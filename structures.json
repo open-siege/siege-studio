@@ -1,0 +1,115 @@
+{
+  "header": {
+    "opening": ">4s",
+    "fileInfo": "<lh",
+    "version": "<l",
+    "keys": "persistanceType objectLength className version"
+  },
+  "structures": {
+    "TS::Shape": {
+      "versions": {
+        "7": {
+          "members": {
+            "Header": {
+              "keys": "nNodes nSeqs nSubSeqs nKeyframes nTransforms nNames nObjects nDetails nMeshes nTransitions nFrameTriggers",
+              "format": "<11l"
+            },
+            "Data": {
+              "keys": "fRadius fCentreX fCentreY fCentreZ",
+              "format": "<f3f"
+            },
+            "Node": {
+              "keys": "fName fParent fnSubSequences fFirstSubSequence fDefaultTransform",
+              "format": "<5l"
+            },
+            "Sequence": {
+              "keys": "fName fCyclic fDuration fPriority fFirstFrameTrigger fNumFrameTriggers fNumIFLSubSequences fFirstIFLSubSequence",
+              "format": "<2lf5l"
+            },
+            "SubSequence": {
+              "keys": "fSequenceIndex fnKeyframes fFirstKeyframe",
+              "format": "<3l"
+            },
+            "Keyframe": {
+              "keys": "fPosition fKeyValue fMatIndex",
+              "format": "<f2L"
+            },
+            "Transform": {
+              "keys": "fRotateX fRotateY fRotateZ fRotateW fTranslateX fTranslateY fTranslateZ fScaleX fScaleY fScaleZ",
+              "format": "<4h6f"
+            },
+            "Name": {
+              "keys": "name",
+              "format": ">24s"
+            },
+            "Object": {
+              "keys": "fName fFlags fMeshIndex fNodeIndex fDepFlags fDep0X fDep0Y fDep0Z fDep1X fDep1Y fDep1Z fDep2X fDep2Y fDep2Z fObjectOffsetX fObjectOffsetY fObjectOffsetZ fnSubSequences fFirstSubSequence",
+              "format": "<2h3l12f2l"
+            },
+            "Detail": {
+              "keys": "fRootNodeIndex fSize",
+              "format": "<lf"
+            }
+          }
+        }
+      }
+    },
+    "TS::CelAnimMesh": {
+        "versions": {
+          "3":
+          {
+            "members": {
+            "Header": {
+              "keys": "numVerts mVertsPerFrame numTexVerts numFaces numFrames mTextureVertsPerFrame radius",
+              "format": "<6lf"
+            },
+            "Vertex": {
+              "keys": "x y z normal",
+              "format": "<4B"
+            },
+            "TextureVertex": {
+              "keys": "x y",
+              "format": "<2f"
+            },
+            "Face": {
+              "keys": "vi1 ti1 vi2 ti2 vi3 ti3 material",
+              "format": "<7l"
+            },
+            "Frame": {
+              "keys": "firstVert scaleX scaleY scaleZ originX originY originZ",
+              "format": "<l6f"
+            }
+          }
+        }
+      }
+    },
+    "TS::TransAnimMesh": {
+
+    },
+    "TS::MaterialList": {
+      "versions": {
+        "3": {
+          "members": {
+            "Header":
+              {
+              "keys": "fnDetails fnMaterials",
+              "format": "<2l"
+            },
+            "Material": {
+              "keys": "fFlags fAlpha fIndex fRed fGreen fBlue fRGBFlags",
+              "format": "<lfl4B"
+            },
+            "MaterialName": {
+              "keys": "fName",
+              "format": ">32s"
+            },
+            "MaterialFooter": {
+              "keys": "fType fElasticity fFriction",
+              "format": "<lff"
+            }
+        }
+        }
+      }
+    }
+  }
+}
