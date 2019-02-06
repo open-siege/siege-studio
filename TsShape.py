@@ -7,7 +7,7 @@ from collections import namedtuple
 with open('structures.json') as f:
     data = json.load(f)
 
-input_fd = open("tr_talon.dts", "rb")
+input_fd = open(sys.argv[1], "rb")
 
 dat = input_fd.read()
 offset = 0
@@ -128,7 +128,8 @@ for object in objects[1]:
     expandedVertices = []
     someNode = nodes[1][object.fNodeIndex]
     someNodeName = names[1][someNode.fName].name
-    someNodeName = someNodeName[:-10].rstrip('\0')
+    someNodeName = someNodeName.split("\0")[0]
+
     shapeFile.write("o " + someNodeName + "\r\n")
     someTransform = transforms[1][someNode.fDefaultTransform]
     someMesh = meshes[object.fMeshIndex]
@@ -154,3 +155,5 @@ for object in objects[1]:
         idx2 = face.vi3 + firstVert + faceOffset
         shapeFile.write("\tf " + str(idx0 + 1) + " " + str(idx1 + 1) + " " + str(idx2 + 1) + "\r\n")
     faceOffset += len(expandedVertices)
+
+shapeFile.close()
