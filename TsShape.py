@@ -136,27 +136,115 @@ while i < shapeHeader[1].nMeshes:
     offset = meshOffset
     i += 1
 
+Sequence = namedtuple("Sequence", "name sequence frameTriggers")
+SubSequence = namedtuple("SubSequence", "subSequence sequence keyFrames")
+Object = namedtuple("Object", "name object node mesh subSequences")
+Node = namedtuple("Node", "name node defaultTransform subSequences parentNode childNodes object")
+
+mappedSequences = []
+mappedSubSequences = []
+mappedNodes = []
+mappedObjects = []
+
+for sequence in sequences[1]:
+    sequenceName = names[1][sequence.fName].name
+    sequenceName = sequenceName.split("\0")[0]
+    frameTrigs = []
+    i = 0
+    while i < sequence.fNumFrameTriggers:
+        index = sequence.fFirstFrameTrigger + i
+        frameTrigs.append(frameTriggers[1][index])
+        i += 1
+    mappedSequences.append(Sequence._make((sequenceName, sequence, frameTrigs)))
+
+for subSequence in subSequences[1]:
+    sequence = mappedSequences[subSequence.fSequenceIndex]
+    keyFrams = []
+    i = 0
+    while i < subSequence.fnKeyframes:
+        index = subSequence.fFirstKeyframe + i
+        keyFrams.append(keyframes[1][index])
+        i += 1
+
+    mappedSubSequences.append(SubSequence._make((subSequence, sequence, keyFrams)))
+
+for node in nodes[1]:
+    nodeName = names[1][node.fName].name
+    nodeName = nodeName.split("\0")[0]
+    someTransform = transforms[1][node.fDefaultTransform]
+    subSeqs = []
+    i = 0
+    while i < node.fnSubSequences:
+        index = node.fFirstSubSequence + i
+        subSeqs.append(mappedSubSequences[index])
+        i += 1
+
+    parentNode = None
+    if node.fParent > -1:
+        parentNode = mappedNodes[node.fParent]
+
+    finalNode = Node._make((nodeName, node, someTransform, subSeqs, parentNode, [], []))
+
+    if node.fParent > -1:
+        parentNode.childNodes.append(finalNode)
+
+    mappedNodes.append(finalNode)
+
+
+for object in objects[1]:
+    someNode = mappedNodes[object.fNodeIndex]
+    someObjectName = names[1][object.fName].name
+    someObjectName = someObjectName.split("\0")[0]
+    someMesh = meshes[object.fMeshIndex]
+    subSeqs = []
+    i = 0
+    while i < object.fnSubSequences:
+        index = object.fFirstSubSequence + i
+        subSeqs.append(mappedSubSequences[index])
+        i += 1
+
+    finalObject = Object._make((someObjectName, object, someNode, someMesh, subSeqs))
+    someNode.object.append(finalObject)
+    mappedObjects.append(finalObject)
 
 shapeFile = open(exportFilename,"w")
 faceOffset = 0
-for object in objects[1]:
+for object in mappedObjects:
     expandedVertices = []
-    someNode = nodes[1][object.fNodeIndex]
-    someNodeName = names[1][someNode.fName].name
-    someNodeName = someNodeName.split("\0")[0]
+    shapeFile.write("o " + object.name + "\r\n")
 
-    shapeFile.write("o " + someNodeName + "\r\n")
-    someTransform = transforms[1][someNode.fDefaultTransform]
-    someMesh = meshes[object.fMeshIndex]
+    someTransform = object.node.defaultTransform
+    someMesh = object.mesh
 
     for vert in someMesh.vertices:
         firstFrame = someMesh.frames[0]
         scaleX = firstFrame.scaleX * someTransform.fScaleX
         scaleY = firstFrame.scaleY * someTransform.fScaleY
         scaleZ = firstFrame.scaleZ * someTransform.fScaleZ
+
         originX = firstFrame.originX + someTransform.fTranslateX
         originY = firstFrame.originY + someTransform.fTranslateY
         originZ = firstFrame.originZ + someTransform.fTranslateZ
+
+        currentObject = None
+        if object.node.parentNode is not None:
+            if len(object.node.parentNode.object) > 0:
+                currentObject = object.node.parentNode.object[0]
+
+        if len(object.subSequences) > 0:
+            while currentObject is not None:
+
+                if len(currentObject.subSequences) == 0:
+                    break
+                originX += currentObject.node.defaultTransform.fTranslateX
+                originY += currentObject.node.defaultTransform.fTranslateY
+                originZ += currentObject.node.defaultTransform.fTranslateZ
+                if currentObject.node.parentNode is not None:
+                    if len(currentObject.node.parentNode.object) > 0:
+                        currentObject = currentObject.node.parentNode.object[0]
+                        continue
+                currentObject = None
+
         newVert = (vert.x * scaleX + originX, vert.y * scaleY + originY, vert.z * scaleZ + originZ)
         expandedVertices.append(newVert)
 
