@@ -49,6 +49,18 @@
             "Detail": {
               "keys": "fRootNodeIndex fSize",
               "format": "<lf"
+            },
+            "Transition": {
+              "keys": "fStartSequence fEndSequence fStartPosition fEndPosition fDuration fRotateX fRotateY fRotateZ fRotateW fTranslateX fTranslateY fTranslateZ fScaleX fScaleY fScaleZ",
+              "format": "<2l3f4h6f"
+            },
+            "FrameTrigger": {
+              "keys": "fPosition fValue",
+              "format": "<fl"
+            },
+            "Footer": {
+              "keys": "fnDefaultMaterials fAlwaysNode",
+              "format": "<2l"
             }
           }
         }
