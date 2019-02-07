@@ -7,7 +7,10 @@ from collections import namedtuple
 with open('structures.json') as f:
     data = json.load(f)
 
-input_fd = open(sys.argv[1], "rb")
+importFilename = sys.argv[1]
+exportFilename = importFilename.replace(".dts", ".obj").replace(".DTS", ".obj")
+
+input_fd = open(importFilename, "rb")
 
 dat = input_fd.read()
 offset = 0
@@ -111,7 +114,6 @@ while i < shapeHeader[1].nMeshes:
         faces.append(vertex[1])
         x += 1
     x = 0
-
     while x < mesh[1].numFrames:
         vertex = readData(data, meshOffset, meshHeader[1], "Frame")
         meshOffset = vertex[0]
@@ -122,7 +124,7 @@ while i < shapeHeader[1].nMeshes:
     i += 1
 
 
-shapeFile = open("test.obj","w")
+shapeFile = open(exportFilename,"w")
 faceOffset = 0
 for object in objects[1]:
     expandedVertices = []
