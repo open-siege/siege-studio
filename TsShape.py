@@ -139,9 +139,9 @@ for object in objects[1]:
         scaleX = firstFrame.scaleX * someTransform.fScaleX
         scaleY = firstFrame.scaleY * someTransform.fScaleY
         scaleZ = firstFrame.scaleZ * someTransform.fScaleZ
-        originX = firstFrame.scaleX * someTransform.fTranslateX
-        originY = firstFrame.scaleY * someTransform.fTranslateY
-        originZ = firstFrame.scaleZ * someTransform.fTranslateZ
+        originX = firstFrame.originX + someTransform.fTranslateX
+        originY = firstFrame.originY + someTransform.fTranslateY
+        originZ = firstFrame.originZ + someTransform.fTranslateZ
         newVert = (vert.x * scaleX + originX, vert.y * scaleY + originY, vert.z * scaleZ + originZ)
         expandedVertices.append(newVert)
 
