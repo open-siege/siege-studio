@@ -10,6 +10,8 @@ with open('structures.json') as f:
 importFilename = sys.argv[1]
 exportFilename = importFilename.replace(".dts", ".obj").replace(".DTS", ".obj")
 
+print "reading " + importFilename
+
 input_fd = open(importFilename, "rb")
 
 dat = input_fd.read()
@@ -78,15 +80,25 @@ offset = names[0]
 
 objects = readArrayData(data, offset, header[1], "Object", shapeHeader[1].nObjects)
 offset = objects[0]
+
 details = readArrayData(data, offset, header[1], "Detail", shapeHeader[1].nDetails)
 offset = details[0]
+
+transitions = readArrayData(data, offset, header[1], "Transition", shapeHeader[1].nTransitions)
+offset = transitions[0]
+
+frameTriggers = readArrayData(data, offset, header[1], "FrameTrigger", shapeHeader[1].nFrameTriggers)
+offset = frameTriggers[0]
+
+footer = readData(data, offset, header[1], "Footer")
+offset = footer[0]
 
 meshes = []
 i = 0
 faceOffset = 0
 Mesh = namedtuple("Mesh", "header vertices faces frames")
 while i < shapeHeader[1].nMeshes:
-    offset = dat.index("PERS", offset)
+    #offset = dat.index("PERS", offset)
     meshHeader = readInstance(data, offset)
     offset = meshHeader[0]
     mesh = readData(data, offset, meshHeader[1], "Header")
@@ -121,6 +133,7 @@ while i < shapeHeader[1].nMeshes:
         x += 1
 
     meshes.append(Mesh._make((meshHeader[1], vertices, faces, frames)))
+    offset = meshOffset
     i += 1
 
 
