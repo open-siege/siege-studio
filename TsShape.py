@@ -5,7 +5,7 @@ import json
 from collections import namedtuple
 
 with open('structures.json') as f:
-    data = json.load(f)
+    structures = json.load(f)
 
 importFilename = sys.argv[1]
 exportFilename = importFilename.replace(".dts", ".obj").replace(".DTS", ".obj")
@@ -51,88 +51,90 @@ def readArrayData(data, offset, objectHeader, memberName, length):
         i += 1
     return (offset, result)
 
-header = readInstance(data, offset)
+header = readInstance(structures, offset)
 offset = header[0]
 
-shapeHeader = readData(data, offset, header[1], "Header")
+shapeHeader = readData(structures, offset, header[1], "Header")
 offset = shapeHeader[0]
 
-shapeData = readData(data, offset, header[1], "Data")
+shapeData = readData(structures, offset, header[1], "Data")
 offset = shapeData[0]
 
-nodes = readArrayData(data, offset, header[1], "Node", shapeHeader[1].nNodes)
+nodes = readArrayData(structures, offset, header[1], "Node", shapeHeader[1].nNodes)
 offset = nodes[0]
 
-sequences = readArrayData(data, offset, header[1], "Sequence", shapeHeader[1].nSeqs)
+sequences = readArrayData(structures, offset, header[1], "Sequence", shapeHeader[1].nSeqs)
 offset = sequences[0]
 
-subSequences = readArrayData(data, offset, header[1], "SubSequence", shapeHeader[1].nSubSeqs)
+subSequences = readArrayData(structures, offset, header[1], "SubSequence", shapeHeader[1].nSubSeqs)
 offset = subSequences[0]
 
-keyframes = readArrayData(data, offset, header[1], "Keyframe", shapeHeader[1].nKeyframes)
+keyframes = readArrayData(structures, offset, header[1], "Keyframe", shapeHeader[1].nKeyframes)
 offset = keyframes[0]
 
-transforms = readArrayData(data, offset, header[1], "Transform", shapeHeader[1].nTransforms)
+transforms = readArrayData(structures, offset, header[1], "Transform", shapeHeader[1].nTransforms)
 offset = transforms[0]
 
-names = readArrayData(data, offset, header[1], "Name", shapeHeader[1].nNames)
+names = readArrayData(structures, offset, header[1], "Name", shapeHeader[1].nNames)
 offset = names[0]
 
-objects = readArrayData(data, offset, header[1], "Object", shapeHeader[1].nObjects)
+objects = readArrayData(structures, offset, header[1], "Object", shapeHeader[1].nObjects)
 offset = objects[0]
 
-details = readArrayData(data, offset, header[1], "Detail", shapeHeader[1].nDetails)
+details = readArrayData(structures, offset, header[1], "Detail", shapeHeader[1].nDetails)
 offset = details[0]
 
-transitions = readArrayData(data, offset, header[1], "Transition", shapeHeader[1].nTransitions)
+transitions = readArrayData(structures, offset, header[1], "Transition", shapeHeader[1].nTransitions)
 offset = transitions[0]
 
-frameTriggers = readArrayData(data, offset, header[1], "FrameTrigger", shapeHeader[1].nFrameTriggers)
+frameTriggers = readArrayData(structures, offset, header[1], "FrameTrigger", shapeHeader[1].nFrameTriggers)
 offset = frameTriggers[0]
 
-footer = readData(data, offset, header[1], "Footer")
+footer = readData(structures, offset, header[1], "Footer")
 offset = footer[0]
 
 meshes = []
 i = 0
 faceOffset = 0
-Mesh = namedtuple("Mesh", "header vertices faces frames")
+Mesh = namedtuple("Mesh", "header vertices textureVertices faces frames")
 while i < shapeHeader[1].nMeshes:
     #offset = dat.index("PERS", offset)
-    meshHeader = readInstance(data, offset)
+    meshHeader = readInstance(structures, offset)
     offset = meshHeader[0]
-    mesh = readData(data, offset, meshHeader[1], "Header")
+    mesh = readData(structures, offset, meshHeader[1], "Header")
     meshOffset = mesh[0]
     vertices = []
+    textureVertices = []
     faces = []
     frames = []
     x = 0
     while x < mesh[1].numVerts:
-        vertex = readData(data, meshOffset, meshHeader[1], "Vertex")
+        vertex = readData(structures, meshOffset, meshHeader[1], "Vertex")
         meshOffset = vertex[0]
         vertices.append(vertex[1])
         x += 1
 
     x = 0
     while x < mesh[1].numTexVerts:
-        vertex = readData(data, meshOffset, meshHeader[1], "TextureVertex")
+        vertex = readData(structures, meshOffset, meshHeader[1], "TextureVertex")
         meshOffset = vertex[0]
+        textureVertices.append(vertex[1])
         x += 1
 
     x = 0
     while x < mesh[1].numFaces:
-        vertex = readData(data, meshOffset, meshHeader[1], "Face")
+        vertex = readData(structures, meshOffset, meshHeader[1], "Face")
         meshOffset = vertex[0]
         faces.append(vertex[1])
         x += 1
     x = 0
     while x < mesh[1].numFrames:
-        vertex = readData(data, meshOffset, meshHeader[1], "Frame")
+        vertex = readData(structures, meshOffset, meshHeader[1], "Frame")
         meshOffset = vertex[0]
         frames.append(vertex[1])
         x += 1
 
-    meshes.append(Mesh._make((meshHeader[1], vertices, faces, frames)))
+    meshes.append(Mesh._make((meshHeader[1], vertices, textureVertices, faces, frames)))
     offset = meshOffset
     i += 1
 
@@ -216,40 +218,42 @@ for object in mappedObjects:
     someTransform = object.node.defaultTransform
     someMesh = object.mesh
 
+    firstFrame = someMesh.frames[0]
+    scaleX = firstFrame.scaleX * someTransform.fScaleX
+    scaleY = firstFrame.scaleY * someTransform.fScaleY
+    scaleZ = firstFrame.scaleZ * someTransform.fScaleZ
+
+    originX = firstFrame.originX + someTransform.fTranslateX
+    originY = firstFrame.originY + someTransform.fTranslateY
+    originZ = firstFrame.originZ + someTransform.fTranslateZ
+
+    currentObject = None
+    if object.node.parentNode is not None:
+        if len(object.node.parentNode.object) > 0:
+            currentObject = object.node.parentNode.object[0]
+
+    if len(object.subSequences) > 0:
+        while currentObject is not None:
+
+            if len(currentObject.subSequences) == 0:
+                break
+            originX += currentObject.node.defaultTransform.fTranslateX
+            originY += currentObject.node.defaultTransform.fTranslateY
+            originZ += currentObject.node.defaultTransform.fTranslateZ
+            if currentObject.node.parentNode is not None:
+                if len(currentObject.node.parentNode.object) > 0:
+                    currentObject = currentObject.node.parentNode.object[0]
+                    continue
+            currentObject = None
+
     for vert in someMesh.vertices:
-        firstFrame = someMesh.frames[0]
-        scaleX = firstFrame.scaleX * someTransform.fScaleX
-        scaleY = firstFrame.scaleY * someTransform.fScaleY
-        scaleZ = firstFrame.scaleZ * someTransform.fScaleZ
-
-        originX = firstFrame.originX + someTransform.fTranslateX
-        originY = firstFrame.originY + someTransform.fTranslateY
-        originZ = firstFrame.originZ + someTransform.fTranslateZ
-
-        currentObject = None
-        if object.node.parentNode is not None:
-            if len(object.node.parentNode.object) > 0:
-                currentObject = object.node.parentNode.object[0]
-
-        if len(object.subSequences) > 0:
-            while currentObject is not None:
-
-                if len(currentObject.subSequences) == 0:
-                    break
-                originX += currentObject.node.defaultTransform.fTranslateX
-                originY += currentObject.node.defaultTransform.fTranslateY
-                originZ += currentObject.node.defaultTransform.fTranslateZ
-                if currentObject.node.parentNode is not None:
-                    if len(currentObject.node.parentNode.object) > 0:
-                        currentObject = currentObject.node.parentNode.object[0]
-                        continue
-                currentObject = None
-
-        newVert = (vert.x * scaleX + originX, vert.y * scaleY + originY, vert.z * scaleZ + originZ)
+        newVert = (vert.x * scaleX + originX, vert.y * scaleY + originY, vert.z * scaleZ + originZ, structures["normalTable"][vert.normal])
         expandedVertices.append(newVert)
-
     for vert in expandedVertices:
             shapeFile.write("\tv " + str(vert[0]) + " " + str(vert[1]) + " " + str(vert[2]) + "\r\n")
+
+    for vert in expandedVertices:
+            shapeFile.write("\tvn " + str(vert[3][0]) + " " + str(vert[3][1]) + " " + str(vert[3][2]) + "\r\n")
 
     for face in someMesh.faces:
         firstVert = someMesh.frames[0].firstVert
