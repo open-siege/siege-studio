@@ -63,7 +63,63 @@
               "format": "<2l"
             }
           }
+        },
+      "8": {
+        "members": {
+          "Header": {
+            "keys": "nNodes nSeqs nSubSeqs nKeyframes nTransforms nNames nObjects nDetails nMeshes nTransitions nFrameTriggers",
+            "format": "<11l"
+          },
+          "Data": {
+            "keys": "fRadius fCentreX fCentreY fCentreZ fBoundsMinX fBoundsMinY fBoundsMinZ fBoundsMaxX fBoundsMaxY fBoundsMaxZ",
+            "format": "<f9f"
+          },
+          "Node": {
+            "keys": "fName fParent fnSubSequences fFirstSubSequence fDefaultTransform",
+            "format": "<5h"
+          },
+          "Sequence": {
+            "keys": "fName fCyclic fDuration fPriority fFirstFrameTrigger fNumFrameTriggers fNumIFLSubSequences fFirstIFLSubSequence",
+            "format": "<2lf5l"
+          },
+          "SubSequence": {
+            "keys": "fSequenceIndex fnKeyframes fFirstKeyframe",
+            "format": "<3h"
+          },
+          "Keyframe": {
+            "keys": "fPosition fKeyValue fMatIndex",
+            "format": "<f2H"
+          },
+          "Transform": {
+            "keys": "fRotateX fRotateY fRotateZ fRotateW fTranslateX fTranslateY fTranslateZ",
+            "format": "<4h3f"
+          },
+          "Name": {
+            "keys": "name",
+            "format": ">24s"
+          },
+          "Object": {
+            "keys": "fName fFlags fMeshIndex fNodeIndex fObjectOffsetX fObjectOffsetY fObjectOffsetZ fnSubSequences fFirstSubSequence",
+            "format": "<2hlh3f2h"
+          },
+          "Detail": {
+            "keys": "fRootNodeIndex fSize",
+            "format": "<lf"
+          },
+          "Transition": {
+            "keys": "fStartSequence fEndSequence fStartPosition fEndPosition fDuration fRotateX fRotateY fRotateZ fRotateW fTranslateX fTranslateY fTranslateZ fScaleX fScaleY fScaleZ",
+            "format": "<2l3f4h3f"
+          },
+          "FrameTrigger": {
+            "keys": "fPosition fValue",
+            "format": "<fl"
+          },
+          "Footer": {
+            "keys": "fnDefaultMaterials fAlwaysNode",
+            "format": "<2l"
+          }
         }
+      }
       }
     },
     "TS::CelAnimMesh": {
