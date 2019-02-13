@@ -1,7 +1,8 @@
 from collections import namedtuple
 
+Keyframe = namedtuple("Keyframe", "keyframe transform")
 Sequence = namedtuple("Sequence", "name sequence frameTriggers")
-SubSequence = namedtuple("SubSequence", "subSequence sequence keyFrames")
+SubSequence = namedtuple("SubSequence", "subSequence sequence keyframes")
 Object = namedtuple("Object", "name object node mesh subSequences")
 Node = namedtuple("Node", "name node defaultTransform subSequences parentNode childNodes object")
 
@@ -10,6 +11,11 @@ def mapObjects(shape):
     mappedSubSequences = []
     mappedNodes = []
     mappedObjects = []
+    mappedKeyframes = []
+
+    for keyframe in shape.keyframes:
+        someTransform = shape.transforms[keyframe.fKeyValue]
+        mappedKeyframes.append(Keyframe._make((keyframe, someTransform)))
 
     for sequence in shape.sequences:
         sequenceName = shape.names[sequence.fName].name
@@ -28,7 +34,7 @@ def mapObjects(shape):
         i = 0
         while i < subSequence.fnKeyframes:
             index = subSequence.fFirstKeyframe + i
-            keyFrams.append(shape.keyframes[index])
+            keyFrams.append(mappedKeyframes[index])
             i += 1
 
         mappedSubSequences.append(SubSequence._make((subSequence, sequence, keyFrams)))
