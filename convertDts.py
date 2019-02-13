@@ -23,12 +23,12 @@ shape = readDts.readDtsData(structures, rawData)
 input_fd.close()
 
 # then map them for conversation later
-mappedObjects = mapObjects.mapObjects(shape)
+mappedDetails = mapObjects.mapObjects(shape)
 
 # save a new file
 shapeFile = open(exportFilename,"w")
 
 #TODO move the normal table out of the obj writer into the object mapper
-writeObj.writeObj(mappedObjects, structures["normalTable"], shapeFile)
+writeObj.writeObj(mappedDetails, structures["normalTable"], shapeFile)
 
 shapeFile.close()
