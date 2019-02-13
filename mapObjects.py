@@ -2,10 +2,10 @@ from collections import namedtuple
 
 
 Keyframe = namedtuple("Keyframe", "keyframe transform")
-Sequence = namedtuple("Sequence", "name sequence frameTriggers")
+Sequence = namedtuple("Sequence", "name sequence subSequences frameTriggers")
 SubSequence = namedtuple("SubSequence", "subSequence sequence keyframes")
-Object = namedtuple("Object", "name object node mesh subSequences")
-Node = namedtuple("Node", "name node defaultTransform subSequences parentNode childNodes object")
+Object = namedtuple("Object", "name object node mesh sequences subSequences")
+Node = namedtuple("Node", "name node defaultTransform sequences subSequences parentNode childNodes object")
 Detail = namedtuple("Detail", "detail rootNode")
 
 def mapObjects(shape):
@@ -29,7 +29,7 @@ def mapObjects(shape):
             index = sequence.fFirstFrameTrigger + i
             frameTrigs.append(shape.frameTriggers[index])
             i += 1
-        mappedSequences.append(Sequence._make((sequenceName, sequence, frameTrigs)))
+        mappedSequences.append(Sequence._make((sequenceName, sequence, [], frameTrigs)))
 
     for subSequence in shape.subSequences:
         sequence = mappedSequences[subSequence.fSequenceIndex]
@@ -40,24 +40,31 @@ def mapObjects(shape):
             keyFrams.append(mappedKeyframes[index])
             i += 1
 
-        mappedSubSequences.append(SubSequence._make((subSequence, sequence, keyFrams)))
+        subSeq = SubSequence._make((subSequence, sequence, keyFrams))
+        sequence.subSequences.append(subSeq)
+        mappedSubSequences.append(subSeq)
 
     for node in shape.nodes:
         nodeName = shape.names[node.fName].name
         nodeName = nodeName.split("\0")[0]
         someTransform = shape.transforms[node.fDefaultTransform]
+        seqs = []
         subSeqs = []
         i = 0
         while i < node.fnSubSequences:
             index = node.fFirstSubSequence + i
-            subSeqs.append(mappedSubSequences[index])
+            subSeq = mappedSubSequences[index]
+            if subSeq.sequence not in seqs:
+                seqs.append(subSeq.sequence)
+            subSeqs.append(subSeq)
             i += 1
 
         parentNode = None
         if node.fParent > -1:
             parentNode = mappedNodes[node.fParent]
 
-        finalNode = Node._make((nodeName, node, someTransform, subSeqs, parentNode, [], []))
+        object = None
+        finalNode = Node._make((nodeName, node, someTransform, seqs, subSeqs, parentNode, [], {"instance" : None}))
 
         if node.fParent > -1:
             parentNode.childNodes.append(finalNode)
@@ -70,15 +77,19 @@ def mapObjects(shape):
         someObjectName = shape.names[object.fName].name
         someObjectName = someObjectName.split("\0")[0]
         someMesh = shape.meshes[object.fMeshIndex]
+        seqs = []
         subSeqs = []
         i = 0
         while i < object.fnSubSequences:
             index = object.fFirstSubSequence + i
-            subSeqs.append(mappedSubSequences[index])
+            subSeq = mappedSubSequences[index]
+            if subSeq.sequence not in seqs:
+                seqs.append(subSeq.sequence)
+            subSeqs.append(subSeq)
             i += 1
 
-        finalObject = Object._make((someObjectName, object, someNode, someMesh, subSeqs))
-        someNode.object.append(finalObject)
+        finalObject = Object._make((someObjectName, object, someNode, someMesh, seqs, subSeqs))
+        someNode.object["instance"] = finalObject
         mappedObjects.append(finalObject)
 
     for detail in shape.details:

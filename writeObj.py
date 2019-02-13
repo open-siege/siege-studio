@@ -16,21 +16,21 @@ def writeObject(object, normalTable, shapeFile, faceOffset):
 
     currentObject = None
     if object.node.parentNode is not None:
-        if len(object.node.parentNode.object) > 0:
-            currentObject = object.node.parentNode.object[0]
+        if object.node.parentNode.object["instance"] is not None:
+            currentObject = object.node.parentNode.object["instance"]
 
-    if len(object.subSequences) > 0:
-        print object.name + " " +  object.subSequences[0].sequence.name
+    if len(object.sequences) > 0:
+        print object.name + " " +  object.sequences[0].name
         while currentObject is not None:
 
-            if len(currentObject.subSequences) == 0:
+            if len(currentObject.sequences) == 0:
                 break
             originX += currentObject.node.defaultTransform.fTranslateX
             originY += currentObject.node.defaultTransform.fTranslateY
             originZ += currentObject.node.defaultTransform.fTranslateZ
             if currentObject.node.parentNode is not None:
-                if len(currentObject.node.parentNode.object) > 0:
-                    currentObject = currentObject.node.parentNode.object[0]
+                if currentObject.node.parentNode.object["instance"] is not None:
+                    currentObject = currentObject.node.parentNode.object["instance"]
                     continue
             currentObject = None
 
@@ -53,11 +53,13 @@ def writeObject(object, normalTable, shapeFile, faceOffset):
     return faceOffset
 
 def writeWriteNode(rootNode, normalTable, shapeFile, faceOffset):
-    for object in rootNode.object:
+    object = rootNode.object["instance"]
+    if object is not None:
         faceOffset = writeObject(object, normalTable, shapeFile, faceOffset)
 
     for node in rootNode.childNodes:
-        for object in node.object:
+        object = node.object["instance"]
+        if object is not None:
             faceOffset = writeObject(object, normalTable, shapeFile, faceOffset)
         for childNode in node.childNodes:
             print childNode.name
