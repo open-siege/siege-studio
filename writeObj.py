@@ -1,4 +1,16 @@
+def quaternion_mult(q,r):
+    return [r[0]*q[0]-r[1]*q[1]-r[2]*q[2]-r[3]*q[3],
+            r[0]*q[1]+r[1]*q[0]-r[2]*q[3]+r[3]*q[2],
+            r[0]*q[2]+r[1]*q[3]+r[2]*q[0]-r[3]*q[1],
+            r[0]*q[3]-r[1]*q[2]+r[2]*q[1]+r[3]*q[0]]
+
+def point_rotation_by_quaternion(point,q):
+    r = [0]+point
+    q_conj = [q[0],-1*q[1],-1*q[2],-1*q[3]]
+    return quaternion_mult(quaternion_mult(q,r),q_conj)[1:]
+
 def writeObject(object, normalTable, shapeFile, faceOffset):
+    magicValue = 32767
     expandedVertices = []
     shapeFile.write("o " + object.name + "\r\n")
 
@@ -10,9 +22,16 @@ def writeObject(object, normalTable, shapeFile, faceOffset):
     scaleY = firstFrame.scaleY * someTransform.fScaleY
     scaleZ = firstFrame.scaleZ * someTransform.fScaleZ
 
-    originX = firstFrame.originX + someTransform.fTranslateX
-    originY = firstFrame.originY + someTransform.fTranslateY
-    originZ = firstFrame.originZ + someTransform.fTranslateZ
+    originX = firstFrame.originX
+    originY = firstFrame.originY
+    originZ = firstFrame.originZ
+
+    originX += someTransform.fTranslateX
+    originY += someTransform.fTranslateY
+    originZ += someTransform.fTranslateZ
+
+    quat = [float(someTransform.fRotateW) / magicValue, float(someTransform.fRotateX) / magicValue, float(someTransform.fRotateY) / magicValue, float(someTransform.fRotateZ) / magicValue]
+    #originX, originY, originZ = point_rotation_by_quaternion([originX, originY, originZ], quat)
 
     currentObject = None
     if object.node.parentNode is not None:
@@ -25,9 +44,12 @@ def writeObject(object, normalTable, shapeFile, faceOffset):
 
             if len(currentObject.sequences) == 0:
                 break
-            originX += currentObject.node.defaultTransform.fTranslateX
-            originY += currentObject.node.defaultTransform.fTranslateY
-            originZ += currentObject.node.defaultTransform.fTranslateZ
+            parentTransform = currentObject.node.defaultTransform
+            originX += parentTransform.fTranslateX
+            originY += parentTransform.fTranslateY
+            originZ += parentTransform.fTranslateZ
+            quat = [float(parentTransform.fRotateW) / magicValue, float(parentTransform.fRotateX) / magicValue, float(parentTransform.fRotateY) / magicValue, float(parentTransform.fRotateZ) / magicValue]
+            #originX, originY, originZ = point_rotation_by_quaternion([originX, originY, originZ], quat)
             if currentObject.node.parentNode is not None:
                 if currentObject.node.parentNode.object["instance"] is not None:
                     currentObject = currentObject.node.parentNode.object["instance"]
@@ -62,7 +84,6 @@ def writeWriteNode(rootNode, normalTable, shapeFile, faceOffset):
         if object is not None:
             faceOffset = writeObject(object, normalTable, shapeFile, faceOffset)
         for childNode in node.childNodes:
-            print childNode.name
             faceOffset = writeWriteNode(childNode, normalTable, shapeFile, faceOffset)
     return faceOffset
 
