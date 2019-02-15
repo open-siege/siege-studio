@@ -1,3 +1,4 @@
+# from https://math.stackexchange.com/questions/40164/how-do-you-rotate-a-vector-by-a-unit-quaternion
 def quaternion_mult(q,r):
     return [r[0]*q[0]-r[1]*q[1]-r[2]*q[2]-r[3]*q[3],
             r[0]*q[1]+r[1]*q[0]-r[2]*q[3]+r[3]*q[2],
@@ -39,7 +40,6 @@ def writeObject(object, normalTable, shapeFile, faceOffset):
             currentObject = object.node.parentNode.object["instance"]
 
     if len(object.sequences) > 0:
-        print object.name + " " +  object.sequences[0].name
         while currentObject is not None:
 
             if len(currentObject.sequences) == 0:

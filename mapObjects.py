@@ -48,14 +48,14 @@ def mapObjects(shape):
         nodeName = shape.names[node.fName].name
         nodeName = nodeName.split("\0")[0]
         someTransform = shape.transforms[node.fDefaultTransform]
-        seqs = []
+        seqs = {}
         subSeqs = []
         i = 0
         while i < node.fnSubSequences:
             index = node.fFirstSubSequence + i
             subSeq = mappedSubSequences[index]
-            if subSeq.sequence not in seqs:
-                seqs.append(subSeq.sequence)
+            if subSeq.sequence.name not in seqs:
+                seqs[subSeq.sequence.name] = subSeqs
             subSeqs.append(subSeq)
             i += 1
 
@@ -77,14 +77,14 @@ def mapObjects(shape):
         someObjectName = shape.names[object.fName].name
         someObjectName = someObjectName.split("\0")[0]
         someMesh = shape.meshes[object.fMeshIndex]
-        seqs = []
+        seqs = {}
         subSeqs = []
         i = 0
         while i < object.fnSubSequences:
             index = object.fFirstSubSequence + i
             subSeq = mappedSubSequences[index]
-            if subSeq.sequence not in seqs:
-                seqs.append(subSeq.sequence)
+            if subSeq.sequence.name not in seqs:
+                seqs[subSeq.sequence.name] = subSeqs
             subSeqs.append(subSeq)
             i += 1
 
