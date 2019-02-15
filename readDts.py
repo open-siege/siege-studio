@@ -22,6 +22,10 @@ def readInstance(structs, rawData, offset):
     return (offset, ShapeHeader._make((header[0], fileLength, className[0], version[0])))
 
 def readData(structs, rawData, offset, objectHeader, memberName):
+    objVersion = str(objectHeader.version)
+    if objVersion not in structs["structures"][objectHeader.className]["versions"]:
+        raise ValueError(objectHeader.className + " version " + objVersion + " not currently supported")
+
     ShapeHeaderStruct = structs["structures"][objectHeader.className]["versions"][str(objectHeader.version)]["members"][memberName]
     ShapeHeader = namedtuple(memberName, ShapeHeaderStruct["keys"])
     result = ShapeHeader._make(struct.unpack_from(ShapeHeaderStruct["format"], rawData, offset))

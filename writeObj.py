@@ -78,12 +78,11 @@ def writeWriteNode(rootNode, normalTable, shapeFile, faceOffset):
     object = rootNode.object["instance"]
     if object is not None:
         faceOffset = writeObject(object, normalTable, shapeFile, faceOffset)
-
-    for node in rootNode.childNodes:
+    for key, node in rootNode.childNodes.iteritems():
         object = node.object["instance"]
         if object is not None:
             faceOffset = writeObject(object, normalTable, shapeFile, faceOffset)
-        for childNode in node.childNodes:
+        for key, childNode in node.childNodes.iteritems():
             faceOffset = writeWriteNode(childNode, normalTable, shapeFile, faceOffset)
     return faceOffset
 
