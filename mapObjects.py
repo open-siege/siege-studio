@@ -40,18 +40,22 @@ def mapObjects(shape, shouldFail):
             i += 1
         mappedSequences.append(Sequence._make((sequenceName, sequence, [], frameTrigs)))
 
+    expectedKeyframes = 0
+    for subSequence in shape.subSequences:
+        expectedKeyframes += subSequence.fnKeyframes
+
+    if expectedKeyframes > len(mappedKeyframes):
+        error = "Shape does not have the correct number of mapped keyframes. Has " + str(len(mappedKeyframes)) + ", should have " + str(expectedKeyframes)
+        if shouldFail:
+            raise ValueError(error)
+        else:
+            print error
     for subSequence in shape.subSequences:
         sequence = mappedSequences[subSequence.fSequenceIndex]
         keyFrams = []
         i = 0
         while i < subSequence.fnKeyframes:
             index = subSequence.fFirstKeyframe + i
-            if index > len(mappedKeyframes) - 1:
-                error = "Shape does not have the correct number of mapped keyframes. Has " + str(len(mappedKeyframes)) + ", should have " + str(subSequence.fFirstKeyframe + subSequence.fnKeyframes - 1)
-                if shouldFail:
-                    raise ValueError(error)
-                else:
-                    print error
             if index < len(mappedKeyframes) - 1:
                 keyFrams.append(mappedKeyframes[index])
             i += 1
@@ -108,13 +112,14 @@ def mapObjects(shape, shouldFail):
         someNode.object["instance"] = finalObject
         mappedObjects.append(finalObject)
 
+    if len(mappedNodes) < len(mappedObjects):
+        print ("The number of nodes is less than the number of objects", len(mappedNodes), len(mappedObjects))
     for detail in shape.details:
         someNode = mappedNodes[detail.fRootNodeIndex]
         if len(mappedNodes) < len(mappedObjects):
             for object in mappedObjects:
-                if object.name not in someNode.childNodes:
-
-                    finalNode = Node._make((object.name, None, None, object.sequences, object.subSequences, someNode, {}, {"instance" : object}))
+                if object.name not in someNode.childNodes and object.node.name == someNode.name:
+                    finalNode = Node._make((object.name, object.node.node, object.node.defaultTransform, object.sequences, object.subSequences, someNode, {}, {"instance" : object}))
                     someNode.childNodes[object.name] = finalNode
 
         mappedDetails.append(Detail._make((detail, someNode)))
