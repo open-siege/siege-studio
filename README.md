@@ -14,7 +14,8 @@ This is a learning project, with the intention being multifold:
 * Providing new opportunities to mod or port the respective games' assets
 
 Current Usage
-`python convertDts someFile.dts`
+  `python convertDts.py someFile.dts`
+
 Writes out someFile.obj
 
 Inspired by a DTS converter for Earthsiege 2 (https://github.com/booto/convert_dts)
