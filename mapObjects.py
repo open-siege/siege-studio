@@ -8,17 +8,26 @@ Object = namedtuple("Object", "name object node mesh sequences subSequences")
 Node = namedtuple("Node", "name node defaultTransform sequences subSequences parentNode childNodes object")
 Detail = namedtuple("Detail", "detail rootNode")
 
-def mapObjects(shape):
+def mapObjects(shape, shouldFail):
     mappedSequences = []
     mappedSubSequences = []
     mappedNodes = []
     mappedObjects = []
     mappedKeyframes = []
     mappedDetails = []
+    nodeDict = {}
 
     for keyframe in shape.keyframes:
-        someTransform = shape.transforms[keyframe.fKeyValue]
-        mappedKeyframes.append(Keyframe._make((keyframe, someTransform)))
+        if keyframe.fKeyValue > len(shape.transforms) - 1:
+            error = "Shape does not have the correct number of transforms. Has " + str(len(shape.transforms)) + ", needs at least " + str(keyframe.fKeyValue + 1)
+            if shouldFail:
+                raise ValueError(error)
+            else:
+                print error
+
+        if keyframe.fKeyValue < len(shape.transforms) - 1:
+            someTransform = shape.transforms[keyframe.fKeyValue]
+            mappedKeyframes.append(Keyframe._make((keyframe, someTransform)))
 
     for sequence in shape.sequences:
         sequenceName = shape.names[sequence.fName].name
@@ -37,7 +46,14 @@ def mapObjects(shape):
         i = 0
         while i < subSequence.fnKeyframes:
             index = subSequence.fFirstKeyframe + i
-            keyFrams.append(mappedKeyframes[index])
+            if index > len(mappedKeyframes) - 1:
+                error = "Shape does not have the correct number of mapped keyframes. Has " + str(len(mappedKeyframes)) + ", should have " + str(subSequence.fFirstKeyframe + subSequence.fnKeyframes - 1)
+                if shouldFail:
+                    raise ValueError(error)
+                else:
+                    print error
+            if index < len(mappedKeyframes) - 1:
+                keyFrams.append(mappedKeyframes[index])
             i += 1
 
         subSeq = SubSequence._make((subSequence, sequence, keyFrams))
@@ -64,13 +80,13 @@ def mapObjects(shape):
             parentNode = mappedNodes[node.fParent]
 
         object = None
-        finalNode = Node._make((nodeName, node, someTransform, seqs, subSeqs, parentNode, [], {"instance" : None}))
+        finalNode = Node._make((nodeName, node, someTransform, seqs, subSeqs, parentNode, {}, {"instance" : None}))
 
         if node.fParent > -1:
-            parentNode.childNodes.append(finalNode)
+            parentNode.childNodes[finalNode.name] = finalNode
 
+        nodeDict[finalNode.name] = finalNode
         mappedNodes.append(finalNode)
-
 
     for object in shape.objects:
         someNode = mappedNodes[object.fNodeIndex]
@@ -94,6 +110,12 @@ def mapObjects(shape):
 
     for detail in shape.details:
         someNode = mappedNodes[detail.fRootNodeIndex]
-        mappedDetails.append(Detail._make((detail, someNode)))
+        if len(mappedNodes) < len(mappedObjects):
+            for object in mappedObjects:
+                if object.name not in someNode.childNodes:
 
+                    finalNode = Node._make((object.name, None, None, object.sequences, object.subSequences, someNode, {}, {"instance" : object}))
+                    someNode.childNodes[object.name] = finalNode
+
+        mappedDetails.append(Detail._make((detail, someNode)))
     return mappedDetails

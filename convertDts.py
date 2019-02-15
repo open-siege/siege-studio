@@ -1,6 +1,8 @@
 
 import sys
 import json
+import glob
+
 import readDts
 import mapObjects
 import writeObj
@@ -10,25 +12,24 @@ from collections import namedtuple
 with open('structures.json') as f:
     structures = json.load(f)
 
-importFilename = sys.argv[1]
-exportFilename = importFilename.replace(".dts", ".obj").replace(".DTS", ".obj")
+importFilenames = sys.argv[1:]
 
-print "reading " + importFilename
+for importFilename in importFilenames:
+    exportFilename = importFilename.replace(".dts", ".obj").replace(".DTS", ".obj")
 
-input_fd = open(importFilename, "rb")
+    print "reading " + importFilename
+    try:
+        with open(importFilename, "rb") as input_fd:
+            # first get the parsed shape datastructures
+            rawData = input_fd.read()
+            shape = readDts.readDtsData(structures, rawData)
+        # then map them for conversation later
+        mappedDetails = mapObjects.mapObjects(shape, False)
 
-# first get the parsed shape datastructures
-rawData = input_fd.read()
-shape = readDts.readDtsData(structures, rawData)
-input_fd.close()
-
-# then map them for conversation later
-mappedDetails = mapObjects.mapObjects(shape)
-
-# save a new file
-shapeFile = open(exportFilename,"w")
-
-#TODO move the normal table out of the obj writer into the object mapper
-writeObj.writeObj(mappedDetails, structures["normalTable"], shapeFile)
-
-shapeFile.close()
+        print "writing " + exportFilename
+        # save a new file
+        with open(exportFilename,"w") as shapeFile:
+            #TODO move the normal table out of the obj writer into the object mapper
+            writeObj.writeObj(mappedDetails, structures["normalTable"], shapeFile)
+    except Exception as e:
+        print e
