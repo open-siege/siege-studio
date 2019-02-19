@@ -7,6 +7,15 @@ import readErf
 
 importFilenames = sys.argv[1:]
 
+# lower half of mech
+# hip
+    # (l/r)uleg (u for upper)
+    # (l/r)mleg (m for middle)
+    # (l/r)dleg (d for down)
+        # (l/r)foot
+        # (l/r)ftoe (f for front)
+        # (l/r)btoe (b for back)
+
 for importFilename in importFilenames:
     exportFilename = importFilename.replace(".erf", ".obj").replace(".erf", ".obj")
     try:
