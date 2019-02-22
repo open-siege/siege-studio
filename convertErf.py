@@ -29,7 +29,8 @@ def getMaxMinX(items):
     return (maxY, minY)
 
 for importFilename in importFilenames:
-    exportFilename = importFilename.replace(".erf", ".obj").replace(".erf", ".obj")
+    partName = importFilename.replace(".erf", "").replace(".ERF", "").split("/")[-1]
+    exportFilename = importFilename.replace(".erf", ".obj").replace(".ERF", ".obj")
     try:
         print "reading " + importFilename
         with open(importFilename, "rb") as input_fd:
@@ -53,11 +54,12 @@ for importFilename in importFilenames:
                 meshes.append((name, verts, uvVerts, faces));
                 i += 1
 
+        print "writing " + exportFilename
         with open(exportFilename,"w") as shapeFile:
             vertIndex = 0
             for index, mesh in enumerate(meshes):
                 name, verts, uvVerts, faces = mesh
-                shapeFile.write("g " + str(index) + "\r\n")
+                shapeFile.write("g " + partName + "-" +  str(index) + "\r\n")
                 for vertex in verts:
                     shapeFile.write("\tv " + str(vertex[0]) + " " + str(vertex[1]) + " " + str(vertex[2]) + "\r\n")
 
