@@ -16,6 +16,18 @@ importFilenames = sys.argv[1:]
         # (l/r)ftoe (f for front)
         # (l/r)btoe (b for back)
 
+def getMaxMinY(items):
+    mappedItems = list(map(lambda x: x[1]))
+    minY = min(mappedItems)
+    maxY = max(mappedItems)
+    return (maxY, minY)
+
+def getMaxMinX(items):
+    mappedItems = list(map(lambda x: x[0]))
+    minX = min(mappedItems)
+    maxX = max(mappedItems)
+    return (maxY, minY)
+
 for importFilename in importFilenames:
     exportFilename = importFilename.replace(".erf", ".obj").replace(".erf", ".obj")
     try:
