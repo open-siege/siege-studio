@@ -39,7 +39,10 @@ for importFilename in importFilenames:
 	if "." not in files[1][0]:
 		files = readFiles(numFiles, infoFmt, offset)
 	
-        
+        # every file seems to have 2 bytes of padding
+	# which has been checked against the FRONT.OVL which was pre-extracted
+	filePadding = 2
+	
         for index, file in enumerate(files):
             filename, fileOffset = file
 	    print "extracting " + filename
@@ -47,7 +50,7 @@ for importFilename in importFilenames:
             if index + 1 < numFiles:
                 nextFilename, nextFileOffset = files[index + 1]
             with open("extracted/" + filename,"w") as shapeFile:
-                newFileByteArray = bytearray(rawData[fileOffset:nextFileOffset])
+                newFileByteArray = bytearray(rawData[fileOffset:nextFileOffset - filePadding])
                 shapeFile.write(newFileByteArray)
    
 
