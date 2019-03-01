@@ -39,13 +39,13 @@ for importFilename in importFilenames:
             for x in range(numVerts):
                 vert = struct.unpack_from(vertexFmt, rawData, offset)
                 offset += struct.calcsize(vertexFmt)
-                print (vert[0], vert[1], vert[2])
+                print vert
                 verts.append(vert)
 
             for x in range(numNormals):
                 normal = struct.unpack_from(normalFmt, rawData, offset)
                 offset += struct.calcsize(normalFmt)
-                print normal
+                #print normal
                 normals.append(normal)
 
             for x in range(numPrimitives):
@@ -65,20 +65,24 @@ for importFilename in importFilenames:
                 shapeFile.write("\n")
                 verts, normals, faces = object
                 for vertex in verts:
-                    shapeFile.write("\tv " + str(float(vertex[0])) + " " + str(float(vertex[1])) + " " + str(float(vertex[2])) + "\n")
+                    shapeFile.write("\tv ")
+                    shapeFile.write(str(float(vertex[0])) + " ")
+                    shapeFile.write(str(float(vertex[1])) + " ")
+                    shapeFile.write(str(float(vertex[2])) + " ")
+                    shapeFile.write("\n")
 
                 for header, polygon in faces:
                     shapeFile.write("\tf ")
-                    shapeFile.write(str(polygon[4] + 1 + faceIndex) + " ")
                     shapeFile.write(str(polygon[5] + 1 + faceIndex) + " ")
                     shapeFile.write(str(polygon[6] + 1 + faceIndex) + " ")
+                    shapeFile.write(str(polygon[7] + 1 + faceIndex) + " ")
                     shapeFile.write("\n")
                     shapeFile.write("\tf ")
+                    shapeFile.write(str(polygon[6] + 1 + faceIndex) + " ")
                     shapeFile.write(str(polygon[7] + 1 + faceIndex) + " ")
                     shapeFile.write(str(polygon[8] + 1 + faceIndex) + " ")
-                    shapeFile.write(str(polygon[9] + 1 + faceIndex) + " ")
                     shapeFile.write("\n")
-                faceIndex += len(object[0])
+                faceIndex += len(verts)
 
     except Exception as e:
         print e
