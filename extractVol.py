@@ -29,7 +29,7 @@ for importFilename in importFilenames:
         nextIndex = rawData.find("\\\0", offset)
         while nextIndex != -1:
             length = nextIndex - offset
-            if length <= 0 or length > 5:
+            if length <= 0 or length > 8:
                 break
             folderFmt = "<" + str(length) + "s"
             (folderName, ) = struct.unpack_from(folderFmt, rawData, offset)
