@@ -18,10 +18,11 @@ for importFilename in importFilenames:
         offset = 0
         objectFmt = "<4L3L2L"
         primitiveFmt = "<6H12B"
+        primitiveFmt2 = "<20B"
+        primitiveFmt3 = "<24B"
         vertexFmt = "<4h"
         normalFmt = "<4h"
         (fileHeader, fileLength, dataHeader, num1, num2, tmdHeader, tmdLength) = struct.unpack_from(bndHeaderFmt, rawData, offset)
-        print (tmdHeader, tmdLength + struct.calcsize(bndHeaderFmt))
         offset += struct.calcsize(bndHeaderFmt)
         objects = []
         for i in range(1):
@@ -39,17 +40,20 @@ for importFilename in importFilenames:
                 verts.append(vert)
 
             offset = originalOffset + topNormal
-            print numNormals
             for x in range(numNormals):
                 normal = struct.unpack_from(normalFmt, rawData, offset)
                 offset += struct.calcsize(normalFmt)
                 normals.append(normal)
-            print numPrimitives
+            #offset += topPrimitive
+            remainingBytes = tmdLength - offset + topPrimitive
             for x in range(numPrimitives):
-                prim = struct.unpack_from(primitiveFmt, rawData, offset)
-                offset += struct.calcsize(primitiveFmt)
-                primitives.append(prim)
+                fmt = primitiveFmt2
+                if x > 2:
+                    fmt = primitiveFmt3
+                prim = struct.unpack_from(fmt, rawData, offset)
+                offset += struct.calcsize(fmt)
                 print prim
+                primitives.append(prim)
             objects.append((verts, normals, primitives))
         print offset
 
@@ -68,12 +72,6 @@ for importFilename in importFilenames:
                     shapeFile.write(str(polygon[1] + 1 + faceIndex) + " ")
                     shapeFile.write(str(polygon[2] + 1 + faceIndex) + " ")
                     shapeFile.write("\n")
-                    shapeFile.write("\tf ")
-                    shapeFile.write(str(polygon[1] + 1 + faceIndex) + " ")
-                    shapeFile.write(str(polygon[2] + 1 + faceIndex) + " ")
-                    shapeFile.write(str(polygon[3] + 1 + faceIndex) + " ")
-                    shapeFile.write("\n")
-
 
 
                 faceIndex += len(object[0])
