@@ -22,7 +22,7 @@ I will document each game over time, however here are additional "VOL" file form
 * RMF + 001 + 002 + etc
     * Red Baron
     * A-10 Tank Killer 1.5
-    * Nova 7
+    * Nova 9
 * DYN
     * Aces of Europe
     * Aces of the Deep
