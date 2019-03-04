@@ -59,16 +59,15 @@ for importFilename in importFilenames:
     	    os.makedirs(destDir)
 
         for index, file in enumerate(files):
-            if "DTS" in file[0]:
-                print "writing " + destDir + "/" + file[0]
-                with open(destDir + "/" + file[0],"w") as newFile:
-                        offset = file[1]
-                        nextOffset = len(rawData)
-                        if index + 1 < len(files):
-                            nextOffset = files[index + 1][1]
+            print "writing " + destDir + "/" + file[0]
+            with open(destDir + "/" + file[0],"w") as newFile:
+                    offset = file[1]
+                    nextOffset = len(rawData)
+                    if index + 1 < len(files):
+                        nextOffset = files[index + 1][1]
 
-                        newFileByteArray = bytearray(rawData[offset:nextOffset])
-                        newFile.write(newFileByteArray)
+                    newFileByteArray = bytearray(rawData[offset:nextOffset])
+                    newFile.write(newFileByteArray)
 
 
     except Exception as e:
