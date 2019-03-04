@@ -19,7 +19,7 @@ Here is a list of games which use the 3Space engine: http://sierrachest.com/inde
 However, the file formats vary between all of them.
 
 I will document each game over time, however here are additional "VOL" file formats I have discovered and their related games:
-* BMF + 001 + 002 + etc
+* RMF + 001 + 002 + etc
     * Red Baron
     * A-10 Tank Killer 1.5
     * Nova 7
