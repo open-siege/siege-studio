@@ -58,23 +58,18 @@ for importFilename in importFilenames:
         if not os.path.exists(destDir):
     	    os.makedirs(destDir)
 
-        for folder in folders:
-            newFolder = destDir + "/" + folder
-            folderUpper = "." + folder.upper()
-            for index, file in enumerate(files):
-                if folderUpper in file[0]:
-                    if not os.path.exists(newFolder):
-                        print "making " + newFolder
-                        os.makedirs(newFolder)
-                    print "writing " + newFolder + "/" + file[0]
-                    with open(newFolder + "/" + file[0],"w") as newFile:
-                            offset = file[1]
-                            nextOffset = len(rawData)
-                            if index + 1 < len(files):
-                                nextOffset = files[index + 1][1]
+        for index, file in enumerate(files):
+            if "DTS" in file[0]:
+                print "writing " + destDir + "/" + file[0]
+                with open(destDir + "/" + file[0],"w") as newFile:
+                        offset = file[1]
+                        nextOffset = len(rawData)
+                        if index + 1 < len(files):
+                            nextOffset = files[index + 1][1]
 
-                            newFileByteArray = bytearray(rawData[offset:nextOffset])
-                            newFile.write(newFileByteArray)
+                        newFileByteArray = bytearray(rawData[offset:nextOffset])
+                        newFile.write(newFileByteArray)
+
 
     except Exception as e:
         print e
