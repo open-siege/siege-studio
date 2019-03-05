@@ -29,6 +29,8 @@ for importFilename in importFilenames:
         archiveNames = []
         for i in range(header[2]):
             filenameIndex = rawData.find(destDirLower, offset)
+            if filenameIndex == -1:
+                filenameIndex = rawData.find(destDir, offset)
             filenameEndIndex = rawData.find(".", filenameIndex) + sizeOfExtension
             archiveNames.append(rawData[filenameIndex:filenameEndIndex])
             offset = filenameEndIndex + 1

@@ -9,7 +9,6 @@ filenameFmt = "<13sL"
 
 def getFileinfo(rawData, offset):
     firstFile = struct.unpack_from(filenameFmt, rawData, offset)
-    print firstFile
     offset += struct.calcsize(filenameFmt)
     files = []
     currentFile = firstFile
