@@ -24,8 +24,8 @@ I will document each game over time, however here are additional "VOL" file form
     * A-10 Tank Killer 1.5
     * Nova 9
 * DYN
-    * Aces of Europe
-    * Aces of the Deep
+    * Aces of the Pacific
+    * Aces over Europe
 
 Soon there will be extractBmf.py and extractDyn.py.
 
