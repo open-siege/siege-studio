@@ -46,8 +46,8 @@ for importFilename in importFilenames:
             raise ValueError("Could not find first file to determine first offset")
         files = []
         currentFile = firstFile
-        files.append(currentFile)
-        for i in range(98):
+        files.append((currentFile[0], offset, currentFile[1]))
+        while offset < len(rawData):
             offset += currentFile[-1]
             if offset + struct.calcsize(filenameFmt) > len(rawData):
                 break
@@ -56,11 +56,19 @@ for importFilename in importFilenames:
             if (offset + struct.calcsize(filenameFmt)) >= len(rawData):
                 break
             currentFile = struct.unpack_from(filenameFmt, rawData, offset)
-            files.append(currentFile)
             offset += struct.calcsize(filenameFmt)
+            files.append((currentFile[0], offset, currentFile[1]))
 
-        for file in files:
-            print file
+        if not os.path.exists(destDir):
+    	    os.makedirs(destDir)
+
+        for index, file in enumerate(files):
+            filename, fileOffset, fileLength = file
+            filename = filename.split("\0")[0]
+            print "writing " + destDir + "/" + filename
+            with open(destDir + "/" + filename,"w") as newFile:
+                    newFileByteArray = bytearray(rawData[fileOffset:fileOffset + fileLength])
+                    newFile.write(newFileByteArray)
 
     except Exception as e:
         print e
