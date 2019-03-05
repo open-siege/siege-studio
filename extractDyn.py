@@ -2,8 +2,9 @@ import sys
 import json
 import struct
 import glob
-
 import os
+
+import processFiles
 
 importFilenames = sys.argv[1:]
 
@@ -39,25 +40,9 @@ for importFilename in importFilenames:
                 index -= 1
 
             offset = index
-            firstFile = struct.unpack_from(filenameFmt, rawData, offset)
-            offset += struct.calcsize(filenameFmt)
+            break
 
-        if firstFile is None:
-            raise ValueError("Could not find first file to determine first offset")
-        files = []
-        currentFile = firstFile
-        files.append((currentFile[0], offset, currentFile[1]))
-        while offset < len(rawData):
-            offset += currentFile[-1]
-            if offset + struct.calcsize(filenameFmt) > len(rawData):
-                break
-            while rawData[offset] == "\0":
-                offset += 1
-            if (offset + struct.calcsize(filenameFmt)) >= len(rawData):
-                break
-            currentFile = struct.unpack_from(filenameFmt, rawData, offset)
-            offset += struct.calcsize(filenameFmt)
-            files.append((currentFile[0], offset, currentFile[1]))
+        files = processFiles.getFileinfo(rawData, offset)
 
         if not os.path.exists(destDir):
     	    os.makedirs(destDir)
