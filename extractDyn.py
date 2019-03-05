@@ -34,12 +34,11 @@ for importFilename in importFilenames:
                 firstFileOffset = firstFileIndex + 4
                 firstFileIndex = -1
                 continue
-            endOfFileIndex = firstFileIndex + 4 + 1
-            while rawData[endOfFileIndex] == "\0":
-                endOfFileIndex += 1
-            endOfFileIndex += struct.calcsize("<L")
-            startOfFileIndex = endOfFileIndex - struct.calcsize(filenameFmt)
-            offset = startOfFileIndex
+            index = firstFileIndex - 1
+            while ord(rawData[index - 1]) >= ord("0") and ord(rawData[index - 1]) <= ord("z"):
+                index -= 1
+
+            offset = index
             firstFile = struct.unpack_from(filenameFmt, rawData, offset)
             offset += struct.calcsize(filenameFmt)
 
