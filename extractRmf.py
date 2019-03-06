@@ -16,7 +16,10 @@ for importFilename in importFilenames:
             rawData = input_fd.read()
 
         destDir = importFilename.replace(".rmf", "").replace(".RMF", "")
-        destDirLower = destDir.lower()
+        searchName = destDir.split("/")[-1].split("\\")[-1]
+        searchNameLower = searchName.lower()
+        searchDir = destDir.replace(searchName, "")
+
         sizeOfExtension = 4
         offset = 0
         headerFmt = "<3H"
@@ -28,20 +31,22 @@ for importFilename in importFilenames:
             raise ValueError("RMF file header not correct")
         archiveNames = []
         for i in range(header[2]):
-            filenameIndex = rawData.find(destDirLower, offset)
+            filenameIndex = rawData.find(searchNameLower, offset)
             if filenameIndex == -1:
-                filenameIndex = rawData.find(destDir, offset)
+                filenameIndex = rawData.find(searchName, offset)
             filenameEndIndex = rawData.find(".", filenameIndex) + sizeOfExtension
             archiveNames.append(rawData[filenameIndex:filenameEndIndex])
             offset = filenameEndIndex + 1
         for name in archiveNames:
             offset = 0
-            print "reading " + name
-            if os.path.isfile(name) is False:
+
+            if os.path.isfile(searchDir + name) is False:
                 name = name.upper()
 
-            if os.path.isfile(name) is False:
+            if os.path.isfile(searchDir + name) is False:
                 continue
+            name = searchDir + name
+            print "reading " + name
             with open(name, "rb") as input_fd:
                 rawData = input_fd.read()
             print "getting file info for " + name
