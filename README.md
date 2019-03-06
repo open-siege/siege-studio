@@ -13,22 +13,26 @@ Currently, there are two scripts:
     * It does not extract VOL files yet, but can read file names, of the following games:
         * Red Baron 3D (probably Red Baron 2 as well)
         * Silent Thunder - A10 Tank Killer 2
+* extractDyn.py
+    * It extracts DYN files from the following games:
+        * Aces of the Pacific
+        * Aces over Europe + Expansion
+        * Aces of the Deep + Expansion
+* extractRmf.py
+    * It extracts RMF files with related 00x files from the following games:
+        * Red Baron
+        * A-10 Tank-Killer 1.5
+        * Nova 9
 
 Here is a list of games which use the 3Space engine: http://sierrachest.com/index.php?a=engines&id=30
 
 However, the file formats vary between all of them.
 
-I will document each game over time, however here are additional "VOL" file formats I have discovered and their related games:
-* RMF + 001 + 002 + etc
-    * Red Baron
-    * A-10 Tank Killer 1.5
-    * Nova 9
-* DYN
-    * Aces of the Pacific
-    * Aces over Europe
+All games which use RMF, and all which use DYN (except for Aces of the Deep) seem to use a virtual machine with bytecode stored in OVL files. Stellar 7, while not having any archive files, does have an OVL file called STELLAR.RES. Further research will be made into that format, as well as all the other game formats used.
 
-Soon there will be extractBmf.py and extractDyn.py.
+DYN files seem to be very much the same in structure as the RMF and 001 + 002 + 00x combinations, except being unified into one file format.
 
+DTS files only really show up in the Metaltech games, Aces of the Deep then all the Windows based games. It appears as if TBL was the previous format, but investigation still needs to be made.
 
 All of the DTS files from the Metaltech games can be converted with the convert_dts script I found, but the DTS files in the shapes.VOL file in Aces of the Deep do not convert with the script (https://github.com/booto/convert_dts).
 
