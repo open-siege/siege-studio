@@ -26,7 +26,7 @@ for importFilename in importFilenames:
         firstFileIndex = -1
         offset += struct.calcsize(headerFmt)
         firstFileOffset = offset
-        validTypes = ["OVL", "FMD", "DAT"]
+        validTypes = ["OVL", "FMD", "DAT", "BMP", "PAL", "TBL"]
         firstFile = None
         while firstFileIndex == -1:
             firstFileIndex = rawData.find(".", firstFileOffset)
