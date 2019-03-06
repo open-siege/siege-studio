@@ -16,8 +16,13 @@ for importFilename in importFilenames:
 
         destDir = importFilename.replace(".vol", "").replace(".VOL", "")
         offset = 0
+        volIndexHeaderFmt = "<4sL"
+        volIndexHeaderTag = "voli"
         headerFmt = "<4sL4sL4sLL"
         filenameFmt = "<13s"
+        fileHeaderFmt = "<4s4s"
+        itemFmt = "<7L"
+
         header = struct.unpack_from(headerFmt, rawData, offset)
         if "VOL" not in header[0]:
             raise ValueError("File header is not VOL as expected")
@@ -34,27 +39,54 @@ for importFilename in importFilenames:
         nextIndex = rawData.find("\0", offset)
         while nextIndex != -1:
             length = nextIndex - offset
-            if length <= 0 or length > 13:
+            if length <= 0 or length > 15:
                 break
             fileFmt = "<" + str(length) + "s"
             (filename, ) = struct.unpack_from(fileFmt, rawData, offset)
             files.append(filename)
-            print filename
             offset += struct.calcsize(fileFmt) + 1
             nextIndex = rawData.find("\0", offset)
-        nextFile = rawData.find("VBLK", offset)
-        filecount = 0
-        while nextFile != -1:
-            if len(files) > filecount:
-                if "dts" in files[filecount]:
-                    print files[filecount]
-                    nextFile = rawData.find("VBLK", nextFile + 5)
-                    filecount += 1
-                    print rawData[nextFile + 4]
-                    continue
-            filecount += 1
-            nextFile = rawData.find("VBLK", nextFile + 5)
-        print (filecount, len(files))
+        offset = rawData.find(volIndexHeaderTag, offset)
+        (volIndexHeader, unk1) = struct.unpack_from(volIndexHeaderFmt, rawData, offset)
+
+        if volIndexHeader != volIndexHeaderTag:
+            raise ValueError("File header does not have voli as expected")
+        offset += struct.calcsize(volIndexHeaderFmt)
+        totalLength = len(files)
+        headerLength = totalLength / 2
+        isEven = totalLength % 2 == 0
+        fileInfo = []
+        nameIndex = 0
+        for index in range(headerLength):
+            info = struct.unpack_from(itemFmt, rawData, offset)
+            fileOffset = info[1]
+            fileLength = info[2]
+            fileInfo.append((files[nameIndex], fileOffset))
+            if nameIndex + 1 < totalLength:
+                nextFileOffset = fileOffset + fileLength + struct.calcsize(fileHeaderFmt)
+                fileInfo.append((files[nameIndex + 1], nextFileOffset))
+            nameIndex += 2
+            offset += struct.calcsize(itemFmt)
+        if not os.path.exists(destDir):
+    	    os.makedirs(destDir)
+        for index, info in enumerate(fileInfo):
+
+            if index > 10:
+                break
+            offset = info[1]
+            (fileHeader, fileLengthRaw) = struct.unpack_from(fileHeaderFmt, rawData, offset)
+            (fileLength,) = struct.unpack("<L", fileLengthRaw[:-1] + "\0")
+            offset += struct.calcsize(fileHeaderFmt)
+            if fileHeader == "VBLK":
+                print "writing " + destDir + "/" + info[0] + " " + str(fileLength)
+                endOffset = len(rawData)
+                if index + 1 < len(fileInfo):
+                    endOffset = fileInfo[index + 1][1]
+                print (offset - struct.calcsize(fileHeaderFmt))
+                print (endOffset, offset + fileLength)
+                with open(destDir + "/" + info[0],"w") as shapeFile:
+        		        newFileByteArray = bytearray(rawData[offset:endOffset])
+        		        shapeFile.write(newFileByteArray)
 
 
     except Exception as e:
