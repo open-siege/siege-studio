@@ -1,5 +1,7 @@
 # 3Space VOL Extractor
 
+** Work will resume in May, with the other game extractors ** 
+
 This is a set of Python scripts designed to extract VOL files by the 3Space Engine, used in multiple Dynamix simulation games.
 
 Currently, there are two scripts:
