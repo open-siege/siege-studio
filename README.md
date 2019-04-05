@@ -30,7 +30,7 @@ Here is a list of games which use the 3Space engine: http://sierrachest.com/inde
 
 However, the file formats vary between all of them.
 
-All games which use RMF, and all which use DYN (except for Aces of the Deep) seem to use a virtual machine with bytecode stored in OVL files. Stellar 7, while not having any archive files, does have an OVL file called STELLAR.RES. Further research will be made into that format, as well as all the other game formats used.
+All games which use RMF, and all which use DYN (except for Aces of the Deep) seem to use OVL files, which are executable overlays, which replace parts of executing code during runtime to reduce how much memory is used by the game. Stellar 7, while not having any archive files, does have an OVL file called STELLAR.RES. Further research will be made into that format, as well as all the other game formats used.
 
 DYN files seem to be very much the same in structure as the RMF and 001 + 002 + 00x combinations, except being unified into one file format.
 
