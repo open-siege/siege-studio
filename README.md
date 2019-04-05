@@ -1,5 +1,7 @@
 # Darkstar DTS Converter
 
+** Work will resume in June, with the other game model converters ** 
+
 WARNING - Still being actively developed - It can convert models to OBJ, but still needs additional work.
 
 This is a Python script designed to convert DTS files from the Darkstar Engine, used in Starsige and Starsiege: Tribes, into a more modern format.
