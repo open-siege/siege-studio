@@ -1,5 +1,7 @@
 # Colony Wars BND Converter
 
+** Work will resume in June, with the other game model converters ** 
+
 WARNING - Still being actively developed - It can convert models to OBJ, but still needs major additional work.
 
 This is a Python script designed to convert BND files from the Colony Wars games into a more compatible format.
