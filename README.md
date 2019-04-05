@@ -1,5 +1,7 @@
 # Darkstar VOL Extractor
 
+** Work will resume in May, with the other game extractors ** 
+
 This is a Python script designed to extract VOL files by the Darkstar Engine, used in Starsige and Starsiege: Tribes.
 
 Currently, the script can extract all files out of a VOL without any decompression.
