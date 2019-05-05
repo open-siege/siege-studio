@@ -1,5 +1,7 @@
 # Colony Wars RSC extractor
 
+** Work will resume in May, with the other game extractors ** 
+
 This is a Python script designed to extract RSC files used in Colony Wars and Colony Wars: Vengeance. The RSC file in Colony Wars: Red Sun is not yet supported as it uses some form of compression.
 
 Currently, the script can extract all files out of a RSC without any further modification.
