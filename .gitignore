@@ -1,0 +1,12 @@
+*.exe
+*.dll
+*.dts
+*.bmp
+*.vol
+*.ai
+*.dml
+*.dis
+*.dil
+*.dig
+*.dat
+extracted/
