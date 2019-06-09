@@ -12,7 +12,7 @@ compressionTypes = {
     3: "lzh"
 }
 
-FileInfo = namedtuple("FileInfo", "compression_type start_offset end_offset length filename")
+FileInfo = namedtuple("FileInfo", "filename start_offset end_offset size compression_type")
 
 vol = "VOL".encode("utf-8")
 vols = "vols".encode("utf-8")
@@ -54,6 +54,8 @@ def get_file_names(raw_data):
 
 
 def get_file_metadata(raw_data):
+    fileFmt = "<4s4s"
+    results = []
     (filenames, offset) = get_file_names(raw_data)
     item_header_fmt = "<4sL"
     item_fmt = "<4LB"
@@ -71,28 +73,35 @@ def get_file_metadata(raw_data):
         file_info.append(item)
         offset += struct.calcsize(item_fmt)
 
-    return file_info, offset
-
-
-def write_files(raw_data, dest_dir, file_info, filenames):
-    fileFmt = "<4s4s"
     for index, info in enumerate(file_info):
-        offset = info[2]
+        file_offset = info[2]
+        file_size = info[3]
+        compression_type = info[4]
         filename = filenames[index]
-        (fileHeader, fileLengthRaw) = struct.unpack_from(fileFmt, raw_data, offset)
+        (fileHeader, fileLengthRaw) = struct.unpack_from(fileFmt, raw_data, file_offset)
         # turning the random data at the end of the file length into \0 to parse correctly
         (fileLength,) = struct.unpack("<L", fileLengthRaw[:-1] + eos)
 
         if (fileLength != info[3]):
             print("File length mismatch for", filename, "Footer value", info[3], "Header value", fileLength)
+        file_offset += struct.calcsize(fileFmt)
 
-
-        offset += struct.calcsize(fileFmt)
+        end_offset = file_offset + file_size
         if fileHeader == vblk:
-            print("writing " + dest_dir + "/" + filename)
-            with open(dest_dir + "/" + filename, "wb") as shapeFile:
-                new_file_byte_array = bytearray(raw_data[offset:offset + info[3]])
-                shapeFile.write(new_file_byte_array)
+            results.append(
+                FileInfo._make((filename, file_offset, end_offset, file_size, compressionTypes[compression_type])))
+    return results, offset
+
+
+def write_files(raw_data, dest_dir, file_info):
+    for index, info in enumerate(file_info):
+        offset = info.start_offset
+        end_offset = info.end_offset
+        filename = info.filename
+        with open(dest_dir + "/" + filename, "wb") as shapeFile:
+            print("writing " + dest_dir + "/" + filename + ", compression type:", info.compression_type)
+            new_file_byte_array = bytearray(raw_data[offset:end_offset])
+            shapeFile.write(new_file_byte_array)
 
 
 def extract_archive(import_filename):
@@ -101,12 +110,11 @@ def extract_archive(import_filename):
 
     dest_dir = import_filename.replace(".vol", "").replace(".VOL", "")
 
-    (files, offset) = get_file_names(raw_data)
     (fileInfo, offset) = get_file_metadata(raw_data)
 
     if not os.path.exists(dest_dir):
         os.makedirs(dest_dir)
-    write_files(raw_data, dest_dir, fileInfo, files)
+    write_files(raw_data, dest_dir, fileInfo)
 
 
 for importFilename in importFilenames:
