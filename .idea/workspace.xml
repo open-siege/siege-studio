@@ -2,9 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="fc31aab8-4514-45f9-85bd-67d33ebeb1f2" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/unvol.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/extract-vol.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/unvol.py" beforeDir="false" afterPath="$PROJECT_DIR$/unvol.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -17,8 +16,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/unvol.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="340">
-              <caret line="35" column="47" selection-start-line="35" selection-start-column="47" selection-end-line="35" selection-end-column="47" />
+            <state relative-caret-position="221">
+              <caret line="13" column="21" selection-start-line="13" selection-start-column="21" selection-end-line="13" selection-end-column="21" />
               <folding>
                 <element signature="e#0#10#0" expanded="true" />
               </folding>
@@ -52,6 +51,7 @@
       <list>
         <option value="$PROJECT_DIR$/.gitignore" />
         <option value="$PROJECT_DIR$/extract-vol.py" />
+        <option value="$PROJECT_DIR$/extract-file.py" />
         <option value="$PROJECT_DIR$/unvol.py" />
       </list>
     </option>
@@ -117,7 +117,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/extract-vol.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/unvol.py" />
       <option name="PARAMETERS" value="gameObjects.vol darkstar.vol scripts.vol" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -207,10 +207,17 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/extract-file.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="17">
+          <caret line="1" selection-start-line="1" selection-end-line="1" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/unvol.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="340">
-          <caret line="35" column="47" selection-start-line="35" selection-start-column="47" selection-end-line="35" selection-end-column="47" />
+        <state relative-caret-position="221">
+          <caret line="13" column="21" selection-start-line="13" selection-start-column="21" selection-end-line="13" selection-end-column="21" />
           <folding>
             <element signature="e#0#10#0" expanded="true" />
           </folding>
