@@ -1,6 +1,5 @@
 import sys
 import struct
-import os
 from collections import namedtuple
 
 importFilenames = sys.argv[1:]
@@ -90,37 +89,4 @@ def get_file_metadata(raw_data):
         if fileHeader == vblk:
             results.append(
                 FileInfo._make((filename, file_offset, end_offset, file_size, compressionTypes[compression_type])))
-    return results, offset
-
-
-def write_files(raw_data, dest_dir, file_info):
-    for index, info in enumerate(file_info):
-        offset = info.start_offset
-        end_offset = info.end_offset
-        filename = info.filename
-        with open(dest_dir + "/" + filename, "wb") as shapeFile:
-            print("writing " + dest_dir + "/" + filename + ", compression type:", info.compression_type)
-            new_file_byte_array = bytearray(raw_data[offset:end_offset])
-            shapeFile.write(new_file_byte_array)
-
-
-def extract_archive(import_filename):
-    with open(import_filename, "rb") as input_fd:
-        raw_data = input_fd.read()
-
-    dest_dir = import_filename.replace(".vol", "").replace(".VOL", "")
-
-    (fileInfo, offset) = get_file_metadata(raw_data)
-
-    if not os.path.exists(dest_dir):
-        os.makedirs(dest_dir)
-    write_files(raw_data, dest_dir, fileInfo)
-
-
-for importFilename in importFilenames:
-
-    print("reading " + importFilename)
-    try:
-        extract_archive(importFilename)
-    except Exception as e:
-        print(e)
+    return results
