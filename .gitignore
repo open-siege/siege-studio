@@ -31,3 +31,4 @@
 *.PFT
 *.PAL
 extracted/
+.idea/
