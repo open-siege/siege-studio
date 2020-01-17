@@ -13,7 +13,7 @@ def point_rotation_by_quaternion(point,q):
 def writeObject(object, normalTable, shapeFile, faceOffset):
     magicValue = 32767
     expandedVertices = []
-    shapeFile.write("o " + object.name + "\r\n")
+    shapeFile.write("o " + str(object.name) + "\r\n")
 
     someTransform = object.node.defaultTransform
     someMesh = object.mesh
@@ -78,11 +78,11 @@ def writeWriteNode(rootNode, normalTable, shapeFile, faceOffset):
     object = rootNode.object["instance"]
     if object is not None:
         faceOffset = writeObject(object, normalTable, shapeFile, faceOffset)
-    for key, node in rootNode.childNodes.iteritems():
+    for key, node in rootNode.childNodes.items():
         object = node.object["instance"]
         if object is not None:
             faceOffset = writeObject(object, normalTable, shapeFile, faceOffset)
-        for key, childNode in node.childNodes.iteritems():
+        for key, childNode in node.childNodes.items():
             faceOffset = writeWriteNode(childNode, normalTable, shapeFile, faceOffset)
     return faceOffset
 

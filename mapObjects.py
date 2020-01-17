@@ -23,7 +23,7 @@ def mapObjects(shape, shouldFail):
             if shouldFail:
                 raise ValueError(error)
             else:
-                print error
+                print(error)
 
         if keyframe.fKeyValue < len(shape.transforms) - 1:
             someTransform = shape.transforms[keyframe.fKeyValue]
@@ -31,7 +31,7 @@ def mapObjects(shape, shouldFail):
 
     for sequence in shape.sequences:
         sequenceName = shape.names[sequence.fName].name
-        sequenceName = sequenceName.split("\0")[0]
+        sequenceName = sequenceName.split(b"\0")[0]
         frameTrigs = []
         i = 0
         while i < sequence.fNumFrameTriggers:
@@ -49,7 +49,7 @@ def mapObjects(shape, shouldFail):
         if shouldFail:
             raise ValueError(error)
         else:
-            print error
+            print(error)
     for subSequence in shape.subSequences:
         sequence = mappedSequences[subSequence.fSequenceIndex]
         keyFrams = []
@@ -66,7 +66,7 @@ def mapObjects(shape, shouldFail):
 
     for node in shape.nodes:
         nodeName = shape.names[node.fName].name
-        nodeName = nodeName.split("\0")[0]
+        nodeName = nodeName.split(b"\0")[0]
         someTransform = shape.transforms[node.fDefaultTransform]
         seqs = {}
         subSeqs = []
@@ -95,7 +95,7 @@ def mapObjects(shape, shouldFail):
     for object in shape.objects:
         someNode = mappedNodes[object.fNodeIndex]
         someObjectName = shape.names[object.fName].name
-        someObjectName = someObjectName.split("\0")[0]
+        someObjectName = someObjectName.split(b"\0")[0]
         someMesh = shape.meshes[object.fMeshIndex]
         seqs = {}
         subSeqs = []
@@ -113,7 +113,7 @@ def mapObjects(shape, shouldFail):
         mappedObjects.append(finalObject)
 
     if len(mappedNodes) < len(mappedObjects):
-        print ("The number of nodes is less than the number of objects", len(mappedNodes), len(mappedObjects))
+        print(("The number of nodes is less than the number of objects", len(mappedNodes), len(mappedObjects)))
     for detail in shape.details:
         someNode = mappedNodes[detail.fRootNodeIndex]
         if len(mappedNodes) < len(mappedObjects):
