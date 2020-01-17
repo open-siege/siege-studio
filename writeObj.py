@@ -10,10 +10,10 @@ def point_rotation_by_quaternion(point,q):
     q_conj = [q[0],-1*q[1],-1*q[2],-1*q[3]]
     return quaternion_mult(quaternion_mult(q,r),q_conj)[1:]
 
-def writeObject(object, normalTable, shapeFile, faceOffset):
+def writeObject(object, normalTable, shapeFile, faceOffset, textureOffset):
     magicValue = 32767
     expandedVertices = []
-    shapeFile.write("o " + object.name.decode("utf-8") + "\r\n")
+    shapeFile.write("o " + object.name.decode("utf-8") + "\n")
 
     someTransform = object.node.defaultTransform
     someMesh = object.mesh
@@ -60,32 +60,41 @@ def writeObject(object, normalTable, shapeFile, faceOffset):
         newVert = (vert.x * scaleX + originX, vert.y * scaleY + originY, vert.z * scaleZ + originZ, normalTable[vert.normal])
         expandedVertices.append(newVert)
     for vert in expandedVertices:
-            shapeFile.write("\tv " + str(vert[0]) + " " + str(vert[1]) + " " + str(vert[2]) + "\r\n")
+            shapeFile.write("\tv " + str(vert[0]) + " " + str(vert[1]) + " " + str(vert[2]) + "\n")
 
     for vert in expandedVertices:
-            shapeFile.write("\tvn " + str(vert[3][0]) + " " + str(vert[3][1]) + " " + str(vert[3][2]) + "\r\n")
+            shapeFile.write("\tvn " + str(vert[3][0]) + " " + str(vert[3][1]) + " " + str(vert[3][2]) + "\n")
+
+
+    for textureVert in someMesh.textureVertices:
+            shapeFile.write("\tvt " + str(textureVert.x) + " " + str(textureVert.y) + "\n")
 
     for face in someMesh.faces:
         firstVert = someMesh.frames[0].firstVert
-        idx0 = face.vi1 + firstVert + faceOffset
-        idx1 = face.vi2 + firstVert + faceOffset
-        idx2 = face.vi3 + firstVert + faceOffset
-        shapeFile.write("\tf " + str(idx0 + 1) + " " + str(idx1 + 1) + " " + str(idx2 + 1) + "\r\n")
-    faceOffset += len(expandedVertices)
-    return faceOffset
+        idx1 = face.vi1 + firstVert + faceOffset
+        idx2 = face.vi2 + firstVert + faceOffset
+        idx3 = face.vi3 + firstVert + faceOffset
 
-def writeNode(rootNode, normalTable, shapeFile, faceOffset):
+        face1 = str(idx1 + 1) + "/" + str(face.ti1 + textureOffset + 1) + "/" + str(idx1 + 1)
+        face2 = str(idx2 + 1) + "/" + str(face.ti2 + textureOffset + 1) + "/" + str(idx2 + 1)
+        face3 = str(idx3 + 1) + "/" + str(face.ti3 + textureOffset + 1) + "/" + str(idx3 + 1)
+
+        shapeFile.write("\tf " + face1 + " " + face2 + " " + face3 + " " + "\n")
+    faceOffset += len(expandedVertices)
+    textureOffset += len(someMesh.textureVertices)
+    return (faceOffset, textureOffset)
+
+def writeNode(rootNode, normalTable, shapeFile, faceOffset, textureOffset):
     object = rootNode.object["instance"]
     if object is not None:
-        faceOffset = writeObject(object, normalTable, shapeFile, faceOffset)
+        (faceOffset, textureOffset) = writeObject(object, normalTable, shapeFile, faceOffset, textureOffset)
     for key, node in rootNode.childNodes.items():
         object = node.object["instance"]
         if object is not None:
-            faceOffset = writeObject(object, normalTable, shapeFile, faceOffset)
+            (faceOffset, textureOffset) = writeObject(object, normalTable, shapeFile, faceOffset, textureOffset)
         for key, childNode in node.childNodes.items():
-            faceOffset = writeNode(childNode, normalTable, shapeFile, faceOffset)
-    return faceOffset
+            (faceOffset, textureOffset) = writeNode(childNode, normalTable, shapeFile, faceOffset, textureOffset)
+    return (faceOffset, textureOffset)
 
 def writeObj(rootNode, normalTable, shapeFile):
-    faceOffset = 0
-    writeNode(rootNode, normalTable, shapeFile, faceOffset)
+    writeNode(rootNode, normalTable, shapeFile, 0, 0)
