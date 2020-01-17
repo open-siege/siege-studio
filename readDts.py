@@ -23,10 +23,11 @@ def readInstance(structs, rawData, offset):
 
 def readData(structs, rawData, offset, objectHeader, memberName):
     objVersion = str(objectHeader.version)
-    if objVersion not in structs["structures"][objectHeader.className]["versions"]:
-        raise ValueError(objectHeader.className + " version " + objVersion + " not currently supported")
+    className = objectHeader.className.decode("utf-8")
+    if objVersion not in structs["structures"][className]["versions"]:
+        raise ValueError(objectHeader.className.decode("utf-8") + " version " + objVersion.decode("utf-8") + " not currently supported")
 
-    ShapeHeaderStruct = structs["structures"][objectHeader.className]["versions"][str(objectHeader.version)]["members"][memberName]
+    ShapeHeaderStruct = structs["structures"][className]["versions"][objVersion]["members"][memberName]
     ShapeHeader = namedtuple(memberName, ShapeHeaderStruct["keys"])
     result = ShapeHeader._make(struct.unpack_from(ShapeHeaderStruct["format"], rawData, offset))
     offset += struct.calcsize(ShapeHeaderStruct["format"])
