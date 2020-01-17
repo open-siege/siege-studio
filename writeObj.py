@@ -79,7 +79,7 @@ def writeObject(object, normalTable, shapeFile, faceOffset, textureOffset):
         face2 = str(idx2 + 1) + "/" + str(face.ti2 + textureOffset + 1) + "/" + str(idx2 + 1)
         face3 = str(idx3 + 1) + "/" + str(face.ti3 + textureOffset + 1) + "/" + str(idx3 + 1)
 
-        shapeFile.write("\tf " + face1 + " " + face2 + " " + face3 + " " + "\n")
+        shapeFile.write("\tf " + face3 + " " + face2 + " " + face1 + " " + "\n")
     faceOffset += len(expandedVertices)
     textureOffset += len(someMesh.textureVertices)
     return (faceOffset, textureOffset)
