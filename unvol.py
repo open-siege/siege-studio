@@ -4,12 +4,9 @@ import volinfo
 
 importFilenames = sys.argv[1:]
 
-
-
-
 for importFilename in importFilenames:
 
-    print("reading " + importFilename)
+    print("processing " + importFilename)
     try:
         extract_file.extract_archive(importFilename, volinfo)
     except Exception as e:
