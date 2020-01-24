@@ -4,9 +4,6 @@ import volinfo
 
 importFilenames = sys.argv[1:]
 
-
-
-
 for importFilename in importFilenames:
 
     print("reading " + importFilename)
