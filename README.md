@@ -2,7 +2,7 @@
 
 WARNING - Still being actively developed - It can convert models to OBJ, but still needs additional work.
 
-This is a Python 2.7 script designed to convert DTS files from the Darkstar Engine, used in Starsige and Starsiege: Tribes, into a more modern format. Python 3 support is coming.
+This is a Python 3 script designed to convert DTS files from the Darkstar Engine, used in Starsige and Starsiege: Tribes, into a more modern format. Python 3 support is coming.
 
 Currently the script can export a DTS (from a default keyframe) to an OBJ file.
 
