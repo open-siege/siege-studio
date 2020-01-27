@@ -13,14 +13,15 @@ compressionTypes = {
 
 FileInfo = namedtuple("FileInfo", "filename start_offset end_offset size compression_type")
 
-vol = "VOL".encode("utf-8")
-vols = "vols".encode("utf-8")
-voli = "voli".encode("utf-8")
-vblk = "VBLK".encode("utf-8")
-eos = "\0".encode("utf-8")
+vol = b"VOL"
+pvol = b"PVOL"
+vols = b"vols"
+voli = b"voli"
+vblk = b"VBLK"
+eos = b"\0"
 
 
-def git_file_list_offsets(raw_data):
+def get_file_list_offsets(raw_data):
     offset = 0
     header_fmt = "<4sL"
 
@@ -29,6 +30,10 @@ def git_file_list_offsets(raw_data):
 
     if vol not in header:
         raise ValueError("File header is not VOL as expected")
+
+    if header == pvol:
+        footer_fmt = "<4sL"
+
 
     offset = lengthUntilFooter
     footer = struct.unpack_from(footer_fmt, raw_data, offset)
@@ -43,7 +48,7 @@ def git_file_list_offsets(raw_data):
 
 
 def get_file_names(raw_data):
-    (offset, fileListEndIndex) = git_file_list_offsets(raw_data)
+    (offset, fileListEndIndex) = get_file_list_offsets(raw_data)
     filenames = []
     while offset < fileListEndIndex:
         end_index = raw_data.index(eos, offset)
