@@ -14,7 +14,13 @@ def write_files(import_filename, raw_data, dest_dir, file_info):
         else:
             print("using extract.exe to extract " + dest_dir + "/" + filename + ", compression type:", info.compression_type)
             subprocess.call(["extract.exe", import_filename, info.filename, dest_dir + "/" + filename])
-
+            with open(dest_dir + "/" + filename, "rb") as extractedFile:
+                raw_data = extractedFile.read()
+                if len(raw_data) != info.size:
+                    print("Removing garbage data from " + dest_dir + "/" + filename)
+                raw_data = raw_data[0:info.size]
+            with open(dest_dir + "/" + filename, "wb") as extractedFile:
+                extractedFile.write(raw_data)
 
 
 
