@@ -25,9 +25,6 @@ def write_files(import_filename, raw_data, dest_dir, file_info):
             with open(dest_dir + "/" + filename, "wb") as outputFile:
                 outputFile.write(bytearray(raw_data))
 
-
-
-
 def extract_archive(import_filename, archive_module):
     with open(import_filename, "rb") as input_fd:
         raw_data = input_fd.read()
