@@ -1,0 +1,1246 @@
+{
+	"sensors": [
+		{
+			"sensorId": 400,
+			"sweepTime": 2.0,
+			"mode": {
+				"active": {
+					"base": 0.5,
+					"range": 900,
+					"shutdown": -0.1,
+					"squat": -0.3,
+					"stop": -0.1,
+					"slow": 0.1,
+					"fast": 0.2,
+					"active": 0.4,
+					"camo": -2.0,
+					"jam": -0.5,
+					"shield": 0.0,
+					"tJam": 0.0
+				},
+				"passive": {
+					"base": 0.3,
+					"range": 500,
+					"shutdown": -0.3,
+					"squat": 0.0,
+					"stop": -0.2,
+					"slow": 0.2,
+					"fast": 0.4,
+					"active": 0.7,
+					"camo": -0.6,
+					"jam": 0.3,
+					"shield": 0.2,
+					"tJam": -0.6
+				}
+			},
+			"displayInfo": {
+				"shortName": {
+					"constantName": "IDSEN_HUM1",
+					"numericTag": "00302101",
+					"text": {
+						"en": "Basic"
+					}
+				},
+				"longName": {
+					"constantName": "IDSEN_HUM1_L",
+					"numericTag": "00302102",
+					"text": {
+						"en": "Basic Sensor"
+					}
+				},
+				"smallBmp": "huSensorS2_S.bmp",
+				"smallDisBmp": "huSensorS2_SD.bmp",
+				"largeBmp": "huSensorS2_L.bmp",
+				"largeDisBmp": "huSensorS2_LD.bmp",
+				"description": {
+					"constantName": "IDCSPEC_SEN_HUM1",
+					"numericTag": "00303151",
+					"text": {
+						"en": "MODE\t\t\tRANGE\t\tRESOLUTION\t\n<jl>Active\t\t\t900\t\t\t0.50\t\n<Jl>Passive\t\t\t500\t\t\t0.30\t\n<Jl>Sweep Time (sec)\t\t2.00\t"
+					}
+				}
+			},
+			"techInfo": {
+				"techLevel": 1,
+				"techBase": "human",
+				"combatValue": 131,
+				"mass": 1.0,
+				"mountPoint": "small",
+				"sizeDamage": 506
+			}
+		},
+		{
+			"sensorId": 401,
+			"sweepTime": 3.0,
+			"mode": {
+				"active": {
+					"base": 0.65,
+					"range": 1200,
+					"shutdown": -0.1,
+					"squat": -0.3,
+					"stop": -0.1,
+					"slow": 0.05,
+					"fast": 0.1,
+					"active": 0.4,
+					"camo": -2.0,
+					"jam": -0.4,
+					"shield": 0.0,
+					"tJam": 0.0
+				},
+				"passive": {
+					"base": 0.3,
+					"range": 500,
+					"shutdown": -0.5,
+					"squat": 0.0,
+					"stop": -0.2,
+					"slow": 0.1,
+					"fast": 0.2,
+					"active": 0.5,
+					"camo": -0.6,
+					"jam": 0.2,
+					"shield": 0.1,
+					"tJam": -0.4
+				}
+			},
+			"displayInfo": {
+				"shortName": {
+					"constantName": "IDSEN_HUM7",
+					"numericTag": "00302113",
+					"text": {
+						"en": "Ranger"
+					}
+				},
+				"longName": {
+					"constantName": "IDSEN_HUM7_L",
+					"numericTag": "00302114",
+					"text": {
+						"en": "Ranger Sensor"
+					}
+				},
+				"smallBmp": "huSensorL2_S.bmp",
+				"smallDisBmp": "huSensorL2_SD.bmp",
+				"largeBmp": "huSensorL2_L.bmp",
+				"largeDisBmp": "huSensorL2_LD.bmp",
+				"description": {
+					"constantName": "IDCSPEC_SEN_HUM2",
+					"numericTag": "00303152",
+					"text": {
+						"en": "MODE\t\t\tRANGE\t\tRESOLUTION\t\n<jl>Active\t\t\t1200\t\t\t0.65\t\n<Jl>Passive\t\t\t500\t\t\t0.30\t\n<Jl>Sweep Time (sec)\t\t3.00\t"
+					}
+				}
+			},
+			"techInfo": {
+				"techLevel": 3,
+				"techBase": "human",
+				"combatValue": 143,
+				"mass": 2.5,
+				"mountPoint": "small",
+				"sizeDamage": 1250
+			}
+		},
+		{
+			"sensorId": 408,
+			"sweepTime": 2.0,
+			"mode": {
+				"active": {
+					"base": 0.6,
+					"range": 1000,
+					"shutdown": -0.1,
+					"squat": -0.3,
+					"stop": -0.1,
+					"slow": 0.1,
+					"fast": 0.2,
+					"active": 0.4,
+					"camo": -2.0,
+					"jam": -0.4,
+					"shield": 0.0,
+					"tJam": 0.0
+				},
+				"passive": {
+					"base": 0.35,
+					"range": 700,
+					"shutdown": -0.5,
+					"squat": 0.0,
+					"stop": -0.2,
+					"slow": 0.2,
+					"fast": 0.3,
+					"active": 0.6,
+					"camo": -0.6,
+					"jam": 0.3,
+					"shield": 0.2,
+					"tJam": -0.4
+				}
+			},
+			"displayInfo": {
+				"shortName": {
+					"constantName": "IDSEN_HUM9",
+					"numericTag": "00302117",
+					"text": {
+						"en": "Standard"
+					}
+				},
+				"longName": {
+					"constantName": "IDSEN_HUM9_L",
+					"numericTag": "00302118",
+					"text": {
+						"en": "Standard Sensor"
+					}
+				},
+				"smallBmp": "huSensorM2_S.bmp",
+				"smallDisBmp": "huSensorM2_SD.bmp",
+				"largeBmp": "huSensorM2_L.bmp",
+				"largeDisBmp": "huSensorM2_LD.bmp",
+				"description": {
+					"constantName": "IDCSPEC_SEN_HUM3",
+					"numericTag": "00303153",
+					"text": {
+						"en": "MODE\t\t\tRANGE\t\tRESOLUTION\t\n<jl>Active\t\t\t1000\t\t\t0.60\t\n<Jl>Passive\t\t\t700\t\t\t0.35\t\n<Jl>Sweep Time (sec)\t\t2.00\t"
+					}
+				}
+			},
+			"techInfo": {
+				"techLevel": 2,
+				"techBase": "human",
+				"combatValue": 181,
+				"mass": 2.0,
+				"mountPoint": "small",
+				"sizeDamage": 1000
+			}
+		},
+		{
+			"sensorId": 409,
+			"sweepTime": 2.0,
+			"mode": {
+				"active": {
+					"base": 0.7,
+					"range": 1350,
+					"shutdown": -0.1,
+					"squat": -0.3,
+					"stop": -0.1,
+					"slow": 0.1,
+					"fast": 0.2,
+					"active": 0.3,
+					"camo": -2.0,
+					"jam": -0.3,
+					"shield": 0.0,
+					"tJam": 0.0
+				},
+				"passive": {
+					"base": 0.3,
+					"range": 600,
+					"shutdown": -0.5,
+					"squat": 0.0,
+					"stop": -0.1,
+					"slow": 0.2,
+					"fast": 0.3,
+					"active": 0.6,
+					"camo": -0.6,
+					"jam": 0.2,
+					"shield": 0.2,
+					"tJam": -0.4
+				}
+			},
+			"displayInfo": {
+				"shortName": {
+					"constantName": "IDSEN_HUM10",
+					"numericTag": "00302119",
+					"text": {
+						"en": "Longbow"
+					}
+				},
+				"longName": {
+					"constantName": "IDSEN_HUM10_L",
+					"numericTag": "00302120",
+					"text": {
+						"en": "Longbow Sensor"
+					}
+				},
+				"smallBmp": "huSensorS1_S.bmp",
+				"smallDisBmp": "huSensorS1_SD.bmp",
+				"largeBmp": "huSensorS1_L.bmp",
+				"largeDisBmp": "huSensorS1_LD.bmp",
+				"description": {
+					"constantName": "IDCSPEC_SEN_HUM4",
+					"numericTag": "00303154",
+					"text": {
+						"en": "MODE\t\t\tRANGE\t\tRESOLUTION\t\n<jl>Active\t\t\t1350\t\t\t0.70\t\n<Jl>Passive\t\t\t600\t\t\t0.30\t\n<Jl>Sweep Time (sec)\t\t2.00\t"
+					}
+				}
+			},
+			"techInfo": {
+				"techLevel": 2,
+				"techBase": "human",
+				"combatValue": 259,
+				"mass": 2.5,
+				"mountPoint": "medium",
+				"sizeDamage": 1250
+			}
+		},
+		{
+			"sensorId": 410,
+			"sweepTime": 1.5,
+			"mode": {
+				"active": {
+					"base": 0.7,
+					"range": 1200,
+					"shutdown": -0.3,
+					"squat": -0.3,
+					"stop": -0.2,
+					"slow": 0.1,
+					"fast": 0.2,
+					"active": 0.3,
+					"camo": -1.0,
+					"jam": -0.5,
+					"shield": 0.0,
+					"tJam": 0.0
+				},
+				"passive": {
+					"base": 0.5,
+					"range": 850,
+					"shutdown": -0.3,
+					"squat": 0.0,
+					"stop": -0.1,
+					"slow": 0.2,
+					"fast": 0.3,
+					"active": 0.5,
+					"camo": -0.5,
+					"jam": 0.3,
+					"shield": 0.1,
+					"tJam": -0.35
+				}
+			},
+			"displayInfo": {
+				"shortName": {
+					"constantName": "IDSEN_HUM11",
+					"numericTag": "00302121",
+					"text": {
+						"en": "Inflt"
+					}
+				},
+				"longName": {
+					"constantName": "IDSEN_HUM11_L",
+					"numericTag": "00302122",
+					"text": {
+						"en": "Infiltrator Sensor"
+					}
+				},
+				"smallBmp": "huSensorL1_S.bmp",
+				"smallDisBmp": "huSensorL1_SD.bmp",
+				"largeBmp": "huSensorL1_L.bmp",
+				"largeDisBmp": "huSensorL1_LD.bmp",
+				"description": {
+					"constantName": "IDCSPEC_SEN_HUM5",
+					"numericTag": "00303155",
+					"text": {
+						"en": "MODE\t\t\tRANGE\t\tRESOLUTION\t\n<jl>Active\t\t\t1200\t\t\t0.70\t\n<Jl>Passive\t\t\t850\t\t\t0.50\t\n<Jl>Sweep Time (sec)\t\t1.50\t"
+					}
+				}
+			},
+			"techInfo": {
+				"techLevel": 3,
+				"techBase": "human",
+				"combatValue": 351,
+				"mass": 3.5,
+				"mountPoint": "medium",
+				"sizeDamage": 1750
+			}
+		},
+		{
+			"sensorId": 411,
+			"sweepTime": 2.5,
+			"mode": {
+				"active": {
+					"base": 0.75,
+					"range": 1500,
+					"shutdown": -0.2,
+					"squat": -0.3,
+					"stop": 0.0,
+					"slow": 0.03,
+					"fast": 0.1,
+					"active": 0.2,
+					"camo": -2.0,
+					"jam": -0.5,
+					"shield": 0.0,
+					"tJam": 0.0
+				},
+				"passive": {
+					"base": 0.35,
+					"range": 700,
+					"shutdown": -0.5,
+					"squat": -0.05,
+					"stop": -0.15,
+					"slow": 0.04,
+					"fast": 0.2,
+					"active": 0.4,
+					"camo": -0.4,
+					"jam": 0.2,
+					"shield": 0.2,
+					"tJam": -0.4
+				}
+			},
+			"displayInfo": {
+				"shortName": {
+					"constantName": "IDSEN_HUM12",
+					"numericTag": "00302123",
+					"text": {
+						"en": "Cross"
+					}
+				},
+				"longName": {
+					"constantName": "IDSEN_HUM12_L",
+					"numericTag": "00302124",
+					"text": {
+						"en": "Crossbow Sensor"
+					}
+				},
+				"smallBmp": "huSensorM1_S.bmp",
+				"smallDisBmp": "huSensorM1_SD.bmp",
+				"largeBmp": "huSensorM1_L.bmp",
+				"largeDisBmp": "huSensorM1_LD.bmp",
+				"description": {
+					"constantName": "IDCSPEC_SEN_HUM6",
+					"numericTag": "00303156",
+					"text": {
+						"en": "MODE\t\t\tRANGE\t\tRESOLUTION\t\n<jl>Active\t\t\t1500\t\t\t0.75\t\n<Jl>Passive\t\t\t700\t\t\t0.35\t\n<Jl>Sweep Time (sec)\t\t2.50\t"
+					}
+				}
+			},
+			"techInfo": {
+				"techLevel": 3,
+				"techBase": "human",
+				"combatValue": 250,
+				"mass": 3.0,
+				"mountPoint": "large",
+				"sizeDamage": 1500
+			}
+		},
+		{
+			"sensorId": 412,
+			"sweepTime": 2.0,
+			"mode": {
+				"active": {
+					"base": 0.6,
+					"range": 800,
+					"shutdown": -0.1,
+					"squat": -0.3,
+					"stop": 0.0,
+					"slow": 0.05,
+					"fast": 0.1,
+					"active": 0.4,
+					"camo": -2.0,
+					"jam": -0.5,
+					"shield": 0.0,
+					"tJam": 0.0
+				},
+				"passive": {
+					"base": 0.3,
+					"range": 500,
+					"shutdown": -0.5,
+					"squat": 0.0,
+					"stop": -0.1,
+					"slow": 0.1,
+					"fast": 0.2,
+					"active": 0.6,
+					"camo": -0.6,
+					"jam": 0.2,
+					"shield": 0.1,
+					"tJam": -0.6
+				}
+			},
+			"displayInfo": {
+				"shortName": {
+					"constantName": "IDSEN_HUM13",
+					"numericTag": "00302125",
+					"text": {
+						"en": "Utlight"
+					}
+				},
+				"longName": {
+					"constantName": "IDSEN_HUM13_L",
+					"numericTag": "00302126",
+					"text": {
+						"en": "Ultralight Sensor"
+					}
+				},
+				"smallBmp": "huSensor3_S.bmp",
+				"smallDisBmp": "huSensor3_SD.bmp",
+				"largeBmp": "huSensor3_L.bmp",
+				"largeDisBmp": "huSensor3_LD.bmp",
+				"description": {
+					"constantName": "IDCSPEC_SEN_HUM7",
+					"numericTag": "00303157",
+					"text": {
+						"en": "MODE\t\t\tRANGE\t\tRESOLUTION\t\n<jl>Active\t\t\t800\t\t\t0.60\t\n<Jl>Passive\t\t\t500\t\t\t0.30\t\n<Jl>Sweep Time (sec)\t\t2.00\t"
+					}
+				}
+			},
+			"techInfo": {
+				"techLevel": 2,
+				"techBase": "human",
+				"combatValue": 139,
+				"mass": 0.5,
+				"mountPoint": "small",
+				"sizeDamage": 250
+			}
+		},
+		{
+			"sensorId": 413,
+			"sweepTime": 1.5,
+			"mode": {
+				"active": {
+					"base": 0.55,
+					"range": 900,
+					"shutdown": -0.1,
+					"squat": -0.2,
+					"stop": 0.0,
+					"slow": 0.1,
+					"fast": 0.2,
+					"active": 0.4,
+					"camo": -1.5,
+					"jam": -0.5,
+					"shield": 0.0,
+					"tJam": 0.0
+				},
+				"passive": {
+					"base": 0.45,
+					"range": 650,
+					"shutdown": -0.3,
+					"squat": 0.0,
+					"stop": -0.1,
+					"slow": 0.3,
+					"fast": 0.5,
+					"active": 0.5,
+					"camo": -0.4,
+					"jam": 0.2,
+					"shield": 0.2,
+					"tJam": -0.2
+				}
+			},
+			"displayInfo": {
+				"shortName": {
+					"constantName": "IDSEN_HUM14",
+					"numericTag": "00302127",
+					"text": {
+						"en": "Hound"
+					}
+				},
+				"longName": {
+					"constantName": "IDSEN_HUM14_L",
+					"numericTag": "00302128",
+					"text": {
+						"en": "Bloodhound Sensor"
+					}
+				},
+				"smallBmp": "huSensor4_S.bmp",
+				"smallDisBmp": "huSensor4_SD.bmp",
+				"largeBmp": "huSensor4_L.bmp",
+				"largeDisBmp": "huSensor4_LD.bmp",
+				"description": {
+					"constantName": "IDCSPEC_SEN_HUM8",
+					"numericTag": "00303158",
+					"text": {
+						"en": "MODE\t\t\tRANGE\t\tRESOLUTION\t\n<jl>Active\t\t\t900\t\t\t0.55\t\n<Jl>Passive\t\t\t650\t\t\t0.45\t\n<Jl>Sweep Time (sec)\t\t1.50\t"
+					}
+				}
+			},
+			"techInfo": {
+				"techLevel": 4,
+				"techBase": "human",
+				"combatValue": 214,
+				"mass": 1.5,
+				"mountPoint": "medium",
+				"sizeDamage": 750
+			}
+		},
+		{
+			"sensorId": 414,
+			"sweepTime": 1.5,
+			"mode": {
+				"active": {
+					"base": 0.35,
+					"range": 1000,
+					"shutdown": -0.1,
+					"squat": -0.3,
+					"stop": 0.0,
+					"slow": 0.2,
+					"fast": 0.3,
+					"active": 0.6,
+					"camo": -0.5,
+					"jam": -0.5,
+					"shield": 0.0,
+					"tJam": -0.5
+				},
+				"passive": {
+					"base": 0.6,
+					"range": 750,
+					"shutdown": -0.7,
+					"squat": 0.0,
+					"stop": -0.1,
+					"slow": 0.2,
+					"fast": 0.3,
+					"active": 0.7,
+					"camo": -0.6,
+					"jam": 0.5,
+					"shield": 0.3,
+					"tJam": -0.5
+				}
+			},
+			"displayInfo": {
+				"shortName": {
+					"constantName": "IDSEN_HUM8",
+					"numericTag": "00302115",
+					"text": {
+						"en": "Emiss"
+					}
+				},
+				"longName": {
+					"constantName": "IDSEN_HUM8_L",
+					"numericTag": "00302116",
+					"text": {
+						"en": "Emission Scanning Sensor"
+					}
+				},
+				"smallBmp": "huThermsensor_S.bmp",
+				"smallDisBmp": "huThermsensor_SD.bmp",
+				"largeBmp": "huThermsensor_L.bmp",
+				"largeDisBmp": "huThermsensor_LD.bmp",
+				"description": {
+					"constantName": "IDCSPEC_SEN_HUM9",
+					"numericTag": "00303159",
+					"text": {
+						"en": "MODE\t\t\tRANGE\t\tRESOLUTION\t\n<jl>Active\t\t\t1000\t\t\t0.35\t\n<Jl>Passive\t\t\t750\t\t\t0.60\t\n<Jl>Sweep Time (sec)\t\t1.50\t"
+					}
+				}
+			},
+			"techInfo": {
+				"techLevel": 4,
+				"techBase": "human",
+				"combatValue": 192,
+				"mass": 1.5,
+				"mountPoint": "medium",
+				"sizeDamage": 769
+			}
+		},
+		{
+			"sensorId": 426,
+			"sweepTime": 2.5,
+			"mode": {
+				"active": {
+					"base": 0.55,
+					"range": 900,
+					"shutdown": -0.1,
+					"squat": -0.3,
+					"stop": -0.1,
+					"slow": 0.1,
+					"fast": 0.2,
+					"active": 0.4,
+					"camo": -2.0,
+					"jam": -0.5,
+					"shield": 0.0,
+					"tJam": 0.0
+				},
+				"passive": {
+					"base": 0.35,
+					"range": 500,
+					"shutdown": -0.3,
+					"squat": 0.0,
+					"stop": -0.2,
+					"slow": 0.2,
+					"fast": 0.4,
+					"active": 0.7,
+					"camo": -0.7,
+					"jam": 0.3,
+					"shield": 0.2,
+					"tJam": -0.6
+				}
+			},
+			"displayInfo": {
+				"shortName": {
+					"constantName": "IDSEN_CYB1",
+					"numericTag": "00302151",
+					"text": {
+						"en": "Alpha"
+					}
+				},
+				"longName": {
+					"constantName": "IDSEN_CYB1_L",
+					"numericTag": "00302152",
+					"text": {
+						"en": "Cybrid Basic Sensor"
+					}
+				},
+				"smallBmp": "cySensorS2_S.bmp",
+				"smallDisBmp": "cySensorS2_SD.bmp",
+				"largeBmp": "cySensorS2_L.bmp",
+				"largeDisBmp": "cySensorS2_LD.bmp",
+				"description": {
+					"constantName": "IDCSPEC_SEN_CYB1",
+					"numericTag": "00303181",
+					"text": {
+						"en": "MODE\t\t\tRANGE\t\tRESOLUTION\t\n<jl>Active\t\t\t900\t\t\t0.55\t\n<Jl>Passive\t\t\t500\t\t\t0.35\t\n<Jl>Sweep Time (sec)\t\t2.50\t"
+					}
+				}
+			},
+			"techInfo": {
+				"techLevel": 1,
+				"techBase": "cybrid",
+				"combatValue": 117,
+				"mass": 1.0,
+				"mountPoint": "small",
+				"sizeDamage": 506
+			}
+		},
+		{
+			"sensorId": 427,
+			"sweepTime": 3.5,
+			"mode": {
+				"active": {
+					"base": 0.7,
+					"range": 1200,
+					"shutdown": -0.1,
+					"squat": -0.3,
+					"stop": -0.1,
+					"slow": 0.05,
+					"fast": 0.1,
+					"active": 0.3,
+					"camo": -2.0,
+					"jam": -0.4,
+					"shield": 0.0,
+					"tJam": 0.0
+				},
+				"passive": {
+					"base": 0.35,
+					"range": 500,
+					"shutdown": -0.5,
+					"squat": 0.0,
+					"stop": -0.2,
+					"slow": 0.1,
+					"fast": 0.2,
+					"active": 0.6,
+					"camo": -0.7,
+					"jam": 0.2,
+					"shield": 0.1,
+					"tJam": -0.4
+				}
+			},
+			"displayInfo": {
+				"shortName": {
+					"constantName": "IDSEN_CYB2",
+					"numericTag": "00302153",
+					"text": {
+						"en": "Beta"
+					}
+				},
+				"longName": {
+					"constantName": "IDSEN_CYB2_L",
+					"numericTag": "00302154",
+					"text": {
+						"en": "Cybrid Enhanced Range Sensor"
+					}
+				},
+				"smallBmp": "cySensorL2_S.bmp",
+				"smallDisBmp": "cySensorL2_SD.bmp",
+				"largeBmp": "cySensorL2_L.bmp",
+				"largeDisBmp": "cySensorL2_LD.bmp",
+				"description": {
+					"constantName": "IDCSPEC_SEN_CYB2",
+					"numericTag": "00303182",
+					"text": {
+						"en": "MODE\t\t\tRANGE\t\tRESOLUTION\t\n<jl>Active\t\t\t1200\t\t\t0.70\t\n<Jl>Passive\t\t\t500\t\t\t0.35\t\n<Jl>Sweep Time (sec)\t\t3.50\t"
+					}
+				}
+			},
+			"techInfo": {
+				"techLevel": 3,
+				"techBase": "cybrid",
+				"combatValue": 133,
+				"mass": 2.5,
+				"mountPoint": "small",
+				"sizeDamage": 1237
+			}
+		},
+		{
+			"sensorId": 428,
+			"sweepTime": 2.5,
+			"mode": {
+				"active": {
+					"base": 0.65,
+					"range": 1000,
+					"shutdown": -0.1,
+					"squat": -0.3,
+					"stop": -0.1,
+					"slow": 0.1,
+					"fast": 0.2,
+					"active": 0.3,
+					"camo": -2.0,
+					"jam": -0.4,
+					"shield": 0.0,
+					"tJam": 0.0
+				},
+				"passive": {
+					"base": 0.4,
+					"range": 700,
+					"shutdown": -0.5,
+					"squat": 0.0,
+					"stop": -0.2,
+					"slow": 0.2,
+					"fast": 0.3,
+					"active": 0.5,
+					"camo": -0.6,
+					"jam": 0.3,
+					"shield": 0.2,
+					"tJam": -0.4
+				}
+			},
+			"displayInfo": {
+				"shortName": {
+					"constantName": "IDSEN_CYB3",
+					"numericTag": "00302155",
+					"text": {
+						"en": "Gamma"
+					}
+				},
+				"longName": {
+					"constantName": "IDSEN_CYB3_L",
+					"numericTag": "00302156",
+					"text": {
+						"en": "Cybrid Intermediate Sensor"
+					}
+				},
+				"smallBmp": "cySensorM2_S.bmp",
+				"smallDisBmp": "cySensorM2_SD.bmp",
+				"largeBmp": "cySensorM2_L.bmp",
+				"largeDisBmp": "cySensorM2_LD.bmp",
+				"description": {
+					"constantName": "IDCSPEC_SEN_CYB3",
+					"numericTag": "00303183",
+					"text": {
+						"en": "MODE\t\t\tRANGE\t\tRESOLUTION\t\n<jl>Active\t\t\t1000\t\t\t0.65\t\n<Jl>Passive\t\t\t700\t\t\t0.40\t\n<Jl>Sweep Time (sec)\t\t2.50\t"
+					}
+				}
+			},
+			"techInfo": {
+				"techLevel": 2,
+				"techBase": "cybrid",
+				"combatValue": 158,
+				"mass": 2.0,
+				"mountPoint": "small",
+				"sizeDamage": 1000
+			}
+		},
+		{
+			"sensorId": 429,
+			"sweepTime": 2.5,
+			"mode": {
+				"active": {
+					"base": 0.75,
+					"range": 1350,
+					"shutdown": -0.1,
+					"squat": -0.3,
+					"stop": -0.1,
+					"slow": 0.1,
+					"fast": 0.2,
+					"active": 0.2,
+					"camo": -2.0,
+					"jam": -0.3,
+					"shield": 0.0,
+					"tJam": 0.0
+				},
+				"passive": {
+					"base": 0.35,
+					"range": 600,
+					"shutdown": -0.5,
+					"squat": 0.0,
+					"stop": -0.1,
+					"slow": 0.2,
+					"fast": 0.3,
+					"active": 0.6,
+					"camo": -0.6,
+					"jam": 0.2,
+					"shield": 0.2,
+					"tJam": -0.4
+				}
+			},
+			"displayInfo": {
+				"shortName": {
+					"constantName": "IDSEN_CYB4",
+					"numericTag": "00302157",
+					"text": {
+						"en": "Delta"
+					}
+				},
+				"longName": {
+					"constantName": "IDSEN_CYB4_L",
+					"numericTag": "00302158",
+					"text": {
+						"en": "Cybrid Long-Range Sensor"
+					}
+				},
+				"smallBmp": "cySensorS1_S.bmp",
+				"smallDisBmp": "cySensorS1_SD.bmp",
+				"largeBmp": "cySensorS1_L.bmp",
+				"largeDisBmp": "cySensorS1_LD.bmp",
+				"description": {
+					"constantName": "IDCSPEC_SEN_CYB4",
+					"numericTag": "00303184",
+					"text": {
+						"en": "MODE\t\t\tRANGE\t\tRESOLUTION\t\n<jl>Active\t\t\t1350\t\t\t0.75\t\n<Jl>Passive\t\t\t600\t\t\t0.35\t\n<Jl>Sweep Time (sec)\t\t2.50\t"
+					}
+				}
+			},
+			"techInfo": {
+				"techLevel": 2,
+				"techBase": "cybrid",
+				"combatValue": 224,
+				"mass": 2.5,
+				"mountPoint": "medium",
+				"sizeDamage": 1250
+			}
+		},
+		{
+			"sensorId": 430,
+			"sweepTime": 2.0,
+			"mode": {
+				"active": {
+					"base": 0.7,
+					"range": 1100,
+					"shutdown": -0.3,
+					"squat": -0.3,
+					"stop": -0.2,
+					"slow": 0.1,
+					"fast": 0.2,
+					"active": 0.3,
+					"camo": -1.0,
+					"jam": -0.5,
+					"shield": 0.0,
+					"tJam": 0.0
+				},
+				"passive": {
+					"base": 0.55,
+					"range": 850,
+					"shutdown": -0.3,
+					"squat": 0.0,
+					"stop": -0.1,
+					"slow": 0.2,
+					"fast": 0.3,
+					"active": 0.5,
+					"camo": -0.6,
+					"jam": 0.3,
+					"shield": 0.1,
+					"tJam": -0.35
+				}
+			},
+			"displayInfo": {
+				"shortName": {
+					"constantName": "IDSEN_CYB5",
+					"numericTag": "00302159",
+					"text": {
+						"en": "Epsilon"
+					}
+				},
+				"longName": {
+					"constantName": "IDSEN_CYB5_L",
+					"numericTag": "00302160",
+					"text": {
+						"en": "Cybrid Enhanced Passive Sensor"
+					}
+				},
+				"smallBmp": "cySensorL1_S.bmp",
+				"smallDisBmp": "cySensorL1_SD.bmp",
+				"largeBmp": "cySensorL1_L.bmp",
+				"largeDisBmp": "cySensorL1_LD.bmp",
+				"description": {
+					"constantName": "IDCSPEC_SEN_CYB5",
+					"numericTag": "00303185",
+					"text": {
+						"en": "MODE\t\t\tRANGE\t\tRESOLUTION\t\n<jl>Active\t\t\t1100\t\t\t0.70\t\n<Jl>Passive\t\t\t850\t\t\t0.55\t\n<Jl>Sweep Time (sec)\t\t2.00\t"
+					}
+				}
+			},
+			"techInfo": {
+				"techLevel": 3,
+				"techBase": "cybrid",
+				"combatValue": 251,
+				"mass": 3.0,
+				"mountPoint": "medium",
+				"sizeDamage": 1500
+			}
+		},
+		{
+			"sensorId": 431,
+			"sweepTime": 3.0,
+			"mode": {
+				"active": {
+					"base": 0.75,
+					"range": 1500,
+					"shutdown": -0.2,
+					"squat": -0.3,
+					"stop": 0.0,
+					"slow": 0.03,
+					"fast": 0.1,
+					"active": 0.2,
+					"camo": -2.0,
+					"jam": -0.5,
+					"shield": 0.0,
+					"tJam": 0.0
+				},
+				"passive": {
+					"base": 0.4,
+					"range": 700,
+					"shutdown": -0.5,
+					"squat": -0.05,
+					"stop": -0.15,
+					"slow": 0.04,
+					"fast": 0.2,
+					"active": 0.5,
+					"camo": -0.6,
+					"jam": 0.2,
+					"shield": 0.2,
+					"tJam": -0.4
+				}
+			},
+			"displayInfo": {
+				"shortName": {
+					"constantName": "IDSEN_CYB6",
+					"numericTag": "00302161",
+					"text": {
+						"en": "Zeta"
+					}
+				},
+				"longName": {
+					"constantName": "IDSEN_CYB6_L",
+					"numericTag": "00302162",
+					"text": {
+						"en": "Cybrid Extended Range Sensor"
+					}
+				},
+				"smallBmp": "cySensorM1_S.bmp",
+				"smallDisBmp": "cySensorM1_SD.bmp",
+				"largeBmp": "cySensorM1_L.bmp",
+				"largeDisBmp": "cySensorM1_LD.bmp",
+				"description": {
+					"constantName": "IDCSPEC_SEN_CYB6",
+					"numericTag": "00303186",
+					"text": {
+						"en": "MODE\t\t\tRANGE\t\tRESOLUTION\t\n<jl>Active\t\t\t1500\t\t\t0.75\t\n<Jl>Passive\t\t\t700\t\t\t0.40\t\n<Jl>Sweep Time (sec)\t\t3.00\t"
+					}
+				}
+			},
+			"techInfo": {
+				"techLevel": 3,
+				"techBase": "cybrid",
+				"combatValue": 211,
+				"mass": 2.5,
+				"mountPoint": "large",
+				"sizeDamage": 1254
+			}
+		},
+		{
+			"sensorId": 432,
+			"sweepTime": 2.5,
+			"mode": {
+				"active": {
+					"base": 0.6,
+					"range": 800,
+					"shutdown": -0.1,
+					"squat": -0.3,
+					"stop": 0.0,
+					"slow": 0.05,
+					"fast": 0.1,
+					"active": 0.5,
+					"camo": -2.0,
+					"jam": -0.5,
+					"shield": 0.0,
+					"tJam": 0.0
+				},
+				"passive": {
+					"base": 0.35,
+					"range": 500,
+					"shutdown": -0.5,
+					"squat": 0.0,
+					"stop": -0.1,
+					"slow": 0.1,
+					"fast": 0.2,
+					"active": 0.5,
+					"camo": -0.6,
+					"jam": 0.2,
+					"shield": 0.1,
+					"tJam": -0.6
+				}
+			},
+			"displayInfo": {
+				"shortName": {
+					"constantName": "IDSEN_CYB7",
+					"numericTag": "00302163",
+					"text": {
+						"en": "Eta"
+					}
+				},
+				"longName": {
+					"constantName": "IDSEN_CYB7_L",
+					"numericTag": "00302164",
+					"text": {
+						"en": "Cybrid Compact Sensor"
+					}
+				},
+				"smallBmp": "cySensor3_S.bmp",
+				"smallDisBmp": "cySensor3_SD.bmp",
+				"largeBmp": "cySensor3_L.bmp",
+				"largeDisBmp": "cySensor3_LD.bmp",
+				"description": {
+					"constantName": "IDCSPEC_SEN_CYB7",
+					"numericTag": "00303187",
+					"text": {
+						"en": "MODE\t\t\tRANGE\t\tRESOLUTION\t\n<jl>Active\t\t\t800\t\t\t0.60\t\n<Jl>Passive\t\t\t500\t\t\t0.35\t\n<Jl>Sweep Time (sec)\t\t2.50\t"
+					}
+				}
+			},
+			"techInfo": {
+				"techLevel": 2,
+				"techBase": "cybrid",
+				"combatValue": 114,
+				"mass": 0.5,
+				"mountPoint": "small",
+				"sizeDamage": 250
+			}
+		},
+		{
+			"sensorId": 433,
+			"sweepTime": 1.5,
+			"mode": {
+				"active": {
+					"base": 0.55,
+					"range": 900,
+					"shutdown": -0.1,
+					"squat": -0.2,
+					"stop": 0.0,
+					"slow": 0.1,
+					"fast": 0.2,
+					"active": 0.4,
+					"camo": -1.5,
+					"jam": -0.5,
+					"shield": 0.0,
+					"tJam": 0.0
+				},
+				"passive": {
+					"base": 0.45,
+					"range": 650,
+					"shutdown": -0.3,
+					"squat": 0.0,
+					"stop": -0.1,
+					"slow": 0.3,
+					"fast": 0.5,
+					"active": 0.6,
+					"camo": -0.45,
+					"jam": 0.2,
+					"shield": 0.2,
+					"tJam": -0.2
+				}
+			},
+			"displayInfo": {
+				"shortName": {
+					"constantName": "IDSEN_CYB8",
+					"numericTag": "00302165",
+					"text": {
+						"en": "Theta"
+					}
+				},
+				"longName": {
+					"constantName": "IDSEN_CYB8_L",
+					"numericTag": "00302166",
+					"text": {
+						"en": "Cybrid Enhanced Tracker Sensor"
+					}
+				},
+				"smallBmp": "cySensor4_S.bmp",
+				"smallDisBmp": "cySensor4_SD.bmp",
+				"largeBmp": "cySensor4_L.bmp",
+				"largeDisBmp": "cySensor4_LD.bmp",
+				"description": {
+					"constantName": "IDCSPEC_SEN_CYB8",
+					"numericTag": "00303188",
+					"text": {
+						"en": "MODE\t\t\tRANGE\t\tRESOLUTION\t\n<jl>Active\t\t\t900\t\t\t0.55\t\n<Jl>Passive\t\t\t650\t\t\t0.45\t\n<Jl>Sweep Time (sec)\t\t1.50\t"
+					}
+				}
+			},
+			"techInfo": {
+				"techLevel": 4,
+				"techBase": "cybrid",
+				"combatValue": 214,
+				"mass": 1.5,
+				"mountPoint": "medium",
+				"sizeDamage": 750
+			}
+		},
+		{
+			"sensorId": 434,
+			"sweepTime": 1.5,
+			"mode": {
+				"active": {
+					"base": 0.4,
+					"range": 1000,
+					"shutdown": -0.1,
+					"squat": -0.3,
+					"stop": -0.2,
+					"slow": 0.4,
+					"fast": 0.8,
+					"active": 0.0,
+					"camo": -0.5,
+					"jam": -0.3,
+					"shield": 0.0,
+					"tJam": 0.0
+				},
+				"passive": {
+					"base": 0.6,
+					"range": 750,
+					"shutdown": -0.9,
+					"squat": -0.8,
+					"stop": -0.3,
+					"slow": 0.5,
+					"fast": 1.0,
+					"active": 0.3,
+					"camo": -0.5,
+					"jam": 0.5,
+					"shield": 0.0,
+					"tJam": -0.2
+				}
+			},
+			"displayInfo": {
+				"shortName": {
+					"constantName": "IDSEN_CYB9",
+					"numericTag": "00302167",
+					"text": {
+						"en": "Iota"
+					}
+				},
+				"longName": {
+					"constantName": "IDSEN_CYB9_L",
+					"numericTag": "00302168",
+					"text": {
+						"en": "Cybrid Motion Sensor"
+					}
+				},
+				"smallBmp": "cyThermsensor_S.bmp",
+				"smallDisBmp": "cyThermsensor_SD.bmp",
+				"largeBmp": "cyThermsensor_L.bmp",
+				"largeDisBmp": "cyThermsensor_LD.bmp",
+				"description": {
+					"constantName": "IDCSPEC_SEN_CYB9",
+					"numericTag": "00303189",
+					"text": {
+						"en": "MODE\t\t\tRANGE\t\tRESOLUTION\t\n<jl>Active\t\t\t1000\t\t\t0.40\t\n<Jl>Passive\t\t\t750\t\t\t0.60\t\n<Jl>Sweep Time (sec)\t\t1.00\t"
+					}
+				}
+			},
+			"techInfo": {
+				"techLevel": 4,
+				"techBase": "cybrid",
+				"combatValue": 208,
+				"mass": 1.5,
+				"mountPoint": "medium",
+				"sizeDamage": 769
+			}
+		}
+	]
+}
