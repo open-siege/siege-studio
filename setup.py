@@ -1,5 +1,9 @@
 from setuptools import setup, find_packages
 
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
+print(find_packages())
 setup(
     name='darkstar-vol-extractor',
     version='0.0.1',
@@ -8,5 +12,7 @@ setup(
     license='MIT',
     author='Matthew',
     author_email='matthew@sobantu.co.za',
-    description=''
+    description='',
+    long_description=long_description,
+    long_description_content_type="text/markdown"
 )
