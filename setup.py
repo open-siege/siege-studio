@@ -1,9 +1,9 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='darkstar-vol-extractor',
     version='0.0.1',
-    packages=[''],
+    packages=find_packages(),
     url='https://github.com/matthew-rindel/darkstar-vol-extractor',
     license='MIT',
     author='Matthew',
