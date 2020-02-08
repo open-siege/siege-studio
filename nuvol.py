@@ -10,32 +10,62 @@ for importFilename in importFilenames:
 
     # thank you stackoverflow - https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory
     filesToPack = [f for f in listdir(importFilename) if isfile(join(importFilename, f))]
+
     rawBytes = []
     fileDescriptors = []
     mainHeaderFmt = "<4sL"
-    fileHeaderFmt = "<4s4B"
+    fileInfoFmt = "<4LB"
     startOffset = struct.calcsize(mainHeaderFmt)
     currentOffset = startOffset
+    nameOffset = 0
 
     for file in filesToPack:
+        print("reading " + join(importFilename, file))
         with open(join(importFilename, file), "rb") as outputFile:
-            rawData = outputFile.read()
+            rawData = bytearray(outputFile.read())
         rawBytes.extend(file.encode("utf-8") + b"\0")
         # id is never used in any of the vol files I have seen
-        # name is actually a char* which has random data in a real vol. can be 0
-        id = 0
-        name = 0
-        compressionType = 0
-        fileDescriptors.append((id, name, currentOffset, len(rawData), compressionType, rawData))
-        currentOffset += len(rawData) + struct.calcsize(fileHeaderFmt)
+        # name is a char* but is actually used as an offset into the string array that gets generated
+        fileDescriptors.append({
+            "id": 0,
+            "name": nameOffset,
+            "offset": currentOffset,
+            "size": len(rawData),
+            "compression": 0,
+            "data": rawData
+        })
+        currentOffset += len(rawData) + struct.calcsize(mainHeaderFmt)
+        nameOffset += len(file) + len(b"\0")
+        if len(rawData) % 4 != 0:
+            currentOffset += 2
+            rawData.extend(b"\0\0")
+
+    combinedFileData = bytearray()
+    for descriptor in fileDescriptors:
+        fileHeader = (b"VBLK", descriptor["size"])
+        fileHeader = bytearray(struct.pack(mainHeaderFmt, *fileHeader))
+        (rawByte) = struct.unpack("<B", b"\x80")
+        fileHeader[-1] = rawByte[0]
+        combinedFileData.extend(fileHeader)
+        combinedFileData.extend(descriptor["data"])
+
+    fileInfoHeader = (b"voli", struct.calcsize(fileInfoFmt) * len(fileDescriptors))
+    fileInfoData = bytearray(struct.pack(mainHeaderFmt, *fileInfoHeader))
+    for descriptor in fileDescriptors:
+        fileInfo = (descriptor["id"], descriptor["name"], descriptor["offset"], descriptor["size"],
+                    descriptor["compression"])
+        fileInfoData.extend(struct.pack(fileInfoFmt, *fileInfo))
 
     header = (b"PVOL", currentOffset)
-    finalResult = bytearray(struct.pack(mainHeaderFmt, *header))
     stringSection = (b"vols", len(rawBytes))
     rawHeader = bytearray(struct.pack("<4sL", *stringSection))
     rawHeader.extend(rawBytes)
-    finalResult.extend(rawHeader)
-    print(finalResult)
+
+    with open(importFilename + ".new.vol", "wb") as outputFile:
+        outputFile.write(struct.pack(mainHeaderFmt, *header))
+        outputFile.write(combinedFileData)
+        outputFile.write(rawHeader)
+        outputFile.write(fileInfoData)
 
 
 
