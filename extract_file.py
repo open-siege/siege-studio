@@ -1,4 +1,5 @@
 import os
+import json
 import subprocess
 
 def write_files(import_filename, raw_data, dest_dir, file_info):
@@ -33,6 +34,18 @@ def extract_archive(import_filename, archive_module):
 
     file_info = archive_module.get_file_metadata(raw_data)
 
+    volumeStructure = {
+        "files": []
+    }
+
+    for file in file_info:
+        volumeStructure["files"].append(file.filename)
+
     if not os.path.exists(dest_dir):
         os.makedirs(dest_dir)
+
+    print("Writing " + os.path.join(dest_dir, import_filename + ".json") )
+    with open(os.path.join(dest_dir, import_filename + ".json"), "w") as volumeFile:
+        volumeFile.write(json.dumps(volumeStructure, indent="\t"))
+
     write_files(import_filename, raw_data, dest_dir, file_info)

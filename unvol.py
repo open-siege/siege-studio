@@ -1,8 +1,13 @@
 import sys
 import extract_file
 import volinfo
+import glob
 
-importFilenames = sys.argv[1:]
+importFilenames = []
+
+for importFilename in sys.argv[1:]:
+    files = glob.glob(importFilename)
+    importFilenames.extend(files)
 
 for importFilename in importFilenames:
 
