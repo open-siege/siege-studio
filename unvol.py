@@ -10,7 +10,6 @@ for importFilename in sys.argv[1:]:
     importFilenames.extend(files)
 
 for importFilename in importFilenames:
-
     print("processing " + importFilename)
     try:
         extract_file.extract_archive(importFilename, volinfo)

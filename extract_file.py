@@ -44,8 +44,11 @@ def extract_archive(import_filename, archive_module):
     if not os.path.exists(dest_dir):
         os.makedirs(dest_dir)
 
-    print("Writing " + os.path.join(dest_dir, import_filename + ".json") )
-    with open(os.path.join(dest_dir, import_filename + ".json"), "w") as volumeFile:
+    json_filename = os.path.split(import_filename)[-1]
+    json_filename = os.path.join(dest_dir, json_filename + ".json")
+
+    print("Writing " + json_filename)
+    with open(json_filename, "w") as volumeFile:
         volumeFile.write(json.dumps(volumeStructure, indent="\t"))
 
     write_files(import_filename, raw_data, dest_dir, file_info)

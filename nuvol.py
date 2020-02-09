@@ -1,15 +1,25 @@
 import sys
 import struct
+import json
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile, join, exists
 
-importFilenames = sys.argv[1:]
+importFolders = sys.argv[1:]
 
-for importFilename in importFilenames:
-    print("packing " + importFilename)
+for importFolder in importFolders:
+    print("packing " + importFolder)
 
     # thank you stackoverflow - https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory
-    filesToPack = [f for f in listdir(importFilename) if isfile(join(importFilename, f))]
+    filesToPack = [f for f in listdir(importFolder) if isfile(join(importFolder, f))]
+    importFolderVolJson = importFolder + ".vol.json"
+    finalVol = importFolder + ".vol"
+    finalVolNew = importFolder + ".vol.new"
+
+    if importFolderVolJson in filesToPack:
+        filesToPack.remove(importFolderVolJson)
+        with open(join(importFolder, importFolderVolJson), "r") as volumeFile:
+            parsedInfo = json.loads(volumeFile.read())
+            filesToPack = parsedInfo["files"]
 
     rawBytes = []
     fileDescriptors = []
@@ -20,12 +30,13 @@ for importFilename in importFilenames:
     nameOffset = 0
 
     for file in filesToPack:
-        print("reading " + join(importFilename, file))
-        with open(join(importFilename, file), "rb") as outputFile:
+        print("reading " + join(importFolder, file))
+        with open(join(importFolder, file), "rb") as outputFile:
             rawData = bytearray(outputFile.read())
         rawBytes.extend(file.encode("utf-8") + b"\0")
         # id is never used in any of the vol files I have seen
         # name is a char* but is actually used as an offset into the string array that gets generated
+        # we don't do any form of compression ever, because unvol can't handle it
         fileDescriptors.append({
             "id": 0,
             "name": nameOffset,
@@ -36,9 +47,9 @@ for importFilename in importFilenames:
         })
         currentOffset += len(rawData) + struct.calcsize(mainHeaderFmt)
         nameOffset += len(file) + len(b"\0")
-        if len(rawData) % 4 != 0:
-            currentOffset += 2
-            rawData.extend(b"\0\0")
+        while len(rawData) % 4 != 0:
+            rawData.extend(b"\0")
+            currentOffset += 1
 
     combinedFileData = bytearray()
     for descriptor in fileDescriptors:
@@ -61,7 +72,10 @@ for importFilename in importFilenames:
     rawHeader = bytearray(struct.pack("<4sL", *stringSection))
     rawHeader.extend(rawBytes)
 
-    with open(importFilename + ".new.vol", "wb") as outputFile:
+    if exists(finalVol):
+        finalVol = finalVolNew
+
+    with open(finalVol, "wb") as outputFile:
         outputFile.write(struct.pack(mainHeaderFmt, *header))
         outputFile.write(combinedFileData)
         outputFile.write(rawHeader)
