@@ -1,12 +1,22 @@
 import sys
 import struct
 import json
+import glob
 from os import listdir
-from os.path import isfile, join, exists
+from os.path import isfile, join, exists, split
 
-importFolders = sys.argv[1:]
+importFolders = []
+
+for importFolder in sys.argv[1:]:
+    files = glob.glob(importFolder)
+    importFolders.extend(files)
 
 for importFolder in importFolders:
+    # if a glob for .vol.json is used, take the
+    if importFolder.endswith(".vol.json") or importFolder.endswith(".VOL.json"):
+        importFolder = split(importFolder)[:-1]
+        importFolder = join("", *importFolder)
+
     print("packing " + importFolder)
 
     # thank you stackoverflow - https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory
