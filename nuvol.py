@@ -2,6 +2,7 @@ import sys
 import struct
 import json
 import glob
+import binascii
 from os import listdir
 from os.path import isfile, join, exists, split
 
@@ -24,14 +25,18 @@ for importFolder in importFolders:
     importFolderVolJson = importFolder + ".vol.json"
     finalVol = importFolder + ".vol"
     finalVolNew = importFolder + ".vol.new"
+    volumeHeader = binascii.hexlify(b"PVOL").decode("utf8")
 
     if importFolderVolJson in filesToPack:
         filesToPack.remove(importFolderVolJson)
         with open(join(importFolder, importFolderVolJson), "r") as volumeFile:
             parsedInfo = json.loads(volumeFile.read())
+            volumeHeader = parsedInfo["volumeHeader"]
             filesToPack = parsedInfo["files"]
 
-    rawBytes = []
+    volumeHeader = binascii.unhexlify(volumeHeader)
+
+    stringBuffer = []
     fileDescriptors = []
     mainHeaderFmt = "<4sL"
     fileInfoFmt = "<4LB"
@@ -43,7 +48,7 @@ for importFolder in importFolders:
         print("reading " + join(importFolder, file))
         with open(join(importFolder, file), "rb") as outputFile:
             rawData = bytearray(outputFile.read())
-        rawBytes.extend(file.encode("utf-8") + b"\0")
+        stringBuffer.extend(file.encode("utf-8") + b"\0")
         # id is never used in any of the vol files I have seen
         # name is a char* but is actually used as an offset into the string array that gets generated
         # we don't do any form of compression ever, because unvol can't handle it
@@ -77,10 +82,22 @@ for importFolder in importFolders:
                     descriptor["compression"])
         fileInfoData.extend(struct.pack(fileInfoFmt, *fileInfo))
 
-    header = (b"PVOL", currentOffset)
-    stringSection = (b"vols", len(rawBytes))
-    rawHeader = bytearray(struct.pack("<4sL", *stringSection))
-    rawHeader.extend(rawBytes)
+    header = (volumeHeader, currentOffset)
+
+    if volumeHeader == b"PVOL":
+        stringSection = (b"vols", len(stringBuffer))
+        while len(stringBuffer) % 2 != 0:
+            stringBuffer.extend(b"\0")
+
+        rawHeader = bytearray(struct.pack("<4sL", *stringSection))
+        rawHeader.extend(stringBuffer)
+    else:
+        stringSection = (b"vols", 0, b"voli", 0,  b"vols", len(stringBuffer))
+        while len(stringBuffer) % 2 != 0:
+            stringBuffer.extend(b"\0")
+
+        rawHeader = bytearray(struct.pack("<4sL4sL4sL", *stringSection))
+        rawHeader.extend(stringBuffer)
 
     if exists(finalVol):
         finalVol = finalVolNew

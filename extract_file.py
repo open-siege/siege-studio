@@ -1,6 +1,7 @@
 import os
 import json
 import subprocess
+import binascii
 
 def write_files(import_filename, raw_data, dest_dir, file_info):
     for index, info in enumerate(file_info):
@@ -35,6 +36,7 @@ def extract_archive(import_filename, archive_module):
     file_info = archive_module.get_file_metadata(raw_data)
 
     volumeStructure = {
+        "volumeHeader": binascii.hexlify(raw_data[0:4]).decode("utf8"),
         "files": []
     }
 
