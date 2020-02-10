@@ -3,7 +3,7 @@ import struct
 import json
 import glob
 import binascii
-from os import listdir
+from os import listdir, rename
 from os.path import isfile, join, exists, split
 
 importFolders = []
@@ -13,18 +13,22 @@ for importFolder in sys.argv[1:]:
     importFolders.extend(files)
 
 for importFolder in importFolders:
+    importFolderVolJson = None
     # if a glob for .vol.json is used, take the
     if importFolder.endswith(".vol.json") or importFolder.endswith(".VOL.json"):
-        importFolder = split(importFolder)[:-1]
+        importFolder = split(importFolder)
+        importFolderVolJson = importFolder[-1]
+        importFolder = importFolder[:-1]
         importFolder = join("", *importFolder)
 
     print("packing " + importFolder)
 
     # thank you stackoverflow - https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory
     filesToPack = [f for f in listdir(importFolder) if isfile(join(importFolder, f))]
-    importFolderVolJson = importFolder + ".vol.json"
+    if importFolder is None:
+        importFolderVolJson = importFolder + ".vol.json"
     finalVol = importFolder + ".vol"
-    finalVolNew = importFolder + ".vol.new"
+    finalVolOld = importFolder + ".vol.old"
     volumeHeader = binascii.hexlify(b"PVOL").decode("utf8")
 
     if importFolderVolJson in filesToPack:
@@ -99,8 +103,8 @@ for importFolder in importFolders:
         rawHeader = bytearray(struct.pack("<4sL4sL4sL", *stringSection))
         rawHeader.extend(stringBuffer)
 
-    if exists(finalVol):
-        finalVol = finalVolNew
+    if exists(finalVol) and not exists(finalVolOld):
+        rename(finalVol, finalVolOld)
 
     with open(finalVol, "wb") as outputFile:
         outputFile.write(struct.pack(mainHeaderFmt, *header))
