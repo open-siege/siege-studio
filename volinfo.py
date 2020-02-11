@@ -20,7 +20,6 @@ voli = b"voli"
 vblk = b"VBLK"
 eos = b"\0"
 
-
 def get_file_list_offsets(raw_data):
     offset = 0
     header_fmt = "<4sL"

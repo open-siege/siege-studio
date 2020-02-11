@@ -36,9 +36,12 @@ def extract_archive(import_filename, archive_module):
     file_info = archive_module.get_file_metadata(raw_data)
 
     volumeStructure = {
-        "volumeHeader": binascii.hexlify(raw_data[0:4]).decode("utf8"),
         "files": []
     }
+
+    volHeader = raw_data[0:4]
+    if volHeader != b"PVOL":
+        volumeStructure["volumeHeader"] = binascii.hexlify(volHeader).decode("utf8")
 
     for file in file_info:
         volumeStructure["files"].append(file.filename)

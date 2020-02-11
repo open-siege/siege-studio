@@ -14,19 +14,21 @@ for importFolder in sys.argv[1:]:
 
 for importFolder in importFolders:
     importFolderVolJson = None
-    # if a glob for .vol.json is used, take the
+    # if a glob for .vol.json is used, take the directory part of it
     if importFolder.endswith(".vol.json") or importFolder.endswith(".VOL.json"):
         importFolder = split(importFolder)
         importFolderVolJson = importFolder[-1]
         importFolder = importFolder[:-1]
         importFolder = join("", *importFolder)
+    else:
+        # we want the directory name so that we can specify what the vol json filename should be
+        importFolderVolJson = split(importFolder)[-1] + ".vol.json"
 
     print("packing " + importFolder)
 
     # thank you stackoverflow - https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory
     filesToPack = [f for f in listdir(importFolder) if isfile(join(importFolder, f))]
-    if importFolder is None:
-        importFolderVolJson = importFolder + ".vol.json"
+
     finalVol = importFolder + ".vol"
     finalVolOld = importFolder + ".vol.old"
     volumeHeader = binascii.hexlify(b"PVOL").decode("utf8")
@@ -35,7 +37,8 @@ for importFolder in importFolders:
         filesToPack.remove(importFolderVolJson)
         with open(join(importFolder, importFolderVolJson), "r") as volumeFile:
             parsedInfo = json.loads(volumeFile.read())
-            volumeHeader = parsedInfo["volumeHeader"]
+            if "volumeHeader" in parsedInfo:
+                volumeHeader = parsedInfo["volumeHeader"]
             filesToPack = parsedInfo["files"]
 
     volumeHeader = binascii.unhexlify(volumeHeader)
@@ -111,6 +114,4 @@ for importFolder in importFolders:
         outputFile.write(combinedFileData)
         outputFile.write(rawHeader)
         outputFile.write(fileInfoData)
-
-
 

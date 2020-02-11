@@ -22,13 +22,13 @@ for importFile in importFiles:
         rawData = volumeFile.read()
     file1Hash = hashlib.sha256(rawData).hexdigest()
 
-    with open(importFile + ".new", "rb") as volumeFile:
+    with open(importFile + ".old", "rb") as volumeFile:
         rawData = volumeFile.read()
     file2Hash = hashlib.sha256(rawData).hexdigest()
 
     if file1Hash == file2Hash:
-        print(f"{OKGREEN}{importFile} matches {importFile}.new{ENDC}")
+        print(f"{OKGREEN}{importFile} matches {importFile}.old{ENDC}")
 
     if file1Hash != file2Hash:
-        print(f"{FAIL}{importFile} does not match {importFile}.new{ENDC}")
+        print(f"{FAIL}{importFile} does not match {importFile}.old{ENDC}")
 
