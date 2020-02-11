@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 print(find_packages())
 setup(
     name='darkstar-vol-extractor',
-    version='0.0.3',
+    version='0.0.4',
     packages=find_packages(),
     url='https://github.com/matthew-rindel/darkstar-vol-extractor',
     license='MIT',
