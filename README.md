@@ -29,7 +29,7 @@ Globs are supported too:
    
 The same works for unvol.exe
 
-A folder is make per vol file and the contents extracted of each into them.
+A folder is made per vol file and the contents extracted of each into them.
 
 A JSON file is also generated with the original order of the files for repacking.
 
