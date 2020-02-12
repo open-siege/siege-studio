@@ -1,4 +1,4 @@
-import sharedEquipment
+import sharedInfo
 from functools import partial
 
 def createExecContext():
@@ -10,9 +10,8 @@ def createExecContext():
         "S": "small",
         "L": "large",
         "M": "medium",
-        "engines": {},
-        "finalEngines": [],
-        "currentEngineId": {}
+        "engines": [],
+        "currentEngine": {}
     }
 
     result["newEngine"] = partial(newEngine, result)
@@ -22,29 +21,21 @@ def createExecContext():
     return result
 
 def newEngine(context, engineId, velocityRating, accelerationRating, accelerationAtMaxVelocity):
-    engines = context["engines"]
-    currentEngineId = context["currentEngineId"]
-    finalEngines = context["finalEngines"]
-    currentEngineId["current"] = engineId
-    if engineId not in engines:
-        engines[engineId] = {
+    engine = {
             "engineId": engineId,
             "velocityRating": velocityRating,
             "accelerationRating": accelerationRating,
             "accelerationAtMaxVelocity": accelerationAtMaxVelocity
-        }
-        finalEngines.append(engines[engineId])
+    }
+    context["currentEngine"] = engine
+    context["engines"].append(engine)
 
 
 def engineInfo1(context, shortNameTag, longNameTag, smallBmp, smallDisBmp, largeBmp, largeDisBmp, description):
-    engines = context["engines"]
-    currentEngineId = context["currentEngineId"]
-    engines[currentEngineId["current"]]["displayInfo"] = sharedEquipment.createGenericInfo(shortNameTag, longNameTag, smallBmp, smallDisBmp, largeBmp, largeDisBmp, description)
+    context["currentEngine"]["displayInfo"] = sharedInfo.createGenericInfo(shortNameTag, longNameTag, smallBmp, smallDisBmp, largeBmp, largeDisBmp, description)
 
 def engineInfo2(context, techLevel, techBase, combatValue, mass, mountPoint, sizeDamage):
-    engines = context["engines"]
-    currentEngineId = context["currentEngineId"]
-    engines[currentEngineId["current"]]["techInfo"] = {
+    context["currentEngine"]["techInfo"] = {
         "techLevel": techLevel,
         "techBase": techBase,
         "combatValue": combatValue,

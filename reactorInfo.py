@@ -1,12 +1,10 @@
-import sharedEquipment
+import sharedInfo
 from functools import partial
 
 def createExecContext():
     result = {
-        "newReactor": newReactor,
-        "reactors": {},
-        "finalReactors": [],
-        "currentReactorId": {},
+        "reactors": [],
+        "currentReactor": {},
         "H": "human",
         "C": "cybrid",
         "X": "xl",
@@ -26,29 +24,22 @@ def createExecContext():
 
 
 def newReactor(context, reactorId, output, battery, meltdown):
-    reactors = context["reactors"]
-    finalReactors = context["finalReactors"]
-    currentReactorId = context["currentReactorId"]
-    if reactorId not in reactors:
-        currentReactorId["current"] = reactorId
-        reactors[reactorId] = {
+    reactor = {
             "reactorId": reactorId,
             "output": output,
             "battery": battery,
             "meltdown": meltdown
         }
-        finalReactors.append(reactors[reactorId])
+    context["currentReactor"] = reactor
+    context["reactors"].append(reactor)
 
 
 def reactorInfo1(context, shortNameTag, longNameTag, smallBmp, smallDisBmp, largeBmp, largeDisBmp, description):
-    reactors = context["reactors"]
-    currentReactorId = context["currentReactorId"]
-    reactors[currentReactorId["current"]]["displayInfo"] = sharedEquipment.createGenericInfo(shortNameTag, longNameTag, smallBmp, smallDisBmp, largeBmp, largeDisBmp, description)
+
+    context["currentReactor"]["displayInfo"] = sharedInfo.createGenericInfo(shortNameTag, longNameTag, smallBmp, smallDisBmp, largeBmp, largeDisBmp, description)
 
 def reactorInfo2(context, techLevel, techBase, combatValue, mass, mountPoint, sizeDamage):
-    reactors = context["reactors"]
-    currentReactorId = context["currentReactorId"]
-    reactors[currentReactorId["current"]]["techInfo"] = {
+    context["currentReactor"]["techInfo"] = {
         "techLevel": techLevel,
         "techBase": techBase,
         "combatValue": combatValue,
