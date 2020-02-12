@@ -1,11 +1,20 @@
-import sharedEquipment
+import sharedInfo
 from functools import partial
 
 def createExecContext():
     result = {
-        "armors": {},
-        "currentArmorId": {},
-        "finalArmors": []
+        "armors": [],
+        "currentArmor": {},
+        "Armor": "armor",
+        "A": "armor",
+        "X": "xeno",
+        "s": "small",
+        "X": "xl",
+        "x": "xl",
+        "S": "small",
+        "L": "large",
+        "M": "medium",
+        "m": "medium"
     }
 
     result["newArmor"] = partial(newArmor, result)
@@ -16,37 +25,29 @@ def createExecContext():
     return result
 
 def newArmor(context, armorId, type, conShrug, elecShrug, thrmShrug, conEff, elecEff, thrmEff, rcsMod, reallocRate, regenRate):
-    armors = context["armors"]
-    currentArmorId = context["currentArmorId"]
-    finalArmors = context["finalArmors"]
-    if armorId not in armors:
-        currentArmorId["current"] = armorId
-        armors[armorId] = {
-            "armorId": armorId,
-            "type": type,
-            "conShrug": conShrug,
-            "elecShrug": elecShrug,
-            "thrmShrug": thrmShrug,
-            "conEff": conEff,
-            "elecEff": elecEff,
-            "thrmEff": thrmEff,
-            "rscMod": rcsMod,
-            "reallocRate": reallocRate,
-            "regenRate": regenRate,
-            "specialOverrides": []
-        }
-        finalArmors.append(armorId[armorId])
+    armor = {
+        "armorId": armorId,
+        "type": type,
+        "conShrug": conShrug,
+        "elecShrug": elecShrug,
+        "thrmShrug": thrmShrug,
+        "conEff": conEff,
+        "elecEff": elecEff,
+        "thrmEff": thrmEff,
+        "rscMod": rcsMod,
+        "reallocRate": reallocRate,
+        "regenRate": regenRate,
+        "specialOverrides": []
+    }
+    context["armors"].append(armor)
+    context["currentArmor"] = armor
 
 
 def armorInfo1(context, shortNameTag, longNameTag, smallBmp, smallDisBmp, largeBmp, largeDisBmp, description):
-    armors = context["armors"]
-    currentArmorId = context["currentArmorId"]
-    armors[currentArmorId["current"]]["displayInfo"] = sharedEquipment.createGenericInfo(shortNameTag, longNameTag, smallBmp, smallDisBmp, largeBmp, largeDisBmp, description)
+    context["currentArmor"]["displayInfo"] = sharedInfo.createGenericInfo(shortNameTag, longNameTag, smallBmp, smallDisBmp, largeBmp, largeDisBmp, description)
 
 def armorInfo2(context, techLevel, techBase, combatValue, density, mountPoint, sizeDamage):
-    armors = context["armors"]
-    currentArmorId = context["currentArmorId"]
-    armors[currentArmorId["current"]]["techInfo"] = {
+    context["currentArmor"]["techInfo"] = {
         "techLevel": techLevel,
         "techBase": techBase,
         "combatValue": combatValue,
@@ -56,9 +57,7 @@ def armorInfo2(context, techLevel, techBase, combatValue, density, mountPoint, s
     }
 
 def armorInfospecial(context, projectileId, shrug, effective):
-    armors = context["armors"]
-    currentArmorId = context["currentArmorId"]
-    armors[currentArmorId["current"]]["specialOverrides"].append({
+    context["currentArmor"]["specialOverrides"].append({
         "projectileId": projectileId,
         "shrug": shrug,
         "effective": effective

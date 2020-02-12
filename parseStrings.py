@@ -1,5 +1,3 @@
-import reactorInfo
-
 def parseStringsFromFile(importFilename):
     translations = {}
     with open(importFilename, "r") as stringFile:
@@ -19,12 +17,3 @@ def parseStringsFromFile(importFilename):
                     }
                 }
     return translations
-
-reactorContext = reactorInfo.createExecContext()
-
-execString = 'newReactor (	200 ,	60 ,	400 ,	345	)'
-
-exec(execString, reactorContext)
-
-
-print(reactorContext["reactors"])
