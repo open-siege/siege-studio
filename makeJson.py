@@ -52,4 +52,5 @@ convertToJson("datProjectile", projectileInfo, "projectiles")
 hercs = glob.glob("datHerc_*.cs")
 
 for herc in hercs:
+    print(f"Parsing {herc}")
     convertToJson(herc.replace(".cs", ""), hercInfo, "hercs")
