@@ -15,8 +15,12 @@ def createExecContext():
         "M": "medium",
         "T": "top",
         "B": "bottom",
+        "L": "left",
+        "R": "right",
+        "I": "internal",
         "LeftPod": "leftPod",
         "RightPod": "rightPod",
+        "TopPod": "topPod",
         "LeftServos": "leftServos",
         "RightServos": "rightServos",
         "Pelvis": "pelvis",
@@ -27,6 +31,9 @@ def createExecContext():
         "RightCalf": "rightCalf",
         "LeftFoot": "leftFoot",
         "RightFoot": "rightFoot",
+        "LeftThigh": "leftThigh",
+        "RighThigh": "rightThigh",
+        "RightThigh": "rightThigh",
         "Pilot": "pilot",
         "Engine": "engine",
         "Armor": "armor",
@@ -34,7 +41,12 @@ def createExecContext():
         "Head": "head",
         "Computer": "computer",
         "Shield": "shield",
-        "Sensors": "sensor"
+        "Sensors": "sensor",
+        "true": True,
+        "false": False,
+        "vehicleIsPilotable": True,
+        "BASL": "BASL",
+        "PROM": "PROM"
     }
     result["hercBase"] = partial(hercBase, result)
     result["hercPos"] = partial(hercPos, result)
@@ -49,14 +61,22 @@ def createExecContext():
     result["newConfiguration"] = partial(newConfiguration, result)
     result["defaultWeapons"] = partial(defaultWeapons, result)
     result["defaultMountables"] = partial(defaultMountables, result)
+    result["vehiclePilotable"] = partial(vehiclePilotable, result)
+    result["translucentCockpit"] = partial(translucentCockpit, result)
+    result["hercFootprint"] = partial(hercFootprint, result)
+    result["HardPointDamage"] = partial(HardPointDamage, result)
 
     for key in result:
         contextToOverwrite[key] = result[key]
 
     return contextToOverwrite
 
+def vehiclePilotable(context, value):
+    context["vehicleIsPilotable"] = value
+
 def hercBase(context, identityTag, abbreviation, shape, mass, maxMass, radarCrossSection, techLevel, combatValue):
     herc = {
+        "vehiclePilotable": context["vehicleIsPilotable"],
         "identityTag": identityTag,
         "abbreviation": abbreviation,
         "shape": shape,
@@ -72,6 +92,7 @@ def hercBase(context, identityTag, abbreviation, shape, mass, maxMass, radarCros
         "defaultWeapons": [],
         "defaultMountables": []
     }
+    context["vehicleIsPilotable"] = True
     context["currentHerc"] = herc
     context["hercs"].append(herc)
 
@@ -99,7 +120,7 @@ def hercAnim(context, toStandVel, toRunVel, toFastRunVel, toFastTurnVel):
     }
 
 def hercCpit(context, offsetX, offsetY, offsetZ):
-    context["currentHerc"]["anim"] = {
+    context["currentHerc"]["cpit"] = {
         "offsetX": offsetX,
         "offsetY": offsetY,
         "offsetZ": offsetZ
@@ -113,13 +134,19 @@ def hercColl(context, sphOffstX, sphOffstY, sphOffstZ, sphereRad):
         "sphereRad": sphereRad
     }
 
-def hercAI(context, aiName1, aiName2, aiName3, aiName4):
+def hercAI(context, aiName1, aiName2, aiName3, aiName4 = None):
     context["currentHerc"]["ai"] = {
         "aiName1": aiName1,
         "aiName2": aiName2,
         "aiName3": aiName3,
         "aiName4": aiName4
     }
+
+def hercFootprint(context, footprintType):
+    context["currentHerc"]["footprintType"] = footprintType
+
+def translucentCockpit(context):
+    context["currentHerc"]["cpit"]["translucent"] = True
 
 def newHardPoint(context, hardpointId, size, side, dmgParent, offsetFromNodeX, offsetFromNodeY, offsetFromNodeZ, xRotationRangeMin, xRotationRangeMax, zRotationRangeMin, zRotationRangeMax):
     context["currentHerc"]["hardPoints"].append({
@@ -131,6 +158,9 @@ def newHardPoint(context, hardpointId, size, side, dmgParent, offsetFromNodeX, o
         "xRotationRange": [xRotationRangeMin, xRotationRangeMax],
         "zRotationRange": [zRotationRangeMin, zRotationRangeMax]
     })
+
+def HardPointDamage(context, damageValue):
+    context["currentHerc"]["hardPoints"][-1]["damage"] = damageValue
 
 def newMountPoint(context, mountPointId, size, dmgParent, *allowedMountables):
     mountPoint = {
