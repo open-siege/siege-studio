@@ -47,6 +47,8 @@ def createExecContext():
         "FlyerLeftFoot2": "flyerLeftFoot2",
         "FlyerRightFoot1": "flyerRightFoot1",
         "FlyerRightFoot2": "flyerRightFoot2",
+        "CargoA": "cargoA",
+        "CargoB": "cargoB",
         "Tail": "tail",
         "LeftLeg": "leftLeg",
         "RightLeg": "rightLeg",
@@ -154,7 +156,7 @@ def createExecContext():
     result["HardPointSpecial"] = partial(HardPointSpecial, contextToOverwrite)
     result["hardPointSpecial"] = partial(HardPointSpecial, contextToOverwrite)
     result["droneExplosion"] = partial(droneExplosion, contextToOverwrite)
-    result["genericDrone"] = partial(droneExplosion, contextToOverwrite)
+    result["genericDrone"] = partial(genericDrone, contextToOverwrite)
 
     for key in sfxStrings:
         contextToOverwrite[key] = sfxStrings[key]
@@ -368,3 +370,28 @@ def defaultMountables(context, *mountables):
 
 def genericDrone(context, cargoCount):
     context["currentVehicle"]["cargoCount"] = cargoCount
+    globalStrings = parseFiles.parseStringsFromFile("Sim.Strings.cs")
+    with open("datDroneGeneric.cs", "r") as genericFile:
+        lines = genericFile.read().splitlines()
+        currentBlock = ""
+        for index, line in enumerate(lines):
+            if currentBlock == "if":
+                currentBlock = ""
+                continue
+            line = line.strip()
+            line = currentBlock + line
+
+            if line.startswith("{") or line.startswith("}"):
+                line = line.replace("{", "").replace("}", "")
+
+            if line.startswith("function") or line == "":
+                continue
+
+            if "%cargoCount" in line:
+                line = line.replace("%cargoCount", str(cargoCount))
+            if line.startswith("if"):
+                line = line + ":"
+                nextLine = "\t" + lines[index + 1].replace("{", "").replace("}", "").strip()
+                line = "\n".join([line, nextLine])
+                currentBlock = "if"
+            exec(line, globalStrings, context)
