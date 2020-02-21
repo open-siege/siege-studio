@@ -1,8 +1,8 @@
-import parseStrings
+import parseFiles
 from functools import partial
 
 def createExecContext():
-    sfxStrings = parseStrings.parseStringsFromFile("sfx.strings.cs")
+    sfxStrings = parseFiles.parseStringsFromFile("sfx.strings.cs")
     result = {
         "weapons": [],
         "currentWeapon": {},

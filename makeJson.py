@@ -1,4 +1,4 @@
-import parseStrings
+import parseFiles
 import engineInfo
 import reactorInfo
 import sensorInfo
@@ -9,48 +9,52 @@ import intMountsInfo
 import projectileInfo
 import hercInfo
 import json
-import glob
+from functools import partial
 
-globalStrings = parseStrings.parseStringsFromFile("Sim.Strings.cs")
+globalStrings = parseFiles.parseStringsFromFile("Sim.Strings.cs")
 
-def convertToJson(filename, module, finalKey):
-    context = module.createExecContext()
+parseFiles.convertToJson("datEngine", globalStrings, engineInfo, "engines")
+parseFiles.convertToJson("datReactor", globalStrings, reactorInfo, "reactors")
+parseFiles.convertToJson("datSensor", globalStrings, sensorInfo, "sensors")
+parseFiles.convertToJson("datArmor", globalStrings, armorInfo, "armors")
+parseFiles.convertToJson("datShield", globalStrings, shieldInfo, "shields")
+parseFiles.convertToJson("datWeapon", globalStrings, weaponInfo, "weapons")
+parseFiles.convertToJson("datIntMounts", globalStrings, intMountsInfo, "internalMounts")
+parseFiles.convertToJson("datProjectile", globalStrings, projectileInfo, "projectiles")
 
-    with open(f"{filename}.cs", "r") as stringFile:
-        lines = stringFile.read().splitlines()
-        skipLine = False
-        for line in lines:
-            if skipLine == True:
-                skipLine = False
-                continue
-            line = line.strip()
-            if line.startswith("//"):
-                continue
-            try:
-                exec(line, globalStrings, context)
-            except SyntaxError as error:
-                if error.msg.find("EOF") != -1:
-                    nextLine = lines[lines.index(line) + 1]
-                    exec(line + nextLine, globalStrings, context)
-                    skipLine = True
-                else:
-                    print(error)
-
-    with open(f"{filename}.json", "w") as outputFile:
-        outputFile.write(json.dumps({finalKey: context[finalKey]}, indent="\t"))
+def buildVehicle(context, vehicleId, techBase, filename):
+    herc = {
+        "vehicleId": vehicleId,
+        "techBase": techBase
+    }
+    context["vehicles"].append(herc)
+    context["currentVehicle"] = herc
+    print(f"Processing {filename}")
+    with open(filename, "r") as stringFile:
+        parseFiles.processFile(stringFile.read(), globalStrings, context)
 
 
-convertToJson("datEngine", engineInfo, "engines")
-convertToJson("datReactor", reactorInfo, "reactors")
-convertToJson("datSensor", sensorInfo, "sensors")
-convertToJson("datArmor", armorInfo, "armors")
-convertToJson("datShield", shieldInfo, "shields")
-convertToJson("datWeapon", weaponInfo, "weapons")
-convertToJson("datIntMounts", intMountsInfo, "internalMounts")
-convertToJson("datProjectile", projectileInfo, "projectiles")
+def buildFlyer(context, vehicleId, filename):
+    pass
 
-hercs = glob.glob("datHerc_*.cs")
+def localExec(filename):
+    pass
 
-for herc in hercs:
-    print(f"Parsing {herc}")
-    convertToJson(herc.replace(".cs", ""), hercInfo, "hercs")
+def createVehicleContext():
+    result = hercInfo.createExecContext()
+    result["buildHerc"] = partial(buildVehicle, result)
+    result["buildTank"] = partial(buildVehicle, result)
+    result["buildFlyer"] = partial(buildFlyer, result)
+    result["buildDrone"] = partial(buildFlyer, result)
+    result["exec"] = localExec
+
+    return result
+
+
+with open(f"datVehicle.cs", "r") as stringFile:
+    fileContent = stringFile.read()
+    fileContent = fileContent[fileContent.index("buildHerc( "):]
+    context = createVehicleContext()
+    parseFiles.processFile(fileContent, globalStrings, context)
+    with open("datVehicle.json", "w") as outputFile:
+        outputFile.write(json.dumps({"vehicles": context["vehicles"]}, indent="\t"))
