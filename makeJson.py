@@ -24,6 +24,7 @@ parseFiles.convertToJson("datProjectile", globalStrings, projectileInfo, "projec
 
 def buildVehicle(context, vehicleId, techBase, filename):
     herc = {
+        "fileId": filename.replace(".cs", ""),
         "vehicleId": vehicleId,
         "techBase": techBase
     }
@@ -34,8 +35,8 @@ def buildVehicle(context, vehicleId, techBase, filename):
         parseFiles.processFile(stringFile.read(), globalStrings, context)
 
 
-def buildFlyer(context, vehicleId, filename):
-    pass
+def buildVehicleWithoutTechBase(context, vehicleId, filename):
+    buildVehicle(context, vehicleId, None, filename)
 
 def localExec(filename):
     pass
@@ -44,8 +45,8 @@ def createVehicleContext():
     result = hercInfo.createExecContext()
     result["buildHerc"] = partial(buildVehicle, result)
     result["buildTank"] = partial(buildVehicle, result)
-    result["buildFlyer"] = partial(buildFlyer, result)
-    result["buildDrone"] = partial(buildFlyer, result)
+    result["buildFlyer"] = partial(buildVehicleWithoutTechBase, result)
+    result["buildDrone"] = partial(buildVehicleWithoutTechBase, result)
     result["exec"] = localExec
 
     return result

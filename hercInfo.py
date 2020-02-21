@@ -20,6 +20,8 @@ def createExecContext():
         "R": "right",
         "I": "internal",
         "LeftPod": "leftPod",
+        "Left_WingA": "leftWingA",
+        "Right_WingA": "rightWingA",
         "tankLeftPod": "tankLeftPod",
         "tankRightPod": "tankRightPod",
         "TankLeftPod": "tankLeftPod",
@@ -32,6 +34,19 @@ def createExecContext():
         "RightServos": "rightServos",
         "Pelvis": "pelvis",
         "none": None,
+        "LeftWing1": "leftWing1",
+        "RightWing1": "RightWing1",
+        "LeftWing2": "leftWing2",
+        "RightWing2": "RightWing2",
+        "LeftEngine1": "leftEngine1",
+        "RightEngine1": "rightEngine1",
+        "LeftEngine2": "leftEngine2",
+        "RightEngine2": "rightEngine2",
+        "FlyerLeftFoot1": "flyerLeftFoot1",
+        "FlyerLeftFoot2": "flyerLeftFoot2",
+        "FlyerRightFoot1": "flyerRightFoot1",
+        "FlyerRightFoot2": "flyerRightFoot2",
+        "Tail": "tail",
         "LeftLeg": "leftLeg",
         "RightLeg": "rightLeg",
         "LeftCalf": "leftCalf",
@@ -42,9 +57,12 @@ def createExecContext():
         "RighThigh": "rightThigh",
         "RightThigh": "rightThigh",
         "TankHead": "tankHead",
+        "FlyerHead": "flyerHead",
         "Body": "body",
+        "FlyerBody": "flyerBody",
         "LeftTread": "leftTread",
         "RightTread": "rightTread",
+        "thermalDiffuser": "thermalDiffuser",
         "RearTread": "readTread",
         "CenterTread": "centerTread",
         "Pilot": "pilot",
@@ -75,9 +93,11 @@ def createExecContext():
 
     result["hercPos"] = partial(hercPos, contextToOverwrite)
     result["tankPos"] = partial(hercPos, contextToOverwrite)
+    result["flyerPos"] = partial(flyerPos, contextToOverwrite)
 
     result["hercRot"] = partial(hercRot, contextToOverwrite)
     result["tankRot"] = partial(hercRot, contextToOverwrite)
+    result["flyerRot"] = partial(flyerRot, contextToOverwrite)
 
     result["hercAnim"] = partial(hercAnim, contextToOverwrite)
     result["tankAnim"] = partial(tankAnim, contextToOverwrite)
@@ -89,10 +109,15 @@ def createExecContext():
 
     result["hercColl"] = partial(hercColl, contextToOverwrite)
     result["tankColl"] = partial(hercColl, contextToOverwrite)
-    contextToOverwrite
+    result["flyerColl"] = partial(hercColl, contextToOverwrite)
+
     result["hercAI"] = partial(hercAI, contextToOverwrite)
     result["tankAI"] = partial(hercAI, contextToOverwrite)
     result["flyerAI"] = partial(hercAI, contextToOverwrite)
+
+    result["flyerExhaust"] = partial(flyerExhaust, contextToOverwrite)
+    result["flyerNav"] = partial(flyerNav, contextToOverwrite)
+    result["flyerSound"] = partial(flyerSound, contextToOverwrite)
 
     result["tankSound"] = partial(tankSound, contextToOverwrite)
     result["tankSlide"] = partial(tankSlide, contextToOverwrite)
@@ -110,6 +135,7 @@ def createExecContext():
     result["HardPointDamage"] = partial(HardPointDamage, contextToOverwrite)
     result["HardPointSpecial"] = partial(HardPointSpecial, contextToOverwrite)
     result["hardPointSpecial"] = partial(HardPointSpecial, contextToOverwrite)
+    result["droneExplosion"] = partial(droneExplosion, contextToOverwrite)
 
     for key in sfxStrings:
         contextToOverwrite[key] = sfxStrings[key]
@@ -157,12 +183,29 @@ def hercPos(context, maxPosAcc, minPosVel, maxForPosVel, maxRevPosVel):
         "maxRevPosVel": maxRevPosVel
     }
 
+def flyerPos(context, maxPosAcc, thrustMultiple, maxLiftVel, maxFallVel, maxFlyVel, fastLean):
+    context["currentVehicle"]["pos"] = {
+        "maxPosAcc": maxPosAcc,
+        "thrustMultiple": thrustMultiple,
+        "maxLiftVel": maxLiftVel,
+        "maxFallVel": maxFallVel,
+        "maxFlyVel": maxFlyVel,
+        "fastLean": fastLean
+    }
+
 def hercRot(context,minRotVel, maxRVSlow, maxRVFast, maxRVTurret = None):
     context["currentVehicle"]["rot"] = {
         "minRotVel": minRotVel,
         "maxRVSlow": maxRVSlow,
         "maxRVFast": maxRVFast,
         "maxRVTurret": maxRVTurret
+    }
+
+def flyerRot(context, maxRotXVel, maxRotYVel, maxRotZVel):
+    context["currentVehicle"]["rot"] = {
+        "maxRotXVel": maxRotXVel,
+        "maxRotYVel": maxRotYVel,
+        "maxRotZVel": maxRotZVel,
     }
 
 def hercAnim(context, toStandVel, toRunVel, toFastRunVel, toFastTurnVel):
@@ -223,6 +266,25 @@ def tankSlide(context, slideCoefficient):
     context["currentVehicle"]["slide"] = {
         "slideCoefficient": slideCoefficient
     }
+
+def flyerExhaust(context, exhaustShapeT, exhaustShapeNT, numberOfSources):
+    context["currentVehicle"]["exhaust"] = {
+        "exhaustShapeT": exhaustShapeT,
+        "exhaustShapeNT": exhaustShapeNT,
+        "numberOfSources": numberOfSources
+    }
+
+def flyerNav(context, maxLean, maxBank, taxiRange, shortRange, mediumRange):
+    context["currentVehicle"]["nav"] = {
+        "maxLean": maxLean,
+        "maxBank": maxBank,
+        "taxiRange": taxiRange,
+        "shortRange": shortRange,
+        "mediumRange": mediumRange
+    }
+
+def droneExplosion(context, *values):
+    context["currentVehicle"]["droneExplosion"] = values
 
 def translucentCockpit(context):
     context["currentVehicle"]["cpit"]["translucent"] = True
