@@ -30,6 +30,7 @@ def createExecContext():
         "RightPod": "rightPod",
         "TopPod": "topPod",
         "TopPodA": "topPodA",
+        "TopPodB": "topPodB",
         "LeftServos": "leftServos",
         "RightServos": "rightServos",
         "Pelvis": "pelvis",
@@ -49,6 +50,12 @@ def createExecContext():
         "Tail": "tail",
         "LeftLeg": "leftLeg",
         "RightLeg": "rightLeg",
+        "LeftLegA": "leftLegA",
+        "RightLegA": "rightLegA",
+        "LeftLegB": "leftLegB",
+        "RightLegB": "rightLegB",
+        "LeftLegC": "leftLegC",
+        "RightLegC": "rightLegC",
         "LeftCalf": "leftCalf",
         "RightCalf": "rightCalf",
         "LeftFoot": "leftFoot",
@@ -62,6 +69,10 @@ def createExecContext():
         "FlyerBody": "flyerBody",
         "LeftTread": "leftTread",
         "RightTread": "rightTread",
+        "LeftTreadA": "leftTreadA",
+        "RightTreadA": "rightTreadA",
+        "LeftTreadB": "leftTreadB",
+        "RightTreadB": "rightTreadB",
         "thermalDiffuser": "thermalDiffuser",
         "RearTread": "readTread",
         "CenterTread": "centerTread",
@@ -90,17 +101,21 @@ def createExecContext():
     result["hercBase"] = partial(hercBase, contextToOverwrite)
     result["tankBase"] = partial(hercBase, contextToOverwrite)
     result["flyerBase"] = partial(hercBase, contextToOverwrite)
+    result["droneBase"] = partial(hercBase, contextToOverwrite)
 
     result["hercPos"] = partial(hercPos, contextToOverwrite)
     result["tankPos"] = partial(hercPos, contextToOverwrite)
+    result["dronePos"] = partial(hercPos, contextToOverwrite)
     result["flyerPos"] = partial(flyerPos, contextToOverwrite)
 
     result["hercRot"] = partial(hercRot, contextToOverwrite)
     result["tankRot"] = partial(hercRot, contextToOverwrite)
+    result["droneRot"] = partial(hercRot, contextToOverwrite)
     result["flyerRot"] = partial(flyerRot, contextToOverwrite)
 
     result["hercAnim"] = partial(hercAnim, contextToOverwrite)
     result["tankAnim"] = partial(tankAnim, contextToOverwrite)
+    result["droneAnim"] = partial(tankAnim, contextToOverwrite)
     result["hercAnim"] = partial(hercAnim, contextToOverwrite)
 
     result["hercCpit"] = partial(hercCpit, contextToOverwrite)
@@ -108,6 +123,7 @@ def createExecContext():
     result["flyerCpit"] = partial(hercCpit, contextToOverwrite)
 
     result["hercColl"] = partial(hercColl, contextToOverwrite)
+    result["droneColl"] = partial(hercColl, contextToOverwrite)
     result["tankColl"] = partial(hercColl, contextToOverwrite)
     result["flyerColl"] = partial(hercColl, contextToOverwrite)
 
@@ -116,10 +132,12 @@ def createExecContext():
     result["flyerAI"] = partial(hercAI, contextToOverwrite)
 
     result["flyerExhaust"] = partial(flyerExhaust, contextToOverwrite)
+    result["flyerExhaustOffset"] = partial(flyerExhaustOffset, contextToOverwrite)
     result["flyerNav"] = partial(flyerNav, contextToOverwrite)
     result["flyerSound"] = partial(flyerSound, contextToOverwrite)
 
     result["tankSound"] = partial(tankSound, contextToOverwrite)
+    result["droneSound"] = partial(tankSound, contextToOverwrite)
     result["tankSlide"] = partial(tankSlide, contextToOverwrite)
 
     result["newHardPoint"] = partial(newHardPoint, contextToOverwrite)
@@ -136,6 +154,7 @@ def createExecContext():
     result["HardPointSpecial"] = partial(HardPointSpecial, contextToOverwrite)
     result["hardPointSpecial"] = partial(HardPointSpecial, contextToOverwrite)
     result["droneExplosion"] = partial(droneExplosion, contextToOverwrite)
+    result["genericDrone"] = partial(droneExplosion, contextToOverwrite)
 
     for key in sfxStrings:
         contextToOverwrite[key] = sfxStrings[key]
@@ -271,8 +290,12 @@ def flyerExhaust(context, exhaustShapeT, exhaustShapeNT, numberOfSources):
     context["currentVehicle"]["exhaust"] = {
         "exhaustShapeT": exhaustShapeT,
         "exhaustShapeNT": exhaustShapeNT,
-        "numberOfSources": numberOfSources
+        "numberOfSources": numberOfSources,
+        "offsets": []
     }
+
+def flyerExhaustOffset(context, *values):
+    context["currentVehicle"]["exhaust"]["offsets"].append(values)
 
 def flyerNav(context, maxLean, maxBank, taxiRange, shortRange, mediumRange):
     context["currentVehicle"]["nav"] = {
@@ -342,3 +365,6 @@ def defaultWeapons(context, *weapons):
 def defaultMountables(context, *mountables):
     for mountable in mountables:
         context["currentVehicle"]["defaultMountables"].append(mountable)
+
+def genericDrone(context, cargoCount):
+    context["currentVehicle"]["cargoCount"] = cargoCount
