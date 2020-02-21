@@ -1,4 +1,4 @@
-import parseStrings
+import parseFiles
 from functools import partial
 
 def createExecContext():
@@ -16,7 +16,7 @@ def createExecContext():
         "PROX": "prox"
     }
 
-    globalStrings = parseStrings.parseStringsFromFile("Sim.Strings.cs")
+    globalStrings = parseFiles.parseStringsFromFile("Sim.Strings.cs")
 
     for key in globalStrings:
         if key.startswith("IDWEA_"):
