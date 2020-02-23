@@ -189,7 +189,17 @@ def hercBase(context, identityTag, abbreviation, shape, mass, maxMass, radarCros
         "components": [],
         "configurations": [],
         "defaultWeapons": [],
-        "defaultMountables": []
+        "defaultMountables": [],
+        "pos": None,
+        "rot": None,
+        "anim": None,
+        "cpit": None,
+        "coll": None,
+        "ai": None,
+        "sound": None,
+        "exhaust": None,
+        "slide": None,
+        "footprintType": None
     }
     context["vehicleIsPilotable"] = True
     context["vehicleIsArtillery"] = False
@@ -371,6 +381,9 @@ def defaultMountables(context, *mountables):
 def genericDrone(context, cargoCount):
     context["currentVehicle"]["cargoCount"] = cargoCount
     globalStrings = parseFiles.parseStringsFromFile("Sim.Strings.cs")
+
+    # manually parsing the file for now, because we know the structure
+    # of datDroneGeneric and we don't need any other script files to make all this work.
     with open("datDroneGeneric.cs", "r") as genericFile:
         lines = genericFile.read().splitlines()
         currentBlock = ""
