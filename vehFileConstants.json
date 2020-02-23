@@ -38,21 +38,21 @@
     "groupMaxCount": 6
   },
   "sensor": {
-    "idIndex": 28,
-    "groupIdStart": 124,
-    "componentIdStart": 46,
-    "idDelta": 64,
+    "idIndex": 38,
+    "groupIdStart": 227,
+    "componentIdStart": 150,
+    "idDelta": 32,
     "groupMaxCount": 4
   },
   "special1": {
-    "idIndex": 28,
+    "idIndex": 40,
     "groupIdStart": 124,
     "componentIdStart": 46,
-    "idDelta": 64,
+    "idDelta": 32,
     "groupMaxCount": 4
   },
   "special2": {
-    "idIndex": 28,
+    "idIndex": 42,
     "groupIdStart": 124,
     "componentIdStart": 46,
     "idDelta": 64,
