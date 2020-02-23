@@ -7,7 +7,7 @@ import shieldInfo
 import weaponInfo
 import intMountsInfo
 import projectileInfo
-import hercInfo
+import vehicleInfo
 import json
 from functools import partial
 
@@ -22,10 +22,11 @@ parseFiles.convertToJson("datWeapon", globalStrings, weaponInfo, "weapons")
 parseFiles.convertToJson("datIntMounts", globalStrings, intMountsInfo, "internalMounts")
 parseFiles.convertToJson("datProjectile", globalStrings, projectileInfo, "projectiles")
 
-def buildVehicle(context, vehicleId, techBase, filename):
+def buildVehicle(context, vehicleType, vehicleId, techBase, filename):
     herc = {
         "fileId": filename.replace(".cs", ""),
         "vehicleId": vehicleId,
+        "vehicleType": vehicleType,
         "techBase": techBase
     }
     context["vehicles"].append(herc)
@@ -35,18 +36,18 @@ def buildVehicle(context, vehicleId, techBase, filename):
         parseFiles.processFile(stringFile.read(), globalStrings, context)
 
 
-def buildVehicleWithoutTechBase(context, vehicleId, filename):
-    buildVehicle(context, vehicleId, None, filename)
+def buildVehicleWithoutTechBase(context, vehicleType, vehicleId, filename):
+    buildVehicle(context, vehicleType, vehicleId, None, filename)
 
 def localExec(filename):
     pass
 
 def createVehicleContext():
-    result = hercInfo.createExecContext()
-    result["buildHerc"] = partial(buildVehicle, result)
-    result["buildTank"] = partial(buildVehicle, result)
-    result["buildFlyer"] = partial(buildVehicleWithoutTechBase, result)
-    result["buildDrone"] = partial(buildVehicleWithoutTechBase, result)
+    result = vehicleInfo.createExecContext()
+    result["buildHerc"] = partial(buildVehicle, result, "herc")
+    result["buildTank"] = partial(buildVehicle, result, "tank")
+    result["buildFlyer"] = partial(buildVehicleWithoutTechBase, result, "flyer")
+    result["buildDrone"] = partial(buildVehicleWithoutTechBase, result, "drone")
     result["exec"] = localExec
 
     return result
