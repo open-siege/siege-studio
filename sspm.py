@@ -44,8 +44,9 @@ def downloadPackageWithDependencies(packageName, version = None):
     with tarfile.open(getTarballName(versionInfo)) as tf:
         tf.extractall(path=destinationDirectory)
 
-    for key in versionInfo["dependencies"]:
-        downloadPackageWithDependencies(key)
+    if "dependencies" in versionInfo:
+        for key in versionInfo["dependencies"]:
+            downloadPackageWithDependencies(key)
 
 
 downloadPackageWithDependencies(packageName)
