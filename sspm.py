@@ -3,15 +3,15 @@ import tarfile
 import requests
 import os
 import os.path
+import click
 from clint.textui import progress
 from os import walk
 
-packageName = "starsiege-retail"
 with open("sspm.config.json", "r") as configFile:
     config = json.loads(configFile.read())
 
 tempDirectory = os.path.join("temp", "packages")
-finalDirectory = "final"
+finalDirectory = "."
 
 if not os.path.exists(tempDirectory):
     os.makedirs(tempDirectory)
@@ -24,7 +24,7 @@ def getAllFilesFromFolder(folder, files = None):
         filenames = map(lambda f: os.path.join(dirpath, f), filenames)
         files.extend(filenames)
         for dir in dirnames:
-            getAllFilesFromFolder(dir, files)
+            getAllFilesFromFolder(os.path.join(dirpath, dir), files)
 
     return files
 
@@ -88,16 +88,15 @@ def downloadPackageWithDependencies(packageName, version = None):
             if tarLength is None:
                 tempFile.write(tarballResponse.content)
             else:
-                for chunk in progress.bar(tarballResponse.iter_content(chunk_size=1024), expected_size=(tarLength / 1024) + 1):
+                for chunk in progress.bar(tarballResponse.iter_content(chunk_size=4096), expected_size=(tarLength / 4096) + 1):
                     if chunk:
                         tempFile.write(chunk)
-                        tempFile.flush()
+                tempFile.flush()
 
 
     with tarfile.open(os.path.join(tempDirectory, getTarballName(versionInfo))) as tf:
         tf.extractall(path=destinationDirectory)
 
-    print(destinationDirectory)
     packageInfo["extractedFiles"] = getAllFilesFromFolder(destinationDirectory)
 
     packageInfo["expandedDependencies"] = []
@@ -108,5 +107,18 @@ def downloadPackageWithDependencies(packageName, version = None):
 
     return packageInfo
 
-finalPackage = downloadPackageWithDependencies(packageName)
-copyFilesToFinalFolder(finalPackage)
+
+@click.group()
+def cli():
+    pass
+
+
+@cli.command("install")
+@click.argument("packagename")
+def install(packagename):
+    finalPackage = downloadPackageWithDependencies(packagename)
+    copyFilesToFinalFolder(finalPackage)
+
+
+if __name__ == "__main__":
+    cli()
