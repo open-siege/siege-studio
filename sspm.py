@@ -6,6 +6,7 @@ import os.path
 import click
 from clint.textui import progress
 from os import walk
+import asyncio
 
 with open("sspm.config.json", "r") as configFile:
     config = json.loads(configFile.read())
@@ -63,10 +64,7 @@ def copyFilesToFinalFolder(packageInfo):
         copyFilesToFinalFolder(child)
 
 
-def downloadPackageWithDependencies(packageName, version = None):
-    destinationDirectory = os.path.join(tempDirectory, packageName)
-    if not os.path.exists(destinationDirectory):
-        os.makedirs(destinationDirectory)
+def downloadPackageWithDependencies(packageName, version=None):
     packageInfo = getPackageInfo(packageName)
 
     if version is None:
@@ -80,32 +78,41 @@ def downloadPackageWithDependencies(packageName, version = None):
     print(f"downloading {packageName} {versionToUse}")
     versionInfo = packageInfo["versions"][versionToUse]
 
-    if not os.path.exists(os.path.join(tempDirectory, getTarballName(versionInfo))):
-        with open(os.path.join(tempDirectory, getTarballName(versionInfo)), "wb") as tempFile:
-            tarballResponse = downloadTarball(versionInfo)
-            tarLength = int(tarballResponse.headers.get("content-length"))
+    downloadPackageTar(versionInfo)
+    extractTar(packageInfo, versionInfo)
+    processDependencies(packageInfo, versionInfo)
 
-            if tarLength is None:
-                tempFile.write(tarballResponse.content)
-            else:
-                for chunk in progress.bar(tarballResponse.iter_content(chunk_size=4096), expected_size=(tarLength / 4096) + 1):
-                    if chunk:
-                        tempFile.write(chunk)
-                tempFile.flush()
+    return packageInfo
 
-
+def extractTar(packageInfo, versionInfo):
+    destinationDirectory = os.path.join(tempDirectory, packageInfo["name"])
+    if not os.path.exists(destinationDirectory):
+        os.makedirs(destinationDirectory)
     with tarfile.open(os.path.join(tempDirectory, getTarballName(versionInfo))) as tf:
         tf.extractall(path=destinationDirectory)
 
     packageInfo["extractedFiles"] = getAllFilesFromFolder(destinationDirectory)
 
+def downloadPackageTar(versionInfo):
+    if not os.path.exists(os.path.join(tempDirectory, getTarballName(versionInfo))):
+        with open(os.path.join(tempDirectory, getTarballName(versionInfo)), "wb") as tempFile:
+            with downloadTarball(versionInfo) as tarballResponse:
+                tarLength = int(tarballResponse.headers.get("content-length"))
+
+                if tarLength is None:
+                    tempFile.write(tarballResponse.content)
+                else:
+                    for chunk in progress.bar(tarballResponse.iter_content(chunk_size=4096), expected_size=(tarLength / 4096) + 1):
+                        if chunk:
+                            tempFile.write(chunk)
+            tempFile.flush()
+
+def processDependencies(packageInfo, versionInfo):
     packageInfo["expandedDependencies"] = []
     if "dependencies" in versionInfo:
         for key, value in versionInfo["dependencies"].items():
             childPackage = downloadPackageWithDependencies(key, value)
             packageInfo["expandedDependencies"].append(childPackage)
-
-    return packageInfo
 
 
 @click.group()
