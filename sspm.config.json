@@ -1,3 +1,4 @@
 {
-  "packageRegistry": "http://thesiegehub.com:4873"
+  "packageRegistry": "http://thesiegehub.com:4873",
+  "numberOfConcurrentDownloads": 8
 }
