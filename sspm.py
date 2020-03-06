@@ -6,7 +6,17 @@ import os.path
 import click
 from clint.textui import progress
 from os import walk
-import asyncio
+from multiprocessing.pool import ThreadPool
+from time import time as timer
+from threading import Lock
+
+s_print_lock = Lock()
+
+def s_print(*a, **b):
+    """Thread safe print function"""
+    with s_print_lock:
+        print(*a, **b)
+
 
 with open("sspm.config.json", "r") as configFile:
     config = json.loads(configFile.read())
@@ -50,7 +60,6 @@ def findMatchingVersion(packageInfo, version):
 def copyFilesToFinalFolder(packageInfo):
     for file in packageInfo["extractedFiles"]:
 
-        print(file)
         fileFolder = file.replace(os.path.join(tempDirectory, packageInfo["name"], "package", ""), "")
         splitData = os.path.split(fileFolder)
         fileFolder = os.path.join(finalDirectory, *splitData[:-1])
@@ -64,7 +73,7 @@ def copyFilesToFinalFolder(packageInfo):
         copyFilesToFinalFolder(child)
 
 
-def downloadPackageWithDependencies(packageName, version=None):
+def downloadPackageInformation(packageName, version, packages):
     packageInfo = getPackageInfo(packageName)
 
     if version is None:
@@ -75,17 +84,23 @@ def downloadPackageWithDependencies(packageName, version=None):
     if versionToUse is None:
         raise RuntimeError(f"Could not find matching version for {packageName} {version}")
 
-    print(f"downloading {packageName} {versionToUse}")
     versionInfo = packageInfo["versions"][versionToUse]
 
-    downloadPackageTar(versionInfo)
-    extractTar(packageInfo, versionInfo)
-    processDependencies(packageInfo, versionInfo)
+    packages.append((packageInfo, versionInfo))
+    processDependeciesInformation(packageInfo, versionInfo, packages)
 
     return packageInfo
 
+def processDependeciesInformation(packageInfo, versionInfo, packages):
+    packageInfo["expandedDependencies"] = []
+    if "dependencies" in versionInfo:
+        for key, value in versionInfo["dependencies"].items():
+            childPackage = downloadPackageInformation(key, value, packages)
+            packageInfo["expandedDependencies"].append(childPackage)
+
 def extractTar(packageInfo, versionInfo):
     destinationDirectory = os.path.join(tempDirectory, packageInfo["name"])
+    s_print(f"extracting {versionInfo['name']}")
     if not os.path.exists(destinationDirectory):
         os.makedirs(destinationDirectory)
     with tarfile.open(os.path.join(tempDirectory, getTarballName(versionInfo))) as tf:
@@ -93,8 +108,10 @@ def extractTar(packageInfo, versionInfo):
 
     packageInfo["extractedFiles"] = getAllFilesFromFolder(destinationDirectory)
 
+
 def downloadPackageTar(versionInfo):
     if not os.path.exists(os.path.join(tempDirectory, getTarballName(versionInfo))):
+        s_print(f"downloading {versionInfo['name']}")
         with open(os.path.join(tempDirectory, getTarballName(versionInfo)), "wb") as tempFile:
             with downloadTarball(versionInfo) as tarballResponse:
                 tarLength = int(tarballResponse.headers.get("content-length"))
@@ -102,18 +119,18 @@ def downloadPackageTar(versionInfo):
                 if tarLength is None:
                     tempFile.write(tarballResponse.content)
                 else:
-                    for chunk in progress.bar(tarballResponse.iter_content(chunk_size=4096), expected_size=(tarLength / 4096) + 1):
+                    for chunk in tarballResponse.iter_content(chunk_size=4096):
                         if chunk:
                             tempFile.write(chunk)
             tempFile.flush()
+    else:
+        s_print(f"found cached version of {versionInfo['name']}")
 
-def processDependencies(packageInfo, versionInfo):
-    packageInfo["expandedDependencies"] = []
-    if "dependencies" in versionInfo:
-        for key, value in versionInfo["dependencies"].items():
-            childPackage = downloadPackageWithDependencies(key, value)
-            packageInfo["expandedDependencies"].append(childPackage)
 
+def downloadPackageTarForThread(rawData):
+    (packageInfo, versionInfo) = rawData
+    downloadPackageTar(versionInfo)
+    return rawData
 
 @click.group()
 def cli():
@@ -123,7 +140,18 @@ def cli():
 @cli.command("install")
 @click.argument("packagename")
 def install(packagename):
-    finalPackage = downloadPackageWithDependencies(packagename)
+    packages = []
+    finalPackage = downloadPackageInformation(packagename, None, packages)
+
+    pool = ThreadPool(config["numberOfConcurrentDownloads"])
+    results = pool.imap_unordered(downloadPackageTarForThread, packages)
+
+    start = timer()
+    #progress.bar(, expected_size=(tarLength / 4096) + 1)
+    for (packageInfo, versionInfo) in results:
+        extractTar(packageInfo, versionInfo)
+
+    s_print(f"Elapsed Time: {timer() - start}")
     copyFilesToFinalFolder(finalPackage)
 
 
