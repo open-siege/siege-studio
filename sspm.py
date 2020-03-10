@@ -100,7 +100,6 @@ def processDependeciesInformation(packageInfo, versionInfo, packages):
 
 def extractTar(packageInfo, versionInfo):
     destinationDirectory = os.path.join(tempDirectory, packageInfo["name"])
-    s_print(f"extracting {versionInfo['name']}")
     if not os.path.exists(destinationDirectory):
         os.makedirs(destinationDirectory)
     with tarfile.open(os.path.join(tempDirectory, getTarballName(versionInfo))) as tf:
@@ -111,7 +110,6 @@ def extractTar(packageInfo, versionInfo):
 
 def downloadPackageTar(versionInfo):
     if not os.path.exists(os.path.join(tempDirectory, getTarballName(versionInfo))):
-        s_print(f"downloading {versionInfo['name']}")
         with open(os.path.join(tempDirectory, getTarballName(versionInfo)), "wb") as tempFile:
             with downloadTarball(versionInfo) as tarballResponse:
                 tarLength = int(tarballResponse.headers.get("content-length"))
@@ -141,17 +139,25 @@ def cli():
 @click.argument("packagename")
 def install(packagename):
     packages = []
+    s_print(f"downloading package info for {packagename}")
     finalPackage = downloadPackageInformation(packagename, None, packages)
 
     pool = ThreadPool(config["numberOfConcurrentDownloads"])
     results = pool.imap_unordered(downloadPackageTarForThread, packages)
 
     start = timer()
-    #progress.bar(, expected_size=(tarLength / 4096) + 1)
-    for (packageInfo, versionInfo) in results:
-        extractTar(packageInfo, versionInfo)
+    s_print(f"downloading {len(packages)} files for {packagename}")
+    with progress.Bar(label="nonlinear", expected_size=len(packages)) as bar:
+        bar.label = f"{packages[0][0]['name']}\t"
+        for index, (packageInfo, versionInfo) in enumerate(results):
+            if index + 1 < len(packages):
+                bar.label = f"{packages[index + 1][0]['name']}\t"
+            bar.show(index + 1)
+            extractTar(packageInfo, versionInfo)
+
 
     s_print(f"Elapsed Time: {timer() - start}")
+    s_print(f"copying files to {finalDirectory}")
     copyFilesToFinalFolder(finalPackage)
 
 
