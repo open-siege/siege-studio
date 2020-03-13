@@ -6,6 +6,7 @@ import hashlib
 import os.path
 import click
 import base64
+from tinydb import TinyDB, where
 from clint.textui import progress
 from os import walk
 from multiprocessing.pool import ThreadPool
@@ -25,7 +26,6 @@ with open("sspm.config.json", "r") as configFile:
 
 tempDirectory = os.path.join("temp", "packages")
 
-
 if not os.path.exists(tempDirectory):
     os.makedirs(tempDirectory)
 
@@ -41,9 +41,24 @@ def getAllFilesFromFolder(folder, files = None):
 
     return files
 
-def getPackageInfo(packageName):
-    packageInfoResponse = requests.get(f"{config['packageRegistry']}/{packageName}")
-    return packageInfoResponse.json()
+def getPackageInfo(packageName, withoutCache):
+    db = TinyDB(config["cacheDbLocation"])
+    packages = db.table("packages")
+    results = []
+    if withoutCache is False:
+        results = packages.search(where("name") == packageName)
+
+    if len(results) == 0:
+        packageInfoResponse = requests.get(f"{config['packageRegistry']}/{packageName}")
+        result = packageInfoResponse.json()
+
+        if "dist-tags" in result and withoutCache is False:
+            packages.insert(result)
+        elif withoutCache is True:
+            packages.remove(where("name") == packageName)
+        return result
+    else:
+        return results[0]
 
 def downloadTarball(versionInfo):
     packageInfoResponse = requests.get(versionInfo['dist']['tarball'], stream=True)
@@ -75,8 +90,8 @@ def copyFilesToFinalFolder(finalDirectory, packageInfo):
         copyFilesToFinalFolder(finalDirectory, child)
 
 
-def downloadPackageInformation(packageName, version, packages):
-    packageInfo = getPackageInfo(packageName)
+def downloadPackageInformation(packageName, version, packages, withoutCache=False):
+    packageInfo = getPackageInfo(packageName, withoutCache)
 
     if version is None:
         versionToUse = packageInfo["dist-tags"]["latest"]
@@ -84,6 +99,8 @@ def downloadPackageInformation(packageName, version, packages):
         versionToUse = findMatchingVersion(packageInfo, version)
 
     if versionToUse is None:
+        if withoutCache is False:
+            return downloadPackageInformation(packageName, version, packages, True)
         raise RuntimeError(f"Could not find matching version for {packageName} {version}")
 
     versionInfo = packageInfo["versions"][versionToUse]
@@ -151,7 +168,15 @@ def cli():
 def install(packagename, dest_dir):
     packages = []
     s_print(f"downloading package info for {packagename}")
-    finalPackage = downloadPackageInformation(packagename, None, packages)
+    packagename = packagename.split("@")
+    packageVersion = None
+
+    if len(packagename) == 2:
+        packageVersion = packagename[-1]
+
+    packagename = packagename[0]
+
+    finalPackage = downloadPackageInformation(packagename, packageVersion, packages)
 
     pool = ThreadPool(config["numberOfConcurrentDownloads"])
     results = pool.imap_unordered(downloadPackageTarForThread, packages)
