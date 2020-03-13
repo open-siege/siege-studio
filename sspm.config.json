@@ -1,4 +1,5 @@
 {
   "packageRegistry": "http://thesiegehub.com:4873",
-  "numberOfConcurrentDownloads": 8
+  "numberOfConcurrentDownloads": 8,
+  "cacheDbLocation": "temp/package-cache.json"
 }
