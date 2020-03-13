@@ -2,8 +2,10 @@ import json
 import tarfile
 import requests
 import os
+import hashlib
 import os.path
 import click
+import base64
 from clint.textui import progress
 from os import walk
 from multiprocessing.pool import ThreadPool
@@ -22,7 +24,7 @@ with open("sspm.config.json", "r") as configFile:
     config = json.loads(configFile.read())
 
 tempDirectory = os.path.join("temp", "packages")
-finalDirectory = "."
+
 
 if not os.path.exists(tempDirectory):
     os.makedirs(tempDirectory)
@@ -57,7 +59,7 @@ def findMatchingVersion(packageInfo, version):
             return someVersion
     return None
 
-def copyFilesToFinalFolder(packageInfo):
+def copyFilesToFinalFolder(finalDirectory, packageInfo):
     for file in packageInfo["extractedFiles"]:
 
         fileFolder = file.replace(os.path.join(tempDirectory, packageInfo["name"], "package", ""), "")
@@ -70,7 +72,7 @@ def copyFilesToFinalFolder(packageInfo):
             if not os.path.exists(os.path.join(fileFolder, filename)):
                 os.rename(file, os.path.join(fileFolder, filename))
     for child in packageInfo["expandedDependencies"]:
-        copyFilesToFinalFolder(child)
+        copyFilesToFinalFolder(finalDirectory, child)
 
 
 def downloadPackageInformation(packageName, version, packages):
@@ -109,8 +111,18 @@ def extractTar(packageInfo, versionInfo):
 
 
 def downloadPackageTar(versionInfo):
-    if not os.path.exists(os.path.join(tempDirectory, getTarballName(versionInfo))):
-        with open(os.path.join(tempDirectory, getTarballName(versionInfo)), "wb") as tempFile:
+    downloadPath = os.path.join(tempDirectory, getTarballName(versionInfo))
+
+    if os.path.exists(downloadPath):
+        with open(os.path.join(downloadPath), "rb") as tempFile:
+            rawData = tempFile.read()
+        fileHash = f"sha512-{base64.encodebytes(hashlib.sha512(rawData).digest()).decode('utf8')}"
+        fileHash = "".join(fileHash.split("\n"))
+        if fileHash != versionInfo["dist"]["integrity"]:
+            os.remove(downloadPath)
+
+    if not os.path.exists(downloadPath):
+        with open(os.path.join(downloadPath), "wb") as tempFile:
             with downloadTarball(versionInfo) as tarballResponse:
                 tarLength = int(tarballResponse.headers.get("content-length"))
 
@@ -121,8 +133,6 @@ def downloadPackageTar(versionInfo):
                         if chunk:
                             tempFile.write(chunk)
             tempFile.flush()
-    else:
-        s_print(f"found cached version of {versionInfo['name']}")
 
 
 def downloadPackageTarForThread(rawData):
@@ -137,7 +147,8 @@ def cli():
 
 @cli.command("install")
 @click.argument("packagename")
-def install(packagename):
+@click.option("--dest-dir", default=".", help="The directory where the game will be placed")
+def install(packagename, dest_dir):
     packages = []
     s_print(f"downloading package info for {packagename}")
     finalPackage = downloadPackageInformation(packagename, None, packages)
@@ -157,8 +168,8 @@ def install(packagename):
 
 
     s_print(f"Elapsed Time: {timer() - start}")
-    s_print(f"copying files to {finalDirectory}")
-    copyFilesToFinalFolder(finalPackage)
+    s_print(f"copying files to {dest_dir}")
+    copyFilesToFinalFolder(dest_dir, finalPackage)
 
 
 if __name__ == "__main__":
