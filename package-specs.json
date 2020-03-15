@@ -149,13 +149,13 @@
                         {
                             "name": "starsiege-missions-singleplayer-human",
                             "include": [
-                                "campaign/Human/*.*"
+                                "campaign/Hu*/*.*"
                             ]
                         },
                         {
                             "name": "starsiege-missions-singleplayer-cybrid",
                             "include": [
-                                "campaign/Cybrid (Advanced)/*.*"
+                                "campaign/Cy*/*.*"
                             ]
                         },
                         {
@@ -233,7 +233,11 @@
                     ],
                     "exclude": [
                         "*.Sim.vol",
+                        "sm_*.vol",
+                        "tr*.vol",
                         "scripts.vol",
+                        "taunts.vol",
+                        "sound.vol",
                         "*.cs"
                     ]
                 },
