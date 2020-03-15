@@ -23,11 +23,11 @@
                     "children": [
                         {
                             "name": "starsiege-movies-story-human",
-                            "include": ["movies/cybrid_finale.smk"]
+                            "include": ["movies/human_finale.smk"]
                         },
                         {
                             "name": "starsiege-movies-story-cybrid",
-                            "include": ["movies/human_finale.smk"]
+                            "include": ["movies/cybrid_finale.smk"]
                         }
                     ],
                     "include": []
@@ -238,6 +238,7 @@
                         "scripts.vol",
                         "taunts.vol",
                         "sound.vol",
+						"cinematic.vol",
                         "*.cs"
                     ]
                 },
