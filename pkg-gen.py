@@ -80,7 +80,7 @@ def new(specname, dest_dir, base_dir, version):
 
             if file not in filesToExclude:
                 print(f"Copying {file}")
-                shutil.copy2(file, newDir)
+                shutil.copy(file, newDir)
 
 if __name__ == "__main__":
     cli()
