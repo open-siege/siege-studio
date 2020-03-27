@@ -31,11 +31,11 @@ if not os.path.exists(tempDirectory):
 
 def getAllFilesFromFolder(folder, files = None):
     if files is None:
-        files = []
+        files = set()
 
     for (dirpath, dirnames, filenames) in walk(folder):
         filenames = map(lambda f: os.path.join(dirpath, f), filenames)
-        files.extend(filenames)
+        files.update(filenames)
         for dir in dirnames:
             getAllFilesFromFolder(os.path.join(dirpath, dir), files)
 
@@ -74,23 +74,21 @@ def findMatchingVersion(packageInfo, version):
             return someVersion
     return None
 
-def copyFilesToFinalFolder(finalDirectory, packageInfo):
+def copyFilesToFinalFolder(finalDirectory, packageInfo, versionInfo):
     for file in packageInfo["extractedFiles"]:
-
-        fileFolder = file.replace(os.path.join(tempDirectory, packageInfo["name"], "package", ""), "")
+        fileFolder = file.replace(os.path.join(tempDirectory, f"{packageInfo['name']}-{versionInfo['version']}", "package", ""), "")
+        print("copying  " + file)
         splitData = os.path.split(fileFolder)
         fileFolder = os.path.join(finalDirectory, *splitData[:-1])
-        filename = splitData[-1]
+        filename: str = splitData[-1]
         if not os.path.exists(fileFolder):
             os.makedirs(fileFolder)
-        if filename != "package.json":
-            if not os.path.exists(os.path.join(fileFolder, filename)):
-                os.rename(file, os.path.join(fileFolder, filename))
-    for child in packageInfo["expandedDependencies"]:
-        copyFilesToFinalFolder(finalDirectory, child)
+        if not filename.endswith("package.json"):
+            destinationFile = os.path.join(fileFolder, filename)
+            os.replace(file, destinationFile)
 
 
-def downloadPackageInformation(packageName, version, packages, withoutCache=False):
+def downloadPackageInformation(packageName, version, packages: dict, withoutCache=False):
     packageInfo = getPackageInfo(packageName, withoutCache)
 
     if version is None:
@@ -104,11 +102,13 @@ def downloadPackageInformation(packageName, version, packages, withoutCache=Fals
         raise RuntimeError(f"Could not find matching version for {packageName} {version}")
 
     versionInfo = packageInfo["versions"][versionToUse]
+    key = f"{packageInfo['name']}@{versionInfo['version']}"
 
-    packages.append((packageInfo, versionInfo))
+    if key not in packages:
+        packages[key] = (packageInfo, versionInfo)
     processDependeciesInformation(packageInfo, versionInfo, packages)
 
-    return packageInfo
+    return (packageInfo, versionInfo)
 
 def processDependeciesInformation(packageInfo, versionInfo, packages):
     packageInfo["expandedDependencies"] = []
@@ -118,7 +118,7 @@ def processDependeciesInformation(packageInfo, versionInfo, packages):
             packageInfo["expandedDependencies"].append(childPackage)
 
 def extractTar(packageInfo, versionInfo):
-    destinationDirectory = os.path.join(tempDirectory, packageInfo["name"])
+    destinationDirectory = os.path.join(tempDirectory, f"{packageInfo['name']}-{versionInfo['version']}")
     if not os.path.exists(destinationDirectory):
         os.makedirs(destinationDirectory)
     with tarfile.open(os.path.join(tempDirectory, getTarballName(versionInfo))) as tf:
@@ -163,38 +163,39 @@ def cli():
 
 
 @cli.command("install")
-@click.argument("packagename")
+@click.argument("installPackages", nargs=-1)
 @click.option("--dest-dir", default=".", help="The directory where the game will be placed")
-def install(packagename, dest_dir):
-    packages = []
-    s_print(f"downloading package info for {packagename}")
-    packagename = packagename.split("@")
-    packageVersion = None
+def install(installpackages, dest_dir):
+    for packageName in installpackages:
+        packages = {}
+        s_print(f"downloading package info for {packageName}")
+        packageName = packageName.split("@")
+        packageVersion = None
 
-    if len(packagename) == 2:
-        packageVersion = packagename[-1]
+        if len(packageName) == 2:
+            packageVersion = packageName[-1]
 
-    packagename = packagename[0]
+        packageName = packageName[0]
 
-    finalPackage = downloadPackageInformation(packagename, packageVersion, packages)
+        (finalPackageInfo, finalVersionInfo) = downloadPackageInformation(packageName, packageVersion, packages)
 
-    pool = ThreadPool(config["numberOfConcurrentDownloads"])
-    results = pool.imap_unordered(downloadPackageTarForThread, packages)
+        pool = ThreadPool(config["numberOfConcurrentDownloads"])
+        results = pool.imap_unordered(downloadPackageTarForThread, packages.values())
 
-    start = timer()
-    s_print(f"downloading {len(packages)} files for {packagename}")
-    with progress.Bar(label="nonlinear", expected_size=len(packages)) as bar:
-        bar.label = f"{packages[0][0]['name']}\t"
-        for index, (packageInfo, versionInfo) in enumerate(results):
-            if index + 1 < len(packages):
-                bar.label = f"{packages[index + 1][0]['name']}\t"
-            bar.show(index + 1)
-            extractTar(packageInfo, versionInfo)
+        start = timer()
+        s_print(f"downloading {len(packages)} files for {packageName}")
+        with progress.Bar(label=packageName, expected_size=len(packages)) as bar:
+            for index, (packageInfo, versionInfo) in enumerate(results):
+                bar.label = f"{packageInfo['name']}@{versionInfo['version']}\t"
+                bar.show(index + 1)
+                extractTar(packageInfo, versionInfo)
 
 
-    s_print(f"Elapsed Time: {timer() - start}")
-    s_print(f"copying files to {dest_dir}")
-    copyFilesToFinalFolder(dest_dir, finalPackage)
+        s_print(f"Elapsed Time: {timer() - start}")
+        s_print(f"copying files to {dest_dir}")
+
+        for (packageInfo, versionInfo) in reversed(packages.values()):
+            copyFilesToFinalFolder(dest_dir, packageInfo, versionInfo)
 
 
 if __name__ == "__main__":

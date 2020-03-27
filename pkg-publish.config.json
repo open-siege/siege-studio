@@ -1,3 +1,4 @@
 {
-  "npmPath": "C:\\nodejs\\npm.cmd"
+  "npmPath": "\"C:\\Program Files\\nodejs\\npm.cmd\"",
+  "registryUrl": "http://localhost:4873"
 }
