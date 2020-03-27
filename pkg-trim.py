@@ -72,7 +72,7 @@ def bulk(packages, base_dir, compare_hashes_instead):
             firstFiles = getAllFiles(packageInfo["folder"])
             secondFiles = getAllFiles(secondInfo["folder"])
             processedFiles = set()
-            dependentVersions = OrderedDict()
+            dependentVersions = set()
 
             for file, path in firstFiles.items():
                 if file.endswith("package.json"):
@@ -87,7 +87,7 @@ def bulk(packages, base_dir, compare_hashes_instead):
                 if ".DELETE." in path:
                     packageVersion = path.split('.DELETE.')[-1]
 
-                dependentVersions[packageVersion] = None
+                dependentVersions.add(packageVersion)
 
                 secondFilePath = None
                 if compare_hashes_instead is True:
@@ -122,7 +122,9 @@ def bulk(packages, base_dir, compare_hashes_instead):
 
                     secondHash = getFileHash(secondFilePath)
                     if firstHash == secondHash:
-                        latestVersion = [*dependentVersions.keys()][-1]
+                        sortedVersions = [*dependentVersions]
+                        sortedVersions.sort()
+                        latestVersion = sortedVersions[-1]
                         if packageName not in secondInfo["dependencies"] or \
                                 secondInfo["dependencies"] != latestVersion:
                             secondInfo["dependencies"][packageName] = latestVersion

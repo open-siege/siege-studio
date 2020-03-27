@@ -30,7 +30,9 @@
                             "include": ["movies/cybrid_finale.smk"]
                         }
                     ],
-                    "include": []
+                    "include": [
+						"movies/intro.smk"
+					]
                 },
                 {
                     "name": "starsiege-movies-pilots",
@@ -67,9 +69,9 @@
                     "name": "starsiege-movies-core",
                     "children": [],
                     "include": [
-                        "Credits.smk",
-                        "dynamix.smk",
-                        "story.smk"
+                        "movies/Credits.smk",
+                        "movies/dynamix.smk",
+                        "movies/story.smk"
                     ]
                 }
             ]
@@ -174,12 +176,12 @@
                 {
                     "name": "starsiege-music-disc-1",
                     "include": [
-                    "music/*"
+						"music02/*"
                     ]
                 }, {
                     "name": "starsiege-music-disc-2",
                     "include": [
-                        "music02/*"
+                        "music/*"
                     ]
                 }
             ]
@@ -200,6 +202,12 @@
                         "motd.cs",
                         "playerPrefs.cs",
                         "serverPrefs.cs"
+                    ]
+                },
+				{
+                    "name": "starsiege-scripts-server",
+                    "include": [
+						"Server_*.cs"
                     ]
                 },
                 {
@@ -271,7 +279,14 @@
                     "include": [
                         "vehicles/*"
                     ]
+                },
+                {
+                    "name": "starsiege-data-recordings",
+                    "include": [
+                        "recordings/*"
+                    ]
                 }
+				
             ]
         }
     ]
