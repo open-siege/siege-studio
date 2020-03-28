@@ -1,5 +1,10 @@
 {
   "packageRegistry": "http://localhost:4873",
   "numberOfConcurrentDownloads": 8,
-  "cacheDbLocation": "temp/package-cache.json"
+  "cacheDbLocation": "temp/package-cache.json",
+  "plugins": {
+    "postinstall": {
+      "rename": "plugins/postinstall/rename.py"
+    }
+  }
 }

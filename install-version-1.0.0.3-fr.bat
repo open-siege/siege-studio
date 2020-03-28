@@ -1,0 +1,1 @@
+python sspm.py install starsiege-retail@1.0.0-3.fr --dest-dir="Starsiege 1.0.0.3 fr"
