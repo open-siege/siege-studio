@@ -3,6 +3,7 @@ import requests
 import os
 import hashlib
 import base64
+import json
 from tinydb import TinyDB, where
 from os import walk
 
@@ -15,6 +16,19 @@ def createTempDirectory(config):
 def getTempDirectory(config):
     tempDirectory = os.path.join(config["tempDir"] if "tempDir" in config else "temp", "packages")
     return tempDirectory
+
+def getRecipesDirectory(config):
+    tempDirectory = config["recipesDir"] if "recipesDir" in config else "recipes"
+    return tempDirectory
+
+def getAllRecipes(config):
+    recipesDir = getRecipesDirectory(config)
+    files = getAllFilesFromFolder(recipesDir)
+
+    for file in files:
+        with open(file, "r") as recipeFile:
+            yield json.loads(recipeFile.read())
+
 
 def getAllFilesFromFolder(folder, files = None):
     if files is None:
@@ -71,7 +85,7 @@ def copyFilesToFinalFolder(config, finalDirectory, packageInfo, versionInfo):
             os.makedirs(fileFolder)
         if filename.endswith("package.json") or filename.startswith("postinstall."):
             continue
-        print("copying  " + file)
+        config["localPrint"]("copying  " + file)
         destinationFile = os.path.join(fileFolder, filename)
         os.replace(file, destinationFile)
 
