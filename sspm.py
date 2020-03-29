@@ -7,34 +7,25 @@ import json
 import click
 import core
 import plugins
-import os
-
-s_print_lock = Lock()
-
-def s_print(*a, **b):
-    """Thread safe print function"""
-    with s_print_lock:
-        print(*a, **b)
 
 @click.group()
 def cli():
     pass
 
 
-@cli.command("install")
-@click.argument("installPackages", nargs=-1)
-@click.option("--dest-dir", default=".", help="The directory where the game will be placed")
-@click.option("--with-cache", default=True, type=click.BOOL, help="Whether or not package info should be cached in a local database.")
-def install(installpackages, dest_dir, with_cache):
+def installCore(installpackages, dest_dir, with_cache, localPrint=None):
     with open("sspm.config.json", "r") as configFile:
         config = json.loads(configFile.read())
 
+    if localPrint is None:
+        localPrint = print
+    config["localPrint"] = localPrint
     core.createTempDirectory(config)
     postInstallPlugins = plugins.loadPostInstallPlugins(config)
 
     for packageName in installpackages:
         packages = {}
-        s_print(f"downloading package info for {packageName}")
+        localPrint(f"downloading package info for {packageName}")
         packageName = packageName.split("@")
         packageVersion = None
 
@@ -49,7 +40,7 @@ def install(installpackages, dest_dir, with_cache):
         results = pool.imap_unordered(partial(core.downloadPackageTarForThread, config), packages.values())
 
         start = timer()
-        s_print(f"downloading {len(packages)} files for {packageName}")
+        localPrint(f"downloading {len(packages)} files for {packageName}")
         with progress.Bar(label=packageName, expected_size=len(packages)) as bar:
             for index, (packageInfo, versionInfo) in enumerate(results):
                 bar.label = f"{packageInfo['name']}@{versionInfo['version']}\t"
@@ -57,8 +48,8 @@ def install(installpackages, dest_dir, with_cache):
                 core.extractTar(config, packageInfo, versionInfo)
 
 
-        s_print(f"Elapsed Time: {timer() - start}")
-        s_print(f"copying files to {dest_dir}")
+        localPrint(f"Elapsed Time: {timer() - start}")
+        localPrint(f"copying files to {dest_dir}")
 
         for (packageInfo, versionInfo) in reversed(packages.values()):
             core.copyFilesToFinalFolder(config, dest_dir, packageInfo, versionInfo)
@@ -72,6 +63,13 @@ def install(installpackages, dest_dir, with_cache):
                                                  if filePath.endswith(postInstallScript)][0]
 
                         plugin.execute(postInstallScriptPath, dest_dir)
+
+@cli.command("install")
+@click.argument("installPackages", nargs=-1)
+@click.option("--dest-dir", default=".", help="The directory where the game will be placed")
+@click.option("--with-cache", default=True, type=click.BOOL, help="Whether or not package info should be cached in a local database.")
+def install(installpackages, dest_dir, with_cache):
+    installCore(installpackages, dest_dir, with_cache)
 
 if __name__ == "__main__":
     cli()
