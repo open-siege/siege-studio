@@ -1,1 +1,1 @@
-python sspm.py install starsiege-retail@1.0.0-0.en --dest-dir="Starsiege 1.0.0.0 en"
+sspm install starsiege-retail@1.0.0-0.en starsiege-config-default-1080p starsiege-compat-dxwnd ssr-keymaps ssr-master starsiege-server-crash-fix --dest-dir="Starsiege 1.0.0.0 en"
