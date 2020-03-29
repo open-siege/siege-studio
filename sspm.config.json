@@ -1,5 +1,5 @@
 {
-  "packageRegistry": "http://localhost:4873",
+  "packageRegistry": "https://packages.thesiegehub.com",
   "numberOfConcurrentDownloads": 8,
   "cacheDbLocation": "temp/package-cache.json",
   "plugins": {

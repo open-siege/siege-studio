@@ -24,7 +24,8 @@ def cli():
 @cli.command("install")
 @click.argument("installPackages", nargs=-1)
 @click.option("--dest-dir", default=".", help="The directory where the game will be placed")
-def install(installpackages, dest_dir):
+@click.option("--with-cache", default=True, type=click.BOOL, help="Whether or not package info should be cached in a local database.")
+def install(installpackages, dest_dir, with_cache):
     with open("sspm.config.json", "r") as configFile:
         config = json.loads(configFile.read())
 
@@ -42,7 +43,7 @@ def install(installpackages, dest_dir):
 
         packageName = packageName[0]
 
-        core.downloadPackageInformation(config, packageName, packageVersion, packages)
+        core.downloadPackageInformation(config, packageName, packageVersion, packages, not with_cache)
 
         pool = ThreadPool(config["numberOfConcurrentDownloads"])
         results = pool.imap_unordered(partial(core.downloadPackageTarForThread, config), packages.values())
@@ -71,7 +72,6 @@ def install(installpackages, dest_dir):
                                                  if filePath.endswith(postInstallScript)][0]
 
                         plugin.execute(postInstallScriptPath, dest_dir)
-                print(f"{packageInfo['name']} has {postInstallScript}")
 
 if __name__ == "__main__":
     cli()

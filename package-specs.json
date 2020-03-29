@@ -66,6 +66,13 @@
                     "include": ["movies/Scannex_*.smk"]
                 },
                 {
+                    "name": "starsiege-movies-tutorials",
+                    "children": [],
+                    "include": [
+                        "movies/tutorial*.smk"
+                    ]
+                },
+                {
                     "name": "starsiege-movies-core",
                     "children": [],
                     "include": [
