@@ -125,6 +125,8 @@ def bulk(packages, base_dir, compare_hashes_instead):
                         sortedVersions = [*dependentVersions]
                         sortedVersions.sort()
                         latestVersion = sortedVersions[-1]
+                        if "dependencies" not in secondInfo:
+                            secondInfo["dependencies"] = {}
                         if packageName not in secondInfo["dependencies"] or \
                                 secondInfo["dependencies"] != latestVersion:
                             secondInfo["dependencies"][packageName] = latestVersion
