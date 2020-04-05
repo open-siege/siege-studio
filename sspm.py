@@ -19,6 +19,7 @@ def installCore(installpackages, dest_dir, with_cache, localPrint=None):
 
     if localPrint is None:
         localPrint = print
+
     config["localPrint"] = localPrint
     core.createTempDirectory(config)
     postInstallPlugins = plugins.loadPostInstallPlugins(config)
@@ -31,6 +32,8 @@ def installCore(installpackages, dest_dir, with_cache, localPrint=None):
 
         if len(packageName) == 2:
             packageVersion = packageName[-1]
+            if packageVersion == "latest":
+                packageVersion = None
 
         packageName = packageName[0]
 
@@ -41,10 +44,15 @@ def installCore(installpackages, dest_dir, with_cache, localPrint=None):
 
         start = timer()
         localPrint(f"downloading {len(packages)} files for {packageName}")
-        with progress.Bar(label=packageName, expected_size=len(packages)) as bar:
+        if localPrint is print:
+            with progress.Bar(label=packageName, expected_size=len(packages)) as bar:
+                for index, (packageInfo, versionInfo) in enumerate(results):
+                    bar.label = f"{packageInfo['name']}@{versionInfo['version']}\t"
+                    bar.show(index + 1)
+                    core.extractTar(config, packageInfo, versionInfo)
+        else:
             for index, (packageInfo, versionInfo) in enumerate(results):
-                bar.label = f"{packageInfo['name']}@{versionInfo['version']}\t"
-                bar.show(index + 1)
+                localPrint(f"downloaded {packageInfo['name']}@{versionInfo['version']}\t")
                 core.extractTar(config, packageInfo, versionInfo)
 
 
