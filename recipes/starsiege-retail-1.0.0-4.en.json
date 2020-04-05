@@ -8,7 +8,9 @@
         "starsiege-retail": "1.0.0-4.en",
   		"starsiege-config-default-1080p": "latest",
 		"starsiege-compat-dxwnd": "latest",
+		"starsiege-server-crash-fix": "latest",
 		"ssr-keymaps": "latest",
-		"ssr-master starsiege-server-crash-fix": "latest"
+		"ssr-master": "latest",
+        "sspm-cli": "latest"
 	}
 }

@@ -9,6 +9,9 @@
 		"starsiege-missions-multiplayer": "1.0.0-3.en",
 		"starsiege-scripts-core": "1.0.0-3.en",
 		"starsiege-scripts-config": "1.0.0-3.en",
-		"starsiege-scripts-server": "1.0.0-3.en"
+		"starsiege-scripts-server": "1.0.0-3.en",
+		"starsiege-compat-dxwnd": "latest",
+        "ssr-master": "latest",
+        "sspm-cli": "latest"
 	}
 }
