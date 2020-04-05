@@ -47,7 +47,7 @@ def printToOutput(model, controls, commands, *a, **b):
 def installPackage(items, installDir, commands, newPrint):
     try:
         for package, version in items:
-            sspm.installCore([f"{package}@{version}"], installDir, True, newPrint)
+            sspm.installPackagesCore([f"{package}@{version}"], installDir, True, newPrint)
     except Exception as e:
         newPrint(e)
         commands.cancelInstall()

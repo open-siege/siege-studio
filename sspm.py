@@ -6,14 +6,14 @@ from time import time as timer
 import json
 import click
 import core
-import plugins
+import plugins as extPlugins
+from types import SimpleNamespace
 
 @click.group()
 def cli():
     pass
 
-
-def installCore(installpackages, dest_dir, with_cache, localPrint=None):
+def getLocalConfig(dest_dir, with_cache, localPrint):
     with open("sspm.config.json", "r") as configFile:
         config = json.loads(configFile.read())
 
@@ -21,63 +21,90 @@ def installCore(installpackages, dest_dir, with_cache, localPrint=None):
         localPrint = print
 
     config["localPrint"] = localPrint
-    core.createTempDirectory(config)
-    postInstallPlugins = plugins.loadPostInstallPlugins(config)
+    config["destDir"] = dest_dir
+    config["withCache"] = with_cache
 
-    for packageName in installpackages:
-        packages = {}
-        localPrint(f"downloading package info for {packageName}")
-        packageName = packageName.split("@")
-        packageVersion = None
+    packageFile = core.getDestinationPackageFile(config)
+    config["packageFile"] = packageFile
 
-        if len(packageName) == 2:
-            packageVersion = packageName[-1]
-            if packageVersion == "latest":
-                packageVersion = None
+    return config
 
-        packageName = packageName[0]
+def installPackageInternal(packageName, config, plugins, localPrint):
+    packages = {}
+    with_cache = config["withCache"]
+    dest_dir = config["destDir"]
 
-        core.downloadPackageInformation(config, packageName, packageVersion, packages, not with_cache)
+    localPrint(f"downloading package info for {packageName}")
+    packageName = packageName.split("@")
+    packageVersion = None
 
-        pool = ThreadPool(config["numberOfConcurrentDownloads"])
-        results = pool.imap_unordered(partial(core.downloadPackageTarForThread, config), packages.values())
+    if len(packageName) == 2:
+        packageVersion = packageName[-1]
+        if packageVersion == "latest":
+            packageVersion = None
 
-        start = timer()
-        localPrint(f"downloading {len(packages)} files for {packageName}")
-        if localPrint is print:
-            with progress.Bar(label=packageName, expected_size=len(packages)) as bar:
-                for index, (packageInfo, versionInfo) in enumerate(results):
-                    bar.label = f"{packageInfo['name']}@{versionInfo['version']}\t"
-                    bar.show(index + 1)
-                    core.extractTar(config, packageInfo, versionInfo)
-        else:
+    packageName = packageName[0]
+
+    (rootPackageInfo, rootVersionInfo) = core.downloadPackageInformation(config, packageName, packageVersion, packages, not with_cache)
+
+    pool = ThreadPool(config["numberOfConcurrentDownloads"])
+    results = pool.imap_unordered(partial(core.downloadPackageTarForThread, config), packages.values())
+
+    start = timer()
+    localPrint(f"downloading {len(packages)} files for {packageName}")
+    if localPrint is print:
+        with progress.Bar(label=packageName, expected_size=len(packages)) as bar:
             for index, (packageInfo, versionInfo) in enumerate(results):
-                localPrint(f"downloaded {packageInfo['name']}@{versionInfo['version']}\t")
+                bar.label = f"{packageInfo['name']}@{versionInfo['version']}\t"
+                bar.show(index + 1)
                 core.extractTar(config, packageInfo, versionInfo)
+    else:
+        for index, (packageInfo, versionInfo) in enumerate(results):
+            localPrint(f"downloaded {packageInfo['name']}@{versionInfo['version']}\t")
+            core.extractTar(config, packageInfo, versionInfo)
+
+    localPrint(f"Elapsed Time: {timer() - start}")
+    localPrint(f"copying files to {dest_dir}")
+
+    for (packageInfo, versionInfo) in reversed(packages.values()):
+        core.copyFilesToFinalFolder(config, dest_dir, packageInfo, versionInfo)
+
+    for (packageInfo, versionInfo) in reversed(packages.values()):
+        if "scripts" in versionInfo and "postinstall" in versionInfo["scripts"]:
+            postInstallScript = versionInfo["scripts"]["postinstall"]
+            for plugin in plugins.postInstall:
+                if plugin.canExecute(postInstallScript):
+                    postInstallScriptPath = [filePath for filePath in versionInfo["extractedFiles"]
+                                             if filePath.endswith(postInstallScript)][0]
+
+                    plugin.execute(postInstallScriptPath, dest_dir)
 
 
-        localPrint(f"Elapsed Time: {timer() - start}")
-        localPrint(f"copying files to {dest_dir}")
+    finalPackageVersion = f"^{rootVersionInfo['version']}" if packageVersion is None  else rootVersionInfo["version"]
 
-        for (packageInfo, versionInfo) in reversed(packages.values()):
-            core.copyFilesToFinalFolder(config, dest_dir, packageInfo, versionInfo)
+    if rootPackageInfo["name"] not in config["packageFile"]["dependencies"] or\
+            config["packageFile"]["dependencies"][rootPackageInfo["name"]] != finalPackageVersion:
+        config["packageFile"]["dependencies"][rootPackageInfo["name"]] = finalPackageVersion
+        core.updateDestinationPackageFile(config, config["packageFile"])
 
-        for (packageInfo, versionInfo) in reversed(packages.values()):
-            if "scripts" in versionInfo and "postinstall" in versionInfo["scripts"]:
-                postInstallScript = versionInfo["scripts"]["postinstall"]
-                for plugin in postInstallPlugins:
-                    if plugin.canExecute(postInstallScript):
-                        postInstallScriptPath = [filePath for filePath in versionInfo["extractedFiles"]
-                                                 if filePath.endswith(postInstallScript)][0]
+def installPackageCore(packageName, dest_dir, with_cache, localPrint):
+    config = getLocalConfig(dest_dir, with_cache, localPrint)
+    core.createTempDirectory(config)
+    plugins = SimpleNamespace()
+    plugins.postInstall = extPlugins.loadPostInstallPlugins(config)
+    return installPackageInternal(packageName, config, plugins, localPrint)
 
-                        plugin.execute(postInstallScriptPath, dest_dir)
+def installPackagesCore(installpackages, dest_dir, with_cache, localPrint=None):
+    for packageName in installpackages:
+        installPackageCore(packageName, dest_dir, with_cache, localPrint)
+
 
 @cli.command("install")
 @click.argument("installPackages", nargs=-1)
 @click.option("--dest-dir", default=".", help="The directory where the game will be placed")
 @click.option("--with-cache", default=True, type=click.BOOL, help="Whether or not package info should be cached in a local database.")
 def install(installpackages, dest_dir, with_cache):
-    installCore(installpackages, dest_dir, with_cache)
+    installPackagesCore(installpackages, dest_dir, with_cache)
 
 if __name__ == "__main__":
     cli()

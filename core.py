@@ -14,6 +14,21 @@ def createTempDirectory(config):
     if not os.path.exists(tempDirectory):
         os.makedirs(tempDirectory)
 
+def getDestinationPackageFile(config):
+    packageFile = os.path.join(config["destDir"], "package.json")
+    if os.path.exists(packageFile):
+        with open(packageFile, "r") as file:
+            result = json.loads(file.read())
+            if "dependencies" not in result:
+                result["dependencies"] = {}
+            return result
+    return {"dependencies": {}}
+
+def updateDestinationPackageFile(config, newData):
+    packageFile = os.path.join(config["destDir"], "package.json")
+    with open(packageFile, "w") as file:
+        file.write(json.dumps(newData, indent="\t"))
+
 def getTempDirectory(config):
     tempDirectory = os.path.join(config["tempDir"] if "tempDir" in config else "temp", "packages")
     return tempDirectory
@@ -31,7 +46,7 @@ def getAllRecipes(config):
             yield json.loads(recipeFile.read())
 
 
-def getAllFilesFromFolder(folder, files = None):
+def getAllFilesFromFolder(folder, files=None):
     if files is None:
         files = set()
 
