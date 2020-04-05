@@ -4,6 +4,7 @@ import os
 import hashlib
 import base64
 import json
+import shutil
 from tinydb import TinyDB, where
 from os import walk
 
@@ -87,7 +88,7 @@ def copyFilesToFinalFolder(config, finalDirectory, packageInfo, versionInfo):
             continue
         config["localPrint"]("copying  " + file)
         destinationFile = os.path.join(fileFolder, filename)
-        os.replace(file, destinationFile)
+        shutil.move(file, destinationFile)
 
 
 def downloadPackageInformation(config, packageName, version, packages: dict, withoutCache=False):
