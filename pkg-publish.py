@@ -26,7 +26,7 @@ def bulk(base_dir):
         for file in filesToDelete:
             os.remove(file)
 
-        npmCommand = f"{config['npmPath']} publish --cwd {packageFolder}"
+        npmCommand = f"\"{config['npmPath']}\" publish --cwd {packageFolder}"
 
         if registryUrl is not None:
             npmCommand = f"{npmCommand} --registry {registryUrl}"
