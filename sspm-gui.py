@@ -39,7 +39,7 @@ def printToOutput(model, controls, commands, *a, **b):
     if not model.isCancelled:
         controls.txtOutput.insert(tk.END, f"{''.join(*a)}\n")
         controls.txtOutput.see("end")
-        pgrProgress.step()
+        controls.pgrProgress.step()
     else:
         commands.resetToDefaultState()
         sys.exit()
@@ -59,8 +59,8 @@ def updateToRunGameControls(model, controls, commands):
                                   command=commands.runGame)
 
 def runGame(model, controls, commands):
-    processToRun = os.path.join(installLocation.get(), model.selectedRecipeInfo["main"])
-    subprocess.Popen([processToRun], cwd=installLocation.get())
+    processToRun = os.path.join(model.installDir.get(), model.selectedRecipeInfo["main"])
+    subprocess.Popen([processToRun], cwd=model.installDir.get())
 
 def cancelInstall(model, controls, commands):
     controls.btnInstall.configure(state=tk.DISABLED)
@@ -75,7 +75,7 @@ def installGame(model, controls, commands):
             selectetedRecipe = recipe
             break
 
-    installDir = installLocation.get()
+    installDir = model.installDir.get()
     model.showMore.set(False)
     model.isCancelled = False
     model.selectedRecipeInfo = selectetedRecipe
@@ -91,67 +91,93 @@ def installGame(model, controls, commands):
     p1.start()
 
 
-model = SimpleNamespace()
-commands = SimpleNamespace()
-controls = SimpleNamespace()
+def createRootControl(controls):
+    controls.window = tk.Tk()
+    controls.window.geometry("720x320")
+    controls.window.title("Starsiege Launcher")
 
-controls.window = tk.Tk()
-controls.window.geometry("720x320")
-controls.window.title("Starsiege Launcher")
+    return controls.window
 
-with open("sspm.config.json", "r") as configFile:
-    config = json.loads(configFile.read())
+def createModel(root, model: SimpleNamespace):
+    defaultInstallDir = "C:\\Dynamix\\Starsiege"
+    defaultRecipe = "starsiege-retail-1.0.0-3.en"
 
-defaultInstallDir = "C:\\Dynamix\\Starsiege"
-defaultRecipe = "starsiege-retail-1.0.0-3.en"
+    with open("sspm.config.json", "r") as configFile:
+        config = json.loads(configFile.read())
 
-model.showMore = tk.BooleanVar(controls.window, value=False)
-model.installDir = tk.StringVar(controls.window, value=defaultInstallDir)
-model.selectedRecipe = tk.StringVar(controls.window)
-model.recipes = [*core.getAllRecipes(config)]
-model.recipesAsLabels = [recipe["description"] for recipe in model.recipes]
-model.recipesAsLabels.sort()
+    model.showMore = tk.BooleanVar(root, value=False)
+    model.installDir = tk.StringVar(root, value=defaultInstallDir)
+    model.selectedRecipe = tk.StringVar(root)
+    model.recipes = [*core.getAllRecipes(config)]
+    model.recipesAsLabels = [recipe["description"] for recipe in model.recipes]
+    model.recipesAsLabels.sort()
 
-for recipe in model.recipes:
-    if recipe["name"] == defaultRecipe:
-        model.selectedRecipe.set(recipe["description"])
-        break
+    for recipe in model.recipes:
+        if recipe["name"] == defaultRecipe:
+            model.selectedRecipe.set(recipe["description"])
+            break
+
+def setupCommands(model, controls, commands):
+    commands.installGame = partial(installGame, model, controls, commands)
+    commands.toggleMoreVisibility = partial(toggleMoreVisibility, model, controls, commands)
+    commands.cancelInstall = partial(cancelInstall, model, controls, commands)
+    commands.resetToDefaultState = partial(resetToDefaultState, model, controls, commands)
+    commands.updateToRunGameControls = partial(updateToRunGameControls, model, controls, commands)
+    commands.runGame = partial(runGame, model, controls, commands)
+
+def bindCommandsToModel(commands, model):
+    model.showMore.trace_variable("w", lambda *args: commands.toggleMoreVisibility())
+
+def createControls(root, controls):
+    frame = ttk.Frame(root)
+    frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+    controls.btnInstall = ttk.Button(frame, text="Install")
+    controls.btnInstall.pack(fill=tk.BOTH, expand=True)
+
+    controls.pgrProgress = pgrProgress = ttk.Progressbar(frame, length=100, orient=tk.HORIZONTAL, mode="determinate")
+    pgrProgress.pack(fill=tk.X, expand=True)
+
+    controls.chkShowMoreOptions = ttk.Checkbutton(frame, text="Show More", onvalue=True, offvalue=False)
+    controls.chkShowMoreOptions.pack(fill=tk.BOTH, expand=True)
+
+    controls.fraMore = ttk.Labelframe(frame, text="More")
+    controls.fraMore.pack_forget()
+
+    controls.txtOutput = tk.scrolledtext.ScrolledText(frame)
+    controls.txtOutput.pack_forget()
+
+    controls.fraVersion = createParentAndLabel(controls.fraMore, "Version to Install:")
+    controls.cmbVersionToInstall = ttk.Combobox(controls.fraVersion)
+    controls.cmbVersionToInstall.pack(fill=tk.X, expand=True)
+
+    controls.fraLocation = createParentAndLabel(controls.fraMore, "Install Destination:")
+    controls.txtInstallLocation = ttk.Entry(controls.fraLocation)
+    controls.txtInstallLocation.pack(fill=tk.X, expand=True)
+
+def bindControlsToModel(controls, model):
+    controls.chkShowMoreOptions.configure(variable=model.showMore)
+    controls.cmbVersionToInstall.configure(textvariable=model.selectedRecipe, values=model.recipesAsLabels)
+    controls.txtInstallLocation.configure(textvariable=model.installDir)
+
+def bindCommandsToControls(commands, controls):
+    controls.btnInstall.configure(command=commands.installGame)
+
+def setup():
+    result = SimpleNamespace()
+    result.model = model = SimpleNamespace()
+    result.commands = commands = SimpleNamespace()
+    result.controls = controls = SimpleNamespace()
+
+    root = createRootControl(controls)
+    createControls(root, controls)
+    createModel(root, model)
+    setupCommands(model, controls, commands)
+    bindCommandsToModel(commands, model)
+    bindControlsToModel(controls, model)
+    bindCommandsToControls(commands, controls)
+
+    return result
 
 
-commands.installGame = partial(installGame, model, controls, commands)
-commands.toggleMoreVisibility = partial(toggleMoreVisibility, model, controls, commands)
-commands.cancelInstall = partial(cancelInstall, model, controls, commands)
-commands.resetToDefaultState = partial(resetToDefaultState, model, controls, commands)
-commands.updateToRunGameControls = partial(updateToRunGameControls, model, controls, commands)
-commands.runGame = partial(runGame, model, controls, commands)
-
-model.showMore.trace_variable("w", lambda *args: commands.toggleMoreVisibility())
-
-frame = ttk.Frame(controls.window)
-frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-controls.btnInstall = ttk.Button(frame, text="Install")
-controls.btnInstall.pack(fill=tk.BOTH, expand=True)
-
-controls.pgrProgress = pgrProgress = ttk.Progressbar(frame, length=100, orient=tk.HORIZONTAL, mode="determinate")
-pgrProgress.pack(fill=tk.X, expand=True)
-
-controls.chkShowMoreOptions = ttk.Checkbutton(frame, text="Show More", variable=model.showMore, onvalue=True, offvalue=False)
-controls.chkShowMoreOptions.pack(fill=tk.BOTH, expand=True)
-
-controls.fraMore = ttk.Labelframe(frame, text="More")
-controls.fraMore.pack_forget()
-
-controls.txtOutput = tk.scrolledtext.ScrolledText(frame)
-controls.txtOutput.pack_forget()
-
-versionFrame = createParentAndLabel(controls.fraMore, "Version to Install:")
-controls.cmbVersionToInstall = ttk.Combobox(versionFrame, textvariable=model.selectedRecipe, values=model.recipesAsLabels)
-controls.cmbVersionToInstall.pack(fill=tk.X, expand=True)
-
-locationFrame = createParentAndLabel(controls.fraMore, "Install Destination:")
-installLocation = ttk.Entry(locationFrame, textvariable=model.installDir)
-installLocation.pack(fill=tk.X, expand=True)
-
-controls.btnInstall.configure(command=commands.installGame)
-
-controls.window.mainloop()
+mainWindow = setup()
+mainWindow.controls.window.mainloop()
