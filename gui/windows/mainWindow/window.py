@@ -15,7 +15,7 @@ def createRootControl(controls):
 
     return controls.window
 
-def createModel(root, model: SimpleNamespace):
+def setupModel(root, model: SimpleNamespace):
     with open("sspm.config.json", "r") as configFile:
         config = json.loads(configFile.read())
 
@@ -28,6 +28,7 @@ def createModel(root, model: SimpleNamespace):
     model.recipes = [*core.getAllRecipes(config)]
     model.recipesAsLabels = [recipe["description"] for recipe in model.recipes]
     model.recipesAsLabels.sort()
+    model.currentState = tk.StringVar(root, value="readyToInstall")
 
     for recipe in model.recipes:
         if recipe["name"] == defaultRecipe:
@@ -38,27 +39,25 @@ def setupCommands(model, controls, commands):
     commands.installGame = partial(logic.installGame, model, controls, commands)
     commands.toggleMoreVisibility = partial(logic.toggleMoreVisibility, model, controls, commands)
     commands.cancelInstall = partial(logic.cancelInstall, model, controls, commands)
-    commands.resetToDefaultState = partial(logic.resetToDefaultState, model, controls, commands)
-    commands.updateToRunGameControls = partial(logic.updateToRunGameControls, model, controls, commands)
     commands.runGame = partial(logic.runGame, model, controls, commands)
+    commands.toggleControlsBasedOnState = partial(logic.toggleControlsBasedOnState, model, controls, commands)
 
-def bindCommandsToModel(commands, model):
-    model.showMore.trace_variable("w", lambda *args: commands.toggleMoreVisibility())
-
-def createControls(root, controls):
+def createControls(root, controls, moduleLoader):
     frame = ttk.Frame(root)
     frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
     controls.btnInstall = ttk.Button(frame, text="Install")
     controls.btnInstall.pack(fill=tk.BOTH, expand=True)
 
-    controls.pgrProgress = pgrProgress = ttk.Progressbar(frame, length=100, orient=tk.HORIZONTAL, mode="determinate")
-    pgrProgress.pack(fill=tk.X, expand=True)
+    controls.pgrProgress = ttk.Progressbar(frame, length=100, orient=tk.HORIZONTAL, mode="determinate")
+    controls.pgrProgress.pack_forget()
 
     controls.chkShowMoreOptions = ttk.Checkbutton(frame, text="Show More", onvalue=True, offvalue=False)
     controls.chkShowMoreOptions.pack(fill=tk.BOTH, expand=True)
 
     controls.fraMore = ttk.Labelframe(frame, text="More")
     controls.fraMore.pack_forget()
+
+    controls.pnlSettings = moduleLoader.loadAndSetupWidget("runtimeConfig", root)
 
     controls.txtOutput = tk.scrolledtext.ScrolledText(frame)
     controls.txtOutput.pack_forget()
@@ -70,6 +69,10 @@ def createControls(root, controls):
     controls.fraLocation = shared.createParentAndLabel(controls.fraMore, "Install Destination:")
     controls.txtInstallLocation = ttk.Entry(controls.fraLocation)
     controls.txtInstallLocation.pack(fill=tk.X, expand=True)
+
+def bindCommandsToModel(commands, model):
+    model.showMore.trace_variable("w", lambda *args: commands.toggleMoreVisibility())
+    model.currentState.trace_variable("w", lambda *args: commands.toggleControlsBasedOnState())
 
 def bindControlsToModel(controls, model):
     controls.chkShowMoreOptions.configure(variable=model.showMore)

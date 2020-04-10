@@ -6,19 +6,36 @@ import tkinter as tk
 from functools import partial
 from threading import Thread
 
+
+def toggleControlsBasedOnState(model, controls, commands):
+    currentState = model.currentState.get()
+    if currentState == "installing":
+        controls.chkShowMoreOptions.pack_forget()
+        controls.pgrProgress.pack(fill=tk.X, expand=True)
+        controls.txtOutput.pack(fill=tk.BOTH, expand=True)
+
+        controls.btnInstall.configure(text="Cancel",
+                                      command=commands.cancelInstall)
+    elif currentState == "readyToInstall":
+        controls.btnInstall.configure(text="Install",
+                                      state=tk.NORMAL,
+                                      command=commands.installGame)
+        model.showMore.set(False)
+        controls.pgrProgress.pack_forget()
+        controls.txtOutput.pack_forget()
+        controls.chkShowMoreOptions.pack(fill=tk.BOTH, expand=True)
+    elif currentState == "readyToRun":
+        controls.btnInstall.configure(text="Run",
+                                      command=commands.runGame)
+        controls.pgrProgress.pack_forget()
+        controls.txtOutput.pack_forget()
+        controls.pnlSettings.root.pack(fill=tk.BOTH, expand=True)
+
 def toggleMoreVisibility(model, controls, commands):
     if model.showMore.get() is False:
         controls.fraMore.pack_forget()
     else:
         controls.fraMore.pack(fill=tk.BOTH, expand=True)
-
-def resetToDefaultState(model, controls, commands):
-    controls.btnInstall.configure(text="Install",
-                                  state=tk.NORMAL,
-                                  command=commands.installGame)
-    model.showMore.set(False)
-    controls.txtOutput.pack_forget()
-    controls.chkShowMoreOptions.pack(fill=tk.BOTH, expand=True)
 
 def printToOutput(model, controls, commands, *a, **b):
     if not model.isCancelled:
@@ -26,22 +43,19 @@ def printToOutput(model, controls, commands, *a, **b):
         controls.txtOutput.see("end")
         controls.pgrProgress.step()
     else:
-        commands.resetToDefaultState()
+        model.currentState.set("readyToInstall")
         sys.exit()
 
-def installPackage(items, installDir, commands, newPrint):
+def installPackage(items, installDir, model, newPrint):
     try:
         for package, version in items:
             sspm.installPackagesCore([f"{package}@{version}"], installDir, True, newPrint)
     except Exception as e:
         newPrint(e)
-        commands.cancelInstall()
+        model.currentState.set("readyToInstall")
         return
-    commands.updateToRunGameControls()
+    model.currentState.set("readyToRun")
 
-def updateToRunGameControls(model, controls, commands):
-    controls.btnInstall.configure(text="Run",
-                                  command=commands.runGame)
 
 def runGame(model, controls, commands):
     processToRun = os.path.join(model.installDir.get(), model.selectedRecipeInfo["main"])
@@ -63,14 +77,10 @@ def installGame(model, controls, commands):
     installDir = model.installDir.get()
     model.showMore.set(False)
     model.isCancelled = False
+    model.currentState.set("installing")
     model.selectedRecipeInfo = selectetedRecipe
-    controls.chkShowMoreOptions.pack_forget()
-    controls.txtOutput.pack(fill=tk.BOTH, expand=True)
-
-    controls.btnInstall.configure(text="Cancel",
-                                  command=commands.cancelInstall)
 
     p1 = Thread(target=installPackage, args=(selectetedRecipe["dependencies"].items(), installDir,
-                                             commands,
+                                             model,
                                              partial(printToOutput, model, controls, commands)))
     p1.start()
