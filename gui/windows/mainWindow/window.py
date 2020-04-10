@@ -16,11 +16,11 @@ def createRootControl(controls):
     return controls.window
 
 def createModel(root, model: SimpleNamespace):
-    defaultInstallDir = "C:\\Dynamix\\Starsiege"
-    defaultRecipe = "starsiege-retail-1.0.0-3.en"
-
     with open("sspm.config.json", "r") as configFile:
         config = json.loads(configFile.read())
+
+    defaultInstallDir = config["defaults"]["installDirectory"]
+    defaultRecipe = config["defaults"]["recipe"]
 
     model.showMore = tk.BooleanVar(root, value=False)
     model.installDir = tk.StringVar(root, value=defaultInstallDir)
