@@ -31,9 +31,9 @@ def resetToDefaultState(model, controls, commands):
     controls.btnInstall.configure(text="Install",
                                   state=tk.NORMAL,
                                   command=commands.installGame)
+    model.showMore.set(False)
     controls.txtOutput.pack_forget()
     controls.chkShowMoreOptions.pack(fill=tk.BOTH, expand=True)
-    commands.toggleMoreVisibility()
 
 def printToOutput(model, controls, commands, *a, **b):
     if not model.isCancelled:
@@ -79,7 +79,6 @@ def installGame(model, controls, commands):
     model.showMore.set(False)
     model.isCancelled = False
     model.selectedRecipeInfo = selectetedRecipe
-    commands.toggleMoreVisibility()
     controls.chkShowMoreOptions.pack_forget()
     controls.txtOutput.pack(fill=tk.BOTH, expand=True)
 
@@ -126,6 +125,8 @@ commands.resetToDefaultState = partial(resetToDefaultState, model, controls, com
 commands.updateToRunGameControls = partial(updateToRunGameControls, model, controls, commands)
 commands.runGame = partial(runGame, model, controls, commands)
 
+model.showMore.trace_variable("w", lambda *args: commands.toggleMoreVisibility())
+
 frame = ttk.Frame(controls.window)
 frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
 controls.btnInstall = ttk.Button(frame, text="Install")
@@ -136,7 +137,6 @@ pgrProgress.pack(fill=tk.X, expand=True)
 
 controls.chkShowMoreOptions = ttk.Checkbutton(frame, text="Show More", variable=model.showMore, onvalue=True, offvalue=False)
 controls.chkShowMoreOptions.pack(fill=tk.BOTH, expand=True)
-controls.chkShowMoreOptions.configure(command=commands.toggleMoreVisibility)
 
 controls.fraMore = ttk.Labelframe(frame, text="More")
 controls.fraMore.pack_forget()
