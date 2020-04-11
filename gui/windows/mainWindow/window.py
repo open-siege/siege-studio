@@ -57,7 +57,14 @@ def createControls(root, controls, moduleLoader):
     controls.fraMore = ttk.Labelframe(frame, text="More")
     controls.fraMore.pack_forget()
 
-    controls.pnlSettings = moduleLoader.loadAndSetupWidget("runtimeConfig", root)
+    controls.pnlSettings = ttk.Notebook(frame)
+    controls.pnlSettings.pack_forget()
+
+    controls.pnlSettingsTab1 = moduleLoader.loadAndSetupWidget("runtimeConfig", controls.pnlSettings)
+    controls.pnlSettingsTab2 = moduleLoader.loadAndSetupWidget("packageConfig", controls.pnlSettings)
+
+    controls.pnlSettings.add(controls.pnlSettingsTab1.root, text="Settings")
+    controls.pnlSettings.add(controls.pnlSettingsTab2.root, text="Packages")
 
     controls.txtOutput = tk.scrolledtext.ScrolledText(frame)
     controls.txtOutput.pack_forget()

@@ -26,12 +26,12 @@ def setupModule(uiModule, parent=None, model=None):
     else:
         result.model = model
 
-    uiModule.setupModel(root, model)
-    uiModule.createControls(root, controls, moduleLoader)
-    uiModule.setupCommands(model, controls, commands)
-    uiModule.bindCommandsToModel(commands, model)
-    uiModule.bindControlsToModel(controls, model)
-    uiModule.bindCommandsToControls(commands, controls)
+    uiModule.setupModel(root, model) if hasattr(uiModule, "setupModel") else None
+    uiModule.createControls(root, controls, moduleLoader) if hasattr(uiModule, "createControls") else None
+    uiModule.setupCommands(model, controls, commands) if hasattr(uiModule, "setupCommands") else None
+    uiModule.bindCommandsToModel(commands, model) if hasattr(uiModule, "bindCommandsToModel") else None
+    uiModule.bindControlsToModel(controls, model) if hasattr(uiModule, "bindControlsToModel") else None
+    uiModule.bindCommandsToControls(commands, controls) if hasattr(uiModule, "bindCommandsToControls") else None
 
     return result
 
@@ -83,4 +83,6 @@ if mainWindow is None:
     sys.exit()
 
 main = setupModule(mainWindow.module)
+main.model.currentState.set("readyToRun")
+
 main.root.mainloop()

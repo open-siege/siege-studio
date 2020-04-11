@@ -29,7 +29,8 @@ def toggleControlsBasedOnState(model, controls, commands):
                                       command=commands.runGame)
         controls.pgrProgress.pack_forget()
         controls.txtOutput.pack_forget()
-        controls.pnlSettings.root.pack(fill=tk.BOTH, expand=True)
+        controls.chkShowMoreOptions.pack_forget()
+        controls.pnlSettings.pack(fill=tk.BOTH, expand=True)
 
 def toggleMoreVisibility(model, controls, commands):
     if model.showMore.get() is False:
