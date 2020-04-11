@@ -25,7 +25,7 @@ def toggleControlsBasedOnState(model, controls, commands):
         controls.txtOutput.pack_forget()
         controls.chkShowMoreOptions.pack(fill=tk.BOTH, expand=True)
     elif currentState == "readyToRun":
-        controls.btnInstall.configure(text="Run",
+        controls.btnInstall.configure(text="Launch",
                                       command=commands.runGame)
         controls.pgrProgress.pack_forget()
         controls.txtOutput.pack_forget()

@@ -84,5 +84,5 @@ if mainWindow is None:
 
 main = setupModule(mainWindow.module)
 main.model.currentState.set("readyToRun")
-
+main.root.geometry("900x480")
 main.root.mainloop()
