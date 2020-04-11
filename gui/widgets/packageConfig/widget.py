@@ -11,11 +11,22 @@ def createRootControl(controls, parent):
 
     return controls.frame
 
+def setupModel(root, model: SimpleNamespace):
+    model.packages = logic.getPackageVersions()
+
+def bindControlsToModel(controls, model):
+    controls.tblPackages.delete(*controls.tblPackages.get_children())
+    for package in model.packages:
+        controls.tblPackages.insert("", "end", values=package)
+
+
 def createControls(root, controls, moduleLoader):
-    cols = ('Package', 'Current Version', 'Newer Version', "Update")
-    controls.tblPackages = ttk.Treeview(root, columns=cols, show='headings')
+    controls.fraPackages = shared.createParentAndLabel(root, "Packages:")
+    controls.fraPackages.pack(fill=tk.BOTH, expand=True)
+
+    cols = ("Package", "Current Version", "Newer Version", "Update")
+    controls.tblPackages = ttk.Treeview(controls.fraPackages, columns=cols, show='headings')
     for col in cols:
         controls.tblPackages.heading(col, text=col)
 
     controls.tblPackages.pack(fill=tk.BOTH, expand=True)
-    controls.tblPackages.insert("", "end", values=("starsiege-retail", "1.0.0-3.en", "-", "-"))
