@@ -9,15 +9,33 @@ heightKey = "$pref::GWC::SIM_FS_HEIGHT"
 dxWndFilename = "dxwnd.dxw"
 cdVolumeKey = "cdvol0"
 
+masterFile = os.path.join("scripts", "master.cs")
+masterPrefix = "$Inet::Master"
+
+def getCurrentMasterServers():
+    masterServers = []
+    indexes = range(1, 9)
+
+    if os.path.exists(masterFile):
+        with open(masterFile, "r") as mastersFile:
+            data = mastersFile.read()
+            for index in indexes:
+                existingData = getSettingStringValue(getExistingData(data, f"{masterPrefix}{index}"))
+                if existingData is not None:
+                    masterServers.append((existingData, "☑"))
+
+    return masterServers
+
+
 def saveCdVolumeToFile(model):
-    time.sleep(0.5)
-    volume: int = model.volume.get()
+    time.sleep(2)
     if os.path.exists(dxWndFilename):
         with open(dxWndFilename, "r") as prefsFile:
             data = prefsFile.read()
             oldData = "" + data
             existingData = getExistingData(data, cdVolumeKey, "\n")
             if existingData is not None:
+                volume: int = model.volume.get()
                 data = data.replace(existingData, f"{cdVolumeKey}={volume}")
 
         if data != oldData:
@@ -41,13 +59,19 @@ def getCurrentCdVolume():
     return result
 
 def getExistingData(data, key, endTerminator=";"):
-    widthIndex = data.index(key)
+    widthIndex = data.find(key)
 
     if widthIndex != -1:
-        endIndex = data.index(endTerminator, widthIndex)
+        endIndex = data.find(endTerminator, widthIndex)
         if endIndex != -1:
             return data[widthIndex:endIndex]
     return None
+
+def getSettingStringValue(oldData, default=None):
+    if oldData is None:
+        return default
+    oldData = oldData.split("=")[-1]
+    return oldData.strip().replace("\"", "")
 
 def getSettingIntValue(oldData, default=None):
     if oldData is None:

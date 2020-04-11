@@ -15,7 +15,7 @@ def createRootControl(controls, parent):
 def setupModel(root, model: SimpleNamespace):
     model.resolutions = ["1920x1080", "1600x900", "1440x900", "1366x768", "1280x1024", "1280x960", "1280x720",
                          "1024x768", "800x600", "640x480", "640x400"]
-    model.masterServers = [("master.thesiegehub.com", "☑"),("master.siegehub.com", "☑")]
+    model.masterServers = logic.getCurrentMasterServers()
     model.volume = tk.IntVar(root, value=logic.getCurrentCdVolume())
     model.selectedResolution = tk.StringVar(root)
     model.selectedResolution.set(logic.getCurrentResolution())
@@ -47,7 +47,7 @@ def createControls(root, controls, moduleLoader):
 
     controls.fraMasterServers = shared.createParentAndLabel(root, "Master Servers:")
     controls.fraMasterServers.pack(fill=tk.BOTH, expand=True)
-    cols = ("Domain/Address", "Enabled")
+    cols = ("Address", "Enabled")
     controls.tblPackages = ttk.Treeview(controls.fraMasterServers, columns=cols, show='headings')
     for col in cols:
         controls.tblPackages.heading(col, text=col)
