@@ -1,11 +1,33 @@
 import glob
 import os
 import sys
+import json
+import tkinter.messagebox as msg
 import importlib.util
 from types import SimpleNamespace
 from collections import namedtuple
 
 UiModule = namedtuple("UiModule", "name module")
+
+def getDefaultStatus():
+    result = None
+
+    recipes = glob.glob("recipes/*.json")
+
+    if len(recipes) > 0:
+        result = "readyToInstall"
+
+    if os.path.exists("package.json"):
+        result = "readyToRun"
+
+    if result != "readyToRun" and os.path.exists("sspm.config.json"):
+        with open("sspm.config.json", "r") as configFile:
+            config = json.loads(configFile.read())
+            if "defaults" in config and "defaultExe" in config["defaults"]:
+                result = "readyToRun" if os.path.exists(config["defaults"]["defaultExe"]) else result
+
+    return result
+
 
 def setupModule(uiModule, parent=None, model=None):
     result = SimpleNamespace()
@@ -76,13 +98,19 @@ def loadAndSetupWidget(widgetName, parent=None, model=None):
     widget = loadWidget(widgetName)
     return setupModule(widget.module, parent, model)
 
-mainWindow = loadWindow("mainWindow")
 
-if mainWindow is None:
-    print("Cannot load main window for application, closing.")
-    sys.exit()
+defaultState = getDefaultStatus()
 
-main = setupModule(mainWindow.module)
-main.model.currentState.set("readyToRun")
-main.root.geometry("900x480")
-main.root.mainloop()
+if defaultState is not None:
+    mainWindow = loadWindow("mainWindow")
+
+    if mainWindow is None:
+        print("Cannot load main window for application, closing.")
+        sys.exit()
+
+    main = setupModule(mainWindow.module)
+    main.model.currentState.set(defaultState)
+    main.root.geometry("900x480")
+    main.root.mainloop()
+else:
+    msg.showerror("No valid config files found", "There are several key files missing for the launcher to run. Please place this executable in the same directory as sspm.config.json or package.json or the recipes folder.")
