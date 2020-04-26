@@ -1,7 +1,7 @@
 {
   "name": "starsiege-math-shims",
-  "version": "0.7.0",
-  "description": "(   (   (     \r  )\\ ))\\ ))\\ )  \r (()/(()/(()/(  \r  /(_))(_))(_)) \r (_))(_))(_))   \r / __/ __| _ \\  \r \\__ \\__ \\   /  \r |___/___/_|_\\",
+  "version": "0.7.1",
+  "description": "Some shims to add missing math functions to Starsiege.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
