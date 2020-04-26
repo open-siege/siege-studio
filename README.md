@@ -1,12 +1,4 @@
- (   (   (     
- )\ ))\ ))\ )  
-(()/(()/(()/(  
- /(_))(_))(_)) 
-(_))(_))(_))   
-/ __/ __| _ \  
-\__ \__ \   /  
-|___/___/_|_\  
-               
+SSR - The Starsiege Restoration Project
 
 This is a small set of shims to add originally absent math functions to Starsiege which were present in Starsiege Tribes.
 
