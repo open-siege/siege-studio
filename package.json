@@ -1,0 +1,19 @@
+{
+  "name": "starsiege-math-shims",
+  "version": "0.7.0",
+  "description": "(   (   (     \r  )\\ ))\\ ))\\ )  \r (()/(()/(()/(  \r  /(_))(_))(_)) \r (_))(_))(_))   \r / __/ __| _ \\  \r \\__ \\__ \\   /  \r |___/___/_|_\\",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matthew-rindel/starsiege-math-shims.git"
+  },
+  "author": "Matthew Rindel",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/matthew-rindel/starsiege-math-shims/issues"
+  },
+  "homepage": "https://github.com/matthew-rindel/starsiege-math-shims#readme"
+}
