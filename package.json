@@ -1,6 +1,6 @@
 {
   "name": "starsiege-math-shims",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Some shims to add missing math functions to Starsiege.",
   "main": "index.js",
   "scripts": {
