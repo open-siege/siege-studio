@@ -16,7 +16,7 @@ function ceil(%number)
 // Adapted from a C++ version from here: https://stackoverflow.com/questions/3581528/how-is-the-square-root-function-implemented/39716982
 // Often, the values lack precision when dividing, so ceil is used 
 // to round up values which may be lacking in precision.
-function sqrt(%number){
+function Math::sqrt(%number){
   %lo = 0;
   %hi = %number;
   %mid = 0;
