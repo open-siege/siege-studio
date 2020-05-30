@@ -22,67 +22,26 @@
 
 #include <cstdint>
 #include <memory>
-
-#include <pybind11/embed.h> // everything needed for embedding
-namespace py = pybind11;
 #include <string>
-#include <fstream>
-#include <streambuf>
 #include <thread>
 #include <chrono>
+#include <fstream>
 #include <cstdint>
-#include <nlohmann/json.hpp>
+#include <pybind11/embed.h>
 
-// Most Darkstar games have functions using Borland fastcall,
-// so this is considered the standard calling convention for functions
-#define DARKCALL __fastcall
+#include "GameRuntime.hpp"
 
-
-struct GameConsole;
-
-struct ConsoleConsumer
-{
-	virtual void DARKCALL writeLine(GameConsole*, const char *consoleLine) = 0;
-};
-
-using json = nlohmann::json;
-
-using GetConsoleFunc = GameConsole* (DARKCALL*)();
-using AddConsoleConsumerFunc = void (DARKCALL*) (GameConsole* console, ConsoleConsumer*);
-using ConsoleEvalFunc = const char* (DARKCALL*) (GameConsole* console, int functionId, int argc, const char** argv);
+namespace py = pybind11;
 
 static std::thread* pythonThread = nullptr;
 int attachedCount = 0;
 
-struct Game
+GameRuntime::Game GameRuntime::Game::instance{};
+
+
+struct TestConsoleConsumer : public GameRuntime::ConsoleConsumer
 {
-	GetConsoleFunc GetConsole;
-	AddConsoleConsumerFunc AddConsoleConsumer;
-	ConsoleEvalFunc ConsoleEval;
-};
-
-
-
-Game loadFunctions()
-{
-	std::ifstream fileStream("functions.json");
-	std::string str((std::istreambuf_iterator<char>(fileStream)),
-				 std::istreambuf_iterator<char>());
-	auto functionData = json::parse(str);
-	auto defaultMapping = functionData["default"].get<std::string>();
-	auto gameMapping = functionData["mappings"][defaultMapping];
-
-	return {
-		(GetConsoleFunc)std::stoul(gameMapping["ConsoleGetConsole"].get<std::string>(), nullptr, 16),
-		(AddConsoleConsumerFunc)std::stoul(gameMapping["ConsoleAddConsumer"].get<std::string>(), nullptr, 16),
-		(ConsoleEvalFunc)std::stoul(gameMapping["ConsoleEval"].get<std::string>(), nullptr, 16),
-	};
-}
-
-
-struct TestConsoleConsumer : public ConsoleConsumer
-{
-		virtual void DARKCALL writeLine(GameConsole*, const char *consoleLine)
+		virtual void DARKCALL writeLine(GameRuntime::GameConsole*, const char *consoleLine)
 		{
 			std::ofstream file("super-special-log.log", std::ios_base::app);
 			file << "A message from the other side!" << std::endl;
@@ -90,7 +49,7 @@ struct TestConsoleConsumer : public ConsoleConsumer
 			try
 			{
 				py::scoped_interpreter guard{};
-				pybind11::eval_file("simple.py");
+				py::eval_file("simple.py");
 			}
 			catch(const std::exception& ex)
 			{
@@ -108,27 +67,23 @@ void runPython()
 		std::ofstream file("test.log");
 		file << "Hello there!" << std::endl;
         std::this_thread::sleep_for(std::chrono::seconds(20));
-        const char* arguments[] =
-        {
-            "eval",
-            "echo(\"Hello world from C++\");"
-		};
 
-        auto game = loadFunctions();
+		auto game = GameRuntime::Game::currentInstance();
 
-		file << game.ConsoleEval(nullptr, 0, 2, arguments);
+		auto console = game.getInterpreter();
 
-		auto gameConsole = game.GetConsole();
-		game.AddConsoleConsumer(gameConsole, new TestConsoleConsumer());
+		file << console.eval("echo(\"Hello world from C++\");");
 
-        //py::scoped_interpreter guard{};
+		console.addConsumer(new TestConsoleConsumer());
+
+		//py::scoped_interpreter guard{};
         //py::print("Hello, World!"); // use the Python API
         //pybind11::eval_file("simple.py");
     }
     catch (const std::exception & ex)
     {
-        std::ofstream file("error.log");
-        file << "An error occurred: " << ex.what() << std::endl;
+        std::ofstream file("darkstar-hook-errors.log", std::ios_base::app);
+        file << ex.what() << std::endl;
     }
 }
 
