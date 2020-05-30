@@ -27,68 +27,62 @@
 namespace py = pybind11;
 #include <string>
 #include <fstream>
+#include <streambuf>
 #include <thread>
 #include <chrono>
 #include <cstdint>
+#include <nlohmann/json.hpp>
 
+// Most Darkstar games have functions using Borland fastcall,
+// so this is considered the standard calling convention for functions
 #define DARKCALL __fastcall
-
-
-
-static std::thread* pythonThread = nullptr;
-int attachedCount = 0;
 
 
 struct GameConsole;
 
-
-int PythonMain(int argc, char *argv[])
-{
-	wchar_t *program = Py_DecodeLocale(argv[0], NULL);
-	if (program == NULL) {
-		fprintf(stderr, "Fatal error: cannot decode argv[0]\n");
-		exit(1);
-    }
-	Py_SetProgramName(program);  /* optional but recommended */
-	Py_Initialize();
-	PyRun_SimpleString("from time import time,ctime\n"
-					   "print('Today is', ctime(time()))\n");
-	if (Py_FinalizeEx() < 0) {
-		exit(120);
-	}
-	PyMem_RawFree(program);
-	return 0;
-}
-
-
 struct ConsoleConsumer
 {
-	virtual void DARKCALL consoleMessage(GameConsole*, const char *consoleLine) = 0;
+	virtual void DARKCALL writeLine(GameConsole*, const char *consoleLine) = 0;
 };
 
-std::uint32_t getConsole = 0x5E3004;
-std::uint32_t addConsumerAddress = 0x5E336C;
-std::uint32_t evalAddress = 0x5E2BBC;
+using json = nlohmann::json;
 
-typedef GameConsole* (DARKCALL* GetConsoleFunc) ();
-typedef void (DARKCALL* AddConsoleConsumerFunc) (GameConsole* console, ConsoleConsumer*);
-typedef const char* (DARKCALL* ConsoleEvalFunc) (GameConsole* console, int functionId, int argc, const char** argv);
+using GetConsoleFunc = GameConsole* (DARKCALL*)();
+using AddConsoleConsumerFunc = void (DARKCALL*) (GameConsole* console, ConsoleConsumer*);
+using ConsoleEvalFunc = const char* (DARKCALL*) (GameConsole* console, int functionId, int argc, const char** argv);
 
-extern char  etext, edata, end;
+static std::thread* pythonThread = nullptr;
+int attachedCount = 0;
 
-
-namespace Game
+struct Game
 {
-	GetConsoleFunc GetConsole = (GetConsoleFunc)getConsole;
-	AddConsoleConsumerFunc AddConsoleConsumer = (AddConsoleConsumerFunc)addConsumerAddress;
-	ConsoleEvalFunc ConsoleEval = (ConsoleEvalFunc)evalAddress;
-}
+	GetConsoleFunc GetConsole;
+	AddConsoleConsumerFunc AddConsoleConsumer;
+	ConsoleEvalFunc ConsoleEval;
+};
 
+
+
+Game loadFunctions()
+{
+	std::ifstream fileStream("functions.json");
+	std::string str((std::istreambuf_iterator<char>(fileStream)),
+				 std::istreambuf_iterator<char>());
+	auto functionData = json::parse(str);
+	auto defaultMapping = functionData["default"].get<std::string>();
+	auto gameMapping = functionData["mappings"][defaultMapping];
+
+	return {
+		(GetConsoleFunc)std::stoul(gameMapping["ConsoleGetConsole"].get<std::string>(), nullptr, 16),
+		(AddConsoleConsumerFunc)std::stoul(gameMapping["ConsoleAddConsumer"].get<std::string>(), nullptr, 16),
+		(ConsoleEvalFunc)std::stoul(gameMapping["ConsoleEval"].get<std::string>(), nullptr, 16),
+	};
+}
 
 
 struct TestConsoleConsumer : public ConsoleConsumer
 {
-		virtual void DARKCALL consoleMessage(GameConsole*, const char *consoleLine)
+		virtual void DARKCALL writeLine(GameConsole*, const char *consoleLine)
 		{
 			std::ofstream file("super-special-log.log", std::ios_base::app);
 			file << "A message from the other side!" << std::endl;
@@ -118,12 +112,14 @@ void runPython()
         {
             "eval",
             "echo(\"Hello world from C++\");"
-        };
+		};
 
-		file << Game::ConsoleEval(nullptr, 0, 2, arguments);
+        auto game = loadFunctions();
 
-		auto gameConsole = Game::GetConsole();
-		Game::AddConsoleConsumer(gameConsole, new TestConsoleConsumer());
+		file << game.ConsoleEval(nullptr, 0, 2, arguments);
+
+		auto gameConsole = game.GetConsole();
+		game.AddConsoleConsumer(gameConsole, new TestConsoleConsumer());
 
         //py::scoped_interpreter guard{};
         //py::print("Hello, World!"); // use the Python API
