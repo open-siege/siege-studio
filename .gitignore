@@ -30,3 +30,10 @@
 *.exe
 *.out
 *.app
+
+mem.res
+*.cbproj.local
+Win32
+__history
+__recovery
+__astcache
