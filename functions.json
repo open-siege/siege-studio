@@ -1,0 +1,10 @@
+{
+   "default":"Starsiege-1003",
+   "mappings":{
+      "Starsiege-1003":{
+         "ConsoleGetConsole":"0x5E3004",
+         "ConsoleAddConsumer":"0x5E336C",
+         "ConsoleEval":"0x5E2BBC"
+      }
+   }
+}

@@ -107,6 +107,10 @@
         <VerInfo_Locale>1033</VerInfo_Locale>
     </PropertyGroup>
     <ItemGroup>
+        <None Include="functions.json">
+            <ModuleName>Untitled1</ModuleName>
+            <ContainerId>WebFile</ContainerId>
+        </None>
         <DefFile Include="libs\python38.def">
             <VirtualFolder>{5764A92E-4A69-48F4-9F63-0C2E5D25CB3C}</VirtualFolder>
             <BuildOrder>3</BuildOrder>
