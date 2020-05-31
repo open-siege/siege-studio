@@ -4,7 +4,21 @@
       "Starsiege-1003":{
          "ConsoleGetConsole":"0x5E3004",
          "ConsoleAddConsumer":"0x5E336C",
-         "ConsoleEval":"0x5E2BBC"
+         "ConsoleCls":"0x5e2738",
+         "ConsoleSqrt":"0x5e2814",
+         "ConsoleFloor":"0x5e2860",
+         "ConsoleEcho":"0x5e28a0",
+         "ConsoleDbEcho":"0x5e2900",
+         "ConsoleStrCat":"0x5e297c",
+         "ConsoleQuit":"0x5e29c0",
+         "ConsoleExec":"0x5e29d0",
+         "ConsoleEval": "0x5e2bbc",
+         "ConsoleExportVariables":"0x5e2c00",
+         "ConsoleDeleteVariables":"0x5e2c68",
+         "ConsoleExportFunctions":"0x5e2ca8",
+         "ConsoleDeleteFunctions":"0x5e2d10",
+         "ConsoleTrace":"0x5e2d50",
+         "ConsoleDebug":"0x5e2de0"
       }
    }
 }
