@@ -19,7 +19,7 @@ namespace GameRuntime
 					current = _functions.GetConsole();
 				}
 
-				std::string eval(std::string someCode)
+				std::string eval(const std::string& someCode)
 				{
 					std::array<const char*, 2> arguments {"eval", someCode.c_str()};
 					return _functions.ConsoleEval(current, 0, arguments.size(), arguments.data());
@@ -53,9 +53,10 @@ namespace GameRuntime
 				return instance;
 			  }
 
-			  GameConsole getInterpreter()
+			  GameConsole& getConsole()
 			  {
-				  return GameConsole(functions);
+				  static GameConsole console(functions);
+				  return console;
               }
 
 	};
