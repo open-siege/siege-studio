@@ -18,6 +18,16 @@ namespace Engine
    	using ConsoleCallbackFunc = const char* (*DARKCALL)(GameConsole*, std::int32_t, std::int32_t, const char**);
 	using ManagedString = const char*;
 
+	template<typename T>
+	struct DynamicArray
+	{
+		std::uint32_t size;
+		std::uint32_t capacity;
+		std::uint16_t chunkSize;
+		std::uint16_t settings;
+        T* data;
+    };
+
 	struct ConsoleConsumer
 	{
 		virtual void DARKCALL writeLine(GameConsole*, const char *consoleLine) = 0;

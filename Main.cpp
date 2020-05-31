@@ -90,8 +90,15 @@ void runPython()
 		file << "console.exportFunctions: " << console.exportFunctions("*", "exportFunctions.cs", "False") << std::endl;
 		file << "console.exportVariables: " << console.exportVariables("*", "exportVariables.cs", "False") << std::endl;
 		file << "Sqrt of 144: " << console.sqrt("144") << std::endl;
+
+		auto plugins = game.getPlugins();
+
+		file << "Number of plugins inside of game: " << plugins.size() << " "
+		<< plugins.capacity() <<  " "
+		 << std::endl;
+		plugins[0]->executeCallback(console.getRaw(), 3, 0, nullptr);
 	}
-	catch (const std::exception & ex)
+	catch (const std::exception& ex)
 	{
 		std::ofstream file{"darkstar-hook-errors.log", std::ios_base::app};
 		file << ex.what() << std::endl;
@@ -104,12 +111,15 @@ void runPython()
 	}
 }
 
-extern "C" int _libmain(unsigned long reason) {
+extern "C" int _libmain(unsigned long reason)
+{
 	return 1;
 }
 
-extern "C" __declspec(dllexport) void* _cdecl MS_Malloc(std::size_t size) {
-	if (pythonThread == nullptr) {
+extern "C" __declspec(dllexport) void* _cdecl MS_Malloc(std::size_t size)
+{
+	if (pythonThread == nullptr)
+	{
 		isLoaded = true;
 		pythonThread = std::make_unique<std:: thread>(runPython);
 		pythonThread->detach();
@@ -118,16 +128,17 @@ extern "C" __declspec(dllexport) void* _cdecl MS_Malloc(std::size_t size) {
 	return std::malloc(size);
 }
 
-extern "C" __declspec(dllexport) void _cdecl MS_Free(void* data) {
+extern "C" __declspec(dllexport) void _cdecl MS_Free(void* data)
+{
 	std::free(data);
 }
 
-extern "C" __declspec(dllexport) void* _cdecl MS_Realloc(void* data,
-	std::size_t size) {
+extern "C" __declspec(dllexport) void* _cdecl MS_Realloc(void* data, std::size_t size)
+{
 	return std::realloc(data, size);
 }
 
-extern "C" __declspec(dllexport) void* _cdecl MS_Calloc(std::size_t num,
-	std::size_t size) {
+extern "C" __declspec(dllexport) void* _cdecl MS_Calloc(std::size_t num, std::size_t size)
+{
 	return std::calloc(num, size);
 }

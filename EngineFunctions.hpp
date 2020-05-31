@@ -14,12 +14,17 @@ namespace Engine
 {
 	using json = nlohmann::json;
 
+	using GetGameRootFunc = GameRoot* (DARKCALL*)();
+	using AddGamePluginFunc = void(DARKCALL*)(GameRoot*, GamePlugin*);
 	using GetConsoleFunc = GameConsole* (DARKCALL*)();
 	using AddConsoleConsumerFunc = void (DARKCALL*) (GameConsole* console, ConsoleConsumer*);
 
 
 	struct GameFunctions
 	{
+		GetGameRootFunc GetGameRoot;
+		AddGamePluginFunc AddGamePlugin;
+
 		GetConsoleFunc GetConsole;
 		AddConsoleConsumerFunc AddConsoleConsumer;
 
@@ -51,6 +56,8 @@ namespace Engine
 		auto gameMapping = functionData["mappings"][defaultMapping];
 
 		return {
+			(GetGameRootFunc)std::stoul(gameMapping["GetGameRoot"].get<std::string>(), nullptr, 16),
+			(AddGamePluginFunc)std::stoul(gameMapping["AddGamePlugin"].get<std::string>(), nullptr, 16),
 			(GetConsoleFunc)std::stoul(gameMapping["ConsoleGetConsole"].get<std::string>(), nullptr, 16),
 			(AddConsoleConsumerFunc)std::stoul(gameMapping["ConsoleAddConsumer"].get<std::string>(), nullptr, 16),
 			(ConsoleCallbackFunc)std::stoul(gameMapping["ConsoleCls"].get<std::string>(), nullptr, 16),
