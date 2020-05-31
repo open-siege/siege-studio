@@ -6,7 +6,9 @@
 namespace GameRuntime
 {
 	using GameFunctions = Engine::GameFunctions;
-    using ConsoleConsumer = Engine::ConsoleConsumer;
+	using GameRoot = Engine::GameRoot;
+    using GamePlugin = Engine::GamePlugin;
+	using ConsoleConsumer = Engine::ConsoleConsumer;
 
 	class GameConsole
 	{
@@ -27,6 +29,11 @@ namespace GameRuntime
 				{
 					current = _functions.GetConsole();
 				}
+
+				Engine::GameConsole* getRaw()
+				{
+                    return current;
+                }
 
 				std::string cls()
 				{
@@ -139,6 +146,7 @@ namespace GameRuntime
 
 	class Game
 	{
+		  GameRoot* current = nullptr;
 		  GameFunctions functions = { nullptr };
 
 		  public:
@@ -147,6 +155,8 @@ namespace GameRuntime
 				   if (functions.GetConsole == nullptr) {
 					   functions = Engine::loadFunctions(functionsFileName);
 				   }
+
+                   current = functions.GetGameRoot();
 			  }
 
 			  static Game& currentInstance(std::string functionsFileName = "functions.json")
@@ -163,8 +173,26 @@ namespace GameRuntime
 			  {
 				  static GameConsole console{functions};
 				  return console;
-              }
+			  }
 
+			  void addPlugin(GamePlugin* plugin)
+			  {
+                  functions.AddGamePlugin(current, plugin);
+			  }
+
+			  std::vector<GamePlugin*> getPlugins()
+			  {
+				  std::vector<GamePlugin*> result;
+				  auto rawArray = (Engine::DynamicArray<GamePlugin*>*)((std::uint8_t*)current + 264);
+
+				  result.reserve(rawArray->capacity);
+
+				  for (int i = 0; i < rawArray->size; i++)
+				  {
+                        result.push_back(rawArray->data[i]);
+				  }
+				  return result;
+              }
 	};
 }
 

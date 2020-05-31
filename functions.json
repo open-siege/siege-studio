@@ -2,6 +2,8 @@
    "default":"Starsiege-1003",
    "mappings":{
       "Starsiege-1003":{
+         "GetGameRoot": "0x59d9b0",
+         "AddGamePlugin": "0x59d598",
          "ConsoleGetConsole":"0x5E3004",
          "ConsoleAddConsumer":"0x5E336C",
          "ConsoleCls":"0x5e2738",
