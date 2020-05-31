@@ -36,12 +36,9 @@ namespace py = pybind11;
 static std::thread* pythonThread = nullptr;
 int attachedCount = 0;
 
-GameRuntime::Game GameRuntime::Game::instance{};
-
-
-struct TestConsoleConsumer : public GameRuntime::ConsoleConsumer
+struct TestConsoleConsumer : public Engine::ConsoleConsumer
 {
-		virtual void DARKCALL writeLine(GameRuntime::GameConsole*, const char *consoleLine)
+		virtual void DARKCALL writeLine(Engine::GameConsole*, const char *consoleLine)
 		{
 			std::ofstream file("super-special-log.log", std::ios_base::app);
 			file << "A message from the other side!" << std::endl;
