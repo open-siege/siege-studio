@@ -67,7 +67,7 @@ void runPython()
 
 		auto game = GameRuntime::Game::currentInstance();
 
-		auto console = game.getInterpreter();
+		auto console = game.getConsole();
 
 		file << console.eval("echo(\"Hello world from C++\");");
 
