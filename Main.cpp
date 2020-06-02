@@ -33,10 +33,11 @@
 #include <pybind11/embed.h>
 
 #include "GameRuntime.hpp"
+#include "PyGamePlugin.hpp"
 
 namespace py = pybind11;
 
-static std::unique_ptr<std:: thread>pythonThread{nullptr};
+static std::unique_ptr<std::thread> pythonThread{nullptr};
 static std::atomic_bool isLoaded{false};
 
 struct TestConsoleConsumer : public Engine::ConsoleConsumer
@@ -44,18 +45,7 @@ struct TestConsoleConsumer : public Engine::ConsoleConsumer
 	virtual void DARKCALL writeLine(Engine::GameConsole*, const char *consoleLine) override
 	{
 		std::ofstream file{"super-special-log.log", std::ios_base::app};
-		file << "A message from the other side!" << std::endl;
 		file << consoleLine << std::endl;
-		try
-		{
-			py::scoped_interpreter guard {};
-			py::eval_file("simple.py");
-		}
-		catch (const std::exception& ex)
-		{
-			file << "An error ocurred with python" << std::endl;
-			file << ex.what() << std::endl;
-		}
 	}
 };
 
@@ -97,6 +87,17 @@ void runPython()
 		<< plugins.capacity() <<  " "
 		 << std::endl;
 		plugins[0]->executeCallback(console.getRaw(), 3, 0, nullptr);
+
+        try
+		{
+			py::scoped_interpreter guard {};
+			py::eval_file("simple.py");
+		}
+		catch (const std::exception& ex)
+		{
+			file << "An error ocurred with python" << std::endl;
+			file << ex.what() << std::endl;
+		}
 	}
 	catch (const std::exception& ex)
 	{
