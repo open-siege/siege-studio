@@ -4,8 +4,10 @@
 #include <pybind11/embed.h>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include "EngineTypes.hpp"
+#include "GameRuntime.hpp"
 
 
 namespace Engine::Python
@@ -21,7 +23,7 @@ namespace Engine::Python
 					std::int32_t argc,
 					const char** argv) override
 			{
-
+				  std::cout << "execute callback called";
 				  std::vector<std::string> arguments {argv, argv + argc };
 				 _lastString = doExecuteCallback(console, callbackId, arguments);
 
@@ -32,20 +34,24 @@ namespace Engine::Python
 
 			virtual void DARKCALL setManager(GameManager* manager) override
 			{
+				std::cout << "setManager called";
 				this->manager = manager;
 			}
 
 			virtual void DARKCALL init() override
 			{
+				std::cout << "init called";
 				doInit();
 			}
 			virtual void DARKCALL startFrame() override
 			{
+				std::cout << "startFrame called";
 				doStartFrame();
 			}
 
 			virtual void DARKCALL endFrame() override
 			{
+				std::cout << "endFrame called";
 				doEndFrame();
 			}
 
@@ -88,10 +94,28 @@ namespace Engine::Python
 
     PYBIND11_EMBEDDED_MODULE(darkstar, m) {
 		py::class_<Engine::Python::PyGamePlugin>(m, "GamePlugin")
+			.def(py::init<>())
 			.def("doExecuteCallback", &ExtendedGamePlugin::doExecuteCallback)
 			.def("doInit", &ExtendedGamePlugin::doInit)
 			.def("doStartFrame", &ExtendedGamePlugin::doStartFrame)
 			.def("doEndFrame", &ExtendedGamePlugin::doEndFrame);
+
+
+		  py::class_<GameRuntime::GameConsole>(m, "GameConsole")
+			.def("exec", &GameRuntime::GameConsole::exec)
+			.def("eval", &GameRuntime::GameConsole::eval)
+			.def("exportVariables", &GameRuntime::GameConsole::exportVariables)
+			.def("deleteVariables", &GameRuntime::GameConsole::deleteVariables)
+			.def("exportFunctions", &GameRuntime::GameConsole::exportFunctions)
+			.def("deleteFunctions", &GameRuntime::GameConsole::deleteFunctions);
+
+		py::class_<GameRuntime::Game>(m, "Game")
+			.def("getConsole", &GameRuntime::Game::getConsole)
+			.def("addPlugin", &GameRuntime::Game::addPlugin)
+			.def("getPlugins", &GameRuntime::Game::getPlugins);
+
+			m.def("currentInstance", &GameRuntime::Game::currentInstance, "Gets the current instance of a game", py::arg("functionsFileName") = "functions.json");
+
 	}
 }
 

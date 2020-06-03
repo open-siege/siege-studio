@@ -88,10 +88,10 @@ void runPython()
 		 << std::endl;
 		plugins[0]->executeCallback(console.getRaw(), 3, 0, nullptr);
 
-        try
+		try
 		{
-			py::scoped_interpreter guard {};
-			py::eval_file("simple.py");
+			static py::scoped_interpreter guard{};
+		    py::eval_file("simple.py");
 		}
 		catch (const std::exception& ex)
 		{
