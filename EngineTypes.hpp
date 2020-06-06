@@ -52,18 +52,6 @@ namespace Engine
 		virtual void DARKCALL startFrame() = 0;
         virtual void DARKCALL endFrame() = 0;
 	};
-
-	struct ExtendedGamePlugin : GamePlugin
-	{
-		virtual DARKCALL ~ExtendedGamePlugin() = default;
-
-		virtual std::string doExecuteCallback(void* console, std::int32_t callbackId, std::vector<std::string>& args) = 0;
-
-		virtual void doInit() = 0;
-		virtual void doStartFrame() = 0;
-
-		virtual void doEndFrame() = 0;
-    };
 }
 
 #endif

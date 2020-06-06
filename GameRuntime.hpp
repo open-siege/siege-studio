@@ -1,19 +1,30 @@
 #ifndef GAMERUNTIME_HPP
 #define GAMERUNTIME_HPP
 
+#include <memory>
+#include <map>
 #include "EngineFunctions.hpp"
+#include "EngineExternalTypes.hpp"
+#include "PythonTypes.hpp"
+
 
 namespace GameRuntime
 {
 	using GameFunctions = Engine::GameFunctions;
 	using GameRoot = Engine::GameRoot;
-    using GamePlugin = Engine::GamePlugin;
+	using GamePlugin = Engine::GamePlugin;
 	using ConsoleConsumer = Engine::ConsoleConsumer;
+	using ConsoleCallback = Engine::ConsoleCallback;
+	using ConsoleCallbackFunc = Engine::ConsoleCallbackFunc;
+	using ExternalConsoleCallback = Engine::ExternalConsoleCallback;
+	using ConsoleCallbackWrapper = Engine::ConsoleCallbackWrapper;
+    using PyConsoleCallback = Engine::Python::PyConsoleCallback;
 
 	class GameConsole
 	{
 			 GameFunctions& _functions;
 			 Engine::GameConsole* current;
+			 std::map<std::string, std::shared_ptr<ConsoleCallbackWrapper>> _wrappedCallbacks;
 
 			 template<typename TStringCollection>
 			 void copyArguments(std::vector<const char*>& arguments, const TStringCollection& args)
@@ -54,8 +65,15 @@ namespace GameRuntime
 					return _functions.ConsoleFloor(current, 0, arguments.size(), arguments.data());
 				}
 
+				std::string echo(const std::string& message)
+				{
+					std::array<const char*, 2> arguments {"echo", message.c_str()};
+					return _functions.ConsoleEcho(current, 0, arguments.size(), arguments.data());
+				}
+
+
 				template<typename TStringCollection>
-				std::string echo(const TStringCollection& args)
+				std::string echoRange(const TStringCollection& args)
 				{
 					std::vector<const char*> arguments;
 					arguments.reserve(args.size() + 1);
@@ -142,6 +160,29 @@ namespace GameRuntime
 				{
 					_functions.AddConsoleConsumer(current, consumer);
 				}
+
+				void addCommandFunc(int id, const std::string& name, ConsoleCallbackFunc func, int runLevel = 0)
+				{
+					   _functions.AddConsoleCallbackFunc(current, id, name.c_str(), func, runLevel);
+				}
+
+
+				void addCommandExtended(int id, const std::string& name, PyConsoleCallback* callback, int runLevel = 0)
+				{
+					auto newCallback = _wrappedCallbacks[name] = std::make_shared<ConsoleCallbackWrapper>(callback);
+					  addCommand(id, name, newCallback.get(), runLevel);
+				}
+
+
+				void addCommand(int id, const std::string& name, ConsoleCallback* callback, int runLevel = 0)
+				{
+					   _functions.AddConsoleCallback(current, id, name.c_str(), callback, runLevel);
+				}
+
+				bool removeCommand(const std::string& name)
+				{
+                    return false;
+                }
 	};
 
 	class Game

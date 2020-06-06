@@ -5,6 +5,8 @@
          "GetGameRoot": "0x59d9b0",
          "AddGamePlugin": "0x59d598",
          "ConsoleGetConsole":"0x5E3004",
+         "ConsoleAddCommandFunc":"0x5e34dc",
+         "ConsoleAddCommandObject":"0x5e3514",
          "ConsoleAddConsumer":"0x5E336C",
          "ConsoleCls":"0x5e2738",
          "ConsoleSqrt":"0x5e2814",
