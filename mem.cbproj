@@ -107,6 +107,9 @@
         <VerInfo_Locale>1033</VerInfo_Locale>
     </PropertyGroup>
     <ItemGroup>
+        <None Include="EngineExtendedTypes.hpp">
+            <BuildOrder>9</BuildOrder>
+        </None>
         <None Include="EngineFunctions.hpp">
             <BuildOrder>6</BuildOrder>
         </None>
@@ -130,6 +133,9 @@
         </None>
         <None Include="PyGamePlugin.hpp">
             <BuildOrder>7</BuildOrder>
+        </None>
+        <None Include="PyModule.hpp">
+            <BuildOrder>10</BuildOrder>
         </None>
         <None Include="simple.py"/>
         <BuildConfiguration Include="Release">

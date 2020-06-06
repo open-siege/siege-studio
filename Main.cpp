@@ -33,12 +33,13 @@
 #include <pybind11/embed.h>
 
 #include "GameRuntime.hpp"
-#include "PyGamePlugin.hpp"
+#include "PythonModule.hpp"
 
 namespace py = pybind11;
 
 static std::unique_ptr<std::thread> pythonThread{nullptr};
-static std::atomic_bool isLoaded{false};
+static std::atomic_int32_t noAllocs{0};
+static std::atomic_bool isRunning{false};
 
 struct TestConsoleConsumer : public Engine::ConsoleConsumer
 {
@@ -49,22 +50,45 @@ struct TestConsoleConsumer : public Engine::ConsoleConsumer
 	}
 };
 
+
+struct TestConsoleCallback : public Engine::ConsoleCallback
+{
+	std::string _lastResult;
+
+	virtual const char* DARKCALL executeCallback(Engine::GameConsole* console,
+				std::int32_t callbackId,
+				std::int32_t argc,
+				const char** argv)
+				{
+
+					_lastResult = "\"";
+					 std::vector<std::string> arguments (argv, argv + argc);
+					   for (const std::string& argument : arguments) // access by const reference
+					   {
+						   _lastResult += argument;
+					   }
+
+                       _lastResult += "\"";
+					 return _lastResult.c_str();
+				}
+};
+
 void runPython()
 {
 	try
 	{
 		std::ofstream file{"test.log"};
 		file << "Hello there!" << std::endl;
-		std::this_thread::sleep_for(std::chrono::seconds(10));
 
 		auto game = GameRuntime::Game::currentInstance();
 
 		auto console = game.getConsole();
 
 		console.addConsumer(new TestConsoleConsumer());
+        console.addCommand(0, "cpp::testCallback", new TestConsoleCallback());
 
-		file << console.echo(std::array<std::string,1>{"Hello world from echo in C++ with array"}) << std::endl;
-		file << console.echo(std::vector<std::string>{"Hello world from echo in C++ with vector"}) << std::endl;
+		file << console.echoRange(std::array<std::string,1>{"Hello world from echo in C++ with array"}) << std::endl;
+		file << console.echoRange(std::vector<std::string>{"Hello world from echo in C++ with vector"}) << std::endl;
 		file << console.dbecho(std::array<std::string,2>{"1", "Hello world from dbecho in C++ with array"}) << std::endl;
 		file << console.dbecho(std::vector<std::string>{"1", "Hello world from dbecho in C++ with vector"}) << std::endl;
 		file << console.strcat(std::array<std::string,1>{"Hello world from strcat in C++ with array"}) << std::endl;
@@ -91,7 +115,8 @@ void runPython()
 		try
 		{
 			static py::scoped_interpreter guard{};
-		    py::eval_file("simple.py");
+            static py::object scope = py::module::import("__main__").attr("__dict__");
+			py::eval_file("simple.py", scope);
 		}
 		catch (const std::exception& ex)
 		{
@@ -104,12 +129,6 @@ void runPython()
 		std::ofstream file{"darkstar-hook-errors.log", std::ios_base::app};
 		file << ex.what() << std::endl;
 	}
-
-	while (isLoaded) {
-		// TODO add logic for detecting when the dll is unloaded
-		// as well as some code that needs to always be running
-		break;
-	}
 }
 
 extern "C" int _libmain(unsigned long reason)
@@ -119,12 +138,19 @@ extern "C" int _libmain(unsigned long reason)
 
 extern "C" __declspec(dllexport) void* _cdecl MS_Malloc(std::size_t size)
 {
-	if (pythonThread == nullptr)
-	{
-		isLoaded = true;
-		pythonThread = std::make_unique<std:: thread>(runPython);
-		pythonThread->detach();
+	noAllocs++;
+
+	if (noAllocs >= 55 && !isRunning) {
+        isRunning = true;
+        runPython();
 	}
+
+
+   //	if (pythonThread == nullptr)
+  //	{
+   //		pythonThread = std::make_unique<std::thread>(runPython);
+  //		pythonThread->detach();
+  //	}
 	// return 0;
 	return std::malloc(size);
 }

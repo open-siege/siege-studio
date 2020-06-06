@@ -17,6 +17,8 @@ namespace Engine
 	using GetGameRootFunc = GameRoot* (DARKCALL*)();
 	using AddGamePluginFunc = void(DARKCALL*)(GameRoot*, GamePlugin*);
 	using GetConsoleFunc = GameConsole* (DARKCALL*)();
+	using AddConsoleCallbackFuncFunc = void (DARKCALL*)(GameConsole*, int id, const char* name, ConsoleCallbackFunc, int runLevel);
+	using AddConsoleCallbackObjectFunc = void (DARKCALL*) (GameConsole*, int id, const char* name, ConsoleCallback*, int runLevel);
 	using AddConsoleConsumerFunc = void (DARKCALL*) (GameConsole* console, ConsoleConsumer*);
 
 
@@ -26,7 +28,12 @@ namespace Engine
 		AddGamePluginFunc AddGamePlugin;
 
 		GetConsoleFunc GetConsole;
+
+		AddConsoleCallbackFuncFunc AddConsoleCallbackFunc;
+		AddConsoleCallbackObjectFunc AddConsoleCallback;
+
 		AddConsoleConsumerFunc AddConsoleConsumer;
+
 
 		ConsoleCallbackFunc ConsoleCls;
 		ConsoleCallbackFunc ConsoleSqrt;
@@ -59,6 +66,8 @@ namespace Engine
 			(GetGameRootFunc)std::stoul(gameMapping["GetGameRoot"].get<std::string>(), nullptr, 16),
 			(AddGamePluginFunc)std::stoul(gameMapping["AddGamePlugin"].get<std::string>(), nullptr, 16),
 			(GetConsoleFunc)std::stoul(gameMapping["ConsoleGetConsole"].get<std::string>(), nullptr, 16),
+			(AddConsoleCallbackFuncFunc)std::stoul(gameMapping["ConsoleAddCommandFunc"].get<std::string>(), nullptr, 16),
+			(AddConsoleCallbackObjectFunc)std::stoul(gameMapping["ConsoleAddCommandObject"].get<std::string>(), nullptr, 16),
 			(AddConsoleConsumerFunc)std::stoul(gameMapping["ConsoleAddConsumer"].get<std::string>(), nullptr, 16),
 			(ConsoleCallbackFunc)std::stoul(gameMapping["ConsoleCls"].get<std::string>(), nullptr, 16),
 			(ConsoleCallbackFunc)std::stoul(gameMapping["ConsoleSqrt"].get<std::string>(), nullptr, 16),
