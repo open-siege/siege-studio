@@ -200,19 +200,19 @@ namespace GameRuntime
                    current = functions.GetGameRoot();
 			  }
 
-			  static Game& currentInstance(std::string functionsFileName = "functions.json")
+			  static std::shared_ptr<Game> currentInstance(std::string functionsFileName = "functions.json")
 			  {
-				static Game instance;
+				static std::shared_ptr<Game> instance = std::make_shared<Game>();
 
-				if (instance.functions.GetConsole == nullptr) {
-						  instance.init(functionsFileName);
+				if (instance->functions.GetConsole == nullptr) {
+						  instance->init(functionsFileName);
 				}
 				return instance;
 			  }
 
-			  GameConsole& getConsole()
+			  std::shared_ptr<GameConsole> getConsole()
 			  {
-				  static GameConsole console{functions};
+				  static std::shared_ptr<GameConsole> console = std::make_shared<GameConsole>(functions);
 				  return console;
 			  }
 

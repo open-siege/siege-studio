@@ -33,7 +33,7 @@ namespace Engine::Python
 			.def("doEndFrame", &ExternalGamePlugin::doEndFrame);
 
 
-		  py::class_<GameRuntime::GameConsole>(m, "GameConsole")
+		  py::class_<GameRuntime::GameConsole, std::shared_ptr<GameRuntime::GameConsole>>(m, "GameConsole")
 			.def("exec", &GameRuntime::GameConsole::exec)
 			.def("eval", &GameRuntime::GameConsole::eval)
             .def("echo", &GameRuntime::GameConsole::echo)
@@ -44,12 +44,12 @@ namespace Engine::Python
 			.def("addCommand", &GameRuntime::GameConsole::addCommandExtended)
 			.def("removeCommand", &GameRuntime::GameConsole::removeCommand);
 
-		py::class_<GameRuntime::Game>(m, "Game")
-			.def("getConsole", &GameRuntime::Game::getConsole)
+		py::class_<GameRuntime::Game, std::shared_ptr<GameRuntime::Game>>(m, "Game")
+			.def("getConsole", &GameRuntime::Game::getConsole, py::return_value_policy::reference)
 			.def("addPlugin", &GameRuntime::Game::addPlugin)
 			.def("getPlugins", &GameRuntime::Game::getPlugins);
 
-			m.def("currentInstance", &GameRuntime::Game::currentInstance, "Gets the current instance of a game", py::arg("functionsFileName") = "functions.json");
+			m.def("currentInstance", &GameRuntime::Game::currentInstance, "Gets the current instance of a game", py::arg("functionsFileName") = "functions.json", py::return_value_policy::reference);
 
 	}
 }
