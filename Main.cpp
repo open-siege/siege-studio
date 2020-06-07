@@ -165,7 +165,7 @@ extern "C" __declspec(dllexport) void* _cdecl MS_Malloc(std::size_t size)
 	// before the rest of the game is loaded.
 	// TODO put the 55 into a config section somewhere
     // because it could change per game or game version.
-	if (noAllocs >= 200 && !isRunning) {
+	if (noAllocs >= 55 && !isRunning) {
         isRunning = true;
         runPython();
 	}
@@ -175,6 +175,7 @@ extern "C" __declspec(dllexport) void* _cdecl MS_Malloc(std::size_t size)
 
 extern "C" __declspec(dllexport) void _cdecl MS_Free(void* data)
 {
+	noAllocs--;
 	std::free(data);
 }
 
