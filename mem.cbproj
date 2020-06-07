@@ -107,7 +107,7 @@
         <VerInfo_Locale>1033</VerInfo_Locale>
     </PropertyGroup>
     <ItemGroup>
-        <None Include="EngineExtendedTypes.hpp">
+        <None Include="EngineExternalTypes.hpp">
             <BuildOrder>9</BuildOrder>
         </None>
         <None Include="EngineFunctions.hpp">
@@ -131,11 +131,11 @@
         <None Include="memPCH1.h">
             <BuildOrder>0</BuildOrder>
         </None>
-        <None Include="PyGamePlugin.hpp">
-            <BuildOrder>7</BuildOrder>
-        </None>
-        <None Include="PyModule.hpp">
+        <None Include="PythonModule.hpp">
             <BuildOrder>10</BuildOrder>
+        </None>
+        <None Include="PythonTypes.hpp">
+            <BuildOrder>7</BuildOrder>
         </None>
         <None Include="simple.py"/>
         <BuildConfiguration Include="Release">

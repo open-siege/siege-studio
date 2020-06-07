@@ -49,7 +49,7 @@ namespace Engine
 				{
 					try
 					{
-						std::vector<std::string> arguments;
+						std::vector<std::string> arguments(argv, argv + argc);
 						_lastResult = _internalCallback->doExecuteCallback(console, callbackId, arguments);
 
 					}
