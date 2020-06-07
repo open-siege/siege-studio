@@ -20,6 +20,10 @@ TODO
 * Everything is work in progress, including the documentation.
     * More detailed explanations of how this module works and the exposed API will be added over time.
 * All of the exe details for each game get stored in functions.json. Right now, only Starsiege 1.0003r has been added.
+* Why C++ Builder? Why not Visual C++ or MinGW?
+    * Most Darkstar games were compiled with the predecessor to C++ Builder and use a calling convention called __fastcall
+    * The meaning of __fastcall in C++ Builder is different to that of Visual C++, thus meaning raw assembly code would be needed to interface with the game code if Visual C++ is to be used
+    * So far, object structures (like vtables) are compatible between C++ Builder and Borland C++, which makes it possible extend the game in new ways based on disassembled information  
 * What can be done with this?
     * The built-in game interpreter can be extended with new functions either from C++ or Python
     * Existing built-in game functions can also be removed, replaced or decorated
