@@ -49,6 +49,18 @@ namespace GameRuntime
 			return _lastResult.c_str();
 		}
 	};
+
+	template<typename TConsumer>
+	struct ConsoleConsumerWrapper : ConsoleConsumer
+	{
+
+	};
+
+	template<typename TPlugin>
+	struct GamePluginWrapper : ConsoleCallbackWrapper<TPlugin>
+	{
+
+	};
 }
 
 #endif
