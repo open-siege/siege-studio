@@ -119,10 +119,16 @@
         <None Include="functions.json">
             <ContainerId>WebFile</ContainerId>
         </None>
+        <CppCompile Include="GameRuntime.cpp">
+            <BuildOrder>11</BuildOrder>
+        </CppCompile>
         <None Include="GameRuntime.hpp">
             <BuildOrder>5</BuildOrder>
         </None>
-        <CppCompile Include="Main.cpp">
+        <None Include="GameRuntimeExternalTypes.hpp">
+            <BuildOrder>12</BuildOrder>
+        </None>
+        <CppCompile Include="Hook.cpp">
             <BuildOrder>1</BuildOrder>
         </CppCompile>
         <DefFile Include="mem.def">
