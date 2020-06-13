@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <map>
+#include <utility>
 #include "EngineFunctions.hpp"
 #include "EngineExternalTypes.hpp"
 #include "PythonTypes.hpp"
@@ -17,14 +18,47 @@ namespace GameRuntime
 	using ConsoleCallback = Engine::ConsoleCallback;
 	using ConsoleCallbackFunc = Engine::ConsoleCallbackFunc;
 	using ExternalConsoleCallback = Engine::ExternalConsoleCallback;
-	using ConsoleCallbackWrapper = Engine::ConsoleCallbackWrapper;
-    using PyConsoleCallback = Engine::Python::PyConsoleCallback;
+	using PyConsoleCallback = Engine::Python::PyConsoleCallback;
+
+	template<typename TCallback>
+	struct ConsoleCallbackWrapper : ConsoleCallback
+	{
+		 TCallback* _internalCallback;
+		 std::string _lastResult;
+
+		 ConsoleCallbackWrapper(TCallback* callback) : _internalCallback(callback)
+		 {
+
+         }
+
+		  virtual const char* DARKCALL executeCallback(Engine::GameConsole* console,
+				std::int32_t callbackId,
+				std::int32_t argc,
+				const char** argv)
+				{
+					try
+					{
+						std::vector<std::string_view> arguments(argv, argv + argc);
+						_lastResult = _internalCallback->doExecuteCallback(console, callbackId, arguments);
+
+					}
+					catch(const std::exception& ex)
+					{
+							std::ofstream file{"darkstar-hook-errors.log", std::ios_base::app};
+							file << ex.what() << std::endl;
+                            return "False";
+					}
+
+					return _lastResult.c_str();
+				}
+	};
 
 	class GameConsole
 	{
 			 GameFunctions& _functions;
 			 Engine::GameConsole* current;
-			 std::map<std::string, std::shared_ptr<ConsoleCallbackWrapper>> _wrappedCallbacks;
+			 std::map<std::string, std::shared_ptr<ConsoleCallback>> _wrappedCallbacksByName;
+			 std::map<ExternalConsoleCallback*, std::shared_ptr<ConsoleCallback>> _wrappedCallbacksByKey;
 
 			 template<typename TStringCollection>
 			 void copyArguments(std::vector<const char*>& arguments, const TStringCollection& args)
@@ -169,8 +203,27 @@ namespace GameRuntime
 
 				void addCommandExtended(int id, const std::string& name, PyConsoleCallback* callback, int runLevel = 0)
 				{
-					auto newCallback = _wrappedCallbacks[name] = std::make_shared<ConsoleCallbackWrapper>(callback);
-					  addCommand(id, name, newCallback.get(), runLevel);
+					auto key = static_cast<ExternalConsoleCallback*>(callback);
+
+					auto existingWrapper = _wrappedCallbacksByKey.find(key);
+
+					if (existingWrapper == _wrappedCallbacksByKey.end()) {
+						auto newCallback = std::make_shared<ConsoleCallbackWrapper<PyConsoleCallback>>(callback);
+						_wrappedCallbacksByKey[key] = newCallback;
+						_wrappedCallbacksByName[name] = newCallback;
+
+						addCommand(id, name, newCallback.get(), runLevel);
+						return;
+					}
+
+                    // If the name is new, we can reuse the same callback
+					auto wrapperByName = _wrappedCallbacksByName.find(name);
+					if (wrapperByName == _wrappedCallbacksByName.end())
+					{
+						_wrappedCallbacksByName[name] = existingWrapper->second;
+
+						addCommand(id, name, existingWrapper->second.get(), runLevel);
+					}
 				}
 
 
