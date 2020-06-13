@@ -10,7 +10,8 @@ namespace GameRuntime
 {
 	void Game::init(std::string functionsFileName)
 	{
-		if (functions.GetConsole == nullptr) {
+		if (functions.GetConsole == nullptr)
+		{
 			functions = Engine::loadFunctions(functionsFileName);
 		}
 
@@ -21,7 +22,8 @@ namespace GameRuntime
 	{
 		static std::shared_ptr<Game> instance = std::make_shared<Game>();
 
-		if (instance->functions.GetConsole == nullptr) {
+		if (instance->functions.GetConsole == nullptr)
+		{
 			instance->init(functionsFileName);
 		}
 		return instance;

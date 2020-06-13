@@ -70,7 +70,7 @@ struct TestGamePlugin : public Engine::GamePlugin
 
     virtual void DARKCALL destroy() override
 	{
-
+		  this->~TestGamePlugin();
     }
 
 	virtual void DARKCALL setManager(Engine::GameManager* manager) override
