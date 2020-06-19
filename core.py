@@ -3,8 +3,6 @@ import requests
 import os
 import hashlib
 import base64
-import json
-import shutil
 from tinydb import TinyDB, where
 from os import walk
 
@@ -14,39 +12,11 @@ def createTempDirectory(config):
     if not os.path.exists(tempDirectory):
         os.makedirs(tempDirectory)
 
-def getDestinationPackageFile(config):
-    packageFile = os.path.join(config["destDir"], "package.json")
-    if os.path.exists(packageFile):
-        with open(packageFile, "r") as file:
-            result = json.loads(file.read())
-            if "dependencies" not in result:
-                result["dependencies"] = {}
-            return result
-    return {"dependencies": {}}
-
-def updateDestinationPackageFile(config, newData):
-    packageFile = os.path.join(config["destDir"], "package.json")
-    with open(packageFile, "w") as file:
-        file.write(json.dumps(newData, indent="\t"))
-
 def getTempDirectory(config):
     tempDirectory = os.path.join(config["tempDir"] if "tempDir" in config else "temp", "packages")
     return tempDirectory
 
-def getRecipesDirectory(config):
-    tempDirectory = config["recipesDir"] if "recipesDir" in config else "recipes"
-    return tempDirectory
-
-def getAllRecipes(config):
-    recipesDir = getRecipesDirectory(config)
-    files = getAllFilesFromFolder(recipesDir)
-
-    for file in files:
-        with open(file, "r") as recipeFile:
-            yield json.loads(recipeFile.read())
-
-
-def getAllFilesFromFolder(folder, files=None):
+def getAllFilesFromFolder(folder, files = None):
     if files is None:
         files = set()
 
@@ -101,9 +71,9 @@ def copyFilesToFinalFolder(config, finalDirectory, packageInfo, versionInfo):
             os.makedirs(fileFolder)
         if filename.endswith("package.json") or filename.startswith("postinstall."):
             continue
-        config["localPrint"]("copying  " + file)
+        print("copying  " + file)
         destinationFile = os.path.join(fileFolder, filename)
-        shutil.move(file, destinationFile)
+        os.replace(file, destinationFile)
 
 
 def downloadPackageInformation(config, packageName, version, packages: dict, withoutCache=False):
