@@ -2,11 +2,6 @@
   "packageRegistry": "https://packages.thesiegehub.com",
   "numberOfConcurrentDownloads": 8,
   "cacheDbLocation": "temp/package-cache.json",
-  "defaults": {
-    "recipe": "starsiege-retail-1.0.0-3.en",
-    "installDirectory": "C:\\Dynamix\\Starsiege",
-    "defaultExe": "Starsiege.exe"
-  },
   "plugins": {
     "postinstall": {
       "rename": "plugins/postinstall/rename.py"
