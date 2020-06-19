@@ -1,0 +1,12 @@
+LIBRARY     DARKSTAR.DLL
+
+EXPORTS
+    MS_Calloc                      @9   ; MS_Calloc
+    MS_Free                        @7   ; MS_Free
+    MS_Malloc                      @6   ; MS_Malloc
+    MS_Realloc                     @8   ; MS_Realloc
+    _MS_Calloc                     @4   ; _MS_Calloc
+    _MS_Free                       @2   ; _MS_Free
+    _MS_Malloc                     @1   ; _MS_Malloc
+    _MS_Realloc                    @3   ; _MS_Realloc
+    ___CPPdebugHook                @5   ; ___CPPdebugHook
