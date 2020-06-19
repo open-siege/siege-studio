@@ -26,3 +26,4 @@ console.addCommand(0, "pythonTestCallback", theCallback, 0)
 
 console.echo("Done adding a callback")
 
+game.knownPlugins.terrain.saveTerrain("hello", "world")
