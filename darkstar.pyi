@@ -1,4 +1,6 @@
 
+def currentInstance() -> Game: ...
+
 class Game:
 
     def getConsole(self) -> Console: ...
@@ -8,8 +10,6 @@ class Game:
 
 class Console:
     def echo(self): ...
-
-
 
 class KnownPlugins:
     @property

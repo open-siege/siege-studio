@@ -33,9 +33,15 @@
 
 mem.res
 *.cbproj.local
+*.local
+*.user
+*.res
 Win32
 __history
 __recovery
 __astcache
 .idea/
 .vs/
+venv/
+x64/
+x86/
