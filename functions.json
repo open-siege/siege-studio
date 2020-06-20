@@ -24,7 +24,7 @@
           "TedPlugin",
           "SimWinConsolePlugin",
           "SimTelnetPlugin",
-          "SimShapePlugin,
+          "SimShapePlugin",
           "HercInfoDataPlugin",
           "DatabasePlugin",
           "ICPlugin",
