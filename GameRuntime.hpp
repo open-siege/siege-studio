@@ -8,6 +8,7 @@
 #include "EngineExternalTypes.hpp"
 #include "PythonTypes.hpp"
 #include "GameRuntimeExternalTypes.hpp"
+#include "EnginePlugins.hpp"
 
 namespace GameRuntime
 {

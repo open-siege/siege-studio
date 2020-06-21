@@ -122,6 +122,9 @@
         <None Include="functions.json">
             <ContainerId>WebFile</ContainerId>
         </None>
+        <None Include="GamePlugins.hpp">
+            <BuildOrder>13</BuildOrder>
+        </None>
         <CppCompile Include="GameRuntime.cpp">
             <BuildOrder>11</BuildOrder>
         </CppCompile>
@@ -232,12 +235,6 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName=".\Win32\Debug\darkstar.dll" Configuration="Debug" Class="ProjectOutput">
-                    <Platform Name="Win32">
-                        <RemoteName>darkstar.dll</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
                 <DeployFile LocalName="$(BDS)\Redist\osx32\libcgunwind.1.0.dylib" Class="DependencyModule">
                     <Platform Name="OSX32">
                         <Overwrite>true</Overwrite>
@@ -256,6 +253,12 @@
                 <DeployFile LocalName=".\Win32\Debug\darkstar.tds" Configuration="Debug" Class="DebugSymbols">
                     <Platform Name="Win32">
                         <RemoteName>darkstar.tds</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName=".\Win32\Debug\darkstar.dll" Configuration="Debug" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>darkstar.dll</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
