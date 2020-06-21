@@ -11,12 +11,12 @@
 
 namespace Engine
 {
-	constexpr const char* boolToString(bool someValue)
+	constexpr const char* toString(bool someValue)
 	{
 		return someValue == true ? "True" : "False";
 	}
 
-	constexpr bool stringToBool(std::string_view someValue)
+	constexpr bool toBool(std::string_view someValue)
 	{
 		return someValue == "True" || someValue == "true" || someValue == "TRUE";
 	}
@@ -25,9 +25,8 @@ namespace Engine
 	{
 		bool consoleEnable(bool shouldEnable = true)
 		{
-
-			std::array<const char*, 2> arguments{ "consoleEnable", boolToString(shouldEnable) };
-			return stringToBool(executeCallback(console, 3, arguments.size(), arguments.data()));
+			std::array<const char*, 2> arguments{ "consoleEnable", toString(shouldEnable) };
+			return toBool(executeCallback(console, 3, arguments.size(), arguments.data()));
 		}
 
 		virtual DARKCALL ~SimGuiConsolePlugin() override = default;
@@ -51,7 +50,7 @@ namespace Engine
 		bool setFullscreenDevice(const std::string& simCanvasName, const std::string& deviceName)
 		{
 			std::array<const char*, 3> arguments{ "setFullscreenDevice", simCanvasName.c_str(), deviceName.c_str() };
-			return stringToBool(executeCallback(console, 2, arguments.size(), arguments.data()));
+			return toBool(executeCallback(console, 2, arguments.size(), arguments.data()));
 		}
 
 		bool setWindowedDevice(const std::string& simCanvasName, const std::string& deviceName)
@@ -65,7 +64,7 @@ namespace Engine
 				return true;
 			}
 
-			return stringToBool(result);
+			return toBool(result);
 		}
 
 		void listDevices()
@@ -84,7 +83,7 @@ namespace Engine
 				return true;
 			}
 
-			return stringToBool(result);
+			return toBool(result);
 		}
 
 		void messageCanvasDevice(const std::string& simCanvasName, const std::string& message)
@@ -129,25 +128,25 @@ namespace Engine
 		bool isFullscreenMode(const std::string& simCanvasName)
 		{
 			std::array<const char*, 2> arguments{ "isFullscreenMode", simCanvasName.c_str() };
-			return stringToBool(executeCallback(console, 10, arguments.size(), arguments.data()));
+			return toBool(executeCallback(console, 10, arguments.size(), arguments.data()));
 		}
 
 		void setFullscreenMode(const std::string& simCanvasName, bool isFullscreen = false)
 		{
-			std::array<const char*, 3> arguments{ "setFullscreenMode", simCanvasName.c_str(), boolToString(isFullscreen) };
+			std::array<const char*, 3> arguments{ "setFullscreenMode", simCanvasName.c_str(), toString(isFullscreen) };
 			executeCallback(console, 11, arguments.size(), arguments.data());
 		}
 
 		bool setFsResolution(const std::string& simCanvasName, const std::string& resolution)
 		{
 			std::array<const char*, 3> arguments{ "setFSResolution", simCanvasName.c_str(), resolution.c_str() };
-			return stringToBool(executeCallback(console, 12, arguments.size(), arguments.data()));
+			return toBool(executeCallback(console, 12, arguments.size(), arguments.data()));
 		}
 
 		bool isVirtualFs(const std::string& simCanvasName)
 		{
 			std::array<const char*, 2> arguments{ "isVirtualFS", simCanvasName.c_str() };
-			return stringToBool(executeCallback(console, 13, arguments.size(), arguments.data()));
+			return toBool(executeCallback(console, 13, arguments.size(), arguments.data()));
 		}
 
 		void nextRes(const std::string& simCanvasName)
@@ -186,7 +185,7 @@ namespace Engine
 		bool isGfxDriver(const std::string& simCanvasName, const std::string& driverName)
 		{
 			std::array<const char*, 3> arguments{ "isGfxDriver", simCanvasName.c_str(), driverName.c_str() };
-			return stringToBool(executeCallback(console, 19, arguments.size(), arguments.data()));
+			return toBool(executeCallback(console, 19, arguments.size(), arguments.data()));
 		}
 
 		void resetUpdateRegion(const std::string& simCanvasName)
