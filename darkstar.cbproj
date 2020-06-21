@@ -116,14 +116,14 @@
         <None Include="EngineFunctions.hpp">
             <BuildOrder>6</BuildOrder>
         </None>
+        <None Include="EnginePlugins.hpp">
+            <BuildOrder>13</BuildOrder>
+        </None>
         <None Include="EngineTypes.hpp">
             <BuildOrder>4</BuildOrder>
         </None>
         <None Include="functions.json">
             <ContainerId>WebFile</ContainerId>
-        </None>
-        <None Include="GamePlugins.hpp">
-            <BuildOrder>13</BuildOrder>
         </None>
         <CppCompile Include="GameRuntime.cpp">
             <BuildOrder>11</BuildOrder>
