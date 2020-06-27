@@ -53,10 +53,10 @@
         <SanitizedProjectName>darkstar</SanitizedProjectName>
         <ILINK_GenerateImportLibrary>true</ILINK_GenerateImportLibrary>
         <_TCHARMapping>char</_TCHARMapping>
-        <ILINK_LibraryPath>C:\Python38-32\cppbuilder;$(ILINK_LibraryPath)</ILINK_LibraryPath>
+        <ILINK_LibraryPath>Plugins\;C:\Python38-32\cppbuilder;$(ILINK_LibraryPath)</ILINK_LibraryPath>
         <VerInfo_Locale>7177</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
-        <IncludePath>C:\Python38-32\include;C:\cppbuilder\include;$(IncludePath)</IncludePath>
+        <IncludePath>Plugins\;C:\Python38-32\include;C:\cppbuilder\include;$(IncludePath)</IncludePath>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
         <PackageImports>adortl;appanalytics;bcbie;bcbsmp;bindcomp;bindcompdbx;bindcompfmx;bindcompvcl;bindengine;CloudService;CustomIPTransport;dbexpress;dbrtl;dbxcds;DbxClientDriver;DbxCommonDriver;DBXInterBaseDriver;DBXMySQLDriver;DBXSqliteDriver;dsnap;dsnapcon;dsnapxml;FireDAC;FireDACADSDriver;FireDACCommon;FireDACCommonDriver;FireDACCommonODBC;FireDACIBDriver;FireDACMSAccDriver;FireDACMySQLDriver;FireDACPgDriver;FireDACSqliteDriver;fmx;fmxase;fmxdae;fmxFireDAC;fmxobj;IndyCore;IndyIPClient;IndyIPCommon;IndyIPServer;IndyProtocols;IndySystem;inet;inetdb;inetdbxpress;RESTBackendComponents;RESTComponents;rtl;soapmidas;soaprtl;soapserver;svn;tethering;vcl;vclactnband;vcldb;vcldsnap;vclFireDAC;vclie;vclimg;VCLRESTComponents;VclSmp;vcltouch;vclwinx;vclx;xmlrtl;$(PackageImports)</PackageImports>
@@ -116,9 +116,6 @@
         <None Include="EngineFunctions.hpp">
             <BuildOrder>6</BuildOrder>
         </None>
-        <None Include="EnginePlugins.hpp">
-            <BuildOrder>13</BuildOrder>
-        </None>
         <None Include="EngineTypes.hpp">
             <BuildOrder>4</BuildOrder>
         </None>
@@ -139,6 +136,10 @@
         </CppCompile>
         <None Include="memPCH1.h">
             <BuildOrder>0</BuildOrder>
+        </None>
+        <None Include="Plugins\EnginePlugins.hpp">
+            <VirtualFolder>{CDDBB955-6F79-4323-8B71-B71B754A7D69}</VirtualFolder>
+            <BuildOrder>13</BuildOrder>
         </None>
         <None Include="PythonModule.hpp">
             <BuildOrder>10</BuildOrder>
@@ -177,6 +178,7 @@
                 <Folders/>
                 <VFOLDERS>
                     <VFOLDER ID="{5764A92E-4A69-48F4-9F63-0C2E5D25CB3C}" name="libs"/>
+                    <VFOLDER ID="{CDDBB955-6F79-4323-8B71-B71B754A7D69}" name="Plugins"/>
                 </VFOLDERS>
             </CPlusPlusBuilder.Personality>
             <Deployment Version="3">

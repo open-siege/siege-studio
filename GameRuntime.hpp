@@ -38,6 +38,8 @@ namespace GameRuntime
 		void addPlugin(GamePlugin* plugin);
 
 		std::vector<GamePlugin*> getPlugins();
+
+        Engine::StarsiegePlugins starsiegePlugins();
 	};
 
 	class GameConsole
