@@ -1,8 +1,8 @@
 import darkstar
 
-game = darkstar.currentInstance()
-
-console = game.getConsole()
+game = darkstar.game.currentInstance
+console = game.console
+plugins = game.starsiegePlugins
 
 console.echo("Hello world from Python in simple.py")
 
@@ -25,5 +25,3 @@ theCallback = TestCallback()
 console.addCommand(0, "pythonTestCallback", theCallback, 0)
 
 console.echo("Done adding a callback")
-
-game.knownPlugins.terrain.saveTerrain("hello", "world")

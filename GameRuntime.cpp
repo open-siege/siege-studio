@@ -54,6 +54,11 @@ namespace GameRuntime
 		return result;
 	}
 
+	Engine::StarsiegePlugins Game::starsiegePlugins()
+	{
+		return Engine::StarsiegePlugins{getPlugins()};
+    }
+
 	std::string GameConsole::cls()
 	{
 		std::array<const char*, 1> arguments{ "cls" };
