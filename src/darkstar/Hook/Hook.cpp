@@ -32,8 +32,8 @@
 #include <vector>
 #include <pybind11/embed.h>
 
-#include "GameRuntime.hpp"
-#include "PythonModule.hpp"
+#include "Hook/Game.hpp"
+#include "Python/PythonModule.hpp"
 
 namespace py = pybind11;
 
@@ -41,9 +41,9 @@ static std::unique_ptr<std::thread> pythonThread{ nullptr };
 static std::atomic_int32_t noAllocs{ 0 };
 static std::atomic_bool isRunning{ false };
 
-struct TestConsoleConsumer : public Engine::ConsoleConsumer
+struct TestConsoleConsumer : public Core::ConsoleConsumer
 {
-	virtual void DARKCALL writeLine(Engine::GameConsole*, const char* consoleLine) override
+	virtual void DARKCALL writeLine(Core::GameConsole*, const char* consoleLine) override
 	{
 		std::ofstream file{ "super-special-log.log", std::ios_base::app };
 		file << consoleLine << std::endl;
@@ -51,13 +51,13 @@ struct TestConsoleConsumer : public Engine::ConsoleConsumer
 };
 
 
-struct TestGamePlugin : public Engine::GamePlugin
+struct TestGamePlugin : public Core::GamePlugin
 {
 	std::atomic_int32_t numFrames{ 0 };
 
-    std::shared_ptr<GameRuntime::GameConsole> _console;
+    std::shared_ptr<Hook::GameConsole> _console;
 
-	virtual const char* DARKCALL executeCallback(Engine::GameConsole* console,
+	virtual const char* DARKCALL executeCallback(Core::GameConsole* console,
 		std::int32_t callbackId,
 		std::int32_t argc,
 		const char** argv) override
@@ -73,7 +73,7 @@ struct TestGamePlugin : public Engine::GamePlugin
 		  this->~TestGamePlugin();
     }
 
-	virtual void DARKCALL setManager(Engine::GameManager* manager) override
+	virtual void DARKCALL setManager(Core::GameManager* manager) override
 	{
 		std::ofstream file{ "cpp-plugin.log", std::ios_base::app };
 		file << "setManager has been called with " << manager << std::endl;
@@ -114,11 +114,11 @@ struct TestGamePlugin : public Engine::GamePlugin
 };
 
 
-struct TestConsoleCallback : public Engine::ConsoleCallback
+struct TestConsoleCallback : public Core::ConsoleCallback
 {
 	std::string _lastResult;
 
-	virtual const char* DARKCALL executeCallback(Engine::GameConsole* otherConsole,
+	virtual const char* DARKCALL executeCallback(Core::GameConsole* otherConsole,
 		std::int32_t callbackId,
 		std::int32_t argc,
 		const char** argv)
@@ -127,7 +127,7 @@ struct TestConsoleCallback : public Engine::ConsoleCallback
 		_lastResult = "\"";
 		try
 		{
-			auto game = GameRuntime::Game::currentInstance();
+			auto game = Hook::Game::currentInstance();
 			auto console = game->getConsole();
 			std::ofstream file{ "test.log", std::ios_base::app };
 			file << "callback game runtime: " << game.get() << std::endl;
@@ -158,7 +158,7 @@ void runPython()
 		std::ofstream file{ "test.log" };
 		file << "Hello there!" << std::endl;
 
-		auto game = GameRuntime::Game::currentInstance();
+		auto game = Hook::Game::currentInstance();
 
 		auto console = game->getConsole();
 
@@ -193,12 +193,15 @@ void runPython()
 		file << "Number of plugins inside of game: " << plugins.size() << " "
 			<< plugins.capacity() << " "
 			<< std::endl;
+
+		file << "raw console: " << console->getRaw() << std::endl;
+		file << "raw plugin console: " << plugins[0]->console << std::endl;
 		//plugins[0]->executeCallback(console.getRaw(), 3, 0, nullptr);
 
 		try
 		{
 			static py::scoped_interpreter guard{};
-			py::eval_file("simple.py");
+			py::eval_file("hook.py");
 		}
 		catch (const std::exception & ex)
 		{
