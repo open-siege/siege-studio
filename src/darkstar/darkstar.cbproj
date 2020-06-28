@@ -50,13 +50,13 @@
         <ProjectType>CppDynamicLibrary</ProjectType>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
         <Multithreaded>true</Multithreaded>
-        <SanitizedProjectName>mem</SanitizedProjectName>
+        <SanitizedProjectName>darkstar</SanitizedProjectName>
         <ILINK_GenerateImportLibrary>true</ILINK_GenerateImportLibrary>
         <_TCHARMapping>char</_TCHARMapping>
-        <ILINK_LibraryPath>C:\Python38-32\cppbuilder;$(ILINK_LibraryPath)</ILINK_LibraryPath>
+        <ILINK_LibraryPath>src\Core\;src\Python\;src\Hook\;src\;Hook\;Python\;Core\;Plugins\;C:\Python38-32\cppbuilder;$(ILINK_LibraryPath)</ILINK_LibraryPath>
         <VerInfo_Locale>7177</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
-        <IncludePath>C:\Python38-32\include;C:\cppbuilder\include;$(IncludePath)</IncludePath>
+        <IncludePath>src\Core\;src\Python\;src\Hook\;src\;Hook\;Python\;Core\;Plugins\;C:\Python38-32\include;C:\cppbuilder\include;$(IncludePath)</IncludePath>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
         <PackageImports>adortl;appanalytics;bcbie;bcbsmp;bindcomp;bindcompdbx;bindcompfmx;bindcompvcl;bindengine;CloudService;CustomIPTransport;dbexpress;dbrtl;dbxcds;DbxClientDriver;DbxCommonDriver;DBXInterBaseDriver;DBXMySQLDriver;DBXSqliteDriver;dsnap;dsnapcon;dsnapxml;FireDAC;FireDACADSDriver;FireDACCommon;FireDACCommonDriver;FireDACCommonODBC;FireDACIBDriver;FireDACMSAccDriver;FireDACMySQLDriver;FireDACPgDriver;FireDACSqliteDriver;fmx;fmxase;fmxdae;fmxFireDAC;fmxobj;IndyCore;IndyIPClient;IndyIPCommon;IndyIPServer;IndyProtocols;IndySystem;inet;inetdb;inetdbxpress;RESTBackendComponents;RESTComponents;rtl;soapmidas;soaprtl;soapserver;svn;tethering;vcl;vclactnband;vcldb;vcldsnap;vclFireDAC;vclie;vclimg;VCLRESTComponents;VclSmp;vcltouch;vclwinx;vclx;xmlrtl;$(PackageImports)</PackageImports>
@@ -107,37 +107,49 @@
         <VerInfo_Locale>1033</VerInfo_Locale>
     </PropertyGroup>
     <ItemGroup>
-        <None Include="EngineExternalTypes.hpp">
-            <BuildOrder>9</BuildOrder>
+        <None Include="src\Core\EngineExternalTypes.hpp">
+            <BuildOrder>13</BuildOrder>
         </None>
-        <None Include="EngineFunctions.hpp">
+        <None Include="src\Core\EngineFunctions.hpp">
+            <BuildOrder>14</BuildOrder>
+        </None>
+        <None Include="src\Core\EngineTypes.hpp">
+            <BuildOrder>15</BuildOrder>
+        </None>
+        <None Include="src\Core\__history"/>
+        <DefFile Include="src\darkstar.def">
+            <BuildOrder>0</BuildOrder>
+        </DefFile>
+        <None Include="src\darkstar.pyi"/>
+        <None Include="src\functions.json"/>
+        <None Include="src\hook.py"/>
+        <CppCompile Include="src\Hook\Game.cpp">
+            <BuildOrder>5</BuildOrder>
+        </CppCompile>
+        <None Include="src\Hook\Game.hpp">
             <BuildOrder>6</BuildOrder>
         </None>
-        <None Include="EngineTypes.hpp">
+        <CppCompile Include="src\Hook\GameConsole.cpp">
+            <BuildOrder>7</BuildOrder>
+        </CppCompile>
+        <None Include="src\Hook\GameConsole.hpp">
+            <BuildOrder>8</BuildOrder>
+        </None>
+        <None Include="src\Hook\GameRuntimeExternalTypes.hpp">
+            <BuildOrder>9</BuildOrder>
+        </None>
+        <CppCompile Include="src\Hook\Hook.cpp">
+            <BuildOrder>10</BuildOrder>
+        </CppCompile>
+        <None Include="src\memPCH1.h">
             <BuildOrder>4</BuildOrder>
         </None>
-        <None Include="functions.json">
-            <ContainerId>WebFile</ContainerId>
+        <None Include="src\Python\PythonModule.hpp">
+            <BuildOrder>11</BuildOrder>
         </None>
-        <None Include="GameRuntime.hpp">
-            <BuildOrder>5</BuildOrder>
+        <None Include="src\Python\PythonTypes.hpp">
+            <BuildOrder>12</BuildOrder>
         </None>
-        <CppCompile Include="Main.cpp">
-            <BuildOrder>1</BuildOrder>
-        </CppCompile>
-        <DefFile Include="mem.def">
-            <BuildOrder>2</BuildOrder>
-        </DefFile>
-        <None Include="memPCH1.h">
-            <BuildOrder>0</BuildOrder>
-        </None>
-        <None Include="PythonModule.hpp">
-            <BuildOrder>10</BuildOrder>
-        </None>
-        <None Include="PythonTypes.hpp">
-            <BuildOrder>7</BuildOrder>
-        </None>
-        <None Include="simple.py"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
@@ -226,12 +238,6 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName=".\Win32\Debug\mem.dll" Configuration="Debug" Class="ProjectOutput">
-                    <Platform Name="Win32">
-                        <RemoteName>mem.dll</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
                 <DeployFile LocalName="$(BDS)\Redist\osx32\libcgunwind.1.0.dylib" Class="DependencyModule">
                     <Platform Name="OSX32">
                         <Overwrite>true</Overwrite>
@@ -247,9 +253,15 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName=".\Win32\Debug\mem.tds" Configuration="Debug" Class="DebugSymbols">
+                <DeployFile LocalName=".\Win32\Debug\darkstar.tds" Configuration="Debug" Class="DebugSymbols">
                     <Platform Name="Win32">
-                        <RemoteName>mem.tds</RemoteName>
+                        <RemoteName>darkstar.tds</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName=".\Win32\Debug\darkstar.dll" Configuration="Debug" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>darkstar.dll</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
