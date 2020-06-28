@@ -71,7 +71,6 @@ class Game:
     def starsiegePlugins(self) -> KnownPlugins: ...
 
     @staticmethod
-    @property
     def currentInstance() -> Game: ...
 
 

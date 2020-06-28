@@ -7,8 +7,7 @@
 
 #include <cstdint>
 
-
-namespace Engine
+namespace Core
 {
 	struct GameRoot;
 	struct GameConsole;

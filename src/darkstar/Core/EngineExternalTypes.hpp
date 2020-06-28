@@ -1,13 +1,13 @@
 #ifndef ENGINEEXTENDEDTYPES_HPP
 #define ENGINEEXTENDEDTYPES_HPP
 
-#include "EngineTypes.hpp"
+#include "Core/EngineTypes.hpp"
 
 #include <vector>
 #include <string>
 #include <string_view>
 
-namespace Engine
+namespace Core
 {
 	struct ExternalConsoleCallback
 	{

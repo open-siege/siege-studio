@@ -4,21 +4,21 @@
 #include <memory>
 #include <map>
 #include <utility>
-#include "EngineFunctions.hpp"
-#include "EngineExternalTypes.hpp"
-#include "PythonTypes.hpp"
+#include "Core/EngineFunctions.hpp"
+#include "Core/EngineExternalTypes.hpp"
+#include "Python/PythonTypes.hpp"
 
 
-namespace GameRuntime
+namespace Hook
 {
-	using GameFunctions = Engine::GameFunctions;
-	using GameRoot = Engine::GameRoot;
-	using GamePlugin = Engine::GamePlugin;
-	using ConsoleConsumer = Engine::ConsoleConsumer;
-	using ConsoleCallback = Engine::ConsoleCallback;
-	using ConsoleCallbackFunc = Engine::ConsoleCallbackFunc;
-	using ExternalConsoleCallback = Engine::ExternalConsoleCallback;
-	using PyConsoleCallback = Engine::Python::PyConsoleCallback;
+	using GameFunctions = Core::GameFunctions;
+	using GameRoot = Core::GameRoot;
+	using GamePlugin = Core::GamePlugin;
+	using ConsoleConsumer = Core::ConsoleConsumer;
+	using ConsoleCallback = Core::ConsoleCallback;
+	using ConsoleCallbackFunc = Core::ConsoleCallbackFunc;
+	using ExternalConsoleCallback = Core::ExternalConsoleCallback;
+	using PyConsoleCallback = Python::PyConsoleCallback;
 
 	template<typename TCallback>
 	struct ConsoleCallbackWrapper : ConsoleCallback
@@ -28,7 +28,7 @@ namespace GameRuntime
 
 		ConsoleCallbackWrapper(TCallback* callback) : _internalCallback(callback) {}
 
-		virtual const char* DARKCALL executeCallback(Engine::GameConsole* console,
+		virtual const char* DARKCALL executeCallback(Core::GameConsole* console,
 			std::int32_t callbackId,
 			std::int32_t argc,
 			const char** argv)
