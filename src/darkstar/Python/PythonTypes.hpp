@@ -6,15 +6,15 @@
 #include <vector>
 #include <iostream>
 
-#include "EngineExternalTypes.hpp"
+#include "Core/EngineExternalTypes.hpp"
 
-namespace Engine::Python
+namespace Python
 {
 	namespace py = pybind11;
 
-	struct PyConsoleConsumer : ExternalConsoleConsumer
+	struct PyConsoleConsumer : Core::ExternalConsoleConsumer
 	{
-			virtual void doWriteLine(void* console, const std::string& line) override
+			virtual void doWriteLine(void* console, const std::string_view& line) override
 			{
 					PYBIND11_OVERLOAD_PURE(
 						void, /* Return type */
@@ -27,9 +27,9 @@ namespace Engine::Python
     };
 
 
-	struct PyConsoleCallback : ExternalConsoleCallback
+	struct PyConsoleCallback : Core::ExternalConsoleCallback
 	{
-            virtual std::string doExecuteCallback(void* console, std::int32_t callbackId, std::vector<std::string>& args) override
+            virtual std::string doExecuteCallback(void* console, std::int32_t callbackId, const std::vector<std::string_view>& args) override
 			{
 					PYBIND11_OVERLOAD_PURE(
 						std::string, /* Return type */
@@ -42,9 +42,9 @@ namespace Engine::Python
 			}
     };
 
-	struct PyGamePlugin : ExternalGamePlugin
+	struct PyGamePlugin : Core::ExternalGamePlugin
 	{
-			virtual std::string doExecuteCallback(void* console, std::int32_t callbackId, std::vector<std::string>& args) override
+			virtual std::string doExecuteCallback(void* console, std::int32_t callbackId, const std::vector<std::string_view>& args) override
 			{
 					PYBIND11_OVERLOAD_PURE(
 						std::string, /* Return type */

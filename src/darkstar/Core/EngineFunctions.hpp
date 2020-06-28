@@ -7,10 +7,9 @@
 #include <streambuf>
 #include <array>
 
-#include "EngineTypes.hpp"
+#include "Core/EngineTypes.hpp"
 
-
-namespace Engine
+namespace Core
 {
 	using json = nlohmann::json;
 
@@ -33,7 +32,6 @@ namespace Engine
 		AddConsoleCallbackObjectFunc AddConsoleCallback;
 
 		AddConsoleConsumerFunc AddConsoleConsumer;
-
 
 		ConsoleCallbackFunc ConsoleCls;
 		ConsoleCallbackFunc ConsoleSqrt;
