@@ -46,13 +46,13 @@ namespace Core
 		GameConsole* console;
 
         virtual void DARKCALL destroy() = 0;
-		virtual void DARKCALL setManager(GameManager* manager) = 0;
+        virtual void DARKCALL setManager(GameManager* manager) = 0;
 		virtual void DARKCALL init() = 0;
 		virtual void DARKCALL startFrame() = 0;
 		virtual void DARKCALL endFrame() = 0;
 
         // unlike Borland C++ of old, destructors seem to go at the end of the vtable
-		virtual DARKCALL ~GamePlugin() = default;
+        virtual DARKCALL ~GamePlugin() = default;
 	};
 }
 
