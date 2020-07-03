@@ -37,7 +37,6 @@ namespace Hook
 			{
 				std::vector<std::string_view> arguments(argv, argv + argc);
 				_lastResult = _internalCallback->doExecuteCallback(console, callbackId, arguments);
-
 			}
 			catch (const std::exception & ex)
 			{

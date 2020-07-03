@@ -94,7 +94,7 @@ namespace Hook {
 
         void addCommand(int id, const std::string &name, Core::ConsoleCallback *callback, int runLevel = 0);
 
-        bool removeCommand(const std::string &name);
+        std::string removeCommand(const std::string &name);
     };
 }
 

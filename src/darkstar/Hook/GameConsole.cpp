@@ -72,7 +72,7 @@ namespace Hook
     std::string GameConsole::deleteFunctions(const std::string& functionGlob)
     {
         std::array<const char*, 2> arguments{ "deleteFunctions", functionGlob.c_str() };
-        return _functions.ConsoleDeleteFunctions(current, 0, arguments.size(), arguments.data());
+		return _functions.ConsoleDeleteFunctions(current, 0, arguments.size(), arguments.data());
     }
 
     std::string GameConsole::trace()
@@ -113,7 +113,7 @@ namespace Hook
         }
 
         // If the name is new, we can reuse the same callback
-        auto wrapperByName = _wrappedCallbacksByName.find(name);
+		auto wrapperByName = _wrappedCallbacksByName.find(name);
         if (wrapperByName == _wrappedCallbacksByName.end())
         {
             _wrappedCallbacksByName[name] = existingWrapper->second;
@@ -127,8 +127,8 @@ namespace Hook
         _functions.AddConsoleCallback(current, id, name.c_str(), callback, runLevel);
     }
 
-    bool GameConsole::removeCommand(const std::string& name)
+	std::string GameConsole::removeCommand(const std::string& name)
     {
-        return false;
+		return deleteFunctions(name);
     }
 }
