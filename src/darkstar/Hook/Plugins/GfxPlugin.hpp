@@ -67,20 +67,20 @@ namespace Hook::Plugins
             execute(plugin, 7, { "setScreenShotSeq", screenshotSeqStr.c_str() });
         }
 
-        void screenshot(std::optional<std::string> filename, std::optional<int> screenShotSeq = std::nullopt)
+		void screenshot(std::string canvasName, std::optional<std::string> filename, std::optional<int> screenShotSeq = std::nullopt)
         {
             if (screenShotSeq.has_value())
             {
                 setScreenshotSeq(*screenShotSeq);
             }
 
-            if (filename.has_value())
+			if (filename)
             {
-                execute(plugin, 8, { "screenShot", filename->c_str() });
+				execute(plugin, 8, { "screenShot", canvasName.c_str(), filename->c_str() });
             }
             else
-            {
-                execute(plugin, 8, { "screenShot" });
+			{
+                execute(plugin, 8, { "screenShot", canvasName.c_str() });
             }
         }
 

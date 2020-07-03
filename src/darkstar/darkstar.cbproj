@@ -41,8 +41,8 @@
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
         <DCC_CBuilderOutput>JPHNE</DCC_CBuilderOutput>
-        <IntermediateOutputDir>.\$(Platform)\$(Config)</IntermediateOutputDir>
-        <FinalOutputDir>.\$(Platform)\$(Config)</FinalOutputDir>
+        <IntermediateOutputDir>.\bin\$(Platform)\$(Config)</IntermediateOutputDir>
+        <FinalOutputDir>.\bin\$(Platform)\$(Config)</FinalOutputDir>
         <BCC_wpar>false</BCC_wpar>
         <BCC_OptimizeForSpeed>true</BCC_OptimizeForSpeed>
         <BCC_ExtendedErrorInfo>true</BCC_ExtendedErrorInfo>
@@ -53,10 +53,10 @@
         <SanitizedProjectName>darkstar</SanitizedProjectName>
         <ILINK_GenerateImportLibrary>true</ILINK_GenerateImportLibrary>
         <_TCHARMapping>char</_TCHARMapping>
-        <ILINK_LibraryPath>src\Core\;src\Python\;src\Hook\;src\;Hook\;Python\;Core\;Plugins\;C:\Python38-32\cppbuilder;$(ILINK_LibraryPath)</ILINK_LibraryPath>
+        <ILINK_LibraryPath>Hook\Plugins\;src\Core\;src\Python\;src\Hook\;src\;Hook\;Python\;Core\;Plugins\;C:\Python38-32\cppbuilder;$(ILINK_LibraryPath)</ILINK_LibraryPath>
         <VerInfo_Locale>7177</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
-        <IncludePath>src\Core\;src\Python\;src\Hook\;src\;Hook\;Python\;Core\;Plugins\;C:\Python38-32\include;C:\cppbuilder\include;$(IncludePath)</IncludePath>
+        <IncludePath>Hook\Plugins\;src\Core\;src\Python\;src\Hook\;src\;Hook\;Python\;Core\;Plugins\;C:\Python38-32\include;C:\cppbuilder\include;$(IncludePath)</IncludePath>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
         <PackageImports>adortl;appanalytics;bcbie;bcbsmp;bindcomp;bindcompdbx;bindcompfmx;bindcompvcl;bindengine;CloudService;CustomIPTransport;dbexpress;dbrtl;dbxcds;DbxClientDriver;DbxCommonDriver;DBXInterBaseDriver;DBXMySQLDriver;DBXSqliteDriver;dsnap;dsnapcon;dsnapxml;FireDAC;FireDACADSDriver;FireDACCommon;FireDACCommonDriver;FireDACCommonODBC;FireDACIBDriver;FireDACMSAccDriver;FireDACMySQLDriver;FireDACPgDriver;FireDACSqliteDriver;fmx;fmxase;fmxdae;fmxFireDAC;fmxobj;IndyCore;IndyIPClient;IndyIPCommon;IndyIPServer;IndyProtocols;IndySystem;inet;inetdb;inetdbxpress;RESTBackendComponents;RESTComponents;rtl;soapmidas;soaprtl;soapserver;svn;tethering;vcl;vclactnband;vcldb;vcldsnap;vclFireDAC;vclie;vclimg;VCLRESTComponents;VclSmp;vcltouch;vclwinx;vclx;xmlrtl;$(PackageImports)</PackageImports>
@@ -105,50 +105,108 @@
         <BCC_UseClassicCompiler>false</BCC_UseClassicCompiler>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_Locale>1033</VerInfo_Locale>
+        <IntermediateOutputDir>.\bin\$(Platform)\$(Config)</IntermediateOutputDir>
+        <FinalOutputDir>.\bin\$(Platform)\$(Config)</FinalOutputDir>
     </PropertyGroup>
     <ItemGroup>
-        <None Include="src\Core\EngineExternalTypes.hpp">
-            <BuildOrder>13</BuildOrder>
-        </None>
-        <None Include="src\Core\EngineFunctions.hpp">
-            <BuildOrder>14</BuildOrder>
-        </None>
-        <None Include="src\Core\EngineTypes.hpp">
-            <BuildOrder>15</BuildOrder>
-        </None>
-        <None Include="src\Core\__history"/>
-        <DefFile Include="src\darkstar.def">
-            <BuildOrder>0</BuildOrder>
-        </DefFile>
-        <None Include="src\darkstar.pyi"/>
-        <None Include="src\functions.json"/>
-        <None Include="src\hook.py"/>
-        <CppCompile Include="src\Hook\Game.cpp">
-            <BuildOrder>5</BuildOrder>
-        </CppCompile>
-        <None Include="src\Hook\Game.hpp">
-            <BuildOrder>6</BuildOrder>
-        </None>
-        <CppCompile Include="src\Hook\GameConsole.cpp">
-            <BuildOrder>7</BuildOrder>
-        </CppCompile>
-        <None Include="src\Hook\GameConsole.hpp">
+        <None Include="Core\EngineExternalTypes.hpp">
             <BuildOrder>8</BuildOrder>
         </None>
-        <None Include="src\Hook\GameRuntimeExternalTypes.hpp">
+        <None Include="Core\EngineFunctions.hpp">
             <BuildOrder>9</BuildOrder>
         </None>
-        <CppCompile Include="src\Hook\Hook.cpp">
+        <None Include="Core\EngineTypes.hpp">
             <BuildOrder>10</BuildOrder>
+        </None>
+        <DefFile Include="darkstar.def">
+            <BuildOrder>16</BuildOrder>
+        </DefFile>
+        <None Include="darkstar.pyi"/>
+        <None Include="functions.json"/>
+        <None Include="hook.py"/>
+        <None Include="Hook\ConsoleWrappers.hpp">
+            <BuildOrder>35</BuildOrder>
+        </None>
+        <CppCompile Include="Hook\Game.cpp">
+            <BuildOrder>0</BuildOrder>
         </CppCompile>
-        <None Include="src\memPCH1.h">
-            <BuildOrder>4</BuildOrder>
+        <None Include="Hook\Game.hpp">
+            <BuildOrder>1</BuildOrder>
         </None>
-        <None Include="src\Python\PythonModule.hpp">
-            <BuildOrder>11</BuildOrder>
+        <CppCompile Include="Hook\GameConsole.cpp">
+            <BuildOrder>2</BuildOrder>
+        </CppCompile>
+        <None Include="Hook\GameConsole.hpp">
+            <BuildOrder>3</BuildOrder>
         </None>
-        <None Include="src\Python\PythonTypes.hpp">
-            <BuildOrder>12</BuildOrder>
+        <CppCompile Include="Hook\Hook.cpp">
+            <BuildOrder>5</BuildOrder>
+        </CppCompile>
+        <None Include="Hook\Plugins\EnginePlugins.hpp">
+            <BuildOrder>17</BuildOrder>
+        </None>
+        <None Include="Hook\Plugins\FearMissionPlugin.hpp">
+            <BuildOrder>18</BuildOrder>
+        </None>
+        <None Include="Hook\Plugins\GamePluginWrapper.hpp">
+            <BuildOrder>19</BuildOrder>
+        </None>
+        <None Include="Hook\Plugins\GfxPlugin.hpp">
+            <BuildOrder>20</BuildOrder>
+        </None>
+        <None Include="Hook\Plugins\InteriorPlugin.hpp">
+            <BuildOrder>21</BuildOrder>
+        </None>
+        <None Include="Hook\Plugins\MissionPlugin.hpp">
+            <BuildOrder>22</BuildOrder>
+        </None>
+        <None Include="Hook\Plugins\MovPlayPlugin.hpp">
+            <BuildOrder>23</BuildOrder>
+        </None>
+        <None Include="Hook\Plugins\NetPlugin.hpp">
+            <BuildOrder>24</BuildOrder>
+        </None>
+        <None Include="Hook\Plugins\RedbookPlugin.hpp">
+            <BuildOrder>25</BuildOrder>
+        </None>
+        <None Include="Hook\Plugins\Shared.hpp">
+            <BuildOrder>26</BuildOrder>
+        </None>
+        <None Include="Hook\Plugins\SimGuiConsolePlugin.hpp">
+            <BuildOrder>27</BuildOrder>
+        </None>
+        <None Include="Hook\Plugins\SimGuiPlugin.hpp">
+            <BuildOrder>28</BuildOrder>
+        </None>
+        <None Include="Hook\Plugins\SimInputPlugin.hpp">
+            <BuildOrder>29</BuildOrder>
+        </None>
+        <None Include="Hook\Plugins\SimTreePlugin.hpp">
+            <BuildOrder>30</BuildOrder>
+        </None>
+        <None Include="Hook\Plugins\SkyPlugin.hpp">
+            <BuildOrder>31</BuildOrder>
+        </None>
+        <None Include="Hook\Plugins\SoundFxPlugin.hpp">
+            <BuildOrder>32</BuildOrder>
+        </None>
+        <None Include="Hook\Plugins\StarsiegePlugins.hpp">
+            <BuildOrder>33</BuildOrder>
+        </None>
+        <None Include="Hook\Plugins\TerrainPlugin.hpp">
+            <BuildOrder>34</BuildOrder>
+        </None>
+        <None Include="Hook\Plugins\ToolPlugin.hpp">
+            <BuildOrder>35</BuildOrder>
+        </None>
+        <None Include="memPCH1.h">
+            <BuildOrder>15</BuildOrder>
+        </None>
+        <None Include="Python\PythonModule.hpp">
+            <BuildOrder>6</BuildOrder>
+        </None>
+        <None Include="Python\PythonTypes.hpp">
+            <BuildOrder>7</BuildOrder>
         </None>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
@@ -178,9 +236,7 @@
                     <Excluded_Packages Name="$(BDSBIN)\bcbofficexp260.bpl">Embarcadero C++Builder Office XP Servers Package</Excluded_Packages>
                 </Excluded_Packages>
                 <Folders/>
-                <VFOLDERS>
-                    <VFOLDER ID="{5764A92E-4A69-48F4-9F63-0C2E5D25CB3C}" name="libs"/>
-                </VFOLDERS>
+                <VFOLDERS/>
             </CPlusPlusBuilder.Personality>
             <Deployment Version="3">
                 <DeployFile Condition="'$(DynamicRTL)'=='true' And '$(Multithreaded)'!='true'" LocalName="$(BDS)\bin\cc32c260.dll" Class="DependencyModule">
@@ -253,13 +309,13 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName=".\Win32\Debug\darkstar.tds" Configuration="Debug" Class="DebugSymbols">
+                <DeployFile LocalName=".\Win32\bin\Debug\darkstar.tds" Configuration="Debug" Class="DebugSymbols">
                     <Platform Name="Win32">
                         <RemoteName>darkstar.tds</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName=".\Win32\Debug\darkstar.dll" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName=".\Win32\bin\Debug\darkstar.dll" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>darkstar.dll</RemoteName>
                         <Overwrite>true</Overwrite>

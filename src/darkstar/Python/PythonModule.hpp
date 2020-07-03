@@ -25,7 +25,8 @@ namespace Python
 		py::class_<Plugins::SimGuiConsolePlugin>(m, "SimGuiConsolePlugin")
 		        .def("consoleEnable", &Plugins::SimGuiConsolePlugin::consoleEnable);
 
-        py::class_<Plugins::GfxPlugin>(m, "GfxPlugin");
+		py::class_<Plugins::GfxPlugin>(m, "GfxPlugin")
+				.def("screenshot", &Plugins::GfxPlugin::screenshot);
 
 		py::class_<Plugins::TerrainPlugin>(m, "TerrainPlugin");
 
@@ -54,7 +55,7 @@ namespace Python
 			.def(py::init<>())
 			.def("doWriteLine", &Core::ExternalConsoleConsumer::doWriteLine);
 
-		py::class_<Core::ExternalConsoleCallback, PyConsoleCallback>(m, "PyConsoleCallback")
+		py::class_<Core::ExternalConsoleCallback, PyConsoleCallback, >(m, "PyConsoleCallback")
 			.def(py::init<>())
 			.def("doExecuteCallback", &Core::ExternalConsoleCallback::doExecuteCallback);
 
