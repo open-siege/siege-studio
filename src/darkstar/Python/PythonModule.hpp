@@ -55,7 +55,7 @@ namespace Python
 			.def(py::init<>())
 			.def("doWriteLine", &Core::ExternalConsoleConsumer::doWriteLine);
 
-		py::class_<Core::ExternalConsoleCallback, PyConsoleCallback, >(m, "PyConsoleCallback")
+		py::class_<Core::ExternalConsoleCallback, PyConsoleCallback>(m, "PyConsoleCallback")
 			.def(py::init<>())
 			.def("doExecuteCallback", &Core::ExternalConsoleCallback::doExecuteCallback);
 

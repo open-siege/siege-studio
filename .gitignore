@@ -49,3 +49,4 @@ venv/
 x64/
 x86/
 src/darkstar/bin
+packages/
