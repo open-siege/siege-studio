@@ -1,0 +1,1 @@
+lib /def:..\darkstar\darkstar.def /out:libs\darkstar.lib /machine:x86

@@ -18,6 +18,9 @@
     <None Include="mem.def">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="make-darkstar-lib.bat">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="mem.cpp">
