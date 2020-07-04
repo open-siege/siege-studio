@@ -1,5 +1,5 @@
 from conans import ConanFile
-
+import json
 
 class DarkstarHookConan(ConanFile):
     settings = {"os": None, "compiler": None, "build_type": None, "arch": "x86"}
@@ -8,6 +8,11 @@ class DarkstarHookConan(ConanFile):
 
     def imports(self):
         self.copy("*", dst="packages/include", src="@includedirs")
+
+        with open("local-config.json", "r") as localConfigFile:
+            localConfig = json.loads(localConfigFile.read())
+
+        self.copy("*", dst="packages/include", src=localConfig["pythonIncludeDir"])
 
         # There is an internal issue with the library implementation for
         # C++ Builder, which prevents detail::all_of<is_valid_class_option<options>...>::value

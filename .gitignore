@@ -25,11 +25,18 @@
 *.la
 *.a
 *.lib
+*.exp
 
 # Executables
 *.exe
 *.out
 *.app
+
+*.ilk
+*.log
+*.pdb
+*.tlog
+*.idb
 
 mem.res
 *.cbproj.local
@@ -50,3 +57,11 @@ x64/
 x86/
 src/darkstar/bin
 packages/
+
+conanbuildinfo.txt
+conanbuildinfo.json
+conan_imports_manifest.txt
+graph_info.json
+conaninfo.txt
+conan.lock
+cmake-build-debug/
