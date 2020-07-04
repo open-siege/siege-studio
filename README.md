@@ -21,6 +21,12 @@ If the directory is somewhere else, update the pythonIncludeDir in local-config.
 
 Conan is required to install the project dependencies (except for Python - at the moment)
 
+If you don't already have it, just run:
+
+``pip install conan``
+
+Once everything is installed, run the following in the main checkout directory of the project.
+
 ``conan install . --profile ./local-profile.ini``
 
 All installed packages are copied into the _packages_ folder. This includes the Python include files from the local Python installation.
