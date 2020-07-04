@@ -8,6 +8,14 @@ A C++ Builder dll which allows for extension of Darkstar engine games and embeds
 #### Libraries
 * Python 3.8.3 or newer
 * Pybind11 2.5.0
+* nlohmann_json 3.8.0
+
+#### Installing Dependencies
+Conan is required to install the project dependencies (except for Python - at the moment)
+
+``conan install . --profile ./local-profile.ini``
+
+All items are installed into the _packages_ folder.
 
 ### Setup with Game
 TODO
