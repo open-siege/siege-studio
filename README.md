@@ -1,6 +1,8 @@
 # Darkstar Hook
 A C++ Builder dll which allows for extension of Darkstar engine games and embeds Python to make that process fully dynamic.
 
+For some more technical information of the project, check this document: https://github.com/matthew-rindel/darkstar-hook/blob/master/progress-and-roadmap.md
+
 ### Dependencies
 #### Tools
 * C++ Builder 10.3.3 or newer: https://www.embarcadero.com/products/cbuilder/starter
