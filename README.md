@@ -3,14 +3,16 @@ A C++ Builder dll which allows for extension of Darkstar engine games and embeds
 
 ### Dependencies
 #### Tools
-* C++ Builder 10.3.3 or newer.
-* A disassembler or decompiler for the relevant game. I use Binary Ninja 
+* C++ Builder 10.3.3 or newer: https://www.embarcadero.com/products/cbuilder/starter
+* A disassembler or decompiler for the relevant game. I use Binary Ninja: https://binary.ninja/
 #### Libraries
 * Python 3.8.3 or newer (32-bit version only)
 * Pybind11 2.5.0
 * nlohmann_json 3.8.0
 
 ### Project Setup
+If you aren't already using Chocolately, feel free to check it out and install it here: https://chocolatey.org/
+
 First, make sure you have installed Python 3 on your system. This is easy as running:
 
 ``choco install python3 --x86``
