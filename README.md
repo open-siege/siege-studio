@@ -1,7 +1,61 @@
 # Darkstar Hook
-A C++ Builder dll which allows for extension of Darkstar engine games and embeds Python to make that process fully dynamic.
+This project allows for new code to be added to various Darkstar engine games, either using C++ or Python, without needing the source code of the original games (which have been for all official accounts lost or not publically available).
+
+C++ Builder builder is used for ABI compatilbitiy and embeds Python to make the extension process fully dynamic.
+
+Visual Studio is required for other proxy dlls because its linker supports forward exports. Read the document below for more information.
 
 For some more technical information of the project, check this document: https://github.com/matthew-rindel/darkstar-hook/blob/master/progress-and-roadmap.md
+
+### Code Structure
+#### src/darkstar
+##### Structure Summary
+The main dll project for the project which makes use of C++ Builder. It is 32-bit only because the games are all 32-bit.
+
+C++ 17 is used, for the features that do work.
+
+All of the types which map out engine data structures are in _src/darkstar/Core_.
+
+All of the types which wrap the engine types are present in _src/darkstar/Hook_.
+
+All of the types which are used to interact with Python are present in _src/darkstar/Python_.
+
+The Darkstar engine is a precursor to the Torque engine, and most of the documentation for Torque applies to Darkstar for a few topics. These documents are:
+* http://docs.garagegames.com/torque-3d/official/index.html?content/documentation/Scripting/Overview/Introduction.html
+* http://www.garagegames.com/community/resources/view/20937
+* http://wiki.torque3d.org/
+
+_src/Darkstar/functions.json_ contains all of the memory addresses for some of the functions defined in _src/darkstar/Core/EngineFunctions.hpp_.
+
+The ultimate goal is to have addresses for every binary using the Darkstar engine. Currently only Starsiege 1.003 is supported.
+##### Brief Engine Description
+The _src/Darkstar/Core/EngineTypes.hpp_ file defines all of the data types present in each binary of each Darkstar game.
+
+All of the function pointers defined in _src/darkstar/Core/EngineFunctions.hpp_ interact with these data types directly.
+
+The object structure is something like this:
+* GameRoot is used to represent a global object representing the game itself.
+    * It contains all the other objects then used to interact with the game, find specifc objects or communicate with either the client or server.
+* GameConsole is a child of GameRoot which allows for direct interaction with the scripting engine, which is called CScript (the precursor to TorqueScript).
+    * The game console is where most of the magic happens for the hook, as it allows for new code to be added to the game dynamically, which is then accessible from the scripting engine.
+* GameObject is a base class for every entity in a game. 
+    * If we are talking about Tribes, then every soldier jetpacking around is a GameObject derivative. 
+    * If we are talking about Starsiege, then every herc or tank is a GameObject derivative.
+* GameManager represents either a client or server which manages many child GameObjects, especially everything relating to the game world, all of the level assets, static objects, NPCs, etc.
+* The ConsoleConsumer is an extension point for GameConsole, which allows for any console messages to be sent to the consumer to handle somehow (usually to log or display on another window or something else). _AddConsoleConsumer_ in _darkstar/Core/EngineFunctions.hpp_ is used to add a new consumer.
+* The ConsoleCallback is another extension point for GameConsole, and is what is used when new native code is to be excuted for by script funciton. _AddConsoleCallbackFunc_ or _AddConsoleCallback_ in _darkstar/Core/EngineFunctions.hpp_ is used to add a new callback.
+* GamePlugin is an extended ConsoleCallback which is an extension point of GameRoot. These plugins can also be notified of frame render events during the render cycle. _AddGamePlugin_ in _darkstar/Core/EngineFunctions.hpp_ is used to add a new plugin.
+
+### src/mem
+mem.dll is a special dll that Starsiege and Tribes are compiled to check for, in oder to replace their internal calls to malloc/free/calloc/realloc.
+
+The project in src/mem is a Visual Studio project which compiles a proxy dll, and all it does is forward those functions to the implementation found in darkstar.dll
+
+The _mem.cpp_ file is deliberately empty for there to be a translation unit to compile.
+
+The real work of this project is done by _mem.def_, which is used to describe the functions to forward.
+
+See https://github.com/matthew-rindel/darkstar-hook/blob/master/progress-and-roadmap.md for more information and links about how this works.
 
 ### Dependencies
 #### Tools
