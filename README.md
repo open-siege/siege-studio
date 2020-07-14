@@ -7,9 +7,9 @@ Visual Studio is required for other proxy dlls because its linker supports forwa
 
 For some more technical information of the project, check this document: https://github.com/matthew-rindel/darkstar-hook/blob/master/progress-and-roadmap.md
 
-### Code Structure
-#### src/darkstar
-##### Structure Summary
+## Code Structure
+### src/darkstar
+#### Structure Summary
 The main dll project for the project which makes use of C++ Builder. It is 32-bit only because the games are all 32-bit.
 
 C++ 17 is used, for the features that do work.
@@ -28,7 +28,7 @@ The Darkstar engine is a precursor to the Torque engine, and most of the documen
 _src/Darkstar/functions.json_ contains all of the memory addresses for some of the functions defined in _src/darkstar/Core/EngineFunctions.hpp_.
 
 The ultimate goal is to have addresses for every binary using the Darkstar engine. Currently only Starsiege 1.003 is supported.
-##### Brief Engine Description
+#### Brief Engine Description
 The _src/Darkstar/Core/EngineTypes.hpp_ file defines all of the data types present in each binary of each Darkstar game.
 
 All of the function pointers defined in _src/darkstar/Core/EngineFunctions.hpp_ interact with these data types directly.
