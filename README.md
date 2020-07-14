@@ -57,16 +57,16 @@ The real work of this project is done by _mem.def_, which is used to describe th
 
 See https://github.com/matthew-rindel/darkstar-hook/blob/master/progress-and-roadmap.md for more information and links about how this works.
 
-### Dependencies
-#### Tools
+## Dependencies
+### Tools
 * C++ Builder 10.3.3 or newer: https://www.embarcadero.com/products/cbuilder/starter
 * A disassembler or decompiler for the relevant game. I use Binary Ninja: https://binary.ninja/
-#### Libraries
+### Libraries
 * Python 3.8.3 or newer (32-bit version only)
 * Pybind11 2.5.0
 * nlohmann_json 3.8.0
 
-### Project Setup
+## Project Setup
 If you aren't already using Chocolately, feel free to check it out and install it here: https://chocolatey.org/
 
 First, make sure you have installed Python 3 on your system. This is easy as running:
@@ -89,14 +89,10 @@ Once everything is installed, run the following in the main checkout directory o
 
 All installed packages are copied into the _packages_ folder. This includes the Python include files from the local Python installation.
 
-### Setup with Game
+## Setup with Game
 TODO
 
-### Notes
-* A lib file for Python must be created from the python38.def file in the libs folder
-    * To do this, impdef is required. TODO add exact commands
-* Small changes to the Pybind11 headers are needed for things to compile
-    * TODO add the two lines which need to be commented out.
+## Notes
 * Everything is work in progress, including the documentation.
     * More detailed explanations of how this module works and the exposed API will be added over time.
 * All of the exe details for each game get stored in functions.json. Right now, only Starsiege 1.0003r has been added.
