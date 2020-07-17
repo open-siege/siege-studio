@@ -69,14 +69,6 @@ See https://github.com/matthew-rindel/darkstar-hook/blob/master/progress-and-roa
 ## Project Setup
 If you aren't already using Chocolately, feel free to check it out and install it here: https://chocolatey.org/
 
-First, make sure you have installed Python 3 on your system. This is easy as running:
-
-``choco install python3 --x86``
-
-The default installation directory is *C:\Python38-32*, and there is an _include_ folder inside there with all of the Python C headers, which are required by this project.
- 
-If the directory is somewhere else, update the pythonIncludeDir in local-config.json to point to the include folder.
-
 Conan is required to install the project dependencies (except for Python - at the moment)
 
 If you don't already have it, just run:
