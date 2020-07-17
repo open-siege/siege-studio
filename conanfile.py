@@ -10,11 +10,6 @@ class DarkstarHookConan(ConanFile):
     def imports(self):
         self.copy("*", src="@includedirs", dst="packages/include")
 
-        with open("local-config.json", "r") as localConfigFile:
-            localConfig = json.loads(localConfigFile.read())
-
-        #self.copy("*", src=, dst="packages/include")
-
         # There is an internal issue with the library implementation for
         # C++ Builder, which prevents detail::all_of<is_valid_class_option<options>...>::value
         # from evaluating correctly even though the template arguments are correct.
@@ -28,6 +23,9 @@ class DarkstarHookConan(ConanFile):
             pybind11.writelines(lines)
 
         # Download the source package for Python then copy the headers.
+        with open("local-config.json", "r") as localConfigFile:
+            localConfig = json.loads(localConfigFile.read())
+
         pythonSrcFile = os.path.split(localConfig["pythonSrcPackage"])[-1]
         pythonFolderName = ".".join(pythonSrcFile.split(".")[:-1])
         pythonSrcFile = f"tmp/{pythonSrcFile}"
