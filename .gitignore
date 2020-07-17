@@ -57,6 +57,7 @@ x64/
 x86/
 src/darkstar/bin
 packages/
+tmp/
 
 conanbuildinfo.txt
 conanbuildinfo.json
