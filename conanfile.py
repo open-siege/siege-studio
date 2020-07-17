@@ -1,4 +1,5 @@
-from conans import ConanFile
+from conans import ConanFile, tools
+import os.path
 import json
 
 class DarkstarHookConan(ConanFile):
@@ -7,12 +8,12 @@ class DarkstarHookConan(ConanFile):
     generators = "json"
 
     def imports(self):
-        self.copy("*", dst="packages/include", src="@includedirs")
+        self.copy("*", src="@includedirs", dst="packages/include")
 
         with open("local-config.json", "r") as localConfigFile:
             localConfig = json.loads(localConfigFile.read())
 
-        self.copy("*", dst="packages/include", src=localConfig["pythonIncludeDir"])
+        #self.copy("*", src=, dst="packages/include")
 
         # There is an internal issue with the library implementation for
         # C++ Builder, which prevents detail::all_of<is_valid_class_option<options>...>::value
@@ -25,4 +26,19 @@ class DarkstarHookConan(ConanFile):
             lines[1059 - 1] = f"//{lines[1059 - 1]}"
             lines[1060 - 1] = f"//{lines[1060 - 1]}"
             pybind11.writelines(lines)
+
+        # Download the source package for Python then copy the headers.
+        pythonSrcFile = os.path.split(localConfig["pythonSrcPackage"])[-1]
+        pythonFolderName = ".".join(pythonSrcFile.split(".")[:-1])
+        pythonSrcFile = f"tmp/{pythonSrcFile}"
+
+        if not os.path.exists(pythonSrcFile):
+            tools.download(localConfig["pythonSrcPackage"], pythonSrcFile)
+
+        tools.unzip(pythonSrcFile, "tmp", pattern=f"{pythonFolderName}/Include/*")
+        tools.unzip(pythonSrcFile, "tmp", pattern=f"{pythonFolderName}/PC/*")
+
+        self.copy("*.h", src=os.path.abspath(f"tmp/{pythonFolderName}/Include"), dst="packages/include")
+        self.copy("*.h", src=os.path.abspath(f"tmp/{pythonFolderName}/PC"), dst="packages/include")
+        tools.rmdir(f"tmp/{pythonFolderName}")
 
