@@ -67,9 +67,7 @@ See https://github.com/matthew-rindel/darkstar-hook/blob/master/progress-and-roa
 * nlohmann_json 3.8.0
 
 ## Project Setup
-If you aren't already using Chocolately, feel free to check it out and install it here: https://chocolatey.org/
-
-Conan is required to install the project dependencies (except for Python - at the moment)
+Conan is required to install the project dependencies.
 
 If you don't already have it, just run:
 
