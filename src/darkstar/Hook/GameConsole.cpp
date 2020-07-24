@@ -3,7 +3,6 @@
 #include <utility>
 #include "Core/EngineFunctions.hpp"
 #include "Core/EngineExternalTypes.hpp"
-#include "Python/PythonTypes.hpp"
 #include "Hook/GameConsole.hpp"
 #include "Hook/ConsoleWrappers.hpp"
 
@@ -95,31 +94,6 @@ namespace Hook
     void GameConsole::addCommandFunc(int id, const std::string& name, Core::ConsoleCallbackFunc func, int runLevel)
     {
         _functions.AddConsoleCallbackFunc(current, id, name.c_str(), func, runLevel);
-    }
-
-    void GameConsole::addCommandExtended(int id, const std::string& name, Python::PyConsoleCallback* callback, int runLevel)
-    {
-        auto key = static_cast<Core::ExternalConsoleCallback*>(callback);
-
-        auto existingWrapper = _wrappedCallbacksByKey.find(key);
-
-        if (existingWrapper == _wrappedCallbacksByKey.end()) {
-            auto newCallback = std::make_shared<ConsoleCallbackWrapper<Python::PyConsoleCallback>>(callback);
-            _wrappedCallbacksByKey[key] = newCallback;
-            _wrappedCallbacksByName[name] = newCallback;
-
-            addCommand(id, name, newCallback.get(), runLevel);
-            return;
-        }
-
-        // If the name is new, we can reuse the same callback
-		auto wrapperByName = _wrappedCallbacksByName.find(name);
-        if (wrapperByName == _wrappedCallbacksByName.end())
-        {
-            _wrappedCallbacksByName[name] = existingWrapper->second;
-
-            addCommand(id, name, existingWrapper->second.get(), runLevel);
-        }
     }
 
     void GameConsole::addCommand(int id, const std::string& name, ConsoleCallback* callback, int runLevel)

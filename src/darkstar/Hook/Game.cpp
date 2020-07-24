@@ -3,7 +3,6 @@
 #include <utility>
 #include "Core/EngineFunctions.hpp"
 #include "Core/EngineExternalTypes.hpp"
-#include "Python/PythonTypes.hpp"
 #include "Hook/Game.hpp"
 #include "Hook/GameConsole.hpp"
 
