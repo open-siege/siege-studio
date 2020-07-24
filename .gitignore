@@ -37,6 +37,7 @@
 *.pdb
 *.tlog
 *.idb
+*.lastbuildstate
 
 mem.res
 *.cbproj.local
@@ -58,9 +59,11 @@ x86/
 src/darkstar/bin
 packages/
 tmp/
+bin/
 
 conanbuildinfo.txt
 conanbuildinfo.json
+conan_build.props
 conan_imports_manifest.txt
 graph_info.json
 conaninfo.txt

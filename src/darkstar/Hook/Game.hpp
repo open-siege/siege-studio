@@ -6,7 +6,6 @@
 #include <utility>
 #include "Core/EngineFunctions.hpp"
 #include "Core/EngineExternalTypes.hpp"
-#include "Python/PythonTypes.hpp"
 #include "Hook/Plugins/StarsiegePlugins.hpp"
 
 namespace Hook
@@ -18,7 +17,6 @@ namespace Hook
 	using ConsoleCallback = Core::ConsoleCallback;
 	using ConsoleCallbackFunc = Core::ConsoleCallbackFunc;
 	using ExternalConsoleCallback = Core::ExternalConsoleCallback;
-	using PyConsoleCallback = Python::PyConsoleCallback;
 
 	class GameConsole;
 

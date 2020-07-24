@@ -1,1 +1,0 @@
-implib -a libs\python38.lib libs\python38.def

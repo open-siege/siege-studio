@@ -79,6 +79,12 @@ Once everything is installed, run the following in the main checkout directory o
 
 All installed packages are copied into the _packages_ folder. This includes the Python include files from the local Python installation.
 
+To compile the project, simply use:
+
+``conan build .``
+
+TODO add more information about the build targets.
+
 ## Setup with Game
 TODO
 

@@ -90,8 +90,6 @@ namespace Hook {
 
         void addCommandFunc(int id, const std::string &name, Core::ConsoleCallbackFunc func, int runLevel = 0);
 
-		void addCommandExtended(int id, const std::string &name, Python::PyConsoleCallback *callback, int runLevel = 0);
-
         void addCommand(int id, const std::string &name, Core::ConsoleCallback *callback, int runLevel = 0);
 
         std::string removeCommand(const std::string &name);
