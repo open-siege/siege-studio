@@ -51,7 +51,7 @@ namespace Core
 	};
 
 
-	GameFunctions loadFunctions(std::string functionsFileName = "functions.json")
+	inline GameFunctions loadFunctions(std::string functionsFileName = "functions.json")
 	{
 		std::ifstream fileStream(functionsFileName);
 		std::string str((std::istreambuf_iterator<char>(fileStream)),

@@ -47,7 +47,7 @@ namespace Hook
 
 		result.reserve(rawArray->capacity);
 
-		for (int i = 0; i < rawArray->size; i++)
+		for (decltype(rawArray->size) i = 0; i < rawArray->size; i++)
 		{
 			result.push_back(rawArray->data[i]);
 		}
