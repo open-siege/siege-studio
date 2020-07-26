@@ -4,13 +4,13 @@
 #include <utility>
 #include <optional>
 #include <string>
-#include "Plugins\GamePluginWrapper.hpp"
+#include "Hook/Plugins/GamePluginWrapper.hpp"
 
 namespace Hook::Plugins
 {
     constexpr const char* toString(bool someValue)
     {
-        return someValue == true ? "True" : "False";
+        return someValue ? "True" : "False";
     }
 
     constexpr const char* toIntString(bool someValue)
@@ -38,7 +38,7 @@ namespace Hook::Plugins
         return toBool(std::string_view{someRawValue});
     }
 
-    std::optional<bool> toOptionalBool(const char* someRawValue)
+    inline std::optional<bool> toOptionalBool(const char* someRawValue)
     {
         if (someRawValue == nullptr)
         {
@@ -54,7 +54,7 @@ namespace Hook::Plugins
         return plugin->executeCallback(plugin->console, callbackId, Size, args);
     }
 
-    const char* execute(Core::GamePlugin* plugin, std::int32_t callbackId, std::vector<const char*>& args)
+    inline const char* execute(Core::GamePlugin* plugin, std::int32_t callbackId, std::vector<const char*>& args)
     {
         return plugin->executeCallback(plugin->console, callbackId, args.size(), args.data());
     }
