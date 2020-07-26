@@ -28,5 +28,3 @@ Current Usage
 Writes out someFile.obj
 
 Inspired by a DTS converter for Earthsiege 2 (https://github.com/booto/convert_dts)
-
-The inner workings of the file format gleaned from (https://github.com/jamesu/TribesViewer) and (https://github.com/AltimorTASDK/TribesRebirth)
