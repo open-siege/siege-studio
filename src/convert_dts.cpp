@@ -27,6 +27,11 @@ std::vector<std::byte> read_string(std::vector<std::byte>::iterator& iterator, s
 template <typename destination_type>
 std::vector<destination_type> read_vector(std::vector<std::byte>::iterator& iterator, std::size_t size)
 {
+    if (size == 0)
+    {
+        return {};
+    }
+
     std::vector<destination_type> dest(size);
     std::copy(iterator, iterator + sizeof(destination_type) * size, reinterpret_cast<std::byte*>(&dest[0]));
     std::advance(iterator, sizeof(destination_type) * size);
@@ -55,6 +60,25 @@ destination_type read(std::vector<std::byte>::iterator& iterator)
     return dest;
 }
 
+dts::tag_header read_file_header(std::vector<std::byte>::iterator& cursor)
+{
+    dts::tag_header file_header =
+            {
+                    read<sizeof(dts::file_tag)>(cursor),
+                    read<dts::file_info>(cursor)
+            };
+
+    if (file_header.tag != dts::pers_tag)
+    {
+        throw std::invalid_argument("The file provided does not have the appropriate tag to be a Darkstar DTS file.");
+    }
+
+    file_header.class_name = read_string(cursor, file_header.file_info.class_name_length);
+    file_header.version = read<dts::version>(cursor);
+
+    return file_header;
+}
+
 int main(int argc, const char** argv)
 {
     if (argc > 1)
@@ -68,19 +92,7 @@ int main(int argc, const char** argv)
 
         auto cursor = file_buffer.begin();
 
-        dts::tag_header file_header =
-        {
-                read<sizeof(dts::file_tag)>(cursor),
-                read<dts::file_info>(cursor)
-        };
-
-        if (file_header.tag != dts::pers_tag)
-        {
-            throw std::invalid_argument("The file provided does not have the appropriate tag to be a Darkstar DTS file.");
-        }
-
-        file_header.class_name = read_string(cursor, file_header.file_info.class_name_length);
-        file_header.version = read<dts::version>(cursor);
+        dts::tag_header file_header = read_file_header(cursor);
 
         auto header = read<dts::shape::v7::header>(cursor);
         dts::shape_v7 shape
@@ -100,10 +112,36 @@ int main(int argc, const char** argv)
             read<dts::shape::v7::footer>(cursor)
         };
 
+        shape.meshes.reserve(header.num_meshes);
+
         for (int i = 0; i < header.num_meshes; ++i)
         {
+            auto mesh_tag_header = read_file_header(cursor);
+            auto mesh_header = read<dts::mesh::v3::header>(cursor);
 
+            std::cerr << "num_verts " << mesh_header.num_verts << std::endl;
+            std::cerr << "num_texture_verts " << mesh_header.num_texture_verts << std::endl;
+            std::cerr << "num_faces " << mesh_header.num_faces << std::endl;
+
+            assert(mesh_header.num_verts < 65000);
+            assert(mesh_header.num_texture_verts < 65000);
+
+            std::cerr << (char*)&mesh_tag_header.class_name[0] << std::endl;
+            dts::mesh_v3 mesh {
+                    mesh_header,
+                    read_vector<dts::mesh::v3::vertex>(cursor, mesh_header.num_verts),
+                    read_vector<dts::mesh::v3::texture_vertex>(cursor, mesh_header.num_texture_verts),
+                    read_vector<dts::mesh::v3::face>(cursor, mesh_header.num_faces),
+                    read_vector<dts::mesh::v3::frame>(cursor, mesh_header.num_frames)
+            };
+
+            shape.meshes.push_back(mesh);
         }
+
+        // TODO fix material list parsing and get that working
+        //auto material_list_header = read_file_header(cursor);
+
+        std::cerr << (char*)&material_list_header.class_name[0] << std::endl;
 
         std::cout << shape.footer.always_node << " " << shape.footer.num_default_materials << '\n';
 

@@ -7,7 +7,6 @@
 namespace darkstar::dts
 {
     namespace endian = boost::endian;
-
     using file_tag = std::array<std::byte, 4>;
 
     constexpr file_tag to_tag(const std::array<std::uint8_t, 4> values)
@@ -239,10 +238,46 @@ namespace darkstar::dts
             float origin_z;
         };
 
-
-
         static_assert(sizeof(vertex) == sizeof(std::int32_t));
     }
+
+    namespace material_list::v3
+    {
+        struct header
+        {
+            endian::little_int32_t num_details;
+            endian::little_int32_t num_materials;
+        };
+
+        struct material
+        {
+            endian::little_int32_t flags;
+            float alpha;
+            endian::little_int32_t index;
+            std::uint8_t red;
+            std::uint8_t green;
+            std::uint8_t blue;
+            std::uint8_t rgb_flags;
+        };
+
+        using material_name = std::array<std::byte, 32>;
+
+        struct footer
+        {
+            endian::little_int32_t type;
+            float elasticity;
+            float friction;
+        };
+    }
+
+    struct mesh_v3
+    {
+        mesh::v3::header header;
+        std::vector<mesh::v3::vertex> vertices;
+        std::vector<mesh::v3::texture_vertex> texture_vertices;
+        std::vector<mesh::v3::face> faces;
+        std::vector<mesh::v3::frame> frames;
+    };
 
     struct shape_v7
     {
@@ -259,7 +294,7 @@ namespace darkstar::dts
         std::vector<shape::v7::transition> transitions;
         std::vector<shape::v7::frame_trigger> frame_triggers;
         shape::v7::footer footer;
-        std::vector<mesh::mesh> meshes;
+        std::vector<mesh_v3> meshes;
     };
 }
 
