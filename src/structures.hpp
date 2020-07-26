@@ -187,6 +187,8 @@ namespace darkstar::dts
             endian::little_int32_t num_default_materials;
             endian::little_int32_t always_node;
         };
+
+        using has_material_list_flag = endian::little_int32_t;
     }
 
     namespace mesh::v3

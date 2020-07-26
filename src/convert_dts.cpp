@@ -139,9 +139,13 @@ int main(int argc, const char** argv)
         }
 
         // TODO fix material list parsing and get that working
-        //auto material_list_header = read_file_header(cursor);
+        if (auto has_material_list = read<dts::shape::v7::has_material_list_flag>(cursor); has_material_list == 1)
+        {
+            auto material_list_header = read_file_header(cursor);
 
-        std::cerr << (char*)&material_list_header.class_name[0] << std::endl;
+            std::cout << (char*)&material_list_header.class_name[0] << std::endl;
+            std::cout << material_list_header.version << std::endl;
+        }
 
         std::cout << shape.footer.always_node << " " << shape.footer.num_default_materials << '\n';
 
