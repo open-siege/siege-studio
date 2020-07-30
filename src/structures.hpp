@@ -65,15 +65,6 @@ namespace darkstar::dts
 
     static_assert(sizeof(quaternion4s) == sizeof(std::array<endian::little_int16_t, 4>));
 
-    namespace mesh
-    {
-        struct mesh
-        {
-
-        };
-
-    }
-
     namespace shape::v7
     {
         struct header
@@ -278,6 +269,12 @@ namespace darkstar::dts
         std::vector<mesh::v3::frame> frames;
     };
 
+    struct material_list_v3
+    {
+        material_list::v3::header header;
+        std::vector<material_list::v3::material> materials;
+    };
+
     struct shape_v7
     {
         shape::v7::header header;
@@ -294,6 +291,8 @@ namespace darkstar::dts
         std::vector<shape::v7::frame_trigger> frame_triggers;
         shape::v7::footer footer;
         std::vector<mesh_v3> meshes;
+
+        material_list_v3 material_list;
     };
 }
 

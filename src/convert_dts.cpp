@@ -64,7 +64,7 @@ destination_type read(std::vector<std::byte>::iterator& iterator)
     return dest;
 }
 
-dts::tag_header read_file_header(std::vector<std::byte>::iterator& cursor)
+dts::tag_header read_object_header(std::vector<std::byte>::iterator& cursor)
 {
     dts::tag_header file_header =
             {
@@ -96,7 +96,7 @@ int main(int argc, const char** argv)
 
         auto cursor = file_buffer.begin();
 
-        dts::tag_header file_header = read_file_header(cursor);
+        dts::tag_header file_header = read_object_header(cursor);
 
         if (file_header.version != 7)
         {
@@ -128,18 +128,11 @@ int main(int argc, const char** argv)
 
         for (int i = 0; i < header.num_meshes; ++i)
         {
-            auto mesh_tag_header = read_file_header(cursor);
+            auto mesh_tag_header = read_object_header(cursor);
             auto mesh_header = read<dts::mesh::v3::header>(cursor);
 
-            std::cerr << "num_verts " << mesh_header.num_verts << std::endl;
-            std::cerr << "num_texture_verts " << mesh_header.num_texture_verts << std::endl;
-            std::cerr << "num_faces " << mesh_header.num_faces << std::endl;
-
-            assert(mesh_header.num_verts < 65000);
-            assert(mesh_header.num_texture_verts < 65000);
-
-            std::cerr << (char*)&mesh_tag_header.class_name[0] << std::endl;
-            dts::mesh_v3 mesh {
+            dts::mesh_v3 mesh
+            {
                     mesh_header,
                     read_vector<dts::mesh::v3::vertex>(cursor, mesh_header.num_verts),
                     read_vector<dts::mesh::v3::texture_vertex>(cursor, mesh_header.num_texture_verts),
@@ -150,59 +143,19 @@ int main(int argc, const char** argv)
             shape.meshes.push_back(mesh);
         }
 
-        // TODO fix material list parsing and get that working
         if (auto has_material_list = read<dts::shape::v7::has_material_list_flag>(cursor); has_material_list == 1)
         {
-            auto material_list_header = read_file_header(cursor);
+            auto object_header = read_object_header(cursor);
+
             auto main_header = read<dts::material_list::v3::header>(cursor);
 
-            std::cout << (char*)&material_list_header.class_name[0] << std::endl;
-            std::cout << material_list_header.version << std::endl;
-            std::cout << "Number of details " << main_header.num_details << std::endl;
-            std::cout << "Number of materials " <<  main_header.num_materials << std::endl;
-
-            auto materials = read_vector<dts::material_list::v3::material>(cursor, main_header.num_materials);
-
-            for(const auto& material : materials)
+            shape.material_list =
             {
-                std::cout << material.alpha << std::endl;
-                std::cout << (int)material.red << std::endl;
-                std::cout << (int)material.green << std::endl;
-                std::cout << (int)material.blue << std::endl;
-                std::cout << material.elasticity << std::endl;
-                std::cout << material.friction << std::endl;
-                std::cout << (char*)&material.file_name[0] << std::endl;
-            }
-
-            std::cout << "Number of bytes remaining " << file_buffer.end() - cursor << std::endl;
+                main_header,
+                read_vector<dts::material_list::v3::material>(cursor, main_header.num_materials * main_header.num_details)
+            };
         }
 
-        std::cout << shape.footer.always_node << " " << shape.footer.num_default_materials << '\n';
-
-        std::cout << shape.transforms.back().scale.x << " " << shape.transforms[0].scale.y << '\n';
-
-        std::cout << (char*)&shape.names.back() << '\n';
-
-        for (auto& byte : file_header.tag)
-        {
-            std::cout << (char)byte << '\n';
-        }
-
-        std::cout << file_header.version << '\n';
-        std::cout << (char*)&file_header.class_name[0] << '\n';
-
-        std::cout << shape.header.num_nodes << '\n';
-
-        std::cout << shape.nodes[0].num_sub_sequences << '\n';
-
-        std::cout << shape.sequences[0].name_index << '\n';
-
-        std::cout << shape.data.radius << '\n';
-
-        std::cout << "Main file is " << file_header.file_info.file_length << " bytes in size\n";
-        std::cout << "Class name length is " << file_header.file_info.class_name_length << " bytes in size\n";
-
-        std::cout << "The file size of " << argv[0] << " is: " << file_size << '\n';
     }
 
     return 0;
