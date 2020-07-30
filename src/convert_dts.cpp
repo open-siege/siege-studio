@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iterator>
 #include <vector>
+#include <sstream>
 #include <filesystem>
 #include <boost/endian/arithmetic.hpp>
 #include "structures.hpp"
@@ -11,12 +12,15 @@ namespace dts = darkstar::dts;
 
 std::vector<std::byte> read_string(std::vector<std::byte>::iterator& iterator, std::size_t size)
 {
+    std::vector<std::byte> dest(size + 1, std::byte('\0'));
+
+    // There is always an embedded \0 in the
+    // file if the string length is less than 16 bytes.
     if (size < 16)
     {
         size++;
     }
 
-    std::vector<std::byte> dest(size);
     std::copy(iterator, iterator + size, dest.begin());
     std::advance(iterator, size);
 
@@ -94,7 +98,15 @@ int main(int argc, const char** argv)
 
         dts::tag_header file_header = read_file_header(cursor);
 
+        if (file_header.version != 7)
+        {
+            std::stringstream error;
+            error << file_name << " is DTS version " << file_header.version + " which is not currently supported.";
+            throw std::invalid_argument(error.str());
+        }
+
         auto header = read<dts::shape::v7::header>(cursor);
+
         dts::shape_v7 shape
         {
             header,
@@ -142,9 +154,27 @@ int main(int argc, const char** argv)
         if (auto has_material_list = read<dts::shape::v7::has_material_list_flag>(cursor); has_material_list == 1)
         {
             auto material_list_header = read_file_header(cursor);
+            auto main_header = read<dts::material_list::v3::header>(cursor);
 
             std::cout << (char*)&material_list_header.class_name[0] << std::endl;
             std::cout << material_list_header.version << std::endl;
+            std::cout << "Number of details " << main_header.num_details << std::endl;
+            std::cout << "Number of materials " <<  main_header.num_materials << std::endl;
+
+            auto materials = read_vector<dts::material_list::v3::material>(cursor, main_header.num_materials);
+
+            for(const auto& material : materials)
+            {
+                std::cout << material.alpha << std::endl;
+                std::cout << (int)material.red << std::endl;
+                std::cout << (int)material.green << std::endl;
+                std::cout << (int)material.blue << std::endl;
+                std::cout << material.elasticity << std::endl;
+                std::cout << material.friction << std::endl;
+                std::cout << (char*)&material.file_name[0] << std::endl;
+            }
+
+            std::cout << "Number of bytes remaining " << file_buffer.end() - cursor << std::endl;
         }
 
         std::cout << shape.footer.always_node << " " << shape.footer.num_default_materials << '\n';

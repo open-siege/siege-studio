@@ -260,12 +260,9 @@ namespace darkstar::dts
             std::uint8_t green;
             std::uint8_t blue;
             std::uint8_t rgb_flags;
-        };
 
-        using material_name = std::array<std::byte, 32>;
+            std::array<std::byte, 32> file_name;
 
-        struct footer
-        {
             endian::little_int32_t type;
             float elasticity;
             float friction;
