@@ -1,12 +1,13 @@
 #ifndef DARKSTARDTSCONVERTER_STRUCTURES_HPP
 #define DARKSTARDTSCONVERTER_STRUCTURES_HPP
 
-#include <boost/endian/arithmetic.hpp>
+#include "json_boost.hpp"
 #include <array>
 
 namespace darkstar::dts
 {
     namespace endian = boost::endian;
+    using json = nlohmann::json;
     using file_tag = std::array<std::byte, 4>;
 
     constexpr file_tag to_tag(const std::array<std::uint8_t, 4> values)
@@ -46,6 +47,7 @@ namespace darkstar::dts
     };
 
     static_assert(sizeof(vector3f) == sizeof(std::array<float, 3>));
+    NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(vector3f, x, y, z);
 
     struct quaternion4s
     {
@@ -54,6 +56,8 @@ namespace darkstar::dts
         endian::little_int16_t z;
         endian::little_int16_t w;
     };
+
+    NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(quaternion4s, x, y, z, w);
 
     struct quaternion4f
     {
@@ -64,6 +68,8 @@ namespace darkstar::dts
     };
 
     static_assert(sizeof(quaternion4s) == sizeof(std::array<endian::little_int16_t, 4>));
+    NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(quaternion4f, x, y, z, w);
+
 
     namespace shape::v7
     {
@@ -82,11 +88,16 @@ namespace darkstar::dts
             endian::little_int32_t num_frame_triggers;
         };
 
+        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(header, num_nodes, num_sequences, num_sub_sequences, num_key_frames,
+                num_transforms, num_names, num_objects, num_details, num_meshes, num_transitions, num_frame_triggers)
+
         struct data
         {
             float radius;
             vector3f centre;
         };
+
+        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(data, radius, centre);
 
         static_assert(sizeof(data) == sizeof(std::array<float, 4>));
 
@@ -98,6 +109,8 @@ namespace darkstar::dts
             endian::little_int32_t first_sub_sequence;
             endian::little_int32_t default_transform;
         };
+
+        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(node, name, parent, num_sub_sequences, first_sub_sequence, default_transform)
 
         struct sequence
         {
@@ -111,12 +124,17 @@ namespace darkstar::dts
             endian::little_int32_t first_ifl_sub_sequence;
         };
 
+        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(sequence, name_index, cyclic, duration, priority, first_frame_trigger,
+                num_frame_triggers, num_ifl_sub_sequences, first_ifl_sub_sequence)
+
         struct sub_sequence
         {
             endian::little_int32_t sequence_index;
             endian::little_int32_t num_key_frames;
             endian::little_int32_t first_key_frame;
         };
+
+        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(sub_sequence, sequence_index, num_key_frames, first_key_frame)
 
         struct keyframe
         {
@@ -125,6 +143,8 @@ namespace darkstar::dts
             endian::little_uint32_t mat_index;
         };
 
+        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(keyframe, position, key_value, mat_index)
+
         struct transform
         {
             quaternion4s rotation;
@@ -132,9 +152,11 @@ namespace darkstar::dts
             vector3f scale;
         };
 
+        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(transform, rotation, translation, scale)
+
         static_assert(sizeof(transform) == sizeof(std::array<std::int32_t, 8>));
 
-        using name = std::array<std::byte, 24>;
+        using name = std::array<char, 24>;
 
         struct object
         {
@@ -149,11 +171,15 @@ namespace darkstar::dts
             endian::little_int32_t first_sub_sequences;
         };
 
+        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(object, name_index, flags, mesh_index, node_index, dep_flags, dep, object_offset, num_sub_sequences, first_sub_sequences)
+
         struct detail
         {
             endian::little_int32_t name_index;
             float size;
         };
+
+        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(detail, name_index, size)
 
         struct transition
         {
@@ -167,17 +193,23 @@ namespace darkstar::dts
             vector3f scale;
         };
 
+        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(transition, start_sequence, end_sequence, start_position, end_position, duration, rotation, translation, scale)
+
         struct frame_trigger
         {
             float position;
             float value;
         };
 
+        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(frame_trigger, position, value)
+
         struct footer
         {
             endian::little_int32_t num_default_materials;
             endian::little_int32_t always_node;
         };
+
+        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(footer, num_default_materials, always_node)
 
         using has_material_list_flag = endian::little_int32_t;
     }
@@ -195,6 +227,9 @@ namespace darkstar::dts
             float radius;
         };
 
+        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(header, num_verts, verts_per_frame, num_texture_verts, num_faces,
+                num_frames, texture_verts_per_frame, radius)
+
         struct vertex
         {
             std::uint8_t x;
@@ -203,11 +238,16 @@ namespace darkstar::dts
             std::uint8_t normal;
         };
 
+        static_assert(sizeof(vertex) == sizeof(std::int32_t));
+        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(vertex, x, y, z, normal)
+
         struct texture_vertex
         {
             float x;
             float y;
         };
+
+        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(texture_vertex, x, y)
 
         struct face
         {
@@ -220,6 +260,8 @@ namespace darkstar::dts
             endian::little_int32_t material;
         };
 
+        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(face, vi1, ti1, vi2, ti2, vi3, ti3, material)
+
         struct frame
         {
             endian::little_int32_t first_vert;
@@ -231,7 +273,7 @@ namespace darkstar::dts
             float origin_z;
         };
 
-        static_assert(sizeof(vertex) == sizeof(std::int32_t));
+        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(frame, first_vert, scale_x, scale_y, scale_z, origin_x, origin_y, origin_z)
     }
 
     namespace material_list::v3
@@ -242,22 +284,33 @@ namespace darkstar::dts
             endian::little_int32_t num_materials;
         };
 
+        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(header, num_details, num_materials)
+
+        struct rgb_data
+        {
+            std::uint8_t red;
+            std::uint8_t green;
+            std::uint8_t blue;
+            std::uint8_t rgb_flags;
+        };
+
+        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(rgb_data, red, green, blue, rgb_flags)
+
         struct material
         {
             endian::little_int32_t flags;
             float alpha;
             endian::little_int32_t index;
-            std::uint8_t red;
-            std::uint8_t green;
-            std::uint8_t blue;
-            std::uint8_t rgb_flags;
+            rgb_data rgb_data;
 
-            std::array<std::byte, 32> file_name;
+            std::array<char, 32> file_name;
 
             endian::little_int32_t type;
             float elasticity;
             float friction;
         };
+
+        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(material, flags, alpha, index, rgb_data, file_name, type, elasticity, friction)
     }
 
     struct mesh_v3
@@ -269,11 +322,15 @@ namespace darkstar::dts
         std::vector<mesh::v3::frame> frames;
     };
 
+    NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(mesh_v3, header, vertices, texture_vertices, faces, frames)
+
     struct material_list_v3
     {
         material_list::v3::header header;
         std::vector<material_list::v3::material> materials;
     };
+
+    NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(material_list_v3, header, materials)
 
     struct shape_v7
     {
@@ -294,6 +351,9 @@ namespace darkstar::dts
 
         material_list_v3 material_list;
     };
+
+    NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(shape_v7, header, data, nodes, sequences, sub_sequences, keyframes, transforms,
+                    names, objects, details, transitions, frame_triggers, footer, meshes, material_list)
 }
 
 #endif //DARKSTARDTSCONVERTER_STRUCTURES_HPP

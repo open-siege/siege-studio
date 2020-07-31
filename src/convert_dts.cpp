@@ -87,7 +87,7 @@ int main(int argc, const char** argv)
 {
     if (argc > 1)
     {
-        std::string_view file_name = argv[1];
+        std::string file_name = argv[1];
         auto file_size = fs::file_size(file_name);
         std::vector<std::byte> file_buffer(file_size);
         std::basic_ifstream<std::byte> input(file_name, std::ios::binary);
@@ -156,6 +156,11 @@ int main(int argc, const char** argv)
             };
         }
 
+        nlohmann::ordered_json someone_as_json = shape;
+
+        auto new_file_name = file_name.substr(0, file_name.rfind(".")) + ".json";
+        std::ofstream someone_as_file(new_file_name, std::ios::trunc);
+        someone_as_file << someone_as_json.dump(4);
     }
 
     return 0;
