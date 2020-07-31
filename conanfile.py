@@ -3,7 +3,7 @@ from conans import ConanFile, CMake, tools
 class LocalConanFile(ConanFile):
     build_requires = "cmake/3.17.3"
     settings = "os", "compiler", "build_type", "arch"
-    requires = "boost_endian/1.69.0@bincrafters/stable"
+    requires = "boost_endian/1.69.0@bincrafters/stable", "nlohmann_json/3.9.0"
     generators = "cmake"
     build_folder = "build"
 
