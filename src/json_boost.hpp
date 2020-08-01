@@ -6,9 +6,6 @@
 #include <boost/endian/arithmetic.hpp>
 #include <nlohmann/json.hpp>
 
-#define NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(Type, ...)  \
-    inline void to_json(nlohmann::ordered_json& nlohmann_json_j, const Type& nlohmann_json_t) { NLOHMANN_JSON_EXPAND(NLOHMANN_JSON_PASTE(NLOHMANN_JSON_TO, __VA_ARGS__)) }
-
 namespace nlohmann {
     template<std::size_t Size>
     struct adl_serializer<std::array<char, Size>> {
@@ -43,19 +40,6 @@ namespace nlohmann {
     };
 }
 
-namespace darkstar {
-    template<std::size_t Size>
-    constexpr std::array<std::string_view, Size> make_keys(const char *(&&keys)[Size]) {
-        std::array<std::string_view, Size> result;
-        for (auto i = 0; i < Size; i++) {
-            result[i] = keys[i];
-        }
-        return result;
-    }
-
-
-}
-
 namespace darkstar::dts {
     template<typename T, typename = int>
     struct has_struct_keys : std::false_type {
@@ -65,8 +49,245 @@ namespace darkstar::dts {
     struct has_struct_keys<T, decltype((void) T::keys, 0)> : std::true_type {
     };
 
-    template<typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
-    void to_json(nlohmann::ordered_json &j, const StructType &raw) {
+    template<typename BasicJsonType, typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
+    void from_json(const BasicJsonType& json, StructType& raw) {
+        using object_t = nlohmann::json::object_t;
+
+        if constexpr (StructType::keys.size() == 1) {
+            auto& keys = StructType::keys;
+            auto& [item0] = raw;
+
+            json.at(object_t::key_type(keys[0])).get_to(item0);
+        }
+
+        if constexpr (StructType::keys.size() == 1) {
+            auto& keys = StructType::keys;
+            auto& [item0] = raw;
+
+            json.at(object_t::key_type(keys[0])).get_to(item0);
+        }
+
+        if constexpr (StructType::keys.size() == 2) {
+            auto& keys = StructType::keys;
+            auto& [item0, item1] = raw;
+
+            json.at(object_t::key_type(keys[0])).get_to(item0);
+            json.at(object_t::key_type(keys[1])).get_to(item1);
+        }
+
+        if constexpr (StructType::keys.size() == 3) {
+            auto& keys = StructType::keys;
+            auto& [item0, item1, item2] = raw;
+
+            json.at(object_t::key_type(keys[0])).get_to(item0);
+            json.at(object_t::key_type(keys[1])).get_to(item1);
+            json.at(object_t::key_type(keys[2])).get_to(item2);
+        }
+
+        if constexpr (StructType::keys.size() == 4) {
+            auto& keys = StructType::keys;
+            auto& [item0, item1, item2, item3] = raw;
+
+            json.at(object_t::key_type(keys[0])).get_to(item0);
+            json.at(object_t::key_type(keys[1])).get_to(item1);
+            json.at(object_t::key_type(keys[2])).get_to(item2);
+            json.at(object_t::key_type(keys[3])).get_to(item3);
+        }
+
+        if constexpr (StructType::keys.size() == 5) {
+            auto& keys = StructType::keys;
+            auto& [item0, item1, item2, item3, item4] = raw;
+
+            json.at(object_t::key_type(keys[0])).get_to(item0);
+            json.at(object_t::key_type(keys[1])).get_to(item1);
+            json.at(object_t::key_type(keys[2])).get_to(item2);
+            json.at(object_t::key_type(keys[3])).get_to(item3);
+            json.at(object_t::key_type(keys[4])).get_to(item4);
+        }
+
+        if constexpr (StructType::keys.size() == 6) {
+            auto& keys = StructType::keys;
+            auto& [item0, item1, item2, item3, item4, item5] = raw;
+
+            json.at(object_t::key_type(keys[0])).get_to(item0);
+            json.at(object_t::key_type(keys[1])).get_to(item1);
+            json.at(object_t::key_type(keys[2])).get_to(item2);
+            json.at(object_t::key_type(keys[3])).get_to(item3);
+            json.at(object_t::key_type(keys[4])).get_to(item4);
+            json.at(object_t::key_type(keys[5])).get_to(item5);
+        }
+
+        if constexpr (StructType::keys.size() == 7) {
+            auto& keys = StructType::keys;
+            auto& [item0, item1, item2, item3, item4, item5, item6] = raw;
+
+            json.at(object_t::key_type(keys[0])).get_to(item0);
+            json.at(object_t::key_type(keys[1])).get_to(item1);
+            json.at(object_t::key_type(keys[2])).get_to(item2);
+            json.at(object_t::key_type(keys[3])).get_to(item3);
+            json.at(object_t::key_type(keys[4])).get_to(item4);
+            json.at(object_t::key_type(keys[5])).get_to(item5);
+            json.at(object_t::key_type(keys[6])).get_to(item6);
+        }
+
+        if constexpr (StructType::keys.size() == 8) {
+            auto& keys = StructType::keys;
+            auto& [item0, item1, item2, item3, item4, item5, item6,
+                    item7] = raw;
+
+            json.at(object_t::key_type(keys[0])).get_to(item0);
+            json.at(object_t::key_type(keys[1])).get_to(item1);
+            json.at(object_t::key_type(keys[2])).get_to(item2);
+            json.at(object_t::key_type(keys[3])).get_to(item3);
+            json.at(object_t::key_type(keys[4])).get_to(item4);
+            json.at(object_t::key_type(keys[5])).get_to(item5);
+            json.at(object_t::key_type(keys[6])).get_to(item6);
+            json.at(object_t::key_type(keys[7])).get_to(item7);
+        }
+
+        if constexpr (StructType::keys.size() == 9) {
+            auto& keys = StructType::keys;
+            auto& [item0, item1, item2, item3, item4, item5, item6,
+                    item7, item8] = raw;
+
+            json.at(object_t::key_type(keys[0])).get_to(item0);
+            json.at(object_t::key_type(keys[1])).get_to(item1);
+            json.at(object_t::key_type(keys[2])).get_to(item2);
+            json.at(object_t::key_type(keys[3])).get_to(item3);
+            json.at(object_t::key_type(keys[4])).get_to(item4);
+            json.at(object_t::key_type(keys[5])).get_to(item5);
+            json.at(object_t::key_type(keys[6])).get_to(item6);
+            json.at(object_t::key_type(keys[7])).get_to(item7);
+            json.at(object_t::key_type(keys[8])).get_to(item8);
+        }
+
+        if constexpr (StructType::keys.size() == 10) {
+            const auto& keys = StructType::keys;
+            auto& [item0, item1, item2, item3, item4, item5, item6,
+                    item7, item8, item9] = raw;
+
+            json.at(object_t::key_type(keys[0])).get_to(item0);
+            json.at(object_t::key_type(keys[1])).get_to(item1);
+            json.at(object_t::key_type(keys[2])).get_to(item2);
+            json.at(object_t::key_type(keys[3])).get_to(item3);
+            json.at(object_t::key_type(keys[4])).get_to(item4);
+            json.at(object_t::key_type(keys[5])).get_to(item5);
+            json.at(object_t::key_type(keys[6])).get_to(item6);
+            json.at(object_t::key_type(keys[7])).get_to(item7);
+            json.at(object_t::key_type(keys[8])).get_to(item8);
+            json.at(object_t::key_type(keys[9])).get_to(item9);
+        }
+
+        if constexpr (StructType::keys.size() == 11) {
+            const auto& keys = StructType::keys;
+            auto& [item0, item1, item2, item3, item4, item5, item6,
+                    item7, item8, item9, item10] = raw;
+
+            json.at(object_t::key_type(keys[0])).get_to(item0);
+            json.at(object_t::key_type(keys[1])).get_to(item1);
+            json.at(object_t::key_type(keys[2])).get_to(item2);
+            json.at(object_t::key_type(keys[3])).get_to(item3);
+            json.at(object_t::key_type(keys[4])).get_to(item4);
+            json.at(object_t::key_type(keys[5])).get_to(item5);
+            json.at(object_t::key_type(keys[6])).get_to(item6);
+            json.at(object_t::key_type(keys[7])).get_to(item7);
+            json.at(object_t::key_type(keys[8])).get_to(item8);
+            json.at(object_t::key_type(keys[9])).get_to(item9);
+            json.at(object_t::key_type(keys[10])).get_to(item10);
+        }
+
+        if constexpr (StructType::keys.size() == 12) {
+            auto& keys = StructType::keys;
+            auto& [item0, item1, item2, item3, item4, item5, item6,
+                    item7, item8, item9, item10, item11] = raw;
+
+            json.at(object_t::key_type(keys[0])).get_to(item0);
+            json.at(object_t::key_type(keys[1])).get_to(item1);
+            json.at(object_t::key_type(keys[2])).get_to(item2);
+            json.at(object_t::key_type(keys[3])).get_to(item3);
+            json.at(object_t::key_type(keys[4])).get_to(item4);
+            json.at(object_t::key_type(keys[5])).get_to(item5);
+            json.at(object_t::key_type(keys[6])).get_to(item6);
+            json.at(object_t::key_type(keys[7])).get_to(item7);
+            json.at(object_t::key_type(keys[8])).get_to(item8);
+            json.at(object_t::key_type(keys[9])).get_to(item9);
+            json.at(object_t::key_type(keys[10])).get_to(item10);
+            json.at(object_t::key_type(keys[11])).get_to(item11);
+        }
+
+        if constexpr (StructType::keys.size() == 13) {
+            auto& keys = StructType::keys;
+            auto& [item0, item1, item2, item3, item4, item5, item6,
+                    item7, item8, item9, item10, item11, item12] = raw;
+
+            json.at(object_t::key_type(keys[0])).get_to(item0);
+            json.at(object_t::key_type(keys[1])).get_to(item1);
+            json.at(object_t::key_type(keys[2])).get_to(item2);
+            json.at(object_t::key_type(keys[3])).get_to(item3);
+            json.at(object_t::key_type(keys[4])).get_to(item4);
+            json.at(object_t::key_type(keys[5])).get_to(item5);
+            json.at(object_t::key_type(keys[6])).get_to(item6);
+            json.at(object_t::key_type(keys[7])).get_to(item7);
+            json.at(object_t::key_type(keys[8])).get_to(item8);
+            json.at(object_t::key_type(keys[9])).get_to(item9);
+            json.at(object_t::key_type(keys[10])).get_to(item10);
+            json.at(object_t::key_type(keys[11])).get_to(item11);
+            json.at(object_t::key_type(keys[12])).get_to(item12);
+        }
+
+        if constexpr (StructType::keys.size() == 14) {
+            auto& keys = StructType::keys;
+            auto& [item0, item1, item2, item3, item4, item5, item6,
+                    item7, item8, item9, item10, item11, item12, item13] = raw;
+
+            json.at(object_t::key_type(keys[0])).get_to(item0);
+            json.at(object_t::key_type(keys[1])).get_to(item1);
+            json.at(object_t::key_type(keys[2])).get_to(item2);
+            json.at(object_t::key_type(keys[3])).get_to(item3);
+            json.at(object_t::key_type(keys[4])).get_to(item4);
+            json.at(object_t::key_type(keys[5])).get_to(item5);
+            json.at(object_t::key_type(keys[6])).get_to(item6);
+            json.at(object_t::key_type(keys[7])).get_to(item7);
+            json.at(object_t::key_type(keys[8])).get_to(item8);
+            json.at(object_t::key_type(keys[9])).get_to(item9);
+            json.at(object_t::key_type(keys[10])).get_to(item10);
+            json.at(object_t::key_type(keys[11])).get_to(item11);
+            json.at(object_t::key_type(keys[12])).get_to(item12);
+            json.at(object_t::key_type(keys[13])).get_to(item13);
+        }
+
+        if constexpr (StructType::keys.size() == 15) {
+            const auto& keys = StructType::keys;
+            auto& [item0, item1, item2, item3, item4, item5, item6,
+            item7, item8, item9, item10, item11, item12, item13, item14] = raw;
+
+            json.at(object_t::key_type(keys[0])).get_to(item0);
+            json.at(object_t::key_type(keys[1])).get_to(item1);
+            json.at(object_t::key_type(keys[2])).get_to(item2);
+            json.at(object_t::key_type(keys[3])).get_to(item3);
+            json.at(object_t::key_type(keys[4])).get_to(item4);
+            json.at(object_t::key_type(keys[5])).get_to(item5);
+            json.at(object_t::key_type(keys[6])).get_to(item6);
+            json.at(object_t::key_type(keys[7])).get_to(item7);
+            json.at(object_t::key_type(keys[8])).get_to(item8);
+            json.at(object_t::key_type(keys[9])).get_to(item9);
+            json.at(object_t::key_type(keys[10])).get_to(item10);
+            json.at(object_t::key_type(keys[11])).get_to(item11);
+            json.at(object_t::key_type(keys[12])).get_to(item12);
+            json.at(object_t::key_type(keys[13])).get_to(item13);
+            json.at(object_t::key_type(keys[14])).get_to(item14);
+        }
+    }
+
+
+    template<typename BasicJsonType, typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
+    void to_json(BasicJsonType& j, const StructType& raw) {
+        if constexpr (StructType::keys.size() == 1) {
+            auto &keys = StructType::keys;
+            auto&[item0] = raw;
+            j = nlohmann::ordered_json{{keys[0], item0}};
+        }
+
         if constexpr (StructType::keys.size() == 2) {
             auto &keys = StructType::keys;
             auto&[item0, item1] = raw;
@@ -171,26 +392,144 @@ namespace darkstar::dts {
                                        {keys[9], item9}
             };
         }
+
+        if constexpr (StructType::keys.size() == 11) {
+            auto &keys = StructType::keys;
+            auto&[item0, item1, item2, item3, item4, item5, item6, item7, item8, item9, item10] = raw;
+            j = nlohmann::ordered_json{{keys[0], item0},
+                                       {keys[1], item1},
+                                       {keys[2], item2},
+                                       {keys[3], item3},
+                                       {keys[4], item4},
+                                       {keys[5], item5},
+                                       {keys[6], item6},
+                                       {keys[7], item7},
+                                       {keys[8], item8},
+                                       {keys[9], item9},
+                                       {keys[10], item10}
+            };
+        }
+
+        if constexpr (StructType::keys.size() == 12) {
+            auto &keys = StructType::keys;
+            auto&[item0, item1, item2, item3, item4, item5, item6,
+                  item7, item8, item9, item10, item11] = raw;
+            j = nlohmann::ordered_json{{keys[0], item0},
+                                       {keys[1], item1},
+                                       {keys[2], item2},
+                                       {keys[3], item3},
+                                       {keys[4], item4},
+                                       {keys[5], item5},
+                                       {keys[6], item6},
+                                       {keys[7], item7},
+                                       {keys[8], item8},
+                                       {keys[9], item9},
+                                       {keys[10], item10},
+                                       {keys[11], item11}
+            };
+        }
+
+        if constexpr (StructType::keys.size() == 13) {
+            auto& keys = StructType::keys;
+            auto& [item0, item1, item2, item3, item4, item5, item6,
+                  item7, item8, item9, item10, item11, item12] = raw;
+            j = nlohmann::ordered_json{{keys[0], item0},
+                                       {keys[1], item1},
+                                       {keys[2], item2},
+                                       {keys[3], item3},
+                                       {keys[4], item4},
+                                       {keys[5], item5},
+                                       {keys[6], item6},
+                                       {keys[7], item7},
+                                       {keys[8], item8},
+                                       {keys[9], item9},
+                                       {keys[10], item10},
+                                       {keys[11], item11},
+                                       {keys[12], item12}
+            };
+        }
+
+        if constexpr (StructType::keys.size() == 14) {
+            auto& keys = StructType::keys;
+            auto& [item0, item1, item2, item3, item4, item5, item6,
+            item7, item8, item9, item10, item11, item12, item13] = raw;
+            j = nlohmann::ordered_json{{keys[0], item0},
+                                       {keys[1], item1},
+                                       {keys[2], item2},
+                                       {keys[3], item3},
+                                       {keys[4], item4},
+                                       {keys[5], item5},
+                                       {keys[6], item6},
+                                       {keys[7], item7},
+                                       {keys[8], item8},
+                                       {keys[9], item9},
+                                       {keys[10], item10},
+                                       {keys[11], item11},
+                                       {keys[12], item12},
+                                       {keys[13], item13}
+            };
+        }
+
+        if constexpr (StructType::keys.size() == 15) {
+            auto& keys = StructType::keys;
+            auto& [item0, item1, item2, item3, item4, item5, item6,
+            item7, item8, item9, item10, item11, item12, item13, item14] = raw;
+            j = nlohmann::ordered_json{{keys[0], item0},
+                                       {keys[1], item1},
+                                       {keys[2], item2},
+                                       {keys[3], item3},
+                                       {keys[4], item4},
+                                       {keys[5], item5},
+                                       {keys[6], item6},
+                                       {keys[7], item7},
+                                       {keys[8], item8},
+                                       {keys[9], item9},
+                                       {keys[10], item10},
+                                       {keys[11], item11},
+                                       {keys[12], item12},
+                                       {keys[13], item13},
+                                       {keys[14], item14}
+            };
+        }
     }
 
     namespace shape::v7 {
-        template<typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
-        void to_json(nlohmann::ordered_json &j, const StructType &raw) {
+        template<typename BasicJsonType, typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
+        void to_json(BasicJsonType &j, const StructType &raw)
+        {
             darkstar::dts::to_json(j, raw);
+        }
+
+        template<typename BasicJsonType, typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
+        void from_json(const BasicJsonType& json, StructType& raw)
+        {
+            darkstar::dts::from_json(json, raw);
         }
     }
 
     namespace mesh::v3 {
-        template<typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
-        void to_json(nlohmann::ordered_json &j, const StructType &raw) {
-            darkstar::dts::to_json(j, raw);
+        template<typename BasicJsonType, typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
+        void to_json(BasicJsonType &json, const StructType &raw) {
+            darkstar::dts::to_json(json, raw);
+        }
+
+        template<typename BasicJsonType, typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
+        void from_json(const BasicJsonType& json, StructType& raw)
+        {
+            darkstar::dts::from_json(json, raw);
         }
     }
 
     namespace material_list::v3 {
-        template<typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
-        void to_json(nlohmann::ordered_json &j, const StructType &raw) {
-            darkstar::dts::to_json(j, raw);
+        template<typename BasicJsonType,typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
+        void to_json(BasicJsonType& json, const StructType &raw) {
+            darkstar::dts::to_json(json, raw);
+        }
+
+        template<typename BasicJsonType, typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
+        void from_json(const BasicJsonType& json, StructType& raw)
+        {
+            darkstar::dts::from_json(json, raw);
         }
     }
 }

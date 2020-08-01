@@ -1,14 +1,22 @@
 #ifndef DARKSTARDTSCONVERTER_STRUCTURES_HPP
 #define DARKSTARDTSCONVERTER_STRUCTURES_HPP
 
-#include "json_boost.hpp"
+#include <boost/endian/arithmetic.hpp>
 #include <array>
 
 namespace darkstar::dts
 {
     namespace endian = boost::endian;
-    using json = nlohmann::json;
     using file_tag = std::array<std::byte, 4>;
+
+    template<std::size_t Size>
+    constexpr std::array<std::string_view, Size> make_keys(const char *(&&keys)[Size]) {
+        std::array<std::string_view, Size> result;
+        for (auto i = 0; i < Size; i++) {
+            result[i] = keys[i];
+        }
+        return result;
+    }
 
     constexpr file_tag to_tag(const std::array<std::uint8_t, 4> values)
     {
@@ -74,6 +82,18 @@ namespace darkstar::dts
     {
         struct header
         {
+            constexpr static auto keys = make_keys({"numNodes",
+                                                    "numSequences",
+                                                    "numSubSequences",
+                                                    "numKeyFrames",
+                                                    "numTransforms",
+                                                    "numNames",
+                                                    "numObjects",
+                                                    "numDetails",
+                                                    "numMeshes",
+                                                    "numTransitions",
+                                                    "numFrameTriggers"});
+
             endian::little_int32_t num_nodes;
             endian::little_int32_t num_sequences;
             endian::little_int32_t num_sub_sequences;
@@ -86,9 +106,6 @@ namespace darkstar::dts
             endian::little_int32_t num_transitions;
             endian::little_int32_t num_frame_triggers;
         };
-
-        NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(header, num_nodes, num_sequences, num_sub_sequences, num_key_frames,
-                num_transforms, num_names, num_objects, num_details, num_meshes, num_transitions, num_frame_triggers)
 
         struct data
         {
@@ -338,6 +355,22 @@ namespace darkstar::dts
 
     struct shape_v7
     {
+        constexpr static auto keys = make_keys({"header",
+                                                "data",
+                                                "nodes",
+                                                "sequences",
+                                                "subSequences",
+                                                "keyframes",
+                                                "transforms",
+                                                "names",
+                                                "objects",
+                                                "details",
+                                                "transitions",
+                                                "frameTriggers",
+                                                "footer",
+                                                "meshes",
+                                                "materialList"});
+
         shape::v7::header header;
         shape::v7::data data;
         std::vector<shape::v7::node> nodes;
@@ -355,9 +388,6 @@ namespace darkstar::dts
 
         material_list_v3 material_list;
     };
-
-    NLOHMANN_DEFINE_UNORDERED_TYPE_NON_INTRUSIVE(shape_v7, header, data, nodes, sequences, sub_sequences, keyframes, transforms,
-                    names, objects, details, transitions, frame_triggers, footer, meshes, material_list)
 }
 
 #endif //DARKSTARDTSCONVERTER_STRUCTURES_HPP
