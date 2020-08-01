@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <boost/endian/arithmetic.hpp>
 #include "structures.hpp"
+#include "json_boost.hpp"
 
 namespace fs = std::filesystem;
 namespace dts = darkstar::dts;
@@ -207,8 +208,18 @@ int main(int argc, const char** argv)
 
         auto file_name_string = file_name.string();
         auto new_file_name = file_name_string.substr(0, file_name_string.rfind(".")) + ".json";
-        std::ofstream someone_as_file(new_file_name, std::ios::trunc);
-        someone_as_file << someone_as_json.dump(4);
+        {
+            std::ofstream someone_as_file(new_file_name, std::ios::trunc);
+            someone_as_file << someone_as_json.dump(4);
+        }
+
+        {
+            std::ifstream test_file(new_file_name);
+            auto fresh_shape_json = nlohmann::json::parse(test_file);
+            dts::shape_v7 fresh_shape = fresh_shape_json;
+
+            std::cout << fresh_shape.header.num_meshes << '\n';
+        }
     }
 
     return 0;
