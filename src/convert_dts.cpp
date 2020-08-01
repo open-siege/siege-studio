@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iterator>
 #include <vector>
+#include <set>
 #include <sstream>
 #include <filesystem>
 #include <boost/endian/arithmetic.hpp>
@@ -83,11 +84,57 @@ dts::tag_header read_object_header(std::vector<std::byte>::iterator& cursor)
     return file_header;
 }
 
+std::vector<fs::path> find_files(std::vector<std::string>& file_names)
+{
+    std::vector<fs::path> files;
+
+    std::set<std::string> extensions;
+
+    for(const auto& file_name : file_names)
+    {
+        if (file_name == "*")
+        {
+            extensions.insert(".dts");
+            extensions.insert(".DTS");
+            continue;
+        }
+
+        if (auto glob_index = file_name.rfind("*.", 0); glob_index == 0)
+        {
+            extensions.insert(file_name.substr(glob_index + 1));
+            continue;
+        }
+
+        if (auto path = fs::current_path().append(file_name); fs::exists(path))
+        {
+            files.push_back(path);
+        }
+    }
+
+    if (!extensions.empty())
+    {
+        for(auto& item : fs::recursive_directory_iterator(fs::current_path()))
+        {
+            if (item.is_regular_file())
+            {
+                for(auto& extension : extensions)
+                {
+                    if (item.path().filename().string().rfind(extension) != std::string::npos)
+                    {
+                        files.push_back(item.path());
+                    }
+                }
+            }
+        }
+    }
+
+    return files;
+}
+
 int main(int argc, const char** argv)
 {
-    if (argc > 1)
+    for (auto& file_name : find_files(std::vector<std::string>(argv + 1, argv + argc)))
     {
-        std::string file_name = argv[1];
         auto file_size = fs::file_size(file_name);
         std::vector<std::byte> file_buffer(file_size);
         std::basic_ifstream<std::byte> input(file_name, std::ios::binary);
@@ -158,7 +205,8 @@ int main(int argc, const char** argv)
 
         nlohmann::ordered_json someone_as_json = shape;
 
-        auto new_file_name = file_name.substr(0, file_name.rfind(".")) + ".json";
+        auto file_name_string = file_name.string();
+        auto new_file_name = file_name_string.substr(0, file_name_string.rfind(".")) + ".json";
         std::ofstream someone_as_file(new_file_name, std::ios::trunc);
         someone_as_file << someone_as_json.dump(4);
     }
