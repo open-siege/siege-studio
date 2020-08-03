@@ -2,6 +2,7 @@
 #define DARKSTARDTSCONVERTER_STRUCTURES_HPP
 
 #include <boost/endian/arithmetic.hpp>
+#include <variant>
 #include <array>
 
 namespace darkstar::dts
@@ -77,6 +78,42 @@ namespace darkstar::dts
 
     static_assert(sizeof(quaternion4s) == sizeof(std::array<endian::little_int16_t, 4>));
 
+    struct rgb_data
+    {
+        constexpr static auto keys = make_keys({"red", "green", "blue", "rgbFlags"});
+
+        std::uint8_t red;
+        std::uint8_t green;
+        std::uint8_t blue;
+        std::uint8_t rgb_flags;
+    };
+
+    namespace shape::v6
+    {
+        struct transform
+        {
+            constexpr static auto keys = make_keys({"rotation", "translation", "scale"});
+            quaternion4f rotation;
+            vector3f translation;
+            vector3f scale;
+        };
+
+        struct transition
+        {
+            constexpr static auto keys = make_keys({"startSequence",
+                                                    "endSequence",
+                                                    "startPosition",
+                                                    "endPosition",
+                                                    "duration",
+                                                    "transform"});
+            endian::little_int32_t start_sequence;
+            endian::little_int32_t end_sequence;
+            float start_position;
+            float end_position;
+            float duration;
+            transform transform;
+        };
+    }
 
     namespace shape::v7
     {
@@ -297,6 +334,21 @@ namespace darkstar::dts
         };
     }
 
+    namespace material_list::v2
+    {
+        struct material
+        {
+            constexpr static auto keys = make_keys({"flags", "alpha", "index", "rgbData", "fileName"});
+
+            endian::little_int32_t flags;
+            float alpha;
+            endian::little_int32_t index;
+            rgb_data rgb_data;
+
+            std::array<char, 32> file_name;
+        };
+    }
+
     namespace material_list::v3
     {
         struct header
@@ -305,16 +357,6 @@ namespace darkstar::dts
                                                     "numMaterials"});
             endian::little_int32_t num_details;
             endian::little_int32_t num_materials;
-        };
-
-        struct rgb_data
-        {
-            constexpr static auto keys = make_keys({"red", "green", "blue", "rgbFlags"});
-
-            std::uint8_t red;
-            std::uint8_t green;
-            std::uint8_t blue;
-            std::uint8_t rgb_flags;
         };
 
         struct material
@@ -352,6 +394,43 @@ namespace darkstar::dts
         material_list::v3::header header;
         std::vector<material_list::v3::material> materials;
     };
+
+    struct shape_v6
+    {
+        constexpr static auto keys = make_keys({"header",
+                                                "data",
+                                                "nodes",
+                                                "sequences",
+                                                "subSequences",
+                                                "keyframes",
+                                                "transforms",
+                                                "names",
+                                                "objects",
+                                                "details",
+                                                "transitions",
+                                                "frameTriggers",
+                                                "footer",
+                                                "meshes",
+                                                "materialList"});
+
+        shape::v7::header header;
+        shape::v7::data data;
+        std::vector<shape::v7::node> nodes;
+        std::vector<shape::v7::sequence> sequences;
+        std::vector<shape::v7::sub_sequence> sub_sequences;
+        std::vector<shape::v7::keyframe> keyframes;
+        std::vector<shape::v6::transform> transforms;
+        std::vector<shape::v7::name> names;
+        std::vector<shape::v7::object> objects;
+        std::vector<shape::v7::detail> details;
+        std::vector<shape::v6::transition> transitions;
+        std::vector<shape::v7::frame_trigger> frame_triggers;
+        shape::v7::footer footer;
+        std::vector<mesh_v3> meshes;
+
+        material_list_v3 material_list;
+    };
+
 
     struct shape_v7
     {

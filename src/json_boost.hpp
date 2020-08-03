@@ -298,6 +298,20 @@ namespace darkstar::dts {
         }
     }
 
+    namespace shape::v6 {
+        template<typename BasicJsonType, typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
+        void to_json(BasicJsonType &j, const StructType &raw)
+        {
+            darkstar::dts::to_json(j, raw);
+        }
+
+        template<typename BasicJsonType, typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
+        void from_json(const BasicJsonType& json, StructType& raw)
+        {
+            darkstar::dts::from_json(json, raw);
+        }
+    }
+
     namespace shape::v7 {
         template<typename BasicJsonType, typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
         void to_json(BasicJsonType &j, const StructType &raw)
