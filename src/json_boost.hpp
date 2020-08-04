@@ -298,22 +298,32 @@ namespace darkstar::dts {
         }
     }
 
-    namespace shape::v6 {
+    namespace shape::v5
+    {
         using darkstar::dts::to_json;
         using darkstar::dts::from_json;
     }
 
-    namespace shape::v7 {
+    namespace shape::v6
+    {
         using darkstar::dts::to_json;
         using darkstar::dts::from_json;
     }
 
-    namespace mesh::v3 {
+    namespace shape::v7
+    {
         using darkstar::dts::to_json;
         using darkstar::dts::from_json;
     }
 
-    namespace material_list::v3 {
+    namespace mesh::v3
+    {
+        using darkstar::dts::to_json;
+        using darkstar::dts::from_json;
+    }
+
+    namespace material_list::v3
+    {
         using darkstar::dts::to_json;
         using darkstar::dts::from_json;
     }

@@ -88,6 +88,16 @@ namespace darkstar::dts
         std::uint8_t rgb_flags;
     };
 
+    namespace shape::v5
+    {
+        struct footer
+        {
+            constexpr static auto keys = make_keys({"numDefaultMaterials"});
+            endian::little_int32_t num_default_materials;
+        };
+    }
+
+
     namespace shape::v6
     {
         struct transform
@@ -393,6 +403,42 @@ namespace darkstar::dts
 
         material_list::v3::header header;
         std::vector<material_list::v3::material> materials;
+    };
+
+    struct shape_v5
+    {
+        constexpr static auto keys = make_keys({"header",
+                                                "data",
+                                                "nodes",
+                                                "sequences",
+                                                "subSequences",
+                                                "keyframes",
+                                                "transforms",
+                                                "names",
+                                                "objects",
+                                                "details",
+                                                "transitions",
+                                                "frameTriggers",
+                                                "footer",
+                                                "meshes",
+                                                "materialList"});
+
+        shape::v7::header header;
+        shape::v7::data data;
+        std::vector<shape::v7::node> nodes;
+        std::vector<shape::v7::sequence> sequences;
+        std::vector<shape::v7::sub_sequence> sub_sequences;
+        std::vector<shape::v7::keyframe> keyframes;
+        std::vector<shape::v6::transform> transforms;
+        std::vector<shape::v7::name> names;
+        std::vector<shape::v7::object> objects;
+        std::vector<shape::v7::detail> details;
+        std::vector<shape::v6::transition> transitions;
+        std::vector<shape::v7::frame_trigger> frame_triggers;
+        shape::v5::footer footer;
+        std::vector<mesh_v3> meshes;
+
+        material_list_v3 material_list;
     };
 
     struct shape_v6
