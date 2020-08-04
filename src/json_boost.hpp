@@ -299,57 +299,23 @@ namespace darkstar::dts {
     }
 
     namespace shape::v6 {
-        template<typename BasicJsonType, typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
-        void to_json(BasicJsonType &j, const StructType &raw)
-        {
-            darkstar::dts::to_json(j, raw);
-        }
-
-        template<typename BasicJsonType, typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
-        void from_json(const BasicJsonType& json, StructType& raw)
-        {
-            darkstar::dts::from_json(json, raw);
-        }
+        using darkstar::dts::to_json;
+        using darkstar::dts::from_json;
     }
 
     namespace shape::v7 {
-        template<typename BasicJsonType, typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
-        void to_json(BasicJsonType &j, const StructType &raw)
-        {
-            darkstar::dts::to_json(j, raw);
-        }
-
-        template<typename BasicJsonType, typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
-        void from_json(const BasicJsonType& json, StructType& raw)
-        {
-            darkstar::dts::from_json(json, raw);
-        }
+        using darkstar::dts::to_json;
+        using darkstar::dts::from_json;
     }
 
     namespace mesh::v3 {
-        template<typename BasicJsonType, typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
-        void to_json(BasicJsonType &json, const StructType &raw) {
-            darkstar::dts::to_json(json, raw);
-        }
-
-        template<typename BasicJsonType, typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
-        void from_json(const BasicJsonType& json, StructType& raw)
-        {
-            darkstar::dts::from_json(json, raw);
-        }
+        using darkstar::dts::to_json;
+        using darkstar::dts::from_json;
     }
 
     namespace material_list::v3 {
-        template<typename BasicJsonType,typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
-        void to_json(BasicJsonType& json, const StructType &raw) {
-            darkstar::dts::to_json(json, raw);
-        }
-
-        template<typename BasicJsonType, typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
-        void from_json(const BasicJsonType& json, StructType& raw)
-        {
-            darkstar::dts::from_json(json, raw);
-        }
+        using darkstar::dts::to_json;
+        using darkstar::dts::from_json;
     }
 }
 
