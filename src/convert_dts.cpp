@@ -8,6 +8,7 @@
 #include <boost/endian/arithmetic.hpp>
 #include "structures.hpp"
 #include "json_boost.hpp"
+#include "complex_serializer.hpp"
 
 namespace fs = std::filesystem;
 namespace dts = darkstar::dts;
@@ -183,25 +184,11 @@ void read_materials(ShapeType& shape, dts::shape::v7::header& header, std::vecto
         {
             auto main_header = read<dts::material_list::v3::header>(cursor);
 
-            auto materials = read_vector<dts::material_list::v2::material>(cursor, main_header.num_materials * main_header.num_details);
-
-            std::vector<dts::material_list::v3::material> upgraded_materials;
-            upgraded_materials.reserve(materials.size());
-
-            std::transform(materials.begin(), materials.end(), std::back_inserter(upgraded_materials),
-                           [](const auto& old)
-                           {
-                               dts::material_list::v3::material new_mat = {0};
-                               auto start = reinterpret_cast<const std::byte*>(&old);
-                               std::copy(start, start + sizeof(old), reinterpret_cast<std::byte*>(&new_mat));
-                               return new_mat;
-                           });
-
             shape.material_list =
-                    dts::material_list_v3
+                    dts::material_list_v2
                     {
                             main_header,
-                            upgraded_materials
+                            read_vector<dts::material_list::v2::material>(cursor, main_header.num_materials * main_header.num_details)
                     };
         }
 
