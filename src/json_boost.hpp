@@ -223,32 +223,32 @@ namespace darkstar::dts {
         }
 
         if constexpr (StructType::keys.size() == 6) {
-            auto &keys = StructType::keys;
-            auto&[item0, item1, item2, item3, item4, item5] = raw;
+            auto& keys = StructType::keys;
+            auto& [item0, item1, item2, item3, item4, item5] = raw;
             to_json_impl(json, keys, item0, item1, item2, item3, item4, item5);
         }
 
         if constexpr (StructType::keys.size() == 7) {
-            auto &keys = StructType::keys;
-            auto&[item0, item1, item2, item3, item4, item5, item6] = raw;
+            auto& keys = StructType::keys;
+            auto& [item0, item1, item2, item3, item4, item5, item6] = raw;
             to_json_impl(json, keys, item0, item1, item2, item3, item4, item5, item6);
         }
 
         if constexpr (StructType::keys.size() == 8) {
-            auto &keys = StructType::keys;
+            auto& keys = StructType::keys;
             auto&[item0, item1, item2, item3, item4, item5, item6, item7] = raw;
             to_json_impl(json, keys, item0, item1, item2, item3, item4, item5, item6, item7);
         }
 
         if constexpr (StructType::keys.size() == 9) {
-            auto &keys = StructType::keys;
-            auto&[item0, item1, item2, item3, item4, item5, item6, item7, item8] = raw;
+            auto& keys = StructType::keys;
+            auto& [item0, item1, item2, item3, item4, item5, item6, item7, item8] = raw;
             to_json_impl(json, keys, item0, item1, item2, item3, item4, item5, item6, item7, item8);
         }
 
         if constexpr (StructType::keys.size() == 10) {
-            auto &keys = StructType::keys;
-            auto&[item0, item1, item2, item3, item4, item5, item6, item7, item8, item9] = raw;
+            auto& keys = StructType::keys;
+            auto& [item0, item1, item2, item3, item4, item5, item6, item7, item8, item9] = raw;
             to_json_impl(json, keys, item0, item1, item2, item3,
                     item4, item5, item6, item7, item8, item9);
         }
@@ -310,6 +310,12 @@ namespace darkstar::dts {
     }
 
     namespace shape::v7
+    {
+        using darkstar::dts::to_json;
+        using darkstar::dts::from_json;
+    }
+
+    namespace mesh::v2
     {
         using darkstar::dts::to_json;
         using darkstar::dts::from_json;

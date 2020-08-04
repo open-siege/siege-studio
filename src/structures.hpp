@@ -284,7 +284,7 @@ namespace darkstar::dts
         using has_material_list_flag = endian::little_int32_t;
     }
 
-    namespace mesh::v3
+    namespace mesh::v2
     {
         struct header
         {
@@ -294,6 +294,8 @@ namespace darkstar::dts
                                                     "numFaces",
                                                     "numFrames",
                                                     "textureVertsPerFrame",
+                                                    "scale",
+                                                    "origin",
                                                     "radius"});
 
             endian::little_int32_t num_verts;
@@ -302,6 +304,8 @@ namespace darkstar::dts
             endian::little_int32_t num_faces;
             endian::little_int32_t num_frames;
             endian::little_int32_t texture_verts_per_frame;
+            vector3f scale;
+            vector3f origin;
             float radius;
         };
 
@@ -334,6 +338,38 @@ namespace darkstar::dts
             endian::little_int32_t ti3;
             endian::little_int32_t material;
         };
+
+        struct frame
+        {
+            constexpr static auto keys = make_keys({"firstVert"});
+            endian::little_int32_t first_vert;
+        };
+    }
+
+    namespace mesh::v3
+    {
+        struct header
+        {
+            constexpr static auto keys = make_keys({"numVerts",
+                                                    "vertsPerFrame",
+                                                    "numTextureVerts",
+                                                    "numFaces",
+                                                    "numFrames",
+                                                    "textureVertsPerFrame",
+                                                    "radius"});
+
+            endian::little_int32_t num_verts;
+            endian::little_int32_t verts_per_frame;
+            endian::little_int32_t num_texture_verts;
+            endian::little_int32_t num_faces;
+            endian::little_int32_t num_frames;
+            endian::little_int32_t texture_verts_per_frame;
+            float radius;
+        };
+
+        using mesh::v2::vertex;
+        using mesh::v2::texture_vertex;
+        using mesh::v2::face;
 
         struct frame
         {
@@ -386,8 +422,21 @@ namespace darkstar::dts
         };
     }
 
+    struct mesh_v2
+    {
+        constexpr static auto version = 2;
+        constexpr static auto keys = make_keys({"header", "vertices", "textureVertices", "faces", "frames"});
+
+        mesh::v2::header header;
+        std::vector<mesh::v3::vertex> vertices;
+        std::vector<mesh::v3::texture_vertex> texture_vertices;
+        std::vector<mesh::v3::face> faces;
+        std::vector<mesh::v2::frame> frames;
+    };
+
     struct mesh_v3
     {
+        constexpr static auto version = 3;
         constexpr static auto keys = make_keys({"header", "vertices", "textureVertices", "faces", "frames"});
 
         mesh::v3::header header;
@@ -396,6 +445,8 @@ namespace darkstar::dts
         std::vector<mesh::v3::face> faces;
         std::vector<mesh::v3::frame> frames;
     };
+
+    using mesh_variant = std::variant<mesh_v2, mesh_v3>;
 
     struct material_list_v2
     {
@@ -449,7 +500,7 @@ namespace darkstar::dts
         std::vector<shape::v6::transition> transitions;
         std::vector<shape::v7::frame_trigger> frame_triggers;
         shape::v5::footer footer;
-        std::vector<mesh_v3> meshes;
+        std::vector<mesh_variant> meshes;
 
         material_list_variant material_list;
     };
@@ -485,7 +536,7 @@ namespace darkstar::dts
         std::vector<shape::v6::transition> transitions;
         std::vector<shape::v7::frame_trigger> frame_triggers;
         shape::v7::footer footer;
-        std::vector<mesh_v3> meshes;
+        std::vector<mesh_variant> meshes;
 
         material_list_variant material_list;
     };
@@ -522,7 +573,7 @@ namespace darkstar::dts
         std::vector<shape::v7::transition> transitions;
         std::vector<shape::v7::frame_trigger> frame_triggers;
         shape::v7::footer footer;
-        std::vector<mesh_v3> meshes;
+        std::vector<mesh_variant> meshes;
 
         material_list_variant material_list;
     };
