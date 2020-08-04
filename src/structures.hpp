@@ -397,13 +397,26 @@ namespace darkstar::dts
         std::vector<mesh::v3::frame> frames;
     };
 
+    struct material_list_v2
+    {
+        constexpr static auto version = 2;
+        constexpr static auto keys = make_keys({"header", "materials"});
+
+        material_list::v3::header header;
+        std::vector<material_list::v2::material> materials;
+    };
+
+
     struct material_list_v3
     {
+        constexpr static auto version = 3;
         constexpr static auto keys = make_keys({"header", "materials"});
 
         material_list::v3::header header;
         std::vector<material_list::v3::material> materials;
     };
+
+    using material_list_variant = std::variant<darkstar::dts::material_list_v2, darkstar::dts::material_list_v3>;
 
     struct shape_v5
     {
@@ -438,7 +451,7 @@ namespace darkstar::dts
         shape::v5::footer footer;
         std::vector<mesh_v3> meshes;
 
-        material_list_v3 material_list;
+        material_list_variant material_list;
     };
 
     struct shape_v6
@@ -474,7 +487,7 @@ namespace darkstar::dts
         shape::v7::footer footer;
         std::vector<mesh_v3> meshes;
 
-        material_list_v3 material_list;
+        material_list_variant material_list;
     };
 
 
@@ -511,7 +524,7 @@ namespace darkstar::dts
         shape::v7::footer footer;
         std::vector<mesh_v3> meshes;
 
-        material_list_v3 material_list;
+        material_list_variant material_list;
     };
 }
 
