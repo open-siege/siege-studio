@@ -264,6 +264,34 @@ dts::shape_v6 read_shape_v6(std::vector<std::byte>::iterator& cursor)
     return shape;
 }
 
+dts::shape_v5 read_shape_v5(std::vector<std::byte>::iterator& cursor)
+{
+    auto header = read<dts::shape::v7::header>(cursor);
+
+    dts::shape_v5 shape
+            {
+                    header,
+                    read<dts::shape::v7::data>(cursor),
+                    read_vector<dts::shape::v7::node>(cursor, header.num_nodes),
+                    read_vector<dts::shape::v7::sequence>(cursor, header.num_sequences),
+                    read_vector<dts::shape::v7::sub_sequence>(cursor, header.num_sub_sequences),
+                    read_vector<dts::shape::v7::keyframe>(cursor, header.num_key_frames),
+                    read_vector<dts::shape::v6::transform>(cursor, header.num_transforms),
+                    read_vector<dts::shape::v7::name>(cursor, header.num_names),
+                    read_vector<dts::shape::v7::object>(cursor, header.num_objects),
+                    read_vector<dts::shape::v7::detail>(cursor, header.num_details),
+                    read_vector<dts::shape::v6::transition>(cursor, header.num_transitions),
+                    read_vector<dts::shape::v7::frame_trigger>(cursor, header.num_frame_triggers),
+                    read<dts::shape::v5::footer>(cursor)
+            };
+
+    read_meshes(shape, header, cursor);
+
+    read_materials(shape, header, cursor);
+
+    return shape;
+}
+
 template <typename ShapeType>
 void convert_to_json(const std::filesystem::path& file_name, const ShapeType& shape)
 {
@@ -309,6 +337,11 @@ int main(int argc, const char** argv)
             else if (file_header.version == 6)
             {
                 auto shape = read_shape_v6(cursor);
+                convert_to_json(file_name, shape);
+            }
+            else if (file_header.version == 5)
+            {
+                auto shape = read_shape_v5(cursor);
                 convert_to_json(file_name, shape);
             }
             else
