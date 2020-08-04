@@ -57,7 +57,7 @@ namespace darkstar::dts {
         (json.at(key_type(keys[current_key++])).get_to(args), ...);
     }
 
-    template<typename BasicJsonType, typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
+    template<typename BasicJsonType, typename StructType, typename = typename std::enable_if_t<has_struct_keys<StructType>::value>>
     void from_json(const BasicJsonType& json, StructType& raw) {
         if constexpr (StructType::keys.size() == 1) {
             auto& keys = StructType::keys;
@@ -186,12 +186,11 @@ namespace darkstar::dts {
     {
         using key_type = typename BasicJsonType::object_t::key_type;
         std::size_t current_key = 0;
-        json = BasicJsonType{};
         (json.emplace(key_type(keys[current_key++]), args), ...);
     }
 
 
-    template<typename BasicJsonType, typename StructType, typename = typename std::enable_if<has_struct_keys<StructType>::value, bool>::type>
+    template<typename BasicJsonType, typename StructType, typename = typename std::enable_if_t<has_struct_keys<StructType>::value>>
     void to_json(BasicJsonType& json, const StructType& raw) {
         if constexpr (StructType::keys.size() == 1) {
             auto &keys = StructType::keys;
