@@ -134,7 +134,7 @@ std::vector<fs::path> find_files(std::vector<std::string>& file_names)
 }
 
 template <typename ShapeType>
-void read_meshes(ShapeType& shape, dts::shape::v7::header& header, std::vector<std::byte>::iterator& cursor)
+void read_meshes(ShapeType& shape, const dts::shape::v7::header& header, std::vector<std::byte>::iterator& cursor)
 {
     shape.meshes.reserve(header.num_meshes);
 
@@ -142,23 +142,40 @@ void read_meshes(ShapeType& shape, dts::shape::v7::header& header, std::vector<s
     {
         auto mesh_tag_header = read_object_header(cursor);
 
-        if (mesh_tag_header.version != 3)
+        if (mesh_tag_header.version == 3)
         {
-            throw std::invalid_argument("The mesh version was not version 3 as expected");
+            auto mesh_header = read<dts::mesh::v3::header>(cursor);
+
+            dts::mesh_v3 mesh
+                    {
+                            mesh_header,
+                            read_vector<dts::mesh::v3::vertex>(cursor, mesh_header.num_verts),
+                            read_vector<dts::mesh::v3::texture_vertex>(cursor, mesh_header.num_texture_verts),
+                            read_vector<dts::mesh::v3::face>(cursor, mesh_header.num_faces),
+                            read_vector<dts::mesh::v3::frame>(cursor, mesh_header.num_frames)
+                    };
+
+            shape.meshes.push_back(mesh);
         }
+        else if (mesh_tag_header.version == 2)
+        {
+            auto mesh_header = read<dts::mesh::v2::header>(cursor);
 
-        auto mesh_header = read<dts::mesh::v3::header>(cursor);
+            dts::mesh_v2 mesh
+                    {
+                            mesh_header,
+                            read_vector<dts::mesh::v3::vertex>(cursor, mesh_header.num_verts),
+                            read_vector<dts::mesh::v3::texture_vertex>(cursor, mesh_header.num_texture_verts),
+                            read_vector<dts::mesh::v3::face>(cursor, mesh_header.num_faces),
+                            read_vector<dts::mesh::v2::frame>(cursor, mesh_header.num_frames)
+                    };
 
-        dts::mesh_v3 mesh
-                {
-                        mesh_header,
-                        read_vector<dts::mesh::v3::vertex>(cursor, mesh_header.num_verts),
-                        read_vector<dts::mesh::v3::texture_vertex>(cursor, mesh_header.num_texture_verts),
-                        read_vector<dts::mesh::v3::face>(cursor, mesh_header.num_faces),
-                        read_vector<dts::mesh::v3::frame>(cursor, mesh_header.num_frames)
-                };
-
-        shape.meshes.push_back(mesh);
+            shape.meshes.push_back(mesh);
+        }
+        else
+        {
+            throw std::invalid_argument("The mesh version was not version 2 or 3 as expected");
+        }
     }
 }
 
@@ -293,7 +310,7 @@ void convert_to_json(const std::filesystem::path& file_name, const ShapeType& sh
     {
         std::ifstream test_file(new_file_name);
         auto fresh_shape_json = nlohmann::json::parse(test_file);
-        dts::shape_v7 fresh_shape = fresh_shape_json;
+        const ShapeType fresh_shape = fresh_shape_json;
 
         std::cout << fresh_shape.header.num_meshes << '\n';
     }
