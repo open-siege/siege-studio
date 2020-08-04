@@ -19,8 +19,8 @@ namespace nlohmann {
         {
             std::visit([&] (const auto& value)
             {
-                j = value;
                 j.emplace("version", std::remove_reference_t<decltype(value)>::version);
+                darkstar::dts::to_json(j, value);
             }, opt);
         }
 
@@ -32,6 +32,13 @@ namespace nlohmann {
             if (version == 3)
             {
                 darkstar::dts::material_list_v3 value = j;
+                opt = value;
+            }
+
+            if (version == 2)
+            {
+                darkstar::dts::material_list_v2 value = j;
+                opt = value;
             }
         }
     };
