@@ -10,7 +10,9 @@
 
 namespace nlohmann {
     using material_list = darkstar::dts::material_list_variant;
-    using mesh = darkstar::dts::mesh_variant ;
+    using mesh = darkstar::dts::mesh_variant;
+    using shape = darkstar::dts::shape_variant;
+
 
     template<typename... Type>
     struct adl_serializer<std::variant<Type...>>
@@ -26,38 +28,55 @@ namespace nlohmann {
         }
 
         template<typename BasicJsonType>
-        static void from_json(const BasicJsonType &j, material_list &opt)
+        static void from_json(const BasicJsonType &js, material_list &opt)
         {
-            auto version = j.at("version");
+            auto version = js.at("version");
 
             if (version == 3)
             {
-                darkstar::dts::material_list_v3 value = j;
-                opt = value;
+                opt.emplace<darkstar::dts::material_list_v3>(js);
             }
 
             if (version == 2)
             {
-                darkstar::dts::material_list_v2 value = j;
-                opt = value;
+                opt.emplace<darkstar::dts::material_list_v2>(js);
             }
         }
 
         template<typename BasicJsonType>
-        static void from_json(const BasicJsonType &j, mesh &opt)
+        static void from_json(const BasicJsonType &js, mesh &opt)
         {
-            auto version = j.at("version");
+            auto version = js.at("version");
 
             if (version == 3)
             {
-                darkstar::dts::mesh_v3 value = j;
-                opt = value;
+                opt.emplace<darkstar::dts::mesh_v3>(js);
             }
 
             if (version == 2)
             {
-                darkstar::dts::mesh_v2 value = j;
-                opt = value;
+                opt.emplace<darkstar::dts::mesh_v2>(js);
+            }
+        }
+
+        template<typename BasicJsonType>
+        static void from_json(const BasicJsonType &js, shape &opt)
+        {
+            auto version = js.at("version");
+
+            if (version == 7)
+            {
+                opt.emplace<darkstar::dts::shape_v7>(js);
+            }
+
+            if (version == 6)
+            {
+                opt.emplace<darkstar::dts::shape_v6>(js);
+            }
+
+            if (version == 5)
+            {
+                opt.emplace<darkstar::dts::shape_v5>(js);
             }
         }
     };
