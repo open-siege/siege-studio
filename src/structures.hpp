@@ -471,6 +471,7 @@ namespace darkstar::dts
 
     struct shape_v5
     {
+        constexpr static auto version = 5;
         constexpr static auto keys = make_keys({"header",
                                                 "data",
                                                 "nodes",
@@ -507,6 +508,7 @@ namespace darkstar::dts
 
     struct shape_v6
     {
+        constexpr static auto version = 6;
         constexpr static auto keys = make_keys({"header",
                                                 "data",
                                                 "nodes",
@@ -544,6 +546,7 @@ namespace darkstar::dts
 
     struct shape_v7
     {
+        constexpr static auto version = 7;
         constexpr static auto keys = make_keys({"header",
                                                 "data",
                                                 "nodes",
@@ -577,6 +580,8 @@ namespace darkstar::dts
 
         material_list_variant material_list;
     };
+
+    using shape_variant = std::variant<shape_v5, shape_v6, shape_v7>;
 }
 
 #endif //DARKSTARDTSCONVERTER_STRUCTURES_HPP
