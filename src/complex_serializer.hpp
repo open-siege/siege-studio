@@ -78,6 +78,11 @@ namespace nlohmann {
             {
                 opt.emplace<darkstar::dts::shape_v5>(js);
             }
+
+            if (version == 2)
+            {
+                opt.emplace<darkstar::dts::shape_v2>(js);
+            }
         }
     };
 }

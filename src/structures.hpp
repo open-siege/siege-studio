@@ -88,6 +88,53 @@ namespace darkstar::dts
         std::uint8_t rgb_flags;
     };
 
+    namespace shape::v2
+    {
+        struct header
+        {
+            constexpr static auto keys = make_keys({"numNodes",
+                                                    "numSequences",
+                                                    "numSubSequences",
+                                                    "numKeyFrames",
+                                                    "numTransforms",
+                                                    "numNames",
+                                                    "numObjects",
+                                                    "numDetails",
+                                                    "numMeshes",
+                                                    "numTransitions"});
+
+            endian::little_int32_t num_nodes;
+            endian::little_int32_t num_sequences;
+            endian::little_int32_t num_sub_sequences;
+            endian::little_int32_t num_key_frames;
+            endian::little_int32_t num_transforms;
+            endian::little_int32_t num_names;
+            endian::little_int32_t num_objects;
+            endian::little_int32_t num_details;
+            endian::little_int32_t num_meshes;
+            endian::little_int32_t num_transitions;
+        };
+
+        struct keyframe
+        {
+            constexpr static auto keys = make_keys({"position", "keyValue"});
+            float position;
+            endian::little_uint32_t key_value;
+        };
+
+        struct sequence
+        {
+            constexpr static auto keys = make_keys({"nameIndex",
+                                                    "cyclic",
+                                                    "duration",
+                                                    "priority"
+                                                   });
+            endian::little_int32_t name_index;
+            endian::little_int32_t cyclic;
+            float duration;
+            endian::little_int32_t priority;
+        };
+    }
     namespace shape::v5
     {
         struct footer
@@ -469,6 +516,39 @@ namespace darkstar::dts
 
     using material_list_variant = std::variant<darkstar::dts::material_list_v2, darkstar::dts::material_list_v3>;
 
+    struct shape_v2
+    {
+        constexpr static auto version = 2;
+        constexpr static auto keys = make_keys({"header",
+                                                "data",
+                                                "nodes",
+                                                "sequences",
+                                                "subSequences",
+                                                "keyframes",
+                                                "transforms",
+                                                "names",
+                                                "objects",
+                                                "details",
+                                                "transitions",
+                                                "meshes",
+                                                "materialList"});
+
+        shape::v2::header header;
+        shape::v7::data data;
+        std::vector<shape::v7::node> nodes;
+        std::vector<shape::v2::sequence> sequences;
+        std::vector<shape::v7::sub_sequence> sub_sequences;
+        std::vector<shape::v2::keyframe> keyframes;
+        std::vector<shape::v6::transform> transforms;
+        std::vector<shape::v7::name> names;
+        std::vector<shape::v7::object> objects;
+        std::vector<shape::v7::detail> details;
+        std::vector<shape::v6::transition> transitions;
+        std::vector<mesh_variant> meshes;
+
+        material_list_variant material_list;
+    };
+
     struct shape_v5
     {
         constexpr static auto version = 5;
@@ -581,7 +661,7 @@ namespace darkstar::dts
         material_list_variant material_list;
     };
 
-    using shape_variant = std::variant<shape_v5, shape_v6, shape_v7>;
+    using shape_variant = std::variant<shape_v2, shape_v5, shape_v6, shape_v7>;
 }
 
 #endif //DARKSTARDTSCONVERTER_STRUCTURES_HPP

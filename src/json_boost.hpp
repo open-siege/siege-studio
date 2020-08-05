@@ -297,6 +297,13 @@ namespace darkstar::dts {
         }
     }
 
+    namespace shape::v2
+    {
+        using darkstar::dts::to_json;
+        using darkstar::dts::from_json;
+    }
+
+
     namespace shape::v5
     {
         using darkstar::dts::to_json;
