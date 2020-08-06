@@ -121,7 +121,8 @@ std::vector<fs::path> find_files(std::vector<std::string>& file_names)
             {
                 for(auto& extension : extensions)
                 {
-                    if (item.path().filename().string().rfind(extension) != std::string::npos)
+                    if (const auto& value = item.path().filename().string();
+                            value.rfind(extension) == value.size() - extension.size())
                     {
                         files.push_back(item.path());
                     }
