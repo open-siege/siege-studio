@@ -322,6 +322,12 @@ namespace darkstar::dts {
         using darkstar::dts::from_json;
     }
 
+    namespace mesh::v1
+    {
+        using darkstar::dts::to_json;
+        using darkstar::dts::from_json;
+    }
+
     namespace mesh::v2
     {
         using darkstar::dts::to_json;

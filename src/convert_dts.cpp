@@ -149,9 +149,9 @@ void read_meshes(ShapeType& shape, std::size_t num_meshes, std::basic_ifstream<s
             dts::mesh_v3 mesh
                     {
                             mesh_header,
-                            read_vector<dts::mesh::v3::vertex>(stream, mesh_header.num_verts),
-                            read_vector<dts::mesh::v3::texture_vertex>(stream, mesh_header.num_texture_verts),
-                            read_vector<dts::mesh::v3::face>(stream, mesh_header.num_faces),
+                            read_vector<dts::mesh::v2::vertex>(stream, mesh_header.num_verts),
+                            read_vector<dts::mesh::v2::texture_vertex>(stream, mesh_header.num_texture_verts),
+                            read_vector<dts::mesh::v2::face>(stream, mesh_header.num_faces),
                             read_vector<dts::mesh::v3::frame>(stream, mesh_header.num_frames)
                     };
 
@@ -164,9 +164,24 @@ void read_meshes(ShapeType& shape, std::size_t num_meshes, std::basic_ifstream<s
             dts::mesh_v2 mesh
                     {
                             mesh_header,
-                            read_vector<dts::mesh::v3::vertex>(stream, mesh_header.num_verts),
-                            read_vector<dts::mesh::v3::texture_vertex>(stream, mesh_header.num_texture_verts),
-                            read_vector<dts::mesh::v3::face>(stream, mesh_header.num_faces),
+                            read_vector<dts::mesh::v2::vertex>(stream, mesh_header.num_verts),
+                            read_vector<dts::mesh::v2::texture_vertex>(stream, mesh_header.num_texture_verts),
+                            read_vector<dts::mesh::v2::face>(stream, mesh_header.num_faces),
+                            read_vector<dts::mesh::v2::frame>(stream, mesh_header.num_frames)
+                    };
+
+            shape.meshes.push_back(mesh);
+        }
+        else if (mesh_tag_header.version == 1)
+        {
+            auto mesh_header = read<dts::mesh::v1::header>(stream);
+
+            dts::mesh_v1 mesh
+                    {
+                            mesh_header,
+                            read_vector<dts::mesh::v2::vertex>(stream, mesh_header.num_verts),
+                            read_vector<dts::mesh::v2::texture_vertex>(stream, mesh_header.num_texture_verts),
+                            read_vector<dts::mesh::v2::face>(stream, mesh_header.num_faces),
                             read_vector<dts::mesh::v2::frame>(stream, mesh_header.num_frames)
                     };
 
@@ -268,6 +283,30 @@ dts::shape_variant read_shape(const fs::path& file_name, std::basic_ifstream<std
                         read_vector<dts::shape::v2::sequence>(stream, header.num_sequences),
                         read_vector<dts::shape::v7::sub_sequence>(stream, header.num_sub_sequences),
                         read_vector<dts::shape::v2::keyframe>(stream, header.num_key_frames),
+                        read_vector<dts::shape::v6::transform>(stream, header.num_transforms),
+                        read_vector<dts::shape::v7::name>(stream, header.num_names),
+                        read_vector<dts::shape::v7::object>(stream, header.num_objects),
+                        read_vector<dts::shape::v7::detail>(stream, header.num_details),
+                        read_vector<dts::shape::v6::transition>(stream, header.num_transitions)
+                };
+
+        read_meshes(shape, header.num_meshes, stream);
+
+        read_materials(shape, stream);
+
+        return shape;
+    }
+    else if (file_header.version == 3)
+    {
+        auto header = read<dts::shape::v2::header>(stream);
+        dts::shape_v3 shape
+                {
+                        header,
+                        read<dts::shape::v7::data>(stream),
+                        read_vector<dts::shape::v7::node>(stream, header.num_nodes),
+                        read_vector<dts::shape::v2::sequence>(stream, header.num_sequences),
+                        read_vector<dts::shape::v7::sub_sequence>(stream, header.num_sub_sequences),
+                        read_vector<dts::shape::v7::keyframe>(stream, header.num_key_frames),
                         read_vector<dts::shape::v6::transform>(stream, header.num_transforms),
                         read_vector<dts::shape::v7::name>(stream, header.num_names),
                         read_vector<dts::shape::v7::object>(stream, header.num_objects),
