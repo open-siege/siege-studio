@@ -212,87 +212,50 @@ void read_materials(ShapeType& shape, std::basic_ifstream<std::byte>& stream)
     }
 }
 
+
+template<typename ShapeType>
+ShapeType read_shape_impl(std::basic_ifstream<std::byte>& stream)
+{
+    auto header = read<decltype(ShapeType::header)>(stream);
+    ShapeType shape
+            {
+                    header,
+                    read<decltype(ShapeType::data)>(stream),
+                    read_vector<typename decltype(ShapeType::nodes)::value_type>(stream, header.num_nodes),
+                    read_vector<typename decltype(ShapeType::sequences)::value_type>(stream, header.num_sequences),
+                    read_vector<typename decltype(ShapeType::sub_sequences)::value_type>(stream, header.num_sub_sequences),
+                    read_vector<typename decltype(ShapeType::keyframes)::value_type>(stream, header.num_key_frames),
+                    read_vector<typename decltype(ShapeType::transforms)::value_type>(stream, header.num_transforms),
+                    read_vector<typename decltype(ShapeType::names)::value_type>(stream, header.num_names),
+                    read_vector<typename decltype(ShapeType::objects)::value_type>(stream, header.num_objects),
+                    read_vector<typename decltype(ShapeType::details)::value_type>(stream, header.num_details),
+                    read_vector<typename decltype(ShapeType::transitions)::value_type>(stream, header.num_transitions),
+                    read_vector<typename decltype(ShapeType::frame_triggers)::value_type>(stream, header.num_frame_triggers),
+                    read<decltype(ShapeType::footer)>(stream)
+            };
+
+    read_meshes(shape, header.num_meshes, stream);
+
+    read_materials(shape, stream);
+
+    return shape;
+}
+
 dts::shape_variant read_shape(const fs::path& file_name, std::basic_ifstream<std::byte>& stream)
 {
     dts::tag_header file_header = read_object_header(stream);
 
     if (file_header.version == 7)
     {
-        auto header = read<dts::shape::v7::header>(stream);
-        dts::shape_v7 shape
-                {
-                        header,
-                        read<dts::shape::v7::data>(stream),
-                        read_vector<dts::shape::v7::node>(stream, header.num_nodes),
-                        read_vector<dts::shape::v7::sequence>(stream, header.num_sequences),
-                        read_vector<dts::shape::v7::sub_sequence>(stream, header.num_sub_sequences),
-                        read_vector<dts::shape::v7::keyframe>(stream, header.num_key_frames),
-                        read_vector<dts::shape::v7::transform>(stream, header.num_transforms),
-                        read_vector<dts::shape::v7::name>(stream, header.num_names),
-                        read_vector<dts::shape::v7::object>(stream, header.num_objects),
-                        read_vector<dts::shape::v7::detail>(stream, header.num_details),
-                        read_vector<dts::shape::v7::transition>(stream, header.num_transitions),
-                        read_vector<dts::shape::v7::frame_trigger>(stream, header.num_frame_triggers),
-                        read<dts::shape::v7::footer>(stream)
-                };
-
-        read_meshes(shape, header.num_meshes, stream);
-
-        read_materials(shape, stream);
-
-        return shape;
+        return read_shape_impl<dts::shape_v7>(stream);
     }
     else if (file_header.version == 6)
     {
-        auto header = read<dts::shape::v7::header>(stream);
-         dts::shape_v6 shape
-                {
-                        header,
-                        read<dts::shape::v7::data>(stream),
-                        read_vector<dts::shape::v7::node>(stream, header.num_nodes),
-                        read_vector<dts::shape::v7::sequence>(stream, header.num_sequences),
-                        read_vector<dts::shape::v7::sub_sequence>(stream, header.num_sub_sequences),
-                        read_vector<dts::shape::v7::keyframe>(stream, header.num_key_frames),
-                        read_vector<dts::shape::v6::transform>(stream, header.num_transforms),
-                        read_vector<dts::shape::v7::name>(stream, header.num_names),
-                        read_vector<dts::shape::v7::object>(stream, header.num_objects),
-                        read_vector<dts::shape::v7::detail>(stream, header.num_details),
-                        read_vector<dts::shape::v6::transition>(stream, header.num_transitions),
-                        read_vector<dts::shape::v7::frame_trigger>(stream, header.num_frame_triggers),
-                        read<dts::shape::v7::footer>(stream)
-                };
-
-        read_meshes(shape, header.num_meshes, stream);
-
-        read_materials(shape, stream);
-
-        return shape;
+        return read_shape_impl<dts::shape_v6>(stream);
     }
     else if (file_header.version == 5)
     {
-        auto header = read<dts::shape::v7::header>(stream);
-        dts::shape_v5 shape
-                {
-                        header,
-                        read<dts::shape::v7::data>(stream),
-                        read_vector<dts::shape::v7::node>(stream, header.num_nodes),
-                        read_vector<dts::shape::v7::sequence>(stream, header.num_sequences),
-                        read_vector<dts::shape::v7::sub_sequence>(stream, header.num_sub_sequences),
-                        read_vector<dts::shape::v7::keyframe>(stream, header.num_key_frames),
-                        read_vector<dts::shape::v6::transform>(stream, header.num_transforms),
-                        read_vector<dts::shape::v7::name>(stream, header.num_names),
-                        read_vector<dts::shape::v7::object>(stream, header.num_objects),
-                        read_vector<dts::shape::v7::detail>(stream, header.num_details),
-                        read_vector<dts::shape::v6::transition>(stream, header.num_transitions),
-                        read_vector<dts::shape::v7::frame_trigger>(stream, header.num_frame_triggers),
-                        read<dts::shape::v5::footer>(stream)
-                };
-
-        read_meshes(shape, header.num_meshes, stream);
-
-        read_materials(shape, stream);
-
-        return shape;
+        return read_shape_impl<dts::shape_v5>(stream);
     }
     else if (file_header.version == 2)
     {
