@@ -135,6 +135,7 @@ namespace darkstar::dts
             endian::little_int32_t priority;
         };
     }
+
     namespace shape::v5
     {
         struct footer
@@ -331,6 +332,30 @@ namespace darkstar::dts
         using has_material_list_flag = endian::little_int32_t;
     }
 
+    namespace mesh::v1
+    {
+        struct header
+        {
+            constexpr static auto keys = make_keys({"numVerts",
+                                                    "vertsPerFrame",
+                                                    "numTextureVerts",
+                                                    "numFaces",
+                                                    "numFrames",
+                                                    "scale",
+                                                    "origin",
+                                                    "radius"});
+
+            endian::little_int32_t num_verts;
+            endian::little_int32_t verts_per_frame;
+            endian::little_int32_t num_texture_verts;
+            endian::little_int32_t num_faces;
+            endian::little_int32_t num_frames;
+            vector3f scale;
+            vector3f origin;
+            float radius;
+        };
+    }
+
     namespace mesh::v2
     {
         struct header
@@ -469,6 +494,19 @@ namespace darkstar::dts
         };
     }
 
+    struct mesh_v1
+    {
+        constexpr static auto version = 1;
+        constexpr static auto keys = make_keys({"header", "vertices", "textureVertices", "faces", "frames"});
+
+        mesh::v1::header header;
+        std::vector<mesh::v3::vertex> vertices;
+        std::vector<mesh::v3::texture_vertex> texture_vertices;
+        std::vector<mesh::v3::face> faces;
+        std::vector<mesh::v2::frame> frames;
+    };
+
+
     struct mesh_v2
     {
         constexpr static auto version = 2;
@@ -493,7 +531,7 @@ namespace darkstar::dts
         std::vector<mesh::v3::frame> frames;
     };
 
-    using mesh_variant = std::variant<mesh_v2, mesh_v3>;
+    using mesh_variant = std::variant<mesh_v1, mesh_v2, mesh_v3>;
 
     struct material_list_v2
     {
@@ -539,6 +577,39 @@ namespace darkstar::dts
         std::vector<shape::v2::sequence> sequences;
         std::vector<shape::v7::sub_sequence> sub_sequences;
         std::vector<shape::v2::keyframe> keyframes;
+        std::vector<shape::v6::transform> transforms;
+        std::vector<shape::v7::name> names;
+        std::vector<shape::v7::object> objects;
+        std::vector<shape::v7::detail> details;
+        std::vector<shape::v6::transition> transitions;
+        std::vector<mesh_variant> meshes;
+
+        material_list_variant material_list;
+    };
+
+    struct shape_v3
+    {
+        constexpr static auto version = 3;
+        constexpr static auto keys = make_keys({"header",
+                                                "data",
+                                                "nodes",
+                                                "sequences",
+                                                "subSequences",
+                                                "keyframes",
+                                                "transforms",
+                                                "names",
+                                                "objects",
+                                                "details",
+                                                "transitions",
+                                                "meshes",
+                                                "materialList"});
+
+        shape::v2::header header;
+        shape::v7::data data;
+        std::vector<shape::v7::node> nodes;
+        std::vector<shape::v2::sequence> sequences;
+        std::vector<shape::v7::sub_sequence> sub_sequences;
+        std::vector<shape::v7::keyframe> keyframes;
         std::vector<shape::v6::transform> transforms;
         std::vector<shape::v7::name> names;
         std::vector<shape::v7::object> objects;
@@ -661,7 +732,7 @@ namespace darkstar::dts
         material_list_variant material_list;
     };
 
-    using shape_variant = std::variant<shape_v2, shape_v5, shape_v6, shape_v7>;
+    using shape_variant = std::variant<shape_v2, shape_v3, shape_v5, shape_v6, shape_v7>;
 }
 
 #endif //DARKSTARDTSCONVERTER_STRUCTURES_HPP
