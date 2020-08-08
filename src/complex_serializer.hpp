@@ -18,53 +18,58 @@ namespace nlohmann
   struct adl_serializer<std::variant<Type...>>
   {
     template<typename BasicJsonType>
-    static void to_json(BasicJsonType &j, const std::variant<Type...> &opt)
+    static void to_json(BasicJsonType& json, const std::variant<Type...>& opt)
     {
-      std::visit([&](const auto &value) {
-        j.emplace("version", std::remove_reference_t<decltype(value)>::version);
-        darkstar::dts::to_json(j, value);
+      std::visit([&](const auto& value) {
+        json.emplace("version", std::remove_reference_t<decltype(value)>::version);
+        json.emplace("typeName", std::remove_reference_t<decltype(value)>::type_name);
+        darkstar::dts::to_json(json, value);
       },
         opt);
     }
 
     template<typename Struct, typename BasicJsonType, typename Variant>
-    static void emplace_variant(const BasicJsonType &js, Variant &opt, int version)
+    static void emplace_variant(const BasicJsonType& js, Variant& opt, std::string_view type_name, int version)
     {
-      if (version == Struct::version)
+      if (version == Struct::version && type_name == Struct::type_name)
       {
         opt.template emplace<Struct>(js);
       }
     }
 
     template<typename BasicJsonType>
-    static void from_json(const BasicJsonType &js, material_list &opt)
+    static void from_json(const BasicJsonType& js, material_list& opt)
     {
       auto version = js.at("version");
+      auto type_name = js.at("typeName");
 
-      emplace_variant<darkstar::dts::material_list_v2>(js, opt, version);
-      emplace_variant<darkstar::dts::material_list_v3>(js, opt, version);
+      emplace_variant<darkstar::dts::material_list_v2>(js, opt, type_name, version);
+      emplace_variant<darkstar::dts::material_list_v3>(js, opt, type_name, version);
+      emplace_variant<darkstar::dts::material_list_v4>(js, opt, type_name, version);
     }
 
     template<typename BasicJsonType>
-    static void from_json(const BasicJsonType &js, mesh &opt)
+    static void from_json(const BasicJsonType& js, mesh& opt)
     {
       auto version = js.at("version");
+      auto type_name = js.at("typeName");
 
-      emplace_variant<darkstar::dts::mesh_v2>(js, opt, version);
-      emplace_variant<darkstar::dts::mesh_v3>(js, opt, version);
+      emplace_variant<darkstar::dts::mesh_v2>(js, opt, type_name, version);
+      emplace_variant<darkstar::dts::mesh_v3>(js, opt, type_name, version);
     }
 
     template<typename BasicJsonType>
-    static void from_json(const BasicJsonType &js, shape &opt)
+    static void from_json(const BasicJsonType& js, shape& opt)
     {
       auto version = js.at("version");
+      auto type_name = js.at("typeName");
 
-      emplace_variant<darkstar::dts::shape_v2>(js, opt, version);
-      emplace_variant<darkstar::dts::shape_v3>(js, opt, version);
-      emplace_variant<darkstar::dts::shape_v5>(js, opt, version);
-      emplace_variant<darkstar::dts::shape_v6>(js, opt, version);
-      emplace_variant<darkstar::dts::shape_v7>(js, opt, version);
-      emplace_variant<darkstar::dts::shape_v8>(js, opt, version);
+      emplace_variant<darkstar::dts::shape_v2>(js, opt, type_name, version);
+      emplace_variant<darkstar::dts::shape_v3>(js, opt, type_name, version);
+      emplace_variant<darkstar::dts::shape_v5>(js, opt, type_name, version);
+      emplace_variant<darkstar::dts::shape_v6>(js, opt, type_name, version);
+      emplace_variant<darkstar::dts::shape_v7>(js, opt, type_name, version);
+      emplace_variant<darkstar::dts::shape_v8>(js, opt, type_name, version);
     }
   };
 }// namespace nlohmann

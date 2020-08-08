@@ -369,6 +369,13 @@ namespace darkstar::dts
     using darkstar::dts::to_json;
     using darkstar::dts::from_json;
   }// namespace material_list::v3
+
+  namespace material_list::v4
+  {
+    using darkstar::dts::to_json;
+    using darkstar::dts::from_json;
+  }// namespace material_list::v4
+
 }// namespace darkstar::dts
 
 #endif//DARKSTARDTSCONVERTER_JSON_BOOST_HPP
