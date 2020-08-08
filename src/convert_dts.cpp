@@ -153,7 +153,8 @@ void read_meshes(ShapeType &shape, std::size_t num_meshes, std::basic_ifstream<s
       };
 
       shape.meshes.push_back(mesh);
-    } else if (mesh_tag_header.version == 2)
+    }
+    else if (mesh_tag_header.version == 2)
     {
       auto mesh_header = read<dts::mesh::v2::header>(stream);
 
@@ -166,7 +167,8 @@ void read_meshes(ShapeType &shape, std::size_t num_meshes, std::basic_ifstream<s
       };
 
       shape.meshes.push_back(mesh);
-    } else if (mesh_tag_header.version == 1)
+    }
+    else if (mesh_tag_header.version == 1)
     {
       auto mesh_header = read<dts::mesh::v1::header>(stream);
 
@@ -179,7 +181,8 @@ void read_meshes(ShapeType &shape, std::size_t num_meshes, std::basic_ifstream<s
       };
 
       shape.meshes.push_back(mesh);
-    } else
+    }
+    else
     {
       throw std::invalid_argument("The mesh version was not version 2 or 3 as expected");
     }
@@ -202,7 +205,8 @@ void read_materials(ShapeType &shape, std::basic_ifstream<std::byte> &stream)
           main_header,
           read_vector<dts::material_list::v3::material>(stream, main_header.num_materials * main_header.num_details)
         };
-    } else if (object_header.version == 2)
+    }
+    else if (object_header.version == 2)
     {
       auto main_header = read<dts::material_list::v3::header>(stream);
 
@@ -247,16 +251,23 @@ dts::shape_variant read_shape(const fs::path &file_name, std::basic_ifstream<std
 {
   dts::tag_header file_header = read_object_header(stream);
 
-  if (file_header.version == 7)
+  if (file_header.version == 8)
+  {
+    return read_shape_impl<dts::shape_v8>(stream);
+  }
+  else if (file_header.version == 7)
   {
     return read_shape_impl<dts::shape_v7>(stream);
-  } else if (file_header.version == 6)
+  }
+  else if (file_header.version == 6)
   {
     return read_shape_impl<dts::shape_v6>(stream);
-  } else if (file_header.version == 5)
+  }
+  else if (file_header.version == 5)
   {
     return read_shape_impl<dts::shape_v5>(stream);
-  } else if (file_header.version == 2)
+  }
+  else if (file_header.version == 2)
   {
     auto header = read<dts::shape::v2::header>(stream);
     dts::shape_v2 shape{
@@ -278,7 +289,8 @@ dts::shape_variant read_shape(const fs::path &file_name, std::basic_ifstream<std
     read_materials(shape, stream);
 
     return shape;
-  } else if (file_header.version == 3)
+  }
+  else if (file_header.version == 3)
   {
     auto header = read<dts::shape::v2::header>(stream);
     dts::shape_v3 shape{
@@ -300,7 +312,8 @@ dts::shape_variant read_shape(const fs::path &file_name, std::basic_ifstream<std
     read_materials(shape, stream);
 
     return shape;
-  } else
+  }
+  else
   {
     std::stringstream error;
     error << file_name << " is DTS version " << file_header.version << " which is currently unsupported.";
@@ -323,7 +336,7 @@ void convert_to_json(const std::filesystem::path &file_name, const dts::shape_va
     auto fresh_shape_json = nlohmann::json::parse(test_file);
     const dts::shape_variant fresh_shape = fresh_shape_json;
 
-    std::visit([](const auto &shape) { std::cout << shape.header.num_meshes << '\n'; }, fresh_shape);
+    std::visit([](const auto &shape) { std::cout << "Number of meshes: " << shape.header.num_meshes << '\n'; }, fresh_shape);
   }
 }
 
@@ -340,7 +353,8 @@ int main(int argc, const char **argv)
       auto shape = read_shape(file_name, input);
 
       convert_to_json(file_name, shape);
-    } catch (const std::exception &ex)
+    }
+    catch (const std::exception &ex)
     {
       std::cerr << ex.what() << '\n';
     }

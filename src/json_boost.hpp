@@ -334,6 +334,12 @@ namespace darkstar::dts
     using darkstar::dts::from_json;
   }// namespace shape::v7
 
+  namespace shape::v8
+  {
+    using darkstar::dts::to_json;
+    using darkstar::dts::from_json;
+  }// namespace shape::v8
+
   namespace mesh::v1
   {
     using darkstar::dts::to_json;
