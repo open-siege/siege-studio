@@ -12,6 +12,11 @@ namespace darkstar::dts
   namespace endian = boost::endian;
   using file_tag = std::array<std::byte, 4>;
 
+  struct empty
+  {
+    // Placeholder for types which need named items which are empty.
+  };
+
   template<std::size_t Size>
   constexpr std::array<std::string_view, Size> make_keys(const char*(&&keys)[Size])
   {
@@ -678,6 +683,7 @@ namespace darkstar::dts
 
   struct shape_v2
   {
+    constexpr static empty footer = {};
     constexpr static auto type_name = std::string_view{ "TS::Shape" };
     constexpr static auto version = 2;
     constexpr static auto keys = make_keys({ "header",
@@ -712,6 +718,7 @@ namespace darkstar::dts
 
   struct shape_v3
   {
+    constexpr static empty footer = {};
     constexpr static auto type_name = shape_v2::type_name;
     constexpr static auto version = 3;
     constexpr static auto keys = make_keys({ "header",
