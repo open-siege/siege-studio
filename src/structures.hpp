@@ -3,6 +3,8 @@
 
 #include <variant>
 #include <array>
+#include <string>
+#include <vector>
 #include "endian_arithmetic.hpp"
 
 namespace darkstar::dts
@@ -11,7 +13,7 @@ namespace darkstar::dts
   using file_tag = std::array<std::byte, 4>;
 
   template<std::size_t Size>
-  constexpr std::array<std::string_view, Size> make_keys(const char *(&&keys)[Size])
+  constexpr std::array<std::string_view, Size> make_keys(const char*(&&keys)[Size])
   {
     std::array<std::string_view, Size> result;
     for (auto i = 0; i < Size; i++)
@@ -34,7 +36,7 @@ namespace darkstar::dts
 
   constexpr file_tag pers_tag = to_tag({ 'P', 'E', 'R', 'S' });
 
-  using version = endian::little_int32_t;
+  using version = endian::little_uint32_t;
 
   struct file_info
   {
@@ -46,7 +48,7 @@ namespace darkstar::dts
   {
     dts::file_tag tag;
     dts::file_info file_info;
-    std::vector<std::byte> class_name;
+    std::string class_name;
     dts::version version;
   };
 
@@ -388,8 +390,7 @@ namespace darkstar::dts
 
     struct object
     {
-      constexpr static auto keys = make_keys({ "nameIndex", "flags", "meshIndex", "nodeIndex",
-                                              "objectOffset", "numSubSequences", "firstSubSequence" });
+      constexpr static auto keys = make_keys({ "nameIndex", "flags", "meshIndex", "nodeIndex", "objectOffset", "numSubSequences", "firstSubSequence" });
       endian::little_int16_t name_index;
       endian::little_int16_t flags;
       endian::little_int32_t mesh_index;
@@ -540,6 +541,14 @@ namespace darkstar::dts
 
   namespace material_list::v2
   {
+    struct header
+    {
+      constexpr static auto keys = make_keys({ "numDetails",
+        "numMaterials" });
+      endian::little_int32_t num_details;
+      endian::little_int32_t num_materials;
+    };
+
     struct material
     {
       constexpr static auto keys = make_keys({ "flags", "alpha", "index", "rgbData", "fileName" });
@@ -555,14 +564,6 @@ namespace darkstar::dts
 
   namespace material_list::v3
   {
-    struct header
-    {
-      constexpr static auto keys = make_keys({ "numDetails",
-        "numMaterials" });
-      endian::little_int32_t num_details;
-      endian::little_int32_t num_materials;
-    };
-
     struct material
     {
       constexpr static auto keys = make_keys({ "flags", "alpha", "index", "rgbData", "fileName", "type", "elasticity", "friction" });
@@ -580,8 +581,29 @@ namespace darkstar::dts
     };
   }// namespace material_list::v3
 
+  namespace material_list::v4
+  {
+    struct material
+    {
+      constexpr static auto keys = make_keys({ "flags", "alpha", "index", "rgbData", "fileName", "type", "elasticity", "friction", "useDefaultProperties" });
+
+      endian::little_int32_t flags;
+      float alpha;
+      endian::little_int32_t index;
+      rgb_data rgb_data;
+
+      std::array<char, 32> file_name;
+
+      endian::little_int32_t type;
+      float elasticity;
+      float friction;
+      endian::little_uint32_t use_default_properties;
+    };
+  }// namespace material_list::v4
+
   struct mesh_v1
   {
+    constexpr static auto type_name = std::string_view{ "TS::CelAnimMesh" };
     constexpr static auto version = 1;
     constexpr static auto keys = make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
 
@@ -595,6 +617,7 @@ namespace darkstar::dts
 
   struct mesh_v2
   {
+    constexpr static auto type_name = mesh_v1::type_name;
     constexpr static auto version = 2;
     constexpr static auto keys = make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
 
@@ -607,6 +630,7 @@ namespace darkstar::dts
 
   struct mesh_v3
   {
+    constexpr static auto type_name = mesh_v1::type_name;
     constexpr static auto version = 3;
     constexpr static auto keys = make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
 
@@ -621,27 +645,40 @@ namespace darkstar::dts
 
   struct material_list_v2
   {
+    constexpr static auto type_name = std::string_view{ "TS::MaterialList" };
     constexpr static auto version = 2;
     constexpr static auto keys = make_keys({ "header", "materials" });
 
-    material_list::v3::header header;
+    material_list::v2::header header;
     std::vector<material_list::v2::material> materials;
   };
 
 
   struct material_list_v3
   {
+    constexpr static auto type_name = material_list_v2::type_name;
     constexpr static auto version = 3;
     constexpr static auto keys = make_keys({ "header", "materials" });
 
-    material_list::v3::header header;
+    material_list::v2::header header;
     std::vector<material_list::v3::material> materials;
   };
 
-  using material_list_variant = std::variant<darkstar::dts::material_list_v2, darkstar::dts::material_list_v3>;
+  struct material_list_v4
+  {
+    constexpr static auto type_name = material_list_v2::type_name;
+    constexpr static auto version = 4;
+    constexpr static auto keys = make_keys({ "header", "materials" });
+
+    material_list::v2::header header;
+    std::vector<material_list::v4::material> materials;
+  };
+
+  using material_list_variant = std::variant<darkstar::dts::material_list_v2, darkstar::dts::material_list_v3, darkstar::dts::material_list_v4>;
 
   struct shape_v2
   {
+    constexpr static auto type_name = std::string_view{ "TS::Shape" };
     constexpr static auto version = 2;
     constexpr static auto keys = make_keys({ "header",
       "data",
@@ -675,6 +712,7 @@ namespace darkstar::dts
 
   struct shape_v3
   {
+    constexpr static auto type_name = shape_v2::type_name;
     constexpr static auto version = 3;
     constexpr static auto keys = make_keys({ "header",
       "data",
@@ -708,6 +746,7 @@ namespace darkstar::dts
 
   struct shape_v5
   {
+    constexpr static auto type_name = shape_v2::type_name;
     constexpr static auto version = 5;
     constexpr static auto keys = make_keys({ "header",
       "data",
@@ -745,6 +784,7 @@ namespace darkstar::dts
 
   struct shape_v6
   {
+    constexpr static auto type_name = shape_v2::type_name;
     constexpr static auto version = 6;
     constexpr static auto keys = make_keys({ "header",
       "data",
@@ -782,6 +822,7 @@ namespace darkstar::dts
 
   struct shape_v7
   {
+    constexpr static auto type_name = shape_v2::type_name;
     constexpr static auto version = 7;
     constexpr static auto keys = make_keys({ "header",
       "data",
@@ -819,6 +860,7 @@ namespace darkstar::dts
 
   struct shape_v8
   {
+    constexpr static auto type_name = shape_v2::type_name;
     constexpr static auto version = 8;
     constexpr static auto keys = make_keys({ "header",
       "data",
@@ -855,6 +897,8 @@ namespace darkstar::dts
   };
 
   using shape_variant = std::variant<shape_v2, shape_v3, shape_v5, shape_v6, shape_v7, shape_v8>;
+
+  using shape_or_material_list = std::variant<material_list_variant, shape_variant>;
 }// namespace darkstar::dts
 
 #endif//DARKSTARDTSCONVERTER_STRUCTURES_HPP

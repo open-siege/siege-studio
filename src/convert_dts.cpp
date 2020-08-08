@@ -2,6 +2,8 @@
 #include <fstream>
 #include <iterator>
 #include <vector>
+#include <algorithm>
+#include <execution>
 #include <set>
 #include <sstream>
 #include <filesystem>
@@ -12,25 +14,33 @@
 namespace fs = std::filesystem;
 namespace dts = darkstar::dts;
 
-std::vector<std::byte> read_string(std::basic_ifstream<std::byte> &stream, std::size_t size)
+template<class... Ts>
+struct overloaded : Ts...
 {
-  std::vector<std::byte> dest(size + 1, std::byte('\0'));
+  using Ts::operator()...;
+};
+template<class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
+
+std::string read_string(std::basic_ifstream<std::byte>& stream, std::size_t size)
+{
+  std::string dest(size, '\0');
+
+  stream.read(reinterpret_cast<std::byte*>(&dest[0]), size);
 
   // There is always an embedded \0 in the
   // file if the string length is less than 16 bytes.
   if (size < 16)
   {
-    size++;
+    stream.seekg(1, std::ios_base::cur);
   }
-
-  stream.read(&dest[0], size);
 
   return dest;
 }
 
 
 template<typename destination_type>
-std::vector<destination_type> read_vector(std::basic_ifstream<std::byte> &stream, std::size_t size)
+std::vector<destination_type> read_vector(std::basic_ifstream<std::byte>& stream, std::size_t size)
 {
   if (size == 0)
   {
@@ -39,14 +49,14 @@ std::vector<destination_type> read_vector(std::basic_ifstream<std::byte> &stream
 
   std::vector<destination_type> dest(size);
 
-  stream.read(reinterpret_cast<std::byte *>(&dest[0]), sizeof(destination_type) * size);
+  stream.read(reinterpret_cast<std::byte*>(&dest[0]), sizeof(destination_type) * size);
 
   return dest;
 }
 
 
 template<std::size_t size>
-std::array<std::byte, size> read(std::basic_ifstream<std::byte> &stream)
+std::array<std::byte, size> read(std::basic_ifstream<std::byte>& stream)
 {
   std::array<std::byte, size> dest{};
 
@@ -56,16 +66,16 @@ std::array<std::byte, size> read(std::basic_ifstream<std::byte> &stream)
 }
 
 template<typename destination_type>
-destination_type read(std::basic_ifstream<std::byte> &stream)
+destination_type read(std::basic_ifstream<std::byte>& stream)
 {
   destination_type dest{};
 
-  stream.read(reinterpret_cast<std::byte *>(&dest), sizeof(destination_type));
+  stream.read(reinterpret_cast<std::byte*>(&dest), sizeof(destination_type));
 
   return dest;
 }
 
-dts::tag_header read_object_header(std::basic_ifstream<std::byte> &stream)
+dts::tag_header read_object_header(std::basic_ifstream<std::byte>& stream)
 {
   dts::tag_header file_header = {
     read<sizeof(dts::file_tag)>(stream),
@@ -83,18 +93,20 @@ dts::tag_header read_object_header(std::basic_ifstream<std::byte> &stream)
   return file_header;
 }
 
-std::vector<fs::path> find_files(const std::vector<std::string> &file_names)
+std::vector<fs::path> find_files(const std::vector<std::string>& file_names)
 {
   std::vector<fs::path> files;
 
   std::set<std::string> extensions;
 
-  for (const auto &file_name : file_names)
+  for (const auto& file_name : file_names)
   {
     if (file_name == "*")
     {
       extensions.insert(".dts");
       extensions.insert(".DTS");
+      extensions.insert(".dml");
+      extensions.insert(".DML");
       continue;
     }
 
@@ -112,13 +124,13 @@ std::vector<fs::path> find_files(const std::vector<std::string> &file_names)
 
   if (!extensions.empty())
   {
-    for (auto &item : fs::recursive_directory_iterator(fs::current_path()))
+    for (auto& item : fs::recursive_directory_iterator(fs::current_path()))
     {
       if (item.is_regular_file())
       {
-        for (auto &extension : extensions)
+        for (auto& extension : extensions)
         {
-          if (const auto &value = item.path().filename().string();
+          if (const auto& value = item.path().filename().string();
               value.rfind(extension) == value.size() - extension.size())
           {
             files.push_back(item.path());
@@ -132,13 +144,23 @@ std::vector<fs::path> find_files(const std::vector<std::string> &file_names)
 }
 
 template<typename ShapeType>
-void read_meshes(ShapeType &shape, std::size_t num_meshes, std::basic_ifstream<std::byte> &stream)
+void read_meshes(ShapeType& shape, std::size_t num_meshes, std::basic_ifstream<std::byte>& stream)
 {
   shape.meshes.reserve(num_meshes);
 
   for (auto i = 0u; i < num_meshes; ++i)
   {
     auto mesh_tag_header = read_object_header(stream);
+
+    if (mesh_tag_header.class_name != dts::mesh_v1::type_name)
+    {
+      throw std::invalid_argument("The object provided is not a mesh as expected.");
+    }
+
+    if (mesh_tag_header.version > 3)
+    {
+      throw std::invalid_argument("The mesh version was not version 1, 2 or 3 as expected.");
+    }
 
     if (mesh_tag_header.version == 3)
     {
@@ -154,7 +176,8 @@ void read_meshes(ShapeType &shape, std::size_t num_meshes, std::basic_ifstream<s
 
       shape.meshes.push_back(mesh);
     }
-    else if (mesh_tag_header.version == 2)
+
+    if (mesh_tag_header.version == 2)
     {
       auto mesh_header = read<dts::mesh::v2::header>(stream);
 
@@ -168,7 +191,8 @@ void read_meshes(ShapeType &shape, std::size_t num_meshes, std::basic_ifstream<s
 
       shape.meshes.push_back(mesh);
     }
-    else if (mesh_tag_header.version == 1)
+
+    if (mesh_tag_header.version == 1)
     {
       auto mesh_header = read<dts::mesh::v1::header>(stream);
 
@@ -182,46 +206,64 @@ void read_meshes(ShapeType &shape, std::size_t num_meshes, std::basic_ifstream<s
 
       shape.meshes.push_back(mesh);
     }
-    else
-    {
-      throw std::invalid_argument("The mesh version was not version 2 or 3 as expected");
-    }
   }
 }
 
+
+dts::material_list_variant read_material_list(const dts::tag_header& object_header, std::basic_ifstream<std::byte>& stream)
+{
+  if (object_header.class_name != dts::material_list_v2::type_name)
+  {
+    throw std::invalid_argument("The object was not a material list as expected.");
+  }
+
+  if (object_header.version == 2)
+  {
+    auto main_header = read<dts::material_list::v2::header>(stream);
+
+    return dts::material_list_v2{
+      main_header,
+      read_vector<dts::material_list::v2::material>(stream, main_header.num_materials * main_header.num_details)
+    };
+  }
+
+  if (object_header.version == 3)
+  {
+    auto main_header = read<dts::material_list::v2::header>(stream);
+
+    return dts::material_list_v3{
+      main_header,
+      read_vector<dts::material_list::v3::material>(stream, main_header.num_materials * main_header.num_details)
+    };
+  }
+
+  if (object_header.version == 4)
+  {
+    auto main_header = read<dts::material_list::v2::header>(stream);
+
+    return dts::material_list_v4{
+      main_header,
+      read_vector<dts::material_list::v4::material>(stream, main_header.num_materials * main_header.num_details)
+    };
+  }
+
+  throw std::invalid_argument("The material list version provided is not supported: " + std::to_string(object_header.version));
+}
+
 template<typename ShapeType>
-void read_materials(ShapeType &shape, std::basic_ifstream<std::byte> &stream)
+void read_materials(ShapeType& shape, std::basic_ifstream<std::byte>& stream)
 {
   if (auto has_material_list = read<dts::shape::v7::has_material_list_flag>(stream); has_material_list == 1)
   {
     auto object_header = read_object_header(stream);
 
-    if (object_header.version == 3)
-    {
-      auto main_header = read<dts::material_list::v3::header>(stream);
-
-      shape.material_list =
-        dts::material_list_v3{
-          main_header,
-          read_vector<dts::material_list::v3::material>(stream, main_header.num_materials * main_header.num_details)
-        };
-    }
-    else if (object_header.version == 2)
-    {
-      auto main_header = read<dts::material_list::v3::header>(stream);
-
-      shape.material_list =
-        dts::material_list_v2{
-          main_header,
-          read_vector<dts::material_list::v2::material>(stream, main_header.num_materials * main_header.num_details)
-        };
-    }
+    shape.material_list = read_material_list(object_header, stream);
   }
 }
 
 
 template<typename ShapeType>
-ShapeType read_shape_impl(std::basic_ifstream<std::byte> &stream)
+ShapeType read_shape_impl(std::basic_ifstream<std::byte>& stream)
 {
   auto header = read<decltype(ShapeType::header)>(stream);
   ShapeType shape{
@@ -247,9 +289,24 @@ ShapeType read_shape_impl(std::basic_ifstream<std::byte> &stream)
   return shape;
 }
 
-dts::shape_variant read_shape(const fs::path &file_name, std::basic_ifstream<std::byte> &stream)
+dts::shape_or_material_list read_shape(const fs::path& file_name, std::basic_ifstream<std::byte>& stream)
 {
   dts::tag_header file_header = read_object_header(stream);
+
+  if (file_header.class_name == dts::material_list_v2::type_name)
+  {
+    return read_material_list(file_header, stream);
+  }
+
+  if (file_header.class_name != dts::shape_v2::type_name)
+  {
+    throw std::invalid_argument("The object provided is not a shape as expected.");
+  }
+
+  if (file_header.version > 8)
+  {
+    throw std::invalid_argument("The shape is not supported.");
+  }
 
   if (file_header.version == 8)
   {
@@ -321,7 +378,8 @@ dts::shape_variant read_shape(const fs::path &file_name, std::basic_ifstream<std
   }
 }
 
-void convert_to_json(const std::filesystem::path &file_name, const dts::shape_variant &shape)
+template<typename ItemType>
+void convert_to_json(const std::filesystem::path& file_name, const ItemType& shape)
 {
   nlohmann::ordered_json shape_as_json = shape;
 
@@ -330,35 +388,46 @@ void convert_to_json(const std::filesystem::path &file_name, const dts::shape_va
     std::ofstream someone_as_file(new_file_name, std::ios::trunc);
     someone_as_file << shape_as_json.dump(4);
   }
-
-  {
-    std::ifstream test_file(new_file_name);
-    auto fresh_shape_json = nlohmann::json::parse(test_file);
-    const dts::shape_variant fresh_shape = fresh_shape_json;
-
-    std::visit([](const auto &shape) { std::cout << "Number of meshes: " << shape.header.num_meshes << '\n'; }, fresh_shape);
-  }
 }
 
-
-int main(int argc, const char **argv)
+void read_from_json(const std::filesystem::path& file_name)
 {
-  for (auto &file_name : find_files(std::vector<std::string>(argv + 1, argv + argc)))
-  {
+  auto new_file_name = file_name.string() + ".json";
+  std::ifstream test_file(new_file_name);
+  auto fresh_shape_json = nlohmann::json::parse(test_file);
+  const dts::shape_variant fresh_shape = fresh_shape_json;
+}
+
+int main(int argc, const char** argv)
+{
+  const auto files = find_files(std::vector<std::string>(argv + 1, argv + argc));
+
+  std::for_each(std::execution::par_unseq, files.begin(), files.end(), [](auto&& file_name) {
     try
     {
-      std::cout << "Converting " << file_name << '\n';
+      {
+        std::stringstream msg;
+        msg << "Converting " << file_name << '\n';
+        std::cout << msg.str();
+      }
+
       std::basic_ifstream<std::byte> input(file_name, std::ios::binary);
 
       auto shape = read_shape(file_name, input);
 
-      convert_to_json(file_name, shape);
+      std::visit(overloaded{
+                   [&](const dts::shape_variant& some_shape) {
+                     convert_to_json(file_name, some_shape);
+                     read_from_json(file_name);
+                   },
+                   [&](const dts::material_list_variant& materials) { convert_to_json(file_name, materials); } },
+        shape);
     }
-    catch (const std::exception &ex)
+    catch (const std::exception& ex)
     {
       std::cerr << ex.what() << '\n';
     }
-  }
+  });
 
   return 0;
 }
