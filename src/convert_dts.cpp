@@ -5,7 +5,6 @@
 #include <set>
 #include <sstream>
 #include <filesystem>
-#include <boost/endian/arithmetic.hpp>
 #include "structures.hpp"
 #include "json_boost.hpp"
 #include "complex_serializer.hpp"
@@ -13,359 +12,339 @@
 namespace fs = std::filesystem;
 namespace dts = darkstar::dts;
 
-std::vector<std::byte> read_string(std::basic_ifstream<std::byte>& stream, std::size_t size)
+std::vector<std::byte> read_string(std::basic_ifstream<std::byte> &stream, std::size_t size)
 {
-    std::vector<std::byte> dest(size + 1, std::byte('\0'));
+  std::vector<std::byte> dest(size + 1, std::byte('\0'));
 
-    // There is always an embedded \0 in the
-    // file if the string length is less than 16 bytes.
-    if (size < 16)
-    {
-        size++;
-    }
+  // There is always an embedded \0 in the
+  // file if the string length is less than 16 bytes.
+  if (size < 16)
+  {
+    size++;
+  }
 
-    stream.read(&dest[0], size);
+  stream.read(&dest[0], size);
 
-    return dest;
+  return dest;
 }
 
 
-template <typename destination_type>
-std::vector<destination_type> read_vector(std::basic_ifstream<std::byte>& stream, std::size_t size)
+template<typename destination_type>
+std::vector<destination_type> read_vector(std::basic_ifstream<std::byte> &stream, std::size_t size)
 {
-    if (size == 0)
-    {
-        return {};
-    }
+  if (size == 0)
+  {
+    return {};
+  }
 
-    std::vector<destination_type> dest(size);
+  std::vector<destination_type> dest(size);
 
-    stream.read(reinterpret_cast<std::byte*>(&dest[0]), sizeof(destination_type) * size);
+  stream.read(reinterpret_cast<std::byte *>(&dest[0]), sizeof(destination_type) * size);
 
-    return dest;
+  return dest;
 }
 
 
 template<std::size_t size>
-std::array<std::byte, size> read(std::basic_ifstream<std::byte>& stream)
+std::array<std::byte, size> read(std::basic_ifstream<std::byte> &stream)
 {
-    std::array<std::byte, size> dest{};
+  std::array<std::byte, size> dest{};
 
-    stream.read(&dest[0], size);
+  stream.read(&dest[0], size);
 
-    return dest;
+  return dest;
 }
 
-template <typename destination_type>
-destination_type read(std::basic_ifstream<std::byte>& stream)
+template<typename destination_type>
+destination_type read(std::basic_ifstream<std::byte> &stream)
 {
-    destination_type dest{};
+  destination_type dest{};
 
-    stream.read(reinterpret_cast<std::byte*>(&dest), sizeof(destination_type));
+  stream.read(reinterpret_cast<std::byte *>(&dest), sizeof(destination_type));
 
-    return dest;
+  return dest;
 }
 
-dts::tag_header read_object_header(std::basic_ifstream<std::byte>& stream)
+dts::tag_header read_object_header(std::basic_ifstream<std::byte> &stream)
 {
-    dts::tag_header file_header =
-            {
-                    read<sizeof(dts::file_tag)>(stream),
-                    read<dts::file_info>(stream)
-            };
+  dts::tag_header file_header = {
+    read<sizeof(dts::file_tag)>(stream),
+    read<dts::file_info>(stream)
+  };
 
-    if (file_header.tag != dts::pers_tag)
-    {
-        throw std::invalid_argument("The file provided does not have the appropriate tag to be a Darkstar DTS file.");
-    }
+  if (file_header.tag != dts::pers_tag)
+  {
+    throw std::invalid_argument("The file provided does not have the appropriate tag to be a Darkstar DTS file.");
+  }
 
-    file_header.class_name = read_string(stream, file_header.file_info.class_name_length);
-    file_header.version = read<dts::version>(stream);
+  file_header.class_name = read_string(stream, file_header.file_info.class_name_length);
+  file_header.version = read<dts::version>(stream);
 
-    return file_header;
+  return file_header;
 }
 
-std::vector<fs::path> find_files(std::vector<std::string>& file_names)
+std::vector<fs::path> find_files(const std::vector<std::string> &file_names)
 {
-    std::vector<fs::path> files;
+  std::vector<fs::path> files;
 
-    std::set<std::string> extensions;
+  std::set<std::string> extensions;
 
-    for(const auto& file_name : file_names)
+  for (const auto &file_name : file_names)
+  {
+    if (file_name == "*")
     {
-        if (file_name == "*")
-        {
-            extensions.insert(".dts");
-            extensions.insert(".DTS");
-            continue;
-        }
-
-        if (auto glob_index = file_name.rfind("*.", 0); glob_index == 0)
-        {
-            extensions.insert(file_name.substr(glob_index + 1));
-            continue;
-        }
-
-        if (auto path = fs::current_path().append(file_name); fs::exists(path))
-        {
-            files.push_back(path);
-        }
+      extensions.insert(".dts");
+      extensions.insert(".DTS");
+      continue;
     }
 
-    if (!extensions.empty())
+    if (auto glob_index = file_name.rfind("*.", 0); glob_index == 0)
     {
-        for(auto& item : fs::recursive_directory_iterator(fs::current_path()))
-        {
-            if (item.is_regular_file())
-            {
-                for(auto& extension : extensions)
-                {
-                    if (const auto& value = item.path().filename().string();
-                            value.rfind(extension) == value.size() - extension.size())
-                    {
-                        files.push_back(item.path());
-                    }
-                }
-            }
-        }
+      extensions.insert(file_name.substr(glob_index + 1));
+      continue;
     }
 
-    return files;
+    if (auto path = fs::current_path().append(file_name); fs::exists(path))
+    {
+      files.push_back(path);
+    }
+  }
+
+  if (!extensions.empty())
+  {
+    for (auto &item : fs::recursive_directory_iterator(fs::current_path()))
+    {
+      if (item.is_regular_file())
+      {
+        for (auto &extension : extensions)
+        {
+          if (const auto &value = item.path().filename().string();
+              value.rfind(extension) == value.size() - extension.size())
+          {
+            files.push_back(item.path());
+          }
+        }
+      }
+    }
+  }
+
+  return files;
 }
 
-template <typename ShapeType>
-void read_meshes(ShapeType& shape, std::size_t num_meshes, std::basic_ifstream<std::byte>& stream)
+template<typename ShapeType>
+void read_meshes(ShapeType &shape, std::size_t num_meshes, std::basic_ifstream<std::byte> &stream)
 {
-    shape.meshes.reserve(num_meshes);
+  shape.meshes.reserve(num_meshes);
 
-    for (int i = 0; i < num_meshes; ++i)
+  for (auto i = 0u; i < num_meshes; ++i)
+  {
+    auto mesh_tag_header = read_object_header(stream);
+
+    if (mesh_tag_header.version == 3)
     {
-        auto mesh_tag_header = read_object_header(stream);
+      auto mesh_header = read<dts::mesh::v3::header>(stream);
 
-        if (mesh_tag_header.version == 3)
-        {
-            auto mesh_header = read<dts::mesh::v3::header>(stream);
+      dts::mesh_v3 mesh{
+        mesh_header,
+        read_vector<dts::mesh::v2::vertex>(stream, mesh_header.num_verts),
+        read_vector<dts::mesh::v2::texture_vertex>(stream, mesh_header.num_texture_verts),
+        read_vector<dts::mesh::v2::face>(stream, mesh_header.num_faces),
+        read_vector<dts::mesh::v3::frame>(stream, mesh_header.num_frames)
+      };
 
-            dts::mesh_v3 mesh
-                    {
-                            mesh_header,
-                            read_vector<dts::mesh::v2::vertex>(stream, mesh_header.num_verts),
-                            read_vector<dts::mesh::v2::texture_vertex>(stream, mesh_header.num_texture_verts),
-                            read_vector<dts::mesh::v2::face>(stream, mesh_header.num_faces),
-                            read_vector<dts::mesh::v3::frame>(stream, mesh_header.num_frames)
-                    };
+      shape.meshes.push_back(mesh);
+    } else if (mesh_tag_header.version == 2)
+    {
+      auto mesh_header = read<dts::mesh::v2::header>(stream);
 
-            shape.meshes.push_back(mesh);
-        }
-        else if (mesh_tag_header.version == 2)
-        {
-            auto mesh_header = read<dts::mesh::v2::header>(stream);
+      dts::mesh_v2 mesh{
+        mesh_header,
+        read_vector<dts::mesh::v2::vertex>(stream, mesh_header.num_verts),
+        read_vector<dts::mesh::v2::texture_vertex>(stream, mesh_header.num_texture_verts),
+        read_vector<dts::mesh::v2::face>(stream, mesh_header.num_faces),
+        read_vector<dts::mesh::v2::frame>(stream, mesh_header.num_frames)
+      };
 
-            dts::mesh_v2 mesh
-                    {
-                            mesh_header,
-                            read_vector<dts::mesh::v2::vertex>(stream, mesh_header.num_verts),
-                            read_vector<dts::mesh::v2::texture_vertex>(stream, mesh_header.num_texture_verts),
-                            read_vector<dts::mesh::v2::face>(stream, mesh_header.num_faces),
-                            read_vector<dts::mesh::v2::frame>(stream, mesh_header.num_frames)
-                    };
+      shape.meshes.push_back(mesh);
+    } else if (mesh_tag_header.version == 1)
+    {
+      auto mesh_header = read<dts::mesh::v1::header>(stream);
 
-            shape.meshes.push_back(mesh);
-        }
-        else if (mesh_tag_header.version == 1)
-        {
-            auto mesh_header = read<dts::mesh::v1::header>(stream);
+      dts::mesh_v1 mesh{
+        mesh_header,
+        read_vector<dts::mesh::v2::vertex>(stream, mesh_header.num_verts),
+        read_vector<dts::mesh::v2::texture_vertex>(stream, mesh_header.num_texture_verts),
+        read_vector<dts::mesh::v2::face>(stream, mesh_header.num_faces),
+        read_vector<dts::mesh::v2::frame>(stream, mesh_header.num_frames)
+      };
 
-            dts::mesh_v1 mesh
-                    {
-                            mesh_header,
-                            read_vector<dts::mesh::v2::vertex>(stream, mesh_header.num_verts),
-                            read_vector<dts::mesh::v2::texture_vertex>(stream, mesh_header.num_texture_verts),
-                            read_vector<dts::mesh::v2::face>(stream, mesh_header.num_faces),
-                            read_vector<dts::mesh::v2::frame>(stream, mesh_header.num_frames)
-                    };
-
-            shape.meshes.push_back(mesh);
-        }
-        else
-        {
-            throw std::invalid_argument("The mesh version was not version 2 or 3 as expected");
-        }
+      shape.meshes.push_back(mesh);
+    } else
+    {
+      throw std::invalid_argument("The mesh version was not version 2 or 3 as expected");
     }
+  }
 }
 
-template <typename ShapeType>
-void read_materials(ShapeType& shape, std::basic_ifstream<std::byte>& stream)
+template<typename ShapeType>
+void read_materials(ShapeType &shape, std::basic_ifstream<std::byte> &stream)
 {
-    if (auto has_material_list = read<dts::shape::v7::has_material_list_flag>(stream); has_material_list == 1)
+  if (auto has_material_list = read<dts::shape::v7::has_material_list_flag>(stream); has_material_list == 1)
+  {
+    auto object_header = read_object_header(stream);
+
+    if (object_header.version == 3)
     {
-        auto object_header = read_object_header(stream);
+      auto main_header = read<dts::material_list::v3::header>(stream);
 
-        if (object_header.version == 3)
-        {
-            auto main_header = read<dts::material_list::v3::header>(stream);
+      shape.material_list =
+        dts::material_list_v3{
+          main_header,
+          read_vector<dts::material_list::v3::material>(stream, main_header.num_materials * main_header.num_details)
+        };
+    } else if (object_header.version == 2)
+    {
+      auto main_header = read<dts::material_list::v3::header>(stream);
 
-            shape.material_list =
-                    dts::material_list_v3
-                    {
-                            main_header,
-                            read_vector<dts::material_list::v3::material>(stream, main_header.num_materials * main_header.num_details)
-                    };
-        }
-        else if (object_header.version == 2)
-        {
-            auto main_header = read<dts::material_list::v3::header>(stream);
-
-            shape.material_list =
-                    dts::material_list_v2
-                    {
-                            main_header,
-                            read_vector<dts::material_list::v2::material>(stream, main_header.num_materials * main_header.num_details)
-                    };
-        }
-
+      shape.material_list =
+        dts::material_list_v2{
+          main_header,
+          read_vector<dts::material_list::v2::material>(stream, main_header.num_materials * main_header.num_details)
+        };
     }
+  }
 }
 
 
 template<typename ShapeType>
-ShapeType read_shape_impl(std::basic_ifstream<std::byte>& stream)
+ShapeType read_shape_impl(std::basic_ifstream<std::byte> &stream)
 {
-    auto header = read<decltype(ShapeType::header)>(stream);
-    ShapeType shape
-            {
-                    header,
-                    read<decltype(ShapeType::data)>(stream),
-                    read_vector<typename decltype(ShapeType::nodes)::value_type>(stream, header.num_nodes),
-                    read_vector<typename decltype(ShapeType::sequences)::value_type>(stream, header.num_sequences),
-                    read_vector<typename decltype(ShapeType::sub_sequences)::value_type>(stream, header.num_sub_sequences),
-                    read_vector<typename decltype(ShapeType::keyframes)::value_type>(stream, header.num_key_frames),
-                    read_vector<typename decltype(ShapeType::transforms)::value_type>(stream, header.num_transforms),
-                    read_vector<typename decltype(ShapeType::names)::value_type>(stream, header.num_names),
-                    read_vector<typename decltype(ShapeType::objects)::value_type>(stream, header.num_objects),
-                    read_vector<typename decltype(ShapeType::details)::value_type>(stream, header.num_details),
-                    read_vector<typename decltype(ShapeType::transitions)::value_type>(stream, header.num_transitions),
-                    read_vector<typename decltype(ShapeType::frame_triggers)::value_type>(stream, header.num_frame_triggers),
-                    read<decltype(ShapeType::footer)>(stream)
-            };
+  auto header = read<decltype(ShapeType::header)>(stream);
+  ShapeType shape{
+    header,
+    read<decltype(ShapeType::data)>(stream),
+    read_vector<typename decltype(ShapeType::nodes)::value_type>(stream, header.num_nodes),
+    read_vector<typename decltype(ShapeType::sequences)::value_type>(stream, header.num_sequences),
+    read_vector<typename decltype(ShapeType::sub_sequences)::value_type>(stream, header.num_sub_sequences),
+    read_vector<typename decltype(ShapeType::keyframes)::value_type>(stream, header.num_key_frames),
+    read_vector<typename decltype(ShapeType::transforms)::value_type>(stream, header.num_transforms),
+    read_vector<typename decltype(ShapeType::names)::value_type>(stream, header.num_names),
+    read_vector<typename decltype(ShapeType::objects)::value_type>(stream, header.num_objects),
+    read_vector<typename decltype(ShapeType::details)::value_type>(stream, header.num_details),
+    read_vector<typename decltype(ShapeType::transitions)::value_type>(stream, header.num_transitions),
+    read_vector<typename decltype(ShapeType::frame_triggers)::value_type>(stream, header.num_frame_triggers),
+    read<decltype(ShapeType::footer)>(stream)
+  };
+
+  read_meshes(shape, header.num_meshes, stream);
+
+  read_materials(shape, stream);
+
+  return shape;
+}
+
+dts::shape_variant read_shape(const fs::path &file_name, std::basic_ifstream<std::byte> &stream)
+{
+  dts::tag_header file_header = read_object_header(stream);
+
+  if (file_header.version == 7)
+  {
+    return read_shape_impl<dts::shape_v7>(stream);
+  } else if (file_header.version == 6)
+  {
+    return read_shape_impl<dts::shape_v6>(stream);
+  } else if (file_header.version == 5)
+  {
+    return read_shape_impl<dts::shape_v5>(stream);
+  } else if (file_header.version == 2)
+  {
+    auto header = read<dts::shape::v2::header>(stream);
+    dts::shape_v2 shape{
+      header,
+      read<dts::shape::v7::data>(stream),
+      read_vector<dts::shape::v7::node>(stream, header.num_nodes),
+      read_vector<dts::shape::v2::sequence>(stream, header.num_sequences),
+      read_vector<dts::shape::v7::sub_sequence>(stream, header.num_sub_sequences),
+      read_vector<dts::shape::v2::keyframe>(stream, header.num_key_frames),
+      read_vector<dts::shape::v6::transform>(stream, header.num_transforms),
+      read_vector<dts::shape::v7::name>(stream, header.num_names),
+      read_vector<dts::shape::v7::object>(stream, header.num_objects),
+      read_vector<dts::shape::v7::detail>(stream, header.num_details),
+      read_vector<dts::shape::v6::transition>(stream, header.num_transitions)
+    };
 
     read_meshes(shape, header.num_meshes, stream);
 
     read_materials(shape, stream);
 
     return shape;
+  } else if (file_header.version == 3)
+  {
+    auto header = read<dts::shape::v2::header>(stream);
+    dts::shape_v3 shape{
+      header,
+      read<dts::shape::v7::data>(stream),
+      read_vector<dts::shape::v7::node>(stream, header.num_nodes),
+      read_vector<dts::shape::v2::sequence>(stream, header.num_sequences),
+      read_vector<dts::shape::v7::sub_sequence>(stream, header.num_sub_sequences),
+      read_vector<dts::shape::v7::keyframe>(stream, header.num_key_frames),
+      read_vector<dts::shape::v6::transform>(stream, header.num_transforms),
+      read_vector<dts::shape::v7::name>(stream, header.num_names),
+      read_vector<dts::shape::v7::object>(stream, header.num_objects),
+      read_vector<dts::shape::v7::detail>(stream, header.num_details),
+      read_vector<dts::shape::v6::transition>(stream, header.num_transitions)
+    };
+
+    read_meshes(shape, header.num_meshes, stream);
+
+    read_materials(shape, stream);
+
+    return shape;
+  } else
+  {
+    std::stringstream error;
+    error << file_name << " is DTS version " << file_header.version << " which is currently unsupported.";
+    throw std::invalid_argument(error.str());
+  }
 }
 
-dts::shape_variant read_shape(const fs::path& file_name, std::basic_ifstream<std::byte>& stream)
+void convert_to_json(const std::filesystem::path &file_name, const dts::shape_variant &shape)
 {
-    dts::tag_header file_header = read_object_header(stream);
+  nlohmann::ordered_json shape_as_json = shape;
 
-    if (file_header.version == 7)
-    {
-        return read_shape_impl<dts::shape_v7>(stream);
-    }
-    else if (file_header.version == 6)
-    {
-        return read_shape_impl<dts::shape_v6>(stream);
-    }
-    else if (file_header.version == 5)
-    {
-        return read_shape_impl<dts::shape_v5>(stream);
-    }
-    else if (file_header.version == 2)
-    {
-        auto header = read<dts::shape::v2::header>(stream);
-        dts::shape_v2 shape
-                {
-                        header,
-                        read<dts::shape::v7::data>(stream),
-                        read_vector<dts::shape::v7::node>(stream, header.num_nodes),
-                        read_vector<dts::shape::v2::sequence>(stream, header.num_sequences),
-                        read_vector<dts::shape::v7::sub_sequence>(stream, header.num_sub_sequences),
-                        read_vector<dts::shape::v2::keyframe>(stream, header.num_key_frames),
-                        read_vector<dts::shape::v6::transform>(stream, header.num_transforms),
-                        read_vector<dts::shape::v7::name>(stream, header.num_names),
-                        read_vector<dts::shape::v7::object>(stream, header.num_objects),
-                        read_vector<dts::shape::v7::detail>(stream, header.num_details),
-                        read_vector<dts::shape::v6::transition>(stream, header.num_transitions)
-                };
+  auto new_file_name = file_name.string() + ".json";
+  {
+    std::ofstream someone_as_file(new_file_name, std::ios::trunc);
+    someone_as_file << shape_as_json.dump(4);
+  }
 
-        read_meshes(shape, header.num_meshes, stream);
+  {
+    std::ifstream test_file(new_file_name);
+    auto fresh_shape_json = nlohmann::json::parse(test_file);
+    const dts::shape_variant fresh_shape = fresh_shape_json;
 
-        read_materials(shape, stream);
-
-        return shape;
-    }
-    else if (file_header.version == 3)
-    {
-        auto header = read<dts::shape::v2::header>(stream);
-        dts::shape_v3 shape
-                {
-                        header,
-                        read<dts::shape::v7::data>(stream),
-                        read_vector<dts::shape::v7::node>(stream, header.num_nodes),
-                        read_vector<dts::shape::v2::sequence>(stream, header.num_sequences),
-                        read_vector<dts::shape::v7::sub_sequence>(stream, header.num_sub_sequences),
-                        read_vector<dts::shape::v7::keyframe>(stream, header.num_key_frames),
-                        read_vector<dts::shape::v6::transform>(stream, header.num_transforms),
-                        read_vector<dts::shape::v7::name>(stream, header.num_names),
-                        read_vector<dts::shape::v7::object>(stream, header.num_objects),
-                        read_vector<dts::shape::v7::detail>(stream, header.num_details),
-                        read_vector<dts::shape::v6::transition>(stream, header.num_transitions)
-                };
-
-        read_meshes(shape, header.num_meshes, stream);
-
-        read_materials(shape, stream);
-
-        return shape;
-    }
-    else
-    {
-        std::stringstream error;
-        error << file_name << " is DTS version " << file_header.version << " which is currently unsupported.";
-        throw std::invalid_argument(error.str());
-    }
-}
-
-void convert_to_json(const std::filesystem::path& file_name, const dts::shape_variant& shape)
-{
-    nlohmann::ordered_json shape_as_json = shape;
-
-    auto new_file_name = file_name.string() + ".json";
-    {
-        std::ofstream someone_as_file(new_file_name, std::ios::trunc);
-        someone_as_file << shape_as_json.dump(4);
-    }
-
-    {
-        std::ifstream test_file(new_file_name);
-        auto fresh_shape_json = nlohmann::json::parse(test_file);
-        const dts::shape_variant fresh_shape = fresh_shape_json;
-
-        std::visit([](const auto& shape){ std::cout << shape.header.num_meshes << '\n';}, fresh_shape);
-    }
+    std::visit([](const auto &shape) { std::cout << shape.header.num_meshes << '\n'; }, fresh_shape);
+  }
 }
 
 
-int main(int argc, const char** argv)
+int main(int argc, const char **argv)
 {
-    for (auto& file_name : find_files(std::vector<std::string>(argv + 1, argv + argc)))
+  for (auto &file_name : find_files(std::vector<std::string>(argv + 1, argv + argc)))
+  {
+    try
     {
-        try
-        {
-            std::cout << "Converting " << file_name << '\n';
-            std::basic_ifstream<std::byte> input(file_name, std::ios::binary);
+      std::cout << "Converting " << file_name << '\n';
+      std::basic_ifstream<std::byte> input(file_name, std::ios::binary);
 
-            auto shape = read_shape(file_name, input);
+      auto shape = read_shape(file_name, input);
 
-            convert_to_json(file_name, shape);
-        }
-        catch (const std::exception& ex)
-        {
-            std::cerr << ex.what() << '\n';
-        }
+      convert_to_json(file_name, shape);
+    } catch (const std::exception &ex)
+    {
+      std::cerr << ex.what() << '\n';
     }
+  }
 
-    return 0;
+  return 0;
 }
