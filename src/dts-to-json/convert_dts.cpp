@@ -14,14 +14,6 @@
 namespace fs = std::filesystem;
 namespace dts = darkstar::dts;
 
-template<class... Ts>
-struct overloaded : Ts...
-{
-  using Ts::operator()...;
-};
-template<class... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
-
 std::string read_string(std::basic_ifstream<std::byte>& stream, std::size_t size)
 {
   std::string dest(size, '\0');
@@ -378,18 +370,6 @@ dts::shape_or_material_list read_shape(const fs::path& file_name, std::basic_ifs
   }
 }
 
-template<typename ItemType>
-void convert_to_json(const std::filesystem::path& file_name, const ItemType& shape)
-{
-  nlohmann::ordered_json shape_as_json = shape;
-
-  auto new_file_name = file_name.string() + ".json";
-  {
-    std::ofstream someone_as_file(new_file_name, std::ios::trunc);
-    someone_as_file << shape_as_json.dump(4);
-  }
-}
-
 void read_from_json(const std::filesystem::path& file_name)
 {
   auto new_file_name = file_name.string() + ".json";
@@ -402,7 +382,8 @@ int main(int argc, const char** argv)
 {
   const auto files = find_files(std::vector<std::string>(argv + 1, argv + argc));
 
-  std::for_each(std::execution::par_unseq, files.begin(), files.end(), [](auto&& file_name) {
+  std::for_each(std::execution::par_unseq, files.begin(), files.end(), [](auto&& file_name)
+  {
     try
     {
       {
@@ -415,13 +396,14 @@ int main(int argc, const char** argv)
 
       auto shape = read_shape(file_name, input);
 
-      std::visit(overloaded{
-                   [&](const dts::shape_variant& some_shape) {
-                     convert_to_json(file_name, some_shape);
-                     read_from_json(file_name);
-                   },
-                   [&](const dts::material_list_variant& materials) { convert_to_json(file_name, materials); } },
-        shape);
+      std::visit([&](const auto& item)
+      {
+        nlohmann::ordered_json item_as_json = item;
+
+        auto new_file_name = file_name.string() + ".json";
+        std::ofstream item_as_file(new_file_name, std::ios::trunc);
+        item_as_file << item_as_json.dump(4);
+      }, shape);
     }
     catch (const std::exception& ex)
     {
