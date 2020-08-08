@@ -19,3 +19,10 @@ conaninfo.txt
 conanbuildinfo.txt
 conan.lock
 graph_info.json
+activate.bat
+activate.ps1
+activate.sh
+deactivate.bat
+deactivate.ps1
+deactivate.sh
+environment.*.env
