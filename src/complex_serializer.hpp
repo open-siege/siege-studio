@@ -41,8 +41,8 @@ namespace nlohmann
     {
       auto version = js.at("version");
 
-      emplace_variant<darkstar::dts::material_list_v3>(js, opt, version);
       emplace_variant<darkstar::dts::material_list_v2>(js, opt, version);
+      emplace_variant<darkstar::dts::material_list_v3>(js, opt, version);
     }
 
     template<typename BasicJsonType>
@@ -50,8 +50,8 @@ namespace nlohmann
     {
       auto version = js.at("version");
 
-      emplace_variant<darkstar::dts::mesh_v3>(js, opt, version);
       emplace_variant<darkstar::dts::mesh_v2>(js, opt, version);
+      emplace_variant<darkstar::dts::mesh_v3>(js, opt, version);
     }
 
     template<typename BasicJsonType>
@@ -59,10 +59,12 @@ namespace nlohmann
     {
       auto version = js.at("version");
 
-      emplace_variant<darkstar::dts::shape_v7>(js, opt, version);
-      emplace_variant<darkstar::dts::shape_v6>(js, opt, version);
-      emplace_variant<darkstar::dts::shape_v5>(js, opt, version);
       emplace_variant<darkstar::dts::shape_v2>(js, opt, version);
+      emplace_variant<darkstar::dts::shape_v3>(js, opt, version);
+      emplace_variant<darkstar::dts::shape_v5>(js, opt, version);
+      emplace_variant<darkstar::dts::shape_v6>(js, opt, version);
+      emplace_variant<darkstar::dts::shape_v7>(js, opt, version);
+      emplace_variant<darkstar::dts::shape_v8>(js, opt, version);
     }
   };
 }// namespace nlohmann
