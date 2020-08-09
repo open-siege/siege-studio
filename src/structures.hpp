@@ -12,11 +12,6 @@ namespace darkstar::dts
   namespace endian = boost::endian;
   using file_tag = std::array<std::byte, 4>;
 
-  struct empty
-  {
-    // Placeholder for types which need named items which are empty.
-  };
-
   template<std::size_t Size>
   constexpr std::array<std::string_view, Size> make_keys(const char*(&&keys)[Size])
   {
@@ -131,92 +126,6 @@ namespace darkstar::dts
       endian::little_int32_t num_transitions;
     };
 
-    struct keyframe
-    {
-      constexpr static auto keys = make_keys({ "position", "keyValue" });
-      float position;
-      endian::little_uint32_t key_value;
-    };
-
-    struct sequence
-    {
-      constexpr static auto keys = make_keys({ "nameIndex",
-        "cyclic",
-        "duration",
-        "priority" });
-      endian::little_int32_t name_index;
-      endian::little_int32_t cyclic;
-      float duration;
-      endian::little_int32_t priority;
-    };
-  }// namespace shape::v2
-
-  namespace shape::v5
-  {
-    struct footer
-    {
-      constexpr static auto keys = make_keys({ "numDefaultMaterials" });
-      endian::little_int32_t num_default_materials;
-    };
-  }// namespace shape::v5
-
-
-  namespace shape::v6
-  {
-    struct transform
-    {
-      constexpr static auto keys = make_keys({ "rotation", "translation", "scale" });
-      quaternion4f rotation;
-      vector3f translation;
-      vector3f scale;
-    };
-
-    struct transition
-    {
-      constexpr static auto keys = make_keys({ "startSequence",
-        "endSequence",
-        "startPosition",
-        "endPosition",
-        "duration",
-        "transform" });
-      endian::little_int32_t start_sequence;
-      endian::little_int32_t end_sequence;
-      float start_position;
-      float end_position;
-      float duration;
-      transform transform;
-    };
-  }// namespace shape::v6
-
-  namespace shape::v7
-  {
-    struct header
-    {
-      constexpr static auto keys = make_keys({ "numNodes",
-        "numSequences",
-        "numSubSequences",
-        "numKeyFrames",
-        "numTransforms",
-        "numNames",
-        "numObjects",
-        "numDetails",
-        "numMeshes",
-        "numTransitions",
-        "numFrameTriggers" });
-
-      endian::little_int32_t num_nodes;
-      endian::little_int32_t num_sequences;
-      endian::little_int32_t num_sub_sequences;
-      endian::little_int32_t num_key_frames;
-      endian::little_int32_t num_transforms;
-      endian::little_int32_t num_names;
-      endian::little_int32_t num_objects;
-      endian::little_int32_t num_details;
-      endian::little_int32_t num_meshes;
-      endian::little_int32_t num_transitions;
-      endian::little_int32_t num_frame_triggers;
-    };
-
     struct data
     {
       constexpr static auto keys = make_keys({ "radius", "centre" });
@@ -239,21 +148,13 @@ namespace darkstar::dts
     struct sequence
     {
       constexpr static auto keys = make_keys({ "nameIndex",
-        "cyclic",
-        "duration",
-        "priority",
-        "firstFrameTrigger",
-        "numFrameTriggers",
-        "numIflSubSequences",
-        "firstIflSubSequence" });
+                                               "cyclic",
+                                               "duration",
+                                               "priority" });
       endian::little_int32_t name_index;
       endian::little_int32_t cyclic;
       float duration;
       endian::little_int32_t priority;
-      endian::little_int32_t first_frame_trigger;
-      endian::little_int32_t num_frame_triggers;
-      endian::little_int32_t num_ifl_sub_sequences;
-      endian::little_int32_t first_ifl_sub_sequence;
     };
 
     struct sub_sequence
@@ -264,24 +165,20 @@ namespace darkstar::dts
       endian::little_int32_t first_key_frame;
     };
 
-
     struct keyframe
     {
-      constexpr static auto keys = make_keys({ "position", "keyValue", "matIndex" });
+      constexpr static auto keys = make_keys({ "position", "keyValue" });
       float position;
       endian::little_uint32_t key_value;
-      endian::little_uint32_t mat_index;
     };
 
     struct transform
     {
       constexpr static auto keys = make_keys({ "rotation", "translation", "scale" });
-      quaternion4s rotation;
+      quaternion4f rotation;
       vector3f translation;
       vector3f scale;
     };
-
-    static_assert(sizeof(transform) == sizeof(std::array<std::int32_t, 8>));
 
     using name = std::array<char, 24>;
 
@@ -309,6 +206,122 @@ namespace darkstar::dts
     struct transition
     {
       constexpr static auto keys = make_keys({ "startSequence",
+                                               "endSequence",
+                                               "startPosition",
+                                               "endPosition",
+                                               "duration",
+                                               "transform" });
+      endian::little_int32_t start_sequence;
+      endian::little_int32_t end_sequence;
+      float start_position;
+      float end_position;
+      float duration;
+      transform transform;
+    };
+  }// namespace shape::v2
+
+  namespace shape::v3
+  {
+    struct keyframe
+    {
+      constexpr static auto keys = make_keys({ "position", "keyValue", "matIndex" });
+      float position;
+      endian::little_uint32_t key_value;
+      endian::little_uint32_t mat_index;
+    };
+  }
+
+  namespace shape::v5
+  {
+    struct header
+    {
+      constexpr static auto keys = make_keys({ "numNodes",
+                                               "numSequences",
+                                               "numSubSequences",
+                                               "numKeyFrames",
+                                               "numTransforms",
+                                               "numNames",
+                                               "numObjects",
+                                               "numDetails",
+                                               "numMeshes",
+                                               "numTransitions",
+                                               "numFrameTriggers" });
+
+      endian::little_int32_t num_nodes;
+      endian::little_int32_t num_sequences;
+      endian::little_int32_t num_sub_sequences;
+      endian::little_int32_t num_key_frames;
+      endian::little_int32_t num_transforms;
+      endian::little_int32_t num_names;
+      endian::little_int32_t num_objects;
+      endian::little_int32_t num_details;
+      endian::little_int32_t num_meshes;
+      endian::little_int32_t num_transitions;
+      endian::little_int32_t num_frame_triggers;
+    };
+
+    struct sequence
+    {
+      constexpr static auto keys = make_keys({ "nameIndex",
+                                               "cyclic",
+                                               "duration",
+                                               "priority",
+                                               "firstFrameTrigger",
+                                               "numFrameTriggers",
+                                               "numIflSubSequences",
+                                               "firstIflSubSequence" });
+      endian::little_int32_t name_index;
+      endian::little_int32_t cyclic;
+      float duration;
+      endian::little_int32_t priority;
+      endian::little_int32_t first_frame_trigger;
+      endian::little_int32_t num_frame_triggers;
+      endian::little_int32_t num_ifl_sub_sequences;
+      endian::little_int32_t first_ifl_sub_sequence;
+    };
+
+    struct frame_trigger
+    {
+      constexpr static auto keys = make_keys({ "position",
+                                               "value" });
+      float position;
+      float value;
+    };
+
+    struct footer
+    {
+      constexpr static auto keys = make_keys({ "numDefaultMaterials" });
+      endian::little_int32_t num_default_materials;
+    };
+  }// namespace shape::v5
+
+
+  namespace shape::v6
+  {
+    struct footer
+    {
+      constexpr static auto keys = make_keys({ "numDefaultMaterials",
+                                               "alwaysNode" });
+      endian::little_int32_t num_default_materials;
+      endian::little_int32_t always_node;
+    };
+  }// namespace shape::v6
+
+  namespace shape::v7
+  {
+    struct transform
+    {
+      constexpr static auto keys = make_keys({ "rotation", "translation", "scale" });
+      quaternion4s rotation;
+      vector3f translation;
+      vector3f scale;
+    };
+
+    static_assert(sizeof(transform) == sizeof(std::array<std::int32_t, 8>));
+
+    struct transition
+    {
+      constexpr static auto keys = make_keys({ "startSequence",
         "endSequence",
         "startPosition",
         "endPosition",
@@ -324,22 +337,6 @@ namespace darkstar::dts
       quaternion4s rotation;
       vector3f translation;
       vector3f scale;
-    };
-
-    struct frame_trigger
-    {
-      constexpr static auto keys = make_keys({ "position",
-        "value" });
-      float position;
-      float value;
-    };
-
-    struct footer
-    {
-      constexpr static auto keys = make_keys({ "numDefaultMaterials",
-        "alwaysNode" });
-      endian::little_int32_t num_default_materials;
-      endian::little_int32_t always_node;
     };
 
     using has_material_list_flag = endian::little_int32_t;
@@ -683,7 +680,6 @@ namespace darkstar::dts
 
   struct shape_v2
   {
-    constexpr static empty footer = {};
     constexpr static auto type_name = std::string_view{ "TS::Shape" };
     constexpr static auto version = 2;
     constexpr static auto keys = make_keys({ "header",
@@ -701,16 +697,16 @@ namespace darkstar::dts
       "materialList" });
 
     shape::v2::header header;
-    shape::v7::data data;
-    std::vector<shape::v7::node> nodes;
+    shape::v2::data data;
+    std::vector<shape::v2::node> nodes;
     std::vector<shape::v2::sequence> sequences;
-    std::vector<shape::v7::sub_sequence> sub_sequences;
+    std::vector<shape::v2::sub_sequence> sub_sequences;
     std::vector<shape::v2::keyframe> keyframes;
-    std::vector<shape::v6::transform> transforms;
-    std::vector<shape::v7::name> names;
-    std::vector<shape::v7::object> objects;
-    std::vector<shape::v7::detail> details;
-    std::vector<shape::v6::transition> transitions;
+    std::vector<shape::v2::transform> transforms;
+    std::vector<shape::v2::name> names;
+    std::vector<shape::v2::object> objects;
+    std::vector<shape::v2::detail> details;
+    std::vector<shape::v2::transition> transitions;
     std::vector<mesh_variant> meshes;
 
     material_list_variant material_list;
@@ -718,7 +714,6 @@ namespace darkstar::dts
 
   struct shape_v3
   {
-    constexpr static empty footer = {};
     constexpr static auto type_name = shape_v2::type_name;
     constexpr static auto version = 3;
     constexpr static auto keys = make_keys({ "header",
@@ -736,16 +731,16 @@ namespace darkstar::dts
       "materialList" });
 
     shape::v2::header header;
-    shape::v7::data data;
-    std::vector<shape::v7::node> nodes;
+    shape::v2::data data;
+    std::vector<shape::v2::node> nodes;
     std::vector<shape::v2::sequence> sequences;
-    std::vector<shape::v7::sub_sequence> sub_sequences;
-    std::vector<shape::v7::keyframe> keyframes;
-    std::vector<shape::v6::transform> transforms;
-    std::vector<shape::v7::name> names;
-    std::vector<shape::v7::object> objects;
-    std::vector<shape::v7::detail> details;
-    std::vector<shape::v6::transition> transitions;
+    std::vector<shape::v2::sub_sequence> sub_sequences;
+    std::vector<shape::v3::keyframe> keyframes;
+    std::vector<shape::v2::transform> transforms;
+    std::vector<shape::v2::name> names;
+    std::vector<shape::v2::object> objects;
+    std::vector<shape::v2::detail> details;
+    std::vector<shape::v2::transition> transitions;
     std::vector<mesh_variant> meshes;
 
     material_list_variant material_list;
@@ -771,18 +766,18 @@ namespace darkstar::dts
       "meshes",
       "materialList" });
 
-    shape::v7::header header;
-    shape::v7::data data;
-    std::vector<shape::v7::node> nodes;
-    std::vector<shape::v7::sequence> sequences;
-    std::vector<shape::v7::sub_sequence> sub_sequences;
-    std::vector<shape::v7::keyframe> keyframes;
-    std::vector<shape::v6::transform> transforms;
-    std::vector<shape::v7::name> names;
-    std::vector<shape::v7::object> objects;
-    std::vector<shape::v7::detail> details;
-    std::vector<shape::v6::transition> transitions;
-    std::vector<shape::v7::frame_trigger> frame_triggers;
+    shape::v5::header header;
+    shape::v2::data data;
+    std::vector<shape::v2::node> nodes;
+    std::vector<shape::v5::sequence> sequences;
+    std::vector<shape::v2::sub_sequence> sub_sequences;
+    std::vector<shape::v3::keyframe> keyframes;
+    std::vector<shape::v2::transform> transforms;
+    std::vector<shape::v2::name> names;
+    std::vector<shape::v2::object> objects;
+    std::vector<shape::v2::detail> details;
+    std::vector<shape::v2::transition> transitions;
+    std::vector<shape::v5::frame_trigger> frame_triggers;
     shape::v5::footer footer;
     std::vector<mesh_variant> meshes;
 
@@ -809,19 +804,19 @@ namespace darkstar::dts
       "meshes",
       "materialList" });
 
-    shape::v7::header header;
-    shape::v7::data data;
-    std::vector<shape::v7::node> nodes;
-    std::vector<shape::v7::sequence> sequences;
-    std::vector<shape::v7::sub_sequence> sub_sequences;
-    std::vector<shape::v7::keyframe> keyframes;
-    std::vector<shape::v6::transform> transforms;
-    std::vector<shape::v7::name> names;
-    std::vector<shape::v7::object> objects;
-    std::vector<shape::v7::detail> details;
-    std::vector<shape::v6::transition> transitions;
-    std::vector<shape::v7::frame_trigger> frame_triggers;
-    shape::v7::footer footer;
+    shape::v5::header header;
+    shape::v2::data data;
+    std::vector<shape::v2::node> nodes;
+    std::vector<shape::v5::sequence> sequences;
+    std::vector<shape::v2::sub_sequence> sub_sequences;
+    std::vector<shape::v3::keyframe> keyframes;
+    std::vector<shape::v2::transform> transforms;
+    std::vector<shape::v2::name> names;
+    std::vector<shape::v2::object> objects;
+    std::vector<shape::v2::detail> details;
+    std::vector<shape::v2::transition> transitions;
+    std::vector<shape::v5::frame_trigger> frame_triggers;
+    shape::v6::footer footer;
     std::vector<mesh_variant> meshes;
 
     material_list_variant material_list;
@@ -847,19 +842,19 @@ namespace darkstar::dts
       "meshes",
       "materialList" });
 
-    shape::v7::header header;
-    shape::v7::data data;
-    std::vector<shape::v7::node> nodes;
-    std::vector<shape::v7::sequence> sequences;
-    std::vector<shape::v7::sub_sequence> sub_sequences;
-    std::vector<shape::v7::keyframe> keyframes;
+    shape::v5::header header;
+    shape::v2::data data;
+    std::vector<shape::v2::node> nodes;
+    std::vector<shape::v5::sequence> sequences;
+    std::vector<shape::v2::sub_sequence> sub_sequences;
+    std::vector<shape::v3::keyframe> keyframes;
     std::vector<shape::v7::transform> transforms;
-    std::vector<shape::v7::name> names;
-    std::vector<shape::v7::object> objects;
-    std::vector<shape::v7::detail> details;
+    std::vector<shape::v2::name> names;
+    std::vector<shape::v2::object> objects;
+    std::vector<shape::v2::detail> details;
     std::vector<shape::v7::transition> transitions;
-    std::vector<shape::v7::frame_trigger> frame_triggers;
-    shape::v7::footer footer;
+    std::vector<shape::v5::frame_trigger> frame_triggers;
+    shape::v6::footer footer;
     std::vector<mesh_variant> meshes;
 
     material_list_variant material_list;
@@ -885,19 +880,19 @@ namespace darkstar::dts
       "meshes",
       "materialList" });
 
-    shape::v7::header header;
+    shape::v5::header header;
     shape::v8::data data;
     std::vector<shape::v8::node> nodes;
-    std::vector<shape::v7::sequence> sequences;
+    std::vector<shape::v5::sequence> sequences;
     std::vector<shape::v8::sub_sequence> sub_sequences;
     std::vector<shape::v8::keyframe> keyframes;
     std::vector<shape::v8::transform> transforms;
     std::vector<shape::v8::name> names;
     std::vector<shape::v8::object> objects;
-    std::vector<shape::v7::detail> details;
+    std::vector<shape::v2::detail> details;
     std::vector<shape::v8::transition> transitions;
-    std::vector<shape::v7::frame_trigger> frame_triggers;
-    shape::v7::footer footer;
+    std::vector<shape::v5::frame_trigger> frame_triggers;
+    shape::v5::footer footer;
     std::vector<mesh_variant> meshes;
 
     material_list_variant material_list;

@@ -4,12 +4,12 @@
 #include <vector>
 #include <algorithm>
 #include <execution>
-#include <set>
 #include <sstream>
 #include <filesystem>
 #include "structures.hpp"
 #include "json_boost.hpp"
 #include "complex_serializer.hpp"
+#include "shared.hpp"
 
 namespace fs = std::filesystem;
 namespace dts = darkstar::dts;
@@ -76,63 +76,17 @@ dts::tag_header read_object_header(std::basic_ifstream<std::byte>& stream)
 
   if (file_header.tag != dts::pers_tag)
   {
-    throw std::invalid_argument("The file provided does not have the appropriate tag to be a Darkstar DTS file.");
+    std::stringstream msg;
+    msg << "There was an error trying to parse a portion of the DTS/DML file at " << stream.tellg() << ". ";
+    msg << "Expected " << std::string(reinterpret_cast<const char*>(dts::pers_tag.data()), dts::pers_tag.size()) << " to be present but was not found.\n";
+
+    throw std::invalid_argument(msg.str());
   }
 
   file_header.class_name = read_string(stream, file_header.file_info.class_name_length);
   file_header.version = read<dts::version>(stream);
 
   return file_header;
-}
-
-std::vector<fs::path> find_files(const std::vector<std::string>& file_names)
-{
-  std::vector<fs::path> files;
-
-  std::set<std::string> extensions;
-
-  for (const auto& file_name : file_names)
-  {
-    if (file_name == "*")
-    {
-      extensions.insert(".dts");
-      extensions.insert(".DTS");
-      extensions.insert(".dml");
-      extensions.insert(".DML");
-      continue;
-    }
-
-    if (auto glob_index = file_name.rfind("*.", 0); glob_index == 0)
-    {
-      extensions.insert(file_name.substr(glob_index + 1));
-      continue;
-    }
-
-    if (auto path = fs::current_path().append(file_name); fs::exists(path))
-    {
-      files.push_back(path);
-    }
-  }
-
-  if (!extensions.empty())
-  {
-    for (auto& item : fs::recursive_directory_iterator(fs::current_path()))
-    {
-      if (item.is_regular_file())
-      {
-        for (auto& extension : extensions)
-        {
-          if (const auto& value = item.path().filename().string();
-              value.rfind(extension) == value.size() - extension.size())
-          {
-            files.push_back(item.path());
-          }
-        }
-      }
-    }
-  }
-
-  return files;
 }
 
 template<typename ShapeType>
@@ -270,9 +224,13 @@ ShapeType read_shape_impl(std::basic_ifstream<std::byte>& stream)
     read_vector<typename decltype(ShapeType::objects)::value_type>(stream, header.num_objects),
     read_vector<typename decltype(ShapeType::details)::value_type>(stream, header.num_details),
     read_vector<typename decltype(ShapeType::transitions)::value_type>(stream, header.num_transitions),
-    read_vector<typename decltype(ShapeType::frame_triggers)::value_type>(stream, header.num_frame_triggers),
-    read<decltype(ShapeType::footer)>(stream)
   };
+
+  if constexpr (ShapeType::version > 3)
+  {
+    shape.frame_triggers = read_vector<typename decltype(ShapeType::frame_triggers)::value_type>(stream, header.num_frame_triggers);
+    shape.footer = read<decltype(ShapeType::footer)>(stream);
+  }
 
   read_meshes(shape, header.num_meshes, stream);
 
@@ -316,51 +274,13 @@ dts::shape_or_material_list read_shape(const fs::path& file_name, std::basic_ifs
   {
     return read_shape_impl<dts::shape_v5>(stream);
   }
-  else if (file_header.version == 2)
-  {
-    auto header = read<dts::shape::v2::header>(stream);
-    dts::shape_v2 shape{
-      header,
-      read<dts::shape::v7::data>(stream),
-      read_vector<dts::shape::v7::node>(stream, header.num_nodes),
-      read_vector<dts::shape::v2::sequence>(stream, header.num_sequences),
-      read_vector<dts::shape::v7::sub_sequence>(stream, header.num_sub_sequences),
-      read_vector<dts::shape::v2::keyframe>(stream, header.num_key_frames),
-      read_vector<dts::shape::v6::transform>(stream, header.num_transforms),
-      read_vector<dts::shape::v7::name>(stream, header.num_names),
-      read_vector<dts::shape::v7::object>(stream, header.num_objects),
-      read_vector<dts::shape::v7::detail>(stream, header.num_details),
-      read_vector<dts::shape::v6::transition>(stream, header.num_transitions)
-    };
-
-    read_meshes(shape, header.num_meshes, stream);
-
-    read_materials(shape, stream);
-
-    return shape;
-  }
   else if (file_header.version == 3)
   {
-    auto header = read<dts::shape::v2::header>(stream);
-    dts::shape_v3 shape{
-      header,
-      read<dts::shape::v7::data>(stream),
-      read_vector<dts::shape::v7::node>(stream, header.num_nodes),
-      read_vector<dts::shape::v2::sequence>(stream, header.num_sequences),
-      read_vector<dts::shape::v7::sub_sequence>(stream, header.num_sub_sequences),
-      read_vector<dts::shape::v7::keyframe>(stream, header.num_key_frames),
-      read_vector<dts::shape::v6::transform>(stream, header.num_transforms),
-      read_vector<dts::shape::v7::name>(stream, header.num_names),
-      read_vector<dts::shape::v7::object>(stream, header.num_objects),
-      read_vector<dts::shape::v7::detail>(stream, header.num_details),
-      read_vector<dts::shape::v6::transition>(stream, header.num_transitions)
-    };
-
-    read_meshes(shape, header.num_meshes, stream);
-
-    read_materials(shape, stream);
-
-    return shape;
+    return read_shape_impl<dts::shape_v3>(stream);
+  }
+  else if (file_header.version == 2)
+  {
+    return read_shape_impl<dts::shape_v2>(stream);
   }
   else
   {
@@ -380,10 +300,11 @@ void read_from_json(const std::filesystem::path& file_name)
 
 int main(int argc, const char** argv)
 {
-  const auto files = find_files(std::vector<std::string>(argv + 1, argv + argc));
+  const auto files = dts::shared::find_files(
+    std::vector<std::string>(argv + 1, argv + argc),
+    ".dts",".DTS", ".dml", ".DML");
 
-  std::for_each(std::execution::par_unseq, files.begin(), files.end(), [](auto&& file_name)
-  {
+  std::for_each(std::execution::par_unseq, files.begin(), files.end(), [](auto&& file_name) {
     try
     {
       {
@@ -396,18 +317,24 @@ int main(int argc, const char** argv)
 
       auto shape = read_shape(file_name, input);
 
-      std::visit([&](const auto& item)
-      {
+      std::visit([&](const auto& item) {
         nlohmann::ordered_json item_as_json = item;
 
         auto new_file_name = file_name.string() + ".json";
         std::ofstream item_as_file(new_file_name, std::ios::trunc);
         item_as_file << item_as_json.dump(4);
-      }, shape);
+
+        std::stringstream msg;
+        msg << "Created " << new_file_name << '\n';
+        std::cout << msg.str();
+      },
+        shape);
     }
     catch (const std::exception& ex)
     {
-      std::cerr << ex.what() << '\n';
+      std::stringstream msg;
+      msg << file_name << " " << ex.what() << '\n';
+      std::cerr << msg.str();
     }
   });
 

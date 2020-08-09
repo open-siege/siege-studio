@@ -4,73 +4,14 @@
 #include <vector>
 #include <algorithm>
 #include <execution>
-#include <set>
-#include <sstream>
 #include <optional>
-#include <filesystem>
 #include "structures.hpp"
 #include "json_boost.hpp"
 #include "complex_serializer.hpp"
+#include "shared.hpp"
 
 namespace fs = std::filesystem;
 namespace dts = darkstar::dts;
-
-template<class... Ts>
-struct overloaded : Ts...
-{
-  using Ts::operator()...;
-};
-template<class... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
-
-std::vector<fs::path> find_files(const std::vector<std::string>& file_names)
-{
-  std::vector<fs::path> files;
-
-  std::set<std::string> extensions;
-
-  for (const auto& file_name : file_names)
-  {
-    if (file_name == "*")
-    {
-      extensions.insert(".dts.json");
-      extensions.insert(".DTS.json");
-      continue;
-    }
-
-    if (auto glob_index = file_name.rfind("*.", 0); glob_index == 0)
-    {
-      extensions.insert(file_name.substr(glob_index + 1));
-      continue;
-    }
-
-    if (auto path = fs::current_path().append(file_name); fs::exists(path))
-    {
-      files.push_back(path);
-    }
-  }
-
-  if (!extensions.empty())
-  {
-    for (auto& item : fs::recursive_directory_iterator(fs::current_path()))
-    {
-      if (item.is_regular_file())
-      {
-        for (auto& extension : extensions)
-        {
-          if (const auto& value = item.path().filename().string();
-              value.rfind(extension) == value.size() - extension.size())
-          {
-            files.push_back(item.path());
-          }
-        }
-      }
-    }
-  }
-
-  return files;
-}
-
 
 template<std::size_t Size>
 void write(std::basic_ostream<std::byte>& stream, const std::array<std::byte, Size>& value)
@@ -83,13 +24,6 @@ void write(std::basic_ostream<std::byte>& stream, const ValueType& value)
 {
   stream.write(reinterpret_cast<const std::byte*>(&value), sizeof(value));
 }
-
-
-void write(std::basic_ostream<std::byte>&, dts::empty)
-{
-  //Do nothing
-}
-
 
 template<typename ValueType>
 void write(std::basic_ostream<std::byte>& stream, const std::vector<ValueType>& values)
@@ -145,7 +79,9 @@ void write_size(std::basic_ostream<std::byte>& stream, std::optional<std::uint32
 
 int main(int argc, const char** argv)
 {
-  const auto files = find_files(std::vector<std::string>(argv + 1, argv + argc));
+  const auto files = dts::shared::find_files(
+    std::vector<std::string>(argv + 1, argv + argc),
+    ".dts.json", ".DTS.json"/*, TODO properly recreate dml files from JSON: ".dml.json", ".DML.json"*/);
 
   std::for_each(std::execution::par_unseq, files.begin(), files.end(), [](auto&& file_name) {
     try
@@ -218,7 +154,9 @@ int main(int argc, const char** argv)
     }
     catch (const std::exception& ex)
     {
-      std::cerr << ex.what() << '\n';
+        std::stringstream msg;
+        msg << file_name << " " << ex.what() << '\n';
+        std::cerr << msg.str();
     }
   });
 
