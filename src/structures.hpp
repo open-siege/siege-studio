@@ -99,6 +99,260 @@ namespace darkstar::dts
     std::uint8_t rgb_flags;
   };
 
+
+  namespace mesh::v1
+  {
+    struct header
+    {
+      constexpr static auto keys = make_keys({ "numVerts",
+                                               "vertsPerFrame",
+                                               "numTextureVerts",
+                                               "numFaces",
+                                               "numFrames",
+                                               "scale",
+                                               "origin",
+                                               "radius" });
+
+      endian::little_int32_t num_verts;
+      endian::little_int32_t verts_per_frame;
+      endian::little_int32_t num_texture_verts;
+      endian::little_int32_t num_faces;
+      endian::little_int32_t num_frames;
+      vector3f scale;
+      vector3f origin;
+      float radius;
+    };
+
+    struct vertex
+    {
+      constexpr static auto keys = make_keys({ "x", "y", "z", "normal" });
+      std::uint8_t x;
+      std::uint8_t y;
+      std::uint8_t z;
+      std::uint8_t normal;
+    };
+
+    static_assert(sizeof(vertex) == sizeof(std::int32_t));
+
+    struct texture_vertex
+    {
+      constexpr static auto keys = make_keys({ "x", "y" });
+      float x;
+      float y;
+    };
+
+    struct face
+    {
+      constexpr static auto keys = make_keys({ "vi1", "ti1", "vi2", "ti2", "vi3", "ti3", "material" });
+      endian::little_int32_t vi1;
+      endian::little_int32_t ti1;
+      endian::little_int32_t vi2;
+      endian::little_int32_t ti2;
+      endian::little_int32_t vi3;
+      endian::little_int32_t ti3;
+      endian::little_int32_t material;
+    };
+
+    struct frame
+    {
+      constexpr static auto keys = make_keys({ "firstVert" });
+      endian::little_int32_t first_vert;
+    };
+
+    struct mesh
+    {
+      constexpr static auto type_name = std::string_view{ "TS::CelAnimMesh" };
+      constexpr static auto version = 1;
+      constexpr static auto keys = make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
+
+      header header;
+      std::vector<vertex> vertices;
+      std::vector<texture_vertex> texture_vertices;
+      std::vector<face> faces;
+      std::vector<frame> frames;
+    };
+  }// namespace mesh::v1
+
+  namespace mesh::v2
+  {
+    struct header
+    {
+      constexpr static auto keys = make_keys({ "numVerts",
+                                               "vertsPerFrame",
+                                               "numTextureVerts",
+                                               "numFaces",
+                                               "numFrames",
+                                               "textureVertsPerFrame",
+                                               "scale",
+                                               "origin",
+                                               "radius" });
+
+      endian::little_int32_t num_verts;
+      endian::little_int32_t verts_per_frame;
+      endian::little_int32_t num_texture_verts;
+      endian::little_int32_t num_faces;
+      endian::little_int32_t num_frames;
+      endian::little_int32_t texture_verts_per_frame;
+      vector3f scale;
+      vector3f origin;
+      float radius;
+    };
+
+    struct mesh
+    {
+      constexpr static auto type_name = v1::mesh::type_name;
+      constexpr static auto version = 2;
+      constexpr static auto keys = make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
+
+      header header;
+      std::vector<v1::vertex> vertices;
+      std::vector<v1::texture_vertex> texture_vertices;
+      std::vector<v1::face> faces;
+      std::vector<v1::frame> frames;
+    };
+  }// namespace mesh::v2
+
+  namespace mesh::v3
+  {
+    struct header
+    {
+      constexpr static auto keys = make_keys({ "numVerts",
+                                               "vertsPerFrame",
+                                               "numTextureVerts",
+                                               "numFaces",
+                                               "numFrames",
+                                               "textureVertsPerFrame",
+                                               "radius" });
+
+      endian::little_int32_t num_verts;
+      endian::little_int32_t verts_per_frame;
+      endian::little_int32_t num_texture_verts;
+      endian::little_int32_t num_faces;
+      endian::little_int32_t num_frames;
+      endian::little_int32_t texture_verts_per_frame;
+      float radius;
+    };
+
+    struct frame
+    {
+      constexpr static auto keys = make_keys({ "firstVert", "scale", "origin" });
+      endian::little_int32_t first_vert;
+      vector3f scale;
+      vector3f origin;
+    };
+
+    struct mesh
+    {
+      constexpr static auto type_name = v1::mesh::type_name;
+      constexpr static auto version = 3;
+      constexpr static auto keys = make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
+
+      v3::header header;
+      std::vector<v1::vertex> vertices;
+      std::vector<v1::texture_vertex> texture_vertices;
+      std::vector<v1::face> faces;
+      std::vector<v3::frame> frames;
+    };
+
+  }// namespace mesh::v3
+
+  namespace material_list::v2
+  {
+    struct header
+    {
+      constexpr static auto keys = make_keys({ "numDetails",
+                                               "numMaterials" });
+      endian::little_int32_t num_details;
+      endian::little_int32_t num_materials;
+    };
+
+    struct material
+    {
+      constexpr static auto keys = make_keys({ "flags", "alpha", "index", "rgbData", "fileName" });
+
+      endian::little_int32_t flags;
+      float alpha;
+      endian::little_int32_t index;
+      rgb_data rgb_data;
+
+      std::array<char, 32> file_name;
+    };
+
+    struct material_list
+    {
+      constexpr static auto type_name = std::string_view{ "TS::MaterialList" };
+      constexpr static auto version = 2;
+      constexpr static auto keys = make_keys({ "header", "materials" });
+
+      header header;
+      std::vector<material> materials;
+    };
+  }// namespace material_list::v2
+
+  namespace material_list::v3
+  {
+    struct material
+    {
+      constexpr static auto keys = make_keys({ "flags", "alpha", "index", "rgbData", "fileName", "type", "elasticity", "friction" });
+
+      endian::little_int32_t flags;
+      float alpha;
+      endian::little_int32_t index;
+      rgb_data rgb_data;
+
+      std::array<char, 32> file_name;
+
+      endian::little_int32_t type;
+      float elasticity;
+      float friction;
+    };
+
+    struct material_list
+    {
+      constexpr static auto type_name = v2::material_list::type_name;
+      constexpr static auto version = 3;
+      constexpr static auto keys = make_keys({ "header", "materials" });
+
+      v2::header header;
+      std::vector<material> materials;
+    };
+  }// namespace material_list::v3
+
+  namespace material_list::v4
+  {
+    struct material
+    {
+      constexpr static auto keys = make_keys({ "flags", "alpha", "index", "rgbData", "fileName", "type", "elasticity", "friction", "useDefaultProperties" });
+
+      endian::little_int32_t flags;
+      float alpha;
+      endian::little_int32_t index;
+      rgb_data rgb_data;
+
+      std::array<char, 32> file_name;
+
+      endian::little_int32_t type;
+      float elasticity;
+      float friction;
+      endian::little_uint32_t use_default_properties;
+    };
+
+    struct material_list
+    {
+      constexpr static auto type_name = v2::material_list::type_name;
+      constexpr static auto version = 4;
+      constexpr static auto keys = make_keys({ "header", "materials" });
+
+      v2::header header;
+      std::vector<material> materials;
+    };
+
+  }// namespace material_list::v4
+
+  using mesh_variant = std::variant<mesh::v1::mesh, mesh::v2::mesh, mesh::v3::mesh>;
+
+  using material_list_variant = std::variant<material_list::v2::material_list, material_list::v3::material_list, material_list::v4::material_list>;
+
   namespace shape::v2
   {
     struct header
@@ -218,6 +472,43 @@ namespace darkstar::dts
       float duration;
       transform transform;
     };
+
+    // TODO Put this into the actual shape for 100% coverage in the JSON file.
+    using has_material_list_flag = endian::little_int32_t;
+
+    struct shape
+    {
+      constexpr static auto type_name = std::string_view{ "TS::Shape" };
+      constexpr static auto version = 2;
+      constexpr static auto keys = make_keys({ "header",
+                                               "data",
+                                               "nodes",
+                                               "sequences",
+                                               "subSequences",
+                                               "keyframes",
+                                               "transforms",
+                                               "names",
+                                               "objects",
+                                               "details",
+                                               "transitions",
+                                               "meshes",
+                                               "materialList" });
+
+      header header;
+      data data;
+      std::vector<node> nodes;
+      std::vector<sequence> sequences;
+      std::vector<sub_sequence> sub_sequences;
+      std::vector<keyframe> keyframes;
+      std::vector<transform> transforms;
+      std::vector<name> names;
+      std::vector<object> objects;
+      std::vector<detail> details;
+      std::vector<transition> transitions;
+      std::vector<mesh_variant> meshes;
+
+      material_list_variant material_list;
+    };
   }// namespace shape::v2
 
   namespace shape::v3
@@ -228,6 +519,40 @@ namespace darkstar::dts
       float position;
       endian::little_uint32_t key_value;
       endian::little_uint32_t mat_index;
+    };
+
+    struct shape
+    {
+      constexpr static auto type_name = v2::shape::type_name;
+      constexpr static auto version = 3;
+      constexpr static auto keys = make_keys({ "header",
+                                               "data",
+                                               "nodes",
+                                               "sequences",
+                                               "subSequences",
+                                               "keyframes",
+                                               "transforms",
+                                               "names",
+                                               "objects",
+                                               "details",
+                                               "transitions",
+                                               "meshes",
+                                               "materialList" });
+
+      v2::header header;
+      v2::data data;
+      std::vector<v2::node> nodes;
+      std::vector<v2::sequence> sequences;
+      std::vector<v2::sub_sequence> sub_sequences;
+      std::vector<keyframe> keyframes;
+      std::vector<v2::transform> transforms;
+      std::vector<v2::name> names;
+      std::vector<v2::object> objects;
+      std::vector<v2::detail> details;
+      std::vector<v2::transition> transitions;
+      std::vector<mesh_variant> meshes;
+
+      material_list_variant material_list;
     };
   }
 
@@ -293,6 +618,44 @@ namespace darkstar::dts
       constexpr static auto keys = make_keys({ "numDefaultMaterials" });
       endian::little_int32_t num_default_materials;
     };
+
+    struct shape
+    {
+      constexpr static auto type_name = v2::shape::type_name;
+      constexpr static auto version = 5;
+      constexpr static auto keys = make_keys({ "header",
+                                               "data",
+                                               "nodes",
+                                               "sequences",
+                                               "subSequences",
+                                               "keyframes",
+                                               "transforms",
+                                               "names",
+                                               "objects",
+                                               "details",
+                                               "transitions",
+                                               "frameTriggers",
+                                               "footer",
+                                               "meshes",
+                                               "materialList" });
+
+      header header;
+      v2::data data;
+      std::vector<v2::node> nodes;
+      std::vector<sequence> sequences;
+      std::vector<v2::sub_sequence> sub_sequences;
+      std::vector<v3::keyframe> keyframes;
+      std::vector<v2::transform> transforms;
+      std::vector<v2::name> names;
+      std::vector<v2::object> objects;
+      std::vector<v2::detail> details;
+      std::vector<v2::transition> transitions;
+      std::vector<frame_trigger> frame_triggers;
+      v5::footer footer;
+      std::vector<mesh_variant> meshes;
+
+      material_list_variant material_list;
+    };
   }// namespace shape::v5
 
 
@@ -304,6 +667,44 @@ namespace darkstar::dts
                                                "alwaysNode" });
       endian::little_int32_t num_default_materials;
       endian::little_int32_t always_node;
+    };
+
+    struct shape
+    {
+      constexpr static auto type_name = v2::shape::type_name;
+      constexpr static auto version = 6;
+      constexpr static auto keys = make_keys({ "header",
+                                               "data",
+                                               "nodes",
+                                               "sequences",
+                                               "subSequences",
+                                               "keyframes",
+                                               "transforms",
+                                               "names",
+                                               "objects",
+                                               "details",
+                                               "transitions",
+                                               "frameTriggers",
+                                               "footer",
+                                               "meshes",
+                                               "materialList" });
+
+      v5::header header;
+      v2::data data;
+      std::vector<v2::node> nodes;
+      std::vector<v5::sequence> sequences;
+      std::vector<v2::sub_sequence> sub_sequences;
+      std::vector<v3::keyframe> keyframes;
+      std::vector<v2::transform> transforms;
+      std::vector<v2::name> names;
+      std::vector<v2::object> objects;
+      std::vector<v2::detail> details;
+      std::vector<v2::transition> transitions;
+      std::vector<v5::frame_trigger> frame_triggers;
+      footer footer;
+      std::vector<mesh_variant> meshes;
+
+      material_list_variant material_list;
     };
   }// namespace shape::v6
 
@@ -339,7 +740,43 @@ namespace darkstar::dts
       vector3f scale;
     };
 
-    using has_material_list_flag = endian::little_int32_t;
+    struct shape
+    {
+      constexpr static auto type_name = v2::shape::type_name;
+      constexpr static auto version = 7;
+      constexpr static auto keys = make_keys({ "header",
+                                               "data",
+                                               "nodes",
+                                               "sequences",
+                                               "subSequences",
+                                               "keyframes",
+                                               "transforms",
+                                               "names",
+                                               "objects",
+                                               "details",
+                                               "transitions",
+                                               "frameTriggers",
+                                               "footer",
+                                               "meshes",
+                                               "materialList" });
+
+      v5::header header;
+      v2::data data;
+      std::vector<v2::node> nodes;
+      std::vector<v5::sequence> sequences;
+      std::vector<v2::sub_sequence> sub_sequences;
+      std::vector<v3::keyframe> keyframes;
+      std::vector<transform> transforms;
+      std::vector<v2::name> names;
+      std::vector<v2::object> objects;
+      std::vector<v2::detail> details;
+      std::vector<transition> transitions;
+      std::vector<v5::frame_trigger> frame_triggers;
+      v6::footer footer;
+      std::vector<mesh_variant> meshes;
+
+      material_list_variant material_list;
+    };
   }// namespace shape::v7
 
   namespace shape::v8
@@ -388,8 +825,6 @@ namespace darkstar::dts
       vector3f translation;
     };
 
-    using name = std::array<char, 24>;
-
     struct object
     {
       constexpr static auto keys = make_keys({ "nameIndex", "flags", "meshIndex", "nodeIndex", "objectOffset", "numSubSequences", "firstSubSequence" });
@@ -418,487 +853,46 @@ namespace darkstar::dts
       transform transformation;
     };
 
-    using has_material_list_flag = endian::little_int32_t;
+    struct shape
+    {
+      constexpr static auto type_name = v2::shape::type_name;
+      constexpr static auto version = 8;
+      constexpr static auto keys = make_keys({ "header",
+                                               "data",
+                                               "nodes",
+                                               "sequences",
+                                               "subSequences",
+                                               "keyframes",
+                                               "transforms",
+                                               "names",
+                                               "objects",
+                                               "details",
+                                               "transitions",
+                                               "frameTriggers",
+                                               "footer",
+                                               "meshes",
+                                               "materialList" });
+
+      v5::header header;
+      data data;
+      std::vector<node> nodes;
+      std::vector<v5::sequence> sequences;
+      std::vector<sub_sequence> sub_sequences;
+      std::vector<keyframe> keyframes;
+      std::vector<transform> transforms;
+      std::vector<v2::name> names;
+      std::vector<v8::object> objects;
+      std::vector<v2::detail> details;
+      std::vector<v8::transition> transitions;
+      std::vector<v5::frame_trigger> frame_triggers;
+      v5::footer footer;
+      std::vector<mesh_variant> meshes;
+
+      material_list_variant material_list;
+    };
   }// namespace shape::v8
-
-  namespace mesh::v1
-  {
-    struct header
-    {
-      constexpr static auto keys = make_keys({ "numVerts",
-        "vertsPerFrame",
-        "numTextureVerts",
-        "numFaces",
-        "numFrames",
-        "scale",
-        "origin",
-        "radius" });
-
-      endian::little_int32_t num_verts;
-      endian::little_int32_t verts_per_frame;
-      endian::little_int32_t num_texture_verts;
-      endian::little_int32_t num_faces;
-      endian::little_int32_t num_frames;
-      vector3f scale;
-      vector3f origin;
-      float radius;
-    };
-  }// namespace mesh::v1
-
-  namespace mesh::v2
-  {
-    struct header
-    {
-      constexpr static auto keys = make_keys({ "numVerts",
-        "vertsPerFrame",
-        "numTextureVerts",
-        "numFaces",
-        "numFrames",
-        "textureVertsPerFrame",
-        "scale",
-        "origin",
-        "radius" });
-
-      endian::little_int32_t num_verts;
-      endian::little_int32_t verts_per_frame;
-      endian::little_int32_t num_texture_verts;
-      endian::little_int32_t num_faces;
-      endian::little_int32_t num_frames;
-      endian::little_int32_t texture_verts_per_frame;
-      vector3f scale;
-      vector3f origin;
-      float radius;
-    };
-
-    struct vertex
-    {
-      constexpr static auto keys = make_keys({ "x", "y", "z", "normal" });
-      std::uint8_t x;
-      std::uint8_t y;
-      std::uint8_t z;
-      std::uint8_t normal;
-    };
-
-    static_assert(sizeof(vertex) == sizeof(std::int32_t));
-
-    struct texture_vertex
-    {
-      constexpr static auto keys = make_keys({ "x", "y" });
-      float x;
-      float y;
-    };
-
-    struct face
-    {
-      constexpr static auto keys = make_keys({ "vi1", "ti1", "vi2", "ti2", "vi3", "ti3", "material" });
-      endian::little_int32_t vi1;
-      endian::little_int32_t ti1;
-      endian::little_int32_t vi2;
-      endian::little_int32_t ti2;
-      endian::little_int32_t vi3;
-      endian::little_int32_t ti3;
-      endian::little_int32_t material;
-    };
-
-    struct frame
-    {
-      constexpr static auto keys = make_keys({ "firstVert" });
-      endian::little_int32_t first_vert;
-    };
-  }// namespace mesh::v2
-
-  namespace mesh::v3
-  {
-    struct header
-    {
-      constexpr static auto keys = make_keys({ "numVerts",
-        "vertsPerFrame",
-        "numTextureVerts",
-        "numFaces",
-        "numFrames",
-        "textureVertsPerFrame",
-        "radius" });
-
-      endian::little_int32_t num_verts;
-      endian::little_int32_t verts_per_frame;
-      endian::little_int32_t num_texture_verts;
-      endian::little_int32_t num_faces;
-      endian::little_int32_t num_frames;
-      endian::little_int32_t texture_verts_per_frame;
-      float radius;
-    };
-
-    using mesh::v2::vertex;
-    using mesh::v2::texture_vertex;
-    using mesh::v2::face;
-
-    struct frame
-    {
-      constexpr static auto keys = make_keys({ "firstVert", "scale", "origin" });
-      endian::little_int32_t first_vert;
-      vector3f scale;
-      vector3f origin;
-    };
-  }// namespace mesh::v3
-
-  namespace material_list::v2
-  {
-    struct header
-    {
-      constexpr static auto keys = make_keys({ "numDetails",
-        "numMaterials" });
-      endian::little_int32_t num_details;
-      endian::little_int32_t num_materials;
-    };
-
-    struct material
-    {
-      constexpr static auto keys = make_keys({ "flags", "alpha", "index", "rgbData", "fileName" });
-
-      endian::little_int32_t flags;
-      float alpha;
-      endian::little_int32_t index;
-      rgb_data rgb_data;
-
-      std::array<char, 32> file_name;
-    };
-  }// namespace material_list::v2
-
-  namespace material_list::v3
-  {
-    struct material
-    {
-      constexpr static auto keys = make_keys({ "flags", "alpha", "index", "rgbData", "fileName", "type", "elasticity", "friction" });
-
-      endian::little_int32_t flags;
-      float alpha;
-      endian::little_int32_t index;
-      rgb_data rgb_data;
-
-      std::array<char, 32> file_name;
-
-      endian::little_int32_t type;
-      float elasticity;
-      float friction;
-    };
-  }// namespace material_list::v3
-
-  namespace material_list::v4
-  {
-    struct material
-    {
-      constexpr static auto keys = make_keys({ "flags", "alpha", "index", "rgbData", "fileName", "type", "elasticity", "friction", "useDefaultProperties" });
-
-      endian::little_int32_t flags;
-      float alpha;
-      endian::little_int32_t index;
-      rgb_data rgb_data;
-
-      std::array<char, 32> file_name;
-
-      endian::little_int32_t type;
-      float elasticity;
-      float friction;
-      endian::little_uint32_t use_default_properties;
-    };
-  }// namespace material_list::v4
-
-  struct mesh_v1
-  {
-    constexpr static auto type_name = std::string_view{ "TS::CelAnimMesh" };
-    constexpr static auto version = 1;
-    constexpr static auto keys = make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
-
-    mesh::v1::header header;
-    std::vector<mesh::v3::vertex> vertices;
-    std::vector<mesh::v3::texture_vertex> texture_vertices;
-    std::vector<mesh::v3::face> faces;
-    std::vector<mesh::v2::frame> frames;
-  };
-
-
-  struct mesh_v2
-  {
-    constexpr static auto type_name = mesh_v1::type_name;
-    constexpr static auto version = 2;
-    constexpr static auto keys = make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
-
-    mesh::v2::header header;
-    std::vector<mesh::v3::vertex> vertices;
-    std::vector<mesh::v3::texture_vertex> texture_vertices;
-    std::vector<mesh::v3::face> faces;
-    std::vector<mesh::v2::frame> frames;
-  };
-
-  struct mesh_v3
-  {
-    constexpr static auto type_name = mesh_v1::type_name;
-    constexpr static auto version = 3;
-    constexpr static auto keys = make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
-
-    mesh::v3::header header;
-    std::vector<mesh::v3::vertex> vertices;
-    std::vector<mesh::v3::texture_vertex> texture_vertices;
-    std::vector<mesh::v3::face> faces;
-    std::vector<mesh::v3::frame> frames;
-  };
-
-  using mesh_variant = std::variant<mesh_v1, mesh_v2, mesh_v3>;
-
-  struct material_list_v2
-  {
-    constexpr static auto type_name = std::string_view{ "TS::MaterialList" };
-    constexpr static auto version = 2;
-    constexpr static auto keys = make_keys({ "header", "materials" });
-
-    material_list::v2::header header;
-    std::vector<material_list::v2::material> materials;
-  };
-
-
-  struct material_list_v3
-  {
-    constexpr static auto type_name = material_list_v2::type_name;
-    constexpr static auto version = 3;
-    constexpr static auto keys = make_keys({ "header", "materials" });
-
-    material_list::v2::header header;
-    std::vector<material_list::v3::material> materials;
-  };
-
-  struct material_list_v4
-  {
-    constexpr static auto type_name = material_list_v2::type_name;
-    constexpr static auto version = 4;
-    constexpr static auto keys = make_keys({ "header", "materials" });
-
-    material_list::v2::header header;
-    std::vector<material_list::v4::material> materials;
-  };
-
-  using material_list_variant = std::variant<darkstar::dts::material_list_v2, darkstar::dts::material_list_v3, darkstar::dts::material_list_v4>;
-
-  struct shape_v2
-  {
-    constexpr static auto type_name = std::string_view{ "TS::Shape" };
-    constexpr static auto version = 2;
-    constexpr static auto keys = make_keys({ "header",
-      "data",
-      "nodes",
-      "sequences",
-      "subSequences",
-      "keyframes",
-      "transforms",
-      "names",
-      "objects",
-      "details",
-      "transitions",
-      "meshes",
-      "materialList" });
-
-    shape::v2::header header;
-    shape::v2::data data;
-    std::vector<shape::v2::node> nodes;
-    std::vector<shape::v2::sequence> sequences;
-    std::vector<shape::v2::sub_sequence> sub_sequences;
-    std::vector<shape::v2::keyframe> keyframes;
-    std::vector<shape::v2::transform> transforms;
-    std::vector<shape::v2::name> names;
-    std::vector<shape::v2::object> objects;
-    std::vector<shape::v2::detail> details;
-    std::vector<shape::v2::transition> transitions;
-    std::vector<mesh_variant> meshes;
-
-    material_list_variant material_list;
-  };
-
-  struct shape_v3
-  {
-    constexpr static auto type_name = shape_v2::type_name;
-    constexpr static auto version = 3;
-    constexpr static auto keys = make_keys({ "header",
-      "data",
-      "nodes",
-      "sequences",
-      "subSequences",
-      "keyframes",
-      "transforms",
-      "names",
-      "objects",
-      "details",
-      "transitions",
-      "meshes",
-      "materialList" });
-
-    shape::v2::header header;
-    shape::v2::data data;
-    std::vector<shape::v2::node> nodes;
-    std::vector<shape::v2::sequence> sequences;
-    std::vector<shape::v2::sub_sequence> sub_sequences;
-    std::vector<shape::v3::keyframe> keyframes;
-    std::vector<shape::v2::transform> transforms;
-    std::vector<shape::v2::name> names;
-    std::vector<shape::v2::object> objects;
-    std::vector<shape::v2::detail> details;
-    std::vector<shape::v2::transition> transitions;
-    std::vector<mesh_variant> meshes;
-
-    material_list_variant material_list;
-  };
-
-  struct shape_v5
-  {
-    constexpr static auto type_name = shape_v2::type_name;
-    constexpr static auto version = 5;
-    constexpr static auto keys = make_keys({ "header",
-      "data",
-      "nodes",
-      "sequences",
-      "subSequences",
-      "keyframes",
-      "transforms",
-      "names",
-      "objects",
-      "details",
-      "transitions",
-      "frameTriggers",
-      "footer",
-      "meshes",
-      "materialList" });
-
-    shape::v5::header header;
-    shape::v2::data data;
-    std::vector<shape::v2::node> nodes;
-    std::vector<shape::v5::sequence> sequences;
-    std::vector<shape::v2::sub_sequence> sub_sequences;
-    std::vector<shape::v3::keyframe> keyframes;
-    std::vector<shape::v2::transform> transforms;
-    std::vector<shape::v2::name> names;
-    std::vector<shape::v2::object> objects;
-    std::vector<shape::v2::detail> details;
-    std::vector<shape::v2::transition> transitions;
-    std::vector<shape::v5::frame_trigger> frame_triggers;
-    shape::v5::footer footer;
-    std::vector<mesh_variant> meshes;
-
-    material_list_variant material_list;
-  };
-
-  struct shape_v6
-  {
-    constexpr static auto type_name = shape_v2::type_name;
-    constexpr static auto version = 6;
-    constexpr static auto keys = make_keys({ "header",
-      "data",
-      "nodes",
-      "sequences",
-      "subSequences",
-      "keyframes",
-      "transforms",
-      "names",
-      "objects",
-      "details",
-      "transitions",
-      "frameTriggers",
-      "footer",
-      "meshes",
-      "materialList" });
-
-    shape::v5::header header;
-    shape::v2::data data;
-    std::vector<shape::v2::node> nodes;
-    std::vector<shape::v5::sequence> sequences;
-    std::vector<shape::v2::sub_sequence> sub_sequences;
-    std::vector<shape::v3::keyframe> keyframes;
-    std::vector<shape::v2::transform> transforms;
-    std::vector<shape::v2::name> names;
-    std::vector<shape::v2::object> objects;
-    std::vector<shape::v2::detail> details;
-    std::vector<shape::v2::transition> transitions;
-    std::vector<shape::v5::frame_trigger> frame_triggers;
-    shape::v6::footer footer;
-    std::vector<mesh_variant> meshes;
-
-    material_list_variant material_list;
-  };
-
-  struct shape_v7
-  {
-    constexpr static auto type_name = shape_v2::type_name;
-    constexpr static auto version = 7;
-    constexpr static auto keys = make_keys({ "header",
-      "data",
-      "nodes",
-      "sequences",
-      "subSequences",
-      "keyframes",
-      "transforms",
-      "names",
-      "objects",
-      "details",
-      "transitions",
-      "frameTriggers",
-      "footer",
-      "meshes",
-      "materialList" });
-
-    shape::v5::header header;
-    shape::v2::data data;
-    std::vector<shape::v2::node> nodes;
-    std::vector<shape::v5::sequence> sequences;
-    std::vector<shape::v2::sub_sequence> sub_sequences;
-    std::vector<shape::v3::keyframe> keyframes;
-    std::vector<shape::v7::transform> transforms;
-    std::vector<shape::v2::name> names;
-    std::vector<shape::v2::object> objects;
-    std::vector<shape::v2::detail> details;
-    std::vector<shape::v7::transition> transitions;
-    std::vector<shape::v5::frame_trigger> frame_triggers;
-    shape::v6::footer footer;
-    std::vector<mesh_variant> meshes;
-
-    material_list_variant material_list;
-  };
-
-  struct shape_v8
-  {
-    constexpr static auto type_name = shape_v2::type_name;
-    constexpr static auto version = 8;
-    constexpr static auto keys = make_keys({ "header",
-      "data",
-      "nodes",
-      "sequences",
-      "subSequences",
-      "keyframes",
-      "transforms",
-      "names",
-      "objects",
-      "details",
-      "transitions",
-      "frameTriggers",
-      "footer",
-      "meshes",
-      "materialList" });
-
-    shape::v5::header header;
-    shape::v8::data data;
-    std::vector<shape::v8::node> nodes;
-    std::vector<shape::v5::sequence> sequences;
-    std::vector<shape::v8::sub_sequence> sub_sequences;
-    std::vector<shape::v8::keyframe> keyframes;
-    std::vector<shape::v8::transform> transforms;
-    std::vector<shape::v8::name> names;
-    std::vector<shape::v8::object> objects;
-    std::vector<shape::v2::detail> details;
-    std::vector<shape::v8::transition> transitions;
-    std::vector<shape::v5::frame_trigger> frame_triggers;
-    shape::v5::footer footer;
-    std::vector<mesh_variant> meshes;
-
-    material_list_variant material_list;
-  };
-
-  using shape_variant = std::variant<shape_v2, shape_v3, shape_v5, shape_v6, shape_v7, shape_v8>;
+  
+  using shape_variant = std::variant<shape::v2::shape, shape::v3::shape, shape::v5::shape, shape::v6::shape, shape::v7::shape, shape::v8::shape>;
 
   using shape_or_material_list = std::variant<material_list_variant, shape_variant>;
 }// namespace darkstar::dts

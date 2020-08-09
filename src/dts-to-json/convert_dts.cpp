@@ -92,13 +92,14 @@ dts::tag_header read_object_header(std::basic_ifstream<std::byte>& stream)
 template<typename ShapeType>
 void read_meshes(ShapeType& shape, std::size_t num_meshes, std::basic_ifstream<std::byte>& stream)
 {
+  using namespace dts::mesh;
   shape.meshes.reserve(num_meshes);
 
   for (auto i = 0u; i < num_meshes; ++i)
   {
     auto mesh_tag_header = read_object_header(stream);
 
-    if (mesh_tag_header.class_name != dts::mesh_v1::type_name)
+    if (mesh_tag_header.class_name != v1::mesh::type_name)
     {
       throw std::invalid_argument("The object provided is not a mesh as expected.");
     }
@@ -108,16 +109,16 @@ void read_meshes(ShapeType& shape, std::size_t num_meshes, std::basic_ifstream<s
       throw std::invalid_argument("The mesh version was not version 1, 2 or 3 as expected.");
     }
 
-    if (mesh_tag_header.version == 3)
+    if (mesh_tag_header.version == 1)
     {
-      auto mesh_header = read<dts::mesh::v3::header>(stream);
+      auto mesh_header = read<v1::header>(stream);
 
-      dts::mesh_v3 mesh{
+      v1::mesh mesh{
         mesh_header,
-        read_vector<dts::mesh::v2::vertex>(stream, mesh_header.num_verts),
-        read_vector<dts::mesh::v2::texture_vertex>(stream, mesh_header.num_texture_verts),
-        read_vector<dts::mesh::v2::face>(stream, mesh_header.num_faces),
-        read_vector<dts::mesh::v3::frame>(stream, mesh_header.num_frames)
+        read_vector<v1::vertex>(stream, mesh_header.num_verts),
+        read_vector<v1::texture_vertex>(stream, mesh_header.num_texture_verts),
+        read_vector<v1::face>(stream, mesh_header.num_faces),
+        read_vector<v1::frame>(stream, mesh_header.num_frames)
       };
 
       shape.meshes.push_back(mesh);
@@ -125,29 +126,29 @@ void read_meshes(ShapeType& shape, std::size_t num_meshes, std::basic_ifstream<s
 
     if (mesh_tag_header.version == 2)
     {
-      auto mesh_header = read<dts::mesh::v2::header>(stream);
+      auto mesh_header = read<v2::header>(stream);
 
-      dts::mesh_v2 mesh{
+      v2::mesh mesh{
         mesh_header,
-        read_vector<dts::mesh::v2::vertex>(stream, mesh_header.num_verts),
-        read_vector<dts::mesh::v2::texture_vertex>(stream, mesh_header.num_texture_verts),
-        read_vector<dts::mesh::v2::face>(stream, mesh_header.num_faces),
-        read_vector<dts::mesh::v2::frame>(stream, mesh_header.num_frames)
+        read_vector<v1::vertex>(stream, mesh_header.num_verts),
+        read_vector<v1::texture_vertex>(stream, mesh_header.num_texture_verts),
+        read_vector<v1::face>(stream, mesh_header.num_faces),
+        read_vector<v1::frame>(stream, mesh_header.num_frames)
       };
 
       shape.meshes.push_back(mesh);
     }
 
-    if (mesh_tag_header.version == 1)
+    if (mesh_tag_header.version == 3)
     {
-      auto mesh_header = read<dts::mesh::v1::header>(stream);
+      auto mesh_header = read<v3::header>(stream);
 
-      dts::mesh_v1 mesh{
+      v3::mesh mesh{
         mesh_header,
-        read_vector<dts::mesh::v2::vertex>(stream, mesh_header.num_verts),
-        read_vector<dts::mesh::v2::texture_vertex>(stream, mesh_header.num_texture_verts),
-        read_vector<dts::mesh::v2::face>(stream, mesh_header.num_faces),
-        read_vector<dts::mesh::v2::frame>(stream, mesh_header.num_frames)
+        read_vector<v1::vertex>(stream, mesh_header.num_verts),
+        read_vector<v1::texture_vertex>(stream, mesh_header.num_texture_verts),
+        read_vector<v1::face>(stream, mesh_header.num_faces),
+        read_vector<v3::frame>(stream, mesh_header.num_frames)
       };
 
       shape.meshes.push_back(mesh);
@@ -158,38 +159,39 @@ void read_meshes(ShapeType& shape, std::size_t num_meshes, std::basic_ifstream<s
 
 dts::material_list_variant read_material_list(const dts::tag_header& object_header, std::basic_ifstream<std::byte>& stream)
 {
-  if (object_header.class_name != dts::material_list_v2::type_name)
+  using namespace dts::material_list;
+  if (object_header.class_name != v2::material_list::type_name)
   {
     throw std::invalid_argument("The object was not a material list as expected.");
   }
 
   if (object_header.version == 2)
   {
-    auto main_header = read<dts::material_list::v2::header>(stream);
+    auto main_header = read<v2::header>(stream);
 
-    return dts::material_list_v2{
+    return v2::material_list{
       main_header,
-      read_vector<dts::material_list::v2::material>(stream, main_header.num_materials * main_header.num_details)
+      read_vector<v2::material>(stream, main_header.num_materials * main_header.num_details)
     };
   }
 
   if (object_header.version == 3)
   {
-    auto main_header = read<dts::material_list::v2::header>(stream);
+    auto main_header = read<v2::header>(stream);
 
-    return dts::material_list_v3{
+    return v3::material_list{
       main_header,
-      read_vector<dts::material_list::v3::material>(stream, main_header.num_materials * main_header.num_details)
+      read_vector<v3::material>(stream, main_header.num_materials * main_header.num_details)
     };
   }
 
   if (object_header.version == 4)
   {
-    auto main_header = read<dts::material_list::v2::header>(stream);
+    auto main_header = read<v2::header>(stream);
 
-    return dts::material_list_v4{
+    return v4::material_list{
       main_header,
-      read_vector<dts::material_list::v4::material>(stream, main_header.num_materials * main_header.num_details)
+      read_vector<v4::material>(stream, main_header.num_materials * main_header.num_details)
     };
   }
 
@@ -199,7 +201,7 @@ dts::material_list_variant read_material_list(const dts::tag_header& object_head
 template<typename ShapeType>
 void read_materials(ShapeType& shape, std::basic_ifstream<std::byte>& stream)
 {
-  if (auto has_material_list = read<dts::shape::v7::has_material_list_flag>(stream); has_material_list == 1)
+  if (auto has_material_list = read<dts::shape::v2::has_material_list_flag>(stream); has_material_list == 1)
   {
     auto object_header = read_object_header(stream);
 
@@ -241,14 +243,15 @@ ShapeType read_shape_impl(std::basic_ifstream<std::byte>& stream)
 
 dts::shape_or_material_list read_shape(const fs::path& file_name, std::basic_ifstream<std::byte>& stream)
 {
+  using namespace dts::shape;
   dts::tag_header file_header = read_object_header(stream);
 
-  if (file_header.class_name == dts::material_list_v2::type_name)
+  if (file_header.class_name == dts::material_list::v2::material_list::type_name)
   {
     return read_material_list(file_header, stream);
   }
 
-  if (file_header.class_name != dts::shape_v2::type_name)
+  if (file_header.class_name != v2::shape::type_name)
   {
     throw std::invalid_argument("The object provided is not a shape as expected.");
   }
@@ -258,29 +261,29 @@ dts::shape_or_material_list read_shape(const fs::path& file_name, std::basic_ifs
     throw std::invalid_argument("The shape is not supported.");
   }
 
-  if (file_header.version == 8)
+  if (file_header.version == 2)
   {
-    return read_shape_impl<dts::shape_v8>(stream);
-  }
-  else if (file_header.version == 7)
-  {
-    return read_shape_impl<dts::shape_v7>(stream);
-  }
-  else if (file_header.version == 6)
-  {
-    return read_shape_impl<dts::shape_v6>(stream);
-  }
-  else if (file_header.version == 5)
-  {
-    return read_shape_impl<dts::shape_v5>(stream);
+    return read_shape_impl<v2::shape>(stream);
   }
   else if (file_header.version == 3)
   {
-    return read_shape_impl<dts::shape_v3>(stream);
+    return read_shape_impl<v3::shape>(stream);
   }
-  else if (file_header.version == 2)
+  else if (file_header.version == 5)
   {
-    return read_shape_impl<dts::shape_v2>(stream);
+    return read_shape_impl<v5::shape>(stream);
+  }
+  else if (file_header.version == 6)
+  {
+    return read_shape_impl<v6::shape>(stream);
+  }
+  else if (file_header.version == 7)
+  {
+    return read_shape_impl<v7::shape>(stream);
+  }
+  else if (file_header.version == 8)
+  {
+    return read_shape_impl<v8::shape>(stream);
   }
   else
   {
