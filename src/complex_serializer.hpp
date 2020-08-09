@@ -40,36 +40,39 @@ namespace nlohmann
     template<typename BasicJsonType>
     static void from_json(const BasicJsonType& js, material_list& opt)
     {
+      using namespace darkstar::dts::material_list;
       auto version = js.at("version");
       auto type_name = js.at("typeName");
 
-      emplace_variant<darkstar::dts::material_list_v2>(js, opt, type_name, version);
-      emplace_variant<darkstar::dts::material_list_v3>(js, opt, type_name, version);
-      emplace_variant<darkstar::dts::material_list_v4>(js, opt, type_name, version);
+      emplace_variant<v2::material_list>(js, opt, type_name, version);
+      emplace_variant<v3::material_list>(js, opt, type_name, version);
+      emplace_variant<v4::material_list>(js, opt, type_name, version);
     }
 
     template<typename BasicJsonType>
     static void from_json(const BasicJsonType& js, mesh& opt)
     {
+      using namespace darkstar::dts::mesh;
       auto version = js.at("version");
       auto type_name = js.at("typeName");
 
-      emplace_variant<darkstar::dts::mesh_v2>(js, opt, type_name, version);
-      emplace_variant<darkstar::dts::mesh_v3>(js, opt, type_name, version);
+      emplace_variant<v2::mesh>(js, opt, type_name, version);
+      emplace_variant<v3::mesh>(js, opt, type_name, version);
     }
 
     template<typename BasicJsonType>
     static void from_json(const BasicJsonType& js, shape& opt)
     {
+      using namespace darkstar::dts::shape;
       auto version = js.at("version");
       auto type_name = js.at("typeName");
 
-      emplace_variant<darkstar::dts::shape_v2>(js, opt, type_name, version);
-      emplace_variant<darkstar::dts::shape_v3>(js, opt, type_name, version);
-      emplace_variant<darkstar::dts::shape_v5>(js, opt, type_name, version);
-      emplace_variant<darkstar::dts::shape_v6>(js, opt, type_name, version);
-      emplace_variant<darkstar::dts::shape_v7>(js, opt, type_name, version);
-      emplace_variant<darkstar::dts::shape_v8>(js, opt, type_name, version);
+      emplace_variant<v2::shape>(js, opt, type_name, version);
+      emplace_variant<v3::shape>(js, opt, type_name, version);
+      emplace_variant<v5::shape>(js, opt, type_name, version);
+      emplace_variant<v6::shape>(js, opt, type_name, version);
+      emplace_variant<v7::shape>(js, opt, type_name, version);
+      emplace_variant<v8::shape>(js, opt, type_name, version);
     }
   };
 }// namespace nlohmann
