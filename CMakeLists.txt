@@ -18,12 +18,11 @@ include_directories(src)
 conan_target_link_libraries(dts-to-json)
 conan_target_link_libraries(json-to-dts)
 
-target_compile_options(dts-to-json PRIVATE
-        $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
-        $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -pedantic -Werror>
-        )
 
-target_compile_options(json-to-dts PRIVATE
-        $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
-        $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -pedantic -Werror>
-        )
+if(MSVC)
+    target_compile_options(dts-to-json PRIVATE /W4 /WX $<$<CONFIG:RELEASE>:/O2>)
+    target_compile_options(json-to-dts PRIVATE /W4 /WX $<$<CONFIG:RELEASE>:/O2>)
+else()
+    target_compile_options(dts-to-json PRIVATE -Wall -Wextra -Werror -pedantic $<$<CONFIG:RELEASE>:-O3>)
+    target_compile_options(json-to-dts PRIVATE -Wall -Wextra -Werror -pedantic $<$<CONFIG:RELEASE>:-O3>)
+endif()
