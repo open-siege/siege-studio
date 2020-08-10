@@ -391,8 +391,8 @@ namespace darkstar::dts
 
     struct node
     {
-      constexpr static auto keys = make_keys({ "name", "parent", "numSubSequences", "firstSubSequence", "defaultTransform" });
-      endian::little_int32_t name;
+      constexpr static auto keys = make_keys({ "nameIndex", "parent", "numSubSequences", "firstSubSequence", "defaultTransform" });
+      endian::little_int32_t name_index;
       endian::little_int32_t parent;
       endian::little_int32_t num_sub_sequences;
       endian::little_int32_t first_sub_sequence;
