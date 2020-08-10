@@ -63,3 +63,6 @@ Any existing **.old** files will not be overwritten for backup purposes of the o
 ### Known Issues
 * A small amount of files from Tribes have _null_ instead of a number in the JSON output. 
 * DTS files from Driver's Education have a variant of DTS 3.5, which is not fully supported currently.
+
+### Other Projects
+See here: https://github.com/matthew-rindel/darkstar-projects
