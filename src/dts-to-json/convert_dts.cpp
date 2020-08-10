@@ -312,7 +312,7 @@ int main(int argc, const char** argv)
     {
       {
         std::stringstream msg;
-        msg << "Converting " << file_name << '\n';
+        msg << "Converting " << file_name.string() << '\n';
         std::cout << msg.str();
       }
 

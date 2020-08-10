@@ -77,12 +77,23 @@ void write_size(std::basic_ostream<std::byte>& stream, std::optional<std::uint32
   stream.seekp(end_offset, std::ios_base::beg);
 }
 
+bool replace(std::string& str, const std::string& from, const std::string& to)
+{
+  size_t start_pos = str.rfind(from);
+  if (start_pos == std::string::npos)
+  {
+    return false;
+  }
+  str.replace(start_pos, from.length(), to);
+  return true;
+}
+
 int main(int argc, const char** argv)
 {
   const auto files = dts::shared::find_files(
     std::vector<std::string>(argv + 1, argv + argc),
     ".dts.json",
-    ".DTS.json" ,
+    ".DTS.json",
     ".dml.json",
     ".DML.json");
 
@@ -91,7 +102,7 @@ int main(int argc, const char** argv)
     {
       {
         std::stringstream msg;
-        msg << "Converting " << file_name << '\n';
+        msg << "Converting " << file_name.string() << '\n';
         std::cout << msg.str();
       }
 
@@ -99,26 +110,35 @@ int main(int argc, const char** argv)
       auto fresh_shape_json = nlohmann::json::parse(test_file);
       const auto json_type_name = fresh_shape_json.at("typeName").get<std::string>();
 
+      std::string new_file_name = file_name.string();
+      replace(new_file_name, ".json", "");
+
+      if (fs::is_regular_file(new_file_name) && !fs::is_regular_file(new_file_name + ".old"))
+      {
+        fs::rename(new_file_name, new_file_name + ".old");
+      }
+
       if (json_type_name == dts::material_list::v2::material_list::type_name)
       {
         const dts::material_list_variant fresh_shape = fresh_shape_json;
-        auto new_file_name = file_name.string() + ".dml";
 
         std::basic_ofstream<std::byte> stream(new_file_name, std::ios::binary);
 
         std::visit([&](const auto& materials) {
-                          write_header(stream, materials);
-                          write(stream, materials.header);
-                          write(stream, materials.materials);
-                          write_size(stream);
-                   },
-                   fresh_shape);
+          write_header(stream, materials);
+          write(stream, materials.header);
+          write(stream, materials.materials);
+          write_size(stream);
+        },
+          fresh_shape);
+
+        std::stringstream msg;
+        msg << "Created " << new_file_name << '\n';
+        std::cout << msg.str();
       }
       else if (json_type_name == dts::shape::v2::shape::type_name)
       {
         const dts::shape_variant fresh_shape = fresh_shape_json;
-
-        auto new_file_name = file_name.string() + ".dts";
 
         std::basic_ofstream<std::byte> stream(new_file_name, std::ios::binary);
 
@@ -171,6 +191,10 @@ int main(int argc, const char** argv)
             shape.material_list);
 
           write_size(stream);
+
+          std::stringstream msg;
+          msg << "Created " << new_file_name << '\n';
+          std::cout << msg.str();
         },
           fresh_shape);
       }
