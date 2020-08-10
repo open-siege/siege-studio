@@ -14,6 +14,8 @@ This is the third generation of the DTS format, so versions will be described as
 
 Darkstar DTS versions 3.2, 3.3, 3.5, 3.6, 3.7 and 3.8 can be processed, which covers files from each of the games above.
 
+Inspired by a DTS converter for Earthsiege 2 (https://github.com/booto/convert_dts)
+
 ### Setup and Build Instructions
 
 If you don't already have Conan on your system, find instructions here: https://conan.io/downloads.html
@@ -38,8 +40,6 @@ You can do ```dts-to-json *``` to convert all files in a folder.
 Or ```dts-to-json some.dts``` to convert an individual file.
 
 Or you can simply drag one or more files and drop it onto the executable, and it will convert all items that it can.
-
-Inspired by a DTS converter for Earthsiege 2 (https://github.com/booto/convert_dts)
 
 The result will be a plain text JSON file which should be editable in any text editor, and which has the same name as the DTS/DML file except with **.json** added onto it.
 
