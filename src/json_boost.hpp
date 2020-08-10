@@ -2,6 +2,7 @@
 #define DARKSTARDTSCONVERTER_JSON_BOOST_HPP
 
 #include <algorithm>
+#include <sstream>
 #include <type_traits>
 #include <nlohmann/json.hpp>
 #include "endian_arithmetic.hpp"
@@ -12,20 +13,28 @@ namespace nlohmann
   struct adl_serializer<std::array<char, Size>>
   {
     template<typename BasicJsonType>
-    static void to_json(BasicJsonType& j, const std::array<char, Size>& opt)
+    static void to_json(BasicJsonType& json, const std::array<char, Size>& opt)
     {
-      j = std::string(&opt[0]);
+      json = std::string(&opt[0]);
     }
 
     template<typename BasicJsonType>
-    static void from_json(const BasicJsonType& j, std::array<char, Size>& opt)
+    static void from_json(const BasicJsonType& js, std::array<char, Size>& opt)
     {
-      /* TODO: throw exception if the input string size is too big for the array.
-       * You actually wouldn't want things to silently fail because a bad DTS/DML file will crash
-       * the respective game.
-       * */
-      auto result = j.template get<std::string>();
-      auto end = result.size() < Size ? result.end() : result.begin() + Size - 1;
+      auto result = js.template get<std::string>();
+      constexpr auto actual_size = Size - 1;
+
+      if (result.size() > actual_size)
+      {
+        std::stringstream msg;
+        msg << "The value " << result << " is too long for the internal type it maps to. ";
+        msg << "The maximum expected size is " << actual_size << " characters.";
+        msg << "The size of " << result << " is " << result.size() << " characters.";
+
+        throw BasicJsonType::other_error::create(int{}, msg.str());
+      }
+
+      auto end = result.size() < Size ? result.end() : result.begin() + actual_size;
 
       std::fill(opt.begin(), opt.end(), '\0');
       std::copy(result.begin(), end, opt.begin());
