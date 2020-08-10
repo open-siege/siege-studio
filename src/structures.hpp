@@ -885,7 +885,7 @@ namespace darkstar::dts
       std::vector<v2::detail> details;
       std::vector<v8::transition> transitions;
       std::vector<v5::frame_trigger> frame_triggers;
-      v5::footer footer;
+      v6::footer footer;
       std::vector<mesh_variant> meshes;
 
       material_list_variant material_list;
