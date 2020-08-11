@@ -53,8 +53,6 @@ Which will convert multiple folders to vol files. For just one file, try:
 
 `python nuvol.py someFolder1/someFolder1.vol.json`
 
-### Notes
+### Related Projects
 
-The format was reverse engineered initially by using already extracted files to determine embedded file sizes and various offsets. Later revisions (especially to get how the compression is determined) came from reading the original source code (https://github.com/AltimorTASDK/TribesRebirth).
-
-This project is related to https://github.com/matthew-rindel/darkstar-dts-converter
+https://github.com/matthew-rindel/darkstar-projects
