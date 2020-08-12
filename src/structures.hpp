@@ -391,12 +391,12 @@ namespace darkstar::dts
 
     struct node
     {
-      constexpr static auto keys = make_keys({ "nameIndex", "parent", "numSubSequences", "firstSubSequence", "defaultTransform" });
+      constexpr static auto keys = make_keys({ "nameIndex", "parentNodeIndex", "numSubSequences", "firstSubSequence", "defaultTransformIndex" });
       endian::little_int32_t name_index;
-      endian::little_int32_t parent;
+      endian::little_int32_t parent_node_index;
       endian::little_int32_t num_sub_sequences;
       endian::little_int32_t first_sub_sequence;
-      endian::little_int32_t default_transform;
+      endian::little_int32_t default_transform_index;
     };
 
     struct sequence
@@ -421,9 +421,9 @@ namespace darkstar::dts
 
     struct keyframe
     {
-      constexpr static auto keys = make_keys({ "position", "keyValue" });
+      constexpr static auto keys = make_keys({ "position", "transformIndex" });
       float position;
-      endian::little_uint32_t key_value;
+      endian::little_uint32_t transform_index;
     };
 
     struct transform
@@ -452,21 +452,21 @@ namespace darkstar::dts
 
     struct detail
     {
-      constexpr static auto keys = make_keys({ "nameIndex", "size" });
-      endian::little_int32_t name_index;
+      constexpr static auto keys = make_keys({ "rootNodeIndex", "size" });
+      endian::little_int32_t root_node_index;
       float size;
     };
 
     struct transition
     {
-      constexpr static auto keys = make_keys({ "startSequence",
-                                               "endSequence",
+      constexpr static auto keys = make_keys({ "startSequenceIndex",
+                                               "endSequenceIndex",
                                                "startPosition",
                                                "endPosition",
                                                "duration",
                                                "transform" });
-      endian::little_int32_t start_sequence;
-      endian::little_int32_t end_sequence;
+      endian::little_int32_t start_sequence_index;
+      endian::little_int32_t end_sequence_index;
       float start_position;
       float end_position;
       float duration;
@@ -515,9 +515,9 @@ namespace darkstar::dts
   {
     struct keyframe
     {
-      constexpr static auto keys = make_keys({ "position", "keyValue", "matIndex" });
+      constexpr static auto keys = make_keys({ "position", "transformIndex", "matIndex" });
       float position;
-      endian::little_uint32_t key_value;
+      endian::little_uint32_t transform_index;
       endian::little_uint32_t mat_index;
     };
 
@@ -722,16 +722,16 @@ namespace darkstar::dts
 
     struct transition
     {
-      constexpr static auto keys = make_keys({ "startSequence",
-        "endSequence",
+      constexpr static auto keys = make_keys({ "startSequenceIndex",
+        "endSequenceIndex",
         "startPosition",
         "endPosition",
         "duration",
         "rotation",
         "translation",
         "scale" });
-      endian::little_int32_t start_sequence;
-      endian::little_int32_t end_sequence;
+      endian::little_int32_t start_sequence_index;
+      endian::little_int32_t end_sequence_index;
       float start_position;
       float end_position;
       float duration;
@@ -793,12 +793,12 @@ namespace darkstar::dts
 
     struct node
     {
-      constexpr static auto keys = make_keys({ "name", "parent", "numSubSequences", "firstSubSequence", "defaultTransform" });
-      endian::little_int16_t name;
-      endian::little_int16_t parent;
+      constexpr static auto keys = make_keys({ "nameIndex", "parentNodeIndex", "numSubSequences", "firstSubSequence", "defaultTransformIndex" });
+      endian::little_int16_t name_index;
+      endian::little_int16_t parent_node_index;
       endian::little_int16_t num_sub_sequences;
       endian::little_int16_t first_sub_sequence;
-      endian::little_int16_t default_transform;
+      endian::little_int16_t default_transform_index;
     };
 
     struct sub_sequence
@@ -812,9 +812,9 @@ namespace darkstar::dts
 
     struct keyframe
     {
-      constexpr static auto keys = make_keys({ "position", "keyValue", "matIndex" });
+      constexpr static auto keys = make_keys({ "position", "transformIndex", "matIndex" });
       float position;
-      endian::little_uint16_t key_value;
+      endian::little_uint16_t transform_index;
       endian::little_uint16_t mat_index;
     };
 
