@@ -293,19 +293,14 @@ dts::shape_or_material_list read_shape(const fs::path& file_name, std::basic_ifs
   }
 }
 
-void read_from_json(const std::filesystem::path& file_name)
-{
-  auto new_file_name = file_name.string() + ".json";
-  std::ifstream test_file(new_file_name);
-  auto fresh_shape_json = nlohmann::json::parse(test_file);
-  const dts::shape_variant fresh_shape = fresh_shape_json;
-}
-
 int main(int argc, const char** argv)
 {
   const auto files = dts::shared::find_files(
     std::vector<std::string>(argv + 1, argv + argc),
-    ".dts",".DTS", ".dml", ".DML");
+    ".dts",
+    ".DTS",
+    ".dml",
+    ".DML");
 
   std::for_each(std::execution::par_unseq, files.begin(), files.end(), [](auto&& file_name) {
     try
@@ -323,9 +318,181 @@ int main(int argc, const char** argv)
       std::visit([&](const auto& item) {
         nlohmann::ordered_json item_as_json = item;
 
+        auto sequences = nlohmann::json::object();
+
+        for (auto& sequence : item_as_json["sequences"])
+        {
+          auto sequence_name = item_as_json["names"][sequence["nameIndex"].get<int>()].get<std::string>();
+          sequence["name"] = sequence_name;
+          sequences[sequence_name] = sequence;
+        }
+
+        auto nodes = nlohmann::json::object();
+
+        for (auto& node : item_as_json["nodes"])
+        {
+          auto parent_index = node["parentNodeIndex"].get<int>();
+
+          if (parent_index != -1)
+          {
+            auto& parent_node = item_as_json["nodes"][parent_index];
+
+            auto parent_name = item_as_json["names"][parent_node["nameIndex"].get<int>()].get<std::string>();
+            node["parentNodeIndex"] = parent_name;
+          }
+          else
+          {
+            node["parentNodeIndex"] = nullptr;
+          }
+          //const auto default_transform_index = element["defaultTransformIndex"].get<int>();
+
+          std::string name = item_as_json["names"][node["nameIndex"].get<int>()].get<std::string>();
+          node["name"] = name;
+
+
+          nlohmann::json element = node;
+
+          element["sequences"] = nlohmann::json::object();
+
+          auto& sub_sequences = item_as_json["subSequences"];
+          const auto num_sub_sequences = element["numSubSequences"].get<int>();
+          const auto first_sub_sequence = element["firstSubSequence"].get<int>();
+          for (auto i = first_sub_sequence; i < first_sub_sequence + num_sub_sequences; ++i)
+          {
+            auto& local_sub_sequence = sub_sequences[i];
+            auto& sequence = item_as_json["sequences"][local_sub_sequence["sequenceIndex"].get<int>()];
+            auto sequence_name = sequence["name"].get<std::string>();
+
+            auto& key_frames = element["subSequences"][sequence_name] = nlohmann::json::array();
+            const auto first_key_frame = local_sub_sequence["firstKeyFrame"].get<int>();
+            const auto num_key_frames = local_sub_sequence["numKeyFrames"].get<int>();
+
+            auto& keyframes = item_as_json["keyframes"];
+            for (auto j = first_key_frame; j < first_key_frame + num_key_frames; ++j)
+            {
+              auto& keyframe = keyframes[j];
+              keyframe["keyframeIndex"] = j;
+              auto transform_index = keyframe["transformIndex"].get<int>();
+              auto& transform = item_as_json["transforms"][transform_index];
+
+              keyframe["transformation"] = transform;
+
+              key_frames.emplace_back(keyframe);
+            }
+          }
+
+          nodes.emplace(name, element);
+        }
+
+        auto objects = nlohmann::json::object();
+
+        for (auto& object : item_as_json["objects"])
+        {
+
+          auto name = item_as_json["names"][object["nameIndex"].get<int>()].get<std::string>();
+          object["name"] = name;
+          //          objects[name] = element;
+
+          if (nodes.contains(name))
+          {
+            auto& node = nodes[name];
+            object["parentObjectIndex"] = node["parentNodeIndex"];
+            object["nodeIndex"] = name;
+            node["objectIndex"] = name;
+          }
+
+
+          nlohmann::json element = object;
+          element["sequences"] = nlohmann::json::object();
+
+          auto& sub_sequences = item_as_json["subSequences"];
+          const auto num_sub_sequences = element["numSubSequences"].get<int>();
+          const auto first_sub_sequence = element["firstSubSequence"].get<int>();
+          for (auto i = first_sub_sequence; i < first_sub_sequence + num_sub_sequences; ++i)
+          {
+            auto& local_sub_sequence = sub_sequences[i];
+            auto& sequence = item_as_json["sequences"][local_sub_sequence["sequenceIndex"].get<int>()];
+            auto sequence_name = sequence["name"].get<std::string>();
+
+            auto& key_frames = element["subSequences"][sequence_name] = nlohmann::json::array();
+            const auto first_key_frame = local_sub_sequence["firstKeyFrame"].get<int>();
+            const auto num_key_frames = local_sub_sequence["numKeyFrames"].get<int>();
+
+            auto& keyframes = item_as_json["keyframes"];
+            for (auto j = first_key_frame; j < first_key_frame + num_key_frames; ++j)
+            {
+              auto& keyframe = keyframes[j];
+              keyframe["keyframeIndex"] = j;
+              auto transform_index = keyframe["transformIndex"].get<int>();
+              auto& transform = item_as_json["transforms"][transform_index];
+
+              keyframe["transformation"] = transform;
+
+              key_frames.emplace_back(keyframe);
+            }
+          }
+          objects.emplace(name, element);
+        }
+
+        for (auto& element : item_as_json["details"])
+        {
+          auto& node = item_as_json["nodes"][element["rootNodeIndex"].get<int>()];
+
+          element["rootNodeIndex"] = node["name"];
+        }
+
+        auto count = 0u;
+        for (auto& element : item_as_json["transitions"])
+        {
+          const auto start_index = element["startSequenceIndex"].get<int>();
+          const auto end_index = element["endSequenceIndex"].get<int>();
+
+          element["startSequenceIndex"] = item_as_json["sequences"][start_index]["name"];
+          element["endSequenceIndex"] = item_as_json["sequences"][end_index]["name"];
+
+          std::stringstream possible_name;
+          possible_name << "Trans";
+
+          if (count < 10)
+          {
+            possible_name << '0' << count;
+          }
+          else
+          {
+            possible_name << count;
+          }
+
+          for (auto& name : item_as_json["names"])
+          {
+            if (const auto raw_name = name.get<std::string>(); raw_name.rfind(possible_name.str(), 0) == 0)
+            {
+              element["name"] = raw_name;
+            }
+          }
+          count++;
+        }
+
+        item_as_json["nodes"] = nodes;
+        item_as_json["objects"] = objects;
+        item_as_json["sequences"] = sequences;
+        item_as_json.erase("transforms");
+        item_as_json.erase("keyframes");
+        item_as_json.erase("subSequences");
+        item_as_json.erase("names");
+        item_as_json.erase("header");
+
         auto new_file_name = file_name.string() + ".json";
-        std::ofstream item_as_file(new_file_name, std::ios::trunc);
-        item_as_file << item_as_json.dump(4);
+        {
+          std::ofstream item_as_file(new_file_name, std::ios::trunc);
+          item_as_file << item_as_json.dump(4);
+        }
+
+        //new_file_name = file_name.string() + ".pack";
+        {
+          //std::basic_ofstream<std::uint8_t> item_as_file(new_file_name, std::ios::trunc | std::ios::binary);
+          //const auto pack = nlohmann::json::to_msgpack(item_as_json);
+          //item_as_file.write(&pack[0], pack.size());
+        }
 
         std::stringstream msg;
         msg << "Created " << new_file_name << '\n';
