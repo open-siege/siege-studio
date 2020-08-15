@@ -391,11 +391,11 @@ namespace darkstar::dts
 
     struct node
     {
-      constexpr static auto keys = make_keys({ "nameIndex", "parentNodeIndex", "numSubSequences", "firstSubSequence", "defaultTransformIndex" });
+      constexpr static auto keys = make_keys({ "nameIndex", "parentNodeIndex", "numSubSequences", "firstSubSequenceIndex", "defaultTransformIndex" });
       endian::little_int32_t name_index;
       endian::little_int32_t parent_node_index;
       endian::little_int32_t num_sub_sequences;
-      endian::little_int32_t first_sub_sequence;
+      endian::little_int32_t first_sub_sequence_index;
       endian::little_int32_t default_transform_index;
     };
 
@@ -413,10 +413,10 @@ namespace darkstar::dts
 
     struct sub_sequence
     {
-      constexpr static auto keys = make_keys({ "sequenceIndex", "numKeyFrames", "firstKeyFrame" });
+      constexpr static auto keys = make_keys({ "sequenceIndex", "numKeyFrames", "firstKeyFrameIndex" });
       endian::little_int32_t sequence_index;
       endian::little_int32_t num_key_frames;
-      endian::little_int32_t first_key_frame;
+      endian::little_int32_t first_key_frame_index;
     };
 
     struct keyframe
@@ -438,7 +438,7 @@ namespace darkstar::dts
 
     struct object
     {
-      constexpr static auto keys = make_keys({ "nameIndex", "flags", "meshIndex", "nodeIndex", "depFlags", "dep", "objectOffset", "numSubSequences", "firstSubSequence" });
+      constexpr static auto keys = make_keys({ "nameIndex", "flags", "meshIndex", "nodeIndex", "depFlags", "dep", "objectOffset", "numSubSequences", "firstSubSequenceIndex" });
       endian::little_int16_t name_index;
       endian::little_int16_t flags;
       endian::little_int32_t mesh_index;
@@ -447,7 +447,7 @@ namespace darkstar::dts
       std::array<vector3f, 3> dep;
       vector3f object_offset;
       endian::little_int32_t num_sub_sequences;
-      endian::little_int32_t first_sub_sequence;
+      endian::little_int32_t first_sub_sequence_index;
     };
 
     struct detail
@@ -591,18 +591,18 @@ namespace darkstar::dts
                                                "cyclic",
                                                "duration",
                                                "priority",
-                                               "firstFrameTrigger",
+                                               "firstFrameTriggerIndex",
                                                "numFrameTriggers",
                                                "numIflSubSequences",
-                                               "firstIflSubSequence" });
+                                               "firstIflSubSequenceIndex" });
       endian::little_int32_t name_index;
       endian::little_int32_t cyclic;
       float duration;
       endian::little_int32_t priority;
-      endian::little_int32_t first_frame_trigger;
+      endian::little_int32_t first_frame_trigger_index;
       endian::little_int32_t num_frame_triggers;
       endian::little_int32_t num_ifl_sub_sequences;
-      endian::little_int32_t first_ifl_sub_sequence;
+      endian::little_int32_t first_ifl_sub_sequence_index;
     };
 
     struct frame_trigger
@@ -793,20 +793,20 @@ namespace darkstar::dts
 
     struct node
     {
-      constexpr static auto keys = make_keys({ "nameIndex", "parentNodeIndex", "numSubSequences", "firstSubSequence", "defaultTransformIndex" });
+      constexpr static auto keys = make_keys({ "nameIndex", "parentNodeIndex", "numSubSequences", "firstSubSequenceIndex", "defaultTransformIndex" });
       endian::little_int16_t name_index;
       endian::little_int16_t parent_node_index;
       endian::little_int16_t num_sub_sequences;
-      endian::little_int16_t first_sub_sequence;
+      endian::little_int16_t first_sub_sequence_index;
       endian::little_int16_t default_transform_index;
     };
 
     struct sub_sequence
     {
-      constexpr static auto keys = make_keys({ "sequenceIndex", "numKeyFrames", "firstKeyFrame" });
+      constexpr static auto keys = make_keys({ "sequenceIndex", "numKeyFrames", "firstKeyFrameIndex" });
       endian::little_int16_t sequence_index;
       endian::little_int16_t num_key_frames;
-      endian::little_int16_t first_key_frame;
+      endian::little_int16_t first_key_frame_index;
     };
 
 
@@ -827,14 +827,14 @@ namespace darkstar::dts
 
     struct object
     {
-      constexpr static auto keys = make_keys({ "nameIndex", "flags", "meshIndex", "nodeIndex", "objectOffset", "numSubSequences", "firstSubSequence" });
+      constexpr static auto keys = make_keys({ "nameIndex", "flags", "meshIndex", "nodeIndex", "objectOffset", "numSubSequences", "firstSubSequenceIndex" });
       endian::little_int16_t name_index;
       endian::little_int16_t flags;
       endian::little_int32_t mesh_index;
       endian::little_int16_t node_index;
       vector3f object_offset;
       endian::little_int16_t num_sub_sequences;
-      endian::little_int16_t first_sub_sequence;
+      endian::little_int16_t first_sub_sequence_index;
     };
 
     struct transition
