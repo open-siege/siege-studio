@@ -6,7 +6,7 @@
 #include <vector>
 #include <fstream>
 #include <filesystem>
-#include "structures.hpp"
+#include "dts_structures.hpp"
 #include "endian_arithmetic.hpp"
 
 namespace binary::io

@@ -2,7 +2,7 @@
 #include <vector>
 #include <algorithm>
 #include <execution>
-#include "structures.hpp"
+#include "dts_structures.hpp"
 #include "json_boost.hpp"
 #include "complex_serializer.hpp"
 #include "shared.hpp"
