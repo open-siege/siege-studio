@@ -3,6 +3,7 @@
 
 #include <map>
 #include <bitset>
+#include "complex_serializer.hpp"
 #include "json_boost.hpp"
 
 void format_json(nlohmann::ordered_json& item_as_json)

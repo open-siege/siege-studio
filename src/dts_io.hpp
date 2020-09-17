@@ -264,7 +264,7 @@ namespace darkstar::dts
   {
     boost::endian::little_uint32_t size_in_bytes{};
 
-    start_offset = start_offset.has_value() ? start_offset.value() + dts::pers_tag.size() : dts::pers_tag.size();
+    start_offset = start_offset.has_value() ? start_offset.value() + static_cast<std::uint32_t>(dts::pers_tag.size()) : static_cast<std::uint32_t>(dts::pers_tag.size());
     std::uint32_t end_offset = static_cast<std::uint32_t>(stream.tellp());
 
     // sort out the size we reserved earlier
