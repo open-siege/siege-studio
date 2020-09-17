@@ -7,13 +7,14 @@
 #include "complex_serializer.hpp"
 #include "shared.hpp"
 #include "dts_io.hpp"
+#include "dts_json_formatting.hpp"
 
 namespace fs = std::filesystem;
 namespace dts = darkstar::dts;
 
 int main(int argc, const char** argv)
 {
-  const auto files = dts::shared::find_files(
+  const auto files = shared::find_files(
     std::vector<std::string>(argv + 1, argv + argc),
     ".dts",
     ".DTS",
@@ -35,6 +36,8 @@ int main(int argc, const char** argv)
 
       std::visit([&](const auto& item) {
         nlohmann::ordered_json item_as_json = item;
+
+        format_json(item_as_json);
 
         auto new_file_name = file_name.string() + ".json";
         {

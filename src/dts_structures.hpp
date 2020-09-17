@@ -60,6 +60,38 @@ namespace darkstar::dts
     float z;
   };
 
+  vector3f operator+(const vector3f& left, const vector3f& right)
+  {
+    vector3f result{};
+
+    result.x = left.x + right.x;
+    result.y = left.y + right.y;
+    result.z = left.z + right.z;
+
+    return result;
+  }
+
+  vector3f operator+=(const vector3f& left, const vector3f& right)
+  {
+    return left + right;
+  }
+
+  vector3f operator*(const vector3f& left, const vector3f& right)
+  {
+    vector3f result{};
+
+    result.x = left.x * right.x;
+    result.y = left.y * right.y;
+    result.z = left.z * right.z;
+
+    return result;
+  }
+
+  vector3f operator*=(const vector3f& left, const vector3f& right)
+  {
+    return left * right;
+  }
+
   struct vector3f_pair
   {
     constexpr static auto keys = make_keys({ "min", "max" });
@@ -105,13 +137,13 @@ namespace darkstar::dts
     struct header
     {
       constexpr static auto keys = make_keys({ "numVerts",
-                                               "vertsPerFrame",
-                                               "numTextureVerts",
-                                               "numFaces",
-                                               "numFrames",
-                                               "scale",
-                                               "origin",
-                                               "radius" });
+        "vertsPerFrame",
+        "numTextureVerts",
+        "numFaces",
+        "numFrames",
+        "scale",
+        "origin",
+        "radius" });
 
       endian::little_int32_t num_verts;
       endian::little_int32_t verts_per_frame;
@@ -133,6 +165,29 @@ namespace darkstar::dts
     };
 
     static_assert(sizeof(vertex) == sizeof(std::int32_t));
+
+    vector3f operator*(const vertex& left, const vector3f& right)
+    {
+      vector3f result{};
+
+      result.x = left.x * right.x;
+      result.y = left.y * right.y;
+      result.z = left.z * right.z;
+
+      return result;
+    }
+
+
+    vector3f operator+(const vertex& left, const vector3f& right)
+    {
+      vector3f result{};
+
+      result.x = left.x + right.x;
+      result.y = left.y + right.y;
+      result.z = left.z + right.z;
+
+      return result;
+    }
 
     struct texture_vertex
     {
@@ -178,14 +233,14 @@ namespace darkstar::dts
     struct header
     {
       constexpr static auto keys = make_keys({ "numVerts",
-                                               "vertsPerFrame",
-                                               "numTextureVerts",
-                                               "numFaces",
-                                               "numFrames",
-                                               "textureVertsPerFrame",
-                                               "scale",
-                                               "origin",
-                                               "radius" });
+        "vertsPerFrame",
+        "numTextureVerts",
+        "numFaces",
+        "numFrames",
+        "textureVertsPerFrame",
+        "scale",
+        "origin",
+        "radius" });
 
       endian::little_int32_t num_verts;
       endian::little_int32_t verts_per_frame;
@@ -217,12 +272,12 @@ namespace darkstar::dts
     struct header
     {
       constexpr static auto keys = make_keys({ "numVerts",
-                                               "vertsPerFrame",
-                                               "numTextureVerts",
-                                               "numFaces",
-                                               "numFrames",
-                                               "textureVertsPerFrame",
-                                               "radius" });
+        "vertsPerFrame",
+        "numTextureVerts",
+        "numFaces",
+        "numFrames",
+        "textureVertsPerFrame",
+        "radius" });
 
       endian::little_int32_t num_verts;
       endian::little_int32_t verts_per_frame;
@@ -261,7 +316,7 @@ namespace darkstar::dts
     struct header
     {
       constexpr static auto keys = make_keys({ "numDetails",
-                                               "numMaterials" });
+        "numMaterials" });
       endian::little_int32_t num_details;
       endian::little_int32_t num_materials;
     };
@@ -402,9 +457,9 @@ namespace darkstar::dts
     struct sequence
     {
       constexpr static auto keys = make_keys({ "nameIndex",
-                                               "cyclic",
-                                               "duration",
-                                               "priority" });
+        "cyclic",
+        "duration",
+        "priority" });
       endian::little_int32_t name_index;
       endian::little_int32_t cyclic;
       float duration;
@@ -460,11 +515,11 @@ namespace darkstar::dts
     struct transition
     {
       constexpr static auto keys = make_keys({ "startSequenceIndex",
-                                               "endSequenceIndex",
-                                               "startPosition",
-                                               "endPosition",
-                                               "duration",
-                                               "transform" });
+        "endSequenceIndex",
+        "startPosition",
+        "endPosition",
+        "duration",
+        "transform" });
       endian::little_int32_t start_sequence_index;
       endian::little_int32_t end_sequence_index;
       float start_position;
@@ -481,18 +536,18 @@ namespace darkstar::dts
       constexpr static auto type_name = std::string_view{ "TS::Shape" };
       constexpr static auto version = 2;
       constexpr static auto keys = make_keys({ "header",
-                                               "data",
-                                               "nodes",
-                                               "sequences",
-                                               "subSequences",
-                                               "keyframes",
-                                               "transforms",
-                                               "names",
-                                               "objects",
-                                               "details",
-                                               "transitions",
-                                               "meshes",
-                                               "materialList" });
+        "data",
+        "nodes",
+        "sequences",
+        "subSequences",
+        "keyframes",
+        "transforms",
+        "names",
+        "objects",
+        "details",
+        "transitions",
+        "meshes",
+        "materialList" });
 
       header header;
       data data;
@@ -526,18 +581,18 @@ namespace darkstar::dts
       constexpr static auto type_name = v2::shape::type_name;
       constexpr static auto version = 3;
       constexpr static auto keys = make_keys({ "header",
-                                               "data",
-                                               "nodes",
-                                               "sequences",
-                                               "subSequences",
-                                               "keyframes",
-                                               "transforms",
-                                               "names",
-                                               "objects",
-                                               "details",
-                                               "transitions",
-                                               "meshes",
-                                               "materialList" });
+        "data",
+        "nodes",
+        "sequences",
+        "subSequences",
+        "keyframes",
+        "transforms",
+        "names",
+        "objects",
+        "details",
+        "transitions",
+        "meshes",
+        "materialList" });
 
       v2::header header;
       v2::data data;
@@ -554,23 +609,23 @@ namespace darkstar::dts
 
       material_list_variant material_list;
     };
-  }
+  }// namespace shape::v3
 
   namespace shape::v5
   {
     struct header
     {
       constexpr static auto keys = make_keys({ "numNodes",
-                                               "numSequences",
-                                               "numSubSequences",
-                                               "numKeyFrames",
-                                               "numTransforms",
-                                               "numNames",
-                                               "numObjects",
-                                               "numDetails",
-                                               "numMeshes",
-                                               "numTransitions",
-                                               "numFrameTriggers" });
+        "numSequences",
+        "numSubSequences",
+        "numKeyFrames",
+        "numTransforms",
+        "numNames",
+        "numObjects",
+        "numDetails",
+        "numMeshes",
+        "numTransitions",
+        "numFrameTriggers" });
 
       endian::little_int32_t num_nodes;
       endian::little_int32_t num_sequences;
@@ -588,13 +643,13 @@ namespace darkstar::dts
     struct sequence
     {
       constexpr static auto keys = make_keys({ "nameIndex",
-                                               "cyclic",
-                                               "duration",
-                                               "priority",
-                                               "firstFrameTriggerIndex",
-                                               "numFrameTriggers",
-                                               "numIflSubSequences",
-                                               "firstIflSubSequenceIndex" });
+        "cyclic",
+        "duration",
+        "priority",
+        "firstFrameTriggerIndex",
+        "numFrameTriggers",
+        "numIflSubSequences",
+        "firstIflSubSequenceIndex" });
       endian::little_int32_t name_index;
       endian::little_int32_t cyclic;
       float duration;
@@ -608,7 +663,7 @@ namespace darkstar::dts
     struct frame_trigger
     {
       constexpr static auto keys = make_keys({ "position",
-                                               "value" });
+        "value" });
       float position;
       float value;
     };
@@ -624,20 +679,20 @@ namespace darkstar::dts
       constexpr static auto type_name = v2::shape::type_name;
       constexpr static auto version = 5;
       constexpr static auto keys = make_keys({ "header",
-                                               "data",
-                                               "nodes",
-                                               "sequences",
-                                               "subSequences",
-                                               "keyframes",
-                                               "transforms",
-                                               "names",
-                                               "objects",
-                                               "details",
-                                               "transitions",
-                                               "frameTriggers",
-                                               "footer",
-                                               "meshes",
-                                               "materialList" });
+        "data",
+        "nodes",
+        "sequences",
+        "subSequences",
+        "keyframes",
+        "transforms",
+        "names",
+        "objects",
+        "details",
+        "transitions",
+        "frameTriggers",
+        "footer",
+        "meshes",
+        "materialList" });
 
       header header;
       v2::data data;
@@ -664,7 +719,7 @@ namespace darkstar::dts
     struct footer
     {
       constexpr static auto keys = make_keys({ "numDefaultMaterials",
-                                               "alwaysNode" });
+        "alwaysNode" });
       endian::little_int32_t num_default_materials;
       endian::little_int32_t always_node;
     };
@@ -674,20 +729,20 @@ namespace darkstar::dts
       constexpr static auto type_name = v2::shape::type_name;
       constexpr static auto version = 6;
       constexpr static auto keys = make_keys({ "header",
-                                               "data",
-                                               "nodes",
-                                               "sequences",
-                                               "subSequences",
-                                               "keyframes",
-                                               "transforms",
-                                               "names",
-                                               "objects",
-                                               "details",
-                                               "transitions",
-                                               "frameTriggers",
-                                               "footer",
-                                               "meshes",
-                                               "materialList" });
+        "data",
+        "nodes",
+        "sequences",
+        "subSequences",
+        "keyframes",
+        "transforms",
+        "names",
+        "objects",
+        "details",
+        "transitions",
+        "frameTriggers",
+        "footer",
+        "meshes",
+        "materialList" });
 
       v5::header header;
       v2::data data;
@@ -745,20 +800,20 @@ namespace darkstar::dts
       constexpr static auto type_name = v2::shape::type_name;
       constexpr static auto version = 7;
       constexpr static auto keys = make_keys({ "header",
-                                               "data",
-                                               "nodes",
-                                               "sequences",
-                                               "subSequences",
-                                               "keyframes",
-                                               "transforms",
-                                               "names",
-                                               "objects",
-                                               "details",
-                                               "transitions",
-                                               "frameTriggers",
-                                               "footer",
-                                               "meshes",
-                                               "materialList" });
+        "data",
+        "nodes",
+        "sequences",
+        "subSequences",
+        "keyframes",
+        "transforms",
+        "names",
+        "objects",
+        "details",
+        "transitions",
+        "frameTriggers",
+        "footer",
+        "meshes",
+        "materialList" });
 
       v5::header header;
       v2::data data;
@@ -858,20 +913,20 @@ namespace darkstar::dts
       constexpr static auto type_name = v2::shape::type_name;
       constexpr static auto version = 8;
       constexpr static auto keys = make_keys({ "header",
-                                               "data",
-                                               "nodes",
-                                               "sequences",
-                                               "subSequences",
-                                               "keyframes",
-                                               "transforms",
-                                               "names",
-                                               "objects",
-                                               "details",
-                                               "transitions",
-                                               "frameTriggers",
-                                               "footer",
-                                               "meshes",
-                                               "materialList" });
+        "data",
+        "nodes",
+        "sequences",
+        "subSequences",
+        "keyframes",
+        "transforms",
+        "names",
+        "objects",
+        "details",
+        "transitions",
+        "frameTriggers",
+        "footer",
+        "meshes",
+        "materialList" });
 
       v5::header header;
       data data;
@@ -891,7 +946,7 @@ namespace darkstar::dts
       material_list_variant material_list;
     };
   }// namespace shape::v8
-  
+
   using shape_variant = std::variant<shape::v2::shape, shape::v3::shape, shape::v5::shape, shape::v6::shape, shape::v7::shape, shape::v8::shape>;
 
   using shape_or_material_list = std::variant<material_list_variant, shape_variant>;
