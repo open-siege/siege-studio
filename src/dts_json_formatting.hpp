@@ -73,7 +73,7 @@ void format_json(nlohmann::ordered_json& item_as_json)
           element["defaultTransformationFrameIndex"] = key_frames.size();
         }
 
-        transform_keyframe_mapping.emplace(transform_index, std::make_tuple(name, sequence_name, key_frames.size()));
+        transform_keyframe_mapping.emplace(transform_index, std::make_tuple(name, sequence_name, static_cast<std::int32_t>(key_frames.size())));
 
         auto& transform = item_as_json["transforms"][transform_index];
 

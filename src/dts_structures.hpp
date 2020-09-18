@@ -62,35 +62,23 @@ namespace darkstar::dts
 
   vector3f operator+(const vector3f& left, const vector3f& right)
   {
-    vector3f result{};
-
-    result.x = left.x + right.x;
-    result.y = left.y + right.y;
-    result.z = left.z + right.z;
-
-    return result;
+    return { left.x + right.x, left.y + right.y, left.z + right.z };
   }
 
-  vector3f operator+=(const vector3f& left, const vector3f& right)
-  {
-    return left + right;
-  }
+//  vector3f operator+=(const vector3f& left, const vector3f& right)
+//  {
+//    return left + right;
+//  }
 
   vector3f operator*(const vector3f& left, const vector3f& right)
   {
-    vector3f result{};
-
-    result.x = left.x * right.x;
-    result.y = left.y * right.y;
-    result.z = left.z * right.z;
-
-    return result;
+    return { left.x * right.x, left.y * right.y, left.z * right.z };
   }
-
-  vector3f operator*=(const vector3f& left, const vector3f& right)
-  {
-    return left * right;
-  }
+//
+//  vector3f operator*=(const vector3f& left, const vector3f& right)
+//  {
+//    return left * right;
+//  }
 
   struct vector3f_pair
   {
