@@ -1,6 +1,7 @@
 #ifndef DARKSTARDTSCONVERTER_DTS_IO_HPP
 #define DARKSTARDTSCONVERTER_DTS_IO_HPP
 
+#include <sstream>
 #include "dts_structures.hpp"
 #include "binary_io.hpp"
 
