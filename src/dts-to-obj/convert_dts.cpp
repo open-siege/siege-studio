@@ -50,15 +50,15 @@ int main(int argc, const char** argv)
                    [&](const dts::shape_variant& core_shape)
                    {
                      std::visit([&](const auto& main_shape) {
-                       //for (auto i = 0u; i < main_shape.details.size(); ++i)
+                       for (auto i = 0u; i < main_shape.details.size(); ++i)
                        {
-                         const auto& detail_level = main_shape.details[0];
+                         const auto& detail_level = main_shape.details[i];
                          const auto root_node = main_shape.nodes[detail_level.root_node_index];
                          const std::string root_node_name = main_shape.names[root_node.name_index].data();
                          std::ofstream output(file_name.string() + "." + root_node_name + ".obj", std::ios::trunc);
                          auto renderer = obj_renderer{output};
 
-                         render_dts(main_shape, renderer, 0);
+                         render_dts(main_shape, renderer, i);
                        }
                      },
                        core_shape);
