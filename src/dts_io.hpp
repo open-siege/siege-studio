@@ -184,6 +184,55 @@ namespace darkstar::dts
     return shape;
   }
 
+
+  dts::shape_variant read_shape(const std::filesystem::path& file_name, std::basic_ifstream<std::byte>& stream, std::optional<dts::tag_header> file_header)
+  {
+    using namespace dts::shape;
+    file_header = !file_header.has_value() ? read_object_header(stream) : file_header;
+
+    if (file_header->class_name != v2::shape::type_name)
+    {
+      throw std::invalid_argument("The object provided is not a shape as expected.");
+    }
+
+    if (file_header->version > 8)
+    {
+      throw std::invalid_argument("The shape is not supported.");
+    }
+
+    if (file_header->version == 2)
+    {
+      return read_shape_impl<v2::shape>(stream);
+    }
+    else if (file_header->version == 3)
+    {
+      return read_shape_impl<v3::shape>(stream);
+    }
+    else if (file_header->version == 5)
+    {
+      return read_shape_impl<v5::shape>(stream);
+    }
+    else if (file_header->version == 6)
+    {
+      return read_shape_impl<v6::shape>(stream);
+    }
+    else if (file_header->version == 7)
+    {
+      return read_shape_impl<v7::shape>(stream);
+    }
+    else if (file_header->version == 8)
+    {
+      return read_shape_impl<v8::shape>(stream);
+    }
+    else
+    {
+      std::stringstream error;
+      error << file_name << " is DTS version " << file_header->version << " which is currently unsupported.";
+      throw std::invalid_argument(error.str());
+    }
+  }
+
+
   dts::shape_or_material_list read_shape(const std::filesystem::path& file_name, std::basic_ifstream<std::byte>& stream)
   {
     using namespace dts::shape;
@@ -194,46 +243,7 @@ namespace darkstar::dts
       return read_material_list(file_header, stream);
     }
 
-    if (file_header.class_name != v2::shape::type_name)
-    {
-      throw std::invalid_argument("The object provided is not a shape as expected.");
-    }
-
-    if (file_header.version > 8)
-    {
-      throw std::invalid_argument("The shape is not supported.");
-    }
-
-    if (file_header.version == 2)
-    {
-      return read_shape_impl<v2::shape>(stream);
-    }
-    else if (file_header.version == 3)
-    {
-      return read_shape_impl<v3::shape>(stream);
-    }
-    else if (file_header.version == 5)
-    {
-      return read_shape_impl<v5::shape>(stream);
-    }
-    else if (file_header.version == 6)
-    {
-      return read_shape_impl<v6::shape>(stream);
-    }
-    else if (file_header.version == 7)
-    {
-      return read_shape_impl<v7::shape>(stream);
-    }
-    else if (file_header.version == 8)
-    {
-      return read_shape_impl<v8::shape>(stream);
-    }
-    else
-    {
-      std::stringstream error;
-      error << file_name << " is DTS version " << file_header.version << " which is currently unsupported.";
-      throw std::invalid_argument(error.str());
-    }
+    return read_shape(file_name, stream, file_header);
   }
 
   template<typename RootType>

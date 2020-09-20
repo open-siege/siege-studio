@@ -24,7 +24,7 @@ bool replace(std::string& str, const std::string& from, const std::string& to)
 
 int main(int argc, const char** argv)
 {
-  const auto files = dts::shared::find_files(
+  const auto files = shared::find_files(
     std::vector<std::string>(argv + 1, argv + argc),
     ".dts.json",
     ".DTS.json",
