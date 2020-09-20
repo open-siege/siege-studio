@@ -7,7 +7,7 @@
 #include <set>
 #include <filesystem>
 
-namespace darkstar::dts::shared
+namespace shared
 {
   namespace fs = std::filesystem;
 
