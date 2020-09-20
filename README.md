@@ -20,9 +20,16 @@ Inspired by a DTS converter for Earthsiege 2 (https://github.com/booto/convert_d
 
 If you don't already have Conan on your system, find instructions here: https://conan.io/downloads.html
 
+As a setup command, without any pre-built packages, run ```conan install cmake/3.17.3@/ -g virtualenv```
+
+Then run ```activate``` or ```./activate```
+
 To install project dependencies, use:
 
-```conan install .``` or ```conan install . --missing``` if you system is missing precompiled packages for the dependencies.
+```conan install .``` or ```conan install . --build=missing``` if you system is missing precompiled packages for the dependencies.
+
+For debug builds use:
+```conan install . -s build_type=Debug``` or ```conan install . -s build_type=Debug --build=missing```
 
 To build the project, use:
 

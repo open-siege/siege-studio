@@ -5,7 +5,7 @@
 #include <type_traits>
 #include <nlohmann/json.hpp>
 #include "json_boost.hpp"
-#include "structures.hpp"
+#include "dts_structures.hpp"
 
 namespace nlohmann
 {
