@@ -134,7 +134,7 @@ int main(int argc, const char** argv)
 
   sf::ContextSettings context;
   context.depthBits = 24;
-  constexpr auto main_title = "3Space Studio - Darkstar DTS Viewer -";
+  constexpr auto main_title = "3Space Studio - Darkstar DTS Viewer - ";
 
   sf::RenderWindow window(sf::VideoMode(800, 600, 32), main_title + shape_path.value().filename().string(), sf::Style::Default, context);
 
