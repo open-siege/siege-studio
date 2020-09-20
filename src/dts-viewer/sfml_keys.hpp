@@ -59,7 +59,9 @@ namespace config
     std::make_pair("Tab"sv, sf::Keyboard::Tab),
     std::make_pair("Space"sv, sf::Keyboard::Space),
     std::make_pair("Enter"sv, sf::Keyboard::Enter),
-    std::make_pair("Backspace"sv, sf::Keyboard::Backspace)
+    std::make_pair("Backspace"sv, sf::Keyboard::Backspace),
+    std::make_pair("Period"sv, sf::Keyboard::Period),
+    std::make_pair("Comma"sv, sf::Keyboard::Comma)
   };
 
 

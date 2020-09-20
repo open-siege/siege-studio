@@ -5,12 +5,12 @@
 #include <bitset>
 #include <utility>
 #include <unordered_map>
-#include <iomanip>
 #include "json_boost.hpp"
 #include "complex_serializer.hpp"
 #include "shared.hpp"
 #include "dts_io.hpp"
-#include "dts_render.hpp"
+#include "obj_renderer.hpp"
+
 namespace fs = std::filesystem;
 namespace dts = darkstar::dts;
 
@@ -23,64 +23,6 @@ struct overloaded : Ts...
 // explicit deduction guide (not needed as of C++20)
 template<class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
-
-
-struct obj_render final : shape_renderer
-{
-  std::optional<std::string> new_face_str = std::nullopt;
-  std::size_t face_count = 0;
-  std::ofstream& output;
-
-  obj_render(std::ofstream& output)
-    : output(output)
-  {
-    output << std::setprecision(32);
-  }
-
-  void update_node(std::string_view) override
-  {
-  }
-
-  void update_object(std::string_view object_name) override
-  {
-    output << "o " << object_name << '\n';
-  }
-
-  void new_face(std::size_t num_vertices) override
-  {
-    std::stringstream stream;
-    stream << "\tf";
-
-    for (auto i = 1u; i <= num_vertices; ++i)
-    {
-      stream << " " << face_count + i << "/" << face_count + i;
-    }
-
-    stream << '\n';
-
-    new_face_str = stream.str();
-
-    face_count += num_vertices;
-  }
-
-  void end_face() override
-  {
-    if (new_face_str.has_value())
-    {
-      output << new_face_str.value();
-    }
-  }
-
-  void emit_vertex(const darkstar::dts::vector3f& vertex) override
-  {
-    output << "\tv " << vertex.x << ' ' << vertex.y << ' ' << vertex.z << '\n';
-  }
-
-  void emit_texture_vertex(const darkstar::dts::mesh::v1::texture_vertex& vertex) override
-  {
-    output << "\tvt " << vertex.x << ' ' << vertex.y << '\n';
-  }
-};
 
 int main(int argc, const char** argv)
 {
@@ -108,21 +50,21 @@ int main(int argc, const char** argv)
                    [&](const dts::shape_variant& core_shape)
                    {
                      std::visit([&](const auto& main_shape) {
-                       for (auto i = 0u; i < main_shape.details.size(); ++i)
+                       //for (auto i = 0u; i < main_shape.details.size(); ++i)
                        {
-                         const auto& detail_level = main_shape.details[i];
+                         const auto& detail_level = main_shape.details[0];
                          const auto root_node = main_shape.nodes[detail_level.root_node_index];
                          const std::string root_node_name = main_shape.names[root_node.name_index].data();
                          std::ofstream output(file_name.string() + "." + root_node_name + ".obj", std::ios::trunc);
-                         auto renderer = obj_render{output};
+                         auto renderer = obj_renderer{output};
 
-                         render_dts(main_shape, renderer, i);
+                         render_dts(main_shape, renderer, 0);
                        }
                      },
                        core_shape);
                    },
                    [&](const dts::material_list_variant&) {
-                     //Do nothing
+                     //TODO generate a MTL file
                    } },
         shape);
     }
