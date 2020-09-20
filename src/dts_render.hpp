@@ -80,9 +80,9 @@ void render_dts(const darkstar::dts::shape_variant& shape_variant, shape_rendere
           const std::string_view data = shape.names[other_node->name_index].data();
           const auto index = static_cast<std::int32_t>(std::distance(std::begin(shape.nodes), other_node));
 
-          auto [iterator, added] = object_indexes.emplace(index, std::pmr::set<std::int32_t>{ &resource });
+          auto [iterator, node_added] = object_indexes.emplace(index, std::pmr::set<std::int32_t>{ &resource });
 
-          if (added)
+          if (node_added)
           {
             valid_nodes.emplace_back(iterator->first);
           }
@@ -132,9 +132,9 @@ void render_dts(const darkstar::dts::shape_variant& shape_variant, shape_rendere
       for (const std::int32_t object_index : objects)
       {
         const auto& object = shape.objects[object_index];
-        const std::string_view parent_object_name = shape.names[object.name_index].data();
+        const std::string_view object_name = shape.names[object.name_index].data();
 
-        renderer.update_object(parent_object_name);
+        renderer.update_object(object_name);
 
         std::visit([&](const auto& mesh) {
           dts::vector3f mesh_scale;
