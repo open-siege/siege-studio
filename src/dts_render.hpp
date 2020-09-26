@@ -12,8 +12,8 @@
 
 struct shape_renderer
 {
-  virtual void update_node(std::string_view node_name) = 0;
-  virtual void update_object(std::string_view object_name) = 0;
+  virtual void update_node(std::optional<std::string_view> parent_node_name, std::string_view node_name) = 0;
+  virtual void update_object(std::optional<std::string_view> parent_node_name, std::string_view object_name) = 0;
   virtual void new_face(std::size_t num_vertices) = 0;
   virtual void end_face() = 0;
   virtual void emit_vertex(const darkstar::dts::vector3f& vertex) = 0;
@@ -48,6 +48,11 @@ std::vector<std::string> get_detail_levels(const darkstar::dts::shape_variant& s
 void render_dts(const darkstar::dts::shape_variant& shape_variant, shape_renderer& renderer, std::optional<std::size_t> detail_level_index = std::nullopt)
 {
   std::visit([&](const auto& shape) {
+    if (shape.details.empty())
+    {
+      return;
+    }
+
     namespace dts = darkstar::dts;
     std::vector<std::byte> buffer(8192, std::byte{ 0 });
     std::pmr::monotonic_buffer_resource resource{ buffer.data(), buffer.size() };
@@ -106,7 +111,7 @@ void render_dts(const darkstar::dts::shape_variant& shape_variant, shape_rendere
       }
     }
 
-    for (const auto& [child_node_index, transforms] : node_indexes)
+    for (const auto& [node_index, transforms] : node_indexes)
     {
       std::optional<dts::vector3f> default_scale;
       dts::vector3f default_translation = { 0, 0, 0 };
@@ -123,18 +128,27 @@ void render_dts(const darkstar::dts::shape_variant& shape_variant, shape_rendere
         default_translation = default_translation + transform->translation;
       }
 
-      const auto& child_node = shape.nodes[child_node_index];
-      const std::string_view child_node_name = shape.names[child_node.name_index].data();
-      renderer.update_node(child_node_name);
+      const auto& node = shape.nodes[node_index];
+      const std::string_view node_name = shape.names[node.name_index].data();
 
-      auto& objects = object_indexes[child_node_index];
+      std::optional<std::string_view> parent_node_name;
+
+      if (node.parent_node_index != -1)
+      {
+        const auto& parent_node = shape.nodes[node.parent_node_index];
+        parent_node_name = shape.names[parent_node.name_index].data();
+      }
+
+      renderer.update_node(parent_node_name, node_name);
+
+      auto& objects = object_indexes[node_index];
 
       for (const std::int32_t object_index : objects)
       {
         const auto& object = shape.objects[object_index];
         const std::string_view object_name = shape.names[object.name_index].data();
 
-        renderer.update_object(object_name);
+        renderer.update_object(node_name, object_name);
 
         std::visit([&](const auto& mesh) {
           dts::vector3f mesh_scale;
