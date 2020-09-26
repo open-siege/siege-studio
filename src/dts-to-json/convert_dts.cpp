@@ -37,7 +37,7 @@ int main(int argc, const char** argv)
       std::visit([&](const auto& item) {
         nlohmann::ordered_json item_as_json = item;
 
-        //format_json(item_as_json);
+        format_json(item_as_json);
 
         auto new_file_name = file_name.string() + ".json";
         {
