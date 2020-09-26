@@ -151,7 +151,7 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
 {
   static std::map<std::optional<std::filesystem::path>, shape_instance> shape_instances;
 
-  auto instance_iterator = shape_instances.emplace(shape_path, shape_instance{ get_shape(shape_path), { 0, 0, -15 }, { 60, 180, 120 } });
+  auto instance_iterator = shape_instances.emplace(shape_path, shape_instance{ get_shape(shape_path), { 0, 0, -20 }, { 115, 180, -35 } });
   auto& instance = instance_iterator.first;
 
   static std::map<std::string, std::function<void(shape_instance&)>> actions;
@@ -340,6 +340,8 @@ void create_render_view(wxWindow* panel, std::optional<std::filesystem::path> pa
 
 void populate_tree_view(wxTreeCtrl* tree_view, fs::path search_path)
 {
+  using namespace std::literals;
+  constexpr std::array extensions = { ".dts"sv, ".DTS"sv };
   tree_view->DeleteAllItems();
 
   auto parent = tree_view->AddRoot(search_path.string());
@@ -348,11 +350,17 @@ void populate_tree_view(wxTreeCtrl* tree_view, fs::path search_path)
   {
     if (item.is_directory())
     {
-      tree_view->AppendItem(parent, item.path().filename().string());
+      tree_view->AppendItem(parent, item.path().string());
     }
     else
     {
-      tree_view->AppendItem(parent, item.path().filename().string());
+      auto filename = item.path().filename().string();
+      if (std::any_of(extensions.begin(), extensions.end(), [&filename](const auto& ext) {
+            return ends_with(filename, ext);
+          }))
+      {
+        tree_view->AppendItem(parent, filename);
+      }
     }
   }
 }
@@ -398,12 +406,11 @@ int main(int argc, char** argv)
     auto item = event.GetItem();
     auto text = tree_view->GetItemText(item);
 
-    const auto current_path = std::filesystem::path{text.ToAscii().data()};
+    const auto current_path = std::filesystem::path{ text.ToAscii().data() };
     const auto new_path = search_path / current_path;
     wxPanel* panel = new wxPanel(notebook, wxID_ANY);
     create_render_view(panel, new_path);
     auto selection = notebook->GetSelection();
-    std::cout << "Deleting " << selection << '\n';
     notebook->InsertPage(selection, panel, new_path.filename().string());
     num_elements = notebook->GetPageCount();
 
@@ -422,7 +429,6 @@ int main(int argc, char** argv)
   panel = new wxPanel(notebook, wxID_ANY);
   panel->SetName("+");
   notebook->AddPage(panel, "+");
-
 
 
   notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED,
@@ -480,7 +486,6 @@ int main(int argc, char** argv)
         wxPanel* panel = new wxPanel(notebook, wxID_ANY);
         create_render_view(panel, new_path);
         auto selection = notebook->GetSelection();
-        std::cout << "Deleting " << selection << '\n';
         notebook->InsertPage(selection, panel, new_path.value().filename().string());
         num_elements = notebook->GetPageCount();
 

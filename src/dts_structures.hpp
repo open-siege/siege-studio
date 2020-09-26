@@ -112,6 +112,23 @@ namespace darkstar::dts
     float w;
   };
 
+  quaternion4f to_float(const quaternion4f& other)
+  {
+    return other;
+  }
+
+  quaternion4f to_float(const quaternion4s& other)
+  {
+    constexpr std::int16_t max = SHRT_MAX;
+
+    return {
+      float(other.x) / max,
+      float(other.y) / max,
+      float(other.z) / max,
+      float(other.w) / max
+    };
+  }
+
   static_assert(sizeof(quaternion4s) == sizeof(std::array<endian::little_int16_t, 4>));
 
   struct rgb_data

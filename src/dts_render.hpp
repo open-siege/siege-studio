@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <set>
 #include <memory_resource>
+#include <glm/gtx/quaternion.hpp>
 #include "dts_structures.hpp"
 
 struct shape_renderer
@@ -115,6 +116,7 @@ void render_dts(const darkstar::dts::shape_variant& shape_variant, shape_rendere
     {
       std::optional<dts::vector3f> default_scale;
       dts::vector3f default_translation = { 0, 0, 0 };
+      dts::quaternion4f default_rotation = { 0, 0, 0, 1 };
 
       for (auto transform : transforms)
       {
@@ -125,7 +127,17 @@ void render_dts(const darkstar::dts::shape_variant& shape_variant, shape_rendere
             default_scale = transform->scale;
           }
         }
-        default_translation = default_translation + transform->translation;
+
+        //auto rotation = dts::to_float(transform->rotation);
+
+       // glm::quat glm_rotation{rotation.w, rotation.x, rotation.y, rotation.z};
+        glm::vec3 translation {transform->translation.x, transform->translation.y, transform->translation.z};
+
+       // translation = glm::rotate(glm_rotation, translation);
+
+        default_translation.x += translation.x;
+        default_translation.y += translation.y;
+        default_translation.z += translation.z;
       }
 
       const auto& node = shape.nodes[node_index];
