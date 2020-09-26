@@ -6,6 +6,7 @@
 
 #include <wx/wx.h>
 #include <wx/aui/aui.h>
+#include <wx/treectrl.h>
 
 #include <imgui.h>
 #include <imgui-SFML.h>
@@ -94,22 +95,14 @@ auto apply_configuration(std::map<std::string, std::function<void(shape_instance
 {
   //TODO read this from config one day
   std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(shape_instance&)>>> callbacks;
-  callbacks.emplace(config::get_key_for_name("Left"), std::ref(actions.at("pan_left")));
   callbacks.emplace(config::get_key_for_name("Numpad4"), std::ref(actions.at("pan_left")));
-  callbacks.emplace(config::get_key_for_name("Right"), std::ref(actions.at("pan_right")));
   callbacks.emplace(config::get_key_for_name("Numpad6"), std::ref(actions.at("pan_right")));
-  callbacks.emplace(config::get_key_for_name("Up"), std::ref(actions.at("pan_up")));
   callbacks.emplace(config::get_key_for_name("Numpad8"), std::ref(actions.at("pan_up")));
-  callbacks.emplace(config::get_key_for_name("Down"), std::ref(actions.at("pan_down")));
   callbacks.emplace(config::get_key_for_name("Numpad2"), std::ref(actions.at("pan_down")));
-  callbacks.emplace(config::get_key_for_name("Home"), std::ref(actions.at("increase_x_rotation")));
-  callbacks.emplace(config::get_key_for_name("Numpad7"), std::ref(actions.at("increase_x_rotation")));
-  callbacks.emplace(config::get_key_for_name("PageUp"), std::ref(actions.at("decrease_x_rotation")));
-  callbacks.emplace(config::get_key_for_name("Numpad9"), std::ref(actions.at("decrease_x_rotation")));
-  callbacks.emplace(config::get_key_for_name("End"), std::ref(actions.at("increase_z_rotation")));
-  callbacks.emplace(config::get_key_for_name("Numpad1"), std::ref(actions.at("increase_z_rotation")));
-  callbacks.emplace(config::get_key_for_name("PageDown"), std::ref(actions.at("decrease_z_rotation")));
-  callbacks.emplace(config::get_key_for_name("Numpad3"), std::ref(actions.at("decrease_z_rotation")));
+  callbacks.emplace(config::get_key_for_name("Numpad1"), std::ref(actions.at("increase_x_rotation")));
+  callbacks.emplace(config::get_key_for_name("Numpad3"), std::ref(actions.at("decrease_x_rotation")));
+  callbacks.emplace(config::get_key_for_name("Numpad7"), std::ref(actions.at("increase_z_rotation")));
+  callbacks.emplace(config::get_key_for_name("Numpad9"), std::ref(actions.at("decrease_z_rotation")));
 
   callbacks.emplace(config::get_key_for_name("Add"), std::ref(actions.at("zoom_in")));
   callbacks.emplace(config::get_key_for_name("Subtract"), std::ref(actions.at("zoom_out")));
@@ -158,7 +151,7 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
 {
   static std::map<std::optional<std::filesystem::path>, shape_instance> shape_instances;
 
-  auto instance_iterator = shape_instances.emplace(shape_path, shape_instance{ get_shape(shape_path), { 0, 0, -15 }, { 180, 120, -30 } });
+  auto instance_iterator = shape_instances.emplace(shape_path, shape_instance{ get_shape(shape_path), { 0, 0, -15 }, { 60, 180, 120 } });
   auto& instance = instance_iterator.first;
 
   static std::map<std::string, std::function<void(shape_instance&)>> actions;
@@ -174,8 +167,8 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
   actions.emplace("zoom_in", [](auto& instance) { instance.translation.z++; });
   actions.emplace("zoom_out", [](auto& instance) { instance.translation.z--; });
 
-  actions.emplace("pan_left", [](auto& instance) { instance.translation.x++; });
-  actions.emplace("pan_right", [](auto& instance) { instance.translation.x--; });
+  actions.emplace("pan_left", [](auto& instance) { instance.translation.x--; });
+  actions.emplace("pan_right", [](auto& instance) { instance.translation.x++; });
 
   actions.emplace("pan_up", [](auto& instance) { instance.translation.y++; });
   actions.emplace("pan_down", [](auto& instance) { instance.translation.y--; });
@@ -232,8 +225,8 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
     glLoadIdentity();
     glTranslatef(translation.x, translation.y, translation.z);
 
-    glRotatef(rotation.y, 1.f, 0.f, 0.f);
-    glRotatef(rotation.x, 0.f, 1.f, 0.f);
+    glRotatef(rotation.x, 1.f, 0.f, 0.f);
+    glRotatef(rotation.y, 0.f, 1.f, 0.f);
     glRotatef(rotation.z, 0.f, 0.f, 1.f);
 
     glBegin(GL_TRIANGLES);
@@ -303,14 +296,6 @@ wxMenuBar* createMenuBar()
   return menuBar;
 }
 
-template<typename Callback>
-wxButton* bindEvent(wxButton* button, Callback&& callback)
-{
-  button->Bind(wxEVT_BUTTON, std::forward<Callback>(callback));
-  return button;
-}
-
-
 void create_render_view(wxWindow* panel, std::optional<std::filesystem::path> path)
 {
   auto* graphics = new wxControl(panel, -1, wxDefaultPosition, wxSize{ 800, 500 }, 0);
@@ -348,12 +333,34 @@ void create_render_view(wxWindow* panel, std::optional<std::filesystem::path> pa
     if (gui_context != primary_gui_context)
     {
       ImGui::DestroyContext(gui_context);
+      ImGui::SetCurrentContext(primary_gui_context);
     }
   });
 }
 
+void populate_tree_view(wxTreeCtrl* tree_view, fs::path search_path)
+{
+  tree_view->DeleteAllItems();
+
+  auto parent = tree_view->AddRoot(search_path.string());
+
+  for (auto& item : fs::directory_iterator(search_path))
+  {
+    if (item.is_directory())
+    {
+      tree_view->AppendItem(parent, item.path().filename().string());
+    }
+    else
+    {
+      tree_view->AppendItem(parent, item.path().filename().string());
+    }
+  }
+}
+
 int main(int argc, char** argv)
 {
+  auto search_path = fs::current_path();
+
   wxApp::SetInitializerFunction(createApp);
   wxEntryStart(argc, argv);
   auto* app = wxApp::GetInstance();
@@ -364,22 +371,104 @@ int main(int argc, char** argv)
   frame->SetMenuBar(createMenuBar());
 
   frame->CreateStatusBar();
-  frame->SetStatusText("Welcome to C++ Durban!");
+  frame->SetStatusText("3Space Studio");
 
   frame->Bind(
     wxEVT_MENU, [](auto& event) {
-      wxMessageBox("This is a wxWidgets Hello World example",
-        "About Hello wxWidgets",
+      wxMessageBox("This is a tool to explore files using the 3Space or Darkstar engines. Currently only Starsiege, Starsiege Tribes, Trophy Bass 3D and Front Page Sports: Ski Racing are supported.",
+        "About 3Space Studio",
         wxOK | wxICON_INFORMATION);
     },
     wxID_ABOUT);
 
-  wxAuiNotebook* auiNotebook = new wxAuiNotebook(frame, wxID_ANY);
+  auto* sizer = new wxBoxSizer(wxHORIZONTAL);
 
-  wxPanel* panel = new wxPanel(auiNotebook, wxID_ANY);
-  auto path = get_shape_path(argc, argv);
-  create_render_view(panel, path);
-  auiNotebook->AddPage(panel, path.has_value() ? path.value().filename().string() :"Tab 1");
+  auto* tree_view = new wxTreeCtrl(frame);
+  sizer->Add(tree_view, 20, wxEXPAND, 0);
+
+  populate_tree_view(tree_view, search_path);
+
+
+  wxAuiNotebook* notebook = new wxAuiNotebook(frame, wxID_ANY);
+  auto num_elements = notebook->GetPageCount();
+
+  sizer->Add(notebook, 80, wxEXPAND, 0);
+
+  tree_view->Bind(wxEVT_TREE_ITEM_ACTIVATED, [notebook, tree_view, search_path, &num_elements](wxTreeEvent& event) {
+    auto item = event.GetItem();
+    auto text = tree_view->GetItemText(item);
+
+    const auto current_path = std::filesystem::path{text.ToAscii().data()};
+    const auto new_path = search_path / current_path;
+    wxPanel* panel = new wxPanel(notebook, wxID_ANY);
+    create_render_view(panel, new_path);
+    auto selection = notebook->GetSelection();
+    std::cout << "Deleting " << selection << '\n';
+    notebook->InsertPage(selection, panel, new_path.filename().string());
+    num_elements = notebook->GetPageCount();
+
+    if (num_elements > 2)
+    {
+      notebook->DeletePage(selection + 1);
+    }
+
+    notebook->ChangeSelection(selection);
+  });
+
+  wxPanel* panel = new wxPanel(notebook, wxID_ANY);
+  create_render_view(panel, std::nullopt);
+  notebook->AddPage(panel, "New Tab");
+
+  panel = new wxPanel(notebook, wxID_ANY);
+  panel->SetName("+");
+  notebook->AddPage(panel, "+");
+
+
+
+  notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED,
+    [notebook, &num_elements](wxAuiNotebookEvent& event) {
+      auto* tab = notebook->GetPage(event.GetSelection());
+
+      if (tab->GetName() == "+")
+      {
+        if (notebook->GetPageCount() == 1)
+        {
+          wxPanel* panel = new wxPanel(notebook, wxID_ANY);
+          create_render_view(panel, std::nullopt);
+          notebook->InsertPage(notebook->GetPageCount() - 1, panel, "New Tab");
+          notebook->ChangeSelection(notebook->GetPageCount() - 2);
+          num_elements = notebook->GetPageCount();
+        }
+        else
+        {
+          notebook->ChangeSelection(event.GetSelection() - 1);
+        }
+      }
+    });
+
+  notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGING,
+    [notebook, &num_elements](wxAuiNotebookEvent& event) mutable {
+      auto* tab = notebook->GetPage(event.GetSelection());
+
+      if (tab->GetName() == "+")
+      {
+        if (num_elements > notebook->GetPageCount())
+        {
+          num_elements = notebook->GetPageCount();
+          return;
+        }
+
+        wxPanel* panel = new wxPanel(notebook, wxID_ANY);
+        create_render_view(panel, std::nullopt);
+        notebook->InsertPage(notebook->GetPageCount() - 1, panel, "New Tab");
+        notebook->ChangeSelection(notebook->GetPageCount() - 2);
+        num_elements = notebook->GetPageCount();
+      }
+      else
+      {
+        event.Skip();
+      }
+    });
 
 
   frame->Bind(
@@ -388,10 +477,22 @@ int main(int argc, char** argv)
 
       if (new_path.has_value())
       {
-        wxPanel* panel = new wxPanel(auiNotebook, wxID_ANY);
+        wxPanel* panel = new wxPanel(notebook, wxID_ANY);
         create_render_view(panel, new_path);
-        auiNotebook->AddPage(panel, new_path.value().filename().string());
-        auiNotebook->ChangeSelection(auiNotebook->GetPageCount() - 1);
+        auto selection = notebook->GetSelection();
+        std::cout << "Deleting " << selection << '\n';
+        notebook->InsertPage(selection, panel, new_path.value().filename().string());
+        num_elements = notebook->GetPageCount();
+
+        if (num_elements > 2)
+        {
+          notebook->DeletePage(selection + 1);
+        }
+
+        search_path = new_path.value().parent_path();
+        populate_tree_view(tree_view, search_path);
+
+        notebook->ChangeSelection(selection);
       }
     },
     wxID_OPEN);
@@ -402,6 +503,8 @@ int main(int argc, char** argv)
     },
     wxID_EXIT);
 
+  sizer->SetSizeHints(frame);
+  frame->SetSizer(sizer);
   frame->SetSize(800, 600);
   frame->Show(true);
 

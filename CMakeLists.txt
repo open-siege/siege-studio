@@ -11,7 +11,7 @@ file(GLOB MDL_SRC_FILES src/mdl-to-json/*.cpp)
 file(GLOB DTS_SRC_FILES src/dts-to-json/*.cpp)
 file(GLOB OBJ_SRC_FILES src/dts-to-obj/*.cpp)
 file(GLOB JSON_SRC_FILES src/json-to-dts/*.cpp)
-file(GLOB DTS_VIEWER_SRC_FILES src/dts-viewer/*.cpp)
+file(GLOB DTS_VIEWER_SRC_FILES src/dts-viewer/utility.cpp src/dts-viewer/*.cpp)
 
 add_executable(mdl-to-json ${MDL_SRC_FILES})
 add_executable(dts-to-json ${DTS_SRC_FILES})
