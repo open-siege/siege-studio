@@ -1,4 +1,4 @@
-# Darkstar Hook
+# Darkstar Extender
 This project allows for new code to be added to various Darkstar engine games, either using C++ or Python, without needing the source code of the original games (which have been for all official accounts lost or not publically available).
 
 C++ Builder builder is used for ABI compatilbitiy and embeds Python to make the extension process fully dynamic.
