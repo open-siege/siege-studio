@@ -60,12 +60,12 @@ namespace darkstar::dts
     float z;
   };
 
-  vector3f operator+(const vector3f& left, const vector3f& right)
+  inline vector3f operator+(const vector3f& left, const vector3f& right)
   {
     return { left.x + right.x, left.y + right.y, left.z + right.z };
   }
 
-  vector3f operator-(const vector3f& left, const vector3f& right)
+  inline vector3f operator-(const vector3f& left, const vector3f& right)
   {
     return { left.x - right.x, left.y - right.y, left.z - right.z };
   }
@@ -75,7 +75,7 @@ namespace darkstar::dts
 //    return left + right;
 //  }
 
-  vector3f operator*(const vector3f& left, const vector3f& right)
+  inline vector3f operator*(const vector3f& left, const vector3f& right)
   {
     return { left.x * right.x, left.y * right.y, left.z * right.z };
   }
@@ -112,12 +112,12 @@ namespace darkstar::dts
     float w;
   };
 
-  quaternion4f to_float(const quaternion4f& other)
+  inline quaternion4f to_float(const quaternion4f& other)
   {
     return other;
   }
 
-  quaternion4f to_float(const quaternion4s& other)
+  inline quaternion4f to_float(const quaternion4s& other)
   {
     constexpr std::int16_t max = SHRT_MAX;
 
@@ -176,7 +176,7 @@ namespace darkstar::dts
 
     static_assert(sizeof(vertex) == sizeof(std::int32_t));
 
-    vector3f operator*(const vertex& left, const vector3f& right)
+    inline vector3f operator*(const vertex& left, const vector3f& right)
     {
       vector3f result{};
 
@@ -188,7 +188,7 @@ namespace darkstar::dts
     }
 
 
-    vector3f operator+(const vertex& left, const vector3f& right)
+    inline vector3f operator+(const vertex& left, const vector3f& right)
     {
       vector3f result{};
 
