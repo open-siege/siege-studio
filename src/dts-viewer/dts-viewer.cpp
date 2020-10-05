@@ -14,9 +14,8 @@
 #include <SFML/Window/Event.hpp>
 #include <SFML/Graphics.hpp>
 #include <SFML/OpenGL.hpp>
-
 #include "dts_io.hpp"
-#include "dts_render.hpp"
+#include "dts_renderable_shape.hpp"
 #include "gl_renderer.hpp"
 #include "sfml_keys.hpp"
 #include "utility.hpp"
@@ -26,9 +25,9 @@ namespace dts = darkstar::dts;
 
 struct shape_instance
 {
-  dts::shape_variant shape;
+  std::unique_ptr<renderable_shape> shape;
 
-  dts::vector3f translation;
+  glm::vec3 translation;
   dts::vector3f rotation;
 };
 
@@ -151,7 +150,8 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
 {
   static std::map<std::optional<std::filesystem::path>, shape_instance> shape_instances;
 
-  auto instance_iterator = shape_instances.emplace(shape_path, shape_instance{ get_shape(shape_path), { 0, 0, -20 }, { 115, 180, -35 } });
+  auto shape = std::make_unique<dts_renderable_shape>(get_shape(shape_path));
+  auto instance_iterator = shape_instances.emplace(shape_path, shape_instance{ std::move(shape), { 0, 0, -20 }, { 115, 180, -35 } });
   auto& instance = instance_iterator.first;
 
   static std::map<std::string, std::function<void(shape_instance&)>> actions;
@@ -176,9 +176,11 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
 
   std::map<std::optional<std::string>, std::map<std::string, bool>> visible_nodes;
   std::map<std::string, std::map<std::string, bool>> visible_objects;
-  auto detail_levels = get_detail_levels(instance->second.shape);
+  auto detail_levels = instance->second.shape->get_detail_levels();
   int detail_level_index = 0;
   bool root_visible = true;
+
+  auto qRot1 = glm::quat(1.f, 0.f, 0.f, 0.f);
 
   auto callbacks = apply_configuration(actions);
 
@@ -231,7 +233,7 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
 
     glBegin(GL_TRIANGLES);
     auto renderer = gl_renderer{ visible_nodes, visible_objects };
-    render_dts(shape, renderer, detail_level_index);
+    shape->render_shape(renderer, detail_level_index);
     glEnd();
 
 
@@ -263,7 +265,6 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
     }
 
     ImGui::End();
-
 
     ImGui::SFML::Render(*window);
     window->popGLStates();

@@ -5,7 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
-#include "dts_render.hpp"
+#include "dts_renderable_shape.hpp"
 
 struct obj_renderer final : shape_renderer
 {
