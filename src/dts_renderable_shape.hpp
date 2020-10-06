@@ -26,7 +26,7 @@ public:
   }
 
   std::vector<std::string> get_detail_levels() const override;
-  void render_shape(shape_renderer& renderer, std::optional<std::size_t> detail_level_index = std::nullopt) const override;
+  void render_shape(shape_renderer& renderer, const std::vector<std::size_t>& detail_level_indexes/*, const std::vector<sequence_info>& sequences*/) const override;
 
 private:
   using transform_set = std::pmr::set<std::variant<const darkstar::dts::shape::v2::transform*, const darkstar::dts::shape::v7::transform*, const darkstar::dts::shape::v8::transform*>>;
@@ -36,7 +36,7 @@ private:
     std::unordered_map<std::int32_t, std::pmr::set<std::int32_t>> object_indexes;
   };
 
-  friend std::map<std::size_t, instance_info>::iterator cache_instance(const dts_renderable_shape &self, std::optional<std::size_t> detail_level_index);
+  friend std::map<std::size_t, instance_info>::iterator cache_instance(const dts_renderable_shape &self, std::size_t detail_level_index);
 
   darkstar::dts::shape_variant shape;
   mutable std::map<std::size_t, instance_info> instances;
