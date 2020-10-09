@@ -18,6 +18,48 @@ template<class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
 
+std::vector<sequence_info> dts_renderable_shape::get_sequences(const std::vector<std::size_t>& detail_level_indexes) const
+{
+  std::vector<sequence_info> results;
+
+  std::visit([&](auto& local_shape) {
+    results.reserve(local_shape.sequences.size());
+
+    for (auto& sequence : local_shape.sequences)
+    {
+      results.push_back({ local_shape.names[sequence.name_index].data(), std::vector<sub_sequence_info>{} });
+    }
+
+    if (local_shape.details.empty())
+    {
+      return;
+    }
+
+    for (auto detail_level_index : detail_level_indexes)
+    {
+      auto instance = cache_instance(*this, detail_level_index);
+
+      for (const auto& [node_index, transforms] : instance->second.node_indexes)
+      {
+        if (node_index == -1)
+        {
+          continue;
+        }
+        const auto& node = local_shape.nodes[node_index];
+        std::string node_name = local_shape.names[node.name_index].data();
+        for (auto i = node.first_sub_sequence_index; i < node.first_sub_sequence_index + node.num_sub_sequences; ++i)
+        {
+          auto& sub_sequence = local_shape.sub_sequences[i];
+          auto& sequence = results[sub_sequence.sequence_index];
+          sequence.sub_sequences.push_back({ node_name, sub_sequence.num_key_frames, 0.0f, true });
+        }
+      }
+    }
+  },
+    shape);
+  return results;
+}
+
 std::map<std::size_t, dts_renderable_shape::instance_info>::iterator cache_instance(const dts_renderable_shape& self, std::size_t detail_level_index)
 {
   return std::visit([&](const auto& local_shape) {

@@ -177,7 +177,7 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
   std::map<std::optional<std::string>, std::map<std::string, bool>> visible_nodes;
   std::map<std::string, std::map<std::string, bool>> visible_objects;
   auto detail_levels = instance->second.shape->get_detail_levels();
-  std::vector<std::size_t> detail_level_index = { 0 };
+  std::vector<std::size_t> detail_level_indexes = { 0 };
   bool root_visible = true;
 
   auto qRot1 = glm::quat(1.f, 0.f, 0.f, 0.f);
@@ -233,7 +233,7 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
 
     glBegin(GL_TRIANGLES);
     auto renderer = gl_renderer{ visible_nodes, visible_objects };
-    shape->render_shape(renderer, detail_level_index);
+    shape->render_shape(renderer, detail_level_indexes);
     glEnd();
 
 
@@ -245,7 +245,7 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
     {
       ImGui::Begin("Nodes");
 
-      for (auto index : detail_level_index)
+      for (auto index : detail_level_indexes)
       {
         render_tree_view(detail_levels[index], root_visible, visible_nodes, visible_objects);
       }
@@ -257,37 +257,44 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
 
     for (auto i = 0u; i < detail_levels.size(); ++i)
     {
-      auto selected_item = std::find_if(std::begin(detail_level_index), std::end(detail_level_index), [i](auto value) {
+      auto selected_item = std::find_if(std::begin(detail_level_indexes), std::end(detail_level_indexes), [i](auto value) {
         return value == i;
       });
 
-      bool is_selected = selected_item != std::end(detail_level_index);
+      bool is_selected = selected_item != std::end(detail_level_indexes);
 
       if (ImGui::Checkbox(detail_levels[i].c_str(), &is_selected))
       {
         if (is_selected)
         {
-          detail_level_index.emplace_back(i);
+          detail_level_indexes.emplace_back(i);
         }
-        else if (selected_item != std::end(detail_level_index))
+        else if (selected_item != std::end(detail_level_indexes))
         {
-          detail_level_index.erase(selected_item);
+          detail_level_indexes.erase(selected_item);
         }
       }
     }
+    ImGui::End();
 
-    //    if (ImGui::ListBox(
-    //          "", &detail_level_index, [](void* data, int idx, const char** out_text) {
-    //            *out_text = reinterpret_cast<std::string*>(data)[idx].c_str();
-    //            return true;
-    //          },
-    //          detail_levels.data(),
-    //          detail_levels.size()))
-    //    {
-    //      visible_nodes.clear();
-    //      visible_objects.clear();
-    //    }
+    ImGui::Begin("Sequences");
 
+    auto sequences = shape->get_sequences(detail_level_indexes);
+
+    static bool enabled = false;
+    for (auto& sequence : sequences)
+    {
+      ImGui::Checkbox(sequence.name.c_str(), &enabled);
+
+      ImGui::Indent(8);
+
+      for (auto& sub_sequence : sequence.sub_sequences)
+      {
+        ImGui::Checkbox(sub_sequence.node_name.c_str(), &enabled);
+      }
+
+      ImGui::Unindent(8);
+    }
     ImGui::End();
 
     ImGui::SFML::Render(*window);

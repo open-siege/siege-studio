@@ -22,14 +22,24 @@ struct shape_renderer
   shape_renderer(shape_renderer&&) = delete;
 };
 
+struct sub_sequence_info
+{
+  std::string node_name;
+  std::int32_t num_key_frames;
+  float position;
+  bool enabled;
+};
+
 struct sequence_info
 {
   std::string name;
-  float position;
+  std::vector<sub_sequence_info> sub_sequences;
 };
 
 struct renderable_shape
 {
+  virtual std::vector<sequence_info> get_sequences(const std::vector<std::size_t>& detail_level_indexes) const = 0;
+
   virtual std::vector<std::string> get_detail_levels() const = 0;
 
   virtual void render_shape(shape_renderer& renderer, const std::vector<std::size_t>& detail_level_indexes/*, const std::vector<sequence_info>& sequences*/) const = 0;
