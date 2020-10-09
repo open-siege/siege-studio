@@ -14,9 +14,6 @@
 #include "renderable_shape.hpp"
 #include "dts_structures.hpp"
 
-
-
-
 class dts_renderable_shape : public renderable_shape
 {
 public:
@@ -24,6 +21,8 @@ public:
     : shape(std::move(shape))
   {
   }
+
+  std::vector<sequence_info> get_sequences(const std::vector<std::size_t>& detail_level_indexes) const override;
 
   std::vector<std::string> get_detail_levels() const override;
   void render_shape(shape_renderer& renderer, const std::vector<std::size_t>& detail_level_indexes/*, const std::vector<sequence_info>& sequences*/) const override;
