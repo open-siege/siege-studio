@@ -7,7 +7,7 @@
 #include <variant>
 #include <optional>
 #include <iostream>
-
+#include <glm/gtx/quaternion.hpp>
 
 template<class... Ts>
 struct overloaded : Ts...
@@ -18,6 +18,20 @@ struct overloaded : Ts...
 template<class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
+std::tuple<darkstar::dts::vector3f, darkstar::dts::quaternion4f, darkstar::dts::vector3f> get_translation(const darkstar::dts::shape::v2::transform& transform)
+{
+  return std::make_tuple(transform.translation * transform.scale, darkstar::dts::to_float(transform.rotation), transform.scale);
+}
+
+std::tuple<darkstar::dts::vector3f, darkstar::dts::quaternion4f, darkstar::dts::vector3f> get_translation(const darkstar::dts::shape::v7::transform& transform)
+{
+  return std::make_tuple(transform.translation * transform.scale, darkstar::dts::to_float(transform.rotation), transform.scale);
+}
+
+std::tuple<darkstar::dts::vector3f, darkstar::dts::quaternion4f, darkstar::dts::vector3f> get_translation(const darkstar::dts::shape::v8::transform& transform)
+{
+  return std::make_tuple(transform.translation, darkstar::dts::to_float(transform.rotation), darkstar::dts::vector3f{ 1.0f, 1.0f, 1.0f });
+}
 
 instance_info get_instance(const darkstar::dts::shape_variant& shape, std::size_t detail_level_index, const std::vector<sequence_info>& sequences)
 {
@@ -53,8 +67,7 @@ instance_info get_instance(const darkstar::dts::shape_variant& shape, std::size_
         }
       }
 
-      const auto* transform = &local_shape.transforms[transform_index];
-      location->second.emplace(transform);
+      location->second.emplace_back(get_translation(local_shape.transforms[transform_index]));
 
       for (auto other_node = std::begin(local_shape.nodes); other_node != std::end(local_shape.nodes); ++other_node)
       {
@@ -70,10 +83,10 @@ instance_info get_instance(const darkstar::dts::shape_variant& shape, std::size_
             valid_nodes.emplace_back(iterator->first);
           }
 
-          for (const auto other_transform : info.node_indexes[parent_index])
+          for (const auto& other_transform : info.node_indexes[parent_index])
           {
             const auto [child_location, child_added] = info.node_indexes.emplace(index, instance_info::transform_set{});
-            child_location->second.emplace(other_transform);
+            child_location->second.emplace_back(other_transform);
           }
         }
       }
@@ -216,6 +229,7 @@ std::vector<std::string> dts_renderable_shape::get_detail_levels() const
 
 void dts_renderable_shape::render_shape(shape_renderer& renderer, const std::vector<std::size_t>& detail_level_indexes, const std::vector<sequence_info>& sequences) const
 {
+
   std::visit([&](const auto& local_shape) {
     namespace dts = darkstar::dts;
 
@@ -226,41 +240,12 @@ void dts_renderable_shape::render_shape(shape_renderer& renderer, const std::vec
 
     for (auto detail_level_index : detail_level_indexes)
     {
+
       auto instance = get_instance(shape, detail_level_index, sequences);
 
-      for (const auto& [node_index, transforms] : instance.node_indexes)
+      for (const auto& node_item : instance.node_indexes)
       {
-        std::optional<dts::vector3f> default_scale;
-        dts::vector3f default_translation = { 0, 0, 0 };
-
-        for (auto raw_transform : transforms)
-        {
-          auto raw_translation = std::visit([](auto& real_transform) { return real_transform->translation; }, raw_transform);
-          auto scale = std::visit(overloaded{
-                                    [](const dts::shape::v2::transform* real_transform) { return real_transform->scale; },
-                                    [](const dts::shape::v7::transform* real_transform) { return real_transform->scale; },
-                                    [](const dts::shape::v8::transform*) { return dts::vector3f{ 1, 1, 1 }; } },
-            raw_transform);
-
-          if constexpr (std::remove_reference_t<decltype(local_shape)>::version < 8)
-          {
-            if (!default_scale.has_value())
-            {
-              default_scale = scale;
-            }
-          }
-
-          auto rotation = std::visit([](const auto* real_transform) { return dts::to_float(real_transform->rotation); },
-            raw_transform);
-
-          glm::quat glm_rotation{ rotation.w, rotation.x, rotation.y, rotation.z };
-
-          auto translation = glm::rotate(glm_rotation, glm::vec3{ raw_translation.x, raw_translation.y, raw_translation.z });
-
-          default_translation.x += translation.x;
-          default_translation.y += translation.y;
-          default_translation.z += translation.z;
-        }
+        auto& [node_index, transforms] = node_item;
 
         const auto& node = local_shape.nodes[node_index];
         const std::string_view node_name = local_shape.names[node.name_index].data();
@@ -306,14 +291,6 @@ void dts_renderable_shape::render_shape(shape_renderer& renderer, const std::vec
                 mesh_origin = { 0, 0, 0 };
               }
             }
-
-            if (default_scale.has_value())
-            {
-              mesh_scale *= default_scale.value();
-            }
-
-            mesh_origin += default_translation;
-
             for (const auto& face : mesh.faces)
             {
               renderer.new_face(3);
@@ -327,7 +304,24 @@ void dts_renderable_shape::render_shape(shape_renderer& renderer, const std::vec
 
               for (const auto& raw_vertex : vertices)
               {
-                renderer.emit_vertex(raw_vertex.get() * mesh_scale + mesh_origin);
+                auto vertex = glm::vec4(raw_vertex.get().x, raw_vertex.get().y, raw_vertex.get().z, 1.0f);
+
+                auto translation_matrix = glm::translate(glm::mat4(1.0f), glm::vec3(mesh_origin.x, mesh_origin.y, mesh_origin.z));
+                auto rotation_matrix = glm::mat4(1.0f);
+                auto scale_matrix = glm::scale(glm::mat4(1.0f), glm::vec3(mesh_scale.x, mesh_scale.y, mesh_scale.z));
+
+                vertex = translation_matrix * rotation_matrix * scale_matrix * vertex;
+
+
+                for (const auto& [translation, rotation, scale] : node_item.second)
+                {
+                  translation_matrix = glm::translate(glm::mat4(1.0f), glm::vec3(translation.x, translation.y, translation.z));
+                  //rotation_matrix = glm::mat4(1.0f) * glm::toMat4(glm::quat(rotation.w, rotation.x, rotation.y, rotation.z));
+                  scale_matrix = glm::scale(glm::mat4(1.0f), glm::vec3(scale.x, scale.y, scale.z));
+                  vertex = translation_matrix * rotation_matrix * scale_matrix * vertex;
+                }
+
+                renderer.emit_vertex(darkstar::dts::vector3f{ vertex.x, vertex.y, vertex.z });
               }
 
               for (const auto& raw_texture_vertex : texture_vertices)
