@@ -14,6 +14,9 @@
 #include <SFML/Window/Event.hpp>
 #include <SFML/Graphics.hpp>
 #include <SFML/OpenGL.hpp>
+
+#include <glm/gtx/quaternion.hpp>
+
 #include "dts_io.hpp"
 #include "dts_renderable_shape.hpp"
 #include "gl_renderer.hpp"

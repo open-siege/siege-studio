@@ -9,14 +9,13 @@
 #include <unordered_map>
 #include <set>
 #include <memory_resource>
-#include <glm/gtx/quaternion.hpp>
 
 #include "renderable_shape.hpp"
 #include "dts_structures.hpp"
 
 struct instance_info
 {
-  using transform_set = std::pmr::set<std::variant<const darkstar::dts::shape::v2::transform*, const darkstar::dts::shape::v7::transform*, const darkstar::dts::shape::v8::transform*>>;
+  using transform_set = std::pmr::list<std::tuple<darkstar::dts::vector3f, darkstar::dts::quaternion4f, darkstar::dts::vector3f>>;
   std::unordered_map<std::int32_t, transform_set> node_indexes;
   std::unordered_map<std::int32_t, std::pmr::set<std::int32_t>> object_indexes;
 };
