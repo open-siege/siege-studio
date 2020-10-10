@@ -6,6 +6,7 @@
 #include <map>
 #include <variant>
 #include <optional>
+#include <iostream>
 
 
 template<class... Ts>
@@ -18,71 +19,40 @@ template<class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
 
-std::vector<sequence_info> dts_renderable_shape::get_sequences(const std::vector<std::size_t>& detail_level_indexes) const
-{
-  std::vector<sequence_info> results;
-
-  std::visit([&](auto& local_shape) {
-    results.reserve(local_shape.sequences.size());
-
-    for (auto& sequence : local_shape.sequences)
-    {
-      results.push_back({ local_shape.names[sequence.name_index].data(), std::vector<sub_sequence_info>{} });
-    }
-
-    if (local_shape.details.empty())
-    {
-      return;
-    }
-
-    for (auto detail_level_index : detail_level_indexes)
-    {
-      auto instance = cache_instance(*this, detail_level_index);
-
-      for (const auto& [node_index, transforms] : instance->second.node_indexes)
-      {
-        if (node_index == -1)
-        {
-          continue;
-        }
-        const auto& node = local_shape.nodes[node_index];
-        std::string node_name = local_shape.names[node.name_index].data();
-        for (auto i = node.first_sub_sequence_index; i < node.first_sub_sequence_index + node.num_sub_sequences; ++i)
-        {
-          auto& sub_sequence = local_shape.sub_sequences[i];
-          auto& sequence = results[sub_sequence.sequence_index];
-          sequence.sub_sequences.push_back({ node_name, sub_sequence.num_key_frames, 0.0f, true });
-        }
-      }
-    }
-  },
-    shape);
-  return results;
-}
-
-std::map<std::size_t, dts_renderable_shape::instance_info>::iterator cache_instance(const dts_renderable_shape& self, std::size_t detail_level_index)
+instance_info get_instance(const darkstar::dts::shape_variant& shape, std::size_t detail_level_index, const std::vector<sequence_info>& sequences)
 {
   return std::visit([&](const auto& local_shape) {
-    auto instance_iterator = self.instances.find(detail_level_index);
-
-    if (instance_iterator != self.instances.end())
-    {
-      return instance_iterator;
-    }
-    const auto& [info, added] = self.instances.emplace(detail_level_index, dts_renderable_shape::instance_info{});
+    instance_info info{};
 
     const auto& detail_level = local_shape.details[detail_level_index];
     const auto root_note_index = detail_level.root_node_index;
 
     std::list<std::int32_t> valid_nodes;
 
-    valid_nodes.emplace_back(info->second.object_indexes.emplace(root_note_index, std::pmr::set<std::int32_t>{}).first->first);
+    valid_nodes.emplace_back(info.object_indexes.emplace(root_note_index, std::pmr::set<std::int32_t>{}).first->first);
 
     for (const auto parent_index : valid_nodes)
     {
-      const auto [location, added] = info->second.node_indexes.emplace(parent_index, dts_renderable_shape::transform_set{});
+      const auto [location, added] = info.node_indexes.emplace(parent_index, instance_info::transform_set{});
 
       auto transform_index = local_shape.nodes[parent_index].default_transform_index;
+
+      for (auto& sequence : sequences)
+      {
+        if (sequence.enabled)
+        {
+          for (auto& sub_sequence : sequence.sub_sequences)
+          {
+            if (sub_sequence.enabled && parent_index == sub_sequence.node_index)
+            {
+              const auto& key_frame = local_shape.keyframes[sub_sequence.first_key_frame_index + sub_sequence.frame_index];
+              transform_index = key_frame.transform_index;
+              break;
+            }
+          }
+        }
+      }
+
       const auto* transform = &local_shape.transforms[transform_index];
       location->second.emplace(transform);
 
@@ -93,16 +63,16 @@ std::map<std::size_t, dts_renderable_shape::instance_info>::iterator cache_insta
           //const std::string_view data = local_shape.names[other_node->name_index].data();
           const auto index = static_cast<std::int32_t>(std::distance(std::begin(local_shape.nodes), other_node));
 
-          auto [iterator, node_added] = info->second.object_indexes.emplace(index, std::pmr::set<std::int32_t>{});
+          auto [iterator, node_added] = info.object_indexes.emplace(index, std::pmr::set<std::int32_t>{});
 
           if (node_added)
           {
             valid_nodes.emplace_back(iterator->first);
           }
 
-          for (const auto other_transform : info->second.node_indexes[parent_index])
+          for (const auto other_transform : info.node_indexes[parent_index])
           {
-            const auto [child_location, child_added] = info->second.node_indexes.emplace(index, dts_renderable_shape::transform_set{});
+            const auto [child_location, child_added] = info.node_indexes.emplace(index, instance_info::transform_set{});
             child_location->second.emplace(other_transform);
           }
         }
@@ -111,8 +81,8 @@ std::map<std::size_t, dts_renderable_shape::instance_info>::iterator cache_insta
 
     for (auto object = std::begin(local_shape.objects); object != std::end(local_shape.objects); ++object)
     {
-      if (const auto item = info->second.object_indexes.find(object->node_index);
-          item != info->second.object_indexes.cend())
+      if (const auto item = info.object_indexes.find(object->node_index);
+          item != info.object_indexes.cend())
       {
         const auto index = static_cast<std::int32_t>(std::distance(std::begin(local_shape.objects), object));
         item->second.emplace(index);
@@ -121,7 +91,109 @@ std::map<std::size_t, dts_renderable_shape::instance_info>::iterator cache_insta
 
     return info;
   },
-    self.shape);
+    shape);
+}
+
+std::vector<sequence_info> dts_renderable_shape::get_sequences(const std::vector<std::size_t>& detail_level_indexes) const
+{
+  std::vector<sequence_info> results;
+
+  if (shape.index() == std::variant_npos)
+  {
+    return results;
+  }
+
+  std::visit([&](auto& local_shape) {
+    if (local_shape.sequences.empty() || local_shape.sub_sequences.empty())
+    {
+      return;
+    }
+
+    std::vector<sequence_info> sequences;
+    results.reserve(local_shape.sequences.size());
+
+    for (auto i = 0; i < local_shape.sequences.size(); ++i)
+    {
+      auto& sequence = local_shape.sequences[i];
+      results.push_back({ i, local_shape.names[sequence.name_index].data(), i == 0, std::vector<sub_sequence_info>{} });
+    }
+
+    if (local_shape.details.empty())
+    {
+      return;
+    }
+
+    for (auto detail_level_index : detail_level_indexes)
+    {
+      auto instance = get_instance(shape, detail_level_index, sequences);
+
+      for (const auto& [node_index, transforms] : instance.node_indexes)
+      {
+        if (node_index == -1)
+        {
+          continue;
+        }
+        const auto& node = local_shape.nodes[node_index];
+        std::string node_name = local_shape.names[node.name_index].data();
+
+        auto create_sub_info = [&](auto node_index, auto& sub_sequence) {
+          sub_sequence_info info;
+          info.node_index = node_index;
+          info.node_name = node_name;
+          info.first_key_frame_index = sub_sequence.first_key_frame_index;
+          info.num_key_frames = sub_sequence.num_key_frames;
+          info.enabled = sub_sequence.sequence_index == 0;
+
+          if (sub_sequence.num_key_frames > 0)
+          {
+            info.min_position = local_shape.keyframes[sub_sequence.first_key_frame_index].position;
+            info.max_position = local_shape.keyframes[sub_sequence.first_key_frame_index + sub_sequence.num_key_frames - 1].position;
+          }
+          else
+          {
+            info.min_position = 0;
+            info.max_position = 0;
+          }
+
+          info.frame_index = 0;
+          info.position = info.min_position;
+
+          return info;
+        };
+
+        if (node.num_sub_sequences == 0)
+        {
+          for (auto& object : local_shape.objects)
+          {
+            if (object.node_index == node_index)
+            {
+              for (auto i = object.first_sub_sequence_index; i < object.first_sub_sequence_index + object.num_sub_sequences; ++i)
+              {
+                auto& sub_sequence = local_shape.sub_sequences[i];
+                auto& sequence = results[sub_sequence.sequence_index];
+
+                sequence.sub_sequences.emplace_back(create_sub_info(node_index, sub_sequence));
+              }
+              break;
+            }
+          }
+        }
+        else
+        {
+          for (auto i = node.first_sub_sequence_index; i < node.first_sub_sequence_index + node.num_sub_sequences; ++i)
+          {
+            auto& sub_sequence = local_shape.sub_sequences[i];
+            auto& sequence = results[sub_sequence.sequence_index];
+
+            sequence.sub_sequences.emplace_back(create_sub_info(node_index, sub_sequence));
+          }
+        }
+      }
+    }
+  },
+    shape);
+
+  return results;
 }
 
 std::vector<std::string> dts_renderable_shape::get_detail_levels() const
@@ -142,10 +214,11 @@ std::vector<std::string> dts_renderable_shape::get_detail_levels() const
     shape);
 }
 
-void dts_renderable_shape::render_shape(shape_renderer& renderer, const std::vector<std::size_t>& detail_level_indexes /*, const std::vector<sequence_info>& sequences*/) const
+void dts_renderable_shape::render_shape(shape_renderer& renderer, const std::vector<std::size_t>& detail_level_indexes, const std::vector<sequence_info>& sequences) const
 {
   std::visit([&](const auto& local_shape) {
     namespace dts = darkstar::dts;
+
     if (local_shape.details.empty())
     {
       return;
@@ -153,13 +226,12 @@ void dts_renderable_shape::render_shape(shape_renderer& renderer, const std::vec
 
     for (auto detail_level_index : detail_level_indexes)
     {
-      auto instance = cache_instance(*this, detail_level_index);
+      auto instance = get_instance(shape, detail_level_index, sequences);
 
-      for (const auto& [node_index, transforms] : instance->second.node_indexes)
+      for (const auto& [node_index, transforms] : instance.node_indexes)
       {
         std::optional<dts::vector3f> default_scale;
         dts::vector3f default_translation = { 0, 0, 0 };
-        dts::quaternion4f default_rotation = { 0, 0, 0, 1 };
 
         for (auto raw_transform : transforms)
         {
@@ -178,12 +250,12 @@ void dts_renderable_shape::render_shape(shape_renderer& renderer, const std::vec
             }
           }
 
-          //auto rotation = dts::to_float(transform->rotation);
+          auto rotation = std::visit([](const auto* real_transform) { return dts::to_float(real_transform->rotation); },
+            raw_transform);
 
-          // glm::quat glm_rotation{rotation.w, rotation.x, rotation.y, rotation.z};
-          glm::vec3 translation{ raw_translation.x, raw_translation.y, raw_translation.z };
+          glm::quat glm_rotation{ rotation.w, rotation.x, rotation.y, rotation.z };
 
-          // translation = glm::rotate(glm_rotation, translation);
+          auto translation = glm::rotate(glm_rotation, glm::vec3{ raw_translation.x, raw_translation.y, raw_translation.z });
 
           default_translation.x += translation.x;
           default_translation.y += translation.y;
@@ -203,7 +275,7 @@ void dts_renderable_shape::render_shape(shape_renderer& renderer, const std::vec
 
         renderer.update_node(parent_node_name, node_name);
 
-        auto& objects = instance->second.object_indexes[node_index];
+        auto& objects = instance.object_indexes[node_index];
 
         for (const std::int32_t object_index : objects)
         {
@@ -237,10 +309,10 @@ void dts_renderable_shape::render_shape(shape_renderer& renderer, const std::vec
 
             if (default_scale.has_value())
             {
-              mesh_scale = mesh_scale * default_scale.value();
+              mesh_scale *= default_scale.value();
             }
 
-            mesh_origin = mesh_origin + default_translation;
+            mesh_origin += default_translation;
 
             for (const auto& face : mesh.faces)
             {

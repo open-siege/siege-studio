@@ -150,8 +150,10 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
 {
   static std::map<std::optional<std::filesystem::path>, shape_instance> shape_instances;
 
-  auto shape = std::make_unique<dts_renderable_shape>(get_shape(shape_path));
-  auto instance_iterator = shape_instances.emplace(shape_path, shape_instance{ std::move(shape), { 0, 0, -20 }, { 115, 180, -35 } });
+  auto instance_iterator = shape_instances.emplace(shape_path, shape_instance{
+                                                                 std::make_unique<dts_renderable_shape>(get_shape(shape_path)),
+                                                                 { 0, 0, -20 },
+                                                                 { 115, 180, -35 } });
   auto& instance = instance_iterator.first;
 
   static std::map<std::string, std::function<void(shape_instance&)>> actions;
@@ -178,6 +180,8 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
   std::map<std::string, std::map<std::string, bool>> visible_objects;
   auto detail_levels = instance->second.shape->get_detail_levels();
   std::vector<std::size_t> detail_level_indexes = { 0 };
+  auto sequences = instance->second.shape->get_sequences(detail_level_indexes);
+
   bool root_visible = true;
 
   auto qRot1 = glm::quat(1.f, 0.f, 0.f, 0.f);
@@ -233,7 +237,7 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
 
     glBegin(GL_TRIANGLES);
     auto renderer = gl_renderer{ visible_nodes, visible_objects };
-    shape->render_shape(renderer, detail_level_indexes);
+    shape->render_shape(renderer, detail_level_indexes, sequences);
     glEnd();
 
 
@@ -268,10 +272,12 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
         if (is_selected)
         {
           detail_level_indexes.emplace_back(i);
+          //sequences = shape->get_sequences(detail_level_indexes);
         }
         else if (selected_item != std::end(detail_level_indexes))
         {
           detail_level_indexes.erase(selected_item);
+          //sequences = shape->get_sequences(detail_level_indexes);
         }
       }
     }
@@ -279,18 +285,17 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
 
     ImGui::Begin("Sequences");
 
-    auto sequences = shape->get_sequences(detail_level_indexes);
-
-    static bool enabled = false;
     for (auto& sequence : sequences)
     {
-      ImGui::Checkbox(sequence.name.c_str(), &enabled);
+      ImGui::Checkbox(sequence.name.c_str(), &sequence.enabled);
 
       ImGui::Indent(8);
 
       for (auto& sub_sequence : sequence.sub_sequences)
       {
-        ImGui::Checkbox(sub_sequence.node_name.c_str(), &enabled);
+        ImGui::Checkbox(sub_sequence.node_name.c_str(), &sub_sequence.enabled);
+
+        ImGui::SliderInt("shared", &sub_sequence.frame_index, 0, sub_sequence.num_key_frames - 1);
       }
 
       ImGui::Unindent(8);
