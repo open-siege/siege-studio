@@ -70,20 +70,22 @@ namespace darkstar::dts
     return { left.x - right.x, left.y - right.y, left.z - right.z };
   }
 
-//  vector3f operator+=(const vector3f& left, const vector3f& right)
-//  {
-//    return left + right;
-//  }
+  inline vector3f operator+=(vector3f& left, const vector3f& right)
+  {
+    left = left + right;
+    return left;
+  }
 
   inline vector3f operator*(const vector3f& left, const vector3f& right)
   {
     return { left.x * right.x, left.y * right.y, left.z * right.z };
   }
-//
-//  vector3f operator*=(const vector3f& left, const vector3f& right)
-//  {
-//    return left * right;
-//  }
+
+  inline vector3f operator*=(vector3f& left, const vector3f& right)
+  {
+    left = left * right;
+    return left;
+  }
 
   struct vector3f_pair
   {
