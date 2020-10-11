@@ -13,11 +13,16 @@
 #include "renderable_shape.hpp"
 #include "dts_structures.hpp"
 
+struct node_instance
+{
+  std::set<std::int32_t> object_indexes;
+  std::unordered_map<std::int32_t, node_instance> node_indexes;
+};
+
 struct instance_info
 {
-  using transform_set = std::pmr::list<std::tuple<darkstar::dts::vector3f, darkstar::dts::quaternion4f, darkstar::dts::vector3f>>;
-  std::unordered_map<std::int32_t, transform_set> node_indexes;
-  std::unordered_map<std::int32_t, std::pmr::set<std::int32_t>> object_indexes;
+  using transform = std::tuple<darkstar::dts::vector3f, darkstar::dts::quaternion4f, darkstar::dts::vector3f>;
+  std::unordered_map<std::int32_t, node_instance> node_indexes;
 };
 
 class dts_renderable_shape : public renderable_shape
