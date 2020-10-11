@@ -22,7 +22,7 @@ struct node_instance
 struct instance_info
 {
   using transform = std::tuple<darkstar::dts::vector3f, darkstar::dts::quaternion4f, darkstar::dts::vector3f>;
-  std::unordered_map<std::int32_t, node_instance> node_indexes;
+  std::pair<std::int32_t, node_instance> root_node;
 };
 
 class dts_renderable_shape : public renderable_shape
