@@ -6,7 +6,6 @@
 #include <map>
 #include <variant>
 #include <optional>
-#include <iostream>
 #include <functional>
 #include <glm/gtx/quaternion.hpp>
 
@@ -64,29 +63,28 @@ instance_info get_instance(const darkstar::dts::shape_variant& shape, std::size_
 {
   return std::visit([&](const auto& local_shape) {
     const auto& detail_level = local_shape.details[detail_level_index];
-    const auto root_note_index = detail_level.root_node_index;
-
+    const std::int32_t root_note_index = detail_level.root_node_index;
 
     instance_info info{};
 
-    auto [root_node_info, added] = info.node_indexes.emplace(root_note_index, node_instance{});
+    info.root_node = std::make_pair(root_note_index, node_instance{});
 
-    std::list<std::unordered_map<std::int32_t, node_instance>::iterator> valid_nodes{ root_node_info };
+    std::list<std::pair<const std::int32_t, node_instance*>> valid_nodes{ std::make_pair(root_note_index, &info.root_node.second) };
 
     for (const auto& iterator : valid_nodes)
     {
-      auto& [parent_index, node_info] = *iterator;
+      auto& [parent_index, node_info] = iterator;
       for (auto other_node = std::begin(local_shape.nodes); other_node != std::end(local_shape.nodes); ++other_node)
       {
         if (other_node->parent_node_index == parent_index)
         {
           const auto node_index = static_cast<std::int32_t>(std::distance(std::begin(local_shape.nodes), other_node));
 
-          auto [new_node_info, new_added] = node_info.node_indexes.emplace(node_index, node_instance{});
+          auto [new_node_info, new_added] = node_info->node_indexes.emplace(node_index, node_instance{});
 
           if (new_added)
           {
-            valid_nodes.emplace_back(new_node_info);
+            valid_nodes.emplace_back(std::make_pair(new_node_info->first, &new_node_info->second));
           }
         }
       }
@@ -96,7 +94,7 @@ instance_info get_instance(const darkstar::dts::shape_variant& shape, std::size_
         if (object->node_index == parent_index)
         {
           const auto object_index = static_cast<std::int32_t>(std::distance(std::begin(local_shape.objects), object));
-          node_info.object_indexes.emplace(object_index);
+          node_info->object_indexes.emplace(object_index);
         }
       }
     }
@@ -207,10 +205,7 @@ std::vector<sequence_info> dts_renderable_shape::get_sequences(const std::vector
         }
       };
 
-      for (const auto& [node_index, node_instance] : instance.node_indexes)
-      {
-        populate_sequences(node_index, node_instance);
-      }
+      populate_sequences(instance.root_node.first, instance.root_node.second);
     }
   },
     shape);
@@ -255,7 +250,6 @@ void dts_renderable_shape::render_shape(shape_renderer& renderer, const std::vec
         [&](const auto& node_item, const auto parent_node_matrix) {
           auto& [node_index, node_instance] = node_item;
 
-
           const auto& node = local_shape.nodes[node_index];
           const std::string_view node_name = local_shape.names[node.name_index].data();
 
@@ -266,19 +260,18 @@ void dts_renderable_shape::render_shape(shape_renderer& renderer, const std::vec
           const auto& [translation, rotation, scale] = get_translation(local_shape.transforms[transform_index]);
 
           auto translation_matrix = glm::translate(glm::mat4(1.0f), glm::vec3(translation.x, translation.y, translation.z));
-          auto rotation_matrix = glm::toMat4(glm::quat(rotation.w, rotation.x, rotation.y, rotation.z));
+          auto rotation_matrix = glm::transpose(glm::toMat4(glm::quat(rotation.w, rotation.x, rotation.y, rotation.z)));
 
           auto scale_matrix = glm::scale(glm::mat4(1.0f), glm::vec3(scale.x, scale.y, scale.z));
 
           if (parent_node_matrix.has_value())
           {
-            node_matrix = translation_matrix * rotation_matrix * scale_matrix * parent_node_matrix.value();
+            node_matrix = parent_node_matrix.value() * (translation_matrix * rotation_matrix * scale_matrix);
           }
           else
           {
             node_matrix = translation_matrix * rotation_matrix * scale_matrix;
           }
-
 
           std::optional<std::string_view> parent_node_name;
 
@@ -361,10 +354,7 @@ void dts_renderable_shape::render_shape(shape_renderer& renderer, const std::vec
           }
         };
 
-      for (const auto& root_node : instance.node_indexes)
-      {
-        render_node(root_node, std::nullopt);
-      }
+      render_node(instance.root_node, std::nullopt);
     }
   },
     shape);
