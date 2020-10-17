@@ -19,8 +19,8 @@ namespace darkstar::dts
     if (file_header.tag != dts::pers_tag)
     {
       std::stringstream msg;
-      msg << "There was an error trying to parse a portion of the DTS/DML file at " << stream.tellg() << ". ";
-      msg << "Expected " << std::string(reinterpret_cast<const char*>(dts::pers_tag.data()), dts::pers_tag.size()) << " to be present but was not found.\n";
+      msg << "There was an error trying to parse a portion of the DTS/DML file at byte number " << stream.tellg() << ". ";
+      msg << "Expected the " << std::string(reinterpret_cast<const char*>(dts::pers_tag.data()), dts::pers_tag.size()) << " file header to be present but it was not found.\n";
 
       throw std::invalid_argument(msg.str());
     }

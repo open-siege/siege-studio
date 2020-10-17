@@ -70,24 +70,21 @@ namespace config
     static auto numpad_key_names = get_numpad_key_names();
     static auto letter_names = get_letter_key_names();
 
-    auto numpad_key = find_if(numpad_key_names.begin(), numpad_key_names.end(),
-      [&](const auto& value) { return value.first == name;});
+    auto numpad_key = find_if(numpad_key_names.begin(), numpad_key_names.end(), [&](const auto& value) { return value.first == name; });
 
     if (numpad_key != numpad_key_names.end())
     {
       return numpad_key->second;
     }
 
-    auto special_key = find_if(special_key_names.begin(), special_key_names.end(),
-                              [&](const auto& value) { return value.first == name;});
+    auto special_key = find_if(special_key_names.begin(), special_key_names.end(), [&](const auto& value) { return value.first == name; });
 
     if (special_key != special_key_names.end())
     {
       return special_key->second;
     }
 
-    auto letter_key = find_if(letter_names.begin(), letter_names.end(),
-                               [&](const auto& value) { return value.first == name;});
+    auto letter_key = find_if(letter_names.begin(), letter_names.end(), [&](const auto& value) { return value.first == name; });
 
     if (letter_key != letter_names.end())
     {
@@ -97,9 +94,7 @@ namespace config
     return sf::Keyboard::Key::Unknown;
   }
 
-}
-
-
+}// namespace config
 
 
 #endif//DARKSTARDTSCONVERTER_SFML_KEYS_HPP
