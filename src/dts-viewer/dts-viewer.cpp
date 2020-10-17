@@ -153,10 +153,7 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
 {
   static std::map<std::optional<std::filesystem::path>, shape_instance> shape_instances;
 
-  auto instance_iterator = shape_instances.emplace(shape_path, shape_instance{
-                                                                 std::make_unique<dts_renderable_shape>(get_shape(shape_path)),
-                                                                 { 0, 0, -20 },
-                                                                 { 115, 180, -35 } });
+  auto instance_iterator = shape_instances.emplace(shape_path, shape_instance{ std::make_unique<dts_renderable_shape>(get_shape(shape_path)), { 0, 0, -20 }, { 115, 180, -35 } });
   auto& instance = instance_iterator.first;
 
   static std::map<std::string, std::function<void(shape_instance&)>> actions;
@@ -296,7 +293,7 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
 
       for (auto& sub_sequence : sequence.sub_sequences)
       {
-        ImGui::Checkbox(sub_sequence.node_name.c_str(), &sub_sequence.enabled);
+        ImGui::Checkbox((sequence.name + "/" + sub_sequence.node_name).c_str(), &sub_sequence.enabled);
 
         ImGui::SliderInt("shared", &sub_sequence.frame_index, 0, sub_sequence.num_key_frames - 1);
       }
@@ -447,7 +444,13 @@ int main(int argc, char** argv)
     auto text = tree_view->GetItemText(item);
 
     const auto current_path = std::filesystem::path{ text.ToAscii().data() };
-    const auto new_path = search_path / current_path;
+    auto new_path = search_path / current_path;
+
+    if (fs::is_directory(new_path))
+    {
+      return;
+    }
+
     wxPanel* panel = new wxPanel(notebook, wxID_ANY);
     create_render_view(panel, new_path);
     auto selection = notebook->GetSelection();
