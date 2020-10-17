@@ -3,7 +3,7 @@
 
 #include <map>
 #include <SFML/OpenGL.hpp>
-#include "dts_renderable_shape.hpp"
+#include "renderable_shape.hpp"
 
 struct gl_renderer final : shape_renderer
 {

@@ -378,7 +378,6 @@ wxMenuBar* create_menu_bar()
   menuFile->AppendSeparator();
   menuFile->Append(wxID_EXIT);
 
-
   auto* menuHelp = new wxMenu();
   menuHelp->Append(wxID_ABOUT);
 
