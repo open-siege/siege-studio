@@ -2,6 +2,7 @@
 #include <functional>
 #include <iostream>
 #include <map>
+#include <deque>
 #include <memory>
 
 #include <wx/wx.h>
@@ -38,6 +39,19 @@ std::optional<std::filesystem::path> get_shape_path()
 {
   constexpr static auto filetypes = "Darkstar DTS files|*.dts;*.DTS";
   auto dialog = std::make_unique<wxFileDialog>(nullptr, "Open a Darkstar DTS File", "", "", filetypes, wxFD_OPEN, wxDefaultPosition);
+
+  if (dialog->ShowModal() == wxID_OK)
+  {
+    const auto buffer = dialog->GetPath().ToAscii();
+    return std::string_view{ buffer.data(), buffer.length() };
+  }
+
+  return std::nullopt;
+}
+
+std::optional<std::filesystem::path> get_workspace_path()
+{
+  auto dialog = std::make_unique<wxDirDialog>(nullptr, "Open a folder to use as a workspace");
 
   if (dialog->ShowModal() == wxID_OK)
   {
@@ -90,7 +104,7 @@ void setup_opengl()
 
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  perspectiveGL(90.f, 1.f, 1.f, 300.0f);
+  perspectiveGL(90.f, 1.f, 1.f, 1200.0f);
 }
 
 auto apply_configuration(std::map<std::string, std::function<void(shape_instance&)>>& actions)
@@ -315,10 +329,15 @@ wxAppConsole* createApp()
   return new wxApp();
 }
 
-wxMenuBar* createMenuBar()
+constexpr auto event_open_in_new_tab = 1;
+constexpr auto event_open_folder_as_workspace = 2;
+
+wxMenuBar* create_menu_bar()
 {
   auto* menuFile = new wxMenu();
   menuFile->Append(wxID_OPEN);
+  menuFile->Append(event_open_in_new_tab, "Open in New Tab...");
+  menuFile->Append(event_open_folder_as_workspace, "Open Folder as Workpace");
   menuFile->AppendSeparator();
   menuFile->Append(wxID_EXIT);
 
@@ -375,30 +394,82 @@ void create_render_view(wxWindow* panel, std::optional<std::filesystem::path> pa
   });
 }
 
-void populate_tree_view(wxTreeCtrl* tree_view, fs::path search_path)
+auto get_path_from_tree_item(wxTreeCtrl* tree_view, wxTreeItemId item, const fs::path& search_path)
+{
+  std::deque<std::filesystem::path> path_fragments;
+
+  auto parent_item = tree_view->GetItemParent(item);
+
+  do
+  {
+    if (parent_item != tree_view->GetRootItem())
+    {
+      path_fragments.emplace_front(tree_view->GetItemText(parent_item).ToAscii().data());
+      parent_item = tree_view->GetItemParent(parent_item);
+    }
+  } while (parent_item != tree_view->GetRootItem());
+
+  path_fragments.emplace_back(std::filesystem::path{ tree_view->GetItemText(item).ToAscii().data() });
+
+  auto new_path = search_path;
+
+  for (auto& path : path_fragments)
+  {
+    new_path = new_path / path;
+  }
+
+  return new_path;
+}
+
+void populate_tree_view(wxTreeCtrl* tree_view, fs::path search_path, std::optional<wxTreeItemId> parent = std::nullopt)
 {
   using namespace std::literals;
   constexpr std::array extensions = { ".dts"sv, ".DTS"sv };
-  tree_view->DeleteAllItems();
 
-  auto parent = tree_view->AddRoot(search_path.string());
+  if (!fs::is_directory(search_path))
+  {
+    return;
+  }
+
+  bool is_root = false;
+  if (!parent.has_value())
+  {
+    tree_view->DeleteAllItems();
+    is_root = true;
+  }
+
+  parent = parent.has_value() ? parent : tree_view->AddRoot(search_path.string());
 
   for (auto& item : fs::directory_iterator(search_path))
   {
     if (item.is_directory())
     {
-      tree_view->AppendItem(parent, item.path().string());
+      auto new_parent = tree_view->AppendItem(parent.value(), item.path().stem().string());
+
+      if (is_root)
+      {
+        populate_tree_view(tree_view, item, new_parent);
+      }
     }
-    else
+  }
+
+  for (auto& item : fs::directory_iterator(search_path))
+  {
+    if (!item.is_directory())
     {
       auto filename = item.path().filename().string();
       if (std::any_of(extensions.begin(), extensions.end(), [&filename](const auto& ext) {
             return ends_with(filename, ext);
           }))
       {
-        tree_view->AppendItem(parent, filename);
+        tree_view->AppendItem(parent.value(), filename);
       }
     }
+  }
+
+  if (is_root)
+  {
+    tree_view->Expand(parent.value());
   }
 }
 
@@ -413,7 +484,7 @@ int main(int argc, char** argv)
 
   auto* frame = new wxFrame(nullptr, wxID_ANY, "3Space Studio");
 
-  frame->SetMenuBar(createMenuBar());
+  frame->SetMenuBar(create_menu_bar());
 
   frame->CreateStatusBar();
   frame->SetStatusText("3Space Studio");
@@ -433,19 +504,13 @@ int main(int argc, char** argv)
 
   populate_tree_view(tree_view, search_path);
 
-
   wxAuiNotebook* notebook = new wxAuiNotebook(frame, wxID_ANY);
   auto num_elements = notebook->GetPageCount();
 
   sizer->Add(notebook, 80, wxEXPAND, 0);
 
-  tree_view->Bind(wxEVT_TREE_ITEM_ACTIVATED, [notebook, tree_view, search_path, &num_elements](wxTreeEvent& event) {
-    auto item = event.GetItem();
-    auto text = tree_view->GetItemText(item);
-
-    const auto current_path = std::filesystem::path{ text.ToAscii().data() };
-    auto new_path = search_path / current_path;
-
+  auto add_element_from_file = [notebook, &num_elements](auto& new_path, bool replace_selection = false) {
+    std::cout << new_path << fs::is_directory(new_path) << "\n";
     if (fs::is_directory(new_path))
     {
       return;
@@ -453,16 +518,78 @@ int main(int argc, char** argv)
 
     wxPanel* panel = new wxPanel(notebook, wxID_ANY);
     create_render_view(panel, new_path);
-    auto selection = notebook->GetSelection();
-    notebook->InsertPage(selection, panel, new_path.filename().string());
-    num_elements = notebook->GetPageCount();
 
-    if (num_elements > 2)
+    if (replace_selection)
     {
-      notebook->DeletePage(selection + 1);
+      auto selection = notebook->GetSelection();
+      notebook->InsertPage(selection, panel, new_path.filename().string());
+      num_elements = notebook->GetPageCount();
+
+      if (num_elements > 2)
+      {
+        notebook->DeletePage(selection + 1);
+      }
+
+      notebook->ChangeSelection(selection);
+    }
+    else
+    {
+      notebook->InsertPage(notebook->GetPageCount() - 1, panel, new_path.filename().string());
+      num_elements = notebook->GetPageCount();
+      notebook->ChangeSelection(notebook->GetPageCount() - 2);
+    }
+  };
+
+  auto add_new_element = [notebook, &num_elements]() {
+    wxPanel* panel = new wxPanel(notebook, wxID_ANY);
+    create_render_view(panel, std::nullopt);
+    notebook->InsertPage(notebook->GetPageCount() - 1, panel, "New Tab");
+    notebook->ChangeSelection(notebook->GetPageCount() - 2);
+    num_elements = notebook->GetPageCount();
+  };
+
+  tree_view->Bind(wxEVT_TREE_ITEM_EXPANDING, [tree_view, &search_path, &add_element_from_file](wxTreeEvent& event) {
+    auto item = event.GetItem();
+
+    if (item == tree_view->GetRootItem())
+    {
+      return;
     }
 
-    notebook->ChangeSelection(selection);
+    if (tree_view->HasChildren(item))
+    {
+      wxTreeItemIdValue cookie = nullptr;
+
+      auto child = tree_view->GetFirstChild(item, cookie);
+
+      if (cookie && !tree_view->HasChildren(child))
+      {
+        populate_tree_view(tree_view, get_path_from_tree_item(tree_view, child, search_path), child);
+      }
+
+      do {
+        child = tree_view->GetNextChild(item, cookie);
+
+        if (cookie && !tree_view->HasChildren(child))
+        {
+          populate_tree_view(tree_view, get_path_from_tree_item(tree_view, child, search_path), child);
+        }
+      } while (cookie != nullptr);
+    }
+  });
+
+  tree_view->Bind(wxEVT_TREE_ITEM_ACTIVATED, [tree_view, &search_path, &add_element_from_file](wxTreeEvent& event) {
+    auto item = event.GetItem();
+
+    if (item == tree_view->GetRootItem())
+    {
+      return;
+    }
+
+
+    auto item_path = get_path_from_tree_item(tree_view, item, search_path);
+
+    add_element_from_file(item_path, true);
   });
 
   wxPanel* panel = new wxPanel(notebook, wxID_ANY);
@@ -475,18 +602,14 @@ int main(int argc, char** argv)
 
 
   notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED,
-    [notebook, &num_elements](wxAuiNotebookEvent& event) {
+    [notebook, &add_new_element](wxAuiNotebookEvent& event) {
       auto* tab = notebook->GetPage(event.GetSelection());
 
       if (tab->GetName() == "+")
       {
         if (notebook->GetPageCount() == 1)
         {
-          wxPanel* panel = new wxPanel(notebook, wxID_ANY);
-          create_render_view(panel, std::nullopt);
-          notebook->InsertPage(notebook->GetPageCount() - 1, panel, "New Tab");
-          notebook->ChangeSelection(notebook->GetPageCount() - 2);
-          num_elements = notebook->GetPageCount();
+          add_new_element();
         }
         else
         {
@@ -496,7 +619,7 @@ int main(int argc, char** argv)
     });
 
   notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGING,
-    [notebook, &num_elements](wxAuiNotebookEvent& event) mutable {
+    [notebook, &num_elements, &add_new_element](wxAuiNotebookEvent& event) mutable {
       auto* tab = notebook->GetPage(event.GetSelection());
 
       if (tab->GetName() == "+")
@@ -507,11 +630,7 @@ int main(int argc, char** argv)
           return;
         }
 
-        wxPanel* panel = new wxPanel(notebook, wxID_ANY);
-        create_render_view(panel, std::nullopt);
-        notebook->InsertPage(notebook->GetPageCount() - 1, panel, "New Tab");
-        notebook->ChangeSelection(notebook->GetPageCount() - 2);
-        num_elements = notebook->GetPageCount();
+        add_new_element();
       }
       else
       {
@@ -526,24 +645,36 @@ int main(int argc, char** argv)
 
       if (new_path.has_value())
       {
-        wxPanel* panel = new wxPanel(notebook, wxID_ANY);
-        create_render_view(panel, new_path);
-        auto selection = notebook->GetSelection();
-        notebook->InsertPage(selection, panel, new_path.value().filename().string());
-        num_elements = notebook->GetPageCount();
-
-        if (num_elements > 2)
-        {
-          notebook->DeletePage(selection + 1);
-        }
+        add_element_from_file(new_path.value(), true);
 
         search_path = new_path.value().parent_path();
         populate_tree_view(tree_view, search_path);
-
-        notebook->ChangeSelection(selection);
       }
     },
     wxID_OPEN);
+
+  frame->Bind(
+    wxEVT_MENU, [&](auto& event) {
+      const auto new_path = get_shape_path();
+
+      if (new_path.has_value())
+      {
+        add_element_from_file(new_path.value());
+      }
+    },
+    event_open_in_new_tab);
+
+  frame->Bind(
+    wxEVT_MENU, [&](auto& event) {
+      const auto new_path = get_workspace_path();
+
+      if (new_path.has_value())
+      {
+        search_path = new_path.value();
+        populate_tree_view(tree_view, search_path);
+      }
+    },
+    event_open_folder_as_workspace);
 
   frame->Bind(
     wxEVT_MENU, [frame](auto& event) {
