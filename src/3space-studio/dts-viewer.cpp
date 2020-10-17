@@ -725,7 +725,7 @@ int main(int argc, char** argv)
   frame->SetMenuBar(create_menu_bar());
   frame->CreateStatusBar();
   frame->SetStatusText("3Space Studio");
-  frame->SetSize(800, 600);
+  frame->Maximize();
   frame->Show(true);
 
   app->OnRun();
