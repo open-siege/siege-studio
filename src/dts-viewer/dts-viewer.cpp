@@ -2,9 +2,13 @@
 #include <functional>
 #include <iostream>
 #include <map>
+#include <deque>
 #include <memory>
 
 #include <wx/wx.h>
+#include <wx/aui/aui.h>
+#include <wx/treectrl.h>
+
 #include <imgui.h>
 #include <imgui-SFML.h>
 #include <SFML/Graphics/RenderWindow.hpp>
@@ -12,77 +16,24 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/OpenGL.hpp>
 
+#include <glm/gtx/quaternion.hpp>
+
 #include "dts_io.hpp"
-#include "dts_render.hpp"
+#include "dts_renderable_shape.hpp"
+#include "gl_renderer.hpp"
 #include "sfml_keys.hpp"
+#include "utility.hpp"
 
 namespace fs = std::filesystem;
 namespace dts = darkstar::dts;
 
-struct gl_renderer final : shape_renderer
+struct shape_instance
 {
-  const std::array<std::uint8_t, 3> max_colour = { 255, 255, 0 };
-  std::string_view current_object_name;
-  std::uint8_t num_faces = 0;
-  std::map<std::string, bool>& visible_nodes;
-  std::map<std::string, bool>::iterator current_node;
+  std::unique_ptr<renderable_shape> shape;
 
-  gl_renderer(std::map<std::string, bool>& visible_nodes) : visible_nodes(visible_nodes)
-  {
-    current_node = visible_nodes.end();
-  }
-
-  void update_node(std::string_view node_name) override
-  {
-    current_node = visible_nodes.emplace(node_name, true).first;
-  }
-
-  void update_object(std::string_view object_name) override
-  {
-    num_faces = 0;
-    current_object_name = object_name;
-  }
-
-  void new_face(std::size_t) override
-  {
-    if (current_node->second)
-    {
-      const auto [red, green, blue] = max_colour;
-      glColor4ub(red - num_faces, green - num_faces, std::uint8_t(current_object_name.size()), 255);
-      num_faces += 255 / 15;
-    }
-  }
-
-  void end_face() override
-  {
-  }
-
-  void emit_vertex(const darkstar::dts::vector3f& vertex) override
-  {
-    if (current_node->second)
-    {
-      glVertex3f(vertex.x, vertex.y, vertex.z);
-    }
-  }
-
-  void emit_texture_vertex(const darkstar::dts::mesh::v1::texture_vertex&) override
-  {
-  }
+  glm::vec3 translation;
+  dts::vector3f rotation;
 };
-
-
-void perspectiveGL(GLdouble fovY, GLdouble aspect, GLdouble zNear, GLdouble zFar)
-{
-  constexpr GLdouble pi = 3.1415926535897932384626433832795;
-  GLdouble fW, fH;
-
-  //fH = tan( (fovY / 2) / 180 * pi ) * zNear;
-  fH = tan(fovY / 360 * pi) * zNear;
-  fW = fH * aspect;
-
-  glFrustum(-fW, fW, -fH, fH, zNear, zFar);
-}
-
 
 std::optional<std::filesystem::path> get_shape_path()
 {
@@ -98,50 +49,58 @@ std::optional<std::filesystem::path> get_shape_path()
   return std::nullopt;
 }
 
-int main(int argc, const char** argv)
+std::optional<std::filesystem::path> get_workspace_path()
 {
-  using namespace std::literals;
-  std::optional<std::filesystem::path> shape_path;
+  auto dialog = std::make_unique<wxDirDialog>(nullptr, "Open a folder to use as a workspace");
 
-  dts::shape_variant shape;
+  if (dialog->ShowModal() == wxID_OK)
+  {
+    const auto buffer = dialog->GetPath().ToAscii();
+    return std::string_view{ buffer.data(), buffer.length() };
+  }
 
+  return std::nullopt;
+}
+
+std::optional<std::filesystem::path> get_shape_path(int argc, char** argv)
+{
   if (argc > 1)
   {
-    shape_path = argv[1];
+    return argv[1];
   }
 
-  if (!shape_path.has_value())
-  {
-    shape_path = get_shape_path();
-  }
+  return get_shape_path();
+}
 
+dts::shape_variant get_shape(std::optional<std::filesystem::path> shape_path)
+{
   if (!shape_path.has_value())
   {
-    wxMessageBox("No file has been selected.", "Cannot Continue.", wxICON_ERROR);
-    return EXIT_FAILURE;
+    return dts::shape_variant{};
   }
 
   try
   {
     std::basic_ifstream<std::byte> input(shape_path.value(), std::ios::binary);
-    shape = dts::read_shape(shape_path.value(), input, std::nullopt);
+    return dts::read_shape(shape_path.value(), input, std::nullopt);
   }
   catch (const std::exception& ex)
   {
     wxMessageBox(ex.what(), "Error Loading Model.", wxICON_ERROR);
-    return EXIT_FAILURE;
+    return dts::shape_variant{};
+  }
+}
+
+void setup_opengl(wxControl* parent)
+{
+  auto [width, height] = parent->GetClientSize();
+
+  if (height == 0)
+  {
+    return;
   }
 
-  sf::ContextSettings context;
-  context.depthBits = 24;
-  constexpr auto main_title = "3Space Studio - Darkstar DTS Viewer - ";
-
-  sf::RenderWindow window(sf::VideoMode(800, 600, 32), main_title + shape_path.value().filename().string(), sf::Style::Default, context);
-
-  ImGui::SFML::Init(window);
-
-  std::array color = { 0.f, 0.f, 0.f };
-  sf::Clock clock;
+  glViewport(0, 0, width, height);
 
   glClearDepth(1.f);
   glClearColor(0.3f, 0.3f, 0.3f, 0.f);
@@ -154,52 +113,117 @@ int main(int argc, const char** argv)
 
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  perspectiveGL(90.f, 1.f, 1.f, 300.0f);
+
+  perspectiveGL(90.f, double(width) / double(height), 1.f, 1200.0f);
+}
+
+auto apply_configuration(std::map<std::string, std::function<void(shape_instance&)>>& actions)
+{
+  //TODO read this from config one day
+  std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(shape_instance&)>>> callbacks;
+  callbacks.emplace(config::get_key_for_name("Numpad4"), std::ref(actions.at("pan_left")));
+  callbacks.emplace(config::get_key_for_name("Numpad6"), std::ref(actions.at("pan_right")));
+  callbacks.emplace(config::get_key_for_name("Numpad8"), std::ref(actions.at("pan_up")));
+  callbacks.emplace(config::get_key_for_name("Numpad2"), std::ref(actions.at("pan_down")));
+  callbacks.emplace(config::get_key_for_name("Numpad1"), std::ref(actions.at("increase_x_rotation")));
+  callbacks.emplace(config::get_key_for_name("Numpad3"), std::ref(actions.at("decrease_x_rotation")));
+  callbacks.emplace(config::get_key_for_name("Numpad7"), std::ref(actions.at("increase_z_rotation")));
+  callbacks.emplace(config::get_key_for_name("Numpad9"), std::ref(actions.at("decrease_z_rotation")));
+
+  callbacks.emplace(config::get_key_for_name("Add"), std::ref(actions.at("zoom_in")));
+  callbacks.emplace(config::get_key_for_name("Subtract"), std::ref(actions.at("zoom_out")));
+
+  callbacks.emplace(config::get_key_for_name("Divide"), std::ref(actions.at("increase_y_rotation")));
+  callbacks.emplace(config::get_key_for_name("Insert"), std::ref(actions.at("increase_y_rotation")));
+  callbacks.emplace(config::get_key_for_name("Numpad0"), std::ref(actions.at("increase_y_rotation")));
+
+  callbacks.emplace(config::get_key_for_name("Multiply"), std::ref(actions.at("decrease_y_rotation")));
+  callbacks.emplace(config::get_key_for_name("Delete"), std::ref(actions.at("decrease_y_rotation")));
+  callbacks.emplace(config::get_key_for_name("Period"), std::ref(actions.at("decrease_y_rotation")));
+
+  return callbacks;
+}
 
 
-  float x_angle = 180;
-  float y_angle = 120;
-  float z_angle = -30;
+void render_tree_view(const std::string& node, bool& node_visible, std::map<std::optional<std::string>, std::map<std::string, bool>>& visible_nodes, std::map<std::string, std::map<std::string, bool>>& visible_objects)
+{
+  ImGui::Checkbox(node.c_str(), &node_visible);
+  ImGui::Indent(8);
 
-  dts::vector3f translation = { 0, 0, -15 };
-
-  std::map<sf::Keyboard::Key, std::function<void()>> callbacks;
-  std::map<std::string, bool> visible_nodes;
-  auto detail_levels = get_detail_levels(shape);
-  int detail_level_index = 0;
-
-  callbacks.emplace(config::get_key_for_name("Left"), [&]() { x_angle--; });
-  callbacks.emplace(config::get_key_for_name("Numpad4"), [&]() { x_angle--; });
-  callbacks.emplace(config::get_key_for_name("Right"), [&]() { x_angle++; });
-  callbacks.emplace(config::get_key_for_name("Numpad6"), [&]() { x_angle++; });
-  callbacks.emplace(config::get_key_for_name("Up"), [&]() { y_angle++; });
-  callbacks.emplace(config::get_key_for_name("Numpad8"), [&]() { y_angle++; });
-  callbacks.emplace(config::get_key_for_name("Down"), [&]() { y_angle--; });
-  callbacks.emplace(config::get_key_for_name("Numpad2"), [&]() { y_angle--; });
-  callbacks.emplace(config::get_key_for_name("Home"), [&]() { z_angle++; });
-  callbacks.emplace(config::get_key_for_name("Numpad7"), [&]() { z_angle++; });
-  callbacks.emplace(config::get_key_for_name("PageUp"), [&]() { z_angle--; });
-  callbacks.emplace(config::get_key_for_name("Numpad9"), [&]() { z_angle--; });
-  callbacks.emplace(config::get_key_for_name("End"), [&]() { translation.x++; });
-  callbacks.emplace(config::get_key_for_name("Numpad1"), [&]() { translation.x++; });
-  callbacks.emplace(config::get_key_for_name("PageDown"), [&]() { translation.x--; });
-  callbacks.emplace(config::get_key_for_name("Numpad3"), [&]() { translation.x--; });
-
-  callbacks.emplace(config::get_key_for_name("Add"), [&]() { translation.z++; });
-  callbacks.emplace(config::get_key_for_name("Subtract"), [&]() { translation.z--; });
-
-  callbacks.emplace(config::get_key_for_name("Divide"), [&]() { translation.y++; });
-  callbacks.emplace(config::get_key_for_name("Insert"), [&]() { translation.y++; });
-  callbacks.emplace(config::get_key_for_name("Numpad0"), [&]() { translation.y++; });
-
-  callbacks.emplace(config::get_key_for_name("Multiply"), [&]() { translation.y--; });
-  callbacks.emplace(config::get_key_for_name("Delete"), [&]() { translation.y--; });
-  callbacks.emplace(config::get_key_for_name("Period"), [&]() { translation.y--; });
-
-  while (window.isOpen())
+  if (visible_objects[node].size() > 1)
   {
+    for (auto& [child_object, object_visible] : visible_objects[node])
+    {
+      if (node == child_object)
+      {
+        ImGui::Checkbox((child_object + " (object)").c_str(), &object_visible);
+      }
+      else
+      {
+        ImGui::Checkbox(child_object.c_str(), &object_visible);
+      }
+    }
+  }
+
+  for (auto& [child_node, child_node_visible] : visible_nodes[node])
+  {
+    render_tree_view(child_node, child_node_visible, visible_nodes, visible_objects);
+  }
+
+  ImGui::Unindent(8);
+}
+
+auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext)
+{
+  static std::map<std::optional<std::filesystem::path>, shape_instance> shape_instances;
+
+  auto instance_iterator = shape_instances.emplace(shape_path, shape_instance{ std::make_unique<dts_renderable_shape>(get_shape(shape_path)), { 0, 0, -20 }, { 115, 180, -35 } });
+  auto& instance = instance_iterator.first;
+
+  static std::map<std::string, std::function<void(shape_instance&)>> actions;
+
+  actions.emplace("increase_x_rotation", [](auto& instance) { instance.rotation.x++; });
+  actions.emplace("decrease_x_rotation", [](auto& instance) { instance.rotation.x--; });
+
+  actions.emplace("increase_y_rotation", [](auto& instance) { instance.rotation.y++; });
+  actions.emplace("decrease_y_rotation", [](auto& instance) { instance.rotation.y--; });
+  actions.emplace("increase_z_rotation", [](auto& instance) { instance.rotation.z++; });
+  actions.emplace("decrease_z_rotation", [](auto& instance) { instance.rotation.z--; });
+
+  actions.emplace("zoom_in", [](auto& instance) { instance.translation.z++; });
+  actions.emplace("zoom_out", [](auto& instance) { instance.translation.z--; });
+
+  actions.emplace("pan_left", [](auto& instance) { instance.translation.x--; });
+  actions.emplace("pan_right", [](auto& instance) { instance.translation.x++; });
+
+  actions.emplace("pan_up", [](auto& instance) { instance.translation.y++; });
+  actions.emplace("pan_down", [](auto& instance) { instance.translation.y--; });
+
+
+  std::map<std::optional<std::string>, std::map<std::string, bool>> visible_nodes;
+  std::map<std::string, std::map<std::string, bool>> visible_objects;
+  auto detail_levels = instance->second.shape->get_detail_levels();
+  std::vector<std::size_t> detail_level_indexes = { 0 };
+  auto sequences = instance->second.shape->get_sequences(detail_level_indexes);
+
+  bool root_visible = true;
+
+  auto qRot1 = glm::quat(1.f, 0.f, 0.f, 0.f);
+
+  auto callbacks = apply_configuration(actions);
+
+  sf::Clock clock;
+
+  setup_opengl(parent);
+
+  return [=](auto& wx_event) mutable {
+    wxPaintDC Dc(parent);
+
     sf::Event event;
-    while (window.pollEvent(event))
+
+    ImGui::SetCurrentContext(guiContext);
+
+    while (window->pollEvent(event))
     {
       ImGui::SFML::ProcessEvent(event);
       if (event.type == sf::Event::KeyPressed && (event.key.code != sf::Keyboard::Escape))
@@ -208,101 +232,507 @@ int main(int argc, const char** argv)
 
         if (callback != callbacks.end())
         {
-          callback->second();
+          callback->second(instance->second);
         }
       }
 
       if (event.type == sf::Event::Closed)
       {
-        window.close();
+        window->close();
       }
 
       if ((event.type == sf::Event::KeyPressed) && (event.key.code == sf::Keyboard::Escape))
       {
-        window.close();
+        window->close();
       }
     }
+
+    auto& [shape, translation, rotation] = instance->second;
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     glTranslatef(translation.x, translation.y, translation.z);
 
-    glRotatef(y_angle, 1.f, 0.f, 0.f);
-    glRotatef(x_angle, 0.f, 1.f, 0.f);
-    glRotatef(z_angle, 0.f, 0.f, 1.f);
+    glRotatef(rotation.x, 1.f, 0.f, 0.f);
+    glRotatef(rotation.y, 0.f, 1.f, 0.f);
+    glRotatef(rotation.z, 0.f, 0.f, 1.f);
 
     glBegin(GL_TRIANGLES);
-    auto renderer = gl_renderer{ visible_nodes };
-    render_dts(shape, renderer, detail_level_index);
+    auto renderer = gl_renderer{ visible_nodes, visible_objects };
+    shape->render_shape(renderer, detail_level_indexes, sequences);
     glEnd();
 
-    window.pushGLStates();
+    window->pushGLStates();
 
-    ImGui::SFML::Update(window, clock.restart());
+    ImGui::SFML::Update(*window, clock.restart());
 
-    if (ImGui::Begin("Options"))
+    if (!detail_levels.empty())
     {
-      if (ImGui::Button("Open"))
-      {
-        const auto path = get_shape_path();
+      ImGui::Begin("Details and Nodes");
 
-        if (path.has_value())
+      if (ImGui::CollapsingHeader("Detail Levels", ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen))
+      {
+        for (auto i = 0u; i < detail_levels.size(); ++i)
         {
-          try
+          auto selected_item = std::find_if(std::begin(detail_level_indexes), std::end(detail_level_indexes), [i](auto value) {
+            return value == i;
+          });
+
+          bool is_selected = selected_item != std::end(detail_level_indexes);
+
+          if (ImGui::Checkbox(detail_levels[i].c_str(), &is_selected))
           {
-            std::basic_ifstream<std::byte> input(path.value(), std::ios::binary);
-            shape = dts::read_shape(path.value(), input, std::nullopt);
-            window.setTitle(main_title + path.value().filename().string());
-            visible_nodes.clear();
-          }
-          catch (const std::exception& ex)
-          {
-            wxMessageBox(ex.what(), "Error Loading Model.", wxICON_ERROR);
+            if (is_selected)
+            {
+              detail_level_indexes.emplace_back(i);
+              sequences = shape->get_sequences(detail_level_indexes);
+            }
+            else if (selected_item != std::end(detail_level_indexes))
+            {
+              detail_level_indexes.erase(selected_item);
+              sequences = shape->get_sequences(detail_level_indexes);
+            }
           }
         }
       }
-      ImGui::SameLine();
-      if (ImGui::Button("Exit"))
+
+      if (ImGui::CollapsingHeader("Nodes", ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen))
       {
-        window.close();
-        break;
+        for (auto index : detail_level_indexes)
+        {
+          render_tree_view(detail_levels[index], root_visible, visible_nodes, visible_objects);
+        }
       }
 
       ImGui::End();
     }
 
-    ImGui::Begin("Nodes");
-
-    for (auto& [node_name, is_visible] : visible_nodes)
+    if (!sequences.empty())
     {
-      ImGui::Checkbox(node_name.c_str(), &is_visible);
+      ImGui::Begin("Sequences");
+
+      if (ImGui::CollapsingHeader("Sequences", ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen))
+      {
+        for (auto it = sequences.begin(); it != sequences.end(); it++)
+        {
+          auto& sequence = *it;
+
+          if (ImGui::Checkbox(sequence.name.c_str(), &sequence.enabled))
+          {
+            auto enabled_count = std::count_if(sequence.sub_sequences.begin(), sequence.sub_sequences.end(), [](auto& sub_sequence) {
+              return sub_sequence.enabled;
+            });
+
+            if (enabled_count == sequence.sub_sequences.size() || enabled_count == 0)
+            {
+              for (auto& sub_sequence : sequence.sub_sequences)
+              {
+                sub_sequence.enabled = sequence.enabled;
+              }
+            }
+          }
+        }
+      }
+
+      if (ImGui::CollapsingHeader("Sub Sequences", ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen))
+      {
+        for (auto& sequence : sequences)
+        {
+          ImGui::LabelText("", sequence.name.c_str());
+          for (auto& sub_sequence : sequence.sub_sequences)
+          {
+            ImGui::Checkbox((sequence.name + "/" + sub_sequence.node_name).c_str(), &sub_sequence.enabled);
+
+            ImGui::SliderInt(sequence.enabled ? " " : "", &sub_sequence.frame_index, 0, sub_sequence.num_key_frames - 1);
+          }
+        }
+      }
+
+      ImGui::End();
     }
 
-    ImGui::End();
 
-    ImGui::Begin("Detail Levels");
+    ImGui::SFML::Render(*window);
+    window->popGLStates();
+    window->display();
+  };
+}
 
-    if (ImGui::ListBox(
-          "", &detail_level_index, [](void* data, int idx, const char** out_text) {
-            *out_text = reinterpret_cast<std::string*>(data)[idx].c_str();
-            return true;
-          },
-          detail_levels.data(),
-          detail_levels.size()))
-    {
-      visible_nodes.clear();
-    }
+wxAppConsole* createApp()
+{
+  wxAppConsole::CheckBuildOptions(WX_BUILD_OPTIONS_SIGNATURE,
+    "Hello wxWidgets");
+  return new wxApp();
+}
 
-    ImGui::End();
+constexpr auto event_open_in_new_tab = 1;
+constexpr auto event_open_folder_as_workspace = 2;
+
+wxMenuBar* create_menu_bar()
+{
+  auto* menuFile = new wxMenu();
+  menuFile->Append(wxID_OPEN);
+  menuFile->Append(event_open_in_new_tab, "Open in New Tab...");
+  menuFile->Append(event_open_folder_as_workspace, "Open Folder as Workpace");
+  menuFile->AppendSeparator();
+  menuFile->Append(wxID_EXIT);
 
 
-    ImGui::SFML::Render(window);
+  auto* menuHelp = new wxMenu();
+  menuHelp->Append(wxID_ABOUT);
 
-    window.popGLStates();
-    window.display();
+  auto* menuBar = new wxMenuBar();
+  menuBar->Append(menuFile, "&File");
+  menuBar->Append(menuHelp, "&Help");
+
+  return menuBar;
+}
+
+void create_render_view(wxWindow* panel, std::optional<std::filesystem::path> path)
+{
+  auto* graphics = new wxControl(panel, -1, wxDefaultPosition, wxDefaultSize, 0);
+
+  panel->GetSizer()->Add(graphics, 1, wxEXPAND | wxALL, 5);
+
+  sf::ContextSettings context;
+  context.depthBits = 24;
+  auto* window = new sf::RenderWindow(get_handle(graphics), context);
+  static bool is_init = false;
+  static ImGuiContext* primary_gui_context;
+
+  ImGuiContext* gui_context;
+
+  if (!is_init)
+  {
+    ImGui::SFML::Init(*window);
+
+    primary_gui_context = gui_context = ImGui::GetCurrentContext();
+    is_init = true;
+  }
+  else
+  {
+    gui_context = ImGui::CreateContext(ImGui::GetIO().Fonts);
   }
 
+  graphics->Bind(wxEVT_ERASE_BACKGROUND, [](auto& event) {});
+
+  graphics->Bind(wxEVT_SIZE, [=](auto& event) {
+    setup_opengl(graphics);
+  });
+
+  graphics->Bind(wxEVT_IDLE, [=](auto& event) {
+    graphics->Refresh();
+  });
+  graphics->Bind(wxEVT_PAINT, renderer_main(path, window, graphics, gui_context));
+
+  graphics->Bind(wxEVT_DESTROY, [=](auto& event) {
+    delete window;
+    if (gui_context != primary_gui_context)
+    {
+      ImGui::DestroyContext(gui_context);
+      ImGui::SetCurrentContext(primary_gui_context);
+    }
+  });
+}
+
+auto get_path_from_tree_item(wxTreeCtrl* tree_view, wxTreeItemId item, const fs::path& search_path)
+{
+  std::deque<std::filesystem::path> path_fragments;
+
+  auto parent_item = tree_view->GetItemParent(item);
+
+  do
+  {
+    if (parent_item != tree_view->GetRootItem())
+    {
+      path_fragments.emplace_front(tree_view->GetItemText(parent_item).ToAscii().data());
+      parent_item = tree_view->GetItemParent(parent_item);
+    }
+  } while (parent_item != tree_view->GetRootItem());
+
+  path_fragments.emplace_back(std::filesystem::path{ tree_view->GetItemText(item).ToAscii().data() });
+
+  auto new_path = search_path;
+
+  for (auto& path : path_fragments)
+  {
+    new_path = new_path / path;
+  }
+
+  return new_path;
+}
+
+void populate_tree_view(wxTreeCtrl* tree_view, fs::path search_path, std::optional<wxTreeItemId> parent = std::nullopt)
+{
+  using namespace std::literals;
+  constexpr std::array extensions = { ".dts"sv, ".DTS"sv };
+
+  if (!fs::is_directory(search_path))
+  {
+    return;
+  }
+
+  bool is_root = false;
+  if (!parent.has_value())
+  {
+    tree_view->DeleteAllItems();
+    is_root = true;
+  }
+
+  parent = parent.has_value() ? parent : tree_view->AddRoot(search_path.string());
+
+  for (auto& item : fs::directory_iterator(search_path))
+  {
+    if (item.is_directory())
+    {
+      auto new_parent = tree_view->AppendItem(parent.value(), item.path().stem().string());
+
+      if (is_root)
+      {
+        populate_tree_view(tree_view, item, new_parent);
+      }
+    }
+  }
+
+  for (auto& item : fs::directory_iterator(search_path))
+  {
+    if (!item.is_directory())
+    {
+      auto filename = item.path().filename().string();
+      if (std::any_of(extensions.begin(), extensions.end(), [&filename](const auto& ext) {
+            return ends_with(filename, ext);
+          }))
+      {
+        tree_view->AppendItem(parent.value(), filename);
+      }
+    }
+  }
+
+  if (is_root)
+  {
+    tree_view->Expand(parent.value());
+  }
+}
+
+int main(int argc, char** argv)
+{
+  auto search_path = fs::current_path();
+
+  wxApp::SetInitializerFunction(createApp);
+  wxEntryStart(argc, argv);
+  auto* app = wxApp::GetInstance();
+  app->CallOnInit();
+
+  auto* frame = new wxFrame(nullptr, wxID_ANY, "3Space Studio");
+
+  frame->SetMenuBar(create_menu_bar());
+
+  frame->CreateStatusBar();
+  frame->SetStatusText("3Space Studio");
+
+  frame->Bind(
+    wxEVT_MENU, [](auto& event) {
+      wxMessageBox("This is a tool to explore files using the 3Space or Darkstar engines. Currently only Starsiege, Starsiege Tribes, Trophy Bass 3D and Front Page Sports: Ski Racing are supported.",
+        "About 3Space Studio",
+        wxOK | wxICON_INFORMATION);
+    },
+    wxID_ABOUT);
+
+  auto* sizer = new wxBoxSizer(wxHORIZONTAL);
+
+  auto* tree_view = new wxTreeCtrl(frame);
+  sizer->Add(tree_view, 20, wxEXPAND, 0);
+
+  populate_tree_view(tree_view, search_path);
+
+  wxAuiNotebook* notebook = new wxAuiNotebook(frame, wxID_ANY);
+  auto num_elements = notebook->GetPageCount();
+
+  sizer->Add(notebook, 80, wxEXPAND, 0);
+
+  auto add_element_from_file = [notebook, &num_elements](auto& new_path, bool replace_selection = false) {
+    if (fs::is_directory(new_path))
+    {
+      return;
+    }
+
+    wxPanel* panel = new wxPanel(notebook, wxID_ANY);
+    panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
+    create_render_view(panel, new_path);
+
+    if (replace_selection)
+    {
+      auto selection = notebook->GetSelection();
+      notebook->InsertPage(selection, panel, new_path.filename().string());
+      num_elements = notebook->GetPageCount();
+
+      if (num_elements > 2)
+      {
+        notebook->DeletePage(selection + 1);
+      }
+
+      notebook->ChangeSelection(selection);
+    }
+    else
+    {
+      notebook->InsertPage(notebook->GetPageCount() - 1, panel, new_path.filename().string());
+      num_elements = notebook->GetPageCount();
+      notebook->ChangeSelection(notebook->GetPageCount() - 2);
+    }
+  };
+
+  auto add_new_element = [notebook, &num_elements]() {
+    wxPanel* panel = new wxPanel(notebook, wxID_ANY);
+    panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
+    create_render_view(panel, std::nullopt);
+    notebook->InsertPage(notebook->GetPageCount() - 1, panel, "New Tab");
+    notebook->ChangeSelection(notebook->GetPageCount() - 2);
+    num_elements = notebook->GetPageCount();
+  };
+
+  tree_view->Bind(wxEVT_TREE_ITEM_EXPANDING, [tree_view, &search_path](wxTreeEvent& event) {
+    auto item = event.GetItem();
+
+    if (item == tree_view->GetRootItem())
+    {
+      return;
+    }
+
+    if (tree_view->HasChildren(item))
+    {
+      wxTreeItemIdValue cookie = nullptr;
+
+      auto child = tree_view->GetFirstChild(item, cookie);
+
+      if (cookie && !tree_view->HasChildren(child))
+      {
+        populate_tree_view(tree_view, get_path_from_tree_item(tree_view, child, search_path), child);
+      }
+
+      do {
+        child = tree_view->GetNextChild(item, cookie);
+
+        if (cookie && !tree_view->HasChildren(child))
+        {
+          populate_tree_view(tree_view, get_path_from_tree_item(tree_view, child, search_path), child);
+        }
+      } while (cookie != nullptr);
+    }
+  });
+
+  tree_view->Bind(wxEVT_TREE_ITEM_ACTIVATED, [tree_view, &search_path, &add_element_from_file](wxTreeEvent& event) {
+    auto item = event.GetItem();
+
+    if (item == tree_view->GetRootItem())
+    {
+      return;
+    }
+
+
+    auto item_path = get_path_from_tree_item(tree_view, item, search_path);
+
+    add_element_from_file(item_path, true);
+  });
+
+  wxPanel* panel = new wxPanel(notebook, wxID_ANY);
+  panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
+  create_render_view(panel, std::nullopt);
+  notebook->AddPage(panel, "New Tab");
+
+  panel = new wxPanel(notebook, wxID_ANY);
+  panel->SetName("+");
+  notebook->AddPage(panel, "+");
+
+  notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED,
+    [notebook, &add_new_element](wxAuiNotebookEvent& event) {
+      auto* tab = notebook->GetPage(event.GetSelection());
+
+      if (tab->GetName() == "+")
+      {
+        if (notebook->GetPageCount() == 1)
+        {
+          add_new_element();
+        }
+        else
+        {
+          notebook->ChangeSelection(event.GetSelection() - 1);
+        }
+      }
+    });
+
+  notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGING,
+    [notebook, &num_elements, &add_new_element](wxAuiNotebookEvent& event) mutable {
+      auto* tab = notebook->GetPage(event.GetSelection());
+
+      if (tab->GetName() == "+")
+      {
+        if (num_elements > notebook->GetPageCount())
+        {
+          num_elements = notebook->GetPageCount();
+          return;
+        }
+
+        add_new_element();
+      }
+      else
+      {
+        event.Skip();
+      }
+    });
+
+
+  frame->Bind(
+    wxEVT_MENU, [&](auto& event) {
+      const auto new_path = get_shape_path();
+
+      if (new_path.has_value())
+      {
+        add_element_from_file(new_path.value(), true);
+
+        search_path = new_path.value().parent_path();
+        populate_tree_view(tree_view, search_path);
+      }
+    },
+    wxID_OPEN);
+
+  frame->Bind(
+    wxEVT_MENU, [&](auto& event) {
+      const auto new_path = get_shape_path();
+
+      if (new_path.has_value())
+      {
+        add_element_from_file(new_path.value());
+      }
+    },
+    event_open_in_new_tab);
+
+  frame->Bind(
+    wxEVT_MENU, [&](auto& event) {
+      const auto new_path = get_workspace_path();
+
+      if (new_path.has_value())
+      {
+        search_path = new_path.value();
+        populate_tree_view(tree_view, search_path);
+      }
+    },
+    event_open_folder_as_workspace);
+
+  frame->Bind(
+    wxEVT_MENU, [frame](auto& event) {
+      frame->Close(true);
+    },
+    wxID_EXIT);
+
+  sizer->SetSizeHints(frame);
+  frame->SetSizer(sizer);
+  frame->SetSize(800, 600);
+  frame->Show(true);
+
+  app->OnRun();
+
   ImGui::SFML::Shutdown();
-  return EXIT_SUCCESS;
+
+  return 0;
 }
