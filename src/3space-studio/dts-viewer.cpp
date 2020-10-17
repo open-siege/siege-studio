@@ -374,7 +374,7 @@ wxMenuBar* create_menu_bar()
   auto* menuFile = new wxMenu();
   menuFile->Append(wxID_OPEN);
   menuFile->Append(event_open_in_new_tab, "Open in New Tab...");
-  menuFile->Append(event_open_folder_as_workspace, "Open Folder as Workpace");
+  menuFile->Append(event_open_folder_as_workspace, "Open Folder as Workspace");
   menuFile->AppendSeparator();
   menuFile->Append(wxID_EXIT);
 
