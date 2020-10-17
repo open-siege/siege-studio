@@ -5,7 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
-#include "dts_render.hpp"
+#include "dts_renderable_shape.hpp"
 
 struct obj_renderer final : shape_renderer
 {
@@ -19,11 +19,11 @@ struct obj_renderer final : shape_renderer
     output << std::setprecision(32);
   }
 
-  void update_node(std::string_view) override
+  void update_node(std::optional<std::string_view>, std::string_view) override
   {
   }
 
-  void update_object(std::string_view object_name) override
+  void update_object(std::optional<std::string_view>, std::string_view object_name) override
   {
     output << "o " << object_name << '\n';
   }

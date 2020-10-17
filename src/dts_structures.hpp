@@ -60,30 +60,32 @@ namespace darkstar::dts
     float z;
   };
 
-  vector3f operator+(const vector3f& left, const vector3f& right)
+  inline vector3f operator+(const vector3f& left, const vector3f& right)
   {
     return { left.x + right.x, left.y + right.y, left.z + right.z };
   }
 
-  vector3f operator-(const vector3f& left, const vector3f& right)
+  inline vector3f operator-(const vector3f& left, const vector3f& right)
   {
     return { left.x - right.x, left.y - right.y, left.z - right.z };
   }
 
-//  vector3f operator+=(const vector3f& left, const vector3f& right)
-//  {
-//    return left + right;
-//  }
+  inline vector3f operator+=(vector3f& left, const vector3f& right)
+  {
+    left = left + right;
+    return left;
+  }
 
-  vector3f operator*(const vector3f& left, const vector3f& right)
+  inline vector3f operator*(const vector3f& left, const vector3f& right)
   {
     return { left.x * right.x, left.y * right.y, left.z * right.z };
   }
-//
-//  vector3f operator*=(const vector3f& left, const vector3f& right)
-//  {
-//    return left * right;
-//  }
+
+  inline vector3f operator*=(vector3f& left, const vector3f& right)
+  {
+    left = left * right;
+    return left;
+  }
 
   struct vector3f_pair
   {
@@ -111,6 +113,23 @@ namespace darkstar::dts
     float z;
     float w;
   };
+
+  inline quaternion4f to_float(const quaternion4f& other)
+  {
+    return other;
+  }
+
+  inline quaternion4f to_float(const quaternion4s& other)
+  {
+    constexpr std::int16_t max = SHRT_MAX;
+
+    return {
+      float(other.x) / max,
+      float(other.y) / max,
+      float(other.z) / max,
+      float(other.w) / max
+    };
+  }
 
   static_assert(sizeof(quaternion4s) == sizeof(std::array<endian::little_int16_t, 4>));
 
@@ -159,7 +178,7 @@ namespace darkstar::dts
 
     static_assert(sizeof(vertex) == sizeof(std::int32_t));
 
-    vector3f operator*(const vertex& left, const vector3f& right)
+    inline vector3f operator*(const vertex& left, const vector3f& right)
     {
       vector3f result{};
 
@@ -171,7 +190,7 @@ namespace darkstar::dts
     }
 
 
-    vector3f operator+(const vertex& left, const vector3f& right)
+    inline vector3f operator+(const vertex& left, const vector3f& right)
     {
       vector3f result{};
 
