@@ -100,6 +100,8 @@ For example, while Earthsiege and Red Baron 2 might share a 3Space 2.0 core (of 
 
 ### Setup and Build Instructions
 
+New to C++, CMake or Conan? Checkout this set of examples with instructions to get started: https://github.com/matthew-rindel/hello-cpp-durban
+
 If you don't already have Conan on your system, find instructions here: https://conan.io/downloads.html
 
 As a setup command, without any pre-built packages, run ```conan install cmake/3.17.3@/ -g virtualenv```
