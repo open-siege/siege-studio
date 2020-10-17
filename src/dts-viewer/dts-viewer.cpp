@@ -102,7 +102,6 @@ void setup_opengl(wxControl* parent)
 
   glViewport(0, 0, width, height);
 
-
   glClearDepth(1.f);
   glClearColor(0.3f, 0.3f, 0.3f, 0.f);
 
@@ -250,7 +249,6 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
 
     auto& [shape, translation, rotation] = instance->second;
 
-
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -271,60 +269,89 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
 
     if (!detail_levels.empty())
     {
-      ImGui::Begin("Nodes");
+      ImGui::Begin("Details and Nodes");
 
-      for (auto index : detail_level_indexes)
+      if (ImGui::CollapsingHeader("Detail Levels", ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen))
       {
-        render_tree_view(detail_levels[index], root_visible, visible_nodes, visible_objects);
+        for (auto i = 0u; i < detail_levels.size(); ++i)
+        {
+          auto selected_item = std::find_if(std::begin(detail_level_indexes), std::end(detail_level_indexes), [i](auto value) {
+            return value == i;
+          });
+
+          bool is_selected = selected_item != std::end(detail_level_indexes);
+
+          if (ImGui::Checkbox(detail_levels[i].c_str(), &is_selected))
+          {
+            if (is_selected)
+            {
+              detail_level_indexes.emplace_back(i);
+              sequences = shape->get_sequences(detail_level_indexes);
+            }
+            else if (selected_item != std::end(detail_level_indexes))
+            {
+              detail_level_indexes.erase(selected_item);
+              sequences = shape->get_sequences(detail_level_indexes);
+            }
+          }
+        }
+      }
+
+      if (ImGui::CollapsingHeader("Nodes", ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen))
+      {
+        for (auto index : detail_level_indexes)
+        {
+          render_tree_view(detail_levels[index], root_visible, visible_nodes, visible_objects);
+        }
       }
 
       ImGui::End();
     }
 
-    ImGui::Begin("Detail Levels");
-
-    for (auto i = 0u; i < detail_levels.size(); ++i)
+    if (!sequences.empty())
     {
-      auto selected_item = std::find_if(std::begin(detail_level_indexes), std::end(detail_level_indexes), [i](auto value) {
-        return value == i;
-      });
+      ImGui::Begin("Sequences");
 
-      bool is_selected = selected_item != std::end(detail_level_indexes);
-
-      if (ImGui::Checkbox(detail_levels[i].c_str(), &is_selected))
+      if (ImGui::CollapsingHeader("Sequences", ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen))
       {
-        if (is_selected)
+        for (auto it = sequences.begin(); it != sequences.end(); it++)
         {
-          detail_level_indexes.emplace_back(i);
-          //sequences = shape->get_sequences(detail_level_indexes);
-        }
-        else if (selected_item != std::end(detail_level_indexes))
-        {
-          detail_level_indexes.erase(selected_item);
-          //sequences = shape->get_sequences(detail_level_indexes);
+          auto& sequence = *it;
+
+          if (ImGui::Checkbox(sequence.name.c_str(), &sequence.enabled))
+          {
+            auto enabled_count = std::count_if(sequence.sub_sequences.begin(), sequence.sub_sequences.end(), [](auto& sub_sequence) {
+              return sub_sequence.enabled;
+            });
+
+            if (enabled_count == sequence.sub_sequences.size() || enabled_count == 0)
+            {
+              for (auto& sub_sequence : sequence.sub_sequences)
+              {
+                sub_sequence.enabled = sequence.enabled;
+              }
+            }
+          }
         }
       }
-    }
-    ImGui::End();
 
-    ImGui::Begin("Sequences");
-
-    for (auto& sequence : sequences)
-    {
-      ImGui::Checkbox(sequence.name.c_str(), &sequence.enabled);
-
-      ImGui::Indent(8);
-
-      for (auto& sub_sequence : sequence.sub_sequences)
+      if (ImGui::CollapsingHeader("Sub Sequences", ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen))
       {
-        ImGui::Checkbox((sequence.name + "/" + sub_sequence.node_name).c_str(), &sub_sequence.enabled);
+        for (auto& sequence : sequences)
+        {
+          ImGui::LabelText("", sequence.name.c_str());
+          for (auto& sub_sequence : sequence.sub_sequences)
+          {
+            ImGui::Checkbox((sequence.name + "/" + sub_sequence.node_name).c_str(), &sub_sequence.enabled);
 
-        ImGui::SliderInt("shared", &sub_sequence.frame_index, 0, sub_sequence.num_key_frames - 1);
+            ImGui::SliderInt(sequence.enabled ? " " : "", &sub_sequence.frame_index, 0, sub_sequence.num_key_frames - 1);
+          }
+        }
       }
 
-      ImGui::Unindent(8);
+      ImGui::End();
     }
-    ImGui::End();
+
 
     ImGui::SFML::Render(*window);
     window->popGLStates();
