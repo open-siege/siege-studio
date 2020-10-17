@@ -199,9 +199,9 @@ std::vector<sequence_info> dts_renderable_shape::get_sequences(const std::vector
           }
         }
 
-        for (const auto& [node_index, node_instance] : node_instance.node_indexes)
+        for (const auto& [child_node_index, child_node_instance] : node_instance.node_indexes)
         {
-          populate_sequences(node_index, node_instance);
+          populate_sequences(child_node_index, child_node_instance);
         }
       };
 
