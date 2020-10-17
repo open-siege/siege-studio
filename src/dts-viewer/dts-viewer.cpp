@@ -91,8 +91,18 @@ dts::shape_variant get_shape(std::optional<std::filesystem::path> shape_path)
   }
 }
 
-void setup_opengl()
+void setup_opengl(wxControl* parent)
 {
+  auto [width, height] = parent->GetClientSize();
+
+  if (height == 0)
+  {
+    return;
+  }
+
+  glViewport(0, 0, width, height);
+
+
   glClearDepth(1.f);
   glClearColor(0.3f, 0.3f, 0.3f, 0.f);
 
@@ -104,7 +114,8 @@ void setup_opengl()
 
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  perspectiveGL(90.f, 1.f, 1.f, 1200.0f);
+
+  perspectiveGL(90.f, double(width) / double(height), 1.f, 1200.0f);
 }
 
 auto apply_configuration(std::map<std::string, std::function<void(shape_instance&)>>& actions)
@@ -204,7 +215,7 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
 
   sf::Clock clock;
 
-  setup_opengl();
+  setup_opengl(parent);
 
   return [=](auto& wx_event) mutable {
     wxPaintDC Dc(parent);
@@ -253,7 +264,6 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
     auto renderer = gl_renderer{ visible_nodes, visible_objects };
     shape->render_shape(renderer, detail_level_indexes, sequences);
     glEnd();
-
 
     window->pushGLStates();
 
@@ -354,12 +364,13 @@ wxMenuBar* create_menu_bar()
 
 void create_render_view(wxWindow* panel, std::optional<std::filesystem::path> path)
 {
-  auto* graphics = new wxControl(panel, -1, wxDefaultPosition, wxSize{ 800, 500 }, 0);
+  auto* graphics = new wxControl(panel, -1, wxDefaultPosition, wxDefaultSize, 0);
+
+  panel->GetSizer()->Add(graphics, 1, wxEXPAND | wxALL, 5);
 
   sf::ContextSettings context;
   context.depthBits = 24;
   auto* window = new sf::RenderWindow(get_handle(graphics), context);
-
   static bool is_init = false;
   static ImGuiContext* primary_gui_context;
 
@@ -378,6 +389,10 @@ void create_render_view(wxWindow* panel, std::optional<std::filesystem::path> pa
   }
 
   graphics->Bind(wxEVT_ERASE_BACKGROUND, [](auto& event) {});
+
+  graphics->Bind(wxEVT_SIZE, [=](auto& event) {
+    setup_opengl(graphics);
+  });
 
   graphics->Bind(wxEVT_IDLE, [=](auto& event) {
     graphics->Refresh();
@@ -510,13 +525,13 @@ int main(int argc, char** argv)
   sizer->Add(notebook, 80, wxEXPAND, 0);
 
   auto add_element_from_file = [notebook, &num_elements](auto& new_path, bool replace_selection = false) {
-    std::cout << new_path << fs::is_directory(new_path) << "\n";
     if (fs::is_directory(new_path))
     {
       return;
     }
 
     wxPanel* panel = new wxPanel(notebook, wxID_ANY);
+    panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
     create_render_view(panel, new_path);
 
     if (replace_selection)
@@ -542,13 +557,14 @@ int main(int argc, char** argv)
 
   auto add_new_element = [notebook, &num_elements]() {
     wxPanel* panel = new wxPanel(notebook, wxID_ANY);
+    panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
     create_render_view(panel, std::nullopt);
     notebook->InsertPage(notebook->GetPageCount() - 1, panel, "New Tab");
     notebook->ChangeSelection(notebook->GetPageCount() - 2);
     num_elements = notebook->GetPageCount();
   };
 
-  tree_view->Bind(wxEVT_TREE_ITEM_EXPANDING, [tree_view, &search_path, &add_element_from_file](wxTreeEvent& event) {
+  tree_view->Bind(wxEVT_TREE_ITEM_EXPANDING, [tree_view, &search_path](wxTreeEvent& event) {
     auto item = event.GetItem();
 
     if (item == tree_view->GetRootItem())
@@ -593,13 +609,13 @@ int main(int argc, char** argv)
   });
 
   wxPanel* panel = new wxPanel(notebook, wxID_ANY);
+  panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
   create_render_view(panel, std::nullopt);
   notebook->AddPage(panel, "New Tab");
 
   panel = new wxPanel(notebook, wxID_ANY);
   panel->SetName("+");
   notebook->AddPage(panel, "+");
-
 
   notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED,
     [notebook, &add_new_element](wxAuiNotebookEvent& event) {
