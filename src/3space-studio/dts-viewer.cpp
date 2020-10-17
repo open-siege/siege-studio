@@ -526,11 +526,6 @@ int main(int argc, char** argv)
 
   auto* frame = new wxFrame(nullptr, wxID_ANY, "3Space Studio");
 
-  frame->SetMenuBar(create_menu_bar());
-
-  frame->CreateStatusBar();
-  frame->SetStatusText("3Space Studio");
-
   frame->Bind(
     wxEVT_MENU, [](auto& event) {
       wxMessageBox("This is a tool to explore files using the 3Space or Darkstar engines. Currently only Starsiege, Starsiege Tribes, Trophy Bass 3D and Front Page Sports: Ski Racing are supported.",
@@ -727,6 +722,10 @@ int main(int argc, char** argv)
 
   sizer->SetSizeHints(frame);
   frame->SetSizer(sizer);
+
+  frame->SetMenuBar(create_menu_bar());
+  frame->CreateStatusBar();
+  frame->SetStatusText("3Space Studio");
   frame->SetSize(800, 600);
   frame->Show(true);
 
