@@ -9,6 +9,7 @@
 #include "complex_serializer.hpp"
 #include "shared.hpp"
 #include "dts_io.hpp"
+#include "dts_renderable_shape.hpp"
 #include "obj_renderer.hpp"
 
 namespace fs = std::filesystem;
@@ -58,7 +59,10 @@ int main(int argc, const char** argv)
                          std::ofstream output(file_name.string() + "." + root_node_name + ".obj", std::ios::trunc);
                          auto renderer = obj_renderer{output};
 
-                         render_dts(main_shape, renderer, i);
+                         dts_renderable_shape instance{core_shape};
+                         std::vector<std::size_t> details{i};
+                         auto sequences = instance.get_sequences(details);
+                         instance.render_shape(renderer, details, sequences);
                        }
                      },
                        core_shape);
