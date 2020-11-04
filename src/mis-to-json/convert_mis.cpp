@@ -39,6 +39,9 @@ namespace darkstar
   constexpr auto es_palette_tag = to_tag({ 'E', 'S', 'p', 't' });
   constexpr auto interior_shape_tag = to_tag({ 0x0c, 0x01, 0x00, 0x00 });
   constexpr auto sim_structure_tag = to_tag({ 0x00, 0x01, 0x00, 0x00 });
+  constexpr auto drop_point_tag = to_tag({ 'D', 'P', 'N', 'T' });
+  constexpr auto nav_marker_tag = to_tag({ 'E', 'S', 'N', 'M' });
+  constexpr auto sim_marker_tag = to_tag({ 'm', 'a', 'r', 'k' });
 
   struct sim_set;
   struct sim_group;
@@ -48,8 +51,10 @@ namespace darkstar
   struct sim_palette;
   struct interior_shape;
   struct sim_structure;
+  struct sim_marker;
+  struct nav_marker;
 
-  using sim_item = std::variant<sim_set, sim_group, sim_volume, sim_terrain, sim_palette, interior_shape, sim_structure, raw_item>;
+  using sim_item = std::variant<sim_set, sim_group, sim_volume, sim_terrain, sim_palette, interior_shape, sim_structure, sim_marker, nav_marker, raw_item>;
 
   using sim_items = std::vector<sim_item>;
 
@@ -135,6 +140,28 @@ namespace darkstar
     std::array<std::byte, 117> data;
     endian::little_uint32_t string_length;
     std::string filename;
+  };
+
+  struct transform_matrix
+  {
+    endian::little_int32_t flags;
+    std::array<std::array<float, 3>, 3> rotation;
+    std::array<float, 3> position;
+  };
+
+  struct sim_marker
+  {
+    volume_header header;
+    sim_network_object base;
+    transform_matrix transformation;
+  };
+
+  struct nav_marker
+  {
+    volume_header header;
+    sim_network_object base;
+    transform_matrix transformation;
+    std::array<std::byte, 12> footer;
   };
 
   struct raw_item
@@ -294,6 +321,33 @@ darkstar::interior_shape read_interior_shape(std::basic_ifstream<std::byte>& fil
   return shape;
 }
 
+darkstar::sim_marker read_sim_marker(std::basic_ifstream<std::byte>& file, darkstar::volume_header& header, darkstar::sim_item_reader_map&)
+{
+  darkstar::sim_marker marker;
+  marker.header = header;
+  marker.base = read_sim_network_object(file);
+
+  file.read(reinterpret_cast<std::byte*>(&marker.transformation), sizeof(marker.transformation));
+
+  skip_alignment_bytes(file, header.footer_offset);
+
+  return marker;
+}
+
+darkstar::nav_marker read_nav_marker(std::basic_ifstream<std::byte>& file, darkstar::volume_header& header, darkstar::sim_item_reader_map&)
+{
+  darkstar::nav_marker marker;
+  marker.header = header;
+  marker.base = read_sim_network_object(file);
+
+  file.read(reinterpret_cast<std::byte*>(&marker.transformation), sizeof(marker.transformation));
+  file.read(marker.footer.data(), marker.footer.size());
+
+  skip_alignment_bytes(file, header.footer_offset);
+
+  return marker;
+}
+
 darkstar::sim_group read_sim_group(std::basic_ifstream<std::byte>& file, darkstar::volume_header& header, darkstar::sim_item_reader_map& readers)
 {
   darkstar::sim_group group;
@@ -332,7 +386,10 @@ int main(int, const char** argv)
     { sim_vol_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_volume(file, header, readers); } } },
     { sim_terrain_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_terrain(file, header, readers); } } },
     { es_palette_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_palette(file, header, readers); } } },
-    { interior_shape_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_interior_shape(file, header, readers); } } }
+    { interior_shape_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_interior_shape(file, header, readers); } } },
+    { drop_point_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_marker(file, header, readers); } } },
+    { sim_marker_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_marker(file, header, readers); } } },
+    { nav_marker_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_nav_marker(file, header, readers); } } }
   };
 
   auto results = read_children(file, 1, readers);
@@ -348,6 +405,9 @@ int main(int, const char** argv)
                           },
                  [&](darkstar::sim_volume& item) {
                    std::cout << "Volume file is has: " << item.filename << '\n';
+                 },
+                 [&](darkstar::sim_marker& item) {
+                   std::cout << "Sim marker: " << item.transformation.position[0] << '\n';
                  },
                  [&](darkstar::sim_terrain& item) {
                    std::cout << "Volume file is has: " << item.dtf_file << '\n';
