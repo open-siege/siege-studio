@@ -42,6 +42,9 @@ namespace darkstar
   constexpr auto drop_point_tag = to_tag({ 'D', 'P', 'N', 'T' });
   constexpr auto nav_marker_tag = to_tag({ 'E', 'S', 'N', 'M' });
   constexpr auto sim_marker_tag = to_tag({ 'm', 'a', 'r', 'k' });
+  constexpr auto herc_tag = to_tag({ 'H', 'E', 'R', 'C' });
+  constexpr auto tank_tag = to_tag({ 'T', 'A', 'N', 'K' });
+  //constexpr auto flyer_tag = to_tag({ 'F', 'L', 'Y', 'R' });
 
   struct sim_set;
   struct sim_group;
@@ -53,8 +56,9 @@ namespace darkstar
   struct sim_structure;
   struct sim_marker;
   struct nav_marker;
+  struct vehicle;
 
-  using sim_item = std::variant<sim_set, sim_group, sim_volume, sim_terrain, sim_palette, interior_shape, sim_structure, sim_marker, nav_marker, raw_item>;
+  using sim_item = std::variant<sim_set, sim_group, sim_volume, sim_terrain, sim_palette, interior_shape, sim_structure, sim_marker, nav_marker, vehicle, raw_item>;
 
   using sim_items = std::vector<sim_item>;
 
@@ -162,6 +166,25 @@ namespace darkstar
     sim_network_object base;
     transform_matrix transformation;
     std::array<std::byte, 12> footer;
+  };
+
+  struct vehicle
+  {
+    volume_header header;
+    endian::little_uint32_t version;
+    std::array<std::byte, 14> data;
+
+    constexpr static auto type_fields_size = sizeof(std::array<endian::little_uint16_t, 9>);
+    endian::little_uint16_t vehicle_type;
+    endian::little_uint16_t engine_type;
+    endian::little_uint16_t reactor_type;
+    endian::little_uint16_t computer_type;
+    endian::little_uint16_t shield_type;
+    endian::little_uint16_t armor_type;
+    endian::little_uint16_t sensor_type;
+    endian::little_uint16_t special_1_type;
+    endian::little_uint16_t special_2_type;
+    std::vector<std::byte> footer;
   };
 
   struct raw_item
@@ -348,6 +371,25 @@ darkstar::nav_marker read_nav_marker(std::basic_ifstream<std::byte>& file, darks
   return marker;
 }
 
+darkstar::vehicle read_vehicle(std::basic_ifstream<std::byte>& file, darkstar::volume_header& header, darkstar::sim_item_reader_map&)
+{
+  darkstar::vehicle vehicle;
+  vehicle.header = header;
+
+  const auto footer_length = header.footer_offset - sizeof(vehicle.version) - vehicle.data.size() - vehicle.type_fields_size;
+
+  file.read(reinterpret_cast<std::byte*>(&vehicle.version), sizeof(vehicle.version));
+  file.read(vehicle.data.data(), vehicle.data.size());
+  file.read(reinterpret_cast<std::byte*>(&vehicle.vehicle_type), vehicle.type_fields_size);
+
+  vehicle.footer = std::vector<std::byte>(footer_length);
+  file.read(vehicle.footer.data(), vehicle.footer.size());
+
+  skip_alignment_bytes(file, header.footer_offset);
+
+  return vehicle;
+}
+
 darkstar::sim_group read_sim_group(std::basic_ifstream<std::byte>& file, darkstar::volume_header& header, darkstar::sim_item_reader_map& readers)
 {
   darkstar::sim_group group;
@@ -374,6 +416,7 @@ darkstar::sim_set read_sim_set(std::basic_ifstream<std::byte>& file, darkstar::v
 
   return set;
 }
+
 int main(int, const char** argv)
 {
   using namespace darkstar;
@@ -389,7 +432,10 @@ int main(int, const char** argv)
     { interior_shape_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_interior_shape(file, header, readers); } } },
     { drop_point_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_marker(file, header, readers); } } },
     { sim_marker_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_marker(file, header, readers); } } },
-    { nav_marker_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_nav_marker(file, header, readers); } } }
+    { nav_marker_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_nav_marker(file, header, readers); } } },
+    { herc_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_vehicle(file, header, readers); } } },
+    { tank_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_vehicle(file, header, readers); } } },
+    //{ flyer_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_vehicle(file, header, readers); } } }
   };
 
   auto results = read_children(file, 1, readers);
@@ -417,6 +463,11 @@ int main(int, const char** argv)
                  },
                  [&](darkstar::interior_shape& item) {
                    std::cout << "Volume file is has: " << item.filename << '\n';
+                 },
+                 [&](darkstar::vehicle& item) {
+                   std::cout << "Vehicle info is: ";
+                   std::cout << item.vehicle_type << " " << item.engine_type;
+                   std::cout << '\n';
                  },
                  [&](darkstar::sim_group& item) {
                    for (auto i = 0u; i < item.children.size(); ++i)
