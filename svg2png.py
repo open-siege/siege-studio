@@ -116,7 +116,7 @@ for [key, value] in results.items():
                 middle = values["Middle"]
                 props += f" Middle({middle[0] - coords[0]}, {middle[1] - coords[1]}, {middle[2]}, {middle[3]})"
 
-            props += ";\n"
+            props += " Smooth;\n"
         else:
             props += f'{child} = {values};\n'
     text_results += f"{key} {op}\n {props} {close}\n"
