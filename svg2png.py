@@ -1,4 +1,5 @@
 from wand.api import library
+from collections.abc import Iterable
 import base64
 import wand.color
 import wand.image
@@ -35,6 +36,11 @@ results = {}
 
 svg_group = "{http://www.w3.org/2000/svg}g"
 
+def get_value_for_prop(prop, values):
+    if prop == "TitleBarHeight":
+        return values[-1]
+    return None
+
 
 def process_node(item, parent_transform=None):
     id = item.get("id")
@@ -51,24 +57,38 @@ def process_node(item, parent_transform=None):
             transform = parent_transform
 
         if id is not None and "." in id:
-            [name, prop, section] = id.split(".")
+            values = id.split(".")
+            
             rect = item[0]
             x = float(rect.get("x"))
             y = float(rect.get("y"))
             width = float(rect.get("width"))
             height = float(rect.get("height"))
-
-            # top_left = [x, y, 1]
-            if name not in results:
-                results[name] = {}
-
-            if prop not in results[name]:
-                results[name][prop] = {}
-
+            
             [new_x, new_y, new_z] = numpy.dot(transform, [x, y, 1])
             [new_xx, new_yy, new_zz] = numpy.dot(transform, [x + width, y + height, 1])
+            
+            if len(values) == 2:
+                [name, prop] = values            
 
-            results[name][prop][section] = [new_x, new_y, new_xx - new_x, new_yy - new_y]
+                if name not in results:
+                    results[name] = {}
+
+                if prop not in results[name]:
+                    results[name][prop] = {}
+
+                results[name][prop] = get_value_for_prop(prop, [new_x, new_y, new_xx - new_x, new_yy - new_y])
+            
+            if len(values) == 3:
+                [name, prop, section] = values            
+                
+                if name not in results:
+                    results[name] = {}
+
+                if prop not in results[name]:
+                    results[name][prop] = {}
+
+                results[name][prop][section] = [new_x, new_y, new_xx - new_x, new_yy - new_y]
         for child in item:
             process_node(child, transform)
 
@@ -87,7 +107,7 @@ close = "}"
 for [key, value] in results.items():
     props = ""
     for [child, values] in value.items():
-        if "Part" in values:
+        if isinstance(values, Iterable) and "Part" in values:
             props += f'{child} = "{output}"'
             coords = values["Part"]
             props += f" Part({coords[0]}, {coords[1]}, {coords[2]}, {coords[3]})"
@@ -97,6 +117,8 @@ for [key, value] in results.items():
                 props += f" Middle({middle[0] - coords[0]}, {middle[1] - coords[1]}, {middle[2]}, {middle[3]})"
 
             props += ";\n"
+        else:
+            props += f'{child} = {values};\n'
     text_results += f"{key} {op}\n {props} {close}\n"
 
 with open(theme_file, "w") as out:
