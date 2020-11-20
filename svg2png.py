@@ -36,9 +36,13 @@ results = {}
 
 svg_group = "{http://www.w3.org/2000/svg}g"
 
-def get_value_for_prop(prop, values):
+def get_value_for_prop(prop, values, rect):
     if prop == "TitleBarHeight":
         return values[-1]
+
+    if prop == "TextColor" or prop == "TextColorFocused"  or prop == "TextColorDisabled":
+        return rect.get("style").replace("fill:", "").replace(";", "")
+
     return None
 
 
@@ -77,7 +81,7 @@ def process_node(item, parent_transform=None):
                 if prop not in results[name]:
                     results[name][prop] = {}
 
-                results[name][prop] = get_value_for_prop(prop, [new_x, new_y, new_xx - new_x, new_yy - new_y])
+                results[name][prop] = get_value_for_prop(prop, [new_x, new_y, new_xx - new_x, new_yy - new_y], rect)
             
             if len(values) == 3:
                 [name, prop, section] = values            
