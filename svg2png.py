@@ -36,12 +36,20 @@ results = {}
 
 svg_group = "{http://www.w3.org/2000/svg}g"
 
+colorProperties = {"TextColor", "TextColorFocused", "TextColorDisabled", "BorderColor", "BackgroundColor"}
+
 def get_value_for_prop(prop, values, rect):
     if prop == "TitleBarHeight":
         return values[-1]
 
-    if prop == "TextColor" or prop == "TextColorFocused"  or prop == "TextColorDisabled":
+    if prop in colorProperties:
         return rect.get("style").replace("fill:", "").replace(";", "")
+
+    if prop == "Scrollbar":
+        return "&Scrollbar"
+
+    if prop == "ListBox":
+        return "&ListBox"
 
     return None
 
@@ -112,7 +120,7 @@ for [key, value] in results.items():
     props = ""
     for [child, values] in value.items():
         if isinstance(values, Iterable) and "Part" in values:
-            props += f'{child} = "{output}"'
+            props += f'\t{child} = "{output}"'
             coords = values["Part"]
             props += f" Part({coords[0]}, {coords[1]}, {coords[2]}, {coords[3]})"
 
@@ -122,8 +130,8 @@ for [key, value] in results.items():
 
             props += " Smooth;\n"
         else:
-            props += f'{child} = {values};\n'
-    text_results += f"{key} {op}\n {props} {close}\n"
+            props += f'\t{child} = {values};\n'
+    text_results += f"{key} {op}\n {props} {close}\n\n"
 
 with open(theme_file, "w") as out:
     out.write(text_results)
