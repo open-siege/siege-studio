@@ -6,9 +6,12 @@ import wand.image
 import numpy
 import xml.etree.ElementTree as ET
 
-input = "widgets.svg"
-output = "widgets.png"
-theme_file = "widgets.txt"
+# TODO make these command line parameters
+input = "besieged-theme.svg"
+output = "besieged-theme.png"
+theme_file = "besieged-theme.txt"
+
+# Texture Generation
 
 with open(input, "rb") as svg_file:
     with wand.image.Image() as image:
@@ -27,7 +30,10 @@ raw_data = image[0].get("href").replace("data:image/png;base64,", "")
 with open(output, "wb") as out:
     out.write(base64.b64decode(raw_data))
 
+# Theme Generation
 
+# TODO support other types of SVG element transformations.
+# They should likely all produce a matrix, to make the calculation part consistent.
 def matrix(a, b, c, d, e, f):
     return ([a, c, e], [b, d, f], [0, 0, 1])
 
@@ -38,6 +44,8 @@ svg_group = "{http://www.w3.org/2000/svg}g"
 
 colorProperties = {"TextColor", "TextColorFocused", "TextColorDisabled", "BorderColor", "BackgroundColor"}
 
+# TODO support more property types
+# and also make this code more dynamic
 def get_value_for_prop(prop, values, rect):
     if prop == "TitleBarHeight":
         return values[-1]
