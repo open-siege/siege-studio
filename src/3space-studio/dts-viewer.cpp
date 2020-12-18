@@ -362,7 +362,7 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
 wxAppConsole* createApp()
 {
   wxAppConsole::CheckBuildOptions(WX_BUILD_OPTIONS_SIGNATURE,
-    "Hello wxWidgets");
+    "3Space Studio");
   return new wxApp();
 }
 
