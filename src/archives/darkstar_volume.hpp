@@ -4,12 +4,11 @@
 #include <fstream>
 #include <vector>
 #include <array>
-#include <iostream>
 #include <utility>
 #include <string>
 #include "endian_arithmetic.hpp"
 
-namespace darkstar
+namespace darkstar::vol
 {
   namespace endian = boost::endian;
   using namespace std::literals;
@@ -31,7 +30,7 @@ namespace darkstar
     return result;
   }
 
-  constexpr auto vol_file_tag = to_tag({ 'V', 'O', 'L', ' ' });
+  constexpr auto vol_file_tag = to_tag({ ' ', 'V', 'O', 'L' });
   constexpr auto alt_vol_file_tag = to_tag({ 'P', 'V', 'O', 'L' });
 
   enum class compression_type : std::uint8_t
@@ -122,6 +121,12 @@ namespace darkstar
   {
     auto buffer_size = get_file_list_offsets(raw_data);
     std::vector<char> raw_chars(buffer_size);
+
+    if ((buffer_size) % 2 != 0)
+    {
+      raw_data.seekg(1, std::ios::cur);
+    }
+
     raw_data.read(reinterpret_cast<std::byte*>(raw_chars.data()), raw_chars.size());
 
     std::vector<std::string> results;
@@ -169,8 +174,6 @@ namespace darkstar
 
     return results;
   }
-
-
 }// namespace darkstar
 
 
