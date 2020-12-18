@@ -11,7 +11,7 @@ file(GLOB MDL_SRC_FILES src/mdl-to-json/*.cpp)
 file(GLOB DTS_SRC_FILES src/dts-to-json/*.cpp)
 file(GLOB OBJ_SRC_FILES src/dts_renderable_shape.cpp src/dts-to-obj/*.cpp)
 file(GLOB JSON_SRC_FILES src/json-to-dts/*.cpp)
-file(GLOB VOL_SRC_FILES src/unvol/*.cpp)
+file(GLOB VOL_SRC_FILES src/archives/*.cpp src/unvol/*.cpp)
 file(GLOB MIS_SRC_FILES src/mis-to-json/*.cpp)
 file(GLOB DTS_VIEWER_SRC_FILES src/dts_renderable_shape.cpp src/3space-studio/utility.cpp src/3space-studio/*.cpp)
 
