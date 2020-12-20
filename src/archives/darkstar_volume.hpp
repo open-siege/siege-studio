@@ -126,7 +126,8 @@ namespace darkstar::vol
     endian::little_uint32_t id;
     endian::little_uint32_t offset;
     endian::little_uint32_t size;
-    endian::little_uint16_t compression_type;
+    std::uint8_t padding;
+    std::uint8_t compression_type;
   };
 
   static_assert(sizeof(old_file_header) == sizeof(std::array<std::byte, 14>));
