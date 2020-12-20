@@ -4,6 +4,8 @@
 #include <array>
 #include <vector>
 #include <fstream>
+#include <optional>
+#include <utility>
 
 #include "endian_arithmetic.hpp"
 
@@ -31,6 +33,7 @@ namespace darkstar::vol
 
   constexpr auto vol_file_tag = to_tag({ ' ', 'V', 'O', 'L' });
   constexpr auto alt_vol_file_tag = to_tag({ 'P', 'V', 'O', 'L' });
+  constexpr auto old_vol_file_tag = to_tag({ 'V', 'O', 'L', ' ' });
 
   enum class compression_type : std::uint8_t
   {
@@ -40,11 +43,18 @@ namespace darkstar::vol
     lzh
   };
 
+  enum class volume_version
+  {
+    three_space_vol,
+    darkstar_pvol,
+    darkstar_vol
+  };
+
   struct file_info
   {
     std::string filename;
-    endian::little_uint32_t offset;
-    endian::little_uint32_t size;
+    uint32_t offset;
+    uint32_t size;
     compression_type compression_type;
   };
 
@@ -53,6 +63,15 @@ namespace darkstar::vol
     std::array<std::byte, 4> file_tag;
     endian::little_uint32_t footer_offset;
   };
+
+  struct old_volume_header
+  {
+    std::array<std::byte, 4> file_tag;
+    endian::little_uint24_t footer_offset;
+    std::byte padding;
+  };
+
+  static_assert(sizeof(volume_header) == sizeof(old_volume_header));
 
   struct normal_footer
   {
@@ -69,6 +88,21 @@ namespace darkstar::vol
     std::array<std::byte, 4> string_header_tag;
     endian::little_uint32_t file_list_size;
   };
+
+  struct old_footer
+  {
+    std::array<std::byte, 4> header_tag;
+    endian::little_uint24_t header_size;
+    std::byte padding;
+    std::array<std::byte, 4> string_header_tag;
+    endian::little_uint24_t buffer_size;
+    std::byte padding2;
+    endian::little_uint24_t file_list_size;
+    std::byte padding3;
+  };
+
+  static_assert(sizeof(alternative_footer) * 2 + sizeof(std::array<std::byte, 4>)
+                == sizeof(old_footer));
 
   struct file_index_header
   {
@@ -87,9 +121,19 @@ namespace darkstar::vol
 
   static_assert(sizeof(file_header) == sizeof(std::array<std::byte, 17>));
 
-  std::size_t get_file_list_offsets(std::basic_ifstream<std::byte>& raw_data);
+  struct old_file_header
+  {
+    endian::little_uint32_t id;
+    endian::little_uint32_t offset;
+    endian::little_uint32_t size;
+    endian::little_uint16_t compression_type;
+  };
 
-  std::vector<std::string> get_file_names(std::basic_ifstream<std::byte>& raw_data);
+  static_assert(sizeof(old_file_header) == sizeof(std::array<std::byte, 14>));
+
+  std::tuple<volume_version, std::size_t, std::optional<std::size_t>> get_file_list_offsets(std::basic_ifstream<std::byte>& raw_data);
+
+  std::pair<volume_version, std::vector<std::string>> get_file_names(std::basic_ifstream<std::byte>& raw_data);
 
   std::vector<file_info> get_file_metadata(std::basic_ifstream<std::byte>& raw_data);
 
