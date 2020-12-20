@@ -59,8 +59,6 @@ namespace darkstar::vol
       raw_data.seekg(1, std::ios::cur);
     }
 
-    std::cout << "The current index is " << raw_data.tellg() << "\n";
-
     raw_data.read(reinterpret_cast<std::byte*>(raw_chars.data()), raw_chars.size());
 
     std::vector<std::string> results;
@@ -77,12 +75,6 @@ namespace darkstar::vol
     if (amount_to_skip.has_value())
     {
       raw_data.seekg(amount_to_skip.value(), std::ios::cur);
-
-      std::cout << "The amount to skip is " << amount_to_skip.value() << "\n";
-
-      std::cout << "The character size is " << raw_chars.size() << "\n";
-
-      std::cout << "The current index is " << raw_data.tellg() << "\n";
     }
 
     return std::make_pair(volume_type, results);
@@ -129,7 +121,7 @@ namespace darkstar::vol
 
         offset = file.offset;
         size = file.size;
-        compression_type = darkstar::vol::compression_type::none;
+        compression_type = file.compression_type == 1 ? darkstar::vol::compression_type::none : darkstar::vol::compression_type::lz;
 
         index += sizeof(old_file_header);
       }
@@ -186,7 +178,7 @@ namespace darkstar::vol
       std::cout << "Executing " << command.str() << '\n';
       std::system(command.str().c_str());
 
-      if (std::filesystem::file_size(new_path) > some_file.size)
+      if (std::filesystem::exists(new_path) && std::filesystem::file_size(new_path) > some_file.size)
       {
         auto old_path = new_path.string() + ".old";
         std::filesystem::rename(new_path, old_path);
