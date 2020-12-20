@@ -11,7 +11,7 @@
 
 namespace darkstar::vol
 {
-  std::size_t get_file_list_offsets(std::basic_ifstream<std::byte>& raw_data)
+  std::tuple<volume_version, std::size_t, std::optional<std::size_t>> get_file_list_offsets(std::basic_ifstream<std::byte>& raw_data)
   {
     volume_header header;
 
@@ -23,7 +23,7 @@ namespace darkstar::vol
       raw_data.seekg(header.footer_offset, std::ios_base::beg);
       raw_data.read(reinterpret_cast<std::byte*>(&footer), sizeof(footer));
 
-      return footer.file_list_size;
+      return std::make_tuple(volume_version::darkstar_vol, footer.file_list_size, std::nullopt);
     }
     else if (header.file_tag == alt_vol_file_tag)
     {
@@ -31,7 +31,16 @@ namespace darkstar::vol
       raw_data.seekg(header.footer_offset, std::ios_base::beg);
       raw_data.read(reinterpret_cast<std::byte*>(&footer), sizeof(footer));
 
-      return footer.file_list_size;
+      return std::make_tuple(volume_version::darkstar_pvol, footer.file_list_size, std::nullopt);
+    }
+    else if (header.file_tag == old_vol_file_tag)
+    {
+      old_footer footer;
+      raw_data.read(reinterpret_cast<std::byte*>(&footer), sizeof(footer));
+
+      auto amount_to_skip = footer.buffer_size - sizeof(int32_t) - footer.file_list_size;
+
+      return std::make_tuple(volume_version::three_space_vol, footer.file_list_size, amount_to_skip);
     }
     else
     {
@@ -40,15 +49,17 @@ namespace darkstar::vol
   }
 
 
-  std::vector<std::string> get_file_names(std::basic_ifstream<std::byte>& raw_data)
+  std::pair<volume_version, std::vector<std::string>> get_file_names(std::basic_ifstream<std::byte>& raw_data)
   {
-    auto buffer_size = get_file_list_offsets(raw_data);
+    auto [volume_type, buffer_size, amount_to_skip] = get_file_list_offsets(raw_data);
     std::vector<char> raw_chars(buffer_size);
 
-    if ((buffer_size) % 2 != 0)
+    if (volume_type != volume_version::three_space_vol && (buffer_size) % 2 != 0)
     {
       raw_data.seekg(1, std::ios::cur);
     }
+
+    std::cout << "The current index is " << raw_data.tellg() << "\n";
 
     raw_data.read(reinterpret_cast<std::byte*>(raw_chars.data()), raw_chars.size());
 
@@ -63,14 +74,36 @@ namespace darkstar::vol
       index += results.back().size() + 1;
     }
 
-    return results;
+    if (amount_to_skip.has_value())
+    {
+      raw_data.seekg(amount_to_skip.value(), std::ios::cur);
+
+      std::cout << "The amount to skip is " << amount_to_skip.value() << "\n";
+
+      std::cout << "The character size is " << raw_chars.size() << "\n";
+
+      std::cout << "The current index is " << raw_data.tellg() << "\n";
+    }
+
+    return std::make_pair(volume_type, results);
   }
 
   std::vector<file_info> get_file_metadata(std::basic_ifstream<std::byte>& raw_data)
   {
-    auto filenames = get_file_names(raw_data);
+    auto [volume_type, filenames] = get_file_names(raw_data);
     file_index_header header;
-    raw_data.read(reinterpret_cast<std::byte*>(&header), sizeof(header));
+
+    if (volume_type == volume_version::three_space_vol)
+    {
+      old_volume_header raw_header;
+      raw_data.read(reinterpret_cast<std::byte*>(&raw_header), sizeof(raw_header));
+      header.index_tag = raw_header.file_tag;
+      header.index_size = raw_header.footer_offset;
+    }
+    else
+    {
+      raw_data.read(reinterpret_cast<std::byte*>(&header), sizeof(header));
+    }
 
     std::vector<std::byte> raw_bytes(header.index_size);
     raw_data.read(raw_bytes.data(), raw_bytes.size());
@@ -82,17 +115,49 @@ namespace darkstar::vol
 
     while (index < raw_bytes.size())
     {
-      file_header file;
-      std::copy(raw_bytes.data() + index, raw_bytes.data() + index + sizeof(file_header), reinterpret_cast<std::byte*>(&file));
+      endian::little_uint32_t offset;
+      endian::little_uint32_t size;
+      compression_type compression_type;
+
+      if (volume_type == volume_version::three_space_vol)
+      {
+        old_file_header file;
+
+        std::copy(raw_bytes.data() + index,
+                  raw_bytes.data() + index + sizeof(old_file_header),
+                  reinterpret_cast<std::byte*>(&file));
+
+        offset = file.offset;
+        size = file.size;
+        compression_type = darkstar::vol::compression_type::none;
+
+        index += sizeof(old_file_header);
+      }
+      else
+      {
+        file_header file;
+        std::copy(raw_bytes.data() + index,
+                  raw_bytes.data() + index + sizeof(file_header),
+                  reinterpret_cast<std::byte*>(&file));
+        offset = file.offset;
+        size = file.size;
+        compression_type = file.compression_type;
+
+        index += sizeof(file_header);
+      }
 
       file_info info;
 
       info.filename = std::move(filenames[results.size()]);
-      info.size = file.size;
-      info.offset = file.offset;
-      info.compression_type = file.compression_type;
+      info.offset = offset;
+      info.size = size;
+      info.compression_type = compression_type;
       results.emplace_back(info);
-      index += sizeof(file_header);
+
+      if (results.size() == filenames.size())
+      {
+        break;
+      }
     }
 
     return results;
