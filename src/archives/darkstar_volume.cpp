@@ -13,13 +13,13 @@ namespace darkstar::vol
 {
   std::tuple<volume_version, std::size_t, std::optional<std::size_t>> get_file_list_offsets(std::basic_ifstream<std::byte>& raw_data)
   {
-    volume_header header;
+    volume_header header{};
 
     raw_data.read(reinterpret_cast<std::byte*>(&header), sizeof(header));
 
     if (header.file_tag == vol_file_tag)
     {
-      normal_footer footer;
+      normal_footer footer{};
       raw_data.seekg(header.footer_offset, std::ios_base::beg);
       raw_data.read(reinterpret_cast<std::byte*>(&footer), sizeof(footer));
 
@@ -27,7 +27,7 @@ namespace darkstar::vol
     }
     else if (header.file_tag == alt_vol_file_tag)
     {
-      alternative_footer footer;
+      alternative_footer footer{};
       raw_data.seekg(header.footer_offset, std::ios_base::beg);
       raw_data.read(reinterpret_cast<std::byte*>(&footer), sizeof(footer));
 
@@ -35,7 +35,7 @@ namespace darkstar::vol
     }
     else if (header.file_tag == old_vol_file_tag)
     {
-      old_footer footer;
+      old_footer footer{};
       raw_data.read(reinterpret_cast<std::byte*>(&footer), sizeof(footer));
 
       auto amount_to_skip = footer.buffer_size - sizeof(int32_t) - footer.file_list_size;
@@ -83,11 +83,11 @@ namespace darkstar::vol
   std::vector<file_info> get_file_metadata(std::basic_ifstream<std::byte>& raw_data)
   {
     auto [volume_type, filenames] = get_file_names(raw_data);
-    file_index_header header;
+    file_index_header header{};
 
     if (volume_type == volume_version::three_space_vol)
     {
-      old_volume_header raw_header;
+      old_volume_header raw_header{};
       raw_data.read(reinterpret_cast<std::byte*>(&raw_header), sizeof(raw_header));
       header.index_tag = raw_header.file_tag;
       header.index_size = raw_header.footer_offset;
@@ -113,7 +113,7 @@ namespace darkstar::vol
 
       if (volume_type == volume_version::three_space_vol)
       {
-        old_file_header file;
+        old_file_header file{};
 
         std::copy(raw_bytes.data() + index,
                   raw_bytes.data() + index + sizeof(old_file_header),
@@ -127,7 +127,7 @@ namespace darkstar::vol
       }
       else
       {
-        file_header file;
+        file_header file{};
         std::copy(raw_bytes.data() + index,
                   raw_bytes.data() + index + sizeof(file_header),
                   reinterpret_cast<std::byte*>(&file));

@@ -14,6 +14,7 @@ namespace darkstar::vol
   namespace endian = boost::endian;
   using namespace std::literals;
 
+  // TODO add some checks for these items
   constexpr auto vol_index_tag = "voli"sv;
   constexpr auto vol_string_tag = "vols"sv;
   constexpr auto vol_block_tag = "vblk"sv;
