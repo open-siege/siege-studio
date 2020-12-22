@@ -8,6 +8,8 @@
 #include <utility>
 #include <string>
 
+#include "endian_arithmetic.hpp"
+
 namespace three_space::vol
 {
   namespace endian = boost::endian;
@@ -183,7 +185,7 @@ namespace three_space::vol
       std::byte entry{};
       raw_data.read(&entry, sizeof(entry));
 
-      std::array<endian::little_uint32_t, 2> file_info;
+      std::array<endian::little_uint32_t, 2> file_info{};
       raw_data.read(reinterpret_cast<std::byte*>(&file_info), sizeof(file_info));
 
       auto new_path = std::filesystem::path("volume") / folder_name / child_filename.data();
