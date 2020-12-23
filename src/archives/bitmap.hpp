@@ -73,9 +73,23 @@ namespace darkstar::bmp
     endian::little_uint32_t num_important_colours;
   };
 
+  struct pbmp_data
+  {
+    pbmp_header bmp_header;
+    endian::little_uint32_t detail_levels;
+    endian::little_uint32_t palette_index;
+    std::vector<std::byte> pixels;
+  };
 
+  struct windows_bmp_data
+  {
+    windows_bmp_header header;
+    windows_bmp_info info;
+    std::vector<pal::colour> colours;
+    std::vector<std::byte> pixels;
+  };
 
-  void get_bmp_data(std::basic_ifstream<std::byte>& raw_data)
+  windows_bmp_data get_bmp_data(std::basic_ifstream<std::byte>& raw_data)
   {
     windows_bmp_header header{};
     raw_data.read(reinterpret_cast<std::byte*>(&header), sizeof(header));
@@ -105,9 +119,9 @@ namespace darkstar::bmp
 
     for (auto i = 0; i < num_colours; ++i)
     {
-      pal::colour colour{};
-      raw_data.read(reinterpret_cast<std::byte*>(&colour), sizeof(colour));
-      colours.emplace_back(colour);
+      std::array<std::byte, 4> quad{};
+      raw_data.read(quad.data(), sizeof(quad));
+      colours.emplace_back(pal::colour{quad[2], quad[1], quad[0], quad[3]});
     }
 
     const auto num_pixels = info.width * info.height * (info.bit_depth / 8);
@@ -116,22 +130,53 @@ namespace darkstar::bmp
 
     raw_data.read(pixels.data(), pixels.size());
 
-    for (auto& colour : colours)
-    {
-      std::cout << "#"
-                << std::setfill('0')
-                << std::setw(2)
-                << std::hex
-                << int(colour.red)
-                << std::setw(2)
-                << int(colour.green)
-                << std::setw(2)
-                << int(colour.blue)
-                << '\n';
-    }
+    return {
+      header,
+      info,
+      colours,
+      pixels
+    };
   }
 
-  void get_pbmp_data(std::basic_ifstream<std::byte>& raw_data)
+  void write_bmp_data(std::basic_ofstream<std::byte>& raw_data, const std::vector<pal::colour>& colours, const std::vector<std::byte>& pixels)
+  {
+    windows_bmp_header header{};
+    header.tag = windows_bmp_tag;
+    header.reserved1 = 0;
+    header.reserved2 = 0;
+    header.offset = sizeof(header) + sizeof(windows_bmp_info) + int(colours.size()) * sizeof(pal::colour);
+
+    windows_bmp_info info{0};
+    info.info_size = sizeof(info);
+    info.width = 256;
+    info.height = 256;
+    info.planes = 1;
+    info.bit_depth = 8;
+    info.compression = 0;
+    info.image_size = 256 * 256;
+
+    const auto num_pixels = info.width * info.height * (info.bit_depth / 8);
+
+    if (pixels.size() != num_pixels)
+    {
+      throw std::invalid_argument("The pixels vector does not have the correct number of pixels.");
+    }
+
+    header.file_size = header.offset + num_pixels;
+
+    raw_data.write(reinterpret_cast<std::byte*>(&header), sizeof(header));
+    raw_data.write(reinterpret_cast<std::byte*>(&info), sizeof(info));
+
+    for (auto& colour : colours)
+    {
+      std::array<std::byte, 4> quad{ colour.blue, colour.green, colour.red, colour.flags };
+      raw_data.write(quad.data(), sizeof(quad));
+    }
+
+    raw_data.write(pixels.data(), pixels.size());
+  }
+
+  pbmp_data get_pbmp_data(std::basic_ifstream<std::byte>& raw_data)
   {
     std::array<std::byte, 4> header{};
     endian::little_uint32_t file_size{};
@@ -189,6 +234,13 @@ namespace darkstar::bmp
         raw_data.seekg(chunk_size, std::ios::cur);
       }
     }
+
+    return {
+      bmp_header,
+      detail_levels,
+      palette_index,
+      pixels
+    };
   }
 }
 
