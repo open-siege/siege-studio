@@ -58,16 +58,11 @@ namespace darkstar::pal
   struct palette
   {
     std::array<colour, 256> colours;
-    std::array<colour, 256> shade_map;
-    std::array<colour, 256> haze_map;
-    std::array<colour, 256> trans_map;
-
     endian::little_uint32_t index;
     endian::little_uint32_t type;
   };
 
-
-  void get_pal_data(std::basic_ifstream<std::byte>& raw_data)
+  std::vector<colour> get_pal_data(std::basic_ifstream<std::byte>& raw_data)
   {
     std::array<std::byte, 4> header{};
     endian::little_uint32_t file_size{};
@@ -123,25 +118,13 @@ namespace darkstar::pal
       }
     }
 
-    for (auto& colour : colours)
-    {
-      std::cout << "#"
-                << std::setfill('0')
-                << std::setw(2)
-                << std::hex
-                << int(colour.red)
-                << std::setw(2)
-                << int(colour.green)
-                << std::setw(2)
-                << int(colour.blue)
-                << '\n';
-    }
+    return colours;
   }
 
-  void get_ppl_data(std::basic_ifstream<std::byte>& raw_data)
+  std::vector<palette> get_ppl_data(std::basic_ifstream<std::byte>& raw_data)
   {
     std::array<std::byte, 4> header{};
-    endian::little_int32_t num_palettes{};
+    palette_info info{};
 
     raw_data.read(header.data(), sizeof(header));
 
@@ -150,7 +133,13 @@ namespace darkstar::pal
       throw std::invalid_argument("File data is not PPL as expected.");
     }
 
-    raw_data.read(reinterpret_cast<std::byte*>(&num_palettes), sizeof(num_palettes));
+    raw_data.read(reinterpret_cast<std::byte*>(&info), sizeof(info));
+
+    std::vector<palette> results(info.palette_count);
+
+    raw_data.read(reinterpret_cast<std::byte*>(results.data()), results.size() * sizeof(palette));
+
+    return results;
   }
 }// namespace darkstar::pal
 
