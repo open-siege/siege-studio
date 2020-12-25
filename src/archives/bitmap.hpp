@@ -123,7 +123,7 @@ namespace darkstar::bmp
     {
       std::array<std::byte, 4> quad{};
       raw_data.read(quad.data(), sizeof(quad));
-      colours.emplace_back(pal::colour{quad[2], quad[1], quad[0], quad[3]});
+      colours.emplace_back(pal::colour{quad[2], quad[1], quad[0], std::byte{255}});
     }
 
     const auto num_pixels = info.width * info.height * (info.bit_depth / 8);
