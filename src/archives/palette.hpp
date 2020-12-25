@@ -40,6 +40,17 @@ namespace darkstar::pal
     std::byte flags;
   };
 
+  // A big thanks to https://stackoverflow.com/questions/5392061/algorithm-to-check-similarity-of-colors and
+  // https://www.compuphase.com/cmetric.htm
+  double colour_distance(const colour& e1, const colour& e2)
+  {
+    long rmean = ((long)e1.red + (long)e2.red) / 2;
+    long r = (long)e1.red - (long)e2.red;
+    long g = (long)e1.green - (long)e2.green;
+    long b = (long)e1.blue - (long)e2.blue;
+    return sqrt((((512 + rmean) * r * r) >> 8) + 4 * g * g + (((767 - rmean) * b * b) >> 8));
+  }
+
   struct palette_header
   {
     endian::big_int16_t version;
