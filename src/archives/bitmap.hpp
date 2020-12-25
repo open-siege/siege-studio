@@ -28,6 +28,8 @@ namespace darkstar::bmp
 
   constexpr file_tag pbmp_tag = to_tag({ 'P', 'B', 'M', 'P' });
 
+  constexpr file_tag pba_tag = to_tag({ 'P', 'B', 'M', 'A' });
+
   constexpr file_tag header_tag = to_tag({ 'h', 'e', 'a', 'd' });
 
   constexpr file_tag data_tag = to_tag({ 'd', 'a', 't', 'a' });
@@ -138,7 +140,7 @@ namespace darkstar::bmp
     };
   }
 
-  void write_bmp_data(std::basic_ofstream<std::byte>& raw_data, const std::vector<pal::colour>& colours, const std::vector<std::byte>& pixels)
+  void write_bmp_data(std::basic_ofstream<std::byte>& raw_data, std::int32_t width, std::int32_t height, const std::vector<pal::colour>& colours, const std::vector<std::byte>& pixels)
   {
     windows_bmp_header header{};
     header.tag = windows_bmp_tag;
@@ -148,12 +150,12 @@ namespace darkstar::bmp
 
     windows_bmp_info info{0};
     info.info_size = sizeof(info);
-    info.width = 256;
-    info.height = 256;
+    info.width = width;
+    info.height = height;
     info.planes = 1;
     info.bit_depth = 8;
     info.compression = 0;
-    info.image_size = 256 * 256;
+    info.image_size = width * height;
 
     const auto num_pixels = info.width * info.height * (info.bit_depth / 8);
 
@@ -178,6 +180,7 @@ namespace darkstar::bmp
 
   pbmp_data get_pbmp_data(std::basic_ifstream<std::byte>& raw_data)
   {
+    const auto start = std::size_t(raw_data.tellg());
     std::array<std::byte, 4> header{};
     endian::little_uint32_t file_size{};
 
@@ -194,7 +197,9 @@ namespace darkstar::bmp
     endian::little_uint32_t palette_index{};
     std::vector<std::byte> pixels;
 
-    while (!raw_data.eof())
+    auto end = start + file_size + sizeof(header) + sizeof(file_size) + sizeof(std::int32_t) + sizeof(std::array<std::int32_t, 6>);
+
+    while (std::size_t(raw_data.tellg()) < end)
     {
       std::array<std::byte, 4> chunk_header{};
       endian::little_uint32_t chunk_size{};
@@ -241,6 +246,85 @@ namespace darkstar::bmp
       palette_index,
       pixels
     };
+  }
+
+  void write_pbmp_data(std::basic_ofstream<std::byte>& raw_data, std::int32_t width, std::int32_t height, const std::vector<pal::colour>& colours, const std::vector<std::byte>& pixels)
+  {
+    raw_data.write(pbmp_tag.data(), sizeof(pbmp_tag));
+
+    auto file_size_pos = raw_data.tellp();
+
+    endian::little_int32_t file_size = 0;
+    raw_data.write(reinterpret_cast<std::byte*>(&file_size), sizeof(file_size));
+
+    raw_data.write(header_tag.data(), sizeof(header_tag));
+    endian::little_int32_t header_size = sizeof(pbmp_header);
+    raw_data.write(reinterpret_cast<std::byte*>(&header_size), sizeof(header_size));
+    pbmp_header header{};
+    header.version = 3;
+    header.width = width;
+    header.height = height;
+    header.bit_depth = 8;
+    header.flags = 8;
+
+    raw_data.write(reinterpret_cast<std::byte*>(&header), sizeof(header));
+
+    auto pal_bytes = pal::write_pal_data(raw_data, colours);
+
+    raw_data.write(data_tag.data(), sizeof(data_tag));
+    header_size = std::int32_t(pixels.size());
+    raw_data.write(reinterpret_cast<std::byte*>(&header_size), sizeof(header_size));
+    raw_data.write(pixels.data(), pixels.size());
+
+    raw_data.write(detail_tag.data(), sizeof(detail_tag));
+    header_size = sizeof(std::int32_t);
+    raw_data.write(reinterpret_cast<std::byte*>(&header_size), sizeof(header_size));
+    endian::little_int32_t num_details = 1;
+    raw_data.write(reinterpret_cast<std::byte*>(&num_details), sizeof(num_details));
+
+    raw_data.write(palette_tag.data(), sizeof(palette_tag));
+    header_size = sizeof(std::int32_t);
+    raw_data.write(reinterpret_cast<std::byte*>(&header_size), sizeof(header_size));
+    endian::little_int32_t palette_index = 1;
+    raw_data.write(reinterpret_cast<std::byte*>(&palette_index), sizeof(palette_index));
+
+    raw_data.seekp(file_size_pos, std::ios::beg);
+
+    file_size = std::int32_t(sizeof(std::int32_t) + sizeof(pbmp_header) + pal_bytes + sizeof(std::array<std::int32_t, 2>) + pixels.size());
+    raw_data.write(reinterpret_cast<std::byte*>(&file_size), sizeof(file_size));
+  }
+
+  std::vector<pbmp_data> get_pba_data(std::basic_ifstream<std::byte>& raw_data)
+  {
+    std::vector<pbmp_data> results;
+
+    std::array<std::byte, 4> header{};
+    endian::little_uint32_t count{};
+
+    raw_data.read(header.data(), sizeof(header));
+    raw_data.read(reinterpret_cast<std::byte*>(&count), sizeof(count));
+
+    if (header != pba_tag)
+    {
+      throw std::invalid_argument("File data is not PBA based.");
+    }
+
+    raw_data.read(header.data(), sizeof(header));
+
+    raw_data.read(reinterpret_cast<std::byte*>(&count), sizeof(count));
+
+    // Count appears twice in the files. Or it means something else. Haven't seen a file where it is something else.
+    raw_data.read(reinterpret_cast<std::byte*>(&count), sizeof(count));
+    raw_data.read(reinterpret_cast<std::byte*>(&count), sizeof(count));
+
+    results.reserve(count);
+
+    for (auto i = 0u; i < count; ++i)
+    {
+      results.emplace_back(get_pbmp_data(raw_data));
+    }
+
+    return results;
   }
 }
 
