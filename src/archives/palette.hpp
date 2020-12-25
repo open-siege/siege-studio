@@ -42,7 +42,7 @@ namespace darkstar::pal
 
   struct palette_header
   {
-    endian::little_int16_t version;
+    endian::big_int16_t version;
     endian::little_int16_t colour_count;
   };
 
@@ -70,6 +70,9 @@ namespace darkstar::pal
 
     raw_data.read(header.data(), sizeof(header));
     raw_data.read(reinterpret_cast<std::byte*>(&file_size), sizeof(file_size));
+
+    const auto start = std::size_t(raw_data.tellg());
+
     raw_data.read(sub_header.data(), sizeof(sub_header));
 
     if (header != riff_tag)
@@ -84,7 +87,9 @@ namespace darkstar::pal
 
     std::vector<colour> colours;
 
-    while (!raw_data.eof())
+    const auto end = start + file_size + sizeof(header) + sizeof(file_size);
+
+    while (std::size_t(raw_data.tellg()) < end)
     {
       std::array<std::byte, 4> chunk_header{};
       endian::little_uint32_t chunk_size{};
@@ -119,6 +124,29 @@ namespace darkstar::pal
     }
 
     return colours;
+  }
+
+  std::int32_t write_pal_data(std::basic_ofstream<std::byte>& raw_data, const std::vector<colour>& colours)
+  {
+    raw_data.write(riff_tag.data(), sizeof(riff_tag));
+
+    endian::little_int32_t file_size = static_cast<int32_t>(sizeof(std::array<std::int32_t, 3>) + sizeof(palette_header) + sizeof(colour) * colours.size());
+    raw_data.write(reinterpret_cast<std::byte*>(&file_size), sizeof(file_size));
+    raw_data.write(pal_tag.data(), sizeof(pal_tag));
+
+    raw_data.write(data_tag.data(), sizeof(data_tag));
+
+    endian::little_int32_t data_size = static_cast<int32_t>(sizeof(palette_header) + sizeof(colour) * colours.size());
+    raw_data.write(reinterpret_cast<std::byte*>(&data_size), sizeof(data_size));
+
+    palette_header header{};
+    header.version = 3;
+    header.colour_count = static_cast<std::int16_t>(colours.size());
+
+    raw_data.write(reinterpret_cast<std::byte*>(&header), sizeof(header));
+    raw_data.write(reinterpret_cast<const std::byte*>(colours.data()), sizeof(colour) * colours.size());
+
+    return sizeof(riff_tag) + sizeof(file_size) + file_size;
   }
 
   std::vector<palette> get_ppl_data(std::basic_ifstream<std::byte>& raw_data)
