@@ -11,6 +11,19 @@ namespace shared
 {
   namespace fs = std::filesystem;
 
+  template <std::size_t Count>
+  constexpr std::array<std::byte, Count> to_tag(const std::array<std::uint8_t, Count> values)
+  {
+    std::array<std::byte, Count> result{};
+
+    for (auto i = 0u; i < values.size(); i++)
+    {
+      result[i] = std::byte{ values[i] };
+    }
+
+    return result;
+  }
+
   template<char Delimiter>
   class delimited_string : public std::string
   {

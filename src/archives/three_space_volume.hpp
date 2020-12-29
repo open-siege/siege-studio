@@ -8,13 +8,30 @@
 #include <utility>
 #include <string>
 
+#include "archive.hpp"
 #include "endian_arithmetic.hpp"
 
 namespace three_space::vol
 {
   namespace endian = boost::endian;
 
-  void get_data(std::basic_ifstream<std::byte>& raw_data)
+  constexpr auto rmf_tag_0 = shared::to_tag<4>({ 0x00, 0x01, 0x05, 0x07 });
+
+  constexpr auto rmf_tag_1 = shared::to_tag<4>({ 0x00, 0x01, 0x06, 0x07 });
+
+  constexpr auto rmf_tag_2 = shared::to_tag<4>({ 0x00, 0x02, 0x04, 0x07 });
+
+  constexpr auto rmf_tag_3 = shared::to_tag<4>({ 0x01, 0x00, 0x00, 0x00 });
+
+  constexpr auto rmf_tag_4 = shared::to_tag<4>({ 0x01, 0x04, 0x06, 0x07 });
+
+  constexpr auto rmf_tag_5 = shared::to_tag<4>({ 0x00, 0x01, 0x05, 0x06 });
+
+  constexpr auto rmf_tag_6 = shared::to_tag<4>({ 0x00, 0x01, 0x04, 0x07 });
+
+  constexpr auto rmf_tag_7 = shared::to_tag<4>({ 0x03, 0x04, 0x05, 0x07 });
+
+  void get_rmf_data(std::basic_ifstream<std::byte>& raw_data)
   {
     std::array<std::byte, 6> header{};
     raw_data.read(header.data(), sizeof(header));
@@ -201,6 +218,43 @@ namespace three_space::vol
     }
   }
 
+  struct rmf_file_archive : shared::archive::file_archive
+  {
+    bool stream_is_supported(std::basic_istream<std::byte>& stream) override
+    {
+      std::array<std::byte, 4> tag{};
+      stream.read(tag.data(), sizeof(tag));
+
+      stream.seekg(-int(sizeof(tag)), std::ios::cur);
+
+      return tag == tbv_tag;
+    }
+
+    std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> get_content_info(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) override
+    {
+      std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> results;
+
+      return results;
+    }
+
+    void set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info) override
+    {
+      // TODO this actually needs to skip passed the header before the file contents
+      if (int(stream.tellg()) != info.offset)
+      {
+        stream.seekg(info.offset, std::ios::beg);
+      }
+    }
+
+    void extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output) override
+    {
+      set_stream_position(stream, info);
+
+      std::copy_n(std::istreambuf_iterator<std::byte>(stream),
+                  info.size,
+                  std::ostreambuf_iterator<std::byte>(output));
+    }
+  };
 
 }// namespace three_space::vol
 
