@@ -1,7 +1,3 @@
-//
-// Created by Matthew on 2020/10/05.
-//
-#include "make-cpp-great-again.hpp"
 #include "dts_renderable_shape.hpp"
 #include <map>
 #include <variant>

@@ -15,6 +15,62 @@ namespace darkstar::bmp
   namespace endian = boost::endian;
   using file_tag = std::array<std::byte, 4>;
 
+  // TODO extract a set of colour remap functions out of this code.
+  //  for (auto i = 0; i < pals.size(); ++i)
+  //  {
+  //    if (pals[i].index == bmp_data.palette_index)
+  //    {
+  //      std::reverse(bmp_data.pixels.begin(), bmp_data.pixels.end());
+  //      for (auto r = bmp_data.pixels.begin(); r != bmp_data.pixels.end(); r += bmp_data.bmp_header.width)
+  //      {
+  //        std::reverse(r, r + bmp_data.bmp_header.width);
+  //      }
+  //      auto new_colours = std::vector(pals[i].colours.begin(), pals[i].colours.end());
+  //
+  //      auto& other_colours = other_bmp_data.colours;
+  //
+  //
+  //      for (auto x = 0u; x < new_colours.size(); x++)
+  //      {
+  //        auto& colour = new_colours[x];
+  //        auto result = std::find_if(other_colours.begin(), other_colours.end(), [&](auto& other) {
+  //          return other.red == colour.red && other.green == colour.green && other.blue == colour.blue;
+  //        });
+  //
+  //        if (result != other_colours.end())
+  //        {
+  //          auto other_index = std::distance(other_colours.begin(), result);
+  //          std::cout << "other index is " << other_index << '\n';
+  //          palette_map[x] = (unsigned int)(other_index);
+  //        }
+  //        else
+  //        {
+  //          std::map<double, unsigned int> distances;
+  //          std::cout << "Colour is: " << int(colour.red) << " " << int(colour.green) << " " << int(colour.blue) << '\n';
+  //          for (auto y = 0u; y < other_colours.size(); y++)
+  //          {
+  //            auto& other = other_colours[y];
+  //            //  std::cout << "Other is is: " << int(other.red) << " " << int(other.green) << " " << int(other.blue) << '\n';
+  //            auto distance = darkstar::pal::colour_distance(colour, other);
+  //            distances[distance] = y;
+  //          }
+  //
+  //          palette_map[x] = distances.begin()->second;
+  //        }
+  //      }
+  //
+  //      for (auto x = 0u; x < bmp_data.pixels.size(); ++x)
+  //      {
+  //        auto new_index = palette_map[(unsigned int)(bmp_data.pixels[x])];
+  //        bmp_data.pixels[x] = std::byte(new_index);
+  //      }
+  //
+  //      std::basic_ofstream<std::byte> test{ "test-" + std::to_string(i) + ".bmp", std::ios::binary };
+  //      darkstar::bmp::write_bmp_data(test, bmp_data.bmp_header.width, bmp_data.bmp_header.height, std::vector(other_colours.size(), darkstar::pal::colour{}), bmp_data.pixels);
+  //    }
+  //  }
+
+
   constexpr file_tag to_tag(const std::array<std::uint8_t, 4> values)
   {
     file_tag result{};
