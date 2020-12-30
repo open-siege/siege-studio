@@ -12,6 +12,19 @@ namespace shared
   namespace fs = std::filesystem;
 
   template <std::size_t Count>
+  constexpr std::array<std::byte, Count> to_tag(const char* values)
+  {
+    std::array<std::byte, Count> result{};
+
+    for (auto i = 0u; i < Count; i++)
+    {
+      result[i] = std::byte(values[i]);
+    }
+
+    return result;
+  }
+
+  template <std::size_t Count>
   constexpr std::array<std::byte, Count> to_tag(const std::array<std::uint8_t, Count> values)
   {
     std::array<std::byte, Count> result{};
