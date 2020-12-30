@@ -11,7 +11,7 @@
 
 namespace darkstar::vol
 {
-  std::tuple<volume_version, std::size_t, std::optional<std::size_t>> get_file_list_offsets(std::basic_ifstream<std::byte>& raw_data)
+  std::tuple<volume_version, std::size_t, std::optional<std::size_t>> get_file_list_offsets(std::basic_istream<std::byte>& raw_data)
   {
     volume_header header{};
 
@@ -49,7 +49,7 @@ namespace darkstar::vol
   }
 
 
-  std::pair<volume_version, std::vector<std::string>> get_file_names(std::basic_ifstream<std::byte>& raw_data)
+  std::pair<volume_version, std::vector<std::string>> get_file_names(std::basic_istream<std::byte>& raw_data)
   {
     auto [volume_type, buffer_size, amount_to_skip] = get_file_list_offsets(raw_data);
     std::vector<char> raw_chars(buffer_size);
@@ -80,7 +80,7 @@ namespace darkstar::vol
     return std::make_pair(volume_type, results);
   }
 
-  std::vector<file_info> get_file_metadata(std::basic_ifstream<std::byte>& raw_data)
+  std::vector<file_info> get_file_metadata(std::basic_istream<std::byte>& raw_data)
   {
     auto [volume_type, filenames] = get_file_names(raw_data);
     file_index_header header{};
@@ -155,7 +155,7 @@ namespace darkstar::vol
     return results;
   }
 
-  void extract_files(std::basic_ifstream<std::byte>& volume, std::string_view volume_filename, std::string_view output_dir, file_info& some_file)
+  void extract_files(std::basic_istream<std::byte>& volume, std::string_view volume_filename, std::string_view output_dir, file_info& some_file)
   {
     auto new_path = std::filesystem::path(output_dir) / some_file.filename;
 
