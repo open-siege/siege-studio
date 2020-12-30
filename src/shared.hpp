@@ -49,7 +49,7 @@ namespace shared
     return is;
   }
 
-  bool ends_with(const std::string& main_str, const std::string& to_match)
+  inline bool ends_with(const std::string& main_str, const std::string& to_match)
   {
     if (main_str.size() >= to_match.size() && main_str.compare(main_str.size() - to_match.size(), to_match.size(), to_match) == 0)
     {

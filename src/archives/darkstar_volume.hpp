@@ -7,6 +7,7 @@
 #include <optional>
 #include <utility>
 
+#include "archive.hpp"
 #include "endian_arithmetic.hpp"
 
 namespace darkstar::vol
@@ -133,13 +134,67 @@ namespace darkstar::vol
 
   static_assert(sizeof(old_file_header) == sizeof(std::array<std::byte, 14>));
 
-  std::tuple<volume_version, std::size_t, std::optional<std::size_t>> get_file_list_offsets(std::basic_ifstream<std::byte>& raw_data);
+  std::tuple<volume_version, std::size_t, std::optional<std::size_t>> get_file_list_offsets(std::basic_istream<std::byte>& raw_data);
 
-  std::pair<volume_version, std::vector<std::string>> get_file_names(std::basic_ifstream<std::byte>& raw_data);
+  std::pair<volume_version, std::vector<std::string>> get_file_names(std::basic_istream<std::byte>& raw_data);
 
-  std::vector<file_info> get_file_metadata(std::basic_ifstream<std::byte>& raw_data);
+  std::vector<file_info> get_file_metadata(std::basic_istream<std::byte>& raw_data);
 
-  void extract_files(std::basic_ifstream<std::byte>& volume, std::string_view volume_filename, std::string_view output_dir, file_info& some_file);
+  void extract_files(std::basic_istream<std::byte>& volume, std::string_view volume_filename, std::string_view output_dir, file_info& some_file);
+
+  struct vol_file_archive : shared::archive::file_archive
+  {
+    using folder_info = shared::archive::folder_info;
+
+    bool stream_is_supported(std::basic_istream<std::byte>& stream) override
+    {
+      std::array<std::byte, 4> tag{};
+      stream.read(tag.data(), sizeof(tag));
+
+      stream.seekg(-int(sizeof(tag)), std::ios::cur);
+
+      return tag == vol_file_tag || tag == alt_vol_file_tag || tag == old_vol_file_tag;
+    }
+
+    std::vector<std::variant<folder_info, shared::archive::file_info>> get_content_info(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) override
+    {
+      std::vector<std::variant<folder_info, shared::archive::file_info>> results;
+
+      auto raw_results = get_file_metadata(stream);
+
+      results.reserve(raw_results.size());
+
+      std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(results), [&](const file_info& value) {
+        shared::archive::file_info info{};
+        info.filename = value.filename;
+        info.offset = value.offset;
+        info.size = value.size;
+        info.compression_type = shared::archive::compression_type(value.compression_type);
+        info.folder_path = archive_or_folder_path;
+        return info;
+      });
+
+      return results;
+    }
+
+    void set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info) override
+    {
+      // TODO this actually needs to skip passed the header before the file contents
+      if (int(stream.tellg()) != info.offset)
+      {
+        stream.seekg(info.offset, std::ios::beg);
+      }
+    }
+
+    void extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output) override
+    {
+      set_stream_position(stream, info);
+
+      std::copy_n(std::istreambuf_iterator<std::byte>(stream),
+        info.size,
+        std::ostreambuf_iterator<std::byte>(output));
+    }
+  };
 }// namespace darkstar::vol
 
 

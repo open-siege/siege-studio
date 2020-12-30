@@ -18,7 +18,7 @@ namespace studio::fs
 
   struct file_system_archive : shared::archive::file_archive
   {
-    std::map<std::string, std::unique_ptr<shared::archive::file_archive>> archive_types;
+    std::multimap<std::string, std::unique_ptr<shared::archive::file_archive>> archive_types;
 
     std::locale default_locale;
 
@@ -48,13 +48,15 @@ namespace studio::fs
       auto ext = archive_path.filename().extension().string();
       std::transform(ext.begin(), ext.end(), ext.begin(), [&](char c) { return std::tolower(c, default_locale); });
 
-      if (auto archive_type = archive_types.find(ext); archive_type != archive_types.end())
+      auto archive_type = archive_types.equal_range(ext);
+
+      for (auto it = archive_type.first; it != archive_type.second; ++it)
       {
         auto file_stream = std::basic_ifstream<std::byte>{ archive_path, std::ios::binary };
 
-        if (archive_type->second->stream_is_supported(file_stream))
+        if (it->second->stream_is_supported(file_stream))
         {
-          return archive_type->second->get_content_info(file_stream, folder_path);
+          return it->second->get_content_info(file_stream, folder_path);
         }
       }
 
@@ -72,16 +74,21 @@ namespace studio::fs
           ext = item.path().filename().extension().string();
           std::transform(ext.begin(), ext.end(), ext.begin(), [&](auto c) { return std::tolower(c, default_locale); });
 
-          if (auto archive_type = archive_types.find(ext); archive_type != archive_types.end())
-          {
-            auto file_stream = std::basic_ifstream<std::byte>{ item, std::ios::binary };
+          archive_type = archive_types.equal_range(ext);
 
-            if (archive_type->second->stream_is_supported(file_stream))
+          if (archive_type.first != archive_type.second)
+          {
+            for (auto it = archive_type.first; it != archive_type.second; ++it)
             {
-              shared::archive::folder_info info{};
-              info.name = item.path().filename().string();
-              info.full_path = item.path();
-              files.emplace_back(info);
+              auto file_stream = std::basic_ifstream<std::byte>{ item, std::ios::binary };
+
+              if (it->second->stream_is_supported(file_stream))
+              {
+                shared::archive::folder_info info{};
+                info.name = item.path().filename().string();
+                info.full_path = item.path();
+                files.emplace_back(info);
+              }
             }
           }
           else
