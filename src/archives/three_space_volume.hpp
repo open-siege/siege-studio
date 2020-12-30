@@ -26,6 +26,10 @@ namespace three_space::vol
     shared::to_tag<4>({ 0x03, 0x04, 0x05, 0x07 })
   };
 
+  constexpr auto dyn_tag = shared::to_tag<20>("Dynamix Volume File");
+
+  constexpr auto vol_tag = shared::to_tag<4>({ 'V', 'O', 'L', 'N' });
+
   struct rmf_file_header
   {
     endian::little_int32_t checksum;
@@ -72,12 +76,9 @@ namespace three_space::vol
     auto volume_count = static_cast<int>(header[header.size() - 2]);
 
     std::array<char, 14> filename{ '\0' };
-    std::cout << volume_count << " volumes are present" << '\n';
 
     auto real_path = archive_path.parent_path().parent_path();
-
     auto map_filename = archive_path.parent_path().filename().string();
-
     auto volume_filename = archive_path.filename().string();
 
     for (auto i = 0; i < volume_count; ++i)
@@ -94,7 +95,7 @@ namespace three_space::vol
         raw_data.read(reinterpret_cast<std::byte*>(headers.data()), file_count * sizeof(rmf_file_header));
 
         std::sort(headers.begin(), headers.end(), [](const auto& a, const auto& b) {
-               return a.offset < b.offset;
+          return a.offset < b.offset;
         });
 
         results.reserve(file_count);
@@ -134,43 +135,51 @@ namespace three_space::vol
     return results;
   }
 
-  void get_dyn_data(std::basic_istream<std::byte>& raw_data)
+  std::vector<shared::archive::file_info> get_dyn_data(std::basic_istream<std::byte>& raw_data)
   {
-    std::array<char, 20> header{};
-    raw_data.read(reinterpret_cast<std::byte*>(header.data()), sizeof(header));
+    std::array<std::byte, 20> header{};
+    raw_data.read(header.data(), sizeof(header));
+
+    if (header != dyn_tag)
+    {
+      throw std::invalid_argument("File was is not a DYN volume, as expected.");
+    }
+
     raw_data.seekg(12, std::ios::cur);
 
     endian::little_uint32_t file_count{};
 
     raw_data.read(reinterpret_cast<std::byte*>(&file_count), sizeof(file_count));
 
-    std::cout << int(file_count) << " files present." << '\n';
-
+    // The section being skipped appears to be an array of checksums.
+    // TODO verify if the checksums are crc32.
     raw_data.seekg(file_count * sizeof(std::array<std::byte, 4>), std::ios::cur);
 
-    std::array<char, 13> child_filename{ '\0' };
+    std::array<char, 14> child_filename{ '\0' };
+
+    std::vector<shared::archive::file_info> results;
+    results.reserve(file_count);
 
     for (auto x = 0u; x < file_count; ++x)
     {
-      raw_data.read(reinterpret_cast<std::byte*>(child_filename.data()), child_filename.size());
+      shared::archive::file_info info{};
+
+      info.compression_type = shared::archive::compression_type::none;
+      info.offset = std::size_t(raw_data.tellg());
+
+      raw_data.read(reinterpret_cast<std::byte*>(child_filename.data()), child_filename.size() - 1);
 
       endian::little_uint32_t file_size{};
 
       raw_data.read(reinterpret_cast<std::byte*>(&file_size), sizeof(file_size));
 
-      auto new_path = std::filesystem::path("volume") / child_filename.data();
-      std::cout << std::string(child_filename.data()) << '\n';
+      info.filename = child_filename.data();
+      info.size = file_size;
 
-      auto new_file = std::basic_ofstream<std::byte>{ new_path, std::ios::binary };
+      results.emplace_back(info);
+      raw_data.seekg(file_size, std::ios::cur);
 
       auto current_position = static_cast<int>(raw_data.tellg());
-      std::copy_n(std::istreambuf_iterator<std::byte>(raw_data),
-        file_size,
-        std::ostreambuf_iterator<std::byte>(new_file));
-
-      current_position = current_position + file_size;
-
-      raw_data.seekg(current_position, std::ios::beg);
 
       while ((current_position % 4) != 0)
       {
@@ -178,12 +187,19 @@ namespace three_space::vol
         raw_data.seekg(1, std::ios::cur);
       }
     }
+
+    return results;
   }
 
-  void get_vol_data(std::basic_istream<std::byte>& raw_data)
+  std::vector<std::string> get_vol_folders(std::basic_istream<std::byte>& raw_data)
   {
-    std::array<char, 4> header{};
+    std::array<std::byte, 4> header{};
     raw_data.read(reinterpret_cast<std::byte*>(header.data()), sizeof(header));
+
+    if (header != vol_tag)
+    {
+      throw std::invalid_argument("File was is not a VOL file, as expected.");
+    }
 
     raw_data.seekg(6, std::ios::cur);
 
@@ -194,69 +210,91 @@ namespace three_space::vol
     std::vector<char> raw_folders(num_chars, '\0');
     raw_data.read(reinterpret_cast<std::byte*>(raw_folders.data()), raw_folders.size());
 
-    std::vector<std::string_view> folders;
+    std::vector<std::string> folders;
     folders.reserve(raw_folders.size() / 5);
 
     size_t i = 0u;
     while (i < raw_folders.size())
     {
       folders.emplace_back(raw_folders.data() + i);
+
+      if (folders.back().back() == '\\')
+      {
+        folders.back().pop_back();
+      }
+
       i += strlen(raw_folders.data() + i) + 1;
     }
 
-    std::array<endian::little_uint16_t, 3> info{};
+    return folders;
+  }
 
-    raw_data.read(reinterpret_cast<std::byte*>(info.data()), sizeof(info));
+  std::vector<shared::archive::file_info> get_vol_data(std::basic_istream<std::byte>& raw_data, const std::filesystem::path& archive_path)
+  {
+    const auto folders = get_vol_folders(raw_data);
 
-    const auto start_index = int(raw_data.tellg()) - sizeof(endian::little_uint16_t);
-    const auto end_index = start_index + info[1];
+    auto real_path = archive_path.parent_path().parent_path();
+    auto volume_filename = archive_path.parent_path().filename().string();
+    auto folder_name = archive_path.filename().string();
 
-    std::vector<std::tuple<std::array<char, 14>, std::uint8_t, endian::little_uint32_t>> files;
+    endian::little_uint16_t num_files;
+    raw_data.read(reinterpret_cast<std::byte*>(&num_files), sizeof(num_files));
+
+    endian::little_uint32_t header_size;
+    raw_data.read(reinterpret_cast<std::byte*>(&header_size), sizeof(header_size));
+
+    std::vector<shared::archive::file_info> files;
+    files.reserve(num_files);
 
     std::array<char, 14> filename{ '\0' };
-    while (int(raw_data.tellg()) < end_index)
+
+    for (auto i = 0u; i < num_files; ++i)
     {
+      shared::archive::file_info info{};
+
       raw_data.read(reinterpret_cast<std::byte*>(filename.data()), filename.size() - 1);
-
-      std::cout << "Filename is " << filename.data() << '\n';
-
       std::uint8_t folder_index;
       raw_data.read(reinterpret_cast<std::byte*>(&folder_index), sizeof(folder_index));
 
-      endian::little_uint32_t file_index;
-      raw_data.read(reinterpret_cast<std::byte*>(&file_index), sizeof(file_index));
+      endian::little_uint32_t offset;
+      raw_data.read(reinterpret_cast<std::byte*>(&offset), sizeof(offset));
 
-      files.emplace_back(filename, folder_index, file_index);
+      if (folder_index > folders.size())
+      {
+        continue;
+      }
+
+      info.folder_path = folders[folder_index];
+
+      if (folder_name == info.folder_path.string())
+      {
+        info.compression_type = shared::archive::compression_type::none;
+        info.offset = offset;
+        info.filename = filename.data();
+
+        files.emplace_back(info);
+      }
     }
-
-    raw_data.seekg(1, std::ios::cur);
-
-    std::cout << "Number of files are " << files.size() << '\n';
 
     for (auto& file : files)
     {
-      auto& [child_filename, folder_index, file_index] = file;
-      auto& folder_name = folders[folder_index];
-
-      raw_data.seekg(file_index, std::ios::beg);
+      raw_data.seekg(file.offset, std::ios::beg);
 
       std::byte entry{};
       raw_data.read(&entry, sizeof(entry));
 
+      if (entry != std::byte{ 0x02 })
+      {
+        throw std::invalid_argument("VOL file has corrupted data.");
+      }
+
       std::array<endian::little_uint32_t, 2> file_info{};
       raw_data.read(reinterpret_cast<std::byte*>(&file_info), sizeof(file_info));
 
-      auto new_path = std::filesystem::path("volume") / folder_name / child_filename.data();
-
-      std::filesystem::create_directory(std::filesystem::path("volume") / folder_name);
-
-      std::cout << "Extracting " << child_filename.data() << " to " << new_path << '\n';
-      auto new_file = std::basic_ofstream<std::byte>{ new_path, std::ios::binary };
-
-      std::copy_n(std::istreambuf_iterator<std::byte>(raw_data),
-        file_info[0],
-        std::ostreambuf_iterator<std::byte>(new_file));
+      file.size = file_info[0];
     }
+
+    return files;
   }
 
   struct rmf_file_archive : shared::archive::file_archive
@@ -306,6 +344,118 @@ namespace three_space::vol
         results.reserve(raw_results.size());
 
         std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(results), [&](auto& value) {
+          return value;
+        });
+      }
+
+      return results;
+    }
+
+    void set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info) override
+    {
+      // TODO this actually needs to skip passed the header before the file contents
+      if (int(stream.tellg()) != info.offset)
+      {
+        stream.seekg(info.offset, std::ios::beg);
+      }
+    }
+
+    void extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output) override
+    {
+      set_stream_position(stream, info);
+
+      std::copy_n(std::istreambuf_iterator<std::byte>(stream),
+        info.size,
+        std::ostreambuf_iterator<std::byte>(output));
+    }
+  };
+
+  struct dyn_file_archive : shared::archive::file_archive
+  {
+    bool stream_is_supported(std::basic_istream<std::byte>& stream) override
+    {
+      std::array<std::byte, 20> tag{};
+      stream.read(tag.data(), sizeof(tag));
+
+      stream.seekg(-int(sizeof(tag)), std::ios::cur);
+
+      return tag == dyn_tag;
+    }
+
+    std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> get_content_info(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) override
+    {
+      std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> results;
+
+      auto raw_results = get_dyn_data(stream);
+
+      results.reserve(raw_results.size());
+
+      std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(results), [&](auto& value) {
+        value.folder_path = archive_or_folder_path;
+
+        return value;
+      });
+
+      return results;
+    }
+
+    void set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info) override
+    {
+      // TODO this actually needs to skip passed the header before the file contents
+      if (int(stream.tellg()) != info.offset)
+      {
+        stream.seekg(info.offset, std::ios::beg);
+      }
+    }
+
+    void extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output) override
+    {
+      set_stream_position(stream, info);
+
+      std::copy_n(std::istreambuf_iterator<std::byte>(stream),
+        info.size,
+        std::ostreambuf_iterator<std::byte>(output));
+    }
+  };
+
+  struct vol_file_archive : shared::archive::file_archive
+  {
+    bool stream_is_supported(std::basic_istream<std::byte>& stream) override
+    {
+      std::array<std::byte, 4> tag{};
+      stream.read(tag.data(), sizeof(tag));
+
+      stream.seekg(-int(sizeof(tag)), std::ios::cur);
+
+      return tag == vol_tag;
+    }
+
+    std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> get_content_info(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) override
+    {
+      std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> results;
+
+      if (std::filesystem::exists(archive_or_folder_path))
+      {
+        auto raw_results = get_vol_folders(stream);
+
+        results.reserve(raw_results.size());
+
+        std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(results), [&](auto& value) {
+          shared::archive::folder_info info{};
+          info.full_path = archive_or_folder_path / value;
+          info.name = value;
+
+          return info;
+        });
+      }
+      else
+      {
+        auto raw_results = get_vol_data(stream, archive_or_folder_path);
+
+        results.reserve(raw_results.size());
+
+        std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(results), [&](auto& value) {
+          value.folder_path = archive_or_folder_path;
           return value;
         });
       }
