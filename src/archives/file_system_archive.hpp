@@ -38,12 +38,19 @@ namespace studio::fs
     {
       std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> files;
 
-      auto ext = folder_path.filename().extension().string();
+      auto archive_path = folder_path;
+
+      while (!std::filesystem::exists(archive_path))
+      {
+        archive_path = archive_path.parent_path();
+      }
+
+      auto ext = archive_path.filename().extension().string();
       std::transform(ext.begin(), ext.end(), ext.begin(), [&](char c) { return std::tolower(c, default_locale); });
 
       if (auto archive_type = archive_types.find(ext); archive_type != archive_types.end())
       {
-        auto file_stream = std::basic_ifstream<std::byte>{ folder_path, std::ios::binary };
+        auto file_stream = std::basic_ifstream<std::byte>{ archive_path, std::ios::binary };
 
         if (archive_type->second->stream_is_supported(file_stream))
         {
