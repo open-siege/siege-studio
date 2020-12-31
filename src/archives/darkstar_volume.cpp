@@ -288,7 +288,7 @@ namespace darkstar::vol
     return tag == vol_file_tag || tag == alt_vol_file_tag || tag == old_vol_file_tag;
   }
 
-  std::vector<std::variant<folder_info, shared::archive::file_info>> vol_file_archive::get_content_info(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path)
+  std::vector<std::variant<folder_info, shared::archive::file_info>> vol_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path)
   {
     std::vector<std::variant<folder_info, shared::archive::file_info>> results;
 

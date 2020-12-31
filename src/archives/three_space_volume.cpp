@@ -315,7 +315,7 @@ namespace three_space::vol
     return result;
   }
 
-  std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> rmf_file_archive::get_content_info(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path)
+  std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> rmf_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path)
   {
     std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> results;
 
@@ -376,7 +376,7 @@ namespace three_space::vol
     return tag == dyn_tag;
   }
 
-  std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> dyn_file_archive::get_content_info(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path)
+  std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> dyn_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path)
   {
     std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> results;
 
@@ -424,7 +424,7 @@ namespace three_space::vol
     return tag == vol_tag;
   }
 
-  std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> vol_file_archive::get_content_info(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path)
+  std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> vol_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path)
   {
     std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> results;
 

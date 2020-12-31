@@ -41,7 +41,7 @@ namespace shared::archive
   {
     virtual bool stream_is_supported(std::basic_istream<std::byte>&) = 0;
 
-    virtual std::vector<std::variant<folder_info, file_info>> get_content_info(std::basic_istream<std::byte>&, std::filesystem::path) = 0;
+    virtual std::vector<std::variant<folder_info, file_info>> get_content_listing(std::basic_istream<std::byte>&, std::filesystem::path) = 0;
 
     virtual void set_stream_position(std::basic_istream<std::byte>&, const file_info&) = 0;
 

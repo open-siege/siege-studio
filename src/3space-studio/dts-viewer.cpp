@@ -4,6 +4,7 @@
 #include <map>
 #include <deque>
 #include <memory>
+#include <optional>
 
 #include <wx/wx.h>
 #include <wx/aui/aui.h>
@@ -24,12 +25,33 @@
 #include "sfml_keys.hpp"
 #include "utility.hpp"
 
+#include "archives/darkstar_volume.hpp"
+#include "archives/three_space_volume.hpp"
+#include "archives/trophy_bass_volume.hpp"
+#include "archives/file_system_archive.hpp"
+
 namespace fs = std::filesystem;
 namespace dts = darkstar::dts;
 
+using optional_istream = std::optional<std::reference_wrapper<std::basic_istream<std::byte>>>;
+
+struct tree_item_file_info : public wxTreeItemData
+{
+  shared::archive::file_info info;
+
+  explicit tree_item_file_info(shared::archive::file_info info) : info(std::move(info)) {}
+};
+
+struct tree_item_folder_info : public wxTreeItemData
+{
+  shared::archive::folder_info info;
+
+  explicit tree_item_folder_info(shared::archive::folder_info info) : info(std::move(info)) {}
+};
+
 struct shape_instance
 {
-  std::unique_ptr<renderable_shape> shape;
+  std::shared_ptr<renderable_shape> shape;
 
   glm::vec3 translation;
   dts::vector3f rotation;
@@ -72,17 +94,16 @@ std::optional<std::filesystem::path> get_shape_path(int argc, char** argv)
   return get_shape_path();
 }
 
-dts::shape_variant get_shape(std::optional<std::filesystem::path> shape_path)
+dts::shape_variant get_shape(optional_istream shape_stream)
 {
-  if (!shape_path.has_value())
+  if (!shape_stream.has_value())
   {
     return dts::shape_variant{};
   }
 
   try
   {
-    std::basic_ifstream<std::byte> input(shape_path.value(), std::ios::binary);
-    return dts::read_shape(shape_path.value(), input, std::nullopt);
+    return dts::read_shape(shape_stream->get(), std::nullopt);
   }
   catch (const std::exception& ex)
   {
@@ -173,12 +194,13 @@ void render_tree_view(const std::string& node, bool& node_visible, std::map<std:
   ImGui::Unindent(8);
 }
 
-auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext)
+auto renderer_main(optional_istream shape_stream, sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext)
 {
-  static std::map<std::optional<std::filesystem::path>, shape_instance> shape_instances;
+  //static std::map<std::optional<std::filesystem::path>, shape_instance> shape_instances;
 
-  auto instance_iterator = shape_instances.emplace(shape_path, shape_instance{ std::make_unique<dts_renderable_shape>(get_shape(shape_path)), { 0, 0, -20 }, { 115, 180, -35 } });
-  auto& instance = instance_iterator.first;
+  //auto instance_iterator = shape_instances.emplace(shape_path, shape_instance{ std::make_unique<dts_renderable_shape>(get_shape(shape_stream)), { 0, 0, -20 }, { 115, 180, -35 } });
+  auto instance = shape_instance{ std::make_shared<dts_renderable_shape>(get_shape(shape_stream)), { 0, 0, -20 }, { 115, 180, -35 } };
+  //auto& instance = instance_iterator.first;
 
   static std::map<std::string, std::function<void(shape_instance&)>> actions;
 
@@ -202,9 +224,9 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
 
   std::map<std::optional<std::string>, std::map<std::string, bool>> visible_nodes;
   std::map<std::string, std::map<std::string, bool>> visible_objects;
-  auto detail_levels = instance->second.shape->get_detail_levels();
+  auto detail_levels = instance.shape->get_detail_levels();
   std::vector<std::size_t> detail_level_indexes = { 0 };
-  auto sequences = instance->second.shape->get_sequences(detail_level_indexes);
+  auto sequences = instance.shape->get_sequences(detail_level_indexes);
 
   bool root_visible = true;
 
@@ -232,7 +254,7 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
 
         if (callback != callbacks.end())
         {
-          callback->second(instance->second);
+          callback->second(instance);
         }
       }
 
@@ -247,7 +269,7 @@ auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWi
       }
     }
 
-    auto& [shape, translation, rotation] = instance->second;
+    auto& [shape, translation, rotation] = instance;
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
@@ -388,7 +410,7 @@ wxMenuBar* create_menu_bar()
   return menuBar;
 }
 
-void create_render_view(wxWindow* panel, std::optional<std::filesystem::path> path)
+void create_render_view(wxWindow* panel, optional_istream file_stream)
 {
   auto* graphics = new wxControl(panel, -1, wxDefaultPosition, wxDefaultSize, 0);
 
@@ -423,7 +445,7 @@ void create_render_view(wxWindow* panel, std::optional<std::filesystem::path> pa
   graphics->Bind(wxEVT_IDLE, [=](auto& event) {
     graphics->Refresh();
   });
-  graphics->Bind(wxEVT_PAINT, renderer_main(path, window, graphics, gui_context));
+  graphics->Bind(wxEVT_PAINT, renderer_main(file_stream, window, graphics, gui_context));
 
   graphics->Bind(wxEVT_DESTROY, [=](auto& event) {
     delete window;
@@ -435,39 +457,15 @@ void create_render_view(wxWindow* panel, std::optional<std::filesystem::path> pa
   });
 }
 
-auto get_path_from_tree_item(wxTreeCtrl* tree_view, wxTreeItemId item, const fs::path& search_path)
-{
-  std::deque<std::filesystem::path> path_fragments;
-
-  auto parent_item = tree_view->GetItemParent(item);
-
-  do
-  {
-    if (parent_item != tree_view->GetRootItem())
-    {
-      path_fragments.emplace_front(tree_view->GetItemText(parent_item).ToAscii().data());
-      parent_item = tree_view->GetItemParent(parent_item);
-    }
-  } while (parent_item != tree_view->GetRootItem());
-
-  path_fragments.emplace_back(std::filesystem::path{ tree_view->GetItemText(item).ToAscii().data() });
-
-  auto new_path = search_path;
-
-  for (auto& path : path_fragments)
-  {
-    new_path = new_path / path;
-  }
-
-  return new_path;
-}
-
-void populate_tree_view(wxTreeCtrl* tree_view, fs::path search_path, std::optional<wxTreeItemId> parent = std::nullopt)
+void populate_tree_view(studio::fs::file_system_archive& archive,
+  wxTreeCtrl* tree_view,
+  const fs::path& search_path,
+  std::optional<wxTreeItemId> parent = std::nullopt)
 {
   using namespace std::literals;
   constexpr std::array extensions = { ".dts"sv, ".DTS"sv };
 
-  if (!fs::is_directory(search_path))
+  if (archive.is_regular_file(search_path))
   {
     return;
   }
@@ -481,31 +479,41 @@ void populate_tree_view(wxTreeCtrl* tree_view, fs::path search_path, std::option
 
   parent = parent.has_value() ? parent : tree_view->AddRoot(search_path.string());
 
-  for (auto& item : fs::directory_iterator(search_path))
-  {
-    if (item.is_directory())
-    {
-      auto new_parent = tree_view->AppendItem(parent.value(), item.path().stem().string());
+  auto files_folders = archive.get_content_listing(search_path);
 
-      if (is_root)
+  for (auto& item : files_folders)
+  {
+    std::visit([&](auto&& folder) {
+      using T = std::decay_t<decltype(folder)>;
+
+      if constexpr (std::is_same_v<T, shared::archive::folder_info>)
       {
-        populate_tree_view(tree_view, item, new_parent);
+        auto new_parent = tree_view->AppendItem(parent.value(), folder.full_path.filename().string(), -1, -1, new tree_item_folder_info(folder));
+
+        if (is_root)
+        {
+          populate_tree_view(archive, tree_view, folder.full_path, new_parent);
+        }
       }
-    }
+    },
+      item);
   }
 
-  for (auto& item : fs::directory_iterator(search_path))
+  for (auto& item : files_folders)
   {
-    if (!item.is_directory())
-    {
-      auto filename = item.path().filename().string();
-      if (std::any_of(extensions.begin(), extensions.end(), [&filename](const auto& ext) {
-            return ends_with(filename, ext);
-          }))
+    std::visit([&](auto&& file) {
+      using T = std::decay_t<decltype(file)>;
+      if constexpr (std::is_same_v<T, shared::archive::file_info>)
       {
-        tree_view->AppendItem(parent.value(), filename);
+        if (std::any_of(extensions.begin(), extensions.end(), [&file](const auto& ext) {
+              return ends_with(file.filename, ext);
+            }))
+        {
+          tree_view->AppendItem(parent.value(), file.filename, -1, -1, new tree_item_file_info(file));
+        }
       }
-    }
+    },
+      item);
   }
 
   if (is_root)
@@ -516,6 +524,17 @@ void populate_tree_view(wxTreeCtrl* tree_view, fs::path search_path, std::option
 
 int main(int argc, char** argv)
 {
+  studio::fs::file_system_archive archive;
+
+  archive.add_archive_type(".tbv", std::make_unique<trophy_bass::vol::tbv_file_archive>());
+  archive.add_archive_type(".rbx", std::make_unique<trophy_bass::vol::rbx_file_archive>());
+  archive.add_archive_type(".rmf", std::make_unique<three_space::vol::rmf_file_archive>());
+  archive.add_archive_type(".map", std::make_unique<three_space::vol::rmf_file_archive>());
+  archive.add_archive_type(".vga", std::make_unique<three_space::vol::rmf_file_archive>());
+  archive.add_archive_type(".dyn", std::make_unique<three_space::vol::dyn_file_archive>());
+  archive.add_archive_type(".vol", std::make_unique<three_space::vol::vol_file_archive>());
+  archive.add_archive_type(".vol", std::make_unique<darkstar::vol::vol_file_archive>());
+
   auto search_path = fs::current_path();
 
   wxApp::SetInitializerFunction(createApp);
@@ -538,22 +557,17 @@ int main(int argc, char** argv)
   auto* tree_view = new wxTreeCtrl(frame);
   sizer->Add(tree_view, 20, wxEXPAND, 0);
 
-  populate_tree_view(tree_view, search_path);
+  populate_tree_view(archive, tree_view, search_path);
 
-  wxAuiNotebook* notebook = new wxAuiNotebook(frame, wxID_ANY);
+  auto* notebook = new wxAuiNotebook(frame, wxID_ANY);
   auto num_elements = notebook->GetPageCount();
 
   sizer->Add(notebook, 80, wxEXPAND, 0);
 
-  auto add_element_from_file = [notebook, &num_elements](auto& new_path, bool replace_selection = false) {
-    if (fs::is_directory(new_path))
-    {
-      return;
-    }
-
-    wxPanel* panel = new wxPanel(notebook, wxID_ANY);
+  auto add_element_from_file = [notebook, &num_elements](auto new_path, auto new_stream, bool replace_selection = false) {
+    auto* panel = new wxPanel(notebook, wxID_ANY);
     panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
-    create_render_view(panel, new_path);
+    create_render_view(panel, new_stream);
 
     if (replace_selection)
     {
@@ -577,7 +591,7 @@ int main(int argc, char** argv)
   };
 
   auto add_new_element = [notebook, &num_elements]() {
-    wxPanel* panel = new wxPanel(notebook, wxID_ANY);
+    auto* panel = new wxPanel(notebook, wxID_ANY);
     panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
     create_render_view(panel, std::nullopt);
     notebook->InsertPage(notebook->GetPageCount() - 1, panel, "New Tab");
@@ -585,7 +599,7 @@ int main(int argc, char** argv)
     num_elements = notebook->GetPageCount();
   };
 
-  tree_view->Bind(wxEVT_TREE_ITEM_EXPANDING, [tree_view, &search_path](wxTreeEvent& event) {
+  tree_view->Bind(wxEVT_TREE_ITEM_EXPANDING, [&archive, tree_view](wxTreeEvent& event) {
     auto item = event.GetItem();
 
     if (item == tree_view->GetRootItem())
@@ -601,7 +615,10 @@ int main(int argc, char** argv)
 
       if (cookie && !tree_view->HasChildren(child))
       {
-        populate_tree_view(tree_view, get_path_from_tree_item(tree_view, child, search_path), child);
+        if (auto* real_info = dynamic_cast<tree_item_folder_info*>(tree_view->GetItemData(child)); real_info)
+        {
+          populate_tree_view(archive, tree_view, real_info->info.full_path, child);
+        }
       }
 
       do {
@@ -609,13 +626,16 @@ int main(int argc, char** argv)
 
         if (cookie && !tree_view->HasChildren(child))
         {
-          populate_tree_view(tree_view, get_path_from_tree_item(tree_view, child, search_path), child);
+          if (auto* real_info = dynamic_cast<tree_item_folder_info*>(tree_view->GetItemData(child)); real_info)
+          {
+            populate_tree_view(archive, tree_view, real_info->info.full_path, child);
+          }
         }
       } while (cookie != nullptr);
     }
   });
 
-  tree_view->Bind(wxEVT_TREE_ITEM_ACTIVATED, [tree_view, &search_path, &add_element_from_file](wxTreeEvent& event) {
+  tree_view->Bind(wxEVT_TREE_ITEM_ACTIVATED, [&archive, tree_view, &add_element_from_file](wxTreeEvent& event) {
     auto item = event.GetItem();
 
     if (item == tree_view->GetRootItem())
@@ -623,13 +643,36 @@ int main(int argc, char** argv)
       return;
     }
 
+    if (auto* real_info = dynamic_cast<tree_item_file_info*>(tree_view->GetItemData(item)); real_info)
+    {
+      auto& info = real_info->info;
 
-    auto item_path = get_path_from_tree_item(tree_view, item, search_path);
+      // TODO put this into the archive class
+      // TODO needs to support compression too
+      if (info.compression_type == shared::archive::compression_type::none)
+      {
+        auto full_path = info.folder_path / info.filename;
 
-    add_element_from_file(item_path, true);
+        if (std::filesystem::is_directory(info.folder_path))
+        {
+          auto file_stream = std::basic_ifstream<std::byte>(full_path, std::ios::binary);
+
+          add_element_from_file(full_path, std::ref(file_stream), true);
+        }
+        else
+        {
+          auto archive_path = archive.get_archive_path(info.folder_path);
+          auto file_stream = std::basic_ifstream<std::byte>(archive_path, std::ios::binary);
+
+          archive.set_stream_position(archive_path, file_stream, info);
+
+          add_element_from_file(full_path, std::ref(file_stream), true);
+        }
+      }
+    }
   });
 
-  wxPanel* panel = new wxPanel(notebook, wxID_ANY);
+  auto* panel = new wxPanel(notebook, wxID_ANY);
   panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
   create_render_view(panel, std::nullopt);
   notebook->AddPage(panel, "New Tab");
@@ -682,10 +725,11 @@ int main(int argc, char** argv)
 
       if (new_path.has_value())
       {
-        add_element_from_file(new_path.value(), true);
+        //TODO fix this
+        //add_element_from_file(new_path.value(), true);
 
         search_path = new_path.value().parent_path();
-        populate_tree_view(tree_view, search_path);
+        populate_tree_view(archive, tree_view, search_path);
       }
     },
     wxID_OPEN);
@@ -694,9 +738,10 @@ int main(int argc, char** argv)
     wxEVT_MENU, [&](auto& event) {
       const auto new_path = get_shape_path();
 
+      // TODO fix this
       if (new_path.has_value())
       {
-        add_element_from_file(new_path.value());
+        //add_element_from_file(new_path.value());
       }
     },
     event_open_in_new_tab);
@@ -708,7 +753,7 @@ int main(int argc, char** argv)
       if (new_path.has_value())
       {
         search_path = new_path.value();
-        populate_tree_view(tree_view, search_path);
+        populate_tree_view(archive, tree_view, search_path);
       }
     },
     event_open_folder_as_workspace);
