@@ -56,7 +56,7 @@ namespace trophy_bass::vol
     return tag == rbx_tag;
   }
 
-  std::vector<std::variant<folder_info, shared::archive::file_info>> rbx_file_archive::get_content_info(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path)
+  std::vector<std::variant<folder_info, shared::archive::file_info>> rbx_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path)
   {
     std::vector<shared::archive::file_info> results;
 
@@ -161,7 +161,7 @@ namespace trophy_bass::vol
     return tag == tbv_tag;
   }
 
-  std::vector<std::variant<folder_info, shared::archive::file_info>> tbv_file_archive::get_content_info(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path)
+  std::vector<std::variant<folder_info, shared::archive::file_info>> tbv_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path)
   {
     std::vector<shared::archive::file_info> results;
 

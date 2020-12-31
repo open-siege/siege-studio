@@ -7,7 +7,7 @@
 
 namespace darkstar::dts
 {
-  dts::tag_header read_object_header(std::basic_ifstream<std::byte>& stream)
+  dts::tag_header read_object_header(std::basic_istream<std::byte>& stream)
   {
     using namespace binary::io;
 
@@ -32,7 +32,7 @@ namespace darkstar::dts
   }
 
   template<typename ShapeType>
-  void read_meshes(ShapeType& shape, std::size_t num_meshes, std::basic_ifstream<std::byte>& stream)
+  void read_meshes(ShapeType& shape, std::size_t num_meshes, std::basic_istream<std::byte>& stream)
   {
     using namespace binary::io;
     using namespace dts::mesh;
@@ -99,7 +99,7 @@ namespace darkstar::dts
     }
   }
 
-  dts::material_list_variant read_material_list(const dts::tag_header& object_header, std::basic_ifstream<std::byte>& stream)
+  dts::material_list_variant read_material_list(const dts::tag_header& object_header, std::basic_istream<std::byte>& stream)
   {
     using namespace binary::io;
     using namespace dts::material_list;
@@ -142,7 +142,7 @@ namespace darkstar::dts
   }
 
   template<typename ShapeType>
-  void read_materials(ShapeType& shape, std::basic_ifstream<std::byte>& stream)
+  void read_materials(ShapeType& shape, std::basic_istream<std::byte>& stream)
   {
     if (auto has_material_list = binary::io::read<dts::shape::v2::has_material_list_flag>(stream); has_material_list == 1)
     {
@@ -153,7 +153,7 @@ namespace darkstar::dts
   }
 
   template<typename ShapeType>
-  ShapeType read_shape_impl(std::basic_ifstream<std::byte>& stream)
+  ShapeType read_shape_impl(std::basic_istream<std::byte>& stream)
   {
     using namespace binary::io;
     auto header = read<decltype(ShapeType::header)>(stream);
@@ -185,7 +185,7 @@ namespace darkstar::dts
   }
 
 
-  dts::shape_variant read_shape(const std::filesystem::path& file_name, std::basic_ifstream<std::byte>& stream, std::optional<dts::tag_header> file_header)
+  dts::shape_variant read_shape(std::basic_istream<std::byte>& stream, std::optional<dts::tag_header> file_header)
   {
     using namespace dts::shape;
     file_header = !file_header.has_value() ? read_object_header(stream) : file_header;
@@ -227,13 +227,13 @@ namespace darkstar::dts
     else
     {
       std::stringstream error;
-      error << file_name << " is DTS version " << file_header->version << " which is currently unsupported.";
+      error << "File is DTS version " << file_header->version << ", which is currently unsupported.";
       throw std::invalid_argument(error.str());
     }
   }
 
 
-  dts::shape_or_material_list read_shape(const std::filesystem::path& file_name, std::basic_ifstream<std::byte>& stream)
+  dts::shape_or_material_list read_shape(std::basic_istream<std::byte>& stream)
   {
     using namespace dts::shape;
     dts::tag_header file_header = read_object_header(stream);
@@ -243,7 +243,7 @@ namespace darkstar::dts
       return read_material_list(file_header, stream);
     }
 
-    return read_shape(file_name, stream, file_header);
+    return read_shape(stream, file_header);
   }
 
   template<typename RootType>

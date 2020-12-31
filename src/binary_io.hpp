@@ -12,7 +12,7 @@
 namespace binary::io
 {
   template<std::size_t size>
-  std::array<std::byte, size> read(std::basic_ifstream<std::byte>& stream)
+  std::array<std::byte, size> read(std::basic_istream<std::byte>& stream)
   {
     std::array<std::byte, size> dest{};
 
@@ -22,7 +22,7 @@ namespace binary::io
   }
 
   template<typename destination_type>
-  destination_type read(std::basic_ifstream<std::byte>& stream)
+  destination_type read(std::basic_istream<std::byte>& stream)
   {
     destination_type dest{};
 
@@ -32,7 +32,7 @@ namespace binary::io
   }
 
   template<typename destination_type>
-  std::vector<destination_type> read_vector(std::basic_ifstream<std::byte>& stream, std::size_t size)
+  std::vector<destination_type> read_vector(std::basic_istream<std::byte>& stream, std::size_t size)
   {
     if (size == 0)
     {
@@ -46,7 +46,7 @@ namespace binary::io
     return dest;
   }
 
-  std::string read_string(std::basic_ifstream<std::byte>& stream, std::size_t size, std::size_t max_size = 16)
+  std::string read_string(std::basic_istream<std::byte>& stream, std::size_t size, std::size_t max_size = 16)
   {
     std::string dest(size, '\0');
 
