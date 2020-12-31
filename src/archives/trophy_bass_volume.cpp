@@ -38,20 +38,10 @@ namespace trophy_bass::vol
     endian::little_uint32_t file_size;
   };
 
-  struct tbv_archive_info
-  {
-    std::vector<std::pair<tbv_file_header, tbv_file_info>> headers;
-  };
-
   struct rbx_file_header
   {
     std::array<char, 12> filename;
     endian::little_int32_t offset;
-  };
-
-  struct rbx_archive_info
-  {
-    std::vector<std::pair<rbx_file_header, endian::little_uint32_t>> headers;
   };
 
   using folder_info = shared::archive::folder_info;
@@ -142,10 +132,13 @@ namespace trophy_bass::vol
 
   void rbx_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info)
   {
-    // TODO this actually needs to skip passed the header before the file contents
-    if (int(stream.tellg()) != info.offset)
+    if (int(stream.tellg()) == info.offset)
     {
-      stream.seekg(info.offset, std::ios::beg);
+      stream.seekg(sizeof(endian::little_int32_t), std::ios::cur);
+    }
+    else if (int(stream.tellg()) != info.offset + sizeof(tbv_file_info))
+    {
+      stream.seekg(info.offset + sizeof(endian::little_int32_t), std::ios::beg);
     }
   }
 
@@ -240,10 +233,13 @@ namespace trophy_bass::vol
 
   void tbv_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info)
   {
-    // TODO this actually needs to skip passed the header before the file contents
-    if (int(stream.tellg()) != info.offset)
+    if (int(stream.tellg()) == info.offset)
     {
-      stream.seekg(info.offset, std::ios::beg);
+      stream.seekg(sizeof(tbv_file_info), std::ios::cur);
+    }
+    else if (int(stream.tellg()) != info.offset + sizeof(tbv_file_info))
+    {
+      stream.seekg(info.offset + sizeof(tbv_file_info), std::ios::beg);
     }
   }
 
