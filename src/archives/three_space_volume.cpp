@@ -347,10 +347,13 @@ namespace three_space::vol
 
   void rmf_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info)
   {
-    // TODO this actually needs to skip passed the header before the file contents
-    if (int(stream.tellg()) != info.offset)
+    if (int(stream.tellg()) == info.offset)
     {
-      stream.seekg(info.offset, std::ios::beg);
+      stream.seekg(sizeof(std::array<std::byte, 13>) + sizeof(endian::little_int32_t), std::ios::cur);
+    }
+    else if (int(stream.tellg()) != info.offset + sizeof(std::array<std::byte, 13>) + sizeof(endian::little_int32_t))
+    {
+      stream.seekg(info.offset + sizeof(endian::little_int32_t), std::ios::beg);
     }
   }
 
@@ -392,10 +395,13 @@ namespace three_space::vol
 
   void dyn_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info)
   {
-    // TODO this actually needs to skip passed the header before the file contents
-    if (int(stream.tellg()) != info.offset)
+    if (int(stream.tellg()) == info.offset)
     {
-      stream.seekg(info.offset, std::ios::beg);
+      stream.seekg(sizeof(std::array<std::byte, 13>) + sizeof(endian::little_int32_t), std::ios::cur);
+    }
+    else if (int(stream.tellg()) != info.offset + sizeof(std::array<std::byte, 13>) + sizeof(endian::little_int32_t))
+    {
+      stream.seekg(info.offset + sizeof(endian::little_int32_t), std::ios::beg);
     }
   }
 
