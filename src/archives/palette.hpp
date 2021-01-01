@@ -42,7 +42,7 @@ namespace darkstar::pal
 
   // A big thanks to https://stackoverflow.com/questions/5392061/algorithm-to-check-similarity-of-colors and
   // https://www.compuphase.com/cmetric.htm
-  double colour_distance(const colour& e1, const colour& e2)
+  inline double colour_distance(const colour& e1, const colour& e2)
   {
     long rmean = ((long)e1.red + (long)e2.red) / 2;
     long r = (long)e1.red - (long)e2.red;
@@ -73,7 +73,7 @@ namespace darkstar::pal
     endian::little_uint32_t type;
   };
 
-  std::vector<colour> get_pal_data(std::basic_ifstream<std::byte>& raw_data)
+  inline std::vector<colour> get_pal_data(std::basic_ifstream<std::byte>& raw_data)
   {
     std::array<std::byte, 4> header{};
     endian::little_uint32_t file_size{};
@@ -137,7 +137,7 @@ namespace darkstar::pal
     return colours;
   }
 
-  std::int32_t write_pal_data(std::basic_ofstream<std::byte>& raw_data, const std::vector<colour>& colours)
+  inline std::int32_t write_pal_data(std::basic_ofstream<std::byte>& raw_data, const std::vector<colour>& colours)
   {
     raw_data.write(riff_tag.data(), sizeof(riff_tag));
 
@@ -160,7 +160,7 @@ namespace darkstar::pal
     return sizeof(riff_tag) + sizeof(file_size) + file_size;
   }
 
-  std::vector<palette> get_ppl_data(std::basic_ifstream<std::byte>& raw_data)
+  inline std::vector<palette> get_ppl_data(std::basic_ifstream<std::byte>& raw_data)
   {
     std::array<std::byte, 4> header{};
     palette_info info{};
