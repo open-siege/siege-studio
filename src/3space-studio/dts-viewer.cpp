@@ -15,15 +15,11 @@
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Window/Event.hpp>
 #include <SFML/Graphics.hpp>
-#include <SFML/OpenGL.hpp>
 
-#include <glm/gtx/quaternion.hpp>
-
-#include "dts_io.hpp"
-#include "dts_renderable_shape.hpp"
-#include "gl_renderer.hpp"
-#include "sfml_keys.hpp"
 #include "utility.hpp"
+
+#include "canvas_painter.hpp"
+#include "views/view_factory.hpp"
 
 #include "archives/darkstar_volume.hpp"
 #include "archives/three_space_volume.hpp"
@@ -31,9 +27,11 @@
 #include "archives/file_system_archive.hpp"
 
 namespace fs = std::filesystem;
-namespace dts = darkstar::dts;
 
 using optional_istream = std::optional<std::reference_wrapper<std::basic_istream<std::byte>>>;
+
+static studio::fs::null_buffer null_buffer;
+static std::basic_istream<std::byte> null_stream (&null_buffer);
 
 struct tree_item_file_info : public wxTreeItemData
 {
@@ -47,14 +45,6 @@ struct tree_item_folder_info : public wxTreeItemData
   shared::archive::folder_info info;
 
   explicit tree_item_folder_info(shared::archive::folder_info info) : info(std::move(info)) {}
-};
-
-struct shape_instance
-{
-  std::shared_ptr<renderable_shape> shape;
-
-  glm::vec3 translation;
-  dts::vector3f rotation;
 };
 
 std::optional<std::filesystem::path> get_shape_path()
@@ -94,293 +84,6 @@ std::optional<std::filesystem::path> get_shape_path(int argc, char** argv)
   return get_shape_path();
 }
 
-dts::shape_variant get_shape(optional_istream shape_stream)
-{
-  if (!shape_stream.has_value())
-  {
-    return dts::shape_variant{};
-  }
-
-  try
-  {
-    return dts::read_shape(shape_stream->get(), std::nullopt);
-  }
-  catch (const std::exception& ex)
-  {
-    wxMessageBox(ex.what(), "Error Loading Model.", wxICON_ERROR);
-    return dts::shape_variant{};
-  }
-}
-
-void setup_opengl(wxControl* parent)
-{
-  auto [width, height] = parent->GetClientSize();
-
-  if (height == 0)
-  {
-    return;
-  }
-
-  glViewport(0, 0, width, height);
-
-  glClearDepth(1.f);
-  glClearColor(0.3f, 0.3f, 0.3f, 0.f);
-
-  glEnable(GL_DEPTH_TEST);
-  glDepthMask(GL_TRUE);
-
-  glEnable(GL_CULL_FACE);
-  glCullFace(GL_BACK);
-
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-
-  perspectiveGL(90.f, double(width) / double(height), 1.f, 1200.0f);
-}
-
-auto apply_configuration(std::map<std::string, std::function<void(shape_instance&)>>& actions)
-{
-  //TODO read this from config one day
-  std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(shape_instance&)>>> callbacks;
-  callbacks.emplace(config::get_key_for_name("Numpad4"), std::ref(actions.at("pan_left")));
-  callbacks.emplace(config::get_key_for_name("Numpad6"), std::ref(actions.at("pan_right")));
-  callbacks.emplace(config::get_key_for_name("Numpad8"), std::ref(actions.at("pan_up")));
-  callbacks.emplace(config::get_key_for_name("Numpad2"), std::ref(actions.at("pan_down")));
-  callbacks.emplace(config::get_key_for_name("Numpad1"), std::ref(actions.at("increase_x_rotation")));
-  callbacks.emplace(config::get_key_for_name("Numpad3"), std::ref(actions.at("decrease_x_rotation")));
-  callbacks.emplace(config::get_key_for_name("Numpad7"), std::ref(actions.at("increase_z_rotation")));
-  callbacks.emplace(config::get_key_for_name("Numpad9"), std::ref(actions.at("decrease_z_rotation")));
-
-  callbacks.emplace(config::get_key_for_name("Add"), std::ref(actions.at("zoom_in")));
-  callbacks.emplace(config::get_key_for_name("Subtract"), std::ref(actions.at("zoom_out")));
-
-  callbacks.emplace(config::get_key_for_name("Divide"), std::ref(actions.at("increase_y_rotation")));
-  callbacks.emplace(config::get_key_for_name("Insert"), std::ref(actions.at("increase_y_rotation")));
-  callbacks.emplace(config::get_key_for_name("Numpad0"), std::ref(actions.at("increase_y_rotation")));
-
-  callbacks.emplace(config::get_key_for_name("Multiply"), std::ref(actions.at("decrease_y_rotation")));
-  callbacks.emplace(config::get_key_for_name("Delete"), std::ref(actions.at("decrease_y_rotation")));
-  callbacks.emplace(config::get_key_for_name("Period"), std::ref(actions.at("decrease_y_rotation")));
-
-  return callbacks;
-}
-
-
-void render_tree_view(const std::string& node, bool& node_visible, std::map<std::optional<std::string>, std::map<std::string, bool>>& visible_nodes, std::map<std::string, std::map<std::string, bool>>& visible_objects)
-{
-  ImGui::Checkbox(node.c_str(), &node_visible);
-  ImGui::Indent(8);
-
-  if (visible_objects[node].size() > 1)
-  {
-    for (auto& [child_object, object_visible] : visible_objects[node])
-    {
-      if (node == child_object)
-      {
-        ImGui::Checkbox((child_object + " (object)").c_str(), &object_visible);
-      }
-      else
-      {
-        ImGui::Checkbox(child_object.c_str(), &object_visible);
-      }
-    }
-  }
-
-  for (auto& [child_node, child_node_visible] : visible_nodes[node])
-  {
-    render_tree_view(child_node, child_node_visible, visible_nodes, visible_objects);
-  }
-
-  ImGui::Unindent(8);
-}
-
-auto renderer_main(optional_istream shape_stream, sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext)
-{
-  //static std::map<std::optional<std::filesystem::path>, shape_instance> shape_instances;
-
-  //auto instance_iterator = shape_instances.emplace(shape_path, shape_instance{ std::make_unique<dts_renderable_shape>(get_shape(shape_stream)), { 0, 0, -20 }, { 115, 180, -35 } });
-  auto instance = shape_instance{ std::make_shared<dts_renderable_shape>(get_shape(shape_stream)), { 0, 0, -20 }, { 115, 180, -35 } };
-  //auto& instance = instance_iterator.first;
-
-  static std::map<std::string, std::function<void(shape_instance&)>> actions;
-
-  actions.emplace("increase_x_rotation", [](auto& instance) { instance.rotation.x++; });
-  actions.emplace("decrease_x_rotation", [](auto& instance) { instance.rotation.x--; });
-
-  actions.emplace("increase_y_rotation", [](auto& instance) { instance.rotation.y++; });
-  actions.emplace("decrease_y_rotation", [](auto& instance) { instance.rotation.y--; });
-  actions.emplace("increase_z_rotation", [](auto& instance) { instance.rotation.z++; });
-  actions.emplace("decrease_z_rotation", [](auto& instance) { instance.rotation.z--; });
-
-  actions.emplace("zoom_in", [](auto& instance) { instance.translation.z++; });
-  actions.emplace("zoom_out", [](auto& instance) { instance.translation.z--; });
-
-  actions.emplace("pan_left", [](auto& instance) { instance.translation.x--; });
-  actions.emplace("pan_right", [](auto& instance) { instance.translation.x++; });
-
-  actions.emplace("pan_up", [](auto& instance) { instance.translation.y++; });
-  actions.emplace("pan_down", [](auto& instance) { instance.translation.y--; });
-
-
-  std::map<std::optional<std::string>, std::map<std::string, bool>> visible_nodes;
-  std::map<std::string, std::map<std::string, bool>> visible_objects;
-  auto detail_levels = instance.shape->get_detail_levels();
-  std::vector<std::size_t> detail_level_indexes = { 0 };
-  auto sequences = instance.shape->get_sequences(detail_level_indexes);
-
-  bool root_visible = true;
-
-  auto qRot1 = glm::quat(1.f, 0.f, 0.f, 0.f);
-
-  auto callbacks = apply_configuration(actions);
-
-  sf::Clock clock;
-
-  setup_opengl(parent);
-
-  return [=](auto& wx_event) mutable {
-    wxPaintDC Dc(parent);
-
-    sf::Event event;
-
-    ImGui::SetCurrentContext(guiContext);
-
-    while (window->pollEvent(event))
-    {
-      ImGui::SFML::ProcessEvent(event);
-      if (event.type == sf::Event::KeyPressed && (event.key.code != sf::Keyboard::Escape))
-      {
-        const auto callback = callbacks.find(event.key.code);
-
-        if (callback != callbacks.end())
-        {
-          callback->second(instance);
-        }
-      }
-
-      if (event.type == sf::Event::Closed)
-      {
-        window->close();
-      }
-
-      if ((event.type == sf::Event::KeyPressed) && (event.key.code == sf::Keyboard::Escape))
-      {
-        window->close();
-      }
-    }
-
-    auto& [shape, translation, rotation] = instance;
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glTranslatef(translation.x, translation.y, translation.z);
-
-    glRotatef(rotation.x, 1.f, 0.f, 0.f);
-    glRotatef(rotation.y, 0.f, 1.f, 0.f);
-    glRotatef(rotation.z, 0.f, 0.f, 1.f);
-
-    glBegin(GL_TRIANGLES);
-    auto renderer = gl_renderer{ visible_nodes, visible_objects };
-    shape->render_shape(renderer, detail_level_indexes, sequences);
-    glEnd();
-
-    window->pushGLStates();
-
-    ImGui::SFML::Update(*window, clock.restart());
-
-    if (!detail_levels.empty())
-    {
-      ImGui::Begin("Details and Nodes");
-
-      if (ImGui::CollapsingHeader("Detail Levels", ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen))
-      {
-        for (auto i = 0u; i < detail_levels.size(); ++i)
-        {
-          auto selected_item = std::find_if(std::begin(detail_level_indexes), std::end(detail_level_indexes), [i](auto value) {
-            return value == i;
-          });
-
-          bool is_selected = selected_item != std::end(detail_level_indexes);
-
-          if (ImGui::Checkbox(detail_levels[i].c_str(), &is_selected))
-          {
-            if (is_selected)
-            {
-              detail_level_indexes.emplace_back(i);
-              sequences = shape->get_sequences(detail_level_indexes);
-            }
-            else if (selected_item != std::end(detail_level_indexes))
-            {
-              detail_level_indexes.erase(selected_item);
-              sequences = shape->get_sequences(detail_level_indexes);
-            }
-          }
-        }
-      }
-
-      if (ImGui::CollapsingHeader("Nodes", ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen))
-      {
-        for (auto index : detail_level_indexes)
-        {
-          render_tree_view(detail_levels[index], root_visible, visible_nodes, visible_objects);
-        }
-      }
-
-      ImGui::End();
-    }
-
-    if (!sequences.empty())
-    {
-      ImGui::Begin("Sequences");
-
-      if (ImGui::CollapsingHeader("Sequences", ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen))
-      {
-        for (auto it = sequences.begin(); it != sequences.end(); it++)
-        {
-          auto& sequence = *it;
-
-          if (ImGui::Checkbox(sequence.name.c_str(), &sequence.enabled))
-          {
-            auto enabled_count = std::count_if(sequence.sub_sequences.begin(), sequence.sub_sequences.end(), [](auto& sub_sequence) {
-              return sub_sequence.enabled;
-            });
-
-            if (enabled_count == sequence.sub_sequences.size() || enabled_count == 0)
-            {
-              for (auto& sub_sequence : sequence.sub_sequences)
-              {
-                sub_sequence.enabled = sequence.enabled;
-              }
-            }
-          }
-        }
-      }
-
-      if (ImGui::CollapsingHeader("Sub Sequences", ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen))
-      {
-        for (auto& sequence : sequences)
-        {
-          ImGui::LabelText("", sequence.name.c_str());
-          for (auto& sub_sequence : sequence.sub_sequences)
-          {
-            ImGui::Checkbox((sequence.name + "/" + sub_sequence.node_name).c_str(), &sub_sequence.enabled);
-
-            ImGui::SliderInt(sequence.enabled ? " " : "", &sub_sequence.frame_index, 0, sub_sequence.num_key_frames - 1);
-          }
-        }
-      }
-
-      ImGui::End();
-    }
-
-
-    ImGui::SFML::Render(*window);
-    window->popGLStates();
-    window->display();
-  };
-}
-
 wxAppConsole* createApp()
 {
   wxAppConsole::CheckBuildOptions(WX_BUILD_OPTIONS_SIGNATURE,
@@ -410,7 +113,7 @@ wxMenuBar* create_menu_bar()
   return menuBar;
 }
 
-void create_render_view(wxWindow* panel, optional_istream file_stream)
+void create_render_view(wxWindow* panel, std::basic_istream<std::byte>& file_stream, const view_factory& factory)
 {
   auto* graphics = new wxControl(panel, -1, wxDefaultPosition, wxDefaultSize, 0);
 
@@ -436,16 +139,21 @@ void create_render_view(wxWindow* panel, optional_istream file_stream)
     gui_context = ImGui::CreateContext(ImGui::GetIO().Fonts);
   }
 
+  graphics_view* handler = factory.create_view(file_stream);
+
+  graphics->SetClientObject(handler);
+
   graphics->Bind(wxEVT_ERASE_BACKGROUND, [](auto& event) {});
 
   graphics->Bind(wxEVT_SIZE, [=](auto& event) {
-    setup_opengl(graphics);
+    handler->setup_gl(window, graphics, gui_context);
   });
 
   graphics->Bind(wxEVT_IDLE, [=](auto& event) {
     graphics->Refresh();
   });
-  graphics->Bind(wxEVT_PAINT, renderer_main(file_stream, window, graphics, gui_context));
+
+  graphics->Bind(wxEVT_PAINT, canvas_painter(window, graphics, gui_context, handler));
 
   graphics->Bind(wxEVT_DESTROY, [=](auto& event) {
     delete window;
@@ -535,6 +243,8 @@ int main(int argc, char** argv)
   archive.add_archive_type(".vol", std::make_unique<three_space::vol::vol_file_archive>());
   archive.add_archive_type(".vol", std::make_unique<darkstar::vol::vol_file_archive>());
 
+  view_factory view_factory = create_default_view_factory();
+
   auto search_path = fs::current_path();
 
   wxApp::SetInitializerFunction(createApp);
@@ -564,10 +274,10 @@ int main(int argc, char** argv)
 
   sizer->Add(notebook, 80, wxEXPAND, 0);
 
-  auto add_element_from_file = [notebook, &num_elements](auto new_path, auto new_stream, bool replace_selection = false) {
+  auto add_element_from_file = [notebook, &num_elements, &view_factory](auto new_path, auto new_stream, bool replace_selection = false) {
     auto* panel = new wxPanel(notebook, wxID_ANY);
     panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
-    create_render_view(panel, new_stream);
+    create_render_view(panel, new_stream, view_factory);
 
     if (replace_selection)
     {
@@ -590,10 +300,10 @@ int main(int argc, char** argv)
     }
   };
 
-  auto add_new_element = [notebook, &num_elements]() {
+  auto add_new_element = [notebook, &num_elements, &view_factory]() {
     auto* panel = new wxPanel(notebook, wxID_ANY);
     panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
-    create_render_view(panel, std::nullopt);
+    create_render_view(panel, null_stream, view_factory);
     notebook->InsertPage(notebook->GetPageCount() - 1, panel, "New Tab");
     notebook->ChangeSelection(notebook->GetPageCount() - 2);
     num_elements = notebook->GetPageCount();
@@ -674,7 +384,7 @@ int main(int argc, char** argv)
 
   auto* panel = new wxPanel(notebook, wxID_ANY);
   panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
-  create_render_view(panel, std::nullopt);
+  create_render_view(panel, null_stream, view_factory);
   notebook->AddPage(panel, "New Tab");
 
   panel = new wxPanel(notebook, wxID_ANY);
