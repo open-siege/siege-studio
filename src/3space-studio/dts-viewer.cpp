@@ -165,13 +165,14 @@ void create_render_view(wxWindow* panel, std::basic_istream<std::byte>& file_str
   });
 }
 
-void populate_tree_view(studio::fs::file_system_archive& archive,
+void populate_tree_view(const view_factory& view_factory,
+  studio::fs::file_system_archive& archive,
   wxTreeCtrl* tree_view,
   const fs::path& search_path,
   std::optional<wxTreeItemId> parent = std::nullopt)
 {
   using namespace std::literals;
-  constexpr std::array extensions = { ".dts"sv, ".DTS"sv };
+  const static auto extensions = view_factory.get_extensions();
 
   if (archive.is_regular_file(search_path))
   {
@@ -200,7 +201,7 @@ void populate_tree_view(studio::fs::file_system_archive& archive,
 
         if (is_root)
         {
-          populate_tree_view(archive, tree_view, folder.full_path, new_parent);
+          populate_tree_view(view_factory, archive, tree_view, folder.full_path, new_parent);
         }
       }
     },
@@ -267,7 +268,7 @@ int main(int argc, char** argv)
   auto* tree_view = new wxTreeCtrl(frame);
   sizer->Add(tree_view, 20, wxEXPAND, 0);
 
-  populate_tree_view(archive, tree_view, search_path);
+  populate_tree_view(view_factory, archive, tree_view, search_path);
 
   auto* notebook = new wxAuiNotebook(frame, wxID_ANY);
   auto num_elements = notebook->GetPageCount();
@@ -309,7 +310,7 @@ int main(int argc, char** argv)
     num_elements = notebook->GetPageCount();
   };
 
-  tree_view->Bind(wxEVT_TREE_ITEM_EXPANDING, [&archive, tree_view](wxTreeEvent& event) {
+  tree_view->Bind(wxEVT_TREE_ITEM_EXPANDING, [&view_factory, &archive, tree_view](wxTreeEvent& event) {
     auto item = event.GetItem();
 
     if (item == tree_view->GetRootItem())
@@ -327,7 +328,7 @@ int main(int argc, char** argv)
       {
         if (auto* real_info = dynamic_cast<tree_item_folder_info*>(tree_view->GetItemData(child)); real_info)
         {
-          populate_tree_view(archive, tree_view, real_info->info.full_path, child);
+          populate_tree_view(view_factory, archive, tree_view, real_info->info.full_path, child);
         }
       }
 
@@ -338,7 +339,7 @@ int main(int argc, char** argv)
         {
           if (auto* real_info = dynamic_cast<tree_item_folder_info*>(tree_view->GetItemData(child)); real_info)
           {
-            populate_tree_view(archive, tree_view, real_info->info.full_path, child);
+            populate_tree_view(view_factory, archive, tree_view, real_info->info.full_path, child);
           }
         }
       } while (cookie != nullptr);
@@ -439,7 +440,7 @@ int main(int argc, char** argv)
         //add_element_from_file(new_path.value(), true);
 
         search_path = new_path.value().parent_path();
-        populate_tree_view(archive, tree_view, search_path);
+        populate_tree_view(view_factory, archive, tree_view, search_path);
       }
     },
     wxID_OPEN);
@@ -463,7 +464,7 @@ int main(int argc, char** argv)
       if (new_path.has_value())
       {
         search_path = new_path.value();
-        populate_tree_view(archive, tree_view, search_path);
+        populate_tree_view(view_factory, archive, tree_view, search_path);
       }
     },
     event_open_folder_as_workspace);
