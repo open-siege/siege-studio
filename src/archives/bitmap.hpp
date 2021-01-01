@@ -90,7 +90,7 @@ namespace darkstar::bmp
     std::vector<std::byte> pixels;
   };
 
-  inline bool is_windows_bmp(std::basic_istream<std::byte>& raw_data)
+  inline bool is_microsoft_bmp(std::basic_istream<std::byte>& raw_data)
   {
     windows_bmp_header header{};
     raw_data.read(reinterpret_cast<std::byte*>(&header), sizeof(header));
