@@ -7,7 +7,31 @@
 
 namespace darkstar::dts
 {
-  dts::tag_header read_object_header(std::basic_istream<std::byte>& stream)
+  inline bool is_darkstar_dts(std::basic_istream<std::byte>& stream)
+  {
+    using namespace binary::io;
+
+    auto starting_point = stream.tellg();
+
+    dts::tag_header file_header = {
+      read<sizeof(dts::file_tag)>(stream),
+      read<dts::file_info>(stream)
+    };
+
+    if (file_header.tag != dts::pers_tag)
+    {
+      stream.seekg(starting_point, std::ios::beg);
+      return false;
+    }
+
+    file_header.class_name = read_string(stream, file_header.file_info.class_name_length);
+
+    stream.seekg(starting_point, std::ios::beg);
+
+    return file_header.class_name == dts::shape::v2::shape::type_name;
+  }
+
+  inline dts::tag_header read_object_header(std::basic_istream<std::byte>& stream)
   {
     using namespace binary::io;
 
@@ -99,7 +123,7 @@ namespace darkstar::dts
     }
   }
 
-  dts::material_list_variant read_material_list(const dts::tag_header& object_header, std::basic_istream<std::byte>& stream)
+  inline dts::material_list_variant read_material_list(const dts::tag_header& object_header, std::basic_istream<std::byte>& stream)
   {
     using namespace binary::io;
     using namespace dts::material_list;
@@ -185,7 +209,7 @@ namespace darkstar::dts
   }
 
 
-  dts::shape_variant read_shape(std::basic_istream<std::byte>& stream, std::optional<dts::tag_header> file_header)
+  inline dts::shape_variant read_shape(std::basic_istream<std::byte>& stream, std::optional<dts::tag_header> file_header)
   {
     using namespace dts::shape;
     file_header = !file_header.has_value() ? read_object_header(stream) : file_header;
@@ -233,7 +257,7 @@ namespace darkstar::dts
   }
 
 
-  dts::shape_or_material_list read_shape(std::basic_istream<std::byte>& stream)
+  inline dts::shape_or_material_list read_shape(std::basic_istream<std::byte>& stream)
   {
     using namespace dts::shape;
     dts::tag_header file_header = read_object_header(stream);
@@ -271,7 +295,7 @@ namespace darkstar::dts
     write(stream, version);
   }
 
-  void write_size(std::basic_ostream<std::byte>& stream, std::optional<std::uint32_t> start_offset = std::nullopt)
+  inline void write_size(std::basic_ostream<std::byte>& stream, std::optional<std::uint32_t> start_offset = std::nullopt)
   {
     boost::endian::little_uint32_t size_in_bytes{};
 

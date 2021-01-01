@@ -46,7 +46,7 @@ namespace binary::io
     return dest;
   }
 
-  std::string read_string(std::basic_istream<std::byte>& stream, std::size_t size, std::size_t max_size = 16)
+  inline std::string read_string(std::basic_istream<std::byte>& stream, std::size_t size, std::size_t max_size = 16)
   {
     std::string dest(size, '\0');
 
