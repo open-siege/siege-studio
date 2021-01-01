@@ -176,7 +176,17 @@ namespace darkstar::pal
     return sizeof(riff_tag) + sizeof(file_size) + file_size;
   }
 
-  inline std::vector<palette> get_ppl_data(std::basic_ifstream<std::byte>& raw_data)
+  inline bool is_phoenix_pal(std::basic_istream<std::byte>& raw_data)
+  {
+    std::array<std::byte, 4> header{};
+
+    raw_data.read(header.data(), sizeof(header));
+    raw_data.seekg(-int(sizeof(header)), std::ios::cur);
+
+    return header == ppl_tag;
+  }
+
+  inline std::vector<palette> get_ppl_data(std::basic_istream<std::byte>& raw_data)
   {
     std::array<std::byte, 4> header{};
     palette_info info{};

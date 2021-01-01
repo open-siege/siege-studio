@@ -12,7 +12,9 @@ public:
   void render_gl(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext) override {}
   void render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext) override;
 private:
-  std::vector<sf::RectangleShape> rectangles;
+  std::vector<sf::RectangleShape>* rectangles = nullptr;
+
+  std::vector<std::vector<sf::RectangleShape>> all_rectangles;
 };
 
 #endif//DARKSTARDTSCONVERTER_PAL_VIEW_HPP
