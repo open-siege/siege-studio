@@ -146,7 +146,6 @@ void darkstar_dts_view::render_gl(sf::RenderWindow* window, wxControl* parent, I
 
 void darkstar_dts_view::render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext)
 {
-
   if (!detail_levels.empty())
   {
     ImGui::Begin("Details and Nodes");
