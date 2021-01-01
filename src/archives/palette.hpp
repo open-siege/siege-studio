@@ -73,7 +73,23 @@ namespace darkstar::pal
     endian::little_uint32_t type;
   };
 
-  inline std::vector<colour> get_pal_data(std::basic_ifstream<std::byte>& raw_data)
+  inline bool is_microsoft_pal(std::basic_istream<std::byte>& raw_data)
+  {
+    const auto start = raw_data.tellg();
+    std::array<std::byte, 4> header{};
+    endian::little_uint32_t file_size{};
+    std::array<std::byte, 4> sub_header{};
+
+    raw_data.read(header.data(), sizeof(header));
+    raw_data.read(reinterpret_cast<std::byte*>(&file_size), sizeof(file_size));
+    raw_data.read(sub_header.data(), sizeof(sub_header));
+
+    raw_data.seekg(start, std::ios::beg);
+
+    return header == riff_tag && sub_header == pal_tag;
+  }
+
+  inline std::vector<colour> get_pal_data(std::basic_istream<std::byte>& raw_data)
   {
     std::array<std::byte, 4> header{};
     endian::little_uint32_t file_size{};
@@ -137,7 +153,7 @@ namespace darkstar::pal
     return colours;
   }
 
-  inline std::int32_t write_pal_data(std::basic_ofstream<std::byte>& raw_data, const std::vector<colour>& colours)
+  inline std::int32_t write_pal_data(std::basic_ostream<std::byte>& raw_data, const std::vector<colour>& colours)
   {
     raw_data.write(riff_tag.data(), sizeof(riff_tag));
 
