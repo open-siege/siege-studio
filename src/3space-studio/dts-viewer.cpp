@@ -278,7 +278,7 @@ int main(int argc, char** argv)
   auto add_element_from_file = [notebook, &num_elements, &view_factory](auto new_path, auto new_stream, bool replace_selection = false) {
     auto* panel = new wxPanel(notebook, wxID_ANY);
     panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
-    create_render_view(panel, new_stream, view_factory);
+    create_render_view(panel, *new_stream, view_factory);
 
     if (replace_selection)
     {
@@ -347,6 +347,8 @@ int main(int argc, char** argv)
   });
 
   tree_view->Bind(wxEVT_TREE_ITEM_ACTIVATED, [&archive, tree_view, &add_element_from_file](wxTreeEvent& event) {
+
+    static bool had_first_activation = false;
     auto item = event.GetItem();
 
     if (item == tree_view->GetRootItem())
@@ -358,28 +360,8 @@ int main(int argc, char** argv)
     {
       auto& info = real_info->info;
 
-      // TODO put this into the archive class
-      // TODO needs to support compression too
-      if (info.compression_type == shared::archive::compression_type::none)
-      {
-        auto full_path = info.folder_path / info.filename;
-
-        if (std::filesystem::is_directory(info.folder_path))
-        {
-          auto file_stream = std::basic_ifstream<std::byte>(full_path, std::ios::binary);
-
-          add_element_from_file(full_path, std::ref(file_stream), true);
-        }
-        else
-        {
-          auto archive_path = archive.get_archive_path(info.folder_path);
-          auto file_stream = std::basic_ifstream<std::byte>(archive_path, std::ios::binary);
-
-          archive.set_stream_position(archive_path, file_stream, info);
-
-          add_element_from_file(full_path, std::ref(file_stream), true);
-        }
-      }
+      add_element_from_file(info.folder_path / info.filename, archive.load_file(info), had_first_activation == false);
+      had_first_activation = true;
     }
   });
 
@@ -436,8 +418,7 @@ int main(int argc, char** argv)
 
       if (new_path.has_value())
       {
-        //TODO fix this
-        //add_element_from_file(new_path.value(), true);
+        add_element_from_file(new_path.value(), archive.load_file(new_path.value()), true);
 
         search_path = new_path.value().parent_path();
         populate_tree_view(view_factory, archive, tree_view, search_path);
@@ -449,10 +430,9 @@ int main(int argc, char** argv)
     wxEVT_MENU, [&](auto& event) {
       const auto new_path = get_shape_path();
 
-      // TODO fix this
       if (new_path.has_value())
       {
-        //add_element_from_file(new_path.value());
+        add_element_from_file(new_path.value(), archive.load_file(new_path.value()));
       }
     },
     event_open_in_new_tab);

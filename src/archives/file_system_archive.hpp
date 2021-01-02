@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <locale>
 #include <fstream>
+#include <sstream>
 #include "archive.hpp"
 
 
@@ -23,12 +24,6 @@ namespace studio::fs
 
     std::locale default_locale;
 
-    void add_archive_type(std::string extension, std::unique_ptr<shared::archive::file_archive> archive_type)
-    {
-      std::transform(extension.begin(), extension.end(), extension.begin(), [&](auto c) { return std::tolower(c, default_locale); });
-      archive_types.insert(std::make_pair(std::move(extension), std::move(archive_type)));
-    }
-
     static std::filesystem::path get_archive_path(const std::filesystem::path& folder_path)
     {
       auto archive_path = folder_path;
@@ -39,6 +34,63 @@ namespace studio::fs
       }
 
       return archive_path;
+    }
+
+    void add_archive_type(std::string extension, std::unique_ptr<shared::archive::file_archive> archive_type)
+    {
+      std::transform(extension.begin(), extension.end(), extension.begin(), [&](auto c) { return std::tolower(c, default_locale); });
+      archive_types.insert(std::make_pair(std::move(extension), std::move(archive_type)));
+    }
+
+    std::unique_ptr<std::basic_istream<std::byte>> load_file(const std::filesystem::path& path)
+    {
+      shared::archive::file_info info{};
+
+      info.folder_path = path.parent_path();
+      info.filename = path.filename().string();
+
+      return load_file(info);
+    }
+
+    std::unique_ptr<std::basic_istream<std::byte>> load_file(const shared::archive::file_info& info) const
+    {
+      if (info.compression_type == shared::archive::compression_type::none)
+      {
+        if (std::filesystem::is_directory(info.folder_path))
+        {
+          return std::make_unique<std::basic_ifstream<std::byte>>(info.folder_path / info.filename, std::ios::binary);
+        }
+        else
+        {
+          auto archive_path = get_archive_path(info.folder_path);
+          auto file_stream = std::make_unique<std::basic_ifstream<std::byte>>(archive_path, std::ios::binary);
+
+          auto archive = get_archive_type(archive_path);
+
+          if (archive.has_value())
+          {
+            archive->get().set_stream_position(*file_stream, info);
+          }
+
+          return file_stream;
+        }
+      }
+      else
+      {
+        auto archive_path = get_archive_path(info.folder_path);
+
+        auto file_stream = std::basic_ifstream<std::byte>(archive_path, std::ios::binary);
+        auto archive = get_archive_type(archive_path);
+
+        auto memory_stream = std::make_unique<std::basic_stringstream<std::byte>>();
+
+        if (archive.has_value())
+        {
+          archive->get().extract_file_contents(file_stream, info, *memory_stream);
+        }
+
+        return memory_stream;
+      }
     }
 
     bool is_regular_file(const std::filesystem::path& folder_path) const
@@ -72,18 +124,6 @@ namespace studio::fs
 
 
       return std::nullopt;
-    }
-
-    void set_stream_position(const std::filesystem::path& archive_path,
-      std::basic_istream<std::byte>& stream,
-      const shared::archive::file_info& info) const
-    {
-      auto archive = get_archive_type(archive_path);
-
-      if (archive.has_value())
-      {
-        archive->get().set_stream_position(stream, info);
-      }
     }
 
     std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> get_content_listing(const std::filesystem::path& folder_path) const
