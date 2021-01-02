@@ -342,7 +342,18 @@ namespace darkstar::vol
 
       std::filesystem::create_directory(folder_path);
 
-      command << "extract.exe" << ' ' << volume_filename << ' ' << info.filename << ' ' << new_path;
+      auto extract_path = std::filesystem::path("extract.exe");
+
+      if (std::filesystem::exists(std::filesystem::current_path() / extract_path))
+      {
+        extract_path = std::filesystem::current_path() / extract_path;
+      }
+      else if (std::filesystem::exists(volume_filename.parent_path() / extract_path))
+      {
+        extract_path = volume_filename.parent_path() / extract_path;
+      }
+
+      command << extract_path << ' ' << volume_filename << ' ' << info.filename << ' ' << new_path;
 
       std::system(command.str().c_str());
 
