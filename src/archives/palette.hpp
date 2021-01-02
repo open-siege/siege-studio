@@ -68,6 +68,13 @@ namespace darkstar::pal
 
   struct palette
   {
+    std::vector<colour> colours;
+    endian::little_uint32_t index;
+    endian::little_uint32_t type;
+  };
+
+  struct fixed_palette
+  {
     std::array<colour, 256> colours;
     endian::little_uint32_t index;
     endian::little_uint32_t type;
@@ -200,9 +207,21 @@ namespace darkstar::pal
 
     raw_data.read(reinterpret_cast<std::byte*>(&info), sizeof(info));
 
-    std::vector<palette> results(info.palette_count);
+    std::vector<fixed_palette> temp(info.palette_count);
 
-    raw_data.read(reinterpret_cast<std::byte*>(results.data()), results.size() * sizeof(palette));
+    raw_data.read(reinterpret_cast<std::byte*>(temp.data()), temp.size() * sizeof(fixed_palette));
+
+    std::vector<palette> results;
+    results.reserve(temp.size());
+
+    std::transform(temp.begin(), temp.end(), std::back_inserter(results), [&] (const auto& temp_pal){
+      palette new_pal{};
+      new_pal.colours = std::vector(temp_pal.colours.begin(), temp_pal.colours.end());
+      new_pal.index = temp_pal.index;
+      new_pal.type = temp_pal.type;
+
+      return new_pal;
+    });
 
     return results;
   }
