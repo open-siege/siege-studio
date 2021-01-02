@@ -3,6 +3,7 @@
 
 #include "graphics_view.hpp"
 #include "archives/file_system_archive.hpp"
+#include "archives/palette.hpp"
 
 class bmp_view : public graphics_view
 {
@@ -13,6 +14,16 @@ public:
   void render_gl(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext) override {}
   void render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext) override;
 private:
+  std::vector<darkstar::pal::colour> default_colours;
+  std::map<std::string, std::vector<darkstar::pal::palette>> loaded_palettes;
+  std::vector<darkstar::pal::palette>* selected_palette = nullptr;
+  std::string selected_palette_name = "";
+  std::size_t selected_index = std::string::npos;
+  std::size_t default_index = std::string::npos;
+
+
+  std::vector<std::byte> original_pixels;
+
   sf::Image loaded_image;
   sf::Texture texture;
   sf::Sprite sprite;

@@ -52,7 +52,7 @@ namespace studio::fs
     {
       std::stringstream key;
       key << search_path;
-      std::for_each(extensions.begin(), extensions.end(), [&](auto& ext){ key << ext; });
+      std::for_each(extensions.begin(), extensions.end(), [&](auto& ext) { key << ext; });
 
       auto cache_result = info_cache.find(key.str());
 
