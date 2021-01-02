@@ -80,7 +80,7 @@ bmp_view::bmp_view(std::basic_istream<std::byte>& image_stream, const studio::fs
           {
             selected_index = default_index = i;
             selected_palette = &result.first->second;
-            selected_palette_name = result.first->first;
+            selected_palette_name = default_palette_name = result.first->first;
             break;
           }
         }
@@ -105,6 +105,33 @@ bmp_view::bmp_view(std::basic_istream<std::byte>& image_stream, const studio::fs
   sprite.setTexture(texture);
 }
 
+void bmp_view::refresh_image()
+{
+  auto [width, height] = loaded_image.getSize();
+  strategy colour_strat = strategy(colour_strategy);
+
+  if (colour_strat == strategy::do_nothing)
+  {
+    create_image(loaded_image,
+                 width,
+                 height,
+                 original_pixels,
+                 selected_palette->at(selected_index).colours);
+  }
+  else if (colour_strat == strategy::remap)
+  {
+    create_image(loaded_image,
+                 width,
+                 height,
+                 darkstar::bmp::remap_bitmap(original_pixels,
+                      loaded_palettes.at(default_palette_name).at(default_index).colours,
+                      selected_palette->at(selected_index).colours),
+                 selected_palette->at(selected_index).colours);
+  }
+
+  texture.update(loaded_image);
+}
+
 void bmp_view::render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext)
 {
   window->clear();
@@ -127,13 +154,7 @@ void bmp_view::render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiConte
           selected_index = 0;
         }
 
-        auto [width, height] = loaded_image.getSize();
-        create_image(loaded_image,
-          width,
-          height,
-          original_pixels,
-          selected_palette->at(selected_index).colours);
-        texture.update(loaded_image);
+        refresh_image();
       }
 
       ImGui::Indent(8);
@@ -152,20 +173,13 @@ void bmp_view::render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiConte
           label << " ";
         }
 
-
         if (ImGui::RadioButton(label.str().c_str(), key == selected_palette_name && i == selected_index))
         {
           selected_palette_name = key;
           selected_palette = &value;
           selected_index = i;
 
-          auto [width, height] = loaded_image.getSize();
-          create_image(loaded_image,
-            width,
-            height,
-            original_pixels,
-            selected_palette->at(selected_index).colours);
-          texture.update(loaded_image);
+          refresh_image();
         }
       }
       child_count++;
@@ -173,6 +187,25 @@ void bmp_view::render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiConte
       ImGui::Unindent(8);
     }
 
+    ImGui::End();
+
+    ImGui::Begin("Colour Strategy");
+    if (ImGui::RadioButton("Do Nothing", &colour_strategy, 0))
+    {
+      refresh_image();
+    }
+    ImGui::SameLine();
+
+    if (ImGui::RadioButton("Remap", &colour_strategy, 1))
+    {
+      refresh_image();
+    }
+    ImGui::SameLine();
+
+    if (ImGui::RadioButton("Remap (only unique colours)", &colour_strategy, 2))
+    {
+      refresh_image();
+    }
     ImGui::End();
   }
 }
