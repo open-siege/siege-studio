@@ -8,8 +8,8 @@
 #include <locale>
 #include <fstream>
 #include <sstream>
+#include <functional>
 #include "archive.hpp"
-
 
 namespace studio::fs
 {
@@ -23,6 +23,12 @@ namespace studio::fs
     std::multimap<std::string, std::unique_ptr<shared::archive::file_archive>> archive_types;
 
     std::locale default_locale;
+
+    const std::filesystem::path& search_path;
+
+    mutable std::map<std::string, std::vector<shared::archive::file_info>> info_cache;
+
+    file_system_archive(const std::filesystem::path& search_path) : search_path(search_path) {}
 
     static std::filesystem::path get_archive_path(const std::filesystem::path& folder_path)
     {
@@ -42,7 +48,62 @@ namespace studio::fs
       archive_types.insert(std::make_pair(std::move(extension), std::move(archive_type)));
     }
 
-    std::unique_ptr<std::basic_istream<std::byte>> load_file(const std::filesystem::path& path)
+    std::vector<shared::archive::file_info> find_files(const std::vector<std::string_view>& extensions) const
+    {
+      std::stringstream key;
+      key << search_path;
+      std::for_each(extensions.begin(), extensions.end(), [&](auto& ext){ key << ext; });
+
+      auto cache_result = info_cache.find(key.str());
+
+      if (cache_result != info_cache.end())
+      {
+        return cache_result->second;
+      }
+
+      std::vector<shared::archive::file_info> results;
+
+      auto files_folders = get_content_listing(search_path);
+
+      std::function<void(decltype(files_folders)::const_reference)> get_files_folders = [&](const auto& file_folder) {
+        std::visit([&](const auto& folder) {
+          using T = std::decay_t<decltype(folder)>;
+
+          if constexpr (std::is_same_v<T, shared::archive::folder_info>)
+          {
+            auto more_files = get_content_listing(folder.full_path);
+            for (auto& item : more_files)
+            {
+              get_files_folders(item);
+            }
+          }
+
+          if constexpr (std::is_same_v<T, shared::archive::file_info>)
+          {
+            for (auto& extension : extensions)
+            {
+              if (std::filesystem::path(folder.filename).extension().string() == extension)
+              {
+                results.emplace_back(folder);
+                break;
+              }
+            }
+          }
+        },
+          file_folder);
+      };
+
+      for (const auto& item : files_folders)
+      {
+        get_files_folders(item);
+      }
+
+      info_cache.emplace(key.str(), results);
+
+      return results;
+    }
+
+    std::unique_ptr<std::basic_istream<std::byte>> load_file(const std::filesystem::path& path) const
     {
       shared::archive::file_info info{};
 

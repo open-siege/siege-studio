@@ -187,7 +187,17 @@ namespace darkstar::bmp
     raw_data.write(pixels.data(), pixels.size());
   }
 
-  inline pbmp_data get_pbmp_data(std::basic_ifstream<std::byte>& raw_data)
+  inline bool is_phoenix_bmp(std::basic_istream<std::byte>& raw_data)
+  {
+    std::array<std::byte, 4> header{};
+    raw_data.read(header.data(), sizeof(header));
+
+    raw_data.seekg(-int(sizeof(header)), std::ios::cur);
+
+    return header == pbmp_tag;
+  }
+
+  inline pbmp_data get_pbmp_data(std::basic_istream<std::byte>& raw_data)
   {
     const auto start = std::size_t(raw_data.tellg());
     std::array<std::byte, 4> header{};

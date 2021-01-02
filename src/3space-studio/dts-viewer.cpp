@@ -113,7 +113,7 @@ wxMenuBar* create_menu_bar()
   return menuBar;
 }
 
-void create_render_view(wxWindow* panel, std::basic_istream<std::byte>& file_stream, const view_factory& factory)
+void create_render_view(wxWindow* panel, std::basic_istream<std::byte>& file_stream, const view_factory& factory, const studio::fs::file_system_archive& archive)
 {
   auto* graphics = new wxControl(panel, -1, wxDefaultPosition, wxDefaultSize, 0);
 
@@ -139,7 +139,7 @@ void create_render_view(wxWindow* panel, std::basic_istream<std::byte>& file_str
     gui_context = ImGui::CreateContext(ImGui::GetIO().Fonts);
   }
 
-  graphics_view* handler = factory.create_view(file_stream);
+  graphics_view* handler = factory.create_view(file_stream, archive);
 
   graphics->SetClientObject(handler);
 
@@ -233,7 +233,8 @@ void populate_tree_view(const view_factory& view_factory,
 
 int main(int argc, char** argv)
 {
-  studio::fs::file_system_archive archive;
+  auto search_path = fs::current_path();
+  studio::fs::file_system_archive archive(search_path);
 
   archive.add_archive_type(".tbv", std::make_unique<trophy_bass::vol::tbv_file_archive>());
   archive.add_archive_type(".rbx", std::make_unique<trophy_bass::vol::rbx_file_archive>());
@@ -246,7 +247,6 @@ int main(int argc, char** argv)
 
   view_factory view_factory = create_default_view_factory();
 
-  auto search_path = fs::current_path();
 
   wxApp::SetInitializerFunction(createApp);
   wxEntryStart(argc, argv);
@@ -275,10 +275,10 @@ int main(int argc, char** argv)
 
   sizer->Add(notebook, 80, wxEXPAND, 0);
 
-  auto add_element_from_file = [notebook, &num_elements, &view_factory](auto new_path, auto new_stream, bool replace_selection = false) {
+  auto add_element_from_file = [notebook, &num_elements, &view_factory, &archive](auto new_path, auto new_stream, bool replace_selection = false) {
     auto* panel = new wxPanel(notebook, wxID_ANY);
     panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
-    create_render_view(panel, *new_stream, view_factory);
+    create_render_view(panel, *new_stream, view_factory, archive);
 
     if (replace_selection)
     {
@@ -301,10 +301,10 @@ int main(int argc, char** argv)
     }
   };
 
-  auto add_new_element = [notebook, &num_elements, &view_factory]() {
+  auto add_new_element = [notebook, &num_elements, &view_factory, &archive]() {
     auto* panel = new wxPanel(notebook, wxID_ANY);
     panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
-    create_render_view(panel, null_stream, view_factory);
+    create_render_view(panel, null_stream, view_factory, archive);
     notebook->InsertPage(notebook->GetPageCount() - 1, panel, "New Tab");
     notebook->ChangeSelection(notebook->GetPageCount() - 2);
     num_elements = notebook->GetPageCount();
@@ -367,7 +367,7 @@ int main(int argc, char** argv)
 
   auto* panel = new wxPanel(notebook, wxID_ANY);
   panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
-  create_render_view(panel, null_stream, view_factory);
+  create_render_view(panel, null_stream, view_factory, archive);
   notebook->AddPage(panel, "New Tab");
 
   panel = new wxPanel(notebook, wxID_ANY);
