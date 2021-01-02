@@ -46,7 +46,7 @@ namespace trophy_bass::vol
 
   using folder_info = shared::archive::folder_info;
 
-  bool rbx_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream)
+  bool rbx_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
   {
     std::array<std::byte, 4> tag{};
     stream.read(tag.data(), sizeof(tag));
@@ -56,7 +56,7 @@ namespace trophy_bass::vol
     return tag == rbx_tag;
   }
 
-  std::vector<std::variant<folder_info, shared::archive::file_info>> rbx_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path)
+  std::vector<std::variant<folder_info, shared::archive::file_info>> rbx_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
   {
     std::vector<shared::archive::file_info> results;
 
@@ -130,7 +130,7 @@ namespace trophy_bass::vol
     return final_results;
   }
 
-  void rbx_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info)
+  void rbx_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info) const
   {
     if (int(stream.tellg()) == info.offset)
     {
@@ -142,7 +142,7 @@ namespace trophy_bass::vol
     }
   }
 
-  void rbx_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output)
+  void rbx_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output) const
   {
     set_stream_position(stream, info);
 
@@ -151,7 +151,7 @@ namespace trophy_bass::vol
       std::ostreambuf_iterator<std::byte>(output));
   }
 
-  bool tbv_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream)
+  bool tbv_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
   {
     std::array<std::byte, 9> tag{};
     stream.read(tag.data(), sizeof(tag));
@@ -161,7 +161,7 @@ namespace trophy_bass::vol
     return tag == tbv_tag;
   }
 
-  std::vector<std::variant<folder_info, shared::archive::file_info>> tbv_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path)
+  std::vector<rbx_file_archive::content_info> tbv_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
   {
     std::vector<shared::archive::file_info> results;
 
@@ -231,7 +231,7 @@ namespace trophy_bass::vol
     return final_results;
   }
 
-  void tbv_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info)
+  void tbv_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info) const
   {
     if (int(stream.tellg()) == info.offset)
     {
@@ -243,7 +243,7 @@ namespace trophy_bass::vol
     }
   }
 
-  void tbv_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output)
+  void tbv_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output) const
   {
     set_stream_position(stream, info);
 

@@ -17,23 +17,6 @@ namespace studio::fs
     int overflow(int c) { return c; }
   };
 
-  std::unique_ptr<std::basic_istream<std::byte>> open_stream(std::optional<std::filesystem::path> archive_path)
-  {
-    static studio::fs::null_buffer buffer;
-
-    if (!archive_path.has_value())
-    {
-      return std::make_unique<std::basic_istream<std::byte>>(&buffer);
-    }
-
-    if (archive_path.has_value() && std::filesystem::is_directory(archive_path.value()))
-    {
-      return std::make_unique<std::basic_istream<std::byte>>(&buffer);
-    }
-
-    return std::make_unique<std::basic_ifstream<std::byte>>(archive_path.value(), std::ios::binary);
-  }
-
   struct file_system_archive
   {
     std::multimap<std::string, std::unique_ptr<shared::archive::file_archive>> archive_types;
@@ -46,7 +29,7 @@ namespace studio::fs
       archive_types.insert(std::make_pair(std::move(extension), std::move(archive_type)));
     }
 
-    std::filesystem::path get_archive_path(const std::filesystem::path& folder_path)
+    static std::filesystem::path get_archive_path(const std::filesystem::path& folder_path)
     {
       auto archive_path = folder_path;
 
@@ -58,7 +41,7 @@ namespace studio::fs
       return archive_path;
     }
 
-    bool is_regular_file(const std::filesystem::path& folder_path)
+    bool is_regular_file(const std::filesystem::path& folder_path) const
     {
       auto archive_path = get_archive_path(folder_path);
 
@@ -70,7 +53,7 @@ namespace studio::fs
       return folder_path.has_extension();
     }
 
-    std::optional<std::reference_wrapper<shared::archive::file_archive>> get_archive_type(const std::filesystem::path& file_path)
+    std::optional<std::reference_wrapper<shared::archive::file_archive>> get_archive_type(const std::filesystem::path& file_path) const
     {
       auto ext = file_path.filename().extension().string();
       std::transform(ext.begin(), ext.end(), ext.begin(), [&](char c) { return std::tolower(c, default_locale); });
@@ -93,7 +76,7 @@ namespace studio::fs
 
     void set_stream_position(const std::filesystem::path& archive_path,
       std::basic_istream<std::byte>& stream,
-      const shared::archive::file_info& info)
+      const shared::archive::file_info& info) const
     {
       auto archive = get_archive_type(archive_path);
 
@@ -101,10 +84,9 @@ namespace studio::fs
       {
         archive->get().set_stream_position(stream, info);
       }
-
     }
 
-    std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> get_content_listing(const std::filesystem::path& folder_path)
+    std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> get_content_listing(const std::filesystem::path& folder_path) const
     {
       std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> files;
 

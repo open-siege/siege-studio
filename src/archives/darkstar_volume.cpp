@@ -278,7 +278,7 @@ namespace darkstar::vol
 
   using folder_info = shared::archive::folder_info;
 
-  bool vol_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream)
+  bool vol_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
   {
     std::array<std::byte, 4> tag{};
     stream.read(tag.data(), sizeof(tag));
@@ -288,15 +288,15 @@ namespace darkstar::vol
     return tag == vol_file_tag || tag == alt_vol_file_tag || tag == old_vol_file_tag;
   }
 
-  std::vector<std::variant<folder_info, shared::archive::file_info>> vol_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path)
+  std::vector<vol_file_archive::content_info> vol_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
   {
-    std::vector<std::variant<folder_info, shared::archive::file_info>> results;
+    std::vector<vol_file_archive::content_info> results;
 
     auto raw_results = get_file_metadata(stream);
 
     results.reserve(raw_results.size());
 
-    std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(results), [&](const file_info& value) {
+    std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(results), [&](const auto& value) {
       shared::archive::file_info info{};
       info.filename = value.filename;
       info.offset = value.offset;
@@ -309,7 +309,7 @@ namespace darkstar::vol
     return results;
   }
 
-  void vol_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info)
+  void vol_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info) const
   {
     if (int(stream.tellg()) == info.offset)
     {
@@ -321,7 +321,7 @@ namespace darkstar::vol
     }
   }
 
-  void vol_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output)
+  void vol_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output) const
   {
     if (info.compression_type == shared::archive::compression_type::none)
     {
@@ -344,7 +344,6 @@ namespace darkstar::vol
 
       command << "extract.exe" << ' ' << volume_filename << ' ' << info.filename << ' ' << new_path;
 
-      std::cout << "Executing " << command.str() << '\n';
       std::system(command.str().c_str());
 
       if (std::filesystem::exists(new_path) && std::filesystem::file_size(new_path) > info.size)

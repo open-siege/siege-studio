@@ -293,7 +293,7 @@ namespace three_space::vol
     return files;
   }
 
-  bool rmf_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream)
+  bool rmf_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
   {
     std::array<std::byte, 4> tag{};
     stream.read(tag.data(), sizeof(tag));
@@ -315,7 +315,7 @@ namespace three_space::vol
     return result;
   }
 
-  std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> rmf_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path)
+  std::vector<rmf_file_archive::content_info> rmf_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
   {
     std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> results;
 
@@ -345,7 +345,7 @@ namespace three_space::vol
     return results;
   }
 
-  void rmf_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info)
+  void rmf_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info) const
   {
     if (int(stream.tellg()) == info.offset)
     {
@@ -357,7 +357,7 @@ namespace three_space::vol
     }
   }
 
-  void rmf_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output)
+  void rmf_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output) const
   {
     set_stream_position(stream, info);
 
@@ -366,7 +366,7 @@ namespace three_space::vol
       std::ostreambuf_iterator<std::byte>(output));
   }
 
-  bool dyn_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream)
+  bool dyn_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
   {
     std::array<std::byte, 20> tag{};
     stream.read(tag.data(), sizeof(tag));
@@ -376,9 +376,9 @@ namespace three_space::vol
     return tag == dyn_tag;
   }
 
-  std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> dyn_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path)
+  std::vector<dyn_file_archive::content_info> dyn_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
   {
-    std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> results;
+    std::vector<dyn_file_archive::content_info> results;
 
     auto raw_results = get_dyn_data(stream);
 
@@ -393,7 +393,7 @@ namespace three_space::vol
     return results;
   }
 
-  void dyn_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info)
+  void dyn_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info) const
   {
     if (int(stream.tellg()) == info.offset)
     {
@@ -405,7 +405,7 @@ namespace three_space::vol
     }
   }
 
-  void dyn_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output)
+  void dyn_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output) const
   {
     set_stream_position(stream, info);
 
@@ -414,7 +414,7 @@ namespace three_space::vol
       std::ostreambuf_iterator<std::byte>(output));
   }
 
-  bool vol_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream)
+  bool vol_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
   {
     std::array<std::byte, 4> tag{};
     stream.read(tag.data(), sizeof(tag));
@@ -424,9 +424,9 @@ namespace three_space::vol
     return tag == vol_tag;
   }
 
-  std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> vol_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path)
+  std::vector<dyn_file_archive::content_info> vol_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
   {
-    std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> results;
+    std::vector<dyn_file_archive::content_info> results;
 
     if (std::filesystem::exists(archive_or_folder_path))
     {
@@ -457,7 +457,7 @@ namespace three_space::vol
     return results;
   }
 
-  void vol_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info)
+  void vol_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info) const
   {
     // TODO this actually needs to skip passed the header before the file contents
     if (int(stream.tellg()) != info.offset)
@@ -466,7 +466,7 @@ namespace three_space::vol
     }
   }
 
-  void vol_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output)
+  void vol_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output) const
   {
     set_stream_position(stream, info);
 
