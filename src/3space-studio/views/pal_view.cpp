@@ -43,6 +43,11 @@ pal_view::pal_view(std::basic_istream<std::byte>& image_stream)
     {
       generate_rectangles(palette.colours);
     }
+
+    if (!all_rectangles.empty())
+    {
+      rectangles = &all_rectangles.front();
+    }
   }
 }
 
