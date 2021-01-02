@@ -19,8 +19,20 @@ private:
   std::vector<darkstar::pal::palette>* selected_palette = nullptr;
   std::string selected_palette_name = "";
   std::size_t selected_index = std::string::npos;
+
+  std::string default_palette_name = "";
   std::size_t default_index = std::string::npos;
 
+
+  void refresh_image();
+
+  enum class strategy : int
+  {
+    do_nothing,
+    remap,
+    remap_unique
+  };
+  int colour_strategy = 0;
 
   std::vector<std::byte> original_pixels;
 
