@@ -39,13 +39,17 @@ namespace shared::archive
 
   struct file_archive
   {
-    virtual bool stream_is_supported(std::basic_istream<std::byte>&) = 0;
+    using folder_info = shared::archive::folder_info;
+    using file_info = shared::archive::file_info;
+    using content_info = std::variant<folder_info, shared::archive::file_info>;
 
-    virtual std::vector<std::variant<folder_info, file_info>> get_content_listing(std::basic_istream<std::byte>&, std::filesystem::path) = 0;
+    virtual bool stream_is_supported(std::basic_istream<std::byte>&) const = 0;
 
-    virtual void set_stream_position(std::basic_istream<std::byte>&, const file_info&) = 0;
+    virtual std::vector<content_info> get_content_listing(std::basic_istream<std::byte>&, std::filesystem::path) const = 0;
 
-    virtual void extract_file_contents(std::basic_istream<std::byte>&, const file_info&, std::basic_ostream<std::byte>&) = 0;
+    virtual void set_stream_position(std::basic_istream<std::byte>&, const file_info&) const = 0;
+
+    virtual void extract_file_contents(std::basic_istream<std::byte>&, const file_info&, std::basic_ostream<std::byte>&) const = 0;
 
     virtual ~file_archive() = default;
     file_archive() = default;
