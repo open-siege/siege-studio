@@ -1,5 +1,5 @@
 #include "pal_view.hpp"
-#include "archives/bitmap.hpp"
+#include "content/bitmap.hpp"
 
 pal_view::pal_view(std::basic_istream<std::byte>& image_stream)
 {

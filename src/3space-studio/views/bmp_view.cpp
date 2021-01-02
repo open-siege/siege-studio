@@ -1,5 +1,5 @@
 #include "bmp_view.hpp"
-#include "archives/bitmap.hpp"
+#include "content/bitmap.hpp"
 
 
 void create_image(sf::Image& loaded_image,

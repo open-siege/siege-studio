@@ -3,7 +3,7 @@
 #include "bmp_view.hpp"
 #include "pal_view.hpp"
 #include "dts_io.hpp"
-#include "archives/bitmap.hpp"
+#include "content/bitmap.hpp"
 
 namespace dts = darkstar::dts;
 

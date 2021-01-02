@@ -3,7 +3,7 @@
 
 #include "graphics_view.hpp"
 #include "archives/file_system_archive.hpp"
-#include "archives/palette.hpp"
+#include "content/palette.hpp"
 
 class bmp_view : public graphics_view
 {
