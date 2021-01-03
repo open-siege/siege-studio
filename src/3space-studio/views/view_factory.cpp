@@ -18,23 +18,15 @@ view_factory create_default_view_factory()
   view_factory.add_file_type(darkstar::pal::is_phoenix_pal, [](auto&, auto& stream, auto&) { return static_cast<graphics_view*>(new pal_view(stream)); });
 
   view_factory.add_extension(".dts", dts::is_darkstar_dts);
-  view_factory.add_extension(".DTS", dts::is_darkstar_dts);
 
   view_factory.add_extension(".bmp", darkstar::bmp::is_microsoft_bmp);
-  view_factory.add_extension(".BMP", darkstar::bmp::is_microsoft_bmp);
   view_factory.add_extension(".bmp", darkstar::bmp::is_phoenix_bmp);
-  view_factory.add_extension(".BMP", darkstar::bmp::is_phoenix_bmp);
   view_factory.add_extension(".pba", darkstar::bmp::is_phoenix_bmp_array);
-  view_factory.add_extension(".PBA", darkstar::bmp::is_phoenix_bmp_array);
 
   view_factory.add_extension(".pal", darkstar::pal::is_microsoft_pal);
-  view_factory.add_extension(".PAL", darkstar::pal::is_microsoft_pal);
   view_factory.add_extension(".pal", darkstar::pal::is_phoenix_pal);
-  view_factory.add_extension(".PAL", darkstar::pal::is_phoenix_pal);
   view_factory.add_extension(".ipl", darkstar::pal::is_phoenix_pal);
-  view_factory.add_extension(".IPL", darkstar::pal::is_phoenix_pal);
   view_factory.add_extension(".ppl", darkstar::pal::is_phoenix_pal);
-  view_factory.add_extension(".PPL", darkstar::pal::is_phoenix_pal);
 
   return view_factory;
 }
