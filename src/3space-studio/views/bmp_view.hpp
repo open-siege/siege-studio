@@ -15,13 +15,16 @@ public:
   void render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext) override;
 private:
   std::vector<darkstar::pal::colour> default_colours;
-  std::map<std::string, std::vector<darkstar::pal::palette>> loaded_palettes;
+  std::list<std::string> sort_order;
+  std::map<std::string_view, std::vector<darkstar::pal::palette>> loaded_palettes;
   std::vector<darkstar::pal::palette>* selected_palette = nullptr;
-  std::string selected_palette_name = "";
-  std::size_t selected_index = std::string::npos;
+  std::string_view selected_palette_name;
+  std::size_t selected_palette_index = std::string::npos;
 
-  std::string default_palette_name = "";
-  std::size_t default_index = std::string::npos;
+  int selected_bitmap_index = 0;
+
+  std::string_view default_palette_name;
+  std::size_t default_palette_index = std::string::npos;
 
 
   void refresh_image();
@@ -34,7 +37,7 @@ private:
   };
   int colour_strategy = 0;
 
-  std::vector<std::byte> original_pixels;
+  std::vector<std::vector<std::byte>> original_pixels;
 
   sf::Image loaded_image;
   sf::Texture texture;

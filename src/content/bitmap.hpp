@@ -332,7 +332,17 @@ namespace darkstar::bmp
     raw_data.write(reinterpret_cast<std::byte*>(&file_size), sizeof(file_size));
   }
 
-  inline std::vector<pbmp_data> get_pba_data(std::basic_ifstream<std::byte>& raw_data)
+  inline bool is_phoenix_bmp_array(std::basic_istream<std::byte>& raw_data)
+  {
+    std::array<std::byte, 4> header{};
+    raw_data.read(header.data(), sizeof(header));
+
+    raw_data.seekg(-int(sizeof(header)), std::ios::cur);
+
+    return header == pba_tag;
+  }
+
+  inline std::vector<pbmp_data> get_pba_data(std::basic_istream<std::byte>& raw_data)
   {
     std::vector<pbmp_data> results;
 
