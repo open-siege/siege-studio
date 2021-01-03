@@ -28,10 +28,11 @@
 
 namespace fs = std::filesystem;
 
-using optional_istream = std::optional<std::reference_wrapper<std::basic_istream<std::byte>>>;
-
-static studio::fs::null_buffer null_buffer;
-static std::basic_istream<std::byte> null_stream (&null_buffer);
+studio::fs::file_stream create_null_stream()
+{
+  static studio::fs::null_buffer null_buffer;
+  return std::make_pair(shared::archive::file_info{}, std::make_unique<std::basic_istream<std::byte>>(&null_buffer));
+}
 
 struct tree_item_file_info : public wxTreeItemData
 {
@@ -113,7 +114,7 @@ wxMenuBar* create_menu_bar()
   return menuBar;
 }
 
-void create_render_view(wxWindow* panel, std::basic_istream<std::byte>& file_stream, const view_factory& factory, const studio::fs::file_system_archive& archive)
+void create_render_view(wxWindow* panel, studio::fs::file_stream file_stream, const view_factory& factory, const studio::fs::file_system_archive& archive)
 {
   auto* graphics = new wxControl(panel, -1, wxDefaultPosition, wxDefaultSize, 0);
 
@@ -139,7 +140,7 @@ void create_render_view(wxWindow* panel, std::basic_istream<std::byte>& file_str
     gui_context = ImGui::CreateContext(ImGui::GetIO().Fonts);
   }
 
-  graphics_view* handler = factory.create_view(file_stream, archive);
+  graphics_view* handler = factory.create_view(file_stream.first, *file_stream.second, archive);
 
   graphics->SetClientObject(handler);
 
@@ -215,10 +216,10 @@ void populate_tree_view(const view_factory& view_factory,
       if constexpr (std::is_same_v<T, shared::archive::file_info>)
       {
         if (std::any_of(extensions.begin(), extensions.end(), [&file](const auto& ext) {
-              return ends_with(file.filename, ext);
+              return ends_with(file.filename.string(), ext);
             }))
         {
-          tree_view->AppendItem(parent.value(), file.filename, -1, -1, new tree_item_file_info(file));
+          tree_view->AppendItem(parent.value(), file.filename.string(), -1, -1, new tree_item_file_info(file));
         }
       }
     },
@@ -277,15 +278,17 @@ int main(int argc, char** argv)
 
     sizer->Add(notebook, 80, wxEXPAND, 0);
 
-    auto add_element_from_file = [notebook, &num_elements, &view_factory, &archive](auto new_path, auto new_stream, bool replace_selection = false) {
+    auto add_element_from_file = [notebook, &num_elements, &view_factory, &archive](auto new_stream, bool replace_selection = false) {
            auto* panel = new wxPanel(notebook, wxID_ANY);
            panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
-           create_render_view(panel, *new_stream, view_factory, archive);
+
+           auto new_path = new_stream.first;
+           create_render_view(panel, std::move(new_stream), view_factory, archive);
 
            if (replace_selection)
            {
              auto selection = notebook->GetSelection();
-             notebook->InsertPage(selection, panel, new_path.filename().string());
+             notebook->InsertPage(selection, panel, new_path.filename.string());
              num_elements = notebook->GetPageCount();
 
              if (num_elements > 2)
@@ -297,7 +300,7 @@ int main(int argc, char** argv)
            }
            else
            {
-             notebook->InsertPage(notebook->GetPageCount() - 1, panel, new_path.filename().string());
+             notebook->InsertPage(notebook->GetPageCount() - 1, panel, new_path.filename.string());
              num_elements = notebook->GetPageCount();
              notebook->ChangeSelection(notebook->GetPageCount() - 2);
            }
@@ -306,7 +309,7 @@ int main(int argc, char** argv)
     auto add_new_element = [notebook, &num_elements, &view_factory, &archive]() {
            auto* panel = new wxPanel(notebook, wxID_ANY);
            panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
-           create_render_view(panel, null_stream, view_factory, archive);
+           create_render_view(panel, create_null_stream(), view_factory, archive);
            notebook->InsertPage(notebook->GetPageCount() - 1, panel, "New Tab");
            notebook->ChangeSelection(notebook->GetPageCount() - 2);
            num_elements = notebook->GetPageCount();
@@ -360,16 +363,14 @@ int main(int argc, char** argv)
 
            if (auto* real_info = dynamic_cast<tree_item_file_info*>(tree_view->GetItemData(item)); real_info)
            {
-             auto& info = real_info->info;
-
-             add_element_from_file(info.folder_path / info.filename, archive.load_file(info), had_first_activation == false);
+             add_element_from_file(archive.load_file(real_info->info), had_first_activation == false);
              had_first_activation = true;
            }
     });
 
     auto* panel = new wxPanel(notebook, wxID_ANY);
     panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
-    create_render_view(panel, null_stream, view_factory, archive);
+    create_render_view(panel, create_null_stream(), view_factory, archive);
     notebook->AddPage(panel, "New Tab");
 
     panel = new wxPanel(notebook, wxID_ANY);
@@ -420,7 +421,7 @@ int main(int argc, char** argv)
 
              if (new_path.has_value())
              {
-               add_element_from_file(new_path.value(), archive.load_file(new_path.value()), true);
+               add_element_from_file(archive.load_file(new_path.value()), true);
 
                search_path = new_path.value().parent_path();
                populate_tree_view(view_factory, archive, tree_view, search_path);
@@ -434,7 +435,7 @@ int main(int argc, char** argv)
 
              if (new_path.has_value())
              {
-               add_element_from_file(new_path.value(), archive.load_file(new_path.value()));
+               add_element_from_file(archive.load_file(new_path.value()));
              }
       },
       event_open_in_new_tab);

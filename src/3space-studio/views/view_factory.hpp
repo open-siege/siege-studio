@@ -9,7 +9,7 @@
 
 using stream_validator = bool(std::basic_istream<std::byte>&);
 
-using view_creator = graphics_view*(std::basic_istream<std::byte>&, const studio::fs::file_system_archive&);
+using view_creator = graphics_view*(const shared::archive::file_info&, std::basic_istream<std::byte>&, const studio::fs::file_system_archive&);
 
 class view_factory
 {
@@ -25,33 +25,28 @@ public:
     validators.emplace(extensions.back(), checker);
   }
 
-  std::vector<std::string_view> get_extensions() const
+  [[nodiscard]] std::vector<std::string_view> get_extensions() const
   {
     return std::vector<std::string_view>(extensions.cbegin(), extensions.cend());
   }
 
-  graphics_view* create_view(std::string_view extension, std::basic_istream<std::byte>& stream, const studio::fs::file_system_archive& manager) const
+  graphics_view* create_view(const shared::archive::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::fs::file_system_archive& manager) const
   {
-    auto archive_type = validators.equal_range(extension);
+    auto archive_type = validators.equal_range(file_info.filename.extension().string());
 
     for (auto it = archive_type.first; it != archive_type.second; ++it)
     {
       if (it->second(stream))
       {
-        return creators.at(it->second)(stream, manager);
+        return creators.at(it->second)(file_info, stream, manager);
       }
     }
 
-    return create_view(stream, manager);
-  }
-
-  graphics_view* create_view(std::basic_istream<std::byte>& stream, const studio::fs::file_system_archive& manager) const
-  {
     for (auto& [checker, creator] : creators)
     {
       if (checker(stream))
       {
-        return creator(stream, manager);
+        return creator(file_info, stream, manager);
       }
     }
 

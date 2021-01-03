@@ -13,6 +13,8 @@
 
 namespace studio::fs
 {
+  using file_stream = std::pair<shared::archive::file_info, std::unique_ptr<std::basic_istream<std::byte>>>;
+
   struct null_buffer : public std::basic_streambuf<std::byte>
   {
     int overflow(int c) { return c; }
@@ -48,10 +50,10 @@ namespace studio::fs
       archive_types.insert(std::make_pair(std::move(extension), std::move(archive_type)));
     }
 
-    std::vector<shared::archive::file_info> find_files(const std::vector<std::string_view>& extensions) const
+    std::vector<shared::archive::file_info> find_files(const std::filesystem::path& new_search_path, const std::vector<std::string_view>& extensions) const
     {
       std::stringstream key;
-      key << search_path;
+      key << new_search_path;
       std::for_each(extensions.begin(), extensions.end(), [&](auto& ext) { key << ext; });
 
       auto cache_result = info_cache.find(key.str());
@@ -63,7 +65,7 @@ namespace studio::fs
 
       std::vector<shared::archive::file_info> results;
 
-      auto files_folders = get_content_listing(search_path);
+      auto files_folders = get_content_listing(new_search_path);
 
       std::function<void(decltype(files_folders)::const_reference)> get_files_folders = [&](const auto& file_folder) {
         std::visit([&](const auto& folder) {
@@ -103,7 +105,30 @@ namespace studio::fs
       return results;
     }
 
-    std::unique_ptr<std::basic_istream<std::byte>> load_file(const std::filesystem::path& path) const
+    std::vector<shared::archive::file_info> find_files(const std::vector<std::string_view>& extensions) const
+    {
+      return find_files(search_path, extensions);
+    }
+
+    static void merge_results(std::vector<shared::archive::file_info>& group1,
+      const std::vector<shared::archive::file_info>& group2)
+    {
+      group1.reserve(group1.capacity() + group2.size());
+
+      for (auto& group2_item : group2)
+      {
+        auto result = std::find_if(group1.begin(), group1.end(), [&](const auto& group1_item) {
+               return group1_item.folder_path == group2_item.folder_path;
+        });
+
+        if (result == group1.end())
+        {
+          group1.emplace_back(group2_item);
+        }
+      }
+    }
+
+    file_stream load_file(const std::filesystem::path& path)
     {
       shared::archive::file_info info{};
 
@@ -113,13 +138,13 @@ namespace studio::fs
       return load_file(info);
     }
 
-    std::unique_ptr<std::basic_istream<std::byte>> load_file(const shared::archive::file_info& info) const
+    file_stream load_file(const shared::archive::file_info& info) const
     {
       if (info.compression_type == shared::archive::compression_type::none)
       {
         if (std::filesystem::is_directory(info.folder_path))
         {
-          return std::make_unique<std::basic_ifstream<std::byte>>(info.folder_path / info.filename, std::ios::binary);
+          return std::make_pair(info, std::make_unique<std::basic_ifstream<std::byte>>(info.folder_path / info.filename, std::ios::binary));
         }
         else
         {
@@ -133,7 +158,7 @@ namespace studio::fs
             archive->get().set_stream_position(*file_stream, info);
           }
 
-          return file_stream;
+          return std::make_pair(info, std::move(file_stream));
         }
       }
       else
@@ -150,7 +175,7 @@ namespace studio::fs
           archive->get().extract_file_contents(file_stream, info, *memory_stream);
         }
 
-        return memory_stream;
+        return std::make_pair(info, std::move(memory_stream));
       }
     }
 
