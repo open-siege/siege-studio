@@ -49,87 +49,110 @@ bmp_view::bmp_view(std::basic_istream<std::byte>& image_stream, const studio::fs
     rect.width = windows_bmp.info.width;
     rect.height = windows_bmp.info.height;
 
-    original_pixels = std::move(windows_bmp.pixels);
+    original_pixels.emplace_back(std::move(windows_bmp.pixels));
   }
-  else if (darkstar::bmp::is_phoenix_bmp(image_stream))
+  else
   {
-    auto phoenix_bmp = darkstar::bmp::get_pbmp_data(image_stream);
-    std::vector<std::uint8_t> pixels;
+    std::vector<darkstar::bmp::pbmp_data> frames;
 
-    pixels.reserve(phoenix_bmp.bmp_header.width * phoenix_bmp.bmp_header.height * sizeof(std::int32_t));
-
-    auto palettes = manager.find_files({ ".ppl", ".PPL", ".ipl", ".IPL", ".pal", ".PAL" });
-
-    for (auto& palette_info : palettes)
+    if (darkstar::bmp::is_phoenix_bmp(image_stream))
     {
-      auto raw_palette = manager.load_file(palette_info);
-
-      if (darkstar::pal::is_phoenix_pal(*raw_palette))
-      {
-        auto result = loaded_palettes.emplace(palette_info.filename, darkstar::pal::get_ppl_data(*raw_palette));
-
-        if (selected_palette)
-        {
-          continue;
-        }
-
-        for (auto i = 0u; i < result.first->second.size(); ++i)
-        {
-          auto& child = result.first->second[i];
-          if (child.index == phoenix_bmp.palette_index)
-          {
-            selected_index = default_index = i;
-            selected_palette = &result.first->second;
-            selected_palette_name = default_palette_name = result.first->first;
-            break;
-          }
-        }
-      }
+      frames.emplace_back(darkstar::bmp::get_pbmp_data(image_stream));
+    }
+    else if (darkstar::bmp::is_phoenix_bmp_array(image_stream))
+    {
+      frames = darkstar::bmp::get_pba_data(image_stream);
     }
 
-    create_image(loaded_image,
-      phoenix_bmp.bmp_header.width,
-      phoenix_bmp.bmp_header.height,
-      phoenix_bmp.pixels,
-      selected_palette ? selected_palette->at(selected_index).colours : default_colours);
+    for (auto& phoenix_bmp : frames)
+    {
+      if (original_pixels.empty())
+      {
+        auto palettes = manager.find_files({ ".ppl", ".PPL", ".ipl", ".IPL", ".pal", ".PAL" });
 
-    original_pixels = std::move(phoenix_bmp.pixels);
-    rect.width = phoenix_bmp.bmp_header.width;
-    rect.height = phoenix_bmp.bmp_header.height;
+        for (auto& palette_info : palettes)
+        {
+          auto raw_palette = manager.load_file(palette_info);
+
+          if (darkstar::pal::is_phoenix_pal(*raw_palette))
+          {
+            auto result = loaded_palettes.emplace(sort_order.emplace_back(std::move(palette_info.filename)), darkstar::pal::get_ppl_data(*raw_palette));
+
+            if (selected_palette)
+            {
+              continue;
+            }
+
+            for (auto i = 0u; i < result.first->second.size(); ++i)
+            {
+              auto& child = result.first->second[i];
+              if (child.index == phoenix_bmp.palette_index)
+              {
+                selected_palette_index = default_palette_index = i;
+                selected_palette = &result.first->second;
+                selected_palette_name = default_palette_name = result.first->first;
+                break;
+              }
+            }
+          }
+        }
+
+        create_image(loaded_image,
+          phoenix_bmp.bmp_header.width,
+          phoenix_bmp.bmp_header.height,
+          phoenix_bmp.pixels,
+          selected_palette ? selected_palette->at(selected_palette_index).colours : default_colours);
+
+        rect.width = phoenix_bmp.bmp_header.width;
+        rect.height = phoenix_bmp.bmp_header.height;
+      }
+
+      original_pixels.emplace_back(std::move(phoenix_bmp.pixels));
+    }
   }
 
-  rect.top = 0;
-  rect.left = 0;
+  sort_order.sort([&](const auto& a, const auto& b) {
+    return loaded_palettes.at(a).size() < loaded_palettes.at(b).size();
+  });
 
-  texture.loadFromImage(loaded_image, rect);
-  sprite.setTexture(texture);
+  if (!original_pixels.empty())
+  {
+    rect.top = 0;
+    rect.left = 0;
+
+    texture.loadFromImage(loaded_image, rect);
+    sprite.setTexture(texture);
+  }
 }
 
 void bmp_view::refresh_image()
 {
-  auto [width, height] = loaded_image.getSize();
-  strategy colour_strat = strategy(colour_strategy);
-
-  if (colour_strat == strategy::do_nothing)
+  if (!original_pixels.empty())
   {
-    create_image(loaded_image,
-                 width,
-                 height,
-                 original_pixels,
-                 selected_palette->at(selected_index).colours);
-  }
-  else if (colour_strat == strategy::remap)
-  {
-    create_image(loaded_image,
-                 width,
-                 height,
-                 darkstar::bmp::remap_bitmap(original_pixels,
-                      loaded_palettes.at(default_palette_name).at(default_index).colours,
-                      selected_palette->at(selected_index).colours),
-                 selected_palette->at(selected_index).colours);
-  }
+    auto [width, height] = loaded_image.getSize();
+    auto colour_strat = strategy(colour_strategy);
 
-  texture.update(loaded_image);
+    if (colour_strat == strategy::do_nothing)
+    {
+      create_image(loaded_image,
+        width,
+        height,
+        original_pixels.at(selected_bitmap_index),
+        selected_palette->at(selected_palette_index).colours);
+    }
+    else if (colour_strat == strategy::remap)
+    {
+      create_image(loaded_image,
+        width,
+        height,
+        darkstar::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
+          loaded_palettes.at(default_palette_name).at(default_palette_index).colours,
+          selected_palette->at(selected_palette_index).colours),
+        selected_palette->at(selected_palette_index).colours);
+    }
+
+    texture.update(loaded_image);
+  }
 }
 
 void bmp_view::render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext)
@@ -142,45 +165,54 @@ void bmp_view::render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiConte
     ImGui::Begin("Palettes");
 
     auto child_count = 0;
-    for (auto& [key, value] : loaded_palettes)
+    for (auto& key : sort_order)
     {
+      auto& value = loaded_palettes.at(key);
+
       if (ImGui::RadioButton(key.c_str(), key == selected_palette_name))
       {
         selected_palette_name = key;
         selected_palette = &value;
 
-        if (loaded_palettes.at(key).size() - 1 < selected_index)
+        if (loaded_palettes.at(key).size() - 1 < selected_palette_index)
         {
-          selected_index = 0;
+          selected_palette_index = 0;
         }
 
         refresh_image();
       }
 
       ImGui::Indent(8);
+
+      std::string placeholder;
+      placeholder.reserve(std::strlen("Palette ") + std::strlen(" (default for this image)") + child_count);
+
+      std::stringstream label(placeholder);
+
       for (auto i = 0u; i < value.size(); ++i)
       {
-        std::stringstream label;
         label << "Palette " << i + 1;
 
-        if (i == default_index)
+        if (i == default_palette_index)
         {
           label << " (default for this image)";
         }
 
         for (auto y = 0; y < child_count; ++y)
         {
-          label << " ";
+          label << ' ';
         }
 
-        if (ImGui::RadioButton(label.str().c_str(), key == selected_palette_name && i == selected_index))
+        if (ImGui::RadioButton(label.str().c_str(), key == selected_palette_name && i == selected_palette_index))
         {
           selected_palette_name = key;
           selected_palette = &value;
-          selected_index = i;
+          selected_palette_index = i;
 
           refresh_image();
         }
+
+        label.str("");
       }
       child_count++;
 
@@ -207,6 +239,23 @@ void bmp_view::render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiConte
       refresh_image();
     }
     ImGui::End();
+
+    if (original_pixels.size() > 1)
+    {
+      ImGui::Begin("Frames");
+      std::stringstream label;
+      for (auto i = 0; i < original_pixels.size(); ++i)
+      {
+        label << "Frame " << i + 1;
+
+        if (ImGui::RadioButton(label.str().c_str(), &selected_bitmap_index, i))
+        {
+          refresh_image();
+        }
+        label.str("");
+      }
+      ImGui::End();
+    }
   }
 }
 

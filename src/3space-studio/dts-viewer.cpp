@@ -233,240 +233,247 @@ void populate_tree_view(const view_factory& view_factory,
 
 int main(int argc, char** argv)
 {
-  auto search_path = fs::current_path();
-  studio::fs::file_system_archive archive(search_path);
+  try
+  {
+    auto search_path = fs::current_path();
+    studio::fs::file_system_archive archive(search_path);
 
-  archive.add_archive_type(".tbv", std::make_unique<trophy_bass::vol::tbv_file_archive>());
-  archive.add_archive_type(".rbx", std::make_unique<trophy_bass::vol::rbx_file_archive>());
-  archive.add_archive_type(".rmf", std::make_unique<three_space::vol::rmf_file_archive>());
-  archive.add_archive_type(".map", std::make_unique<three_space::vol::rmf_file_archive>());
-  archive.add_archive_type(".vga", std::make_unique<three_space::vol::rmf_file_archive>());
-  archive.add_archive_type(".dyn", std::make_unique<three_space::vol::dyn_file_archive>());
-  archive.add_archive_type(".vol", std::make_unique<three_space::vol::vol_file_archive>());
-  archive.add_archive_type(".vol", std::make_unique<darkstar::vol::vol_file_archive>());
+    archive.add_archive_type(".tbv", std::make_unique<trophy_bass::vol::tbv_file_archive>());
+    archive.add_archive_type(".rbx", std::make_unique<trophy_bass::vol::rbx_file_archive>());
+    archive.add_archive_type(".rmf", std::make_unique<three_space::vol::rmf_file_archive>());
+    archive.add_archive_type(".map", std::make_unique<three_space::vol::rmf_file_archive>());
+    archive.add_archive_type(".vga", std::make_unique<three_space::vol::rmf_file_archive>());
+    archive.add_archive_type(".dyn", std::make_unique<three_space::vol::dyn_file_archive>());
+    archive.add_archive_type(".vol", std::make_unique<three_space::vol::vol_file_archive>());
+    archive.add_archive_type(".vol", std::make_unique<darkstar::vol::vol_file_archive>());
 
-  view_factory view_factory = create_default_view_factory();
+    view_factory view_factory = create_default_view_factory();
 
 
-  wxApp::SetInitializerFunction(createApp);
-  wxEntryStart(argc, argv);
-  auto* app = wxApp::GetInstance();
-  app->CallOnInit();
+    wxApp::SetInitializerFunction(createApp);
+    wxEntryStart(argc, argv);
+    auto* app = wxApp::GetInstance();
+    app->CallOnInit();
 
-  auto* frame = new wxFrame(nullptr, wxID_ANY, "3Space Studio");
+    auto* frame = new wxFrame(nullptr, wxID_ANY, "3Space Studio");
 
-  frame->Bind(
-    wxEVT_MENU, [](auto& event) {
-      wxMessageBox("This is a tool to explore files using the 3Space or Darkstar engines. Currently only Starsiege, Starsiege Tribes, Trophy Bass 3D and Front Page Sports: Ski Racing are supported.",
-        "About 3Space Studio",
-        wxOK | wxICON_INFORMATION);
-    },
-    wxID_ABOUT);
+    frame->Bind(
+      wxEVT_MENU, [](auto& event) {
+             wxMessageBox("This is a tool to explore files using the 3Space or Darkstar engines. Currently only Starsiege, Starsiege Tribes, Trophy Bass 3D and Front Page Sports: Ski Racing are supported.",
+                          "About 3Space Studio",
+                          wxOK | wxICON_INFORMATION);
+      },
+      wxID_ABOUT);
 
-  auto* sizer = new wxBoxSizer(wxHORIZONTAL);
+    auto* sizer = new wxBoxSizer(wxHORIZONTAL);
 
-  auto* tree_view = new wxTreeCtrl(frame);
-  sizer->Add(tree_view, 20, wxEXPAND, 0);
+    auto* tree_view = new wxTreeCtrl(frame);
+    sizer->Add(tree_view, 20, wxEXPAND, 0);
 
-  populate_tree_view(view_factory, archive, tree_view, search_path);
+    populate_tree_view(view_factory, archive, tree_view, search_path);
 
-  auto* notebook = new wxAuiNotebook(frame, wxID_ANY);
-  auto num_elements = notebook->GetPageCount();
+    auto* notebook = new wxAuiNotebook(frame, wxID_ANY);
+    auto num_elements = notebook->GetPageCount();
 
-  sizer->Add(notebook, 80, wxEXPAND, 0);
+    sizer->Add(notebook, 80, wxEXPAND, 0);
 
-  auto add_element_from_file = [notebook, &num_elements, &view_factory, &archive](auto new_path, auto new_stream, bool replace_selection = false) {
-    auto* panel = new wxPanel(notebook, wxID_ANY);
-    panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
-    create_render_view(panel, *new_stream, view_factory, archive);
+    auto add_element_from_file = [notebook, &num_elements, &view_factory, &archive](auto new_path, auto new_stream, bool replace_selection = false) {
+           auto* panel = new wxPanel(notebook, wxID_ANY);
+           panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
+           create_render_view(panel, *new_stream, view_factory, archive);
 
-    if (replace_selection)
-    {
-      auto selection = notebook->GetSelection();
-      notebook->InsertPage(selection, panel, new_path.filename().string());
-      num_elements = notebook->GetPageCount();
+           if (replace_selection)
+           {
+             auto selection = notebook->GetSelection();
+             notebook->InsertPage(selection, panel, new_path.filename().string());
+             num_elements = notebook->GetPageCount();
 
-      if (num_elements > 2)
-      {
-        notebook->DeletePage(selection + 1);
-      }
+             if (num_elements > 2)
+             {
+               notebook->DeletePage(selection + 1);
+             }
 
-      notebook->ChangeSelection(selection);
-    }
-    else
-    {
-      notebook->InsertPage(notebook->GetPageCount() - 1, panel, new_path.filename().string());
-      num_elements = notebook->GetPageCount();
-      notebook->ChangeSelection(notebook->GetPageCount() - 2);
-    }
-  };
+             notebook->ChangeSelection(selection);
+           }
+           else
+           {
+             notebook->InsertPage(notebook->GetPageCount() - 1, panel, new_path.filename().string());
+             num_elements = notebook->GetPageCount();
+             notebook->ChangeSelection(notebook->GetPageCount() - 2);
+           }
+    };
 
-  auto add_new_element = [notebook, &num_elements, &view_factory, &archive]() {
+    auto add_new_element = [notebook, &num_elements, &view_factory, &archive]() {
+           auto* panel = new wxPanel(notebook, wxID_ANY);
+           panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
+           create_render_view(panel, null_stream, view_factory, archive);
+           notebook->InsertPage(notebook->GetPageCount() - 1, panel, "New Tab");
+           notebook->ChangeSelection(notebook->GetPageCount() - 2);
+           num_elements = notebook->GetPageCount();
+    };
+
+    tree_view->Bind(wxEVT_TREE_ITEM_EXPANDING, [&view_factory, &archive, tree_view](wxTreeEvent& event) {
+           auto item = event.GetItem();
+
+           if (item == tree_view->GetRootItem())
+           {
+             return;
+           }
+
+           if (tree_view->HasChildren(item))
+           {
+             wxTreeItemIdValue cookie = nullptr;
+
+             auto child = tree_view->GetFirstChild(item, cookie);
+
+             if (cookie && !tree_view->HasChildren(child))
+             {
+               if (auto* real_info = dynamic_cast<tree_item_folder_info*>(tree_view->GetItemData(child)); real_info)
+               {
+                 populate_tree_view(view_factory, archive, tree_view, real_info->info.full_path, child);
+               }
+             }
+
+             do {
+               child = tree_view->GetNextChild(item, cookie);
+
+               if (cookie && !tree_view->HasChildren(child))
+               {
+                 if (auto* real_info = dynamic_cast<tree_item_folder_info*>(tree_view->GetItemData(child)); real_info)
+                 {
+                   populate_tree_view(view_factory, archive, tree_view, real_info->info.full_path, child);
+                 }
+               }
+             } while (cookie != nullptr);
+           }
+    });
+
+    tree_view->Bind(wxEVT_TREE_ITEM_ACTIVATED, [&archive, tree_view, &add_element_from_file](wxTreeEvent& event) {
+
+           static bool had_first_activation = false;
+           auto item = event.GetItem();
+
+           if (item == tree_view->GetRootItem())
+           {
+             return;
+           }
+
+           if (auto* real_info = dynamic_cast<tree_item_file_info*>(tree_view->GetItemData(item)); real_info)
+           {
+             auto& info = real_info->info;
+
+             add_element_from_file(info.folder_path / info.filename, archive.load_file(info), had_first_activation == false);
+             had_first_activation = true;
+           }
+    });
+
     auto* panel = new wxPanel(notebook, wxID_ANY);
     panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
     create_render_view(panel, null_stream, view_factory, archive);
-    notebook->InsertPage(notebook->GetPageCount() - 1, panel, "New Tab");
-    notebook->ChangeSelection(notebook->GetPageCount() - 2);
-    num_elements = notebook->GetPageCount();
-  };
+    notebook->AddPage(panel, "New Tab");
 
-  tree_view->Bind(wxEVT_TREE_ITEM_EXPANDING, [&view_factory, &archive, tree_view](wxTreeEvent& event) {
-    auto item = event.GetItem();
+    panel = new wxPanel(notebook, wxID_ANY);
+    panel->SetName("+");
+    notebook->AddPage(panel, "+");
 
-    if (item == tree_view->GetRootItem())
-    {
-      return;
-    }
+    notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED,
+                   [notebook, &add_new_element](wxAuiNotebookEvent& event) {
+                          auto* tab = notebook->GetPage(event.GetSelection());
 
-    if (tree_view->HasChildren(item))
-    {
-      wxTreeItemIdValue cookie = nullptr;
+                          if (tab->GetName() == "+")
+                          {
+                            if (notebook->GetPageCount() == 1)
+                            {
+                              add_new_element();
+                            }
+                            else
+                            {
+                              notebook->ChangeSelection(event.GetSelection() - 1);
+                            }
+                          }
+                   });
 
-      auto child = tree_view->GetFirstChild(item, cookie);
+    notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGING,
+                   [notebook, &num_elements, &add_new_element](wxAuiNotebookEvent& event) mutable {
+                          auto* tab = notebook->GetPage(event.GetSelection());
 
-      if (cookie && !tree_view->HasChildren(child))
-      {
-        if (auto* real_info = dynamic_cast<tree_item_folder_info*>(tree_view->GetItemData(child)); real_info)
-        {
-          populate_tree_view(view_factory, archive, tree_view, real_info->info.full_path, child);
-        }
-      }
+                          if (tab->GetName() == "+")
+                          {
+                            if (num_elements > notebook->GetPageCount())
+                            {
+                              num_elements = notebook->GetPageCount();
+                              return;
+                            }
 
-      do {
-        child = tree_view->GetNextChild(item, cookie);
-
-        if (cookie && !tree_view->HasChildren(child))
-        {
-          if (auto* real_info = dynamic_cast<tree_item_folder_info*>(tree_view->GetItemData(child)); real_info)
-          {
-            populate_tree_view(view_factory, archive, tree_view, real_info->info.full_path, child);
-          }
-        }
-      } while (cookie != nullptr);
-    }
-  });
-
-  tree_view->Bind(wxEVT_TREE_ITEM_ACTIVATED, [&archive, tree_view, &add_element_from_file](wxTreeEvent& event) {
-
-    static bool had_first_activation = false;
-    auto item = event.GetItem();
-
-    if (item == tree_view->GetRootItem())
-    {
-      return;
-    }
-
-    if (auto* real_info = dynamic_cast<tree_item_file_info*>(tree_view->GetItemData(item)); real_info)
-    {
-      auto& info = real_info->info;
-
-      add_element_from_file(info.folder_path / info.filename, archive.load_file(info), had_first_activation == false);
-      had_first_activation = true;
-    }
-  });
-
-  auto* panel = new wxPanel(notebook, wxID_ANY);
-  panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
-  create_render_view(panel, null_stream, view_factory, archive);
-  notebook->AddPage(panel, "New Tab");
-
-  panel = new wxPanel(notebook, wxID_ANY);
-  panel->SetName("+");
-  notebook->AddPage(panel, "+");
-
-  notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED,
-    [notebook, &add_new_element](wxAuiNotebookEvent& event) {
-      auto* tab = notebook->GetPage(event.GetSelection());
-
-      if (tab->GetName() == "+")
-      {
-        if (notebook->GetPageCount() == 1)
-        {
-          add_new_element();
-        }
-        else
-        {
-          notebook->ChangeSelection(event.GetSelection() - 1);
-        }
-      }
-    });
-
-  notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGING,
-    [notebook, &num_elements, &add_new_element](wxAuiNotebookEvent& event) mutable {
-      auto* tab = notebook->GetPage(event.GetSelection());
-
-      if (tab->GetName() == "+")
-      {
-        if (num_elements > notebook->GetPageCount())
-        {
-          num_elements = notebook->GetPageCount();
-          return;
-        }
-
-        add_new_element();
-      }
-      else
-      {
-        event.Skip();
-      }
-    });
+                            add_new_element();
+                          }
+                          else
+                          {
+                            event.Skip();
+                          }
+                   });
 
 
-  frame->Bind(
-    wxEVT_MENU, [&](auto& event) {
-      const auto new_path = get_shape_path();
+    frame->Bind(
+      wxEVT_MENU, [&](auto& event) {
+             const auto new_path = get_shape_path();
 
-      if (new_path.has_value())
-      {
-        add_element_from_file(new_path.value(), archive.load_file(new_path.value()), true);
+             if (new_path.has_value())
+             {
+               add_element_from_file(new_path.value(), archive.load_file(new_path.value()), true);
 
-        search_path = new_path.value().parent_path();
-        populate_tree_view(view_factory, archive, tree_view, search_path);
-      }
-    },
-    wxID_OPEN);
+               search_path = new_path.value().parent_path();
+               populate_tree_view(view_factory, archive, tree_view, search_path);
+             }
+      },
+      wxID_OPEN);
 
-  frame->Bind(
-    wxEVT_MENU, [&](auto& event) {
-      const auto new_path = get_shape_path();
+    frame->Bind(
+      wxEVT_MENU, [&](auto& event) {
+             const auto new_path = get_shape_path();
 
-      if (new_path.has_value())
-      {
-        add_element_from_file(new_path.value(), archive.load_file(new_path.value()));
-      }
-    },
-    event_open_in_new_tab);
+             if (new_path.has_value())
+             {
+               add_element_from_file(new_path.value(), archive.load_file(new_path.value()));
+             }
+      },
+      event_open_in_new_tab);
 
-  frame->Bind(
-    wxEVT_MENU, [&](auto& event) {
-      const auto new_path = get_workspace_path();
+    frame->Bind(
+      wxEVT_MENU, [&](auto& event) {
+             const auto new_path = get_workspace_path();
 
-      if (new_path.has_value())
-      {
-        search_path = new_path.value();
-        populate_tree_view(view_factory, archive, tree_view, search_path);
-      }
-    },
-    event_open_folder_as_workspace);
+             if (new_path.has_value())
+             {
+               search_path = new_path.value();
+               populate_tree_view(view_factory, archive, tree_view, search_path);
+             }
+      },
+      event_open_folder_as_workspace);
 
-  frame->Bind(
-    wxEVT_MENU, [frame](auto& event) {
-      frame->Close(true);
-    },
-    wxID_EXIT);
+    frame->Bind(
+      wxEVT_MENU, [frame](auto& event) {
+             frame->Close(true);
+      },
+      wxID_EXIT);
 
-  sizer->SetSizeHints(frame);
-  frame->SetSizer(sizer);
+    sizer->SetSizeHints(frame);
+    frame->SetSizer(sizer);
 
-  frame->SetMenuBar(create_menu_bar());
-  frame->CreateStatusBar();
-  frame->SetStatusText("3Space Studio");
-  frame->Maximize();
-  frame->Show(true);
+    frame->SetMenuBar(create_menu_bar());
+    frame->CreateStatusBar();
+    frame->SetStatusText("3Space Studio");
+    frame->Maximize();
+    frame->Show(true);
 
-  app->OnRun();
+    app->OnRun();
 
-  ImGui::SFML::Shutdown();
+    ImGui::SFML::Shutdown();
+  }
+  catch(const std::exception& exception)
+  {
+    std::cerr << exception.what() << '\n';
+  }
 
   return 0;
 }
