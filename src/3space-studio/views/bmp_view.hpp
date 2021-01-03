@@ -8,7 +8,7 @@
 class bmp_view : public graphics_view
 {
 public:
-  bmp_view(std::basic_istream<std::byte>& image_stream, const studio::fs::file_system_archive&);
+  bmp_view(const shared::archive::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::fs::file_system_archive&);
   std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks() override { return {};}
   void setup_gl(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext) override;
   void render_gl(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext) override {}
@@ -17,7 +17,6 @@ private:
   std::vector<darkstar::pal::colour> default_colours;
   std::list<std::string> sort_order;
   std::map<std::string_view, std::vector<darkstar::pal::palette>> loaded_palettes;
-  std::vector<darkstar::pal::palette>* selected_palette = nullptr;
   std::string_view selected_palette_name;
   std::size_t selected_palette_index = std::string::npos;
 

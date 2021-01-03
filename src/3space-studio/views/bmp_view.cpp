@@ -24,7 +24,7 @@ void create_image(sf::Image& loaded_image,
 }
 
 
-bmp_view::bmp_view(std::basic_istream<std::byte>& image_stream, const studio::fs::file_system_archive& manager)
+bmp_view::bmp_view(const shared::archive::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::fs::file_system_archive& manager)
 {
   default_colours.reserve(256);
   for (auto i = 0; i < 256; ++i)
@@ -36,9 +36,45 @@ bmp_view::bmp_view(std::basic_istream<std::byte>& image_stream, const studio::fs
   }
 
   sf::IntRect rect;
+
+  std::vector<shared::archive::file_info> palettes;
+
+
+  palettes = manager.find_files(studio::fs::file_system_archive::get_archive_path(info.folder_path).parent_path(), { ".ppl", ".PPL", ".ipl", ".IPL", ".pal", ".PAL" });
+
+  auto all_palettes = manager.find_files({ ".ppl", ".PPL", ".ipl", ".IPL", ".pal", ".PAL" });
+
+  studio::fs::file_system_archive::merge_results(palettes, all_palettes);
+
+
+  for (auto& palette_info : palettes)
+  {
+    auto raw_palette = manager.load_file(palette_info);
+
+    if (darkstar::pal::is_phoenix_pal(*raw_palette.second))
+    {
+      loaded_palettes.emplace(sort_order.emplace_back(palette_info.filename.string()), darkstar::pal::get_ppl_data(*raw_palette.second));
+    }
+    else if (darkstar::pal::is_microsoft_pal(*raw_palette.second))
+    {
+      std::vector<darkstar::pal::palette> temp;
+      temp.emplace_back().colours = darkstar::pal::get_pal_data(*raw_palette.second);
+
+      loaded_palettes.emplace(sort_order.emplace_back(palette_info.filename.string()), std::move(temp));
+    }
+  }
+
   if (darkstar::bmp::is_microsoft_bmp(image_stream))
   {
     auto windows_bmp = darkstar::bmp::get_bmp_data(image_stream);
+
+    std::vector<darkstar::pal::palette> temp;
+    temp.emplace_back().colours = windows_bmp.colours;
+
+    loaded_palettes.emplace(sort_order.emplace_back("Internal"), std::move(temp));
+
+    selected_palette_index = default_palette_index = 0;
+    selected_palette_name = default_palette_name = "Internal";
 
     create_image(loaded_image,
       windows_bmp.info.width,
@@ -68,31 +104,53 @@ bmp_view::bmp_view(std::basic_istream<std::byte>& image_stream, const studio::fs
     {
       if (original_pixels.empty())
       {
-        auto palettes = manager.find_files({ ".ppl", ".PPL", ".ipl", ".IPL", ".pal", ".PAL" });
-
-        for (auto& palette_info : palettes)
+        if (!selected_palette_name.empty())
         {
-          auto raw_palette = manager.load_file(palette_info);
+          continue;
+        }
 
-          if (darkstar::pal::is_phoenix_pal(*raw_palette))
+
+        std::vector<decltype(palettes)::pointer> results;
+        results.reserve(palettes.size() / 2);
+
+        for (auto& palette : palettes)
+        {
+          if (palette.folder_path == info.folder_path)
           {
-            auto result = loaded_palettes.emplace(sort_order.emplace_back(std::move(palette_info.filename)), darkstar::pal::get_ppl_data(*raw_palette));
+            results.emplace_back(&palette);
+          }
+        }
 
-            if (selected_palette)
+        auto get_defaults = [&](auto& value) {
+          for (auto i = 0u; i < value.second.size(); ++i)
+          {
+            auto& child = value.second[i];
+            if (child.index == phoenix_bmp.palette_index)
             {
-              continue;
+              selected_palette_index = default_palette_index = i;
+              selected_palette_name = default_palette_name = value.first;
+              break;
             }
+          }
+        };
 
-            for (auto i = 0u; i < result.first->second.size(); ++i)
+        if (results.empty())
+        {
+          for (auto& entry : loaded_palettes)
+          {
+            if (entry.second.size() > phoenix_bmp.palette_index)
             {
-              auto& child = result.first->second[i];
-              if (child.index == phoenix_bmp.palette_index)
-              {
-                selected_palette_index = default_palette_index = i;
-                selected_palette = &result.first->second;
-                selected_palette_name = default_palette_name = result.first->first;
-                break;
-              }
+              get_defaults(entry);
+            }
+          }
+        }
+        else
+        {
+          for (auto result : results)
+          {
+            if (auto entry = loaded_palettes.find(result->filename.string()); entry != loaded_palettes.end())
+            {
+              get_defaults(*entry);
             }
           }
         }
@@ -101,7 +159,7 @@ bmp_view::bmp_view(std::basic_istream<std::byte>& image_stream, const studio::fs
           phoenix_bmp.bmp_header.width,
           phoenix_bmp.bmp_header.height,
           phoenix_bmp.pixels,
-          selected_palette ? selected_palette->at(selected_palette_index).colours : default_colours);
+          selected_palette_name.empty() ? default_colours : loaded_palettes.at(selected_palette_name).at(selected_palette_index).colours);
 
         rect.width = phoenix_bmp.bmp_header.width;
         rect.height = phoenix_bmp.bmp_header.height;
@@ -112,7 +170,7 @@ bmp_view::bmp_view(std::basic_istream<std::byte>& image_stream, const studio::fs
   }
 
   sort_order.sort([&](const auto& a, const auto& b) {
-    return loaded_palettes.at(a).size() < loaded_palettes.at(b).size();
+    return (a == "Internal") || loaded_palettes.at(a).size() < loaded_palettes.at(b).size();
   });
 
   if (!original_pixels.empty())
@@ -138,7 +196,7 @@ void bmp_view::refresh_image()
         width,
         height,
         original_pixels.at(selected_bitmap_index),
-        selected_palette->at(selected_palette_index).colours);
+        loaded_palettes.at(selected_palette_name).at(selected_palette_index).colours);
     }
     else if (colour_strat == strategy::remap)
     {
@@ -147,8 +205,8 @@ void bmp_view::refresh_image()
         height,
         darkstar::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
           loaded_palettes.at(default_palette_name).at(default_palette_index).colours,
-          selected_palette->at(selected_palette_index).colours),
-        selected_palette->at(selected_palette_index).colours);
+          loaded_palettes.at(selected_palette_name).at(selected_palette_index).colours),
+        loaded_palettes.at(selected_palette_name).at(selected_palette_index).colours);
     }
 
     texture.update(loaded_image);
@@ -172,7 +230,6 @@ void bmp_view::render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiConte
       if (ImGui::RadioButton(key.c_str(), key == selected_palette_name))
       {
         selected_palette_name = key;
-        selected_palette = &value;
 
         if (loaded_palettes.at(key).size() - 1 < selected_palette_index)
         {
@@ -193,7 +250,7 @@ void bmp_view::render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiConte
       {
         label << "Palette " << i + 1;
 
-        if (i == default_palette_index)
+        if (key == default_palette_name && i == default_palette_index)
         {
           label << " (default for this image)";
         }
@@ -206,7 +263,6 @@ void bmp_view::render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiConte
         if (ImGui::RadioButton(label.str().c_str(), key == selected_palette_name && i == selected_palette_index))
         {
           selected_palette_name = key;
-          selected_palette = &value;
           selected_palette_index = i;
 
           refresh_image();

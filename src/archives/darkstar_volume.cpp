@@ -338,7 +338,7 @@ namespace darkstar::vol
 
       auto folder_path = volume_filename.parent_path() / "temp";
 
-      auto new_path = folder_path / (info.filename + ".tmp");
+      auto new_path = folder_path / (info.filename.string() + ".tmp");
 
       std::filesystem::create_directory(folder_path);
 

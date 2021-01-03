@@ -21,7 +21,7 @@ namespace shared::archive
 
   struct file_info
   {
-    std::string filename;
+    std::filesystem::path filename;
     std::size_t offset;
     std::size_t size;
     compression_type compression_type;
