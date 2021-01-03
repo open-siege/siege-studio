@@ -142,6 +142,11 @@ bmp_view::bmp_view(const shared::archive::file_info& info, std::basic_istream<st
             {
               get_defaults(entry);
             }
+
+            if (selected_palette_index != std::string::npos)
+            {
+              break;
+            }
           }
         }
         else
@@ -151,6 +156,11 @@ bmp_view::bmp_view(const shared::archive::file_info& info, std::basic_istream<st
             if (auto entry = loaded_palettes.find(result->filename.string()); entry != loaded_palettes.end())
             {
               get_defaults(*entry);
+            }
+
+            if (selected_palette_index != std::string::npos)
+            {
+              break;
             }
           }
         }

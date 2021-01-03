@@ -6,6 +6,7 @@
 #include "graphics_view.hpp"
 #include "default_view.hpp"
 #include "archives/file_system_archive.hpp"
+#include "3space-studio/utility.hpp"
 
 using stream_validator = bool(std::basic_istream<std::byte>&);
 
@@ -21,8 +22,7 @@ public:
 
   void add_extension(std::string_view extension, stream_validator* checker)
   {
-    extensions.emplace_back(extension);
-    validators.emplace(extensions.back(), checker);
+    validators.emplace(*extensions.emplace(extension).first, checker);
   }
 
   [[nodiscard]] std::vector<std::string_view> get_extensions() const
@@ -32,7 +32,7 @@ public:
 
   graphics_view* create_view(const shared::archive::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::fs::file_system_archive& manager) const
   {
-    auto archive_type = validators.equal_range(file_info.filename.extension().string());
+    auto archive_type = validators.equal_range(to_lower(file_info.filename.extension().string()));
 
     for (auto it = archive_type.first; it != archive_type.second; ++it)
     {
@@ -54,7 +54,7 @@ public:
   }
 
 private:
-  std::vector<std::string> extensions;
+  std::set<std::string> extensions;
 
   std::map<stream_validator*, view_creator*> creators;
   std::multimap<std::string_view, stream_validator*> validators;
