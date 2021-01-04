@@ -22,7 +22,7 @@ struct graphics_view : wxClientData
 
   virtual std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks() = 0;
 
-  virtual void setup_gl(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) = 0;
+  virtual void setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) = 0;
 
   virtual void render_gl(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) = 0;
 

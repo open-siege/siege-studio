@@ -22,15 +22,16 @@ namespace studio::fs
 
   struct file_system_archive
   {
-    std::multimap<std::string, std::unique_ptr<shared::archive::file_archive>> archive_types;
+    const std::filesystem::path& search_path;
 
     std::locale default_locale;
 
-    const std::filesystem::path& search_path;
+    std::multimap<std::string, std::unique_ptr<shared::archive::file_archive>> archive_types;
+    std::map<std::string, std::function<void(const shared::archive::file_info&)>> actions;
 
     mutable std::map<std::string, std::vector<shared::archive::file_info>> info_cache;
 
-    file_system_archive(const std::filesystem::path& search_path) : search_path(search_path) {}
+    explicit file_system_archive(const std::filesystem::path& search_path) : search_path(search_path) {}
 
     static std::filesystem::path get_archive_path(const std::filesystem::path& folder_path)
     {
@@ -42,6 +43,21 @@ namespace studio::fs
       }
 
       return archive_path;
+    }
+
+    void add_action(std::string name, std::function<void(const shared::archive::file_info&)> action)
+    {
+      actions.emplace(std::move(name), std::move(action));
+    }
+
+    void execute_action(const std::string& name, const shared::archive::file_info& info) const
+    {
+      auto result = actions.find(name);
+
+      if (result != actions.end())
+      {
+        result->second(info);
+      }
     }
 
     void add_archive_type(std::string extension, std::unique_ptr<shared::archive::file_archive> archive_type)
