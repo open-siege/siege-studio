@@ -42,7 +42,7 @@ bmp_view::bmp_view(const shared::archive::file_info& info, std::basic_istream<st
 
   palettes = manager.find_files(studio::fs::file_system_archive::get_archive_path(info.folder_path).parent_path(), { ".ppl", ".PPL", ".ipl", ".IPL", ".pal", ".PAL" });
 
-  auto all_palettes = manager.find_files({ ".ppl", ".PPL", ".ipl", ".IPL", ".pal", ".PAL" });
+  auto all_palettes = manager.find_files({ ".ppl", ".ipl", ".pal" });
 
   studio::fs::file_system_archive::merge_results(palettes, all_palettes);
 
@@ -223,7 +223,7 @@ void bmp_view::refresh_image()
   }
 }
 
-void bmp_view::render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext)
+void bmp_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
 {
   window->clear();
   window->draw(sprite);
@@ -325,7 +325,7 @@ void bmp_view::render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiConte
   }
 }
 
-void bmp_view::setup_gl(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext)
+void bmp_view::setup_gl(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
 {
   auto [width, height] = parent->GetClientSize();
 

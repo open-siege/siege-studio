@@ -9,10 +9,11 @@ class bmp_view : public graphics_view
 {
 public:
   bmp_view(const shared::archive::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::fs::file_system_archive&);
+  bool requires_gl() const override { return true; }
   std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks() override { return {};}
-  void setup_gl(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext) override;
-  void render_gl(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext) override {}
-  void render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext) override;
+  void setup_gl(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) override;
+  void render_gl(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) override {}
+  void render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) override;
 private:
   std::vector<darkstar::pal::colour> default_colours;
   std::list<std::string> sort_order;

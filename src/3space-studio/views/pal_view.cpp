@@ -51,7 +51,7 @@ pal_view::pal_view(std::basic_istream<std::byte>& image_stream)
   }
 }
 
-void pal_view::render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext)
+void pal_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
 {
   window->clear();
 
@@ -81,7 +81,7 @@ void pal_view::render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiConte
   }
 }
 
-void pal_view::setup_gl(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext)
+void pal_view::setup_gl(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
 {
   if (rectangles)
   {

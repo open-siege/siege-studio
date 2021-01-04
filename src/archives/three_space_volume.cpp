@@ -293,7 +293,7 @@ namespace three_space::vol
     return files;
   }
 
-  bool rmf_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  bool rmf_file_archive::is_supported(std::basic_istream<std::byte>& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(tag.data(), sizeof(tag));
@@ -313,6 +313,11 @@ namespace three_space::vol
     }
 
     return result;
+  }
+
+  bool rmf_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  {
+    return is_supported(stream);
   }
 
   std::vector<rmf_file_archive::content_info> rmf_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
@@ -366,7 +371,7 @@ namespace three_space::vol
       std::ostreambuf_iterator<std::byte>(output));
   }
 
-  bool dyn_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  bool dyn_file_archive::is_supported(std::basic_istream<std::byte>& stream)
   {
     std::array<std::byte, 20> tag{};
     stream.read(tag.data(), sizeof(tag));
@@ -374,6 +379,12 @@ namespace three_space::vol
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
     return tag == dyn_tag;
+  }
+
+
+  bool dyn_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  {
+    return is_supported(stream);
   }
 
   std::vector<dyn_file_archive::content_info> dyn_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
@@ -414,7 +425,7 @@ namespace three_space::vol
       std::ostreambuf_iterator<std::byte>(output));
   }
 
-  bool vol_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  bool vol_file_archive::is_supported(std::basic_istream<std::byte>& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(tag.data(), sizeof(tag));
@@ -422,6 +433,11 @@ namespace three_space::vol
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
     return tag == vol_tag;
+  }
+
+  bool vol_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  {
+    return is_supported(stream);
   }
 
   std::vector<dyn_file_archive::content_info> vol_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
