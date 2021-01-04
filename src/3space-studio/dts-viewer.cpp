@@ -111,7 +111,7 @@ void create_render_view(wxWindow* panel, studio::fs::file_stream file_stream, co
     auto* content_panel = new wxPanel(panel, wxID_ANY);
     panel->GetSizer()->Add(content_panel, 1, wxEXPAND | wxALL, 5);
 
-    handler->setup_gl(content_panel, nullptr, nullptr);
+    handler->setup_view(content_panel, nullptr, nullptr);
   }
   else
   {
@@ -144,26 +144,24 @@ void create_render_view(wxWindow* panel, studio::fs::file_stream file_stream, co
     graphics->Bind(wxEVT_ERASE_BACKGROUND, [](auto& event) {});
 
     graphics->Bind(wxEVT_SIZE, [=](auto& event) {
-           handler->setup_gl(graphics, window, gui_context);
+      handler->setup_view(graphics, window, gui_context);
     });
 
     graphics->Bind(wxEVT_IDLE, [=](auto& event) {
-           graphics->Refresh();
+      graphics->Refresh();
     });
 
     graphics->Bind(wxEVT_PAINT, canvas_painter(graphics, window, gui_context, handler));
 
     graphics->Bind(wxEVT_DESTROY, [=](auto& event) {
-           delete window;
-           if (gui_context != primary_gui_context)
-           {
-             ImGui::DestroyContext(gui_context);
-             ImGui::SetCurrentContext(primary_gui_context);
-           }
+      delete window;
+      if (gui_context != primary_gui_context)
+      {
+        ImGui::DestroyContext(gui_context);
+        ImGui::SetCurrentContext(primary_gui_context);
+      }
     });
   }
-
-
 }
 
 void populate_tree_view(const view_factory& view_factory,
@@ -398,6 +396,9 @@ int main(int argc, char** argv)
         notebook->ChangeSelection(notebook->GetPageCount() - 2);
       }
     };
+    archive.add_action("open_new_tab", [&](auto& path) {
+      add_element_from_file(archive.load_file(path));
+    });
 
     auto add_new_element = [notebook, &num_elements, &view_factory, &archive]() {
       auto* panel = new wxPanel(notebook, wxID_ANY);
@@ -464,7 +465,7 @@ int main(int argc, char** argv)
         shared::archive::file_info info{};
         info.filename = folder_info->info.full_path.filename();
         info.folder_path = folder_info->info.full_path.parent_path();
-        add_element_from_file(archive.load_file(info), had_first_activation == false);
+        add_element_from_file(archive.load_file(info), true);
       }
     });
 

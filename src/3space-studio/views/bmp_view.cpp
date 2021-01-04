@@ -325,7 +325,7 @@ void bmp_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContex
   }
 }
 
-void bmp_view::setup_gl(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
+void bmp_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
 {
   auto [width, height] = parent->GetClientSize();
 

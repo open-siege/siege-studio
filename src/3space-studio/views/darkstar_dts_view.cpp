@@ -101,7 +101,7 @@ std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::
   return callbacks;
 }
 
-void darkstar_dts_view::setup_gl(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
+void darkstar_dts_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
 {
   auto [width, height] = parent->GetClientSize();
 

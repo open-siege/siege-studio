@@ -11,7 +11,7 @@ auto canvas_painter(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* gu
 
   auto callbacks = handler->get_callbacks();
 
-  handler->setup_gl(parent, window, guiContext);
+  handler->setup_view(parent, window, guiContext);
 
   return [=](auto& wx_event) mutable {
     wxPaintDC Dc(parent);

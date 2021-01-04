@@ -81,7 +81,7 @@ void pal_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContex
   }
 }
 
-void pal_view::setup_gl(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
+void pal_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
 {
   if (rectangles)
   {
