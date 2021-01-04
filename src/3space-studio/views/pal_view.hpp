@@ -6,7 +6,7 @@
 class pal_view : public graphics_view
 {
 public:
-  pal_view(std::basic_istream<std::byte>& image_stream);
+  explicit pal_view(std::basic_istream<std::byte>& image_stream);
   bool requires_gl() const override { return true; }
   std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks() override { return {};}
   void setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) override;

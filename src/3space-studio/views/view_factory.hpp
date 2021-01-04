@@ -50,7 +50,7 @@ public:
       }
     }
 
-    return new default_view();
+    return new default_view(file_info);
   }
 
 private:

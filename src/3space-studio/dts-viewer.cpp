@@ -287,6 +287,7 @@ int main(int argc, char** argv)
     wxEntryStart(argc, argv);
     auto* app = wxApp::GetInstance();
     app->CallOnInit();
+    wxInitAllImageHandlers();
 
     auto* frame = new wxFrame(nullptr, wxID_ANY, "3Space Studio");
 
