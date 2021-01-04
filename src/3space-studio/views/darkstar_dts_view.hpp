@@ -10,10 +10,11 @@ class darkstar_dts_view : public graphics_view
 {
 public:
   darkstar_dts_view(std::basic_istream<std::byte>& shape_stream);
+  bool requires_gl() const override { return true; }
   std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks() override;
-  void setup_gl(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext) override;
-  void render_gl(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext) override;
-  void render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext) override;
+  void setup_gl(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) override;
+  void render_gl(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) override;
+  void render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) override;
 
 private:
   std::unique_ptr<renderable_shape> shape;

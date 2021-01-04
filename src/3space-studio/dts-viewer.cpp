@@ -104,54 +104,66 @@ wxMenuBar* create_menu_bar()
 
 void create_render_view(wxWindow* panel, studio::fs::file_stream file_stream, const view_factory& factory, const studio::fs::file_system_archive& archive)
 {
-  auto* graphics = new wxControl(panel, -1, wxDefaultPosition, wxDefaultSize, 0);
+  graphics_view* handler = factory.create_view(file_stream.first, *file_stream.second, archive);
 
-  panel->GetSizer()->Add(graphics, 1, wxEXPAND | wxALL, 5);
-
-  sf::ContextSettings context;
-  context.depthBits = 24;
-  auto* window = new sf::RenderWindow(get_handle(graphics), context);
-  static bool is_init = false;
-  static ImGuiContext* primary_gui_context;
-
-  ImGuiContext* gui_context;
-
-  if (!is_init)
+  if (!handler->requires_gl())
   {
-    ImGui::SFML::Init(*window);
+    auto* content_panel = new wxPanel(panel, wxID_ANY);
+    panel->GetSizer()->Add(content_panel, 1, wxEXPAND | wxALL, 5);
 
-    primary_gui_context = gui_context = ImGui::GetCurrentContext();
-    is_init = true;
+    handler->setup_gl(content_panel, nullptr, nullptr);
   }
   else
   {
-    gui_context = ImGui::CreateContext(ImGui::GetIO().Fonts);
+    auto* graphics = new wxControl(panel, -1, wxDefaultPosition, wxDefaultSize, 0);
+
+    panel->GetSizer()->Add(graphics, 1, wxEXPAND | wxALL, 5);
+
+    sf::ContextSettings context;
+    context.depthBits = 24;
+    auto* window = new sf::RenderWindow(get_handle(graphics), context);
+    static bool is_init = false;
+    static ImGuiContext* primary_gui_context;
+
+    ImGuiContext* gui_context;
+
+    if (!is_init)
+    {
+      ImGui::SFML::Init(*window);
+
+      primary_gui_context = gui_context = ImGui::GetCurrentContext();
+      is_init = true;
+    }
+    else
+    {
+      gui_context = ImGui::CreateContext(ImGui::GetIO().Fonts);
+    }
+
+    graphics->SetClientObject(handler);
+
+    graphics->Bind(wxEVT_ERASE_BACKGROUND, [](auto& event) {});
+
+    graphics->Bind(wxEVT_SIZE, [=](auto& event) {
+           handler->setup_gl(graphics, window, gui_context);
+    });
+
+    graphics->Bind(wxEVT_IDLE, [=](auto& event) {
+           graphics->Refresh();
+    });
+
+    graphics->Bind(wxEVT_PAINT, canvas_painter(graphics, window, gui_context, handler));
+
+    graphics->Bind(wxEVT_DESTROY, [=](auto& event) {
+           delete window;
+           if (gui_context != primary_gui_context)
+           {
+             ImGui::DestroyContext(gui_context);
+             ImGui::SetCurrentContext(primary_gui_context);
+           }
+    });
   }
 
-  graphics_view* handler = factory.create_view(file_stream.first, *file_stream.second, archive);
 
-  graphics->SetClientObject(handler);
-
-  graphics->Bind(wxEVT_ERASE_BACKGROUND, [](auto& event) {});
-
-  graphics->Bind(wxEVT_SIZE, [=](auto& event) {
-    handler->setup_gl(window, graphics, gui_context);
-  });
-
-  graphics->Bind(wxEVT_IDLE, [=](auto& event) {
-    graphics->Refresh();
-  });
-
-  graphics->Bind(wxEVT_PAINT, canvas_painter(window, graphics, gui_context, handler));
-
-  graphics->Bind(wxEVT_DESTROY, [=](auto& event) {
-    delete window;
-    if (gui_context != primary_gui_context)
-    {
-      ImGui::DestroyContext(gui_context);
-      ImGui::SetCurrentContext(primary_gui_context);
-    }
-  });
 }
 
 void populate_tree_view(const view_factory& view_factory,
@@ -317,35 +329,34 @@ int main(int argc, char** argv)
 
     populate_tree_view(view_factory, archive, tree_view, search_path, extensions);
 
-    auto& get_filter_selection = [&tree_search, &extensions]() {
+    auto get_filter_selection = [&tree_search, &view_factory]() {
       const auto selection = tree_search->GetSelection();
 
-      static std::vector<std::string_view> new_extensions;
+      std::vector<std::string_view> new_extensions;
 
       if (selection == 0)
       {
-        return extensions;
+        return view_factory.get_extensions();
       }
       else if (selection == 1 || selection == 2)
       {
-        new_extensions.clear();
-
         if (selection == 1)
         {
+          new_extensions.reserve(3);
           new_extensions.emplace_back(".pal");
           new_extensions.emplace_back(".ppl");
           new_extensions.emplace_back(".ipl");
         }
-        else if (selection == 2)
+        else
         {
+          new_extensions.reserve(2);
           new_extensions.emplace_back(".bmp");
           new_extensions.emplace_back(".pba");
         }
       }
       else
       {
-        new_extensions.clear();
-        new_extensions.emplace_back(extensions[selection - 3]);
+        new_extensions.emplace_back(view_factory.get_extensions()[selection - 3]);
       }
 
       return new_extensions;
@@ -446,6 +457,14 @@ int main(int argc, char** argv)
       {
         add_element_from_file(archive.load_file(real_info->info), had_first_activation == false);
         had_first_activation = true;
+      }
+      else if (auto* folder_info = dynamic_cast<tree_item_folder_info*>(tree_view->GetItemData(item));
+               folder_info && !std::filesystem::is_directory(folder_info->info.full_path))
+      {
+        shared::archive::file_info info{};
+        info.filename = folder_info->info.full_path.filename();
+        info.folder_path = folder_info->info.full_path.parent_path();
+        add_element_from_file(archive.load_file(info), had_first_activation == false);
       }
     });
 

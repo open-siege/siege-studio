@@ -46,7 +46,7 @@ namespace trophy_bass::vol
 
   using folder_info = shared::archive::folder_info;
 
-  bool rbx_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  bool rbx_file_archive::is_supported(std::basic_istream<std::byte>& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(tag.data(), sizeof(tag));
@@ -54,6 +54,11 @@ namespace trophy_bass::vol
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
     return tag == rbx_tag;
+  }
+
+  bool rbx_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  {
+    return is_supported(stream);
   }
 
   std::vector<std::variant<folder_info, shared::archive::file_info>> rbx_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
@@ -151,7 +156,7 @@ namespace trophy_bass::vol
       std::ostreambuf_iterator<std::byte>(output));
   }
 
-  bool tbv_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  bool tbv_file_archive::is_supported(std::basic_istream<std::byte>& stream)
   {
     std::array<std::byte, 9> tag{};
     stream.read(tag.data(), sizeof(tag));
@@ -159,6 +164,11 @@ namespace trophy_bass::vol
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
     return tag == tbv_tag;
+  }
+
+  bool tbv_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  {
+    return is_supported(stream);
   }
 
   std::vector<rbx_file_archive::content_info> tbv_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const

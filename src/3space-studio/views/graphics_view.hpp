@@ -18,14 +18,15 @@
 
 struct graphics_view : wxClientData
 {
+  virtual bool requires_gl() const = 0;
+
   virtual std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks() = 0;
 
-  virtual void setup_gl(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext) = 0;
+  virtual void setup_gl(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) = 0;
 
-  virtual void render_gl(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext) = 0;
+  virtual void render_gl(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) = 0;
 
-  virtual void render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext) = 0;
+  virtual void render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) = 0;
 };
-
 
 #endif//DARKSTARDTSCONVERTER_GRAPHICS_HANDLER_HPP

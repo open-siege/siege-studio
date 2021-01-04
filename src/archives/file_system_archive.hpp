@@ -82,12 +82,21 @@ namespace studio::fs
 
           if constexpr (std::is_same_v<T, shared::archive::file_info>)
           {
-            for (auto& extension : extensions)
+            if (extensions.size() == 1 && extensions.front() == "ALL")
             {
-              if (std::filesystem::path(folder.filename).extension().string() == extension)
+              results.emplace_back(folder);
+            }
+            else
+            {
+              for (auto& extension : extensions)
               {
-                results.emplace_back(folder);
-                break;
+                auto ext = folder.filename.extension().string();
+                std::transform(ext.begin(), ext.end(), ext.begin(), [&](char c) { return std::tolower(c, default_locale); });
+                if (ext == extension)
+                {
+                  results.emplace_back(folder);
+                  break;
+                }
               }
             }
           }
@@ -189,6 +198,19 @@ namespace studio::fs
       }
 
       return folder_path.has_extension();
+    }
+
+    std::optional<std::reference_wrapper<shared::archive::file_archive>> get_archive_type(std::basic_istream<std::byte>& stream) const
+    {
+      for (auto& [key, value] : archive_types)
+      {
+        if (value->stream_is_supported(stream))
+        {
+          return std::ref(*value);
+        }
+      }
+
+      return std::nullopt;
     }
 
     std::optional<std::reference_wrapper<shared::archive::file_archive>> get_archive_type(const std::filesystem::path& file_path) const

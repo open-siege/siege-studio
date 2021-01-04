@@ -278,7 +278,7 @@ namespace darkstar::vol
 
   using folder_info = shared::archive::folder_info;
 
-  bool vol_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  bool vol_file_archive::is_supported(std::basic_istream<std::byte>& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(tag.data(), sizeof(tag));
@@ -286,6 +286,11 @@ namespace darkstar::vol
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
     return tag == vol_file_tag || tag == alt_vol_file_tag || tag == old_vol_file_tag;
+  }
+
+  bool vol_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  {
+    return is_supported(stream);
   }
 
   std::vector<vol_file_archive::content_info> vol_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const

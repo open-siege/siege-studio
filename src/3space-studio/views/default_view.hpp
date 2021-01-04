@@ -5,10 +5,11 @@
 
 class default_view : public graphics_view
 {
+  bool requires_gl() const override { return true; }
   std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks() { return {};}
-  void setup_gl(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext) {}
-  void render_gl(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext) {}
-  void render_ui(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext) {}
+  void setup_gl(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) {}
+  void render_gl(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) {}
+  void render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) {}
 };
 
 #endif//DARKSTARDTSCONVERTER_DEFAULT_VIEW_HPP

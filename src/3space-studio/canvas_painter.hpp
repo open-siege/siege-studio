@@ -5,13 +5,13 @@
 
 using optional_istream = std::optional<std::reference_wrapper<std::basic_istream<std::byte>>>;
 
-auto canvas_painter(sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext, graphics_view* handler)
+auto canvas_painter(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext, graphics_view* handler)
 {
   sf::Clock clock;
 
   auto callbacks = handler->get_callbacks();
 
-  handler->setup_gl(window, parent, guiContext);
+  handler->setup_gl(parent, window, guiContext);
 
   return [=](auto& wx_event) mutable {
     wxPaintDC Dc(parent);
@@ -45,12 +45,12 @@ auto canvas_painter(sf::RenderWindow* window, wxControl* parent, ImGuiContext* g
       }
     }
 
-    handler->render_gl(window, parent, guiContext);
+    handler->render_gl(parent, window, guiContext);
 
     window->pushGLStates();
     ImGui::SFML::Update(*window, clock.restart());
 
-    handler->render_ui(window, parent, guiContext);
+    handler->render_ui(parent, window, guiContext);
 
     ImGui::SFML::Render(*window);
     window->popGLStates();

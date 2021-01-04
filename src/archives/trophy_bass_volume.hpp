@@ -8,6 +8,8 @@ namespace trophy_bass::vol
 {
   struct rbx_file_archive : shared::archive::file_archive
   {
+    static bool is_supported(std::basic_istream<std::byte>& stream);
+
     bool stream_is_supported(std::basic_istream<std::byte>& stream) const override;
 
     std::vector<content_info> get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const override;
@@ -19,6 +21,8 @@ namespace trophy_bass::vol
 
   struct tbv_file_archive : shared::archive::file_archive
   {
+    static bool is_supported(std::basic_istream<std::byte>& stream);
+
     bool stream_is_supported(std::basic_istream<std::byte>& stream) const override;
 
     std::vector<content_info> get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const override;
