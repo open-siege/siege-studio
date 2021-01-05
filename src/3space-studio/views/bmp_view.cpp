@@ -255,6 +255,17 @@ void bmp_view::refresh_image()
           loaded_palettes.at(selected_palette_name).at(selected_palette_index).colours),
         loaded_palettes.at(selected_palette_name).at(selected_palette_index).colours);
     }
+    else if (colour_strat == strategy::remap_unique)
+    {
+      create_image(loaded_image,
+        width,
+        height,
+        darkstar::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
+          loaded_palettes.at(default_palette_name).at(default_palette_index).colours,
+          loaded_palettes.at(selected_palette_name).at(selected_palette_index).colours,
+          true),
+        loaded_palettes.at(selected_palette_name).at(selected_palette_index).colours);
+    }
 
     texture.update(loaded_image);
   }

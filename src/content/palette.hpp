@@ -40,6 +40,14 @@ namespace darkstar::pal
     std::byte flags;
   };
 
+  inline bool operator==(const colour& left, const colour& right)
+  {
+    return left.red == right.red &&
+    left.green == right.green &&
+    left.blue == right.blue &&
+    left.flags == right.flags;
+  }
+
   // A big thanks to https://stackoverflow.com/questions/5392061/algorithm-to-check-similarity-of-colors and
   // https://www.compuphase.com/cmetric.htm
   inline double colour_distance(const colour& e1, const colour& e2)
