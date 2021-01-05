@@ -10,10 +10,11 @@ class bmp_view : public graphics_view
 public:
   bmp_view(const shared::archive::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::fs::file_system_archive&);
   bool requires_gl() const override { return true; }
-  std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks() override { return {};}
+  std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks() override;
   void setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) override;
   void render_gl(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) override {}
   void render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) override;
+
 private:
   std::vector<darkstar::pal::colour> default_colours;
   std::list<std::string> sort_order;
@@ -42,6 +43,12 @@ private:
   sf::Image loaded_image;
   sf::Texture texture;
   sf::Sprite sprite;
+
+  float image_scale = 1;
+  bool scale_changed = false;
+
+  std::function<void(const sf::Event&)> zoom_in;
+  std::function<void(const sf::Event&)> zoom_out;
 };
 
 #endif//DARKSTARDTSCONVERTER_BMP_VIEW_HPP

@@ -1,5 +1,6 @@
 #include "bmp_view.hpp"
 #include "content/bitmap.hpp"
+#include "sfml_keys.hpp"
 #include "3space-studio/utility.hpp"
 
 void create_image(sf::Image& loaded_image,
@@ -21,11 +22,28 @@ void create_image(sf::Image& loaded_image,
   }
 
   loaded_image.create(width, height, rendered_pixels.data());
+  loaded_image.flipVertically();
 }
 
 
 bmp_view::bmp_view(const shared::archive::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::fs::file_system_archive& manager)
 {
+  zoom_in = [&](const sf::Event&) {
+    if (image_scale < 4.0f)
+    {
+      image_scale += 0.1f;
+      scale_changed = true;
+    }
+  };
+
+  zoom_out = [&](const sf::Event&) {
+    if (image_scale > 1.0f)
+    {
+      image_scale -= 0.1f;
+      scale_changed = true;
+    }
+  };
+
   default_colours.reserve(256);
   for (auto i = 0; i < 256; ++i)
   {
@@ -152,7 +170,6 @@ bmp_view::bmp_view(const shared::archive::file_info& info, std::basic_istream<st
           auto bmp_file_name = to_lower(info.filename.stem().string());
 
           auto possible_palette = std::find_if(results.begin(), results.end(), [&](auto* item) {
-
             auto palette_file_name = to_lower(item->filename.stem().string());
             return bmp_file_name.rfind(palette_file_name, 0) == 0;
           });
@@ -243,8 +260,24 @@ void bmp_view::refresh_image()
   }
 }
 
+std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> bmp_view::get_callbacks()
+{
+  std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> callbacks;
+
+  //TODO read this from config file
+  callbacks.emplace(config::get_key_for_name("Add"), std::ref(zoom_in));
+  callbacks.emplace(config::get_key_for_name("Subtract"), std::ref(zoom_out));
+  return callbacks;
+}
+
 void bmp_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
 {
+  if (scale_changed)
+  {
+    setup_view(parent, window, guiContext);
+    scale_changed = false;
+  }
+
   window->clear();
   window->draw(sprite);
 
@@ -320,7 +353,11 @@ void bmp_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContex
 
     ImGui::End();
 
-    ImGui::Begin("Colour Strategy");
+    ImGui::Begin("Settings");
+
+    ImGui::Text("%s", "Colour Strategy: ");
+    ImGui::SameLine();
+
     if (ImGui::RadioButton("Do Nothing", &colour_strategy, 0))
     {
       refresh_image();
@@ -337,6 +374,15 @@ void bmp_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContex
     {
       refresh_image();
     }
+
+    ImGui::Text("%s", "Zoom: ");
+    ImGui::SameLine();
+
+    if (ImGui::SliderFloat("   ", &image_scale, 1.0f, 4.0f))
+    {
+      setup_view(parent, window, guiContext);
+    }
+
     ImGui::End();
 
     if (original_pixels.size() > 1)
@@ -365,8 +411,8 @@ void bmp_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiConte
   auto image_width = sprite.getTexture()->getSize().x;
   auto image_height = sprite.getTexture()->getSize().y;
 
-  auto width_ratio = float(image_width) / width;
-  auto height_ratio = float(image_height) / height;
+  auto width_ratio = float(image_width) / float(width) * image_scale;
+  auto height_ratio = float(image_height) / float(height) * image_scale;
 
   sf::FloatRect visibleArea(0, 0, image_width, image_height);
   sf::View view(visibleArea);
