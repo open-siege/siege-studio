@@ -386,6 +386,92 @@ void bmp_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContex
       refresh_image();
     }
 
+    ImGui::Text("%s", "Default Palette File: ");
+    ImGui::SameLine();
+
+    int name_distance = std::distance(loaded_palettes.begin(), loaded_palettes.find(default_palette_name));
+
+    if (ImGui::Combo(
+      "", (&name_distance),
+      [](void* data, int idx, const char** out_text) -> bool {
+        auto* real_data = reinterpret_cast<decltype(loaded_palettes)*>(data);
+        auto it = real_data->begin();
+        std::advance(it, idx);
+        if (it != real_data->end())
+        {
+          static std::string temp;
+          temp = it->first;
+          *out_text = temp.c_str();
+          return true;
+        }
+        else
+        {
+          *out_text = "N/A";
+          return false;
+        }
+      },
+      reinterpret_cast<void*>(&loaded_palettes),
+      loaded_palettes.size()))
+    {
+      auto new_palette = loaded_palettes.begin();
+
+      std::advance(new_palette, name_distance);
+
+      if (new_palette != loaded_palettes.end())
+      {
+        auto old_name = default_palette_name;
+        default_palette_name = new_palette->first;
+        if (new_palette->second.size() < default_palette_index)
+        {
+          default_palette_index = 0;
+        }
+
+        if (selected_palette_name == old_name)
+        {
+          selected_palette_index = default_palette_index;
+          selected_palette_name = default_palette_name;
+        }
+
+        refresh_image();
+      }
+    }
+
+    ImGui::Text("%s", "Default Palette: ");
+    ImGui::SameLine();
+
+
+    auto old_index = default_palette_index;
+    if (ImGui::Combo(
+      "  ", reinterpret_cast<int*>(&default_palette_index),
+      [](void* data, int idx, const char** out_text) -> bool {
+             auto* real_data = reinterpret_cast<decltype(loaded_palettes)::value_type::second_type*>(data);
+             auto it = real_data->begin();
+             std::advance(it, idx);
+             if (it != real_data->end())
+             {
+               static std::string temp;
+               temp = "Palette " + std::to_string(idx + 1);
+               *out_text = temp.c_str();
+               return true;
+             }
+             else
+             {
+               *out_text = "N/A";
+               return false;
+             }
+      },
+      reinterpret_cast<void*>(&loaded_palettes.at(default_palette_name)),
+      loaded_palettes.at(default_palette_name).size()))
+    {
+      if (selected_palette_index == old_index)
+      {
+        selected_palette_index = default_palette_index;
+      }
+
+      refresh_image();
+    }
+
+
     ImGui::Text("%s", "Zoom: ");
     ImGui::SameLine();
 
