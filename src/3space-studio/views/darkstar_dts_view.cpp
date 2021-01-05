@@ -218,7 +218,7 @@ void darkstar_dts_view::render_ui(wxWindow* parent, sf::RenderWindow* window, Im
     {
       for (auto& sequence : sequences)
       {
-        ImGui::LabelText("", sequence.name.c_str());
+        ImGui::LabelText("", "%s", sequence.name.c_str());
         for (auto& sub_sequence : sequence.sub_sequences)
         {
           ImGui::Checkbox((sequence.name + "/" + sub_sequence.node_name).c_str(), &sub_sequence.enabled);

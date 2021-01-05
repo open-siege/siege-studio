@@ -60,6 +60,11 @@ namespace studio::fs
       }
     }
 
+    std::filesystem::path get_search_path() const
+    {
+      return search_path;
+    }
+
     void add_archive_type(std::string extension, std::unique_ptr<shared::archive::file_archive> archive_type)
     {
       std::transform(extension.begin(), extension.end(), extension.begin(), [&](auto c) { return std::tolower(c, default_locale); });

@@ -1,6 +1,6 @@
 #include "bmp_view.hpp"
 #include "content/bitmap.hpp"
-
+#include "3space-studio/utility.hpp"
 
 void create_image(sf::Image& loaded_image,
   int width,
@@ -39,28 +39,27 @@ bmp_view::bmp_view(const shared::archive::file_info& info, std::basic_istream<st
 
   std::vector<shared::archive::file_info> palettes;
 
-
   palettes = manager.find_files(studio::fs::file_system_archive::get_archive_path(info.folder_path).parent_path(), { ".ppl", ".PPL", ".ipl", ".IPL", ".pal", ".PAL" });
 
   auto all_palettes = manager.find_files({ ".ppl", ".ipl", ".pal" });
 
   studio::fs::file_system_archive::merge_results(palettes, all_palettes);
 
-
   for (auto& palette_info : palettes)
   {
     auto raw_palette = manager.load_file(palette_info);
+    auto result = (std::filesystem::relative(palette_info.folder_path, manager.get_search_path()) / palette_info.filename).string();
 
     if (darkstar::pal::is_phoenix_pal(*raw_palette.second))
     {
-      loaded_palettes.emplace(sort_order.emplace_back(palette_info.filename.string()), darkstar::pal::get_ppl_data(*raw_palette.second));
+      loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), darkstar::pal::get_ppl_data(*raw_palette.second));
     }
     else if (darkstar::pal::is_microsoft_pal(*raw_palette.second))
     {
       std::vector<darkstar::pal::palette> temp;
       temp.emplace_back().colours = darkstar::pal::get_pal_data(*raw_palette.second);
 
-      loaded_palettes.emplace(sort_order.emplace_back(palette_info.filename.string()), std::move(temp));
+      loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::move(temp));
     }
   }
 
@@ -109,7 +108,6 @@ bmp_view::bmp_view(const shared::archive::file_info& info, std::basic_istream<st
           continue;
         }
 
-
         std::vector<decltype(palettes)::pointer> results;
         results.reserve(palettes.size() / 2);
 
@@ -121,7 +119,7 @@ bmp_view::bmp_view(const shared::archive::file_info& info, std::basic_istream<st
           }
         }
 
-        auto get_defaults = [&](auto& value) {
+        auto get_defaults = [&](decltype(loaded_palettes)::reference value) {
           for (auto i = 0u; i < value.second.size(); ++i)
           {
             auto& child = value.second[i];
@@ -151,16 +149,38 @@ bmp_view::bmp_view(const shared::archive::file_info& info, std::basic_istream<st
         }
         else
         {
-          for (auto result : results)
+          auto bmp_file_name = to_lower(info.filename.stem().string());
+
+          auto possible_palette = std::find_if(results.begin(), results.end(), [&](auto* item) {
+
+            auto palette_file_name = to_lower(item->filename.stem().string());
+            return bmp_file_name.rfind(palette_file_name, 0) == 0;
+          });
+
+          if (possible_palette != results.end())
           {
-            if (auto entry = loaded_palettes.find(result->filename.string()); entry != loaded_palettes.end())
+            auto key = (std::filesystem::relative((*possible_palette)->folder_path, manager.get_search_path()) / (*possible_palette)->filename).string();
+
+            if (auto entry = loaded_palettes.find(key); entry != loaded_palettes.end())
             {
               get_defaults(*entry);
             }
-
-            if (selected_palette_index != std::string::npos)
+          }
+          else
+          {
+            for (auto result : results)
             {
-              break;
+              auto pal_key = (std::filesystem::relative(result->folder_path, manager.get_search_path()) / result->filename).string();
+
+              if (auto entry = loaded_palettes.find(pal_key); entry != loaded_palettes.end())
+              {
+                get_defaults(*entry);
+              }
+
+              if (selected_palette_index != std::string::npos)
+              {
+                break;
+              }
             }
           }
         }
@@ -237,30 +257,12 @@ void bmp_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContex
     {
       auto& value = loaded_palettes.at(key);
 
-      if (ImGui::RadioButton(key.c_str(), key == selected_palette_name))
+      if (value.size() == 1)
       {
-        selected_palette_name = key;
+        std::stringstream label;
+        label << key;
 
-        if (loaded_palettes.at(key).size() - 1 < selected_palette_index)
-        {
-          selected_palette_index = 0;
-        }
-
-        refresh_image();
-      }
-
-      ImGui::Indent(8);
-
-      std::string placeholder;
-      placeholder.reserve(std::strlen("Palette ") + std::strlen(" (default for this image)") + child_count);
-
-      std::stringstream label(placeholder);
-
-      for (auto i = 0u; i < value.size(); ++i)
-      {
-        label << "Palette " << i + 1;
-
-        if (key == default_palette_name && i == default_palette_index)
+        if (default_palette_name == key && default_palette_index == 0)
         {
           label << " (default for this image)";
         }
@@ -270,19 +272,50 @@ void bmp_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContex
           label << ' ';
         }
 
-        if (ImGui::RadioButton(label.str().c_str(), key == selected_palette_name && i == selected_palette_index))
+        if (ImGui::RadioButton(label.str().c_str(), selected_palette_name == key && selected_palette_index == 0))
         {
           selected_palette_name = key;
-          selected_palette_index = i;
+          selected_palette_index = 0;
 
           refresh_image();
         }
-
-        label.str("");
       }
-      child_count++;
+      else
+      {
+        if (ImGui::CollapsingHeader(
+              key == default_palette_name ? (key + " (contains default for image)").c_str() : key.c_str(),
 
-      ImGui::Unindent(8);
+              key == selected_palette_name ? ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen : 0))
+        {
+          std::stringstream label;
+
+          for (auto i = 0u; i < value.size(); ++i)
+          {
+            label << "Palette " << i + 1;
+
+            if (key == default_palette_name && i == default_palette_index)
+            {
+              label << " (default for this image)";
+            }
+
+            for (auto y = 0; y < child_count; ++y)
+            {
+              label << ' ';
+            }
+
+            if (ImGui::RadioButton(label.str().c_str(), key == selected_palette_name && i == selected_palette_index))
+            {
+              selected_palette_name = key;
+              selected_palette_index = i;
+
+              refresh_image();
+            }
+
+            label.str("");
+          }
+          child_count++;
+        }
+      }
     }
 
     ImGui::End();
