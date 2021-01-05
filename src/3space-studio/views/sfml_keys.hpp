@@ -65,7 +65,7 @@ namespace config
   };
 
 
-  sf::Keyboard::Key get_key_for_name(const std::string_view name)
+  inline sf::Keyboard::Key get_key_for_name(const std::string_view name)
   {
     static auto numpad_key_names = get_numpad_key_names();
     static auto letter_names = get_letter_key_names();
