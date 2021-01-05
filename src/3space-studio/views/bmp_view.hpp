@@ -36,7 +36,7 @@ private:
     remap,
     remap_unique
   };
-  int colour_strategy = 0;
+  int colour_strategy = 1;
 
   std::vector<std::vector<std::byte>> original_pixels;
 

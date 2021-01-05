@@ -37,9 +37,9 @@ namespace darkstar::bmp
 
   constexpr file_tag palette_tag = to_tag({ 'P', 'i', 'D', 'X' });
 
-  constexpr std::array<std::byte, 2> windows_bmp_tag = { std::byte{66}, std::byte{77}}; // BM
+  constexpr std::array<std::byte, 2> windows_bmp_tag = { std::byte{ 66 }, std::byte{ 77 } };// BM
 
-  constexpr std::array<std::byte, 2> special_reserved_tag = { std::byte{0xF7}, std::byte{0xF5}}; // for palettes
+  constexpr std::array<std::byte, 2> special_reserved_tag = { std::byte{ 0xF7 }, std::byte{ 0xF5 } };// for palettes
 
   struct pbmp_header
   {
@@ -151,7 +151,7 @@ namespace darkstar::bmp
     {
       std::array<std::byte, 4> quad{};
       raw_data.read(quad.data(), sizeof(quad));
-      colours.emplace_back(pal::colour{quad[2], quad[1], quad[0], std::byte{255}});
+      colours.emplace_back(pal::colour{ quad[2], quad[1], quad[0], std::byte{ 255 } });
     }
 
     const auto num_pixels = info.width * info.height * (info.bit_depth / 8);
@@ -176,7 +176,7 @@ namespace darkstar::bmp
     header.reserved2 = 0;
     header.offset = sizeof(header) + sizeof(windows_bmp_info) + int(colours.size()) * sizeof(pal::colour);
 
-    windows_bmp_info info{0};
+    windows_bmp_info info{ 0 };
     info.info_size = sizeof(info);
     info.width = width;
     info.height = height;
@@ -377,8 +377,14 @@ namespace darkstar::bmp
 
   inline std::vector<std::byte> remap_bitmap(const std::vector<std::byte>& pixels,
     const std::vector<pal::colour>& original_colours,
-    const std::vector<pal::colour>& other_colours)
+    const std::vector<pal::colour>& other_colours,
+    bool only_unique = false)
   {
+    if (original_colours == other_colours)
+    {
+      return pixels;
+    }
+
     std::vector<std::byte> results;
     results.reserve(pixels.size());
     std::map<std::size_t, std::size_t> palette_map;
@@ -387,7 +393,7 @@ namespace darkstar::bmp
     {
       auto& colour = original_colours[x];
       auto result = std::find_if(other_colours.begin(), other_colours.end(), [&](auto& other) {
-             return other.red == colour.red && other.green == colour.green && other.blue == colour.blue;
+        return other.red == colour.red && other.green == colour.green && other.blue == colour.blue;
       });
 
       if (result != other_colours.end())
@@ -405,18 +411,41 @@ namespace darkstar::bmp
           distances[distance] = y;
         }
 
-        palette_map[x] = distances.begin()->second;
+        if (only_unique)
+        {
+          for (auto distance : distances)
+          {
+            auto already_exists = std::find_if(palette_map.begin(), palette_map.end(), [&](auto& elem) {
+              return elem.second == distance.second;
+            });
+
+            if (already_exists == palette_map.end())
+            {
+              palette_map[x] = distance.second;
+              break;
+            }
+          }
+
+          if (auto inserted = palette_map.find(x); inserted == palette_map.end())
+          {
+            palette_map[x] = distances.begin()->second;
+          }
+        }
+        else
+        {
+          palette_map[x] = distances.begin()->second;
+        }
       }
     }
 
-    for (auto x = 0u; x < pixels.size(); ++x)
+    for (auto pixel : pixels)
     {
-      auto new_index = palette_map[(std::size_t)(pixels[x])];
+      auto new_index = palette_map[(std::size_t)pixel];
       results.emplace_back(std::byte(new_index));
     }
 
     return results;
   }
-}
+}// namespace darkstar::bmp
 
 #endif//DARKSTARDTSCONVERTER_BITMAP_HPP
