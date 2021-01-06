@@ -45,7 +45,7 @@ int main(int argc, const char** argv)
 
       std::basic_ifstream<std::byte> input(file_name, std::ios::binary);
 
-      auto shape = dts::read_shape(file_name, input);
+      auto shape = dts::read_shape(input);
 
       std::visit(overloaded{
                    [&](const dts::shape_variant& core_shape)

@@ -43,8 +43,16 @@ std::int32_t get_transform_index(const darkstar::dts::shape_variant& shape, std:
           if (sub_sequence.enabled && node_index == sub_sequence.node_index)
           {
             const auto& key_frame = local_shape.keyframes[sub_sequence.first_key_frame_index + sub_sequence.frame_index];
-            transform_index = key_frame.transform_index;
-            break;
+
+            if (local_shape.transforms.size() > key_frame.transform_index)
+            {
+              transform_index = key_frame.transform_index;
+              break;
+            }
+            else
+            {
+              continue;
+            }
           }
         }
       }
@@ -252,7 +260,6 @@ void dts_renderable_shape::render_shape(shape_renderer& renderer, const std::vec
           glm::mat4 node_matrix;
 
           auto transform_index = get_transform_index(shape, node_index, sequences);
-
           const auto& [translation, rotation, scale] = get_translation(local_shape.transforms[transform_index]);
 
           auto translation_matrix = glm::translate(glm::mat4(1.0f), glm::vec3(translation.x, translation.y, translation.z));
