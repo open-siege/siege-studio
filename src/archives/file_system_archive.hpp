@@ -221,19 +221,6 @@ namespace studio::fs
       return folder_path.has_extension();
     }
 
-    std::optional<std::reference_wrapper<shared::archive::file_archive>> get_archive_type(std::basic_istream<std::byte>& stream) const
-    {
-      for (auto& [key, value] : archive_types)
-      {
-        if (value->stream_is_supported(stream))
-        {
-          return std::ref(*value);
-        }
-      }
-
-      return std::nullopt;
-    }
-
     std::optional<std::reference_wrapper<shared::archive::file_archive>> get_archive_type(const std::filesystem::path& file_path) const
     {
       auto ext = file_path.filename().extension().string();
@@ -251,7 +238,6 @@ namespace studio::fs
         }
       }
 
-
       return std::nullopt;
     }
     void extract_file_contents(std::basic_istream<std::byte>& archive_file, std::filesystem::path destination, const shared::archive::file_info& info) const
@@ -263,7 +249,7 @@ namespace studio::fs
 
       std::basic_ofstream<std::byte> new_file(destination / info.filename, std::ios::binary);
 
-      auto type = get_archive_type(archive_file);
+      auto type = get_archive_type(archive_path);
 
       if (type.has_value())
       {
