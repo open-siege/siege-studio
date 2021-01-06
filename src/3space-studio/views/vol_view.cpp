@@ -1,7 +1,10 @@
-#include "vol_view.hpp"
-
+#include <utility>
+#include <execution>
+#include <atomic>
 #include <wx/treelist.h>
 #include <wx/filepicker.h>
+
+#include "vol_view.hpp"
 
 vol_view::vol_view(const shared::archive::file_info& info, const studio::fs::file_system_archive& archive)
   : archive(archive)
@@ -76,11 +79,12 @@ void vol_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiConte
 
   auto* panel = new wxPanel(parent);
 
-  auto* folder_picker = new wxDirPickerCtrl(panel, wxID_ANY, archive.get_search_path().string());
+  auto* folder_picker = new wxDirPickerCtrl(panel, wxID_ANY, (archive.get_search_path() / "extracted").string());
 
   auto* export_button = new wxButton(panel, wxID_ANY, "Extract All Files");
 
   export_button->Bind(wxEVT_BUTTON, [=](wxCommandEvent& event) {
+    should_cancel = false;
     auto* dialog = new wxDialog(parent, wxID_ANY, "Extracting Files");
 
     auto* dialog_sizer = new wxBoxSizer(wxVERTICAL);
@@ -110,14 +114,17 @@ void vol_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiConte
 
       std::basic_ifstream<std::byte> archive_file(archive_path, std::ios::binary);
 
-      auto value = 0;
-
       for (auto& file : files)
       {
+        if (should_cancel)
+        {
+          std::cout << "Stopping normal execution\n";
+          return true;
+        }
         text2->SetLabel((std::filesystem::relative(archive_path, file.folder_path) / file.filename).string());
 
         archive.extract_file_contents(archive_file, dest, file);
-        gauge->SetValue(++value);
+        gauge->SetValue(gauge->GetValue() + 1);
       }
 
       return true;
@@ -127,8 +134,83 @@ void vol_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiConte
 
   auto* export_all_button = new wxButton(panel, wxID_ANY, "Extract All Volumes");
 
-  export_all_button->Bind(wxEVT_BUTTON, [=](auto&) {
+  export_all_button->Bind(wxEVT_BUTTON, [=](wxCommandEvent& event) {
+    should_cancel = false;
+    auto* dialog = new wxDialog(parent, wxID_ANY, "Extracting All Volumes");
 
+    auto* dialog_sizer = new wxBoxSizer(wxVERTICAL);
+
+    auto* gauge = new wxGauge(dialog, wxID_ANY, 0);
+    gauge->SetWindowStyle(wxGA_HORIZONTAL);
+
+    auto* text1 = new wxStaticText(dialog, wxID_ANY, "");
+    text1->SetWindowStyle(wxALIGN_CENTRE_HORIZONTAL);
+
+    auto* text2 = new wxStaticText(dialog, wxID_ANY, "");
+    text2->SetWindowStyle(wxALIGN_CENTRE_HORIZONTAL);
+    dialog_sizer->AddStretchSpacer(2);
+    dialog_sizer->Add(text1, 2, wxEXPAND, 0);
+    dialog_sizer->Add(gauge, 2, wxEXPAND, 0);
+    dialog_sizer->Add(text2, 2, wxEXPAND, 0);
+    dialog_sizer->AddStretchSpacer(2);
+    dialog->SetSizer(dialog_sizer);
+
+    dialog->Bind(wxEVT_CLOSE_WINDOW, [=](auto&) {
+      should_cancel = true;
+      std::cout << "Stopping the thread\n";
+    });
+
+    pending_save = std::async(std::launch::async, [=] {
+      auto unique = std::unique_ptr<wxDialog>(dialog);
+      auto dest = std::filesystem::path(folder_picker->GetPath().c_str().AsChar());
+      unique->SetSize(unique->GetSize().x + dest.string().size(), unique->GetSize().y);
+      unique->CenterOnScreen();
+      unique->Show();
+      text1->SetLabel("Extracting to\n" + dest.string());
+
+      auto all_files = archive.find_files({ ".vol" });
+
+      std::for_each(std::execution::par_unseq, all_files.begin(), all_files.end(), [=](const auto& volume_file) {
+        static std::mutex label_mutex;
+        static std::mutex gauge_mutex;
+
+        auto file_archive_path = volume_file.folder_path / volume_file.filename;
+
+        std::cout << (file_archive_path.string() + "\n");
+        auto child_files = archive.find_files(file_archive_path, { "ALL" });
+
+        {
+          std::lock_guard<std::mutex> lock(gauge_mutex);
+          gauge->SetRange(gauge->GetRange() + child_files.size());
+        }
+
+        std::basic_ifstream<std::byte> archive_file(file_archive_path, std::ios::binary);
+
+        for (const auto& file : child_files)
+        {
+          if (should_cancel)
+          {
+            std::cout << "Stopping paralell execution\n";
+            return;
+          }
+
+          {
+            std::lock_guard<std::mutex> lock(label_mutex);
+            text2->SetLabel((std::filesystem::relative(archive.get_search_path(), file.folder_path) / file.filename).string());
+          }
+
+          archive.extract_file_contents(archive_file, dest, file);
+
+          {
+            std::lock_guard<std::mutex> lock(gauge_mutex);
+            gauge->SetValue(gauge->GetValue() + 1);
+          }
+        }
+      });
+
+      return true;
+    });
+    event.Skip();
   });
 
   auto* panel_sizer = new wxBoxSizer(wxHORIZONTAL);
