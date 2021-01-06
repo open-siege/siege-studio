@@ -81,17 +81,43 @@ void vol_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiConte
   auto* export_button = new wxButton(panel, wxID_ANY, "Extract All Files");
 
   export_button->Bind(wxEVT_BUTTON, [=](wxCommandEvent& event) {
-    std::cout << "Extract button clicked\n";
-    pending_save = std::async(std::launch::async, [=] {
-      std::cout << "Async code has started\n";
-      wxDialog dialog(parent, wxID_ANY, "Extracting Files");
+    auto* dialog = new wxDialog(parent, wxID_ANY, "Extracting Files");
 
-      dialog.Show();
+    auto* dialog_sizer = new wxBoxSizer(wxVERTICAL);
+
+    auto* gauge = new wxGauge(dialog, wxID_ANY, files.size());
+    gauge->SetWindowStyle(wxGA_HORIZONTAL);
+
+    auto* text1 = new wxStaticText(dialog, wxID_ANY, "");
+    text1->SetWindowStyle(wxALIGN_CENTRE_HORIZONTAL);
+
+    auto* text2 = new wxStaticText(dialog, wxID_ANY, "");
+    text2->SetWindowStyle(wxALIGN_CENTRE_HORIZONTAL);
+    dialog_sizer->AddStretchSpacer(2);
+    dialog_sizer->Add(text1, 2, wxEXPAND, 0);
+    dialog_sizer->Add(gauge, 2, wxEXPAND, 0);
+    dialog_sizer->Add(text2, 2, wxEXPAND, 0);
+    dialog_sizer->AddStretchSpacer(2);
+    dialog->SetSizer(dialog_sizer);
+
+    pending_save = std::async(std::launch::async, [=] {
+      auto unique = std::unique_ptr<wxDialog>(dialog);
+      auto dest = std::filesystem::path(folder_picker->GetPath().c_str().AsChar());
+      unique->SetSize(unique->GetSize().x + dest.string().size(), unique->GetSize().y);
+      unique->CenterOnScreen();
+      unique->Show();
+      text1->SetLabel("Extracting to\n" + (dest / archive_path.stem()).string());
+
       std::basic_ifstream<std::byte> archive_file(archive_path, std::ios::binary);
+
+      auto value = 0;
 
       for (auto& file : files)
       {
-        archive.extract_file_contents(archive_file, folder_picker->GetPath().c_str().AsChar(), file);
+        text2->SetLabel((std::filesystem::relative(archive_path, file.folder_path) / file.filename).string());
+
+        archive.extract_file_contents(archive_file, dest, file);
+        gauge->SetValue(++value);
       }
 
       return true;
