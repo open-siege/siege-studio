@@ -358,7 +358,7 @@ namespace darkstar::vol
         extract_path = volume_filename.parent_path() / extract_path;
       }
 
-      command << extract_path << ' ' << volume_filename << ' ' << info.filename << ' ' << new_path;
+      command << extract_path.string() << ' ' << volume_filename << ' ' << info.filename << ' ' << new_path;
 
       std::system(command.str().c_str());
 
