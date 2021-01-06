@@ -1,5 +1,7 @@
 #include "vol_view.hpp"
+
 #include <wx/treelist.h>
+#include <wx/filepicker.h>
 
 vol_view::vol_view(const shared::archive::file_info& info, const studio::fs::file_system_archive& archive)
   : archive(archive)
@@ -10,7 +12,7 @@ vol_view::vol_view(const shared::archive::file_info& info, const studio::fs::fil
 
 void vol_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
 {
-  static std::map<shared::archive::compression_type, const char*> type_names{
+  const static std::map<shared::archive::compression_type, const char*> type_names{
     { shared::archive::compression_type::none, "None" },
     { shared::archive::compression_type::lz, "Lempel-Ziv" },
     { shared::archive::compression_type::lzh, "Lempel-Ziv w/ Huffman coding" },
@@ -25,6 +27,7 @@ void vol_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiConte
   }
 
   auto* sizer = new wxBoxSizer(wxVERTICAL);
+
   auto* table = new wxTreeListCtrl(parent, wxID_ANY);
   table->AppendColumn("Filename");
 
@@ -70,7 +73,51 @@ void vol_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiConte
     table->SetItemText(id, table->GetColumnCount() - 1, type_names.at(file.compression_type));
   }
 
-  sizer->Add(table, 1, wxEXPAND, 0);
+
+  auto* panel = new wxPanel(parent);
+
+  auto* folder_picker = new wxDirPickerCtrl(panel, wxID_ANY, archive.get_search_path().string());
+
+  auto* export_button = new wxButton(panel, wxID_ANY, "Extract All Files");
+
+  export_button->Bind(wxEVT_BUTTON, [=](wxCommandEvent& event) {
+    std::cout << "Extract button clicked\n";
+    pending_save = std::async(std::launch::async, [=] {
+      std::cout << "Async code has started\n";
+      wxDialog dialog(parent, wxID_ANY, "Extracting Files");
+
+      dialog.Show();
+      std::basic_ifstream<std::byte> archive_file(archive_path, std::ios::binary);
+
+      for (auto& file : files)
+      {
+        archive.extract_file_contents(archive_file, folder_picker->GetPath().c_str().AsChar(), file);
+      }
+
+      return true;
+    });
+    event.Skip();
+  });
+
+  auto* export_all_button = new wxButton(panel, wxID_ANY, "Extract All Volumes");
+
+  export_all_button->Bind(wxEVT_BUTTON, [=](auto&) {
+
+  });
+
+  auto* panel_sizer = new wxBoxSizer(wxHORIZONTAL);
+
+  panel_sizer->Add(folder_picker, 4, wxEXPAND, 0);
+  panel_sizer->AddStretchSpacer(1);
+  panel_sizer->Add(export_button, 2, wxEXPAND, 0);
+  panel_sizer->AddStretchSpacer(1);
+  panel_sizer->Add(export_all_button, 2, wxEXPAND, 0);
+  panel_sizer->AddStretchSpacer(12);
+
+  panel->SetSizer(panel_sizer);
+
+  sizer->Add(panel, 1, wxEXPAND, 0);
+  sizer->Add(table, 15, wxEXPAND, 0);
 
   parent->SetSizer(sizer);
 }

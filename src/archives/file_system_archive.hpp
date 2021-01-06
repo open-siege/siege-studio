@@ -148,7 +148,7 @@ namespace studio::fs
       for (auto& group2_item : group2)
       {
         auto result = std::find_if(group1.begin(), group1.end(), [&](const auto& group1_item) {
-               return group1_item.folder_path == group2_item.folder_path;
+          return group1_item.folder_path == group2_item.folder_path;
         });
 
         if (result == group1.end())
@@ -158,7 +158,7 @@ namespace studio::fs
       }
     }
 
-    file_stream load_file(const std::filesystem::path& path)
+    file_stream load_file(const std::filesystem::path& path) const
     {
       shared::archive::file_info info{};
 
@@ -254,6 +254,23 @@ namespace studio::fs
 
       return std::nullopt;
     }
+    void extract_file_contents(std::basic_istream<std::byte>& archive_file, std::filesystem::path destination, const shared::archive::file_info& info) const
+    {
+      auto archive_path = get_archive_path(info.folder_path);
+
+      destination = destination / archive_path.stem() / std::filesystem::relative(archive_path, info.folder_path);
+      std::filesystem::create_directory(destination);
+
+      std::basic_ofstream<std::byte> new_file(destination / info.filename, std::ios::binary);
+
+      auto type = get_archive_type(archive_file);
+
+      if (type.has_value())
+      {
+        type->get().extract_file_contents(archive_file, info, new_file);
+      }
+    }
+
 
     std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> get_content_listing(const std::filesystem::path& folder_path) const
     {
