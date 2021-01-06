@@ -95,6 +95,24 @@ namespace studio::fs
           if constexpr (std::is_same_v<T, shared::archive::folder_info>)
           {
             auto more_files = get_content_listing(folder.full_path);
+
+            if (std::filesystem::exists(folder.full_path) && !std::filesystem::is_directory(folder.full_path))
+            {
+              for (auto& extension : extensions)
+              {
+                auto ext = folder.full_path.filename().extension().string();
+                std::transform(ext.begin(), ext.end(), ext.begin(), [&](char c) { return std::tolower(c, default_locale); });
+                if (ext == extension)
+                {
+                  shared::archive::file_info info{};
+                  info.filename = folder.full_path.filename();
+                  info.folder_path = folder.full_path.parent_path();
+                  results.emplace_back(info);
+                  break;
+                }
+              }
+            }
+
             for (auto& item : more_files)
             {
               get_files_folders(item);

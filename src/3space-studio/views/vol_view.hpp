@@ -19,6 +19,7 @@ private:
   std::filesystem::path archive_path;
   std::vector<shared::archive::file_info> files;
   std::future<bool> pending_save;
+  bool should_cancel;
 };
 
 #endif//DARKSTARDTSCONVERTER_VOL_VIEW_HPP
