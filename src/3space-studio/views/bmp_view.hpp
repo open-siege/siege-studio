@@ -16,9 +16,10 @@ public:
   void render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) override;
 
 private:
+  const studio::fs::file_system_archive& archive;
   std::vector<darkstar::pal::colour> default_colours;
   std::list<std::string> sort_order;
-  std::map<std::string_view, std::vector<darkstar::pal::palette>> loaded_palettes;
+  std::map<std::string_view, std::pair<shared::archive::file_info, std::vector<darkstar::pal::palette>>> loaded_palettes;
   std::string_view selected_palette_name;
   std::size_t selected_palette_index = std::string::npos;
 
