@@ -104,9 +104,11 @@ void vol_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiConte
     dialog_sizer->AddStretchSpacer(2);
     dialog->SetSizer(dialog_sizer);
 
+
     pending_save = std::async(std::launch::async, [=] {
       auto unique = std::unique_ptr<wxDialog>(dialog);
       auto dest = std::filesystem::path(folder_picker->GetPath().c_str().AsChar());
+      std::filesystem::create_directory(dest);
       unique->SetSize(unique->GetSize().x + dest.string().size(), unique->GetSize().y);
       unique->CenterOnScreen();
       unique->Show();
@@ -118,13 +120,18 @@ void vol_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiConte
       {
         if (should_cancel)
         {
-          std::cout << "Stopping normal execution\n";
           return true;
         }
         text2->SetLabel((std::filesystem::relative(archive_path, file.folder_path) / file.filename).string());
 
         archive.extract_file_contents(archive_file, dest, file);
         gauge->SetValue(gauge->GetValue() + 1);
+      }
+
+      if (!opened_folder)
+      {
+        wxLaunchDefaultApplication(dest.string());
+        opened_folder = true;
       }
 
       return true;
@@ -157,12 +164,12 @@ void vol_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiConte
 
     dialog->Bind(wxEVT_CLOSE_WINDOW, [=](auto&) {
       should_cancel = true;
-      std::cout << "Stopping the thread\n";
     });
 
     pending_save = std::async(std::launch::async, [=] {
       auto unique = std::unique_ptr<wxDialog>(dialog);
       auto dest = std::filesystem::path(folder_picker->GetPath().c_str().AsChar());
+      std::filesystem::create_directory(dest);
       unique->SetSize(unique->GetSize().x + dest.string().size(), unique->GetSize().y);
       unique->CenterOnScreen();
       unique->Show();
@@ -176,7 +183,6 @@ void vol_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiConte
 
         auto file_archive_path = volume_file.folder_path / volume_file.filename;
 
-        std::cout << (file_archive_path.string() + "\n");
         auto child_files = archive.find_files(file_archive_path, { "ALL" });
 
         {
@@ -190,7 +196,6 @@ void vol_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiConte
         {
           if (should_cancel)
           {
-            std::cout << "Stopping paralell execution\n";
             return;
           }
 
@@ -207,6 +212,12 @@ void vol_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiConte
           }
         }
       });
+
+      if (!opened_folder)
+      {
+        wxLaunchDefaultApplication(dest.string());
+        opened_folder = true;
+      }
 
       return true;
     });

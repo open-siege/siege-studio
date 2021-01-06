@@ -20,6 +20,7 @@ private:
   std::vector<shared::archive::file_info> files;
   std::future<bool> pending_save;
   bool should_cancel;
+  bool opened_folder = false;
 };
 
 #endif//DARKSTARDTSCONVERTER_VOL_VIEW_HPP
