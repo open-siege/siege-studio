@@ -27,6 +27,7 @@ void create_image(sf::Image& loaded_image,
 
 
 bmp_view::bmp_view(const shared::archive::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::fs::file_system_archive& manager)
+ : archive(manager)
 {
   zoom_in = [&](const sf::Event&) {
     if (image_scale < 4.0f)
@@ -70,14 +71,14 @@ bmp_view::bmp_view(const shared::archive::file_info& info, std::basic_istream<st
 
     if (darkstar::pal::is_phoenix_pal(*raw_palette.second))
     {
-      loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), darkstar::pal::get_ppl_data(*raw_palette.second));
+      loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, darkstar::pal::get_ppl_data(*raw_palette.second)));
     }
     else if (darkstar::pal::is_microsoft_pal(*raw_palette.second))
     {
       std::vector<darkstar::pal::palette> temp;
       temp.emplace_back().colours = darkstar::pal::get_pal_data(*raw_palette.second);
 
-      loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::move(temp));
+      loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, std::move(temp)));
     }
   }
 
@@ -88,7 +89,7 @@ bmp_view::bmp_view(const shared::archive::file_info& info, std::basic_istream<st
     std::vector<darkstar::pal::palette> temp;
     temp.emplace_back().colours = windows_bmp.colours;
 
-    loaded_palettes.emplace(sort_order.emplace_back("Internal"), std::move(temp));
+    loaded_palettes.emplace(sort_order.emplace_back("Internal"), std::make_pair(info, std::move(temp)));
 
     selected_palette_index = default_palette_index = 0;
     selected_palette_name = default_palette_name = "Internal";
@@ -138,9 +139,9 @@ bmp_view::bmp_view(const shared::archive::file_info& info, std::basic_istream<st
         }
 
         auto get_defaults = [&](decltype(loaded_palettes)::reference value) {
-          for (auto i = 0u; i < value.second.size(); ++i)
+          for (auto i = 0u; i < value.second.second.size(); ++i)
           {
-            auto& child = value.second[i];
+            auto& child = value.second.second[i];
             if (child.index == phoenix_bmp.palette_index)
             {
               selected_palette_index = default_palette_index = i;
@@ -154,7 +155,7 @@ bmp_view::bmp_view(const shared::archive::file_info& info, std::basic_istream<st
         {
           for (auto& entry : loaded_palettes)
           {
-            if (entry.second.size() > phoenix_bmp.palette_index)
+            if (entry.second.second.size() > phoenix_bmp.palette_index)
             {
               get_defaults(entry);
             }
@@ -206,7 +207,7 @@ bmp_view::bmp_view(const shared::archive::file_info& info, std::basic_istream<st
           phoenix_bmp.bmp_header.width,
           phoenix_bmp.bmp_header.height,
           phoenix_bmp.pixels,
-          selected_palette_name.empty() ? default_colours : loaded_palettes.at(selected_palette_name).at(selected_palette_index).colours);
+          selected_palette_name.empty() ? default_colours : loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
 
         rect.width = phoenix_bmp.bmp_header.width;
         rect.height = phoenix_bmp.bmp_header.height;
@@ -217,7 +218,7 @@ bmp_view::bmp_view(const shared::archive::file_info& info, std::basic_istream<st
   }
 
   sort_order.sort([&](const auto& a, const auto& b) {
-    return (a == "Internal") || loaded_palettes.at(a).size() < loaded_palettes.at(b).size();
+    return (a == "Internal") || loaded_palettes.at(a).second.size() < loaded_palettes.at(b).second.size();
   });
 
   if (!original_pixels.empty())
@@ -243,7 +244,7 @@ void bmp_view::refresh_image()
         width,
         height,
         original_pixels.at(selected_bitmap_index),
-        loaded_palettes.at(selected_palette_name).at(selected_palette_index).colours);
+        loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
     }
     else if (colour_strat == strategy::remap)
     {
@@ -251,9 +252,9 @@ void bmp_view::refresh_image()
         width,
         height,
         darkstar::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
-          loaded_palettes.at(default_palette_name).at(default_palette_index).colours,
-          loaded_palettes.at(selected_palette_name).at(selected_palette_index).colours),
-        loaded_palettes.at(selected_palette_name).at(selected_palette_index).colours);
+          loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+          loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours),
+        loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
     }
     else if (colour_strat == strategy::remap_unique)
     {
@@ -261,10 +262,10 @@ void bmp_view::refresh_image()
         width,
         height,
         darkstar::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
-          loaded_palettes.at(default_palette_name).at(default_palette_index).colours,
-          loaded_palettes.at(selected_palette_name).at(selected_palette_index).colours,
+          loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+          loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours,
           true),
-        loaded_palettes.at(selected_palette_name).at(selected_palette_index).colours);
+        loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
     }
 
     texture.update(loaded_image);
@@ -299,7 +300,7 @@ void bmp_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContex
     auto child_count = 0;
     for (auto& key : sort_order)
     {
-      auto& value = loaded_palettes.at(key);
+      auto& [file_info, value] = loaded_palettes.at(key);
 
       if (value.size() == 1)
       {
@@ -331,6 +332,12 @@ void bmp_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContex
 
               key == selected_palette_name ? ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen : 0))
         {
+
+          if (ImGui::Button("Open Palette in New Tab"))
+          {
+            archive.execute_action("open_new_tab", file_info);
+          }
+
           std::stringstream label;
 
           for (auto i = 0u; i < value.size(); ++i)
@@ -421,7 +428,7 @@ void bmp_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContex
       {
         auto old_name = default_palette_name;
         default_palette_name = new_palette->first;
-        if (new_palette->second.size() < default_palette_index)
+        if (new_palette->second.second.size() < default_palette_index)
         {
           default_palette_index = 0;
         }
@@ -445,9 +452,9 @@ void bmp_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContex
       "  ", reinterpret_cast<int*>(&default_palette_index),
       [](void* data, int idx, const char** out_text) -> bool {
              auto* real_data = reinterpret_cast<decltype(loaded_palettes)::value_type::second_type*>(data);
-             auto it = real_data->begin();
+             auto it = real_data->second.begin();
              std::advance(it, idx);
-             if (it != real_data->end())
+             if (it != real_data->second.end())
              {
                static std::string temp;
                temp = "Palette " + std::to_string(idx + 1);
@@ -461,7 +468,7 @@ void bmp_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContex
              }
       },
       reinterpret_cast<void*>(&loaded_palettes.at(default_palette_name)),
-      loaded_palettes.at(default_palette_name).size()))
+      loaded_palettes.at(default_palette_name).second.size()))
     {
       if (selected_palette_index == old_index)
       {
