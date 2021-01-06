@@ -1,9 +1,14 @@
+#include <execution>
+
 #include "darkstar_dts_view.hpp"
 #include "dts_io.hpp"
 #include "dts_renderable_shape.hpp"
 #include "gl_renderer.hpp"
 #include "sfml_keys.hpp"
 #include "3space-studio/utility.hpp"
+#include "obj_renderer.hpp"
+
+std::filesystem::path darkstar_dts_view::export_path = std::filesystem::path();
 
 darkstar::dts::shape_variant get_shape(std::basic_istream<std::byte>& shape_stream)
 {
@@ -46,8 +51,15 @@ void render_tree_view(const std::string& node, bool& node_visible, std::map<std:
   ImGui::Unindent(8);
 }
 
-darkstar_dts_view::darkstar_dts_view(std::basic_istream<std::byte>& shape_stream)
+darkstar_dts_view::darkstar_dts_view(const shared::archive::file_info& info, std::basic_istream<std::byte>& shape_stream, const studio::fs::file_system_archive& archive)
+  : info(std::move(info)), archive(archive)
 {
+  if (export_path == std::filesystem::path())
+  {
+    export_path = archive.get_search_path() / "exported";
+    std::filesystem::create_directory(export_path);
+  }
+
   shape = std::make_unique<dts_renderable_shape>(get_shape(shape_stream));
   translation = { 0, 0, -20 };
   rotation = { 115, 180, -35 };
@@ -148,6 +160,81 @@ void darkstar_dts_view::render_ui(wxWindow* parent, sf::RenderWindow* window, Im
 {
   if (!detail_levels.empty())
   {
+    ImGui::Begin("Export Options");
+
+    if (ImGui::Button("Set Export Directory"))
+    {
+      auto dialog = std::make_unique<wxDirDialog>(nullptr, "Open a folder to export files to");
+
+      if (dialog->ShowModal() == wxID_OK)
+      {
+        export_path = dialog->GetPath().c_str().AsChar();
+      }
+    }
+
+    ImGui::SameLine();
+    ImGui::Text("%s", export_path.string().c_str());
+
+
+    if (ImGui::Button("Export to OBJ"))
+    {
+      for (auto i = 0u; i < detail_levels.size(); ++i)
+      {
+        auto new_file_name = info.filename.stem().string() + "-" + detail_levels[i] + ".obj";
+
+        std::filesystem::create_directory(export_path);
+        std::ofstream output(export_path / new_file_name, std::ios::trunc);
+        auto renderer = obj_renderer{ output };
+
+        std::vector<std::size_t> details{ i };
+        shape->render_shape(renderer, details, sequences);
+      }
+
+      if (!opened_folder)
+      {
+        wxLaunchDefaultApplication(export_path.string());
+        opened_folder = true;
+      }
+    }
+    // TODO fix issue with certain dts files which have bad data
+    //    if (ImGui::Button("Export All DTS files to OBJ"))
+    //    {
+    //      auto files = archive.find_files({ ".dts" });
+    //
+    //      if (!opened_folder && !files.empty())
+    //      {
+    //        wxLaunchDefaultApplication(export_path.string());
+    //        opened_folder = true;
+    //      }
+    //
+    //      std::cout << "Number of files: " << files.size() << "\n";
+    //
+    //      std::for_each(std::execution::par_unseq, files.begin(), files.end(), [=](const auto& shape_info) {
+    //        auto archive_path = archive.get_archive_path(shape_info.folder_path);
+    //        auto shape_stream = archive.load_file(shape_info);
+    //
+    //        auto real_shape = dts_renderable_shape(get_shape(*shape_stream.second));
+    //
+    //        auto local_detail_levels = real_shape.get_detail_levels();
+    //
+    //        for (auto i = 0u; i < local_detail_levels.size(); ++i)
+    //        {
+    //          auto new_file_name = shape_info.filename.stem().string() + "-" + detail_levels[i] + ".obj";
+    //
+    //          std::filesystem::create_directory(export_path);
+    //          std::ofstream output(export_path / new_file_name, std::ios::trunc);
+    //          auto renderer = obj_renderer{ output };
+    //
+    //          std::vector<std::size_t> details{ i };
+    //          auto local_sequences = shape->get_sequences(details);
+    //          std::cout << "Rendering " + new_file_name + "\n";
+    //          shape->render_shape(renderer, details, local_sequences);
+    //        }
+    //      });
+    //    }
+
+    ImGui::End();
+
     ImGui::Begin("Details and Nodes");
 
     if (ImGui::CollapsingHeader("Detail Levels", ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen))
