@@ -1,9 +1,9 @@
 #ifndef DARKSTARDTSCONVERTER_VOL_VIEW_HPP
 #define DARKSTARDTSCONVERTER_VOL_VIEW_HPP
 
+#include <future>
 #include "graphics_view.hpp"
 #include "archives/file_system_archive.hpp"
-#include <future>
 
 class vol_view : public graphics_view
 {

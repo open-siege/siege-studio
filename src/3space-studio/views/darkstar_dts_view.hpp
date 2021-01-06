@@ -5,11 +5,12 @@
 
 #include "graphics_view.hpp"
 #include "renderable_shape.hpp"
+#include "archives/file_system_archive.hpp"
 
 class darkstar_dts_view : public graphics_view
 {
 public:
-  darkstar_dts_view(std::basic_istream<std::byte>& shape_stream);
+  darkstar_dts_view(const shared::archive::file_info&, std::basic_istream<std::byte>& shape_stream, const studio::fs::file_system_archive& archive);
   bool requires_gl() const override { return true; }
   std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks() override;
   void setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) override;
@@ -17,6 +18,9 @@ public:
   void render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext) override;
 
 private:
+  static std::filesystem::path export_path;
+  const studio::fs::file_system_archive& archive;
+  shared::archive::file_info info;
   std::unique_ptr<renderable_shape> shape;
 
   glm::vec3 translation;
@@ -31,6 +35,7 @@ private:
   std::vector<std::string> detail_levels;
 
   bool root_visible = true;
+  bool opened_folder = false;
 };
 
 #endif//DARKSTARDTSCONVERTER_DARKSTAR_DTS_VIEW_HPP
