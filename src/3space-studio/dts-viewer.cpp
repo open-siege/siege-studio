@@ -317,6 +317,7 @@ int main(int argc, char** argv)
     tree_search->Append("All Supported Formats");
     tree_search->Append("All Palettes (.pal, .ppl, .ipl)");
     tree_search->Append("All Images (.bmp, .pba)");
+    tree_search->Append("All 3D Models (.dts)");
 
     for (auto& extension : extensions)
     {
@@ -339,7 +340,7 @@ int main(int argc, char** argv)
       {
         return view_factory.get_extensions();
       }
-      else if (selection == 1 || selection == 2)
+      else if (selection == 1 || selection == 2 || selection == 3)
       {
         if (selection == 1)
         {
@@ -348,16 +349,20 @@ int main(int argc, char** argv)
           new_extensions.emplace_back(".ppl");
           new_extensions.emplace_back(".ipl");
         }
-        else
+        else if(selection == 2)
         {
           new_extensions.reserve(2);
           new_extensions.emplace_back(".bmp");
           new_extensions.emplace_back(".pba");
         }
+        else
+        {
+          new_extensions.emplace_back(".dts");
+        }
       }
       else
       {
-        new_extensions.emplace_back(view_factory.get_extensions()[selection - 3]);
+        new_extensions.emplace_back(view_factory.get_extensions()[selection - 4]);
       }
 
       return new_extensions;
