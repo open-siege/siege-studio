@@ -22,24 +22,24 @@
 
 namespace fs = std::filesystem;
 
-studio::fs::file_stream create_null_stream()
+studio::resource::file_stream create_null_stream()
 {
-  static studio::fs::null_buffer null_buffer;
-  return std::make_pair(shared::archive::file_info{}, std::make_unique<std::basic_istream<std::byte>>(&null_buffer));
+  static studio::resource::null_buffer null_buffer;
+  return std::make_pair(studio::resource::file_info{}, std::make_unique<std::basic_istream<std::byte>>(&null_buffer));
 }
 
 struct tree_item_file_info : public wxTreeItemData
 {
-  shared::archive::file_info info;
+  studio::resource::file_info info;
 
-  explicit tree_item_file_info(shared::archive::file_info info) : info(std::move(info)) {}
+  explicit tree_item_file_info(studio::resource::file_info info) : info(std::move(info)) {}
 };
 
 struct tree_item_folder_info : public wxTreeItemData
 {
-  shared::archive::folder_info info;
+  studio::resource::folder_info info;
 
-  explicit tree_item_folder_info(shared::archive::folder_info info) : info(std::move(info)) {}
+  explicit tree_item_folder_info(studio::resource::folder_info info) : info(std::move(info)) {}
 };
 
 std::optional<std::filesystem::path> get_shape_path()
@@ -98,7 +98,7 @@ wxMenuBar* create_menu_bar()
   return menuBar;
 }
 
-void create_render_view(wxWindow* panel, studio::fs::file_stream file_stream, const view_factory& factory, const studio::fs::resource_explorer& archive)
+void create_render_view(wxWindow* panel, studio::resource::file_stream file_stream, const view_factory& factory, const studio::resource::resource_explorer& archive)
 {
   graphics_view* handler = factory.create_view(file_stream.first, *file_stream.second, archive);
 
@@ -161,7 +161,7 @@ void create_render_view(wxWindow* panel, studio::fs::file_stream file_stream, co
 }
 
 void populate_tree_view(const view_factory& view_factory,
-  studio::fs::resource_explorer& archive,
+  studio::resource::resource_explorer& archive,
   wxTreeCtrl* tree_view,
   const fs::path& search_path,
   const std::vector<std::string_view>& extensions,
@@ -193,22 +193,22 @@ void populate_tree_view(const view_factory& view_factory,
         return std::visit([&](const auto& other) {
           using BType = std::decay_t<decltype(other)>;
 
-          if constexpr (std::is_same_v<AType, shared::archive::folder_info> && std::is_same_v<BType, AType>)
+          if constexpr (std::is_same_v<AType, studio::resource::folder_info> && std::is_same_v<BType, AType>)
           {
             return entry.full_path < other.full_path;
           }
 
-          if constexpr (std::is_same_v<AType, shared::archive::file_info> && std::is_same_v<BType, AType>)
+          if constexpr (std::is_same_v<AType, studio::resource::file_info> && std::is_same_v<BType, AType>)
           {
             return entry.filename < other.filename;
           }
 
-          if constexpr (std::is_same_v<AType, shared::archive::file_info> && std::is_same_v<BType, shared::archive::folder_info>)
+          if constexpr (std::is_same_v<AType, studio::resource::file_info> && std::is_same_v<BType, studio::resource::folder_info>)
           {
             return false;
           }
 
-          if constexpr (std::is_same_v<AType, shared::archive::folder_info> && std::is_same_v<BType, shared::archive::file_info>)
+          if constexpr (std::is_same_v<AType, studio::resource::folder_info> && std::is_same_v<BType, studio::resource::file_info>)
           {
             return true;
           }
@@ -225,7 +225,7 @@ void populate_tree_view(const view_factory& view_factory,
     std::visit([&](auto&& folder) {
       using T = std::decay_t<decltype(folder)>;
 
-      if constexpr (std::is_same_v<T, shared::archive::folder_info>)
+      if constexpr (std::is_same_v<T, studio::resource::folder_info>)
       {
         auto new_parent = tree_view->AppendItem(parent.value(), folder.full_path.filename().string(), -1, -1, new tree_item_folder_info(folder));
 
@@ -242,7 +242,7 @@ void populate_tree_view(const view_factory& view_factory,
   {
     std::visit([&](auto&& file) {
       using T = std::decay_t<decltype(file)>;
-      if constexpr (std::is_same_v<T, shared::archive::file_info>)
+      if constexpr (std::is_same_v<T, studio::resource::file_info>)
       {
         if (std::any_of(extensions.begin(), extensions.end(), [&file](const auto& ext) {
               return ends_with(to_lower(file.filename.string()), ext);
@@ -454,7 +454,7 @@ int main(int argc, char** argv)
       else if (auto* folder_info = dynamic_cast<tree_item_folder_info*>(tree_view->GetItemData(item));
                folder_info && !std::filesystem::is_directory(folder_info->info.full_path))
       {
-        shared::archive::file_info info{};
+        studio::resource::file_info info{};
         info.filename = folder_info->info.full_path.filename();
         info.folder_path = folder_info->info.full_path.parent_path();
         add_element_from_file(archive.load_file(info), true);

@@ -9,7 +9,7 @@
 #include <filesystem>
 #include "../shared.hpp"
 
-namespace shared::archive
+namespace studio::resource
 {
   enum class compression_type
   {
@@ -37,9 +37,9 @@ namespace shared::archive
 
   struct archive_plugin
   {
-    using folder_info = shared::archive::folder_info;
-    using file_info = shared::archive::file_info;
-    using content_info = std::variant<folder_info, shared::archive::file_info>;
+    using folder_info = studio::resource::folder_info;
+    using file_info = studio::resource::file_info;
+    using content_info = std::variant<folder_info, studio::resource::file_info>;
 
     virtual bool stream_is_supported(std::basic_istream<std::byte>&) const = 0;
 

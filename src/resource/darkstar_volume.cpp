@@ -5,10 +5,9 @@
 #include <utility>
 #include <string>
 #include <cstdlib>
-#include <iostream>
-#include "archives/darkstar_volume.hpp"
+#include "resource/darkstar_volume.hpp"
 
-namespace darkstar::vol
+namespace studio::resource::vol::darkstar
 {
   namespace endian = boost::endian;
   using namespace std::literals;
@@ -242,7 +241,7 @@ namespace darkstar::vol
 
         offset = file.offset;
         size = file.size;
-        compression_type = file.compression_type == 1 ? darkstar::vol::compression_type::none : darkstar::vol::compression_type::lz;
+        compression_type = file.compression_type == 1 ? vol::darkstar::compression_type::none : vol::darkstar::compression_type::lz;
 
         index += sizeof(old_file_header);
       }
@@ -276,7 +275,7 @@ namespace darkstar::vol
     return results;
   }
 
-  using folder_info = shared::archive::folder_info;
+  using folder_info = studio::resource::folder_info;
 
   bool vol_file_archive::is_supported(std::basic_istream<std::byte>& stream)
   {
@@ -302,11 +301,11 @@ namespace darkstar::vol
     results.reserve(raw_results.size());
 
     std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(results), [&](const auto& value) {
-      shared::archive::file_info info{};
+      studio::resource::file_info info{};
       info.filename = value.filename;
       info.offset = value.offset;
       info.size = value.size;
-      info.compression_type = shared::archive::compression_type(value.compression_type);
+      info.compression_type = studio::resource::compression_type(value.compression_type);
       info.folder_path = archive_or_folder_path;
       return info;
     });
@@ -314,21 +313,21 @@ namespace darkstar::vol
     return results;
   }
 
-  void vol_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info) const
+  void vol_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info) const
   {
     if (int(stream.tellg()) == info.offset)
     {
-      stream.seekg(sizeof(darkstar::vol::file_index_header), std::ios::cur);
+      stream.seekg(sizeof(vol::darkstar::file_index_header), std::ios::cur);
     }
-    else if (int(stream.tellg()) != info.offset + sizeof(darkstar::vol::file_index_header))
+    else if (int(stream.tellg()) != info.offset + sizeof(vol::darkstar::file_index_header))
     {
-      stream.seekg(info.offset + sizeof(darkstar::vol::file_index_header), std::ios::beg);
+      stream.seekg(info.offset + sizeof(vol::darkstar::file_index_header), std::ios::beg);
     }
   }
 
-  void vol_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output) const
+  void vol_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info, std::basic_ostream<std::byte>& output) const
   {
-    if (info.compression_type == shared::archive::compression_type::none)
+    if (info.compression_type == studio::resource::compression_type::none)
     {
       set_stream_position(stream, info);
       std::copy_n(std::istreambuf_iterator<std::byte>(stream),

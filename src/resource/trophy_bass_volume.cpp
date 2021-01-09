@@ -5,7 +5,7 @@
 #include <string>
 #include "trophy_bass_volume.hpp"
 
-namespace trophy_bass::vol
+namespace studio::resource::vol::trophy_bass
 {
   namespace endian = boost::endian;
 
@@ -44,7 +44,7 @@ namespace trophy_bass::vol
     endian::little_int32_t offset;
   };
 
-  using folder_info = shared::archive::folder_info;
+  using folder_info = studio::resource::folder_info;
 
   bool rbx_file_archive::is_supported(std::basic_istream<std::byte>& stream)
   {
@@ -61,9 +61,9 @@ namespace trophy_bass::vol
     return is_supported(stream);
   }
 
-  std::vector<std::variant<folder_info, shared::archive::file_info>> rbx_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
+  std::vector<std::variant<folder_info, studio::resource::file_info>> rbx_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
   {
-    std::vector<shared::archive::file_info> results;
+    std::vector<studio::resource::file_info> results;
 
     std::array<std::byte, 4> tag{};
     stream.read(tag.data(), sizeof(tag));
@@ -94,11 +94,11 @@ namespace trophy_bass::vol
       rbx_file_header header{};
       stream.read(reinterpret_cast<std::byte*>(&header), sizeof(header));
 
-      shared::archive::file_info info{};
+      studio::resource::file_info info{};
 
       std::copy(header.filename.begin(), header.filename.end(), temp.begin());
       info.filename = temp.data();
-      info.compression_type = shared::archive::compression_type::none;
+      info.compression_type = studio::resource::compression_type::none;
       info.offset = header.offset;
 
       results.emplace_back(info);
@@ -123,7 +123,7 @@ namespace trophy_bass::vol
       info.size = file_size;
     }
 
-    std::vector<std::variant<folder_info, shared::archive::file_info>> final_results;
+    std::vector<std::variant<folder_info, studio::resource::file_info>> final_results;
     final_results.reserve(results.size());
 
     std::transform(results.begin(), results.end(), std::back_inserter(final_results), [&](auto& value) {
@@ -135,7 +135,7 @@ namespace trophy_bass::vol
     return final_results;
   }
 
-  void rbx_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info) const
+  void rbx_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info) const
   {
     if (int(stream.tellg()) == info.offset)
     {
@@ -147,7 +147,7 @@ namespace trophy_bass::vol
     }
   }
 
-  void rbx_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output) const
+  void rbx_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info, std::basic_ostream<std::byte>& output) const
   {
     set_stream_position(stream, info);
 
@@ -173,7 +173,7 @@ namespace trophy_bass::vol
 
   std::vector<rbx_file_archive::content_info> tbv_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
   {
-    std::vector<shared::archive::file_info> results;
+    std::vector<studio::resource::file_info> results;
 
     std::array<std::byte, 9> tag{};
     stream.read(tag.data(), sizeof(tag));
@@ -199,8 +199,8 @@ namespace trophy_bass::vol
       tbv_file_header header{};
       stream.read(reinterpret_cast<std::byte*>(&header), sizeof(header));
 
-      shared::archive::file_info info{};
-      info.compression_type = shared::archive::compression_type::none;
+      studio::resource::file_info info{};
+      info.compression_type = studio::resource::compression_type::none;
       info.offset = header.offset;
 
       results.emplace_back(info);
@@ -229,7 +229,7 @@ namespace trophy_bass::vol
       header.size = info.file_size;
     }
 
-    std::vector<std::variant<folder_info, shared::archive::file_info>> final_results;
+    std::vector<std::variant<folder_info, studio::resource::file_info>> final_results;
     final_results.reserve(results.size());
 
     std::transform(results.begin(), results.end(), std::back_inserter(final_results), [&](auto& value) {
@@ -241,7 +241,7 @@ namespace trophy_bass::vol
     return final_results;
   }
 
-  void tbv_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info) const
+  void tbv_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info) const
   {
     if (int(stream.tellg()) == info.offset)
     {
@@ -253,7 +253,7 @@ namespace trophy_bass::vol
     }
   }
 
-  void tbv_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output) const
+  void tbv_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info, std::basic_ostream<std::byte>& output) const
   {
     set_stream_position(stream, info);
 

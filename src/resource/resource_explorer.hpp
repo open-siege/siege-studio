@@ -11,9 +11,9 @@
 #include <functional>
 #include "archive_plugin.hpp"
 
-namespace studio::fs
+namespace studio::resource
 {
-  using file_stream = std::pair<shared::archive::file_info, std::unique_ptr<std::basic_istream<std::byte>>>;
+  using file_stream = std::pair<studio::resource::file_info, std::unique_ptr<std::basic_istream<std::byte>>>;
 
   struct null_buffer : public std::basic_streambuf<std::byte>
   {
@@ -26,10 +26,10 @@ namespace studio::fs
 
     std::locale default_locale;
 
-    std::multimap<std::string, std::unique_ptr<shared::archive::archive_plugin>> archive_types;
-    std::map<std::string, std::function<void(const shared::archive::file_info&)>> actions;
+    std::multimap<std::string, std::unique_ptr<studio::resource::archive_plugin>> archive_types;
+    std::map<std::string, std::function<void(const studio::resource::file_info&)>> actions;
 
-    mutable std::map<std::string, std::vector<shared::archive::file_info>> info_cache;
+    mutable std::map<std::string, std::vector<studio::resource::file_info>> info_cache;
 
     explicit resource_explorer(const std::filesystem::path& search_path) : search_path(search_path) {}
 
@@ -45,12 +45,12 @@ namespace studio::fs
       return archive_path;
     }
 
-    void add_action(std::string name, std::function<void(const shared::archive::file_info&)> action)
+    void add_action(std::string name, std::function<void(const studio::resource::file_info&)> action)
     {
       actions.emplace(std::move(name), std::move(action));
     }
 
-    void execute_action(const std::string& name, const shared::archive::file_info& info) const
+    void execute_action(const std::string& name, const studio::resource::file_info& info) const
     {
       auto result = actions.find(name);
 
@@ -65,13 +65,13 @@ namespace studio::fs
       return search_path;
     }
 
-    void add_archive_type(std::string extension, std::unique_ptr<shared::archive::archive_plugin> archive_type)
+    void add_archive_type(std::string extension, std::unique_ptr<studio::resource::archive_plugin> archive_type)
     {
       std::transform(extension.begin(), extension.end(), extension.begin(), [&](auto c) { return std::tolower(c, default_locale); });
       archive_types.insert(std::make_pair(std::move(extension), std::move(archive_type)));
     }
 
-    std::vector<shared::archive::file_info> find_files(const std::filesystem::path& new_search_path, const std::vector<std::string_view>& extensions) const
+    std::vector<studio::resource::file_info> find_files(const std::filesystem::path& new_search_path, const std::vector<std::string_view>& extensions) const
     {
       std::stringstream key;
       key << new_search_path;
@@ -84,7 +84,7 @@ namespace studio::fs
         return cache_result->second;
       }
 
-      std::vector<shared::archive::file_info> results;
+      std::vector<studio::resource::file_info> results;
 
       auto files_folders = get_content_listing(new_search_path);
 
@@ -92,7 +92,7 @@ namespace studio::fs
         std::visit([&](const auto& folder) {
           using T = std::decay_t<decltype(folder)>;
 
-          if constexpr (std::is_same_v<T, shared::archive::folder_info>)
+          if constexpr (std::is_same_v<T, studio::resource::folder_info>)
           {
             auto more_files = get_content_listing(folder.full_path);
 
@@ -104,7 +104,7 @@ namespace studio::fs
                 std::transform(ext.begin(), ext.end(), ext.begin(), [&](char c) { return std::tolower(c, default_locale); });
                 if (ext == extension)
                 {
-                  shared::archive::file_info info{};
+                  studio::resource::file_info info{};
                   info.filename = folder.full_path.filename();
                   info.folder_path = folder.full_path.parent_path();
                   results.emplace_back(info);
@@ -119,7 +119,7 @@ namespace studio::fs
             }
           }
 
-          if constexpr (std::is_same_v<T, shared::archive::file_info>)
+          if constexpr (std::is_same_v<T, studio::resource::file_info>)
           {
             if (extensions.size() == 1 && extensions.front() == "ALL")
             {
@@ -153,13 +153,13 @@ namespace studio::fs
       return results;
     }
 
-    std::vector<shared::archive::file_info> find_files(const std::vector<std::string_view>& extensions) const
+    std::vector<studio::resource::file_info> find_files(const std::vector<std::string_view>& extensions) const
     {
       return find_files(search_path, extensions);
     }
 
-    static void merge_results(std::vector<shared::archive::file_info>& group1,
-      const std::vector<shared::archive::file_info>& group2)
+    static void merge_results(std::vector<studio::resource::file_info>& group1,
+      const std::vector<studio::resource::file_info>& group2)
     {
       group1.reserve(group1.capacity() + group2.size());
 
@@ -178,7 +178,7 @@ namespace studio::fs
 
     file_stream load_file(const std::filesystem::path& path) const
     {
-      shared::archive::file_info info{};
+      studio::resource::file_info info{};
 
       info.folder_path = path.parent_path();
       info.filename = path.filename().string();
@@ -186,9 +186,9 @@ namespace studio::fs
       return load_file(info);
     }
 
-    file_stream load_file(const shared::archive::file_info& info) const
+    file_stream load_file(const studio::resource::file_info& info) const
     {
-      if (info.compression_type == shared::archive::compression_type::none)
+      if (info.compression_type == studio::resource::compression_type::none)
       {
         if (std::filesystem::is_directory(info.folder_path))
         {
@@ -239,7 +239,7 @@ namespace studio::fs
       return folder_path.has_extension();
     }
 
-    std::optional<std::reference_wrapper<shared::archive::archive_plugin>> get_archive_type(const std::filesystem::path& file_path) const
+    std::optional<std::reference_wrapper<studio::resource::archive_plugin>> get_archive_type(const std::filesystem::path& file_path) const
     {
       auto ext = file_path.filename().extension().string();
       std::transform(ext.begin(), ext.end(), ext.begin(), [&](char c) { return std::tolower(c, default_locale); });
@@ -258,7 +258,7 @@ namespace studio::fs
 
       return std::nullopt;
     }
-    void extract_file_contents(std::basic_istream<std::byte>& archive_file, std::filesystem::path destination, const shared::archive::file_info& info) const
+    void extract_file_contents(std::basic_istream<std::byte>& archive_file, std::filesystem::path destination, const studio::resource::file_info& info) const
     {
       auto archive_path = get_archive_path(info.folder_path);
 
@@ -276,9 +276,9 @@ namespace studio::fs
     }
 
 
-    std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> get_content_listing(const std::filesystem::path& folder_path) const
+    std::vector<std::variant<studio::resource::folder_info, studio::resource::file_info>> get_content_listing(const std::filesystem::path& folder_path) const
     {
-      std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> files;
+      std::vector<std::variant<studio::resource::folder_info, studio::resource::file_info>> files;
 
       if (auto archive_type = get_archive_type(get_archive_path(folder_path)); archive_type.has_value())
       {
@@ -291,21 +291,21 @@ namespace studio::fs
       {
         if (item.is_directory())
         {
-          shared::archive::folder_info info{};
+          studio::resource::folder_info info{};
           info.name = item.path().filename().string();
           info.full_path = item.path();
           files.emplace_back(info);
         }
         else if (auto archive_type = get_archive_type(item.path()); archive_type.has_value())
         {
-          shared::archive::folder_info info{};
+          studio::resource::folder_info info{};
           info.name = item.path().filename().string();
           info.full_path = item.path();
           files.emplace_back(info);
         }
         else
         {
-          shared::archive::file_info info{};
+          studio::resource::file_info info{};
 
           info.filename = item.path().filename().string();
           info.folder_path = item.path().parent_path();

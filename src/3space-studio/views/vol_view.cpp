@@ -6,7 +6,7 @@
 
 #include "vol_view.hpp"
 
-vol_view::vol_view(const shared::archive::file_info& info, const studio::fs::resource_explorer& archive)
+vol_view::vol_view(const studio::resource::file_info& info, const studio::resource::resource_explorer& archive)
   : archive(archive)
 {
   archive_path = info.folder_path / info.filename;
@@ -15,11 +15,11 @@ vol_view::vol_view(const shared::archive::file_info& info, const studio::fs::res
 
 void vol_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
 {
-  const static std::map<shared::archive::compression_type, const char*> type_names{
-    { shared::archive::compression_type::none, "None" },
-    { shared::archive::compression_type::lz, "Lempel-Ziv" },
-    { shared::archive::compression_type::lzh, "Lempel-Ziv w/ Huffman coding" },
-    { shared::archive::compression_type::rle, "Run-Length Encoding" }
+  const static std::map<studio::resource::compression_type, const char*> type_names{
+    { studio::resource::compression_type::none, "None" },
+    { studio::resource::compression_type::lz, "Lempel-Ziv" },
+    { studio::resource::compression_type::lzh, "Lempel-Ziv w/ Huffman coding" },
+    { studio::resource::compression_type::rle, "Run-Length Encoding" }
   };
 
   std::set<std::filesystem::path> folders;
