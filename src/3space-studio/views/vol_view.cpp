@@ -83,7 +83,7 @@ void vol_view::setup_view(wxWindow& parent)
 
   export_button->Bind(wxEVT_BUTTON, [parent = &parent, this, folder_picker](wxCommandEvent& event) {
     should_cancel = false;
-    auto dialog = std::make_unique<wxDialog>(nullptr, wxID_ANY, "Extracting Files");
+    auto dialog = std::make_unique<wxDialog>(parent, wxID_ANY, "Extracting Files");
 
     auto dialog_sizer = std::make_unique<wxBoxSizer>(wxVERTICAL);
 
@@ -141,7 +141,7 @@ void vol_view::setup_view(wxWindow& parent)
 
   export_all_button->Bind(wxEVT_BUTTON, [parent = &parent, this, folder_picker](wxCommandEvent& event) {
     should_cancel = false;
-    auto dialog = std::make_unique<wxDialog>(nullptr, wxID_ANY, "Extracting All Volumes");
+    auto dialog = std::make_unique<wxDialog>(parent, wxID_ANY, "Extracting All Volumes");
 
     auto dialog_sizer = std::make_unique<wxBoxSizer>(wxVERTICAL);
 

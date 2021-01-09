@@ -290,7 +290,7 @@ int main(int argc, char** argv)
     auto tree_panel = std::make_unique<wxPanel>(frame.get(), wxID_ANY);
     tree_panel->SetSizer(std::make_unique<wxBoxSizer>(wxVERTICAL).release());
 
-    auto tree_search = std::make_unique<wxComboBox>(tree_panel.get(), wxID_ANY);
+    auto tree_search = std::shared_ptr<wxComboBox>(new wxComboBox(tree_panel.get(), wxID_ANY), default_wx_deleter);
 
     auto extensions = view_factory.get_extensions();
 
@@ -310,7 +310,7 @@ int main(int argc, char** argv)
 
     populate_tree_view(view_factory, archive, *tree_view, search_path, extensions);
 
-    auto get_filter_selection = [&tree_search, &view_factory]() {
+    auto get_filter_selection = [tree_search, &view_factory]() {
       const auto selection = tree_search->GetSelection();
 
       std::vector<std::string_view> new_extensions;
@@ -347,7 +347,7 @@ int main(int argc, char** argv)
       return new_extensions;
     };
 
-    tree_search->Bind(wxEVT_COMBOBOX, [&](wxCommandEvent& event) {
+    tree_search->Bind(wxEVT_COMBOBOX, [&view_factory, &archive, tree_view, search_path, get_filter_selection](wxCommandEvent& event) {
       populate_tree_view(view_factory, archive, *tree_view, search_path, get_filter_selection());
     });
 
@@ -546,7 +546,7 @@ int main(int argc, char** argv)
     auto sizer = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
     sizer->SetSizeHints(frame.get());
 
-    tree_panel->GetSizer()->Add(tree_search.release(), 2, wxEXPAND, 0);
+    tree_panel->GetSizer()->Add(tree_search.get(), 2, wxEXPAND, 0);
     tree_panel->GetSizer()->Add(tree_view.get(), 98, wxEXPAND, 0);
     sizer->Add(tree_panel.release(), 20, wxEXPAND, 0);
     sizer->Add(notebook.get(), 80, wxEXPAND, 0);

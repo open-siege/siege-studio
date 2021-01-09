@@ -333,10 +333,10 @@ void bmp_view::render_ui(wxWindow& parent, sf::RenderWindow& window, ImGuiContex
               key == selected_palette_name ? ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen : 0))
         {
           // TODO figure out why it works for some files but not others
-//          if (ImGui::Button("Open Palette in New Tab"))
-//          {
-//            archive.execute_action("open_new_tab", file_info);
-//          }
+          if (ImGui::Button("Open Palette in New Tab"))
+          {
+            archive.execute_action("open_new_tab", file_info);
+          }
 
           std::stringstream label;
 
