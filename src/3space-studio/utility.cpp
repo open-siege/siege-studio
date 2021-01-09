@@ -7,7 +7,7 @@
 #include <wx/gtk/win_gtk.h>
 #endif
 
-WXWidget get_handle(const wxControl* const control)
+WXWidget get_handle(const wxControl& control)
 {
 #ifdef __WXGTK__
 
@@ -19,7 +19,7 @@ WXWidget get_handle(const wxControl* const control)
   XFlush(GDK_WINDOW_XDISPLAY(Win));
         return GDK_WINDOW_XWINDOW(Win));
 #else
-  return control->GetHandle();
+  return control.GetHandle();
 #endif
 }
 

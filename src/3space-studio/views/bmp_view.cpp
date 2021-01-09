@@ -282,16 +282,16 @@ std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::
   return callbacks;
 }
 
-void bmp_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
+void bmp_view::render_ui(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& gui_context)
 {
   if (scale_changed)
   {
-    setup_view(parent, window, guiContext);
+    setup_view(parent, window, gui_context);
     scale_changed = false;
   }
 
-  window->clear();
-  window->draw(sprite);
+  window.clear();
+  window.draw(sprite);
 
   if (!loaded_palettes.empty())
   {
@@ -484,7 +484,7 @@ void bmp_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContex
 
     if (ImGui::SliderFloat("   ", &image_scale, 1.0f, 4.0f))
     {
-      setup_view(parent, window, guiContext);
+      setup_view(parent, window, gui_context);
     }
 
     ImGui::End();
@@ -508,9 +508,9 @@ void bmp_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContex
   }
 }
 
-void bmp_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
+void bmp_view::setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext&)
 {
-  auto [width, height] = parent->GetClientSize();
+  auto [width, height] = parent.GetClientSize();
 
   auto image_width = sprite.getTexture()->getSize().x;
   auto image_height = sprite.getTexture()->getSize().y;
@@ -521,5 +521,5 @@ void bmp_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiConte
   sf::FloatRect visibleArea(0, 0, image_width, image_height);
   sf::View view(visibleArea);
   view.setViewport(sf::FloatRect(0.5 - width_ratio / 2, 0.5 - height_ratio / 2, width_ratio, height_ratio));
-  window->setView(view);
+  window.setView(view);
 }

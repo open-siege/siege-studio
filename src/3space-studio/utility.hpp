@@ -32,7 +32,7 @@ inline bool ends_with(std::string_view value, std::string_view ending)
   return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
 }
 
-WXWidget get_handle(const wxControl* const control);
+WXWidget get_handle(const wxControl& control);
 
 void perspectiveGL(GLdouble fovY, GLdouble aspect, GLdouble zNear, GLdouble zFar);
 

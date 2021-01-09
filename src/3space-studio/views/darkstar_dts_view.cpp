@@ -113,9 +113,9 @@ std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::
   return callbacks;
 }
 
-void darkstar_dts_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
+void darkstar_dts_view::setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext)
 {
-  auto [width, height] = parent->GetClientSize();
+  auto [width, height] = parent.GetClientSize();
 
   if (height == 0)
   {
@@ -139,7 +139,7 @@ void darkstar_dts_view::setup_view(wxWindow* parent, sf::RenderWindow* window, I
   perspectiveGL(90.f, double(width) / double(height), 1.f, 1200.0f);
 }
 
-void darkstar_dts_view::render_gl(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
+void darkstar_dts_view::render_gl(wxWindow& parent, sf::RenderWindow& window, ImGuiContext&)
 {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glMatrixMode(GL_MODELVIEW);
@@ -156,7 +156,7 @@ void darkstar_dts_view::render_gl(wxWindow* parent, sf::RenderWindow* window, Im
   glEnd();
 }
 
-void darkstar_dts_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
+void darkstar_dts_view::render_ui(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& gui_context)
 {
   if (!detail_levels.empty())
   {
