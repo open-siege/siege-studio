@@ -354,7 +354,7 @@ int main(int argc, char** argv)
     auto notebook = std::shared_ptr<wxAuiNotebook>(new wxAuiNotebook(frame.get(), wxID_ANY), default_wx_deleter);
     auto num_elements = notebook->GetPageCount();
 
-    auto add_element_from_file = [notebook, &num_elements, &view_factory, &archive](auto new_stream, bool replace_selection = false) {
+    auto add_element_from_file = [notebook, frame, &num_elements, &view_factory, &archive](auto new_stream, bool replace_selection = false) {
       auto panel = std::make_unique<wxPanel>(notebook.get(), wxID_ANY);
       panel->SetSizer(std::make_unique<wxBoxSizer>(wxHORIZONTAL).release());
 
@@ -365,6 +365,7 @@ int main(int argc, char** argv)
       {
         auto selection = notebook->GetSelection();
         notebook->InsertPage(selection, panel.release(), new_path.filename.string());
+
         num_elements = notebook->GetPageCount();
 
         if (num_elements > 2)
@@ -373,6 +374,12 @@ int main(int argc, char** argv)
         }
 
         notebook->ChangeSelection(selection);
+
+        if (frame->IsMaximized())
+        {
+          frame->Maximize(false);
+          frame->Maximize();
+        }
       }
       else
       {
