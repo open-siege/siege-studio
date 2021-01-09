@@ -3,7 +3,7 @@
 #include <iostream>
 
 #include <filesystem>
-#include "archives/darkstar_volume.hpp"
+#include "resource/darkstar_volume.hpp"
 
 int main(int, const char** argv)
 {

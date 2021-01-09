@@ -5,12 +5,12 @@
 
 #include "graphics_view.hpp"
 #include "default_view.hpp"
-#include "archives/resource_explorer.hpp"
+#include "resource/resource_explorer.hpp"
 #include "3space-studio/utility.hpp"
 
 using stream_validator = bool(std::basic_istream<std::byte>&);
 
-using view_creator = graphics_view*(const shared::archive::file_info&, std::basic_istream<std::byte>&, const studio::fs::resource_explorer&);
+using view_creator = graphics_view*(const studio::resource::file_info&, std::basic_istream<std::byte>&, const studio::resource::resource_explorer&);
 
 class view_factory
 {
@@ -21,7 +21,7 @@ public:
 
   [[nodiscard]] std::vector<std::string_view> get_extensions() const;
 
-  graphics_view* create_view(const shared::archive::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::fs::resource_explorer& manager) const;
+  graphics_view* create_view(const studio::resource::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resource::resource_explorer& manager) const;
 
 private:
   std::set<std::string> extensions;

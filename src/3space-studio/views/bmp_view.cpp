@@ -26,7 +26,7 @@ void create_image(sf::Image& loaded_image,
 }
 
 
-bmp_view::bmp_view(const shared::archive::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::fs::resource_explorer& manager)
+bmp_view::bmp_view(const studio::resource::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::resource::resource_explorer& manager)
  : archive(manager)
 {
   zoom_in = [&](const sf::Event&) {
@@ -56,13 +56,13 @@ bmp_view::bmp_view(const shared::archive::file_info& info, std::basic_istream<st
 
   sf::IntRect rect;
 
-  std::vector<shared::archive::file_info> palettes;
+  std::vector<studio::resource::file_info> palettes;
 
-  palettes = manager.find_files(studio::fs::resource_explorer::get_archive_path(info.folder_path).parent_path(), { ".ppl", ".PPL", ".ipl", ".IPL", ".pal", ".PAL" });
+  palettes = manager.find_files(studio::resource::resource_explorer::get_archive_path(info.folder_path).parent_path(), { ".ppl", ".PPL", ".ipl", ".IPL", ".pal", ".PAL" });
 
   auto all_palettes = manager.find_files({ ".ppl", ".ipl", ".pal" });
 
-  studio::fs::resource_explorer::merge_results(palettes, all_palettes);
+  studio::resource::resource_explorer::merge_results(palettes, all_palettes);
 
   for (auto& palette_info : palettes)
   {

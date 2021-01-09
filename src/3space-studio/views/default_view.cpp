@@ -3,7 +3,7 @@
 
 #include <utility>
 
-default_view::default_view(shared::archive::file_info info)
+default_view::default_view(studio::resource::file_info info)
   : info(std::move(info))
 {}
 

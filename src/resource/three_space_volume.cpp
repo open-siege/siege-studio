@@ -7,7 +7,7 @@
 
 #include "three_space_volume.hpp"
 
-namespace three_space::vol
+namespace studio::resource::vol::three_space
 {
   namespace endian = boost::endian;
 
@@ -32,7 +32,7 @@ namespace three_space::vol
     endian::little_int32_t offset;
   };
 
-  std::vector<shared::archive::folder_info> get_rmf_sub_archives(std::basic_istream<std::byte>& raw_data)
+  std::vector<studio::resource::folder_info> get_rmf_sub_archives(std::basic_istream<std::byte>& raw_data)
   {
     std::array<std::byte, 6> header{};
     raw_data.read(header.data(), sizeof(header));
@@ -41,7 +41,7 @@ namespace three_space::vol
 
     std::array<char, 14> filename{ '\0' };
 
-    std::vector<shared::archive::folder_info> results;
+    std::vector<studio::resource::folder_info> results;
     results.reserve(volume_count);
 
     for (auto i = 0; i < volume_count; ++i)
@@ -51,7 +51,7 @@ namespace three_space::vol
       endian::little_uint16_t file_count{};
       raw_data.read(reinterpret_cast<std::byte*>(&file_count), sizeof(file_count));
 
-      shared::archive::folder_info info{};
+      studio::resource::folder_info info{};
       info.name = filename.data();
       info.file_count = file_count;
 
@@ -63,9 +63,9 @@ namespace three_space::vol
     return results;
   }
 
-  std::vector<shared::archive::file_info> get_rmf_data(std::basic_istream<std::byte>& raw_data, const std::filesystem::path& archive_path)
+  std::vector<studio::resource::file_info> get_rmf_data(std::basic_istream<std::byte>& raw_data, const std::filesystem::path& archive_path)
   {
-    std::vector<shared::archive::file_info> results;
+    std::vector<studio::resource::file_info> results;
     std::array<std::byte, 6> header{};
     raw_data.read(header.data(), sizeof(header));
 
@@ -110,12 +110,12 @@ namespace three_space::vol
           endian::little_uint32_t file_size{};
           volume.read(reinterpret_cast<std::byte*>(&file_size), sizeof(file_size));
 
-          shared::archive::file_info info{};
+          studio::resource::file_info info{};
           info.offset = file_header.offset;
           info.filename = child_filename.data();
           info.size = file_size;
           info.folder_path = real_path / map_filename / volume_filename;
-          info.compression_type = shared::archive::compression_type::none;
+          info.compression_type = studio::resource::compression_type::none;
 
           results.emplace_back(info);
         }
@@ -131,7 +131,7 @@ namespace three_space::vol
     return results;
   }
 
-  std::vector<shared::archive::file_info> get_dyn_data(std::basic_istream<std::byte>& raw_data)
+  std::vector<studio::resource::file_info> get_dyn_data(std::basic_istream<std::byte>& raw_data)
   {
     std::array<std::byte, 20> header{};
     raw_data.read(header.data(), sizeof(header));
@@ -153,14 +153,14 @@ namespace three_space::vol
 
     std::array<char, 14> child_filename{ '\0' };
 
-    std::vector<shared::archive::file_info> results;
+    std::vector<studio::resource::file_info> results;
     results.reserve(file_count);
 
     for (auto x = 0u; x < file_count; ++x)
     {
-      shared::archive::file_info info{};
+      studio::resource::file_info info{};
 
-      info.compression_type = shared::archive::compression_type::none;
+      info.compression_type = studio::resource::compression_type::none;
       info.offset = std::size_t(raw_data.tellg());
 
       raw_data.read(reinterpret_cast<std::byte*>(child_filename.data()), child_filename.size() - 1);
@@ -225,7 +225,7 @@ namespace three_space::vol
     return folders;
   }
 
-  std::vector<shared::archive::file_info> get_vol_data(std::basic_istream<std::byte>& raw_data, const std::filesystem::path& archive_path)
+  std::vector<studio::resource::file_info> get_vol_data(std::basic_istream<std::byte>& raw_data, const std::filesystem::path& archive_path)
   {
     const auto folders = get_vol_folders(raw_data);
 
@@ -239,14 +239,14 @@ namespace three_space::vol
     endian::little_uint32_t header_size;
     raw_data.read(reinterpret_cast<std::byte*>(&header_size), sizeof(header_size));
 
-    std::vector<shared::archive::file_info> files;
+    std::vector<studio::resource::file_info> files;
     files.reserve(num_files);
 
     std::array<char, 14> filename{ '\0' };
 
     for (auto i = 0u; i < num_files; ++i)
     {
-      shared::archive::file_info info{};
+      studio::resource::file_info info{};
 
       raw_data.read(reinterpret_cast<std::byte*>(filename.data()), filename.size() - 1);
       std::uint8_t folder_index;
@@ -264,7 +264,7 @@ namespace three_space::vol
 
       if (folder_name == info.folder_path.string())
       {
-        info.compression_type = shared::archive::compression_type::none;
+        info.compression_type = studio::resource::compression_type::none;
         info.offset = offset;
         info.filename = filename.data();
 
@@ -322,7 +322,7 @@ namespace three_space::vol
 
   std::vector<rmf_file_archive::content_info> rmf_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
   {
-    std::vector<std::variant<shared::archive::folder_info, shared::archive::file_info>> results;
+    std::vector<std::variant<studio::resource::folder_info, studio::resource::file_info>> results;
 
     if (std::filesystem::exists(archive_or_folder_path))
     {
@@ -350,7 +350,7 @@ namespace three_space::vol
     return results;
   }
 
-  void rmf_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info) const
+  void rmf_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info) const
   {
     if (int(stream.tellg()) == info.offset)
     {
@@ -362,7 +362,7 @@ namespace three_space::vol
     }
   }
 
-  void rmf_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output) const
+  void rmf_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info, std::basic_ostream<std::byte>& output) const
   {
     set_stream_position(stream, info);
 
@@ -404,7 +404,7 @@ namespace three_space::vol
     return results;
   }
 
-  void dyn_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info) const
+  void dyn_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info) const
   {
     if (int(stream.tellg()) == info.offset)
     {
@@ -416,7 +416,7 @@ namespace three_space::vol
     }
   }
 
-  void dyn_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output) const
+  void dyn_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info, std::basic_ostream<std::byte>& output) const
   {
     set_stream_position(stream, info);
 
@@ -451,7 +451,7 @@ namespace three_space::vol
       results.reserve(raw_results.size());
 
       std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(results), [&](auto& value) {
-        shared::archive::folder_info info{};
+        studio::resource::folder_info info{};
         info.full_path = archive_or_folder_path / value;
         info.name = value;
 
@@ -473,7 +473,7 @@ namespace three_space::vol
     return results;
   }
 
-  void vol_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info) const
+  void vol_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info) const
   {
     // TODO this actually needs to skip passed the header before the file contents
     if (int(stream.tellg()) != info.offset)
@@ -482,7 +482,7 @@ namespace three_space::vol
     }
   }
 
-  void vol_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output) const
+  void vol_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info, std::basic_ostream<std::byte>& output) const
   {
     set_stream_position(stream, info);
 

@@ -14,7 +14,7 @@
 #include <SFML/Window/Event.hpp>
 #include <SFML/Graphics.hpp>
 #include <SFML/OpenGL.hpp>
-#include "archives/archive_plugin.hpp"
+#include "resource/archive_plugin.hpp"
 
 struct graphics_view : wxClientData
 {

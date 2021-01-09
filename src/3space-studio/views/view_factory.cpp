@@ -17,7 +17,7 @@ void view_factory::add_extension(std::string_view extension, stream_validator* c
   return std::vector<std::string_view>(extensions.cbegin(), extensions.cend());
 }
 
-graphics_view* view_factory::create_view(const shared::archive::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::fs::resource_explorer& manager) const
+graphics_view* view_factory::create_view(const studio::resource::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resource::resource_explorer& manager) const
 {
   auto archive_type = validators.equal_range(to_lower(file_info.filename.extension().string()));
 
