@@ -18,11 +18,7 @@
 #include "utility.hpp"
 
 #include "canvas_painter.hpp"
-#include "views/view_factory.hpp"
-
-#include "archives/darkstar_volume.hpp"
-#include "archives/three_space_volume.hpp"
-#include "archives/trophy_bass_volume.hpp"
+#include "views/config.hpp"
 
 namespace fs = std::filesystem;
 
@@ -270,19 +266,7 @@ int main(int argc, char** argv)
   try
   {
     auto search_path = fs::current_path();
-    studio::fs::file_system_archive archive(search_path);
-
-    // TODO fix issues with extracting some of the older vol formats
-    // TODO put the below into an implementation file
-//    archive.add_archive_type(".tbv", std::make_unique<trophy_bass::vol::tbv_file_archive>());
-//    archive.add_archive_type(".rbx", std::make_unique<trophy_bass::vol::rbx_file_archive>());
-//    archive.add_archive_type(".rmf", std::make_unique<three_space::vol::rmf_file_archive>());
-//    archive.add_archive_type(".map", std::make_unique<three_space::vol::rmf_file_archive>());
-//    archive.add_archive_type(".vga", std::make_unique<three_space::vol::rmf_file_archive>());
-//    archive.add_archive_type(".dyn", std::make_unique<three_space::vol::dyn_file_archive>());
-//    archive.add_archive_type(".vol", std::make_unique<three_space::vol::vol_file_archive>());
-    archive.add_archive_type(".vol", std::make_unique<darkstar::vol::vol_file_archive>());
-
+    studio::fs::file_system_archive archive = create_default_resource_explorer(search_path);
     view_factory view_factory = create_default_view_factory();
 
     wxApp::SetInitializerFunction(createApp);
