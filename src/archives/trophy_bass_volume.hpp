@@ -1,12 +1,12 @@
 #ifndef DARKSTARDTSCONVERTER_TROPHY_BASS_VOLUME_HPP
 #define DARKSTARDTSCONVERTER_TROPHY_BASS_VOLUME_HPP
 
-#include "archive.hpp"
+#include "archive_plugin.hpp"
 #include "endian_arithmetic.hpp"
 
 namespace trophy_bass::vol
 {
-  struct rbx_file_archive : shared::archive::file_archive
+  struct rbx_file_archive : shared::archive::archive_plugin
   {
     static bool is_supported(std::basic_istream<std::byte>& stream);
 
@@ -19,7 +19,7 @@ namespace trophy_bass::vol
     void extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output) const override;
   };
 
-  struct tbv_file_archive : shared::archive::file_archive
+  struct tbv_file_archive : shared::archive::archive_plugin
   {
     static bool is_supported(std::basic_istream<std::byte>& stream);
 

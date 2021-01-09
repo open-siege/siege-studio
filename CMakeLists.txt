@@ -7,7 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR})
 
-file(GLOB MDL_SRC_FILES src/mdl-to-json/*.cpp)
+#file(GLOB MDL_SRC_FILES src/mdl-to-json/*.cpp)
 file(GLOB DTS_SRC_FILES src/dts-to-json/*.cpp)
 file(GLOB OBJ_SRC_FILES src/dts_renderable_shape.cpp src/dts-to-obj/*.cpp)
 file(GLOB JSON_SRC_FILES src/json-to-dts/*.cpp)

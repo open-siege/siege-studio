@@ -1,5 +1,5 @@
-#ifndef DARKSTARDTSCONVERTER_FILE_SYSTEM_ARCHIVE_HPP
-#define DARKSTARDTSCONVERTER_FILE_SYSTEM_ARCHIVE_HPP
+#ifndef DARKSTARDTSCONVERTER_RESOURCE_EXPLORER_HPP
+#define DARKSTARDTSCONVERTER_RESOURCE_EXPLORER_HPP
 
 #include <filesystem>
 #include <memory>
@@ -9,7 +9,7 @@
 #include <fstream>
 #include <sstream>
 #include <functional>
-#include "archive.hpp"
+#include "archive_plugin.hpp"
 
 namespace studio::fs
 {
@@ -20,18 +20,18 @@ namespace studio::fs
     int overflow(int c) { return c; }
   };
 
-  struct file_system_archive
+  struct resource_explorer
   {
     const std::filesystem::path& search_path;
 
     std::locale default_locale;
 
-    std::multimap<std::string, std::unique_ptr<shared::archive::file_archive>> archive_types;
+    std::multimap<std::string, std::unique_ptr<shared::archive::archive_plugin>> archive_types;
     std::map<std::string, std::function<void(const shared::archive::file_info&)>> actions;
 
     mutable std::map<std::string, std::vector<shared::archive::file_info>> info_cache;
 
-    explicit file_system_archive(const std::filesystem::path& search_path) : search_path(search_path) {}
+    explicit resource_explorer(const std::filesystem::path& search_path) : search_path(search_path) {}
 
     static std::filesystem::path get_archive_path(const std::filesystem::path& folder_path)
     {
@@ -65,7 +65,7 @@ namespace studio::fs
       return search_path;
     }
 
-    void add_archive_type(std::string extension, std::unique_ptr<shared::archive::file_archive> archive_type)
+    void add_archive_type(std::string extension, std::unique_ptr<shared::archive::archive_plugin> archive_type)
     {
       std::transform(extension.begin(), extension.end(), extension.begin(), [&](auto c) { return std::tolower(c, default_locale); });
       archive_types.insert(std::make_pair(std::move(extension), std::move(archive_type)));
@@ -239,7 +239,7 @@ namespace studio::fs
       return folder_path.has_extension();
     }
 
-    std::optional<std::reference_wrapper<shared::archive::file_archive>> get_archive_type(const std::filesystem::path& file_path) const
+    std::optional<std::reference_wrapper<shared::archive::archive_plugin>> get_archive_type(const std::filesystem::path& file_path) const
     {
       auto ext = file_path.filename().extension().string();
       std::transform(ext.begin(), ext.end(), ext.begin(), [&](char c) { return std::tolower(c, default_locale); });
@@ -319,4 +319,4 @@ namespace studio::fs
 }// namespace studio::fs
 
 
-#endif//DARKSTARDTSCONVERTER_FILE_SYSTEM_ARCHIVE_HPP
+#endif//DARKSTARDTSCONVERTER_RESOURCE_EXPLORER_HPP

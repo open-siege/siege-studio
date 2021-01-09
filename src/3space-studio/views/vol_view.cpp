@@ -6,7 +6,7 @@
 
 #include "vol_view.hpp"
 
-vol_view::vol_view(const shared::archive::file_info& info, const studio::fs::file_system_archive& archive)
+vol_view::vol_view(const shared::archive::file_info& info, const studio::fs::resource_explorer& archive)
   : archive(archive)
 {
   archive_path = info.folder_path / info.filename;

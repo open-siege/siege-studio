@@ -35,9 +35,7 @@ namespace shared::archive
     std::filesystem::path full_path;
   };
 
-  using is_supported_func = bool(std::basic_istream<std::byte>&);
-
-  struct file_archive
+  struct archive_plugin
   {
     using folder_info = shared::archive::folder_info;
     using file_info = shared::archive::file_info;
@@ -51,10 +49,10 @@ namespace shared::archive
 
     virtual void extract_file_contents(std::basic_istream<std::byte>&, const file_info&, std::basic_ostream<std::byte>&) const = 0;
 
-    virtual ~file_archive() = default;
-    file_archive() = default;
-    file_archive(const file_archive&) = delete;
-    file_archive(file_archive&&) = delete;
+    virtual ~archive_plugin() = default;
+    archive_plugin() = default;
+    archive_plugin(const archive_plugin&) = delete;
+    archive_plugin(archive_plugin&&) = delete;
   };
 }
 

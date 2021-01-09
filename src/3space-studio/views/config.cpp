@@ -56,9 +56,9 @@ view_factory create_default_view_factory()
   return view_factory;
 }
 
-studio::fs::file_system_archive create_default_resource_explorer(const std::filesystem::path& search_path)
+studio::fs::resource_explorer create_default_resource_explorer(const std::filesystem::path& search_path)
 {
-  studio::fs::file_system_archive archive(search_path);
+  studio::fs::resource_explorer archive(search_path);
 
   // TODO fix issues with extracting some of the older vol formats
   archive.add_archive_type(".tbv", std::make_unique<trophy_bass::vol::tbv_file_archive>());
