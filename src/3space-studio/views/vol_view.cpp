@@ -13,7 +13,7 @@ vol_view::vol_view(const studio::resource::file_info& info, const studio::resour
   files = archive.find_files(archive_path, { "ALL" });
 }
 
-void vol_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
+void vol_view::setup_view(wxWindow& parent)
 {
   const static std::map<studio::resource::compression_type, const char*> type_names{
     { studio::resource::compression_type::none, "None" },
@@ -31,7 +31,7 @@ void vol_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiConte
 
   auto* sizer = new wxBoxSizer(wxVERTICAL);
 
-  auto* table = new wxTreeListCtrl(parent, wxID_ANY);
+  auto* table = new wxTreeListCtrl(&parent, wxID_ANY);
   table->AppendColumn("Filename");
 
   if (folders.size() > 1)
@@ -77,13 +77,13 @@ void vol_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiConte
   }
 
 
-  auto* panel = new wxPanel(parent);
+  auto* panel = new wxPanel(&parent);
 
   auto* folder_picker = new wxDirPickerCtrl(panel, wxID_ANY, (archive.get_search_path() / "extracted").string());
 
   auto* export_button = new wxButton(panel, wxID_ANY, "Extract All Files");
 
-  export_button->Bind(wxEVT_BUTTON, [=](wxCommandEvent& event) {
+  export_button->Bind(wxEVT_BUTTON, [parent = &parent, this, folder_picker](wxCommandEvent& event) {
     should_cancel = false;
     auto* dialog = new wxDialog(parent, wxID_ANY, "Extracting Files");
 
@@ -141,7 +141,7 @@ void vol_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiConte
 
   auto* export_all_button = new wxButton(panel, wxID_ANY, "Extract All Volumes");
 
-  export_all_button->Bind(wxEVT_BUTTON, [=](wxCommandEvent& event) {
+  export_all_button->Bind(wxEVT_BUTTON, [parent = &parent, this, folder_picker](wxCommandEvent& event) {
     should_cancel = false;
     auto* dialog = new wxDialog(parent, wxID_ANY, "Extracting All Volumes");
 
@@ -238,5 +238,5 @@ void vol_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiConte
   sizer->Add(panel, 1, wxEXPAND, 0);
   sizer->Add(table, 15, wxEXPAND, 0);
 
-  parent->SetSizer(sizer);
+  parent.SetSizer(sizer);
 }

@@ -19,14 +19,14 @@ namespace dio
 view_factory create_default_view_factory()
 {
   view_factory view_factory;
-  view_factory.add_file_type(dts::is_darkstar_dts, [](auto& info, auto& stream, auto& manager) { return static_cast<graphics_view*>(new darkstar_dts_view(info, stream, manager)); });
-  view_factory.add_file_type(darkstar::bmp::is_microsoft_bmp, [](auto& info, auto& stream, auto& manager) { return static_cast<graphics_view*>(new bmp_view(info, stream, manager)); });
-  view_factory.add_file_type(darkstar::bmp::is_phoenix_bmp, [](auto& info, auto& stream, auto& manager) { return static_cast<graphics_view*>(new bmp_view(info, stream, manager)); });
-  view_factory.add_file_type(darkstar::bmp::is_phoenix_bmp_array, [](auto& info, auto& stream, auto& manager) { return static_cast<graphics_view*>(new bmp_view(info, stream, manager)); });
-  view_factory.add_file_type(darkstar::pal::is_microsoft_pal, [](auto&, auto& stream, auto&) { return static_cast<graphics_view*>(new pal_view(stream)); });
-  view_factory.add_file_type(darkstar::pal::is_phoenix_pal, [](auto&, auto& stream, auto&) { return static_cast<graphics_view*>(new pal_view(stream)); });
+  view_factory.add_file_type(dts::is_darkstar_dts, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new darkstar_dts_view(info, stream, manager)); });
+  view_factory.add_file_type(darkstar::bmp::is_microsoft_bmp, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new bmp_view(info, stream, manager)); });
+  view_factory.add_file_type(darkstar::bmp::is_phoenix_bmp, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new bmp_view(info, stream, manager)); });
+  view_factory.add_file_type(darkstar::bmp::is_phoenix_bmp_array, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new bmp_view(info, stream, manager)); });
+  view_factory.add_file_type(darkstar::pal::is_microsoft_pal, [](auto&, auto& stream, auto&) { return std::unique_ptr<studio_view>(new pal_view(stream)); });
+  view_factory.add_file_type(darkstar::pal::is_phoenix_pal, [](auto&, auto& stream, auto&) { return std::unique_ptr<studio_view>(new pal_view(stream)); });
 
-  view_factory.add_file_type(dio::vol::darkstar::vol_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return static_cast<graphics_view*>(new vol_view(info, archive)); });
+  view_factory.add_file_type(dio::vol::darkstar::vol_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
 
   // TODO fix issues with extracting some of the older vol formats
   //  view_factory.add_file_type(three_space::vol::vol_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return static_cast<graphics_view*>(new vol_view(info, archive)); });

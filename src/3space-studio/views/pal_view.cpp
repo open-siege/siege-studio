@@ -51,15 +51,15 @@ pal_view::pal_view(std::basic_istream<std::byte>& image_stream)
   }
 }
 
-void pal_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
+void pal_view::render_ui(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext)
 {
-  window->clear();
+  window.clear();
 
   if (rectangles)
   {
     for (auto& rectangle : *rectangles)
     {
-      window->draw(rectangle);
+      window.draw(rectangle);
     }
 
     if (all_rectangles.size() > 1)
@@ -81,11 +81,11 @@ void pal_view::render_ui(wxWindow* parent, sf::RenderWindow* window, ImGuiContex
   }
 }
 
-void pal_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext)
+void pal_view::setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext&)
 {
   if (rectangles)
   {
-    auto [width, height] = parent->GetClientSize();
+    auto [width, height] = parent.GetClientSize();
 
     auto image_width = rectangles->size() / 8 * rectangles->size();
     auto image_height = rectangles->size() / 8 * (rectangles->size() / 8);
@@ -96,6 +96,6 @@ void pal_view::setup_view(wxWindow* parent, sf::RenderWindow* window, ImGuiConte
     sf::FloatRect visibleArea(0, 0, image_width, image_height);
     sf::View view(visibleArea);
     view.setViewport(sf::FloatRect(0.5 - width_ratio / 16, 0.5 - height_ratio / 8, width_ratio, height_ratio));
-    window->setView(view);
+    window.setView(view);
   }
 }

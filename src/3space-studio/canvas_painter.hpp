@@ -3,22 +3,20 @@
 
 #include "views/graphics_view.hpp"
 
-using optional_istream = std::optional<std::reference_wrapper<std::basic_istream<std::byte>>>;
-
-auto canvas_painter(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* guiContext, graphics_view* handler)
+auto canvas_painter(const std::shared_ptr<wxWindow>& parent, const std::shared_ptr<sf::RenderWindow>& window, ImGuiContext& gui_context, const std::shared_ptr<graphics_view>& handler)
 {
   sf::Clock clock;
 
   auto callbacks = handler->get_callbacks();
 
-  handler->setup_view(parent, window, guiContext);
+  handler->setup_view(*parent, *window, gui_context);
 
-  return [=](auto& wx_event) mutable {
-    wxPaintDC Dc(parent);
+  return [parent, window, gui_context = &gui_context, handler, clock, callbacks](auto& wx_event) mutable {
+    wxPaintDC Dc(parent.get());
 
-    sf::Event event;
+    sf::Event event{};
 
-    ImGui::SetCurrentContext(guiContext);
+    ImGui::SetCurrentContext(gui_context);
 
     while (window->pollEvent(event))
     {
@@ -45,12 +43,12 @@ auto canvas_painter(wxWindow* parent, sf::RenderWindow* window, ImGuiContext* gu
       }
     }
 
-    handler->render_gl(parent, window, guiContext);
+    handler->render_gl(*parent, *window, *gui_context);
 
     window->pushGLStates();
     ImGui::SFML::Update(*window, clock.restart());
 
-    handler->render_ui(parent, window, guiContext);
+    handler->render_ui(*parent, *window, *gui_context);
 
     ImGui::SFML::Render(*window);
     window->popGLStates();

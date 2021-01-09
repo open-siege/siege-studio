@@ -22,6 +22,14 @@
 
 namespace fs = std::filesystem;
 
+void default_wx_deleter(wxWindowBase* control)
+{
+  if (!control->IsBeingDeleted())
+  {
+    delete control;
+  }
+}
+
 studio::resource::file_stream create_null_stream()
 {
   static studio::resource::null_buffer null_buffer;
@@ -79,45 +87,45 @@ wxAppConsole* createApp()
 constexpr auto event_open_in_new_tab = 1;
 constexpr auto event_open_folder_as_workspace = 2;
 
-wxMenuBar* create_menu_bar()
+auto create_menu_bar()
 {
-  auto* menuFile = new wxMenu();
+  auto menuFile = std::make_unique<wxMenu>();
   menuFile->Append(wxID_OPEN);
   menuFile->Append(event_open_in_new_tab, "Open in New Tab...");
   menuFile->Append(event_open_folder_as_workspace, "Open Folder as Workspace");
   menuFile->AppendSeparator();
   menuFile->Append(wxID_EXIT);
 
-  auto* menuHelp = new wxMenu();
+  auto menuHelp = std::make_unique<wxMenu>();
   menuHelp->Append(wxID_ABOUT);
 
-  auto* menuBar = new wxMenuBar();
-  menuBar->Append(menuFile, "&File");
-  menuBar->Append(menuHelp, "&Help");
+  auto menuBar = std::make_unique<wxMenuBar>();
+  menuBar->Append(menuFile.release(), "&File");
+  menuBar->Append(menuHelp.release(), "&Help");
 
   return menuBar;
 }
 
-void create_render_view(wxWindow* panel, studio::resource::file_stream file_stream, const view_factory& factory, const studio::resource::resource_explorer& archive)
+void create_render_view(wxWindow& panel, studio::resource::file_stream file_stream, const view_factory& factory, const studio::resource::resource_explorer& archive)
 {
-  graphics_view* handler = factory.create_view(file_stream.first, *file_stream.second, archive);
+  auto raw_view = factory.create_view(file_stream.first, *file_stream.second, archive);
 
-  if (!handler->requires_gl())
+  if (auto* view = dynamic_cast<normal_view*>(raw_view.get()); view)
   {
-    auto* content_panel = new wxPanel(panel, wxID_ANY);
-    panel->GetSizer()->Add(content_panel, 1, wxEXPAND | wxALL, 5);
+    auto content_panel = std::make_unique<wxPanel>(&panel, wxID_ANY);
 
-    handler->setup_view(content_panel, nullptr, nullptr);
+    view->setup_view(*content_panel);
+    content_panel->SetClientObject(raw_view.release());
+
+    panel.GetSizer()->Add(content_panel.release(), 1, wxEXPAND | wxALL, 5);
   }
-  else
+  else if (auto other_view = std::dynamic_pointer_cast<graphics_view>(std::shared_ptr<studio_view>(std::move(raw_view))); other_view)
   {
-    auto* graphics = new wxControl(panel, -1, wxDefaultPosition, wxDefaultSize, 0);
-
-    panel->GetSizer()->Add(graphics, 1, wxEXPAND | wxALL, 5);
+    auto graphics = std::shared_ptr<wxControl>(new wxControl(&panel, -1, wxDefaultPosition, wxDefaultSize, 0), default_wx_deleter);
 
     sf::ContextSettings context;
     context.depthBits = 24;
-    auto* window = new sf::RenderWindow(get_handle(graphics), context);
+    auto window = std::make_shared<sf::RenderWindow>(get_handle(*graphics), context);
     static bool is_init = false;
     static ImGuiContext* primary_gui_context;
 
@@ -135,34 +143,36 @@ void create_render_view(wxWindow* panel, studio::resource::file_stream file_stre
       gui_context = ImGui::CreateContext(ImGui::GetIO().Fonts);
     }
 
-    graphics->SetClientObject(handler);
-
     graphics->Bind(wxEVT_ERASE_BACKGROUND, [](auto& event) {});
 
     graphics->Bind(wxEVT_SIZE, [=](auto& event) {
-      handler->setup_view(graphics, window, gui_context);
+      other_view->setup_view(*graphics, *window, *gui_context);
     });
 
     graphics->Bind(wxEVT_IDLE, [=](auto& event) {
       graphics->Refresh();
     });
 
-    graphics->Bind(wxEVT_PAINT, canvas_painter(graphics, window, gui_context, handler));
+    graphics->Bind(wxEVT_PAINT, canvas_painter(graphics, window, *gui_context, other_view));
 
-    graphics->Bind(wxEVT_DESTROY, [=](auto& event) {
-      delete window;
+    graphics->Bind(wxEVT_DESTROY, [=](auto& event) mutable {
+      window.reset();
+      graphics.reset();
       if (gui_context != primary_gui_context)
       {
         ImGui::DestroyContext(gui_context);
         ImGui::SetCurrentContext(primary_gui_context);
       }
     });
+
+    other_view->setup_view(*graphics, *window, *gui_context);
+    panel.GetSizer()->Add(graphics.get(), 1, wxEXPAND | wxALL, 5);
   }
 }
 
 void populate_tree_view(const view_factory& view_factory,
   studio::resource::resource_explorer& archive,
-  wxTreeCtrl* tree_view,
+  wxTreeCtrl& tree_view,
   const fs::path& search_path,
   const std::vector<std::string_view>& extensions,
   std::optional<wxTreeItemId> parent = std::nullopt)
@@ -177,11 +187,11 @@ void populate_tree_view(const view_factory& view_factory,
   bool is_root = false;
   if (!parent.has_value())
   {
-    tree_view->DeleteAllItems();
+    tree_view.DeleteAllItems();
     is_root = true;
   }
 
-  parent = parent.has_value() ? parent : tree_view->AddRoot(search_path.string());
+  parent = parent.has_value() ? parent : tree_view.AddRoot(search_path.string());
 
   auto files_folders = archive.get_content_listing(search_path);
 
@@ -227,7 +237,7 @@ void populate_tree_view(const view_factory& view_factory,
 
       if constexpr (std::is_same_v<T, studio::resource::folder_info>)
       {
-        auto new_parent = tree_view->AppendItem(parent.value(), folder.full_path.filename().string(), -1, -1, new tree_item_folder_info(folder));
+        auto new_parent = tree_view.AppendItem(parent.value(), folder.full_path.filename().string(), -1, -1, new tree_item_folder_info(folder));
 
         if (is_root)
         {
@@ -248,7 +258,7 @@ void populate_tree_view(const view_factory& view_factory,
               return ends_with(to_lower(file.filename.string()), ext);
             }))
         {
-          tree_view->AppendItem(parent.value(), file.filename.string(), -1, -1, new tree_item_file_info(file));
+          tree_view.AppendItem(parent.value(), file.filename.string(), -1, -1, new tree_item_file_info(file));
         }
       }
     },
@@ -257,7 +267,7 @@ void populate_tree_view(const view_factory& view_factory,
 
   if (is_root)
   {
-    tree_view->Expand(parent.value());
+    tree_view.Expand(parent.value());
   }
 }
 
@@ -275,7 +285,7 @@ int main(int argc, char** argv)
     app->CallOnInit();
     wxInitAllImageHandlers();
 
-    auto* frame = new wxFrame(nullptr, wxID_ANY, "3Space Studio");
+    auto frame = std::shared_ptr<wxFrame>(new wxFrame(nullptr, wxID_ANY, "3Space Studio"), default_wx_deleter);
 
     frame->Bind(
       wxEVT_MENU, [](auto& event) {
@@ -285,16 +295,10 @@ int main(int argc, char** argv)
       },
       wxID_ABOUT);
 
-    auto* sizer = new wxBoxSizer(wxHORIZONTAL);
+    auto tree_panel = std::make_unique<wxPanel>(frame.get(), wxID_ANY);
+    tree_panel->SetSizer(std::make_unique<wxBoxSizer>(wxVERTICAL).release());
 
-    auto* tree_panel = new wxPanel(frame, wxID_ANY);
-    sizer->Add(tree_panel, 20, wxEXPAND, 0);
-
-    auto* tree_sizer = new wxBoxSizer(wxVERTICAL);
-    tree_panel->SetSizer(tree_sizer);
-
-    auto* tree_search = new wxComboBox(tree_panel, wxID_ANY);
-    tree_sizer->Add(tree_search, 2, wxEXPAND, 0);
+    auto tree_search = std::make_unique<wxComboBox>(tree_panel.get(), wxID_ANY);
 
     auto extensions = view_factory.get_extensions();
 
@@ -310,10 +314,9 @@ int main(int argc, char** argv)
 
     tree_search->SetSelection(0);
 
-    auto* tree_view = new wxTreeCtrl(tree_panel);
-    tree_sizer->Add(tree_view, 98, wxEXPAND, 0);
+    auto tree_view = std::shared_ptr<wxTreeCtrl>(new wxTreeCtrl(tree_panel.get()), default_wx_deleter);
 
-    populate_tree_view(view_factory, archive, tree_view, search_path, extensions);
+    populate_tree_view(view_factory, archive, *tree_view, search_path, extensions);
 
     auto get_filter_selection = [&tree_search, &view_factory]() {
       const auto selection = tree_search->GetSelection();
@@ -333,7 +336,7 @@ int main(int argc, char** argv)
           new_extensions.emplace_back(".ppl");
           new_extensions.emplace_back(".ipl");
         }
-        else if(selection == 2)
+        else if (selection == 2)
         {
           new_extensions.reserve(2);
           new_extensions.emplace_back(".bmp");
@@ -353,25 +356,23 @@ int main(int argc, char** argv)
     };
 
     tree_search->Bind(wxEVT_COMBOBOX, [&](wxCommandEvent& event) {
-      populate_tree_view(view_factory, archive, tree_view, search_path, get_filter_selection());
+      populate_tree_view(view_factory, archive, *tree_view, search_path, get_filter_selection());
     });
 
-    auto* notebook = new wxAuiNotebook(frame, wxID_ANY);
+    auto notebook = std::shared_ptr<wxAuiNotebook>(new wxAuiNotebook(frame.get(), wxID_ANY), default_wx_deleter);
     auto num_elements = notebook->GetPageCount();
 
-    sizer->Add(notebook, 80, wxEXPAND, 0);
-
     auto add_element_from_file = [notebook, &num_elements, &view_factory, &archive](auto new_stream, bool replace_selection = false) {
-      auto* panel = new wxPanel(notebook, wxID_ANY);
-      panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
+      auto panel = std::make_unique<wxPanel>(notebook.get(), wxID_ANY);
+      panel->SetSizer(std::make_unique<wxBoxSizer>(wxHORIZONTAL).release());
 
       auto new_path = new_stream.first;
-      create_render_view(panel, std::move(new_stream), view_factory, archive);
+      create_render_view(*panel, std::move(new_stream), view_factory, archive);
 
       if (replace_selection)
       {
         auto selection = notebook->GetSelection();
-        notebook->InsertPage(selection, panel, new_path.filename.string());
+        notebook->InsertPage(selection, panel.release(), new_path.filename.string());
         num_elements = notebook->GetPageCount();
 
         if (num_elements > 2)
@@ -383,7 +384,7 @@ int main(int argc, char** argv)
       }
       else
       {
-        notebook->InsertPage(notebook->GetPageCount() - 1, panel, new_path.filename.string());
+        notebook->InsertPage(notebook->GetPageCount() - 1, panel.release(), new_path.filename.string());
         num_elements = notebook->GetPageCount();
         notebook->ChangeSelection(notebook->GetPageCount() - 2);
       }
@@ -393,10 +394,10 @@ int main(int argc, char** argv)
     });
 
     auto add_new_element = [notebook, &num_elements, &view_factory, &archive]() {
-      auto* panel = new wxPanel(notebook, wxID_ANY);
-      panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
-      create_render_view(panel, create_null_stream(), view_factory, archive);
-      notebook->InsertPage(notebook->GetPageCount() - 1, panel, "New Tab");
+      auto panel = std::make_unique<wxPanel>(notebook.get(), wxID_ANY);
+      panel->SetSizer(std::make_unique<wxBoxSizer>(wxHORIZONTAL).release());
+      create_render_view(*panel, create_null_stream(), view_factory, archive);
+      notebook->InsertPage(notebook->GetPageCount() - 1, panel.release(), "New Tab");
       notebook->ChangeSelection(notebook->GetPageCount() - 2);
       num_elements = notebook->GetPageCount();
     };
@@ -419,7 +420,7 @@ int main(int argc, char** argv)
         {
           if (auto* real_info = dynamic_cast<tree_item_folder_info*>(tree_view->GetItemData(child)); real_info)
           {
-            populate_tree_view(view_factory, archive, tree_view, real_info->info.full_path, get_filter_selection(), child);
+            populate_tree_view(view_factory, archive, *tree_view, real_info->info.full_path, get_filter_selection(), child);
           }
         }
 
@@ -430,7 +431,7 @@ int main(int argc, char** argv)
           {
             if (auto* real_info = dynamic_cast<tree_item_folder_info*>(tree_view->GetItemData(child)); real_info)
             {
-              populate_tree_view(view_factory, archive, tree_view, real_info->info.full_path, get_filter_selection(), child);
+              populate_tree_view(view_factory, archive, *tree_view, real_info->info.full_path, get_filter_selection(), child);
             }
           }
         } while (cookie != nullptr);
@@ -461,14 +462,14 @@ int main(int argc, char** argv)
       }
     });
 
-    auto* panel = new wxPanel(notebook, wxID_ANY);
-    panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
-    create_render_view(panel, create_null_stream(), view_factory, archive);
-    notebook->AddPage(panel, "New Tab");
+    auto panel = std::make_unique<wxPanel>(notebook.get(), wxID_ANY);
+    panel->SetSizer(std::make_unique<wxBoxSizer>(wxHORIZONTAL).release());
+    create_render_view(*panel, create_null_stream(), view_factory, archive);
+    notebook->AddPage(panel.release(), "New Tab");
 
-    panel = new wxPanel(notebook, wxID_ANY);
+    panel = std::make_unique<wxPanel>(notebook.get(), wxID_ANY);
     panel->SetName("+");
-    notebook->AddPage(panel, "+");
+    notebook->AddPage(panel.release(), "+");
 
     notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED,
       [notebook, &add_new_element](wxAuiNotebookEvent& event) {
@@ -516,7 +517,7 @@ int main(int argc, char** argv)
           add_element_from_file(archive.load_file(new_path.value()), true);
 
           search_path = new_path.value().parent_path();
-          populate_tree_view(view_factory, archive, tree_view, search_path, get_filter_selection());
+          populate_tree_view(view_factory, archive, *tree_view, search_path, get_filter_selection());
         }
       },
       wxID_OPEN);
@@ -539,7 +540,7 @@ int main(int argc, char** argv)
         if (new_path.has_value())
         {
           search_path = new_path.value();
-          populate_tree_view(view_factory, archive, tree_view, search_path, get_filter_selection());
+          populate_tree_view(view_factory, archive, *tree_view, search_path, get_filter_selection());
         }
       },
       event_open_folder_as_workspace);
@@ -550,18 +551,26 @@ int main(int argc, char** argv)
       },
       wxID_EXIT);
 
-    sizer->SetSizeHints(frame);
-    frame->SetSizer(sizer);
+    auto sizer = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
+    sizer->SetSizeHints(frame.get());
 
-    frame->SetMenuBar(create_menu_bar());
+    tree_panel->GetSizer()->Add(tree_search.release(), 2, wxEXPAND, 0);
+    tree_panel->GetSizer()->Add(tree_view.get(), 98, wxEXPAND, 0);
+    sizer->Add(tree_panel.release(), 20, wxEXPAND, 0);
+    sizer->Add(notebook.get(), 80, wxEXPAND, 0);
+    frame->SetSizer(sizer.release());
+
+    frame->SetMenuBar(create_menu_bar().release());
     frame->CreateStatusBar();
     frame->SetStatusText("3Space Studio");
     frame->Maximize();
     frame->Show(true);
 
-    app->OnRun();
+    auto result = app->OnRun();
 
     ImGui::SFML::Shutdown();
+
+    return result;
   }
   catch (const std::exception& exception)
   {
