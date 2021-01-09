@@ -8,6 +8,13 @@
 #include <wx/wx.h>
 #include <SFML/OpenGL.hpp>
 
+inline void default_wx_deleter(wxWindowBase* control)
+{
+  if (!control->IsBeingDeleted())
+  {
+    delete control;
+  }
+}
 
 inline std::string to_lower(std::string_view some_string, const std::locale& locale)
 {
