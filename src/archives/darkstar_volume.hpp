@@ -7,12 +7,12 @@
 #include <optional>
 #include <utility>
 
-#include "archive.hpp"
+#include "archive_plugin.hpp"
 #include "endian_arithmetic.hpp"
 
 namespace darkstar::vol
 {
-  struct vol_file_archive : shared::archive::file_archive
+  struct vol_file_archive : shared::archive::archive_plugin
   {
     static bool is_supported(std::basic_istream<std::byte>& stream);
 

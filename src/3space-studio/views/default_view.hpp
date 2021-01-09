@@ -2,7 +2,7 @@
 #define DARKSTARDTSCONVERTER_DEFAULT_VIEW_HPP
 
 #include "graphics_view.hpp"
-#include "archives/file_system_archive.hpp"
+#include "archives/resource_explorer.hpp"
 
 class default_view : public graphics_view
 {

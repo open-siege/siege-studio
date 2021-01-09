@@ -98,7 +98,7 @@ wxMenuBar* create_menu_bar()
   return menuBar;
 }
 
-void create_render_view(wxWindow* panel, studio::fs::file_stream file_stream, const view_factory& factory, const studio::fs::file_system_archive& archive)
+void create_render_view(wxWindow* panel, studio::fs::file_stream file_stream, const view_factory& factory, const studio::fs::resource_explorer& archive)
 {
   graphics_view* handler = factory.create_view(file_stream.first, *file_stream.second, archive);
 
@@ -161,7 +161,7 @@ void create_render_view(wxWindow* panel, studio::fs::file_stream file_stream, co
 }
 
 void populate_tree_view(const view_factory& view_factory,
-  studio::fs::file_system_archive& archive,
+  studio::fs::resource_explorer& archive,
   wxTreeCtrl* tree_view,
   const fs::path& search_path,
   const std::vector<std::string_view>& extensions,
@@ -266,8 +266,8 @@ int main(int argc, char** argv)
   try
   {
     auto search_path = fs::current_path();
-    studio::fs::file_system_archive archive = create_default_resource_explorer(search_path);
-    view_factory view_factory = create_default_view_factory();
+    auto archive = create_default_resource_explorer(search_path);
+    auto view_factory = create_default_view_factory();
 
     wxApp::SetInitializerFunction(createApp);
     wxEntryStart(argc, argv);

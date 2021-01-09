@@ -1,12 +1,12 @@
 #ifndef DARKSTARDTSCONVERTER_THREE_SPACE_VOLUME_HPP
 #define DARKSTARDTSCONVERTER_THREE_SPACE_VOLUME_HPP
 
-#include "archive.hpp"
+#include "archive_plugin.hpp"
 #include "endian_arithmetic.hpp"
 
 namespace three_space::vol
 {
-  struct rmf_file_archive : shared::archive::file_archive
+  struct rmf_file_archive : shared::archive::archive_plugin
   {
     static bool is_supported(std::basic_istream<std::byte>& stream);
 
@@ -19,7 +19,7 @@ namespace three_space::vol
     void extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output) const override;
   };
 
-  struct dyn_file_archive : shared::archive::file_archive
+  struct dyn_file_archive : shared::archive::archive_plugin
   {
     static bool is_supported(std::basic_istream<std::byte>& stream);
 
@@ -32,7 +32,7 @@ namespace three_space::vol
     void extract_file_contents(std::basic_istream<std::byte>& stream, const shared::archive::file_info& info, std::basic_ostream<std::byte>& output) const override;
   };
 
-  struct vol_file_archive : shared::archive::file_archive
+  struct vol_file_archive : shared::archive::archive_plugin
   {
     static bool is_supported(std::basic_istream<std::byte>& stream);
 
