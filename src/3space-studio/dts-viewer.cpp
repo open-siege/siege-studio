@@ -22,14 +22,6 @@
 
 namespace fs = std::filesystem;
 
-void default_wx_deleter(wxWindowBase* control)
-{
-  if (!control->IsBeingDeleted())
-  {
-    delete control;
-  }
-}
-
 studio::resource::file_stream create_null_stream()
 {
   static studio::resource::null_buffer null_buffer;
