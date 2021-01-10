@@ -87,13 +87,13 @@ void vol_view::setup_view(wxWindow& parent)
 
     auto dialog_sizer = std::make_unique<wxBoxSizer>(wxVERTICAL);
 
-    auto gauge = std::shared_ptr<wxGauge>(new wxGauge(dialog.get(), wxID_ANY, files.size()), default_wx_deleter);
+    auto gauge = std::make_unique<wxGauge>(dialog.get(), wxID_ANY, files.size());
     gauge->SetWindowStyle(wxGA_HORIZONTAL);
 
-    auto text1 = std::shared_ptr<wxStaticText>(new wxStaticText(dialog.get(), wxID_ANY, ""), default_wx_deleter);
+    auto text1 = std::make_unique<wxStaticText>(dialog.get(), wxID_ANY, "");
     text1->SetWindowStyle(wxALIGN_CENTRE_HORIZONTAL);
 
-    auto text2 = std::shared_ptr<wxStaticText>(new wxStaticText(dialog.get(), wxID_ANY, ""), default_wx_deleter);
+    auto text2 = std::make_unique<wxStaticText>(dialog.get(), wxID_ANY, "");
     text2->SetWindowStyle(wxALIGN_CENTRE_HORIZONTAL);
     dialog_sizer->AddStretchSpacer(2);
     dialog_sizer->Add(text1.get(), 2, wxEXPAND, 0);
@@ -103,7 +103,7 @@ void vol_view::setup_view(wxWindow& parent)
     dialog->SetSizer(dialog_sizer.release());
 
 
-    pending_save = std::async(std::launch::async, [this, dialog = dialog.release(), folder_picker, text1, text2, gauge] {
+    pending_save = std::async(std::launch::async, [this, dialog = dialog.release(), folder_picker, text1 = text1.release(), text2 = text2.release(), gauge = gauge.release()] {
       auto dest = std::filesystem::path(folder_picker->GetPath().c_str().AsChar());
       std::filesystem::create_directory(dest);
       auto scoped_dialog = std::unique_ptr<wxDialog>(dialog);
@@ -146,13 +146,13 @@ void vol_view::setup_view(wxWindow& parent)
 
     auto dialog_sizer = std::make_unique<wxBoxSizer>(wxVERTICAL);
 
-    auto gauge = std::shared_ptr<wxGauge>(new wxGauge(dialog.get(), wxID_ANY, 0), default_wx_deleter);
+    auto gauge = std::make_unique<wxGauge>(dialog.get(), wxID_ANY, 0);
     gauge->SetWindowStyle(wxGA_HORIZONTAL);
 
-    auto text1 = std::shared_ptr<wxStaticText>(new wxStaticText(dialog.get(), wxID_ANY, ""), default_wx_deleter);
+    auto text1 = std::make_unique<wxStaticText>(dialog.get(), wxID_ANY, "");
     text1->SetWindowStyle(wxALIGN_CENTRE_HORIZONTAL);
 
-    auto text2 = std::shared_ptr<wxStaticText>(new wxStaticText(dialog.get(), wxID_ANY, ""), default_wx_deleter);
+    auto text2 = std::make_unique<wxStaticText>(dialog.get(), wxID_ANY, "");
     text2->SetWindowStyle(wxALIGN_CENTRE_HORIZONTAL);
     dialog_sizer->AddStretchSpacer(2);
     dialog_sizer->Add(text1.get(), 2, wxEXPAND, 0);
@@ -165,7 +165,7 @@ void vol_view::setup_view(wxWindow& parent)
       should_cancel = true;
     });
 
-    pending_save = std::async(std::launch::async, [this, dialog = dialog.release(), folder_picker, text1, text2, gauge] {
+    pending_save = std::async(std::launch::async, [this, dialog = dialog.release(), folder_picker, text1 = text1.release(), text2 = text2.release(), gauge = gauge.release()] {
       auto dest = std::filesystem::path(folder_picker->GetPath().c_str().AsChar());
       std::filesystem::create_directory(dest);
       auto scoped_dialog = std::unique_ptr<wxDialog>(dialog);

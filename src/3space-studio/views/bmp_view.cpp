@@ -334,6 +334,15 @@ void bmp_view::render_ui(wxWindow& parent, sf::RenderWindow& window, ImGuiContex
 
           refresh_image();
         }
+
+        ImGui::SameLine();
+
+        ImGui::PushID(&file_info);
+        if (ImGui::Button("Open in New Tab"))
+        {
+          archive.execute_action("open_new_tab", file_info);
+        }
+        ImGui::PopID();
       }
       else
       {
@@ -343,7 +352,7 @@ void bmp_view::render_ui(wxWindow& parent, sf::RenderWindow& window, ImGuiContex
               key == selected_palette_name ? ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen : 0))
         {
           ImGui::PushID(&file_info);
-          if (ImGui::Button("Open Palette in New Tab"))
+          if (ImGui::Button("Open in New Tab"))
           {
             archive.execute_action("open_new_tab", file_info);
           }
