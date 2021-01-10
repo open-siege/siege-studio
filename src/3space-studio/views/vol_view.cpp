@@ -176,18 +176,26 @@ void vol_view::setup_view(wxWindow& parent)
 
       auto all_files = archive.find_files({ ".vol", ".rmf", ".rbx", ".dyn", ".tbv" });
 
-      std::for_each(std::execution::par_unseq, all_files.begin(), all_files.end(), [=](const auto& volume_file) {
-        static std::mutex label_mutex;
-        static std::mutex gauge_mutex;
+      std::vector<std::pair<std::filesystem::path, std::vector<studio::resource::file_info>>> found_files(all_files.size());
 
+      std::transform(std::execution::par, all_files.begin(), all_files.end(), found_files.begin(), [=](const auto& volume_file) {
+        static std::mutex gauge_mutex;
         auto file_archive_path = volume_file.folder_path / volume_file.filename;
 
         auto child_files = archive.find_files(file_archive_path, { "ALL" });
-
         {
           std::lock_guard<std::mutex> lock(gauge_mutex);
           gauge->SetRange(gauge->GetRange() + child_files.size());
         }
+
+        return std::make_pair(file_archive_path, std::move(child_files));
+      });
+
+      std::for_each(std::execution::par_unseq, found_files.begin(), found_files.end(), [=](const auto& info) {
+        static std::mutex label_mutex;
+        static std::mutex gauge_mutex;
+
+        const auto& [file_archive_path, child_files] = info;
 
         std::basic_ifstream<std::byte> archive_file(file_archive_path, std::ios::binary);
 
