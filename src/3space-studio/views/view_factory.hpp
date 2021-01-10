@@ -23,6 +23,7 @@ public:
 
   std::unique_ptr<studio_view> create_view(const studio::resource::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resource::resource_explorer& manager) const;
 
+  std::unique_ptr<studio_view> create_default_view(const studio::resource::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resource::resource_explorer& manager) const;
 private:
   std::set<std::string> extensions;
 
