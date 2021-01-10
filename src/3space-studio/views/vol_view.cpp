@@ -120,7 +120,8 @@ void vol_view::setup_view(wxWindow& parent)
         {
           return true;
         }
-        text2->SetLabel((std::filesystem::relative(archive_path, file.folder_path) / file.filename).string());
+
+        text2->SetLabel((std::filesystem::relative(file.folder_path, archive_path) / file.filename).string());
 
         archive.extract_file_contents(archive_file, dest, file);
         gauge->SetValue(gauge->GetValue() + 1);
@@ -199,7 +200,7 @@ void vol_view::setup_view(wxWindow& parent)
 
           {
             std::lock_guard<std::mutex> lock(label_mutex);
-            text2->SetLabel((std::filesystem::relative(archive.get_search_path(), file.folder_path) / file.filename).string());
+            text2->SetLabel((std::filesystem::relative(file.folder_path, archive.get_search_path()) / file.filename).string());
           }
 
           archive.extract_file_contents(archive_file, dest, file);

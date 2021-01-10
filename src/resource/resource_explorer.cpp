@@ -233,7 +233,15 @@ namespace studio::resource
   {
     auto archive_path = get_archive_path(info.folder_path);
 
-    destination = destination / archive_path.stem() / std::filesystem::relative(archive_path, info.folder_path);
+    std::filesystem::create_directory(destination / archive_path.stem());
+
+    destination = destination / archive_path.stem() / std::filesystem::relative(info.folder_path, archive_path).replace_extension("");
+
+    if (archive_path.stem() == destination.stem())
+    {
+      destination = destination.parent_path();
+    }
+
     std::filesystem::create_directory(destination);
 
     std::basic_ofstream<std::byte> new_file(destination / info.filename, std::ios::binary);

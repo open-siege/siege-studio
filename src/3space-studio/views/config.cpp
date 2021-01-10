@@ -35,7 +35,6 @@ view_factory create_default_view_factory()
   view_factory.add_file_type(dio::vol::trophy_bass::rbx_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
   view_factory.add_file_type(dio::vol::trophy_bass::tbv_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
 
-
   view_factory.add_extension(".dts", dts::is_darkstar_dts);
 
   view_factory.add_extension(".bmp", darkstar::bmp::is_microsoft_bmp);

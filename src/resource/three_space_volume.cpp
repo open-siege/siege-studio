@@ -352,33 +352,30 @@ namespace studio::resource::vol::three_space
 
   void rmf_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info) const
   {
+    constexpr auto header_size = sizeof(std::array<std::byte, 13>) + sizeof(endian::little_int32_t);
+
     if (int(stream.tellg()) == info.offset)
     {
-      stream.seekg(sizeof(std::array<std::byte, 13>) + sizeof(endian::little_int32_t), std::ios::cur);
+      stream.seekg(header_size, std::ios::cur);
     }
-    else if (int(stream.tellg()) != info.offset + sizeof(std::array<std::byte, 13>) + sizeof(endian::little_int32_t))
+    else if (int(stream.tellg()) != info.offset + header_size)
     {
-      stream.seekg(info.offset + sizeof(endian::little_int32_t), std::ios::beg);
+      stream.seekg(info.offset + header_size, std::ios::beg);
     }
   }
 
   void rmf_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info, std::basic_ostream<std::byte>& output) const
   {
-    auto listing = get_content_listing(stream, info.folder_path);
+    auto main_path = info.folder_path.parent_path().parent_path();
+    auto resource_file = info.folder_path.filename();
 
-    if (!listing.empty())
-    {
-      auto main_path = info.folder_path.parent_path().parent_path();
-      auto resource_file = info.folder_path.filename();
+    auto real_stream = std::basic_ifstream<std::byte>(main_path / resource_file, std::ios::binary);
 
-      auto real_stream = std::basic_ifstream<std::byte>(main_path / resource_file, std::ios::binary);
+    set_stream_position(real_stream, info);
 
-      set_stream_position(real_stream, info);
-
-      std::copy_n(std::istreambuf_iterator<std::byte>(real_stream),
-        info.size,
-        std::ostreambuf_iterator<std::byte>(output));
-    }
+    std::copy_n(std::istreambuf_iterator<std::byte>(real_stream),
+                info.size,
+                std::ostreambuf_iterator<std::byte>(output));
   }
 
   bool dyn_file_archive::is_supported(std::basic_istream<std::byte>& stream)
