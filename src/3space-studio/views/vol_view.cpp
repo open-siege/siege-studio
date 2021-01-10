@@ -174,7 +174,7 @@ void vol_view::setup_view(wxWindow& parent)
       scoped_dialog->Show();
       text1->SetLabel("Extracting to\n" + dest.string());
 
-      auto all_files = archive.find_files({ ".vol" });
+      auto all_files = archive.find_files({ ".vol", ".rmf", ".rbx", ".dyn", ".tbv" });
 
       std::for_each(std::execution::par_unseq, all_files.begin(), all_files.end(), [=](const auto& volume_file) {
         static std::mutex label_mutex;
