@@ -203,11 +203,21 @@ bmp_view::bmp_view(const studio::resource::file_info& info, std::basic_istream<s
           }
         }
 
+        if (selected_palette_name.empty())
+        {
+          std::vector<darkstar::pal::palette> temp;
+          temp.emplace_back().colours = default_colours;
+          loaded_palettes.emplace(sort_order.emplace_back("Auto-generated"), std::make_pair(info, std::move(temp)));
+
+          selected_palette_index = default_palette_index = 0;
+          selected_palette_name = default_palette_name = "Auto-generated";
+        }
+
         create_image(loaded_image,
           phoenix_bmp.bmp_header.width,
           phoenix_bmp.bmp_header.height,
           phoenix_bmp.pixels,
-          selected_palette_name.empty() ? default_colours : loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
+          loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
 
         rect.width = phoenix_bmp.bmp_header.width;
         rect.height = phoenix_bmp.bmp_header.height;
@@ -218,7 +228,7 @@ bmp_view::bmp_view(const studio::resource::file_info& info, std::basic_istream<s
   }
 
   sort_order.sort([&](const auto& a, const auto& b) {
-    return (a == "Internal") || loaded_palettes.at(a).second.size() < loaded_palettes.at(b).second.size();
+    return (a == "Internal") || (a == "Auto-generated") || loaded_palettes.at(a).second.size() < loaded_palettes.at(b).second.size();
   });
 
   if (!original_pixels.empty())
