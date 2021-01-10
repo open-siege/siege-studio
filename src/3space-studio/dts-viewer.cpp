@@ -100,7 +100,17 @@ auto create_menu_bar()
 
 void create_render_view(wxWindow& panel, studio::resource::file_stream file_stream, const view_factory& factory, const studio::resource::resource_explorer& archive)
 {
-  auto raw_view = factory.create_view(file_stream.first, *file_stream.second, archive);
+  std::unique_ptr<studio_view> raw_view;
+
+  try
+  {
+    raw_view = factory.create_view(file_stream.first, *file_stream.second, archive);
+  }
+  catch (const std::exception& ex)
+  {
+    std::cerr << ex.what() << '\n';
+    raw_view = factory.create_default_view(file_stream.first, *file_stream.second, archive);
+  }
 
   if (auto* view = dynamic_cast<normal_view*>(raw_view.get()); view)
   {

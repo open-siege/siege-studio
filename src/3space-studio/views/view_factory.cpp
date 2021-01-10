@@ -39,3 +39,8 @@ std::unique_ptr<studio_view> view_factory::create_view(const studio::resource::f
 
   return std::make_unique<default_view>(file_info);
 }
+
+std::unique_ptr<studio_view> view_factory::create_default_view(const studio::resource::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resource::resource_explorer& manager) const
+{
+  return std::make_unique<default_view>(file_info);
+}

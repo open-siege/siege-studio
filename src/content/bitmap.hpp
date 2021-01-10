@@ -227,7 +227,7 @@ namespace darkstar::bmp
 
     if (header != pbmp_tag)
     {
-      throw std::invalid_argument("File data is not PBMP based.");
+      throw std::invalid_argument("File data is not PBMP based. Offset is " + std::to_string(raw_data.tellg()));
     }
 
     pbmp_header bmp_header{};
@@ -267,6 +267,12 @@ namespace darkstar::bmp
       else if (chunk_header == palette_tag)
       {
         raw_data.read(reinterpret_cast<std::byte*>(&palette_index), sizeof(palette_index));
+      }
+      else if (chunk_header == pbmp_tag)
+      {
+        raw_data.seekg(-int(sizeof(file_size)), std::ios::cur);
+        raw_data.seekg(-int(sizeof(pbmp_tag)), std::ios::cur);
+        break;
       }
       else
       {
