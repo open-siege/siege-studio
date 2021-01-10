@@ -228,6 +228,7 @@ namespace studio::resource
 
     return std::nullopt;
   }
+
   void resource_explorer::extract_file_contents(std::basic_istream<std::byte>& archive_file, std::filesystem::path destination, const studio::resource::file_info& info) const
   {
     auto archive_path = get_archive_path(info.folder_path);

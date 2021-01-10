@@ -79,11 +79,11 @@ void vol_view::setup_view(wxWindow& parent)
 
   auto folder_picker = std::shared_ptr<wxDirPickerCtrl>(new wxDirPickerCtrl(panel.get(), wxID_ANY, (archive.get_search_path() / "extracted").string()), default_wx_deleter);
 
-  auto export_button = std::make_unique<wxButton>(panel.get(), wxID_ANY, "Extract All Files");
+  auto export_button = std::make_unique<wxButton>(panel.get(), wxID_ANY, "Extract Volume Contents");
 
   export_button->Bind(wxEVT_BUTTON, [parent = &parent, this, folder_picker](wxCommandEvent& event) {
     should_cancel = false;
-    auto dialog = std::make_unique<wxDialog>(parent, wxID_ANY, "Extracting Files");
+    auto dialog = std::make_unique<wxDialog>(parent, wxID_ANY, "Extracting Volume Contents");
 
     auto dialog_sizer = std::make_unique<wxBoxSizer>(wxVERTICAL);
 
