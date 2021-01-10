@@ -384,18 +384,18 @@ int main(int argc, char** argv)
         }
 
         notebook->ChangeSelection(selection);
-
-        if (frame->IsMaximized())
-        {
-          frame->Maximize(false);
-          frame->Maximize();
-        }
       }
       else
       {
         notebook->InsertPage(notebook->GetPageCount() - 1, panel.release(), new_path.filename.string());
         num_elements = notebook->GetPageCount();
         notebook->ChangeSelection(notebook->GetPageCount() - 2);
+      }
+
+      if (frame->IsMaximized())
+      {
+        frame->Maximize(false);
+        frame->Maximize();
       }
     };
     archive.add_action("open_new_tab", [&](auto& path) {
