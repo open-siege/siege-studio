@@ -364,11 +364,21 @@ namespace studio::resource::vol::three_space
 
   void rmf_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info, std::basic_ostream<std::byte>& output) const
   {
-    set_stream_position(stream, info);
+    auto listing = get_content_listing(stream, info.folder_path);
 
-    std::copy_n(std::istreambuf_iterator<std::byte>(stream),
-      info.size,
-      std::ostreambuf_iterator<std::byte>(output));
+    if (!listing.empty())
+    {
+      auto main_path = info.folder_path.parent_path().parent_path();
+      auto resource_file = info.folder_path.filename();
+
+      auto real_stream = std::basic_ifstream<std::byte>(main_path / resource_file, std::ios::binary);
+
+      set_stream_position(real_stream, info);
+
+      std::copy_n(std::istreambuf_iterator<std::byte>(real_stream),
+        info.size,
+        std::ostreambuf_iterator<std::byte>(output));
+    }
   }
 
   bool dyn_file_archive::is_supported(std::basic_istream<std::byte>& stream)
@@ -490,4 +500,4 @@ namespace studio::resource::vol::three_space
       info.size,
       std::ostreambuf_iterator<std::byte>(output));
   }
-}// namespace three_space::vol
+}// namespace studio::resource::vol::three_space

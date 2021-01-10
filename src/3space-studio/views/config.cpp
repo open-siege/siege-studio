@@ -29,11 +29,11 @@ view_factory create_default_view_factory()
   view_factory.add_file_type(dio::vol::darkstar::vol_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
 
   // TODO fix issues with extracting some of the older vol formats
-  //  view_factory.add_file_type(three_space::vol::vol_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return static_cast<graphics_view*>(new vol_view(info, archive)); });
-  //  view_factory.add_file_type(three_space::vol::rmf_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return static_cast<graphics_view*>(new vol_view(info, archive)); });
-  //  view_factory.add_file_type(three_space::vol::dyn_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return static_cast<graphics_view*>(new vol_view(info, archive)); });
-  //  view_factory.add_file_type(trophy_bass::vol::rbx_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return static_cast<graphics_view*>(new vol_view(info, archive)); });
-  //  view_factory.add_file_type(trophy_bass::vol::tbv_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return static_cast<graphics_view*>(new vol_view(info, archive)); });
+  view_factory.add_file_type(dio::vol::three_space::vol_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
+  view_factory.add_file_type(dio::vol::three_space::rmf_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
+  view_factory.add_file_type(dio::vol::three_space::dyn_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
+  view_factory.add_file_type(dio::vol::trophy_bass::rbx_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
+  view_factory.add_file_type(dio::vol::trophy_bass::tbv_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
 
 
   view_factory.add_extension(".dts", dts::is_darkstar_dts);
