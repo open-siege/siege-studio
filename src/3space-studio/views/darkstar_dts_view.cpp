@@ -197,41 +197,40 @@ void darkstar_dts_view::render_ui(wxWindow& parent, sf::RenderWindow& window, Im
       }
     }
     // TODO fix issue with certain dts files which have bad data
-    //    if (ImGui::Button("Export All DTS files to OBJ"))
-    //    {
-    //      auto files = archive.find_files({ ".dts" });
-    //
-    //      if (!opened_folder && !files.empty())
-    //      {
-    //        wxLaunchDefaultApplication(export_path.string());
-    //        opened_folder = true;
-    //      }
-    //
-    //      std::cout << "Number of files: " << files.size() << "\n";
-    //
-    //      std::for_each(std::execution::par_unseq, files.begin(), files.end(), [=](const auto& shape_info) {
-    //        auto archive_path = archive.get_archive_path(shape_info.folder_path);
-    //        auto shape_stream = archive.load_file(shape_info);
-    //
-    //        auto real_shape = dts_renderable_shape(get_shape(*shape_stream.second));
-    //
-    //        auto local_detail_levels = real_shape.get_detail_levels();
-    //
-    //        for (auto i = 0u; i < local_detail_levels.size(); ++i)
-    //        {
-    //          auto new_file_name = shape_info.filename.stem().string() + "-" + detail_levels[i] + ".obj";
-    //
-    //          std::filesystem::create_directory(export_path);
-    //          std::ofstream output(export_path / new_file_name, std::ios::trunc);
-    //          auto renderer = obj_renderer{ output };
-    //
-    //          std::vector<std::size_t> details{ i };
-    //          auto local_sequences = shape->get_sequences(details);
-    //          std::cout << "Rendering " + new_file_name + "\n";
-    //          shape->render_shape(renderer, details, local_sequences);
-    //        }
-    //      });
-    //    }
+
+    if (ImGui::Button("Export All DTS files to OBJ"))
+    {
+      auto files = archive.find_files({ ".dts" });
+
+      if (!opened_folder && !files.empty())
+      {
+        wxLaunchDefaultApplication(export_path.string());
+        opened_folder = true;
+      }
+
+      std::for_each(std::execution::par_unseq, files.begin(), files.end(), [=](const auto& shape_info) {
+        auto archive_path = archive.get_archive_path(shape_info.folder_path);
+        auto shape_stream = archive.load_file(shape_info);
+
+        auto real_shape = dts_renderable_shape(get_shape(*shape_stream.second));
+
+        auto local_detail_levels = real_shape.get_detail_levels();
+
+        for (auto i = 0u; i < local_detail_levels.size(); ++i)
+        {
+          auto new_file_name = shape_info.filename.stem().string() + "-" + local_detail_levels[i] + ".obj";
+
+          std::filesystem::create_directory(export_path);
+          std::ofstream output(export_path / new_file_name, std::ios::trunc);
+          auto renderer = obj_renderer{ output };
+
+          std::vector<std::size_t> details{ i };
+
+          auto local_sequences = real_shape.get_sequences(details);
+          real_shape.render_shape(renderer, details, local_sequences);
+        }
+      });
+    }
 
     ImGui::End();
 
