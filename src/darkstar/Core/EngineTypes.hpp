@@ -20,7 +20,7 @@ namespace Core
 	struct GameManager;
 	struct GameObject;
 
-   	using ConsoleCallbackFunc = const char* (*DARKCALL)(GameConsole*, std::int32_t, std::int32_t, const char**);
+   	using ConsoleCallbackFunc = const char* (DARKCALL*)(GameConsole*, std::int32_t, std::int32_t, const char**);
 	using ManagedString = const char*;
 
 	template<typename T>

@@ -60,6 +60,7 @@ src/darkstar/bin
 packages/
 tmp/
 bin/
+build/
 
 conanbuildinfo.txt
 conanbuildinfo.json
@@ -71,3 +72,12 @@ conan.lock
 cmake-build-debug/
 
 local-env.ini
+
+*.env
+
+activate.bat
+activate.ps1
+activate.sh
+deactivate.bat
+deactivate.ps1
+deactivate.sh

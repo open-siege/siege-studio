@@ -59,7 +59,13 @@ See https://github.com/matthew-rindel/darkstar-hook/blob/master/progress-and-roa
 
 ## Dependencies
 ### Tools
-* C++ Builder 10.3.3 or newer: https://www.embarcadero.com/products/cbuilder/starter
+* GCC 10.2.0 + MinGW-w64 8.0.0 without LLVM/Clang/LLD/LLDB - release 5: http://winlibs.com/#download-release
+  * It's advised to extract Mingw to a folder such as c:\mingw32.
+  * In addition, adding it to the path will be required for Conan and CMake to discover various tools correctly.
+  * If you have multiple instances of gcc, you can override the default compiler of Conan by updating **local-env.ini** with the following:
+    * [env]
+      CC=/some/folder/gcc
+      CXX=/some/folder/g++
 * A disassembler or decompiler for the relevant game. I use Binary Ninja: https://binary.ninja/
 ### Libraries
 * Python 3.8.3 or newer (32-bit version only)
@@ -73,14 +79,18 @@ If you don't already have it, just run:
 
 ``pip install conan``
 
-To setup environment variables for Conan (which are present in local-env.ini), run:
+To setup a dummy local-env.ini for Conan (for potential compiler overrides) run:
 ```python conanfile.py```
 
-Once everything is installed, run the following in the main checkout directory of the project.
+On very first run, without a gcc compiled cmake present, run ```conan install cmake/3.17.3@/ -g virtualenv```
+
+Then run ```activate``` or ```./activate```
+
+Run the following in the main checkout directory of the project:
 
 ``conan install . --profile ./local-profile.ini``
 
-All installed packages are copied into the _packages_ folder. This includes the Python include files from the local Python installation.
+All installed packages are copied into the _packages_ folder.
 
 To compile the project, simply use:
 
@@ -95,12 +105,12 @@ TODO
 * Everything is work in progress, including the documentation.
     * More detailed explanations of how this module works and the exposed API will be added over time.
 * All of the exe details for each game get stored in functions.json. Right now, only Starsiege 1.0003r has been added.
-* Why C++ Builder? Why not Visual C++ or MinGW?
+* Why not Visual C++?
     * Most Darkstar games were compiled with the predecessor to C++ Builder and use a calling convention called __fastcall
     * The meaning of __fastcall in C++ Builder is different to that of Visual C++, thus meaning raw assembly code would be needed to interface with the game code if Visual C++ is to be used
-    * So far, object structures (like vtables) are compatible between C++ Builder and Borland C++, which makes it possible extend the game in new ways based on disassembled information  
+    * GCC supports the __fastcall, but using a different keyword, and thus makes it easier to hook into the game.
 * What can be done with this?
-    * The built-in game interpreter can be extended with new functions either from C++ or Python
+    * The built-in game interpreter can be extended with new functions either from C++ or another scripting language
     * Existing built-in game functions can also be removed, replaced or decorated
     * Examples of ideas:
         * Updating the screenshot function of the game to convert BMP files to PNG
@@ -109,4 +119,5 @@ TODO
         * Much more
 
 ### Related Projects
-https://github.com/matthew-rindel/darkstar-projects
+https://github.com/matthew-rindel/3space-studio
+
