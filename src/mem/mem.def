@@ -1,5 +1,5 @@
 EXPORTS
-    MS_Malloc = darkstar._MS_Malloc
-    MS_Free = darkstar._MS_Free
-    MS_Realloc = darkstar._MS_Realloc
-    MS_Calloc = darkstar._MS_Calloc
+    MS_Malloc = darkstar.MS_Malloc
+    MS_Free = darkstar.MS_Free
+    MS_Realloc = darkstar.MS_Realloc
+    MS_Calloc = darkstar.MS_Calloc
