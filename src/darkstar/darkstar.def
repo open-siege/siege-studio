@@ -1,5 +1,5 @@
 EXPORTS
-    MS_Malloc = _MS_Malloc
-    MS_Free = _MS_Free
-    MS_Realloc = _MS_Realloc
-    MS_Calloc = _MS_Calloc
+    _MS_Malloc
+    _MS_Free
+    _MS_Realloc
+    _MS_Calloc

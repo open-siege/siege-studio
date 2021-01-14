@@ -69,3 +69,5 @@ graph_info.json
 conaninfo.txt
 conan.lock
 cmake-build-debug/
+
+local-env.ini
