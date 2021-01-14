@@ -14,6 +14,12 @@ include_directories(packages/include)
 
 file(GLOB SRC_FILES src/darkstar/**/*.cpp)
 
-add_library(darkstar SHARED ${SRC_FILES} src/darkstar/darkstar_vs.def)
+if(MSVC)
+    file(GLOB DEF_FILES src/darkstar/darkstar_vs.def)
+else()
+    file(GLOB DEF_FILES src/darkstar/darkstar.def)
+endif()
+
+add_library(darkstar SHARED ${SRC_FILES} ${DEF_FILES})
 
 target_link_libraries(darkstar)

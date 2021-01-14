@@ -64,7 +64,7 @@ void runExtender() noexcept
 
 extern "C"
 {
-    void* _cdecl MS_Malloc(std::size_t size) noexcept
+    extern __declspec(dllexport) void* _cdecl MS_Malloc(std::size_t size) noexcept
     {
         noAllocs++;
 
@@ -85,18 +85,18 @@ extern "C"
         return std::malloc(size);
     }
 
-    void _cdecl MS_Free(void* data) noexcept
+    extern __declspec(dllexport) void _cdecl MS_Free(void* data) noexcept
     {
         noAllocs--;
         std::free(data);
     }
 
-    void* _cdecl MS_Realloc(void* data, std::size_t size) noexcept
+    extern __declspec(dllexport) void* _cdecl MS_Realloc(void* data, std::size_t size) noexcept
     {
         return std::realloc(data, size);
     }
 
-    void* _cdecl MS_Calloc(std::size_t num, std::size_t size) noexcept
+    extern __declspec(dllexport) void* _cdecl MS_Calloc(std::size_t num, std::size_t size) noexcept
     {
         return std::calloc(num, size);
     }

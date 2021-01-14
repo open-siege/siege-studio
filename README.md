@@ -73,6 +73,9 @@ If you don't already have it, just run:
 
 ``pip install conan``
 
+To setup environment variables for Conan (which are present in local-env.ini), run:
+```python conanfile.py```
+
 Once everything is installed, run the following in the main checkout directory of the project.
 
 ``conan install . --profile ./local-profile.ini``
