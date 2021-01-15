@@ -196,7 +196,6 @@ void darkstar_dts_view::render_ui(wxWindow& parent, sf::RenderWindow& window, Im
         opened_folder = true;
       }
     }
-    // TODO fix issue with certain dts files which have bad data
 
     if (ImGui::Button("Export All DTS files to OBJ"))
     {
@@ -212,22 +211,25 @@ void darkstar_dts_view::render_ui(wxWindow& parent, sf::RenderWindow& window, Im
         auto archive_path = archive.get_archive_path(shape_info.folder_path);
         auto shape_stream = archive.load_file(shape_info);
 
-        auto real_shape = dts_renderable_shape(get_shape(*shape_stream.second));
-
-        auto local_detail_levels = real_shape.get_detail_levels();
-
-        for (auto i = 0u; i < local_detail_levels.size(); ++i)
+        if (darkstar::dts::is_darkstar_dts(*shape_stream.second))
         {
-          auto new_file_name = shape_info.filename.stem().string() + "-" + local_detail_levels[i] + ".obj";
+          auto real_shape = dts_renderable_shape(get_shape(*shape_stream.second));
 
-          std::filesystem::create_directory(export_path);
-          std::ofstream output(export_path / new_file_name, std::ios::trunc);
-          auto renderer = obj_renderer{ output };
+          auto local_detail_levels = real_shape.get_detail_levels();
 
-          std::vector<std::size_t> details{ i };
+          for (auto i = 0u; i < local_detail_levels.size(); ++i)
+          {
+            auto new_file_name = shape_info.filename.stem().string() + "-" + local_detail_levels[i] + ".obj";
 
-          auto local_sequences = real_shape.get_sequences(details);
-          real_shape.render_shape(renderer, details, local_sequences);
+            std::filesystem::create_directory(export_path);
+            std::ofstream output(export_path / new_file_name, std::ios::trunc);
+            auto renderer = obj_renderer{ output };
+
+            std::vector<std::size_t> details{ i };
+
+            auto local_sequences = real_shape.get_sequences(details);
+            real_shape.render_shape(renderer, details, local_sequences);
+          }
         }
       });
     }

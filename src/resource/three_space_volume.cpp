@@ -482,10 +482,15 @@ namespace studio::resource::vol::three_space
 
   void vol_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info) const
   {
-    // TODO this actually needs to skip passed the header before the file contents
-    if (int(stream.tellg()) != info.offset)
+    constexpr auto header_size = sizeof(std::byte) + sizeof(std::array<endian::little_uint32_t, 2>);
+
+    if (int(stream.tellg()) == info.offset)
     {
-      stream.seekg(info.offset, std::ios::beg);
+      stream.seekg(header_size, std::ios::cur);
+    }
+    else if (int(stream.tellg()) != info.offset + header_size)
+    {
+      stream.seekg(info.offset + header_size, std::ios::beg);
     }
   }
 
