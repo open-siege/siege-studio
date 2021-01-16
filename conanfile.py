@@ -1,30 +1,32 @@
-import os
+import os.path
 from conans import ConanFile, CMake, MSBuild, tools
 
-if not os.path.exists("local-env.ini"):
-    with open("local-env.ini", "w") as env:
-        env.write("")
-
 class DarkstarHookConan(ConanFile):
-    settings = {"os": None, "compiler": None, "build_type": None, "arch": "x86"}
-    build_requires = "cmake/3.17.3"
-    requires = "nlohmann_json/3.8.0"
-    generators = "json"
+    def requirements(self):
+        if not os.path.exists("packages/4.0.1.zip"):
+            tools.download("https://github.com/matthew-rindel/Detours/archive/4.0.1.zip", "packages/4.0.1.zip")
+
+        tools.unzip("packages/4.0.1.zip", "packages")
+
+        self.run("cd packages/Detours-4.0.1 && conan export . detours/4.0.1@microsoft/stable")
+
+        self.run("cd darkstar && conan install . --profile ./local-profile.ini")
+        self.run("cd darkstar.detours && conan install . -s arch=x86 --build=missing")
+        self.run("cd mem && conan install . -s arch=x86 -s build_type=Debug")
 
     def build(self):
-        self.build_folder = "build"
-        cmake = CMake(self)
-        cmake.configure()
-        cmake.build()
-        os.remove("build/darkstar.dll") if os.path.exists("build/darkstar.dll") else None
-        os.rename("build/libdarkstar.dll", "build/darkstar.dll")
+        self.run("cd darkstar && conan build .")
+        self.run("cd darkstar.detours && conan build .")
+        self.run("cd mem && conan build .")
 
-        if not os.path.exists(f"{self.source_folder}/src/mem/libs"):
-            os.mkdir(f"{self.source_folder}/src/mem/libs")
+    def package(self):
+        tools.rmdir("package/bin")
+        tools.mkdir("package/bin")
+        tools.rename("darkstar/build/darkstar.dll", "package/bin/darkstar.dll")
+        tools.rename("darkstar/build/functions.json", "package/bin/functions.json")
 
-        msbuild = MSBuild(self)
-        msbuild.build_env.lib_paths.append(f"{self.source_folder}/src/mem/libs")
-        msbuild.build("src/mem/mem.sln", upgrade_project=False, toolset="v142")
-
-    def imports(self):
-            self.copy("*", src="@includedirs", dst="packages/include")
+        if (os.path.exists("darkstar.detours/build/Release")):
+            tools.rename("darkstar.detours/build/Release/darkstar.detours.dll", "package/bin/darkstar.detours.dll")
+        else:
+            tools.rename("darkstar.detours/build/Debug/darkstar.detours.dll", "package/bin/darkstar.detours.dll")
+        tools.rename("mem/build/mem.dll", "package/bin/mem.dll")

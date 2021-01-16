@@ -1,5 +1,7 @@
 from conans import ConanFile, CMake, tools
 
+# conan install . -s arch=x86
+
 class LocalConanFile(ConanFile):
     build_requires = "cmake/3.17.3"
     settings = "os", "compiler", "build_type", "arch"

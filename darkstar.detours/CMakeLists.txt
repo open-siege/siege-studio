@@ -3,7 +3,7 @@ project(darkstar.detours)
 
 find_package(detours REQUIRED)
 
-add_library(darkstar.detours SHARED main.cpp darkstar.detours.def)
+add_library(darkstar.detours SHARED src/main.cpp src/darkstar.detours.def)
 
 include_directories(${detours_INCLUDE_DIRS})
 

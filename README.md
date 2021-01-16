@@ -79,16 +79,9 @@ If you don't already have it, just run:
 
 ``pip install conan``
 
-To setup a dummy local-env.ini for Conan (for potential compiler overrides) run:
-```python conanfile.py```
-
-On very first run, without a gcc compiled cmake present, run ```conan install cmake/3.17.3@/ -g virtualenv```
-
-Then run ```activate``` or ```./activate```
-
 Run the following in the main checkout directory of the project:
 
-``conan install . --profile ./local-profile.ini``
+``conan install . -s arch=x86``
 
 All installed packages are copied into the _packages_ folder.
 
@@ -96,10 +89,17 @@ To compile the project, simply use:
 
 ``conan build .``
 
-TODO add more information about the build targets.
+To assemble all the build artifacts into one folder, type:
 
-## Setup with Game
-TODO
+``conan package .``
+
+This will create a folder called package and inside package/bin will be the following:
+* mem.dll
+* darkstar.dll
+* functions.json
+* darkstar.detours.dll
+
+Those files can then be copied into the directory of a specific game for everything to work.
 
 ## Notes
 * Everything is work in progress, including the documentation.
