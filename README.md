@@ -59,6 +59,8 @@ See https://github.com/matthew-rindel/darkstar-hook/blob/master/progress-and-roa
 
 ## Dependencies
 ### Tools
+* Python + Conan: https://chocolatey.org/packages/python + https://conan.io/downloads.html
+* Visual C++ 2019 Build Tools: https://github.com/matthew-rindel/hello-cpp-durban#setup
 * GCC 10.2.0 + MinGW-w64 8.0.0 without LLVM/Clang/LLD/LLDB - release 5: http://winlibs.com/#download-release
   * It's advised to extract Mingw to a folder such as c:\mingw32.
   * In addition, adding it to the path will be required for Conan and CMake to discover various tools correctly.
@@ -68,9 +70,8 @@ See https://github.com/matthew-rindel/darkstar-hook/blob/master/progress-and-roa
       CXX=/some/folder/g++
 * A disassembler or decompiler for the relevant game. I use Binary Ninja: https://binary.ninja/
 ### Libraries
-* Python 3.8.3 or newer (32-bit version only)
-* Pybind11 2.5.0
 * nlohmann_json 3.8.0
+* Microsoft Detours 4.0.1
 
 ## Project Setup
 Conan is required to install the project dependencies.
@@ -89,7 +90,7 @@ To compile the project, simply use:
 
 ``conan build .``
 
-To assemble all the build artifacts into one folder, type:
+To assemble all the build artefacts into one folder, type:
 
 ``conan package .``
 
