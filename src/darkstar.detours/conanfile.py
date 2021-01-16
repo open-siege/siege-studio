@@ -1,0 +1,16 @@
+from conans import ConanFile, CMake, tools
+
+class LocalConanFile(ConanFile):
+    build_requires = "cmake/3.17.3"
+    settings = "os", "compiler", "build_type", "arch"
+    requires = "detours/4.0.1@microsoft/stable"
+    generators = "cmake_find_package"
+    build_folder = "build"
+
+    def build(self):
+        self.build_folder = "build"
+        cmake = CMake(self)
+        cmake.configure()
+        cmake.build()
+
+

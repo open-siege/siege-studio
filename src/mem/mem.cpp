@@ -1,2 +1,9 @@
-// This is a stub to be able to compile the dll.
-// The linker does all the work via mem.def.
+#include <windows.h>
+
+extern "C" void detours_init();
+
+BOOL WINAPI DllMain(HINSTANCE, DWORD, LPVOID)
+{
+    detours_init();
+    return TRUE;
+}
