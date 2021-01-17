@@ -378,7 +378,6 @@ namespace studio::content::bmp
   {
     if (original_colours == other_colours)
     {
-      std::cout << "No change to pixels were made\n";
       return pixels;
     }
 
