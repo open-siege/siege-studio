@@ -7,6 +7,21 @@ namespace studio::views
 {
   std::filesystem::path bmp_view::export_path = std::filesystem::path();
 
+  std::vector<content::pal::colour> get_default_colours()
+  {
+    std::vector<content::pal::colour> default_colours;
+    default_colours.reserve(256);
+    for (auto i = 0; i < 256; ++i)
+    {
+      auto colour1 = std::byte(i);
+      auto colour2 = std::byte(256 - i);
+      auto colour3 = std::byte(std::rand() % 256);
+      default_colours.emplace_back(content::pal::colour{ colour1, colour2, colour3, std::byte(0xFF) });
+    }
+
+    return default_colours;
+  }
+
   void create_image(sf::Image& loaded_image,
     int width,
     int height,
@@ -29,9 +44,13 @@ namespace studio::views
     loaded_image.flipVertically();
   }
 
+  std::size_t bmp_view::get_unique_colours(const std::vector<std::byte>& pixels)
+  {
+    return std::set(pixels.begin(), pixels.end()).size();
+  }
 
   bmp_view::bmp_view(const studio::resource::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::resource::resource_explorer& manager)
-    : info(info), archive(manager)
+    : archive(manager), info(info)
   {
     if (export_path == std::filesystem::path())
     {
@@ -55,14 +74,6 @@ namespace studio::views
       }
     };
 
-    default_colours.reserve(256);
-    for (auto i = 0; i < 256; ++i)
-    {
-      auto colour1 = std::byte(i);
-      auto colour2 = std::byte(256 - i);
-      auto colour3 = std::byte(std::rand() % 256);
-      default_colours.emplace_back(content::pal::colour{ colour1, colour2, colour3, std::byte(0xFF) });
-    }
 
     sf::IntRect rect;
 
@@ -97,12 +108,13 @@ namespace studio::views
       auto windows_bmp = content::bmp::get_bmp_data(image_stream);
 
       std::vector<content::pal::palette> temp;
+      bit_depth = windows_bmp.info.bit_depth;
       temp.emplace_back().colours = windows_bmp.colours;
 
       loaded_palettes.emplace(sort_order.emplace_back("Internal"), std::make_pair(info, std::move(temp)));
 
-      selected_palette_index = default_palette_index = 0;
-      selected_palette_name = default_palette_name = "Internal";
+      selection_state.selected_palette_index = selection_state.default_palette_index = 0;
+      selection_state.selected_palette_name = selection_state.default_palette_name = "Internal";
 
       create_image(loaded_image,
         windows_bmp.info.width,
@@ -129,11 +141,16 @@ namespace studio::views
         frames = content::bmp::get_pba_data(image_stream);
       }
 
+      if (!frames.empty())
+      {
+        bit_depth = frames.front().bmp_header.bit_depth;
+      }
+
       for (auto& phoenix_bmp : frames)
       {
         if (original_pixels.empty())
         {
-          if (!selected_palette_name.empty())
+          if (!selection_state.selected_palette_name.empty())
           {
             continue;
           }
@@ -155,8 +172,8 @@ namespace studio::views
               auto& child = value.second.second[i];
               if (child.index == phoenix_bmp.palette_index)
               {
-                selected_palette_index = default_palette_index = i;
-                selected_palette_name = default_palette_name = value.first;
+                selection_state.selected_palette_index = selection_state.default_palette_index = i;
+                selection_state.selected_palette_name = selection_state.default_palette_name = value.first;
                 break;
               }
             }
@@ -171,7 +188,7 @@ namespace studio::views
                 get_defaults(entry);
               }
 
-              if (selected_palette_index != std::string::npos)
+              if (selection_state.selected_palette_index != std::string::npos)
               {
                 break;
               }
@@ -206,7 +223,7 @@ namespace studio::views
                   get_defaults(*entry);
                 }
 
-                if (selected_palette_index != std::string::npos)
+                if (selection_state.selected_palette_index != std::string::npos)
                 {
                   break;
                 }
@@ -214,21 +231,21 @@ namespace studio::views
             }
           }
 
-          if (selected_palette_name.empty())
+          if (selection_state.selected_palette_name.empty())
           {
             std::vector<content::pal::palette> temp;
-            temp.emplace_back().colours = default_colours;
+            temp.emplace_back().colours = get_default_colours();
             loaded_palettes.emplace(sort_order.emplace_back("Auto-generated"), std::make_pair(info, std::move(temp)));
 
-            selected_palette_index = default_palette_index = 0;
-            selected_palette_name = default_palette_name = "Auto-generated";
+            selection_state.selected_palette_index = selection_state.default_palette_index = 0;
+            selection_state.selected_palette_name = selection_state.default_palette_name = "Auto-generated";
           }
 
           create_image(loaded_image,
             phoenix_bmp.bmp_header.width,
             phoenix_bmp.bmp_header.height,
             phoenix_bmp.pixels,
-            loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
+            loaded_palettes.at(selection_state.selected_palette_name).second.at(selection_state.selected_palette_index).colours);
 
           rect.width = phoenix_bmp.bmp_header.width;
           rect.height = phoenix_bmp.bmp_header.height;
@@ -254,38 +271,48 @@ namespace studio::views
 
   void bmp_view::refresh_image()
   {
+    const auto& [selected_palette_name, selected_palette_index, default_palette_name, default_palette_index, selected_bitmap_index] = selection_state;
     if (!original_pixels.empty())
     {
       auto [width, height] = loaded_image.getSize();
-      auto colour_strat = strategy(colour_strategy);
+      auto colour_strat = colour_strategy(strategy);
 
-      if (colour_strat == strategy::do_nothing)
+      if (colour_strat == colour_strategy::do_nothing)
       {
+        num_unique_colours = get_unique_colours(original_pixels.at(selected_bitmap_index));
+
         create_image(loaded_image,
           width,
           height,
           original_pixels.at(selected_bitmap_index),
           loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
       }
-      else if (colour_strat == strategy::remap)
+      else if (colour_strat == colour_strategy::remap)
       {
+        auto new_pixels = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
+          loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+          loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
+
+        num_unique_colours = get_unique_colours(new_pixels);
+
         create_image(loaded_image,
           width,
           height,
-          content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
-            loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
-            loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours),
+          new_pixels,
           loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
       }
-      else if (colour_strat == strategy::remap_unique)
+      else if (colour_strat == colour_strategy::remap_unique)
       {
+        auto new_pixels = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
+          loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+          loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours,
+          true);
+
+        num_unique_colours = get_unique_colours(new_pixels);
         create_image(loaded_image,
           width,
           height,
-          content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
-            loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
-            loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours,
-            true),
+          new_pixels,
           loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
       }
 
@@ -316,6 +343,7 @@ namespace studio::views
 
     if (!loaded_palettes.empty())
     {
+      auto& [selected_palette_name, selected_palette_index, default_palette_name, default_palette_index, selected_bitmap_index] = selection_state;
       ImGui::Begin("Palettes");
 
       auto child_count = 0;
@@ -401,6 +429,28 @@ namespace studio::views
       }
       ImGui::End();
 
+      ImGui::Begin("File Info");
+      auto [width, height] = loaded_image.getSize();
+      ImGui::LabelText("", "Resolution: %ix%i", width, height);
+      ImGui::LabelText("", "Bits per pixel: %i", bit_depth);
+
+      auto unique_colours = get_unique_colours(original_pixels.at(selected_bitmap_index));
+      ImGui::LabelText("", "Original number of unique colours: %llu", unique_colours);
+
+      if (num_unique_colours == 0)
+      {
+        num_unique_colours = unique_colours;
+      }
+
+      if (auto colour_strat = colour_strategy(strategy);
+        (colour_strat == colour_strategy::remap || colour_strat == colour_strategy::remap_unique) &&
+          num_unique_colours != unique_colours)
+      {
+        ImGui::LabelText("", "Remapped number of unique colours: %llu", num_unique_colours);
+      }
+
+      ImGui::End();
+
       if (is_phoenix_bitmap)
       {
         ImGui::Begin("Export Options");
@@ -424,12 +474,10 @@ namespace studio::views
           std::filesystem::create_directories(export_path);
           std::basic_ofstream<std::byte> output(export_path / new_file_name, std::ios::binary);
 
-          auto [width, height] = loaded_image.getSize();
-
           const auto& colours = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
           auto pixels = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
-                                                   loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
-                                                   colours);
+            loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+            colours);
 
           content::bmp::vertical_flip(pixels, width);
           content::bmp::write_bmp_data(output, colours, pixels, width, height, 8);
@@ -447,19 +495,19 @@ namespace studio::views
       ImGui::Text("%s", "Colour Strategy: ");
       ImGui::SameLine();
 
-      if (ImGui::RadioButton("Do Nothing", &colour_strategy, 0))
+      if (ImGui::RadioButton("Do Nothing", &strategy, 0))
       {
         refresh_image();
       }
       ImGui::SameLine();
 
-      if (ImGui::RadioButton("Remap", &colour_strategy, 1))
+      if (ImGui::RadioButton("Remap", &strategy, 1))
       {
         refresh_image();
       }
       ImGui::SameLine();
 
-      if (ImGui::RadioButton("Remap (only unique colours)", &colour_strategy, 2))
+      if (ImGui::RadioButton("Remap (only unique colours)", &strategy, 2))
       {
         refresh_image();
       }
