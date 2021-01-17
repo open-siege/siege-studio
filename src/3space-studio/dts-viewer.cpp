@@ -360,7 +360,7 @@ int main(int argc, char** argv)
            return new_extensions;
     };
 
-    tree_search->Bind(wxEVT_COMBOBOX, [&view_factory, &archive, tree_view, search_path, get_filter_selection](wxCommandEvent& event) {
+    tree_search->Bind(wxEVT_COMBOBOX, [&view_factory, &archive, tree_view, &search_path, get_filter_selection](wxCommandEvent& event) {
            studio::populate_tree_view(view_factory, archive, *tree_view, search_path, get_filter_selection());
     });
 
@@ -528,7 +528,6 @@ int main(int argc, char** argv)
              {
                add_element_from_file(archive.load_file(new_path.value()), true);
 
-               search_path = new_path.value().parent_path();
                studio::populate_tree_view(view_factory, archive, *tree_view, search_path, get_filter_selection());
              }
       },
