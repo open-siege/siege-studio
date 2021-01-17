@@ -441,6 +441,7 @@ namespace studio::views
 
       ImGui::Begin("File Info");
       auto [width, height] = loaded_image.getSize();
+      ImGui::LabelText("", "File type: %s", is_phoenix_bitmap ? "Phoenix Bitmap" : "Microsoft Bitmap");
       ImGui::LabelText("", "Resolution: %ix%i", width, height);
       ImGui::LabelText("", "Bits per pixel: %i", bit_depth);
 
