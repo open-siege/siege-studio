@@ -8,29 +8,18 @@
 #include <iomanip>
 #include "endian_arithmetic.hpp"
 
-namespace darkstar::pal
+namespace studio::content::pal
 {
   namespace endian = boost::endian;
   using file_tag = std::array<std::byte, 4>;
 
-  constexpr file_tag to_tag(const std::array<std::uint8_t, 4> values)
-  {
-    file_tag result{};
+  constexpr file_tag riff_tag = shared::to_tag<4>({ 'R', 'I', 'F', 'F' });
 
-    for (auto i = 0u; i < values.size(); i++)
-    {
-      result[i] = std::byte{ values[i] };
-    }
-    return result;
-  }
+  constexpr file_tag pal_tag = shared::to_tag<4>({ 'P', 'A', 'L', ' ' });
 
-  constexpr file_tag riff_tag = to_tag({ 'R', 'I', 'F', 'F' });
+  constexpr file_tag data_tag = shared::to_tag<4>({ 'd', 'a', 't', 'a' });
 
-  constexpr file_tag pal_tag = to_tag({ 'P', 'A', 'L', ' ' });
-
-  constexpr file_tag data_tag = to_tag({ 'd', 'a', 't', 'a' });
-
-  constexpr file_tag ppl_tag = to_tag({ 'P', 'L', '9', '8' });
+  constexpr file_tag ppl_tag = shared::to_tag<4>({ 'P', 'L', '9', '8' });
 
   struct colour
   {

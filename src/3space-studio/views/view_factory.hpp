@@ -8,29 +8,32 @@
 #include "resource/resource_explorer.hpp"
 #include "3space-studio/utility.hpp"
 
-using stream_validator = bool(std::basic_istream<std::byte>&);
-
-using view_creator = std::unique_ptr<studio_view>(const studio::resource::file_info&, std::basic_istream<std::byte>&, const studio::resource::resource_explorer&);
-
-class view_factory
+namespace studio::views
 {
-public:
-  void add_file_type(stream_validator* checker, view_creator* creator);
+  using stream_validator = bool(std::basic_istream<std::byte>&);
 
-  void add_extension(std::string_view extension, stream_validator* checker);
+  using view_creator = std::unique_ptr<studio_view>(const studio::resource::file_info&, std::basic_istream<std::byte>&, const studio::resource::resource_explorer&);
 
-  [[nodiscard]] std::vector<std::string_view> get_extensions() const;
+  class view_factory
+  {
+  public:
+    void add_file_type(stream_validator* checker, view_creator* creator);
 
-  std::unique_ptr<studio_view> create_view(const studio::resource::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resource::resource_explorer& manager) const;
+    void add_extension(std::string_view extension, stream_validator* checker);
 
-  std::unique_ptr<studio_view> create_default_view(const studio::resource::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resource::resource_explorer& manager) const;
-private:
-  std::set<std::string> extensions;
+    [[nodiscard]] std::vector<std::string_view> get_extensions() const;
 
-  std::map<stream_validator*, view_creator*> creators;
-  std::multimap<std::string_view, stream_validator*> validators;
-};
+    std::unique_ptr<studio_view> create_view(const studio::resource::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resource::resource_explorer& manager) const;
 
+    std::unique_ptr<studio_view> create_default_view(const studio::resource::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resource::resource_explorer& manager) const;
+
+  private:
+    std::set<std::string> extensions;
+
+    std::map<stream_validator*, view_creator*> creators;
+    std::multimap<std::string_view, stream_validator*> validators;
+  };
+}// namespace studio::views
 
 
 #endif//DARKSTARDTSCONVERTER_VIEW_FACTORY_HPP
