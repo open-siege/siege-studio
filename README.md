@@ -78,21 +78,27 @@ Conan is required to install the project dependencies.
 
 If you don't already have it, just run:
 
-``pip install conan``
+```pip install conan```
 
-Run the following in the main checkout directory of the project:
+If CMake has not been built before (specifically for building _darkstar_), you will have to run:
+```conan install cmake/3.17.3@/ -g virtualenv```
 
-``conan install . -s arch=x86``
+Then:
+```activate.bat``` or ```./activate.sh```
 
-All installed packages are copied into the _packages_ folder.
+It is also a good test for whether MinGW is setup correctly.
 
-To compile the project, simply use:
+To build all projects, run the following in the main checkout directory of the project:
 
-``conan build .``
+```conan install . -s arch=x86```
+
+To compile all projects, simply use:
+
+```conan build .```
 
 To assemble all the build artefacts into one folder, type:
 
-``conan package .``
+```conan package .```
 
 This will create a folder called package and inside package/bin will be the following:
 * mem.dll
