@@ -17,42 +17,49 @@ namespace studio::views
     void render_ui(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext) override;
 
   private:
-    static std::filesystem::path export_path;
-    studio::resource::file_info info;
-    const studio::resource::resource_explorer& archive;
-    std::vector<content::pal::colour> default_colours;
-    std::list<std::string> sort_order;
-    std::map<std::string_view, std::pair<studio::resource::file_info, std::vector<content::pal::palette>>> loaded_palettes;
-    std::string_view selected_palette_name;
-    std::size_t selected_palette_index = std::string::npos;
-
-    int selected_bitmap_index = 0;
-
-    bool is_phoenix_bitmap = false;
-
-    std::string_view default_palette_name;
-    std::size_t default_palette_index = std::string::npos;
-
-    bool opened_folder = false;
-
-    void refresh_image();
-
-    enum class strategy : int
+    enum class colour_strategy : int
     {
       do_nothing,
       remap,
       remap_unique
     };
-    int colour_strategy = 1;
+
+    struct selection_state
+    {
+      std::string_view selected_palette_name;
+      std::size_t selected_palette_index = std::string::npos;
+
+      std::string_view default_palette_name;
+      std::size_t default_palette_index = std::string::npos;
+      int selected_bitmap_index = 0;
+    };
+
+    void refresh_image();
+
+    std::size_t get_unique_colours(const std::vector<std::byte>& pixels);
+
+    static std::filesystem::path export_path;
+    const studio::resource::resource_explorer& archive;
+    studio::resource::file_info info;
+    std::list<std::string> sort_order;
+    std::map<std::string_view, std::pair<studio::resource::file_info, std::vector<content::pal::palette>>> loaded_palettes;
+
+    int strategy = static_cast<int>(colour_strategy::remap);
+    bool opened_folder = false;
+    bool scale_changed = false;
+    bool is_phoenix_bitmap = false;
+    int bit_depth = 8;
+    std::size_t num_unique_colours = 0;
+
+    selection_state selection_state;
+
+    float image_scale = 1;
 
     std::vector<std::vector<std::byte>> original_pixels;
 
     sf::Image loaded_image;
     sf::Texture texture;
     sf::Sprite sprite;
-
-    float image_scale = 1;
-    bool scale_changed = false;
 
     std::function<void(const sf::Event&)> zoom_in;
     std::function<void(const sf::Event&)> zoom_out;
