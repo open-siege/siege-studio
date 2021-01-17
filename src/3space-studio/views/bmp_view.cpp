@@ -361,6 +361,11 @@ namespace studio::views
             label << " (default for this image)";
           }
 
+          if (value[0].index > 0)
+          {
+            label << " (ID: " << value[0].index << ")";
+          }
+
           for (auto y = 0; y < child_count; ++y)
           {
             label << ' ';
@@ -406,6 +411,11 @@ namespace studio::views
               if (key == default_palette_name && i == default_palette_index)
               {
                 label << " (default for this image)";
+              }
+
+              if (value[i].index > 0)
+              {
+                label << " (ID: " << value[i].index << ")";
               }
 
               for (auto y = 0; y < child_count; ++y)
