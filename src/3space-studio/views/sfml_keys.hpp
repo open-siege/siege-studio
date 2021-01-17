@@ -7,7 +7,7 @@
 #include <utility>
 #include <SFML/Window/Event.hpp>
 
-namespace config
+namespace studio::views
 {
   using namespace std::literals;
 

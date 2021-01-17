@@ -10,32 +10,22 @@
 #include "palette.hpp"
 #include "endian_arithmetic.hpp"
 
-namespace darkstar::bmp
+namespace studio::content::bmp
 {
   namespace endian = boost::endian;
   using file_tag = std::array<std::byte, 4>;
-  constexpr file_tag to_tag(const std::array<std::uint8_t, 4> values)
-  {
-    file_tag result{};
 
-    for (auto i = 0u; i < values.size(); i++)
-    {
-      result[i] = std::byte{ values[i] };
-    }
-    return result;
-  }
+  constexpr file_tag pbmp_tag = shared::to_tag<4>({ 'P', 'B', 'M', 'P' });
 
-  constexpr file_tag pbmp_tag = to_tag({ 'P', 'B', 'M', 'P' });
+  constexpr file_tag pba_tag = shared::to_tag<4>({ 'P', 'B', 'M', 'A' });
 
-  constexpr file_tag pba_tag = to_tag({ 'P', 'B', 'M', 'A' });
+  constexpr file_tag header_tag = shared::to_tag<4>({ 'h', 'e', 'a', 'd' });
 
-  constexpr file_tag header_tag = to_tag({ 'h', 'e', 'a', 'd' });
+  constexpr file_tag data_tag = shared::to_tag<4>({ 'd', 'a', 't', 'a' });
 
-  constexpr file_tag data_tag = to_tag({ 'd', 'a', 't', 'a' });
+  constexpr file_tag detail_tag = shared::to_tag<4>({ 'D', 'E', 'T', 'L' });
 
-  constexpr file_tag detail_tag = to_tag({ 'D', 'E', 'T', 'L' });
-
-  constexpr file_tag palette_tag = to_tag({ 'P', 'i', 'D', 'X' });
+  constexpr file_tag palette_tag = shared::to_tag<4>({ 'P', 'i', 'D', 'X' });
 
   constexpr std::array<std::byte, 2> windows_bmp_tag = { std::byte{ 66 }, std::byte{ 77 } };// BM
 
@@ -168,7 +158,7 @@ namespace darkstar::bmp
     };
   }
 
-  inline void write_bmp_data(std::basic_ofstream<std::byte>& raw_data, std::int32_t width, std::int32_t height, const std::vector<pal::colour>& colours, const std::vector<std::byte>& pixels)
+  inline void write_bmp_data(std::basic_ostream<std::byte>& raw_data, const std::vector<pal::colour>& colours, const std::vector<std::byte>& pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth)
   {
     windows_bmp_header header{};
     header.tag = windows_bmp_tag;
@@ -181,7 +171,7 @@ namespace darkstar::bmp
     info.width = width;
     info.height = height;
     info.planes = 1;
-    info.bit_depth = 8;
+    info.bit_depth = bit_depth;
     info.compression = 0;
     info.image_size = width * height;
 
@@ -199,7 +189,7 @@ namespace darkstar::bmp
 
     for (auto& colour : colours)
     {
-      std::array<std::byte, 4> quad{ colour.blue, colour.green, colour.red, colour.flags };
+      std::array<std::byte, 4> quad{ colour.blue, colour.green, colour.red, std::byte{0} };
       raw_data.write(quad.data(), sizeof(quad));
     }
 
@@ -388,6 +378,7 @@ namespace darkstar::bmp
   {
     if (original_colours == other_colours)
     {
+      std::cout << "No change to pixels were made\n";
       return pixels;
     }
 
@@ -413,7 +404,7 @@ namespace darkstar::bmp
         for (auto y = 0u; y < other_colours.size(); y++)
         {
           auto& other = other_colours[y];
-          auto distance = darkstar::pal::colour_distance(colour, other);
+          auto distance = pal::colour_distance(colour, other);
           distances[distance] = y;
         }
 

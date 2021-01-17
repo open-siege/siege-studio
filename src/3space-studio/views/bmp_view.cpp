@@ -3,196 +3,172 @@
 #include "sfml_keys.hpp"
 #include "3space-studio/utility.hpp"
 
-void create_image(sf::Image& loaded_image,
-  int width,
-  int height,
-  const std::vector<std::byte>& pixels,
-  const std::vector<darkstar::pal::colour>& colours)
+namespace studio::views
 {
-  std::vector<std::uint8_t> rendered_pixels;
-  rendered_pixels.reserve(width * height * sizeof(std::int32_t));
+  std::filesystem::path bmp_view::export_path = std::filesystem::path();
 
-  for (auto index : pixels)
+  void create_image(sf::Image& loaded_image,
+    int width,
+    int height,
+    const std::vector<std::byte>& pixels,
+    const std::vector<content::pal::colour>& colours)
   {
-    auto& colour = colours[int(index)];
-    rendered_pixels.emplace_back(int(colour.red));
-    rendered_pixels.emplace_back(int(colour.green));
-    rendered_pixels.emplace_back(int(colour.blue));
-    rendered_pixels.emplace_back(int(colour.flags));
+    std::vector<std::uint8_t> rendered_pixels;
+    rendered_pixels.reserve(width * height * sizeof(std::int32_t));
+
+    for (auto index : pixels)
+    {
+      auto& colour = colours[int(index)];
+      rendered_pixels.emplace_back(int(colour.red));
+      rendered_pixels.emplace_back(int(colour.green));
+      rendered_pixels.emplace_back(int(colour.blue));
+      rendered_pixels.emplace_back(int(colour.flags));
+    }
+
+    loaded_image.create(width, height, rendered_pixels.data());
+    loaded_image.flipVertically();
   }
 
-  loaded_image.create(width, height, rendered_pixels.data());
-  loaded_image.flipVertically();
-}
 
-
-bmp_view::bmp_view(const studio::resource::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::resource::resource_explorer& manager)
- : archive(manager)
-{
-  zoom_in = [&](const sf::Event&) {
-    if (image_scale < 4.0f)
-    {
-      image_scale += 0.1f;
-      scale_changed = true;
-    }
-  };
-
-  zoom_out = [&](const sf::Event&) {
-    if (image_scale > 1.0f)
-    {
-      image_scale -= 0.1f;
-      scale_changed = true;
-    }
-  };
-
-  default_colours.reserve(256);
-  for (auto i = 0; i < 256; ++i)
+  bmp_view::bmp_view(const studio::resource::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::resource::resource_explorer& manager)
+    : info(info), archive(manager)
   {
-    auto colour1 = std::byte(i);
-    auto colour2 = std::byte(256 - i);
-    auto colour3 = std::byte(std::rand() % 256);
-    default_colours.emplace_back(darkstar::pal::colour{ colour1, colour2, colour3, std::byte(0xFF) });
-  }
-
-  sf::IntRect rect;
-
-  std::vector<studio::resource::file_info> palettes;
-
-  palettes = manager.find_files(studio::resource::resource_explorer::get_archive_path(info.folder_path).parent_path(), { ".ppl", ".PPL", ".ipl", ".IPL", ".pal", ".PAL" });
-
-  auto all_palettes = manager.find_files({ ".ppl", ".ipl", ".pal" });
-
-  studio::resource::resource_explorer::merge_results(palettes, all_palettes);
-
-  for (auto& palette_info : palettes)
-  {
-    auto raw_palette = manager.load_file(palette_info);
-    auto result = (std::filesystem::relative(palette_info.folder_path, manager.get_search_path()) / palette_info.filename).string();
-
-    if (darkstar::pal::is_phoenix_pal(*raw_palette.second))
+    if (export_path == std::filesystem::path())
     {
-      loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, darkstar::pal::get_ppl_data(*raw_palette.second)));
-    }
-    else if (darkstar::pal::is_microsoft_pal(*raw_palette.second))
-    {
-      std::vector<darkstar::pal::palette> temp;
-      temp.emplace_back().colours = darkstar::pal::get_pal_data(*raw_palette.second);
-
-      loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, std::move(temp)));
-    }
-  }
-
-  if (darkstar::bmp::is_microsoft_bmp(image_stream))
-  {
-    auto windows_bmp = darkstar::bmp::get_bmp_data(image_stream);
-
-    std::vector<darkstar::pal::palette> temp;
-    temp.emplace_back().colours = windows_bmp.colours;
-
-    loaded_palettes.emplace(sort_order.emplace_back("Internal"), std::make_pair(info, std::move(temp)));
-
-    selected_palette_index = default_palette_index = 0;
-    selected_palette_name = default_palette_name = "Internal";
-
-    create_image(loaded_image,
-      windows_bmp.info.width,
-      windows_bmp.info.height,
-      windows_bmp.pixels,
-      windows_bmp.colours);
-
-    rect.width = windows_bmp.info.width;
-    rect.height = windows_bmp.info.height;
-
-    original_pixels.emplace_back(std::move(windows_bmp.pixels));
-  }
-  else
-  {
-    std::vector<darkstar::bmp::pbmp_data> frames;
-
-    if (darkstar::bmp::is_phoenix_bmp(image_stream))
-    {
-      frames.emplace_back(darkstar::bmp::get_pbmp_data(image_stream));
-    }
-    else if (darkstar::bmp::is_phoenix_bmp_array(image_stream))
-    {
-      frames = darkstar::bmp::get_pba_data(image_stream);
+      export_path = archive.get_search_path() / "exported";
+      std::filesystem::create_directory(export_path);
     }
 
-    for (auto& phoenix_bmp : frames)
-    {
-      if (original_pixels.empty())
+    zoom_in = [&](const sf::Event&) {
+      if (image_scale < 4.0f)
       {
-        if (!selected_palette_name.empty())
-        {
-          continue;
-        }
+        image_scale += 0.1f;
+        scale_changed = true;
+      }
+    };
 
-        std::vector<decltype(palettes)::pointer> results;
-        results.reserve(palettes.size() / 2);
+    zoom_out = [&](const sf::Event&) {
+      if (image_scale > 1.0f)
+      {
+        image_scale -= 0.1f;
+        scale_changed = true;
+      }
+    };
 
-        for (auto& palette : palettes)
+    default_colours.reserve(256);
+    for (auto i = 0; i < 256; ++i)
+    {
+      auto colour1 = std::byte(i);
+      auto colour2 = std::byte(256 - i);
+      auto colour3 = std::byte(std::rand() % 256);
+      default_colours.emplace_back(content::pal::colour{ colour1, colour2, colour3, std::byte(0xFF) });
+    }
+
+    sf::IntRect rect;
+
+    std::vector<studio::resource::file_info> palettes;
+
+    palettes = manager.find_files(studio::resource::resource_explorer::get_archive_path(info.folder_path).parent_path(), { ".ppl", ".PPL", ".ipl", ".IPL", ".pal", ".PAL" });
+
+    auto all_palettes = manager.find_files({ ".ppl", ".ipl", ".pal" });
+
+    studio::resource::resource_explorer::merge_results(palettes, all_palettes);
+
+    for (auto& palette_info : palettes)
+    {
+      auto raw_palette = manager.load_file(palette_info);
+      auto result = (std::filesystem::relative(palette_info.folder_path, manager.get_search_path()) / palette_info.filename).string();
+
+      if (content::pal::is_phoenix_pal(*raw_palette.second))
+      {
+        loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, content::pal::get_ppl_data(*raw_palette.second)));
+      }
+      else if (content::pal::is_microsoft_pal(*raw_palette.second))
+      {
+        std::vector<content::pal::palette> temp;
+        temp.emplace_back().colours = content::pal::get_pal_data(*raw_palette.second);
+
+        loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, std::move(temp)));
+      }
+    }
+
+    if (content::bmp::is_microsoft_bmp(image_stream))
+    {
+      auto windows_bmp = content::bmp::get_bmp_data(image_stream);
+
+      std::vector<content::pal::palette> temp;
+      temp.emplace_back().colours = windows_bmp.colours;
+
+      loaded_palettes.emplace(sort_order.emplace_back("Internal"), std::make_pair(info, std::move(temp)));
+
+      selected_palette_index = default_palette_index = 0;
+      selected_palette_name = default_palette_name = "Internal";
+
+      create_image(loaded_image,
+        windows_bmp.info.width,
+        windows_bmp.info.height,
+        windows_bmp.pixels,
+        windows_bmp.colours);
+
+      rect.width = windows_bmp.info.width;
+      rect.height = windows_bmp.info.height;
+
+      original_pixels.emplace_back(std::move(windows_bmp.pixels));
+    }
+    else
+    {
+      is_phoenix_bitmap = true;
+      std::vector<content::bmp::pbmp_data> frames;
+
+      if (content::bmp::is_phoenix_bmp(image_stream))
+      {
+        frames.emplace_back(content::bmp::get_pbmp_data(image_stream));
+      }
+      else if (content::bmp::is_phoenix_bmp_array(image_stream))
+      {
+        frames = content::bmp::get_pba_data(image_stream);
+      }
+
+      for (auto& phoenix_bmp : frames)
+      {
+        if (original_pixels.empty())
         {
-          if (palette.folder_path == info.folder_path)
+          if (!selected_palette_name.empty())
           {
-            results.emplace_back(&palette);
+            continue;
           }
-        }
 
-        auto get_defaults = [&](decltype(loaded_palettes)::reference value) {
-          for (auto i = 0u; i < value.second.second.size(); ++i)
+          std::vector<decltype(palettes)::pointer> results;
+          results.reserve(palettes.size() / 2);
+
+          for (auto& palette : palettes)
           {
-            auto& child = value.second.second[i];
-            if (child.index == phoenix_bmp.palette_index)
+            if (palette.folder_path == info.folder_path)
             {
-              selected_palette_index = default_palette_index = i;
-              selected_palette_name = default_palette_name = value.first;
-              break;
+              results.emplace_back(&palette);
             }
           }
-        };
 
-        if (results.empty())
-        {
-          for (auto& entry : loaded_palettes)
-          {
-            if (entry.second.second.size() > phoenix_bmp.palette_index)
+          auto get_defaults = [&](decltype(loaded_palettes)::reference value) {
+            for (auto i = 0u; i < value.second.second.size(); ++i)
             {
-              get_defaults(entry);
-            }
-
-            if (selected_palette_index != std::string::npos)
-            {
-              break;
-            }
-          }
-        }
-        else
-        {
-          auto bmp_file_name = to_lower(info.filename.stem().string());
-
-          auto possible_palette = std::find_if(results.begin(), results.end(), [&](auto* item) {
-            auto palette_file_name = to_lower(item->filename.stem().string());
-            return bmp_file_name.rfind(palette_file_name, 0) == 0;
-          });
-
-          if (possible_palette != results.end())
-          {
-            auto key = (std::filesystem::relative((*possible_palette)->folder_path, manager.get_search_path()) / (*possible_palette)->filename).string();
-
-            if (auto entry = loaded_palettes.find(key); entry != loaded_palettes.end())
-            {
-              get_defaults(*entry);
-            }
-          }
-          else
-          {
-            for (auto result : results)
-            {
-              auto pal_key = (std::filesystem::relative(result->folder_path, manager.get_search_path()) / result->filename).string();
-
-              if (auto entry = loaded_palettes.find(pal_key); entry != loaded_palettes.end())
+              auto& child = value.second.second[i];
+              if (child.index == phoenix_bmp.palette_index)
               {
-                get_defaults(*entry);
+                selected_palette_index = default_palette_index = i;
+                selected_palette_name = default_palette_name = value.first;
+                break;
+              }
+            }
+          };
+
+          if (results.empty())
+          {
+            for (auto& entry : loaded_palettes)
+            {
+              if (entry.second.second.size() > phoenix_bmp.palette_index)
+              {
+                get_defaults(entry);
               }
 
               if (selected_palette_index != std::string::npos)
@@ -201,345 +177,419 @@ bmp_view::bmp_view(const studio::resource::file_info& info, std::basic_istream<s
               }
             }
           }
+          else
+          {
+            auto bmp_file_name = to_lower(info.filename.stem().string());
+
+            auto possible_palette = std::find_if(results.begin(), results.end(), [&](auto* item) {
+              auto palette_file_name = to_lower(item->filename.stem().string());
+              return bmp_file_name.rfind(palette_file_name, 0) == 0;
+            });
+
+            if (possible_palette != results.end())
+            {
+              auto key = (std::filesystem::relative((*possible_palette)->folder_path, manager.get_search_path()) / (*possible_palette)->filename).string();
+
+              if (auto entry = loaded_palettes.find(key); entry != loaded_palettes.end())
+              {
+                get_defaults(*entry);
+              }
+            }
+            else
+            {
+              for (auto result : results)
+              {
+                auto pal_key = (std::filesystem::relative(result->folder_path, manager.get_search_path()) / result->filename).string();
+
+                if (auto entry = loaded_palettes.find(pal_key); entry != loaded_palettes.end())
+                {
+                  get_defaults(*entry);
+                }
+
+                if (selected_palette_index != std::string::npos)
+                {
+                  break;
+                }
+              }
+            }
+          }
+
+          if (selected_palette_name.empty())
+          {
+            std::vector<content::pal::palette> temp;
+            temp.emplace_back().colours = default_colours;
+            loaded_palettes.emplace(sort_order.emplace_back("Auto-generated"), std::make_pair(info, std::move(temp)));
+
+            selected_palette_index = default_palette_index = 0;
+            selected_palette_name = default_palette_name = "Auto-generated";
+          }
+
+          create_image(loaded_image,
+            phoenix_bmp.bmp_header.width,
+            phoenix_bmp.bmp_header.height,
+            phoenix_bmp.pixels,
+            loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
+
+          rect.width = phoenix_bmp.bmp_header.width;
+          rect.height = phoenix_bmp.bmp_header.height;
         }
 
-        if (selected_palette_name.empty())
-        {
-          std::vector<darkstar::pal::palette> temp;
-          temp.emplace_back().colours = default_colours;
-          loaded_palettes.emplace(sort_order.emplace_back("Auto-generated"), std::make_pair(info, std::move(temp)));
+        original_pixels.emplace_back(std::move(phoenix_bmp.pixels));
+      }
+    }
 
-          selected_palette_index = default_palette_index = 0;
-          selected_palette_name = default_palette_name = "Auto-generated";
-        }
+    sort_order.sort([&](const auto& a, const auto& b) {
+      return (a == "Internal") || (a == "Auto-generated") || loaded_palettes.at(a).second.size() < loaded_palettes.at(b).second.size();
+    });
 
+    if (!original_pixels.empty())
+    {
+      rect.top = 0;
+      rect.left = 0;
+
+      texture.loadFromImage(loaded_image, rect);
+      sprite.setTexture(texture);
+    }
+  }
+
+  void bmp_view::refresh_image()
+  {
+    if (!original_pixels.empty())
+    {
+      auto [width, height] = loaded_image.getSize();
+      auto colour_strat = strategy(colour_strategy);
+
+      if (colour_strat == strategy::do_nothing)
+      {
         create_image(loaded_image,
-          phoenix_bmp.bmp_header.width,
-          phoenix_bmp.bmp_header.height,
-          phoenix_bmp.pixels,
+          width,
+          height,
+          original_pixels.at(selected_bitmap_index),
           loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
-
-        rect.width = phoenix_bmp.bmp_header.width;
-        rect.height = phoenix_bmp.bmp_header.height;
+      }
+      else if (colour_strat == strategy::remap)
+      {
+        create_image(loaded_image,
+          width,
+          height,
+          content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
+            loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+            loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours),
+          loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
+      }
+      else if (colour_strat == strategy::remap_unique)
+      {
+        create_image(loaded_image,
+          width,
+          height,
+          content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
+            loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+            loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours,
+            true),
+          loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
       }
 
-      original_pixels.emplace_back(std::move(phoenix_bmp.pixels));
+      texture.update(loaded_image);
     }
   }
 
-  sort_order.sort([&](const auto& a, const auto& b) {
-    return (a == "Internal") || (a == "Auto-generated") || loaded_palettes.at(a).second.size() < loaded_palettes.at(b).second.size();
-  });
-
-  if (!original_pixels.empty())
+  std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> bmp_view::get_callbacks()
   {
-    rect.top = 0;
-    rect.left = 0;
+    std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> callbacks;
 
-    texture.loadFromImage(loaded_image, rect);
-    sprite.setTexture(texture);
-  }
-}
-
-void bmp_view::refresh_image()
-{
-  if (!original_pixels.empty())
-  {
-    auto [width, height] = loaded_image.getSize();
-    auto colour_strat = strategy(colour_strategy);
-
-    if (colour_strat == strategy::do_nothing)
-    {
-      create_image(loaded_image,
-        width,
-        height,
-        original_pixels.at(selected_bitmap_index),
-        loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
-    }
-    else if (colour_strat == strategy::remap)
-    {
-      create_image(loaded_image,
-        width,
-        height,
-        darkstar::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
-          loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
-          loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours),
-        loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
-    }
-    else if (colour_strat == strategy::remap_unique)
-    {
-      create_image(loaded_image,
-        width,
-        height,
-        darkstar::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
-          loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
-          loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours,
-          true),
-        loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
-    }
-
-    texture.update(loaded_image);
-  }
-}
-
-std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> bmp_view::get_callbacks()
-{
-  std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> callbacks;
-
-  //TODO read this from config file
-  callbacks.emplace(config::get_key_for_name("Add"), std::ref(zoom_in));
-  callbacks.emplace(config::get_key_for_name("Subtract"), std::ref(zoom_out));
-  return callbacks;
-}
-
-void bmp_view::render_ui(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& gui_context)
-{
-  if (scale_changed)
-  {
-    setup_view(parent, window, gui_context);
-    scale_changed = false;
+    //TODO read this from config file
+    callbacks.emplace(get_key_for_name("Add"), std::ref(zoom_in));
+    callbacks.emplace(get_key_for_name("Subtract"), std::ref(zoom_out));
+    return callbacks;
   }
 
-  window.clear();
-  window.draw(sprite);
-
-  if (!loaded_palettes.empty())
+  void bmp_view::render_ui(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& gui_context)
   {
-    ImGui::Begin("Palettes");
-
-    auto child_count = 0;
-    for (auto& key : sort_order)
+    if (scale_changed)
     {
-      auto& [file_info, value] = loaded_palettes.at(key);
+      setup_view(parent, window, gui_context);
+      scale_changed = false;
+    }
 
-      if (value.size() == 1)
+    window.clear();
+    window.draw(sprite);
+
+    if (!loaded_palettes.empty())
+    {
+      ImGui::Begin("Palettes");
+
+      auto child_count = 0;
+      for (auto& key : sort_order)
       {
-        std::stringstream label;
-        label << key;
+        auto& [file_info, value] = loaded_palettes.at(key);
 
-        if (default_palette_name == key && default_palette_index == 0)
+        if (value.size() == 1)
         {
-          label << " (default for this image)";
-        }
+          std::stringstream label;
+          label << key;
 
-        for (auto y = 0; y < child_count; ++y)
-        {
-          label << ' ';
-        }
+          if (default_palette_name == key && default_palette_index == 0)
+          {
+            label << " (default for this image)";
+          }
 
-        if (ImGui::RadioButton(label.str().c_str(), selected_palette_name == key && selected_palette_index == 0))
-        {
-          selected_palette_name = key;
-          selected_palette_index = 0;
+          for (auto y = 0; y < child_count; ++y)
+          {
+            label << ' ';
+          }
 
-          refresh_image();
-        }
+          if (ImGui::RadioButton(label.str().c_str(), selected_palette_name == key && selected_palette_index == 0))
+          {
+            selected_palette_name = key;
+            selected_palette_index = 0;
 
-        ImGui::SameLine();
+            refresh_image();
+          }
 
-        ImGui::PushID(&file_info);
-        if (ImGui::Button("Open in New Tab"))
-        {
-          archive.execute_action("open_new_tab", file_info);
-        }
-        ImGui::PopID();
-      }
-      else
-      {
-        if (ImGui::CollapsingHeader(
-              key == default_palette_name ? (key + " (contains default for image)").c_str() : key.c_str(),
+          ImGui::SameLine();
 
-              key == selected_palette_name ? ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen : 0))
-        {
           ImGui::PushID(&file_info);
           if (ImGui::Button("Open in New Tab"))
           {
             archive.execute_action("open_new_tab", file_info);
           }
           ImGui::PopID();
-
-          std::stringstream label;
-
-          for (auto i = 0u; i < value.size(); ++i)
-          {
-            label << "Palette " << i + 1;
-
-            if (key == default_palette_name && i == default_palette_index)
-            {
-              label << " (default for this image)";
-            }
-
-            for (auto y = 0; y < child_count; ++y)
-            {
-              label << ' ';
-            }
-
-            if (ImGui::RadioButton(label.str().c_str(), key == selected_palette_name && i == selected_palette_index))
-            {
-              selected_palette_name = key;
-              selected_palette_index = i;
-
-              refresh_image();
-            }
-
-            label.str("");
-          }
-          child_count++;
-        }
-      }
-    }
-
-    ImGui::End();
-
-    ImGui::Begin("Settings");
-
-    ImGui::Text("%s", "Colour Strategy: ");
-    ImGui::SameLine();
-
-    if (ImGui::RadioButton("Do Nothing", &colour_strategy, 0))
-    {
-      refresh_image();
-    }
-    ImGui::SameLine();
-
-    if (ImGui::RadioButton("Remap", &colour_strategy, 1))
-    {
-      refresh_image();
-    }
-    ImGui::SameLine();
-
-    if (ImGui::RadioButton("Remap (only unique colours)", &colour_strategy, 2))
-    {
-      refresh_image();
-    }
-
-    ImGui::Text("%s", "Default Palette File: ");
-    ImGui::SameLine();
-
-    int name_distance = std::distance(loaded_palettes.begin(), loaded_palettes.find(default_palette_name));
-
-    if (ImGui::Combo(
-      "", (&name_distance),
-      [](void* data, int idx, const char** out_text) -> bool {
-        auto* real_data = reinterpret_cast<decltype(loaded_palettes)*>(data);
-        auto it = real_data->begin();
-        std::advance(it, idx);
-        if (it != real_data->end())
-        {
-          static std::string temp;
-          temp = it->first;
-          *out_text = temp.c_str();
-          return true;
         }
         else
         {
-          *out_text = "N/A";
-          return false;
+          if (ImGui::CollapsingHeader(
+                key == default_palette_name ? (key + " (contains default for image)").c_str() : key.c_str(),
+
+                key == selected_palette_name ? ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen : 0))
+          {
+            ImGui::PushID(&file_info);
+            if (ImGui::Button("Open in New Tab"))
+            {
+              archive.execute_action("open_new_tab", file_info);
+            }
+            ImGui::PopID();
+
+            std::stringstream label;
+
+            for (auto i = 0u; i < value.size(); ++i)
+            {
+              label << "Palette " << i + 1;
+
+              if (key == default_palette_name && i == default_palette_index)
+              {
+                label << " (default for this image)";
+              }
+
+              for (auto y = 0; y < child_count; ++y)
+              {
+                label << ' ';
+              }
+
+              if (ImGui::RadioButton(label.str().c_str(), key == selected_palette_name && i == selected_palette_index))
+              {
+                selected_palette_name = key;
+                selected_palette_index = i;
+
+                refresh_image();
+              }
+
+              label.str("");
+            }
+            child_count++;
+          }
         }
-      },
-      reinterpret_cast<void*>(&loaded_palettes),
-      loaded_palettes.size()))
-    {
-      auto new_palette = loaded_palettes.begin();
+      }
+      ImGui::End();
 
-      std::advance(new_palette, name_distance);
-
-      if (new_palette != loaded_palettes.end())
+      if (is_phoenix_bitmap)
       {
-        auto old_name = default_palette_name;
-        default_palette_name = new_palette->first;
-        if (new_palette->second.second.size() < default_palette_index)
+        ImGui::Begin("Export Options");
+
+        if (ImGui::Button("Set Export Directory"))
         {
-          default_palette_index = 0;
+          auto dialog = std::make_unique<wxDirDialog>(nullptr, "Open a folder to export files to");
+
+          if (dialog->ShowModal() == wxID_OK)
+          {
+            export_path = dialog->GetPath().c_str().AsChar();
+          }
         }
 
-        if (selected_palette_name == old_name)
+        ImGui::SameLine();
+        ImGui::Text("%s", export_path.string().c_str());
+
+        if (ImGui::Button("Export to regular BMP"))
+        {
+          auto new_file_name = info.filename.replace_extension(".bmp");
+          std::filesystem::create_directories(export_path);
+          std::basic_ofstream<std::byte> output(export_path / new_file_name, std::ios::binary);
+
+          auto [width, height] = loaded_image.getSize();
+
+          const auto& colours = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
+          auto pixels = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
+                                                   loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+                                                   colours);
+
+          content::bmp::vertical_flip(pixels, width);
+          content::bmp::write_bmp_data(output, colours, pixels, width, height, 8);
+          if (!opened_folder)
+          {
+            wxLaunchDefaultApplication(export_path.string());
+            opened_folder = true;
+          }
+        }
+        ImGui::End();
+      }
+
+      ImGui::Begin("Settings");
+
+      ImGui::Text("%s", "Colour Strategy: ");
+      ImGui::SameLine();
+
+      if (ImGui::RadioButton("Do Nothing", &colour_strategy, 0))
+      {
+        refresh_image();
+      }
+      ImGui::SameLine();
+
+      if (ImGui::RadioButton("Remap", &colour_strategy, 1))
+      {
+        refresh_image();
+      }
+      ImGui::SameLine();
+
+      if (ImGui::RadioButton("Remap (only unique colours)", &colour_strategy, 2))
+      {
+        refresh_image();
+      }
+
+      ImGui::Text("%s", "Default Palette File: ");
+      ImGui::SameLine();
+
+      int name_distance = std::distance(loaded_palettes.begin(), loaded_palettes.find(default_palette_name));
+
+      if (ImGui::Combo(
+            "", (&name_distance), [](void* data, int idx, const char** out_text) -> bool {
+              auto* real_data = reinterpret_cast<decltype(loaded_palettes)*>(data);
+              auto it = real_data->begin();
+              std::advance(it, idx);
+              if (it != real_data->end())
+              {
+                static std::string temp;
+                temp = it->first;
+                *out_text = temp.c_str();
+                return true;
+              }
+              else
+              {
+                *out_text = "N/A";
+                return false;
+              }
+            },
+            reinterpret_cast<void*>(&loaded_palettes),
+            loaded_palettes.size()))
+      {
+        auto new_palette = loaded_palettes.begin();
+
+        std::advance(new_palette, name_distance);
+
+        if (new_palette != loaded_palettes.end())
+        {
+          auto old_name = default_palette_name;
+          default_palette_name = new_palette->first;
+          if (new_palette->second.second.size() < default_palette_index)
+          {
+            default_palette_index = 0;
+          }
+
+          if (selected_palette_name == old_name)
+          {
+            selected_palette_index = default_palette_index;
+            selected_palette_name = default_palette_name;
+          }
+
+          refresh_image();
+        }
+      }
+
+      ImGui::Text("%s", "Default Palette: ");
+      ImGui::SameLine();
+
+
+      auto old_index = default_palette_index;
+      if (ImGui::Combo(
+            "  ", reinterpret_cast<int*>(&default_palette_index), [](void* data, int idx, const char** out_text) -> bool {
+              auto* real_data = reinterpret_cast<decltype(loaded_palettes)::value_type::second_type*>(data);
+              auto it = real_data->second.begin();
+              std::advance(it, idx);
+              if (it != real_data->second.end())
+              {
+                static std::string temp;
+                temp = "Palette " + std::to_string(idx + 1);
+                *out_text = temp.c_str();
+                return true;
+              }
+              else
+              {
+                *out_text = "N/A";
+                return false;
+              }
+            },
+            reinterpret_cast<void*>(&loaded_palettes.at(default_palette_name)),
+            loaded_palettes.at(default_palette_name).second.size()))
+      {
+        if (selected_palette_index == old_index)
         {
           selected_palette_index = default_palette_index;
-          selected_palette_name = default_palette_name;
         }
 
         refresh_image();
       }
-    }
-
-    ImGui::Text("%s", "Default Palette: ");
-    ImGui::SameLine();
 
 
-    auto old_index = default_palette_index;
-    if (ImGui::Combo(
-      "  ", reinterpret_cast<int*>(&default_palette_index),
-      [](void* data, int idx, const char** out_text) -> bool {
-             auto* real_data = reinterpret_cast<decltype(loaded_palettes)::value_type::second_type*>(data);
-             auto it = real_data->second.begin();
-             std::advance(it, idx);
-             if (it != real_data->second.end())
-             {
-               static std::string temp;
-               temp = "Palette " + std::to_string(idx + 1);
-               *out_text = temp.c_str();
-               return true;
-             }
-             else
-             {
-               *out_text = "N/A";
-               return false;
-             }
-      },
-      reinterpret_cast<void*>(&loaded_palettes.at(default_palette_name)),
-      loaded_palettes.at(default_palette_name).second.size()))
-    {
-      if (selected_palette_index == old_index)
+      ImGui::Text("%s", "Zoom: ");
+      ImGui::SameLine();
+
+      if (ImGui::SliderFloat("   ", &image_scale, 1.0f, 4.0f))
       {
-        selected_palette_index = default_palette_index;
+        setup_view(parent, window, gui_context);
       }
 
-      refresh_image();
-    }
-
-
-    ImGui::Text("%s", "Zoom: ");
-    ImGui::SameLine();
-
-    if (ImGui::SliderFloat("   ", &image_scale, 1.0f, 4.0f))
-    {
-      setup_view(parent, window, gui_context);
-    }
-
-    ImGui::End();
-
-    if (original_pixels.size() > 1)
-    {
-      ImGui::Begin("Frames");
-      std::stringstream label;
-      for (auto i = 0; i < original_pixels.size(); ++i)
-      {
-        label << "Frame " << i + 1;
-
-        if (ImGui::RadioButton(label.str().c_str(), &selected_bitmap_index, i))
-        {
-          refresh_image();
-        }
-        label.str("");
-      }
       ImGui::End();
+
+      if (original_pixels.size() > 1)
+      {
+        ImGui::Begin("Frames");
+        std::stringstream label;
+        for (auto i = 0; i < original_pixels.size(); ++i)
+        {
+          label << "Frame " << i + 1;
+
+          if (ImGui::RadioButton(label.str().c_str(), &selected_bitmap_index, i))
+          {
+            refresh_image();
+          }
+          label.str("");
+        }
+        ImGui::End();
+      }
     }
   }
-}
 
-void bmp_view::setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext&)
-{
-  auto [width, height] = parent.GetClientSize();
+  void bmp_view::setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext&)
+  {
+    auto [width, height] = parent.GetClientSize();
 
-  auto image_width = sprite.getTexture()->getSize().x;
-  auto image_height = sprite.getTexture()->getSize().y;
+    auto image_width = sprite.getTexture()->getSize().x;
+    auto image_height = sprite.getTexture()->getSize().y;
 
-  auto width_ratio = float(image_width) / float(width) * image_scale;
-  auto height_ratio = float(image_height) / float(height) * image_scale;
+    auto width_ratio = float(image_width) / float(width) * image_scale;
+    auto height_ratio = float(image_height) / float(height) * image_scale;
 
-  sf::FloatRect visibleArea(0, 0, image_width, image_height);
-  sf::View view(visibleArea);
-  view.setViewport(sf::FloatRect(0.5 - width_ratio / 2, 0.5 - height_ratio / 2, width_ratio, height_ratio));
-  window.setView(view);
-}
+    sf::FloatRect visibleArea(0, 0, image_width, image_height);
+    sf::View view(visibleArea);
+    view.setViewport(sf::FloatRect(0.5 - width_ratio / 2, 0.5 - height_ratio / 2, width_ratio, height_ratio));
+    window.setView(view);
+  }
+}// namespace studio::views
