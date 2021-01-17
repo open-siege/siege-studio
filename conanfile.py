@@ -10,7 +10,7 @@ class DarkstarHookConan(ConanFile):
 
         self.run("cd packages/Detours-4.0.1 && conan export . detours/4.0.1@microsoft/stable")
 
-        self.run("cd darkstar && conan install . --profile ./local-profile.ini")
+        self.run("cd darkstar && conan install . --profile ./local-profile.ini -s build_type=Debug --build=missing")
         self.run("cd darkstar.detours && conan install . -s arch=x86 --build=missing")
         self.run("cd mem && conan install . -s arch=x86 -s build_type=Debug")
 
