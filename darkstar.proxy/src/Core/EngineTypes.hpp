@@ -4,12 +4,12 @@
 // Most Darkstar games have functions using Borland fastcall,
 // so this is considered the standard calling convention for functions
 #ifdef __GNUC__
-    // TODO actually make things compile with GCC.
     #define DARKCALL __attribute__((regparm(3)))
 #else
     #define DARKCALL __fastcall
 #endif
 
+#define APICALL __cdecl
 
 #include <cstdint>
 
