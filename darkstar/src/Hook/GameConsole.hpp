@@ -3,16 +3,13 @@
 
 #include <map>
 #include <string>
-#include "Core/EngineTypes.hpp"
-#include "Core/EngineFunctions.hpp"
+#include <vector>
+#include <Darkstar/Proxy.hpp>
 
 namespace Hook {
 
     class GameConsole {
-		Core::GameFunctions &_functions;
         Core::GameConsole *current;
-        std::map<std::string, std::shared_ptr<Core::ConsoleCallback>> _wrappedCallbacksByName;
-		std::map<Core::ExternalConsoleCallback *, std::shared_ptr <Core::ConsoleCallback>> _wrappedCallbacksByKey;
 
         template<typename TStringCollection>
         void copyArguments(std::vector<const char *> &arguments, const TStringCollection &args) {
@@ -23,8 +20,8 @@ namespace Hook {
         }
 
     public:
-        GameConsole(Core::GameFunctions &functions) : _functions(functions) {
-            current = _functions.GetConsole();
+        GameConsole() {
+            current = DarkstarGetConsole();
         }
 
         Core::GameConsole *getRaw() {
@@ -45,7 +42,7 @@ namespace Hook {
             arguments.reserve(args.size() + 1);
             arguments.push_back("echo");
             copyArguments(arguments, args);
-            return _functions.ConsoleEcho(current, 0, arguments.size(), arguments.data());
+            return DarkstarConsoleEcho(current, 0, arguments.size(), arguments.data());
         }
 
         template<typename TStringCollection>
@@ -54,7 +51,7 @@ namespace Hook {
             arguments.reserve(args.size() + 1);
             arguments.push_back("dbecho");
             copyArguments(arguments, args);
-            return _functions.ConsoleDbEcho(current, 0, arguments.size(), arguments.data());
+            return DarkstarConsoleDbEcho(current, 0, arguments.size(), arguments.data());
         }
 
         template<typename TStringCollection>
@@ -63,7 +60,7 @@ namespace Hook {
             arguments.reserve(args.size() + 1);
             arguments.push_back("strcat");
             copyArguments(arguments, args);
-            return _functions.ConsoleStrCat(current, 0, arguments.size(), arguments.data());
+            return DarkstarConsoleStrCat(current, 0, arguments.size(), arguments.data());
         }
 
         std::string quit();
@@ -86,11 +83,11 @@ namespace Hook {
 
         std::string debug();
 
-        void addConsumer(Core::ConsoleConsumer *consumer);
+        void addConsumer(Core::ExternalConsoleConsumer *consumer);
 
-        void addCommandFunc(int id, const std::string &name, Core::ConsoleCallbackFunc func, int runLevel = 0);
+        void addCommandFunc(int id, const std::string &name, Core::ExternalConsoleCallbackFunc func, int runLevel = 0);
 
-        void addCommand(int id, const std::string &name, Core::ConsoleCallback *callback, int runLevel = 0);
+        void addCommand(int id, const std::string &name, Core::ExternalConsoleCallback *callback, int runLevel = 0);
 
         std::string removeCommand(const std::string &name);
     };

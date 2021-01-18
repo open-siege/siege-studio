@@ -1,0 +1,23 @@
+EXPORTS
+    DarkstarSetGameFunctions
+    DarkstarGetGameRoot
+    DarkstarAddGamePlugin
+    DarkstarGetConsole
+    DarkstarAddConsoleCallbackFunc
+    DarkstarAddConsoleCallbackObject
+    DarkstarAddConsoleConsumer
+    DarkstarConsoleCls
+    DarkstarConsoleSqrt
+    DarkstarConsoleFloor
+    DarkstarConsoleEcho
+    DarkstarConsoleDbEcho
+    DarkstarConsoleStrCat
+    DarkstarConsoleQuit
+    DarkstarConsoleExec
+    DarkstarConsoleEval
+    DarkstarConsoleExportVariables
+    DarkstarConsoleDeleteVariables
+    DarkstarConsoleExportFunctions
+    DarkstarConsoleDeleteFunctions
+    DarkstarConsoleTrace
+    DarkstarConsoleDebug

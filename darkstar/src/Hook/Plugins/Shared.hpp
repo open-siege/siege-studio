@@ -15,12 +15,12 @@ namespace Hook::Plugins
 
     constexpr const char* toIntString(bool someValue)
     {
-        return someValue == true ? "1" : "0";
+        return someValue ? "1" : "0";
     }
 
     constexpr const char* toStringLower(bool someValue)
     {
-        return someValue == true ? "true" : "false";
+        return someValue ? "true" : "false";
     }
 
     constexpr bool toBool(std::string_view someValue)
