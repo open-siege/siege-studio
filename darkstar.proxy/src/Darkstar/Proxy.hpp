@@ -44,6 +44,8 @@ extern "C"
     const char* APICALL DarkstarConsoleTrace(Core::GameConsole* console, std::int32_t id, std::int32_t argc, const char** argv) noexcept;
 
     const char* APICALL DarkstarConsoleDebug(Core::GameConsole* console, std::int32_t id, std::int32_t argc, const char** argv) noexcept;
+
+    const char* APICALL DarkstarPluginExecuteCallback(Core::GamePlugin* plugin, std::int32_t id, std::int32_t argc, const char** argv) noexcept;
 };
 
 

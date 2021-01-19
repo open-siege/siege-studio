@@ -21,3 +21,4 @@ EXPORTS
     DarkstarConsoleDeleteFunctions
     DarkstarConsoleTrace
     DarkstarConsoleDebug
+    DarkstarPluginExecuteCallback
