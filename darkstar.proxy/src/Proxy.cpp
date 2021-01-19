@@ -1,31 +1,24 @@
-#include <map>
-#include <set>
-#include <string_view>
-
 #include "Darkstar/Proxy.hpp"
 
 using namespace Core;
 
 static Core::GameFunctions functions;
 
-static std::map<std::string, ExternalConsoleCallbackFunc> func_callbacks;
-
-const char* DARKCALL executeCallback(std::map<std::string, ExternalConsoleCallback*>& callbacks, GameConsole* console,
-                                     std::int32_t callbackId,
-                                     std::int32_t argc,
-                                     const char** argv)
+const char* DARKCALL executeCallbackImpl(GameConsole* console,
+                                         std::int32_t callbackId,
+                                         std::int32_t argc,
+                                         const char** argv)
 {
     if (argc == 0)
     {
-    return "False";
+        return "False";
     }
 
-    std::string new_name = argv[0] + std::to_string(callbackId);
-    auto real_func = callbacks.find(new_name);
+    auto real_func = functions.FindCallbackObject(argv[0], callbackId);
 
-    if (real_func != callbacks.end())
+    if (real_func != nullptr)
     {
-    return real_func->second->doExecuteCallback(console, callbackId, argc, argv);
+        return real_func->doExecuteCallback(console, callbackId, argc, argv);
     }
 
     return "False";
@@ -33,48 +26,47 @@ const char* DARKCALL executeCallback(std::map<std::string, ExternalConsoleCallba
 
 struct ExternalCallbacks : ConsoleCallback
 {
-    static std::map<std::string, ExternalConsoleCallback*> callbacks;
-
     const char* DARKCALL executeCallback(GameConsole* console,
                                                  std::int32_t callbackId,
                                                  std::int32_t argc,
                                                  const char** argv) override
     {
-        return ::executeCallback(callbacks, console, callbackId, argc, argv);
+        return executeCallbackImpl(console, callbackId, argc, argv);
     }
 } object_callbacks;
 
-std::map<std::string, ExternalConsoleCallback*> ExternalCallbacks::callbacks = {};
-
 struct ExternalConsumers : ConsoleConsumer
 {
-    static bool is_added;
-    static std::set<ExternalConsoleConsumer*> consumers;
+    bool is_added = false;
 
     void DARKCALL writeLine(GameConsole* console, const char *consoleLine) override
     {
-        for (auto* consumer : consumers)
+        for (auto i = 0u; i < functions.consumersSize; ++i)
         {
-            consumer->doWriteLine(console, consoleLine);
+            if (functions.consumers[i])
+            {
+                functions.consumers[i]->doWriteLine(console, consoleLine);
+            }
         }
     }
 } object_consumers;
 
-bool ExternalConsumers::is_added = false;
-std::set<ExternalConsoleConsumer*> ExternalConsumers::consumers = {};
-
 struct GamePlugins : GamePlugin
 {
-    static bool is_added;
-    static std::set<ExternalGamePlugin*> plugins;
+    bool is_added = false;
 
     void DARKCALL destroy() override
     {
-        for (auto* plugin : plugins)
+        for (auto i = 0u; i < functions.pluginsSize; ++i)
         {
-            plugin->destroy();
+            if (functions.plugins[i])
+            {
+                functions.plugins[i]->destroy();
+                functions.plugins[i] = nullptr;
+            }
         }
-        plugins.clear();
+
+        functions.pluginsSize = 0;
     }
 
     void DARKCALL setManager(GameManager* manager) override
@@ -84,25 +76,34 @@ struct GamePlugins : GamePlugin
 
     void DARKCALL init() override
     {
-        for (auto* plugin : plugins)
+        for (auto i = 0u; i < functions.pluginsSize; ++i)
         {
-            plugin->doInit();
+            if (functions.plugins[i])
+            {
+                functions.plugins[i]->doInit();
+            }
         }
     }
 
     void DARKCALL startFrame() override
     {
-        for (auto* plugin : plugins)
+        for (auto i = 0u; i < functions.pluginsSize; ++i)
         {
-            plugin->doStartFrame();
+            if (functions.plugins[i])
+            {
+                functions.plugins[i]->doStartFrame();
+            }
         }
     }
 
     void DARKCALL endFrame() override
     {
-        for (auto* plugin : plugins)
+        for (auto i = 0u; i < functions.pluginsSize; ++i)
         {
-            plugin->doEndFrame();
+            if (functions.plugins[i])
+            {
+                functions.plugins[i]->doEndFrame();
+            }
         }
     }
 
@@ -111,14 +112,28 @@ struct GamePlugins : GamePlugin
                                          std::int32_t argc,
                                          const char** argv) override
     {
-        return ::executeCallback(ExternalCallbacks::callbacks, console, callbackId, argc, argv);
+        return executeCallbackImpl(console, callbackId, argc, argv);
     }
 
     DARKCALL ~GamePlugins() override = default;
 } game_plugins;
 
-bool GamePlugins::is_added = false;
-std::set<ExternalGamePlugin*> GamePlugins::plugins = {};
+const char* DARKCALL RealCallback(GameConsole* console, std::int32_t id, std::int32_t argc, const char** argv)
+{
+    if (argc == 0)
+    {
+        return "False";
+    }
+
+    auto real_func = functions.FindCallbackFunc(argv[0], id);
+
+    if (real_func != nullptr)
+    {
+        return real_func(console, id, argc, argv);
+    }
+
+    return "False";
+}
 
 extern "C"
 {
@@ -134,12 +149,17 @@ extern "C"
 
     void APICALL DarkstarAddGamePlugin(GameRoot* root, ExternalGamePlugin* plugin) noexcept
     {
-        if (!GamePlugins::is_added)
+        if (!game_plugins.is_added)
         {
             functions.AddGamePlugin(root, &game_plugins);
+            game_plugins.is_added = true;
         }
 
-        GamePlugins::plugins.emplace(plugin);
+        if (functions.pluginsSize < functions.pluginsCapacity)
+        {
+            functions.plugins[functions.pluginsSize] = plugin;
+            functions.pluginsSize++;
+        }
     }
 
     GameConsole* APICALL DarkstarGetConsole() noexcept
@@ -147,47 +167,32 @@ extern "C"
         return functions.GetConsole();
     }
 
-    const char* DARKCALL RealCallback(GameConsole* console, std::int32_t id, std::int32_t argc, const char** argv)
-    {
-        if (argc == 0)
-        {
-            return "False";
-        }
-        std::string new_name = argv[0] + std::to_string(id);
-        auto real_func = func_callbacks.find(new_name);
-
-        if (real_func != func_callbacks.end())
-        {
-            return real_func->second(console, id, argc, argv);
-        }
-
-        return "False";
-    }
-
     void APICALL DarkstarAddConsoleCallbackFunc(GameConsole* console, int id, const char* name, ExternalConsoleCallbackFunc func, int runLevel) noexcept
     {
-        std::string new_name = name + std::to_string(id);
-        func_callbacks[new_name] = func;
+        functions.AddCallbackFunc(name, id, func);
 
         functions.AddConsoleCallbackFunc(console, id, name, RealCallback, runLevel);
     }
 
     void APICALL DarkstarAddConsoleCallbackObject(GameConsole* console, int id, const char* name, ExternalConsoleCallback* object, int runLevel) noexcept
     {
-        std::string new_name = name + std::to_string(id);
-        ExternalCallbacks::callbacks[new_name] = object;
+        functions.AddCallbackObject(name, id, object);
 
         functions.AddConsoleCallback(console, id, name, &object_callbacks, runLevel);
     }
 
     void APICALL DarkstarAddConsoleConsumer(GameConsole* console, ExternalConsoleConsumer* consumer) noexcept
     {
-        ExternalConsumers::consumers.emplace(consumer);
-
-        if (!ExternalConsumers::is_added)
+        if (!object_consumers.is_added)
         {
             functions.AddConsoleConsumer(console, &object_consumers);
-            ExternalConsumers::is_added = true;
+            object_consumers.is_added = true;
+        }
+
+        if (functions.consumersSize < functions.consumersCapacity)
+        {
+            functions.consumers[functions.consumersSize] = consumer;
+            functions.consumersSize++;
         }
     }
 
@@ -264,6 +269,11 @@ extern "C"
     const char* APICALL DarkstarConsoleDebug(GameConsole* console, std::int32_t id, std::int32_t argc, const char** argv) noexcept
     {
         return functions.ConsoleDebug(console, id, argc, argv);
+    }
+
+    const char* APICALL DarkstarPluginExecuteCallback(Core::GamePlugin* plugin, std::int32_t id, std::int32_t argc, const char** argv) noexcept
+    {
+        return plugin->executeCallback(plugin->console, id, argc, argv);
     }
 };
 

@@ -51,12 +51,12 @@ namespace Hook::Plugins
     template<std::size_t Size>
     const char* execute(Core::GamePlugin* plugin, std::int32_t callbackId, const char* (&&args)[Size])
     {
-        return plugin->executeCallback(plugin->console, callbackId, Size, args);
+        return DarkstarPluginExecuteCallback(plugin, callbackId, Size, args);
     }
 
     inline const char* execute(Core::GamePlugin* plugin, std::int32_t callbackId, std::vector<const char*>& args)
     {
-        return plugin->executeCallback(plugin->console, callbackId, args.size(), args.data());
+        return DarkstarPluginExecuteCallback(plugin, callbackId, args.size(), args.data());
     }
 }
 
