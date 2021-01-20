@@ -2,6 +2,39 @@
 #include "content/bitmap.hpp"
 #include "sfml_keys.hpp"
 #include "3space-studio/utility.hpp"
+#include "json_boost.hpp"
+
+namespace studio::content::pal
+{
+  using darkstar::dts::to_json;
+  using darkstar::dts::from_json;
+}
+
+std::vector<std::int32_t> widen(const std::vector<std::byte>& pixels)
+{
+  std::vector<std::int32_t> results;
+  results.reserve(pixels.size());
+
+  std::transform(pixels.begin(), pixels.end(), std::back_inserter(results), [](auto value)
+  {
+      return std::int32_t(value);
+    });
+
+  return results;
+}
+
+std::vector<std::byte> narrow(const std::vector<std::int32_t>& pixels)
+{
+  std::vector<std::byte> results;
+  results.reserve(pixels.size());
+
+  std::transform(pixels.begin(), pixels.end(), std::back_inserter(results), [](auto value)
+  {
+         return std::byte(value);
+  });
+
+  return results;
+}
 
 namespace studio::views
 {
@@ -25,7 +58,7 @@ namespace studio::views
   void create_image(sf::Image& loaded_image,
     int width,
     int height,
-    const std::vector<std::byte>& pixels,
+    const std::vector<std::int32_t>& pixels,
     const std::vector<content::pal::colour>& colours)
   {
     std::vector<std::uint8_t> rendered_pixels;
@@ -33,7 +66,7 @@ namespace studio::views
 
     for (auto index : pixels)
     {
-      auto& colour = colours[int(index)];
+      auto& colour = colours[index];
       rendered_pixels.emplace_back(int(colour.red));
       rendered_pixels.emplace_back(int(colour.green));
       rendered_pixels.emplace_back(int(colour.blue));
@@ -44,7 +77,7 @@ namespace studio::views
     loaded_image.flipVertically();
   }
 
-  std::size_t bmp_view::get_unique_colours(const std::vector<std::byte>& pixels)
+  std::size_t bmp_view::get_unique_colours(const std::vector<std::int32_t>& pixels)
   {
     return std::set(pixels.begin(), pixels.end()).size();
   }
@@ -244,14 +277,14 @@ namespace studio::views
           create_image(loaded_image,
             phoenix_bmp.bmp_header.width,
             phoenix_bmp.bmp_header.height,
-            phoenix_bmp.pixels,
+            widen(phoenix_bmp.pixels),
             loaded_palettes.at(selection_state.selected_palette_name).second.at(selection_state.selected_palette_index).colours);
 
           rect.width = phoenix_bmp.bmp_header.width;
           rect.height = phoenix_bmp.bmp_header.height;
         }
 
-        original_pixels.emplace_back(std::move(phoenix_bmp.pixels));
+        original_pixels.emplace_back(widen(phoenix_bmp.pixels));
       }
     }
 
@@ -462,7 +495,7 @@ namespace studio::views
 
       ImGui::End();
 
-      if (is_phoenix_bitmap)
+      //if (is_phoenix_bitmap)
       {
         ImGui::Begin("Export Options");
 
@@ -491,7 +524,31 @@ namespace studio::views
             colours);
 
           content::bmp::vertical_flip(pixels, width);
-          content::bmp::write_bmp_data(output, colours, pixels, width, height, 8);
+          content::bmp::write_bmp_data(output, colours, narrow(pixels), width, height, 8);
+          if (!opened_folder)
+          {
+            wxLaunchDefaultApplication(export_path.string());
+            opened_folder = true;
+          }
+        }
+
+        if (ImGui::Button("Export to JSON"))
+        {
+          auto new_file_name = info.filename.string() + ".json";
+          std::filesystem::create_directories(export_path);
+          std::ofstream output(export_path / new_file_name, std::ios::binary);
+
+          const auto& colours = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
+          auto pixels = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
+                                                   loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+                                                   colours);
+
+
+          nlohmann::ordered_json item_as_json;
+          item_as_json["colours"] = colours;
+          item_as_json["pixels"] = pixels;
+
+          output << item_as_json.dump(4);
           if (!opened_folder)
           {
             wxLaunchDefaultApplication(export_path.string());

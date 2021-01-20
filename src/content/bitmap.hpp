@@ -2,11 +2,12 @@
 #define DARKSTARDTSCONVERTER_BITMAP_HPP
 
 #include <vector>
+#include <set>
 #include <array>
 #include <fstream>
 #include <iostream>
 #include <iomanip>
-#include <limits>
+#include <cmath>
 #include "palette.hpp"
 #include "endian_arithmetic.hpp"
 
@@ -77,15 +78,17 @@ namespace studio::content::bmp
     windows_bmp_header header;
     windows_bmp_info info;
     std::vector<pal::colour> colours;
-    std::vector<std::byte> pixels;
+    std::vector<std::int32_t> pixels;
   };
 
-  inline void invert(std::vector<std::byte>& pixels)
+  template<typename UnitType>
+  inline void invert(std::vector<UnitType>& pixels)
   {
     std::reverse(pixels.begin(), pixels.end());
   }
 
-  inline void horizontal_flip(std::vector<std::byte>& pixels, int width)
+  template<typename UnitType>
+  inline void horizontal_flip(std::vector<UnitType>& pixels, int width)
   {
     for (auto r = pixels.begin(); r != pixels.end(); r += width)
     {
@@ -93,7 +96,8 @@ namespace studio::content::bmp
     }
   }
 
-  inline void vertical_flip(std::vector<std::byte>& pixels, int width)
+  template<typename UnitType>
+  inline void vertical_flip(std::vector<UnitType>& pixels, int width)
   {
     invert(pixels);
     horizontal_flip(pixels, width);
@@ -107,6 +111,40 @@ namespace studio::content::bmp
     raw_data.seekg(-int(sizeof(header)), std::ios::cur);
 
     return header.tag == windows_bmp_tag;
+  }
+
+  template<typename AlignmentType>
+  inline std::size_t read_pixel_data(std::basic_istream<std::byte>& raw_data, std::vector<std::byte>& raw_pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth)
+  {
+    const auto x_stride = width * bit_depth / 8;
+    const auto padding = shared::get_padding_size(x_stride, sizeof(AlignmentType));
+
+    if (padding == 0)
+    {
+      raw_data.read(raw_pixels.data(), raw_pixels.size());
+      return raw_pixels.size();
+    }
+    else
+    {
+      std::vector<std::byte> padding_bytes(padding);
+
+      auto pos = 0u;
+
+      auto start = raw_data.tellg();
+      for (auto i = 0u; i < height; ++i)
+      {
+        if (pos > raw_pixels.size())
+        {
+          break;
+        }
+
+        raw_data.read(raw_pixels.data() + pos, x_stride);
+        raw_data.read(padding_bytes.data(), padding_bytes.size());
+        pos += x_stride;
+      }
+
+      return raw_data.tellg() - start;
+    }
   }
 
   inline windows_bmp_data get_bmp_data(std::basic_istream<std::byte>& raw_data)
@@ -123,32 +161,57 @@ namespace studio::content::bmp
 
     raw_data.read(reinterpret_cast<std::byte*>(&info), sizeof(info));
 
-    int num_colours = 0;
-
-    if (info.bit_depth == 4)
-    {
-      num_colours = 16;
-    }
-    else if (info.bit_depth == 8)
-    {
-      num_colours = 256;
-    }
 
     std::vector<pal::colour> colours;
-    colours.reserve(num_colours);
 
-    for (auto i = 0; i < num_colours; ++i)
+    const auto num_pixels = info.width * info.height;
+    std::vector<std::int32_t> pixels;
+    pixels.reserve(num_pixels);
+
+    if (info.bit_depth <= 8)
     {
-      std::array<std::byte, 4> quad{};
-      raw_data.read(quad.data(), sizeof(quad));
-      colours.emplace_back(pal::colour{ quad[2], quad[1], quad[0], std::byte{ 255 } });
+      int num_colours = static_cast<int>(std::pow(float(2), info.bit_depth));
+      colours.reserve(num_colours);
+
+      for (auto i = 0; i < num_colours; ++i)
+      {
+        std::array<std::byte, 4> quad{};
+        raw_data.read(quad.data(), sizeof(quad));
+        colours.emplace_back(pal::colour{ quad[2], quad[1], quad[0], std::byte{ 255 } });
+      }
+
+      std::vector<std::byte> raw_pixels(num_pixels * info.bit_depth / 8, std::byte{});
+
+      read_pixel_data<std::int32_t>(raw_data, raw_pixels, info.width, info.height, info.bit_depth);
+
+      std::transform(raw_pixels.begin(), raw_pixels.end(), std::back_inserter(pixels), [](auto value)
+      {
+          return static_cast<std::int32_t>(value);
+      });
     }
+    else if(info.bit_depth == 24)
+    {
+      std::set<pal::colour> unique_colours;
 
-    const auto num_pixels = info.width * info.height * (info.bit_depth / 8);
+      std::vector<std::array<std::byte, 3>> image_colours(num_pixels);
+      raw_data.read(reinterpret_cast<std::byte*>(image_colours.data()), image_colours.size());
 
-    std::vector<std::byte> pixels(num_pixels, std::byte{});
+      pal::colour temp{};
+      for (auto& colour : image_colours)
+      {
+        temp.red = colour[2];
+        temp.green = colour[1];
+        temp.blue = colour[0];
+        temp.flags = std::byte(0xFF);
 
-    raw_data.read(pixels.data(), pixels.size());
+        auto result = unique_colours.emplace(temp);
+        auto index = static_cast<std::int32_t>(std::distance(unique_colours.begin(), result.first));
+        pixels.emplace_back(index);
+      }
+
+      colours.reserve(unique_colours.size());
+      std::copy(unique_colours.begin(), unique_colours.end(), std::back_inserter(colours));
+    }
 
     return {
       header,
@@ -244,11 +307,10 @@ namespace studio::content::bmp
       }
       else if (chunk_header == data_tag)
       {
-        raw_data.read(pixels.data(), pixels.size());
-
+        auto bytes_read = read_pixel_data<std::int32_t>(raw_data, pixels, bmp_header.width, bmp_header.height, bmp_header.bit_depth);
         // PBMP files contain mip maps of the main image.
         // For now, we won't worry about them.
-        raw_data.seekg(chunk_size - pixels.size(), std::ios::cur);
+        raw_data.seekg(chunk_size - bytes_read, std::ios::cur);
       }
       else if (chunk_header == detail_tag)
       {
@@ -371,7 +433,7 @@ namespace studio::content::bmp
     return results;
   }
 
-  inline std::vector<std::byte> remap_bitmap(const std::vector<std::byte>& pixels,
+  inline std::vector<std::int32_t> remap_bitmap(const std::vector<std::int32_t>& pixels,
     const std::vector<pal::colour>& original_colours,
     const std::vector<pal::colour>& other_colours,
     bool only_unique = false)
@@ -381,7 +443,7 @@ namespace studio::content::bmp
       return pixels;
     }
 
-    std::vector<std::byte> results;
+    std::vector<std::int32_t> results;
     results.reserve(pixels.size());
     std::map<std::size_t, std::size_t> palette_map;
 
@@ -436,8 +498,8 @@ namespace studio::content::bmp
 
     for (auto pixel : pixels)
     {
-      auto new_index = palette_map[(std::size_t)pixel];
-      results.emplace_back(std::byte(new_index));
+      auto new_index = palette_map[pixel];
+      results.emplace_back(std::int32_t(new_index));
     }
 
     return results;

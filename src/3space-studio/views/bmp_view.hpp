@@ -36,7 +36,7 @@ namespace studio::views
 
     void refresh_image();
 
-    std::size_t get_unique_colours(const std::vector<std::byte>& pixels);
+    std::size_t get_unique_colours(const std::vector<std::int32_t>& pixels);
 
     static std::filesystem::path export_path;
     const studio::resource::resource_explorer& archive;
@@ -55,7 +55,7 @@ namespace studio::views
 
     float image_scale = 1;
 
-    std::vector<std::vector<std::byte>> original_pixels;
+    std::vector<std::vector<std::int32_t>> original_pixels;
 
     sf::Image loaded_image;
     sf::Texture texture;

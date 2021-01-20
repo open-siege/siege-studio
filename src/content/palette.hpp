@@ -23,6 +23,8 @@ namespace studio::content::pal
 
   struct colour
   {
+    constexpr static auto keys = shared::make_keys({ "r", "g", "b", "a" });
+
     std::byte red;
     std::byte green;
     std::byte blue;
@@ -35,6 +37,11 @@ namespace studio::content::pal
     left.green == right.green &&
     left.blue == right.blue &&
     left.flags == right.flags;
+  }
+
+  inline bool operator<(const colour& left, const colour& right)
+  {
+    return std::tie(left.red, left.green, left.blue, left.flags) < std::tie(right.red, right.green, right.blue, right.flags);
   }
 
   // A big thanks to https://stackoverflow.com/questions/5392061/algorithm-to-check-similarity-of-colors and
