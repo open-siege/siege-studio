@@ -11,6 +11,19 @@ namespace shared
 {
   namespace fs = std::filesystem;
 
+  constexpr std::size_t get_padding_size(std::size_t count, std::size_t alignment_size)
+  {
+    auto result = 0u;
+
+    while ((count % alignment_size) != 0)
+    {
+      count++;
+      result++;
+    }
+
+    return result;
+  }
+
   template <std::size_t Count>
   constexpr std::array<std::byte, Count> to_tag(const char* values)
   {
@@ -21,6 +34,17 @@ namespace shared
       result[i] = std::byte(values[i]);
     }
 
+    return result;
+  }
+
+  template<std::size_t Size>
+  constexpr std::array<std::string_view, Size> make_keys(const char*(&&keys)[Size])
+  {
+    std::array<std::string_view, Size> result;
+    for (auto i = 0; i < Size; i++)
+    {
+      result[i] = keys[i];
+    }
     return result;
   }
 
