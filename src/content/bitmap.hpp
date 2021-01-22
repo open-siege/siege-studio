@@ -78,7 +78,7 @@ namespace studio::content::bmp
     windows_bmp_header header;
     windows_bmp_info info;
     std::vector<pal::colour> colours;
-    std::vector<std::int32_t> pixels;
+    std::vector<std::int32_t> indexes;
   };
 
   template<typename UnitType>
@@ -113,15 +113,15 @@ namespace studio::content::bmp
     return header.tag == windows_bmp_tag;
   }
 
-  template<typename AlignmentType>
-  inline std::size_t read_pixel_data(std::basic_istream<std::byte>& raw_data, std::vector<std::byte>& raw_pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth)
+  template<typename AlignmentType, typename PixelType>
+  [[maybe_unused]] inline std::size_t read_pixel_data(std::basic_istream<std::byte>& raw_data, std::vector<PixelType>& raw_pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth)
   {
     const auto x_stride = width * bit_depth / 8;
     const auto padding = shared::get_padding_size(x_stride, sizeof(AlignmentType));
 
     if (padding == 0)
     {
-      raw_data.read(raw_pixels.data(), raw_pixels.size());
+      raw_data.read(reinterpret_cast<std::byte*>(raw_pixels.data()), raw_pixels.size() * sizeof(PixelType));
       return raw_pixels.size();
     }
     else
@@ -138,7 +138,7 @@ namespace studio::content::bmp
           break;
         }
 
-        raw_data.read(raw_pixels.data() + pos, x_stride);
+        raw_data.read(reinterpret_cast<std::byte*>(raw_pixels.data()) + pos, x_stride);
         raw_data.read(padding_bytes.data(), padding_bytes.size());
         pos += x_stride;
       }
@@ -165,11 +165,10 @@ namespace studio::content::bmp
     std::vector<pal::colour> colours;
 
     const auto num_pixels = info.width * info.height;
-    std::vector<std::int32_t> pixels;
-    pixels.reserve(num_pixels);
-
+    std::vector<std::int32_t> indexes;
     if (info.bit_depth <= 8)
     {
+      indexes.reserve(num_pixels);
       int num_colours = static_cast<int>(std::pow(float(2), info.bit_depth));
       colours.reserve(num_colours);
 
@@ -180,44 +179,30 @@ namespace studio::content::bmp
         colours.emplace_back(pal::colour{ quad[2], quad[1], quad[0], std::byte{ 255 } });
       }
 
-      std::vector<std::byte> raw_pixels(num_pixels * info.bit_depth / 8, std::byte{});
+      std::vector<std::byte> raw_pixels(num_pixels, std::byte{});
 
       read_pixel_data<std::int32_t>(raw_data, raw_pixels, info.width, info.height, info.bit_depth);
 
-      std::transform(raw_pixels.begin(), raw_pixels.end(), std::back_inserter(pixels), [](auto value)
-      {
-          return static_cast<std::int32_t>(value);
+      std::transform(raw_pixels.begin(), raw_pixels.end(), std::back_inserter(indexes), [](auto value) {
+        return static_cast<std::int32_t>(value);
       });
     }
-    else if(info.bit_depth == 24)
+    else if (info.bit_depth == 24)
     {
-      std::set<pal::colour> unique_colours;
-
+      colours.reserve(num_pixels);
       std::vector<std::array<std::byte, 3>> image_colours(num_pixels);
-      raw_data.read(reinterpret_cast<std::byte*>(image_colours.data()), image_colours.size());
+      read_pixel_data<std::int32_t>(raw_data, image_colours, info.width, info.height, info.bit_depth);
 
-      pal::colour temp{};
-      for (auto& colour : image_colours)
-      {
-        temp.red = colour[2];
-        temp.green = colour[1];
-        temp.blue = colour[0];
-        temp.flags = std::byte(0xFF);
-
-        auto result = unique_colours.emplace(temp);
-        auto index = static_cast<std::int32_t>(std::distance(unique_colours.begin(), result.first));
-        pixels.emplace_back(index);
-      }
-
-      colours.reserve(unique_colours.size());
-      std::copy(unique_colours.begin(), unique_colours.end(), std::back_inserter(colours));
+      std::transform(image_colours.begin(), image_colours.end(), std::back_inserter(colours), [](auto& colour) {
+        return pal::colour{ colour[2], colour[1], colour[0], std::byte(0xFF) };
+      });
     }
 
     return {
       header,
       info,
       colours,
-      pixels
+      indexes
     };
   }
 
@@ -252,7 +237,7 @@ namespace studio::content::bmp
 
     for (auto& colour : colours)
     {
-      std::array<std::byte, 4> quad{ colour.blue, colour.green, colour.red, std::byte{0} };
+      std::array<std::byte, 4> quad{ colour.blue, colour.green, colour.red, std::byte{ 0 } };
       raw_data.write(quad.data(), sizeof(quad));
     }
 
@@ -438,6 +423,11 @@ namespace studio::content::bmp
     const std::vector<pal::colour>& other_colours,
     bool only_unique = false)
   {
+    if (pixels.empty())
+    {
+      return pixels;
+    }
+
     if (original_colours == other_colours)
     {
       return pixels;
@@ -504,6 +494,6 @@ namespace studio::content::bmp
 
     return results;
   }
-}// namespace darkstar::bmp
+}// namespace studio::content::bmp
 
 #endif//DARKSTARDTSCONVERTER_BITMAP_HPP
