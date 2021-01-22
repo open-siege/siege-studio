@@ -1,6 +1,7 @@
 #ifndef DARKSTARDTSCONVERTER_BMP_VIEW_HPP
 #define DARKSTARDTSCONVERTER_BMP_VIEW_HPP
 
+#include <future>
 #include "graphics_view.hpp"
 #include "resource/resource_explorer.hpp"
 #include "content/palette.hpp"
@@ -60,6 +61,8 @@ namespace studio::views
     sf::Image loaded_image;
     sf::Texture texture;
     sf::Sprite sprite;
+
+    std::future<bool> pending_save;
 
     std::function<void(const sf::Event&)> zoom_in;
     std::function<void(const sf::Event&)> zoom_out;

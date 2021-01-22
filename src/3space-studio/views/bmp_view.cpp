@@ -1,3 +1,4 @@
+#include <iomanip>
 #include "bmp_view.hpp"
 #include "content/bitmap.hpp"
 #include "sfml_keys.hpp"
@@ -64,13 +65,26 @@ namespace studio::views
     std::vector<std::uint8_t> rendered_pixels;
     rendered_pixels.reserve(width * height * sizeof(std::int32_t));
 
-    for (auto index : pixels)
+    if (pixels.empty())
     {
-      auto& colour = colours[index];
-      rendered_pixels.emplace_back(int(colour.red));
-      rendered_pixels.emplace_back(int(colour.green));
-      rendered_pixels.emplace_back(int(colour.blue));
-      rendered_pixels.emplace_back(int(colour.flags));
+      for (auto colour : colours)
+      {
+        rendered_pixels.emplace_back(int(colour.red));
+        rendered_pixels.emplace_back(int(colour.green));
+        rendered_pixels.emplace_back(int(colour.blue));
+        rendered_pixels.emplace_back(int(colour.flags));
+      }
+    }
+    else
+    {
+      for (auto index : pixels)
+      {
+        auto& colour = colours[index];
+        rendered_pixels.emplace_back(int(colour.red));
+        rendered_pixels.emplace_back(int(colour.green));
+        rendered_pixels.emplace_back(int(colour.blue));
+        rendered_pixels.emplace_back(int(colour.flags));
+      }
     }
 
     loaded_image.create(width, height, rendered_pixels.data());
@@ -142,7 +156,8 @@ namespace studio::views
 
       std::vector<content::pal::palette> temp;
       bit_depth = windows_bmp.info.bit_depth;
-      temp.emplace_back().colours = windows_bmp.colours;
+      auto& pal = temp.emplace_back();
+      pal.colours = std::move(windows_bmp.colours);
 
       loaded_palettes.emplace(sort_order.emplace_back("Internal"), std::make_pair(info, std::move(temp)));
 
@@ -152,13 +167,13 @@ namespace studio::views
       create_image(loaded_image,
         windows_bmp.info.width,
         windows_bmp.info.height,
-        windows_bmp.pixels,
-        windows_bmp.colours);
+        windows_bmp.indexes,
+        pal.colours);
 
       rect.width = windows_bmp.info.width;
       rect.height = windows_bmp.info.height;
 
-      original_pixels.emplace_back(std::move(windows_bmp.pixels));
+      original_pixels.emplace_back(std::move(windows_bmp.indexes));
     }
     else
     {
@@ -534,26 +549,47 @@ namespace studio::views
 
         if (ImGui::Button("Export to JSON"))
         {
-          auto new_file_name = info.filename.string() + ".json";
-          std::filesystem::create_directories(export_path);
-          std::ofstream output(export_path / new_file_name, std::ios::binary);
+          pending_save = std::async(std::launch::async, [this]() {
+                 auto [width, height] = loaded_image.getSize();
+                 auto& [selected_palette_name, selected_palette_index, default_palette_name, default_palette_index, selected_bitmap_index] = selection_state;
+                 auto new_file_name = info.filename.string() + ".json";
+                 std::filesystem::create_directories(export_path);
+                 std::ofstream output(export_path / new_file_name, std::ios::trunc);
 
-          const auto& colours = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
-          auto pixels = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
-                                                   loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
-                                                   colours);
+                 const auto& colours = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
+                 auto indexes = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
+                                                           loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+                                                           colours);
 
 
-          nlohmann::ordered_json item_as_json;
-          item_as_json["colours"] = colours;
-          item_as_json["pixels"] = pixels;
+                 nlohmann::ordered_json item_as_json;
 
-          output << item_as_json.dump(4);
-          if (!opened_folder)
-          {
-            wxLaunchDefaultApplication(export_path.string());
-            opened_folder = true;
-          }
+                 if (indexes.empty())
+                 {
+                   item_as_json["width"] = width;
+                   item_as_json["height"] = height;
+                   item_as_json["bitDepth"] = bit_depth;
+                   item_as_json["pixels"] = colours;
+
+                 }
+                 else
+                 {
+                   item_as_json["width"] = width;
+                   item_as_json["height"] = height;
+                   item_as_json["bitDepth"] = bit_depth;
+                   item_as_json["colours"] = colours;
+                   item_as_json["indexes"] = indexes;
+                 }
+
+                 output << std::setw(4) << item_as_json;
+                 if (!opened_folder)
+                 {
+                   wxLaunchDefaultApplication(export_path.string());
+                   opened_folder = true;
+                 }
+
+                 return true;
+          });
         }
         ImGui::End();
       }
