@@ -2,6 +2,7 @@
 #define DARKSTARDTSCONVERTER_BMP_VIEW_HPP
 
 #include <future>
+#include <set>
 #include "graphics_view.hpp"
 #include "resource/resource_explorer.hpp"
 #include "content/palette.hpp"
@@ -37,7 +38,11 @@ namespace studio::views
 
     void refresh_image();
 
-    std::size_t get_unique_colours(const std::vector<std::int32_t>& pixels);
+    template<typename IndexType>
+    std::size_t get_unique_colours(const std::vector<IndexType>& pixels)
+    {
+      return std::set<IndexType>(pixels.begin(), pixels.end()).size();
+    }
 
     static std::filesystem::path export_path;
     const studio::resource::resource_explorer& archive;

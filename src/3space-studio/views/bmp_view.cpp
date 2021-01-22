@@ -1,4 +1,5 @@
 #include <iomanip>
+#include <wx/quantize.h>
 #include "bmp_view.hpp"
 #include "content/bitmap.hpp"
 #include "sfml_keys.hpp"
@@ -56,16 +57,53 @@ namespace studio::views
     return default_colours;
   }
 
+  template<typename IndexType>
+  void create_image(sf::Image& loaded_image,
+                    int width,
+                    int height,
+                    const std::vector<IndexType>& indexes,
+                    const std::vector<std::array<std::byte, 3>>& colours)
+  {
+    std::vector<std::uint8_t> rendered_pixels;
+    rendered_pixels.reserve(width * height * sizeof(std::int32_t));
+
+    if (indexes.empty())
+    {
+      for (auto colour : colours)
+      {
+        rendered_pixels.emplace_back(int(colour[0]));
+        rendered_pixels.emplace_back(int(colour[1]));
+        rendered_pixels.emplace_back(int(colour[2]));
+        rendered_pixels.emplace_back(int(0xFF));
+      }
+    }
+    else
+    {
+      for (auto index : indexes)
+      {
+        auto& colour = colours[static_cast<std::int32_t>(index)];
+        rendered_pixels.emplace_back(int(colour[0]));
+        rendered_pixels.emplace_back(int(colour[1]));
+        rendered_pixels.emplace_back(int(colour[2]));
+        rendered_pixels.emplace_back(int(0xFF));
+      }
+    }
+
+    loaded_image.create(width, height, rendered_pixels.data());
+    loaded_image.flipVertically();
+  }
+
+  template<typename IndexType>
   void create_image(sf::Image& loaded_image,
     int width,
     int height,
-    const std::vector<std::int32_t>& pixels,
+    const std::vector<IndexType>& indexes,
     const std::vector<content::pal::colour>& colours)
   {
     std::vector<std::uint8_t> rendered_pixels;
     rendered_pixels.reserve(width * height * sizeof(std::int32_t));
 
-    if (pixels.empty())
+    if (indexes.empty())
     {
       for (auto colour : colours)
       {
@@ -77,9 +115,9 @@ namespace studio::views
     }
     else
     {
-      for (auto index : pixels)
+      for (auto index : indexes)
       {
-        auto& colour = colours[index];
+        auto& colour = colours[static_cast<std::int32_t>(index)];
         rendered_pixels.emplace_back(int(colour.red));
         rendered_pixels.emplace_back(int(colour.green));
         rendered_pixels.emplace_back(int(colour.blue));
@@ -89,11 +127,6 @@ namespace studio::views
 
     loaded_image.create(width, height, rendered_pixels.data());
     loaded_image.flipVertically();
-  }
-
-  std::size_t bmp_view::get_unique_colours(const std::vector<std::int32_t>& pixels)
-  {
-    return std::set(pixels.begin(), pixels.end()).size();
   }
 
   bmp_view::bmp_view(const studio::resource::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::resource::resource_explorer& manager)
@@ -317,6 +350,23 @@ namespace studio::views
     }
   }
 
+  template<typename RowType>
+  std::vector<std::uint8_t*> temp_rows(std::vector<RowType>& data, int width, int height)
+  {
+    std::vector<std::uint8_t*> rows;
+    rows.reserve(height);
+
+    auto stride = width * sizeof(RowType);
+
+    for (auto i = 0; i < height * stride; i += stride)
+    {
+      auto raw = reinterpret_cast<std::uint8_t*>(data.data()) + i;
+      rows.emplace_back(raw);
+    }
+
+    return rows;
+  }
+
   void bmp_view::refresh_image()
   {
     const auto& [selected_palette_name, selected_palette_index, default_palette_name, default_palette_index, selected_bitmap_index] = selection_state;
@@ -337,17 +387,59 @@ namespace studio::views
       }
       else if (colour_strat == colour_strategy::remap)
       {
-        auto new_pixels = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
-          loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
-          loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
+        auto existing_pixels = original_pixels.at(selected_bitmap_index);
 
-        num_unique_colours = get_unique_colours(new_pixels);
+        if (existing_pixels.empty())
+        {
+          auto [width, height] = loaded_image.getSize();
 
-        create_image(loaded_image,
-          width,
-          height,
-          new_pixels,
-          loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
+          auto& colours = loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours;
+
+          std::vector<std::array<std::byte, 3>> narrowed_colours;
+          narrowed_colours.reserve(colours.size());
+
+          std::transform(colours.begin(), colours.end(), std::back_inserter(narrowed_colours), [](auto& colour) {
+            return std::array<std::byte, 3>{colour.red, colour.green, colour.blue};
+          });
+
+          std::vector<std::byte> new_indexes(colours.size(), std::byte('\0'));
+
+          auto& palette = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
+
+          std::vector<std::array<std::byte, 3>> new_palette;
+          new_palette.reserve(palette.size());
+
+          std::transform(palette.begin(), palette.end(), std::back_inserter(new_palette), [](auto& colour) {
+            return std::array<std::byte, 3>{colour.red, colour.green, colour.blue};
+          });
+
+          wxQuantize::DoQuantize(width, height, temp_rows(narrowed_colours, width, height).data(),
+                                 temp_rows(new_indexes, width, height).data(),
+                                 reinterpret_cast<std::uint8_t*>(new_palette.data()),
+                                 new_palette.size());
+
+          num_unique_colours = get_unique_colours(new_indexes);
+
+          create_image(loaded_image,
+                       width,
+                       height,
+                       new_indexes,
+                       new_palette);
+        }
+        else
+        {
+          auto new_indexes = content::bmp::remap_bitmap(existing_pixels,
+                                                       loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+                                                       loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
+
+          num_unique_colours = get_unique_colours(new_indexes);
+
+          create_image(loaded_image,
+                       width,
+                       height,
+                       new_indexes,
+                       loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
+        }
       }
       else if (colour_strat == colour_strategy::remap_unique)
       {
@@ -560,7 +652,6 @@ namespace studio::views
                  auto indexes = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
                                                            loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
                                                            colours);
-
 
                  nlohmann::ordered_json item_as_json;
 
