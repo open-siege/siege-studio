@@ -1,6 +1,6 @@
 #include "view_factory.hpp"
 #include "vol_view.hpp"
-#include "dts_io.hpp"
+#include "content/dts/darkstar.hpp"
 
 namespace studio::views
 {

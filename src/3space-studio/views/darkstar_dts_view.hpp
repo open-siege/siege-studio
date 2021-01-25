@@ -4,8 +4,9 @@
 #include <glm/gtx/quaternion.hpp>
 
 #include "graphics_view.hpp"
-#include "renderable_shape.hpp"
+#include "content/renderable_shape.hpp"
 #include "resource/resource_explorer.hpp"
+#include "content/dts/darkstar_structures.hpp"
 
 namespace studio::views
 {
@@ -22,17 +23,17 @@ namespace studio::views
     static std::filesystem::path export_path;
     const studio::resource::resource_explorer& archive;
     studio::resource::file_info info;
-    std::unique_ptr<renderable_shape> shape;
+    std::unique_ptr<content::renderable_shape> shape;
 
     glm::vec3 translation;
-    darkstar::dts::vector3f rotation;
+    content::vector3f rotation;
 
     std::map<std::string, std::function<void(const sf::Event&)>> actions;
 
     std::map<std::optional<std::string>, std::map<std::string, bool>> visible_nodes;
     std::map<std::string, std::map<std::string, bool>> visible_objects;
     std::vector<std::size_t> detail_level_indexes = { 0 };
-    std::vector<sequence_info> sequences;
+    std::vector<content::sequence_info> sequences;
     std::vector<std::string> detail_levels;
 
     bool root_visible = true;

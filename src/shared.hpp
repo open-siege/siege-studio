@@ -1,13 +1,25 @@
 #ifndef DARKSTARDTSCONVERTER_SHARED_HPP
 #define DARKSTARDTSCONVERTER_SHARED_HPP
 
+#include <array>
 #include <sstream>
 #include <string>
 #include <vector>
 #include <set>
 #include <filesystem>
 
-namespace shared
+template<std::size_t Size>
+constexpr std::array<std::string_view, Size> make_keys(const char*(&&keys)[Size])
+{
+  std::array<std::string_view, Size> result;
+  for (auto i = 0; i < Size; i++)
+  {
+    result[i] = keys[i];
+  }
+  return result;
+}
+
+namespace studio::shared
 {
   namespace fs = std::filesystem;
 
@@ -34,17 +46,6 @@ namespace shared
       result[i] = std::byte(values[i]);
     }
 
-    return result;
-  }
-
-  template<std::size_t Size>
-  constexpr std::array<std::string_view, Size> make_keys(const char*(&&keys)[Size])
-  {
-    std::array<std::string_view, Size> result;
-    for (auto i = 0; i < Size; i++)
-    {
-      result[i] = keys[i];
-    }
     return result;
   }
 

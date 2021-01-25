@@ -6,10 +6,10 @@
 #include <vector>
 #include <fstream>
 #include <filesystem>
-#include "dts_structures.hpp"
+#include "3d_structures.hpp"
 #include "endian_arithmetic.hpp"
 
-namespace binary::io
+namespace studio::content
 {
   template<std::size_t size>
   std::array<std::byte, size> read(std::basic_istream<std::byte>& stream)

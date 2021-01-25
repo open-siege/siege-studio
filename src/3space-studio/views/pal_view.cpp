@@ -1,5 +1,5 @@
 #include "pal_view.hpp"
-#include "content/bitmap.hpp"
+#include "content/bmp/bitmap.hpp"
 
 namespace studio::views
 {

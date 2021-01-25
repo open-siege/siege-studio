@@ -1,19 +1,12 @@
-#ifndef DARKSTARDTSCONVERTER_BITMAP_HPP
-#define DARKSTARDTSCONVERTER_BITMAP_HPP
-
-#include <vector>
+#include "bitmap.hpp"
 #include <set>
-#include <array>
-#include <fstream>
+#include <map>
 #include <iostream>
-#include <iomanip>
 #include <cmath>
-#include "palette.hpp"
-#include "endian_arithmetic.hpp"
+
 
 namespace studio::content::bmp
 {
-  namespace endian = boost::endian;
   using file_tag = std::array<std::byte, 4>;
 
   constexpr file_tag pbmp_tag = shared::to_tag<4>({ 'P', 'B', 'M', 'P' });
@@ -32,78 +25,7 @@ namespace studio::content::bmp
 
   constexpr std::array<std::byte, 2> special_reserved_tag = { std::byte{ 0xF7 }, std::byte{ 0xF5 } };// for palettes
 
-  struct pbmp_header
-  {
-    endian::little_uint32_t version;
-    endian::little_int32_t width;
-    endian::little_int32_t height;
-    endian::little_uint32_t bit_depth;
-    endian::little_uint32_t flags;
-  };
-
-  struct windows_bmp_header
-  {
-    std::array<std::byte, 2> tag;
-    endian::little_uint32_t file_size;
-    endian::little_uint16_t reserved1;
-    endian::little_uint16_t reserved2;
-    endian::little_uint32_t offset;
-  };
-
-  struct windows_bmp_info
-  {
-    endian::little_uint32_t info_size;
-    endian::little_int32_t width;
-    endian::little_int32_t height;
-    endian::little_uint16_t planes;
-    endian::little_uint16_t bit_depth;
-    endian::little_uint32_t compression;
-    endian::little_uint32_t image_size;
-    endian::little_int32_t x_pixels_per_metre;
-    endian::little_int32_t y_pixels_per_metre;
-    endian::little_uint32_t num_colours_used;
-    endian::little_uint32_t num_important_colours;
-  };
-
-  struct pbmp_data
-  {
-    pbmp_header bmp_header;
-    endian::little_uint32_t detail_levels;
-    endian::little_uint32_t palette_index;
-    std::vector<std::byte> pixels;
-  };
-
-  struct windows_bmp_data
-  {
-    windows_bmp_header header;
-    windows_bmp_info info;
-    std::vector<pal::colour> colours;
-    std::vector<std::int32_t> indexes;
-  };
-
-  template<typename UnitType>
-  inline void invert(std::vector<UnitType>& pixels)
-  {
-    std::reverse(pixels.begin(), pixels.end());
-  }
-
-  template<typename UnitType>
-  inline void horizontal_flip(std::vector<UnitType>& pixels, int width)
-  {
-    for (auto r = pixels.begin(); r != pixels.end(); r += width)
-    {
-      std::reverse(r, r + width);
-    }
-  }
-
-  template<typename UnitType>
-  inline void vertical_flip(std::vector<UnitType>& pixels, int width)
-  {
-    invert(pixels);
-    horizontal_flip(pixels, width);
-  }
-
-  inline bool is_microsoft_bmp(std::basic_istream<std::byte>& raw_data)
+  bool is_microsoft_bmp(std::basic_istream<std::byte>& raw_data)
   {
     windows_bmp_header header{};
     raw_data.read(reinterpret_cast<std::byte*>(&header), sizeof(header));
@@ -114,7 +36,7 @@ namespace studio::content::bmp
   }
 
   template<typename AlignmentType, typename PixelType>
-  [[maybe_unused]] inline std::size_t read_pixel_data(std::basic_istream<std::byte>& raw_data, std::vector<PixelType>& raw_pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth)
+  [[maybe_unused]] std::size_t read_pixel_data(std::basic_istream<std::byte>& raw_data, std::vector<PixelType>& raw_pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth)
   {
     const auto x_stride = width * bit_depth / 8;
     const auto padding = shared::get_padding_size(x_stride, sizeof(AlignmentType));
@@ -147,7 +69,7 @@ namespace studio::content::bmp
     }
   }
 
-  inline windows_bmp_data get_bmp_data(std::basic_istream<std::byte>& raw_data)
+  windows_bmp_data get_bmp_data(std::basic_istream<std::byte>& raw_data)
   {
     windows_bmp_header header{};
     raw_data.read(reinterpret_cast<std::byte*>(&header), sizeof(header));
@@ -206,7 +128,7 @@ namespace studio::content::bmp
     };
   }
 
-  inline void write_bmp_data(std::basic_ostream<std::byte>& raw_data, const std::vector<pal::colour>& colours, const std::vector<std::byte>& pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth)
+  void write_bmp_data(std::basic_ostream<std::byte>& raw_data, const std::vector<pal::colour>& colours, const std::vector<std::byte>& pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth)
   {
     windows_bmp_header header{};
     header.tag = windows_bmp_tag;
@@ -244,7 +166,7 @@ namespace studio::content::bmp
     raw_data.write(pixels.data(), pixels.size());
   }
 
-  inline bool is_phoenix_bmp(std::basic_istream<std::byte>& raw_data)
+  bool is_phoenix_bmp(std::basic_istream<std::byte>& raw_data)
   {
     std::array<std::byte, 4> header{};
     raw_data.read(header.data(), sizeof(header));
@@ -254,7 +176,7 @@ namespace studio::content::bmp
     return header == pbmp_tag;
   }
 
-  inline pbmp_data get_pbmp_data(std::basic_istream<std::byte>& raw_data)
+  pbmp_data get_pbmp_data(std::basic_istream<std::byte>& raw_data)
   {
     const auto start = std::size_t(raw_data.tellg());
     std::array<std::byte, 4> header{};
@@ -329,7 +251,7 @@ namespace studio::content::bmp
     };
   }
 
-  inline void write_pbmp_data(std::basic_ofstream<std::byte>& raw_data, std::int32_t width, std::int32_t height, const std::vector<pal::colour>& colours, const std::vector<std::byte>& pixels)
+  void write_pbmp_data(std::basic_ofstream<std::byte>& raw_data, std::int32_t width, std::int32_t height, const std::vector<pal::colour>& colours, const std::vector<std::byte>& pixels)
   {
     raw_data.write(pbmp_tag.data(), sizeof(pbmp_tag));
 
@@ -375,7 +297,7 @@ namespace studio::content::bmp
     raw_data.write(reinterpret_cast<std::byte*>(&file_size), sizeof(file_size));
   }
 
-  inline bool is_phoenix_bmp_array(std::basic_istream<std::byte>& raw_data)
+  bool is_phoenix_bmp_array(std::basic_istream<std::byte>& raw_data)
   {
     std::array<std::byte, 4> header{};
     raw_data.read(header.data(), sizeof(header));
@@ -385,7 +307,7 @@ namespace studio::content::bmp
     return header == pba_tag;
   }
 
-  inline std::vector<pbmp_data> get_pba_data(std::basic_istream<std::byte>& raw_data)
+  std::vector<pbmp_data> get_pba_data(std::basic_istream<std::byte>& raw_data)
   {
     std::vector<pbmp_data> results;
 
@@ -418,10 +340,10 @@ namespace studio::content::bmp
     return results;
   }
 
-  inline std::vector<std::int32_t> remap_bitmap(const std::vector<std::int32_t>& pixels,
+  std::vector<std::int32_t> remap_bitmap(const std::vector<std::int32_t>& pixels,
     const std::vector<pal::colour>& original_colours,
     const std::vector<pal::colour>& other_colours,
-    bool only_unique = false)
+    bool only_unique)
   {
     if (pixels.empty())
     {
@@ -495,5 +417,3 @@ namespace studio::content::bmp
     return results;
   }
 }// namespace studio::content::bmp
-
-#endif//DARKSTARDTSCONVERTER_BITMAP_HPP

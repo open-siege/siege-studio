@@ -1,15 +1,15 @@
 #include <iomanip>
 #include <wx/quantize.h>
 #include "bmp_view.hpp"
-#include "content/bitmap.hpp"
+#include "content/bmp/bitmap.hpp"
 #include "sfml_keys.hpp"
 #include "3space-studio/utility.hpp"
-#include "json_boost.hpp"
+#include "content/json_boost.hpp"
 
 namespace studio::content::pal
 {
-  using darkstar::dts::to_json;
-  using darkstar::dts::from_json;
+  using studio::content::to_json;
+  using studio::content::from_json;
 }
 
 std::vector<std::int32_t> widen(const std::vector<std::byte>& pixels)
@@ -661,7 +661,6 @@ namespace studio::views
                    item_as_json["height"] = height;
                    item_as_json["bitDepth"] = bit_depth;
                    item_as_json["pixels"] = colours;
-
                  }
                  else
                  {

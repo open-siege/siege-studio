@@ -5,7 +5,7 @@
 #include <bitset>
 #include <utility>
 #include <unordered_map>
-#include "json_boost.hpp"
+#include "content/json_boost.hpp"
 #include "complex_serializer.hpp"
 #include "shared.hpp"
 #include "dts_io.hpp"
