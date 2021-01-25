@@ -10,7 +10,6 @@
 
 namespace studio
 {
-
   inline void default_wx_deleter(wxWindowBase* control)
   {
     if (!control->IsBeingDeleted())

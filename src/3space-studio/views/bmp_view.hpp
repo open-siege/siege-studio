@@ -5,7 +5,7 @@
 #include <set>
 #include "graphics_view.hpp"
 #include "resource/resource_explorer.hpp"
-#include "content/palette.hpp"
+#include "content/pal/palette.hpp"
 
 namespace studio::views
 {

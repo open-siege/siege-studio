@@ -3,13 +3,11 @@
 #include "bmp_view.hpp"
 #include "pal_view.hpp"
 #include "vol_view.hpp"
-#include "dts_io.hpp"
-#include "content/bitmap.hpp"
+#include "content/dts/darkstar.hpp"
+#include "content/bmp/bitmap.hpp"
 #include "resource/darkstar_volume.hpp"
 #include "resource/three_space_volume.hpp"
 #include "resource/trophy_bass_volume.hpp"
-
-namespace dts = darkstar::dts;
 
 namespace dio
 {
@@ -21,7 +19,7 @@ namespace studio::views
   view_factory create_default_view_factory()
   {
     view_factory view_factory;
-    view_factory.add_file_type(dts::is_darkstar_dts, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new darkstar_dts_view(info, stream, manager)); });
+    view_factory.add_file_type(content::dts::darkstar::is_darkstar_dts, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new darkstar_dts_view(info, stream, manager)); });
     view_factory.add_file_type(content::bmp::is_microsoft_bmp, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new bmp_view(info, stream, manager)); });
     view_factory.add_file_type(content::bmp::is_phoenix_bmp, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new bmp_view(info, stream, manager)); });
     view_factory.add_file_type(content::bmp::is_phoenix_bmp_array, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new bmp_view(info, stream, manager)); });
@@ -36,7 +34,7 @@ namespace studio::views
     view_factory.add_file_type(dio::vol::trophy_bass::rbx_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
     view_factory.add_file_type(dio::vol::trophy_bass::tbv_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
 
-    view_factory.add_extension(".dts", dts::is_darkstar_dts);
+    view_factory.add_extension(".dts", content::dts::darkstar::is_darkstar_dts);
 
     view_factory.add_extension(".bmp", content::bmp::is_microsoft_bmp);
     view_factory.add_extension(".bmp", content::bmp::is_phoenix_bmp);

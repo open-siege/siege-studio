@@ -3,12 +3,12 @@
 
 #include <map>
 #include <SFML/OpenGL.hpp>
-#include "renderable_shape.hpp"
+#include "content/renderable_shape.hpp"
 
 namespace studio::views
 {
 
-  struct gl_renderer final : shape_renderer
+  struct gl_renderer final : content::shape_renderer
   {
     const std::array<std::uint8_t, 3> max_colour = { 255, 255, 0 };
     std::string_view current_object_name;
@@ -72,7 +72,7 @@ namespace studio::views
     {
     }
 
-    void emit_vertex(const darkstar::dts::vector3f& vertex) override
+    void emit_vertex(const content::vector3f& vertex) override
     {
       if (current_object_visible)
       {
@@ -80,7 +80,7 @@ namespace studio::views
       }
     }
 
-    void emit_texture_vertex(const darkstar::dts::mesh::v1::texture_vertex&) override
+    void emit_texture_vertex(const content::texture_vertex&) override
     {
     }
   };

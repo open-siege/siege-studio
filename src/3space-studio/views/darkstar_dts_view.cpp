@@ -1,27 +1,27 @@
 #include <execution>
 
 #include "darkstar_dts_view.hpp"
-#include "dts_io.hpp"
-#include "dts_renderable_shape.hpp"
+#include "content/dts/darkstar.hpp"
+#include "content/dts/dts_renderable_shape.hpp"
 #include "gl_renderer.hpp"
 #include "sfml_keys.hpp"
 #include "3space-studio/utility.hpp"
-#include "obj_renderer.hpp"
+#include "content/obj_renderer.hpp"
 
 namespace studio::views
 {
   std::filesystem::path darkstar_dts_view::export_path = std::filesystem::path();
 
-  darkstar::dts::shape_variant get_shape(std::basic_istream<std::byte>& shape_stream)
+  content::dts::darkstar::shape_variant get_shape(std::basic_istream<std::byte>& shape_stream)
   {
     try
     {
-      return darkstar::dts::read_shape(shape_stream, std::nullopt);
+      return content::dts::darkstar::read_shape(shape_stream, std::nullopt);
     }
     catch (const std::exception& ex)
     {
       wxMessageBox(ex.what(), "Error Loading Model.", wxICON_ERROR);
-      return darkstar::dts::shape_variant{};
+      return content::dts::darkstar::shape_variant{};
     }
   }
 
@@ -62,7 +62,7 @@ namespace studio::views
       std::filesystem::create_directory(export_path);
     }
 
-    shape = std::make_unique<dts_renderable_shape>(get_shape(shape_stream));
+    shape = std::make_unique<content::dts::darkstar::dts_renderable_shape>(get_shape(shape_stream));
     translation = { 0, 0, -20 };
     rotation = { 115, 180, -35 };
 
@@ -186,7 +186,7 @@ namespace studio::views
 
           std::filesystem::create_directory(export_path);
           std::ofstream output(export_path / new_file_name, std::ios::trunc);
-          auto renderer = obj_renderer{ output };
+          auto renderer = content::obj_renderer{ output };
 
           std::vector<std::size_t> details{ i };
           shape->render_shape(renderer, details, sequences);
@@ -213,9 +213,9 @@ namespace studio::views
           auto archive_path = archive.get_archive_path(shape_info.folder_path);
           auto shape_stream = archive.load_file(shape_info);
 
-          if (darkstar::dts::is_darkstar_dts(*shape_stream.second))
+          if (content::dts::darkstar::is_darkstar_dts(*shape_stream.second))
           {
-            auto real_shape = dts_renderable_shape(get_shape(*shape_stream.second));
+            auto real_shape = content::dts::darkstar::dts_renderable_shape(get_shape(*shape_stream.second));
 
             auto local_detail_levels = real_shape.get_detail_levels();
 
@@ -225,7 +225,7 @@ namespace studio::views
 
               std::filesystem::create_directory(export_path);
               std::ofstream output(export_path / new_file_name, std::ios::trunc);
-              auto renderer = obj_renderer{ output };
+              auto renderer = content::obj_renderer{ output };
 
               std::vector<std::size_t> details{ i };
 

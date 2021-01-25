@@ -4,8 +4,8 @@
 #include <variant>
 #include <type_traits>
 #include <nlohmann/json.hpp>
-#include "json_boost.hpp"
-#include "dts_structures.hpp"
+#include "content/json_boost.hpp"
+#include "darkstar_structures.hpp"
 
 namespace nlohmann
 {

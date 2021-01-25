@@ -1,18 +1,7 @@
-#ifndef DARKSTARDTSCONVERTER_PALETTE_HPP
-#define DARKSTARDTSCONVERTER_PALETTE_HPP
-
-#include <vector>
-#include <array>
-#include <fstream>
-#include <iostream>
-#include <iomanip>
-#include "endian_arithmetic.hpp"
+#include "palette.hpp"
 
 namespace studio::content::pal
 {
-  namespace endian = boost::endian;
-  using file_tag = std::array<std::byte, 4>;
-
   constexpr file_tag riff_tag = shared::to_tag<4>({ 'R', 'I', 'F', 'F' });
 
   constexpr file_tag pal_tag = shared::to_tag<4>({ 'P', 'A', 'L', ' ' });
@@ -21,70 +10,7 @@ namespace studio::content::pal
 
   constexpr file_tag ppl_tag = shared::to_tag<4>({ 'P', 'L', '9', '8' });
 
-  struct colour
-  {
-    constexpr static auto keys = shared::make_keys({ "r", "g", "b", "a" });
-
-    std::byte red;
-    std::byte green;
-    std::byte blue;
-    std::byte flags;
-  };
-
-  inline bool operator==(const colour& left, const colour& right)
-  {
-    return left.red == right.red &&
-    left.green == right.green &&
-    left.blue == right.blue &&
-    left.flags == right.flags;
-  }
-
-  inline bool operator<(const colour& left, const colour& right)
-  {
-    return std::tie(left.red, left.green, left.blue, left.flags) < std::tie(right.red, right.green, right.blue, right.flags);
-  }
-
-  // A big thanks to https://stackoverflow.com/questions/5392061/algorithm-to-check-similarity-of-colors and
-  // https://www.compuphase.com/cmetric.htm
-  inline double colour_distance(const colour& e1, const colour& e2)
-  {
-    long rmean = ((long)e1.red + (long)e2.red) / 2;
-    long r = (long)e1.red - (long)e2.red;
-    long g = (long)e1.green - (long)e2.green;
-    long b = (long)e1.blue - (long)e2.blue;
-    return sqrt((((512 + rmean) * r * r) >> 8) + 4 * g * g + (((767 - rmean) * b * b) >> 8));
-  }
-
-  struct palette_header
-  {
-    endian::big_int16_t version;
-    endian::little_int16_t colour_count;
-  };
-
-  struct palette_info
-  {
-    endian::little_int32_t palette_count;
-    endian::little_int32_t shade_shift;
-    endian::little_int32_t haze_level;
-    colour haze_colour;
-    std::array<std::byte, 32> allowed_matches;
-  };
-
-  struct palette
-  {
-    std::vector<colour> colours;
-    endian::little_uint32_t index;
-    endian::little_uint32_t type;
-  };
-
-  struct fixed_palette
-  {
-    std::array<colour, 256> colours;
-    endian::little_uint32_t index;
-    endian::little_uint32_t type;
-  };
-
-  inline bool is_microsoft_pal(std::basic_istream<std::byte>& raw_data)
+  bool is_microsoft_pal(std::basic_istream<std::byte>& raw_data)
   {
     const auto start = raw_data.tellg();
     std::array<std::byte, 4> header{};
@@ -100,7 +26,7 @@ namespace studio::content::pal
     return header == riff_tag && sub_header == pal_tag;
   }
 
-  inline std::vector<colour> get_pal_data(std::basic_istream<std::byte>& raw_data)
+  std::vector<colour> get_pal_data(std::basic_istream<std::byte>& raw_data)
   {
     std::array<std::byte, 4> header{};
     endian::little_uint32_t file_size{};
@@ -164,7 +90,7 @@ namespace studio::content::pal
     return colours;
   }
 
-  inline std::int32_t write_pal_data(std::basic_ostream<std::byte>& raw_data, const std::vector<colour>& colours)
+  std::int32_t write_pal_data(std::basic_ostream<std::byte>& raw_data, const std::vector<colour>& colours)
   {
     raw_data.write(riff_tag.data(), sizeof(riff_tag));
 
@@ -187,7 +113,7 @@ namespace studio::content::pal
     return sizeof(riff_tag) + sizeof(file_size) + file_size;
   }
 
-  inline bool is_phoenix_pal(std::basic_istream<std::byte>& raw_data)
+  bool is_phoenix_pal(std::basic_istream<std::byte>& raw_data)
   {
     std::array<std::byte, 4> header{};
 
@@ -197,7 +123,7 @@ namespace studio::content::pal
     return header == ppl_tag;
   }
 
-  inline std::vector<palette> get_ppl_data(std::basic_istream<std::byte>& raw_data)
+  std::vector<palette> get_ppl_data(std::basic_istream<std::byte>& raw_data)
   {
     std::array<std::byte, 4> header{};
     palette_info info{};
@@ -219,16 +145,14 @@ namespace studio::content::pal
     results.reserve(temp.size());
 
     std::transform(temp.begin(), temp.end(), std::back_inserter(results), [&] (const auto& temp_pal){
-      palette new_pal{};
-      new_pal.colours = std::vector(temp_pal.colours.begin(), temp_pal.colours.end());
-      new_pal.index = temp_pal.index;
-      new_pal.type = temp_pal.type;
+           palette new_pal{};
+           new_pal.colours = std::vector(temp_pal.colours.begin(), temp_pal.colours.end());
+           new_pal.index = temp_pal.index;
+           new_pal.type = temp_pal.type;
 
-      return new_pal;
+           return new_pal;
     });
 
     return results;
   }
-}// namespace darkstar::pal
-
-#endif//DARKSTARDTSCONVERTER_PALETTE_HPP
+}
