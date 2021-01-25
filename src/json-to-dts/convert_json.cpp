@@ -1,14 +1,15 @@
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <algorithm>
 #include <execution>
 #include "content/dts/darkstar.hpp"
 #include "content/json_boost.hpp"
-#include "complex_serializer.hpp"
+#include "content/dts/complex_serializer.hpp"
 #include "shared.hpp"
 
 namespace fs = std::filesystem;
-namespace dts = darkstar::dts;
+namespace dts = studio::content::dts::darkstar;
 
 bool replace(std::string& str, const std::string& from, const std::string& to)
 {
@@ -23,7 +24,7 @@ bool replace(std::string& str, const std::string& from, const std::string& to)
 
 int main(int argc, const char** argv)
 {
-  const auto files = shared::find_files(
+  const auto files = studio::shared::find_files(
     std::vector<std::string>(argv + 1, argv + argc),
     ".dts.json",
     ".DTS.json",
@@ -53,11 +54,10 @@ int main(int argc, const char** argv)
 
       if (json_type_name == dts::material_list::v2::material_list::type_name)
       {
-        using namespace binary::io;
         const dts::material_list_variant fresh_shape = fresh_shape_json;
 
         std::basic_ofstream<std::byte> stream(new_file_name, std::ios::binary);
-        write_material_list(stream, fresh_shape);
+        dts::write_material_list(stream, fresh_shape);
 
 
         std::stringstream msg;
@@ -66,11 +66,10 @@ int main(int argc, const char** argv)
       }
       else if (json_type_name == dts::shape::v2::shape::type_name)
       {
-        using namespace binary::io;
         const dts::shape_variant fresh_shape = fresh_shape_json;
 
         std::basic_ofstream<std::byte> stream(new_file_name, std::ios::binary);
-        write_shape(stream, fresh_shape);
+        dts::write_shape(stream, fresh_shape);
         std::stringstream msg;
         msg << "Created " << new_file_name << '\n';
         std::cout << msg.str();
