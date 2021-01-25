@@ -2,11 +2,10 @@
 #include <vector>
 #include <algorithm>
 #include <execution>
-#include "dts_structures.hpp"
+#include "content/dts/darkstar.hpp"
 #include "content/json_boost.hpp"
 #include "complex_serializer.hpp"
 #include "shared.hpp"
-#include "dts_io.hpp"
 
 namespace fs = std::filesystem;
 namespace dts = darkstar::dts;
@@ -58,14 +57,8 @@ int main(int argc, const char** argv)
         const dts::material_list_variant fresh_shape = fresh_shape_json;
 
         std::basic_ofstream<std::byte> stream(new_file_name, std::ios::binary);
+        write_material_list(stream, fresh_shape);
 
-        std::visit([&](const auto& materials) {
-          dts::write_header(stream, materials);
-          write(stream, materials.header);
-          write(stream, materials.materials);
-          dts::write_size(stream);
-        },
-          fresh_shape);
 
         std::stringstream msg;
         msg << "Created " << new_file_name << '\n';
@@ -77,62 +70,10 @@ int main(int argc, const char** argv)
         const dts::shape_variant fresh_shape = fresh_shape_json;
 
         std::basic_ofstream<std::byte> stream(new_file_name, std::ios::binary);
-
-        std::visit([&](const auto& shape) {
-          dts::write_header(stream, shape);
-          write(stream, shape.header);
-          write(stream, shape.data);
-          write(stream, shape.nodes);
-          write(stream, shape.sequences);
-          write(stream, shape.sub_sequences);
-          write(stream, shape.keyframes);
-          write(stream, shape.transforms);
-          write(stream, shape.names);
-          write(stream, shape.objects);
-          write(stream, shape.details);
-          write(stream, shape.transitions);
-
-          if constexpr (std::remove_reference_t<decltype(shape)>::version > 3)
-          {
-            write(stream, shape.frame_triggers);
-            write(stream, shape.footer);
-          }
-
-          for (const auto& mesh_var : shape.meshes)
-          {
-            const auto start_offset = static_cast<std::uint32_t>(stream.tellp());
-
-            std::visit([&](const auto& mesh) {
-              dts::write_header(stream, mesh);
-              write(stream, mesh.header);
-              write(stream, mesh.vertices);
-              write(stream, mesh.texture_vertices);
-              write(stream, mesh.faces);
-              write(stream, mesh.frames);
-              dts::write_size(stream, start_offset);
-            },
-              mesh_var);
-          }
-
-          const boost::endian::little_uint32_t has_materials = 1u;
-          write(stream, has_materials);
-
-          const auto start_offset = static_cast<std::uint32_t>(stream.tellp());
-          std::visit([&](const auto& materials) {
-            dts::write_header(stream, materials);
-            write(stream, materials.header);
-            write(stream, materials.materials);
-            dts::write_size(stream, start_offset);
-          },
-            shape.material_list);
-
-          dts::write_size(stream);
-
-          std::stringstream msg;
-          msg << "Created " << new_file_name << '\n';
-          std::cout << msg.str();
-        },
-          fresh_shape);
+        write_shape(stream, fresh_shape);
+        std::stringstream msg;
+        msg << "Created " << new_file_name << '\n';
+        std::cout << msg.str();
       }
     }
     catch (const std::exception& ex)

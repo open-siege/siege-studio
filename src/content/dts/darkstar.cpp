@@ -1,8 +1,82 @@
 #include "darkstar.hpp"
-#include "content/binary_io.hpp"
 
 namespace studio::content::dts::darkstar
 {
+  template<std::size_t size>
+  std::array<std::byte, size> read(std::basic_istream<std::byte>& stream)
+  {
+    std::array<std::byte, size> dest{};
+
+    stream.read(&dest[0], size);
+
+    return dest;
+  }
+
+  template<typename destination_type>
+  destination_type read(std::basic_istream<std::byte>& stream)
+  {
+    destination_type dest{};
+
+    stream.read(reinterpret_cast<std::byte*>(&dest), sizeof(destination_type));
+
+    return dest;
+  }
+
+  template<typename destination_type>
+  std::vector<destination_type> read_vector(std::basic_istream<std::byte>& stream, std::size_t size)
+  {
+    if (size == 0)
+    {
+      return {};
+    }
+
+    std::vector<destination_type> dest(size);
+
+    stream.read(reinterpret_cast<std::byte*>(&dest[0]), sizeof(destination_type) * size);
+
+    return dest;
+  }
+
+  inline std::string read_string(std::basic_istream<std::byte>& stream, std::size_t size, std::size_t max_size = 16)
+  {
+    std::string dest(size, '\0');
+
+    stream.read(reinterpret_cast<std::byte*>(&dest[0]), size);
+
+    // There is always an embedded \0 in the
+    // file if the string length is less than 16 bytes.
+    if (size < max_size)
+    {
+      stream.seekg(1, std::ios_base::cur);
+    }
+
+    return dest;
+  }
+
+  template<std::size_t Size>
+  void write(std::basic_ostream<std::byte>& stream, const std::array<std::byte, Size>& value)
+  {
+    stream.write(value.data(), Size);
+  }
+
+  template<typename ValueType>
+  void write(std::basic_ostream<std::byte>& stream, const ValueType& value)
+  {
+    stream.write(reinterpret_cast<const std::byte*>(&value), sizeof(value));
+  }
+
+  template<typename ValueType>
+  void write(std::basic_ostream<std::byte>& stream, const std::vector<ValueType>& values)
+  {
+    stream.write(reinterpret_cast<const std::byte*>(values.data()), values.size() * sizeof(ValueType));
+  }
+
+  template<typename ValueType>
+  void write(std::basic_ostream<std::byte>& stream, const ValueType* value, std::size_t size)
+  {
+    stream.write(reinterpret_cast<const std::byte*>(value), size);
+  }
+
   bool is_darkstar_dts(std::basic_istream<std::byte>& stream)
   {
     auto starting_point = stream.tellg();
@@ -298,4 +372,70 @@ namespace studio::content::dts::darkstar
 
     stream.seekp(end_offset, std::ios_base::beg);
   }
-}
+
+  void write_material_list(std::basic_ostream<std::byte>& stream, const material_list_variant& list)
+  {
+    std::visit([&](const auto& materials) {
+      write_header(stream, materials);
+      write(stream, materials.header);
+      write(stream, materials.materials);
+      write_size(stream);
+    },
+      list);
+  }
+
+  void write_shape(std::basic_ostream<std::byte>& stream, const shape_variant& fresh_shape)
+  {
+    std::visit([&](const auto& shape) {
+      write_header(stream, shape);
+      write(stream, shape.header);
+      write(stream, shape.data);
+      write(stream, shape.nodes);
+      write(stream, shape.sequences);
+      write(stream, shape.sub_sequences);
+      write(stream, shape.keyframes);
+      write(stream, shape.transforms);
+      write(stream, shape.names);
+      write(stream, shape.objects);
+      write(stream, shape.details);
+      write(stream, shape.transitions);
+
+      if constexpr (std::remove_reference_t<decltype(shape)>::version > 3)
+      {
+        write(stream, shape.frame_triggers);
+        write(stream, shape.footer);
+      }
+
+      for (const auto& mesh_var : shape.meshes)
+      {
+        const auto start_offset = static_cast<std::uint32_t>(stream.tellp());
+
+        std::visit([&](const auto& mesh) {
+          write_header(stream, mesh);
+          write(stream, mesh.header);
+          write(stream, mesh.vertices);
+          write(stream, mesh.texture_vertices);
+          write(stream, mesh.faces);
+          write(stream, mesh.frames);
+          write_size(stream, start_offset);
+        },
+          mesh_var);
+      }
+
+      const boost::endian::little_uint32_t has_materials = 1u;
+      write(stream, has_materials);
+
+      const auto start_offset = static_cast<std::uint32_t>(stream.tellp());
+      std::visit([&](const auto& materials) {
+        write_header(stream, materials);
+        write(stream, materials.header);
+        write(stream, materials.materials);
+        write_size(stream, start_offset);
+      },
+        shape.material_list);
+
+      write_size(stream);
+    },
+      fresh_shape);
+  }
+}// namespace studio::content::dts::darkstar

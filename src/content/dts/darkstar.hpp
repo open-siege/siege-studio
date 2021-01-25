@@ -12,6 +12,10 @@ namespace studio::content::dts::darkstar
   shape_variant read_shape(std::basic_istream<std::byte>& stream, std::optional<tag_header> file_header);
 
   shape_or_material_list read_shape(std::basic_istream<std::byte>& stream);
+
+  void write_material_list(std::basic_ostream<std::byte>& stream, const material_list_variant&);
+
+  void write_shape(std::basic_ostream<std::byte>& stream, const shape_variant&);
 }// namespace darkstar::dts
 
 #endif//DARKSTARDTSCONVERTER_DTS_IO_HPP
