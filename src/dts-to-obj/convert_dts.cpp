@@ -6,14 +6,14 @@
 #include <utility>
 #include <unordered_map>
 #include "content/json_boost.hpp"
-#include "complex_serializer.hpp"
+#include "content/dts/complex_serializer.hpp"
 #include "shared.hpp"
-#include "dts_io.hpp"
-#include "dts_renderable_shape.hpp"
-#include "obj_renderer.hpp"
+#include "content/dts/darkstar.hpp"
+#include "content/dts/dts_renderable_shape.hpp"
+#include "content/obj_renderer.hpp"
 
 namespace fs = std::filesystem;
-namespace dts = darkstar::dts;
+namespace dts = studio::content::dts::darkstar;
 
 // helper type for the visitor #4
 template<class... Ts>
@@ -27,7 +27,7 @@ overloaded(Ts...) -> overloaded<Ts...>;
 
 int main(int argc, const char** argv)
 {
-  const auto files = shared::find_files(
+  const auto files = studio::shared::find_files(
     std::vector<std::string>(argv + 1, argv + argc),
     ".dts",
     ".DTS",
@@ -57,9 +57,9 @@ int main(int argc, const char** argv)
                          const auto root_node = main_shape.nodes[detail_level.root_node_index];
                          const std::string root_node_name = main_shape.names[root_node.name_index].data();
                          std::ofstream output(file_name.string() + "." + root_node_name + ".obj", std::ios::trunc);
-                         auto renderer = obj_renderer{output};
+                         auto renderer = studio::content::obj_renderer{output};
 
-                         dts_renderable_shape instance{core_shape};
+                         studio::content::dts::darkstar::dts_renderable_shape instance{core_shape};
                          std::vector<std::size_t> details{i};
                          auto sequences = instance.get_sequences(details);
                          instance.render_shape(renderer, details, sequences);

@@ -8,20 +8,20 @@
 #include <set>
 #include <filesystem>
 
-template<std::size_t Size>
-constexpr std::array<std::string_view, Size> make_keys(const char*(&&keys)[Size])
-{
-  std::array<std::string_view, Size> result;
-  for (auto i = 0; i < Size; i++)
-  {
-    result[i] = keys[i];
-  }
-  return result;
-}
-
 namespace studio::shared
 {
   namespace fs = std::filesystem;
+
+  template<std::size_t Size>
+  constexpr std::array<std::string_view, Size> make_keys(const char*(&&keys)[Size])
+  {
+    std::array<std::string_view, Size> result;
+    for (auto i = 0; i < Size; i++)
+    {
+      result[i] = keys[i];
+    }
+    return result;
+  }
 
   constexpr std::size_t get_padding_size(std::size_t count, std::size_t alignment_size)
   {

@@ -1,20 +1,22 @@
 #include <iostream>
+#include <iomanip>
 #include <iterator>
 #include <algorithm>
 #include <execution>
 #include <bitset>
+#include <fstream>
 #include "content/json_boost.hpp"
-#include "complex_serializer.hpp"
+#include "content/dts/complex_serializer.hpp"
 #include "shared.hpp"
-#include "dts_io.hpp"
-#include "dts_json_formatting.hpp"
+#include "content/dts/darkstar.hpp"
+//#include "content/dts/dts_json_formatting.hpp"
 
 namespace fs = std::filesystem;
-namespace dts = darkstar::dts;
+namespace dts = studio::content::dts::darkstar;
 
 int main(int argc, const char** argv)
 {
-  const auto files = shared::find_files(
+  const auto files = studio::shared::find_files(
     std::vector<std::string>(argv + 1, argv + argc),
     ".dts",
     ".DTS",
@@ -32,7 +34,7 @@ int main(int argc, const char** argv)
 
       std::basic_ifstream<std::byte> input(file_name, std::ios::binary);
 
-      auto shape = dts::read_shape(file_name, input);
+      auto shape = dts::read_shape(input);
 
       std::visit([&](const auto& item) {
         nlohmann::ordered_json item_as_json = item;
@@ -45,7 +47,7 @@ int main(int argc, const char** argv)
         auto new_file_name = file_name.string() + ".json";
         {
           std::ofstream item_as_file(new_file_name, std::ios::trunc);
-          item_as_file << item_as_json.dump(4);
+          item_as_file << std::setw(4) << item_as_json;
         }
 
         std::stringstream msg;
