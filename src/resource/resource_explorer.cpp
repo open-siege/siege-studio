@@ -286,6 +286,7 @@ namespace studio::resource
 
         info.filename = item.path().filename().string();
         info.folder_path = item.path().parent_path();
+        info.size = std::filesystem::file_size(item.path());
         files.emplace_back(info);
       }
     }
