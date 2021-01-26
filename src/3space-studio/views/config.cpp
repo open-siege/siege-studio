@@ -3,8 +3,10 @@
 #include "bmp_view.hpp"
 #include "pal_view.hpp"
 #include "vol_view.hpp"
+#include "sfx_view.hpp"
 #include "content/dts/darkstar.hpp"
 #include "content/bmp/bitmap.hpp"
+#include "content/sfx/wave.hpp"
 #include "resource/darkstar_volume.hpp"
 #include "resource/three_space_volume.hpp"
 #include "resource/trophy_bass_volume.hpp"
@@ -26,6 +28,8 @@ namespace studio::views
     view_factory.add_file_type(content::pal::is_microsoft_pal, [](auto&, auto& stream, auto&) { return std::unique_ptr<studio_view>(new pal_view(stream)); });
     view_factory.add_file_type(content::pal::is_phoenix_pal, [](auto&, auto& stream, auto&) { return std::unique_ptr<studio_view>(new pal_view(stream)); });
 
+    view_factory.add_file_type(content::sfx::is_sfx_file, [](auto& info, auto& stream, auto& archive) { return std::unique_ptr<studio_view>(new sfx_view(info, stream, archive)); });
+
     view_factory.add_file_type(dio::vol::darkstar::vol_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
 
     view_factory.add_file_type(dio::vol::three_space::vol_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
@@ -39,6 +43,8 @@ namespace studio::views
     view_factory.add_extension(".bmp", content::bmp::is_microsoft_bmp);
     view_factory.add_extension(".bmp", content::bmp::is_phoenix_bmp);
     view_factory.add_extension(".pba", content::bmp::is_phoenix_bmp_array);
+
+    view_factory.add_extension(".sfx", content::sfx::is_sfx_file);
 
     view_factory.add_extension(".pal", content::pal::is_microsoft_pal);
     view_factory.add_extension(".pal", content::pal::is_phoenix_pal);
