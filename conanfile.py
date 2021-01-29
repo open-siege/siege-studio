@@ -16,6 +16,7 @@ class LocalConanFile(ConanFile):
         cmake.configure()
         #self.run("cppcheck src --error-exitcode=1")
         cmake.build()
+        cmake.test()
 
     def imports(self):
         registry_url = "https://www.khronos.org/registry"
