@@ -30,3 +30,4 @@ deactivate.sh
 environment.*.env
 besieged-theme.png
 besieged-theme.txt
+cmake/ 
