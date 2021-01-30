@@ -2,7 +2,7 @@
 #include <sstream>
 #include <iomanip>
 #include <functional>
-#include "resource/darkstar_volume.hpp"
+#include "resources/darkstar_volume.hpp"
 #include "mission.hpp"
 
 namespace studio::mis::darkstar
@@ -299,7 +299,7 @@ namespace studio::mis::darkstar
   }
 }// namespace studio::mis::darkstar
 
-namespace studio::resource::mis::darkstar
+namespace studio::resources::mis::darkstar
 {
   using namespace studio::mis::darkstar;
 
@@ -435,7 +435,7 @@ namespace studio::resource::mis::darkstar
       std::visit([&](auto& info) {
         using info_type = std::decay_t<decltype(info)>;
 
-        if constexpr (std::is_same_v<info_type, studio::resource::file_info>)
+        if constexpr (std::is_same_v<info_type, studio::resources::file_info>)
         {
           if (info.folder_path == archive_or_folder_path)
           {
@@ -443,7 +443,7 @@ namespace studio::resource::mis::darkstar
           }
         }
 
-        if constexpr (std::is_same_v<info_type, studio::resource::folder_info>)
+        if constexpr (std::is_same_v<info_type, studio::resources::folder_info>)
         {
           if (info.full_path.parent_path() == archive_or_folder_path)
           {
@@ -457,12 +457,12 @@ namespace studio::resource::mis::darkstar
     return final_results;
   }
 
-  void mis_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info) const
+  void mis_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info) const
   {
     stream.seekg(info.offset, std::ios::beg);
   }
 
-  void mis_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info, std::basic_ostream<std::byte>& output) const
+  void mis_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info, std::basic_ostream<std::byte>& output) const
   {
     set_stream_position(stream, info);
     auto existing_info = cache_data(stream, info.folder_path);
@@ -470,7 +470,7 @@ namespace studio::resource::mis::darkstar
     for (auto& ref : existing_info->second)
     {
       if (!std::visit([&](auto& child_info) -> bool {
-            if constexpr (std::is_same_v<std::decay_t<decltype(child_info)>, studio::resource::file_info>)
+            if constexpr (std::is_same_v<std::decay_t<decltype(child_info)>, studio::resources::file_info>)
             {
               if (child_info.folder_path == info.folder_path && child_info.filename == info.filename)
               {
@@ -494,4 +494,4 @@ namespace studio::resource::mis::darkstar
       }
     }
   }
-}// namespace studio::resource::mis::darkstar
+}// namespace studio::resources::mis::darkstar

@@ -4,7 +4,7 @@
 #include <future>
 #include <set>
 #include "graphics_view.hpp"
-#include "resource/resource_explorer.hpp"
+#include "resources/resource_explorer.hpp"
 #include "content/pal/palette.hpp"
 
 namespace studio::views
@@ -12,7 +12,7 @@ namespace studio::views
   class bmp_view : public graphics_view
   {
   public:
-    bmp_view(const studio::resource::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::resource::resource_explorer&);
+    bmp_view(const studio::resources::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::resources::resource_explorer&);
     std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks() override;
     void setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext) override;
     void render_gl(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext) override {}
@@ -45,10 +45,10 @@ namespace studio::views
     }
 
     static std::filesystem::path export_path;
-    const studio::resource::resource_explorer& archive;
-    studio::resource::file_info info;
+    const studio::resources::resource_explorer& archive;
+    studio::resources::file_info info;
     std::list<std::string> sort_order;
-    std::map<std::string_view, std::pair<studio::resource::file_info, std::vector<content::pal::palette>>> loaded_palettes;
+    std::map<std::string_view, std::pair<studio::resources::file_info, std::vector<content::pal::palette>>> loaded_palettes;
 
     int strategy = static_cast<int>(colour_strategy::remap);
     bool opened_folder = false;

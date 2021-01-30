@@ -8,14 +8,14 @@
 #include "content/dts/darkstar.hpp"
 #include "content/bmp/bitmap.hpp"
 #include "content/sfx/wave.hpp"
-#include "resource/darkstar_volume.hpp"
-#include "resource/three_space_volume.hpp"
-#include "resource/trophy_bass_volume.hpp"
+#include "resources/darkstar_volume.hpp"
+#include "resources/three_space_volume.hpp"
+#include "resources/trophy_bass_volume.hpp"
 
 namespace dio
 {
-  namespace mis = studio::resource::mis;
-  namespace vol = studio::resource::vol;
+  namespace mis = studio::resources::mis;
+  namespace vol = studio::resources::vol;
 }
 
 namespace studio::views
@@ -68,9 +68,9 @@ namespace studio::views
     return view_factory;
   }
 
-  studio::resource::resource_explorer create_default_resource_explorer(const std::filesystem::path& search_path)
+  studio::resources::resource_explorer create_default_resource_explorer(const std::filesystem::path& search_path)
   {
-    studio::resource::resource_explorer archive(search_path);
+    studio::resources::resource_explorer archive(search_path);
 
     archive.add_archive_type(".mis", std::make_unique<dio::mis::darkstar::mis_file_archive>());
     archive.add_archive_type(".tbv", std::make_unique<dio::vol::trophy_bass::tbv_file_archive>());

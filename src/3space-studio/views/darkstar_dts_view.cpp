@@ -53,7 +53,7 @@ namespace studio::views
     ImGui::Unindent(8);
   }
 
-  darkstar_dts_view::darkstar_dts_view(const studio::resource::file_info& info, std::basic_istream<std::byte>& shape_stream, const studio::resource::resource_explorer& archive)
+  darkstar_dts_view::darkstar_dts_view(const studio::resources::file_info& info, std::basic_istream<std::byte>& shape_stream, const studio::resources::resource_explorer& archive)
     : info(info), archive(archive)
   {
     if (export_path == std::filesystem::path())

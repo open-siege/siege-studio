@@ -129,7 +129,7 @@ namespace studio::views
     loaded_image.flipVertically();
   }
 
-  bmp_view::bmp_view(const studio::resource::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::resource::resource_explorer& manager)
+  bmp_view::bmp_view(const studio::resources::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::resources::resource_explorer& manager)
     : archive(manager), info(info)
   {
     if (export_path == std::filesystem::path())
@@ -157,13 +157,13 @@ namespace studio::views
 
     sf::IntRect rect;
 
-    std::vector<studio::resource::file_info> palettes;
+    std::vector<studio::resources::file_info> palettes;
 
-    palettes = manager.find_files(studio::resource::resource_explorer::get_archive_path(info.folder_path).parent_path(), { ".ppl", ".PPL", ".ipl", ".IPL", ".pal", ".PAL" });
+    palettes = manager.find_files(studio::resources::resource_explorer::get_archive_path(info.folder_path).parent_path(), { ".ppl", ".PPL", ".ipl", ".IPL", ".pal", ".PAL" });
 
     auto all_palettes = manager.find_files({ ".ppl", ".ipl", ".pal" });
 
-    studio::resource::resource_explorer::merge_results(palettes, all_palettes);
+    studio::resources::resource_explorer::merge_results(palettes, all_palettes);
 
     for (auto& palette_info : palettes)
     {

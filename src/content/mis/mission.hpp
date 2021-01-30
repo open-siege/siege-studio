@@ -8,7 +8,7 @@
 #include <istream>
 #include <variant>
 #include <filesystem>
-#include "resource/archive_plugin.hpp"
+#include "resources/archive_plugin.hpp"
 #include "endian_arithmetic.hpp"
 #include "shared.hpp"
 
@@ -190,9 +190,9 @@ namespace studio::mis::darkstar
 
 }// namespace studio::mis::darkstar
 
-namespace studio::resource::mis::darkstar
+namespace studio::resources::mis::darkstar
 {
-  struct mis_file_archive : studio::resource::archive_plugin
+  struct mis_file_archive : studio::resources::archive_plugin
   {
     using ref_vector = std::vector<std::pair<std::reference_wrapper<::studio::mis::darkstar::sim_item>, content_info>>;
     mutable std::map<std::filesystem::path, ::studio::mis::darkstar::sim_items> contents;
@@ -204,9 +204,9 @@ namespace studio::resource::mis::darkstar
 
     bool stream_is_supported(std::basic_istream<std::byte>& stream) const override;
     std::vector<content_info> get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const override;
-    void set_stream_position(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info) const override;
-    void extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info, std::basic_ostream<std::byte>& output) const override;
+    void set_stream_position(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info) const override;
+    void extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info, std::basic_ostream<std::byte>& output) const override;
   };
-}// namespace studio::resource::mis::darkstar
+}// namespace studio::resources::mis::darkstar
 
 #endif//INC_3SPACESTUDIO_MISSION_HPP

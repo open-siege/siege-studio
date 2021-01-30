@@ -9,7 +9,7 @@ int main(int, const char** argv)
   std::string output_folder(argv[1]);
   auto volume = std::basic_ifstream<std::byte>{ output_folder, std::ios::binary };
 
-  auto archive = studio::resource::vol::darkstar::vol_file_archive();
+  auto archive = studio::resources::vol::darkstar::vol_file_archive();
   auto files = archive.get_content_listing(volume, output_folder);
 
   if (auto index = output_folder.find(".vol"); index != std::string::npos)
@@ -27,7 +27,7 @@ int main(int, const char** argv)
     std::visit([&](auto& info) {
            using info_type = std::decay_t<decltype(info)>;
 
-           if constexpr (std::is_same_v<info_type, studio::resource::file_info>)
+           if constexpr (std::is_same_v<info_type, studio::resources::file_info>)
            {
              auto final_folder = output_folder / std::filesystem::relative(info.folder_path, output_folder);
              std::filesystem::create_directories(final_folder);

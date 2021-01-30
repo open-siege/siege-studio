@@ -8,7 +8,7 @@ namespace studio::views
 {
   std::filesystem::path sfx_view::export_path = std::filesystem::path();
 
-  sfx_view::sfx_view(studio::resource::file_info info, std::basic_istream<std::byte>& image_stream, const studio::resource::resource_explorer& explorer)
+  sfx_view::sfx_view(studio::resources::file_info info, std::basic_istream<std::byte>& image_stream, const studio::resources::resource_explorer& explorer)
     : explorer(explorer), info(info)
   {
     if (export_path == std::filesystem::path())
@@ -78,7 +78,7 @@ namespace studio::views
       auto files = explorer.find_files({ ".sfx" });
 
       std::for_each(std::execution::par_unseq, files.begin(), files.end(), [=](const auto& snd_info) {
-        auto archive_path = studio::resource::resource_explorer::get_archive_path(snd_info.folder_path);
+        auto archive_path = studio::resources::resource_explorer::get_archive_path(snd_info.folder_path);
         auto sound_stream = explorer.load_file(snd_info);
 
         if (content::sfx::is_sfx_file(*sound_stream.second))

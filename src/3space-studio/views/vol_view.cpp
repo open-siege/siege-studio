@@ -9,7 +9,7 @@
 
 namespace studio::views
 {
-  vol_view::vol_view(const studio::resource::file_info& info, const studio::resource::resource_explorer& archive)
+  vol_view::vol_view(const studio::resources::file_info& info, const studio::resources::resource_explorer& archive)
     : archive(archive)
   {
     archive_path = info.folder_path / info.filename;
@@ -18,11 +18,11 @@ namespace studio::views
 
   void vol_view::setup_view(wxWindow& parent)
   {
-    const static std::map<studio::resource::compression_type, const char*> type_names{
-      { studio::resource::compression_type::none, "None" },
-      { studio::resource::compression_type::lz, "Lempel-Ziv" },
-      { studio::resource::compression_type::lzh, "Lempel-Ziv w/ Huffman coding" },
-      { studio::resource::compression_type::rle, "Run-Length Encoding" }
+    const static std::map<studio::resources::compression_type, const char*> type_names{
+      { studio::resources::compression_type::none, "None" },
+      { studio::resources::compression_type::lz, "Lempel-Ziv" },
+      { studio::resources::compression_type::lzh, "Lempel-Ziv w/ Huffman coding" },
+      { studio::resources::compression_type::rle, "Run-Length Encoding" }
     };
 
     std::set<std::filesystem::path> folders;
@@ -178,7 +178,7 @@ namespace studio::views
 
         auto all_files = archive.find_files({ ".vol", ".rmf", ".rbx", ".dyn", ".tbv" });
 
-        std::vector<std::pair<std::filesystem::path, std::vector<studio::resource::file_info>>> found_files(all_files.size());
+        std::vector<std::pair<std::filesystem::path, std::vector<studio::resources::file_info>>> found_files(all_files.size());
 
         std::transform(std::execution::par, all_files.begin(), all_files.end(), found_files.begin(), [=](const auto& volume_file) {
           static std::mutex gauge_mutex;

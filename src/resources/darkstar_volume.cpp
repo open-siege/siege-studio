@@ -5,9 +5,9 @@
 #include <utility>
 #include <string>
 #include <cstdlib>
-#include "resource/darkstar_volume.hpp"
+#include "resources/darkstar_volume.hpp"
 
-namespace studio::resource::vol::darkstar
+namespace studio::resources::vol::darkstar
 {
   namespace endian = boost::endian;
   using namespace std::literals;
@@ -275,7 +275,7 @@ namespace studio::resource::vol::darkstar
     return results;
   }
 
-  using folder_info = studio::resource::folder_info;
+  using folder_info = studio::resources::folder_info;
 
   bool vol_file_archive::is_supported(std::basic_istream<std::byte>& stream)
   {
@@ -301,11 +301,11 @@ namespace studio::resource::vol::darkstar
     results.reserve(raw_results.size());
 
     std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(results), [&](const auto& value) {
-      studio::resource::file_info info{};
+      studio::resources::file_info info{};
       info.filename = value.filename;
       info.offset = value.offset;
       info.size = value.size;
-      info.compression_type = studio::resource::compression_type(value.compression_type);
+      info.compression_type = studio::resources::compression_type(value.compression_type);
       info.folder_path = archive_or_folder_path;
       return info;
     });
@@ -313,7 +313,7 @@ namespace studio::resource::vol::darkstar
     return results;
   }
 
-  void vol_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info) const
+  void vol_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info) const
   {
     if (int(stream.tellg()) == info.offset)
     {
@@ -325,9 +325,9 @@ namespace studio::resource::vol::darkstar
     }
   }
 
-  void vol_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resource::file_info& info, std::basic_ostream<std::byte>& output) const
+  void vol_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info, std::basic_ostream<std::byte>& output) const
   {
-    if (info.compression_type == studio::resource::compression_type::none)
+    if (info.compression_type == studio::resources::compression_type::none)
     {
       set_stream_position(stream, info);
       std::copy_n(std::istreambuf_iterator<std::byte>(stream),

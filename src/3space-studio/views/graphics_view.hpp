@@ -14,7 +14,7 @@
 #include <SFML/Window/Event.hpp>
 #include <SFML/Graphics.hpp>
 #include <SFML/OpenGL.hpp>
-#include "resource/archive_plugin.hpp"
+#include "resources/archive_plugin.hpp"
 
 namespace studio::views
 {
