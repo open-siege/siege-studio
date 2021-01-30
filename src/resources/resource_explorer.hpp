@@ -36,7 +36,7 @@ namespace studio::resources
 
     std::filesystem::path get_search_path() const;
 
-    void add_archive_type(std::string extension, std::unique_ptr<studio::resources::archive_plugin> archive_type, std::optional<nonstd::span<std::string_view>> invalid_extensions = std::nullopt);
+    void add_archive_type(std::string extension, std::unique_ptr<studio::resources::archive_plugin> archive_type, std::optional<nonstd::span<std::string_view>> explicit_extensions = std::nullopt);
 
     std::vector<studio::resources::file_info> find_files(const std::filesystem::path& new_search_path, const std::vector<std::string_view>& extensions) const;
 
@@ -57,7 +57,7 @@ namespace studio::resources
 
     std::locale default_locale;
 
-    std::map<std::string, nonstd::span<std::string_view>> disallowed_extensions;
+    std::map<std::string, nonstd::span<std::string_view>> explicit_extensions;
 
     std::multimap<std::string, std::unique_ptr<studio::resources::archive_plugin>> archive_types;
     std::map<std::string, std::function<void(const studio::resources::file_info&)>> actions;
