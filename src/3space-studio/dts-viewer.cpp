@@ -261,7 +261,7 @@ namespace studio
                         if constexpr (std::is_same_v<T, studio::resources::file_info>)
                         {
                           if (std::any_of(extensions.begin(), extensions.end(), [&file](const auto& ext) {
-                                 return ends_with(to_lower(file.filename.string()), ext);
+                                 return shared::ends_with(shared::to_lower(file.filename.string()), ext);
                           }))
                           {
                             tree_view.AppendItem(parent.value(), file.filename.string(), -1, -1, new tree_item_file_info(file));

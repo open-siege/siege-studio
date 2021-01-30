@@ -276,10 +276,10 @@ namespace studio::views
           }
           else
           {
-            auto bmp_file_name = to_lower(info.filename.stem().string());
+            auto bmp_file_name = shared::to_lower(info.filename.stem().string());
 
             auto possible_palette = std::find_if(results.begin(), results.end(), [&](auto* item) {
-              auto palette_file_name = to_lower(item->filename.stem().string());
+              auto palette_file_name = shared::to_lower(item->filename.stem().string());
               return bmp_file_name.rfind(palette_file_name, 0) == 0;
             });
 

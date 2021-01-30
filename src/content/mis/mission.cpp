@@ -318,14 +318,16 @@ namespace studio::resources::mis::darkstar
   {
     auto archive_path = archive_or_folder_path;
 
-    do
+    constexpr auto depth = 20;
+
+    for (auto i = 0; i < depth; ++i)
     {
-      auto extension = archive_path.extension().string();
-      if (extension != ".mis")
+      if (shared::to_lower(archive_path.extension().string()) == ".mis")
       {
-        archive_path = archive_path.parent_path();
+        break;
       }
-    } while (archive_path.extension().string() != ".mis");
+      archive_path = archive_path.parent_path();
+    }
 
     return archive_path;
   }
