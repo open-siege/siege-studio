@@ -357,7 +357,17 @@ namespace studio::resources::vol::darkstar
         extract_path = volume_filename.parent_path() / extract_path;
       }
 
-      command << extract_path.string() << ' ' << volume_filename << ' ' << info.filename << ' ' << new_path;
+      auto extract_path_str = extract_path.string();
+
+      if (extract_path_str.find(" ") != std::string::npos)
+      {
+        command << "cd /d " << extract_path.parent_path() << " && " << extract_path.filename().string()
+                << ' ' << volume_filename << ' ' << info.filename << ' ' << new_path;
+      }
+      else
+      {
+        command << extract_path.string() << ' ' << volume_filename << ' ' << info.filename << ' ' << new_path;
+      }
 
       std::system(command.str().c_str());
 
