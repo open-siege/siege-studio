@@ -194,6 +194,7 @@ namespace studio::resources::mis::darkstar
 {
   struct mis_file_archive : studio::resources::archive_plugin
   {
+    inline static std::array<std::string_view, 1> supported_extensions = std::array<std::string_view, 1>{ std::string_view{".veh"} };
     using ref_vector = std::vector<std::pair<std::reference_wrapper<::studio::mis::darkstar::sim_item>, content_info>>;
     mutable std::map<std::filesystem::path, ::studio::mis::darkstar::sim_items> contents;
     mutable std::map<std::filesystem::path, ref_vector> content_list_info;

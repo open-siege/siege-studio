@@ -26,7 +26,7 @@ namespace studio::views
 
   std::unique_ptr<studio_view> view_factory::create_view(const studio::resources::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resources::resource_explorer& manager) const
   {
-    auto archive_type = validators.equal_range(to_lower(file_info.filename.extension().string()));
+    auto archive_type = validators.equal_range(shared::to_lower(file_info.filename.extension().string()));
 
     for (auto it = archive_type.first; it != archive_type.second; ++it)
     {

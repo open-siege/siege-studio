@@ -72,7 +72,7 @@ namespace studio::views
   {
     studio::resources::resource_explorer archive(search_path);
 
-    archive.add_archive_type(".mis", std::make_unique<dio::mis::darkstar::mis_file_archive>());
+    archive.add_archive_type(".mis", std::make_unique<dio::mis::darkstar::mis_file_archive>(), dio::mis::darkstar::mis_file_archive::supported_extensions);
     archive.add_archive_type(".tbv", std::make_unique<dio::vol::trophy_bass::tbv_file_archive>());
     archive.add_archive_type(".rbx", std::make_unique<dio::vol::trophy_bass::rbx_file_archive>());
     archive.add_archive_type(".rmf", std::make_unique<dio::vol::three_space::rmf_file_archive>());

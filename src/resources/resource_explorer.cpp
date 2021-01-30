@@ -1,6 +1,6 @@
 #include <sstream>
-#include <iostream>
 #include "resource_explorer.hpp"
+#include "shared.hpp"
 
 namespace studio::resources
 {
@@ -36,10 +36,14 @@ namespace studio::resources
     return search_path;
   }
 
-  void resource_explorer::add_archive_type(std::string extension, std::unique_ptr<studio::resources::archive_plugin> archive_type)
+  void resource_explorer::add_archive_type(std::string extension, std::unique_ptr<studio::resources::archive_plugin> archive_type, std::optional<nonstd::span<std::string_view>> invalid_extensions)
   {
-    std::transform(extension.begin(), extension.end(), extension.begin(), [&](auto c) { return std::tolower(c, default_locale); });
-    archive_types.insert(std::make_pair(std::move(extension), std::move(archive_type)));
+    auto result = archive_types.insert(std::make_pair(shared::to_lower(extension), std::move(archive_type)));
+
+    if (invalid_extensions.has_value())
+    {
+      disallowed_extensions.emplace(std::make_pair(result->first, invalid_extensions.value()));
+    }
   }
 
   std::vector<studio::resources::file_info> resource_explorer::find_files(const std::filesystem::path& new_search_path, const std::vector<std::string_view>& extensions) const
@@ -65,14 +69,33 @@ namespace studio::resources
 
         if constexpr (std::is_same_v<T, studio::resources::folder_info>)
         {
+          const auto& real_folder = static_cast<const studio::resources::folder_info&>(folder);
+
+          // disallowed extensions for search for a specific archive type.
+          // to prevent searching files like mis files when it is not needed.
+          if (auto disallowed = disallowed_extensions.find(shared::to_lower(real_folder.full_path.extension().string()));
+              std::filesystem::exists(folder.full_path) &&
+              !std::filesystem::is_directory(real_folder.full_path) && disallowed != disallowed_extensions.end())
+          {
+            for (auto value : disallowed->second)
+            {
+              auto count = std::count(extensions.begin(), extensions.end(), value);
+
+              if (count == 0)
+              {
+                return;
+              }
+            }
+          }
+
           auto more_files = get_content_listing(folder.full_path);
 
           if (std::filesystem::exists(folder.full_path) && !std::filesystem::is_directory(folder.full_path))
           {
             for (auto& extension : extensions)
             {
-              auto ext = folder.full_path.filename().extension().string();
-              std::transform(ext.begin(), ext.end(), ext.begin(), [&](char c) { return std::tolower(c, default_locale); });
+              auto ext = shared::to_lower(folder.full_path.filename().extension().string());
+
               if (ext == extension)
               {
                 studio::resources::file_info info{};
@@ -100,8 +123,7 @@ namespace studio::resources
           {
             for (auto& extension : extensions)
             {
-              auto ext = folder.filename.extension().string();
-              std::transform(ext.begin(), ext.end(), ext.begin(), [&](char c) { return std::tolower(c, default_locale); });
+              auto ext = shared::to_lower(folder.filename.extension().string());
               if (ext == extension)
               {
                 results.emplace_back(folder);
@@ -212,9 +234,7 @@ namespace studio::resources
 
   std::optional<std::reference_wrapper<studio::resources::archive_plugin>> resource_explorer::get_archive_type(const std::filesystem::path& file_path) const
   {
-    auto ext = file_path.filename().extension().string();
-    std::transform(ext.begin(), ext.end(), ext.begin(), [&](char c) { return std::tolower(c, default_locale); });
-
+    auto ext = shared::to_lower(file_path.filename().extension().string());
     auto archive_type = archive_types.equal_range(ext);
 
     for (auto it = archive_type.first; it != archive_type.second; ++it)
