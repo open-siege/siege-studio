@@ -4,8 +4,13 @@
 
 namespace studio::views
 {
-  void view_factory::add_file_type(stream_validator* checker, view_creator* creator)
+  void view_factory::add_file_type(stream_validator* checker, view_creator* creator, bool no_fallback)
   {
+    if (no_fallback)
+    {
+      no_fallback_allowed.emplace(checker);
+    }
+
     creators.emplace(checker, creator);
   }
 
@@ -33,6 +38,11 @@ namespace studio::views
 
     for (auto& [checker, creator] : creators)
     {
+      if (auto allowed = no_fallback_allowed.find(checker); allowed != no_fallback_allowed.end())
+      {
+        return std::make_unique<default_view>(file_info);
+      }
+
       if (checker(stream))
       {
         return creator(file_info, stream, manager);

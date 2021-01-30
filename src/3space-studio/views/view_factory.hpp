@@ -17,7 +17,7 @@ namespace studio::views
   class view_factory
   {
   public:
-    void add_file_type(stream_validator* checker, view_creator* creator);
+    void add_file_type(stream_validator* checker, view_creator* creator, bool no_fallback = false);
 
     void add_extension(std::string_view extension, stream_validator* checker);
 
@@ -29,7 +29,7 @@ namespace studio::views
 
   private:
     std::set<std::string> extensions;
-
+    std::set<stream_validator*> no_fallback_allowed;
     std::map<stream_validator*, view_creator*> creators;
     std::multimap<std::string_view, stream_validator*> validators;
   };
