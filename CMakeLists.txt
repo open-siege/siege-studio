@@ -25,20 +25,20 @@ file(GLOB JSON_SRC_FILES
         src/content/*.cpp
         src/content/dts/*.cpp
         src/json-to-dts/*.cpp)
-file(GLOB VOL_SRC_FILES src/resource/*.cpp src/unvol/*.cpp)
+file(GLOB VOL_SRC_FILES src/resources/*.cpp src/unvol/*.cpp)
 file(GLOB MIS_SRC_FILES src/mis-to-json/*.cpp)
 file(GLOB DTS_VIEWER_SRC_FILES
         src/*.cpp
         src/content/*.cpp
         src/content/**/*.cpp
-        src/resource/*.cpp
+        src/resources/*.cpp
         src/3space-studio/views/*.cpp src/3space-studio/*.cpp)
 
 list(REMOVE_ITEM DTS_VIEWER_SRC_FILES ${TEST_SRC_FILES})
 
 file(GLOB TESTABLE_SRC_FILES src/content/*.cpp
         src/content/**/*.cpp
-        src/resource/*.cpp)
+        src/resources/*.cpp)
 
 add_executable(dts-to-json ${DTS_SRC_FILES})
 add_executable(dts-to-obj ${OBJ_SRC_FILES})

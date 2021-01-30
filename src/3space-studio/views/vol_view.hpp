@@ -3,20 +3,20 @@
 
 #include <future>
 #include "graphics_view.hpp"
-#include "resource/resource_explorer.hpp"
+#include "resources/resource_explorer.hpp"
 
 namespace studio::views
 {
   class vol_view : public normal_view
   {
   public:
-    vol_view(const studio::resource::file_info& info, const studio::resource::resource_explorer& archive);
+    vol_view(const studio::resources::file_info& info, const studio::resources::resource_explorer& archive);
     void setup_view(wxWindow& parent) override;
 
   private:
-    const studio::resource::resource_explorer& archive;
+    const studio::resources::resource_explorer& archive;
     std::filesystem::path archive_path;
-    std::vector<studio::resource::file_info> files;
+    std::vector<studio::resources::file_info> files;
     std::future<bool> pending_save;
     bool should_cancel;
     bool opened_folder = false;

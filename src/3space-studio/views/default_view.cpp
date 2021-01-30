@@ -4,7 +4,7 @@
 #include <utility>
 namespace studio::views
 {
-  default_view::default_view(studio::resource::file_info info)
+  default_view::default_view(studio::resources::file_info info)
     : info(std::move(info)) {}
 
   void default_view::setup_view(wxWindow& parent)

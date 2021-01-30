@@ -5,14 +5,14 @@
 #include <memory>
 #include "graphics_view.hpp"
 #include "default_view.hpp"
-#include "resource/resource_explorer.hpp"
+#include "resources/resource_explorer.hpp"
 #include "3space-studio/utility.hpp"
 
 namespace studio::views
 {
   using stream_validator = bool(std::basic_istream<std::byte>&);
 
-  using view_creator = std::unique_ptr<studio_view>(const studio::resource::file_info&, std::basic_istream<std::byte>&, const studio::resource::resource_explorer&);
+  using view_creator = std::unique_ptr<studio_view>(const studio::resources::file_info&, std::basic_istream<std::byte>&, const studio::resources::resource_explorer&);
 
   class view_factory
   {
@@ -23,9 +23,9 @@ namespace studio::views
 
     [[nodiscard]] std::vector<std::string_view> get_extensions() const;
 
-    std::unique_ptr<studio_view> create_view(const studio::resource::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resource::resource_explorer& manager) const;
+    std::unique_ptr<studio_view> create_view(const studio::resources::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resources::resource_explorer& manager) const;
 
-    std::unique_ptr<studio_view> create_default_view(const studio::resource::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resource::resource_explorer& manager) const;
+    std::unique_ptr<studio_view> create_default_view(const studio::resources::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resources::resource_explorer& manager) const;
 
   private:
     std::set<std::string> extensions;
