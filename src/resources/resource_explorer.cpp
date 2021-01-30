@@ -36,13 +36,13 @@ namespace studio::resources
     return search_path;
   }
 
-  void resource_explorer::add_archive_type(std::string extension, std::unique_ptr<studio::resources::archive_plugin> archive_type, std::optional<nonstd::span<std::string_view>> invalid_extensions)
+  void resource_explorer::add_archive_type(std::string extension, std::unique_ptr<studio::resources::archive_plugin> archive_type, std::optional<nonstd::span<std::string_view>> explicit_extensions)
   {
     auto result = archive_types.insert(std::make_pair(shared::to_lower(extension), std::move(archive_type)));
 
-    if (invalid_extensions.has_value())
+    if (explicit_extensions.has_value())
     {
-      disallowed_extensions.emplace(std::make_pair(result->first, invalid_extensions.value()));
+      this->explicit_extensions.emplace(std::make_pair(result->first, explicit_extensions.value()));
     }
   }
 
@@ -71,19 +71,31 @@ namespace studio::resources
         {
           const auto& real_folder = static_cast<const studio::resources::folder_info&>(folder);
 
-          // disallowed extensions for search for a specific archive type.
-          // to prevent searching files like mis files when it is not needed.
-          if (auto disallowed = disallowed_extensions.find(shared::to_lower(real_folder.full_path.extension().string()));
-              std::filesystem::exists(folder.full_path) &&
-              !std::filesystem::is_directory(real_folder.full_path) && disallowed != disallowed_extensions.end())
-          {
-            for (auto value : disallowed->second)
-            {
-              auto count = std::count(extensions.begin(), extensions.end(), value);
+          const auto ext = shared::to_lower(real_folder.full_path.extension().string());
 
-              if (count == 0)
+          // There are specific archives that must not be queried, unless
+          // they or their supported formats are explicitly queried.
+          if (auto must_be_explicit = explicit_extensions.find(ext);
+              std::filesystem::exists(folder.full_path) &&
+              !std::filesystem::is_directory(real_folder.full_path) && must_be_explicit != explicit_extensions.end())
+          {
+            auto count = std::count(extensions.begin(), extensions.end(), "ALL");
+
+            if (count == 0)
+            {
+              count = std::count(extensions.begin(), extensions.end(), ext);
+            }
+
+            if (count == 0)
+            {
+              for (auto value : must_be_explicit->second)
               {
-                return;
+                count = std::count(extensions.begin(), extensions.end(), value);
+
+                if (count == 0)
+                {
+                  return;
+                }
               }
             }
           }
