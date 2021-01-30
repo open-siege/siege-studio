@@ -66,6 +66,10 @@ target_include_directories(unvol PRIVATE ${GUI_INCLUDES})
 
 target_include_directories(3space-studio PRIVATE ${GUI_INCLUDES})
 target_link_libraries(3space-studio PRIVATE ${GUI_LIBS})
+add_custom_command(TARGET 3space-studio
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/src/3space-studio/logo.png $<TARGET_FILE_DIR:3space-studio>/logo.png
+        )
 
 add_executable(tests ${TESTABLE_SRC_FILES} ${TEST_SRC_FILES})
 target_include_directories(tests PRIVATE ${Catch2_INCLUDES} ${GUI_INCLUDES})
@@ -76,6 +80,7 @@ include(Catch)
 catch_discover_tests(tests)
 
 if(MSVC)
+    target_sources(3space-studio PRIVATE src/3space-studio/3space-studio.rc)
     target_compile_options(dts-to-json PRIVATE /W3 /WX $<$<CONFIG:RELEASE>:/O2>)
     target_compile_options(dts-to-obj PRIVATE /W3 /WX $<$<CONFIG:RELEASE>:/O2>)
     target_compile_options(json-to-dts PRIVATE /W3 /WX $<$<CONFIG:RELEASE>:/O2>)

@@ -1,6 +1,8 @@
 from conans import ConanFile, CMake, tools
 import glob
 import os.path
+from PIL import Image
+
 
 class LocalConanFile(ConanFile):
     system_requires = "opengl/system"
@@ -19,6 +21,12 @@ class LocalConanFile(ConanFile):
         cmake.test()
 
     def imports(self):
+        if not os.path.exists("src/3space-studio/logo.ico"):
+            tools.download(f"https://openclipart.org/image/400px/svg_to_png/97921/rubik-3D-colored.png", "src/3space-studio/logo.png")
+            filename = "src/3space-studio/logo.png"
+            img = Image.open(filename)
+            img.save("src/3space-studio/logo.ico")
+
         registry_url = "https://www.khronos.org/registry"
 
         if not os.path.exists("packages/include/KHR/khrplatform.h"):

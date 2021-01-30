@@ -80,6 +80,7 @@ namespace studio
 
   constexpr auto event_open_in_new_tab = 1;
   constexpr auto event_open_folder_as_workspace = 2;
+  static bool sfml_initialised = false;
 
   auto create_menu_bar()
   {
@@ -138,6 +139,7 @@ namespace studio
       if (!is_init)
       {
         ImGui::SFML::Init(*window);
+        studio::sfml_initialised = true;
 
         primary_gui_context = gui_context = ImGui::GetCurrentContext();
         is_init = true;
@@ -292,6 +294,7 @@ int main(int argc, char** argv)
 
     auto frame = std::shared_ptr<wxFrame>(new wxFrame(nullptr, wxID_ANY, "3Space Studio"), studio::default_wx_deleter);
 
+    frame->SetIcon(wxICON(MAINICON));
     frame->Bind(
       wxEVT_MENU, [](auto& event) {
              wxMessageBox("This is a tool to explore files using the 3Space or Darkstar engines. Currently only Starsiege, Starsiege Tribes, Trophy Bass 3D and Front Page Sports: Ski Racing are supported.",
@@ -579,7 +582,10 @@ int main(int argc, char** argv)
 
     auto result = app->OnRun();
 
-    ImGui::SFML::Shutdown();
+    if (studio::sfml_initialised)
+    {
+      ImGui::SFML::Shutdown();
+    }
 
     return result;
   }
