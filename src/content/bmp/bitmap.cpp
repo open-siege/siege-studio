@@ -9,6 +9,10 @@ namespace studio::content::bmp
 {
   using file_tag = std::array<std::byte, 4>;
 
+  constexpr file_tag bmp_alt1_tag = shared::to_tag<4>({ 'B', 'M', 'P', ' ' });
+
+  constexpr file_tag bmp_alt2_tag = shared::to_tag<4>({ 'B', 'M', 'P', ':' });
+
   constexpr file_tag pbmp_tag = shared::to_tag<4>({ 'P', 'B', 'M', 'P' });
 
   constexpr file_tag pba_tag = shared::to_tag<4>({ 'P', 'B', 'M', 'A' });
@@ -27,12 +31,13 @@ namespace studio::content::bmp
 
   bool is_microsoft_bmp(std::basic_istream<std::byte>& raw_data)
   {
-    windows_bmp_header header{};
+    file_tag header{};
     raw_data.read(reinterpret_cast<std::byte*>(&header), sizeof(header));
 
     raw_data.seekg(-int(sizeof(header)), std::ios::cur);
 
-    return header.tag == windows_bmp_tag;
+    return header != bmp_alt1_tag && header != bmp_alt2_tag &&
+           header[0] == windows_bmp_tag[0] && header[1] == windows_bmp_tag[1];
   }
 
   template<typename AlignmentType, typename PixelType>
