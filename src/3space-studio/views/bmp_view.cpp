@@ -135,7 +135,6 @@ namespace studio::views
     if (export_path == std::filesystem::path())
     {
       export_path = archive.get_search_path() / "exported";
-      std::filesystem::create_directory(export_path);
     }
 
     zoom_in = [&](const sf::Event&) {
