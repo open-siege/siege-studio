@@ -4,6 +4,7 @@
 #include "pal_view.hpp"
 #include "vol_view.hpp"
 #include "sfx_view.hpp"
+#include "content/mis/mission.hpp"
 #include "content/dts/darkstar.hpp"
 #include "content/bmp/bitmap.hpp"
 #include "content/sfx/wave.hpp"
@@ -13,6 +14,7 @@
 
 namespace dio
 {
+  namespace mis = studio::resource::mis;
   namespace vol = studio::resource::vol;
 }
 
@@ -30,6 +32,7 @@ namespace studio::views
 
     view_factory.add_file_type(content::sfx::is_sfx_file, [](auto& info, auto& stream, auto& archive) { return std::unique_ptr<studio_view>(new sfx_view(info, stream, archive)); });
 
+    view_factory.add_file_type(dio::mis::darkstar::mis_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
     view_factory.add_file_type(dio::vol::darkstar::vol_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
 
     view_factory.add_file_type(dio::vol::three_space::vol_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
@@ -51,6 +54,7 @@ namespace studio::views
     view_factory.add_extension(".ipl", content::pal::is_phoenix_pal);
     view_factory.add_extension(".ppl", content::pal::is_phoenix_pal);
 
+    view_factory.add_extension(".mis", dio::mis::darkstar::mis_file_archive::is_supported);
     view_factory.add_extension(".vol", dio::vol::darkstar::vol_file_archive::is_supported);
 
     view_factory.add_extension(".vol", dio::vol::three_space::vol_file_archive::is_supported);
@@ -68,6 +72,7 @@ namespace studio::views
   {
     studio::resource::resource_explorer archive(search_path);
 
+    archive.add_archive_type(".mis", std::make_unique<dio::mis::darkstar::mis_file_archive>());
     archive.add_archive_type(".tbv", std::make_unique<dio::vol::trophy_bass::tbv_file_archive>());
     archive.add_archive_type(".rbx", std::make_unique<dio::vol::trophy_bass::rbx_file_archive>());
     archive.add_archive_type(".rmf", std::make_unique<dio::vol::three_space::rmf_file_archive>());
