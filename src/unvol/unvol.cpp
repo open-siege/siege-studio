@@ -2,7 +2,7 @@
 #include <algorithm>
 
 #include <filesystem>
-#include "resource/darkstar_volume.hpp"
+#include "resources/darkstar_volume.hpp"
 
 int main(int, const char** argv)
 {
