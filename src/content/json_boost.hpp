@@ -60,7 +60,7 @@ namespace nlohmann
   };
 }// namespace nlohmann
 
-namespace darkstar::dts
+namespace studio::content
 {
   template<typename T, typename = int>
   struct has_struct_keys : std::false_type
@@ -321,79 +321,81 @@ namespace darkstar::dts
       to_json_impl(json, keys, item0, item1, item2, item3, item4, item5, item6, item7, item8, item9, item10, item11, item12, item13, item14);
     }
   }
+}// namespace studio::content
 
+namespace studio::content::dts::darkstar
+{
   namespace shape::v2
   {
-    using darkstar::dts::to_json;
-    using darkstar::dts::from_json;
+    using studio::content::to_json;
+    using studio::content::from_json;
   }// namespace shape::v2
 
   namespace shape::v3
   {
-    using darkstar::dts::to_json;
-    using darkstar::dts::from_json;
+    using studio::content::to_json;
+    using studio::content::from_json;
   }// namespace shape::v3
 
   namespace shape::v5
   {
-    using darkstar::dts::to_json;
-    using darkstar::dts::from_json;
+    using studio::content::to_json;
+    using studio::content::from_json;
   }// namespace shape::v5
 
   namespace shape::v6
   {
-    using darkstar::dts::to_json;
-    using darkstar::dts::from_json;
+    using studio::content::to_json;
+    using studio::content::from_json;
   }// namespace shape::v6
 
   namespace shape::v7
   {
-    using darkstar::dts::to_json;
-    using darkstar::dts::from_json;
+    using studio::content::to_json;
+    using studio::content::from_json;
   }// namespace shape::v7
 
   namespace shape::v8
   {
-    using darkstar::dts::to_json;
-    using darkstar::dts::from_json;
+    using studio::content::to_json;
+    using studio::content::from_json;
   }// namespace shape::v8
 
   namespace mesh::v1
   {
-    using darkstar::dts::to_json;
-    using darkstar::dts::from_json;
+    using studio::content::to_json;
+    using studio::content::from_json;
   }// namespace mesh::v1
 
   namespace mesh::v2
   {
-    using darkstar::dts::to_json;
-    using darkstar::dts::from_json;
+    using studio::content::to_json;
+    using studio::content::from_json;
   }// namespace mesh::v2
 
   namespace mesh::v3
   {
-    using darkstar::dts::to_json;
-    using darkstar::dts::from_json;
+    using studio::content::to_json;
+    using studio::content::from_json;
   }// namespace mesh::v3
 
   namespace material_list::v2
   {
-    using darkstar::dts::to_json;
-    using darkstar::dts::from_json;
+    using studio::content::to_json;
+    using studio::content::from_json;
   }// namespace material_list::v2
 
   namespace material_list::v3
   {
-    using darkstar::dts::to_json;
-    using darkstar::dts::from_json;
+    using studio::content::to_json;
+    using studio::content::from_json;
   }// namespace material_list::v3
 
   namespace material_list::v4
   {
-    using darkstar::dts::to_json;
-    using darkstar::dts::from_json;
+    using studio::content::to_json;
+    using studio::content::from_json;
   }// namespace material_list::v4
-
-}// namespace darkstar::dts
+}
 
 #endif//DARKSTARDTSCONVERTER_JSON_BOOST_HPP

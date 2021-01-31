@@ -1,9 +1,9 @@
 #include <array>
 #include <functional>
 #include <iostream>
-#include <map>
 #include <deque>
 #include <memory>
+#include <optional>
 
 #include <wx/wx.h>
 #include <wx/aui/aui.h>
@@ -14,723 +14,585 @@
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Window/Event.hpp>
 #include <SFML/Graphics.hpp>
-#include <SFML/OpenGL.hpp>
 
-#include <glm/gtx/quaternion.hpp>
-
-#include "dts_io.hpp"
-#include "dts_renderable_shape.hpp"
-#include "gl_renderer.hpp"
-#include "sfml_keys.hpp"
 #include "utility.hpp"
 
+#include "canvas_painter.hpp"
+#include "views/config.hpp"
+
 namespace fs = std::filesystem;
-namespace dts = darkstar::dts;
 
-struct shape_instance
+namespace studio
 {
-  std::unique_ptr<renderable_shape> shape;
-
-  glm::vec3 translation;
-  dts::vector3f rotation;
-};
-
-std::optional<std::filesystem::path> get_shape_path()
-{
-  constexpr static auto filetypes = "Darkstar DTS files|*.dts;*.DTS";
-  auto dialog = std::make_unique<wxFileDialog>(nullptr, "Open a Darkstar DTS File", "", "", filetypes, wxFD_OPEN, wxDefaultPosition);
-
-  if (dialog->ShowModal() == wxID_OK)
+  studio::resources::file_stream create_null_stream()
   {
-    const auto buffer = dialog->GetPath().ToAscii();
-    return std::string_view{ buffer.data(), buffer.length() };
+    static studio::resources::null_buffer null_buffer;
+    return std::make_pair(studio::resources::file_info{}, std::make_unique<std::basic_istream<std::byte>>(&null_buffer));
   }
 
-  return std::nullopt;
-}
-
-std::optional<std::filesystem::path> get_workspace_path()
-{
-  auto dialog = std::make_unique<wxDirDialog>(nullptr, "Open a folder to use as a workspace");
-
-  if (dialog->ShowModal() == wxID_OK)
+  struct tree_item_file_info : public wxTreeItemData
   {
-    const auto buffer = dialog->GetPath().ToAscii();
-    return std::string_view{ buffer.data(), buffer.length() };
-  }
+    studio::resources::file_info info;
 
-  return std::nullopt;
-}
+    explicit tree_item_file_info(studio::resources::file_info info) : info(std::move(info)) {}
+  };
 
-std::optional<std::filesystem::path> get_shape_path(int argc, char** argv)
-{
-  if (argc > 1)
+  struct tree_item_folder_info : public wxTreeItemData
   {
-    return argv[1];
-  }
+    studio::resources::folder_info info;
 
-  return get_shape_path();
-}
+    explicit tree_item_folder_info(studio::resources::folder_info info) : info(std::move(info)) {}
+  };
 
-dts::shape_variant get_shape(std::optional<std::filesystem::path> shape_path)
-{
-  if (!shape_path.has_value())
+  std::optional<std::filesystem::path> get_shape_path()
   {
-    return dts::shape_variant{};
-  }
+    constexpr static auto filetypes = "Darkstar DTS files|*.dts;*.DTS";
+    auto dialog = std::make_unique<wxFileDialog>(nullptr, "Open a Darkstar DTS File", "", "", filetypes, wxFD_OPEN, wxDefaultPosition);
 
-  try
-  {
-    std::basic_ifstream<std::byte> input(shape_path.value(), std::ios::binary);
-    return dts::read_shape(shape_path.value(), input, std::nullopt);
-  }
-  catch (const std::exception& ex)
-  {
-    wxMessageBox(ex.what(), "Error Loading Model.", wxICON_ERROR);
-    return dts::shape_variant{};
-  }
-}
-
-void setup_opengl(wxControl* parent)
-{
-  auto [width, height] = parent->GetClientSize();
-
-  if (height == 0)
-  {
-    return;
-  }
-
-  glViewport(0, 0, width, height);
-
-  glClearDepth(1.f);
-  glClearColor(0.3f, 0.3f, 0.3f, 0.f);
-
-  glEnable(GL_DEPTH_TEST);
-  glDepthMask(GL_TRUE);
-
-  glEnable(GL_CULL_FACE);
-  glCullFace(GL_BACK);
-
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-
-  perspectiveGL(90.f, double(width) / double(height), 1.f, 1200.0f);
-}
-
-auto apply_configuration(std::map<std::string, std::function<void(shape_instance&)>>& actions)
-{
-  //TODO read this from config one day
-  std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(shape_instance&)>>> callbacks;
-  callbacks.emplace(config::get_key_for_name("Numpad4"), std::ref(actions.at("pan_left")));
-  callbacks.emplace(config::get_key_for_name("Numpad6"), std::ref(actions.at("pan_right")));
-  callbacks.emplace(config::get_key_for_name("Numpad8"), std::ref(actions.at("pan_up")));
-  callbacks.emplace(config::get_key_for_name("Numpad2"), std::ref(actions.at("pan_down")));
-  callbacks.emplace(config::get_key_for_name("Numpad1"), std::ref(actions.at("increase_x_rotation")));
-  callbacks.emplace(config::get_key_for_name("Numpad3"), std::ref(actions.at("decrease_x_rotation")));
-  callbacks.emplace(config::get_key_for_name("Numpad7"), std::ref(actions.at("increase_z_rotation")));
-  callbacks.emplace(config::get_key_for_name("Numpad9"), std::ref(actions.at("decrease_z_rotation")));
-
-  callbacks.emplace(config::get_key_for_name("Add"), std::ref(actions.at("zoom_in")));
-  callbacks.emplace(config::get_key_for_name("Subtract"), std::ref(actions.at("zoom_out")));
-
-  callbacks.emplace(config::get_key_for_name("Divide"), std::ref(actions.at("increase_y_rotation")));
-  callbacks.emplace(config::get_key_for_name("Insert"), std::ref(actions.at("increase_y_rotation")));
-  callbacks.emplace(config::get_key_for_name("Numpad0"), std::ref(actions.at("increase_y_rotation")));
-
-  callbacks.emplace(config::get_key_for_name("Multiply"), std::ref(actions.at("decrease_y_rotation")));
-  callbacks.emplace(config::get_key_for_name("Delete"), std::ref(actions.at("decrease_y_rotation")));
-  callbacks.emplace(config::get_key_for_name("Period"), std::ref(actions.at("decrease_y_rotation")));
-
-  return callbacks;
-}
-
-
-void render_tree_view(const std::string& node, bool& node_visible, std::map<std::optional<std::string>, std::map<std::string, bool>>& visible_nodes, std::map<std::string, std::map<std::string, bool>>& visible_objects)
-{
-  ImGui::Checkbox(node.c_str(), &node_visible);
-  ImGui::Indent(8);
-
-  if (visible_objects[node].size() > 1)
-  {
-    for (auto& [child_object, object_visible] : visible_objects[node])
+    if (dialog->ShowModal() == wxID_OK)
     {
-      if (node == child_object)
+      const auto buffer = dialog->GetPath().ToAscii();
+      return std::string_view{ buffer.data(), buffer.length() };
+    }
+
+    return std::nullopt;
+  }
+
+  std::optional<std::filesystem::path> get_workspace_path()
+  {
+    auto dialog = std::make_unique<wxDirDialog>(nullptr, "Open a folder to use as a workspace");
+
+    if (dialog->ShowModal() == wxID_OK)
+    {
+      const auto buffer = dialog->GetPath().ToAscii();
+      return std::string_view{ buffer.data(), buffer.length() };
+    }
+
+    return std::nullopt;
+  }
+
+  wxAppConsole* createApp()
+  {
+    wxAppConsole::CheckBuildOptions(WX_BUILD_OPTIONS_SIGNATURE,
+                                    "3Space Studio");
+    return new wxApp();
+  }
+
+  constexpr auto event_open_in_new_tab = 1;
+  constexpr auto event_open_folder_as_workspace = 2;
+  static bool sfml_initialised = false;
+
+  auto create_menu_bar()
+  {
+    auto menuFile = std::make_unique<wxMenu>();
+    menuFile->Append(wxID_OPEN);
+    menuFile->Append(event_open_in_new_tab, "Open in New Tab...");
+    menuFile->Append(event_open_folder_as_workspace, "Open Folder as Workspace");
+    menuFile->AppendSeparator();
+    menuFile->Append(wxID_EXIT);
+
+    auto menuHelp = std::make_unique<wxMenu>();
+    menuHelp->Append(wxID_ABOUT);
+
+    auto menuBar = std::make_unique<wxMenuBar>();
+    menuBar->Append(menuFile.release(), "&File");
+    menuBar->Append(menuHelp.release(), "&Help");
+
+    return menuBar;
+  }
+
+  void create_render_view(wxWindow& panel, studio::resources::file_stream file_stream, const views::view_factory& factory, const studio::resources::resource_explorer& archive)
+  {
+    std::unique_ptr<views::studio_view> raw_view;
+
+    try
+    {
+      raw_view = factory.create_view(file_stream.first, *file_stream.second, archive);
+    }
+    catch (const std::exception& ex)
+    {
+      std::cerr << ex.what() << '\n';
+      raw_view = factory.create_default_view(file_stream.first, *file_stream.second, archive);
+    }
+
+    if (auto* view = dynamic_cast<views::normal_view*>(raw_view.get()); view)
+    {
+      auto content_panel = std::make_unique<wxPanel>(&panel, wxID_ANY);
+
+      view->setup_view(*content_panel);
+      content_panel->SetClientObject(raw_view.release());
+
+      panel.GetSizer()->Add(content_panel.release(), 1, wxEXPAND | wxALL, 5);
+    }
+    else if (auto other_view = std::dynamic_pointer_cast<views::graphics_view>(std::shared_ptr<views::studio_view>(std::move(raw_view))); other_view)
+    {
+      auto graphics = std::shared_ptr<wxControl>(new wxControl(&panel, -1, wxDefaultPosition, wxDefaultSize, 0), default_wx_deleter);
+
+      sf::ContextSettings context;
+      context.depthBits = 24;
+      auto window = std::make_shared<sf::RenderWindow>(get_handle(*graphics), context);
+      static bool is_init = false;
+      static ImGuiContext* primary_gui_context;
+
+      ImGuiContext* gui_context;
+
+      if (!is_init)
       {
-        ImGui::Checkbox((child_object + " (object)").c_str(), &object_visible);
+        ImGui::SFML::Init(*window);
+        studio::sfml_initialised = true;
+
+        primary_gui_context = gui_context = ImGui::GetCurrentContext();
+        is_init = true;
       }
       else
       {
-        ImGui::Checkbox(child_object.c_str(), &object_visible);
+        gui_context = ImGui::CreateContext(ImGui::GetIO().Fonts);
       }
+
+      graphics->Bind(wxEVT_ERASE_BACKGROUND, [](auto& event) {});
+
+      graphics->Bind(wxEVT_SIZE, [=](auto& event) {
+             other_view->setup_view(*graphics, *window, *gui_context);
+      });
+
+      graphics->Bind(wxEVT_IDLE, [=](auto& event) {
+             graphics->Refresh();
+      });
+
+      graphics->Bind(wxEVT_PAINT, canvas_painter(graphics, window, *gui_context, other_view));
+
+      graphics->Bind(wxEVT_DESTROY, [=](auto& event) mutable {
+             window.reset();
+             graphics.reset();
+             if (gui_context != primary_gui_context)
+             {
+               ImGui::DestroyContext(gui_context);
+               ImGui::SetCurrentContext(primary_gui_context);
+             }
+      });
+
+      other_view->setup_view(*graphics, *window, *gui_context);
+      panel.GetSizer()->Add(graphics.get(), 1, wxEXPAND | wxALL, 5);
     }
   }
 
-  for (auto& [child_node, child_node_visible] : visible_nodes[node])
+  void populate_tree_view(const views::view_factory& view_factory,
+                          studio::resources::resource_explorer& archive,
+                          wxTreeCtrl& tree_view,
+                          const fs::path& search_path,
+                          const std::vector<std::string_view>& extensions,
+                          std::optional<wxTreeItemId> parent = std::nullopt)
   {
-    render_tree_view(child_node, child_node_visible, visible_nodes, visible_objects);
-  }
+    using namespace std::literals;
 
-  ImGui::Unindent(8);
-}
-
-auto renderer_main(std::optional<std::filesystem::path> shape_path, sf::RenderWindow* window, wxControl* parent, ImGuiContext* guiContext)
-{
-  static std::map<std::optional<std::filesystem::path>, shape_instance> shape_instances;
-
-  auto instance_iterator = shape_instances.emplace(shape_path, shape_instance{ std::make_unique<dts_renderable_shape>(get_shape(shape_path)), { 0, 0, -20 }, { 115, 180, -35 } });
-  auto& instance = instance_iterator.first;
-
-  static std::map<std::string, std::function<void(shape_instance&)>> actions;
-
-  actions.emplace("increase_x_rotation", [](auto& instance) { instance.rotation.x++; });
-  actions.emplace("decrease_x_rotation", [](auto& instance) { instance.rotation.x--; });
-
-  actions.emplace("increase_y_rotation", [](auto& instance) { instance.rotation.y++; });
-  actions.emplace("decrease_y_rotation", [](auto& instance) { instance.rotation.y--; });
-  actions.emplace("increase_z_rotation", [](auto& instance) { instance.rotation.z++; });
-  actions.emplace("decrease_z_rotation", [](auto& instance) { instance.rotation.z--; });
-
-  actions.emplace("zoom_in", [](auto& instance) { instance.translation.z++; });
-  actions.emplace("zoom_out", [](auto& instance) { instance.translation.z--; });
-
-  actions.emplace("pan_left", [](auto& instance) { instance.translation.x--; });
-  actions.emplace("pan_right", [](auto& instance) { instance.translation.x++; });
-
-  actions.emplace("pan_up", [](auto& instance) { instance.translation.y++; });
-  actions.emplace("pan_down", [](auto& instance) { instance.translation.y--; });
-
-
-  std::map<std::optional<std::string>, std::map<std::string, bool>> visible_nodes;
-  std::map<std::string, std::map<std::string, bool>> visible_objects;
-  auto detail_levels = instance->second.shape->get_detail_levels();
-  std::vector<std::size_t> detail_level_indexes = { 0 };
-  auto sequences = instance->second.shape->get_sequences(detail_level_indexes);
-
-  bool root_visible = true;
-
-  auto qRot1 = glm::quat(1.f, 0.f, 0.f, 0.f);
-
-  auto callbacks = apply_configuration(actions);
-
-  sf::Clock clock;
-
-  setup_opengl(parent);
-
-  return [=](auto& wx_event) mutable {
-    wxPaintDC Dc(parent);
-
-    sf::Event event;
-
-    ImGui::SetCurrentContext(guiContext);
-
-    while (window->pollEvent(event))
+    if (archive.is_regular_file(search_path))
     {
-      ImGui::SFML::ProcessEvent(event);
-      if (event.type == sf::Event::KeyPressed && (event.key.code != sf::Keyboard::Escape))
-      {
-        const auto callback = callbacks.find(event.key.code);
-
-        if (callback != callbacks.end())
-        {
-          callback->second(instance->second);
-        }
-      }
-
-      if (event.type == sf::Event::Closed)
-      {
-        window->close();
-      }
-
-      if ((event.type == sf::Event::KeyPressed) && (event.key.code == sf::Keyboard::Escape))
-      {
-        window->close();
-      }
+      return;
     }
 
-    auto& [shape, translation, rotation] = instance->second;
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glTranslatef(translation.x, translation.y, translation.z);
-
-    glRotatef(rotation.x, 1.f, 0.f, 0.f);
-    glRotatef(rotation.y, 0.f, 1.f, 0.f);
-    glRotatef(rotation.z, 0.f, 0.f, 1.f);
-
-    glBegin(GL_TRIANGLES);
-    auto renderer = gl_renderer{ visible_nodes, visible_objects };
-    shape->render_shape(renderer, detail_level_indexes, sequences);
-    glEnd();
-
-    window->pushGLStates();
-
-    ImGui::SFML::Update(*window, clock.restart());
-
-    if (!detail_levels.empty())
+    bool is_root = false;
+    if (!parent.has_value())
     {
-      ImGui::Begin("Details and Nodes");
-
-      if (ImGui::CollapsingHeader("Detail Levels", ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen))
-      {
-        for (auto i = 0u; i < detail_levels.size(); ++i)
-        {
-          auto selected_item = std::find_if(std::begin(detail_level_indexes), std::end(detail_level_indexes), [i](auto value) {
-            return value == i;
-          });
-
-          bool is_selected = selected_item != std::end(detail_level_indexes);
-
-          if (ImGui::Checkbox(detail_levels[i].c_str(), &is_selected))
-          {
-            if (is_selected)
-            {
-              detail_level_indexes.emplace_back(i);
-              sequences = shape->get_sequences(detail_level_indexes);
-            }
-            else if (selected_item != std::end(detail_level_indexes))
-            {
-              detail_level_indexes.erase(selected_item);
-              sequences = shape->get_sequences(detail_level_indexes);
-            }
-          }
-        }
-      }
-
-      if (ImGui::CollapsingHeader("Nodes", ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen))
-      {
-        for (auto index : detail_level_indexes)
-        {
-          render_tree_view(detail_levels[index], root_visible, visible_nodes, visible_objects);
-        }
-      }
-
-      ImGui::End();
+      tree_view.DeleteAllItems();
+      is_root = true;
     }
 
-    if (!sequences.empty())
+    parent = parent.has_value() ? parent : tree_view.AddRoot(search_path.string());
+
+    auto files_folders = archive.get_content_listing(search_path);
+
+    std::sort(
+      files_folders.begin(), files_folders.end(), [](const auto& a, const auto& b) {
+             return std::visit([&](const auto& entry) {
+                                      using AType = std::decay_t<decltype(entry)>;
+
+                                      return std::visit([&](const auto& other) {
+                                                               using BType = std::decay_t<decltype(other)>;
+
+                                                               if constexpr (std::is_same_v<AType, studio::resources::folder_info> && std::is_same_v<BType, AType>)
+                                                               {
+                                                                 return entry.full_path < other.full_path;
+                                                               }
+
+                                                               if constexpr (std::is_same_v<AType, studio::resources::file_info> && std::is_same_v<BType, AType>)
+                                                               {
+                                                                 return entry.filename < other.filename;
+                                                               }
+
+                                                               if constexpr (std::is_same_v<AType, studio::resources::file_info> && std::is_same_v<BType, studio::resources::folder_info>)
+                                                               {
+                                                                 return false;
+                                                               }
+
+                                                               if constexpr (std::is_same_v<AType, studio::resources::folder_info> && std::is_same_v<BType, studio::resources::file_info>)
+                                                               {
+                                                                 return true;
+                                                               }
+
+                                                               return false;
+                                                        },
+                                                        b);
+                               },
+                               a);
+      });
+
+    for (auto& item : files_folders)
     {
-      ImGui::Begin("Sequences");
+      std::visit([&](auto&& folder) {
+                        using T = std::decay_t<decltype(folder)>;
 
-      if (ImGui::CollapsingHeader("Sequences", ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen))
-      {
-        for (auto it = sequences.begin(); it != sequences.end(); it++)
-        {
-          auto& sequence = *it;
+                        if constexpr (std::is_same_v<T, studio::resources::folder_info>)
+                        {
+                          auto new_parent = tree_view.AppendItem(parent.value(), folder.full_path.filename().string(), -1, -1, new tree_item_folder_info(folder));
 
-          if (ImGui::Checkbox(sequence.name.c_str(), &sequence.enabled))
-          {
-            auto enabled_count = std::count_if(sequence.sub_sequences.begin(), sequence.sub_sequences.end(), [](auto& sub_sequence) {
-              return sub_sequence.enabled;
-            });
-
-            if (enabled_count == sequence.sub_sequences.size() || enabled_count == 0)
-            {
-              for (auto& sub_sequence : sequence.sub_sequences)
-              {
-                sub_sequence.enabled = sequence.enabled;
-              }
-            }
-          }
-        }
-      }
-
-      if (ImGui::CollapsingHeader("Sub Sequences", ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen))
-      {
-        for (auto& sequence : sequences)
-        {
-          ImGui::LabelText("", sequence.name.c_str());
-          for (auto& sub_sequence : sequence.sub_sequences)
-          {
-            ImGui::Checkbox((sequence.name + "/" + sub_sequence.node_name).c_str(), &sub_sequence.enabled);
-
-            ImGui::SliderInt(sequence.enabled ? " " : "", &sub_sequence.frame_index, 0, sub_sequence.num_key_frames - 1);
-          }
-        }
-      }
-
-      ImGui::End();
+                          if (is_root)
+                          {
+                            populate_tree_view(view_factory, archive, tree_view, folder.full_path, extensions, new_parent);
+                          }
+                        }
+                 },
+                 item);
     }
 
-
-    ImGui::SFML::Render(*window);
-    window->popGLStates();
-    window->display();
-  };
-}
-
-wxAppConsole* createApp()
-{
-  wxAppConsole::CheckBuildOptions(WX_BUILD_OPTIONS_SIGNATURE,
-    "Hello wxWidgets");
-  return new wxApp();
-}
-
-constexpr auto event_open_in_new_tab = 1;
-constexpr auto event_open_folder_as_workspace = 2;
-
-wxMenuBar* create_menu_bar()
-{
-  auto* menuFile = new wxMenu();
-  menuFile->Append(wxID_OPEN);
-  menuFile->Append(event_open_in_new_tab, "Open in New Tab...");
-  menuFile->Append(event_open_folder_as_workspace, "Open Folder as Workspace");
-  menuFile->AppendSeparator();
-  menuFile->Append(wxID_EXIT);
-
-  auto* menuHelp = new wxMenu();
-  menuHelp->Append(wxID_ABOUT);
-
-  auto* menuBar = new wxMenuBar();
-  menuBar->Append(menuFile, "&File");
-  menuBar->Append(menuHelp, "&Help");
-
-  return menuBar;
-}
-
-void create_render_view(wxWindow* panel, std::optional<std::filesystem::path> path)
-{
-  auto* graphics = new wxControl(panel, -1, wxDefaultPosition, wxDefaultSize, 0);
-
-  panel->GetSizer()->Add(graphics, 1, wxEXPAND | wxALL, 5);
-
-  sf::ContextSettings context;
-  context.depthBits = 24;
-  auto* window = new sf::RenderWindow(get_handle(graphics), context);
-  static bool is_init = false;
-  static ImGuiContext* primary_gui_context;
-
-  ImGuiContext* gui_context;
-
-  if (!is_init)
-  {
-    ImGui::SFML::Init(*window);
-
-    primary_gui_context = gui_context = ImGui::GetCurrentContext();
-    is_init = true;
-  }
-  else
-  {
-    gui_context = ImGui::CreateContext(ImGui::GetIO().Fonts);
-  }
-
-  graphics->Bind(wxEVT_ERASE_BACKGROUND, [](auto& event) {});
-
-  graphics->Bind(wxEVT_SIZE, [=](auto& event) {
-    setup_opengl(graphics);
-  });
-
-  graphics->Bind(wxEVT_IDLE, [=](auto& event) {
-    graphics->Refresh();
-  });
-  graphics->Bind(wxEVT_PAINT, renderer_main(path, window, graphics, gui_context));
-
-  graphics->Bind(wxEVT_DESTROY, [=](auto& event) {
-    delete window;
-    if (gui_context != primary_gui_context)
+    for (auto& item : files_folders)
     {
-      ImGui::DestroyContext(gui_context);
-      ImGui::SetCurrentContext(primary_gui_context);
+      std::visit([&](auto&& file) {
+                        using T = std::decay_t<decltype(file)>;
+                        if constexpr (std::is_same_v<T, studio::resources::file_info>)
+                        {
+                          if (std::any_of(extensions.begin(), extensions.end(), [&file](const auto& ext) {
+                                 return shared::ends_with(shared::to_lower(file.filename.string()), ext);
+                          }))
+                          {
+                            tree_view.AppendItem(parent.value(), file.filename.string(), -1, -1, new tree_item_file_info(file));
+                          }
+                        }
+                 },
+                 item);
     }
-  });
-}
 
-auto get_path_from_tree_item(wxTreeCtrl* tree_view, wxTreeItemId item, const fs::path& search_path)
-{
-  std::deque<std::filesystem::path> path_fragments;
-
-  auto parent_item = tree_view->GetItemParent(item);
-
-  do
-  {
-    if (parent_item != tree_view->GetRootItem())
+    if (is_root)
     {
-      path_fragments.emplace_front(tree_view->GetItemText(parent_item).ToAscii().data());
-      parent_item = tree_view->GetItemParent(parent_item);
+      tree_view.Expand(parent.value());
     }
-  } while (parent_item != tree_view->GetRootItem());
-
-  path_fragments.emplace_back(std::filesystem::path{ tree_view->GetItemText(item).ToAscii().data() });
-
-  auto new_path = search_path;
-
-  for (auto& path : path_fragments)
-  {
-    new_path = new_path / path;
-  }
-
-  return new_path;
-}
-
-void populate_tree_view(wxTreeCtrl* tree_view, fs::path search_path, std::optional<wxTreeItemId> parent = std::nullopt)
-{
-  using namespace std::literals;
-  constexpr std::array extensions = { ".dts"sv, ".DTS"sv };
-
-  if (!fs::is_directory(search_path))
-  {
-    return;
-  }
-
-  bool is_root = false;
-  if (!parent.has_value())
-  {
-    tree_view->DeleteAllItems();
-    is_root = true;
-  }
-
-  parent = parent.has_value() ? parent : tree_view->AddRoot(search_path.string());
-
-  for (auto& item : fs::directory_iterator(search_path))
-  {
-    if (item.is_directory())
-    {
-      auto new_parent = tree_view->AppendItem(parent.value(), item.path().stem().string());
-
-      if (is_root)
-      {
-        populate_tree_view(tree_view, item, new_parent);
-      }
-    }
-  }
-
-  for (auto& item : fs::directory_iterator(search_path))
-  {
-    if (!item.is_directory())
-    {
-      auto filename = item.path().filename().string();
-      if (std::any_of(extensions.begin(), extensions.end(), [&filename](const auto& ext) {
-            return ends_with(filename, ext);
-          }))
-      {
-        tree_view->AppendItem(parent.value(), filename);
-      }
-    }
-  }
-
-  if (is_root)
-  {
-    tree_view->Expand(parent.value());
   }
 }
 
 int main(int argc, char** argv)
 {
-  auto search_path = fs::current_path();
+  try
+  {
+    auto search_path = fs::current_path();
+    auto archive = studio::views::create_default_resource_explorer(search_path);
+    auto view_factory = studio::views::create_default_view_factory();
 
-  wxApp::SetInitializerFunction(createApp);
-  wxEntryStart(argc, argv);
-  auto* app = wxApp::GetInstance();
-  app->CallOnInit();
+    wxApp::SetInitializerFunction(studio::createApp);
+    wxEntryStart(argc, argv);
+    auto* app = wxApp::GetInstance();
+    app->CallOnInit();
+    wxInitAllImageHandlers();
 
-  auto* frame = new wxFrame(nullptr, wxID_ANY, "3Space Studio");
+    auto frame = std::shared_ptr<wxFrame>(new wxFrame(nullptr, wxID_ANY, "3Space Studio"), studio::default_wx_deleter);
 
-  frame->Bind(
-    wxEVT_MENU, [](auto& event) {
-      wxMessageBox("This is a tool to explore files using the 3Space or Darkstar engines. Currently only Starsiege, Starsiege Tribes, Trophy Bass 3D and Front Page Sports: Ski Racing are supported.",
-        "About 3Space Studio",
-        wxOK | wxICON_INFORMATION);
-    },
-    wxID_ABOUT);
+    frame->SetIcon(wxICON(MAINICON));
+    frame->Bind(
+      wxEVT_MENU, [](auto& event) {
+             wxMessageBox("This is a tool to explore files using the 3Space or Darkstar engines. Currently only Starsiege, Starsiege Tribes, Trophy Bass 3D and Front Page Sports: Ski Racing are supported.",
+                          "About 3Space Studio",
+                          wxOK | wxICON_INFORMATION);
+      },
+      wxID_ABOUT);
 
-  auto* sizer = new wxBoxSizer(wxHORIZONTAL);
+    auto tree_panel = std::make_unique<wxPanel>(frame.get(), wxID_ANY);
+    tree_panel->SetSizer(std::make_unique<wxBoxSizer>(wxVERTICAL).release());
 
-  auto* tree_view = new wxTreeCtrl(frame);
-  sizer->Add(tree_view, 20, wxEXPAND, 0);
+    auto tree_search = std::shared_ptr<wxComboBox>(new wxComboBox(tree_panel.get(), wxID_ANY), studio::default_wx_deleter);
 
-  populate_tree_view(tree_view, search_path);
+    auto extensions = view_factory.get_extensions();
 
-  wxAuiNotebook* notebook = new wxAuiNotebook(frame, wxID_ANY);
-  auto num_elements = notebook->GetPageCount();
+    tree_search->Append("All Supported Formats");
+    tree_search->Append("All Palettes (.pal, .ppl, .ipl)");
+    tree_search->Append("All Images (.bmp, .pba)");
+    tree_search->Append("All 3D Models (.dts)");
 
-  sizer->Add(notebook, 80, wxEXPAND, 0);
-
-  auto add_element_from_file = [notebook, &num_elements](auto& new_path, bool replace_selection = false) {
-    if (fs::is_directory(new_path))
+    for (auto& extension : extensions)
     {
-      return;
+      tree_search->Append(std::string(extension));
     }
 
-    wxPanel* panel = new wxPanel(notebook, wxID_ANY);
-    panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
-    create_render_view(panel, new_path);
+    tree_search->SetSelection(0);
 
-    if (replace_selection)
-    {
-      auto selection = notebook->GetSelection();
-      notebook->InsertPage(selection, panel, new_path.filename().string());
-      num_elements = notebook->GetPageCount();
+    auto tree_view = std::shared_ptr<wxTreeCtrl>(new wxTreeCtrl(tree_panel.get()), studio::default_wx_deleter);
 
-      if (num_elements > 2)
-      {
-        notebook->DeletePage(selection + 1);
-      }
+    studio::populate_tree_view(view_factory, archive, *tree_view, search_path, extensions);
 
-      notebook->ChangeSelection(selection);
-    }
-    else
-    {
-      notebook->InsertPage(notebook->GetPageCount() - 1, panel, new_path.filename().string());
-      num_elements = notebook->GetPageCount();
-      notebook->ChangeSelection(notebook->GetPageCount() - 2);
-    }
-  };
+    auto get_filter_selection = [tree_search, &view_factory]() {
+           const auto selection = tree_search->GetSelection();
 
-  auto add_new_element = [notebook, &num_elements]() {
-    wxPanel* panel = new wxPanel(notebook, wxID_ANY);
-    panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
-    create_render_view(panel, std::nullopt);
-    notebook->InsertPage(notebook->GetPageCount() - 1, panel, "New Tab");
-    notebook->ChangeSelection(notebook->GetPageCount() - 2);
-    num_elements = notebook->GetPageCount();
-  };
+           std::vector<std::string_view> new_extensions;
 
-  tree_view->Bind(wxEVT_TREE_ITEM_EXPANDING, [tree_view, &search_path](wxTreeEvent& event) {
-    auto item = event.GetItem();
+           if (selection == 0)
+           {
+             return view_factory.get_extensions();
+           }
+           else if (selection == 1 || selection == 2 || selection == 3)
+           {
+             if (selection == 1)
+             {
+               new_extensions.reserve(3);
+               new_extensions.emplace_back(".pal");
+               new_extensions.emplace_back(".ppl");
+               new_extensions.emplace_back(".ipl");
+             }
+             else if (selection == 2)
+             {
+               new_extensions.reserve(2);
+               new_extensions.emplace_back(".bmp");
+               new_extensions.emplace_back(".pba");
+             }
+             else
+             {
+               new_extensions.emplace_back(".dts");
+             }
+           }
+           else
+           {
+             new_extensions.emplace_back(view_factory.get_extensions()[selection - 4]);
+           }
 
-    if (item == tree_view->GetRootItem())
-    {
-      return;
-    }
+           return new_extensions;
+    };
 
-    if (tree_view->HasChildren(item))
-    {
-      wxTreeItemIdValue cookie = nullptr;
-
-      auto child = tree_view->GetFirstChild(item, cookie);
-
-      if (cookie && !tree_view->HasChildren(child))
-      {
-        populate_tree_view(tree_view, get_path_from_tree_item(tree_view, child, search_path), child);
-      }
-
-      do {
-        child = tree_view->GetNextChild(item, cookie);
-
-        if (cookie && !tree_view->HasChildren(child))
-        {
-          populate_tree_view(tree_view, get_path_from_tree_item(tree_view, child, search_path), child);
-        }
-      } while (cookie != nullptr);
-    }
-  });
-
-  tree_view->Bind(wxEVT_TREE_ITEM_ACTIVATED, [tree_view, &search_path, &add_element_from_file](wxTreeEvent& event) {
-    auto item = event.GetItem();
-
-    if (item == tree_view->GetRootItem())
-    {
-      return;
-    }
-
-
-    auto item_path = get_path_from_tree_item(tree_view, item, search_path);
-
-    add_element_from_file(item_path, true);
-  });
-
-  wxPanel* panel = new wxPanel(notebook, wxID_ANY);
-  panel->SetSizer(new wxBoxSizer(wxHORIZONTAL));
-  create_render_view(panel, std::nullopt);
-  notebook->AddPage(panel, "New Tab");
-
-  panel = new wxPanel(notebook, wxID_ANY);
-  panel->SetName("+");
-  notebook->AddPage(panel, "+");
-
-  notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED,
-    [notebook, &add_new_element](wxAuiNotebookEvent& event) {
-      auto* tab = notebook->GetPage(event.GetSelection());
-
-      if (tab->GetName() == "+")
-      {
-        if (notebook->GetPageCount() == 1)
-        {
-          add_new_element();
-        }
-        else
-        {
-          notebook->ChangeSelection(event.GetSelection() - 1);
-        }
-      }
+    tree_search->Bind(wxEVT_COMBOBOX, [&view_factory, &archive, tree_view, &search_path, get_filter_selection](wxCommandEvent& event) {
+           studio::populate_tree_view(view_factory, archive, *tree_view, search_path, get_filter_selection());
     });
 
-  notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGING,
-    [notebook, &num_elements, &add_new_element](wxAuiNotebookEvent& event) mutable {
-      auto* tab = notebook->GetPage(event.GetSelection());
+    auto notebook = std::shared_ptr<wxAuiNotebook>(new wxAuiNotebook(frame.get(), wxID_ANY), studio::default_wx_deleter);
+    auto num_elements = notebook->GetPageCount();
 
-      if (tab->GetName() == "+")
-      {
-        if (num_elements > notebook->GetPageCount())
-        {
-          num_elements = notebook->GetPageCount();
-          return;
-        }
+    auto add_element_from_file = [notebook, frame, &num_elements, &view_factory, &archive](auto new_stream, bool replace_selection = false) {
+           auto panel = std::make_unique<wxPanel>(notebook.get(), wxID_ANY);
+           panel->SetSizer(std::make_unique<wxBoxSizer>(wxHORIZONTAL).release());
 
-        add_new_element();
-      }
-      else
-      {
-        event.Skip();
-      }
+           auto new_path = new_stream.first;
+           studio::create_render_view(*panel, std::move(new_stream), view_factory, archive);
+
+           if (replace_selection)
+           {
+             auto selection = notebook->GetSelection();
+             notebook->InsertPage(selection, panel.release(), new_path.filename.string());
+
+             num_elements = notebook->GetPageCount();
+
+             if (num_elements > 2)
+             {
+               notebook->DeletePage(selection + 1);
+             }
+
+             notebook->ChangeSelection(selection);
+           }
+           else
+           {
+             notebook->InsertPage(notebook->GetPageCount() - 1, panel.release(), new_path.filename.string());
+             num_elements = notebook->GetPageCount();
+             notebook->ChangeSelection(notebook->GetPageCount() - 2);
+           }
+
+           if (frame->IsMaximized())
+           {
+             frame->Maximize(false);
+             frame->Maximize();
+           }
+    };
+    archive.add_action("open_new_tab", [&](auto& path) {
+           add_element_from_file(archive.load_file(path));
     });
 
+    auto add_new_element = [notebook, &num_elements, &view_factory, &archive]() {
+           auto panel = std::make_unique<wxPanel>(notebook.get(), wxID_ANY);
+           panel->SetSizer(std::make_unique<wxBoxSizer>(wxHORIZONTAL).release());
+           studio::create_render_view(*panel, studio::create_null_stream(), view_factory, archive);
+           notebook->InsertPage(notebook->GetPageCount() - 1, panel.release(), "New Tab");
+           notebook->ChangeSelection(notebook->GetPageCount() - 2);
+           num_elements = notebook->GetPageCount();
+    };
 
-  frame->Bind(
-    wxEVT_MENU, [&](auto& event) {
-      const auto new_path = get_shape_path();
+    tree_view->Bind(wxEVT_TREE_ITEM_EXPANDING, [&view_factory, &archive, &get_filter_selection, tree_view](wxTreeEvent& event) {
+           auto item = event.GetItem();
 
-      if (new_path.has_value())
-      {
-        add_element_from_file(new_path.value(), true);
+           if (item == tree_view->GetRootItem())
+           {
+             return;
+           }
 
-        search_path = new_path.value().parent_path();
-        populate_tree_view(tree_view, search_path);
-      }
-    },
-    wxID_OPEN);
+           if (tree_view->HasChildren(item))
+           {
+             wxTreeItemIdValue cookie = nullptr;
 
-  frame->Bind(
-    wxEVT_MENU, [&](auto& event) {
-      const auto new_path = get_shape_path();
+             auto child = tree_view->GetFirstChild(item, cookie);
 
-      if (new_path.has_value())
-      {
-        add_element_from_file(new_path.value());
-      }
-    },
-    event_open_in_new_tab);
+             if (cookie && !tree_view->HasChildren(child))
+             {
+               if (auto* real_info = dynamic_cast<studio::tree_item_folder_info*>(tree_view->GetItemData(child)); real_info)
+               {
+                 studio::populate_tree_view(view_factory, archive, *tree_view, real_info->info.full_path, get_filter_selection(), child);
+               }
+             }
 
-  frame->Bind(
-    wxEVT_MENU, [&](auto& event) {
-      const auto new_path = get_workspace_path();
+             do {
+               child = tree_view->GetNextChild(item, cookie);
 
-      if (new_path.has_value())
-      {
-        search_path = new_path.value();
-        populate_tree_view(tree_view, search_path);
-      }
-    },
-    event_open_folder_as_workspace);
+               if (cookie && !tree_view->HasChildren(child))
+               {
+                 if (auto* real_info = dynamic_cast<studio::tree_item_folder_info*>(tree_view->GetItemData(child)); real_info)
+                 {
+                   studio::populate_tree_view(view_factory, archive, *tree_view, real_info->info.full_path, get_filter_selection(), child);
+                 }
+               }
+             } while (cookie != nullptr);
+           }
+    });
 
-  frame->Bind(
-    wxEVT_MENU, [frame](auto& event) {
-      frame->Close(true);
-    },
-    wxID_EXIT);
+    tree_view->Bind(wxEVT_TREE_ITEM_ACTIVATED, [&archive, tree_view, &add_element_from_file](wxTreeEvent& event) {
+           static bool had_first_activation = false;
+           auto item = event.GetItem();
 
-  sizer->SetSizeHints(frame);
-  frame->SetSizer(sizer);
+           if (item == tree_view->GetRootItem())
+           {
+             return;
+           }
 
-  frame->SetMenuBar(create_menu_bar());
-  frame->CreateStatusBar();
-  frame->SetStatusText("3Space Studio");
-  frame->Maximize();
-  frame->Show(true);
+           if (auto* real_info = dynamic_cast<studio::tree_item_file_info*>(tree_view->GetItemData(item)); real_info)
+           {
+             add_element_from_file(archive.load_file(real_info->info), had_first_activation == false);
+             had_first_activation = true;
+           }
+           else if (auto* folder_info = dynamic_cast<studio::tree_item_folder_info*>(tree_view->GetItemData(item));
+             folder_info && !std::filesystem::is_directory(folder_info->info.full_path))
+           {
+             studio::resources::file_info info{};
+             info.filename = folder_info->info.full_path.filename();
+             info.folder_path = folder_info->info.full_path.parent_path();
+             add_element_from_file(archive.load_file(info), true);
+           }
+    });
 
-  app->OnRun();
+    auto panel = std::make_unique<wxPanel>(notebook.get(), wxID_ANY);
+    panel->SetSizer(std::make_unique<wxBoxSizer>(wxHORIZONTAL).release());
+    studio::create_render_view(*panel, studio::create_null_stream(), view_factory, archive);
+    notebook->AddPage(panel.release(), "New Tab");
 
-  ImGui::SFML::Shutdown();
+    panel = std::make_unique<wxPanel>(notebook.get(), wxID_ANY);
+    panel->SetName("+");
+    notebook->AddPage(panel.release(), "+");
+
+    notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED,
+                   [notebook, &add_new_element](wxAuiNotebookEvent& event) {
+                          auto* tab = notebook->GetPage(event.GetSelection());
+
+                          if (tab->GetName() == "+")
+                          {
+                            if (notebook->GetPageCount() == 1)
+                            {
+                              add_new_element();
+                            }
+                            else
+                            {
+                              notebook->ChangeSelection(event.GetSelection() - 1);
+                            }
+                          }
+                   });
+
+    notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGING,
+                   [notebook, &num_elements, &add_new_element](wxAuiNotebookEvent& event) mutable {
+                          auto* tab = notebook->GetPage(event.GetSelection());
+
+                          if (tab->GetName() == "+")
+                          {
+                            if (num_elements > notebook->GetPageCount())
+                            {
+                              num_elements = notebook->GetPageCount();
+                              return;
+                            }
+
+                            add_new_element();
+                          }
+                          else
+                          {
+                            event.Skip();
+                          }
+                   });
+
+    frame->Bind(
+      wxEVT_MENU, [&](auto& event) {
+             const auto new_path = studio::get_shape_path();
+
+             if (new_path.has_value())
+             {
+               add_element_from_file(archive.load_file(new_path.value()), true);
+
+               studio::populate_tree_view(view_factory, archive, *tree_view, search_path, get_filter_selection());
+             }
+      },
+      wxID_OPEN);
+
+    frame->Bind(
+      wxEVT_MENU, [&](auto& event) {
+             const auto new_path = studio::get_shape_path();
+
+             if (new_path.has_value())
+             {
+               add_element_from_file(archive.load_file(new_path.value()));
+             }
+      },
+      studio::event_open_in_new_tab);
+
+    frame->Bind(
+      wxEVT_MENU, [&](auto& event) {
+             const auto new_path = studio::get_workspace_path();
+
+             if (new_path.has_value())
+             {
+               search_path = new_path.value();
+               studio::populate_tree_view(view_factory, archive, *tree_view, search_path, get_filter_selection());
+             }
+      },
+      studio::event_open_folder_as_workspace);
+
+    frame->Bind(
+      wxEVT_MENU, [frame](auto& event) {
+             frame->Close(true);
+      },
+      wxID_EXIT);
+
+    auto sizer = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
+    sizer->SetSizeHints(frame.get());
+
+    tree_panel->GetSizer()->Add(tree_search.get(), 2, wxEXPAND, 0);
+    tree_panel->GetSizer()->Add(tree_view.get(), 98, wxEXPAND, 0);
+    sizer->Add(tree_panel.release(), 20, wxEXPAND, 0);
+    sizer->Add(notebook.get(), 80, wxEXPAND, 0);
+    frame->SetSizer(sizer.release());
+
+    frame->SetMenuBar(studio::create_menu_bar().release());
+    frame->CreateStatusBar();
+    frame->SetStatusText("3Space Studio");
+    frame->Maximize();
+    frame->Show(true);
+
+    auto result = app->OnRun();
+
+    if (studio::sfml_initialised)
+    {
+      ImGui::SFML::Shutdown();
+    }
+
+    return result;
+  }
+  catch (const std::exception& exception)
+  {
+    std::cerr << exception.what() << '\n';
+  }
 
   return 0;
 }
