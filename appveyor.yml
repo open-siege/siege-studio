@@ -1,4 +1,6 @@
   version: 1.0.{build}
+  environment:
+    PYTHON: "C:\\Python38-x64\\python.exe"
   platform:
     - x64
     - x86
@@ -16,5 +18,5 @@
     - cmd: conan build .
 
   test_script:
-    - cmd: cd build/Release
-    - cmd: tests.exe
+    - cmd: cd build
+    - cmd: ctest
