@@ -5,9 +5,9 @@
 #include <string>
 #include <variant>
 #include "endian_arithmetic.hpp"
-#include "dts_structures.hpp"
+#include "darkstar_structures.hpp"
 
-namespace torque::dts
+namespace studio::content::dts::torque
 {
   namespace endian = boost::endian;
 

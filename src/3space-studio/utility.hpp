@@ -1,22 +1,25 @@
 #ifndef DARKSTARDTSCONVERTER_UTILTY_HPP
 #define DARKSTARDTSCONVERTER_UTILTY_HPP
 
+#include <string>
 #include <string_view>
 #include <algorithm>
+#include <locale>
 #include <wx/wx.h>
 #include <SFML/OpenGL.hpp>
 
-inline bool ends_with(std::string_view value, std::string_view ending)
+namespace studio
 {
-  if (ending.size() > value.size())
+  inline void default_wx_deleter(wxWindowBase* control)
   {
-    return false;
+    if (!control->IsBeingDeleted())
+    {
+      delete control;
+    }
   }
-  return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+
+  WXWidget get_handle(const wxControl& control);
+
+  void perspectiveGL(GLdouble fovY, GLdouble aspect, GLdouble zNear, GLdouble zFar);
 }
-
-WXWidget get_handle(const wxControl* const control);
-
-void perspectiveGL(GLdouble fovY, GLdouble aspect, GLdouble zNear, GLdouble zFar);
-
 #endif//DARKSTARDTSCONVERTER_UTILTY_HPP

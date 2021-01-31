@@ -1,0 +1,31 @@
+version: 1.0.{build}
+environment:
+  PYTHON: "C:\\Python37"
+  matrix:
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      PYVER: py38
+      TOXENV: py38-conancurrent
+      CMAKE_GENERATOR: "Visual Studio 16 2019"
+
+platform:
+  - x64
+  - x86
+
+install:
+  - set PATH=%PATH%;%PYTHON%/Scripts/
+  - pip3 install conan
+  - conan user
+  - conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
+  - conan --version
+
+build_script:
+  - set PATH=%PATH%;%PYTHON%/Scripts/
+  - mkdir build
+  - pip3 install -r requirements.txt
+  - conan install . -s build_type=Release --build=missing
+  - conan build .
+
+test_script:
+  - activate
+  - cd build
+  - ctest

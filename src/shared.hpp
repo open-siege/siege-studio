@@ -1,15 +1,89 @@
 #ifndef DARKSTARDTSCONVERTER_SHARED_HPP
 #define DARKSTARDTSCONVERTER_SHARED_HPP
 
+#include <array>
 #include <sstream>
 #include <string>
 #include <vector>
 #include <set>
 #include <filesystem>
 
-namespace shared
+namespace studio::shared
 {
   namespace fs = std::filesystem;
+
+  template<std::size_t Size>
+  constexpr std::array<std::string_view, Size> make_keys(const char*(&&keys)[Size])
+  {
+    std::array<std::string_view, Size> result;
+    for (auto i = 0; i < Size; i++)
+    {
+      result[i] = keys[i];
+    }
+    return result;
+  }
+
+  constexpr std::size_t get_padding_size(std::size_t count, std::size_t alignment_size)
+  {
+    auto result = 0u;
+
+    while ((count % alignment_size) != 0)
+    {
+      count++;
+      result++;
+    }
+
+    return result;
+  }
+
+  template <std::size_t Count>
+  constexpr std::array<std::byte, Count> to_tag(const char* values)
+  {
+    std::array<std::byte, Count> result{};
+
+    for (auto i = 0u; i < Count; i++)
+    {
+      result[i] = std::byte(values[i]);
+    }
+
+    return result;
+  }
+
+  template <std::size_t Count>
+  constexpr std::array<std::byte, Count> to_tag(const std::array<std::uint8_t, Count> values)
+  {
+    std::array<std::byte, Count> result{};
+
+    for (auto i = 0u; i < values.size(); i++)
+    {
+      result[i] = std::byte{ values[i] };
+    }
+
+    return result;
+  }
+
+  inline std::string to_lower(std::string_view some_string, const std::locale& locale)
+  {
+    std::string result(some_string);
+    std::transform(result.begin(), result.end(), result.begin(), [&](auto c) { return std::tolower(c, locale); });
+    return result;
+  }
+
+  inline std::string to_lower(std::string_view some_string)
+  {
+    std::string result(some_string);
+    std::transform(result.begin(), result.end(), result.begin(), [&](auto c) { return std::tolower(c, std::locale()); });
+    return result;
+  }
+
+  inline bool ends_with(std::string_view value, std::string_view ending)
+  {
+    if (ending.size() > value.size())
+    {
+      return false;
+    }
+    return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+  }
 
   template<char Delimiter>
   class delimited_string : public std::string
@@ -23,7 +97,7 @@ namespace shared
     return is;
   }
 
-  bool ends_with(const std::string& main_str, const std::string& to_match)
+  inline bool ends_with(const std::string& main_str, const std::string& to_match)
   {
     if (main_str.size() >= to_match.size() && main_str.compare(main_str.size() - to_match.size(), to_match.size(), to_match) == 0)
     {

@@ -4,15 +4,14 @@
 #include <variant>
 #include <type_traits>
 #include <nlohmann/json.hpp>
-#include "json_boost.hpp"
-#include "dts_structures.hpp"
+#include "content/json_boost.hpp"
+#include "darkstar_structures.hpp"
 
 namespace nlohmann
 {
-  using material_list = darkstar::dts::material_list_variant;
-  using mesh = darkstar::dts::mesh_variant;
-  using shape = darkstar::dts::shape_variant;
-
+  using material_list = studio::content::dts::darkstar::material_list_variant;
+  using mesh = studio::content::dts::darkstar::mesh_variant;
+  using shape = studio::content::dts::darkstar::shape_variant;
 
   template<typename... Type>
   struct adl_serializer<std::variant<Type...>>
@@ -23,7 +22,7 @@ namespace nlohmann
       std::visit([&](const auto& value) {
         json.emplace("version", std::remove_reference_t<decltype(value)>::version);
         json.emplace("typeName", std::remove_reference_t<decltype(value)>::type_name);
-        darkstar::dts::to_json(json, value);
+        studio::content::to_json(json, value);
       },
         opt);
     }
@@ -52,7 +51,7 @@ namespace nlohmann
     template<typename BasicJsonType>
     static void from_json(const BasicJsonType& js, material_list& opt)
     {
-      using namespace darkstar::dts::material_list;
+      using namespace studio::content::dts::darkstar::material_list;
       auto version = js.at("version");
       auto type_name = js.at("typeName");
 
@@ -66,7 +65,7 @@ namespace nlohmann
     template<typename BasicJsonType>
     static void from_json(const BasicJsonType& js, mesh& opt)
     {
-      using namespace darkstar::dts::mesh;
+      using namespace studio::content::dts::darkstar::mesh;
       auto version = js.at("version");
       auto type_name = js.at("typeName");
 
@@ -79,7 +78,7 @@ namespace nlohmann
     template<typename BasicJsonType>
     static void from_json(const BasicJsonType& js, shape& opt)
     {
-      using namespace darkstar::dts::shape;
+      using namespace studio::content::dts::darkstar::shape;
       auto version = js.at("version");
       auto type_name = js.at("typeName");
 
