@@ -8,7 +8,7 @@
   install:
     - cmd: echo "Downloading conan..."
     - cmd: set PATH=%PATH%;C:\Users\appveyor\AppData\Roaming\Python\Python38\Scripts\
-    - cmd: pip install conan
+    - cmd: "%PYTHON%" -m pip install --user conan
     - cmd: conan user
     - cmd: conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
     - cmd: conan --version
