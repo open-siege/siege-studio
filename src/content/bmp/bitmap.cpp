@@ -345,10 +345,11 @@ namespace studio::content::bmp
     return results;
   }
 
-  std::vector<std::int32_t> remap_bitmap(const std::vector<std::int32_t>& pixels,
-    const std::vector<pal::colour>& original_colours,
-    const std::vector<pal::colour>& other_colours,
-    bool only_unique)
+  template<typename IndexType>
+  std::vector<IndexType> remap_bitmap(const std::vector<IndexType>& pixels,
+                                         const std::vector<pal::colour>& original_colours,
+                                         const std::vector<pal::colour>& other_colours,
+                                         bool only_unique)
   {
     if (pixels.empty())
     {
@@ -360,7 +361,7 @@ namespace studio::content::bmp
       return pixels;
     }
 
-    std::vector<std::int32_t> results;
+    std::vector<IndexType> results;
     results.reserve(pixels.size());
     std::map<std::size_t, std::size_t> palette_map;
 
@@ -368,7 +369,7 @@ namespace studio::content::bmp
     {
       auto& colour = original_colours[x];
       auto result = std::find_if(other_colours.begin(), other_colours.end(), [&](auto& other) {
-        return other.red == colour.red && other.green == colour.green && other.blue == colour.blue;
+             return other.red == colour.red && other.green == colour.green && other.blue == colour.blue;
       });
 
       if (result != other_colours.end())
@@ -391,7 +392,7 @@ namespace studio::content::bmp
           for (auto distance : distances)
           {
             auto already_exists = std::find_if(palette_map.begin(), palette_map.end(), [&](auto& elem) {
-              return elem.second == distance.second;
+                   return elem.second == distance.second;
             });
 
             if (already_exists == palette_map.end())
@@ -415,10 +416,27 @@ namespace studio::content::bmp
 
     for (auto pixel : pixels)
     {
-      auto new_index = palette_map[pixel];
-      results.emplace_back(std::int32_t(new_index));
+      auto new_index = palette_map[std::size_t(pixel)];
+      results.emplace_back(IndexType(new_index));
     }
 
     return results;
+  }
+
+  std::vector<std::byte> remap_bitmap(const std::vector<std::byte>& pixels,
+                                         const std::vector<pal::colour>& original_colours,
+                                         const std::vector<pal::colour>& other_colours,
+                                         bool only_unique)
+  {
+    return remap_bitmap<std::byte>(pixels, original_colours, other_colours, only_unique);
+  }
+
+
+  std::vector<std::int32_t> remap_bitmap(const std::vector<std::int32_t>& pixels,
+    const std::vector<pal::colour>& original_colours,
+    const std::vector<pal::colour>& other_colours,
+    bool only_unique)
+  {
+    return remap_bitmap<std::int32_t>(pixels, original_colours, other_colours, only_unique);
   }
 }// namespace studio::content::bmp

@@ -283,13 +283,15 @@ namespace studio::mis::darkstar
     static sim_item_reader_map readers = {
       { sim_group_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_group(file, header, readers); } } },
       { sim_set_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_set(file, header, readers); } } },
-      { sim_vol_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_volume(file, header, readers); } } },
-      { sim_terrain_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_terrain(file, header, readers); } } },
-      { es_palette_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_palette(file, header, readers); } } },
-      { interior_shape_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_interior_shape(file, header, readers); } } },
-      { drop_point_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_marker(file, header, readers); } } },
-      { sim_marker_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_marker(file, header, readers); } } },
-      { nav_marker_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_nav_marker(file, header, readers); } } },
+      //TODO come back to these at another time.
+      // Some of the tags (interior shape being the most common) have issues when parsing
+//      { sim_vol_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_volume(file, header, readers); } } },
+//      { sim_terrain_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_terrain(file, header, readers); } } },
+//      { es_palette_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_palette(file, header, readers); } } },
+//      { interior_shape_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_interior_shape(file, header, readers); } } },
+//      { drop_point_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_marker(file, header, readers); } } },
+//      { sim_marker_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_marker(file, header, readers); } } },
+//      { nav_marker_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_nav_marker(file, header, readers); } } },
       { herc_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_vehicle(file, header, readers); } } },
       { tank_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_vehicle(file, header, readers); } } },
       { flyer_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_vehicle(file, header, readers); } } }
