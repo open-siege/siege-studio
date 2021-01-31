@@ -1,12 +1,9 @@
 version: 1.0.{build}
 environment:
-  PYTHON: "C:\\Python37"
-  matrix:
-    # Conan development
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-      PYVER: py38
-      TOXENV: py38-conancurrent
-      CMAKE_GENERATOR: "Visual Studio 16 2019"
+  APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+  PYVER: py38
+  TOXENV: py38-conancurrent
+  CMAKE_GENERATOR: "Visual Studio 16 2019"
 
 platform:
   - x64
@@ -24,6 +21,7 @@ install:
 
 build_script:
   - mkdir build
+  - pip install -r requirements.txt
   - conan install . -s build_type=Release
   - conan build .
 
