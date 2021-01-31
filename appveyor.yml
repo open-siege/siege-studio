@@ -1,24 +1,32 @@
-  version: 1.0.{build}
-  environment:
-    PYTHON: "C:\\Python38-x64\\python.exe"
-  platform:
-    - x64
-    - x86
+version: 1.0.{build}
+environment:
+  PYTHON: "C:\\Python37"
+  matrix:
+    # Conan development
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      PYVER: py38
+      TOXENV: py38-conancurrent
+      CMAKE_GENERATOR: "Visual Studio 16 2019"
 
-  install:
-    - cmd: >-
-        echo "Downloading conan..."
-        set PATH=%PATH%;C:\Users\appveyor\AppData\Roaming\Python\Python38\Scripts\
-        "%PYTHON%" -m pip install --user conan
-        conan user
-        conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
-        conan --version
+platform:
+  - x64
+  - x86
 
-  build_script:
-    - cmd: mkdir build
-    - cmd: conan install . -s build_type=Release
-    - cmd: conan build .
+install:
+  - cmd: >-
+      echo "Downloading conan..."
+      set PATH=%PATH%;%PYTHON%/Scripts/
+      python -m pip install --upgrade pip
+      python -m pip install --user conan
+      conan user
+      conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
+      conan --version
 
-  test_script:
-    - cmd: cd build
-    - cmd: ctest
+build_script:
+  - cmd: mkdir build
+  - cmd: conan install . -s build_type=Release
+  - cmd: conan build .
+
+test_script:
+  - cmd: cd build
+  - cmd: ctest
