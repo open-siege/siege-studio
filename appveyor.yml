@@ -21,12 +21,15 @@ install:
       conan user
       conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
       conan --version
+      where conan
 
 build_script:
-  - cmd: mkdir build
-  - cmd: conan install . -s build_type=Release
-  - cmd: conan build .
+  - cmd: >-
+      mkdir build
+      conan install . -s build_type=Release
+      conan build .
 
 test_script:
-  - cmd: cd build
-  - cmd: ctest
+  - cmd: >-
+      cd build
+      ctest
