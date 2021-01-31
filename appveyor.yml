@@ -17,7 +17,7 @@ install:
       echo "Downloading conan..."
       set PATH=%PATH%;%PYTHON%/Scripts/
       python -m pip install --upgrade pip
-      python -m pip install --user conan
+      python -m pip install conan
       conan user
       conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
       conan --version
