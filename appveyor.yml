@@ -18,7 +18,7 @@ build_script:
   - conan --version
   - mkdir build
   - pip3 install -r requirements.txt
-  - conan install . -s build_type=Release
+  - conan install . -s build_type=Release --build=missing
   - conan build .
 
 test_script:
