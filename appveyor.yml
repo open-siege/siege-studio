@@ -13,10 +13,11 @@ platform:
 
 build_script:
   - set PATH=%PATH%;%PYTHON%/Scripts/
+  - pip3 install conan
   - conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
   - conan --version
   - mkdir build
-  - pip install -r requirements.txt
+  - pip3 install -r requirements.txt
   - conan install . -s build_type=Release
   - conan build .
 
