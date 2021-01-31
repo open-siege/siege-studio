@@ -13,23 +13,20 @@ platform:
   - x86
 
 install:
-  - cmd: >-
-      echo "Downloading conan..."
-      set PATH=%PATH%;%PYTHON%/Scripts/
-      python -m pip install --upgrade pip
-      python -m pip install conan
-      conan user
-      conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
-      conan --version
-      where conan
+  - echo "Downloading conan..."
+  - set PATH=%PATH%;%PYTHON%/Scripts/
+  - python -m pip install --upgrade pip
+  - python -m pip install conan
+  - conan user
+  - conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
+  - conan --version
+  - where conan
 
 build_script:
-  - cmd: >-
-      mkdir build
-      conan install . -s build_type=Release
-      conan build .
+  - mkdir build
+  - conan install . -s build_type=Release
+  - conan build .
 
 test_script:
-  - cmd: >-
-      cd build
-      ctest
+  - cd build
+  - ctest
