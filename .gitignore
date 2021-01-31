@@ -28,3 +28,8 @@ deactivate.bat
 deactivate.ps1
 deactivate.sh
 environment.*.env
+besieged-theme.png
+besieged-theme.txt
+cmake/ 
+src/3space-studio/logo.ico
+src/3space-studio/logo.png

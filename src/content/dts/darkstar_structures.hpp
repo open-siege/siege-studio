@@ -5,36 +5,16 @@
 #include <array>
 #include <string>
 #include <vector>
+#include "content/3d_structures.hpp"
 #include "endian_arithmetic.hpp"
+#include "shared.hpp"
 
-namespace darkstar::dts
+namespace studio::content::dts::darkstar
 {
   namespace endian = boost::endian;
   using file_tag = std::array<std::byte, 4>;
 
-  template<std::size_t Size>
-  constexpr std::array<std::string_view, Size> make_keys(const char*(&&keys)[Size])
-  {
-    std::array<std::string_view, Size> result;
-    for (auto i = 0; i < Size; i++)
-    {
-      result[i] = keys[i];
-    }
-    return result;
-  }
-
-  constexpr file_tag to_tag(const std::array<std::uint8_t, 4> values)
-  {
-    file_tag result{};
-
-    for (auto i = 0u; i < values.size(); i++)
-    {
-      result[i] = std::byte{ values[i] };
-    }
-    return result;
-  }
-
-  constexpr file_tag pers_tag = to_tag({ 'P', 'E', 'R', 'S' });
+  constexpr file_tag pers_tag = shared::to_tag<4>({ 'P', 'E', 'R', 'S' });
 
   using version = endian::little_uint32_t;
 
@@ -46,109 +26,17 @@ namespace darkstar::dts
 
   struct tag_header
   {
-    dts::file_tag tag;
-    dts::file_info file_info;
+    file_tag tag;
+    file_info file_info;
     std::string class_name;
-    dts::version version;
+    version version;
   };
-
-  struct vector3f
-  {
-    constexpr static auto keys = make_keys({ "x", "y", "z" });
-    float x;
-    float y;
-    float z;
-  };
-
-  inline vector3f operator+(const vector3f& left, const vector3f& right)
-  {
-    return { left.x + right.x, left.y + right.y, left.z + right.z };
-  }
-
-  inline vector3f operator-(const vector3f& left, const vector3f& right)
-  {
-    return { left.x - right.x, left.y - right.y, left.z - right.z };
-  }
-
-  inline vector3f operator+=(vector3f& left, const vector3f& right)
-  {
-    left = left + right;
-    return left;
-  }
-
-  inline vector3f operator*(const vector3f& left, const vector3f& right)
-  {
-    return { left.x * right.x, left.y * right.y, left.z * right.z };
-  }
-
-  inline vector3f operator*=(vector3f& left, const vector3f& right)
-  {
-    left = left * right;
-    return left;
-  }
-
-  struct vector3f_pair
-  {
-    constexpr static auto keys = make_keys({ "min", "max" });
-    vector3f min;
-    vector3f max;
-  };
-
-  static_assert(sizeof(vector3f) == sizeof(std::array<float, 3>));
-
-  struct quaternion4s
-  {
-    constexpr static auto keys = make_keys({ "x", "y", "z", "w" });
-    endian::little_int16_t x;
-    endian::little_int16_t y;
-    endian::little_int16_t z;
-    endian::little_int16_t w;
-  };
-
-  struct quaternion4f
-  {
-    constexpr static auto keys = make_keys({ "x", "y", "z", "w" });
-    float x;
-    float y;
-    float z;
-    float w;
-  };
-
-  inline quaternion4f to_float(const quaternion4f& other)
-  {
-    return other;
-  }
-
-  inline quaternion4f to_float(const quaternion4s& other)
-  {
-    constexpr std::int16_t max = SHRT_MAX;
-
-    return {
-      float(other.x) / max,
-      float(other.y) / max,
-      float(other.z) / max,
-      float(other.w) / max
-    };
-  }
-
-  static_assert(sizeof(quaternion4s) == sizeof(std::array<endian::little_int16_t, 4>));
-
-  struct rgb_data
-  {
-    constexpr static auto keys = make_keys({ "red", "green", "blue", "rgbFlags" });
-
-    std::uint8_t red;
-    std::uint8_t green;
-    std::uint8_t blue;
-    std::uint8_t rgb_flags;
-  };
-
 
   namespace mesh::v1
   {
     struct header
     {
-      constexpr static auto keys = make_keys({ "numVerts",
+      constexpr static auto keys = shared::make_keys({ "numVerts",
         "vertsPerFrame",
         "numTextureVerts",
         "numFaces",
@@ -169,7 +57,7 @@ namespace darkstar::dts
 
     struct vertex
     {
-      constexpr static auto keys = make_keys({ "x", "y", "z", "normal" });
+      constexpr static auto keys = shared::make_keys({ "x", "y", "z", "normal" });
       std::uint8_t x;
       std::uint8_t y;
       std::uint8_t z;
@@ -201,16 +89,11 @@ namespace darkstar::dts
       return result;
     }
 
-    struct texture_vertex
-    {
-      constexpr static auto keys = make_keys({ "x", "y" });
-      float x;
-      float y;
-    };
+    using texture_vertex = studio::content::texture_vertex;
 
     struct face
     {
-      constexpr static auto keys = make_keys({ "vi1", "ti1", "vi2", "ti2", "vi3", "ti3", "material" });
+      constexpr static auto keys = shared::make_keys({ "vi1", "ti1", "vi2", "ti2", "vi3", "ti3", "material" });
       endian::little_int32_t vi1;
       endian::little_int32_t ti1;
       endian::little_int32_t vi2;
@@ -222,7 +105,7 @@ namespace darkstar::dts
 
     struct frame
     {
-      constexpr static auto keys = make_keys({ "firstVert" });
+      constexpr static auto keys = shared::make_keys({ "firstVert" });
       endian::little_int32_t first_vert;
     };
 
@@ -230,7 +113,7 @@ namespace darkstar::dts
     {
       constexpr static auto type_name = std::string_view{ "TS::CelAnimMesh" };
       constexpr static auto version = 1;
-      constexpr static auto keys = make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
+      constexpr static auto keys = shared::make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
 
       header header;
       std::vector<vertex> vertices;
@@ -244,7 +127,7 @@ namespace darkstar::dts
   {
     struct header
     {
-      constexpr static auto keys = make_keys({ "numVerts",
+      constexpr static auto keys = shared::make_keys({ "numVerts",
         "vertsPerFrame",
         "numTextureVerts",
         "numFaces",
@@ -269,7 +152,7 @@ namespace darkstar::dts
     {
       constexpr static auto type_name = v1::mesh::type_name;
       constexpr static auto version = 2;
-      constexpr static auto keys = make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
+      constexpr static auto keys = shared::make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
 
       header header;
       std::vector<v1::vertex> vertices;
@@ -283,7 +166,7 @@ namespace darkstar::dts
   {
     struct header
     {
-      constexpr static auto keys = make_keys({ "numVerts",
+      constexpr static auto keys = shared::make_keys({ "numVerts",
         "vertsPerFrame",
         "numTextureVerts",
         "numFaces",
@@ -302,7 +185,7 @@ namespace darkstar::dts
 
     struct frame
     {
-      constexpr static auto keys = make_keys({ "firstVert", "scale", "origin" });
+      constexpr static auto keys = shared::make_keys({ "firstVert", "scale", "origin" });
       endian::little_int32_t first_vert;
       vector3f scale;
       vector3f origin;
@@ -312,7 +195,7 @@ namespace darkstar::dts
     {
       constexpr static auto type_name = v1::mesh::type_name;
       constexpr static auto version = 3;
-      constexpr static auto keys = make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
+      constexpr static auto keys = shared::make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
 
       v3::header header;
       std::vector<v1::vertex> vertices;
@@ -327,7 +210,7 @@ namespace darkstar::dts
   {
     struct header
     {
-      constexpr static auto keys = make_keys({ "numDetails",
+      constexpr static auto keys = shared::make_keys({ "numDetails",
         "numMaterials" });
       endian::little_int32_t num_details;
       endian::little_int32_t num_materials;
@@ -335,7 +218,7 @@ namespace darkstar::dts
 
     struct material
     {
-      constexpr static auto keys = make_keys({ "flags", "alpha", "index", "rgbData", "fileName" });
+      constexpr static auto keys = shared::make_keys({ "flags", "alpha", "index", "rgbData", "fileName" });
 
       endian::little_int32_t flags;
       float alpha;
@@ -349,7 +232,7 @@ namespace darkstar::dts
     {
       constexpr static auto type_name = std::string_view{ "TS::MaterialList" };
       constexpr static auto version = 2;
-      constexpr static auto keys = make_keys({ "header", "materials" });
+      constexpr static auto keys = shared::make_keys({ "header", "materials" });
 
       header header;
       std::vector<material> materials;
@@ -360,7 +243,7 @@ namespace darkstar::dts
   {
     struct material
     {
-      constexpr static auto keys = make_keys({ "flags", "alpha", "index", "rgbData", "fileName", "type", "elasticity", "friction" });
+      constexpr static auto keys = shared::make_keys({ "flags", "alpha", "index", "rgbData", "fileName", "type", "elasticity", "friction" });
 
       endian::little_int32_t flags;
       float alpha;
@@ -378,7 +261,7 @@ namespace darkstar::dts
     {
       constexpr static auto type_name = v2::material_list::type_name;
       constexpr static auto version = 3;
-      constexpr static auto keys = make_keys({ "header", "materials" });
+      constexpr static auto keys = shared::make_keys({ "header", "materials" });
 
       v2::header header;
       std::vector<material> materials;
@@ -389,7 +272,7 @@ namespace darkstar::dts
   {
     struct material
     {
-      constexpr static auto keys = make_keys({ "flags", "alpha", "index", "rgbData", "fileName", "type", "elasticity", "friction", "useDefaultProperties" });
+      constexpr static auto keys = shared::make_keys({ "flags", "alpha", "index", "rgbData", "fileName", "type", "elasticity", "friction", "useDefaultProperties" });
 
       endian::little_int32_t flags;
       float alpha;
@@ -408,7 +291,7 @@ namespace darkstar::dts
     {
       constexpr static auto type_name = v2::material_list::type_name;
       constexpr static auto version = 4;
-      constexpr static auto keys = make_keys({ "header", "materials" });
+      constexpr static auto keys = shared::make_keys({ "header", "materials" });
 
       v2::header header;
       std::vector<material> materials;
@@ -424,7 +307,7 @@ namespace darkstar::dts
   {
     struct header
     {
-      constexpr static auto keys = make_keys({ "numNodes",
+      constexpr static auto keys = shared::make_keys({ "numNodes",
         "numSequences",
         "numSubSequences",
         "numKeyFrames",
@@ -449,7 +332,7 @@ namespace darkstar::dts
 
     struct data
     {
-      constexpr static auto keys = make_keys({ "radius", "centre" });
+      constexpr static auto keys = shared::make_keys({ "radius", "centre" });
       float radius;
       vector3f centre;
     };
@@ -458,7 +341,7 @@ namespace darkstar::dts
 
     struct node
     {
-      constexpr static auto keys = make_keys({ "nameIndex", "parentNodeIndex", "numSubSequences", "firstSubSequenceIndex", "defaultTransformIndex" });
+      constexpr static auto keys = shared::make_keys({ "nameIndex", "parentNodeIndex", "numSubSequences", "firstSubSequenceIndex", "defaultTransformIndex" });
       endian::little_int32_t name_index;
       endian::little_int32_t parent_node_index;
       endian::little_int32_t num_sub_sequences;
@@ -468,7 +351,7 @@ namespace darkstar::dts
 
     struct sequence
     {
-      constexpr static auto keys = make_keys({ "nameIndex",
+      constexpr static auto keys = shared::make_keys({ "nameIndex",
         "cyclic",
         "duration",
         "priority" });
@@ -480,7 +363,7 @@ namespace darkstar::dts
 
     struct sub_sequence
     {
-      constexpr static auto keys = make_keys({ "sequenceIndex", "numKeyFrames", "firstKeyFrameIndex" });
+      constexpr static auto keys = shared::make_keys({ "sequenceIndex", "numKeyFrames", "firstKeyFrameIndex" });
       endian::little_int32_t sequence_index;
       endian::little_int32_t num_key_frames;
       endian::little_int32_t first_key_frame_index;
@@ -488,14 +371,14 @@ namespace darkstar::dts
 
     struct keyframe
     {
-      constexpr static auto keys = make_keys({ "position", "transformIndex" });
+      constexpr static auto keys = shared::make_keys({ "position", "transformIndex" });
       float position;
       endian::little_uint32_t transform_index;
     };
 
     struct transform
     {
-      constexpr static auto keys = make_keys({ "rotation", "translation", "scale" });
+      constexpr static auto keys = shared::make_keys({ "rotation", "translation", "scale" });
       quaternion4f rotation;
       vector3f translation;
       vector3f scale;
@@ -505,7 +388,7 @@ namespace darkstar::dts
 
     struct object
     {
-      constexpr static auto keys = make_keys({ "nameIndex", "flags", "meshIndex", "nodeIndex", "depFlags", "dep", "objectOffset", "numSubSequences", "firstSubSequenceIndex" });
+      constexpr static auto keys = shared::make_keys({ "nameIndex", "flags", "meshIndex", "nodeIndex", "depFlags", "dep", "objectOffset", "numSubSequences", "firstSubSequenceIndex" });
       endian::little_int16_t name_index;
       endian::little_int16_t flags;
       endian::little_int32_t mesh_index;
@@ -519,14 +402,14 @@ namespace darkstar::dts
 
     struct detail
     {
-      constexpr static auto keys = make_keys({ "rootNodeIndex", "size" });
+      constexpr static auto keys = shared::make_keys({ "rootNodeIndex", "size" });
       endian::little_int32_t root_node_index;
       float size;
     };
 
     struct transition
     {
-      constexpr static auto keys = make_keys({ "startSequenceIndex",
+      constexpr static auto keys = shared::make_keys({ "startSequenceIndex",
         "endSequenceIndex",
         "startPosition",
         "endPosition",
@@ -547,7 +430,7 @@ namespace darkstar::dts
     {
       constexpr static auto type_name = std::string_view{ "TS::Shape" };
       constexpr static auto version = 2;
-      constexpr static auto keys = make_keys({ "header",
+      constexpr static auto keys = shared::make_keys({ "header",
         "data",
         "nodes",
         "sequences",
@@ -582,7 +465,7 @@ namespace darkstar::dts
   {
     struct keyframe
     {
-      constexpr static auto keys = make_keys({ "position", "transformIndex", "matIndex" });
+      constexpr static auto keys = shared::make_keys({ "position", "transformIndex", "matIndex" });
       float position;
       endian::little_uint32_t transform_index;
       endian::little_uint32_t mat_index;
@@ -592,7 +475,7 @@ namespace darkstar::dts
     {
       constexpr static auto type_name = v2::shape::type_name;
       constexpr static auto version = 3;
-      constexpr static auto keys = make_keys({ "header",
+      constexpr static auto keys = shared::make_keys({ "header",
         "data",
         "nodes",
         "sequences",
@@ -627,7 +510,7 @@ namespace darkstar::dts
   {
     struct header
     {
-      constexpr static auto keys = make_keys({ "numNodes",
+      constexpr static auto keys = shared::make_keys({ "numNodes",
         "numSequences",
         "numSubSequences",
         "numKeyFrames",
@@ -654,7 +537,7 @@ namespace darkstar::dts
 
     struct sequence
     {
-      constexpr static auto keys = make_keys({ "nameIndex",
+      constexpr static auto keys = shared::make_keys({ "nameIndex",
         "cyclic",
         "duration",
         "priority",
@@ -674,7 +557,7 @@ namespace darkstar::dts
 
     struct frame_trigger
     {
-      constexpr static auto keys = make_keys({ "position",
+      constexpr static auto keys = shared::make_keys({ "position",
         "value" });
       float position;
       float value;
@@ -682,7 +565,7 @@ namespace darkstar::dts
 
     struct footer
     {
-      constexpr static auto keys = make_keys({ "numDefaultMaterials" });
+      constexpr static auto keys = shared::make_keys({ "numDefaultMaterials" });
       endian::little_int32_t num_default_materials;
     };
 
@@ -690,7 +573,7 @@ namespace darkstar::dts
     {
       constexpr static auto type_name = v2::shape::type_name;
       constexpr static auto version = 5;
-      constexpr static auto keys = make_keys({ "header",
+      constexpr static auto keys = shared::make_keys({ "header",
         "data",
         "nodes",
         "sequences",
@@ -730,7 +613,7 @@ namespace darkstar::dts
   {
     struct footer
     {
-      constexpr static auto keys = make_keys({ "numDefaultMaterials",
+      constexpr static auto keys = shared::make_keys({ "numDefaultMaterials",
         "alwaysNode" });
       endian::little_int32_t num_default_materials;
       endian::little_int32_t always_node;
@@ -740,7 +623,7 @@ namespace darkstar::dts
     {
       constexpr static auto type_name = v2::shape::type_name;
       constexpr static auto version = 6;
-      constexpr static auto keys = make_keys({ "header",
+      constexpr static auto keys = shared::make_keys({ "header",
         "data",
         "nodes",
         "sequences",
@@ -779,7 +662,7 @@ namespace darkstar::dts
   {
     struct transform
     {
-      constexpr static auto keys = make_keys({ "rotation", "translation", "scale" });
+      constexpr static auto keys = shared::make_keys({ "rotation", "translation", "scale" });
       quaternion4s rotation;
       vector3f translation;
       vector3f scale;
@@ -789,7 +672,7 @@ namespace darkstar::dts
 
     struct transition
     {
-      constexpr static auto keys = make_keys({ "startSequenceIndex",
+      constexpr static auto keys = shared::make_keys({ "startSequenceIndex",
         "endSequenceIndex",
         "startPosition",
         "endPosition",
@@ -811,7 +694,7 @@ namespace darkstar::dts
     {
       constexpr static auto type_name = v2::shape::type_name;
       constexpr static auto version = 7;
-      constexpr static auto keys = make_keys({ "header",
+      constexpr static auto keys = shared::make_keys({ "header",
         "data",
         "nodes",
         "sequences",
@@ -850,7 +733,7 @@ namespace darkstar::dts
   {
     struct data
     {
-      constexpr static auto keys = make_keys({ "radius", "centre", "bounds" });
+      constexpr static auto keys = shared::make_keys({ "radius", "centre", "bounds" });
       float radius;
       vector3f centre;
       vector3f_pair bounds;
@@ -860,7 +743,7 @@ namespace darkstar::dts
 
     struct node
     {
-      constexpr static auto keys = make_keys({ "nameIndex", "parentNodeIndex", "numSubSequences", "firstSubSequenceIndex", "defaultTransformIndex" });
+      constexpr static auto keys = shared::make_keys({ "nameIndex", "parentNodeIndex", "numSubSequences", "firstSubSequenceIndex", "defaultTransformIndex" });
       endian::little_int16_t name_index;
       endian::little_int16_t parent_node_index;
       endian::little_int16_t num_sub_sequences;
@@ -870,7 +753,7 @@ namespace darkstar::dts
 
     struct sub_sequence
     {
-      constexpr static auto keys = make_keys({ "sequenceIndex", "numKeyFrames", "firstKeyFrameIndex" });
+      constexpr static auto keys = shared::make_keys({ "sequenceIndex", "numKeyFrames", "firstKeyFrameIndex" });
       endian::little_int16_t sequence_index;
       endian::little_int16_t num_key_frames;
       endian::little_int16_t first_key_frame_index;
@@ -879,7 +762,7 @@ namespace darkstar::dts
 
     struct keyframe
     {
-      constexpr static auto keys = make_keys({ "position", "transformIndex", "matIndex" });
+      constexpr static auto keys = shared::make_keys({ "position", "transformIndex", "matIndex" });
       float position;
       endian::little_uint16_t transform_index;
       endian::little_uint16_t mat_index;
@@ -887,14 +770,14 @@ namespace darkstar::dts
 
     struct transform
     {
-      constexpr static auto keys = make_keys({ "rotation", "translation" });
+      constexpr static auto keys = shared::make_keys({ "rotation", "translation" });
       quaternion4s rotation;
       vector3f translation;
     };
 
     struct object
     {
-      constexpr static auto keys = make_keys({ "nameIndex", "flags", "meshIndex", "nodeIndex", "objectOffset", "numSubSequences", "firstSubSequenceIndex" });
+      constexpr static auto keys = shared::make_keys({ "nameIndex", "flags", "meshIndex", "nodeIndex", "objectOffset", "numSubSequences", "firstSubSequenceIndex" });
       endian::little_int16_t name_index;
       endian::little_int16_t flags;
       endian::little_int32_t mesh_index;
@@ -906,7 +789,7 @@ namespace darkstar::dts
 
     struct transition
     {
-      constexpr static auto keys = make_keys({ "startSequence",
+      constexpr static auto keys = shared::make_keys({ "startSequence",
         "endSequence",
         "startPosition",
         "endPosition",
@@ -924,7 +807,7 @@ namespace darkstar::dts
     {
       constexpr static auto type_name = v2::shape::type_name;
       constexpr static auto version = 8;
-      constexpr static auto keys = make_keys({ "header",
+      constexpr static auto keys = shared::make_keys({ "header",
         "data",
         "nodes",
         "sequences",
