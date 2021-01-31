@@ -17,6 +17,10 @@ namespace studio::resources::vol::trophy_bass
 
   constexpr auto header_tag = shared::to_tag<12>({ 'R', 'i', 'c', 'h', 'R', 'a', 'y', 'l', '@', 'C', 'U', 'C' });
 
+  constexpr auto header_alt_tag = shared::to_tag<12>({ 'R', 'i', 'c', 'h', 'R', 'a', 'y', 'l', '@', 'D', 'Y', 'N' });
+
+  constexpr auto header_alt_tag2 = shared::to_tag<12>({ 'R', 'i', 'c', 'h', 'R', 'a', 'y', 'l', '@', 'D', 'y', 'n' });
+
   struct header
   {
     endian::little_int16_t unknown;
@@ -187,7 +191,9 @@ namespace studio::resources::vol::trophy_bass
 
     stream.read(reinterpret_cast<std::byte*>(&volume_header), sizeof(volume_header));
 
-    if (volume_header.magic_string != header_tag)
+    if (!(volume_header.magic_string == header_tag ||
+          volume_header.magic_string == header_alt_tag ||
+          volume_header.magic_string == header_alt_tag2))
     {
       throw std::invalid_argument("The file data provided is not a valid TBV file.");
     }

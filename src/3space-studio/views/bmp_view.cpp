@@ -10,17 +10,16 @@ namespace studio::content::pal
 {
   using studio::content::to_json;
   using studio::content::from_json;
-}
+}// namespace studio::content::pal
 
 std::vector<std::int32_t> widen(const std::vector<std::byte>& pixels)
 {
   std::vector<std::int32_t> results;
   results.reserve(pixels.size());
 
-  std::transform(pixels.begin(), pixels.end(), std::back_inserter(results), [](auto value)
-  {
-      return std::int32_t(value);
-    });
+  std::transform(pixels.begin(), pixels.end(), std::back_inserter(results), [](auto value) {
+    return std::int32_t(value);
+  });
 
   return results;
 }
@@ -30,9 +29,8 @@ std::vector<std::byte> narrow(const std::vector<std::int32_t>& pixels)
   std::vector<std::byte> results;
   results.reserve(pixels.size());
 
-  std::transform(pixels.begin(), pixels.end(), std::back_inserter(results), [](auto value)
-  {
-         return std::byte(value);
+  std::transform(pixels.begin(), pixels.end(), std::back_inserter(results), [](auto value) {
+    return std::byte(value);
   });
 
   return results;
@@ -59,10 +57,10 @@ namespace studio::views
 
   template<typename IndexType>
   void create_image(sf::Image& loaded_image,
-                    int width,
-                    int height,
-                    const std::vector<IndexType>& indexes,
-                    const std::vector<std::array<std::byte, 3>>& colours)
+    int width,
+    int height,
+    const std::vector<IndexType>& indexes,
+    const std::vector<std::array<std::byte, 3>>& colours)
   {
     std::vector<std::uint8_t> rendered_pixels;
     rendered_pixels.reserve(width * height * sizeof(std::int32_t));
@@ -369,6 +367,19 @@ namespace studio::views
   void bmp_view::refresh_image()
   {
     const auto& [selected_palette_name, selected_palette_index, default_palette_name, default_palette_index, selected_bitmap_index] = selection_state;
+
+    if (bit_depth > 8 && selected_palette_name == "Internal")
+    {
+      auto [width, height] = loaded_image.getSize();
+      create_image(loaded_image,
+        width,
+        height,
+        original_pixels.at(selected_bitmap_index),
+        loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
+      texture.update(loaded_image);
+      return;
+    }
+
     if (!original_pixels.empty())
     {
       auto [width, height] = loaded_image.getSize();
@@ -398,46 +409,50 @@ namespace studio::views
           narrowed_colours.reserve(colours.size());
 
           std::transform(colours.begin(), colours.end(), std::back_inserter(narrowed_colours), [](auto& colour) {
-            return std::array<std::byte, 3>{colour.red, colour.green, colour.blue};
+            return std::array<std::byte, 3>{ colour.red, colour.green, colour.blue };
           });
 
           std::vector<std::byte> new_indexes(colours.size(), std::byte('\0'));
 
           auto& palette = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
 
-          std::vector<std::array<std::byte, 3>> new_palette;
-          new_palette.reserve(palette.size());
+          std::vector<std::array<std::byte, 3>> new_palette(palette.size(), std::array<std::byte, 3>{});
 
-          std::transform(palette.begin(), palette.end(), std::back_inserter(new_palette), [](auto& colour) {
-            return std::array<std::byte, 3>{colour.red, colour.green, colour.blue};
+          wxQuantize::DoQuantize(width, height, temp_rows(narrowed_colours, width, height).data(), temp_rows(new_indexes, width, height).data(), reinterpret_cast<std::uint8_t*>(new_palette.data()), new_palette.size());
+
+
+          std::vector<content::pal::colour> new_new_palette;
+          new_new_palette.reserve(palette.size());
+
+          std::transform(new_palette.begin(), new_palette.end(), std::back_inserter(new_new_palette), [](auto& colour) {
+            return content::pal::colour{ colour[0], colour[1], colour[2], std::byte{0xFF} };
           });
 
-          wxQuantize::DoQuantize(width, height, temp_rows(narrowed_colours, width, height).data(),
-                                 temp_rows(new_indexes, width, height).data(),
-                                 reinterpret_cast<std::uint8_t*>(new_palette.data()),
-                                 new_palette.size());
+          new_indexes = content::bmp::remap_bitmap(new_indexes,
+            new_new_palette,
+            loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
 
           num_unique_colours = get_unique_colours(new_indexes);
 
           create_image(loaded_image,
-                       width,
-                       height,
-                       new_indexes,
-                       new_palette);
+            width,
+            height,
+            new_indexes,
+            new_palette);
         }
         else
         {
           auto new_indexes = content::bmp::remap_bitmap(existing_pixels,
-                                                       loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
-                                                       loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
+            loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+            loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
 
           num_unique_colours = get_unique_colours(new_indexes);
 
           create_image(loaded_image,
-                       width,
-                       height,
-                       new_indexes,
-                       loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
+            width,
+            height,
+            new_indexes,
+            loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
         }
       }
       else if (colour_strat == colour_strategy::remap_unique)
@@ -593,8 +608,7 @@ namespace studio::views
       }
 
       if (auto colour_strat = colour_strategy(strategy);
-        (colour_strat == colour_strategy::remap || colour_strat == colour_strategy::remap_unique) &&
-          num_unique_colours != unique_colours)
+          (colour_strat == colour_strategy::remap || colour_strat == colour_strategy::remap_unique) && num_unique_colours != unique_colours)
       {
         ImGui::LabelText("", "Remapped number of unique colours: %llu", num_unique_colours);
       }
@@ -640,44 +654,44 @@ namespace studio::views
         if (ImGui::Button("Export to JSON"))
         {
           pending_save = std::async(std::launch::async, [this]() {
-                 auto [width, height] = loaded_image.getSize();
-                 auto& [selected_palette_name, selected_palette_index, default_palette_name, default_palette_index, selected_bitmap_index] = selection_state;
-                 auto new_file_name = info.filename.string() + ".json";
-                 std::filesystem::create_directories(export_path);
-                 std::ofstream output(export_path / new_file_name, std::ios::trunc);
+            auto [width, height] = loaded_image.getSize();
+            auto& [selected_palette_name, selected_palette_index, default_palette_name, default_palette_index, selected_bitmap_index] = selection_state;
+            auto new_file_name = info.filename.string() + ".json";
+            std::filesystem::create_directories(export_path);
+            std::ofstream output(export_path / new_file_name, std::ios::trunc);
 
-                 const auto& colours = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
-                 auto indexes = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
-                                                           loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
-                                                           colours);
+            const auto& colours = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
+            auto indexes = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
+              loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+              colours);
 
-                 nlohmann::ordered_json item_as_json;
+            nlohmann::ordered_json item_as_json;
 
-                 if (indexes.empty())
-                 {
-                   item_as_json["width"] = width;
-                   item_as_json["height"] = height;
-                   item_as_json["bitDepth"] = bit_depth;
-                   item_as_json["pixels"] = colours;
-                 }
-                 else
-                 {
-                   item_as_json["width"] = width;
-                   item_as_json["height"] = height;
-                   item_as_json["bitDepth"] = bit_depth;
-                   item_as_json["colours"] = colours;
-                   item_as_json["indexes"] = indexes;
-                 }
+            if (indexes.empty())
+            {
+              item_as_json["width"] = width;
+              item_as_json["height"] = height;
+              item_as_json["bitDepth"] = bit_depth;
+              item_as_json["pixels"] = colours;
+            }
+            else
+            {
+              item_as_json["width"] = width;
+              item_as_json["height"] = height;
+              item_as_json["bitDepth"] = bit_depth;
+              item_as_json["colours"] = colours;
+              item_as_json["indexes"] = indexes;
+            }
 
-                 output << std::setw(4) << item_as_json;
+            output << std::setw(4) << item_as_json;
 
-                 if (!opened_folder)
-                 {
-                   wxLaunchDefaultApplication(export_path.string());
-                   opened_folder = true;
-                 }
+            if (!opened_folder)
+            {
+              wxLaunchDefaultApplication(export_path.string());
+              opened_folder = true;
+            }
 
-                 return true;
+            return true;
           });
         }
         ImGui::End();

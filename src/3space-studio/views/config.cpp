@@ -61,7 +61,9 @@ namespace studio::views
     view_factory.add_extension(".rmf", dio::vol::three_space::rmf_file_archive::is_supported);
     view_factory.add_extension(".map", dio::vol::three_space::rmf_file_archive::is_supported);
     view_factory.add_extension(".vga", dio::vol::three_space::rmf_file_archive::is_supported);
-    view_factory.add_extension(".dyn", dio::vol::three_space::dyn_file_archive::is_supported);
+
+    // TODO fix issues with DYN extraction
+    //view_factory.add_extension(".dyn", dio::vol::three_space::dyn_file_archive::is_supported);
     view_factory.add_extension(".rbx", dio::vol::trophy_bass::rbx_file_archive::is_supported);
     view_factory.add_extension(".tbv", dio::vol::trophy_bass::tbv_file_archive::is_supported);
 
@@ -78,7 +80,9 @@ namespace studio::views
     archive.add_archive_type(".rmf", std::make_unique<dio::vol::three_space::rmf_file_archive>());
     archive.add_archive_type(".map", std::make_unique<dio::vol::three_space::rmf_file_archive>());
     archive.add_archive_type(".vga", std::make_unique<dio::vol::three_space::rmf_file_archive>());
-    archive.add_archive_type(".dyn", std::make_unique<dio::vol::three_space::dyn_file_archive>());
+
+    // TODO fix issues with DYN extraction
+    //archive.add_archive_type(".dyn", std::make_unique<dio::vol::three_space::dyn_file_archive>());
     archive.add_archive_type(".vol", std::make_unique<dio::vol::three_space::vol_file_archive>());
     archive.add_archive_type(".vol", std::make_unique<dio::vol::darkstar::vol_file_archive>());
 

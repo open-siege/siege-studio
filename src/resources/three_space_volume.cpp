@@ -11,12 +11,14 @@ namespace studio::resources::vol::three_space
 {
   namespace endian = boost::endian;
 
-  constexpr auto rmf_tags = std::array<std::array<std::byte, 4>, 8>{
+  constexpr auto rmf_tags = std::array<std::array<std::byte, 4>, 10>{
     shared::to_tag<4>({ 0x00, 0x01, 0x05, 0x07 }),
     shared::to_tag<4>({ 0x00, 0x01, 0x06, 0x07 }),
+    shared::to_tag<4>({ 0x00, 0x02, 0x05, 0x07 }),
     shared::to_tag<4>({ 0x00, 0x02, 0x04, 0x07 }),
     shared::to_tag<4>({ 0x01, 0x00, 0x00, 0x00 }),
     shared::to_tag<4>({ 0x01, 0x04, 0x06, 0x07 }),
+    shared::to_tag<4>({ 0x01, 0x02, 0x04, 0x05 }),
     shared::to_tag<4>({ 0x00, 0x01, 0x05, 0x06 }),
     shared::to_tag<4>({ 0x00, 0x01, 0x04, 0x07 }),
     shared::to_tag<4>({ 0x03, 0x04, 0x05, 0x07 })
@@ -228,9 +230,6 @@ namespace studio::resources::vol::three_space
   std::vector<studio::resources::file_info> get_vol_data(std::basic_istream<std::byte>& raw_data, const std::filesystem::path& archive_path)
   {
     const auto folders = get_vol_folders(raw_data);
-
-    auto real_path = archive_path.parent_path().parent_path();
-    auto volume_filename = archive_path.parent_path().filename().string();
     auto folder_name = archive_path.filename().string();
 
     endian::little_uint16_t num_files;
@@ -255,12 +254,14 @@ namespace studio::resources::vol::three_space
       endian::little_uint32_t offset;
       raw_data.read(reinterpret_cast<std::byte*>(&offset), sizeof(offset));
 
-      if (folder_index > folders.size())
+      if (folder_index > folders.size() || folders.empty())
       {
-        continue;
+        info.folder_path = folder_name;
       }
-
-      info.folder_path = folders[folder_index];
+      else
+      {
+        info.folder_path = folders[folder_index];
+      }
 
       if (folder_name == info.folder_path.string())
       {
@@ -279,10 +280,12 @@ namespace studio::resources::vol::three_space
       std::byte entry{};
       raw_data.read(&entry, sizeof(entry));
 
-      if (entry != std::byte{ 0x02 })
+      if (!(entry == std::byte{ 0x02 } || entry == std::byte{ 0x09 }))
       {
         throw std::invalid_argument("VOL file has corrupted data.");
       }
+
+      file.compression_type = entry == std::byte{ 0x02 } ? compression_type::none : compression_type::lz;
 
       std::array<endian::little_uint32_t, 2> file_info{};
       raw_data.read(reinterpret_cast<std::byte*>(&file_info), sizeof(file_info));
@@ -453,6 +456,7 @@ namespace studio::resources::vol::three_space
 
     if (std::filesystem::exists(archive_or_folder_path))
     {
+      auto position = stream.tellg();
       auto raw_results = get_vol_folders(stream);
 
       results.reserve(raw_results.size());
@@ -464,26 +468,30 @@ namespace studio::resources::vol::three_space
 
         return info;
       });
-    }
-    else
-    {
-      auto raw_results = get_vol_data(stream, archive_or_folder_path);
 
-      results.reserve(raw_results.size());
-
-      std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(results), [&](auto& value) {
-        value.folder_path = archive_or_folder_path;
-        return value;
-      });
+      if (!raw_results.empty())
+      {
+        return results;
+      }
+      stream.seekg(position, std::ios::beg);
     }
+
+    auto raw_results = get_vol_data(stream, archive_or_folder_path);
+
+    results.reserve(raw_results.size());
+
+    std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(results), [&](auto& value) {
+           value.folder_path = archive_or_folder_path;
+           return value;
+    });
 
     return results;
   }
 
+  constexpr auto header_size = sizeof(std::byte) + sizeof(std::array<endian::little_uint32_t, 2>);
+
   void vol_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info) const
   {
-    constexpr auto header_size = sizeof(std::byte) + sizeof(std::array<endian::little_uint32_t, 2>);
-
     if (int(stream.tellg()) == info.offset)
     {
       stream.seekg(header_size, std::ios::cur);
@@ -496,10 +504,18 @@ namespace studio::resources::vol::three_space
 
   void vol_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info, std::basic_ostream<std::byte>& output) const
   {
+    auto current_position = stream.tellg();
+    stream.seekg(0, std::ios::end);
+    auto last_byte = static_cast<std::size_t>(stream.tellg());
+
+    stream.seekg(current_position, std::ios::beg);
+
     set_stream_position(stream, info);
 
+    const auto remaining_bytes = last_byte - info.offset - header_size;
+
     std::copy_n(std::istreambuf_iterator<std::byte>(stream),
-      info.size,
+      info.size > remaining_bytes ? remaining_bytes : info.size,
       std::ostreambuf_iterator<std::byte>(output));
   }
 }// namespace studio::resources::vol::three_space

@@ -42,7 +42,7 @@ namespace studio::resources
 
     if (explicit_extensions.has_value())
     {
-      this->explicit_extensions.emplace(std::make_pair(result->first, explicit_extensions.value()));
+      archive_explicit_extensions.emplace(std::make_pair(result->first, explicit_extensions.value()));
     }
   }
 
@@ -75,9 +75,9 @@ namespace studio::resources
 
           // There are specific archives that must not be queried, unless
           // they or their supported formats are explicitly queried.
-          if (auto must_be_explicit = explicit_extensions.find(ext);
+          if (auto must_be_explicit = archive_explicit_extensions.find(ext);
               std::filesystem::exists(folder.full_path) &&
-              !std::filesystem::is_directory(real_folder.full_path) && must_be_explicit != explicit_extensions.end())
+              !std::filesystem::is_directory(real_folder.full_path) && must_be_explicit != archive_explicit_extensions.end())
           {
             auto count = std::count(extensions.begin(), extensions.end(), "ALL");
 
@@ -106,9 +106,7 @@ namespace studio::resources
           {
             for (auto& extension : extensions)
             {
-              auto ext = shared::to_lower(folder.full_path.filename().extension().string());
-
-              if (ext == extension)
+              if (shared::to_lower(folder.full_path.filename().extension().string()) == extension)
               {
                 studio::resources::file_info info{};
                 info.filename = folder.full_path.filename();

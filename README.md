@@ -10,6 +10,8 @@ Classic Games, Modern Technology.
 
 For a list of current development tasks, check out this ClickUp board here: https://share.clickup.com/b/h/5-15151441-2/aeb3a2cc99994ef
 
+If you are reading this on your computer, checkout the latest README here: https://github.com/matthew-rindel/3space-studio
+
 A first goal for each game is to do the following:
 
 * Support the viewing of 3D assets from various games (specifically DTS - Dynamix Three Space files).
@@ -67,7 +69,7 @@ To build the project, use:
 
 ```conan build .```
 
-Generated files will go into the **build/bin** folder.
+Generated files will go into the **build/Release/bin** or **build/Debug/bin** folder.
 
 ### TGUI Theme Generation
 
