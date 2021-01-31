@@ -98,6 +98,11 @@ namespace studio::content::bmp
 
   std::vector<pbmp_data> get_pba_data(std::basic_istream<std::byte>& raw_data);
 
+  std::vector<std::byte> remap_bitmap(const std::vector<std::byte>& pixels,
+                                         const std::vector<pal::colour>& original_colours,
+                                         const std::vector<pal::colour>& other_colours,
+                                         bool only_unique = false);
+
   std::vector<std::int32_t> remap_bitmap(const std::vector<std::int32_t>& pixels,
     const std::vector<pal::colour>& original_colours,
     const std::vector<pal::colour>& other_colours,
