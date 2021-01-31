@@ -90,12 +90,12 @@ namespace studio::resources
             {
               for (auto value : must_be_explicit->second)
               {
-                count = std::count(extensions.begin(), extensions.end(), value);
+                count += std::count(extensions.begin(), extensions.end(), value);
+              }
 
-                if (count == 0)
-                {
-                  return;
-                }
+              if (count == 0)
+              {
+                return;
               }
             }
           }
