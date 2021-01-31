@@ -1,0 +1,20 @@
+version: 1.0.{build}
+  platform:
+    - x64
+    - x86
+
+  install:
+    - cmd: echo "Downloading conan..."
+    - cmd: set PATH=%PATH%;%PYTHON%/Scripts/
+    - cmd: pip.exe install conan
+    - cmd: conan user
+    - cmd: conan --version
+
+  build_script:
+    - cmd: mkdir build
+    - cmd: conan install . -s build_type=Release
+    - cmd: conan build .
+
+  test_script:
+    - cmd: cd build/Release
+    - cmd: tests.exe
