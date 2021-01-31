@@ -6,12 +6,13 @@
     - x86
 
   install:
-    - cmd: echo "Downloading conan..."
-    - cmd: set PATH=%PATH%;C:\Users\appveyor\AppData\Roaming\Python\Python38\Scripts\
-    - cmd: "%PYTHON%" -m pip install --user conan
-    - cmd: conan user
-    - cmd: conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
-    - cmd: conan --version
+    - cmd: >-
+        echo "Downloading conan..."
+        set PATH=%PATH%;C:\Users\appveyor\AppData\Roaming\Python\Python38\Scripts\
+        "%PYTHON%" -m pip install --user conan
+        conan user
+        conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
+        conan --version
 
   build_script:
     - cmd: mkdir build
