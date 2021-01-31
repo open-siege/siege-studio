@@ -48,6 +48,10 @@ New to C++, CMake or Conan? Checkout this set of examples with instructions to g
 
 If you don't already have Conan on your system, find instructions here: https://conan.io/downloads.html
 
+For this project, you also need to add the Bincrafters Conan remote, with this command:
+
+``conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan``
+
 As a setup command, without any pre-built packages, run ```conan install cmake/3.17.3@/ -g virtualenv```
 
 Then run ```activate``` or ```./activate```
