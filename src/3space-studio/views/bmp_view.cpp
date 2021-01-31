@@ -601,7 +601,6 @@ namespace studio::views
 
       ImGui::End();
 
-      //if (is_phoenix_bitmap)
       {
         ImGui::Begin("Export Options");
 
@@ -618,7 +617,7 @@ namespace studio::views
         ImGui::SameLine();
         ImGui::Text("%s", export_path.string().c_str());
 
-        if (ImGui::Button("Export to regular BMP"))
+        if (is_phoenix_bitmap && ImGui::Button("Export to Regular BMP"))
         {
           auto new_file_name = info.filename.replace_extension(".bmp");
           std::filesystem::create_directories(export_path);
@@ -671,6 +670,7 @@ namespace studio::views
                  }
 
                  output << std::setw(4) << item_as_json;
+
                  if (!opened_folder)
                  {
                    wxLaunchDefaultApplication(export_path.string());
