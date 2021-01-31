@@ -82,7 +82,7 @@ namespace studio::views
     archive.add_archive_type(".vga", std::make_unique<dio::vol::three_space::rmf_file_archive>());
 
     // TODO fix issues with DYN extraction
-    archive.add_archive_type(".dyn", std::make_unique<dio::vol::three_space::dyn_file_archive>());
+    //archive.add_archive_type(".dyn", std::make_unique<dio::vol::three_space::dyn_file_archive>());
     archive.add_archive_type(".vol", std::make_unique<dio::vol::three_space::vol_file_archive>());
     archive.add_archive_type(".vol", std::make_unique<dio::vol::darkstar::vol_file_archive>());
 
