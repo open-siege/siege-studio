@@ -57,7 +57,7 @@ namespace studio::resources
 
     std::locale default_locale;
 
-    std::map<std::string, nonstd::span<std::string_view>> explicit_extensions;
+    std::map<std::string, nonstd::span<std::string_view>> archive_explicit_extensions;
 
     std::multimap<std::string, std::unique_ptr<studio::resources::archive_plugin>> archive_types;
     std::map<std::string, std::function<void(const studio::resources::file_info&)>> actions;
