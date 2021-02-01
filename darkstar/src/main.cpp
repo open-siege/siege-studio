@@ -1,6 +1,7 @@
 // Using https://github.com/microsoft/Detours/wiki/Using-Detours as a starting point
 
 #include <fstream>
+#include <filesystem>
 #include <vector>
 #include <algorithm>
 #include <bitset>
@@ -81,10 +82,199 @@ static auto* TrueGetDriveTypeA = GetDriveTypeA;
 static auto* TrueGetVolumeInformationA = GetVolumeInformationA;
 static auto* TrueAllocConsole = AllocConsole;
 
+static auto* TrueRegCloseKey = RegCloseKey;
+static auto* TrueRegCreateKeyExA = RegCreateKeyExA;
+static auto* TrueRegDeleteKeyA = RegDeleteKeyA;
+static auto* TrueRegEnumKeyExA = RegEnumKeyExA;
+static auto* TrueRegEnumValueA = RegEnumValueA;
+static auto* TrueRegOpenKeyExA = RegOpenKeyExA;
+static auto* TrueRegQueryValueExA = RegQueryValueExA;
+static auto* TrueRegSetValueExA = RegSetValueExA;
+
 static std::string VirtualDriveLetter;
-const static std::string StarsiegeDisc1 = "STARSIEGE1";
-const static std::string StarsiegeDisc2 = "STARSIEGE2";
-const static std::string StarsiegeBetaDisc = "STARSIEGE";
+constexpr static std::string_view StarsiegeDisc1 = "STARSIEGE1";
+constexpr static std::string_view StarsiegeDisc2 = "STARSIEGE2";
+constexpr static std::string_view StarsiegeBetaDisc = "STARSIEGE";
+
+constexpr static std::array<std::string_view, 3> SettingsPath = {
+                                                                 "software",
+                                                                 "dynamix",
+                                                                 "starsiege" };
+
+static std::map<std::string_view, HKEY> LoadedPaths;
+
+LSTATUS APIENTRY WrappedRegCloseKey(HKEY hKey)
+{
+    for (auto& [Name, Key] : LoadedPaths)
+    {
+        if (Key == hKey)
+        {
+            LoadedPaths.erase(Name);
+            return ERROR_SUCCESS;
+        }
+    }
+    file << "Closing @" << hKey << '\n';
+    return TrueRegCloseKey(hKey);
+}
+
+LSTATUS APIENTRY WrappedRegCreateKeyExA(
+        HKEY                        hKey,
+        LPCSTR                      lpSubKey,
+        DWORD                       Reserved,
+        LPSTR                       lpClass,
+        DWORD                       dwOptions,
+        REGSAM                      samDesired,
+        const LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+        PHKEY                       phkResult,
+        LPDWORD                     lpdwDisposition
+)
+{
+    file << "Creating registry key @" << hKey << " " << lpSubKey << " @ " << lpClass << '\n';
+    return TrueRegCreateKeyExA(hKey, lpSubKey, Reserved, lpClass, dwOptions, samDesired, lpSecurityAttributes, phkResult, lpdwDisposition);
+}
+
+LSTATUS APIENTRY WrappedRegDeleteKeyA(
+        HKEY   hKey,
+        LPCSTR lpSubKey
+)
+{
+    file << "Deleting registry key @" << hKey << " " << lpSubKey << '\n';
+    return TrueRegDeleteKeyA(hKey, lpSubKey);
+}
+
+LSTATUS APIENTRY WrappedRegEnumKeyExA(
+        HKEY      hKey,
+        DWORD     dwIndex,
+        LPSTR     lpName,
+        LPDWORD   lpcchName,
+        LPDWORD   lpReserved,
+        LPSTR     lpClass,
+        LPDWORD   lpcchClass,
+        PFILETIME lpftLastWriteTime
+)
+{
+    file << "Enum key @" << hKey << " " << lpName << " " << lpClass << '\n';
+    return TrueRegEnumKeyExA(hKey, dwIndex, lpName, lpcchName, lpReserved, lpClass, lpcchClass, lpftLastWriteTime);
+}
+
+LSTATUS APIENTRY WrappedRegEnumValueA(HKEY    hKey,
+                          DWORD   dwIndex,
+                          LPSTR   lpValueName,
+                          LPDWORD lpcchValueName,
+                          LPDWORD lpReserved,
+                          LPDWORD lpType,
+                          LPBYTE  lpData,
+                          LPDWORD lpcbData
+)
+{
+    file << "Enum value @" << hKey << " " << lpValueName << '\n';
+    return TrueRegEnumValueA(hKey, dwIndex, lpValueName, lpcchValueName, lpReserved, lpType, lpData, lpcbData);
+}
+
+LSTATUS APIENTRY WrappedRegOpenKeyExA(
+        HKEY   hKey,
+        LPCSTR lpSubKey,
+        DWORD  ulOptions,
+        REGSAM samDesired,
+        PHKEY  phkResult
+)
+{
+    std::string Temp(lpSubKey);
+    std::transform(Temp.begin(), Temp.end(), Temp.begin(),
+                   [](char c){ return std::tolower(c); });
+
+    if (hKey == HKEY_LOCAL_MACHINE && Temp == SettingsPath[0])
+    {
+        auto alreadyOpened = LoadedPaths.find(SettingsPath[0]);
+
+        if (alreadyOpened != LoadedPaths.end())
+        {
+            *phkResult = alreadyOpened->second;
+            return ERROR_SUCCESS;
+        }
+
+        auto result = TrueRegOpenKeyExA(hKey, lpSubKey, ulOptions, samDesired, phkResult);
+
+        if (result == ERROR_SUCCESS)
+        {
+            LoadedPaths.emplace(std::make_pair(SettingsPath[0], *phkResult));
+        }
+        return result;
+    }
+
+    for (auto& [Name, Key] : LoadedPaths)
+    {
+        file << "Going through cache for " << Name << '\n';
+        for (auto i = 0; i < 2; ++i)
+        {
+            if (Key == hKey && Name == SettingsPath[i] && Temp == SettingsPath[i + 1])
+            {
+                auto New = LoadedPaths.emplace(std::make_pair(SettingsPath[i + 1], reinterpret_cast<HKEY>(i + 1)));
+
+                *phkResult = New.first->second;
+                return ERROR_SUCCESS;
+            }
+        }
+    }
+
+
+    file << "Opening registry key @" << hKey << " " << lpSubKey << '\n';
+    return TrueRegOpenKeyExA(hKey, lpSubKey, ulOptions, samDesired, phkResult);
+}
+
+LSTATUS APIENTRY WrappedRegQueryValueExA(
+        HKEY    hKey,
+        LPCSTR  lpValueName,
+        LPDWORD lpReserved,
+        LPDWORD lpType,
+        LPBYTE  lpData,
+        LPDWORD lpcbData
+)
+{
+    std::string Temp(lpValueName);
+    std::transform(Temp.begin(), Temp.end(), Temp.begin(),
+                   [](char c){ return std::tolower(c); });
+
+    for (auto& [Name, Key] : LoadedPaths)
+    {
+        if (Name == SettingsPath.back() && Key == hKey && lpData && lpcbData)
+        {
+            if (Temp == "path")
+            {
+                auto CurrentDir = std::filesystem::current_path().string();
+                auto Size = *lpcbData;
+                Size = Size > CurrentDir.size() ? Size : CurrentDir.size();
+                std::copy(CurrentDir.data(), CurrentDir.data() + Size, lpData);
+                file << "Returning fake data for Path\n";
+                return ERROR_SUCCESS;
+            }
+            else if (Temp == "installtype")
+            {
+                constexpr static std::string_view Type = "Full";
+                std::copy(Type.data(), Type.data() + Type.size(), lpData);
+
+                file << "Returning fake data for InstallType\n";
+                return ERROR_SUCCESS;
+            }
+        }
+    }
+
+    file << "Querying registry key @" << hKey << " " << lpValueName << '\n';
+    return TrueRegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
+}
+
+LSTATUS APIENTRY WrappedRegSetValueExA(
+        HKEY       hKey,
+        LPCSTR     lpValueName,
+        DWORD      Reserved,
+        DWORD      dwType,
+        const BYTE *lpData,
+        DWORD      cbData
+)
+{
+    file << "Setting value @" << hKey << " " << lpValueName << '\n';
+    return TrueRegSetValueExA(hKey, lpValueName, Reserved, dwType, lpData, cbData);
+}
 
 BOOL WINAPI WrappedAllocConsole()
 {
@@ -204,7 +394,15 @@ static std::map<void**, void*> functions {
         {&(void*&)TrueGetLogicalDrives, WrappedGetLogicalDrives},
         {&(void*&)TrueGetDriveTypeA, WrappedGetDriveTypeA},
         {&(void*&)TrueGetVolumeInformationA, WrappedGetVolumeInformationA},
-        {&(void*&)TrueAllocConsole, WrappedAllocConsole}
+        {&(void*&)TrueAllocConsole, WrappedAllocConsole},
+        {&(void*&)TrueRegCloseKey, WrappedRegCloseKey},
+        {&(void*&)TrueRegCreateKeyExA, WrappedRegCreateKeyExA},
+        {&(void*&)TrueRegDeleteKeyA, WrappedRegDeleteKeyA},
+        {&(void*&)TrueRegEnumKeyExA, WrappedRegEnumKeyExA},
+        {&(void*&)TrueRegEnumValueA, WrappedRegEnumValueA},
+        {&(void*&)TrueRegOpenKeyExA, WrappedRegOpenKeyExA},
+        {&(void*&)TrueRegQueryValueExA, WrappedRegQueryValueExA},
+        {&(void*&)TrueRegSetValueExA, WrappedRegSetValueExA}
 };
 
 BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, LPVOID reserved)
@@ -218,6 +416,7 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, LPVOID reserved)
 
         DetourTransactionBegin();
         DetourUpdateThread(GetCurrentThread());
+
         for (auto& [original, wrapper] : functions)
         {
             DetourAttach(original, wrapper);
@@ -227,6 +426,7 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, LPVOID reserved)
     } else if (dwReason == DLL_PROCESS_DETACH) {
         DetourTransactionBegin();
         DetourUpdateThread(GetCurrentThread());
+
         for (auto& [original, wrapper] : functions)
         {
             DetourDetach(original, wrapper);
