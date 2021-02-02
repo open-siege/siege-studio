@@ -60,6 +60,10 @@ Then run ```activate``` or ```./activate```
 
 To install project dependencies, use:
 
+```pip install -r requirements.txt```
+
+Then:
+
 ```conan install .``` or ```conan install . --build=missing``` if you system is missing precompiled packages for the dependencies.
 
 For debug builds use:
