@@ -5,7 +5,7 @@ from conans import ConanFile, CMake, tools
 class LocalConanFile(ConanFile):
     build_requires = "cmake/3.17.3"
     settings = "os", "compiler", "build_type", "arch"
-    requires = "detours/4.0.1@microsoft/stable", "nlohmann_json/3.8.0"
+    requires = "detours/4.0.1@microsoft/stable", "nlohmann_json/3.8.0", "catch2/2.13.4"
     generators = "cmake_find_package"
     build_folder = "build"
 
@@ -15,5 +15,6 @@ class LocalConanFile(ConanFile):
         cmake = CMake(self)
         cmake.configure()
         cmake.build()
+        cmake.test()
 
 
