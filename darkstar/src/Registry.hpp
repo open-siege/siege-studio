@@ -91,8 +91,53 @@ LSTATUS APIENTRY WrappedRegOpenKeyExA(
         PHKEY phkResult
 ) {
     std::string Temp(lpSubKey);
+
+    if (Temp.back() == '\\') {
+        Temp.pop_back();
+    }
+
     std::transform(Temp.begin(), Temp.end(), Temp.begin(),
                    [](char c) { return std::tolower(c); });
+
+    if (Temp.find('\\', 0) != std::string::npos)
+    {
+        static std::string MergedResult;
+
+        if (MergedResult.empty())
+        {
+            std::stringstream TempStream;
+
+            for (auto& Path : SettingsPath)
+            {
+                TempStream << Path;
+
+                if (Path != SettingsPath.back())
+                {
+                    TempStream << '\\';
+                }
+            }
+
+            MergedResult = TempStream.str();
+        }
+
+        if (Temp == MergedResult)
+        {
+            HKEY Key = HKEY_LOCAL_MACHINE;
+            LSTATUS Result;
+            for (auto& Path : SettingsPath)
+            {
+                Result = WrappedRegOpenKeyExA(Key, std::string(Path).c_str(), 0, 0, &Key);
+
+                if (Result != ERROR_SUCCESS)
+                {
+                    break;
+                }
+            }
+
+            *phkResult = Key;
+            return Result;
+        }
+    }
 
     if (hKey == HKEY_LOCAL_MACHINE && Temp == SettingsPath[0]) {
         auto alreadyOpened = LoadedPaths.find(SettingsPath[0]);
