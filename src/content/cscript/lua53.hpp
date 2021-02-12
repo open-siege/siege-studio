@@ -7,7 +7,7 @@
 #ifndef TAO_PEGTL_SRC_EXAMPLES_PEGTL_LUA53_HPP
 #define TAO_PEGTL_SRC_EXAMPLES_PEGTL_LUA53_HPP
 
-#if !defined( __cpp_exceptions )
+#if !defined(__cpp_exceptions)
 #error "Exception support required for lua53.hpp"
 #else
 
@@ -16,89 +16,89 @@
 
 namespace lua53
 {
-   // PEGTL grammar for the Lua 5.3.0 lexer and parser.
-   //
-   // The grammar here is not very similar to the grammar
-   // in the Lua reference documentation on which it is based
-   // which is due to multiple causes.
-   //
-   // The main difference is that this grammar includes really
-   // "everything", not just the structural parts from the
-   // reference documentation:
-   // - The PEG-approach combines lexer and parser; this grammar
-   //   handles comments and tokenisation.
-   // - The operator precedence and associativity are reflected
-   //   in the structure of this grammar.
-   // - All details for all types of literals are included, with
-   //   escape-sequences for literal strings, and long literals.
-   //
-   // The second necessary difference is that all left-recursion
-   // had to be eliminated.
-   //
-   // In some places the grammar was optimised to require as little
-   // back-tracking as possible, most prominently for expressions.
-   // The original grammar contains the following production rules:
-   //
-   //   prefixexp ::= var | functioncall | ‘(’ exp ‘)’
-   //   functioncall ::=  prefixexp args | prefixexp ‘:’ Name args
-   //   var ::=  Name | prefixexp ‘[’ exp ‘]’ | prefixexp ‘.’ Name
-   //
-   // We need to eliminate the left-recursion, and we also want to
-   // remove the ambiguity between function calls and variables,
-   // i.e. the fact that we can have expressions like
-   //
-   //   ( a * b ).c()[ d ].e:f()
-   //
-   // where only the last element decides between function call and
-   // variable, making it necessary to parse the whole thing again
-   // if we chose wrong at the beginning.
-   // First we eliminate prefixexp and obtain:
-   //
-   //   functioncall ::=  ( var | functioncall | ‘(’ exp ‘)’ ) ( args | ‘:’ Name args )
-   //   var ::=  Name | ( var | functioncall | ‘(’ exp ‘)’ ) ( ‘[’ exp ‘]’ | ‘.’ Name )
-   //
-   // Next we split function_call and variable into a first part,
-   // a "head", or how they can start, and a second part, the "tail",
-   // which, in a sequence like above, is the final deciding part:
-   //
-   //   vartail ::= '[' exp ']' | '.' Name
-   //   varhead ::= Name | '(' exp ')' vartail
-   //   functail ::= args | ':' Name args
-   //   funchead ::= Name | '(' exp ')'
-   //
-   // This allows us to rewrite var and function_call as follows.
-   //
-   //   var ::= varhead { { functail } vartail }
-   //   function_call ::= funchead [ { vartail } functail ]
-   //
-   // Finally we can define a single expression that takes care
-   // of var, function_call, and expressions in a bracket:
-   //
-   //   chead ::= '(' exp ')' | Name
-   //   combined ::= chead { functail | vartail }
-   //
-   // Such a combined expression starts with a bracketed
-   // expression or a name, and continues with an arbitrary
-   // number of functail and/or vartail parts, all in a one
-   // grammar rule without back-tracking.
-   //
-   // The rule expr_thirteen below implements "combined".
-   //
-   // Another issue of interest when writing a PEG is how to
-   // manage the separators, the white-space and comments that
-   // can occur in many places; in the classical two-stage
-   // lexer-parser approach the lexer would have taken care of
-   // this, but here we use the PEG approach that combines both.
-   //
-   // In the following grammar most rules adopt the convention
-   // that they take care of "internal padding", i.e. spaces
-   // and comments that can occur within the rule, but not
-   // "external padding", i.e. they don't start or end with
-   // a rule that "eats up" all extra padding (spaces and
-   // comments). In some places, where it is more efficient,
-   // right padding is used.
+  // PEGTL grammar for the Lua 5.3.0 lexer and parser.
+  //
+  // The grammar here is not very similar to the grammar
+  // in the Lua reference documentation on which it is based
+  // which is due to multiple causes.
+  //
+  // The main difference is that this grammar includes really
+  // "everything", not just the structural parts from the
+  // reference documentation:
+  // - The PEG-approach combines lexer and parser; this grammar
+  //   handles comments and tokenisation.
+  // - The operator precedence and associativity are reflected
+  //   in the structure of this grammar.
+  // - All details for all types of literals are included, with
+  //   escape-sequences for literal strings, and long literals.
+  //
+  // The second necessary difference is that all left-recursion
+  // had to be eliminated.
+  //
+  // In some places the grammar was optimised to require as little
+  // back-tracking as possible, most prominently for expressions.
+  // The original grammar contains the following production rules:
+  //
+  //   prefixexp ::= var | functioncall | ‘(’ exp ‘)’
+  //   functioncall ::=  prefixexp args | prefixexp ‘:’ Name args
+  //   var ::=  Name | prefixexp ‘[’ exp ‘]’ | prefixexp ‘.’ Name
+  //
+  // We need to eliminate the left-recursion, and we also want to
+  // remove the ambiguity between function calls and variables,
+  // i.e. the fact that we can have expressions like
+  //
+  //   ( a * b ).c()[ d ].e:f()
+  //
+  // where only the last element decides between function call and
+  // variable, making it necessary to parse the whole thing again
+  // if we chose wrong at the beginning.
+  // First we eliminate prefixexp and obtain:
+  //
+  //   functioncall ::=  ( var | functioncall | ‘(’ exp ‘)’ ) ( args | ‘:’ Name args )
+  //   var ::=  Name | ( var | functioncall | ‘(’ exp ‘)’ ) ( ‘[’ exp ‘]’ | ‘.’ Name )
+  //
+  // Next we split function_call and variable into a first part,
+  // a "head", or how they can start, and a second part, the "tail",
+  // which, in a sequence like above, is the final deciding part:
+  //
+  //   vartail ::= '[' exp ']' | '.' Name
+  //   varhead ::= Name | '(' exp ')' vartail
+  //   functail ::= args | ':' Name args
+  //   funchead ::= Name | '(' exp ')'
+  //
+  // This allows us to rewrite var and function_call as follows.
+  //
+  //   var ::= varhead { { functail } vartail }
+  //   function_call ::= funchead [ { vartail } functail ]
+  //
+  // Finally we can define a single expression that takes care
+  // of var, function_call, and expressions in a bracket:
+  //
+  //   chead ::= '(' exp ')' | Name
+  //   combined ::= chead { functail | vartail }
+  //
+  // Such a combined expression starts with a bracketed
+  // expression or a name, and continues with an arbitrary
+  // number of functail and/or vartail parts, all in a one
+  // grammar rule without back-tracking.
+  //
+  // The rule expr_thirteen below implements "combined".
+  //
+  // Another issue of interest when writing a PEG is how to
+  // manage the separators, the white-space and comments that
+  // can occur in many places; in the classical two-stage
+  // lexer-parser approach the lexer would have taken care of
+  // this, but here we use the PEG approach that combines both.
+  //
+  // In the following grammar most rules adopt the convention
+  // that they take care of "internal padding", i.e. spaces
+  // and comments that can occur within the rule, but not
+  // "external padding", i.e. they don't start or end with
+  // a rule that "eats up" all extra padding (spaces and
+  // comments). In some places, where it is more efficient,
+  // right padding is used.
 
-   // clang-format off
+  // clang-format off
    struct short_comment : tao::pegtl::until< tao::pegtl::eolf > {};
    struct long_string : tao::pegtl::raw_string< '[', '=', ']' > {};
    struct comment : tao::pegtl::disable< tao::pegtl::two< '-' >, tao::pegtl::sor< long_string, short_comment > > {};
@@ -111,14 +111,14 @@ namespace lua53
    struct str_do : TAO_PEGTL_STRING( "do" ) {};
    struct str_else : TAO_PEGTL_STRING( "else" ) {};
    struct str_elseif : TAO_PEGTL_STRING( "elseif" ) {};
-   struct str_end : TAO_PEGTL_STRING( "end" ) {};
+   struct str_begin : TAO_PEGTL_STRING( "{" ) {};
+   struct str_end : TAO_PEGTL_STRING( "}" ) {};
    struct str_false : TAO_PEGTL_STRING( "false" ) {};
    struct str_for : TAO_PEGTL_STRING( "for" ) {};
    struct str_function : TAO_PEGTL_STRING( "function" ) {};
    struct str_goto : TAO_PEGTL_STRING( "goto" ) {};
    struct str_if : TAO_PEGTL_STRING( "if" ) {};
    struct str_in : TAO_PEGTL_STRING( "in" ) {};
-   struct str_local : TAO_PEGTL_STRING( "local" ) {};
    struct str_nil : TAO_PEGTL_STRING( "nil" ) {};
    struct str_not : TAO_PEGTL_STRING( "not" ) {};
    struct str_or : TAO_PEGTL_STRING( "or" ) {};
@@ -136,13 +136,14 @@ namespace lua53
    template< typename Key >
    struct key : tao::pegtl::seq< Key, tao::pegtl::not_at< tao::pegtl::identifier_other > > {};
 
-   struct sor_keyword : tao::pegtl::sor< str_and, str_break, str_do, str_elseif, str_else, str_end, str_false, str_for, str_function, str_goto, str_if, str_in, str_local, str_nil, str_not, str_repeat, str_return, str_then, str_true, str_until, str_while > {};
+   struct sor_keyword : tao::pegtl::sor< str_and, str_break, str_do, str_elseif, str_else, str_begin, str_end, str_false, str_for, str_function, str_goto, str_if, str_in, str_nil, str_not, str_repeat, str_return, str_then, str_true, str_until, str_while > {};
 
    struct key_and : key< str_and > {};
    struct key_break : key< str_break > {};
    struct key_do : key< str_do > {};
    struct key_else : key< str_else > {};
    struct key_elseif : key< str_elseif > {};
+   struct key_begin : key< str_begin > {};
    struct key_end : key< str_end > {};
    struct key_false : key< str_false > {};
    struct key_for : key< str_for > {};
@@ -150,7 +151,6 @@ namespace lua53
    struct key_goto : key< str_goto > {};
    struct key_if : key< str_if > {};
    struct key_in : key< str_in > {};
-   struct key_local : key< str_local > {};
    struct key_nil : key< str_nil > {};
    struct key_not : key< str_not > {};
    struct key_or : key< str_or > {};
@@ -166,7 +166,7 @@ namespace lua53
    template< typename R >
    struct pad : tao::pegtl::pad< R, sep > {};
 
-   struct name : tao::pegtl::seq< tao::pegtl::not_at< keyword >, tao::pegtl::identifier > {};
+   struct name : tao::pegtl::seq<tao::pegtl::opt< tao::pegtl::one< '%' >>, tao::pegtl::not_at< keyword >, tao::pegtl::identifier > {};
 
    struct single : tao::pegtl::one< 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', '"', '\'', '0', '\n' > {};
    struct spaces : tao::pegtl::seq< tao::pegtl::one< 'z' >, tao::pegtl::star< tao::pegtl::space > > {};
@@ -207,8 +207,8 @@ namespace lua53
 
    struct statement_return : tao::pegtl::seq< tao::pegtl::pad_opt< expr_list_must, sep >, tao::pegtl::opt< tao::pegtl::one< ';' >, seps > > {};
 
-   template< typename E >
-   struct statement_list : tao::pegtl::seq< seps, tao::pegtl::until< tao::pegtl::sor< E, tao::pegtl::if_must< key_return, statement_return, E > >, statement, seps > > {};
+   template< typename B,  typename E >
+   struct statement_list : tao::pegtl::seq< seps, B, seps, tao::pegtl::until< tao::pegtl::sor< E, tao::pegtl::if_must< key_return, statement_return, E > >, statement, seps > > {};
 
    template< char O, char... N >
    struct op_one : tao::pegtl::seq< tao::pegtl::one< O >, tao::pegtl::at< tao::pegtl::not_one< N... > > > {};
@@ -224,7 +224,7 @@ namespace lua53
    struct parameter_list_one : tao::pegtl::seq< name_list, tao::pegtl::opt_must< pad< tao::pegtl::one< ',' > >, tao::pegtl::ellipsis > > {};
    struct parameter_list : tao::pegtl::sor< tao::pegtl::ellipsis, parameter_list_one > {};
 
-   struct function_body : tao::pegtl::seq< tao::pegtl::one< '(' >, tao::pegtl::pad_opt< parameter_list, sep >, tao::pegtl::one< ')' >, seps, statement_list< key_end > > {};
+   struct function_body : tao::pegtl::seq< tao::pegtl::one< '(' >, tao::pegtl::pad_opt< parameter_list, sep >, tao::pegtl::one< ')' >, seps, statement_list<key_begin, key_end > > {};
    struct function_literal : tao::pegtl::if_must< key_function, seps, function_body > {};
 
    struct bracket_expr : tao::pegtl::if_must< tao::pegtl::one< '(' >, seps, expression, seps, tao::pegtl::one< ')' > > {};
@@ -236,7 +236,7 @@ namespace lua53
    struct variable_tail_two : tao::pegtl::if_must< tao::pegtl::seq< tao::pegtl::not_at< tao::pegtl::two< '.' > >, tao::pegtl::one< '.' > >, seps, name > {};
    struct variable_tail : tao::pegtl::sor< variable_tail_one, variable_tail_two > {};
 
-   struct function_call_tail_one : tao::pegtl::if_must< tao::pegtl::seq< tao::pegtl::not_at< tao::pegtl::two< ':' > >, tao::pegtl::one< ':' > >, seps, name, seps, function_args > {};
+   struct function_call_tail_one : tao::pegtl::if_must< tao::pegtl::seq< tao::pegtl::not_at< tao::pegtl::two< ':' > >, tao::pegtl::one< '.' > >, seps, name, seps, function_args > {};
    struct function_call_tail : tao::pegtl::sor< function_args, function_call_tail_one > {};
 
    struct variable_head_one : tao::pegtl::seq< bracket_expr, seps, variable_tail > {};
@@ -296,18 +296,18 @@ namespace lua53
    struct expr_one : left_assoc< expr_two, key_and > {};
    struct expression : left_assoc< expr_one, key_or > {};
 
-   struct do_statement : tao::pegtl::if_must< key_do, statement_list< key_end > > {};
-   struct while_statement : tao::pegtl::if_must< key_while, seps, expression, seps, key_do, statement_list< key_end > > {};
-   struct repeat_statement : tao::pegtl::if_must< key_repeat, statement_list< key_until >, seps, expression > {};
+   struct do_statement : tao::pegtl::if_must< key_do, statement_list<key_begin, key_end > > {};
+   struct while_statement : tao::pegtl::if_must< key_while, seps, expression, seps, key_do, statement_list<key_begin, key_end > > {};
+   struct repeat_statement : tao::pegtl::if_must< key_repeat, statement_list<key_begin,  key_until >, seps, expression > {};
 
    struct at_elseif_else_end : tao::pegtl::sor< tao::pegtl::at< key_elseif >, tao::pegtl::at< key_else >, tao::pegtl::at< key_end > > {};
-   struct elseif_statement : tao::pegtl::if_must< key_elseif, seps, expression, seps, key_then, statement_list< at_elseif_else_end > > {};
-   struct else_statement : tao::pegtl::if_must< key_else, statement_list< key_end > > {};
-   struct if_statement : tao::pegtl::if_must< key_if, seps, expression, seps, key_then, statement_list< at_elseif_else_end >, seps, tao::pegtl::until< tao::pegtl::sor< else_statement, key_end >, elseif_statement, seps > > {};
+   struct elseif_statement : tao::pegtl::if_must< key_elseif, seps, expression, seps, key_then, statement_list<key_begin,  at_elseif_else_end > > {};
+   struct else_statement : tao::pegtl::if_must< key_else, statement_list<key_begin,  key_end > > {};
+   struct if_statement : tao::pegtl::if_must< key_if, seps, expression, seps, key_then, statement_list<key_begin,  at_elseif_else_end >, seps, tao::pegtl::until< tao::pegtl::sor< else_statement, key_end >, elseif_statement, seps > > {};
 
    struct for_statement_one : tao::pegtl::seq< tao::pegtl::one< '=' >, seps, expression, seps, tao::pegtl::one< ',' >, seps, expression, tao::pegtl::pad_opt< tao::pegtl::if_must< tao::pegtl::one< ',' >, seps, expression >, sep > > {};
    struct for_statement_two : tao::pegtl::seq< tao::pegtl::opt_must< tao::pegtl::one< ',' >, seps, name_list_must, seps >, key_in, seps, expr_list_must, seps > {};
-   struct for_statement : tao::pegtl::if_must< key_for, seps, name, seps, tao::pegtl::sor< for_statement_one, for_statement_two >, key_do, statement_list< key_end > > {};
+   struct for_statement : tao::pegtl::if_must< key_for, seps, name, seps, tao::pegtl::sor< for_statement_one, for_statement_two >, key_do, statement_list<key_begin,  key_end > > {};
 
    struct assignment_variable_list : tao::pegtl::list_must< variable, tao::pegtl::one< ',' >, sep > {};
    struct assignments_one : tao::pegtl::if_must< tao::pegtl::one< '=' >, seps, expr_list_must > {};
@@ -317,7 +317,7 @@ namespace lua53
 
    struct local_function : tao::pegtl::if_must< key_function, seps, name, seps, function_body > {};
    struct local_variables : tao::pegtl::if_must< name_list_must, seps, tao::pegtl::opt< assignments_one > > {};
-   struct local_statement : tao::pegtl::if_must< key_local, seps, tao::pegtl::sor< local_function, local_variables > > {};
+   struct local_statement : tao::pegtl::if_must< tao::pegtl::one<'%'>, tao::pegtl::sor< local_function, local_variables > > {};
 
    struct semicolon : tao::pegtl::one< ';' > {};
    struct statement : tao::pegtl::sor< semicolon,
@@ -334,10 +334,10 @@ namespace lua53
                                        function_definition,
                                        local_statement > {};
 
-   struct grammar : tao::pegtl::must< tao::pegtl::opt< tao::pegtl::shebang >, statement_list< tao::pegtl::eof > > {};
-   // clang-format on
+   struct grammar : tao::pegtl::must< tao::pegtl::opt< tao::pegtl::shebang >, statement_list<tao::pegtl::success, tao::pegtl::eof > > {};
+  // clang-format on
 
-}  // namespace lua53
+}// namespace lua53
 
 #endif
 #endif
