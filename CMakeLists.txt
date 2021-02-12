@@ -11,6 +11,7 @@ find_package(wxwidgets REQUIRED)
 find_package(glm REQUIRED)
 find_package(span-lite REQUIRED)
 find_package(Catch2 REQUIRED)
+find_package(pegtl REQUIRED)
 
 file(GLOB TEST_SRC_FILES src/*.test.cpp src/**/*.test.cpp src/**/**/*.test.cpp)
 
@@ -55,7 +56,7 @@ foreach(target ${boost_endian_LIBRARIES_TARGETS})
     set(BOOST_INCLUDES ${BOOST_INCLUDES} ${TARGET_INCLUDES})
 endforeach()
 
-set(BASIC_INCLUDES ${BOOST_INCLUDES} ${boost_endian_INCLUDE_DIRS} ${nlohmann_json_INCLUDE_DIRS} ${glm_INCLUDE_DIRS} ${nonstd_span-lite_INCLUDE_DIRS} ${Catch2_INCLUDE_DIRS})
+set(BASIC_INCLUDES ${BOOST_INCLUDES} ${boost_endian_INCLUDE_DIRS} ${nlohmann_json_INCLUDE_DIRS} ${glm_INCLUDE_DIRS} ${nonstd_span-lite_INCLUDE_DIRS} ${Catch2_INCLUDE_DIRS} ${taocpp_pegtl_INCLUDE_DIRS})
 set(GUI_INCLUDES ${BASIC_INCLUDES} ${ImGui-SFML_INCLUDE_DIRS} ${wxwidgets_INCLUDE_DIRS})
 set(GUI_LIBS ${ImGui-SFML_LIBRARIES} ${wxwidgets_LIBRARIES} ${glm_LIBRARIES})
 
@@ -74,7 +75,7 @@ add_custom_command(TARGET 3space-studio
 
 add_executable(tests ${TESTABLE_SRC_FILES} ${TEST_SRC_FILES})
 target_include_directories(tests PRIVATE ${Catch2_INCLUDES} ${GUI_INCLUDES})
-target_link_libraries(tests PRIVATE Catch2::Catch2 ${GUI_LIBS})
+target_link_libraries(tests PRIVATE Catch2::Catch2  ${GUI_LIBS})
 
 include(CTest)
 include(Catch)
