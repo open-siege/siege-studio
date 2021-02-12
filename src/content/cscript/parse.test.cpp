@@ -7,16 +7,17 @@
 
 TEST_CASE("Text is parsed correctly", "[pal.microsoft]")
 {
-  auto content = R"(function onAbilityCast(caster, targetPos)
-    local units = findUnitsInRadius(targetPos, 500)
-    local enemies = __TS__ArrayFilter(
+  auto content = R"(function onAbilityCast(%caster, %targetPos)
+  {
+    %units = findUnitsInRadius(targetPos, 500);
+    %enemies = __TS__ArrayFilter(
         units,
-        function(____, unit) return caster:isEnemy(unit) end
-    )
-    for ____, enemy in ipairs(enemies) do
-        enemy:kill()
-    end
-end)";
+        function(____, unit) { return caster.isEnemy(unit) }
+    );
+    for ____, enemy in ipairs(enemies) do {
+        enemy.kill();
+    }
+})";
 
 
   tao::pegtl::string_input in(content, "from_content");
