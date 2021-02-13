@@ -103,15 +103,15 @@ To assemble all the build artefacts into one folder, type:
 This will create a folder called package and inside package/bin will be the following:
 * mem.dll
 * darkstar.dll
-* functions.json
-* darkstar.detours.dll
+* darkstar.proxy.dll
+* config.json
 
 Those files can then be copied into the directory of a specific game for everything to work.
 
 ## Notes
 * Everything is work in progress, including the documentation.
     * More detailed explanations of how this module works and the exposed API will be added over time.
-* All of the exe details for each game get stored in functions.json. Right now, only Starsiege 1.0003r has been added.
+* All of the exe details for each game get stored in config.json.
 * Why not Visual C++?
     * Most Darkstar games were compiled with the predecessor to C++ Builder and use a calling convention called __fastcall
     * The meaning of __fastcall in C++ Builder is different to that of Visual C++, thus meaning raw assembly code would be needed to interface with the game code if Visual C++ is to be used
