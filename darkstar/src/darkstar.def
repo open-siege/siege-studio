@@ -1,4 +1,5 @@
 EXPORTS
+    DetourFinishHelperProcess @1
     MS_Malloc
     MS_Free
     MS_Realloc
