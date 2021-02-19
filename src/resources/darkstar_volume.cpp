@@ -1,4 +1,5 @@
 #include <fstream>
+#include <map>
 #include <filesystem>
 #include <vector>
 #include <array>
@@ -12,10 +13,7 @@ namespace studio::resources::vol::darkstar
   namespace endian = boost::endian;
   using namespace std::literals;
 
-  // TODO add some checks for these items
-  constexpr auto vol_index_tag = "voli"sv;
-  constexpr auto vol_string_tag = "vols"sv;
-  constexpr auto vol_block_tag = "vblk"sv;
+
 
   using file_tag = std::array<std::byte, 4>;
 
@@ -30,17 +28,16 @@ namespace studio::resources::vol::darkstar
     return result;
   }
 
+  // TODO add some checks for these items
+  constexpr auto vol_index_tag = to_tag({ 'v', 'o', 'l', 'i' });
+  constexpr auto vol_string_tag = to_tag({ 'v', 'o', 'l', 's' });
+  constexpr auto vol_block_tag = "vblk"sv;
+
   constexpr auto vol_file_tag = to_tag({ ' ', 'V', 'O', 'L' });
   constexpr auto alt_vol_file_tag = to_tag({ 'P', 'V', 'O', 'L' });
   constexpr auto old_vol_file_tag = to_tag({ 'V', 'O', 'L', ' ' });
 
-  enum class compression_type : std::uint8_t
-  {
-    none,
-    rle,
-    lz,
-    lzh
-  };
+  constexpr auto block_tag = to_tag({ 'V', 'B', 'L', 'K' });
 
   enum class volume_version
   {
@@ -131,6 +128,79 @@ namespace studio::resources::vol::darkstar
 
   static_assert(sizeof(old_file_header) == sizeof(std::array<std::byte, 14>));
 
+
+  void create_vol_file(std::basic_ostream<std::byte>& output, const volume_file_info_vector& files)
+  {
+    auto start = output.tellp();
+
+    endian::little_uint32_t size = 0;
+    output.write(alt_vol_file_tag.data(), alt_vol_file_tag.size());
+
+    output.write(reinterpret_cast<std::byte*>(&size), sizeof(size));
+
+    std::map<std::string_view, endian::little_uint32_t> file_locations;
+
+    for (auto& file : files)
+    {
+      file_locations.emplace(file.filename, output.tellp());
+      output.write(block_tag.data(), block_tag.size());
+      endian::little_uint24_t narrowed_size = file.size;
+      output.write(reinterpret_cast<std::byte*>(&narrowed_size), sizeof(narrowed_size));
+      std::byte tag = std::byte(0x80);
+      output.write(&tag, 1);
+
+      std::copy_n(std::istreambuf_iterator<std::byte>(*file.stream),
+                  file.size,
+                  std::ostreambuf_iterator<std::byte>(output));
+
+      auto size_for_padding = file.size;
+      while (size_for_padding % 4 != 0)
+      {
+        std::byte padding{0x00};
+        output.write(&padding, 1);
+        size_for_padding++;
+      }
+    }
+
+    auto current_position = output.tellp();
+
+    output.seekp(std::size_t(start) + alt_vol_file_tag.size(), std::ios_base::beg);
+    size = current_position - start;
+    output.write(reinterpret_cast<std::byte*>(&size), sizeof(size));
+
+    output.seekp(current_position, std::ios_base::beg);
+
+    std::string filenames;
+    filenames.reserve(10 * filenames.size());
+
+    for (auto& file : files)
+    {
+      filenames.append(file.filename);
+      filenames.push_back('\0');
+    }
+
+    endian::little_uint32_t string_size = filenames.size();
+
+    output.write(vol_string_tag.data(), vol_string_tag.size());
+    output.write(reinterpret_cast<std::byte*>(&string_size), sizeof(string_size));
+    output.write(reinterpret_cast<std::byte*>(filenames.data()), string_size);
+
+    string_size = files.size() * sizeof(file_header);
+    output.write(vol_index_tag.data(), vol_index_tag.size());
+    output.write(reinterpret_cast<std::byte*>(&string_size), sizeof(string_size));
+
+    for (auto& file : files)
+    {
+      endian::little_uint32_t value = 0;
+      output.write(reinterpret_cast<std::byte*>(&value), sizeof(value));
+      output.write(reinterpret_cast<std::byte*>(&value), sizeof(value));
+      output.write(reinterpret_cast<std::byte*>(&file_locations[file.filename]), sizeof(value));
+
+      value = file.size;
+      output.write(reinterpret_cast<std::byte*>(&value), sizeof(value));
+      output.write(reinterpret_cast<const std::byte*>(&file.compression_type), 1);
+    }
+  }
 
   std::tuple<volume_version, std::size_t, std::optional<std::size_t>> get_file_list_offsets(std::basic_istream<std::byte>& raw_data)
   {
