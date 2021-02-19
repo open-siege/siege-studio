@@ -37,6 +37,7 @@ file(GLOB DTS_VIEWER_SRC_FILES
         src/3space-studio/views/*.cpp src/3space-studio/*.cpp)
 
 list(REMOVE_ITEM DTS_VIEWER_SRC_FILES ${TEST_SRC_FILES})
+list(REMOVE_ITEM VOL_SRC_FILES ${TEST_SRC_FILES})
 
 file(GLOB TESTABLE_SRC_FILES src/content/*.cpp
         src/content/**/*.cpp
