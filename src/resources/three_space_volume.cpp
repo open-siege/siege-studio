@@ -357,11 +357,11 @@ namespace studio::resources::vol::three_space
   {
     constexpr auto header_size = sizeof(std::array<std::byte, 13>) + sizeof(endian::little_int32_t);
 
-    if (int(stream.tellg()) == info.offset)
+    if (std::size_t(stream.tellg()) == info.offset)
     {
       stream.seekg(header_size, std::ios::cur);
     }
-    else if (int(stream.tellg()) != info.offset + header_size)
+    else if (std::size_t(stream.tellg()) != info.offset + header_size)
     {
       stream.seekg(info.offset + header_size, std::ios::beg);
     }
@@ -416,11 +416,11 @@ namespace studio::resources::vol::three_space
 
   void dyn_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info) const
   {
-    if (int(stream.tellg()) == info.offset)
+    if (std::size_t(stream.tellg()) == info.offset)
     {
       stream.seekg(sizeof(std::array<std::byte, 13>) + sizeof(endian::little_int32_t), std::ios::cur);
     }
-    else if (int(stream.tellg()) != info.offset + sizeof(std::array<std::byte, 13>) + sizeof(endian::little_int32_t))
+    else if (std::size_t(stream.tellg()) != info.offset + sizeof(std::array<std::byte, 13>) + sizeof(endian::little_int32_t))
     {
       stream.seekg(info.offset + sizeof(endian::little_int32_t), std::ios::beg);
     }
@@ -492,11 +492,11 @@ namespace studio::resources::vol::three_space
 
   void vol_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info) const
   {
-    if (int(stream.tellg()) == info.offset)
+    if (std::size_t(stream.tellg()) == info.offset)
     {
       stream.seekg(header_size, std::ios::cur);
     }
-    else if (int(stream.tellg()) != info.offset + header_size)
+    else if (std::size_t(stream.tellg()) != info.offset + header_size)
     {
       stream.seekg(info.offset + header_size, std::ios::beg);
     }

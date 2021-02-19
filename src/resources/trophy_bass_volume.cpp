@@ -116,7 +116,7 @@ namespace studio::resources::vol::trophy_bass
     {
       auto& info = results[i];
 
-      if (int(stream.tellg()) != info.offset)
+      if (std::size_t(stream.tellg()) != info.offset)
       {
         stream.seekg(info.offset, std::ios::beg);
       }
@@ -141,11 +141,11 @@ namespace studio::resources::vol::trophy_bass
 
   void rbx_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info) const
   {
-    if (int(stream.tellg()) == info.offset)
+    if (std::size_t(stream.tellg()) == info.offset)
     {
       stream.seekg(sizeof(endian::little_int32_t), std::ios::cur);
     }
-    else if (int(stream.tellg()) != info.offset + sizeof(tbv_file_info))
+    else if (std::size_t(stream.tellg()) != info.offset + sizeof(tbv_file_info))
     {
       stream.seekg(info.offset + sizeof(endian::little_int32_t), std::ios::beg);
     }
@@ -222,7 +222,7 @@ namespace studio::resources::vol::trophy_bass
     {
       auto& header = results[i];
 
-      if (int(stream.tellg()) != header.offset)
+      if (std::size_t(stream.tellg()) != header.offset)
       {
         stream.seekg(header.offset, std::ios::beg);
       }
@@ -249,11 +249,11 @@ namespace studio::resources::vol::trophy_bass
 
   void tbv_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info) const
   {
-    if (int(stream.tellg()) == info.offset)
+    if (std::size_t(stream.tellg()) == info.offset)
     {
       stream.seekg(sizeof(tbv_file_info), std::ios::cur);
     }
-    else if (int(stream.tellg()) != info.offset + sizeof(tbv_file_info))
+    else if (std::size_t(stream.tellg()) != info.offset + sizeof(tbv_file_info))
     {
       stream.seekg(info.offset + sizeof(tbv_file_info), std::ios::beg);
     }

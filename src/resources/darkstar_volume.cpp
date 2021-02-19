@@ -131,7 +131,7 @@ namespace studio::resources::vol::darkstar
 
   void create_vol_file(std::basic_ostream<std::byte>& output, const volume_file_info_vector& files)
   {
-    auto start = output.tellp();
+    auto start = std::size_t(output.tellp());
 
     endian::little_uint32_t size = 0;
     output.write(alt_vol_file_tag.data(), alt_vol_file_tag.size());
@@ -142,7 +142,7 @@ namespace studio::resources::vol::darkstar
 
     for (auto& file : files)
     {
-      file_locations.emplace(file.filename, output.tellp());
+      file_locations.emplace(file.filename, endian::little_uint32_t(int(output.tellp())));
       output.write(block_tag.data(), block_tag.size());
       endian::little_uint24_t narrowed_size = file.size;
       output.write(reinterpret_cast<std::byte*>(&narrowed_size), sizeof(narrowed_size));
@@ -162,10 +162,10 @@ namespace studio::resources::vol::darkstar
       }
     }
 
-    auto current_position = output.tellp();
+    auto current_position = std::size_t(output.tellp());
 
     output.seekp(std::size_t(start) + alt_vol_file_tag.size(), std::ios_base::beg);
-    size = current_position - start;
+    size = endian::little_uint32_t(current_position - start);
     output.write(reinterpret_cast<std::byte*>(&size), sizeof(size));
 
     output.seekp(current_position, std::ios_base::beg);
@@ -385,11 +385,11 @@ namespace studio::resources::vol::darkstar
 
   void vol_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info) const
   {
-    if (int(stream.tellg()) == info.offset)
+    if (std::size_t(stream.tellg()) == info.offset)
     {
       stream.seekg(sizeof(vol::darkstar::file_index_header), std::ios::cur);
     }
-    else if (int(stream.tellg()) != info.offset + sizeof(vol::darkstar::file_index_header))
+    else if (std::size_t(stream.tellg()) != info.offset + sizeof(vol::darkstar::file_index_header))
     {
       stream.seekg(info.offset + sizeof(vol::darkstar::file_index_header), std::ios::beg);
     }
