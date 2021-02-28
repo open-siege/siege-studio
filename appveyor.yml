@@ -23,6 +23,8 @@ build_script:
   - set PATH=%PATH%;%PYTHON%/Scripts/
   - mkdir build
   - pip3 install -r requirements.txt
+  - conan install cmake/3.17.3@/ -g virtualenv
+  - activate
   - conan install . -s build_type=Release --build=missing
   - conan build .
 
