@@ -20,7 +20,7 @@ class LocalConanFile(ConanFile):
         print("Working dir", os.getcwd())
         cmake = CMake(self)
         cmake.configure()
-        shutil.copytree(self.build_folder, "..")
+        shutil.copytree(self.build_folder, "../test")
         cmake.build()
         cmake.test()
 
