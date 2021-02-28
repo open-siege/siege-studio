@@ -1,6 +1,7 @@
 from conans import ConanFile, CMake, tools
 import glob
 import os.path
+import shutil
 import sys
 from PIL import Image
 
@@ -19,6 +20,7 @@ class LocalConanFile(ConanFile):
         print("Working dir", os.getcwd())
         cmake = CMake(self)
         cmake.configure()
+        shutil.copytree(self.build_folder, "..")
         cmake.build()
         cmake.test()
 
