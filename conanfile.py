@@ -10,7 +10,7 @@ class LocalConanFile(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     requires = "toml11/3.4.0", "nlohmann_json/3.9.0", "boost_endian/1.69.0@bincrafters/stable", "imgui-sfml/2.1@bincrafters/stable", "wxwidgets/3.1.3@bincrafters/stable", "glm/0.9.9.8", "span-lite/0.9.0", "taocpp-pegtl/3.1.0", "catch2/2.13.4"
     generators = "cmake_find_package", "virtualenv"
-    build_folder = "build"
+    build_folder = os.path.abspath("build")
 
     def build(self):
         self.build_folder = os.path.abspath("build")
