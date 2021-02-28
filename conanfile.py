@@ -13,7 +13,7 @@ class LocalConanFile(ConanFile):
     build_folder = "build"
 
     def build(self):
-        self.build_folder = "build"
+        self.build_folder = os.path.abspath("build")
         cmake = CMake(self)
         cmake.configure()
         cmake.build()
