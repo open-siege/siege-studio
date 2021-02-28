@@ -2,7 +2,7 @@ version: 1.0.{build}
 environment:
   PYTHON: "C:\\Python37"
   matrix:
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+    - APPVEYOR_BUILD_WORKER_IMAGE: Previous Visual Studio 2019
       PYVER: py38
       TOXENV: py38-conancurrent
       CMAKE_GENERATOR: "Visual Studio 16 2019"
