@@ -15,7 +15,7 @@ platform:
 
 install:
   - set PATH=%PATH%;%PYTHON%/Scripts/
-  - pip3 install conan
+  - pip3 install conan --upgrade
   - conan user
   - conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan --force
   - conan --version
