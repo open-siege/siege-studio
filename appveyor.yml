@@ -1,6 +1,7 @@
 version: 1.0.{build}
 environment:
   PYTHON: "C:\\Python38"
+  CONAN_USER_HOME: "C:\\conan-appveyor"
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Windows
       APPVEYOR_BUILD_WORKER_CLOUD: DESKTOP-HKP5S0E
