@@ -17,7 +17,7 @@ install:
   - set PATH=%PATH%;%PYTHON%/Scripts/
   - pip3 install conan
   - conan user
-  - conan remote update bincrafters https://api.bintray.com/conan/bincrafters/public-conan --insert 0
+  - conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan --force
   - conan --version
 
 build_script:
