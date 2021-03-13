@@ -7,7 +7,6 @@ class LocalConanFile(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     requires = "detours/4.0.1@microsoft/stable"
     generators = "cmake_find_package"
-    build_folder = "build"
 
     def build(self):
         self.build_folder = "build"
