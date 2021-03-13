@@ -27,11 +27,6 @@ build_script:
   - conan install . 
   - conan package .
 
-test_script:
-  - activate
-  - cd build
-  - ctest
-
 after_build:
   - powershell Compress-Archive package/* darkstar-extender-%APPVEYOR_BUILD_VERSION%-%PLATFORM%.zip
 
