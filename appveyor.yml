@@ -26,7 +26,7 @@ build_script:
   - conan install cmake/3.17.3@/ -g virtualenv
   - activate
   - conan install . -s build_type=Release --build=missing
-  - conan build .
+  - conan package .
 
 test_script:
   - activate
@@ -34,7 +34,7 @@ test_script:
   - ctest
 
 after_build:
-  - cd %APPVEYOR_BUILD_FOLDER%/package
+  - cd %APPVEYOR_BUILD_FOLDER%\package
   - 7z a 3space-studio.zip .
 
 artifacts:
