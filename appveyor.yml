@@ -37,7 +37,7 @@ after_build:
   - powershell Compress-Archive package/* 3space-studio-%APPVEYOR_BUILD_VERSION%.zip
 
 artifacts:
-  - path: 3space-studio.zip
+  - path: 3space-studio-$(APPVEYOR_BUILD_VERSION).zip
     name: 3spaceStudio
 
 deploy:
