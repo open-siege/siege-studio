@@ -1,4 +1,4 @@
-version: 0.5.1.{build}
+version: 0.5.1-{build}
 environment:
   PYTHON: "C:\\Python38"
   matrix:
@@ -34,14 +34,14 @@ test_script:
   - ctest
 
 after_build:
-  - powershell Compress-Archive package/* 3space-studio-%APPVEYOR_BUILD_VERSION%.zip
+  - powershell Compress-Archive package/* 3space-studio-%APPVEYOR_BUILD_VERSION%-%PLATFORM%.zip
 
 artifacts:
-  - path: 3space-studio-$(APPVEYOR_BUILD_VERSION).zip
+  - path: 3space-studio-$(APPVEYOR_BUILD_VERSION)-$(PLATFORM).zip
     name: 3spaceStudio
 
 deploy:
-  release: 3spaceStudio-v$(APPVEYOR_BUILD_VERSION)
+  release: 3spaceStudio-v$(APPVEYOR_REPO_TAG_NAME)
   provider: GitHub
   auth_token:
     secure: hD8hzQeP3c5jJuk/pMwouuz4wI8VdHDfGlyoTYLrWur9mLHj3lbMP7R37eHRd2Gy
