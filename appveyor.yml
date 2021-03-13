@@ -1,6 +1,6 @@
 version: 1.0.{build}
 environment:
-  PYTHON: "C:\\Python37"
+  PYTHON: "C:\\Python38"
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Windows
       APPVEYOR_BUILD_WORKER_CLOUD: 3Space Studio Private Build Cluster
