@@ -9,6 +9,11 @@ x64/
 dist/
 __pycache__/
 CMakeFiles/
+Debug/
+Release/
+Package/
+include/
+final build/
 
 *.dig
 *.obj
