@@ -15,7 +15,7 @@ class DarkstarHookConan(ConanFile):
         # Release builds cause the dll not to work properly.
         # Tried with various optimisation levels and still has issues. 
         # The debug build isn't too bad since all the main logic has been moved to darkstar.dll
-        self.run("cd darkstar.proxy && conan install . --profile ./local-profile.ini -s build_type=Debug --build=missing")
+        self.run("cd darkstar.proxy && type nul >> ./local-env.ini && conan install . --profile ./local-profile.ini -s build_type=Debug --build=missing")
         self.run("cd mem && conan install . -s arch=x86 -s build_type=Debug")
         self.run("cd launcher && conan install . -s arch=x86 --build=missing")
 
