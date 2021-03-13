@@ -35,7 +35,7 @@ test_script:
 
 after_build:
   - cd %APPVEYOR_BUILD_FOLDER%\package
-  - 7z a 3space-studio.zip .
+  - powershell Compress-Archive * publish.zip
 
 artifacts:
   - path: package\3space-studio.zip
