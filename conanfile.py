@@ -5,11 +5,17 @@ from PIL import Image
 
 
 class LocalConanFile(ConanFile):
+    name = "3space-studio"
+    version = "0.5.1"
+    url = "https://github.com/StarsiegePlayers/3space-studio"
+    license = "MIT"
+    author = "Matthew Rindel (matthew@thesiegehub.com)"
     system_requires = "opengl/system"
     build_requires = "cmake/3.17.3"
     settings = "os", "compiler", "build_type", "arch"
     requires = "toml11/3.4.0", "nlohmann_json/3.9.0", "boost_endian/1.69.0@bincrafters/stable", "imgui-sfml/2.1@bincrafters/stable", "wxwidgets/3.1.3@bincrafters/stable", "glm/0.9.9.8", "span-lite/0.9.0", "taocpp-pegtl/3.1.0", "catch2/2.13.4"
     generators = "cmake_find_package", "virtualenv"
+    exports_sources = "CMakeLists.txt", "LICENSE", "README.md", "game-support.md", "src/*"
 
     def _configure_cmake(self):
         self.source_folder = os.path.abspath(".")
@@ -25,7 +31,15 @@ class LocalConanFile(ConanFile):
         cmake.test()
 
     def package(self):
+        git = tools.Git(folder="wiki")
+        git.clone("https://github.com/StarsiegePlayers/3space-studio.wiki.git", shallow=True)
+        tools.rmdir("wiki/.git")
         cmake = self._configure_cmake()
+        self.copy(pattern="LICENSE", src=self.source_folder, dst="licenses")
+        self.copy(pattern="README.md", src=self.source_folder, dst="res")
+        self.copy(pattern="wiki/*.md", src=self.source_folder, dst="res")
+        self.copy(pattern="game-support.md", src=self.source_folder, dst="res")
+        tools.rmdir("wiki")
         cmake.install()
 
     def package_info(self):
