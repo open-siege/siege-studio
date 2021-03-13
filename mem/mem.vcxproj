@@ -103,7 +103,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <ModuleDefinitionFile>src/mem.def</ModuleDefinitionFile>
-      <AdditionalDependencies>darkstar.detours.lib;darkstar.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>darkstar.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>make-darkstar-lib.bat</Command>
