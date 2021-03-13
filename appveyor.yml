@@ -38,7 +38,7 @@ after_build:
   7z a 3space-studio.zip .
 
 artifacts:
-  - path: %APPVEYOR_BUILD_FOLDER%\package\3space-studio.zip
+  - path: "%APPVEYOR_BUILD_FOLDER%\package\3space-studio.zip"
     name: 3spaceStudio
 
 deploy:
