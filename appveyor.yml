@@ -1,4 +1,4 @@
-version: 1.0.{build}
+version: 0.5.1.{build}
 environment:
   PYTHON: "C:\\Python38"
   matrix:
@@ -34,7 +34,7 @@ test_script:
   - ctest
 
 after_build:
-  - powershell Compress-Archive package/* 3space-studio.zip
+  - powershell Compress-Archive package/* 3space-studio-%APPVEYOR_BUILD_VERSION%.zip
 
 artifacts:
   - path: 3space-studio.zip
