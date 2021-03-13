@@ -34,12 +34,10 @@ test_script:
   - ctest
 
 after_build:
-  - cd %APPVEYOR_BUILD_FOLDER%\package
-  - powershell Compress-Archive * publish.zip
-  - cd ..
+  - powershell Compress-Archive package/* 3space-studio.zip
 
 artifacts:
-  - path: package\3space-studio.zip
+  - path: 3space-studio.zip
     name: 3spaceStudio
 
 deploy:
