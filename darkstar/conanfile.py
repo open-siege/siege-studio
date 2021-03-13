@@ -7,7 +7,6 @@ class LocalConanFile(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     requires = "detours/4.0.1@microsoft/stable", "nlohmann_json/3.8.0"
     generators = "cmake_find_package"
-    build_folder = "build"
 
     def build(self):
         self.run(f"{tools.vcvars_command(self)} && make-proxy-lib.bat")

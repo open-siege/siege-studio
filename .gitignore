@@ -81,3 +81,4 @@ activate.sh
 deactivate.bat
 deactivate.ps1
 deactivate.sh
+package
