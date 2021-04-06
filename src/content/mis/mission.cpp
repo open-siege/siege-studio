@@ -21,6 +21,26 @@ namespace studio::mis::darkstar
   constexpr auto tank_tag = shared::to_tag<4>({ 'T', 'A', 'N', 'K' });
   constexpr auto flyer_tag = shared::to_tag<4>({ 'F', 'L', 'Y', 'R' });
 
+  constexpr auto sim_control_tag = shared::to_tag<4>({ 'S', 'G', 'c', 't' });
+  constexpr auto sim_active_control_tag = shared::to_tag<4>({ 'S', 'G', 'a', 'c' });
+  constexpr auto sim_bitmap_control_tag = shared::to_tag<4>({ 'S', 'G', 'b', 'm' });
+  constexpr auto es_palette_control_tag = shared::to_tag<4>({ 'E', 'S', 'p', 'c' });
+  constexpr auto es_text_wrap_control_tag = shared::to_tag<4>({ 'E', 'S', 't', 'w' });
+  constexpr auto es_text_edit_control_tag = shared::to_tag<4>({ 'E', 'S', 't', 'e' });
+  constexpr auto es_text_list_control_tag = shared::to_tag<4>({ 'E', 'S', 't', 'l' });
+  constexpr auto es_smacker_movie_control_tag = shared::to_tag<4>({ 'E', 'S', 's', 'm' });
+  constexpr auto es_button_control_tag = shared::to_tag<4>({ 'E', 'S', 'b', 't' });
+  constexpr auto es_tab_control_tag = shared::to_tag<4>({ 'G', 'T', 't', 'l' });
+  constexpr auto es_tab_child_control_tag = shared::to_tag<4>({ 'G', 'T', 'c', 'l' });
+  constexpr auto es_slider_control_tag = shared::to_tag<4>({ 'S', 'H', 's', 'l' });
+  //constexpr auto es_scroll_control_tag = shared::to_tag<4>({ 'S', 'H', 's', 'c' });
+  constexpr auto es_toggle_control_tag = shared::to_tag<4>({ 'E', 'S', 'y', 'n' });
+  constexpr auto es_combo_control_tag = shared::to_tag<4>({ 'E', 'S', 'c', 'x' });
+  //EStl ?
+  constexpr auto sim_timer_control_tag = shared::to_tag<4>({ 'S', 'G', 't', 'm' });
+  constexpr auto sim_scroll_control_tag = shared::to_tag<4>({ 'S', 'G', 's', 'C' });
+  constexpr auto sim_text_control_tag = shared::to_tag<4>({ 'S', 'G', 's', 't' });
+
 
   bool is_mission_data(std::basic_istream<std::byte>& file)
   {
@@ -96,6 +116,16 @@ namespace studio::mis::darkstar
 
     return children;
   }
+
+  std::string read_string(std::basic_istream<std::byte>& file, std::size_t size)
+  {
+    std::string name(size, '\0');
+
+    file.read(reinterpret_cast<std::byte*>(name.data()), size);
+
+    return name;
+  }
+
 
   std::string read_string(std::basic_istream<std::byte>& file)
   {
@@ -251,6 +281,124 @@ namespace studio::mis::darkstar
     output.write(vehicle.footer.data(), vehicle.footer.size());
   }
 
+  darkstar::sim_control read_sim_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers, bool read_version = false)
+  {
+    darkstar::sim_control group;
+    group.header = header;
+    group.version = 0;
+
+    if (read_version)
+    {
+      file.read(reinterpret_cast<std::byte*>(&group.version), sizeof(group.version));
+    }
+
+
+    file.read(&group.control_version, sizeof(group.control_version));
+
+    if (int(group.control_version) < 4)
+    {
+      throw std::invalid_argument("Control being parsed has wrong version.");
+    }
+
+    endian::little_uint32_t temp;
+    file.read(reinterpret_cast<std::byte*>(&temp), sizeof(temp));
+    file.read(&group.opaque, sizeof(group.opaque));
+    file.read(&group.fill_colour, sizeof(group.fill_colour));
+    file.read(&group.selected_fill_colour, sizeof(group.selected_fill_colour));
+    file.read(&group.ghost_fill_colour, sizeof(group.ghost_fill_colour));
+    file.read(&group.border, sizeof(group.border));
+    file.read(&group.border_color, sizeof(group.border_color));
+    file.read(&group.selected_border_color, sizeof(group.selected_border_color));
+    file.read(&group.ghost_border_color, sizeof(group.ghost_border_color));
+
+    group.console_command = read_string(file);
+    group.alt_console_command = read_string(file);
+
+    file.read(reinterpret_cast<std::byte*>(&group.flags), sizeof(group.flags));
+    file.read(reinterpret_cast<std::byte*>(&group.tag), sizeof(group.tag));
+    file.read(reinterpret_cast<std::byte*>(&group.horizontal_sizing), sizeof(group.horizontal_sizing));
+    file.read(reinterpret_cast<std::byte*>(&group.vertical_sizing), sizeof(group.vertical_sizing));
+    file.read(reinterpret_cast<std::byte*>(&group.help_tag), sizeof(group.help_tag));
+
+    group.console_variable = read_string(file, sim_control::inspect_size);
+
+    file.read(reinterpret_cast<std::byte*>(&group.children_count), sizeof(group.children_count));
+
+    group.children = read_children(file, group.children_count, readers);
+    group.names = read_strings(file, group.children_count);
+    skip_alignment_bytes(file, header.object_size);
+
+    return group;
+  }
+
+  darkstar::sim_active_control read_sim_active_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers, bool read_version = false)
+  {
+    darkstar::sim_active_control control;
+    control.version = 0;
+
+    if (read_version)
+    {
+      file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    }
+
+    file.read(reinterpret_cast<std::byte*>(&control.is_active), sizeof(control.is_active));
+    file.read(reinterpret_cast<std::byte*>(&control.message), sizeof(control.message));
+
+    control.control_data = read_sim_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::sim_bitmap_control read_sim_bitmap_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers)
+  {
+    darkstar::sim_bitmap_control control;
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(reinterpret_cast<std::byte*>(&control.bitmap_tag), sizeof(control.bitmap_tag));
+    control.inspection_data = read_string(file, sim_control::inspect_size);
+    file.read(reinterpret_cast<std::byte*>(&control.is_transparent), sizeof(control.is_transparent));
+    control.control_data = read_sim_active_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::es_palette_control read_es_palette_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers)
+  {
+    darkstar::es_palette_control control;
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(reinterpret_cast<std::byte*>(&control.palette_tag), sizeof(control.palette_tag));
+    control.inspection_data = read_string(file, sim_control::inspect_size);
+    control.control_data = read_sim_active_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::es_text_wrap_control read_es_text_wrap_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers)
+  {
+    darkstar::es_text_wrap_control control;
+
+    return control;
+  }
+
+  darkstar::es_button_control read_es_button_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers)
+  {
+    darkstar::es_button_control control;
+
+    return control;
+  }
+  darkstar::sim_text_control read_sim_text_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers)
+  {
+    darkstar::sim_text_control control;
+
+    return control;
+  }
+
+  darkstar::es_smacker_movie_control read_es_smacker_movie_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers)
+  {
+    darkstar::es_smacker_movie_control control;
+
+    return control;
+  }
+
   darkstar::sim_group read_sim_group(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers)
   {
     darkstar::sim_group group;
@@ -283,6 +431,13 @@ namespace studio::mis::darkstar
     static sim_item_reader_map readers = {
       { sim_group_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_group(file, header, readers); } } },
       { sim_set_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_set(file, header, readers); } } },
+      { sim_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_control(file, header, readers); } } },
+      { sim_bitmap_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_bitmap_control(file, header, readers); } } },
+      { es_palette_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_es_palette_control(file, header, readers); } } },
+      { es_text_wrap_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_es_text_wrap_control(file, header, readers); } } },
+      { es_button_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_es_button_control(file, header, readers); } } },
+      { es_smacker_movie_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_es_smacker_movie_control(file, header, readers); } } },
+      { sim_text_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_text_control(file, header, readers); } } },
       //TODO come back to these at another time.
       // Some of the tags (interior shape being the most common) have issues when parsing
 //      { sim_vol_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_volume(file, header, readers); } } },

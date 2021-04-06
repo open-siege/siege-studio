@@ -26,6 +26,13 @@ namespace studio::mis::darkstar
   struct sim_marker;
   struct nav_marker;
   struct vehicle;
+  struct sim_control;
+  struct sim_bitmap_control;
+  struct es_palette_control;
+  struct es_text_wrap_control;
+  struct es_smacker_movie_control;
+  struct es_button_control;
+  struct sim_text_control;
 
   struct object_header
   {
@@ -33,7 +40,9 @@ namespace studio::mis::darkstar
     endian::little_uint32_t object_size;
   };
 
-  using sim_item = std::variant<sim_set, sim_group, sim_volume, sim_terrain, sim_palette, interior_shape, sim_structure, sim_marker, nav_marker, vehicle, raw_item>;
+  using sim_item = std::variant<sim_set, sim_group, sim_volume, sim_control, sim_bitmap_control, es_palette_control, es_text_wrap_control, sim_text_control,
+    es_button_control, es_smacker_movie_control,
+    sim_terrain, sim_palette, interior_shape, sim_structure, sim_marker, nav_marker, vehicle, raw_item>;
 
   using sim_items = std::vector<sim_item>;
 
@@ -61,6 +70,94 @@ namespace studio::mis::darkstar
     endian::little_uint32_t children_count;
     sim_items children;
     std::vector<std::string> names;
+  };
+
+  struct sim_control
+  {
+    constexpr static auto inspect_size = 80 + 1;
+    object_header header;
+    endian::little_uint32_t version;
+    std::byte control_version;
+
+    std::byte opaque;
+    std::byte fill_colour;
+    std::byte selected_fill_colour;
+    std::byte ghost_fill_colour;
+    std::byte border;
+    std::byte border_color;
+    std::byte selected_border_color;
+    std::byte ghost_border_color;
+
+    std::string console_command;
+    std::string alt_console_command;
+
+    std::array<endian::little_int32_t, 2> position;
+    std::array<endian::little_int32_t, 2> size;
+    endian::little_uint32_t flags;
+    endian::little_uint32_t tag;
+    endian::little_int32_t horizontal_sizing;
+    endian::little_int32_t vertical_sizing;
+    endian::little_int32_t help_tag;
+    std::string console_variable;
+
+    endian::little_uint32_t children_count;
+    sim_items children;
+    std::vector<std::string> names;
+  };
+
+  struct sim_active_control
+  {
+    endian::little_uint32_t version;
+    std::byte is_active;
+    endian::little_uint32_t message;
+    sim_control control_data;
+  };
+
+  struct sim_bitmap_control
+  {
+    endian::little_uint32_t version;
+    endian::little_int32_t bitmap_tag;
+    std::string inspection_data;
+    std::byte is_transparent;
+    sim_active_control control_data;
+  };
+
+  struct sim_text_control
+  {
+    endian::little_uint32_t version;
+    std::array<endian::little_int32_t, 2> unused;
+    endian::little_int32_t disabled_font_tag;
+    endian::little_int32_t font_tag;
+    endian::little_int32_t alt_font_tag;
+    endian::little_int32_t text_tag;
+    std::string default_text;
+    endian::little_int32_t alignment;
+    endian::little_int32_t vertical_position_delta;
+    sim_active_control control_data;
+  };
+
+  struct es_button_control
+  {
+    endian::little_uint32_t version;
+    std::array<std::byte, 20> button_data;
+    sim_text_control control_data;
+  };
+
+  struct es_smacker_movie_control
+  {
+
+  };
+
+  struct es_text_wrap_control
+  {
+  };
+
+  struct es_palette_control
+  {
+    endian::little_uint32_t version;
+    endian::little_int32_t palette_tag;
+    std::string inspection_data;
+    sim_active_control control_data;
   };
 
   struct address
