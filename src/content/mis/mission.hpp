@@ -36,6 +36,10 @@ namespace studio::mis::darkstar
   struct es_hidden_button_control;
   struct sim_text_control;
   struct sim_timer_control;
+  struct es_text_list_control;
+  struct es_scroll_control;
+  struct es_matrix_control;
+  struct es_text_edit_control;
 
   struct object_header
   {
@@ -44,7 +48,8 @@ namespace studio::mis::darkstar
   };
 
   using sim_item = std::variant<sim_set, sim_group, sim_volume, sim_control, sim_bitmap_control, es_palette_control, es_text_wrap_control, sim_text_control,
-    es_button_control, es_smacker_movie_control, es_hidden_button_control, sim_timer_control, sim_active_control,
+    es_button_control, es_smacker_movie_control, es_hidden_button_control, sim_timer_control, sim_active_control, es_text_list_control,
+    es_scroll_control, es_matrix_control, es_text_edit_control,
     sim_terrain, sim_palette, interior_shape, sim_structure, sim_marker, nav_marker, vehicle, raw_item>;
 
   using sim_items = std::vector<sim_item>;
@@ -163,6 +168,22 @@ namespace studio::mis::darkstar
     sim_text_control control_data;
   };
 
+  struct es_text_list_control
+  {
+    endian::little_uint32_t version;
+    std::array<std::byte, 2> list_data;
+    sim_text_control control_data;
+  };
+
+  struct es_text_edit_control
+  {
+    endian::little_uint32_t version;
+    endian::little_uint32_t numbers_only;
+    std::array<endian::little_uint32_t, 2> unused;
+    endian::little_int32_t max_length;
+    sim_text_control control_data;
+  };
+
   struct es_hidden_button_control
   {
     endian::little_uint32_t version;
@@ -181,13 +202,30 @@ namespace studio::mis::darkstar
     sim_active_control control_data;
   };
 
-
-
   struct es_palette_control
   {
     endian::little_uint32_t version;
     endian::little_int32_t palette_tag;
     std::string inspection_data;
+    sim_control control_data;
+  };
+
+  struct es_scroll_control
+  {
+    endian::little_uint32_t version;
+    endian::little_int32_t scroll_pba_tag;
+    std::byte use_arrow_keys;
+    endian::little_int32_t force_horizontal_scroll_bar;
+    endian::little_int32_t force_vertical_scroll_bar;
+    std::byte use_constant_thumb_height;
+    sim_control control_data;
+  };
+
+  struct es_matrix_control
+  {
+    endian::little_uint32_t version;
+    std::array<endian::little_int32_t, 2> header_size;
+    std::array<std::byte, 91> raw_data;
     sim_control control_data;
   };
 

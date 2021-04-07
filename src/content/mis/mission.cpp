@@ -2,6 +2,7 @@
 #include <sstream>
 #include <iomanip>
 #include <functional>
+#include <iostream>
 #include "resources/darkstar_volume.hpp"
 #include "mission.hpp"
 
@@ -35,12 +36,14 @@ namespace studio::mis::darkstar
   constexpr auto es_tab_control_tag = shared::to_tag<4>({ 'G', 'T', 't', 'l' });
   constexpr auto es_tab_child_control_tag = shared::to_tag<4>({ 'G', 'T', 'c', 'l' });
   constexpr auto es_slider_control_tag = shared::to_tag<4>({ 'S', 'H', 's', 'l' });
-  //constexpr auto es_scroll_control_tag = shared::to_tag<4>({ 'S', 'H', 's', 'c' });
   constexpr auto es_toggle_control_tag = shared::to_tag<4>({ 'E', 'S', 'y', 'n' });
   constexpr auto es_combo_control_tag = shared::to_tag<4>({ 'E', 'S', 'c', 'x' });
-  //EStl ?
   constexpr auto sim_timer_control_tag = shared::to_tag<4>({ 'S', 'G', 't', 'm' });
-  constexpr auto sim_scroll_control_tag = shared::to_tag<4>({ 'S', 'G', 's', 'C' });
+
+  constexpr auto es_matrix_control_tag = shared::to_tag<4>({ 'G', 'b', 'm', 'c' });
+
+  constexpr auto es_scroll_control_tag = shared::to_tag<4>({ 'S', 'H', 's', 'c' });
+  constexpr auto sim_scroll_content_control_tag = shared::to_tag<4>({ 'S', 'G', 's', 'C' });
   constexpr auto sim_text_control_tag = shared::to_tag<4>({ 'S', 'G', 's', 't' });
 
 
@@ -106,6 +109,8 @@ namespace studio::mis::darkstar
       }
 
       darkstar::raw_item item;
+
+      std::cout << "Reading raw item at " << file.tellg() << '\n';
 
       item.header = child_header;
       item.raw_bytes = std::vector<std::byte>(item.header.object_size);
@@ -451,6 +456,59 @@ namespace studio::mis::darkstar
     return control;
   }
 
+  darkstar::es_text_list_control read_es_text_list_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers)
+  {
+    darkstar::es_text_list_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(reinterpret_cast<std::byte*>(control.list_data.data()), sizeof(control.list_data));
+
+    control.control_data = read_sim_text_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::es_text_edit_control read_es_text_edit_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers)
+  {
+    darkstar::es_text_edit_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(reinterpret_cast<std::byte*>(&control.numbers_only), sizeof(control.numbers_only));
+    file.read(reinterpret_cast<std::byte*>(control.unused.data()), sizeof(control.unused));
+    file.read(reinterpret_cast<std::byte*>(&control.max_length), sizeof(control.max_length));
+
+    control.control_data = read_sim_text_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::es_scroll_control read_es_scroll_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers)
+  {
+    darkstar::es_scroll_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(reinterpret_cast<std::byte*>(&control.scroll_pba_tag), sizeof(control.scroll_pba_tag));
+    file.read(&control.use_arrow_keys, sizeof(control.use_arrow_keys));
+    file.read(reinterpret_cast<std::byte*>(&control.force_horizontal_scroll_bar), sizeof(control.force_horizontal_scroll_bar));
+    file.read(reinterpret_cast<std::byte*>(&control.force_vertical_scroll_bar), sizeof(control.force_vertical_scroll_bar));
+    file.read(&control.use_constant_thumb_height, sizeof(control.use_constant_thumb_height));
+
+    control.control_data = read_sim_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::es_matrix_control read_es_matrix_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers)
+  {
+    darkstar::es_matrix_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(reinterpret_cast<std::byte*>(control.header_size.data()), sizeof(control.header_size));
+    file.read(control.raw_data.data(), sizeof(control.raw_data));
+    control.control_data = read_sim_control(file, header, readers);
+
+    return control;
+  }
 
   darkstar::es_smacker_movie_control read_es_smacker_movie_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers)
   {
@@ -501,16 +559,21 @@ namespace studio::mis::darkstar
       { sim_group_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_group(file, header, readers); } } },
       { sim_set_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_set(file, header, readers); } } },
       { sim_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_control(file, header, readers, true); } } },
+      { sim_scroll_content_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_control(file, header, readers, true); } } },
       { sim_active_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_active_control(file, header, readers, true); } } },
       { sim_text_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_text_control(file, header, readers, true); } } },
+      { es_combo_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_text_control(file, header, readers, true); } } },
+      { es_text_edit_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_es_text_edit_control(file, header, readers); } } },
       { sim_bitmap_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_bitmap_control(file, header, readers); } } },
       { es_palette_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_es_palette_control(file, header, readers); } } },
       { sim_palette_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_es_palette_control(file, header, readers); } } },
       { es_text_wrap_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_es_text_wrap_control(file, header, readers); } } },
       { es_button_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_es_button_control(file, header, readers); } } },
       { es_hidden_button_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_es_hidden_button_control(file, header, readers); } } },
+      { es_text_list_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_es_text_list_control(file, header, readers); } } },
+      { es_scroll_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_es_scroll_control(file, header, readers); } } },
+      { es_matrix_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_es_matrix_control(file, header, readers); } } },
       { es_smacker_movie_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_es_smacker_movie_control(file, header, readers); } } },
-      { sim_text_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_text_control(file, header, readers); } } },
       { sim_timer_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_timer_control(file, header, readers); } } },
       //TODO come back to these at another time.
       // Some of the tags (interior shape being the most common) have issues when parsing
