@@ -27,12 +27,15 @@ namespace studio::mis::darkstar
   struct nav_marker;
   struct vehicle;
   struct sim_control;
+  struct sim_active_control;
   struct sim_bitmap_control;
   struct es_palette_control;
   struct es_text_wrap_control;
   struct es_smacker_movie_control;
   struct es_button_control;
+  struct es_hidden_button_control;
   struct sim_text_control;
+  struct sim_timer_control;
 
   struct object_header
   {
@@ -41,7 +44,7 @@ namespace studio::mis::darkstar
   };
 
   using sim_item = std::variant<sim_set, sim_group, sim_volume, sim_control, sim_bitmap_control, es_palette_control, es_text_wrap_control, sim_text_control,
-    es_button_control, es_smacker_movie_control,
+    es_button_control, es_smacker_movie_control, es_hidden_button_control, sim_timer_control, sim_active_control,
     sim_terrain, sim_palette, interior_shape, sim_structure, sim_marker, nav_marker, vehicle, raw_item>;
 
   using sim_items = std::vector<sim_item>;
@@ -113,6 +116,16 @@ namespace studio::mis::darkstar
     sim_control control_data;
   };
 
+  struct sim_timer_control
+  {
+    endian::little_uint32_t version;
+    endian::little_int32_t message;
+    float initial_timeout;
+    float interval_timeout;
+
+    sim_control control_data;
+  };
+
   struct sim_bitmap_control
   {
     endian::little_uint32_t version;
@@ -143,21 +156,39 @@ namespace studio::mis::darkstar
     sim_text_control control_data;
   };
 
-  struct es_smacker_movie_control
-  {
-
-  };
-
   struct es_text_wrap_control
   {
+    endian::little_uint32_t version;
+    std::array<std::byte, 24> button_data;
+    sim_text_control control_data;
   };
+
+  struct es_hidden_button_control
+  {
+    endian::little_uint32_t version;
+    std::array<std::byte, 13> button_data;
+    sim_active_control control_data;
+  };
+
+  struct es_smacker_movie_control
+  {
+    endian::little_uint32_t version;
+    endian::little_int32_t video_tag;
+    std::byte unknown1;
+    endian::little_int32_t category_tag;
+    std::byte unknown2;
+    std::array<std::byte, 9> unknown3;
+    sim_active_control control_data;
+  };
+
+
 
   struct es_palette_control
   {
     endian::little_uint32_t version;
     endian::little_int32_t palette_tag;
     std::string inspection_data;
-    sim_active_control control_data;
+    sim_control control_data;
   };
 
   struct address
