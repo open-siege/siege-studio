@@ -24,12 +24,14 @@ namespace studio::mis::darkstar
   constexpr auto sim_control_tag = shared::to_tag<4>({ 'S', 'G', 'c', 't' });
   constexpr auto sim_active_control_tag = shared::to_tag<4>({ 'S', 'G', 'a', 'c' });
   constexpr auto sim_bitmap_control_tag = shared::to_tag<4>({ 'S', 'G', 'b', 'm' });
+  constexpr auto sim_palette_control_tag = shared::to_tag<4>({ 'S', 'G', 'p', 'l' });
   constexpr auto es_palette_control_tag = shared::to_tag<4>({ 'E', 'S', 'p', 'c' });
   constexpr auto es_text_wrap_control_tag = shared::to_tag<4>({ 'E', 'S', 't', 'w' });
   constexpr auto es_text_edit_control_tag = shared::to_tag<4>({ 'E', 'S', 't', 'e' });
   constexpr auto es_text_list_control_tag = shared::to_tag<4>({ 'E', 'S', 't', 'l' });
   constexpr auto es_smacker_movie_control_tag = shared::to_tag<4>({ 'E', 'S', 's', 'm' });
   constexpr auto es_button_control_tag = shared::to_tag<4>({ 'E', 'S', 'b', 't' });
+  constexpr auto es_hidden_button_control_tag = shared::to_tag<4>({ 'E', 'g', 'h', 'b' });
   constexpr auto es_tab_control_tag = shared::to_tag<4>({ 'G', 'T', 't', 'l' });
   constexpr auto es_tab_child_control_tag = shared::to_tag<4>({ 'G', 'T', 'c', 'l' });
   constexpr auto es_slider_control_tag = shared::to_tag<4>({ 'S', 'H', 's', 'l' });
@@ -292,7 +294,6 @@ namespace studio::mis::darkstar
       file.read(reinterpret_cast<std::byte*>(&group.version), sizeof(group.version));
     }
 
-
     file.read(&group.control_version, sizeof(group.control_version));
 
     if (int(group.control_version) < 4)
@@ -313,6 +314,9 @@ namespace studio::mis::darkstar
 
     group.console_command = read_string(file);
     group.alt_console_command = read_string(file);
+
+    file.read(reinterpret_cast<std::byte*>(group.position.data()), sizeof(group.position));
+    file.read(reinterpret_cast<std::byte*>(group.size.data()), sizeof(group.size));
 
     file.read(reinterpret_cast<std::byte*>(&group.flags), sizeof(group.flags));
     file.read(reinterpret_cast<std::byte*>(&group.tag), sizeof(group.tag));
@@ -355,7 +359,7 @@ namespace studio::mis::darkstar
     file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
     file.read(reinterpret_cast<std::byte*>(&control.bitmap_tag), sizeof(control.bitmap_tag));
     control.inspection_data = read_string(file, sim_control::inspect_size);
-    file.read(reinterpret_cast<std::byte*>(&control.is_transparent), sizeof(control.is_transparent));
+    file.read(&control.is_transparent, sizeof(control.is_transparent));
     control.control_data = read_sim_active_control(file, header, readers);
 
     return control;
@@ -367,7 +371,70 @@ namespace studio::mis::darkstar
     file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
     file.read(reinterpret_cast<std::byte*>(&control.palette_tag), sizeof(control.palette_tag));
     control.inspection_data = read_string(file, sim_control::inspect_size);
+    control.control_data = read_sim_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::sim_timer_control read_sim_timer_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers)
+  {
+    darkstar::sim_timer_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(reinterpret_cast<std::byte*>(&control.message), sizeof(control.message));
+    file.read(reinterpret_cast<std::byte*>(&control.initial_timeout), sizeof(control.initial_timeout));
+    file.read(reinterpret_cast<std::byte*>(&control.interval_timeout), sizeof(control.interval_timeout));
+
+    control.control_data = read_sim_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::es_hidden_button_control read_es_hidden_button_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers)
+  {
+    darkstar::es_hidden_button_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(control.button_data.data(), sizeof(control.button_data));
+
     control.control_data = read_sim_active_control(file, header, readers);
+
+    return control;
+  }
+
+
+  darkstar::sim_text_control read_sim_text_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers, bool read_version = false)
+  {
+    darkstar::sim_text_control control;
+
+    control.version = 0;
+
+    if (read_version)
+    {
+      file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    }
+
+    file.read(reinterpret_cast<std::byte*>(control.unused.data()), sizeof(control.unused));
+    file.read(reinterpret_cast<std::byte*>(&control.disabled_font_tag), sizeof(control.disabled_font_tag));
+    file.read(reinterpret_cast<std::byte*>(&control.font_tag), sizeof(control.font_tag));
+    file.read(reinterpret_cast<std::byte*>(&control.alt_font_tag), sizeof(control.alt_font_tag));
+    file.read(reinterpret_cast<std::byte*>(&control.text_tag), sizeof(control.text_tag));
+    control.default_text = read_string(file, sim_control::inspect_size);
+    file.read(reinterpret_cast<std::byte*>(&control.alignment), sizeof(control.alignment));
+    file.read(reinterpret_cast<std::byte*>(&control.vertical_position_delta), sizeof(control.vertical_position_delta));
+
+    control.control_data = read_sim_active_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::es_button_control read_es_button_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers)
+  {
+    darkstar::es_button_control control;
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(reinterpret_cast<std::byte*>(control.button_data.data()), sizeof(control.button_data));
+
+    control.control_data = read_sim_text_control(file, header, readers);
 
     return control;
   }
@@ -376,25 +443,27 @@ namespace studio::mis::darkstar
   {
     darkstar::es_text_wrap_control control;
 
-    return control;
-  }
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(reinterpret_cast<std::byte*>(control.button_data.data()), sizeof(control.button_data));
 
-  darkstar::es_button_control read_es_button_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers)
-  {
-    darkstar::es_button_control control;
+    control.control_data = read_sim_text_control(file, header, readers);
 
     return control;
   }
-  darkstar::sim_text_control read_sim_text_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers)
-  {
-    darkstar::sim_text_control control;
 
-    return control;
-  }
 
   darkstar::es_smacker_movie_control read_es_smacker_movie_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers)
   {
     darkstar::es_smacker_movie_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(reinterpret_cast<std::byte*>(&control.video_tag), sizeof(control.video_tag));
+
+    file.read(&control.unknown1, sizeof(control.unknown1));
+    file.read(reinterpret_cast<std::byte*>(&control.category_tag), sizeof(control.category_tag));
+    file.read(&control.unknown2, sizeof(control.unknown2));
+    file.read(control.unknown3.data(), sizeof(control.unknown3));
+    control.control_data = read_sim_active_control(file, header, readers);
 
     return control;
   }
@@ -431,13 +500,18 @@ namespace studio::mis::darkstar
     static sim_item_reader_map readers = {
       { sim_group_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_group(file, header, readers); } } },
       { sim_set_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_set(file, header, readers); } } },
-      { sim_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_control(file, header, readers); } } },
+      { sim_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_control(file, header, readers, true); } } },
+      { sim_active_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_active_control(file, header, readers, true); } } },
+      { sim_text_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_text_control(file, header, readers, true); } } },
       { sim_bitmap_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_bitmap_control(file, header, readers); } } },
       { es_palette_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_es_palette_control(file, header, readers); } } },
+      { sim_palette_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_es_palette_control(file, header, readers); } } },
       { es_text_wrap_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_es_text_wrap_control(file, header, readers); } } },
       { es_button_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_es_button_control(file, header, readers); } } },
+      { es_hidden_button_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_es_hidden_button_control(file, header, readers); } } },
       { es_smacker_movie_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_es_smacker_movie_control(file, header, readers); } } },
       { sim_text_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_text_control(file, header, readers); } } },
+      { sim_timer_control_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_timer_control(file, header, readers); } } },
       //TODO come back to these at another time.
       // Some of the tags (interior shape being the most common) have issues when parsing
 //      { sim_vol_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_volume(file, header, readers); } } },
