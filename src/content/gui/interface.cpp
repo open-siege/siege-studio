@@ -40,6 +40,10 @@ namespace studio::gui::darkstar
   constexpr auto es_encyclopedia_control_tag = shared::to_tag<4>({ 'S', 'e', 'c', 'l' });
   constexpr auto es_scannex_control_tag = shared::to_tag<4>({ 'S', 's', 'x', 'l' });
   constexpr auto es_map_control_tag = shared::to_tag<4>({ 'H', 'U', 'm', 'v' });
+  constexpr auto es_irc_channel_list_control_tag = shared::to_tag<4>({ 'S', 'i', 'c', 'l' });
+  constexpr auto es_irc_people_list_control_tag = shared::to_tag<4>({ 'S', 'i', 'p', 'l' });
+  constexpr auto es_irc_sgir_control_tag = shared::to_tag<4>({ 'S', 'G', 'i', 'r' });
+  constexpr auto es_irc_sgit_control_tag = shared::to_tag<4>({ 'S', 'G', 'i', 't' });
   constexpr auto gftf_control_tag = shared::to_tag<4>({ 'G', 'f', 't', 'f' });
 
   bool is_interface_data(std::basic_istream<std::byte>& file)
@@ -375,6 +379,41 @@ namespace studio::gui::darkstar
     return control;
   }
 
+  darkstar::es_irc_channel_list_control read_es_irc_channel_list_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
+  {
+    darkstar::es_irc_channel_list_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(&control.unknown1, sizeof(control.unknown1));
+    file.read(&control.unknown2, sizeof(control.unknown2));
+    control.control_data = read_sim_text_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::es_irc_people_list_control read_es_irc_people_list_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
+  {
+    darkstar::es_irc_people_list_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(&control.unknown1, sizeof(control.unknown1));
+    file.read(&control.unknown2, sizeof(control.unknown2));
+    control.control_data = read_sim_text_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::es_irc_sgit_control read_es_irc_sgit_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
+  {
+    darkstar::es_irc_sgit_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(control.raw_data.data(), sizeof(control.raw_data));
+    control.control_data = read_sim_text_control(file, header, readers);
+
+    return control;
+  }
+
   darkstar::gftf_control read_gftf_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
   {
     darkstar::gftf_control control;
@@ -409,6 +448,7 @@ namespace studio::gui::darkstar
       { sim_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_sim_control(file, header, readers, true); } } },
       { sim_scroll_content_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_sim_control(file, header, readers, true); } } },
       { sim_active_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_sim_active_control(file, header, readers, true); } } },
+      { es_irc_sgir_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_sim_active_control(file, header, readers, true); } } },
       { sim_text_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_sim_text_control(file, header, readers, true); } } },
       { es_combo_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_sim_text_control(file, header, readers, true); } } },
       { es_text_edit_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_text_edit_control(file, header, readers); } } },
@@ -429,6 +469,9 @@ namespace studio::gui::darkstar
       { es_encyclopedia_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_encyclopedia_control(file, header, readers); } } },
       { es_scannex_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_scannex_control(file, header, readers); } } },
       { es_map_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_map_control(file, header, readers); } } },
+      { es_irc_channel_list_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_irc_channel_list_control(file, header, readers); } } },
+      { es_irc_people_list_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_irc_people_list_control(file, header, readers); } } },
+      { es_irc_sgit_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_irc_sgit_control(file, header, readers); } } },
       { gftf_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_gftf_control(file, header, readers); } } },
       { eshm_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_eshm_control(file, header, readers); } } },
       { gial_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_gial_control(file, header, readers); } } }
