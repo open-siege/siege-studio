@@ -36,11 +36,15 @@ namespace studio::gui::darkstar
   struct es_encyclopedia_control;
   struct es_scannex_control;
   struct es_map_control;
+  struct es_irc_channel_list_control;
+  struct es_irc_people_list_control;
+  struct es_irc_sgit_control;
   struct gftf_control;
 
   using gui_item = std::variant<sim_control, sim_bitmap_control, es_palette_control, es_text_wrap_control, sim_text_control,
     es_button_control,es_smacker_movie_control, es_hidden_button_control, sim_timer_control, sim_active_control, es_text_list_control,
-    es_encyclopedia_control, es_scannex_control, es_map_control, gftf_control,
+    es_encyclopedia_control, es_scannex_control, es_map_control, gftf_control, es_irc_channel_list_control, es_irc_people_list_control,
+    es_irc_sgit_control,
     es_scroll_control, es_matrix_control, es_text_edit_control, gial_control, es_picture_pack_control, es_bitmap_animation_control, eshm_control, raw_item>;
 
   using gui_items = std::vector<gui_item>;
@@ -243,6 +247,29 @@ namespace studio::gui::darkstar
     endian::little_uint32_t version;
     std::array<std::byte, 40> raw_data;
     sim_control control_data;
+  };
+
+  struct es_irc_channel_list_control
+  {
+    endian::little_uint32_t version;
+    std::byte unknown1;
+    std::byte unknown2;
+    sim_text_control control_data;
+  };
+
+  struct es_irc_people_list_control
+  {
+    endian::little_uint32_t version;
+    std::byte unknown1;
+    std::byte unknown2;
+    sim_text_control control_data;
+  };
+
+  struct es_irc_sgit_control
+  {
+    endian::little_uint32_t version;
+    std::array<std::byte, 17> raw_data;
+    sim_text_control control_data;
   };
 
   struct gftf_control
