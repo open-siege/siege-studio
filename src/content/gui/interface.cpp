@@ -12,9 +12,12 @@ namespace studio::gui::darkstar
   constexpr auto sim_active_control_tag = shared::to_tag<4>({ 'S', 'G', 'a', 'c' });
   constexpr auto sim_bitmap_control_tag = shared::to_tag<4>({ 'S', 'G', 'b', 'm' });
   constexpr auto sim_palette_control_tag = shared::to_tag<4>({ 'S', 'G', 'p', 'l' });
+  constexpr auto sim_text_wrap_control_tag = shared::to_tag<4>({ 'S', 'G', 't', 'w' });
+  constexpr auto sim_alt_text_wrap_control_tag = shared::to_tag<4>({ 'G', 'f', 't', 'w' });
   constexpr auto es_palette_control_tag = shared::to_tag<4>({ 'E', 'S', 'p', 'c' });
   constexpr auto es_text_wrap_control_tag = shared::to_tag<4>({ 'E', 'S', 't', 'w' });
   constexpr auto es_text_edit_control_tag = shared::to_tag<4>({ 'E', 'S', 't', 'e' });
+  constexpr auto es_alt_text_edit_control_tag = shared::to_tag<4>({ 'S', 'e', 't', 'e' });
   constexpr auto es_text_list_control_tag = shared::to_tag<4>({ 'E', 'S', 't', 'l' });
   constexpr auto es_smacker_movie_control_tag = shared::to_tag<4>({ 'E', 'S', 's', 'm' });
   constexpr auto es_button_control_tag = shared::to_tag<4>({ 'E', 'S', 'b', 't' });
@@ -45,6 +48,16 @@ namespace studio::gui::darkstar
   constexpr auto es_irc_sgir_control_tag = shared::to_tag<4>({ 'S', 'G', 'i', 'r' });
   constexpr auto es_irc_sgit_control_tag = shared::to_tag<4>({ 'S', 'G', 'i', 't' });
   constexpr auto gftf_control_tag = shared::to_tag<4>({ 'G', 'f', 't', 'f' });
+  constexpr auto gsas_control_tag = shared::to_tag<4>({ 'G', 's', 'a', 's' });
+  constexpr auto gsdi_control_tag = shared::to_tag<4>({ 'G', 'S', 'd', 'i' });
+
+  // GC - maybe graphics canvas?
+  // GCvc is inside VehLab.gui and is perhaps the area where the vehicle is drawn on screen.
+  constexpr auto gcmb_control_tag = shared::to_tag<4>({ 'G', 'C', 'm', 'b' });
+  constexpr auto gcvc_control_tag = shared::to_tag<4>({ 'G', 'C', 'v', 'c' });
+  constexpr auto spau_control_tag = shared::to_tag<4>({ 'S', 'p', 'a', 'u' });
+  constexpr auto ghan_control_tag = shared::to_tag<4>({ 'G', 'h', 'a', 'n' });
+  constexpr auto gpsc_control_tag = shared::to_tag<4>({ 'G', 'p', 's', 'c' });
 
   bool is_interface_data(std::basic_istream<std::byte>& file)
   {
@@ -142,6 +155,40 @@ namespace studio::gui::darkstar
     file.read(reinterpret_cast<std::byte*>(&control.message), sizeof(control.message));
 
     control.control_data = read_sim_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::sim_text_wrap_control read_sim_text_wrap_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers, bool read_version = false)
+  {
+    darkstar::sim_text_wrap_control control;
+    control.version = 0;
+
+    if (read_version)
+    {
+      file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    }
+
+    file.read(reinterpret_cast<std::byte*>(&control.ignore_click), sizeof(control.ignore_click));
+    file.read(reinterpret_cast<std::byte*>(&control.disabled_font_tag), sizeof(control.disabled_font_tag));
+    file.read(reinterpret_cast<std::byte*>(&control.alignment), sizeof(control.alignment));
+    file.read(reinterpret_cast<std::byte*>(&control.font_tag), sizeof(control.font_tag));
+    file.read(reinterpret_cast<std::byte*>(&control.text_tag), sizeof(control.text_tag));
+    file.read(reinterpret_cast<std::byte*>(&control.line_spacing), sizeof(control.line_spacing));
+
+    control.control_data = read_sim_active_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::sim_alt_text_wrap_control read_alt_sim_text_wrap_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
+  {
+    darkstar::sim_alt_text_wrap_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(control.raw_data.data(), sizeof(control.raw_data));
+
+    control.control_data = read_sim_text_wrap_control(file, header, readers);
 
     return control;
   }
@@ -414,6 +461,61 @@ namespace studio::gui::darkstar
     return control;
   }
 
+  darkstar::gsas_control read_gsas_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
+  {
+    darkstar::gsas_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(control.raw_data.data(), sizeof(control.raw_data));
+    control.control_data = read_sim_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::gsdi_control read_gsdi_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
+  {
+    darkstar::gsdi_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(control.raw_data.data(), sizeof(control.raw_data));
+    control.control_data = read_sim_text_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::gcmb_control read_gcmb_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
+  {
+    darkstar::gcmb_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(control.raw_data.data(), sizeof(control.raw_data));
+    control.control_data = read_sim_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::gcvc_control read_gcvc_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
+  {
+    darkstar::gcvc_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(control.raw_data.data(), sizeof(control.raw_data));
+    control.control_data = read_sim_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::ghan_control read_ghan_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
+  {
+    darkstar::ghan_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(control.raw_data.data(), sizeof(control.raw_data));
+    control.control_data = read_sim_control(file, header, readers);
+
+    return control;
+  }
+
   darkstar::gftf_control read_gftf_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
   {
     darkstar::gftf_control control;
@@ -446,12 +548,17 @@ namespace studio::gui::darkstar
   {
     static gui_item_reader_map readers = {
       { sim_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_sim_control(file, header, readers, true); } } },
+      { spau_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_sim_control(file, header, readers, true); } } },
+      { gpsc_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_sim_control(file, header, readers, true); } } },
       { sim_scroll_content_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_sim_control(file, header, readers, true); } } },
       { sim_active_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_sim_active_control(file, header, readers, true); } } },
+      { sim_text_wrap_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_sim_text_wrap_control(file, header, readers, true); } } },
+      { sim_alt_text_wrap_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_alt_sim_text_wrap_control(file, header, readers); } } },
       { es_irc_sgir_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_sim_active_control(file, header, readers, true); } } },
       { sim_text_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_sim_text_control(file, header, readers, true); } } },
       { es_combo_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_sim_text_control(file, header, readers, true); } } },
       { es_text_edit_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_text_edit_control(file, header, readers); } } },
+      { es_alt_text_edit_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_text_edit_control(file, header, readers); } } },
       { sim_bitmap_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_sim_bitmap_control(file, header, readers); } } },
       { es_palette_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_palette_control(file, header, readers); } } },
       { sim_palette_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_palette_control(file, header, readers); } } },
@@ -473,6 +580,11 @@ namespace studio::gui::darkstar
       { es_irc_people_list_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_irc_people_list_control(file, header, readers); } } },
       { es_irc_sgit_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_irc_sgit_control(file, header, readers); } } },
       { gftf_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_gftf_control(file, header, readers); } } },
+      { gsas_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_gsas_control(file, header, readers); } } },
+      { gcmb_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_gcmb_control(file, header, readers); } } },
+      { gcvc_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_gcvc_control(file, header, readers); } } },
+      { gsdi_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_gsdi_control(file, header, readers); } } },
+      { ghan_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_ghan_control(file, header, readers); } } },
       { eshm_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_eshm_control(file, header, readers); } } },
       { gial_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_gial_control(file, header, readers); } } }
     };
