@@ -18,6 +18,8 @@ namespace studio::gui::darkstar
   struct sim_control;
   struct sim_active_control;
   struct sim_bitmap_control;
+  struct sim_text_wrap_control;
+  struct sim_alt_text_wrap_control;
   struct es_palette_control;
   struct es_text_wrap_control;
   struct es_smacker_movie_control;
@@ -40,11 +42,16 @@ namespace studio::gui::darkstar
   struct es_irc_people_list_control;
   struct es_irc_sgit_control;
   struct gftf_control;
+  struct gsas_control;
+  struct gcmb_control;
+  struct gcvc_control;
+  struct ghan_control;
+  struct gsdi_control;
 
   using gui_item = std::variant<sim_control, sim_bitmap_control, es_palette_control, es_text_wrap_control, sim_text_control,
     es_button_control,es_smacker_movie_control, es_hidden_button_control, sim_timer_control, sim_active_control, es_text_list_control,
     es_encyclopedia_control, es_scannex_control, es_map_control, gftf_control, es_irc_channel_list_control, es_irc_people_list_control,
-    es_irc_sgit_control,
+    es_irc_sgit_control, gsas_control, gcmb_control, ghan_control, sim_text_wrap_control, sim_alt_text_wrap_control, gcvc_control, gsdi_control,
     es_scroll_control, es_matrix_control, es_text_edit_control, gial_control, es_picture_pack_control, es_bitmap_animation_control, eshm_control, raw_item>;
 
   using gui_items = std::vector<gui_item>;
@@ -121,6 +128,25 @@ namespace studio::gui::darkstar
     endian::little_int32_t alignment;
     endian::little_int32_t vertical_position_delta;
     sim_active_control control_data;
+  };
+
+  struct sim_text_wrap_control
+  {
+    endian::little_uint32_t version;
+    endian::little_int32_t ignore_click;
+    endian::little_int32_t disabled_font_tag;
+    endian::little_int32_t alignment;
+    endian::little_int32_t font_tag;
+    endian::little_int32_t text_tag;
+    endian::little_int32_t line_spacing;
+    sim_active_control control_data;
+  };
+
+  struct sim_alt_text_wrap_control
+  {
+    endian::little_uint32_t version;
+    std::array<std::byte, 40> raw_data;
+    sim_text_wrap_control control_data;
   };
 
   struct es_button_control
@@ -281,6 +307,41 @@ namespace studio::gui::darkstar
     endian::little_int32_t alt_font_tag;
     std::array<std::byte, 32> raw_data2;
     sim_active_control control_data;
+  };
+
+  struct gsas_control
+  {
+    endian::little_uint32_t version;
+    std::array<std::byte, 40> raw_data;
+    sim_control control_data;
+  };
+
+  struct gcmb_control
+  {
+    endian::little_uint32_t version;
+    std::array<std::byte, 40> raw_data;
+    sim_control control_data;
+  };
+
+  struct gcvc_control
+  {
+    endian::little_uint32_t version;
+    std::array<std::byte, 44> raw_data;
+    sim_control control_data;
+  };
+
+  struct ghan_control
+  {
+    endian::little_uint32_t version;
+    std::array<std::byte, 64> raw_data;
+    sim_control control_data;
+  };
+
+  struct gsdi_control
+  {
+    endian::little_uint32_t version;
+    std::array<std::byte, 20> raw_data;
+    sim_text_control control_data;
   };
 
   bool is_interface_data(std::basic_istream<std::byte>& file);
