@@ -111,7 +111,6 @@ namespace studio
     std::uint32_t children_count,
     typename tagged_item_map<ChildType>::tagged_item_reader_map& readers)
   {
-    using volume_header = object_header;
     namespace endian = boost::endian;
     std::vector<ChildType> children;
 
@@ -119,7 +118,7 @@ namespace studio
 
     for (auto i = 0u; i < children_count; ++i)
     {
-      volume_header child_header;
+      object_header child_header;
 
       file.read(reinterpret_cast<std::byte*>(&child_header), sizeof(child_header));
 
@@ -133,7 +132,7 @@ namespace studio
 
       raw_item item;
 
-      std::cout << "Reading raw item at " << file.tellg() << '\n';
+      std::cout << "Read " << std::string_view(reinterpret_cast<char*>(child_header.object_tag.data()), 4) << "@" << int(file.tellg()) - sizeof(object_header) << '\n';
 
       item.header = child_header;
       item.raw_bytes = std::vector<std::byte>(item.header.object_size);

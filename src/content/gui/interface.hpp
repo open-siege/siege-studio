@@ -29,29 +29,21 @@ namespace studio::gui::darkstar
   struct es_scroll_control;
   struct es_matrix_control;
   struct es_text_edit_control;
+  struct gial_control;
+  struct es_picture_pack_control;
+  struct es_bitmap_animation_control;
+  struct eshm_control;
+  struct es_encyclopedia_control;
+  struct es_scannex_control;
+  struct es_map_control;
+  struct gftf_control;
 
   using gui_item = std::variant<sim_control, sim_bitmap_control, es_palette_control, es_text_wrap_control, sim_text_control,
-    es_button_control, es_smacker_movie_control, es_hidden_button_control, sim_timer_control, sim_active_control, es_text_list_control,
-    es_scroll_control, es_matrix_control, es_text_edit_control, raw_item>;
+    es_button_control,es_smacker_movie_control, es_hidden_button_control, sim_timer_control, sim_active_control, es_text_list_control,
+    es_encyclopedia_control, es_scannex_control, es_map_control, gftf_control,
+    es_scroll_control, es_matrix_control, es_text_edit_control, gial_control, es_picture_pack_control, es_bitmap_animation_control, eshm_control, raw_item>;
 
   using gui_items = std::vector<gui_item>;
-
-  struct sim_set
-  {
-    object_header header;
-    endian::little_uint32_t item_id;
-    endian::little_uint32_t children_count;
-    gui_items children;
-  };
-
-  struct sim_group
-  {
-    object_header header;
-    endian::little_uint32_t version;
-    endian::little_uint32_t children_count;
-    gui_items children;
-    std::vector<std::string> names;
-  };
 
   struct sim_control
   {
@@ -200,6 +192,68 @@ namespace studio::gui::darkstar
     std::array<endian::little_int32_t, 2> header_size;
     std::array<std::byte, 91> raw_data;
     sim_control control_data;
+  };
+
+  struct gial_control
+  {
+    endian::little_uint32_t version;
+    std::array<std::byte, 56> raw_data;
+    sim_control control_data;
+  };
+
+  struct es_picture_pack_control
+  {
+    endian::little_uint32_t version;
+    std::array<std::byte, 36> raw_data;
+    sim_active_control control_data;
+  };
+
+  struct es_bitmap_animation_control
+  {
+    endian::little_uint32_t version;
+    std::array<std::byte, 40> raw_data;
+    endian::little_uint32_t flags;
+    endian::little_int32_t pba_tag;
+    sim_text_control control_data;
+  };
+
+  struct eshm_control
+  {
+    endian::little_uint32_t version;
+    std::byte raw_data;
+    sim_control control_data;
+  };
+
+  struct es_encyclopedia_control
+  {
+    endian::little_uint32_t version;
+    std::array<std::byte, 36> raw_data;
+    sim_active_control control_data;
+  };
+
+  struct es_scannex_control
+  {
+    endian::little_uint32_t version;
+    std::array<std::byte, 36> raw_data;
+    sim_active_control control_data;
+  };
+
+  struct es_map_control
+  {
+    endian::little_uint32_t version;
+    std::array<std::byte, 40> raw_data;
+    sim_control control_data;
+  };
+
+  struct gftf_control
+  {
+    endian::little_uint32_t version;
+    std::array<std::byte, 48> raw_data;
+    endian::little_int32_t unknown;
+    endian::little_int32_t font_tag;
+    endian::little_int32_t alt_font_tag;
+    std::array<std::byte, 32> raw_data2;
+    sim_active_control control_data;
   };
 
   bool is_interface_data(std::basic_istream<std::byte>& file);
