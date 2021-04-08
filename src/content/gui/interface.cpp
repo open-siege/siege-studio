@@ -32,6 +32,14 @@ namespace studio::gui::darkstar
   constexpr auto sim_scroll_content_control_tag = shared::to_tag<4>({ 'S', 'G', 's', 'C' });
   constexpr auto sim_text_control_tag = shared::to_tag<4>({ 'S', 'G', 's', 't' });
 
+  constexpr auto gial_control_tag = shared::to_tag<4>({ 'G', 'i', 'a', 'l' });
+  constexpr auto es_picture_pack_control_tag = shared::to_tag<4>({ 'G', 'p', 'p', 'k' });
+  constexpr auto es_bitmap_animation_control_tag = shared::to_tag<4>({ 'G', 'B', 'm', 'A' });
+  constexpr auto eshm_control_tag = shared::to_tag<4>({ 'E', 'S', 'h', 'm' });
+  constexpr auto es_encyclopedia_control_tag = shared::to_tag<4>({ 'S', 'e', 'c', 'l' });
+  constexpr auto es_scannex_control_tag = shared::to_tag<4>({ 'S', 's', 'x', 'l' });
+  constexpr auto es_map_control_tag = shared::to_tag<4>({ 'H', 'U', 'm', 'v' });
+  constexpr auto gftf_control_tag = shared::to_tag<4>({ 'G', 'f', 't', 'f' });
 
   bool is_interface_data(std::basic_istream<std::byte>& file)
   {
@@ -56,24 +64,40 @@ namespace studio::gui::darkstar
 
     file.read(&group.control_version, sizeof(group.control_version));
 
-    if (int(group.control_version) < 4)
-    {
-      throw std::invalid_argument("Control being parsed has wrong version.");
-    }
+    const auto control_version = int(group.control_version);
 
     endian::little_uint32_t temp;
     file.read(reinterpret_cast<std::byte*>(&temp), sizeof(temp));
     file.read(&group.opaque, sizeof(group.opaque));
     file.read(&group.fill_colour, sizeof(group.fill_colour));
-    file.read(&group.selected_fill_colour, sizeof(group.selected_fill_colour));
-    file.read(&group.ghost_fill_colour, sizeof(group.ghost_fill_colour));
+
+    if (control_version > 1)
+    {
+      file.read(&group.selected_fill_colour, sizeof(group.selected_fill_colour));
+      file.read(&group.ghost_fill_colour, sizeof(group.ghost_fill_colour));
+    }
+
     file.read(&group.border, sizeof(group.border));
     file.read(&group.border_color, sizeof(group.border_color));
-    file.read(&group.selected_border_color, sizeof(group.selected_border_color));
-    file.read(&group.ghost_border_color, sizeof(group.ghost_border_color));
+
+    if (control_version > 1)
+    {
+      file.read(&group.selected_border_color, sizeof(group.selected_border_color));
+      file.read(&group.ghost_border_color, sizeof(group.ghost_border_color));
+    }
+
+    if (control_version == 0)
+    {
+      endian::little_uint16_t temp2;
+      file.read(reinterpret_cast<std::byte*>(&temp2), sizeof(temp2));
+    }
 
     group.console_command = read_string(file);
-    group.alt_console_command = read_string(file);
+
+    if (control_version > 2)
+    {
+      group.alt_console_command = read_string(file);
+    }
 
     file.read(reinterpret_cast<std::byte*>(group.position.data()), sizeof(group.position));
     file.read(reinterpret_cast<std::byte*>(group.size.data()), sizeof(group.size));
@@ -82,7 +106,11 @@ namespace studio::gui::darkstar
     file.read(reinterpret_cast<std::byte*>(&group.tag), sizeof(group.tag));
     file.read(reinterpret_cast<std::byte*>(&group.horizontal_sizing), sizeof(group.horizontal_sizing));
     file.read(reinterpret_cast<std::byte*>(&group.vertical_sizing), sizeof(group.vertical_sizing));
-    file.read(reinterpret_cast<std::byte*>(&group.help_tag), sizeof(group.help_tag));
+
+    if (control_version > 3)
+    {
+      file.read(reinterpret_cast<std::byte*>(&group.help_tag), sizeof(group.help_tag));
+    }
 
     group.console_variable = read_string(file, sim_control::inspect_size);
 
@@ -280,31 +308,98 @@ namespace studio::gui::darkstar
     return control;
   }
 
-  darkstar::sim_group read_sim_group(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
+  darkstar::gial_control read_gial_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
   {
-    darkstar::sim_group group;
-    group.header = header;
+    darkstar::gial_control control;
 
-    file.read(reinterpret_cast<std::byte*>(&group.version), sizeof(group.version));
-    file.read(reinterpret_cast<std::byte*>(&group.children_count), sizeof(group.children_count));
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(control.raw_data.data(), sizeof(control.raw_data));
+    control.control_data = read_sim_control(file, header, readers);
 
-    group.children = read_children<gui_item>(file, group.children_count, readers);
-    group.names = read_strings(file, group.children_count);
-    skip_alignment_bytes(file, header.object_size);
-
-    return group;
+    return control;
   }
 
-  darkstar::sim_set read_sim_set(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
+  darkstar::es_picture_pack_control read_es_picture_pack_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
   {
-    darkstar::sim_set set;
-    set.header = header;
-    file.read(reinterpret_cast<std::byte*>(&set.item_id), sizeof(set.item_id));
-    file.read(reinterpret_cast<std::byte*>(&set.children_count), sizeof(set.children_count));
-    set.children = read_children<gui_item>(file, set.children_count, readers);
-    skip_alignment_bytes(file, header.object_size);
+    darkstar::es_picture_pack_control control;
 
-    return set;
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(control.raw_data.data(), sizeof(control.raw_data));
+    control.control_data = read_sim_active_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::eshm_control read_eshm_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
+  {
+    darkstar::eshm_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(&control.raw_data, sizeof(control.raw_data));
+    control.control_data = read_sim_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::es_encyclopedia_control read_es_encyclopedia_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
+  {
+    darkstar::es_encyclopedia_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(control.raw_data.data(), sizeof(control.raw_data));
+    control.control_data = read_sim_active_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::es_scannex_control read_es_scannex_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
+  {
+    darkstar::es_scannex_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(control.raw_data.data(), sizeof(control.raw_data));
+    control.control_data = read_sim_active_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::es_map_control read_es_map_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
+  {
+    darkstar::es_map_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(control.raw_data.data(), sizeof(control.raw_data));
+    control.control_data = read_sim_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::gftf_control read_gftf_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
+  {
+    darkstar::gftf_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(control.raw_data.data(), sizeof(control.raw_data));
+    file.read(reinterpret_cast<std::byte*>(&control.unknown), sizeof(control.unknown));
+    file.read(reinterpret_cast<std::byte*>(&control.font_tag), sizeof(control.font_tag));
+    file.read(reinterpret_cast<std::byte*>(&control.alt_font_tag), sizeof(control.alt_font_tag));
+    file.read(control.raw_data2.data(), sizeof(control.raw_data2));
+    control.control_data = read_sim_active_control(file, header, readers);
+
+    return control;
+  }
+
+  darkstar::es_bitmap_animation_control read_es_bitmap_animation_control(std::basic_istream<std::byte>& file, object_header& header, darkstar::gui_item_reader_map& readers)
+  {
+    darkstar::es_bitmap_animation_control control;
+
+    file.read(reinterpret_cast<std::byte*>(&control.version), sizeof(control.version));
+    file.read(control.raw_data.data(), sizeof(control.raw_data));
+    file.read(reinterpret_cast<std::byte*>(&control.flags), sizeof(control.flags));
+    file.read(reinterpret_cast<std::byte*>(&control.pba_tag), sizeof(control.pba_tag));
+    control.control_data = read_sim_text_control(file, header, readers);
+
+    return control;
   }
 
   darkstar::gui_items read_interface_data(std::basic_istream<std::byte>& file)
@@ -326,7 +421,15 @@ namespace studio::gui::darkstar
       { es_scroll_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_scroll_control(file, header, readers); } } },
       { es_matrix_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_matrix_control(file, header, readers); } } },
       { es_smacker_movie_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_smacker_movie_control(file, header, readers); } } },
-      { sim_timer_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_sim_timer_control(file, header, readers); } } }
+      { sim_timer_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_sim_timer_control(file, header, readers); } } },
+      { es_picture_pack_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_picture_pack_control(file, header, readers); } } },
+      { es_bitmap_animation_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_bitmap_animation_control(file, header, readers); } } },
+      { es_encyclopedia_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_encyclopedia_control(file, header, readers); } } },
+      { es_scannex_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_scannex_control(file, header, readers); } } },
+      { es_map_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_map_control(file, header, readers); } } },
+      { gftf_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_gftf_control(file, header, readers); } } },
+      { eshm_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_eshm_control(file, header, readers); } } },
+      { gial_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_gial_control(file, header, readers); } } }
     };
 
     return read_children<gui_item>(file, 1, readers);
