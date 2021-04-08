@@ -9,6 +9,7 @@
 #include <variant>
 #include <filesystem>
 #include "resources/archive_plugin.hpp"
+#include "content/tagged_data.hpp"
 #include "endian_arithmetic.hpp"
 #include "shared.hpp"
 
@@ -17,7 +18,6 @@ namespace studio::mis::darkstar
   namespace endian = boost::endian;
   struct sim_set;
   struct sim_group;
-  struct raw_item;
   struct sim_volume;
   struct sim_terrain;
   struct sim_palette;
@@ -26,42 +26,11 @@ namespace studio::mis::darkstar
   struct sim_marker;
   struct nav_marker;
   struct vehicle;
-  struct sim_control;
-  struct sim_active_control;
-  struct sim_bitmap_control;
-  struct es_palette_control;
-  struct es_text_wrap_control;
-  struct es_smacker_movie_control;
-  struct es_button_control;
-  struct es_hidden_button_control;
-  struct sim_text_control;
-  struct sim_timer_control;
-  struct es_text_list_control;
-  struct es_scroll_control;
-  struct es_matrix_control;
-  struct es_text_edit_control;
 
-  struct object_header
-  {
-    std::array<std::byte, 4> object_tag;
-    endian::little_uint32_t object_size;
-  };
-
-  using sim_item = std::variant<sim_set, sim_group, sim_volume, sim_control, sim_bitmap_control, es_palette_control, es_text_wrap_control, sim_text_control,
-    es_button_control, es_smacker_movie_control, es_hidden_button_control, sim_timer_control, sim_active_control, es_text_list_control,
-    es_scroll_control, es_matrix_control, es_text_edit_control,
+  using sim_item = std::variant<sim_set, sim_group, sim_volume,
     sim_terrain, sim_palette, interior_shape, sim_structure, sim_marker, nav_marker, vehicle, raw_item>;
 
   using sim_items = std::vector<sim_item>;
-
-  struct sim_item_reader;
-
-  using sim_item_reader_map = std::map<std::array<std::byte, 4>, darkstar::sim_item_reader>;
-
-  struct sim_item_reader
-  {
-    darkstar::sim_item (*read)(std::basic_istream<std::byte>&, object_header&, sim_item_reader_map&);
-  };
 
   struct sim_set
   {
@@ -78,155 +47,6 @@ namespace studio::mis::darkstar
     endian::little_uint32_t children_count;
     sim_items children;
     std::vector<std::string> names;
-  };
-
-  struct sim_control
-  {
-    constexpr static auto inspect_size = 80 + 1;
-    object_header header;
-    endian::little_uint32_t version;
-    std::byte control_version;
-
-    std::byte opaque;
-    std::byte fill_colour;
-    std::byte selected_fill_colour;
-    std::byte ghost_fill_colour;
-    std::byte border;
-    std::byte border_color;
-    std::byte selected_border_color;
-    std::byte ghost_border_color;
-
-    std::string console_command;
-    std::string alt_console_command;
-
-    std::array<endian::little_int32_t, 2> position;
-    std::array<endian::little_int32_t, 2> size;
-    endian::little_uint32_t flags;
-    endian::little_uint32_t tag;
-    endian::little_int32_t horizontal_sizing;
-    endian::little_int32_t vertical_sizing;
-    endian::little_int32_t help_tag;
-    std::string console_variable;
-
-    endian::little_uint32_t children_count;
-    sim_items children;
-    std::vector<std::string> names;
-  };
-
-  struct sim_active_control
-  {
-    endian::little_uint32_t version;
-    std::byte is_active;
-    endian::little_uint32_t message;
-    sim_control control_data;
-  };
-
-  struct sim_timer_control
-  {
-    endian::little_uint32_t version;
-    endian::little_int32_t message;
-    float initial_timeout;
-    float interval_timeout;
-
-    sim_control control_data;
-  };
-
-  struct sim_bitmap_control
-  {
-    endian::little_uint32_t version;
-    endian::little_int32_t bitmap_tag;
-    std::string inspection_data;
-    std::byte is_transparent;
-    sim_active_control control_data;
-  };
-
-  struct sim_text_control
-  {
-    endian::little_uint32_t version;
-    std::array<endian::little_int32_t, 2> unused;
-    endian::little_int32_t disabled_font_tag;
-    endian::little_int32_t font_tag;
-    endian::little_int32_t alt_font_tag;
-    endian::little_int32_t text_tag;
-    std::string default_text;
-    endian::little_int32_t alignment;
-    endian::little_int32_t vertical_position_delta;
-    sim_active_control control_data;
-  };
-
-  struct es_button_control
-  {
-    endian::little_uint32_t version;
-    std::array<std::byte, 20> button_data;
-    sim_text_control control_data;
-  };
-
-  struct es_text_wrap_control
-  {
-    endian::little_uint32_t version;
-    std::array<std::byte, 24> button_data;
-    sim_text_control control_data;
-  };
-
-  struct es_text_list_control
-  {
-    endian::little_uint32_t version;
-    std::array<std::byte, 2> list_data;
-    sim_text_control control_data;
-  };
-
-  struct es_text_edit_control
-  {
-    endian::little_uint32_t version;
-    endian::little_uint32_t numbers_only;
-    std::array<endian::little_uint32_t, 2> unused;
-    endian::little_int32_t max_length;
-    sim_text_control control_data;
-  };
-
-  struct es_hidden_button_control
-  {
-    endian::little_uint32_t version;
-    std::array<std::byte, 13> button_data;
-    sim_active_control control_data;
-  };
-
-  struct es_smacker_movie_control
-  {
-    endian::little_uint32_t version;
-    endian::little_int32_t video_tag;
-    std::byte unknown1;
-    endian::little_int32_t category_tag;
-    std::byte unknown2;
-    std::array<std::byte, 9> unknown3;
-    sim_active_control control_data;
-  };
-
-  struct es_palette_control
-  {
-    endian::little_uint32_t version;
-    endian::little_int32_t palette_tag;
-    std::string inspection_data;
-    sim_control control_data;
-  };
-
-  struct es_scroll_control
-  {
-    endian::little_uint32_t version;
-    endian::little_int32_t scroll_pba_tag;
-    std::byte use_arrow_keys;
-    endian::little_int32_t force_horizontal_scroll_bar;
-    endian::little_int32_t force_vertical_scroll_bar;
-    std::byte use_constant_thumb_height;
-    sim_control control_data;
-  };
-
-  struct es_matrix_control
-  {
-    endian::little_uint32_t version;
-    std::array<endian::little_int32_t, 2> header_size;
-    std::array<std::byte, 91> raw_data;
-    sim_control control_data;
   };
 
   struct address
@@ -330,29 +150,9 @@ namespace studio::mis::darkstar
     std::vector<std::byte> footer;
   };
 
-  struct raw_item
-  {
-    object_header header;
-    std::vector<std::byte> raw_bytes;
-  };
-
   bool is_mission_data(std::basic_istream<std::byte>& file);
 
   sim_items read_mission_data(std::basic_istream<std::byte>& file);
-
-  sim_item get_sim_item(const std::filesystem::path&);
-
-  template<typename ItemType>
-  bool matches_type(const sim_item& item)
-  {
-    return false;
-  }
-
-  template<typename ItemType>
-  std::optional<ItemType> get_real_item(const sim_item& item)
-  {
-    return std::nullopt;
-  }
 
 }// namespace studio::mis::darkstar
 
