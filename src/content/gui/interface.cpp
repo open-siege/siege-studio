@@ -29,6 +29,7 @@ namespace studio::gui::darkstar
   constexpr auto es_matrix_control_tag = shared::to_tag<4>({ 'G', 'b', 'm', 'c' });
 
   constexpr auto es_scroll_control_tag = shared::to_tag<4>({ 'S', 'H', 's', 'c' });
+  constexpr auto es_scroll_control_alt_tag = shared::to_tag<4>({ 'S', 'G', 's', 'c' });
   constexpr auto sim_scroll_content_control_tag = shared::to_tag<4>({ 'S', 'G', 's', 'C' });
   constexpr auto sim_text_control_tag = shared::to_tag<4>({ 'S', 'G', 's', 't' });
 
@@ -419,6 +420,7 @@ namespace studio::gui::darkstar
       { es_hidden_button_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_hidden_button_control(file, header, readers); } } },
       { es_text_list_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_text_list_control(file, header, readers); } } },
       { es_scroll_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_scroll_control(file, header, readers); } } },
+      { es_scroll_control_alt_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_scroll_control(file, header, readers); } } },
       { es_matrix_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_matrix_control(file, header, readers); } } },
       { es_smacker_movie_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_es_smacker_movie_control(file, header, readers); } } },
       { sim_timer_control_tag, { [](auto& file, auto& header, auto& readers) -> gui_item { return read_sim_timer_control(file, header, readers); } } },
