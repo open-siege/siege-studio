@@ -9,6 +9,7 @@
 #include <variant>
 #include <filesystem>
 #include "resources/archive_plugin.hpp"
+#include "content/tagged_data.hpp"
 #include "endian_arithmetic.hpp"
 #include "shared.hpp"
 
@@ -17,7 +18,6 @@ namespace studio::mis::darkstar
   namespace endian = boost::endian;
   struct sim_set;
   struct sim_group;
-  struct raw_item;
   struct sim_volume;
   struct sim_terrain;
   struct sim_palette;
@@ -27,24 +27,10 @@ namespace studio::mis::darkstar
   struct nav_marker;
   struct vehicle;
 
-  struct object_header
-  {
-    std::array<std::byte, 4> object_tag;
-    endian::little_uint32_t object_size;
-  };
-
-  using sim_item = std::variant<sim_set, sim_group, sim_volume, sim_terrain, sim_palette, interior_shape, sim_structure, sim_marker, nav_marker, vehicle, raw_item>;
+  using sim_item = std::variant<sim_set, sim_group, sim_volume,
+    sim_terrain, sim_palette, interior_shape, sim_structure, sim_marker, nav_marker, vehicle, raw_item>;
 
   using sim_items = std::vector<sim_item>;
-
-  struct sim_item_reader;
-
-  using sim_item_reader_map = std::map<std::array<std::byte, 4>, darkstar::sim_item_reader>;
-
-  struct sim_item_reader
-  {
-    darkstar::sim_item (*read)(std::basic_istream<std::byte>&, object_header&, sim_item_reader_map&);
-  };
 
   struct sim_set
   {
@@ -164,29 +150,9 @@ namespace studio::mis::darkstar
     std::vector<std::byte> footer;
   };
 
-  struct raw_item
-  {
-    object_header header;
-    std::vector<std::byte> raw_bytes;
-  };
-
   bool is_mission_data(std::basic_istream<std::byte>& file);
 
   sim_items read_mission_data(std::basic_istream<std::byte>& file);
-
-  sim_item get_sim_item(const std::filesystem::path&);
-
-  template<typename ItemType>
-  bool matches_type(const sim_item& item)
-  {
-    return false;
-  }
-
-  template<typename ItemType>
-  std::optional<ItemType> get_real_item(const sim_item& item)
-  {
-    return std::nullopt;
-  }
 
 }// namespace studio::mis::darkstar
 

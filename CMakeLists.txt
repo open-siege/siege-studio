@@ -28,7 +28,6 @@ file(GLOB JSON_SRC_FILES
         src/content/dts/*.cpp
         src/json-to-dts/*.cpp)
 file(GLOB VOL_SRC_FILES src/resources/*.cpp src/unvol/*.cpp)
-file(GLOB MIS_SRC_FILES src/mis-to-json/*.cpp)
 file(GLOB STUDIO_SRC_FILES
         src/*.cpp
         src/content/*.cpp
@@ -41,6 +40,10 @@ file(GLOB LIB_SRC_FILES
         src/content/**/*.cpp
         src/resources/*.cpp)
 
+list(REMOVE_ITEM DTS_SRC_FILES ${TEST_SRC_FILES})
+list(REMOVE_ITEM JSON_SRC_FILES ${TEST_SRC_FILES})
+list(REMOVE_ITEM OBJ_SRC_FILES ${TEST_SRC_FILES})
+list(REMOVE_ITEM VOL_SRC_FILES ${TEST_SRC_FILES})
 list(REMOVE_ITEM STUDIO_SRC_FILES ${TEST_SRC_FILES})
 list(REMOVE_ITEM LIB_SRC_FILES ${TEST_SRC_FILES})
 
@@ -84,8 +87,8 @@ add_custom_command(TARGET 3space-studio
 
 ## Testing
 add_executable(tests ${TESTABLE_SRC_FILES} ${TEST_SRC_FILES})
-target_include_directories(tests PRIVATE ${Catch2_INCLUDES} ${GUI_INCLUDES})
-target_link_libraries(tests PRIVATE Catch2::Catch2  ${GUI_LIBS})
+target_include_directories(tests PRIVATE ${GUI_INCLUDES} ${Catch2_INCLUDE_DIRS})
+target_link_libraries(tests PRIVATE Catch2::Catch2 ${GUI_LIBS})
 
 include(CTest)
 include(Catch)
