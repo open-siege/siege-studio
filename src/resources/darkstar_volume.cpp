@@ -165,7 +165,7 @@ namespace studio::resources::vol::darkstar
     auto current_position = std::size_t(output.tellp());
 
     output.seekp(std::size_t(start) + alt_vol_file_tag.size(), std::ios_base::beg);
-    size = endian::little_uint32_t(current_position - start);
+    size = std::int32_t(current_position - start);
     output.write(reinterpret_cast<std::byte*>(&size), sizeof(size));
 
     output.seekp(current_position, std::ios_base::beg);
@@ -179,13 +179,13 @@ namespace studio::resources::vol::darkstar
       filenames.push_back('\0');
     }
 
-    endian::little_uint32_t string_size = filenames.size();
+    endian::little_uint32_t string_size = std::int32_t(filenames.size());
 
     output.write(vol_string_tag.data(), vol_string_tag.size());
     output.write(reinterpret_cast<std::byte*>(&string_size), sizeof(string_size));
     output.write(reinterpret_cast<std::byte*>(filenames.data()), string_size);
 
-    string_size = files.size() * sizeof(file_header);
+    string_size = std::int32_t(files.size() * sizeof(file_header));
     output.write(vol_index_tag.data(), vol_index_tag.size());
     output.write(reinterpret_cast<std::byte*>(&string_size), sizeof(string_size));
 
