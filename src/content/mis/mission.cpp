@@ -1,12 +1,13 @@
 #include <fstream>
 #include <sstream>
-#include <iomanip>
 #include <functional>
 #include "resources/darkstar_volume.hpp"
 #include "mission.hpp"
 
 namespace studio::mis::darkstar
 {
+  using sim_item_reader_map = tagged_item_map<sim_item>::tagged_item_reader_map;
+
   constexpr auto sim_group_tag = shared::to_tag<4>({ 'S', 'I', 'M', 'G' });
   constexpr auto sim_set_tag = shared::to_tag<4>({ 'S', 'I', 'M', 'S' });
   constexpr auto sim_vol_tag = shared::to_tag<4>({ 'S', 'V', 'o', 'l' });
@@ -21,7 +22,6 @@ namespace studio::mis::darkstar
   constexpr auto tank_tag = shared::to_tag<4>({ 'T', 'A', 'N', 'K' });
   constexpr auto flyer_tag = shared::to_tag<4>({ 'F', 'L', 'Y', 'R' });
 
-
   bool is_mission_data(std::basic_istream<std::byte>& file)
   {
     std::array<std::byte, 4> header{};
@@ -30,101 +30,6 @@ namespace studio::mis::darkstar
     file.seekg(-int(sizeof(header)), std::ios::cur);
 
     return header == sim_group_tag;
-  }
-
-  template<std::size_t Length>
-  std::string hex_str(std::array<std::byte, Length>& data)
-  {
-    std::stringstream ss;
-    ss << std::hex;
-
-    for (auto item : data)
-    {
-      ss << std::setw(2) << std::setfill('0') << static_cast<std::uint16_t>(item);
-    }
-
-    return ss.str();
-  }
-
-
-  void skip_alignment_bytes(std::basic_istream<std::byte>& file, std::uint32_t base)
-  {
-    int offset = 0;
-    while ((base + offset) % 2 != 0)
-    {
-      offset++;
-    }
-
-    if (offset > 0)
-    {
-      file.seekg(offset, std::ios_base::cur);
-    }
-  }
-
-  darkstar::sim_items read_children(std::basic_istream<std::byte>& file, std::uint32_t children_count, darkstar::sim_item_reader_map& readers)
-  {
-    using volume_header = object_header;
-    namespace endian = boost::endian;
-    darkstar::sim_items children;
-
-    children.reserve(children_count);
-
-    for (auto i = 0u; i < children_count; ++i)
-    {
-      volume_header child_header;
-
-      file.read(reinterpret_cast<std::byte*>(&child_header), sizeof(child_header));
-
-      auto reader = readers.find(child_header.object_tag);
-
-      if (reader != readers.end())
-      {
-        children.emplace_back(reader->second.read(file, child_header, readers));
-        continue;
-      }
-
-      darkstar::raw_item item;
-
-      item.header = child_header;
-      item.raw_bytes = std::vector<std::byte>(item.header.object_size);
-      file.read(item.raw_bytes.data(), item.header.object_size);
-
-      children.emplace_back(std::move(item));
-
-      skip_alignment_bytes(file, item.header.object_size);
-    }
-
-    return children;
-  }
-
-  std::string read_string(std::basic_istream<std::byte>& file)
-  {
-    std::uint8_t size;
-    file.read(reinterpret_cast<std::byte*>(&size), sizeof(std::uint8_t));
-
-    std::string name(size, '\0');
-
-    file.read(reinterpret_cast<std::byte*>(name.data()), size);
-
-    return name;
-  }
-
-  std::vector<std::string> read_strings(std::basic_istream<std::byte>& file, std::uint32_t children_count)
-  {
-    std::vector<std::string> results;
-    results.reserve(children_count);
-
-    for (auto i = 0u; i < children_count; ++i)
-    {
-      std::uint8_t size;
-      file.read(reinterpret_cast<std::byte*>(&size), sizeof(std::uint8_t));
-
-      std::string& name = results.emplace_back(size, '\0');
-
-      file.read(reinterpret_cast<std::byte*>(name.data()), size);
-    }
-
-    return results;
   }
 
   darkstar::sim_network_object read_sim_network_object(std::basic_istream<std::byte>& file)
@@ -259,7 +164,7 @@ namespace studio::mis::darkstar
     file.read(reinterpret_cast<std::byte*>(&group.version), sizeof(group.version));
     file.read(reinterpret_cast<std::byte*>(&group.children_count), sizeof(group.children_count));
 
-    group.children = read_children(file, group.children_count, readers);
+    group.children = read_children<sim_item>(file, group.children_count, readers);
     group.names = read_strings(file, group.children_count);
     skip_alignment_bytes(file, header.object_size);
 
@@ -272,7 +177,7 @@ namespace studio::mis::darkstar
     set.header = header;
     file.read(reinterpret_cast<std::byte*>(&set.item_id), sizeof(set.item_id));
     file.read(reinterpret_cast<std::byte*>(&set.children_count), sizeof(set.children_count));
-    set.children = read_children(file, set.children_count, readers);
+    set.children = read_children<sim_item>(file, set.children_count, readers);
     skip_alignment_bytes(file, header.object_size);
 
     return set;
@@ -297,14 +202,13 @@ namespace studio::mis::darkstar
       { flyer_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_vehicle(file, header, readers); } } }
     };
 
-    return read_children(file, 1, readers);
+    return read_children<sim_item>(file, 1, readers);
   }
 }// namespace studio::mis::darkstar
 
 namespace studio::resources::mis::darkstar
 {
   using namespace studio::mis::darkstar;
-
 
   bool mis_file_archive::is_supported(std::basic_istream<std::byte>& stream)
   {
