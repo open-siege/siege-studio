@@ -48,21 +48,6 @@ namespace studio::content::pal
     return sqrt((((512 + rmean) * r * r) >> 8) + 4 * g * g + (((767 - rmean) * b * b) >> 8));
   }
 
-  struct palette_header
-  {
-    endian::big_int16_t version;
-    endian::little_int16_t colour_count;
-  };
-
-  struct palette_info
-  {
-    endian::little_int32_t palette_count;
-    endian::little_int32_t shade_shift;
-    endian::little_int32_t haze_level;
-    colour haze_colour;
-    std::array<std::byte, 32> allowed_matches;
-  };
-
   struct palette
   {
     std::vector<colour> colours;
@@ -70,12 +55,6 @@ namespace studio::content::pal
     endian::little_uint32_t type;
   };
 
-  struct fixed_palette
-  {
-    std::array<colour, 256> colours;
-    endian::little_uint32_t index;
-    endian::little_uint32_t type;
-  };
 
   bool is_microsoft_pal(std::basic_istream<std::byte>& raw_data);
   std::vector<colour> get_pal_data(std::basic_istream<std::byte>& raw_data);
