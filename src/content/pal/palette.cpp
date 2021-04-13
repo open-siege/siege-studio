@@ -10,6 +10,37 @@ namespace studio::content::pal
 
   constexpr file_tag ppl_tag = shared::to_tag<4>({ 'P', 'L', '9', '8' });
 
+  constexpr file_tag dpl_tag = shared::to_tag<4>({ 0x0f, 0x00, 0x28, 0x00 });
+
+
+  struct palette_header
+  {
+    endian::big_int16_t version;
+    endian::little_int16_t colour_count;
+  };
+
+  struct palette_info
+  {
+    endian::little_int32_t palette_count;
+    endian::little_int32_t shade_shift;
+    endian::little_int32_t haze_level;
+    colour haze_colour;
+    std::array<std::byte, 32> allowed_matches;
+  };
+
+  struct earthsiege_palette_header
+  {
+    endian::little_int32_t total_size;
+    endian::little_int32_t colour_count;
+  };
+
+  struct fixed_palette
+  {
+    std::array<colour, 256> colours;
+    endian::little_uint32_t index;
+    endian::little_uint32_t type;
+  };
+
   bool is_microsoft_pal(std::basic_istream<std::byte>& raw_data)
   {
     const auto start = raw_data.tellg();
@@ -152,6 +183,52 @@ namespace studio::content::pal
 
            return new_pal;
     });
+
+    return results;
+  }
+
+  bool is_earthsiege_pal(std::basic_istream<std::byte>& raw_data)
+  {
+    std::array<std::byte, 4> header{};
+
+    raw_data.read(header.data(), sizeof(header));
+    raw_data.seekg(-int(sizeof(header)), std::ios::cur);
+
+    return header == dpl_tag;
+  }
+
+  std::vector<colour> get_earthsiege_data(std::basic_istream<std::byte>& raw_data)
+  {
+    std::array<std::byte, 4> header{};
+    raw_data.read(header.data(), sizeof(header));
+
+    if (header != dpl_tag)
+    {
+      throw std::invalid_argument("File data is not PPL as expected.");
+    }
+
+    earthsiege_palette_header info{};
+
+    raw_data.read(reinterpret_cast<std::byte*>(&info), sizeof(info));
+
+    std::vector<colour> results(info.colour_count);
+
+    raw_data.read(reinterpret_cast<std::byte*>(results.data()), results.size() * sizeof(colour));
+
+    endian::little_int32_t unknown;
+    raw_data.read(reinterpret_cast<std::byte*>(&unknown), sizeof(unknown));
+
+    for (auto& colour : results)
+    {
+      if (colour.flags == std::byte(0x01))
+      {
+        colour.flags = std::byte(0xFF);
+      }
+      else
+      {
+        colour.flags = std::byte(0);
+      }
+    }
 
     return results;
   }
