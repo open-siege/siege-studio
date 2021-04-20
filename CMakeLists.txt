@@ -28,12 +28,16 @@ file(GLOB JSON_SRC_FILES
         src/content/dts/*.cpp
         src/json-to-dts/*.cpp)
 file(GLOB VOL_SRC_FILES src/resources/*.cpp src/unvol/*.cpp)
+
 file(GLOB STUDIO_SRC_FILES
         src/*.cpp
         src/content/*.cpp
         src/content/**/*.cpp
         src/resources/*.cpp
         src/3space-studio/views/*.cpp src/3space-studio/*.cpp)
+
+file(GLOB SHELL_SRC_FILES
+        src/siege-shell/*.cpp)
 
 file(GLOB LIB_SRC_FILES
         src/content/*.cpp
@@ -56,6 +60,7 @@ add_executable(dts-to-obj ${OBJ_SRC_FILES})
 add_executable(json-to-dts ${JSON_SRC_FILES})
 add_executable(unvol ${VOL_SRC_FILES})
 add_executable(3space-studio ${STUDIO_SRC_FILES})
+add_executable(siege-shell ${SHELL_SRC_FILES})
 add_library(3space STATIC ${LIB_SRC_FILES})
 
 #Include Directories and Linking Configuration
@@ -79,10 +84,17 @@ target_include_directories(unvol PRIVATE ${BASIC_INCLUDES})
 target_include_directories(3space PRIVATE ${BASIC_INCLUDES})
 
 target_include_directories(3space-studio PRIVATE ${GUI_INCLUDES})
+target_include_directories(siege-shell PRIVATE ${GUI_INCLUDES})
 target_link_libraries(3space-studio PRIVATE ${GUI_LIBS})
+target_link_libraries(siege-shell PRIVATE ${GUI_LIBS})
 add_custom_command(TARGET 3space-studio
         POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/src/3space-studio/logo.png $<TARGET_FILE_DIR:3space-studio>/logo.png
+        )
+
+add_custom_command(TARGET siege-shell
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/besieged-theme.png $<TARGET_FILE_DIR:3space-studio>/besieged-theme.png
         )
 
 ## Testing
@@ -102,6 +114,7 @@ if(MSVC)
     target_compile_options(json-to-dts PRIVATE /W3 /WX $<$<CONFIG:RELEASE>:/O2>)
     target_compile_options(unvol PRIVATE /W4 /WX $<$<CONFIG:RELEASE>:/O2>)
     target_compile_options(3space-studio PRIVATE $<$<CONFIG:RELEASE>:/O2>)
+    target_compile_options(siege-shell PRIVATE $<$<CONFIG:RELEASE>:/O2>)
     target_compile_options(3space PRIVATE $<$<CONFIG:RELEASE>:/O2>)
     target_compile_options(tests PRIVATE $<$<CONFIG:RELEASE>:/O2>)
 else()
@@ -110,6 +123,7 @@ else()
     target_compile_options(json-to-dts PRIVATE -Wall -Wextra -Werror -pedantic $<$<CONFIG:RELEASE>:-O3>)
     target_compile_options(unvol PRIVATE -Wall -Wextra -Werror -pedantic $<$<CONFIG:RELEASE>:-O3>)
     target_compile_options(3space-studio PRIVATE $<$<CONFIG:RELEASE>:-O3>)
+    target_compile_options(siege-shell PRIVATE $<$<CONFIG:RELEASE>:-O3>)
     target_compile_options(3space PRIVATE $<$<CONFIG:RELEASE>:-O3>)
     target_compile_options(tests PRIVATE $<$<CONFIG:RELEASE>:-O3>)
 endif()
