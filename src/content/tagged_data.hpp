@@ -4,6 +4,7 @@
 #include <array>
 #include <vector>
 #include <string>
+#include <map>
 #include <iomanip>
 #include <iostream>
 #include "endian_arithmetic.hpp"
