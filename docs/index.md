@@ -12,7 +12,7 @@ For technical information surrounding the file formats, see the [main wiki of th
 
 This project falls as part of a series of projects to renovate the Earthsiege series. However, as more and more games are supported, the scope of specific sister projects may be expanded to incorporate those games.
 
-The overall project is divided into phases:
+The overall project is divided into four phases:
 
 #### Phase 1 - 3Space Studio
 
@@ -21,6 +21,8 @@ The overall project is divided into phases:
 Thus, the goal of phase 1 is to support as many games in the Dynamix catalogue as possible, with the Earthsiege series being the primary focus.
 
 #### Phase 2 - Darkstar Extender
+
+See [project source](https://github.com/matthew-rindel/darkstar-extender).
 
 The purpose of this project is to extend the functionality of games using the Darkstar Engine, with Darkstar being the third major iteration of 3Space technology. Support will be directed towards the following games:
 
