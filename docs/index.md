@@ -6,7 +6,7 @@
 
 
 
-![3Space Studio preview](https://media.giphy.com/media/vRus9g5a1ZNSNKVSiR/giphy.gif)
+<img src="https://media.giphy.com/media/vRus9g5a1ZNSNKVSiR/giphy.gif" alt="3Space Studio preview" style="zoom: 200%;" />
 
 ### File Formats
 
