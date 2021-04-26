@@ -4,9 +4,7 @@
 
 ### Preview
 
-
-
-<img src="https://media.giphy.com/media/vRus9g5a1ZNSNKVSiR/giphy.gif" alt="3Space Studio preview" style="zoom: 200%;" />
+<div style="width:100%;height:0;padding-bottom:51%;position:relative;"><iframe src="https://giphy.com/embed/vRus9g5a1ZNSNKVSiR" width="100%" height="100%" style="position:absolute" frameBorder="0" class="giphy-embed" allowFullScreen></iframe></div><p><a href="https://giphy.com/gifs/starsiege-3space-dyanmix-vRus9g5a1ZNSNKVSiR">via GIPHY</a></p>
 
 ### File Formats
 
