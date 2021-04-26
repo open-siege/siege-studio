@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <iostream>
 #include "endian_arithmetic.hpp"
+#include "shared.hpp"
 
 namespace studio
 {
@@ -15,12 +16,16 @@ namespace studio
 
   struct object_header
   {
+    constexpr static auto keys = shared::make_keys({ "objectTag", "objectSize" });
     std::array<std::byte, 4> object_tag;
     endian::little_uint32_t object_size;
   };
 
   struct raw_item
   {
+    constexpr static auto type_name = "base_part";
+    constexpr static auto version = 1;
+    constexpr static auto keys = shared::make_keys({ "header", "rawBytes" });
     object_header header;
     std::vector<std::byte> raw_bytes;
   };

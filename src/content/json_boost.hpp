@@ -323,6 +323,21 @@ namespace studio::content
   }
 }// namespace studio::content
 
+namespace studio
+{
+  using studio::content::to_json;
+  using studio::content::from_json;
+}// namespace studio
+
+namespace studio::content::dts::three_space
+{
+  namespace v1
+  {
+    using studio::content::to_json;
+    using studio::content::from_json;
+  }// namespace v1
+}// namespace studio::content::dts::three_space
+
 namespace studio::content::dts::darkstar
 {
   namespace shape::v2
@@ -396,6 +411,6 @@ namespace studio::content::dts::darkstar
     using studio::content::to_json;
     using studio::content::from_json;
   }// namespace material_list::v4
-}
+}// namespace studio::content::dts::darkstar
 
 #endif//DARKSTARDTSCONVERTER_JSON_BOOST_HPP
