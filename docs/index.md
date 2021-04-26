@@ -2,6 +2,12 @@
 
 3Space Studio is a reverse engineering effort to preserve the legacy of Dynamix and their games. It serves as a tool for exploring the files of the various games, as well as converting those files to other formats. The core of 3Space Studio can be used as a library for other projects.
 
+### Preview
+
+
+
+![3Space Studio preview](https://media.giphy.com/media/vRus9g5a1ZNSNKVSiR/giphy.gif)
+
 ### File Formats
 
 For more information on the supported file formats of 3Space Studio, see the [Game Support](game-support) page.
