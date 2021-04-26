@@ -9,10 +9,12 @@
 #include "content/dts/complex_serializer.hpp"
 #include "shared.hpp"
 #include "content/dts/darkstar.hpp"
+#include "content/dts/3space.hpp"
 //#include "content/dts/dts_json_formatting.hpp"
 
 namespace fs = std::filesystem;
-namespace dts = studio::content::dts::darkstar;
+namespace dts2 = studio::content::dts::three_space;
+namespace dts3 = studio::content::dts::darkstar;
 
 int main(int argc, const char** argv)
 {
@@ -23,7 +25,7 @@ int main(int argc, const char** argv)
     ".dml",
     ".DML");
 
-  std::for_each(std::execution::par_unseq, files.begin(), files.end(), [](auto&& file_name) {
+  std::for_each(files.begin(), files.end(), [](auto&& file_name) {
     try
     {
       {
@@ -34,27 +36,46 @@ int main(int argc, const char** argv)
 
       std::basic_ifstream<std::byte> input(file_name, std::ios::binary);
 
-      auto shape = dts::read_shape(input);
+      if (dts3::is_darkstar_dts(input))
+      {
+        auto shape = dts3::read_shape(input);
 
-      std::visit([&](const auto& item) {
-        nlohmann::ordered_json item_as_json = item;
+        std::visit([&](const auto& item) {
+                          nlohmann::ordered_json item_as_json = item;
 
-        //TODO make this have a flag
-        // and reduce the amount of formatting to only what makes sense
-        // and what is easy to parse again
-        //format_json(item_as_json);
+                          //TODO make this have a flag
+                          // and reduce the amount of formatting to only what makes sense
+                          // and what is easy to parse again
+                          //format_json(item_as_json);
+
+                          auto new_file_name = file_name.string() + ".json";
+                          {
+                            std::ofstream item_as_file(new_file_name, std::ios::trunc);
+                            item_as_file << std::setw(4) << item_as_json;
+                          }
+
+                          std::stringstream msg;
+                          msg << "Created " << new_file_name << '\n';
+                          std::cout << msg.str();
+                   },
+                   shape);
+      }
+      else if (dts2::v1::is_3space_dts(input))
+      {
+        auto shapes = dts2::v1::read_shapes(input);
+        nlohmann::ordered_json item_as_json = shapes;
 
         auto new_file_name = file_name.string() + ".json";
         {
           std::ofstream item_as_file(new_file_name, std::ios::trunc);
           item_as_file << std::setw(4) << item_as_json;
         }
-
         std::stringstream msg;
-        msg << "Created " << new_file_name << '\n';
+        msg << file_name << " has " << " " << shapes.size() << " shapes\n";
         std::cout << msg.str();
-      },
-        shape);
+      }
+
+
     }
     catch (const std::exception& ex)
     {

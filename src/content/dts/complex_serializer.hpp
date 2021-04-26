@@ -6,12 +6,15 @@
 #include <nlohmann/json.hpp>
 #include "content/json_boost.hpp"
 #include "darkstar_structures.hpp"
+#include "3space.hpp"
 
 namespace nlohmann
 {
   using material_list = studio::content::dts::darkstar::material_list_variant;
   using mesh = studio::content::dts::darkstar::mesh_variant;
   using shape = studio::content::dts::darkstar::shape_variant;
+
+  using three_space_shape = studio::content::dts::three_space::v1::shape_item;
 
   template<typename... Type>
   struct adl_serializer<std::variant<Type...>>
@@ -90,6 +93,33 @@ namespace nlohmann
       emplace_variant<v6::shape>(js, opt, type_name, version);
       emplace_variant<v7::shape>(js, opt, type_name, version);
       emplace_variant<v8::shape>(js, opt, type_name, version);
+    }
+
+    template<typename BasicJsonType>
+    static void from_json(const BasicJsonType& js, three_space_shape& opt)
+    {
+      using namespace studio::content::dts::three_space::v1;
+      auto version = js.at("version");
+      auto type_name = js.at("typeName");
+
+      //raise_type_error<v2::shape, BasicJsonType>(type_name);
+
+      emplace_variant<an_shape>(js, opt, type_name, version);
+      emplace_variant<an_cyclic_sequence>(js, opt, type_name, version);
+      emplace_variant<an_sequence>(js, opt, type_name, version);
+      emplace_variant<an_anim_list>(js, opt, type_name, version);
+      emplace_variant<base_part>(js, opt, type_name, version);
+      emplace_variant<part_list>(js, opt, type_name, version);
+      emplace_variant<bitmap_part>(js, opt, type_name, version);
+      emplace_variant<detail_part>(js, opt, type_name, version);
+      emplace_variant<bsp_part>(js, opt, type_name, version);
+      emplace_variant<group>(js, opt, type_name, version);
+      emplace_variant<bsp_group>(js, opt, type_name, version);
+      emplace_variant<poly>(js, opt, type_name, version);
+      emplace_variant<shaded_poly>(js, opt, type_name, version);
+      emplace_variant<texture_for_poly>(js, opt, type_name, version);
+      emplace_variant<solid_poly>(js, opt, type_name, version);
+      emplace_variant<gouraud_poly>(js, opt, type_name, version);
     }
   };
 }// namespace nlohmann

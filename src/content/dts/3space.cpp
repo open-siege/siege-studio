@@ -1,10 +1,10 @@
 #include <array>
 #include <utility>
 #include <vector>
-#include <variant>
 #include "shared.hpp"
 #include "endian_arithmetic.hpp"
 #include "content/tagged_data.hpp"
+#include "3space.hpp"
 
 namespace studio::content::dts::three_space
 {
@@ -41,214 +41,6 @@ namespace studio::content::dts::three_space
     constexpr file_tag an_shape_tag = shared::to_tag<4>({ 0x03, 0x00, 0x1e, 0x00 });
     constexpr file_tag dc_shape_tag = shared::to_tag<4>({ 0xf8, 0x01, 0xbc, 0x02 });
     constexpr file_tag dc_shape_instance_tag = shared::to_tag<4>({ 0xf5, 0x01, 0xbc, 0x02 });
-
-    struct base_part;
-    struct bsp_part;
-    struct group;
-    struct bsp_group;
-    struct part_list;
-    struct shape;
-    struct poly;
-    struct gouraud_poly;
-    struct shaded_poly;
-    struct solid_poly;
-    struct texture_for_poly;
-    struct cell_anim_part;
-    struct detail_part;
-    struct bitmap_part;
-
-    using shape_item = std::variant<base_part, part_list, bsp_part, cell_anim_part, detail_part, bitmap_part,
-      group, bsp_group, gouraud_poly, shaded_poly, solid_poly, texture_for_poly,poly, shape>;
-
-    using shape_reader_map = tagged_item_map<shape_item>::tagged_item_reader_map;
-
-    struct vector3s
-    {
-      endian::little_int16_t x;
-      endian::little_int16_t y;
-      endian::little_int16_t z;
-    };
-
-    struct base_part
-    {
-      endian::little_int16_t transform;
-      endian::little_int16_t id_number;
-      endian::little_int16_t radius;
-      vector3s center;
-    };
-
-    struct group
-    {
-      base_part base;
-      endian::little_uint16_t index_count;
-      endian::little_uint16_t point_count;
-      endian::little_uint16_t color_count;
-      endian::little_uint16_t item_count;
-
-      std::vector<endian::little_uint16_t> indexes;
-      std::vector<vector3s> points;
-      std::vector<std::array<std::byte, 4>> colors;
-      std::vector<shape_item> items;
-    };
-
-    struct bsp_group
-    {
-      struct bsp_group_node
-      {
-        endian::little_int32_t coeff;
-        endian::little_int16_t poly;
-        endian::little_int16_t front;
-        endian::little_int16_t back;
-      };
-
-      group base;
-      endian::little_uint16_t node_count;
-      std::vector<bsp_group_node> nodes;
-    };
-
-    struct bitmap_part
-    {
-      base_part base;
-      endian::little_uint16_t bmp_tag;
-      std::byte x_offset;
-      std::byte y_offset;
-    };
-
-    struct poly
-    {
-      endian::little_uint16_t normal;
-      endian::little_uint16_t center;
-      endian::little_uint16_t vertex_count;
-      endian::little_uint16_t vertex_list;
-    };
-
-    struct solid_poly
-    {
-      poly base;
-      endian::little_uint16_t colors;
-    };
-
-    struct gouraud_poly
-    {
-      solid_poly base;
-      endian::little_uint16_t normal_list;
-    };
-
-    struct texture_for_poly
-    {
-      solid_poly base;
-    };
-
-    struct shaded_poly
-    {
-      solid_poly base;
-    };
-
-    struct part_list
-    {
-      base_part base;
-      endian::little_uint16_t part_count;
-      std::vector<shape_item> parts;
-    };
-
-    struct shape
-    {
-      part_list base;
-      endian::little_uint16_t transform_list_count;
-      endian::little_uint16_t sequence_list_count;
-      std::vector<endian::little_int32_t> sequence_list;
-      std::vector<endian::little_int32_t> transform_list;
-    };
-
-    struct detail_part
-    {
-      part_list base;
-      endian::little_uint16_t detail_count;
-      std::vector<endian::little_int16_t> details;
-    };
-
-    struct cell_anim_part
-    {
-      part_list base;
-      endian::little_int16_t anim_sequence;
-    };
-
-    struct bsp_part
-    {
-      struct bsp_node
-      {
-        vector3s normal;
-        endian::little_int32_t coeff;
-        endian::little_int16_t front;
-        endian::little_int16_t back;
-      };
-
-      part_list base;
-      endian::little_uint16_t node_count;
-      std::vector<bsp_node> nodes;
-      std::vector<endian::little_uint16_t> transforms;
-    };
-
-    struct an_sequence
-    {
-      struct frame
-      {
-        endian::little_int32_t tick;
-        endian::little_int32_t first_transition;
-        endian::little_int32_t transition_count;
-      };
-
-      endian::little_int16_t tick;
-      endian::little_int16_t priority;
-      endian::little_int16_t gm;
-      endian::little_int16_t frame_count;
-      std::vector<frame> frames;
-      endian::little_uint16_t part_list_count;
-      std::vector<shape_item> part_list;
-      std::vector<std::vector<endian::little_int32_t>> transform_index_list;
-    };
-
-    struct an_anim_list
-    {
-      struct transition
-      {
-        endian::little_int32_t tick;
-        endian::little_int32_t dest_sequence;
-        endian::little_int32_t dest_frame;
-        endian::little_int32_t ground_movement;
-      };
-
-      struct transform
-      {
-        endian::little_int32_t rx;
-        endian::little_int32_t ry;
-        endian::little_int32_t rz;
-        endian::little_int32_t tx;
-        endian::little_int32_t ty;
-        endian::little_int32_t tz;
-      };
-
-      struct relation
-      {
-        endian::little_int32_t parent;
-        endian::little_int32_t destination;
-      };
-
-      endian::little_int16_t sequence_count;
-      std::vector<an_sequence> sequences;
-
-      endian::little_int16_t transition_count;
-      std::vector<transition> transitions;
-
-      endian::little_int16_t transform_count;
-      std::vector<transform> transforms;
-
-      endian::little_int16_t default_transform_count;
-      std::vector<endian::little_int32_t> default_transforms;
-
-      endian::little_int16_t relations_count;
-      std::vector<relation> relations;
-    };
 
     base_part read_base_part(std::basic_istream<std::byte>& file, object_header& header, shape_reader_map&)
     {
@@ -400,11 +192,96 @@ namespace studio::content::dts::three_space
       return shape;
     }
 
+    an_sequence read_an_sequence(std::basic_istream<std::byte>& file, object_header& header, shape_reader_map& readers)
+    {
+      an_sequence shape{};
+
+      file.read(reinterpret_cast<std::byte*>(&shape.tick), sizeof(shape.tick));
+      file.read(reinterpret_cast<std::byte*>(&shape.priority), sizeof(shape.priority));
+      file.read(reinterpret_cast<std::byte*>(&shape.gm), sizeof(shape.gm));
+
+      file.read(reinterpret_cast<std::byte*>(&shape.frame_count), sizeof(shape.frame_count));
+      shape.frames = std::vector<an_sequence::frame>(shape.frame_count);
+      file.read(reinterpret_cast<std::byte*>(shape.frames.data()), sizeof(an_sequence::frame) * shape.frame_count);
+
+      file.read(reinterpret_cast<std::byte*>(&shape.part_list_count), sizeof(shape.part_list_count));
+      shape.part_list = shape.part_list = read_children<shape_item>(file, shape.part_list_count, readers);
+
+      auto transform_count = shape.frame_count * shape.part_list_count;
+
+      shape.transform_index_list = std::vector<endian::little_uint16_t>(transform_count);
+      file.read(reinterpret_cast<std::byte*>(shape.transform_index_list.data()), sizeof(endian::little_uint16_t) * transform_count);
+
+      return shape;
+    }
+
+    an_cyclic_sequence read_an_cyclic_sequence(std::basic_istream<std::byte>& file, object_header& header, shape_reader_map& readers)
+    {
+      an_cyclic_sequence shape{};
+      shape.base = read_an_sequence(file, header, readers);
+
+      return shape;
+    }
+
+    an_anim_list read_an_anim_list(std::basic_istream<std::byte>& file, object_header& header, shape_reader_map& readers)
+    {
+      an_anim_list shape{};
+      file.read(reinterpret_cast<std::byte*>(&shape.sequence_count), sizeof(shape.sequence_count));
+
+      shape.sequences.reserve(shape.sequence_count);
+      for (auto i = 0; i < shape.sequence_count; ++i)
+      {
+        object_header child_header;
+        file.read(reinterpret_cast<std::byte*>(&child_header), sizeof(child_header));
+        shape.sequences.emplace_back(read_an_sequence(file, child_header, readers));
+      }
+
+      file.read(reinterpret_cast<std::byte*>(&shape.transition_count), sizeof(shape.transition_count));
+      shape.transitions = std::vector<an_anim_list::transition>(shape.transition_count);
+      file.read(reinterpret_cast<std::byte*>(shape.transitions.data()), sizeof(an_anim_list::transition) * shape.transition_count);
+
+      file.read(reinterpret_cast<std::byte*>(&shape.transition_count), sizeof(shape.transition_count));
+      shape.transitions = std::vector<an_anim_list::transition>(shape.transition_count);
+      file.read(reinterpret_cast<std::byte*>(shape.transitions.data()), sizeof(an_anim_list::transition) * shape.transition_count);
+
+      file.read(reinterpret_cast<std::byte*>(&shape.transform_count), sizeof(shape.transform_count));
+      shape.transforms = std::vector<an_anim_list::transform>(shape.transform_count);
+      file.read(reinterpret_cast<std::byte*>(shape.transforms.data()), sizeof(an_anim_list::transform) * shape.transform_count);
+
+      file.read(reinterpret_cast<std::byte*>(&shape.default_transform_count), sizeof(shape.default_transform_count));
+      shape.default_transforms = std::vector<endian::little_uint16_t>(shape.default_transform_count);
+      file.read(reinterpret_cast<std::byte*>(shape.default_transforms.data()), sizeof(endian::little_uint16_t) * shape.default_transform_count);
+
+      file.read(reinterpret_cast<std::byte*>(&shape.relations_count), sizeof(shape.relations_count));
+      shape.relations = std::vector<an_anim_list::relation>(shape.relations_count);
+      file.read(reinterpret_cast<std::byte*>(shape.relations.data()), sizeof(an_anim_list::relation) * shape.relations_count);
+
+      return shape;
+    }
+
     shape read_shape(std::basic_istream<std::byte>& file, object_header& header, shape_reader_map& readers)
     {
       shape shape{};
       shape.base = read_part_list(file, header, readers);
       return shape;
+    }
+
+    an_shape read_an_shape(std::basic_istream<std::byte>& file, object_header& header, shape_reader_map& readers)
+    {
+      an_shape shape{};
+      shape.base = read_shape(file, header, readers);
+
+      return shape;
+    }
+
+    bool is_3space_dts(std::basic_istream<std::byte>& stream)
+    {
+      file_tag header{};
+      stream.read(reinterpret_cast<std::byte*>(&header), sizeof(header));
+
+      stream.seekg(-int(sizeof(header)), std::ios::cur);
+
+      return header == shape_tag || header == dc_shape_tag || header == an_shape_tag;
     }
 
     std::vector<shape_item> read_shapes(std::basic_istream<std::byte>& file)
@@ -414,6 +291,7 @@ namespace studio::content::dts::three_space
         { bsp_part_tag, { [](auto& file, auto& header, auto& readers) -> shape_item { return read_bsp_part(file, header, readers); } } },
         { part_list_tag, { [](auto& file, auto& header, auto& readers) -> shape_item { return read_part_list(file, header, readers); } } },
         { base_part_tag, { [](auto& file, auto& header, auto& readers) -> shape_item { return read_base_part(file, header, readers); } } },
+        { detail_part_tag, { [](auto& file, auto& header, auto& readers) -> shape_item { return read_detail_part(file, header, readers); } } },
         { bitmap_part_tag, { [](auto& file, auto& header, auto& readers) -> shape_item { return read_bitmap_part(file, header, readers); } } },
         { cell_anim_part_tag, { [](auto& file, auto& header, auto& readers) -> shape_item { return read_cell_anim_part(file, header, readers); } } },
         { group_tag, { [](auto& file, auto& header, auto& readers) -> shape_item { return read_group(file, header, readers); } } },
@@ -426,6 +304,10 @@ namespace studio::content::dts::three_space
         { alias_solid_poly_tag, { [](auto& file, auto& header, auto& readers) -> shape_item { return read_solid_poly(file, header, readers); } } },
         { shaded_polygon_tag, { [](auto& file, auto& header, auto& readers) -> shape_item { return read_shaded_poly(file, header, readers); } } },
         { alias_shaded_poly_tag, { [](auto& file, auto& header, auto& readers) -> shape_item { return read_shaded_poly(file, header, readers); } } },
+        { an_shape_tag, { [](auto& file, auto& header, auto& readers) -> shape_item { return read_an_shape(file, header, readers); } } },
+        { an_anim_list_tag, { [](auto& file, auto& header, auto& readers) -> shape_item { return read_an_anim_list(file, header, readers); } } },
+        { an_sequence_tag, { [](auto& file, auto& header, auto& readers) -> shape_item { return read_an_sequence(file, header, readers); } } },
+        { an_cyclic_sequence_tag, { [](auto& file, auto& header, auto& readers) -> shape_item { return read_an_cyclic_sequence(file, header, readers); } } },
       };
 
       return read_children<shape_item>(file, 1, readers);
@@ -445,131 +327,11 @@ namespace studio::content::dts::three_space
     constexpr file_tag null_part_tag = shared::to_tag<4>({ 0x78, 0x00, 0x14, 0x00 });
     constexpr file_tag bitmap_frame_tag = shared::to_tag<4>({ 0x6e, 0x00, 0x14, 0x00 });
 
-    struct base_part;
-    struct part_list;
-    struct shape;
-
-    using shape_item = std::variant<base_part, part_list, shape>;
-
-    using shape_items = std::vector<shape_item>;
-
-    struct vector3l
+    std::vector<shape_item> read_shapes(std::basic_istream<std::byte>& file)
     {
-      endian::little_int32_t x;
-      endian::little_int32_t y;
-      endian::little_int32_t z;
-    };
+      static shape_reader_map readers = {};
 
-    struct base_part
-    {
-      endian::little_int32_t transform;
-      endian::little_int32_t id_number;
-      endian::little_int32_t radius;
-      vector3l center;
-    };
-
-    struct part_list
-    {
-      base_part base;
-
-      endian::little_uint32_t part_count;
-      shape_items parts;
-    };
-
-    struct shape
-    {
-      part_list base;
-      endian::little_uint32_t sequence_count;
-      std::vector<endian::little_int32_t> sequences;
-    };
-
-    struct bsp_part
-    {
-      struct bsp_node
-      {
-        vector3l normal;
-        endian::little_int32_t coeff;
-        endian::little_int32_t front;
-        endian::little_int32_t back;
-      };
-
-      part_list base;
-
-      endian::little_uint32_t node_count;
-      std::vector<bsp_node> nodes;
-      std::vector<endian::little_int32_t> transforms;
-    };
-
-    struct detail_part
-    {
-      part_list base;
-      endian::little_uint32_t detail_count;
-      std::vector<endian::little_int32_t> details;
-    };
-
-    struct bitmap_frame_part
-    {
-      base_part base;
-      endian::little_uint32_t bmp_tag;
-      endian::little_int32_t x_offset;
-      endian::little_int32_t y_offset;
-      endian::little_int32_t rotation;
-      endian::little_int32_t squish;
-    };
-
-    struct cell_anim_part
-    {
-      part_list base;
-      endian::little_int32_t anim_sequence;
-      endian::little_int32_t cell_count;
-      std::vector<endian::little_int32_t> cells;
-    };
-
-    struct material
-    {
-      endian::little_int32_t null;
-      endian::little_int32_t unknown0;
-      endian::little_int32_t material_type;
-      endian::little_int32_t unknown1;
-      endian::little_int32_t palette;
-      endian::little_int32_t rgb;
-      endian::little_int32_t flags;
-      std::byte texture;
-    };
-
-    struct material_list
-    {
-      endian::little_uint32_t material_count;
-      endian::little_uint32_t detail_count;
-      std::vector<material> materials;
-    };
-
-    struct mesh
-    {
-      struct vertex
-      {
-        vector3l coordinates;
-        vector3l normal;
-      };
-
-      struct face
-      {
-        vector3l vertices;
-        vector3l texture_vertices;
-        endian::little_int32_t center;
-        endian::little_int32_t material;
-      };
-
-      endian::little_uint32_t vertex_count;
-      std::vector<vertex> vertices;
-
-      endian::little_uint32_t texture_vertex_count;
-      std::vector<std::pair<endian::little_uint32_t, endian::little_uint32_t>> texture_vertices;
-
-      endian::little_uint32_t face_count;
-      std::vector<face> faces;
-    };
-
-
+      return read_children<shape_item>(file, 1, readers);
+    }
   }// namespace v2
 }// namespace studio::content::dts::three_space
