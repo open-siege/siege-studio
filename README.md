@@ -32,7 +32,7 @@ Tertiary goals would be:
 
 ### Game & Format Support
 
-For a full list of games which are intended to be supported, see: [game-support.md](game-support.md)
+For a full list of games which are intended to be supported, see: [game-support.md](docs/game-support.md)
 
 ### Format Background
 
