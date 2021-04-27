@@ -303,7 +303,7 @@ namespace studio::content::dts::three_space
 
     struct an_shape
     {
-      constexpr static auto type_name = "an_anim_list";
+      constexpr static auto type_name = "an_shape";
       constexpr static auto version = 1;
       constexpr static auto keys = shared::make_keys({ "base" });
       shape base;
