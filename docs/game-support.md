@@ -199,6 +199,12 @@ No support.
 * [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS) support in progress (feature/earthsiege-files)
 * [DML](https://github.com/3space-studio/3space-studio/wiki/DML) support in progress (feature/earthsiege-files)
 
+### Kid Pilot - 1998
+
+* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL) (partial support. Needs more investigation to support compression)
+* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS) support in progress (feature/earthsiege-files)
+* [DML](https://github.com/3space-studio/3space-studio/wiki/DML) support in progress (feature/earthsiege-files)
+
 ### Curse You! Red Baron - 1999
 
 * [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL) (partial support. Needs more investigation to support compression)
