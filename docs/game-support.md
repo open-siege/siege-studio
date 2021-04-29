@@ -16,7 +16,7 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 
 ## Games
 
-      <div class="row">
+<div class="row">
 		<div class="col-6">
 		<h3>Arcticfox - 1987 (for DOS)</h3>
 		No support. Unknown file formats.
@@ -25,7 +25,7 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		<h3>A-10 Tank Killer - 1989 (for DOS)</h3>
 		No support. 
 		</div>
-	  </div>
+</div>
 
 
 ### Abrams Battle Tank - 1989 (for DOS)
