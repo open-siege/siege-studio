@@ -55,7 +55,7 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		No support. Unknown file formats.
 		</div>
 		<div class="col-6">
-		<h3>F-14 Tomcat - 1990 (for DOS))</h3>
+		<h3>F-14 Tomcat - 1990 (for DOS)</h3>
 		No support. 
 		</div>
 </div>
@@ -73,35 +73,57 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 
 ## Games
 
-### Red Baron - 1990
+<div class="row">
+		<div class="col-6">
+		<h3>Red Baron - 1990</h3>
+        <ul>
+            <li><a href="https://github.com/3space-studio/3space-studio/wiki/RMF">RMF</a></li>
+        </ul>
+		</div>
+		<div class="col-6">
+		<h3>Stellar 7 (re-release) - 1990</h3>
+		No support. 
+		</div>
+</div>
 
-* [RMF](https://github.com/3space-studio/3space-studio/wiki/RMF)
+<div class="row">
+		<div class="col-6">
+		<h3>A-10 Tank Killer 1.5 - 1991</h3>
+        <ul>
+            <li><a href="https://github.com/3space-studio/3space-studio/wiki/RMF">RMF</a></li>
+        </ul>
+		</div>
+		<div class="col-6">
+		<h3>Nova 9: The Return of Gir Draxon - 1991</h3>
+		<ul>
+            <li><a href="https://github.com/3space-studio/3space-studio/wiki/RMF">RMF</a></li>
+        </ul> 
+		</div>
+</div>
 
-### Stellar 7 (re-release) - 1990
+<div class="row">
+		<div class="col-6">
+		<h3>Aces of the Pacific - 1992</h3>
+        <ul>
+            <li><a href="https://github.com/3space-studio/3space-studio/wiki/DYN">DYN</a></li>
+        </ul>
+		</div>
+		<div class="col-6">
+		<h3>Aces Over Europe - 1993</h3>
+		<ul>
+            <li><a href="https://github.com/3space-studio/3space-studio/wiki/DYN">DYN</a></li>
+        </ul> 
+		</div>
+</div>
 
-No support. 
-
-### A-10 Tank Killer 1.5  - 1991
-
-* [RMF](https://github.com/3space-studio/3space-studio/wiki/RMF)
-
-### Nova 9: The Return of Gir Draxon - 1991
-
-* [RMF](https://github.com/3space-studio/3space-studio/wiki/RMF)
-
-### Aces of the Pacific - 1992
-
-* [DYN](https://github.com/3space-studio/3space-studio/wiki/DYN)
-
-### Aces Over Europe - 1993
-
-* [DYN](https://github.com/3space-studio/3space-studio/wiki/DYN)
-
-### Betrayal at Krondor - 1993
-
-* [RMF](https://github.com/3space-studio/3space-studio/wiki/RMF)
-
-
+<div class="row">
+		<div class="col-6">
+		<h3>Betrayal at Krondor - 1993</h3>
+        <ul>
+            <li><a href="https://github.com/3space-studio/3space-studio/wiki/RMF">RMF</a></li>
+        </ul>
+		</div>
+</div>
 
 # 3Space 2.0
 
