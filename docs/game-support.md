@@ -143,34 +143,51 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 
 ## Games
 
-### Aces of the Deep - 1994
+<div class="row">
+		<div class="col-6">
+		<h3>Aces of the Deep - 1994</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DYN">DYN</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a> support in progress (feature/earthsiege-files)</li>
+        </ul>
+		</div>
+		<div class="col-6">
+		<h3>Metaltech: Battledrome - 1994</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a> support in progress (feature/earthsiege-files)</li>
+        </ul>
+		</div>
+</div>
 
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL)
-* [DYN](https://github.com/3space-studio/3space-studio/wiki/DYN)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS) support in progress (feature/earthsiege-files)
+<div class="row">
+		<div class="col-6">
+		<h3>Metaltech: Earthsiege - 1994</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a> support in progress (feature/earthsiege-files)</li>
+        </ul>
+		</div>
+		<div class="col-6">
+		<h3>Command: Aces of the Deep - 1995</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DYN">DYN</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a> support in progress (feature/earthsiege-files)</li>
+        </ul>
+		</div>
+</div>
 
-### Metaltech: Battledrome - 1994
-
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS) support in progress (feature/earthsiege-files)
-
-### Metaltech: Earthsiege - 1994
-
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS) support in progress (feature/earthsiege-files)
-
-### Command: Aces of the Deep - 1995
-
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL)
-* [DYN](https://github.com/3space-studio/3space-studio/wiki/DYN)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS) support in progress (feature/earthsiege-files)
-
-### Earthsiege 2 - 1996
-
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS) support in progress (feature/earthsiege-files)
-
-
+<div class="row">
+		<div class="col-6">
+		<h3>Earthsiege 2 - 1996</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a> support in progress (feature/earthsiege-files)</li>
+        </ul>
+		</div>
+</div>
 
 # 3Space 2.5
 
