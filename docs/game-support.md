@@ -27,44 +27,38 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		</div>
 </div>
 
+<div class="row">
+		<div class="col-6">
+		<h3>Abrams Battle Tank - 1989 (for DOS)</h3>
+		No support.
+		</div>
+		<div class="col-6">
+		<h3>David Wolf Secret Agent - 1989 (for DOS)</h3>
+		No support. 
+		</div>
+</div>
 
-### Abrams Battle Tank - 1989 (for DOS)
+<div class="row">
+		<div class="col-6">
+		<h3>DeathTrack - 1989</h3>
+		No support. Unknown file formats.
+		</div>
+		<div class="col-6">
+		<h3>Die Hard - 1989</h3>
+		No support. 
+		</div>
+</div>
 
-No support. 
-
-### David Wolf Secret Agent - 1989 (for DOS)
-
-No support. 
-
-### DeathTrack - 1989 
-
-No support. 
-
-### Die Hard - 1989
-
-No support. 
-
-### MechWarrior - 1989 (for DOS)
-
-No support. 
-
-### David Wolf Secret Agent - 1989
-
-No support. 
-
-### DeathTrack - 1989
-
-No support. 
-
-### Die Hard - 1989
-
-No support. 
-
-### F-14 Tomcat - 1990 (for DOS)
-
-No support. 
-
-
+<div class="row">
+		<div class="col-6">
+		<h3>MechWarrior - 1989 (for DOS)</h3>
+		No support. Unknown file formats.
+		</div>
+		<div class="col-6">
+		<h3>F-14 Tomcat - 1990 (for DOS))</h3>
+		No support. 
+		</div>
+</div>
 
 # 3Space 1.5
 
