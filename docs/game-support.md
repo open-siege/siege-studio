@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="https://simplegrid.io/grid/simple-grid.css" />
+
 ### Game Support
 
 Because the 3Space engine has a long history, and has morphed into engines with new names, here is a matrix of the games, most of which were made by Dynamix, (focusing specifically on DOS or Windows) which are intended to be supported or are supported:
@@ -14,13 +16,19 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 
 ## Games
 
-### Arcticfox - 1987 (for DOS)
+<div class="container">
+      <div class="row">
+		<div class="col-6">
+		### Arcticfox - 1987 (for DOS)
+		No support. Unknown file formats.
+		</div>
+		<div class="col-6">
+		### A-10 Tank Killer - 1989 (for DOS)
+		No support. 
+		</div>
+	  </div>
+</div>
 
-No support. Unknown file formats.
-
-### A-10 Tank Killer - 1989 (for DOS)
-
-No support. 
 
 ### Abrams Battle Tank - 1989 (for DOS)
 
