@@ -306,7 +306,7 @@ No support.
 * [BMP](https://github.com/3space-studio/3space-studio/wiki/BMP)
 * [PBA](https://github.com/3space-studio/3space-studio/wiki/PBA)
 
-### Field & Stream: Trophy Bass 4 - 1999
+### Field & Stream: Trophy Bass 4 - 2000
 
 * [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL)
 * [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS)
