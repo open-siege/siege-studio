@@ -315,13 +315,20 @@ namespace studio::content::dts::three_space
   {
     struct base_part;
     struct bsp_part;
+    struct nu_bsp_part;
     struct part_list;
     struct shape;
+    struct mesh;
+    struct nu_shape;
+    struct nu_mesh;
+    struct nu_anim_mesh;
     struct cell_anim_part;
     struct detail_part;
     struct bitmap_frame_part;
+    struct null_part;
 
-    using shape_item = std::variant<raw_item, base_part, part_list, bsp_part, cell_anim_part, detail_part, bitmap_frame_part, shape>;
+    using shape_item = std::variant<raw_item, null_part, base_part, part_list, bsp_part, cell_anim_part,
+      detail_part, bitmap_frame_part, mesh, shape, nu_shape, nu_bsp_part, nu_anim_mesh, nu_anim_mesh>;
 
     bool is_3space_dts(std::basic_istream<std::byte>& stream);
     std::vector<shape_item> read_shapes(std::basic_istream<std::byte>& file);
@@ -343,6 +350,11 @@ namespace studio::content::dts::three_space
       vector3l center;
     };
 
+    struct null_part
+    {
+      base_part base;
+    };
+
     struct part_list
     {
       base_part base;
@@ -352,6 +364,13 @@ namespace studio::content::dts::three_space
     };
 
     struct shape
+    {
+      part_list base;
+      endian::little_uint32_t sequence_count;
+      std::vector<endian::little_int32_t> sequences;
+    };
+
+    struct nu_shape
     {
       part_list base;
       endian::little_uint32_t sequence_count;
@@ -373,6 +392,11 @@ namespace studio::content::dts::three_space
       endian::little_uint32_t node_count;
       std::vector<bsp_node> nodes;
       std::vector<endian::little_int32_t> transforms;
+    };
+
+    struct nu_bsp_part
+    {
+      bsp_part base;
     };
 
     struct detail_part
@@ -409,7 +433,7 @@ namespace studio::content::dts::three_space
       endian::little_int32_t palette;
       endian::little_int32_t rgb;
       endian::little_int32_t flags;
-      std::byte texture;
+      std::string texture;
     };
 
     struct material_list
@@ -435,6 +459,8 @@ namespace studio::content::dts::three_space
         endian::little_int32_t material;
       };
 
+      base_part base;
+
       endian::little_uint32_t vertex_count;
       std::vector<vertex> vertices;
 
@@ -442,6 +468,45 @@ namespace studio::content::dts::three_space
       std::vector<std::pair<endian::little_uint32_t, endian::little_uint32_t>> texture_vertices;
 
       endian::little_uint32_t face_count;
+      std::vector<face> faces;
+    };
+
+    struct nu_mesh
+    {
+      mesh base;
+    };
+
+    struct nu_anim_mesh
+    {
+      struct key_frame
+      {
+        endian::little_int32_t transform_index;
+        vector3l coordinates;
+      };
+
+      struct vertex
+      {
+        endian::little_int32_t duration;
+        std::vector<key_frame> key_frames;
+      };
+
+      struct face
+      {
+        vector3l vertices;
+        vector3l texture_vertices;
+        endian::little_int32_t center;
+        endian::little_int32_t material;
+      };
+
+      base_part base;
+
+      endian::little_uint32_t face_count;
+      endian::little_uint32_t key_frame_count;
+      endian::little_uint32_t vertex_count;
+      endian::little_uint32_t texture_vertex_count;
+
+      std::vector<std::pair<endian::little_uint32_t, endian::little_uint32_t>> texture_vertices;
+      std::vector<vertex> vertices;
       std::vector<face> faces;
     };
   }// namespace v2
