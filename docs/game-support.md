@@ -461,23 +461,35 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 
 ## Games
 
-### Rise of the Dragon - 1990
+<div class="row">
+		<div class="col-6">
+		<h3>Rise of the Dragon - 1990</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/RMF">RMF</a></li>
+        </ul>
+		</div>
+		<div class="col-6">
+		<h3>Heart of China - 1991</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/RMF">RMF</a></li>
+        </ul>
+		</div>
+</div>
 
-* [RMF](https://github.com/3space-studio/3space-studio/wiki/RMF)
-
-### Heart of China - 1991
-
-* [RMF](https://github.com/3space-studio/3space-studio/wiki/RMF)
-
-### The Adventures of Willy Beamish - 1991
-
-* [RMF](https://github.com/3space-studio/3space-studio/wiki/RMF)
-
-### Quarky & Quaysoo's Turbo Science - 1992
-
-* [RMF](https://github.com/3space-studio/3space-studio/wiki/RMF)
-
-
+<div class="row">
+		<div class="col-6">
+		<h3>The Adventures of Willy Beamish - 1991</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/RMF">RMF</a></li>
+        </ul>
+		</div>
+		<div class="col-6">
+		<h3>Quarky & Quaysoo's Turbo Science - 1992</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/RMF">RMF</a></li>
+        </ul>
+		</div>
+</div>
 
 # Dynamix 2D/2.5D Game Engines
 
