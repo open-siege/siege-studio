@@ -1,4 +1,10 @@
 <link rel="stylesheet" href="https://simplegrid.io/grid/simple-grid.css" />
+<style>
+.project-name, .project-tagline 
+{
+    color: white;
+}
+</style>
 
 ### Game Support
 
@@ -206,51 +212,75 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 
 ## Games
 
-### Silent Thunder: A-10 Tank Killer 2 - 1996
+<div class="row">
+		<div class="col-6">
+		<h3>Silent Thunder: A-10 Tank Killer 2 - 1996</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DT2">DT2</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PAL">PAL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PPL">PPL</a></li>
+        </ul>
+		</div>
+		<div class="col-6">
+		<h3>Red Baron 2 - 1997</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a> (partial support. Needs more investigation to support compression)</li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a> support in progress (feature/earthsiege-files)</li>
+        </ul>
+		</div>
+</div>
 
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL)
-* [DT2](https://github.com/3space-studio/3space-studio/wiki/DT2) support in progress (feature/earthsiege-files)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML) support in progress (feature/earthsiege-files)
-* [PAL](https://github.com/3space-studio/3space-studio/wiki/PAL)
-* [PPL](https://github.com/3space-studio/3space-studio/wiki/PPL)
+<div class="row">
+		<div class="col-6">
+		<h3>Pro Pilot '98 - 1997</h3>
+    <ul>
+      <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a> (partial support. Needs more investigation to support compression)</li>
+      <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a> support in progress (feature/earthsiege-files)</li>
+      <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a> support in progress (feature/earthsiege-files)</li>
+    </ul>
+		</div>
+		<div class="col-6">
+		<h3>Red Baron 3D - 1998</h3>
+    <ul>
+      <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a> (partial support. Needs more investigation to support compression)</li>
+      <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a> support in progress (feature/earthsiege-files)</li>
+      <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a> support in progress (feature/earthsiege-files)</li>
+    </ul>
+		</div>
+</div>
 
-### Red Baron 2 - 1997
+<div class="row">
+		<div class="col-6">
+		<h3>Pro Pilot '99 - 1998</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a> (partial support. Needs more investigation to support compression)</li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a> support in progress (feature/earthsiege-files)</li>
+        </ul>
+		</div>
+		<div class="col-6">
+		<h3>Kid Pilot - 1998</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a> (partial support. Needs more investigation to support compression)</li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a> support in progress (feature/earthsiege-files)</li>
+        </ul>
+		</div>
+</div>
 
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL) (partial support. Needs more investigation to support compression)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS) support in progress (feature/earthsiege-files)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML) support in progress (feature/earthsiege-files)
-
-### Pro Pilot '98 - 1997
-
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL) (partial support. Needs more investigation to support compression)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS) support in progress (feature/earthsiege-files)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML) support in progress (feature/earthsiege-files)
-
-### Red Baron 3D - 1998
-
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL) (partial support. Needs more investigation to support compression)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS) support in progress (feature/earthsiege-files)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML) support in progress (feature/earthsiege-files)
-
-### Pro Pilot '99 - 1998
-
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL) (partial support. Needs more investigation to support compression)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS) support in progress (feature/earthsiege-files)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML) support in progress (feature/earthsiege-files)
-
-### Kid Pilot - 1998
-
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL) (partial support. Needs more investigation to support compression)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS) support in progress (feature/earthsiege-files)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML) support in progress (feature/earthsiege-files)
-
-### Curse You! Red Baron - 1999
-
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL) (partial support. Needs more investigation to support compression)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS) support in progress (feature/earthsiege-files)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML) support in progress (feature/earthsiege-files)
-
-
+<div class="row">
+		<div class="col-6">
+		<h3>Curse You! Red Baron - 1999</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a> (partial support. Needs more investigation to support compression)</li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a> support in progress (feature/earthsiege-files)</li>
+        </ul>
+		</div>
+</div>
 
 # 3Space 3.0 aka Darkstar
 
