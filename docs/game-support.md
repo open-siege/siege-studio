@@ -47,7 +47,7 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 <div class="row">
 		<div class="col-6">
 		<h3>DeathTrack - 1989</h3>
-		No support. Unknown file formats.
+		No support.
 		</div>
 		<div class="col-6">
 		<h3>Die Hard - 1989</h3>
@@ -58,7 +58,7 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 <div class="row">
 		<div class="col-6">
 		<h3>MechWarrior - 1989 (for DOS)</h3>
-		No support. Unknown file formats.
+		No support.
 		</div>
 		<div class="col-6">
 		<h3>F-14 Tomcat - 1990 (for DOS)</h3>
