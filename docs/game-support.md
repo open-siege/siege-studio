@@ -430,19 +430,23 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 
 ## Games
 
-### Field & Stream: Trophy Hunting 4 - 2000
+<div class="row">
+		<div class="col-6">
+		<h3>Field & Stream: Trophy Hunting 4 - 2000</h3>
+        No support.
+		</div>
+		<div class="col-6">
+		<h3>Field & Stream: Trophy Hunting 5 - 2001</h3>
+        No support.
+		</div>
+</div>
 
-No support.
-
-### Field & Stream: Trophy Hunting 5 - 2001
-
-No support.
-
-### Tribes 2 - 2001
-
-No support.
-
-
+<div class="row">
+		<div class="col-6">
+		<h3>Tribes 2 - 2001</h3>
+        No support.
+		</div>
+</div>
 
 # Dynamix Game Development System
 
