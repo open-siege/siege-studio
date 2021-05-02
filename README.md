@@ -50,9 +50,17 @@ New to C++, CMake or Conan? Checkout this set of examples with instructions to g
 
 If you don't already have Conan on your system, find instructions here: https://conan.io/downloads.html
 
+Since May 2021, conan.io is the primary place for conan packages. If not updated, run the following to set your conan center remote to the new value:
+
+```conan remote update conan-center https://center.conan.io```
+
 For this project, you also need to add the Bincrafters Conan remote, with this command:
 
-``conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan``
+```conan remote add bincrafters https://bincrafters.jfrog.io/artifactory/api/conan/public-conan```
+
+You may also have to run:
+
+```conan config set general.revisions_enabled=1```
 
 As a setup command, without any pre-built packages, run ```conan install cmake/3.17.3@/ -g virtualenv```
 
