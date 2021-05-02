@@ -10,14 +10,14 @@ namespace studio::content
   namespace endian = boost::endian;
   struct texture_vertex
   {
-    constexpr static auto keys = shared::make_keys({ "x", "y" });
+    KEYS_CONSTEXPR static auto keys = shared::make_keys({ "x", "y" });
     float x;
     float y;
   };
 
   struct vector3f
   {
-    constexpr static auto keys = shared::make_keys({ "x", "y", "z" });
+    KEYS_CONSTEXPR static auto keys = shared::make_keys({ "x", "y", "z" });
     float x;
     float y;
     float z;
@@ -52,7 +52,7 @@ namespace studio::content
 
   struct vector3f_pair
   {
-    constexpr static auto keys = shared::make_keys({ "min", "max" });
+    KEYS_CONSTEXPR static auto keys = shared::make_keys({ "min", "max" });
     vector3f min;
     vector3f max;
   };
@@ -61,7 +61,7 @@ namespace studio::content
 
   struct quaternion4s
   {
-    constexpr static auto keys = shared::make_keys({ "x", "y", "z", "w" });
+    KEYS_CONSTEXPR static auto keys = shared::make_keys({ "x", "y", "z", "w" });
     endian::little_int16_t x;
     endian::little_int16_t y;
     endian::little_int16_t z;
@@ -70,7 +70,7 @@ namespace studio::content
 
   struct quaternion4f
   {
-    constexpr static auto keys = shared::make_keys({ "x", "y", "z", "w" });
+    KEYS_CONSTEXPR static auto keys = shared::make_keys({ "x", "y", "z", "w" });
     float x;
     float y;
     float z;
@@ -98,7 +98,7 @@ namespace studio::content
 
   struct rgb_data
   {
-    constexpr static auto keys = shared::make_keys({ "red", "green", "blue", "rgbFlags" });
+    KEYS_CONSTEXPR static auto keys = shared::make_keys({ "red", "green", "blue", "rgbFlags" });
 
     std::uint8_t red;
     std::uint8_t green;
