@@ -38,7 +38,7 @@ namespace idtech2::mdl
 
   struct vector3f
   {
-    constexpr static auto keys = make_keys({ "x", "y", "z" });
+    KEYS_CONSTEXPR static auto keys = make_keys({ "x", "y", "z" });
     float x;
     float y;
     float z;
@@ -48,7 +48,7 @@ namespace idtech2::mdl
 
   struct vertex
   {
-    constexpr static auto keys = make_keys({ "x", "y", "z", "normal" });
+    KEYS_CONSTEXPR static auto keys = make_keys({ "x", "y", "z", "normal" });
     std::uint8_t x;
     std::uint8_t y;
     std::uint8_t z;
@@ -57,7 +57,7 @@ namespace idtech2::mdl
 
   struct texture_vertex
   {
-    constexpr static auto keys = make_keys({ "onSeam", "x", "y" });
+    KEYS_CONSTEXPR static auto keys = make_keys({ "onSeam", "x", "y" });
     std::uint8_t on_seam;
     std::uint8_t x;
     std::uint8_t y;
@@ -65,7 +65,7 @@ namespace idtech2::mdl
 
   struct face
   {
-    constexpr static auto keys = make_keys({ "facesFront", "vertexIndices" });
+    KEYS_CONSTEXPR static auto keys = make_keys({ "facesFront", "vertexIndices" });
     endian::little_int32_t faces_front;
     std::array<endian::little_int32_t, 3> vertex_indices;
   };

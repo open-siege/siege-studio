@@ -72,8 +72,8 @@ namespace studio::content
   {
   };
 
-  template<typename BasicJsonType, std::size_t Size, typename... Args>
-  void from_json_impl(const BasicJsonType& json, std::array<std::string_view, Size> keys, Args&... args)
+  template<typename BasicJsonType, typename StringType, std::size_t Size, typename... Args>
+  void from_json_impl(const BasicJsonType& json, std::array<StringType, Size> keys, Args&... args)
   {
     using key_type = typename BasicJsonType::object_t::key_type;
     std::size_t current_key = 0;
@@ -204,8 +204,8 @@ namespace studio::content
     }
   }
 
-  template<typename BasicJsonType, std::size_t Size, typename... Args>
-  void to_json_impl(BasicJsonType& json, std::array<std::string_view, Size> keys, Args&... args)
+  template<typename BasicJsonType, typename StringType, std::size_t Size, typename... Args>
+  void to_json_impl(BasicJsonType& json, std::array<StringType, Size> keys, Args&... args)
   {
     using key_type = typename BasicJsonType::object_t::key_type;
     std::size_t current_key = 0;

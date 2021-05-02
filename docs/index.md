@@ -26,7 +26,7 @@ Thus, the goal of phase 1 is to support as many games in the Dynamix catalogue a
 
 #### Phase 2 - Darkstar Extender
 
-See [project source](https://github.com/matthew-rindel/darkstar-extender).
+See [project info](darkstar-extender).
 
 The purpose of this project is to extend the functionality of games using the Darkstar Engine, with Darkstar being the third major iteration of 3Space technology. Support will be directed towards the following games:
 
@@ -49,6 +49,8 @@ Depending on the game, the list of new features, added through the extender, sho
 
 #### Phase 3 - Siege Shell
 
+See [project info](siege-shell).
+
 With the core of the Darkstar games extended, work will begin for a new UI to be built, replacing the potentially error prone shell portion of the game with a modern equivalent, with more features.
 
 Specifically, this project will focus on:
@@ -63,13 +65,19 @@ Depending on progress of 3Space Studio, the following games may also be supporte
 * Metaltech: Earthsiege
 * Metaltech: Battledrome
 * Earthsiege 2
-* A-10 Tank Killer
+* A-10 Tank Killer 1.5
 * Red Baron
 * Aces Over Europe
 * Aces of the Pacific
+* Aces of the Deep
+* Command: Aces of the Deep
 * Silent Thunder: A-10 Tank Killer 2
+* Front Page Sports: Ski Racing
+* King's Quest: Mask of Eternity
 
 #### Phase 4 - Open Siege
+
+See [project info](open-siege).
 
 With the GUI front-end portion of various games supported, the next and final component would be to create a full engine replacement, using the code from the previous projects as a base, to be able to play any of the above games without any original binaries.
 
