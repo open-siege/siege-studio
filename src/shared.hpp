@@ -12,6 +12,24 @@ namespace studio::shared
 {
   namespace fs = std::filesystem;
 
+  // I wish this wasn't needed. But the constexpr issue with 14.28/19.28 still exists:
+  // https://developercommunity2.visualstudio.com/t/internal-compiler-error-with-constexpr-code/1325445?from=email
+  // Couldn't get msys2 to work because inside the conan build, deep down, pacman fails after 10 seconds of downloading, and the fix for it is to apply a specific command line parameters.
+  // But, finding which package to fix/report on is more work than I have time for on a dark Sunday morning.
+#if _MSC_VER >= 1928
+  #define KEYS_CONSTEXPR inline
+  template<std::size_t Size>
+  std::array<const char*, Size> make_keys(const char*(&&keys)[Size])
+  {
+    std::array<const char*, Size> result;
+    for (auto i = 0; i < Size; i++)
+    {
+      result[i] = keys[i];
+    }
+    return result;
+  }
+#else
+#define KEYS_CONSTEXPR constexpr
   template<std::size_t Size>
   constexpr std::array<std::string_view, Size> make_keys(const char*(&&keys)[Size])
   {
@@ -22,6 +40,7 @@ namespace studio::shared
     }
     return result;
   }
+#endif
 
   constexpr std::size_t get_padding_size(std::size_t count, std::size_t alignment_size)
   {
