@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
 find_package(nlohmann_json REQUIRED)
-find_package(boost_endian REQUIRED)
+find_package(Boost REQUIRED)
 find_package(ImGui-SFML REQUIRED)
 find_package(wxwidgets REQUIRED)
 find_package(glm REQUIRED)
@@ -67,12 +67,12 @@ add_library(3space STATIC ${LIB_SRC_FILES})
 include_directories(packages/include)
 include_directories(src)
 
-foreach(target ${boost_endian_LIBRARIES_TARGETS})
+foreach(target ${Boost_LIBRARIES_TARGETS})
     get_target_property(TARGET_INCLUDES ${target} INTERFACE_INCLUDE_DIRECTORIES)
     set(BOOST_INCLUDES ${BOOST_INCLUDES} ${TARGET_INCLUDES})
 endforeach()
 
-set(BASIC_INCLUDES ${BOOST_INCLUDES} ${boost_endian_INCLUDE_DIRS} ${nlohmann_json_INCLUDE_DIRS} ${glm_INCLUDE_DIRS} ${nonstd_span-lite_INCLUDE_DIRS} ${taocpp_pegtl_INCLUDE_DIRS})
+set(BASIC_INCLUDES ${BOOST_INCLUDES} ${Boost_INCLUDE_DIRS} ${nlohmann_json_INCLUDE_DIRS} ${glm_INCLUDE_DIRS} ${nonstd_span-lite_INCLUDE_DIRS} ${taocpp_pegtl_INCLUDE_DIRS})
 set(GUI_INCLUDES ${BASIC_INCLUDES} ${ImGui-SFML_INCLUDE_DIRS} ${wxwidgets_INCLUDE_DIRS})
 set(GUI_LIBS ${ImGui-SFML_LIBRARIES} ${wxwidgets_LIBRARIES} ${glm_LIBRARIES})
 

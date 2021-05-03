@@ -16,7 +16,7 @@ namespace studio::content::pal
 
   struct colour
   {
-    constexpr static auto keys = shared::make_keys({ "r", "g", "b", "a" });
+    KEYS_CONSTEXPR static auto keys = shared::make_keys({ "r", "g", "b", "a" });
 
     std::byte red;
     std::byte green;
