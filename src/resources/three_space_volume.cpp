@@ -1,7 +1,6 @@
 #include <array>
 #include <vector>
 #include <fstream>
-#include <optional>
 #include <utility>
 #include <string>
 
@@ -11,10 +10,11 @@ namespace studio::resources::vol::three_space
 {
   namespace endian = boost::endian;
 
-  constexpr auto rmf_tags = std::array<std::array<std::byte, 4>, 11>{
+  constexpr auto rmf_tags = std::array<std::array<std::byte, 4>, 12>{
     shared::to_tag<4>({ 0x00, 0x01, 0x05, 0x07 }),
     shared::to_tag<4>({ 0x00, 0x01, 0x06, 0x07 }),
     shared::to_tag<4>({ 0x00, 0x01, 0x03, 0x06 }),
+    shared::to_tag<4>({ 0x00, 0x01, 0x02, 0x06 }),
     shared::to_tag<4>({ 0x00, 0x02, 0x05, 0x07 }),
     shared::to_tag<4>({ 0x00, 0x02, 0x04, 0x07 }),
     shared::to_tag<4>({ 0x01, 0x00, 0x00, 0x00 }),

@@ -16,7 +16,7 @@ namespace studio
 
   struct object_header
   {
-    constexpr static auto keys = shared::make_keys({ "objectTag", "objectSize" });
+    KEYS_CONSTEXPR static auto keys = shared::make_keys({ "objectTag", "objectSize" });
     std::array<std::byte, 4> object_tag;
     endian::little_uint32_t object_size;
   };
@@ -25,7 +25,7 @@ namespace studio
   {
     constexpr static auto type_name = "base_part";
     constexpr static auto version = 1;
-    constexpr static auto keys = shared::make_keys({ "header", "rawBytes" });
+    KEYS_CONSTEXPR static auto keys = shared::make_keys({ "header", "rawBytes" });
     object_header header;
     std::vector<std::byte> raw_bytes;
   };

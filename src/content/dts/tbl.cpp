@@ -4,12 +4,14 @@
 
 namespace studio::content::tbl::three_space
 {
+  namespace endian = boost::endian;
+
   using file_tag = std::array<std::byte, 4>;
 
   constexpr file_tag map_tag = shared::to_tag<4>({ 'M', 'A', 'P', ':' });
-  constexpr file_tag map_tag = shared::to_tag<4>({ 'A', 'P', 'P', ':' });
-  constexpr file_tag map_tag = shared::to_tag<4>({ 'G', 'I', 'D', ':' });
-  constexpr file_tag map_tag = shared::to_tag<4>({ 'D', 'A', 'T', ':' });
+  constexpr file_tag app_tag = shared::to_tag<4>({ 'A', 'P', 'P', ':' });
+  constexpr file_tag gid_tag = shared::to_tag<4>({ 'G', 'I', 'D', ':' });
+  constexpr file_tag dat_tag = shared::to_tag<4>({ 'D', 'A', 'T', ':' });
 
   struct map_section
   {
