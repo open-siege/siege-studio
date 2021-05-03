@@ -13,31 +13,18 @@ namespace studio::resources::vol::darkstar
   namespace endian = boost::endian;
   using namespace std::literals;
 
-
-
   using file_tag = std::array<std::byte, 4>;
 
-  constexpr file_tag to_tag(const std::array<std::uint8_t, 4> values)
-  {
-    file_tag result{};
-
-    for (auto i = 0u; i < values.size(); i++)
-    {
-      result[i] = std::byte{ values[i] };
-    }
-    return result;
-  }
-
   // TODO add some checks for these items
-  constexpr auto vol_index_tag = to_tag({ 'v', 'o', 'l', 'i' });
-  constexpr auto vol_string_tag = to_tag({ 'v', 'o', 'l', 's' });
+  constexpr auto vol_index_tag = shared::to_tag<4>({ 'v', 'o', 'l', 'i' });
+  constexpr auto vol_string_tag = shared::to_tag<4>({ 'v', 'o', 'l', 's' });
   constexpr auto vol_block_tag = "vblk"sv;
 
-  constexpr auto vol_file_tag = to_tag({ ' ', 'V', 'O', 'L' });
-  constexpr auto alt_vol_file_tag = to_tag({ 'P', 'V', 'O', 'L' });
-  constexpr auto old_vol_file_tag = to_tag({ 'V', 'O', 'L', ' ' });
+  constexpr auto vol_file_tag = shared::to_tag<4>({ ' ', 'V', 'O', 'L' });
+  constexpr auto alt_vol_file_tag = shared::to_tag<4>({ 'P', 'V', 'O', 'L' });
+  constexpr auto old_vol_file_tag = shared::to_tag<4>({ 'V', 'O', 'L', ' ' });
 
-  constexpr auto block_tag = to_tag({ 'V', 'B', 'L', 'K' });
+  constexpr auto block_tag = shared::to_tag<4>({ 'V', 'B', 'L', 'K' });
 
   enum class volume_version
   {
@@ -106,6 +93,13 @@ namespace studio::resources::vol::darkstar
     endian::little_uint32_t index_size;
   };
 
+  struct block_header
+  {
+    std::array<std::byte, 4> block_tag;
+    endian::little_uint24_t block_size;
+    std::byte end_byte;
+  };
+
   struct file_header
   {
     endian::little_uint32_t id;
@@ -122,14 +116,14 @@ namespace studio::resources::vol::darkstar
     endian::little_uint32_t id;
     endian::little_uint32_t offset;
     endian::little_uint32_t size;
-    std::uint8_t padding;
     std::uint8_t compression_type;
+    std::uint8_t padding;
   };
 
   static_assert(sizeof(old_file_header) == sizeof(std::array<std::byte, 14>));
 
 
-  void create_vol_file(std::basic_ostream<std::byte>& output, const volume_file_info_vector& files)
+  void create_vol_file(std::basic_ostream<std::byte>& output, const std::vector<volume_file_info>& files)
   {
     auto start = std::size_t(output.tellp());
 
@@ -144,16 +138,16 @@ namespace studio::resources::vol::darkstar
     {
       file_locations.emplace(file.filename, endian::little_uint32_t(int(output.tellp())));
       output.write(block_tag.data(), block_tag.size());
-      endian::little_uint24_t narrowed_size = file.size;
+      endian::little_uint24_t narrowed_size = file.compressed_size.has_value() ? file.compressed_size.value() : file.size;
       output.write(reinterpret_cast<std::byte*>(&narrowed_size), sizeof(narrowed_size));
       std::byte tag = std::byte(0x80);
       output.write(&tag, 1);
 
       std::copy_n(std::istreambuf_iterator<std::byte>(*file.stream),
-                  file.size,
+                  narrowed_size,
                   std::ostreambuf_iterator<std::byte>(output));
 
-      auto size_for_padding = file.size;
+      auto size_for_padding = int(output.tellp());
       while (size_for_padding % 4 != 0)
       {
         std::byte padding{0x00};
@@ -184,6 +178,14 @@ namespace studio::resources::vol::darkstar
     output.write(vol_string_tag.data(), vol_string_tag.size());
     output.write(reinterpret_cast<std::byte*>(&string_size), sizeof(string_size));
     output.write(reinterpret_cast<std::byte*>(filenames.data()), string_size);
+
+    auto size_for_padding = string_size;
+    while (size_for_padding % 2 != 0)
+    {
+      std::byte padding{0x00};
+      output.write(&padding, 1);
+      size_for_padding++;
+    }
 
     string_size = std::int32_t(files.size() * sizeof(file_header));
     output.write(vol_index_tag.data(), vol_index_tag.size());
@@ -255,9 +257,22 @@ namespace studio::resources::vol::darkstar
 
     std::size_t index = 0;
 
+    if (raw_chars.back() != '\0')
+    {
+      raw_chars.back() = '\0';
+    }
+
+    constexpr auto max_filesize = 25;
+
     while (index < raw_chars.size())
     {
       results.emplace_back(raw_chars.data() + index);
+
+      if (results.back().size() > max_filesize)
+      {
+        results.pop_back();
+        break;
+      }
 
       index += results.back().size() + 1;
     }
@@ -308,10 +323,9 @@ namespace studio::resources::vol::darkstar
         std::copy(raw_bytes.data() + index,
           raw_bytes.data() + index + sizeof(old_file_header),
           reinterpret_cast<std::byte*>(&file));
-
         offset = file.offset;
         size = file.size;
-        compression_type = file.compression_type == 1 ? vol::darkstar::compression_type::none : vol::darkstar::compression_type::lz;
+        compression_type = vol::darkstar::compression_type(file.compression_type);
 
         index += sizeof(old_file_header);
       }
@@ -334,6 +348,7 @@ namespace studio::resources::vol::darkstar
       info.offset = offset;
       info.size = size;
       info.compression_type = compression_type;
+
       results.emplace_back(info);
 
       if (results.size() == filenames.size())
@@ -399,18 +414,53 @@ namespace studio::resources::vol::darkstar
   {
     if (info.compression_type == studio::resources::compression_type::none)
     {
+
       set_stream_position(stream, info);
       std::copy_n(std::istreambuf_iterator<std::byte>(stream),
-        info.size,
-        std::ostreambuf_iterator<std::byte>(output));
+                  info.size,
+                  std::ostreambuf_iterator<std::byte>(output));
     }
     else
     {
+      std::vector<std::filesystem::path> files_to_remove;
       std::stringstream command;
 
       auto volume_filename = info.folder_path;
 
       auto folder_path = volume_filename.parent_path() / "temp";
+      {
+        volume_header header{};
+
+        auto volume_stream = std::unique_ptr<std::basic_istream<std::byte>>(new std::basic_ifstream<std::byte>(volume_filename, std::ios::binary));
+        volume_stream->read(reinterpret_cast<std::byte*>(&header), sizeof(header));
+
+        if (header.file_tag == old_vol_file_tag)
+        {
+          volume_filename = folder_path / (info.filename.filename().string() + ".vol");
+          volume_stream->seekg(info.offset, std::ios::beg);
+
+          block_header block;
+          volume_stream->read(reinterpret_cast<std::byte*>(&block), sizeof(block));
+
+          if (block.block_tag != block_tag)
+          {
+            return;
+          }
+
+          std::vector<volume_file_info> files;
+          volume_file_info temp_info{};
+          temp_info.filename = info.filename.filename().string();
+          temp_info.size = info.size;
+          temp_info.compressed_size = block.block_size;
+          temp_info.compression_type = darkstar::compression_type(info.compression_type);
+          temp_info.stream = std::move(volume_stream);
+
+          files.emplace_back(std::move(temp_info));
+          std::basic_ofstream<std::byte> new_volume_stream(volume_filename, std::ios::binary);
+          create_vol_file(new_volume_stream, files);
+          files_to_remove.emplace_back(volume_filename);
+        }
+      }
 
       auto new_path = folder_path / (info.filename.string() + ".tmp");
 
@@ -443,6 +493,7 @@ namespace studio::resources::vol::darkstar
 
       if (std::filesystem::exists(new_path) && std::filesystem::file_size(new_path) > info.size)
       {
+        files_to_remove.emplace_back(new_path);
         {
           auto new_file = std::basic_ifstream<std::byte>{ new_path, std::ios::binary };
 
@@ -451,7 +502,10 @@ namespace studio::resources::vol::darkstar
             std::ostreambuf_iterator<std::byte>(output));
         }
 
-        std::filesystem::remove(new_path);
+        for (auto& file : files_to_remove)
+        {
+          std::filesystem::remove(file);
+        }
       }
     }
   }
