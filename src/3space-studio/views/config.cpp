@@ -45,11 +45,15 @@ namespace studio::views
 
     view_factory.add_extension(".bmp", content::bmp::is_microsoft_bmp);
     view_factory.add_extension(".bmp", content::bmp::is_phoenix_bmp);
+    view_factory.add_extension(".dib", content::bmp::is_microsoft_bmp);
+    view_factory.add_extension(".dib", content::bmp::is_phoenix_bmp);
     view_factory.add_extension(".pba", content::bmp::is_phoenix_bmp_array);
 
     view_factory.add_extension(".sfx", content::sfx::is_sfx_file);
 
     view_factory.add_extension(".pal", content::pal::is_microsoft_pal);
+    view_factory.add_extension(".ipl", content::pal::is_microsoft_pal);
+    view_factory.add_extension(".ppl", content::pal::is_microsoft_pal);
     view_factory.add_extension(".pal", content::pal::is_phoenix_pal);
     view_factory.add_extension(".ipl", content::pal::is_phoenix_pal);
     view_factory.add_extension(".ppl", content::pal::is_phoenix_pal);

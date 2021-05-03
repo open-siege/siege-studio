@@ -24,13 +24,12 @@ namespace studio::resources::vol::darkstar
   {
     std::string filename;
     std::int32_t size;
+    std::optional<std::int32_t> compressed_size;
     compression_type compression_type;
     std::unique_ptr<std::basic_istream<std::byte>> stream;
   };
 
-  using volume_file_info_vector = std::vector<volume_file_info>;
-
-  void create_vol_file(std::basic_ostream<std::byte>& output, const volume_file_info_vector& files);
+  void create_vol_file(std::basic_ostream<std::byte>& output, const std::vector<volume_file_info>& files);
 
   struct vol_file_archive : studio::resources::archive_plugin
   {
