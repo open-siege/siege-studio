@@ -1,4 +1,10 @@
 <link rel="stylesheet" href="https://simplegrid.io/grid/simple-grid.css" />
+<style>
+.project-name, .project-tagline 
+{
+    color: white;
+}
+</style>
 
 ### Game Support
 
@@ -41,7 +47,7 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 <div class="row">
 		<div class="col-6">
 		<h3>DeathTrack - 1989</h3>
-		No support. Unknown file formats.
+		No support.
 		</div>
 		<div class="col-6">
 		<h3>Die Hard - 1989</h3>
@@ -52,7 +58,7 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 <div class="row">
 		<div class="col-6">
 		<h3>MechWarrior - 1989 (for DOS)</h3>
-		No support. Unknown file formats.
+		No support.
 		</div>
 		<div class="col-6">
 		<h3>F-14 Tomcat - 1990 (for DOS)</h3>
@@ -206,51 +212,75 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 
 ## Games
 
-### Silent Thunder: A-10 Tank Killer 2 - 1996
+<div class="row">
+		<div class="col-6">
+		<h3>Silent Thunder: A-10 Tank Killer 2 - 1996</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DT2">DT2</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PAL">PAL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PPL">PPL</a></li>
+        </ul>
+		</div>
+		<div class="col-6">
+		<h3>Red Baron 2 - 1997</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a> (partial support. Needs more investigation to support compression)</li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a> support in progress (feature/earthsiege-files)</li>
+        </ul>
+		</div>
+</div>
 
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL)
-* [DT2](https://github.com/3space-studio/3space-studio/wiki/DT2) support in progress (feature/earthsiege-files)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML) support in progress (feature/earthsiege-files)
-* [PAL](https://github.com/3space-studio/3space-studio/wiki/PAL)
-* [PPL](https://github.com/3space-studio/3space-studio/wiki/PPL)
+<div class="row">
+		<div class="col-6">
+		<h3>Pro Pilot '98 - 1997</h3>
+    <ul>
+      <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a> (partial support. Needs more investigation to support compression)</li>
+      <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a> support in progress (feature/earthsiege-files)</li>
+      <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a> support in progress (feature/earthsiege-files)</li>
+    </ul>
+		</div>
+		<div class="col-6">
+		<h3>Red Baron 3D - 1998</h3>
+    <ul>
+      <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a> (partial support. Needs more investigation to support compression)</li>
+      <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a> support in progress (feature/earthsiege-files)</li>
+      <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a> support in progress (feature/earthsiege-files)</li>
+    </ul>
+		</div>
+</div>
 
-### Red Baron 2 - 1997
+<div class="row">
+		<div class="col-6">
+		<h3>Pro Pilot '99 - 1998</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a> (partial support. Needs more investigation to support compression)</li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a> support in progress (feature/earthsiege-files)</li>
+        </ul>
+		</div>
+		<div class="col-6">
+		<h3>Kid Pilot - 1998</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a> (partial support. Needs more investigation to support compression)</li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a> support in progress (feature/earthsiege-files)</li>
+        </ul>
+		</div>
+</div>
 
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL) (partial support. Needs more investigation to support compression)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS) support in progress (feature/earthsiege-files)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML) support in progress (feature/earthsiege-files)
-
-### Pro Pilot '98 - 1997
-
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL) (partial support. Needs more investigation to support compression)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS) support in progress (feature/earthsiege-files)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML) support in progress (feature/earthsiege-files)
-
-### Red Baron 3D - 1998
-
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL) (partial support. Needs more investigation to support compression)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS) support in progress (feature/earthsiege-files)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML) support in progress (feature/earthsiege-files)
-
-### Pro Pilot '99 - 1998
-
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL) (partial support. Needs more investigation to support compression)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS) support in progress (feature/earthsiege-files)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML) support in progress (feature/earthsiege-files)
-
-### Kid Pilot - 1998
-
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL) (partial support. Needs more investigation to support compression)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS) support in progress (feature/earthsiege-files)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML) support in progress (feature/earthsiege-files)
-
-### Curse You! Red Baron - 1999
-
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL) (partial support. Needs more investigation to support compression)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS) support in progress (feature/earthsiege-files)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML) support in progress (feature/earthsiege-files)
-
-
+<div class="row">
+		<div class="col-6">
+		<h3>Curse You! Red Baron - 1999</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a> (partial support. Needs more investigation to support compression)</li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a> support in progress (feature/earthsiege-files)</li>
+        </ul>
+		</div>
+</div>
 
 # 3Space 3.0 aka Darkstar
 
@@ -271,91 +301,121 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 
 ## Games
 
-### Front Page Sports: Ski Racing - 1997
+<div class="row">
+		<div class="col-6">
+		<h3>Front Page Sports: Ski Racing - 1997</h3>
+        <ul>
+                  <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a></li>
+                  <li><a href="https://github.com/3space-studio/3space-studio/wiki/TBV">TBV</a></li>
+                  <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a></li>
+                  <li><a href="https://github.com/3space-studio/3space-studio/wiki/PAL">PAL</a></li>
+                  <li><a href="https://github.com/3space-studio/3space-studio/wiki/PPL">PPL</a></li>
+                  <li><a href="https://github.com/3space-studio/3space-studio/wiki/BMP">BMP</a></li>
+                  <li><a href="https://github.com/3space-studio/3space-studio/wiki/PBA">PBA</a></li>
+        </ul>
+		</div>
+		<div class="col-6">
+		<h3>King's Quest: Mask of Eternity - 1998</h3>
+        <ul>
+                  <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a></li>
+                  <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a></li>
+                  <li><a href="https://github.com/3space-studio/3space-studio/wiki/PAL">PAL</a></li>
+                  <li><a href="https://github.com/3space-studio/3space-studio/wiki/PPL">PPL</a></li>
+                  <li><a href="https://github.com/3space-studio/3space-studio/wiki/BMP">BMP</a></li>
+                  <li><a href="https://github.com/3space-studio/3space-studio/wiki/PBA">PBA</a></li>
+        </ul>
+		</div>
+</div>
 
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML)
-* [PAL](https://github.com/3space-studio/3space-studio/wiki/PAL)
-* [PPL](https://github.com/3space-studio/3space-studio/wiki/PPL)
-* [BMP](https://github.com/3space-studio/3space-studio/wiki/BMP)
-* [PBA](https://github.com/3space-studio/3space-studio/wiki/PBA)
-* [CS](https://github.com/3space-studio/3space-studio/wiki/CS) (partial grammar implemented)
+<div class="row">
+		<div class="col-6">
+		<h3>Driver's Education '98 - 1998</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PAL">PAL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PPL">PPL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/BMP">BMP</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PBA">PBA</a></li>
+        </ul>
+		</div>
+		<div class="col-6">
+		<h3>Starsiege - 1999</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PAL">PAL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PPL">PPL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/BMP">BMP</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PBA">PBA</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/CS">CS</a> (partial grammar implemented)</li>
+        </ul>
+		</div>
+</div>
 
-### King's Quest: Mask of Eternity - 1998
+<div class="row">
+		<div class="col-6">
+		<h3>Starsiege: Tribes - 1999</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PAL">PAL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PPL">PPL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/BMP">BMP</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PBA">PBA</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/CS">CS</a> (partial grammar implemented)</li>
+        </ul>
+		</div>
+		<div class="col-6">
+		<h3>Desert Fighters - 1999</h3>
+        No support.
+		</div>
+</div>
 
-* [CS](https://github.com/3space-studio/3space-studio/wiki/CS) (partial grammar implemented)
-* [PPL](https://github.com/3space-studio/3space-studio/wiki/PPL)
-* [PAL](https://github.com/3space-studio/3space-studio/wiki/PAL)
-* [KQS](https://github.com/3space-studio/3space-studio/wiki/KQS) (only partially, through the existing DTS support)
+<div class="row">
+		<div class="col-6">
+		<h3>Driver's Education '99 - 1999</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PAL">PAL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PPL">PPL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/BMP">BMP</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PBA">PBA</a></li>
+        </ul>
+		</div>
+		<div class="col-6">
+		<h3>Field & Stream: Trophy Bass 3D - 1999</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PAL">PAL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PPL">PPL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/BMP">BMP</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PBA">PBA</a></li>
+        </ul>
+		</div>
+</div>
 
-### Driver's Education '98 - 1998
-
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML)
-* [PAL](https://github.com/3space-studio/3space-studio/wiki/PAL)
-* [PPL](https://github.com/3space-studio/3space-studio/wiki/PPL)
-* [BMP](https://github.com/3space-studio/3space-studio/wiki/BMP)
-* [PBA](https://github.com/3space-studio/3space-studio/wiki/PBA)
-
-### Starsiege - 1999
-
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML)
-* [PAL](https://github.com/3space-studio/3space-studio/wiki/PAL)
-* [PPL](https://github.com/3space-studio/3space-studio/wiki/PPL)
-* [BMP](https://github.com/3space-studio/3space-studio/wiki/BMP)
-* [PBA](https://github.com/3space-studio/3space-studio/wiki/PBA)
-* [CS](https://github.com/3space-studio/3space-studio/wiki/CS) (partial grammar implemented)
-
-### Starsiege: Tribes - 1999
-
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML)
-* [PAL](https://github.com/3space-studio/3space-studio/wiki/PAL)
-* [PPL](https://github.com/3space-studio/3space-studio/wiki/PPL)
-* [BMP](https://github.com/3space-studio/3space-studio/wiki/BMP)
-* [PBA](https://github.com/3space-studio/3space-studio/wiki/PBA)
-* [CS](https://github.com/3space-studio/3space-studio/wiki/CS) (partial grammar implemented)
-
-### Desert Fighters - 1999
-
-No support. 
-
-### Driver's Education '99 - 1999
-
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML)
-* [PAL](https://github.com/3space-studio/3space-studio/wiki/PAL)
-* [PPL](https://github.com/3space-studio/3space-studio/wiki/PPL)
-* [BMP](https://github.com/3space-studio/3space-studio/wiki/BMP)
-* [PBA](https://github.com/3space-studio/3space-studio/wiki/PBA)
-
-### Field & Stream: Trophy Bass 3D - 1999
-
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML)
-* [PAL](https://github.com/3space-studio/3space-studio/wiki/PAL)
-* [PPL](https://github.com/3space-studio/3space-studio/wiki/PPL)
-* [BMP](https://github.com/3space-studio/3space-studio/wiki/BMP)
-* [PBA](https://github.com/3space-studio/3space-studio/wiki/PBA)
-
-### Field & Stream: Trophy Bass 4 - 2000
-
-* [VOL](https://github.com/3space-studio/3space-studio/wiki/VOL)
-* [DTS](https://github.com/3space-studio/3space-studio/wiki/DTS)
-* [DML](https://github.com/3space-studio/3space-studio/wiki/DML)
-* [PAL](https://github.com/3space-studio/3space-studio/wiki/PAL)
-* [PPL](https://github.com/3space-studio/3space-studio/wiki/PPL)
-* [BMP](https://github.com/3space-studio/3space-studio/wiki/BMP)
-* [PBA](https://github.com/3space-studio/3space-studio/wiki/PBA)
-
-
+<div class="row">
+		<div class="col-6">
+		<h3>Field & Stream: Trophy Bass 4 - 2000</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/VOL">VOL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DTS">DTS</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/DML">DML</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PAL">PAL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PPL">PPL</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/BMP">BMP</a></li>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/PBA">PBA</a></li>
+        </ul>
+		</div>
+</div>
 
 # Torque
 
@@ -370,19 +430,23 @@ No support.
 
 ## Games
 
-### Field & Stream: Trophy Hunting 4 - 2000
+<div class="row">
+		<div class="col-6">
+		<h3>Field & Stream: Trophy Hunting 4 - 2000</h3>
+        No support.
+		</div>
+		<div class="col-6">
+		<h3>Field & Stream: Trophy Hunting 5 - 2001</h3>
+        No support.
+		</div>
+</div>
 
-No support.
-
-### Field & Stream: Trophy Hunting 5 - 2001
-
-No support.
-
-### Tribes 2 - 2001
-
-No support.
-
-
+<div class="row">
+		<div class="col-6">
+		<h3>Tribes 2 - 2001</h3>
+        No support.
+		</div>
+</div>
 
 # Dynamix Game Development System
 
@@ -397,23 +461,35 @@ No support.
 
 ## Games
 
-### Rise of the Dragon - 1990
+<div class="row">
+		<div class="col-6">
+		<h3>Rise of the Dragon - 1990</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/RMF">RMF</a></li>
+        </ul>
+		</div>
+		<div class="col-6">
+		<h3>Heart of China - 1991</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/RMF">RMF</a></li>
+        </ul>
+		</div>
+</div>
 
-* [RMF](https://github.com/3space-studio/3space-studio/wiki/RMF)
-
-### Heart of China - 1991
-
-* [RMF](https://github.com/3space-studio/3space-studio/wiki/RMF)
-
-### The Adventures of Willy Beamish - 1991
-
-* [RMF](https://github.com/3space-studio/3space-studio/wiki/RMF)
-
-### Quarky & Quaysoo's Turbo Science - 1992
-
-* [RMF](https://github.com/3space-studio/3space-studio/wiki/RMF)
-
-
+<div class="row">
+		<div class="col-6">
+		<h3>The Adventures of Willy Beamish - 1991</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/RMF">RMF</a></li>
+        </ul>
+		</div>
+		<div class="col-6">
+		<h3>Quarky & Quaysoo's Turbo Science - 1992</h3>
+        <ul>
+          <li><a href="https://github.com/3space-studio/3space-studio/wiki/RMF">RMF</a></li>
+        </ul>
+		</div>
+</div>
 
 # Dynamix 2D/2.5D Game Engines
 
