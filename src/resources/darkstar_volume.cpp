@@ -72,11 +72,16 @@ namespace studio::resources::vol::darkstar
     endian::little_uint32_t file_list_size;
   };
 
-  struct old_footer
+  struct old_header
   {
     std::array<std::byte, 4> header_tag;
     endian::little_uint24_t header_size;
     std::byte padding;
+  };
+
+  struct old_footer
+  {
+    old_header header;
     std::array<std::byte, 4> string_header_tag;
     endian::little_uint24_t buffer_size;
     std::byte padding2;
@@ -140,7 +145,7 @@ namespace studio::resources::vol::darkstar
       output.write(block_tag.data(), block_tag.size());
       endian::little_uint24_t narrowed_size = file.compressed_size.has_value() ? file.compressed_size.value() : file.size;
       output.write(reinterpret_cast<std::byte*>(&narrowed_size), sizeof(narrowed_size));
-      std::byte tag = std::byte(0x80);
+      auto tag = std::byte(0x80);
       output.write(&tag, 1);
 
       std::copy_n(std::istreambuf_iterator<std::byte>(*file.stream),
@@ -230,6 +235,21 @@ namespace studio::resources::vol::darkstar
     {
       old_footer footer{};
       raw_data.read(reinterpret_cast<std::byte*>(&footer), sizeof(footer));
+
+      if (footer.header.header_size > 0)
+      {
+        raw_data.seekg(-sizeof(footer), std::ios::cur);
+        raw_data.read(reinterpret_cast<std::byte*>(&footer.header), sizeof(footer.header));
+        std::vector<std::byte> temp(footer.header.header_size);
+        raw_data.read(temp.data(), temp.size());
+
+        raw_data.read(reinterpret_cast<std::byte*>(&footer) + sizeof(footer.header), sizeof(footer) - sizeof(footer.header));
+      }
+
+      if (footer.string_header_tag != vol_string_tag)
+      {
+        throw std::invalid_argument("Volume file is not a Darkstar/Phoenix VOL file.");
+      }
 
       auto amount_to_skip = footer.buffer_size - sizeof(int32_t) - footer.file_list_size;
 
@@ -439,7 +459,7 @@ namespace studio::resources::vol::darkstar
           volume_filename = folder_path / (info.filename.filename().string() + ".vol");
           volume_stream->seekg(info.offset, std::ios::beg);
 
-          block_header block;
+          block_header block{};
           volume_stream->read(reinterpret_cast<std::byte*>(&block), sizeof(block));
 
           if (block.block_tag != block_tag)
