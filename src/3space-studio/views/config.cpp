@@ -26,9 +26,11 @@ namespace studio::views
     view_factory.add_file_type(content::dts::darkstar::is_darkstar_dts, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new darkstar_dts_view(info, stream, manager)); });
     view_factory.add_file_type(content::bmp::is_microsoft_bmp, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new bmp_view(info, stream, manager)); });
     view_factory.add_file_type(content::bmp::is_phoenix_bmp, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new bmp_view(info, stream, manager)); });
+    view_factory.add_file_type(content::bmp::is_earthsiege_bmp, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new bmp_view(info, stream, manager)); });
     view_factory.add_file_type(content::bmp::is_phoenix_bmp_array, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new bmp_view(info, stream, manager)); });
     view_factory.add_file_type(content::pal::is_microsoft_pal, [](auto&, auto& stream, auto&) { return std::unique_ptr<studio_view>(new pal_view(stream)); });
     view_factory.add_file_type(content::pal::is_phoenix_pal, [](auto&, auto& stream, auto&) { return std::unique_ptr<studio_view>(new pal_view(stream)); });
+    view_factory.add_file_type(content::pal::is_earthsiege_pal, [](auto&, auto& stream, auto&) { return std::unique_ptr<studio_view>(new pal_view(stream)); });
 
     view_factory.add_file_type(content::sfx::is_sfx_file, [](auto& info, auto& stream, auto& archive) { return std::unique_ptr<studio_view>(new sfx_view(info, stream, archive)); }, true);
 
@@ -48,6 +50,7 @@ namespace studio::views
     view_factory.add_extension(".dib", content::bmp::is_microsoft_bmp);
     view_factory.add_extension(".dib", content::bmp::is_phoenix_bmp);
     view_factory.add_extension(".pba", content::bmp::is_phoenix_bmp_array);
+    view_factory.add_extension(".dbm", content::bmp::is_earthsiege_bmp);
 
     view_factory.add_extension(".sfx", content::sfx::is_sfx_file);
 
@@ -57,6 +60,7 @@ namespace studio::views
     view_factory.add_extension(".pal", content::pal::is_phoenix_pal);
     view_factory.add_extension(".ipl", content::pal::is_phoenix_pal);
     view_factory.add_extension(".ppl", content::pal::is_phoenix_pal);
+    view_factory.add_extension(".dpl", content::pal::is_earthsiege_pal);
 
     view_factory.add_extension(".mis", dio::mis::darkstar::mis_file_archive::is_supported);
     view_factory.add_extension(".vol", dio::vol::darkstar::vol_file_archive::is_supported);
@@ -66,8 +70,7 @@ namespace studio::views
     view_factory.add_extension(".map", dio::vol::three_space::rmf_file_archive::is_supported);
     view_factory.add_extension(".vga", dio::vol::three_space::rmf_file_archive::is_supported);
 
-    // TODO fix issues with DYN extraction
-    //view_factory.add_extension(".dyn", dio::vol::three_space::dyn_file_archive::is_supported);
+    view_factory.add_extension(".dyn", dio::vol::three_space::dyn_file_archive::is_supported);
     view_factory.add_extension(".rbx", dio::vol::trophy_bass::rbx_file_archive::is_supported);
     view_factory.add_extension(".tbv", dio::vol::trophy_bass::tbv_file_archive::is_supported);
 

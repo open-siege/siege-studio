@@ -60,6 +60,25 @@ namespace studio::content::bmp
     std::vector<std::int32_t> indexes;
   };
 
+  struct dbm_header
+  {
+    std::array<std::byte, 4> tag;
+    endian::little_uint32_t file_size;
+    endian::little_uint16_t height;
+    endian::little_uint16_t width;
+    std::byte bit_depth;
+    std::byte unknown0;
+    std::byte unknown1;
+    endian::little_uint32_t image_size;
+    endian::little_uint16_t extra_data_size;
+  };
+
+  struct dbm_data
+  {
+    dbm_header header;
+    std::vector<std::byte> pixels;
+  };
+
   template<typename UnitType>
   inline void invert(std::vector<UnitType>& pixels)
   {
@@ -81,6 +100,10 @@ namespace studio::content::bmp
     invert(pixels);
     horizontal_flip(pixels, width);
   }
+
+  bool is_earthsiege_bmp(std::basic_istream<std::byte>& raw_data);
+
+  dbm_data read_earthsiege_bmp(std::basic_istream<std::byte>& raw_data);
 
   bool is_microsoft_bmp(std::basic_istream<std::byte>& raw_data);
 

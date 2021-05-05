@@ -61,8 +61,10 @@ namespace studio::content::pal
   std::int32_t write_pal_data(std::basic_ostream<std::byte>& raw_data, const std::vector<colour>& colours);
 
   bool is_phoenix_pal(std::basic_istream<std::byte>& raw_data);
-
   std::vector<palette> get_ppl_data(std::basic_istream<std::byte>& raw_data);
+
+  bool is_earthsiege_pal(std::basic_istream<std::byte>& raw_data);
+  std::vector<colour> get_earthsiege_pal(std::basic_istream<std::byte>& raw_data);
 }// namespace darkstar::pal
 
 #endif//DARKSTARDTSCONVERTER_PALETTE_HPP

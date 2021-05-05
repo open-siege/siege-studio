@@ -156,9 +156,9 @@ namespace studio::views
 
     std::vector<studio::resources::file_info> palettes;
 
-    palettes = manager.find_files(studio::resources::resource_explorer::get_archive_path(info.folder_path).parent_path(), { ".ppl", ".PPL", ".ipl", ".IPL", ".pal", ".PAL" });
+    palettes = manager.find_files(studio::resources::resource_explorer::get_archive_path(info.folder_path).parent_path(), { ".ppl", ".ipl", ".pal", ".dpl" });
 
-    auto all_palettes = manager.find_files({ ".ppl", ".ipl", ".pal" });
+    auto all_palettes = manager.find_files({ ".ppl", ".ipl", ".pal", ".dpl" });
 
     studio::resources::resource_explorer::merge_results(palettes, all_palettes);
 
@@ -167,7 +167,13 @@ namespace studio::views
       auto raw_palette = manager.load_file(palette_info);
       auto result = (std::filesystem::relative(palette_info.folder_path, manager.get_search_path()) / palette_info.filename).string();
 
-      if (content::pal::is_phoenix_pal(*raw_palette.second))
+      if (content::pal::is_earthsiege_pal(*raw_palette.second))
+      {
+        std::vector<content::pal::palette> temp;
+        temp.emplace_back().colours = content::pal::get_earthsiege_pal(*raw_palette.second);
+        loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, std::move(temp)));
+      }
+      else if (content::pal::is_phoenix_pal(*raw_palette.second))
       {
         loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, content::pal::get_ppl_data(*raw_palette.second)));
       }
@@ -204,6 +210,30 @@ namespace studio::views
       rect.height = windows_bmp.info.height;
 
       original_pixels.emplace_back(std::move(windows_bmp.indexes));
+    }
+    else if (content::bmp::is_earthsiege_bmp(image_stream))
+    {
+      std::vector<content::pal::palette> temp;
+      temp.emplace_back().colours = get_default_colours();
+      loaded_palettes.emplace(sort_order.emplace_back("Auto-generated"), std::make_pair(info, std::move(temp)));
+
+      auto es_bmp = content::bmp::read_earthsiege_bmp(image_stream);
+
+      bit_depth = int(es_bmp.header.bit_depth);
+
+      selection_state.selected_palette_index = selection_state.default_palette_index = 0;
+      selection_state.selected_palette_name = selection_state.default_palette_name = "Auto-generated";
+
+      create_image(loaded_image,
+                   es_bmp.header.width,
+                   es_bmp.header.height,
+                   es_bmp.pixels,
+                   loaded_palettes.at("Auto-generated").second.back().colours);
+
+      rect.width = es_bmp.header.width;
+      rect.height = es_bmp.header.height;
+
+      original_pixels.emplace_back(widen(es_bmp.pixels));
     }
     else
     {
