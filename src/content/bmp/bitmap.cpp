@@ -25,9 +25,39 @@ namespace studio::content::bmp
 
   constexpr file_tag palette_tag = shared::to_tag<4>({ 'P', 'i', 'D', 'X' });
 
+  constexpr file_tag dbm_tag = shared::to_tag<4>({ 0x0e, 0x00, 0x28, 0x00 });
+
   constexpr std::array<std::byte, 2> windows_bmp_tag = { std::byte{ 66 }, std::byte{ 77 } };// BM
 
   constexpr std::array<std::byte, 2> special_reserved_tag = { std::byte{ 0xF7 }, std::byte{ 0xF5 } };// for palettes
+
+  bool is_earthsiege_bmp(std::basic_istream<std::byte>& raw_data)
+  {
+    std::array<std::byte, 4> header{};
+    raw_data.read(header.data(), sizeof(header));
+
+    raw_data.seekg(-int(sizeof(header)), std::ios::cur);
+
+    return header == dbm_tag;
+  }
+
+  dbm_data read_earthsiege_bmp(std::basic_istream<std::byte>& raw_data)
+  {
+    dbm_data data{};
+    raw_data.read(reinterpret_cast<std::byte*>(&data.header), sizeof(data.header));
+    if (data.header.tag == dbm_tag)
+    {
+      auto total_size = int(data.header.width) * int(data.header.height) * (int(data.header.bit_depth)/ 8);
+
+      if (total_size == data.header.image_size)
+      {
+        data.pixels = std::vector<std::byte>(data.header.image_size);
+        raw_data.read(data.pixels.data(), data.pixels.size());
+      }
+    }
+
+    return data;
+  }
 
   bool is_microsoft_bmp(std::basic_istream<std::byte>& raw_data)
   {

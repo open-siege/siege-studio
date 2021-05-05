@@ -38,6 +38,11 @@ namespace studio::views
       auto colours = content::pal::get_pal_data(image_stream);
       generate_rectangles(colours);
     }
+    else if (content::pal::is_earthsiege_pal(image_stream))
+    {
+      auto colours = content::pal::get_earthsiege_pal(image_stream);
+      generate_rectangles(colours);
+    }
     else if (content::pal::is_phoenix_pal(image_stream))
     {
       auto palettes = content::pal::get_ppl_data(image_stream);

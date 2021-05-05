@@ -197,14 +197,14 @@ namespace studio::content::pal
     return header == dpl_tag;
   }
 
-  std::vector<colour> get_earthsiege_data(std::basic_istream<std::byte>& raw_data)
+  std::vector<colour> get_earthsiege_pal(std::basic_istream<std::byte>& raw_data)
   {
     std::array<std::byte, 4> header{};
     raw_data.read(header.data(), sizeof(header));
 
     if (header != dpl_tag)
     {
-      throw std::invalid_argument("File data is not PPL as expected.");
+      throw std::invalid_argument("File data is not DPL as expected.");
     }
 
     earthsiege_palette_header info{};
@@ -220,6 +220,15 @@ namespace studio::content::pal
 
     for (auto& colour : results)
     {
+      auto temp = int(colour.red) * 4;
+      colour.red = temp > 255 ? std::byte(255) : std::byte(temp);
+
+      temp = int(colour.green) * 4;
+      colour.green = temp > 255 ? std::byte(255) : std::byte(temp);
+
+      temp = int(colour.blue) * 4;
+      colour.blue = temp > 255 ? std::byte(255) : std::byte(temp);
+
       if (colour.flags == std::byte(0x01))
       {
         colour.flags = std::byte(0xFF);
