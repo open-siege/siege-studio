@@ -60,7 +60,16 @@ namespace studio::views
     int strategy = static_cast<int>(colour_strategy::remap);
     bool opened_folder = false;
     bool scale_changed = false;
-    bool is_phoenix_bitmap = false;
+
+    enum class bitmap_type
+    {
+      unknown,
+      microsoft,
+      earthsiege,
+      phoenix
+    };
+
+    bitmap_type image_type = bitmap_type::unknown;
     int bit_depth = 8;
     std::size_t num_unique_colours = 0;
 
