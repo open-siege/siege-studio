@@ -30,10 +30,11 @@ namespace studio
     std::vector<std::byte> raw_bytes;
   };
 
+  template <typename IntAlignmentType = std::int16_t>
   inline void skip_alignment_bytes(std::basic_istream<std::byte>& file, std::uint32_t base)
   {
     int offset = 0;
-    while ((base + offset) % 2 != 0)
+    while ((base + offset) % sizeof(IntAlignmentType) != 0)
     {
       offset++;
     }

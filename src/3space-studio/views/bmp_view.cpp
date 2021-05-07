@@ -55,17 +55,14 @@ namespace studio::views
     return default_colours;
   }
 
-  template<typename IndexType>
   void create_image(sf::Image& loaded_image,
-    int width,
-    int height,
-    const std::vector<IndexType>& indexes,
+    const bmp_view::image_data& data,
     const std::vector<std::array<std::byte, 3>>& colours)
   {
     std::vector<std::uint8_t> rendered_pixels;
-    rendered_pixels.reserve(width * height * sizeof(std::int32_t));
+    rendered_pixels.reserve(data.width * data.height * sizeof(std::int32_t));
 
-    if (indexes.empty())
+    if (data.pixels.empty())
     {
       for (auto colour : colours)
       {
@@ -77,7 +74,7 @@ namespace studio::views
     }
     else
     {
-      for (auto index : indexes)
+      for (auto index : data.pixels)
       {
         auto& colour = colours[static_cast<std::int32_t>(index)];
         rendered_pixels.emplace_back(int(colour[0]));
@@ -87,21 +84,18 @@ namespace studio::views
       }
     }
 
-    loaded_image.create(width, height, rendered_pixels.data());
+    loaded_image.create(data.width, data.height, rendered_pixels.data());
     loaded_image.flipVertically();
   }
 
-  template<typename IndexType>
   void create_image(sf::Image& loaded_image,
-    int width,
-    int height,
-    const std::vector<IndexType>& indexes,
+    const bmp_view::image_data& data,
     const std::vector<content::pal::colour>& colours)
   {
     std::vector<std::uint8_t> rendered_pixels;
-    rendered_pixels.reserve(width * height * sizeof(std::int32_t));
+    rendered_pixels.reserve(data.width * data.height * sizeof(std::int32_t));
 
-    if (indexes.empty())
+    if (data.pixels.empty())
     {
       for (auto colour : colours)
       {
@@ -113,7 +107,7 @@ namespace studio::views
     }
     else
     {
-      for (auto index : indexes)
+      for (auto index : data.pixels)
       {
         auto& colour = colours[static_cast<std::int32_t>(index)];
         rendered_pixels.emplace_back(int(colour.red));
@@ -123,7 +117,7 @@ namespace studio::views
       }
     }
 
-    loaded_image.create(width, height, rendered_pixels.data());
+    loaded_image.create(data.width, data.height, rendered_pixels.data());
     loaded_image.flipVertically();
   }
 
@@ -150,9 +144,6 @@ namespace studio::views
         scale_changed = true;
       }
     };
-
-
-    sf::IntRect rect;
 
     std::vector<studio::resources::file_info> palettes;
 
@@ -200,40 +191,37 @@ namespace studio::views
       selection_state.selected_palette_index = selection_state.default_palette_index = 0;
       selection_state.selected_palette_name = selection_state.default_palette_name = "Internal";
 
-      create_image(loaded_image,
-        windows_bmp.info.width,
-        windows_bmp.info.height,
-        windows_bmp.indexes,
-        pal.colours);
+      image_data temp_image{ windows_bmp.info.width, windows_bmp.info.height, std::move(windows_bmp.indexes) };
 
-      rect.width = windows_bmp.info.width;
-      rect.height = windows_bmp.info.height;
-
-      original_pixels.emplace_back(std::move(windows_bmp.indexes));
+      original_pixels.emplace_back(temp_image);
     }
-    else if (content::bmp::is_earthsiege_bmp(image_stream))
+    else if (content::bmp::is_earthsiege_bmp(image_stream) || content::bmp::is_earthsiege_bmp_array(image_stream))
     {
+      std::vector<studio::content::bmp::dbm_data> frames;
+
+      if (content::bmp::is_earthsiege_bmp(image_stream))
+      {
+        frames.emplace_back(content::bmp::read_earthsiege_bmp(image_stream));
+      }
+      else if (content::bmp::is_earthsiege_bmp_array(image_stream))
+      {
+        frames = content::bmp::read_earthsiege_bmp_array(image_stream);
+      }
+
       std::vector<content::pal::palette> temp;
       temp.emplace_back().colours = get_default_colours();
       loaded_palettes.emplace(sort_order.emplace_back("Auto-generated"), std::make_pair(info, std::move(temp)));
 
-      auto es_bmp = content::bmp::read_earthsiege_bmp(image_stream);
+      for (const auto& es_bmp : frames)
+      {
+        bit_depth = int(es_bmp.header.bit_depth);
 
-      bit_depth = int(es_bmp.header.bit_depth);
+        selection_state.selected_palette_index = selection_state.default_palette_index = 0;
+        selection_state.selected_palette_name = selection_state.default_palette_name = "Auto-generated";
 
-      selection_state.selected_palette_index = selection_state.default_palette_index = 0;
-      selection_state.selected_palette_name = selection_state.default_palette_name = "Auto-generated";
-
-      create_image(loaded_image,
-                   es_bmp.header.width,
-                   es_bmp.header.height,
-                   es_bmp.pixels,
-                   loaded_palettes.at("Auto-generated").second.back().colours);
-
-      rect.width = es_bmp.header.width;
-      rect.height = es_bmp.header.height;
-
-      original_pixels.emplace_back(widen(es_bmp.pixels));
+        image_data temp_image{ es_bmp.header.width, es_bmp.header.height, widen(es_bmp.pixels) };
+        original_pixels.emplace_back(temp_image);
+      }
     }
     else
     {
@@ -348,18 +336,10 @@ namespace studio::views
             selection_state.selected_palette_index = selection_state.default_palette_index = 0;
             selection_state.selected_palette_name = selection_state.default_palette_name = "Auto-generated";
           }
+          image_data temp_image{ phoenix_bmp.bmp_header.width, phoenix_bmp.bmp_header.height, widen(phoenix_bmp.pixels) };
 
-          create_image(loaded_image,
-            phoenix_bmp.bmp_header.width,
-            phoenix_bmp.bmp_header.height,
-            widen(phoenix_bmp.pixels),
-            loaded_palettes.at(selection_state.selected_palette_name).second.at(selection_state.selected_palette_index).colours);
-
-          rect.width = phoenix_bmp.bmp_header.width;
-          rect.height = phoenix_bmp.bmp_header.height;
+          original_pixels.emplace_back(temp_image);
         }
-
-        original_pixels.emplace_back(widen(phoenix_bmp.pixels));
       }
     }
 
@@ -369,10 +349,10 @@ namespace studio::views
 
     if (!original_pixels.empty())
     {
-      rect.top = 0;
-      rect.left = 0;
-
-      texture.loadFromImage(loaded_image, rect);
+      create_image(loaded_image,
+                   original_pixels.at(selection_state.selected_palette_index),
+                   loaded_palettes.at(selection_state.selected_palette_name).second.at(selection_state.selected_palette_index).colours);
+      texture.loadFromImage(loaded_image);
       sprite.setTexture(texture);
     }
   }
@@ -394,34 +374,37 @@ namespace studio::views
     return rows;
   }
 
-  void bmp_view::refresh_image()
+  void bmp_view::refresh_image(bool create_new_image)
   {
     const auto& [selected_palette_name, selected_palette_index, default_palette_name, default_palette_index, selected_bitmap_index] = selection_state;
 
     if (bit_depth > 8 && selected_palette_name == "Internal")
     {
-      auto [width, height] = loaded_image.getSize();
       create_image(loaded_image,
-        width,
-        height,
         original_pixels.at(selected_bitmap_index),
         loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
-      texture.update(loaded_image);
+
+      if (create_new_image)
+      {
+        texture.loadFromImage(loaded_image);
+      }
+      else
+      {
+        texture.update(loaded_image);
+      }
+
       return;
     }
 
     if (!original_pixels.empty())
     {
-      auto [width, height] = loaded_image.getSize();
       auto colour_strat = colour_strategy(strategy);
 
       if (colour_strat == colour_strategy::do_nothing)
       {
-        num_unique_colours = get_unique_colours(original_pixels.at(selected_bitmap_index));
+        num_unique_colours = get_unique_colours(original_pixels.at(selected_bitmap_index).pixels);
 
         create_image(loaded_image,
-          width,
-          height,
           original_pixels.at(selected_bitmap_index),
           loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
       }
@@ -429,10 +412,8 @@ namespace studio::views
       {
         auto existing_pixels = original_pixels.at(selected_bitmap_index);
 
-        if (existing_pixels.empty())
+        if (existing_pixels.pixels.empty())
         {
-          auto [width, height] = loaded_image.getSize();
-
           auto& colours = loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours;
 
           std::vector<std::array<std::byte, 3>> narrowed_colours;
@@ -448,59 +429,65 @@ namespace studio::views
 
           std::vector<std::array<std::byte, 3>> new_palette(palette.size(), std::array<std::byte, 3>{});
 
-          wxQuantize::DoQuantize(width, height, temp_rows(narrowed_colours, width, height).data(), temp_rows(new_indexes, width, height).data(), reinterpret_cast<std::uint8_t*>(new_palette.data()), new_palette.size());
+          auto width = existing_pixels.width;
+          auto height = existing_pixels.height;
 
+          wxQuantize::DoQuantize(width, height, temp_rows(narrowed_colours, width, height).data(), temp_rows(new_indexes, width, height).data(), reinterpret_cast<std::uint8_t*>(new_palette.data()), new_palette.size());
 
           std::vector<content::pal::colour> new_new_palette;
           new_new_palette.reserve(palette.size());
 
           std::transform(new_palette.begin(), new_palette.end(), std::back_inserter(new_new_palette), [](auto& colour) {
-            return content::pal::colour{ colour[0], colour[1], colour[2], std::byte{0xFF} };
+            return content::pal::colour{ colour[0], colour[1], colour[2], std::byte{ 0xFF } };
           });
 
-          new_indexes = content::bmp::remap_bitmap(new_indexes,
+          existing_pixels.pixels = widen(content::bmp::remap_bitmap(new_indexes,
             new_new_palette,
-            loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
+            loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours));
 
           num_unique_colours = get_unique_colours(new_indexes);
 
           create_image(loaded_image,
-            width,
-            height,
-            new_indexes,
+            existing_pixels,
             new_palette);
         }
         else
         {
-          auto new_indexes = content::bmp::remap_bitmap(existing_pixels,
+          existing_pixels.pixels = content::bmp::remap_bitmap(existing_pixels.pixels,
             loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
             loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
 
-          num_unique_colours = get_unique_colours(new_indexes);
+          num_unique_colours = get_unique_colours(existing_pixels.pixels);
 
           create_image(loaded_image,
-            width,
-            height,
-            new_indexes,
+            existing_pixels,
             loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
         }
       }
       else if (colour_strat == colour_strategy::remap_unique)
       {
-        auto new_pixels = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
+        auto image_data = original_pixels.at(selected_bitmap_index);
+
+        image_data.pixels = content::bmp::remap_bitmap(image_data.pixels,
           loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
           loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours,
           true);
 
-        num_unique_colours = get_unique_colours(new_pixels);
+        num_unique_colours = get_unique_colours(image_data.pixels);
+
         create_image(loaded_image,
-          width,
-          height,
-          new_pixels,
+          image_data,
           loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
       }
 
-      texture.update(loaded_image);
+      if (create_new_image)
+      {
+        texture.loadFromImage(loaded_image);
+      }
+      else
+      {
+        texture.update(loaded_image);
+      }
     }
   }
 
@@ -629,7 +616,7 @@ namespace studio::views
       ImGui::LabelText("", "Resolution: %ix%i", width, height);
       ImGui::LabelText("", "Bits per pixel: %i", bit_depth);
 
-      auto unique_colours = get_unique_colours(original_pixels.at(selected_bitmap_index));
+      auto unique_colours = get_unique_colours(original_pixels.at(selected_bitmap_index).pixels);
       ImGui::LabelText("", "Original number of unique colours: %llu", unique_colours);
 
       if (num_unique_colours == 0)
@@ -668,7 +655,7 @@ namespace studio::views
           std::basic_ofstream<std::byte> output(export_path / new_file_name, std::ios::binary);
 
           const auto& colours = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
-          auto pixels = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
+          auto pixels = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index).pixels,
             loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
             colours);
 
@@ -691,7 +678,7 @@ namespace studio::views
             std::ofstream output(export_path / new_file_name, std::ios::trunc);
 
             const auto& colours = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
-            auto indexes = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index),
+            auto indexes = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index).pixels,
               loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
               colours);
 
@@ -853,7 +840,7 @@ namespace studio::views
 
           if (ImGui::RadioButton(label.str().c_str(), &selected_bitmap_index, i))
           {
-            refresh_image();
+            refresh_image(true);
           }
           label.str("");
         }

@@ -12,6 +12,13 @@ namespace studio::views
   class bmp_view : public graphics_view
   {
   public:
+    struct image_data
+    {
+      int width;
+      int height;
+      std::vector<std::int32_t> pixels;
+    };
+
     bmp_view(const studio::resources::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::resources::resource_explorer&);
     std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks() override;
     void setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext) override;
@@ -36,7 +43,7 @@ namespace studio::views
       int selected_bitmap_index = 0;
     };
 
-    void refresh_image();
+    void refresh_image(bool create_new_image = false);
 
     template<typename IndexType>
     std::size_t get_unique_colours(const std::vector<IndexType>& pixels)
@@ -61,7 +68,7 @@ namespace studio::views
 
     float image_scale = 1;
 
-    std::vector<std::vector<std::int32_t>> original_pixels;
+    std::vector<image_data> original_pixels;
 
     sf::Image loaded_image;
     sf::Texture texture;
