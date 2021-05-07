@@ -179,6 +179,7 @@ namespace studio::views
 
     if (content::bmp::is_microsoft_bmp(image_stream))
     {
+      image_type = bitmap_type::microsoft;
       auto windows_bmp = content::bmp::get_bmp_data(image_stream);
 
       std::vector<content::pal::palette> temp;
@@ -197,6 +198,7 @@ namespace studio::views
     }
     else if (content::bmp::is_earthsiege_bmp(image_stream) || content::bmp::is_earthsiege_bmp_array(image_stream))
     {
+      image_type = bitmap_type::earthsiege;
       std::vector<studio::content::bmp::dbm_data> frames;
 
       if (content::bmp::is_earthsiege_bmp(image_stream))
@@ -225,7 +227,7 @@ namespace studio::views
     }
     else
     {
-      is_phoenix_bitmap = true;
+      image_type = bitmap_type::phoenix;
       std::vector<content::bmp::pbmp_data> frames;
 
       if (content::bmp::is_phoenix_bmp(image_stream))
@@ -612,7 +614,22 @@ namespace studio::views
 
       ImGui::Begin("File Info");
       auto [width, height] = loaded_image.getSize();
-      ImGui::LabelText("", "File type: %s", is_phoenix_bitmap ? "Phoenix Bitmap" : "Microsoft Bitmap");
+
+      if (image_type == bitmap_type::microsoft)
+      {
+        ImGui::LabelText("", "File type: %s", "Microsoft Bitmap");
+      }
+
+      if (image_type == bitmap_type::earthsiege)
+      {
+        ImGui::LabelText("", "File type: %s", "Earthsiege Bitmap");
+      }
+
+      if (image_type == bitmap_type::phoenix)
+      {
+        ImGui::LabelText("", "File type: %s", "Phoenix Bitmap");
+      }
+
       ImGui::LabelText("", "Resolution: %ix%i", width, height);
       ImGui::LabelText("", "Bits per pixel: %i", bit_depth);
 
@@ -648,7 +665,7 @@ namespace studio::views
         ImGui::SameLine();
         ImGui::Text("%s", export_path.string().c_str());
 
-        if (is_phoenix_bitmap && ImGui::Button("Export to Regular BMP"))
+        if (image_type != bitmap_type::microsoft && ImGui::Button("Export to Regular BMP"))
         {
           auto new_file_name = info.filename.replace_extension(".bmp");
           std::filesystem::create_directories(export_path);

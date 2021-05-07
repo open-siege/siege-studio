@@ -53,6 +53,13 @@ namespace studio::views
     view_factory.add_extension(".pba", content::bmp::is_phoenix_bmp_array);
     view_factory.add_extension(".dbm", content::bmp::is_earthsiege_bmp);
     view_factory.add_extension(".dba", content::bmp::is_earthsiege_bmp_array);
+    view_factory.add_extension(".db0", content::bmp::is_earthsiege_bmp_array);
+    view_factory.add_extension(".db1", content::bmp::is_earthsiege_bmp_array);
+    view_factory.add_extension(".db2", content::bmp::is_earthsiege_bmp_array);
+    view_factory.add_extension(".hba", content::bmp::is_earthsiege_bmp_array);
+    view_factory.add_extension(".hb0", content::bmp::is_earthsiege_bmp_array);
+    view_factory.add_extension(".hb1", content::bmp::is_earthsiege_bmp_array);
+    view_factory.add_extension(".hb2", content::bmp::is_earthsiege_bmp_array);
 
     view_factory.add_extension(".sfx", content::sfx::is_sfx_file);
 
