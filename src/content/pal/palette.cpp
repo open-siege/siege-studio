@@ -12,6 +12,8 @@ namespace studio::content::pal
 
   constexpr file_tag dpl_tag = shared::to_tag<4>({ 0x0f, 0x00, 0x28, 0x00 });
 
+  constexpr file_tag dpl_tag2 = shared::to_tag<4>({ 0x02, 0x00, 0x28, 0x00 });
+
 
   struct palette_header
   {
@@ -194,7 +196,7 @@ namespace studio::content::pal
     raw_data.read(header.data(), sizeof(header));
     raw_data.seekg(-int(sizeof(header)), std::ios::cur);
 
-    return header == dpl_tag;
+    return header == dpl_tag || header == dpl_tag2;
   }
 
   std::vector<colour> get_earthsiege_pal(std::basic_istream<std::byte>& raw_data)
@@ -202,7 +204,7 @@ namespace studio::content::pal
     std::array<std::byte, 4> header{};
     raw_data.read(header.data(), sizeof(header));
 
-    if (header != dpl_tag)
+    if (!(header == dpl_tag || header == dpl_tag2))
     {
       throw std::invalid_argument("File data is not DPL as expected.");
     }
