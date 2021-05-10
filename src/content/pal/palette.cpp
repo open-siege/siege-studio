@@ -1,4 +1,5 @@
 #include "palette.hpp"
+#include <optional>
 
 namespace studio::content::pal
 {
@@ -13,6 +14,11 @@ namespace studio::content::pal
   constexpr file_tag dpl_tag = shared::to_tag<4>({ 0x0f, 0x00, 0x28, 0x00 });
 
   constexpr file_tag dpl_tag2 = shared::to_tag<4>({ 0x02, 0x00, 0x28, 0x00 });
+
+  constexpr file_tag old_pal_tag = shared::to_tag<4>({ 'P', 'A', 'L', ':' });
+  constexpr file_tag vga_tag = shared::to_tag<4>({ 'V', 'G', 'A', ':' });
+  constexpr file_tag cga_tag = shared::to_tag<4>({ 'C', 'G', 'A', ':' });
+  constexpr file_tag ega_tag = shared::to_tag<4>({ 'E', 'G', 'A', ':' });
 
 
   struct palette_header
@@ -42,6 +48,117 @@ namespace studio::content::pal
     endian::little_uint32_t index;
     endian::little_uint32_t type;
   };
+
+  auto expand(std::byte colour)
+  {
+    auto temp = int(colour) * 4;
+    return temp > 255 ? std::byte(255) : std::byte(temp);
+  }
+
+  bool is_old_pal(std::basic_istream<std::byte>& raw_data)
+  {
+    std::array<std::byte, 4> header{};
+
+    raw_data.read(header.data(), sizeof(header));
+    raw_data.seekg(-int(sizeof(header)), std::ios::cur);
+
+    return header == old_pal_tag;
+  }
+
+  void get_old_pal_data(std::basic_istream<std::byte>& raw_data,
+    std::vector<old_palette>& results,
+    std::optional<std::array<std::byte, 4>> header = std::nullopt)
+  {
+    endian::little_uint24_t file_size{};
+
+    if (!header.has_value())
+    {
+      std::array<std::byte, 4> temp;
+      raw_data.read(temp.data(), sizeof(temp));
+      header.emplace(temp);
+    }
+
+    if (results.empty() && header != old_pal_tag)
+    {
+      throw std::invalid_argument("PAL file not valid.");
+    }
+    else if (header != old_pal_tag)
+    {
+      return;
+    }
+
+    raw_data.read(reinterpret_cast<std::byte*>(&file_size), sizeof(file_size));
+    raw_data.seekg(sizeof(std::byte), std::ios::cur);
+
+    endian::little_uint32_t block_size{};
+
+    for (auto i = 0u; i < file_size; i += block_size + sizeof(std::array<std::byte, 4>) + sizeof(block_size))
+    {
+      std::array<std::byte, 4> block;
+      raw_data.read(block.data(), sizeof(block));
+
+      if (block == vga_tag)
+      {
+        raw_data.read(reinterpret_cast<std::byte*>(&block_size), sizeof(block_size));
+
+        auto item_count = block_size / sizeof(std::array<std::byte, 3>);
+        std::vector<std::array<std::byte, 3>> colours(item_count);
+
+        raw_data.read(reinterpret_cast<std::byte*>(colours.data()), item_count * sizeof(std::array<std::byte, 3>));
+
+        auto& palette = results.emplace_back(old_palette{});
+        palette.type = palette_type::vga;
+        palette.colours.reserve(colours.size());
+
+        for (auto& value : colours)
+        {
+          palette.colours.emplace_back(colour{ expand(value[0]), expand(value[1]), expand(value[2]), std::byte(0xFF) });
+        }
+      }
+      else if (block == cga_tag)
+      {
+        raw_data.read(reinterpret_cast<std::byte*>(&block_size), sizeof(block_size));
+
+        auto item_count = block_size / sizeof(std::array<std::byte, 16>);
+        std::vector<std::array<std::byte, 16>> colours(item_count);
+
+        raw_data.read(reinterpret_cast<std::byte*>(colours.data()), item_count * sizeof(std::array<std::byte, 16>));
+
+        std::uint16_t unknown;
+        raw_data.read(reinterpret_cast<std::byte*>(&unknown), sizeof(unknown));
+      }
+      else if (block == ega_tag)
+      {
+        raw_data.read(reinterpret_cast<std::byte*>(&block_size), sizeof(block_size));
+        std::vector<std::byte> data(block_size);
+        raw_data.read(data.data(), block_size);
+      }
+      else
+      {
+        block_size = header.value().size();
+      }
+    }
+  }
+
+  std::vector<old_palette> get_old_pal_data(std::basic_istream<std::byte>& raw_data)
+  {
+    std::vector<old_palette> results;
+    get_old_pal_data(raw_data, results);
+
+    std::array<std::byte, 4> header;
+    do
+    {
+      raw_data.read(header.data(), sizeof(header));
+
+      if (header == old_pal_tag)
+      {
+        get_old_pal_data(raw_data, results, header);
+      }
+    }
+    while (header == old_pal_tag);
+
+    return results;
+  }
 
   bool is_microsoft_pal(std::basic_istream<std::byte>& raw_data)
   {
@@ -222,14 +339,9 @@ namespace studio::content::pal
 
     for (auto& colour : results)
     {
-      auto temp = int(colour.red) * 4;
-      colour.red = temp > 255 ? std::byte(255) : std::byte(temp);
-
-      temp = int(colour.green) * 4;
-      colour.green = temp > 255 ? std::byte(255) : std::byte(temp);
-
-      temp = int(colour.blue) * 4;
-      colour.blue = temp > 255 ? std::byte(255) : std::byte(temp);
+      colour.red = expand(colour.red);
+      colour.green = expand(colour.green);
+      colour.blue = expand(colour.blue);
 
       if (colour.flags == std::byte(0x01))
       {

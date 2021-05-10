@@ -14,6 +14,14 @@ namespace studio::content::pal
   namespace endian = boost::endian;
   using file_tag = std::array<std::byte, 4>;
 
+  enum class palette_type
+  {
+    unknown,
+    cga,
+    ega,
+    vga
+  };
+
   struct colour
   {
     KEYS_CONSTEXPR static auto keys = shared::make_keys({ "r", "g", "b", "a" });
@@ -22,6 +30,12 @@ namespace studio::content::pal
     std::byte green;
     std::byte blue;
     std::byte flags;
+  };
+
+  struct old_palette
+  {
+    palette_type type;
+    std::vector<colour> colours;
   };
 
   inline bool operator==(const colour& left, const colour& right)
@@ -55,6 +69,8 @@ namespace studio::content::pal
     endian::little_uint32_t type;
   };
 
+  bool is_old_pal(std::basic_istream<std::byte>& raw_data);
+  std::vector<old_palette> get_old_pal_data(std::basic_istream<std::byte>& raw_data);
 
   bool is_microsoft_pal(std::basic_istream<std::byte>& raw_data);
   std::vector<colour> get_pal_data(std::basic_istream<std::byte>& raw_data);
