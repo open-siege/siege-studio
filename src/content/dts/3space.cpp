@@ -392,7 +392,7 @@ namespace studio::content::dts::three_space
 
       const auto total_materials = shape.material_count * shape.detail_count;
 
-      for (auto i = 0; i < total_materials; ++i)
+      for (auto i = 0u; i < total_materials; ++i)
       {
         object_header child_header;
         file.read(reinterpret_cast<std::byte*>(&child_header), sizeof(child_header));
