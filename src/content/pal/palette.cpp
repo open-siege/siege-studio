@@ -148,14 +148,14 @@ namespace studio::content::pal
     std::array<std::byte, 4> header;
     do
     {
+      header = std::array<std::byte, 4>{ std::byte(0x00) };
       raw_data.read(header.data(), sizeof(header));
 
       if (header == old_pal_tag)
       {
         get_old_pal_data(raw_data, results, header);
       }
-    }
-    while (header == old_pal_tag);
+    } while (header == old_pal_tag);
 
     return results;
   }
@@ -294,13 +294,13 @@ namespace studio::content::pal
     std::vector<palette> results;
     results.reserve(temp.size());
 
-    std::transform(temp.begin(), temp.end(), std::back_inserter(results), [&] (const auto& temp_pal){
-           palette new_pal{};
-           new_pal.colours = std::vector(temp_pal.colours.begin(), temp_pal.colours.end());
-           new_pal.index = temp_pal.index;
-           new_pal.type = temp_pal.type;
+    std::transform(temp.begin(), temp.end(), std::back_inserter(results), [&](const auto& temp_pal) {
+      palette new_pal{};
+      new_pal.colours = std::vector(temp_pal.colours.begin(), temp_pal.colours.end());
+      new_pal.index = temp_pal.index;
+      new_pal.type = temp_pal.type;
 
-           return new_pal;
+      return new_pal;
     });
 
     return results;
@@ -355,4 +355,4 @@ namespace studio::content::pal
 
     return results;
   }
-}
+}// namespace studio::content::pal
