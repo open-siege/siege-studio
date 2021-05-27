@@ -95,6 +95,13 @@ namespace studio::shared
     return result;
   }
 
+  inline std::string to_upper(std::string_view some_string)
+  {
+    std::string result(some_string);
+    std::transform(result.begin(), result.end(), result.begin(), [&](auto c) { return std::toupper(c, std::locale()); });
+    return result;
+  }
+
   inline bool ends_with(std::string_view value, std::string_view ending)
   {
     if (ending.size() > value.size())
