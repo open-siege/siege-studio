@@ -28,6 +28,8 @@ namespace studio::content::bmp
 
   constexpr file_tag dbm_tag = shared::to_tag<4>({ 0x0e, 0x00, 0x28, 0x00 });
 
+  constexpr file_tag dci_tag = shared::to_tag<4>({ 0x0b, 0x00, 0x28, 0x00 });
+
   constexpr file_tag dba_tag = shared::to_tag<4>({ 0x01, 0x00, 0x28, 0x00 });
 
   constexpr std::array<std::byte, 2> windows_bmp_tag = { std::byte{ 66 }, std::byte{ 77 } };// BM
@@ -42,6 +44,16 @@ namespace studio::content::bmp
     raw_data.seekg(-int(sizeof(header)), std::ios::cur);
 
     return header == dbm_tag;
+  }
+
+  bool is_earthsiege_curose(std::basic_istream<std::byte>& raw_data)
+  {
+    std::array<std::byte, 4> header{};
+    raw_data.read(header.data(), sizeof(header));
+
+    raw_data.seekg(-int(sizeof(header)), std::ios::cur);
+
+    return header == dci_tag;
   }
 
   bool is_earthsiege_bmp_array(std::basic_istream<std::byte>& raw_data)
@@ -73,6 +85,25 @@ namespace studio::content::bmp
     }
 
     return data;
+  }
+
+  dbm_data read_earthsiege_cursor(std::basic_istream<std::byte>& raw_data)
+  {
+    std::array<std::byte, 4> file_header{};
+
+    raw_data.read(file_header.data(), sizeof(file_header));
+
+    if (file_header != dci_tag)
+    {
+      throw std::invalid_argument("File data is not DCI based at offset " + std::to_string(int(raw_data.tellg()) - sizeof(file_header)));
+    }
+    endian::little_uint32_t file_size{};
+    raw_data.read(reinterpret_cast<std::byte*>(&file_size), sizeof(file_size));
+
+    std::array<endian::little_uint32_t, 2> unknown{};
+    raw_data.read(reinterpret_cast<std::byte*>(unknown.data()), sizeof(unknown));
+
+    return read_earthsiege_bmp(raw_data);
   }
 
   std::vector<dbm_data> read_earthsiege_bmp_array(std::basic_istream<std::byte>& raw_data)
