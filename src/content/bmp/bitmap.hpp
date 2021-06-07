@@ -110,9 +110,13 @@ namespace studio::content::bmp
 
   bool is_earthsiege_bmp(std::basic_istream<std::byte>& raw_data);
 
+  bool is_earthsiege_cursor(std::basic_istream<std::byte>& raw_data);
+
   bool is_earthsiege_bmp_array(std::basic_istream<std::byte>& raw_data);
 
   dbm_data read_earthsiege_bmp(std::basic_istream<std::byte>& raw_data);
+
+  dbm_data read_earthsiege_cursor(std::basic_istream<std::byte>& raw_data);
 
   std::vector<dbm_data> read_earthsiege_bmp_array(std::basic_istream<std::byte>& raw_data);
 
