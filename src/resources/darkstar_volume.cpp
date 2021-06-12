@@ -238,7 +238,7 @@ namespace studio::resources::vol::darkstar
 
       if (footer.header.header_size > 0)
       {
-        raw_data.seekg(-sizeof(footer), std::ios::cur);
+        raw_data.seekg(-int(sizeof(footer)), std::ios::cur);
         raw_data.read(reinterpret_cast<std::byte*>(&footer.header), sizeof(footer.header));
         std::vector<std::byte> temp(footer.header.header_size);
         raw_data.read(temp.data(), temp.size());
@@ -470,7 +470,7 @@ namespace studio::resources::vol::darkstar
           std::vector<volume_file_info> files;
           volume_file_info temp_info{};
           temp_info.filename = info.filename.filename().string();
-          temp_info.size = info.size;
+          temp_info.size = std::int32_t(info.size);
           temp_info.compressed_size = block.block_size;
           temp_info.compression_type = darkstar::compression_type(info.compression_type);
           temp_info.stream = std::move(volume_stream);
