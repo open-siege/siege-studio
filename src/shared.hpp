@@ -6,18 +6,98 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <variant>
+#include <optional>
 #include <filesystem>
 
 namespace studio::shared
 {
   namespace fs = std::filesystem;
 
+
+  // A big thanks to https://stackoverflow.com/questions/56246573/how-to-copy-an-element-of-stdvariant-to-a-variable-of-another-variant-type
+  template<typename MainType>
+  struct Exactly
+  {
+    template<typename OtherType,
+      std::enable_if_t<std::is_same_v<MainType, OtherType>, int> = 0>
+    explicit operator OtherType() const {}
+  };
+
+  template<typename To, typename From>
+  bool can_variant_cast(From&& from)
+  {
+    return std::visit([](auto&& elem) -> bool {
+      using ElemType = std::decay_t<decltype(elem)>;
+      if constexpr (std::is_constructible_v<To, Exactly<ElemType>>)
+      {
+        return true;
+      }
+      else
+      {
+        return false;
+      }
+    },
+      std::forward<From>(from));
+  }
+
+  template<typename To, typename From>
+  To variant_cast_def(From&& from)
+  {
+    return std::visit([](auto&& elem) -> To {
+      using ElemType = std::decay_t<decltype(elem)>;
+      if constexpr (std::is_constructible_v<To, Exactly<ElemType>>)
+      {
+        return To(std::forward<decltype(elem)>(elem));
+      }
+      else
+      {
+        return To();
+      }
+    },
+      std::forward<From>(from));
+  }
+
+
+  template<typename To, typename From>
+  std::optional<To> variant_cast_opt(From&& from)
+  {
+    return std::visit([](auto&& elem) -> std::optional<To> {
+      using ElemType = std::decay_t<decltype(elem)>;
+      if constexpr (std::is_constructible_v<To, Exactly<ElemType>>)
+      {
+        return To(std::forward<decltype(elem)>(elem));
+      }
+      else
+      {
+        return std::nullopt;
+      }
+    },
+      std::forward<From>(from));
+  }
+
+  template<typename To, typename From>
+  std::vector<To> transform_variants(const std::vector<From>& items)
+  {
+    std::vector<To> new_items;
+    new_items.reserve(items.size());
+    for (auto& item : items)
+    {
+      if (studio::shared::can_variant_cast<To>(item))
+      {
+        new_items.emplace_back(studio::shared::variant_cast_def<To>(item));
+      }
+    }
+
+    return new_items;
+  }
+
   // I wish this wasn't needed. But the constexpr issue with 14.28/19.28 still exists:
   // https://developercommunity2.visualstudio.com/t/internal-compiler-error-with-constexpr-code/1325445?from=email
   // Couldn't get msys2 to work because inside the conan build, deep down, pacman fails after 10 seconds of downloading, and the fix for it is to apply a specific command line parameters.
   // But, finding which package to fix/report on is more work than I have time for on a dark Sunday morning.
 #if _MSC_VER >= 1928
-  #define KEYS_CONSTEXPR inline
+#define KEYS_CONSTEXPR inline
   template<std::size_t Size>
   std::array<const char*, Size> make_keys(const char*(&&keys)[Size])
   {
@@ -55,7 +135,7 @@ namespace studio::shared
     return result;
   }
 
-  template <std::size_t Count>
+  template<std::size_t Count>
   constexpr std::array<std::byte, Count> to_tag(const char* values)
   {
     std::array<std::byte, Count> result{};
@@ -68,7 +148,7 @@ namespace studio::shared
     return result;
   }
 
-  template <std::size_t Count>
+  template<std::size_t Count>
   constexpr std::array<std::byte, Count> to_tag(const std::array<std::uint8_t, Count> values)
   {
     std::array<std::byte, Count> result{};
@@ -186,6 +266,6 @@ namespace studio::shared
 
     return files;
   }
-}// namespace darkstar::dts::shared
+}// namespace studio::shared
 
 #endif//DARKSTARDTSCONVERTER_SHARED_HPP
