@@ -2,7 +2,8 @@
 
 namespace studio::content::fnt
 {
-  constexpr file_tag pft_tag = shared::to_tag<4>({ 'P', 'F', 'O', 'N' });
+  namespace endian = boost::endian;
+  constexpr auto pft_tag = shared::to_tag<4>({ 'P', 'F', 'O', 'N' });
 
   struct phoenix_font_header
   {
@@ -44,7 +45,7 @@ namespace studio::content::fnt
     endian::little_uint32_t file_size{};
     endian::little_uint32_t version{};
 
-    raw_data.read(header.data(), sizeof(file_header));
+    raw_data.read(file_header.data(), sizeof(file_header));
     raw_data.read(reinterpret_cast<std::byte*>(&file_size), sizeof(file_size));
     raw_data.read(reinterpret_cast<std::byte*>(&version), sizeof(version));
 

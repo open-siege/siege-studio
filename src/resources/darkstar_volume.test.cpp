@@ -11,11 +11,11 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
   {
     std::basic_stringstream<std::byte> mem_buffer;
 
-    darkstar::volume_file_info_vector files;
+    std::vector<darkstar::volume_file_info> files;
     auto memory_file_info = new std::basic_stringstream<std::byte>();
 
     (*memory_file_info) << "Hello Darkness, my old friend...";
-    files.emplace_back(darkstar::volume_file_info{ "hello.txt", 32, darkstar::compression_type::none, std::unique_ptr<std::basic_istream<std::byte>>(memory_file_info) });
+    files.emplace_back(darkstar::volume_file_info{ "hello.txt", 32 , std::nullopt, darkstar::compression_type::none, std::unique_ptr<std::basic_istream<std::byte>>(memory_file_info) });
 
     darkstar::create_vol_file(mem_buffer, files);
 
@@ -81,11 +81,11 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
   {
     std::basic_stringstream<std::byte> mem_buffer;
 
-    darkstar::volume_file_info_vector files;
+    std::vector<darkstar::volume_file_info> files;
     auto memory_file_info = new std::basic_stringstream<std::byte>();
 
     (*memory_file_info) << "I've come to talk with you again..";
-    files.emplace_back(darkstar::volume_file_info{ "hello.txt", 34, darkstar::compression_type::none, std::unique_ptr<std::basic_istream<std::byte>>(memory_file_info) });
+    files.emplace_back(darkstar::volume_file_info{ "hello.txt", 34, std::nullopt, darkstar::compression_type::none, std::unique_ptr<std::basic_istream<std::byte>>(memory_file_info) });
 
     darkstar::create_vol_file(mem_buffer, files);
 
@@ -155,22 +155,22 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
   {
     std::basic_stringstream<std::byte> mem_buffer;
 
-    darkstar::volume_file_info_vector files;
+    std::vector<darkstar::volume_file_info> files;
     auto memory_file_info = new std::basic_stringstream<std::byte>();
 
     (*memory_file_info) << "Hello Darkness, my old friend...";
-    files.emplace_back(darkstar::volume_file_info{ "hello.txt", 32, darkstar::compression_type::none, std::unique_ptr<std::basic_istream<std::byte>>(memory_file_info) });
+    files.emplace_back(darkstar::volume_file_info{ "hello.txt", 32, std::nullopt, darkstar::compression_type::none, std::unique_ptr<std::basic_istream<std::byte>>(memory_file_info) });
 
     auto memory_file_info2 = new std::basic_stringstream<std::byte>();
 
     (*memory_file_info2) << "Hey, hey, hey";
-    files.emplace_back(darkstar::volume_file_info{ "test.txt", 13, darkstar::compression_type::lzh, std::unique_ptr<std::basic_istream<std::byte>>(memory_file_info2) });
+    files.emplace_back(darkstar::volume_file_info{ "test.txt", 13, std::nullopt, darkstar::compression_type::lzh, std::unique_ptr<std::basic_istream<std::byte>>(memory_file_info2) });
 
 
     auto memory_file_info3 = new std::basic_stringstream<std::byte>();
 
     (*memory_file_info3) << "Beep, beep, beep";
-    files.emplace_back(darkstar::volume_file_info{ "beep.txt", 16, darkstar::compression_type::none, std::unique_ptr<std::basic_istream<std::byte>>(memory_file_info3) });
+    files.emplace_back(darkstar::volume_file_info{ "beep.txt", 16, std::nullopt, darkstar::compression_type::none, std::unique_ptr<std::basic_istream<std::byte>>(memory_file_info3) });
 
     darkstar::create_vol_file(mem_buffer, files);
 
