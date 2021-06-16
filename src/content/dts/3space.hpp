@@ -174,12 +174,14 @@ namespace studio::content::dts::three_space
     {
       constexpr static auto type_name = "shape";
       constexpr static auto version = 1;
-      KEYS_CONSTEXPR static auto keys = shared::make_keys({ "base", "transformListCount", "sequenceListCount", "sequences", "transforms" });
+      KEYS_CONSTEXPR static auto keys = shared::make_keys({ "base", "transformListCount", "sequenceListCount", "sequences", "transforms", "extraParts" });
       part_list base;
       endian::little_uint16_t transform_list_count;
       endian::little_uint16_t sequence_list_count;
-      std::vector<endian::little_int32_t> sequence_list;
-      std::vector<endian::little_int32_t> transform_list;
+      std::vector<endian::little_int16_t> sequence_list;
+      std::vector<endian::little_int16_t> transform_list;
+
+      std::vector<shape_item> extra_parts;
     };
 
     struct detail_part
@@ -242,7 +244,7 @@ namespace studio::content::dts::three_space
       endian::little_int16_t frame_count;
       std::vector<frame> frames;
       endian::little_uint16_t part_list_count;
-      std::vector<shape_item> part_list;
+      std::vector<endian::little_uint16_t> part_list;
       std::vector<endian::little_uint16_t> transform_index_list;
     };
 
