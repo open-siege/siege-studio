@@ -205,7 +205,8 @@ namespace studio::content::dts::three_space
       file.read(reinterpret_cast<std::byte*>(shape.frames.data()), sizeof(an_sequence::frame) * shape.frame_count);
 
       file.read(reinterpret_cast<std::byte*>(&shape.part_list_count), sizeof(shape.part_list_count));
-      shape.part_list = shape.part_list = read_children<shape_item>(file, shape.part_list_count, readers);
+      shape.part_list = std::vector<endian::little_uint16_t>(shape.part_list_count);
+      file.read(reinterpret_cast<std::byte*>(shape.part_list.data()), sizeof(endian::little_uint16_t) * shape.part_list_count);
 
       auto transform_count = shape.frame_count * shape.part_list_count;
 
@@ -240,10 +241,6 @@ namespace studio::content::dts::three_space
       shape.transitions = std::vector<an_anim_list::transition>(shape.transition_count);
       file.read(reinterpret_cast<std::byte*>(shape.transitions.data()), sizeof(an_anim_list::transition) * shape.transition_count);
 
-      file.read(reinterpret_cast<std::byte*>(&shape.transition_count), sizeof(shape.transition_count));
-      shape.transitions = std::vector<an_anim_list::transition>(shape.transition_count);
-      file.read(reinterpret_cast<std::byte*>(shape.transitions.data()), sizeof(an_anim_list::transition) * shape.transition_count);
-
       file.read(reinterpret_cast<std::byte*>(&shape.transform_count), sizeof(shape.transform_count));
       shape.transforms = std::vector<an_anim_list::transform>(shape.transform_count);
       file.read(reinterpret_cast<std::byte*>(shape.transforms.data()), sizeof(an_anim_list::transform) * shape.transform_count);
@@ -261,8 +258,36 @@ namespace studio::content::dts::three_space
 
     shape read_shape(std::basic_istream<std::byte>& file, object_header& header, shape_reader_map& readers)
     {
+      auto start = std::size_t(file.tellg());
+      const auto end = start + header.object_size;
       shape shape{};
       shape.base = read_part_list(file, header, readers);
+
+      file.read(reinterpret_cast<std::byte*>(&shape.transform_list_count), sizeof(shape.transform_list_count));
+
+      file.read(reinterpret_cast<std::byte*>(&shape.sequence_list_count), sizeof(shape.sequence_list_count));
+      shape.sequence_list = std::vector<endian::little_int16_t>(shape.sequence_list_count);
+      file.read(reinterpret_cast<std::byte*>(shape.sequence_list.data()), sizeof(endian::little_int16_t) * shape.sequence_list_count);
+
+      shape.transform_list = std::vector<endian::little_int16_t>(shape.transform_list_count);
+      file.read(reinterpret_cast<std::byte*>(shape.transform_list.data()), sizeof(endian::little_int16_t) * shape.transform_list_count);
+
+      do
+      {
+        start = std::size_t(file.tellg());
+
+        if (start < end)
+        {
+          auto new_children = read_children<shape_item>(file, 1, readers);
+
+          if (new_children.empty())
+          {
+            break;
+          }
+
+          shape.extra_parts.emplace_back(new_children.back());
+        }
+      } while (start < end);
 
       return shape;
     }
