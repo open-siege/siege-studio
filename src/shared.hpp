@@ -21,7 +21,7 @@ namespace studio::shared
   {
     template<typename OtherType,
       std::enable_if_t<std::is_same_v<MainType, OtherType>, int> = 0>
-    explicit operator OtherType() const {}
+    operator OtherType() const;
   };
 
   template<typename To, typename From>
