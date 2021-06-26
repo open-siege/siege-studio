@@ -37,9 +37,14 @@ namespace studio::content::dts::three_space
     using shape_item = std::variant<raw_item, base_part, part_list, bsp_part, cell_anim_part, detail_part, bitmap_part, group, bsp_group, gouraud_poly,
       shaded_poly, solid_poly, texture_for_poly, poly, shape, an_sequence, an_cyclic_sequence, an_anim_list, an_shape>;
 
+    using actual_shape_item = std::variant<shape, an_shape>;
+
     using group_item = std::variant<group, bsp_group>;
 
     using poly_item = std::variant<poly, gouraud_poly, shaded_poly, solid_poly, texture_for_poly>;
+
+    // TODO update the anim list reading code to handle parsing these.
+    using sequence_item = std::variant<an_sequence, an_cyclic_sequence>;
 
     using shape_reader_map = tagged_item_map<shape_item>::tagged_item_reader_map;
 

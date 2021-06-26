@@ -18,6 +18,18 @@ overloaded(Ts...) -> overloaded<Ts...>;
 
 namespace studio::content::dts::darkstar
 {
+  struct node_instance
+  {
+    std::set<std::int32_t> object_indexes;
+    std::unordered_map<std::int32_t, node_instance> node_indexes;
+  };
+
+  struct instance_info
+  {
+    using transform = std::tuple<vector3f, quaternion4f, vector3f>;
+    std::pair<std::int32_t, node_instance> root_node;
+  };
+
   std::tuple<vector3f, quaternion4f, vector3f> get_translation(const shape::v2::transform& transform)
   {
     return std::make_tuple(transform.translation, to_float(transform.rotation), transform.scale);

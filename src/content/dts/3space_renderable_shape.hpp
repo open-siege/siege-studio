@@ -1,24 +1,15 @@
-#ifndef DARKSTARDTSCONVERTER_DTS_RENDER_HPP
-#define DARKSTARDTSCONVERTER_DTS_RENDER_HPP
+#ifndef INC_3SPACESTUDIO_3SPACE_RENDERABLE_SHAPE_HPP
+#define INC_3SPACESTUDIO_3SPACE_RENDERABLE_SHAPE_HPP
 
-#include <iterator>
-#include <algorithm>
-#include <utility>
-#include <optional>
-#include <map>
-#include <unordered_map>
-#include <set>
-#include <memory_resource>
-
+#include "3space.hpp"
 #include "content/renderable_shape.hpp"
-#include "darkstar_structures.hpp"
 
-namespace studio::content::dts::darkstar
+namespace studio::content::dts::three_space
 {
   class dts_renderable_shape : public renderable_shape
   {
   public:
-    dts_renderable_shape(shape_variant shape)
+    dts_renderable_shape(v1::shape_item shape)
       : shape(std::move(shape))
     {
     }
@@ -29,8 +20,8 @@ namespace studio::content::dts::darkstar
     void render_shape(shape_renderer& renderer, const std::vector<std::size_t>& detail_level_indexes, const std::vector<sequence_info>& sequences) const override;
 
   private:
-    shape_variant shape;
+    v1::shape_item shape;
   };
 }
 
-#endif//DARKSTARDTSCONVERTER_DTS_RENDER_HPP
+#endif//INC_3SPACESTUDIO_3SPACE_RENDERABLE_SHAPE_HPP

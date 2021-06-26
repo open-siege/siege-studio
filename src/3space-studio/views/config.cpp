@@ -4,6 +4,7 @@
 #include "pal_view.hpp"
 #include "vol_view.hpp"
 #include "sfx_view.hpp"
+#include "content/dts/3space.hpp"
 #include "content/mis/mission.hpp"
 #include "content/dts/darkstar.hpp"
 #include "content/bmp/bitmap.hpp"
@@ -24,6 +25,7 @@ namespace studio::views
   {
     view_factory view_factory;
     view_factory.add_file_type(content::dts::darkstar::is_darkstar_dts, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new darkstar_dts_view(info, stream, manager)); });
+    view_factory.add_file_type(content::dts::three_space::v1::is_3space_dts, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new darkstar_dts_view(info, stream, manager)); });
     view_factory.add_file_type(content::bmp::is_microsoft_bmp, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new bmp_view(info, stream, manager)); });
     view_factory.add_file_type(content::bmp::is_phoenix_bmp, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new bmp_view(info, stream, manager)); });
     view_factory.add_file_type(content::bmp::is_earthsiege_bmp, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new bmp_view(info, stream, manager)); });
@@ -46,6 +48,7 @@ namespace studio::views
     view_factory.add_file_type(dio::vol::trophy_bass::tbv_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
 
     view_factory.add_extension(".dts", content::dts::darkstar::is_darkstar_dts);
+    view_factory.add_extension(".dts", content::dts::three_space::v1::is_3space_dts);
 
     view_factory.add_extension(".bmp", content::bmp::is_microsoft_bmp);
     view_factory.add_extension(".bmp", content::bmp::is_phoenix_bmp);

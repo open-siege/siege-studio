@@ -1,8 +1,7 @@
 #include <execution>
 
 #include "darkstar_dts_view.hpp"
-#include "content/dts/darkstar.hpp"
-#include "content/dts/dts_renderable_shape.hpp"
+#include "content/dts/renderable_shape_factory.hpp"
 #include "gl_renderer.hpp"
 #include "sfml_keys.hpp"
 #include "3space-studio/utility.hpp"
@@ -12,18 +11,19 @@ namespace studio::views
 {
   std::filesystem::path darkstar_dts_view::export_path = std::filesystem::path();
 
-  content::dts::darkstar::shape_variant get_shape(std::basic_istream<std::byte>& shape_stream)
-  {
-    try
-    {
-      return content::dts::darkstar::read_shape(shape_stream, std::nullopt);
-    }
-    catch (const std::exception& ex)
-    {
-      wxMessageBox(ex.what(), "Error Loading Model.", wxICON_ERROR);
-      return content::dts::darkstar::shape_variant{};
-    }
-  }
+  // TODO see if this is still needed.
+  //  content::dts::darkstar::shape_variant get_shape(std::basic_istream<std::byte>& shape_stream)
+  //  {
+  //    try
+  //    {
+  //
+  //    }
+  //    catch (const std::exception& ex)
+  //    {
+  //      wxMessageBox(ex.what(), "Error Loading Model.", wxICON_ERROR);
+  //      return content::dts::darkstar::shape_variant{};
+  //    }
+  //  }
 
   void render_tree_view(const std::string& node, bool& node_visible, std::map<std::optional<std::string>, std::map<std::string, bool>>& visible_nodes, std::map<std::string, std::map<std::string, bool>>& visible_objects)
   {
@@ -62,7 +62,7 @@ namespace studio::views
       std::filesystem::create_directory(export_path);
     }
 
-    shape = std::make_unique<content::dts::darkstar::dts_renderable_shape>(get_shape(shape_stream));
+    shape = content::dts::make_shape(shape_stream);
     translation = { 0, 0, -20 };
     rotation = { 115, 180, -35 };
 
@@ -213,25 +213,22 @@ namespace studio::views
           auto archive_path = archive.get_archive_path(shape_info.folder_path);
           auto shape_stream = archive.load_file(shape_info);
 
-          if (content::dts::darkstar::is_darkstar_dts(*shape_stream.second))
+          auto real_shape = content::dts::make_shape(*shape_stream.second);
+
+          auto local_detail_levels = real_shape->get_detail_levels();
+
+          for (auto i = 0u; i < local_detail_levels.size(); ++i)
           {
-            auto real_shape = content::dts::darkstar::dts_renderable_shape(get_shape(*shape_stream.second));
+            auto new_file_name = shape_info.filename.stem().string() + "-" + local_detail_levels[i] + ".obj";
 
-            auto local_detail_levels = real_shape.get_detail_levels();
+            std::filesystem::create_directory(export_path);
+            std::ofstream output(export_path / new_file_name, std::ios::trunc);
+            auto renderer = content::obj_renderer{ output };
 
-            for (auto i = 0u; i < local_detail_levels.size(); ++i)
-            {
-              auto new_file_name = shape_info.filename.stem().string() + "-" + local_detail_levels[i] + ".obj";
+            std::vector<std::size_t> details{ i };
 
-              std::filesystem::create_directory(export_path);
-              std::ofstream output(export_path / new_file_name, std::ios::trunc);
-              auto renderer = content::obj_renderer{ output };
-
-              std::vector<std::size_t> details{ i };
-
-              auto local_sequences = real_shape.get_sequences(details);
-              real_shape.render_shape(renderer, details, local_sequences);
-            }
+            auto local_sequences = real_shape->get_sequences(details);
+            real_shape->render_shape(renderer, details, local_sequences);
           }
         });
       }
