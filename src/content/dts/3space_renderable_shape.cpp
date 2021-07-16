@@ -88,5 +88,64 @@ namespace studio::content::dts::three_space
   void dts_renderable_shape::render_shape(shape_renderer& renderer, const std::vector<std::size_t>& detail_level_indexes, const std::vector<sequence_info>& sequences) const
   {
 
+    v1::an_anim_list* item = nullptr;
+    std::map<std::int16_t, std::vector<std::int16_t>> nodes;
+
+    if (item->relations_count >= item->default_transform_count)
+    {
+      for (auto& relation : item->relations)
+      {
+        if (relation.parent < 0)
+        {
+          nodes.emplace(relation.destination, std::vector<std::int16_t>());
+        }
+
+        if (relation.parent > 0)
+        {
+          auto existing_item = nodes.find(relation.parent);
+
+          if (existing_item == nodes.end())
+          {
+            existing_item = nodes.emplace(relation.parent, std::vector<std::int16_t>()).first;
+          }
+
+          existing_item->second.emplace_back(relation.destination);
+        }
+      }
+    }
+
+    std::map<std::int16_t, std::vector<std::tuple<std::int32_t, std::int16_t, std::int16_t>>> animated_nodes;
+
+    for (const sequence_info& info : sequences)
+    {
+      if (info.enabled)
+      {
+        auto& seq = item->sequences.at(info.index);
+
+        auto i = 0u;
+        for (auto part : seq.part_list)
+        {
+          auto animated_node = animated_nodes.find(part);
+
+          if (animated_node == animated_nodes.end())
+          {
+            animated_node = animated_nodes.emplace(part, std::vector<std::tuple<std::int32_t, std::int16_t, std::int16_t>>()).first;
+          }
+
+          auto f = seq.frame_count;
+          for (auto x = 0u; x <= seq.transform_index_list.size(); x += seq.part_list_count + i)
+          {
+            animated_node->second.emplace_back(std::make_tuple(info.index, std::int16_t(seq.frame_count - f), seq.transform_index_list[x]));
+
+            f--;
+          }
+
+          i++;
+        }
+      }
+    }
+
+
+    std::map<std::int16_t, std::vector<std::int16_t>> node_frames;
   }
 }// namespace studio::content::dts::three_space
