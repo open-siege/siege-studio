@@ -1,5 +1,6 @@
 #include "3space_renderable_shape.hpp"
 #include "shared.hpp"
+#include <functional>
 
 template<class... Ts>
 struct overloaded : Ts...
@@ -147,5 +148,96 @@ namespace studio::content::dts::three_space
 
 
     std::map<std::int16_t, std::vector<std::int16_t>> node_frames;
+
+
+    auto real_shape = std::get<v1::shape>(shape);
+
+
+    //    std::vector<v1::group_item> groups = studio::shared::transform_variants<v1::group_item>(real_shape.base.parts);
+
+
+    const auto visit_poly = [](const v1::poly& real_poly, const v1::group& real_group) {
+      std::vector<int> face;
+      face.reserve(real_poly.vertex_count);
+
+      for (auto i = real_poly.vertex_list; i < real_poly.vertex_list + real_poly.vertex_count; ++i)
+      {
+        face.emplace_back(real_group.indexes.at(i));
+      }
+
+      return face;
+    };
+
+    const auto visit_group = [&](const v1::group& real_group) {
+      const std::vector<v1::poly_item> polys = studio::shared::transform_variants<v1::poly_item>(real_group.items);
+
+      std::vector<std::vector<int>> all_faces;
+
+      for (auto& poly : polys)
+      {
+        all_faces.emplace_back(std::visit(overloaded{
+                                            [&](const v1::poly& arg) { return visit_poly(arg, real_group); },
+                                            [&](const v1::solid_poly& arg) { return visit_poly(arg.base, real_group); },
+                                            [&](const v1::gouraud_poly& arg) { return visit_poly(arg.base.base, real_group); },
+                                            [&](const v1::shaded_poly& arg) { return visit_poly(arg.base.base, real_group); },
+                                            [&](const v1::texture_for_poly& arg) { return visit_poly(arg.base.base, real_group); },
+                                          },
+          poly));
+      }
+
+      return all_faces;
+    };
+
+    const auto visit_group_item = [&](const v1::group_item& child_item) {
+      return std::visit(overloaded{
+                          [&](const v1::group& arg) { return visit_group(arg); },
+                          [&](const v1::bsp_group& arg) { return visit_group(arg.base); } },
+        child_item);
+    };
+
+
+    std::vector<v1::part_list_item> group_parents = studio::shared::transform_variants<v1::part_list_item>(real_shape.base.parts);
+
+    // std::vector<v1::group_item> groups = studio::shared::transform_variants<v1::group_item>(real_shape.base.parts);
+
+    const auto get_groups = [](const v1::part_list_item& parent) {
+      return std::visit(overloaded{
+                          [&](const v1::shape& arg) { return studio::shared::transform_variants<v1::group_item>(arg.base.parts); },
+                          [&](const v1::an_shape& arg) { return studio::shared::transform_variants<v1::group_item>(arg.base.base.parts); },
+                          [&](const v1::part_list& arg) { return studio::shared::transform_variants<v1::group_item>(arg.parts); },
+                          [&](const v1::bsp_part& arg) { return studio::shared::transform_variants<v1::group_item>(arg.base.parts); },
+                          [&](const v1::cell_anim_part& arg) { return studio::shared::transform_variants<v1::group_item>(arg.base.parts); },
+                          [&](const v1::detail_part& arg) { return studio::shared::transform_variants<v1::group_item>(arg.base.parts); } },
+        parent);
+    };
+
+    const auto get_part_list_item = [](const v1::part_list_item& parent) {
+      return std::visit(overloaded{
+                          [&](const v1::shape& arg) { return studio::shared::transform_variants<v1::part_list_item>(arg.base.parts); },
+                          [&](const v1::an_shape& arg) { return studio::shared::transform_variants<v1::part_list_item>(arg.base.base.parts); },
+                          [&](const v1::part_list& arg) { return studio::shared::transform_variants<v1::part_list_item>(arg.parts); },
+                          [&](const v1::bsp_part& arg) { return studio::shared::transform_variants<v1::part_list_item>(arg.base.parts); },
+                          [&](const v1::cell_anim_part& arg) { return studio::shared::transform_variants<v1::part_list_item>(arg.base.parts); },
+                          [&](const v1::detail_part& arg) { return studio::shared::transform_variants<v1::part_list_item>(arg.base.parts); } },
+        parent);
+    };
+
+    const std::function<void(const v1::part_list_item&)> render_groups = [&](const v1::part_list_item& parent) {
+      const auto groups = get_groups(parent);
+
+      for (auto& group : groups)
+      {
+        const auto faces = visit_group_item(group);
+      }
+
+      const auto parents = get_part_list_item(parent);
+
+      for (auto& other : parents)
+      {
+        render_groups(other);
+      }
+    };
+
+    render_groups(real_shape);
   }
 }// namespace studio::content::dts::three_space
