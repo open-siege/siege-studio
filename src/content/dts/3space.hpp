@@ -43,6 +43,8 @@ namespace studio::content::dts::three_space
 
     using poly_item = std::variant<poly, gouraud_poly, shaded_poly, solid_poly, texture_for_poly>;
 
+    using part_list_item = std::variant<shape, an_shape, part_list, bsp_part, cell_anim_part, detail_part>;
+
     // TODO update the anim list reading code to handle parsing these.
     using sequence_item = std::variant<an_sequence, an_cyclic_sequence>;
 
