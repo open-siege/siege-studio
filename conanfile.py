@@ -7,7 +7,7 @@ from PIL import Image
 class LocalConanFile(ConanFile):
     name = "3space-studio"
     version = "0.5.1"
-    url = "https://github.com/StarsiegePlayers/3space-studio"
+    url = "https://github.com/3space-studio/3space-studio"
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
     system_requires = "opengl/system"
@@ -23,15 +23,11 @@ class LocalConanFile(ConanFile):
         self.options["boost"].bzip2 = False
         self.options["boost"].zlib = False
         self.options["boost"].numa = False
-        self.options["boost"].header_only = True
-        self.options["boost"].header_only = True
 
     def _configure_cmake(self):
-        self.source_folder = os.path.abspath(".")
-        self.build_folder = os.path.abspath("build")
         cmake = CMake(self)
 
-        cmake.configure()
+        cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         return cmake
 
     def build(self):
