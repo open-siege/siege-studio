@@ -1,0 +1,10 @@
+{
+  "packageRegistry": "https://packages.thesiegehub.com",
+  "numberOfConcurrentDownloads": 8,
+  "cacheDbLocation": "temp/package-cache.json",
+  "plugins": {
+    "postinstall": {
+      "rename": "plugins/postinstall/rename.py"
+    }
+  }
+}
