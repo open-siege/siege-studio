@@ -1,0 +1,14 @@
+{
+  "name": "starsiege-retail-1.0.0-0.en",
+  "version": "0.9.0",
+  "private": true,
+  "description": "Starsiege 1.0.0.0 English",
+  "main": "StarsiegeCD2.bat",
+  "dependencies": {
+        "starsiege-retail": "1.0.0-0.en",
+  		"starsiege-config-default-1080p": "latest",
+		"starsiege-compat-dxwnd": "latest",
+		"ssr-keymaps": "latest",
+		"ssr-master starsiege-server-crash-fix": "latest"
+	}
+}
