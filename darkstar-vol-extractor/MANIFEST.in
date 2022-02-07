@@ -1,0 +1,3 @@
+include *.py
+recursive-include *.py
+prune examples/sample?/build
