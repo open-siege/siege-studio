@@ -59,6 +59,14 @@ namespace studio::content
 
   static_assert(sizeof(vector3f) == sizeof(std::array<float, 3>));
 
+  struct vector3s
+  {
+    KEYS_CONSTEXPR static auto keys = shared::make_keys({ "x", "y", "z" });
+    endian::little_int16_t x;
+    endian::little_int16_t y;
+    endian::little_int16_t z;
+  };
+
   struct quaternion4s
   {
     KEYS_CONSTEXPR static auto keys = shared::make_keys({ "x", "y", "z", "w" });

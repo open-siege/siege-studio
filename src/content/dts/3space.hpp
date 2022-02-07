@@ -8,6 +8,7 @@
 #include "shared.hpp"
 #include "endian_arithmetic.hpp"
 #include "content/tagged_data.hpp"
+#include "content/3d_structures.hpp"
 
 namespace studio::content::dts::three_space
 {
@@ -52,14 +53,6 @@ namespace studio::content::dts::three_space
 
     bool is_3space_dts(std::basic_istream<std::byte>& stream);
     std::vector<shape_item> read_shapes(std::basic_istream<std::byte>& file);
-
-    struct vector3s
-    {
-      KEYS_CONSTEXPR static auto keys = shared::make_keys({ "x", "y", "z" });
-      endian::little_int16_t x;
-      endian::little_int16_t y;
-      endian::little_int16_t z;
-    };
 
     struct base_part
     {

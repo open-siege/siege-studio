@@ -18,8 +18,6 @@ namespace studio::content::dts::three_space
     static_assert(std::is_constructible_v<v1::actual_shape_item, shared::Exactly<v1::an_shape>> == true, "Could not create shape item from an shape");
     std::vector<sequence_info> results;
 
-    v1::shape* shape_ref = nullptr;
-
     auto shape_val = studio::shared::variant_cast_opt<v1::actual_shape_item>(shape);
 
     if (!shape_val.has_value())
@@ -27,12 +25,12 @@ namespace studio::content::dts::three_space
       return results;
     }
 
-    std::visit(overloaded{
-                 [&](v1::shape& arg) { shape_ref = &arg; },
-                 [&](v1::an_shape& arg) { shape_ref = &arg.base; } },
-      shape_val.value());
+    auto shape_ref = std::visit(overloaded{
+      [&](v1::shape& arg) { return std::cref(arg); },
+      [&](v1::an_shape& arg) { return std::cref(arg.base); } },
+                                shape_val.value());
 
-    std::vector<v1::an_anim_list> anim_lists = studio::shared::transform_variants<v1::an_anim_list>(shape_ref->extra_parts);
+    std::vector<v1::an_anim_list> anim_lists = studio::shared::transform_variants<v1::an_anim_list>(shape_ref.get().extra_parts);
 
     if (anim_lists.empty())
     {
@@ -88,13 +86,31 @@ namespace studio::content::dts::three_space
 
   void dts_renderable_shape::render_shape(shape_renderer& renderer, const std::vector<std::size_t>& detail_level_indexes, const std::vector<sequence_info>& sequences) const
   {
+    auto shape_val = studio::shared::variant_cast_opt<v1::actual_shape_item>(shape);
 
-    v1::an_anim_list* item = nullptr;
+    if (!shape_val.has_value())
+    {
+      return;
+    }
+
+    auto shape_ref = std::visit(overloaded{
+      [&](v1::shape& arg) { return std::cref(arg); },
+      [&](v1::an_shape& arg) { return std::cref(arg.base); } },
+               shape_val.value());
+
+    std::vector<v1::an_anim_list> anim_lists = studio::shared::transform_variants<v1::an_anim_list>(shape_ref.get().extra_parts);
+
+    if (anim_lists.empty())
+    {
+      return;
+    }
+
+    const auto& anim_list = anim_lists.front();
     std::map<std::int16_t, std::vector<std::int16_t>> nodes;
 
-    if (item->relations_count >= item->default_transform_count)
+    if (anim_list.relations_count >= anim_list.default_transform_count)
     {
-      for (auto& relation : item->relations)
+      for (auto& relation : anim_list.relations)
       {
         if (relation.parent < 0)
         {
@@ -115,13 +131,14 @@ namespace studio::content::dts::three_space
       }
     }
 
+    // Tuple is index, frame index, transform index
     std::map<std::int16_t, std::vector<std::tuple<std::int32_t, std::int16_t, std::int16_t>>> animated_nodes;
 
     for (const sequence_info& info : sequences)
     {
       if (info.enabled)
       {
-        auto& seq = item->sequences.at(info.index);
+        auto& seq = anim_list.sequences.at(info.index);
 
         auto i = 0u;
         for (auto part : seq.part_list)
@@ -146,15 +163,7 @@ namespace studio::content::dts::three_space
       }
     }
 
-
-    std::map<std::int16_t, std::vector<std::int16_t>> node_frames;
-
-
     auto real_shape = std::get<v1::shape>(shape);
-
-
-    //    std::vector<v1::group_item> groups = studio::shared::transform_variants<v1::group_item>(real_shape.base.parts);
-
 
     const auto visit_poly = [](const v1::poly& real_poly, const v1::group& real_group) {
       std::vector<int> face;
@@ -198,8 +207,6 @@ namespace studio::content::dts::three_space
 
     std::vector<v1::part_list_item> group_parents = studio::shared::transform_variants<v1::part_list_item>(real_shape.base.parts);
 
-    // std::vector<v1::group_item> groups = studio::shared::transform_variants<v1::group_item>(real_shape.base.parts);
-
     const auto get_groups = [](const v1::part_list_item& parent) {
       return std::visit(overloaded{
                           [&](const v1::shape& arg) { return studio::shared::transform_variants<v1::group_item>(arg.base.parts); },
@@ -222,12 +229,83 @@ namespace studio::content::dts::three_space
         parent);
     };
 
-    const std::function<void(const v1::part_list_item&)> render_groups = [&](const v1::part_list_item& parent) {
-      const auto groups = get_groups(parent);
+    std::map<std::int16_t, std::vector<v1::group_item>> node_objects;
+
+    const std::function<void(const v1::part_list_item&)> find_groups = [&](const v1::part_list_item& parent) {
+      auto groups = get_groups(parent);
 
       for (auto& group : groups)
       {
+        const auto node_index = std::visit(overloaded{
+                    [&](const v1::group& arg) { return arg.base.transform; },
+                    [&](const v1::bsp_group& arg) { return arg.base.base.transform; }
+                  }, group);
+
+        if (node_index > 0)
+        {
+          auto result = node_objects.find(node_index);
+
+          if (result == node_objects.end())
+          {
+            auto [iterator, added] = node_objects.emplace(std::make_pair(std::int16_t(node_index), std::vector<v1::group_item>()));
+            result = iterator;
+          }
+
+          result->second.emplace_back(std::move(group));
+        }
+      }
+
+      const auto parents = get_part_list_item(parent);
+
+      for (auto& other : parents)
+      {
+        find_groups(other);
+      }
+    };
+
+    find_groups(real_shape);
+
+    const std::function<void(const std::pair<std::int16_t, std::vector<std::int16_t>>&)> render_nodes = [&](const std::pair<std::int16_t, std::vector<std::int16_t>>& parent) {
+      const auto& groups = node_objects.at(parent.first);
+
+      std::string parent_node = "parent_node";
+      std::vector<std::string> object_names;
+      object_names.reserve(groups.size());
+
+      for (auto i = 0; i < groups.size(); ++i)
+      {
+        object_names.emplace_back("Object " + std::to_string(i));
+      }
+
+      auto name_index = 0;
+
+      for (auto& group : groups)
+      {
+        renderer.update_object(parent_node, object_names[name_index]);
         const auto faces = visit_group_item(group);
+
+        const auto points = std::visit(overloaded{
+          [&](const v1::group& arg) { return std::cref(arg.points); },
+          [&](const v1::bsp_group& arg) { return std::cref(arg.base.points); }
+        }, group);
+
+        for (auto& face : faces)
+        {
+          renderer.new_face(face.size());
+
+          for (auto index : face)
+          {
+            auto& point = points.get().at(index);
+            renderer.emit_vertex(vector3f{
+              float(point.x),
+              float(point.y),
+              float(point.z)
+            });
+          }
+
+          renderer.end_face();
+        }
+        name_index++;
       }
 
       const auto parents = get_part_list_item(parent);
