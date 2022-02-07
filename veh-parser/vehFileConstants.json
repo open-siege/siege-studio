@@ -1,0 +1,61 @@
+{
+  "vehicle": {
+    "idIndex": 26
+  },
+  "engine": {
+    "idIndex": 28,
+    "groupIdStart": 124,
+    "componentIdStart": 46,
+    "idDelta": 64,
+    "groupMaxCount": 4
+  },
+  "reactor": {
+    "idIndex": 30,
+    "groupIdStart": 170,
+    "componentIdStart": 93,
+    "idDelta": 128,
+    "groupMaxCount": 2
+  },
+  "computer": {
+    "idIndex": 32,
+    "groupIdStart": 214,
+    "componentIdStart": 99,
+    "idDelta": 128,
+    "groupMaxCount": 2
+  },
+  "shield": {
+    "idIndex": 34,
+    "groupIdStart": 247,
+    "componentIdStart": 24,
+    "idDelta": 32,
+    "groupMaxCount": 6
+  },
+  "armor": {
+    "idIndex": 36,
+    "groupIdStart": 101,
+    "componentIdStart": 86,
+    "idDelta": 32,
+    "groupMaxCount": 6
+  },
+  "sensor": {
+    "idIndex": 38,
+    "groupIdStart": 227,
+    "componentIdStart": 150,
+    "idDelta": 32,
+    "groupMaxCount": 4
+  },
+  "special1": {
+    "idIndex": 40,
+    "groupIdStart": 124,
+    "componentIdStart": 46,
+    "idDelta": 32,
+    "groupMaxCount": 4
+  },
+  "special2": {
+    "idIndex": 42,
+    "groupIdStart": 124,
+    "componentIdStart": 46,
+    "idDelta": 64,
+    "groupMaxCount": 4
+  }
+}
