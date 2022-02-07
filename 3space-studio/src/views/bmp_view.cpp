@@ -3,7 +3,7 @@
 #include "bmp_view.hpp"
 #include "content/bmp/bitmap.hpp"
 #include "sfml_keys.hpp"
-#include "3space-studio/utility.hpp"
+#include "utility.hpp"
 #include "content/json_boost.hpp"
 
 namespace studio::content::pal

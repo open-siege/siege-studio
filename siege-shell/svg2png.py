@@ -7,9 +7,9 @@ import numpy
 import xml.etree.ElementTree as ET
 
 # TODO make these command line parameters
-input = "besieged-theme.svg"
-output = "besieged-theme.png"
-theme_file = "besieged-theme.txt"
+input = "src/besieged-theme.svg"
+output = "src/besieged-theme.png"
+theme_file = "src/besieged-theme.txt"
 
 # Texture Generation
 
