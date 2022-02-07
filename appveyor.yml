@@ -1,0 +1,55 @@
+version: 0.5.1-{build}
+environment:
+  PYTHON: "C:\\Python38"
+  matrix:
+    - APPVEYOR_BUILD_WORKER_IMAGE: Windows
+      APPVEYOR_BUILD_WORKER_CLOUD: 3Space Studio Private Build Cluster
+      PYVER: py38
+      TOXENV: py38-conancurrent
+      CMAKE_GENERATOR: "Visual Studio 16 2019"
+
+platform:
+  - x64
+  - x86
+
+install:
+  - set PATH=%PATH%;%PYTHON%/Scripts/
+  - pip3 install conan --upgrade
+  - conan user
+  - conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan --force
+  - conan --version
+
+build_script:
+  - set PATH=%PATH%;%PYTHON%/Scripts/
+  - mkdir build
+  - pip3 install -r requirements.txt
+  - conan install cmake/3.17.3@/ -g virtualenv
+  - activate
+  - conan install . -s build_type=Release --build=missing
+  - conan package .
+
+test_script:
+  - activate
+  - cd build
+  - ctest
+
+after_build:
+  - powershell Compress-Archive package/* 3space-studio-%APPVEYOR_BUILD_VERSION%-%PLATFORM%.zip
+
+artifacts:
+  - path: 3space-studio-$(APPVEYOR_BUILD_VERSION)-$(PLATFORM).zip
+    name: 3spaceStudio
+
+deploy:
+  tag: $(APPVEYOR_REPO_TAG_NAME)
+  release: 3Space Studio $(APPVEYOR_REPO_TAG_NAME) Release
+  description: "See release notes for information about this release: https://github.com/StarsiegePlayers/3space-studio/wiki/Release-Notes"
+  provider: GitHub
+  auth_token:
+    secure: hD8hzQeP3c5jJuk/pMwouuz4wI8VdHDfGlyoTYLrWur9mLHj3lbMP7R37eHRd2Gy
+  artifact: 3spaceStudio
+  draft: false
+  prerelease: false
+  on:
+    branch: master
+    APPVEYOR_REPO_TAG: true
