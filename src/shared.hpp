@@ -80,7 +80,8 @@ namespace studio::shared
   std::vector<To> transform_variants(const std::vector<From>& items)
   {
     std::vector<To> new_items;
-    new_items.reserve(items.size());
+    new_items.reserve(std::count_if(new_items.first(), new_items.last(), [](auto& item) { return studio::shared::can_variant_cast<To>(item);}));
+
     for (auto& item : items)
     {
       if (studio::shared::can_variant_cast<To>(item))
