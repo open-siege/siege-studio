@@ -5,7 +5,7 @@
 #include <wx/filepicker.h>
 
 #include "vol_view.hpp"
-#include "3space-studio/utility.hpp"
+#include "utility.hpp"
 
 namespace studio::views
 {

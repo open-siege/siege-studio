@@ -4,7 +4,7 @@
 #include "content/dts/renderable_shape_factory.hpp"
 #include "gl_renderer.hpp"
 #include "sfml_keys.hpp"
-#include "3space-studio/utility.hpp"
+#include "utility.hpp"
 #include "content/obj_renderer.hpp"
 
 namespace studio::views

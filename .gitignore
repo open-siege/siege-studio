@@ -33,9 +33,10 @@ deactivate.bat
 deactivate.ps1
 deactivate.sh
 environment.*.env
-besieged-theme.png
+siege-shell/src/besieged-theme.png
 besieged-theme.txt
 cmake/ 
-src/3space-studio/logo.ico
-src/3space-studio/logo.png
+3space-studio/src/logo.ico
+3space-studio/src/logo.png
 *.zip
+/install.bat

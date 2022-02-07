@@ -6,7 +6,7 @@
 #include "graphics_view.hpp"
 #include "default_view.hpp"
 #include "resources/resource_explorer.hpp"
-#include "3space-studio/utility.hpp"
+#include "utility.hpp"
 
 namespace studio::views
 {
