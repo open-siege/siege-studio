@@ -4,7 +4,7 @@
 #include <functional>
 #include <glm/gtx/quaternion.hpp>
 
-#include "dts_renderable_shape.hpp"
+#include "content/dts/dts_renderable_shape.hpp"
 
 template<class... Ts>
 struct overloaded : Ts...

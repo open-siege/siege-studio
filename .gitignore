@@ -12,7 +12,6 @@ CMakeFiles/
 Debug/
 Release/
 Package/
-include/
 final build/
 
 *.dig

@@ -4,7 +4,7 @@
 #include "shared.hpp"
 #include "endian_arithmetic.hpp"
 #include "content/tagged_data.hpp"
-#include "3space_v2.hpp"
+#include "content/dts/3space_v2.hpp"
 
 namespace studio::content::dts::three_space
 {

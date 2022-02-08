@@ -1,5 +1,5 @@
-#include "palette.hpp"
 #include <optional>
+#include "content/pal/palette.hpp"
 
 namespace studio::content::pal
 {

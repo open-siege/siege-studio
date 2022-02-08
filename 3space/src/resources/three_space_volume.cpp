@@ -4,7 +4,7 @@
 #include <utility>
 #include <string>
 
-#include "three_space_volume.hpp"
+#include "resources/three_space_volume.hpp"
 
 namespace studio::resources::vol::three_space
 {

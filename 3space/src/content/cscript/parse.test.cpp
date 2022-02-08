@@ -3,7 +3,7 @@
 #include <iostream>
 #include <functional>
 #include <tao/pegtl/contrib/parse_tree.hpp>
-#include "lua53.hpp"
+#include "content/cscript/lua53.hpp"
 
 TEST_CASE("Text is parsed correctly", "[pal.microsoft]")
 {

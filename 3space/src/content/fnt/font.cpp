@@ -1,4 +1,4 @@
-#include "font.hpp"
+#include "content/fnt/font.hpp"
 
 namespace studio::content::fnt
 {

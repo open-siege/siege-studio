@@ -2,7 +2,7 @@
 #include <sstream>
 #include <functional>
 #include "resources/darkstar_volume.hpp"
-#include "mission.hpp"
+#include "content/mis/mission.hpp"
 
 namespace studio::mis::darkstar
 {
