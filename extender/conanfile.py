@@ -1,23 +1,45 @@
-import os.path
 from conans import ConanFile, CMake, MSBuild, tools
+from shutil import copyfile
+import os.path
 
 class DarkstarHookConan(ConanFile):
+    settings = "os", "compiler", "build_type", "arch"
+    build_requires = "cmake/3.22.0"
+
     def requirements(self):
-        if not os.path.exists("packages/4.0.1.zip"):
-            tools.download("https://github.com/matthew-rindel/Detours/archive/4.0.1.zip", "packages/4.0.1.zip")
-
-        tools.unzip("packages/4.0.1.zip", "packages")
-
-        self.run("cd packages/Detours-4.0.1 && conan export . detours/4.0.1@microsoft/stable")
-
-        self.run("cd darkstar && conan install . -s arch=x86 --build=missing")
+        self.run("conan install cmake/3.22.0@/ -g virtualenv")
+        activate = "activate.bat" if self.settings.os == "Windows" else "./activate.sh"
+        install = "install.bat" if self.settings.os == "Windows" else "./install.sh"
+        copyfile(activate, install)
 
         # Release builds cause the dll not to work properly.
-        # Tried with various optimisation levels and still has issues. 
+        # Tried with various optimisation levels and still has issues.
         # The debug build isn't too bad since all the main logic has been moved to darkstar.dll
-        self.run("cd darkstar.proxy && type nul >> ./local-env.ini && conan install . --profile ./local-profile.ini -s build_type=Debug --build=missing")
-        self.run("cd mem && conan install . -s arch=x86 -s build_type=Debug")
-        self.run("cd launcher && conan install . -s arch=x86 --build=missing")
+        with open(install, "a") as file:
+            commands = [
+                "cd detours",
+                f"conan source .",
+                "conan export . detours/4.0.1@microsoft/stable",
+                "cd ..",
+                "cd darkstar",
+                "conan install . -s arch=x86 --build=missing",
+                "cd ..",
+                "cd darkstar.proxy",
+                "conan install . --profile ./local-profile.ini -s build_type=Debug",
+                "cd ..",
+                "cd mem",
+                "conan install . -s arch=x86 -s build_type=Debug",
+                "cd ..",
+                "cd launcher",
+                "conan install . -s arch=x86 --build=missing",
+                "cd .."
+            ]
+
+            file.write("\n" + " && ".join(commands))
+
+        if self.settings.os != "Windows":
+            self.run(f"chmod +x {install}")
+        self.run(install)
 
     def build(self):
         self.run("cd darkstar && conan build .")

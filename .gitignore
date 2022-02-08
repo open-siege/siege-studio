@@ -40,3 +40,4 @@ cmake/
 *.zip
 /install.bat
 /tools/install.bat
+/extender/install.bat

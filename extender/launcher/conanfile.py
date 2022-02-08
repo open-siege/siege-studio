@@ -1,5 +1,5 @@
 from conans import ConanFile, CMake, tools
-
+import os.path
 # conan install . -s arch=x86
 
 class LocalConanFile(ConanFile):
@@ -9,9 +9,8 @@ class LocalConanFile(ConanFile):
     generators = "cmake_find_package"
 
     def build(self):
-        self.build_folder = "build"
         cmake = CMake(self)
-        cmake.configure()
+        cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         cmake.build()
 
 
