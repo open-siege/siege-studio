@@ -1,4 +1,5 @@
 from conans import ConanFile, CMake, tools
+import os.path
 
 # conan install . -s arch=x86
 
@@ -10,9 +11,8 @@ class LocalConanFile(ConanFile):
 
     def build(self):
         self.run(f"{tools.vcvars_command(self)} && make-proxy-lib.bat")
-        self.build_folder = "build"
         cmake = CMake(self)
-        cmake.configure()
+        cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         cmake.build()
         cmake.test()
 
