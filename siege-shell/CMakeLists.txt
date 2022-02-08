@@ -12,6 +12,10 @@ add_custom_command(TARGET siege-shell
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/src/besieged-theme.png $<TARGET_FILE_DIR:siege-shell>/besieged-theme.png
         )
 
+if(MSVC)
+    target_compile_definitions(siege-shell PRIVATE -D_CRT_SECURE_NO_WARNINGS)
+endif()
+
 install(TARGETS siege-shell
         CONFIGURATIONS Debug Release
         RUNTIME DESTINATION bin)
