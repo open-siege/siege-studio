@@ -16,6 +16,8 @@ class LocalConanFile(ConanFile):
 
     def build(self):
         cmake = CMake(self)
+        print(f"Command line args: {cmake.command_line}")
+        print(f"Build args: {cmake.build_config}")
         cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         cmake.build()
 
