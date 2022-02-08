@@ -17,6 +17,7 @@ target_link_libraries(3space-studio 3space::3space wxwidgets::wxwidgets ImGui-SF
 
 if(MSVC)
     target_sources(3space-studio PRIVATE src/3space-studio.rc)
+    target_compile_definitions(3space-studio PRIVATE -D_CRT_SECURE_NO_WARNINGS)
 endif()
 
 add_custom_command(TARGET 3space-studio
