@@ -13,13 +13,8 @@ class LocalConanFile(ConanFile):
         install = "install.bat" if self.settings.os == "Windows" else "./install.sh"
         copyfile(activate, install)
         with open(install, "a") as file:
-            targets = ["tools", "siege-shell", "3space-studio"]
-            commands = [
-                "cd 3space",
-                f"conan install . -s build_type={self.settings.build_type} --build=missing",
-                "conan export .",
-                "cd .."
-            ]
+            targets = ["dts-to-json", "json-to-dts", "dts-to-obj", "unvol"]
+            commands = []
 
             for target in targets:
                 commands.append(f"cd {target}")
@@ -39,14 +34,6 @@ class LocalConanFile(ConanFile):
         cmake.build()
 
     def package(self):
-        git = tools.Git(folder="wiki")
-        git.clone("https://github.com/StarsiegePlayers/3space-studio.wiki.git", shallow=True)
-        tools.rmdir("wiki/.git")
         cmake = CMake(self)
         cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
-        self.copy(pattern="LICENSE", src=self.source_folder, dst="licenses")
-        self.copy(pattern="README.md", src=self.source_folder, dst="res")
-        self.copy(pattern="wiki/*.md", src=self.source_folder, dst="res")
-        self.copy(pattern="game-support.md", src=self.source_folder, dst="res")
-        tools.rmdir("wiki")
         cmake.install()

@@ -39,3 +39,4 @@ cmake/
 3space-studio/src/logo.png
 *.zip
 /install.bat
+/tools/install.bat

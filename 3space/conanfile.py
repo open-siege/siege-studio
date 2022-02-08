@@ -13,7 +13,7 @@ class LocalConanFile(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     requires = "nlohmann_json/3.9.0", "boost/1.76.0", "glm/0.9.9.8", "span-lite/0.9.0", "taocpp-pegtl/3.1.0", "catch2/2.13.4"
     generators = "cmake_find_package"
-    exports_sources = "CMakeLists.txt", "src/*"
+    exports_sources = "CMakeLists.txt", "include/*", "src/*"
 
     def configure(self):
         self.options["boost"].shared = False
