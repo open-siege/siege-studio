@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 #include <sstream>
-#include "darkstar_volume.hpp"
+#include "resources/darkstar_volume.hpp"
 #include "shared.hpp"
 
 namespace darkstar = studio::resources::vol::darkstar;

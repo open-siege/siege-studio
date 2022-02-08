@@ -1,9 +1,9 @@
-#include "bitmap.hpp"
-#include "content/tagged_data.hpp"
 #include <set>
 #include <map>
 #include <iostream>
 #include <cmath>
+#include "content/bmp/bitmap.hpp"
+#include "content/tagged_data.hpp"
 
 
 namespace studio::content::bmp

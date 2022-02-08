@@ -1,7 +1,7 @@
 #include <fstream>
 #include <functional>
 #include "resources/darkstar_volume.hpp"
-#include "interface.hpp"
+#include "content/gui/interface.hpp"
 
 namespace studio::gui::darkstar
 {

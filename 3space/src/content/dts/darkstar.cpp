@@ -1,4 +1,4 @@
-#include "darkstar.hpp"
+#include "content/dts/darkstar.hpp"
 
 namespace studio::content::dts::darkstar
 {

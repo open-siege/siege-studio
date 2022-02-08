@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 #include <sstream>
-#include "palette.hpp"
+#include "content/pal/palette.hpp"
 
 TEST_CASE("Microsoft PAL is detected correctly", "[pal.microsoft]")
 {

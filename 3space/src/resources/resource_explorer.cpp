@@ -1,6 +1,6 @@
 #include <sstream>
-#include "resource_explorer.hpp"
 #include "shared.hpp"
+#include "resources/resource_explorer.hpp"
 
 namespace studio::resources
 {

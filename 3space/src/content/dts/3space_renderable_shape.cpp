@@ -1,6 +1,6 @@
-#include "3space_renderable_shape.hpp"
-#include "shared.hpp"
 #include <functional>
+#include "content/dts/3space_renderable_shape.hpp"
+#include "shared.hpp"
 
 template<class... Ts>
 struct overloaded : Ts...

@@ -3,7 +3,7 @@
 #include <fstream>
 #include <utility>
 #include <string>
-#include "trophy_bass_volume.hpp"
+#include "resources/trophy_bass_volume.hpp"
 
 namespace studio::resources::vol::trophy_bass
 {
