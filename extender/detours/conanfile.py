@@ -8,7 +8,7 @@ from conans import ConanFile, CMake, MSBuild, tools
 
 class DetoursConanfile(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    build_requires = "cmake/3.17.3"
+    build_requires = "cmake/3.22.0"
     exports_sources = "CMakeLists.txt", "src/*"
 
     def source(self):

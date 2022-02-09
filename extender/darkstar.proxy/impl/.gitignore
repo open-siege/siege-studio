@@ -1,0 +1,4 @@
+/mingw32
+*.7z
+Makefile
+lib.bat
