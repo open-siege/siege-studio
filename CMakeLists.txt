@@ -8,6 +8,3 @@ add_subdirectory(3space-studio)
 add_subdirectory(tools)
 add_subdirectory(siege-shell)
 add_subdirectory(extender)
-
-# TODO fix mdl-to-json as it is vastly out of date
-#add_subdirectory(mdl-to-json)
