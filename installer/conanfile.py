@@ -10,7 +10,7 @@ class LocalConanFile(ConanFile):
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
     system_requires = "opengl/system"
-    build_requires = "cmake/3.17.3"
+    build_requires = "cmake/3.22.0"
     settings = "os", "compiler", "build_type", "arch"
     requires = "wxwidgets/3.1.3@bincrafters/stable","catch2/2.13.4"
     generators = "cmake_find_package", "virtualenv"

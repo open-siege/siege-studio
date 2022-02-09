@@ -7,6 +7,9 @@ class DarkstarHookConan(ConanFile):
     build_requires = "cmake/3.22.0"
 
     def requirements(self):
+        if self.settings.arch != "x86":
+            return
+
         self.run("conan install cmake/3.22.0@/ -g virtualenv")
         activate = "activate.bat" if self.settings.os == "Windows" else "./activate.sh"
         install = "install.bat" if self.settings.os == "Windows" else "./install.sh"

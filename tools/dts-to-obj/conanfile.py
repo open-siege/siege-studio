@@ -4,12 +4,12 @@ import os.path
 
 
 class LocalConanFile(ConanFile):
-    name = "dts-to-json"
+    name = "dts-to-obj"
     version = "0.5.1"
     url = "https://github.com/3space-studio/3space-studio"
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
-    build_requires = "cmake/3.17.3"
+    build_requires = "cmake/3.22.0"
     settings = "os", "compiler", "build_type", "arch"
     requires = "3space/0.5.1"
     generators = "cmake_find_package"
