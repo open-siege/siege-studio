@@ -1,36 +1,25 @@
 from conans import ConanFile, CMake, tools
-from shutil import copyfile
 import os.path
-
 
 class LocalConanFile(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     build_requires = "cmake/3.22.0"
 
     def requirements(self):
-        self.run("conan install cmake/3.22.0@/ -g virtualenv")
-        activate = "activate.bat" if self.settings.os == "Windows" else "./activate.sh"
-        install = "install.bat" if self.settings.os == "Windows" else "./install.sh"
-        copyfile(activate, install)
-        with open(install, "a") as file:
-            targets = ["tools", "siege-shell", "3space-studio", "extender"]
+        targets = ["tools", "siege-shell", "3space-studio", "extender"]
+        commands = [
+            "cd 3space",
+            f"conan install . -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing",
+            "conan export ."
+        ]
+        self.run(" && ".join(commands), run_environment=True)
+
+        for target in targets:
             commands = [
-                "cd 3space",
-                f"conan install . -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing",
-                "conan export .",
-                "cd .."
+                f"cd {target}",
+                f"conan install . -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing"
             ]
-
-            for target in targets:
-                commands.append(f"cd {target}")
-                commands.append(f"conan install . -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing")
-                commands.append(f"cd ..")
-
-            file.write("\n" + " && ".join(commands))
-
-        if self.settings.os != "Windows":
-            self.run(f"chmod +x {install}")
-        self.run(install)
+            self.run(" && ".join(commands), run_environment=True)
 
 
     def build(self):
