@@ -22,19 +22,15 @@ class LocalConanFile(ConanFile):
         self.options["boost"].zlib = False
         self.options["boost"].numa = False
 
-    def _configure_cmake(self):
-        cmake = CMake(self)
-
-        cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
-        return cmake
-
     def build(self):
-        cmake = self._configure_cmake()
+        cmake = CMake(self)
+        cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         cmake.build()
         cmake.test()
 
     def package(self):
-        cmake = self._configure_cmake()
+        cmake = CMake(self)
+        cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         cmake.install()
 
     def package_info(self):

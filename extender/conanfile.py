@@ -25,10 +25,10 @@ class DarkstarHookConan(ConanFile):
                 "conan install . -s arch=x86 --build=missing",
                 "cd ..",
                 "cd darkstar.proxy",
-                "conan install . --profile ./local-profile.ini -s build_type=Debug",
+                "conan install . -s arch=x86",
                 "cd ..",
                 "cd mem",
-                "conan install . -s arch=x86 -s build_type=Debug",
+                "conan install . -s arch=x86",
                 "cd ..",
                 "cd launcher",
                 "conan install . -s arch=x86 --build=missing",
@@ -42,22 +42,13 @@ class DarkstarHookConan(ConanFile):
         self.run(install)
 
     def build(self):
-        self.run("cd darkstar && conan build .")
-        self.run("cd darkstar.proxy && conan build .")
-        self.run("cd mem && conan build .")
-        self.run("cd launcher && conan build .")
+        cmake = CMake(self)
+        cmake.definitions["CONAN_CMAKE_SYSTEM_PROCESSOR"] = self.settings.arch
+        cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
+        cmake.build()
 
     def package(self):
-        self.build()
-        tools.rmdir("package/bin")
-        tools.mkdir("package/bin")
-        tools.rename("darkstar.proxy/build/darkstar.proxy.dll", "package/bin/darkstar.proxy.dll")
-        tools.rename("darkstar/build/config.json", "package/bin/config.json")
-
-        if (os.path.exists("darkstar/build/Release")):
-            tools.rename("darkstar/build/Release/darkstar.dll", "package/bin/darkstar.dll")
-            tools.rename("launcher/build/Release/Starsiege.ext.exe", "package/bin/Starsiege.ext.exe")
-        else:
-            tools.rename("darkstar/build/Debug/darkstar.dll", "package/bin/darkstar.dll")
-            tools.rename("launcher/build/Debug/Starsiege.ext.exe", "package/bin/Starsiege.ext.exe")
-        tools.rename("mem/build/mem.dll", "package/bin/mem.dll")
+        cmake = CMake(self)
+        cmake.definitions["CONAN_CMAKE_SYSTEM_PROCESSOR"] = self.settings.arch
+        cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
+        cmake.install()

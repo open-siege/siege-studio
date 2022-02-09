@@ -13,17 +13,18 @@ add_library(detours STATIC src/detours.cpp
         src/disolarm64.cpp)
 
 target_link_libraries(detours)
+target_include_directories(detours PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 file(GLOB HEADER_FILES src/*.h)
 
 add_custom_command(TARGET detours
         PRE_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/include
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/include
         )
 
 add_custom_command(TARGET detours
         PRE_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ${HEADER_FILES} ${CMAKE_SOURCE_DIR}/include
+        COMMAND ${CMAKE_COMMAND} -E copy ${HEADER_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/include
         )
 
 install(DIRECTORY include
