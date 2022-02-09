@@ -1,7 +1,11 @@
-#include <map>
+#include <unordered_map>
+#include <set>
 #include <variant>
 #include <optional>
+#include <memory>
 #include <functional>
+#include <list>
+#include <memory>
 #include <glm/gtx/quaternion.hpp>
 
 #include "content/dts/dts_renderable_shape.hpp"
@@ -21,13 +25,13 @@ namespace studio::content::dts::darkstar
   struct node_instance
   {
     std::set<std::int32_t> object_indexes;
-    std::unordered_map<std::int32_t, node_instance> node_indexes;
+    std::unordered_map<std::int32_t, std::unique_ptr<node_instance>> node_indexes;
   };
 
   struct instance_info
   {
     using transform = std::tuple<vector3f, quaternion4f, vector3f>;
-    std::pair<std::int32_t, node_instance> root_node;
+    std::pair<std::int32_t, std::unique_ptr<node_instance>> root_node;
   };
 
   std::tuple<vector3f, quaternion4f, vector3f> get_translation(const shape::v2::transform& transform)
@@ -85,11 +89,11 @@ namespace studio::content::dts::darkstar
       const auto& detail_level = local_shape.details[detail_level_index];
       const std::int32_t root_note_index = detail_level.root_node_index;
 
-      instance_info info{};
+      instance_info info{
+        std::make_pair(root_note_index, std::make_unique<node_instance>())
+      };
 
-      info.root_node = std::make_pair(root_note_index, node_instance{});
-
-      std::list<std::pair<const std::int32_t, node_instance*>> valid_nodes{ std::make_pair(root_note_index, &info.root_node.second) };
+      std::list<std::pair<const std::int32_t, node_instance*>> valid_nodes{ std::make_pair(root_note_index, info.root_node.second.get()) };
 
       for (const auto& iterator : valid_nodes)
       {
@@ -100,11 +104,11 @@ namespace studio::content::dts::darkstar
           {
             const auto node_index = static_cast<std::int32_t>(std::distance(std::begin(local_shape.nodes), other_node));
 
-            auto [new_node_info, new_added] = node_info->node_indexes.emplace(node_index, node_instance{});
+            auto [new_node_info, new_added] = node_info->node_indexes.emplace(node_index, std::make_unique<node_instance>());
 
             if (new_added)
             {
-              valid_nodes.emplace_back(std::make_pair(new_node_info->first, &new_node_info->second));
+              valid_nodes.emplace_back(std::make_pair(new_node_info->first, new_node_info->second.get()));
             }
           }
         }
@@ -221,11 +225,11 @@ namespace studio::content::dts::darkstar
 
           for (const auto& [child_node_index, child_node_instance] : node_instance.node_indexes)
           {
-            populate_sequences(child_node_index, child_node_instance);
+            populate_sequences(child_node_index, *child_node_instance);
           }
         };
 
-        populate_sequences(instance.root_node.first, instance.root_node.second);
+        populate_sequences(instance.root_node.first, *instance.root_node.second);
       }
     },
       shape);
@@ -264,7 +268,7 @@ namespace studio::content::dts::darkstar
       {
         auto instance = get_instance(shape, detail_level_index);
 
-        std::function<void(const std::pair<std::int32_t, node_instance>&, std::optional<glm::mat4>)> render_node =
+        std::function<void(const std::pair<std::int32_t, std::reference_wrapper<node_instance>>&, std::optional<glm::mat4>)> render_node =
           [&](const auto& node_item, const auto parent_node_matrix) {
             auto& [node_index, node_instance] = node_item;
 
@@ -300,7 +304,7 @@ namespace studio::content::dts::darkstar
 
             renderer.update_node(parent_node_name, node_name);
 
-            for (const std::int32_t object_index : node_instance.object_indexes)
+            for (const std::int32_t object_index : node_instance.get().object_indexes)
             {
               const auto& object = local_shape.objects[object_index];
               const std::string_view object_name = local_shape.names[object.name_index].data();
@@ -365,15 +369,15 @@ namespace studio::content::dts::darkstar
                 local_shape.meshes[object.mesh_index]);
             }
 
-            for (const auto& child_node_item : node_instance.node_indexes)
+            for (const auto& child_node_item : node_instance.get().node_indexes)
             {
-              render_node(child_node_item, node_matrix);
+              render_node(std::make_pair(child_node_item.first, std::ref(*child_node_item.second)), node_matrix);
             }
           };
 
-        render_node(instance.root_node, std::nullopt);
+        render_node(std::make_pair(instance.root_node.first, std::ref(*instance.root_node.second)), std::nullopt);
       }
     },
       shape);
   }
-}
+}// namespace studio::content::dts::darkstar

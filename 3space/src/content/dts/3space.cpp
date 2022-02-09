@@ -1,6 +1,7 @@
 #include <array>
 #include <utility>
 #include <vector>
+#include <algorithm>
 #include "shared.hpp"
 #include "endian_arithmetic.hpp"
 #include "content/tagged_data.hpp"

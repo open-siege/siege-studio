@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iostream>
 #include <iomanip>
+#include <cmath>
 #include "endian_arithmetic.hpp"
 #include "shared.hpp"
 
@@ -59,7 +60,7 @@ namespace studio::content::pal
     long r = (long)e1.red - (long)e2.red;
     long g = (long)e1.green - (long)e2.green;
     long b = (long)e1.blue - (long)e2.blue;
-    return sqrt((((512 + rmean) * r * r) >> 8) + 4 * g * g + (((767 - rmean) * b * b) >> 8));
+    return std::sqrt((((512 + rmean) * r * r) >> 8) + 4 * g * g + (((767 - rmean) * b * b) >> 8));
   }
 
   struct palette
