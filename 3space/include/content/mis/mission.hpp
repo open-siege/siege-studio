@@ -165,7 +165,7 @@ namespace studio::resources::mis::darkstar
     mutable std::map<std::filesystem::path, ::studio::mis::darkstar::sim_items> contents;
     mutable std::map<std::filesystem::path, ref_vector> content_list_info;
 
-    decltype(content_list_info)::iterator mis_file_archive::cache_data(std::basic_istream<std::byte>& stream, const std::filesystem::path& archive_or_folder_path) const;
+    decltype(content_list_info)::iterator cache_data(std::basic_istream<std::byte>& stream, const std::filesystem::path& archive_or_folder_path) const;
 
     static bool is_supported(std::basic_istream<std::byte>& stream);
 

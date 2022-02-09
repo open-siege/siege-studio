@@ -1,15 +1,22 @@
 from conans import ConanFile, CMake, tools
 import os.path
+import sys
 
 class LocalConanFile(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     build_requires = "cmake/3.22.0"
 
     def requirements(self):
+        profile = "default"
+
+        if "--profile" in sys.argv:
+            profile = sys.argv[sys.argv.index("--profile") + 1]
+            profile = os.path.abspath(profile) if profile != "default" else profile
+
         targets = ["tools", "siege-shell", "3space-studio", "extender"]
         commands = [
             "cd 3space",
-            f"conan install . -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing",
+            f"conan install . --profile {profile} -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing",
             "conan export ."
         ]
         self.run(" && ".join(commands), run_environment=True)
@@ -17,7 +24,7 @@ class LocalConanFile(ConanFile):
         for target in targets:
             commands = [
                 f"cd {target}",
-                f"conan install . -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing"
+                f"conan install . --profile {profile} -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing"
             ]
             self.run(" && ".join(commands), run_environment=True)
 

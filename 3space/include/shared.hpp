@@ -9,6 +9,7 @@
 #include <variant>
 #include <optional>
 #include <filesystem>
+#include <algorithm>
 
 namespace studio::shared
 {
