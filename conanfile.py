@@ -29,7 +29,7 @@ class LocalConanFile(ConanFile):
 
         targets = ["tools", "siege-shell", "3space-studio", "extender"]
 
-        settings = f"--profile {profile} -s build_type={self.settings.build_type} -s arch={self.settings.arch} -s cmake:arch={self.settings.arch_build} --build=missing"
+        settings = f"--profile {profile} -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing"
 
         commands = [
             "cd 3space",

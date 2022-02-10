@@ -10,7 +10,7 @@ class DarkstarHookConan(ConanFile):
         if self.settings.arch != "x86":
             return
 
-        settings = f"-s arch={self.settings.arch} -s cmake:arch={self.settings.arch_build} --build=missing"
+        settings = f"-s arch={self.settings.arch} --build=missing"
 
         self.run(" && ".join([
             "cd detours",

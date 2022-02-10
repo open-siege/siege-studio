@@ -50,35 +50,22 @@ New to C++, CMake or Conan? Checkout this set of examples with instructions to g
 
 If you don't already have Conan on your system, find instructions here: https://conan.io/downloads.html
 
-Since May 2021, conan.io is the primary place for conan packages. If not updated, run the following to set your conan center remote to the new value:
+On first clone and setup, run:
 
-```conan remote update conan-center https://center.conan.io```
+```conan install initial-settings.py```
 
-For this project, you also need to add the Bincrafters Conan remote, with this command:
+This will configure bincrafters and relevant settings to make the project easier to work with.
 
-```conan remote add bincrafters https://bincrafters.jfrog.io/artifactory/api/conan/public-conan```
+To configure and build a debug build, use:
+```conan install . -s build_type=Debug --build=missing```
+```conan build .```
 
-You may also have to run:
+To configure and build a release build, use:
+```conan install . --build=missing```
+```conan build .```
 
-```conan config set general.revisions_enabled=1```
-
-As a setup command, without any pre-built packages, run ```conan install cmake/3.22.0@/ -g virtualenv```
-
-Then run ```activate``` or ```./activate```
-
-To install project dependencies, use:
-
-```pip install -r requirements.txt```
-
-Then:
-
-```conan install .``` or ```conan install . --build=missing``` if you system is missing precompiled packages for the dependencies.
-
-For debug builds use:
-```conan install . -s build_type=Debug``` or ```conan install . -s build_type=Debug --build=missing```
-
-To build the project, use:
-
+For x86 builds, which triggers building of additional projects, use:
+```conan install . -s arch=x86 --build=missing```
 ```conan build .```
 
 Generated files will go into the **build/Release/bin** or **build/Debug/bin** folder.
