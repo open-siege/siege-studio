@@ -42,3 +42,4 @@ cmake/
 /tools/install.bat
 /extender/install.bat
 ImageMagick
+/conanbuildinfo.json
