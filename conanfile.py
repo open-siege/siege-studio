@@ -25,8 +25,11 @@ class LocalConanFile(ConanFile):
         self.run(" && ".join(commands), run_environment=True)
 
         targets = ["tools", "siege-shell", "3space-studio", "extender"]
-        shutil.rmtree("cmake")
-        os.mkdir("cmake")
+
+        if os.exists("cmake"):
+            shutil.rmtree("cmake")
+            os.mkdir("cmake")
+
         commands = [
             "cd 3space",
             f"conan install . --profile {profile} -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing",
