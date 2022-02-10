@@ -48,6 +48,8 @@ class LocalConanFile(ConanFile):
         cmake = CMake(self)
         cmake.definitions["CONAN_CMAKE_SYSTEM_PROCESSOR"] = self.settings.arch
         cmake.definitions["CI"] = os.environ["CI"] if "CI" in os.environ else "False"
+        print(f"Python executable path is {sys.executable}")
+        cmake.definitions["PYTHON_EXECUTABLE"] = sys.executable
         cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         cmake.build()
 
@@ -58,6 +60,8 @@ class LocalConanFile(ConanFile):
         cmake = CMake(self)
         cmake.definitions["CONAN_CMAKE_SYSTEM_PROCESSOR"] = self.settings.arch
         cmake.definitions["CI"] = os.environ["CI"] if "CI" in os.environ else "False"
+        print(f"Python executable path is {sys.executable}")
+        cmake.definitions["PYTHON_EXECUTABLE"] = sys.executable
         cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         self.copy(pattern="LICENSE", src=self.source_folder, dst="licenses")
         self.copy(pattern="README.md", src=self.source_folder, dst="res")
