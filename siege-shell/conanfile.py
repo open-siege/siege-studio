@@ -16,8 +16,6 @@ class LocalConanFile(ConanFile):
 
     def build(self):
         cmake = CMake(self)
-        print(f"Command line args: {cmake.command_line}")
-        print(f"Build args: {cmake.build_config}")
         cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         cmake.build()
 
@@ -29,7 +27,7 @@ class LocalConanFile(ConanFile):
     def imports(self):
         #TODO will need some tweaks to make it work cross platform
         # Could also just export a function and call it here
-        self.run("svg2png")
+        self.run("svg2png", run_environment=True)
         tools.rmdir("cmake")
         tools.mkdir("cmake")
         [tools.rename(file, f"cmake/{file}") for file in glob.glob("*.cmake")]
