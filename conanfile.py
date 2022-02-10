@@ -8,6 +8,10 @@ class LocalConanFile(ConanFile):
     build_requires = "cmake/3.22.0"
 
     def requirements(self):
+        if os.path.exists("./cmake"):
+            shutil.rmtree("./cmake")
+            os.mkdir("./cmake")
+
         profile = "default"
 
         if "--profile" in sys.argv:
@@ -25,10 +29,6 @@ class LocalConanFile(ConanFile):
         self.run(" && ".join(commands), run_environment=True)
 
         targets = ["tools", "siege-shell", "3space-studio", "extender"]
-
-        if os.path.exists("cmake"):
-            shutil.rmtree("cmake")
-            os.mkdir("cmake")
 
         commands = [
             "cd 3space",
