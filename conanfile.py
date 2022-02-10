@@ -23,16 +23,15 @@ class LocalConanFile(ConanFile):
 
         self.run(" && ".join(commands), run_environment=True)
 
-        ci_build = False
-
-        if "CI" in os.environ:
-            ci_build = os.environ["CI"] == "True" or os.environ["CI"] == "true"
-
         targets = ["tools", "siege-shell", "3space-studio", "extender"]
         commands = [
             "cd 3space",
             f"conan install . --profile {profile} -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing",
-            "echo Skipping export" if ci_build else "conan export ."
+            "conan export .",
+            "cd ..",
+            "mkdir cmake",
+            "cd cmake",
+            "conan install 3space/0.5.1@/ -g cmake_find_package"
         ]
         self.run(" && ".join(commands), run_environment=True)
 
@@ -48,6 +47,7 @@ class LocalConanFile(ConanFile):
     def build(self):
         cmake = CMake(self)
         cmake.definitions["CONAN_CMAKE_SYSTEM_PROCESSOR"] = self.settings.arch
+        cmake.definitions["CI"] = os.environ["CI"] if "CI" in os.environ else "False"
         cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         cmake.build()
 
@@ -57,6 +57,7 @@ class LocalConanFile(ConanFile):
         tools.rmdir("wiki/.git")
         cmake = CMake(self)
         cmake.definitions["CONAN_CMAKE_SYSTEM_PROCESSOR"] = self.settings.arch
+        cmake.definitions["CI"] = os.environ["CI"] if "CI" in os.environ else "False"
         cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         self.copy(pattern="LICENSE", src=self.source_folder, dst="licenses")
         self.copy(pattern="README.md", src=self.source_folder, dst="res")
