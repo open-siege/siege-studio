@@ -1,8 +1,8 @@
 from conans import ConanFile, CMake, tools
-from conans.tools import os_info, SystemPackageTool
 import glob
 import os.path
 import sys
+import os
 
 urls = {
     "x86": "https://download.imagemagick.org/ImageMagick/download/binaries/ImageMagick-7.1.0-23-Q16-HDRI-x86-dll.exe",
@@ -20,15 +20,16 @@ class LocalConanFile(ConanFile):
     requires = "3space/0.5.1", "wxwidgets/3.1.5@bincrafters/stable"
     generators = "cmake_find_package"
 
-    def system_requirements(self):
-        arch = str(self.settings.arch)
-        if os_info.is_windows and arch in urls:
-            url = urls[arch]
-            if not os.path.exists(f"installer-{arch}.exe"):
-                tools.download(url, f"installer-{arch}.exe")
-
-            if not os.path.exists(f"C:/ImageMagick-{arch}"):
-                self.run(f"installer-{arch}.exe /DIR=\"C:\\ImageMagick-{arch}\" /VERYSILENT /NORESTART /MERGETASKS=install_devel")
+    #TODO - Find an archive version or a way to archive everything
+    # def system_requirements(self):
+    #     for arch in ["x86", "x86_64"]:
+    #         if os_info.is_windows and arch in urls:
+    #             url = urls[arch]
+    #             if not os.path.exists(f"installer-{arch}.exe"):
+    #                 tools.download(url, f"installer-{arch}.exe")
+    #
+    #             if not os.path.exists(f"C:/ImageMagick-{arch}"):
+    #                 self.run(f"installer-{arch}.exe /DIR=\"C:\\ImageMagick-{arch}\" /VERYSILENT /NORESTART /MERGETASKS=install_devel")
 
 
 
