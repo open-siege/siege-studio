@@ -1,6 +1,7 @@
 from conans import ConanFile, CMake, tools
 import os.path
 import sys
+import shutil
 
 class LocalConanFile(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
@@ -24,12 +25,13 @@ class LocalConanFile(ConanFile):
         self.run(" && ".join(commands), run_environment=True)
 
         targets = ["tools", "siege-shell", "3space-studio", "extender"]
+        shutil.rmtree("cmake")
+        os.mkdir("cmake")
         commands = [
             "cd 3space",
             f"conan install . --profile {profile} -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing",
             "conan export .",
             "cd ..",
-            "mkdir cmake || echo lib3space exported",
             "cd cmake",
             f"conan install 3space/0.5.1@/ -g cmake_find_package --profile {profile} -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing"
         ]
