@@ -4,10 +4,7 @@ import os.path
 import sys
 import os
 
-urls = {
-    "x86": "https://download.imagemagick.org/ImageMagick/download/binaries/ImageMagick-7.1.0-23-Q16-HDRI-x86-dll.exe",
-    "x86_64": "https://download.imagemagick.org/ImageMagick/download/binaries/ImageMagick-7.1.0-23-Q16-HDRI-x64-dll.exe"
-}
+image_url = "https://transfer.sh/F5D3bN/besieged-theme.png"
 
 class LocalConanFile(ConanFile):
     name = "siege-shell"
@@ -20,18 +17,10 @@ class LocalConanFile(ConanFile):
     requires = "3space/0.5.1", "wxwidgets/3.1.5@bincrafters/stable"
     generators = "cmake_find_package"
 
-    #TODO - Find an archive version or a way to archive everything
-    # def system_requirements(self):
-    #     for arch in ["x86", "x86_64"]:
-    #         if os_info.is_windows and arch in urls:
-    #             url = urls[arch]
-    #             if not os.path.exists(f"installer-{arch}.exe"):
-    #                 tools.download(url, f"installer-{arch}.exe")
-    #
-    #             if not os.path.exists(f"C:/ImageMagick-{arch}"):
-    #                 self.run(f"installer-{arch}.exe /DIR=\"C:\\ImageMagick-{arch}\" /VERYSILENT /NORESTART /MERGETASKS=install_devel")
-
-
+    def requirements(self):
+        image_path = "src/besieged-theme.png"
+        if not os.path.exists(image_path):
+            tools.download(image_url, image_path)
 
     def build(self):
         cmake = CMake(self)

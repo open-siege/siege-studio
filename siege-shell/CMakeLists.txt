@@ -9,11 +9,17 @@ set_property(TARGET siege-shell PROPERTY CXX_STANDARD 17)
 target_link_libraries(siege-shell wxwidgets::wxwidgets)
 
 
+# TODO figure out what to do with the whole ImageMagick debacle
+#add_custom_command(TARGET siege-shell
+#        PRE_BUILD
+#        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/svg2png.py
+#        ${CMAKE_CURRENT_SOURCE_DIR}/src/besieged-theme.svg
+#        $<TARGET_FILE_DIR:siege-shell>/besieged-theme.png $<TARGET_FILE_DIR:siege-shell>/besieged-theme.txt)
+
 add_custom_command(TARGET siege-shell
-        PRE_BUILD
-        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/svg2png.py
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/besieged-theme.svg
-        $<TARGET_FILE_DIR:siege-shell>/besieged-theme.png $<TARGET_FILE_DIR:siege-shell>/besieged-theme.txt)
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/src/besieged-theme.png $<TARGET_FILE_DIR:siege-shell>/besieged-theme.png
+        )
 
 if(MSVC)
     target_compile_definitions(siege-shell PRIVATE -D_CRT_SECURE_NO_WARNINGS)
