@@ -1,6 +1,6 @@
 version: 0.5.1-{build}
 environment:
-  PYTHON: "C:\\Python38"
+  PYTHON: "C:\\python310"
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       PYVER: py38

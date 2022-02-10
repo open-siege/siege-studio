@@ -1,15 +1,14 @@
 from wand.api import library
 from collections.abc import Iterable
 import base64
-import wand.color
 import wand.image
 import numpy
 import xml.etree.ElementTree as ET
+import sys
 
-# TODO make these command line parameters
-input = "src/besieged-theme.svg"
-output = "src/besieged-theme.png"
-theme_file = "src/besieged-theme.txt"
+input = sys.argv[1]
+output = sys.argv[2]
+theme_file = sys.argv[3]
 
 # Texture Generation
 

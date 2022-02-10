@@ -1,6 +1,7 @@
 from conans import ConanFile, CMake, tools
 import glob
 import os.path
+import sys
 
 
 class LocalConanFile(ConanFile):
@@ -16,18 +17,17 @@ class LocalConanFile(ConanFile):
 
     def build(self):
         cmake = CMake(self)
+        cmake.definitions["PYTHON_EXECUTABLE"] = sys.executable
         cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         cmake.build()
 
     def package(self):
         cmake = CMake(self)
+        cmake.definitions["PYTHON_EXECUTABLE"] = sys.executable
         cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         cmake.install()
 
     def imports(self):
-        #TODO will need some tweaks to make it work cross platform
-        # Could also just export a function and call it here
-        self.run("svg2png", run_environment=True)
         tools.rmdir("cmake")
         tools.mkdir("cmake")
         [tools.rename(file, f"cmake/{file}") for file in glob.glob("*.cmake")]
