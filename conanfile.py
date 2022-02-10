@@ -29,14 +29,16 @@ class LocalConanFile(ConanFile):
 
         targets = ["tools", "siege-shell", "3space-studio", "extender"]
 
+        settings = f"--profile {profile} -s build_type={self.settings.build_type} -s cmake:arch={self.settings.arch_build} -s arch={self.settings.arch} --build=missing"
+
         commands = [
             "cd 3space",
-            f"conan install . --profile {profile} -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing",
+            f"conan install . {settings}",
             "conan export .",
             "cd ..",
             "mkdir cmake",
             "cd cmake",
-            f"conan install 3space/0.5.1@/ -g cmake_find_package --profile {profile} -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing"
+            f"conan install 3space/0.5.1@/ -g cmake_find_package {settings}"
         ]
         self.run(" && ".join(commands), run_environment=True)
 
@@ -44,7 +46,7 @@ class LocalConanFile(ConanFile):
         for target in targets:
             commands = [
                 f"cd {target}",
-                f"conan install . --profile {profile} -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing"
+                f"conan install . {settings}"
             ]
             self.run(" && ".join(commands), run_environment=True)
 
