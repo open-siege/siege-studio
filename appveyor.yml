@@ -22,7 +22,6 @@ install:
 build_script:
   - set PATH=%PATH%;%PYTHON%/Scripts/
   - mkdir build
-  - pip3 install -r requirements.txt
   - conan install cmake/3.22.0@/ -g virtualenv
   - activate
   - conan install . -s build_type=Release --build=missing
@@ -43,13 +42,13 @@ artifacts:
 deploy:
   tag: $(APPVEYOR_REPO_TAG_NAME)
   release: 3Space Studio $(APPVEYOR_REPO_TAG_NAME) Release
-  description: "See release notes for information about this release: https://github.com/StarsiegePlayers/3space-studio/wiki/Release-Notes"
+  description: "See release notes for information about this release: https://github.com/3space-studio/3space-studio/wiki/Release-Notes"
   provider: GitHub
   auth_token:
     secure: hD8hzQeP3c5jJuk/pMwouuz4wI8VdHDfGlyoTYLrWur9mLHj3lbMP7R37eHRd2Gy
   artifact: 3spaceStudio
   draft: false
-  prerelease: false
+  prerelease: true
   on:
     branch: master
     APPVEYOR_REPO_TAG: true

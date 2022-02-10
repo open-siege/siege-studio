@@ -13,6 +13,16 @@ class LocalConanFile(ConanFile):
             profile = sys.argv[sys.argv.index("--profile") + 1]
             profile = os.path.abspath(profile) if profile != "default" else profile
 
+        commands = [
+            "cd 3space-studio",
+            "pip3 install -r requirements.txt",
+            "cd ..",
+            "cd siege-shell",
+            "pip3 install -r requirements.txt"
+        ]
+
+        self.run(" && ".join(commands), run_environment=True)
+
         targets = ["tools", "siege-shell", "3space-studio", "extender"]
         commands = [
             "cd 3space",
@@ -20,6 +30,7 @@ class LocalConanFile(ConanFile):
             "conan export ."
         ]
         self.run(" && ".join(commands), run_environment=True)
+
 
         for target in targets:
             commands = [

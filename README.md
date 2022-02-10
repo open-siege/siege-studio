@@ -62,7 +62,7 @@ You may also have to run:
 
 ```conan config set general.revisions_enabled=1```
 
-As a setup command, without any pre-built packages, run ```conan install cmake/3.17.3@/ -g virtualenv```
+As a setup command, without any pre-built packages, run ```conan install cmake/3.22.0@/ -g virtualenv```
 
 Then run ```activate``` or ```./activate```
 
