@@ -26,7 +26,7 @@ class DarkstarHookConan(ConanFile):
         # The debug build isn't too bad since all the main logic has been moved to darkstar.dll
         self.run(" && ".join([
             "cd darkstar.proxy",
-            "conan install . -s arch=x86"]), run_environment=True)
+            f"conan install . {settings}"]), run_environment=True)
 
         self.run(" && ".join(["cd mem", f"conan install . {settings}"]), run_environment=True)
 
