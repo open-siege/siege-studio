@@ -17,14 +17,12 @@ class LocalConanFile(ConanFile):
 
     def build(self):
         cmake = CMake(self)
-        print(f"Python executable path is {sys.executable}")
         cmake.definitions["PYTHON_EXECUTABLE"] = sys.executable
         cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         cmake.build()
 
     def package(self):
         cmake = CMake(self)
-        print(f"Python executable path is {sys.executable}")
         cmake.definitions["PYTHON_EXECUTABLE"] = sys.executable
         cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         cmake.install()
