@@ -10,7 +10,6 @@ class LocalConanFile(ConanFile):
     def requirements(self):
         if os.path.exists("./cmake"):
             shutil.rmtree("./cmake")
-            os.mkdir("./cmake")
 
         profile = "default"
 
@@ -35,6 +34,7 @@ class LocalConanFile(ConanFile):
             f"conan install . --profile {profile} -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing",
             "conan export .",
             "cd ..",
+            "mkdir cmake",
             "cd cmake",
             f"conan install 3space/0.5.1@/ -g cmake_find_package --profile {profile} -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing"
         ]
