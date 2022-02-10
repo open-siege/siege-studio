@@ -3,12 +3,14 @@ from shutil import copyfile
 import os.path
 
 class DarkstarHookConan(ConanFile):
-    settings = "os", "compiler", "build_type", "arch"
+    settings = "os", "compiler", "build_type", "arch", "arch_build"
     build_requires = "cmake/3.22.0"
 
     def requirements(self):
         if self.settings.arch != "x86":
             return
+
+        settings = f"-s cmake:arch={self.settings.arch_build} -s arch={self.settings.arch} --build=missing"
 
         self.run(" && ".join([
             "cd detours",
@@ -17,7 +19,7 @@ class DarkstarHookConan(ConanFile):
 
         self.run(" && ".join([
             "cd darkstar",
-            "conan install . -s arch=x86 --build=missing"]), run_environment=True)
+            f"conan install . {settings}"]), run_environment=True)
 
         # Release builds cause the dll not to work properly.
         # Tried with various optimisation levels and still has issues.
@@ -26,9 +28,9 @@ class DarkstarHookConan(ConanFile):
             "cd darkstar.proxy",
             "conan install . -s arch=x86"]), run_environment=True)
 
-        self.run(" && ".join(["cd mem", "conan install . -s arch=x86"]), run_environment=True)
+        self.run(" && ".join(["cd mem", f"conan install . {settings}"]), run_environment=True)
 
-        self.run(" && ".join(["cd launcher", "conan install . -s arch=x86 --build=missing"]), run_environment=True)
+        self.run(" && ".join(["cd launcher", f"conan install . {settings}"]), run_environment=True)
 
     def build(self):
         cmake = CMake(self)
