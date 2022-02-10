@@ -41,3 +41,4 @@ cmake/
 /install.bat
 /tools/install.bat
 /extender/install.bat
+ImageMagick
