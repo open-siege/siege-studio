@@ -29,7 +29,7 @@ class LocalConanFile(ConanFile):
             f"conan install . --profile {profile} -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing",
             "conan export .",
             "cd ..",
-            "mkdir cmake",
+            "mkdir cmake || echo lib3space exported",
             "cd cmake",
             f"conan install 3space/0.5.1@/ -g cmake_find_package --profile {profile} -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing"
         ]
@@ -48,7 +48,6 @@ class LocalConanFile(ConanFile):
         cmake = CMake(self)
         cmake.definitions["CONAN_CMAKE_SYSTEM_PROCESSOR"] = self.settings.arch
         cmake.definitions["CI"] = os.environ["CI"] if "CI" in os.environ else "False"
-        print(f"Python executable path is {sys.executable}")
         cmake.definitions["PYTHON_EXECUTABLE"] = sys.executable
         cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         cmake.build()
@@ -60,7 +59,6 @@ class LocalConanFile(ConanFile):
         cmake = CMake(self)
         cmake.definitions["CONAN_CMAKE_SYSTEM_PROCESSOR"] = self.settings.arch
         cmake.definitions["CI"] = os.environ["CI"] if "CI" in os.environ else "False"
-        print(f"Python executable path is {sys.executable}")
         cmake.definitions["PYTHON_EXECUTABLE"] = sys.executable
         cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         self.copy(pattern="LICENSE", src=self.source_folder, dst="licenses")

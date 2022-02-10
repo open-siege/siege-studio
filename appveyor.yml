@@ -13,7 +13,7 @@ platform:
 
 install:
   - set PATH=%PATH%;%PYTHON%/Scripts/
-  - choco install imagemagick -y
+  - choco install imagemagick -y -PackageParameters InstallDevelopmentHeaders=true
   - pip3 install conan --upgrade
   - conan user
   - conan remote add bincrafters https://bincrafters.jfrog.io/artifactory/api/conan/public-conan
