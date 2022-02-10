@@ -5,6 +5,8 @@ import os.path
 # conan install . -s arch=x86
 
 class LocalConanFile(ConanFile):
+    name = "darkstar-core"
+    version = "0.5.1"
     build_requires = "cmake/3.22.0"
     settings = "os", "compiler", "build_type", "arch"
     requires = "detours/4.0.1@microsoft/stable", "nlohmann_json/3.8.0", "catch2/2.13.4"
