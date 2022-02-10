@@ -23,11 +23,16 @@ class LocalConanFile(ConanFile):
 
         self.run(" && ".join(commands), run_environment=True)
 
+        ci_build = False
+
+        if "CI" in os.environ:
+            ci_build = os.environ["CI"] == "True" or os.environ["CI"] == "true"
+
         targets = ["tools", "siege-shell", "3space-studio", "extender"]
         commands = [
             "cd 3space",
             f"conan install . --profile {profile} -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing",
-            "conan export ."
+            "echo Skipping export" if ci_build else "conan export ."
         ]
         self.run(" && ".join(commands), run_environment=True)
 
