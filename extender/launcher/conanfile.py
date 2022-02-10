@@ -4,6 +4,8 @@ import glob
 # conan install . -s arch=x86
 
 class LocalConanFile(ConanFile):
+    name = "starsiege-launcher"
+    version = "0.5.1"
     build_requires = "cmake/3.22.0"
     settings = "os", "compiler", "build_type", "arch"
     requires = "detours/4.0.1@microsoft/stable"

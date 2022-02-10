@@ -10,16 +10,14 @@ class DarkstarHookConan(ConanFile):
         if self.settings.arch != "x86":
             return
 
-        settings = f"-s cmake:arch={self.settings.arch_build} -s arch={self.settings.arch} --build=missing"
+        settings = f"-s arch={self.settings.arch} -s cmake:arch={self.settings.arch_build} --build=missing"
 
         self.run(" && ".join([
             "cd detours",
             "conan source .",
             "conan export . detours/4.0.1@microsoft/stable"]), run_environment=True)
 
-        self.run(" && ".join([
-            "cd darkstar",
-            f"conan install . {settings}"]), run_environment=True)
+        self.run(" && ".join(["cd darkstar", f"conan install . {settings}"]), run_environment=True)
 
         # Release builds cause the dll not to work properly.
         # Tried with various optimisation levels and still has issues.
