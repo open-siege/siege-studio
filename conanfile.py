@@ -26,7 +26,7 @@ class LocalConanFile(ConanFile):
 
         targets = ["tools", "siege-shell", "3space-studio", "extender"]
 
-        if os.exists("cmake"):
+        if os.path.exists("cmake"):
             shutil.rmtree("cmake")
             os.mkdir("cmake")
 
