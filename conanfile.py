@@ -31,7 +31,7 @@ class LocalConanFile(ConanFile):
             "cd ..",
             "mkdir cmake",
             "cd cmake",
-            f"conan install 3space/0.5.1@/ -g cmake_find_package --profile {profile} -s build_type={self.settings.build_type} -s arch={self.settings.arch}"
+            f"conan install 3space/0.5.1@/ -g cmake_find_package --profile {profile} -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing"
         ]
         self.run(" && ".join(commands), run_environment=True)
 
