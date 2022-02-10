@@ -24,7 +24,7 @@ build_script:
   - mkdir build
   - conan install cmake/3.22.0@/ -g virtualenv
   - activate
-  - echo conan install . -s build_type=Release -s arch=x86 --build=missing > x86.bat
+  - echo conan install . -s build_type=Release -s arch=x86 -s cmake:arch=x86_64 --build=missing > x86.bat
   - echo conan install . -s build_type=Release -s arch=x86_64 --build=missing > x64.bat
   - call %PLATFORM%.bat
   - conan package .
