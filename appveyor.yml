@@ -15,14 +15,15 @@ install:
   - set PATH=%PATH%;%PYTHON%/Scripts/
   - pip3 install conan --upgrade
   - conan user
-  - conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan --force
+  - conan remote add bincrafters https://bincrafters.jfrog.io/artifactory/api/conan/public-conan
+  - conan config set general.revisions_enabled=1
   - conan --version
 
 build_script:
   - set PATH=%PATH%;%PYTHON%/Scripts/
   - mkdir build
   - pip3 install -r requirements.txt
-  - conan install cmake/3.17.3@/ -g virtualenv
+  - conan install cmake/3.22.0@/ -g virtualenv
   - activate
   - conan install . -s build_type=Release --build=missing
   - conan package .
