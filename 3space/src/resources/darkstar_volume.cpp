@@ -266,24 +266,23 @@ namespace studio::resources::vol::darkstar
     auto [volume_type, buffer_size, amount_to_skip] = get_file_list_offsets(raw_data);
     std::vector<char> raw_chars(buffer_size);
 
+    raw_data.read(reinterpret_cast<std::byte*>(raw_chars.data()), raw_chars.size());
+
     if (volume_type != volume_version::three_space_vol && (buffer_size) % 2 != 0)
     {
       raw_data.seekg(1, std::ios::cur);
     }
 
-    raw_data.read(reinterpret_cast<std::byte*>(raw_chars.data()), raw_chars.size());
-
     std::vector<std::string> results;
-
-    std::size_t index = 0;
 
     if (raw_chars.back() != '\0')
     {
       raw_chars.back() = '\0';
     }
 
-    constexpr auto max_filesize = 25;
+    const auto max_filesize = volume_type == volume_version::three_space_vol ? 25 : 100;
 
+    std::size_t index = 0;
     while (index < raw_chars.size())
     {
       results.emplace_back(raw_chars.data() + index);
@@ -320,6 +319,11 @@ namespace studio::resources::vol::darkstar
     else
     {
       raw_data.read(reinterpret_cast<std::byte*>(&header), sizeof(header));
+    }
+
+    if (header.index_tag != vol_index_tag)
+    {
+      throw std::runtime_error("Could not load the VOL file index.");
     }
 
     std::vector<std::byte> raw_bytes(header.index_size);
