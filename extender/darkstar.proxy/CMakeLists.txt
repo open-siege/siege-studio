@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.22)
 
 set(PKG_FILES ${CMAKE_CURRENT_SOURCE_DIR}/impl/package/lib/darkstar.proxy.dll ${CMAKE_CURRENT_SOURCE_DIR}/impl/package/lib/darkstar.proxy.lib)
 
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/impl/package/include)
+
 add_custom_target(darkstar-proxy-build ALL conan package .
         BYPRODUCTS ${PKG_FILES}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/impl)
