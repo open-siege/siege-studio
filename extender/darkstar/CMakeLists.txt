@@ -30,3 +30,7 @@ set_property(TARGET darkstar-tests PROPERTY CXX_STANDARD 17)
 include(CTest)
 include(Catch)
 catch_discover_tests(darkstar-tests)
+
+install(TARGETS darkstar
+        CONFIGURATIONS Debug Release
+        RUNTIME DESTINATION lib)
