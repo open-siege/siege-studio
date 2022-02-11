@@ -13,6 +13,7 @@ platform:
 
 install:
   - set PATH=%PATH%;%PYTHON%/Scripts/
+  - pip3 cache dir > temp && set /p PIP_CACHE=<temp
   - pip3 install conan --upgrade
   - conan user
   - conan install initial-settings.py
@@ -43,6 +44,7 @@ artifacts:
 
 cache:
   - '%USERPROFILE%/.conan/data'
+  - '%PIP_CACHE%'
 
 deploy:
   tag: $(APPVEYOR_REPO_TAG_NAME)
