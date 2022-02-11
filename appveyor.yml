@@ -43,7 +43,7 @@ artifacts:
 
 cache:
   - '%USERPROFILE%/.conan/data'
-  - pip3 cache dir > temp && set /p PIP_CACHE=<temp && %PIP_CACHE%
+  - '%LOCALAPPDATA%/pip/cache'
 
 deploy:
   tag: $(APPVEYOR_REPO_TAG_NAME)
