@@ -8,14 +8,14 @@ class LocalConanFile(ConanFile):
     build_requires = "cmake/3.22.0"
 
     def requirements(self):
-        profile = "default"
-
-        if "--profile" in sys.argv:
-            profile = sys.argv[sys.argv.index("--profile") + 1]
-            profile = os.path.abspath(profile) if profile != "default" else profile
+        args = sys.argv[3:]
+        for index, value in enumerate(args):
+            if value == "--profile":
+                profile = args[index + 1]
+                args[index + 1] = os.path.abspath(profile) if os.path.exists(profile) else profile
         targets = ["dts-to-json", "json-to-dts", "dts-to-obj", "unvol"]
 
-        settings = f"--profile {profile} -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing"
+        settings = ' '.join(args)
 
         for target in targets:
             commands = [f"cd {target}", f"conan install . {settings}"]

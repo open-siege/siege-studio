@@ -11,7 +11,7 @@ class LocalConanFile(ConanFile):
 
         if "--profile" in sys.argv:
             profile = sys.argv[sys.argv.index("--profile") + 1]
-            profile = os.path.abspath(profile) if profile != "default" else profile
+            profile = os.path.abspath(profile) if os.path.exists(profile) else profile
 
         print(f"Configuring CMake arch to {self.settings.arch_build} for {profile} profile. Helps cross-compiling.")
         self.run(f"conan profile update settings.cmake:arch={self.settings.arch_build} {profile}")

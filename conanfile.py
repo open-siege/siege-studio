@@ -9,6 +9,12 @@ class LocalConanFile(ConanFile):
     build_requires = "cmake/3.22.0"
 
     def requirements(self):
+        args = sys.argv[3:]
+        for index, value in enumerate(args):
+            if value == "--profile":
+                profile = args[index + 1]
+                args[index + 1] = os.path.abspath(profile) if os.path.exists(profile) else profile
+
         self.run("conan install cmake/3.22.0@/ -g json")
 
         with open("conanbuildinfo.json", "r") as info:
@@ -17,15 +23,6 @@ class LocalConanFile(ConanFile):
             os.environ["PATH"] += os.pathsep + deps_env_info["PATH"][0] + os.sep
             os.environ["CMAKE_ROOT"] = deps_env_info["CMAKE_ROOT"]
             os.environ["CMAKE_MODULE_PATH"] = deps_env_info["CMAKE_MODULE_PATH"]
-
-        if os.path.exists("./cmake"):
-            shutil.rmtree("./cmake")
-
-        profile = "default"
-
-        if "--profile" in sys.argv:
-            profile = sys.argv[sys.argv.index("--profile") + 1]
-            profile = os.path.abspath(profile) if profile != "default" else profile
 
         commands = [
             "cd 3space-studio",
@@ -37,10 +34,12 @@ class LocalConanFile(ConanFile):
 
         self.run(" && ".join(commands), run_environment=True)
 
+        if os.path.exists("cmake"):
+            shutil.rmtree("cmake")
+
         targets = ["tools", "siege-shell", "3space-studio", "extender"]
 
-        settings = f"--profile {profile} -s build_type={self.settings.build_type} -s arch={self.settings.arch} --build=missing"
-
+        settings = ' '.join(args)
         commands = [
             "cd 3space",
             f"conan install . {settings}",
