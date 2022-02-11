@@ -25,8 +25,6 @@ build_script:
   - echo conan install . -s build_type=Release -s arch=x86_64 --build=missing > x64.bat
   - call %PLATFORM%.bat
   - conan package .
-  - rmdir %USERPROFILE%\.conan\data\3space /S /Q
-  - rmdir %USERPROFILE%\.conan\data\detours /S /Q
 
 test_script:
   - conan install cmake/3.22.0@/ -g virtualenv
@@ -35,6 +33,8 @@ test_script:
   - ctest
 
 after_build:
+  - if exist %USERPROFILE%\.conan\data\3space rmdir %USERPROFILE%\.conan\data\3space /S /Q
+  - if exist %USERPROFILE%\.conan\data\detours rmdir %USERPROFILE%\.conan\data\detours /S /Q
   - powershell Compress-Archive package/* 3space-studio-%APPVEYOR_BUILD_VERSION%-%PLATFORM%.zip
 
 artifacts:
