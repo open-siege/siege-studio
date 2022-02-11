@@ -12,4 +12,5 @@ class DarkstarHookConan(ConanFile):
         msbuild.build("mem.sln", upgrade_project=False, toolset="v142")
 
     def package(self):
+        self.build()
         self.copy("*.dll", "lib", "", keep_path=False)
