@@ -39,6 +39,9 @@ artifacts:
   - path: 3space-studio-$(APPVEYOR_BUILD_VERSION)-$(PLATFORM).zip
     name: 3spaceStudio
 
+cache:
+  - '%USERPROFILE%/.conan/data'
+
 deploy:
   tag: $(APPVEYOR_REPO_TAG_NAME)
   release: 3Space Studio $(APPVEYOR_REPO_TAG_NAME) Release
