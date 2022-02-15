@@ -1,6 +1,6 @@
 # Open Siege
 
-![](logo/logo.svg)
+<img height="320" width="320" src="logo/logo.svg" alt="Open Siege logo" />
 
 ### Summary
 
