@@ -11,7 +11,7 @@ class LocalConanFile(ConanFile):
     author = "Matthew Rindel (matthew@thesiegehub.com)"
     build_requires = "cmake/3.22.0"
     settings = "os", "compiler", "build_type", "arch"
-    requires = "nlohmann_json/3.9.0", "boost/1.76.0", "glm/0.9.9.8", "span-lite/0.9.0", "taocpp-pegtl/3.1.0", "catch2/2.13.4"
+    requires = "nlohmann_json/3.10.5", "boost/1.76.0", "glm/0.9.9.8", "span-lite/0.9.0", "taocpp-pegtl/3.1.0", "catch2/2.13.4"
     generators = "cmake_find_package"
     exports_sources = "CMakeLists.txt", "include/*", "src/*"
 
