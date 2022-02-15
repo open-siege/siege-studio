@@ -46,15 +46,25 @@ cache:
   - extender/darkstar.proxy/impl/mingw.7z
 
 deploy:
-  tag: $(APPVEYOR_REPO_TAG_NAME)
-  release: 3Space Studio $(APPVEYOR_REPO_TAG_NAME) Release
-  description: "See release notes for information about this release: https://github.com/3space-studio/3space-studio/wiki/Release-Notes"
-  provider: GitHub
-  auth_token:
-    secure: hD8hzQeP3c5jJuk/pMwouuz4wI8VdHDfGlyoTYLrWur9mLHj3lbMP7R37eHRd2Gy
-  artifact: 3spaceStudio
-  draft: false
-  prerelease: true
-  on:
-    branch: master
-    APPVEYOR_REPO_TAG: true
+  - release: Open Siege Preview Release
+    description: "See release notes for information about this release: https://github.com/3space-studio/3space-studio/wiki/Release-Notes"
+    provider: GitHub
+    auth_token:
+      secure: j9gRSLHiiIC4nZ4dake8rl5AKZO+nirkNT28Fw53gDZ5F8/Os6F6NPc7OH6db7zB
+    artifact: OpenSiege
+    draft: false
+    skip_tags: true
+    prerelease: true
+    on:
+      branch: master
+  - tag: $(APPVEYOR_REPO_TAG_NAME)
+    release: Open Siege $(APPVEYOR_REPO_TAG_NAME) Release
+    description: "See release notes for information about this release: https://github.com/3space-studio/3space-studio/wiki/Release-Notes"
+    provider: GitHub
+    auth_token:
+      secure: j9gRSLHiiIC4nZ4dake8rl5AKZO+nirkNT28Fw53gDZ5F8/Os6F6NPc7OH6db7zB
+    artifact: OpenSiege
+    draft: false
+    prerelease: false
+    on:
+      APPVEYOR_REPO_TAG: true
