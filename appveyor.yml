@@ -31,29 +31,17 @@ test_script:
   - cd build
   - ctest
 
-for:
--
-  branches:
-    only:
-      - master
-  artifacts:
-    - path: open-siege-preview-$(PLATFORM).zip
-      name: OpenSiege
-  after_build:
-    - if exist %USERPROFILE%\.conan\data\3space rmdir %USERPROFILE%\.conan\data\3space /S /Q
-    - if exist %USERPROFILE%\.conan\data\detours rmdir %USERPROFILE%\.conan\data\detours /S /Q
-    - powershell Compress-Archive package/* open-siege-preview-%PLATFORM%.zip
--
-  branches:
-    except:
-      - master
-  artifacts:
-    - path: open-siege-$(APPVEYOR_BUILD_VERSION)-$(PLATFORM).zip
-      name: OpenSiege
-  after_build:
-    - if exist %USERPROFILE%\.conan\data\3space rmdir %USERPROFILE%\.conan\data\3space /S /Q
-    - if exist %USERPROFILE%\.conan\data\detours rmdir %USERPROFILE%\.conan\data\detours /S /Q
-    - powershell Compress-Archive package/* open-siege-%APPVEYOR_BUILD_VERSION%-%PLATFORM%.zip
+after_build:
+  - if exist %USERPROFILE%\.conan\data\3space rmdir %USERPROFILE%\.conan\data\3space /S /Q
+  - if exist %USERPROFILE%\.conan\data\detours rmdir %USERPROFILE%\.conan\data\detours /S /Q
+  - powershell Compress-Archive package/* open-siege-%APPVEYOR_BUILD_VERSION%-%PLATFORM%.zip
+  - powershell Compress-Archive package/* open-siege-%PLATFORM%.zip
+
+artifacts:
+  - path: open-siege-$(APPVEYOR_BUILD_VERSION)-$(PLATFORM).zip
+    name: OpenSiege
+  - path: open-siege-$(PLATFORM).zip
+    name: OpenSiegePreview
 
 cache:
   - '%USERPROFILE%/.conan/data'
@@ -70,7 +58,7 @@ deploy:
     provider: GitHub
     auth_token:
       secure: j9gRSLHiiIC4nZ4dake8rl5AKZO+nirkNT28Fw53gDZ5F8/Os6F6NPc7OH6db7zB
-    artifact: OpenSiege
+    artifact: OpenSiegePreview
     draft: false
     skip_tags: true
     prerelease: true
