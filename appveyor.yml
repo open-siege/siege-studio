@@ -37,13 +37,17 @@ after_build:
   - powershell Compress-Archive package/* 3space-studio-%APPVEYOR_BUILD_VERSION%-%PLATFORM%.zip
 
 artifacts:
-  - path: 3space-studio-$(APPVEYOR_BUILD_VERSION)-$(PLATFORM).zip
-    name: 3spaceStudio
+  - path: open-siege-$(APPVEYOR_BUILD_VERSION)-$(PLATFORM).zip
+    name: OpenSiege
 
 cache:
   - '%USERPROFILE%/.conan/data'
   - '%LOCALAPPDATA%/pip/cache'
   - extender/darkstar.proxy/impl/mingw.7z
+
+branches:
+  except:
+    - preview
 
 deploy:
   - release: Open Siege Preview Release
@@ -55,8 +59,11 @@ deploy:
     draft: false
     skip_tags: true
     prerelease: true
+    force_update: true
+    tag: preview
     on:
       branch: master
+      APPVEYOR_REPO_TAG: false
   - tag: $(APPVEYOR_REPO_TAG_NAME)
     release: Open Siege $(APPVEYOR_REPO_TAG_NAME) Release
     description: "See release notes for information about this release: https://github.com/3space-studio/3space-studio/wiki/Release-Notes"
@@ -67,4 +74,5 @@ deploy:
     draft: false
     prerelease: false
     on:
+      branch: master
       APPVEYOR_REPO_TAG: true
