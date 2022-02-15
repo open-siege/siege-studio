@@ -9,7 +9,7 @@ class LocalConanFile(ConanFile):
     version = "0.5.1"
     build_requires = "cmake/3.22.0"
     settings = "os", "compiler", "build_type", "arch"
-    requires = "detours/4.0.1@microsoft/stable", "nlohmann_json/3.8.0", "catch2/2.13.4"
+    requires = "detours/4.0.1@microsoft/stable", "nlohmann_json/3.10.5", "catch2/2.13.4"
     generators = "cmake_find_package"
 
     def build(self):
