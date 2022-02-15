@@ -20,7 +20,6 @@ install:
   - conan --version
 
 build_script:
-  - git push --delete https://%GITHUB_ACCESS_TOKEN%@github.com/open-siege/open-siege.git preview 1>nul 2>nul
   - set PATH=%PATH%;%PYTHON%/Scripts/
   - mkdir build
   - echo conan install . -s build_type=Release -s arch=x86 --build=missing > x86.bat
@@ -38,6 +37,7 @@ after_build:
   - if exist %USERPROFILE%\.conan\data\3space rmdir %USERPROFILE%\.conan\data\3space /S /Q
   - if exist %USERPROFILE%\.conan\data\detours rmdir %USERPROFILE%\.conan\data\detours /S /Q
   - powershell Compress-Archive package/* open-siege-%PLATFORM%.zip
+  - git push --delete https://%GITHUB_ACCESS_TOKEN%@github.com/open-siege/open-siege.git preview 1>nul 2>nul
 
 artifacts:
   - path: open-siege-$(PLATFORM).zip
