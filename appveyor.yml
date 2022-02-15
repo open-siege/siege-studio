@@ -20,7 +20,7 @@ install:
   - conan --version
 
 build_script:
-  - git push --delete https://%GITHUB_ACCESS_TOKEN%@github.com/open-siege/open-siege.git preview
+  - git push --delete https://%GITHUB_ACCESS_TOKEN%@github.com/open-siege/open-siege.git preview 1>nul 2>nul
   - set PATH=%PATH%;%PYTHON%/Scripts/
   - mkdir build
   - echo conan install . -s build_type=Release -s arch=x86 --build=missing > x86.bat
