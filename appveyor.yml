@@ -18,6 +18,7 @@ install:
   - conan --version
 
 build_script:
+  - git tag -d preview
   - set PATH=%PATH%;%PYTHON%/Scripts/
   - mkdir build
   - echo conan install . -s build_type=Release -s arch=x86 --build=missing > x86.bat
