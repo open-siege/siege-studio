@@ -40,14 +40,14 @@ namespace nlohmann
     }
 
     template<typename Struct, typename BasicJsonType>
-    static void raise_type_error(std::string_view type_name)
+    static void raise_type_error(std::string_view type_name, const BasicJsonType& context)
     {
       if (type_name != Struct::type_name)
       {
         std::stringstream msg;
         msg << "The type name " << type_name << " is a misspelled or unsupported type. ";
 
-        throw BasicJsonType::other_error::create(int{}, msg.str());
+        throw BasicJsonType::other_error::create(int{}, msg.str(), context);
       }
     }
 
@@ -58,7 +58,7 @@ namespace nlohmann
       auto version = js.at("version");
       auto type_name = js.at("typeName");
 
-      raise_type_error<v2::material_list, BasicJsonType>(type_name);
+      raise_type_error<v2::material_list, BasicJsonType>(type_name, js);
 
       emplace_variant<v2::material_list>(js, opt, type_name, version);
       emplace_variant<v3::material_list>(js, opt, type_name, version);
@@ -72,7 +72,7 @@ namespace nlohmann
       auto version = js.at("version");
       auto type_name = js.at("typeName");
 
-      raise_type_error<v2::mesh, BasicJsonType>(type_name);
+      raise_type_error<v2::mesh, BasicJsonType>(type_name, js);
 
       emplace_variant<v2::mesh>(js, opt, type_name, version);
       emplace_variant<v3::mesh>(js, opt, type_name, version);
@@ -85,7 +85,7 @@ namespace nlohmann
       auto version = js.at("version");
       auto type_name = js.at("typeName");
 
-      raise_type_error<v2::shape, BasicJsonType>(type_name);
+      raise_type_error<v2::shape, BasicJsonType>(type_name, js);
 
       emplace_variant<v2::shape>(js, opt, type_name, version);
       emplace_variant<v3::shape>(js, opt, type_name, version);
@@ -102,7 +102,7 @@ namespace nlohmann
       auto version = js.at("version");
       auto type_name = js.at("typeName");
 
-      //raise_type_error<v2::shape, BasicJsonType>(type_name);
+      //raise_type_error<v2::shape, BasicJsonType>(type_name, js);
 
       emplace_variant<an_shape>(js, opt, type_name, version);
       emplace_variant<an_cyclic_sequence>(js, opt, type_name, version);
