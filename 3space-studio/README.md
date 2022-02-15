@@ -1,16 +1,16 @@
-# Open Siege
+# 3Space Studio
 
-![](logo/logo.svg)
+![](https://openclipart.org/image/400px/svg_to_png/97921/rubik-3D-colored.png)
 
 ### Summary
 
 Classic Games, Modern Technology.
 
-Open Siege is an open-source reimplementation of the 3Space game engine, used by several games such as the Earthsiege/Starsiege series, the Red Baron/Great War Planes series and several others.
-
-Open Siege exists to breathe new life into games made by Dynamix, which use the 3Space engine and its descendants, while also reverse engineering their formats for fun, modding and preservation.
+3Space Studio exists to breathe new life into games made by Dynamix, which use the 3Space engine and its descendants, while also reverse engineering their formats for fun, modding and preservation.
 
 For a list of current development tasks, check out this ClickUp board here: https://share.clickup.com/b/h/5-15151441-2/aeb3a2cc99994ef
+
+If you are reading this on your computer, checkout the latest README here: https://github.com/matthew-rindel/3space-studio
 
 A first goal for each game is to do the following:
 
