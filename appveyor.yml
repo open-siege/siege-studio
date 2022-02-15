@@ -31,14 +31,29 @@ test_script:
   - cd build
   - ctest
 
-after_build:
-  - if exist %USERPROFILE%\.conan\data\3space rmdir %USERPROFILE%\.conan\data\3space /S /Q
-  - if exist %USERPROFILE%\.conan\data\detours rmdir %USERPROFILE%\.conan\data\detours /S /Q
-  - powershell Compress-Archive package/* open-siege-%APPVEYOR_BUILD_VERSION%-%PLATFORM%.zip
-
-artifacts:
-  - path: open-siege-$(APPVEYOR_BUILD_VERSION)-$(PLATFORM).zip
-    name: OpenSiege
+for:
+-
+  branches:
+    only:
+      - master
+  artifacts:
+    - path: open-siege-preview-$(PLATFORM).zip
+      name: OpenSiege
+  after_build:
+    - if exist %USERPROFILE%\.conan\data\3space rmdir %USERPROFILE%\.conan\data\3space /S /Q
+    - if exist %USERPROFILE%\.conan\data\detours rmdir %USERPROFILE%\.conan\data\detours /S /Q
+    - powershell Compress-Archive package/* open-siege-preview-%PLATFORM%.zip
+-
+  branches:
+    except:
+      - master
+  artifacts:
+    - path: open-siege-$(APPVEYOR_BUILD_VERSION)-$(PLATFORM).zip
+      name: OpenSiege
+  after_build:
+    - if exist %USERPROFILE%\.conan\data\3space rmdir %USERPROFILE%\.conan\data\3space /S /Q
+    - if exist %USERPROFILE%\.conan\data\detours rmdir %USERPROFILE%\.conan\data\detours /S /Q
+    - powershell Compress-Archive package/* open-siege-%APPVEYOR_BUILD_VERSION%-%PLATFORM%.zip
 
 cache:
   - '%USERPROFILE%/.conan/data'
