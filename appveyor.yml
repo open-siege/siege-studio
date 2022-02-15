@@ -34,7 +34,7 @@ test_script:
 after_build:
   - if exist %USERPROFILE%\.conan\data\3space rmdir %USERPROFILE%\.conan\data\3space /S /Q
   - if exist %USERPROFILE%\.conan\data\detours rmdir %USERPROFILE%\.conan\data\detours /S /Q
-  - powershell Compress-Archive package/* 3space-studio-%APPVEYOR_BUILD_VERSION%-%PLATFORM%.zip
+  - powershell Compress-Archive package/* open-siege-%APPVEYOR_BUILD_VERSION%-%PLATFORM%.zip
 
 artifacts:
   - path: open-siege-$(APPVEYOR_BUILD_VERSION)-$(PLATFORM).zip
