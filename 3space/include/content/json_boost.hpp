@@ -31,7 +31,7 @@ namespace nlohmann
         msg << "The maximum expected size is " << actual_size << " characters.";
         msg << "The size of " << result << " is " << result.size() << " characters.";
 
-        throw BasicJsonType::other_error::create(int{}, msg.str());
+        throw BasicJsonType::other_error::create(int{}, msg.str(), js);
       }
 
       auto end = result.size() < Size ? result.end() : result.begin() + actual_size;
