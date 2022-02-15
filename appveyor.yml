@@ -1,7 +1,8 @@
 version: 0.5.1-{build}
 environment:
   PYTHON: "C:\\python310"
-  GITHUB_ACCESS_TOKEN: j9gRSLHiiIC4nZ4dake8rl5AKZO+nirkNT28Fw53gDZ5F8/Os6F6NPc7OH6db7zB
+  GITHUB_ACCESS_TOKEN:
+    secure: j9gRSLHiiIC4nZ4dake8rl5AKZO+nirkNT28Fw53gDZ5F8/Os6F6NPc7OH6db7zB
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       PYVER: py38
