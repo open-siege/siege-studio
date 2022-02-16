@@ -1,36 +1,12 @@
-from wand.api import library
 from collections.abc import Iterable
-import base64
-import wand.image
 import numpy
 import xml.etree.ElementTree as ET
 import sys
 
 input = sys.argv[1]
-output = sys.argv[2]
-theme_file = sys.argv[3]
-
-# Texture Generation
-
-with open(input, "rb") as svg_file:
-    with wand.image.Image() as image:
-        with wand.color.Color('transparent') as background_color:
-            library.MagickSetBackgroundColor(image.wand,
-                                             background_color.resource)
-        image.read(blob=svg_file.read(), format="svg")
-        png_image = image.make_blob("png32")
-
-root = ET.fromstring(png_image.decode("utf-8"))
-
-image = list(root.iterfind("{http://www.w3.org/2000/svg}image"))
-
-raw_data = image[0].get("href").replace("data:image/png;base64,", "")
-
-with open(output, "wb") as out:
-    out.write(base64.b64decode(raw_data))
+theme_file = sys.argv[2]
 
 # Theme Generation
-
 # TODO support other types of SVG element transformations.
 # They should likely all produce a matrix, to make the calculation part consistent.
 def matrix(a, b, c, d, e, f):

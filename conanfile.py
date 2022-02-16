@@ -26,9 +26,6 @@ class LocalConanFile(ConanFile):
 
         commands = [
             "cd 3space-studio",
-            "pip3 install -r requirements.txt",
-            "cd ..",
-            "cd siege-shell",
             "pip3 install -r requirements.txt"
         ]
 
