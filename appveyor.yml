@@ -42,7 +42,6 @@ artifacts:
 
 cache:
   - '%USERPROFILE%/.conan/data'
-  - '%LOCALAPPDATA%/pip/cache'
   - extender/darkstar.proxy/impl/mingw.7z
 
 branches:
