@@ -1,10 +1,7 @@
 from conans import ConanFile, CMake, tools
 import glob
 import os.path
-import sys
 import os
-
-image_url = "https://transfer.sh/F5D3bN/besieged-theme.png"
 
 class LocalConanFile(ConanFile):
     name = "siege-shell"
@@ -14,23 +11,16 @@ class LocalConanFile(ConanFile):
     author = "Matthew Rindel (matthew@thesiegehub.com)"
     build_requires = "cmake/3.22.0"
     settings = "os", "compiler", "build_type", "arch"
-    requires = "3space/0.5.1", "wxwidgets/3.1.5@bincrafters/stable"
+    requires = "nanosvg/cci.20210904", "wxwidgets/3.1.5@bincrafters/stable"
     generators = "cmake_find_package"
-
-    def requirements(self):
-        image_path = "src/besieged-theme.png"
-        if not os.path.exists(image_path):
-            tools.download(image_url, image_path)
 
     def build(self):
         cmake = CMake(self)
-        cmake.definitions["PYTHON_EXECUTABLE"] = sys.executable
         cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         cmake.build()
 
     def package(self):
         cmake = CMake(self)
-        cmake.definitions["PYTHON_EXECUTABLE"] = sys.executable
         cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         cmake.install()
 

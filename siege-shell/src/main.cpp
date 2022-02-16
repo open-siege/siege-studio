@@ -1,8 +1,19 @@
 #include <string>
 #include <optional>
+#include <filesystem>
+#include <memory>
+#include <array>
+#include <vector>
+#include <cstdint>
+
 #include <wx/wx.h>
 #include <wx/dcbuffer.h>
 #include <wx/graphics.h>
+
+#define NANOSVG_IMPLEMENTATION
+#include <nanosvg.h>
+#define NANOSVGRAST_IMPLEMENTATION
+#include <nanosvgrast.h>
 
 struct button_data : public wxClientData
 {
@@ -212,6 +223,58 @@ wxStaticText* create_button(widget_info& info,
   return new_button;
 }
 
+wxImage load_image(const std::string& filename)
+{
+  if (!std::filesystem::exists(filename))
+  {
+    auto svg_filename = std::filesystem::path(filename).replace_extension(".svg");
+    auto image = std::shared_ptr<NSVGimage>(nsvgParseFromFile(svg_filename.string().c_str(), "px", 96.0f),
+      [](auto* image) { nsvgDelete(image); });
+
+    auto rast = std::shared_ptr<NSVGrasterizer>(nsvgCreateRasterizer(), [](auto* rast) { nsvgDeleteRasterizer(rast); });
+
+    auto w = (int)image->width;
+    auto h = (int)image->height;
+
+    struct rgba
+    {
+      std::uint8_t r, g, b, a;
+    };
+
+    struct rgb
+    {
+      std::uint8_t r, g, b;
+    };
+
+    static_assert(sizeof(rgba) == sizeof(std::int32_t));
+    static_assert(sizeof(rgb) == sizeof(std::array<std::byte, 3>));
+
+    std::vector<rgba> buffer(w * h);
+    nsvgRasterize(rast.get(), image.get(), 0,0,1, reinterpret_cast<unsigned char*>(buffer.data()), w, h, w * sizeof(rgba));
+
+    auto freer = [](auto* data) { free(data); };
+
+    auto rgb_buffer = std::unique_ptr<rgb[], decltype(freer)>(reinterpret_cast<rgb*>(std::malloc(w * h * sizeof(rgb))), freer);
+    auto a_buffer = std::unique_ptr<std::uint8_t[], decltype(freer)>(reinterpret_cast<std::uint8_t*>(std::malloc(w * h)), freer);
+
+    for (auto i = 0u; i < buffer.size(); ++i)
+    {
+      rgb_buffer.get()[i].r = buffer[i].r;
+      rgb_buffer.get()[i].g = buffer[i].g;
+      rgb_buffer.get()[i].b = buffer[i].b;
+      a_buffer.get()[i] = buffer[i].a;
+    }
+
+    return wxImage(w, h, reinterpret_cast<std::uint8_t*>(rgb_buffer.release()), a_buffer.release());
+  }
+
+  wxImage result = wxImage();
+  result.LoadFile(filename, wxBITMAP_TYPE_PNG);
+
+  return result;
+}
+
+
 int main(int argc, char* argv[])
 {
   wxApp::SetInitializerFunction(createApp);
@@ -242,8 +305,7 @@ int main(int argc, char* argv[])
     wxRect(59, 0, 75, 137)
   };
 
-  info.main_image = wxImage();
-  info.main_image.LoadFile(info.normal_texture.filename, wxBITMAP_TYPE_PNG);
+  info.main_image = load_image(info.normal_texture.filename);
 
   info.normal_texture.image_components = get_texture_components(info.normal_texture, info.main_image);
   info.disabled_texture.image_components = get_texture_components(info.disabled_texture, info.main_image);
