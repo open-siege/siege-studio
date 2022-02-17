@@ -9,7 +9,6 @@ find_package(detours REQUIRED)
 find_package(darkstar-proxy QUIET)
 
 file(GLOB TEST_SRC_FILES src/*.test.cpp src/**/*.test.cpp src/**/**/*.test.cpp)
-file(GLOB JSON_FILES src/config.json)
 file(GLOB SRC_FILES src/*.cpp src/**/*.cpp)
 
 list(REMOVE_ITEM SRC_FILES ${TEST_SRC_FILES})
@@ -17,7 +16,7 @@ list(REMOVE_ITEM SRC_FILES ${TEST_SRC_FILES})
 add_library(darkstar SHARED ${SRC_FILES} src/darkstar.def)
 add_custom_command(TARGET darkstar
         POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ${JSON_FILES} ${CMAKE_CURRENT_BINARY_DIR}
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/src/config.json ${CMAKE_CURRENT_BINARY_DIR}
         )
 target_link_libraries(darkstar PRIVATE detours::detours nlohmann_json::nlohmann_json darkstar-proxy::darkstar-proxy)
 target_include_directories(darkstar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -34,3 +33,5 @@ catch_discover_tests(darkstar-tests)
 install(TARGETS darkstar
         CONFIGURATIONS Debug Release
         RUNTIME DESTINATION lib)
+
+install(FILES src/config.json DESTINATION lib)
