@@ -6,13 +6,13 @@ import os.path
 class LocalConanFile(ConanFile):
     name = "starsiege-launcher"
     version = "0.0.1"
-    url = "https://github.com/StarsiegePlayers/3space-studio"
+    url = "https://github.com/3space-studio/3space-studio"
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
     system_requires = "opengl/system"
     build_requires = "cmake/3.22.0"
     settings = "os", "compiler", "build_type", "arch"
-    requires = "wxwidgets/3.1.5@bincrafters/stable","catch2/2.13.8"
+    requires = "wxwidgets/3.1.5@bincrafters/stable", "catch2/2.13.8", "cpr/1.7.2"
     generators = "cmake_find_package", "virtualenv"
     exports_sources = "CMakeLists.txt", "LICENSE", "README.md", "game-support.md", "src/*"
 
