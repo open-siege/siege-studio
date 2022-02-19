@@ -65,7 +65,8 @@ void runExtender() noexcept
              << std::endl;
 
         file << "raw console: " << console->getRaw() << std::endl;
-        file << "raw plugin console: " << plugins[0]->console << std::endl;
+        // TODO this is off in 1004. Need to find the correct offsets.
+        //file << "raw plugin console: " << plugins[0]->console << std::endl;
     }
     catch (const std::exception & ex)
     {
