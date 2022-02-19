@@ -1,10 +1,7 @@
 #ifndef ENGINEFUNCTIONS_HPP
 #define ENGINEFUNCTIONS_HPP
 
-#include <string>
-#include <fstream>
-#include <streambuf>
-#include <array>
+#include <cstdint>
 
 #include "Core/EngineTypes.hpp"
 #include "Core/EngineExternalTypes.hpp"

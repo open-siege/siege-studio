@@ -5,6 +5,9 @@ add_library(darkstar.proxy SHARED src/Proxy.cpp src/darkstar.proxy.def)
 target_include_directories(darkstar.proxy PUBLIC include)
 set_property(TARGET darkstar.proxy PROPERTY CXX_STANDARD 17)
 
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static")
+target_link_libraries(darkstar.proxy -static-libgcc -static-libstdc++)
+
 add_custom_command(TARGET darkstar.proxy
         POST_BUILD
         COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/lib /def:${CMAKE_CURRENT_SOURCE_DIR}/src/darkstar.proxy.def /out:$<TARGET_FILE_DIR:darkstar.proxy>/darkstar.proxy.lib /machine:x86
