@@ -2,6 +2,8 @@
 #include <map>
 #include <string_view>
 #include <set>
+#include <fstream>
+#include <string>
 #include <nlohmann/json.hpp>
 #include <Darkstar/Proxy.hpp>
 #include "Hook/Game.hpp"

@@ -1,6 +1,8 @@
 #include <memory>
 #include <map>
 #include <utility>
+#include <array>
+#include <string>
 #include "Core/EngineFunctions.hpp"
 #include "Core/EngineExternalTypes.hpp"
 #include "Hook/GameConsole.hpp"
