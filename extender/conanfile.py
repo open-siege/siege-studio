@@ -17,18 +17,11 @@ class DarkstarHookConan(ConanFile):
             "conan source .",
             "conan export . detours/4.0.1@microsoft/stable"]), run_environment=True)
 
-        self.run(" && ".join(["cd darkstar", f"conan install . {settings}"]), run_environment=True)
+        targets = ["darkstar", "darkstar.proxy", "mem", "launcher", "tester"]
 
-        # Release builds cause the dll not to work properly.
-        # Tried with various optimisation levels and still has issues.
-        # The debug build isn't too bad since all the main logic has been moved to darkstar.dll
-        self.run(" && ".join([
-            "cd darkstar.proxy",
-            f"conan install . {settings}"]), run_environment=True)
+        for target in targets:
+            self.run(" && ".join([f"cd {target}", f"conan install . {settings}"]), run_environment=True)
 
-        self.run(" && ".join(["cd mem", f"conan install . {settings}"]), run_environment=True)
-
-        self.run(" && ".join(["cd launcher", f"conan install . {settings}"]), run_environment=True)
 
     def build(self):
         cmake = CMake(self)
