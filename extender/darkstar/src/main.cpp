@@ -25,6 +25,11 @@ void runExtender() noexcept
 
         auto game = Hook::Game::currentInstance();
 
+        if (!game->isLoaded())
+        {
+          return;
+        }
+
         auto console = game->getConsole();
 
         struct local_consumer : Core::ExternalConsoleConsumer

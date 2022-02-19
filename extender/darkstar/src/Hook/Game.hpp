@@ -24,6 +24,8 @@ namespace Hook
 
 		static std::shared_ptr<Game> currentInstance(std::string functionsFileName = "config.json");
 
+                bool isLoaded() const { return current != nullptr; }
+
 		std::shared_ptr<GameConsole> getConsole();
 
 		void addPlugin(ExternalGamePlugin* plugin);
