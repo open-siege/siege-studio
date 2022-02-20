@@ -8,4 +8,8 @@ add_executable(extender-tester src/main.cpp)
 set_property(TARGET extender-tester PROPERTY CXX_STANDARD 17)
 target_link_libraries(extender-tester PRIVATE wxwidgets::wxwidgets)
 
+if(MSVC)
+    target_compile_definitions(extender-tester PRIVATE -D_CRT_SECURE_NO_WARNINGS)
+endif()
+
 install(TARGETS extender-tester CONFIGURATIONS Debug Release RUNTIME DESTINATION bin)
