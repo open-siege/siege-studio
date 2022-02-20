@@ -1,5 +1,5 @@
 from conans import ConanFile, CMake, MSBuild, tools
-from shutil import copyfile
+import json
 import os.path
 
 class DarkstarHookConan(ConanFile):
@@ -12,12 +12,21 @@ class DarkstarHookConan(ConanFile):
 
         settings = f"-s arch={self.settings.arch} --build=missing"
 
+        self.run("conan install cmake/3.22.0@/ -g json")
+
+        with open("conanbuildinfo.json", "r") as info:
+            data = json.load(info)
+            deps_env_info = data["deps_env_info"]
+            os.environ["PATH"] += os.pathsep + deps_env_info["PATH"][0] + os.sep
+            os.environ["CMAKE_ROOT"] = deps_env_info["CMAKE_ROOT"]
+            os.environ["CMAKE_MODULE_PATH"] = deps_env_info["CMAKE_MODULE_PATH"]
+
         self.run(" && ".join([
             "cd detours",
             "conan source .",
             "conan export . detours/4.0.1@microsoft/stable"]), run_environment=True)
 
-        targets = ["darkstar", "darkstar.proxy", "mem", "launcher", "tester"]
+        targets = ["darkstar", "darkstar.proxy", "mem", "launcher", "tray-player", "tester"]
 
         for target in targets:
             self.run(" && ".join([f"cd {target}", f"conan install . {settings}"]), run_environment=True)

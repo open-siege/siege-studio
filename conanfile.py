@@ -17,14 +17,6 @@ class LocalConanFile(ConanFile):
 
         self.run("conan install cmake/3.22.0@/ -g json")
 
-        # self.run("conan install cmake/3.22.0@/ -g json")
-        #
-        # with open("conanbuildinfo.json", "r") as info:
-        #     data = json.load(info)
-        #     deps_env_info = data["deps_env_info"]
-        #
-        #     for key, value in deps_env_info.items():
-        #         args.append(f"-e {key}={value}")
         with open("conanbuildinfo.json", "r") as info:
             data = json.load(info)
             deps_env_info = data["deps_env_info"]

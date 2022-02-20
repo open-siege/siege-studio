@@ -1,0 +1,10 @@
+//auxGetDevCaps
+//auxGetNumDevs
+//mixerGetNumDevs
+//mixerOpen
+//mixerGetLineInfo
+//mixerGetLineControls
+//mixerGetControlDetails
+//mixerClose
+//mciSendCommand
+//mciGetErrorString
