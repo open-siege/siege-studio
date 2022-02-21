@@ -1,9 +1,10 @@
 from conans import ConanFile, CMake, tools
+import glob
 import os.path
 
 class HelloWxWidgetsConanFile(ConanFile):
     build_requires = "cmake/3.22.0"
-    requires = "wxwidgets/3.1.5@bincrafters/stable", "sqlite3/3.37.2"
+    requires = "wxwidgets/3.1.5@bincrafters/stable", "mio/cci.20201220", "sfml/2.5.1"
     settings = "os", "compiler", "build_type", "arch"
     generators = "cmake_find_package"
 
@@ -32,6 +33,11 @@ class HelloWxWidgetsConanFile(ConanFile):
         self.options["wxwidgets"].protocol = False
         self.options["wxwidgets"].html_help = False
         self.options["wxwidgets"].custom_disables = "wxUSE_ARTPROVIDER_TANGO,wxUSE_SVG"
+
+    def imports(self):
+        tools.rmdir("cmake")
+        tools.mkdir("cmake")
+        [tools.rename(file, f"cmake/{file}") for file in glob.glob("*.cmake")]
 
     def build(self):
         cmake = CMake(self)
