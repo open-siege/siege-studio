@@ -7,11 +7,11 @@
 
 namespace studio::views
 {
-  class vol_view : public normal_view
+  class vol_view
   {
   public:
     vol_view(const studio::resources::file_info& info, const studio::resources::resource_explorer& archive);
-    void setup_view(wxWindow& parent) override;
+    void setup_view(wxWindow& parent);
 
   private:
     const studio::resources::resource_explorer& archive;

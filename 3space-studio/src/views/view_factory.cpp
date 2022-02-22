@@ -24,7 +24,7 @@ namespace studio::views
     return std::vector<std::string_view>(extensions.cbegin(), extensions.cend());
   }
 
-  std::unique_ptr<studio_view> view_factory::create_view(const studio::resources::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resources::resource_explorer& manager) const
+  studio_view view_factory::create_view(const studio::resources::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resources::resource_explorer& manager) const
   {
     auto archive_type = validators.equal_range(shared::to_lower(file_info.filename.extension().string()));
 
@@ -40,7 +40,7 @@ namespace studio::views
     {
       if (auto allowed = no_fallback_allowed.find(checker); allowed != no_fallback_allowed.end())
       {
-        return std::make_unique<default_view>(file_info);
+        return normal_view(default_view(file_info));
       }
 
       if (checker(stream))
@@ -49,11 +49,11 @@ namespace studio::views
       }
     }
 
-    return std::make_unique<default_view>(file_info);
+    return normal_view(default_view(file_info));
   }
 
-  std::unique_ptr<studio_view> view_factory::create_default_view(const studio::resources::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resources::resource_explorer& manager) const
+  studio_view  view_factory::create_default_view(const studio::resources::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resources::resource_explorer& manager) const
   {
-    return std::make_unique<default_view>(file_info);
+    return normal_view(default_view(file_info));
   }
 }// namespace studio::views

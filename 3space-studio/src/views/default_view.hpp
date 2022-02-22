@@ -6,11 +6,11 @@
 
 namespace studio::views
 {
-  class default_view : public normal_view
+  class default_view
   {
   public:
     explicit default_view(studio::resources::file_info info);
-    void setup_view(wxWindow& parent) override;
+    void setup_view(wxWindow& parent);
 
   private:
     studio::resources::file_info info;

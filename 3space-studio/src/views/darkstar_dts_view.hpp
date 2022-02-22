@@ -10,14 +10,14 @@
 
 namespace studio::views
 {
-  class darkstar_dts_view : public graphics_view
+  class darkstar_dts_view
   {
   public:
     darkstar_dts_view(const studio::resources::file_info&, std::basic_istream<std::byte>& shape_stream, const studio::resources::resource_explorer& archive);
-    std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks() override;
-    void setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext) override;
-    void render_gl(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext) override;
-    void render_ui(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext) override;
+    std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks();
+    void setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext);
+    void render_gl(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext);
+    void render_ui(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext);
 
   private:
     static std::filesystem::path export_path;
