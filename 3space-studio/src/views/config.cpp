@@ -24,28 +24,28 @@ namespace studio::views
   view_factory create_default_view_factory()
   {
     view_factory view_factory;
-    view_factory.add_file_type(content::dts::darkstar::is_darkstar_dts, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new darkstar_dts_view(info, stream, manager)); });
-    view_factory.add_file_type(content::dts::three_space::v1::is_3space_dts, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new darkstar_dts_view(info, stream, manager)); });
-    view_factory.add_file_type(content::bmp::is_microsoft_bmp, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new bmp_view(info, stream, manager)); });
-    view_factory.add_file_type(content::bmp::is_phoenix_bmp, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new bmp_view(info, stream, manager)); });
-    view_factory.add_file_type(content::bmp::is_earthsiege_bmp, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new bmp_view(info, stream, manager)); });
-    view_factory.add_file_type(content::bmp::is_earthsiege_bmp_array, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new bmp_view(info, stream, manager)); });
-    view_factory.add_file_type(content::bmp::is_phoenix_bmp_array, [](auto& info, auto& stream, auto& manager) { return std::unique_ptr<studio_view>(new bmp_view(info, stream, manager)); });
-    view_factory.add_file_type(content::pal::is_old_pal, [](auto&, auto& stream, auto&) { return std::unique_ptr<studio_view>(new pal_view(stream)); });
-    view_factory.add_file_type(content::pal::is_microsoft_pal, [](auto&, auto& stream, auto&) { return std::unique_ptr<studio_view>(new pal_view(stream)); });
-    view_factory.add_file_type(content::pal::is_phoenix_pal, [](auto&, auto& stream, auto&) { return std::unique_ptr<studio_view>(new pal_view(stream)); });
-    view_factory.add_file_type(content::pal::is_earthsiege_pal, [](auto&, auto& stream, auto&) { return std::unique_ptr<studio_view>(new pal_view(stream)); });
+    view_factory.add_file_type(content::dts::darkstar::is_darkstar_dts, [](auto& info, auto& stream, auto& manager) -> studio_view { return graphics_view(darkstar_dts_view(info, stream, manager)); });
+    view_factory.add_file_type(content::dts::three_space::v1::is_3space_dts, [](auto& info, auto& stream, auto& manager) -> studio_view { return graphics_view(darkstar_dts_view(info, stream, manager)); });
+    view_factory.add_file_type(content::bmp::is_microsoft_bmp, [](auto& info, auto& stream, auto& manager) -> studio_view { return graphics_view(bmp_view(info, stream, manager)); });
+    view_factory.add_file_type(content::bmp::is_phoenix_bmp, [](auto& info, auto& stream, auto& manager) -> studio_view { return graphics_view(bmp_view(info, stream, manager)); });
+    view_factory.add_file_type(content::bmp::is_earthsiege_bmp, [](auto& info, auto& stream, auto& manager) -> studio_view { return graphics_view(bmp_view(info, stream, manager)); });
+    view_factory.add_file_type(content::bmp::is_earthsiege_bmp_array, [](auto& info, auto& stream, auto& manager) -> studio_view { return graphics_view(bmp_view(info, stream, manager)); });
+    view_factory.add_file_type(content::bmp::is_phoenix_bmp_array, [](auto& info, auto& stream, auto& manager) -> studio_view { return graphics_view(bmp_view(info, stream, manager)); });
+    view_factory.add_file_type(content::pal::is_old_pal, [](auto&, auto& stream, auto&) -> studio_view { return graphics_view(pal_view(stream)); });
+    view_factory.add_file_type(content::pal::is_microsoft_pal, [](auto&, auto& stream, auto&) -> studio_view { return graphics_view(pal_view(stream)); });
+    view_factory.add_file_type(content::pal::is_phoenix_pal, [](auto&, auto& stream, auto&) -> studio_view { return graphics_view(pal_view(stream)); });
+    view_factory.add_file_type(content::pal::is_earthsiege_pal, [](auto&, auto& stream, auto&) -> studio_view { return graphics_view(pal_view(stream)); });
 
-    view_factory.add_file_type(content::sfx::is_sfx_file, [](auto& info, auto& stream, auto& archive) { return std::unique_ptr<studio_view>(new sfx_view(info, stream, archive)); }, true);
+    view_factory.add_file_type(content::sfx::is_sfx_file, [](auto& info, auto& stream, auto& archive) -> studio_view { return graphics_view(sfx_view(info, stream, archive)); }, true);
 
-    view_factory.add_file_type(dio::mis::darkstar::mis_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
-    view_factory.add_file_type(dio::vol::darkstar::vol_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
+    view_factory.add_file_type(dio::mis::darkstar::mis_file_archive::is_supported, [](auto& info, auto&, auto& archive) -> studio_view { return normal_view(vol_view(info, archive)); });
+    view_factory.add_file_type(dio::vol::darkstar::vol_file_archive::is_supported, [](auto& info, auto&, auto& archive) -> studio_view { return normal_view(vol_view(info, archive)); });
 
-    view_factory.add_file_type(dio::vol::three_space::vol_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
-    view_factory.add_file_type(dio::vol::three_space::rmf_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
-    view_factory.add_file_type(dio::vol::three_space::dyn_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
-    view_factory.add_file_type(dio::vol::trophy_bass::rbx_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
-    view_factory.add_file_type(dio::vol::trophy_bass::tbv_file_archive::is_supported, [](auto& info, auto&, auto& archive) { return std::unique_ptr<studio_view>(new vol_view(info, archive)); });
+    view_factory.add_file_type(dio::vol::three_space::vol_file_archive::is_supported, [](auto& info, auto&, auto& archive) -> studio_view { return normal_view(vol_view(info, archive)); });
+    view_factory.add_file_type(dio::vol::three_space::rmf_file_archive::is_supported, [](auto& info, auto&, auto& archive) -> studio_view { return normal_view(vol_view(info, archive)); });
+    view_factory.add_file_type(dio::vol::three_space::dyn_file_archive::is_supported, [](auto& info, auto&, auto& archive) -> studio_view { return normal_view(vol_view(info, archive)); });
+    view_factory.add_file_type(dio::vol::trophy_bass::rbx_file_archive::is_supported, [](auto& info, auto&, auto& archive) -> studio_view { return normal_view(vol_view(info, archive)); });
+    view_factory.add_file_type(dio::vol::trophy_bass::tbv_file_archive::is_supported, [](auto& info, auto&, auto& archive) -> studio_view { return normal_view(vol_view(info, archive)); });
 
     view_factory.add_extension(".dts", content::dts::darkstar::is_darkstar_dts);
     view_factory.add_extension(".dts", content::dts::three_space::v1::is_3space_dts);

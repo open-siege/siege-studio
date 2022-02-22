@@ -5,7 +5,7 @@
 
 namespace studio
 {
-  auto canvas_painter(const std::shared_ptr<wxWindow>& parent, const std::shared_ptr<sf::RenderWindow>& window, ImGuiContext& gui_context, const std::shared_ptr<views::graphics_view>& handler)
+  auto canvas_painter(const std::shared_ptr<wxWindow>& parent, const std::shared_ptr<sf::RenderWindow>& window, ImGuiContext& gui_context, std::shared_ptr<views::graphics_view> handler)
   {
     sf::Clock clock;
 
