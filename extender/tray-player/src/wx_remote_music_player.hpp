@@ -8,52 +8,10 @@
 #include <thread>
 #include <string_view>
 #include <string>
+#include <future>
+#include <cstdlib>
 #include <mio/mmap.hpp>
-
-
-enum struct function_status : std::int32_t
-{
-  idle,
-  busy
-};
-
-constexpr auto function_length = 9;
-
-enum struct function : std::int32_t
-{
-  load,
-  play,
-  pause,
-  stop,
-  get_volume,
-  set_volume,
-  length,
-  tell,
-  seek
-};
-
-union function_arg
-{
-  std::uint32_t position;
-  std::uint32_t length;
-  float volume;
-};
-
-union function_result
-{
-  std::uint32_t success;
-  std::uint32_t position;
-  std::uint32_t length;
-  float volume;
-};
-
-struct alignas(std::int32_t) function_info
-{
-  function function;
-  function_status status;
-  function_arg arg;
-  function_result result;
-};
+#include "wx_remote_state.hpp"
 
 namespace fs = std::filesystem;
 struct wx_remote_music_player
@@ -67,6 +25,8 @@ struct wx_remote_music_player
     static inline int channel_count = 0;
 
     mio::mmap_sink channel;
+
+    [[maybe_unused]] std::future<int> process;
 
     inline wx_remote_music_player()
     {
@@ -85,7 +45,8 @@ struct wx_remote_music_player
 
       std::error_code error;
       channel.map(std::string(mem_path), error);
-      // TODO need to create process here
+
+      process = std::async(std::launch::async, std::system, "tray-player");
     }
 
     inline std::array<function_info, function_length>* functions()
@@ -105,13 +66,17 @@ struct wx_remote_music_player
       return reinterpret_cast<char*>(channel.data() + sizeof(std::array<function_info, function_length>));
     }
 
-    inline static void wait_for_function(volatile function_info& info)
+    static void default_yield()
+    {
+      std::this_thread::sleep_for(std::chrono::microseconds(1));
+    }
+
+    inline static void wait_for_function(volatile function_info& info, int max_retries = 2000, void(*yield)() = default_yield)
     {
       int retry_count = 0;
-      constexpr auto max_retries = 10;
       while (info.status == function_status::busy && retry_count < max_retries)
       {
-        std::this_thread::yield();
+        yield();
         ++retry_count;
       }
 
@@ -134,7 +99,7 @@ struct wx_remote_music_player
 
       info.status = function_status::busy;
 
-      wait_for_function(info);
+      wait_for_function(info, 1000, [] () { std::this_thread::sleep_for(std::chrono::microseconds(500)); });
 
       return info.result.success == 1;
     }
