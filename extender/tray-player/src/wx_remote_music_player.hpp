@@ -14,56 +14,108 @@
 #include "wx_remote_state.hpp"
 
 namespace fs = std::filesystem;
+
+PROCESS_INFORMATION* create_process()
+{
+  STARTUPINFO info{};
+  auto process = new PROCESS_INFORMATION{};
+  CreateProcessA("tray-player.exe",
+                 nullptr,
+                 nullptr,
+                 nullptr,
+                 FALSE,
+                 0,
+                 nullptr,
+                 nullptr,
+                 &info,
+                 process);
+
+  return process;
+}
+
+
 struct wx_remote_music_player
 {
     static_assert(sizeof(char) == sizeof(std::int8_t), "Char size is not 8 bits");
 
-    constexpr static auto base_mem_path = std::string_view("player.ipc");
+    constexpr static auto mem_path = std::string_view("player.ipc");
 
-    constexpr static auto max_path_size = 1024;
+    static inline mio::mmap_sink channel;
 
-    static inline int channel_count = 0;
-
-    mio::mmap_sink channel;
-
-    [[maybe_unused]] std::future<int> process;
+    std::string path;
 
     inline wx_remote_music_player()
     {
-      std::string mem_path = std::string(base_mem_path) + "." + std::to_string(channel_count++);
       std::ofstream file(mem_path, std::ios_base::binary | std::ios_base::trunc);
       {
-        std::array<function_info, function_length> functions{};
-        file.write(reinterpret_cast<char*>(functions.data()), function_length * sizeof(function_info));
-      }
-
-      {
-        std::array<char, max_path_size> path{};
-        file.write(path.data(),  path.size());
+        std::vector<char> data(sizeof(process_data), char(0));
+        file.write(data.data(), data.size());
       }
       file.close();
 
       std::error_code error;
       channel.map(std::string(mem_path), error);
 
-      process = std::async(std::launch::async, std::system, "tray-player");
+      static auto process = std::shared_ptr<PROCESS_INFORMATION>(create_process(), [](PROCESS_INFORMATION* data)
+      {
+          if (!data)
+          {
+            return;
+          }
+          TerminateProcess(data->hProcess, 0);
+          delete data;
+        });
     }
 
-    inline std::array<function_info, function_length>* functions()
+    inline process_data* shared_data()
     {
-      return reinterpret_cast<std::array<function_info, function_length>*>(channel.data());
+      return reinterpret_cast<process_data*>(channel.data());
+    }
+
+    inline player_data& player_info()
+    {
+      auto* volatile data = shared_data();
+
+      auto find_next = [data]()  {
+        auto player = std::find_if(data->players.begin(), data->players.end(), [](const auto& info) {
+          std::string_view other = info.path.data();
+          return other.empty();
+        });
+
+        if (player == data->players.end())
+        {
+          return data->players.begin();
+        }
+
+        return player;
+      };
+
+      auto player = std::find_if(data->players.begin(), data->players.end(), [this](const auto& info) {
+        std::string_view other = info.path.data();
+        return path == other;
+      });
+
+      if (player == data->players.end())
+      {
+        return *find_next();
+      }
+
+      return *player;
     }
 
     inline function_info& func_info(function index)
     {
-      auto* volatile funcs = functions();
+      if (path.empty())
+      {
+        static function_info fallback{};
+        return fallback;
+      }
+      else
+      {
+        auto& player = player_info();
 
-      return funcs->at(int(index));
-    }
-
-    inline char* path_data()
-    {
-      return reinterpret_cast<char*>(channel.data() + sizeof(std::array<function_info, function_length>));
+        return player.functions.at(int(index));
+      }
     }
 
     static void default_yield()
@@ -86,22 +138,35 @@ struct wx_remote_music_player
       }
     }
 
-    inline bool load(const std::filesystem::path& path)
+    inline bool load(const std::filesystem::path& music_path)
     {
-      volatile function_info& info = func_info(function::load);
-      info.function = function::load;
+      player_data& player = player_info();
 
+      auto path_str = music_path.string();
 
-      auto path_str = path.string();
-      info.arg.length = static_cast<std::uint32_t>(path_str.size());
-      auto length = path_str.size() >= max_path_size ? max_path_size - 1 : path_str.size();
-      std::copy(path_str.data(), path_str.data() + length, path_data());
+      if (path_str.empty())
+      {
+        return false;
+      }
 
-      info.status = function_status::busy;
+      if (path_str != path)
+      {
+        path = std::move(path_str);
+        function_info& info = player.functions.at(int(function::load));
 
-      wait_for_function(info, 1000, [] () { std::this_thread::sleep_for(std::chrono::microseconds(500)); });
+        info.function = function::load;
+        info.arg.length = static_cast<std::uint32_t>(path.size());
+        auto length = path.size() >= max_path_size ? max_path_size - 1 : path.size();
+        std::copy(path.data(), path.data() + length, player.path.data());
 
-      return info.result.success == 1;
+        info.status = function_status::busy;
+
+        wait_for_function(info, 1000, [] () { std::this_thread::sleep_for(std::chrono::microseconds(500)); });
+
+        return info.result.success == 1;
+      }
+
+      return true;
     }
 
     inline bool play()

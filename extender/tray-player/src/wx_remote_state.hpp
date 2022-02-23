@@ -47,5 +47,24 @@ struct alignas(std::int32_t) function_info
   function_result result;
 };
 
+constexpr static auto max_path_size = 1024;
+
+struct alignas(std::int32_t) player_data
+{
+  std::array<function_info, function_length> functions;
+  std::array<char, max_path_size> path;
+};
+
+constexpr auto max_players = 80;
+
+struct alignas(std::int32_t) process_data
+{
+  function_status process_status;
+  std::array<player_data, max_players> players;
+};
+
+
+
+
 
 #endif// DARKSTAR_EXTENDER_WX_REMOTE_STATE_HPP
