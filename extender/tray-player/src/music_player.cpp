@@ -1,7 +1,7 @@
 #include <variant>
 #include <array>
 #include <string_view>
-#include <algorithm>
+#include <memory>
 #include <SFML/Audio.hpp>
 #include "music_player.hpp"
 #include "wx_remote_music_player.hpp"
@@ -23,16 +23,18 @@ constexpr auto sfml_extensions = std::array<std::string_view, 3>{
 
 struct music_player::music_player_impl
 {
-  std::variant<std::monostate, wx_remote_music_player, sf::Music> player;
+  std::variant<std::monostate, std::shared_ptr<wx_remote_music_player>, sf::Music> player;
 
   bool load(const std::filesystem::path& path)
   {
+    pause();
     auto ext = path.extension();
     auto is_sfml = std::find(sfml_extensions.begin(), sfml_extensions.end(), ext);
     if (is_sfml == sfml_extensions.end())
     {
-      auto& wx_player = player.emplace<wx_remote_music_player>();
-      return wx_player.load(path);
+      static auto wx_player = std::make_shared<wx_remote_music_player>();
+      player.emplace<std::shared_ptr<wx_remote_music_player>>(wx_player);
+      return wx_player->load(path);
     }
 
     auto& sf_player = player.emplace<sf::Music>();
@@ -44,8 +46,8 @@ struct music_player::music_player_impl
   {
     return std::visit(
       overloaded{
-        [](wx_remote_music_player& player) {
-          return player.play();
+        [](std::shared_ptr<wx_remote_music_player>& player) {
+          return player->play();
         },
         [](sf::Music& player) {
           player.play();
@@ -61,8 +63,8 @@ struct music_player::music_player_impl
   {
     return std::visit(
       overloaded{
-        [](wx_remote_music_player& player) {
-          return player.pause();
+        [](std::shared_ptr<wx_remote_music_player>& player) {
+          return player->pause();
         },
         [](sf::Music& player) {
           player.pause();
@@ -78,8 +80,8 @@ struct music_player::music_player_impl
   {
     return std::visit(
       overloaded{
-        [volume](wx_remote_music_player& player) {
-          return player.set_volume(volume);
+        [volume](std::shared_ptr<wx_remote_music_player>& player) {
+          return player->set_volume(volume);
         },
         [volume](sf::Music& player) {
           player.setVolume(volume);
@@ -96,8 +98,8 @@ struct music_player::music_player_impl
   {
     return std::visit(
       overloaded{
-        [](wx_remote_music_player& player) {
-          return player.get_volume();
+        [](std::shared_ptr<wx_remote_music_player>& player) {
+          return player->get_volume();
         },
         [](sf::Music& player) {
           return player.getVolume();
@@ -112,8 +114,8 @@ struct music_player::music_player_impl
   {
     return std::visit(
       overloaded{
-        [](wx_remote_music_player& player) {
-          return player.length();
+        [](std::shared_ptr<wx_remote_music_player>& player) {
+          return player->length();
         },
         [](sf::Music& player) {
           return std::uint32_t(player.getDuration().asMilliseconds());
@@ -128,8 +130,8 @@ struct music_player::music_player_impl
   {
     return std::visit(
       overloaded{
-        [](wx_remote_music_player& player) {
-          return player.tell();
+        [](std::shared_ptr<wx_remote_music_player>& player) {
+          return player->tell();
         },
         [](sf::Music& player) {
           return std::uint32_t(player.getPlayingOffset().asMilliseconds());
@@ -144,8 +146,8 @@ struct music_player::music_player_impl
   {
     return std::visit(
       overloaded{
-        [position](wx_remote_music_player& player) {
-          return player.seek(position);
+        [position](std::shared_ptr<wx_remote_music_player>& player) {
+          return player->seek(position);
         },
         [position](sf::Music& player) {
           player.setPlayingOffset(sf::milliseconds(position));

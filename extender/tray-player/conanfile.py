@@ -9,7 +9,6 @@ class HelloWxWidgetsConanFile(ConanFile):
     generators = "cmake_find_package"
 
     def configure(self):
-        self.options["sqlite3"].enable_json1 = True
         self.options["wxwidgets"].mediactrl = True
         self.options["wxwidgets"].zlib = "off"
         self.options["wxwidgets"].png = "off"

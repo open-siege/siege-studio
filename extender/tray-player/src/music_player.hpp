@@ -6,7 +6,6 @@
 #include <array>
 #include <memory>
 
-
 struct music_player
 {
   music_player();
