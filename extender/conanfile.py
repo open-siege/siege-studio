@@ -26,7 +26,7 @@ class DarkstarHookConan(ConanFile):
             "conan source .",
             "conan export . detours/4.0.1@microsoft/stable"]), run_environment=True)
 
-        targets = ["darkstar", "darkstar.proxy", "mem", "launcher", "tray-player", "tester"]
+        targets = ["darkstar", "darkstar.proxy", "mem", "launcher", "tester"]
 
         for target in targets:
             self.run(" && ".join([f"cd {target}", f"conan install . {settings}"]), run_environment=True)
