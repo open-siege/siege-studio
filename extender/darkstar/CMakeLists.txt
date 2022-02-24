@@ -12,12 +12,7 @@ find_package(darkstar-proxy QUIET)
 add_subdirectory(music)
 add_library(music-player::music-player ALIAS music-player)
 
-file(GLOB TEST_SRC_FILES src/*.test.cpp src/**/*.test.cpp src/**/**/*.test.cpp)
-file(GLOB SRC_FILES src/*.cpp src/**/*.cpp)
-
-list(REMOVE_ITEM SRC_FILES ${TEST_SRC_FILES})
-
-add_library(darkstar SHARED ${SRC_FILES} src/darkstar.def)
+add_library(darkstar SHARED src/main.cpp src/Registry.cpp src/Music.cpp src/Hook/Game.cpp src/Hook/GameConsole.cpp src/darkstar.def)
 add_custom_command(TARGET darkstar
         POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/src/config.json ${CMAKE_CURRENT_BINARY_DIR}
@@ -26,7 +21,7 @@ target_link_libraries(darkstar PRIVATE detours::detours nlohmann_json::nlohmann_
 target_include_directories(darkstar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set_property(TARGET darkstar PROPERTY CXX_STANDARD 17)
 
-add_executable(darkstar-tests ${TEST_SRC_FILES})
+add_executable(darkstar-tests src/TestsMain.test.cpp src/Registry.test.cpp src/Registry.cpp)
 target_link_libraries(darkstar-tests PRIVATE Catch2::Catch2)
 set_property(TARGET darkstar-tests PROPERTY CXX_STANDARD 17)
 
