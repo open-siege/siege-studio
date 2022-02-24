@@ -1,6 +1,7 @@
 from conans import ConanFile, CMake, tools
 import glob
 import os.path
+import sys
 
 # conan install . -s arch=x86
 
@@ -14,6 +15,21 @@ class LocalConanFile(ConanFile):
 
     def configure(self):
         self.options["sqlite3"].enable_json1 = True
+
+
+    def requirements(self):
+        args = sys.argv[3:]
+        for index, value in enumerate(args):
+            if value == "--profile":
+                profile = args[index + 1]
+                args[index + 1] = os.path.abspath(profile) if os.path.exists(profile) else profile
+
+        settings = ' '.join(args)
+        commands = [
+            f"cd music",
+            f"conan install . {settings}"
+        ]
+        self.run(" && ".join(commands), run_environment=True)
 
     def build(self):
         cmake = CMake(self)

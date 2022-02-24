@@ -9,6 +9,9 @@ find_package(sfml REQUIRED)
 find_package(detours REQUIRED)
 find_package(darkstar-proxy QUIET)
 
+add_subdirectory(music)
+add_library(music-player::music-player ALIAS music-player)
+
 file(GLOB TEST_SRC_FILES src/*.test.cpp src/**/*.test.cpp src/**/**/*.test.cpp)
 file(GLOB SRC_FILES src/*.cpp src/**/*.cpp)
 
@@ -19,7 +22,7 @@ add_custom_command(TARGET darkstar
         POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/src/config.json ${CMAKE_CURRENT_BINARY_DIR}
         )
-target_link_libraries(darkstar PRIVATE detours::detours nlohmann_json::nlohmann_json SFML::main SFML::system SFML::audio darkstar-proxy::darkstar-proxy)
+target_link_libraries(darkstar PRIVATE detours::detours nlohmann_json::nlohmann_json SFML::main SFML::system SFML::audio darkstar-proxy::darkstar-proxy music-player::music-player)
 target_include_directories(darkstar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set_property(TARGET darkstar PROPERTY CXX_STANDARD 17)
 

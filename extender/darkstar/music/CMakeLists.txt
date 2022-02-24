@@ -8,6 +8,7 @@ find_package(mio REQUIRED)
 
 add_library(music-player STATIC src/music_player.cpp)
 set_property(TARGET music-player PROPERTY CXX_STANDARD 17)
+target_include_directories(music-player PUBLIC include)
 target_link_libraries(music-player PRIVATE mio::mio-headers SFML::main SFML::system SFML::audio)
 
 add_executable(tray-player src/main.cpp)
