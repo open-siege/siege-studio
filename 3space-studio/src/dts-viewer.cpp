@@ -44,10 +44,20 @@ namespace studio
     explicit tree_item_folder_info(studio::resources::folder_info info) : info(std::move(info)) {}
   };
 
-  std::optional<std::filesystem::path> get_shape_path()
+  std::optional<std::filesystem::path> get_shape_path(std::vector<std::string_view>&& file_types)
   {
-    constexpr static auto filetypes = "Darkstar DTS files|*.dts;*.DTS";
-    auto dialog = std::make_unique<wxFileDialog>(nullptr, "Open a Darkstar DTS File", "", "", filetypes, wxFD_OPEN, wxDefaultPosition);
+    std::stringstream final_types;
+
+    for (auto i = 0; i < file_types.size(); ++i)
+    {
+      final_types << file_types[i] << " (*" << file_types[i] << ")|*" << file_types[i];
+
+      if (i != file_types.size() - 1)
+      {
+        final_types << "|";
+      }
+    }
+    auto dialog = std::make_unique<wxFileDialog>(nullptr, "Open a supported file", "", "", final_types.str(), wxFD_OPEN, wxDefaultPosition);
 
     if (dialog->ShowModal() == wxID_OK)
     {
@@ -542,7 +552,7 @@ int main(int argc, char** argv)
 
     frame->Bind(
       wxEVT_MENU, [&](auto& event) {
-        const auto new_path = studio::get_shape_path();
+        const auto new_path = studio::get_shape_path(view_factory.get_extensions());
 
         if (new_path.has_value())
         {
@@ -555,7 +565,7 @@ int main(int argc, char** argv)
 
     frame->Bind(
       wxEVT_MENU, [&](auto& event) {
-        const auto new_path = studio::get_shape_path();
+        const auto new_path = studio::get_shape_path(view_factory.get_extensions());
 
         if (new_path.has_value())
         {
