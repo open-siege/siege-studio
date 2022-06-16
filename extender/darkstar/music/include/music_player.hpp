@@ -6,17 +6,28 @@
 #include <array>
 #include <memory>
 
+enum struct music_player_state
+{
+  stopped,
+  paused,
+  playing
+};
+
 struct music_player
 {
   music_player();
-  bool load(const std::filesystem::path& path);
-  bool play();
-  bool pause();
-  bool set_volume(float volume);
-  float get_volume();
-  std::uint32_t length();
-  std::uint32_t tell();
-  std::uint32_t seek(std::uint32_t position);
+  [[maybe_unused]] bool load(const std::filesystem::path& path);
+  [[maybe_unused]] bool play();
+  [[maybe_unused]] bool pause();
+  [[maybe_unused]] bool stop();
+  music_player_state state() const noexcept;
+
+  [[maybe_unused]] bool volume(float volume) noexcept;
+  float volume() const noexcept;
+
+  std::uint32_t length() const noexcept;
+  std::uint32_t tell() const noexcept;
+  std::uint32_t seek(std::uint32_t position) const noexcept;
 
 private:
   struct music_player_impl;

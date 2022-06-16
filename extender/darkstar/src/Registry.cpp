@@ -13,6 +13,8 @@ constexpr static std::array<std::string_view, 3> SettingsPath = {
   "starsiege"
 };
 
+static std::map<std::string_view, HKEY> LoadedPaths{};
+
 static auto* TrueRegCreateKeyExA = RegCreateKeyExA;
 static auto* TrueRegDeleteKeyA = RegDeleteKeyA;
 static auto* TrueRegEnumKeyExA = RegEnumKeyExA;
@@ -20,17 +22,17 @@ static auto* TrueRegEnumValueA = RegEnumValueA;
 static auto* TrueRegQueryValueExA = RegQueryValueExA;
 static auto* TrueRegSetValueExA = RegSetValueExA;
 
-LSTATUS APIENTRY WrappedRegCloseKey(HKEY hKey)
+LSTATUS APIENTRY WrappedRegCloseKey(decltype(RegCloseKey) original, std::map<std::string_view, HKEY>& loadedPaths, HKEY hKey)
 {
-  for (auto& [Name, Key] : LoadedPaths)
+  for (auto& [Name, Key] : loadedPaths)
   {
     if (Key == hKey)
     {
-      LoadedPaths.erase(Name);
+      loadedPaths.erase(Name);
       return ERROR_SUCCESS;
     }
   }
-  return TrueRegCloseKey(hKey);
+  return original(hKey);
 }
 
 LSTATUS APIENTRY WrappedRegCreateKeyExA(
@@ -80,6 +82,8 @@ LSTATUS APIENTRY WrappedRegEnumValueA(HKEY hKey,
 }
 
 LSTATUS APIENTRY WrappedRegOpenKeyExA(
+  decltype(RegOpenKeyExA) original,
+  std::map<std::string_view, HKEY>& loadedPaths,
   HKEY hKey,
   LPCSTR lpSubKey,
   DWORD ulOptions,
@@ -122,7 +126,7 @@ LSTATUS APIENTRY WrappedRegOpenKeyExA(
       LSTATUS Result;
       for (auto& Path : SettingsPath)
       {
-        Result = WrappedRegOpenKeyExA(Key, std::string(Path).c_str(), 0, 0, &Key);
+        Result = WrappedRegOpenKeyExA(original, loadedPaths, Key, std::string(Path).c_str(), 0, 0, &Key);
 
         if (Result != ERROR_SUCCESS)
         {
@@ -145,7 +149,7 @@ LSTATUS APIENTRY WrappedRegOpenKeyExA(
       return ERROR_SUCCESS;
     }
 
-    auto result = TrueRegOpenKeyExA(hKey, lpSubKey, ulOptions, samDesired, phkResult);
+    auto result = original(hKey, lpSubKey, ulOptions, samDesired, phkResult);
 
     if (result == ERROR_SUCCESS)
     {
@@ -168,7 +172,7 @@ LSTATUS APIENTRY WrappedRegOpenKeyExA(
     }
   }
 
-  return TrueRegOpenKeyExA(hKey, lpSubKey, ulOptions, samDesired, phkResult);
+  return original(hKey, lpSubKey, ulOptions, samDesired, phkResult);
 }
 
 LSTATUS APIENTRY WrappedRegQueryValueExA(
@@ -219,14 +223,33 @@ LSTATUS APIENTRY WrappedRegSetValueExA(
 }
 
 
+static auto* TrueRegCloseKey = RegCloseKey;
+LSTATUS APIENTRY FinalRegCloseKey(HKEY hKey)
+{
+  return WrappedRegCloseKey(TrueRegCloseKey, LoadedPaths, hKey);
+}
+static_assert(std::is_same_v<TrueRegCloseKey, FinalRegCloseKey>());
+
+static auto* TrueRegOpenKeyExA = RegOpenKeyExA;
+LSTATUS APIENTRY FinalRegOpenKeyExA(
+  HKEY hKey,
+  LPCSTR lpSubKey,
+  DWORD ulOptions,
+  REGSAM samDesired,
+  PHKEY phkResult)
+{
+  return WrappedRegOpenKeyExA(TrueRegOpenKeyExA, LoadedPaths, hKey, lpSubKey, ulOptions, samDesired, phkResult);
+}
+static_assert(std::is_same_v<TrueRegOpenKeyExA, FinalRegOpenKeyExA>());
+
 std::array<std::pair<void**, void*>, 8> GetRegistryDetours()
 {
-  return std::array<std::pair<void**, void*>, 8>{ { { &(void*&)TrueRegCloseKey, WrappedRegCloseKey },
+  return std::array<std::pair<void**, void*>, 8>{ { { &(void*&)TrueRegCloseKey, FinalRegCloseKey },
     { &(void*&)TrueRegCreateKeyExA, WrappedRegCreateKeyExA },
     { &(void*&)TrueRegDeleteKeyA, WrappedRegDeleteKeyA },
     { &(void*&)TrueRegEnumKeyExA, WrappedRegEnumKeyExA },
     { &(void*&)TrueRegEnumValueA, WrappedRegEnumValueA },
-    { &(void*&)TrueRegOpenKeyExA, WrappedRegOpenKeyExA },
+    { &(void*&)TrueRegOpenKeyExA, FinalRegOpenKeyExA },
     { &(void*&)TrueRegQueryValueExA, WrappedRegQueryValueExA },
     { &(void*&)TrueRegSetValueExA, WrappedRegSetValueExA } } };
 }

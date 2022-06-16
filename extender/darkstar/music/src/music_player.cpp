@@ -24,6 +24,7 @@ constexpr auto sfml_extensions = std::array<std::string_view, 3>{
 struct music_player::music_player_impl
 {
   std::variant<std::monostate, wx_remote_music_player, sf::Music> player;
+  music_player_state current_state;
 
   bool load(const std::filesystem::path& path)
   {
@@ -76,7 +77,24 @@ struct music_player::music_player_impl
       player);
   }
 
-  bool set_volume(float volume)
+  bool stop()
+  {
+    return std::visit(
+      overloaded{
+        [](wx_remote_music_player& self) {
+          return self.stop();
+          },
+          [](sf::Music& self) {
+          self.stop();
+          return true;
+          },
+          [](std::monostate&) {
+          return false;
+        }},
+        player);
+  }
+
+  bool volume(float volume) noexcept
   {
     return std::visit(
       overloaded{
@@ -94,55 +112,76 @@ struct music_player::music_player_impl
       player);
   }
 
-  float get_volume()
+  float volume() const noexcept
   {
     return std::visit(
       overloaded{
-        [](wx_remote_music_player& self) {
+        [](const wx_remote_music_player& self) {
           return self.get_volume();
         },
-        [](sf::Music& self) {
-          return self.getVolume();
+        [](const sf::Music& self) {
+          try
+          {
+            return self.getVolume();
+          }
+          catch (...)
+          {
+            return 0.0f;
+          }
         },
-        [](std::monostate&) {
+        [](const std::monostate&) {
           return 0.0f;
         } },
       player);
   }
 
-  std::uint32_t length()
+  std::uint32_t length() const noexcept
   {
     return std::visit(
       overloaded{
-        [](wx_remote_music_player& self) {
+        [](const wx_remote_music_player& self) {
           return self.length();
         },
-        [](sf::Music& self) {
-          return std::uint32_t(self.getDuration().asMilliseconds());
+        [](const sf::Music& self) {
+          try
+          {
+            return std::uint32_t(self.getDuration().asMilliseconds());
+          }
+          catch (...)
+          {
+            return 0u;
+          }
         },
-        [](std::monostate&) -> std::uint32_t {
+        [](const std::monostate&) -> std::uint32_t {
           return 0u;
         } },
       player);
   }
 
-  std::uint32_t tell()
+  std::uint32_t tell() const noexcept
   {
     return std::visit(
       overloaded{
-        [](wx_remote_music_player& self) {
+        [](const wx_remote_music_player& self) {
           return self.tell();
         },
-        [](sf::Music& self) {
-          return std::uint32_t(self.getPlayingOffset().asMilliseconds());
+        [](const sf::Music& self) {
+          try
+          {
+            return std::uint32_t(self.getPlayingOffset().asMilliseconds());
+          }
+          catch (...)
+          {
+            return 0u;
+          }
         },
-        [](std::monostate&) -> std::uint32_t {
+        [](const std::monostate&) -> std::uint32_t {
           return 0u;
         } },
       player);
   }
 
-  std::uint32_t seek(std::uint32_t position)
+  std::uint32_t seek(std::uint32_t position) noexcept
   {
     return std::visit(
       overloaded{
@@ -150,13 +189,25 @@ struct music_player::music_player_impl
           return self.seek(position);
         },
         [position](sf::Music& self) {
-          self.setPlayingOffset(sf::milliseconds(position));
-          return std::uint32_t(self.getPlayingOffset().asMilliseconds());
+          try
+          {
+            self.setPlayingOffset(sf::milliseconds(position));
+            return std::uint32_t(self.getPlayingOffset().asMilliseconds());
+          }
+          catch(...)
+          {
+            return 0u;
+          }
         },
         [](std::monostate&) -> std::uint32_t {
           return 0u;
         } },
       player);
+  }
+
+  music_player_state state() const noexcept
+  {
+    return current_state;
   }
 };
 
@@ -181,27 +232,37 @@ bool music_player::pause()
   return instance->pause();
 }
 
-bool music_player::set_volume(float volume)
+bool music_player::stop()
 {
-  return instance->set_volume(volume);
+  return instance->stop();
 }
 
-float music_player::get_volume()
+music_player_state music_player::state() const noexcept
 {
-  return instance->get_volume();
+  return instance->state();
 }
 
-std::uint32_t music_player::length()
+bool music_player::volume(float volume) noexcept
+{
+  return instance->volume(volume);
+}
+
+float music_player::volume() const noexcept
+{
+  return instance->volume();
+}
+
+std::uint32_t music_player::length() const noexcept
 {
   return instance->length();
 }
 
-std::uint32_t music_player::tell()
+std::uint32_t music_player::tell() const noexcept
 {
   return instance->tell();
 }
 
-std::uint32_t music_player::seek(std::uint32_t position)
+std::uint32_t music_player::seek(std::uint32_t position) const noexcept
 {
   return instance->seek(position);
 }
