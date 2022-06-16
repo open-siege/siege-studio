@@ -22,7 +22,7 @@ Secondary goals include:
 
 * The ability to save new 3D assets using the supported format for that game.
 * The ability to do some basic manipulation of the 3D assets.
-* The ability to convert the 3D asset to a more common format for use in other 3D software.
+* The ability to convert the 3D assets to a more common format for use in other 3D software.
 
 Tertiary goals would be:
 
