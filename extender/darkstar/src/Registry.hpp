@@ -9,12 +9,11 @@
 
 std::array<std::pair<void**, void*>, 8> GetRegistryDetours();
 
-static auto* TrueRegCloseKey = RegCloseKey;
-static auto* TrueRegOpenKeyExA = RegOpenKeyExA;
-static inline std::map<std::string_view, HKEY> LoadedPaths;
 
-LSTATUS APIENTRY WrappedRegCloseKey(HKEY hKey);
+LSTATUS APIENTRY WrappedRegCloseKey(decltype(RegCloseKey) original, std::map<std::string_view, HKEY>& loadedPaths, HKEY hKey);
 LSTATUS APIENTRY WrappedRegOpenKeyExA(
+  decltype(RegOpenKeyExA) original,
+  std::map<std::string_view, HKEY>& loadedPaths,
   HKEY hKey,
   LPCSTR lpSubKey,
   DWORD ulOptions,

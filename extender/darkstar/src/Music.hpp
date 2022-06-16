@@ -3,10 +3,10 @@
 
 #include <array>
 #include <utility>
+#define NOMINMAX
 #include <windows.h>
 
-std::array<std::pair<void**, void*>, 12> GetMusicDetours();
-
+std::array<std::pair<void**, void*>, 2> GetMusicDetours();
 
 enum struct MciMessage : UINT
 {
