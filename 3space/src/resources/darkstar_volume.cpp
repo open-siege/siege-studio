@@ -275,7 +275,7 @@ namespace studio::resources::vol::darkstar
 
     std::vector<std::string> results;
 
-    if (raw_chars.back() != '\0')
+    if (!raw_chars.empty() && raw_chars.back() != '\0')
     {
       raw_chars.back() = '\0';
     }
