@@ -352,7 +352,7 @@ namespace studio::views
     if (!original_pixels.empty())
     {
       create_image(loaded_image,
-                   original_pixels.at(selection_state.selected_palette_index),
+                   original_pixels.at(selection_state.selected_bitmap_index),
                    loaded_palettes.at(selection_state.selected_palette_name).second.at(selection_state.selected_palette_index).colours);
       texture.loadFromImage(loaded_image);
       sprite.setTexture(texture);
