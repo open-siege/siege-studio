@@ -2,6 +2,9 @@
 #define DARKSTARDTSCONVERTER_VOL_VIEW_HPP
 
 #include <future>
+#include <string_view>
+#include <optional>
+#include <wx/treelist.h>
 #include "graphics_view.hpp"
 #include "resources/resource_explorer.hpp"
 
@@ -14,6 +17,11 @@ namespace studio::views
     void setup_view(wxWindow& parent);
 
   private:
+    void filter_files(const std::set<std::filesystem::path>& folders,
+      std::shared_ptr<wxTreeListCtrl> table,
+      std::optional<std::string_view> search_text
+    );
+
     const studio::resources::resource_explorer& archive;
     std::filesystem::path archive_path;
     std::vector<studio::resources::file_info> files;
