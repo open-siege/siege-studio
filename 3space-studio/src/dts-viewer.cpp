@@ -152,51 +152,58 @@ namespace studio
         sf::ContextSettings context;
         context.depthBits = 24;
         auto window = std::make_shared<sf::RenderWindow>(get_handle(*graphics), context);
-        static bool is_init = false;
-        static ImGuiContext* primary_gui_context;
 
-        ImGuiContext* gui_context;
+        static std::unordered_map<std::shared_ptr<sf::RenderWindow>, ImGuiContext*> window_contexts;
 
-        if (!is_init)
+        auto existing_context = window_contexts.find(window);
+
+        if (existing_context == window_contexts.end())
         {
           ImGui::SFML::Init(*window);
           studio::sfml_initialised = true;
 
-          primary_gui_context = gui_context = ImGui::GetCurrentContext();
-          is_init = true;
+          auto result = window_contexts.emplace(window, ImGui::GetCurrentContext());
+          existing_context = result.first;
         }
-        else
-        {
-          gui_context = ImGui::CreateContext(ImGui::GetIO().Fonts);
-        }
+
+        ImGui::SetCurrentContext(existing_context->second);
+
 
         graphics->Bind(wxEVT_ERASE_BACKGROUND, [](auto& event) {});
 
         graphics->Bind(wxEVT_SIZE, [=](auto& event) {
-          shared_view->setup_view(*graphics, *window, *gui_context);
+          shared_view->setup_view(*graphics, *window, *existing_context->second);
         });
 
         graphics->Bind(wxEVT_IDLE, [=](auto& event) {
           graphics->Refresh();
         });
 
-        graphics->Bind(wxEVT_PAINT, canvas_painter(graphics, window, *gui_context, shared_view));
+        graphics->Bind(wxEVT_PAINT, canvas_painter(graphics, window, *existing_context->second, shared_view));
 
-        // direct access of primary_gui_context in the below lambda causes an ICE in VS 2019.
-        static auto get_primary_gui_context = []() { return primary_gui_context; };
+        // direct access of window in the below lambda causes an ICE in VS 2019.
+        auto reset_imgui = [window]()
+        {
+          window_contexts.erase(window);
+          if (window_contexts.empty())
+          {
+            studio::sfml_initialised = false;
+            ImGui::SFML::Shutdown();
+          }
+          else
+          {
+            ImGui::SetCurrentContext(window_contexts.begin()->second);
+            ImGui::SFML::Shutdown(*window);
+          }
+        };
 
         graphics->Bind(wxEVT_DESTROY, [=](auto& event) mutable {
           window.reset();
           graphics.reset();
-          auto* primary = get_primary_gui_context();
-          if (gui_context != primary)
-          {
-            ImGui::DestroyContext(gui_context);
-            ImGui::SetCurrentContext(primary);
-          }
+          reset_imgui();
         });
 
-        shared_view->setup_view(*graphics, *window, *gui_context);
+        shared_view->setup_view(*graphics, *window, *existing_context->second);
         panel.GetSizer()->Add(graphics.get(), 1, wxEXPAND | wxALL, 5);
       }
     },
