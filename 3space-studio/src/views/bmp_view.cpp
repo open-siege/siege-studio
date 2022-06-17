@@ -355,7 +355,6 @@ namespace studio::views
                    original_pixels.at(selection_state.selected_bitmap_index),
                    loaded_palettes.at(selection_state.selected_palette_name).second.at(selection_state.selected_palette_index).colours);
       texture.loadFromImage(loaded_image);
-      sprite.setTexture(texture);
     }
   }
 
@@ -868,6 +867,11 @@ namespace studio::views
 
   void bmp_view::setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext&)
   {
+    if (!sprite.getTexture())
+    {
+      sprite.setTexture(texture);
+    }
+
     auto [width, height] = parent.GetClientSize();
 
     auto image_width = sprite.getTexture()->getSize().x;
