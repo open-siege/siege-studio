@@ -33,14 +33,14 @@ namespace studio::views
     }
 
     auto table = std::shared_ptr<wxTreeListCtrl>(new wxTreeListCtrl(&parent, wxID_ANY), default_wx_deleter);
-    table->AppendColumn("Filename");
+    table->AppendColumn("Filename", wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxCOL_RESIZABLE | wxCOL_SORTABLE);
 
     if (folders.size() > 1)
     {
-      table->AppendColumn("Path");
+      table->AppendColumn("Path", wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxCOL_RESIZABLE | wxCOL_SORTABLE);
     }
-    table->AppendColumn("Size (in bytes)");
-    table->AppendColumn("Compression Method");
+    table->AppendColumn("Size (in bytes)", wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxCOL_RESIZABLE | wxCOL_SORTABLE);
+    table->AppendColumn("Compression Method", wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxCOL_RESIZABLE | wxCOL_SORTABLE);
 
     table->Bind(
       wxEVT_TREELIST_ITEM_ACTIVATED, [this, folders, table](const wxTreeListEvent& event) {
