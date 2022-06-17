@@ -3,12 +3,63 @@
 #include <atomic>
 #include <wx/treelist.h>
 #include <wx/filepicker.h>
+#include <wx/srchctrl.h>
 
 #include "vol_view.hpp"
 #include "utility.hpp"
+#include "shared.hpp"
 
 namespace studio::views
 {
+  const static std::map<studio::resources::compression_type, const char*> type_names{
+    { studio::resources::compression_type::none, "None" },
+    { studio::resources::compression_type::lz, "Lempel-Ziv" },
+    { studio::resources::compression_type::lzh, "Lempel-Ziv w/ Huffman coding" },
+    { studio::resources::compression_type::rle, "Run-Length Encoding" }
+  };
+
+  void vol_view::filter_files(const std::set<std::filesystem::path>& folders,
+    std::shared_ptr<wxTreeListCtrl> table,
+    std::optional<std::string_view> search_text = std::nullopt
+    )
+  {
+    table->DeleteAllItems();
+
+    auto root = table->GetRootItem();
+
+    auto add_columns = [=](const auto& file) {
+      auto id = table->AppendItem(root, file.filename.string(), -1, -1);
+
+      if (folders.size() > 1)
+      {
+        table->SetItemText(id, table->GetColumnCount() - 3, std::filesystem::relative(file.folder_path, archive_path).string());
+      }
+
+      table->SetItemText(id, table->GetColumnCount() - 2, std::to_string(file.size));
+      table->SetItemText(id, table->GetColumnCount() - 1, type_names.at(file.compression_type));
+    };
+
+    if (search_text.has_value())
+    {
+      for (auto& file : files)
+      {
+        auto filename = shared::to_lower(file.filename.string());
+        auto folder_name = shared::to_lower(std::filesystem::relative(file.folder_path, archive_path).string());
+        auto lower_search = shared::to_lower(search_text.value());
+
+        if (filename.find(lower_search) == std::string::npos && folder_name.find(lower_search) == std::string::npos)
+        {
+          continue;
+        }
+        add_columns(file);
+      }
+    }
+    else
+    {
+      std::for_each(files.begin(), files.end(), add_columns);
+    }
+  }
+
   vol_view::vol_view(const studio::resources::file_info& info, const studio::resources::resource_explorer& archive)
     : archive(archive)
   {
@@ -18,13 +69,6 @@ namespace studio::views
 
   void vol_view::setup_view(wxWindow& parent)
   {
-    const static std::map<studio::resources::compression_type, const char*> type_names{
-      { studio::resources::compression_type::none, "None" },
-      { studio::resources::compression_type::lz, "Lempel-Ziv" },
-      { studio::resources::compression_type::lzh, "Lempel-Ziv w/ Huffman coding" },
-      { studio::resources::compression_type::rle, "Run-Length Encoding" }
-    };
-
     std::set<std::filesystem::path> folders;
 
     for (auto& file : files)
@@ -62,20 +106,7 @@ namespace studio::views
         }
       });
 
-    auto root = table->GetRootItem();
-
-    for (auto& file : files)
-    {
-      auto id = table->AppendItem(root, file.filename.string(), -1, -1);
-
-      if (folders.size() > 1)
-      {
-        table->SetItemText(id, table->GetColumnCount() - 3, std::filesystem::relative(file.folder_path, archive_path).string());
-      }
-
-      table->SetItemText(id, table->GetColumnCount() - 2, std::to_string(file.size));
-      table->SetItemText(id, table->GetColumnCount() - 1, type_names.at(file.compression_type));
-    }
+    filter_files(folders, table);
 
     auto panel = std::make_unique<wxPanel>(&parent);
 
@@ -233,6 +264,19 @@ namespace studio::views
       event.Skip();
     });
 
+    auto search = std::make_unique<wxSearchCtrl>(panel.get(), wxID_ANY);
+    search->ShowSearchButton(true);
+    search->ShowCancelButton(true);
+
+    search->Bind(wxEVT_SEARCH, [=](wxCommandEvent& event) {
+      filter_files(folders, table, event.GetString().utf8_string());
+    });
+
+    search->Bind(wxEVT_SEARCH_CANCEL, [folders, table, search = search.get(), this](wxCommandEvent& event) {
+      search->Clear();
+      filter_files(folders, table);
+    });
+
     panel->SetSizer(std::make_unique<wxBoxSizer>(wxHORIZONTAL).release());
 
     panel->GetSizer()->Add(folder_picker.get(), 4, wxEXPAND, 0);
@@ -240,7 +284,8 @@ namespace studio::views
     panel->GetSizer()->Add(export_button.release(), 2, wxEXPAND, 0);
     panel->GetSizer()->AddStretchSpacer(1);
     panel->GetSizer()->Add(export_all_button.release(), 2, wxEXPAND, 0);
-    panel->GetSizer()->AddStretchSpacer(12);
+    panel->GetSizer()->AddStretchSpacer(8);
+    panel->GetSizer()->Add(search.release(), 4, wxEXPAND, 0);
 
     auto sizer = std::make_unique<wxBoxSizer>(wxVERTICAL);
     sizer->Add(panel.release(), 1, wxEXPAND, 0);
