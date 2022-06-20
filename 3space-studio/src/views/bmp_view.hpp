@@ -3,27 +3,43 @@
 
 #include <future>
 #include <set>
+#include <variant>
+#include <utility>
 #include "graphics_view.hpp"
 #include "resources/resource_explorer.hpp"
 #include "content/pal/palette.hpp"
+#include "content/bmp/bitmap.hpp"
 
 namespace studio::views
 {
   class bmp_view 
   {
   public:
-    struct image_data
-    {
-      int width;
-      int height;
-      std::vector<std::int32_t> pixels;
-    };
-
     bmp_view(const studio::resources::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::resources::resource_explorer&);
     std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks();
     void setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext);
     void render_gl(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext) {}
     void render_ui(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext);
+
+    struct image_data
+    {
+      int width;
+      int height;
+      int bit_depth;
+      std::vector<std::int32_t> pixels;
+    };
+
+    enum class bitmap_type
+    {
+      unknown,
+      microsoft,
+      earthsiege,
+      phoenix
+    };
+
+    using bmp_variant = std::variant<studio::content::bmp::windows_bmp_data, std::vector<studio::content::bmp::dbm_data>, std::vector<content::bmp::pbmp_data>>;
+
+    using palette_map = std::map<std::string_view, std::pair<studio::resources::file_info, std::vector<content::pal::palette>>>;
 
   private:
     enum class colour_strategy : int
@@ -43,6 +59,7 @@ namespace studio::views
       int selected_bitmap_index = 0;
     };
 
+    void bmp_view::load_palettes(const std::vector<studio::resources::file_info>& palettes, const studio::resources::resource_explorer& manager);
     void refresh_image(bool create_new_image = false);
 
     template<typename IndexType>
@@ -61,16 +78,7 @@ namespace studio::views
     bool opened_folder = false;
     bool scale_changed = false;
 
-    enum class bitmap_type
-    {
-      unknown,
-      microsoft,
-      earthsiege,
-      phoenix
-    };
-
     bitmap_type image_type = bitmap_type::unknown;
-    int bit_depth = 8;
     std::size_t num_unique_colours = 0;
 
     selection_state selection_state;
