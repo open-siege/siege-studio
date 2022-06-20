@@ -94,6 +94,65 @@ namespace studio::views
       bmp_data);
   }
 
+  std::optional<std::pair<std::string_view, std::size_t>> default_palette_from_settings(
+    const studio::resources::file_info& file,
+    const studio::resources::resource_explorer& manager,
+    const bmp_view::palette_map& loaded_palettes)
+  {
+    std::size_t index = 0;
+    std::string_view name;
+
+    const auto settings_path = manager.get_search_path() / "palettes.settings.json";
+
+    if (!std::filesystem::exists(settings_path))
+    {
+      return std::nullopt;
+    }
+
+    try
+    {
+      std::ifstream test_file(settings_path);
+      auto settings = nlohmann::json::parse(test_file);
+
+
+      auto get_value = [&](std::string key) {
+        if (settings.contains(key))
+        {
+          auto value = settings[key];
+
+          if (value.type() == nlohmann::json::value_t::object && value.contains("name"))
+          {
+            if (value.contains("index"))
+            {
+              index = value["index"];
+            }
+
+            value = value["name"];
+          }
+          else if (value.type() != nlohmann::json::value_t::string)
+          {
+            return;
+          }
+
+          auto loaded_palette = loaded_palettes.find(std::string_view(value));
+
+          if (loaded_palette != loaded_palettes.end())
+          {
+            name = loaded_palette->first;
+          }
+        }
+      };
+
+      get_value("default");
+      get_value((std::filesystem::relative(file.folder_path, manager.get_search_path()) / file.filename).string());
+      return std::make_pair(name, index);
+    }
+    catch (...)
+    {
+      return std::nullopt;
+    }
+  }
+
   std::pair<std::string_view, std::size_t> detect_default_palette(
     const bmp_view::bmp_variant& data,
     const studio::resources::file_info& file,
@@ -109,37 +168,14 @@ namespace studio::views
 
       if constexpr (std::is_same_v<T, std::vector<studio::content::bmp::dbm_data>>)
       {
-        std::string_view name = "Auto-generated";
+        const auto settings = default_palette_from_settings(file, manager, loaded_palettes);
 
-        std::ifstream test_file(manager.get_search_path() / "palettes.settings.json");
-        auto settings = nlohmann::json::parse(test_file);
-
-        if (settings.contains("default"))
+        if (settings.has_value())
         {
-          auto value = settings["default"];
-
-          auto loaded_palette = loaded_palettes.find(std::string_view(value));
-
-          if (loaded_palette != loaded_palettes.end())
-          {
-            name = loaded_palette->first;
-          }
+          return settings.value();
         }
 
-        const auto key = (std::filesystem::relative(file.folder_path, manager.get_search_path()) / file.filename).string();
-        if (settings.contains(key))
-        {
-          auto value = settings[key];
-
-          auto loaded_palette = loaded_palettes.find(std::string_view(value));
-
-          if (loaded_palette != loaded_palettes.end())
-          {
-            name = loaded_palette->first;
-          }
-        }
-
-        return std::make_pair(name, std::size_t(0u));
+        return std::make_pair(std::string_view("Auto-generated"), std::size_t(0u));
       }
 
       if constexpr (std::is_same_v<T, std::vector<studio::content::bmp::pbmp_data>>)
@@ -232,6 +268,13 @@ namespace studio::views
 
           if (name.empty())
           {
+            const auto settings = default_palette_from_settings(file, manager, loaded_palettes);
+
+            if (settings.has_value())
+            {
+              return settings.value();
+            }
+
             index = 0;
             name = "Auto-generated";
           }
