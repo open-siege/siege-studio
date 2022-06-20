@@ -95,7 +95,7 @@ namespace studio::views
   }
 
   void set_default_palette(const studio::resources::resource_explorer& manager,
-    const studio::resources::file_info& file,
+    const std::string& key,
     std::string_view name,
     std::optional<std::size_t> index = std::nullopt)
   {
@@ -103,7 +103,6 @@ namespace studio::views
     {
       const auto settings_path = manager.get_search_path() / "palettes.settings.json";
       auto settings = std::filesystem::exists(settings_path) ? nlohmann::json::parse(std::ifstream(settings_path)) : nlohmann::json{};
-      const auto key = (std::filesystem::relative(file.folder_path, manager.get_search_path()) / file.filename).string();
 
       if (index.has_value())
       {
@@ -121,7 +120,15 @@ namespace studio::views
     {
       return;
     }
+  }
 
+  void set_default_palette(const studio::resources::resource_explorer& manager,
+    const studio::resources::file_info& file,
+    std::string_view name,
+    std::optional<std::size_t> index = std::nullopt)
+  {
+      const auto key = (std::filesystem::relative(file.folder_path, manager.get_search_path()) / file.filename).string();
+      set_default_palette(manager, key, name, index);
   }
 
   std::optional<std::pair<std::string_view, std::size_t>> default_palette_from_settings(
@@ -175,8 +182,8 @@ namespace studio::views
         return false;
       };
 
-      if (get_value("default") ||
-            get_value((std::filesystem::relative(file.folder_path, manager.get_search_path()) / file.filename).string()))
+      if (get_value((std::filesystem::relative(file.folder_path, manager.get_search_path()) / file.filename).string()) ||
+          get_value("default"))
       {
         return std::make_pair(name, index);
       }
@@ -1077,11 +1084,11 @@ namespace studio::views
 
           if (image_type == bitmap_type::earthsiege)
           {
-            set_default_palette(archive, info, selected_palette_name);
+            set_default_palette(archive, info, default_palette_name);
           }
           else
           {
-            set_default_palette(archive, info, selected_palette_name);
+            set_default_palette(archive, info, default_palette_name);
           }
 
 
@@ -1121,6 +1128,12 @@ namespace studio::views
         }
 
         refresh_image();
+      }
+
+
+      if (image_type == bitmap_type::earthsiege && ImGui::Button("Set as Shared Default"))
+      {
+        set_default_palette(archive, "default", default_palette_name);
       }
 
 
