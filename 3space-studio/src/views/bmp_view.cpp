@@ -1,4 +1,5 @@
 #include <iomanip>
+#include <execution>
 #include <wx/quantize.h>
 #include "bmp_view.hpp"
 #include "content/bmp/bitmap.hpp"
@@ -39,6 +40,246 @@ std::vector<std::byte> narrow(const std::vector<std::int32_t>& pixels)
 namespace studio::views
 {
   std::filesystem::path bmp_view::export_path = std::filesystem::path();
+  std::vector<bmp_view::image_data> get_texture_data(const bmp_view::bmp_variant& bmp_data)
+  {
+    return std::visit([&](const auto& frames) {
+      using T = std::decay_t<decltype(frames)>;
+
+      if constexpr (std::is_same_v<T, studio::content::bmp::windows_bmp_data>)
+      {
+        std::vector<bmp_view::image_data> results;
+        bmp_view::image_data temp_image{ frames.info.width, frames.info.height, frames.info.bit_depth, std::move(frames.indexes) };
+
+        results.emplace_back(temp_image);
+
+        return results;
+      }
+
+      if constexpr (std::is_same_v<T, std::vector<studio::content::bmp::dbm_data>>)
+      {
+        std::vector<bmp_view::image_data> results;
+        results.reserve(frames.size());
+        for (const auto& es_bmp : frames)
+        {
+          bmp_view::image_data temp_image{
+            es_bmp.header.width,
+            es_bmp.header.height,
+            int(es_bmp.header.bit_depth),
+            widen(es_bmp.pixels)
+          };
+          results.emplace_back(temp_image);
+        }
+        return results;
+      }
+
+      if constexpr (std::is_same_v<T, std::vector<studio::content::bmp::pbmp_data>>)
+      {
+        std::vector<bmp_view::image_data> results;
+        results.reserve(frames.size());
+
+        for (auto& phoenix_bmp : frames)
+        {
+          bmp_view::image_data temp_image{
+            phoenix_bmp.bmp_header.width,
+            phoenix_bmp.bmp_header.height,
+            int(phoenix_bmp.bmp_header.bit_depth),
+            widen(phoenix_bmp.pixels)
+          };
+
+          results.emplace_back(temp_image);
+        }
+        return results;
+      }
+    },
+      bmp_data);
+  }
+
+  std::pair<std::string_view, std::size_t> detect_default_palette(
+    const bmp_view::bmp_variant& data,
+    const studio::resources::file_info& file,
+    const studio::resources::resource_explorer& manager,
+    const bmp_view::palette_map& loaded_palettes)
+  {
+    return std::visit([&](const auto& frames) {
+      using T = std::decay_t<decltype(frames)>;
+      if constexpr (std::is_same_v<T, studio::content::bmp::windows_bmp_data>)
+      {
+        return std::make_pair(std::string_view("Internal"), std::size_t(0u));
+      }
+
+      if constexpr (std::is_same_v<T, std::vector<studio::content::bmp::dbm_data>>)
+      {
+        std::string_view name = "Auto-generated";
+
+        std::ifstream test_file(manager.get_search_path() / "palettes.settings.json");
+        auto settings = nlohmann::json::parse(test_file);
+
+        if (settings.contains("default"))
+        {
+          auto value = settings["default"];
+
+          auto loaded_palette = loaded_palettes.find(std::string_view(value));
+
+          if (loaded_palette != loaded_palettes.end())
+          {
+            name = loaded_palette->first;
+          }
+        }
+
+        const auto key = (std::filesystem::relative(file.folder_path, manager.get_search_path()) / file.filename).string();
+        if (settings.contains(key))
+        {
+          auto value = settings[key];
+
+          auto loaded_palette = loaded_palettes.find(std::string_view(value));
+
+          if (loaded_palette != loaded_palettes.end())
+          {
+            name = loaded_palette->first;
+          }
+        }
+
+        return std::make_pair(name, std::size_t(0u));
+      }
+
+      if constexpr (std::is_same_v<T, std::vector<studio::content::bmp::pbmp_data>>)
+      {
+        std::size_t index = std::string::npos;
+        std::string_view name;
+
+        for (auto& phoenix_bmp : frames)
+        {
+          if (!name.empty())
+          {
+            continue;
+          }
+
+          std::vector<const studio::resources::file_info*> results;
+          results.reserve(loaded_palettes.size() / 2);
+
+          for (auto& palette : loaded_palettes)
+          {
+            if (palette.second.first.folder_path == file.folder_path)
+            {
+              results.emplace_back(&palette.second.first);
+            }
+          }
+
+          auto get_defaults = [&](bmp_view::palette_map::const_reference value) {
+            for (auto i = 0u; i < value.second.second.size(); ++i)
+            {
+              auto& child = value.second.second[i];
+              if (child.index == phoenix_bmp.palette_index)
+              {
+                index = i;
+                name = value.first;
+                break;
+              }
+            }
+          };
+
+          if (results.empty())
+          {
+            for (auto& entry : loaded_palettes)
+            {
+              if (entry.second.second.size() > phoenix_bmp.palette_index)
+              {
+                get_defaults(entry);
+              }
+
+              if (index != std::string::npos)
+              {
+                break;
+              }
+            }
+          }
+          else
+          {
+            auto bmp_file_name = shared::to_lower(file.filename.stem().string());
+
+            auto possible_palette = std::find_if(results.begin(), results.end(), [&](auto* item) {
+              auto palette_file_name = shared::to_lower(item->filename.stem().string());
+              return bmp_file_name.rfind(palette_file_name, 0) == 0;
+            });
+
+            if (possible_palette != results.end())
+            {
+              auto key = (std::filesystem::relative((*possible_palette)->folder_path, manager.get_search_path()) / (*possible_palette)->filename).string();
+
+              if (auto entry = loaded_palettes.find(key); entry != loaded_palettes.end())
+              {
+                get_defaults(*entry);
+              }
+            }
+            else
+            {
+              for (auto result : results)
+              {
+                auto pal_key = (std::filesystem::relative(result->folder_path, manager.get_search_path()) / result->filename).string();
+
+                if (auto entry = loaded_palettes.find(pal_key); entry != loaded_palettes.end())
+                {
+                  get_defaults(*entry);
+                }
+
+                if (index != std::string::npos)
+                {
+                  break;
+                }
+              }
+            }
+          }
+
+          if (name.empty())
+          {
+            index = 0;
+            name = "Auto-generated";
+          }
+        }
+        return std::make_pair(name, index);
+      }
+    },
+      data);
+  }
+
+  std::pair<bmp_view::bitmap_type, bmp_view::bmp_variant> load_image_data(std::basic_istream<std::byte>& image_stream)
+  {
+    if (content::bmp::is_microsoft_bmp(image_stream))
+    {
+      return std::make_pair(bmp_view::bitmap_type::microsoft, content::bmp::get_bmp_data(image_stream));
+    }
+    else if (content::bmp::is_earthsiege_bmp(image_stream) || content::bmp::is_earthsiege_bmp_array(image_stream))
+    {
+      std::vector<studio::content::bmp::dbm_data> frames;
+
+      if (content::bmp::is_earthsiege_bmp(image_stream))
+      {
+        frames.emplace_back(content::bmp::read_earthsiege_bmp(image_stream));
+      }
+      else if (content::bmp::is_earthsiege_bmp_array(image_stream))
+      {
+        frames = content::bmp::read_earthsiege_bmp_array(image_stream);
+      }
+
+      return std::make_pair(bmp_view::bitmap_type::earthsiege, std::move(frames));
+    }
+    else
+    {
+      std::vector<content::bmp::pbmp_data> frames;
+
+      if (content::bmp::is_phoenix_bmp(image_stream))
+      {
+        frames.emplace_back(content::bmp::get_pbmp_data(image_stream));
+      }
+      else if (content::bmp::is_phoenix_bmp_array(image_stream))
+      {
+        frames = content::bmp::get_pba_data(image_stream);
+      }
+
+      return std::make_pair(bmp_view::bitmap_type::phoenix, std::move(frames));
+    }
+  }
+
 
   std::vector<content::pal::colour> get_default_colours()
   {
@@ -121,6 +362,35 @@ namespace studio::views
     loaded_image.flipVertically();
   }
 
+  void bmp_view::load_palettes(const std::vector<studio::resources::file_info>& palettes, const studio::resources::resource_explorer& manager)
+  {
+    for (auto& palette_info : palettes)
+    {
+      auto raw_palette = manager.load_file(palette_info);
+      auto result = (std::filesystem::relative(palette_info.folder_path, manager.get_search_path()) / palette_info.filename).string();
+
+      if (content::pal::is_earthsiege_pal(*raw_palette.second))
+      {
+        std::vector<content::pal::palette> temp;
+        temp.emplace_back().colours = content::pal::get_earthsiege_pal(*raw_palette.second);
+        loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, std::move(temp)));
+      }
+      else if (content::pal::is_phoenix_pal(*raw_palette.second))
+      {
+        loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, content::pal::get_ppl_data(*raw_palette.second)));
+      }
+      else if (content::pal::is_microsoft_pal(*raw_palette.second))
+      {
+        std::vector<content::pal::palette> temp;
+        temp.emplace_back().colours = content::pal::get_pal_data(*raw_palette.second);
+
+        loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, std::move(temp)));
+      }
+    }
+  }
+
+
+
   bmp_view::bmp_view(const studio::resources::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::resources::resource_explorer& manager)
     : archive(manager), info(info)
   {
@@ -153,197 +423,40 @@ namespace studio::views
 
     studio::resources::resource_explorer::merge_results(palettes, all_palettes);
 
-    for (auto& palette_info : palettes)
+    load_palettes(palettes, manager);
+
+    auto bmp_data = load_image_data(image_stream);
+    image_type = bmp_data.first;
+
+    auto [palette_name, palette_index] = detect_default_palette(bmp_data.second, info, manager, loaded_palettes);
+
+    selection_state.selected_palette_index = selection_state.default_palette_index = palette_index;
+    selection_state.selected_palette_name = selection_state.default_palette_name = palette_name;
+
+    if (palette_name == "Internal")
     {
-      auto raw_palette = manager.load_file(palette_info);
-      auto result = (std::filesystem::relative(palette_info.folder_path, manager.get_search_path()) / palette_info.filename).string();
+      std::visit([&](const auto& data) {
+        using T = std::decay_t<decltype(data)>;
 
-      if (content::pal::is_earthsiege_pal(*raw_palette.second))
-      {
-        std::vector<content::pal::palette> temp;
-        temp.emplace_back().colours = content::pal::get_earthsiege_pal(*raw_palette.second);
-        loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, std::move(temp)));
-      }
-      else if (content::pal::is_phoenix_pal(*raw_palette.second))
-      {
-        loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, content::pal::get_ppl_data(*raw_palette.second)));
-      }
-      else if (content::pal::is_microsoft_pal(*raw_palette.second))
-      {
-        std::vector<content::pal::palette> temp;
-        temp.emplace_back().colours = content::pal::get_pal_data(*raw_palette.second);
+        if constexpr (std::is_same_v<T, studio::content::bmp::windows_bmp_data>)
+        {
+          std::vector<content::pal::palette> temp;
+          auto& pal = temp.emplace_back();
+          pal.colours = std::move(data.colours);
 
-        loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, std::move(temp)));
-      }
-    }
-
-    if (content::bmp::is_microsoft_bmp(image_stream))
-    {
-      image_type = bitmap_type::microsoft;
-      auto windows_bmp = content::bmp::get_bmp_data(image_stream);
-
-      std::vector<content::pal::palette> temp;
-      bit_depth = windows_bmp.info.bit_depth;
-      auto& pal = temp.emplace_back();
-      pal.colours = std::move(windows_bmp.colours);
-
-      loaded_palettes.emplace(sort_order.emplace_back("Internal"), std::make_pair(info, std::move(temp)));
-
-      selection_state.selected_palette_index = selection_state.default_palette_index = 0;
-      selection_state.selected_palette_name = selection_state.default_palette_name = "Internal";
-
-      image_data temp_image{ windows_bmp.info.width, windows_bmp.info.height, std::move(windows_bmp.indexes) };
-
-      original_pixels.emplace_back(temp_image);
-    }
-    else if (content::bmp::is_earthsiege_bmp(image_stream) || content::bmp::is_earthsiege_bmp_array(image_stream))
-    {
-      image_type = bitmap_type::earthsiege;
-      std::vector<studio::content::bmp::dbm_data> frames;
-
-      if (content::bmp::is_earthsiege_bmp(image_stream))
-      {
-        frames.emplace_back(content::bmp::read_earthsiege_bmp(image_stream));
-      }
-      else if (content::bmp::is_earthsiege_bmp_array(image_stream))
-      {
-        frames = content::bmp::read_earthsiege_bmp_array(image_stream);
-      }
-
-      std::vector<content::pal::palette> temp;
-      temp.emplace_back().colours = get_default_colours();
-      loaded_palettes.emplace(sort_order.emplace_back("Auto-generated"), std::make_pair(info, std::move(temp)));
-
-      for (const auto& es_bmp : frames)
-      {
-        bit_depth = int(es_bmp.header.bit_depth);
-
-        selection_state.selected_palette_index = selection_state.default_palette_index = 0;
-        selection_state.selected_palette_name = selection_state.default_palette_name = "Auto-generated";
-
-        image_data temp_image{ es_bmp.header.width, es_bmp.header.height, widen(es_bmp.pixels) };
-        original_pixels.emplace_back(temp_image);
-      }
+          loaded_palettes.emplace(sort_order.emplace_back("Internal"), std::make_pair(info, std::move(temp)));
+        }
+      },
+        bmp_data.second);
     }
     else
     {
-      image_type = bitmap_type::phoenix;
-      std::vector<content::bmp::pbmp_data> frames;
-
-      if (content::bmp::is_phoenix_bmp(image_stream))
-      {
-        frames.emplace_back(content::bmp::get_pbmp_data(image_stream));
-      }
-      else if (content::bmp::is_phoenix_bmp_array(image_stream))
-      {
-        frames = content::bmp::get_pba_data(image_stream);
-      }
-
-      if (!frames.empty())
-      {
-        bit_depth = frames.front().bmp_header.bit_depth;
-      }
-
-      for (auto& phoenix_bmp : frames)
-      {
-        if (original_pixels.empty())
-        {
-          if (!selection_state.selected_palette_name.empty())
-          {
-            continue;
-          }
-
-          std::vector<decltype(palettes)::pointer> results;
-          results.reserve(palettes.size() / 2);
-
-          for (auto& palette : palettes)
-          {
-            if (palette.folder_path == info.folder_path)
-            {
-              results.emplace_back(&palette);
-            }
-          }
-
-          auto get_defaults = [&](decltype(loaded_palettes)::reference value) {
-            for (auto i = 0u; i < value.second.second.size(); ++i)
-            {
-              auto& child = value.second.second[i];
-              if (child.index == phoenix_bmp.palette_index)
-              {
-                selection_state.selected_palette_index = selection_state.default_palette_index = i;
-                selection_state.selected_palette_name = selection_state.default_palette_name = value.first;
-                break;
-              }
-            }
-          };
-
-          if (results.empty())
-          {
-            for (auto& entry : loaded_palettes)
-            {
-              if (entry.second.second.size() > phoenix_bmp.palette_index)
-              {
-                get_defaults(entry);
-              }
-
-              if (selection_state.selected_palette_index != std::string::npos)
-              {
-                break;
-              }
-            }
-          }
-          else
-          {
-            auto bmp_file_name = shared::to_lower(info.filename.stem().string());
-
-            auto possible_palette = std::find_if(results.begin(), results.end(), [&](auto* item) {
-              auto palette_file_name = shared::to_lower(item->filename.stem().string());
-              return bmp_file_name.rfind(palette_file_name, 0) == 0;
-            });
-
-            if (possible_palette != results.end())
-            {
-              auto key = (std::filesystem::relative((*possible_palette)->folder_path, manager.get_search_path()) / (*possible_palette)->filename).string();
-
-              if (auto entry = loaded_palettes.find(key); entry != loaded_palettes.end())
-              {
-                get_defaults(*entry);
-              }
-            }
-            else
-            {
-              for (auto result : results)
-              {
-                auto pal_key = (std::filesystem::relative(result->folder_path, manager.get_search_path()) / result->filename).string();
-
-                if (auto entry = loaded_palettes.find(pal_key); entry != loaded_palettes.end())
-                {
-                  get_defaults(*entry);
-                }
-
-                if (selection_state.selected_palette_index != std::string::npos)
-                {
-                  break;
-                }
-              }
-            }
-          }
-
-          if (selection_state.selected_palette_name.empty())
-          {
-            std::vector<content::pal::palette> temp;
-            temp.emplace_back().colours = get_default_colours();
-            loaded_palettes.emplace(sort_order.emplace_back("Auto-generated"), std::make_pair(info, std::move(temp)));
-
-            selection_state.selected_palette_index = selection_state.default_palette_index = 0;
-            selection_state.selected_palette_name = selection_state.default_palette_name = "Auto-generated";
-          }
-          image_data temp_image{ phoenix_bmp.bmp_header.width, phoenix_bmp.bmp_header.height, widen(phoenix_bmp.pixels) };
-
-          original_pixels.emplace_back(temp_image);
-        }
-      }
+      std::vector<content::pal::palette> temp;
+      temp.emplace_back().colours = get_default_colours();
+      loaded_palettes.emplace(sort_order.emplace_back("Auto-generated"), std::make_pair(info, std::move(temp)));
     }
+
+    original_pixels = get_texture_data(bmp_data.second);
 
     sort_order.sort([&](const auto& a, const auto& b) {
       return (a == "Internal") || (a == "Auto-generated") || loaded_palettes.at(a).second.size() < loaded_palettes.at(b).second.size();
@@ -352,8 +465,8 @@ namespace studio::views
     if (!original_pixels.empty())
     {
       create_image(loaded_image,
-                   original_pixels.at(selection_state.selected_bitmap_index),
-                   loaded_palettes.at(selection_state.selected_palette_name).second.at(selection_state.selected_palette_index).colours);
+        original_pixels.at(selection_state.selected_bitmap_index),
+        loaded_palettes.at(selection_state.selected_palette_name).second.at(selection_state.selected_palette_index).colours);
       texture.loadFromImage(loaded_image);
     }
   }
@@ -379,7 +492,7 @@ namespace studio::views
   {
     const auto& [selected_palette_name, selected_palette_index, default_palette_name, default_palette_index, selected_bitmap_index] = selection_state;
 
-    if (bit_depth > 8 && selected_palette_name == "Internal")
+    if (selected_palette_name == "Internal" && original_pixels.at(selected_bitmap_index).bit_depth > 8)
     {
       create_image(loaded_image,
         original_pixels.at(selected_bitmap_index),
@@ -496,7 +609,7 @@ namespace studio::views
   {
     std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> callbacks;
 
-    //TODO read this from config file
+    // TODO read this from config file
     callbacks.emplace(get_key_for_name("Add"), std::ref(zoom_in));
     callbacks.emplace(get_key_for_name("Subtract"), std::ref(zoom_out));
     return callbacks;
@@ -630,7 +743,7 @@ namespace studio::views
       }
 
       ImGui::LabelText("", "Resolution: %ix%i", width, height);
-      ImGui::LabelText("", "Bits per pixel: %i", bit_depth);
+      ImGui::LabelText("", "Bits per pixel: %i", original_pixels.at(selected_bitmap_index).bit_depth);
 
       auto unique_colours = get_unique_colours(original_pixels.at(selected_bitmap_index).pixels);
       ImGui::LabelText("", "Original number of unique colours: %llu", unique_colours);
@@ -684,6 +797,92 @@ namespace studio::views
           }
         }
 
+        if (ImGui::Button("Export All to Regular BMPs"))
+        {
+          auto files = archive.find_files({ ".bmp", ".dib", ".pba", ".dbm", ".dba", ".db0", ".db1", ".db2", ".hba", ".hb0", ".hb1", ".hb2" });
+
+          if (!opened_folder && !files.empty())
+          {
+            wxLaunchDefaultApplication(export_path.string());
+            opened_folder = true;
+          }
+
+          std::for_each(std::execution::par_unseq, files.begin(), files.end(), [=](const auto& shape_info) {
+            const auto new_path = export_path / std::filesystem::relative(shape_info.folder_path, archive.get_search_path());
+
+            auto new_file_name = std::filesystem::path(shape_info.filename).replace_extension(".bmp");
+            std::filesystem::create_directories(new_path);
+            std::basic_ofstream<std::byte> output(new_path / new_file_name, std::ios::binary);
+
+            auto image_stream = archive.load_file(shape_info);
+            const auto [bmp_type, bmp_data] = load_image_data(*image_stream.second);
+
+            const auto default_palette = detect_default_palette(bmp_data, shape_info, archive, loaded_palettes);
+
+            std::visit([&](const auto& frames) {
+              using T = std::decay_t<decltype(frames)>;
+
+              if constexpr (std::is_same_v<T, studio::content::bmp::windows_bmp_data>)
+              {
+                content::bmp::write_bmp_data(output, frames.colours, narrow(frames.indexes), frames.info.width, frames.info.height, 8);
+              }
+
+              if constexpr (std::is_same_v<T, std::vector<studio::content::bmp::dbm_data>>)
+              {
+                if (frames.empty())
+                {
+                  return;
+                }
+
+                const auto& [palette_name, palette_index] = default_palette;
+
+                const auto& frame = frames.front();
+
+                const auto& colours = loaded_palettes.at(palette_name).second.at(palette_index).colours;
+                auto pixels = frame.pixels;
+
+                content::bmp::vertical_flip(pixels, frame.header.width);
+                content::bmp::write_bmp_data(output, colours, pixels, frame.header.width, frame.header.height, 8);
+              }
+
+              if constexpr (std::is_same_v<T, std::vector<studio::content::bmp::pbmp_data>>)
+              {
+                if (frames.empty())
+                {
+                  return;
+                }
+
+                const auto& [palette_name, palette_index] = default_palette;
+                const auto& frame = frames.front();
+
+                const auto& colours = loaded_palettes.at(palette_name).second.at(palette_index).colours;
+                auto pixels = frame.pixels;
+
+                content::bmp::vertical_flip(pixels, frame.bmp_header.width);
+                content::bmp::write_bmp_data(output, colours, pixels, frame.bmp_header.width, frame.bmp_header.height, 8);
+              }
+
+
+            }, bmp_data);
+          });
+          auto new_file_name = info.filename.replace_extension(".bmp");
+          std::filesystem::create_directories(export_path);
+          std::basic_ofstream<std::byte> output(export_path / new_file_name, std::ios::binary);
+
+          const auto& colours = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
+          auto pixels = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index).pixels,
+            loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+            colours);
+
+          content::bmp::vertical_flip(pixels, width);
+          content::bmp::write_bmp_data(output, colours, narrow(pixels), width, height, 8);
+          if (!opened_folder)
+          {
+            wxLaunchDefaultApplication(export_path.string());
+            opened_folder = true;
+          }
+        }
+
         if (ImGui::Button("Export to JSON"))
         {
           pending_save = std::async(std::launch::async, [this]() {
@@ -704,14 +903,14 @@ namespace studio::views
             {
               item_as_json["width"] = width;
               item_as_json["height"] = height;
-              item_as_json["bitDepth"] = bit_depth;
+              item_as_json["bitDepth"] = original_pixels.at(selected_bitmap_index).bit_depth;
               item_as_json["pixels"] = colours;
             }
             else
             {
               item_as_json["width"] = width;
               item_as_json["height"] = height;
-              item_as_json["bitDepth"] = bit_depth;
+              item_as_json["bitDepth"] = original_pixels.at(selected_bitmap_index).bit_depth;
               item_as_json["colours"] = colours;
               item_as_json["indexes"] = indexes;
             }
@@ -758,7 +957,7 @@ namespace studio::views
       int name_distance = std::distance(loaded_palettes.begin(), loaded_palettes.find(default_palette_name));
 
       if (ImGui::Combo(
-            "", (&name_distance), [](void* data, int idx, const char** out_text) -> bool {
+            "", (&name_distance), [](void*data, int idx, const char**out_text) -> bool {
               auto* real_data = reinterpret_cast<decltype(loaded_palettes)*>(data);
               auto it = real_data->begin();
               std::advance(it, idx);
@@ -807,7 +1006,7 @@ namespace studio::views
 
       auto old_index = default_palette_index;
       if (ImGui::Combo(
-            "  ", reinterpret_cast<int*>(&default_palette_index), [](void* data, int idx, const char** out_text) -> bool {
+            "  ", reinterpret_cast<int*>(&default_palette_index), [](void*data, int idx, const char**out_text) -> bool {
               auto* real_data = reinterpret_cast<decltype(loaded_palettes)::value_type::second_type*>(data);
               auto it = real_data->second.begin();
               std::advance(it, idx);
