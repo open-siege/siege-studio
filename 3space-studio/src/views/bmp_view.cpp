@@ -226,6 +226,13 @@ namespace studio::views
         std::size_t index = std::string::npos;
         std::string_view name;
 
+        const auto settings = default_palette_from_settings(file, manager, loaded_palettes);
+
+        if (settings.has_value())
+        {
+          return settings.value();
+        }
+
         for (auto& phoenix_bmp : frames)
         {
           if (!name.empty())
@@ -311,13 +318,6 @@ namespace studio::views
 
           if (name.empty())
           {
-            const auto settings = default_palette_from_settings(file, manager, loaded_palettes);
-
-            if (settings.has_value())
-            {
-              return settings.value();
-            }
-
             index = 0;
             name = "Auto-generated";
           }
@@ -1088,9 +1088,8 @@ namespace studio::views
           }
           else
           {
-            set_default_palette(archive, info, default_palette_name);
+            set_default_palette(archive, info, default_palette_name, default_palette_index);
           }
-
 
           refresh_image();
         }
@@ -1125,6 +1124,15 @@ namespace studio::views
         if (selected_palette_index == old_index)
         {
           selected_palette_index = default_palette_index;
+        }
+
+        if (image_type == bitmap_type::earthsiege)
+        {
+          set_default_palette(archive, info, default_palette_name);
+        }
+        else
+        {
+          set_default_palette(archive, info, default_palette_name, default_palette_index);
         }
 
         refresh_image();
