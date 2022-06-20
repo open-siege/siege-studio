@@ -94,6 +94,36 @@ namespace studio::views
       bmp_data);
   }
 
+  void set_default_palette(const studio::resources::resource_explorer& manager,
+    const studio::resources::file_info& file,
+    std::string_view name,
+    std::optional<std::size_t> index = std::nullopt)
+  {
+    try
+    {
+      const auto settings_path = manager.get_search_path() / "palettes.settings.json";
+      auto settings = std::filesystem::exists(settings_path) ? nlohmann::json::parse(std::ifstream(settings_path)) : nlohmann::json{};
+      const auto key = (std::filesystem::relative(file.folder_path, manager.get_search_path()) / file.filename).string();
+
+      if (index.has_value())
+      {
+        settings[key] = { {"name", name}, {"index", index.value()} };
+      }
+      else
+      {
+        settings[key] = name;
+      }
+
+      std::ofstream new_file(settings_path, std::ios::trunc);
+      new_file << std::setw(4) << settings;
+    }
+    catch (...)
+    {
+      return;
+    }
+
+  }
+
   std::optional<std::pair<std::string_view, std::size_t>> default_palette_from_settings(
     const studio::resources::file_info& file,
     const studio::resources::resource_explorer& manager,
@@ -111,11 +141,9 @@ namespace studio::views
 
     try
     {
-      std::ifstream test_file(settings_path);
-      auto settings = nlohmann::json::parse(test_file);
+      auto settings = nlohmann::json::parse(std::ifstream(settings_path));
 
-
-      auto get_value = [&](std::string key) {
+      auto get_value = [&](std::string key) -> bool {
         if (settings.contains(key))
         {
           auto value = settings[key];
@@ -131,7 +159,7 @@ namespace studio::views
           }
           else if (value.type() != nlohmann::json::value_t::string)
           {
-            return;
+            return false;
           }
 
           auto loaded_palette = loaded_palettes.find(std::string_view(value));
@@ -139,13 +167,21 @@ namespace studio::views
           if (loaded_palette != loaded_palettes.end())
           {
             name = loaded_palette->first;
+            return true;
           }
+
         }
+
+        return false;
       };
 
-      get_value("default");
-      get_value((std::filesystem::relative(file.folder_path, manager.get_search_path()) / file.filename).string());
-      return std::make_pair(name, index);
+      if (get_value("default") ||
+            get_value((std::filesystem::relative(file.folder_path, manager.get_search_path()) / file.filename).string()))
+      {
+        return std::make_pair(name, index);
+      }
+
+      return std::nullopt;
     }
     catch (...)
     {
@@ -1038,6 +1074,16 @@ namespace studio::views
             selected_palette_index = default_palette_index;
             selected_palette_name = default_palette_name;
           }
+
+          if (image_type == bitmap_type::earthsiege)
+          {
+            set_default_palette(archive, info, selected_palette_name);
+          }
+          else
+          {
+            set_default_palette(archive, info, selected_palette_name);
+          }
+
 
           refresh_image();
         }
