@@ -540,6 +540,7 @@ namespace studio::views
       std::vector<content::pal::palette> temp;
       temp.emplace_back().colours = get_default_colours();
       loaded_palettes.emplace(sort_order.emplace_back("Auto-generated"), std::make_pair(info, std::move(temp)));
+      strategy = static_cast<int>(colour_strategy::do_nothing);
     }
 
     original_pixels = get_texture_data(bmp_data.second);
