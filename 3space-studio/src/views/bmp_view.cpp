@@ -1056,6 +1056,15 @@ namespace studio::views
 
       ImGui::Begin("Settings");
 
+      ImGui::Text("%s", "Zoom: ");
+      ImGui::SameLine();
+
+      if (ImGui::SliderFloat("   ", &image_scale, 1.0f, 4.0f))
+      {
+        setup_view(parent, window, gui_context);
+      }
+
+
       ImGui::Text("%s", "Colour Strategy: ");
       ImGui::SameLine();
 
@@ -1207,15 +1216,6 @@ namespace studio::views
         selected_palette_index = default_palette_index = index;
         set_default_palette(archive, info, "");
         refresh_image();
-      }
-
-
-      ImGui::Text("%s", "Zoom: ");
-      ImGui::SameLine();
-
-      if (ImGui::SliderFloat("   ", &image_scale, 1.0f, 4.0f))
-      {
-        setup_view(parent, window, gui_context);
       }
 
       ImGui::End();
