@@ -111,7 +111,7 @@ namespace studio::views
       {
         settings.erase(key);
       }
-      else if (index.has_value())
+      else if (index.has_value() && index.value() != 0)
       {
         settings[key] = { {"name", name}, {"index", index.value()} };
       }
@@ -841,6 +841,18 @@ namespace studio::views
                 refresh_image();
               }
 
+              if (colour_strategy(strategy) == colour_strategy::do_nothing &&
+                  key == selected_palette_name && i == selected_palette_index && !(key == default_palette_name && i == default_palette_index))
+              {
+                ImGui::SameLine();
+                if (ImGui::Button("Set as Default"))
+                {
+                  default_palette_name = key;
+                  default_palette_index = i;
+                  set_default_palette(archive, info, default_palette_name, default_palette_index);
+                }
+              }
+
               label.str("");
             }
             child_count++;
@@ -1130,14 +1142,7 @@ namespace studio::views
             selected_palette_name = default_palette_name;
           }
 
-          if (image_type == bitmap_type::earthsiege)
-          {
-            set_default_palette(archive, info, default_palette_name);
-          }
-          else
-          {
-            set_default_palette(archive, info, default_palette_name, default_palette_index);
-          }
+          set_default_palette(archive, info, default_palette_name, default_palette_index);
 
           refresh_image();
         }
@@ -1174,14 +1179,7 @@ namespace studio::views
           selected_palette_index = default_palette_index;
         }
 
-        if (image_type == bitmap_type::earthsiege)
-        {
-          set_default_palette(archive, info, default_palette_name);
-        }
-        else
-        {
-          set_default_palette(archive, info, default_palette_name, default_palette_index);
-        }
+        set_default_palette(archive, info, default_palette_name, default_palette_index);
 
         refresh_image();
       }
@@ -1189,19 +1187,6 @@ namespace studio::views
       if (image_type == bitmap_type::earthsiege && ImGui::Button("Set as Shared Default"))
       {
         set_default_palette(archive, "default", default_palette_name);
-      }
-
-      if (ImGui::Button("Set as Default for Folder/Volume"))
-      {
-        auto archive_path = studio::resources::resource_explorer::get_archive_path(info.folder_path);
-        auto all_bitmaps = archive.find_files(archive_path, bmp_extensions);
-
-        auto settings = load_settings(archive);
-
-        for (const auto& bmp_info : all_bitmaps)
-        {
-          set_default_palette(archive, generate_settings_key(archive, bmp_info), default_palette_name, settings, default_palette_index);
-        }
       }
 
       ImGui::SameLine();
