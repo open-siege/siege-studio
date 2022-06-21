@@ -77,17 +77,22 @@ namespace studio::views
     {
       auto files = explorer.find_files({ ".sfx" });
 
+      if (!opened_folder && !files.empty())
+      {
+        wxLaunchDefaultApplication(export_path.string());
+        opened_folder = true;
+      }
+
       std::for_each(std::execution::par_unseq, files.begin(), files.end(), [=](const auto& snd_info) {
-        auto archive_path = studio::resources::resource_explorer::get_archive_path(snd_info.folder_path);
         auto sound_stream = explorer.load_file(snd_info);
 
         if (content::sfx::is_sfx_file(*sound_stream.second))
         {
-          auto final_folder = export_path /std::filesystem::relative(snd_info.folder_path, archive_path);
-          std::filesystem::create_directories(final_folder);
-          auto new_file_name = (final_folder / snd_info.filename).replace_extension(".wav");
+          const auto new_path = export_path / std::filesystem::relative(snd_info.folder_path, explorer.get_search_path());
+          auto new_file_name = std::filesystem::path(snd_info.filename).replace_extension(".wav");
 
-          std::basic_ofstream<std::byte> output(new_file_name, std::ios::binary);
+          std::filesystem::create_directories(new_path);
+          std::basic_ofstream<std::byte> output(new_path / new_file_name, std::ios::binary);
 
           content::sfx::write_wav_header(output, snd_info.size);
           std::copy_n(std::istreambuf_iterator<std::byte>(*sound_stream.second),
