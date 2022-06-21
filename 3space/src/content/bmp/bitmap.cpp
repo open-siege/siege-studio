@@ -244,6 +244,10 @@ namespace studio::content::bmp
     info.compression = 0;
     info.image_size = width * height;
 
+    using AlignmentType = std::int32_t;
+    const auto x_stride = width * bit_depth / 8;
+    const auto padding = shared::get_padding_size(x_stride, sizeof(AlignmentType));
+
     const auto num_pixels = info.width * info.height * (info.bit_depth / 8);
 
     if (pixels.size() != num_pixels)
@@ -262,7 +266,29 @@ namespace studio::content::bmp
       raw_data.write(quad.data(), sizeof(quad));
     }
 
-    raw_data.write(pixels.data(), pixels.size());
+    if (padding == 0)
+    {
+      raw_data.write(pixels.data(), pixels.size());
+    }
+    else
+    {
+      std::vector<std::byte> padding_bytes(padding, std::byte{0});
+
+      auto pos = 0u;
+
+      for (auto i = 0u; i < height; ++i)
+      {
+        if (pos > pixels.size())
+        {
+          break;
+        }
+
+        raw_data.write(pixels.data() + pos, x_stride);
+        raw_data.write(padding_bytes.data(), padding_bytes.size());
+        pos += x_stride;
+      }
+    }
+
   }
 
   bool is_phoenix_bmp(std::basic_istream<std::byte>& raw_data)
