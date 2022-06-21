@@ -159,15 +159,16 @@ namespace studio
 
         if (existing_context == window_contexts.end())
         {
+          // Preserving the context as it may still be in use and
+          // replacing it while ImGui is busy could cause a crash.
+          auto current_context = ImGui::GetCurrentContext();
           ImGui::SFML::Init(*window);
           studio::sfml_initialised = true;
 
           auto result = window_contexts.emplace(window, ImGui::GetCurrentContext());
           existing_context = result.first;
+          ImGui::SetCurrentContext(current_context);
         }
-
-        ImGui::SetCurrentContext(existing_context->second);
-
 
         graphics->Bind(wxEVT_ERASE_BACKGROUND, [](auto& event) {});
 
