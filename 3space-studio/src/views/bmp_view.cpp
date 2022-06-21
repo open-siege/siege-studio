@@ -39,6 +39,9 @@ std::vector<std::byte> narrow(const std::vector<std::int32_t>& pixels)
 
 namespace studio::views
 {
+  constexpr static auto auto_generated_name = std::string_view("Auto-generated");
+  const static std::vector<std::string_view> bmp_extensions = { ".bmp", ".dib", ".pba", ".dbm", ".dba", ".db0", ".db1", ".db2", ".hba", ".hb0", ".hb1", ".hb2" };
+
   std::filesystem::path bmp_view::export_path = std::filesystem::path();
   std::vector<bmp_view::image_data> get_texture_data(const bmp_view::bmp_variant& bmp_data)
   {
@@ -97,12 +100,12 @@ namespace studio::views
   void set_default_palette(const studio::resources::resource_explorer& manager,
     const std::string& key,
     std::string_view name,
+    nlohmann::json& settings,
     std::optional<std::size_t> index = std::nullopt)
   {
     try
     {
       const auto settings_path = manager.get_search_path() / "palettes.settings.json";
-      auto settings = std::filesystem::exists(settings_path) ? nlohmann::json::parse(std::ifstream(settings_path)) : nlohmann::json{};
 
       if (index.has_value())
       {
@@ -122,13 +125,33 @@ namespace studio::views
     }
   }
 
+  auto load_settings(const studio::resources::resource_explorer& manager)
+  {
+    const auto settings_path = manager.get_search_path() / "palettes.settings.json";
+    auto settings = std::filesystem::exists(settings_path) ? nlohmann::json::parse(std::ifstream(settings_path)) : nlohmann::json{};
+    return settings;
+  }
+
+  auto generate_settings_key(const studio::resources::resource_explorer& manager, const studio::resources::file_info& file)
+  {
+    return (std::filesystem::relative(file.folder_path, manager.get_search_path()) / file.filename).string();
+  }
+
+  void set_default_palette(const studio::resources::resource_explorer& manager,
+    const std::string& key,
+    std::string_view name,
+    std::optional<std::size_t> index = std::nullopt)
+  {
+    auto settings =load_settings(manager);
+    set_default_palette(manager, key, name, settings, index);
+  }
+
   void set_default_palette(const studio::resources::resource_explorer& manager,
     const studio::resources::file_info& file,
     std::string_view name,
     std::optional<std::size_t> index = std::nullopt)
   {
-      const auto key = (std::filesystem::relative(file.folder_path, manager.get_search_path()) / file.filename).string();
-      set_default_palette(manager, key, name, index);
+      set_default_palette(manager, generate_settings_key(manager, file), name, index);
   }
 
   std::optional<std::pair<std::string_view, std::size_t>> default_palette_from_settings(
@@ -218,7 +241,7 @@ namespace studio::views
           return settings.value();
         }
 
-        return std::make_pair(std::string_view("Auto-generated"), std::size_t(0u));
+        return std::make_pair(auto_generated_name, std::size_t(0u));
       }
 
       if constexpr (std::is_same_v<T, std::vector<studio::content::bmp::pbmp_data>>)
@@ -319,7 +342,7 @@ namespace studio::views
           if (name.empty())
           {
             index = 0;
-            name = "Auto-generated";
+            name = auto_generated_name;
           }
         }
         return std::make_pair(name, index);
@@ -539,14 +562,14 @@ namespace studio::views
     {
       std::vector<content::pal::palette> temp;
       temp.emplace_back().colours = get_default_colours();
-      loaded_palettes.emplace(sort_order.emplace_back("Auto-generated"), std::make_pair(info, std::move(temp)));
+      loaded_palettes.emplace(sort_order.emplace_back(auto_generated_name), std::make_pair(info, std::move(temp)));
       strategy = static_cast<int>(colour_strategy::do_nothing);
     }
 
     original_pixels = get_texture_data(bmp_data.second);
 
     sort_order.sort([&](const auto& a, const auto& b) {
-      return (a == "Internal") || (a == "Auto-generated") || loaded_palettes.at(a).second.size() < loaded_palettes.at(b).second.size();
+      return (a == "Internal") || (a == auto_generated_name) || loaded_palettes.at(a).second.size() < loaded_palettes.at(b).second.size();
     });
 
     if (!original_pixels.empty())
@@ -886,7 +909,7 @@ namespace studio::views
 
         if (ImGui::Button("Export All to Regular BMPs"))
         {
-          auto files = archive.find_files({ ".bmp", ".dib", ".pba", ".dbm", ".dba", ".db0", ".db1", ".db2", ".hba", ".hb0", ".hb1", ".hb2" });
+          auto files = archive.find_files(bmp_extensions);
 
           if (!opened_folder && !files.empty())
           {
@@ -1143,6 +1166,19 @@ namespace studio::views
       if (image_type == bitmap_type::earthsiege && ImGui::Button("Set as Shared Default"))
       {
         set_default_palette(archive, "default", default_palette_name);
+      }
+
+      if (ImGui::Button("Set as Default for All Files in Folder/Volume"))
+      {
+        auto archive_path = studio::resources::resource_explorer::get_archive_path(info.folder_path);
+        auto all_bitmaps = archive.find_files(archive_path, bmp_extensions);
+
+        auto settings = load_settings(archive);
+
+        for (const auto& bmp_info : all_bitmaps)
+        {
+          set_default_palette(archive, generate_settings_key(archive, bmp_info), default_palette_name, settings, default_palette_index);
+        }
       }
 
 
