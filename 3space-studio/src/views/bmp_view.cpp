@@ -1191,7 +1191,7 @@ namespace studio::views
         set_default_palette(archive, "default", default_palette_name);
       }
 
-      if (ImGui::Button("Set as Default for All Files in Folder/Volume"))
+      if (ImGui::Button("Set as Default for Folder/Volume"))
       {
         auto archive_path = studio::resources::resource_explorer::get_archive_path(info.folder_path);
         auto all_bitmaps = archive.find_files(archive_path, bmp_extensions);
