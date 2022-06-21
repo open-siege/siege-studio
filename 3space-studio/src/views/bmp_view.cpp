@@ -569,21 +569,27 @@ namespace studio::views
       },
         bmp_data.second);
     }
-    else
-    {
-      std::vector<content::pal::palette> temp;
-      temp.emplace_back().colours = get_default_colours();
-      loaded_palettes.emplace(sort_order.emplace_back(auto_generated_name), std::make_pair(info, std::move(temp)));
 
-      if (palette_name == auto_generated_name)
-      {
-        strategy = static_cast<int>(colour_strategy::do_nothing);
-      }
+    std::vector<content::pal::palette> temp;
+    temp.emplace_back().colours = get_default_colours();
+    loaded_palettes.emplace(sort_order.emplace_back(auto_generated_name), std::make_pair(info, std::move(temp)));
+
+    if (palette_name == auto_generated_name)
+    {
+      strategy = static_cast<int>(colour_strategy::do_nothing);
     }
 
     original_pixels = get_texture_data(bmp_data.second);
 
     sort_order.sort([&](const auto& a, const auto& b) {
+      if (a == "Internal" && b == auto_generated_name)
+      {
+        return true;
+      }
+      else if (b == "Internal" && a == auto_generated_name)
+      {
+        return false;
+      }
       return (a == "Internal") || (a == auto_generated_name) || loaded_palettes.at(a).second.size() < loaded_palettes.at(b).second.size();
     });
 
