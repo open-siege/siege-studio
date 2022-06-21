@@ -25,11 +25,11 @@ namespace studio::views
     original_data = mem_buffer.str();
 
     buffer.loadFromMemory(original_data.data(), original_data.size());
-    sound.setBuffer(buffer);
   }
 
   void sfx_view::setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext)
   {
+    sound.setBuffer(buffer);
   }
 
   void sfx_view::render_ui(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext)
