@@ -496,9 +496,21 @@ namespace studio::resources::vol::darkstar
       {
         extract_path = std::filesystem::current_path() / extract_path;
       }
-      else if (std::filesystem::exists(volume_filename.parent_path() / extract_path))
+      else
       {
-        extract_path = volume_filename.parent_path() / extract_path;
+        auto root_path = volume_filename.root_path();
+        auto parent_path = volume_filename.parent_path();
+
+        do
+        {
+          if (std::filesystem::exists(parent_path / extract_path))
+          {
+            extract_path = parent_path / extract_path;
+            break;
+          }
+          parent_path = parent_path.parent_path();
+        }
+        while(parent_path != root_path);
       }
 
       auto extract_path_str = extract_path.string();
