@@ -107,7 +107,11 @@ namespace studio::views
     {
       const auto settings_path = manager.get_search_path() / "palettes.settings.json";
 
-      if (index.has_value())
+      if (name.empty())
+      {
+        settings.erase(key);
+      }
+      else if (index.has_value())
       {
         settings[key] = { {"name", name}, {"index", index.value()} };
       }
@@ -223,7 +227,8 @@ namespace studio::views
     const bmp_view::bmp_variant& data,
     const studio::resources::file_info& file,
     const studio::resources::resource_explorer& manager,
-    const bmp_view::palette_map& loaded_palettes)
+    const bmp_view::palette_map& loaded_palettes,
+    bool ignore_settings = false)
   {
     return std::visit([&](const auto& frames) {
       using T = std::decay_t<decltype(frames)>;
@@ -234,11 +239,14 @@ namespace studio::views
 
       if constexpr (std::is_same_v<T, std::vector<studio::content::bmp::dbm_data>>)
       {
-        const auto settings = default_palette_from_settings(file, manager, loaded_palettes);
-
-        if (settings.has_value())
+        if (!ignore_settings)
         {
-          return settings.value();
+          const auto settings = default_palette_from_settings(file, manager, loaded_palettes);
+
+          if (settings.has_value())
+          {
+            return settings.value();
+          }
         }
 
         return std::make_pair(auto_generated_name, std::size_t(0u));
@@ -249,18 +257,21 @@ namespace studio::views
         std::size_t index = std::string::npos;
         std::string_view name;
 
-        const auto settings = default_palette_from_settings(file, manager, loaded_palettes);
-
-        if (settings.has_value())
+        if (!ignore_settings)
         {
-          return settings.value();
+          const auto settings = default_palette_from_settings(file, manager, loaded_palettes);
+
+          if (settings.has_value())
+          {
+            return settings.value();
+          }
         }
 
         for (auto& phoenix_bmp : frames)
         {
           if (!name.empty())
           {
-            continue;
+            break;
           }
 
           std::vector<const studio::resources::file_info*> results;
@@ -268,7 +279,7 @@ namespace studio::views
 
           for (auto& palette : loaded_palettes)
           {
-            if (palette.second.first.folder_path == file.folder_path)
+            if (palette.first != auto_generated_name && palette.second.first.folder_path == file.folder_path)
             {
               results.emplace_back(&palette.second.first);
             }
@@ -338,12 +349,12 @@ namespace studio::views
               }
             }
           }
+        }
 
-          if (name.empty())
-          {
-            index = 0;
-            name = auto_generated_name;
-          }
+        if (name.empty())
+        {
+          index = 0;
+          name = auto_generated_name;
         }
         return std::make_pair(name, index);
       }
@@ -563,7 +574,11 @@ namespace studio::views
       std::vector<content::pal::palette> temp;
       temp.emplace_back().colours = get_default_colours();
       loaded_palettes.emplace(sort_order.emplace_back(auto_generated_name), std::make_pair(info, std::move(temp)));
-      strategy = static_cast<int>(colour_strategy::do_nothing);
+
+      if (palette_name == auto_generated_name)
+      {
+        strategy = static_cast<int>(colour_strategy::do_nothing);
+      }
     }
 
     original_pixels = get_texture_data(bmp_data.second);
@@ -1162,7 +1177,6 @@ namespace studio::views
         refresh_image();
       }
 
-
       if (image_type == bitmap_type::earthsiege && ImGui::Button("Set as Shared Default"))
       {
         set_default_palette(archive, "default", default_palette_name);
@@ -1179,6 +1193,20 @@ namespace studio::views
         {
           set_default_palette(archive, generate_settings_key(archive, bmp_info), default_palette_name, settings, default_palette_index);
         }
+      }
+
+      ImGui::SameLine();
+
+      if (image_type == bitmap_type::phoenix && ImGui::Button("Reset"))
+      {
+        auto image_stream = archive.load_file(info);
+        const auto [bmp_type, bmp_data] = load_image_data(*image_stream.second);
+
+        const auto [name, index]  = detect_default_palette(bmp_data, info, archive, loaded_palettes, true);
+        selected_palette_name = default_palette_name = name;
+        selected_palette_index = default_palette_index = index;
+        set_default_palette(archive, info, "");
+        refresh_image();
       }
 
 
