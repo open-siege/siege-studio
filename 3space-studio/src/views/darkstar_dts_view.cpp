@@ -219,10 +219,11 @@ namespace studio::views
 
           for (auto i = 0u; i < local_detail_levels.size(); ++i)
           {
+            const auto new_path = export_path / std::filesystem::relative(shape_info.folder_path, archive.get_search_path());
             auto new_file_name = shape_info.filename.stem().string() + "-" + local_detail_levels[i] + ".obj";
 
-            std::filesystem::create_directory(export_path);
-            std::ofstream output(export_path / new_file_name, std::ios::trunc);
+            std::filesystem::create_directory(new_path);
+            std::ofstream output(new_path / new_file_name, std::ios::trunc);
             auto renderer = content::obj_renderer{ output };
 
             std::vector<std::size_t> details{ i };
