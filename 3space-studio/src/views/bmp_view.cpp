@@ -1,4 +1,5 @@
 #include <iomanip>
+#include <iostream>
 #include <execution>
 #include <wx/quantize.h>
 #include "bmp_view.hpp"
@@ -954,59 +955,66 @@ namespace studio::views
             const auto new_path = export_path / std::filesystem::relative(shape_info.folder_path, archive.get_search_path());
 
             auto new_file_name = std::filesystem::path(shape_info.filename).replace_extension(".bmp");
-            std::filesystem::create_directories(new_path);
-            std::basic_ofstream<std::byte> output(new_path / new_file_name, std::ios::binary);
+            try
+            {
+              std::filesystem::create_directories(new_path);
+              std::basic_ofstream<std::byte> output(new_path / new_file_name, std::ios::binary);
 
-            auto image_stream = archive.load_file(shape_info);
-            const auto [bmp_type, bmp_data] = load_image_data(*image_stream.second);
+              auto image_stream = archive.load_file(shape_info);
+              const auto [bmp_type, bmp_data] = load_image_data(*image_stream.second);
 
-            const auto default_palette = detect_default_palette(bmp_data, shape_info, archive, loaded_palettes);
+              const auto default_palette = detect_default_palette(bmp_data, shape_info, archive, loaded_palettes);
 
-            std::visit([&](const auto& frames) {
-              using T = std::decay_t<decltype(frames)>;
+              std::visit([&](const auto& frames) {
+                using T = std::decay_t<decltype(frames)>;
 
-              if constexpr (std::is_same_v<T, studio::content::bmp::windows_bmp_data>)
-              {
-                content::bmp::write_bmp_data(output, frames.colours, narrow(frames.indexes), frames.info.width, frames.info.height, 8);
-              }
-
-              if constexpr (std::is_same_v<T, std::vector<studio::content::bmp::dbm_data>>)
-              {
-                if (frames.empty())
+                if constexpr (std::is_same_v<T, studio::content::bmp::windows_bmp_data>)
                 {
-                  return;
+                  content::bmp::write_bmp_data(output, frames.colours, narrow(frames.indexes), frames.info.width, frames.info.height, 8);
                 }
 
-                const auto& [palette_name, palette_index] = default_palette;
-
-                const auto& frame = frames.front();
-
-                const auto& colours = loaded_palettes.at(palette_name).second.at(palette_index).colours;
-                auto pixels = frame.pixels;
-
-                content::bmp::vertical_flip(pixels, frame.header.width);
-                content::bmp::write_bmp_data(output, colours, pixels, frame.header.width, frame.header.height, 8);
-              }
-
-              if constexpr (std::is_same_v<T, std::vector<studio::content::bmp::pbmp_data>>)
-              {
-                if (frames.empty())
+                if constexpr (std::is_same_v<T, std::vector<studio::content::bmp::dbm_data>>)
                 {
-                  return;
+                  if (frames.empty())
+                  {
+                    return;
+                  }
+
+                  const auto& [palette_name, palette_index] = default_palette;
+
+                  const auto& frame = frames.front();
+
+                  const auto& colours = loaded_palettes.at(palette_name).second.at(palette_index).colours;
+                  auto pixels = frame.pixels;
+
+                  content::bmp::vertical_flip(pixels, frame.header.width);
+                  content::bmp::write_bmp_data(output, colours, pixels, frame.header.width, frame.header.height, 8);
                 }
 
-                const auto& [palette_name, palette_index] = default_palette;
-                const auto& frame = frames.front();
+                if constexpr (std::is_same_v<T, std::vector<studio::content::bmp::pbmp_data>>)
+                {
+                  if (frames.empty())
+                  {
+                    return;
+                  }
 
-                const auto& colours = loaded_palettes.at(palette_name).second.at(palette_index).colours;
-                auto pixels = frame.pixels;
+                  const auto& [palette_name, palette_index] = default_palette;
+                  const auto& frame = frames.front();
 
-                content::bmp::vertical_flip(pixels, frame.bmp_header.width);
-                content::bmp::write_bmp_data(output, colours, pixels, frame.bmp_header.width, frame.bmp_header.height, 8);
-              }
+                  const auto& colours = loaded_palettes.at(palette_name).second.at(palette_index).colours;
+                  auto pixels = frame.pixels;
+
+                  content::bmp::vertical_flip(pixels, frame.bmp_header.width);
+                  content::bmp::write_bmp_data(output, colours, pixels, frame.bmp_header.width, frame.bmp_header.height, 8);
+                }
 
 
-            }, bmp_data);
+              }, bmp_data);
+            }
+            catch (const std::exception& ex)
+            {
+              std::cerr << ((new_path / new_file_name).string() + ": " + ex.what() + '\n');
+            }
           });
           auto new_file_name = info.filename.replace_extension(".bmp");
           std::filesystem::create_directories(export_path);
