@@ -228,7 +228,7 @@ LSTATUS APIENTRY FinalRegCloseKey(HKEY hKey)
 {
   return WrappedRegCloseKey(TrueRegCloseKey, LoadedPaths, hKey);
 }
-static_assert(std::is_same_v<TrueRegCloseKey, FinalRegCloseKey>());
+//static_assert(std::is_same_v<TrueRegCloseKey, FinalRegCloseKey>());
 
 static auto* TrueRegOpenKeyExA = RegOpenKeyExA;
 LSTATUS APIENTRY FinalRegOpenKeyExA(
@@ -240,11 +240,13 @@ LSTATUS APIENTRY FinalRegOpenKeyExA(
 {
   return WrappedRegOpenKeyExA(TrueRegOpenKeyExA, LoadedPaths, hKey, lpSubKey, ulOptions, samDesired, phkResult);
 }
-static_assert(std::is_same_v<TrueRegOpenKeyExA, FinalRegOpenKeyExA>());
+
+//static_assert(std::is_same_v<TrueRegOpenKeyExA, FinalRegOpenKeyExA>());
 
 std::array<std::pair<void**, void*>, 8> GetRegistryDetours()
 {
-  return std::array<std::pair<void**, void*>, 8>{ { { &(void*&)TrueRegCloseKey, FinalRegCloseKey },
+  return std::array<std::pair<void**, void*>, 8>{ {
+    { &(void*&)TrueRegCloseKey, FinalRegCloseKey },
     { &(void*&)TrueRegCreateKeyExA, WrappedRegCreateKeyExA },
     { &(void*&)TrueRegDeleteKeyA, WrappedRegDeleteKeyA },
     { &(void*&)TrueRegEnumKeyExA, WrappedRegEnumKeyExA },

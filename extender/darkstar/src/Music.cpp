@@ -83,7 +83,7 @@ BOOL WINAPI DarkMciGetErrorStringA(MCIERROR err, LPSTR str, UINT other)
 std::array<std::pair<void**, void*>, 2> GetMusicDetours()
 {
   return std::array<std::pair<void**, void*>, 2>{ { { &(void*&)TrueMciSendCommandA, DarkMciSendCommandA },
-    { &(void*&)TrueMciGetErrorStringA, DarkMciGetErrorStringA }
+    { &(void*&)TrueMciGetErrorStringA, DarkMciGetErrorStringA } } };
 }
 
 std::size_t number_of_files_in_directory(const std::filesystem::path& path)
@@ -258,9 +258,8 @@ DWORD WINAPI StatusCommand(MCIDEVICEID device_id, MciMessage message, MciFlags f
     message_data->status.dwReturn = static_cast<DWORD>(length);
     return 1;
   }
-
-    return 1;
   }
+  return 1;
 }
 
 DWORD WINAPI PlayCommand(MCIDEVICEID device_id, MciMessage message, MciFlags flags, MciMessageData* message_data)
@@ -295,7 +294,7 @@ DWORD WINAPI PlayCommand(MCIDEVICEID device_id, MciMessage message, MciFlags fla
 
   std::for_each(tracks.begin(), tracks.end(), [](auto& track) { track.pause(); });
 
-  std::vector <std::tuple<std::size_t, std::size_t, std::reference_wrapper<music_player>>> mapped_tracks;
+  std::vector<std::tuple<std::size_t, std::size_t, std::reference_wrapper<music_player>>> mapped_tracks;
   mapped_tracks.reserve(tracks.size());
 
 
