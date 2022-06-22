@@ -26,7 +26,7 @@ class LocalConanFile(ConanFile):
 
     def imports(self):
         if not os.path.exists("src/logo.ico"):
-            tools.download(f"https://openclipart.org/image/400px/svg_to_png/97921/rubik-3D-colored.png", "src/logo.png")
+            tools.download(f"https://openclipart.org/image/400px/svg_to_png/97921/rubik-3D-colored.png", "src/logo.png", verify=False)
             filename = "src/logo.png"
             img = Image.open(filename)
             img.save("src/logo.ico")
