@@ -80,6 +80,11 @@ namespace studio::content::dts::three_space
     return results;
   }
 
+  nlohmann::json dts_renderable_shape::get_materials() const
+  {
+    return {};
+  }
+
   std::vector<std::string> dts_renderable_shape::get_detail_levels() const
   {
     return { "default" };

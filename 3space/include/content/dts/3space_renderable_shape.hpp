@@ -15,8 +15,9 @@ namespace studio::content::dts::three_space
     }
 
     std::vector<sequence_info> get_sequences(const std::vector<std::size_t>& detail_level_indexes) const override;
-
     std::vector<std::string> get_detail_levels() const override;
+    nlohmann::json get_materials() const override;
+
     void render_shape(shape_renderer& renderer, const std::vector<std::size_t>& detail_level_indexes, const std::vector<sequence_info>& sequences) const override;
 
   private:

@@ -9,6 +9,8 @@
 #include <glm/gtx/quaternion.hpp>
 
 #include "content/dts/dts_renderable_shape.hpp"
+#include "content/json_boost.hpp"
+#include "content/dts/complex_serializer.hpp"
 
 template<class... Ts>
 struct overloaded : Ts...
@@ -253,6 +255,16 @@ namespace studio::content::dts::darkstar
       return results;
     },
       shape);
+  }
+
+  nlohmann::json dts_renderable_shape::get_materials() const
+  {
+    return std::visit([](const auto& instance) {
+      return std::visit([](const auto& list) -> nlohmann::json {
+        return list.materials;
+      },
+        instance.material_list);
+      }, shape);
   }
 
   void dts_renderable_shape::render_shape(shape_renderer& renderer, const std::vector<std::size_t>& detail_level_indexes, const std::vector<sequence_info>& sequences) const
