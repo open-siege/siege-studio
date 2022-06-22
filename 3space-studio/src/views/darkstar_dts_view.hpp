@@ -35,6 +35,7 @@ namespace studio::views
     std::vector<std::size_t> detail_level_indexes = { 0 };
     std::vector<content::sequence_info> sequences;
     std::vector<std::string> detail_levels;
+    nlohmann::json materials;
 
     bool root_visible = true;
     bool opened_folder = false;

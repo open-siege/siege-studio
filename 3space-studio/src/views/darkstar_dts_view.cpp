@@ -1,4 +1,5 @@
 #include <execution>
+#include <algorithm>
 
 #include "darkstar_dts_view.hpp"
 #include "content/dts/renderable_shape_factory.hpp"
@@ -85,6 +86,7 @@ namespace studio::views
 
     sequences = shape->get_sequences(detail_level_indexes);
     detail_levels = shape->get_detail_levels();
+    materials = shape->get_materials();
   }
 
   std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> darkstar_dts_view::get_callbacks()
@@ -318,5 +320,66 @@ namespace studio::views
 
       ImGui::End();
     }
+
+    if (!materials.empty())
+    {
+      ImGui::Begin("Materials");
+
+      for (auto i = 0u; i < materials.size(); ++i)
+      {
+        const auto& material = materials[i];
+        const std::string filename = material["fileName"];
+
+        if (!filename.empty())
+        {
+          ImGui::Text("#%u - %s", i + 1, filename.c_str());
+          ImGui::PushID(&materials + i);
+          if (ImGui::Button("Open in new tab"))
+          {
+            const auto ext = shared::to_lower(std::filesystem::path(filename).extension().string());
+            auto files = archive.find_files(studio::resources::resource_explorer::get_archive_path(info.folder_path), { ext });
+
+            const auto predicate = [&](const auto& material_info){
+              return material_info.filename == filename || shared::to_lower(material_info.filename.string()) == shared::to_lower(filename);
+            };
+
+            auto file_info = std::find_if(files.begin(), files.end(), predicate);
+
+            if (file_info == files.end())
+            {
+              files = archive.find_files({ ext });
+              file_info = std::find_if(files.begin(), files.end(), predicate);
+            }
+
+            if (file_info != files.end())
+            {
+              archive.execute_action("open_new_tab", *file_info);
+            }
+          }
+          ImGui::PopID();
+        }
+        else
+        {
+          ImGui::Text("#%u", i + 1);
+        }
+
+        ImGui::Indent(8);
+        for (auto& [key, val] : material.items())
+        {
+          if (key == "fileName")
+          {
+            continue;
+          }
+
+
+
+          ImGui::Text("%s: %s", key.c_str(), val.dump().c_str());
+        }
+        ImGui::Unindent(8);
+      }
+
+      ImGui::End();
+    }
+
   }
 }// namespace studio::views
