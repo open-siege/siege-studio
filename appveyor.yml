@@ -53,7 +53,7 @@ deploy:
     description: "Current build for $(APPVEYOR_BUILD_VERSION). See release notes for prior releases here: https://github.com/3space-studio/3space-studio/wiki/Release-Notes"
     provider: GitHub
     auth_token:
-      secure: j9gRSLHiiIC4nZ4dake8rl5AKZO+nirkNT28Fw53gDZ5F8/Os6F6NPc7OH6db7zB
+      secure: Z101/tJ3sK4VFKSqikl2qDRGx7lcSwAPN0g32rxzVZuoTLCXVJLhfuFb/xKYG1Y+
     artifact: OpenSiege
     draft: false
     skip_tags: true
@@ -68,7 +68,7 @@ deploy:
     description: "See release notes for information about this release: https://github.com/3space-studio/3space-studio/wiki/Release-Notes"
     provider: GitHub
     auth_token:
-      secure: j9gRSLHiiIC4nZ4dake8rl5AKZO+nirkNT28Fw53gDZ5F8/Os6F6NPc7OH6db7zB
+      secure: Z101/tJ3sK4VFKSqikl2qDRGx7lcSwAPN0g32rxzVZuoTLCXVJLhfuFb/xKYG1Y+
     artifact: OpenSiege
     draft: false
     prerelease: false
