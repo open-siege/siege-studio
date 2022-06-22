@@ -5,7 +5,7 @@ import os.path
 
 class LocalConanFile(ConanFile):
     name = "3space"
-    version = "0.5.1"
+    version = "0.5.3"
     url = "https://github.com/open-siege/open-siege"
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
