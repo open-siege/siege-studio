@@ -4,7 +4,8 @@
 #include <string>
 #include <vector>
 #include <optional>
-#include <nlohmann/json.hpp>
+#include <variant>
+#include <unordered_map>
 #include "3d_structures.hpp"
 
 namespace studio::content
@@ -46,11 +47,31 @@ namespace studio::content
     std::vector<sub_sequence_info> sub_sequences;
   };
 
+  inline std::string to_string(const rgb_data& data)
+  {
+    return "rgba(" + std::to_string(data.red) + ", " + std::to_string(data.green) + ", " + std::to_string(data.blue) + ", " + std::to_string(data.rgb_flags) + ")";
+  }
+
+  struct material
+  {
+    using metadata_type = std::variant<std::int32_t, std::uint32_t, std::int16_t, std::uint16_t, float, rgb_data>;
+    std::string filename;
+    std::unordered_map<std::string_view, metadata_type> metadata;
+    static std::string to_string(const metadata_type& data)
+    {
+      using std::to_string;
+
+      return std::visit([](const auto& val) {
+        return to_string(val);
+      }, data);
+    }
+  };
+
   struct renderable_shape
   {
     virtual std::vector<sequence_info> get_sequences(const std::vector<std::size_t>& detail_level_indexes) const = 0;
     virtual std::vector<std::string> get_detail_levels() const = 0;
-    virtual nlohmann::json get_materials() const = 0;
+    virtual std::vector<material> get_materials() const = 0;
 
     virtual void render_shape(shape_renderer& renderer, const std::vector<std::size_t>& detail_level_indexes, const std::vector<sequence_info>& sequences) const = 0;
 

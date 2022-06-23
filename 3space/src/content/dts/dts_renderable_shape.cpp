@@ -5,12 +5,9 @@
 #include <memory>
 #include <functional>
 #include <list>
-#include <memory>
 #include <glm/gtx/quaternion.hpp>
 
 #include "content/dts/dts_renderable_shape.hpp"
-#include "content/json_boost.hpp"
-#include "content/dts/complex_serializer.hpp"
 
 template<class... Ts>
 struct overloaded : Ts...
@@ -257,11 +254,40 @@ namespace studio::content::dts::darkstar
       shape);
   }
 
-  nlohmann::json dts_renderable_shape::get_materials() const
+  std::vector<material> dts_renderable_shape::get_materials() const
   {
     return std::visit([](const auto& instance) {
-      return std::visit([](const auto& list) -> nlohmann::json {
-        return list.materials;
+      return std::visit([](const auto& list) {
+        std::vector<material> results;
+        results.reserve(list.materials.size());
+
+        for (const auto& raw_material : list.materials)
+        {
+         auto& temp = results.emplace_back();
+         temp.filename = raw_material.file_name.data();
+
+         temp.metadata.emplace("flags", raw_material.flags);
+         temp.metadata.emplace("alpha", raw_material.alpha);
+         temp.metadata.emplace("index", raw_material.index);
+         temp.metadata.emplace("rgbData", raw_material.rgb_data);
+
+         using T = std::decay_t<decltype(raw_material)>;
+
+         if constexpr (std::is_same_v<T, material_list::v3::material>)
+         {
+           temp.metadata.emplace("type", raw_material.type);
+           temp.metadata.emplace("friction", raw_material.friction);
+           temp.metadata.emplace("elasticity", raw_material.elasticity);
+         }
+         if constexpr (std::is_same_v<T, material_list::v4::material>)
+         {
+           temp.metadata.emplace("type", raw_material.type);
+           temp.metadata.emplace("friction", raw_material.friction);
+           temp.metadata.emplace("elasticity", raw_material.elasticity);
+           temp.metadata.emplace("useDefaultProperties", raw_material.use_default_properties);
+         }
+        }
+        return results;
       },
         instance.material_list);
       }, shape);

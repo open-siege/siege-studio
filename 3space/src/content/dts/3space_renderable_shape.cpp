@@ -80,7 +80,7 @@ namespace studio::content::dts::three_space
     return results;
   }
 
-  nlohmann::json dts_renderable_shape::get_materials() const
+  std::vector<material> dts_renderable_shape::get_materials() const
   {
     return {};
   }
