@@ -328,19 +328,18 @@ namespace studio::views
       for (auto i = 0u; i < materials.size(); ++i)
       {
         const auto& material = materials[i];
-        const std::string filename = material["fileName"];
 
-        if (!filename.empty())
+        if (!material.filename.empty())
         {
-          ImGui::Text("#%u - %s", i + 1, filename.c_str());
+          ImGui::Text("#%u - %s", i + 1, material.filename.c_str());
           ImGui::PushID(&materials + i);
           if (ImGui::Button("Open in new tab"))
           {
-            const auto ext = shared::to_lower(std::filesystem::path(filename).extension().string());
+            const auto ext = shared::to_lower(std::filesystem::path(material.filename).extension().string());
             auto files = archive.find_files(studio::resources::resource_explorer::get_archive_path(info.folder_path), { ext });
 
             const auto predicate = [&](const auto& material_info){
-              return material_info.filename == filename || shared::to_lower(material_info.filename.string()) == shared::to_lower(filename);
+              return material_info.filename == material.filename || shared::to_lower(material_info.filename.string()) == shared::to_lower(material.filename);
             };
 
             auto file_info = std::find_if(files.begin(), files.end(), predicate);
@@ -364,16 +363,13 @@ namespace studio::views
         }
 
         ImGui::Indent(8);
-        for (auto& [key, val] : material.items())
+        std::string temp;
+        temp.reserve(10);
+        for (auto& [key, val] : material.metadata)
         {
-          if (key == "fileName")
-          {
-            continue;
-          }
+          temp.assign(key);
 
-
-
-          ImGui::Text("%s: %s", key.c_str(), val.dump().c_str());
+          ImGui::Text("%s: %s", temp.c_str(), std::decay_t<decltype(material)>::to_string(val).c_str());
         }
         ImGui::Unindent(8);
       }

@@ -21,7 +21,7 @@ namespace studio::content::dts
       return {};
     }
 
-    virtual nlohmann::json get_materials() const override
+    std::vector<material> get_materials() const override
     {
       return {};
     }
