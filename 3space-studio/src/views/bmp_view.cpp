@@ -4,6 +4,7 @@
 #include <wx/quantize.h>
 #include "bmp_view.hpp"
 #include "content/bmp/bitmap.hpp"
+#include "content/image/image.hpp"
 #include "sfml_keys.hpp"
 #include "utility.hpp"
 #include "content/json_boost.hpp"
@@ -363,11 +364,23 @@ namespace studio::views
       data);
   }
 
-  std::pair<bmp_view::bitmap_type, bmp_view::bmp_variant> load_image_data(std::basic_istream<std::byte>& image_stream)
+  std::pair<bmp_view::bitmap_type, bmp_view::bmp_variant> load_image_data(const studio::resources::file_info& info, std::basic_istream<std::byte>& image_stream)
   {
     if (content::bmp::is_microsoft_bmp(image_stream))
     {
       return std::make_pair(bmp_view::bitmap_type::microsoft, content::bmp::get_bmp_data(image_stream));
+    }
+    else if (content::bmp::is_jpg(image_stream))
+    {
+      return std::make_pair(bmp_view::bitmap_type::microsoft, content::bmp::get_jpg_data(info, image_stream));
+    }
+    else if (content::bmp::is_png(image_stream))
+    {
+      return std::make_pair(bmp_view::bitmap_type::microsoft, content::bmp::get_png_data(info, image_stream));
+    }
+    else if (content::bmp::is_tga(image_stream))
+    {
+      return std::make_pair(bmp_view::bitmap_type::microsoft, content::bmp::get_tga_data(info, image_stream));
     }
     else if (content::bmp::is_earthsiege_bmp(image_stream) || content::bmp::is_earthsiege_bmp_array(image_stream))
     {
@@ -546,7 +559,7 @@ namespace studio::views
 
     load_palettes(palettes, manager);
 
-    auto bmp_data = load_image_data(image_stream);
+    auto bmp_data = load_image_data(info, image_stream);
     image_type = bmp_data.first;
 
     auto [palette_name, palette_index] = detect_default_palette(bmp_data.second, info, manager, loaded_palettes);
@@ -961,7 +974,7 @@ namespace studio::views
               std::basic_ofstream<std::byte> output(new_path / new_file_name, std::ios::binary);
 
               auto image_stream = archive.load_file(shape_info);
-              const auto [bmp_type, bmp_data] = load_image_data(*image_stream.second);
+              const auto [bmp_type, bmp_data] = load_image_data(image_stream.first,*image_stream.second);
 
               const auto default_palette = detect_default_palette(bmp_data, shape_info, archive, loaded_palettes);
 
@@ -1208,7 +1221,7 @@ namespace studio::views
       if (image_type == bitmap_type::phoenix && ImGui::Button("Reset"))
       {
         auto image_stream = archive.load_file(info);
-        const auto [bmp_type, bmp_data] = load_image_data(*image_stream.second);
+        const auto [bmp_type, bmp_data] = load_image_data(image_stream.first, *image_stream.second);
 
         const auto [name, index]  = detect_default_palette(bmp_data, info, archive, loaded_palettes, true);
         selected_palette_name = default_palette_name = name;

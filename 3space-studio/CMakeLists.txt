@@ -8,6 +8,7 @@ find_package(ImGui-SFML REQUIRED)
 
 file(GLOB STUDIO_SRC_FILES
         src/*.cpp
+        src/content/**/*.cpp
         src/views/*.cpp)
 
 add_executable(3space-studio ${STUDIO_SRC_FILES})

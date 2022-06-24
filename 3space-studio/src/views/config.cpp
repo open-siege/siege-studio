@@ -9,6 +9,7 @@
 #include "content/dts/darkstar.hpp"
 #include "content/bmp/bitmap.hpp"
 #include "content/sfx/wave.hpp"
+#include "content/image/image.hpp"
 #include "resources/darkstar_volume.hpp"
 #include "resources/three_space_volume.hpp"
 #include "resources/trophy_bass_volume.hpp"
@@ -31,6 +32,11 @@ namespace studio::views
     view_factory.add_file_type(content::bmp::is_earthsiege_bmp, [](auto& info, auto& stream, auto& manager) -> studio_view { return graphics_view(bmp_view(info, stream, manager)); });
     view_factory.add_file_type(content::bmp::is_earthsiege_bmp_array, [](auto& info, auto& stream, auto& manager) -> studio_view { return graphics_view(bmp_view(info, stream, manager)); });
     view_factory.add_file_type(content::bmp::is_phoenix_bmp_array, [](auto& info, auto& stream, auto& manager) -> studio_view { return graphics_view(bmp_view(info, stream, manager)); });
+    view_factory.add_file_type(content::bmp::is_png, [](auto& info, auto& stream, auto& manager) -> studio_view { return graphics_view(bmp_view(info, stream, manager)); });
+    view_factory.add_file_type(content::bmp::is_gif, [](auto& info, auto& stream, auto& manager) -> studio_view { return graphics_view(bmp_view(info, stream, manager)); });
+    view_factory.add_file_type(content::bmp::is_jpg, [](auto& info, auto& stream, auto& manager) -> studio_view { return graphics_view(bmp_view(info, stream, manager)); }, true);
+    view_factory.add_file_type(content::bmp::is_tga, [](auto& info, auto& stream, auto& manager) -> studio_view { return graphics_view(bmp_view(info, stream, manager)); }, true);
+
     view_factory.add_file_type(content::pal::is_old_pal, [](auto&, auto& stream, auto&) -> studio_view { return graphics_view(pal_view(stream)); });
     view_factory.add_file_type(content::pal::is_microsoft_pal, [](auto&, auto& stream, auto&) -> studio_view { return graphics_view(pal_view(stream)); });
     view_factory.add_file_type(content::pal::is_phoenix_pal, [](auto&, auto& stream, auto&) -> studio_view { return graphics_view(pal_view(stream)); });
@@ -50,6 +56,11 @@ namespace studio::views
     view_factory.add_extension(".dts", content::dts::darkstar::is_darkstar_dts);
     view_factory.add_extension(".dts", content::dts::three_space::v1::is_3space_dts);
 
+    view_factory.add_extension(".jpg", content::bmp::is_jpg);
+    view_factory.add_extension(".jpeg", content::bmp::is_jpg);
+    view_factory.add_extension(".gif", content::bmp::is_gif);
+    view_factory.add_extension(".png", content::bmp::is_png);
+    view_factory.add_extension(".tga", content::bmp::is_tga);
     view_factory.add_extension(".bmp", content::bmp::is_microsoft_bmp);
     view_factory.add_extension(".bmp", content::bmp::is_phoenix_bmp);
     view_factory.add_extension(".dib", content::bmp::is_microsoft_bmp);

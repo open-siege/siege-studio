@@ -107,12 +107,12 @@ namespace studio::views
         self.setup_view(parent, window, gui_context);
       }
 
-      void render_gl(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext)
+      void render_gl(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext) override
       {
         self.render_gl(parent, window, guiContext);
       }
 
-      void render_ui(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext)
+      void render_ui(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext) override
       {
         self.render_ui(parent, window, guiContext);
       }
