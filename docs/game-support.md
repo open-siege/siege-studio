@@ -6,6 +6,16 @@
 }
 </style>
 
+### Format Background
+
+Despite each version of the engine having some of the same extensions for some of their formats, each iteration of the engine has completely different structures and binary layouts for said formats.
+
+In other words, 3Space 2.0 DTS files are fundamentally different to 3Space 3.0 DTS files, which are in turn completely different to Torque DTS files.
+
+They do share a similar high level structure and some features, but the overall format changes over time and even between games there is a big difference between the format used.
+
+For example, while Earthsiege and Red Baron 2 might share a 3Space 2.0 core (of sorts), the DTS files themselves have different version tags for each entity and need different code to handle them. Depending on how different they are, they may need completely separate implementations for parsing and viewing.
+
 ### Game Support
 
 Because the 3Space engine has a long history, and has morphed into engines with new names, here is a matrix of the games, most of which were made by Dynamix, (focusing specifically on DOS or Windows) which are intended to be supported or are supported:
