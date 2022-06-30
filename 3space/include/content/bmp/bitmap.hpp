@@ -122,9 +122,9 @@ namespace studio::content::bmp
 
   bool is_microsoft_bmp(std::basic_istream<std::byte>& raw_data);
 
-  windows_bmp_data get_bmp_data(std::basic_istream<std::byte>& raw_data);
+  windows_bmp_data get_bmp_data(std::basic_istream<std::byte>& raw_data, bool auto_flip = true);
 
-  void write_bmp_data(std::basic_ostream<std::byte>& raw_data, const std::vector<pal::colour>& colours, const std::vector<std::byte>& pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth);
+  void write_bmp_data(std::basic_ostream<std::byte>& raw_data, std::vector<pal::colour> colours, std::vector<std::byte> pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth, bool auto_flip = true);
 
   bool is_phoenix_bmp(std::basic_istream<std::byte>& raw_data);
 

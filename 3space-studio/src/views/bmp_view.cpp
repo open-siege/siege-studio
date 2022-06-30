@@ -460,7 +460,6 @@ namespace studio::views
     }
 
     loaded_image.create(data.width, data.height, rendered_pixels.data());
-    loaded_image.flipVertically();
   }
 
   void create_image(sf::Image& loaded_image,
@@ -493,7 +492,6 @@ namespace studio::views
     }
 
     loaded_image.create(data.width, data.height, rendered_pixels.data());
-    loaded_image.flipVertically();
   }
 
   void bmp_view::load_palettes(const std::vector<studio::resources::file_info>& palettes, const studio::resources::resource_explorer& manager)
@@ -945,7 +943,6 @@ namespace studio::views
             loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
             colours);
 
-          content::bmp::vertical_flip(pixels, width);
           content::bmp::write_bmp_data(output, colours, narrow(pixels), width, height, 8);
           if (!opened_folder)
           {
@@ -1000,7 +997,6 @@ namespace studio::views
                   const auto& colours = loaded_palettes.at(palette_name).second.at(palette_index).colours;
                   auto pixels = frame.pixels;
 
-                  content::bmp::vertical_flip(pixels, frame.header.width);
                   content::bmp::write_bmp_data(output, colours, pixels, frame.header.width, frame.header.height, 8);
                 }
 
@@ -1017,7 +1013,6 @@ namespace studio::views
                   const auto& colours = loaded_palettes.at(palette_name).second.at(palette_index).colours;
                   auto pixels = frame.pixels;
 
-                  content::bmp::vertical_flip(pixels, frame.bmp_header.width);
                   content::bmp::write_bmp_data(output, colours, pixels, frame.bmp_header.width, frame.bmp_header.height, 8);
                 }
 
@@ -1038,7 +1033,6 @@ namespace studio::views
             loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
             colours);
 
-          content::bmp::vertical_flip(pixels, width);
           content::bmp::write_bmp_data(output, colours, narrow(pixels), width, height, 8);
           if (!opened_folder)
           {
