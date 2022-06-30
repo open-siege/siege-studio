@@ -168,7 +168,7 @@ namespace studio::content::bmp
     }
   }
 
-  windows_bmp_data get_bmp_data(std::basic_istream<std::byte>& raw_data)
+  windows_bmp_data get_bmp_data(std::basic_istream<std::byte>& raw_data, bool auto_flip)
   {
     windows_bmp_header header{};
     raw_data.read(reinterpret_cast<std::byte*>(&header), sizeof(header));
@@ -219,6 +219,18 @@ namespace studio::content::bmp
       });
     }
 
+    if (auto_flip)
+    {
+      if (indexes.empty() && !colours.empty())
+      {
+        vertical_flip(colours, info.width);
+      }
+      else if (!indexes.empty())
+      {
+        vertical_flip(indexes, info.width);
+      }
+    }
+
     return {
       header,
       info,
@@ -227,8 +239,20 @@ namespace studio::content::bmp
     };
   }
 
-  void write_bmp_data(std::basic_ostream<std::byte>& raw_data, const std::vector<pal::colour>& colours, const std::vector<std::byte>& pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth)
+  void write_bmp_data(std::basic_ostream<std::byte>& raw_data, std::vector<pal::colour> colours, std::vector<std::byte> pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth, bool auto_flip)
   {
+    if (auto_flip)
+    {
+      if (pixels.empty() && !colours.empty())
+      {
+        vertical_flip(colours, width);
+      }
+      else if (!pixels.empty())
+      {
+        vertical_flip(pixels, width);
+      }
+    }
+
     windows_bmp_header header{};
     header.tag = windows_bmp_tag;
     header.reserved1 = 0;
