@@ -949,15 +949,15 @@ namespace studio::views
           std::filesystem::create_directories(export_path);
           std::basic_ofstream<std::byte> output(export_path / new_file_name, std::ios::binary);
 
-          const auto& colours = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
+          const auto& selected_palette = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index);
 
           auto fresh_image = remap_image(
             colour_strategy(strategy),
             original_pixels.at(selected_bitmap_index),
             loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
-            colours);
+            selected_palette.colours);
 
-          content::bmp::write_pbmp_data(output, width, height, colours, narrow(fresh_image.pixels));
+          content::bmp::write_pbmp_data(output, width, height, selected_palette.colours, narrow(fresh_image.pixels), selected_palette.index);
           if (!opened_folder)
           {
             wxLaunchDefaultApplication(export_path.string());
