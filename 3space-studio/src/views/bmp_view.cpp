@@ -543,7 +543,7 @@ namespace studio::views
     const std::vector<content::pal::colour>& default_colours,
     const std::vector<content::pal::colour>& selected_colours)
   {
-    if (colour_strat == bmp_view::colour_strategy::do_nothing)
+    if (colour_strat == bmp_view::colour_strategy::do_nothing || default_colours == selected_colours)
     {
       return existing_pixels;
     }
@@ -572,6 +572,8 @@ namespace studio::views
       std::transform(new_palette.begin(), new_palette.end(), std::back_inserter(new_new_palette), [](auto& colour) {
         return content::pal::colour{ colour[0], colour[1], colour[2], std::byte{ 0xFF } };
       });
+
+      existing_pixels.bit_depth = selected_colours.size() <= 256 ? 8 : existing_pixels.bit_depth;
 
       existing_pixels.pixels = widen(content::bmp::remap_bitmap(new_indexes,
         new_new_palette,
@@ -931,7 +933,7 @@ namespace studio::views
             loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
             colours);
 
-          content::bmp::write_bmp_data(output, colours, narrow(fresh_image.pixels), width, height, 8);
+          content::bmp::write_bmp_data(output, colours, narrow(fresh_image.pixels), width, height, fresh_image.bit_depth);
           if (!opened_folder)
           {
             wxLaunchDefaultApplication(export_path.string());
@@ -939,7 +941,9 @@ namespace studio::views
           }
         }
 
-        if (ImGui::Button("Export to Phoenix BMP"))
+        if (!(selected_palette_name == "Internal" &&
+            original_pixels.at(selected_bitmap_index).bit_depth > 8) &&
+            ImGui::Button("Export to Phoenix BMP"))
         {
           auto new_file_name = info.filename.replace_extension(".bmp");
           std::filesystem::create_directories(export_path);
