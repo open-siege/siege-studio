@@ -90,6 +90,10 @@ namespace studio
 
   constexpr auto event_open_in_new_tab = 1;
   constexpr auto event_open_folder_as_workspace = 2;
+  constexpr auto event_close_current_tab = 3;
+  constexpr auto event_close_other_tabs = 4;
+  constexpr auto event_close_left_tabs = 5;
+  constexpr auto event_close_right_tabs = 6;
   static bool sfml_initialised = false;
 
   auto create_menu_bar()
@@ -520,6 +524,52 @@ int main(int argc, char** argv)
     panel = std::make_unique<wxPanel>(notebook.get(), wxID_ANY);
     panel->SetName("+");
     notebook->AddPage(panel.release(), "+");
+
+    auto menuTab = std::make_unique<wxMenu>();
+    menuTab->Append(studio::event_close_current_tab, "Close");
+    menuTab->Append(studio::event_close_other_tabs, "Close Other Tabs");
+    menuTab->Append(studio::event_close_left_tabs, "Close Tabs to the Left");
+    menuTab->Append(studio::event_close_right_tabs, "Close Tabs to the Right");
+
+    auto selection = notebook->GetSelection();
+
+    notebook->Bind(wxEVT_AUINOTEBOOK_TAB_RIGHT_DOWN, [notebook, &selection, menuTab = menuTab.get()](wxAuiNotebookEvent& event) {
+      selection = event.GetSelection();
+      notebook->PopupMenu(menuTab);
+    });
+
+    notebook->Bind(
+      wxEVT_MENU, [notebook, &selection](auto& event) {
+        if (notebook->GetPageCount() > 1)
+        {
+          notebook->DeletePage(selection);
+        }
+      },
+      studio::event_close_current_tab);
+
+    auto close_right_tabs = [notebook, &selection](auto& event) {
+      for (auto i = notebook->GetPageCount(); i > selection; --i)
+      {
+        notebook->DeletePage(i);
+      }
+    };
+
+    auto close_left_tabs = [notebook, &selection](auto& event) {
+      for (auto i = selection - 1; i >= 0; --i)
+      {
+        notebook->DeletePage(i);
+      }
+    };
+
+    notebook->Bind(
+      wxEVT_MENU, [notebook, &close_left_tabs, &close_right_tabs](auto& event) {
+        close_left_tabs(event);
+        close_right_tabs(event);
+      },
+      studio::event_close_other_tabs);
+
+    notebook->Bind(wxEVT_MENU, close_left_tabs,studio::event_close_left_tabs);
+    notebook->Bind(wxEVT_MENU, close_right_tabs,studio::event_close_right_tabs);
 
     notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED,
       [notebook, &add_new_element](wxAuiNotebookEvent& event) {
