@@ -257,7 +257,15 @@ namespace studio::content::bmp
     header.tag = windows_bmp_tag;
     header.reserved1 = 0;
     header.reserved2 = 0;
-    header.offset = sizeof(header) + sizeof(windows_bmp_info) + int(colours.size()) * sizeof(pal::colour);
+
+    if (bit_depth <= 8)
+    {
+      header.offset = sizeof(header) + sizeof(windows_bmp_info) + int(colours.size()) * sizeof(pal::colour);
+    }
+    else
+    {
+      header.offset = sizeof(header) + sizeof(windows_bmp_info);
+    }
 
     windows_bmp_info info{ 0 };
     info.info_size = sizeof(info);
@@ -274,9 +282,14 @@ namespace studio::content::bmp
 
     const auto num_pixels = info.width * info.height * (info.bit_depth / 8);
 
-    if (pixels.size() != num_pixels)
+
+    if (info.bit_depth <= 8 && pixels.size() != num_pixels)
     {
       throw std::invalid_argument("The pixels vector does not have the correct number of pixels.");
+    }
+    else if (info.bit_depth > 8 && colours.size() != (info.width * info.height))
+    {
+      throw std::invalid_argument("The colours vector does not have the correct number of pixels.");
     }
 
     header.file_size = header.offset + num_pixels;
@@ -288,6 +301,11 @@ namespace studio::content::bmp
     {
       std::array<std::byte, 4> quad{ colour.blue, colour.green, colour.red, std::byte{ 0 } };
       raw_data.write(quad.data(), sizeof(quad));
+    }
+
+    if (pixels.empty())
+    {
+      return;
     }
 
     if (padding == 0)
