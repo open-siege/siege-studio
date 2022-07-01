@@ -4,6 +4,7 @@
 #include <vector>
 #include <array>
 #include <fstream>
+#include <optional>
 #include "content/pal/palette.hpp"
 #include "endian_arithmetic.hpp"
 
@@ -130,7 +131,7 @@ namespace studio::content::bmp
 
   pbmp_data get_pbmp_data(std::basic_istream<std::byte>& raw_data);
 
-  void write_pbmp_data(std::basic_ofstream<std::byte>& raw_data, std::int32_t width, std::int32_t height, const std::vector<pal::colour>& colours, const std::vector<std::byte>& pixels);
+  void write_pbmp_data(std::basic_ofstream<std::byte>& raw_data, std::int32_t width, std::int32_t height, const std::vector<pal::colour>& colours, const std::vector<std::byte>& pixels, std::optional<std::uint32_t> palette_id = std::nullopt);
 
   bool is_phoenix_bmp_array(std::basic_istream<std::byte>& raw_data);
 

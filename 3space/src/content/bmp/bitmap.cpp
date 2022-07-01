@@ -418,7 +418,12 @@ namespace studio::content::bmp
     };
   }
 
-  void write_pbmp_data(std::basic_ofstream<std::byte>& raw_data, std::int32_t width, std::int32_t height, const std::vector<pal::colour>& colours, const std::vector<std::byte>& pixels)
+  void write_pbmp_data(std::basic_ofstream<std::byte>& raw_data,
+    std::int32_t width,
+    std::int32_t height,
+    const std::vector<pal::colour>& colours,
+    const std::vector<std::byte>& pixels,
+    std::optional<std::uint32_t> palette_id)
   {
     raw_data.write(pbmp_tag.data(), sizeof(pbmp_tag));
 
@@ -452,11 +457,15 @@ namespace studio::content::bmp
     endian::little_int32_t num_details = 1;
     raw_data.write(reinterpret_cast<std::byte*>(&num_details), sizeof(num_details));
 
-    raw_data.write(palette_tag.data(), sizeof(palette_tag));
-    header_size = sizeof(std::int32_t);
-    raw_data.write(reinterpret_cast<std::byte*>(&header_size), sizeof(header_size));
-    endian::little_int32_t palette_index = 1;
-    raw_data.write(reinterpret_cast<std::byte*>(&palette_index), sizeof(palette_index));
+
+    if (palette_id.has_value())
+    {
+      raw_data.write(palette_tag.data(), sizeof(palette_tag));
+      header_size = sizeof(std::int32_t);
+      raw_data.write(reinterpret_cast<std::byte*>(&header_size), sizeof(header_size));
+      endian::little_uint32_t palette_index = palette_id.value();
+      raw_data.write(reinterpret_cast<std::byte*>(&palette_index), sizeof(palette_index));
+    }
 
     raw_data.seekp(file_size_pos, std::ios::beg);
 
