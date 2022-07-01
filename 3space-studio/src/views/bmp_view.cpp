@@ -521,6 +521,72 @@ namespace studio::views
     }
   }
 
+  template<typename RowType>
+  std::vector<std::uint8_t*> temp_rows(std::vector<RowType>& data, int width, int height)
+  {
+    std::vector<std::uint8_t*> rows;
+    rows.reserve(height);
+
+    auto stride = width * sizeof(RowType);
+
+    for (auto i = 0; i < height * stride; i += stride)
+    {
+      auto raw = reinterpret_cast<std::uint8_t*>(data.data()) + i;
+      rows.emplace_back(raw);
+    }
+
+    return rows;
+  }
+
+  auto remap_image(bmp_view::colour_strategy colour_strat,
+    bmp_view::image_data existing_pixels,
+    const std::vector<content::pal::colour>& default_colours,
+    const std::vector<content::pal::colour>& selected_colours)
+  {
+    if (colour_strat == bmp_view::colour_strategy::do_nothing)
+    {
+      return existing_pixels;
+    }
+
+    if (existing_pixels.pixels.empty())
+    {
+      std::vector<std::array<std::byte, 3>> narrowed_colours;
+      narrowed_colours.reserve(default_colours.size());
+
+      std::transform(default_colours.begin(), default_colours.end(), std::back_inserter(narrowed_colours), [](auto& colour) {
+        return std::array<std::byte, 3>{ colour.red, colour.green, colour.blue };
+      });
+
+      std::vector<std::byte> new_indexes(default_colours.size(), std::byte('\0'));
+
+      std::vector<std::array<std::byte, 3>> new_palette(selected_colours.size(), std::array<std::byte, 3>{});
+
+      auto width = existing_pixels.width;
+      auto height = existing_pixels.height;
+
+      wxQuantize::DoQuantize(width, height, temp_rows(narrowed_colours, width, height).data(), temp_rows(new_indexes, width, height).data(), reinterpret_cast<std::uint8_t*>(new_palette.data()), new_palette.size());
+
+      std::vector<content::pal::colour> new_new_palette;
+      new_new_palette.reserve(selected_colours.size());
+
+      std::transform(new_palette.begin(), new_palette.end(), std::back_inserter(new_new_palette), [](auto& colour) {
+        return content::pal::colour{ colour[0], colour[1], colour[2], std::byte{ 0xFF } };
+      });
+
+      existing_pixels.pixels = widen(content::bmp::remap_bitmap(new_indexes,
+        new_new_palette,
+        selected_colours,
+        colour_strat == bmp_view::colour_strategy::remap_unique));
+    }
+    else
+    {
+      existing_pixels.pixels = content::bmp::remap_bitmap(existing_pixels.pixels,
+        default_colours,
+        selected_colours);
+    }
+
+    return existing_pixels;
+  }
 
 
   bmp_view::bmp_view(const studio::resources::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::resources::resource_explorer& manager)
@@ -614,23 +680,6 @@ namespace studio::views
     }
   }
 
-  template<typename RowType>
-  std::vector<std::uint8_t*> temp_rows(std::vector<RowType>& data, int width, int height)
-  {
-    std::vector<std::uint8_t*> rows;
-    rows.reserve(height);
-
-    auto stride = width * sizeof(RowType);
-
-    for (auto i = 0; i < height * stride; i += stride)
-    {
-      auto raw = reinterpret_cast<std::uint8_t*>(data.data()) + i;
-      rows.emplace_back(raw);
-    }
-
-    return rows;
-  }
-
   void bmp_view::refresh_image(bool create_new_image)
   {
     const auto& [selected_palette_name, selected_palette_index, default_palette_name, default_palette_index, selected_bitmap_index] = selection_state;
@@ -655,87 +704,19 @@ namespace studio::views
 
     if (!original_pixels.empty())
     {
-      auto colour_strat = colour_strategy(strategy);
+      const auto& selected_colours = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
 
-      if (colour_strat == colour_strategy::do_nothing)
-      {
-        num_unique_colours = get_unique_colours(original_pixels.at(selected_bitmap_index).pixels);
+      auto fresh_image = remap_image(
+        colour_strategy(strategy),
+        original_pixels.at(selected_bitmap_index),
+        loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+        selected_colours);
 
-        create_image(loaded_image,
-          original_pixels.at(selected_bitmap_index),
-          loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
-      }
-      else if (colour_strat == colour_strategy::remap)
-      {
-        auto existing_pixels = original_pixels.at(selected_bitmap_index);
+      num_unique_colours = get_unique_colours(fresh_image.pixels);
 
-        if (existing_pixels.pixels.empty())
-        {
-          auto& colours = loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours;
-
-          std::vector<std::array<std::byte, 3>> narrowed_colours;
-          narrowed_colours.reserve(colours.size());
-
-          std::transform(colours.begin(), colours.end(), std::back_inserter(narrowed_colours), [](auto& colour) {
-            return std::array<std::byte, 3>{ colour.red, colour.green, colour.blue };
-          });
-
-          std::vector<std::byte> new_indexes(colours.size(), std::byte('\0'));
-
-          auto& palette = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
-
-          std::vector<std::array<std::byte, 3>> new_palette(palette.size(), std::array<std::byte, 3>{});
-
-          auto width = existing_pixels.width;
-          auto height = existing_pixels.height;
-
-          wxQuantize::DoQuantize(width, height, temp_rows(narrowed_colours, width, height).data(), temp_rows(new_indexes, width, height).data(), reinterpret_cast<std::uint8_t*>(new_palette.data()), new_palette.size());
-
-          std::vector<content::pal::colour> new_new_palette;
-          new_new_palette.reserve(palette.size());
-
-          std::transform(new_palette.begin(), new_palette.end(), std::back_inserter(new_new_palette), [](auto& colour) {
-            return content::pal::colour{ colour[0], colour[1], colour[2], std::byte{ 0xFF } };
-          });
-
-          existing_pixels.pixels = widen(content::bmp::remap_bitmap(new_indexes,
-            new_new_palette,
-            loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours));
-
-          num_unique_colours = get_unique_colours(new_indexes);
-
-          create_image(loaded_image,
-            existing_pixels,
-            loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
-        }
-        else
-        {
-          existing_pixels.pixels = content::bmp::remap_bitmap(existing_pixels.pixels,
-            loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
-            loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
-
-          num_unique_colours = get_unique_colours(existing_pixels.pixels);
-
-          create_image(loaded_image,
-            existing_pixels,
-            loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
-        }
-      }
-      else if (colour_strat == colour_strategy::remap_unique)
-      {
-        auto image_data = original_pixels.at(selected_bitmap_index);
-
-        image_data.pixels = content::bmp::remap_bitmap(image_data.pixels,
-          loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
-          loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours,
-          true);
-
-        num_unique_colours = get_unique_colours(image_data.pixels);
-
-        create_image(loaded_image,
-          image_data,
-          loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
-      }
+      create_image(loaded_image,
+        fresh_image,
+        selected_colours);
 
       if (create_new_image)
       {
@@ -901,7 +882,11 @@ namespace studio::views
       ImGui::LabelText("", "Bits per pixel: %i", original_pixels.at(selected_bitmap_index).bit_depth);
 
       auto unique_colours = get_unique_colours(original_pixels.at(selected_bitmap_index).pixels);
-      ImGui::LabelText("", "Original number of unique colours: %llu", unique_colours);
+
+      if (original_pixels.at(selected_bitmap_index).bit_depth == 8)
+      {
+        ImGui::LabelText("", "Original number of unique colours: %llu", unique_colours);
+      }
 
       if (num_unique_colours == 0)
       {
@@ -939,11 +924,36 @@ namespace studio::views
           std::basic_ofstream<std::byte> output(export_path / new_file_name, std::ios::binary);
 
           const auto& colours = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
-          auto pixels = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index).pixels,
+
+          auto fresh_image = remap_image(
+            colour_strategy(strategy),
+            original_pixels.at(selected_bitmap_index),
             loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
             colours);
 
-          content::bmp::write_bmp_data(output, colours, narrow(pixels), width, height, 8);
+          content::bmp::write_bmp_data(output, colours, narrow(fresh_image.pixels), width, height, 8);
+          if (!opened_folder)
+          {
+            wxLaunchDefaultApplication(export_path.string());
+            opened_folder = true;
+          }
+        }
+
+        if (ImGui::Button("Export to Phoenix BMP"))
+        {
+          auto new_file_name = info.filename.replace_extension(".bmp");
+          std::filesystem::create_directories(export_path);
+          std::basic_ofstream<std::byte> output(export_path / new_file_name, std::ios::binary);
+
+          const auto& colours = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
+
+          auto fresh_image = remap_image(
+            colour_strategy(strategy),
+            original_pixels.at(selected_bitmap_index),
+            loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+            colours);
+
+          content::bmp::write_pbmp_data(output, width, height, colours, narrow(fresh_image.pixels));
           if (!opened_folder)
           {
             wxLaunchDefaultApplication(export_path.string());

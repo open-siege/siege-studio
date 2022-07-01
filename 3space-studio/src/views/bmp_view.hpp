@@ -37,11 +37,6 @@ namespace studio::views
       phoenix
     };
 
-    using bmp_variant = std::variant<studio::content::bmp::windows_bmp_data, std::vector<studio::content::bmp::dbm_data>, std::vector<content::bmp::pbmp_data>>;
-
-    using palette_map = std::map<std::string_view, std::pair<studio::resources::file_info, std::vector<content::pal::palette>>>;
-
-  private:
     enum class colour_strategy : int
     {
       do_nothing,
@@ -49,6 +44,11 @@ namespace studio::views
       remap_unique
     };
 
+    using bmp_variant = std::variant<studio::content::bmp::windows_bmp_data, std::vector<studio::content::bmp::dbm_data>, std::vector<content::bmp::pbmp_data>>;
+
+    using palette_map = std::map<std::string_view, std::pair<studio::resources::file_info, std::vector<content::pal::palette>>>;
+
+  private:
     struct selection_state
     {
       std::string_view selected_palette_name;
@@ -59,7 +59,7 @@ namespace studio::views
       int selected_bitmap_index = 0;
     };
 
-    void bmp_view::load_palettes(const std::vector<studio::resources::file_info>& palettes, const studio::resources::resource_explorer& manager);
+    void load_palettes(const std::vector<studio::resources::file_info>& palettes, const studio::resources::resource_explorer& manager);
     void refresh_image(bool create_new_image = false);
 
     template<typename IndexType>
