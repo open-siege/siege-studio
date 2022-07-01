@@ -706,7 +706,7 @@ namespace studio::views
 
           create_image(loaded_image,
             existing_pixels,
-            new_palette);
+            loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
         }
         else
         {
@@ -932,7 +932,7 @@ namespace studio::views
         ImGui::SameLine();
         ImGui::Text("%s", export_path.string().c_str());
 
-        if (image_type != bitmap_type::microsoft && ImGui::Button("Export to Regular BMP"))
+        if (ImGui::Button("Export to Regular BMP"))
         {
           auto new_file_name = info.filename.replace_extension(".bmp");
           std::filesystem::create_directories(export_path);
