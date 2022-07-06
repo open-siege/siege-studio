@@ -8,6 +8,7 @@
 #include <wx/wx.h>
 #include <wx/aui/aui.h>
 #include <wx/treectrl.h>
+#include <wx/srchctrl.h>
 
 #include <imgui.h>
 #include <imgui-SFML.h>
@@ -220,7 +221,8 @@ namespace studio
     wxTreeCtrl& tree_view,
     const fs::path& search_path,
     const std::vector<std::string_view>& extensions,
-    std::optional<wxTreeItemId> parent = std::nullopt)
+    std::optional<wxTreeItemId> parent = std::nullopt,
+    std::optional<std::string_view> file_filter = std::nullopt)
   {
     using namespace std::literals;
 
@@ -286,12 +288,14 @@ namespace studio
 
           if (is_root)
           {
-            populate_tree_view(view_factory, archive, tree_view, folder.full_path, extensions, new_parent);
+            populate_tree_view(view_factory, archive, tree_view, folder.full_path, extensions, new_parent, file_filter);
           }
         }
       },
         item);
     }
+
+
 
     for (auto& item : files_folders)
     {
@@ -303,6 +307,16 @@ namespace studio
                 return shared::ends_with(shared::to_lower(file.filename.string()), ext);
               }))
           {
+            if (file_filter.has_value() && !file_filter.value().empty())
+            {
+              auto filename = shared::to_lower(file.filename.string());
+              auto lower_search = shared::to_lower(file_filter.value());
+
+              if (filename.find(lower_search) == std::string::npos)
+              {
+                return;
+              }
+            }
             tree_view.AppendItem(parent.value(), file.filename.string(), -1, -1, new tree_item_file_info(file));
           }
         }
@@ -315,33 +329,12 @@ namespace studio
       tree_view.Expand(parent.value());
     }
   }
-}// namespace studio
 
-int main(int argc, char** argv)
-{
-  try
+  auto create_navigation_panel(std::shared_ptr<wxFrame> frame,
+    const views::view_factory& view_factory,
+    studio::resources::resource_explorer& archive,
+    std::function<void(studio::resources::file_stream, bool)> add_element_from_file)
   {
-    auto search_path = fs::current_path();
-    auto archive = studio::views::create_default_resource_explorer(search_path);
-    auto view_factory = studio::views::create_default_view_factory();
-
-    wxApp::SetInitializerFunction(studio::createApp);
-    wxEntryStart(argc, argv);
-    auto* app = wxApp::GetInstance();
-    app->CallOnInit();
-    wxInitAllImageHandlers();
-
-    auto frame = std::shared_ptr<wxFrame>(new wxFrame(nullptr, wxID_ANY, "3Space Studio"), studio::default_wx_deleter);
-
-    frame->SetIcon(wxICON(MAINICON));
-    frame->Bind(
-      wxEVT_MENU, [](auto& event) {
-        wxMessageBox("This is a tool to explore files using the 3Space or Darkstar engines. Currently only Starsiege, Starsiege Tribes, Trophy Bass 3D and Front Page Sports: Ski Racing are supported.",
-          "About 3Space Studio",
-          wxOK | wxICON_INFORMATION);
-      },
-      wxID_ABOUT);
-
     auto tree_panel = std::make_unique<wxPanel>(frame.get(), wxID_ANY);
     tree_panel->SetSizer(std::make_unique<wxBoxSizer>(wxVERTICAL).release());
 
@@ -363,7 +356,7 @@ int main(int argc, char** argv)
 
     auto tree_view = std::shared_ptr<wxTreeCtrl>(new wxTreeCtrl(tree_panel.get()), studio::default_wx_deleter);
 
-    studio::populate_tree_view(view_factory, archive, *tree_view, search_path, extensions);
+    studio::populate_tree_view(view_factory, archive, *tree_view, fs::current_path(), extensions);
 
     auto get_filter_selection = [tree_search, &view_factory]() {
       const auto selection = tree_search->GetSelection();
@@ -402,9 +395,122 @@ int main(int argc, char** argv)
       return new_extensions;
     };
 
-    tree_search->Bind(wxEVT_COMBOBOX, [&view_factory, &archive, tree_view, &search_path, get_filter_selection](wxCommandEvent& event) {
-      studio::populate_tree_view(view_factory, archive, *tree_view, search_path, get_filter_selection());
+    auto search = std::shared_ptr<wxSearchCtrl>(new wxSearchCtrl(tree_panel.get(), wxID_ANY), studio::default_wx_deleter);
+    search->ShowSearchButton(true);
+    search->ShowCancelButton(true);
+
+    auto repopulate = [&view_factory, &archive, tree_view, search, get_filter_selection]() {
+      studio::populate_tree_view(view_factory, archive, *tree_view, fs::current_path(), get_filter_selection(), std::nullopt, search->GetValue().utf8_string());
+    };
+
+    search->Bind(wxEVT_SEARCH, [repopulate](wxCommandEvent& event) {
+      repopulate();
     });
+
+    search->Bind(wxEVT_SEARCH_CANCEL, [search, repopulate](wxCommandEvent& event) {
+      search->Clear();
+      repopulate();
+    });
+
+    tree_search->Bind(wxEVT_COMBOBOX, [repopulate](wxCommandEvent& event) {
+      repopulate();
+    });
+
+    tree_view->Bind(wxEVT_TREE_ITEM_EXPANDING, [&view_factory, &archive, tree_view, get_filter_selection](wxTreeEvent& event) {
+      auto item = event.GetItem();
+
+      if (item == tree_view->GetRootItem())
+      {
+        return;
+      }
+
+      if (tree_view->HasChildren(item))
+      {
+        wxTreeItemIdValue cookie = nullptr;
+
+        auto child = tree_view->GetFirstChild(item, cookie);
+
+        if (cookie && !tree_view->HasChildren(child))
+        {
+          if (auto* real_info = dynamic_cast<studio::tree_item_folder_info*>(tree_view->GetItemData(child)); real_info)
+          {
+            studio::populate_tree_view(view_factory, archive, *tree_view, real_info->info.full_path, get_filter_selection(), child);
+          }
+        }
+
+        do {
+          child = tree_view->GetNextChild(item, cookie);
+
+          if (cookie && !tree_view->HasChildren(child))
+          {
+            if (auto* real_info = dynamic_cast<studio::tree_item_folder_info*>(tree_view->GetItemData(child)); real_info)
+            {
+              studio::populate_tree_view(view_factory, archive, *tree_view, real_info->info.full_path, get_filter_selection(), child);
+            }
+          }
+        } while (cookie != nullptr);
+      }
+    });
+
+    tree_view->Bind(wxEVT_TREE_ITEM_ACTIVATED, [&archive, tree_view, add_element_from_file](wxTreeEvent& event) {
+      static bool had_first_activation = false;
+      auto item = event.GetItem();
+
+      if (item == tree_view->GetRootItem())
+      {
+        return;
+      }
+
+      if (auto* real_info = dynamic_cast<studio::tree_item_file_info*>(tree_view->GetItemData(item)); real_info)
+      {
+        add_element_from_file(archive.load_file(real_info->info), had_first_activation == false);
+        had_first_activation = true;
+      }
+      else if (auto* folder_info = dynamic_cast<studio::tree_item_folder_info*>(tree_view->GetItemData(item));
+               folder_info && !std::filesystem::is_directory(folder_info->info.full_path))
+      {
+        studio::resources::file_info info{};
+        info.filename = folder_info->info.full_path.filename();
+        info.folder_path = folder_info->info.full_path.parent_path();
+        add_element_from_file(archive.load_file(info), true);
+      }
+    });
+
+    tree_panel->GetSizer()->Add(tree_search.get(), 2, wxEXPAND, 0);
+    tree_panel->GetSizer()->Add(search.get(), 2, wxEXPAND, 0);
+    tree_panel->GetSizer()->Add(tree_view.get(), 96, wxEXPAND, 0);
+
+
+
+
+
+    return std::make_pair(std::move(tree_panel), repopulate);
+  }
+}// namespace studio
+
+int main(int argc, char** argv)
+{
+  try
+  {
+    auto archive = studio::views::create_default_resource_explorer();
+    auto view_factory = studio::views::create_default_view_factory();
+
+    wxApp::SetInitializerFunction(studio::createApp);
+    wxEntryStart(argc, argv);
+    auto* app = wxApp::GetInstance();
+    app->CallOnInit();
+    wxInitAllImageHandlers();
+
+    auto frame = std::shared_ptr<wxFrame>(new wxFrame(nullptr, wxID_ANY, "3Space Studio"), studio::default_wx_deleter);
+
+    frame->SetIcon(wxICON(MAINICON));
+    frame->Bind(
+      wxEVT_MENU, [](auto& event) {
+        wxMessageBox("This is a tool to explore files using the 3Space or Darkstar engines. Currently only Starsiege, Starsiege Tribes, Trophy Bass 3D and Front Page Sports: Ski Racing are supported.",
+          "About 3Space Studio",
+          wxOK | wxICON_INFORMATION);
+      },
+      wxID_ABOUT);
 
     auto notebook = std::shared_ptr<wxAuiNotebook>(new wxAuiNotebook(frame.get(), wxID_ANY), studio::default_wx_deleter);
     auto num_elements = notebook->GetPageCount();
@@ -456,65 +562,6 @@ int main(int argc, char** argv)
       num_elements = notebook->GetPageCount();
     };
 
-    tree_view->Bind(wxEVT_TREE_ITEM_EXPANDING, [&view_factory, &archive, &get_filter_selection, tree_view](wxTreeEvent& event) {
-      auto item = event.GetItem();
-
-      if (item == tree_view->GetRootItem())
-      {
-        return;
-      }
-
-      if (tree_view->HasChildren(item))
-      {
-        wxTreeItemIdValue cookie = nullptr;
-
-        auto child = tree_view->GetFirstChild(item, cookie);
-
-        if (cookie && !tree_view->HasChildren(child))
-        {
-          if (auto* real_info = dynamic_cast<studio::tree_item_folder_info*>(tree_view->GetItemData(child)); real_info)
-          {
-            studio::populate_tree_view(view_factory, archive, *tree_view, real_info->info.full_path, get_filter_selection(), child);
-          }
-        }
-
-        do {
-          child = tree_view->GetNextChild(item, cookie);
-
-          if (cookie && !tree_view->HasChildren(child))
-          {
-            if (auto* real_info = dynamic_cast<studio::tree_item_folder_info*>(tree_view->GetItemData(child)); real_info)
-            {
-              studio::populate_tree_view(view_factory, archive, *tree_view, real_info->info.full_path, get_filter_selection(), child);
-            }
-          }
-        } while (cookie != nullptr);
-      }
-    });
-
-    tree_view->Bind(wxEVT_TREE_ITEM_ACTIVATED, [&archive, tree_view, &add_element_from_file](wxTreeEvent& event) {
-      static bool had_first_activation = false;
-      auto item = event.GetItem();
-
-      if (item == tree_view->GetRootItem())
-      {
-        return;
-      }
-
-      if (auto* real_info = dynamic_cast<studio::tree_item_file_info*>(tree_view->GetItemData(item)); real_info)
-      {
-        add_element_from_file(archive.load_file(real_info->info), had_first_activation == false);
-        had_first_activation = true;
-      }
-      else if (auto* folder_info = dynamic_cast<studio::tree_item_folder_info*>(tree_view->GetItemData(item));
-               folder_info && !std::filesystem::is_directory(folder_info->info.full_path))
-      {
-        studio::resources::file_info info{};
-        info.filename = folder_info->info.full_path.filename();
-        info.folder_path = folder_info->info.full_path.parent_path();
-        add_element_from_file(archive.load_file(info), true);
-      }
-    });
 
     auto panel = std::make_unique<wxPanel>(notebook.get(), wxID_ANY);
     panel->SetSizer(std::make_unique<wxBoxSizer>(wxHORIZONTAL).release());
@@ -608,6 +655,10 @@ int main(int argc, char** argv)
         }
       });
 
+    auto navigation_panel_data = studio::create_navigation_panel(frame, view_factory, archive, add_element_from_file);
+    auto tree_view = std::move(navigation_panel_data.first);
+    auto repopulate = navigation_panel_data.second;
+
     frame->Bind(
       wxEVT_MENU, [&](auto& event) {
         const auto new_path = studio::get_shape_path(view_factory.get_extensions());
@@ -616,7 +667,7 @@ int main(int argc, char** argv)
         {
           add_element_from_file(archive.load_file(new_path.value()), true);
 
-          studio::populate_tree_view(view_factory, archive, *tree_view, search_path, get_filter_selection());
+          repopulate();
         }
       },
       wxID_OPEN);
@@ -638,8 +689,8 @@ int main(int argc, char** argv)
 
         if (new_path.has_value())
         {
-          search_path = new_path.value();
-          studio::populate_tree_view(view_factory, archive, *tree_view, search_path, get_filter_selection());
+          fs::current_path(new_path.value());
+          repopulate();
         }
       },
       studio::event_open_folder_as_workspace);
@@ -653,9 +704,8 @@ int main(int argc, char** argv)
     auto sizer = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
     sizer->SetSizeHints(frame.get());
 
-    tree_panel->GetSizer()->Add(tree_search.get(), 2, wxEXPAND, 0);
-    tree_panel->GetSizer()->Add(tree_view.get(), 98, wxEXPAND, 0);
-    sizer->Add(tree_panel.release(), 20, wxEXPAND, 0);
+
+    sizer->Add(tree_view.release(), 20, wxEXPAND, 0);
     sizer->Add(notebook.get(), 80, wxEXPAND, 0);
     frame->SetSizer(sizer.release());
 
