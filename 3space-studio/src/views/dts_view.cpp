@@ -1,7 +1,7 @@
 #include <execution>
 #include <algorithm>
 
-#include "darkstar_dts_view.hpp"
+#include "dts_view.hpp"
 #include "content/dts/renderable_shape_factory.hpp"
 #include "gl_renderer.hpp"
 #include "sfml_keys.hpp"
@@ -66,24 +66,6 @@ namespace studio::views
     shape = content::dts::make_shape(shape_stream);
     translation = { 0, 0, -20 };
     rotation = { 115, 180, -35 };
-
-    actions.emplace("increase_x_rotation", [&](const sf::Event&) { rotation.x++; });
-    actions.emplace("decrease_x_rotation", [&](const sf::Event&) { rotation.x--; });
-
-    actions.emplace("increase_y_rotation", [&](const sf::Event&) { rotation.y++; });
-    actions.emplace("decrease_y_rotation", [&](const sf::Event&) { rotation.y--; });
-    actions.emplace("increase_z_rotation", [&](const sf::Event&) { rotation.z++; });
-    actions.emplace("decrease_z_rotation", [&](const sf::Event&) { rotation.z--; });
-
-    actions.emplace("zoom_in", [&](const sf::Event&) { translation.z++; });
-    actions.emplace("zoom_out", [&](const sf::Event&) { translation.z--; });
-
-    actions.emplace("pan_left", [&](const sf::Event&) { translation.x--; });
-    actions.emplace("pan_right", [&](const sf::Event&) { translation.x++; });
-
-    actions.emplace("pan_up", [&](const sf::Event&) { translation.y++; });
-    actions.emplace("pan_down", [&](const sf::Event&) { translation.y--; });
-
     sequences = shape->get_sequences(detail_level_indexes);
     detail_levels = shape->get_detail_levels();
     materials = shape->get_materials();
@@ -91,6 +73,26 @@ namespace studio::views
 
   std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> darkstar_dts_view::get_callbacks()
   {
+    if (actions.empty())
+    {
+      actions.emplace("increase_x_rotation", [&](const sf::Event&) { rotation.x++; });
+      actions.emplace("decrease_x_rotation", [&](const sf::Event&) { rotation.x--; });
+
+      actions.emplace("increase_y_rotation", [&](const sf::Event&) { rotation.y++; });
+      actions.emplace("decrease_y_rotation", [&](const sf::Event&) { rotation.y--; });
+      actions.emplace("increase_z_rotation", [&](const sf::Event&) { rotation.z++; });
+      actions.emplace("decrease_z_rotation", [&](const sf::Event&) { rotation.z--; });
+
+      actions.emplace("zoom_in", [&](const sf::Event&) { this->translation.z++;});
+      actions.emplace("zoom_out", [&](const sf::Event&) { translation.z--; });
+
+      actions.emplace("pan_left", [&](const sf::Event&) { translation.x--; });
+      actions.emplace("pan_right", [&](const sf::Event&) { translation.x++; });
+
+      actions.emplace("pan_up", [&](const sf::Event&) { translation.y++; });
+      actions.emplace("pan_down", [&](const sf::Event&) { translation.y--; });
+    }
+
     std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> callbacks;
 
     //TODO read this from config file
