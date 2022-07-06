@@ -102,9 +102,9 @@ namespace studio::views
     return view_factory;
   }
 
-  studio::resources::resource_explorer create_default_resource_explorer(const std::filesystem::path& search_path)
+  studio::resources::resource_explorer create_default_resource_explorer()
   {
-    studio::resources::resource_explorer archive(search_path);
+    studio::resources::resource_explorer archive;
 
     archive.add_archive_type(".mis", std::make_unique<dio::mis::darkstar::mis_file_archive>(), dio::mis::darkstar::mis_file_archive::supported_extensions);
     archive.add_archive_type(".tbv", std::make_unique<dio::vol::trophy_bass::tbv_file_archive>());

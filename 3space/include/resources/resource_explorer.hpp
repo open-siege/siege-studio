@@ -24,8 +24,6 @@ namespace studio::resources
   class resource_explorer
   {
   public:
-    explicit resource_explorer(const std::filesystem::path& search_path) : search_path(search_path) {}
-
     static std::filesystem::path get_archive_path(const std::filesystem::path& folder_path);
     static void merge_results(std::vector<studio::resources::file_info>& group1,
                               const std::vector<studio::resources::file_info>& group2);
@@ -53,8 +51,6 @@ namespace studio::resources
     std::vector<std::variant<studio::resources::folder_info, studio::resources::file_info>> get_content_listing(const std::filesystem::path& folder_path) const;
 
   private:
-    const std::filesystem::path& search_path;
-
     std::locale default_locale;
 
     std::map<std::string, nonstd::span<std::string_view>> archive_explicit_extensions;

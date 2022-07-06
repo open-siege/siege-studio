@@ -1,4 +1,5 @@
 #include <sstream>
+#include <filesystem>
 #include "shared.hpp"
 #include "resources/resource_explorer.hpp"
 
@@ -33,7 +34,7 @@ namespace studio::resources
 
   std::filesystem::path resource_explorer::get_search_path() const
   {
-    return search_path;
+    return std::filesystem::current_path();
   }
 
   void resource_explorer::add_archive_type(std::string extension, std::unique_ptr<studio::resources::archive_plugin> archive_type, std::optional<nonstd::span<std::string_view>> explicit_extensions)
@@ -158,7 +159,7 @@ namespace studio::resources
 
   std::vector<studio::resources::file_info> resource_explorer::find_files(const std::vector<std::string_view>& extensions) const
   {
-    return find_files(search_path, extensions);
+    return find_files(get_search_path(), extensions);
   }
 
   void resource_explorer::merge_results(std::vector<studio::resources::file_info>& group1,
@@ -264,7 +265,7 @@ namespace studio::resources
   {
     auto archive_path = get_archive_path(info.folder_path);
 
-    destination = destination / std::filesystem::relative(archive_path, search_path).parent_path() / archive_path.stem() / std::filesystem::relative(info.folder_path, archive_path).replace_extension("");
+    destination = destination / std::filesystem::relative(archive_path, get_search_path()).parent_path() / archive_path.stem() / std::filesystem::relative(info.folder_path, archive_path).replace_extension("");
 
     if (archive_path.stem() == destination.stem())
     {
