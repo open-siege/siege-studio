@@ -599,6 +599,7 @@ int main(int argc, char** argv)
       {
         notebook->DeletePage(i);
       }
+      selection = notebook->GetSelection();
     };
 
     auto close_left_tabs = [notebook, &selection](auto& event) {
@@ -606,6 +607,7 @@ int main(int argc, char** argv)
       {
         notebook->DeletePage(i);
       }
+      selection = notebook->GetSelection();
     };
 
     notebook->Bind(
