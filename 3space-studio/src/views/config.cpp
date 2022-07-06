@@ -1,5 +1,5 @@
 #include "config.hpp"
-#include "darkstar_dts_view.hpp"
+#include "dts_view.hpp"
 #include "bmp_view.hpp"
 #include "pal_view.hpp"
 #include "vol_view.hpp"
