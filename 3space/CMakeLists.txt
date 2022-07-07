@@ -9,6 +9,7 @@ find_package(glm REQUIRED)
 find_package(span-lite REQUIRED)
 find_package(Catch2 REQUIRED)
 find_package(pegtl REQUIRED)
+find_package(libzip REQUIRED)
 
 file(GLOB_RECURSE TEST_SRC_FILES src/*.test.cpp)
 
@@ -26,12 +27,12 @@ file(GLOB TESTABLE_SRC_FILES src/content/*.cpp
 add_library(3space STATIC ${LIB_SRC_FILES})
 set_property(TARGET 3space PROPERTY CXX_STANDARD 17)
 target_include_directories(3space PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(3space nlohmann_json::nlohmann_json Boost::Boost glm::glm nonstd::span-lite taocpp::pegtl)
+target_link_libraries(3space nlohmann_json::nlohmann_json Boost::Boost glm::glm nonstd::span-lite taocpp::pegtl libzip::zip)
 
 add_executable(3space-tests ${TESTABLE_SRC_FILES} ${TEST_SRC_FILES})
 set_property(TARGET 3space-tests PROPERTY CXX_STANDARD 17)
 target_include_directories(3space-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(3space-tests PRIVATE Catch2::Catch2 nlohmann_json::nlohmann_json Boost::Boost glm::glm nonstd::span-lite taocpp::pegtl)
+target_link_libraries(3space-tests PRIVATE Catch2::Catch2 nlohmann_json::nlohmann_json Boost::Boost glm::glm nonstd::span-lite taocpp::pegtl libzip::zip)
 
 include(CTest)
 include(Catch)
