@@ -38,12 +38,12 @@ namespace studio::resources::zip
       return 0;
     case ZIP_SOURCE_READ:
     {
-      og_stream->read(reinterpret_cast<std::byte*>(data), len);
-
       if (og_stream->eof())
       {
         return 0;
       }
+
+      og_stream->read(reinterpret_cast<std::byte*>(data), len);
 
       return len;
     }
