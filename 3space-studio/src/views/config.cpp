@@ -45,6 +45,9 @@ namespace studio::views
     view_factory.add_file_type(content::pal::is_earthsiege_pal, [](auto&, auto& stream, auto&) -> studio_view { return graphics_view(pal_view(stream)); });
 
     view_factory.add_file_type(content::sfx::is_sfx_file, [](auto& info, auto& stream, auto& archive) -> studio_view { return graphics_view(sfx_view(info, stream, archive)); }, true);
+    view_factory.add_file_type(content::sfx::is_wav_file, [](auto& info, auto& stream, auto& archive) -> studio_view { return graphics_view(sfx_view(info, stream, archive)); });
+    view_factory.add_file_type(content::sfx::is_ogg_file, [](auto& info, auto& stream, auto& archive) -> studio_view { return graphics_view(sfx_view(info, stream, archive)); });
+    view_factory.add_file_type(content::sfx::is_flac_file, [](auto& info, auto& stream, auto& archive) -> studio_view { return graphics_view(sfx_view(info, stream, archive)); });
 
     view_factory.add_file_type(dio::mis::darkstar::mis_file_archive::is_supported, [](auto& info, auto&, auto& archive) -> studio_view { return normal_view(vol_view(info, archive)); });
     view_factory.add_file_type(dio::zip::zip_file_archive::is_supported, [](auto& info, auto&, auto& archive) -> studio_view { return normal_view(vol_view(info, archive)); });
@@ -80,6 +83,10 @@ namespace studio::views
     view_factory.add_extension(".hb2", content::bmp::is_earthsiege_bmp_array);
 
     view_factory.add_extension(".sfx", content::sfx::is_sfx_file);
+    view_factory.add_extension(".wav", content::sfx::is_wav_file);
+    view_factory.add_extension(".wave", content::sfx::is_wav_file);
+    view_factory.add_extension(".ogg", content::sfx::is_ogg_file);
+    view_factory.add_extension(".flac", content::sfx::is_flac_file);
 
     view_factory.add_extension(".pal", content::pal::is_old_pal);
     view_factory.add_extension(".pal", content::pal::is_microsoft_pal);

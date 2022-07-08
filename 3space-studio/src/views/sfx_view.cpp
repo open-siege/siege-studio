@@ -16,15 +16,29 @@ namespace studio::views
       export_path = explorer.get_search_path() / "exported";
     }
 
-    std::basic_stringstream<std::byte> mem_buffer;
-    std::vector<std::byte> data(info.size);
-    image_stream.read(data.data(), info.size);
+    if (studio::content::sfx::is_sfx_file(image_stream))
+    {
+      std::basic_stringstream<std::byte> mem_buffer;
+      std::vector<std::byte> data(info.size);
+      image_stream.read(data.data(), info.size);
 
-    content::sfx::write_wav_data(mem_buffer, data);
+      content::sfx::write_wav_data(mem_buffer, data);
 
-    original_data = mem_buffer.str();
+      original_data = mem_buffer.str();
 
-    buffer.loadFromMemory(original_data.data(), original_data.size());
+      buffer.loadFromMemory(original_data.data(), original_data.size());
+    }
+    else if (studio::content::sfx::is_wav_file(image_stream) || studio::content::sfx::is_ogg_file(image_stream) || studio::content::sfx::is_flac_file(image_stream))
+    {
+      std::basic_stringstream<std::byte> mem_buffer;
+
+      std::copy_n(std::istreambuf_iterator<std::byte>(image_stream),
+        info.size,
+        std::ostreambuf_iterator<std::byte>(mem_buffer));
+
+      original_data = mem_buffer.str();
+      buffer.loadFromMemory(original_data.data(), original_data.size());
+    }
   }
 
   void sfx_view::setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext)

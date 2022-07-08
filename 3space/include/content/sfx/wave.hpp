@@ -20,6 +20,8 @@ namespace studio::content::sfx
 
   constexpr file_tag ogg_tag = shared::to_tag<4>({ 'O', 'g', 'g', 'S' });
 
+  constexpr file_tag flac_tag = shared::to_tag<4>({ 'f', 'L', 'a', 'C' });
+
   constexpr file_tag voc_tag = shared::to_tag<4>({ 'C', 'r', 'e', 'a' });
 
   constexpr file_tag empty_tag = shared::to_tag<4>({ '\0', '\0', '\0', '\0' });
@@ -41,7 +43,41 @@ namespace studio::content::sfx
 
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
-    return tag != riff_tag && tag != ogg_tag && tag != voc_tag && tag != empty_tag;
+    return tag != riff_tag && tag != ogg_tag && tag != voc_tag && tag != empty_tag && tag != flac_tag;
+  }
+
+  inline bool is_wav_file(std::basic_istream<std::byte>& stream)
+  {
+    std::array<std::byte, 4> tag{};
+    stream.read(tag.data(), sizeof(tag));
+
+    std::array<std::byte, 4> temp{};
+    stream.seekg(sizeof(temp), std::ios::cur);
+    stream.read(temp.data(), sizeof(temp));
+
+    stream.seekg(-int(sizeof(tag)) * 3, std::ios::cur);
+
+    return tag == riff_tag && temp == wave_tag;
+  }
+
+  inline bool is_ogg_file(std::basic_istream<std::byte>& stream)
+  {
+    std::array<std::byte, 4> tag{};
+    stream.read(tag.data(), sizeof(tag));
+
+    stream.seekg(-int(sizeof(tag)), std::ios::cur);
+
+    return tag == ogg_tag;
+  }
+
+  inline bool is_flac_file(std::basic_istream<std::byte>& stream)
+  {
+    std::array<std::byte, 4> tag{};
+    stream.read(tag.data(), sizeof(tag));
+
+    stream.seekg(-int(sizeof(tag)), std::ios::cur);
+
+    return tag == flac_tag;
   }
 
   inline std::int32_t write_wav_header(std::basic_ostream<std::byte>& raw_data, std::size_t sample_size)
