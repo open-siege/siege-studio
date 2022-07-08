@@ -60,7 +60,7 @@ namespace studio::resources
 
     mutable std::map<std::string, std::vector<studio::resources::file_info>> info_cache;
   };
-}// namespace studio::resource
+}// namespace studio::resources
 
 
 #endif//DARKSTARDTSCONVERTER_RESOURCE_EXPLORER_HPP

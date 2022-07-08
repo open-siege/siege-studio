@@ -2,6 +2,7 @@
 #include "dts_view.hpp"
 #include "bmp_view.hpp"
 #include "pal_view.hpp"
+#include "pal_mapping_view.hpp"
 #include "vol_view.hpp"
 #include "sfx_view.hpp"
 #include "content/dts/3space.hpp"
@@ -10,6 +11,7 @@
 #include "content/bmp/bitmap.hpp"
 #include "content/sfx/wave.hpp"
 #include "content/image/image.hpp"
+#include "content/pal/pal_settings.hpp"
 #include "resources/darkstar_volume.hpp"
 #include "resources/three_space_volume.hpp"
 #include "resources/trophy_bass_volume.hpp"
@@ -39,6 +41,7 @@ namespace studio::views
     view_factory.add_file_type(content::bmp::is_jpg, [](auto& info, auto& stream, auto& manager) -> studio_view { return graphics_view(bmp_view(info, stream, manager)); }, true);
     view_factory.add_file_type(content::bmp::is_tga, [](auto& info, auto& stream, auto& manager) -> studio_view { return graphics_view(bmp_view(info, stream, manager)); }, true);
 
+    view_factory.add_file_type(content::pal::is_pal_settings_file, [](auto& info, auto&, auto&) -> studio_view { return normal_view(pal_mapping_view(info)); }, true);
     view_factory.add_file_type(content::pal::is_old_pal, [](auto&, auto& stream, auto&) -> studio_view { return graphics_view(pal_view(stream)); });
     view_factory.add_file_type(content::pal::is_microsoft_pal, [](auto&, auto& stream, auto&) -> studio_view { return graphics_view(pal_view(stream)); });
     view_factory.add_file_type(content::pal::is_phoenix_pal, [](auto&, auto& stream, auto&) -> studio_view { return graphics_view(pal_view(stream)); });
@@ -88,6 +91,7 @@ namespace studio::views
     view_factory.add_extension(".ogg", content::sfx::is_ogg_file);
     view_factory.add_extension(".flac", content::sfx::is_flac_file);
 
+    view_factory.add_extension("palettes.settings.json", content::pal::is_pal_settings_file);
     view_factory.add_extension(".pal", content::pal::is_old_pal);
     view_factory.add_extension(".pal", content::pal::is_microsoft_pal);
     view_factory.add_extension(".ipl", content::pal::is_microsoft_pal);
