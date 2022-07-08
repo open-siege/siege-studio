@@ -26,13 +26,18 @@ namespace studio::views
 
   studio_view view_factory::create_view(const studio::resources::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resources::resource_explorer& manager) const
   {
-    auto archive_type = validators.equal_range(shared::to_lower(file_info.filename.extension().string()));
+    auto search_values = std::array<std::string, 2>{{shared::to_lower(file_info.filename.extension().string()), shared::to_lower(file_info.filename.string())}};
 
-    for (auto it = archive_type.first; it != archive_type.second; ++it)
+    for (const auto& search_value : search_values)
     {
-      if (it->second(stream))
+      auto archive_type = validators.equal_range(search_value);
+
+      for (auto it = archive_type.first; it != archive_type.second; ++it)
       {
-        return creators.at(it->second)(file_info, stream, manager);
+        if (it->second(stream))
+        {
+          return creators.at(it->second)(file_info, stream, manager);
+        }
       }
     }
 
