@@ -65,7 +65,7 @@ namespace studio::resources::vol::trophy_bass
     return is_supported(stream);
   }
 
-  std::vector<std::variant<folder_info, studio::resources::file_info>> rbx_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
+  std::vector<std::variant<folder_info, studio::resources::file_info>> rbx_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, const listing_query& query) const
   {
     std::vector<studio::resources::file_info> results;
 
@@ -131,7 +131,7 @@ namespace studio::resources::vol::trophy_bass
     final_results.reserve(results.size());
 
     std::transform(results.begin(), results.end(), std::back_inserter(final_results), [&](auto& value) {
-      value.folder_path = archive_or_folder_path;
+      value.folder_path = query.folder_path;
 
       return value;
     });
@@ -175,7 +175,7 @@ namespace studio::resources::vol::trophy_bass
     return is_supported(stream);
   }
 
-  std::vector<rbx_file_archive::content_info> tbv_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
+  std::vector<rbx_file_archive::content_info> tbv_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, const listing_query& query) const
   {
     std::vector<studio::resources::file_info> results;
 
@@ -239,7 +239,7 @@ namespace studio::resources::vol::trophy_bass
     final_results.reserve(results.size());
 
     std::transform(results.begin(), results.end(), std::back_inserter(final_results), [&](auto& value) {
-      value.folder_path = archive_or_folder_path;
+      value.folder_path = query.folder_path;
 
       return value;
     });

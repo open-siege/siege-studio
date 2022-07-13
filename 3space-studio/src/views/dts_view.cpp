@@ -338,7 +338,7 @@ namespace studio::views
           if (ImGui::Button("Open in new tab"))
           {
             const auto ext = shared::to_lower(std::filesystem::path(material.filename).extension().string());
-            auto files = archive.find_files(studio::resources::resource_explorer::get_archive_path(info.folder_path), { ext });
+            auto files = archive.find_files(archive.get_archive_path(info.folder_path), { ext });
 
             const auto predicate = [&](const auto& material_info){
               return material_info.filename == material.filename || shared::to_lower(material_info.filename.string()) == shared::to_lower(material.filename);

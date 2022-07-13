@@ -16,12 +16,14 @@
 #include "resources/three_space_volume.hpp"
 #include "resources/trophy_bass_volume.hpp"
 #include "resources/zip_volume.hpp"
+#include "resources/cyclone_volume.hpp"
 
 namespace dio
 {
   namespace mis = studio::resources::mis;
   namespace vol = studio::resources::vol;
   namespace zip = studio::resources::zip;
+  namespace cln = studio::resources::cln;
 }
 
 namespace studio::views
@@ -61,6 +63,7 @@ namespace studio::views
     view_factory.add_file_type(dio::vol::three_space::dyn_file_archive::is_supported, [](auto& info, auto&, auto& archive) -> studio_view { return normal_view(vol_view(info, archive)); });
     view_factory.add_file_type(dio::vol::trophy_bass::rbx_file_archive::is_supported, [](auto& info, auto&, auto& archive) -> studio_view { return normal_view(vol_view(info, archive)); });
     view_factory.add_file_type(dio::vol::trophy_bass::tbv_file_archive::is_supported, [](auto& info, auto&, auto& archive) -> studio_view { return normal_view(vol_view(info, archive)); });
+    view_factory.add_file_type(dio::cln::cln_file_archive::is_supported, [](auto& info, auto&, auto& archive) -> studio_view { return normal_view(vol_view(info, archive)); }, true);
 
     view_factory.add_extension(".dts", content::dts::darkstar::is_darkstar_dts);
     view_factory.add_extension(".dts", content::dts::three_space::v1::is_3space_dts);
@@ -117,6 +120,8 @@ namespace studio::views
     view_factory.add_extension(".rbx", dio::vol::trophy_bass::rbx_file_archive::is_supported);
     view_factory.add_extension(".tbv", dio::vol::trophy_bass::tbv_file_archive::is_supported);
 
+    view_factory.add_extension(".cln", dio::cln::cln_file_archive::is_supported);
+
     return view_factory;
   }
 
@@ -137,6 +142,8 @@ namespace studio::views
     archive.add_archive_type(".dyn", std::make_unique<dio::vol::three_space::dyn_file_archive>());
     archive.add_archive_type(".vol", std::make_unique<dio::vol::three_space::vol_file_archive>());
     archive.add_archive_type(".vol", std::make_unique<dio::vol::darkstar::vol_file_archive>());
+
+    archive.add_archive_type(".cln", std::make_unique<dio::cln::cln_file_archive>());
 
     return archive;
   }

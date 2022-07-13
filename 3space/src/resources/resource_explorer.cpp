@@ -5,18 +5,6 @@
 
 namespace studio::resources
 {
-  std::filesystem::path resource_explorer::get_archive_path(const std::filesystem::path& folder_path)
-  {
-    auto archive_path = folder_path;
-
-    while (!std::filesystem::exists(archive_path) && !std::filesystem::is_directory(archive_path))
-    {
-      archive_path = archive_path.parent_path();
-    }
-
-    return archive_path;
-  }
-
   void resource_explorer::add_action(std::string name, std::function<void(const studio::resources::file_info&)> action)
   {
     actions.emplace(std::move(name), std::move(action));
@@ -243,6 +231,36 @@ namespace studio::resources
     return folder_path.has_extension();
   }
 
+  std::filesystem::path resource_explorer::get_archive_path(const std::filesystem::path& folder_path) const
+  {
+    auto root = folder_path.root_path();
+    auto temp = folder_path;
+
+    // first pass, based on supported extension
+    while (temp != root)
+    {
+      auto ext = shared::to_lower(temp.filename().extension().string());
+      auto archive_type = archive_types.equal_range(ext);
+
+      if (archive_type.first != archive_type.second)
+      {
+        return temp;
+      }
+
+      temp = temp.parent_path();
+    }
+
+    // second pass, looking for a real file and not a folder
+    auto archive_path = folder_path;
+
+    while (!std::filesystem::exists(archive_path) && !std::filesystem::is_directory(archive_path))
+    {
+      archive_path = archive_path.parent_path();
+    }
+
+    return archive_path;
+  }
+
   std::optional<std::reference_wrapper<studio::resources::archive_plugin>> resource_explorer::get_archive_type(const std::filesystem::path& file_path) const
   {
     auto ext = shared::to_lower(file_path.filename().extension().string());
@@ -292,7 +310,7 @@ namespace studio::resources
     {
       auto file_stream = std::basic_ifstream<std::byte>{ get_archive_path(folder_path), std::ios::binary };
 
-      return archive_type.value().get().get_content_listing(file_stream, folder_path);
+      return archive_type.value().get().get_content_listing(file_stream, { get_archive_path(folder_path), folder_path });
     }
 
     for (auto& item : std::filesystem::directory_iterator(folder_path))

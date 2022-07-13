@@ -24,7 +24,6 @@ namespace studio::resources
   class resource_explorer
   {
   public:
-    static std::filesystem::path get_archive_path(const std::filesystem::path& folder_path);
     static void merge_results(std::vector<studio::resources::file_info>& group1,
                               const std::vector<studio::resources::file_info>& group2);
 
@@ -47,9 +46,10 @@ namespace studio::resources
     bool is_regular_file(const std::filesystem::path& folder_path) const;
 
     std::optional<std::reference_wrapper<studio::resources::archive_plugin>> get_archive_type(const std::filesystem::path& file_path) const;
+    std::filesystem::path get_archive_path(const std::filesystem::path& folder_path) const;
+
     void extract_file_contents(std::basic_istream<std::byte>& archive_file, std::filesystem::path destination, const studio::resources::file_info& info) const;
     std::vector<std::variant<studio::resources::folder_info, studio::resources::file_info>> get_content_listing(const std::filesystem::path& folder_path) const;
-
   private:
     std::locale default_locale;
 

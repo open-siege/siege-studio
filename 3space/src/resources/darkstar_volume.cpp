@@ -401,7 +401,7 @@ namespace studio::resources::vol::darkstar
     return is_supported(stream);
   }
 
-  std::vector<vol_file_archive::content_info> vol_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
+  std::vector<vol_file_archive::content_info> vol_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, const listing_query& query) const
   {
     std::vector<vol_file_archive::content_info> results;
 
@@ -415,7 +415,7 @@ namespace studio::resources::vol::darkstar
       info.offset = value.offset;
       info.size = value.size;
       info.compression_type = studio::resources::compression_type(value.compression_type);
-      info.folder_path = archive_or_folder_path;
+      info.folder_path = query.folder_path;
       return info;
     });
 
