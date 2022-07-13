@@ -3,7 +3,7 @@
 #include <fstream>
 #include <utility>
 #include <string>
-#include <cstdlib>
+#include <unordered_map>
 
 #include "resources/cyclone_volume.hpp"
 
@@ -100,16 +100,30 @@ namespace studio::resources::cln
 
   std::vector<cln_file_archive::content_info> cln_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, const listing_query& query) const
   {
-    auto entries = get_file_entries(stream);
+    thread_local std::unordered_map<std::string, std::vector<file_entry>> cache;
+    auto cached_entries = cache.find(query.archive_path.string());
+
+    if (cached_entries == cache.end())
+    {
+      cached_entries = cache.emplace(query.archive_path.string(), get_file_entries(stream)).first;
+    }
 
     std::vector<cln_file_archive::content_info> results;
+
+    if (cached_entries == cache.end())
+    {
+      return results;
+    }
+
+    auto& entries = cached_entries->second;
+
     results.reserve(16);
 
     if (query.archive_path == query.folder_path)
     {
       for (const auto& entry : entries)
       {
-        if (entry.flags != 1)
+        if (!(entry.offset == 0 && entry.file_size == 0))
         {
           continue;
         }
@@ -131,7 +145,7 @@ namespace studio::resources::cln
     }
 
     auto folder_entry = std::find_if(entries.begin(), entries.end(), [&](const auto& entry) {
-      if (entry.flags == 1)
+      if (entry.offset == 0 && entry.file_size == 0)
       {
         auto folder_name = normalise(entry.filename);
 
@@ -152,7 +166,7 @@ namespace studio::resources::cln
 
         if (full_path.parent_path() == query.folder_path)
         {
-          if (entry.flags == 1)
+          if (entry.offset == 0 && entry.file_size == 0)
           {
             studio::resources::folder_info temp{};
             temp.full_path = full_path;
