@@ -66,7 +66,7 @@ namespace studio::resources::vol::three_space
     return results;
   }
 
-  std::vector<studio::resources::file_info> get_rmf_data(std::basic_istream<std::byte>& raw_data, const std::filesystem::path& archive_path)
+  std::vector<studio::resources::file_info> get_rmf_data(std::basic_istream<std::byte>& raw_data, const std::filesystem::path& folder_path)
   {
     std::vector<studio::resources::file_info> results;
     std::array<std::byte, 6> header{};
@@ -76,9 +76,9 @@ namespace studio::resources::vol::three_space
 
     std::array<char, 14> filename{ '\0' };
 
-    auto real_path = archive_path.parent_path().parent_path();
-    auto map_filename = archive_path.parent_path().filename().string();
-    auto volume_filename = archive_path.filename().string();
+    auto real_path = folder_path.parent_path().parent_path();
+    auto map_filename = folder_path.parent_path().filename().string();
+    auto volume_filename = folder_path.filename().string();
 
     for (auto i = 0; i < volume_count; ++i)
     {
@@ -228,10 +228,10 @@ namespace studio::resources::vol::three_space
     return folders;
   }
 
-  std::vector<studio::resources::file_info> get_vol_data(std::basic_istream<std::byte>& raw_data, const std::filesystem::path& archive_path)
+  std::vector<studio::resources::file_info> get_vol_data(std::basic_istream<std::byte>& raw_data, const std::filesystem::path& folder_path)
   {
     const auto folders = get_vol_folders(raw_data);
-    auto folder_name = archive_path.filename().string();
+    auto folder_name = folder_path.filename().string();
 
     endian::little_uint16_t num_files;
     raw_data.read(reinterpret_cast<std::byte*>(&num_files), sizeof(num_files));
@@ -324,25 +324,25 @@ namespace studio::resources::vol::three_space
     return is_supported(stream);
   }
 
-  std::vector<rmf_file_archive::content_info> rmf_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
+  std::vector<rmf_file_archive::content_info> rmf_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, const listing_query& query) const
   {
     std::vector<std::variant<studio::resources::folder_info, studio::resources::file_info>> results;
 
-    if (std::filesystem::exists(archive_or_folder_path))
+    if (query.archive_path == query.folder_path)
     {
       auto raw_results = get_rmf_sub_archives(stream);
 
       results.reserve(raw_results.size());
 
       std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(results), [&](auto& value) {
-        value.full_path = archive_or_folder_path / value.name;
+        value.full_path = query.archive_path / value.name;
 
         return value;
       });
     }
     else
     {
-      auto raw_results = get_rmf_data(stream, archive_or_folder_path);
+      auto raw_results = get_rmf_data(stream, query.folder_path);
 
       results.reserve(raw_results.size());
 
@@ -398,7 +398,7 @@ namespace studio::resources::vol::three_space
     return is_supported(stream);
   }
 
-  std::vector<dyn_file_archive::content_info> dyn_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
+  std::vector<dyn_file_archive::content_info> dyn_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, const listing_query& query) const
   {
     std::vector<dyn_file_archive::content_info> results;
 
@@ -407,7 +407,7 @@ namespace studio::resources::vol::three_space
     results.reserve(raw_results.size());
 
     std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(results), [&](auto& value) {
-      value.folder_path = archive_or_folder_path;
+      value.folder_path = query.folder_path;
 
       return value;
     });
@@ -453,11 +453,11 @@ namespace studio::resources::vol::three_space
     return is_supported(stream);
   }
 
-  std::vector<dyn_file_archive::content_info> vol_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
+  std::vector<dyn_file_archive::content_info> vol_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, const listing_query& query) const
   {
     std::vector<dyn_file_archive::content_info> results;
 
-    if (std::filesystem::exists(archive_or_folder_path))
+    if (query.archive_path == query.folder_path)
     {
       auto position = stream.tellg();
       auto raw_results = get_vol_folders(stream);
@@ -466,7 +466,7 @@ namespace studio::resources::vol::three_space
 
       std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(results), [&](auto& value) {
         studio::resources::folder_info info{};
-        info.full_path = archive_or_folder_path / value;
+        info.full_path = query.archive_path / value;
         info.name = value;
 
         return info;
@@ -479,12 +479,12 @@ namespace studio::resources::vol::three_space
       stream.seekg(position, std::ios::beg);
     }
 
-    auto raw_results = get_vol_data(stream, archive_or_folder_path);
+    auto raw_results = get_vol_data(stream, query.folder_path);
 
     results.reserve(raw_results.size());
 
     std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(results), [&](auto& value) {
-           value.folder_path = archive_or_folder_path;
+           value.folder_path = query.folder_path;
            return value;
     });
 

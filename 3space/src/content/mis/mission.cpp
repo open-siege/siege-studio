@@ -332,9 +332,9 @@ namespace studio::resources::mis::darkstar
     return existing_info;
   }
 
-  std::vector<mis_file_archive::content_info> mis_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
+  std::vector<mis_file_archive::content_info> mis_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, const listing_query& query) const
   {
-    auto existing_info = cache_data(stream, archive_or_folder_path);
+    auto existing_info = cache_data(stream, query.folder_path);
     std::vector<mis_file_archive::content_info> final_results;
     final_results.reserve(existing_info->second.size());
 
@@ -345,7 +345,7 @@ namespace studio::resources::mis::darkstar
 
         if constexpr (std::is_same_v<info_type, studio::resources::file_info>)
         {
-          if (info.folder_path == archive_or_folder_path)
+          if (info.folder_path == query.folder_path)
           {
             final_results.emplace_back(ref.second);
           }
@@ -353,7 +353,7 @@ namespace studio::resources::mis::darkstar
 
         if constexpr (std::is_same_v<info_type, studio::resources::folder_info>)
         {
-          if (info.full_path.parent_path() == archive_or_folder_path)
+          if (info.full_path.parent_path() == query.folder_path)
           {
             final_results.emplace_back(ref.second);
           }

@@ -35,6 +35,12 @@ namespace studio::resources
     std::filesystem::path full_path;
   };
 
+  struct listing_query
+  {
+    std::filesystem::path archive_path;
+    std::filesystem::path folder_path;
+  };
+
   struct archive_plugin
   {
     using folder_info = studio::resources::folder_info;
@@ -43,7 +49,7 @@ namespace studio::resources
 
     virtual bool stream_is_supported(std::basic_istream<std::byte>&) const = 0;
 
-    virtual std::vector<content_info> get_content_listing(std::basic_istream<std::byte>&, std::filesystem::path) const = 0;
+    virtual std::vector<content_info> get_content_listing(std::basic_istream<std::byte>&, const listing_query& query) const = 0;
 
     virtual void set_stream_position(std::basic_istream<std::byte>&, const file_info&) const = 0;
 

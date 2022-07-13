@@ -617,7 +617,7 @@ namespace studio::views
 
     std::vector<studio::resources::file_info> palettes;
 
-    palettes = manager.find_files(studio::resources::resource_explorer::get_archive_path(info.folder_path).parent_path(), { ".ppl", ".ipl", ".pal", ".dpl" });
+    palettes = manager.find_files(manager.get_archive_path(info.folder_path), { ".ppl", ".ipl", ".pal", ".dpl" });
 
     auto all_palettes = manager.find_files({ ".ppl", ".ipl", ".pal", ".dpl" });
 

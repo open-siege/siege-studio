@@ -104,7 +104,7 @@ namespace studio::resources::zip
     }
   };
 
-  std::vector<zip_file_archive::content_info> zip_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, std::filesystem::path archive_or_folder_path) const
+  std::vector<zip_file_archive::content_info> zip_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, const listing_query& query) const
   {
     zip_error_t src_error;
     auto* source = zip_source_function_create(process_zip_stream, &stream, &src_error);
@@ -135,7 +135,7 @@ namespace studio::resources::zip
 
       temp.size = st.size;
       temp.filename = st.name;
-      temp.folder_path = archive_or_folder_path;
+      temp.folder_path = query.folder_path;
       temp.compression_type = compression_type::lz;
 
       results.emplace_back(temp);
