@@ -35,7 +35,7 @@ namespace studio::resources::cln
     endian::little_uint32_t string_length;
     std::string filename;
     endian::little_uint32_t file_size;
-    endian::little_uint32_t is_folder;
+    endian::little_uint32_t flags;
     endian::little_uint32_t offset;
   };
 
@@ -57,7 +57,7 @@ namespace studio::resources::cln
         stream.read(reinterpret_cast<std::byte*>(entry.filename.data()), entry.string_length);
 
         stream.read(reinterpret_cast<std::byte*>(&entry.file_size), sizeof(entry.file_size));
-        stream.read(reinterpret_cast<std::byte*>(&entry.is_folder), sizeof(entry.is_folder));
+        stream.read(reinterpret_cast<std::byte*>(&entry.flags), sizeof(entry.flags));
         stream.read(reinterpret_cast<std::byte*>(&entry.offset), sizeof(entry.offset));
       }
 
@@ -109,7 +109,7 @@ namespace studio::resources::cln
     {
       for (const auto& entry : entries)
       {
-        if (entry.is_folder != 1)
+        if (entry.flags != 1)
         {
           continue;
         }
@@ -131,7 +131,7 @@ namespace studio::resources::cln
     }
 
     auto folder_entry = std::find_if(entries.begin(), entries.end(), [&](const auto& entry) {
-      if (entry.is_folder == 1)
+      if (entry.flags == 1)
       {
         auto folder_name = normalise(entry.filename);
 
@@ -152,11 +152,22 @@ namespace studio::resources::cln
 
         if (full_path.parent_path() == query.folder_path)
         {
-          if (entry.is_folder == 1)
+          if (entry.flags == 1)
           {
             studio::resources::folder_info temp{};
             temp.full_path = full_path;
             temp.name = full_path.filename().string();
+
+            results.emplace_back(temp);
+          }
+          else if (entry.flags == 0)
+          {
+            file_info temp{};
+            temp.size = entry.file_size;
+            temp.offset = entry.offset;
+            temp.filename = full_path.filename();
+            temp.folder_path = full_path.parent_path();
+            temp.compression_type = compression_type::none;
 
             results.emplace_back(temp);
           }
@@ -165,9 +176,10 @@ namespace studio::resources::cln
             file_info temp{};
             temp.size = entry.file_size;
             temp.offset = entry.offset;
+            temp.compressed_size = entry.flags;
             temp.filename = full_path.filename();
             temp.folder_path = full_path.parent_path();
-            temp.compression_type = compression_type::none;
+            temp.compression_type = compression_type::rle;
 
             results.emplace_back(temp);
           }
@@ -194,18 +206,42 @@ namespace studio::resources::cln
 
   void cln_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info, std::basic_ostream<std::byte>& output) const
   {
-    auto current_position = stream.tellg();
-    stream.seekg(0, std::ios::end);
-    auto last_byte = static_cast<std::size_t>(stream.tellg());
+    if (info.compression_type == compression_type::none)
+    {
+      auto current_position = stream.tellg();
+      stream.seekg(0, std::ios::end);
+      auto last_byte = static_cast<std::size_t>(stream.tellg());
 
-    stream.seekg(current_position, std::ios::beg);
+      stream.seekg(current_position, std::ios::beg);
 
-    set_stream_position(stream, info);
+      set_stream_position(stream, info);
 
-    const auto remaining_bytes = last_byte - info.offset - file_data_header.length();
+      const auto remaining_bytes = last_byte - info.offset - file_data_header.length();
 
-    std::copy_n(std::istreambuf_iterator<std::byte>(stream),
-      info.size > remaining_bytes ? remaining_bytes : info.size,
-      std::ostreambuf_iterator<std::byte>(output));
+      std::copy_n(std::istreambuf_iterator<std::byte>(stream),
+        info.size > remaining_bytes ? remaining_bytes : info.size,
+        std::ostreambuf_iterator<std::byte>(output));
+    }
+    else if (info.compressed_size.has_value())
+    {
+      set_stream_position(stream, info);
+      std::vector<std::byte> temp(info.compressed_size.value(), std::byte{'\0'});
+
+      stream.read(temp.data(), info.compressed_size.value());
+
+      if (info.compressed_size.value() % 2 != 0)
+      {
+        temp.emplace_back(std::byte{'\0'});
+      }
+
+      std::vector<std::byte> buffer;
+      for (auto i = 0u; i < temp.size(); i += 2)
+      {
+        auto count = std::size_t(temp[i]);
+        auto& value = temp[i + 1];
+        buffer.assign(count, value);
+        output.write(buffer.data(), buffer.size());
+      }
+    }
   }
 }// namespace studio::resources::vol::three_space
