@@ -8,8 +8,6 @@
 #include <locale>
 #include <fstream>
 #include <optional>
-#include <functional>
-#include <any>
 #include <nonstd/span.hpp>
 #include "archive_plugin.hpp"
 
@@ -27,10 +25,6 @@ namespace studio::resources
   public:
     static void merge_results(std::vector<studio::resources::file_info>& group1,
                               const std::vector<studio::resources::file_info>& group2);
-
-    void add_action(std::string name, std::function<std::any(const studio::resources::file_info&)> action);
-
-    std::any execute_action(const std::string& name, const studio::resources::file_info& info) const;
 
     std::filesystem::path get_search_path() const;
 
@@ -57,7 +51,6 @@ namespace studio::resources
     std::map<std::string, nonstd::span<std::string_view>> archive_explicit_extensions;
 
     std::multimap<std::string, std::unique_ptr<studio::resources::archive_plugin>> archive_types;
-    std::map<std::string, std::function<std::any(const studio::resources::file_info&)>> actions;
 
     mutable std::map<std::string, std::vector<studio::resources::file_info>> info_cache;
   };

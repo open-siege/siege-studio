@@ -6,6 +6,7 @@
 #include <optional>
 #include <wx/treelist.h>
 #include "graphics_view.hpp"
+#include "view_context.hpp"
 #include "resources/resource_explorer.hpp"
 
 namespace studio::views
@@ -13,7 +14,7 @@ namespace studio::views
   class vol_view
   {
   public:
-    vol_view(const studio::resources::file_info& info, const studio::resources::resource_explorer& archive);
+    vol_view(view_context context);
     void setup_view(wxWindow& parent);
 
   private:
@@ -22,7 +23,7 @@ namespace studio::views
       std::optional<std::string_view> search_text
     );
 
-    const studio::resources::resource_explorer& archive;
+    view_context context;
     std::filesystem::path archive_path;
     std::vector<studio::resources::file_info> files;
     std::future<bool> pending_save;

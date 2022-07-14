@@ -4,6 +4,7 @@
 #include <glm/gtx/quaternion.hpp>
 
 #include "graphics_view.hpp"
+#include "view_context.hpp"
 #include "content/renderable_shape.hpp"
 #include "resources/resource_explorer.hpp"
 #include "content/dts/darkstar_structures.hpp"
@@ -13,7 +14,7 @@ namespace studio::views
   class darkstar_dts_view
   {
   public:
-    darkstar_dts_view(const studio::resources::file_info&, std::basic_istream<std::byte>& shape_stream, const studio::resources::resource_explorer& archive);
+    darkstar_dts_view(view_context context, std::basic_istream<std::byte>& shape_stream);
     std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks();
     void setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext);
     void render_gl(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext);
@@ -21,8 +22,7 @@ namespace studio::views
 
   private:
     static std::filesystem::path export_path;
-    const studio::resources::resource_explorer& archive;
-    studio::resources::file_info info;
+    view_context context;
     std::unique_ptr<content::renderable_shape> shape;
 
     glm::vec3 translation;

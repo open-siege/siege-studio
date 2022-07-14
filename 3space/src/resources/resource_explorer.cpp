@@ -1,27 +1,11 @@
 #include <sstream>
+#include <functional>
 #include <filesystem>
 #include "shared.hpp"
 #include "resources/resource_explorer.hpp"
 
 namespace studio::resources
 {
-  void resource_explorer::add_action(std::string name, std::function<std::any(const studio::resources::file_info&)> action)
-  {
-    actions.emplace(std::move(name), std::move(action));
-  }
-
-  std::any resource_explorer::execute_action(const std::string& name, const studio::resources::file_info& info) const
-  {
-    auto result = actions.find(name);
-
-    if (result != actions.end())
-    {
-      return result->second(info);
-    }
-
-    return {};
-  }
-
   std::filesystem::path resource_explorer::get_search_path() const
   {
     return std::filesystem::current_path();

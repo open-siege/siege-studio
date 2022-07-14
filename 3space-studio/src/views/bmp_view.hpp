@@ -6,6 +6,7 @@
 #include <variant>
 #include <utility>
 #include "graphics_view.hpp"
+#include "view_context.hpp"
 #include "resources/resource_explorer.hpp"
 #include "content/pal/palette.hpp"
 #include "content/bmp/bitmap.hpp"
@@ -15,7 +16,7 @@ namespace studio::views
   class bmp_view 
   {
   public:
-    bmp_view(const studio::resources::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::resources::resource_explorer&);
+    bmp_view(view_context context, std::basic_istream<std::byte>& image_stream);
     std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks();
     void setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext);
     void render_gl(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext) {}
@@ -69,8 +70,7 @@ namespace studio::views
     }
 
     static std::filesystem::path export_path;
-    const studio::resources::resource_explorer& archive;
-    studio::resources::file_info info;
+    view_context context;
     std::list<std::string> sort_order;
     std::map<std::string_view, std::pair<studio::resources::file_info, std::vector<content::pal::palette>>> loaded_palettes;
 

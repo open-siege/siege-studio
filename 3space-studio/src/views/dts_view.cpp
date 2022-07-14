@@ -54,12 +54,12 @@ namespace studio::views
     ImGui::Unindent(8);
   }
 
-  darkstar_dts_view::darkstar_dts_view(const studio::resources::file_info& info, std::basic_istream<std::byte>& shape_stream, const studio::resources::resource_explorer& archive)
-    : info(info), archive(archive)
+  darkstar_dts_view::darkstar_dts_view(view_context context, std::basic_istream<std::byte>& shape_stream)
+    : context(std::move(context))
   {
     if (export_path == std::filesystem::path())
     {
-      export_path = archive.get_search_path() / "exported";
+      export_path = context.explorer.get_search_path() / "exported";
       std::filesystem::create_directory(export_path);
     }
 
@@ -186,7 +186,7 @@ namespace studio::views
       {
         for (auto i = 0u; i < detail_levels.size(); ++i)
         {
-          auto new_file_name = info.filename.stem().string() + "-" + detail_levels[i] + ".obj";
+          auto new_file_name = context.file_info.filename.stem().string() + "-" + detail_levels[i] + ".obj";
 
           std::filesystem::create_directory(export_path);
           std::ofstream output(export_path / new_file_name, std::ios::trunc);
@@ -205,7 +205,7 @@ namespace studio::views
 
       if (ImGui::Button("Export All DTS files to OBJ"))
       {
-        auto files = archive.find_files({ ".dts" });
+        auto files = context.explorer.find_files({ ".dts" });
 
         if (!opened_folder && !files.empty())
         {
@@ -214,8 +214,8 @@ namespace studio::views
         }
 
         std::for_each(std::execution::par_unseq, files.begin(), files.end(), [=](const auto& shape_info) {
-          auto archive_path = archive.get_archive_path(shape_info.folder_path);
-          auto shape_stream = archive.load_file(shape_info);
+          auto archive_path = context.explorer.get_archive_path(shape_info.folder_path);
+          auto shape_stream = context.explorer.load_file(shape_info);
 
           auto real_shape = content::dts::make_shape(*shape_stream.second);
 
@@ -223,7 +223,7 @@ namespace studio::views
 
           for (auto i = 0u; i < local_detail_levels.size(); ++i)
           {
-            const auto new_path = export_path / std::filesystem::relative(shape_info.folder_path, archive.get_search_path());
+            const auto new_path = export_path / std::filesystem::relative(shape_info.folder_path, context.explorer.get_search_path());
             auto new_file_name = shape_info.filename.stem().string() + "-" + local_detail_levels[i] + ".obj";
 
             std::filesystem::create_directory(new_path);
@@ -338,7 +338,7 @@ namespace studio::views
           if (ImGui::Button("Open in new tab"))
           {
             const auto ext = shared::to_lower(std::filesystem::path(material.filename).extension().string());
-            auto files = archive.find_files(archive.get_archive_path(info.folder_path), { ext });
+            auto files = context.explorer.find_files(context.explorer.get_archive_path(context.file_info.folder_path), { ext });
 
             const auto predicate = [&](const auto& material_info){
               return material_info.filename == material.filename || shared::to_lower(material_info.filename.string()) == shared::to_lower(material.filename);
@@ -348,13 +348,13 @@ namespace studio::views
 
             if (file_info == files.end())
             {
-              files = archive.find_files({ ext });
+              files = context.explorer.find_files({ ext });
               file_info = std::find_if(files.begin(), files.end(), predicate);
             }
 
             if (file_info != files.end())
             {
-              archive.execute_action("open_new_tab", *file_info);
+              context.actions.open_new_tab(*file_info);
             }
           }
           ImGui::PopID();

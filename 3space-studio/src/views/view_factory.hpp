@@ -11,6 +11,7 @@
 #include "graphics_view.hpp"
 #include "default_view.hpp"
 #include "resources/resource_explorer.hpp"
+#include "views/view_context.hpp"
 #include "utility.hpp"
 
 namespace studio::views
@@ -18,7 +19,7 @@ namespace studio::views
   using stream_validator = bool(std::basic_istream<std::byte>&);
 
   using studio_view = std::variant<std::monostate, normal_view, graphics_view>;
-  using view_creator = studio_view(const studio::resources::file_info&, std::basic_istream<std::byte>&, const studio::resources::resource_explorer&);
+  using view_creator = studio_view(view_context, std::basic_istream<std::byte>&);
 
   class view_factory
   {
@@ -35,11 +36,14 @@ namespace studio::views
 
     [[nodiscard]] std::vector<std::string_view> get_extension_categories(bool only_interface_visible = true) const;
 
+    view_actions& get_actions();
+
     studio_view create_view(const studio::resources::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resources::resource_explorer& manager) const;
 
     studio_view create_default_view(const studio::resources::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resources::resource_explorer& manager) const;
 
   private:
+    view_actions actions;
     std::set<std::string> extensions;
     std::map<std::string, std::set<std::string_view>> extension_categories;
     std::set<std::string_view> visible_categories;
