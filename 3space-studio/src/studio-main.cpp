@@ -474,6 +474,10 @@ int main(int argc, char** argv)
     auto archive = studio::views::create_default_resource_explorer();
     auto view_factory = studio::views::create_default_view_factory();
 
+    archive.add_action("get_extensions_by_category", [&](auto& path) -> std::any {
+      return std::make_any<std::vector<std::string_view>>(view_factory.get_extensions_by_category(path.filename.string()));
+    });
+
     wxApp::SetInitializerFunction(studio::createApp);
     wxEntryStart(argc, argv);
     auto* app = wxApp::GetInstance();
@@ -528,8 +532,9 @@ int main(int argc, char** argv)
         frame->Maximize();
       }
     };
-    archive.add_action("open_new_tab", [&](auto& path) {
+    archive.add_action("open_new_tab", [&](auto& path) -> std::any {
       add_element_from_file(archive.load_file(path));
+      return {};
     });
 
     auto add_new_element = [notebook, &num_elements, &view_factory, &archive]() {

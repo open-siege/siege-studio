@@ -5,19 +5,21 @@
 
 namespace studio::resources
 {
-  void resource_explorer::add_action(std::string name, std::function<void(const studio::resources::file_info&)> action)
+  void resource_explorer::add_action(std::string name, std::function<std::any(const studio::resources::file_info&)> action)
   {
     actions.emplace(std::move(name), std::move(action));
   }
 
-  void resource_explorer::execute_action(const std::string& name, const studio::resources::file_info& info) const
+  std::any resource_explorer::execute_action(const std::string& name, const studio::resources::file_info& info) const
   {
     auto result = actions.find(name);
 
     if (result != actions.end())
     {
-      result->second(info);
+      return result->second(info);
     }
+
+    return {};
   }
 
   std::filesystem::path resource_explorer::get_search_path() const

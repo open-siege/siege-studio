@@ -967,7 +967,8 @@ namespace studio::views
 
         if (ImGui::Button("Export All to Regular BMPs"))
         {
-          auto files = archive.find_files(get_bmp_extensions());
+          auto extensions = archive.execute_action("get_extensions_by_category", { "All Images" });
+          auto files = archive.find_files(std::any_cast<std::vector<std::string_view>&>(extensions));
 
           if (!opened_folder && !files.empty())
           {

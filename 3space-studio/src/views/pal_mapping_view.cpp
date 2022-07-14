@@ -26,8 +26,8 @@ namespace studio::views
     table->AppendColumn("Selected Palette Index", wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxCOL_RESIZABLE | wxCOL_SORTABLE);
     table->AppendColumn("Actions", wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxCOL_RESIZABLE | wxCOL_SORTABLE);
 
-
-    auto files = explorer.find_files(get_bmp_extensions());
+    auto extensions = explorer.execute_action("get_extensions_by_category", { "All Images" });
+    auto files = explorer.find_files(std::any_cast<std::vector<std::string_view>&>(extensions));
 
     auto root = table->GetRootItem();
 
