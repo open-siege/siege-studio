@@ -1,5 +1,4 @@
 #include "view_factory.hpp"
-#include "vol_view.hpp"
 #include "content/dts/darkstar.hpp"
 
 namespace studio::views
@@ -14,6 +13,54 @@ namespace studio::views
     creators.emplace(checker, creator);
   }
 
+  void view_factory::add_extension_category(std::string_view category, std::vector<std::string_view> extensions, bool is_interface_visible)
+  {
+    auto category_str = std::string(category);
+
+    if (extension_categories.find(category_str) != extension_categories.end())
+    {
+      return;
+    }
+
+    std::set<std::string_view> temp;
+
+    auto save = [&]() {
+      auto existing = extension_categories.emplace(category_str, temp).first;
+
+      if (is_interface_visible)
+      {
+        visible_categories.emplace(existing->first);
+      }
+    };
+
+    if (extensions.size() == 1 && extensions.front() == "ALL")
+    {
+      auto all_exts = get_extensions();
+      std::transform(all_exts.begin(), all_exts.end(), std::inserter(temp, temp.begin()), [](auto& ext) {
+        return ext;
+      });
+      save();
+    }
+    else
+    {
+      for (const auto& extension : extensions)
+      {
+        auto existing_ext = validators.find(extension);
+        if (existing_ext != validators.end())
+        {
+          temp.emplace(existing_ext->first);
+        }
+      }
+
+      if (temp.empty())
+      {
+        return;
+      }
+
+      save();
+    }
+  }
+
   void view_factory::add_extension(std::string_view extension, stream_validator* checker)
   {
     validators.emplace(*extensions.emplace(extension).first, checker);
@@ -22,6 +69,36 @@ namespace studio::views
   [[nodiscard]] std::vector<std::string_view> view_factory::get_extensions() const
   {
     return std::vector<std::string_view>(extensions.cbegin(), extensions.cend());
+  }
+
+  [[nodiscard]] std::vector<std::string_view> view_factory::get_extensions_by_category(std::string_view category) const
+  {
+    auto iter = std::find_if(extension_categories.begin(), extension_categories.end(), [&](auto& ext_category) {
+      return ext_category.first == category;
+    });
+
+    if (iter == extension_categories.end())
+    {
+      return {};
+    }
+
+    std::vector<std::string_view> results;
+    results.reserve(iter->second.size());
+    results.assign(iter->second.begin(), iter->second.end());
+
+    return results;
+  }
+
+  [[nodiscard]] std::vector<std::string_view> view_factory::get_extension_categories() const
+  {
+      std::vector<std::string_view> results;
+      results.reserve(extension_categories.size());
+
+      std::transform(extension_categories.begin(), extension_categories.end(), std::back_inserter(results), [](auto& category) {
+        return category.first;
+      });
+
+      return results;
   }
 
   studio_view view_factory::create_view(const studio::resources::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resources::resource_explorer& manager) const
