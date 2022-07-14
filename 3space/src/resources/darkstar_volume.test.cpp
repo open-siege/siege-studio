@@ -176,7 +176,7 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
 
     darkstar::vol_file_archive archive;
 
-    auto parsed_files = archive.get_content_listing(mem_buffer, std::filesystem::path());
+    auto parsed_files = archive.get_content_listing(mem_buffer, { std::filesystem::path(), std::filesystem::path() });
     REQUIRE(parsed_files.size() == 3);
 
     std::visit([&](auto& info) {
