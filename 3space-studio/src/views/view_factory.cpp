@@ -13,9 +13,9 @@ namespace studio::views
     creators.emplace(checker, creator);
   }
 
-  void view_factory::add_extension_category(std::string_view category, std::vector<std::string_view> extensions, bool is_interface_visible)
+  void view_factory::add_extension_category(std::string_view category, std::vector<std::string_view> new_extensions, bool is_interface_visible)
   {
-    auto category_str = std::string(category);
+    auto category_str = std::to_string(extension_categories.size()) + std::string(category);
 
     if (extension_categories.find(category_str) != extension_categories.end())
     {
@@ -33,7 +33,7 @@ namespace studio::views
       }
     };
 
-    if (extensions.size() == 1 && extensions.front() == "ALL")
+    if (new_extensions.size() == 1 && new_extensions.front() == "ALL")
     {
       auto all_exts = get_extensions();
       std::transform(all_exts.begin(), all_exts.end(), std::inserter(temp, temp.begin()), [](auto& ext) {
@@ -43,7 +43,7 @@ namespace studio::views
     }
     else
     {
-      for (const auto& extension : extensions)
+      for (const auto& extension : new_extensions)
       {
         auto existing_ext = validators.find(extension);
         if (existing_ext != validators.end())
@@ -74,7 +74,7 @@ namespace studio::views
   [[nodiscard]] std::vector<std::string_view> view_factory::get_extensions_by_category(std::string_view category) const
   {
     auto iter = std::find_if(extension_categories.begin(), extension_categories.end(), [&](auto& ext_category) {
-      return ext_category.first == category;
+      return ext_category.first == category || std::string_view(ext_category.first).substr(1) == category;
     });
 
     if (iter == extension_categories.end())
@@ -96,14 +96,17 @@ namespace studio::views
       if (only_interface_visible)
       {
         results.reserve(visible_categories.size());
-        results.assign(visible_categories.begin(), visible_categories.end());
+        std::transform(visible_categories.begin(), visible_categories.end(), std::back_inserter(results), [](auto& category) {
+          return category.substr(1);
+        });
+
         return results;
       }
 
       results.reserve(extension_categories.size());
 
       std::transform(extension_categories.begin(), extension_categories.end(), std::back_inserter(results), [](auto& category) {
-        return category.first;
+        return std::string_view(category.first).substr(1);
       });
 
       return results;

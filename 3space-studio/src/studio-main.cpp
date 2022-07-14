@@ -340,12 +340,14 @@ namespace studio
 
     auto tree_search = std::shared_ptr<wxComboBox>(new wxComboBox(tree_panel.get(), wxID_ANY), studio::default_wx_deleter);
 
+    auto categories = view_factory.get_extension_categories();
+
     auto extensions = view_factory.get_extensions();
 
-    tree_search->Append("All Supported Formats");
-    tree_search->Append("All Palettes (.pal, .ppl, .ipl)");
-    tree_search->Append("All Images (.bmp, .pba)");
-    tree_search->Append("All 3D Models (.dts)");
+    for (auto& category : categories)
+    {
+      tree_search->Append(std::string(category));
+    }
 
     for (auto& extension : extensions)
     {
@@ -358,39 +360,16 @@ namespace studio
 
     studio::populate_tree_view(view_factory, archive, *tree_view, fs::current_path(), extensions);
 
-    auto get_filter_selection = [tree_search, &view_factory]() {
+    auto get_filter_selection = [tree_search, &view_factory, categories, extensions]() {
       const auto selection = tree_search->GetSelection();
 
-      std::vector<std::string_view> new_extensions;
+      if (selection < categories.size())
+      {
+        return view_factory.get_extensions_by_category(categories[selection]);
+      }
 
-      if (selection == 0)
-      {
-        return view_factory.get_extensions();
-      }
-      else if (selection == 1 || selection == 2 || selection == 3)
-      {
-        if (selection == 1)
-        {
-          new_extensions.reserve(3);
-          new_extensions.emplace_back(".pal");
-          new_extensions.emplace_back(".ppl");
-          new_extensions.emplace_back(".ipl");
-        }
-        else if (selection == 2)
-        {
-          new_extensions.reserve(2);
-          new_extensions.emplace_back(".bmp");
-          new_extensions.emplace_back(".pba");
-        }
-        else
-        {
-          new_extensions.emplace_back(".dts");
-        }
-      }
-      else
-      {
-        new_extensions.emplace_back(view_factory.get_extensions()[selection - 4]);
-      }
+      std::vector<std::string_view> new_extensions;
+      new_extensions.emplace_back(extensions[selection - categories.size()]);
 
       return new_extensions;
     };
