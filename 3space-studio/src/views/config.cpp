@@ -122,6 +122,11 @@ namespace studio::views
 
     view_factory.add_extension(".cln", dio::cln::cln_file_archive::is_supported);
 
+    view_factory.add_extension_category("All Supported Formats", { "ALL" }, true);
+    view_factory.add_extension_category("All Palettes", { ".ppl", ".ipl", ".pal", ".dpl" }, true);
+    view_factory.add_extension_category("All Images", { ".bmp", ".dib", ".pba", ".dbm", ".dba", ".db0", ".db1", ".db2", ".hba", ".hb0", ".hb1", ".hb2", ".jpg", ".gif", ".png", ".tga" }, true);
+    view_factory.add_extension_category("All 3D Models", {}, true);
+
     return view_factory;
   }
 

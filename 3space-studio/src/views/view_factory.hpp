@@ -4,6 +4,10 @@
 #include <istream>
 #include <memory>
 #include <variant>
+#include <set>
+#include <map>
+#include <string>
+#include <string_view>
 #include "graphics_view.hpp"
 #include "default_view.hpp"
 #include "resources/resource_explorer.hpp"
@@ -23,7 +27,13 @@ namespace studio::views
 
     void add_extension(std::string_view extension, stream_validator* checker);
 
+    void add_extension_category(std::string_view category, std::vector<std::string_view> extensions, bool is_interface_visible = false);
+
     [[nodiscard]] std::vector<std::string_view> get_extensions() const;
+
+    [[nodiscard]] std::vector<std::string_view> get_extensions_by_category(std::string_view category) const;
+
+    [[nodiscard]] std::vector<std::string_view> get_extension_categories() const;
 
     studio_view create_view(const studio::resources::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resources::resource_explorer& manager) const;
 
@@ -31,6 +41,8 @@ namespace studio::views
 
   private:
     std::set<std::string> extensions;
+    std::map<std::string, std::set<std::string_view>> extension_categories;
+    std::set<std::string_view> visible_categories;
     std::set<stream_validator*> no_fallback_allowed;
     std::map<stream_validator*, view_creator*> creators;
     std::multimap<std::string_view, stream_validator*> validators;
