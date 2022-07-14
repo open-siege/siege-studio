@@ -89,9 +89,17 @@ namespace studio::views
     return results;
   }
 
-  [[nodiscard]] std::vector<std::string_view> view_factory::get_extension_categories() const
+  [[nodiscard]] std::vector<std::string_view> view_factory::get_extension_categories(bool only_interface_visible) const
   {
       std::vector<std::string_view> results;
+
+      if (only_interface_visible)
+      {
+        results.reserve(visible_categories.size());
+        results.assign(visible_categories.begin(), visible_categories.end());
+        return results;
+      }
+
       results.reserve(extension_categories.size());
 
       std::transform(extension_categories.begin(), extension_categories.end(), std::back_inserter(results), [](auto& category) {

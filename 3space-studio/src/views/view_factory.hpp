@@ -33,7 +33,7 @@ namespace studio::views
 
     [[nodiscard]] std::vector<std::string_view> get_extensions_by_category(std::string_view category) const;
 
-    [[nodiscard]] std::vector<std::string_view> get_extension_categories() const;
+    [[nodiscard]] std::vector<std::string_view> get_extension_categories(bool only_interface_visible = true) const;
 
     studio_view create_view(const studio::resources::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resources::resource_explorer& manager) const;
 
