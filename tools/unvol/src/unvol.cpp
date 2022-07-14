@@ -73,7 +73,7 @@ int main(int, const char** argv)
     return EXIT_FAILURE;
   }
 
-  auto files = archive->get_content_listing(volume_stream, volume_file);
+  auto files = archive->get_content_listing(volume_stream, { volume_file, volume_file });
 
   std::string output_folder = replace_extension(volume_file);
 
@@ -96,7 +96,7 @@ int main(int, const char** argv)
         {
           // TODO think about whether get_content_listing should preserve the original position of the stream or not.
           std::basic_ifstream<std::byte> temp_stream{ volume_file, std::ios::binary };
-          auto files = archive->get_content_listing(temp_stream, info.full_path);
+          auto files = archive->get_content_listing(temp_stream, { volume_file, info.full_path });
           extract_files(files);
         }
       }, some_file);
