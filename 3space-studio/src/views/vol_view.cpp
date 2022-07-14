@@ -63,8 +63,8 @@ namespace studio::views
   vol_view::vol_view(view_context context)
     : context(std::move(context))
   {
-    archive_path = context.file_info.folder_path / context.file_info.filename;
-    files = context.explorer.find_files(archive_path, { "ALL" });
+    archive_path = this->context.file_info.folder_path / this->context.file_info.filename;
+    files = this->context.explorer.find_files(archive_path, { "ALL" });
   }
 
   void vol_view::setup_view(wxWindow& parent)
