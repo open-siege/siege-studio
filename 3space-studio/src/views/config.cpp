@@ -43,7 +43,7 @@ namespace studio::views
     view_factory.add_file_type(content::bmp::is_jpg, [](auto& info, auto& stream, auto& manager) -> studio_view { return graphics_view(bmp_view(info, stream, manager)); }, true);
     view_factory.add_file_type(content::bmp::is_tga, [](auto& info, auto& stream, auto& manager) -> studio_view { return graphics_view(bmp_view(info, stream, manager)); }, true);
 
-    view_factory.add_file_type(content::pal::is_pal_settings_file, [](auto& info, auto&, auto&) -> studio_view { return normal_view(pal_mapping_view(info)); }, true);
+    view_factory.add_file_type(content::pal::is_pal_settings_file, [](auto& info, auto& stream, auto& explorer) -> studio_view { return normal_view(pal_mapping_view(info, stream, explorer)); }, true);
     view_factory.add_file_type(content::pal::is_old_pal, [](auto&, auto& stream, auto&) -> studio_view { return graphics_view(pal_view(stream)); });
     view_factory.add_file_type(content::pal::is_microsoft_pal, [](auto&, auto& stream, auto&) -> studio_view { return graphics_view(pal_view(stream)); });
     view_factory.add_file_type(content::pal::is_phoenix_pal, [](auto&, auto& stream, auto&) -> studio_view { return graphics_view(pal_view(stream)); });
