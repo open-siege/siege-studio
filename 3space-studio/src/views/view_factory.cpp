@@ -112,6 +112,11 @@ namespace studio::views
       return results;
   }
 
+  view_actions& view_factory::get_actions()
+  {
+    return actions;
+  }
+
   studio_view view_factory::create_view(const studio::resources::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resources::resource_explorer& manager) const
   {
     auto search_values = std::array<std::string, 2>{{shared::to_lower(file_info.filename.extension().string()), shared::to_lower(file_info.filename.string())}};
@@ -124,7 +129,7 @@ namespace studio::views
       {
         if (it->second(stream))
         {
-          return creators.at(it->second)(file_info, stream, manager);
+          return creators.at(it->second)({ file_info, manager, actions }, stream);
         }
       }
     }
@@ -138,7 +143,7 @@ namespace studio::views
 
       if (checker(stream))
       {
-        return creator(file_info, stream, manager);
+        return creator({ file_info, manager, actions }, stream);
       }
     }
 

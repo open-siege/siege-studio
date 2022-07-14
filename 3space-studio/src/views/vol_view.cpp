@@ -60,11 +60,11 @@ namespace studio::views
     }
   }
 
-  vol_view::vol_view(const studio::resources::file_info& info, const studio::resources::resource_explorer& archive)
-    : archive(archive)
+  vol_view::vol_view(view_context context)
+    : context(std::move(context))
   {
-    archive_path = info.folder_path / info.filename;
-    files = archive.find_files(archive_path, { "ALL" });
+    archive_path = context.file_info.folder_path / context.file_info.filename;
+    files = context.explorer.find_files(archive_path, { "ALL" });
   }
 
   void vol_view::setup_view(wxWindow& parent)
@@ -102,7 +102,7 @@ namespace studio::views
 
         if (original_info != files.end())
         {
-          archive.execute_action("open_new_tab", *original_info);
+          context.actions.open_new_tab(*original_info);
         }
       });
 
@@ -110,7 +110,7 @@ namespace studio::views
 
     auto panel = std::make_unique<wxPanel>(&parent);
 
-    auto folder_picker = std::shared_ptr<wxDirPickerCtrl>(new wxDirPickerCtrl(panel.get(), wxID_ANY, (archive.get_search_path() / "extracted").string()), default_wx_deleter);
+    auto folder_picker = std::shared_ptr<wxDirPickerCtrl>(new wxDirPickerCtrl(panel.get(), wxID_ANY, (context.explorer.get_search_path() / "extracted").string()), default_wx_deleter);
 
     auto export_button = std::make_unique<wxButton>(panel.get(), wxID_ANY, "Extract Volume Contents");
 
@@ -156,7 +156,7 @@ namespace studio::views
 
           text2->SetLabel((std::filesystem::relative(file.folder_path, archive_path) / file.filename).string());
 
-          archive.extract_file_contents(archive_file, dest, file);
+          context.explorer.extract_file_contents(archive_file, dest, file);
           gauge->SetValue(gauge->GetValue() + 1);
         }
 
@@ -207,7 +207,7 @@ namespace studio::views
         scoped_dialog->Show();
         text1->SetLabel("Extracting to\n" + dest.string());
 
-        auto all_files = archive.find_files({ ".vol", ".rmf", ".rbx", ".tbv", ".mis", ".dyn" });
+        auto all_files = context.explorer.find_files({ ".vol", ".rmf", ".rbx", ".tbv", ".mis", ".dyn" });
 
         std::vector<std::pair<std::filesystem::path, std::vector<studio::resources::file_info>>> found_files(all_files.size());
 
@@ -215,7 +215,7 @@ namespace studio::views
           static std::mutex gauge_mutex;
           auto file_archive_path = volume_file.folder_path / volume_file.filename;
 
-          auto child_files = archive.find_files(file_archive_path, { "ALL" });
+          auto child_files = context.explorer.find_files(file_archive_path, { "ALL" });
           {
             std::lock_guard<std::mutex> lock(gauge_mutex);
             gauge->SetRange(gauge->GetRange() + child_files.size());
@@ -241,10 +241,10 @@ namespace studio::views
 
             {
               std::lock_guard<std::mutex> lock(label_mutex);
-              text2->SetLabel((std::filesystem::relative(file.folder_path, archive.get_search_path()) / file.filename).string());
+              text2->SetLabel((std::filesystem::relative(file.folder_path, context.explorer.get_search_path()) / file.filename).string());
             }
 
-            archive.extract_file_contents(archive_file, dest, file);
+            context.explorer.extract_file_contents(archive_file, dest, file);
 
             {
               std::lock_guard<std::mutex> lock(gauge_mutex);

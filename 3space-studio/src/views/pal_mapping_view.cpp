@@ -9,8 +9,8 @@
 
 namespace studio::views
 {
-  pal_mapping_view::pal_mapping_view(studio::resources::file_info info, std::basic_istream<std::byte>& json_stream, const studio::resources::resource_explorer& explorer)
-    : info(std::move(info)), explorer(explorer)
+  pal_mapping_view::pal_mapping_view(view_context context)
+    : context(std::move(context))
     {
 
     }
@@ -26,8 +26,8 @@ namespace studio::views
     table->AppendColumn("Selected Palette Index", wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxCOL_RESIZABLE | wxCOL_SORTABLE);
     table->AppendColumn("Actions", wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxCOL_RESIZABLE | wxCOL_SORTABLE);
 
-    auto extensions = explorer.execute_action("get_extensions_by_category", { "All Images" });
-    auto files = explorer.find_files(std::any_cast<std::vector<std::string_view>&>(extensions));
+    auto extensions = context.actions.get_extensions_by_category("All Images");
+    auto files = context.explorer.find_files(extensions);
 
     auto root = table->GetRootItem();
 

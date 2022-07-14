@@ -591,12 +591,15 @@ namespace studio::views
   }
 
 
-  bmp_view::bmp_view(const studio::resources::file_info& info, std::basic_istream<std::byte>& image_stream, const studio::resources::resource_explorer& manager)
-    : archive(manager), info(info)
+  bmp_view::bmp_view(view_context context, std::basic_istream<std::byte>& image_stream)
+    : context(std::move(context))
   {
+    const auto& info = this->context.file_info;
+    const auto& explorer = this->context.explorer;
+
     if (export_path == std::filesystem::path())
     {
-      export_path = archive.get_search_path() / "exported";
+      export_path = explorer.get_search_path() / "exported";
     }
 
     zoom_in = [&](const sf::Event&) {
@@ -617,18 +620,18 @@ namespace studio::views
 
     std::vector<studio::resources::file_info> palettes;
 
-    palettes = manager.find_files(manager.get_archive_path(info.folder_path), { ".ppl", ".ipl", ".pal", ".dpl" });
+    palettes = explorer.find_files(explorer.get_archive_path(info.folder_path), { ".ppl", ".ipl", ".pal", ".dpl" });
 
-    auto all_palettes = manager.find_files({ ".ppl", ".ipl", ".pal", ".dpl" });
+    auto all_palettes = explorer.find_files({ ".ppl", ".ipl", ".pal", ".dpl" });
 
     studio::resources::resource_explorer::merge_results(palettes, all_palettes);
 
-    load_palettes(palettes, manager);
+    load_palettes(palettes, explorer);
 
     auto bmp_data = load_image_data(info, image_stream);
     image_type = bmp_data.first;
 
-    auto [palette_name, palette_index] = detect_default_palette(bmp_data.second, info, manager, loaded_palettes);
+    auto [palette_name, palette_index] = detect_default_palette(bmp_data.second, info, explorer, loaded_palettes);
 
     selection_state.selected_palette_index = selection_state.default_palette_index = palette_index;
     selection_state.selected_palette_name = selection_state.default_palette_name = palette_name;
@@ -795,7 +798,7 @@ namespace studio::views
           ImGui::PushID(&file_info);
           if (ImGui::Button("Open in New Tab"))
           {
-            archive.execute_action("open_new_tab", file_info);
+            context.actions.open_new_tab(file_info);
           }
           ImGui::PopID();
         }
@@ -809,7 +812,7 @@ namespace studio::views
             ImGui::PushID(&file_info);
             if (ImGui::Button("Open in New Tab"))
             {
-              archive.execute_action("open_new_tab", file_info);
+              context.actions.open_new_tab(file_info);
             }
             ImGui::PopID();
 
@@ -850,7 +853,7 @@ namespace studio::views
                 {
                   default_palette_name = key;
                   default_palette_index = i;
-                  set_default_palette(archive, info, default_palette_name, default_palette_index);
+                  set_default_palette(context.explorer, context.file_info, default_palette_name, default_palette_index);
                 }
               }
 
@@ -921,7 +924,7 @@ namespace studio::views
 
         if (ImGui::Button("Export to Regular BMP"))
         {
-          auto new_file_name = info.filename.replace_extension(".bmp");
+          auto new_file_name = context.file_info.filename.replace_extension(".bmp");
           std::filesystem::create_directories(export_path);
           std::basic_ofstream<std::byte> output(export_path / new_file_name, std::ios::binary);
 
@@ -945,7 +948,7 @@ namespace studio::views
             original_pixels.at(selected_bitmap_index).bit_depth > 8) &&
             ImGui::Button("Export to Phoenix BMP"))
         {
-          auto new_file_name = info.filename.replace_extension(".bmp");
+          auto new_file_name = context.file_info.filename.replace_extension(".bmp");
           std::filesystem::create_directories(export_path);
           std::basic_ofstream<std::byte> output(export_path / new_file_name, std::ios::binary);
 
@@ -967,8 +970,8 @@ namespace studio::views
 
         if (ImGui::Button("Export All to Regular BMPs"))
         {
-          auto extensions = archive.execute_action("get_extensions_by_category", { "All Images" });
-          auto files = archive.find_files(std::any_cast<std::vector<std::string_view>&>(extensions));
+          auto extensions = context.actions.get_extensions_by_category("All Images");
+          auto files = context.explorer.find_files(extensions);
 
           if (!opened_folder && !files.empty())
           {
@@ -977,7 +980,7 @@ namespace studio::views
           }
 
           std::for_each(std::execution::par_unseq, files.begin(), files.end(), [=](const auto& shape_info) {
-            const auto new_path = export_path / std::filesystem::relative(shape_info.folder_path, archive.get_search_path());
+            const auto new_path = export_path / std::filesystem::relative(shape_info.folder_path, context.explorer.get_search_path());
 
             auto new_file_name = std::filesystem::path(shape_info.filename).replace_extension(".bmp");
             try
@@ -985,10 +988,10 @@ namespace studio::views
               std::filesystem::create_directories(new_path);
               std::basic_ofstream<std::byte> output(new_path / new_file_name, std::ios::binary);
 
-              auto image_stream = archive.load_file(shape_info);
+              auto image_stream = context.explorer.load_file(shape_info);
               const auto [bmp_type, bmp_data] = load_image_data(image_stream.first,*image_stream.second);
 
-              const auto default_palette = detect_default_palette(bmp_data, shape_info, archive, loaded_palettes);
+              const auto default_palette = detect_default_palette(bmp_data, shape_info, context.explorer, loaded_palettes);
 
               std::visit([&](const auto& frames) {
                 using T = std::decay_t<decltype(frames)>;
@@ -1039,7 +1042,7 @@ namespace studio::views
               std::cerr << ((new_path / new_file_name).string() + ": " + ex.what() + '\n');
             }
           });
-          auto new_file_name = info.filename.replace_extension(".bmp");
+          auto new_file_name = context.file_info.filename.replace_extension(".bmp");
           std::filesystem::create_directories(export_path);
           std::basic_ofstream<std::byte> output(export_path / new_file_name, std::ios::binary);
 
@@ -1061,7 +1064,7 @@ namespace studio::views
           pending_save = std::async(std::launch::async, [this]() {
             auto [width, height] = loaded_image.getSize();
             auto& [selected_palette_name, selected_palette_index, default_palette_name, default_palette_index, selected_bitmap_index] = selection_state;
-            auto new_file_name = info.filename.string() + ".json";
+            auto new_file_name = context.file_info.filename.string() + ".json";
             std::filesystem::create_directories(export_path);
             std::ofstream output(export_path / new_file_name, std::ios::trunc);
 
@@ -1178,7 +1181,7 @@ namespace studio::views
             selected_palette_name = default_palette_name;
           }
 
-          set_default_palette(archive, info, default_palette_name, default_palette_index);
+          set_default_palette(context.explorer, context.file_info, default_palette_name, default_palette_index);
 
           refresh_image();
         }
@@ -1215,27 +1218,27 @@ namespace studio::views
           selected_palette_index = default_palette_index;
         }
 
-        set_default_palette(archive, info, default_palette_name, default_palette_index);
+        set_default_palette(context.explorer, context.file_info, default_palette_name, default_palette_index);
 
         refresh_image();
       }
 
       if (image_type == bitmap_type::earthsiege && ImGui::Button("Set as Shared Default"))
       {
-        set_default_palette(archive, "default", default_palette_name);
+        set_default_palette(context.explorer, "default", default_palette_name);
       }
 
       ImGui::SameLine();
 
       if (image_type == bitmap_type::phoenix && ImGui::Button("Reset"))
       {
-        auto image_stream = archive.load_file(info);
+        auto image_stream = context.explorer.load_file(context.file_info);
         const auto [bmp_type, bmp_data] = load_image_data(image_stream.first, *image_stream.second);
 
-        const auto [name, index]  = detect_default_palette(bmp_data, info, archive, loaded_palettes, true);
+        const auto [name, index]  = detect_default_palette(bmp_data, context.file_info, context.explorer, loaded_palettes, true);
         selected_palette_name = default_palette_name = name;
         selected_palette_index = default_palette_index = index;
-        set_default_palette(archive, info, "");
+        set_default_palette(context.explorer, context.file_info, "");
         refresh_image();
       }
 
