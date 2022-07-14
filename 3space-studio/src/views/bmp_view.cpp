@@ -7,6 +7,7 @@
 #include "content/image/image.hpp"
 #include "sfml_keys.hpp"
 #include "utility.hpp"
+#include "bmp_shared.hpp"
 #include "content/json_boost.hpp"
 
 namespace studio::content::pal
@@ -42,7 +43,6 @@ std::vector<std::byte> narrow(const std::vector<std::int32_t>& pixels)
 namespace studio::views
 {
   constexpr static auto auto_generated_name = std::string_view("Auto-generated");
-  const static std::vector<std::string_view> bmp_extensions = { ".bmp", ".dib", ".pba", ".dbm", ".dba", ".db0", ".db1", ".db2", ".hba", ".hb0", ".hb1", ".hb2" };
 
   std::filesystem::path bmp_view::export_path = std::filesystem::path();
   std::vector<bmp_view::image_data> get_texture_data(const bmp_view::bmp_variant& bmp_data)
@@ -967,7 +967,7 @@ namespace studio::views
 
         if (ImGui::Button("Export All to Regular BMPs"))
         {
-          auto files = archive.find_files(bmp_extensions);
+          auto files = archive.find_files(get_bmp_extensions());
 
           if (!opened_folder && !files.empty())
           {
