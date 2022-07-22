@@ -26,7 +26,7 @@ namespace studio::views
     table->AppendColumn("Selected Palette Index", wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxCOL_RESIZABLE | wxCOL_SORTABLE);
     table->AppendColumn("Actions", wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxCOL_RESIZABLE | wxCOL_SORTABLE);
 
-    auto extensions = context.actions.get_extensions_by_category("All Images");
+    auto extensions = context.actions.get_extensions_by_category("all_images");
     auto files = context.explorer.find_files(extensions);
 
     auto root = table->GetRootItem();

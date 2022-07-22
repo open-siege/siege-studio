@@ -207,7 +207,7 @@ namespace studio::views
         scoped_dialog->Show();
         text1->SetLabel("Extracting to\n" + dest.string());
 
-        auto all_files = context.explorer.find_files({ ".vol", ".rmf", ".rbx", ".tbv", ".mis", ".dyn" });
+        auto all_files = context.explorer.find_files(context.actions.get_extensions_by_category("all_archives"));
 
         std::vector<std::pair<std::filesystem::path, std::vector<studio::resources::file_info>>> found_files(all_files.size());
 

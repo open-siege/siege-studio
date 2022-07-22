@@ -129,7 +129,11 @@ namespace studio::views
     view_factory.add_extension_category("All Supported Formats", { "ALL" }, true);
     view_factory.add_extension_category("All Palettes", { ".ppl", ".ipl", ".pal", ".dpl" }, true);
     view_factory.add_extension_category("All Images", { ".bmp", ".dib", ".pba", ".dbm", ".dba", ".db0", ".db1", ".db2", ".hba", ".hb0", ".hb1", ".hb2", ".jpg", ".gif", ".png", ".tga" }, true);
+    view_factory.add_extension_category("All Archives", { ".vol", ".rmf", ".rbx", ".tbv", ".mis", ".dyn" }, true);
     view_factory.add_extension_category("All 3D Models", { ".dts" }, true);
+    view_factory.add_extension_category("all_palettes", view_factory.get_extensions_by_category("All Palettes"), false);
+    view_factory.add_extension_category("all_images", view_factory.get_extensions_by_category("All Images"), false);
+    view_factory.add_extension_category("all_archives", view_factory.get_extensions_by_category("All Archives"), false);
 
     return view_factory;
   }
