@@ -620,9 +620,11 @@ namespace studio::views
 
     std::vector<studio::resources::file_info> palettes;
 
-    palettes = explorer.find_files(explorer.get_archive_path(info.folder_path), { ".ppl", ".ipl", ".pal", ".dpl" });
+    const auto pal_extensions = this->context.actions.get_extensions_by_category("all_palettes");
 
-    auto all_palettes = explorer.find_files({ ".ppl", ".ipl", ".pal", ".dpl" });
+    palettes = explorer.find_files(explorer.get_archive_path(info.folder_path), pal_extensions);
+
+    auto all_palettes = explorer.find_files(pal_extensions);
 
     studio::resources::resource_explorer::merge_results(palettes, all_palettes);
 
@@ -970,7 +972,7 @@ namespace studio::views
 
         if (ImGui::Button("Export All to Regular BMPs"))
         {
-          auto extensions = context.actions.get_extensions_by_category("All Images");
+          auto extensions = context.actions.get_extensions_by_category("all_images");
           auto files = context.explorer.find_files(extensions);
 
           if (!opened_folder && !files.empty())

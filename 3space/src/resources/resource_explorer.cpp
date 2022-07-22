@@ -144,7 +144,7 @@ namespace studio::resources
     for (auto& group2_item : group2)
     {
       auto result = std::find_if(group1.begin(), group1.end(), [&](const auto& group1_item) {
-        return group1_item.folder_path == group2_item.folder_path;
+        return group1_item.folder_path == group2_item.folder_path && group1_item.filename == group2_item.filename;
       });
 
       if (result == group1.end())
