@@ -3,6 +3,7 @@
 
 #include "graphics_view.hpp"
 #include "view_context.hpp"
+#include "bmp_shared.hpp"
 #include "resources/resource_explorer.hpp"
 
 namespace studio::views
@@ -15,6 +16,7 @@ namespace studio::views
 
   private:
     view_context context;
+    palette_context palette_data;
   };
 }
 

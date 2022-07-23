@@ -4,7 +4,6 @@
 #include <wx/quantize.h>
 #include "bmp_view.hpp"
 #include "content/bmp/bitmap.hpp"
-#include "content/image/image.hpp"
 #include "sfml_keys.hpp"
 #include "utility.hpp"
 #include "bmp_shared.hpp"
@@ -42,10 +41,8 @@ std::vector<std::byte> narrow(const std::vector<std::int32_t>& pixels)
 
 namespace studio::views
 {
-  constexpr static auto auto_generated_name = std::string_view("Auto-generated");
-
   std::filesystem::path bmp_view::export_path = std::filesystem::path();
-  std::vector<bmp_view::image_data> get_texture_data(const bmp_view::bmp_variant& bmp_data)
+  std::vector<bmp_view::image_data> get_texture_data(const bmp_variant& bmp_data)
   {
     return std::visit([&](const auto& frames) {
       using T = std::decay_t<decltype(frames)>;
@@ -160,261 +157,6 @@ namespace studio::views
       set_default_palette(manager, generate_settings_key(manager, file), name, index);
   }
 
-  std::optional<std::pair<std::string_view, std::size_t>> default_palette_from_settings(
-    const studio::resources::file_info& file,
-    const studio::resources::resource_explorer& manager,
-    const bmp_view::palette_map& loaded_palettes)
-  {
-    std::size_t index = 0;
-    std::string_view name;
-
-    const auto settings_path = manager.get_search_path() / "palettes.settings.json";
-
-    if (!std::filesystem::exists(settings_path))
-    {
-      return std::nullopt;
-    }
-
-    try
-    {
-      auto settings = nlohmann::json::parse(std::ifstream(settings_path));
-
-      auto get_value = [&](std::string key) -> bool {
-        if (settings.contains(key))
-        {
-          auto value = settings[key];
-
-          if (value.type() == nlohmann::json::value_t::object && value.contains("name"))
-          {
-            if (value.contains("index"))
-            {
-              index = value["index"];
-            }
-
-            value = value["name"];
-          }
-          else if (value.type() != nlohmann::json::value_t::string)
-          {
-            return false;
-          }
-
-          auto loaded_palette = loaded_palettes.find(std::string_view(value));
-
-          if (loaded_palette != loaded_palettes.end())
-          {
-            name = loaded_palette->first;
-            return true;
-          }
-
-        }
-
-        return false;
-      };
-
-      if (get_value((std::filesystem::relative(file.folder_path, manager.get_search_path()) / file.filename).string()) ||
-          get_value("default"))
-      {
-        return std::make_pair(name, index);
-      }
-
-      return std::nullopt;
-    }
-    catch (...)
-    {
-      return std::nullopt;
-    }
-  }
-
-  std::pair<std::string_view, std::size_t> detect_default_palette(
-    const bmp_view::bmp_variant& data,
-    const studio::resources::file_info& file,
-    const studio::resources::resource_explorer& manager,
-    const bmp_view::palette_map& loaded_palettes,
-    bool ignore_settings = false)
-  {
-    return std::visit([&](const auto& frames) {
-      using T = std::decay_t<decltype(frames)>;
-      if constexpr (std::is_same_v<T, studio::content::bmp::windows_bmp_data>)
-      {
-        return std::make_pair(std::string_view("Internal"), std::size_t(0u));
-      }
-
-      if constexpr (std::is_same_v<T, std::vector<studio::content::bmp::dbm_data>>)
-      {
-        if (!ignore_settings)
-        {
-          const auto settings = default_palette_from_settings(file, manager, loaded_palettes);
-
-          if (settings.has_value())
-          {
-            return settings.value();
-          }
-        }
-
-        return std::make_pair(auto_generated_name, std::size_t(0u));
-      }
-
-      if constexpr (std::is_same_v<T, std::vector<studio::content::bmp::pbmp_data>>)
-      {
-        std::size_t index = std::string::npos;
-        std::string_view name;
-
-        if (!ignore_settings)
-        {
-          const auto settings = default_palette_from_settings(file, manager, loaded_palettes);
-
-          if (settings.has_value())
-          {
-            return settings.value();
-          }
-        }
-
-        for (auto& phoenix_bmp : frames)
-        {
-          if (!name.empty())
-          {
-            break;
-          }
-
-          std::vector<const studio::resources::file_info*> results;
-          results.reserve(loaded_palettes.size() / 2);
-
-          for (auto& palette : loaded_palettes)
-          {
-            if (palette.first != auto_generated_name && palette.second.first.folder_path == file.folder_path)
-            {
-              results.emplace_back(&palette.second.first);
-            }
-          }
-
-          auto get_defaults = [&](bmp_view::palette_map::const_reference value) {
-            for (auto i = 0u; i < value.second.second.size(); ++i)
-            {
-              auto& child = value.second.second[i];
-              if (child.index == phoenix_bmp.palette_index)
-              {
-                index = i;
-                name = value.first;
-                break;
-              }
-            }
-          };
-
-          if (results.empty())
-          {
-            for (auto& entry : loaded_palettes)
-            {
-              if (entry.second.second.size() > phoenix_bmp.palette_index)
-              {
-                get_defaults(entry);
-              }
-
-              if (index != std::string::npos)
-              {
-                break;
-              }
-            }
-          }
-          else
-          {
-            auto bmp_file_name = shared::to_lower(file.filename.stem().string());
-
-            auto possible_palette = std::find_if(results.begin(), results.end(), [&](auto* item) {
-              auto palette_file_name = shared::to_lower(item->filename.stem().string());
-              return bmp_file_name.rfind(palette_file_name, 0) == 0;
-            });
-
-            if (possible_palette != results.end())
-            {
-              auto key = (std::filesystem::relative((*possible_palette)->folder_path, manager.get_search_path()) / (*possible_palette)->filename).string();
-
-              if (auto entry = loaded_palettes.find(key); entry != loaded_palettes.end())
-              {
-                get_defaults(*entry);
-              }
-            }
-            else
-            {
-              for (auto result : results)
-              {
-                auto pal_key = (std::filesystem::relative(result->folder_path, manager.get_search_path()) / result->filename).string();
-
-                if (auto entry = loaded_palettes.find(pal_key); entry != loaded_palettes.end())
-                {
-                  get_defaults(*entry);
-                }
-
-                if (index != std::string::npos)
-                {
-                  break;
-                }
-              }
-            }
-          }
-        }
-
-        if (name.empty())
-        {
-          index = 0;
-          name = auto_generated_name;
-        }
-        return std::make_pair(name, index);
-      }
-    },
-      data);
-  }
-
-  std::pair<bmp_view::bitmap_type, bmp_view::bmp_variant> load_image_data(const studio::resources::file_info& info, std::basic_istream<std::byte>& image_stream)
-  {
-    if (content::bmp::is_microsoft_bmp(image_stream))
-    {
-      return std::make_pair(bmp_view::bitmap_type::microsoft, content::bmp::get_bmp_data(image_stream));
-    }
-    else if (content::bmp::is_jpg(image_stream))
-    {
-      return std::make_pair(bmp_view::bitmap_type::microsoft, content::bmp::get_jpg_data(info, image_stream));
-    }
-    else if (content::bmp::is_png(image_stream))
-    {
-      return std::make_pair(bmp_view::bitmap_type::microsoft, content::bmp::get_png_data(info, image_stream));
-    }
-    else if (content::bmp::is_tga(image_stream))
-    {
-      return std::make_pair(bmp_view::bitmap_type::microsoft, content::bmp::get_tga_data(info, image_stream));
-    }
-    else if (content::bmp::is_earthsiege_bmp(image_stream) || content::bmp::is_earthsiege_bmp_array(image_stream))
-    {
-      std::vector<studio::content::bmp::dbm_data> frames;
-
-      if (content::bmp::is_earthsiege_bmp(image_stream))
-      {
-        frames.emplace_back(content::bmp::read_earthsiege_bmp(image_stream));
-      }
-      else if (content::bmp::is_earthsiege_bmp_array(image_stream))
-      {
-        frames = content::bmp::read_earthsiege_bmp_array(image_stream);
-      }
-
-      return std::make_pair(bmp_view::bitmap_type::earthsiege, std::move(frames));
-    }
-    else
-    {
-      std::vector<content::bmp::pbmp_data> frames;
-
-      if (content::bmp::is_phoenix_bmp(image_stream))
-      {
-        frames.emplace_back(content::bmp::get_pbmp_data(image_stream));
-      }
-      else if (content::bmp::is_phoenix_bmp_array(image_stream))
-      {
-        frames = content::bmp::get_pba_data(image_stream);
-      }
-
-      return std::make_pair(bmp_view::bitmap_type::phoenix, std::move(frames));
-    }
-  }
-
-
   std::vector<content::pal::colour> get_default_colours()
   {
     std::vector<content::pal::colour> default_colours;
@@ -492,33 +234,6 @@ namespace studio::views
     }
 
     loaded_image.create(data.width, data.height, rendered_pixels.data());
-  }
-
-  void bmp_view::load_palettes(const std::vector<studio::resources::file_info>& palettes, const studio::resources::resource_explorer& manager)
-  {
-    for (auto& palette_info : palettes)
-    {
-      auto raw_palette = manager.load_file(palette_info);
-      auto result = (std::filesystem::relative(palette_info.folder_path, manager.get_search_path()) / palette_info.filename).string();
-
-      if (content::pal::is_earthsiege_pal(*raw_palette.second))
-      {
-        std::vector<content::pal::palette> temp;
-        temp.emplace_back().colours = content::pal::get_earthsiege_pal(*raw_palette.second);
-        loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, std::move(temp)));
-      }
-      else if (content::pal::is_phoenix_pal(*raw_palette.second))
-      {
-        loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, content::pal::get_ppl_data(*raw_palette.second)));
-      }
-      else if (content::pal::is_microsoft_pal(*raw_palette.second))
-      {
-        std::vector<content::pal::palette> temp;
-        temp.emplace_back().colours = content::pal::get_pal_data(*raw_palette.second);
-
-        loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, std::move(temp)));
-      }
-    }
   }
 
   template<typename RowType>
@@ -618,17 +333,17 @@ namespace studio::views
       }
     };
 
-    std::vector<studio::resources::file_info> palettes;
-
     const auto pal_extensions = this->context.actions.get_extensions_by_category("all_palettes");
 
-    palettes = explorer.find_files(explorer.get_archive_path(info.folder_path), pal_extensions);
+    auto palettes = explorer.find_files(explorer.get_archive_path(info.folder_path), pal_extensions);
 
     auto all_palettes = explorer.find_files(pal_extensions);
 
     studio::resources::resource_explorer::merge_results(palettes, all_palettes);
 
-    load_palettes(palettes, explorer);
+    palette_data.load_palettes(explorer, palettes);
+
+    auto& [sort_order, loaded_palettes] = palette_data;
 
     auto bmp_data = load_image_data(info, image_stream);
     image_type = bmp_data.first;
@@ -649,7 +364,7 @@ namespace studio::views
           auto& pal = temp.emplace_back();
           pal.colours = std::move(data.colours);
 
-          loaded_palettes.emplace(sort_order.emplace_back("Internal"), std::make_pair(info, std::move(temp)));
+          palette_data.loaded_palettes.emplace(palette_data.sort_order.emplace_back("Internal"), std::make_pair(info, std::move(temp)));
         }
       },
         bmp_data.second);
@@ -675,7 +390,7 @@ namespace studio::views
       {
         return false;
       }
-      return (a == "Internal") || (a == auto_generated_name) || loaded_palettes.at(a).second.size() < loaded_palettes.at(b).second.size();
+      return (a == "Internal") || (a == auto_generated_name) || palette_data.loaded_palettes.at(a).second.size() < palette_data.loaded_palettes.at(b).second.size();
     });
 
     if (!original_pixels.empty())
@@ -695,7 +410,7 @@ namespace studio::views
     {
       create_image(loaded_image,
         original_pixels.at(selected_bitmap_index),
-        loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
+        palette_data.loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours);
 
       if (create_new_image)
       {
@@ -711,12 +426,12 @@ namespace studio::views
 
     if (!original_pixels.empty())
     {
-      const auto& selected_colours = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
+      const auto& selected_colours = palette_data.loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
 
       auto fresh_image = remap_image(
         colour_strategy(strategy),
         original_pixels.at(selected_bitmap_index),
-        loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+        palette_data.loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
         selected_colours);
 
       num_unique_colours = get_unique_colours(fresh_image.pixels);
@@ -757,15 +472,15 @@ namespace studio::views
     window.clear();
     window.draw(sprite);
 
-    if (!loaded_palettes.empty())
+    if (!palette_data.loaded_palettes.empty())
     {
       auto& [selected_palette_name, selected_palette_index, default_palette_name, default_palette_index, selected_bitmap_index] = selection_state;
       ImGui::Begin("Palettes");
 
       auto child_count = 0;
-      for (auto& key : sort_order)
+      for (auto& key : palette_data.sort_order)
       {
-        auto& [file_info, value] = loaded_palettes.at(key);
+        auto& [file_info, value] = palette_data.loaded_palettes.at(key);
 
         if (value.size() == 1)
         {
@@ -930,12 +645,12 @@ namespace studio::views
           std::filesystem::create_directories(export_path);
           std::basic_ofstream<std::byte> output(export_path / new_file_name, std::ios::binary);
 
-          const auto& colours = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
+          const auto& colours = palette_data.loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
 
           auto fresh_image = remap_image(
             colour_strategy(strategy),
             original_pixels.at(selected_bitmap_index),
-            loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+            palette_data.loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
             colours);
 
           content::bmp::write_bmp_data(output, colours, narrow(fresh_image.pixels), width, height, fresh_image.bit_depth);
@@ -954,12 +669,12 @@ namespace studio::views
           std::filesystem::create_directories(export_path);
           std::basic_ofstream<std::byte> output(export_path / new_file_name, std::ios::binary);
 
-          const auto& selected_palette = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index);
+          const auto& selected_palette = palette_data.loaded_palettes.at(selected_palette_name).second.at(selected_palette_index);
 
           auto fresh_image = remap_image(
             colour_strategy(strategy),
             original_pixels.at(selected_bitmap_index),
-            loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+            palette_data.loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
             selected_palette.colours);
 
           content::bmp::write_pbmp_data(output, width, height, selected_palette.colours, narrow(fresh_image.pixels), selected_palette.index);
@@ -993,7 +708,7 @@ namespace studio::views
               auto image_stream = context.explorer.load_file(shape_info);
               const auto [bmp_type, bmp_data] = load_image_data(image_stream.first,*image_stream.second);
 
-              const auto default_palette = detect_default_palette(bmp_data, shape_info, context.explorer, loaded_palettes);
+              const auto default_palette = detect_default_palette(bmp_data, shape_info, context.explorer, palette_data.loaded_palettes);
 
               std::visit([&](const auto& frames) {
                 using T = std::decay_t<decltype(frames)>;
@@ -1014,7 +729,7 @@ namespace studio::views
 
                   const auto& frame = frames.front();
 
-                  const auto& colours = loaded_palettes.at(palette_name).second.at(palette_index).colours;
+                  const auto& colours = palette_data.loaded_palettes.at(palette_name).second.at(palette_index).colours;
                   auto pixels = frame.pixels;
 
                   content::bmp::write_bmp_data(output, colours, pixels, frame.header.width, frame.header.height, 8);
@@ -1030,7 +745,7 @@ namespace studio::views
                   const auto& [palette_name, palette_index] = default_palette;
                   const auto& frame = frames.front();
 
-                  const auto& colours = loaded_palettes.at(palette_name).second.at(palette_index).colours;
+                  const auto& colours = palette_data.loaded_palettes.at(palette_name).second.at(palette_index).colours;
                   auto pixels = frame.pixels;
 
                   content::bmp::write_bmp_data(output, colours, pixels, frame.bmp_header.width, frame.bmp_header.height, 8);
@@ -1048,9 +763,9 @@ namespace studio::views
           std::filesystem::create_directories(export_path);
           std::basic_ofstream<std::byte> output(export_path / new_file_name, std::ios::binary);
 
-          const auto& colours = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
+          const auto& colours = palette_data.loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
           auto pixels = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index).pixels,
-            loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+            palette_data.loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
             colours);
 
           content::bmp::write_bmp_data(output, colours, narrow(pixels), width, height, 8);
@@ -1070,9 +785,9 @@ namespace studio::views
             std::filesystem::create_directories(export_path);
             std::ofstream output(export_path / new_file_name, std::ios::trunc);
 
-            const auto& colours = loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
+            const auto& colours = palette_data.loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
             auto indexes = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index).pixels,
-              loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
+              palette_data.loaded_palettes.at(default_palette_name).second.at(default_palette_index).colours,
               colours);
 
             nlohmann::ordered_json item_as_json;
@@ -1141,11 +856,11 @@ namespace studio::views
       ImGui::Text("%s", "Default Palette File: ");
       ImGui::SameLine();
 
-      int name_distance = std::distance(loaded_palettes.begin(), loaded_palettes.find(default_palette_name));
+      int name_distance = std::distance(palette_data.loaded_palettes.begin(), palette_data.loaded_palettes.find(default_palette_name));
 
       if (ImGui::Combo(
             "", (&name_distance), [](void*data, int idx, const char**out_text) -> bool {
-              auto* real_data = reinterpret_cast<decltype(loaded_palettes)*>(data);
+              auto* real_data = reinterpret_cast<decltype(palette_data.loaded_palettes)*>(data);
               auto it = real_data->begin();
               std::advance(it, idx);
               if (it != real_data->end())
@@ -1161,14 +876,14 @@ namespace studio::views
                 return false;
               }
             },
-            reinterpret_cast<void*>(&loaded_palettes),
-            loaded_palettes.size()))
+            reinterpret_cast<void*>(&palette_data.loaded_palettes),
+            palette_data.loaded_palettes.size()))
       {
-        auto new_palette = loaded_palettes.begin();
+        auto new_palette = palette_data.loaded_palettes.begin();
 
         std::advance(new_palette, name_distance);
 
-        if (new_palette != loaded_palettes.end())
+        if (new_palette != palette_data.loaded_palettes.end())
         {
           auto old_name = default_palette_name;
           default_palette_name = new_palette->first;
@@ -1196,7 +911,7 @@ namespace studio::views
       auto old_index = default_palette_index;
       if (ImGui::Combo(
             "  ", reinterpret_cast<int*>(&default_palette_index), [](void*data, int idx, const char**out_text) -> bool {
-              auto* real_data = reinterpret_cast<decltype(loaded_palettes)::value_type::second_type*>(data);
+              auto* real_data = reinterpret_cast<decltype(palette_data.loaded_palettes)::value_type::second_type*>(data);
               auto it = real_data->second.begin();
               std::advance(it, idx);
               if (it != real_data->second.end())
@@ -1212,8 +927,8 @@ namespace studio::views
                 return false;
               }
             },
-            reinterpret_cast<void*>(&loaded_palettes.at(default_palette_name)),
-            loaded_palettes.at(default_palette_name).second.size()))
+            reinterpret_cast<void*>(&palette_data.loaded_palettes.at(default_palette_name)),
+            palette_data.loaded_palettes.at(default_palette_name).second.size()))
       {
         if (selected_palette_index == old_index)
         {
@@ -1237,7 +952,7 @@ namespace studio::views
         auto image_stream = context.explorer.load_file(context.file_info);
         const auto [bmp_type, bmp_data] = load_image_data(image_stream.first, *image_stream.second);
 
-        const auto [name, index]  = detect_default_palette(bmp_data, context.file_info, context.explorer, loaded_palettes, true);
+        const auto [name, index]  = detect_default_palette(bmp_data, context.file_info, context.explorer, palette_data.loaded_palettes, true);
         selected_palette_name = default_palette_name = name;
         selected_palette_index = default_palette_index = index;
         set_default_palette(context.explorer, context.file_info, "");
