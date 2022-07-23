@@ -10,6 +10,7 @@
 #include "resources/resource_explorer.hpp"
 #include "content/pal/palette.hpp"
 #include "content/bmp/bitmap.hpp"
+#include "content/json_boost.hpp"
 
 namespace studio::views
 {
@@ -36,6 +37,22 @@ namespace studio::views
 
   std::string get_palette_key(const studio::resources::resource_explorer& explorer,
     const studio::resources::file_info& file);
+
+  void set_default_palette(const studio::resources::resource_explorer& manager,
+    const std::string& key,
+    std::string_view name,
+    nlohmann::json& settings,
+    std::optional<std::size_t> index = std::nullopt);
+
+  void set_default_palette(const studio::resources::resource_explorer& manager,
+    const std::string& key,
+    std::string_view name,
+    std::optional<std::size_t> index = std::nullopt);
+
+  void set_default_palette(const studio::resources::resource_explorer& manager,
+    const studio::resources::file_info& file,
+    std::string_view name,
+    std::optional<std::size_t> index = std::nullopt);
 
   std::pair<bitmap_type, bmp_variant> load_image_data_for_pal_detection(const studio::resources::file_info& info, std::basic_istream<std::byte>& image_stream);
 

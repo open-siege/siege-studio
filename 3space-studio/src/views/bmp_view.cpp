@@ -96,67 +96,6 @@ namespace studio::views
       bmp_data);
   }
 
-  void set_default_palette(const studio::resources::resource_explorer& manager,
-    const std::string& key,
-    std::string_view name,
-    nlohmann::json& settings,
-    std::optional<std::size_t> index = std::nullopt)
-  {
-    try
-    {
-      const auto settings_path = manager.get_search_path() / "palettes.settings.json";
-
-      if (name.empty())
-      {
-        settings.erase(key);
-      }
-      else if (index.has_value() && index.value() != 0)
-      {
-        settings[key] = { {"name", name}, {"index", index.value()} };
-      }
-      else
-      {
-        settings[key] = name;
-      }
-
-      std::ofstream new_file(settings_path, std::ios::trunc);
-      new_file << std::setw(4) << settings;
-    }
-    catch (...)
-    {
-      return;
-    }
-  }
-
-  auto load_settings(const studio::resources::resource_explorer& manager)
-  {
-    const auto settings_path = manager.get_search_path() / "palettes.settings.json";
-    auto settings = std::filesystem::exists(settings_path) ? nlohmann::json::parse(std::ifstream(settings_path)) : nlohmann::json{};
-    return settings;
-  }
-
-  auto generate_settings_key(const studio::resources::resource_explorer& manager, const studio::resources::file_info& file)
-  {
-    return (std::filesystem::relative(file.folder_path, manager.get_search_path()) / file.filename).string();
-  }
-
-  void set_default_palette(const studio::resources::resource_explorer& manager,
-    const std::string& key,
-    std::string_view name,
-    std::optional<std::size_t> index = std::nullopt)
-  {
-    auto settings =load_settings(manager);
-    set_default_palette(manager, key, name, settings, index);
-  }
-
-  void set_default_palette(const studio::resources::resource_explorer& manager,
-    const studio::resources::file_info& file,
-    std::string_view name,
-    std::optional<std::size_t> index = std::nullopt)
-  {
-      set_default_palette(manager, generate_settings_key(manager, file), name, index);
-  }
-
   std::vector<content::pal::colour> get_default_colours()
   {
     std::vector<content::pal::colour> default_colours;
