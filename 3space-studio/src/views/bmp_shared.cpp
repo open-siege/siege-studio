@@ -10,7 +10,7 @@ namespace studio::views
     for (auto& palette_info : palettes)
     {
       auto raw_palette = manager.load_file(palette_info);
-      auto result = (std::filesystem::relative(palette_info.folder_path, manager.get_search_path()) / palette_info.filename).string();
+      auto result = get_palette_key(manager, palette_info);
 
       if (content::pal::is_earthsiege_pal(*raw_palette.second))
       {
@@ -116,6 +116,62 @@ namespace studio::views
     const studio::resources::file_info& file)
   {
     return (std::filesystem::relative(file.folder_path, explorer.get_search_path()) / file.filename).string();
+  }
+
+  void set_default_palette(const studio::resources::resource_explorer& manager,
+    const std::string& key,
+    std::string_view name,
+    nlohmann::json& settings,
+    std::optional<std::size_t> index)
+  {
+    try
+    {
+      const auto settings_path = manager.get_search_path() / "palettes.settings.json";
+
+      if (name.empty())
+      {
+        settings.erase(key);
+      }
+      else if (index.has_value() && index.value() != 0)
+      {
+        settings[key] = { {"name", name}, {"index", index.value()} };
+      }
+      else
+      {
+        settings[key] = name;
+      }
+
+      std::ofstream new_file(settings_path, std::ios::trunc);
+      new_file << std::setw(4) << settings;
+    }
+    catch (...)
+    {
+      return;
+    }
+  }
+
+  auto load_settings(const studio::resources::resource_explorer& manager)
+  {
+    const auto settings_path = manager.get_search_path() / "palettes.settings.json";
+    auto settings = std::filesystem::exists(settings_path) ? nlohmann::json::parse(std::ifstream(settings_path)) : nlohmann::json{};
+    return settings;
+  }
+
+  void set_default_palette(const studio::resources::resource_explorer& manager,
+    const std::string& key,
+    std::string_view name,
+    std::optional<std::size_t> index)
+  {
+    auto settings = load_settings(manager);
+    set_default_palette(manager, key, name, settings, index);
+  }
+
+  void set_default_palette(const studio::resources::resource_explorer& manager,
+    const studio::resources::file_info& file,
+    std::string_view name,
+    std::optional<std::size_t> index)
+  {
+    set_default_palette(manager, get_palette_key(manager, file), name, index);
   }
 
   std::pair<std::string_view, std::size_t> detect_default_palette(

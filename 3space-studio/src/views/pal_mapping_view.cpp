@@ -83,6 +83,36 @@ namespace studio::views
       table->AppendItem(strings);
     }
 
+    table->Bind(wxEVT_DATAVIEW_ITEM_VALUE_CHANGED, [&](wxDataViewEvent& event) {
+      auto* model = event.GetModel();
+
+      wxVariant default_palette_key;
+      model->GetValue(default_palette_key, event.GetItem(), 2);
+
+      auto palette_iter = palette_data.loaded_palettes.find(default_palette_key.GetString().utf8_string());
+
+      if (palette_iter != palette_data.loaded_palettes.end())
+      {
+        wxVariant folder_path;
+        model->GetValue(folder_path, event.GetItem(), 0);
+
+        wxVariant filename;
+        model->GetValue(filename, event.GetItem(), 1);
+
+        wxVariant default_palette_index;
+        model->GetValue(default_palette_index, event.GetItem(), 3);
+
+        if (default_palette_index.GetInteger() >= palette_iter->second.second.size())
+        {
+          default_palette_index = "0";
+          model->SetValue(default_palette_index, event.GetItem(), 3);
+        }
+
+        auto file_path = std::filesystem::path(folder_path.GetString().utf8_string()) / filename.GetString().utf8_string();
+        set_default_palette(context.explorer, file_path.string(), default_palette_key.GetString().utf8_string(), default_palette_index.GetInteger());
+      }
+    });
+
     auto sizer = std::make_unique<wxBoxSizer>(wxVERTICAL);
     sizer->Add(table.release(), 15, wxEXPAND, 0);
 
