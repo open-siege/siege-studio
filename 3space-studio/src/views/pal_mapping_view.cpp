@@ -1,4 +1,5 @@
 #include <utility>
+#include <execution>
 
 #include <wx/treelist.h>
 
@@ -26,23 +27,41 @@ namespace studio::views
     table->AppendColumn("Selected Palette Index", wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxCOL_RESIZABLE | wxCOL_SORTABLE);
     table->AppendColumn("Actions", wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxCOL_RESIZABLE | wxCOL_SORTABLE);
 
-    auto extensions = context.actions.get_extensions_by_category("all_images");
-    auto files = context.explorer.find_files(extensions);
+    auto images = context.explorer.find_files(context.actions.get_extensions_by_category("all_images"));
+
+    auto palettes = context.explorer.find_files(context.actions.get_extensions_by_category("all_palettes"));
+
+    palette_data.load_palettes(context.explorer, palettes);
 
     auto root = table->GetRootItem();
 
+    std::vector<std::array<std::string, 7>> loaded_data(images.size());
 
-    for (const auto& file : files)
+    std::transform(std::execution::par, images.begin(), images.end(), loaded_data.begin(), [&](const auto& image) {
+      auto image_stream = context.explorer.load_file(image);
+
+      auto bmp_data = load_image_data_for_pal_detection(image, *image_stream.second);
+
+      auto default_palette = detect_default_palette(bmp_data.second, image, context.explorer, palette_data.loaded_palettes);
+
+      return std::array<std::string, 7>{{ image.folder_path.string(),
+            image.filename.string(),
+            std::string(default_palette.first),
+            std::to_string(default_palette.second),
+            std::string(default_palette.first),
+            std::to_string(default_palette.second),
+            ""}};
+    });
+
+
+    for (auto& strings : loaded_data)
     {
-      auto new_id = table->AppendItem(root, file.folder_path.string(), -1, -1);
+      auto new_id = table->AppendItem(root, std::move(strings[0]), -1, -1);
 
-
-      table->SetItemText(new_id, 1, file.filename.string());
-      table->SetItemText(new_id, 2, "Default");
-      table->SetItemText(new_id, 3, "0");
-      table->SetItemText(new_id, 4, "Default");
-      table->SetItemText(new_id, 5, "0");
-      table->SetItemText(new_id, 6, "");
+      for (auto i = 1; i < strings.size(); ++i)
+      {
+        table->SetItemText(new_id, i, std::move(strings[i]));
+      }
     }
 
     auto sizer = std::make_unique<wxBoxSizer>(wxVERTICAL);
