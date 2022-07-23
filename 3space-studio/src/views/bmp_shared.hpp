@@ -34,6 +34,9 @@ namespace studio::views
 
   constexpr static auto auto_generated_name = std::string_view("Auto-generated");
 
+  std::string get_palette_key(const studio::resources::resource_explorer& explorer,
+    const studio::resources::file_info& file);
+
   std::pair<bitmap_type, bmp_variant> load_image_data_for_pal_detection(const studio::resources::file_info& info, std::basic_istream<std::byte>& image_stream);
 
   std::pair<bitmap_type, bmp_variant> load_image_data(const studio::resources::file_info& info, std::basic_istream<std::byte>& image_stream);

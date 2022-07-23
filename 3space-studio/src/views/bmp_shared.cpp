@@ -112,6 +112,12 @@ namespace studio::views
     }
   }
 
+  std::string get_palette_key(const studio::resources::resource_explorer& explorer,
+    const studio::resources::file_info& file)
+  {
+    return (std::filesystem::relative(file.folder_path, explorer.get_search_path()) / file.filename).string();
+  }
+
   std::pair<std::string_view, std::size_t> detect_default_palette(
     const bmp_variant& data,
     const studio::resources::file_info& file,
@@ -213,7 +219,7 @@ namespace studio::views
 
             if (possible_palette != results.end())
             {
-              auto key = (std::filesystem::relative((*possible_palette)->folder_path, manager.get_search_path()) / (*possible_palette)->filename).string();
+              auto key = get_palette_key(manager, *(*possible_palette));
 
               if (auto entry = loaded_palettes.find(key); entry != loaded_palettes.end())
               {
@@ -224,7 +230,7 @@ namespace studio::views
             {
               for (auto result : results)
               {
-                auto pal_key = (std::filesystem::relative(result->folder_path, manager.get_search_path()) / result->filename).string();
+                auto pal_key = get_palette_key(manager, *result);
 
                 if (auto entry = loaded_palettes.find(pal_key); entry != loaded_palettes.end())
                 {
