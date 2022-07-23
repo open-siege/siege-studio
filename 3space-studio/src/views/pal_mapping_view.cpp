@@ -1,7 +1,7 @@
 #include <utility>
 #include <execution>
 
-#include <wx/treelist.h>
+#include <wx/dataview.h>
 
 #include "pal_mapping_view.hpp"
 #include "utility.hpp"
@@ -12,30 +12,29 @@ namespace studio::views
 {
   pal_mapping_view::pal_mapping_view(view_context context)
     : context(std::move(context))
-    {
-
-    }
+  {
+  }
 
   void pal_mapping_view::setup_view(wxWindow& parent)
   {
-    auto table = std::unique_ptr<wxTreeListCtrl>(new wxTreeListCtrl(&parent, wxID_ANY));
-    table->AppendColumn("Image Folder", wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxCOL_RESIZABLE | wxCOL_SORTABLE);
-    table->AppendColumn("Image", wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxCOL_RESIZABLE | wxCOL_SORTABLE);
-    table->AppendColumn("Default Palette", wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxCOL_RESIZABLE | wxCOL_SORTABLE);
-    table->AppendColumn("Default Palette Index", wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxCOL_RESIZABLE | wxCOL_SORTABLE);
-    table->AppendColumn("Selected Palette", wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxCOL_RESIZABLE | wxCOL_SORTABLE);
-    table->AppendColumn("Selected Palette Index", wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxCOL_RESIZABLE | wxCOL_SORTABLE);
-    table->AppendColumn("Actions", wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxCOL_RESIZABLE | wxCOL_SORTABLE);
-
     auto images = context.explorer.find_files(context.actions.get_extensions_by_category("all_images"));
 
     auto palettes = context.explorer.find_files(context.actions.get_extensions_by_category("all_palettes"));
 
     palette_data.load_palettes(context.explorer, palettes);
 
-    auto root = table->GetRootItem();
+    wxArrayString available_palettes;
+    available_palettes.reserve(palettes.size() + 2);
 
-    std::vector<std::array<std::string, 7>> loaded_data(images.size());
+    available_palettes.Add(std::string(auto_generated_name));
+    available_palettes.Add("Internal");
+
+    for (auto& palette : palettes)
+    {
+      available_palettes.Add(get_palette_key(context.explorer, palette));
+    }
+
+    std::vector<wxVector<wxVariant>> loaded_data(images.size());
 
     std::transform(std::execution::par, images.begin(), images.end(), loaded_data.begin(), [&](const auto& image) {
       auto image_stream = context.explorer.load_file(image);
@@ -44,24 +43,44 @@ namespace studio::views
 
       auto default_palette = detect_default_palette(bmp_data.second, image, context.explorer, palette_data.loaded_palettes);
 
-      return std::array<std::string, 7>{{ image.folder_path.string(),
-            image.filename.string(),
-            std::string(default_palette.first),
-            std::to_string(default_palette.second),
-            std::string(default_palette.first),
-            std::to_string(default_palette.second),
-            ""}};
+      wxVector<wxVariant> results;
+      results.reserve(7);
+
+      results.push_back(image.folder_path.string());
+      results.push_back(image.filename.string());
+      results.push_back(std::string(default_palette.first));
+      results.push_back(std::to_string(default_palette.second));
+      results.push_back(std::string(default_palette.first));
+      results.push_back(std::to_string(default_palette.second));
+      results.push_back("");
+      return results;
     });
+
+    auto table = std::unique_ptr<wxDataViewListCtrl>(new wxDataViewListCtrl(&parent, wxID_ANY));
+    table->AppendTextColumn("Image Folder", wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
+    table->AppendTextColumn("Image", wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
+
+    auto selectionColumn = std::make_unique<wxDataViewColumn>("Default Palette",
+      std::make_unique<wxDataViewChoiceRenderer>(available_palettes).release(),
+      table->GetColumnCount(),
+      wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
+    table->AppendColumn(selectionColumn.release());
+
+    table->AppendTextColumn("Default Palette Index", wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
+
+    selectionColumn = std::make_unique<wxDataViewColumn>("Selected Palette",
+      std::make_unique<wxDataViewChoiceRenderer>(available_palettes).release(),
+      table->GetColumnCount(),
+      wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
+    table->AppendColumn(selectionColumn.release());
+
+    table->AppendTextColumn("Selected Palette Index", wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
+    table->AppendTextColumn("Actions", wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
 
 
     for (auto& strings : loaded_data)
     {
-      auto new_id = table->AppendItem(root, std::move(strings[0]), -1, -1);
-
-      for (auto i = 1; i < strings.size(); ++i)
-      {
-        table->SetItemText(new_id, i, std::move(strings[i]));
-      }
+      table->AppendItem(strings);
     }
 
     auto sizer = std::make_unique<wxBoxSizer>(wxVERTICAL);
