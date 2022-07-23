@@ -472,7 +472,7 @@ int main(int argc, char** argv)
   try
   {
     auto archive = studio::views::create_default_resource_explorer();
-    auto view_factory = studio::views::create_default_view_factory();
+    auto view_factory = studio::views::create_default_view_factory(archive);
 
     view_factory.get_actions().get_extensions_by_category = [&](auto path) {
       return view_factory.get_extensions_by_category(path);

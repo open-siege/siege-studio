@@ -6,7 +6,7 @@
 
 namespace studio::views
 {
-  view_factory create_default_view_factory();
+  view_factory create_default_view_factory(const studio::resources::resource_explorer& explorer);
 
   studio::resources::resource_explorer create_default_resource_explorer();
 }

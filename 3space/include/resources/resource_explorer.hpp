@@ -30,6 +30,8 @@ namespace studio::resources
 
     void add_archive_type(std::string extension, std::unique_ptr<studio::resources::archive_plugin> archive_type, std::optional<nonstd::span<std::string_view>> explicit_extensions = std::nullopt);
 
+    std::vector<std::string_view> get_archive_extensions() const;
+
     std::vector<studio::resources::file_info> find_files(const std::filesystem::path& new_search_path, const std::vector<std::string_view>& extensions) const;
 
     std::vector<studio::resources::file_info> find_files(const std::vector<std::string_view>& extensions) const;

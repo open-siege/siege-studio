@@ -21,6 +21,22 @@ namespace studio::resources
     }
   }
 
+  std::vector<std::string_view> resource_explorer::get_archive_extensions() const
+  {
+    std::vector<std::string_view> extensions;
+    extensions.reserve(archive_types.size());
+
+    for (auto &[key, value] : archive_types)
+    {
+      if (extensions.empty() || extensions.back() != key)
+      {
+        extensions.emplace_back(key);
+      }
+    }
+
+    return extensions;
+  }
+
   std::vector<studio::resources::file_info> resource_explorer::find_files(const std::filesystem::path& new_search_path, const std::vector<std::string_view>& extensions) const
   {
     std::stringstream key;
