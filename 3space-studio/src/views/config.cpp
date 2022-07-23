@@ -30,7 +30,7 @@ namespace dio
 
 namespace studio::views
 {
-  view_factory create_default_view_factory()
+  view_factory create_default_view_factory(const studio::resources::resource_explorer& explorer)
   {
     view_factory view_factory;
     view_factory.add_file_type(content::dts::darkstar::is_darkstar_dts, [](auto context, auto& stream) -> studio_view { return graphics_view(darkstar_dts_view(context, stream)); });
@@ -129,7 +129,7 @@ namespace studio::views
     view_factory.add_extension_category("All Supported Formats", { "ALL" }, true);
     view_factory.add_extension_category("All Palettes", { ".ppl", ".ipl", ".pal", ".dpl" }, true);
     view_factory.add_extension_category("All Images", { ".bmp", ".dib", ".pba", ".dbm", ".dba", ".db0", ".db1", ".db2", ".hba", ".hb0", ".hb1", ".hb2", ".jpg", ".gif", ".png", ".tga" }, true);
-    view_factory.add_extension_category("All Archives", { ".vol", ".rmf", ".rbx", ".tbv", ".mis", ".dyn" }, true);
+    view_factory.add_extension_category("All Archives", explorer.get_archive_extensions(), true);
     view_factory.add_extension_category("All 3D Models", { ".dts" }, true);
     view_factory.add_extension_category("all_palettes", view_factory.get_extensions_by_category("All Palettes"), false);
     view_factory.add_extension_category("all_images", view_factory.get_extensions_by_category("All Images"), false);
