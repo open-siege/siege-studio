@@ -69,6 +69,11 @@ namespace studio::views
     const studio::resources::file_info& file,
     const studio::resources::resource_explorer& manager,
     const palette_map& loaded_palettes);
+
+  std::optional<std::pair<std::string_view, std::size_t>> selected_palette_from_settings(
+    const studio::resources::file_info& file,
+    const studio::resources::resource_explorer& manager,
+    const palette_map& loaded_palettes);
 }
 
 #endif// OPEN_SIEGE_BMP_SHARED_HPP
