@@ -108,8 +108,14 @@ namespace studio::views
           model->SetValue(default_palette_index, event.GetItem(), 3);
         }
 
-        auto file_path = std::filesystem::path(folder_path.GetString().utf8_string()) / filename.GetString().utf8_string();
-        set_default_palette(context.explorer, file_path.string(), default_palette_key.GetString().utf8_string(), default_palette_index.GetInteger());
+        studio::resources::file_info info;
+        info.filename = filename.GetString().utf8_string();
+        info.folder_path = folder_path.GetString().utf8_string();
+
+        set_default_palette(context.explorer,
+          get_palette_key(context.explorer, info),
+          default_palette_key.GetString().utf8_string(),
+          default_palette_index.GetInteger());
       }
     });
 
