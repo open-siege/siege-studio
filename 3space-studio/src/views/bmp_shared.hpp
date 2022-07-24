@@ -54,6 +54,22 @@ namespace studio::views
     std::string_view name,
     std::optional<std::size_t> index = std::nullopt);
 
+  void set_selected_palette(const studio::resources::resource_explorer& manager,
+    const std::string& key,
+    std::string_view name,
+    nlohmann::json& settings,
+    std::optional<std::size_t> index = std::nullopt);
+
+  void set_selected_palette(const studio::resources::resource_explorer& manager,
+    const std::string& key,
+    std::string_view name,
+    std::optional<std::size_t> index = std::nullopt);
+
+  void set_selected_palette(const studio::resources::resource_explorer& manager,
+    const studio::resources::file_info& file,
+    std::string_view name,
+    std::optional<std::size_t> index = std::nullopt);
+
   std::pair<bitmap_type, bmp_variant> load_image_data_for_pal_detection(const studio::resources::file_info& info, std::basic_istream<std::byte>& image_stream);
 
   std::pair<bitmap_type, bmp_variant> load_image_data(const studio::resources::file_info& info, std::basic_istream<std::byte>& image_stream);

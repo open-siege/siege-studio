@@ -98,35 +98,56 @@ namespace studio::views
     table->Bind(wxEVT_DATAVIEW_ITEM_VALUE_CHANGED, [&](wxDataViewEvent& event) {
       auto* model = event.GetModel();
 
+      wxVariant folder_path;
+      model->GetValue(folder_path, event.GetItem(), 0);
+
+      wxVariant filename;
+      model->GetValue(filename, event.GetItem(), 1);
+
       wxVariant default_palette_key;
       model->GetValue(default_palette_key, event.GetItem(), 2);
 
+      wxVariant default_palette_index;
+      model->GetValue(default_palette_index, event.GetItem(), 3);
+
+
+      wxVariant selected_palette_key;
+      model->GetValue(selected_palette_key, event.GetItem(), 4);
+
+      wxVariant selected_palette_index;
+      model->GetValue(selected_palette_index, event.GetItem(), 5);
+
       auto palette_iter = palette_data.loaded_palettes.find(default_palette_key.GetString().utf8_string());
+
+      studio::resources::file_info info;
+      info.filename = filename.GetString().utf8_string();
+      info.folder_path = folder_path.GetString().utf8_string();
 
       if (palette_iter != palette_data.loaded_palettes.end())
       {
-        wxVariant folder_path;
-        model->GetValue(folder_path, event.GetItem(), 0);
-
-        wxVariant filename;
-        model->GetValue(filename, event.GetItem(), 1);
-
-        wxVariant default_palette_index;
-        model->GetValue(default_palette_index, event.GetItem(), 3);
-
         if (default_palette_index.GetInteger() >= palette_iter->second.second.size())
         {
           default_palette_index = palette_iter->second.second.empty() ? std::string("0") : std::to_string(palette_iter->second.second.size() - 1);
           model->SetValue(default_palette_index, event.GetItem(), 3);
         }
-
-        studio::resources::file_info info;
-        info.filename = filename.GetString().utf8_string();
-        info.folder_path = folder_path.GetString().utf8_string();
-
         set_default_palette(context.explorer,info,
           default_palette_key.GetString().utf8_string(),
           default_palette_index.GetInteger());
+      }
+
+      palette_iter = palette_data.loaded_palettes.find(default_palette_key.GetString().utf8_string());
+
+      if (palette_iter != palette_data.loaded_palettes.end())
+      {
+        if (selected_palette_index.GetInteger() >= palette_iter->second.second.size())
+        {
+          selected_palette_index = palette_iter->second.second.empty() ? std::string("0") : std::to_string(palette_iter->second.second.size() - 1);
+          model->SetValue(selected_palette_index, event.GetItem(), 5);
+        }
+
+        set_selected_palette(context.explorer,info,
+          selected_palette_key.GetString().utf8_string(),
+          selected_palette_index.GetInteger());
       }
     });
 
