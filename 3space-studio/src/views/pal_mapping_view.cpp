@@ -43,6 +43,8 @@ namespace studio::views
 
       auto default_palette = detect_default_palette(bmp_data.second, image, context.explorer, palette_data.loaded_palettes);
 
+      auto selected_palette = selected_palette_from_settings(image, context.explorer, palette_data.loaded_palettes);
+
       wxVector<wxVariant> results;
       results.reserve(7);
 
@@ -50,8 +52,18 @@ namespace studio::views
       results.push_back(image.filename.string());
       results.push_back(std::string(default_palette.first));
       results.push_back(std::to_string(default_palette.second));
-      results.push_back(std::string(default_palette.first));
-      results.push_back(std::to_string(default_palette.second));
+
+      if (selected_palette.has_value())
+      {
+        results.push_back(std::string(selected_palette.value().first));
+        results.push_back(std::to_string(selected_palette.value().second));
+      }
+      else
+      {
+        results.push_back(std::string(default_palette.first));
+        results.push_back(std::to_string(default_palette.second));
+      }
+
       results.push_back("");
       return results;
     });
@@ -112,8 +124,7 @@ namespace studio::views
         info.filename = filename.GetString().utf8_string();
         info.folder_path = folder_path.GetString().utf8_string();
 
-        set_default_palette(context.explorer,
-          get_palette_key(context.explorer, info),
+        set_default_palette(context.explorer,info,
           default_palette_key.GetString().utf8_string(),
           default_palette_index.GetInteger());
       }

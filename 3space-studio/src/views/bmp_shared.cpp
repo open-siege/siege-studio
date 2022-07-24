@@ -118,11 +118,12 @@ namespace studio::views
     return (std::filesystem::relative(file.folder_path, explorer.get_search_path()) / file.filename).string();
   }
 
-  void set_default_palette(const studio::resources::resource_explorer& manager,
+  void set_palette_values(const studio::resources::resource_explorer& manager,
     const std::string& key,
     std::string_view name,
     nlohmann::json& settings,
-    std::optional<std::size_t> index)
+    std::optional<std::size_t> index,
+    std::pair<std::string_view, std::string_view> keys)
   {
     try
     {
@@ -134,7 +135,7 @@ namespace studio::views
       }
       else if (index.has_value() && index.value() != 0)
       {
-        settings[key] = { {"name", name}, {"index", index.value()} };
+        settings[key] = { {keys.first, name}, {keys.second, index.value()} };
       }
       else
       {
@@ -148,6 +149,24 @@ namespace studio::views
     {
       return;
     }
+  }
+
+  void set_selected_palette(const studio::resources::resource_explorer& manager,
+    const std::string& key,
+    std::string_view name,
+    nlohmann::json& settings,
+    std::optional<std::size_t> index)
+  {
+    set_palette_values(manager, key, name, settings, index, std::make_pair("selectedPaletteName", "selectedPaletteName"));
+  }
+
+  void set_default_palette(const studio::resources::resource_explorer& manager,
+    const std::string& key,
+    std::string_view name,
+    nlohmann::json& settings,
+    std::optional<std::size_t> index)
+  {
+    set_palette_values(manager, key, name, settings, index, std::make_pair("defaultPaletteName", "defaultPaletteIndex"));
   }
 
   auto load_settings(const studio::resources::resource_explorer& manager)
@@ -166,12 +185,29 @@ namespace studio::views
     set_default_palette(manager, key, name, settings, index);
   }
 
+  void set_selected_palette(const studio::resources::resource_explorer& manager,
+    const std::string& key,
+    std::string_view name,
+    std::optional<std::size_t> index)
+  {
+    auto settings = load_settings(manager);
+    set_selected_palette(manager, key, name, settings, index);
+  }
+
   void set_default_palette(const studio::resources::resource_explorer& manager,
     const studio::resources::file_info& file,
     std::string_view name,
     std::optional<std::size_t> index)
   {
     set_default_palette(manager, get_palette_key(manager, file), name, index);
+  }
+
+  void set_selected_palette(const studio::resources::resource_explorer& manager,
+    const studio::resources::file_info& file,
+    std::string_view name,
+    std::optional<std::size_t> index)
+  {
+    set_selected_palette(manager, get_palette_key(manager, file), name, index);
   }
 
   std::pair<std::string_view, std::size_t> detect_default_palette(
@@ -337,6 +373,7 @@ namespace studio::views
         {
           auto value = settings[key];
 
+          // Keeping the old name of the property for short-lived backwards compatibility
           if (value.type() == nlohmann::json::value_t::object && value.contains("name"))
           {
             if (value.contains("index"))
@@ -345,6 +382,15 @@ namespace studio::views
             }
 
             value = value["name"];
+          }
+          else if (value.type() == nlohmann::json::value_t::object && value.contains("defaultPaletteName"))
+          {
+            if (value.contains("defaultPaletteIndex"))
+            {
+              index = value["defaultPaletteIndex"];
+            }
+
+            value = value["defaultPaletteName"];
           }
           else if (value.type() != nlohmann::json::value_t::string)
           {
@@ -364,13 +410,68 @@ namespace studio::views
         return false;
       };
 
-      if (get_value((std::filesystem::relative(file.folder_path, manager.get_search_path()) / file.filename).string()) ||
-          get_value("default"))
+      if (get_value(get_palette_key(manager, file)) || get_value("default"))
       {
         return std::make_pair(name, index);
       }
 
       return std::nullopt;
+    }
+    catch (...)
+    {
+      return std::nullopt;
+    }
+  }
+
+  std::optional<std::pair<std::string_view, std::size_t>> selected_palette_from_settings(
+    const studio::resources::file_info& file,
+    const studio::resources::resource_explorer& manager,
+    const palette_map& loaded_palettes)
+  {
+    const auto settings_path = manager.get_search_path() / "palettes.settings.json";
+
+    if (!std::filesystem::exists(settings_path))
+    {
+      return std::nullopt;
+    }
+
+    try
+    {
+      auto settings = nlohmann::json::parse(std::ifstream(settings_path));
+
+      const auto key = get_palette_key(manager, file);
+
+      if (settings.contains(key))
+      {
+        std::size_t index = 0;
+        std::string_view name;
+
+        auto value = settings[key];
+
+        if (value.type() == nlohmann::json::value_t::object && value.contains("selectedPaletteName"))
+        {
+          if (value.contains("selectedPaletteIndex"))
+          {
+            index = value["selectedPaletteIndex"];
+          }
+
+          value = value["selectedPaletteName"];
+        }
+        else if (value.type() != nlohmann::json::value_t::string)
+        {
+          return default_palette_from_settings(file, manager, loaded_palettes);
+        }
+
+        auto loaded_palette = loaded_palettes.find(std::string_view(value));
+
+        if (loaded_palette != loaded_palettes.end())
+        {
+          name = loaded_palette->first;
+          return std::make_pair(name, index);
+        }
+      }
+
+      return default_palette_from_settings(file, manager, loaded_palettes);
     }
     catch (...)
     {
