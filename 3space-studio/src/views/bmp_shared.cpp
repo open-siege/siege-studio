@@ -133,13 +133,37 @@ namespace studio::views
       {
         settings.erase(key);
       }
-      else if (index.has_value() && index.value() != 0)
+      else if (index.has_value())
       {
-        settings[key] = { {keys.first, name}, {keys.second, index.value()} };
+        if (settings.contains(key))
+        {
+          auto& value = settings[key];
+          // The previous code would save the default name by itself,
+          // so this logic compensates for that.
+          // However the default value may become the selected value if,
+          // that variant of the function is called
+          value = value.type() == nlohmann::json::value_t::object ? value : nlohmann::json{ { keys.first, value }};
+          value[std::string(keys.first)] = name;
+          value[std::string(keys.second)] = index.value();
+        }
+        else
+        {
+          settings[key] = { {keys.first, name}, {keys.second, index.value()} };
+        }
       }
       else
       {
-        settings[key] = name;
+        if (settings.contains(key))
+        {
+          // See above comment
+          auto& value = settings[key];
+          value = value.type() == nlohmann::json::value_t::object ? value : nlohmann::json{ { keys.first, value }};
+          value[std::string(keys.first)] = name;
+        }
+        else
+        {
+          settings[key] = { {keys.first, name} };
+        }
       }
 
       std::ofstream new_file(settings_path, std::ios::trunc);
@@ -157,7 +181,7 @@ namespace studio::views
     nlohmann::json& settings,
     std::optional<std::size_t> index)
   {
-    set_palette_values(manager, key, name, settings, index, std::make_pair("selectedPaletteName", "selectedPaletteName"));
+    set_palette_values(manager, key, name, settings, index, std::make_pair("selectedPaletteName", "selectedPaletteIndex"));
   }
 
   void set_default_palette(const studio::resources::resource_explorer& manager,
