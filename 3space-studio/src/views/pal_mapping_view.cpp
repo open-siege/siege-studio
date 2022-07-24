@@ -104,7 +104,7 @@ namespace studio::views
 
         if (default_palette_index.GetInteger() >= palette_iter->second.second.size())
         {
-          default_palette_index = "0";
+          default_palette_index = palette_iter->second.second.empty() ? std::string("0") : std::to_string(palette_iter->second.second.size() - 1);
           model->SetValue(default_palette_index, event.GetItem(), 3);
         }
 
