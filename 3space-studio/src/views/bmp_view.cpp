@@ -284,16 +284,14 @@ namespace studio::views
 
     auto [default_palette_name, default_palette_index] = detect_default_palette(bmp_data.second, info, explorer, loaded_palettes);
 
-    auto selected_palette = selected_palette_from_settings(info, explorer, loaded_palettes);
+    auto selected_palette = selected_palette_from_settings(info, explorer, loaded_palettes)
+                              .value_or(std::make_pair(default_palette_name, default_palette_index));
 
-    selection_state.selected_palette_name = selection_state.default_palette_name = default_palette_name;
-    selection_state.selected_palette_index = selection_state.default_palette_index = default_palette_index;
+    selection_state.default_palette_name = default_palette_name;
+    selection_state.default_palette_index = default_palette_index;
+    selection_state.selected_palette_name = selected_palette.first;
+    selection_state.selected_palette_index = selected_palette.second;
 
-    if (selected_palette.has_value())
-    {
-      selection_state.selected_palette_name = selected_palette.value().first;
-      selection_state.selected_palette_index = selected_palette.value().second;
-    }
 
     if (default_palette_name == "Internal")
     {
@@ -654,6 +652,10 @@ namespace studio::views
 
               const auto default_palette = detect_default_palette(bmp_data, shape_info, context.explorer, palette_data.loaded_palettes);
 
+              const auto selected_palette =
+                selected_palette_from_settings(shape_info, context.explorer, palette_data.loaded_palettes)
+                  .value_or(default_palette);
+
               std::visit([&](const auto& frames) {
                 using T = std::decay_t<decltype(frames)>;
 
@@ -669,14 +671,25 @@ namespace studio::views
                     return;
                   }
 
-                  const auto& [palette_name, palette_index] = default_palette;
+                  const auto& default_colours = palette_data.loaded_palettes.at(default_palette.first).second.at(default_palette.second).colours;
+                  const auto& selected_colours = palette_data.loaded_palettes.at(selected_palette.first).second.at(selected_palette.second).colours;
 
                   const auto& frame = frames.front();
-
-                  const auto& colours = palette_data.loaded_palettes.at(palette_name).second.at(palette_index).colours;
                   auto pixels = frame.pixels;
 
-                  content::bmp::write_bmp_data(output, colours, pixels, frame.header.width, frame.header.height, 8);
+                  image_data temp;
+                  temp.pixels = widen(frame.pixels);
+                  temp.bit_depth = int(frame.header.bit_depth);
+                  temp.width = frame.header.width;
+                  temp.height = frame.header.height;
+
+                  auto fresh_image = remap_image(
+                    colour_strategy::remap,
+                    temp,
+                    default_colours,
+                    selected_colours);
+
+                  content::bmp::write_bmp_data(output, selected_colours, narrow(fresh_image.pixels), frame.header.width, frame.header.height, 8);
                 }
 
                 if constexpr (std::is_same_v<T, std::vector<studio::content::bmp::pbmp_data>>)
@@ -686,15 +699,26 @@ namespace studio::views
                     return;
                   }
 
-                  const auto& [palette_name, palette_index] = default_palette;
-                  const auto& frame = frames.front();
+                  const auto& default_colours = palette_data.loaded_palettes.at(default_palette.first).second.at(default_palette.second).colours;
+                  const auto& selected_colours = palette_data.loaded_palettes.at(selected_palette.first).second.at(selected_palette.second).colours;
 
-                  const auto& colours = palette_data.loaded_palettes.at(palette_name).second.at(palette_index).colours;
+                  const auto& frame = frames.front();
                   auto pixels = frame.pixels;
 
-                  content::bmp::write_bmp_data(output, colours, pixels, frame.bmp_header.width, frame.bmp_header.height, 8);
-                }
+                  image_data temp;
+                  temp.pixels = widen(frame.pixels);
+                  temp.bit_depth = int(frame.bmp_header.bit_depth);
+                  temp.width = frame.bmp_header.width;
+                  temp.height = frame.bmp_header.height;
 
+                  auto fresh_image = remap_image(
+                    colour_strategy::remap,
+                    temp,
+                    default_colours,
+                    selected_colours);
+
+                  content::bmp::write_bmp_data(output, selected_colours, narrow(fresh_image.pixels), frame.bmp_header.width, frame.bmp_header.height, 8);
+                }
 
               }, bmp_data);
             }
