@@ -187,22 +187,24 @@ namespace studio::views
         const auto default_palette = detect_default_palette(bmp_data.second, image, context.explorer, palette_data.loaded_palettes);
 
         const auto selected_palette = selected_palette_from_settings(image, context.explorer, palette_data.loaded_palettes).value_or(default_palette);
-
         auto key = (image.folder_path / image.filename).string();
         auto item = table_rows.at(key);
-        auto* model = table->GetModel();
 
-        // Duplicated because of ice errors when values are static
-        constexpr auto default_palette_key_col = 2;
-        constexpr auto default_palette_index_col = 3;
-        constexpr auto selected_palette_key_col = 4;
-        constexpr auto selected_palette_index_col = 5;
-        model->SetValue(std::string(default_palette.first), item, default_palette_key_col);
-        model->SetValue(long(default_palette.second), item, default_palette_index_col);
-        model->SetValue(std::string(selected_palette.first), item, selected_palette_key_col);
-        model->SetValue(long(selected_palette.second), item, selected_palette_index_col);
+        table->CallAfter([=]() {
+          auto* model = table->GetModel();
+
+          // Duplicated because of ice errors when values are static
+          constexpr auto default_palette_key_col = 2;
+          constexpr auto default_palette_index_col = 3;
+          constexpr auto selected_palette_key_col = 4;
+          constexpr auto selected_palette_index_col = 5;
+
+          model->SetValue(std::string(default_palette.first), item, default_palette_key_col);
+          model->SetValue(long(default_palette.second), item, default_palette_index_col);
+          model->SetValue(std::string(selected_palette.first), item, selected_palette_key_col);
+          model->SetValue(long(selected_palette.second), item, selected_palette_index_col);
+        });
       });
-      table->GetParent()->Update();
     });
 
     auto sizer = std::make_unique<wxBoxSizer>(wxVERTICAL);
