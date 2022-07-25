@@ -71,6 +71,10 @@ namespace studio::views
 
     table->AppendTextColumn("Actions", wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
 
+    table->Bind(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, [this, table = table.get()](wxDataViewEvent& event) {
+        table->EditItem(event.GetItem(), event.GetDataViewColumn());
+    });
+
     table->Bind(wxEVT_DATAVIEW_ITEM_VALUE_CHANGED, [this, palettes_have_same_values = palettes_have_same_values.get()](wxDataViewEvent& event) {
       constexpr auto default_palette_key_col = 2;
       constexpr auto default_palette_index_col = 3;
@@ -179,18 +183,45 @@ namespace studio::views
     }
 
     pending_load = std::async(std::launch::async, [this, table = table.get(), images = std::move(images), table_rows = std::move(table_rows)]() {
-      std::for_each(std::execution::par, images.begin(), images.end(), [&](const auto& image) {
-        auto image_stream = context.explorer.load_file(image);
 
-        auto bmp_data = load_image_data_for_pal_detection(image, *image_stream.second);
+      struct palette_row
+      {
+        wxDataViewItem item;
+        std::pair<std::string_view, std::size_t> default_palette;
+        std::pair<std::string_view, std::size_t> selected_palette;
+      };
 
-        const auto default_palette = detect_default_palette(bmp_data.second, image, context.explorer, palette_data.loaded_palettes);
+      auto distance = 32u;
 
-        const auto selected_palette = selected_palette_from_settings(image, context.explorer, palette_data.loaded_palettes).value_or(default_palette);
-        auto key = (image.folder_path / image.filename).string();
-        auto item = table_rows.at(key);
+      for (auto i = 0u; i < images.size(); i+= distance)
+      {
+        auto begin = images.begin();
+        auto end = images.begin();
+        std::advance(begin, i);
 
-        table->CallAfter([=]() {
+        if (end + i + distance > images.end())
+        {
+          end = images.end();
+        }
+        else
+        {
+          std::advance(end, i + distance);
+        }
+
+        std::vector<palette_row> temp(std::distance(begin, end));
+        std::transform(std::execution::par_unseq, begin, end, temp.begin(), [&](const auto& image) -> palette_row {
+          auto image_stream = context.explorer.load_file(image);
+
+          auto bmp_data = load_image_data_for_pal_detection(image, *image_stream.second);
+
+          const auto default_palette = detect_default_palette(bmp_data.second, image, context.explorer, palette_data.loaded_palettes);
+
+          const auto selected_palette = selected_palette_from_settings(image, context.explorer, palette_data.loaded_palettes).value_or(default_palette);
+          auto key = (image.folder_path / image.filename).string();
+          return { table_rows.at(key), default_palette, selected_palette };
+        });
+
+        table->CallAfter([table = table, temp = std::move(temp)]() {
           auto* model = table->GetModel();
 
           // Duplicated because of ice errors when values are static
@@ -199,12 +230,16 @@ namespace studio::views
           constexpr auto selected_palette_key_col = 4;
           constexpr auto selected_palette_index_col = 5;
 
-          model->SetValue(std::string(default_palette.first), item, default_palette_key_col);
-          model->SetValue(long(default_palette.second), item, default_palette_index_col);
-          model->SetValue(std::string(selected_palette.first), item, selected_palette_key_col);
-          model->SetValue(long(selected_palette.second), item, selected_palette_index_col);
+          for (auto& row : temp)
+          {
+            auto& [item, default_palette, selected_palette] = row;
+            model->SetValue(std::string(default_palette.first), item, default_palette_key_col);
+            model->SetValue(long(default_palette.second), item, default_palette_index_col);
+            model->SetValue(std::string(selected_palette.first), item, selected_palette_key_col);
+            model->SetValue(long(selected_palette.second), item, selected_palette_index_col);
+          }
         });
-      });
+      }
     });
 
     auto sizer = std::make_unique<wxBoxSizer>(wxVERTICAL);
