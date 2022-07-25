@@ -273,12 +273,7 @@ namespace studio::views
     };
 
     const auto pal_extensions = this->context.actions.get_extensions_by_category("all_palettes");
-
-    auto palettes = explorer.find_files(explorer.get_archive_path(info.folder_path), pal_extensions);
-
-    auto all_palettes = explorer.find_files(pal_extensions);
-
-    studio::resources::resource_explorer::merge_results(palettes, all_palettes);
+    const auto palettes = explorer.find_files(pal_extensions);
 
     palette_data.load_palettes(explorer, palettes);
 
@@ -287,12 +282,20 @@ namespace studio::views
     auto bmp_data = load_image_data(info, image_stream);
     image_type = bmp_data.first;
 
-    auto [palette_name, palette_index] = detect_default_palette(bmp_data.second, info, explorer, loaded_palettes);
+    auto [default_palette_name, default_palette_index] = detect_default_palette(bmp_data.second, info, explorer, loaded_palettes);
 
-    selection_state.selected_palette_index = selection_state.default_palette_index = palette_index;
-    selection_state.selected_palette_name = selection_state.default_palette_name = palette_name;
+    auto selected_palette = selected_palette_from_settings(info, explorer, loaded_palettes);
 
-    if (palette_name == "Internal")
+    selection_state.selected_palette_name = selection_state.default_palette_name = default_palette_name;
+    selection_state.selected_palette_index = selection_state.default_palette_index = default_palette_index;
+
+    if (selected_palette.has_value())
+    {
+      selection_state.selected_palette_name = selected_palette.value().first;
+      selection_state.selected_palette_index = selected_palette.value().second;
+    }
+
+    if (default_palette_name == "Internal")
     {
       std::visit([&](const auto& data) {
         using T = std::decay_t<decltype(data)>;
@@ -313,7 +316,7 @@ namespace studio::views
     temp.emplace_back().colours = get_default_colours();
     loaded_palettes.emplace(sort_order.emplace_back(auto_generated_name), std::make_pair(info, std::move(temp)));
 
-    if (palette_name == auto_generated_name)
+    if (default_palette_name == auto_generated_name)
     {
       strategy = static_cast<int>(colour_strategy::do_nothing);
     }
