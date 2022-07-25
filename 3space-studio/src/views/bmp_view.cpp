@@ -501,6 +501,8 @@ namespace studio::views
                 selected_palette_name = key;
                 selected_palette_index = i;
 
+                set_selected_palette(context.explorer, context.file_info, selected_palette_name, selected_palette_index);
+
                 refresh_image();
               }
 
