@@ -1,5 +1,7 @@
 #include <utility>
 #include <execution>
+#include <future>
+#include <unordered_map>
 
 #include <wx/dataview.h>
 
@@ -17,8 +19,6 @@ namespace studio::views
 
   void pal_mapping_view::setup_view(wxWindow& parent)
   {
-    auto images = context.explorer.find_files(context.actions.get_extensions_by_category("all_images"));
-
     auto palettes = context.explorer.find_files(context.actions.get_extensions_by_category("all_palettes"));
 
     palette_data.load_palettes(context.explorer, palettes);
@@ -34,35 +34,11 @@ namespace studio::views
       available_palettes.Add(get_palette_key(context.explorer, palette));
     }
 
-    std::vector<wxVector<wxVariant>> loaded_data(images.size());
-
-    std::transform(std::execution::par, images.begin(), images.end(), loaded_data.begin(), [&](const auto& image) {
-      auto image_stream = context.explorer.load_file(image);
-
-      auto bmp_data = load_image_data_for_pal_detection(image, *image_stream.second);
-
-      const auto default_palette = detect_default_palette(bmp_data.second, image, context.explorer, palette_data.loaded_palettes);
-
-      const auto selected_palette = selected_palette_from_settings(image, context.explorer, palette_data.loaded_palettes).value_or(default_palette);
-
-      wxVector<wxVariant> results;
-      results.reserve(7);
-
-      results.push_back(image.folder_path.string());
-      results.push_back(image.filename.string());
-      results.push_back(std::string(default_palette.first));
-      results.push_back(long(default_palette.second));
-      results.push_back(std::string(selected_palette.first));
-      results.push_back(long(selected_palette.second));
-
-      results.push_back("");
-      return results;
-    });
-
     auto panel = std::make_unique<wxPanel>(&parent);
     auto palettes_have_same_values = std::make_unique<wxCheckBox>(panel.get(), wxID_ANY, "Sync Palette Values");
 
     auto table = std::unique_ptr<wxDataViewListCtrl>(new wxDataViewListCtrl(&parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_ROW_LINES | wxDV_MULTIPLE));
+
     table->AppendTextColumn("Image Folder", wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
     table->AppendTextColumn("Image", wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
 
@@ -94,12 +70,6 @@ namespace studio::views
     table->AppendColumn(selectionColumn.release());
 
     table->AppendTextColumn("Actions", wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-
-
-    for (auto& strings : loaded_data)
-    {
-      table->AppendItem(strings);
-    }
 
     table->Bind(wxEVT_DATAVIEW_ITEM_VALUE_CHANGED, [this, palettes_have_same_values = palettes_have_same_values.get()](wxDataViewEvent& event) {
       constexpr auto default_palette_key_col = 2;
@@ -186,6 +156,54 @@ namespace studio::views
 
     panel->GetSizer()->Add(palettes_have_same_values.release(), 2, wxEXPAND, 0);
     panel->GetSizer()->AddStretchSpacer(8);
+
+    auto images = context.explorer.find_files(context.actions.get_extensions_by_category("all_images"));
+
+    std::unordered_map<std::string, wxDataViewItem> table_rows;
+    for (auto& image : images)
+    {
+      wxVector<wxVariant> results;
+      results.reserve(7);
+
+      results.push_back(image.folder_path.string());
+      results.push_back(image.filename.string());
+      results.push_back("?");
+      results.push_back(0);
+      results.push_back("?");
+      results.push_back(0);
+
+      results.push_back("");
+
+      table->AppendItem(results);
+      table_rows.emplace((image.folder_path / image.filename).string(), table->RowToItem(table->GetItemCount() - 1));
+    }
+
+    pending_load = std::async(std::launch::async, [this, table = table.get(), images = std::move(images), table_rows = std::move(table_rows)]() {
+      std::for_each(std::execution::par, images.begin(), images.end(), [&](const auto& image) {
+        auto image_stream = context.explorer.load_file(image);
+
+        auto bmp_data = load_image_data_for_pal_detection(image, *image_stream.second);
+
+        const auto default_palette = detect_default_palette(bmp_data.second, image, context.explorer, palette_data.loaded_palettes);
+
+        const auto selected_palette = selected_palette_from_settings(image, context.explorer, palette_data.loaded_palettes).value_or(default_palette);
+
+        auto key = (image.folder_path / image.filename).string();
+        auto item = table_rows.at(key);
+        auto* model = table->GetModel();
+
+        // Duplicated because of ice errors when values are static
+        constexpr auto default_palette_key_col = 2;
+        constexpr auto default_palette_index_col = 3;
+        constexpr auto selected_palette_key_col = 4;
+        constexpr auto selected_palette_index_col = 5;
+        model->SetValue(std::string(default_palette.first), item, default_palette_key_col);
+        model->SetValue(long(default_palette.second), item, default_palette_index_col);
+        model->SetValue(std::string(selected_palette.first), item, selected_palette_key_col);
+        model->SetValue(long(selected_palette.second), item, selected_palette_index_col);
+      });
+      table->GetParent()->Update();
+    });
 
     auto sizer = std::make_unique<wxBoxSizer>(wxVERTICAL);
     sizer->Add(panel.release(), 1, wxEXPAND, 0);

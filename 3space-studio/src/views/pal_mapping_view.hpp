@@ -1,6 +1,7 @@
 #ifndef DARKSTARDTSCONVERTER_PAL_MAPPING_VIEW_HPP
 #define DARKSTARDTSCONVERTER_PAL_MAPPING_VIEW_HPP
 
+#include <future>
 #include "graphics_view.hpp"
 #include "view_context.hpp"
 #include "bmp_shared.hpp"
@@ -17,6 +18,7 @@ namespace studio::views
   private:
     view_context context;
     palette_context palette_data;
+    std::future<void> pending_load;
   };
 }
 
