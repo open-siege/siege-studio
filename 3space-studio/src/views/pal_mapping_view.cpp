@@ -182,7 +182,7 @@ namespace studio::views
       table_rows.emplace((image.folder_path / image.filename).string(), table->RowToItem(table->GetItemCount() - 1));
     }
 
-    pending_load = std::async(std::launch::async, [this, table = table.get(), images = std::move(images), table_rows = std::move(table_rows)]() {
+    pending_load = std::async(std::launch::async, [this, table = table.get(), images = std::move(images), table_rows = std::move(table_rows)]() mutable {
 
       struct palette_row
       {
@@ -191,21 +191,21 @@ namespace studio::views
         std::pair<std::string_view, std::size_t> selected_palette;
       };
 
-      auto distance = 32u;
+      auto distance = 16u;
 
-      for (auto i = 0u; i < images.size(); i+= distance)
+
+      while (!images.empty())
       {
         auto begin = images.begin();
-        auto end = images.begin();
-        std::advance(begin, i);
+        auto end = begin;
 
-        if (end + i + distance > images.end())
+        if (std::distance(end, images.end()) < distance)
         {
           end = images.end();
         }
         else
         {
-          std::advance(end, i + distance);
+          std::advance(end, distance);
         }
 
         std::vector<palette_row> temp(std::distance(begin, end));
@@ -239,6 +239,8 @@ namespace studio::views
             model->SetValue(long(selected_palette.second), item, selected_palette_index_col);
           }
         });
+
+        images.erase(begin, end);
       }
     });
 
