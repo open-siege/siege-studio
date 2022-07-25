@@ -152,7 +152,7 @@ namespace studio::content::bmp
       auto pos = 0u;
 
       auto start = raw_data.tellg();
-      for (auto i = 0u; i < height; ++i)
+      for (auto i = 0; i < height; ++i)
       {
         if (pos > raw_pixels.size())
         {
@@ -318,7 +318,7 @@ namespace studio::content::bmp
 
       auto pos = 0u;
 
-      for (auto i = 0u; i < height; ++i)
+      for (auto i = 0; i < height; ++i)
       {
         if (pos > pixels.size())
         {

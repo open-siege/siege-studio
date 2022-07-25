@@ -12,15 +12,6 @@ namespace studio::content::bmp
 {
   namespace endian = boost::endian;
 
-  struct pbmp_header
-  {
-    endian::little_uint32_t version;
-    endian::little_int32_t width;
-    endian::little_int32_t height;
-    endian::little_uint32_t bit_depth;
-    endian::little_uint32_t flags;
-  };
-
   struct windows_bmp_header
   {
     std::array<std::byte, 2> tag;
@@ -45,20 +36,29 @@ namespace studio::content::bmp
     endian::little_uint32_t num_important_colours;
   };
 
-  struct pbmp_data
-  {
-    pbmp_header bmp_header;
-    endian::little_uint32_t detail_levels;
-    endian::little_uint32_t palette_index;
-    std::vector<std::byte> pixels;
-  };
-
   struct windows_bmp_data
   {
     windows_bmp_header header;
     windows_bmp_info info;
     std::vector<pal::colour> colours;
     std::vector<std::int32_t> indexes;
+  };
+
+  struct pbmp_header
+  {
+    endian::little_uint32_t version;
+    endian::little_int32_t width;
+    endian::little_int32_t height;
+    endian::little_uint32_t bit_depth;
+    endian::little_uint32_t flags;
+  };
+
+  struct pbmp_data
+  {
+    pbmp_header bmp_header;
+    endian::little_uint32_t detail_levels;
+    endian::little_uint32_t palette_index;
+    std::vector<std::byte> pixels;
   };
 
   struct dba_header
