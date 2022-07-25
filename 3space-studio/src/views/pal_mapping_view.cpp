@@ -75,19 +75,13 @@ namespace studio::views
         table->EditItem(event.GetItem(), event.GetDataViewColumn());
     });
 
-    table->Bind(wxEVT_DATAVIEW_ITEM_VALUE_CHANGED, [this, palettes_have_same_values = palettes_have_same_values.get()](wxDataViewEvent& event) {
+    table->Bind(wxEVT_DATAVIEW_ITEM_VALUE_CHANGED, [this, table = table.get(), palettes_have_same_values = palettes_have_same_values.get()](wxDataViewEvent& event) {
       constexpr auto default_palette_key_col = 2;
       constexpr auto default_palette_index_col = 3;
       constexpr auto selected_palette_key_col = 4;
       constexpr auto selected_palette_index_col = 5;
 
       auto* model = event.GetModel();
-
-      wxVariant folder_path;
-      model->GetValue(folder_path, event.GetItem(), 0);
-
-      wxVariant filename;
-      model->GetValue(filename, event.GetItem(), 1);
 
       wxVariant default_palette_key;
       model->GetValue(default_palette_key, event.GetItem(), default_palette_key_col);
@@ -102,10 +96,6 @@ namespace studio::views
       model->GetValue(selected_palette_index, event.GetItem(), selected_palette_index_col);
 
       auto palette_iter = palette_data.loaded_palettes.find(default_palette_key.GetString().utf8_string());
-
-      studio::resources::file_info info;
-      info.filename = filename.GetString().utf8_string();
-      info.folder_path = folder_path.GetString().utf8_string();
 
       if (palette_iter != palette_data.loaded_palettes.end())
       {
@@ -147,6 +137,21 @@ namespace studio::views
         }
       }
 
+      auto file_info_for_item = [](const wxDataViewModel& model, const wxDataViewItem& item) {
+        wxVariant folder_path;
+        model.GetValue(folder_path, item, 0);
+
+        wxVariant filename;
+        model.GetValue(filename, item, 1);
+        studio::resources::file_info info;
+        info.filename = filename.GetString().utf8_string();
+        info.folder_path = folder_path.GetString().utf8_string();
+
+        return info;
+      };
+
+      auto info = file_info_for_item(*model, event.GetItem());
+
       set_default_palette(context.explorer, info,
         default_palette_key.GetString().utf8_string(),
         default_palette_index.GetInteger());
@@ -154,6 +159,38 @@ namespace studio::views
       set_selected_palette(context.explorer, info,
         selected_palette_key.GetString().utf8_string(),
         selected_palette_index.GetInteger());
+
+      wxDataViewItemArray selections;
+      table->GetSelections(selections);
+
+      for (auto& selection : selections)
+      {
+        if (selection != event.GetItem())
+        {
+          auto* column = event.GetDataViewColumn();
+          info = file_info_for_item(*model, selection);
+
+          if (palettes_have_same_values->GetValue() || column->GetModelColumn() == default_palette_key_col || column->GetModelColumn() == default_palette_index_col)
+          {
+            model->SetValue(default_palette_key, selection, default_palette_key_col);
+            model->SetValue(default_palette_index, selection, default_palette_index_col);
+
+            set_default_palette(context.explorer, info,
+              default_palette_key.GetString().utf8_string(),
+              default_palette_index.GetInteger());
+          }
+
+          if (palettes_have_same_values->GetValue() || column->GetModelColumn() == selected_palette_key_col || column->GetModelColumn() == selected_palette_index_col)
+          {
+            model->SetValue(selected_palette_key, selection, selected_palette_key_col);
+            model->SetValue(selected_palette_index, selection, selected_palette_index_col);
+
+            set_selected_palette(context.explorer, info,
+              selected_palette_key.GetString().utf8_string(),
+              selected_palette_index.GetInteger());
+          }
+        }
+      }
     });
 
     panel->SetSizer(std::make_unique<wxBoxSizer>(wxHORIZONTAL).release());
