@@ -656,26 +656,36 @@ namespace studio::views
                 selected_palette_from_settings(shape_info, context.explorer, palette_data.loaded_palettes)
                   .value_or(default_palette);
 
-              std::visit([&](const auto& frames) {
+
+              const auto& default_colours = palette_data.loaded_palettes.at(default_palette.first).second.at(default_palette.second).colours;
+              const auto& selected_colours = palette_data.loaded_palettes.at(selected_palette.first).second.at(selected_palette.second).colours;
+
+              const auto fresh_image = std::visit([&](const auto& frames) -> image_data {
                 using T = std::decay_t<decltype(frames)>;
 
                 if constexpr (std::is_same_v<T, studio::content::bmp::windows_bmp_data>)
                 {
-                  content::bmp::write_bmp_data(output, frames.colours, narrow(frames.indexes), frames.info.width, frames.info.height, 8);
+                  image_data temp;
+                  temp.pixels = frames.indexes;
+                  temp.bit_depth = frames.info.bit_depth;
+                  temp.width = frames.info.width;
+                  temp.height = frames.info.height;
+
+                  return remap_image(
+                    colour_strategy::remap,
+                    temp,
+                    default_colours,
+                    selected_colours);
                 }
 
                 if constexpr (std::is_same_v<T, std::vector<studio::content::bmp::dbm_data>>)
                 {
                   if (frames.empty())
                   {
-                    return;
+                    return {};
                   }
 
-                  const auto& default_colours = palette_data.loaded_palettes.at(default_palette.first).second.at(default_palette.second).colours;
-                  const auto& selected_colours = palette_data.loaded_palettes.at(selected_palette.first).second.at(selected_palette.second).colours;
-
                   const auto& frame = frames.front();
-                  auto pixels = frame.pixels;
 
                   image_data temp;
                   temp.pixels = widen(frame.pixels);
@@ -683,27 +693,21 @@ namespace studio::views
                   temp.width = frame.header.width;
                   temp.height = frame.header.height;
 
-                  auto fresh_image = remap_image(
+                  return remap_image(
                     colour_strategy::remap,
                     temp,
                     default_colours,
                     selected_colours);
-
-                  content::bmp::write_bmp_data(output, selected_colours, narrow(fresh_image.pixels), frame.header.width, frame.header.height, 8);
                 }
 
                 if constexpr (std::is_same_v<T, std::vector<studio::content::bmp::pbmp_data>>)
                 {
                   if (frames.empty())
                   {
-                    return;
+                    return {};
                   }
 
-                  const auto& default_colours = palette_data.loaded_palettes.at(default_palette.first).second.at(default_palette.second).colours;
-                  const auto& selected_colours = palette_data.loaded_palettes.at(selected_palette.first).second.at(selected_palette.second).colours;
-
                   const auto& frame = frames.front();
-                  auto pixels = frame.pixels;
 
                   image_data temp;
                   temp.pixels = widen(frame.pixels);
@@ -711,16 +715,16 @@ namespace studio::views
                   temp.width = frame.bmp_header.width;
                   temp.height = frame.bmp_header.height;
 
-                  auto fresh_image = remap_image(
+                  return remap_image(
                     colour_strategy::remap,
                     temp,
                     default_colours,
                     selected_colours);
-
-                  content::bmp::write_bmp_data(output, selected_colours, narrow(fresh_image.pixels), frame.bmp_header.width, frame.bmp_header.height, 8);
                 }
 
               }, bmp_data);
+
+              content::bmp::write_bmp_data(output, selected_colours, narrow(fresh_image.pixels), fresh_image.width, fresh_image.height, fresh_image.bit_depth);
             }
             catch (const std::exception& ex)
             {
