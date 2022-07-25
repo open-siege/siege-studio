@@ -62,7 +62,7 @@ namespace studio::views
     auto panel = std::make_unique<wxPanel>(&parent);
     auto palettes_have_same_values = std::make_unique<wxCheckBox>(panel.get(), wxID_ANY, "Sync Palette Values");
 
-    auto table = std::unique_ptr<wxDataViewListCtrl>(new wxDataViewListCtrl(&parent, wxID_ANY));
+    auto table = std::unique_ptr<wxDataViewListCtrl>(new wxDataViewListCtrl(&parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_ROW_LINES | wxDV_MULTIPLE));
     table->AppendTextColumn("Image Folder", wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
     table->AppendTextColumn("Image", wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
 
