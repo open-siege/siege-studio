@@ -28,6 +28,47 @@
 | socket                | zts_bsd_socket                                                                                           |
 | bind                  | zts_bsd_bind                                                                                             |
 
+## OpenGL
+* wglCreateContext
+* wglDeleteContext
+* wglGetProcAddress
+* wglMakeCurrent
+* glViewport
+* glClearColor
+* glClearDepth
+* glDisable
+* glEnable
+* glBindTexture
+* glClear
+* glMatrixMode
+* glLoadIdentity
+* glTranslatef
+* glScalef
+* glFogi
+* glHint
+* glBegin
+* glColor3f
+* glColor4f
+* glColor4fv
+* glVertex2f
+* glVertex3f
+* glVertex3fv
+* glVertex4fv
+* glFogf
+* glFogfv
+* glEnd
+* glDeleteTextures
+* glFinish
+* glFrontFace
+* glGenTextures
+* glGetError
+* glGetString
+* glTexCoord2f
+* glTexEnvi
+* glTexImage2D
+* glTexParameteri
+* glTexSubImage2D
+
 ## UWP Support Mapping
 | advapi32              | alternative |
 |-----------------------|-------------|
@@ -225,6 +266,11 @@
 
 | user32                     | alternative |
 |----------------------------|-------------|
+| CreateWindowExA            | deprecated  |
+| CallWindowProcA            | deprecated  |
+| TranslateMessage           | deprecated  |
+| DispatchMessageA           | deprecated  |
+| DefWindowProcA             | deprecated  |
 | AdjustWindowRect           | deprecated  |
 | AdjustWindowRectEx         | deprecated  |
 | AppendMenuA                | deprecated  |
@@ -232,7 +278,6 @@
 | BeginPaint                 | deprecated  |
 | BringWindowToTop           | deprecated  |
 | CallNextHookEx             | deprecated  |
-| CallWindowProcA            | deprecated  |
 | ChangeDisplaySettingsA     | deprecated  |
 | CheckDlgButton             | deprecated  |
 | CheckMenuItem              | deprecated  |
@@ -242,16 +287,14 @@
 | CreateDialogParamA         | deprecated  |
 | CreateMDIWindowA           | deprecated  |
 | CreatePopupMenu            | deprecated  |
-| CreateWindowExA            | deprecated  |
 | DefMDIChildProcA           | deprecated  |
-| DefWindowProcA             | deprecated  |
 | DeferWindowPos             | deprecated  |
 | DeleteMenu                 | deprecated  |
 | DestroyMenu                | deprecated  |
 | DestroyWindow              | deprecated  |
 | DialogBoxIndirectParamA    | deprecated  |
 | DialogBoxParamA            | deprecated  |
-| DispatchMessageA           | deprecated  |
+
 | DrawMenuBar                | deprecated  |
 | EmptyClipboard             | deprecated  |
 | EnableMenuItem             | deprecated  |
@@ -342,7 +385,6 @@
 | TrackPopupMenu             | deprecated  |
 | TrackPopupMenuEx           | deprecated  |
 | TranslateAcceleratorA      | deprecated  |
-| TranslateMessage           | deprecated  |
 | UnhookWindowsHookEx        | deprecated  |
 | UpdateWindow               | deprecated  |
 | ValidateRect               | deprecated  |
@@ -373,43 +415,6 @@
 | CoCreateInstance | CoCreateInstanceFromApp |
 | CoInitialize     | CoInitializeEx          |
 | CoUninitialize   | same                    |
-
-# Earthsiege 2
-## Joystick
-### winmm
-* joyGetNumDevs
-* joyGetDevCapsA
-* joyGetPosEx
-* joyGetPos
-* joyGetDevCapsA
-* joySetThreshold
-
-## UWP Support Mapping
-| kernel32                 | alternative          |
-|--------------------------|----------------------|
-| GlobalLock               | same                 |
-| GetModuleHandleA         | deprecated           |
-| GlobalHandle             | deprecated           |
-| OpenFile                 | CreateFile2          |
-| CreateFileA              | CreateFile2          |
-| FreeLibrary              | same                 |
-| LoadLibraryA             | LoadPackagedLibrary  |
-| GetProcAddress           | same                 |
-| CloseHandle              | same                 |
-| GlobalAlloc              | same                 |
-| GlobalFree               | same                 |
-| GlobalUnlock             | same                 |
-| _lopen                   | deprecated           |
-| _llseek                  | deprecated           |
-| _lclose                  | deprecated           |
-| _hread                   | deprecated           |
-| Sleep                    | same                 |
-| SetLastError             | same                 |
-| GetVersion               | GetVersionExA        |
-| GetTickCount             | same                 |
-| DeviceIoControl          | same                 |
-| GetPrivateProfileStringA | deprecated           |
-| GlobalMemoryStatus       | GlobalMemoryStatusEx |
 
 
 # Other
