@@ -28,7 +28,7 @@
 | socket                | zts_bsd_socket                                                                                           |
 | bind                  | zts_bsd_bind                                                                                             |
 
-## UWP supported mapping
+## UWP Support Mapping
 | advapi32              | alternative |
 |-----------------------|-------------|
 | RegCloseKey           | deprecated  |
@@ -383,6 +383,34 @@
 * joyGetPos
 * joyGetDevCapsA
 * joySetThreshold
+
+## UWP Support Mapping
+| kernel32                 | alternative          |
+|--------------------------|----------------------|
+| GlobalLock               | same                 |
+| GetModuleHandleA         | deprecated           |
+| GlobalHandle             | deprecated           |
+| OpenFile                 | CreateFile2          |
+| CreateFileA              | CreateFile2          |
+| FreeLibrary              | same                 |
+| LoadLibraryA             | LoadPackagedLibrary  |
+| GetProcAddress           | same                 |
+| CloseHandle              | same                 |
+| GlobalAlloc              | same                 |
+| GlobalFree               | same                 |
+| GlobalUnlock             | same                 |
+| _lopen                   | deprecated           |
+| _llseek                  | deprecated           |
+| _lclose                  | deprecated           |
+| _hread                   | deprecated           |
+| Sleep                    | same                 |
+| SetLastError             | same                 |
+| GetVersion               | GetVersionExA        |
+| GetTickCount             | same                 |
+| DeviceIoControl          | same                 |
+| GetPrivateProfileStringA | deprecated           |
+| GlobalMemoryStatus       | GlobalMemoryStatusEx |
+
 
 # Other
 ## ws_32
