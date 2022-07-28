@@ -151,7 +151,10 @@ namespace studio::resources::vol::trophy_bass
     }
   }
 
-  void rbx_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info, std::basic_ostream<std::byte>& output) const
+  void rbx_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream,
+    const studio::resources::file_info& info,
+    std::basic_ostream<std::byte>& output,
+    std::optional<std::reference_wrapper<batch_storage>>) const
   {
     set_stream_position(stream, info);
 
@@ -259,7 +262,10 @@ namespace studio::resources::vol::trophy_bass
     }
   }
 
-  void tbv_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info, std::basic_ostream<std::byte>& output) const
+  void tbv_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream,
+    const studio::resources::file_info& info,
+    std::basic_ostream<std::byte>& output,
+    std::optional<std::reference_wrapper<batch_storage>>) const
   {
     set_stream_position(stream, info);
 

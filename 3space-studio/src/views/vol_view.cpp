@@ -147,6 +147,8 @@ namespace studio::views
 
         std::basic_ifstream<std::byte> archive_file(archive_path, std::ios::binary);
 
+        resources::batch_storage storage;
+
         for (auto& file : files)
         {
           if (should_cancel)
@@ -156,7 +158,7 @@ namespace studio::views
 
           text2->SetLabel((std::filesystem::relative(file.folder_path, archive_path) / file.filename).string());
 
-          context.explorer.extract_file_contents(archive_file, dest, file);
+          context.explorer.extract_file_contents(archive_file, dest, file, storage);
           gauge->SetValue(gauge->GetValue() + 1);
         }
 
@@ -232,6 +234,8 @@ namespace studio::views
 
           std::basic_ifstream<std::byte> archive_file(file_archive_path, std::ios::binary);
 
+          resources::batch_storage storage;
+
           for (const auto& file : child_files)
           {
             if (should_cancel)
@@ -244,7 +248,7 @@ namespace studio::views
               text2->SetLabel((std::filesystem::relative(file.folder_path, context.explorer.get_search_path()) / file.filename).string());
             }
 
-            context.explorer.extract_file_contents(archive_file, dest, file);
+            context.explorer.extract_file_contents(archive_file, dest, file, storage);
 
             {
               std::lock_guard<std::mutex> lock(gauge_mutex);

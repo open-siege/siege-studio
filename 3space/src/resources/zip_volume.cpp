@@ -151,27 +151,49 @@ namespace studio::resources::zip
 
   }
 
-  void zip_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info, std::basic_ostream<std::byte>& output) const
+  void zip_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream,
+    const studio::resources::file_info& info,
+    std::basic_ostream<std::byte>& output,
+    std::optional<std::reference_wrapper<batch_storage>> storage) const
   {
-    zip_error_t src_error;
-    auto* source = zip_source_function_create(process_zip_stream, &stream, &src_error);
+    std::shared_ptr<zip_t> archive;
 
-    zip_error_t err;
-    zip_t* archive = zip_open_from_source(source, 0, &err);
+    auto create_archive = [&]() {
+      zip_error_t src_error;
+      auto* source = zip_source_function_create(process_zip_stream, &stream, &src_error);
 
+      zip_error_t err;
+      return std::shared_ptr<zip_t>(zip_open_from_source(source, 0, &err), zip_close);
+    };
 
-    zip_file *entry = zip_fopen(archive, info.filename.string().c_str(), 0);
+    if (storage.has_value())
+    {
+      auto zip_iter = storage.value().get().temp.find("zip_instance");
+
+      if (zip_iter == storage.value().get().temp.end())
+      {
+        archive = create_archive();
+        zip_iter = storage.value().get().temp.emplace("zip_instance", std::static_pointer_cast<void>(archive)).first;
+      }
+
+      archive = std::static_pointer_cast<zip_t>(std::get<std::shared_ptr<void>>(zip_iter->second));
+    }
+    else
+    {
+      archive = create_archive();
+    }
+
+    using file_ptr = std::unique_ptr<zip_file, void(*)(zip_file*)>;
+
+    file_ptr entry = file_ptr(zip_fopen(archive.get(), info.filename.string().c_str(), 0), [](zip_file* file){ zip_fclose(file); });
 
     std::vector<std::byte> contents(info.size);
 
-    zip_fread(entry, contents.data(), info.size);
+    zip_fread(entry.get(), contents.data(), info.size);
 
     std::copy_n(contents.data(),
       info.size,
       std::ostreambuf_iterator<std::byte>(output));
 
-    zip_fclose(entry);
-
-    zip_close(archive);
   }
 }// namespace darkstar::vol

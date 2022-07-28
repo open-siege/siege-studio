@@ -7,6 +7,8 @@
 #include <optional>
 #include <variant>
 #include <filesystem>
+#include <unordered_map>
+#include <memory>
 #include "../shared.hpp"
 
 namespace studio::resources
@@ -42,6 +44,11 @@ namespace studio::resources
     std::filesystem::path folder_path;
   };
 
+  struct batch_storage
+  {
+    std::unordered_map<std::string_view, std::variant<void*, std::shared_ptr<void>>> temp;
+  };
+
   struct archive_plugin
   {
     using folder_info = studio::resources::folder_info;
@@ -54,7 +61,10 @@ namespace studio::resources
 
     virtual void set_stream_position(std::basic_istream<std::byte>&, const file_info&) const = 0;
 
-    virtual void extract_file_contents(std::basic_istream<std::byte>&, const file_info&, std::basic_ostream<std::byte>&) const = 0;
+    virtual void extract_file_contents(std::basic_istream<std::byte>&,
+      const file_info&,
+      std::basic_ostream<std::byte>&,
+      std::optional<std::reference_wrapper<batch_storage>> = std::nullopt) const = 0;
 
     virtual ~archive_plugin() = default;
     archive_plugin() = default;
