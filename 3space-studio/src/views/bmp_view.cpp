@@ -657,8 +657,15 @@ namespace studio::views
                   .value_or(default_palette);
 
 
-              const auto& default_colours = palette_data.loaded_palettes.at(default_palette.first).second.at(default_palette.second).colours;
-              const auto& selected_colours = palette_data.loaded_palettes.at(selected_palette.first).second.at(selected_palette.second).colours;
+              // Used because the colours of the image have to be unwrapped at a later stage
+              thread_local auto placeholder_colours = get_default_colours();
+
+              auto& default_colours = default_palette.first == "Internal" ?
+                                                                                placeholder_colours :
+                                                                                 palette_data.loaded_palettes.at(default_palette.first).second.at(default_palette.second).colours;
+              auto& selected_colours = selected_palette.first == "Internal" ?
+                                                                                  placeholder_colours :
+                                                                                  palette_data.loaded_palettes.at(selected_palette.first).second.at(selected_palette.second).colours;
 
               const auto fresh_image = std::visit([&](const auto& frames) -> image_data {
                 using T = std::decay_t<decltype(frames)>;
@@ -670,6 +677,16 @@ namespace studio::views
                   temp.bit_depth = frames.info.bit_depth;
                   temp.width = frames.info.width;
                   temp.height = frames.info.height;
+
+                  if (default_palette.first == "Internal")
+                  {
+                    default_colours = frames.colours;
+                  }
+
+                  if (selected_palette.first == "Internal")
+                  {
+                    selected_colours = frames.colours;
+                  }
 
                   return remap_image(
                     colour_strategy::remap,
