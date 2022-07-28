@@ -16,7 +16,10 @@ namespace studio::resources::vol::trophy_bass
 
     void set_stream_position(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info) const override;
 
-    void extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info, std::basic_ostream<std::byte>& output) const override;
+    void extract_file_contents(std::basic_istream<std::byte>& stream,
+      const studio::resources::file_info& info,
+      std::basic_ostream<std::byte>& output,
+      std::optional<std::reference_wrapper<batch_storage>> = std::nullopt) const override;
   };
 
   struct tbv_file_archive : studio::resources::archive_plugin
@@ -29,7 +32,10 @@ namespace studio::resources::vol::trophy_bass
 
     void set_stream_position(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info) const override;
 
-    void extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info, std::basic_ostream<std::byte>& output) const override;
+    void extract_file_contents(std::basic_istream<std::byte>& stream,
+      const studio::resources::file_info& info,
+      std::basic_ostream<std::byte>& output,
+      std::optional<std::reference_wrapper<batch_storage>> = std::nullopt) const override;
   };
 }// namespace trophy_bass::vol
 

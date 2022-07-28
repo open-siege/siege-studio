@@ -368,7 +368,10 @@ namespace studio::resources::vol::three_space
     }
   }
 
-  void rmf_file_archive::extract_file_contents(std::basic_istream<std::byte>&, const studio::resources::file_info& info, std::basic_ostream<std::byte>& output) const
+  void rmf_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream,
+    const studio::resources::file_info& info,
+    std::basic_ostream<std::byte>& output,
+    std::optional<std::reference_wrapper<batch_storage>>) const
   {
     auto main_path = info.folder_path.parent_path().parent_path();
     auto resource_file = info.folder_path.filename();
@@ -429,7 +432,10 @@ namespace studio::resources::vol::three_space
     }
   }
 
-  void dyn_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info, std::basic_ostream<std::byte>& output) const
+  void dyn_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream,
+    const studio::resources::file_info& info,
+    std::basic_ostream<std::byte>& output,
+    std::optional<std::reference_wrapper<batch_storage>>) const
   {
     set_stream_position(stream, info);
 
@@ -505,7 +511,10 @@ namespace studio::resources::vol::three_space
     }
   }
 
-  void vol_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info, std::basic_ostream<std::byte>& output) const
+  void vol_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream,
+    const studio::resources::file_info& info,
+    std::basic_ostream<std::byte>& output,
+    std::optional<std::reference_wrapper<batch_storage>>) const
   {
     auto current_position = stream.tellg();
     stream.seekg(0, std::ios::end);

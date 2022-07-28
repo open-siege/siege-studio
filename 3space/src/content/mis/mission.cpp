@@ -370,7 +370,10 @@ namespace studio::resources::mis::darkstar
     stream.seekg(info.offset, std::ios::beg);
   }
 
-  void mis_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info, std::basic_ostream<std::byte>& output) const
+  void mis_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream,
+    const studio::resources::file_info& info,
+    std::basic_ostream<std::byte>& output,
+    std::optional<std::reference_wrapper<batch_storage>>) const
   {
     set_stream_position(stream, info);
     auto existing_info = cache_data(stream, info.folder_path);

@@ -281,7 +281,10 @@ namespace studio::resources
     return std::nullopt;
   }
 
-  void resource_explorer::extract_file_contents(std::basic_istream<std::byte>& archive_file, std::filesystem::path destination, const studio::resources::file_info& info) const
+  void resource_explorer::extract_file_contents(std::basic_istream<std::byte>& archive_file,
+    std::filesystem::path destination,
+    const studio::resources::file_info& info,
+    std::optional<std::reference_wrapper<batch_storage>> storage) const
   {
     auto archive_path = get_archive_path(info.folder_path);
 
@@ -300,7 +303,7 @@ namespace studio::resources
 
     if (type.has_value())
     {
-      type->get().extract_file_contents(archive_file, info, new_file);
+      type->get().extract_file_contents(archive_file, info, new_file, storage);
     }
   }
 

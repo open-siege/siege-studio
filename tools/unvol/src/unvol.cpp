@@ -77,6 +77,8 @@ int main(int, const char** argv)
 
   std::string output_folder = replace_extension(volume_file);
 
+  studio::resources::batch_storage storage;
+
   std::function<void(decltype(files)&)> extract_files = [&](const auto& files){
     for (const auto& some_file : files)
     {
@@ -89,7 +91,7 @@ int main(int, const char** argv)
           std::filesystem::create_directories(final_folder);
           auto filename = final_folder / info.filename;
           auto new_stream = std::basic_ofstream<std::byte>{ filename, std::ios::binary };
-          archive->extract_file_contents(volume_stream, info, new_stream);
+          archive->extract_file_contents(volume_stream, info, new_stream, storage);
         }
 
         if constexpr (std::is_same_v<info_type, studio::resources::folder_info>)
