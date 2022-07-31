@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include <wx/dataview.h>
+#include <wx/srchctrl.h>
 
 #include "pal_mapping_view.hpp"
 #include "utility.hpp"
@@ -17,193 +18,261 @@ namespace studio::views
   {
   }
 
+
   void pal_mapping_view::setup_view(wxWindow& parent)
   {
     auto palettes = context.explorer.find_files(context.actions.get_extensions_by_category("all_palettes"));
 
     palette_data.load_palettes(context.explorer, palettes);
 
-    wxArrayString available_palettes;
-    available_palettes.reserve(palettes.size() + 2);
-
-    available_palettes.Add(std::string(auto_generated_name));
-    available_palettes.Add("Internal");
-
-    for (auto& palette : palettes)
-    {
-      available_palettes.Add(get_palette_key(context.explorer, palette));
-    }
-
     auto panel = std::make_unique<wxPanel>(&parent);
     auto palettes_have_same_values = std::make_unique<wxCheckBox>(panel.get(), wxID_ANY, "Sync Palette Values");
 
-    auto table = std::unique_ptr<wxDataViewListCtrl>(new wxDataViewListCtrl(&parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_ROW_LINES | wxDV_MULTIPLE));
+    auto create_table = [this, &parent, palettes = std::move(palettes), palettes_have_same_values = palettes_have_same_values.get()]() {
+      wxArrayString available_palettes;
+      available_palettes.reserve(palettes.size() + 2);
 
-    table->AppendTextColumn("Image Folder", wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-    table->AppendTextColumn("Image", wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
+      available_palettes.Add(std::string(auto_generated_name));
+      available_palettes.Add("Internal");
 
-    auto selectionColumn = std::make_unique<wxDataViewColumn>("Default Palette",
-      std::make_unique<wxDataViewChoiceRenderer>(available_palettes).release(),
-      table->GetColumnCount(),
-      wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-    table->AppendColumn(selectionColumn.release());
+      for (auto& palette : palettes)
+      {
+        available_palettes.Add(get_palette_key(context.explorer, palette));
+      }
+
+      auto table = std::unique_ptr<wxDataViewListCtrl>(new wxDataViewListCtrl(&parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_ROW_LINES | wxDV_MULTIPLE));
+
+      table->AppendTextColumn("Image Folder", wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
+      table->AppendTextColumn("Image", wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
+
+      auto selectionColumn = std::make_unique<wxDataViewColumn>("Default Palette",
+        std::make_unique<wxDataViewChoiceRenderer>(available_palettes).release(),
+        table->GetColumnCount(),
+        wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
+      table->AppendColumn(selectionColumn.release());
 
 
-    selectionColumn = std::make_unique<wxDataViewColumn>("Default Palette Index",
-      std::make_unique<wxDataViewSpinRenderer>(0, 255).release(),
-      table->GetColumnCount(),
-      wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
+      selectionColumn = std::make_unique<wxDataViewColumn>("Default Palette Index",
+        std::make_unique<wxDataViewSpinRenderer>(0, 255).release(),
+        table->GetColumnCount(),
+        wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
 
-    table->AppendColumn(selectionColumn.release());
+      table->AppendColumn(selectionColumn.release());
 
-    selectionColumn = std::make_unique<wxDataViewColumn>("Selected Palette",
-      std::make_unique<wxDataViewChoiceRenderer>(available_palettes).release(),
-      table->GetColumnCount(),
-      wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-    table->AppendColumn(selectionColumn.release());
+      selectionColumn = std::make_unique<wxDataViewColumn>("Selected Palette",
+        std::make_unique<wxDataViewChoiceRenderer>(available_palettes).release(),
+        table->GetColumnCount(),
+        wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
+      table->AppendColumn(selectionColumn.release());
 
-    selectionColumn = std::make_unique<wxDataViewColumn>("Selected Palette Index",
-      std::make_unique<wxDataViewSpinRenderer>(0, 255).release(),
-      table->GetColumnCount(),
-      wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
+      selectionColumn = std::make_unique<wxDataViewColumn>("Selected Palette Index",
+        std::make_unique<wxDataViewSpinRenderer>(0, 255).release(),
+        table->GetColumnCount(),
+        wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
 
-    table->AppendColumn(selectionColumn.release());
+      table->AppendColumn(selectionColumn.release());
 
-    table->AppendTextColumn("Actions", wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
+      table->AppendTextColumn("Actions", wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
 
-    table->Bind(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, [this, table = table.get()](wxDataViewEvent& event) {
+      table->Bind(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, [this, table = table.get()](wxDataViewEvent& event) {
         table->EditItem(event.GetItem(), event.GetDataViewColumn());
-    });
+      });
 
-    table->Bind(wxEVT_DATAVIEW_ITEM_VALUE_CHANGED, [this, table = table.get(), palettes_have_same_values = palettes_have_same_values.get()](wxDataViewEvent& event) {
-      constexpr auto default_palette_key_col = 2;
-      constexpr auto default_palette_index_col = 3;
-      constexpr auto selected_palette_key_col = 4;
-      constexpr auto selected_palette_index_col = 5;
+      table->Bind(wxEVT_DATAVIEW_ITEM_VALUE_CHANGED, [this, table = table.get(), palettes_have_same_values](wxDataViewEvent& event) {
+        constexpr auto default_palette_key_col = 2;
+        constexpr auto default_palette_index_col = 3;
+        constexpr auto selected_palette_key_col = 4;
+        constexpr auto selected_palette_index_col = 5;
 
-      auto* model = event.GetModel();
+        auto* model = event.GetModel();
 
-      wxVariant default_palette_key;
-      model->GetValue(default_palette_key, event.GetItem(), default_palette_key_col);
+        wxVariant default_palette_key;
+        model->GetValue(default_palette_key, event.GetItem(), default_palette_key_col);
 
-      wxVariant default_palette_index;
-      model->GetValue(default_palette_index, event.GetItem(), default_palette_index_col);
+        wxVariant default_palette_index;
+        model->GetValue(default_palette_index, event.GetItem(), default_palette_index_col);
 
-      wxVariant selected_palette_key;
-      model->GetValue(selected_palette_key, event.GetItem(), selected_palette_key_col);
+        wxVariant selected_palette_key;
+        model->GetValue(selected_palette_key, event.GetItem(), selected_palette_key_col);
 
-      wxVariant selected_palette_index;
-      model->GetValue(selected_palette_index, event.GetItem(), selected_palette_index_col);
+        wxVariant selected_palette_index;
+        model->GetValue(selected_palette_index, event.GetItem(), selected_palette_index_col);
 
-      auto palette_iter = palette_data.loaded_palettes.find(default_palette_key.GetString().utf8_string());
+        auto palette_iter = palette_data.loaded_palettes.find(default_palette_key.GetString().utf8_string());
 
-      if (palette_iter != palette_data.loaded_palettes.end())
-      {
-        if (default_palette_index.GetInteger() >= palette_iter->second.second.size())
+        if (palette_iter != palette_data.loaded_palettes.end())
         {
-          default_palette_index = palette_iter->second.second.empty() ? long{} : long(palette_iter->second.second.size() - 1);
-          model->SetValue(default_palette_index, event.GetItem(), default_palette_index_col);
+          if (default_palette_index.GetInteger() >= palette_iter->second.second.size())
+          {
+            default_palette_index = palette_iter->second.second.empty() ? long{} : long(palette_iter->second.second.size() - 1);
+            model->SetValue(default_palette_index, event.GetItem(), default_palette_index_col);
+          }
         }
-      }
 
-      palette_iter = palette_data.loaded_palettes.find(default_palette_key.GetString().utf8_string());
+        palette_iter = palette_data.loaded_palettes.find(default_palette_key.GetString().utf8_string());
 
-      if (palette_iter != palette_data.loaded_palettes.end())
-      {
-        if (selected_palette_index.GetInteger() >= palette_iter->second.second.size())
+        if (palette_iter != palette_data.loaded_palettes.end())
         {
-          selected_palette_index = palette_iter->second.second.empty() ? long{} : long(palette_iter->second.second.size() - 1);
-          model->SetValue(selected_palette_index, event.GetItem(), selected_palette_index_col);
+          if (selected_palette_index.GetInteger() >= palette_iter->second.second.size())
+          {
+            selected_palette_index = palette_iter->second.second.empty() ? long{} : long(palette_iter->second.second.size() - 1);
+            model->SetValue(selected_palette_index, event.GetItem(), selected_palette_index_col);
+          }
         }
-      }
 
-      if (palettes_have_same_values->GetValue())
-      {
+        if (palettes_have_same_values->GetValue())
+        {
+          auto* column = event.GetDataViewColumn();
+
+          if (column->GetModelColumn() == default_palette_key_col || column->GetModelColumn() == default_palette_index_col)
+          {
+            selected_palette_key = default_palette_key;
+            selected_palette_index = default_palette_index;
+            model->SetValue(selected_palette_key, event.GetItem(), selected_palette_key_col);
+            model->SetValue(selected_palette_index, event.GetItem(), selected_palette_index_col);
+          }
+          else if (column->GetModelColumn() == selected_palette_key_col || column->GetModelColumn() == selected_palette_index_col)
+          {
+            default_palette_key = selected_palette_key;
+            default_palette_index = selected_palette_index;
+            model->SetValue(default_palette_key, event.GetItem(), default_palette_key_col);
+            model->SetValue(default_palette_index, event.GetItem(), default_palette_index_col);
+          }
+        }
+
+        auto file_info_for_item = [](const wxDataViewModel& model, const wxDataViewItem& item) {
+          wxVariant folder_path;
+          model.GetValue(folder_path, item, 0);
+
+          wxVariant filename;
+          model.GetValue(filename, item, 1);
+          studio::resources::file_info info;
+          info.filename = filename.GetString().utf8_string();
+          info.folder_path = folder_path.GetString().utf8_string();
+
+          return info;
+        };
+
+        auto info = file_info_for_item(*model, event.GetItem());
+
         auto* column = event.GetDataViewColumn();
 
-        if (column->GetModelColumn() == default_palette_key_col || column->GetModelColumn() == default_palette_index_col)
+        if (palettes_have_same_values->GetValue() || column->GetModelColumn() == default_palette_key_col || column->GetModelColumn() == default_palette_index_col)
         {
-          selected_palette_key = default_palette_key;
-          selected_palette_index = default_palette_index;
-          model->SetValue(selected_palette_key, event.GetItem(), selected_palette_key_col);
-          model->SetValue(selected_palette_index, event.GetItem(), selected_palette_index_col);
+          set_default_palette(context.explorer, info,
+            default_palette_key.GetString().utf8_string(),
+            default_palette_index.GetInteger());
         }
-        else if (column->GetModelColumn() == selected_palette_key_col || column->GetModelColumn() == selected_palette_index_col)
+
+        if (palettes_have_same_values->GetValue() || column->GetModelColumn() == selected_palette_key_col || column->GetModelColumn() == selected_palette_index_col)
         {
-          default_palette_key = selected_palette_key;
-          default_palette_index = selected_palette_index;
-          model->SetValue(default_palette_key, event.GetItem(), default_palette_key_col);
-          model->SetValue(default_palette_index, event.GetItem(), default_palette_index_col);
+          set_selected_palette(context.explorer, info,
+            selected_palette_key.GetString().utf8_string(),
+            selected_palette_index.GetInteger());
         }
-      }
 
-      auto file_info_for_item = [](const wxDataViewModel& model, const wxDataViewItem& item) {
-        wxVariant folder_path;
-        model.GetValue(folder_path, item, 0);
+        wxDataViewItemArray selections;
+        table->GetSelections(selections);
 
-        wxVariant filename;
-        model.GetValue(filename, item, 1);
-        studio::resources::file_info info;
-        info.filename = filename.GetString().utf8_string();
-        info.folder_path = folder_path.GetString().utf8_string();
-
-        return info;
-      };
-
-      auto info = file_info_for_item(*model, event.GetItem());
-
-      auto* column = event.GetDataViewColumn();
-
-      if (palettes_have_same_values->GetValue() || column->GetModelColumn() == default_palette_key_col || column->GetModelColumn() == default_palette_index_col)
-      {
-        set_default_palette(context.explorer, info,
-          default_palette_key.GetString().utf8_string(),
-          default_palette_index.GetInteger());
-      }
-
-      if (palettes_have_same_values->GetValue() || column->GetModelColumn() == selected_palette_key_col || column->GetModelColumn() == selected_palette_index_col)
-      {
-        set_selected_palette(context.explorer, info,
-          selected_palette_key.GetString().utf8_string(),
-          selected_palette_index.GetInteger());
-      }
-
-      wxDataViewItemArray selections;
-      table->GetSelections(selections);
-
-      for (auto& selection : selections)
-      {
-        if (selection != event.GetItem())
+        for (auto& selection : selections)
         {
-          info = file_info_for_item(*model, selection);
-
-          if (palettes_have_same_values->GetValue() || column->GetModelColumn() == default_palette_key_col || column->GetModelColumn() == default_palette_index_col)
+          if (selection != event.GetItem())
           {
-            model->SetValue(default_palette_key, selection, default_palette_key_col);
-            model->SetValue(default_palette_index, selection, default_palette_index_col);
+            info = file_info_for_item(*model, selection);
 
-            set_default_palette(context.explorer, info,
-              default_palette_key.GetString().utf8_string(),
-              default_palette_index.GetInteger());
-          }
+            if (palettes_have_same_values->GetValue() || column->GetModelColumn() == default_palette_key_col || column->GetModelColumn() == default_palette_index_col)
+            {
+              model->SetValue(default_palette_key, selection, default_palette_key_col);
+              model->SetValue(default_palette_index, selection, default_palette_index_col);
 
-          if (palettes_have_same_values->GetValue() || column->GetModelColumn() == selected_palette_key_col || column->GetModelColumn() == selected_palette_index_col)
-          {
-            model->SetValue(selected_palette_key, selection, selected_palette_key_col);
-            model->SetValue(selected_palette_index, selection, selected_palette_index_col);
+              set_default_palette(context.explorer, info,
+                default_palette_key.GetString().utf8_string(),
+                default_palette_index.GetInteger());
+            }
 
-            set_selected_palette(context.explorer, info,
-              selected_palette_key.GetString().utf8_string(),
-              selected_palette_index.GetInteger());
+            if (palettes_have_same_values->GetValue() || column->GetModelColumn() == selected_palette_key_col || column->GetModelColumn() == selected_palette_index_col)
+            {
+              model->SetValue(selected_palette_key, selection, selected_palette_key_col);
+              model->SetValue(selected_palette_index, selection, selected_palette_index_col);
+
+              set_selected_palette(context.explorer, info,
+                selected_palette_key.GetString().utf8_string(),
+                selected_palette_index.GetInteger());
+            }
           }
         }
+      });
+
+      return table;
+    };
+
+    auto table = create_table();
+    auto search_table = create_table();
+    auto sizer = std::make_unique<wxBoxSizer>(wxVERTICAL);
+
+    auto search = std::make_unique<wxSearchCtrl>(panel.get(), wxID_ANY);
+    search->ShowSearchButton(true);
+    search->ShowCancelButton(true);
+
+    auto cancel = [search = search.get(), sizer = sizer.get(), table = table.get(), search_table = search_table.get()](wxCommandEvent& event) {
+      search->Clear();
+      sizer->Hide(search_table);
+      sizer->Show(table);
+      sizer->Layout();
+    };
+
+    search->Bind(wxEVT_SEARCH, [sizer = sizer.get(),
+                                 table = table.get(),
+                                 search_table = search_table.get(),
+                                 cancel,
+                                this](wxCommandEvent& event) {
+      if (event.GetString().empty())
+      {
+        cancel(event);
+        return;
       }
+
+      auto images = context.explorer.find_files(context.actions.get_extensions_by_category("all_images"));
+      search_table->DeleteAllItems();
+
+      for (auto& image : images)
+      {
+        auto filename = shared::to_lower(image.filename.string());
+        auto folder_name = shared::to_lower(std::filesystem::relative(image.folder_path, context.explorer.get_search_path()).string());
+        auto lower_search = shared::to_lower(event.GetString().utf8_string());
+
+        if (filename.find(lower_search) == std::string::npos && folder_name.find(lower_search) == std::string::npos)
+        {
+          continue;
+        }
+
+        wxVector<wxVariant> results;
+        results.reserve(7);
+
+        results.push_back(image.folder_path.string());
+        results.push_back(image.filename.string());
+        results.push_back("?");
+        results.push_back(0);
+        results.push_back("?");
+        results.push_back(0);
+
+        results.push_back("");
+
+        search_table->AppendItem(results);
+      }
+
+      sizer->Hide(table);
+      sizer->Show(search_table);
+      sizer->Layout();
     });
+
+    search->Bind(wxEVT_SEARCH_CANCEL, cancel);
 
     panel->SetSizer(std::make_unique<wxBoxSizer>(wxHORIZONTAL).release());
 
     panel->GetSizer()->Add(palettes_have_same_values.release(), 2, wxEXPAND, 0);
     panel->GetSizer()->AddStretchSpacer(8);
+    panel->GetSizer()->Add(search.release(), 4, wxEXPAND, 0);
 
     auto images = context.explorer.find_files(context.actions.get_extensions_by_category("all_images"));
 
@@ -288,9 +357,11 @@ namespace studio::views
       }
     });
 
-    auto sizer = std::make_unique<wxBoxSizer>(wxVERTICAL);
+
     sizer->Add(panel.release(), 1, wxEXPAND, 0);
+    sizer->Add(search_table.get(), 15, wxEXPAND, 0);
     sizer->Add(table.release(), 15, wxEXPAND, 0);
+    sizer->Hide(search_table.release());
 
     parent.SetSizer(sizer.release());
   }
