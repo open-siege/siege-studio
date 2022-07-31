@@ -152,13 +152,21 @@ namespace studio::views
 
       auto info = file_info_for_item(*model, event.GetItem());
 
-      set_default_palette(context.explorer, info,
-        default_palette_key.GetString().utf8_string(),
-        default_palette_index.GetInteger());
+      auto* column = event.GetDataViewColumn();
 
-      set_selected_palette(context.explorer, info,
-        selected_palette_key.GetString().utf8_string(),
-        selected_palette_index.GetInteger());
+      if (palettes_have_same_values->GetValue() || column->GetModelColumn() == default_palette_key_col || column->GetModelColumn() == default_palette_index_col)
+      {
+        set_default_palette(context.explorer, info,
+          default_palette_key.GetString().utf8_string(),
+          default_palette_index.GetInteger());
+      }
+
+      if (palettes_have_same_values->GetValue() || column->GetModelColumn() == selected_palette_key_col || column->GetModelColumn() == selected_palette_index_col)
+      {
+        set_selected_palette(context.explorer, info,
+          selected_palette_key.GetString().utf8_string(),
+          selected_palette_index.GetInteger());
+      }
 
       wxDataViewItemArray selections;
       table->GetSelections(selections);
@@ -167,7 +175,6 @@ namespace studio::views
       {
         if (selection != event.GetItem())
         {
-          auto* column = event.GetDataViewColumn();
           info = file_info_for_item(*model, selection);
 
           if (palettes_have_same_values->GetValue() || column->GetModelColumn() == default_palette_key_col || column->GetModelColumn() == default_palette_index_col)
