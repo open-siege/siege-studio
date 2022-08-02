@@ -216,9 +216,39 @@ namespace studio::views
     search->ShowSearchButton(true);
     search->ShowCancelButton(true);
 
+    auto open_in_tab = std::make_unique<wxButton>(panel.get(), wxID_ANY, "Open In New Tab");
+
+    open_in_tab->Bind(wxEVT_BUTTON, [this, table = table.get(), images](wxCommandEvent& event) {
+      wxDataViewItemArray selections;
+      table->GetSelections(selections);
+
+      auto* model = table->GetModel();
+
+      for (auto& selection : selections)
+      {
+        wxVariant temp;
+        model->GetValue(temp, selection, 0);
+        auto folder_path = temp.GetString().utf8_string();
+
+        model->GetValue(temp, selection, 1);
+        auto filename = temp.GetString().utf8_string();
+
+        auto possible_item = std::find_if(images.begin(), images.end(), [&](const auto& info) {
+          return info.filename == filename && info.folder_path == folder_path;
+        });
+
+        if (possible_item != images.end())
+        {
+          context.actions.open_new_tab(*possible_item);
+        }
+      }
+    });
+
+
     panel->SetSizer(std::make_unique<wxBoxSizer>(wxHORIZONTAL).release());
 
     panel->GetSizer()->Add(palettes_have_same_values.release(), 2, wxEXPAND, 0);
+    panel->GetSizer()->Add(open_in_tab.release(), 2, wxEXPAND, 0);
     panel->GetSizer()->AddStretchSpacer(8);
     panel->GetSizer()->Add(search.get(), 4, wxEXPAND, 0);
 
@@ -363,9 +393,9 @@ namespace studio::views
       }
     });
 
-    sizer->Add(panel.release(), 1, wxEXPAND, 0);
-    sizer->Add(search_table.get(), 15, wxEXPAND, 0);
-    sizer->Add(table.release(), 15, wxEXPAND, 0);
+    sizer->Add(panel.release(), 4, wxEXPAND, 0);
+    sizer->Add(search_table.get(), 96, wxEXPAND, 0);
+    sizer->Add(table.release(), 96, wxEXPAND, 0);
     sizer->Hide(search_table.release());
 
     parent.SetSizer(sizer.release());
