@@ -210,6 +210,8 @@ namespace studio::views
     auto search_table = create_table();
     auto sizer = std::make_unique<wxBoxSizer>(wxVERTICAL);
 
+    auto images = context.explorer.find_files(context.actions.get_extensions_by_category("all_images"));
+
     auto search = std::make_unique<wxSearchCtrl>(panel.get(), wxID_ANY);
     search->ShowSearchButton(true);
     search->ShowCancelButton(true);
@@ -224,6 +226,7 @@ namespace studio::views
     search->Bind(wxEVT_SEARCH, [sizer = sizer.get(),
                                  table = table.get(),
                                  search_table = search_table.get(),
+                                 images,
                                  cancel,
                                 this](wxCommandEvent& event) {
       if (event.GetString().empty())
@@ -232,22 +235,22 @@ namespace studio::views
         return;
       }
 
-      auto images = context.explorer.find_files(context.actions.get_extensions_by_category("all_images"));
       search_table->DeleteAllItems();
+
+      auto search_value = shared::to_lower(event.GetString().utf8_string());
+
+      wxVector<wxVariant> results;
+      results.reserve(7);
 
       for (auto& image : images)
       {
         auto filename = shared::to_lower(image.filename.string());
         auto folder_name = shared::to_lower(std::filesystem::relative(image.folder_path, context.explorer.get_search_path()).string());
-        auto lower_search = shared::to_lower(event.GetString().utf8_string());
 
-        if (filename.find(lower_search) == std::string::npos && folder_name.find(lower_search) == std::string::npos)
+        if (filename.find(search_value) == std::string::npos && folder_name.find(search_value) == std::string::npos)
         {
           continue;
         }
-
-        wxVector<wxVariant> results;
-        results.reserve(7);
 
         results.push_back(image.folder_path.string());
         results.push_back(image.filename.string());
@@ -259,6 +262,7 @@ namespace studio::views
         results.push_back("");
 
         search_table->AppendItem(results);
+        results.clear();
       }
 
       sizer->Hide(table);
@@ -274,13 +278,13 @@ namespace studio::views
     panel->GetSizer()->AddStretchSpacer(8);
     panel->GetSizer()->Add(search.release(), 4, wxEXPAND, 0);
 
-    auto images = context.explorer.find_files(context.actions.get_extensions_by_category("all_images"));
-
     std::unordered_map<std::string, wxDataViewItem> table_rows;
+    wxVector<wxVariant> results;
+    results.reserve(7);
+
     for (auto& image : images)
     {
-      wxVector<wxVariant> results;
-      results.reserve(7);
+
 
       results.push_back(image.folder_path.string());
       results.push_back(image.filename.string());
@@ -292,6 +296,7 @@ namespace studio::views
       results.push_back("");
 
       table->AppendItem(results);
+      results.clear();
       table_rows.emplace((image.folder_path / image.filename).string(), table->RowToItem(table->GetItemCount() - 1));
     }
 
@@ -356,7 +361,6 @@ namespace studio::views
         images.erase(begin, end);
       }
     });
-
 
     sizer->Add(panel.release(), 1, wxEXPAND, 0);
     sizer->Add(search_table.get(), 15, wxEXPAND, 0);
