@@ -295,8 +295,6 @@ namespace studio
         item);
     }
 
-
-
     for (auto& item : files_folders)
     {
       std::visit([&](auto&& file) {
