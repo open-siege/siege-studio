@@ -216,6 +216,32 @@ namespace studio::views
     search->ShowSearchButton(true);
     search->ShowCancelButton(true);
 
+    panel->SetSizer(std::make_unique<wxBoxSizer>(wxHORIZONTAL).release());
+
+    panel->GetSizer()->Add(palettes_have_same_values.release(), 2, wxEXPAND, 0);
+    panel->GetSizer()->AddStretchSpacer(8);
+    panel->GetSizer()->Add(search.get(), 4, wxEXPAND, 0);
+
+    std::unordered_map<std::string, wxDataViewItem> table_rows;
+    wxVector<wxVariant> results;
+    results.reserve(7);
+
+    for (auto& image : images)
+    {
+      results.push_back(image.folder_path.string());
+      results.push_back(image.filename.string());
+      results.push_back("?");
+      results.push_back(0);
+      results.push_back("?");
+      results.push_back(0);
+
+      results.push_back("");
+
+      table->AppendItem(results);
+      results.clear();
+      table_rows.emplace((image.folder_path / image.filename).string(), table->RowToItem(table->GetItemCount() - 1));
+    }
+
     auto cancel = [search = search.get(), sizer = sizer.get(), table = table.get(), search_table = search_table.get()](wxCommandEvent& event) {
       search->Clear();
       sizer->Hide(search_table);
@@ -227,8 +253,9 @@ namespace studio::views
                                  table = table.get(),
                                  search_table = search_table.get(),
                                  images,
+                                 table_rows,
                                  cancel,
-                                this](wxCommandEvent& event) {
+                                 this](wxCommandEvent& event) {
       if (event.GetString().empty())
       {
         cancel(event);
@@ -252,14 +279,16 @@ namespace studio::views
           continue;
         }
 
-        results.push_back(image.folder_path.string());
-        results.push_back(image.filename.string());
-        results.push_back("?");
-        results.push_back(0);
-        results.push_back("?");
-        results.push_back(0);
+        auto key = (image.folder_path / image.filename).string();
+        auto row = table->ItemToRow(table_rows.at(key));
 
-        results.push_back("");
+        wxVariant temp;
+
+        for (auto i = 0u; i < table->GetColumnCount(); ++i)
+        {
+          table->GetValue(temp, row, i);
+          results.push_back(temp);
+        }
 
         search_table->AppendItem(results);
         results.clear();
@@ -270,35 +299,7 @@ namespace studio::views
       sizer->Layout();
     });
 
-    search->Bind(wxEVT_SEARCH_CANCEL, cancel);
-
-    panel->SetSizer(std::make_unique<wxBoxSizer>(wxHORIZONTAL).release());
-
-    panel->GetSizer()->Add(palettes_have_same_values.release(), 2, wxEXPAND, 0);
-    panel->GetSizer()->AddStretchSpacer(8);
-    panel->GetSizer()->Add(search.release(), 4, wxEXPAND, 0);
-
-    std::unordered_map<std::string, wxDataViewItem> table_rows;
-    wxVector<wxVariant> results;
-    results.reserve(7);
-
-    for (auto& image : images)
-    {
-
-
-      results.push_back(image.folder_path.string());
-      results.push_back(image.filename.string());
-      results.push_back("?");
-      results.push_back(0);
-      results.push_back("?");
-      results.push_back(0);
-
-      results.push_back("");
-
-      table->AppendItem(results);
-      results.clear();
-      table_rows.emplace((image.folder_path / image.filename).string(), table->RowToItem(table->GetItemCount() - 1));
-    }
+    search.release()->Bind(wxEVT_SEARCH_CANCEL, cancel);
 
     pending_load = std::async(std::launch::async, [this, table = table.get(), images = std::move(images), table_rows = std::move(table_rows)]() mutable {
 
