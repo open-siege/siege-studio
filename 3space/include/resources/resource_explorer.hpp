@@ -23,9 +23,6 @@ namespace studio::resources
   class resource_explorer
   {
   public:
-    static void merge_results(std::vector<studio::resources::file_info>& group1,
-                              const std::vector<studio::resources::file_info>& group2);
-
     std::filesystem::path get_search_path() const;
 
     void add_archive_type(std::string extension, std::unique_ptr<studio::resources::archive_plugin> archive_type, std::optional<nonstd::span<std::string_view>> explicit_extensions = std::nullopt);

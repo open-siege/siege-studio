@@ -152,24 +152,6 @@ namespace studio::resources
     return find_files(get_search_path(), extensions);
   }
 
-  void resource_explorer::merge_results(std::vector<studio::resources::file_info>& group1,
-    const std::vector<studio::resources::file_info>& group2)
-  {
-    group1.reserve(group1.capacity() + group2.size());
-
-    for (auto& group2_item : group2)
-    {
-      auto result = std::find_if(group1.begin(), group1.end(), [&](const auto& group1_item) {
-        return group1_item.folder_path == group2_item.folder_path && group1_item.filename == group2_item.filename;
-      });
-
-      if (result == group1.end())
-      {
-        group1.emplace_back(group2_item);
-      }
-    }
-  }
-
   file_stream resource_explorer::load_file(const std::filesystem::path& path) const
   {
     studio::resources::file_info info{};
