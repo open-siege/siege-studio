@@ -292,8 +292,8 @@ namespace studio::views
     panel->GetSizer()->Add(search.release(), 4, wxEXPAND, 0);
 
     auto sizer = std::make_unique<wxBoxSizer>(wxVERTICAL);
-    sizer->Add(panel.release(), 1, wxEXPAND, 0);
-    sizer->Add(table.get(), 15, wxEXPAND, 0);
+    sizer->Add(panel.release(), 4, wxEXPAND, 0);
+    sizer->Add(table.get(), 96, wxEXPAND, 0);
 
     parent.SetSizer(sizer.release());
   }
