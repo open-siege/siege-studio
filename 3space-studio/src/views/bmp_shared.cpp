@@ -9,7 +9,7 @@ namespace studio::views
   {
     for (auto& palette_info : palettes)
     {
-      auto raw_palette = manager.load_file(palette_info);
+      auto raw_palette = manager.load_file(palette_info, true);
       auto result = get_palette_key(manager, palette_info);
 
       if (content::pal::is_earthsiege_pal(*raw_palette.second))
