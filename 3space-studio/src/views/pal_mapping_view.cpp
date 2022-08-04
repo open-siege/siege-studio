@@ -74,7 +74,7 @@ namespace studio::views
 
       table->AppendTextColumn("Actions", wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
 
-      table->Bind(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, [this, table = table.get()](wxDataViewEvent& event) {
+      table->Bind(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, [table = table.get()](wxDataViewEvent& event) {
         table->EditItem(event.GetItem(), event.GetDataViewColumn());
       });
 
@@ -342,9 +342,13 @@ namespace studio::views
 
       auto distance = 16u;
 
-
       while (!images.empty())
       {
+        if (table->IsBeingDeleted())
+        {
+          break;
+        }
+
         auto begin = images.begin();
         auto end = begin;
 
