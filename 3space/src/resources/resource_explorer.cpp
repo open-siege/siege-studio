@@ -335,6 +335,11 @@ namespace studio::resources
       return archive_type.value().get().get_content_listing(file_stream, { get_archive_path(folder_path), folder_path });
     }
 
+    if (!std::filesystem::is_directory(folder_path))
+    {
+      return files;
+    }
+
     for (auto& item : std::filesystem::directory_iterator(folder_path))
     {
       if (item.is_directory())
