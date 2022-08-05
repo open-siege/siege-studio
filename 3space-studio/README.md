@@ -10,7 +10,7 @@ Classic Games, Modern Technology.
 
 For a list of current development tasks, check out this ClickUp board here: https://share.clickup.com/b/h/5-15151441-2/aeb3a2cc99994ef
 
-If you are reading this on your computer, checkout the latest README here: https://github.com/matthew-rindel/3space-studio
+If you are reading this on your computer, checkout the latest README here: https://github.com/open-siege/open-siege
 
 A first goal for each game is to do the following:
 
