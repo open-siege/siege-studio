@@ -536,9 +536,25 @@ int main(int argc, char** argv)
     };
 
     auto add_new_element = [notebook, &num_elements, &view_factory, &archive]() {
+      auto new_tab_count = 0;
+
+      for (auto i = 0u; i < notebook->GetPageCount(); ++i)
+      {
+        if (notebook->GetPageText(i) == "New Tab")
+        {
+          new_tab_count++;
+        }
+      }
+
+      if (new_tab_count >= 5)
+      {
+        return;
+      }
+
       auto panel = std::make_unique<wxPanel>(notebook.get(), wxID_ANY);
       panel->SetSizer(std::make_unique<wxBoxSizer>(wxHORIZONTAL).release());
       studio::create_render_view(*panel, studio::create_null_stream(), view_factory, archive);
+
       notebook->InsertPage(notebook->GetPageCount() - 1, panel.release(), "New Tab");
       notebook->ChangeSelection(notebook->GetPageCount() - 2);
       num_elements = notebook->GetPageCount();
@@ -569,7 +585,7 @@ int main(int argc, char** argv)
 
     notebook->Bind(
       wxEVT_MENU, [notebook, &selection](auto& event) {
-        if (notebook->GetPageCount() > 1)
+        if (notebook->GetPageCount() > 2 && notebook->GetPageText(selection) != "+")
         {
           notebook->DeletePage(selection);
         }
@@ -579,7 +595,10 @@ int main(int argc, char** argv)
     auto close_right_tabs = [notebook, &selection](auto& event) {
       for (auto i = notebook->GetPageCount(); i > selection; --i)
       {
-        notebook->DeletePage(i);
+        if (notebook->GetPageText(i) != "+")
+        {
+          notebook->DeletePage(i);
+        }
       }
       selection = notebook->GetSelection();
     };
