@@ -126,5 +126,5 @@ Those files can then be copied into the directory of a specific game for everyth
         * Much more
 
 ### Related Projects
-https://github.com/matthew-rindel/3space-studio
+https://github.com/open-siege/open-siege
 

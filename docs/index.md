@@ -10,7 +10,7 @@
 
 For more information on the supported file formats of 3Space Studio, see the [Game Support](game-support) page.
 
-For technical information surrounding the file formats, see the [main wiki of this project](https://github.com/matthew-rindel/3space-studio/wiki).
+For technical information surrounding the file formats, see the [main wiki of this project](https://github.com/open-siege/open-siege/wiki).
 
 ### Roadmap
 

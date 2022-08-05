@@ -56,7 +56,7 @@ namespace studio::views
       auto text = std::make_unique<wxStaticText>(&parent, wxID_ANY, "This particular file is not yet supported by 3Space Studio.\nThough, you can still read about it on our wiki.\nClick the link below to find out more.");
       text->SetWindowStyle(wxALIGN_CENTRE_HORIZONTAL);
 
-      std::string url = "https://github.com/matthew-rindel/3space-studio/wiki/" + extension;
+      std::string url = "https://github.com/open-siege/open-siege/wiki/" + extension;
 
       auto command = std::make_unique<wxCommandLinkButton>(&parent, wxID_ANY, url);
 
