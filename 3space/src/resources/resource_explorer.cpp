@@ -152,45 +152,23 @@ namespace studio::resources
     return find_files(get_search_path(), extensions);
   }
 
-  file_stream resource_explorer::load_file(const std::filesystem::path& path, bool should_cache) const
+  file_stream resource_explorer::load_file(const std::filesystem::path& path) const
   {
     studio::resources::file_info info{};
 
     info.folder_path = path.parent_path();
     info.filename = path.filename().string();
 
-    return load_file(info, should_cache);
+    return load_file(info);
   }
 
-  file_stream resource_explorer::load_file(const studio::resources::file_info& info, bool should_cache) const
+  file_stream resource_explorer::load_file(const studio::resources::file_info& info) const
   {
-    thread_local std::map<std::string, std::basic_string<std::byte>> info_cache;
-
-    auto combined_path = info.folder_path / info.filename;
-
-    if (auto cached_item = info_cache.find(combined_path.string()); should_cache && cached_item != info_cache.end())
-    {
-      return std::make_pair(info, std::make_unique<std::basic_istringstream<std::byte>>(cached_item->second, std::ios::binary));
-    }
-
     if (info.compression_type == studio::resources::compression_type::none)
     {
       if (std::filesystem::is_directory(info.folder_path))
       {
-        if (should_cache)
-        {
-          auto memory_stream = std::make_unique<std::basic_stringstream<std::byte>>(std::ios::binary | std::ios::in | std::ios::out);
-          std::basic_ifstream<std::byte> file(combined_path, std::ios::binary);
-
-          std::copy( std::istreambuf_iterator<std::byte>( file ),
-            std::istreambuf_iterator<std::byte>(),
-            std::ostreambuf_iterator<std::byte>( *memory_stream ));
-
-          info_cache.emplace(combined_path.string(), memory_stream->str());
-          return std::make_pair(info, std::move(memory_stream));
-        }
-
-        return std::make_pair(info, std::make_unique<std::basic_ifstream<std::byte>>(combined_path, std::ios::binary));
+        return std::make_pair(info, std::make_unique<std::basic_ifstream<std::byte>>(info.folder_path / info.filename, std::ios::binary));
       }
       else
       {
@@ -202,14 +180,6 @@ namespace studio::resources
         if (archive.has_value())
         {
           archive->get().set_stream_position(*file_stream, info);
-        }
-
-        if (should_cache)
-        {
-          auto memory_stream = std::make_unique<std::basic_stringstream<std::byte>>(std::ios::binary | std::ios::in | std::ios::out);
-          archive->get().extract_file_contents(*file_stream, info, *memory_stream);
-          info_cache.emplace(combined_path.string(), memory_stream->str());
-          return std::make_pair(info, std::move(memory_stream));
         }
 
         return std::make_pair(info, std::move(file_stream));
@@ -227,11 +197,6 @@ namespace studio::resources
       if (archive.has_value())
       {
         archive->get().extract_file_contents(file_stream, info, *memory_stream);
-      }
-
-      if (should_cache)
-      {
-        info_cache.emplace(combined_path.string(), memory_stream->str());
       }
 
       return std::make_pair(info, std::move(memory_stream));

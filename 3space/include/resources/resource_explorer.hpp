@@ -33,9 +33,9 @@ namespace studio::resources
 
     std::vector<studio::resources::file_info> find_files(const std::vector<std::string_view>& extensions) const;
 
-    file_stream load_file(const std::filesystem::path& path, bool should_cache = false) const;
+    file_stream load_file(const std::filesystem::path& path) const;
 
-    file_stream load_file(const studio::resources::file_info& info, bool should_cache = false) const;
+    file_stream load_file(const studio::resources::file_info& info) const;
 
     bool is_regular_file(const std::filesystem::path& folder_path) const;
 
