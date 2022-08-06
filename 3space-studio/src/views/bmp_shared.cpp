@@ -1,3 +1,4 @@
+#include <execution>
 #include "bmp_shared.hpp"
 #include "content/pal/palette.hpp"
 #include "content/json_boost.hpp"
@@ -7,25 +8,30 @@ namespace studio::views
 {
   void palette_context::load_palettes(const studio::resources::resource_explorer& manager, const std::vector<studio::resources::file_info>& palettes)
   {
-    for (auto& palette_info : palettes)
+    std::vector<studio::resources::file_stream> loaded_files(palettes.size());
+
+    std::transform(std::execution::par_unseq, palettes.begin(), palettes.end(), loaded_files.begin(), [&manager](const auto& palette_info) {
+      return manager.load_file(palette_info);
+    });
+
+    for (auto& [palette_info, raw_stream] : loaded_files)
     {
-      auto raw_palette = manager.load_file(palette_info, true);
       auto result = get_palette_key(manager, palette_info);
 
-      if (content::pal::is_earthsiege_pal(*raw_palette.second))
+      if (content::pal::is_earthsiege_pal(*raw_stream))
       {
         std::vector<content::pal::palette> temp;
-        temp.emplace_back().colours = content::pal::get_earthsiege_pal(*raw_palette.second);
+        temp.emplace_back().colours = content::pal::get_earthsiege_pal(*raw_stream);
         loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, std::move(temp)));
       }
-      else if (content::pal::is_phoenix_pal(*raw_palette.second))
+      else if (content::pal::is_phoenix_pal(*raw_stream))
       {
-        loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, content::pal::get_ppl_data(*raw_palette.second)));
+        loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, content::pal::get_ppl_data(*raw_stream)));
       }
-      else if (content::pal::is_microsoft_pal(*raw_palette.second))
+      else if (content::pal::is_microsoft_pal(*raw_stream))
       {
         std::vector<content::pal::palette> temp;
-        temp.emplace_back().colours = content::pal::get_pal_data(*raw_palette.second);
+        temp.emplace_back().colours = content::pal::get_pal_data(*raw_stream);
 
         loaded_palettes.emplace(sort_order.emplace_back(std::move(result)), std::make_pair(palette_info, std::move(temp)));
       }
