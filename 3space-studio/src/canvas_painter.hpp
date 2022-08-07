@@ -1,6 +1,7 @@
 #ifndef DARKSTARDTSCONVERTER_DTS_WIDGET_HPP
 #define DARKSTARDTSCONVERTER_DTS_WIDGET_HPP
 
+#include <imgui-SFML.h>
 #include "views/graphics_view.hpp"
 
 namespace studio
@@ -13,13 +14,11 @@ namespace studio
 
     handler->setup_view(*parent, *window, gui_context);
 
-    return [parent, window, gui_context = &gui_context, handler, clock, callbacks](auto& wx_event) mutable {
+    return [parent, window, handler, clock, callbacks](auto& wx_event) mutable {
            wxPaintDC Dc(parent.get());
+           ImGui::SFML::SetCurrentWindow(*window);
 
            sf::Event event{};
-
-           ImGui::SetCurrentContext(gui_context);
-
            while (window->pollEvent(event))
            {
              ImGui::SFML::ProcessEvent(event);
@@ -44,6 +43,8 @@ namespace studio
                window->close();
              }
            }
+
+           auto gui_context = ImGui::GetCurrentContext();
 
            handler->render_gl(*parent, *window, *gui_context);
 

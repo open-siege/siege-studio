@@ -457,10 +457,6 @@ namespace studio
     tree_panel->GetSizer()->Add(search.get(), 2, wxEXPAND, 0);
     tree_panel->GetSizer()->Add(tree_view.get(), 96, wxEXPAND, 0);
 
-
-
-
-
     return std::make_pair(std::move(tree_panel), repopulate);
   }
 }// namespace studio
