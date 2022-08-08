@@ -944,8 +944,21 @@ namespace studio::views
         const auto [name, index]  = detect_default_palette(bmp_data, context.file_info, context.explorer, palette_data.loaded_palettes, true);
         selected_palette_name = default_palette_name = name;
         selected_palette_index = default_palette_index = index;
-        set_default_palette(context.explorer, context.file_info, "");
+        set_default_palette(context.explorer, context.file_info, name, index);
+        set_selected_palette(context.explorer, context.file_info, name, index);
         refresh_image();
+      }
+
+      if (ImGui::Button("Bulk Palette Edit"))
+      {
+        set_default_palette(context.explorer, context.file_info, default_palette_name, default_palette_index);
+        set_selected_palette(context.explorer, context.file_info, selected_palette_name, selected_palette_index);
+
+        resources::file_info config_file{};
+        config_file.folder_path = context.explorer.get_search_path();
+        config_file.filename = "palettes.settings.json";
+
+        context.actions.open_new_tab(config_file);
       }
 
       ImGui::End();
