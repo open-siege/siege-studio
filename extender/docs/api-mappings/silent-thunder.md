@@ -5,7 +5,6 @@
 * joyGetDevCapsA
 * joyGetPosEx
 * joyGetPos
-* joyGetDevCapsA
 * joySetThreshold
 
 ## Graphics
