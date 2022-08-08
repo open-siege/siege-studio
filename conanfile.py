@@ -7,6 +7,7 @@ import json
 class LocalConanFile(ConanFile):
     settings = "os", "compiler", "build_type", "arch", "arch_build"
     build_requires = "cmake/3.22.0"
+    version = "0.5.3"
 
     def requirements(self):
         args = sys.argv[3:]
