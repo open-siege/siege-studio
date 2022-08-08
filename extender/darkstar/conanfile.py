@@ -10,11 +10,16 @@ class LocalConanFile(ConanFile):
     version = "0.5.3"
     build_requires = "cmake/3.22.0"
     settings = "os", "compiler", "build_type", "arch"
-    requires = "detours/4.0.1@microsoft/stable", "sqlite3/3.37.2", "nlohmann_json/3.10.5", "sfml/2.5.1", "catch2/2.13.8"
+    requires = "detours/4.0.1@microsoft/stable", "sqlite3/3.37.2", "nlohmann_json/3.10.5", "sfml/2.5.1", "sdl/2.0.20", "catch2/2.13.8"
     generators = "cmake_find_package"
 
     def configure(self):
         self.options["sqlite3"].enable_json1 = True
+        self.options["sdl"].shared = False
+        self.options["sdl"].opengl = False
+        self.options["sdl"].opengles = False
+        self.options["sdl"].vulkan = False
+        self.options["sdl"].sdl2main = False
 
 
     def requirements(self):
