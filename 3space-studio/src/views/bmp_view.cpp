@@ -944,8 +944,8 @@ namespace studio::views
         const auto [name, index]  = detect_default_palette(bmp_data, context.file_info, context.explorer, palette_data.loaded_palettes, true);
         selected_palette_name = default_palette_name = name;
         selected_palette_index = default_palette_index = index;
-        set_default_palette(context.explorer, context.file_info, name, index);
-        set_selected_palette(context.explorer, context.file_info, name, index);
+        set_default_palette(context.explorer, context.file_info, "");
+        set_selected_palette(context.explorer, context.file_info, "");
         refresh_image();
       }
 
