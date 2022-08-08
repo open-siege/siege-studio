@@ -5,7 +5,7 @@ import os.path
 
 class LocalConanFile(ConanFile):
     name = "dts-to-obj"
-    version = "0.5.3"
+    version = "0.6.0"
     url = "https://github.com/open-siege/open-siege"
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"

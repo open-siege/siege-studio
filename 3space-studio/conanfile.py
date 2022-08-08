@@ -5,7 +5,7 @@ from PIL import Image
 
 class LocalConanFile(ConanFile):
     name = "3space-studio"
-    version = "0.5.3"
+    version = "0.6.0"
     url = "https://github.com/open-siege/open-siege"
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
