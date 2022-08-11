@@ -24,10 +24,10 @@ for filename in glob.glob("**/*.py", recursive=True):
         continue
     print(f"Updating {filename}")
     with open(filename, "r") as file:
-        # f for f in files if not f.endswith('.rc')
-        old = f"version = \"{old_version}\""
-        new = f"version = \"{current_version}\""
-        lines = [line.replace(old, new) if old in line else line for line in file.readlines()]
+        lines = file.readlines()
+        items_to_replace = [(f"\"3space/{old_version}\"", f"\"3space/{current_version}\""), (f"version = \"{old_version}\"", f"version = \"{current_version}\"")]
+        for (old, new) in items_to_replace:
+            lines = [line.replace(old, new) if old in line else line for line in lines]
 
     with open(filename, "w") as file:
         file.writelines(lines)

@@ -11,7 +11,7 @@ class LocalConanFile(ConanFile):
     author = "Matthew Rindel (matthew@thesiegehub.com)"
     build_requires = "cmake/3.22.0"
     settings = "os", "compiler", "build_type", "arch"
-    requires = "3space/0.5.3"
+    requires = "3space/0.6.0"
     generators = "cmake_find_package"
 
     def build(self):
