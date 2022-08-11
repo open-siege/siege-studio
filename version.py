@@ -25,7 +25,7 @@ for filename in glob.glob("**/*.py", recursive=True):
     print(f"Updating {filename}")
     with open(filename, "r") as file:
         lines = file.readlines()
-        items_to_replace = [(f"\"3space/{old_version}\"", f"\"3space/{current_version}\""), (f"version = \"{old_version}\"", f"version = \"{current_version}\"")]
+        items_to_replace = [(f"3space/{old_version}", f"3space/{current_version}"), (f"version = \"{old_version}\"", f"version = \"{current_version}\"")]
         for (old, new) in items_to_replace:
             lines = [line.replace(old, new) if old in line else line for line in lines]
 
