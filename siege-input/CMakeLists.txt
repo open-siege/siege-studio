@@ -5,8 +5,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 find_package(imgui REQUIRED)
 find_package(SDL2 REQUIRED)
 
-add_executable(siege-input src/main.cpp)
+add_executable(siege-input bindings/imgui_impl_sdl.cpp bindings/imgui_impl_sdlrenderer.cpp src/main.cpp)
 set_property(TARGET siege-input PROPERTY CXX_STANDARD 17)
+target_include_directories(siege-input PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/bindings ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 target_link_libraries(siege-input PRIVATE imgui::imgui SDL2::SDL2-static)
 

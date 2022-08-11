@@ -31,6 +31,8 @@ class HelloImguiSfmlConanFile(ConanFile):
         cmake.install()
 
     def imports(self):
+        self.copy("*.h", src="res/bindings/", dst="bindings")
+        self.copy("*.cpp", src="res/bindings/", dst="bindings")
         tools.rmdir("cmake")
         tools.mkdir("cmake")
         [tools.rename(file, f"cmake/{file}") for file in glob.glob("*.cmake")]
