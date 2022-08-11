@@ -1,0 +1,13 @@
+cmake_minimum_required(VERSION 3.16)
+project(siege-input)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+find_package(imgui REQUIRED)
+find_package(SDL2 REQUIRED)
+
+add_executable(siege-input src/main.cpp)
+set_property(TARGET siege-input PROPERTY CXX_STANDARD 17)
+
+target_link_libraries(siege-input PRIVATE imgui::imgui SDL2::SDL2-static)
+
+install(TARGETS siege-input CONFIGURATIONS Debug Release RUNTIME DESTINATION bin)
