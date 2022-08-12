@@ -162,16 +162,19 @@ int main(int, char**)
                 joystick = joysticks[i] = std::shared_ptr<SDL_Joystick>(SDL_JoystickOpen(i), SDL_JoystickClose);
               }
 
-              ImGui::Text("Device GUID %s", to_string(SDL_JoystickGetDeviceGUID(i)).c_str());
-              ImGui::Text("Vendor ID %d", SDL_JoystickGetVendor(joystick.get()));
-              ImGui::Text("Product ID %d", SDL_JoystickGetProduct(joystick.get()));
-              ImGui::Text("Product Version %d", SDL_JoystickGetProductVersion(joystick.get()));
-              ImGui::Text("Serial Number %s", SDL_JoystickGetSerial(joystick.get()));
-              ImGui::Text("Detected Type %s", to_string(SDL_JoystickGetType(joystick.get())));
-              ImGui::Text("Num Buttons %d", SDL_JoystickNumButtons(joystick.get()));
-              ImGui::Text("Num Hats %d", SDL_JoystickNumHats(joystick.get()));
-              ImGui::Text("Num Axes %d", SDL_JoystickNumAxes(joystick.get()));
-              ImGui::Text("Num Balls %d", SDL_JoystickNumBalls(joystick.get()));
+              ImGui::Text("Device GUID: %s", to_string(SDL_JoystickGetDeviceGUID(i)).c_str());
+              ImGui::Text("Vendor ID: %d", SDL_JoystickGetVendor(joystick.get()));
+              ImGui::Text("Product ID: %d", SDL_JoystickGetProduct(joystick.get()));
+              ImGui::Text("Product Version: %d", SDL_JoystickGetProductVersion(joystick.get()));
+              ImGui::Text("Serial Number: %s", SDL_JoystickGetSerial(joystick.get()));
+              ImGui::Text("Detected Type: %s", to_string(SDL_JoystickGetType(joystick.get())));
+              ImGui::Text("Num Buttons: %d", SDL_JoystickNumButtons(joystick.get()));
+              ImGui::Text("Num Hats: %d", SDL_JoystickNumHats(joystick.get()));
+              ImGui::Text("Num Axes: %d", SDL_JoystickNumAxes(joystick.get()));
+              ImGui::Text("Num Balls: %d", SDL_JoystickNumBalls(joystick.get()));
+              ImGui::Text("Has LED: %s", SDL_JoystickHasLED(joystick.get()) == SDL_TRUE ? "True" : "False");
+              ImGui::Text("Has Rumble: %s", SDL_JoystickHasRumble(joystick.get()) == SDL_TRUE ? "True" : "False");
+              ImGui::Text("Has Triggers with Rumble: %s", SDL_JoystickHasRumbleTriggers(joystick.get()) == SDL_TRUE ? "True" : "False");
               ImGui::EndTabItem();
             }
           }
