@@ -253,6 +253,21 @@ int main(int, char**)
                 ImGui::SameLine();
               }
 
+              ImGui::NewLine();
+
+              for(auto x = 0; x < SDL_JoystickNumButtons(joystick.get()); ++x)
+              {
+                auto value = SDL_JoystickGetButton(joystick.get(), x) == 1;
+                ImGui::Selectable(std::to_string(x + 1).c_str(), value, 0, ImVec2(50, 50));
+                ImGui::SameLine();
+
+                if ((x + 1) % 4 == 0)
+                {
+                  ImGui::NewLine();
+                }
+              }
+
+
               ImGui::EndTabItem();
             }
           }
