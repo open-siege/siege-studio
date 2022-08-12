@@ -10,6 +10,7 @@
 #include <array>
 #include <unordered_map>
 #include <algorithm>
+#include <limits>
 
 #include <SDL.h>
 
@@ -139,6 +140,7 @@ int main(int, char**)
 
       while (running)
       {
+        SDL_JoystickUpdate();
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
@@ -242,6 +244,13 @@ int main(int, char**)
               if (haptic_devices[i])
               {
                 ImGui::Text("Num Supported Haptic Effects: %d", SDL_HapticNumEffects(haptic_devices[i].get()));
+              }
+
+              for (auto x = 0; x < SDL_JoystickNumAxes(joystick.get()); ++x)
+              {
+                auto value = int(SDL_JoystickGetAxis(joystick.get(), x));
+                ImGui::VSliderInt("##int", ImVec2(18, 160), &value, std::numeric_limits<Sint16>::min(), std::numeric_limits<Sint16>::max());
+                ImGui::SameLine();
               }
 
               ImGui::EndTabItem();
