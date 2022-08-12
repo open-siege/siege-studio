@@ -99,7 +99,6 @@ int main(int, char**)
       ImGui_ImplSDL2_InitForSDLRenderer(window.get(), renderer.get());
       ImGui_ImplSDLRenderer_Init(renderer.get());
 
-      bool show_demo_window = true;
       ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
       bool running = true;
@@ -130,11 +129,6 @@ int main(int, char**)
         }
 
         new_frame();
-
-        if (show_demo_window)
-        {
-          ImGui::ShowDemoWindow(&show_demo_window);
-        }
 
         ImGui::Begin("Input Info");
         ImGui::Text("Number of controllers: %d", SDL_NumJoysticks());
@@ -168,6 +162,10 @@ int main(int, char**)
               ImGui::Text("Product Version %d", SDL_JoystickGetProductVersion(joystick.get()));
               ImGui::Text("Serial Number %s", SDL_JoystickGetSerial(joystick.get()));
               ImGui::Text("Detected Type %s", to_string(SDL_JoystickGetType(joystick.get())));
+              ImGui::Text("Num Buttons %d", SDL_JoystickNumButtons(joystick.get()));
+              ImGui::Text("Num Hats %d", SDL_JoystickNumHats(joystick.get()));
+              ImGui::Text("Num Axes %d", SDL_JoystickNumAxes(joystick.get()));
+              ImGui::Text("Num Balls %d", SDL_JoystickNumBalls(joystick.get()));
               ImGui::EndTabItem();
             }
           }
