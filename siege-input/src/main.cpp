@@ -23,6 +23,28 @@ auto to_string(const SDL_JoystickGUID& guid)
   return result;
 }
 
+auto to_string(SDL_JoystickType type)
+{
+  static_assert(SDL_JOYSTICK_TYPE_UNKNOWN == 0);
+  static_assert(SDL_JOYSTICK_TYPE_THROTTLE == 9);
+  constexpr static std::array<const char*, 10> names = {
+    "Unknown",
+    "Game Controller",
+    "Wheel",
+    "Arcade Stick",
+    "Flight Stick",
+    "Dance Pad",
+    "Guitar",
+    "Drum Kit",
+    "Arcade Pad",
+    "Throttle"
+  };
+
+  auto type_index = std::size_t(type);
+
+  return type_index < names.size() ? names[type_index] : "";
+}
+
 auto to_array(const SDL_JoystickGUID& guid)
 {
   std::array<std::byte, 16> result;
@@ -145,6 +167,7 @@ int main(int, char**)
               ImGui::Text("Product ID %d", SDL_JoystickGetProduct(joystick.get()));
               ImGui::Text("Product Version %d", SDL_JoystickGetProductVersion(joystick.get()));
               ImGui::Text("Serial Number %s", SDL_JoystickGetSerial(joystick.get()));
+              ImGui::Text("Detected Type %s", to_string(SDL_JoystickGetType(joystick.get())));
               ImGui::EndTabItem();
             }
           }
