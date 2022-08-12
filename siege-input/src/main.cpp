@@ -147,6 +147,9 @@ int main(int, char**)
       int right_trigger = 0xAAAA;
       int trigger_duration = 1000;
 
+      bool led_enabled = false;
+      ImVec4 led_colour(1.0f, 0.0f, 1.0f, 0.5f);
+
       while (running)
       {
         SDL_JoystickUpdate();
@@ -198,12 +201,12 @@ int main(int, char**)
               if (!joystick || (joystick && SDL_JoystickGetDeviceInstanceID(i) != SDL_JoystickInstanceID(joystick.get())))
               {
                 joystick = joysticks[i] = std::shared_ptr<SDL_Joystick>(SDL_JoystickOpen(i), [i, &haptic_devices, &controllers](auto* joystick){
-                  if (haptic_devices[i])
+                  if (haptic_devices.size() > i && haptic_devices[i])
                   {
                     haptic_devices[i] = std::shared_ptr<SDL_Haptic>();
                   }
 
-                  if (controllers[i])
+                  if (controllers.size() > i && controllers[i])
                   {
                     controllers[i] = std::shared_ptr<SDL_GameController>();
                   }
@@ -340,6 +343,23 @@ int main(int, char**)
                   {
                     SDL_JoystickRumble(joystick.get(), 0, 0, 0);
                   }
+                }
+              }
+
+              if (SDL_JoystickHasLED(joystick.get()) == SDL_TRUE)
+              {
+                ImGui::ColorPicker3("LED Colour", reinterpret_cast<float*>(&led_colour));
+                if (ImGui::Checkbox("LED On/Off", &led_enabled))
+                {
+                }
+
+                if (led_enabled)
+                {
+                  SDL_JoystickSetLED(joystick.get(), Uint8(led_colour.x * 255), Uint8(led_colour.y * 255), Uint8(led_colour.z * 255));
+                }
+                else
+                {
+                  SDL_JoystickSetLED(joystick.get(), 0, 0, 0);
                 }
               }
 
