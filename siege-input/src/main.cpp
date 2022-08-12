@@ -138,6 +138,11 @@ int main(int, char**)
         ImGui::NewFrame();
       };
 
+      bool should_rumble = false;
+      int low_frequency = 0xFFFF;
+      int high_frequency = 0xFFFF;
+      int duration = 1000;
+
       while (running)
       {
         SDL_JoystickUpdate();
@@ -293,6 +298,25 @@ int main(int, char**)
                     ImGui::NewLine();
                   }
                   x++;
+                }
+              }
+
+              if (SDL_JoystickHasRumble(joystick.get()) == SDL_TRUE)
+              {
+                ImGui::SliderInt("Low Frequency", &low_frequency, std::numeric_limits<Uint16>::min(), std::numeric_limits<Uint16>::max());
+                ImGui::SliderInt("High Frequency", &high_frequency, std::numeric_limits<Uint16>::min(), std::numeric_limits<Uint16>::max());
+                ImGui::SliderInt("Duration", &duration, std::numeric_limits<Uint16>::min(), std::numeric_limits<Uint16>::max());
+
+                if (ImGui::Checkbox("Controller Rumble", &should_rumble))
+                {
+                  if (should_rumble)
+                  {
+                    SDL_JoystickRumble(joystick.get(), Uint16(low_frequency), Uint16(high_frequency), Uint32(duration));
+                  }
+                  else
+                  {
+                    SDL_JoystickRumble(joystick.get(), 0, 0, 0);
+                  }
                 }
               }
 
