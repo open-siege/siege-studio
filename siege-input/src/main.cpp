@@ -129,6 +129,7 @@ int main(int, char**)
 
       // Same as the number of joysticks to make it easier to index.
       std::vector<std::shared_ptr<SDL_Haptic>> haptic_devices(SDL_NumJoysticks());
+      std::vector<std::shared_ptr<SDL_GameController>> controllers(SDL_NumJoysticks());
 
       auto new_frame = []() {
         ImGui_ImplSDLRenderer_NewFrame();
@@ -169,6 +170,7 @@ int main(int, char**)
         {
           joysticks.resize(SDL_NumJoysticks());
           haptic_devices.resize(SDL_NumJoysticks());
+          controllers.resize(SDL_NumJoysticks());
         }
 
         if (ImGui::BeginTabBar("Controllers", tab_bar_flags))
@@ -184,17 +186,28 @@ int main(int, char**)
 
               if (!joystick || (joystick && SDL_JoystickGetDeviceInstanceID(i) != SDL_JoystickInstanceID(joystick.get())))
               {
-                joystick = joysticks[i] = std::shared_ptr<SDL_Joystick>(SDL_JoystickOpen(i), [i, &haptic_devices](auto* joystick){
-                  SDL_JoystickClose(joystick);
+                joystick = joysticks[i] = std::shared_ptr<SDL_Joystick>(SDL_JoystickOpen(i), [i, &haptic_devices, &controllers](auto* joystick){
                   if (haptic_devices[i])
                   {
                     haptic_devices[i] = std::shared_ptr<SDL_Haptic>();
                   }
+
+                  if (controllers[i])
+                  {
+                    controllers[i] = std::shared_ptr<SDL_GameController>();
+                  }
+
+                  SDL_JoystickClose(joystick);
                 });
 
                 if (SDL_JoystickIsHaptic(joystick.get()))
                 {
                   haptic_devices[i] = std::shared_ptr<SDL_Haptic>(SDL_HapticOpenFromJoystick(joystick.get()), SDL_HapticClose);
+                }
+
+                if (SDL_IsGameController(i) == SDL_TRUE)
+                {
+                  controllers[i] = std::shared_ptr<SDL_GameController>(SDL_GameControllerOpen(i), SDL_GameControllerClose);
                 }
               }
 
@@ -205,15 +218,22 @@ int main(int, char**)
               ImGui::Text("Serial Number: %s", SDL_JoystickGetSerial(joystick.get()));
               ImGui::Text("Detected Type: %s", to_string(SDL_JoystickGetType(joystick.get())));
 
-              if (SDL_IsGameController(i) == SDL_TRUE)
+              if (controllers[i])
               {
-                ImGui::Text("Detected Controller Type: %s", to_string(SDL_GameControllerTypeForIndex(i)));
+                ImGui::Text("Detected Controller Type: %s", to_string(SDL_GameControllerGetType(controllers[i].get())));
               }
 
               ImGui::Text("Num Buttons: %d", SDL_JoystickNumButtons(joystick.get()));
               ImGui::Text("Num Hats: %d", SDL_JoystickNumHats(joystick.get()));
               ImGui::Text("Num Axes: %d", SDL_JoystickNumAxes(joystick.get()));
               ImGui::Text("Num Balls: %d", SDL_JoystickNumBalls(joystick.get()));
+
+              if (controllers[i])
+              {
+                ImGui::Text("Num Touchpads: %d", SDL_GameControllerGetNumTouchpads(controllers[i].get()));
+                //ImGui::Text("Num Simultaneous Fingers: %d", SDL_GameControllerGetNumTouchpadFingers(controllers[i].get()));
+              }
+
               ImGui::Text("Has LED: %s", SDL_JoystickHasLED(joystick.get()) == SDL_TRUE ? "True" : "False");
               ImGui::Text("Has Rumble: %s", SDL_JoystickHasRumble(joystick.get()) == SDL_TRUE ? "True" : "False");
               ImGui::Text("Has Triggers with Rumble: %s", SDL_JoystickHasRumbleTriggers(joystick.get()) == SDL_TRUE ? "True" : "False");
