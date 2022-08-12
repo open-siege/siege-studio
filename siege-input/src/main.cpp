@@ -51,17 +51,22 @@ int main(int, char**)
       bool show_demo_window = true;
       ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-      bool done = false;
-      while (!done)
+      bool running = true;
+      while (running)
       {
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
           ImGui_ImplSDL2_ProcessEvent(&event);
           if (event.type == SDL_QUIT)
-            done = true;
+          {
+            running = false;
+          }
+
           if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window.get()))
-            done = true;
+          {
+            running = false;
+          }
         }
 
         ImGui_ImplSDLRenderer_NewFrame();
