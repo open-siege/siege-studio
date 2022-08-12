@@ -8,7 +8,6 @@
 #include <string>
 #include <string_view>
 #include <array>
-#include <list>
 #include <unordered_map>
 #include <algorithm>
 
@@ -82,7 +81,7 @@ auto to_byte_view(const SDL_JoystickGUID& guid)
 
 int main(int, char**)
 {
-  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0)
+  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC) != 0)
   {
     std::cerr << "Error: " << SDL_GetError() << '\n';
     return -1;
@@ -128,6 +127,9 @@ int main(int, char**)
 
       std::vector<std::shared_ptr<SDL_Joystick>> joysticks(SDL_NumJoysticks());
 
+      // Same as the number of joysticks to make it easier to index.
+      std::vector<std::shared_ptr<SDL_Haptic>> haptic_devices(SDL_NumJoysticks());
+
       auto new_frame = []() {
         ImGui_ImplSDLRenderer_NewFrame();
         ImGui_ImplSDL2_NewFrame();
@@ -166,6 +168,7 @@ int main(int, char**)
         if (joysticks.size() != SDL_NumJoysticks())
         {
           joysticks.resize(SDL_NumJoysticks());
+          haptic_devices.resize(SDL_NumJoysticks());
         }
 
         if (ImGui::BeginTabBar("Controllers", tab_bar_flags))
@@ -181,7 +184,18 @@ int main(int, char**)
 
               if (!joystick || (joystick && SDL_JoystickGetDeviceInstanceID(i) != SDL_JoystickInstanceID(joystick.get())))
               {
-                joystick = joysticks[i] = std::shared_ptr<SDL_Joystick>(SDL_JoystickOpen(i), SDL_JoystickClose);
+                joystick = joysticks[i] = std::shared_ptr<SDL_Joystick>(SDL_JoystickOpen(i), [i, &haptic_devices](auto* joystick){
+                  SDL_JoystickClose(joystick);
+                  if (haptic_devices[i])
+                  {
+                    haptic_devices[i] = std::shared_ptr<SDL_Haptic>();
+                  }
+                });
+
+                if (SDL_JoystickIsHaptic(joystick.get()))
+                {
+                  haptic_devices[i] = std::shared_ptr<SDL_Haptic>(SDL_HapticOpenFromJoystick(joystick.get()), SDL_HapticClose);
+                }
               }
 
               ImGui::Text("Device GUID: %s", to_string(SDL_JoystickGetDeviceGUID(i)).c_str());
@@ -203,6 +217,13 @@ int main(int, char**)
               ImGui::Text("Has LED: %s", SDL_JoystickHasLED(joystick.get()) == SDL_TRUE ? "True" : "False");
               ImGui::Text("Has Rumble: %s", SDL_JoystickHasRumble(joystick.get()) == SDL_TRUE ? "True" : "False");
               ImGui::Text("Has Triggers with Rumble: %s", SDL_JoystickHasRumbleTriggers(joystick.get()) == SDL_TRUE ? "True" : "False");
+
+
+              if (haptic_devices[i])
+              {
+                ImGui::Text("Num Supported Haptic Effects: %d", SDL_HapticNumEffects(haptic_devices[i].get()));
+              }
+
               ImGui::EndTabItem();
             }
           }
