@@ -82,8 +82,7 @@ int main(int, char**)
 
       bool running = true;
 
-      std::list<std::basic_string<std::byte>> joysticks_guids;
-      std::unordered_map<std::basic_string_view<std::byte>, std::unique_ptr<SDL_Joystick, void(*)(SDL_Joystick *)>> joysticks;
+      std::vector<std::shared_ptr<SDL_Joystick>> joysticks(SDL_NumJoysticks());
 
       auto new_frame = []() {
         ImGui_ImplSDLRenderer_NewFrame();
@@ -119,6 +118,12 @@ int main(int, char**)
         ImGui::Text("Number of controllers: %d", SDL_NumJoysticks());
 
         ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
+
+        if (joysticks.size() != SDL_NumJoysticks())
+        {
+          joysticks.resize(SDL_NumJoysticks());
+        }
+
         if (ImGui::BeginTabBar("Controllers", tab_bar_flags))
         {
           std::string temp;
@@ -128,21 +133,18 @@ int main(int, char**)
             temp.assign("#" + std::to_string(i + 1) + " " + SDL_JoystickNameForIndex(i));
             if (ImGui::BeginTabItem(temp.c_str()))
             {
-              auto device_guid = SDL_JoystickGetDeviceGUID(i);
-              auto joystick = joysticks.find(to_byte_view(device_guid));
+              auto joystick = joysticks[i];
 
-              if (joystick == joysticks.end())
+              if (!joystick || (joystick && SDL_JoystickGetDeviceInstanceID(i) != SDL_JoystickInstanceID(joystick.get())))
               {
-                joystick = joysticks.emplace(joysticks_guids.emplace_back(to_byte_view(device_guid)),
-                                      std::unique_ptr<SDL_Joystick, void(*)(SDL_Joystick *)>(SDL_JoystickOpen(i), SDL_JoystickClose)
-                                      ).first;
+                joystick = joysticks[i] = std::shared_ptr<SDL_Joystick>(SDL_JoystickOpen(i), SDL_JoystickClose);
               }
 
-              ImGui::Text("Device GUID %s", to_string(device_guid).c_str());
-              ImGui::Text("Vendor ID %d", SDL_JoystickGetVendor(joystick->second.get()));
-              ImGui::Text("Product ID %d", SDL_JoystickGetProduct(joystick->second.get()));
-              ImGui::Text("Product Version %d", SDL_JoystickGetProductVersion(joystick->second.get()));
-              ImGui::Text("Serial Number %s", SDL_JoystickGetSerial(joystick->second.get()));
+              ImGui::Text("Device GUID %s", to_string(SDL_JoystickGetDeviceGUID(i)).c_str());
+              ImGui::Text("Vendor ID %d", SDL_JoystickGetVendor(joystick.get()));
+              ImGui::Text("Product ID %d", SDL_JoystickGetProduct(joystick.get()));
+              ImGui::Text("Product Version %d", SDL_JoystickGetProductVersion(joystick.get()));
+              ImGui::Text("Serial Number %s", SDL_JoystickGetSerial(joystick.get()));
               ImGui::EndTabItem();
             }
           }
