@@ -138,10 +138,14 @@ int main(int, char**)
         ImGui::NewFrame();
       };
 
-      bool should_rumble = false;
-      int low_frequency = 0xFFFF;
-      int high_frequency = 0xFFFF;
+      bool controller_rumble = false;
+      bool trigger_rumble = false;
+      int low_frequency = 0xAAAA;
+      int high_frequency = 0xAAAA;
       int duration = 1000;
+      int left_trigger = 0xAAAA;
+      int right_trigger = 0xAAAA;
+      int trigger_duration = 1000;
 
       while (running)
       {
@@ -307,11 +311,30 @@ int main(int, char**)
                 ImGui::SliderInt("High Frequency", &high_frequency, std::numeric_limits<Uint16>::min(), std::numeric_limits<Uint16>::max());
                 ImGui::SliderInt("Duration", &duration, std::numeric_limits<Uint16>::min(), std::numeric_limits<Uint16>::max());
 
-                if (ImGui::Checkbox("Controller Rumble", &should_rumble))
+                if (ImGui::Checkbox("Controller Rumble", &controller_rumble))
                 {
-                  if (should_rumble)
+                  if (controller_rumble)
                   {
                     SDL_JoystickRumble(joystick.get(), Uint16(low_frequency), Uint16(high_frequency), Uint32(duration));
+                  }
+                  else
+                  {
+                    SDL_JoystickRumble(joystick.get(), 0, 0, 0);
+                  }
+                }
+              }
+
+              if (SDL_JoystickHasRumbleTriggers(joystick.get()) == SDL_TRUE)
+              {
+                ImGui::SliderInt("Left Trigger", &left_trigger, std::numeric_limits<Uint16>::min(), std::numeric_limits<Uint16>::max());
+                ImGui::SliderInt("Right Trigger", &right_trigger, std::numeric_limits<Uint16>::min(), std::numeric_limits<Uint16>::max());
+                ImGui::SliderInt("Trigger Duration", &trigger_duration, std::numeric_limits<Uint16>::min(), std::numeric_limits<Uint16>::max());
+
+                if (ImGui::Checkbox("Trigger Rumble", &trigger_rumble))
+                {
+                  if (trigger_rumble)
+                  {
+                    SDL_JoystickRumbleTriggers(joystick.get(), Uint16(left_trigger), Uint16(right_trigger), Uint32(trigger_duration));
                   }
                   else
                   {
