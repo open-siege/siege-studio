@@ -5,7 +5,36 @@
 #include "imgui_impl_sdlrenderer.h"
 #include <iostream>
 #include <memory>
+#include <string>
+#include <string_view>
+#include <array>
+#include <list>
+#include <unordered_map>
+#include <algorithm>
+
 #include <SDL.h>
+
+auto to_string(const SDL_JoystickGUID& guid)
+{
+  std::string result(36, '\0');
+
+  SDL_JoystickGetGUIDString(guid, result.data(), int(result.size()));
+
+  return result;
+}
+
+auto to_array(const SDL_JoystickGUID& guid)
+{
+  std::array<std::byte, 16> result;
+  std::memcpy(result.data(), guid.data, sizeof(guid.data));
+
+  return result;
+}
+
+auto to_byte_view(const SDL_JoystickGUID& guid)
+{
+  return std::basic_string_view<std::byte> (reinterpret_cast<const std::byte*>(guid.data), sizeof(guid.data));
+}
 
 int main(int, char**)
 {
@@ -30,7 +59,7 @@ int main(int, char**)
 
     // The Rapoo V600S DirectInput driver causes an access violation in winmm when this is called.
     // Will find out if I can trigger vibration through the Joystick API alone, or if this needs some work.
-    //SDL_InitSubSystem(SDL_INIT_HAPTIC);
+    // SDL_InitSubSystem(SDL_INIT_HAPTIC);
 
     // ImGui scope
     {
@@ -52,6 +81,16 @@ int main(int, char**)
       ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
       bool running = true;
+
+      std::list<std::basic_string<std::byte>> joysticks_guids;
+      std::unordered_map<std::basic_string_view<std::byte>, std::unique_ptr<SDL_Joystick, void(*)(SDL_Joystick *)>> joysticks;
+
+      auto new_frame = []() {
+        ImGui_ImplSDLRenderer_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
+        ImGui::NewFrame();
+      };
+
       while (running)
       {
         SDL_Event event;
@@ -69,14 +108,48 @@ int main(int, char**)
           }
         }
 
-        ImGui_ImplSDLRenderer_NewFrame();
-        ImGui_ImplSDL2_NewFrame();
-        ImGui::NewFrame();
+        new_frame();
 
         if (show_demo_window)
         {
           ImGui::ShowDemoWindow(&show_demo_window);
         }
+
+        ImGui::Begin("Input Info");
+        ImGui::Text("Number of controllers: %d", SDL_NumJoysticks());
+
+        ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
+        if (ImGui::BeginTabBar("Controllers", tab_bar_flags))
+        {
+          std::string temp;
+          temp.reserve(32);
+          for (auto i = 0; i < SDL_NumJoysticks(); ++i)
+          {
+            temp.assign("#" + std::to_string(i + 1) + " " + SDL_JoystickNameForIndex(i));
+            if (ImGui::BeginTabItem(temp.c_str()))
+            {
+              auto device_guid = SDL_JoystickGetDeviceGUID(i);
+              auto joystick = joysticks.find(to_byte_view(device_guid));
+
+              if (joystick == joysticks.end())
+              {
+                joystick = joysticks.emplace(joysticks_guids.emplace_back(to_byte_view(device_guid)),
+                                      std::unique_ptr<SDL_Joystick, void(*)(SDL_Joystick *)>(SDL_JoystickOpen(i), SDL_JoystickClose)
+                                      ).first;
+              }
+
+              ImGui::Text("Device GUID %s", to_string(device_guid).c_str());
+              ImGui::Text("Vendor ID %d", SDL_JoystickGetVendor(joystick->second.get()));
+              ImGui::Text("Product ID %d", SDL_JoystickGetProduct(joystick->second.get()));
+              ImGui::Text("Product Version %d", SDL_JoystickGetProductVersion(joystick->second.get()));
+              ImGui::Text("Serial Number %s", SDL_JoystickGetSerial(joystick->second.get()));
+              ImGui::EndTabItem();
+            }
+          }
+          ImGui::EndTabBar();
+        }
+
+        ImGui::End();
 
         ImGui::Render();
         SDL_SetRenderDrawColor(renderer.get(), (Uint8)(clear_color.x * 255), (Uint8)(clear_color.y * 255), (Uint8)(clear_color.z * 255), (Uint8)(clear_color.w * 255));
