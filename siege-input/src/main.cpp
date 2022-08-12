@@ -99,6 +99,7 @@ int main(int, char**)
       ImGui_ImplSDL2_InitForSDLRenderer(window.get(), renderer.get());
       ImGui_ImplSDLRenderer_Init(renderer.get());
 
+      bool show_demo_window = true;
       ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
       bool running = true;
@@ -129,6 +130,11 @@ int main(int, char**)
         }
 
         new_frame();
+
+        if (show_demo_window)
+        {
+          ImGui::ShowDemoWindow(&show_demo_window);
+        }
 
         ImGui::Begin("Input Info");
         ImGui::Text("Number of controllers: %d", SDL_NumJoysticks());
