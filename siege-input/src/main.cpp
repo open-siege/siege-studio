@@ -45,6 +45,28 @@ auto to_string(SDL_JoystickType type)
   return type_index < names.size() ? names[type_index] : "";
 }
 
+auto to_string(SDL_GameControllerType type)
+{
+  static_assert(SDL_CONTROLLER_TYPE_UNKNOWN == 0);
+  static_assert(SDL_CONTROLLER_TYPE_GOOGLE_STADIA == 9);
+  constexpr static std::array<const char*, 10> names = {
+    "Unknown",
+    "Xbox 360",
+    "Xbox One",
+    "PS3",
+    "PS4",
+    "Nintendo Switch Pro",
+    "Virtual Controller",
+    "PS5",
+    "Amazon Luna",
+    "Google Stadia"
+  };
+
+  auto type_index = std::size_t(type);
+
+  return type_index < names.size() ? names[type_index] : "";
+}
+
 auto to_array(const SDL_JoystickGUID& guid)
 {
   std::array<std::byte, 16> result;
@@ -60,7 +82,7 @@ auto to_byte_view(const SDL_JoystickGUID& guid)
 
 int main(int, char**)
 {
-  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK) != 0)
+  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0)
   {
     std::cerr << "Error: " << SDL_GetError() << '\n';
     return -1;
@@ -168,6 +190,12 @@ int main(int, char**)
               ImGui::Text("Product Version: %d", SDL_JoystickGetProductVersion(joystick.get()));
               ImGui::Text("Serial Number: %s", SDL_JoystickGetSerial(joystick.get()));
               ImGui::Text("Detected Type: %s", to_string(SDL_JoystickGetType(joystick.get())));
+
+              if (SDL_IsGameController(i) == SDL_TRUE)
+              {
+                ImGui::Text("Detected Controller Type: %s", to_string(SDL_GameControllerTypeForIndex(i)));
+              }
+
               ImGui::Text("Num Buttons: %d", SDL_JoystickNumButtons(joystick.get()));
               ImGui::Text("Num Hats: %d", SDL_JoystickNumHats(joystick.get()));
               ImGui::Text("Num Axes: %d", SDL_JoystickNumAxes(joystick.get()));
