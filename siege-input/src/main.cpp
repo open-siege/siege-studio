@@ -258,12 +258,29 @@ int main(int, char**)
                 ImGui::Text("Num Supported Haptic Effects: %d", SDL_HapticNumEffects(haptic_devices[i].get()));
               }
 
-              for (auto x = 0; x < SDL_JoystickNumAxes(joystick.get()); ++x)
+              if (controllers[i])
               {
-                auto value = int(SDL_JoystickGetAxis(joystick.get(), x));
-                ImGui::VSliderInt("##int", ImVec2(18, 160), &value, std::numeric_limits<Sint16>::min(), std::numeric_limits<Sint16>::max());
-                ImGui::SameLine();
+                for (auto x = 0; x < 4; x += 2)
+                {
+                  auto x_value = float(SDL_JoystickGetAxis(joystick.get(), x)) / std::numeric_limits<Sint16>::max() / 2;
+                  auto y_value = float(SDL_JoystickGetAxis(joystick.get(), x + 1)) / std::numeric_limits<Sint16>::max() / 2;
+                  ImVec2 alignment(x_value + 0.5f, y_value + 0.5f);
+                  ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, alignment);
+                  ImGui::Selectable("X", true, 0, ImVec2(200, 200));
+                  ImGui::PopStyleVar();
+                  ImGui::SameLine();
+                }
               }
+              else
+              {
+                for (auto x = 0; x < SDL_JoystickNumAxes(joystick.get()); ++x)
+                {
+                  auto value = int(SDL_JoystickGetAxis(joystick.get(), x));
+                  ImGui::VSliderInt("##int", ImVec2(18, 160), &value, std::numeric_limits<Sint16>::min(), std::numeric_limits<Sint16>::max());
+                  ImGui::SameLine();
+                }
+              }
+
 
               ImGui::NewLine();
 
