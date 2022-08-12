@@ -268,6 +268,34 @@ int main(int, char**)
               }
 
 
+              ImGui::NewLine();
+
+              constexpr static auto hat_states = std::array<std::tuple<int, const char*, ImVec2>, 9> {
+                  std::make_tuple(SDL_HAT_LEFTUP, "\\", ImVec2(0.0f, 0.5f)), std::make_tuple(SDL_HAT_UP, "^\n|", ImVec2(0.5f, 0.5f)), std::make_tuple(SDL_HAT_RIGHTUP, "/", ImVec2(1.0f, 0.5f)),
+                  std::make_tuple(SDL_HAT_LEFT, "<-", ImVec2(0.0f, 0.5f)), std::make_tuple(SDL_HAT_CENTERED, "o", ImVec2(0.5f, 0.5f)), std::make_tuple(SDL_HAT_RIGHT, "->", ImVec2(1.0f, 0.5f)),
+                  std::make_tuple(SDL_HAT_LEFTDOWN, "/", ImVec2(0.0f, 0.5f)), std::make_tuple(SDL_HAT_DOWN, "|\nv", ImVec2(0.5f, 0.5f)), std::make_tuple(SDL_HAT_RIGHTDOWN, "\\", ImVec2(1.0f, 0.5f)),
+                };
+
+              for(auto h = 0; h < SDL_JoystickNumHats(joystick.get()); ++h)
+              {
+                auto value = SDL_JoystickGetHat(joystick.get(), h);
+
+                auto x = 0;
+                for (auto& [state, label, alignment] : hat_states)
+                {
+                  ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, alignment);
+                  ImGui::Selectable(label, state == value, 0, ImVec2(25, 25));
+                  ImGui::PopStyleVar();
+                  ImGui::SameLine();
+
+                  if ((x + 1) % 3 == 0)
+                  {
+                    ImGui::NewLine();
+                  }
+                  x++;
+                }
+              }
+
               ImGui::EndTabItem();
             }
           }
