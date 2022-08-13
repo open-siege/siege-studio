@@ -120,6 +120,40 @@ Uint8 Siege_GameControllerGetDPadAsHat(SDL_GameController* controller)
   return SDL_HAT_CENTERED;
 }
 
+const char* Siege_GameControllerGetStringForButton(SDL_GameController* controller, SDL_GameControllerButton button)
+{
+  auto value = SDL_GameControllerGetStringForButton(button);
+  auto type = SDL_GameControllerGetType(controller);
+
+  if (type == SDL_GameControllerType::SDL_CONTROLLER_TYPE_PS3 || type == SDL_GameControllerType::SDL_CONTROLLER_TYPE_PS4 || type == SDL_GameControllerType::SDL_CONTROLLER_TYPE_PS5)
+  {
+    constexpr static std::array<std::pair<const char*, const char*>, 9> ps_button_mapping = {
+      std::make_pair("a", "cross"),
+      std::make_pair("b", "circle"),
+      std::make_pair("x", "square"),
+      std::make_pair("y", "triangle"),
+      std::make_pair("back", "select"),
+      std::make_pair("leftstick", "l3"),
+      std::make_pair("rightstick", "r3"),
+      std::make_pair("leftshoulder", "l1"),
+      std::make_pair("rightshoulder", "r1")
+    };
+
+    auto value_str = value ? std::string_view(value) : std::string_view();
+
+    auto mapping = std::find_if(ps_button_mapping.begin(), ps_button_mapping.end(), [&](const auto& pair) {
+      return value_str == pair.first;
+    });
+
+    if (mapping != ps_button_mapping.end())
+    {
+      return mapping->second;
+    }
+  }
+
+  return value;
+}
+
 SDL_JoystickType SDLCALL Siege_JoystickGetType(SDL_Joystick* joystick);
 
 int main(int, char**)
@@ -421,7 +455,7 @@ int main(int, char**)
                 {
                   auto value = SDL_JoystickGetButton(joystick.get(), binding.value.button) == 1;
 
-                  ImGui::Selectable(SDL_GameControllerGetStringForButton(button), value, 0, ImVec2(50, 50));
+                  ImGui::Selectable(Siege_GameControllerGetStringForButton(controllers[i].get(), button), value, 0, ImVec2(50, 50));
                   ImGui::SameLine();
 
                   if ((x + 1) % 4 == 0)
