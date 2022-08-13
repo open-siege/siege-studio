@@ -77,10 +77,50 @@ inline auto to_array(const SDL_JoystickGUID& guid)
 
 auto to_byte_view(const SDL_JoystickGUID& guid)
 {
-  return std::basic_string_view<std::byte> (reinterpret_cast<const std::byte*>(guid.data), sizeof(guid.data));
+  return std::basic_string_view<std::byte>(reinterpret_cast<const std::byte*>(guid.data), sizeof(guid.data));
 }
 
-SDL_JoystickType SDLCALL Siege_JoystickGetType(SDL_Joystick *joystick);
+Uint8 Siege_GameControllerGetDPadAsHat(SDL_GameController* controller)
+{
+  if (SDL_GameControllerGetButton(controller, SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_UP) && SDL_GameControllerGetButton(controller, SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_LEFT))
+  {
+    return SDL_HAT_LEFTUP;
+  }
+  else if (SDL_GameControllerGetButton(controller, SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_UP) && SDL_GameControllerGetButton(controller, SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_RIGHT))
+  {
+    return SDL_HAT_RIGHTUP;
+  }
+
+  if (SDL_GameControllerGetButton(controller, SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_DOWN) && SDL_GameControllerGetButton(controller, SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_LEFT))
+  {
+    return SDL_HAT_LEFTDOWN;
+  }
+  else if (SDL_GameControllerGetButton(controller, SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_DOWN) && SDL_GameControllerGetButton(controller, SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_RIGHT))
+  {
+    return SDL_HAT_RIGHTDOWN;
+  }
+
+  if (SDL_GameControllerGetButton(controller, SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_UP))
+  {
+    return SDL_HAT_UP;
+  }
+  else if (SDL_GameControllerGetButton(controller, SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_DOWN))
+  {
+    return SDL_HAT_DOWN;
+  }
+  else if (SDL_GameControllerGetButton(controller, SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_LEFT))
+  {
+    return SDL_HAT_LEFT;
+  }
+  else if (SDL_GameControllerGetButton(controller, SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_RIGHT))
+  {
+    return SDL_HAT_RIGHT;
+  }
+
+  return SDL_HAT_CENTERED;
+}
+
+SDL_JoystickType SDLCALL Siege_JoystickGetType(SDL_Joystick* joystick);
 
 int main(int, char**)
 {
@@ -205,7 +245,7 @@ int main(int, char**)
 
               if (!joystick || (joystick && SDL_JoystickGetDeviceInstanceID(i) != SDL_JoystickInstanceID(joystick.get())))
               {
-                joystick = joysticks[i] = std::shared_ptr<SDL_Joystick>(SDL_JoystickOpen(i), [i, &haptic_devices, &controllers](auto* joystick){
+                joystick = joysticks[i] = std::shared_ptr<SDL_Joystick>(SDL_JoystickOpen(i), [i, &haptic_devices, &controllers](auto* joystick) {
                   if (haptic_devices.size() > i && haptic_devices[i])
                   {
                     haptic_devices[i] = std::shared_ptr<SDL_Haptic>();
@@ -250,7 +290,7 @@ int main(int, char**)
               if (controllers[i])
               {
                 ImGui::Text("Num Touchpads: %d", SDL_GameControllerGetNumTouchpads(controllers[i].get()));
-                //ImGui::Text("Num Simultaneous Fingers: %d", SDL_GameControllerGetNumTouchpadFingers(controllers[i].get()));
+                // ImGui::Text("Num Simultaneous Fingers: %d", SDL_GameControllerGetNumTouchpadFingers(controllers[i].get()));
               }
 
               ImGui::Text("Has LED: %s", SDL_JoystickHasLED(joystick.get()) == SDL_TRUE ? "True" : "False");
@@ -346,24 +386,24 @@ int main(int, char**)
 
               if (controllers[i])
               {
-                constexpr static auto known_buttons = std::array<SDL_GameControllerButton, 17> {
-                  SDL_CONTROLLER_BUTTON_A,
-                  SDL_CONTROLLER_BUTTON_B,
-                  SDL_CONTROLLER_BUTTON_X,
-                  SDL_CONTROLLER_BUTTON_Y,
-                  SDL_CONTROLLER_BUTTON_LEFTSHOULDER,
-                  SDL_CONTROLLER_BUTTON_RIGHTSHOULDER,
-                  SDL_CONTROLLER_BUTTON_LEFTSTICK,
-                  SDL_CONTROLLER_BUTTON_RIGHTSTICK,
-                  SDL_CONTROLLER_BUTTON_BACK,
-                  SDL_CONTROLLER_BUTTON_START,
-                  SDL_CONTROLLER_BUTTON_GUIDE,
-                  SDL_CONTROLLER_BUTTON_MISC1,
-                  SDL_CONTROLLER_BUTTON_PADDLE1,
-                  SDL_CONTROLLER_BUTTON_PADDLE2,
-                  SDL_CONTROLLER_BUTTON_PADDLE3,
-                  SDL_CONTROLLER_BUTTON_PADDLE4,
-                  SDL_CONTROLLER_BUTTON_TOUCHPAD
+                constexpr static auto known_buttons = std::array<SDL_GameControllerButton, 17>{
+                  SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_A,
+                  SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_B,
+                  SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_X,
+                  SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_Y,
+                  SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_LEFTSHOULDER,
+                  SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_RIGHTSHOULDER,
+                  SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_LEFTSTICK,
+                  SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_RIGHTSTICK,
+                  SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_BACK,
+                  SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_START,
+                  SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_GUIDE,
+                  SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_MISC1,
+                  SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_PADDLE1,
+                  SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_PADDLE2,
+                  SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_PADDLE3,
+                  SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_PADDLE4,
+                  SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_TOUCHPAD
                 };
 
                 current_bindings.clear();
@@ -393,7 +433,7 @@ int main(int, char**)
               }
               else
               {
-                for(auto x = 0; x < SDL_JoystickNumButtons(joystick.get()); ++x)
+                for (auto x = 0; x < SDL_JoystickNumButtons(joystick.get()); ++x)
                 {
                   auto value = SDL_JoystickGetButton(joystick.get(), x) == 1;
                   ImGui::Selectable(std::to_string(x + 1).c_str(), value, 0, ImVec2(50, 50));
@@ -408,15 +448,30 @@ int main(int, char**)
 
               ImGui::NewLine();
 
-              constexpr static auto hat_states = std::array<std::tuple<int, const char*, ImVec2>, 9> {
-                  std::make_tuple(SDL_HAT_LEFTUP, "\\", ImVec2(0.0f, 0.5f)), std::make_tuple(SDL_HAT_UP, "^\n|", ImVec2(0.5f, 0.5f)), std::make_tuple(SDL_HAT_RIGHTUP, "/", ImVec2(1.0f, 0.5f)),
-                  std::make_tuple(SDL_HAT_LEFT, "<-", ImVec2(0.0f, 0.5f)), std::make_tuple(SDL_HAT_CENTERED, "o", ImVec2(0.5f, 0.5f)), std::make_tuple(SDL_HAT_RIGHT, "->", ImVec2(1.0f, 0.5f)),
-                  std::make_tuple(SDL_HAT_LEFTDOWN, "/", ImVec2(0.0f, 0.5f)), std::make_tuple(SDL_HAT_DOWN, "|\nv", ImVec2(0.5f, 0.5f)), std::make_tuple(SDL_HAT_RIGHTDOWN, "\\", ImVec2(1.0f, 0.5f)),
-                };
+              constexpr static auto hat_states = std::array<std::tuple<int, const char*, ImVec2>, 9>{
+                std::make_tuple(SDL_HAT_LEFTUP, "\\", ImVec2(0.0f, 0.5f)),
+                std::make_tuple(SDL_HAT_UP, "^\n|", ImVec2(0.5f, 0.5f)),
+                std::make_tuple(SDL_HAT_RIGHTUP, "/", ImVec2(1.0f, 0.5f)),
+                std::make_tuple(SDL_HAT_LEFT, "<-", ImVec2(0.0f, 0.5f)),
+                std::make_tuple(SDL_HAT_CENTERED, "o", ImVec2(0.5f, 0.5f)),
+                std::make_tuple(SDL_HAT_RIGHT, "->", ImVec2(1.0f, 0.5f)),
+                std::make_tuple(SDL_HAT_LEFTDOWN, "/", ImVec2(0.0f, 0.5f)),
+                std::make_tuple(SDL_HAT_DOWN, "|\nv", ImVec2(0.5f, 0.5f)),
+                std::make_tuple(SDL_HAT_RIGHTDOWN, "\\", ImVec2(1.0f, 0.5f)),
+              };
 
-              for(auto h = 0; h < SDL_JoystickNumHats(joystick.get()); ++h)
+              constexpr static auto d_pad_buttons = std::array<SDL_GameControllerButton, 4>{
+                SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_UP,
+                SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_DOWN,
+                SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_LEFT,
+                SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_RIGHT
+              };
+
+              if (SDL_JoystickNumHats(joystick.get()) == 0 && controllers[i] && std::any_of(d_pad_buttons.begin(), d_pad_buttons.end(), [&](auto button) {
+                    return SDL_GameControllerHasButton(controllers[i].get(), button);
+                  }))
               {
-                auto value = SDL_JoystickGetHat(joystick.get(), h);
+                auto value = Siege_GameControllerGetDPadAsHat(controllers[i].get());
 
                 auto x = 0;
                 for (auto& [state, label, alignment] : hat_states)
@@ -433,6 +488,29 @@ int main(int, char**)
                   x++;
                 }
               }
+              else
+              {
+                for (auto h = 0; h < SDL_JoystickNumHats(joystick.get()); ++h)
+                {
+                  auto value = SDL_JoystickGetHat(joystick.get(), h);
+
+                  auto x = 0;
+                  for (auto& [state, label, alignment] : hat_states)
+                  {
+                    ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, alignment);
+                    ImGui::Selectable(label, state == value, 0, ImVec2(25, 25));
+                    ImGui::PopStyleVar();
+                    ImGui::SameLine();
+
+                    if ((x + 1) % 3 == 0)
+                    {
+                      ImGui::NewLine();
+                    }
+                    x++;
+                  }
+                }
+              }
+
 
               if (SDL_JoystickHasRumble(joystick.get()) == SDL_TRUE)
               {
