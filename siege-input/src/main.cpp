@@ -308,6 +308,26 @@ int main(int, char**)
                   ImGui::SameLine();
                 }
               }
+              else if (Siege_JoystickGetType(joystick.get()) == SDL_JoystickType::SDL_JOYSTICK_TYPE_FLIGHT_STICK)
+              {
+                if (SDL_JoystickNumAxes(joystick.get()) >= 2)
+                {
+                  auto x_value = float(SDL_JoystickGetAxis(joystick.get(), 0)) / std::numeric_limits<Sint16>::max() / 2;
+                  auto y_value = float(SDL_JoystickGetAxis(joystick.get(), 1)) / std::numeric_limits<Sint16>::max() / 2;
+                  ImVec2 alignment(x_value + 0.5f, y_value + 0.5f);
+                  ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, alignment);
+                  ImGui::Selectable("+", true, 0, ImVec2(200, 200));
+                  ImGui::PopStyleVar();
+                  ImGui::SameLine();
+                }
+
+                for (auto x = 2; x < SDL_JoystickNumAxes(joystick.get()); ++x)
+                {
+                  auto value = int(SDL_JoystickGetAxis(joystick.get(), x));
+                  ImGui::VSliderInt("##int", ImVec2(18, 160), &value, std::numeric_limits<Sint16>::min(), std::numeric_limits<Sint16>::max());
+                  ImGui::SameLine();
+                }
+              }
               else
               {
                 for (auto x = 0; x < SDL_JoystickNumAxes(joystick.get()); ++x)
