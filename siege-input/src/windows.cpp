@@ -1,6 +1,5 @@
 #include <array>
-#include <utility>
-#include <cstring>
+#include <string_view>
 #include <limits>
 #include <unordered_map>
 #include <memory>
@@ -97,20 +96,26 @@ SDL_JoystickType SDLCALL Siege_JoystickGetType(SDL_Joystick* joystick)
           {
             cached_types.emplace(vendor_product, SDL_JoystickType::SDL_JOYSTICK_TYPE_WHEEL);
           }
-          else if (mainType == DI8DEVTYPE_JOYSTICK)
+          else if (mainType == DI8DEVTYPE_JOYSTICK || mainType == DI8DEVTYPE_FLIGHT)
           {
-            if (subType == DI8DEVTYPEJOYSTICK_LIMITED)
+            if (SDL_JoystickNumAxes(real_joystick) == 0)
             {
               cached_types.emplace(vendor_product, SDL_JoystickType::SDL_JOYSTICK_TYPE_ARCADE_STICK);
             }
             else
             {
-              cached_types.emplace(vendor_product, SDL_JoystickType::SDL_JOYSTICK_TYPE_FLIGHT_STICK);
+              auto device_name = std::string_view(SDL_JoystickName(real_joystick));
+
+              if (device_name.find("throttle") != std::string::npos || device_name.find("Throttle") != std::string::npos)
+              {
+                cached_types.emplace(vendor_product, SDL_JoystickType::SDL_JOYSTICK_TYPE_THROTTLE);
+              }
+              else
+              {
+                cached_types.emplace(vendor_product, SDL_JoystickType::SDL_JOYSTICK_TYPE_FLIGHT_STICK);
+              }
+
             }
-          }
-          else if (mainType == DI8DEVTYPE_FLIGHT)
-          {
-            cached_types.emplace(vendor_product, SDL_JoystickType::SDL_JOYSTICK_TYPE_FLIGHT_STICK);
           }
           else if (mainType == DI8DEVTYPE_SUPPLEMENTAL)
           {
