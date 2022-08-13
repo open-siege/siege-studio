@@ -67,7 +67,7 @@ auto to_string(SDL_GameControllerType type)
   return type_index < names.size() ? names[type_index] : "";
 }
 
-auto to_array(const SDL_JoystickGUID& guid)
+inline auto to_array(const SDL_JoystickGUID& guid)
 {
   std::array<std::byte, 16> result;
   std::memcpy(result.data(), guid.data, sizeof(guid.data));
@@ -79,6 +79,8 @@ auto to_byte_view(const SDL_JoystickGUID& guid)
 {
   return std::basic_string_view<std::byte> (reinterpret_cast<const std::byte*>(guid.data), sizeof(guid.data));
 }
+
+SDL_JoystickType SDLCALL Siege_JoystickGetType(SDL_Joystick *joystick);
 
 int main(int, char**)
 {
@@ -230,7 +232,7 @@ int main(int, char**)
               ImGui::Text("Product ID: %d", SDL_JoystickGetProduct(joystick.get()));
               ImGui::Text("Product Version: %d", SDL_JoystickGetProductVersion(joystick.get()));
               ImGui::Text("Serial Number: %s", SDL_JoystickGetSerial(joystick.get()));
-              ImGui::Text("Detected Type: %s", to_string(SDL_JoystickGetType(joystick.get())));
+              ImGui::Text("Detected Type: %s", to_string(Siege_JoystickGetType(joystick.get())));
 
               if (controllers[i])
               {
