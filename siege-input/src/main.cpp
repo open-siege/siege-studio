@@ -262,14 +262,49 @@ int main(int, char**)
 
               if (controllers[i])
               {
-                for (auto x = 0; x < 4; x += 2)
+                auto left_x_binding = SDL_GameControllerGetBindForAxis(controllers[i].get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_LEFTX);
+                auto left_y_binding = SDL_GameControllerGetBindForAxis(controllers[i].get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_LEFTY);
+                auto right_x_binding = SDL_GameControllerGetBindForAxis(controllers[i].get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_RIGHTX);
+                auto right_y_binding = SDL_GameControllerGetBindForAxis(controllers[i].get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_RIGHTY);
+
+                std::vector<std::pair<SDL_GameControllerButtonBind, SDL_GameControllerButtonBind>> valid_bindings;
+                valid_bindings.reserve(2);
+
+                if (left_x_binding.bindType == SDL_CONTROLLER_BINDTYPE_AXIS && left_y_binding.bindType == SDL_CONTROLLER_BINDTYPE_AXIS)
                 {
-                  auto x_value = float(SDL_JoystickGetAxis(joystick.get(), x)) / std::numeric_limits<Sint16>::max() / 2;
-                  auto y_value = float(SDL_JoystickGetAxis(joystick.get(), x + 1)) / std::numeric_limits<Sint16>::max() / 2;
+                  valid_bindings.emplace_back(std::make_pair(left_x_binding, left_y_binding));
+                }
+
+                if (right_x_binding.bindType == SDL_CONTROLLER_BINDTYPE_AXIS && right_x_binding.bindType == SDL_CONTROLLER_BINDTYPE_AXIS)
+                {
+                  valid_bindings.emplace_back(std::make_pair(right_x_binding, right_y_binding));
+                }
+
+                for (auto& [x_axis, y_axis] : valid_bindings)
+                {
+                  auto x_value = float(SDL_JoystickGetAxis(joystick.get(), x_axis.value.axis)) / std::numeric_limits<Sint16>::max() / 2;
+                  auto y_value = float(SDL_JoystickGetAxis(joystick.get(), y_axis.value.axis)) / std::numeric_limits<Sint16>::max() / 2;
                   ImVec2 alignment(x_value + 0.5f, y_value + 0.5f);
                   ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, alignment);
-                  ImGui::Selectable("X", true, 0, ImVec2(200, 200));
+                  ImGui::Selectable("+", true, 0, ImVec2(200, 200));
                   ImGui::PopStyleVar();
+                  ImGui::SameLine();
+                }
+
+                auto left_trigger_axis = SDL_GameControllerGetBindForAxis(controllers[i].get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_TRIGGERLEFT);
+                auto right_trigger_axis = SDL_GameControllerGetBindForAxis(controllers[i].get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
+
+                if (left_trigger_axis.bindType == SDL_CONTROLLER_BINDTYPE_AXIS)
+                {
+                  auto value = int(SDL_JoystickGetAxis(joystick.get(), left_trigger_axis.value.axis));
+                  ImGui::VSliderInt("##int", ImVec2(18, 160), &value, std::numeric_limits<Sint16>::min(), std::numeric_limits<Sint16>::max());
+                  ImGui::SameLine();
+                }
+
+                if (right_trigger_axis.bindType == SDL_CONTROLLER_BINDTYPE_AXIS)
+                {
+                  auto value = int(SDL_JoystickGetAxis(joystick.get(), right_trigger_axis.value.axis));
+                  ImGui::VSliderInt("##int", ImVec2(18, 160), &value, std::numeric_limits<Sint16>::min(), std::numeric_limits<Sint16>::max());
                   ImGui::SameLine();
                 }
               }
