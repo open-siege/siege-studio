@@ -152,6 +152,9 @@ int main(int, char**)
       bool led_enabled = false;
       ImVec4 led_colour(1.0f, 0.0f, 1.0f, 0.5f);
 
+      std::vector<std::pair<SDL_GameControllerButton, SDL_GameControllerButtonBind>> current_bindings;
+      current_bindings.reserve(std::size_t(SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_MAX));
+
       while (running)
       {
         SDL_JoystickUpdate();
@@ -341,18 +344,67 @@ int main(int, char**)
 
               ImGui::NewLine();
 
-              for(auto x = 0; x < SDL_JoystickNumButtons(joystick.get()); ++x)
+              if (controllers[i])
               {
-                auto value = SDL_JoystickGetButton(joystick.get(), x) == 1;
-                ImGui::Selectable(std::to_string(x + 1).c_str(), value, 0, ImVec2(50, 50));
-                ImGui::SameLine();
+                constexpr static auto known_buttons = std::array<SDL_GameControllerButton, 17> {
+                  SDL_CONTROLLER_BUTTON_A,
+                  SDL_CONTROLLER_BUTTON_B,
+                  SDL_CONTROLLER_BUTTON_X,
+                  SDL_CONTROLLER_BUTTON_Y,
+                  SDL_CONTROLLER_BUTTON_LEFTSHOULDER,
+                  SDL_CONTROLLER_BUTTON_RIGHTSHOULDER,
+                  SDL_CONTROLLER_BUTTON_LEFTSTICK,
+                  SDL_CONTROLLER_BUTTON_RIGHTSTICK,
+                  SDL_CONTROLLER_BUTTON_BACK,
+                  SDL_CONTROLLER_BUTTON_START,
+                  SDL_CONTROLLER_BUTTON_GUIDE,
+                  SDL_CONTROLLER_BUTTON_MISC1,
+                  SDL_CONTROLLER_BUTTON_PADDLE1,
+                  SDL_CONTROLLER_BUTTON_PADDLE2,
+                  SDL_CONTROLLER_BUTTON_PADDLE3,
+                  SDL_CONTROLLER_BUTTON_PADDLE4,
+                  SDL_CONTROLLER_BUTTON_TOUCHPAD
+                };
 
-                if ((x + 1) % 4 == 0)
+                current_bindings.clear();
+
+                for (auto button : known_buttons)
                 {
-                  ImGui::NewLine();
+                  if (SDL_GameControllerHasButton(controllers[i].get(), button) == SDL_TRUE)
+                  {
+                    current_bindings.emplace_back(std::make_pair(button, SDL_GameControllerGetBindForButton(controllers[i].get(), button)));
+                  }
+                }
+
+                auto x = 0;
+                for (auto& [button, binding] : current_bindings)
+                {
+                  auto value = SDL_JoystickGetButton(joystick.get(), binding.value.button) == 1;
+
+                  ImGui::Selectable(SDL_GameControllerGetStringForButton(button), value, 0, ImVec2(50, 50));
+                  ImGui::SameLine();
+
+                  if ((x + 1) % 4 == 0)
+                  {
+                    ImGui::NewLine();
+                  }
+                  x++;
                 }
               }
+              else
+              {
+                for(auto x = 0; x < SDL_JoystickNumButtons(joystick.get()); ++x)
+                {
+                  auto value = SDL_JoystickGetButton(joystick.get(), x) == 1;
+                  ImGui::Selectable(std::to_string(x + 1).c_str(), value, 0, ImVec2(50, 50));
+                  ImGui::SameLine();
 
+                  if ((x + 1) % 4 == 0)
+                  {
+                    ImGui::NewLine();
+                  }
+                }
+              }
 
               ImGui::NewLine();
 
