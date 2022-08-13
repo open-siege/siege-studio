@@ -371,16 +371,16 @@ int main(int, char**)
                 auto left_trigger_axis = SDL_GameControllerGetBindForAxis(controllers[i].get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_TRIGGERLEFT);
                 auto right_trigger_axis = SDL_GameControllerGetBindForAxis(controllers[i].get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
 
-                if (left_trigger_axis.bindType == SDL_CONTROLLER_BINDTYPE_AXIS)
+                if (left_trigger_axis.bindType != SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_NONE)
                 {
-                  auto value = int(SDL_JoystickGetAxis(joystick.get(), left_trigger_axis.value.axis));
+                  auto value = int(SDL_GameControllerGetAxis(controllers[i].get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_TRIGGERLEFT));
                   ImGui::VSliderInt("##int", ImVec2(18, 160), &value, std::numeric_limits<Sint16>::min(), std::numeric_limits<Sint16>::max());
                   ImGui::SameLine();
                 }
 
-                if (right_trigger_axis.bindType == SDL_CONTROLLER_BINDTYPE_AXIS)
+                if (right_trigger_axis.bindType != SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_NONE)
                 {
-                  auto value = int(SDL_JoystickGetAxis(joystick.get(), right_trigger_axis.value.axis));
+                  auto value = int(SDL_GameControllerGetAxis(controllers[i].get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_TRIGGERRIGHT));
                   ImGui::VSliderInt("##int", ImVec2(18, 160), &value, std::numeric_limits<Sint16>::min(), std::numeric_limits<Sint16>::max());
                   ImGui::SameLine();
                 }
@@ -544,6 +544,27 @@ int main(int, char**)
                   }
                 }
               }
+
+              if (controllers[i])
+              {
+                for (auto x = 0; x < SDL_GameControllerGetNumTouchpads(controllers[i].get()); ++x)
+                {
+                  Uint8 state;
+                  float x_coord = 0;
+                  float y_coord = 0;
+                  float pressure = 0;
+
+                  SDL_GameControllerGetTouchpadFinger(controllers[i].get(), x, 0, &state, &x_coord, &y_coord, &pressure);
+
+                  ImVec2 alignment(x_coord, y_coord);
+                  ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, alignment);
+                  ImGui::Selectable("+", true, 0, ImVec2(200, 200));
+                  ImGui::PopStyleVar();
+                  ImGui::SameLine();
+                }
+              }
+
+              ImGui::NewLine();
 
 
               if (SDL_JoystickHasRumble(joystick.get()) == SDL_TRUE)
