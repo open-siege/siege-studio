@@ -124,6 +124,10 @@ SDL_JoystickType SDLCALL Siege_JoystickGetType(SDL_Joystick* joystick)
               cached_types.emplace(vendor_product, SDL_JoystickType::SDL_JOYSTICK_TYPE_THROTTLE);
             }
           }
+          else
+          {
+            cached_types.emplace(vendor_product, SDL_JoystickType::SDL_JOYSTICK_TYPE_UNKNOWN);
+          }
           return DIENUM_STOP;
         }
 
