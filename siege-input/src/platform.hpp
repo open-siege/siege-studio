@@ -5,13 +5,66 @@
 
 SDL_JoystickType Siege_JoystickGetType(SDL_Joystick* joystick);
 
-SDL_bool Siege_IsMouse(SDL_Joystick* joystick);
-
-Uint16 Siege_JoystickGetVendor(SDL_Joystick *joystick);
-Uint16 Siege_JoystickGetProduct(SDL_Joystick *joystick);
-Uint16 Siege_JoystickGetProductVersion(SDL_Joystick *joystick);
-
-
 void Siege_InitVirtualJoysticks();
+SDL_bool Siege_IsMouse(SDL_Joystick* joystick);
+Uint16 Siege_JoystickGetVendor(SDL_Joystick* joystick);
+Uint16 Siege_JoystickGetProduct(SDL_Joystick* joystick);
+Uint16 Siege_JoystickGetProductVersion(SDL_Joystick* joystick);
+
+void Siege_SaveDeviceToFile(SDL_Joystick* joystick, int device_index);
+void Siege_SaveAllDevicesToFile();
+
+inline auto to_string(const SDL_JoystickGUID& guid)
+{
+  std::string result(36, '\0');
+
+  SDL_JoystickGetGUIDString(guid, result.data(), int(result.size()));
+
+  return result;
+}
+
+inline auto to_string(SDL_JoystickType type)
+{
+  static_assert(SDL_JOYSTICK_TYPE_UNKNOWN == 0);
+  static_assert(SDL_JOYSTICK_TYPE_THROTTLE == 9);
+  constexpr static std::array<const char*, 10> names = {
+    "Unknown",
+    "Game Controller",
+    "Wheel",
+    "Arcade Stick",
+    "Flight Stick",
+    "Dance Pad",
+    "Guitar",
+    "Drum Kit",
+    "Arcade Pad",
+    "Throttle"
+  };
+
+  auto type_index = std::size_t(type);
+
+  return type_index < names.size() ? names[type_index] : "";
+}
+
+inline auto to_string(SDL_GameControllerType type)
+{
+  static_assert(SDL_CONTROLLER_TYPE_UNKNOWN == 0);
+  static_assert(SDL_CONTROLLER_TYPE_GOOGLE_STADIA == 9);
+  constexpr static std::array<const char*, 10> names = {
+    "Unknown",
+    "Xbox 360",
+    "Xbox One",
+    "PS3",
+    "PS4",
+    "Nintendo Switch Pro",
+    "Virtual Controller",
+    "PS5",
+    "Amazon Luna",
+    "Google Stadia"
+  };
+
+  auto type_index = std::size_t(type);
+
+  return type_index < names.size() ? names[type_index] : "";
+}
 
 #endif// OPEN_SIEGE_PLATFORM_HPP
