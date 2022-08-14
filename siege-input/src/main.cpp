@@ -1,8 +1,5 @@
 #define SDL_MAIN_HANDLED
 
-#include <imgui.h>
-#include "imgui_impl_sdl.h"
-#include "imgui_impl_sdlrenderer.h"
 #include <iostream>
 #include <memory>
 #include <string>
@@ -12,7 +9,14 @@
 #include <algorithm>
 #include <limits>
 #include <optional>
+#include <sstream>
+#include <iomanip>
+
 #include <SDL.h>
+#include <imgui.h>
+#include "imgui_impl_sdl.h"
+#include "imgui_impl_sdlrenderer.h"
+
 #include "platform.hpp"
 
 auto to_string(const SDL_JoystickGUID& guid)
@@ -79,6 +83,25 @@ inline auto to_array(const SDL_JoystickGUID& guid)
 auto to_byte_view(const SDL_JoystickGUID& guid)
 {
   return std::basic_string_view<std::byte>(reinterpret_cast<const std::byte*>(guid.data), sizeof(guid.data));
+}
+
+template<typename Integral>
+const char* to_hex(Integral value)
+{
+  static std::unordered_map<Integral, std::string> converted_values;
+
+  auto result = converted_values.find(value);
+
+  if (result == converted_values.end())
+  {
+    std::stringstream stream;
+    stream << "0x"
+           << std::setfill('0') << std::setw(sizeof(Integral) * 2)
+           << std::hex << value;
+    result = converted_values.emplace(value, stream.str()).first;
+  }
+
+  return result->second.c_str();
 }
 
 Uint8 Siege_GameControllerGetDPadAsHat(SDL_GameController* controller)
@@ -305,9 +328,11 @@ int main(int, char**)
                 }
               }
 
+              const auto vendor_id = Siege_JoystickGetVendor(joystick.get());
+              const auto product_id = Siege_JoystickGetProduct(joystick.get());
               ImGui::Text("Device GUID: %s", to_string(SDL_JoystickGetDeviceGUID(i)).c_str());
-              ImGui::Text("Vendor ID: %d", Siege_JoystickGetVendor(joystick.get()));
-              ImGui::Text("Product ID: %d", Siege_JoystickGetProduct(joystick.get()));
+              ImGui::Text("Vendor ID: %s (%d)",to_hex(vendor_id), vendor_id);
+              ImGui::Text("Product ID: %s (%d)", to_hex(product_id), vendor_id);
               ImGui::Text("Product Version: %d", Siege_JoystickGetProductVersion(joystick.get()));
               ImGui::Text("Serial Number: %s", SDL_JoystickGetSerial(joystick.get()));
 
