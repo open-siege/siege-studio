@@ -1,8 +1,9 @@
 #include <array>
+#include <string>
 #include <string_view>
 #include <limits>
 #include <unordered_map>
-#include <unordered_set>
+#include <optional>
 #include <memory>
 #include <SDL.h>
 
@@ -157,8 +158,15 @@ struct VirtualJoystick
   std::array<Sint16, 4> axes;
 };
 
+struct HidAttributes
+{
+  Uint16 vendor_id;
+  Uint16 product_id;
+  Uint16 version_id;
+};
+
 static std::unordered_map<HANDLE, VirtualJoystick> virtual_joysticks;
-static std::unordered_set<SDL_Joystick*> joystick_mice;
+static std::unordered_map<SDL_Joystick*, std::optional<HidAttributes>> joystick_mice;
 static std::shared_ptr<void> message_hook;
 
 LRESULT CALLBACK MessageHookCallback(
@@ -250,6 +258,30 @@ LRESULT CALLBACK MessageHookCallback(
   return CallNextHookEx(nullptr, nCode, wParam, lParam);
 }
 
+std::optional<HidAttributes> DeviceNameToAttributes(std::string device_name)
+{
+  constexpr static auto vid_key = std::string_view("VID_");
+  constexpr static auto pid_key = std::string_view("PID_");
+  auto vid_index = device_name.find(vid_key);
+  auto pid_index = device_name.find(pid_key);
+
+  if (vid_index != std::string::npos && pid_index != std::string::npos)
+  {
+    vid_index += vid_key.size();
+    pid_index += pid_key.size();
+    auto vid = device_name.substr(vid_index, 4);
+    auto pid = device_name.substr(pid_index, 4);
+
+    HidAttributes result{};
+    result.vendor_id = std::stoul(vid, nullptr, 16);
+    result.product_id = std::stoul(pid, nullptr, 16);
+
+    return result;
+  }
+
+  return std::nullopt;
+}
+
 void Siege_InitVirtualJoysticks()
 {
   RAWINPUTDEVICE Rid[2];
@@ -317,7 +349,7 @@ void Siege_InitVirtualJoysticks()
         joystick.joystick = SDL_JoystickOpen(joystick_index);
 
         virtual_joysticks.emplace(device.hDevice, joystick);
-        joystick_mice.emplace(joystick.joystick);
+        joystick_mice.emplace(joystick.joystick, DeviceNameToAttributes(std::move(device_name)));
       }
     }
   }
@@ -333,4 +365,55 @@ SDL_bool Siege_IsMouse(SDL_Joystick* joystick)
   auto result = joystick_mice.find(joystick);
 
   return result == joystick_mice.end() ? SDL_bool::SDL_FALSE : SDL_bool::SDL_TRUE;
+}
+
+std::optional<HidAttributes> GetHidAttributes(SDL_Joystick *joystick)
+{
+  if (!joystick)
+  {
+    return std::nullopt;
+  }
+
+  auto result = joystick_mice.find(joystick);
+
+  if (result == joystick_mice.end())
+  {
+    return std::nullopt;
+  }
+
+  if (!result->second.has_value())
+  {
+    return std::nullopt;
+  }
+
+  return result->second;
+}
+
+Uint16 Siege_JoystickGetVendor(SDL_Joystick *joystick)
+{
+  auto attrs = GetHidAttributes(joystick);
+
+  if (attrs.has_value())
+  {
+    return attrs->vendor_id;
+  }
+
+  return SDL_JoystickGetVendor(joystick);
+}
+
+Uint16 Siege_JoystickGetProduct(SDL_Joystick *joystick)
+{
+  auto attrs = GetHidAttributes(joystick);
+
+  if (attrs.has_value())
+  {
+    return attrs->product_id;
+  }
+
+  return SDL_JoystickGetProduct(joystick);
+}
+
+Uint16 Siege_JoystickGetProductVersion(SDL_Joystick *joystick)
+{
+  return SDL_JoystickGetProductVersion(joystick);
 }

@@ -306,9 +306,9 @@ int main(int, char**)
               }
 
               ImGui::Text("Device GUID: %s", to_string(SDL_JoystickGetDeviceGUID(i)).c_str());
-              ImGui::Text("Vendor ID: %d", SDL_JoystickGetVendor(joystick.get()));
-              ImGui::Text("Product ID: %d", SDL_JoystickGetProduct(joystick.get()));
-              ImGui::Text("Product Version: %d", SDL_JoystickGetProductVersion(joystick.get()));
+              ImGui::Text("Vendor ID: %d", Siege_JoystickGetVendor(joystick.get()));
+              ImGui::Text("Product ID: %d", Siege_JoystickGetProduct(joystick.get()));
+              ImGui::Text("Product Version: %d", Siege_JoystickGetProductVersion(joystick.get()));
               ImGui::Text("Serial Number: %s", SDL_JoystickGetSerial(joystick.get()));
 
               if (SDL_JoystickIsVirtual(i) && Siege_IsMouse(joystick.get()))
