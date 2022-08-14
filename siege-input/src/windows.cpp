@@ -273,8 +273,16 @@ std::optional<HidAttributes> DeviceNameToAttributes(std::string device_name)
     auto pid = device_name.substr(pid_index, 4);
 
     HidAttributes result{};
-    result.vendor_id = std::stoul(vid, nullptr, 16);
-    result.product_id = std::stoul(pid, nullptr, 16);
+
+    try
+    {
+      result.vendor_id = std::stoul(vid, nullptr, 16);
+      result.product_id = std::stoul(pid, nullptr, 16);
+    }
+    catch(...)
+    {
+      return std::nullopt;
+    }
 
     return result;
   }
