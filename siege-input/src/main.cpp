@@ -337,6 +337,73 @@ int main(int, char**)
                 ImGui::Text("Num Supported Haptic Effects: %d", SDL_HapticNumEffects(haptic_devices[i].get()));
               }
 
+              constexpr static auto hat_states = std::array<std::tuple<int, const char*, ImVec2>, 9>{
+                std::make_tuple(SDL_HAT_LEFTUP, "\\", ImVec2(0.0f, 0.5f)),
+                std::make_tuple(SDL_HAT_UP, "^\n|", ImVec2(0.5f, 0.5f)),
+                std::make_tuple(SDL_HAT_RIGHTUP, "/", ImVec2(1.0f, 0.5f)),
+                std::make_tuple(SDL_HAT_LEFT, "<-", ImVec2(0.0f, 0.5f)),
+                std::make_tuple(SDL_HAT_CENTERED, "o", ImVec2(0.5f, 0.5f)),
+                std::make_tuple(SDL_HAT_RIGHT, "->", ImVec2(1.0f, 0.5f)),
+                std::make_tuple(SDL_HAT_LEFTDOWN, "/", ImVec2(0.0f, 0.5f)),
+                std::make_tuple(SDL_HAT_DOWN, "|\nv", ImVec2(0.5f, 0.5f)),
+                std::make_tuple(SDL_HAT_RIGHTDOWN, "\\", ImVec2(1.0f, 0.5f)),
+              };
+
+              constexpr static auto d_pad_buttons = std::array<SDL_GameControllerButton, 4>{
+                SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_UP,
+                SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_DOWN,
+                SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_LEFT,
+                SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_RIGHT
+              };
+
+              ImGui::BeginGroup();
+              if (SDL_JoystickNumHats(joystick.get()) == 0 && controllers[i] && std::any_of(d_pad_buttons.begin(), d_pad_buttons.end(), [&](auto button) {
+                    return SDL_GameControllerHasButton(controllers[i].get(), button);
+                  }))
+              {
+                auto value = Siege_GameControllerGetDPadAsHat(controllers[i].get());
+
+                auto x = 0;
+                for (auto& [state, label, alignment] : hat_states)
+                {
+                  ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, alignment);
+                  ImGui::Selectable(label, state == value, 0, ImVec2(25, 25));
+                  ImGui::PopStyleVar();
+                  ImGui::SameLine();
+
+                  if ((x + 1) % 3 == 0)
+                  {
+                    ImGui::NewLine();
+                  }
+                  x++;
+                }
+              }
+              else
+              {
+                for (auto h = 0; h < SDL_JoystickNumHats(joystick.get()); ++h)
+                {
+                  auto value = SDL_JoystickGetHat(joystick.get(), h);
+
+                  auto x = 0;
+                  for (auto& [state, label, alignment] : hat_states)
+                  {
+                    ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, alignment);
+                    ImGui::Selectable(label, state == value, 0, ImVec2(25, 25));
+                    ImGui::PopStyleVar();
+                    ImGui::SameLine();
+
+                    if ((x + 1) % 3 == 0)
+                    {
+                      ImGui::NewLine();
+                    }
+                    x++;
+                  }
+                }
+              }
+              ImGui::EndGroup();
+
+              ImGui::SameLine();
+
               if (controllers[i])
               {
                 auto left_x_binding = SDL_GameControllerGetBindForAxis(controllers[i].get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_LEFTX);
@@ -385,7 +452,8 @@ int main(int, char**)
                   ImGui::SameLine();
                 }
               }
-              else if (Siege_JoystickGetType(joystick.get()) == SDL_JoystickType::SDL_JOYSTICK_TYPE_FLIGHT_STICK)
+              else if (Siege_JoystickGetType(joystick.get()) == SDL_JoystickType::SDL_JOYSTICK_TYPE_FLIGHT_STICK ||
+                       Siege_JoystickGetType(joystick.get()) == SDL_JoystickType::SDL_JOYSTICK_TYPE_GAMECONTROLLER)
               {
                 if (SDL_JoystickNumAxes(joystick.get()) >= 2)
                 {
@@ -482,68 +550,6 @@ int main(int, char**)
 
               ImGui::NewLine();
 
-              constexpr static auto hat_states = std::array<std::tuple<int, const char*, ImVec2>, 9>{
-                std::make_tuple(SDL_HAT_LEFTUP, "\\", ImVec2(0.0f, 0.5f)),
-                std::make_tuple(SDL_HAT_UP, "^\n|", ImVec2(0.5f, 0.5f)),
-                std::make_tuple(SDL_HAT_RIGHTUP, "/", ImVec2(1.0f, 0.5f)),
-                std::make_tuple(SDL_HAT_LEFT, "<-", ImVec2(0.0f, 0.5f)),
-                std::make_tuple(SDL_HAT_CENTERED, "o", ImVec2(0.5f, 0.5f)),
-                std::make_tuple(SDL_HAT_RIGHT, "->", ImVec2(1.0f, 0.5f)),
-                std::make_tuple(SDL_HAT_LEFTDOWN, "/", ImVec2(0.0f, 0.5f)),
-                std::make_tuple(SDL_HAT_DOWN, "|\nv", ImVec2(0.5f, 0.5f)),
-                std::make_tuple(SDL_HAT_RIGHTDOWN, "\\", ImVec2(1.0f, 0.5f)),
-              };
-
-              constexpr static auto d_pad_buttons = std::array<SDL_GameControllerButton, 4>{
-                SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_UP,
-                SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_DOWN,
-                SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_LEFT,
-                SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_RIGHT
-              };
-
-              if (SDL_JoystickNumHats(joystick.get()) == 0 && controllers[i] && std::any_of(d_pad_buttons.begin(), d_pad_buttons.end(), [&](auto button) {
-                    return SDL_GameControllerHasButton(controllers[i].get(), button);
-                  }))
-              {
-                auto value = Siege_GameControllerGetDPadAsHat(controllers[i].get());
-
-                auto x = 0;
-                for (auto& [state, label, alignment] : hat_states)
-                {
-                  ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, alignment);
-                  ImGui::Selectable(label, state == value, 0, ImVec2(25, 25));
-                  ImGui::PopStyleVar();
-                  ImGui::SameLine();
-
-                  if ((x + 1) % 3 == 0)
-                  {
-                    ImGui::NewLine();
-                  }
-                  x++;
-                }
-              }
-              else
-              {
-                for (auto h = 0; h < SDL_JoystickNumHats(joystick.get()); ++h)
-                {
-                  auto value = SDL_JoystickGetHat(joystick.get(), h);
-
-                  auto x = 0;
-                  for (auto& [state, label, alignment] : hat_states)
-                  {
-                    ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, alignment);
-                    ImGui::Selectable(label, state == value, 0, ImVec2(25, 25));
-                    ImGui::PopStyleVar();
-                    ImGui::SameLine();
-
-                    if ((x + 1) % 3 == 0)
-                    {
-                      ImGui::NewLine();
-                    }
-                    x++;
-                  }
-                }
-              }
 
               if (controllers[i])
               {
