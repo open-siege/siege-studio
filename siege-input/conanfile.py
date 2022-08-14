@@ -9,7 +9,7 @@ class HelloImguiSfmlConanFile(ConanFile):
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
     build_requires = "cmake/3.22.0"
-    requires = "imgui/cci.20220621+1.88.docking", "sdl/2.0.20"
+    requires = "nlohmann_json/3.10.5", "imgui/cci.20220621+1.88.docking", "sdl/2.0.20"
     settings = "os", "compiler", "build_type", "arch"
     generators = "cmake_find_package"
 

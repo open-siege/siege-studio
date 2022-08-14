@@ -19,59 +19,6 @@
 
 #include "platform.hpp"
 
-auto to_string(const SDL_JoystickGUID& guid)
-{
-  std::string result(36, '\0');
-
-  SDL_JoystickGetGUIDString(guid, result.data(), int(result.size()));
-
-  return result;
-}
-
-auto to_string(SDL_JoystickType type)
-{
-  static_assert(SDL_JOYSTICK_TYPE_UNKNOWN == 0);
-  static_assert(SDL_JOYSTICK_TYPE_THROTTLE == 9);
-  constexpr static std::array<const char*, 10> names = {
-    "Unknown",
-    "Game Controller",
-    "Wheel",
-    "Arcade Stick",
-    "Flight Stick",
-    "Dance Pad",
-    "Guitar",
-    "Drum Kit",
-    "Arcade Pad",
-    "Throttle"
-  };
-
-  auto type_index = std::size_t(type);
-
-  return type_index < names.size() ? names[type_index] : "";
-}
-
-auto to_string(SDL_GameControllerType type)
-{
-  static_assert(SDL_CONTROLLER_TYPE_UNKNOWN == 0);
-  static_assert(SDL_CONTROLLER_TYPE_GOOGLE_STADIA == 9);
-  constexpr static std::array<const char*, 10> names = {
-    "Unknown",
-    "Xbox 360",
-    "Xbox One",
-    "PS3",
-    "PS4",
-    "Nintendo Switch Pro",
-    "Virtual Controller",
-    "PS5",
-    "Amazon Luna",
-    "Google Stadia"
-  };
-
-  auto type_index = std::size_t(type);
-
-  return type_index < names.size() ? names[type_index] : "";
-}
-
 inline auto to_array(const SDL_JoystickGUID& guid)
 {
   std::array<std::byte, 16> result;
@@ -221,7 +168,6 @@ int main(int, char**)
       ImGui_ImplSDL2_InitForSDLRenderer(window.get(), renderer.get());
       ImGui_ImplSDLRenderer_Init(renderer.get());
 
-      bool show_demo_window = true;
       ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
       bool running = true;
@@ -272,11 +218,6 @@ int main(int, char**)
         }
 
         new_frame();
-
-        if (show_demo_window)
-        {
-          ImGui::ShowDemoWindow(&show_demo_window);
-        }
 
         ImGui::Begin("Input Info");
         ImGui::Text("Number of controllers: %d", SDL_NumJoysticks());
@@ -330,6 +271,23 @@ int main(int, char**)
 
               const auto vendor_id = Siege_JoystickGetVendor(joystick.get());
               const auto product_id = Siege_JoystickGetProduct(joystick.get());
+
+              ImGui::BeginGroup();
+
+              if (ImGui::Button("Export Device Info"))
+              {
+                Siege_SaveDeviceToFile(joystick.get(), i);
+              }
+
+              ImGui::SameLine();
+
+              if (ImGui::Button("Export Info for All Devices"))
+              {
+                Siege_SaveAllDevicesToFile();
+              }
+
+              ImGui::EndGroup();
+
               ImGui::Text("Device GUID: %s", to_string(SDL_JoystickGetDeviceGUID(i)).c_str());
               ImGui::Text("Vendor ID: %s (%d)",to_hex(vendor_id), vendor_id);
               ImGui::Text("Product ID: %s (%d)", to_hex(product_id), vendor_id);

@@ -276,8 +276,8 @@ std::optional<HidAttributes> DeviceNameToAttributes(std::string device_name)
 
     try
     {
-      result.vendor_id = std::stoul(vid, nullptr, 16);
-      result.product_id = std::stoul(pid, nullptr, 16);
+      result.vendor_id = Uint16(std::stoul(vid, nullptr, 16));
+      result.product_id = Uint16(std::stoul(pid, nullptr, 16));
     }
     catch(...)
     {
