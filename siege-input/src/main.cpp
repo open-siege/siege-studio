@@ -11,8 +11,8 @@
 #include <unordered_map>
 #include <algorithm>
 #include <limits>
-
 #include <SDL.h>
+#include "platform.hpp"
 
 auto to_string(const SDL_JoystickGUID& guid)
 {
@@ -154,8 +154,6 @@ const char* Siege_GameControllerGetStringForButton(SDL_GameController* controlle
   return value;
 }
 
-SDL_JoystickType SDLCALL Siege_JoystickGetType(SDL_Joystick* joystick);
-
 int main(int, char**)
 {
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC) != 0)
@@ -176,6 +174,8 @@ int main(int, char**)
       SDL_Log("Error creating SDL_Renderer!");
       return -1;
     }
+
+    Siege_InitVirtualJoysticks();
 
     // The Rapoo V600S DirectInput driver causes an access violation in winmm when this is called.
     // Will find out if I can trigger vibration through the Joystick API alone, or if this needs some work.

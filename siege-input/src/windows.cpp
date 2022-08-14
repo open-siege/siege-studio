@@ -12,7 +12,7 @@
 #include <windows.h>
 #include <dinput.h>
 
-SDL_JoystickType SDLCALL Siege_JoystickGetType(SDL_Joystick* joystick)
+SDL_JoystickType Siege_JoystickGetType(SDL_Joystick* joystick)
 {
   auto type = SDL_JoystickGetType(joystick);
 
@@ -147,4 +147,175 @@ SDL_JoystickType SDLCALL Siege_JoystickGetType(SDL_Joystick* joystick)
 
 
   return type;
+}
+
+
+struct VirtualJoystick
+{
+  SDL_Joystick* joystick;
+  std::array<Sint16, 4> axes;
+};
+
+static std::unordered_map<HANDLE, VirtualJoystick> virtual_joysticks;
+static std::shared_ptr<void> message_hook;
+
+LRESULT CALLBACK MessageHookCallback(
+  int    nCode,
+  WPARAM wParam,
+  LPARAM lParam
+)
+{
+  if (nCode < 0)
+  {
+    return CallNextHookEx(nullptr, nCode, wParam, lParam);
+  }
+
+  auto* data = reinterpret_cast<MSG*>(lParam);
+
+  if (data->message == WM_INPUT && wParam == PM_REMOVE)
+  {
+    UINT dwSize;
+
+    GetRawInputData((HRAWINPUT)data->lParam, RID_INPUT, nullptr, &dwSize, sizeof(RAWINPUTHEADER));
+    RAWINPUT final_data;
+    dwSize = sizeof(RAWINPUT);
+
+    if (GetRawInputData((HRAWINPUT)data->lParam, RID_INPUT, &final_data, &dwSize, sizeof(RAWINPUTHEADER)) != dwSize)
+    {
+      return CallNextHookEx(nullptr, nCode, wParam, lParam);
+    }
+
+    if (final_data.header.dwType == RIM_TYPEMOUSE)
+    {
+      auto joystick = virtual_joysticks.find(final_data.header.hDevice);
+
+      if (joystick != virtual_joysticks.end())
+      {
+        auto& v_joy = joystick->second;
+
+        constexpr static std::array<std::pair<USHORT, USHORT>, 5> mouse_events = {
+          std::make_pair(RI_MOUSE_BUTTON_1_DOWN, RI_MOUSE_BUTTON_1_UP),
+          std::make_pair(RI_MOUSE_BUTTON_2_DOWN, RI_MOUSE_BUTTON_2_UP),
+          std::make_pair(RI_MOUSE_BUTTON_3_DOWN, RI_MOUSE_BUTTON_3_UP),
+          std::make_pair(RI_MOUSE_BUTTON_4_DOWN, RI_MOUSE_BUTTON_4_UP),
+          std::make_pair(RI_MOUSE_BUTTON_5_DOWN, RI_MOUSE_BUTTON_5_UP)
+        };
+
+        for (auto i = 0; i < mouse_events.size(); ++i)
+        {
+          const auto& [down, up] = mouse_events[i];
+          if (final_data.data.mouse.usButtonFlags & down)
+          {
+            SDL_JoystickSetVirtualButton(v_joy.joystick, i, 1);
+          }
+          else if (final_data.data.mouse.usButtonFlags & up)
+          {
+            SDL_JoystickSetVirtualButton(v_joy.joystick, i, 0);
+          }
+        }
+
+        if ((final_data.data.mouse.usFlags & MOUSE_MOVE_RELATIVE) == MOUSE_MOVE_RELATIVE)
+        {
+          v_joy.axes[0] += Sint16(final_data.data.mouse.lLastX) * 8;
+          SDL_JoystickSetVirtualAxis(v_joy.joystick, 0, v_joy.axes[0]);
+
+          v_joy.axes[1] += Sint16(final_data.data.mouse.lLastY) * 8;
+          SDL_JoystickSetVirtualAxis(v_joy.joystick, 1, v_joy.axes[1]);
+        }
+        else if ((final_data.data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) == MOUSE_MOVE_ABSOLUTE)
+        {
+          v_joy.axes[0] = Sint16(final_data.data.mouse.lLastX);
+          SDL_JoystickSetVirtualAxis(v_joy.joystick, 0, v_joy.axes[0]);
+
+          v_joy.axes[1] = Sint16(final_data.data.mouse.lLastY);
+          SDL_JoystickSetVirtualAxis(v_joy.joystick, 1, v_joy.axes[1]);
+        }
+
+        if (final_data.data.mouse.usButtonFlags & RI_MOUSE_WHEEL)
+        {
+          v_joy.axes[2] += Sint16(final_data.data.mouse.usButtonData);
+          SDL_JoystickSetVirtualAxis(v_joy.joystick, 2, v_joy.axes[2]);
+        }
+        else if (final_data.data.mouse.usButtonFlags & RI_MOUSE_HWHEEL)
+        {
+          v_joy.axes[3] += Sint16(final_data.data.mouse.usButtonData);
+          SDL_JoystickSetVirtualAxis(v_joy.joystick, 3, v_joy.axes[3]);
+        }
+      }
+    }
+  }
+
+  return CallNextHookEx(nullptr, nCode, wParam, lParam);
+}
+
+void Siege_InitVirtualJoysticks()
+{
+  RAWINPUTDEVICE Rid[2];
+
+  Rid[0].usUsagePage = 0x01;          // HID_USAGE_PAGE_GENERIC
+  Rid[0].usUsage = 0x02;              // HID_USAGE_GENERIC_MOUSE
+  Rid[0].dwFlags = 0;
+  Rid[0].hwndTarget = 0;
+
+  Rid[1].usUsagePage = 0x01;          // HID_USAGE_PAGE_GENERIC
+  Rid[1].usUsage = 0x06;              // HID_USAGE_GENERIC_KEYBOARD
+  Rid[1].dwFlags = 0;
+  Rid[1].hwndTarget = 0;
+
+  if (RegisterRawInputDevices(Rid, 2, sizeof(Rid[0])) == FALSE)
+  {
+    return;
+  }
+
+  auto hook = SetWindowsHookExA(
+    WH_GETMESSAGE,
+    MessageHookCallback,
+    GetModuleHandleA(nullptr),
+    GetCurrentThreadId()
+  );
+
+  if (!hook)
+  {
+    return;
+  }
+
+  message_hook.reset(reinterpret_cast<void*>(hook), [](void* value) { UnhookWindowsHookEx(reinterpret_cast<HHOOK>(value)); });
+
+  std::vector<RAWINPUTDEVICELIST> raw_input_devices;
+
+  UINT num_devices;
+  GetRawInputDeviceList(nullptr, &num_devices, sizeof(RAWINPUTDEVICELIST));
+  raw_input_devices.assign(num_devices, {});
+  GetRawInputDeviceList(raw_input_devices.data(), &num_devices, sizeof(RAWINPUTDEVICELIST));
+
+  for (auto& device : raw_input_devices)
+  {
+    std::string device_name;
+    UINT name_size;
+    GetRawInputDeviceInfoA(device.hDevice, RIDI_DEVICENAME, nullptr, &name_size);
+    device_name.assign(name_size, '\0');
+    GetRawInputDeviceInfoA(device.hDevice, RIDI_DEVICENAME, device_name.data(), &name_size);
+
+    RID_DEVICE_INFO device_info{};
+    UINT device_size = sizeof(device_info);
+    GetRawInputDeviceInfoA(device.hDevice, RIDI_DEVICEINFO, &device_info, &device_size);
+
+    // TODO: also add support for keyboard virtual joysticks (RIM_TYPEKEYBOARD)
+    if (device.dwType == RIM_TYPEMOUSE)
+    {
+      VirtualJoystick joystick{};
+
+      auto joystick_index = SDL_JoystickAttachVirtual(
+        SDL_JoystickType::SDL_JOYSTICK_TYPE_FLIGHT_STICK,
+        device_info.mouse.fHasHorizontalWheel ? 4 : 3, // 3 for a mouse with a scroll wheels, 4 for a mouse with two scroll wheels
+        device_info.mouse.dwNumberOfButtons, 0);
+
+      if (joystick_index != -1)
+      {
+        joystick.joystick = SDL_JoystickOpen(joystick_index);
+
+        virtual_joysticks.emplace(device.hDevice, joystick);
+      }
+    }
+  }
 }
