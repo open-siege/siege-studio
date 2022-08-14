@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <limits>
+#include <optional>
 #include <SDL.h>
 #include "platform.hpp"
 
@@ -452,8 +453,7 @@ int main(int, char**)
                   ImGui::SameLine();
                 }
               }
-              else if (Siege_JoystickGetType(joystick.get()) == SDL_JoystickType::SDL_JOYSTICK_TYPE_FLIGHT_STICK ||
-                       Siege_JoystickGetType(joystick.get()) == SDL_JoystickType::SDL_JOYSTICK_TYPE_GAMECONTROLLER)
+              else if (Siege_JoystickGetType(joystick.get()) == SDL_JoystickType::SDL_JOYSTICK_TYPE_FLIGHT_STICK || Siege_JoystickGetType(joystick.get()) == SDL_JoystickType::SDL_JOYSTICK_TYPE_GAMECONTROLLER)
               {
                 if (SDL_JoystickNumAxes(joystick.get()) >= 2)
                 {
@@ -486,6 +486,7 @@ int main(int, char**)
 
               ImGui::NewLine();
 
+              ImGui::BeginGroup();
               if (controllers[i])
               {
                 constexpr static auto known_buttons = std::array<SDL_GameControllerButton, 17>{
@@ -548,11 +549,91 @@ int main(int, char**)
                 }
               }
 
-              ImGui::NewLine();
+              ImGui::EndGroup();
 
+              if (SDL_JoystickHasRumble(joystick.get()) == SDL_TRUE)
+              {
+                ImGui::SameLine();
+                ImGui::BeginGroup();
+
+                if (ImGui::Checkbox("Controller Rumble", &controller_rumble))
+                {
+                  static std::optional<SDL_TimerID> pending_timer;
+                  if (controller_rumble)
+                  {
+                    pending_timer.emplace(SDL_AddTimer(
+                      duration, [](Uint32 interval, void* param) -> Uint32 {
+                        pending_timer.reset();
+                        bool* should_rumble = reinterpret_cast<bool*>(param);
+                        *should_rumble = false;
+                        return 0;
+                      },
+                      &controller_rumble));
+                    SDL_JoystickRumble(joystick.get(), Uint16(low_frequency), Uint16(high_frequency), Uint32(duration));
+                  }
+                  else
+                  {
+                    if (pending_timer.has_value())
+                    {
+                      SDL_RemoveTimer(pending_timer.value());
+                    }
+                    SDL_JoystickRumble(joystick.get(), 0, 0, 0);
+                  }
+                }
+
+                ImGui::PushItemWidth(320.0f);
+                ImGui::SliderInt("Low Frequency", &low_frequency, std::numeric_limits<Uint16>::min(), std::numeric_limits<Uint16>::max());
+                ImGui::SliderInt("High Frequency", &high_frequency, std::numeric_limits<Uint16>::min(), std::numeric_limits<Uint16>::max());
+                ImGui::SliderInt("Duration", &duration, std::numeric_limits<Uint16>::min(), 20000);
+                ImGui::PopItemWidth();
+
+                ImGui::EndGroup();
+              }
+
+              if (SDL_JoystickHasRumbleTriggers(joystick.get()) == SDL_TRUE)
+              {
+                static std::optional<SDL_TimerID> pending_timer;
+                ImGui::SameLine();
+                ImGui::BeginGroup();
+
+                if (ImGui::Checkbox("Trigger Rumble", &trigger_rumble))
+                {
+                  if (trigger_rumble)
+                  {
+                    pending_timer.emplace(SDL_AddTimer(
+                      duration, [](Uint32 interval, void* param) -> Uint32 {
+                        pending_timer.reset();
+                        bool* should_rumble = reinterpret_cast<bool*>(param);
+                        *should_rumble = false;
+                        return 0;
+                      },
+                      &trigger_rumble));
+                    SDL_JoystickRumbleTriggers(joystick.get(), Uint16(left_trigger), Uint16(right_trigger), Uint32(trigger_duration));
+                  }
+                  else
+                  {
+                    if (pending_timer.has_value())
+                    {
+                      SDL_RemoveTimer(pending_timer.value());
+                    }
+                    SDL_JoystickRumble(joystick.get(), 0, 0, 0);
+                  }
+                }
+
+                ImGui::PushItemWidth(320.0f);
+                ImGui::SliderInt("Left Trigger", &left_trigger, std::numeric_limits<Uint16>::min(), std::numeric_limits<Uint16>::max());
+                ImGui::SliderInt("Right Trigger", &right_trigger, std::numeric_limits<Uint16>::min(), std::numeric_limits<Uint16>::max());
+                ImGui::SliderInt("Trigger Duration", &trigger_duration, std::numeric_limits<Uint16>::min(), 20000);
+                ImGui::PopItemWidth();
+
+                ImGui::EndGroup();
+              }
+
+              ImGui::NewLine();
 
               if (controllers[i])
               {
+                ImGui::BeginGroup();
                 for (auto x = 0; x < SDL_GameControllerGetNumTouchpads(controllers[i].get()); ++x)
                 {
                   Uint8 state;
@@ -562,61 +643,26 @@ int main(int, char**)
 
                   SDL_GameControllerGetTouchpadFinger(controllers[i].get(), x, 0, &state, &x_coord, &y_coord, &pressure);
 
+                  ImGui::Text("Touchpad %d", x + 1);
                   ImVec2 alignment(x_coord, y_coord);
                   ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, alignment);
                   ImGui::Selectable("+", true, 0, ImVec2(200, 200));
                   ImGui::PopStyleVar();
                   ImGui::SameLine();
                 }
-              }
-
-              ImGui::NewLine();
-
-
-              if (SDL_JoystickHasRumble(joystick.get()) == SDL_TRUE)
-              {
-                ImGui::SliderInt("Low Frequency", &low_frequency, std::numeric_limits<Uint16>::min(), std::numeric_limits<Uint16>::max());
-                ImGui::SliderInt("High Frequency", &high_frequency, std::numeric_limits<Uint16>::min(), std::numeric_limits<Uint16>::max());
-                ImGui::SliderInt("Duration", &duration, std::numeric_limits<Uint16>::min(), std::numeric_limits<Uint16>::max());
-
-                if (ImGui::Checkbox("Controller Rumble", &controller_rumble))
-                {
-                  if (controller_rumble)
-                  {
-                    SDL_JoystickRumble(joystick.get(), Uint16(low_frequency), Uint16(high_frequency), Uint32(duration));
-                  }
-                  else
-                  {
-                    SDL_JoystickRumble(joystick.get(), 0, 0, 0);
-                  }
-                }
-              }
-
-              if (SDL_JoystickHasRumbleTriggers(joystick.get()) == SDL_TRUE)
-              {
-                ImGui::SliderInt("Left Trigger", &left_trigger, std::numeric_limits<Uint16>::min(), std::numeric_limits<Uint16>::max());
-                ImGui::SliderInt("Right Trigger", &right_trigger, std::numeric_limits<Uint16>::min(), std::numeric_limits<Uint16>::max());
-                ImGui::SliderInt("Trigger Duration", &trigger_duration, std::numeric_limits<Uint16>::min(), std::numeric_limits<Uint16>::max());
-
-                if (ImGui::Checkbox("Trigger Rumble", &trigger_rumble))
-                {
-                  if (trigger_rumble)
-                  {
-                    SDL_JoystickRumbleTriggers(joystick.get(), Uint16(left_trigger), Uint16(right_trigger), Uint32(trigger_duration));
-                  }
-                  else
-                  {
-                    SDL_JoystickRumble(joystick.get(), 0, 0, 0);
-                  }
-                }
+                ImGui::EndGroup();
               }
 
               if (SDL_JoystickHasLED(joystick.get()) == SDL_TRUE)
               {
-                ImGui::ColorPicker3("LED Colour", reinterpret_cast<float*>(&led_colour));
+                ImGui::SameLine();
+                ImGui::BeginGroup();
                 if (ImGui::Checkbox("LED On/Off", &led_enabled))
                 {
                 }
+                ImGui::PushItemWidth(320.0f);
+                ImGui::ColorPicker3("LED Colour", reinterpret_cast<float*>(&led_colour));
+                ImGui::PopItemWidth();
 
                 if (led_enabled)
                 {
@@ -626,6 +672,7 @@ int main(int, char**)
                 {
                   SDL_JoystickSetLED(joystick.get(), 0, 0, 0);
                 }
+                ImGui::EndGroup();
               }
 
               ImGui::EndTabItem();
