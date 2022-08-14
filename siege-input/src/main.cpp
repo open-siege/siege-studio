@@ -325,7 +325,6 @@ int main(int, char**)
               if (controllers[i])
               {
                 ImGui::Text("Num Touchpads: %d", SDL_GameControllerGetNumTouchpads(controllers[i].get()));
-                // ImGui::Text("Num Simultaneous Fingers: %d", SDL_GameControllerGetNumTouchpadFingers(controllers[i].get()));
               }
 
               ImGui::Text("Has LED: %s", SDL_JoystickHasLED(joystick.get()) == SDL_TRUE ? "True" : "False");
@@ -644,6 +643,7 @@ int main(int, char**)
                   SDL_GameControllerGetTouchpadFinger(controllers[i].get(), x, 0, &state, &x_coord, &y_coord, &pressure);
 
                   ImGui::Text("Touchpad %d", x + 1);
+                  ImGui::Text("Num Simultaneous Fingers: %d", SDL_GameControllerGetNumTouchpadFingers(controllers[i].get(), x));
                   ImVec2 alignment(x_coord, y_coord);
                   ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, alignment);
                   ImGui::Selectable("+", true, 0, ImVec2(200, 200));
