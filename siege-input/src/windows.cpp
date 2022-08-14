@@ -233,12 +233,12 @@ LRESULT CALLBACK MessageHookCallback(
 
         if (final_data.data.mouse.usButtonFlags & RI_MOUSE_WHEEL)
         {
-          v_joy.axes[2] += Sint16(final_data.data.mouse.usButtonData);
+          v_joy.axes[2] += Sint16(final_data.data.mouse.usButtonData) * 8;
           SDL_JoystickSetVirtualAxis(v_joy.joystick, 2, v_joy.axes[2]);
         }
         else if (final_data.data.mouse.usButtonFlags & RI_MOUSE_HWHEEL)
         {
-          v_joy.axes[3] += Sint16(final_data.data.mouse.usButtonData);
+          v_joy.axes[3] += Sint16(final_data.data.mouse.usButtonData) * 8;
           SDL_JoystickSetVirtualAxis(v_joy.joystick, 3, v_joy.axes[3]);
         }
       }
