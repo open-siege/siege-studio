@@ -601,7 +601,7 @@ int main(int, char**)
                   if (trigger_rumble)
                   {
                     pending_timer.emplace(SDL_AddTimer(
-                      duration, [](Uint32 interval, void* param) -> Uint32 {
+                      trigger_duration, [](Uint32 interval, void* param) -> Uint32 {
                         pending_timer.reset();
                         bool* should_rumble = reinterpret_cast<bool*>(param);
                         *should_rumble = false;
