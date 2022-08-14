@@ -310,7 +310,15 @@ int main(int, char**)
               ImGui::Text("Product ID: %d", SDL_JoystickGetProduct(joystick.get()));
               ImGui::Text("Product Version: %d", SDL_JoystickGetProductVersion(joystick.get()));
               ImGui::Text("Serial Number: %s", SDL_JoystickGetSerial(joystick.get()));
-              ImGui::Text("Detected Type: %s", to_string(Siege_JoystickGetType(joystick.get())));
+
+              if (SDL_JoystickIsVirtual(i) && Siege_IsMouse(joystick.get()))
+              {
+                ImGui::Text("Detected Type: Mouse");
+              }
+              else
+              {
+                ImGui::Text("Detected Type: %s", to_string(Siege_JoystickGetType(joystick.get())));
+              }
 
               if (controllers[i])
               {

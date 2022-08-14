@@ -2,6 +2,7 @@
 #include <string_view>
 #include <limits>
 #include <unordered_map>
+#include <unordered_set>
 #include <memory>
 #include <SDL.h>
 
@@ -157,6 +158,7 @@ struct VirtualJoystick
 };
 
 static std::unordered_map<HANDLE, VirtualJoystick> virtual_joysticks;
+static std::unordered_set<SDL_Joystick*> joystick_mice;
 static std::shared_ptr<void> message_hook;
 
 LRESULT CALLBACK MessageHookCallback(
@@ -315,7 +317,20 @@ void Siege_InitVirtualJoysticks()
         joystick.joystick = SDL_JoystickOpen(joystick_index);
 
         virtual_joysticks.emplace(device.hDevice, joystick);
+        joystick_mice.emplace(joystick.joystick);
       }
     }
   }
+}
+
+SDL_bool Siege_IsMouse(SDL_Joystick* joystick)
+{
+  if (!joystick)
+  {
+    return SDL_bool::SDL_FALSE;
+  }
+
+  auto result = joystick_mice.find(joystick);
+
+  return result == joystick_mice.end() ? SDL_bool::SDL_FALSE : SDL_bool::SDL_TRUE;
 }
