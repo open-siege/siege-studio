@@ -5,13 +5,13 @@ from PIL import Image
 
 class LocalConanFile(ConanFile):
     name = "3space-studio"
-    version = "0.6.0"
+    version = "0.6.1"
     url = "https://github.com/open-siege/open-siege"
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
     build_requires = "cmake/3.22.0"
     settings = "os", "compiler", "build_type", "arch"
-    requires = "3space/0.6.0", "wxwidgets/3.1.5@bincrafters/stable", "imgui-sfml/2.5@bincrafters/stable", "zlib/1.2.12"
+    requires = "3space/0.6.1", "wxwidgets/3.1.5@bincrafters/stable", "imgui-sfml/2.5@bincrafters/stable", "zlib/1.2.12"
     generators = "cmake_find_package"
 
     def build(self):
