@@ -62,14 +62,14 @@ json joystick_to_json(SDL_Joystick* joystick, int device_index)
   result["numHats"] = SDL_JoystickNumHats(joystick);
   result["numAxes"] = SDL_JoystickNumAxes(joystick);
   result["numBalls"] = SDL_JoystickNumBalls(joystick);
-  result["hasRumble"] = SDL_JoystickHasRumble(joystick);
-  result["hasTriggerRumble"] = SDL_JoystickHasRumbleTriggers(joystick);
+  result["hasRumble"] = SDL_JoystickHasRumble(joystick) == SDL_bool::SDL_TRUE;
+  result["hasTriggerRumble"] = SDL_JoystickHasRumbleTriggers(joystick) == SDL_bool::SDL_TRUE;
 
   if (SDL_IsGameController(device_index))
   {
     auto controller = std::shared_ptr<SDL_GameController>(SDL_GameControllerOpen(device_index), SDL_GameControllerClose);
 
-    result["hasLed"] = SDL_GameControllerHasLED(controller.get());
+    result["hasLed"] = SDL_GameControllerHasLED(controller.get()) == SDL_bool::SDL_TRUE;
     result["numTouchpads"] = SDL_GameControllerGetNumTouchpads(controller.get());
 
     std::vector<int> touch_pad_fingers(SDL_GameControllerGetNumTouchpads(controller.get()));
@@ -84,8 +84,8 @@ json joystick_to_json(SDL_Joystick* joystick, int device_index)
       result["touchpadFingerCount"] = touch_pad_fingers;
     }
 
-    bool hasAccelerometer = SDL_GameControllerHasSensor(controller.get(), SDL_SensorType::SDL_SENSOR_ACCEL);
-    bool hasGyroscope = SDL_GameControllerHasSensor(controller.get(), SDL_SensorType::SDL_SENSOR_GYRO);
+    bool hasAccelerometer = SDL_GameControllerHasSensor(controller.get(), SDL_SensorType::SDL_SENSOR_ACCEL) == SDL_bool::SDL_TRUE;
+    bool hasGyroscope = SDL_GameControllerHasSensor(controller.get(), SDL_SensorType::SDL_SENSOR_GYRO) == SDL_bool::SDL_TRUE;
     result["hasAccelerometer"] = hasAccelerometer;
     result["hasGyroscope"] = hasGyroscope;
 
