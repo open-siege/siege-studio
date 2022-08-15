@@ -32,25 +32,6 @@ auto to_byte_view(const SDL_JoystickGUID& guid)
   return std::basic_string_view<std::byte>(reinterpret_cast<const std::byte*>(guid.data), sizeof(guid.data));
 }
 
-template<typename Integral>
-const char* to_hex(Integral value)
-{
-  static std::unordered_map<Integral, std::string> converted_values;
-
-  auto result = converted_values.find(value);
-
-  if (result == converted_values.end())
-  {
-    std::stringstream stream;
-    stream << "0x"
-           << std::setfill('0') << std::setw(sizeof(Integral) * 2)
-           << std::hex << value;
-    result = converted_values.emplace(value, stream.str()).first;
-  }
-
-  return result->second.c_str();
-}
-
 Uint8 Siege_GameControllerGetDPadAsHat(SDL_GameController* controller)
 {
   if (SDL_GameControllerGetButton(controller, SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_UP) && SDL_GameControllerGetButton(controller, SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_LEFT))
@@ -89,40 +70,6 @@ Uint8 Siege_GameControllerGetDPadAsHat(SDL_GameController* controller)
   }
 
   return SDL_HAT_CENTERED;
-}
-
-const char* Siege_GameControllerGetStringForButton(SDL_GameController* controller, SDL_GameControllerButton button)
-{
-  auto value = SDL_GameControllerGetStringForButton(button);
-  auto type = SDL_GameControllerGetType(controller);
-
-  if (type == SDL_GameControllerType::SDL_CONTROLLER_TYPE_PS3 || type == SDL_GameControllerType::SDL_CONTROLLER_TYPE_PS4 || type == SDL_GameControllerType::SDL_CONTROLLER_TYPE_PS5)
-  {
-    constexpr static std::array<std::pair<const char*, const char*>, 9> ps_button_mapping = {
-      std::make_pair("a", "cross"),
-      std::make_pair("b", "circle"),
-      std::make_pair("x", "square"),
-      std::make_pair("y", "triangle"),
-      std::make_pair("back", "select"),
-      std::make_pair("leftstick", "l3"),
-      std::make_pair("rightstick", "r3"),
-      std::make_pair("leftshoulder", "l1"),
-      std::make_pair("rightshoulder", "r1")
-    };
-
-    auto value_str = value ? std::string_view(value) : std::string_view();
-
-    auto mapping = std::find_if(ps_button_mapping.begin(), ps_button_mapping.end(), [&](const auto& pair) {
-      return value_str == pair.first;
-    });
-
-    if (mapping != ps_button_mapping.end())
-    {
-      return mapping->second;
-    }
-  }
-
-  return value;
 }
 
 int main(int, char**)
@@ -290,7 +237,7 @@ int main(int, char**)
 
               ImGui::Text("Device GUID: %s", to_string(SDL_JoystickGetDeviceGUID(i)).c_str());
               ImGui::Text("Vendor ID: %s (%d)",to_hex(vendor_id), vendor_id);
-              ImGui::Text("Product ID: %s (%d)", to_hex(product_id), vendor_id);
+              ImGui::Text("Product ID: %s (%d)", to_hex(product_id), product_id);
               ImGui::Text("Product Version: %d", Siege_JoystickGetProductVersion(joystick.get()));
               ImGui::Text("Serial Number: %s", SDL_JoystickGetSerial(joystick.get()));
 
