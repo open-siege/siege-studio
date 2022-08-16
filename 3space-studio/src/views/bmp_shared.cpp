@@ -38,7 +38,7 @@ namespace studio::views
     }
   }
 
-  std::pair<bitmap_type, bmp_variant> load_image_data_for_pal_detection(const studio::resources::file_info& info, std::basic_istream<std::byte>& image_stream)
+  std::pair<bitmap_type, bmp_variant> load_image_data_for_pal_detection(const studio::resources::file_info& info, std::istream& image_stream)
   {
     if (content::bmp::is_microsoft_bmp(image_stream) ||
         content::bmp::is_jpg(image_stream) ||
@@ -68,7 +68,7 @@ namespace studio::views
     }
   }
 
-  std::pair<bitmap_type, bmp_variant> load_image_data(const studio::resources::file_info& info, std::basic_istream<std::byte>& image_stream)
+  std::pair<bitmap_type, bmp_variant> load_image_data(const studio::resources::file_info& info, std::istream& image_stream)
   {
     if (content::bmp::is_microsoft_bmp(image_stream))
     {

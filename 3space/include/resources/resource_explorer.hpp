@@ -13,9 +13,9 @@
 
 namespace studio::resources
 {
-  using file_stream = std::pair<studio::resources::file_info, std::unique_ptr<std::basic_istream<std::byte>>>;
+  using file_stream = std::pair<studio::resources::file_info, std::unique_ptr<std::istream>>;
 
-  struct null_buffer : public std::basic_streambuf<std::byte>
+  struct null_buffer : public std::streambuf
   {
     int overflow(int c) { return c; }
   };
@@ -42,7 +42,7 @@ namespace studio::resources
     std::optional<std::reference_wrapper<studio::resources::archive_plugin>> get_archive_type(const std::filesystem::path& file_path) const;
     std::filesystem::path get_archive_path(const std::filesystem::path& folder_path) const;
 
-    void extract_file_contents(std::basic_istream<std::byte>& archive_file,
+    void extract_file_contents(std::istream& archive_file,
       std::filesystem::path destination,
       const studio::resources::file_info& info,
       std::optional<std::reference_wrapper<batch_storage>> = std::nullopt) const;

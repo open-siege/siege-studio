@@ -17,7 +17,7 @@ namespace studio::views
   class bmp_view 
   {
   public:
-    bmp_view(view_context context, std::basic_istream<std::byte>& image_stream);
+    bmp_view(view_context context, std::istream& image_stream);
     std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks();
     void setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext);
     void render_gl(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext) {}

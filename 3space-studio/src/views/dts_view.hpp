@@ -14,7 +14,7 @@ namespace studio::views
   class darkstar_dts_view
   {
   public:
-    darkstar_dts_view(view_context context, std::basic_istream<std::byte>& shape_stream);
+    darkstar_dts_view(view_context context, std::istream& shape_stream);
     std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks();
     void setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext);
     void render_gl(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext);

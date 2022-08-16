@@ -1,10 +1,9 @@
 #include <set>
 #include <map>
-#include <iostream>
 #include <cmath>
 #include "content/bmp/bitmap.hpp"
 #include "content/tagged_data.hpp"
-
+#include "stream.hpp"
 
 namespace studio::content::bmp
 {
@@ -36,40 +35,40 @@ namespace studio::content::bmp
 
   constexpr std::array<std::byte, 2> special_reserved_tag = { std::byte{ 0xF7 }, std::byte{ 0xF5 } };// for palettes
 
-  bool is_earthsiege_bmp(std::basic_istream<std::byte>& raw_data)
+  bool is_earthsiege_bmp(std::istream& raw_data)
   {
     std::array<std::byte, 4> header{};
-    raw_data.read(header.data(), sizeof(header));
+    studio::read(raw_data, header.data(), sizeof(header));
 
     raw_data.seekg(-int(sizeof(header)), std::ios::cur);
 
     return header == dbm_tag;
   }
 
-  bool is_earthsiege_curose(std::basic_istream<std::byte>& raw_data)
+  bool is_earthsiege_curose(std::istream& raw_data)
   {
     std::array<std::byte, 4> header{};
-    raw_data.read(header.data(), sizeof(header));
+    studio::read(raw_data, header.data(), sizeof(header));
 
     raw_data.seekg(-int(sizeof(header)), std::ios::cur);
 
     return header == dci_tag;
   }
 
-  bool is_earthsiege_bmp_array(std::basic_istream<std::byte>& raw_data)
+  bool is_earthsiege_bmp_array(std::istream& raw_data)
   {
     std::array<std::byte, 4> header{};
-    raw_data.read(header.data(), sizeof(header));
+    studio::read(raw_data, header.data(), sizeof(header));
 
     raw_data.seekg(-int(sizeof(header)), std::ios::cur);
 
     return header == dba_tag;
   }
 
-  dbm_data read_earthsiege_bmp(std::basic_istream<std::byte>& raw_data)
+  dbm_data read_earthsiege_bmp(std::istream& raw_data)
   {
     dbm_data data{};
-    raw_data.read(reinterpret_cast<std::byte*>(&data.header), sizeof(data.header));
+    studio::read(raw_data, reinterpret_cast<char*>(&data.header), sizeof(data.header));
 
     if (data.header.tag != dbm_tag)
     {
@@ -81,36 +80,36 @@ namespace studio::content::bmp
     if (total_size == data.header.image_size)
     {
       data.pixels = std::vector<std::byte>(data.header.image_size);
-      raw_data.read(data.pixels.data(), data.pixels.size());
+      studio::read(raw_data, data.pixels.data(), data.pixels.size());
     }
 
     return data;
   }
 
-  dbm_data read_earthsiege_cursor(std::basic_istream<std::byte>& raw_data)
+  dbm_data read_earthsiege_cursor(std::istream& raw_data)
   {
     std::array<std::byte, 4> file_header{};
 
-    raw_data.read(file_header.data(), sizeof(file_header));
+    studio::read(raw_data, file_header.data(), sizeof(file_header));
 
     if (file_header != dci_tag)
     {
       throw std::invalid_argument("File data is not DCI based at offset " + std::to_string(int(raw_data.tellg()) - sizeof(file_header)));
     }
     endian::little_uint32_t file_size{};
-    raw_data.read(reinterpret_cast<std::byte*>(&file_size), sizeof(file_size));
+    studio::read(raw_data, reinterpret_cast<char*>(&file_size), sizeof(file_size));
 
     std::array<endian::little_uint32_t, 2> unknown{};
-    raw_data.read(reinterpret_cast<std::byte*>(unknown.data()), sizeof(unknown));
+    studio::read(raw_data, reinterpret_cast<char*>(unknown.data()), sizeof(unknown));
 
     return read_earthsiege_bmp(raw_data);
   }
 
-  std::vector<dbm_data> read_earthsiege_bmp_array(std::basic_istream<std::byte>& raw_data)
+  std::vector<dbm_data> read_earthsiege_bmp_array(std::istream& raw_data)
   {
     std::vector<dbm_data> results;
     dba_header header;
-    raw_data.read(reinterpret_cast<std::byte*>(&header), sizeof(header));
+    studio::read(raw_data, reinterpret_cast<char*>(&header), sizeof(header));
 
     results.reserve(header.count);
 
@@ -123,10 +122,10 @@ namespace studio::content::bmp
     return results;
   }
 
-  bool is_microsoft_bmp(std::basic_istream<std::byte>& raw_data)
+  bool is_microsoft_bmp(std::istream& raw_data)
   {
     file_tag header{};
-    raw_data.read(reinterpret_cast<std::byte*>(&header), sizeof(header));
+    studio::read(raw_data, reinterpret_cast<char*>(&header), sizeof(header));
 
     raw_data.seekg(-int(sizeof(header)), std::ios::cur);
 
@@ -135,14 +134,14 @@ namespace studio::content::bmp
   }
 
   template<typename AlignmentType, typename PixelType>
-  [[maybe_unused]] std::size_t read_pixel_data(std::basic_istream<std::byte>& raw_data, std::vector<PixelType>& raw_pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth)
+  [[maybe_unused]] std::size_t read_pixel_data(std::istream& raw_data, std::vector<PixelType>& raw_pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth)
   {
     const auto x_stride = width * bit_depth / 8;
     const auto padding = shared::get_padding_size(x_stride, sizeof(AlignmentType));
 
     if (padding == 0)
     {
-      raw_data.read(reinterpret_cast<std::byte*>(raw_pixels.data()), raw_pixels.size() * sizeof(PixelType));
+      studio::read(raw_data, reinterpret_cast<char*>(raw_pixels.data()), raw_pixels.size() * sizeof(PixelType));
       return raw_pixels.size();
     }
     else
@@ -159,8 +158,8 @@ namespace studio::content::bmp
           break;
         }
 
-        raw_data.read(reinterpret_cast<std::byte*>(raw_pixels.data()) + pos, x_stride);
-        raw_data.read(padding_bytes.data(), padding_bytes.size());
+        studio::read(raw_data, reinterpret_cast<char*>(raw_pixels.data()) + pos, x_stride);
+        studio::read(raw_data, padding_bytes.data(), padding_bytes.size());
         pos += x_stride;
       }
 
@@ -168,10 +167,10 @@ namespace studio::content::bmp
     }
   }
 
-  windows_bmp_data get_bmp_data(std::basic_istream<std::byte>& raw_data, bool auto_flip)
+  windows_bmp_data get_bmp_data(std::istream& raw_data, bool auto_flip)
   {
     windows_bmp_header header{};
-    raw_data.read(reinterpret_cast<std::byte*>(&header), sizeof(header));
+    studio::read(raw_data, reinterpret_cast<char*>(&header), sizeof(header));
 
     if (header.tag != windows_bmp_tag)
     {
@@ -180,7 +179,7 @@ namespace studio::content::bmp
 
     windows_bmp_info info{};
 
-    raw_data.read(reinterpret_cast<std::byte*>(&info), sizeof(info));
+    studio::read(raw_data, reinterpret_cast<char*>(&info), sizeof(info));
 
 
     std::vector<pal::colour> colours;
@@ -196,7 +195,7 @@ namespace studio::content::bmp
       for (auto i = 0; i < num_colours; ++i)
       {
         std::array<std::byte, 4> quad{};
-        raw_data.read(quad.data(), sizeof(quad));
+        studio::read(raw_data, quad.data(), sizeof(quad));
         colours.emplace_back(pal::colour{ quad[2], quad[1], quad[0], std::byte{ 255 } });
       }
 
@@ -239,7 +238,7 @@ namespace studio::content::bmp
     };
   }
 
-  void write_bmp_data(std::basic_ostream<std::byte>& raw_data, std::vector<pal::colour> colours, std::vector<std::byte> pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth, bool auto_flip)
+  void write_bmp_data(std::ostream& raw_data, std::vector<pal::colour> colours, std::vector<std::byte> pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth, bool auto_flip)
   {
     if (auto_flip)
     {
@@ -294,13 +293,13 @@ namespace studio::content::bmp
 
     header.file_size = header.offset + num_pixels;
 
-    raw_data.write(reinterpret_cast<std::byte*>(&header), sizeof(header));
-    raw_data.write(reinterpret_cast<std::byte*>(&info), sizeof(info));
+    studio::write(raw_data, reinterpret_cast<const char*>(&header), sizeof(header));
+    studio::write(raw_data, reinterpret_cast<const char*>(&info), sizeof(info));
 
     for (auto& colour : colours)
     {
       std::array<std::byte, 4> quad{ colour.blue, colour.green, colour.red, std::byte{ 0 } };
-      raw_data.write(quad.data(), sizeof(quad));
+      studio::write(raw_data, quad.data(), sizeof(quad));
     }
 
     if (pixels.empty())
@@ -310,7 +309,7 @@ namespace studio::content::bmp
 
     if (padding == 0)
     {
-      raw_data.write(pixels.data(), pixels.size());
+      studio::write(raw_data, pixels.data(), pixels.size());
     }
     else
     {
@@ -325,32 +324,32 @@ namespace studio::content::bmp
           break;
         }
 
-        raw_data.write(pixels.data() + pos, x_stride);
-        raw_data.write(padding_bytes.data(), padding_bytes.size());
+        studio::write(raw_data, pixels.data() + pos, x_stride);
+        studio::write(raw_data, padding_bytes.data(), padding_bytes.size());
         pos += x_stride;
       }
     }
 
   }
 
-  bool is_phoenix_bmp(std::basic_istream<std::byte>& raw_data)
+  bool is_phoenix_bmp(std::istream& raw_data)
   {
     std::array<std::byte, 4> header{};
-    raw_data.read(header.data(), sizeof(header));
+    studio::read(raw_data, header.data(), sizeof(header));
 
     raw_data.seekg(-int(sizeof(header)), std::ios::cur);
 
     return header == pbmp_tag;
   }
 
-  pbmp_data get_pbmp_data(std::basic_istream<std::byte>& raw_data)
+  pbmp_data get_pbmp_data(std::istream& raw_data)
   {
     const auto start = std::size_t(raw_data.tellg());
     std::array<std::byte, 4> header{};
     endian::little_uint32_t file_size{};
 
-    raw_data.read(header.data(), sizeof(header));
-    raw_data.read(reinterpret_cast<std::byte*>(&file_size), sizeof(file_size));
+    studio::read(raw_data, header.data(), sizeof(header));
+    studio::read(raw_data, reinterpret_cast<char*>(&file_size), sizeof(file_size));
 
     if (header != pbmp_tag)
     {
@@ -369,12 +368,12 @@ namespace studio::content::bmp
       std::array<std::byte, 4> chunk_header{};
       endian::little_uint32_t chunk_size{};
 
-      raw_data.read(chunk_header.data(), chunk_header.size());
-      raw_data.read(reinterpret_cast<std::byte*>(&chunk_size), sizeof(chunk_size));
+      studio::read(raw_data, chunk_header.data(), chunk_header.size());
+      studio::read(raw_data, reinterpret_cast<char*>(&chunk_size), sizeof(chunk_size));
 
       if (chunk_header == header_tag)
       {
-        raw_data.read(reinterpret_cast<std::byte*>(&bmp_header), sizeof(bmp_header));
+        studio::read(raw_data, reinterpret_cast<char*>(&bmp_header), sizeof(bmp_header));
 
         const auto num_pixels = bmp_header.width * bmp_header.height * (bmp_header.bit_depth / 8);
         pixels = std::vector<std::byte>(num_pixels, std::byte{});
@@ -388,11 +387,11 @@ namespace studio::content::bmp
       }
       else if (chunk_header == detail_tag)
       {
-        raw_data.read(reinterpret_cast<std::byte*>(&detail_levels), sizeof(detail_levels));
+        studio::read(raw_data, reinterpret_cast<char*>(&detail_levels), sizeof(detail_levels));
       }
       else if (chunk_header == palette_tag)
       {
-        raw_data.read(reinterpret_cast<std::byte*>(&palette_index), sizeof(palette_index));
+        studio::read(raw_data, reinterpret_cast<char*>(&palette_index), sizeof(palette_index));
       }
       else if (chunk_header == pbmp_tag)
       {
@@ -418,23 +417,23 @@ namespace studio::content::bmp
     };
   }
 
-  void write_pbmp_data(std::basic_ofstream<std::byte>& raw_data,
+  void write_pbmp_data(std::ofstream& raw_data,
     std::int32_t width,
     std::int32_t height,
     const std::vector<pal::colour>& colours,
     const std::vector<std::byte>& pixels,
     std::optional<std::uint32_t> palette_id)
   {
-    raw_data.write(pbmp_tag.data(), sizeof(pbmp_tag));
+    studio::write(raw_data, pbmp_tag.data(), sizeof(pbmp_tag));
 
     auto file_size_pos = raw_data.tellp();
 
     endian::little_int32_t file_size = 0;
-    raw_data.write(reinterpret_cast<std::byte*>(&file_size), sizeof(file_size));
+    studio::write(raw_data, reinterpret_cast<const char*>(&file_size), sizeof(file_size));
 
-    raw_data.write(header_tag.data(), sizeof(header_tag));
+    studio::write(raw_data, header_tag.data(), sizeof(header_tag));
     endian::little_int32_t header_size = sizeof(pbmp_header);
-    raw_data.write(reinterpret_cast<std::byte*>(&header_size), sizeof(header_size));
+    studio::write(raw_data, reinterpret_cast<const char*>(&header_size), sizeof(header_size));
     pbmp_header header{};
     header.version = 3;
     header.width = width;
@@ -442,69 +441,69 @@ namespace studio::content::bmp
     header.bit_depth = 8;
     header.flags = 8;
 
-    raw_data.write(reinterpret_cast<std::byte*>(&header), sizeof(header));
+    studio::write(raw_data, reinterpret_cast<const char*>(&header), sizeof(header));
 
     auto pal_bytes = pal::write_pal_data(raw_data, colours);
 
-    raw_data.write(data_tag.data(), sizeof(data_tag));
+    studio::write(raw_data, data_tag.data(), sizeof(data_tag));
     header_size = std::int32_t(pixels.size());
-    raw_data.write(reinterpret_cast<std::byte*>(&header_size), sizeof(header_size));
-    raw_data.write(pixels.data(), pixels.size());
+    studio::write(raw_data, reinterpret_cast<const char*>(&header_size), sizeof(header_size));
+    studio::write(raw_data, pixels.data(), pixels.size());
 
-    raw_data.write(detail_tag.data(), sizeof(detail_tag));
+    studio::write(raw_data, detail_tag.data(), sizeof(detail_tag));
     header_size = sizeof(std::int32_t);
-    raw_data.write(reinterpret_cast<std::byte*>(&header_size), sizeof(header_size));
+    studio::write(raw_data, reinterpret_cast<const char*>(&header_size), sizeof(header_size));
     endian::little_int32_t num_details = 1;
-    raw_data.write(reinterpret_cast<std::byte*>(&num_details), sizeof(num_details));
+    studio::write(raw_data, reinterpret_cast<const char*>(&num_details), sizeof(num_details));
 
 
     if (palette_id.has_value())
     {
-      raw_data.write(palette_tag.data(), sizeof(palette_tag));
+      studio::write(raw_data, palette_tag.data(), sizeof(palette_tag));
       header_size = sizeof(std::int32_t);
-      raw_data.write(reinterpret_cast<std::byte*>(&header_size), sizeof(header_size));
+      studio::write(raw_data, reinterpret_cast<const char*>(&header_size), sizeof(header_size));
       endian::little_uint32_t palette_index = palette_id.value();
-      raw_data.write(reinterpret_cast<std::byte*>(&palette_index), sizeof(palette_index));
+      studio::write(raw_data, reinterpret_cast<const char*>(&palette_index), sizeof(palette_index));
     }
 
     raw_data.seekp(file_size_pos, std::ios::beg);
 
     file_size = std::int32_t(sizeof(std::int32_t) + sizeof(pbmp_header) + pal_bytes + sizeof(std::array<std::int32_t, 2>) + pixels.size());
-    raw_data.write(reinterpret_cast<std::byte*>(&file_size), sizeof(file_size));
+    studio::write(raw_data, reinterpret_cast<const char*>(&file_size), sizeof(file_size));
   }
 
-  bool is_phoenix_bmp_array(std::basic_istream<std::byte>& raw_data)
+  bool is_phoenix_bmp_array(std::istream& raw_data)
   {
     std::array<std::byte, 4> header{};
-    raw_data.read(header.data(), sizeof(header));
+    studio::read(raw_data, header.data(), sizeof(header));
 
     raw_data.seekg(-int(sizeof(header)), std::ios::cur);
 
     return header == pba_tag;
   }
 
-  std::vector<pbmp_data> get_pba_data(std::basic_istream<std::byte>& raw_data)
+  std::vector<pbmp_data> get_pba_data(std::istream& raw_data)
   {
     std::vector<pbmp_data> results;
 
     std::array<std::byte, 4> header{};
     endian::little_uint32_t count{};
 
-    raw_data.read(header.data(), sizeof(header));
-    raw_data.read(reinterpret_cast<std::byte*>(&count), sizeof(count));
+    studio::read(raw_data, header.data(), sizeof(header));
+    studio::read(raw_data, reinterpret_cast<char*>(&count), sizeof(count));
 
     if (header != pba_tag)
     {
       throw std::invalid_argument("File data is not PBA based.");
     }
 
-    raw_data.read(header.data(), sizeof(header));
+    studio::read(raw_data, header.data(), sizeof(header));
 
-    raw_data.read(reinterpret_cast<std::byte*>(&count), sizeof(count));
+    studio::read(raw_data, reinterpret_cast<char*>(&count), sizeof(count));
 
     // Count appears twice in the files. Or it means something else. Haven't seen a file where it is something else.
-    raw_data.read(reinterpret_cast<std::byte*>(&count), sizeof(count));
-    raw_data.read(reinterpret_cast<std::byte*>(&count), sizeof(count));
+    studio::read(raw_data, reinterpret_cast<char*>(&count), sizeof(count));
+    studio::read(raw_data, reinterpret_cast<char*>(&count), sizeof(count));
 
     results.reserve(count);
 

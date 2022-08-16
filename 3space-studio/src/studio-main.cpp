@@ -28,7 +28,7 @@ namespace studio
   studio::resources::file_stream create_null_stream()
   {
     static studio::resources::null_buffer null_buffer;
-    return std::make_pair(studio::resources::file_info{}, std::make_unique<std::basic_istream<std::byte>>(&null_buffer));
+    return std::make_pair(studio::resources::file_info{}, std::make_unique<std::istream>(&null_buffer));
   }
 
   struct tree_item_file_info : public wxTreeItemData

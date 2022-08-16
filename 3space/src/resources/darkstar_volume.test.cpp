@@ -9,13 +9,13 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
 {
   SECTION("When data is 4 byte aligned, no padding is added.")
   {
-    std::basic_stringstream<std::byte> mem_buffer;
+    std::stringstream mem_buffer;
 
     std::vector<darkstar::volume_file_info> files;
-    auto memory_file_info = new std::basic_stringstream<std::byte>();
+    auto memory_file_info = new std::stringstream();
 
     (*memory_file_info) << "Hello Darkness, my old friend...";
-    files.emplace_back(darkstar::volume_file_info{ "hello.txt", 32 , std::nullopt, darkstar::compression_type::none, std::unique_ptr<std::basic_istream<std::byte>>(memory_file_info) });
+    files.emplace_back(darkstar::volume_file_info{ "hello.txt", 32 , std::nullopt, darkstar::compression_type::none, std::unique_ptr<std::istream>(memory_file_info) });
 
     darkstar::create_vol_file(mem_buffer, files);
 
@@ -37,7 +37,7 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
     REQUIRE(temp == little_endian_32_in_hex_with_end_byte_tag);
 
     std::string content(32, '\0');
-    mem_buffer.read(reinterpret_cast<std::byte*>(content.data()), content.size());
+    mem_buffer.read(reinterpret_cast<char*>(content.data()), content.size());
     REQUIRE(content == std::string_view{ "Hello Darkness, my old friend..." });
 
     mem_buffer.read(temp.data(), temp.size());
@@ -48,7 +48,7 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
     REQUIRE(temp == little_endian_10_in_hex);
 
     std::array<char, 10> filename = {};
-    mem_buffer.read(reinterpret_cast<std::byte*>(filename.data()), filename.size());
+    mem_buffer.read(reinterpret_cast<char*>(filename.data()), filename.size());
     REQUIRE(filename == std::array<char, 10>{ "hello.txt" });
 
     mem_buffer.read(temp.data(), temp.size());
@@ -79,13 +79,13 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
 
   SECTION("When is data not is 4 byte aligned, padding is added.")
   {
-    std::basic_stringstream<std::byte> mem_buffer;
+    std::stringstream mem_buffer;
 
     std::vector<darkstar::volume_file_info> files;
-    auto memory_file_info = new std::basic_stringstream<std::byte>();
+    auto memory_file_info = new std::stringstream();
 
     (*memory_file_info) << "I've come to talk with you again..";
-    files.emplace_back(darkstar::volume_file_info{ "hello.txt", 34, std::nullopt, darkstar::compression_type::none, std::unique_ptr<std::basic_istream<std::byte>>(memory_file_info) });
+    files.emplace_back(darkstar::volume_file_info{ "hello.txt", 34, std::nullopt, darkstar::compression_type::none, std::unique_ptr<std::istream>(memory_file_info) });
 
     darkstar::create_vol_file(mem_buffer, files);
 
@@ -107,7 +107,7 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
     REQUIRE(temp == little_endian_34_in_hex_with_end_byte_tag);
 
     std::string content(34, '\0');
-    mem_buffer.read(reinterpret_cast<std::byte*>(content.data()), content.size());
+    mem_buffer.read(reinterpret_cast<char*>(content.data()), content.size());
     REQUIRE(content == std::string_view{ "I've come to talk with you again.." });
 
     mem_buffer.read(temp.data(), 2);
@@ -122,7 +122,7 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
     REQUIRE(temp == little_endian_10_in_hex);
 
     std::array<char, 10> filename = {};
-    mem_buffer.read(reinterpret_cast<std::byte*>(filename.data()), filename.size());
+    mem_buffer.read(reinterpret_cast<char*>(filename.data()), filename.size());
     REQUIRE(filename == std::array<char, 10>{ "hello.txt" });
 
     mem_buffer.read(temp.data(), temp.size());
@@ -153,24 +153,24 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
 
   SECTION("When multiple files are present, the file info can be parsed correctly.")
   {
-    std::basic_stringstream<std::byte> mem_buffer;
+    std::stringstream mem_buffer;
 
     std::vector<darkstar::volume_file_info> files;
-    auto memory_file_info = new std::basic_stringstream<std::byte>();
+    auto memory_file_info = new std::stringstream();
 
     (*memory_file_info) << "Hello Darkness, my old friend...";
-    files.emplace_back(darkstar::volume_file_info{ "hello.txt", 32, std::nullopt, darkstar::compression_type::none, std::unique_ptr<std::basic_istream<std::byte>>(memory_file_info) });
+    files.emplace_back(darkstar::volume_file_info{ "hello.txt", 32, std::nullopt, darkstar::compression_type::none, std::unique_ptr<std::istream>(memory_file_info) });
 
-    auto memory_file_info2 = new std::basic_stringstream<std::byte>();
+    auto memory_file_info2 = new std::stringstream();
 
     (*memory_file_info2) << "Hey, hey, hey";
-    files.emplace_back(darkstar::volume_file_info{ "test.txt", 13, std::nullopt, darkstar::compression_type::lzh, std::unique_ptr<std::basic_istream<std::byte>>(memory_file_info2) });
+    files.emplace_back(darkstar::volume_file_info{ "test.txt", 13, std::nullopt, darkstar::compression_type::lzh, std::unique_ptr<std::istream>(memory_file_info2) });
 
 
-    auto memory_file_info3 = new std::basic_stringstream<std::byte>();
+    auto memory_file_info3 = new std::stringstream();
 
     (*memory_file_info3) << "Beep, beep, beep";
-    files.emplace_back(darkstar::volume_file_info{ "beep.txt", 16, std::nullopt, darkstar::compression_type::none, std::unique_ptr<std::basic_istream<std::byte>>(memory_file_info3) });
+    files.emplace_back(darkstar::volume_file_info{ "beep.txt", 16, std::nullopt, darkstar::compression_type::none, std::unique_ptr<std::istream>(memory_file_info3) });
 
     darkstar::create_vol_file(mem_buffer, files);
 

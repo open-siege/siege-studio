@@ -10,7 +10,7 @@ namespace studio::views
   class sfx_view
   {
   public:
-    explicit sfx_view(studio::resources::file_info, std::basic_istream<std::byte>&, const studio::resources::resource_explorer&);
+    explicit sfx_view(studio::resources::file_info, std::istream&, const studio::resources::resource_explorer&);
     std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks() { return {}; }
     void setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext);
     void render_gl(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext) {}
@@ -20,7 +20,7 @@ namespace studio::views
     static std::filesystem::path export_path;
     const studio::resources::resource_explorer& explorer;
     studio::resources::file_info info;
-    std::basic_string<std::byte> original_data;
+    std::string original_data;
     sf::SoundBuffer buffer;
     sf::Sound sound;
     bool opened_folder = false;

@@ -13,7 +13,7 @@ namespace studio::views
   std::filesystem::path darkstar_dts_view::export_path = std::filesystem::path();
 
   // TODO see if this is still needed.
-  //  content::dts::darkstar::shape_variant get_shape(std::basic_istream<std::byte>& shape_stream)
+  //  content::dts::darkstar::shape_variant get_shape(std::istream& shape_stream)
   //  {
   //    try
   //    {
@@ -54,7 +54,7 @@ namespace studio::views
     ImGui::Unindent(8);
   }
 
-  darkstar_dts_view::darkstar_dts_view(view_context context, std::basic_istream<std::byte>& shape_stream)
+  darkstar_dts_view::darkstar_dts_view(view_context context, std::istream& shape_stream)
     : context(std::move(context))
   {
     if (export_path == std::filesystem::path())

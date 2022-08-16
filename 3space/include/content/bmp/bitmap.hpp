@@ -109,33 +109,33 @@ namespace studio::content::bmp
     horizontal_flip(pixels, width);
   }
 
-  bool is_earthsiege_bmp(std::basic_istream<std::byte>& raw_data);
+  bool is_earthsiege_bmp(std::istream& raw_data);
 
-  bool is_earthsiege_cursor(std::basic_istream<std::byte>& raw_data);
+  bool is_earthsiege_cursor(std::istream& raw_data);
 
-  bool is_earthsiege_bmp_array(std::basic_istream<std::byte>& raw_data);
+  bool is_earthsiege_bmp_array(std::istream& raw_data);
 
-  dbm_data read_earthsiege_bmp(std::basic_istream<std::byte>& raw_data);
+  dbm_data read_earthsiege_bmp(std::istream& raw_data);
 
-  dbm_data read_earthsiege_cursor(std::basic_istream<std::byte>& raw_data);
+  dbm_data read_earthsiege_cursor(std::istream& raw_data);
 
-  std::vector<dbm_data> read_earthsiege_bmp_array(std::basic_istream<std::byte>& raw_data);
+  std::vector<dbm_data> read_earthsiege_bmp_array(std::istream& raw_data);
 
-  bool is_microsoft_bmp(std::basic_istream<std::byte>& raw_data);
+  bool is_microsoft_bmp(std::istream& raw_data);
 
-  windows_bmp_data get_bmp_data(std::basic_istream<std::byte>& raw_data, bool auto_flip = true);
+  windows_bmp_data get_bmp_data(std::istream& raw_data, bool auto_flip = true);
 
-  void write_bmp_data(std::basic_ostream<std::byte>& raw_data, std::vector<pal::colour> colours, std::vector<std::byte> pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth, bool auto_flip = true);
+  void write_bmp_data(std::ostream& raw_data, std::vector<pal::colour> colours, std::vector<std::byte> pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth, bool auto_flip = true);
 
-  bool is_phoenix_bmp(std::basic_istream<std::byte>& raw_data);
+  bool is_phoenix_bmp(std::istream& raw_data);
 
-  pbmp_data get_pbmp_data(std::basic_istream<std::byte>& raw_data);
+  pbmp_data get_pbmp_data(std::istream& raw_data);
 
-  void write_pbmp_data(std::basic_ofstream<std::byte>& raw_data, std::int32_t width, std::int32_t height, const std::vector<pal::colour>& colours, const std::vector<std::byte>& pixels, std::optional<std::uint32_t> palette_id = std::nullopt);
+  void write_pbmp_data(std::ofstream& raw_data, std::int32_t width, std::int32_t height, const std::vector<pal::colour>& colours, const std::vector<std::byte>& pixels, std::optional<std::uint32_t> palette_id = std::nullopt);
 
-  bool is_phoenix_bmp_array(std::basic_istream<std::byte>& raw_data);
+  bool is_phoenix_bmp_array(std::istream& raw_data);
 
-  std::vector<pbmp_data> get_pba_data(std::basic_istream<std::byte>& raw_data);
+  std::vector<pbmp_data> get_pba_data(std::istream& raw_data);
 
   std::vector<std::byte> remap_bitmap(const std::vector<std::byte>& pixels,
                                          const std::vector<pal::colour>& original_colours,

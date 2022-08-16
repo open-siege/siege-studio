@@ -70,9 +70,9 @@ namespace studio::views
     std::string_view name,
     std::optional<std::size_t> index = std::nullopt);
 
-  std::pair<bitmap_type, bmp_variant> load_image_data_for_pal_detection(const studio::resources::file_info& info, std::basic_istream<std::byte>& image_stream);
+  std::pair<bitmap_type, bmp_variant> load_image_data_for_pal_detection(const studio::resources::file_info& info, std::istream& image_stream);
 
-  std::pair<bitmap_type, bmp_variant> load_image_data(const studio::resources::file_info& info, std::basic_istream<std::byte>& image_stream);
+  std::pair<bitmap_type, bmp_variant> load_image_data(const studio::resources::file_info& info, std::istream& image_stream);
 
   std::pair<std::string_view, std::size_t> detect_default_palette(
     const bmp_variant& data,

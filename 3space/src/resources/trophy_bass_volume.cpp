@@ -50,27 +50,27 @@ namespace studio::resources::vol::trophy_bass
 
   using folder_info = studio::resources::folder_info;
 
-  bool rbx_file_archive::is_supported(std::basic_istream<std::byte>& stream)
+  bool rbx_file_archive::is_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
-    stream.read(tag.data(), sizeof(tag));
+    stream.read(reinterpret_cast<char *>(tag.data()), sizeof(tag));
 
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
     return tag == rbx_tag;
   }
 
-  bool rbx_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  bool rbx_file_archive::stream_is_supported(std::istream& stream) const
   {
     return is_supported(stream);
   }
 
-  std::vector<std::variant<folder_info, studio::resources::file_info>> rbx_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, const listing_query& query) const
+  std::vector<std::variant<folder_info, studio::resources::file_info>> rbx_file_archive::get_content_listing(std::istream& stream, const listing_query& query) const
   {
     std::vector<studio::resources::file_info> results;
 
     std::array<std::byte, 4> tag{};
-    stream.read(tag.data(), sizeof(tag));
+    stream.read(reinterpret_cast<char *>(tag.data()), sizeof(tag));
 
     if (tag != rbx_tag)
     {
@@ -79,10 +79,10 @@ namespace studio::resources::vol::trophy_bass
 
     endian::little_uint32_t num_files;
 
-    stream.read(reinterpret_cast<std::byte*>(&num_files), sizeof(num_files));
+    stream.read(reinterpret_cast<char*>(&num_files), sizeof(num_files));
 
     std::array<std::byte, 4> padding{};
-    stream.read(reinterpret_cast<std::byte*>(&padding), sizeof(padding));
+    stream.read(reinterpret_cast<char*>(&padding), sizeof(padding));
 
     if (padding != rbx_padding)
     {
@@ -96,7 +96,7 @@ namespace studio::resources::vol::trophy_bass
     for (auto i = 0u; i < num_files; ++i)
     {
       rbx_file_header header{};
-      stream.read(reinterpret_cast<std::byte*>(&header), sizeof(header));
+      stream.read(reinterpret_cast<char*>(&header), sizeof(header));
 
       studio::resources::file_info info{};
 
@@ -122,7 +122,7 @@ namespace studio::resources::vol::trophy_bass
       }
 
       endian::little_uint32_t file_size{};
-      stream.read(reinterpret_cast<std::byte*>(&file_size), sizeof(file_size));
+      stream.read(reinterpret_cast<char*>(&file_size), sizeof(file_size));
 
       info.size = file_size;
     }
@@ -139,7 +139,7 @@ namespace studio::resources::vol::trophy_bass
     return final_results;
   }
 
-  void rbx_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info) const
+  void rbx_file_archive::set_stream_position(std::istream& stream, const studio::resources::file_info& info) const
   {
     if (std::size_t(stream.tellg()) == info.offset)
     {
@@ -151,39 +151,39 @@ namespace studio::resources::vol::trophy_bass
     }
   }
 
-  void rbx_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream,
+  void rbx_file_archive::extract_file_contents(std::istream& stream,
     const studio::resources::file_info& info,
-    std::basic_ostream<std::byte>& output,
+    std::ostream& output,
     std::optional<std::reference_wrapper<batch_storage>>) const
   {
     set_stream_position(stream, info);
 
-    std::copy_n(std::istreambuf_iterator<std::byte>(stream),
+    std::copy_n(std::istreambuf_iterator(stream),
       info.size,
-      std::ostreambuf_iterator<std::byte>(output));
+      std::ostreambuf_iterator(output));
   }
 
-  bool tbv_file_archive::is_supported(std::basic_istream<std::byte>& stream)
+  bool tbv_file_archive::is_supported(std::istream& stream)
   {
     std::array<std::byte, 9> tag{};
-    stream.read(tag.data(), sizeof(tag));
+    stream.read(reinterpret_cast<char *>(tag.data()), sizeof(tag));
 
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
     return tag == tbv_tag;
   }
 
-  bool tbv_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  bool tbv_file_archive::stream_is_supported(std::istream& stream) const
   {
     return is_supported(stream);
   }
 
-  std::vector<rbx_file_archive::content_info> tbv_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, const listing_query& query) const
+  std::vector<rbx_file_archive::content_info> tbv_file_archive::get_content_listing(std::istream& stream, const listing_query& query) const
   {
     std::vector<studio::resources::file_info> results;
 
     std::array<std::byte, 9> tag{};
-    stream.read(tag.data(), sizeof(tag));
+    stream.read(reinterpret_cast<char *>(tag.data()), sizeof(tag));
 
     if (tag != tbv_tag)
     {
@@ -192,7 +192,7 @@ namespace studio::resources::vol::trophy_bass
 
     header volume_header{};
 
-    stream.read(reinterpret_cast<std::byte*>(&volume_header), sizeof(volume_header));
+    stream.read(reinterpret_cast<char*>(&volume_header), sizeof(volume_header));
 
     if (!(volume_header.magic_string == header_tag ||
           volume_header.magic_string == header_alt_tag ||
@@ -206,7 +206,7 @@ namespace studio::resources::vol::trophy_bass
     for (auto i = 0u; i < volume_header.num_files; ++i)
     {
       tbv_file_header header{};
-      stream.read(reinterpret_cast<std::byte*>(&header), sizeof(header));
+      stream.read(reinterpret_cast<char*>(&header), sizeof(header));
 
       studio::resources::file_info info{};
       info.compression_type = studio::resources::compression_type::none;
@@ -230,7 +230,7 @@ namespace studio::resources::vol::trophy_bass
         stream.seekg(header.offset, std::ios::beg);
       }
       tbv_file_info info{};
-      stream.read(reinterpret_cast<std::byte*>(&info), sizeof(info));
+      stream.read(reinterpret_cast<char*>(&info), sizeof(info));
 
       std::copy(info.filename.begin(), info.filename.end(), temp.begin());
 
@@ -250,7 +250,7 @@ namespace studio::resources::vol::trophy_bass
     return final_results;
   }
 
-  void tbv_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info) const
+  void tbv_file_archive::set_stream_position(std::istream& stream, const studio::resources::file_info& info) const
   {
     if (std::size_t(stream.tellg()) == info.offset)
     {
@@ -262,15 +262,15 @@ namespace studio::resources::vol::trophy_bass
     }
   }
 
-  void tbv_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream,
+  void tbv_file_archive::extract_file_contents(std::istream& stream,
     const studio::resources::file_info& info,
-    std::basic_ostream<std::byte>& output,
+    std::ostream& output,
     std::optional<std::reference_wrapper<batch_storage>>) const
   {
     set_stream_position(stream, info);
 
-    std::copy_n(std::istreambuf_iterator<std::byte>(stream),
+    std::copy_n(std::istreambuf_iterator(stream),
       info.size,
-      std::ostreambuf_iterator<std::byte>(output));
+      std::ostreambuf_iterator(output));
   }
 }// namespace trophy_bass::vol

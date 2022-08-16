@@ -12,20 +12,20 @@ namespace studio::resources::cln
   namespace endian = boost::endian;
 
 
-  bool cln_file_archive::is_supported(std::basic_istream<std::byte>& stream)
+  bool cln_file_archive::is_supported(std::istream& stream)
   {
     endian::little_int32_t file_count;
-    stream.read(reinterpret_cast<std::byte*>(&file_count), sizeof(file_count));
+    stream.read(reinterpret_cast<char*>(&file_count), sizeof(file_count));
 
     endian::little_int32_t folder_name_length;
-    stream.read(reinterpret_cast<std::byte*>(&folder_name_length), sizeof(folder_name_length));
+    stream.read(reinterpret_cast<char*>(&folder_name_length), sizeof(folder_name_length));
 
     stream.seekg(-int(sizeof(file_count)) * 2, std::ios::cur);
 
     return file_count <= 6000 == folder_name_length <= 256;
   }
 
-  bool cln_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  bool cln_file_archive::stream_is_supported(std::istream& stream) const
   {
     return is_supported(stream);
   }
@@ -39,26 +39,26 @@ namespace studio::resources::cln
     endian::little_uint32_t offset;
   };
 
-  auto get_file_entries(std::basic_istream<std::byte>& stream)
+  auto get_file_entries(std::istream& stream)
   {
       std::vector<file_entry> entries;
 
       endian::little_int32_t file_count;
-      stream.read(reinterpret_cast<std::byte*>(&file_count), sizeof(file_count));
+      stream.read(reinterpret_cast<char*>(&file_count), sizeof(file_count));
 
       entries.reserve(file_count);
 
       for (auto i = 0; i < file_count; i++)
       {
         auto& entry = entries.emplace_back();
-        stream.read(reinterpret_cast<std::byte*>(&entry.string_length), sizeof(entry.string_length));
+        stream.read(reinterpret_cast<char*>(&entry.string_length), sizeof(entry.string_length));
         entry.filename.assign(entry.string_length, '\0');
 
-        stream.read(reinterpret_cast<std::byte*>(entry.filename.data()), entry.string_length);
+        stream.read(reinterpret_cast<char*>(entry.filename.data()), entry.string_length);
 
-        stream.read(reinterpret_cast<std::byte*>(&entry.file_size), sizeof(entry.file_size));
-        stream.read(reinterpret_cast<std::byte*>(&entry.flags), sizeof(entry.flags));
-        stream.read(reinterpret_cast<std::byte*>(&entry.offset), sizeof(entry.offset));
+        stream.read(reinterpret_cast<char*>(&entry.file_size), sizeof(entry.file_size));
+        stream.read(reinterpret_cast<char*>(&entry.flags), sizeof(entry.flags));
+        stream.read(reinterpret_cast<char*>(&entry.offset), sizeof(entry.offset));
       }
 
       return entries;
@@ -98,7 +98,7 @@ namespace studio::resources::cln
     return input.rfind(value_to_find, 0) == 0;
   }
 
-  std::vector<cln_file_archive::content_info> cln_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, const listing_query& query) const
+  std::vector<cln_file_archive::content_info> cln_file_archive::get_content_listing(std::istream& stream, const listing_query& query) const
   {
     thread_local std::unordered_map<std::string, std::vector<file_entry>> cache;
     auto cached_entries = cache.find(query.archive_path.string());
@@ -206,7 +206,7 @@ namespace studio::resources::cln
 
   constexpr auto file_data_header = std::string_view("MAGIC_NUMBER");
 
-  void cln_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info) const
+  void cln_file_archive::set_stream_position(std::istream& stream, const studio::resources::file_info& info) const
   {
     if (std::size_t(stream.tellg()) == info.offset)
     {
@@ -218,9 +218,9 @@ namespace studio::resources::cln
     }
   }
 
-  void cln_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream,
+  void cln_file_archive::extract_file_contents(std::istream& stream,
     const studio::resources::file_info& info,
-    std::basic_ostream<std::byte>& output,
+    std::ostream& output,
     std::optional<std::reference_wrapper<batch_storage>>) const
   {
     if (info.compression_type == compression_type::none)
@@ -235,16 +235,16 @@ namespace studio::resources::cln
 
       const auto remaining_bytes = last_byte - info.offset - file_data_header.length();
 
-      std::copy_n(std::istreambuf_iterator<std::byte>(stream),
+      std::copy_n(std::istreambuf_iterator(stream),
         info.size > remaining_bytes ? remaining_bytes : info.size,
-        std::ostreambuf_iterator<std::byte>(output));
+        std::ostreambuf_iterator(output));
     }
     else if (info.compressed_size.has_value())
     {
       set_stream_position(stream, info);
       std::vector<std::byte> temp(info.compressed_size.value(), std::byte{'\0'});
 
-      stream.read(temp.data(), info.compressed_size.value());
+      stream.read(reinterpret_cast<char*>(temp.data()), info.compressed_size.value());
 
       if (info.compressed_size.value() % 2 != 0)
       {
@@ -257,7 +257,7 @@ namespace studio::resources::cln
         auto count = std::size_t(temp[i]);
         auto& value = temp[i + 1];
         buffer.assign(count, value);
-        output.write(buffer.data(), buffer.size());
+        output.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
       }
     }
   }

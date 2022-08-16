@@ -145,7 +145,7 @@ namespace studio::views
         scoped_dialog->Show();
         text1->SetLabel("Extracting to\n" + (dest / archive_path.stem()).string());
 
-        std::basic_ifstream<std::byte> archive_file(archive_path, std::ios::binary);
+        std::ifstream archive_file(archive_path, std::ios::binary);
 
         resources::batch_storage storage;
 
@@ -232,7 +232,7 @@ namespace studio::views
 
           const auto& [file_archive_path, child_files] = info;
 
-          std::basic_ifstream<std::byte> archive_file(file_archive_path, std::ios::binary);
+          std::ifstream archive_file(file_archive_path, std::ios::binary);
 
           resources::batch_storage storage;
 

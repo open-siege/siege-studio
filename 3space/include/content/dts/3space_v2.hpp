@@ -32,8 +32,8 @@ namespace studio::content::dts::three_space
     using shape_item = std::variant<raw_item, null_part, base_part, part_list, bsp_part, cell_anim_part,
       detail_part, bitmap_frame_part, mesh, shape, nu_shape, nu_bsp_part, nu_anim_mesh, nu_anim_mesh>;
 
-    bool is_3space_dts(std::basic_istream<std::byte>& stream);
-    std::vector<shape_item> read_shapes(std::basic_istream<std::byte>& file);
+    bool is_3space_dts(std::istream& stream);
+    std::vector<shape_item> read_shapes(std::istream& file);
 
     using shape_reader_map = tagged_item_map<shape_item>::tagged_item_reader_map;
 

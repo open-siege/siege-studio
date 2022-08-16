@@ -9,30 +9,30 @@ namespace studio::content::bmp
   constexpr std::array<std::byte, 3> gif_tag = shared::to_tag<3>({ 'G', 'I', 'F' });
   constexpr std::array<std::byte, 2> jpg_tag = shared::to_tag<2>({ 0xff, 0x28 });
 
-  bool is_jpg(std::basic_istream<std::byte>& raw_data)
+  bool is_jpg(std::istream& raw_data)
   {
     std::array<std::byte, 2> header{};
-    raw_data.read(header.data(), sizeof(header));
+    raw_data.read(reinterpret_cast<char *>(header.data()), sizeof(header));
 
     raw_data.seekg(-int(sizeof(header)), std::ios::cur);
 
     return header == jpg_tag;
   }
 
-  bool is_png(std::basic_istream<std::byte>& raw_data)
+  bool is_png(std::istream& raw_data)
   {
     file_tag header{};
-    raw_data.read(header.data(), sizeof(header));
+    raw_data.read(reinterpret_cast<char *>(header.data()), sizeof(header));
 
     raw_data.seekg(-int(sizeof(header)), std::ios::cur);
 
     return header == png_tag;
   }
 
-  bool is_gif(std::basic_istream<std::byte>& raw_data)
+  bool is_gif(std::istream& raw_data)
   {
     std::array<std::byte, 3> header{};
-    raw_data.read(header.data(), sizeof(header));
+    raw_data.read(reinterpret_cast<char *>(header.data()), sizeof(header));
 
     raw_data.seekg(-int(sizeof(header)), std::ios::cur);
 
@@ -40,10 +40,10 @@ namespace studio::content::bmp
   }
 
 
-  bool is_tga(std::basic_istream<std::byte>& raw_data)
+  bool is_tga(std::istream& raw_data)
   {
     std::array<std::byte, 3> header{};
-    raw_data.read(header.data(), sizeof(header));
+    raw_data.read(reinterpret_cast<char *>(header.data()), sizeof(header));
 
     raw_data.seekg(-int(sizeof(header)), std::ios::cur);
 
@@ -54,12 +54,12 @@ namespace studio::content::bmp
            header[2] == std::byte{11};
   }
 
-  windows_bmp_data get_supported_data(const studio::resources::file_info& info, std::basic_istream<std::byte>& raw_data)
+  windows_bmp_data get_supported_data(const studio::resources::file_info& info, std::istream& raw_data)
   {
     sf::Image image;
 
     std::vector<std::byte> data(info.size);
-    raw_data.read(data.data(), info.size);
+    raw_data.read(reinterpret_cast<char *>(data.data()), info.size);
 
     if (image.loadFromMemory(data.data(), info.size))
     {
@@ -91,22 +91,22 @@ namespace studio::content::bmp
     return {};
   }
 
-  windows_bmp_data get_png_data(const studio::resources::file_info& info, std::basic_istream<std::byte>& raw_data)
+  windows_bmp_data get_png_data(const studio::resources::file_info& info, std::istream& raw_data)
   {
       return get_supported_data(info, raw_data);
   }
 
-  windows_bmp_data get_jpg_data(const studio::resources::file_info& info, std::basic_istream<std::byte>& raw_data)
+  windows_bmp_data get_jpg_data(const studio::resources::file_info& info, std::istream& raw_data)
   {
     return get_supported_data(info, raw_data);
   }
 
-  windows_bmp_data get_gif_data(const studio::resources::file_info& info, std::basic_istream<std::byte>& raw_data)
+  windows_bmp_data get_gif_data(const studio::resources::file_info& info, std::istream& raw_data)
   {
     return get_supported_data(info, raw_data);
   }
 
-  windows_bmp_data get_tga_data(const studio::resources::file_info& info, std::basic_istream<std::byte>& raw_data)
+  windows_bmp_data get_tga_data(const studio::resources::file_info& info, std::istream& raw_data)
   {
     return get_supported_data(info, raw_data);
   }

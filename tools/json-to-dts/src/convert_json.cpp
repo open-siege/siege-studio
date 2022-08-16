@@ -56,7 +56,7 @@ int main(int argc, const char** argv)
       {
         const dts::material_list_variant fresh_shape = fresh_shape_json;
 
-        std::basic_ofstream<std::byte> stream(new_file_name, std::ios::binary);
+        std::ofstream stream(new_file_name, std::ios::binary);
         dts::write_material_list(stream, fresh_shape);
 
 
@@ -68,7 +68,7 @@ int main(int argc, const char** argv)
       {
         const dts::shape_variant fresh_shape = fresh_shape_json;
 
-        std::basic_ofstream<std::byte> stream(new_file_name, std::ios::binary);
+        std::ofstream stream(new_file_name, std::ios::binary);
         dts::write_shape(stream, fresh_shape);
         std::stringstream msg;
         msg << "Created " << new_file_name << '\n';

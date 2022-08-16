@@ -3,7 +3,7 @@
 
 namespace studio::content::dts
 {
-  std::unique_ptr<content::renderable_shape> make_shape(std::basic_istream<std::byte>& shape_stream);
+  std::unique_ptr<content::renderable_shape> make_shape(std::istream& shape_stream);
 }
 
 #endif//INC_3SPACESTUDIO_RENDERABLE_SHAPE_FACTORY_HPP
