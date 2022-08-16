@@ -2,6 +2,7 @@
 #include <sstream>
 #include "resources/darkstar_volume.hpp"
 #include "shared.hpp"
+#include "stream.hpp"
 
 namespace darkstar = studio::resources::vol::darkstar;
 
@@ -26,54 +27,54 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
     std::array<std::byte, 4> temp = {};
 
     constexpr auto little_endian_48_in_hex = std::array<std::byte, 4>{ std::byte(0x30), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_48_in_hex);
 
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == studio::shared::to_tag<4>({ 'V', 'B', 'L', 'K' }));
 
     constexpr auto little_endian_32_in_hex_with_end_byte_tag = std::array<std::byte, 4>{ std::byte(0x20), std::byte(0x00), std::byte(0x00), std::byte(0x80) };
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_32_in_hex_with_end_byte_tag);
 
     std::string content(32, '\0');
-    mem_buffer.read(reinterpret_cast<char*>(content.data()), content.size());
+    studio::read(mem_buffer, reinterpret_cast<char*>(content.data()), content.size());
     REQUIRE(content == std::string_view{ "Hello Darkness, my old friend..." });
 
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == studio::shared::to_tag<4>({ 'v', 'o', 'l', 's' }));
 
     constexpr auto little_endian_10_in_hex = std::array<std::byte, 4>{ std::byte(0x0A), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_10_in_hex);
 
     std::array<char, 10> filename = {};
-    mem_buffer.read(reinterpret_cast<char*>(filename.data()), filename.size());
+    studio::read(mem_buffer, reinterpret_cast<char*>(filename.data()), filename.size());
     REQUIRE(filename == std::array<char, 10>{ "hello.txt" });
 
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == studio::shared::to_tag<4>({ 'v', 'o', 'l', 'i' }));
 
     constexpr auto little_endian_17_in_hex = std::array<std::byte, 4>{ std::byte(0x11), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_17_in_hex);
 
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == std::array<std::byte, 4>());
 
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == std::array<std::byte, 4>());
 
     constexpr auto little_endian_8_in_hex = std::array<std::byte, 4>{ std::byte(0x08), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_8_in_hex);
 
     constexpr auto little_endian_32_in_hex = std::array<std::byte, 4>{ std::byte(0x20), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_32_in_hex);
 
     std::byte file_type{};
-    mem_buffer.read(&file_type, 1);
+    studio::read(mem_buffer, &file_type, 1);
     REQUIRE(file_type == std::byte{ 0x00 });
   }
 
@@ -96,58 +97,58 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
     std::array<std::byte, 4> temp = {};
 
     constexpr auto little_endian_52_in_hex = std::array<std::byte, 4>{ std::byte(0x34), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_52_in_hex);
 
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == studio::shared::to_tag<4>({ 'V', 'B', 'L', 'K' }));
 
     constexpr auto little_endian_34_in_hex_with_end_byte_tag = std::array<std::byte, 4>{ std::byte(0x22), std::byte(0x00), std::byte(0x00), std::byte(0x80) };
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_34_in_hex_with_end_byte_tag);
 
     std::string content(34, '\0');
-    mem_buffer.read(reinterpret_cast<char*>(content.data()), content.size());
+    studio::read(mem_buffer, reinterpret_cast<char*>(content.data()), content.size());
     REQUIRE(content == std::string_view{ "I've come to talk with you again.." });
 
-    mem_buffer.read(temp.data(), 2);
+    studio::read(mem_buffer, temp.data(), 2);
     REQUIRE(temp[0] == std::byte(0x00));
     REQUIRE(temp[1] == std::byte(0x00));
 
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == studio::shared::to_tag<4>({ 'v', 'o', 'l', 's' }));
 
     constexpr auto little_endian_10_in_hex = std::array<std::byte, 4>{ std::byte(0x0A), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_10_in_hex);
 
     std::array<char, 10> filename = {};
-    mem_buffer.read(reinterpret_cast<char*>(filename.data()), filename.size());
+    studio::read(mem_buffer, reinterpret_cast<char*>(filename.data()), filename.size());
     REQUIRE(filename == std::array<char, 10>{ "hello.txt" });
 
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == studio::shared::to_tag<4>({ 'v', 'o', 'l', 'i' }));
 
     constexpr auto little_endian_17_in_hex = std::array<std::byte, 4>{ std::byte(0x11), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_17_in_hex);
 
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == std::array<std::byte, 4>());
 
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == std::array<std::byte, 4>());
 
     constexpr auto little_endian_8_in_hex = std::array<std::byte, 4>{ std::byte(0x08), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_8_in_hex);
 
     constexpr auto little_endian_32_in_hex = std::array<std::byte, 4>{ std::byte(0x22), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
-    mem_buffer.read(temp.data(), temp.size());
+    studio::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_32_in_hex);
 
     std::byte file_type{};
-    mem_buffer.read(&file_type, 1);
+    studio::read(mem_buffer, &file_type, 1);
     REQUIRE(file_type == std::byte{ 0x00 });
   }
 
