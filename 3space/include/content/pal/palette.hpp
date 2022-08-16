@@ -70,18 +70,18 @@ namespace studio::content::pal
     endian::little_uint32_t type;
   };
 
-  bool is_old_pal(std::basic_istream<std::byte>& raw_data);
-  std::vector<old_palette> get_old_pal_data(std::basic_istream<std::byte>& raw_data);
+  bool is_old_pal(std::istream& raw_data);
+  std::vector<old_palette> get_old_pal_data(std::istream& raw_data);
 
-  bool is_microsoft_pal(std::basic_istream<std::byte>& raw_data);
-  std::vector<colour> get_pal_data(std::basic_istream<std::byte>& raw_data);
-  std::int32_t write_pal_data(std::basic_ostream<std::byte>& raw_data, const std::vector<colour>& colours);
+  bool is_microsoft_pal(std::istream& raw_data);
+  std::vector<colour> get_pal_data(std::istream& raw_data);
+  std::int32_t write_pal_data(std::ostream& raw_data, const std::vector<colour>& colours);
 
-  bool is_phoenix_pal(std::basic_istream<std::byte>& raw_data);
-  std::vector<palette> get_ppl_data(std::basic_istream<std::byte>& raw_data);
+  bool is_phoenix_pal(std::istream& raw_data);
+  std::vector<palette> get_ppl_data(std::istream& raw_data);
 
-  bool is_earthsiege_pal(std::basic_istream<std::byte>& raw_data);
-  std::vector<colour> get_earthsiege_pal(std::basic_istream<std::byte>& raw_data);
+  bool is_earthsiege_pal(std::istream& raw_data);
+  std::vector<colour> get_earthsiege_pal(std::istream& raw_data);
 }// namespace darkstar::pal
 
 #endif//DARKSTARDTSCONVERTER_PALETTE_HPP

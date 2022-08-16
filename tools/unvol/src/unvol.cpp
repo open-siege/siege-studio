@@ -54,7 +54,7 @@ constexpr static auto vol_checkers = std::array<std::pair<CheckerType, CreatorTy
 int main(int, const char** argv)
 {
   std::string volume_file(argv[1]);
-  auto volume_stream = std::basic_ifstream<std::byte>{ volume_file, std::ios::binary };
+  auto volume_stream = std::ifstream{ volume_file, std::ios::binary };
 
   std::unique_ptr<studio::resources::archive_plugin> archive;
 
@@ -90,14 +90,14 @@ int main(int, const char** argv)
           auto final_folder = output_folder / std::filesystem::relative(replace_extension(info.folder_path.string()), output_folder);
           std::filesystem::create_directories(final_folder);
           auto filename = final_folder / info.filename;
-          auto new_stream = std::basic_ofstream<std::byte>{ filename, std::ios::binary };
+          auto new_stream = std::ofstream{ filename, std::ios::binary };
           archive->extract_file_contents(volume_stream, info, new_stream, storage);
         }
 
         if constexpr (std::is_same_v<info_type, studio::resources::folder_info>)
         {
           // TODO think about whether get_content_listing should preserve the original position of the stream or not.
-          std::basic_ifstream<std::byte> temp_stream{ volume_file, std::ios::binary };
+          std::ifstream temp_stream{ volume_file, std::ios::binary };
           auto files = archive->get_content_listing(temp_stream, { volume_file, info.full_path });
           extract_files(files);
         }

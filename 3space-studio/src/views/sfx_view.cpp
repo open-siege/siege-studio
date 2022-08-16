@@ -8,7 +8,7 @@ namespace studio::views
 {
   std::filesystem::path sfx_view::export_path = std::filesystem::path();
 
-  sfx_view::sfx_view(studio::resources::file_info info, std::basic_istream<std::byte>& image_stream, const studio::resources::resource_explorer& explorer)
+  sfx_view::sfx_view(studio::resources::file_info info, std::istream& image_stream, const studio::resources::resource_explorer& explorer)
     : explorer(explorer), info(info)
   {
     if (export_path == std::filesystem::path())
@@ -18,9 +18,9 @@ namespace studio::views
 
     if (studio::content::sfx::is_sfx_file(image_stream))
     {
-      std::basic_stringstream<std::byte> mem_buffer;
+      std::stringstream mem_buffer;
       std::vector<std::byte> data(info.size);
-      image_stream.read(data.data(), info.size);
+      image_stream.read(reinterpret_cast<char*>(data.data()), info.size);
 
       content::sfx::write_wav_data(mem_buffer, data);
 
@@ -30,11 +30,11 @@ namespace studio::views
     }
     else if (studio::content::sfx::is_wav_file(image_stream) || studio::content::sfx::is_ogg_file(image_stream) || studio::content::sfx::is_flac_file(image_stream))
     {
-      std::basic_stringstream<std::byte> mem_buffer;
+      std::stringstream mem_buffer;
 
-      std::copy_n(std::istreambuf_iterator<std::byte>(image_stream),
+      std::copy_n(std::istreambuf_iterator(image_stream),
         info.size,
-        std::ostreambuf_iterator<std::byte>(mem_buffer));
+        std::ostreambuf_iterator(mem_buffer));
 
       original_data = mem_buffer.str();
       buffer.loadFromMemory(original_data.data(), original_data.size());
@@ -78,7 +78,7 @@ namespace studio::views
       auto new_file_name = info.filename.replace_extension(".wav");
       std::filesystem::create_directories(export_path);
 
-      std::basic_ofstream<std::byte> output(export_path / new_file_name, std::ios::binary);
+      std::ofstream output(export_path / new_file_name, std::ios::binary);
       output.write(original_data.data(), original_data.size());
       if (!opened_folder)
       {
@@ -106,12 +106,12 @@ namespace studio::views
           auto new_file_name = std::filesystem::path(snd_info.filename).replace_extension(".wav");
 
           std::filesystem::create_directories(new_path);
-          std::basic_ofstream<std::byte> output(new_path / new_file_name, std::ios::binary);
+          std::ofstream output(new_path / new_file_name, std::ios::binary);
 
           content::sfx::write_wav_header(output, snd_info.size);
-          std::copy_n(std::istreambuf_iterator<std::byte>(*sound_stream.second),
+          std::copy_n(std::istreambuf_iterator(*sound_stream.second),
                       snd_info.size,
-                      std::ostreambuf_iterator<std::byte>(output));
+                      std::ostreambuf_iterator(output));
         }
       });
     }

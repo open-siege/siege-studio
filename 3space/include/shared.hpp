@@ -15,7 +15,6 @@ namespace studio::shared
 {
   namespace fs = std::filesystem;
 
-
   // A big thanks to https://stackoverflow.com/questions/56246573/how-to-copy-an-element-of-stdvariant-to-a-variable-of-another-variant-type
   template<typename MainType>
   struct Exactly

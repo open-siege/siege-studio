@@ -245,7 +245,7 @@ namespace studio::views
   }
 
 
-  bmp_view::bmp_view(view_context context, std::basic_istream<std::byte>& image_stream)
+  bmp_view::bmp_view(view_context context, std::istream& image_stream)
     : context(std::move(context))
   {
     const auto& info = this->context.file_info;
@@ -585,7 +585,7 @@ namespace studio::views
         {
           auto new_file_name = context.file_info.filename.replace_extension(".bmp");
           std::filesystem::create_directories(export_path);
-          std::basic_ofstream<std::byte> output(export_path / new_file_name, std::ios::binary);
+          std::ofstream output(export_path / new_file_name, std::ios::binary);
 
           const auto& colours = palette_data.loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
 
@@ -609,7 +609,7 @@ namespace studio::views
         {
           auto new_file_name = context.file_info.filename.replace_extension(".bmp");
           std::filesystem::create_directories(export_path);
-          std::basic_ofstream<std::byte> output(export_path / new_file_name, std::ios::binary);
+          std::ofstream output(export_path / new_file_name, std::ios::binary);
 
           const auto& selected_palette = palette_data.loaded_palettes.at(selected_palette_name).second.at(selected_palette_index);
 
@@ -645,7 +645,7 @@ namespace studio::views
             try
             {
               std::filesystem::create_directories(new_path);
-              std::basic_ofstream<std::byte> output(new_path / new_file_name, std::ios::binary);
+              std::ofstream output(new_path / new_file_name, std::ios::binary);
 
               auto image_stream = context.explorer.load_file(shape_info);
               const auto [bmp_type, bmp_data] = load_image_data(image_stream.first,*image_stream.second);
@@ -750,7 +750,7 @@ namespace studio::views
           });
           auto new_file_name = context.file_info.filename.replace_extension(".bmp");
           std::filesystem::create_directories(export_path);
-          std::basic_ofstream<std::byte> output(export_path / new_file_name, std::ios::binary);
+          std::ofstream output(export_path / new_file_name, std::ios::binary);
 
           const auto& colours = palette_data.loaded_palettes.at(selected_palette_name).second.at(selected_palette_index).colours;
           auto pixels = content::bmp::remap_bitmap(original_pixels.at(selected_bitmap_index).pixels,

@@ -5,6 +5,7 @@
 #include <string>
 
 #include "resources/three_space_volume.hpp"
+#include "stream.hpp"
 
 namespace studio::resources::vol::three_space
 {
@@ -35,10 +36,10 @@ namespace studio::resources::vol::three_space
     endian::little_int32_t offset;
   };
 
-  std::vector<studio::resources::folder_info> get_rmf_sub_archives(std::basic_istream<std::byte>& raw_data)
+  std::vector<studio::resources::folder_info> get_rmf_sub_archives(std::istream& raw_data)
   {
     std::array<std::byte, 6> header{};
-    raw_data.read(header.data(), sizeof(header));
+    studio::read(raw_data, header.data(), sizeof(header));
 
     auto volume_count = static_cast<int>(header[header.size() - 2]);
 
@@ -49,10 +50,10 @@ namespace studio::resources::vol::three_space
 
     for (auto i = 0; i < volume_count; ++i)
     {
-      raw_data.read(reinterpret_cast<std::byte*>(filename.data()), sizeof(filename) - 1);
+      studio::read(raw_data, reinterpret_cast<char*>(filename.data()), sizeof(filename) - 1);
 
       endian::little_uint16_t file_count{};
-      raw_data.read(reinterpret_cast<std::byte*>(&file_count), sizeof(file_count));
+      studio::read(raw_data, reinterpret_cast<char*>(&file_count), sizeof(file_count));
 
       studio::resources::folder_info info{};
       info.name = filename.data();
@@ -66,11 +67,11 @@ namespace studio::resources::vol::three_space
     return results;
   }
 
-  std::vector<studio::resources::file_info> get_rmf_data(std::basic_istream<std::byte>& raw_data, const std::filesystem::path& folder_path)
+  std::vector<studio::resources::file_info> get_rmf_data(std::istream& raw_data, const std::filesystem::path& folder_path)
   {
     std::vector<studio::resources::file_info> results;
     std::array<std::byte, 6> header{};
-    raw_data.read(header.data(), sizeof(header));
+    studio::read(raw_data, header.data(), sizeof(header));
 
     auto volume_count = static_cast<int>(header[header.size() - 2]);
 
@@ -82,16 +83,16 @@ namespace studio::resources::vol::three_space
 
     for (auto i = 0; i < volume_count; ++i)
     {
-      raw_data.read(reinterpret_cast<std::byte*>(filename.data()), sizeof(filename) - 1);
+      studio::read(raw_data, reinterpret_cast<char*>(filename.data()), sizeof(filename) - 1);
 
       endian::little_uint16_t file_count{};
-      raw_data.read(reinterpret_cast<std::byte*>(&file_count), sizeof(file_count));
+      studio::read(raw_data, reinterpret_cast<char*>(&file_count), sizeof(file_count));
 
       if (volume_filename == std::string_view(filename.data()))
       {
         std::vector<rmf_file_header> headers(file_count, rmf_file_header{});
 
-        raw_data.read(reinterpret_cast<std::byte*>(headers.data()), file_count * sizeof(rmf_file_header));
+        studio::read(raw_data, reinterpret_cast<char*>(headers.data()), file_count * sizeof(rmf_file_header));
 
         std::sort(headers.begin(), headers.end(), [](const auto& a, const auto& b) {
           return a.offset < b.offset;
@@ -99,7 +100,7 @@ namespace studio::resources::vol::three_space
 
         results.reserve(file_count);
 
-        auto volume = std::basic_ifstream<std::byte>{ real_path / volume_filename, std::ios::binary };
+        auto volume = std::ifstream{ real_path / volume_filename, std::ios::binary };
 
         std::array<char, 14> child_filename{ '\0' };
 
@@ -109,9 +110,9 @@ namespace studio::resources::vol::three_space
 
           volume.seekg(file_header.offset, std::ios::beg);
 
-          volume.read(reinterpret_cast<std::byte*>(child_filename.data()), child_filename.size() - 1);
+          volume.read(reinterpret_cast<char*>(child_filename.data()), child_filename.size() - 1);
           endian::little_uint32_t file_size{};
-          volume.read(reinterpret_cast<std::byte*>(&file_size), sizeof(file_size));
+          volume.read(reinterpret_cast<char*>(&file_size), sizeof(file_size));
 
           studio::resources::file_info info{};
           info.offset = file_header.offset;
@@ -134,10 +135,10 @@ namespace studio::resources::vol::three_space
     return results;
   }
 
-  std::vector<studio::resources::file_info> get_dyn_data(std::basic_istream<std::byte>& raw_data)
+  std::vector<studio::resources::file_info> get_dyn_data(std::istream& raw_data)
   {
     std::array<std::byte, 20> header{};
-    raw_data.read(header.data(), sizeof(header));
+    studio::read(raw_data, header.data(), sizeof(header));
 
     if (header != dyn_tag)
     {
@@ -148,7 +149,7 @@ namespace studio::resources::vol::three_space
 
     endian::little_uint32_t file_count{};
 
-    raw_data.read(reinterpret_cast<std::byte*>(&file_count), sizeof(file_count));
+    studio::read(raw_data, reinterpret_cast<char*>(&file_count), sizeof(file_count));
 
     // The section being skipped appears to be an array of checksums.
     // TODO verify if the checksums are crc32.
@@ -166,11 +167,11 @@ namespace studio::resources::vol::three_space
       info.compression_type = studio::resources::compression_type::none;
       info.offset = std::size_t(raw_data.tellg());
 
-      raw_data.read(reinterpret_cast<std::byte*>(child_filename.data()), child_filename.size() - 1);
+      studio::read(raw_data, reinterpret_cast<char*>(child_filename.data()), child_filename.size() - 1);
 
       endian::little_uint32_t file_size{};
 
-      raw_data.read(reinterpret_cast<std::byte*>(&file_size), sizeof(file_size));
+      studio::read(raw_data, reinterpret_cast<char*>(&file_size), sizeof(file_size));
 
       info.filename = child_filename.data();
       info.size = file_size;
@@ -190,10 +191,10 @@ namespace studio::resources::vol::three_space
     return results;
   }
 
-  std::vector<std::string> get_vol_folders(std::basic_istream<std::byte>& raw_data)
+  std::vector<std::string> get_vol_folders(std::istream& raw_data)
   {
     std::array<std::byte, 4> header{};
-    raw_data.read(reinterpret_cast<std::byte*>(header.data()), sizeof(header));
+    studio::read(raw_data, reinterpret_cast<char*>(header.data()), sizeof(header));
 
     if (header != vol_tag)
     {
@@ -204,10 +205,10 @@ namespace studio::resources::vol::three_space
 
     endian::little_uint16_t num_chars{};
 
-    raw_data.read(reinterpret_cast<std::byte*>(&num_chars), sizeof(num_chars));
+    studio::read(raw_data, reinterpret_cast<char*>(&num_chars), sizeof(num_chars));
 
     std::vector<char> raw_folders(num_chars, '\0');
-    raw_data.read(reinterpret_cast<std::byte*>(raw_folders.data()), raw_folders.size());
+    studio::read(raw_data, reinterpret_cast<char*>(raw_folders.data()), raw_folders.size());
 
     std::vector<std::string> folders;
     folders.reserve(raw_folders.size() / 5);
@@ -228,16 +229,16 @@ namespace studio::resources::vol::three_space
     return folders;
   }
 
-  std::vector<studio::resources::file_info> get_vol_data(std::basic_istream<std::byte>& raw_data, const std::filesystem::path& folder_path)
+  std::vector<studio::resources::file_info> get_vol_data(std::istream& raw_data, const std::filesystem::path& folder_path)
   {
     const auto folders = get_vol_folders(raw_data);
     auto folder_name = folder_path.filename().string();
 
     endian::little_uint16_t num_files;
-    raw_data.read(reinterpret_cast<std::byte*>(&num_files), sizeof(num_files));
+    studio::read(raw_data, reinterpret_cast<char*>(&num_files), sizeof(num_files));
 
     endian::little_uint32_t header_size;
-    raw_data.read(reinterpret_cast<std::byte*>(&header_size), sizeof(header_size));
+    studio::read(raw_data, reinterpret_cast<char*>(&header_size), sizeof(header_size));
 
     std::vector<studio::resources::file_info> files;
     files.reserve(num_files);
@@ -248,12 +249,12 @@ namespace studio::resources::vol::three_space
     {
       studio::resources::file_info info{};
 
-      raw_data.read(reinterpret_cast<std::byte*>(filename.data()), filename.size() - 1);
+      studio::read(raw_data, reinterpret_cast<char*>(filename.data()), filename.size() - 1);
       std::uint8_t folder_index;
-      raw_data.read(reinterpret_cast<std::byte*>(&folder_index), sizeof(folder_index));
+      studio::read(raw_data, reinterpret_cast<char*>(&folder_index), sizeof(folder_index));
 
       endian::little_uint32_t offset;
-      raw_data.read(reinterpret_cast<std::byte*>(&offset), sizeof(offset));
+      studio::read(raw_data, reinterpret_cast<char*>(&offset), sizeof(offset));
 
       if (folder_index > folders.size() || folders.empty())
       {
@@ -279,7 +280,7 @@ namespace studio::resources::vol::three_space
       raw_data.seekg(file.offset, std::ios::beg);
 
       std::byte entry{};
-      raw_data.read(&entry, sizeof(entry));
+      studio::read(raw_data, &entry, sizeof(entry));
 
       if (!(entry == std::byte{ 0x02 } || entry == std::byte{ 0x09 }))
       {
@@ -289,7 +290,7 @@ namespace studio::resources::vol::three_space
       file.compression_type = entry == std::byte{ 0x02 } ? compression_type::none : compression_type::lz;
 
       std::array<endian::little_uint32_t, 2> file_info{};
-      raw_data.read(reinterpret_cast<std::byte*>(&file_info), sizeof(file_info));
+      studio::read(raw_data, reinterpret_cast<char*>(&file_info), sizeof(file_info));
 
       file.size = file_info[0];
     }
@@ -297,10 +298,10 @@ namespace studio::resources::vol::three_space
     return files;
   }
 
-  bool rmf_file_archive::is_supported(std::basic_istream<std::byte>& stream)
+  bool rmf_file_archive::is_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
-    stream.read(tag.data(), sizeof(tag));
+    stream.read(reinterpret_cast<char *>(tag.data()), sizeof(tag));
 
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
@@ -319,12 +320,12 @@ namespace studio::resources::vol::three_space
     return result;
   }
 
-  bool rmf_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  bool rmf_file_archive::stream_is_supported(std::istream& stream) const
   {
     return is_supported(stream);
   }
 
-  std::vector<rmf_file_archive::content_info> rmf_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, const listing_query& query) const
+  std::vector<rmf_file_archive::content_info> rmf_file_archive::get_content_listing(std::istream& stream, const listing_query& query) const
   {
     std::vector<std::variant<studio::resources::folder_info, studio::resources::file_info>> results;
 
@@ -354,7 +355,7 @@ namespace studio::resources::vol::three_space
     return results;
   }
 
-  void rmf_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info) const
+  void rmf_file_archive::set_stream_position(std::istream& stream, const studio::resources::file_info& info) const
   {
     constexpr auto header_size = sizeof(std::array<std::byte, 13>) + sizeof(endian::little_int32_t);
 
@@ -368,27 +369,27 @@ namespace studio::resources::vol::three_space
     }
   }
 
-  void rmf_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream,
+  void rmf_file_archive::extract_file_contents(std::istream& stream,
     const studio::resources::file_info& info,
-    std::basic_ostream<std::byte>& output,
+    std::ostream& output,
     std::optional<std::reference_wrapper<batch_storage>>) const
   {
     auto main_path = info.folder_path.parent_path().parent_path();
     auto resource_file = info.folder_path.filename();
 
-    auto real_stream = std::basic_ifstream<std::byte>(main_path / resource_file, std::ios::binary);
+    auto real_stream = std::ifstream(main_path / resource_file, std::ios::binary);
 
     set_stream_position(real_stream, info);
 
-    std::copy_n(std::istreambuf_iterator<std::byte>(real_stream),
+    std::copy_n(std::istreambuf_iterator(real_stream),
                 info.size,
-                std::ostreambuf_iterator<std::byte>(output));
+                std::ostreambuf_iterator(output));
   }
 
-  bool dyn_file_archive::is_supported(std::basic_istream<std::byte>& stream)
+  bool dyn_file_archive::is_supported(std::istream& stream)
   {
     std::array<std::byte, 20> tag{};
-    stream.read(tag.data(), sizeof(tag));
+    stream.read(reinterpret_cast<char *>(tag.data()), sizeof(tag));
 
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
@@ -396,12 +397,12 @@ namespace studio::resources::vol::three_space
   }
 
 
-  bool dyn_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  bool dyn_file_archive::stream_is_supported(std::istream& stream) const
   {
     return is_supported(stream);
   }
 
-  std::vector<dyn_file_archive::content_info> dyn_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, const listing_query& query) const
+  std::vector<dyn_file_archive::content_info> dyn_file_archive::get_content_listing(std::istream& stream, const listing_query& query) const
   {
     std::vector<dyn_file_archive::content_info> results;
 
@@ -418,7 +419,7 @@ namespace studio::resources::vol::three_space
     return results;
   }
 
-  void dyn_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info) const
+  void dyn_file_archive::set_stream_position(std::istream& stream, const studio::resources::file_info& info) const
   {
     constexpr auto header_size = sizeof(std::array<std::byte, 13>) + sizeof(endian::little_int32_t);
 
@@ -432,34 +433,34 @@ namespace studio::resources::vol::three_space
     }
   }
 
-  void dyn_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream,
+  void dyn_file_archive::extract_file_contents(std::istream& stream,
     const studio::resources::file_info& info,
-    std::basic_ostream<std::byte>& output,
+    std::ostream& output,
     std::optional<std::reference_wrapper<batch_storage>>) const
   {
     set_stream_position(stream, info);
 
-    std::copy_n(std::istreambuf_iterator<std::byte>(stream),
+    std::copy_n(std::istreambuf_iterator(stream),
       info.size,
-      std::ostreambuf_iterator<std::byte>(output));
+      std::ostreambuf_iterator(output));
   }
 
-  bool vol_file_archive::is_supported(std::basic_istream<std::byte>& stream)
+  bool vol_file_archive::is_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
-    stream.read(tag.data(), sizeof(tag));
+    stream.read(reinterpret_cast<char *>(tag.data()), sizeof(tag));
 
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
     return tag == vol_tag;
   }
 
-  bool vol_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  bool vol_file_archive::stream_is_supported(std::istream& stream) const
   {
     return is_supported(stream);
   }
 
-  std::vector<dyn_file_archive::content_info> vol_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, const listing_query& query) const
+  std::vector<dyn_file_archive::content_info> vol_file_archive::get_content_listing(std::istream& stream, const listing_query& query) const
   {
     std::vector<dyn_file_archive::content_info> results;
 
@@ -499,7 +500,7 @@ namespace studio::resources::vol::three_space
 
   constexpr auto header_size = sizeof(std::byte) + sizeof(std::array<endian::little_uint32_t, 2>);
 
-  void vol_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info) const
+  void vol_file_archive::set_stream_position(std::istream& stream, const studio::resources::file_info& info) const
   {
     if (std::size_t(stream.tellg()) == info.offset)
     {
@@ -511,9 +512,9 @@ namespace studio::resources::vol::three_space
     }
   }
 
-  void vol_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream,
+  void vol_file_archive::extract_file_contents(std::istream& stream,
     const studio::resources::file_info& info,
-    std::basic_ostream<std::byte>& output,
+    std::ostream& output,
     std::optional<std::reference_wrapper<batch_storage>>) const
   {
     auto current_position = stream.tellg();
@@ -526,8 +527,8 @@ namespace studio::resources::vol::three_space
 
     const auto remaining_bytes = last_byte - info.offset - header_size;
 
-    std::copy_n(std::istreambuf_iterator<std::byte>(stream),
+    std::copy_n(std::istreambuf_iterator(stream),
       info.size > remaining_bytes ? remaining_bytes : info.size,
-      std::ostreambuf_iterator<std::byte>(output));
+      std::ostreambuf_iterator(output));
   }
 }// namespace studio::resources::vol::three_space

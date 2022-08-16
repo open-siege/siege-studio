@@ -173,12 +173,12 @@ namespace studio::resources
     {
       if (std::filesystem::is_directory(info.folder_path))
       {
-        return std::make_pair(info, std::make_unique<std::basic_ifstream<std::byte>>(info.folder_path / info.filename, std::ios::binary));
+        return std::make_pair(info, std::make_unique<std::ifstream>(info.folder_path / info.filename, std::ios::binary));
       }
       else
       {
         auto archive_path = get_archive_path(info.folder_path);
-        auto file_stream = std::make_unique<std::basic_ifstream<std::byte>>(archive_path, std::ios::binary);
+        auto file_stream = std::make_unique<std::ifstream>(archive_path, std::ios::binary);
 
         auto archive = get_archive_type(archive_path);
 
@@ -194,10 +194,10 @@ namespace studio::resources
     {
       auto archive_path = get_archive_path(info.folder_path);
 
-      auto file_stream = std::basic_ifstream<std::byte>(archive_path, std::ios::binary);
+      auto file_stream = std::ifstream(archive_path, std::ios::binary);
       auto archive = get_archive_type(archive_path);
 
-      auto memory_stream = std::make_unique<std::basic_stringstream<std::byte>>(std::ios::binary | std::ios::in | std::ios::out);
+      auto memory_stream = std::make_unique<std::stringstream>(std::ios::binary | std::ios::in | std::ios::out);
 
       if (archive.has_value())
       {
@@ -257,7 +257,7 @@ namespace studio::resources
 
     for (auto it = archive_type.first; it != archive_type.second; ++it)
     {
-      auto file_stream = std::basic_ifstream<std::byte>{ file_path, std::ios::binary };
+      auto file_stream = std::ifstream{ file_path, std::ios::binary };
 
       if (it->second->stream_is_supported(file_stream))
       {
@@ -268,7 +268,7 @@ namespace studio::resources
     return std::nullopt;
   }
 
-  void resource_explorer::extract_file_contents(std::basic_istream<std::byte>& archive_file,
+  void resource_explorer::extract_file_contents(std::istream& archive_file,
     std::filesystem::path destination,
     const studio::resources::file_info& info,
     std::optional<std::reference_wrapper<batch_storage>> storage) const
@@ -284,7 +284,7 @@ namespace studio::resources
 
     std::filesystem::create_directories(destination);
 
-    std::basic_ofstream<std::byte> new_file(destination / info.filename, std::ios::binary);
+    std::ofstream new_file(destination / info.filename, std::ios::binary);
 
     auto type = get_archive_type(archive_path);
 
@@ -300,7 +300,7 @@ namespace studio::resources
 
     if (auto archive_type = get_archive_type(get_archive_path(folder_path)); archive_type.has_value())
     {
-      auto file_stream = std::basic_ifstream<std::byte>{ get_archive_path(folder_path), std::ios::binary };
+      auto file_stream = std::ifstream{ get_archive_path(folder_path), std::ios::binary };
 
       return archive_type.value().get().get_content_listing(file_stream, { get_archive_path(folder_path), folder_path });
     }

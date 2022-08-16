@@ -3,6 +3,7 @@
 #include <functional>
 #include "resources/darkstar_volume.hpp"
 #include "content/mis/mission.hpp"
+#include "stream.hpp"
 
 namespace studio::mis::darkstar
 {
@@ -22,26 +23,26 @@ namespace studio::mis::darkstar
   constexpr auto tank_tag = shared::to_tag<4>({ 'T', 'A', 'N', 'K' });
   constexpr auto flyer_tag = shared::to_tag<4>({ 'F', 'L', 'Y', 'R' });
 
-  bool is_mission_data(std::basic_istream<std::byte>& file)
+  bool is_mission_data(std::istream& file)
   {
     std::array<std::byte, 4> header{};
 
-    file.read(header.data(), sizeof(header));
+    studio::read(file, header.data(), sizeof(header));
     file.seekg(-int(sizeof(header)), std::ios::cur);
 
     return header == sim_group_tag;
   }
 
-  darkstar::sim_network_object read_sim_network_object(std::basic_istream<std::byte>& file)
+  darkstar::sim_network_object read_sim_network_object(std::istream& file)
   {
     darkstar::sim_network_object object{};
 
-    file.read(reinterpret_cast<std::byte*>(&object), sizeof(object));
+    studio::read(file, reinterpret_cast<char*>(&object), sizeof(object));
 
     return object;
   }
 
-  darkstar::sim_volume read_sim_volume(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map&)
+  darkstar::sim_volume read_sim_volume(std::istream& file, object_header& header, darkstar::sim_item_reader_map&)
   {
     darkstar::sim_volume volume;
     volume.header = header;
@@ -53,22 +54,22 @@ namespace studio::mis::darkstar
     return volume;
   }
 
-  darkstar::sim_terrain read_sim_terrain(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map&)
+  darkstar::sim_terrain read_sim_terrain(std::istream& file, object_header& header, darkstar::sim_item_reader_map&)
   {
     darkstar::sim_terrain volume;
     volume.header = header;
     volume.base = read_sim_network_object(file);
 
-    file.read(volume.data.data(), volume.data.size());
+    studio::read(file, volume.data.data(), volume.data.size());
     volume.dtf_file = read_string(file);
-    file.read(volume.footer.data(), volume.footer.size());
+    studio::read(file, volume.footer.data(), volume.footer.size());
 
     skip_alignment_bytes(file, header.object_size);
 
     return volume;
   }
 
-  darkstar::sim_palette read_sim_palette(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map&)
+  darkstar::sim_palette read_sim_palette(std::istream& file, object_header& header, darkstar::sim_item_reader_map&)
   {
     darkstar::sim_palette palette;
     palette.header = header;
@@ -81,88 +82,88 @@ namespace studio::mis::darkstar
     return palette;
   }
 
-  darkstar::interior_shape read_interior_shape(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map&)
+  darkstar::interior_shape read_interior_shape(std::istream& file, object_header& header, darkstar::sim_item_reader_map&)
   {
     darkstar::interior_shape shape;
 
     shape.header = header;
-    file.read(reinterpret_cast<std::byte*>(&shape.version), sizeof(shape.version));
-    file.read(shape.data.data(), shape.data.size());
-    file.read(reinterpret_cast<std::byte*>(&shape.string_length), sizeof(shape.string_length));
+    studio::read(file, reinterpret_cast<char*>(&shape.version), sizeof(shape.version));
+    studio::read(file, shape.data.data(), shape.data.size());
+    studio::read(file, reinterpret_cast<char*>(&shape.string_length), sizeof(shape.string_length));
 
     shape.filename = std::string(shape.string_length, '\0');
 
-    file.read(reinterpret_cast<std::byte*>(shape.filename.data()), shape.filename.size());
+    studio::read(file, reinterpret_cast<char*>(shape.filename.data()), shape.filename.size());
 
-    file.read(shape.footer.data(), shape.footer.size());
+    studio::read(file, shape.footer.data(), shape.footer.size());
 
     skip_alignment_bytes(file, header.object_size);
 
     return shape;
   }
 
-  darkstar::sim_marker read_sim_marker(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map&)
+  darkstar::sim_marker read_sim_marker(std::istream& file, object_header& header, darkstar::sim_item_reader_map&)
   {
     darkstar::sim_marker marker{};
     marker.header = header;
     marker.base = read_sim_network_object(file);
 
-    file.read(reinterpret_cast<std::byte*>(&marker.transformation), sizeof(marker.transformation));
+    studio::read(file, reinterpret_cast<char*>(&marker.transformation), sizeof(marker.transformation));
 
     skip_alignment_bytes(file, header.object_size);
 
     return marker;
   }
 
-  darkstar::nav_marker read_nav_marker(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map&)
+  darkstar::nav_marker read_nav_marker(std::istream& file, object_header& header, darkstar::sim_item_reader_map&)
   {
     darkstar::nav_marker marker{};
     marker.header = header;
     marker.base = read_sim_network_object(file);
 
-    file.read(reinterpret_cast<std::byte*>(&marker.transformation), sizeof(marker.transformation));
-    file.read(marker.footer.data(), marker.footer.size());
+    studio::read(file, reinterpret_cast<char*>(&marker.transformation), sizeof(marker.transformation));
+    studio::read(file, marker.footer.data(), marker.footer.size());
 
     skip_alignment_bytes(file, header.object_size);
 
     return marker;
   }
 
-  darkstar::vehicle read_vehicle(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map&)
+  darkstar::vehicle read_vehicle(std::istream& file, object_header& header, darkstar::sim_item_reader_map&)
   {
     darkstar::vehicle vehicle;
     vehicle.header = header;
 
     const auto footer_length = header.object_size - sizeof(vehicle.version) - vehicle.data.size() - darkstar::vehicle::type_fields_size;
 
-    file.read(reinterpret_cast<std::byte*>(&vehicle.version), sizeof(vehicle.version));
-    file.read(vehicle.data.data(), vehicle.data.size());
-    file.read(reinterpret_cast<std::byte*>(&vehicle.vehicle_type), darkstar::vehicle::type_fields_size);
+    studio::read(file, reinterpret_cast<char*>(&vehicle.version), sizeof(vehicle.version));
+    studio::read(file, vehicle.data.data(), vehicle.data.size());
+    studio::read(file, reinterpret_cast<char*>(&vehicle.vehicle_type), darkstar::vehicle::type_fields_size);
 
     vehicle.footer = std::vector<std::byte>(footer_length);
-    file.read(vehicle.footer.data(), vehicle.footer.size());
+    studio::read(file, vehicle.footer.data(), vehicle.footer.size());
 
     skip_alignment_bytes(file, header.object_size);
 
     return vehicle;
   }
 
-  void write_vehicle(const darkstar::vehicle& vehicle, std::basic_ostream<std::byte>& output)
+  void write_vehicle(const darkstar::vehicle& vehicle, std::ostream& output)
   {
-    output.write(reinterpret_cast<const std::byte*>(&vehicle.header), sizeof(vehicle.header));
-    output.write(reinterpret_cast<const std::byte*>(&vehicle.version), sizeof(vehicle.version));
-    output.write(vehicle.data.data(), vehicle.data.size());
-    output.write(reinterpret_cast<const std::byte*>(&vehicle.vehicle_type), darkstar::vehicle::type_fields_size);
-    output.write(vehicle.footer.data(), vehicle.footer.size());
+    output.write(reinterpret_cast<const char*>(&vehicle.header), sizeof(vehicle.header));
+    output.write(reinterpret_cast<const char*>(&vehicle.version), sizeof(vehicle.version));
+    output.write(reinterpret_cast<const char*>(vehicle.data.data()), vehicle.data.size());
+    output.write(reinterpret_cast<const char*>(&vehicle.vehicle_type), darkstar::vehicle::type_fields_size);
+    output.write(reinterpret_cast<const char*>(vehicle.footer.data()), vehicle.footer.size());
   }
 
-  darkstar::sim_group read_sim_group(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers)
+  darkstar::sim_group read_sim_group(std::istream& file, object_header& header, darkstar::sim_item_reader_map& readers)
   {
     darkstar::sim_group group;
     group.header = header;
 
-    file.read(reinterpret_cast<std::byte*>(&group.version), sizeof(group.version));
-    file.read(reinterpret_cast<std::byte*>(&group.children_count), sizeof(group.children_count));
+    studio::read(file, reinterpret_cast<char*>(&group.version), sizeof(group.version));
+    studio::read(file, reinterpret_cast<char*>(&group.children_count), sizeof(group.children_count));
 
     group.children = read_children<sim_item>(file, group.children_count, readers);
     group.names = read_strings(file, group.children_count);
@@ -171,19 +172,19 @@ namespace studio::mis::darkstar
     return group;
   }
 
-  darkstar::sim_set read_sim_set(std::basic_istream<std::byte>& file, object_header& header, darkstar::sim_item_reader_map& readers)
+  darkstar::sim_set read_sim_set(std::istream& file, object_header& header, darkstar::sim_item_reader_map& readers)
   {
     darkstar::sim_set set;
     set.header = header;
-    file.read(reinterpret_cast<std::byte*>(&set.item_id), sizeof(set.item_id));
-    file.read(reinterpret_cast<std::byte*>(&set.children_count), sizeof(set.children_count));
+    studio::read(file, reinterpret_cast<char*>(&set.item_id), sizeof(set.item_id));
+    studio::read(file, reinterpret_cast<char*>(&set.children_count), sizeof(set.children_count));
     set.children = read_children<sim_item>(file, set.children_count, readers);
     skip_alignment_bytes(file, header.object_size);
 
     return set;
   }
 
-  darkstar::sim_items read_mission_data(std::basic_istream<std::byte>& file)
+  darkstar::sim_items read_mission_data(std::istream& file)
   {
     static sim_item_reader_map readers = {
       { sim_group_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_group(file, header, readers); } } },
@@ -210,12 +211,12 @@ namespace studio::resources::mis::darkstar
 {
   using namespace studio::mis::darkstar;
 
-  bool mis_file_archive::is_supported(std::basic_istream<std::byte>& stream)
+  bool mis_file_archive::is_supported(std::istream& stream)
   {
     return is_mission_data(stream);
   }
 
-  bool mis_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  bool mis_file_archive::stream_is_supported(std::istream& stream) const
   {
     return is_mission_data(stream);
   }
@@ -238,7 +239,7 @@ namespace studio::resources::mis::darkstar
     return archive_path;
   }
 
-  decltype(mis_file_archive::content_list_info)::iterator mis_file_archive::cache_data(std::basic_istream<std::byte>& stream,
+  decltype(mis_file_archive::content_list_info)::iterator mis_file_archive::cache_data(std::istream& stream,
     const std::filesystem::path& archive_or_folder_path) const
   {
     auto archive_path = get_archive_path(archive_or_folder_path);
@@ -332,7 +333,7 @@ namespace studio::resources::mis::darkstar
     return existing_info;
   }
 
-  std::vector<mis_file_archive::content_info> mis_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, const listing_query& query) const
+  std::vector<mis_file_archive::content_info> mis_file_archive::get_content_listing(std::istream& stream, const listing_query& query) const
   {
     auto existing_info = cache_data(stream, query.folder_path);
     std::vector<mis_file_archive::content_info> final_results;
@@ -365,14 +366,14 @@ namespace studio::resources::mis::darkstar
     return final_results;
   }
 
-  void mis_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info) const
+  void mis_file_archive::set_stream_position(std::istream& stream, const studio::resources::file_info& info) const
   {
     stream.seekg(info.offset, std::ios::beg);
   }
 
-  void mis_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream,
+  void mis_file_archive::extract_file_contents(std::istream& stream,
     const studio::resources::file_info& info,
-    std::basic_ostream<std::byte>& output,
+    std::ostream& output,
     std::optional<std::reference_wrapper<batch_storage>>) const
   {
     set_stream_position(stream, info);

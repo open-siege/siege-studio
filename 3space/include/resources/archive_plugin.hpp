@@ -55,15 +55,15 @@ namespace studio::resources
     using file_info = studio::resources::file_info;
     using content_info = std::variant<folder_info, studio::resources::file_info>;
 
-    virtual bool stream_is_supported(std::basic_istream<std::byte>&) const = 0;
+    virtual bool stream_is_supported(std::istream&) const = 0;
 
-    virtual std::vector<content_info> get_content_listing(std::basic_istream<std::byte>&, const listing_query& query) const = 0;
+    virtual std::vector<content_info> get_content_listing(std::istream&, const listing_query& query) const = 0;
 
-    virtual void set_stream_position(std::basic_istream<std::byte>&, const file_info&) const = 0;
+    virtual void set_stream_position(std::istream&, const file_info&) const = 0;
 
-    virtual void extract_file_contents(std::basic_istream<std::byte>&,
+    virtual void extract_file_contents(std::istream&,
       const file_info&,
-      std::basic_ostream<std::byte>&,
+      std::ostream&,
       std::optional<std::reference_wrapper<batch_storage>> = std::nullopt) const = 0;
 
     virtual ~archive_plugin() = default;

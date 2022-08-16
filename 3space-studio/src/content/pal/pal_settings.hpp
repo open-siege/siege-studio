@@ -5,7 +5,7 @@
 
 namespace studio::content::pal
 {
-  bool is_pal_settings_file(std::basic_istream<std::byte>& raw_data);
+  bool is_pal_settings_file(std::istream& raw_data);
 }
 
 #endif// OPEN_SIEGE_PAL_SETTINGS_HPP

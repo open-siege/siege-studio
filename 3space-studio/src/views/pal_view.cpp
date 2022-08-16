@@ -4,7 +4,7 @@
 namespace studio::views
 {
 
-  pal_view::pal_view(std::basic_istream<std::byte>& image_stream)
+  pal_view::pal_view(std::istream& image_stream)
   {
     auto generate_rectangles = [&](auto& colours) {
       rectangles = &all_rectangles.emplace_back();

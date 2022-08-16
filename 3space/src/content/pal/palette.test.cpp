@@ -4,7 +4,7 @@
 
 TEST_CASE("Microsoft PAL is detected correctly", "[pal.microsoft]")
 {
-  std::basic_stringstream<std::byte> mem_buffer;
+  std::stringstream mem_buffer;
   mem_buffer << "RAFF11111111111";
 
   REQUIRE(studio::content::pal::is_microsoft_pal(mem_buffer) == false);
@@ -20,7 +20,7 @@ TEST_CASE("Microsoft PAL is detected correctly", "[pal.microsoft]")
 
 TEST_CASE("Phoenix PAL is detected correctly", "[pal.darkstar]")
 {
-  std::basic_stringstream<std::byte> mem_buffer;
+  std::stringstream mem_buffer;
   mem_buffer << "RAFF11111111111";
 
   REQUIRE(studio::content::pal::is_phoenix_pal(mem_buffer) == false);

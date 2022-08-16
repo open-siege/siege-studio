@@ -7,6 +7,7 @@
 #include <string>
 #include <cstdlib>
 #include "resources/darkstar_volume.hpp"
+#include "stream.hpp"
 
 namespace studio::resources::vol::darkstar
 {
@@ -128,35 +129,35 @@ namespace studio::resources::vol::darkstar
   static_assert(sizeof(old_file_header) == sizeof(std::array<std::byte, 14>));
 
 
-  void create_vol_file(std::basic_ostream<std::byte>& output, const std::vector<volume_file_info>& files)
+  void create_vol_file(std::ostream& output, const std::vector<volume_file_info>& files)
   {
     auto start = std::size_t(output.tellp());
 
     endian::little_uint32_t size = 0;
-    output.write(alt_vol_file_tag.data(), alt_vol_file_tag.size());
+    studio::write(output, alt_vol_file_tag.data(), alt_vol_file_tag.size());
 
-    output.write(reinterpret_cast<std::byte*>(&size), sizeof(size));
+    studio::write(output, reinterpret_cast<const char*>(&size), sizeof(size));
 
     std::map<std::string_view, endian::little_uint32_t> file_locations;
 
     for (auto& file : files)
     {
       file_locations.emplace(file.filename, endian::little_uint32_t(int(output.tellp())));
-      output.write(block_tag.data(), block_tag.size());
+      studio::write(output, block_tag.data(), block_tag.size());
       endian::little_uint24_t narrowed_size = file.compressed_size.has_value() ? file.compressed_size.value() : file.size;
-      output.write(reinterpret_cast<std::byte*>(&narrowed_size), sizeof(narrowed_size));
+      studio::write(output, reinterpret_cast<const char*>(&narrowed_size), sizeof(narrowed_size));
       auto tag = std::byte(0x80);
-      output.write(&tag, 1);
+      studio::write(output, &tag, 1);
 
-      std::copy_n(std::istreambuf_iterator<std::byte>(*file.stream),
+      std::copy_n(std::istreambuf_iterator(*file.stream),
                   narrowed_size,
-                  std::ostreambuf_iterator<std::byte>(output));
+                  std::ostreambuf_iterator(output));
 
       auto size_for_padding = int(output.tellp());
       while (size_for_padding % 4 != 0)
       {
         std::byte padding{0x00};
-        output.write(&padding, 1);
+        studio::write(output, &padding, 1);
         size_for_padding++;
       }
     }
@@ -165,7 +166,7 @@ namespace studio::resources::vol::darkstar
 
     output.seekp(std::size_t(start) + alt_vol_file_tag.size(), std::ios_base::beg);
     size = std::int32_t(current_position - start);
-    output.write(reinterpret_cast<std::byte*>(&size), sizeof(size));
+    studio::write(output, reinterpret_cast<const char*>(&size), sizeof(size));
 
     output.seekp(current_position, std::ios_base::beg);
 
@@ -180,46 +181,46 @@ namespace studio::resources::vol::darkstar
 
     endian::little_uint32_t string_size = std::int32_t(filenames.size());
 
-    output.write(vol_string_tag.data(), vol_string_tag.size());
-    output.write(reinterpret_cast<std::byte*>(&string_size), sizeof(string_size));
-    output.write(reinterpret_cast<std::byte*>(filenames.data()), string_size);
+    studio::write(output, vol_string_tag.data(), vol_string_tag.size());
+    studio::write(output, reinterpret_cast<const char*>(&string_size), sizeof(string_size));
+    studio::write(output, reinterpret_cast<const char*>(filenames.data()), string_size);
 
     auto size_for_padding = string_size;
     while (size_for_padding % 2 != 0)
     {
       std::byte padding{0x00};
-      output.write(&padding, 1);
+      studio::write(output, &padding, 1);
       size_for_padding++;
     }
 
     string_size = std::int32_t(files.size() * sizeof(file_header));
-    output.write(vol_index_tag.data(), vol_index_tag.size());
-    output.write(reinterpret_cast<std::byte*>(&string_size), sizeof(string_size));
+    studio::write(output, vol_index_tag.data(), vol_index_tag.size());
+    studio::write(output, reinterpret_cast<const char*>(&string_size), sizeof(string_size));
 
     for (auto& file : files)
     {
       endian::little_uint32_t value = 0;
-      output.write(reinterpret_cast<std::byte*>(&value), sizeof(value));
-      output.write(reinterpret_cast<std::byte*>(&value), sizeof(value));
-      output.write(reinterpret_cast<std::byte*>(&file_locations[file.filename]), sizeof(value));
+      studio::write(output, reinterpret_cast<const char*>(&value), sizeof(value));
+      studio::write(output, reinterpret_cast<const char*>(&value), sizeof(value));
+      studio::write(output, reinterpret_cast<const char*>(&file_locations[file.filename]), sizeof(value));
 
       value = file.size;
-      output.write(reinterpret_cast<std::byte*>(&value), sizeof(value));
-      output.write(reinterpret_cast<const std::byte*>(&file.compression_type), 1);
+      studio::write(output, reinterpret_cast<const char*>(&value), sizeof(value));
+      studio::write(output, reinterpret_cast<const char*>(&file.compression_type), 1);
     }
   }
 
-  std::tuple<volume_version, std::size_t, std::optional<std::size_t>> get_file_list_offsets(std::basic_istream<std::byte>& raw_data)
+  std::tuple<volume_version, std::size_t, std::optional<std::size_t>> get_file_list_offsets(std::istream& raw_data)
   {
     volume_header header{};
 
-    raw_data.read(reinterpret_cast<std::byte*>(&header), sizeof(header));
+    raw_data.read(reinterpret_cast<char*>(&header), sizeof(header));
 
     if (header.file_tag == vol_file_tag)
     {
       normal_footer footer{};
       raw_data.seekg(header.footer_offset, std::ios_base::beg);
-      raw_data.read(reinterpret_cast<std::byte*>(&footer), sizeof(footer));
+      raw_data.read(reinterpret_cast<char*>(&footer), sizeof(footer));
 
       return std::make_tuple(volume_version::darkstar_vol, footer.file_list_size, std::nullopt);
     }
@@ -227,23 +228,23 @@ namespace studio::resources::vol::darkstar
     {
       alternative_footer footer{};
       raw_data.seekg(header.footer_offset, std::ios_base::beg);
-      raw_data.read(reinterpret_cast<std::byte*>(&footer), sizeof(footer));
+      raw_data.read(reinterpret_cast<char*>(&footer), sizeof(footer));
 
       return std::make_tuple(volume_version::darkstar_pvol, footer.file_list_size, std::nullopt);
     }
     else if (header.file_tag == old_vol_file_tag)
     {
       old_footer footer{};
-      raw_data.read(reinterpret_cast<std::byte*>(&footer), sizeof(footer));
+      raw_data.read(reinterpret_cast<char*>(&footer), sizeof(footer));
 
       if (footer.header.header_size > 0)
       {
         raw_data.seekg(-int(sizeof(footer)), std::ios::cur);
-        raw_data.read(reinterpret_cast<std::byte*>(&footer.header), sizeof(footer.header));
+        raw_data.read(reinterpret_cast<char*>(&footer.header), sizeof(footer.header));
         std::vector<std::byte> temp(footer.header.header_size);
-        raw_data.read(temp.data(), temp.size());
+        studio::read(raw_data, temp.data(), temp.size());
 
-        raw_data.read(reinterpret_cast<std::byte*>(&footer) + sizeof(footer.header), sizeof(footer) - sizeof(footer.header));
+        raw_data.read(reinterpret_cast<char*>(&footer) + sizeof(footer.header), sizeof(footer) - sizeof(footer.header));
       }
 
       if (footer.string_header_tag != vol_string_tag)
@@ -261,12 +262,12 @@ namespace studio::resources::vol::darkstar
     }
   }
 
-  std::pair<volume_version, std::vector<std::string>> get_file_names(std::basic_istream<std::byte>& raw_data)
+  std::pair<volume_version, std::vector<std::string>> get_file_names(std::istream& raw_data)
   {
     auto [volume_type, buffer_size, amount_to_skip] = get_file_list_offsets(raw_data);
     std::vector<char> raw_chars(buffer_size);
 
-    raw_data.read(reinterpret_cast<std::byte*>(raw_chars.data()), raw_chars.size());
+    raw_data.read(reinterpret_cast<char*>(raw_chars.data()), raw_chars.size());
 
     if (volume_type != volume_version::three_space_vol && (buffer_size) % 2 != 0)
     {
@@ -304,7 +305,7 @@ namespace studio::resources::vol::darkstar
     return std::make_pair(volume_type, results);
   }
 
-  std::vector<file_info> get_file_metadata(std::basic_istream<std::byte>& raw_data)
+  std::vector<file_info> get_file_metadata(std::istream& raw_data)
   {
     auto [volume_type, filenames] = get_file_names(raw_data);
     file_index_header header{};
@@ -312,13 +313,13 @@ namespace studio::resources::vol::darkstar
     if (volume_type == volume_version::three_space_vol)
     {
       old_volume_header raw_header{};
-      raw_data.read(reinterpret_cast<std::byte*>(&raw_header), sizeof(raw_header));
+      raw_data.read(reinterpret_cast<char*>(&raw_header), sizeof(raw_header));
       header.index_tag = raw_header.file_tag;
       header.index_size = raw_header.footer_offset;
     }
     else
     {
-      raw_data.read(reinterpret_cast<std::byte*>(&header), sizeof(header));
+      raw_data.read(reinterpret_cast<char*>(&header), sizeof(header));
     }
 
     if (header.index_tag != vol_index_tag)
@@ -327,7 +328,7 @@ namespace studio::resources::vol::darkstar
     }
 
     std::vector<std::byte> raw_bytes(header.index_size);
-    raw_data.read(raw_bytes.data(), raw_bytes.size());
+    studio::read(raw_data, raw_bytes.data(), raw_bytes.size());
 
     std::size_t index = 0;
 
@@ -386,22 +387,22 @@ namespace studio::resources::vol::darkstar
 
   using folder_info = studio::resources::folder_info;
 
-  bool vol_file_archive::is_supported(std::basic_istream<std::byte>& stream)
+  bool vol_file_archive::is_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
-    stream.read(tag.data(), sizeof(tag));
+    studio::read(stream, tag.data(), sizeof(tag));
 
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
     return tag == vol_file_tag || tag == alt_vol_file_tag || tag == old_vol_file_tag;
   }
 
-  bool vol_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  bool vol_file_archive::stream_is_supported(std::istream& stream) const
   {
     return is_supported(stream);
   }
 
-  std::vector<vol_file_archive::content_info> vol_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, const listing_query& query) const
+  std::vector<vol_file_archive::content_info> vol_file_archive::get_content_listing(std::istream& stream, const listing_query& query) const
   {
     std::vector<vol_file_archive::content_info> results;
 
@@ -422,7 +423,7 @@ namespace studio::resources::vol::darkstar
     return results;
   }
 
-  void vol_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info) const
+  void vol_file_archive::set_stream_position(std::istream& stream, const studio::resources::file_info& info) const
   {
     if (std::size_t(stream.tellg()) == info.offset)
     {
@@ -434,18 +435,18 @@ namespace studio::resources::vol::darkstar
     }
   }
 
-  void vol_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream,
+  void vol_file_archive::extract_file_contents(std::istream& stream,
     const studio::resources::file_info& info,
-    std::basic_ostream<std::byte>& output,
+    std::ostream& output,
     std::optional<std::reference_wrapper<batch_storage>>) const
   {
     if (info.compression_type == studio::resources::compression_type::none)
     {
 
       set_stream_position(stream, info);
-      std::copy_n(std::istreambuf_iterator<std::byte>(stream),
+      std::copy_n(std::istreambuf_iterator(stream),
                   info.size,
-                  std::ostreambuf_iterator<std::byte>(output));
+                  std::ostreambuf_iterator(output));
     }
     else
     {
@@ -458,8 +459,8 @@ namespace studio::resources::vol::darkstar
       {
         volume_header header{};
 
-        auto volume_stream = std::unique_ptr<std::basic_istream<std::byte>>(new std::basic_ifstream<std::byte>(volume_filename, std::ios::binary));
-        volume_stream->read(reinterpret_cast<std::byte*>(&header), sizeof(header));
+        auto volume_stream = std::unique_ptr<std::istream>(new std::ifstream(volume_filename, std::ios::binary));
+        volume_stream->read(reinterpret_cast<char*>(&header), sizeof(header));
 
         if (header.file_tag == old_vol_file_tag)
         {
@@ -467,7 +468,7 @@ namespace studio::resources::vol::darkstar
           volume_stream->seekg(info.offset, std::ios::beg);
 
           block_header block{};
-          volume_stream->read(reinterpret_cast<std::byte*>(&block), sizeof(block));
+          volume_stream->read(reinterpret_cast<char*>(&block), sizeof(block));
 
           if (block.block_tag != block_tag)
           {
@@ -483,7 +484,7 @@ namespace studio::resources::vol::darkstar
           temp_info.stream = std::move(volume_stream);
 
           files.emplace_back(std::move(temp_info));
-          std::basic_ofstream<std::byte> new_volume_stream(volume_filename, std::ios::binary);
+          std::ofstream new_volume_stream(volume_filename, std::ios::binary);
           create_vol_file(new_volume_stream, files);
           files_to_remove.emplace_back(volume_filename);
         }
@@ -534,11 +535,11 @@ namespace studio::resources::vol::darkstar
       {
         files_to_remove.emplace_back(new_path);
         {
-          auto new_file = std::basic_ifstream<std::byte>{ new_path, std::ios::binary };
+          auto new_file = std::ifstream{ new_path, std::ios::binary };
 
-          std::copy_n(std::istreambuf_iterator<std::byte>(new_file),
+          std::copy_n(std::istreambuf_iterator(new_file),
             info.size,
-            std::ostreambuf_iterator<std::byte>(output));
+            std::ostreambuf_iterator(output));
         }
 
         for (auto& file : files_to_remove)

@@ -8,7 +8,7 @@ namespace studio::views
   class pal_view
   {
   public:
-    explicit pal_view(std::basic_istream<std::byte>& image_stream);
+    explicit pal_view(std::istream& image_stream);
     std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks() { return {}; }
     void setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext);
     void render_gl(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext) {}

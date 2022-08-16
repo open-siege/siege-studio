@@ -5,9 +5,9 @@
 
 namespace studio::content::fnt
 {
-  bool is_phoenix_font(std::basic_istream<std::byte>& raw_data);
+  bool is_phoenix_font(std::istream& raw_data);
 
-  bmp::pbmp_data read_phoenix_font(std::basic_istream<std::byte>& raw_data);
+  bmp::pbmp_data read_phoenix_font(std::istream& raw_data);
 }
 
 #endif//INC_3SPACESTUDIO_FONT_HPP

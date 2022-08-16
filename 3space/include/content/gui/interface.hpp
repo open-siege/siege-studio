@@ -344,9 +344,9 @@ namespace studio::gui::darkstar
     sim_text_control control_data;
   };
 
-  bool is_interface_data(std::basic_istream<std::byte>& file);
+  bool is_interface_data(std::istream& file);
 
-  gui_items read_interface_data(std::basic_istream<std::byte>& file);
+  gui_items read_interface_data(std::istream& file);
 }// namespace studio::mis::darkstar
 
 

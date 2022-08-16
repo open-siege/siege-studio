@@ -10,17 +10,17 @@ namespace studio::resources::atd
 {
   namespace endian = boost::endian;
 
-  bool atd_file_archive::is_supported(std::basic_istream<std::byte>& stream)
+  bool atd_file_archive::is_supported(std::istream& stream)
   {
     endian::little_int32_t file_count;
-    stream.read(reinterpret_cast<std::byte*>(&file_count), sizeof(file_count));
+    stream.read(reinterpret_cast<char*>(&file_count), sizeof(file_count));
 
     stream.seekg(-int(sizeof(file_count)), std::ios::cur);
 
     return file_count <= 6000;
   }
 
-  bool atd_file_archive::stream_is_supported(std::basic_istream<std::byte>& stream) const
+  bool atd_file_archive::stream_is_supported(std::istream& stream) const
   {
     return is_supported(stream);
   }
@@ -32,12 +32,12 @@ namespace studio::resources::atd
     std::array<char, 80> filename;
   };
 
-  std::vector<atd_file_archive::content_info> atd_file_archive::get_content_listing(std::basic_istream<std::byte>& stream, const listing_query& query) const
+  std::vector<atd_file_archive::content_info> atd_file_archive::get_content_listing(std::istream& stream, const listing_query& query) const
   {
     std::vector<atd_file_archive::content_info> results;
 
     endian::little_uint32_t file_count;
-    stream.read(reinterpret_cast<std::byte*>(&file_count), sizeof(file_count));
+    stream.read(reinterpret_cast<char*>(&file_count), sizeof(file_count));
 
     results.reserve(file_count);
     std::array<char, 81> temp_filename{'\0'};
@@ -45,7 +45,7 @@ namespace studio::resources::atd
     for (auto i = 0u; i < file_count; i++)
     {
       file_entry temp;
-      stream.read(reinterpret_cast<std::byte*>(&temp), sizeof(temp));
+      stream.read(reinterpret_cast<char*>(&temp), sizeof(temp));
 
       file_info info{};
 
@@ -64,7 +64,7 @@ namespace studio::resources::atd
     return results;
   }
 
-  void atd_file_archive::set_stream_position(std::basic_istream<std::byte>& stream, const studio::resources::file_info& info) const
+  void atd_file_archive::set_stream_position(std::istream& stream, const studio::resources::file_info& info) const
   {
     if (std::size_t(stream.tellg()) != info.offset)
     {
@@ -72,15 +72,15 @@ namespace studio::resources::atd
     }
   }
 
-  void atd_file_archive::extract_file_contents(std::basic_istream<std::byte>& stream,
+  void atd_file_archive::extract_file_contents(std::istream& stream,
     const studio::resources::file_info& info,
-    std::basic_ostream<std::byte>& output,
+    std::ostream& output,
     std::optional<std::reference_wrapper<batch_storage>>) const
   {
     set_stream_position(stream, info);
-    std::copy_n(std::istreambuf_iterator<std::byte>(stream),
+    std::copy_n(std::istreambuf_iterator(stream),
       info.size,
-      std::ostreambuf_iterator<std::byte>(output));
+      std::ostreambuf_iterator(output));
 
     stream.seekg(2, std::ios::cur);
   }

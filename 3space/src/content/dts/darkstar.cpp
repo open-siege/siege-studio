@@ -3,27 +3,27 @@
 namespace studio::content::dts::darkstar
 {
   template<std::size_t size>
-  std::array<std::byte, size> read(std::basic_istream<std::byte>& stream)
+  std::array<std::byte, size> read(std::istream& stream)
   {
     std::array<std::byte, size> dest{};
 
-    stream.read(&dest[0], size);
+    stream.read(reinterpret_cast<char*>(&dest[0]), size);
 
     return dest;
   }
 
   template<typename destination_type>
-  destination_type read(std::basic_istream<std::byte>& stream)
+  destination_type read(std::istream& stream)
   {
     destination_type dest{};
 
-    stream.read(reinterpret_cast<std::byte*>(&dest), sizeof(destination_type));
+    stream.read(reinterpret_cast<char*>(&dest), sizeof(destination_type));
 
     return dest;
   }
 
   template<typename destination_type>
-  std::vector<destination_type> read_vector(std::basic_istream<std::byte>& stream, std::size_t size)
+  std::vector<destination_type> read_vector(std::istream& stream, std::size_t size)
   {
     if (size == 0)
     {
@@ -32,16 +32,16 @@ namespace studio::content::dts::darkstar
 
     std::vector<destination_type> dest(size);
 
-    stream.read(reinterpret_cast<std::byte*>(&dest[0]), sizeof(destination_type) * size);
+    stream.read(reinterpret_cast<char*>(&dest[0]), sizeof(destination_type) * size);
 
     return dest;
   }
 
-  inline std::string read_string(std::basic_istream<std::byte>& stream, std::size_t size, std::size_t max_size = 16)
+  inline std::string read_string(std::istream& stream, std::size_t size, std::size_t max_size = 16)
   {
     std::string dest(size, '\0');
 
-    stream.read(reinterpret_cast<std::byte*>(&dest[0]), size);
+    stream.read(reinterpret_cast<char*>(&dest[0]), size);
 
     // There is always an embedded \0 in the
     // file if the string length is less than 16 bytes.
@@ -54,30 +54,30 @@ namespace studio::content::dts::darkstar
   }
 
   template<std::size_t Size>
-  void write(std::basic_ostream<std::byte>& stream, const std::array<std::byte, Size>& value)
+  void write(std::ostream& stream, const std::array<std::byte, Size>& value)
   {
-    stream.write(value.data(), Size);
+    stream.write(reinterpret_cast<const char*>(value.data()), Size);
   }
 
   template<typename ValueType>
-  void write(std::basic_ostream<std::byte>& stream, const ValueType& value)
+  void write(std::ostream& stream, const ValueType& value)
   {
-    stream.write(reinterpret_cast<const std::byte*>(&value), sizeof(value));
+    stream.write(reinterpret_cast<const char*>(&value), sizeof(value));
   }
 
   template<typename ValueType>
-  void write(std::basic_ostream<std::byte>& stream, const std::vector<ValueType>& values)
+  void write(std::ostream& stream, const std::vector<ValueType>& values)
   {
-    stream.write(reinterpret_cast<const std::byte*>(values.data()), values.size() * sizeof(ValueType));
+    stream.write(reinterpret_cast<const char*>(values.data()), values.size() * sizeof(ValueType));
   }
 
   template<typename ValueType>
-  void write(std::basic_ostream<std::byte>& stream, const ValueType* value, std::size_t size)
+  void write(std::ostream& stream, const ValueType* value, std::size_t size)
   {
-    stream.write(reinterpret_cast<const std::byte*>(value), size);
+    stream.write(reinterpret_cast<const char*>(value), size);
   }
 
-  bool is_darkstar_dts(std::basic_istream<std::byte>& stream)
+  bool is_darkstar_dts(std::istream& stream)
   {
     auto starting_point = stream.tellg();
 
@@ -99,7 +99,7 @@ namespace studio::content::dts::darkstar
     return file_header.class_name == shape::v2::shape::type_name;
   }
 
-  tag_header read_object_header(std::basic_istream<std::byte>& stream)
+  tag_header read_object_header(std::istream& stream)
   {
     tag_header file_header = {
       read<sizeof(file_tag)>(stream),
@@ -122,7 +122,7 @@ namespace studio::content::dts::darkstar
   }
 
   template<typename ShapeType>
-  void read_meshes(ShapeType& shape, std::size_t num_meshes, std::basic_istream<std::byte>& stream)
+  void read_meshes(ShapeType& shape, std::size_t num_meshes, std::istream& stream)
   {
     using namespace mesh;
     shape.meshes.reserve(num_meshes);
@@ -188,7 +188,7 @@ namespace studio::content::dts::darkstar
     }
   }
 
-  material_list_variant read_material_list(const tag_header& object_header, std::basic_istream<std::byte>& stream)
+  material_list_variant read_material_list(const tag_header& object_header, std::istream& stream)
   {
     using namespace material_list;
     if (object_header.class_name != v2::material_list::type_name)
@@ -230,7 +230,7 @@ namespace studio::content::dts::darkstar
   }
 
   template<typename ShapeType>
-  void read_materials(ShapeType& shape, std::basic_istream<std::byte>& stream)
+  void read_materials(ShapeType& shape, std::istream& stream)
   {
     if (auto has_material_list = read<shape::v2::has_material_list_flag>(stream); has_material_list == 1)
     {
@@ -241,7 +241,7 @@ namespace studio::content::dts::darkstar
   }
 
   template<typename ShapeType>
-  ShapeType read_shape_impl(std::basic_istream<std::byte>& stream)
+  ShapeType read_shape_impl(std::istream& stream)
   {
     auto header = read<decltype(ShapeType::header)>(stream);
     ShapeType shape{
@@ -272,7 +272,7 @@ namespace studio::content::dts::darkstar
   }
 
 
-  shape_variant read_shape(std::basic_istream<std::byte>& stream, std::optional<tag_header> file_header)
+  shape_variant read_shape(std::istream& stream, std::optional<tag_header> file_header)
   {
     using namespace shape;
     file_header = !file_header.has_value() ? read_object_header(stream) : file_header;
@@ -320,7 +320,7 @@ namespace studio::content::dts::darkstar
   }
 
 
-  shape_or_material_list read_shape(std::basic_istream<std::byte>& stream)
+  shape_or_material_list read_shape(std::istream& stream)
   {
     using namespace shape;
     tag_header file_header = read_object_header(stream);
@@ -334,7 +334,7 @@ namespace studio::content::dts::darkstar
   }
 
   template<typename RootType>
-  void write_header(std::basic_ostream<std::byte>& stream, const RootType& root)
+  void write_header(std::ostream& stream, const RootType& root)
   {
     constexpr static auto empty = std::byte{ '\0' };
     boost::endian::little_uint32_t size_in_bytes{};
@@ -357,7 +357,7 @@ namespace studio::content::dts::darkstar
     write(stream, version);
   }
 
-  void write_size(std::basic_ostream<std::byte>& stream, std::optional<std::uint32_t> start_offset = std::nullopt)
+  void write_size(std::ostream& stream, std::optional<std::uint32_t> start_offset = std::nullopt)
   {
     boost::endian::little_uint32_t size_in_bytes{};
 
@@ -373,7 +373,7 @@ namespace studio::content::dts::darkstar
     stream.seekp(end_offset, std::ios_base::beg);
   }
 
-  void write_material_list(std::basic_ostream<std::byte>& stream, const material_list_variant& list)
+  void write_material_list(std::ostream& stream, const material_list_variant& list)
   {
     std::visit([&](const auto& materials) {
       write_header(stream, materials);
@@ -384,7 +384,7 @@ namespace studio::content::dts::darkstar
       list);
   }
 
-  void write_shape(std::basic_ostream<std::byte>& stream, const shape_variant& fresh_shape)
+  void write_shape(std::ostream& stream, const shape_variant& fresh_shape)
   {
     std::visit([&](const auto& shape) {
       write_header(stream, shape);

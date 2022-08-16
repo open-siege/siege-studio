@@ -28,7 +28,7 @@ int main(int argc, const char** argv)
         std::cout << msg.str();
       }
 
-      std::basic_ifstream<std::byte> input(file_name, std::ios::binary);
+      std::ifstream input(file_name, std::ios::binary);
 
       auto header = io::read<mdl::file_header>(input);
 

@@ -16,10 +16,10 @@
 
 namespace studio::views
 {
-  using stream_validator = bool(std::basic_istream<std::byte>&);
+  using stream_validator = bool(std::istream&);
 
   using studio_view = std::variant<std::monostate, normal_view, graphics_view>;
-  using view_creator = studio_view(view_context, std::basic_istream<std::byte>&);
+  using view_creator = studio_view(view_context, std::istream&);
 
   class view_factory
   {
@@ -38,9 +38,9 @@ namespace studio::views
 
     view_actions& get_actions();
 
-    studio_view create_view(const studio::resources::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resources::resource_explorer& manager) const;
+    studio_view create_view(const studio::resources::file_info& file_info, std::istream& stream, const studio::resources::resource_explorer& manager) const;
 
-    studio_view create_default_view(const studio::resources::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resources::resource_explorer& manager) const;
+    studio_view create_default_view(const studio::resources::file_info& file_info, std::istream& stream, const studio::resources::resource_explorer& manager) const;
 
   private:
     view_actions actions;

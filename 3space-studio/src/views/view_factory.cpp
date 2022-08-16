@@ -117,7 +117,7 @@ namespace studio::views
     return actions;
   }
 
-  studio_view view_factory::create_view(const studio::resources::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resources::resource_explorer& manager) const
+  studio_view view_factory::create_view(const studio::resources::file_info& file_info, std::istream& stream, const studio::resources::resource_explorer& manager) const
   {
     auto search_values = std::array<std::string, 2>{{shared::to_lower(file_info.filename.extension().string()), shared::to_lower(file_info.filename.string())}};
 
@@ -150,7 +150,7 @@ namespace studio::views
     return normal_view(default_view(file_info));
   }
 
-  studio_view  view_factory::create_default_view(const studio::resources::file_info& file_info, std::basic_istream<std::byte>& stream, const studio::resources::resource_explorer& manager) const
+  studio_view  view_factory::create_default_view(const studio::resources::file_info& file_info, std::istream& stream, const studio::resources::resource_explorer& manager) const
   {
     return normal_view(default_view(file_info));
   }

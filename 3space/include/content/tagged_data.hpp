@@ -31,7 +31,7 @@ namespace studio
   };
 
   template <typename IntAlignmentType = std::int16_t>
-  inline void skip_alignment_bytes(std::basic_istream<std::byte>& file, std::uint32_t base)
+  inline void skip_alignment_bytes(std::istream& file, std::uint32_t base)
   {
     int offset = 0;
     while ((base + offset) % sizeof(IntAlignmentType) != 0)
@@ -59,28 +59,28 @@ namespace studio
     return ss.str();
   }
 
-  inline std::string read_string(std::basic_istream<std::byte>& file, std::size_t size)
+  inline std::string read_string(std::istream& file, std::size_t size)
   {
     std::string name(size, '\0');
 
-    file.read(reinterpret_cast<std::byte*>(name.data()), size);
+    file.read(reinterpret_cast<char*>(name.data()), size);
 
     return name;
   }
 
-  inline std::string read_string(std::basic_istream<std::byte>& file)
+  inline std::string read_string(std::istream& file)
   {
     std::uint8_t size;
-    file.read(reinterpret_cast<std::byte*>(&size), sizeof(std::uint8_t));
+    file.read(reinterpret_cast<char*>(&size), sizeof(std::uint8_t));
 
     std::string name(size, '\0');
 
-    file.read(reinterpret_cast<std::byte*>(name.data()), size);
+    file.read(reinterpret_cast<char*>(name.data()), size);
 
     return name;
   }
 
-  inline std::vector<std::string> read_strings(std::basic_istream<std::byte>& file, std::uint32_t children_count)
+  inline std::vector<std::string> read_strings(std::istream& file, std::uint32_t children_count)
   {
     std::vector<std::string> results;
     results.reserve(children_count);
@@ -88,11 +88,11 @@ namespace studio
     for (auto i = 0u; i < children_count; ++i)
     {
       std::uint8_t size;
-      file.read(reinterpret_cast<std::byte*>(&size), sizeof(std::uint8_t));
+      file.read(reinterpret_cast<char*>(&size), sizeof(std::uint8_t));
 
       std::string& name = results.emplace_back(size, '\0');
 
-      file.read(reinterpret_cast<std::byte*>(name.data()), size);
+      file.read(reinterpret_cast<char*>(name.data()), size);
     }
 
     return results;
@@ -110,11 +110,11 @@ namespace studio
   template <typename ChildType>
   struct tagged_item_reader
   {
-    ChildType (*read)(std::basic_istream<std::byte>&, object_header&, typename tagged_item_map<ChildType>::tagged_item_reader_map&);
+    ChildType (*read)(std::istream&, object_header&, typename tagged_item_map<ChildType>::tagged_item_reader_map&);
   };
 
   template <typename ChildType>
-  std::vector<ChildType> read_children(std::basic_istream<std::byte>& file,
+  std::vector<ChildType> read_children(std::istream& file,
     std::uint32_t children_count,
     typename tagged_item_map<ChildType>::tagged_item_reader_map& readers)
   {
@@ -127,7 +127,7 @@ namespace studio
     {
       object_header child_header;
 
-      file.read(reinterpret_cast<std::byte*>(&child_header), sizeof(child_header));
+      file.read(reinterpret_cast<char*>(&child_header), sizeof(child_header));
 
       auto reader = readers.find(child_header.object_tag);
 
@@ -143,7 +143,7 @@ namespace studio
 
       item.header = child_header;
       item.raw_bytes = std::vector<std::byte>(item.header.object_size);
-      file.read(item.raw_bytes.data(), item.header.object_size);
+      file.read(reinterpret_cast<char*>(item.raw_bytes.data()), item.header.object_size);
 
       children.emplace_back(std::move(item));
 
