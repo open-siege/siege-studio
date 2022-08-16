@@ -25,7 +25,7 @@ namespace studio::resources::vol::darkstar
     std::string filename;
     std::int32_t size;
     std::optional<std::int32_t> compressed_size;
-    compression_type compression_type;
+    darkstar::compression_type compression_type;
     std::unique_ptr<std::basic_istream<std::byte>> stream;
   };
 
