@@ -1,8 +1,13 @@
 #include <sstream>
 #include <functional>
 #include <filesystem>
+#include <climits>
 #include "shared.hpp"
 #include "resources/resource_explorer.hpp"
+
+// Check to make sure our chars are 8 bits wide and additional sanity checks.
+static_assert(CHAR_BIT == 8);
+static_assert(sizeof(char) == sizeof(std::byte));
 
 namespace studio::resources
 {
