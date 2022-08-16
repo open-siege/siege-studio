@@ -27,9 +27,9 @@ namespace studio::content::dts::darkstar
   struct tag_header
   {
     file_tag tag;
-    file_info file_info;
+    darkstar::file_info file_info;
     std::string class_name;
-    version version;
+    darkstar::version version;
   };
 
   namespace mesh::v1
@@ -115,7 +115,7 @@ namespace studio::content::dts::darkstar
       constexpr static auto version = 1;
       KEYS_CONSTEXPR static auto keys = shared::make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
 
-      header header;
+      v1::header header;
       std::vector<vertex> vertices;
       std::vector<texture_vertex> texture_vertices;
       std::vector<face> faces;
@@ -154,7 +154,7 @@ namespace studio::content::dts::darkstar
       constexpr static auto version = 2;
       KEYS_CONSTEXPR static auto keys = shared::make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
 
-      header header;
+      v2::header header;
       std::vector<v1::vertex> vertices;
       std::vector<v1::texture_vertex> texture_vertices;
       std::vector<v1::face> faces;
@@ -223,7 +223,7 @@ namespace studio::content::dts::darkstar
       endian::little_int32_t flags;
       float alpha;
       endian::little_int32_t index;
-      rgb_data rgb_data;
+      content::rgb_data rgb_data;
 
       std::array<char, 32> file_name;
     };
@@ -234,7 +234,7 @@ namespace studio::content::dts::darkstar
       constexpr static auto version = 2;
       KEYS_CONSTEXPR static auto keys = shared::make_keys({ "header", "materials" });
 
-      header header;
+      v2::header header;
       std::vector<material> materials;
     };
   }// namespace material_list::v2
@@ -248,7 +248,7 @@ namespace studio::content::dts::darkstar
       endian::little_int32_t flags;
       float alpha;
       endian::little_int32_t index;
-      rgb_data rgb_data;
+      content::rgb_data rgb_data;
 
       std::array<char, 32> file_name;
 
@@ -277,7 +277,7 @@ namespace studio::content::dts::darkstar
       endian::little_int32_t flags;
       float alpha;
       endian::little_int32_t index;
-      rgb_data rgb_data;
+      content::rgb_data rgb_data;
 
       std::array<char, 32> file_name;
 
@@ -420,7 +420,7 @@ namespace studio::content::dts::darkstar
       float start_position;
       float end_position;
       float duration;
-      transform transform;
+      v2::transform transform;
     };
 
     // TODO Put this into the actual shape for 100% coverage in the JSON file.
@@ -444,8 +444,8 @@ namespace studio::content::dts::darkstar
         "meshes",
         "materialList" });
 
-      header header;
-      data data;
+      v2::header header;
+      v2::data data;
       std::vector<node> nodes;
       std::vector<sequence> sequences;
       std::vector<sub_sequence> sub_sequences;
@@ -589,7 +589,7 @@ namespace studio::content::dts::darkstar
         "meshes",
         "materialList" });
 
-      header header;
+      v5::header header;
       v2::data data;
       std::vector<v2::node> nodes;
       std::vector<sequence> sequences;
@@ -651,7 +651,7 @@ namespace studio::content::dts::darkstar
       std::vector<v2::detail> details;
       std::vector<v2::transition> transitions;
       std::vector<v5::frame_trigger> frame_triggers;
-      footer footer;
+      v6::footer footer;
       std::vector<mesh_variant> meshes;
 
       material_list_variant material_list;
@@ -824,7 +824,7 @@ namespace studio::content::dts::darkstar
         "materialList" });
 
       v5::header header;
-      data data;
+      v8::data data;
       std::vector<node> nodes;
       std::vector<v5::sequence> sequences;
       std::vector<sub_sequence> sub_sequences;
