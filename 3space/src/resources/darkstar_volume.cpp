@@ -38,7 +38,7 @@ namespace studio::resources::vol::darkstar
     std::string filename;
     std::uint32_t offset;
     std::uint32_t size;
-    compression_type compression_type;
+    darkstar::compression_type compression_type;
   };
 
   struct volume_header
@@ -111,7 +111,7 @@ namespace studio::resources::vol::darkstar
     endian::little_uint32_t name_empty_space;
     endian::little_uint32_t offset;
     endian::little_uint32_t size;
-    compression_type compression_type;
+    darkstar::compression_type compression_type;
   };
 
   static_assert(sizeof(file_header) == sizeof(std::array<std::byte, 17>));

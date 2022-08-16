@@ -27,7 +27,7 @@ namespace studio::resources
     std::size_t offset;
     std::size_t size;
     std::optional<std::size_t> compressed_size;
-    compression_type compression_type;
+    resources::compression_type compression_type;
     std::filesystem::path folder_path;
   };
 
