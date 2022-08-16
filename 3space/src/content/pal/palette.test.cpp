@@ -11,7 +11,7 @@ TEST_CASE("Microsoft PAL is detected correctly", "[pal.microsoft]")
   REQUIRE(mem_buffer.tellg() == 0);
 
   mem_buffer.clear();
-  mem_buffer.str(reinterpret_cast<const std::byte*>(""));
+  mem_buffer.str("");
   mem_buffer << "RIFF0000PAL ";
 
   REQUIRE(studio::content::pal::is_microsoft_pal(mem_buffer) == true);
@@ -27,7 +27,7 @@ TEST_CASE("Phoenix PAL is detected correctly", "[pal.darkstar]")
   REQUIRE(mem_buffer.tellg() == 0);
 
   mem_buffer.clear();
-  mem_buffer.str(reinterpret_cast<const std::byte*>(""));
+  mem_buffer.str("");
   mem_buffer << "PL98";
 
   REQUIRE(studio::content::pal::is_phoenix_pal(mem_buffer) == true);
