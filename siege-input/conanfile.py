@@ -21,6 +21,9 @@ class HelloImguiSfmlConanFile(ConanFile):
         self.options["sdl"].vulkan = False
         self.options["sdl"].sdl2main = False
 
+        if self.settings.os == "Linux":
+            self.options["sdl"].wayland = False
+
     def build(self):
         cmake = CMake(self)
         cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
