@@ -11,6 +11,7 @@
 #include <optional>
 #include <sstream>
 #include <iomanip>
+#include <cstring>
 
 #include <SDL.h>
 #include <imgui.h>

@@ -480,7 +480,9 @@ int main(int argc, char** argv)
 
     auto frame = std::shared_ptr<wxFrame>(new wxFrame(nullptr, wxID_ANY, "3Space Studio"), studio::default_wx_deleter);
 
+#if _WIN32 || _WIN64
     frame->SetIcon(wxICON(MAINICON));
+#endif
     frame->Bind(
       wxEVT_MENU, [](auto& event) {
         wxMessageBox("This is a tool to explore files using the 3Space or Darkstar engines. Currently only Starsiege, Starsiege Tribes, Trophy Bass 3D and Front Page Sports: Ski Racing are supported.",
