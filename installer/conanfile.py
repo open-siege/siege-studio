@@ -16,6 +16,31 @@ class LocalConanFile(ConanFile):
     generators = "cmake_find_package", "virtualenv"
     exports_sources = "CMakeLists.txt", "LICENSE", "README.md", "game-support.md", "src/*"
 
+    def configure(self):
+        self.options["wxwidgets"].mediactrl = False
+        self.options["wxwidgets"].zlib = "off"
+        self.options["wxwidgets"].png = "off"
+        self.options["wxwidgets"].jpeg = "off"
+        self.options["wxwidgets"].tiff = "off"
+        self.options["wxwidgets"].expat = "off"
+        self.options["wxwidgets"].secretstore = False
+        self.options["wxwidgets"].aui = False
+        self.options["wxwidgets"].opengl = False
+        self.options["wxwidgets"].propgrid = False
+        self.options["wxwidgets"].ribbon = False
+        self.options["wxwidgets"].richtext = False
+        self.options["wxwidgets"].sockets = False
+        self.options["wxwidgets"].stc = False
+        self.options["wxwidgets"].richtext = False
+        self.options["wxwidgets"].webview = False
+        self.options["wxwidgets"].xml = False
+        self.options["wxwidgets"].xrc = False
+        self.options["wxwidgets"].fs_inet = False
+        self.options["wxwidgets"].help = False
+        self.options["wxwidgets"].protocol = False
+        self.options["wxwidgets"].html_help = False
+        self.options["wxwidgets"].custom_disables = "wxUSE_ARTPROVIDER_TANGO,wxUSE_SVG"
+
     def _configure_cmake(self):
         self.source_folder = os.path.abspath(".")
         self.build_folder = os.path.abspath("build")
