@@ -14,6 +14,30 @@ class LocalConanFile(ConanFile):
     requires = "3space/0.6.1", "wxwidgets/3.1.5@bincrafters/stable", "imgui-sfml/2.5@bincrafters/stable", "zlib/1.2.12"
     generators = "cmake_find_package"
 
+    def configure(self):
+        self.options["wxwidgets"].aui = True
+        self.options["wxwidgets"].opengl = True
+        self.options["wxwidgets"].zlib = "off"
+        self.options["wxwidgets"].jpeg = "off"
+        self.options["wxwidgets"].tiff = "off"
+        self.options["wxwidgets"].expat = "off"
+        self.options["wxwidgets"].mediactrl = False
+        self.options["wxwidgets"].secretstore = False
+        self.options["wxwidgets"].propgrid = False
+        self.options["wxwidgets"].ribbon = False
+        self.options["wxwidgets"].richtext = False
+        self.options["wxwidgets"].sockets = False
+        self.options["wxwidgets"].stc = False
+        self.options["wxwidgets"].richtext = False
+        self.options["wxwidgets"].webview = False
+        self.options["wxwidgets"].xml = False
+        self.options["wxwidgets"].xrc = False
+        self.options["wxwidgets"].fs_inet = False
+        self.options["wxwidgets"].help = False
+        self.options["wxwidgets"].protocol = False
+        self.options["wxwidgets"].html_help = False
+        self.options["wxwidgets"].custom_disables = "wxUSE_ARTPROVIDER_TANGO,wxUSE_SVG"
+
     def build(self):
         cmake = CMake(self)
         cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
