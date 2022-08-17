@@ -9,7 +9,8 @@ class HelloImguiSfmlConanFile(ConanFile):
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
     build_requires = "cmake/3.22.0"
-    requires = "nlohmann_json/3.10.5", "imgui/cci.20220621+1.88.docking", "sdl/2.0.20"
+    # openssl is here to force package resolution issue with cmake on linux
+    requires = "nlohmann_json/3.10.5", "imgui/cci.20220621+1.88.docking", "sdl/2.0.20", "openssl/1.1.1o"
     settings = "os", "compiler", "build_type", "arch"
     generators = "cmake_find_package"
 
