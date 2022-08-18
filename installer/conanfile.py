@@ -17,7 +17,7 @@ class LocalConanFile(ConanFile):
     exports_sources = "CMakeLists.txt", "LICENSE", "README.md", "game-support.md", "src/*"
 
     def configure(self):
-        self.options["wxwidgets"].mediactrl = False
+        self.options["wxwidgets"].mediactrl = True
         self.options["wxwidgets"].zlib = "off"
         self.options["wxwidgets"].png = "off"
         self.options["wxwidgets"].jpeg = "off"

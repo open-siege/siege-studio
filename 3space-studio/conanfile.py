@@ -15,12 +15,11 @@ class LocalConanFile(ConanFile):
     generators = "cmake_find_package"
 
     def configure(self):
-        self.options["wxwidgets"].aui = True
-        self.options["wxwidgets"].opengl = True
-        self.options["wxwidgets"].zlib = "off"
         self.options["wxwidgets"].jpeg = "off"
         self.options["wxwidgets"].tiff = "off"
         self.options["wxwidgets"].expat = "off"
+        self.options["wxwidgets"].aui = False
+        self.options["wxwidgets"].opengl = True
         self.options["wxwidgets"].mediactrl = False
         self.options["wxwidgets"].secretstore = False
         self.options["wxwidgets"].propgrid = False
@@ -36,7 +35,6 @@ class LocalConanFile(ConanFile):
         self.options["wxwidgets"].help = False
         self.options["wxwidgets"].protocol = False
         self.options["wxwidgets"].html_help = False
-        self.options["wxwidgets"].custom_disables = "wxUSE_ARTPROVIDER_TANGO,wxUSE_SVG"
 
     def build(self):
         cmake = CMake(self)
