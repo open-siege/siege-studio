@@ -18,7 +18,7 @@ class LocalConanFile(ConanFile):
         self.options["wxwidgets"].jpeg = "off"
         self.options["wxwidgets"].tiff = "off"
         self.options["wxwidgets"].expat = "off"
-        self.options["wxwidgets"].aui = False
+        self.options["wxwidgets"].aui = True
         self.options["wxwidgets"].opengl = True
         self.options["wxwidgets"].mediactrl = False
         self.options["wxwidgets"].secretstore = False
