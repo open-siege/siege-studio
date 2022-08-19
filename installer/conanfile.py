@@ -18,14 +18,12 @@ class LocalConanFile(ConanFile):
 
     def configure(self):
         self.options["wxwidgets"].mediactrl = True
-        self.options["wxwidgets"].zlib = "off"
-        self.options["wxwidgets"].png = "off"
         self.options["wxwidgets"].jpeg = "off"
         self.options["wxwidgets"].tiff = "off"
         self.options["wxwidgets"].expat = "off"
+        self.options["wxwidgets"].aui = True
+        self.options["wxwidgets"].opengl = True
         self.options["wxwidgets"].secretstore = False
-        self.options["wxwidgets"].aui = False
-        self.options["wxwidgets"].opengl = False
         self.options["wxwidgets"].propgrid = False
         self.options["wxwidgets"].ribbon = False
         self.options["wxwidgets"].richtext = False
@@ -39,7 +37,6 @@ class LocalConanFile(ConanFile):
         self.options["wxwidgets"].help = False
         self.options["wxwidgets"].protocol = False
         self.options["wxwidgets"].html_help = False
-        self.options["wxwidgets"].custom_disables = "wxUSE_ARTPROVIDER_TANGO,wxUSE_SVG"
 
     def _configure_cmake(self):
         self.source_folder = os.path.abspath(".")
