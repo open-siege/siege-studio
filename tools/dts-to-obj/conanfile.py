@@ -14,6 +14,10 @@ class LocalConanFile(ConanFile):
     requires = "3space/0.6.1"
     generators = "cmake_find_package"
 
+    def requirements(self):
+        if self.settings.os == "Linux":
+            self.requires("tbb/2020.3")
+
     def build(self):
         cmake = CMake(self)
         cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
