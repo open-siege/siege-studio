@@ -51,12 +51,21 @@ namespace nlohmann
       }
     }
 
+    static std::pair<std::string_view, int> get_type_info(const nlohmann::json& js)
+    {
+      return std::make_pair(js.at("typeName").get_ref<const std::string&>(), js.at("version").get<int>());
+    }
+
+    static std::pair<std::string_view, int> get_type_info(const nlohmann::ordered_json& js)
+    {
+      return std::make_pair(js.at("typeName").get_ref<const std::string&>(), js.at("version").get<int>());
+    }
+
     template<typename BasicJsonType>
     static void from_json(const BasicJsonType& js, material_list& opt)
     {
       using namespace studio::content::dts::darkstar::material_list;
-      auto version = js.at("version");
-      auto type_name = js.at("typeName");
+      const auto [type_name, version] = get_type_info(js);
 
       raise_type_error<v2::material_list, BasicJsonType>(type_name, js);
 
@@ -69,8 +78,7 @@ namespace nlohmann
     static void from_json(const BasicJsonType& js, mesh& opt)
     {
       using namespace studio::content::dts::darkstar::mesh;
-      auto version = js.at("version");
-      auto type_name = js.at("typeName");
+      const auto [type_name, version] = get_type_info(js);
 
       raise_type_error<v2::mesh, BasicJsonType>(type_name, js);
 
@@ -82,8 +90,7 @@ namespace nlohmann
     static void from_json(const BasicJsonType& js, shape& opt)
     {
       using namespace studio::content::dts::darkstar::shape;
-      auto version = js.at("version");
-      auto type_name = js.at("typeName");
+      const auto [type_name, version] = get_type_info(js);
 
       raise_type_error<v2::shape, BasicJsonType>(type_name, js);
 
@@ -99,8 +106,7 @@ namespace nlohmann
     static void from_json(const BasicJsonType& js, three_space_shape& opt)
     {
       using namespace studio::content::dts::three_space::v1;
-      auto version = js.at("version");
-      auto type_name = js.at("typeName");
+      const auto [type_name, version] = get_type_info(js);
 
       //raise_type_error<v2::shape, BasicJsonType>(type_name, js);
 
