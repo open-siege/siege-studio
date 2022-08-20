@@ -4,8 +4,6 @@
 #include <memory>
 #include <SFML/Audio.hpp>
 #include "music_player.hpp"
-#include "wx_remote_music_player.hpp"
-
 
 template<class... Ts>
 struct overloaded : Ts...
@@ -23,7 +21,7 @@ constexpr auto sfml_extensions = std::array<std::string_view, 3>{
 
 struct music_player::music_player_impl
 {
-  std::variant<std::monostate, wx_remote_music_player, sf::Music> player;
+  std::variant<std::monostate, sf::Music> player;
   music_player_state current_state;
 
   bool load(const std::filesystem::path& path)
@@ -34,8 +32,7 @@ struct music_player::music_player_impl
     if (is_sfml == sfml_extensions.end())
     {
       
-      auto& wx_player = player.emplace<wx_remote_music_player>();
-      return wx_player.load(path);
+      return false;
     }
 
     auto& sf_player = player.emplace<sf::Music>();
@@ -47,9 +44,6 @@ struct music_player::music_player_impl
   {
     return std::visit(
       overloaded{
-        [](wx_remote_music_player& player) {
-          return player.play();
-        },
         [](sf::Music& player) {
           player.play();
           return true;
@@ -64,9 +58,6 @@ struct music_player::music_player_impl
   {
     return std::visit(
       overloaded{
-        [](wx_remote_music_player& self) {
-          return self.pause();
-        },
         [](sf::Music& self) {
           self.pause();
           return true;
@@ -81,9 +72,6 @@ struct music_player::music_player_impl
   {
     return std::visit(
       overloaded{
-        [](wx_remote_music_player& self) {
-          return self.stop();
-          },
           [](sf::Music& self) {
           self.stop();
           return true;
@@ -98,9 +86,6 @@ struct music_player::music_player_impl
   {
     return std::visit(
       overloaded{
-        [volume](wx_remote_music_player& self) {
-          return self.set_volume(volume);
-        },
         [volume](sf::Music& self) {
           self.setVolume(volume);
           return true;
@@ -116,9 +101,6 @@ struct music_player::music_player_impl
   {
     return std::visit(
       overloaded{
-        [](const wx_remote_music_player& self) {
-          return self.get_volume();
-        },
         [](const sf::Music& self) {
           try
           {
@@ -139,9 +121,6 @@ struct music_player::music_player_impl
   {
     return std::visit(
       overloaded{
-        [](const wx_remote_music_player& self) {
-          return self.length();
-        },
         [](const sf::Music& self) {
           try
           {
@@ -162,9 +141,6 @@ struct music_player::music_player_impl
   {
     return std::visit(
       overloaded{
-        [](const wx_remote_music_player& self) {
-          return self.tell();
-        },
         [](const sf::Music& self) {
           try
           {
@@ -185,9 +161,6 @@ struct music_player::music_player_impl
   {
     return std::visit(
       overloaded{
-        [position](wx_remote_music_player& self) {
-          return self.seek(position);
-        },
         [position](sf::Music& self) {
           try
           {

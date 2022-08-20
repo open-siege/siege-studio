@@ -4,31 +4,9 @@ import os.path
 
 class HelloWxWidgetsConanFile(ConanFile):
     build_requires = "cmake/3.22.0"
-    requires = "wxwidgets/3.1.5@bincrafters/stable", "mio/cci.20201220", "sfml/2.5.1"
+    requires = "sfml/2.5.1"
     settings = "os", "compiler", "build_type", "arch"
     generators = "cmake_find_package"
-
-    def configure(self):
-        self.options["wxwidgets"].mediactrl = True
-        self.options["wxwidgets"].jpeg = "off"
-        self.options["wxwidgets"].tiff = "off"
-        self.options["wxwidgets"].expat = "off"
-        self.options["wxwidgets"].aui = True
-        self.options["wxwidgets"].opengl = True
-        self.options["wxwidgets"].secretstore = False
-        self.options["wxwidgets"].propgrid = False
-        self.options["wxwidgets"].ribbon = False
-        self.options["wxwidgets"].richtext = False
-        self.options["wxwidgets"].sockets = False
-        self.options["wxwidgets"].stc = False
-        self.options["wxwidgets"].richtext = False
-        self.options["wxwidgets"].webview = False
-        self.options["wxwidgets"].xml = False
-        self.options["wxwidgets"].xrc = False
-        self.options["wxwidgets"].fs_inet = False
-        self.options["wxwidgets"].help = False
-        self.options["wxwidgets"].protocol = False
-        self.options["wxwidgets"].html_help = False
 
     def imports(self):
         tools.rmdir("cmake")
