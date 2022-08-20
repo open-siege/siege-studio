@@ -8,6 +8,11 @@ add_executable(json-to-dts src/convert_json.cpp)
 set_property(TARGET json-to-dts PROPERTY CXX_STANDARD 17)
 target_link_libraries(json-to-dts 3space::3space)
 
+if(UNIX AND NOT APPLE)
+    find_package(TBB REQUIRED)
+    target_link_libraries(json-to-dts TBB::tbb)
+endif()
+
 install(TARGETS json-to-dts
         CONFIGURATIONS Debug Release
         RUNTIME DESTINATION bin)
