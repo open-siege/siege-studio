@@ -156,8 +156,12 @@ namespace studio
 
         sf::ContextSettings context;
         context.depthBits = 24;
+// TODO I need to fix get_handle on Linux, but I want to get things working for now to text other parts of the app.
+#ifdef __WXGTK__
+        auto window = std::make_shared<sf::RenderWindow>(sf::VideoMode(640, 480), file_stream.first.filename.string(), sf::Style::Default, context);
+#else
         auto window = std::make_shared<sf::RenderWindow>(get_handle(*graphics), context);
-
+#endif
         static std::unordered_map<std::shared_ptr<sf::RenderWindow>, ImGuiContext*> window_contexts;
 
         auto existing_context = window_contexts.find(window);
@@ -211,6 +215,7 @@ namespace studio
 
         shared_view->setup_view(*graphics, *window, *existing_context->second);
         panel.GetSizer()->Add(graphics.get(), 1, wxEXPAND | wxALL, 5);
+        window->requestFocus();
       }
     },
       std::move(raw_view));

@@ -1,6 +1,7 @@
 .idea/
 venv/
 build/
+package/
 cmake-build-debug/
 cmake-build-release/
 packages/
