@@ -17,12 +17,12 @@ class LocalConanFile(ConanFile):
     exports_sources = "CMakeLists.txt", "LICENSE", "README.md", "game-support.md", "src/*"
 
     def configure(self):
-        self.options["wxwidgets"].mediactrl = True
         self.options["wxwidgets"].jpeg = "off"
         self.options["wxwidgets"].tiff = "off"
         self.options["wxwidgets"].expat = "off"
         self.options["wxwidgets"].aui = True
         self.options["wxwidgets"].opengl = True
+        self.options["wxwidgets"].mediactrl = False
         self.options["wxwidgets"].secretstore = False
         self.options["wxwidgets"].propgrid = False
         self.options["wxwidgets"].ribbon = False
