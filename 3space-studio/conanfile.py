@@ -14,6 +14,10 @@ class LocalConanFile(ConanFile):
     requires = "3space/0.6.1", "wxwidgets/3.1.5@bincrafters/stable", "imgui-sfml/2.5@bincrafters/stable", "zlib/1.2.12"
     generators = "cmake_find_package"
 
+    def requirements(self):
+        if self.settings.os == "Linux":
+            self.requires("tbb/2020.3")
+
     def configure(self):
         self.options["wxwidgets"].jpeg = "off"
         self.options["wxwidgets"].tiff = "off"

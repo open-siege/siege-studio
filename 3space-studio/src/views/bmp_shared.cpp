@@ -427,7 +427,7 @@ namespace studio::views
             return false;
           }
 
-          auto loaded_palette = loaded_palettes.find(std::string_view(value));
+          auto loaded_palette = loaded_palettes.find(std::string_view(value.get_ref<const std::string&>()));
 
           if (loaded_palette != loaded_palettes.end())
           {
@@ -492,7 +492,7 @@ namespace studio::views
           return default_palette_from_settings(file, manager, loaded_palettes);
         }
 
-        auto loaded_palette = loaded_palettes.find(std::string_view(value));
+        auto loaded_palette = loaded_palettes.find(std::string_view(value.get_ref<const std::string&>()));
 
         if (loaded_palette != loaded_palettes.end())
         {
