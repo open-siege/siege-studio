@@ -156,9 +156,21 @@ namespace studio
 
         sf::ContextSettings context;
         context.depthBits = 24;
-// TODO I need to fix get_handle on Linux, but I want to get things working for now to text other parts of the app.
+// TODO It's much more complicated than anticipated to make everything work correctly.
+// There are plans to overhaul everything in the future in any case.
+// It makes more sense to get a compilable (and partially viable) solution going,
+// then come back to this in the future. The main goal is to have a better separation
+// in place for the ImGui-based UIs, such that they aren't aware of wxControls or anything like that.
+// This can be addressed as part of the planned reworking.
 #ifdef __WXGTK__
-        auto window = std::make_shared<sf::RenderWindow>(sf::VideoMode(640, 480), file_stream.first.filename.string(), sf::Style::Default, context);
+        static auto main_window = std::make_shared<sf::RenderWindow>(sf::VideoMode(640, 480), "Graphics Window", sf::Style::Default, context);
+
+        if (!main_window->isOpen())
+        {
+          main_window = std::make_shared<sf::RenderWindow>(sf::VideoMode(640, 480), "Graphics Window", sf::Style::Default, context);
+        }
+        auto window = main_window;
+        window->setTitle(file_stream.first.filename.string());
 #else
         auto window = std::make_shared<sf::RenderWindow>(get_handle(*graphics), context);
 #endif
@@ -191,6 +203,7 @@ namespace studio
 
         graphics->Bind(wxEVT_PAINT, canvas_painter(graphics, window, *existing_context->second, shared_view));
 
+#ifndef __WXGTK__
         // direct access of window in the below lambda causes an ICE in VS 2019.
         auto reset_imgui = [window]()
         {
@@ -212,6 +225,7 @@ namespace studio
           graphics.reset();
           reset_imgui();
         });
+#endif
 
         shared_view->setup_view(*graphics, *window, *existing_context->second);
         panel.GetSizer()->Add(graphics.get(), 1, wxEXPAND | wxALL, 5);
