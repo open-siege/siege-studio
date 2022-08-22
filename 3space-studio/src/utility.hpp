@@ -7,6 +7,7 @@
 #include <locale>
 #include <wx/wx.h>
 #include <SFML/OpenGL.hpp>
+#include <SFML/Window/WindowHandle.hpp>
 
 namespace studio
 {
@@ -18,7 +19,7 @@ namespace studio
     }
   }
 
-  WXWidget get_handle(const wxControl& control);
+  sf::WindowHandle get_handle(const wxControl& control);
 
   void perspectiveGL(GLdouble fovY, GLdouble aspect, GLdouble zNear, GLdouble zFar);
 }

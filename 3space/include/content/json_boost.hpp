@@ -45,17 +45,22 @@ namespace nlohmann
   struct adl_serializer<boost::endian::endian_arithmetic<ByteOrder, IntType, Size>>
   {
     using EndianType = boost::endian::endian_arithmetic<ByteOrder, IntType, Size>;
+    using ValueType = typename EndianType::value_type;
 
     template<typename BasicJsonType>
     static void to_json(BasicJsonType& j, const EndianType& opt)
     {
-      j = static_cast<typename EndianType::value_type>(opt);
+      j = static_cast<ValueType>(opt);
     }
 
-    template<typename BasicJsonType>
-    static void from_json(const BasicJsonType& j, EndianType& opt)
+    static void from_json(const nlohmann::json& j, EndianType& opt)
     {
-      opt = j.template get<EndianType::value_type>();
+      opt = j.get<ValueType>();
+    }
+
+    static void from_json(const nlohmann::ordered_json& j, EndianType& opt)
+    {
+      opt = j.get<ValueType>();
     }
   };
 }// namespace nlohmann

@@ -15,6 +15,8 @@ class LocalConanFile(ConanFile):
 
         print(f"Configuring CMake arch to {self.settings.arch_build} for {profile} profile. Helps cross-compiling.")
         self.run(f"conan profile update settings.cmake:arch={self.settings.arch_build} {profile}")
+        print(f"Configuring CMake build_type to Release because we don't need to recompile the whole of CMake just for debug builds. It's a build time dependency.")
+        self.run(f"conan profile update settings.cmake:build_type=Release {profile}")
 
         print(f"Adding the bincrafters remote @ https://bincrafters.jfrog.io/artifactory/api/conan/public-conan.")
         self.run(f"conan remote add bincrafters https://bincrafters.jfrog.io/artifactory/api/conan/public-conan --force")
