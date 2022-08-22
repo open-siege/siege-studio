@@ -12,14 +12,16 @@ namespace studio
   {
     // TODO fix this code because it doesn't work at the moment.
 #ifdef __WXGTK__
-    // GTK implementation requires to go deeper to find the
-    // low-level X11 identifier of the widget
-    auto m_wxwindow = control.GetHandle();
-    gtk_widget_realize(m_wxwindow);
-    gtk_widget_set_double_buffered(m_wxwindow, false);
-    GdkWindow* Win = gtk_widget_get_window(GTK_WIDGET(m_wxwindow));
-    XFlush(GDK_WINDOW_XDISPLAY(Win));
-    return GDK_WINDOW_XWINDOW(Win);
+    // Currently results in:
+    // The error was 'BadAccess (attempt to access private resource denied)'.
+    // (Details: serial 57 error_code 10 request_code 2 minor_code 0)
+    //return gdk_x11_drawable_get_xid(gtk_widget_get_window(control.GetHandle()));
+
+    // SFML wants a Window, and doesn't appear to deal with XIDs.
+    // Making all of this work properly is more time than I have at the moment.
+    // Long term, the way SFML is used in the project will be changed (if not removed).
+    // Thus, I'm leaving things here for now, to come back to it later.
+    return gdk_x11_get_default_root_xwindow();
 #else
     return control.GetHandle();
 #endif
