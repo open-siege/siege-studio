@@ -8,9 +8,9 @@ find_package(imgui REQUIRED)
 find_package(SDL2 REQUIRED)
 
 if(WIN32)
-    add_executable(siege-input bindings/imgui_impl_sdl.cpp bindings/imgui_impl_sdlrenderer.cpp src/common.cpp src/windows.cpp src/main.cpp)
+    add_executable(siege-input bindings/imgui_impl_sdl.cpp bindings/imgui_impl_dx11.cpp src/render_windows.cpp src/common.cpp src/windows.cpp src/main.cpp)
 else()
-    add_executable(siege-input bindings/imgui_impl_sdl.cpp bindings/imgui_impl_sdlrenderer.cpp src/common.cpp src/other.cpp src/main.cpp)
+    add_executable(siege-input bindings/imgui_impl_sdl.cpp bindings/imgui_impl_sdlrenderer.cpp src/render_sdl.cpp src/common.cpp src/other.cpp src/main.cpp)
 endif()
 
 
@@ -20,7 +20,7 @@ target_include_directories(siege-input PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/bindi
 target_link_libraries(siege-input PRIVATE imgui::imgui SDL2::SDL2-static nlohmann_json::nlohmann_json)
 
 if(WIN32)
-    target_link_libraries(siege-input PRIVATE dinput8)
+    target_link_libraries(siege-input PRIVATE dinput8 d3d11)
 endif()
 
 install(TARGETS siege-input CONFIGURATIONS Debug Release RUNTIME DESTINATION bin)
