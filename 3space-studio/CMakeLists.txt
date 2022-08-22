@@ -21,6 +21,11 @@ if(MSVC)
     target_compile_definitions(3space-studio PRIVATE -D_CRT_SECURE_NO_WARNINGS)
 endif()
 
+if(UNIX AND NOT APPLE)
+    find_package(TBB REQUIRED)
+    target_link_libraries(3space-studio TBB::tbb)
+endif()
+
 add_custom_command(TARGET 3space-studio
         POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/src/logo.png $<TARGET_FILE_DIR:3space-studio>/logo.png

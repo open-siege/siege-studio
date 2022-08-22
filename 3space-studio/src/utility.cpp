@@ -4,22 +4,24 @@
 #ifdef __WXGTK__
 #include <gdk/gdkx.h>
 #include <gtk/gtk.h>
-#include <wx/gtk/win_gtk.h>
 #endif
 
 namespace studio
 {
-  WXWidget get_handle(const wxControl& control)
+  sf::WindowHandle get_handle(const wxControl& control)
   {
+    // TODO fix this code because it doesn't work at the moment.
 #ifdef __WXGTK__
+    // Currently results in:
+    // The error was 'BadAccess (attempt to access private resource denied)'.
+    // (Details: serial 57 error_code 10 request_code 2 minor_code 0)
+    //return gdk_x11_drawable_get_xid(gtk_widget_get_window(control.GetHandle()));
 
-    // GTK implementation requires to go deeper to find the
-  // low-level X11 identifier of the widget
-  gtk_widget_realize(m_wxwindow);
-  gtk_widget_set_double_buffered(m_wxwindow, false);
-  GdkWindow* Win = GTK_PIZZA(m_wxwindow)->bin_window;
-  XFlush(GDK_WINDOW_XDISPLAY(Win));
-        return GDK_WINDOW_XWINDOW(Win));
+    // SFML wants a Window, and doesn't appear to deal with XIDs.
+    // Making all of this work properly is more time than I have at the moment.
+    // Long term, the way SFML is used in the project will be changed (if not removed).
+    // Thus, I'm leaving things here for now, to come back to it later.
+    return gdk_x11_get_default_root_xwindow();
 #else
     return control.GetHandle();
 #endif
