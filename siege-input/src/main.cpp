@@ -15,8 +15,8 @@
 
 #include <SDL.h>
 #include <imgui.h>
+#include "render.hpp"
 #include "imgui_impl_sdl.h"
-#include "imgui_impl_sdlrenderer.h"
 
 #include "platform.hpp"
 
@@ -87,13 +87,6 @@ int main(int, char**)
     auto window = std::unique_ptr<SDL_Window, void (*)(SDL_Window*)>(
       SDL_CreateWindow("Siege Input", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags), SDL_DestroyWindow);
 
-    auto renderer = std::unique_ptr<SDL_Renderer, void (*)(SDL_Renderer*)>(SDL_CreateRenderer(window.get(), -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED), SDL_DestroyRenderer);
-    if (!renderer)
-    {
-      SDL_Log("Error creating SDL_Renderer!");
-      return -1;
-    }
-
     Siege_InitVirtualJoysticks();
 
     // The Rapoo V600S DirectInput driver causes an access violation in winmm when this is called.
@@ -103,18 +96,21 @@ int main(int, char**)
     // ImGui scope
     {
       IMGUI_CHECKVERSION();
-      auto context = std::unique_ptr<ImGuiContext, void (*)(ImGuiContext*)>(ImGui::CreateContext(), [](auto* context) {
-        ImGui_ImplSDLRenderer_Shutdown();
-        ImGui_ImplSDL2_Shutdown();
-        ImGui::DestroyContext(context);
-      });
+      auto context = std::unique_ptr<ImGuiContext, void (*)(ImGuiContext*)>(ImGui::CreateContext(), Siege_Shutdown);
 
       ImGuiIO& io = ImGui::GetIO();
 
+      io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+      io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
       ImGui::StyleColorsDark();
 
-      ImGui_ImplSDL2_InitForSDLRenderer(window.get(), renderer.get());
-      ImGui_ImplSDLRenderer_Init(renderer.get());
+      auto render_context = Siege_Init(window.get());
+
+      if (!render_context)
+      {
+        return -1;
+      }
 
       ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
@@ -125,12 +121,6 @@ int main(int, char**)
       // Same as the number of joysticks to make it easier to index.
       std::vector<std::shared_ptr<SDL_Haptic>> haptic_devices(SDL_NumJoysticks());
       std::vector<std::shared_ptr<SDL_GameController>> controllers(SDL_NumJoysticks());
-
-      auto new_frame = []() {
-        ImGui_ImplSDLRenderer_NewFrame();
-        ImGui_ImplSDL2_NewFrame();
-        ImGui::NewFrame();
-      };
 
       bool controller_rumble = false;
       bool trigger_rumble = false;
@@ -163,9 +153,15 @@ int main(int, char**)
           {
             running = false;
           }
+
+          if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED && event.window.windowID == SDL_GetWindowID(window.get()))
+          {
+            // Release all outstanding references to the swap chain's buffers before resizing.
+            Siege_Resize(*render_context);
+          }
         }
 
-        new_frame();
+        Siege_NewFrame();
 
         ImGui::Begin("Input Info");
         ImGui::Text("Number of controllers: %d", SDL_NumJoysticks());
@@ -623,10 +619,16 @@ int main(int, char**)
         ImGui::End();
 
         ImGui::Render();
-        SDL_SetRenderDrawColor(renderer.get(), (Uint8)(clear_color.x * 255), (Uint8)(clear_color.y * 255), (Uint8)(clear_color.z * 255), (Uint8)(clear_color.w * 255));
-        SDL_RenderClear(renderer.get());
-        ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
-        SDL_RenderPresent(renderer.get());
+        Siege_RenderReset(*render_context, clear_color);
+        Siege_RenderDrawData(ImGui::GetDrawData());
+
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+          ImGui::UpdatePlatformWindows();
+          ImGui::RenderPlatformWindowsDefault();
+        }
+
+        Siege_RenderPresent(*render_context);
       }
     }
     // /ImGui scope
