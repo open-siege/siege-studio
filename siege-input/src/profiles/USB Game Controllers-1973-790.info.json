@@ -1,0 +1,17 @@
+{
+    "fileVersion": 1,
+    "fileType": "deviceInfo",
+    "deviceName": "USB Game Controllers",
+    "deviceGuid": "03000000b50700001603000000000000",
+    "vendorId": "0x07b5",
+    "productId": "0x0316",
+    "productVersion": 0,
+    "serialNumber": "",
+    "detectedDeviceType": "Flight Stick",
+    "numButtons": 4,
+    "numHats": 1,
+    "numAxes": 3,
+    "numBalls": 0,
+    "hasRumble": false,
+    "hasTriggerRumble": false
+}

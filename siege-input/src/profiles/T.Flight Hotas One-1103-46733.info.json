@@ -1,0 +1,17 @@
+{
+    "fileVersion": 1,
+    "fileType": "deviceInfo",
+    "deviceName": "T.Flight Hotas One",
+    "deviceGuid": "030000004f0400008db6000000000000",
+    "vendorId": "0x044f",
+    "productId": "0xb68d",
+    "productVersion": 0,
+    "serialNumber": "",
+    "detectedDeviceType": "Flight Stick",
+    "numButtons": 15,
+    "numHats": 1,
+    "numAxes": 8,
+    "numBalls": 0,
+    "hasRumble": false,
+    "hasTriggerRumble": false
+}

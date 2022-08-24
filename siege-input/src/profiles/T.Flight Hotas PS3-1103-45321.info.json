@@ -1,0 +1,17 @@
+{
+    "fileVersion": 1,
+    "fileType": "deviceInfo",
+    "deviceName": "T.Flight Hotas PS3",
+    "deviceGuid": "030000004f04000009b1000000000000",
+    "vendorId": "0x044f",
+    "productId": "0xb109",
+    "productVersion": 0,
+    "serialNumber": "",
+    "detectedDeviceType": "Game Controller",
+    "numButtons": 13,
+    "numHats": 1,
+    "numAxes": 4,
+    "numBalls": 0,
+    "hasRumble": false,
+    "hasTriggerRumble": false
+}
