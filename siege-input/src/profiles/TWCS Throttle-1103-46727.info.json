@@ -1,0 +1,17 @@
+{
+    "fileVersion": 1,
+    "fileType": "deviceInfo",
+    "deviceName": "TWCS Throttle",
+    "deviceGuid": "030000004f04000087b6000000000000",
+    "vendorId": "0x044f",
+    "productId": "0xb687",
+    "productVersion": 0,
+    "serialNumber": "",
+    "detectedDeviceType": "Throttle",
+    "numButtons": 14,
+    "numHats": 1,
+    "numAxes": 8,
+    "numBalls": 0,
+    "hasRumble": false,
+    "hasTriggerRumble": false
+}
