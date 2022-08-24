@@ -1,0 +1,17 @@
+{
+    "fileVersion": 1,
+    "fileType": "deviceInfo",
+    "deviceName": "TCA Q-Eng 3&4",
+    "deviceGuid": "030000004f0400000804000000000000",
+    "vendorId": "0x044f",
+    "productId": "0x0408",
+    "productVersion": 0,
+    "serialNumber": "",
+    "detectedDeviceType": "Unknown",
+    "numButtons": 31,
+    "numHats": 0,
+    "numAxes": 7,
+    "numBalls": 0,
+    "hasRumble": false,
+    "hasTriggerRumble": false
+}
