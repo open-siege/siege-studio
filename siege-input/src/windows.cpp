@@ -18,7 +18,7 @@ SDL_JoystickType Siege_JoystickGetType(SDL_Joystick* joystick)
 {
   auto type = SDL_JoystickGetType(joystick);
 
-  if (type == SDL_JoystickType::SDL_JOYSTICK_TYPE_UNKNOWN)
+  if (type == SDL_JoystickType::SDL_JOYSTICK_TYPE_UNKNOWN || type == SDL_JoystickType::SDL_JOYSTICK_TYPE_GAMECONTROLLER)
   {
     static std::unordered_map<std::basic_string<std::uint16_t>, SDL_JoystickType> cached_types;
 

@@ -1,0 +1,17 @@
+{
+    "fileVersion": 1,
+    "fileType": "deviceInfo",
+    "deviceName": "T.16000M",
+    "deviceGuid": "030000004f0400000ab1000000000000",
+    "vendorId": "0x044f",
+    "productId": "0xb10a",
+    "productVersion": 0,
+    "serialNumber": "",
+    "detectedDeviceType": "Flight Stick",
+    "numButtons": 16,
+    "numHats": 1,
+    "numAxes": 4,
+    "numBalls": 0,
+    "hasRumble": false,
+    "hasTriggerRumble": false
+}
