@@ -1,210 +1,212 @@
 {
-    "fileVersion": 1,
-    "fileType": "deviceInfo",
-    "deviceName": "T.Flight Stick X (PS3)",
-    "deviceGuid": "030000004f04000007b1000000000000",
-    "vendorId": "0x044f",
-    "productId": "0xb107",
-    "productVersion": 0,
-    "serialNumber": "",
-    "detectedDeviceType": "Game Controller",
-    "numButtons": 13,
-    "numHats": 1,
-    "numAxes": 4,
-    "numBalls": 0,
-    "hasRumble": false,
-    "hasTriggerRumble": false,
-    "bindings": {
-        "axes": {
-            "mainStick": {
-                "intendedHand": "right",
-                "location": {
-                    "part": "mainStickBase",
-                    "placementX": "middle",
-                    "placementY": "top",
-                    "placementZ": "middle"
-                },
-                "x": {
-                    "type": "axis",
-                    "index": 0
-                },
-                "y": {
-                    "type": "axis",
-                    "index": 1
-                },
-                "twist": {
-                    "type": "axis",
-                    "index": 2
-                }
-            },
-            "miniThrottle": {
-                "location": {
-                    "part": "mainStickBase",
-                    "placementX": "left",
-                    "placementY": "top",
-                    "placementZ": "front"
-                },
-                "y": {
-                    "type": "axis",
-                    "index": 3
-                }
-            }
+  "fileVersion": 1,
+  "fileType": "deviceInfo",
+  "deviceName": "T.Flight Stick X (PS3)",
+  "deviceGuid": "030000004f04000007b1000000000000",
+  "vendorId": "0x044f",
+  "productId": "0xb107",
+  "productVersion": 0,
+  "serialNumber": "",
+  "detectedDeviceType": "Game Controller",
+  "numButtons": 13,
+  "numHats": 1,
+  "numAxes": 4,
+  "numBalls": 0,
+  "hasRumble": false,
+  "hasTriggerRumble": false,
+  "bindings": {
+    "axes": {
+      "mainStick": {
+        "intendedHand": "right",
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "middle",
+          "placementY": "top",
+          "placementZ": "middle"
         },
-        "buttons": {
-            "r1": {
-                "location": {
-                    "part": "mainStick",
-                    "placementX": "middle",
-                    "placementY": "top",
-                    "placementZ": "back"
-                },
-                "altName": "mainTrigger",
-                "type": "button",
-                "index": 5
-            },
-            "l1": {
-                "location": {
-                    "part": "mainStick",
-                    "placementX": "middle",
-                    "placementY": "top",
-                    "placementZ": "front"
-                },
-                "altName": "2",
-                "type": "button",
-                "index": 4
-            },
-            "r3": {
-                "location": {
-                    "part": "mainStick",
-                    "placementX": "right",
-                    "placementY": "top",
-                    "placementZ": "back"
-                },
-                "altName": "3",
-                "type": "button",
-                "index": 11
-            },
-            "l3": {
-                "location": {
-                    "part": "mainStick",
-                    "placementX": "right",
-                    "placementY": "top",
-                    "placementZ": "front"
-                },
-                "altName": "4",
-                "type": "button",
-                "index": 10
-            },
-            "5": {
-                "location": {
-                    "part": "mainStickBase",
-                    "placementX": "left",
-                    "placementY": "top",
-                    "placementZ": "back"
-                },
-                "type": "button",
-                "index": 0
-            },
-            "6": {
-                "location": {
-                    "part": "mainStickBase",
-                    "placementX": "left",
-                    "placementY": "top",
-                    "placementZ": "back"
-                },
-                "type": "button",
-                "index": 1
-            },
-            "7": {
-                "location": {
-                    "part": "mainStickBase",
-                    "placementX": "left",
-                    "placementY": "top",
-                    "placementZ": "back"
-                },
-                "type": "button",
-                "index": 2
-            },
-            "8": {
-                "location": {
-                    "part": "mainStickBase",
-                    "placementX": "left",
-                    "placementY": "top",
-                    "placementZ": "back"
-                },
-                "type": "button",
-                "index": 3
-            },
-            "r2": {
-                "location": {
-                    "part": "mainStickBase",
-                    "placementX": "left",
-                    "placementY": "top",
-                    "placementZ": "middle"
-                },
-                "altName": "9",
-                "type": "button",
-                "index": 7
-            },
-            "l2": {
-                "location": {
-                    "part": "mainStickBase",
-                    "placementX": "left",
-                    "placementY": "top",
-                    "placementZ": "middle"
-                },
-                "altName": "10",
-                "type": "button",
-                "index": 6
-            },
-            "select": {
-                "location": {
-                    "part": "mainStickBase",
-                    "placementX": "right",
-                    "placementY": "top",
-                    "placementZ": "front"
-                },
-                "altName": "11",
-                "type": "button",
-                "index": 8
-            },
-            "start": {
-                "location": {
-                    "part": "mainStickBase",
-                    "placementX": "right",
-                    "placementY": "top",
-                    "placementZ": "front"
-                },
-                "altName": "12",
-                "type": "button",
-                "index": 9
-            }
+        "x": {
+          "type": "axis",
+          "index": 0
         },
-        "hats": {
-            "pov": {
-                "location": {
-                    "part": "mainStick",
-                    "placementX": "left",
-                    "placementY": "top",
-                    "placementZ": "front"
-                },
-                "type": "hat",
-                "index": 0
-            }
+        "y": {
+          "type": "axis",
+          "index": 1
         },
-        "special": {
-            "platformToggle": {
-                "location": {
-                    "part": "mainStickBase",
-                    "placementX": "middle",
-                    "placementY": "middle",
-                    "placementZ": "back"
-                },
-                "values": [
-                    "pc",
-                    "ps3"
-                ]
-            }
+        "twist": {
+          "type": "axis",
+          "index": 2
         }
+      },
+      "miniThrottle": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "left",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "y": {
+          "type": "axis",
+          "index": 3
+        }
+      }
+    },
+    "buttons": {
+      "r1": {
+        "location": {
+          "part": "mainStick",
+          "placementX": "middle",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "altName": "mainTrigger",
+        "type": "button",
+        "index": 5
+      },
+      "l1": {
+        "location": {
+          "part": "mainStick",
+          "placementX": "middle",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "altName": "2",
+        "type": "button",
+        "index": 4
+      },
+      "r3": {
+        "location": {
+          "part": "mainStick",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "altName": "3",
+        "type": "button",
+        "index": 11
+      },
+      "l3": {
+        "location": {
+          "part": "mainStick",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "altName": "4",
+        "type": "button",
+        "index": 10
+      },
+      "5": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "left",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "type": "button",
+        "index": 0
+      },
+      "6": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "left",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "type": "button",
+        "index": 1
+      },
+      "7": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "left",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "type": "button",
+        "index": 2
+      },
+      "8": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "left",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "type": "button",
+        "index": 3
+      },
+      "r2": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "left",
+          "placementY": "top",
+          "placementZ": "middle"
+        },
+        "altName": "9",
+        "type": "button",
+        "index": 7
+      },
+      "l2": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "left",
+          "placementY": "top",
+          "placementZ": "middle"
+        },
+        "altName": "10",
+        "type": "button",
+        "index": 6
+      },
+      "select": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "altName": "11",
+        "type": "button",
+        "index": 8
+      },
+      "start": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "altName": "12",
+        "type": "button",
+        "index": 9
+      }
+    },
+    "hats": {
+      "pov": {
+        "location": {
+          "part": "mainStick",
+          "placementX": "left",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "hat",
+        "index": 0
+      }
+    },
+    "special": {
+      "platformToggle": {
+        "valueForProfile": "ps3",
+        "driverReported": "onReconnect",
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "middle",
+          "placementY": "middle",
+          "placementZ": "back"
+        },
+        "values": [
+          "pc",
+          "ps3"
+        ]
+      }
     }
+  }
 }

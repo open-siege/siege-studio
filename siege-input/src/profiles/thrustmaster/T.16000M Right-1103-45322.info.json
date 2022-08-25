@@ -226,6 +226,8 @@
     },
     "special": {
       "handToggle": {
+        "valueForProfile": "right",
+        "driverReported": "no",
         "location": {
           "part": "mainStickBase",
           "placementX": "right",

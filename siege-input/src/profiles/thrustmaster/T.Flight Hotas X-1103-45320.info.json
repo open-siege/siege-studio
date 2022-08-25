@@ -191,6 +191,8 @@
     },
     "special": {
       "platformToggle": {
+        "valueForProfile": "pc",
+        "driverReported": "onReconnect",
         "location": {
           "part": "mainStickBase",
           "placementX": "middle",
