@@ -13,5 +13,40 @@
     "numAxes": 3,
     "numBalls": 0,
     "hasRumble": false,
-    "hasTriggerRumble": false
+    "hasTriggerRumble": false,
+    "bindings": {
+        "axes": {
+            "pedals": {
+                "leftPedal": {
+                    "type": "axis",
+                    "index": 0,
+                    "altName": "brake"
+                },
+                "rightPedal": {
+                    "type": "axis",
+                    "index": 1,
+                    "altName": "accelerator"
+                },
+                "rudder": {
+                    "type": "axis",
+                    "index": 2,
+                    "altName": "clutch"
+                }
+            }
+        },
+        "special": {
+            "deviceToggle": {
+                "location": {
+                    "part": "adapter",
+                    "placementX": "right",
+                    "placementY": "bottom",
+                    "placementZ": "middle"
+                },
+                "values": [
+                    "car",
+                    "plane"
+                ]
+            }
+        }
+    }
 }
