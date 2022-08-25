@@ -35,10 +35,6 @@
                 "twist": {
                     "type": "axis",
                     "index": 3
-                },
-                "miniRudder": {
-                    "type": "axis",
-                    "index": 4
                 }
             },
             "mainThrottle": {
@@ -51,6 +47,10 @@
                 "y": {
                     "type": "axis",
                     "index": 2
+                },
+                "miniRudder": {
+                    "type": "axis",
+                    "index": 4
                 }
             }
         },
