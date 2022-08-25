@@ -1,52 +1,54 @@
 {
-    "fileVersion": 1,
-    "fileType": "deviceInfo",
-    "deviceName": "T-Pedals",
-    "deviceGuid": "030000004f04000078b6000000000000",
-    "vendorId": "0x044f",
-    "productId": "0xb678",
-    "productVersion": 0,
-    "serialNumber": "",
-    "detectedDeviceType": "Unknown",
-    "numButtons": 0,
-    "numHats": 0,
-    "numAxes": 3,
-    "numBalls": 0,
-    "hasRumble": false,
-    "hasTriggerRumble": false,
-    "bindings": {
-        "axes": {
-            "pedals": {
-                "brake": {
-                    "type": "axis",
-                    "index": 0,
-                    "altName": "leftPedal"
-                },
-                "accelerator": {
-                    "type": "axis",
-                    "index": 1,
-                    "altName": "rightPedal"
-                },
-                "clutch": {
-                    "type": "axis",
-                    "index": 2,
-                    "altName": "rudder"
-                }
-            }
+  "fileVersion": 1,
+  "fileType": "deviceInfo",
+  "deviceName": "T-Pedals",
+  "deviceGuid": "030000004f04000078b6000000000000",
+  "vendorId": "0x044f",
+  "productId": "0xb678",
+  "productVersion": 0,
+  "serialNumber": "",
+  "detectedDeviceType": "Unknown",
+  "numButtons": 0,
+  "numHats": 0,
+  "numAxes": 3,
+  "numBalls": 0,
+  "hasRumble": false,
+  "hasTriggerRumble": false,
+  "bindings": {
+    "axes": {
+      "pedals": {
+        "brake": {
+          "type": "axis",
+          "index": 0,
+          "altName": "leftPedal"
         },
-        "special": {
-            "deviceToggle": {
-                "location": {
-                    "part": "adapter",
-                    "placementX": "right",
-                    "placementY": "bottom",
-                    "placementZ": "middle"
-                },
-                "values": [
-                    "car",
-                    "plane"
-                ]
-            }
+        "accelerator": {
+          "type": "axis",
+          "index": 1,
+          "altName": "rightPedal"
+        },
+        "clutch": {
+          "type": "axis",
+          "index": 2,
+          "altName": "rudder"
         }
+      }
+    },
+    "special": {
+      "deviceToggle": {
+        "valueForProfile": "car",
+        "driverReported": "onReconnect",
+        "location": {
+          "part": "adapter",
+          "placementX": "right",
+          "placementY": "bottom",
+          "placementZ": "middle"
+        },
+        "values": [
+          "car",
+          "plane"
+        ]
+      }
     }
+  }
 }
