@@ -17,6 +17,7 @@
   "bindings": {
     "axes": {
       "mainStick": {
+        "intendedHand": "left",
         "location": {
           "part": "mainStickBase",
           "placementX": "middle",
