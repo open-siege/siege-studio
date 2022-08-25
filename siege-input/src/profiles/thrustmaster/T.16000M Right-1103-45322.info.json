@@ -1,17 +1,241 @@
 {
-    "fileVersion": 1,
-    "fileType": "deviceInfo",
-    "deviceName": "T.16000M",
-    "deviceGuid": "030000004f0400000ab1000000000000",
-    "vendorId": "0x044f",
-    "productId": "0xb10a",
-    "productVersion": 0,
-    "serialNumber": "",
-    "detectedDeviceType": "Flight Stick",
-    "numButtons": 16,
-    "numHats": 1,
-    "numAxes": 4,
-    "numBalls": 0,
-    "hasRumble": false,
-    "hasTriggerRumble": false
+  "fileVersion": 1,
+  "fileType": "deviceInfo",
+  "deviceName": "T.16000M",
+  "deviceGuid": "030000004f0400000ab1000000000000",
+  "vendorId": "0x044f",
+  "productId": "0xb10a",
+  "productVersion": 0,
+  "serialNumber": "",
+  "detectedDeviceType": "Flight Stick",
+  "numButtons": 16,
+  "numHats": 1,
+  "numAxes": 4,
+  "numBalls": 0,
+  "hasRumble": false,
+  "hasTriggerRumble": false,
+  "bindings": {
+    "axes": {
+      "mainStick": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "middle",
+          "placementY": "top",
+          "placementZ": "middle"
+        },
+        "x": {
+          "type": "axis",
+          "index": 0
+        },
+        "y": {
+          "type": "axis",
+          "index": 1
+        },
+        "twist": {
+          "type": "axis",
+          "index": 2
+        }
+      },
+      "miniThrottle": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "middle",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "y": {
+          "type": "axis",
+          "index": 3
+        }
+      }
+    },
+    "buttons": {
+      "mainTrigger": {
+        "location": {
+          "part": "mainStick",
+          "placementX": "middle",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "type": "button",
+        "index": 0
+      },
+      "2": {
+        "location": {
+          "part": "mainStick",
+          "placementX": "middle",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "button",
+        "index": 1
+      },
+      "3": {
+        "location": {
+          "part": "mainStick",
+          "placementX": "left",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "button",
+        "index": 2
+      },
+      "4": {
+        "location": {
+          "part": "mainStick",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "button",
+        "index": 3
+      },
+      "5": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "left",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "type": "button",
+        "index": 4
+      },
+      "6": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "left",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "type": "button",
+        "index": 5
+      },
+      "7": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "left",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "type": "button",
+        "index": 6
+      },
+      "8": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "left",
+          "placementY": "top",
+          "placementZ": "middle"
+        },
+        "type": "button",
+        "index": 7
+      },
+      "9": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "left",
+          "placementY": "top",
+          "placementZ": "middle"
+        },
+        "type": "button",
+        "index": 8
+      },
+      "10": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "left",
+          "placementY": "top",
+          "placementZ": "middle"
+        },
+        "type": "button",
+        "index": 9
+      },
+      "11": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "type": "button",
+        "index": 10
+      },
+      "12": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "type": "button",
+        "index": 11
+      },
+      "13": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "type": "button",
+        "index": 12
+      },
+      "14": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "middle"
+        },
+        "type": "button",
+        "index": 13
+      },
+      "15": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "middle"
+        },
+        "type": "button",
+        "index": 14
+      },
+      "16": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "middle"
+        },
+        "type": "button",
+        "index": 15
+      }
+    },
+    "hats": {
+      "pov": {
+        "location": {
+          "part": "mainStick",
+          "placementX": "middle",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "hat",
+        "index": 0
+      }
+    },
+    "special": {
+      "handToggle": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "right",
+          "placementY": "bottom",
+          "placementZ": "back"
+        },
+        "values": [
+          "left",
+          "right"
+        ]
+      }
+    }
+  }
 }
