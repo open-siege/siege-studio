@@ -1,251 +1,252 @@
 {
-    "fileVersion": 1,
-    "fileType": "deviceInfo",
-    "deviceName": "T.Flight Hotas One",
-    "deviceGuid": "030000004f0400008db6000000000000",
-    "vendorId": "0x044f",
-    "productId": "0xb68d",
-    "productVersion": 0,
-    "serialNumber": "",
-    "detectedDeviceType": "Flight Stick",
-    "numButtons": 15,
-    "numHats": 1,
-    "numAxes": 8,
-    "numBalls": 0,
-    "hasRumble": false,
-    "hasTriggerRumble": false,
-    "bindings": {
-        "axes": {
-            "mainStick": {
-                "intendedHand": "right",
-                "location": {
-                    "part": "mainStickBase",
-                    "placementX": "middle",
-                    "placementY": "top",
-                    "placementZ": "middle"
-                },
-                "x": {
-                    "type": "axis",
-                    "index": 0
-                },
-                "y": {
-                    "type": "axis",
-                    "index": 1
-                },
-                "twist": {
-                    "type": "axis",
-                    "index": 5
-                }
-            },
-            "mainThrottle": {
-                "location": {
-                    "part": "mainThrottleBase",
-                    "placementX": "middle",
-                    "placementY": "top",
-                    "placementZ": "middle"
-                },
-                "y": {
-                    "type": "axis",
-                    "index": 2
-                },
-                "miniRudder": {
-                    "type": "axis",
-                    "index": 6
-                }
-            },
-            "externalPedals": {
-                "optional": true,
-                "leftPedal": {
-                    "type": "axis",
-                    "index": 4
-                },
-                "rightPedal": {
-                    "type": "axis",
-                    "index": 3
-                },
-                "rudder": {
-                    "type": "axis",
-                    "index": 7
-                }
-            }
+  "fileVersion": 1,
+  "fileType": "deviceInfo",
+  "deviceName": "T.Flight Hotas One",
+  "deviceGuid": "030000004f0400008db6000000000000",
+  "vendorId": "0x044f",
+  "productId": "0xb68d",
+  "productVersion": 0,
+  "serialNumber": "",
+  "detectedDeviceType": "Flight Stick",
+  "numButtons": 15,
+  "numHats": 1,
+  "numAxes": 8,
+  "numBalls": 0,
+  "hasRumble": false,
+  "hasTriggerRumble": false,
+  "bindings": {
+    "axes": {
+      "mainStick": {
+        "intendedHand": "right",
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "middle",
+          "placementY": "top",
+          "placementZ": "middle"
         },
-        "buttons": {
-            "mainTrigger": {
-                "location": {
-                    "part": "mainStick",
-                    "placementX": "middle",
-                    "placementY": "top",
-                    "placementZ": "back"
-                },
-                "type": "button",
-                "index": 0
-            },
-            "2": {
-                "location": {
-                    "part": "mainStick",
-                    "placementX": "middle",
-                    "placementY": "top",
-                    "placementZ": "front"
-                },
-                "type": "button",
-                "index": 1
-            },
-            "3": {
-                "location": {
-                    "part": "mainStick",
-                    "placementX": "right",
-                    "placementY": "top",
-                    "placementZ": "back"
-                },
-                "type": "button",
-                "index": 2
-            },
-            "4": {
-                "location": {
-                    "part": "mainStick",
-                    "placementX": "right",
-                    "placementY": "top",
-                    "placementZ": "front"
-                },
-                "type": "button",
-                "index": 3
-            },
-            "5": {
-                "location": {
-                    "part": "mainThrottle",
-                    "placementX": "right",
-                    "placementY": "top",
-                    "placementZ": "front"
-                },
-                "type": "button",
-                "index": 4
-            },
-            "6": {
-                "location": {
-                    "part": "mainThrottle",
-                    "placementX": "right",
-                    "placementY": "top",
-                    "placementZ": "front"
-                },
-                "type": "button",
-                "index": 5
-            },
-            "7": {
-                "location": {
-                    "part": "mainThrottle",
-                    "placementX": "right",
-                    "placementY": "top",
-                    "placementZ": "front"
-                },
-                "type": "button",
-                "index": 6
-            },
-            "8": {
-                "location": {
-                    "part": "mainThrottle",
-                    "placementX": "right",
-                    "placementY": "top",
-                    "placementZ": "front"
-                },
-                "type": "button",
-                "index": 7
-            },
-            "9": {
-                "location": {
-                    "part": "mainThrottle",
-                    "placementX": "right",
-                    "placementY": "top",
-                    "placementZ": "back"
-                },
-                "type": "button",
-                "index": 8
-            },
-            "10": {
-                "location": {
-                    "part": "mainThrottle",
-                    "placementX": "right",
-                    "placementY": "top",
-                    "placementZ": "back"
-                },
-                "type": "button",
-                "index": 9
-            },
-            "select": {
-                "location": {
-                    "part": "mainStickBase",
-                    "placementX": "middle",
-                    "placementY": "top",
-                    "placementZ": "front"
-                },
-                "type": "button",
-                "index": 10
-            },
-            "start": {
-                "location": {
-                    "part": "mainStickBase",
-                    "placementX": "middle",
-                    "placementY": "top",
-                    "placementZ": "front"
-                },
-                "type": "button",
-                "index": 11
-            },
-            "13": {
-                "location": {
-                    "part": "mainThrottleBase",
-                    "placementX": "right",
-                    "placementY": "top",
-                    "placementZ": "front"
-                },
-                "type": "button",
-                "index": 12
-            },
-            "14": {
-                "location": {
-                    "part": "mainThrottleBase",
-                    "placementX": "right",
-                    "placementY": "top",
-                    "placementZ": "front"
-                },
-                "type": "button",
-                "index": 13
-            },
-            "15": {
-                "location": {
-                    "part": "mainThrottleBase",
-                    "placementX": "right",
-                    "placementY": "top",
-                    "placementZ": "front"
-                },
-                "type": "button",
-                "index": 14
-            }
+        "x": {
+          "type": "axis",
+          "index": 0
         },
-        "hats": {
-            "pov": {
-                "location": {
-                    "part": "mainStick",
-                    "placementX": "left",
-                    "placementY": "top",
-                    "placementZ": "front"
-                },
-                "type": "hat",
-                "index": 0
-            }
+        "y": {
+          "type": "axis",
+          "index": 1
         },
-        "special": {
-            "platformToggle": {
-                "location": {
-                    "part": "mainStickBase",
-                    "placementX": "middle",
-                    "placementY": "middle",
-                    "placementZ": "back"
-                },
-                "values": [
-                    "pc",
-                    "ps3"
-                ]
-            }
+        "twist": {
+          "type": "axis",
+          "index": 5
         }
+      },
+      "mainThrottle": {
+        "intendedHand": "left",
+        "location": {
+          "part": "mainThrottleBase",
+          "placementX": "middle",
+          "placementY": "top",
+          "placementZ": "middle"
+        },
+        "y": {
+          "type": "axis",
+          "index": 2
+        },
+        "miniRudder": {
+          "type": "axis",
+          "index": 6
+        }
+      },
+      "externalPedals": {
+        "optional": true,
+        "leftPedal": {
+          "type": "axis",
+          "index": 4
+        },
+        "rightPedal": {
+          "type": "axis",
+          "index": 3
+        },
+        "rudder": {
+          "type": "axis",
+          "index": 7
+        }
+      }
+    },
+    "buttons": {
+      "mainTrigger": {
+        "location": {
+          "part": "mainStick",
+          "placementX": "middle",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "type": "button",
+        "index": 0
+      },
+      "2": {
+        "location": {
+          "part": "mainStick",
+          "placementX": "middle",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "button",
+        "index": 1
+      },
+      "3": {
+        "location": {
+          "part": "mainStick",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "type": "button",
+        "index": 2
+      },
+      "4": {
+        "location": {
+          "part": "mainStick",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "button",
+        "index": 3
+      },
+      "5": {
+        "location": {
+          "part": "mainThrottle",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "button",
+        "index": 4
+      },
+      "6": {
+        "location": {
+          "part": "mainThrottle",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "button",
+        "index": 5
+      },
+      "7": {
+        "location": {
+          "part": "mainThrottle",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "button",
+        "index": 6
+      },
+      "8": {
+        "location": {
+          "part": "mainThrottle",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "button",
+        "index": 7
+      },
+      "9": {
+        "location": {
+          "part": "mainThrottle",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "type": "button",
+        "index": 8
+      },
+      "10": {
+        "location": {
+          "part": "mainThrottle",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "type": "button",
+        "index": 9
+      },
+      "select": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "middle",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "button",
+        "index": 10
+      },
+      "start": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "middle",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "button",
+        "index": 11
+      },
+      "13": {
+        "location": {
+          "part": "mainThrottleBase",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "button",
+        "index": 12
+      },
+      "14": {
+        "location": {
+          "part": "mainThrottleBase",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "button",
+        "index": 13
+      },
+      "15": {
+        "location": {
+          "part": "mainThrottleBase",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "button",
+        "index": 14
+      }
+    },
+    "hats": {
+      "pov": {
+        "location": {
+          "part": "mainStick",
+          "placementX": "left",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "hat",
+        "index": 0
+      }
+    },
+    "special": {
+      "platformToggle": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "middle",
+          "placementY": "middle",
+          "placementZ": "back"
+        },
+        "values": [
+          "pc",
+          "ps3"
+        ]
+      }
     }
+  }
 }
