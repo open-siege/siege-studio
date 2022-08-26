@@ -34,7 +34,7 @@
         },
         "twist": {
           "type": "axis",
-          "index": 3
+          "index": 2
         }
       },
       "mainThrottle": {
@@ -47,11 +47,11 @@
         },
         "y": {
           "type": "axis",
-          "index": 2
+          "index": 3
         },
         "miniRudder": {
           "type": "axis",
-          "index": 4
+          "index": 2
         }
       }
     },
@@ -181,6 +181,16 @@
         },
         "type": "button",
         "index": 9
+      },
+      "home": {
+        "location": {
+          "part": "mainThrottleBase",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "button",
+        "index": 12
       }
     },
     "hats": {
