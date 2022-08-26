@@ -63,6 +63,7 @@
           "placementY": "top",
           "placementZ": "back"
         },
+        "altName": "r1",
         "type": "button",
         "index": 0
       },
@@ -73,6 +74,7 @@
           "placementY": "top",
           "placementZ": "front"
         },
+        "altName": "l1",
         "type": "button",
         "index": 1
       },
@@ -83,6 +85,7 @@
           "placementY": "top",
           "placementZ": "back"
         },
+        "altName": "r3",
         "type": "button",
         "index": 2
       },
@@ -93,6 +96,7 @@
           "placementY": "top",
           "placementZ": "front"
         },
+        "altName": "l3",
         "type": "button",
         "index": 3
       },
@@ -143,6 +147,7 @@
           "placementY": "top",
           "placementZ": "back"
         },
+        "altName": "r2",
         "type": "button",
         "index": 8
       },
@@ -153,6 +158,7 @@
           "placementY": "top",
           "placementZ": "back"
         },
+        "altName": "l2",
         "type": "button",
         "index": 9
       },
