@@ -115,7 +115,7 @@
                     "part": "mainStickBase",
                     "placementX": "left",
                     "placementY": "top",
-                    "placementZ": "middle"
+                    "placementZ": "back"
                 },
                 "type": "button",
                 "index": 6
@@ -125,7 +125,7 @@
                     "part": "mainStickBase",
                     "placementX": "left",
                     "placementY": "top",
-                    "placementZ": "middle"
+                    "placementZ": "back"
                 },
                 "type": "button",
                 "index": 7
