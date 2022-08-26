@@ -19,12 +19,12 @@
       "pedals": {
         "leftPedal": {
           "type": "axis",
-          "index": 0,
+          "index": 1,
           "altName": "brake"
         },
         "rightPedal": {
           "type": "axis",
-          "index": 1,
+          "index": 0,
           "altName": "accelerator"
         },
         "rudder": {
