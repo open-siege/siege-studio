@@ -1,17 +1,270 @@
 {
-    "fileVersion": 1,
-    "fileType": "deviceInfo",
-    "deviceName": "Xbox One Game Controller",
-    "deviceGuid": "030000004f0400008cb6000000007704",
-    "vendorId": "0x044f",
-    "productId": "0xb68c",
-    "productVersion": 0,
-    "serialNumber": "",
-    "detectedDeviceType": "Flight Stick",
-    "numButtons": 78,
-    "numHats": 0,
-    "numAxes": 16,
-    "numBalls": 0,
-    "hasRumble": false,
-    "hasTriggerRumble": false
+  "fileVersion": 1,
+  "fileType": "deviceInfo",
+  "deviceName": "Xbox One Game Controller",
+  "deviceGuid": "030000004f0400008cb6000000007704",
+  "vendorId": "0x044f",
+  "productId": "0xb68c",
+  "productVersion": 0,
+  "serialNumber": "",
+  "detectedDeviceType": "Flight Stick",
+  "numButtons": 78,
+  "numHats": 0,
+  "numAxes": 16,
+  "numBalls": 0,
+  "hasRumble": false,
+  "hasTriggerRumble": false,
+  "bindings": {
+    "axes": {
+      "mainStick": {
+        "intendedHand": "right",
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "middle",
+          "placementY": "top",
+          "placementZ": "middle"
+        },
+        "x": {
+          "type": "axis",
+          "index": 3
+        },
+        "y": {
+          "type": "axis",
+          "index": 2
+        },
+        "twist": {
+          "type": "axis",
+          "index": 1
+        }
+      },
+      "mainThrottle": {
+        "intendedHand": "left",
+        "location": {
+          "part": "mainThrottleBase",
+          "placementX": "middle",
+          "placementY": "top",
+          "placementZ": "middle"
+        },
+        "y": {
+          "type": "axis",
+          "index": 0
+        },
+        "miniRudder": {
+          "type": "axis",
+          "index": 4
+        }
+      },
+      "externalPedals": {
+        "optional": true,
+        "leftPedal": {
+          "type": "axis",
+          "index": 5
+        },
+        "rightPedal": {
+          "type": "axis",
+          "index": 6
+        },
+        "rudder": {
+          "type": "axis",
+          "index": 1
+        }
+      }
+    },
+    "buttons": {
+      "f1": {
+        "location": {
+          "part": "mainStick",
+          "placementX": "middle",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "altName": "mainTrigger",
+        "type": "button",
+        "index": 8
+      },
+      "f2": {
+        "location": {
+          "part": "mainStick",
+          "placementX": "middle",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "altName": "2",
+        "type": "button",
+        "index": 9
+      },
+      "b1": {
+        "location": {
+          "part": "mainStick",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "altName": "3",
+        "type": "button",
+        "index": 14
+      },
+      "b2": {
+        "location": {
+          "part": "mainStick",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "altName": "4",
+        "type": "button",
+        "index": 15
+      },
+      "x": {
+        "location": {
+          "part": "mainThrottle",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "altName": "5",
+        "type": "button",
+        "index": 2
+      },
+      "a": {
+        "location": {
+          "part": "mainThrottle",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "altName": "6",
+        "type": "button",
+        "index": 0
+      },
+      "b": {
+        "location": {
+          "part": "mainThrottle",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "altName": "7",
+        "type": "button",
+        "index": 1
+      },
+      "y": {
+        "location": {
+          "part": "mainThrottle",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "altName": "8",
+        "type": "button",
+        "index": 3
+      },
+      "b3": {
+        "location": {
+          "part": "mainThrottle",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "altName": "9",
+        "type": "button",
+        "index": 16
+      },
+      "b4": {
+        "location": {
+          "part": "mainThrottle",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "back"
+        },
+        "altName": "10",
+        "type": "button",
+        "index": 17
+      },
+      "select": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "middle",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "button",
+        "index": 6
+      },
+      "start": {
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "middle",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "button",
+        "index": 7
+      },
+      "prev": {
+        "location": {
+          "part": "mainThrottleBase",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "altName": "13",
+        "type": "button",
+        "index": 4
+      },
+      "next": {
+        "location": {
+          "part": "mainThrottleBase",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "altName": "14",
+        "type": "button",
+        "index": 5
+      },
+      "b5": {
+        "location": {
+          "part": "mainThrottleBase",
+          "placementX": "right",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "altName": "15",
+        "type": "button",
+        "index": 18
+      }
+    },
+    "hats": {
+      "pov": {
+        "location": {
+          "part": "mainStick",
+          "placementX": "left",
+          "placementY": "top",
+          "placementZ": "front"
+        },
+        "type": "button",
+        "indexUp": 10,
+        "indexRight": 11,
+        "indexDown": 12,
+        "indexLeft": 13
+      }
+    },
+    "special": {
+      "platformToggle": {
+        "valueForProfile": "xbox",
+        "driverReported": "onReconnect",
+        "location": {
+          "part": "mainStickBase",
+          "placementX": "middle",
+          "placementY": "middle",
+          "placementZ": "back"
+        },
+        "values": [
+          "pc",
+          "xbox"
+        ]
+      }
+    }
+  }
 }
