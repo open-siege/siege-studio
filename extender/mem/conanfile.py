@@ -4,7 +4,7 @@ import os.path
 
 class LocalConanFile(ConanFile):
     name = "darkstar-mem"
-    version = "0.6.2"
+    version = "0.6.3"
     url = "https://github.com/open-siege/open-siege"
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"

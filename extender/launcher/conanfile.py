@@ -5,7 +5,7 @@ import glob
 
 class LocalConanFile(ConanFile):
     name = "starsiege-launcher"
-    version = "0.6.2"
+    version = "0.6.3"
     build_requires = "cmake/3.22.0"
     settings = "os", "compiler", "build_type", "arch"
     requires = "detours/4.0.1@microsoft/stable"

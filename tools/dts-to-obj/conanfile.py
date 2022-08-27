@@ -5,13 +5,13 @@ import os.path
 
 class LocalConanFile(ConanFile):
     name = "dts-to-obj"
-    version = "0.6.2"
+    version = "0.6.3"
     url = "https://github.com/open-siege/open-siege"
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
     build_requires = "cmake/3.22.0"
     settings = "os", "compiler", "build_type", "arch"
-    requires = "3space/0.6.2"
+    requires = "3space/0.6.3"
     generators = "cmake_find_package"
 
     def requirements(self):
