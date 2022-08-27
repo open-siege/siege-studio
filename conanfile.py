@@ -7,7 +7,7 @@ import json
 class LocalConanFile(ConanFile):
     settings = "os", "compiler", "build_type", "arch", "arch_build"
     build_requires = "cmake/3.22.0"
-    version = "0.6.2"
+    version = "0.6.3"
 
     def requirements(self):
         args = sys.argv[3:]
@@ -45,7 +45,7 @@ class LocalConanFile(ConanFile):
             "cd ..",
             "mkdir cmake",
             "cd cmake",
-            f"conan install 3space/0.6.2@/ -g cmake_find_package {settings}"
+            f"conan install 3space/0.6.3@/ -g cmake_find_package {settings}"
         ]
         self.run(" && ".join(commands), run_environment=True)
 
