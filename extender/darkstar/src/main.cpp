@@ -8,17 +8,31 @@
 #include <array>
 #include <map>
 #include <atomic>
+#include <cstdlib>
 #include <windows.h>
 #include <detours.h>
 #include "Hook/Game.hpp"
 #include "Hook/GameConsole.hpp"
 #include "Registry.hpp"
-#include "Music.hpp"
+#include "System.hpp"
+#include "Input/winmm.hpp"
 
 static std::atomic_bool game_extended = false;
 
 void runExtender() noexcept
 {
+  const auto* mode = std::getenv("DARKSTAR_MODE");
+
+  if (!mode)
+  {
+    return;
+  }
+
+  if (mode != std::string_view{"starsiege"})
+  {
+    return;
+  }
+
   try
   {
     std::ofstream file{ "test.log" };
@@ -226,13 +240,17 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, LPVOID reserved)
 {
   if (DetourIsHelperProcess())
   {
+    file << "Detour helper process\n";
     return TRUE;
   }
 
   static auto RegistryFunctions = GetRegistryDetours();
+  static auto WinmmFunctions = winmm::GetWinmmDetours();
+  static auto SystemFunctions = core::GetSystemDetours();
 
   if (dwReason == DLL_PROCESS_ATTACH)
   {
+    file << "Attaching to dll\n";
     DetourRestoreAfterWith();
 
     DetourTransactionBegin();
@@ -240,15 +258,20 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, LPVOID reserved)
 
     std::for_each(functions.begin(), functions.end(), DetourAttach);
     std::for_each(RegistryFunctions.begin(), RegistryFunctions.end(), DetourAttach);
+    std::for_each(WinmmFunctions.begin(), WinmmFunctions.end(), DetourAttach);
+    std::for_each(SystemFunctions.begin(), SystemFunctions.end(), DetourAttach);
 
     DetourTransactionCommit();
   }
   else if (dwReason == DLL_PROCESS_DETACH)
   {
+    file << "Detaching from dll\n";
     DetourTransactionBegin();
     DetourUpdateThread(GetCurrentThread());
     std::for_each(functions.begin(), functions.end(), DetourDetach);
     std::for_each(RegistryFunctions.begin(), RegistryFunctions.end(), DetourDetach);
+    std::for_each(WinmmFunctions.begin(), WinmmFunctions.end(), DetourDetach);
+    std::for_each(SystemFunctions.begin(), SystemFunctions.end(), DetourDetach);
     DetourTransactionCommit();
   }
 
