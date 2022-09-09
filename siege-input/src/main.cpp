@@ -15,10 +15,10 @@
 
 #include <SDL.h>
 #include <imgui.h>
-#include "render.hpp"
+#include "renderer/renderer.hpp"
 #include "imgui_impl_sdl.h"
 
-#include "platform.hpp"
+#include "platform/platform.hpp"
 
 inline auto to_array(const SDL_JoystickGUID& guid)
 {
