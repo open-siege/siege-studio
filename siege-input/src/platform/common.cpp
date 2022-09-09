@@ -2,7 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <cstdlib>
-#include "platform.hpp"
+#include "platform/platform.hpp"
 
 using json =  nlohmann::ordered_json;
 

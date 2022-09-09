@@ -24,7 +24,6 @@ SDL_JoystickType Siege_JoystickGetType(SDL_Joystick* joystick)
 
     auto vendor_product = std::basic_string<std::uint16_t>{SDL_JoystickGetVendor(joystick), SDL_JoystickGetProduct(joystick)};
 
-
     auto existing = cached_types.find(vendor_product);
 
     if (existing != cached_types.end())
