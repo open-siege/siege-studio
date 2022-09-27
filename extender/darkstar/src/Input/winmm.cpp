@@ -26,8 +26,6 @@ namespace winmm
     invalid_param = MMSYSERR_INVALPARAM
   };
 
-  static std::shared_ptr<void> joystick_subsystem;
-
   static auto* TrueJoyGetNumDevs = joyGetNumDevs;
   static auto* TrueJoyGetDevCapsA = joyGetDevCapsA;
   static auto* TrueJoyGetPos = joyGetPos;
@@ -36,17 +34,19 @@ namespace winmm
 
   void init_joysticks()
   {
-      if (!joystick_subsystem)
-      {
-          auto result = SDL_InitSubSystem(SDL_INIT_JOYSTICK);
-          if (result == 0)
-          {
-              //joystick_subsystem.reset(reinterpret_cast<void*>(SDL_INIT_JOYSTICK), [](void*){ SDL_QuitSubSystem(SDL_INIT_JOYSTICK);});
-              std::ofstream log("darkstar.winmm.log", std::ios::app);
-              log << "SDL Joystick sub system init\n";
-              SDL_JoystickUpdate();
-          }
-      }
+    if (SDL_WasInit(SDL_INIT_JOYSTICK) & SDL_INIT_JOYSTICK)
+    {
+      return;
+    }
+
+    auto result = SDL_InitSubSystem(SDL_INIT_JOYSTICK);
+    if (result == 0)
+    {
+      //joystick_subsystem.reset(reinterpret_cast<void*>(SDL_INIT_JOYSTICK), [](void*){ SDL_QuitSubSystem(SDL_INIT_JOYSTICK);});
+      std::ofstream log("darkstar.winmm.log", std::ios::trunc);
+      log << "SDL Joystick sub system init\n";
+      SDL_JoystickUpdate();
+    }
   }
 
   UINT WINAPI DarkJoyGetNumDevs()
