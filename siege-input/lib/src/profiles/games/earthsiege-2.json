@@ -1,0 +1,9 @@
+{
+  "executables": ["ES.EXE", "VSHELL.EXE", "DBSIM.EXE"],
+  "supportsJoysticks": true,
+  "apiType": "winmm",
+  "limits": {
+    "maxAxis": 4,
+    "maxButtons": 8
+  }
+}
