@@ -8,6 +8,7 @@
   "productVersion": 0,
   "serialNumber": "",
   "detectedDeviceType": "Unknown",
+  "actualDeviceType": "Throttle",
   "numButtons": 31,
   "numHats": 0,
   "numAxes": 7,
