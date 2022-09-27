@@ -28,8 +28,6 @@ namespace winmm
 
   static std::shared_ptr<void> joystick_subsystem;
 
-  static bool detour_enabled = true;
-
   static auto* TrueJoyGetNumDevs = joyGetNumDevs;
   static auto* TrueJoyGetDevCapsA = joyGetDevCapsA;
   static auto* TrueJoyGetPos = joyGetPos;
@@ -56,16 +54,8 @@ namespace winmm
     init_joysticks();
     std::ofstream log("darkstar.winmm.log", std::ios::app);
 
-    if (!detour_enabled)
-    {
-      log << "Calling TrueJoyGetNumDevs\n";
-      return TrueJoyGetNumDevs();
-    }
-
-    detour_enabled = false;
     auto result = SDL_NumJoysticks();
     log << "DarkJoyGetNumDevs: " << result << '\n';
-    detour_enabled = true;
 
     log << "DarkJoyGetDevCapsA returning \n";
     return result;
@@ -80,12 +70,6 @@ namespace winmm
     std::ofstream log("darkstar.winmm.log", std::ios::app);
     log << "DarkJoyGetDevCapsA: joy_id=" << joy_id << '\n';
 
-    if (!detour_enabled)
-    {
-      log << "Calling TrueJoyGetDevCapsA\n";
-      return joystickresult_t(TrueJoyGetDevCapsA(joy_id, caps, size));
-    }
-
     if (!caps || size < sizeof(JOYCAPSA))
     {
       return joystickresult_t::invalid_param;
@@ -97,13 +81,17 @@ namespace winmm
       joy_id = 0;
     }
 
-    detour_enabled = false;
-    auto temp = SDL_JoystickOpen(0);
+    if (joy_id > std::size_t(SDL_NumJoysticks() - 1))
+    {
+      return joystickresult_t::no_driver;
+    }
+
+    auto temp = SDL_JoystickOpen(int(joy_id));
 
     if (!temp)
     {
       log << "Could not open joystick" << joy_id << '\n';
-      return joystickresult_t::bad_joystick_id;
+      return joystickresult_t::no_driver;
     }
 
     *caps = JOYCAPSA{};
@@ -125,7 +113,6 @@ namespace winmm
     log << "Found" << SDL_JoystickName(temp) << '\n';
     auto length = std::strlen(SDL_JoystickName(temp)) > sizeof(caps->szPname) ? sizeof(caps->szPname) : std::strlen(SDL_JoystickName(temp));
     std::memcpy(caps->szPname, SDL_JoystickName(temp), length);
-    detour_enabled = true;
 
     log << "DarkJoyGetDevCapsA returning \n";
     return joystickresult_t::no_error;
@@ -139,11 +126,6 @@ namespace winmm
     std::ofstream log("darkstar.winmm.log", std::ios::app);
     log << "DarkJoyGetPosEx: joy_id=" << joy_id << '\n';
 
-    if (!detour_enabled)
-    {
-      log << "Calling TrueJoyGetPos\n";
-      return joystickresult_t(TrueJoyGetPos(joy_id, info));
-    }
     log.flush();
 
     if (!info)
@@ -155,15 +137,14 @@ namespace winmm
 
     *info = JOYINFO{};
 
-    detour_enabled = false;
 
     SDL_JoystickUpdate();
 
-    auto temp = SDL_JoystickOpen(0);
+    auto temp = SDL_JoystickOpen(int(joy_id));
 
     if (!temp)
     {
-      return joystickresult_t::bad_joystick_id;
+      return joystickresult_t::unplugged;
     }
 
     info->wXpos = WORD(SDL_JoystickGetAxis(temp, 0));
@@ -190,8 +171,6 @@ namespace winmm
         info->wButtons |= JOY_BUTTON4;
     }
 
-    detour_enabled = true;
-
     return joystickresult_t::no_error;
   }
 
@@ -202,12 +181,6 @@ namespace winmm
   {
     std::ofstream log("darkstar.winmm.log", std::ios::app);
     log << "DarkJoyGetPosEx: joy_id=" << joy_id << '\n';
-
-    if (!detour_enabled)
-    {
-      log << "Calling TrueJoyGetPosEx\n";
-      return joystickresult_t(TrueJoyGetPosEx(joy_id, info));
-    }
 
     if (!info || info->dwSize < sizeof(JOYINFOEX))
     {
@@ -225,11 +198,17 @@ namespace winmm
 
     init_joysticks();
 
+    auto temp = SDL_JoystickOpen(int(joy_id));
+
+    if (!temp)
+    {
+      return joystickresult_t::unplugged;
+    }
+
     const auto flags = info->dwFlags;
+
     *info = JOYINFOEX{};
 
-    detour_enabled = false;
-    auto temp = SDL_JoystickOpen(0);
     SDL_JoystickUpdate();
 
     log << "Flags " << flags << '\n';
@@ -306,8 +285,6 @@ namespace winmm
       info->dwPOV = JOY_POVBACKWARD - JOY_POVRIGHT / 2;
     }
 
-
-    detour_enabled = true;
     return joystickresult_t::no_error;
   }
 
