@@ -2,6 +2,10 @@
 #define OPEN_SIEGE_PLATFORM_HPP
 
 #include <SDL.h>
+#include <string>
+#include <array>
+#include <unordered_map>
+#include <sstream>
 
 SDL_JoystickType Siege_JoystickGetType(SDL_Joystick* joystick);
 
