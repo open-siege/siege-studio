@@ -10,7 +10,7 @@ class LocalConanFile(ConanFile):
     version = "0.6.3"
     build_requires = "cmake/3.22.0"
     settings = "os", "compiler", "build_type", "arch"
-    requires = "detours/4.0.1@microsoft/stable", "nlohmann_json/3.10.5", "sdl/2.0.20", "catch2/2.13.8", "siege-input/0.6.3"
+    requires = "detours/4.0.1@microsoft/stable", "nlohmann_json/3.10.5", "catch2/2.13.8", "siege-input/0.6.3"
     generators = "cmake_find_package"
 
     def configure(self):
