@@ -35,11 +35,13 @@ class LocalConanFile(ConanFile):
         if os.path.exists("cmake"):
             shutil.rmtree("cmake")
 
-        targets = ["tools", "siege-shell", "siege-input", "3space-studio", "extender"]
-
         settings = ' '.join(args)
         commands = [
             "cd 3space",
+            f"conan install . {settings}",
+            "conan export .",
+            "cd ..",
+            "cd siege-input",
             f"conan install . {settings}",
             "conan export .",
             "cd ..",
@@ -49,6 +51,8 @@ class LocalConanFile(ConanFile):
         ]
         self.run(" && ".join(commands), run_environment=True)
 
+
+        targets = ["tools", "siege-shell", "siege-input", "3space-studio", "extender"]
 
         for target in targets:
             commands = [

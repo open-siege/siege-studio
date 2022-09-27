@@ -1,46 +1,33 @@
 from conans import ConanFile, CMake, tools
 import glob
 import os.path
-import sys
 
-# conan install . -s arch=x86
-
-class LocalConanFile(ConanFile):
-    name = "darkstar-core"
+class HelloImguiSfmlConanFile(ConanFile):
+    name = "siege-input"
     version = "0.6.3"
+    url = "https://github.com/open-siege/open-siege"
+    license = "MIT"
+    author = "Matthew Rindel (matthew@thesiegehub.com)"
     build_requires = "cmake/3.22.0"
+    # openssl is here to force package resolution issue with cmake on linux
+    requires = "imgui/cci.20220621+1.88.docking", "openssl/1.1.1o"
     settings = "os", "compiler", "build_type", "arch"
-    requires = "detours/4.0.1@microsoft/stable", "nlohmann_json/3.10.5", "sdl/2.0.20", "catch2/2.13.8", "siege-input/0.6.3"
     generators = "cmake_find_package"
 
     def configure(self):
-        self.options["sqlite3"].enable_json1 = True
         self.options["sdl"].shared = False
         self.options["sdl"].opengl = False
         self.options["sdl"].opengles = False
         self.options["sdl"].vulkan = False
         self.options["sdl"].sdl2main = False
 
-
-    def requirements(self):
-        args = sys.argv[3:]
-        for index, value in enumerate(args):
-            if value == "--profile":
-                profile = args[index + 1]
-                args[index + 1] = os.path.abspath(profile) if os.path.exists(profile) else profile
-
-        settings = ' '.join(args)
-        commands = [
-            f"cd music",
-            f"conan install . {settings}"
-        ]
-        self.run(" && ".join(commands), run_environment=True)
+        if self.settings.os == "Linux":
+            self.options["sdl"].wayland = False
 
     def build(self):
         cmake = CMake(self)
         cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         cmake.build()
-        cmake.test()
 
     def package(self):
         cmake = CMake(self)
@@ -48,7 +35,8 @@ class LocalConanFile(ConanFile):
         cmake.install()
 
     def imports(self):
+        self.copy("*.h", src="res/bindings/", dst="bindings")
+        self.copy("*.cpp", src="res/bindings/", dst="bindings")
         tools.rmdir("cmake")
         tools.mkdir("cmake")
         [tools.rename(file, f"cmake/{file}") for file in glob.glob("*.cmake")]
-
