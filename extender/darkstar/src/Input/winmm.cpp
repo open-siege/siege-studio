@@ -282,11 +282,11 @@ namespace winmm
     }
     else if (pov == SDL_HAT_LEFTUP)
     {
-      info->dwPOV = JOY_POVBACKWARD + JOY_POVRIGHT / 2;
+      info->dwPOV = JOY_POVLEFT + JOY_POVRIGHT / 2;
     }
     else if (pov == SDL_HAT_LEFTDOWN)
     {
-      info->dwPOV = JOY_POVBACKWARD - JOY_POVRIGHT / 2;
+      info->dwPOV = JOY_POVLEFT - JOY_POVRIGHT / 2;
     }
     else if (pov == SDL_HAT_RIGHT)
     {
