@@ -6,7 +6,7 @@
 
 struct binding
 {
-  std::size_t value;
+  std::size_t index;
   SDL_GameControllerBindType type;
 };
 
@@ -50,26 +50,56 @@ auto parse_profile(std::filesystem::path file_name)
   return nlohmann::json::parse(profile_file);
 }
 
-stick_indexes binding_for_primary_stick(const nlohmann::json& data)
+throttle_indexes default_binding_for_primary_stick(const nlohmann::json& data)
 {
-  auto default_binding = [&]() {
-    stick_indexes result{};
+  throttle_indexes result{};
 
-    if (data["numAxes"].get<int>() >= 2)
-    {
-      result.x.value = 0;
-      result.x.type = SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_AXIS;
-      result.y.value = 1;
-      result.y.type = SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_AXIS;
-    }
+  const auto num_axes = data["numAxes"].get<int>();
 
-    return result;
-  };
-
-  if (!data.contains("bindings") &&
-      !data["bindings"].contains("axes"))
+  if (num_axes >= 2)
   {
-    return default_binding();
+    result.x.index = 0;
+    result.x.type = SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_AXIS;
+    result.y.index = 1;
+    result.y.type = SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_AXIS;
+  }
+
+  if (num_axes == 4)
+  {
+    result.twist.emplace({ 2,
+      SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_AXIS });
+  }
+
+  return result;
+}
+
+stick_indexes default_binding_for_primary_throttle(const nlohmann::json& data)
+{
+  stick_indexes result{};
+
+  const auto num_axes = data["numAxes"].get<int>();
+
+
+  if (num_axes == 3)
+  {
+    result.y.index = 2;
+    result.y.type = SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_AXIS;
+  }
+
+  if (num_axes >= 4)
+  {
+    result.y.index = 3;
+    result.y.type = SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_AXIS;
+  }
+
+  return result;
+}
+
+std::optional<stick_indexes> binding_for_primary_stick(const nlohmann::json& data)
+{
+  if (!data.contains("bindings") && !data["bindings"].contains("axes"))
+  {
+    return std::nullopt;
   }
 
   const auto& axes = data["bindings"]["axes"];
@@ -77,22 +107,20 @@ stick_indexes binding_for_primary_stick(const nlohmann::json& data)
   auto parse_stick = [&](const nlohmann::json& stick) {
     if (!stick.contains("x") && !stick.contains("y"))
     {
-      return default_binding();
+      return std::nullopt;
     }
 
     stick_indexes result{};
 
-    result.x.value = stick["x"]["index"].get<std::size_t>();
+    result.x.index = stick["x"]["index"].get<std::size_t>();
     result.x.type = from_string(stick["x"]["type"].get<std::string>());
-    result.y.value = stick["y"]["index"].get<std::size_t>();
+    result.y.index = stick["y"]["index"].get<std::size_t>();
     result.y.type = from_string(stick["y"]["type"].get<std::string>());
 
     if (stick.contains("twist"))
     {
-      result.twist.emplace({
-        stick["twist"]["index"].get<std::size_t>(),
-        from_string(stick["twist"]["type"].get<std::string>())
-      });
+      result.twist.emplace({ stick["twist"]["index"].get<std::size_t>(),
+        from_string(stick["twist"]["type"].get<std::string>()) });
     }
   };
 
@@ -111,15 +139,14 @@ stick_indexes binding_for_primary_stick(const nlohmann::json& data)
     return parse_stick(axes["analogStick"]);
   }
 
-  return default_binding();
+  return std::nullopt;
 }
 
-throttle_indexes binding_for_primary_throttle(const nlohmann::json& data)
+std::optional<throttle_indexes> binding_for_primary_throttle(const nlohmann::json& data)
 {
-  if (!data.contains("bindings") &&
-      !data["bindings"].contains("axes"))
+  if (!data.contains("bindings") && !data["bindings"].contains("axes"))
   {
-    return {};
+    return std::nullopt;
   }
 
   const auto& axes = data["bindings"]["axes"];
@@ -127,15 +154,13 @@ throttle_indexes binding_for_primary_throttle(const nlohmann::json& data)
   auto parse_throttle = [&](const nlohmann::json& throttle) {
     throttle_indexes result{};
 
-    result.y.value = throttle["y"]["index"].get<std::size_t>();
+    result.y.index = throttle["y"]["index"].get<std::size_t>();
     result.y.type = from_string(throttle["y"]["type"].get<std::string>());
 
     if (throttle.contains("miniRudder"))
     {
-      result.mini_rudder.emplace({
-        throttle["miniRudder"]["index"].get<std::size_t>(),
-        from_string(throttle["miniRudder"]["type"].get<std::string>())
-      });
+      result.mini_rudder.emplace({ throttle["miniRudder"]["index"].get<std::size_t>(),
+        from_string(throttle["miniRudder"]["type"].get<std::string>()) });
     }
 
     return result;
@@ -145,16 +170,10 @@ throttle_indexes binding_for_primary_throttle(const nlohmann::json& data)
   {
     auto result = parse_throttle(axes["mainThrottle"]);
 
-    if (!result.mini_rudder.has_value() &&
-        axes.contains("miniRudder") &&
-        axes["miniRudder"].contains("location") &&
-        axes["miniRudder"]["location"].contains("part") &&
-        axes["miniRudder"]["location"]["part"] == "mainThrottle")
+    if (!result.mini_rudder.has_value() && axes.contains("miniRudder") && axes["miniRudder"].contains("location") && axes["miniRudder"]["location"].contains("part") && axes["miniRudder"]["location"]["part"] == "mainThrottle")
     {
-      result.mini_rudder.emplace({
-        axes["miniRudder"]["x"]["index"].get<std::size_t>(),
-        from_string(axes["miniRudder"]["x"]["type"].get<std::string>())
-      });
+      result.mini_rudder.emplace({ axes["miniRudder"]["x"]["index"].get<std::size_t>(),
+        from_string(axes["miniRudder"]["x"]["type"].get<std::string>()) });
     }
 
     return result;
@@ -165,35 +184,51 @@ throttle_indexes binding_for_primary_throttle(const nlohmann::json& data)
     return parse_throttle(axes["miniThrottle"]);
   }
 
-  return {};
+  return std::nullopt;
 }
 
 std::optional<binding> binding_for_primary_rudder(const nlohmann::json& data)
 {
-  auto result = binding_for_primary_stick(data).twist
-          .value_or(binding_for_primary_throttle(data).mini_rudder);
+  if (!data.contains("bindings") && !data["bindings"].contains("axes"))
+  {
+    return std::nullopt;
+  }
 
-  if (!data.contains("bindings") &&
-      !data["bindings"].contains("axes"))
+  std::optional<binding> result;
+
+  auto stick_binding = binding_for_primary_stick(data);
+
+  if (stick_binding.has_value() && stick_binding.value().twist.has_value())
+  {
+    result = stick_binding.value().twist;
+  }
+
+  if (!result.has_value())
+  {
+    auto throttle_binding = binding_for_primary_throttle(data);
+
+    if (throttle_binding.has_value() && throttle_binding.value().mini_rudder.has_value())
+    {
+      result = throttle_binding.value().mini_rudder;
+    }
+  }
+
+  if (result.has_value())
   {
     return result;
   }
 
   const auto& axes = data["bindings"]["axes"];
 
-  if (!result.has_value() &&
-      axes.contains("pedals") &&
-    axes["pedals"].contains("rudder"))
+  if (axes.contains("pedals") && axes["pedals"].contains("rudder"))
   {
     return {
       axes["pedals"]["rudder"]["index"].get<std::size_t>(),
-        from_string(axes["pedals"]["rudder"]["type"].get<std::string>())
+      from_string(axes["pedals"]["rudder"]["type"].get<std::string>())
     };
   }
 
-  if (!result.has_value() &&
-      axes.contains("externalPedals") &&
-      axes["externalPedals"].contains("rudder"))
+  if (axes.contains("externalPedals") && axes["externalPedals"].contains("rudder"))
   {
     return {
       axes["externalPedals"]["rudder"]["index"].get<std::size_t>(),
@@ -201,8 +236,7 @@ std::optional<binding> binding_for_primary_rudder(const nlohmann::json& data)
     };
   }
 
-  if (!result.has_value() &&
-      axes.contains("rudder"))
+  if (axes.contains("rudder"))
   {
     return {
       axes["rudder"]["index"].get<std::size_t>(),
@@ -210,5 +244,5 @@ std::optional<binding> binding_for_primary_rudder(const nlohmann::json& data)
     };
   }
 
-  return result;
+  return std::nullopt;
 }
