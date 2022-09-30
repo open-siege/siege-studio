@@ -14,6 +14,13 @@
 
 #include <platform/platform.hpp>
 
+auto joystick_get_or_open(int device_index)
+{
+  auto instance_id = SDL_JoystickGetDeviceInstanceID(device_index);
+
+  return instance_id == -1 || instance_id == 0 ? SDL_JoystickOpen(device_index) : SDL_JoystickFromInstanceID(device_index);
+}
+
 namespace winmm
 {
   enum class joystickresult_t : UINT
@@ -85,7 +92,7 @@ namespace winmm
       return joystickresult_t::no_driver;
     }
 
-    auto temp = SDL_JoystickOpen(int(joy_id));
+    auto temp = joystick_get_or_open(int(joy_id));
 
     if (!temp)
     {
@@ -137,7 +144,7 @@ namespace winmm
     *info = JOYINFO{};
 
 
-    auto temp = SDL_JoystickOpen(int(joy_id));
+    auto temp = joystick_get_or_open(int(joy_id));
 
     if (!temp)
     {
@@ -192,7 +199,7 @@ namespace winmm
 
     init_joysticks();
 
-    auto temp = SDL_JoystickOpen(int(joy_id));
+    auto temp = joystick_get_or_open(int(joy_id));
 
     if (!temp)
     {
