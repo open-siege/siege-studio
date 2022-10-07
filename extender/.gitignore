@@ -82,3 +82,4 @@ deactivate.bat
 deactivate.ps1
 deactivate.sh
 package
+/cmake-build-debug-visual-studio/

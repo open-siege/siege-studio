@@ -344,19 +344,29 @@ void Siege_InitVirtualJoysticks()
     // TODO: also add support for keyboard virtual joysticks (RIM_TYPEKEYBOARD)
     if (device.dwType == RIM_TYPEMOUSE)
     {
+      constexpr static HidAttributes default_attributes = { 0 };
+      auto attributes = DeviceNameToAttributes(device_name);
       VirtualJoystick joystick{};
 
-      auto joystick_index = SDL_JoystickAttachVirtual(
-        SDL_JoystickType::SDL_JOYSTICK_TYPE_FLIGHT_STICK,
-        device_info.mouse.fHasHorizontalWheel ? 4 : 3, // 3 for a mouse with a scroll wheels, 4 for a mouse with two scroll wheels
-        device_info.mouse.dwNumberOfButtons, 0);
+      SDL_VirtualJoystickDesc joy{};
+
+      joy.version = SDL_VIRTUAL_JOYSTICK_DESC_VERSION;
+      joy.type = SDL_JoystickType::SDL_JOYSTICK_TYPE_FLIGHT_STICK;
+      joy.naxes = device_info.mouse.fHasHorizontalWheel ? 4 : 3, // 3 for a mouse with a scroll wheels, 4 for a mouse with two scroll wheels;
+      joy.nbuttons = device_info.mouse.dwNumberOfButtons;
+      joy.nhats = 0;
+      joy.vendor_id = attributes.value_or(default_attributes).vendor_id;
+      joy.product_id = attributes.value_or(default_attributes).product_id;
+      joy.name = device_name.c_str();
+
+      int joystick_index = SDL_JoystickAttachVirtualEx(&joy);
 
       if (joystick_index != -1)
       {
         joystick.joystick = SDL_JoystickOpen(joystick_index);
 
         virtual_joysticks.emplace(device.hDevice, joystick);
-        joystick_mice.emplace(joystick.joystick, DeviceNameToAttributes(std::move(device_name)));
+        joystick_mice.emplace(joystick.joystick, attributes);
       }
     }
   }
