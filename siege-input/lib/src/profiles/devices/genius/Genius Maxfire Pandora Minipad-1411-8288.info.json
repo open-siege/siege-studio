@@ -1,0 +1,140 @@
+{
+    "fileVersion": 1,
+    "fileType": "deviceInfo",
+    "deviceName": "USB,2-axis 8-button gamepad",
+    "deviceGuid": "03000000830500006020000000000000",
+    "vendorId": "0x0583",
+    "productId": "0x2060",
+    "productVersion": 0,
+    "serialNumber": "",
+    "detectedDeviceType": "Flight Stick",
+    "detectedControllerType": "Unknown",
+    "numButtons": 8,
+    "numHats": 0,
+    "numAxes": 2,
+    "numBalls": 0,
+    "hasRumble": false,
+    "hasTriggerRumble": false,
+    "hasLed": false,
+    "numTouchpads": 0,
+    "hasAccelerometer": false,
+    "hasGyroscope": false,
+    "bindings": {
+        "axes": {
+            "leftStick": {
+                "x": {
+                    "type": "none",
+                    "index": 0
+                },
+                "y": {
+                    "type": "none",
+                    "index": 0
+                }
+            },
+            "rightStick": {
+                "x": {
+                    "type": "none",
+                    "index": 0
+                },
+                "y": {
+                    "type": "none",
+                    "index": 0
+                }
+            },
+            "leftTrigger": {
+                "type": "none",
+                "index": 0
+            },
+            "rightTrigger": {
+                "type": "none",
+                "index": 0
+            }
+        },
+        "buttons": {
+            "a": {
+                "type": "button",
+                "index": 0
+            },
+            "b": {
+                "type": "button",
+                "index": 1
+            },
+            "x": {
+                "type": "button",
+                "index": 2
+            },
+            "y": {
+                "type": "button",
+                "index": 3
+            },
+            "back": {
+                "type": "button",
+                "index": 6
+            },
+            "guide": {
+                "type": "none",
+                "index": 0
+            },
+            "start": {
+                "type": "button",
+                "index": 7
+            },
+            "leftstick": {
+                "type": "none",
+                "index": 0
+            },
+            "rightstick": {
+                "type": "none",
+                "index": 0
+            },
+            "leftshoulder": {
+                "type": "button",
+                "index": 4
+            },
+            "rightshoulder": {
+                "type": "button",
+                "index": 5
+            },
+            "dpup": {
+                "type": "axis",
+                "index": 1
+            },
+            "dpdown": {
+                "type": "axis",
+                "index": 1
+            },
+            "dpleft": {
+                "type": "axis",
+                "index": 0
+            },
+            "dpright": {
+                "type": "axis",
+                "index": 0
+            },
+            "misc1": {
+                "type": "none",
+                "index": 0
+            },
+            "paddle1": {
+                "type": "none",
+                "index": 0
+            },
+            "paddle2": {
+                "type": "none",
+                "index": 0
+            },
+            "paddle3": {
+                "type": "none",
+                "index": 0
+            },
+            "paddle4": {
+                "type": "none",
+                "index": 0
+            },
+            "touchpad": {
+                "type": "none",
+                "index": 0
+            }
+        }
+    }
+}
