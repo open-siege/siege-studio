@@ -289,7 +289,7 @@ std::optional<HidAttributes> DeviceNameToAttributes(std::string device_name)
   return std::nullopt;
 }
 
-void Siege_InitVirtualJoysticks()
+void Siege_InitVirtualJoysticksFromMice()
 {
   RAWINPUTDEVICE Rid[2];
 

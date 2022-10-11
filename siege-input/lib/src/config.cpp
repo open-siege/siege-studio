@@ -3,44 +3,26 @@
 #include <filesystem>
 #include <optional>
 #include <SDL.h>
+#include "config.hpp"
 
-struct binding
-{
-  std::size_t index;
-  SDL_GameControllerBindType type;
-};
-
-struct stick_indexes
-{
-  binding x;
-  binding y;
-  std::optional<binding> twist;
-};
-
-struct throttle_indexes
-{
-  binding y;
-  std::optional<binding> mini_rudder;
-};
-
-inline SDL_GameControllerType from_string(std::string_view type)
+inline SDL_GameControllerBindType from_string(std::string_view type)
 {
   if (type == "axis")
   {
-    return SDL_GameControllerType::SDL_CONTROLLER_BINDTYPE_AXIS;
+    return SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_AXIS;
   }
 
   if (type == "button")
   {
-    return SDL_GameControllerType::SDL_CONTROLLER_BINDTYPE_BUTTON;
+    return SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_BUTTON;
   }
 
   if (type == "hat")
   {
-    return SDL_GameControllerType::SDL_CONTROLLER_BINDTYPE_HAT;
+    return SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_HAT;
   }
 
-  return SDL_GameControllerType::SDL_CONTROLLER_BINDTYPE_NONE;
+  return SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_NONE;
 }
 
 
@@ -50,9 +32,14 @@ auto parse_profile(std::filesystem::path file_name)
   return nlohmann::json::parse(profile_file);
 }
 
-throttle_indexes default_binding_for_primary_stick(const nlohmann::json& data)
+std::optional<stick_indexes> default_binding_for_primary_stick(const nlohmann::json& data)
 {
-  throttle_indexes result{};
+  if (data.contains("numAxes"))
+  {
+    return std::nullopt;
+  }
+
+  stick_indexes result{};
 
   const auto num_axes = data["numAxes"].get<int>();
 
@@ -66,16 +53,23 @@ throttle_indexes default_binding_for_primary_stick(const nlohmann::json& data)
 
   if (num_axes == 4)
   {
-    result.twist.emplace({ 2,
-      SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_AXIS });
+    result.twist.emplace(binding{
+      2,
+      SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_AXIS
+    });
   }
 
   return result;
 }
 
-stick_indexes default_binding_for_primary_throttle(const nlohmann::json& data)
+std::optional<throttle_indexes> default_binding_for_primary_throttle(const nlohmann::json& data)
 {
-  stick_indexes result{};
+  if (data.contains("numAxes"))
+  {
+    return std::nullopt;
+  }
+
+  throttle_indexes result{};
 
   const auto num_axes = data["numAxes"].get<int>();
 
@@ -104,7 +98,7 @@ std::optional<stick_indexes> binding_for_primary_stick(const nlohmann::json& dat
 
   const auto& axes = data["bindings"]["axes"];
 
-  auto parse_stick = [&](const nlohmann::json& stick) {
+  auto parse_stick = [&](const nlohmann::json& stick) -> std::optional<stick_indexes> {
     if (!stick.contains("x") && !stick.contains("y"))
     {
       return std::nullopt;
@@ -119,9 +113,12 @@ std::optional<stick_indexes> binding_for_primary_stick(const nlohmann::json& dat
 
     if (stick.contains("twist"))
     {
-      result.twist.emplace({ stick["twist"]["index"].get<std::size_t>(),
+      result.twist.emplace(binding {
+        stick["twist"]["index"].get<std::size_t>(),
         from_string(stick["twist"]["type"].get<std::string>()) });
     }
+
+    return result;
   };
 
   if (axes.contains("mainStick"))
@@ -151,7 +148,12 @@ std::optional<throttle_indexes> binding_for_primary_throttle(const nlohmann::jso
 
   const auto& axes = data["bindings"]["axes"];
 
-  auto parse_throttle = [&](const nlohmann::json& throttle) {
+  auto parse_throttle = [&](const nlohmann::json& throttle) ->  std::optional<throttle_indexes> {
+    if (!throttle.contains("y"))
+    {
+      return std::nullopt;
+    }
+
     throttle_indexes result{};
 
     result.y.index = throttle["y"]["index"].get<std::size_t>();
@@ -159,7 +161,7 @@ std::optional<throttle_indexes> binding_for_primary_throttle(const nlohmann::jso
 
     if (throttle.contains("miniRudder"))
     {
-      result.mini_rudder.emplace({ throttle["miniRudder"]["index"].get<std::size_t>(),
+      result.mini_rudder.emplace( binding{ throttle["miniRudder"]["index"].get<std::size_t>(),
         from_string(throttle["miniRudder"]["type"].get<std::string>()) });
     }
 
@@ -170,9 +172,14 @@ std::optional<throttle_indexes> binding_for_primary_throttle(const nlohmann::jso
   {
     auto result = parse_throttle(axes["mainThrottle"]);
 
-    if (!result.mini_rudder.has_value() && axes.contains("miniRudder") && axes["miniRudder"].contains("location") && axes["miniRudder"]["location"].contains("part") && axes["miniRudder"]["location"]["part"] == "mainThrottle")
+    if (result.has_value() &&
+        !result.value().mini_rudder.has_value() &&
+        axes.contains("miniRudder") &&
+        axes["miniRudder"].contains("location") &&
+        axes["miniRudder"]["location"].contains("part") &&
+        axes["miniRudder"]["location"]["part"] == "mainThrottle")
     {
-      result.mini_rudder.emplace({ axes["miniRudder"]["x"]["index"].get<std::size_t>(),
+      result.value().mini_rudder.emplace(binding{ axes["miniRudder"]["x"]["index"].get<std::size_t>(),
         from_string(axes["miniRudder"]["x"]["type"].get<std::string>()) });
     }
 
@@ -222,7 +229,7 @@ std::optional<binding> binding_for_primary_rudder(const nlohmann::json& data)
 
   if (axes.contains("pedals") && axes["pedals"].contains("rudder"))
   {
-    return {
+    return binding{
       axes["pedals"]["rudder"]["index"].get<std::size_t>(),
       from_string(axes["pedals"]["rudder"]["type"].get<std::string>())
     };
@@ -230,7 +237,7 @@ std::optional<binding> binding_for_primary_rudder(const nlohmann::json& data)
 
   if (axes.contains("externalPedals") && axes["externalPedals"].contains("rudder"))
   {
-    return {
+    return binding{
       axes["externalPedals"]["rudder"]["index"].get<std::size_t>(),
       from_string(axes["externalPedals"]["rudder"]["type"].get<std::string>())
     };
@@ -238,7 +245,7 @@ std::optional<binding> binding_for_primary_rudder(const nlohmann::json& data)
 
   if (axes.contains("rudder"))
   {
-    return {
+    return binding{
       axes["rudder"]["index"].get<std::size_t>(),
       from_string(axes["rudder"]["type"].get<std::string>())
     };
