@@ -1,0 +1,6 @@
+#ifndef OPEN_SIEGE_VIRTUAL_JOYSTICK_HPP
+#define OPEN_SIEGE_VIRTUAL_JOYSTICK_HPP
+
+void Siege_InitVirtualJoysticksFromJoysticks();
+
+#endif// OPEN_SIEGE_VIRTUAL_JOYSTICK_HPP

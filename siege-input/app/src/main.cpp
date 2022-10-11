@@ -19,6 +19,7 @@
 #include "imgui_impl_sdl.h"
 
 #include "platform/platform.hpp"
+#include "virtual_joystick.hpp"
 
 inline auto to_array(const SDL_JoystickGUID& guid)
 {
@@ -87,7 +88,8 @@ int main(int, char**)
     auto window = std::unique_ptr<SDL_Window, void (*)(SDL_Window*)>(
       SDL_CreateWindow("Siege Input", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags), SDL_DestroyWindow);
 
-    Siege_InitVirtualJoysticks();
+    Siege_InitVirtualJoysticksFromMice();
+    Siege_InitVirtualJoysticksFromJoysticks();
 
     // The Rapoo V600S DirectInput driver causes an access violation in winmm when this is called.
     // Will find out if I can trigger vibration through the Joystick API alone, or if this needs some work.

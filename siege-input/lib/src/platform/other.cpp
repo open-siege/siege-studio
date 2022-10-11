@@ -5,7 +5,7 @@ SDL_JoystickType Siege_JoystickGetType(SDL_Joystick *joystick)
   return SDL_JoystickGetType(joystick);
 }
 
-void Siege_InitVirtualJoysticks()
+void Siege_InitVirtualJoysticksFromMice()
 {
 }
 

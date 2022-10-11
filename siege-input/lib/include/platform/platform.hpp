@@ -6,16 +6,18 @@
 #include <array>
 #include <unordered_map>
 #include <sstream>
+#include <nlohmann/json.hpp>
 
 SDL_JoystickType Siege_JoystickGetType(SDL_Joystick* joystick);
 
-void Siege_InitVirtualJoysticks();
+void Siege_InitVirtualJoysticksFromMice();
 SDL_bool Siege_IsMouse(SDL_Joystick* joystick);
 Uint16 Siege_JoystickGetVendor(SDL_Joystick* joystick);
 Uint16 Siege_JoystickGetProduct(SDL_Joystick* joystick);
 Uint16 Siege_JoystickGetProductVersion(SDL_Joystick* joystick);
 
 void Siege_SaveDeviceToFile(SDL_Joystick* joystick, int device_index);
+nlohmann::ordered_json joystick_to_json(SDL_Joystick* joystick, int device_index);
 void Siege_SaveAllDevicesToFile();
 
 inline auto to_string(const SDL_JoystickGUID& guid)

@@ -7,11 +7,16 @@ find_package(nlohmann_json REQUIRED)
 find_package(SDL2 REQUIRED)
 
 if(WIN32)
-    add_library(siege-input STATIC src/platform/common.cpp src/platform/windows.cpp)
+    add_library(siege-input STATIC src/platform/common.cpp src/platform/windows.cpp src/config.cpp src/virtual_joystick.cpp)
 else()
-    add_library(siege-input STATIC src/platform/common.cpp src/platform/other.cpp)
+    add_library(siege-input STATIC src/platform/common.cpp src/platform/other.cpp src/config.cpp src/virtual_joystick.cpp)
 endif()
 
+
+add_custom_command(TARGET siege-input
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/src/profiles $<TARGET_FILE_DIR:siege-input>/
+        )
 
 set_property(TARGET siege-input PROPERTY CXX_STANDARD 17)
 target_include_directories(siege-input PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
