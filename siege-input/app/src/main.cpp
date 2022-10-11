@@ -9,8 +9,7 @@
 #include <algorithm>
 #include <limits>
 #include <optional>
-#include <sstream>
-#include <iomanip>
+#include <utility>
 #include <cstring>
 
 #include <SDL.h>
@@ -74,8 +73,38 @@ Uint8 Siege_GameControllerGetDPadAsHat(SDL_GameController* controller)
   return SDL_HAT_CENTERED;
 }
 
+constexpr static auto devices_which_crash = std::array<std::pair<Uint16, Uint16>, 3> {{
+  { 4607, 2103 },
+  { 4607, 2106 },
+  { 121, 6287 }
+}};
+
 int main(int, char**)
 {
+  SDL_SetHint(SDL_HINT_JOYSTICK_ROG_CHAKRAM, "1");
+  SDL_InitSubSystem(SDL_INIT_JOYSTICK);
+
+  for (auto i = 0; i < SDL_NumJoysticks(); ++i)
+  {
+    auto bad_device = std::find(devices_which_crash.begin(), devices_which_crash.end(),
+                        std::make_pair(SDL_JoystickGetDeviceVendor(i), SDL_JoystickGetDeviceProduct(i)));
+
+    if (bad_device != devices_which_crash.end())
+    {
+      SDL_SetHint(SDL_HINT_DIRECTINPUT_ENABLED, "0");
+    }
+    // TODO store this in a collection to use when saving device info
+//    std::cout << "Loading " << SDL_JoystickNameForIndex(i) << '\n';
+//    std::cout << "Path " << SDL_JoystickPathForIndex(i) << '\n';
+//    std::cout << "GUID " << to_string(SDL_JoystickGetDeviceGUID(i)) << '\n';
+//    std::cout << "Vendor " << SDL_JoystickGetDeviceVendor(i) << '\n';
+//    std::cout << "Product " << SDL_JoystickGetDeviceProduct(i) << '\n';
+//    std::cout << "Version " << SDL_JoystickGetDeviceProductVersion(i) << '\n';
+//    std::cout << "Type " << SDL_JoystickGetDeviceType(i) << '\n';
+  }
+  SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
+
+
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC) != 0)
   {
     std::cerr << "Error: " << SDL_GetError() << '\n';
