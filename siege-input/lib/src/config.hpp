@@ -29,6 +29,8 @@ std::optional<stick_indexes> default_binding_for_primary_stick(const nlohmann::j
 
 std::optional<throttle_indexes> default_binding_for_primary_throttle(const nlohmann::json& data);
 
+std::optional<binding> default_binding_for_primary_rudder(const nlohmann::json& data);
+
 std::optional<stick_indexes> binding_for_primary_stick(const nlohmann::json& data);
 
 std::optional<throttle_indexes> binding_for_primary_throttle(const nlohmann::json& data);
