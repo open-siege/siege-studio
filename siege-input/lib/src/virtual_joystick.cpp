@@ -19,33 +19,38 @@ auto joystick_get_or_open(int device_index)
   return instance_id == -1 || instance_id == 0 ? SDL_JoystickOpen(device_index) : SDL_JoystickFromInstanceID(instance_id);
 }
 
+template<typename ValueType = std::int16_t>
 struct game_axis
 {
   int target_axis_index;
   int joystick_id;
-  std::int16_t current_value;
+  ValueType current_value;
 };
 
 struct game_bindings
 {
-  game_axis stick_x;
-  game_axis stick_y;
-  game_axis rudder;
-  game_axis throttle;
+  game_axis<std::int16_t> stick_x;
+  game_axis<std::int16_t> stick_y;
+  game_axis<std::int16_t> rudder;
+  game_axis<std::int16_t> throttle;
+  game_axis<std::uint8_t> pov_hat;
+  std::vector<SDL_bool> buttons;
 };
 
+template<typename ValueType = std::int16_t>
 struct joystick_axis
 {
   int axis_index;
-  std::int16_t previous_value;
+  ValueType previous_value;
 };
 
 struct joystick_bindings
 {
-  joystick_axis stick_x;
-  joystick_axis stick_y;
-  joystick_axis rudder;
-  joystick_axis throttle;
+  joystick_axis<std::int16_t> stick_x;
+  joystick_axis<std::int16_t> stick_y;
+  joystick_axis<std::int16_t> rudder;
+  joystick_axis<std::int16_t> throttle;
+  joystick_axis<std::uint8_t> pov_hat;
 };
 
 struct joystick_data
@@ -125,6 +130,9 @@ void SDLCALL JoyUpdate(void* userdata)
     }
   }
 
+  game_binds.buttons.assign(game_binds.buttons.size(), SDL_bool::SDL_FALSE);
+  game_binds.pov_hat.current_value = SDL_HAT_CENTERED;
+
   for (auto i = 0u; i < joystick_binds.size(); ++i)
   {
     if (SDL_JoystickIsVirtual(i) == SDL_bool::SDL_TRUE)
@@ -145,6 +153,7 @@ void SDLCALL JoyUpdate(void* userdata)
     auto y = SDL_JoystickGetAxis(joystick, temp.stick_y.axis_index);
     auto throttle = SDL_JoystickGetAxis(joystick, temp.throttle.axis_index);
     auto rudder = SDL_JoystickGetAxis(joystick, temp.rudder.axis_index);
+    auto pov = SDL_JoystickGetHat(joystick, 0);
 
     if (x != temp.stick_x.previous_value || y != temp.stick_y.previous_value)
     {
@@ -168,6 +177,20 @@ void SDLCALL JoyUpdate(void* userdata)
       game_binds.rudder.joystick_id = i;
       game_binds.rudder.current_value = rudder;
     }
+
+    if (pov != temp.pov_hat.previous_value)
+    {
+      game_binds.pov_hat.joystick_id = i;
+      game_binds.pov_hat.current_value = pov;
+    }
+
+    for (auto b = 0u; b < game_binds.buttons.size(); ++b)
+    {
+        if (SDL_JoystickGetButton(joystick, b) == 1)
+        {
+          game_binds.buttons[b] = SDL_bool::SDL_TRUE;
+        }
+    }
   }
 
   SDL_JoystickSetVirtualAxis(virtual_joystick,
@@ -185,6 +208,17 @@ void SDLCALL JoyUpdate(void* userdata)
   SDL_JoystickSetVirtualAxis(virtual_joystick,
     game_binds.rudder.target_axis_index,
     game_binds.rudder.current_value);
+
+  SDL_JoystickSetVirtualHat(virtual_joystick,
+    game_binds.pov_hat.target_axis_index,
+    game_binds.pov_hat.current_value);
+
+  for (auto b = 0u; b < game_binds.buttons.size(); ++b)
+  {
+    SDL_JoystickSetVirtualButton(virtual_joystick,
+      b,
+      game_binds.buttons[b]);
+  }
   //extern DECLSPEC int SDLCALL SDL_JoystickSetVirtualButton(SDL_Joystick *joystick, int button, Uint8 value);
   //extern DECLSPEC int SDLCALL SDL_JoystickSetVirtualHat(SDL_Joystick *joystick, int hat, Uint8 value);
 }
@@ -252,6 +286,21 @@ void Siege_InitVirtualJoysticksFromJoysticks()
       2, 0, 0
     }, {
       3, 0, 0
+    },
+    { 0, 0, SDL_HAT_CENTERED },
+    {
+      SDL_bool::SDL_FALSE,
+      SDL_bool::SDL_FALSE,
+      SDL_bool::SDL_FALSE,
+      SDL_bool::SDL_FALSE,
+      SDL_bool::SDL_FALSE,
+      SDL_bool::SDL_FALSE,
+      SDL_bool::SDL_FALSE,
+      SDL_bool::SDL_FALSE,
+      SDL_bool::SDL_FALSE,
+      SDL_bool::SDL_FALSE,
+      SDL_bool::SDL_FALSE,
+      SDL_bool::SDL_FALSE
     }
   };
 }
