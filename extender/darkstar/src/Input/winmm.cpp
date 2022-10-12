@@ -8,17 +8,16 @@
 #include <joystickapi.h>
 #include <memory>
 #include <fstream>
-
-
 #include "winmm.hpp"
 
 #include <platform/platform.hpp>
+#include <virtual_joystick.hpp>
 
-auto joystick_get_or_open(int device_index)
+inline auto joystick_get_or_open(int device_index)
 {
   auto instance_id = SDL_JoystickGetDeviceInstanceID(device_index);
 
-  return instance_id == -1 || instance_id == 0 ? SDL_JoystickOpen(device_index) : SDL_JoystickFromInstanceID(device_index);
+  return instance_id == -1 || instance_id == 0 ? SDL_JoystickOpen(device_index) : SDL_JoystickFromInstanceID(instance_id);
 }
 
 namespace winmm
@@ -52,6 +51,7 @@ namespace winmm
       std::ofstream log("darkstar.winmm.log", std::ios::trunc);
       log << "SDL Joystick sub system init\n";
       SDL_JoystickUpdate();
+      Siege_InitVirtualJoysticksFromJoysticks();
     }
   }
 
@@ -91,6 +91,10 @@ namespace winmm
     {
       return joystickresult_t::no_driver;
     }
+
+    joy_id = SDL_NumJoysticks() - 1 - joy_id;
+
+    log << "Actual joystick ID " << joy_id << '\n';
 
     auto temp = joystick_get_or_open(int(joy_id));
 
@@ -143,6 +147,7 @@ namespace winmm
 
     *info = JOYINFO{};
 
+    joy_id = SDL_NumJoysticks() - 1 - joy_id;
 
     auto temp = joystick_get_or_open(int(joy_id));
 
@@ -198,6 +203,10 @@ namespace winmm
     }
 
     init_joysticks();
+
+    joy_id = SDL_NumJoysticks() - 1 - joy_id;
+
+    log << "Actual joystick ID " << joy_id << '\n';
 
     auto temp = joystick_get_or_open(int(joy_id));
 

@@ -11,7 +11,7 @@ class HelloImguiSfmlConanFile(ConanFile):
     build_requires = "cmake/3.22.0"
     # openssl is here to force package resolution issue with cmake on linux
     requires = "nlohmann_json/3.10.5", "imgui/cci.20220621+1.88.docking", "sdl/2.24.0", "openssl/1.1.1o"
-    settings = "os", "compiler", "build_type", "arch"
+    settings = "os", "compiler", "build_type", "arch", "arch_build"
     generators = "cmake_find_package"
     exports_sources = "CMakeLists.txt", "include/*", "src/*"
 
@@ -35,9 +35,10 @@ class HelloImguiSfmlConanFile(ConanFile):
         cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
         cmake.install()
 
+    def package_info(self):
+        self.cpp_info.libs.append("siege-input")
+
     def imports(self):
-        self.copy("*.h", src="res/bindings/", dst="bindings")
-        self.copy("*.cpp", src="res/bindings/", dst="bindings")
         tools.rmdir("cmake")
         tools.mkdir("cmake")
         [tools.rename(file, f"cmake/{file}") for file in glob.glob("*.cmake")]

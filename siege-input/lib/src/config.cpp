@@ -34,7 +34,7 @@ auto parse_profile(std::filesystem::path file_name)
 
 std::optional<stick_indexes> default_binding_for_primary_stick(const nlohmann::json& data)
 {
-  if (data.contains("numAxes"))
+  if (!data.contains("numAxes"))
   {
     return std::nullopt;
   }
@@ -64,15 +64,19 @@ std::optional<stick_indexes> default_binding_for_primary_stick(const nlohmann::j
 
 std::optional<throttle_indexes> default_binding_for_primary_throttle(const nlohmann::json& data)
 {
-  if (data.contains("numAxes"))
+  if (!data.contains("numAxes"))
+  {
+    return std::nullopt;
+  }
+
+  const auto num_axes = data["numAxes"].get<int>();
+
+  if (num_axes < 3)
   {
     return std::nullopt;
   }
 
   throttle_indexes result{};
-
-  const auto num_axes = data["numAxes"].get<int>();
-
 
   if (num_axes == 3)
   {
@@ -89,9 +93,39 @@ std::optional<throttle_indexes> default_binding_for_primary_throttle(const nlohm
   return result;
 }
 
+std::optional<binding> default_binding_for_primary_rudder(const nlohmann::json& data)
+{
+  if (!data.contains("numAxes"))
+  {
+    return std::nullopt;
+  }
+
+  const auto num_axes = data["numAxes"].get<int>();
+
+  if (num_axes <= 3)
+  {
+    return std::nullopt;
+  }
+
+  binding result{};
+
+  if (num_axes >= 4)
+  {
+    result.index = 2;
+    result.type = SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_AXIS;
+  }
+
+  return result;
+}
+
 std::optional<stick_indexes> binding_for_primary_stick(const nlohmann::json& data)
 {
-  if (!data.contains("bindings") && !data["bindings"].contains("axes"))
+  if (!data.contains("bindings"))
+  {
+    return std::nullopt;
+  }
+
+  if (!data["bindings"].contains("axes"))
   {
     return std::nullopt;
   }
@@ -141,7 +175,12 @@ std::optional<stick_indexes> binding_for_primary_stick(const nlohmann::json& dat
 
 std::optional<throttle_indexes> binding_for_primary_throttle(const nlohmann::json& data)
 {
-  if (!data.contains("bindings") && !data["bindings"].contains("axes"))
+  if (!data.contains("bindings"))
+  {
+    return std::nullopt;
+  }
+
+  if (!data["bindings"].contains("axes"))
   {
     return std::nullopt;
   }
@@ -196,7 +235,12 @@ std::optional<throttle_indexes> binding_for_primary_throttle(const nlohmann::jso
 
 std::optional<binding> binding_for_primary_rudder(const nlohmann::json& data)
 {
-  if (!data.contains("bindings") && !data["bindings"].contains("axes"))
+  if (!data.contains("bindings"))
+  {
+    return std::nullopt;
+  }
+
+  if (!data["bindings"].contains("axes"))
   {
     return std::nullopt;
   }

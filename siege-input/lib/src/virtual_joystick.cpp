@@ -12,13 +12,6 @@
 
 namespace fs = std::filesystem;
 
-auto joystick_get_or_open(int device_index)
-{
-  auto instance_id = SDL_JoystickGetDeviceInstanceID(device_index);
-
-  return instance_id == -1 || instance_id == 0 ? SDL_JoystickOpen(device_index) : SDL_JoystickFromInstanceID(instance_id);
-}
-
 template<typename ValueType = std::int16_t>
 struct game_axis
 {
@@ -46,6 +39,7 @@ struct joystick_axis
 
 struct joystick_bindings
 {
+  std::shared_ptr<SDL_Joystick> joystick;
   joystick_axis<std::int16_t> stick_x;
   joystick_axis<std::int16_t> stick_y;
   joystick_axis<std::int16_t> rudder;
@@ -61,37 +55,45 @@ struct joystick_data
   std::unordered_map<std::string, nlohmann::json> profiles;
 };
 
-void SDLCALL JoyUpdate(void* userdata)
+void init_joysticks(joystick_data& real_data, void(*do_update)())
 {
-  auto* real_data = reinterpret_cast<joystick_data*>(userdata);
-
-  auto& joystick_binds = real_data->joystick_binds;
-  auto* virtual_joystick = real_data->virtual_joystick;
-  game_bindings& game_binds = real_data->game_binds;
-
+  auto& joystick_binds = real_data.joystick_binds;
+  auto* virtual_joystick = real_data.virtual_joystick;
   auto num_joysticks = SDL_NumJoysticks();
 
   if (joystick_binds.size() != num_joysticks)
   {
     joystick_binds.clear();
+    joystick_binds.reserve(num_joysticks);
 
     for (auto i = 0; i < num_joysticks; ++i)
     {
-      joystick_bindings& temp = joystick_binds.emplace_back();
+      joystick_bindings& temp = joystick_binds.emplace_back(joystick_bindings{std::unique_ptr<SDL_Joystick, void (*)(SDL_Joystick*)>{ SDL_JoystickOpen(i), SDL_JoystickClose }});
 
-      std::unique_ptr<SDL_Joystick, void(*)(SDL_Joystick*)> real_joystick{ SDL_JoystickOpen(i), SDL_JoystickClose};
+      if (temp.joystick.get() == virtual_joystick)
+      {
+        joystick_binds.pop_back();
+        continue;
+      }
+    }
 
-      auto joystick_guid = to_string(SDL_JoystickGetGUID(real_joystick.get()));
+    do_update();
 
-      auto profile = real_data->profiles.find(joystick_guid);
+    for (auto i = 0u; i < joystick_binds.size(); ++i)
+    {
+      joystick_bindings& temp = joystick_binds[i];
 
-      if (profile == real_data->profiles.end())
+      auto joystick_guid = to_string(SDL_JoystickGetGUID(temp.joystick.get()));
+
+      auto profile = real_data.profiles.find(joystick_guid);
+
+      if (profile == real_data.profiles.end())
       {
         if (SDL_JoystickIsVirtual(i) == SDL_bool::SDL_TRUE)
         {
           continue;
         }
-        profile = real_data->profiles.emplace(joystick_guid, joystick_to_json(real_joystick.get(), i)).first;
+        profile = real_data.profiles.emplace(joystick_guid, joystick_to_json(temp.joystick.get(), i)).first;
       }
 
       auto stick = binding_for_primary_stick(profile->second);
@@ -108,27 +110,43 @@ void SDLCALL JoyUpdate(void* userdata)
         throttle_indexes = default_binding_for_primary_throttle(profile->second);
       }
 
+      if (!rudder_indexes.has_value())
+      {
+        rudder_indexes = default_binding_for_primary_rudder(profile->second);
+      }
+
       if (stick.has_value())
       {
         temp.stick_x.axis_index = int(stick.value().x.index);
-        temp.stick_x.previous_value = SDL_JoystickGetAxis(real_joystick.get(), temp.stick_x.axis_index);
+        temp.stick_x.previous_value = SDL_JoystickGetAxis(temp.joystick.get(), temp.stick_x.axis_index);
         temp.stick_y.axis_index = int(stick.value().y.index);
-        temp.stick_y.previous_value = SDL_JoystickGetAxis(real_joystick.get(), temp.stick_y.axis_index);
+        temp.stick_y.previous_value = SDL_JoystickGetAxis(temp.joystick.get(), temp.stick_y.axis_index);
       }
 
       if (throttle_indexes.has_value())
       {
         temp.throttle.axis_index = int(throttle_indexes.value().y.index);
-        temp.throttle.previous_value = SDL_JoystickGetAxis(real_joystick.get(), temp.throttle.axis_index);
+        temp.throttle.previous_value = SDL_JoystickGetAxis(temp.joystick.get(), temp.throttle.axis_index);
       }
 
       if (rudder_indexes.has_value())
       {
         temp.rudder.axis_index = int(rudder_indexes.value().index);
-        temp.rudder.previous_value = SDL_JoystickGetAxis(real_joystick.get(), temp.rudder.axis_index);
+        temp.rudder.previous_value = SDL_JoystickGetAxis(temp.joystick.get(), temp.rudder.axis_index);
       }
     }
   }
+}
+
+void SDLCALL JoyUpdate(void* userdata)
+{
+  auto* real_data = reinterpret_cast<joystick_data*>(userdata);
+
+  auto& joystick_binds = real_data->joystick_binds;
+  auto* virtual_joystick = real_data->virtual_joystick;
+  game_bindings& game_binds = real_data->game_binds;
+
+  init_joysticks(*real_data, [](){});
 
   game_binds.buttons.assign(game_binds.buttons.size(), SDL_bool::SDL_FALSE);
   game_binds.pov_hat.current_value = SDL_HAT_CENTERED;
@@ -140,20 +158,33 @@ void SDLCALL JoyUpdate(void* userdata)
       continue;
     }
 
-    auto* joystick = joystick_get_or_open(i);
+    joystick_bindings& temp = joystick_binds[i];
+    auto x = SDL_JoystickGetAxis(temp.joystick.get(), temp.stick_x.axis_index);
+    auto y = SDL_JoystickGetAxis(temp.joystick.get(), temp.stick_y.axis_index);
+    auto throttle = SDL_JoystickGetAxis(temp.joystick.get(), temp.throttle.axis_index);
+    auto rudder = SDL_JoystickGetAxis(temp.joystick.get(), temp.rudder.axis_index);
+    auto pov = SDL_JoystickGetHat(temp.joystick.get(), 0);
 
-
-    if (!joystick)
+    if (game_binds.stick_x.joystick_id == i)
     {
-      continue;
+      game_binds.stick_x.current_value = x;
+      game_binds.stick_y.current_value = y;
     }
 
-    joystick_bindings& temp = joystick_binds[i];
-    auto x = SDL_JoystickGetAxis(joystick, temp.stick_x.axis_index);
-    auto y = SDL_JoystickGetAxis(joystick, temp.stick_y.axis_index);
-    auto throttle = SDL_JoystickGetAxis(joystick, temp.throttle.axis_index);
-    auto rudder = SDL_JoystickGetAxis(joystick, temp.rudder.axis_index);
-    auto pov = SDL_JoystickGetHat(joystick, 0);
+    if (game_binds.throttle.joystick_id == i)
+    {
+      game_binds.throttle.current_value = throttle;
+    }
+
+    if (game_binds.rudder.joystick_id == i)
+    {
+      game_binds.rudder.current_value = rudder;
+    }
+
+    if (game_binds.pov_hat.joystick_id == i)
+    {
+      game_binds.pov_hat.current_value = pov;
+    }
 
     if (x != temp.stick_x.previous_value || y != temp.stick_y.previous_value)
     {
@@ -186,7 +217,7 @@ void SDLCALL JoyUpdate(void* userdata)
 
     for (auto b = 0u; b < game_binds.buttons.size(); ++b)
     {
-        if (SDL_JoystickGetButton(joystick, b) == 1)
+        if (SDL_JoystickGetButton(temp.joystick.get(), b) == 1)
         {
           game_binds.buttons[b] = SDL_bool::SDL_TRUE;
         }
@@ -240,14 +271,6 @@ void Siege_InitVirtualJoysticksFromJoysticks()
   joy.userdata = temp_data;
   joy.Update = JoyUpdate;
 
-  int device_index = SDL_JoystickAttachVirtualEx(&joy);
-
-  if (device_index == -1)
-  {
-    delete temp_data;
-    return;
-  }
-
   const auto profiles_path = fs::path("profiles") / fs::path("devices");
 
   if (fs::exists(profiles_path))
@@ -273,6 +296,16 @@ void Siege_InitVirtualJoysticksFromJoysticks()
         }
       }
     }
+  }
+
+  init_joysticks(*temp_data, SDL_JoystickUpdate);
+
+  int device_index = SDL_JoystickAttachVirtualEx(&joy);
+
+  if (device_index == -1)
+  {
+    delete temp_data;
+    return;
   }
 
   temp_data->virtual_joystick = SDL_JoystickOpen(device_index);

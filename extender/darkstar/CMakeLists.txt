@@ -19,7 +19,7 @@ add_custom_command(TARGET darkstar
         POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/src/config.json ${CMAKE_CURRENT_BINARY_DIR}
         )
-target_link_libraries(darkstar PRIVATE detours::detours nlohmann_json::nlohmann_json darkstar-proxy::darkstar-proxy siege-input::siege-input winmm)
+target_link_libraries(darkstar PRIVATE detours::detours nlohmann_json::nlohmann_json darkstar-proxy::darkstar-proxy siege-input::siege-input winmm dinput8)
 target_include_directories(darkstar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set_property(TARGET darkstar PROPERTY CXX_STANDARD 17)
 
