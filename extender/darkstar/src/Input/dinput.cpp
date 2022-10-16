@@ -5,6 +5,7 @@
 #include <dinput.h>
 
 #include <vector>
+#include <unordered_map>
 #include <memory>
 #include <platform/platform.hpp>
 
@@ -43,14 +44,78 @@ namespace dinput
     };
   }
 
-  create_result WINAPI DarkDirectInputCreateA(HINSTANCE appInstance, DWORD version, IDirectInputA** output, LPUNKNOWN)
+  namespace core::v2
   {
+    HRESULT STDMETHODCALLTYPE DarkFindDevice(IDirectInput2A*, const GUID& deviceClass, LPCSTR deviceName, GUID* result);
 
-    static IDirectInputA instance{ &core::v1::dinput_vtable };
+    static IDirectInput2AVtbl dinput_vtable = ([](){
+      IDirectInput2AVtbl temp{};
+      std::memcpy(&temp, &core::v1::dinput_vtable, sizeof(core::v1::dinput_vtable));
+      temp.FindDevice = DarkFindDevice;
+      return temp;
+    })();
+  }
 
-    *output = &instance;
+  namespace core::v7
+  {
+    HRESULT STDMETHODCALLTYPE DarkCreateDeviceEx(IDirectInput7A*,
+      const GUID& deviceType,
+      const IID& interfaceType,
+      void** output,
+      IUnknown*);
+
+    static IDirectInput7AVtbl dinput_vtable = ([](){
+      IDirectInput7AVtbl temp{};
+      std::memcpy(&temp, &core::v2::dinput_vtable, sizeof(core::v2::dinput_vtable));
+      temp.CreateDeviceEx = DarkCreateDeviceEx;
+      return temp;
+    })();
+  }
+
+  namespace core::v8
+  {
+    HRESULT STDMETHODCALLTYPE DarkCreateDevice(IDirectInput8A*, const GUID&, IDirectInputDevice8A**, IUnknown*);
+    HRESULT STDMETHODCALLTYPE DarkEnumDevicesBySemantics(IDirectInput8A*, LPCSTR username,DIACTIONFORMATA* actionFormat,LPDIENUMDEVICESBYSEMANTICSCBA callback, void* data, DWORD flags);
+    HRESULT STDMETHODCALLTYPE DarkConfigureDevices(IDirectInput8A*, LPDICONFIGUREDEVICESCALLBACK, LPDICONFIGUREDEVICESPARAMSA, DWORD, void*);
+
+    static IDirectInput8AVtbl dinput_vtable = ([](){
+      IDirectInput8AVtbl temp{};
+      std::memcpy(&temp, &core::v2::dinput_vtable, sizeof(core::v2::dinput_vtable));
+      temp.CreateDevice = DarkCreateDevice;
+      temp.EnumDevicesBySemantics = DarkEnumDevicesBySemantics;
+      temp.ConfigureDevices = DarkConfigureDevices;
+      return temp;
+    })();
+  }
+
+  create_result WINAPI DarkDirectInputCreateA(HINSTANCE appInstance, DWORD version, IDirectInputA** output, IUnknown*)
+  {
+    static std::unordered_map<DWORD, IDirectInputA> instances;
+
+    auto result = instances.emplace(version, IDirectInputA{ &core::v1::dinput_vtable });
+
+    *output = &result.first->second;
 
     return create_result::ok;
+  }
+
+  HRESULT WINAPI DarkDirectInputCreateExA(HINSTANCE appInstance, DWORD version, const IID& interfaceId, void** output, IUnknown*)
+  {
+
+    static std::unordered_map<DWORD, IDirectInputA> instances;
+
+    auto result = instances.emplace(version, IDirectInputA{ &core::v1::dinput_vtable });
+
+    return result.first->second.lpVtbl->QueryInterface(&result.first->second, interfaceId, output);
+  }
+
+  HRESULT WINAPI DirectInput8Create(HINSTANCE hinst, DWORD version, const IID& interfaceId, void** output, IUnknown*)
+  {
+    static std::unordered_map<DWORD, IDirectInput8A> instances;
+
+    auto result = instances.emplace(version, IDirectInput8A{ &core::v8::dinput_vtable });
+
+    return result.first->second.lpVtbl->QueryInterface(&result.first->second, interfaceId, output);
   }
 
   namespace device::v1
@@ -142,6 +207,22 @@ namespace dinput
     })();
   }
 
+  namespace device::v8
+  {
+    HRESULT STDMETHODCALLTYPE DarkBuildActionMap(IDirectInputDevice8A*, DIACTIONFORMATA* actionFormat, LPCSTR username, DWORD flags);
+    HRESULT STDMETHODCALLTYPE DarkSetActionMap(IDirectInputDevice8A*, DIACTIONFORMATA* actionFormat, LPCSTR username, DWORD flags);
+    HRESULT STDMETHODCALLTYPE DarkGetImageInfo(IDirectInputDevice8A*, DIDEVICEIMAGEINFOHEADERA* deviceImage);
+
+    static IDirectInputDevice8AVtbl device_vtable = ([](){
+      IDirectInputDevice8AVtbl temp{};
+      std::memcpy(&temp, &device::v7::device_vtable, sizeof(device::v7::device_vtable));
+      temp.BuildActionMap = DarkBuildActionMap;
+      temp.SetActionMap = DarkSetActionMap;
+      temp.GetImageInfo = DarkGetImageInfo;
+      return temp;
+    })();
+  }
+
   struct device_info
   {
     IDirectInputDeviceA device;
@@ -152,8 +233,46 @@ namespace dinput
 
   namespace device::v1
   {
-    template<typename device_type = IDirectInputDeviceA>
-    HRESULT STDMETHODCALLTYPE DarkGetCapabilities(device_type* self, DIDEVCAPS* caps) // maybe used
+    HRESULT STDMETHODCALLTYPE QueryInterface(IDirectInputDeviceA* self, REFIID interface_id, void** result)
+    {
+        if (interface_id == IID_IDirectInputDeviceA)
+        {
+          self->lpVtbl = &device::v1::device_vtable;
+          *result = self;
+        }
+        else if (interface_id == IID_IDirectInputDevice2A)
+        {
+          IDirectInputDevice2A* new_device = reinterpret_cast<IDirectInputDevice2A*>(self);
+          new_device->lpVtbl = &device::v2::device_vtable;
+          *result = new_device;
+        }
+        else if (interface_id == IID_IDirectInputDevice7A)
+        {
+          IDirectInputDevice7A* new_device = reinterpret_cast<IDirectInputDevice7A*>(self);
+          new_device->lpVtbl = &device::v7::device_vtable;
+          *result = new_device;
+        }
+        else if (interface_id == IID_IDirectInputDevice8A)
+        {
+          IDirectInputDevice8A* new_device = reinterpret_cast<IDirectInputDevice8A*>(self);
+          new_device->lpVtbl = &device::v8::device_vtable;
+          *result = new_device;
+        }
+
+        return DIERR_NOINTERFACE;
+    }
+
+    ULONG STDMETHODCALLTYPE AddRef(IDirectInputDeviceA*)
+    {
+      return 1;
+    }
+
+    ULONG STDMETHODCALLTYPE Release(IDirectInputDeviceA*)
+    {
+      return 1;
+    }
+
+    HRESULT STDMETHODCALLTYPE DarkGetCapabilities(IDirectInputDeviceA* self, DIDEVCAPS* caps) // maybe used
     {
       auto size = caps->dwSize;
 
@@ -340,14 +459,12 @@ namespace dinput
 
     HRESULT STDMETHODCALLTYPE DarkAcquire(IDirectInputDeviceA*) // maybe used
     {
-      SDL_JoystickOpen(0);
       return 0;
     }
 
 
     HRESULT STDMETHODCALLTYPE DarkUnacquire(IDirectInputDeviceA*)  // maybe used
     {
-      SDL_JoystickClose(nullptr);
       return 0;
     }
 
@@ -558,6 +675,44 @@ namespace dinput
 
   namespace core::v1
   {
+    HRESULT STDMETHODCALLTYPE QueryInterface(IDirectInputA* self, REFIID interface_id, void** result)
+    {
+      if (interface_id == IID_IDirectInputA)
+      {
+        self->lpVtbl = &core::v1::dinput_vtable;
+        *result = self;
+      }
+      else if (interface_id == IID_IDirectInput2A)
+      {
+        IDirectInput2A* new_dinput = reinterpret_cast<IDirectInput2A*>(self);
+        new_dinput->lpVtbl = &core::v2::dinput_vtable;
+        *result = new_dinput;
+      }
+      else if (interface_id == IID_IDirectInput7A)
+      {
+        IDirectInput7A* new_dinput = reinterpret_cast<IDirectInput7A*>(self);
+        new_dinput->lpVtbl = &core::v7::dinput_vtable;
+        *result = new_dinput;
+      }
+      else if (interface_id == IID_IDirectInput8A)
+      {
+        IDirectInput8A* new_dinput = reinterpret_cast<IDirectInput8A*>(self);
+        new_dinput->lpVtbl = &core::v8::dinput_vtable;
+        *result = new_dinput;
+      }
+
+      return DIERR_NOINTERFACE;
+    }
+
+    ULONG STDMETHODCALLTYPE AddRef(IDirectInputA*)
+    {
+      return 1;
+    }
+
+    ULONG STDMETHODCALLTYPE Release(IDirectInputA*)
+    {
+      return 1;
+    }
 
     auto sdl_to_dinput_type(SDL_JoystickType sdl_type)
     {
@@ -597,7 +752,6 @@ namespace dinput
       }
       return 0;
     }
-
 
     HRESULT STDMETHODCALLTYPE DarkCreateDevice(IDirectInputA*, const GUID& deviceType, IDirectInputDeviceA** output, IUnknown*)
     {
@@ -694,10 +848,33 @@ namespace dinput
       void** output,
       IUnknown*)
     {
-      return core::v1::DarkCreateDevice(nullptr, deviceType, reinterpret_cast<IDirectInputDeviceA**>(output), nullptr);
+      IDirectInputDeviceA* temp;
+      auto result = core::v1::DarkCreateDevice(nullptr, deviceType, &temp, nullptr);
+
+      if (result != DI_OK)
+      {
+        return result;
+      }
+
+      return temp->lpVtbl->QueryInterface(temp, interfaceType, output);
     }
   }
 
+  namespace core::v8
+  {
+    HRESULT STDMETHODCALLTYPE DarkCreateDevice(IDirectInput8A*, const GUID& deviceType, IDirectInputDevice8A** output, IUnknown*)
+    {
+      IDirectInputDeviceA* temp;
+      auto result = core::v1::DarkCreateDevice(nullptr, deviceType, &temp, nullptr);
+
+      if (result != DI_OK)
+      {
+        return result;
+      }
+
+      return temp->lpVtbl->QueryInterface(temp, IID_IDirectInput8A, reinterpret_cast<void**>(output));
+    }
+  }
   namespace effect
   {
 
