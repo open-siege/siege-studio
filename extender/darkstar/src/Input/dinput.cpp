@@ -7,6 +7,8 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
+#include <optional>
+#include <limits>
 #include <platform/platform.hpp>
 
 namespace dinput
@@ -231,6 +233,9 @@ namespace dinput
 
   static std::vector<device_info> devices;
 
+  static std::optional<IDirectInputDeviceA> keyboard;
+  static std::optional<IDirectInputDeviceA> mouse;
+
   namespace device::v1
   {
     HRESULT STDMETHODCALLTYPE QueryInterface(IDirectInputDeviceA* self, REFIID interface_id, void** result)
@@ -440,12 +445,142 @@ namespace dinput
         return DIERR_INVALIDPARAM;
       }
 
-      result->dwSize = sizeof(DIPROPHEADER);
-      result->dwHeaderSize = sizeof(DIPROPHEADER);
-      result->dwObj = 0;
-      result->dwHow = 0;
+      if (prop_id == DIPROP_APPDATA)
+      {
+        // TODO come back to this later
+      }
+      else if (prop_id == DIPROP_AUTOCENTER)
+      {
+        return S_FALSE;
+      }
+      else if (prop_id == DIPROP_AXISMODE && result->dwSize == sizeof(DIPROPDWORD))
+      {
+        auto* value = reinterpret_cast<DIPROPDWORD*>(result);
 
-      return 0;
+        value->dwData = DIPROPAXISMODE_ABS;
+      }
+      else if (prop_id == DIPROP_BUFFERSIZE)
+      {
+        return S_FALSE;
+      }
+      else if (prop_id == DIPROP_CALIBRATION)
+      {
+        return S_FALSE;
+      }
+      else if (prop_id == DIPROP_CALIBRATIONMODE)
+      {
+        return S_FALSE;
+      }
+      else if (prop_id == DIPROP_CPOINTS)
+      {
+        return S_FALSE;
+      }
+      else if (prop_id == DIPROP_DEADZONE)
+      {
+        return S_FALSE;
+      }
+      else if (prop_id == DIPROP_FFGAIN)
+      {
+        return DI_OK;
+      }
+      else if (prop_id == DIPROP_FFLOAD)
+      {
+        return S_FALSE;
+      }
+      else if (prop_id == DIPROP_GRANULARITY)
+      {
+        return S_FALSE;
+      }
+      else if (prop_id == DIPROP_USERNAME && result->dwSize == sizeof(DIPROPSTRING))
+      {
+        auto player_index = SDL_JoystickGetPlayerIndex(info->joystick.get());
+
+        if (player_index == -1)
+        {
+          return S_FALSE;
+        }
+
+        auto* value = reinterpret_cast<DIPROPSTRING*>(result);
+        auto player_name = "Player " + std::to_string(player_index + 1);
+        std::memcpy(&value->wsz, player_name.data(), player_name.size());
+      }
+      else if (prop_id == DIPROP_GUIDANDPATH)
+      {
+        auto* product_path = SDL_JoystickPath(info->joystick.get());
+
+        if (!product_path)
+        {
+          return S_FALSE;
+        }
+
+        auto* value = reinterpret_cast<DIPROPSTRING*>(result);
+        auto product_path_str = std::string_view(product_path);
+
+        std::memcpy(&value->wsz, product_path_str.data(), product_path_str.size());
+      }
+      else if (prop_id == DIPROP_VIDPID && result->dwSize == sizeof(DIPROPDWORD))
+      {
+        auto vendor_id = SDL_JoystickGetVendor(info->joystick.get());
+        auto product_id = SDL_JoystickGetVendor(info->joystick.get());
+        auto* value = reinterpret_cast<DIPROPDWORD*>(result);
+      }
+      else if ((prop_id == DIPROP_PRODUCTNAME || prop_id == DIPROP_INSTANCENAME || prop_id == DIPROP_GETPORTDISPLAYNAME) &&
+               result->dwSize == sizeof(DIPROPSTRING))
+      {
+        auto* product_name = SDL_JoystickName(info->joystick.get());
+
+        if (!product_name)
+        {
+          return S_FALSE;
+        }
+
+        auto* value = reinterpret_cast<DIPROPSTRING*>(result);
+        auto product_name_str = std::string_view(product_name);
+
+        std::memcpy(&value->wsz, product_name_str.data(), product_name_str.size());
+      }
+      else if (prop_id == DIPROP_JOYSTICKID)
+      {
+
+      }
+      else if (prop_id == DIPROP_KEYNAME)
+      {
+        // TODO come back to this
+        return S_FALSE;
+      }
+      else if (prop_id == DIPROP_SCANCODE)
+      {
+        // TODO come back to this
+        return S_FALSE;
+      }
+      else if (prop_id == DIPROP_LOGICALRANGE && result->dwSize == sizeof(DIPROPRANGE))
+      {
+        auto* range = reinterpret_cast<DIPROPRANGE*>(result);
+        range->lMin = std::numeric_limits<std::int16_t>::min();
+        range->lMax = std::numeric_limits<std::int16_t>::max();
+      }
+      else if (prop_id == DIPROP_PHYSICALRANGE && result->dwSize == sizeof(DIPROPRANGE))
+      {
+        auto* range = reinterpret_cast<DIPROPRANGE*>(result);
+        range->lMin = std::numeric_limits<std::int16_t>::min();
+        range->lMax = std::numeric_limits<std::int16_t>::max();
+      }
+      else if (prop_id == DIPROP_RANGE && result->dwSize == sizeof(DIPROPRANGE))
+      {
+        auto* range = reinterpret_cast<DIPROPRANGE*>(result);
+        range->lMin = std::numeric_limits<std::int16_t>::min();
+        range->lMax = std::numeric_limits<std::int16_t>::max();
+      }
+      else if (prop_id == DIPROP_SATURATION)
+      {
+        return S_FALSE;
+      }
+      else if (prop_id == DIPROP_TYPENAME)
+      {
+        return S_FALSE;
+      }
+
+      return DI_OK;
     }
 
     HRESULT STDMETHODCALLTYPE DarkSetProperty(IDirectInputDeviceA*, const GUID& prop_id, DIPROPHEADER* result) // maybe used
@@ -872,7 +1007,7 @@ namespace dinput
         return result;
       }
 
-      return temp->lpVtbl->QueryInterface(temp, IID_IDirectInput8A, reinterpret_cast<void**>(output));
+      return temp->lpVtbl->QueryInterface(temp, IID_IDirectInputDevice8A, reinterpret_cast<void**>(output));
     }
   }
   namespace effect
