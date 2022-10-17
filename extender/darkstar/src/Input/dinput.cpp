@@ -10,6 +10,7 @@
 #include <optional>
 #include <limits>
 #include <platform/platform.hpp>
+#include <virtual_joystick.hpp>
 
 namespace dinput
 {
@@ -103,7 +104,6 @@ namespace dinput
 
   HRESULT WINAPI DarkDirectInputCreateExA(HINSTANCE appInstance, DWORD version, const IID& interfaceId, void** output, IUnknown*)
   {
-
     static std::unordered_map<DWORD, IDirectInputA> instances;
 
     auto result = instances.emplace(version, IDirectInputA{ &core::v1::dinput_vtable });
@@ -229,6 +229,7 @@ namespace dinput
   {
     IDirectInputDeviceA device;
     std::unique_ptr<SDL_Joystick, void(*)(SDL_Joystick*)> joystick;
+    DIDATAFORMAT* format;
   };
 
   static std::vector<device_info> devices;
@@ -263,8 +264,12 @@ namespace dinput
           new_device->lpVtbl = &device::v8::device_vtable;
           *result = new_device;
         }
+        else
+        {
+          return DIERR_NOINTERFACE;
+        }
 
-        return DIERR_NOINTERFACE;
+        return DI_OK;
     }
 
     ULONG STDMETHODCALLTYPE AddRef(IDirectInputDeviceA*)
@@ -289,6 +294,8 @@ namespace dinput
       }
 
       caps->dwFlags = DIDC_ATTACHED;
+
+      // TODO needs a mask here for the sub type as well
       caps->dwDevType = DI8DEVTYPE_FLIGHT;
       caps->dwAxes = SDL_JoystickNumAxes(info->joystick.get());
       caps->dwButtons = SDL_JoystickNumButtons(info->joystick.get());
@@ -364,7 +371,52 @@ namespace dinput
       return name->second;
     }
 
+    HRESULT STDMETHODCALLTYPE DarkGetObjectInfo(IDirectInputDeviceA* self, DIDEVICEOBJECTINSTANCEA* result, DWORD value, DWORD how)
+    {
+      if (!result)
+      {
+        return DIERR_INVALIDPARAM;
+      }
 
+      auto info = std::find_if(devices.begin(), devices.end(), [self](const auto& value) { return &value.device == self; });
+
+      if (info == devices.end())
+      {
+        return DIERR_INVALIDPARAM;
+      }
+
+      // need to also support the offset parameter
+      if (how == DIPH_BYID)
+      {
+          auto type = DIDFT_GETTYPE(value);
+          auto instance = DIDFT_GETINSTANCE(value);
+
+          if (type == DIDFT_AXIS)
+          {
+            auto num_axes = SDL_JoystickNumAxes(info->joystick.get());
+
+            result->guidType = GetAxisObjectType(num_axes, instance);
+
+            auto name = GetAxisName(result->guidType);
+            std::memcpy(&result->tszName, name.data(), name.size());
+          }
+          else if (type == DIDFT_POV)
+          {
+            result->guidType = GUID_POV;
+
+            auto name = "Hat " + std::to_string(instance + 1);
+            std::memcpy(&result->tszName, name.data(), name.size());
+          }
+          else if (type == DIDFT_BUTTON)
+          {
+            result->guidType = GUID_Button;
+            auto name = "Button " + std::to_string(instance + 1);
+            std::memcpy(&result->tszName, name.data(), name.size());
+          }
+      }
+
+      return 0;
+    }
 
     HRESULT STDMETHODCALLTYPE DarkEnumObjects(IDirectInputDeviceA* self, LPDIENUMDEVICEOBJECTSCALLBACKA callback, void* data, DWORD flags)
     {
@@ -375,12 +427,13 @@ namespace dinput
         return DIERR_INVALIDPARAM;
       }
 
-      for (auto i = 0; i < SDL_JoystickNumAxes(info->joystick.get()); ++i)
+      auto num_axes = SDL_JoystickNumAxes(info->joystick.get());
+      for (auto i = 0; i < num_axes; ++i)
       {
         DIDEVICEOBJECTINSTANCEA object{};
         object.dwSize = sizeof(DIDEVICEOBJECTINSTANCEA);
-        object.guidType = GetAxisObjectType(SDL_JoystickNumAxes(info->joystick.get()), i);
-        object.dwType = DIDFT_AXIS;
+        object.guidType = GetAxisObjectType(num_axes, i);
+        object.dwType = DIDFT_MAKEINSTANCE(i) | DIDFT_AXIS;
 
         auto name = GetAxisName(object.guidType);
         std::memcpy(&object.tszName, name.data(), name.size());
@@ -393,12 +446,13 @@ namespace dinput
         }
       }
 
-      for (auto i = 0; i < SDL_JoystickNumHats(info->joystick.get()); ++i)
+      auto num_hats = SDL_JoystickNumHats(info->joystick.get());
+      for (auto i = 0; i < num_hats; ++i)
       {
         DIDEVICEOBJECTINSTANCEA object{};
         object.dwSize = sizeof(DIDEVICEOBJECTINSTANCEA);
         object.guidType = GUID_POV;
-        object.dwType = DIDFT_POV;
+        object.dwType = DIDFT_MAKEINSTANCE(i) | DIDFT_POV;
 
         auto name = "Hat " + std::to_string(i + 1);
         std::memcpy(&object.tszName, name.data(), name.size());
@@ -416,7 +470,7 @@ namespace dinput
         DIDEVICEOBJECTINSTANCEA object{};
         object.dwSize = sizeof(DIDEVICEOBJECTINSTANCEA);
         object.guidType = GUID_Button;
-        object.dwType = DIDFT_BUTTON;
+        object.dwType = DIDFT_MAKEINSTANCE(i) | DIDFT_BUTTON;
         auto name = "Button " + std::to_string(i + 1);
         std::memcpy(&object.tszName, name.data(), name.size());
 
@@ -589,85 +643,125 @@ namespace dinput
       {
         return DIERR_INVALIDPARAM;
       }
-      return 0;
+
+      if (prop_id == DIPROP_APPDATA)
+      {
+        // TODO come back to this later
+      }
+
+      return DI_OK;
     }
 
-    HRESULT STDMETHODCALLTYPE DarkAcquire(IDirectInputDeviceA*) // maybe used
+    HRESULT STDMETHODCALLTYPE DarkAcquire(IDirectInputDeviceA*)
     {
-      return 0;
+      return DI_OK;
     }
 
 
     HRESULT STDMETHODCALLTYPE DarkUnacquire(IDirectInputDeviceA*)  // maybe used
     {
-      return 0;
+      return DI_OK;
     }
 
-    HRESULT STDMETHODCALLTYPE DarkSetDataFormat(IDirectInputDeviceA*, DIDATAFORMAT*) // maybe used
+    HRESULT STDMETHODCALLTYPE DarkSetDataFormat(IDirectInputDeviceA* self, DIDATAFORMAT* format) // maybe used
     {
-      return 0;
+      auto info = std::find_if(devices.begin(), devices.end(), [self](const auto& value) { return &value.device == self; });
+
+      if (info == devices.end())
+      {
+        return DIERR_INVALIDPARAM;
+      }
+
+      info->format = format;
+
+      return DI_OK;
     }
 
-    HRESULT STDMETHODCALLTYPE DarkGetDeviceState(IDirectInputDeviceA*, DWORD, LPVOID) // maybe used
+    HRESULT STDMETHODCALLTYPE DarkGetDeviceState(IDirectInputDeviceA* self, DWORD size, void* result) // maybe used
     {
+      auto info = std::find_if(devices.begin(), devices.end(), [self](const auto& value) { return &value.device == self; });
 
-      DIJOYSTATE joy_state{};
-
-      //stick
-      joy_state.lX = SDL_JoystickGetAxis(nullptr, 0);
-      joy_state.lY = SDL_JoystickGetAxis(nullptr, 1);
-
-      // rudder
-      joy_state.lRz = SDL_JoystickGetAxis(nullptr, 2);
-
-      // throttle
-      joy_state.lZ = SDL_JoystickGetAxis(nullptr, 3);
-
-      joy_state.lRx = SDL_JoystickGetAxis(nullptr, 4);
-      joy_state.lRy = SDL_JoystickGetAxis(nullptr, 5);
-
-      joy_state.rglSlider[0] = SDL_JoystickGetAxis(nullptr, 6);
-      joy_state.rglSlider[1] = SDL_JoystickGetAxis(nullptr, 7);
-
-      joy_state.rgdwPOV[0] = SDL_JoystickGetHat(nullptr, 0);
-      joy_state.rgdwPOV[1] = SDL_JoystickGetHat(nullptr, 1);
-      joy_state.rgdwPOV[2] = SDL_JoystickGetHat(nullptr, 2);
-      joy_state.rgdwPOV[3] = SDL_JoystickGetHat(nullptr, 3);
-
-      for (auto i = 0; i < 32; ++i)
+      if (info == devices.end())
       {
-        joy_state.rgbButtons[i] = SDL_JoystickGetButton(nullptr, 0);
+        return DIERR_INVALIDPARAM;
       }
 
-      DIJOYSTATE2 joy_state2{};
+      auto update_state = [&](auto& joy_state) {
 
-      //stick
-      joy_state2.lX = SDL_JoystickGetAxis(nullptr, 0);
-      joy_state2.lY = SDL_JoystickGetAxis(nullptr, 1);
+        //stick
+        joy_state.lX = SDL_JoystickGetAxis(info->joystick.get(), 0);
+        joy_state.lY = SDL_JoystickGetAxis(info->joystick.get(), 1);
 
-      // rudder
-      joy_state2.lRz = SDL_JoystickGetAxis(nullptr, 2);
+        // rudder
+        joy_state.lRz = SDL_JoystickGetAxis(info->joystick.get(), 2);
 
-      // throttle
-      joy_state2.lZ = SDL_JoystickGetAxis(nullptr, 3);
+        // throttle
+        joy_state.lZ = SDL_JoystickGetAxis(info->joystick.get(), 3);
 
-      joy_state2.lRx = SDL_JoystickGetAxis(nullptr, 4);
-      joy_state2.lRy = SDL_JoystickGetAxis(nullptr, 5);
+        joy_state.lRx = SDL_JoystickGetAxis(info->joystick.get(), 4);
+        joy_state.lRy = SDL_JoystickGetAxis(info->joystick.get(), 5);
 
-      joy_state2.rglSlider[0] = SDL_JoystickGetAxis(nullptr, 6);
-      joy_state2.rglSlider[1] = SDL_JoystickGetAxis(nullptr, 7);
+        joy_state.rglSlider[0] = SDL_JoystickGetAxis(info->joystick.get(), 6);
+        joy_state.rglSlider[1] = SDL_JoystickGetAxis(info->joystick.get(), 7);
 
-      joy_state2.rgdwPOV[0] = SDL_JoystickGetHat(nullptr, 0);
-      joy_state2.rgdwPOV[1] = SDL_JoystickGetHat(nullptr, 1);
-      joy_state2.rgdwPOV[2] = SDL_JoystickGetHat(nullptr, 2);
-      joy_state2.rgdwPOV[3] = SDL_JoystickGetHat(nullptr, 3);
+        joy_state.rgdwPOV[0] = SDL_JoystickGetHat(info->joystick.get(), 0);
+        joy_state.rgdwPOV[1] = SDL_JoystickGetHat(info->joystick.get(), 1);
+        joy_state.rgdwPOV[2] = SDL_JoystickGetHat(info->joystick.get(), 2);
+        joy_state.rgdwPOV[3] = SDL_JoystickGetHat(info->joystick.get(), 3);
 
-      for (auto i = 0; i < 32; ++i)
+        for (auto i = 0; i < 32; ++i)
+        {
+          joy_state.rgbButtons[i] = SDL_JoystickGetButton(info->joystick.get(), i);
+        }
+      };
+
+      if (info->format == &c_dfDIJoystick)
       {
-        joy_state2.rgbButtons[i] = SDL_JoystickGetButton(nullptr, 0);
+        DIJOYSTATE joy_state{};
+        update_state(joy_state);
+        std::memcpy(result, &joy_state, size);
+      }
+      else if (info->format == &c_dfDIJoystick2)
+      {
+        DIJOYSTATE2 joy_state{};
+        update_state(joy_state);
+        std::memcpy(result, &joy_state, size);
+      }
+      else if (info->format == &c_dfDIMouse)
+      {
+        DIMOUSESTATE mouse_state{};
+        mouse_state.lX = SDL_JoystickGetAxis(info->joystick.get(), 0);
+        mouse_state.lY = SDL_JoystickGetAxis(info->joystick.get(), 1);
+        mouse_state.lZ = SDL_JoystickGetAxis(info->joystick.get(), 2);
+
+        for (auto i = 0; i < 4; ++i)
+        {
+          mouse_state.rgbButtons[i] = SDL_JoystickGetButton(info->joystick.get(), i);
+        }
+      }
+      else if (info->format == &c_dfDIMouse2)
+      {
+        DIMOUSESTATE2 mouse_state{};
+        mouse_state.lX = SDL_JoystickGetAxis(info->joystick.get(), 0);
+        mouse_state.lY = SDL_JoystickGetAxis(info->joystick.get(), 1);
+        mouse_state.lZ = SDL_JoystickGetAxis(info->joystick.get(), 2);
+
+        for (auto i = 0; i < 8; ++i)
+        {
+          mouse_state.rgbButtons[i] = SDL_JoystickGetButton(info->joystick.get(), i);
+        }
+      }
+      else if (info->format == &c_dfDIKeyboard)
+      {
+        std::vector<BYTE> keys(256, 0);
+
+        for (auto i = 0; i < 256; ++i)
+        {
+          keys[i] = SDL_JoystickGetButton(info->joystick.get(), i);
+        }
       }
 
-      return 0;
+      return DI_OK;
     }
 
 
@@ -693,17 +787,6 @@ namespace dinput
     {
       return 0;
     }
-
-
-    HRESULT STDMETHODCALLTYPE DarkGetObjectInfo(IDirectInputDeviceA*, DIDEVICEOBJECTINSTANCEA* info, DWORD value, DWORD how)
-    {
-      info->dwSize = sizeof(DIDEVICEOBJECTINSTANCEA);
-      info->guidType = GUID_XAxis;
-      info->dwType = DIDFT_AXIS;
-      //object.tszName = "X-Axis";
-      return 0;
-    }
-
 
     HRESULT STDMETHODCALLTYPE DarkGetDeviceInfo(IDirectInputDeviceA*, DIDEVICEINSTANCEA* info)
     {
@@ -734,25 +817,27 @@ namespace dinput
 
     HRESULT STDMETHODCALLTYPE DarkEnumEffects(IDirectInputDevice2A*, LPDIENUMEFFECTSCALLBACKA callback, LPVOID data, DWORD filter)
     {
-      DIEFFECTINFOA effect{};
-
-      effect.dwSize = sizeof(DIEFFECTINFOA);
-      effect.dwEffType = DIEFT_CONDITION;
-      effect.dwStaticParams = DIEP_ENVELOPE;
-      effect.dwDynamicParams = DIEP_ENVELOPE;
-      //effect.tszName = "Vibration";
-
-      auto result = callback(&effect, data);
+      // TODO figure this out later
+//      DIEFFECTINFOA effect{};
+//
+//      effect.dwSize = sizeof(DIEFFECTINFOA);
+//      effect.dwEffType = DIEFT_CONDITION;
+//      effect.dwStaticParams = DIEP_ENVELOPE;
+//      effect.dwDynamicParams = DIEP_ENVELOPE;
+//      //effect.tszName = "Vibration";
+//
+//      auto result = callback(&effect, data);
 
       return 0;
     }
 
     HRESULT STDMETHODCALLTYPE DarkGetEffectInfo(IDirectInputDevice2A*, DIEFFECTINFOA* info, const GUID&)
     {
-      info->dwSize = sizeof(DIEFFECTINFOA);
-      info->dwEffType = DIEFT_CONDITION;
-      info->dwStaticParams = DIEP_ENVELOPE;
-      info->dwDynamicParams = DIEP_ENVELOPE;
+      // TODO figure this out later
+//      info->dwSize = sizeof(DIEFFECTINFOA);
+//      info->dwEffType = DIEFT_CONDITION;
+//      info->dwStaticParams = DIEP_ENVELOPE;
+//      info->dwDynamicParams = DIEP_ENVELOPE;
       return 0;
     }
 
@@ -777,7 +862,7 @@ namespace dinput
 
     HRESULT STDMETHODCALLTYPE DarkEscape(IDirectInputDevice2A*, DIEFFESCAPE* command)
     {
-      return 0;
+      return DIERR_DEVICEFULL;
     }
 
     HRESULT STDMETHODCALLTYPE DarkPoll(IDirectInputDevice2A*)  // maybe used
@@ -788,7 +873,7 @@ namespace dinput
 
     HRESULT STDMETHODCALLTYPE DarkSendDeviceData(IDirectInputDevice2A*, DWORD size, const DIDEVICEOBJECTDATA* data, DWORD* length, DWORD flags)
     {
-      return 0;
+      return DIERR_REPORTFULL;
     }
   }
 
@@ -835,8 +920,12 @@ namespace dinput
         new_dinput->lpVtbl = &core::v8::dinput_vtable;
         *result = new_dinput;
       }
+      else
+      {
+        return DIERR_NOINTERFACE;
+      }
 
-      return DIERR_NOINTERFACE;
+      return DI_OK;
     }
 
     ULONG STDMETHODCALLTYPE AddRef(IDirectInputA*)
@@ -888,7 +977,7 @@ namespace dinput
       return 0;
     }
 
-    HRESULT STDMETHODCALLTYPE DarkCreateDevice(IDirectInputA*, const GUID& deviceType, IDirectInputDeviceA** output, IUnknown*)
+    HRESULT STDMETHODCALLTYPE DarkCreateDevice(IDirectInputA* self, const GUID& deviceType, IDirectInputDeviceA** output, IUnknown*)
     {
       if (deviceType == GUID_SysKeyboard)
       {
@@ -902,12 +991,22 @@ namespace dinput
         return 0;
       }
 
+      if (!self)
+      {
+        return DIERR_INVALIDPARAM;
+      }
+
+      self->lpVtbl->Initialize(self, 0, 0);
+
       if (devices.empty())
       {
         for (auto i = 0; i < SDL_NumJoysticks(); ++i)
         {
-          devices.emplace_back(device_info{ { &device::v1::device_vtable },
-            { SDL_JoystickOpen(i), [](SDL_Joystick* joy){ SDL_JoystickClose(joy); } }});
+          auto& device = devices.emplace_back(device_info{
+            { &device::v1::device_vtable },
+            { SDL_JoystickOpen(i), [](SDL_Joystick* joy){ SDL_JoystickClose(joy); } },
+            const_cast<DIDATAFORMAT*>(&c_dfDIJoystick)
+          });
         }
       }
 
@@ -932,7 +1031,7 @@ namespace dinput
 
     HRESULT STDMETHODCALLTYPE DarkGetDeviceStatus(IDirectInputA*, const GUID&)
     {
-      return 0;
+      return DI_OK;
     }
 
     HRESULT STDMETHODCALLTYPE DarkRunControlPanel(IDirectInputA*, DWORD)
@@ -942,7 +1041,22 @@ namespace dinput
 
     HRESULT STDMETHODCALLTYPE DarkInitialize(IDirectInputA*, HINSTANCE, DWORD)
     {
-      return 0;
+      if (SDL_WasInit(SDL_INIT_JOYSTICK) & SDL_INIT_JOYSTICK)
+      {
+        return DI_OK;
+      }
+
+      auto result = SDL_InitSubSystem(SDL_INIT_JOYSTICK);
+
+      if (result != 0)
+      {
+        return DIERR_OLDDIRECTINPUTVERSION;
+      }
+
+      SDL_JoystickUpdate();
+      Siege_InitVirtualJoysticksFromJoysticks();
+
+      return DI_OK;
     }
   }
 
