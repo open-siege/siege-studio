@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <memory>
 #include <optional>
+#include <algorithm>
 #include <limits>
 #include <platform/platform.hpp>
 #include <virtual_joystick.hpp>
@@ -225,11 +226,20 @@ namespace dinput
     })();
   }
 
+  struct joystick_state
+  {
+    std::vector<Sint16> axes;
+    std::vector<Uint8> hats;
+    std::vector<Uint8> buttons;
+  };
+
   struct device_info
   {
     IDirectInputDeviceA device;
     std::unique_ptr<SDL_Joystick, void(*)(SDL_Joystick*)> joystick;
     DIDATAFORMAT* format;
+    joystick_state previous_values;
+    std::vector<DIDEVICEOBJECTDATA> event_buffer;
   };
 
   static std::vector<device_info> devices;
@@ -293,7 +303,7 @@ namespace dinput
         return DIERR_INVALIDPARAM;
       }
 
-      caps->dwFlags = DIDC_ATTACHED;
+      caps->dwFlags = DIDC_ATTACHED | DIDC_POLLEDDEVICE;
 
       // TODO needs a mask here for the sub type as well
       caps->dwDevType = DI8DEVTYPE_FLIGHT;
@@ -345,6 +355,47 @@ namespace dinput
       }
 
       return GUID_Slider;
+    }
+
+    LONG GetAxisOffset(int num_axes, int index)
+    {
+      if (index == 0)
+      {
+        return DIJOFS_X;
+      }
+
+      if (index == 1)
+      {
+        return DIJOFS_Y;
+      }
+
+      if (num_axes == 3 && index == 2)
+      {
+        return DIJOFS_Z;
+      }
+      else if (num_axes >= 4 && index == 2)
+      {
+        return DIJOFS_RZ;
+      }
+
+      if (num_axes >= 4 && index == 3)
+      {
+        return DIJOFS_Z;
+      }
+
+      if (index == 4)
+      {
+        return DIJOFS_RX;
+      }
+
+      if (index == 5)
+      {
+        return DIJOFS_RY;
+      }
+
+      index = index - 5;
+
+      return DIJOFS_SLIDER(index);
     }
 
     std::string_view GetAxisName(const GUID& axis_type)
@@ -711,7 +762,7 @@ namespace dinput
 
         for (auto i = 0; i < 32; ++i)
         {
-          joy_state.rgbButtons[i] = SDL_JoystickGetButton(info->joystick.get(), i);
+          joy_state.rgbButtons[i] = SDL_JoystickGetButton(info->joystick.get(), i)  == 1 ? std::numeric_limits<BYTE>::max() : std::numeric_limits<BYTE>::min();
         }
       };
 
@@ -736,7 +787,7 @@ namespace dinput
 
         for (auto i = 0; i < 4; ++i)
         {
-          mouse_state.rgbButtons[i] = SDL_JoystickGetButton(info->joystick.get(), i);
+          mouse_state.rgbButtons[i] = SDL_JoystickGetButton(info->joystick.get(), i) == 1 ? std::numeric_limits<BYTE>::max() : std::numeric_limits<BYTE>::min();
         }
       }
       else if (info->format == &c_dfDIMouse2)
@@ -748,7 +799,7 @@ namespace dinput
 
         for (auto i = 0; i < 8; ++i)
         {
-          mouse_state.rgbButtons[i] = SDL_JoystickGetButton(info->joystick.get(), i);
+          mouse_state.rgbButtons[i] = SDL_JoystickGetButton(info->joystick.get(), i) == 1 ? std::numeric_limits<BYTE>::max() : std::numeric_limits<BYTE>::min();
         }
       }
       else if (info->format == &c_dfDIKeyboard)
@@ -757,23 +808,111 @@ namespace dinput
 
         for (auto i = 0; i < 256; ++i)
         {
-          keys[i] = SDL_JoystickGetButton(info->joystick.get(), i);
+          keys[i] = SDL_JoystickGetButton(info->joystick.get(), i) == 1 ? std::numeric_limits<BYTE>::max() : std::numeric_limits<BYTE>::min();
         }
       }
 
       return DI_OK;
     }
 
-
-    HRESULT STDMETHODCALLTYPE DarkGetDeviceData(IDirectInputDeviceA*, DWORD size, DIDEVICEOBJECTDATA*, DWORD* length, DWORD flags) // maybe used
+    HRESULT STDMETHODCALLTYPE DarkGetDeviceData(IDirectInputDeviceA* self, DWORD size, DIDEVICEOBJECTDATA* results, DWORD* length, DWORD flags) // maybe used
     {
-      DIDEVICEOBJECTDATA data{};
-      data.dwOfs = DIJOFS_BUTTON0;
-      data.dwData = 0;
-      data.dwSequence = 0;
-      data.uAppData = 0;
+      if (size != sizeof(DIDEVICEOBJECTDATA))
+      {
+        return DIERR_INVALIDPARAM;
+      }
 
-      return 0;
+      if (!length)
+      {
+        return DIERR_INVALIDPARAM;
+      }
+
+      auto info = std::find_if(devices.begin(), devices.end(), [self](const auto& value) { return &value.device == self; });
+
+      if (info == devices.end())
+      {
+        return DIERR_INVALIDPARAM;
+      }
+
+      if (results == nullptr && *length == INFINITE)
+      {
+        *length = info->event_buffer.size();
+
+        if (flags != DIGDD_PEEK)
+        {
+          info->event_buffer.clear();
+        }
+
+        return DI_OK;
+      }
+
+
+      SDL_JoystickUpdate();
+
+      info->previous_values.axes.resize(SDL_JoystickNumAxes(info->joystick.get()));
+      info->previous_values.hats.resize(SDL_JoystickNumHats(info->joystick.get()));
+      info->previous_values.buttons.resize(SDL_JoystickNumButtons(info->joystick.get()));
+      info->event_buffer.reserve(
+        info->previous_values.axes.size() +
+        info->previous_values.hats.size() +
+        info->previous_values.buttons.size());
+
+      for (auto i = 0; i < SDL_JoystickNumAxes(info->joystick.get()); ++i)
+      {
+        if (info->previous_values.axes[i] != SDL_JoystickGetAxis(info->joystick.get(), i))
+        {
+          info->previous_values.axes[i] = SDL_JoystickGetAxis(info->joystick.get(), i);
+          auto& data = info->event_buffer.emplace_back();
+          data.dwOfs = GetAxisOffset(SDL_JoystickNumAxes(info->joystick.get()), i);
+          data.dwData = info->previous_values.axes[i];
+          data.dwSequence = 0;
+          data.uAppData = 0;
+        }
+      }
+
+      for (auto i = 0; i < SDL_JoystickNumHats(info->joystick.get()); ++i)
+      {
+        if (info->previous_values.hats[i] != SDL_JoystickGetHat(info->joystick.get(), i))
+        {
+          info->previous_values.hats[i] = SDL_JoystickGetHat(info->joystick.get(), i);
+          auto& data = info->event_buffer.emplace_back();
+          data.dwOfs = DIJOFS_POV(i);
+          data.dwData = info->previous_values.hats[i];
+          data.dwSequence = 0;
+          data.uAppData = 0;
+        }
+      }
+
+      for (auto i = 0; i < SDL_JoystickNumButtons(info->joystick.get()); ++i)
+      {
+        if (info->previous_values.buttons[i] != SDL_JoystickGetButton(info->joystick.get(), i))
+        {
+          info->previous_values.buttons[i] = SDL_JoystickGetButton(info->joystick.get(), i);
+          auto& data = info->event_buffer.emplace_back();
+          data.dwOfs = DIJOFS_BUTTON(i);
+          data.dwData = info->previous_values.buttons[i] == 1 ? std::numeric_limits<BYTE>::max() : std::numeric_limits<BYTE>::min();
+          data.dwSequence = 0;
+          data.uAppData = 0;
+        }
+      }
+
+      auto requested_length = *length;
+      auto actual_length = info->event_buffer.size();
+
+      if (requested_length >= actual_length)
+      {
+        std::copy_n(info->event_buffer.begin(), actual_length, results);
+        info->event_buffer.clear();
+        *length = actual_length;
+      }
+      else
+      {
+        std::copy_n(info->event_buffer.begin(), requested_length, results);
+        info->event_buffer.clear();
+        return DI_BUFFEROVERFLOW;
+      }
+
+      return DI_OK;
     }
 
 
