@@ -393,7 +393,7 @@ namespace dinput
         return DIJOFS_RY;
       }
 
-      index = index - 5;
+      index = index - 6;
 
       return DIJOFS_SLIDER(index);
     }
@@ -436,7 +436,7 @@ namespace dinput
         return DIERR_INVALIDPARAM;
       }
 
-      // need to also support the offset parameter
+      // TODO need to also support the offset parameter
       if (how == DIPH_BYID)
       {
           auto type = DIDFT_GETTYPE(value);
