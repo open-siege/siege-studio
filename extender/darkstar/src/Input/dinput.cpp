@@ -10,6 +10,8 @@
 #include <optional>
 #include <algorithm>
 #include <limits>
+#include <chrono>
+#include <fstream>
 #include <platform/platform.hpp>
 #include <virtual_joystick.hpp>
 
@@ -92,32 +94,44 @@ namespace dinput
     })();
   }
 
+  // dinput.dll was first introduced with DirectX 3
+  // IDirectInputA/IDirectInputW also came in DirectX 3
+  // DirectX 4 never came out.
+  // IDirectInput2A/IDirectInput2W came in DirectX 5
+  // DirectInput 3 only supports Keyboard and Mouse. The Windows Joystick API was still expected to be used for Joysticks.
+  // DirectInput 5 added support for Joysticks as well as force-feedback.
   create_result WINAPI DarkDirectInputCreateA(HINSTANCE appInstance, DWORD version, IDirectInputA** output, IUnknown*)
   {
     static std::unordered_map<DWORD, IDirectInputA> instances;
 
     auto result = instances.emplace(version, IDirectInputA{ &core::v1::dinput_vtable });
 
+    result.first->second.lpVtbl->Initialize(&result.first->second, appInstance, version);
     *output = &result.first->second;
 
     return create_result::ok;
   }
 
+  // DirectInputCreateEX was introduced with DirectX 7.
   HRESULT WINAPI DarkDirectInputCreateExA(HINSTANCE appInstance, DWORD version, const IID& interfaceId, void** output, IUnknown*)
   {
     static std::unordered_map<DWORD, IDirectInputA> instances;
 
     auto result = instances.emplace(version, IDirectInputA{ &core::v1::dinput_vtable });
 
+    result.first->second.lpVtbl->Initialize(&result.first->second, appInstance, version);
     return result.first->second.lpVtbl->QueryInterface(&result.first->second, interfaceId, output);
   }
 
-  HRESULT WINAPI DirectInput8Create(HINSTANCE hinst, DWORD version, const IID& interfaceId, void** output, IUnknown*)
+  // This resides in dinput8.dll
+  // Introduced with DirectX 8
+  HRESULT WINAPI DirectInput8Create(HINSTANCE appInstance, DWORD version, const IID& interfaceId, void** output, IUnknown*)
   {
     static std::unordered_map<DWORD, IDirectInput8A> instances;
 
     auto result = instances.emplace(version, IDirectInput8A{ &core::v8::dinput_vtable });
 
+    result.first->second.lpVtbl->Initialize(&result.first->second, appInstance, version);
     return result.first->second.lpVtbl->QueryInterface(&result.first->second, interfaceId, output);
   }
 
@@ -705,12 +719,16 @@ namespace dinput
 
     HRESULT STDMETHODCALLTYPE DarkAcquire(IDirectInputDeviceA*)
     {
+      std::ofstream log("darkstar.winmm.log", std::ios::app);
+      log << "DarkAcquire returning \n";
       return DI_OK;
     }
 
 
     HRESULT STDMETHODCALLTYPE DarkUnacquire(IDirectInputDeviceA*)  // maybe used
     {
+      std::ofstream log("darkstar.winmm.log", std::ios::app);
+      log << "DarkUnacquire returning \n";
       return DI_OK;
     }
 
@@ -815,6 +833,12 @@ namespace dinput
       return DI_OK;
     }
 
+    // https://stackoverflow.com/questions/24957464/is-there-any-c-standard-class-function-which-is-similar-to-gettickcount-on-w
+    DWORD DarkTickCount()
+    {
+      return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    }
+
     HRESULT STDMETHODCALLTYPE DarkGetDeviceData(IDirectInputDeviceA* self, DWORD size, DIDEVICEOBJECTDATA* results, DWORD* length, DWORD flags) // maybe used
     {
       if (size != sizeof(DIDEVICEOBJECTDATA))
@@ -846,7 +870,6 @@ namespace dinput
         return DI_OK;
       }
 
-
       SDL_JoystickUpdate();
 
       info->previous_values.axes.resize(SDL_JoystickNumAxes(info->joystick.get()));
@@ -857,6 +880,8 @@ namespace dinput
         info->previous_values.hats.size() +
         info->previous_values.buttons.size());
 
+      static DWORD sequence = 0;
+
       for (auto i = 0; i < SDL_JoystickNumAxes(info->joystick.get()); ++i)
       {
         if (info->previous_values.axes[i] != SDL_JoystickGetAxis(info->joystick.get(), i))
@@ -865,7 +890,8 @@ namespace dinput
           auto& data = info->event_buffer.emplace_back();
           data.dwOfs = GetAxisOffset(SDL_JoystickNumAxes(info->joystick.get()), i);
           data.dwData = info->previous_values.axes[i];
-          data.dwSequence = 0;
+          data.dwSequence = sequence++;
+          data.dwTimeStamp = DarkTickCount();
           data.uAppData = 0;
         }
       }
@@ -878,7 +904,8 @@ namespace dinput
           auto& data = info->event_buffer.emplace_back();
           data.dwOfs = DIJOFS_POV(i);
           data.dwData = info->previous_values.hats[i];
-          data.dwSequence = 0;
+          data.dwSequence = sequence++;
+          data.dwTimeStamp = DarkTickCount();
           data.uAppData = 0;
         }
       }
@@ -891,7 +918,8 @@ namespace dinput
           auto& data = info->event_buffer.emplace_back();
           data.dwOfs = DIJOFS_BUTTON(i);
           data.dwData = info->previous_values.buttons[i] == 1 ? std::numeric_limits<BYTE>::max() : std::numeric_limits<BYTE>::min();
-          data.dwSequence = 0;
+          data.dwSequence = sequence++;
+          data.dwTimeStamp = DarkTickCount();
           data.uAppData = 0;
         }
       }
@@ -918,32 +946,41 @@ namespace dinput
 
     HRESULT STDMETHODCALLTYPE DarkSetEventNotification(IDirectInputDeviceA*, HANDLE)
     {
-      return 0;
+      std::ofstream log("darkstar.winmm.log", std::ios::app);
+      log << "DarkSetEventNotification returning \n";
+      return DI_OK;
     }
 
 
     HRESULT STDMETHODCALLTYPE DarkSetCooperativeLevel(IDirectInputDeviceA*, HWND, DWORD) // maybe used
     {
-      return 0;
+      std::ofstream log("darkstar.winmm.log", std::ios::app);
+      log << "DarkSetCooperativeLevel returning \n";
+      return DI_OK;
     }
 
     HRESULT STDMETHODCALLTYPE DarkGetDeviceInfo(IDirectInputDeviceA*, DIDEVICEINSTANCEA* info)
     {
+      // TODO this needs to be implemented properly
       info->dwSize = sizeof(DIDEVICEINSTANCEA);
       info->dwDevType = DI8DEVTYPE_FLIGHT;
-      return 0;
+      return DI_OK;
     }
 
 
     HRESULT STDMETHODCALLTYPE DarkRunControlPanel(IDirectInputDeviceA*, HWND, DWORD)
     {
-      return 0;
+      std::ofstream log("darkstar.winmm.log", std::ios::app);
+      log << "Device::DarkRunControlPanel returning \n";
+      return DI_OK;
     }
 
 
     HRESULT STDMETHODCALLTYPE DarkInitialize(IDirectInputDeviceA*, HINSTANCE, DWORD version)
     {
-      return 0;
+      std::ofstream log("darkstar.winmm.log", std::ios::app);
+      log << "Device::DarkInitialize returning \n";
+      return DI_OK;
     }
   }
 
@@ -951,11 +988,15 @@ namespace dinput
   {
     HRESULT STDMETHODCALLTYPE DarkCreateEffect(IDirectInputDevice2A*, const GUID&, const DIEFFECT*, IDirectInputEffect**, IUnknown*)
     {
-      return 0;
+      std::ofstream log("darkstar.winmm.log", std::ios::app);
+      log << "DarkCreateEffect returning \n";
+      return DI_OK;
     }
 
     HRESULT STDMETHODCALLTYPE DarkEnumEffects(IDirectInputDevice2A*, LPDIENUMEFFECTSCALLBACKA callback, LPVOID data, DWORD filter)
     {
+      std::ofstream log("darkstar.winmm.log", std::ios::app);
+      log << "DarkEnumEffects returning \n";
       // TODO figure this out later
 //      DIEFFECTINFOA effect{};
 //
@@ -967,40 +1008,51 @@ namespace dinput
 //
 //      auto result = callback(&effect, data);
 
-      return 0;
+      return DI_OK;
     }
 
     HRESULT STDMETHODCALLTYPE DarkGetEffectInfo(IDirectInputDevice2A*, DIEFFECTINFOA* info, const GUID&)
     {
+      std::ofstream log("darkstar.winmm.log", std::ios::app);
+      log << "DarkGetEffectInfo returning \n";
       // TODO figure this out later
 //      info->dwSize = sizeof(DIEFFECTINFOA);
 //      info->dwEffType = DIEFT_CONDITION;
 //      info->dwStaticParams = DIEP_ENVELOPE;
 //      info->dwDynamicParams = DIEP_ENVELOPE;
-      return 0;
+      return DI_OK;
     }
 
     HRESULT STDMETHODCALLTYPE DarkGetForceFeedbackState(IDirectInputDevice2A*, DWORD* value)
     {
+      std::ofstream log("darkstar.winmm.log", std::ios::app);
+      log << "DarkGetForceFeedbackState returning \n";
       *value = DIGFFS_STOPPED;
-      return 0;
+      return DI_OK;
     }
 
     HRESULT STDMETHODCALLTYPE DarkSendForceFeedbackCommand(IDirectInputDevice2A*, DWORD flags)
     {
-      return 0;
+      std::ofstream log("darkstar.winmm.log", std::ios::app);
+      log << "DarkSendForceFeedbackCommand returning \n";
+      return DI_OK;
     }
 
     HRESULT STDMETHODCALLTYPE DarkEnumCreatedEffectObjects(IDirectInputDevice2A*, LPDIENUMCREATEDEFFECTOBJECTSCALLBACK callback, void* data, DWORD)
     {
-      IDirectInputEffect* effect = nullptr;
+      // TODO come back to this later
+     // IDirectInputEffect* effect = nullptr;
 
-      auto result = callback(effect, data);
-      return 0;
+     // auto result = callback(effect, data);
+      std::ofstream log("darkstar.winmm.log", std::ios::app);
+      log << "DarkEnumCreatedEffectObjects returning \n";
+      return DI_OK;
     }
 
     HRESULT STDMETHODCALLTYPE DarkEscape(IDirectInputDevice2A*, DIEFFESCAPE* command)
     {
+      std::ofstream log("darkstar.winmm.log", std::ios::app);
+      log << "DarkEscape returning \n";
       return DIERR_DEVICEFULL;
     }
 
@@ -1012,6 +1064,8 @@ namespace dinput
 
     HRESULT STDMETHODCALLTYPE DarkSendDeviceData(IDirectInputDevice2A*, DWORD size, const DIDEVICEOBJECTDATA* data, DWORD* length, DWORD flags)
     {
+      std::ofstream log("darkstar.winmm.log", std::ios::app);
+      log << "DarkSendDeviceData returning \n";
       return DIERR_REPORTFULL;
     }
   }
@@ -1020,15 +1074,21 @@ namespace dinput
   {
     HRESULT STDMETHODCALLTYPE DarkEnumEffectsInFile(IDirectInputDevice7A*, LPCSTR fileName, LPDIENUMEFFECTSINFILECALLBACK callback, void* data, DWORD flags)
     {
-      DIFILEEFFECT effect{};
+      // TODO finish this when I know how it should work
+//      DIFILEEFFECT effect{};
+//
+//      auto result = callback(&effect, data);
 
-      auto result = callback(&effect, data);
-      return 0;
+      std::ofstream log("darkstar.winmm.log", std::ios::app);
+      log << "DarkEnumEffectsInFile returning \n";
+      return DI_OK;
     }
 
     HRESULT STDMETHODCALLTYPE DarkWriteEffectToFile(IDirectInputDevice7A*, LPCSTR filename, DWORD, DIFILEEFFECT* effect, DWORD flags)
     {
-      return 0;
+      std::ofstream log("darkstar.winmm.log", std::ios::app);
+      log << "DarkWriteEffectToFile returning \n";
+      return DI_OK;
     }
   }
 
@@ -1036,31 +1096,59 @@ namespace dinput
   {
     HRESULT STDMETHODCALLTYPE QueryInterface(IDirectInputA* self, REFIID interface_id, void** result)
     {
+      bool should_init = SDL_WasInit(SDL_INIT_JOYSTICK) & SDL_INIT_JOYSTICK;
+
+      auto re_init = [&](std::string_view expected_value) {
+        auto enabled = SDL_GetHint(SDL_HINT_DIRECTINPUT_ENABLED);
+
+        if (!enabled)
+        {
+          enabled = "1";
+        }
+
+        if (enabled != expected_value)
+        {
+          SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
+          SDL_SetHint(SDL_HINT_DIRECTINPUT_ENABLED, expected_value == "1" ? "1" : "0");
+
+          if (should_init)
+          {
+            SDL_InitSubSystem(SDL_INIT_JOYSTICK);
+          }
+        }
+      };
+
       if (interface_id == IID_IDirectInputA)
       {
+        re_init("1");
+
         self->lpVtbl = &core::v1::dinput_vtable;
         *result = self;
       }
       else if (interface_id == IID_IDirectInput2A)
       {
+        re_init("1");
         IDirectInput2A* new_dinput = reinterpret_cast<IDirectInput2A*>(self);
         new_dinput->lpVtbl = &core::v2::dinput_vtable;
         *result = new_dinput;
       }
       else if (interface_id == IID_IDirectInput7A)
       {
+        re_init("1");
         IDirectInput7A* new_dinput = reinterpret_cast<IDirectInput7A*>(self);
         new_dinput->lpVtbl = &core::v7::dinput_vtable;
         *result = new_dinput;
       }
       else if (interface_id == IID_IDirectInput8A)
       {
+        re_init("0");
         IDirectInput8A* new_dinput = reinterpret_cast<IDirectInput8A*>(self);
         new_dinput->lpVtbl = &core::v8::dinput_vtable;
         *result = new_dinput;
       }
       else
       {
+        SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
         return DIERR_NOINTERFACE;
       }
 
@@ -1170,11 +1258,15 @@ namespace dinput
 
     HRESULT STDMETHODCALLTYPE DarkGetDeviceStatus(IDirectInputA*, const GUID&)
     {
+      std::ofstream log("darkstar.winmm.log", std::ios::app);
+      log << "DarkGetDeviceStatus returning \n";
       return DI_OK;
     }
 
     HRESULT STDMETHODCALLTYPE DarkRunControlPanel(IDirectInputA*, DWORD)
     {
+      std::ofstream log("darkstar.winmm.log", std::ios::app);
+      log << "DarkRunControlPanel returning \n";
       return 0;
     }
 
@@ -1192,6 +1284,8 @@ namespace dinput
         return DIERR_OLDDIRECTINPUTVERSION;
       }
 
+      std::ofstream log("darkstar.winmm.log", std::ios::trunc);
+      log << "SDL Joystick sub system init\n";
       SDL_JoystickUpdate();
       Siege_InitVirtualJoysticksFromJoysticks();
 
