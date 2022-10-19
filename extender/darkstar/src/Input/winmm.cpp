@@ -32,6 +32,7 @@ namespace winmm
     invalid_param = MMSYSERR_INVALPARAM
   };
 
+  //These functions count as being a part of DirectX 1 and 2.
   static auto* TrueJoyGetNumDevs = joyGetNumDevs;
   static auto* TrueJoyGetDevCapsA = joyGetDevCapsA;
   static auto* TrueJoyGetPos = joyGetPos;
