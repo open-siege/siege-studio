@@ -16,6 +16,11 @@ namespace siege
     return SDL_bool::SDL_FALSE;
   }
 
+  SDL_bool IsKeyboard(SDL_Joystick*)
+  {
+    return SDL_bool::SDL_FALSE;
+  }
+
   Uint16 JoystickGetVendor(SDL_Joystick *joystick)
   {
     return SDL_JoystickGetVendor(joystick);

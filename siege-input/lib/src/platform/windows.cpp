@@ -439,6 +439,18 @@ namespace siege
      return result == joystick_mice.end() ? SDL_bool::SDL_FALSE : SDL_bool::SDL_TRUE;
    }
 
+   SDL_bool IsKeyboard(SDL_Joystick* joystick)
+   {
+     if (!joystick)
+     {
+       return SDL_bool::SDL_FALSE;
+     }
+
+     auto result = joystick_keyboards.find(joystick);
+
+     return result == joystick_keyboards.end() ? SDL_bool::SDL_FALSE : SDL_bool::SDL_TRUE;
+   }
+
    std::optional<HidAttributes> GetHidAttributes(SDL_Joystick *joystick)
    {
      if (!joystick)
