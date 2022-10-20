@@ -83,3 +83,6 @@ deactivate.ps1
 deactivate.sh
 package
 /cmake-build-debug-visual-studio/
+/vigem/src/
+/vigem/include/
+/vigem/CMakeLists.txt
