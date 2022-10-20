@@ -145,8 +145,6 @@ SDL_JoystickType Siege_JoystickGetType(SDL_Joystick* joystick)
     }
   }
 
-
-
   return type;
 }
 
@@ -166,6 +164,7 @@ struct HidAttributes
 
 static std::unordered_map<HANDLE, VirtualJoystick> virtual_joysticks;
 static std::unordered_map<SDL_Joystick*, std::optional<HidAttributes>> joystick_mice;
+static std::unordered_map<SDL_Joystick*, std::optional<HidAttributes>> joystick_keyboards;
 static std::shared_ptr<void> message_hook;
 
 LRESULT CALLBACK MessageHookCallback(
@@ -189,7 +188,7 @@ LRESULT CALLBACK MessageHookCallback(
     RAWINPUT final_data;
     dwSize = sizeof(RAWINPUT);
 
-    if (GetRawInputData((HRAWINPUT)data->lParam, RID_INPUT, &final_data, &dwSize, sizeof(RAWINPUTHEADER)) != dwSize)
+    if (GetRawInputData((HRAWINPUT)data->lParam, RID_INPUT, &final_data, &dwSize, sizeof(RAWINPUTHEADER)) <= sizeof(RAWINPUTHEADER))
     {
       return CallNextHookEx(nullptr, nCode, wParam, lParam);
     }
@@ -252,6 +251,33 @@ LRESULT CALLBACK MessageHookCallback(
         }
       }
     }
+    else if (final_data.header.dwType == RIM_TYPEKEYBOARD)
+    {
+      auto joystick = virtual_joysticks.find(final_data.header.hDevice);
+
+      if (joystick != virtual_joysticks.end())
+      {
+        auto& v_joy = joystick->second;
+
+        auto is_down = (final_data.data.keyboard.Flags & RI_KEY_BREAK) != RI_KEY_BREAK;
+        auto is_extended = (final_data.data.keyboard.Flags & RI_KEY_E0) == RI_KEY_E0;
+
+        // Raw Input always provides the 'make' version of a scan code.
+        // The below aligns the reported code with the scan-codes used by DirectInput.
+        // Extended codes are converted into the 'break' version of the code.
+        // See for full list of codes: https://learn.microsoft.com/en-us/windows/win32/inputdev/about-keyboard-input#scan-codes
+        auto code = is_extended ? final_data.data.keyboard.MakeCode | 0x80 : final_data.data.keyboard.MakeCode;
+
+        if (is_down)
+        {
+          SDL_JoystickSetVirtualButton(v_joy.joystick, code, 1);
+        }
+        else
+        {
+          SDL_JoystickSetVirtualButton(v_joy.joystick, code, 0);
+        }
+      }
+    }
   }
 
   return CallNextHookEx(nullptr, nCode, wParam, lParam);
@@ -291,19 +317,19 @@ std::optional<HidAttributes> DeviceNameToAttributes(std::string device_name)
 
 void Siege_InitVirtualJoysticksFromMice()
 {
-  RAWINPUTDEVICE Rid[2];
+  std::array<RAWINPUTDEVICE, 2> deviceRequest;
 
-  Rid[0].usUsagePage = 0x01;          // HID_USAGE_PAGE_GENERIC
-  Rid[0].usUsage = 0x02;              // HID_USAGE_GENERIC_MOUSE
-  Rid[0].dwFlags = 0;
-  Rid[0].hwndTarget = 0;
+  deviceRequest[0].usUsagePage = 0x01;          // HID_USAGE_PAGE_GENERIC
+  deviceRequest[0].usUsage = 0x02;              // HID_USAGE_GENERIC_MOUSE
+  deviceRequest[0].dwFlags = 0;
+  deviceRequest[0].hwndTarget = 0;
 
-  Rid[1].usUsagePage = 0x01;          // HID_USAGE_PAGE_GENERIC
-  Rid[1].usUsage = 0x06;              // HID_USAGE_GENERIC_KEYBOARD
-  Rid[1].dwFlags = 0;
-  Rid[1].hwndTarget = 0;
+  deviceRequest[1].usUsagePage = 0x01;          // HID_USAGE_PAGE_GENERIC
+  deviceRequest[1].usUsage = 0x06;              // HID_USAGE_GENERIC_KEYBOARD
+  deviceRequest[1].dwFlags = 0;
+  deviceRequest[1].hwndTarget = 0;
 
-  if (RegisterRawInputDevices(Rid, 2, sizeof(Rid[0])) == FALSE)
+  if (RegisterRawInputDevices(deviceRequest.data(), UINT(deviceRequest.size()), sizeof(RAWINPUTDEVICE)) == FALSE)
   {
     return;
   }
@@ -334,17 +360,17 @@ void Siege_InitVirtualJoysticksFromMice()
     std::string device_name;
     UINT name_size;
     GetRawInputDeviceInfoA(device.hDevice, RIDI_DEVICENAME, nullptr, &name_size);
-    device_name.assign(name_size, '\0');
+    device_name.assign(name_size + 12, '\0');
     GetRawInputDeviceInfoA(device.hDevice, RIDI_DEVICENAME, device_name.data(), &name_size);
 
     RID_DEVICE_INFO device_info{};
     UINT device_size = sizeof(device_info);
     GetRawInputDeviceInfoA(device.hDevice, RIDI_DEVICEINFO, &device_info, &device_size);
 
-    // TODO: also add support for keyboard virtual joysticks (RIM_TYPEKEYBOARD)
+    constexpr static HidAttributes default_attributes = { 0 };
+
     if (device.dwType == RIM_TYPEMOUSE)
     {
-      constexpr static HidAttributes default_attributes = { 0 };
       auto attributes = DeviceNameToAttributes(device_name);
       VirtualJoystick joystick{};
 
@@ -352,11 +378,12 @@ void Siege_InitVirtualJoysticksFromMice()
 
       joy.version = SDL_VIRTUAL_JOYSTICK_DESC_VERSION;
       joy.type = SDL_JoystickType::SDL_JOYSTICK_TYPE_FLIGHT_STICK;
+      joy.nbuttons = Uint16(device_info.mouse.dwNumberOfButtons);
       joy.naxes = device_info.mouse.fHasHorizontalWheel ? 4 : 3, // 3 for a mouse with a scroll wheels, 4 for a mouse with two scroll wheels;
-      joy.nbuttons = device_info.mouse.dwNumberOfButtons;
       joy.nhats = 0;
       joy.vendor_id = attributes.value_or(default_attributes).vendor_id;
       joy.product_id = attributes.value_or(default_attributes).product_id;
+      device_name = "Mouse: " + device_name;
       joy.name = device_name.c_str();
 
       int joystick_index = SDL_JoystickAttachVirtualEx(&joy);
@@ -367,6 +394,33 @@ void Siege_InitVirtualJoysticksFromMice()
 
         virtual_joysticks.emplace(device.hDevice, joystick);
         joystick_mice.emplace(joystick.joystick, attributes);
+      }
+    }
+    else if (device.dwType == RIM_TYPEKEYBOARD)
+    {
+      auto attributes = DeviceNameToAttributes(device_name);
+      VirtualJoystick joystick{};
+
+      SDL_VirtualJoystickDesc joy{};
+
+      joy.version = SDL_VIRTUAL_JOYSTICK_DESC_VERSION;
+      joy.type = SDL_JoystickType::SDL_JOYSTICK_TYPE_FLIGHT_STICK;
+      joy.nbuttons = Uint16(device_info.keyboard.dwNumberOfKeysTotal);
+      joy.naxes = 0;
+      joy.nhats = 0;
+      joy.vendor_id = attributes.value_or(default_attributes).vendor_id;
+      joy.product_id = attributes.value_or(default_attributes).product_id;
+      device_name = "Keyboard: " + device_name;
+      joy.name = device_name.c_str();
+
+      int joystick_index = SDL_JoystickAttachVirtualEx(&joy);
+
+      if (joystick_index != -1)
+      {
+        joystick.joystick = SDL_JoystickOpen(joystick_index);
+
+        virtual_joysticks.emplace(device.hDevice, joystick);
+        joystick_keyboards.emplace(joystick.joystick, attributes);
       }
     }
   }
