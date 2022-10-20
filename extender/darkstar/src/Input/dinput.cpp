@@ -258,8 +258,8 @@ namespace dinput
 
   static std::vector<device_info> devices;
 
-  static std::optional<IDirectInputDeviceA> keyboard;
-  static std::optional<IDirectInputDeviceA> mouse;
+  static std::optional<std::size_t> keyboard_index;
+  static std::optional<std::size_t> mouse_index;
 
   namespace device::v1
   {
@@ -498,6 +498,7 @@ namespace dinput
         DIDEVICEOBJECTINSTANCEA object{};
         object.dwSize = sizeof(DIDEVICEOBJECTINSTANCEA);
         object.guidType = GetAxisObjectType(num_axes, i);
+        object.dwOfs = GetAxisOffset(num_axes, i);
         object.dwType = DIDFT_MAKEINSTANCE(i) | DIDFT_AXIS;
 
         auto name = GetAxisName(object.guidType);
@@ -517,6 +518,7 @@ namespace dinput
         DIDEVICEOBJECTINSTANCEA object{};
         object.dwSize = sizeof(DIDEVICEOBJECTINSTANCEA);
         object.guidType = GUID_POV;
+        object.dwOfs = DIJOFS_POV(i);
         object.dwType = DIDFT_MAKEINSTANCE(i) | DIDFT_POV;
 
         auto name = "Hat " + std::to_string(i + 1);
@@ -530,14 +532,29 @@ namespace dinput
         }
       }
 
+      auto is_keyboard = siege::IsKeyboard(info->joystick.get());
+      auto button_type = is_keyboard ? GUID_Key : GUID_Button;
+
       for (auto i = 0; i < siege::JoystickNumButtons(info->joystick.get()); ++i)
       {
         DIDEVICEOBJECTINSTANCEA object{};
         object.dwSize = sizeof(DIDEVICEOBJECTINSTANCEA);
-        object.guidType = GUID_Button;
+        object.guidType = button_type;
         object.dwType = DIDFT_MAKEINSTANCE(i) | DIDFT_BUTTON;
-        auto name = "Button " + std::to_string(i + 1);
-        std::memcpy(&object.tszName, name.data(), name.size());
+
+        if (is_keyboard)
+        {
+          auto vkey = MapVirtualKeyA(i, MAPVK_VSC_TO_VK);
+          auto key_char = char(LOWORD(MapVirtualKeyA(vkey, MAPVK_VK_TO_CHAR)));
+          std::memcpy(&object.tszName, &key_char, 1);
+          object.dwOfs = i;
+        }
+        else
+        {
+          object.dwOfs = DIJOFS_BUTTON(i);
+          auto name = "Button " + std::to_string(i + 1);
+          std::memcpy(&object.tszName, name.data(), name.size());
+        }
 
         auto result = callback(&object, data);
 
@@ -1206,18 +1223,6 @@ namespace dinput
 
     HRESULT STDMETHODCALLTYPE DarkCreateDevice(IDirectInputA* self, const GUID& deviceType, IDirectInputDeviceA** output, IUnknown*)
     {
-      if (deviceType == GUID_SysKeyboard)
-      {
-        // TODO complete this later
-        return 0;
-      }
-
-      if (deviceType == GUID_SysMouse)
-      {
-        // TODO complete this later
-        return 0;
-      }
-
       if (!self)
       {
         return DIERR_INVALIDPARAM;
@@ -1234,10 +1239,57 @@ namespace dinput
             { siege::JoystickOpen(i), [](siege::Joystick* joy){ siege::JoystickClose(joy); } },
             const_cast<DIDATAFORMAT*>(&c_dfDIJoystick)
           });
+
+          if (siege::IsMouse(device.joystick.get()))
+          {
+            device.format = const_cast<DIDATAFORMAT*>(&c_dfDIMouse);
+          }
+
+          if (siege::IsKeyboard(device.joystick.get()))
+          {
+            device.format = const_cast<DIDATAFORMAT*>(&c_dfDIKeyboard);
+          }
+
+          if (!mouse_index.has_value() && siege::IsMouse(device.joystick.get()) && siege::JoystickGetProduct(device.joystick.get()) != 0)
+          {
+            mouse_index = i;
+          }
+
+          if (!keyboard_index.has_value() && siege::IsKeyboard(device.joystick.get()) && siege::JoystickGetProduct(device.joystick.get()) != 0)
+          {
+            keyboard_index = i;
+          }
         }
       }
 
-      if (deviceType == GUID_Joystick && !devices.empty())
+      if (devices.empty())
+      {
+        return DIERR_INVALIDPARAM;
+      }
+
+      if (deviceType == GUID_SysKeyboard)
+      {
+        if (!keyboard_index.has_value())
+        {
+          return DIERR_INVALIDPARAM;
+        }
+
+        *output = &devices[keyboard_index.value()].device;
+        return DI_OK;
+      }
+
+      if (deviceType == GUID_SysMouse)
+      {
+        if (!mouse_index.has_value())
+        {
+          return DIERR_INVALIDPARAM;
+        }
+
+        *output = &devices[mouse_index.value()].device;
+        return 0;
+      }
+
+      if (deviceType == GUID_Joystick)
       {
         *output = &devices.rbegin()->device;
         return 0;
