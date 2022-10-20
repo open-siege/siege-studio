@@ -15,9 +15,9 @@
 
 inline auto joystick_get_or_open(int device_index)
 {
-  auto instance_id = SDL_JoystickGetDeviceInstanceID(device_index);
+  auto instance_id = siege::JoystickGetDeviceInstanceID(device_index);
 
-  return instance_id == -1 || instance_id == 0 ? SDL_JoystickOpen(device_index) : SDL_JoystickFromInstanceID(instance_id);
+  return instance_id == -1 || instance_id == 0 ? siege::JoystickOpen(device_index) : siege::JoystickFromInstanceID(instance_id);
 }
 
 namespace winmm
@@ -41,18 +41,18 @@ namespace winmm
 
   void init_joysticks()
   {
-    if (SDL_WasInit(SDL_INIT_JOYSTICK) & SDL_INIT_JOYSTICK)
+    if (siege::WasInit(SDL_INIT_JOYSTICK) & SDL_INIT_JOYSTICK)
     {
       return;
     }
 
-    auto result = SDL_InitSubSystem(SDL_INIT_JOYSTICK);
+    auto result = siege::InitSubSystem(SDL_INIT_JOYSTICK);
     if (result == 0)
     {
       std::ofstream log("darkstar.winmm.log", std::ios::trunc);
       log << "SDL Joystick sub system init\n";
-      SDL_JoystickUpdate();
-      Siege_InitVirtualJoysticksFromJoysticks();
+      siege::JoystickUpdate();
+      siege::InitVirtualJoysticksFromJoysticks();
     }
   }
 
@@ -61,7 +61,7 @@ namespace winmm
     init_joysticks();
     std::ofstream log("darkstar.winmm.log", std::ios::app);
 
-    auto result = SDL_NumJoysticks();
+    auto result = siege::NumJoysticks();
     log << "DarkJoyGetNumDevs: " << result << '\n';
 
     log << "DarkJoyGetDevCapsA returning \n";
@@ -88,12 +88,12 @@ namespace winmm
       joy_id = 0;
     }
 
-    if (joy_id > std::size_t(SDL_NumJoysticks() - 1))
+    if (joy_id > std::size_t(siege::NumJoysticks() - 1))
     {
       return joystickresult_t::no_driver;
     }
 
-    joy_id = SDL_NumJoysticks() - 1 - joy_id;
+    joy_id = siege::NumJoysticks() - 1 - joy_id;
 
     log << "Actual joystick ID " << joy_id << '\n';
 
@@ -107,12 +107,12 @@ namespace winmm
 
     *caps = JOYCAPSA{};
     caps->wCaps = JOYCAPS_HASZ | JOYCAPS_HASR | JOYCAPS_HASPOV;
-    caps->wMid = SDL_JoystickGetVendor(temp);
-    caps->wPid = SDL_JoystickGetProduct(temp);
-    caps->wMaxAxes = SDL_JoystickNumAxes(temp);
-    caps->wNumAxes = SDL_JoystickNumAxes(temp);
-    caps->wMaxButtons = SDL_JoystickNumButtons(temp);
-    caps->wNumButtons = SDL_JoystickNumButtons(temp);
+    caps->wMid = siege::JoystickGetVendor(temp);
+    caps->wPid = siege::JoystickGetProduct(temp);
+    caps->wMaxAxes = siege::JoystickNumAxes(temp);
+    caps->wNumAxes = siege::JoystickNumAxes(temp);
+    caps->wMaxButtons = siege::JoystickNumButtons(temp);
+    caps->wNumButtons = siege::JoystickNumButtons(temp);
     caps->wXmin = 0;
     caps->wXmax = std::numeric_limits<std::uint16_t>::max();
     caps->wYmin = 0;
@@ -121,9 +121,9 @@ namespace winmm
     caps->wZmax = std::numeric_limits<std::uint16_t>::max();
     caps->wRmin = 0;
     caps->wRmax = std::numeric_limits<std::uint16_t>::max();
-    log << "Found" << SDL_JoystickName(temp) << '\n';
-    auto length = std::strlen(SDL_JoystickName(temp)) > sizeof(caps->szPname) ? sizeof(caps->szPname) : std::strlen(SDL_JoystickName(temp));
-    std::memcpy(caps->szPname, SDL_JoystickName(temp), length);
+    log << "Found" << siege::JoystickName(temp) << '\n';
+    auto length = std::strlen(siege::JoystickName(temp)) > sizeof(caps->szPname) ? sizeof(caps->szPname) : std::strlen(siege::JoystickName(temp));
+    std::memcpy(caps->szPname, siege::JoystickName(temp), length);
 
     log << "DarkJoyGetDevCapsA returning \n";
     return joystickresult_t::no_error;
@@ -148,7 +148,7 @@ namespace winmm
 
     *info = JOYINFO{};
 
-    joy_id = SDL_NumJoysticks() - 1 - joy_id;
+    joy_id = siege::NumJoysticks() - 1 - joy_id;
 
     auto temp = joystick_get_or_open(int(joy_id));
 
@@ -157,11 +157,11 @@ namespace winmm
       return joystickresult_t::unplugged;
     }
 
-    SDL_JoystickUpdate();
+    siege::JoystickUpdate();
 
-    info->wXpos = WORD(SDL_JoystickGetAxis(temp, 0));
-    info->wYpos = WORD(SDL_JoystickGetAxis(temp, 1));
-    info->wZpos = WORD(SDL_JoystickGetAxis(temp, 2));
+    info->wXpos = WORD(siege::JoystickGetAxis(temp, 0));
+    info->wYpos = WORD(siege::JoystickGetAxis(temp, 1));
+    info->wZpos = WORD(siege::JoystickGetAxis(temp, 2));
 
     constexpr static std::array<DWORD, 4> buttons = {
       JOY_BUTTON1,
@@ -172,7 +172,7 @@ namespace winmm
 
     for (auto i = 0u; i < buttons.size(); ++i)
     {
-      if (SDL_JoystickGetButton(temp, i))
+      if (siege::JoystickGetButton(temp, i))
       {
         info->wButtons |= buttons[i];
       }
@@ -205,7 +205,7 @@ namespace winmm
 
     init_joysticks();
 
-    joy_id = SDL_NumJoysticks() - 1 - joy_id;
+    joy_id = siege::NumJoysticks() - 1 - joy_id;
 
     log << "Actual joystick ID " << joy_id << '\n';
 
@@ -220,19 +220,19 @@ namespace winmm
 
     *info = JOYINFOEX{};
 
-    SDL_JoystickUpdate();
+    siege::JoystickUpdate();
 
     log << "Flags " << flags << '\n';
 
-    log << "joy_id stick: " << SDL_JoystickGetAxis(temp, 0) << " " << SDL_JoystickGetAxis(temp, 1) << '\n';
+    log << "joy_id stick: " << siege::JoystickGetAxis(temp, 0) << " " << siege::JoystickGetAxis(temp, 1) << '\n';
 
-    log << "joy_id rudder: " << SDL_JoystickGetAxis(temp, 2) << " " << DWORD(SDL_JoystickGetAxis(temp, 2)) << '\n';
-    log << "joy_id throttle: " << SDL_JoystickGetAxis(temp, 3) << " " << DWORD(SDL_JoystickGetAxis(temp, 3)) <<  '\n';
+    log << "joy_id rudder: " << siege::JoystickGetAxis(temp, 2) << " " << DWORD(siege::JoystickGetAxis(temp, 2)) << '\n';
+    log << "joy_id throttle: " << siege::JoystickGetAxis(temp, 3) << " " << DWORD(siege::JoystickGetAxis(temp, 3)) <<  '\n';
 
-    info->dwXpos = int(SDL_JoystickGetAxis(temp, 0)) + std::numeric_limits<std::int16_t>::max();
-    info->dwYpos = int(SDL_JoystickGetAxis(temp, 1)) + std::numeric_limits<std::int16_t>::max();
-    info->dwRpos = int(SDL_JoystickGetAxis(temp, 2)) + std::numeric_limits<std::int16_t>::max();
-    info->dwZpos = int(SDL_JoystickGetAxis(temp, 3)) + std::numeric_limits<std::int16_t>::max();
+    info->dwXpos = int(siege::JoystickGetAxis(temp, 0)) + std::numeric_limits<std::int16_t>::max();
+    info->dwYpos = int(siege::JoystickGetAxis(temp, 1)) + std::numeric_limits<std::int16_t>::max();
+    info->dwRpos = int(siege::JoystickGetAxis(temp, 2)) + std::numeric_limits<std::int16_t>::max();
+    info->dwZpos = int(siege::JoystickGetAxis(temp, 3)) + std::numeric_limits<std::int16_t>::max();
 
 
     info->dwSize = sizeof(JOYINFOEX);
@@ -275,13 +275,13 @@ namespace winmm
 
     for (auto i = 0u; i < buttons.size(); ++i)
     {
-      if (SDL_JoystickGetButton(temp, i))
+      if (siege::JoystickGetButton(temp, i))
       {
         info->dwButtons |= buttons[i];
       }
     }
 
-    auto pov = SDL_JoystickGetHat(temp, 0);
+    auto pov = siege::JoystickGetHat(temp, 0);
 
     info->dwPOV = JOY_POVCENTERED;
 

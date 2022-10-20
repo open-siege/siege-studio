@@ -20,7 +20,7 @@
 #include "platform/platform.hpp"
 #include "virtual_joystick.hpp"
 
-inline auto to_array(const SDL_JoystickGUID& guid)
+inline auto to_array(const siege::JoystickGUID& guid)
 {
   std::array<std::byte, 16> result;
   std::memcpy(result.data(), guid.data, sizeof(guid.data));
@@ -28,12 +28,12 @@ inline auto to_array(const SDL_JoystickGUID& guid)
   return result;
 }
 
-auto to_byte_view(const SDL_JoystickGUID& guid)
+auto to_byte_view(const siege::JoystickGUID& guid)
 {
   return std::basic_string_view<std::byte>(reinterpret_cast<const std::byte*>(guid.data), sizeof(guid.data));
 }
 
-Uint8 Siege_GameControllerGetDPadAsHat(SDL_GameController* controller)
+Uint8 GameControllerGetDPadAsHat(SDL_GameController* controller)
 {
   if (SDL_GameControllerGetButton(controller, SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_UP) && SDL_GameControllerGetButton(controller, SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_LEFT))
   {
@@ -81,31 +81,31 @@ constexpr static auto devices_which_crash = std::array<std::pair<Uint16, Uint16>
 
 int main(int, char**)
 {
-  SDL_SetHint(SDL_HINT_JOYSTICK_ROG_CHAKRAM, "1");
-  SDL_InitSubSystem(SDL_INIT_JOYSTICK);
+  siege::SetHint(SDL_HINT_JOYSTICK_ROG_CHAKRAM, "1");
+  siege::InitSubSystem(SDL_INIT_JOYSTICK);
 
-  for (auto i = 0; i < SDL_NumJoysticks(); ++i)
+  for (auto i = 0; i < siege::NumJoysticks(); ++i)
   {
     auto bad_device = std::find(devices_which_crash.begin(), devices_which_crash.end(),
-                        std::make_pair(SDL_JoystickGetDeviceVendor(i), SDL_JoystickGetDeviceProduct(i)));
+                        std::make_pair(siege::JoystickGetDeviceVendor(i), siege::JoystickGetDeviceProduct(i)));
 
     if (bad_device != devices_which_crash.end())
     {
-      SDL_SetHint(SDL_HINT_DIRECTINPUT_ENABLED, "0");
+      siege::SetHint(SDL_HINT_DIRECTINPUT_ENABLED, "0");
     }
     // TODO store this in a collection to use when saving device info
-//    std::cout << "Loading " << SDL_JoystickNameForIndex(i) << '\n';
-//    std::cout << "Path " << SDL_JoystickPathForIndex(i) << '\n';
-//    std::cout << "GUID " << to_string(SDL_JoystickGetDeviceGUID(i)) << '\n';
-//    std::cout << "Vendor " << SDL_JoystickGetDeviceVendor(i) << '\n';
-//    std::cout << "Product " << SDL_JoystickGetDeviceProduct(i) << '\n';
-//    std::cout << "Version " << SDL_JoystickGetDeviceProductVersion(i) << '\n';
-//    std::cout << "Type " << SDL_JoystickGetDeviceType(i) << '\n';
+//    std::cout << "Loading " << siege::JoystickNameForIndex(i) << '\n';
+//    std::cout << "Path " << siege::JoystickPathForIndex(i) << '\n';
+//    std::cout << "GUID " << to_string(siege::JoystickGetDeviceGUID(i)) << '\n';
+//    std::cout << "Vendor " << siege::JoystickGetDeviceVendor(i) << '\n';
+//    std::cout << "Product " << siege::JoystickGetDeviceProduct(i) << '\n';
+//    std::cout << "Version " << siege::JoystickGetDeviceProductVersion(i) << '\n';
+//    std::cout << "Type " << siege::JoystickGetDeviceType(i) << '\n';
   }
-  SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
+  siege::QuitSubSystem(SDL_INIT_JOYSTICK);
 
 
-  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC) != 0)
+  if (siege::InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC) != 0)
   {
     std::cerr << "Error: " << SDL_GetError() << '\n';
     return -1;
@@ -117,8 +117,8 @@ int main(int, char**)
     auto window = std::unique_ptr<SDL_Window, void (*)(SDL_Window*)>(
       SDL_CreateWindow("Siege Input", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags), SDL_DestroyWindow);
 
-    Siege_InitVirtualJoysticksFromMice();
-    Siege_InitVirtualJoysticksFromJoysticks();
+    siege::InitVirtualJoysticksFromKeyboardsAndMice();
+    siege::InitVirtualJoysticksFromJoysticks();
 
     // The Rapoo V600S DirectInput driver causes an access violation in winmm when this is called.
     // Will find out if I can trigger vibration through the Joystick API alone, or if this needs some work.
@@ -127,7 +127,7 @@ int main(int, char**)
     // ImGui scope
     {
       IMGUI_CHECKVERSION();
-      auto context = std::unique_ptr<ImGuiContext, void (*)(ImGuiContext*)>(ImGui::CreateContext(), Siege_Shutdown);
+      auto context = std::unique_ptr<ImGuiContext, void (*)(ImGuiContext*)>(ImGui::CreateContext(), siege::RenderShutdown);
 
       ImGuiIO& io = ImGui::GetIO();
 
@@ -136,7 +136,7 @@ int main(int, char**)
 
       ImGui::StyleColorsDark();
 
-      auto render_context = Siege_Init(window.get());
+      auto render_context = siege::RenderInit(window.get());
 
       if (!render_context)
       {
@@ -147,7 +147,7 @@ int main(int, char**)
 
       bool running = true;
 
-      std::vector<std::shared_ptr<SDL_Joystick>> joysticks(SDL_NumJoysticks());
+      std::vector<std::shared_ptr<siege::Joystick>> joysticks(SDL_NumJoysticks());
 
       // Same as the number of joysticks to make it easier to index.
       std::vector<std::shared_ptr<SDL_Haptic>> haptic_devices(SDL_NumJoysticks());
@@ -170,7 +170,7 @@ int main(int, char**)
 
       while (running)
       {
-        SDL_JoystickUpdate();
+        siege::JoystickUpdate();
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
@@ -188,11 +188,11 @@ int main(int, char**)
           if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED && event.window.windowID == SDL_GetWindowID(window.get()))
           {
             // Release all outstanding references to the swap chain's buffers before resizing.
-            Siege_Resize(*render_context);
+            siege::Resize(*render_context);
           }
         }
 
-        Siege_NewFrame();
+        siege::NewFrame();
 
         ImGui::Begin("Input Info");
         ImGui::Text("Number of controllers: %d", SDL_NumJoysticks());
@@ -212,14 +212,14 @@ int main(int, char**)
           temp.reserve(32);
           for (auto i = 0; i < SDL_NumJoysticks(); ++i)
           {
-            temp.assign("#" + std::to_string(i + 1) + " " + SDL_JoystickNameForIndex(i));
+            temp.assign("#" + std::to_string(i + 1) + " " + siege::JoystickNameForIndex(i));
             if (ImGui::BeginTabItem(temp.c_str()))
             {
               auto joystick = joysticks[i];
 
-              if (!joystick || (joystick && SDL_JoystickGetDeviceInstanceID(i) != SDL_JoystickInstanceID(joystick.get())))
+              if (!joystick || (joystick && siege::JoystickGetDeviceInstanceID(i) != siege::JoystickInstanceID(joystick.get())))
               {
-                joystick = joysticks[i] = std::shared_ptr<SDL_Joystick>(SDL_JoystickOpen(i), [i, &haptic_devices, &controllers](auto* joystick) {
+                joystick = joysticks[i] = std::shared_ptr<siege::Joystick>(siege::JoystickOpen(i), [i, &haptic_devices, &controllers](auto* joystick) {
                   if (haptic_devices.size() > i && haptic_devices[i])
                   {
                     haptic_devices[i] = std::shared_ptr<SDL_Haptic>();
@@ -230,10 +230,10 @@ int main(int, char**)
                     controllers[i] = std::shared_ptr<SDL_GameController>();
                   }
 
-                  SDL_JoystickClose(joystick);
+                  siege::JoystickClose(joystick);
                 });
 
-                if (SDL_JoystickIsHaptic(joystick.get()))
+                if (siege::JoystickIsHaptic(joystick.get()))
                 {
                   haptic_devices[i] = std::shared_ptr<SDL_Haptic>(SDL_HapticOpenFromJoystick(joystick.get()), SDL_HapticClose);
                 }
@@ -244,58 +244,58 @@ int main(int, char**)
                 }
               }
 
-              const auto vendor_id = Siege_JoystickGetVendor(joystick.get());
-              const auto product_id = Siege_JoystickGetProduct(joystick.get());
+              const auto vendor_id = siege::JoystickGetVendor(joystick.get());
+              const auto product_id = siege::JoystickGetProduct(joystick.get());
 
               ImGui::BeginGroup();
 
               if (ImGui::Button("Export Device Info"))
               {
-                Siege_SaveDeviceToFile(joystick.get(), i);
+                siege::SaveDeviceToFile(joystick.get(), i);
               }
 
               ImGui::SameLine();
 
               if (ImGui::Button("Export Info for All Devices"))
               {
-                Siege_SaveAllDevicesToFile();
+                siege::SaveAllDevicesToFile();
               }
 
               ImGui::EndGroup();
 
-              ImGui::Text("Device GUID: %s", to_string(SDL_JoystickGetDeviceGUID(i)).c_str());
-              ImGui::Text("Vendor ID: %s (%d)",to_hex(vendor_id), vendor_id);
-              ImGui::Text("Product ID: %s (%d)", to_hex(product_id), product_id);
-              ImGui::Text("Product Version: %d", Siege_JoystickGetProductVersion(joystick.get()));
-              ImGui::Text("Serial Number: %s", SDL_JoystickGetSerial(joystick.get()));
+              ImGui::Text("Device GUID: %s", siege::to_string(siege::JoystickGetDeviceGUID(i)).c_str());
+              ImGui::Text("Vendor ID: %s (%d)", siege::to_hex(vendor_id), vendor_id);
+              ImGui::Text("Product ID: %s (%d)", siege::to_hex(product_id), product_id);
+              ImGui::Text("Product Version: %d", siege::JoystickGetProductVersion(joystick.get()));
+              ImGui::Text("Serial Number: %s", siege::JoystickGetSerial(joystick.get()));
 
-              if (SDL_JoystickIsVirtual(i) && Siege_IsMouse(joystick.get()))
+              if (siege::JoystickIsVirtual(i) && siege::IsMouse(joystick.get()))
               {
                 ImGui::Text("Detected Type: Mouse");
               }
               else
               {
-                ImGui::Text("Detected Type: %s", to_string(Siege_JoystickGetType(joystick.get())));
+                ImGui::Text("Detected Type: %s", siege::to_string(siege::JoystickGetType(joystick.get())));
               }
 
               if (controllers[i])
               {
-                ImGui::Text("Detected Controller Type: %s", to_string(SDL_GameControllerGetType(controllers[i].get())));
+                ImGui::Text("Detected Controller Type: %s", siege::to_string(SDL_GameControllerGetType(controllers[i].get())));
               }
 
-              ImGui::Text("Num Buttons: %d", SDL_JoystickNumButtons(joystick.get()));
-              ImGui::Text("Num Hats: %d", SDL_JoystickNumHats(joystick.get()));
-              ImGui::Text("Num Axes: %d", SDL_JoystickNumAxes(joystick.get()));
-              ImGui::Text("Num Balls: %d", SDL_JoystickNumBalls(joystick.get()));
+              ImGui::Text("Num Buttons: %d", siege::JoystickNumButtons(joystick.get()));
+              ImGui::Text("Num Hats: %d", siege::JoystickNumHats(joystick.get()));
+              ImGui::Text("Num Axes: %d", siege::JoystickNumAxes(joystick.get()));
+              ImGui::Text("Num Balls: %d", siege::JoystickNumBalls(joystick.get()));
 
               if (controllers[i])
               {
                 ImGui::Text("Num Touchpads: %d", SDL_GameControllerGetNumTouchpads(controllers[i].get()));
               }
 
-              ImGui::Text("Has LED: %s", SDL_JoystickHasLED(joystick.get()) == SDL_TRUE ? "True" : "False");
-              ImGui::Text("Has Rumble: %s", SDL_JoystickHasRumble(joystick.get()) == SDL_TRUE ? "True" : "False");
-              ImGui::Text("Has Triggers with Rumble: %s", SDL_JoystickHasRumbleTriggers(joystick.get()) == SDL_TRUE ? "True" : "False");
+              ImGui::Text("Has LED: %s", siege::JoystickHasLED(joystick.get()) == SDL_TRUE ? "True" : "False");
+              ImGui::Text("Has Rumble: %s", siege::JoystickHasRumble(joystick.get()) == SDL_TRUE ? "True" : "False");
+              ImGui::Text("Has Triggers with Rumble: %s", siege::JoystickHasRumbleTriggers(joystick.get()) == SDL_TRUE ? "True" : "False");
 
 
               if (haptic_devices[i])
@@ -323,11 +323,11 @@ int main(int, char**)
               };
 
               ImGui::BeginGroup();
-              if (SDL_JoystickNumHats(joystick.get()) == 0 && controllers[i] && std::any_of(d_pad_buttons.begin(), d_pad_buttons.end(), [&](auto button) {
+              if (siege::JoystickNumHats(joystick.get()) == 0 && controllers[i] && std::any_of(d_pad_buttons.begin(), d_pad_buttons.end(), [&](auto button) {
                     return SDL_GameControllerHasButton(controllers[i].get(), button);
                   }))
               {
-                auto value = Siege_GameControllerGetDPadAsHat(controllers[i].get());
+                auto value = GameControllerGetDPadAsHat(controllers[i].get());
 
                 auto x = 0;
                 for (auto& [state, label, alignment] : hat_states)
@@ -346,9 +346,9 @@ int main(int, char**)
               }
               else
               {
-                for (auto h = 0; h < SDL_JoystickNumHats(joystick.get()); ++h)
+                for (auto h = 0; h < siege::JoystickNumHats(joystick.get()); ++h)
                 {
-                  auto value = SDL_JoystickGetHat(joystick.get(), h);
+                  auto value = siege::JoystickGetHat(joystick.get(), h);
 
                   auto x = 0;
                   for (auto& [state, label, alignment] : hat_states)
@@ -392,8 +392,8 @@ int main(int, char**)
 
                 for (auto& [x_axis, y_axis] : valid_bindings)
                 {
-                  auto x_value = float(SDL_JoystickGetAxis(joystick.get(), x_axis.value.axis)) / std::numeric_limits<Sint16>::max() / 2;
-                  auto y_value = float(SDL_JoystickGetAxis(joystick.get(), y_axis.value.axis)) / std::numeric_limits<Sint16>::max() / 2;
+                  auto x_value = float(siege::JoystickGetAxis(joystick.get(), x_axis.value.axis)) / std::numeric_limits<Sint16>::max() / 2;
+                  auto y_value = float(siege::JoystickGetAxis(joystick.get(), y_axis.value.axis)) / std::numeric_limits<Sint16>::max() / 2;
                   ImVec2 alignment(x_value + 0.5f, y_value + 0.5f);
                   ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, alignment);
                   ImGui::Selectable("+", true, 0, ImVec2(200, 200));
@@ -418,12 +418,12 @@ int main(int, char**)
                   ImGui::SameLine();
                 }
               }
-              else if (Siege_JoystickGetType(joystick.get()) == SDL_JoystickType::SDL_JOYSTICK_TYPE_FLIGHT_STICK || Siege_JoystickGetType(joystick.get()) == SDL_JoystickType::SDL_JOYSTICK_TYPE_GAMECONTROLLER)
+              else if (siege::JoystickGetType(joystick.get()) == siege::JoystickType::SDL_JOYSTICK_TYPE_FLIGHT_STICK || siege::JoystickGetType(joystick.get()) == siege::JoystickType::SDL_JOYSTICK_TYPE_GAMECONTROLLER)
               {
-                if (SDL_JoystickNumAxes(joystick.get()) >= 2)
+                if (siege::JoystickNumAxes(joystick.get()) >= 2)
                 {
-                  auto x_value = float(SDL_JoystickGetAxis(joystick.get(), 0)) / std::numeric_limits<Sint16>::max() / 2;
-                  auto y_value = float(SDL_JoystickGetAxis(joystick.get(), 1)) / std::numeric_limits<Sint16>::max() / 2;
+                  auto x_value = float(siege::JoystickGetAxis(joystick.get(), 0)) / std::numeric_limits<Sint16>::max() / 2;
+                  auto y_value = float(siege::JoystickGetAxis(joystick.get(), 1)) / std::numeric_limits<Sint16>::max() / 2;
                   ImVec2 alignment(x_value + 0.5f, y_value + 0.5f);
                   ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, alignment);
                   ImGui::Selectable("+", true, 0, ImVec2(200, 200));
@@ -431,18 +431,18 @@ int main(int, char**)
                   ImGui::SameLine();
                 }
 
-                for (auto x = 2; x < SDL_JoystickNumAxes(joystick.get()); ++x)
+                for (auto x = 2; x < siege::JoystickNumAxes(joystick.get()); ++x)
                 {
-                  auto value = int(SDL_JoystickGetAxis(joystick.get(), x));
+                  auto value = int(siege::JoystickGetAxis(joystick.get(), x));
                   ImGui::VSliderInt("##int", ImVec2(18, 160), &value, std::numeric_limits<Sint16>::min(), std::numeric_limits<Sint16>::max());
                   ImGui::SameLine();
                 }
               }
               else
               {
-                for (auto x = 0; x < SDL_JoystickNumAxes(joystick.get()); ++x)
+                for (auto x = 0; x < siege::JoystickNumAxes(joystick.get()); ++x)
                 {
-                  auto value = int(SDL_JoystickGetAxis(joystick.get(), x));
+                  auto value = int(siege::JoystickGetAxis(joystick.get(), x));
                   ImGui::VSliderInt("##int", ImVec2(18, 160), &value, std::numeric_limits<Sint16>::min(), std::numeric_limits<Sint16>::max());
                   ImGui::SameLine();
                 }
@@ -487,9 +487,9 @@ int main(int, char**)
                 auto x = 0;
                 for (auto& [button, binding] : current_bindings)
                 {
-                  auto value = SDL_JoystickGetButton(joystick.get(), binding.value.button) == 1;
+                  auto value = siege::JoystickGetButton(joystick.get(), binding.value.button) == 1;
 
-                  ImGui::Selectable(Siege_GameControllerGetStringForButton(controllers[i].get(), button), value, 0, ImVec2(50, 50));
+                  ImGui::Selectable(siege::GameControllerGetStringForButton(controllers[i].get(), button), value, 0, ImVec2(50, 50));
                   ImGui::SameLine();
 
                   if ((x + 1) % 4 == 0)
@@ -501,9 +501,9 @@ int main(int, char**)
               }
               else
               {
-                for (auto x = 0; x < SDL_JoystickNumButtons(joystick.get()); ++x)
+                for (auto x = 0; x < siege::JoystickNumButtons(joystick.get()); ++x)
                 {
-                  auto value = SDL_JoystickGetButton(joystick.get(), x) == 1;
+                  auto value = siege::JoystickGetButton(joystick.get(), x) == 1;
                   ImGui::Selectable(std::to_string(x + 1).c_str(), value, 0, ImVec2(50, 50));
                   ImGui::SameLine();
 
@@ -516,7 +516,7 @@ int main(int, char**)
 
               ImGui::EndGroup();
 
-              if (SDL_JoystickHasRumble(joystick.get()) == SDL_TRUE)
+              if (siege::JoystickHasRumble(joystick.get()) == SDL_TRUE)
               {
                 ImGui::SameLine();
                 ImGui::BeginGroup();
@@ -534,7 +534,7 @@ int main(int, char**)
                         return 0;
                       },
                       &controller_rumble));
-                    SDL_JoystickRumble(joystick.get(), Uint16(low_frequency), Uint16(high_frequency), Uint32(duration));
+                    siege::JoystickRumble(joystick.get(), Uint16(low_frequency), Uint16(high_frequency), Uint32(duration));
                   }
                   else
                   {
@@ -542,7 +542,7 @@ int main(int, char**)
                     {
                       SDL_RemoveTimer(pending_timer.value());
                     }
-                    SDL_JoystickRumble(joystick.get(), 0, 0, 0);
+                    siege::JoystickRumble(joystick.get(), 0, 0, 0);
                   }
                 }
 
@@ -555,7 +555,7 @@ int main(int, char**)
                 ImGui::EndGroup();
               }
 
-              if (SDL_JoystickHasRumbleTriggers(joystick.get()) == SDL_TRUE)
+              if (siege::JoystickHasRumbleTriggers(joystick.get()) == SDL_TRUE)
               {
                 static std::optional<SDL_TimerID> pending_timer;
                 ImGui::SameLine();
@@ -573,7 +573,7 @@ int main(int, char**)
                         return 0;
                       },
                       &trigger_rumble));
-                    SDL_JoystickRumbleTriggers(joystick.get(), Uint16(left_trigger), Uint16(right_trigger), Uint32(trigger_duration));
+                    siege::JoystickRumbleTriggers(joystick.get(), Uint16(left_trigger), Uint16(right_trigger), Uint32(trigger_duration));
                   }
                   else
                   {
@@ -581,7 +581,7 @@ int main(int, char**)
                     {
                       SDL_RemoveTimer(pending_timer.value());
                     }
-                    SDL_JoystickRumble(joystick.get(), 0, 0, 0);
+                    siege::JoystickRumble(joystick.get(), 0, 0, 0);
                   }
                 }
 
@@ -619,7 +619,7 @@ int main(int, char**)
                 ImGui::EndGroup();
               }
 
-              if (SDL_JoystickHasLED(joystick.get()) == SDL_TRUE)
+              if (siege::JoystickHasLED(joystick.get()) == SDL_TRUE)
               {
                 ImGui::SameLine();
                 ImGui::BeginGroup();
@@ -632,11 +632,11 @@ int main(int, char**)
 
                 if (led_enabled)
                 {
-                  SDL_JoystickSetLED(joystick.get(), Uint8(led_colour.x * 255), Uint8(led_colour.y * 255), Uint8(led_colour.z * 255));
+                  siege::JoystickSetLED(joystick.get(), Uint8(led_colour.x * 255), Uint8(led_colour.y * 255), Uint8(led_colour.z * 255));
                 }
                 else
                 {
-                  SDL_JoystickSetLED(joystick.get(), 0, 0, 0);
+                  siege::JoystickSetLED(joystick.get(), 0, 0, 0);
                 }
                 ImGui::EndGroup();
               }
@@ -650,8 +650,8 @@ int main(int, char**)
         ImGui::End();
 
         ImGui::Render();
-        Siege_RenderReset(*render_context, clear_color);
-        Siege_RenderDrawData(ImGui::GetDrawData());
+        siege::RenderReset(*render_context, clear_color);
+        siege::RenderDrawData(ImGui::GetDrawData());
 
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
@@ -659,7 +659,7 @@ int main(int, char**)
           ImGui::RenderPlatformWindowsDefault();
         }
 
-        Siege_RenderPresent(*render_context);
+        siege::RenderPresent(*render_context);
       }
     }
     // /ImGui scope
