@@ -250,7 +250,7 @@ namespace dinput
   struct device_info
   {
     IDirectInputDeviceA device;
-    std::unique_ptr<SDL_Joystick, void(*)(SDL_Joystick*)> joystick;
+    std::unique_ptr<siege::Joystick, void(*)(siege::Joystick*)> joystick;
     DIDATAFORMAT* format;
     joystick_state previous_values;
     std::vector<DIDEVICEOBJECTDATA> event_buffer;
@@ -321,9 +321,9 @@ namespace dinput
 
       // TODO needs a mask here for the sub type as well
       caps->dwDevType = DI8DEVTYPE_FLIGHT;
-      caps->dwAxes = SDL_JoystickNumAxes(info->joystick.get());
-      caps->dwButtons = SDL_JoystickNumButtons(info->joystick.get());
-      caps->dwPOVs = SDL_JoystickNumHats(info->joystick.get());
+      caps->dwAxes = siege::JoystickNumAxes(info->joystick.get());
+      caps->dwButtons = siege::JoystickNumButtons(info->joystick.get());
+      caps->dwPOVs = siege::JoystickNumHats(info->joystick.get());
 
       if (size > sizeof(DIDEVCAPS_DX3))
       {
@@ -458,7 +458,7 @@ namespace dinput
 
           if (type == DIDFT_AXIS)
           {
-            auto num_axes = SDL_JoystickNumAxes(info->joystick.get());
+            auto num_axes = siege::JoystickNumAxes(info->joystick.get());
 
             result->guidType = GetAxisObjectType(num_axes, instance);
 
@@ -492,7 +492,7 @@ namespace dinput
         return DIERR_INVALIDPARAM;
       }
 
-      auto num_axes = SDL_JoystickNumAxes(info->joystick.get());
+      auto num_axes = siege::JoystickNumAxes(info->joystick.get());
       for (auto i = 0; i < num_axes; ++i)
       {
         DIDEVICEOBJECTINSTANCEA object{};
@@ -511,7 +511,7 @@ namespace dinput
         }
       }
 
-      auto num_hats = SDL_JoystickNumHats(info->joystick.get());
+      auto num_hats = siege::JoystickNumHats(info->joystick.get());
       for (auto i = 0; i < num_hats; ++i)
       {
         DIDEVICEOBJECTINSTANCEA object{};
@@ -530,7 +530,7 @@ namespace dinput
         }
       }
 
-      for (auto i = 0; i < SDL_JoystickNumButtons(info->joystick.get()); ++i)
+      for (auto i = 0; i < siege::JoystickNumButtons(info->joystick.get()); ++i)
       {
         DIDEVICEOBJECTINSTANCEA object{};
         object.dwSize = sizeof(DIDEVICEOBJECTINSTANCEA);
@@ -612,7 +612,7 @@ namespace dinput
       }
       else if (prop_id == DIPROP_USERNAME && result->dwSize == sizeof(DIPROPSTRING))
       {
-        auto player_index = SDL_JoystickGetPlayerIndex(info->joystick.get());
+        auto player_index = siege::JoystickGetPlayerIndex(info->joystick.get());
 
         if (player_index == -1)
         {
@@ -625,7 +625,7 @@ namespace dinput
       }
       else if (prop_id == DIPROP_GUIDANDPATH)
       {
-        auto* product_path = SDL_JoystickPath(info->joystick.get());
+        auto* product_path = siege::JoystickPath(info->joystick.get());
 
         if (!product_path)
         {
@@ -639,14 +639,14 @@ namespace dinput
       }
       else if (prop_id == DIPROP_VIDPID && result->dwSize == sizeof(DIPROPDWORD))
       {
-        auto vendor_id = SDL_JoystickGetVendor(info->joystick.get());
-        auto product_id = SDL_JoystickGetVendor(info->joystick.get());
+        auto vendor_id = siege::JoystickGetVendor(info->joystick.get());
+        auto product_id = siege::JoystickGetVendor(info->joystick.get());
         auto* value = reinterpret_cast<DIPROPDWORD*>(result);
       }
       else if ((prop_id == DIPROP_PRODUCTNAME || prop_id == DIPROP_INSTANCENAME || prop_id == DIPROP_GETPORTDISPLAYNAME) &&
                result->dwSize == sizeof(DIPROPSTRING))
       {
-        auto* product_name = SDL_JoystickName(info->joystick.get());
+        auto* product_name = siege::JoystickName(info->joystick.get());
 
         if (!product_name)
         {
@@ -758,29 +758,29 @@ namespace dinput
       auto update_state = [&](auto& joy_state) {
 
         //stick
-        joy_state.lX = SDL_JoystickGetAxis(info->joystick.get(), 0);
-        joy_state.lY = SDL_JoystickGetAxis(info->joystick.get(), 1);
+        joy_state.lX = siege::JoystickGetAxis(info->joystick.get(), 0);
+        joy_state.lY = siege::JoystickGetAxis(info->joystick.get(), 1);
 
         // rudder
-        joy_state.lRz = SDL_JoystickGetAxis(info->joystick.get(), 2);
+        joy_state.lRz = siege::JoystickGetAxis(info->joystick.get(), 2);
 
         // throttle
-        joy_state.lZ = SDL_JoystickGetAxis(info->joystick.get(), 3);
+        joy_state.lZ = siege::JoystickGetAxis(info->joystick.get(), 3);
 
-        joy_state.lRx = SDL_JoystickGetAxis(info->joystick.get(), 4);
-        joy_state.lRy = SDL_JoystickGetAxis(info->joystick.get(), 5);
+        joy_state.lRx = siege::JoystickGetAxis(info->joystick.get(), 4);
+        joy_state.lRy = siege::JoystickGetAxis(info->joystick.get(), 5);
 
-        joy_state.rglSlider[0] = SDL_JoystickGetAxis(info->joystick.get(), 6);
-        joy_state.rglSlider[1] = SDL_JoystickGetAxis(info->joystick.get(), 7);
+        joy_state.rglSlider[0] = siege::JoystickGetAxis(info->joystick.get(), 6);
+        joy_state.rglSlider[1] = siege::JoystickGetAxis(info->joystick.get(), 7);
 
-        joy_state.rgdwPOV[0] = SDL_JoystickGetHat(info->joystick.get(), 0);
-        joy_state.rgdwPOV[1] = SDL_JoystickGetHat(info->joystick.get(), 1);
-        joy_state.rgdwPOV[2] = SDL_JoystickGetHat(info->joystick.get(), 2);
-        joy_state.rgdwPOV[3] = SDL_JoystickGetHat(info->joystick.get(), 3);
+        joy_state.rgdwPOV[0] = siege::JoystickGetHat(info->joystick.get(), 0);
+        joy_state.rgdwPOV[1] = siege::JoystickGetHat(info->joystick.get(), 1);
+        joy_state.rgdwPOV[2] = siege::JoystickGetHat(info->joystick.get(), 2);
+        joy_state.rgdwPOV[3] = siege::JoystickGetHat(info->joystick.get(), 3);
 
         for (auto i = 0; i < 32; ++i)
         {
-          joy_state.rgbButtons[i] = SDL_JoystickGetButton(info->joystick.get(), i)  == 1 ? std::numeric_limits<BYTE>::max() : std::numeric_limits<BYTE>::min();
+          joy_state.rgbButtons[i] = siege::JoystickGetButton(info->joystick.get(), i)  == 1 ? std::numeric_limits<BYTE>::max() : std::numeric_limits<BYTE>::min();
         }
       };
 
@@ -799,25 +799,25 @@ namespace dinput
       else if (info->format == &c_dfDIMouse)
       {
         DIMOUSESTATE mouse_state{};
-        mouse_state.lX = SDL_JoystickGetAxis(info->joystick.get(), 0);
-        mouse_state.lY = SDL_JoystickGetAxis(info->joystick.get(), 1);
-        mouse_state.lZ = SDL_JoystickGetAxis(info->joystick.get(), 2);
+        mouse_state.lX = siege::JoystickGetAxis(info->joystick.get(), 0);
+        mouse_state.lY = siege::JoystickGetAxis(info->joystick.get(), 1);
+        mouse_state.lZ = siege::JoystickGetAxis(info->joystick.get(), 2);
 
         for (auto i = 0; i < 4; ++i)
         {
-          mouse_state.rgbButtons[i] = SDL_JoystickGetButton(info->joystick.get(), i) == 1 ? std::numeric_limits<BYTE>::max() : std::numeric_limits<BYTE>::min();
+          mouse_state.rgbButtons[i] = siege::JoystickGetButton(info->joystick.get(), i) == 1 ? std::numeric_limits<BYTE>::max() : std::numeric_limits<BYTE>::min();
         }
       }
       else if (info->format == &c_dfDIMouse2)
       {
         DIMOUSESTATE2 mouse_state{};
-        mouse_state.lX = SDL_JoystickGetAxis(info->joystick.get(), 0);
-        mouse_state.lY = SDL_JoystickGetAxis(info->joystick.get(), 1);
-        mouse_state.lZ = SDL_JoystickGetAxis(info->joystick.get(), 2);
+        mouse_state.lX = siege::JoystickGetAxis(info->joystick.get(), 0);
+        mouse_state.lY = siege::JoystickGetAxis(info->joystick.get(), 1);
+        mouse_state.lZ = siege::JoystickGetAxis(info->joystick.get(), 2);
 
         for (auto i = 0; i < 8; ++i)
         {
-          mouse_state.rgbButtons[i] = SDL_JoystickGetButton(info->joystick.get(), i) == 1 ? std::numeric_limits<BYTE>::max() : std::numeric_limits<BYTE>::min();
+          mouse_state.rgbButtons[i] = siege::JoystickGetButton(info->joystick.get(), i) == 1 ? std::numeric_limits<BYTE>::max() : std::numeric_limits<BYTE>::min();
         }
       }
       else if (info->format == &c_dfDIKeyboard)
@@ -826,7 +826,7 @@ namespace dinput
 
         for (auto i = 0; i < 256; ++i)
         {
-          keys[i] = SDL_JoystickGetButton(info->joystick.get(), i) == 1 ? std::numeric_limits<BYTE>::max() : std::numeric_limits<BYTE>::min();
+          keys[i] = siege::JoystickGetButton(info->joystick.get(), i) == 1 ? std::numeric_limits<BYTE>::max() : std::numeric_limits<BYTE>::min();
         }
       }
 
@@ -870,11 +870,11 @@ namespace dinput
         return DI_OK;
       }
 
-      SDL_JoystickUpdate();
+      siege::JoystickUpdate();
 
-      info->previous_values.axes.resize(SDL_JoystickNumAxes(info->joystick.get()));
-      info->previous_values.hats.resize(SDL_JoystickNumHats(info->joystick.get()));
-      info->previous_values.buttons.resize(SDL_JoystickNumButtons(info->joystick.get()));
+      info->previous_values.axes.resize(siege::JoystickNumAxes(info->joystick.get()));
+      info->previous_values.hats.resize(siege::JoystickNumHats(info->joystick.get()));
+      info->previous_values.buttons.resize(siege::JoystickNumButtons(info->joystick.get()));
       info->event_buffer.reserve(
         info->previous_values.axes.size() +
         info->previous_values.hats.size() +
@@ -882,13 +882,13 @@ namespace dinput
 
       static DWORD sequence = 0;
 
-      for (auto i = 0; i < SDL_JoystickNumAxes(info->joystick.get()); ++i)
+      for (auto i = 0; i < siege::JoystickNumAxes(info->joystick.get()); ++i)
       {
-        if (info->previous_values.axes[i] != SDL_JoystickGetAxis(info->joystick.get(), i))
+        if (info->previous_values.axes[i] != siege::JoystickGetAxis(info->joystick.get(), i))
         {
-          info->previous_values.axes[i] = SDL_JoystickGetAxis(info->joystick.get(), i);
+          info->previous_values.axes[i] = siege::JoystickGetAxis(info->joystick.get(), i);
           auto& data = info->event_buffer.emplace_back();
-          data.dwOfs = GetAxisOffset(SDL_JoystickNumAxes(info->joystick.get()), i);
+          data.dwOfs = GetAxisOffset(siege::JoystickNumAxes(info->joystick.get()), i);
           data.dwData = info->previous_values.axes[i];
           data.dwSequence = sequence++;
           data.dwTimeStamp = DarkTickCount();
@@ -896,11 +896,11 @@ namespace dinput
         }
       }
 
-      for (auto i = 0; i < SDL_JoystickNumHats(info->joystick.get()); ++i)
+      for (auto i = 0; i < siege::JoystickNumHats(info->joystick.get()); ++i)
       {
-        if (info->previous_values.hats[i] != SDL_JoystickGetHat(info->joystick.get(), i))
+        if (info->previous_values.hats[i] != siege::JoystickGetHat(info->joystick.get(), i))
         {
-          info->previous_values.hats[i] = SDL_JoystickGetHat(info->joystick.get(), i);
+          info->previous_values.hats[i] = siege::JoystickGetHat(info->joystick.get(), i);
           auto& data = info->event_buffer.emplace_back();
           data.dwOfs = DIJOFS_POV(i);
           data.dwData = info->previous_values.hats[i];
@@ -910,11 +910,11 @@ namespace dinput
         }
       }
 
-      for (auto i = 0; i < SDL_JoystickNumButtons(info->joystick.get()); ++i)
+      for (auto i = 0; i < siege::JoystickNumButtons(info->joystick.get()); ++i)
       {
-        if (info->previous_values.buttons[i] != SDL_JoystickGetButton(info->joystick.get(), i))
+        if (info->previous_values.buttons[i] != siege::JoystickGetButton(info->joystick.get(), i))
         {
-          info->previous_values.buttons[i] = SDL_JoystickGetButton(info->joystick.get(), i);
+          info->previous_values.buttons[i] = siege::JoystickGetButton(info->joystick.get(), i);
           auto& data = info->event_buffer.emplace_back();
           data.dwOfs = DIJOFS_BUTTON(i);
           data.dwData = info->previous_values.buttons[i] == 1 ? std::numeric_limits<BYTE>::max() : std::numeric_limits<BYTE>::min();
@@ -1058,7 +1058,7 @@ namespace dinput
 
     HRESULT STDMETHODCALLTYPE DarkPoll(IDirectInputDevice2A*)  // maybe used
     {
-      SDL_JoystickUpdate();
+      siege::JoystickUpdate();
       return 0;
     }
 
@@ -1165,7 +1165,7 @@ namespace dinput
       return 1;
     }
 
-    auto sdl_to_dinput_type(SDL_JoystickType sdl_type)
+    auto sdl_to_dinput_type(siege::JoystickType sdl_type)
     {
       return DI8DEVTYPE_FLIGHT;
     }
@@ -1178,7 +1178,7 @@ namespace dinput
 
         device.dwSize = sizeof(DIDEVICEINSTANCEA);
 
-        auto device_guid = SDL_JoystickGetDeviceGUID(i);
+        auto device_guid = siege::JoystickGetDeviceGUID(i);
         static_assert(sizeof(device_guid) == sizeof(device.guidProduct));
 
         std::memcpy(&device.guidProduct, &device_guid, sizeof(device_guid));
@@ -1187,9 +1187,9 @@ namespace dinput
 
         std::memcpy(&device.guidInstance, &i, sizeof(i));
 
-        device.dwDevType = sdl_to_dinput_type(SDL_JoystickGetDeviceType(i));
+        device.dwDevType = sdl_to_dinput_type(siege::JoystickGetDeviceType(i));
 
-        auto instance_name = SDL_JoystickNameForIndex(i);
+        auto instance_name = siege::JoystickNameForIndex(i);
         auto length = std::strlen(instance_name);
         std::memcpy(device.tszInstanceName, instance_name, length);
         std::memcpy(device.tszProductName, instance_name, length);
@@ -1231,7 +1231,7 @@ namespace dinput
         {
           auto& device = devices.emplace_back(device_info{
             { &device::v1::device_vtable },
-            { SDL_JoystickOpen(i), [](SDL_Joystick* joy){ SDL_JoystickClose(joy); } },
+            { siege::JoystickOpen(i), [](siege::Joystick* joy){ siege::JoystickClose(joy); } },
             const_cast<DIDATAFORMAT*>(&c_dfDIJoystick)
           });
         }
@@ -1286,8 +1286,8 @@ namespace dinput
 
       std::ofstream log("darkstar.winmm.log", std::ios::trunc);
       log << "SDL Joystick sub system init\n";
-      SDL_JoystickUpdate();
-      Siege_InitVirtualJoysticksFromJoysticks();
+      siege::JoystickUpdate();
+      siege::InitVirtualJoysticksFromJoysticks();
 
       return DI_OK;
     }
@@ -1308,7 +1308,7 @@ namespace dinput
       }
 
       auto device = std::find_if(devices.begin(), devices.end(), [&](const auto& info) {
-        return std::string_view(SDL_JoystickName(info.joystick.get())) == deviceName;
+        return std::string_view(siege::JoystickName(info.joystick.get())) == deviceName;
       });
 
       if (device != devices.end())
