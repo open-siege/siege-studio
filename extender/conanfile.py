@@ -26,6 +26,11 @@ class DarkstarHookConan(ConanFile):
             "conan source .",
             "conan export . detours/4.0.1@microsoft/stable"]), run_environment=True)
 
+        self.run(" && ".join([
+            "cd vigem",
+            "conan source .",
+            "conan export . ViGEmClient/1.21.218@ViGEm/stable"]), run_environment=True)
+
         targets = ["darkstar", "darkstar.proxy", "mem", "launcher", "tester"]
 
         for target in targets:
