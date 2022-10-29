@@ -102,8 +102,8 @@ To assemble all the build artefacts into one folder, type:
 
 This will create a folder called package and inside package/bin will be the following:
 * mem.dll
-* darkstar.dll
-* darkstar.proxy.dll
+* siege.dll
+* siege.proxy.dll
 * config.json
 
 Those files can then be copied into the directory of a specific game for everything to work.

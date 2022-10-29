@@ -37,8 +37,8 @@ environment.*.env
 siege-shell/src/besieged-theme.png
 besieged-theme.txt
 cmake/ 
-3space-studio/src/logo.ico
-3space-studio/src/logo.png
+siege-studio/src/logo.ico
+siege-studio/src/logo.png
 *.zip
 /install.bat
 /tools/install.bat

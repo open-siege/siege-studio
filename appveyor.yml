@@ -42,7 +42,7 @@ artifacts:
 
 cache:
   - '%USERPROFILE%/.conan/data'
-  - extender/darkstar.proxy/impl/mingw.7z
+  - extender/siege.proxy/impl/mingw.7z
 
 branches:
   except:

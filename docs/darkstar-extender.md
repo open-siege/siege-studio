@@ -26,4 +26,4 @@ Depending on the game, the list of new features, added through the extender, sho
 * JSON parsing support.
 * Much more.
 
-See [project source](https://github.com/3space-studio/darkstar-extender).
+See [project source](https://github.com/open-siege/open-siege).

@@ -26,7 +26,7 @@ class LocalConanFile(ConanFile):
             os.environ["CMAKE_MODULE_PATH"] = deps_env_info["CMAKE_MODULE_PATH"]
 
         commands = [
-            "cd 3space-studio",
+            "cd siege-studio",
             "pip3 install -r requirements.txt"
         ]
 
@@ -52,7 +52,7 @@ class LocalConanFile(ConanFile):
         self.run(" && ".join(commands), run_environment=True)
 
 
-        targets = ["tools", "siege-shell", "siege-input", "3space-studio", "extender"]
+        targets = ["tools", "siege-shell", "siege-input", "siege-studio", "extender"]
 
         for target in targets:
             commands = [
