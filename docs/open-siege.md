@@ -8,13 +8,13 @@ Since 3Space Studio already supports a large amount of formats for Darkstar, the
 * Starsiege: Tribes
 
 In order to achieve this, full support for the following formats would be required:
-* [MIS](https://github.com/3space-studio/3space-studio/wiki/MIS)
-* [DIG](https://github.com/3space-studio/3space-studio/wiki/DIG)
-* [DIS](https://github.com/3space-studio/3space-studio/wiki/DIS)
-* [DIL](https://github.com/3space-studio/3space-studio/wiki/DIL)
-* [DTF](https://github.com/3space-studio/3space-studio/wiki/DTF)
-* [DTB](https://github.com/3space-studio/3space-studio/wiki/DTB)
-* [CS](https://github.com/3space-studio/3space-studio/wiki/CS)
+* [MIS](https://github.com/open-siege/open-siege/wiki/MIS)
+* [DIG](https://github.com/open-siege/open-siege/wiki/DIG)
+* [DIS](https://github.com/open-siege/open-siege/wiki/DIS)
+* [DIL](https://github.com/open-siege/open-siege/wiki/DIL)
+* [DTF](https://github.com/open-siege/open-siege/wiki/DTF)
+* [DTB](https://github.com/open-siege/open-siege/wiki/DTB)
+* [CS](https://github.com/open-siege/open-siege/wiki/CS)
 
 Other formats, like PBM/BMP, DTS, DML, PAL/PPL are already supported, but may require additional improvements.
 
@@ -26,11 +26,11 @@ As far as humanly possible, existing mods and scripts will be supported.
 Other games may be supported. It depends on the level of support 3Space Studio can attain for their file formats.
 
 Specifically, to implement some of the older games, some of the following file formats would need to be supported:
-* [WLD](https://github.com/3space-studio/3space-studio/wiki/WLD)
-* [MSN](https://github.com/3space-studio/3space-studio/wiki/MSN)
-* [BND](https://github.com/3space-studio/3space-studio/wiki/BND)
-* [DAT](https://github.com/3space-studio/3space-studio/wiki/DAT)
-* [TBL](https://github.com/3space-studio/3space-studio/wiki/TBL)
-* [SCR](https://github.com/3space-studio/3space-studio/wiki/SCR)
-* [Older DTS formats (in progress at the moment)](https://github.com/3space-studio/3space-studio/wiki/DTS)
+* [WLD](https://github.com/open-siege/open-siege/wiki/WLD)
+* [MSN](https://github.com/open-siege/open-siege/wiki/MSN)
+* [BND](https://github.com/open-siege/open-siege/wiki/BND)
+* [DAT](https://github.com/open-siege/open-siege/wiki/DAT)
+* [TBL](https://github.com/open-siege/open-siege/wiki/TBL)
+* [SCR](https://github.com/open-siege/open-siege/wiki/SCR)
+* [Older DTS formats (in progress at the moment)](https://github.com/open-siege/open-siege/wiki/DTS)
 

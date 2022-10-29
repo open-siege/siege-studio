@@ -52,15 +52,15 @@ The following games are DOS based:
 * Aces of the Deep
 
 In order for support for these games to be implemented, the following formats, as a minimum, have to be supported in 3Space Studio:
-* [TTM](https://github.com/3space-studio/3space-studio/wiki/TTM)
-* [SCR](https://github.com/3space-studio/3space-studio/wiki/SCR)
-* [BMP (the versions specific to these games)](https://github.com/3space-studio/3space-studio/wiki/BMP)
-* [PAL (the versions specific to these games)](https://github.com/3space-studio/3space-studio/wiki/PAL)
-* [DPL (which is currently in progress - for the Metaltech games only)](https://github.com/3space-studio/3space-studio/wiki/DPL)
-* [DBM (which is currently in progress - for the Metaltech games only)](https://github.com/3space-studio/3space-studio/wiki/DBM)
-* [DBA (which is currently in progress - for the Metaltech games only)](https://github.com/3space-studio/3space-studio/wiki/DBA)
-* [DTS/DCS (primary 3D format for the Metaltech games and Aces of the Deep)](https://github.com/3space-studio/3space-studio/wiki/DTS)
-* [TBL (primary 3D format all the other games)](https://github.com/3space-studio/3space-studio/wiki/TBL)
+* [TTM](https://github.com/open-siege/open-siege/wiki/TTM)
+* [SCR](https://github.com/open-siege/open-siege/wiki/SCR)
+* [BMP (the versions specific to these games)](https://github.com/open-siege/open-siege/wiki/BMP)
+* [PAL (the versions specific to these games)](https://github.com/open-siege/open-siege/wiki/PAL)
+* [DPL (which is currently in progress - for the Metaltech games only)](https://github.com/open-siege/open-siege/wiki/DPL)
+* [DBM (which is currently in progress - for the Metaltech games only)](https://github.com/open-siege/open-siege/wiki/DBM)
+* [DBA (which is currently in progress - for the Metaltech games only)](https://github.com/open-siege/open-siege/wiki/DBA)
+* [DTS/DCS (primary 3D format for the Metaltech games and Aces of the Deep)](https://github.com/open-siege/open-siege/wiki/DTS)
+* [TBL (primary 3D format all the other games)](https://github.com/open-siege/open-siege/wiki/TBL)
 * The save game/career/vehicle configuration formats for each game
 
 Each of these games have separated executables, and generally the shell executable generates some files before launching the sim executable with specific command line parameters.
@@ -76,8 +76,8 @@ Various sequels to the above games, with the same dual executable architecture, 
 For Earthsiege 2 and Command: Aces of the Deep, the list of files to support is the same as for the DOS games above. 
 
 For Silent Thunder, many of the file formats are supported already, with the following remaining:
-* [PAL/PPL support (Phoenix Palette files specifically)](https://github.com/3space-studio/3space-studio/wiki/PAL)
-* [DTS (3Space 2.5 era DTS files, which is currently in progress)](https://github.com/3space-studio/3space-studio/wiki/DTS)
+* [PAL/PPL support (Phoenix Palette files specifically)](https://github.com/open-siege/open-siege/wiki/PAL)
+* [DTS (3Space 2.5 era DTS files, which is currently in progress)](https://github.com/open-siege/open-siege/wiki/DTS)
 
 In terms of adding fixes for these games, specific compatibility fixes may be applied, and/or Darkstar Extender can be used, in a very limited capacity, to detour Win32 APIs which the game depends on but which may have issues with modern Windows. 
 
