@@ -41,10 +41,6 @@ class LocalConanFile(ConanFile):
             f"conan install . {settings}",
             "conan export .",
             "cd ..",
-            "cd siege-input",
-            f"conan install . {settings}",
-            "conan export .",
-            "cd ..",
             "mkdir cmake",
             "cd cmake",
             f"conan install 3space/0.6.3@/ -g cmake_find_package {settings}"
@@ -52,7 +48,7 @@ class LocalConanFile(ConanFile):
         self.run(" && ".join(commands), run_environment=True)
 
 
-        targets = ["tools", "siege-shell", "siege-input", "siege-studio", "extender"]
+        targets = ["siege-installer", "siege-launcher", "siege-studio"]
 
         for target in targets:
             commands = [

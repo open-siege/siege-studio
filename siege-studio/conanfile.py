@@ -1,10 +1,11 @@
 from conans import ConanFile, CMake, tools
 import glob
 import os.path
+import sys
 from PIL import Image
 
 class LocalConanFile(ConanFile):
-    name = "3space-studio"
+    name = "siege-studio"
     version = "0.6.3"
     url = "https://github.com/open-siege/open-siege"
     license = "MIT"
@@ -15,6 +16,15 @@ class LocalConanFile(ConanFile):
     generators = "cmake_find_package"
 
     def requirements(self):
+        args = sys.argv[3:]
+        for index, value in enumerate(args):
+            if value == "--profile":
+                profile = args[index + 1]
+                args[index + 1] = os.path.abspath(profile) if os.path.exists(profile) else profile
+
+        settings = ' '.join(args)
+        self.run(" && ".join([f"cd tools", f"conan install . {settings}"]), run_environment=True)
+
         if self.settings.os == "Linux":
             self.requires("tbb/2020.3")
 

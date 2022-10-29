@@ -1,9 +1,9 @@
 ## Open Siege
 
 ### Summary
-When a certain critical mass is reached in terms of file format support in 3Space Studio, it will be possible to combine the code from that project with an engine such as OGRE 3D to produce a fully playable, open-source reimplementation of games such as Starsiege and many others.
+When a certain critical mass is reached in terms of file format support in Siege Studio, it will be possible to combine the code from that project with an engine such as OGRE 3D to produce a fully playable, open-source reimplementation of games such as Starsiege and many others.
 
-Since 3Space Studio already supports a large amount of formats for Darkstar, the initial focus will be on:
+Since Siege Studio already supports a large amount of formats for Darkstar, the initial focus will be on:
 * Starsiege
 * Starsiege: Tribes
 
@@ -23,7 +23,7 @@ Game logic for each game would be rewritten, and possibly other engines, such as
 As far as humanly possible, existing mods and scripts will be supported.
 
 ### Future Game Support
-Other games may be supported. It depends on the level of support 3Space Studio can attain for their file formats.
+Other games may be supported. It depends on the level of support Siege Studio can attain for their file formats.
 
 Specifically, to implement some of the older games, some of the following file formats would need to be supported:
 * [WLD](https://github.com/open-siege/open-siege/wiki/WLD)

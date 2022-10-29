@@ -12,7 +12,6 @@ else()
     add_library(siege-input STATIC src/platform/common.cpp src/platform/other.cpp src/config.cpp src/virtual_joystick.cpp)
 endif()
 
-
 add_custom_command(TARGET siege-input
         POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/src/profiles $<TARGET_FILE_DIR:siege-input>/

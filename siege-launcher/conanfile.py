@@ -15,11 +15,13 @@ class HelloImguiSfmlConanFile(ConanFile):
     def requirements(self):
         args = sys.argv[3:]
         settings = ' '.join(args)
-        targets = ["lib", "app"]
 
         self.run(" && ".join([
-            "cd lib",
+            "cd siege-input",
+            f"conan install . {settings}",
             "conan export . "]), run_environment=True)
+
+        targets = ["siege-extender", "siege-launcher"]
 
         for target in targets:
             commands = [

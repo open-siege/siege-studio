@@ -1,6 +1,6 @@
-# Darkstar Extender Tester
+# Siege Extender Music Player
 
-Test app for verifying Darkstar Extender functionality.
+Tray application to be used to delegate the playing of music to the operating system.
 
 ## Setup Instructions
 The example requires the Conan package manager.

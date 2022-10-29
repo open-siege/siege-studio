@@ -1,4 +1,4 @@
-# 3Space Studio
+# Siege Studio
 
 ![](https://openclipart.org/image/400px/svg_to_png/97921/rubik-3D-colored.png)
 
@@ -6,7 +6,7 @@
 
 Classic Games, Modern Technology.
 
-3Space Studio exists to breathe new life into games made by Dynamix, which use the 3Space engine and its descendants, while also reverse engineering their formats for fun, modding and preservation.
+Siege Studio exists to breathe new life into games made by Dynamix, which use the 3Space engine and its descendants, while also reverse engineering their formats for fun, modding and preservation.
 
 For a list of current development tasks, check out this ClickUp board here: https://share.clickup.com/b/h/5-15151441-2/aeb3a2cc99994ef
 
@@ -86,7 +86,7 @@ TODO: add information for all of the other working build targets
 
 #### 3space-studio
 
-TODO: write a decent description of how to use the 3Space Studio GUI.
+TODO: write a decent description of how to use the Siege Studio GUI.
 
 #### dts-to-json
 With dts-to-json, you can convert either individual or multiple DTS or DML files to JSON.

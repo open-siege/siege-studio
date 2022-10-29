@@ -5,7 +5,7 @@
 wxAppConsole* createApp()
 {
     wxAppConsole::CheckBuildOptions(WX_BUILD_OPTIONS_SIGNATURE,
-                                        "Darkstar Extender Tester");
+                                        "Siege Extender Tester");
     return new wxApp();
 }
 
@@ -17,10 +17,10 @@ int main(int argc, char *argv[])
     auto* app = wxApp::GetInstance();
     app->CallOnInit();
 
-    auto* frame = new wxFrame(nullptr, wxID_ANY, "Darkstar Extender Tester");
+    auto* frame = new wxFrame(nullptr, wxID_ANY, "Siege Extender Tester");
 
     frame->CreateStatusBar();
-    frame->SetStatusText("Darkstar Extender Tester");
+    frame->SetStatusText("Siege Extender Tester");
 
     frame->Bind(wxEVT_MENU, [frame](auto &event)
     {

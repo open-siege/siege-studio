@@ -6,7 +6,7 @@ if(NOT CONAN_CMAKE_SYSTEM_PROCESSOR)
 endif()
 
 if(MSVC AND (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86" OR CONAN_CMAKE_SYSTEM_PROCESSOR STREQUAL "x86"))
-    message(STATUS "Including Darkstar Extender targets")
+    message(STATUS "Including Siege Extender targets")
     add_subdirectory(siege.proxy)
     add_library(siege-proxy::siege-proxy ALIAS siege-proxy)
 

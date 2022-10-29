@@ -1,4 +1,4 @@
-## Darkstar Extender
+## Siege Extender
 
 ### Summary
 Several games using the Darkstar engine have a built in scripting system.
