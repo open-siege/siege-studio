@@ -85,7 +85,7 @@ namespace studio
   wxAppConsole* createApp()
   {
     wxAppConsole::CheckBuildOptions(WX_BUILD_OPTIONS_SIGNATURE,
-      "3Space Studio");
+      "Siege Studio");
     return new wxApp();
   }
 
@@ -497,7 +497,7 @@ int main(int argc, char** argv)
     app->CallOnInit();
     wxInitAllImageHandlers();
 
-    auto frame = std::shared_ptr<wxFrame>(new wxFrame(nullptr, wxID_ANY, "3Space Studio"), studio::default_wx_deleter);
+    auto frame = std::shared_ptr<wxFrame>(new wxFrame(nullptr, wxID_ANY, "Siege Studio"), studio::default_wx_deleter);
 
 #if _WIN32 || _WIN64
     frame->SetIcon(wxICON(MAINICON));
@@ -505,7 +505,7 @@ int main(int argc, char** argv)
     frame->Bind(
       wxEVT_MENU, [](auto& event) {
         wxMessageBox("This is a tool to explore files using the 3Space or Darkstar engines. Currently only Starsiege, Starsiege Tribes, Trophy Bass 3D and Front Page Sports: Ski Racing are supported.",
-          "About 3Space Studio",
+          "About Siege Studio",
           wxOK | wxICON_INFORMATION);
       },
       wxID_ABOUT);
@@ -731,7 +731,7 @@ int main(int argc, char** argv)
 
     frame->SetMenuBar(studio::create_menu_bar().release());
     frame->CreateStatusBar();
-    frame->SetStatusText("3Space Studio");
+    frame->SetStatusText("Siege Studio");
     frame->Maximize();
     frame->Show(true);
 

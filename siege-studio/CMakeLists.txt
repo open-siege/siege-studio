@@ -11,6 +11,7 @@ file(GLOB STUDIO_SRC_FILES
         src/content/**/*.cpp
         src/views/*.cpp)
 
+add_subdirectory(tools)
 add_executable(siege-studio ${STUDIO_SRC_FILES})
 set_property(TARGET siege-studio PROPERTY CXX_STANDARD 17)
 target_include_directories(siege-studio PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/packages/include ${CMAKE_CURRENT_SOURCE_DIR}/src)

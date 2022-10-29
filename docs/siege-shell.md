@@ -11,7 +11,7 @@ Primarily, the initial parts of this project will focus on:
 * Starsiege
 * Starsiege: Tribes
 
-These two games only have one executable responsible for the whole game, however, using Darkstar Extender and with full file support for the game from 3Space Studio, it is possible to launch the original game directly into a mission.
+These two games only have one executable responsible for the whole game, however, using Siege Extender and with full file support for the game from Siege Studio, it is possible to launch the original game directly into a mission.
 
 ### Planned Features
 The possible features, specifically for Starsiege and Starsiege: Tribes include:
@@ -23,7 +23,7 @@ The possible features, specifically for Starsiege and Starsiege: Tribes include:
 * Much more.
 
 ### Future Game Support
-In terms of supporting other games, it is possible, but further work on 3Space Studio. These are the possible future games which can be supported:
+In terms of supporting other games, it is possible, but further work on Siege Studio. These are the possible future games which can be supported:
 * Metaltech: Earthsiege
 * Metaltech: Battledrome
 * Earthsiege 2
@@ -51,7 +51,7 @@ The following games are DOS based:
 * Aces of the Pacific
 * Aces of the Deep
 
-In order for support for these games to be implemented, the following formats, as a minimum, have to be supported in 3Space Studio:
+In order for support for these games to be implemented, the following formats, as a minimum, have to be supported in Siege Studio:
 * [TTM](https://github.com/open-siege/open-siege/wiki/TTM)
 * [SCR](https://github.com/open-siege/open-siege/wiki/SCR)
 * [BMP (the versions specific to these games)](https://github.com/open-siege/open-siege/wiki/BMP)
@@ -79,7 +79,7 @@ For Silent Thunder, many of the file formats are supported already, with the fol
 * [PAL/PPL support (Phoenix Palette files specifically)](https://github.com/open-siege/open-siege/wiki/PAL)
 * [DTS (3Space 2.5 era DTS files, which is currently in progress)](https://github.com/open-siege/open-siege/wiki/DTS)
 
-In terms of adding fixes for these games, specific compatibility fixes may be applied, and/or Darkstar Extender can be used, in a very limited capacity, to detour Win32 APIs which the game depends on but which may have issues with modern Windows. 
+In terms of adding fixes for these games, specific compatibility fixes may be applied, and/or Siege Extender can be used, in a very limited capacity, to detour Win32 APIs which the game depends on but which may have issues with modern Windows. 
 
 #### Windows Darkstar Games
 The games are: 
@@ -88,9 +88,9 @@ The games are:
 
 These games, in particular, have one executable for the shell and the sim/gameplay.
 
-However, because they have a scripting engine and will be supported by Darkstar Extender, it will be possible to force the games to start levels directly.
+However, because they have a scripting engine and will be supported by Siege Extender, it will be possible to force the games to start levels directly.
 
-Graphics files for these games are already supported, however Mask of Eternity requires support for extracting its VOL files with 3Space Studio.
+Graphics files for these games are already supported, however Mask of Eternity requires support for extracting its VOL files with Siege Studio.
 
 Both games work best with a Glide wrapper, and the shell can configure those to their best settings.
 

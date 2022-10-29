@@ -1,6 +1,6 @@
-## Welcome to 3Space Studio
+## Welcome to Siege Studio
 
-3Space Studio is a reverse engineering effort to preserve the legacy of Dynamix and their games. It serves as a tool for exploring the files of the various games, as well as converting those files to other formats. The core of 3Space Studio can be used as a library for other projects.
+Siege Studio is a reverse engineering effort to preserve the legacy of Dynamix and their games. It serves as a tool for exploring the files of the various games, as well as converting those files to other formats. The core of Siege Studio can be used as a library for other projects.
 
 ### Preview
 
@@ -8,7 +8,7 @@
 
 ### File Formats
 
-For more information on the supported file formats of 3Space Studio, see the [Game Support](game-support) page.
+For more information on the supported file formats of Siege Studio, see the [Game Support](game-support) page.
 
 For technical information surrounding the file formats, see the [main wiki of this project](https://github.com/open-siege/open-siege/wiki).
 
@@ -18,13 +18,13 @@ This project falls as part of a series of projects to renovate the Earthsiege se
 
 The overall project is divided into four phases:
 
-#### Phase 1 - 3Space Studio
+#### Phase 1 - Siege Studio
 
-3Space Studio serves as the foundation for all reverse engineering efforts related to Dynamix's games. As such, it being mature is pivotal to the success of any further undertakings to modernise or remake any of said games.
+Siege Studio serves as the foundation for all reverse engineering efforts related to Dynamix's games. As such, it being mature is pivotal to the success of any further undertakings to modernise or remake any of said games.
 
 Thus, the goal of phase 1 is to support as many games in the Dynamix catalogue as possible, with the Earthsiege series being the primary focus.
 
-#### Phase 2 - Darkstar Extender
+#### Phase 2 - Siege Extender
 
 See [project info](darkstar-extender).
 
@@ -60,7 +60,7 @@ Specifically, this project will focus on:
 
 In the case of games like Starsiege and Tribes, there can be more advanced integration with services like Discord and the like, while also making a large part of the game fully open source.
 
-Depending on progress of 3Space Studio, the following games may also be supported:
+Depending on progress of Siege Studio, the following games may also be supported:
 
 * Metaltech: Earthsiege
 * Metaltech: Battledrome
@@ -81,7 +81,7 @@ See [project info](open-siege).
 
 With the GUI front-end portion of various games supported, the next and final component would be to create a full engine replacement, using the code from the previous projects as a base, to be able to play any of the above games without any original binaries.
 
-The goal is to incorporate the logic from 3Space Studio with OGRE 3D, and potentially other libraries, to recreate the simulation aspects of each game, and work directly with Siege Shell, and eventually fully incorporate it, as to have a fully open-source implementation of Dynamix's classic games.
+The goal is to incorporate the logic from Siege Studio with OGRE 3D, and potentially other libraries, to recreate the simulation aspects of each game, and work directly with Siege Shell, and eventually fully incorporate it, as to have a fully open-source implementation of Dynamix's classic games.
 
 
 

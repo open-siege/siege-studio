@@ -18,7 +18,7 @@ namespace studio::views
     {
       auto file_path = std::filesystem::current_path() / "logo.png";
 
-      auto text = std::make_unique<wxStaticText>(&parent, wxID_ANY, "Welcome to 3Space Studio.");
+      auto text = std::make_unique<wxStaticText>(&parent, wxID_ANY, "Welcome to Siege Studio.");
       text->SetWindowStyle(wxALIGN_CENTRE_HORIZONTAL);
       auto font = text->GetFont();
       font.SetPointSize(18);
@@ -53,7 +53,7 @@ namespace studio::views
     else if (auto extension = info.filename.extension().string(); !extension.empty())
     {
       extension = extension.substr(1);
-      auto text = std::make_unique<wxStaticText>(&parent, wxID_ANY, "This particular file is not yet supported by 3Space Studio.\nThough, you can still read about it on our wiki.\nClick the link below to find out more.");
+      auto text = std::make_unique<wxStaticText>(&parent, wxID_ANY, "This particular file is not yet supported by Siege Studio.\nThough, you can still read about it on our wiki.\nClick the link below to find out more.");
       text->SetWindowStyle(wxALIGN_CENTRE_HORIZONTAL);
 
       std::string url = "https://github.com/open-siege/open-siege/wiki/" + extension;

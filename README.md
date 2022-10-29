@@ -63,16 +63,6 @@ For x86 builds, which triggers building of additional projects, use:
 
 Generated files will go into the **build/Release/bin** or **build/Debug/bin** folder.
 
-### TGUI Theme Generation
-
-Once the Besieged Theme and the related script is release-ready, it will be integrated into the build pipeline via Conan.
-
-**besieged-theme.afdesign** is the source of truth, and **besieged-theme.svg** exists only as a convenience for build automation (there are plans to do cloud builds eventually).
-
-With that being said, contributions to the theme may become tricky because of the arrangement, and the advice is either for a person to use Affinity Designer (if they have it), for changes to the svg to be backported during a merge request, by someone with an Affinity Designer license.
-
-Hopefully it doesn't come down to that, because the release-ready version should be mostly final.
-
 ### License Information
 
 See [LICENSE](LICENSE) for license information about the code (which is under an MIT license).
