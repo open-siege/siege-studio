@@ -3,7 +3,7 @@ import os.path
 
 
 class LocalConanFile(ConanFile):
-    name = "darkstar-mem"
+    name = "siege-mem"
     version = "0.6.3"
     url = "https://github.com/open-siege/open-siege"
     license = "MIT"
@@ -25,6 +25,6 @@ class LocalConanFile(ConanFile):
         cmake.install()
 
     def package_info(self):
-        self.cpp_info.libs.append("darkstar.proxy")
+        self.cpp_info.libs.append("siege.proxy")
 
 

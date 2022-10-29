@@ -17,7 +17,7 @@ if (NOT TARGET 3space::3space)
     add_library(3space::3space ALIAS 3space)
 endif()
 
-add_subdirectory(3space-studio)
+add_subdirectory(siege-studio)
 add_subdirectory(tools)
 add_subdirectory(siege-shell)
 add_subdirectory(siege-input)
