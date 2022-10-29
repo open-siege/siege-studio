@@ -6,7 +6,7 @@ import os.path
 class LocalConanFile(ConanFile):
     name = "starsiege-launcher"
     version = "0.0.1"
-    url = "https://github.com/3space-studio/3space-studio"
+    url = "https://github.com/open-siege/open-siege"
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
     system_requires = "opengl/system"

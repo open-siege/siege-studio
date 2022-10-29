@@ -37,7 +37,7 @@ artifacts:
 deploy:
   tag: $(APPVEYOR_REPO_TAG_NAME)
   release: Darkstar Extender $(APPVEYOR_REPO_TAG_NAME) Release
-  description: "See release notes for information about this release: https://github.com/StarsiegePlayers/darkstar-extender/wiki/Release-Notes"
+  description: "See release notes for information about this release: https://github.com/open-siege/open-siege/wiki/Release-Notes"
   provider: GitHub
   auth_token:
     secure: hD8hzQeP3c5jJuk/pMwouuz4wI8VdHDfGlyoTYLrWur9mLHj3lbMP7R37eHRd2Gy
