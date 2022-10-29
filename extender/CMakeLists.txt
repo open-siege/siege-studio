@@ -13,5 +13,5 @@ if(MSVC AND (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86" OR CONAN_CMAKE_SYSTEM_PROCESS
     add_subdirectory(darkstar)
     add_subdirectory(mem)
     add_subdirectory(launcher)
-    add_subdirectory(tester)
+    ##add_subdirectory(tester)
 endif()

@@ -75,7 +75,7 @@ class LocalConanFile(ConanFile):
 
     def package(self):
         git = tools.Git(folder="wiki")
-        git.clone("https://github.com/StarsiegePlayers/3space-studio.wiki.git", shallow=True)
+        git.clone("https://github.com/open-siege/open-siege.wiki.git", shallow=True)
         tools.rmdir("wiki/.git")
         self.copy(pattern="LICENSE", src=self.source_folder, dst="licenses")
         self.copy(pattern="README.md", src=self.source_folder, dst="res")
