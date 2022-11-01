@@ -2,9 +2,12 @@
 #include <filesystem>
 #include <algorithm>
 #include <vector>
+#include <deque>
 #include <unordered_set>
 #include <iostream>
 #include <fstream>
+#include <algorithm>
+#include <cpr/cpr.h>
 #include "games/games.hpp"
 
 namespace fs = std::filesystem;
@@ -12,250 +15,306 @@ namespace fs = std::filesystem;
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
-int main()
+using input_arg = std::variant<std::string_view, fs::path, cpr::Url>;
+
+int main(int argc, char** argv)
 {
-  std::string_view game = "earthsiege2";
-  fs::path destination_path = "C:\\test\\Earthshiege 2";
+  std::deque<input_arg> args;
+  std::transform(argv, argv + argc, std::back_inserter(args), [](char* arg) -> input_arg {
+      if (!arg)
+      {
+        return std::string_view{};
+      }
 
+      if (fs::exists(arg))
+      {
+        return fs::path(arg);
+      }
 
-  auto maybe_info = get_info_for_game(game);
+      std::string_view result = arg;
 
-  if (!maybe_info.has_value())
-  {
-    return -1;
-  }
+      auto http_index = result.find("http://");
 
-  auto& info = maybe_info.value();
+      if (http_index != std::string::npos)
+      {
+        return cpr::Url{arg};
+      }
 
-  std::unordered_map<std::string, std::string_view> variable_values;
+      http_index = result.find("https://");
 
-  std::transform(info.variables.begin(), info.variables.end(), std::inserter(variable_values, variable_values.begin()), [](auto& item){
-    return std::make_pair("<" + std::string(item.first) + ">", item.second.front());
-  });
+      if (http_index != std::string::npos)
+      {
+        return cpr::Url{arg};
+      }
+
+      return result;
+    });
 
   std::vector<fs::path> search_paths;
-  search_paths.reserve(27);
+  search_paths.reserve(28);
 
   search_paths.emplace_back(fs::current_path());
 
-  std::vector<char> temp;
+  auto app_path = args.front();
+  args.pop_front();
 
-  const static auto separator = []{
-    auto value = (fs::path("a") / "b").string();
-    value.pop_back();
-    return value.back();
-  }();
-
-  for (auto i = 0; i < 26; ++i)
+  if (std::holds_alternative<fs::path>(app_path) && fs::current_path() != std::get<fs::path>(app_path).parent_path())
   {
-    temp.emplace_back('A' + i);
-    temp.emplace_back(':');
-    temp.emplace_back(separator);
-    search_paths.emplace_back(std::string_view(temp.data(), temp.size()));
-    temp.clear();
+    search_paths.emplace_back(fs::path(std::get<fs::path>(app_path)).parent_path());
   }
 
-  std::unordered_map<std::string, std::string> expected_files;
-  std::unordered_map<std::string, std::string> wildcard_files;
+  std::vector<std::string_view> supported_games;
 
-  auto last_variable_used = variable_values.begin();
+  auto possible_game_name = std::find_if(args.begin(), args.end(), std::holds_alternative<std::string_view, std::string_view, fs::path, cpr::Url>);
 
-  for (const auto& mapping : info.directory_mappings)
+  if (possible_game_name != args.end() && is_supported_game(std::get<std::string_view>(*possible_game_name)))
   {
-    const auto& src_path = mapping.first;
-    const auto& dst_path = mapping.second;
-    auto star_index = src_path.find('*');
-    auto bracket_index = src_path.find('<');
-
-    if (bracket_index != std::string_view::npos)
-    {
-      std::decay_t<decltype(std::string_view::npos)> variable_index;
-
-      auto do_replace = [&](auto current_iter){
-        if (current_iter == variable_values.end())
-        {
-          return false;
-        }
-
-        variable_index = src_path.find(current_iter->first);
-
-        if (variable_index != std::string_view::npos)
-        {
-          if (star_index == std::string_view::npos)
-          {
-            expected_files.emplace(std::string(src_path).replace(variable_index,
-                                     current_iter->first.size(),
-                                     current_iter->second), dst_path);
-          }
-          else
-          {
-            wildcard_files.emplace(std::string(src_path).replace(variable_index,
-                                     current_iter->first.size(),
-                                     current_iter->second), dst_path);
-          }
-
-
-          return true;
-        }
-
-        return false;
-      };
-
-      auto replaced = do_replace(last_variable_used);
-
-      if (!replaced)
-      {
-        for (auto iter = variable_values.begin(); iter != variable_values.end(); std::advance(iter, 1))
-        {
-          replaced = do_replace(iter);
-
-          if (replaced)
-          {
-            last_variable_used = iter;
-            break;
-          }
-        }
-      }
-    }
-    else if (star_index != std::string_view::npos)
-    {
-      wildcard_files.emplace(src_path, dst_path);
-    }
-    else
-    {
-      expected_files.emplace(src_path, dst_path);
-    }
+    supported_games.emplace_back(std::get<std::string_view>(*possible_game_name));
+  }
+  else
+  {
+    supported_games = get_supported_games();
   }
 
-  std::optional<fs::path> content_path;
-  std::unordered_map<std::string, std::string> found_files;
-
-  for (const auto& path : search_paths)
+  for (const auto& game : supported_games)
   {
-    if (fs::exists(path))
-    {
-      for (const auto& [source_file, destination_rule] : expected_files)
-      {
-        auto path_of_interest = path / source_file;
-        if (fs::exists(path_of_interest) &&
-            (fs::is_directory(path_of_interest) ||
-                std::ifstream(path_of_interest, std::ios::binary))
-          )
-        {
-          if (destination_rule == "=")
-          {
-            found_files.emplace(path_of_interest.string(), std::string_view(source_file));
-          }
-          else
-          {
-            found_files.emplace(path_of_interest.string(), destination_rule);
-          }
-        }
-      }
+    auto maybe_info = get_info_for_game(game);
 
-      if (found_files.size() == expected_files.size())
-      {
-        content_path.emplace(path);
-        break;
-      }
+    if (!maybe_info.has_value())
+    {
+      continue;
     }
-    found_files.clear();
-  }
 
-  if (content_path.has_value())
-  {
-    std::cout << "Found " << game << " content at " << content_path.value() << '\n';
+    fs::path destination_path = "C:\\test\\EarthSiege 2";
 
-    for (const auto& [source_wildcard, destination_rule] : wildcard_files)
+    auto& info = maybe_info.value();
+
+    std::unordered_map<std::string, std::string_view> variable_values;
+
+    std::transform(info.variables.begin(), info.variables.end(), std::inserter(variable_values, variable_values.begin()), [](auto& item){
+      return std::make_pair("<" + std::string(item.first) + ">", item.second.front());
+    });
+
+
+
+    std::vector<char> temp;
+
+    const static auto separator = []{
+      auto value = (fs::path("a") / "b").string();
+      value.pop_back();
+      return value.back();
+    }();
+
+    for (auto i = 0; i < 26; ++i)
     {
-      auto working_path = content_path.value() / fs::path(source_wildcard).parent_path();
-      auto working_value = fs::path(source_wildcard).filename();
+      temp.emplace_back('A' + i);
+      temp.emplace_back(':');
+      temp.emplace_back(separator);
+      search_paths.emplace_back(std::string_view(temp.data(), temp.size()));
+      temp.clear();
+    }
 
-      if (fs::exists(working_path))
+    std::unordered_map<std::string, std::string> expected_files;
+    std::unordered_map<std::string, std::string> wildcard_files;
+
+    auto last_variable_used = variable_values.begin();
+
+    for (const auto& mapping : info.directory_mappings)
+    {
+      const auto& src_path = mapping.first;
+      const auto& dst_path = mapping.second;
+      auto star_index = src_path.find('*');
+      auto bracket_index = src_path.find('<');
+
+      if (bracket_index != std::string_view::npos)
       {
-        for (const auto& dir_entry : std::filesystem::directory_iterator{working_path})
-        {
-          if (working_value.stem() == "*" && dir_entry.path().extension() == working_value.extension())
+        std::decay_t<decltype(std::string_view::npos)> variable_index;
+
+        auto do_replace = [&](auto current_iter){
+          if (current_iter == variable_values.end())
           {
-            if (destination_rule == "=")
+            return false;
+          }
+
+          variable_index = src_path.find(current_iter->first);
+
+          if (variable_index != std::string_view::npos)
+          {
+            if (star_index == std::string_view::npos)
             {
-              found_files.emplace(dir_entry.path().string(), dir_entry.path().string().erase(0, working_path.string().size()));
+              expected_files.emplace(std::string(src_path).replace(variable_index,
+                                       current_iter->first.size(),
+                                       current_iter->second), dst_path);
             }
             else
             {
-              found_files.emplace(dir_entry.path().string(), destination_rule);
+              wildcard_files.emplace(std::string(src_path).replace(variable_index,
+                                       current_iter->first.size(),
+                                       current_iter->second), dst_path);
+            }
+
+
+            return true;
+          }
+
+          return false;
+        };
+
+        auto replaced = do_replace(last_variable_used);
+
+        if (!replaced)
+        {
+          for (auto iter = variable_values.begin(); iter != variable_values.end(); std::advance(iter, 1))
+          {
+            replaced = do_replace(iter);
+
+            if (replaced)
+            {
+              last_variable_used = iter;
+              break;
             }
           }
         }
       }
-
-      std::cout << "Wildcard file at " << working_path << " " << working_value << '\n';
+      else if (star_index != std::string_view::npos)
+      {
+        wildcard_files.emplace(src_path, dst_path);
+      }
+      else
+      {
+        expected_files.emplace(src_path, dst_path);
+      }
     }
 
-    fs::create_directories(destination_path);
-    for (const auto& [src, dst] : found_files)
+    std::optional<fs::path> content_path;
+    std::unordered_map<std::string, std::string> found_files;
+
+    for (const auto& path : search_paths)
     {
-      auto new_path = destination_path / dst;
-
-      bool is_file = false;
-
-      if (!fs::is_directory(src))
+      if (fs::exists(path))
       {
-        is_file = true;
-        fs::create_directories(new_path.parent_path());
-      }
-
-      try
-      {
-        if (is_file && fs::exists(new_path) && fs::file_size(new_path) == 0)
+        for (const auto& [source_file, destination_rule] : expected_files)
         {
-          std::cout << "Removing empty file " << new_path << '\n';
-          fs::remove(new_path);
+          auto path_of_interest = path / source_file;
+          if (fs::exists(path_of_interest) &&
+              (fs::is_directory(path_of_interest) ||
+                std::ifstream(path_of_interest, std::ios::binary))
+          )
+          {
+            if (destination_rule == "=")
+            {
+              found_files.emplace(path_of_interest.string(), std::string_view(source_file));
+            }
+            else
+            {
+              found_files.emplace(path_of_interest.string(), destination_rule);
+            }
+          }
         }
 
-        std::cout << "Copying from " << src << " to " << new_path << '\n';
-        fs::copy(src, new_path, fs::copy_options::recursive | fs::copy_options::skip_existing);
-
-        fs::permissions(new_path,  fs::perms::owner_read |
-                                    fs::perms::owner_write |
-                                    fs::perms::group_read |
-                                    fs::perms::group_write,
-          fs::perm_options::add);
+        if (found_files.size() == expected_files.size())
+        {
+          content_path.emplace(path);
+          break;
+        }
       }
-      catch(const std::exception& ex)
-      {
-        std::cerr << "Error: " << ex.what() << '\n';
-      }
+      found_files.clear();
     }
 
-    for (const auto& file : info.generated_files)
+    if (content_path.has_value())
     {
-      const auto& dst = file.first;
-      const auto& rule = file.second;
-      auto dst_path = destination_path / dst;
+      std::cout << "Found " << game << " content at " << content_path.value() << '\n';
 
-      fs::create_directories(dst_path.parent_path());
+      for (const auto& [source_wildcard, destination_rule] : wildcard_files)
+      {
+        auto working_path = content_path.value() / fs::path(source_wildcard).parent_path();
+        auto working_value = fs::path(source_wildcard).filename();
 
-      std::visit(overloaded {
-                   [&](const literal_template& arg) {
-                     std::ofstream output(dst_path, std::ios::binary);
-                     output << arg.value;
-                   },
-                   [&](const internal_generated_template& arg) {
+        if (fs::exists(working_path))
+        {
+          for (const auto& dir_entry : std::filesystem::directory_iterator{working_path})
+          {
+            if (working_value.stem() == "*" && dir_entry.path().extension() == working_value.extension())
+            {
+              if (destination_rule == "=")
+              {
+                found_files.emplace(dir_entry.path().string(), dir_entry.path().string().erase(0, working_path.string().size()));
+              }
+              else
+              {
+                found_files.emplace(dir_entry.path().string(), destination_rule);
+              }
+            }
+          }
+        }
 
-                     template_args args{};
+        std::cout << "Wildcard file at " << working_path << " " << working_value << '\n';
+      }
 
-                     auto dst_path_str = dst_path.string();
-                     args.file_path = dst_path_str.c_str(); // it allows functions to also take the form of char**
-                     args.file_path_size = dst_path_str.size();
+      fs::create_directories(destination_path);
+      for (const auto& [src, dst] : found_files)
+      {
+        auto new_path = destination_path / dst;
 
-                     args.original_path = dst.data();
-                     args.original_path_size = dst.size();
+        bool is_file = false;
 
-                     auto result = arg.generate_template(&args);
+        if (!fs::is_directory(src))
+        {
+          is_file = true;
+          fs::create_directories(new_path.parent_path());
+        }
 
-                     switch (result)
-                     {
+        try
+        {
+          if (is_file && fs::exists(new_path) && fs::file_size(new_path) == 0)
+          {
+            std::cout << "Removing empty file " << new_path << '\n';
+            fs::remove(new_path);
+          }
+
+          std::cout << "Copying from " << src << " to " << new_path << '\n';
+          fs::copy(src, new_path, fs::copy_options::recursive | fs::copy_options::skip_existing);
+
+          fs::permissions(new_path,  fs::perms::owner_read |
+                                      fs::perms::owner_write |
+                                      fs::perms::group_read |
+                                      fs::perms::group_write,
+            fs::perm_options::add);
+        }
+        catch(const std::exception& ex)
+        {
+          std::cerr << "Error: " << ex.what() << '\n';
+        }
+      }
+
+      for (const auto& file : info.generated_files)
+      {
+        const auto& dst = file.first;
+        const auto& rule = file.second;
+        auto dst_path = destination_path / dst;
+
+        fs::create_directories(dst_path.parent_path());
+
+        std::visit(overloaded {
+                     [&](const literal_template& arg) {
+                       std::ofstream output(dst_path, std::ios::binary);
+                       output << arg.value;
+                     },
+                     [&](const internal_generated_template& arg) {
+
+                       template_args args{};
+
+                       auto dst_path_str = dst_path.string();
+                       args.file_path = dst_path_str.c_str(); // it allows functions to also take the form of char**
+                       args.file_path_size = dst_path_str.size();
+
+                       args.original_path = dst.data();
+                       args.original_path_size = dst.size();
+
+                       auto result = arg.generate_template(&args);
+
+                       switch (result)
+                       {
                        case std::errc::no_such_file_or_directory:
                        {
                          std::cerr << "Function for " << dst_path_str << " should have created the file automatically.";
@@ -265,14 +324,16 @@ int main()
                        {
                          break;
                        }
-                     }
-                   },
-                   [](const auto& arg) { }
-                 }, rule);
+                       }
+                     },
+                     [](const auto& arg) { }
+                   }, rule);
+      }
+      return 0;
     }
-  }
-  else
-  {
-    std::cout << "Did not find " << game << " content at \n";
+    else
+    {
+      std::cout << "Did not find " << game << " content at \n";
+    }
   }
 }
