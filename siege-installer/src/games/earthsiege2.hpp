@@ -46,9 +46,9 @@ namespace earthsiege2
     }
   };
 
-  inline static std::vector<std::string_view> generated_files = {
-    "DATA/DRIVE.CFG",
-    "DATA/LANGUAGE.CFG"
+  inline static std::unordered_map<std::string_view, game_template> generated_files = {
+    { "DATA/DRIVE.CFG", literal_template { ".\r\n.\r\n" }} ,
+    { "DATA/LANGUAGE.CFG", literal_template { "E\r\n" } }
   };
 
   inline static std::unordered_map<std::string_view, std::string_view> directory_mappings = {

@@ -9,6 +9,9 @@
 
 namespace fs = std::filesystem;
 
+template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
 int main()
 {
   std::string_view game = "earthsiege2";
@@ -223,6 +226,49 @@ int main()
       {
         std::cerr << "Error: " << ex.what() << '\n';
       }
+    }
+
+    for (const auto& file : info.generated_files)
+    {
+      const auto& dst = file.first;
+      const auto& rule = file.second;
+      auto dst_path = destination_path / dst;
+
+      fs::create_directories(dst_path.parent_path());
+
+      std::visit(overloaded {
+                   [&](const literal_template& arg) {
+                     std::ofstream output(dst_path, std::ios::binary);
+                     output << arg.value;
+                   },
+                   [&](const internal_generated_template& arg) {
+
+                     template_args args{};
+
+                     auto dst_path_str = dst_path.string();
+                     args.file_path = dst_path_str.c_str(); // it allows functions to also take the form of char**
+                     args.file_path_size = dst_path_str.size();
+
+                     args.original_path = dst.data();
+                     args.original_path_size = dst.size();
+
+                     auto result = arg.generate_template(&args);
+
+                     switch (result)
+                     {
+                       case std::errc::no_such_file_or_directory:
+                       {
+                         std::cerr << "Function for " << dst_path_str << " should have created the file automatically.";
+                         break;
+                       }
+                       default:
+                       {
+                         break;
+                       }
+                     }
+                   },
+                   [](const auto& arg) { }
+                 }, rule);
     }
   }
   else
