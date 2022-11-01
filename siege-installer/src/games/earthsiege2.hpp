@@ -31,6 +31,9 @@ namespace earthsiege2
     result.disc_names = {
       "EARTHSIEGE2"
     };
+
+    result.default_install_path = "<systemDrive>/Dynamix/EarthSiege 2";
+
     return result;
   }();
 

@@ -13,6 +13,7 @@ struct game_storage_properties
 {
   std::size_t number_of_discs;
   std::array<std::string_view, 32> disc_names;
+  std::string_view default_install_path;
 };
 
 struct literal_template
@@ -57,6 +58,10 @@ struct game_info
   game_storage_properties& storage_properties;
 };
 
+
+std::vector<std::string_view> get_supported_games();
+
+bool is_supported_game(std::string_view game_name);
 
 std::optional<game_info> get_info_for_game(std::string_view game_name);
 
