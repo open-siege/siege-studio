@@ -68,7 +68,7 @@ deploy:
     description: "See release notes for information about this release: https://github.com/open-siege/open-siege/wiki/Release-Notes"
     provider: GitHub
     auth_token:
-      secure: Z101/tJ3sK4VFKSqikl2qDRGx7lcSwAPN0g32rxzVZuoTLCXVJLhfuFb/xKYG1Y+
+      secure: OUwMI1lAGRx4089vueSDDucWsvEcOjTxX5fnL/u/L8KPCo6+4VGKbQKPZ5F1Ojwnxmwt8PHWUFMr5YzdYkJ4p+i+MfwybYSACE4URnvgs91BRvl81RM4ZUyZ1DWTcf3P
     artifact: OpenSiege
     draft: false
     prerelease: false
