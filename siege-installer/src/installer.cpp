@@ -144,6 +144,13 @@ parsed_args parse_args(int argc, char** argv)
   return result;
 }
 
+// TODO list:
+// * Add support for extracting contexts from archive files
+// * Add support for downloading archive files
+// * Add support for creating registry keys
+// * Add support for Starsiege
+// * Fix CI builds
+
 int main(int argc, char** argv)
 {
   auto args = parse_args(argc, argv);
