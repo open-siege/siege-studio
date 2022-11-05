@@ -7,6 +7,8 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <numeric>
+#include <functional>
 #include <cpr/cpr.h>
 #include "games/games.hpp"
 
@@ -17,59 +19,157 @@ template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 using input_arg = std::variant<std::string_view, fs::path, cpr::Url>;
 
-int main(int argc, char** argv)
+
+struct parsed_args
+{
+  std::optional<fs::path> app_path;
+  std::variant<std::monostate, fs::path, cpr::Url> src_path;
+  std::optional<fs::path> dst_path;
+  std::string_view game_name;
+};
+
+// argument examples
+
+// <gameFolderPath>
+// <gameFolderPath> <destination>
+// <game>
+// <gameFolderPath> <game>
+// <gameFolderPath> <game> <destination>
+// <gameFolderPath> <destination> <game>
+
+parsed_args parse_args(int argc, char** argv)
 {
   std::deque<input_arg> args;
   std::transform(argv, argv + argc, std::back_inserter(args), [](char* arg) -> input_arg {
-      if (!arg)
-      {
-        return std::string_view{};
-      }
+    if (!arg)
+    {
+      return std::string_view{};
+    }
 
-      if (fs::exists(arg))
-      {
-        return fs::path(arg);
-      }
+    if (fs::exists(arg) || fs::exists(fs::path(arg).root_path()))
+    {
+      return fs::path(arg);
+    }
 
-      std::string_view result = arg;
+    std::string_view result = arg;
 
-      auto http_index = result.find("http://");
+    auto http_index = result.find("http://");
 
-      if (http_index != std::string::npos)
-      {
-        return cpr::Url{arg};
-      }
+    if (http_index != std::string::npos)
+    {
+      return cpr::Url{arg};
+    }
 
-      http_index = result.find("https://");
+    http_index = result.find("https://");
 
-      if (http_index != std::string::npos)
-      {
-        return cpr::Url{arg};
-      }
+    if (http_index != std::string::npos)
+    {
+      return cpr::Url{arg};
+    }
 
-      return result;
-    });
+    return result;
+  });
 
-  std::vector<fs::path> search_paths;
-  search_paths.reserve(28);
-
-  search_paths.emplace_back(fs::current_path());
-
+  parsed_args result{};
   auto app_path = args.front();
   args.pop_front();
 
-  if (std::holds_alternative<fs::path>(app_path) && fs::current_path() != std::get<fs::path>(app_path).parent_path())
+  if (std::holds_alternative<fs::path>(app_path))
   {
-    search_paths.emplace_back(fs::path(std::get<fs::path>(app_path)).parent_path());
+    result.app_path = std::get<fs::path>(app_path);
+  }
+
+  auto game_name = std::find_if(args.begin(), args.end(), std::holds_alternative<std::string_view, std::string_view, fs::path, cpr::Url>);
+
+  if (game_name != args.end() && is_supported_game(std::get<std::string_view>(*game_name)))
+  {
+    result.game_name = std::get<std::string_view>(*game_name);
+    args.erase(game_name);
+  }
+
+  auto src_url = std::find_if(args.begin(), args.end(), std::holds_alternative<cpr::Url, std::string_view, fs::path, cpr::Url>);
+
+  bool dest_is_default = false;
+  if (src_url != args.end())
+  {
+    result.src_path = std::get<cpr::Url>(*src_url);
+    args.erase(src_url);
+    dest_is_default = true;
+  }
+
+  auto src_or_dst_path = std::find_if(args.begin(), args.end(), std::holds_alternative<fs::path, std::string_view, fs::path, cpr::Url>);
+
+  if (src_or_dst_path != args.end() && dest_is_default)
+  {
+    result.dst_path = std::get<fs::path>(*src_or_dst_path);
+  }
+  else if (src_or_dst_path != args.end() && args.size() >= 2)
+  {
+    result.src_path = std::get<fs::path>(*src_or_dst_path);
+    std::advance(src_or_dst_path, 1);
+
+    if (src_or_dst_path != args.end())
+    {
+      result.dst_path = std::get<fs::path>(*src_or_dst_path);
+    }
+  }
+  else if (src_or_dst_path != args.end() && args.size() == 1)
+  {
+    auto temp = std::get<fs::path>(*src_or_dst_path);
+
+    if (fs::exists(temp) && fs::is_directory(temp))
+    {
+      auto range = fs::directory_iterator(temp);
+      auto count = std::distance(fs::begin(range), fs::end(range));
+
+      if (count == 0)
+      {
+        result.dst_path = temp;
+      }
+      else
+      {
+        result.src_path = temp;
+      }
+    }
+    else if (fs::exists(temp) && !fs::is_directory(temp))
+    {
+      result.src_path = temp;
+    }
+    else if (!fs::exists(temp))
+    {
+      result.dst_path = temp;
+    }
+  }
+
+  return result;
+}
+
+int main(int argc, char** argv)
+{
+  auto args = parse_args(argc, argv);
+
+  std::vector<fs::path> search_paths;
+  search_paths.reserve(32);
+
+  if (std::holds_alternative<fs::path>(args.src_path))
+  {
+    search_paths.emplace_back(std::get<fs::path>(args.src_path));
+  }
+
+  search_paths.emplace_back(fs::current_path());
+
+  auto app_path = args.app_path.value_or(fs::current_path() / "installer");
+
+  if (fs::current_path() != app_path.parent_path())
+  {
+    search_paths.emplace_back(app_path.parent_path());
   }
 
   std::vector<std::string_view> supported_games;
 
-  auto possible_game_name = std::find_if(args.begin(), args.end(), std::holds_alternative<std::string_view, std::string_view, fs::path, cpr::Url>);
-
-  if (possible_game_name != args.end() && is_supported_game(std::get<std::string_view>(*possible_game_name)))
+  if (!args.game_name.empty())
   {
-    supported_games.emplace_back(std::get<std::string_view>(*possible_game_name));
+    supported_games.emplace_back(args.game_name);
   }
   else
   {
@@ -84,18 +184,43 @@ int main(int argc, char** argv)
     {
       continue;
     }
-
-    fs::path destination_path = "C:\\test\\EarthSiege 2";
-
     auto& info = maybe_info.value();
 
-    std::unordered_map<std::string, std::string_view> variable_values;
+    std::unordered_map<std::string, std::string> variable_values;
 
     std::transform(info.variables.begin(), info.variables.end(), std::inserter(variable_values, variable_values.begin()), [](auto& item){
-      return std::make_pair("<" + std::string(item.first) + ">", item.second.front());
+      return std::make_pair("<" + std::string(item.first) + ">", std::string(item.second.front()));
     });
 
+    if (auto path_with_root = args.dst_path.value_or( fs::current_path()); path_with_root.has_root_path())
+    {
+      variable_values.emplace("<systemDrive>", path_with_root.root_path().string());
+    }
+    else
+    {
+      variable_values.emplace("<systemDrive>", "C:\\");
+    }
 
+    auto replace_variables = [&](const fs::path& input) -> fs::path {
+      fs::path result;
+      for (auto& item : input)
+      {
+        auto variable = variable_values.find(item.string());
+
+        if (variable != variable_values.end())
+        {
+          result /= variable->second;
+        }
+        else
+        {
+          result /= item;
+        }
+      }
+
+      return result;
+    };
+
+    fs::path destination_path = replace_variables(args.dst_path.value_or(info.storage_properties.default_install_path));
 
     std::vector<char> temp;
 
@@ -195,7 +320,7 @@ int main(int argc, char** argv)
       {
         for (const auto& [source_file, destination_rule] : expected_files)
         {
-          auto path_of_interest = path / source_file;
+          auto path_of_interest = (path / source_file).make_preferred();
           if (fs::exists(path_of_interest) &&
               (fs::is_directory(path_of_interest) ||
                 std::ifstream(path_of_interest, std::ios::binary))
@@ -227,7 +352,7 @@ int main(int argc, char** argv)
 
       for (const auto& [source_wildcard, destination_rule] : wildcard_files)
       {
-        auto working_path = content_path.value() / fs::path(source_wildcard).parent_path();
+        auto working_path = (content_path.value() / fs::path(source_wildcard).parent_path()).make_preferred();
         auto working_value = fs::path(source_wildcard).filename();
 
         if (fs::exists(working_path))
@@ -254,15 +379,15 @@ int main(int argc, char** argv)
       fs::create_directories(destination_path);
       for (const auto& [src, dst] : found_files)
       {
-        auto new_path = destination_path / dst;
+        auto new_path = (destination_path / dst).make_preferred();
 
         bool is_file = false;
 
         if (!fs::is_directory(src))
         {
           is_file = true;
-          fs::create_directories(new_path.parent_path());
         }
+        fs::create_directories(new_path.parent_path());
 
         try
         {
@@ -291,7 +416,7 @@ int main(int argc, char** argv)
       {
         const auto& dst = file.first;
         const auto& rule = file.second;
-        auto dst_path = destination_path / dst;
+        auto dst_path = (destination_path / dst).make_preferred();
 
         fs::create_directories(dst_path.parent_path());
 
