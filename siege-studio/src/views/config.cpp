@@ -151,6 +151,9 @@ namespace studio::views
     archive.add_archive_type(".zip", std::make_unique<dio::zip::zip_file_archive>());
     archive.add_archive_type(".vl2", std::make_unique<dio::zip::zip_file_archive>());
     archive.add_archive_type(".pk3", std::make_unique<dio::zip::zip_file_archive>());
+    archive.add_archive_type(".docx", std::make_unique<dio::zip::zip_file_archive>());
+    archive.add_archive_type(".pptx", std::make_unique<dio::zip::zip_file_archive>());
+    archive.add_archive_type(".xlxs", std::make_unique<dio::zip::zip_file_archive>());
 
     archive.add_archive_type(".dyn", std::make_unique<dio::vol::three_space::dyn_file_archive>());
     archive.add_archive_type(".vol", std::make_unique<dio::vol::three_space::vol_file_archive>());
