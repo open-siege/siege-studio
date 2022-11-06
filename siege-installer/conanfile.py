@@ -11,7 +11,7 @@ class LocalConanFile(ConanFile):
     author = "Matthew Rindel (matthew@thesiegehub.com)"
     build_requires = "cmake/3.22.0"
     settings = "os", "compiler", "build_type", "arch"
-    requires = "catch2/2.13.8", "cpr/1.7.2"
+    requires = "catch2/2.13.8", "cpr/1.7.2", "3space/0.6.3", "zlib/1.2.12", "openssl/1.1.1o"
     generators = "cmake_find_package", "virtualenv"
     exports_sources = "CMakeLists.txt", "LICENSE", "README.md", "game-support.md", "src/*"
 

@@ -242,9 +242,23 @@ namespace studio::resources
     // second pass, looking for a real file and not a folder
     auto archive_path = folder_path;
 
+    constexpr static auto max_depth = 16;
+    auto depth = 0;
+
     while (!std::filesystem::exists(archive_path) && !std::filesystem::is_directory(archive_path))
+    try
     {
       archive_path = archive_path.parent_path();
+      depth++;
+
+      if (depth >= max_depth)
+      {
+        break;
+      }
+    }
+    catch(...)
+    {
+      break;
     }
 
     return archive_path;
@@ -275,16 +289,19 @@ namespace studio::resources
   {
     auto archive_path = get_archive_path(info.folder_path);
 
-    destination = destination / std::filesystem::relative(archive_path, get_search_path()).parent_path() / archive_path.stem() / std::filesystem::relative(info.folder_path, archive_path).replace_extension("");
-
-    if (archive_path.stem() == destination.stem())
+    if (destination.filename() != info.filename)
     {
-      destination = destination.parent_path();
+      destination = destination / std::filesystem::relative(archive_path, get_search_path()).parent_path() / archive_path.stem() / std::filesystem::relative(info.folder_path, archive_path).replace_extension("");
+
+      if (archive_path.stem() == destination.stem())
+      {
+        destination = destination.parent_path();
+      }
+      std::filesystem::create_directories(destination);
+      destination = destination / info.filename;
     }
 
-    std::filesystem::create_directories(destination);
-
-    std::ofstream new_file(destination / info.filename, std::ios::binary);
+    std::ofstream new_file(destination, std::ios::binary);
 
     auto type = get_archive_type(archive_path);
 
@@ -311,6 +328,7 @@ namespace studio::resources
     }
 
     for (auto& item : std::filesystem::directory_iterator(folder_path))
+    try
     {
       if (item.is_directory())
       {
@@ -335,6 +353,10 @@ namespace studio::resources
         info.size = std::size_t(std::filesystem::file_size(item.path()));
         files.emplace_back(info);
       }
+    }
+    catch(...)
+    {
+      continue;
     }
 
     return files;
