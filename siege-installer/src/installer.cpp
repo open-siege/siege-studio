@@ -199,9 +199,80 @@ int main(int argc, char** argv)
   std::vector<fs::path> search_paths;
   search_paths.reserve(32);
 
+  auto explorer = create_resource_explorer();
+
+  fs::path archive_input;
+  fs::path temp_folder;
+  std::optional<std::reference_wrapper<studio::resources::archive_plugin>> archive_input_plugin;
+  std::unordered_map<std::string, studio::resources::file_info> archive_files;
+
   if (std::holds_alternative<fs::path>(args.src_path))
   {
-    search_paths.emplace_back(std::get<fs::path>(args.src_path));
+    if (auto& src_path = std::get<fs::path>(args.src_path); !fs::is_directory(src_path))
+    {
+      auto archive_type = explorer.get_archive_type(src_path);
+
+      if (archive_type.has_value())
+      {
+        std::ifstream archive {src_path, std::ios::binary };
+
+        auto content_listing = archive_type.value().get().get_content_listing(archive, { src_path, src_path });
+
+        auto all_content = content_listing;
+        all_content.reserve(all_content.capacity() * 4);
+
+        std::function<void(const decltype(content_listing)&)> visit_listing = [&](const auto& content_listing) {
+          for (auto& entry : content_listing)
+          {
+            std::visit(overloaded {
+                         [&](const studio::resources::folder_info& arg) {
+                           auto child_listing = archive_type.value().get().get_content_listing(archive, { src_path, arg.full_path });
+
+                           if (all_content.size() + child_listing.size() > all_content.capacity())
+                           {
+                             all_content.reserve(all_content.capacity() + all_content.size() + child_listing.size());
+                           }
+
+                           std::copy(child_listing.begin(), child_listing.end(), std::back_inserter(all_content));
+                           visit_listing(child_listing);
+                         },
+                         [](const studio::resources::file_info& arg) {
+                         }
+                       }, entry);
+          }
+        };
+
+        visit_listing(content_listing);
+
+        temp_folder = fs::temp_directory_path() / (src_path.stem().string() + std::to_string(fs::file_size(src_path)));
+
+        for (auto& entry : all_content)
+        {
+          std::visit(overloaded {
+                       [&](const studio::resources::folder_info& arg) {
+                         auto relative_path = fs::relative(arg.full_path, src_path);
+                         auto new_path = temp_folder / relative_path;
+                         fs::create_directories(new_path);
+                       },
+                       [&](const studio::resources::file_info& arg) {
+                         auto relative_path = fs::relative(arg.folder_path, src_path);
+                         auto new_path = temp_folder / relative_path / arg.filename;
+                         fs::create_directories(new_path.parent_path());
+
+                         std::ofstream output(new_path);
+                         archive_files.emplace(new_path.lexically_normal().string(), arg);
+                       }
+                     }, entry);
+        }
+        search_paths.emplace_back(temp_folder);
+        archive_input = src_path;
+        archive_input_plugin.emplace(archive_type.value());
+      }
+    }
+    else
+    {
+      search_paths.emplace_back(src_path);
+    }
   }
 
   search_paths.emplace_back(fs::current_path());
@@ -283,7 +354,21 @@ int main(int argc, char** argv)
       temp.emplace_back('A' + i);
       temp.emplace_back(':');
       temp.emplace_back(separator);
-      search_paths.emplace_back(std::string_view(temp.data(), temp.size()));
+
+      auto temp_str = std::string_view(temp.data(), temp.size());
+
+      try
+      {
+        if (fs::exists(temp_str))
+        {
+          search_paths.emplace_back(temp_str);
+        }
+      }
+      catch(...)
+      {
+
+      }
+
       temp.clear();
     }
 
@@ -360,86 +445,37 @@ int main(int argc, char** argv)
     }
 
     std::optional<fs::path> content_path;
-
-    using found_file_info = std::pair<std::variant<studio::resources::folder_info, studio::resources::file_info>, std::string>;
-
-    std::unordered_map<std::string, found_file_info> found_files;
-
-    auto explorer = create_resource_explorer();
-
-    std::unordered_map<std::string,
-      std::vector<std::variant<studio::resources::folder_info, studio::resources::file_info>>> path_listings;
+    std::unordered_map<std::string, std::string> found_files;
 
     for (const auto& path : search_paths)
     {
-      path_listings.emplace((path / "").string(), explorer.get_content_listing(path));
-
-      for (const auto& [source_file, destination_rule] : expected_files)
+      if (fs::exists(path))
       {
-        std::vector<fs::path> path_parts;
-        path_parts.reserve(4);
-
-        auto source_file_path = fs::path(source_file);
-
-        std::copy(source_file_path.begin(), source_file_path.end(), std::back_inserter(path_parts));
-        path_parts.pop_back();
-
-        for (const auto& part : path_parts)
+        for (const auto& [source_file, destination_rule] : expected_files)
         {
-          auto new_path = (path / part).string();
-          auto existing_cache = path_listings.find(new_path);
-
-          if (existing_cache == path_listings.end())
+          auto path_of_interest = (path / source_file).make_preferred();
+          if (fs::exists(path_of_interest) &&
+              (fs::is_directory(path_of_interest) ||
+                std::ifstream(path_of_interest, std::ios::binary))
+          )
           {
-            path_listings.emplace(std::move(new_path), explorer.get_content_listing(path / part));
-          }
-        }
-
-        auto listing = path_listings.find((path / source_file_path.parent_path()).string());
-
-        if (listing != path_listings.end())
-        {
-          auto file_info = listing->second.end();
-          file_info = std::find_if(listing->second.begin(), listing->second.end(), [&](const auto& entry) {
-            return std::visit(overloaded {
-                                [&](const studio::resources::folder_info& arg) {
-                                  return arg.name == source_file_path.filename();
-                                },
-                                [&](const studio::resources::file_info& arg) {
-                                  return arg.filename == source_file_path.filename();
-                                }
-                              }, entry);
-          });
-
-          if (file_info != listing->second.end())
-          {
-            auto path_of_interest = std::visit(overloaded {
-                                                 [&](const studio::resources::folder_info& arg) {
-                                                   return arg.full_path;
-                                                 },
-                                                 [&](const studio::resources::file_info& arg) {
-                                                   return arg.folder_path / arg.filename;
-                                                 }
-                                               }, *file_info);
-
             if (destination_rule == "=")
             {
-              found_files.emplace(path_of_interest.string(), std::make_pair(*file_info, source_file));
+              found_files.emplace(path_of_interest.string(), std::string_view(source_file));
             }
             else
             {
-              found_files.emplace(path_of_interest.string(), std::make_pair(*file_info, destination_rule));
+              found_files.emplace(path_of_interest.string(), destination_rule);
             }
           }
         }
-      }
 
-      if (found_files.size() == expected_files.size())
-      {
-        content_path.emplace(path);
-        break;
+        if (found_files.size() == expected_files.size())
+        {
+          content_path.emplace(path);
+          break;
+        }
       }
-
       found_files.clear();
     }
 
@@ -452,28 +488,20 @@ int main(int argc, char** argv)
         auto working_path = (content_path.value() / fs::path(source_wildcard).parent_path()).make_preferred();
         auto working_value = fs::path(source_wildcard).filename();
 
-        auto [iterator, added] = path_listings.emplace(working_path.string(), explorer.get_content_listing(working_path));
-
-        for (const auto& file_info : iterator->second)
+        if (fs::exists(working_path))
         {
-          auto path_of_interest = std::visit(overloaded {
-                                               [&](const studio::resources::folder_info& arg) {
-                                                 return arg.full_path;
-                                               },
-                                               [&](const studio::resources::file_info& arg) {
-                                                 return arg.folder_path / arg.filename;
-                                               }
-                                             }, file_info);
-
-          if (working_value.stem() == "*" && path_of_interest.extension() == working_value.extension())
+          for (const auto& dir_entry : std::filesystem::directory_iterator{working_path})
           {
-            if (destination_rule == "=")
+            if (working_value.stem() == "*" && dir_entry.path().extension() == working_value.extension())
             {
-              found_files.emplace(path_of_interest.string(), std::make_pair(file_info, path_of_interest.string().erase(0, working_path.string().size())));
-            }
-            else
-            {
-              found_files.emplace(path_of_interest.string(), std::make_pair(file_info, destination_rule));
+              if (destination_rule == "=")
+              {
+                found_files.emplace(dir_entry.path().string(), dir_entry.path().string().erase(0, working_path.string().size()));
+              }
+              else
+              {
+                found_files.emplace(dir_entry.path().string(), destination_rule);
+              }
             }
           }
         }
@@ -482,75 +510,75 @@ int main(int argc, char** argv)
       }
 
       fs::create_directories(destination_path);
-      for (const auto& found_file : found_files)
+      for (const auto& [src, dst] : found_files)
       {
-        const auto& src = found_file.first;
-        const auto& dst = found_file.second.second;
-        const auto& file_info = found_file.second.first;
+        auto new_path = (destination_path / dst).make_preferred();
+
+        bool is_file = false;
+
+        if (!fs::is_directory(src))
+        {
+          is_file = true;
+        }
+        fs::create_directories(new_path.parent_path());
 
         try
         {
-          auto new_path = (destination_path / dst).make_preferred();
-          fs::create_directories(new_path.parent_path());
+          if (is_file && fs::exists(new_path) && fs::file_size(new_path) == 0)
+          {
+            std::cout << "Removing empty file " << new_path << '\n';
+            fs::remove(new_path);
+          }
 
-          auto process_file_info = [&](const studio::resources::file_info& arg, const auto& new_path) {
-            if (fs::exists(new_path) && fs::file_size(new_path) == 0)
+          if (content_path == temp_folder && archive_input_plugin.has_value())
+          {
+            if (fs::is_directory(src))
             {
-              std::cout << "Removing empty file " << new_path << '\n';
-              fs::remove(new_path);
-            }
+              std::ifstream input { archive_input, std::ios::binary };
 
-            if (fs::exists(arg.folder_path / arg.filename))
-            {
-              std::cout << "Copying from " << arg.folder_path / arg.filename << " to " << new_path << '\n';
-              fs::copy(arg.folder_path / arg.filename, new_path, fs::copy_options::recursive | fs::copy_options::skip_existing);
+              auto items = archive_input_plugin.value().get().get_content_listing(input, {
+                                                                                           archive_input,
+                                                                                           archive_input / fs::relative(src, temp_folder)
+                                                                                         });
+              fs::create_directories(new_path);
+
+              for (auto item : items)
+              {
+                std::visit(overloaded {
+                             [&](const studio::resources::folder_info& arg) {
+                             },
+                             [&](const studio::resources::file_info& arg) {
+                               std::ofstream output { new_path / arg.filename, std::ios::binary };
+                              // std::cout << "Extracting from " << src << " to " << new_path << '\n';
+                               archive_input_plugin.value().get().extract_file_contents(input, arg, output);
+                             }
+                           }, item);
+
+              }
+
             }
             else
             {
-              std::cout << "Extracting " << arg.folder_path / arg.filename << " to " << new_path << '\n';
-              std::ifstream archive{ explorer.get_archive_path(arg.folder_path), std::ios::binary };
-              explorer.extract_file_contents(archive, new_path, arg);
+              auto file_iter = archive_files.find(src);
+
+              if (file_iter != archive_files.end())
+              {
+                std::ifstream input { archive_input, std::ios::binary };
+                std::ofstream output { new_path, std::ios::binary };
+                std::cout << "Extracting from " << src << " to " << new_path << '\n';
+                archive_input_plugin.value().get().extract_file_contents(input, file_iter->second, output);
+              }
+              else
+              {
+                std::cerr << src << " not found\n";
+              }
             }
-          };
-
-          std::function<void(const studio::resources::folder_info&)> process_folder_info = [&](const studio::resources::folder_info& arg) {
-            if (!fs::is_directory(arg.full_path) && fs::exists(arg.full_path))
-            {
-              fs::copy(arg.full_path, new_path, fs::copy_options::recursive | fs::copy_options::skip_existing);
-              return;
-            }
-
-            auto child_files = path_listings.find(arg.full_path.string());
-
-            if (child_files == path_listings.end())
-            {
-              child_files = path_listings.emplace(arg.full_path.string(), explorer.get_content_listing(arg.full_path.string())).first;
-            }
-
-            fs::create_directories(new_path);
-
-            for (const auto& child_info : child_files->second)
-            {
-              std::visit(overloaded {
-                           [&](const studio::resources::folder_info& arg) {
-                             process_folder_info(arg);
-                           },
-                           [&](const studio::resources::file_info& arg) {
-                             process_file_info(arg, new_path / arg.filename);
-                           },
-                         }, child_info);
-            }
-          };
-
-          std::visit(overloaded {
-                       [&](const studio::resources::folder_info& arg) {
-                         process_folder_info(arg);
-                       },
-                       [&](const studio::resources::file_info& arg) {
-                         process_file_info(arg, new_path);
-                       }
-                     }, file_info);
-
+          }
+          else
+          {
+            std::cout << "Copying from " << src << " to " << new_path << '\n';
+            fs::copy(src, new_path, fs::copy_options::recursive | fs::copy_options::skip_existing);
+          }
 
           fs::permissions(new_path,  fs::perms::owner_read |
                                       fs::perms::owner_write |
@@ -611,6 +639,7 @@ int main(int argc, char** argv)
     else
     {
       std::cout << "Did not find " << game << " content at \n";
+      return -1;
     }
   }
 }

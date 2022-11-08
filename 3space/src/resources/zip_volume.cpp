@@ -1,10 +1,15 @@
 #include <fstream>
 #include <filesystem>
 #include <vector>
+#include <list>
+#include <string>
+#include <unordered_map>
 #include <utility>
 #include <zip.h>
 
 #include "resources/zip_volume.hpp"
+
+namespace fs = std::filesystem;
 
 namespace studio::resources::zip
 {
@@ -106,42 +111,93 @@ namespace studio::resources::zip
 
   std::vector<zip_file_archive::content_info> zip_file_archive::get_content_listing(std::istream& stream, const listing_query& query) const
   {
-    zip_error_t src_error;
-    auto* source = zip_source_function_create(process_zip_stream, &stream, &src_error);
+    static std::list<std::string> name_cache;
+    static std::unordered_map<std::string, std::vector<struct zip_stat>> stat_cache;
 
-    std::vector<zip_file_archive::content_info> results;
-    zip_t* zip_file;
+    auto cache_key = fs::exists(query.archive_path) ?
+                                                    query.archive_path.string() + std::to_string(fs::file_size(query.archive_path)) :
+                                                    query.archive_path.string();
 
+    auto cache_entry = stat_cache.find(cache_key);
 
-    zip_error_t err;
-    zip_file = zip_open_from_source(source, 0, &err);
-
-    auto entry_count = zip_get_num_entries(zip_file, 0);
-
-    if (entry_count == -1)
+    if (cache_entry == stat_cache.end())
     {
-      return results;
+      zip_error_t src_error;
+      auto* source = zip_source_function_create(process_zip_stream, &stream, &src_error);
+
+      std::vector<struct zip_stat> entries;
+      zip_t* zip_file;
+
+      zip_error_t err;
+      zip_file = zip_open_from_source(source, 0, &err);
+
+      auto entry_count = zip_get_num_entries(zip_file, 0);
+
+      if (entry_count == -1)
+      {
+        zip_close(zip_file);
+        return {};
+      }
+
+      entries.reserve(entry_count);
+
+      for (decltype(entry_count) i = 0; i < entry_count; ++i)
+      {
+        struct zip_stat st;
+        zip_stat_init(&st);
+        zip_stat_index(zip_file, i, 0, &st);
+
+        if (st.name)
+        {
+          st.name = name_cache.emplace_back(st.name).c_str();
+          entries.emplace_back(st);
+        }
+      }
+
+      cache_entry = stat_cache.emplace(cache_key, std::move(entries)).first;
+
+      zip_close(zip_file);
     }
 
-    results.reserve(entry_count);
-
-    for (decltype(entry_count) i = 0; i < entry_count; ++i)
+    std::vector<zip_file_archive::content_info> results;
+    for (auto& entry : cache_entry->second)
     {
-      struct zip_stat st;
-      zip_stat_init(&st);
-      zip_stat_index(zip_file, i, 0, &st);
+      std::string_view name_str(entry.name);
+      std::filesystem::path name = !name_str.empty() && name_str[name_str.size() - 1] == '/' ? name_str.substr(0, name_str.size() - 1) : name_str;
+
+      auto relative_path = fs::relative(query.folder_path, query.archive_path);
+
+      if (relative_path.string() == ".")
+      {
+        relative_path = "";
+      }
+
+      auto parent_path = name.parent_path();
+
+      if (parent_path != relative_path)
+      {
+        continue;
+      }
+
+      if (entry.size == 0)
+      {
+        folder_info temp{};
+
+        temp.name = name.filename().string();
+        temp.full_path = query.archive_path / name;
+        results.emplace_back(std::move(temp));
+        continue;
+      }
 
       file_info temp{};
 
-      temp.size = st.size;
-      temp.filename = st.name;
+      temp.size = entry.size;
+      temp.filename = name.filename();
       temp.folder_path = query.folder_path;
       temp.compression_type = compression_type::lz;
 
-      results.emplace_back(temp);
+      results.emplace_back(std::move(temp));
     }
-
-    zip_close(zip_file);
 
     return results;
   }
