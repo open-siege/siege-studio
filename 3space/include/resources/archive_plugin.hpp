@@ -29,6 +29,7 @@ namespace studio::resources
     std::optional<std::size_t> compressed_size;
     resources::compression_type compression_type;
     std::filesystem::path folder_path;
+    std::filesystem::path archive_path;
   };
 
   struct folder_info
@@ -36,6 +37,7 @@ namespace studio::resources
     std::string name;
     std::optional<std::size_t> file_count;
     std::filesystem::path full_path;
+    std::filesystem::path archive_path;
   };
 
   struct listing_query

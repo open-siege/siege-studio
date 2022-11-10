@@ -185,6 +185,7 @@ namespace studio::resources::zip
 
         temp.name = name.filename().string();
         temp.full_path = query.archive_path / name;
+        temp.archive_path = query.archive_path;
         results.emplace_back(std::move(temp));
         continue;
       }
@@ -194,6 +195,7 @@ namespace studio::resources::zip
       temp.size = entry.size;
       temp.filename = name.filename();
       temp.folder_path = query.folder_path;
+      temp.archive_path = query.archive_path;
       temp.compression_type = compression_type::lz;
 
       results.emplace_back(std::move(temp));
@@ -241,7 +243,19 @@ namespace studio::resources::zip
 
     using file_ptr = std::unique_ptr<zip_file, void(*)(zip_file*)>;
 
-    file_ptr entry = file_ptr(zip_fopen(archive.get(), info.filename.string().c_str(), 0), [](zip_file* file){ zip_fclose(file); });
+    auto full_path = info.folder_path != info.archive_path ? std::filesystem::relative(info.folder_path, info.archive_path) / info.filename : info.filename;
+
+    auto full_path_str = full_path.string();
+
+    for (auto i = 0u; i < full_path_str.size(); ++i)
+    {
+      if (full_path_str[i] == '\\')
+      {
+        full_path_str[i] = '/';
+      }
+    }
+
+    file_ptr entry = file_ptr(zip_fopen(archive.get(), full_path_str.c_str(), 0), [](zip_file* file){ zip_fclose(file); });
 
     std::vector<std::byte> contents(info.size);
 
