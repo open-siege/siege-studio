@@ -532,10 +532,11 @@ int main(int argc, char** argv)
 
           if (content_path == temp_folder && archive_input_plugin.has_value())
           {
+            std::ifstream input { archive_input, std::ios::binary };
+            studio::resources::batch_storage storage;
+
             if (fs::is_directory(src))
             {
-              std::ifstream input { archive_input, std::ios::binary };
-
               auto items = archive_input_plugin.value().get().get_content_listing(input, {
                                                                                            archive_input,
                                                                                            archive_input / fs::relative(src, temp_folder)
@@ -549,8 +550,8 @@ int main(int argc, char** argv)
                              },
                              [&](const studio::resources::file_info& arg) {
                                std::ofstream output { new_path / arg.filename, std::ios::binary };
-                              // std::cout << "Extracting from " << src << " to " << new_path << '\n';
-                               archive_input_plugin.value().get().extract_file_contents(input, arg, output);
+
+                               archive_input_plugin.value().get().extract_file_contents(input, arg, output, std::ref(storage));
                              }
                            }, item);
 
@@ -563,10 +564,8 @@ int main(int argc, char** argv)
 
               if (file_iter != archive_files.end())
               {
-                std::ifstream input { archive_input, std::ios::binary };
                 std::ofstream output { new_path, std::ios::binary };
-                std::cout << "Extracting from " << src << " to " << new_path << '\n';
-                archive_input_plugin.value().get().extract_file_contents(input, file_iter->second, output);
+                archive_input_plugin.value().get().extract_file_contents(input, file_iter->second, output, std::ref(storage));
               }
               else
               {
