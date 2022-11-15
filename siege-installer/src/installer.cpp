@@ -186,7 +186,6 @@ parsed_args parse_args(int argc, char** argv)
 }
 
 // TODO list:
-// * Add support for extracting contexts from archive files
 // * Add support for downloading archive files
 // * Add support for creating registry keys
 // * Add support for Starsiege
@@ -195,6 +194,32 @@ parsed_args parse_args(int argc, char** argv)
 int main(int argc, char** argv)
 {
   auto args = parse_args(argc, argv);
+
+  args.src_path = std::visit(overloaded {
+                               [&](const cpr::Url& arg) -> decltype(args.src_path) {
+                                 cpr::Session session;
+
+                                 auto temp_file = fs::temp_directory_path() / fs::path(arg.str()).filename();
+
+                                 std::ofstream file(temp_file, std::ios_base::binary | std::ios_base::trunc);
+                                 session.SetUrl(arg);
+                                 session.SetWriteCallback(cpr::WriteCallback([&file](std::string data, std::intptr_t) {
+                                   std::cout << "Reading " << data.size() << " bytes of data\n";
+                                   file.write(data.data(), data.size());
+                                   return true;
+                                 }));
+
+                                 auto response = session.Get();
+
+                                 return std::move(temp_file);
+                               },
+                               [](const fs::path& arg)  -> decltype(args.src_path) {
+                                 return arg;
+                               },
+                               [](const std::monostate& arg)  -> decltype(args.src_path) {
+                                 return std::monostate{};
+                               }
+                             }, args.src_path);
 
   std::vector<fs::path> search_paths;
   search_paths.reserve(32);
