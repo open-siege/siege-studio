@@ -199,7 +199,14 @@ int main(int argc, char** argv)
                                [&](const cpr::Url& arg) -> decltype(args.src_path) {
                                  cpr::Session session;
 
-                                 auto temp_file = fs::temp_directory_path() / fs::path(arg.str()).filename();
+                                 auto filename = fs::path(arg.str()).filename().string();
+
+                                 if (filename.empty())
+                                 {
+                                   filename = "installer-download.tmp";
+                                 }
+
+                                 auto temp_file = fs::temp_directory_path() / filename;
 
                                  std::ofstream file(temp_file, std::ios_base::binary | std::ios_base::trunc);
                                  session.SetUrl(arg);
