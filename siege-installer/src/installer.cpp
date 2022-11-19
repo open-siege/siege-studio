@@ -17,6 +17,7 @@
 #include "resources/zip_volume.hpp"
 #include "resources/cyclone_volume.hpp"
 #include "resources/sword_volume.hpp"
+#include "resources/seven_zip_volume.hpp"
 #include "resources/resource_explorer.hpp"
 
 namespace fs = std::filesystem;
@@ -24,13 +25,13 @@ namespace fs = std::filesystem;
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
-
 namespace dio
 {
   namespace vol = studio::resources::vol;
   namespace zip = studio::resources::zip;
   namespace cln = studio::resources::cln;
   namespace atd = studio::resources::atd;
+  namespace seven_zip = studio::resources::seven_zip;
 }
 
 studio::resources::resource_explorer create_resource_explorer()
@@ -55,6 +56,8 @@ studio::resources::resource_explorer create_resource_explorer()
 
   archive.add_archive_type(".cln", std::make_unique<dio::cln::cln_file_archive>());
   archive.add_archive_type(".atd", std::make_unique<dio::atd::atd_file_archive>());
+
+  archive.add_archive_type(".7z", std::make_unique<dio::seven_zip::seven_zip_file_archive>());
 
   return archive;
 }
@@ -194,6 +197,8 @@ parsed_args parse_args(int argc, char** argv)
 int main(int argc, char** argv)
 {
   auto args = parse_args(argc, argv);
+
+  dio::seven_zip::seven_zip_file_archive::toggle_bulk_extraction();
 
   args.src_path = std::visit(overloaded {
                                [&](const cpr::Url& arg) -> decltype(args.src_path) {
