@@ -18,6 +18,7 @@
 #include "resources/cyclone_volume.hpp"
 #include "resources/sword_volume.hpp"
 #include "resources/seven_zip_volume.hpp"
+#include "resources/iso_volume.hpp"
 #include "resources/resource_explorer.hpp"
 
 namespace fs = std::filesystem;
@@ -31,6 +32,7 @@ namespace dio
   namespace zip = studio::resources::zip;
   namespace cln = studio::resources::cln;
   namespace atd = studio::resources::atd;
+  namespace iso = studio::resources::iso;
   namespace seven_zip = studio::resources::seven_zip;
 }
 
@@ -58,6 +60,11 @@ studio::resources::resource_explorer create_resource_explorer()
   archive.add_archive_type(".atd", std::make_unique<dio::atd::atd_file_archive>());
 
   archive.add_archive_type(".7z", std::make_unique<dio::seven_zip::seven_zip_file_archive>());
+
+  archive.add_archive_type(".cue", std::make_unique<dio::iso::iso_file_archive>());
+  archive.add_archive_type(".iso", std::make_unique<dio::iso::iso_file_archive>());
+  archive.add_archive_type(".img", std::make_unique<dio::iso::iso_file_archive>());
+  archive.add_archive_type(".bin", std::make_unique<dio::iso::iso_file_archive>());
 
   return archive;
 }
@@ -199,6 +206,7 @@ int main(int argc, char** argv)
   auto args = parse_args(argc, argv);
 
   dio::seven_zip::seven_zip_file_archive::toggle_bulk_extraction();
+  //dio::iso::iso_file_archive::toggle_bulk_extraction();
 
   args.src_path = std::visit(overloaded {
                                [&](const cpr::Url& arg) -> decltype(args.src_path) {
