@@ -11,14 +11,14 @@
 #include <algorithm>
 #include <iostream>
 
-#include "resources/seven_zip_volume.hpp"
+#include "resources/iso_volume.hpp"
 
 namespace fs = std::filesystem;
 
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
-namespace studio::resources::seven_zip
+namespace studio::resources::iso
 {
   using folder_info = studio::resources::folder_info;
 
@@ -31,20 +31,20 @@ namespace studio::resources::seven_zip
     return str;
   }
 
-  std::string seven_zip_executable()
+  std::string power_iso_executable()
   {
 #ifdef WIN32
     try
     {
-      if (fs::exists("7z.exe"))
+      if (fs::exists("piso.exe"))
       {
-        return "7z.exe";
+        return "piso.exe";
       }
 
       constexpr static std::array<std::string_view, 3> commands = {{
-        "where 7z",
-        "echo %PROGRAMFILES%\\7-Zip\\7z.exe",
-        "echo %PROGRAMFILES(x86)%\\7-Zip\\7z.exe"
+        "where piso",
+        "echo %PROGRAMFILES%\\PowerISO\\piso.exe",
+        "echo %PROGRAMFILES(x86)%\\PowerISO\\piso.exe"
       }};
 
       for (auto command : commands)
@@ -67,36 +67,36 @@ namespace studio::resources::seven_zip
     }
 #endif
 
-    return "7z";
+    return "piso";
   }
 
   static bool should_bulk_extract = false;
 
-  bool seven_zip_file_archive::toggle_bulk_extraction()
+  bool iso_file_archive::toggle_bulk_extraction()
   {
     should_bulk_extract = !should_bulk_extract;
     return should_bulk_extract;
   }
 
-  bool seven_zip_file_archive::is_supported(std::istream& stream)
+  bool iso_file_archive::is_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(reinterpret_cast<char *>(tag.data()), sizeof(tag));
 
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
-    return tag == file_record_tag;
+    return tag != file_record_tag;
   }
 
-  bool seven_zip_file_archive::stream_is_supported(std::istream& stream) const
+  bool iso_file_archive::stream_is_supported(std::istream& stream) const
   {
     return is_supported(stream);
   }
 
-  std::vector<seven_zip_file_archive::content_info> seven_zip_file_archive::get_content_listing(std::istream& stream, const listing_query& query) const
+  std::vector<iso_file_archive::content_info> iso_file_archive::get_content_listing(std::istream& stream, const listing_query& query) const
   {
     static std::list<std::string> name_cache;
-    static std::unordered_map<std::string, std::vector<seven_zip_file_archive::content_info>> stat_cache;
+    static std::unordered_map<std::string, std::vector<iso_file_archive::content_info>> stat_cache;
 
     auto cache_key = fs::exists(query.archive_path) ?
                                                     query.archive_path.string() + std::to_string(fs::file_size(query.archive_path)) :
@@ -109,12 +109,13 @@ namespace studio::resources::seven_zip
       auto listing_filename = fs::temp_directory_path() / (query.archive_path.stem().string() + "-listing.txt");
 
       std::stringstream command;
-      command << '\"' << seven_zip_executable() << " l " << query.archive_path << " > " << listing_filename << '\"';
+      command << '\"' << power_iso_executable() << " list " << query.archive_path << " / -r" << " > " << listing_filename << '\"';
       std::cout << command.str() << '\n';
+      std::cout.flush();
       std::system(command.str().c_str());
 
       std::vector<std::string> raw_contents;
-      raw_contents.reserve(128);
+      raw_contents.reserve(256);
 
       std::ifstream raw_listing(listing_filename, std::ios::binary);
 
@@ -123,87 +124,87 @@ namespace studio::resources::seven_zip
         raw_contents.push_back(rtrim(std::move(temp)));
       }
 
-      auto header_iter = std::find_if(raw_contents.begin(), raw_contents.end(), [](auto& row) {
-        return row.find("Date") != std::string::npos &&
-               row.find("Time") != std::string::npos &&
-               row.find("Attr") != std::string::npos &&
-               row.find("Size") != std::string::npos &&
-               row.find("Compressed") != std::string::npos &&
-               row.find("Name") != std::string::npos;
+      std::vector<iso_file_archive::content_info> results;
+
+      auto first_folder = std::find_if(raw_contents.begin(), raw_contents.end(), [](auto& raw) {
+        return raw.find("Objects in ") != std::string::npos;
       });
 
-      if (header_iter == raw_contents.end())
+      auto current_path = query.archive_path;
+
+      for (auto row = first_folder; row != raw_contents.end(); ++row)
       {
-        return {};
-      }
-
-      auto line_iter = header_iter;
-      std::advance(line_iter, 1);
-
-      if (line_iter == raw_contents.end())
-      {
-        return {};
-      }
-
-      auto date_time_indices = std::make_pair(line_iter->find('-'), line_iter->find(' '));
-      auto attr_indices = std::make_pair(line_iter->find('-', date_time_indices.second), line_iter->find(' ', date_time_indices.second + 1));
-      auto size_indices = std::make_pair(line_iter->find('-', attr_indices.second), line_iter->find(' ', attr_indices.second + 1));
-      auto compressed_indices = std::make_pair(line_iter->find('-', size_indices.second), line_iter->find(' ', size_indices.second + 1));
-      auto name_indices = std::make_pair(line_iter->find('-', compressed_indices.second), line_iter->rfind('-'));
-
-      auto first = line_iter;
-      std::advance(first, 1);
-
-      if (first == raw_contents.end())
-      {
-        return {};
-      }
-
-      std::vector<seven_zip_file_archive::content_info> results;
-      results.reserve(std::distance(first, raw_contents.end()));
-
-      for (auto current = first; current != raw_contents.end(); ++current)
-      {
-        auto attr = current->substr(attr_indices.first, attr_indices.second - attr_indices.first);
-
-        if (attr == "-----")
+        if (row->empty())
         {
-          break;
+          continue;
         }
 
-        if (attr.find('D') != std::string::npos)
+        if (row->find("Files, ") != std::string::npos &&
+            row->find("Folders") != std::string::npos &&
+          row->find("bytes") != std::string::npos)
         {
-          seven_zip_file_archive::folder_info folder{};
+          continue;
+        }
+
+        if (row->find("Total:") == 0)
+        {
+          continue;
+        }
+
+        if (row->find("Objects in ") != std::string::npos)
+        {
+          auto start = row->find("\\") + 1;
+          auto count = row->rfind(":") - start;
+          auto path = row->substr(start, count);
+
+          if (path.empty())
+          {
+            current_path = query.archive_path;
+          }
+          else
+          {
+            current_path = query.archive_path / fs::path(path).make_preferred();
+          }
+
+          continue;
+        }
+
+        if (row->find("<DIR>") != std::string::npos)
+        {
+          if (row->back() == '.')
+          {
+            continue;
+          }
+
+          auto name = row->substr(row->rfind(' ') + 1);
+
+          if (name.empty())
+          {
+            continue;
+          }
+
+          iso_file_archive::folder_info folder{};
           folder.archive_path = query.archive_path;
-          folder.full_path = (query.archive_path / current->substr(name_indices.first)).make_preferred();
-          folder.name = folder.full_path.filename().string();
+          folder.name = name;
+          folder.full_path = current_path / name;
+
           results.emplace_back(folder);
         }
         else
         {
-          seven_zip_file_archive::file_info file{};
+          iso_file_archive::file_info file{};
 
-          auto name = fs::path(current->substr(name_indices.first));
+          auto name = row->substr(row->rfind(' ') + 1);
 
-          file.filename = name.filename();
+          if (name.empty())
+          {
+            continue;
+          }
+
+          file.filename = name;
           file.archive_path = query.archive_path;
-          file.folder_path = (query.archive_path / name.make_preferred()).parent_path();
+          file.folder_path = current_path;
           file.compression_type = compression_type::lzh;
-
-          try
-          {
-            auto size = current->substr(size_indices.first, size_indices.second - size_indices.first);
-
-            if (auto iter = std::find_if(size.begin(), size.end(), [](auto val) { return std::isdigit(val);});
-                iter != size.end())
-            {
-              file.size = std::stoi(size);
-            }
-          }
-          catch (...)
-          {
-
-          }
 
           results.emplace_back(file);
         }
@@ -212,13 +213,13 @@ namespace studio::resources::seven_zip
       cache_entry = stat_cache.emplace(cache_key, std::move(results)).first;
     }
 
-    std::vector<seven_zip_file_archive::content_info> results;
+    std::vector<iso_file_archive::content_info> results;
 
     auto is_valid = overloaded {
-      [&](const seven_zip_file_archive::file_info& item) {
+      [&](const iso_file_archive::file_info& item) {
         return item.folder_path == query.folder_path;
       },
-        [&](const seven_zip_file_archive::folder_info& item) {
+        [&](const iso_file_archive::folder_info& item) {
           return item.full_path.parent_path() == query.folder_path;
         }
     };
@@ -239,12 +240,12 @@ namespace studio::resources::seven_zip
     return results;
   }
 
-  void seven_zip_file_archive::set_stream_position(std::istream& stream, const studio::resources::file_info& info) const
+  void iso_file_archive::set_stream_position(std::istream& stream, const studio::resources::file_info& info) const
   {
 
   }
 
-  void seven_zip_file_archive::extract_file_contents(std::istream& stream,
+  void iso_file_archive::extract_file_contents(std::istream& stream,
     const studio::resources::file_info& info,
     std::ostream& output,
     std::optional<std::reference_wrapper<batch_storage>> storage) const
@@ -260,24 +261,17 @@ namespace studio::resources::seven_zip
     static std::unordered_set<std::string> already_ran_commands;
 
     std::stringstream command;
-    if (!should_bulk_extract)
-    {
-      command << '\"' << seven_zip_executable() << " x -y -o" << temp_path
-              << ' ' <<  info.archive_path << " \"" << internal_file_path.string() << "\""
-              << '\"';
 
-      std::cout << command.str() << '\n';
-      std::cout.flush();
-      std::system(command.str().c_str());
-    }
-    else if (already_ran_commands.count(info.archive_path.string()) == 0)
+    if (already_ran_commands.count(info.archive_path.string()) == 0)
     {
-      command << '\"' << seven_zip_executable() << " x -y -o" << temp_path << ' ' <<  info.archive_path << '\"';
+      command << '\"' << power_iso_executable() << " extract " << info.archive_path << " / -y -od " << temp_path << '\"';
       std::cout << command.str() << '\n';
       std::cout.flush();
       std::system(command.str().c_str());
       already_ran_commands.emplace(info.archive_path.string());
     }
+
+    temp_path = temp_path / "Data";
 
     std::ifstream temp(temp_path / internal_file_path, std::ios::binary);
 
