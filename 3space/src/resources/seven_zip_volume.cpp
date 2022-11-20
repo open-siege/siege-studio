@@ -70,14 +70,6 @@ namespace studio::resources::seven_zip
     return "7z";
   }
 
-  static bool should_bulk_extract = false;
-
-  bool seven_zip_file_archive::toggle_bulk_extraction()
-  {
-    should_bulk_extract = !should_bulk_extract;
-    return should_bulk_extract;
-  }
-
   bool seven_zip_file_archive::is_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
@@ -249,6 +241,17 @@ namespace studio::resources::seven_zip
     std::ostream& output,
     std::optional<std::reference_wrapper<batch_storage>> storage) const
   {
+    std::unique_ptr<fs::path, void(*)(fs::path*)> delete_path = {
+      nullptr,
+      [](fs::path* value) {
+        if (value) {
+          std::error_code unused;
+          fs::remove_all(*value, unused);
+          delete value;
+        }
+      }
+    };
+
     auto temp_path = fs::temp_directory_path() / (info.archive_path.stem().string() + "temp");
     auto internal_file_path = info.folder_path == info.archive_path ?
                                                                     info.filename :
@@ -260,11 +263,13 @@ namespace studio::resources::seven_zip
     static std::unordered_set<std::string> already_ran_commands;
 
     std::stringstream command;
-    if (!should_bulk_extract)
+    if (!storage.has_value())
     {
       command << '\"' << seven_zip_executable() << " x -y -o" << temp_path
               << ' ' <<  info.archive_path << " \"" << internal_file_path.string() << "\""
               << '\"';
+
+      delete_path.reset(new fs::path(temp_path / internal_file_path));
 
       std::cout << command.str() << '\n';
       std::cout.flush();
@@ -273,10 +278,14 @@ namespace studio::resources::seven_zip
     else if (already_ran_commands.count(info.archive_path.string()) == 0)
     {
       command << '\"' << seven_zip_executable() << " x -y -o" << temp_path << ' ' <<  info.archive_path << '\"';
+
+      delete_path.reset(new fs::path(temp_path));
+
       std::cout << command.str() << '\n';
       std::cout.flush();
       std::system(command.str().c_str());
-      already_ran_commands.emplace(info.archive_path.string());
+      auto [command_iter, added] = already_ran_commands.emplace(info.archive_path.string());
+      storage.value().get().temp.emplace(*command_iter, std::move(delete_path));
     }
 
     std::ifstream temp(temp_path / internal_file_path, std::ios::binary);

@@ -1,5 +1,5 @@
-#ifndef DARKSTARDTSCONVERTER_SEVEN_ZIP_VOLUME_HPP
-#define DARKSTARDTSCONVERTER_SEVEN_ZIP_VOLUME_HPP
+#ifndef DARKSTARDTSCONVERTER_CAB_VOLUME_HPP
+#define DARKSTARDTSCONVERTER_CAB_VOLUME_HPP
 
 #include <array>
 #include <vector>
@@ -10,9 +10,9 @@
 #include "archive_plugin.hpp"
 #include "endian_arithmetic.hpp"
 
-namespace studio::resources::seven_zip
+namespace studio::resources::cab
 {
-  struct seven_zip_file_archive : studio::resources::archive_plugin
+  struct cab_file_archive : studio::resources::archive_plugin
   {
     static bool is_supported(std::istream& stream);
 
