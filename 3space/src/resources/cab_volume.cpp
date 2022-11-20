@@ -122,11 +122,19 @@ namespace studio::resources::cab
 
         if (folder_added && file.folder_path != query.archive_path)
         {
-          cab_file_archive::folder_info folder{};
-          folder.full_path = file.folder_path;
-          folder.archive_path = query.archive_path;
-          folder.name = folder.full_path.filename().string();
-          results.emplace_back(std::move(folder));
+          auto relative_path = fs::relative(file.folder_path, query.archive_path);
+
+          auto new_path = query.archive_path;
+
+          for (auto& segment : relative_path)
+          {
+            cab_file_archive::folder_info folder{};
+            new_path = new_path / segment;
+            folder.full_path = new_path;
+            folder.archive_path = query.archive_path;
+            folder.name = folder.full_path.filename().string();
+            results.emplace_back(std::move(folder));
+          }
         }
 
         file.compression_type = compression_type::lzh;
