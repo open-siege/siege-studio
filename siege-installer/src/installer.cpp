@@ -19,6 +19,7 @@
 #include "resources/sword_volume.hpp"
 #include "resources/seven_zip_volume.hpp"
 #include "resources/iso_volume.hpp"
+#include "resources/cab_volume.hpp"
 #include "resources/resource_explorer.hpp"
 
 namespace fs = std::filesystem;
@@ -33,6 +34,7 @@ namespace dio
   namespace cln = studio::resources::cln;
   namespace atd = studio::resources::atd;
   namespace iso = studio::resources::iso;
+  namespace cab = studio::resources::cab;
   namespace seven_zip = studio::resources::seven_zip;
 }
 
@@ -65,6 +67,8 @@ studio::resources::resource_explorer create_resource_explorer()
   archive.add_archive_type(".iso", std::make_unique<dio::iso::iso_file_archive>());
   archive.add_archive_type(".img", std::make_unique<dio::iso::iso_file_archive>());
   archive.add_archive_type(".bin", std::make_unique<dio::iso::iso_file_archive>());
+
+  archive.add_archive_type(".cab", std::make_unique<dio::cab::cab_file_archive>());
 
   return archive;
 }
@@ -205,9 +209,6 @@ int main(int argc, char** argv)
 {
   auto args = parse_args(argc, argv);
 
-  dio::seven_zip::seven_zip_file_archive::toggle_bulk_extraction();
-  //dio::iso::iso_file_archive::toggle_bulk_extraction();
-
   args.src_path = std::visit(overloaded {
                                [&](const cpr::Url& arg) -> decltype(args.src_path) {
                                  cpr::Session session;
@@ -261,33 +262,7 @@ int main(int argc, char** argv)
       {
         std::ifstream archive {src_path, std::ios::binary };
 
-        auto content_listing = archive_type.value().get().get_content_listing(archive, { src_path, src_path });
-
-        auto all_content = content_listing;
-        all_content.reserve(all_content.capacity() * 4);
-
-        std::function<void(const decltype(content_listing)&)> visit_listing = [&](const auto& content_listing) {
-          for (auto& entry : content_listing)
-          {
-            std::visit(overloaded {
-                         [&](const studio::resources::folder_info& arg) {
-                           auto child_listing = archive_type.value().get().get_content_listing(archive, { src_path, arg.full_path });
-
-                           if (all_content.size() + child_listing.size() > all_content.capacity())
-                           {
-                             all_content.reserve(all_content.capacity() + all_content.size() + child_listing.size());
-                           }
-
-                           std::copy(child_listing.begin(), child_listing.end(), std::back_inserter(all_content));
-                           visit_listing(child_listing);
-                         },
-                         [](const studio::resources::file_info& arg) {
-                         }
-                       }, entry);
-          }
-        };
-
-        visit_listing(content_listing);
+        auto all_content = studio::resources::get_all_content(src_path, archive, archive_type.value().get());
 
         temp_folder = fs::temp_directory_path() / (src_path.stem().string() + std::to_string(fs::file_size(src_path)));
 
@@ -682,8 +657,32 @@ int main(int argc, char** argv)
     }
     else
     {
-      std::cout << "Did not find " << game << " content at \n";
-      return -1;
+      std::visit(overloaded {
+                   [&](const fs::path& src_path) {
+                     auto archive_type = explorer.get_archive_type(src_path);
+
+                     if (archive_type.has_value())
+                     {
+                       std::ifstream archive{ src_path, std::ios::binary };
+                       auto all_files = studio::resources::get_all_content_of_type<studio::resources::file_info>(src_path, archive, archive_type.value().get());
+
+                       studio::resources::batch_storage storage;
+
+                       for (auto& file : all_files)
+                       {
+                         auto new_path = fs::relative(file.folder_path, file.archive_path);
+                         fs::create_directories(new_path);
+
+                         std::ofstream output { new_path / file.filename };
+
+                        archive_type.value().get().extract_file_contents(archive, file, output, std::ref(storage));
+                       }
+                     }
+                   },
+                   [](const cpr::Url& arg) {},
+                   [](const std::monostate& arg)  {}
+                 }, args.src_path);
+      return 0;
     }
   }
 }

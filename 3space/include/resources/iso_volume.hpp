@@ -16,8 +16,6 @@ namespace studio::resources::iso
   {
     static bool is_supported(std::istream& stream);
 
-    static bool toggle_bulk_extraction();
-
     bool stream_is_supported(std::istream& stream) const override;
     std::vector<content_info> get_content_listing(std::istream& stream, const listing_query& query) const override;
     void set_stream_position(std::istream& stream, const studio::resources::file_info& info) const override;

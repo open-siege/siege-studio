@@ -70,14 +70,6 @@ namespace studio::resources::iso
     return "piso";
   }
 
-  static bool should_bulk_extract = false;
-
-  bool iso_file_archive::toggle_bulk_extraction()
-  {
-    should_bulk_extract = !should_bulk_extract;
-    return should_bulk_extract;
-  }
-
   bool iso_file_archive::is_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
@@ -176,7 +168,7 @@ namespace studio::resources::iso
             continue;
           }
 
-          auto name = row->substr(row->rfind(' ') + 1);
+          auto name = row->substr(row->rfind("  ") + 2);
 
           if (name.empty())
           {
@@ -194,7 +186,7 @@ namespace studio::resources::iso
         {
           iso_file_archive::file_info file{};
 
-          auto name = row->substr(row->rfind(' ') + 1);
+          auto name = row->substr(row->rfind("  ") + 2);
 
           if (name.empty())
           {

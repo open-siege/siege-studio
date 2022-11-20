@@ -9,6 +9,8 @@
 #include <filesystem>
 #include <unordered_map>
 #include <memory>
+#include <algorithm>
+#include <functional>
 #include "../shared.hpp"
 
 namespace studio::resources
@@ -73,6 +75,64 @@ namespace studio::resources
     archive_plugin(const archive_plugin&) = delete;
     archive_plugin(archive_plugin&&) = delete;
   };
+
+  template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+  template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
+  inline std::vector<archive_plugin::content_info> get_all_content(const std::filesystem::path& src_path, std::ifstream& archive, const archive_plugin& plugin)
+  {
+    auto content_listing = plugin.get_content_listing(archive, { src_path, src_path });
+
+    auto all_content = content_listing;
+    all_content.reserve(all_content.capacity() * 4);
+
+    std::function<void(const decltype(content_listing)&)> visit_listing = [&](const auto& content_listing) {
+      for (auto& entry : content_listing)
+      {
+        std::visit(overloaded {
+                     [&](const studio::resources::folder_info& arg) {
+                       auto child_listing = plugin.get_content_listing(archive, { src_path, arg.full_path });
+
+                       if (all_content.size() + child_listing.size() > all_content.capacity())
+                       {
+                         all_content.reserve(all_content.capacity() + all_content.size() + child_listing.size());
+                       }
+
+                       std::copy(child_listing.begin(), child_listing.end(), std::back_inserter(all_content));
+                       visit_listing(child_listing);
+                     },
+                     [](const studio::resources::file_info& arg) {
+                     }
+                   }, entry);
+      }
+    };
+
+    visit_listing(content_listing);
+
+    return all_content;
+  }
+
+  template<typename ContentType>
+  inline std::vector<archive_plugin::file_info> get_all_content_of_type(const std::filesystem::path& src_path, std::ifstream& archive, const archive_plugin& plugin)
+  {
+    auto all_content = get_all_content(src_path, archive, plugin);
+
+    std::vector<ContentType> files;
+    files.reserve(std::count_if(all_content.begin(), all_content.end(),
+      [&](auto& value) {
+        return std::holds_alternative<ContentType>(value);
+      }));
+
+    for (auto& content : all_content)
+    {
+      if (std::holds_alternative<ContentType>(content))
+      {
+        files.emplace_back(std::get<ContentType>(content));
+      }
+    }
+
+    return files;
+  }
 }
 
 #endif
