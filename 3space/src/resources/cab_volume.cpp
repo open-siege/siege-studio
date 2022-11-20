@@ -210,7 +210,7 @@ namespace studio::resources::cab
     if (!storage.has_value())
     {
       command << '\"' << cab_exe << " x "
-              <<  info.archive_path << " \"" << internal_file_path.string() << "\""
+              <<  info.archive_path << " \"" << internal_file_path.filename().string() << "\""
               << '\"';
 
       delete_path.reset(new fs::path(temp_path / internal_file_path));
