@@ -673,7 +673,7 @@ int main(int argc, char** argv)
                          auto new_path = fs::current_path() / file.archive_path.stem() / fs::relative(file.folder_path, file.archive_path);
                          fs::create_directories(new_path);
 
-                         std::ofstream output { new_path / file.filename };
+                         std::ofstream output { new_path / file.filename, std::ios::binary };
 
                         archive_type.value().get().extract_file_contents(archive, file, output, std::ref(storage));
                        }
