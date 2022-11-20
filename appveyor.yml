@@ -53,7 +53,7 @@ deploy:
     description: "Current build for $(APPVEYOR_BUILD_VERSION). See release notes for prior releases here: https://github.com/open-siege/open-siege/wiki/Release-Notes"
     provider: GitHub
     auth_token:
-      secure: Z101/tJ3sK4VFKSqikl2qDRGx7lcSwAPN0g32rxzVZuoTLCXVJLhfuFb/xKYG1Y+
+      secure: cF30mL/AQgAs/nlGPSzCaz8Yo8MKXwchcWQwiZecf0sJNOv5qgkxxs9z8Ekk4RXb
     artifact: OpenSiege
     draft: false
     skip_tags: true
@@ -68,7 +68,7 @@ deploy:
     description: "See release notes for information about this release: https://github.com/open-siege/open-siege/wiki/Release-Notes"
     provider: GitHub
     auth_token:
-      secure: OUwMI1lAGRx4089vueSDDucWsvEcOjTxX5fnL/u/L8KPCo6+4VGKbQKPZ5F1Ojwnxmwt8PHWUFMr5YzdYkJ4p+i+MfwybYSACE4URnvgs91BRvl81RM4ZUyZ1DWTcf3P
+      secure: cF30mL/AQgAs/nlGPSzCaz8Yo8MKXwchcWQwiZecf0sJNOv5qgkxxs9z8Ekk4RXb
     artifact: OpenSiege
     draft: false
     prerelease: false
