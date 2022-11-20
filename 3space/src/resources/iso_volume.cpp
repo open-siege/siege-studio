@@ -46,15 +46,15 @@ namespace studio::resources::iso
         "echo %PROGRAMFILES%\\PowerISO\\piso.exe",
         "echo %PROGRAMFILES(x86)%\\PowerISO\\piso.exe"
       }};
+      auto output_path = make_auto_remove_path(fs::temp_directory_path() / "output.txt");
 
       for (auto command : commands)
       {
         std::stringstream command_str;
-        auto output_path = fs::temp_directory_path()/ "output.txt";
-        command_str << command << " > " << output_path;
+        command_str << command << " > " << *output_path;
         std::system(command_str.str().c_str());
         std::string temp;
-        if (std::ifstream output(output_path, std::ios::binary);
+        if (std::ifstream output(*output_path, std::ios::binary);
             output && std::getline(output, temp) && fs::exists(rtrim(temp)))
         {
           return "\"" + rtrim(temp) + "\"";
@@ -98,10 +98,10 @@ namespace studio::resources::iso
 
     if (cache_entry == stat_cache.end())
     {
-      auto listing_filename = fs::temp_directory_path() / (query.archive_path.stem().string() + "-listing.txt");
+      auto listing_filename = make_auto_remove_path(fs::temp_directory_path() / (query.archive_path.stem().string() + "-listing.txt"));
 
       std::stringstream command;
-      command << '\"' << power_iso_executable() << " list " << query.archive_path << " / -r" << " > " << listing_filename << '\"';
+      command << '\"' << power_iso_executable() << " list " << query.archive_path << " / -r" << " > " << *listing_filename << '\"';
       std::cout << command.str() << '\n';
       std::cout.flush();
       std::system(command.str().c_str());
@@ -109,7 +109,7 @@ namespace studio::resources::iso
       std::vector<std::string> raw_contents;
       raw_contents.reserve(256);
 
-      std::ifstream raw_listing(listing_filename, std::ios::binary);
+      std::ifstream raw_listing(*listing_filename, std::ios::binary);
 
       for (std::string temp; std::getline(raw_listing, temp);)
       {
@@ -242,6 +242,7 @@ namespace studio::resources::iso
     std::ostream& output,
     std::optional<std::reference_wrapper<batch_storage>> storage) const
   {
+    auto delete_path = make_auto_remove_path();
     auto temp_path = fs::temp_directory_path() / (info.archive_path.stem().string() + "temp");
     auto internal_file_path = info.folder_path == info.archive_path ?
                                                                     info.filename :
@@ -257,10 +258,14 @@ namespace studio::resources::iso
     if (already_ran_commands.count(info.archive_path.string()) == 0)
     {
       command << '\"' << power_iso_executable() << " extract " << info.archive_path << " / -y -od " << temp_path << '\"';
+
+      delete_path.reset(new fs::path(temp_path));
+
       std::cout << command.str() << '\n';
       std::cout.flush();
       std::system(command.str().c_str());
-      already_ran_commands.emplace(info.archive_path.string());
+      auto [command_iter, added] = already_ran_commands.emplace(info.archive_path.string());
+      storage.value().get().temp.emplace(*command_iter, std::move(delete_path));
     }
 
     temp_path = temp_path / "Data";

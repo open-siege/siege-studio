@@ -670,7 +670,7 @@ int main(int argc, char** argv)
 
                        for (auto& file : all_files)
                        {
-                         auto new_path = fs::relative(file.folder_path, file.archive_path);
+                         auto new_path = fs::current_path() / file.archive_path.stem() / fs::relative(file.folder_path, file.archive_path);
                          fs::create_directories(new_path);
 
                          std::ofstream output { new_path / file.filename };

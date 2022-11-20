@@ -133,6 +133,22 @@ namespace studio::resources
 
     return files;
   }
+
+  inline auto make_auto_remove_path(std::filesystem::path some_path = "")
+  {
+    auto value = some_path.string().empty() ? nullptr : new std::filesystem::path(std::move(some_path));
+
+    return std::unique_ptr<std::filesystem::path, void(*)(std::filesystem::path*)> {
+      value,
+      [](std::filesystem::path* value) {
+        if (value) {
+          std::error_code unused;
+          std::filesystem::remove_all(*value, unused);
+          delete value;
+        }
+      }
+    };
+  }
 }
 
 #endif

@@ -83,17 +83,17 @@ namespace studio::resources::cab
 
     if (cache_entry == stat_cache.end())
     {
-      auto listing_filename = fs::temp_directory_path() / (query.archive_path.stem().string() + "-listing.txt");
+      auto listing_filename = make_auto_remove_path(fs::temp_directory_path() / (query.archive_path.stem().string() + "-listing.txt"));
 
       std::stringstream command;
-      command << '\"' << cab_executable() << " l " << query.archive_path << " > " << listing_filename << '\"';
+      command << '\"' << cab_executable() << " l " << query.archive_path << " > " << *listing_filename << '\"';
       std::cout << command.str() << '\n';
       std::system(command.str().c_str());
 
       std::vector<std::string> raw_contents;
       raw_contents.reserve(128);
 
-      std::ifstream raw_listing(listing_filename, std::ios::binary);
+      std::ifstream raw_listing(*listing_filename, std::ios::binary);
 
       for (std::string temp; std::getline(raw_listing, temp);)
       {
@@ -189,16 +189,7 @@ namespace studio::resources::cab
     std::ostream& output,
     std::optional<std::reference_wrapper<batch_storage>> storage) const
   {
-    std::unique_ptr<fs::path, void(*)(fs::path*)> delete_path = {
-      nullptr,
-      [](fs::path* value) {
-        if (value) {
-          std::error_code unused;
-          fs::remove_all(*value, unused);
-          delete value;
-        }
-      }
-    };
+    auto delete_path = make_auto_remove_path();
 
     auto temp_path = fs::temp_directory_path() / (info.archive_path.stem().string() + "temp");
     auto internal_file_path = info.folder_path == info.archive_path ?
