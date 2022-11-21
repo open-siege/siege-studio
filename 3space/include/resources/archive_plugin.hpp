@@ -79,7 +79,7 @@ namespace studio::resources
   template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
   template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
-  inline std::vector<archive_plugin::content_info> get_all_content(const std::filesystem::path& src_path, std::ifstream& archive, const archive_plugin& plugin)
+  inline std::vector<archive_plugin::content_info> get_all_content(const std::filesystem::path& src_path, std::istream& archive, const archive_plugin& plugin)
   {
     auto content_listing = plugin.get_content_listing(archive, { src_path, src_path });
 
@@ -113,7 +113,7 @@ namespace studio::resources
   }
 
   template<typename ContentType>
-  inline std::vector<archive_plugin::file_info> get_all_content_of_type(const std::filesystem::path& src_path, std::ifstream& archive, const archive_plugin& plugin)
+  inline std::vector<archive_plugin::file_info> get_all_content_of_type(const std::filesystem::path& src_path, std::istream& archive, const archive_plugin& plugin)
   {
     auto all_content = get_all_content(src_path, archive, plugin);
 
