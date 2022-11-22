@@ -64,9 +64,11 @@ studio::resources::resource_explorer create_resource_explorer()
   archive.add_archive_type(".7z", std::make_unique<dio::seven_zip::seven_zip_file_archive>());
 
   archive.add_archive_type(".cue", std::make_unique<dio::iso::iso_file_archive>());
+  archive.add_archive_type(".mds", std::make_unique<dio::iso::iso_file_archive>());
   archive.add_archive_type(".iso", std::make_unique<dio::iso::iso_file_archive>());
   archive.add_archive_type(".img", std::make_unique<dio::iso::iso_file_archive>());
   archive.add_archive_type(".bin", std::make_unique<dio::iso::iso_file_archive>());
+  archive.add_archive_type(".mdf", std::make_unique<dio::iso::iso_file_archive>());
 
   archive.add_archive_type(".cab", std::make_unique<dio::cab::cab_file_archive>());
 
@@ -247,11 +249,6 @@ int main(int argc, char** argv)
 
   auto explorer = create_resource_explorer();
 
-  fs::path archive_input;
-  fs::path temp_folder;
-  std::optional<std::reference_wrapper<studio::resources::archive_plugin>> archive_input_plugin;
-  std::unordered_map<std::string, studio::resources::file_info> archive_files;
-
   if (std::holds_alternative<fs::path>(args.src_path))
   {
     if (auto& src_path = std::get<fs::path>(args.src_path); !fs::is_directory(src_path))
@@ -264,29 +261,119 @@ int main(int argc, char** argv)
 
         auto all_content = studio::resources::get_all_content(src_path, archive, archive_type.value().get());
 
-        temp_folder = fs::temp_directory_path() / (src_path.stem().string() + std::to_string(fs::file_size(src_path)));
+        auto all_files = studio::resources::unwrap_content_of_type<studio::resources::file_info>(all_content);
 
-        for (auto& entry : all_content)
+        auto create_empty_files = [&](const decltype(all_content)& all_items, fs::path archive_path) {
+          fs::path temp_folder = fs::temp_directory_path() / (archive_path.stem().string() + std::to_string(fs::file_size(archive_path)));
+
+          for (auto& entry : all_items)
+          {
+            std::visit(overloaded {
+                         [&](const studio::resources::folder_info& arg) {
+                           auto relative_path = fs::relative(arg.full_path, archive_path);
+                           auto new_path = temp_folder / relative_path;
+                           fs::create_directories(new_path);
+                         },
+                         [&](const studio::resources::file_info& arg) {
+                           auto relative_path = fs::relative(arg.folder_path, archive_path);
+                           auto new_path = temp_folder / relative_path / arg.filename;
+                           fs::create_directories(new_path.parent_path());
+
+                           std::ofstream output(new_path, std::ios::binary);
+                         }
+                       }, entry);
+          }
+
+          std::ofstream original_name(temp_folder / "original-archive-path.txt");
+          original_name << archive_path.string();
+
+          search_paths.emplace_back(temp_folder);
+        };
+
+        auto is_valid_disc_index = [&](const auto& info) {
+          if (info.filename.extension() == ".cue" || info.filename.extension() == ".CUE" ||
+              info.filename.extension() == ".mds" || info.filename.extension() == ".MDS")
+          {
+            return std::count_if(all_files.begin(), all_files.end(), [&](const auto& other) {
+              return other.folder_path == info.folder_path;
+            }) > 1;
+          }
+
+          return false;
+        };
+
+        auto is_disc_image = [&](const auto& info) {
+          if (is_valid_disc_index(info))
+          {
+            return true;
+          }
+          constexpr static auto extensions = std::array<std::string_view, 6>{{
+            ".iso",
+            ".ISO",
+            ".mdf",
+            ".MDF",
+            ".bin",
+            ".BIN"
+          }};
+
+          auto iter = std::find(extensions.begin(), extensions.end(), info.filename.extension());
+          return iter != extensions.end();
+        };
+
+        auto has_disc_image = std::any_of(all_files.begin(), all_files.end(), is_disc_image);
+
+        if (has_disc_image)
         {
-          std::visit(overloaded {
-                       [&](const studio::resources::folder_info& arg) {
-                         auto relative_path = fs::relative(arg.full_path, src_path);
-                         auto new_path = temp_folder / relative_path;
-                         fs::create_directories(new_path);
-                       },
-                       [&](const studio::resources::file_info& arg) {
-                         auto relative_path = fs::relative(arg.folder_path, src_path);
-                         auto new_path = temp_folder / relative_path / arg.filename;
-                         fs::create_directories(new_path.parent_path());
+          auto disc_index = std::find_if(all_files.begin(), all_files.end(), is_valid_disc_index);
 
-                         std::ofstream output(new_path);
-                         archive_files.emplace(new_path.lexically_normal().string(), arg);
-                       }
-                     }, entry);
+          auto dest_path = fs::temp_directory_path() / (src_path.stem().string() + "-images-" + std::to_string(fs::file_size(src_path)));
+
+          auto is_valid = [&](const auto& info) {
+            if (disc_index != all_files.end() && info.folder_path == disc_index->folder_path)
+            {
+              return true;
+            }
+
+            return is_disc_image(info);
+          };
+
+          fs::path path_to_query;
+
+          studio::resources::batch_storage storage;
+
+          for (auto& info : all_files)
+          {
+            if (is_valid(info))
+            {
+              auto relative_path = fs::relative(info.folder_path, info.archive_path);
+
+              fs::create_directories(dest_path / relative_path);
+              path_to_query = dest_path / relative_path / info.filename;
+
+              std::ofstream new_file{ path_to_query, std::ios::binary };
+
+              archive_type.value().get().extract_file_contents(archive, info, new_file, std::ref(storage));
+            }
+          }
+
+          if (disc_index != all_files.end())
+          {
+            auto relative_path = fs::relative(disc_index->folder_path, disc_index->archive_path);
+            path_to_query = dest_path / relative_path / disc_index->filename;
+          }
+
+          auto sub_archive_type = explorer.get_archive_type(path_to_query);
+
+          if (sub_archive_type.has_value())
+          {
+            std::ifstream sub_archive {path_to_query, std::ios::binary };
+
+            auto sub_content = studio::resources::get_all_content(path_to_query, sub_archive, sub_archive_type.value().get());
+            create_empty_files(sub_content, path_to_query);
+          }
         }
-        search_paths.emplace_back(temp_folder);
-        archive_input = src_path;
-        archive_input_plugin.emplace(archive_type.value());
+
+        create_empty_files(all_content, src_path);
       }
     }
     else
@@ -529,7 +616,36 @@ int main(int argc, char** argv)
         std::cout << "Wildcard file at " << working_path << " " << working_value << '\n';
       }
 
+      std::string archive_input;
+      std::optional<std::reference_wrapper<studio::resources::archive_plugin>> archive_input_plugin;
+      std::vector<studio::resources::file_info> archive_files;
+
+      if (fs::exists(content_path.value() / "original-archive-path.txt"))
+      {
+        std::ifstream original_name(content_path.value() / "original-archive-path.txt");
+        std::getline(original_name, archive_input);
+
+        if (!archive_input.empty() && !fs::exists(archive_input))
+        {
+          continue;
+        }
+
+        archive_input_plugin = explorer.get_archive_type(archive_input);
+
+        if (!archive_input_plugin.has_value())
+        {
+          continue;
+        }
+
+        std::ifstream input { archive_input, std::ios::binary };
+
+        archive_files =
+          studio::resources::get_all_content_of_type<studio::resources::file_info>(archive_input, input, archive_input_plugin.value().get());
+      }
+
       fs::create_directories(destination_path);
+      studio::resources::batch_storage storage;
+
       for (const auto& [src, dst] : found_files)
       {
         auto new_path = (destination_path / dst).make_preferred();
@@ -550,42 +666,40 @@ int main(int argc, char** argv)
             fs::remove(new_path);
           }
 
-          if (content_path == temp_folder && archive_input_plugin.has_value())
+          if (archive_input_plugin.has_value())
           {
             std::ifstream input { archive_input, std::ios::binary };
-            studio::resources::batch_storage storage;
+
+            auto full_path = archive_input / fs::relative(src, content_path.value());
 
             if (fs::is_directory(src))
             {
-              auto items = archive_input_plugin.value().get().get_content_listing(input, {
-                                                                                           archive_input,
-                                                                                           archive_input / fs::relative(src, temp_folder)
-                                                                                         });
               fs::create_directories(new_path);
 
-              for (auto item : items)
+              auto matches_folder = [&](auto& info) {
+                return info.folder_path == full_path;
+              };
+
+              auto file_iter = std::find_if(archive_files.begin(), archive_files.end(), matches_folder);
+
+              while (file_iter != archive_files.end())
               {
-                std::visit(overloaded {
-                             [&](const studio::resources::folder_info& arg) {
-                             },
-                             [&](const studio::resources::file_info& arg) {
-                               std::ofstream output { new_path / arg.filename, std::ios::binary };
-
-                               archive_input_plugin.value().get().extract_file_contents(input, arg, output, std::ref(storage));
-                             }
-                           }, item);
-
+                std::ofstream output { new_path / file_iter->filename, std::ios::binary };
+                archive_input_plugin.value().get().extract_file_contents(input, *file_iter, output, std::ref(storage));
+                std::advance(file_iter, 1);
+                file_iter = std::find_if(file_iter, archive_files.end(), matches_folder);
               }
-
             }
             else
             {
-              auto file_iter = archive_files.find(src);
+              auto file_iter = std::find_if(archive_files.begin(), archive_files.end(), [&](auto& info) {
+                return info.filename == full_path.filename() && info.folder_path == full_path.parent_path();
+              });
 
               if (file_iter != archive_files.end())
               {
                 std::ofstream output { new_path, std::ios::binary };
-                archive_input_plugin.value().get().extract_file_contents(input, file_iter->second, output, std::ref(storage));
+                archive_input_plugin.value().get().extract_file_contents(input, *file_iter, output, std::ref(storage));
               }
               else
               {
