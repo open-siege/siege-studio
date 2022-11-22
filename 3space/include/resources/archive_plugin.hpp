@@ -93,11 +93,12 @@ namespace studio::resources
                      [&](const studio::resources::folder_info& arg) {
                        auto child_listing = plugin.get_content_listing(archive, { src_path, arg.full_path });
 
-                       if (all_content.size() + child_listing.size() > all_content.capacity())
+                       if (all_content.size() + child_listing.size() + 1 > all_content.capacity())
                        {
-                         all_content.reserve(all_content.capacity() + all_content.size() + child_listing.size());
+                         all_content.reserve(all_content.capacity() + all_content.size() + child_listing.size() + 1);
                        }
 
+                       all_content.emplace_back(arg);
                        std::copy(child_listing.begin(), child_listing.end(), std::back_inserter(all_content));
                        visit_listing(child_listing);
                      },
@@ -113,10 +114,8 @@ namespace studio::resources
   }
 
   template<typename ContentType>
-  inline std::vector<archive_plugin::file_info> get_all_content_of_type(const std::filesystem::path& src_path, std::istream& archive, const archive_plugin& plugin)
+  inline std::vector<archive_plugin::file_info> unwrap_content_of_type(const std::vector<archive_plugin::content_info>& all_content)
   {
-    auto all_content = get_all_content(src_path, archive, plugin);
-
     std::vector<ContentType> files;
     files.reserve(std::count_if(all_content.begin(), all_content.end(),
       [&](auto& value) {
@@ -132,6 +131,12 @@ namespace studio::resources
     }
 
     return files;
+  }
+
+  template<typename ContentType>
+  inline std::vector<archive_plugin::file_info> get_all_content_of_type(const std::filesystem::path& src_path, std::istream& archive, const archive_plugin& plugin)
+  {
+    return unwrap_content_of_type<ContentType>(get_all_content(src_path, archive, plugin));
   }
 
   inline auto make_auto_remove_path(std::filesystem::path some_path = "")
