@@ -22,9 +22,9 @@ namespace siege
 
      if (type == SDL_JoystickType::SDL_JOYSTICK_TYPE_UNKNOWN || type == SDL_JoystickType::SDL_JOYSTICK_TYPE_GAMECONTROLLER)
      {
-       static std::unordered_map<std::basic_string<std::uint16_t>, SDL_JoystickType> cached_types;
+       static std::unordered_map<std::u16string, SDL_JoystickType> cached_types;
 
-       auto vendor_product = std::basic_string<std::uint16_t>{SDL_JoystickGetVendor(joystick), SDL_JoystickGetProduct(joystick)};
+       auto vendor_product = std::u16string{SDL_JoystickGetVendor(joystick), SDL_JoystickGetProduct(joystick)};
 
        auto existing = cached_types.find(vendor_product);
 
@@ -87,7 +87,7 @@ namespace siege
 
            if (vendor_id == LOWORD(hardware_info.dwData) && product_id == HIWORD(hardware_info.dwData))
            {
-             auto vendor_product = std::basic_string<std::uint16_t>{SDL_JoystickGetVendor(real_joystick), SDL_JoystickGetProduct(real_joystick)};
+             auto vendor_product = std::u16string{SDL_JoystickGetVendor(real_joystick), SDL_JoystickGetProduct(real_joystick)};
              auto mainType = device_instance->dwDevType & std::numeric_limits<std::uint8_t>::max();
              auto subType = device_instance->dwDevType & std::numeric_limits<std::uint16_t>::max();
 
