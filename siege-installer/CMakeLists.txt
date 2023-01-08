@@ -9,6 +9,7 @@ find_package(Catch2 REQUIRED)
 add_executable(siege-installer src/installer.cpp src/games/games.cpp)
 set_property(TARGET siege-installer PROPERTY CXX_STANDARD 17)
 target_link_libraries(siege-installer PRIVATE cpr::cpr 3space::3space)
+target_include_directories(siege-installer PRIVATE src)
 
 ## Testing
 add_executable(tests src/tests_main.test.cpp)
