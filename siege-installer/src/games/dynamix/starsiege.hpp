@@ -5,7 +5,7 @@
 #include <string_view>
 #include <array>
 #include <unordered_map>
-#include "games.hpp"
+#include "games/games.hpp"
 
 namespace starsiege
 {

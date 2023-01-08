@@ -1,0 +1,8 @@
+//
+// Created by matth on 2022/11/28.
+//
+
+#ifndef OPEN_SIEGE_BANG_GUNSHIP_ELITE_HPP
+#define OPEN_SIEGE_BANG_GUNSHIP_ELITE_HPP
+
+#endif// OPEN_SIEGE_BANG_GUNSHIP_ELITE_HPP
