@@ -136,7 +136,7 @@ namespace studio::content::pal
       }
       else
       {
-        block_size = header.value().size();
+        block_size = static_cast<std::uint32_t>(header.value().size());
       }
     }
   }
