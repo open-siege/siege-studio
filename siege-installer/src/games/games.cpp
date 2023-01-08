@@ -1,6 +1,6 @@
 #include <algorithm>
 #include "games.hpp"
-#include "earthsiege2.hpp"
+#include "dynamix/earthsiege2.hpp"
 
 std::vector<std::string_view> get_supported_games()
 {
