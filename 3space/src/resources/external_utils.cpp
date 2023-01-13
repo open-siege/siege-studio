@@ -153,7 +153,7 @@ namespace studio::resources
 
   using content_map = std::unordered_map<std::string, std::vector<content_info>>;
 
-  [[nodiscard]] std::vector<content_info> filter_results_for_query(const listing_query& query, content_map::const_iterator cache_entry)
+  [[nodiscard]] std::vector<content_info> filter_results_for_query(const listing_query& query, const content_map::const_iterator& cache_entry)
   {
     std::vector<content_info> results;
 
@@ -196,7 +196,25 @@ namespace studio::resources
     return raw_contents;
   }
 
-  std::vector<content_info> cached_get_content_listing(const listing_query& query, std::function<std::vector<content_info>(const fs::path& listing_filename)> get_listing)
+  [[nodiscard]] std::vector<std::string> execute_command(const fs::path& listing_filename, const std::function<void(std::stringstream&)>& generate_command)
+  {
+    std::stringstream command;
+    generate_command(command);
+    std::cout << command.str() << '\n';
+    std::system(command.str().c_str());
+
+    return read_lines(listing_filename);
+  }
+
+  void execute_command(const std::function<void(std::stringstream&)>& generate_command)
+  {
+    std::stringstream command;
+    generate_command(command);
+    std::cout << command.str() << '\n';
+    std::system(command.str().c_str());
+  }
+
+  std::vector<content_info> cached_get_content_listing(const listing_query& query, const std::function<std::vector<content_info>(const fs::path& listing_filename)>& get_listing)
   {
     static std::list<std::string> name_cache;
     static std::unordered_map<std::string, std::vector<content_info>> stat_cache;
@@ -219,13 +237,9 @@ namespace studio::resources
   std::vector<content_info> wincdemu_get_content_listing(const listing_query& query)
   {
     return cached_get_content_listing(query, [&](const auto& listing_filename) -> std::vector<content_info> {
-      std::stringstream command;
-      command << '\"' << wincdemu_executable() << ' ' << query.archive_path << " > " << listing_filename << '\"';
-
-      std::cout << command.str() << '\n';
-      std::system(command.str().c_str());
-
-      auto lines = read_lines(listing_filename);
+      auto lines = execute_command(listing_filename, [&](auto& command) {
+        command << '\"' << wincdemu_executable() << ' ' << query.archive_path << " > " << listing_filename << '\"';
+      });
 
       if (lines.empty())
       {
@@ -237,14 +251,9 @@ namespace studio::resources
         return {};
       }
 
-      command.str("");
-
-      command << '\"' << wincdemu_executable() << " /list > " << listing_filename << '\"';
-
-      std::cout << command.str() << '\n';
-      std::system(command.str().c_str());
-
-      lines = read_lines(listing_filename);
+      lines = execute_command(listing_filename, [&](auto& command) {
+        command << '\"' << wincdemu_executable() << " /list > " << listing_filename << '\"';
+      });
 
       auto drive_letter_iter = std::find_if(lines.begin(), lines.end(), [&](auto& line) {
         return line.find(query.archive_path.string()) != std::string::npos;
@@ -262,22 +271,34 @@ namespace studio::resources
       }
 
       std::vector<content_info> results;
+      results.reserve(128);
 
-      // TODO finish this tomorrow morning.
       for (const fs::directory_entry& dir_entry :
         fs::recursive_directory_iterator(drive_letter))
       {
         if (dir_entry.is_directory())
         {
-
+          folder_info folder{};
+          folder.full_path = dir_entry.path();
+          folder.archive_path = drive_letter;
+          folder.name = folder.full_path.filename().string();
+          results.emplace_back(folder);
         }
         else
         {
-
+          file_info file{};
+          file.archive_path = drive_letter;
+          file.compression_type = compression_type::none;
+          file.size = dir_entry.file_size();
+          file.folder_path = dir_entry.path().parent_path();
+          file.filename = dir_entry.path().filename();
+          results.emplace_back(file);
         }
       }
 
-
+      execute_command([&](auto& command) {
+        command << '\"' << wincdemu_executable() << " /unmount " << query.archive_path << '\"';
+      });
 
       return results;
     });
@@ -285,19 +306,68 @@ namespace studio::resources
 
   std::vector<content_info> winiso_get_content_listing(const listing_query& query)
   {
+    return cached_get_content_listing(query, [&](const auto& listing_filename) -> std::vector<content_info> {
+      auto lines = execute_command(listing_filename, [&](auto& command) {
+        command << '\"' << "powershell -c \"(Mount-DiskImage -ImagePath " << query.archive_path << " | Get-Volume).DriveLetter + ':'\" > " << listing_filename << '\"';
+      });
 
+      if (lines.empty())
+      {
+        return {};
+      }
+
+      if (lines[0].find(":") == std::string::npos)
+      {
+        return {};
+      }
+
+
+      auto drive_letter = lines[0];
+      if (!fs::exists(drive_letter))
+      {
+        return {};
+      }
+
+      std::vector<content_info> results;
+      results.reserve(128);
+
+      for (const fs::directory_entry& dir_entry :
+        fs::recursive_directory_iterator(drive_letter))
+      {
+        if (dir_entry.is_directory())
+        {
+          folder_info folder{};
+          folder.full_path = dir_entry.path();
+          folder.archive_path = drive_letter;
+          folder.name = folder.full_path.filename().string();
+          results.emplace_back(folder);
+        }
+        else
+        {
+          file_info file{};
+          file.archive_path = drive_letter;
+          file.compression_type = compression_type::none;
+          file.size = dir_entry.file_size();
+          file.folder_path = dir_entry.path().parent_path();
+          file.filename = dir_entry.path().filename();
+          results.emplace_back(file);
+        }
+      }
+
+      execute_command([&](auto& command) {
+        command << '\"' << "powershell -c \"Dismount-DiskImage -ImagePath " << query.archive_path << '\"' << '\"';
+      });
+
+      return results;
+    });
   }
 
   std::vector<content_info> zip_get_content_listing(const listing_query& query)
   {
     return cached_get_content_listing(query, [&](const auto& listing_filename) -> std::vector<content_info> {
-
-      std::stringstream command;
-      command << '\"' << seven_zip_executable() << " l " << query.archive_path << " > " << listing_filename << '\"';
-      std::cout << command.str() << '\n';
-      std::system(command.str().c_str());
-
-      std::vector<std::string> raw_contents = read_lines(listing_filename);
+      auto raw_contents = execute_command(listing_filename, [&](auto& command) {
+        command << '\"' << seven_zip_executable() << " l " << query.archive_path << " > " << listing_filename << '\"';
+      });
 
       auto header_iter = std::find_if(raw_contents.begin(), raw_contents.end(), [](auto& row) {
         return row.find("Date") != std::string::npos &&
@@ -392,7 +462,7 @@ namespace studio::resources
   void add_folders(const file_info& file,
     const fs::path& archive_path,
     std::unordered_set<std::string>& folders,
-    std::function<void(folder_info&&)> move_result)
+    const std::function<void(folder_info&&)>& move_result)
   {
     auto [folder_iter, folder_added] = folders.emplace(file.folder_path.string());
 
@@ -417,13 +487,9 @@ namespace studio::resources
   std::vector<content_info> cab5_get_content_listing(const std::string_view exe_path, const listing_query& query)
   {
     return cached_get_content_listing(query, [&](const auto& listing_filename) -> std::vector<content_info> {
-      std::stringstream command;
-      command << '\"' << exe_path << " l " << query.archive_path << " > " << listing_filename << '\"';
-      std::cout << command.str() << '\n';
-      std::system(command.str().c_str());
-
-      std::vector<std::string> raw_contents = read_lines(listing_filename);
-
+      auto raw_contents = execute_command(listing_filename, [&](auto& command) {
+        command << '\"' << exe_path << " l " << query.archive_path << " > " << listing_filename << '\"';
+      });
       std::vector<content_info> results;
       results.reserve(raw_contents.size());
 
@@ -474,12 +540,9 @@ namespace studio::resources
   {
     return cached_get_content_listing(query, [&](const auto& listing_filename) -> std::vector<content_info>
     {
-      std::stringstream command;
-      command << '\"' << cab2_executable() << " l " << query.archive_path << " > " << listing_filename << '\"';
-      std::cout << command.str() << '\n';
-      std::system(command.str().c_str());
-
-      std::vector<std::string> raw_contents = read_lines(listing_filename);
+      auto raw_contents = execute_command(listing_filename, [&](auto& command) {
+        command << '\"' << cab2_executable() << " l " << query.archive_path << " > " << listing_filename << '\"';
+      });
 
       auto header_iter = std::find_if(raw_contents.begin(), raw_contents.end(), [](auto& row) {
         return row.find("Date") != std::string::npos &&
@@ -607,13 +670,9 @@ namespace studio::resources
   {
     return cached_get_content_listing(query, [&](const auto& listing_filename) -> std::vector<content_info>
     {
-      std::stringstream command;
-      command << '\"' << power_iso_executable() << " list " << query.archive_path << " / -r" << " > " << listing_filename << '\"';
-      std::cout << command.str() << '\n';
-      std::cout.flush();
-      std::system(command.str().c_str());
-
-      std::vector<std::string> raw_contents = read_lines(listing_filename);
+      auto raw_contents = execute_command(listing_filename, [&](auto& command) {
+        command << '\"' << power_iso_executable() << " list " << query.archive_path << " / -r" << " > " << listing_filename << '\"';
+      });
       std::vector<content_info> results;
 
       auto first_folder = std::find_if(raw_contents.begin(), raw_contents.end(), [](auto& raw) {
@@ -706,14 +765,28 @@ namespace studio::resources
 
   std::vector<content_info> iso_get_content_listing(const listing_query& query)
   {
-    auto power_iso_listing = power_iso_get_content_listing(query);
+    auto listing = power_iso_get_content_listing(query);
 
-    if (!power_iso_listing.empty())
+    if (!listing.empty())
     {
-      return power_iso_listing;
+      return listing;
     }
 
-    return zip_get_content_listing(query);
+    listing = zip_get_content_listing(query);
+
+    if (!listing.empty())
+    {
+      return listing;
+    }
+
+    listing = wincdemu_get_content_listing(query);
+
+    if (!listing.empty())
+    {
+      return listing;
+    }
+
+    return winiso_get_content_listing(query);
   }
 
   [[maybe_unused]] bool extract_file_contents_using_external_app(const studio::resources::file_info& info,
