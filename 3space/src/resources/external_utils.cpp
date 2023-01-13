@@ -274,6 +274,7 @@ namespace studio::resources
 
   void wincdemu_unmount_iso(const fs::path& archive_path)
   {
+    // TODO: add logic to unmount drive by drive name if already added
     execute_command([&](auto& command) {
       command << '\"' << wincdemu_executable() << " /unmount " << archive_path << '\"';
       get_cached_drive_paths().erase(archive_path.string());
@@ -348,6 +349,7 @@ namespace studio::resources
 
   void winiso_unmount_iso(const fs::path& archive_path)
   {
+    // TODO: add logic to unmount drive by drive name if already added
     execute_command([&](auto& command) {
       command << '\"' << "powershell -c \"Dismount-DiskImage -ImagePath " << archive_path << '\"' << '\"';
     });
