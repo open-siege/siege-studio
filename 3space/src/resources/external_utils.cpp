@@ -16,8 +16,8 @@ namespace studio::resources
 {
   [[nodiscard]] std::string rtrim(std::string str)
   {
-    auto it1 =  std::find_if( str.rbegin() , str.rend() , [](char ch){ return !std::isspace<char>(ch , std::locale::classic() ) ; } );
-    str.erase( it1.base() , str.end() );
+    auto it1 = std::find_if(str.rbegin(), str.rend(), [](char ch) { return !std::isspace<char>(ch, std::locale::classic()); });
+    str.erase(it1.base(), str.end());
     return str;
   }
 
@@ -46,24 +46,23 @@ namespace studio::resources
   [[nodiscard]] std::string find_system_app(std::string_view app_name, const std::array<std::string_view, Size>& commands)
   {
 #ifdef WIN32
-      try
+    try
+    {
+      auto name_with_extension = fs::path(app_name).replace_extension(".exe");
+
+      if (fs::exists(name_with_extension))
       {
-        auto name_with_extension = fs::path(app_name).replace_extension(".exe");
-
-        if (fs::exists(name_with_extension))
-        {
-          return name_with_extension.string();
-        }
-
-        return find_system_app(commands).value_or(std::string(app_name));
+        return name_with_extension.string();
       }
-      catch (...)
-      {
 
-      }
+      return find_system_app(commands).value_or(std::string(app_name));
+    }
+    catch (...)
+    {
+    }
 #endif
 
-      return std::string(app_name);
+    return std::string(app_name);
   }
 
   [[nodiscard]] std::string find_cab_executable(std::string_view app_name, std::array<std::string_view, 2> search_names)
@@ -81,7 +80,6 @@ namespace studio::resources
     }
     catch (...)
     {
-
     }
 #endif
 
@@ -90,63 +88,51 @@ namespace studio::resources
 
   [[nodiscard]] std::string cab6_executable()
   {
-    std::array<std::string_view, 2> names = {{
-      "i6comp.exe",
-      "i6cmp13b\\i6comp.exe"
-    }};
+    std::array<std::string_view, 2> names = { { "i6comp.exe",
+      "i6cmp13b\\i6comp.exe" } };
 
     return find_cab_executable("i6comp", names);
   }
 
   [[nodiscard]] std::string cab5_executable()
   {
-    std::array<std::string_view, 2> names = {{
-      "I5comp.exe",
-      "i5comp21\\I5comp.exe"
-    }};
+    std::array<std::string_view, 2> names = { { "I5comp.exe",
+      "i5comp21\\I5comp.exe" } };
 
     return find_cab_executable("I5comp", names);
   }
 
   [[nodiscard]] std::string cab2_executable()
   {
-    std::array<std::string_view, 2> names = {{
-      "ICOMP.EXE",
-      "icomp95\\ICOMP.EXE"
-    }};
+    std::array<std::string_view, 2> names = { { "ICOMP.EXE",
+      "icomp95\\ICOMP.EXE" } };
 
     return find_cab_executable("ICOMP", names);
   }
 
   [[nodiscard]] std::string seven_zip_executable()
   {
-    constexpr static std::array<std::string_view, 3> commands = {{
-      "where 7z",
+    constexpr static std::array<std::string_view, 3> commands = { { "where 7z",
       "echo %PROGRAMFILES%\\7-Zip\\7z.exe",
-      "echo %PROGRAMFILES(x86)%\\7-Zip\\7z.exe"
-    }};
+      "echo %PROGRAMFILES(x86)%\\7-Zip\\7z.exe" } };
 
     return find_system_app("7z", commands);
   }
 
   [[nodiscard]] std::string wincdemu_executable()
   {
-    constexpr static std::array<std::string_view, 3> commands = {{
-      "where batchmnt",
+    constexpr static std::array<std::string_view, 3> commands = { { "where batchmnt",
       "echo %PROGRAMFILES%\\WinCDEmu\\batchmnt.exe",
-      "echo %PROGRAMFILES(x86)%\\WinCDEmu\\batchmnt.exe"
-    }};
+      "echo %PROGRAMFILES(x86)%\\WinCDEmu\\batchmnt.exe" } };
 
     return find_system_app("batchmnt", commands);
   }
 
   [[nodiscard]] std::string power_iso_executable()
   {
-    constexpr static std::array<std::string_view, 3> commands = {{
-      "where piso",
+    constexpr static std::array<std::string_view, 3> commands = { { "where piso",
       "echo %PROGRAMFILES%\\PowerISO\\piso.exe",
-      "echo %PROGRAMFILES(x86)%\\PowerISO\\piso.exe"
-    }};
+      "echo %PROGRAMFILES(x86)%\\PowerISO\\piso.exe" } };
 
     return find_system_app("piso", commands);
   }
@@ -157,7 +143,7 @@ namespace studio::resources
   {
     std::vector<content_info> results;
 
-    auto is_valid = overloaded {
+    auto is_valid = overloaded{
       [&](const file_info& item) {
         return item.folder_path == query.folder_path;
       },
@@ -219,9 +205,7 @@ namespace studio::resources
     static std::list<std::string> name_cache;
     static std::unordered_map<std::string, std::vector<content_info>> stat_cache;
 
-    auto cache_key = fs::exists(query.archive_path) ?
-                                                    query.archive_path.string() + std::to_string(fs::file_size(query.archive_path)) :
-                                                    query.archive_path.string();
+    auto cache_key = fs::exists(query.archive_path) ? query.archive_path.string() + std::to_string(fs::file_size(query.archive_path)) : query.archive_path.string();
 
     auto cache_entry = stat_cache.find(cache_key);
 
@@ -234,8 +218,22 @@ namespace studio::resources
     return filter_results_for_query(query, cache_entry);
   }
 
+  std::unordered_map<std::string, std::string>& get_cached_drive_paths()
+  {
+    static std::unordered_map<std::string, std::string> drive_paths;
+    return drive_paths;
+  }
+
   std::optional<std::string> wincdemu_mount_iso(const fs::path& archive_path, const fs::path& listing_filename)
   {
+    auto& drive_paths = get_cached_drive_paths();
+    auto existing_path = drive_paths.find(archive_path.string());
+
+    if (existing_path != drive_paths.end())
+    {
+      return existing_path->second;
+    }
+
     auto lines = execute_command(listing_filename, [&](auto& command) {
       command << '\"' << wincdemu_executable() << ' ' << archive_path << " > " << listing_filename << '\"';
     });
@@ -269,6 +267,8 @@ namespace studio::resources
       return std::nullopt;
     }
 
+    drive_paths.emplace(archive_path.string(), drive_letter);
+
     return drive_letter;
   }
 
@@ -276,6 +276,7 @@ namespace studio::resources
   {
     execute_command([&](auto& command) {
       command << '\"' << wincdemu_executable() << " /unmount " << archive_path << '\"';
+      get_cached_drive_paths().erase(archive_path.string());
     });
   }
 
@@ -298,18 +299,18 @@ namespace studio::resources
         if (dir_entry.is_directory())
         {
           folder_info folder{};
-          folder.full_path = dir_entry.path();
-          folder.archive_path = drive_letter.value();
+          folder.full_path = dir_entry.path().relative_path();
+          folder.archive_path = query.archive_path;
           folder.name = folder.full_path.filename().string();
           results.emplace_back(folder);
         }
         else
         {
           file_info file{};
-          file.archive_path = drive_letter.value();
+          file.archive_path = query.archive_path;
           file.compression_type = compression_type::none;
           file.size = dir_entry.file_size();
-          file.folder_path = dir_entry.path().parent_path();
+          file.folder_path = dir_entry.path().parent_path().relative_path();
           file.filename = dir_entry.path().filename();
           results.emplace_back(file);
         }
@@ -370,18 +371,18 @@ namespace studio::resources
         if (dir_entry.is_directory())
         {
           folder_info folder{};
-          folder.full_path = dir_entry.path();
-          folder.archive_path = drive_letter.value();
+          folder.full_path = dir_entry.path().relative_path();
+          folder.archive_path = query.archive_path;
           folder.name = folder.full_path.filename().string();
           results.emplace_back(folder);
         }
         else
         {
           file_info file{};
-          file.archive_path = drive_letter.value();
+          file.archive_path = query.archive_path;
           file.compression_type = compression_type::none;
           file.size = dir_entry.file_size();
-          file.folder_path = dir_entry.path().parent_path();
+          file.folder_path = dir_entry.path().parent_path().relative_path();
           file.filename = dir_entry.path().filename();
           results.emplace_back(file);
         }
@@ -401,12 +402,7 @@ namespace studio::resources
       });
 
       auto header_iter = std::find_if(raw_contents.begin(), raw_contents.end(), [](auto& row) {
-        return row.find("Date") != std::string::npos &&
-               row.find("Time") != std::string::npos &&
-               row.find("Attr") != std::string::npos &&
-               row.find("Size") != std::string::npos &&
-               row.find("Compressed") != std::string::npos &&
-               row.find("Name") != std::string::npos;
+        return row.find("Date") != std::string::npos && row.find("Time") != std::string::npos && row.find("Attr") != std::string::npos && row.find("Size") != std::string::npos && row.find("Compressed") != std::string::npos && row.find("Name") != std::string::npos;
       });
 
       if (header_iter == raw_contents.end())
@@ -471,7 +467,7 @@ namespace studio::resources
           {
             auto size = current->substr(size_indices.first, size_indices.second - size_indices.first);
 
-            if (auto iter = std::find_if(size.begin(), size.end(), [](auto val) { return std::isdigit(val);});
+            if (auto iter = std::find_if(size.begin(), size.end(), [](auto val) { return std::isdigit(val); });
                 iter != size.end())
             {
               file.size = std::stoi(size);
@@ -479,7 +475,6 @@ namespace studio::resources
           }
           catch (...)
           {
-
           }
 
           results.emplace_back(file);
@@ -549,7 +544,7 @@ namespace studio::resources
         {
           auto size = current.substr(size_index, size_count);
 
-          if (auto iter = std::find_if(size.begin(), size.end(), [](auto val) { return std::isdigit(val);});
+          if (auto iter = std::find_if(size.begin(), size.end(), [](auto val) { return std::isdigit(val); });
               iter != size.end())
           {
             file.size = std::stoi(size);
@@ -557,7 +552,6 @@ namespace studio::resources
         }
         catch (...)
         {
-
         }
 
         results.emplace_back(std::move(file));
@@ -569,19 +563,13 @@ namespace studio::resources
 
   std::vector<content_info> cab2_get_content_listing(const listing_query& query)
   {
-    return cached_get_content_listing(query, [&](const auto& listing_filename) -> std::vector<content_info>
-    {
+    return cached_get_content_listing(query, [&](const auto& listing_filename) -> std::vector<content_info> {
       auto raw_contents = execute_command(listing_filename, [&](auto& command) {
         command << '\"' << cab2_executable() << " l " << query.archive_path << " > " << listing_filename << '\"';
       });
 
       auto header_iter = std::find_if(raw_contents.begin(), raw_contents.end(), [](auto& row) {
-        return row.find("Date") != std::string::npos &&
-               row.find("Time") != std::string::npos &&
-               row.find("OrigSize") != std::string::npos &&
-               row.find("Attr") != std::string::npos &&
-               row.find("CompSize") != std::string::npos &&
-               row.find("Name") != std::string::npos;
+        return row.find("Date") != std::string::npos && row.find("Time") != std::string::npos && row.find("OrigSize") != std::string::npos && row.find("Attr") != std::string::npos && row.find("CompSize") != std::string::npos && row.find("Name") != std::string::npos;
       });
 
       if (header_iter == raw_contents.end())
@@ -652,7 +640,7 @@ namespace studio::resources
           {
             auto size = current->substr(size_indices.first, size_indices.second - size_indices.first);
 
-            if (auto iter = std::find_if(size.begin(), size.end(), [](auto val) { return std::isdigit(val);});
+            if (auto iter = std::find_if(size.begin(), size.end(), [](auto val) { return std::isdigit(val); });
                 iter != size.end())
             {
               file.size = std::stoi(size);
@@ -699,10 +687,10 @@ namespace studio::resources
 
   std::vector<content_info> power_iso_get_content_listing(const listing_query& query)
   {
-    return cached_get_content_listing(query, [&](const auto& listing_filename) -> std::vector<content_info>
-    {
+    return cached_get_content_listing(query, [&](const auto& listing_filename) -> std::vector<content_info> {
       auto raw_contents = execute_command(listing_filename, [&](auto& command) {
-        command << '\"' << power_iso_executable() << " list " << query.archive_path << " / -r" << " > " << listing_filename << '\"';
+        command << '\"' << power_iso_executable() << " list " << query.archive_path << " / -r"
+                << " > " << listing_filename << '\"';
       });
       std::vector<content_info> results;
 
@@ -719,9 +707,7 @@ namespace studio::resources
           continue;
         }
 
-        if (row->find("Files, ") != std::string::npos &&
-            row->find("Folders") != std::string::npos &&
-            row->find("bytes") != std::string::npos)
+        if (row->find("Files, ") != std::string::npos && row->find("Folders") != std::string::npos && row->find("bytes") != std::string::npos)
         {
           continue;
         }
@@ -829,9 +815,7 @@ namespace studio::resources
     auto delete_path = make_auto_remove_path();
 
     auto temp_path = fs::temp_directory_path() / (info.archive_path.stem().string() + "temp");
-    auto internal_file_path = info.folder_path == info.archive_path ?
-                                                                    info.filename :
-                                                                    fs::relative(info.folder_path, info.archive_path) / info.filename;
+    auto internal_file_path = info.folder_path == info.archive_path ? info.filename : fs::relative(info.folder_path, info.archive_path) / info.filename;
 
     auto current_working_path = fs::current_path();
     fs::create_directories(temp_path);
@@ -872,56 +856,70 @@ namespace studio::resources
     return true;
   }
 
-  void seven_extract_file_contents(const studio::resources::file_info& info,
+  bool seven_extract_file_contents(const studio::resources::file_info& info,
     std::ostream& output,
     std::optional<std::reference_wrapper<batch_storage>> storage)
   {
-    extract_file_contents_using_external_app(info, output, storage,
-      [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
+    return extract_file_contents_using_external_app(
+      info, output, storage, [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
         std::stringstream command;
         command << '\"' << seven_zip_executable() << " x -y -o" << temp_path
                 << ' ' <<  info.archive_path << " \"" << internal_file_path.string() << "\""
                 << '\"';
-        return command.str();
-      }, [] (const auto& info, const auto& temp_path, const auto&) {
+        return command.str(); }, [](const auto& info, const auto& temp_path, const auto&) {
         std::stringstream command;
         command << '\"' << seven_zip_executable() << " x -y -o" << temp_path << ' ' <<  info.archive_path << '\"';
-        return command.str();
-      });
+        return command.str(); });
   }
 
   void iso_extract_file_contents(const studio::resources::file_info& info,
     std::ostream& output,
     std::optional<std::reference_wrapper<batch_storage>> storage)
   {
-    if (fs::is_directory(info.archive_path))
-    {
-      // TODO finish the logic here of mounting/unmounting an image to get data out of it.
-      // Bulk extraction will open the image at least once.
-      // Single extraction will open the image each time.
-      std::ifstream temp(info.folder_path / info.filename, std::ios::binary);
+    auto extracted = extract_file_contents_using_external_app(
+      info, output, storage, [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
+        std::stringstream command;
+        command << '\"' << power_iso_executable() << " extract " << info.archive_path << " / -y -od " << temp_path << '\"';
+        return command.str(); }, [](const auto& info, const auto& temp_path, const auto&) {
+        std::stringstream command;
+        command << '\"' << power_iso_executable() << " extract " << info.archive_path << " / -y -od " << temp_path << '\"';
+        return command.str(); });
 
-      std::copy_n(std::istreambuf_iterator(temp),
-        info.size,
-        std::ostreambuf_iterator(output));
+    if (extracted)
+    {
+      return;
     }
-    else
-    {
-      auto extracted = extract_file_contents_using_external_app(info, output, storage,
-        [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
-          std::stringstream command;
-          command << '\"' << power_iso_executable() << " extract " << info.archive_path << " / -y -od " << temp_path << '\"';
-          return command.str();
-        }, [] (const auto& info, const auto& temp_path, const auto&) {
-          std::stringstream command;
-          command << '\"' << power_iso_executable() << " extract " << info.archive_path << " / -y -od " << temp_path << '\"';
-          return command.str();
-        });
 
-      if (!extracted)
-      {
-        return seven_extract_file_contents(info, output, storage);
-      }
+    extracted = seven_extract_file_contents(info, output, storage);
+
+    if (extracted)
+    {
+      return;
+    }
+
+    const auto temp_file = fs::temp_directory_path() / "temp-output.txt";
+    auto drive_letter = wincdemu_mount_iso(info.archive_path, temp_file);
+
+    if (!drive_letter.has_value())
+    {
+      drive_letter = winiso_mount_iso(info.archive_path, temp_file);
+    }
+
+    if (!drive_letter.has_value())
+    {
+      return;
+    }
+
+    std::ifstream temp(drive_letter.value() / info.folder_path / info.filename, std::ios::binary);
+
+    std::copy_n(std::istreambuf_iterator(temp),
+      info.size,
+      std::ostreambuf_iterator(output));
+
+    if (!storage.has_value())
+    {
+      wincdemu_unmount_iso(info.archive_path);
+      winiso_unmount_iso(info.archive_path);
     }
   }
 
@@ -929,60 +927,59 @@ namespace studio::resources
     std::ostream& output,
     std::optional<std::reference_wrapper<batch_storage>> storage)
   {
-    auto extracted = extract_file_contents_using_external_app(info, output, storage,
-      [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
+    auto extracted = extract_file_contents_using_external_app(
+      info, output, storage, [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
         fs::current_path(temp_path);
         std::stringstream command;
         command << '\"' << cab2_executable() << " x "
                 <<  info.archive_path << " \"" << internal_file_path.filename().string() << "\""
                 << '\"';
-        return command.str();
-    }, [] (const auto& info, const auto& temp_path, const auto&) {
+        return command.str(); }, [](const auto& info, const auto& temp_path, const auto&) {
         fs::current_path(temp_path);
         std::stringstream command;
         command << '\"' << cab2_executable() << " x " <<  info.archive_path << '\"';
-        return command.str();
-      });
+        return command.str(); });
 
     if (!extracted)
     {
-      extracted = extract_file_contents_using_external_app(info, output, storage,
-        [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
+      extracted = extract_file_contents_using_external_app(
+        info, output, storage, [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
           fs::current_path(temp_path);
           std::stringstream command;
           command << '\"' << cab5_executable() << " x "
                   <<  info.archive_path << " \"" << internal_file_path.filename().string() << "\""
                   << '\"';
-          return command.str();
-        }, [] (const auto& info, const auto& temp_path, const auto&) {
+          return command.str(); }, [](const auto& info, const auto& temp_path, const auto&) {
           fs::current_path(temp_path);
           std::stringstream command;
           command << '\"' << cab5_executable() << " x " <<  info.archive_path << '\"';
-          return command.str();
-        });
+          return command.str(); });
     }
 
-    if (!extracted)
+    if (extracted)
     {
-      extracted = extract_file_contents_using_external_app(info, output, storage,
-        [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
-          fs::current_path(temp_path);
-          std::stringstream command;
-          command << '\"' << cab6_executable() << " x "
-                  <<  info.archive_path << " \"" << internal_file_path.filename().string() << "\""
-                  << '\"';
-          return command.str();
-        }, [] (const auto& info, const auto& temp_path, const auto&) {
-          fs::current_path(temp_path);
-          std::stringstream command;
-          command << '\"' << cab6_executable() << " x " <<  info.archive_path << '\"';
-          return command.str();
-        });
+      return;
     }
 
-    if (!extracted)
+    extracted = extract_file_contents_using_external_app(
+      info, output, storage, [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
+        fs::current_path(temp_path);
+        std::stringstream command;
+        command << '\"' << cab6_executable() << " x "
+                <<  info.archive_path << " \"" << internal_file_path.filename().string() << "\""
+                << '\"';
+        return command.str(); }, [](const auto& info, const auto& temp_path, const auto&) {
+        fs::current_path(temp_path);
+        std::stringstream command;
+        command << '\"' << cab6_executable() << " x " <<  info.archive_path << '\"';
+        return command.str(); });
+
+    if (extracted)
     {
-      return seven_extract_file_contents(info, output, storage);
+      return;
     }
+
+    seven_extract_file_contents(info, output, storage);
+
   }
-}
+}// namespace studio::resources
