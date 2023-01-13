@@ -234,38 +234,57 @@ namespace studio::resources
     return filter_results_for_query(query, cache_entry);
   }
 
+  std::optional<std::string> wincdemu_mount_iso(const fs::path& archive_path, const fs::path& listing_filename)
+  {
+    auto lines = execute_command(listing_filename, [&](auto& command) {
+      command << '\"' << wincdemu_executable() << ' ' << archive_path << " > " << listing_filename << '\"';
+    });
+
+    if (lines.empty())
+    {
+      return std::nullopt;
+    }
+
+    if (lines[0].find("successfully") == std::string::npos)
+    {
+      return std::nullopt;
+    }
+
+    lines = execute_command(listing_filename, [&](auto& command) {
+      command << '\"' << wincdemu_executable() << " /list > " << listing_filename << '\"';
+    });
+
+    auto drive_letter_iter = std::find_if(lines.begin(), lines.end(), [&](auto& line) {
+      return line.find(archive_path.string()) != std::string::npos;
+    });
+
+    if (drive_letter_iter == lines.end())
+    {
+      return std::nullopt;
+    }
+
+    auto drive_letter = drive_letter_iter->substr(0, drive_letter_iter->find(archive_path.string()));
+    if (!fs::exists(drive_letter))
+    {
+      return std::nullopt;
+    }
+
+    return drive_letter;
+  }
+
+  void wincdemu_unmount_iso(const fs::path& archive_path)
+  {
+    execute_command([&](auto& command) {
+      command << '\"' << wincdemu_executable() << " /unmount " << archive_path << '\"';
+    });
+  }
+
   std::vector<content_info> wincdemu_get_content_listing(const listing_query& query)
   {
     return cached_get_content_listing(query, [&](const auto& listing_filename) -> std::vector<content_info> {
-      auto lines = execute_command(listing_filename, [&](auto& command) {
-        command << '\"' << wincdemu_executable() << ' ' << query.archive_path << " > " << listing_filename << '\"';
-      });
+      auto drive_letter = wincdemu_mount_iso(query.archive_path, listing_filename);
 
-      if (lines.empty())
-      {
-        return {};
-      }
-
-      if (lines[0].find("successfully") == std::string::npos)
-      {
-        return {};
-      }
-
-      lines = execute_command(listing_filename, [&](auto& command) {
-        command << '\"' << wincdemu_executable() << " /list > " << listing_filename << '\"';
-      });
-
-      auto drive_letter_iter = std::find_if(lines.begin(), lines.end(), [&](auto& line) {
-        return line.find(query.archive_path.string()) != std::string::npos;
-      });
-
-      if (drive_letter_iter == lines.end())
-      {
-        return {};
-      }
-
-      auto drive_letter = drive_letter_iter->substr(0, drive_letter_iter->find(query.archive_path.string()));
-      if (!fs::exists(drive_letter))
+      if (!drive_letter.has_value())
       {
         return {};
       }
@@ -274,20 +293,20 @@ namespace studio::resources
       results.reserve(128);
 
       for (const fs::directory_entry& dir_entry :
-        fs::recursive_directory_iterator(drive_letter))
+        fs::recursive_directory_iterator(drive_letter.value()))
       {
         if (dir_entry.is_directory())
         {
           folder_info folder{};
           folder.full_path = dir_entry.path();
-          folder.archive_path = drive_letter;
+          folder.archive_path = drive_letter.value();
           folder.name = folder.full_path.filename().string();
           results.emplace_back(folder);
         }
         else
         {
           file_info file{};
-          file.archive_path = drive_letter;
+          file.archive_path = drive_letter.value();
           file.compression_type = compression_type::none;
           file.size = dir_entry.file_size();
           file.folder_path = dir_entry.path().parent_path();
@@ -296,34 +315,48 @@ namespace studio::resources
         }
       }
 
-      execute_command([&](auto& command) {
-        command << '\"' << wincdemu_executable() << " /unmount " << query.archive_path << '\"';
-      });
+      wincdemu_unmount_iso(query.archive_path);
 
       return results;
+    });
+  }
+
+  std::optional<std::string> winiso_mount_iso(const fs::path& archive_path, const fs::path& listing_filename)
+  {
+    auto lines = execute_command(listing_filename, [&](auto& command) {
+      command << '\"' << "powershell -c \"(Mount-DiskImage -ImagePath " << archive_path << " | Get-Volume).DriveLetter + ':'\" > " << listing_filename << '\"';
+    });
+
+    if (lines.empty())
+    {
+      return std::nullopt;
+    }
+
+    if (lines[0].find(":") == std::string::npos)
+    {
+      return std::nullopt;
+    }
+
+    if (!fs::exists(lines[0]))
+    {
+      return std::nullopt;
+    }
+
+    return lines[0];
+  }
+
+  void winiso_unmount_iso(const fs::path& archive_path)
+  {
+    execute_command([&](auto& command) {
+      command << '\"' << "powershell -c \"Dismount-DiskImage -ImagePath " << archive_path << '\"' << '\"';
     });
   }
 
   std::vector<content_info> winiso_get_content_listing(const listing_query& query)
   {
     return cached_get_content_listing(query, [&](const auto& listing_filename) -> std::vector<content_info> {
-      auto lines = execute_command(listing_filename, [&](auto& command) {
-        command << '\"' << "powershell -c \"(Mount-DiskImage -ImagePath " << query.archive_path << " | Get-Volume).DriveLetter + ':'\" > " << listing_filename << '\"';
-      });
-
-      if (lines.empty())
-      {
-        return {};
-      }
-
-      if (lines[0].find(":") == std::string::npos)
-      {
-        return {};
-      }
-
-
-      auto drive_letter = lines[0];
-      if (!fs::exists(drive_letter))
+      auto drive_letter = winiso_mount_iso(query.archive_path, listing_filename);
+      if (!drive_letter.has_value())
       {
         return {};
       }
@@ -332,20 +365,20 @@ namespace studio::resources
       results.reserve(128);
 
       for (const fs::directory_entry& dir_entry :
-        fs::recursive_directory_iterator(drive_letter))
+        fs::recursive_directory_iterator(drive_letter.value()))
       {
         if (dir_entry.is_directory())
         {
           folder_info folder{};
           folder.full_path = dir_entry.path();
-          folder.archive_path = drive_letter;
+          folder.archive_path = drive_letter.value();
           folder.name = folder.full_path.filename().string();
           results.emplace_back(folder);
         }
         else
         {
           file_info file{};
-          file.archive_path = drive_letter;
+          file.archive_path = drive_letter.value();
           file.compression_type = compression_type::none;
           file.size = dir_entry.file_size();
           file.folder_path = dir_entry.path().parent_path();
@@ -354,9 +387,7 @@ namespace studio::resources
         }
       }
 
-      execute_command([&](auto& command) {
-        command << '\"' << "powershell -c \"Dismount-DiskImage -ImagePath " << query.archive_path << '\"' << '\"';
-      });
+      winiso_unmount_iso(query.archive_path);
 
       return results;
     });
@@ -841,22 +872,6 @@ namespace studio::resources
     return true;
   }
 
-  void iso_extract_file_contents(const studio::resources::file_info& info,
-    std::ostream& output,
-    std::optional<std::reference_wrapper<batch_storage>> storage)
-  {
-    extract_file_contents_using_external_app(info, output, storage,
-      [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
-        std::stringstream command;
-        command << '\"' << power_iso_executable() << " extract " << info.archive_path << " / -y -od " << temp_path << '\"';
-        return command.str();
-      }, [] (const auto& info, const auto& temp_path, const auto&) {
-        std::stringstream command;
-        command << '\"' << power_iso_executable() << " extract " << info.archive_path << " / -y -od " << temp_path << '\"';
-        return command.str();
-      });
-  }
-
   void seven_extract_file_contents(const studio::resources::file_info& info,
     std::ostream& output,
     std::optional<std::reference_wrapper<batch_storage>> storage)
@@ -873,6 +888,41 @@ namespace studio::resources
         command << '\"' << seven_zip_executable() << " x -y -o" << temp_path << ' ' <<  info.archive_path << '\"';
         return command.str();
       });
+  }
+
+  void iso_extract_file_contents(const studio::resources::file_info& info,
+    std::ostream& output,
+    std::optional<std::reference_wrapper<batch_storage>> storage)
+  {
+    if (fs::is_directory(info.archive_path))
+    {
+      // TODO finish the logic here of mounting/unmounting an image to get data out of it.
+      // Bulk extraction will open the image at least once.
+      // Single extraction will open the image each time.
+      std::ifstream temp(info.folder_path / info.filename, std::ios::binary);
+
+      std::copy_n(std::istreambuf_iterator(temp),
+        info.size,
+        std::ostreambuf_iterator(output));
+    }
+    else
+    {
+      auto extracted = extract_file_contents_using_external_app(info, output, storage,
+        [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
+          std::stringstream command;
+          command << '\"' << power_iso_executable() << " extract " << info.archive_path << " / -y -od " << temp_path << '\"';
+          return command.str();
+        }, [] (const auto& info, const auto& temp_path, const auto&) {
+          std::stringstream command;
+          command << '\"' << power_iso_executable() << " extract " << info.archive_path << " / -y -od " << temp_path << '\"';
+          return command.str();
+        });
+
+      if (!extracted)
+      {
+        return seven_extract_file_contents(info, output, storage);
+      }
+    }
   }
 
   void cab_extract_file_contents(const studio::resources::file_info& info,
