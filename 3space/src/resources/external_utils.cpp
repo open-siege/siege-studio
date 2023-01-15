@@ -224,6 +224,21 @@ namespace studio::resources
     return drive_paths;
   }
 
+  void wincdemu_unmount_iso(const fs::path& archive_path)
+  {
+    auto& drive_paths = get_cached_drive_paths();
+
+    if (drive_paths.find(archive_path.string()) == drive_paths.end())
+    {
+      return;
+    }
+
+    execute_command([&](auto& command) {
+      command << '\"' << wincdemu_executable() << " /unmount " << archive_path << '\"';
+      drive_paths.erase(archive_path.string());
+    });
+  }
+
   std::optional<std::string> wincdemu_mount_iso(const fs::path& archive_path, const fs::path& listing_filename)
   {
     auto& drive_paths = get_cached_drive_paths();
@@ -243,7 +258,10 @@ namespace studio::resources
       return std::nullopt;
     }
 
-    if (lines[0].find("successfully") == std::string::npos)
+    bool already_mounted = lines[0].find("already mounted") != std::string::npos;
+
+    if (lines[0].find("successfully") == std::string::npos &&
+        lines[0].find("already mounted") == std::string::npos)
     {
       return std::nullopt;
     }
@@ -262,30 +280,23 @@ namespace studio::resources
     }
 
     auto drive_letter = drive_letter_iter->substr(0, drive_letter_iter->find(archive_path.string()));
+
     if (!fs::exists(drive_letter))
     {
       return std::nullopt;
     }
 
-    drive_paths.emplace(archive_path.string(), drive_letter);
+    // wincdemu only maps one image to one drive,
+    // so if it is already mounted externally,
+    // we don't want to unmount it later (because it was most likely mounted by the user already).
+    if (!already_mounted)
+    {
+      drive_paths.emplace(archive_path.string(), drive_letter);
+    }
 
     return drive_letter;
   }
 
-  void wincdemu_unmount_iso(const fs::path& archive_path)
-  {
-    auto& drive_paths = get_cached_drive_paths();
-
-    if (drive_paths.find(archive_path.string()) == drive_paths.end())
-    {
-      return;
-    }
-
-    execute_command([&](auto& command) {
-      command << '\"' << wincdemu_executable() << " /unmount " << archive_path << '\"';
-      drive_paths.erase(archive_path.string());
-    });
-  }
 
   std::vector<content_info> wincdemu_get_content_listing(const listing_query& query)
   {
