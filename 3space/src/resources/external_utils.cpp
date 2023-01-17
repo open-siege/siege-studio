@@ -942,7 +942,20 @@ namespace studio::resources
       info.size,
       std::ostreambuf_iterator(output));
 
-    if (!storage.has_value())
+    if (storage.has_value())
+    {
+      auto unmount_iter = storage.value().get().temp.find("unmounter");
+
+      if (unmount_iter == storage.value().get().temp.end())
+      {
+        std::shared_ptr<file_info> unmounter(const_cast<file_info*>(&info), [archive_path = info.archive_path](file_info*) {
+          wincdemu_unmount_iso(archive_path);
+          winiso_unmount_iso(archive_path);
+        });
+        storage.value().get().temp.emplace("unmounter", std::static_pointer_cast<void>(unmounter));
+      }
+    }
+    else
     {
       wincdemu_unmount_iso(info.archive_path);
       winiso_unmount_iso(info.archive_path);
@@ -1006,6 +1019,5 @@ namespace studio::resources
     }
 
     seven_extract_file_contents(info, output, storage);
-
   }
 }// namespace studio::resources
