@@ -25,6 +25,7 @@ namespace studio::resources::cab
 
   constexpr auto file_record_tag = shared::to_tag<4>({ 'I', 'S', 'c', 0x28 });
 
+  // TODO add more checks for if a file is supported
   bool cab_file_archive::is_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};

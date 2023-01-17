@@ -33,6 +33,7 @@ namespace studio::resources::iso
   }
 
 
+  // TODO add proper checks for if a file is supported
   bool iso_file_archive::is_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
