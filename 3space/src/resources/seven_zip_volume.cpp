@@ -32,6 +32,7 @@ namespace studio::resources::seven_zip
     return str;
   }
 
+  // TODO add more checks for if a file is supported
   bool seven_zip_file_archive::is_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
