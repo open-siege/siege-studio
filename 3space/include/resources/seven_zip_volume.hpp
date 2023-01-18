@@ -10,7 +10,7 @@
 #include "archive_plugin.hpp"
 #include "endian_arithmetic.hpp"
 
-namespace studio::resources::seven_zip
+namespace studio::resources::zip
 {
   struct seven_zip_file_archive : studio::resources::archive_plugin
   {

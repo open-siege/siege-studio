@@ -16,6 +16,9 @@
 #include "resources/three_space_volume.hpp"
 #include "resources/trophy_bass_volume.hpp"
 #include "resources/zip_volume.hpp"
+#include "resources/seven_zip_volume.hpp"
+#include "resources/cab_volume.hpp"
+#include "resources/iso_volume.hpp"
 #include "resources/cyclone_volume.hpp"
 #include "resources/sword_volume.hpp"
 
@@ -26,6 +29,8 @@ namespace dio
   namespace zip = studio::resources::zip;
   namespace cln = studio::resources::cln;
   namespace atd = studio::resources::atd;
+  namespace iso = studio::resources::iso;
+  namespace cab = studio::resources::cab;
 }
 
 namespace studio::views
@@ -65,6 +70,13 @@ namespace studio::views
     view_factory.add_file_type(dio::vol::three_space::dyn_file_archive::is_supported, [](auto context, auto& stream) -> studio_view { return normal_view(vol_view(context)); });
     view_factory.add_file_type(dio::vol::trophy_bass::rbx_file_archive::is_supported, [](auto context, auto& stream) -> studio_view { return normal_view(vol_view(context)); });
     view_factory.add_file_type(dio::vol::trophy_bass::tbv_file_archive::is_supported, [](auto context, auto& stream) -> studio_view { return normal_view(vol_view(context)); });
+
+#if WIN32
+    view_factory.add_file_type(dio::iso::iso_file_archive::is_supported, [](auto context, auto& stream) -> studio_view { return normal_view(vol_view(context)); });
+    view_factory.add_file_type(dio::zip::seven_zip_file_archive::is_supported, [](auto context, auto& stream) -> studio_view { return normal_view(vol_view(context)); });
+    view_factory.add_file_type(dio::cab::cab_file_archive::is_supported, [](auto context, auto& stream) -> studio_view { return normal_view(vol_view(context)); });
+#endif
+
     view_factory.add_file_type(dio::cln::cln_file_archive::is_supported, [](auto context, auto& stream) -> studio_view { return normal_view(vol_view(context)); }, true);
     view_factory.add_file_type(dio::atd::atd_file_archive::is_supported, [](auto context, auto& stream) -> studio_view { return normal_view(vol_view(context)); }, true);
 
@@ -123,6 +135,19 @@ namespace studio::views
     view_factory.add_extension(".rbx", dio::vol::trophy_bass::rbx_file_archive::is_supported);
     view_factory.add_extension(".tbv", dio::vol::trophy_bass::tbv_file_archive::is_supported);
 
+#if WIN32
+    view_factory.add_extension(".iso", dio::iso::iso_file_archive::is_supported);
+    view_factory.add_extension(".mds", dio::iso::iso_file_archive::is_supported);
+    view_factory.add_extension(".cue", dio::iso::iso_file_archive::is_supported);
+    view_factory.add_extension(".nrg", dio::iso::iso_file_archive::is_supported);
+    view_factory.add_extension(".7z", dio::zip::seven_zip_file_archive::is_supported);
+    view_factory.add_extension(".rar", dio::zip::seven_zip_file_archive::is_supported);
+    view_factory.add_extension(".tgz", dio::zip::seven_zip_file_archive::is_supported);
+    view_factory.add_extension(".exe", dio::zip::seven_zip_file_archive::is_supported);
+    view_factory.add_extension(".cab", dio::cab::cab_file_archive::is_supported);
+    view_factory.add_extension(".z", dio::cab::cab_file_archive::is_supported);
+#endif
+
     view_factory.add_extension(".cln", dio::cln::cln_file_archive::is_supported);
     view_factory.add_extension(".atd", dio::atd::atd_file_archive::is_supported);
 
@@ -159,6 +184,18 @@ namespace studio::views
     archive.add_archive_type(".vol", std::make_unique<dio::vol::three_space::vol_file_archive>());
     archive.add_archive_type(".vol", std::make_unique<dio::vol::darkstar::vol_file_archive>());
 
+#if WIN32
+    archive.add_archive_type(".iso", std::make_unique<dio::iso::iso_file_archive>());
+    archive.add_archive_type(".mds", std::make_unique<dio::iso::iso_file_archive>());
+    archive.add_archive_type(".cue", std::make_unique<dio::iso::iso_file_archive>());
+    archive.add_archive_type(".nrg", std::make_unique<dio::iso::iso_file_archive>());
+    archive.add_archive_type(".7z", std::make_unique<dio::zip::seven_zip_file_archive>());
+    archive.add_archive_type(".rar", std::make_unique<dio::zip::seven_zip_file_archive>());
+    archive.add_archive_type(".tgz", std::make_unique<dio::zip::seven_zip_file_archive>());
+    archive.add_archive_type(".exe", std::make_unique<dio::zip::seven_zip_file_archive>());
+    archive.add_archive_type(".cab", std::make_unique<dio::cab::cab_file_archive>());
+    archive.add_archive_type(".z", std::make_unique<dio::cab::cab_file_archive>());
+#endif
     archive.add_archive_type(".cln", std::make_unique<dio::cln::cln_file_archive>());
     archive.add_archive_type(".atd", std::make_unique<dio::atd::atd_file_archive>());
 
