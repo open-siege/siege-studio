@@ -23,7 +23,9 @@ namespace studio::resources::seven_zip
 {
   using folder_info = studio::resources::folder_info;
 
-  constexpr auto file_record_tag = shared::to_tag<4>({ '7', 'z', 0xbc, 0xaf });
+  constexpr auto seven7_file_record_tag = shared::to_tag<4>({ '7', 'z', 0xbc, 0xaf });
+  constexpr auto gz_deflate_file_record_tag = shared::to_tag<4>({ 0x1f, 0x8b, 0x08, 0x00 });
+  constexpr auto rar_file_record_tag = shared::to_tag<4>({ 'R', 'a', 'r', '!' });
 
   std::string rtrim(std::string str)
   {
@@ -32,7 +34,6 @@ namespace studio::resources::seven_zip
     return str;
   }
 
-  // TODO add more checks for if a file is supported
   bool seven_zip_file_archive::is_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
@@ -40,7 +41,9 @@ namespace studio::resources::seven_zip
 
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
-    return tag == file_record_tag;
+    return tag == seven7_file_record_tag ||
+           tag == gz_deflate_file_record_tag ||
+           tag == rar_file_record_tag;
   }
 
   bool seven_zip_file_archive::stream_is_supported(std::istream& stream) const
