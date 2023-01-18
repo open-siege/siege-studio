@@ -26,6 +26,7 @@ namespace studio::resources::seven_zip
   constexpr auto seven7_file_record_tag = shared::to_tag<4>({ '7', 'z', 0xbc, 0xaf });
   constexpr auto gz_deflate_file_record_tag = shared::to_tag<4>({ 0x1f, 0x8b, 0x08, 0x00 });
   constexpr auto rar_file_record_tag = shared::to_tag<4>({ 'R', 'a', 'r', '!' });
+  constexpr auto common_exe_tag = shared::to_tag<4>({ 'M', 'Z', 0x90, 0x00 });
 
   std::string rtrim(std::string str)
   {
@@ -43,7 +44,8 @@ namespace studio::resources::seven_zip
 
     return tag == seven7_file_record_tag ||
            tag == gz_deflate_file_record_tag ||
-           tag == rar_file_record_tag;
+           tag == rar_file_record_tag ||
+           tag == common_exe_tag;
   }
 
   bool seven_zip_file_archive::stream_is_supported(std::istream& stream) const

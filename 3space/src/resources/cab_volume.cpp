@@ -23,9 +23,10 @@ namespace studio::resources::cab
 {
   using folder_info = studio::resources::folder_info;
 
-  constexpr auto file_record_tag = shared::to_tag<4>({ 'I', 'S', 'c', 0x28 });
+  constexpr auto is5_cab_tag = shared::to_tag<4>({ 'I', 'S', 'c', 0x28 });
+  constexpr auto is2_cab_tag = shared::to_tag<4>({ 0x13, 0x5d, 0x65, 0x8c });
+  constexpr auto ms_cab_tag = shared::to_tag<4>({ 'M', 'S', 'C', 'F' });
 
-  // TODO add more checks for if a file is supported
   bool cab_file_archive::is_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
@@ -33,7 +34,9 @@ namespace studio::resources::cab
 
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
-    return tag == file_record_tag;
+    return tag == is5_cab_tag ||
+           tag == is2_cab_tag ||
+           tag == ms_cab_tag;
   }
 
   bool cab_file_archive::stream_is_supported(std::istream& stream) const
