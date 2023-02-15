@@ -10,7 +10,7 @@ Open Siege is an open-source reimplementation of the 3Space game engine, used by
 
 Open Siege exists to breathe new life into games made by Dynamix, which use the 3Space engine and its descendants, while also reverse engineering their formats for fun, modding and preservation.
 
-For a list of features currently being worked on, see the release notes for the upcoming changes here: vhttps://github.com/open-siege/open-siege/wiki/Release-Notes
+For a list of features currently being worked on, see the release notes for the upcoming changes here: https://github.com/open-siege/open-siege/wiki/Release-Notes
 
 Primary goals of the project at this time are to reverse engineer all of the file formats of files used by each game, while also enabling each of the games to work correctly on modern platforms, with additional enhances provided by hooking the games as needed.
 
