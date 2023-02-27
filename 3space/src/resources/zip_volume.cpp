@@ -247,11 +247,11 @@ namespace studio::resources::zip
 
     auto full_path_str = full_path.string();
 
-    for (auto i = 0u; i < full_path_str.size(); ++i)
+    for (char & i : full_path_str)
     {
-      if (full_path_str[i] == '\\')
+      if (i == '\\')
       {
-        full_path_str[i] = '/';
+        i = '/';
       }
     }
 
@@ -264,6 +264,5 @@ namespace studio::resources::zip
     std::copy_n(reinterpret_cast<char *>(contents.data()),
       info.size,
       std::ostreambuf_iterator(output));
-
   }
 }// namespace darkstar::vol
