@@ -14,13 +14,6 @@ namespace fs = std::filesystem;
 
 namespace studio::resources
 {
-  [[nodiscard]] std::string rtrim(std::string str)
-  {
-    auto it1 = std::find_if(str.rbegin(), str.rend(), [](char ch) { return !std::isspace<char>(ch, std::locale::classic()); });
-    str.erase(it1.base(), str.end());
-    return str;
-  }
-
   template<std::size_t Size>
   [[nodiscard]] inline std::optional<std::string> find_system_app(const std::array<std::string_view, Size>& commands)
   {
@@ -170,16 +163,8 @@ namespace studio::resources
 
   [[nodiscard]] std::vector<std::string> read_lines(const fs::path& listing_filename)
   {
-    std::vector<std::string> raw_contents;
-    raw_contents.reserve(128);
     std::ifstream raw_listing(listing_filename, std::ios::binary);
-
-    for (std::string temp; std::getline(raw_listing, temp);)
-    {
-      raw_contents.push_back(rtrim(std::move(temp)));
-    }
-
-    return raw_contents;
+    return read_lines(raw_listing);
   }
 
   [[nodiscard]] std::vector<std::string> execute_command(const fs::path& listing_filename, const std::function<void(std::stringstream&)>& generate_command)
