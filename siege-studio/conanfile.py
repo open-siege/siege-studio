@@ -12,7 +12,7 @@ class LocalConanFile(ConanFile):
     author = "Matthew Rindel (matthew@thesiegehub.com)"
     build_requires = "cmake/3.22.0"
     settings = "os", "compiler", "build_type", "arch"
-    requires = "3space/0.6.3", "wxwidgets/3.1.5@bincrafters/stable", "libpng/1.6.37", "imgui-sfml/2.5@bincrafters/stable", "zlib/1.2.12"
+    requires = "3space/0.6.3", "libpng/1.6.37", "imgui/cci.20230105+1.89.2.docking", "zlib/1.2.12"
     generators = "cmake_find_package"
 
     def requirements(self):
@@ -28,27 +28,6 @@ class LocalConanFile(ConanFile):
         if self.settings.os == "Linux":
             self.requires("tbb/2020.3")
 
-    def configure(self):
-        self.options["wxwidgets"].jpeg = "off"
-        self.options["wxwidgets"].tiff = "off"
-        self.options["wxwidgets"].expat = "off"
-        self.options["wxwidgets"].aui = True
-        self.options["wxwidgets"].opengl = True
-        self.options["wxwidgets"].mediactrl = False
-        self.options["wxwidgets"].secretstore = False
-        self.options["wxwidgets"].propgrid = False
-        self.options["wxwidgets"].ribbon = False
-        self.options["wxwidgets"].richtext = False
-        self.options["wxwidgets"].sockets = False
-        self.options["wxwidgets"].stc = False
-        self.options["wxwidgets"].richtext = False
-        self.options["wxwidgets"].webview = False
-        self.options["wxwidgets"].xml = False
-        self.options["wxwidgets"].xrc = False
-        self.options["wxwidgets"].fs_inet = False
-        self.options["wxwidgets"].help = False
-        self.options["wxwidgets"].protocol = False
-        self.options["wxwidgets"].html_help = False
 
     def build(self):
         cmake = CMake(self)

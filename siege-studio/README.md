@@ -50,12 +50,6 @@ New to C++, CMake or Conan? Checkout this set of examples with instructions to g
 
 If you don't already have Conan on your system, find instructions here: https://conan.io/downloads.html
 
-On first clone and setup, run:
-
-```conan install initial-settings.py```
-
-This will configure bincrafters and relevant settings to make the project easier to work with.
-
 To configure and build a debug build, use:
 ```conan install . -s build_type=Debug --build=missing```
 ```conan build .```
