@@ -1,4 +1,5 @@
-from conans import ConanFile, CMake, tools
+from conan import ConanFile
+from conan.tools.cmake import CMake, cmake_layout
 import glob
 import os.path
 
@@ -9,19 +10,19 @@ class LocalConanFile(ConanFile):
     url = "https://github.com/open-siege/open-siege"
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
-    build_requires = "cmake/3.22.0"
+    build_requires = "cmake/3.26.4"
     settings = "os", "compiler", "build_type", "arch"
     requires = "3space/0.6.3"
-    generators = "cmake_find_package"
+    generators = "CMakeToolchain", "CMakeDeps"
 
     def build(self):
         cmake = CMake(self)
-        cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
+        cmake.configure()
         cmake.build()
 
     def package(self):
         cmake = CMake(self)
-        cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
+        cmake.configure()
         cmake.install()
 
     def imports(self):

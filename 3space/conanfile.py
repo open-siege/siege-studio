@@ -1,4 +1,5 @@
-from conans import ConanFile, CMake, tools
+from conan import ConanFile
+from conan.tools.cmake import CMake, cmake_layout
 import glob
 import os.path
 
@@ -9,12 +10,15 @@ class LocalConanFile(ConanFile):
     url = "https://github.com/open-siege/open-siege"
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
-    build_requires = "cmake/3.22.0"
+    build_requires = "cmake/3.26.4"
     settings = "os", "compiler", "build_type", "arch"
     # openssl is here to force package resolution issue with cmake on linux
-    requires = "nlohmann_json/3.10.5", "boost/1.78.0", "glm/0.9.9.8", "span-lite/0.10.3", "taocpp-pegtl/3.2.1", "libzip/1.8.0", "openssl/1.1.1o", "catch2/2.13.8"
-    generators = "cmake_find_package"
+    requires = "nlohmann_json/3.11.2", "boost/1.82.0", "glm/cci.20230113", "span-lite/0.10.3", "taocpp-pegtl/3.2.7", "libzip/1.9.2", "catch2/3.3.2"
+    generators = "CMakeToolchain", "CMakeDeps"
     exports_sources = "CMakeLists.txt", "include/*", "src/*"
+
+    def layout(self):
+        cmake_layout(self)
 
     def configure(self):
         self.options["boost"].shared = False
@@ -25,13 +29,13 @@ class LocalConanFile(ConanFile):
 
     def build(self):
         cmake = CMake(self)
-        cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
+        cmake.configure()
         cmake.build()
         cmake.test()
 
     def package(self):
         cmake = CMake(self)
-        cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
+        cmake.configure()
         cmake.install()
 
     def package_info(self):

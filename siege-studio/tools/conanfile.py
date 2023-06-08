@@ -1,11 +1,12 @@
-from conans import ConanFile, CMake, tools
+from conan import ConanFile
+from conan.tools.cmake import CMake, cmake_layout
 import os.path
 import sys
 
 
 class LocalConanFile(ConanFile):
     settings = "os", "compiler", "build_type", "arch", "arch_build"
-    build_requires = "cmake/3.22.0"
+    build_requires = "cmake/3.26.4"
 
     def requirements(self):
         args = sys.argv[3:]
@@ -24,10 +25,10 @@ class LocalConanFile(ConanFile):
 
     def build(self):
         cmake = CMake(self)
-        cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
+        cmake.configure()
         cmake.build()
 
     def package(self):
         cmake = CMake(self)
-        cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
+        cmake.configure()
         cmake.install()

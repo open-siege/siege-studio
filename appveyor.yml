@@ -26,7 +26,7 @@ build_script:
   - conan package .
 
 test_script:
-  - conan install cmake/3.22.0@/ -g virtualenv
+  - conan install cmake/3.26.4@/ -g virtualenv
   - activate
   - cd build
   - ctest
