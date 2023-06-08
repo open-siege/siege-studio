@@ -3,4 +3,3 @@ project(siege-launcher)
 
 add_subdirectory(siege-input)
 add_subdirectory(siege-launcher)
-add_subdirectory(siege-extender)
