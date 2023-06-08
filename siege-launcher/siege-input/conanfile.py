@@ -1,4 +1,5 @@
-from conans import ConanFile, CMake, tools
+from conan import ConanFile
+from conan.tools.cmake import CMake, cmake_layout
 import glob
 import os.path
 
@@ -8,11 +9,10 @@ class HelloImguiSfmlConanFile(ConanFile):
     url = "https://github.com/open-siege/open-siege"
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
-    build_requires = "cmake/3.22.0"
-    # openssl is here to force package resolution issue with cmake on linux
-    requires = "nlohmann_json/3.10.5", "imgui/cci.20220621+1.88.docking", "sdl/2.24.0", "openssl/1.1.1o"
+    build_requires = "cmake/3.26.4"
+    requires = "nlohmann_json/3.11.2", "imgui/cci.20230105+1.89.2.docking", "sdl/2.26.1"
     settings = "os", "compiler", "build_type", "arch", "arch_build"
-    generators = "cmake_find_package"
+    generators = "CMakeToolchain", "CMakeDeps"
     exports_sources = "CMakeLists.txt", "include/*", "src/*"
 
     def configure(self):
@@ -27,12 +27,12 @@ class HelloImguiSfmlConanFile(ConanFile):
 
     def build(self):
         cmake = CMake(self)
-        cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
+        cmake.configure()
         cmake.build()
 
     def package(self):
         cmake = CMake(self)
-        cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
+        cmake.configure()
         cmake.install()
 
     def package_info(self):

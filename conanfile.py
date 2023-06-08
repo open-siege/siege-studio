@@ -1,4 +1,5 @@
-from conans import ConanFile, CMake, tools
+from conan import ConanFile
+from conan.tools.cmake import CMake, cmake_layout
 import os.path
 import sys
 import shutil
@@ -6,7 +7,7 @@ import json
 
 class LocalConanFile(ConanFile):
     settings = "os", "compiler", "build_type", "arch", "arch_build"
-    build_requires = "cmake/3.22.0"
+    build_requires = "cmake/3.26.4"
     version = "0.6.3"
 
     def requirements(self):
@@ -16,7 +17,7 @@ class LocalConanFile(ConanFile):
                 profile = args[index + 1]
                 args[index + 1] = os.path.abspath(profile) if os.path.exists(profile) else profile
 
-        self.run("conan install cmake/3.22.0@/ -g json")
+        self.run("conan install cmake/3.26.4@/ -g json")
 
         with open("conanbuildinfo.json", "r") as info:
             data = json.load(info)
@@ -63,7 +64,7 @@ class LocalConanFile(ConanFile):
         cmake.definitions["CONAN_CMAKE_SYSTEM_PROCESSOR"] = self.settings.arch
         cmake.definitions["CI"] = os.environ["CI"] if "CI" in os.environ else "False"
         cmake.definitions["PYTHON_EXECUTABLE"] = sys.executable
-        cmake.configure(source_folder=os.path.abspath("."), build_folder=os.path.abspath("build"))
+        cmake.configure()
         return cmake
 
     def build(self):
