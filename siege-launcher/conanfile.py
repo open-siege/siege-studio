@@ -21,7 +21,7 @@ class HelloImguiSfmlConanFile(ConanFile):
             f"conan install . {settings}",
             "conan export . "]), run_environment=True)
 
-        targets = ["siege-extender", "siege-launcher"]
+        targets = ["siege-launcher"]
 
         for target in targets:
             commands = [
