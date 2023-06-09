@@ -362,27 +362,30 @@ namespace studio::resources::iso
 
     static std::unordered_map<std::string, studio::resources::content_info> mapped_paths;
 
+    // TODO this doesn't compile in MSVC :(
+      // ICE errors are the worst
     std::transform(temp_results.begin(), temp_results.end(), temp_results.begin(), [&](auto& info) {
       return std::visit(
         overloaded {
           [&](studio::resources::folder_info& arg) -> studio::resources::content_info {
+          // commented out to fix ICE
+            // auto original = arg;
 
-            auto original = arg;
-
-            // TODO remap the directory to the archive path and not temp
-            arg.full_path = query.archive_path / fs::relative(arg.full_path, temp_archive_path);
-            arg.archive_path = query.archive_path;
-            mapped_paths.emplace(arg.full_path.string(), std::move(original));
+            // // TODO remap the directory to the archive path and not temp
+            // arg.full_path = query.archive_path / fs::relative(arg.full_path, temp_archive_path);
+            // arg.archive_path = query.archive_path;
+            // mapped_paths.emplace(arg.full_path.string(), std::move(original));
 
             return std::move(arg);
           },
             [&](studio::resources::file_info& arg) -> studio::resources::content_info  {
-            auto original = arg;
-            // TODO remap the directory to the archive path and not temp
-            arg.folder_path = query.archive_path / fs::relative(arg.folder_path, temp_archive_path);
-            arg.archive_path = query.archive_path;
+              // commented out to fix ICE
+            // auto original = arg;
+            // // TODO remap the directory to the archive path and not temp
+            // arg.folder_path = query.archive_path / fs::relative(arg.folder_path, temp_archive_path);
+            // arg.archive_path = query.archive_path;
 
-            mapped_paths.emplace((arg.folder_path / arg.filename).string(), std::move(original));
+            // mapped_paths.emplace((arg.folder_path / arg.filename).string(), std::move(original));
 
             return std::move(arg);
             }
