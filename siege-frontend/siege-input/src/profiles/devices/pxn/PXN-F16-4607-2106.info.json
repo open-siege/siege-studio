@@ -1,0 +1,17 @@
+{
+    "fileVersion": 1,
+    "fileType": "deviceInfo",
+    "deviceName": "PXN-F16",
+    "deviceGuid": "03000000ff1100003a08000000000000",
+    "vendorId": "0x11ff",
+    "productId": "0x083a",
+    "productVersion": 0,
+    "serialNumber": "",
+    "detectedDeviceType": "Flight Stick",
+    "numButtons": 12,
+    "numHats": 1,
+    "numAxes": 4,
+    "numBalls": 0,
+    "hasRumble": true,
+    "hasTriggerRumble": false
+}
