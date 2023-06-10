@@ -6,10 +6,13 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 find_package(imgui REQUIRED)
 
 if(WIN32)
+    find_package(vigemclient REQUIRED)
     add_executable(siege-launcher bindings/imgui_impl_sdl.cpp
             bindings/imgui_impl_dx11.cpp
             src/renderer/windows.cpp
             src/main.cpp)
+
+    target_link_libraries(siege-launcher PRIVATE vigemclient::vigemclient)
 else()
     add_executable(siege-launcher bindings/imgui_impl_sdl.cpp
             bindings/imgui_impl_sdlrenderer.cpp

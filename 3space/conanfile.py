@@ -45,9 +45,3 @@ class LocalConanFile(ConanFile):
     def package_info(self):
         self.cpp_info.libs.append("3space")
 
-    def imports(self):
-        tools.rmdir("cmake")
-        tools.mkdir("cmake")
-        [tools.rename(file, f"cmake/{file}") for file in glob.glob("*.cmake")]
-
-

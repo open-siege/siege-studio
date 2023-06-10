@@ -17,18 +17,8 @@ class LocalConanFile(ConanFile):
     generators = "CMakeToolchain", "CMakeDeps"
 
     def requirements(self):
-        args = sys.argv[3:]
-        for index, value in enumerate(args):
-            if value == "--profile":
-                profile = args[index + 1]
-                args[index + 1] = os.path.abspath(profile) if os.path.exists(profile) else profile
-
-        settings = ' '.join(args)
-        self.run(" && ".join([f"cd tools", f"conan install . {settings}"]), run_environment=True)
-
         if self.settings.os == "Linux":
             self.requires("tbb/2020.3")
-
 
     def build(self):
         cmake = CMake(self)

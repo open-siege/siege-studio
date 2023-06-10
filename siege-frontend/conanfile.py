@@ -15,6 +15,10 @@ class SiegeLauncherConanFile(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     generators = "CMakeToolchain", "CMakeDeps"
 
+    def requirements(self):
+        if self.settings.os == "Windows":
+            self.requires("vigemclient/1.21.222.0")
+
     def layout(self):
         cmake_layout(self)
 

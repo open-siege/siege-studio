@@ -1,0 +1,23 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index ef85e0b..edc9a12 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,6 +1,15 @@
+-Project(ViGEmClient)
+ cmake_minimum_required(VERSION 3.20.2)
++Project(ViGEmClient)
+ 
+ set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/ViGEmClient.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/Internal.h ${CMAKE_CURRENT_SOURCE_DIR}/src/resource.h ${CMAKE_CURRENT_SOURCE_DIR}/src/ViGEmClient.rc)
+-add_library(ViGEmClient EXCLUDE_FROM_ALL ${SOURCES})
++add_library(ViGEmClient STATIC ${SOURCES})
+ target_include_directories(ViGEmClient PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
++
++install(DIRECTORY include
++        DESTINATION .
++        COMPONENT devel
++        FILES_MATCHING PATTERN "*.h")
++
++install(TARGETS ViGEmClient
++        CONFIGURATIONS Debug Release
++        RUNTIME DESTINATION lib)
+\ No newline at end of file
