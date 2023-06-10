@@ -46,7 +46,7 @@ class SiegeLauncherConanFile(ConanFile):
         dep = self.dependencies["imgui"]
         (base, other) = os.path.split(dep.cpp_info.libdirs[0])
         fullDir = os.path.join(base, "res", "bindings")
-        dstDir = os.path.join(self.source_folder, "siege-launcher", "bindings")
+        dstDir = os.path.join(self.source_folder, "siege-interface", "bindings")
         print(fullDir)
         print(dstDir)
 

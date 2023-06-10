@@ -14,11 +14,10 @@
 
 #include <SDL.h>
 #include <imgui.h>
-#include "renderer/renderer.hpp"
-#include "imgui_impl_sdl.h"
 
 #include "platform/platform.hpp"
 #include "virtual_joystick.hpp"
+#include "interface/main.hpp"
 
 inline auto to_array(const siege::JoystickGUID& guid)
 {
@@ -79,121 +78,48 @@ constexpr static auto devices_which_crash = std::array<std::pair<Uint16, Uint16>
   { 121, 6287 }
 }};
 
-int main(int, char**)
+
+struct LauncherOnFrameBeginCallback
 {
-  siege::SetHint(SDL_HINT_JOYSTICK_ROG_CHAKRAM, "1");
-  siege::InitSubSystem(SDL_INIT_JOYSTICK);
+  std::vector<std::shared_ptr<siege::Joystick>> joysticks;
+  
+  // Same as the number of joysticks to make it easier to index.
+  std::vector<std::shared_ptr<SDL_Haptic>> haptic_devices;
+  std::vector<std::shared_ptr<SDL_GameController>> controllers;
+  bool controller_rumble;
+  bool trigger_rumble;
+  int low_frequency;
+  int high_frequency;
+  int duration;
+  int left_trigger;
+  int right_trigger;
+  int trigger_duration;
 
-  for (auto i = 0; i < siege::NumJoysticks(); ++i)
+  bool led_enabled;
+  ImVec4 led_colour;
+
+  std::vector<std::pair<SDL_GameControllerButton, SDL_GameControllerButtonBind>> current_bindings;
+
+  LauncherOnFrameBeginCallback()
+   : controller_rumble(false), 
+    trigger_rumble(false),
+      low_frequency(0xAAAA),
+      high_frequency(0xAAAA),
+      duration(1000),
+      left_trigger(0xAAAA),
+      right_trigger(0xAAAA),
+      trigger_duration(1000),
+      led_enabled(false),
+      led_colour(1.0f, 0.0f, 1.0f, 0.5f)
   {
-    auto bad_device = std::find(devices_which_crash.begin(), devices_which_crash.end(),
-                        std::make_pair(siege::JoystickGetDeviceVendor(i), siege::JoystickGetDeviceProduct(i)));
-
-    if (bad_device != devices_which_crash.end())
-    {
-      siege::SetHint(SDL_HINT_DIRECTINPUT_ENABLED, "0");
-    }
-    // TODO store this in a collection to use when saving device info
-//    std::cout << "Loading " << siege::JoystickNameForIndex(i) << '\n';
-//    std::cout << "Path " << siege::JoystickPathForIndex(i) << '\n';
-//    std::cout << "GUID " << to_string(siege::JoystickGetDeviceGUID(i)) << '\n';
-//    std::cout << "Vendor " << siege::JoystickGetDeviceVendor(i) << '\n';
-//    std::cout << "Product " << siege::JoystickGetDeviceProduct(i) << '\n';
-//    std::cout << "Version " << siege::JoystickGetDeviceProductVersion(i) << '\n';
-//    std::cout << "Type " << siege::JoystickGetDeviceType(i) << '\n';
-  }
-  siege::QuitSubSystem(SDL_INIT_JOYSTICK);
-
-
-  if (siege::InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC) != 0)
-  {
-    std::cerr << "Error: " << SDL_GetError() << '\n';
-    return -1;
-  }
-
-  // SDL scope
-  {
-    SDL_WindowFlags window_flags = SDL_WindowFlags(SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    auto window = std::unique_ptr<SDL_Window, void (*)(SDL_Window*)>(
-      SDL_CreateWindow("Siege Input", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags), SDL_DestroyWindow);
-
-    siege::InitVirtualJoysticksFromKeyboardsAndMice();
-    siege::InitVirtualJoysticksFromJoysticks();
-
-    // The Rapoo V600S DirectInput driver causes an access violation in winmm when this is called.
-    // Will find out if I can trigger vibration through the Joystick API alone, or if this needs some work.
-    // SDL_InitSubSystem(SDL_INIT_HAPTIC);
-
-    // ImGui scope
-    {
-      IMGUI_CHECKVERSION();
-      auto context = std::unique_ptr<ImGuiContext, void (*)(ImGuiContext*)>(ImGui::CreateContext(), siege::RenderShutdown);
-
-      ImGuiIO& io = ImGui::GetIO();
-
-      io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-      io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-
-      ImGui::StyleColorsDark();
-
-      auto render_context = siege::RenderInit(window.get());
-
-      if (!render_context)
-      {
-        return -1;
-      }
-
-      ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
-      bool running = true;
-
-      std::vector<std::shared_ptr<siege::Joystick>> joysticks(SDL_NumJoysticks());
-
-      // Same as the number of joysticks to make it easier to index.
-      std::vector<std::shared_ptr<SDL_Haptic>> haptic_devices(SDL_NumJoysticks());
-      std::vector<std::shared_ptr<SDL_GameController>> controllers(SDL_NumJoysticks());
-
-      bool controller_rumble = false;
-      bool trigger_rumble = false;
-      int low_frequency = 0xAAAA;
-      int high_frequency = 0xAAAA;
-      int duration = 1000;
-      int left_trigger = 0xAAAA;
-      int right_trigger = 0xAAAA;
-      int trigger_duration = 1000;
-
-      bool led_enabled = false;
-      ImVec4 led_colour(1.0f, 0.0f, 1.0f, 0.5f);
-
-      std::vector<std::pair<SDL_GameControllerButton, SDL_GameControllerButtonBind>> current_bindings;
+      joysticks.assign(SDL_NumJoysticks(), nullptr);
+      haptic_devices.assign(SDL_NumJoysticks(), nullptr);
+      controllers.assign(SDL_NumJoysticks(), nullptr);
       current_bindings.reserve(std::size_t(SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_MAX));
+  }
 
-      while (running)
-      {
-        siege::JoystickUpdate();
-        SDL_Event event;
-        while (SDL_PollEvent(&event))
-        {
-          ImGui_ImplSDL2_ProcessEvent(&event);
-          if (event.type == SDL_QUIT)
-          {
-            running = false;
-          }
 
-          if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window.get()))
-          {
-            running = false;
-          }
-
-          if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED && event.window.windowID == SDL_GetWindowID(window.get()))
-          {
-            // Release all outstanding references to the swap chain's buffers before resizing.
-            siege::Resize(*render_context);
-          }
-        }
-
-        siege::NewFrame();
-
+  void operator()() {
         ImGui::Begin("Input Info");
         ImGui::Text("Number of controllers: %d", SDL_NumJoysticks());
 
@@ -219,7 +145,7 @@ int main(int, char**)
 
               if (!joystick || (joystick && siege::JoystickGetDeviceInstanceID(i) != siege::JoystickInstanceID(joystick.get())))
               {
-                joystick = joysticks[i] = std::shared_ptr<siege::Joystick>(siege::JoystickOpen(i), [i, &haptic_devices, &controllers](auto* joystick) {
+                joystick = joysticks[i] = std::shared_ptr<siege::Joystick>(siege::JoystickOpen(i), [i, this](auto* joystick) {
                   if (haptic_devices.size() > i && haptic_devices[i])
                   {
                     haptic_devices[i] = std::shared_ptr<SDL_Haptic>();
@@ -648,24 +574,35 @@ int main(int, char**)
         }
 
         ImGui::End();
-
-        ImGui::Render();
-        siege::RenderReset(*render_context, clear_color);
-        siege::RenderDrawData(ImGui::GetDrawData());
-
-        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        {
-          ImGui::UpdatePlatformWindows();
-          ImGui::RenderPlatformWindowsDefault();
-        }
-
-        siege::RenderPresent(*render_context);
-      }
-    }
-    // /ImGui scope
   }
+};
 
-  SDL_Quit();
 
-  return 0;
+int main(int argc, char** argv)
+{
+  siege::SetHint(SDL_HINT_JOYSTICK_ROG_CHAKRAM, "1");
+  siege::InitSubSystem(SDL_INIT_JOYSTICK);
+
+  for (auto i = 0; i < siege::NumJoysticks(); ++i)
+  {
+    auto bad_device = std::find(devices_which_crash.begin(), devices_which_crash.end(),
+                        std::make_pair(siege::JoystickGetDeviceVendor(i), siege::JoystickGetDeviceProduct(i)));
+
+    if (bad_device != devices_which_crash.end())
+    {
+      siege::SetHint(SDL_HINT_DIRECTINPUT_ENABLED, "0");
+    }
+  }
+  siege::QuitSubSystem(SDL_INIT_JOYSTICK);
+
+  siege::AppCallbacks callbacks;
+  callbacks.onWindowCreated = [](SDL_Window* window) {
+    SDL_SetWindowTitle(window, "Siege Launcher");
+    siege::InitSubSystem(SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC);
+    siege::InitVirtualJoysticksFromKeyboardsAndMice();
+    siege::InitVirtualJoysticksFromJoysticks();
+  };
+  callbacks.onNewFrame = LauncherOnFrameBeginCallback{};
+
+  return siege::AppMain(std::vector<std::string>(argv, argv + argc), std::move(callbacks));
 }
