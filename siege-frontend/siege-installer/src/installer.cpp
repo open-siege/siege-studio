@@ -35,7 +35,6 @@ namespace dio
   namespace atd = studio::resources::atd;
   namespace iso = studio::resources::iso;
   namespace cab = studio::resources::cab;
-  namespace seven_zip = studio::resources::seven_zip;
 }
 
 studio::resources::resource_explorer create_resource_explorer()
@@ -61,7 +60,7 @@ studio::resources::resource_explorer create_resource_explorer()
   archive.add_archive_type(".cln", std::make_unique<dio::cln::cln_file_archive>());
   archive.add_archive_type(".atd", std::make_unique<dio::atd::atd_file_archive>());
 
-  archive.add_archive_type(".7z", std::make_unique<dio::seven_zip::seven_zip_file_archive>());
+  archive.add_archive_type(".7z", std::make_unique<dio::zip::seven_zip_file_archive>());
 
   archive.add_archive_type(".cue", std::make_unique<dio::iso::iso_file_archive>());
   archive.add_archive_type(".mds", std::make_unique<dio::iso::iso_file_archive>());

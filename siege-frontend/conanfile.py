@@ -1,19 +1,22 @@
 from conan import ConanFile
 from conan.tools.cmake import CMake, cmake_layout
+from conan.tools.files import copy
 import glob
 import os.path
 
-class HelloImguiSfmlConanFile(ConanFile):
-    name = "siege-input"
+class SiegeLauncherConanFile(ConanFile):
+    name = "siege-frontend"
     version = "0.6.3"
     url = "https://github.com/open-siege/open-siege"
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
     build_requires = "cmake/3.26.4"
-    requires = "nlohmann_json/3.11.2", "imgui/cci.20230105+1.89.2.docking", "sdl/2.26.1"
-    settings = "os", "compiler", "build_type", "arch", "arch_build"
+    requires = "3space/0.6.3", "imgui/cci.20230105+1.89.2.docking", "sdl/2.26.1", "catch2/3.3.2", "cpr/1.10.1"
+    settings = "os", "compiler", "build_type", "arch"
     generators = "CMakeToolchain", "CMakeDeps"
-    exports_sources = "CMakeLists.txt", "include/*", "src/*"
+
+    def layout(self):
+        cmake_layout(self)
 
     def configure(self):
         self.options["sdl"].shared = False
@@ -35,10 +38,16 @@ class HelloImguiSfmlConanFile(ConanFile):
         cmake.configure()
         cmake.install()
 
-    def package_info(self):
-        self.cpp_info.libs.append("siege-input")
+    def generate(self):
+        dep = self.dependencies["imgui"]
+        (base, other) = os.path.split(dep.cpp_info.libdirs[0])
+        fullDir = os.path.join(base, "res", "bindings")
+        dstDir = os.path.join(self.source_folder, "siege-launcher", "bindings")
+        print(fullDir)
+        print(dstDir)
 
-    def imports(self):
-        tools.rmdir("cmake")
-        tools.mkdir("cmake")
-        [tools.rename(file, f"cmake/{file}") for file in glob.glob("*.cmake")]
+        if not os.path.exists(dstDir):
+            os.makedirs(dstDir)
+        copy(self, "*.h", fullDir, dstDir)
+        copy(self, "*.cpp", fullDir, dstDir)       
+            

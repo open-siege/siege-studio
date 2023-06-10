@@ -13,7 +13,7 @@ class LocalConanFile(ConanFile):
     author = "Matthew Rindel (matthew@thesiegehub.com)"
     build_requires = "cmake/3.26.4"
     settings = "os", "compiler", "build_type", "arch"
-    requires = "3space/0.6.3", "libpng/1.6.37", "imgui/cci.20230105+1.89.2.docking", "zlib/1.2.12"
+    requires = "3space/0.6.3", "libpng/1.6.37", "imgui/cci.20230105+1.89.2.docking", "sdl/2.26.1"
     generators = "CMakeToolchain", "CMakeDeps"
 
     def requirements(self):

@@ -5,6 +5,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 find_package(cpr REQUIRED)
 find_package(Catch2 REQUIRED)
+find_package(3space REQUIRED)
 
 add_executable(siege-installer src/installer.cpp src/games/games.cpp)
 set_property(TARGET siege-installer PROPERTY CXX_STANDARD 17)
@@ -13,7 +14,7 @@ target_include_directories(siege-installer PRIVATE src)
 
 ## Testing
 add_executable(tests src/tests_main.test.cpp)
-target_link_libraries(tests PRIVATE Catch2::Catch2)
+target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 
 include(CTest)
 include(Catch)

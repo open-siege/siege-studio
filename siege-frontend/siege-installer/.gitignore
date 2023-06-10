@@ -46,3 +46,4 @@
 /graph_info.json
 /cmake-build-debug/
 /cmake/
+CMakeUserPresets.json
