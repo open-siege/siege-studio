@@ -6,38 +6,41 @@
 
 Classic Games, Modern Technology.
 
-Open Siege is an open-source reimplementation of the 3Space game engine, used by several games such as the Earthsiege/Starsiege series, the Red Baron/Great War Planes series and several others.
+Open Siege is a suite of tools to enable the compatibility and playability of classic games, primarily focusing on vehicle simulations and first person shooters from the DOS and early Windows era.
 
-Open Siege exists to breathe new life into games made by Dynamix, which use the 3Space engine and its descendants, while also reverse engineering their formats for fun, modding and preservation.
+The eventual goal is to become an open-source reimplementation of the 3Space game engine, used by several games such as the Earthsiege/Starsiege series, the Red Baron/Great War Planes series and several others.
 
-For a list of features currently being worked on, see the release notes for the upcoming changes here: vhttps://github.com/open-siege/open-siege/wiki/Release-Notes
+Until then, the focus is currently on the following goals:
+* Installability: making games easier to install and integrating them with modern game launchers.
+* Controllability: configuring modern controllers, both common and niche, with popular control schemes and fixing compatibility issues.
+* Modability: being able to explore, preview and edit assets which belong to a game.
 
-Primary goals of the project at this time are to reverse engineer all of the file formats of files used by each game, while also enabling each of the games to work correctly on modern platforms, with additional enhances provided by hooking the games as needed.
-
-Some of the key areas of focus are:
-* Support the viewing of 3D assets from various games (specifically DTS - Dynamix Three Space files).
-* Support the extraction of archive files for specified games (typically VOL - a game volume archive file).
-* Support viewing of texture data for the 3D assets and the games in question.
-
-Secondary goals include:
-* The ability to save new 3D assets using the supported format for that game.
-* The ability to do some basic manipulation of the 3D assets.
-* The ability to convert the 3D assets to a more common format for use in other 3D software.
-* Game specific file format support, for example VEH for Starsiege, which would allow for editing of vehicle load-outs and saving them back to the file system.
-* Support of other game formats which serve a similar function (like MDL or PAK from Quake).
-* Become a tool of choice for modding games using 3Space or Torque technology and potentially other game engines.
-
-Tertiary goals:
-* Create a new game engine that can host all of the files and content from each game, including:
-  * A scripting engine supporting scripts from Starsiege, Starsiege Tribes and Tribes 2.
-  * Support for original game files with minimal to no modifications.
-  * The abillity to play the games on more platforms beyond DOS and Windows.
-
-### Game & Format Support
-
-For a full list of games which are intended to be supported, see: [game-support.md](docs/game-support.md)
+The project contains the following components, to make the goals possible (most are work in progress and not ready for use yet):
+* Siege Launcher
+  * A configuration tool for detecting controllers and games and creating matching configurations for them.
+  * It supports editing game configuration files to match the physical layout of the controller, and modern control schemes for the genre.
+  * It takes care of the differences between DirectInput and XInput controllers and makes sure the game works with both.
+  * It can configure multiple device setups such as joystick + throttle or joystick + joystick, plus a few others.
+  * Can run in headless mode or with a UI with system tray support.
+* Siege Installer
+  * Allows for installation of a game from a phyiscal disc or compressed/disc archive.
+  * Can work with multiple levels of archives (ISO file inside of a zip file).
+  * Support for adding the game to a launcher such as GOG or Steam.
+  * Support for adding a game to an existing entry in GOG or Steam, especially for sequels or related games (for example adding Fury3 to Terminal Velocity).
+* Siege Studio
+  * Supports browsing of game files and previewing the contents of supported formats.
+  * Allows for conversion to and from certain formats.
+  * Supports extraction of game archive files.
+* lib3space
+  * The core of the file format support in the project. 
+  * It contains all the logic to parse game archive and asset files as well as configuration files.
+* Siege Input and Siege Interface
+  * Support libaries which make up the backbone of the front-end projects.
 
 ### Setup and Build Instructions
+
+_Caution!_ The instructions are currently incorrect because of a move from Conan 1 to Conan 2 and thus are no longer correct.
+Updates are coming soon.
 
 New to C++, CMake or Conan? Checkout this set of examples with instructions to get started: https://github.com/matthew-rindel/hello-cpp-durban
 

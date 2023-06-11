@@ -8,8 +8,6 @@ Classic Games, Modern Technology.
 
 Siege Studio exists to breathe new life into games made by Dynamix, which use the 3Space engine and its descendants, while also reverse engineering their formats for fun, modding and preservation.
 
-For a list of current development tasks, check out this ClickUp board here: https://share.clickup.com/b/h/5-15151441-2/aeb3a2cc99994ef
-
 If you are reading this on your computer, checkout the latest README here: https://github.com/open-siege/open-siege
 
 A first goal for each game is to do the following:
@@ -78,7 +76,7 @@ Hopefully it doesn't come down to that, because the release-ready version should
 
 TODO: add information for all of the other working build targets
 
-#### 3space-studio
+#### siege-studio
 
 TODO: write a decent description of how to use the Siege Studio GUI.
 
