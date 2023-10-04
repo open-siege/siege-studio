@@ -22,7 +22,8 @@ list(REMOVE_ITEM LIB_SRC_FILES ${TEST_SRC_FILES})
 
 file(GLOB TESTABLE_SRC_FILES src/content/*.cpp
         src/content/**/*.cpp
-        src/resources/*.cpp)
+        src/resources/*.cpp
+        src/configurations/*.cpp)
 
 add_library(3space STATIC ${LIB_SRC_FILES})
 set_property(TARGET 3space PROPERTY CXX_STANDARD 17)

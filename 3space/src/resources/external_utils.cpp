@@ -7,6 +7,7 @@
 #include <iostream>
 #include <functional>
 #include <variant>
+#include <list>
 #include <unordered_set>
 #include "resources/external_utils.hpp"
 

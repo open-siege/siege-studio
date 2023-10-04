@@ -1,13 +1,11 @@
 #include <limits>
 #include "configurations/id_tech.hpp"
-#include "endian_arithmetic.hpp"
 
 namespace studio::configurations::id_tech
 {
-    namespace endian = boost::endian;
-
     namespace id_tech_2
     {
+        using config_line = text_game_config::config_line;
         constexpr static auto end_line = std::string_view("\r\n");
 
         constexpr static auto average_line_size = 20;
@@ -31,14 +29,14 @@ namespace studio::configurations::id_tech
         std::vector<std::string_view> split_line(std::string_view line)
         {
             std::vector<std::string_view> segments;
-            results.reserve(3);
+            segments.reserve(3);
             std::optional<std::size_t> first_quote;
             auto start = 0u;
             for (auto i = 0u; i < line.size(); ++i)
             {
                 if (i == ' ' && !first_quote.has_value())
                 {
-                    results.emplace_back(line.substr(start, i - start));
+                    segments.emplace_back(line.substr(start, i - start));
                     start = i + 1;
                 }
 
@@ -50,7 +48,7 @@ namespace studio::configurations::id_tech
                 if (line[i] == '\"' && first_quote.has_value())
                 {
                     start = first_quote.value() + 1;
-                    results.emplace_back(line.substr(start,  - 1 - start));
+                    segments.emplace_back(line.substr(start,  - 1 - start));
                     first_quote.reset();
                 }
             }
@@ -102,7 +100,7 @@ namespace studio::configurations::id_tech
                 return std::nullopt;
             }
             
-            return text_game_config(std::move(buffer), std::move(config_data));
+            return std::make_optional<text_game_config>(std::move(buffer), std::move(config_data));
         }
 
         std::string join_line(const config_line& line)
@@ -121,28 +119,30 @@ namespace studio::configurations::id_tech
 
                 if (segment.find(' ') != std::string_view::npos)
                 {
-                    result.append('\"');
+                    result.push_back('\"');
                 }
 
                 result.append(segment);
 
                 if (segment.find(' ') != std::string_view::npos)
                 {
-                    result.append('\"');
+                    result.push_back('\"');
                 }
 
-                result.append(' ');
+                result.push_back(' ');
             }
 
-            result.append('\"');
+            result.push_back('\"');
             result.append(line.value);
-            result.append('\"');
+            result.push_back('\"');
+
+            return result;
         }
 
 
-        void save_config(std::istream& raw_data, const text_game_config& config)
+        void save_config(std::ostream& raw_data, const text_game_config& config)
         {
-            config.persist([&] (const auto& entries) 
+            config.persist([&] (const std::vector<config_line>& entries) 
             {
                 for (auto& entry : entries)
                 {

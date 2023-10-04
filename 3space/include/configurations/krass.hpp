@@ -6,9 +6,9 @@
 
 namespace studio::configurations::krass
 {
-    std::optional<game_config> load_config(std::istream&, std::size_t);
+    std::optional<text_game_config> load_config(std::istream&, std::size_t);
 
-    void save_config(std::istream&, const game_config&);
+    void save_config(std::istream&, const text_game_config&);
 }
 
 #endif
