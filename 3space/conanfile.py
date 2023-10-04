@@ -18,6 +18,9 @@ class LocalConanFile(ConanFile):
     exports_sources = "CMakeLists.txt", "include/*", "src/*"
 
     def requirements(self):
+        if self.settings.os == "Linux":
+            self.requires("onetbb/2021.3.0")
+
         self.requires("boost/1.82.0", transitive_headers=True)
         self.requires("nlohmann_json/3.11.2", transitive_headers=True)
 
