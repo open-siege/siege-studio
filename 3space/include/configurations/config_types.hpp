@@ -136,6 +136,16 @@ namespace studio::configurations
                     }, data);
         }
 
+        template <typename StoredType> bool has() const
+        {
+            return std::holds_alternative<StoredType>(data);
+        }
+
+        template <typename StoredType> StoredType get() const
+        {
+            return std::get<StoredType>(data);
+        }
+
         inline bool operator!=(const config_value& rhs) const
         { 
                     return !(*this == rhs); 
