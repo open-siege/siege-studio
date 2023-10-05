@@ -10,6 +10,8 @@
 #include <string_view>
 #include <cstdint>
 #include <functional>
+#include <istream>
+#include <ostream>
 
 namespace studio::configurations
 {
@@ -51,6 +53,8 @@ namespace studio::configurations
             void remove(std::string_view key);
 
             void persist(std::function<void(const std::vector<config_entry>&)>) const;
+        private: 
+            std::vector<config_entry> entries;
     };
 
     class text_game_config
