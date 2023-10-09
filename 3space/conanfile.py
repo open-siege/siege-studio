@@ -1,5 +1,6 @@
 from conan import ConanFile
 from conan.tools.cmake import CMake, cmake_layout
+from conan.tools.system.package_manager import Apt
 import glob
 import os.path
 
@@ -17,10 +18,15 @@ class LocalConanFile(ConanFile):
     generators = "CMakeToolchain", "CMakeDeps"
     exports_sources = "CMakeLists.txt", "include/*", "src/*"
 
-    def requirements(self):
+    # TODO make this more robust so that it can work for other distro's
+    # or add a proper check for Ubuntu specifically
+    def system_requirements(self):
         if self.settings.os == "Linux":
-            self.requires("onetbb/2021.3.0")
+            apt = Apt(self)
+            apt.install(["libtbb-dev"], update=True, check=True)
 
+
+    def requirements(self):
         self.requires("boost/1.82.0", transitive_headers=True)
         self.requires("nlohmann_json/3.11.2", transitive_headers=True)
 

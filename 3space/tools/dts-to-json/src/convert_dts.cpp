@@ -1,8 +1,8 @@
 #include <iostream>
 #include <iomanip>
 #include <iterator>
-#include <algorithm>
 #include <execution>
+#include <algorithm>
 #include <bitset>
 #include <fstream>
 #include "content/json_boost.hpp"
@@ -34,7 +34,7 @@ int main(int argc, const char** argv)
     ".dml",
     ".DML");
 
-  std::for_each(files.begin(), files.end(), [](auto&& file_name) {
+  std::for_each(std::execution::par_unseq, files.begin(), files.end(), [](auto&& file_name) {
     try
     {
       {
