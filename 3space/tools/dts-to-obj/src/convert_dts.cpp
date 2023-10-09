@@ -1,7 +1,7 @@
 #include <iostream>
 #include <iterator>
-#include <algorithm>
 #include <execution>
+#include <algorithm>
 #include <bitset>
 #include <utility>
 #include <unordered_map>

@@ -8,6 +8,11 @@ add_executable(unvol src/unvol.cpp)
 set_property(TARGET unvol PROPERTY CXX_STANDARD 17)
 target_link_libraries(unvol 3space::3space)
 
+if(UNIX AND NOT APPLE)
+    find_package(TBB REQUIRED)
+    target_link_libraries(unvol TBB::tbb)
+endif()
+
 install(TARGETS unvol
         CONFIGURATIONS Debug Release
         RUNTIME DESTINATION bin)
