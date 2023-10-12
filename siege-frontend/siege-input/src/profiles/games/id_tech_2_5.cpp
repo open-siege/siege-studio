@@ -3,35 +3,61 @@
 #include <string_view>
 #include <cstdint>
 
+// movement
+constexpr static auto forward_on = "+forward"; 
+constexpr static auto backward_on = "+back";
+constexpr static auto move_left_on = "+moveleft"; // strafe left
+constexpr static auto move_right_on = "+moveright"; // strafe right
+constexpr static auto move_up_on = "+moveup"; // jump
+constexpr static auto move_down_on = "+movedown"; // crouch
+constexpr static auto speed_on = "+speed"; // walk/run
+
+// aiming
+constexpr static auto look_up_on = "+lookup"; 
+constexpr static auto look_down_on = "+lookdown"; 
+constexpr static auto look_left_on = "+left"; // strafe left
+constexpr static auto look_right_on = "+right"; // strafe right
+
+// shooting
+constexpr static auto attack_on = "+attack";
+constexpr static auto weapon_next = "weapnext";
+constexpr static auto weapon_previous = "weaprev";
+
+
+constexpr static auto melee_attack_on = "+melee-attack";
+
+constexpr static auto idtech_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
+    {"r2", attack_on },
+    {"left_y+", forward_on },
+    {"left_y-", backward_on },
+    {"left_x+", move_left_on },
+    {"left_x-", move_right_on },
+    {"right_y+", look_up_on },
+    {"right_y-", look_down_on },
+    {"right_x+", look_up_down },
+    {"right_x-", turn_left_right },
+    {"l3", speed_on },
+    {"r3", melee_attack_on },
+    {"triangle", weapon_next},
+    {"circle", move_down_on},
+    {"cross", move_up_on}
+}};
+
+// FreeCS
+// OpenHL
+// Quake (DOS)
+// WinQuake
+// GLQuake
+// Hexen 2
+// CIA Operatives
+// Laser Arena
 
 // Soldier of Fortune
-
-constexpr static auto attack_on = "+attack";
-constexpr static auto speed_on = "+speed";
-constexpr static auto move_up_on = "+moveup";
-constexpr static auto move_down_on = "+movedown";
-constexpr static auto melee_attack_on = "+melee-attack";
-constexpr static auto weapnext = "weapnext";
-constexpr static auto move_forward_backward = "move_forward_backward";
-constexpr static auto move_left_right = "move_left_right";
-constexpr static auto look_up_down = "look_up_down";
-constexpr static auto turn_left_right = "turn_left_right";
-
 constexpr static auto sof_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
-    {"r2", attack_on },
     {"l2", "+altattack" },
     {"l1", "itemnext" },
     {"r1", "itemuse"},
-    {"left_y_axis",  move_forward_backward },
-    {"left_x_axis", move_left_right },
-    {"right_y_axis", look_up_down },
-    {"right_x_axis", turn_left_right },
-    {"l3", speed_on },
-    {"r3", melee_attack_on },
-    {"triangle", weapnext },
-    {"circle",  move_down_on },
     {"square", "+use-plus-special"},
-    {"cross", move_up_on },
     {"start", "menu objectives"},
     {"select", "score"},
 }};
@@ -52,20 +78,10 @@ constexpr static auto sof_dual_stick_defaults = std::array<std::array<std::strin
 // Kingpin
 
 constexpr static auto kingpin_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
-    {"r2", attack_on },
     {"l2", "holster" },
     {"l1", "invnext" },
     {"r1", "invuse"},
-    {"left_y_axis", move_forward_backward},
-    {"left_x_axis", move_left_right },
-    {"right_y_axis", look_up_down},
-    {"right_x_axis", turn_left_right },
-    {"l3", speed_on },
-    {"r3", melee_attack_on },
-    {"triangle", weapnext},
-    {"circle", move_down_on },
     {"square", "+activate"},
-    {"cross", move_up_on},
     {"start", "cmd help"},
     {"select", "inven"},
     {"d_pad_up", "flashlight"},
@@ -88,20 +104,10 @@ constexpr static auto kingpin_dual_stick_defaults = std::array<std::array<std::s
 //alias -melee-attack "weapprev; -attack"
 
 constexpr static auto sin_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
-    {"r2", attack_on },
     {"l2", "weaponuse" },
     {"l1", "invnext" },
     {"r1", "invuse"},
-    {"left_y_axis", move_forward_backward},
-    {"left_x_axis", move_left_right },
-    {"right_y_axis", look_up_down },
-    {"right_x_axis", turn_left_right },
-    {"l3", speed_on },
-    {"r3", melee_attack_on },
-    {"triangle", weapnext},
-    {"circle", move_down_on},
     {"square", "+use"},
-    {"cross", move_up_on},
     {"start", "showinfo"},
     {"select", "toggleviewmode"} 
 }};
@@ -112,20 +118,11 @@ constexpr static auto sin_dual_stick_defaults = std::array<std::array<std::strin
 // base/autoexec.cfg
 
 constexpr static auto heretic2_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
-    {"r2", attack_on },
     {"l2", "+defend" },
     {"l1", "defprev" },
     {"r1", "defnext"},
-    {"left_y_axis", move_forward_backward },
-    {"left_x_axis", move_left_right },
-    {"right_y_axis", look_up_down },
-    {"right_x_axis", turn_left_right },
-    {"l3", speed_on },
-    {"r3", melee_attack_on},
-    {"triangle", weapnext},
     {"circle", "+creep"},
     {"square", "+action"},
-    {"cross", move_up_on},
     {"start", "menu_objectives"},
     {"select", "menu_city_map"} 
 }};
@@ -141,19 +138,10 @@ constexpr static auto heretic2_dual_stick_defaults = std::array<std::array<std::
 // baseq2/autoexec.cfg
 
 constexpr static auto quake2_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
-    {"r2", attack_on },
     {"l2", "invuse" },
     {"l1", "invnext" },
     {"r1", "+throw-grenade"},
-    {"left_y_axis", move_forward_backward },
-    {"left_x_axis", move_left_right },
-    {"right_y_axis", look_up_down },
-    {"right_x_axis", turn_left_right },
-    {"l3", "+speed" },
-    {"triangle", weapnext},
-    {"circle", move_down_on},
     {"square", "inven"},
-    {"cross", move_up_on},
     {"start", "cmd help"},
     {"select", "score"} 
 }};
@@ -251,4 +239,94 @@ enum struct weapon_assignment : std::uint_8
     flameThrower,
     lightningGun
 };
+
+// Quake 3
+
+
+constexpr static auto quake3_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
+    {"l2", "+zoom" },
+    {"l1", "weapprev" },
+    {"r1", weapnext },
+    {"l3", speed_on },
+    {"r3", melee_attack_on },
+    {"triangle", "vote yes" },
+    {"circle",  move_down_on },
+    {"square", "vote no"},
+    {"cross", move_up_on },
+    {"start", "pause"},
+    {"select", "+scores"},
+}};
+
+//alias +melee-attack "weapon 1; +attack"
+//alias -melee-attack "weapnext; -attack"
+// baseq3
+
+// Quake Live
+
+// Return to Castle Wolfenstein
+// Main
+constexpr static auto wolf_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
+    {"r2", attack_on },
+    {"l2", "weapalt" },
+    {"l1", "itemnext" },
+    {"r1", "+useitem" },
+    {"left_y_axis",  move_forward_backward },
+    {"left_x_axis", move_left_right },
+    {"right_y_axis", look_up_down },
+    {"right_x_axis", turn_left_right },
+    {"l3", "+sprint" },
+    {"r3", "+kick" },
+    {"triangle", weapnext },
+    {"circle",  move_down_on },
+    {"square", "+activate"},
+    {"cross", move_up_on },
+    {"start", "pause"},
+    {"select", "+scores"},
+}};
+
+// 007 Nightfire
+// bond/config.cfg
+
+// Half Life Day One
+
+// Gunman Chronicles
+
+// Half Life (Steam)
+
+// Counter Strike (Steam)
+
+// Day of Defeat (Steam)
+
+// Ricochet (Steam)
+
+// Deathmatch Classic (Steam)
+
+// Wolfenstein: Enemy Territory
+
+// Allied Assault
+
+// Call of Duty
+
+// Call of Duty United Offensive
+
+// Soldier of Fortune 2
+
+// Alice
+
+// FAKK 2
+
+// Jedi Knight 2
+
+// Jedi Academy
+
+// Elite Force
+
+// Elite Force 2
+
+// Iron Grip: Warlord
+
+// Dark Salvation
+
+// Space Trader Merchant Marine
+
 
