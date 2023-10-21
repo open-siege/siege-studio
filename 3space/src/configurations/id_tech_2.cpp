@@ -1,4 +1,5 @@
 #include <limits>
+#include <memory>
 #include "configurations/id_tech.hpp"
 
 namespace studio::configurations::id_tech
@@ -10,52 +11,77 @@ namespace studio::configurations::id_tech
 
         constexpr static auto average_line_size = 20;
 
-        std::vector<std::string_view> split_string_view(std::string_view line, std::string_view separator, std::size_t size_hint = 4)
+        std::vector<std::string_view> split_into_lines(std::string_view line, std::string_view separator, std::size_t size_hint = 4)
         {
-            auto start = 0u;
-            auto space = line.find(separator, start);
-
-            if (space == std::string_view::npos)
-            {
-                return { line };
-            }
-
             std::vector<std::string_view> segments;
-            segments.reserve(size_hint);   
+            segments.reserve(size_hint);
+
+            auto start = 0u;
+
+            for (auto i = 0u; i < line.size(); ++i)
+            {
+                if (i < line.size() - separator.size() && std::string_view(line.data() + 1 + i, separator.size()) == separator)
+                {       
+                    segments.emplace_back(line.substr(start, i + 1 - start));
+                    start = i + separator.size() + 1;
+                }
+                else if (i == line.size() - separator.size())
+                {
+                    segments.emplace_back(line.substr(start, i + separator.size()));
+                }
+            }
 
             return segments;
         }
 
-        std::vector<std::string_view> split_line(std::string_view line)
+        std::vector<std::string_view> split_into_segments(std::string_view line)
         {
             std::vector<std::string_view> segments;
             segments.reserve(3);
             std::optional<std::size_t> first_quote;
+
             auto start = 0u;
+
             for (auto i = 0u; i < line.size(); ++i)
             {
-                if (i == ' ' && !first_quote.has_value())
+                if (first_quote.has_value())
                 {
-                    segments.emplace_back(line.substr(start, i - start));
-                    start = i + 1;
+                    if (line[i] == '\"')
+                    {
+                        start = first_quote.value() + 1;
+                        first_quote.reset();
+                        segments.emplace_back(line.substr(start, i - start));
+                        start = i + 1;
+
+                        if (i < line.size() - 1 && line[i + 1] == ' ')
+                        {
+                            start++;
+                        }
+                    }
+                    continue;
                 }
 
-                if (line[i] == '\"' && !first_quote.has_value())
+
+                if (line[i] == '\"')
                 {
                     first_quote.emplace(i);
+                    continue;
                 }
 
-                if (line[i] == '\"' && first_quote.has_value())
+                if (i < line.size() - 1 && line[i + 1] == ' ')
                 {
-                    start = first_quote.value() + 1;
-                    segments.emplace_back(line.substr(start,  - 1 - start));
-                    first_quote.reset();
+                    segments.emplace_back(line.substr(start, i + 1 - start));
+                    start = i + 2;
+                }
+                else if (i == line.size() - 1)
+                {
+                    segments.emplace_back(line.substr(start, i));
                 }
             }
 
             return segments;
         }
-
+ 
 
         std::optional<text_game_config> load_config(std::istream& raw_data, std::size_t stream_size)
         {
@@ -64,20 +90,24 @@ namespace studio::configurations::id_tech
                 return std::nullopt;
             }
 
-            std::string buffer;
-            buffer.assign(stream_size, '\0');
+            std::unique_ptr<char[]> buffer(new char[stream_size]);
+            std::string_view buffer_str(buffer.get(), stream_size);
+            std::fill_n(buffer.get(), stream_size, '\0');
+
             auto current_pos = raw_data.tellg();
-            raw_data.read(buffer.data(), stream_size);
+   
+            raw_data.read(buffer.get(),  stream_size);
+
             raw_data.seekg(current_pos, std::ios::beg);
 
-            auto lines = split_string_view(buffer, end_line, stream_size / average_line_size);
+            auto lines = split_into_lines(buffer_str, end_line, stream_size / average_line_size);
 
             std::vector<config_line> config_data;
             config_data.reserve(lines.size());
 
             for (auto& line : lines)
             {
-                auto segments = split_line(line);
+                auto segments = split_into_segments(line);
 
                 if (segments.empty())
                 {
