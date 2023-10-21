@@ -12,6 +12,7 @@
 #include <functional>
 #include <istream>
 #include <ostream>
+#include <memory>
 
 namespace studio::configurations
 {
@@ -68,7 +69,7 @@ namespace studio::configurations
             };
 
             text_game_config() = default;
-            text_game_config(std::string&&, std::vector<config_line>&&);
+            text_game_config(std::unique_ptr<char[]> &&, std::vector<config_line>&&);
             text_game_config(const text_game_config&);
             text_game_config(text_game_config&&) = delete;
 
@@ -80,7 +81,7 @@ namespace studio::configurations
             void persist(std::function<void(const std::vector<config_line>&)>) const;
 
         private:
-            std::string raw_data;
+            std::unique_ptr<char[]>  raw_data;
             std::vector<config_line> line_entries;
     };
 }

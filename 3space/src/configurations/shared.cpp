@@ -58,9 +58,10 @@ namespace studio::configurations
         // TODO copy data without invalidating string views
     }
 
-    text_game_config::text_game_config(std::string&& raw, std::vector<config_line>&& entries) 
-        : raw_data(raw), line_entries(entries)
+    text_game_config::text_game_config(std::unique_ptr<char[]>&& raw, std::vector<config_line>&& entries) 
+        : raw_data(std::move(raw)), line_entries(entries)
     {
+
     }
 
     std::vector<key_type> text_game_config::keys() const
