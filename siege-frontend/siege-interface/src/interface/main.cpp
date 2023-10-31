@@ -54,6 +54,7 @@ namespace siege
 
         if (!render_context)
         {
+          std::cerr << "Error: " << SDL_GetError() << '\n';
           return -1;
         }
 

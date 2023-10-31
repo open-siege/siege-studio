@@ -578,6 +578,106 @@ struct LauncherOnFrameBeginCallback
 };
 
 
+struct GameLauncherOnFrameBeginCallback
+{
+  
+  GameLauncherOnFrameBeginCallback()
+  {
+  }
+
+
+  void operator()() {
+        ImGui::Begin("Games");
+
+
+        ImGui::BeginGroup();
+            ImGui::Text("Detected Games: ");
+
+            if (ImGui::Button("Quake 2"))
+            {
+               
+            }
+
+            if (ImGui::Button("Heretic 2"))
+            {
+       
+            }
+
+            if (ImGui::Button("SiN"))
+            {
+       
+            }
+
+            if (ImGui::Button("Kingpin: Life of Crime"))
+            {
+        
+            }
+
+            if (ImGui::Button("Soldier of Fortune"))
+            {
+          
+            }
+
+            if (ImGui::Button("Anachronox"))
+            {
+             
+            }
+        ImGui::EndGroup();
+
+        //ImGui::SameLine();
+
+        if (ImGui::BeginTabBar("Settings"))
+              {
+                if (ImGui::BeginTabItem("Controls"))
+                {
+                   ImGui::BeginGroup();
+                  ImGui::Text("Move Forward: Left Stick Y-Axis +");
+                  ImGui::Text("Move Backward: Left Stick Y-Axis -");
+
+                  ImGui::Text("Move Left: Left Stick X-Axis -");
+                  ImGui::Text("Move Right: Left Stick X-Axis +");
+
+                  ImGui::Text("Look Up: Right Stick Y-Axis +");
+                  ImGui::Text("Look Down: Right Stick Y-Axis -");
+
+                  ImGui::Text("Turn Left: Right Stick X-Axis -");
+                  ImGui::Text("Turn Right: Left Stick X-Axis +");
+
+
+                  ImGui::Text("Jump: X");
+                  ImGui::Text("Crouch: O");
+                  ImGui::Text("Reload: []");
+                  ImGui::Text("Change Weapon: ^");
+
+                  ImGui::Text("Change Item: L1");
+                  ImGui::Text("Use Item: R1");
+                  ImGui::Text("Secondary Attack: L2");
+                  ImGui::Text("Primary Attack: R2");
+                  ImGui::Text("Run: L3");
+                  ImGui::Text("Melee: R3");
+
+                  ImGui::EndGroup();
+                  ImGui::EndTabItem();
+                }
+
+                if (ImGui::BeginTabItem("Graphics"))
+                {
+                  ImGui::EndTabItem();
+                }
+
+                if (ImGui::BeginTabItem("Audio"))
+                {
+                  ImGui::EndTabItem();
+                }
+                ImGui::EndTabBar();
+              }
+
+
+        ImGui::End();
+  }
+};
+
+
 int main(int argc, char** argv)
 {
   siege::SetHint(SDL_HINT_JOYSTICK_ROG_CHAKRAM, "1");
@@ -602,7 +702,7 @@ int main(int argc, char** argv)
     siege::InitVirtualJoysticksFromKeyboardsAndMice();
     siege::InitVirtualJoysticksFromJoysticks();
   };
-  callbacks.onNewFrame = LauncherOnFrameBeginCallback{};
+  callbacks.onNewFrame = GameLauncherOnFrameBeginCallback{};
 
   return siege::AppMain(std::vector<std::string>(argv, argv + argc), std::move(callbacks));
 }
