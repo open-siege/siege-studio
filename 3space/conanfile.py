@@ -16,7 +16,7 @@ class LocalConanFile(ConanFile):
     # openssl is here to force package resolution issue with cmake on linux
     requires = "glm/cci.20230113", "span-lite/0.10.3", "taocpp-pegtl/3.2.7", "libzip/1.9.2", "catch2/3.3.2"
     generators = "CMakeToolchain", "CMakeDeps"
-    exports_sources = "CMakeLists.txt", "include/*", "src/*"
+    exports_sources = "CMakeLists.txt", "include/*", "src/*", "tools/*"
 
     # TODO make this more robust so that it can work for other distro's
     # or add a proper check for Ubuntu specifically

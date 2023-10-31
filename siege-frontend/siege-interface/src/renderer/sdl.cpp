@@ -20,7 +20,15 @@ namespace siege
   std::shared_ptr<RenderContext> RenderInit(SDL_Window* window)
   {
     auto context = std::make_shared<RenderContext>();
-    context->renderer.reset(SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED));
+
+    auto* temp = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
+
+    if (temp == nullptr)
+    {
+      temp = SDL_CreateRenderer(window, 0, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
+    }
+
+    context->renderer.reset(temp);
 
     if (!context->renderer)
     {
