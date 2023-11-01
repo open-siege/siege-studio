@@ -2,11 +2,169 @@
 #include <fstream>
 #include <filesystem>
 #include <optional>
+#include <memory>
 #include <SDL.h>
+#include "platform/platform.hpp"
 #include "config.hpp"
+#include "joystick_info.hpp"
 
 namespace siege
 {
+  std::vector<joystick_info> get_all_joysticks()
+  {
+    std::vector<joystick_info> joysticks;
+
+    const auto num_joysticks = siege::NumJoysticks();
+
+    joysticks.reserve(num_joysticks);
+
+    for (auto i = 0; i < num_joysticks; ++i)
+    {
+      auto& info = joysticks.emplace_back();
+      auto joystick = std::shared_ptr<Joystick>(siege::JoystickOpen(i), siege::JoystickClose);
+
+      const char* joystick_name = siege::JoystickName(joystick.get());
+
+      if (joystick_name != nullptr)
+      {
+        info.name = joystick_name;
+      }
+
+
+      std::shared_ptr<SDL_GameController> controller;
+
+      if (SDL_IsGameController(i) == SDL_bool::SDL_TRUE)
+      {
+        controller.reset(SDL_GameControllerOpen(i), SDL_GameControllerClose);
+        info.controller_type.emplace(SDL_GameControllerGetType(controller.get()));
+      }
+
+      std::optional<SDL_GameControllerButtonBind> left_trigger_binding;
+      std::optional<SDL_GameControllerButtonBind> right_trigger_binding;
+
+      if (SDL_GameControllerHasAxis(controller.get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_TRIGGERLEFT) == SDL_bool::SDL_TRUE)
+      {
+          left_trigger_binding = SDL_GameControllerGetBindForAxis(controller.get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
+      }
+
+      if (SDL_GameControllerHasAxis(controller.get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_TRIGGERRIGHT) == SDL_bool::SDL_TRUE)
+      {
+          right_trigger_binding = SDL_GameControllerGetBindForAxis(controller.get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
+      }
+
+      const auto num_buttons = siege::JoystickNumButtons(joystick.get());
+      info.buttons.reserve(num_buttons);
+
+      for (auto b = 0; b < num_buttons; ++b)
+      {
+        auto& button = info.buttons.emplace_back();
+
+        button.is_left_trigger = left_trigger_binding.has_value() && 
+        left_trigger_binding.value().bindType == SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_BUTTON &&
+        left_trigger_binding.value().value.button == i;
+
+        button.is_right_trigger = right_trigger_binding.has_value() && 
+        right_trigger_binding.value().bindType == SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_BUTTON &&
+        right_trigger_binding.value().value.button == i;
+
+        if (controller)
+        {
+          for (auto bb = 0; bb < static_cast<int>(SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_MAX); ++bb)
+          {
+              auto button_type = static_cast<SDL_GameControllerButton>(bb);
+              if (SDL_GameControllerHasButton(controller.get(), button_type) == SDL_bool::SDL_TRUE)
+              {
+                  auto binding = SDL_GameControllerGetBindForButton(controller.get(), button_type);
+
+                  if (binding.bindType == SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_BUTTON && binding.value.button == b)
+                  {
+                    button.button_type.emplace(button_type);
+                    break;
+                  }
+              }
+          }
+        }
+      }
+
+
+      const auto num_axes = siege::JoystickNumAxes(joystick.get());
+      info.axes.reserve(num_axes);
+
+      for (auto a = 0; a < num_axes; ++a)
+      {
+        auto& axis = info.axes.emplace_back();
+
+        if (controller)
+        {
+          for (auto aa = 0; aa < static_cast<int>(SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_MAX); ++aa)
+          {
+              auto axis_type = static_cast<SDL_GameControllerAxis>(aa);
+              if (SDL_GameControllerHasAxis(controller.get(), axis_type) == SDL_bool::SDL_TRUE)
+              {
+                  auto binding = SDL_GameControllerGetBindForAxis(controller.get(), axis_type);
+
+                  if (binding.bindType == SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_AXIS && binding.value.axis == a)
+                  {
+                    axis.axis_type.emplace(axis_type);
+                    break;
+                  }
+              }
+          }
+        }
+      }
+
+      std::optional<SDL_GameControllerButtonBind> d_pad_up_binding;
+      std::optional<SDL_GameControllerButtonBind> d_pad_down_binding;
+      std::optional<SDL_GameControllerButtonBind> d_pad_left_binding;
+      std::optional<SDL_GameControllerButtonBind> d_pad_right_binding;
+
+      if (SDL_GameControllerHasButton(controller.get(), SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_UP) == SDL_bool::SDL_TRUE)
+      {
+          d_pad_up_binding = SDL_GameControllerGetBindForButton(controller.get(), SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_UP);
+      }
+
+      if (SDL_GameControllerHasButton(controller.get(), SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_DOWN) == SDL_bool::SDL_TRUE)
+      {
+          d_pad_down_binding = SDL_GameControllerGetBindForButton(controller.get(), SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_DOWN);
+      }
+
+      if (SDL_GameControllerHasButton(controller.get(), SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_LEFT) == SDL_bool::SDL_TRUE)
+      {
+          d_pad_left_binding = SDL_GameControllerGetBindForButton(controller.get(), SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_LEFT);
+      }
+
+      if (SDL_GameControllerHasButton(controller.get(), SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_RIGHT) == SDL_bool::SDL_TRUE)
+      {
+          d_pad_right_binding = SDL_GameControllerGetBindForButton(controller.get(), SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_RIGHT);
+      }
+
+      const auto num_hats = siege::JoystickNumHats(joystick.get());
+      info.hats.reserve(num_hats);
+
+      for (auto b = 0; b < num_hats; ++b)
+      {
+        auto& hat = info.hats.emplace_back();
+
+        hat.is_controller_dpad = d_pad_up_binding.has_value() && 
+        d_pad_down_binding.has_value() &&
+        d_pad_left_binding.has_value() &&
+        d_pad_right_binding.has_value() &&
+        d_pad_up_binding.value().bindType == SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_HAT &&
+        d_pad_up_binding.value().value.hat.hat == i &&
+        d_pad_down_binding.value().bindType == SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_HAT &&
+        d_pad_down_binding.value().value.hat.hat == i &&
+        d_pad_left_binding.value().bindType == SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_HAT &&
+        d_pad_left_binding.value().value.hat.hat == i &&
+        d_pad_right_binding.value().bindType == SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_HAT &&
+        d_pad_right_binding.value().value.hat.hat == i;
+      }
+
+    }
+
+
+    return joysticks;
+  }
+
   inline SDL_GameControllerBindType from_string(std::string_view type)
   {
     if (type == "axis")
