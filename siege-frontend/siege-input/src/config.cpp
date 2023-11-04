@@ -10,6 +10,45 @@
 
 namespace siege
 {
+
+  constexpr static auto sdl_mapping = std::array<std::array<std::string_view, 2>, 14> {{
+        { "leftstick", xbox::ls },
+        { "rightstick", xbox::rs },
+        { "leftshoulder", xbox::lb },
+        { "rightshoulder", xbox::rb },
+        { "dpup", common::d_pad_up },
+        { "dpdown", common::d_pad_down },
+        { "dpleft", common::d_pad_left },
+        { "dpright", common::d_pad_right },
+        { "leftx", common::left_x },
+        { "lefty", common::left_y },
+        { "rightx", common::right_x },
+        { "righty", common::right_y },
+        { "lefttrigger", xbox::lt },
+        { "righttrigger", xbox::rt }
+    }};
+
+    constexpr std::string_view to_common(std::string_view value)
+    {
+        for (auto i = 0; i < sdl_mapping.size(); ++i)
+        {
+            if (sdl_mapping[i][0] == value)
+            {
+                return sdl_mapping[i][1];
+            }
+        }
+
+        return to_xbox(value);
+    }
+
+    constexpr static auto a = std::string_view("a");
+    constexpr static auto leftstick = std::string_view("leftstick");
+    constexpr static auto leftx = std::string_view("leftx");
+
+    static_assert(to_common(a) == xbox::a);
+    static_assert(to_common(leftstick) == xbox::ls);
+    static_assert(to_common(leftx) == common::left_x);
+
   std::vector<joystick_info> get_all_joysticks()
   {
     std::vector<joystick_info> joysticks;
@@ -30,24 +69,52 @@ namespace siege
         info.name = joystick_name;
       }
 
+      auto joystick_type = siege::JoystickGetType(joystick.get());
+
+      if (joystick_type == SDL_JoystickType::SDL_JOYSTICK_TYPE_GAMECONTROLLER)
+      {
+        info.type.emplace(common::types::game_controller);
+      }
+      else if (joystick_type == SDL_JoystickType::SDL_JOYSTICK_TYPE_FLIGHT_STICK)
+      {
+        info.type.emplace(common::types::flight_stick);
+      }
+      else if (joystick_type == SDL_JoystickType::SDL_JOYSTICK_TYPE_THROTTLE)
+      {
+        info.type.emplace(common::types::throttle);
+      }
+      else if (joystick_type == SDL_JoystickType::SDL_JOYSTICK_TYPE_WHEEL)
+      {
+        info.type.emplace(common::types::steering_wheel);
+      }
 
       std::shared_ptr<SDL_GameController> controller;
 
       if (SDL_IsGameController(i) == SDL_bool::SDL_TRUE)
       {
         controller.reset(SDL_GameControllerOpen(i), SDL_GameControllerClose);
-        info.controller_type.emplace(SDL_GameControllerGetType(controller.get()));
+
+        const auto controller_type = SDL_GameControllerGetType(controller.get());
+
+        if (controller_type == SDL_GameControllerType::SDL_CONTROLLER_TYPE_XBOX360 || controller_type == SDL_GameControllerType::SDL_CONTROLLER_TYPE_XBOX360)
+        {
+          info.controller_type.emplace(common::types::xbox);
+        }
+        else if (controller_type == SDL_GameControllerType::SDL_CONTROLLER_TYPE_XBOX360 || controller_type == SDL_GameControllerType::SDL_CONTROLLER_TYPE_XBOX360)
+        {
+          info.controller_type.emplace(common::types::playstation);
+        }
       }
 
       std::optional<SDL_GameControllerButtonBind> left_trigger_binding;
       std::optional<SDL_GameControllerButtonBind> right_trigger_binding;
 
-      if (SDL_GameControllerHasAxis(controller.get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_TRIGGERLEFT) == SDL_bool::SDL_TRUE)
+      if (controller && SDL_GameControllerHasAxis(controller.get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_TRIGGERLEFT) == SDL_bool::SDL_TRUE)
       {
           left_trigger_binding = SDL_GameControllerGetBindForAxis(controller.get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
       }
 
-      if (SDL_GameControllerHasAxis(controller.get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_TRIGGERRIGHT) == SDL_bool::SDL_TRUE)
+      if (controller && SDL_GameControllerHasAxis(controller.get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_TRIGGERRIGHT) == SDL_bool::SDL_TRUE)
       {
           right_trigger_binding = SDL_GameControllerGetBindForAxis(controller.get(), SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
       }
@@ -78,7 +145,15 @@ namespace siege
 
                   if (binding.bindType == SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_BUTTON && binding.value.button == b)
                   {
-                    button.button_type.emplace(button_type);
+                    if (info.controller_type.has_value() && info.controller_type.value() == common::types::xbox)
+                    {
+                        button.button_type.emplace(to_xbox(to_common(SDL_GameControllerGetStringForButton(button_type))));
+                    }
+                    else if(info.controller_type.has_value() && info.controller_type.value() == common::types::playstation)
+                    {
+                        button.button_type.emplace(to_playstation(to_common(SDL_GameControllerGetStringForButton(button_type))));
+                    }
+
                     break;
                   }
               }
@@ -105,7 +180,14 @@ namespace siege
 
                   if (binding.bindType == SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_AXIS && binding.value.axis == a)
                   {
-                    axis.axis_type.emplace(axis_type);
+                    if (info.controller_type.has_value() && info.controller_type.value() == common::types::xbox)
+                    {
+                        axis.axis_type.emplace(to_xbox(to_common(SDL_GameControllerGetStringForAxis(axis_type))));
+                    }
+                    else if(info.controller_type.has_value() && info.controller_type.value() == common::types::playstation)
+                    {
+                        axis.axis_type.emplace(to_playstation(to_common(SDL_GameControllerGetStringForAxis(axis_type))));
+                    }
                     break;
                   }
               }
@@ -118,22 +200,22 @@ namespace siege
       std::optional<SDL_GameControllerButtonBind> d_pad_left_binding;
       std::optional<SDL_GameControllerButtonBind> d_pad_right_binding;
 
-      if (SDL_GameControllerHasButton(controller.get(), SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_UP) == SDL_bool::SDL_TRUE)
+      if (controller && SDL_GameControllerHasButton(controller.get(), SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_UP) == SDL_bool::SDL_TRUE)
       {
           d_pad_up_binding = SDL_GameControllerGetBindForButton(controller.get(), SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_UP);
       }
 
-      if (SDL_GameControllerHasButton(controller.get(), SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_DOWN) == SDL_bool::SDL_TRUE)
+      if (controller && SDL_GameControllerHasButton(controller.get(), SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_DOWN) == SDL_bool::SDL_TRUE)
       {
           d_pad_down_binding = SDL_GameControllerGetBindForButton(controller.get(), SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_DOWN);
       }
 
-      if (SDL_GameControllerHasButton(controller.get(), SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_LEFT) == SDL_bool::SDL_TRUE)
+      if (controller && SDL_GameControllerHasButton(controller.get(), SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_LEFT) == SDL_bool::SDL_TRUE)
       {
           d_pad_left_binding = SDL_GameControllerGetBindForButton(controller.get(), SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_LEFT);
       }
 
-      if (SDL_GameControllerHasButton(controller.get(), SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_RIGHT) == SDL_bool::SDL_TRUE)
+      if (controller && SDL_GameControllerHasButton(controller.get(), SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_RIGHT) == SDL_bool::SDL_TRUE)
       {
           d_pad_right_binding = SDL_GameControllerGetBindForButton(controller.get(), SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_RIGHT);
       }
