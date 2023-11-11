@@ -7,9 +7,9 @@ find_package(nlohmann_json REQUIRED)
 find_package(SDL2 REQUIRED)
 
 if(WIN32)
-    add_library(siege-input STATIC src/platform/common.cpp src/platform/windows.cpp src/config.cpp src/virtual_joystick.cpp)
+    add_library(siege-input STATIC src/platform/common.cpp src/platform/windows.cpp src/config.cpp src/virtual_joystick.cpp src/profiles/games/id_tech_2.cpp)
 else()
-    add_library(siege-input STATIC src/platform/common.cpp src/platform/other.cpp src/config.cpp src/virtual_joystick.cpp)
+    add_library(siege-input STATIC src/platform/common.cpp src/platform/other.cpp src/config.cpp src/virtual_joystick.cpp src/profiles/games/id_tech_2.cpp)
 endif()
 
 add_custom_command(TARGET siege-input
