@@ -2,6 +2,8 @@
 #include <utility>
 #include <string_view>
 #include <cstdint>
+#include <algorithm>
+#include "joystick_info.hpp"
 
 // movement
 constexpr static auto forward_on = "+forward"; 
@@ -26,15 +28,21 @@ constexpr static auto weapon_previous = "weaprev";
 
 constexpr static auto melee_attack_on = "+melee-attack";
 
-constexpr static auto idtech_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
+namespace playstation = siege::playstation;
+using joystick_info = siege::joystick_info;
+using button = siege::button;
+using hat = siege::hat;
+using axis = siege::axis;
+
+constexpr static auto idtech_dual_stick_defaults = std::array<std::array<std::string_view, 2>, 14> {{
     {"left_y+", forward_on },
     {"left_y-", backward_on },
     {"left_x+", move_left_on },
     {"left_x-", move_right_on },
     {"right_y+", look_up_on },
     {"right_y-", look_down_on },
-    {"right_x+", look_up_down },
-    {"right_x-", turn_left_right },
+    {"right_x+", look_right_on },
+    {"right_x-", look_left_on },
     {playstation::r2, attack_on },
     {playstation::l3, speed_on },
     {playstation::r3, melee_attack_on },
@@ -44,81 +52,192 @@ constexpr static auto idtech_dual_stick_defaults = std::array<std::array<std::st
 }};
 
 
-std::string_view find_quake1_button(std::string_view)
+
+axis add_quake_1_axis_metadata(axis result)
 {
-    constexpr static auto controller_button_mapping = std::array<std::array<std::string_view, 2>> {{
-        { playstation::cross, "JOY1" },
-        { playstation::circle, "JOY2" },
-        { playstation::square, "JOY3" },
-        { playstation::triangle, "JOY4" },
-        { playstation::l1, "AUX1" },
-        { playstation::r1, "AUX2" },
-        { playstation::l2, "AUX3" },
-        { playstation::r2, "AUX4" },
-        { playstation::l3, "AUX5" },
-        { playstation::r3, "AUX6" },
-        { playstation::start, "AUX7" },
-        { playstation::select, "AUX8" },
+    constexpr static auto axis_names = std::array<std::string_view, 6> {{
+        "joyadvaxisx",
+        "joyadvaxisy",
+        "joyadvaxisz",
+        "joyadvaxisr",
+        "joyadvaxisu",
+        "joyadvaxisv",
     }};
-}
-std::string_view find_quake2_button(std::string_view)
-{
-    constexpr static auto controller_button_mapping = std::array<std::array<std::string_view, 2>> {{
-        { playstation::cross, "JOY1" },
-        { playstation::circle, "JOY2" },
-        { playstation::square, "JOY3" },
-        { playstation::triangle, "JOY4" },
-        { playstation::l1, "AUX1" },
-        { playstation::r1, "AUX2" },
-        { playstation::l2, "AUX3" },
-        { playstation::r2, "AUX4" },
-        { playstation::l3, "AUX5" },
-        { playstation::r3, "AUX6" },
-        { playstation::start, "AUX7" },
-        { playstation::select, "AUX8" },
-    }};
+
+    if (result.index < axis_names.size())
+    {
+        result.meta_name_positive.emplace(axis_names[result.index]);
+        result.meta_name_negative.emplace(axis_names[result.index]);
+    }
+
+    return result;
 }
 
-std::string_view find_quake3_button(std::string_view)
+button add_quake_1_button_metadata(button result)
 {
-    constexpr static auto controller_button_mapping = std::array<std::array<std::string_view, 2>> {{
-        { playstation::cross, "JOY1" },
-        { playstation::circle, "JOY2" },
-        { playstation::square, "JOY3" },
-        { playstation::triangle, "JOY4" },
-        { playstation::l1, "JOY5" },
-        { playstation::r1, "JOY6" },
-        { playstation::l2, "JOy7" },
-        { playstation::r2, "JOY8" },
-        { playstation::l3, "JOY9" },
-        { playstation::r3, "JOY10" },
-        { playstation::start, "JOY11" },
-        { playstation::select, "JOY12" },
+    constexpr static auto button_names = std::array<std::string_view, 15> {{
+        "JOY1",
+        "JOY2",
+        "JOY3",
+        "JOY4",
+        "AUX5",
+        "AUX6",
+        "AUX7",
+        "AUX8",
+        "AUX9",
+        "AUX10",
+        "AUX11",
+        "AUX12",
+        "AUX13",
+        "AUX14",
+        "AUX15"
     }};
-}
-std::string_view find_quake1_axis(std::string_view)
-{
-        constexpr static auto controller_axis_mapping = std::array<std::array<std::string_view, 2>> {{
-            { "left_x", "joyadvaxisx" },
-           { "left_y", "joyadvaxisy" },
-           { "right_x", "joyadvaxisz" },
-           { "right_y", "joyadvaxisr" }
 
-    }};
+    if (result.index < button_names.size())
+    {
+        result.meta_name.emplace(button_names[result.index]);
+    }
+
+    return result;
 }
-std::string_view find_quake2_axis(std::string_view)
+
+
+hat add_quake_1_hat_metadata(hat result)
 {
-    constexpr static auto controller_button_mapping = std::array<std::array<std::string_view, 2>> {{
-           { "left_x", "joy_advaxisx" },
-           { "left_y", "joy_advaxisy" },
-           { "right_x", "joy_advaxisz" },
-           { "right_y", "joy_advaxisr" }
+    if (result.index == 0)
+    {
+        result.meta_name_up = "AUX29";
+        result.meta_name_down = "AUX31";
+        result.meta_name_right = "AUX30";
+        result.meta_name_left = "AUX32";
+    }
+
+    return result;
+}
+
+
+joystick_info add_quake_1_input_metadata(joystick_info info)
+{
+    std::transform(info.buttons.begin(), info.buttons.end(), info.buttons.begin(), add_quake_1_button_metadata);
+    std::transform(info.axes.begin(), info.axes.end(), info.axes.begin(), add_quake_1_axis_metadata);
+    std::transform(info.hats.begin(), info.hats.end(), info.hats.begin(), add_quake_1_hat_metadata);
+
+    return info;
+}
+
+axis add_quake_2_axis_metadata(axis result)
+{
+    constexpr static auto axis_names = std::array<std::string_view, 6> {{
+        "joy_advaxisx",
+        "joy_advaxisy",
+        "joy_advaxisz",
+        "joy_advaxisr",
+        "joy_advaxisu",
+        "joy_advaxisv"
     }};
+
+
+    if (result.index < axis_names.size())
+    {
+        result.meta_name_positive.emplace(axis_names[result.index]);
+        result.meta_name_negative.emplace(axis_names[result.index]);
+    }
+
+    return result;
+}
+
+joystick_info add_quake_2_input_metadata(joystick_info info)
+{
+    std::transform(info.buttons.begin(), info.buttons.end(), info.buttons.begin(), add_quake_1_button_metadata);
+    std::transform(info.axes.begin(), info.axes.end(), info.axes.begin(), add_quake_2_axis_metadata);
+    std::transform(info.hats.begin(), info.hats.end(), info.hats.begin(), add_quake_1_hat_metadata);
+
+    return info;
+}
+
+
+button add_quake_3_button_metadata(button result)
+{
+    constexpr static auto button_names = std::array<std::string_view, 15> {{
+        "JOY1",
+        "JOY2",
+        "JOY3",
+        "JOY4",
+        "JOY5",
+        "JOY6",
+        "JOY7",
+        "JOY8",
+        "JOY9",
+        "JOY10",
+        "JOY11",
+        "JOY12",
+        "JOY13",
+        "JOY14",
+        "JOY15"
+    }};
+
+    if (result.index < button_names.size())
+    {
+        result.meta_name.emplace(button_names[result.index]);
+    }
+
+    return result;
+}
+
+axis add_quake_3_axis_metadata(axis result)
+{
+    if (result.index == 0)
+    {
+        result.meta_name_positive = "UPARROW";
+        result.meta_name_negative = "DOWNARROW";
+    }
+
+    if (result.index == 1)
+    {
+        result.meta_name_positive = "RIGHTARROW";
+        result.meta_name_negative = "LEFTARROW";
+    }
+
+    if (result.index == 2)
+    {
+        result.meta_name_positive = "JOY18";
+        result.meta_name_negative = "JOY19";
+    }
+
+    if (result.index == 3)
+    {
+        result.meta_name_positive = "JOY17";
+        result.meta_name_negative = "JOY16";
+    }
+
+    return result;
+}
+
+hat add_quake_3_hat_metadata(hat result)
+{
+    if (result.index == 0)
+    {
+        result.meta_name_up = "JOY24";
+        result.meta_name_down = "JOY25";
+        result.meta_name_right = "JOY26";
+        result.meta_name_left = "JOY27";
+    }
+
+    return result;
+}
+
+joystick_info add_quake_3_input_metadata(joystick_info info)
+{
+    std::transform(info.buttons.begin(), info.buttons.end(), info.buttons.begin(), add_quake_3_button_metadata);
+    std::transform(info.axes.begin(), info.axes.end(), info.axes.begin(), add_quake_3_axis_metadata);
+    std::transform(info.hats.begin(), info.hats.end(), info.hats.begin(), add_quake_3_hat_metadata);
+
+    return info;
 }
 
 std::string_view find_axis_index_for_action(std::string_view)
 {
-    constexpr static auto controller_button_mapping = std::array<std::array<std::string_view, 2>> {{
+    constexpr static auto controller_button_mapping = std::array<std::array<std::string_view, 2>, 10> {{
         { forward_on, "1" },
         { backward_on, "1" },
         { look_up_on, "2" },
@@ -130,409 +249,7 @@ std::string_view find_axis_index_for_action(std::string_view)
         { move_up_on, "5" },
         { move_down_on, "5" }
     }};
+
+    return "";
 }
 
-
-enum struct quake_config_type
-{
-    unknown,
-    quake1,
-    quake2,
-    quake3
-};
-
-
-enum struct quake1_game
-{
-    unknown,
-    quake1,
-    hexen2,
-    laser_arena,
-    cia_operative,
-    battle_metal
-};
-
-
-text_game_config create_quake1_config(quake_config_type type, quake1_game game)
-{
-    text_game_config config;
-
-    for (auto& input : idtech_dual_stick_defaults)
-    {
-        auto virtual_input = input.first;
-
-        if (virtual_input.back() == '-' || virtual_input.back() == '+')
-        {
-            auto index = find_axis_index_for_action(input.second);
-            config.emplace(find_quake1_axis(virtual_input), index);
-        }
-        else
-        {
-                auto real_button = find_quake1_button(virtual_input);
-                config.emplace({"bind", real_button}, input.second);
-        }
-    }
-
-
-    return config;
-}
-
-enum struct quake2_game
-{
-    unknown,
-    quake2,
-    heretic2,
-    kingpin,
-    daikatana,
-    sin,
-    soldier_of_fortune
-};
-
-// Soldier of Fortune
-constexpr static auto sof_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
-    {"l2", "+altattack" },
-    {"l1", "itemnext" },
-    {"r1", "itemuse"},
-    {"square", "+use-plus-special"},
-    {"start", "menu objectives"},
-    {"select", "score"},
-}};
-
-// user/config.cfg
-// user/CURRENT.cfg
-// base/autoexec.cfg
-//alias +use-plus-special1 "+weaponextra1; +use"
-//alias -use-plus-special1 "-weaponextra1; -use; alias +use-plus-special +use-plus-special2; alias -use-plus-special -use-plus-special2"
-//alias +use-plus-special2 "+weaponextra2; +use"
-//alias -use-plus-special2 "-weaponextra2; -use; alias +use-plus-special +use-plus-special1; alias -use-plus-special -use-plus-special1"
-//alias +use-plus-special +use-plus-special1
-//alias -use-plus-special -use-plus-special1
-
-//alias +melee-attack "weaponselect 1; +attack"
-//alias -melee-attack "weaponbestsafe; -attack"
-
-// Kingpin
-
-constexpr static auto kingpin_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
-    {"l2", "holster" },
-    {"l1", "invnext" },
-    {"r1", "invuse"},
-    {"square", "+activate"},
-    {"start", "cmd help"},
-    {"select", "inven"},
-    {"d_pad_up", "flashlight"},
-    {"d_pad_down", "key2"},
-    {"d_pad_left", "key1"},
-    {"d_pad_right", "key3"}
-}};
-
-
-// main/config.cfg
-// main/autoexec.cfg
-//alias +melee-attack "use pipe; +attack"
-//alias -melee-attack "weapprev; -attack"
-
-// SIN
-// base/default.cfg
-// base/players/*/config.cfg
-// base/autoexec.cfg
-//alias +melee-attack "use Fists; +attack"
-//alias -melee-attack "weapprev; -attack"
-
-constexpr static auto sin_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
-    {"l2", "weaponuse" },
-    {"l1", "invnext" },
-    {"r1", "invuse"},
-    {"square", "+use"},
-    {"start", "showinfo"},
-    {"select", "toggleviewmode"} 
-}};
-
-// Heretic 2
-// base/Default.cfg
-// base/user.cfg
-// base/autoexec.cfg
-
-constexpr static auto heretic2_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
-    {"l2", "+defend" },
-    {"l1", "defprev" },
-    {"r1", "defnext"},
-    {"circle", "+creep"},
-    {"square", "+action"},
-    {"start", "menu_objectives"},
-    {"select", "menu_city_map"} 
-}};
-
-//alias +melee-attack "use staff; +attack"
-//alias -melee-attack "weapprev; -attack"
-
-// need to swap menu_city_map with menu_world_map
-
-// Quake 2
-// baseq2/pak0.pak/default.cfg
-// baseq2/config.cfg
-// baseq2/autoexec.cfg
-
-constexpr static auto quake2_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
-    {"l2", "invuse" },
-    {"l1", "invnext" },
-    {"r1", "+throw-grenade"},
-    {"square", "inven"},
-    {"start", "cmd help"},
-    {"select", "score"} 
-}};
-
-//alias +throw-grenade "use grenades; +attack"
-//alias -throw-grenade "weapprev; -attack"
-
-
-
-text_game_config create_quake2_config(quake_config_type type, quake2_game game)
-{
-    text_game_config config;
-
-    auto apply_config = [&](const auto& input) {
-            auto virtual_input = input.first;
-
-            if (virtual_input.back() == '-' || virtual_input.back() == '+')
-            {
-                auto index = find_axis_index_for_action(input.second);
-                config.emplace({"set", find_quake2_axis(virtual_input)}, index);
-            }
-            else
-            {
-                auto real_button = find_quake2_button(virtual_input);
-                config.emplace({"bind", real_button}, input.second);
-            }
-    };
-
-    std::for_each(idtech_dual_stick_defaults.begin(), idtech_dual_stick_defaults.end(), apply_config);
-
-    if (game == quake2_game::quake2)
-    {
-        std::for_each(quake2_dual_stick_defaults.begin(), quake2_dual_stick_defaults.end(), apply_config);
-    }
-
-    if (game == quake2_game::soldier_of_fortune)
-    {
-        std::for_each(sof_dual_stick_defaults.begin(), sof_dual_stick_defaults.end(), apply_config);
-    }
-
-    if (game == quake2_game::heretic2)
-    {
-        std::for_each(heretic2_dual_stick_defaults.begin(), heretic2_dual_stick_defaults.end(), apply_config);
-    }
-
-    if (game == quake2_game::kingpin)
-    {
-        std::for_each(kingpin_dual_stick_defaults.begin(), kingpin_dual_stick_defaults.end(), apply_config);
-    }
-
-    if (game == quake2_game::sin)
-    {
-        std::for_each(sin_dual_stick_defaults.begin(), sin_dual_stick_defaults.end(), apply_config);
-    }
-
-    return config;
-}
-
-enum struct quake3_game
-{
-    unknown,
-    quake3,
-    elite_force,
-    elite_force2,
-    jedi_knight2,
-    jedi_academy,
-    soldier_of_fortune2,
-    return_to_castle_wolfenstein,
-    wolfenstein_enemy_territory
-    allied_assault,
-    call_of_duty
-};
-
-// Quake 3
-constexpr static auto quake3_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
-    {"l2", "+zoom" },
-    {"l1", weapprev },
-    {"r1", weapnext },
-    {"triangle", "vote yes" },
-    {"square", "vote no"},
-    {"start", "pause"},
-    {"select", "+scores"},
-}};
-
-//alias +melee-attack "weapon 1; +attack"
-//alias -melee-attack "weapnext; -attack"
-// baseq3
-
-// Quake Live
-
-// Return to Castle Wolfenstein
-// Main
-constexpr static auto wolf_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
-    {"l2", "weapalt" },
-    {"l1", "itemnext" },
-    {"r1", "+useitem" },
-    {"l3", "+sprint" },
-    {"r3", "+kick" },
-    {"square", "+activate"},
-    {"start", "pause"},
-    {"select", "+scores"},
-}};
-
-
-// Wolfenstein: Enemy Territory
-constexpr static auto wolfet_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
-}};
-
-// Allied Assault
-constexpr static auto moh_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
-}};
-
-// Call of Duty
-constexpr static auto cod_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
-}};
-
-// Call of Duty United Offensive
-
-// Soldier of Fortune 2
-constexpr static auto sof2_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
-}};
-
-// Alice
-
-// FAKK 2
-
-// Jedi Knight 2
-constexpr static auto jk2_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
-}};
-
-// Jedi Academy
-constexpr static auto jka_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
-}};
-
-// Elite Force
-constexpr static auto ef_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
-}};
-
-
-// Elite Force 2
-constexpr static auto ef2_dual_stick_defaults = std::array<std::array<std::string_view, 2>> {{
-}};
-
-
-// Iron Grip: Warlord
-
-// Dark Salvation
-
-// Space Trader Merchant Marine
-
-text_game_config create_quake3_config(quake_config_type type, quake3_game game)
-{
-    text_game_config config;
-
-    for (auto& input : idtech_dual_stick_defaults)
-    {
-            auto virtual_input = input.first;
-
-            auto real_button = find_quake3_button(virtual_input);
-            config.emplace({"bind", real_button}, input.second);
-    }
-
-    if (game == quake3_game::quake3)
-    {
-        std::for_each(quake3_dual_stick_defaults.begin(), quake3_dual_stick_defaults.end(), apply_config);
-    }
-
-    if (game == quake3_game::elite_force)
-    {
-        std::for_each(ef_dual_stick_defaults.begin(), ef_dual_stick_defaults.end(), apply_config);
-    }
-
-    if (game == quake3_game::elite_force2)
-    {
-        std::for_each(ef2_dual_stick_defaults.begin(), ef2_dual_stick_defaults.end(), apply_config);
-    }
-
-    if (game == quake3_game::jedi_knight2)
-    {
-        std::for_each(jk2_dual_stick_defaults.begin(), jk2_dual_stick_defaults.end(), apply_config);
-    }
-
-    if (game == quake3_game::jedi_academy)
-    {
-        std::for_each(j.begin(), sin_dual_stick_defaults.end(), apply_config);
-    }
-
-    return config;
-}
-
-
-// Quake
-
-// Hexen 2
-constexpr static auto joystick_flags = std::array<std::string_view> {{
-    "in_joystick", 
-    "joy_advanced",
-    "use_ff"
-}};
-
-enum struct axis_binding : std::uint_8
-{
-    unbound = 0,
-    move_forward_backward,
-    look_up_down, // trackball only
-    move_left_right,
-    turn_left_right,
-    crouch_jump
-};
-
-// set FLAG "1"
-
-// set AXIS "BINDING"
-constexpr static auto joystick_axis = std::array<std::string_view> {{
-    "joy_advaxisx", 
-    "joy_advaxisy",
-    "joy_advaxisz", 
-    "joy_advaxisr", 
-    "joy_advaxisu",
-    "joy_advaxisv"
-}};
-
-
-// from -2 to 2
-// negative inverts the axis
-constexpr static auto binding_sensitivity = std::array<std::string_view> {{
-    "joy_forwardsensitivity",
-    "joy_upsensitivity",
-    "joy_yawsensitivity", 
-    "joy_sidesensitivity"
-    "joy_pitchsensitivity", 
-}};
-
-constexpr static auto binding_deadzone = std::array<std::string_view> {{
-    "joy_forwardthreshold",
-    "joy_upthreshold",
-    "joy_yawthreshold", 
-    "joy_sidethreshold"
-    "joy_pitchthreshold", 
-}};
-
-
-// 007 Nightfire
-// bond/config.cfg
-
-// Half Life Day One
-
-// Gunman Chronicles
-
-// Half Life (Steam)
-
-// Counter Strike (Steam)
-
-// Day of Defeat (Steam)
-
-// Ricochet (Steam)
-
-// Deathmatch Classic (Steam)

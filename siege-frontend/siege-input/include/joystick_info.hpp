@@ -2,11 +2,9 @@
 #define OPEN_SIEGE_JOYSTICK_INFO_HPP
 
 #include <optional>
-#include <variant>
 #include <array>
 #include <vector>
 #include <string_view>
-#include <variant>
 #include <array>
 #include <utility>
 #include <algorithm>
@@ -150,18 +148,26 @@ namespace siege
         std::optional<std::string_view> button_type;
         bool is_left_trigger;
         bool is_right_trigger;
+
+        std::optional<std::string_view> meta_name;
     };
 
     struct axis
     {
         std::size_t index;
         std::optional<std::string_view> axis_type;
+        std::optional<std::string_view> meta_name_positive;
+        std::optional<std::string_view> meta_name_negative;
     };
 
     struct hat
     {
         std::size_t index;
         bool is_controller_dpad;
+        std::optional<std::string_view> meta_name_up;
+        std::optional<std::string_view> meta_name_down;
+        std::optional<std::string_view> meta_name_left;
+        std::optional<std::string_view> meta_name_right;
     };
 
     struct joystick_info
