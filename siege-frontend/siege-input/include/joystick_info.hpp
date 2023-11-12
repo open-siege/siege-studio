@@ -37,6 +37,7 @@ namespace siege
     namespace playstation
     {
         using namespace std::literals;
+        using namespace common;
         constexpr static auto cross = "cross"sv;
         constexpr static auto circle = "circle"sv;
         constexpr static auto square = "square"sv;
@@ -54,6 +55,7 @@ namespace siege
     namespace xbox
     {
         using namespace std::literals;
+        using namespace common;
         constexpr static auto a = "a"sv;
         constexpr static auto b = "b"sv;
         constexpr static auto x = "x"sv;
@@ -142,6 +144,12 @@ namespace siege
     static_assert(to_playstation(xbox::rs) == playstation::r3);
     static_assert(to_playstation(playstation::cross).data() == playstation::cross.data());
 
+    struct action
+    {
+        std::string_view name;
+        std::string_view target_meta_name;
+    };
+
     struct button
     {
         std::size_t index;
@@ -150,6 +158,8 @@ namespace siege
         bool is_right_trigger;
 
         std::optional<std::string_view> meta_name;
+
+        std::vector<action> actions;
     };
 
     struct axis
@@ -158,6 +168,8 @@ namespace siege
         std::optional<std::string_view> axis_type;
         std::optional<std::string_view> meta_name_positive;
         std::optional<std::string_view> meta_name_negative;
+
+        std::vector<action> actions;
     };
 
     struct hat
@@ -168,6 +180,8 @@ namespace siege
         std::optional<std::string_view> meta_name_down;
         std::optional<std::string_view> meta_name_left;
         std::optional<std::string_view> meta_name_right;
+
+        std::vector<action> actions;
     };
 
     struct joystick_info

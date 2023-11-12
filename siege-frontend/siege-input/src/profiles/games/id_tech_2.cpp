@@ -34,25 +34,6 @@ using button = siege::button;
 using hat = siege::hat;
 using axis = siege::axis;
 
-constexpr static auto idtech_dual_stick_defaults = std::array<std::array<std::string_view, 2>, 14> {{
-    {"left_y+", forward_on },
-    {"left_y-", backward_on },
-    {"left_x+", move_left_on },
-    {"left_x-", move_right_on },
-    {"right_y+", look_up_on },
-    {"right_y-", look_down_on },
-    {"right_x+", look_right_on },
-    {"right_x-", look_left_on },
-    {playstation::r2, attack_on },
-    {playstation::l3, speed_on },
-    {playstation::r3, melee_attack_on },
-    {playstation::triangle, weapon_next},
-    {playstation::circle, move_down_on},
-    {playstation::cross, move_up_on}
-}};
-
-
-
 axis add_quake_1_axis_metadata(axis result)
 {
     constexpr static auto axis_names = std::array<std::string_view, 6> {{
@@ -122,7 +103,59 @@ joystick_info add_quake_1_input_metadata(joystick_info info)
     std::transform(info.axes.begin(), info.axes.end(), info.axes.begin(), add_quake_1_axis_metadata);
     std::transform(info.hats.begin(), info.hats.end(), info.hats.begin(), add_quake_1_hat_metadata);
 
-    return info;
+    return std::move(info);
+}
+
+template<std::size_t ArraySize>
+joystick_info add_actions_to_joystick_info(const std::array<std::array<std::string_view, 2>, ArraySize>& defaults, joystick_info info)
+{
+    for (auto& [input, game_action] : defaults)
+    {
+        if (input.rfind('+') == input.size() - 1)
+        {
+            auto real_input = input.substr(0, input.size() - 1);
+            auto axis_iter = std::find_if(info.axes.begin(), info.axes.end(), [&](const auto& axis) {
+                return axis.axis_type.has_value() && axis.meta_name_positive.has_value() && axis.axis_type.value() == real_input;
+            });
+
+            if (axis_iter != info.axes.end())
+            {
+                auto& controller_action = axis_iter->actions.emplace_back();
+                controller_action.name = game_action;
+                controller_action.target_meta_name = axis_iter->meta_name_positive.value();
+            }
+            continue;
+        }
+
+        if (input.rfind('-') == input.size() - 1)
+        {
+            auto real_input = input.substr(0, input.size() - 1);
+            auto axis_iter = std::find_if(info.axes.begin(), info.axes.end(), [&](const auto& axis) {
+                return axis.axis_type.has_value() && axis.meta_name_negative.has_value() && axis.axis_type.value() == real_input;
+            });
+
+            if (axis_iter != info.axes.end())
+            {
+                auto& controller_action = axis_iter->actions.emplace_back();
+                controller_action.name = game_action;
+                controller_action.target_meta_name = axis_iter->meta_name_negative.value();
+            }
+            continue;
+        }
+
+        auto button_iter = std::find_if(info.buttons.begin(), info.buttons.end(), [input](const auto& button) {
+                return button.button_type.has_value() && button.meta_name.has_value() && button.button_type.value() == input;
+        });
+
+        if (button_iter != info.buttons.end())
+        {
+            auto& controller_action = button_iter->actions.emplace_back();
+            controller_action.name = game_action;
+            controller_action.target_meta_name = button_iter->meta_name.value();
+        }
+    }
+
+    return std::move(info);
 }
 
 axis add_quake_2_axis_metadata(axis result)
@@ -152,7 +185,7 @@ joystick_info add_quake_2_input_metadata(joystick_info info)
     std::transform(info.axes.begin(), info.axes.end(), info.axes.begin(), add_quake_2_axis_metadata);
     std::transform(info.hats.begin(), info.hats.end(), info.hats.begin(), add_quake_1_hat_metadata);
 
-    return info;
+    return std::move(info);
 }
 
 
@@ -210,7 +243,7 @@ axis add_quake_3_axis_metadata(axis result)
         result.meta_name_negative = "JOY16";
     }
 
-    return result;
+    return std::move(result);
 }
 
 hat add_quake_3_hat_metadata(hat result)
@@ -223,7 +256,7 @@ hat add_quake_3_hat_metadata(hat result)
         result.meta_name_left = "JOY27";
     }
 
-    return result;
+    return std::move(result);
 }
 
 joystick_info add_quake_3_input_metadata(joystick_info info)
@@ -232,7 +265,109 @@ joystick_info add_quake_3_input_metadata(joystick_info info)
     std::transform(info.axes.begin(), info.axes.end(), info.axes.begin(), add_quake_3_axis_metadata);
     std::transform(info.hats.begin(), info.hats.end(), info.hats.begin(), add_quake_3_hat_metadata);
 
-    return info;
+    return std::move(info);
+}
+
+constexpr static auto idtech_dual_stick_defaults = std::array<std::array<std::string_view, 2>, 14> {{
+        {"left_y+", forward_on },
+        {"left_y-", backward_on },
+        {"left_x+", move_left_on },
+        {"left_x-", move_right_on },
+        {"right_y+", look_up_on },
+        {"right_y-", look_down_on },
+        {"right_x+", look_right_on },
+        {"right_x-", look_left_on },
+        {playstation::r2, attack_on },
+        {playstation::l3, speed_on },
+        {playstation::r3, melee_attack_on },
+        {playstation::triangle, weapon_next},
+        {playstation::circle, move_down_on},
+        {playstation::cross, move_up_on}
+}};
+
+joystick_info add_quake_1_default_actions(joystick_info info)
+{
+    return add_actions_to_joystick_info(idtech_dual_stick_defaults, info);
+}
+
+joystick_info add_hexen_2_default_actions(joystick_info info)
+{
+    return add_actions_to_joystick_info(idtech_dual_stick_defaults, info);
+}
+
+joystick_info add_quake_2_default_actions(joystick_info info)
+{
+    constexpr static auto quake2_dual_stick_defaults = std::array<std::array<std::string_view, 2>, 6> {{
+        {playstation::l2, "invuse" },
+        {playstation::l1, "invnext" },
+        {playstation::r1, "+throw-grenade"},
+        {playstation::square, "inven"},
+        {playstation::start, "cmd help"},
+        {playstation::select, "score"} 
+    }};
+
+    return add_actions_to_joystick_info(quake2_dual_stick_defaults, add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info)));
+}
+
+joystick_info add_soldier_of_fortune_default_actions(joystick_info info)
+{
+    constexpr static auto sof_dual_stick_defaults = std::array<std::array<std::string_view, 2>, 6> {{
+        {playstation::l2, "+altattack" },
+        {playstation::l1, "itemnext" },
+        {playstation::r1, "itemuse"},
+        {playstation::square, "+use-plus-special"},
+        {playstation::start, "menu objectives"},
+        {playstation::select, "score"},
+    }};
+
+    return add_actions_to_joystick_info(sof_dual_stick_defaults, add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info)));
+}
+
+joystick_info add_kingpin_default_actions(joystick_info info)
+{
+    constexpr static auto kingpin_dual_stick_defaults = std::array<std::array<std::string_view, 2>, 10> {{
+        {playstation::l2, "holster" },
+        {playstation::l1, "invnext" },
+        {playstation::r1, "invuse"},
+        {playstation::square, "+activate"},
+        {playstation::start, "cmd help"},
+        {playstation::select, "inven"},
+        {playstation::d_pad_up, "flashlight"},
+        {playstation::d_pad_down, "key2"},
+        {playstation::d_pad_left, "key1"},
+        {playstation::d_pad_right, "key3"}
+    }};
+
+    return add_actions_to_joystick_info(kingpin_dual_stick_defaults, add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info)));
+}
+
+joystick_info add_sin_default_actions(joystick_info info)
+{
+    constexpr static auto sin_dual_stick_defaults = std::array<std::array<std::string_view, 2>, 6> {{
+        {playstation::l2, "weaponuse" },
+        {playstation::l1, "invnext" },
+        {playstation::r1, "invuse"},
+        {playstation::square, "+use"},
+        {playstation::start, "showinfo"},
+        {playstation::select, "toggleviewmode"} 
+    }};
+
+    return add_actions_to_joystick_info(sin_dual_stick_defaults, add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info)));
+}
+
+joystick_info add_heretic_2_default_actions(joystick_info info)
+{
+    constexpr static auto heretic2_dual_stick_defaults = std::array<std::array<std::string_view, 2>, 10> {{
+        {playstation::l2, "+defend" },
+        {playstation::l1, "defprev" },
+        {playstation::r1, "defnext"},
+        {playstation::circle, "+creep"},
+        {playstation::square, "+action"},
+        {playstation::start, "menu_objectives"},
+        {playstation::select, "menu_city_map"} 
+    }};
+
+    return add_actions_to_joystick_info(heretic2_dual_stick_defaults, add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info)));
 }
 
 std::string_view find_axis_index_for_action(std::string_view)
