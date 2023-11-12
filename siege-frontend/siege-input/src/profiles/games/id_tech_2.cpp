@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <algorithm>
 #include "joystick_info.hpp"
+#include "game_info.hpp"
 
 // movement
 constexpr static auto forward_on = "+forward"; 
@@ -33,6 +34,7 @@ using joystick_info = siege::joystick_info;
 using button = siege::button;
 using hat = siege::hat;
 using axis = siege::axis;
+using game_info = siege::game_info;
 
 axis add_quake_1_axis_metadata(axis result)
 {
@@ -368,6 +370,34 @@ joystick_info add_heretic_2_default_actions(joystick_info info)
     }};
 
     return add_actions_to_joystick_info(heretic2_dual_stick_defaults, add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info)));
+}
+
+joystick_info add_quake_3_default_actions(joystick_info info)
+{
+    constexpr static auto quake3_dual_stick_defaults = std::array<std::array<std::string_view, 2>, 7> {{
+        {playstation::l2, "+zoom" },
+        {playstation::l1, "weapprev" },
+        {playstation::r1, "weapnext" },
+        {playstation::triangle, "vote yes" },
+        {playstation::square, "vote no"},
+        {playstation::start, "pause"},
+        {playstation::select, "+scores"},
+    }};
+    return add_actions_to_joystick_info(quake3_dual_stick_defaults, add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info)));
+}
+
+std::vector<game_info> get_id_tech_games()
+{
+    return {
+        game_info {"Quake", add_quake_1_input_metadata, add_quake_1_default_actions },
+        game_info {"Quake 2", add_quake_2_input_metadata, add_quake_2_default_actions },
+        game_info {"Quake 3", add_quake_3_input_metadata, add_quake_3_default_actions },
+        game_info {"SiN", add_quake_2_input_metadata, add_sin_default_actions },
+        game_info {"Soldier of Fortune", add_quake_2_input_metadata, add_soldier_of_fortune_default_actions },
+        game_info {"Heretic 2", add_quake_2_input_metadata, add_heretic_2_default_actions },
+        game_info {"Hexen 2", add_quake_2_input_metadata, add_hexen_2_default_actions },
+        game_info {"Kingpin", add_quake_2_input_metadata, add_kingpin_default_actions }
+    };
 }
 
 std::string_view find_axis_index_for_action(std::string_view)
