@@ -5,11 +5,23 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 find_package(nlohmann_json REQUIRED)
 find_package(SDL2 REQUIRED)
+find_package(3space QUIET) # used for standalone builds. Requires lib3space to be packaged.
 
 if(WIN32)
-    add_library(siege-input STATIC src/platform/common.cpp src/platform/windows.cpp src/config.cpp src/virtual_joystick.cpp src/profiles/games/id_tech_2.cpp)
+    add_library(siege-input STATIC 
+    src/platform/common.cpp 
+    src/platform/windows.cpp src/config.cpp 
+    src/virtual_joystick.cpp 
+    src/profiles/games/id_tech_2.actions.cpp
+    src/profiles/games/id_tech_2.meta.cpp)
 else()
-    add_library(siege-input STATIC src/platform/common.cpp src/platform/other.cpp src/config.cpp src/virtual_joystick.cpp src/profiles/games/id_tech_2.cpp)
+    add_library(siege-input STATIC 
+    src/platform/common.cpp 
+    src/platform/other.cpp 
+    src/config.cpp 
+    src/virtual_joystick.cpp 
+    src/profiles/games/id_tech_2.meta.cpp
+    src/profiles/games/id_tech_2.actions.cpp)
 endif()
 
 add_custom_command(TARGET siege-input
@@ -20,7 +32,7 @@ add_custom_command(TARGET siege-input
 set_property(TARGET siege-input PROPERTY CXX_STANDARD 17)
 target_include_directories(siege-input PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_include_directories(siege-input PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(siege-input PUBLIC SDL2::SDL2-static nlohmann_json::nlohmann_json)
+target_link_libraries(siege-input PUBLIC SDL2::SDL2-static nlohmann_json::nlohmann_json 3space::3space)
 
 if(WIN32)
     target_link_libraries(siege-input PRIVATE dinput8)

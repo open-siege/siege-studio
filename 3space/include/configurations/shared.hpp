@@ -70,8 +70,8 @@ namespace studio::configurations
 
             text_game_config() = default;
             text_game_config(std::unique_ptr<char[]> &&, std::vector<config_line>&&);
-            text_game_config(const text_game_config&);
-            text_game_config(text_game_config&&) = delete;
+            text_game_config(const text_game_config&) = delete;
+            text_game_config(text_game_config&&) = default;
 
             std::vector<key_type> keys() const;
             std::string_view find(key_type key) const;

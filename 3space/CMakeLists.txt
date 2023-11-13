@@ -16,7 +16,8 @@ file(GLOB_RECURSE TEST_SRC_FILES src/*.test.cpp)
 file(GLOB LIB_SRC_FILES
         src/content/*.cpp
         src/content/**/*.cpp
-        src/resources/*.cpp)
+        src/resources/*.cpp
+        src/configurations/*.cpp)
 
 list(REMOVE_ITEM LIB_SRC_FILES ${TEST_SRC_FILES})
 
