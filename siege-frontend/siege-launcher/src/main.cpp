@@ -11,10 +11,13 @@
 #include <optional>
 #include <utility>
 #include <cstring>
+#include <iostream>
+#include <fstream>
 
 #include <SDL.h>
 #include <imgui.h>
 
+#include "id_tech.hpp"
 #include "platform/platform.hpp"
 #include "joystick_info.hpp"
 #include "virtual_joystick.hpp"
@@ -28,46 +31,27 @@ constexpr static auto devices_which_crash = std::array<std::pair<Uint16, Uint16>
 }};
 
 
+const std::string& to_string(std::string_view value, std::size_t index = 0)
+{
+  thread_local std::array<std::string, 10> strings;
+
+  if (index > strings.size() - 1)
+  {
+    index = strings.size() - 1;
+  }
+
+  strings[index].assign(value);
+  return strings[index];
+}
+
 struct GameLauncherOnFrameBeginCallback
 {
-  std::vector<std::string> games;
+  std::optional<siege::game_info> selected_game;
+  std::vector<siege::game_info> games;
   std::vector<siege::joystick_info> joysticks;
 
-
   GameLauncherOnFrameBeginCallback()
-    : games({
-      "Quake",
-      "HeXen II",
-      "Laser Arena",
-      "CIA Operative: Solo Misisons",
-      "battleMETAL",
-      "Quake 2", 
-      "Heretic 2",
-      "SiN",
-      "Kingpin: Life of Crime",
-      "Soldier of Fortune",
-      "Daikatana",
-      "Anachronox",
-      "Half-Life",
-      "007 Nightfire",
-      "Cry of Fear",
-      "Quake III Arena",
-      "Heavy Metal FAKK 2",
-      "Star Trek: Voyager - Elite Force",
-      "American McGee's Alice",
-      "007 Agent Under Fire",
-      "Return to Castle Wolfenstein",
-      "Medal of Honor: Allied Assault",
-      "Star Wars Jedi Knight II: Jedi Outcast",
-      "Soldier of Fortune II: Double Helix",
-      "Wolfenstein: Enemy Territory",
-      "Star Wars Jedi Knight: Jedi Academy",
-      "Call of Duty",
-      "007 Everything or Nothing",
-      "Iron Grip: Warlord",
-      "Dark Salvation",
-      "Quake Live"
-    })
+    : games(siege::get_id_tech_games())
   {
   }
 
@@ -94,9 +78,9 @@ struct GameLauncherOnFrameBeginCallback
 
         for (auto& game : games)
         {
-            if (ImGui::Button(game.c_str()))
+            if (ImGui::Button(to_string(game.english_name).c_str()))
             {
-               
+              selected_game.emplace(game);
             }
         }
        ImGui::End();
@@ -108,33 +92,71 @@ struct GameLauncherOnFrameBeginCallback
         {
                 if (ImGui::BeginTabItem("Controls"))
                 {
-                   ImGui::BeginGroup();
-                  ImGui::Text("Move Forward: Left Stick Y-Axis +");
-                  ImGui::Text("Move Backward: Left Stick Y-Axis -");
 
-                  ImGui::Text("Move Left: Left Stick X-Axis -");
-                  ImGui::Text("Move Right: Left Stick X-Axis +");
+                  for (auto& joystick : joysticks)
+                  {
+                    ImGui::BeginGroup();
 
-                  ImGui::Text("Look Up: Right Stick Y-Axis +");
-                  ImGui::Text("Look Down: Right Stick Y-Axis -");
+                    if (selected_game.has_value())
+                    {
+                      auto joystick_info = selected_game.value()
+                            .add_default_actions(selected_game.value()
+                            .add_input_metadata(amend_controller_info(joysticks[0])));
 
-                  ImGui::Text("Turn Left: Right Stick X-Axis -");
-                  ImGui::Text("Turn Right: Left Stick X-Axis +");
+                      if (ImGui::Button("Save file"))
+                      {
+                        auto config = selected_game.value().create_game_config(joystick_info);
+
+                        if (const auto* text = std::get_if<siege::game_info::text_config>(&config))
+                        {
+                          std::ofstream config_file("temp.cfg", std::ios::trunc | std::ios::binary);
+                          text->save_config(config_file, text->config);
+                        }
+                      }
 
 
-                  ImGui::Text("Jump: X");
-                  ImGui::Text("Crouch: O");
-                  ImGui::Text("Reload: []");
-                  ImGui::Text("Change Weapon: ^");
+                      ImGui::Text("%s", to_string(joystick_info.name).c_str());
 
-                  ImGui::Text("Change Item: L1");
-                  ImGui::Text("Use Item: R1");
-                  ImGui::Text("Secondary Attack: L2");
-                  ImGui::Text("Primary Attack: R2");
-                  ImGui::Text("Run: L3");
-                  ImGui::Text("Melee: R3");
+                      for (auto& axis : joystick_info.axes)
+                      {
+                        if (axis.axis_type.has_value())
+                        {
+                          for (auto& action : axis.actions)
+                          {
+                            ImGui::Text("%s: %s %s", to_string(action.name).c_str(), 
+                                    to_string(action.target_meta_name, 1).c_str(), 
+                                    to_string(axis.axis_type.value(), 2).c_str());
+                          }
+                        }
+                      }
+
+                      for (auto& button : joystick_info.buttons)
+                      {
+                        if (button.button_type.has_value())
+                        {
+                          for (auto& action : button.actions)
+                          {
+                            ImGui::Text("%s: %s %s", to_string(action.name).c_str(), 
+                                    to_string(action.target_meta_name, 1).c_str(), 
+                                    to_string(button.button_type.value(), 2).c_str());
+                          }
+
+                        }
+                      }
+
+                      for (auto& hat : joystick_info.hats)
+                      {
+                          for (auto& action : hat.actions)
+                          {
+                            ImGui::Text("%s: %s", to_string(action.name).c_str(), 
+                                    to_string(action.target_meta_name, 1).c_str());
+                          }
+                      }
+                    }
 
                   ImGui::EndGroup();
+                  }
+                   
                   ImGui::EndTabItem();
                 }
 
@@ -174,8 +196,8 @@ int main(int argc, char** argv)
   callbacks.onWindowCreated = [](SDL_Window* window) {
     SDL_SetWindowTitle(window, "Siege Launcher");
     siege::InitSubSystem(SDL_INIT_TIMER | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC);
-    siege::InitVirtualJoysticksFromKeyboardsAndMice();
-    siege::InitVirtualJoysticksFromJoysticks();
+ //   siege::InitVirtualJoysticksFromKeyboardsAndMice();
+ //   siege::InitVirtualJoysticksFromJoysticks();
   };
   callbacks.onNewFrame = GameLauncherOnFrameBeginCallback{};
 

@@ -11,26 +11,26 @@ namespace studio::configurations::id_tech
         namespace wolf3d
         {
             std::optional<binary_game_config> load_config(std::istream&, std::size_t);
-            void save_config(std::istream&, const binary_game_config&);
+            void save_config(std::ostream&, const binary_game_config&);
         }
 
         namespace blake_stone
         {
             std::optional<binary_game_config> load_config(std::istream&, std::size_t);
-            void save_config(std::istream&, const binary_game_config&);
+            void save_config(std::ostream&, const binary_game_config&);
         }
 
         namespace corridor_7
         {
             std::optional<binary_game_config> load_config(std::istream&, std::size_t);
-            void save_config(std::istream&, const binary_game_config&);
+            void save_config(std::ostream&, const binary_game_config&);
         }
 
         namespace body_count
         {
             std::optional<binary_game_config> load_config(std::istream&, std::size_t);
 
-            void save_config(std::istream&, const binary_game_config&);
+            void save_config(std::ostream&, const binary_game_config&);
         }
     }
 

@@ -196,6 +196,8 @@ namespace siege
     };
 
     std::vector<joystick_info> get_all_joysticks();
+
+    joystick_info amend_controller_info(joystick_info info);
 }
 
 

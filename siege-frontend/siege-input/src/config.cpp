@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <optional>
 #include <memory>
+#include <algorithm>
 #include <SDL.h>
 #include "platform/platform.hpp"
 #include "config.hpp"
@@ -100,7 +101,7 @@ namespace siege
         {
           info.controller_type.emplace(common::types::xbox);
         }
-        else if (controller_type == SDL_GameControllerType::SDL_CONTROLLER_TYPE_XBOX360 || controller_type == SDL_GameControllerType::SDL_CONTROLLER_TYPE_XBOX360)
+        else if (controller_type == SDL_GameControllerType::SDL_CONTROLLER_TYPE_PS3 || controller_type == SDL_GameControllerType::SDL_CONTROLLER_TYPE_PS4)
         {
           info.controller_type.emplace(common::types::playstation);
         }
@@ -126,13 +127,14 @@ namespace siege
       {
         auto& button = info.buttons.emplace_back();
 
+        button.index = std::size_t(b);
         button.is_left_trigger = left_trigger_binding.has_value() && 
         left_trigger_binding.value().bindType == SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_BUTTON &&
-        left_trigger_binding.value().value.button == i;
+        left_trigger_binding.value().value.button == b;
 
         button.is_right_trigger = right_trigger_binding.has_value() && 
         right_trigger_binding.value().bindType == SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_BUTTON &&
-        right_trigger_binding.value().value.button == i;
+        right_trigger_binding.value().value.button == b;
 
         if (controller)
         {
@@ -158,9 +160,38 @@ namespace siege
                   }
               }
           }
+
+          if (!button.button_type.has_value() && 
+            info.controller_type.has_value() && 
+            info.controller_type.value() == common::types::xbox)
+          {
+            if (button.is_left_trigger)
+            {
+              button.button_type.emplace(xbox::lt);
+            }
+
+            if (button.is_right_trigger)
+            {
+              button.button_type.emplace(xbox::rt);
+            }
+          }
+
+          if (!button.button_type.has_value() && 
+            info.controller_type.has_value() && 
+            info.controller_type.value() == common::types::playstation)
+          {
+            if (button.is_left_trigger)
+            {
+              button.button_type.emplace(playstation::l2);
+            }
+
+            if (button.is_right_trigger)
+            {
+              button.button_type.emplace(playstation::r2);
+            }
+          }
         }
       }
-
 
       const auto num_axes = siege::JoystickNumAxes(joystick.get());
       info.axes.reserve(num_axes);
@@ -168,6 +199,7 @@ namespace siege
       for (auto a = 0; a < num_axes; ++a)
       {
         auto& axis = info.axes.emplace_back();
+        axis.index = std::size_t(a);
 
         if (controller)
         {
@@ -227,6 +259,7 @@ namespace siege
       {
         auto& hat = info.hats.emplace_back();
 
+        hat.index = std::size_t(b);
         hat.is_controller_dpad = d_pad_up_binding.has_value() && 
         d_pad_down_binding.has_value() &&
         d_pad_left_binding.has_value() &&
@@ -240,11 +273,85 @@ namespace siege
         d_pad_right_binding.value().bindType == SDL_GameControllerBindType::SDL_CONTROLLER_BINDTYPE_HAT &&
         d_pad_right_binding.value().value.hat.hat == i;
       }
-
     }
 
-
     return joysticks;
+  }
+
+  joystick_info amend_controller_info(joystick_info info)
+  {
+    if (info.controller_type.has_value() && info.controller_type.value() == common::types::playstation)
+    {
+        auto l1_button = std::find_if(info.buttons.begin(), info.buttons.end(), [] (const auto& button) {
+            return button.button_type.has_value() && button.button_type.value() == playstation::l1;
+        });
+
+        auto l2_button = std::find_if(info.buttons.begin(), info.buttons.end(), [] (const auto& button) {
+            return button.button_type.has_value() && button.button_type.value() == playstation::l2;
+        });
+
+        auto l3_button = std::find_if(info.buttons.begin(), info.buttons.end(), [] (const auto& button) {
+            return button.button_type.has_value() && button.button_type.value() == playstation::l3;
+        });
+
+        if (l1_button != info.buttons.end() && l3_button != info.buttons.end() && l2_button == info.buttons.end())
+        {
+          auto l2_axis = std::find_if(info.axes.begin(), info.axes.end(), [] (const auto& axis) 
+          { return axis.axis_type.has_value() && axis.axis_type.value() == playstation::l2;
+          });
+
+          if (l2_axis == info.axes.end())
+          {
+            return std::move(info);
+          }
+
+          l2_button = std::find_if(l1_button, l3_button, [] (const auto& button) { return !button.button_type.has_value();});
+
+          if (l2_button == info.buttons.end())
+          {
+            return std::move(info);
+          }
+
+          l2_button->is_left_trigger = true;
+          l2_button->button_type.emplace(playstation::l2);
+        }
+
+        auto r1_button = std::find_if(info.buttons.begin(), info.buttons.end(), [] (const auto& button) {
+            return button.button_type.has_value() && button.button_type.value() == playstation::r1;
+        });
+
+        auto r2_button = std::find_if(info.buttons.begin(), info.buttons.end(), [] (const auto& button) {
+            return button.button_type.has_value() && button.button_type.value() == playstation::r2;
+        });
+
+        auto r3_button = std::find_if(info.buttons.begin(), info.buttons.end(), [] (const auto& button) {
+            return button.button_type.has_value() && button.button_type.value() == playstation::r3;
+        });
+
+        if (r1_button != info.buttons.end() && r3_button != info.buttons.end() && r2_button == info.buttons.end())
+        {
+          auto r2_axis = std::find_if(info.axes.begin(), info.axes.end(), [] (const auto& axis) 
+          { return axis.axis_type.has_value() && axis.axis_type.value() == playstation::r2;
+          });
+
+          if (r2_axis == info.axes.end())
+          {
+            return std::move(info);
+          }
+
+          r2_button = std::find_if(r1_button, r3_button, [] (const auto& button) { return !button.button_type.has_value();});
+
+          if (r2_button == info.buttons.end())
+          {
+            return std::move(info);
+          }
+
+          r2_button->is_left_trigger = true;
+          r2_button->button_type.emplace(playstation::r2);
+        }
+    }
+
+    return std::move(info);
   }
 
   inline SDL_GameControllerBindType from_string(std::string_view type)
