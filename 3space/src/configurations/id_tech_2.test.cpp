@@ -166,5 +166,4 @@ TEST_CASE("Parsing of an id tech config file", "[cfg.id_tech]")
     REQUIRE(value.value().find({"set", "ghl_shadow_darkness"}) == "0.75");
     REQUIRE(value.value().find({"set", "vid_brightness"}) == "0.600000");
   }
-
 }

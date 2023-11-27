@@ -43,18 +43,22 @@ namespace studio::configurations
                 config_value value;
             };
 
-            binary_game_config() = default;
-            binary_game_config(std::vector<config_entry>&&);
-            binary_game_config(const binary_game_config&);
-            binary_game_config(binary_game_config&&) = delete;
+            using persist = void(&)(const std::vector<config_entry>&, std::ostream&);
+
+            binary_game_config(persist);
+            binary_game_config(std::vector<config_entry>&&, persist);
+            binary_game_config(binary_game_config&&) = default;
+            binary_game_config() = delete;
+            binary_game_config(const binary_game_config&) = delete;
 
             std::vector<std::string_view> keys() const;
             std::optional<config_value> find(std::string_view key) const;
             void emplace(std::string_view key, config_value value);
             void remove(std::string_view key);
 
-            void persist(std::function<void(const std::vector<config_entry>&)>) const;
+            void save(std::ostream&) const;
         private: 
+            persist save_config;
             std::vector<config_entry> entries;
     };
 
@@ -65,22 +69,22 @@ namespace studio::configurations
             {
                 std::string_view raw_line;
                 key_type key_segments;
-                std::string_view value;
+                key_type value;
             };
 
-            text_game_config() = default;
-            text_game_config(std::unique_ptr<char[]> &&, std::vector<config_line>&&);
-            text_game_config(const text_game_config&) = delete;
-            text_game_config(text_game_config&&) = default;
+            using persist = void(const std::vector<config_line>&, std::ostream&);
+
+            text_game_config(persist&);
+            text_game_config(std::unique_ptr<char[]> &&, std::vector<config_line>&&, persist&);
 
             std::vector<key_type> keys() const;
-            std::string_view find(key_type key) const;
-            void emplace(key_type key, std::string_view value);
-            void remove(key_type key);
+            key_type find(key_type key) const;
+            text_game_config&& emplace(key_type key, key_type value);
+            text_game_config&& remove(key_type key);
 
-            void persist(std::function<void(const std::vector<config_line>&)>) const;
-
+            void save(std::ostream&) const;
         private:
+            persist& save_config;
             std::unique_ptr<char[]>  raw_data;
             std::vector<config_line> line_entries;
     };

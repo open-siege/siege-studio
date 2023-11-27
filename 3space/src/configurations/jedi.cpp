@@ -6,6 +6,20 @@ namespace studio::configurations::jedi
 {
     using config_entry = binary_game_config::config_entry;
     namespace endian = boost::endian;
+
+    namespace jedi_knight
+    {
+        std::optional<text_game_config> load_config(std::istream&, std::size_t)
+        {
+            return std::nullopt;
+        }
+
+        void save_config(std::ostream&, const text_game_config&)
+        {
+
+        }
+    }
+
     namespace dark_forces
     {
         
@@ -185,95 +199,95 @@ namespace studio::configurations::jedi
             }
 
 
-            return std::make_optional<binary_game_config>(std::move(results));
+            return std::make_optional<binary_game_config>(std::move(results), save_config);
         }
 
-        void save_config(std::ostream& raw_data, const binary_game_config& config)
+        void save_config(const std::vector<binary_game_config::config_entry>& entries, std::ostream& raw_data)
         {
-            auto type = config.find("ConfigType");
+            // auto type = config.find("ConfigType");
 
-            if (type != config_value("DarkForces"))
-            {
-                return;    
-            }
+            // if (type != config_value("DarkForces"))
+            // {
+            //     return;    
+            // }
 
-            config_value zero(std::uint32_t(0u));
-            little_endian_stream_writer writer{raw_data};
+            // config_value zero(std::uint32_t(0u));
+            // little_endian_stream_writer writer{raw_data};
 
-            writer.write(std::string_view(expected_header.data(), expected_header.size()));
-            raw_data.write(reinterpret_cast<const char*>(checksum.data()), sizeof(checksum));
+            // writer.write(std::string_view(expected_header.data(), expected_header.size()));
+            // raw_data.write(reinterpret_cast<const char*>(checksum.data()), sizeof(checksum));
 
-            writer.write(std::string(5, '\0'));
-            write(writer, config.find("ShowHud").value_or(config_value(true)) ? config_value(std::numeric_limits<std::uint32_t>::max()) : zero);
+            // writer.write(std::string(5, '\0'));
+            // write(writer, config.find("ShowHud").value_or(config_value(true)) ? config_value(std::numeric_limits<std::uint32_t>::max()) : zero);
             
             
 
-            write(writer, config.find("InternalResolution").value_or(zero));
-            write(writer, config.find("GeometryDetail").value_or(zero));
-            write(writer, config.find("ScreenSize").value_or(zero));
-            writer.write(std::string(2, '\0'));
-            write(writer, config.find("JoystickEnabled").value_or(zero));
-            write(writer, config.find("EffectsVolume").value_or(zero));
-            write(writer, config.find("MusicVolume").value_or(zero));
-            write(writer, config.find("MouseSensitivity").value_or(zero));
-            write(writer, config.find("GammaCorrection").value_or(zero));
-            write(writer, config.find("SuperShield").value_or(config_value(false)) ? config_value(std::uint32_t(1)) : zero);
-            write(writer, config.find("NumChannels").value_or(zero));
-            write(writer, config.find("AutoSwapWeapon").value_or(config_value(false)) ? config_value(std::uint32_t(1)) : zero);
-            write(writer, config.find("CutsceneEffectsVolume").value_or(zero));
-            write(writer, config.find("CutsceneMusicVolume").value_or(zero));
+            // write(writer, config.find("InternalResolution").value_or(zero));
+            // write(writer, config.find("GeometryDetail").value_or(zero));
+            // write(writer, config.find("ScreenSize").value_or(zero));
+            // writer.write(std::string(2, '\0'));
+            // write(writer, config.find("JoystickEnabled").value_or(zero));
+            // write(writer, config.find("EffectsVolume").value_or(zero));
+            // write(writer, config.find("MusicVolume").value_or(zero));
+            // write(writer, config.find("MouseSensitivity").value_or(zero));
+            // write(writer, config.find("GammaCorrection").value_or(zero));
+            // write(writer, config.find("SuperShield").value_or(config_value(false)) ? config_value(std::uint32_t(1)) : zero);
+            // write(writer, config.find("NumChannels").value_or(zero));
+            // write(writer, config.find("AutoSwapWeapon").value_or(config_value(false)) ? config_value(std::uint32_t(1)) : zero);
+            // write(writer, config.find("CutsceneEffectsVolume").value_or(zero));
+            // write(writer, config.find("CutsceneMusicVolume").value_or(zero));
 
-            writer.write(std::uint8_t(0xDB));
-            writer.write(std::string(24, 0xFF));
-            writer.write(std::string(sizeof(std::array<std::int32_t, 3>), '\0'));          
-            write(writer, config.find("JoystickType").value_or(zero));
-            write(writer, config.find("HatInfo").value_or(zero));
-            writer.write(std::uint32_t(0));
-            write(writer, config.find("Joy1CalibrationCentre").value_or(zero));
-            write(writer, config.find("Joy1TopLeft").value_or(zero));
-            write(writer, config.find("Joy1BottomRight").value_or(zero));
-            writer.write(std::string(sizeof(std::array<std::int32_t, 3>), '\0'));
-            write(writer, config.find("Joy2CalibrationCentre").value_or(zero));
-            write(writer, config.find("Joy2TopLeft").value_or(zero));
-            write(writer, config.find("Joy2BottomRight").value_or(zero));
-            writer.write(std::string(32, 0xFF));
-            write(writer, config.find("IsCalibrated").value_or(config_value(false)) ? config_value(std::numeric_limits<std::uint32_t>::max()) : zero);
+            // writer.write(std::uint8_t(0xDB));
+            // writer.write(std::string(24, 0xFF));
+            // writer.write(std::string(sizeof(std::array<std::int32_t, 3>), '\0'));          
+            // write(writer, config.find("JoystickType").value_or(zero));
+            // write(writer, config.find("HatInfo").value_or(zero));
+            // writer.write(std::uint32_t(0));
+            // write(writer, config.find("Joy1CalibrationCentre").value_or(zero));
+            // write(writer, config.find("Joy1TopLeft").value_or(zero));
+            // write(writer, config.find("Joy1BottomRight").value_or(zero));
+            // writer.write(std::string(sizeof(std::array<std::int32_t, 3>), '\0'));
+            // write(writer, config.find("Joy2CalibrationCentre").value_or(zero));
+            // write(writer, config.find("Joy2TopLeft").value_or(zero));
+            // write(writer, config.find("Joy2BottomRight").value_or(zero));
+            // writer.write(std::string(32, 0xFF));
+            // write(writer, config.find("IsCalibrated").value_or(config_value(false)) ? config_value(std::numeric_limits<std::uint32_t>::max()) : zero);
         
-            for (auto action : keyboardActions)
-            {
-                if (action == unused)
-                {
-                    writer.write(std::uint8_t(0x00));
-                }
-                else
-                {
-                    write(writer, config.find(action).value_or(config_value(std::uint8_t(0u))));
-                }
-            }
+            // for (auto action : keyboardActions)
+            // {
+            //     if (action == unused)
+            //     {
+            //         writer.write(std::uint8_t(0x00));
+            //     }
+            //     else
+            //     {
+            //         write(writer, config.find(action).value_or(config_value(std::uint8_t(0u))));
+            //     }
+            // }
 
-            for (auto action : joystickActions)
-            {
-                if (action == unused)
-                {
-                    writer.write(std::uint8_t(0x00));
-                }
-                else
-                {
-                    write(writer, config.find(action).value_or(config_value(std::uint8_t(0u))));
-                }
-            }
+            // for (auto action : joystickActions)
+            // {
+            //     if (action == unused)
+            //     {
+            //         writer.write(std::uint8_t(0x00));
+            //     }
+            //     else
+            //     {
+            //         write(writer, config.find(action).value_or(config_value(std::uint8_t(0u))));
+            //     }
+            // }
 
-            for (auto action : mouseActions)
-            {
-                if (action == unused)
-                {
-                    writer.write(std::uint8_t(0x00));
-                }
-                else
-                {
-                    write(writer, config.find(action).value_or(config_value(std::uint8_t(0u))));
-                }
-            }
+            // for (auto action : mouseActions)
+            // {
+            //     if (action == unused)
+            //     {
+            //         writer.write(std::uint8_t(0x00));
+            //     }
+            //     else
+            //     {
+            //         write(writer, config.find(action).value_or(config_value(std::uint8_t(0u))));
+            //     }
+            // }
         }
     }
 }

@@ -7,12 +7,10 @@
 
 namespace siege
 {
-
     using joystick_info = siege::joystick_info;
     using button = siege::button;
     using hat = siege::hat;
     using axis = siege::axis;
-
 
     axis add_quake_1_axis_metadata(axis result)
     {
@@ -31,7 +29,7 @@ namespace siege
             result.meta_name_negative.emplace(axis_names[result.index]);
         }
 
-        return std::move(result);
+        return result;
     }
 
     button add_quake_1_button_metadata(button result)
@@ -59,7 +57,7 @@ namespace siege
             result.meta_name.emplace(button_names[result.index]);
         }
 
-        return std::move(result);
+        return result;
     }
 
 
@@ -73,7 +71,7 @@ namespace siege
             result.meta_name_left = "AUX32";
         }
 
-        return std::move(result);
+        return result;
     }
 
 
@@ -83,7 +81,7 @@ namespace siege
         std::transform(info.axes.begin(), info.axes.end(), info.axes.begin(), add_quake_1_axis_metadata);
         std::transform(info.hats.begin(), info.hats.end(), info.hats.begin(), add_quake_1_hat_metadata);
 
-        return std::move(info);
+        return info;
     }
 
     axis add_quake_2_axis_metadata(axis result)
@@ -112,7 +110,7 @@ namespace siege
         std::transform(info.axes.begin(), info.axes.end(), info.axes.begin(), add_quake_2_axis_metadata);
         std::transform(info.hats.begin(), info.hats.end(), info.hats.begin(), add_quake_1_hat_metadata);
 
-        return std::move(info);
+        return info;
     }
 
 
@@ -141,7 +139,7 @@ namespace siege
             result.meta_name.emplace(button_names[result.index]);
         }
 
-        return std::move(result);
+        return result;
     }
 
     axis add_quake_3_axis_metadata(axis result)
@@ -170,7 +168,7 @@ namespace siege
             result.meta_name_negative = "JOY16";
         }
 
-        return std::move(result);
+        return result;
     }
 
     hat add_quake_3_hat_metadata(hat result)
@@ -183,7 +181,7 @@ namespace siege
             result.meta_name_left = "JOY27";
         }
 
-        return std::move(result);
+        return result;
     }
 
     joystick_info add_quake_3_input_metadata(joystick_info info)
@@ -192,6 +190,6 @@ namespace siege
         std::transform(info.axes.begin(), info.axes.end(), info.axes.begin(), add_quake_3_axis_metadata);
         std::transform(info.hats.begin(), info.hats.end(), info.hats.begin(), add_quake_3_hat_metadata);
 
-        return std::move(info);
+        return info;
     }
 }

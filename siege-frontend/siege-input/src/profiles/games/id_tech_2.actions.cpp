@@ -9,6 +9,7 @@
 
 namespace siege
 {
+    using namespace std::literals;
     // movement
     constexpr static auto forward_on = "+forward"; 
     constexpr static auto backward_on = "+back";
@@ -37,6 +38,7 @@ namespace siege
     using button = siege::button;
     using hat = siege::hat;
     using axis = siege::axis;
+    using alias = siege::alias;
     using game_info = siege::game_info;
     using text_game_config = studio::configurations::text_game_config;
 
@@ -57,6 +59,15 @@ namespace siege
             {playstation::cross, move_up_on}
     }};
 
+
+    template<std::size_t ArraySize>
+    joystick_info add_aliases_to_joystick_info(const std::array<std::array<std::string_view, 2>, ArraySize>& defaults, joystick_info info)
+    {
+        info.aliases.reserve(ArraySize);
+
+        std::transform(defaults.begin(), defaults.end(), std::back_inserter(info.aliases), [](const auto& values) { return alias{values[0], values[1]} });
+        return info;
+    }
 
     template<std::size_t ArraySize>
     joystick_info add_actions_to_joystick_info(const std::array<std::array<std::string_view, 2>, ArraySize>& defaults, joystick_info info)
@@ -107,7 +118,7 @@ namespace siege
             }
         }
 
-        return std::move(info);
+        return info;
     }
 
     joystick_info add_quake_1_default_actions(joystick_info info)
@@ -131,7 +142,14 @@ namespace siege
             {playstation::select, "score"} 
         }};
 
-        return add_actions_to_joystick_info(quake2_dual_stick_defaults, add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info)));
+        constexpr static auto quake2_aliases = std::array<std::array<std::string_view, 2>, 2> {{
+                {"+throw-grenade", "use grenades; +attack"},
+                {"-throw-grenade", "-weapprev; -attack"}
+        }};
+
+        return add_aliases_to_joystick_info(quake2_aliases, 
+                    add_actions_to_joystick_info(quake2_dual_stick_defaults, 
+                        add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info))));
     }
 
     joystick_info add_soldier_of_fortune_default_actions(joystick_info info)
@@ -145,7 +163,20 @@ namespace siege
             {playstation::select, "score"},
         }};
 
-        return add_actions_to_joystick_info(sof_dual_stick_defaults, add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info)));
+        constexpr static auto sof_aliases = std::array<std::array<std::string_view, 2>, 8> {{
+                {"+melee-attack", "weaponselect 1; +attack"},
+                {"-melee-attack", "weaponbestsafe; -attack"},
+                {"+use-plus-special1", "+weaponextra1; +use"},
+                {"-use-plus-special1", "-weaponextra1; -use; alias +use-plus-special +use-plus-special2; alias -use-plus-special -use-plus-special2"},
+                {"+use-plus-special2", "+weaponextra2; +use"},
+                {"-use-plus-special2", "-weaponextra2; -use; alias +use-plus-special +use-plus-special1; alias -use-plus-special -use-plus-special1"},
+                {"+use-plus-special", "+use-plus-special1"},
+                {"-use-plus-special", "-use-plus-special1"}
+        }};
+
+        return add_aliases_to_joystick_info(sof_aliases, 
+                    add_actions_to_joystick_info(sof_dual_stick_defaults, 
+                        add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info))));
     }
 
     joystick_info add_kingpin_default_actions(joystick_info info)
@@ -163,7 +194,14 @@ namespace siege
             {playstation::d_pad_right, "key3"}
         }};
 
-        return add_actions_to_joystick_info(kingpin_dual_stick_defaults, add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info)));
+        constexpr static auto kingpin_aliases = std::array<std::array<std::string_view, 2>, 2> {{
+                {"+melee-attack", "use pipe; +attack"},
+                {"-melee-attack", "weapprev; -attack"}
+        }};
+
+        return add_aliases_to_joystick_info(kingpin_aliases, 
+                    add_actions_to_joystick_info(kingpin_dual_stick_defaults, 
+                        add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info))));
     }
 
     joystick_info add_sin_default_actions(joystick_info info)
@@ -177,7 +215,14 @@ namespace siege
             {playstation::select, "toggleviewmode"} 
         }};
 
-        return add_actions_to_joystick_info(sin_dual_stick_defaults, add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info)));
+        constexpr static auto sin_aliases = std::array<std::array<std::string_view, 2>, 2> {{
+                {"+melee-attack", "use Fists; +attack"},
+                {"-melee-attack", "weapprev; -attack"}
+        }};
+
+        return add_aliases_to_joystick_info(sin_aliases, 
+                    add_actions_to_joystick_info(sin_dual_stick_defaults, 
+                        add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info))));
     }
 
     joystick_info add_heretic_2_default_actions(joystick_info info)
@@ -192,7 +237,14 @@ namespace siege
             {playstation::select, "menu_city_map"} 
         }};
 
-        return add_actions_to_joystick_info(heretic2_dual_stick_defaults, add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info)));
+        constexpr static auto heretic2_aliases = std::array<std::array<std::string_view, 2>, 2> {{
+                {"+melee-attack", "use staff; +attack"},
+                {"-melee-attack", "weapprev; -attack"}
+        }};
+
+        return add_aliases_to_joystick_info(heretic2_aliases, 
+                    add_actions_to_joystick_info(heretic2_dual_stick_defaults, 
+                        add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info))));
     }
 
     joystick_info add_quake_3_default_actions(joystick_info info)
@@ -206,51 +258,91 @@ namespace siege
             {playstation::start, "pause"},
             {playstation::select, "+scores"},
         }};
-        return add_actions_to_joystick_info(quake3_dual_stick_defaults, add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info)));
+
+        constexpr static auto quake3_aliases = std::array<std::array<std::string_view, 2>, 2> {{
+                {"+melee-attack", "weapon 1; +attack"},
+                {"-melee-attack", "weapnext; -attack"}
+        }};
+
+        return add_aliases_to_joystick_info(quake3_aliases, 
+                    add_actions_to_joystick_info(quake3_dual_stick_defaults, 
+                        add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info))));
     }
 
     joystick_info add_quake_1_input_metadata(joystick_info info);
     joystick_info add_quake_2_input_metadata(joystick_info info);
     joystick_info add_quake_3_input_metadata(joystick_info info);
-    game_info::config_info convert_to_quake_config(joystick_info joystick);
-    game_info::config_info convert_to_quake_2_config(joystick_info joystick);
-    game_info::config_info convert_to_quake_3_config(joystick_info joystick);
+    std::vector<game_config> convert_to_quake_config(joystick_info joystick);
+    std::vector<game_config> convert_to_quake_2_config(joystick_info joystick);
+    std::vector<game_config> convert_to_quake_3_config(joystick_info joystick);
 
     std::vector<game_info> get_id_tech_games()
     {
+        const static auto quake = game_info {
+                    "Quake"sv, 
+                    common::types::playstation,
+                    add_quake_1_input_metadata, 
+                    add_quake_1_default_actions, 
+                    convert_to_quake_config
+        };
+
+        const static auto quake_2 = game_info {
+                "Quake II"sv, 
+                common::types::playstation,
+                add_quake_2_input_metadata, 
+                add_quake_2_default_actions,
+                convert_to_quake_2_config
+        };
+
+        const static auto quake_3 = game_info {
+                "Quake III Arena"sv, 
+                common::types::playstation,
+                add_quake_3_input_metadata, 
+                add_quake_3_default_actions, 
+                convert_to_quake_3_config  
+        };
+
+        const static auto half_life = game_info {
+                    "Half-Life"sv, 
+                    common::types::playstation,
+                    add_quake_2_input_metadata, 
+                    add_quake_2_default_actions, 
+                    convert_to_quake_2_config
+        };
+
         return {
-            game_info {"Quake", add_quake_1_input_metadata, add_quake_1_default_actions, convert_to_quake_config },
-            game_info {"battleMETAL", add_quake_1_input_metadata, add_quake_1_default_actions, convert_to_quake_config },
-            game_info {"Hexen II", add_quake_2_input_metadata, add_hexen_2_default_actions, convert_to_quake_config },
-            game_info {"Quake II", add_quake_2_input_metadata, add_quake_2_default_actions, convert_to_quake_2_config },
-            game_info {"Heretic 2", add_quake_2_input_metadata, add_heretic_2_default_actions, convert_to_quake_2_config},
-            game_info {"SiN", add_quake_2_input_metadata, add_sin_default_actions, convert_to_quake_2_config },
-            game_info {"Kingpin: Life of Crime", add_quake_2_input_metadata, add_kingpin_default_actions, convert_to_quake_2_config },
-            game_info {"Daikatana", add_quake_2_input_metadata, add_quake_2_default_actions, convert_to_quake_2_config },
-            game_info {"AQtion", add_quake_2_input_metadata, add_quake_2_default_actions, convert_to_quake_2_config },
-            game_info {"Soldier of Fortune", add_quake_2_input_metadata, add_soldier_of_fortune_default_actions, convert_to_quake_2_config },
-            game_info {"Half-Life", add_quake_2_input_metadata, add_quake_2_default_actions, convert_to_quake_2_config },
-            game_info {"Half-Life: Opposing Force", add_quake_2_input_metadata, add_quake_2_default_actions, convert_to_quake_2_config },
-            game_info {"Half-Life: Blue Shift", add_quake_2_input_metadata, add_quake_2_default_actions, convert_to_quake_2_config },
-            game_info {"Counter-Strike", add_quake_2_input_metadata, add_quake_2_default_actions, convert_to_quake_2_config },
-            game_info {"Counter-Strike: Condition Zero", add_quake_2_input_metadata, add_quake_2_default_actions, convert_to_quake_2_config },
-            game_info {"Counter-Strike: Condition Zero Deleted Scenes", add_quake_2_input_metadata, add_quake_2_default_actions, convert_to_quake_2_config },
-            game_info {"Cry of Fear", add_quake_2_input_metadata, add_quake_2_default_actions, convert_to_quake_2_config },
-            game_info {"Day of Defeat", add_quake_2_input_metadata, add_quake_2_default_actions, convert_to_quake_2_config },
-            game_info {"Deathmatch Classic", add_quake_2_input_metadata, add_quake_2_default_actions, convert_to_quake_2_config },
-            game_info {"Ricochet", add_quake_2_input_metadata, add_quake_2_default_actions, convert_to_quake_2_config },
-            game_info {"Quake III Arena", add_quake_3_input_metadata, add_quake_3_default_actions, convert_to_quake_3_config },
-            game_info {"Quake Live", add_quake_3_input_metadata, add_quake_3_default_actions, convert_to_quake_3_config },
-            game_info {"Iron Grip: Warlord", add_quake_3_input_metadata, add_quake_3_default_actions, convert_to_quake_3_config },
-            game_info {"Star Trek: Voyager - Elite Force", add_quake_3_input_metadata, add_quake_3_default_actions, convert_to_quake_3_config },
-            game_info {"Star Trek: Elite Force II", add_quake_3_input_metadata, add_quake_3_default_actions, convert_to_quake_3_config },
-            game_info {"Star Wars: Jedi Knight II - Jedi Outcast", add_quake_3_input_metadata, add_quake_3_default_actions, convert_to_quake_3_config },
-            game_info {"Star Wars: Jedi Knight - Jedi Academy", add_quake_3_input_metadata, add_quake_3_default_actions, convert_to_quake_3_config },
-            game_info {"Return to Castle Wolfenstein", add_quake_3_input_metadata, add_quake_3_default_actions, convert_to_quake_3_config },
-            game_info {"Soldier of Fortune II: Double Helix", add_quake_3_input_metadata, add_quake_3_default_actions, convert_to_quake_3_config },
-            game_info {"Medal of Honor: Allied Assault", add_quake_3_input_metadata, add_quake_3_default_actions, convert_to_quake_3_config },
-            game_info {"Call of Duty", add_quake_3_input_metadata, add_quake_3_default_actions, convert_to_quake_3_config },
-            game_info {"Space Trader: Merchant Marine", add_quake_3_input_metadata, add_quake_3_default_actions, convert_to_quake_3_config }
+            quake,
+            game_info {quake, "battleMETAL"sv, add_quake_1_default_actions},
+            game_info {quake, "Hexen II"sv, add_hexen_2_default_actions},
+            quake_2,
+            game_info {quake_2, "Heretic 2"sv, add_heretic_2_default_actions},
+            game_info {quake_2, "SiN"sv, add_sin_default_actions},
+            game_info {quake_2, "Kingpin: Life of Crime"sv, add_kingpin_default_actions},
+            game_info {quake_2, "Daikatana"sv, add_quake_2_default_actions},
+            game_info {quake_2, "AQtion"sv, add_quake_2_default_actions},
+            game_info {quake_2, "Soldier of Fortune"sv, add_soldier_of_fortune_default_actions},
+            half_life,
+            game_info {half_life, "Half-Life: Opposing Force"sv, add_quake_2_default_actions},
+            game_info {half_life, "Half-Life: Blue Shift"sv, add_quake_2_default_actions},
+            game_info {half_life, "Counter-Strike"sv, add_quake_2_default_actions},
+            game_info {half_life, "Counter-Strike: Condition Zero"sv, add_quake_2_default_actions},
+            game_info {half_life, "Counter-Strike: Condition Zero Deleted Scenes"sv, add_quake_2_default_actions},
+            game_info {half_life, "Cry of Fear"sv, add_quake_2_default_actions},
+            game_info {half_life, "Day of Defeat"sv, add_quake_2_default_actions},
+            game_info {half_life, "Deathmatch Classic"sv, add_quake_2_default_actions},
+            game_info {half_life, "Ricochet"sv, add_quake_2_default_actions},
+            quake_3,
+            game_info {quake_3, "Quake Live"sv, add_quake_3_default_actions},
+            game_info {quake_3, "Iron Grip: Warlord"sv, add_quake_3_default_actions},
+            game_info {quake_3, "Star Trek: Voyager - Elite Force"sv, add_quake_3_default_actions},
+            game_info {quake_3, "Star Trek: Elite Force II"sv, add_quake_3_default_actions},
+            game_info {quake_3, "Star Wars: Jedi Knight II - Jedi Outcast"sv, add_quake_3_default_actions},
+            game_info {quake_3, "Star Wars: Jedi Knight - Jedi Academy"sv, add_quake_3_default_actions},
+            game_info {quake_3, "Return to Castle Wolfenstein"sv, add_quake_3_default_actions},
+            game_info {quake_3, "Soldier of Fortune II: Double Helix"sv, add_quake_3_default_actions},
+            game_info {quake_3, "Medal of Honor: Allied Assault"sv, add_quake_3_default_actions},
+            game_info {quake_3, "Call of Duty"sv, add_quake_3_default_actions},
+            game_info {quake_3, "Space Trader: Merchant Marine"sv, add_quake_3_default_actions}
         };
     }
 
@@ -269,7 +361,6 @@ namespace siege
             { move_down_on, "5" }
         }};
 
-
         auto existing_mapping = std::find_if(controller_button_mapping.begin(), controller_button_mapping.end(), [&](auto& mapping) {
             return mapping[0] == action;
         });
@@ -282,96 +373,102 @@ namespace siege
         return "0";
     }
 
-    game_info::config_info convert_to_quake_config(joystick_info joystick)
+    std::vector<game_config> convert_to_quake_config(joystick_info joystick)
     {
-        text_game_config config;
+        return std::vector<game_config>{ game_config{ "autoexec.cfg", [&] () {
+            text_game_config config(studio::configurations::id_tech::id_tech_2::save_config);
 
-        for (auto& button : joystick.buttons)
-        {
-            for (auto& action : button.actions)
-            {
-                config.emplace({"bind", action.target_meta_name}, action.name);
-            }
-        }
+            auto create_bind = [&] (const auto& action) {
+                            config.emplace({"bind", action.target_meta_name}, action.name);
+            };
 
-        for (auto& hat : joystick.hats)
-        {
-            for (auto& action : hat.actions)
-            {
-                config.emplace({"bind", action.target_meta_name}, action.name);
-            }
-        }
+            std::for_each(joystick.buttons.cbegin(), joystick.buttons.cend(), [&] (const auto& button) {
+                std::for_each(button.actions.cbegin(), button.actions.cend(), create_bind);
+            });
 
-        for (auto& axis : joystick.axes)
-        {
-            for (auto& action : axis.actions)
-            {
-                config.emplace(action.target_meta_name, find_axis_index_for_action(action.name));
-            }
-        }
+            std::for_each(joystick.hats.cbegin(), joystick.hats.cend(), [&] (const auto& hat) {
+                std::for_each(hat.actions.cbegin(), hat.actions.cend(), create_bind);
+            });
 
-        return game_info::text_config { std::move(config), studio::configurations::id_tech::id_tech_2::load_config, studio::configurations::id_tech::id_tech_2::save_config };
+            config.emplace({"joyadvanced"}, "1"sv);
+
+            std::for_each(joystick.axes.cbegin(), joystick.axes.cend(), [&] (const auto& axis) {
+                std::for_each(axis.actions.cbegin(), axis.actions.cend(), [&](const auto& action) {
+                    config.emplace(action.target_meta_name, find_axis_index_for_action(action.name));
+                });
+            });
+
+            return config;
+        } } };
     }
 
-    game_info::config_info convert_to_quake_2_config(joystick_info joystick)
+    std::vector<game_config> convert_to_quake_2_config(joystick_info joystick)
     {
-        text_game_config config;
+        return std::vector<game_config>{ game_config{ "autoexec.cfg", [&] () {
+            text_game_config config(studio::configurations::id_tech::id_tech_2::save_config);
+            auto create_bind = [&] (const auto& action) {
+                        config.emplace({"bind", action.target_meta_name}, action.name);
+            };
 
-        for (auto& button : joystick.buttons)
-        {
-            for (auto& action : button.actions)
-            {
-                config.emplace({"bind", action.target_meta_name}, action.name);
-            }
-        }
+            std::for_each(joystick.buttons.cbegin(), joystick.buttons.cend(), [&] (const auto& button) {
+                std::for_each(button.actions.cbegin(), button.actions.cend(), create_bind);
+            });
 
-        for (auto& hat : joystick.hats)
-        {
-            for (auto& action : hat.actions)
-            {
-                config.emplace({"bind", action.target_meta_name}, action.name);
-            }
-        }
+            std::for_each(joystick.hats.cbegin(), joystick.hats.cend(), [&] (const auto& hat) {
+                std::for_each(hat.actions.cbegin(), hat.actions.cend(), create_bind);
+            });
 
-        for (auto& axis : joystick.axes)
-        {
-            for (auto& action : axis.actions)
-            {
-                config.emplace({"set", action.target_meta_name}, find_axis_index_for_action(action.name));
-            }
-        }
+            config.emplace({"set", "joy_advanced"}, "1"sv);
 
-        return game_info::text_config { std::move(config), studio::configurations::id_tech::id_tech_2::load_config, studio::configurations::id_tech::id_tech_2::save_config };
+            std::for_each(joystick.axes.cbegin(), joystick.axes.cend(), [&] (const auto& axis) {
+                std::for_each(axis.actions.cbegin(), axis.actions.cend(), [&](const auto& action) {
+                    config.emplace({"set", action.target_meta_name}, find_axis_index_for_action(action.name));
+                });
+            });
+
+            return config;
+        }() } };
     }
 
-    game_info::config_info convert_to_quake_3_config(joystick_info joystick)
+    std::vector<game_config> convert_to_quake_3_config(joystick_info joystick)
     {
-        text_game_config config;
+        return std::vector<game_config>{ game_config{ "autoexec.cfg", [&] () {
+            text_game_config config(studio::configurations::id_tech::id_tech_2::save_config);
 
-        for (auto& button : joystick.buttons)
-        {
-            for (auto& action : button.actions)
-            {
+            auto create_bind = [&] (const auto& action) {
                 config.emplace({"bind", action.target_meta_name}, action.name);
-            }
-        }
+            };
 
-        for (auto& hat : joystick.hats)
-        {
-            for (auto& action : hat.actions)
-            {
-                config.emplace({"bind", action.target_meta_name}, action.name);
-            }
-        }
+            std::for_each(joystick.buttons.cbegin(), joystick.buttons.cend(), [&] (const auto& button) {
+                std::for_each(button.actions.cbegin(), button.actions.cend(), create_bind);
+            });
 
-        for (auto& axis : joystick.axes)
-        {
-            for (auto& action : axis.actions)
-            {
-                config.emplace({"bind", action.target_meta_name}, action.name);
-            }
-        }
+            std::for_each(joystick.hats.cbegin(), joystick.hats.cend(), [&] (const auto& hat) {
+                std::for_each(hat.actions.cbegin(), hat.actions.cend(), create_bind);
+            });
 
-        return game_info::text_config { std::move(config), studio::configurations::id_tech::id_tech_2::load_config, studio::configurations::id_tech::id_tech_2::save_config };
+            std::for_each(joystick.axes.cbegin(), joystick.axes.cend(), [&] (const auto& axis) {
+                std::for_each(axis.actions.cbegin(), axis.actions.cend(), create_bind);
+            });
+
+            return config;
+            }() } };
     }
+
+    constexpr static auto binding_sensitivity = std::array<std::string_view, 5> {{
+        "joy_forwardsensitivity",
+        "joy_upsensitivity",
+        "joy_yawsensitivity", 
+        "joy_sidesensitivity"
+        "joy_pitchsensitivity", 
+    }};
+
+    constexpr static auto binding_deadzone = std::array<std::string_view, 5> {{
+        "joy_forwardthreshold",
+        "joy_upthreshold",
+        "joy_yawthreshold", 
+        "joy_sidethreshold"
+        "joy_pitchthreshold", 
+    }};
+
 }

@@ -1,16 +1,11 @@
-#include <limits>
-#include <memory>
-#include "configurations/id_tech.hpp"
+#include "configurations/dosbox.hpp"
 
-namespace studio::configurations::id_tech
+namespace studio::configurations::dosbox
 {
-    namespace id_tech_2
+    constexpr static auto end_line = std::string_view("\r\n");
+
+    namespace mapper
     {
-        using config_line = text_game_config::config_line;
-        constexpr static auto end_line = std::string_view("\r\n");
-
-        constexpr static auto average_line_size = 20;
-
         std::vector<std::string_view> split_into_lines(std::string_view line, std::string_view separator, std::size_t size_hint = 4)
         {
             std::vector<std::string_view> segments;
@@ -81,7 +76,9 @@ namespace studio::configurations::id_tech
 
             return segments;
         }
- 
+
+        constexpr static auto average_line_size = 100;
+        using config_line = text_game_config::config_line;
 
         std::optional<text_game_config> load_config(std::istream& raw_data, std::size_t stream_size)
         {
@@ -89,6 +86,7 @@ namespace studio::configurations::id_tech
             {
                 return std::nullopt;
             }
+
 
             std::unique_ptr<char[]> buffer(new char[stream_size]);
             std::fill_n(buffer.get(), stream_size, '\0');
@@ -118,9 +116,9 @@ namespace studio::configurations::id_tech
                     continue;
                 }
 
-                auto value = segments.back();
-                segments.pop_back();
-                config_data.emplace_back(config_line{line, segments, value});
+                auto key = segments.front();
+                segments.erase(segments.begin(), ++segments.begin());
+                config_data.emplace_back(config_line{line, key, segments});
             }
 
             if (config_data.empty())
@@ -131,51 +129,22 @@ namespace studio::configurations::id_tech
             return std::make_optional<text_game_config>(std::move(buffer), std::move(config_data), save_config);
         }
 
-        std::string join_line(const config_line& line)
+        void save_config(const std::vector<text_game_config::config_line>&, std::ostream&)
         {
-            auto segments = line.key_segments.to_array<2>();
 
-            std::string result;
-            result.reserve(segments[0].size() + segments[1].size() + line.value.at(0).size() + 2 + 4); // 2 spaces and 4 quotes
+        }
+    }
 
-            for (auto segment : segments)
-            {
-                if (segment.empty())
-                {
-                    continue;
-                }
-
-                if (segment.find(' ') != std::string_view::npos)
-                {
-                    result.push_back('\"');
-                }
-
-                result.append(segment);
-
-                if (segment.find(' ') != std::string_view::npos)
-                {
-                    result.push_back('\"');
-                }
-
-                result.push_back(' ');
-            }
-
-            result.push_back('\"');
-            result.append(line.value.at(0));
-            result.push_back('\"');
-
-            return result;
+    namespace config
+    {
+        std::optional<text_game_config> load_config(std::istream&, std::size_t)
+        {
+            return std::nullopt;
         }
 
-        void save_config(const std::vector<config_line>& entries, std::ostream& raw_data)
+        void save_config(const std::vector<text_game_config::config_line>&, std::ostream&)
         {
-            for (auto& entry : entries)
-            {
-                auto line = join_line(entry);
 
-                raw_data.write(line.data(), line.size());
-                raw_data.write(end_line.data(), end_line.size());
-            }
         }
     }
 }
