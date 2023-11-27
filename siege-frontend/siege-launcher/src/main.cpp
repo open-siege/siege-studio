@@ -107,11 +107,10 @@ struct GameLauncherOnFrameBeginCallback
                       {
                         auto config = selected_game.value().create_game_config(joystick_info);
 
-                        if (const auto* text = std::get_if<siege::game_info::text_config>(&config))
-                        {
-                          std::ofstream config_file("temp.cfg", std::ios::trunc | std::ios::binary);
-                          text->save_config(config_file, text->config);
-                        }
+                        std::visit([](const auto& raw_config) {
+                           std::ofstream config_file("temp.cfg", std::ios::trunc | std::ios::binary);
+                           raw_config.save(config_file);
+                        }, config);
                       }
 
 

@@ -53,8 +53,14 @@ namespace studio::configurations
         }
     }
 
-    text_game_config::text_game_config(std::unique_ptr<char[]>&& raw, std::vector<config_line>&& entries) 
-        : raw_data(std::move(raw)), line_entries(std::move(entries))
+    text_game_config::text_game_config(text_game_config::persist& save_config)
+            : save_config(save_config)
+    {
+
+    }
+
+    text_game_config::text_game_config(std::unique_ptr<char[]>&& raw, std::vector<config_line>&& entries, persist& save_config) 
+        : raw_data(std::move(raw)), line_entries(std::move(entries)), save_config(save_config)
     {
 
     }
@@ -69,19 +75,19 @@ namespace studio::configurations
         return results;
     }
 
-    std::string_view text_game_config::find(key_type key) const
+    key_type text_game_config::find(key_type key) const
     {
         auto iter = std::find_if(line_entries.rbegin(), line_entries.rend(), [&](auto& entry) { return entry.key_segments == key; });
 
         if (iter == line_entries.rend())
         {
-            return "";
+            return key_type{std::string_view("")};
         }
 
         return iter->value;
     }
 
-    void text_game_config::emplace(key_type key, std::string_view value)
+    text_game_config&& text_game_config::emplace(key_type key, key_type value)
     {
         auto iter = std::find_if(line_entries.rbegin(), line_entries.rend(), [&](auto& entry) { return entry.key_segments == key; });
         
@@ -93,30 +99,31 @@ namespace studio::configurations
         {
             line_entries.emplace_back(config_line{"", key, value });
         }
+
+        return std::move(*this);
     }
 
-    void text_game_config::remove(key_type key)
+    text_game_config&& text_game_config::remove(key_type key)
     {
         auto iter = std::remove_if(line_entries.begin(), line_entries.end(), [&](auto& entry) { return entry.key_segments == key; });
 
         line_entries.erase(iter, line_entries.end());
+
+        return std::move(*this);
     }
 
-    void text_game_config::persist(std::function<void(const std::vector<config_line>&)> func) const
+    void text_game_config::save(std::ostream& stream) const
     {
-        if (func)
-        {
-            func(line_entries);
-        }
+        save_config(line_entries, stream);
     }
 
-    binary_game_config::binary_game_config(const binary_game_config&)
+    binary_game_config::binary_game_config(persist save_config) 
+        : save_config(save_config)
     {
-        // TODO implement or default
     }
 
-    binary_game_config::binary_game_config(std::vector<config_entry>&& entries) 
-        : entries(entries)
+    binary_game_config::binary_game_config(std::vector<config_entry>&& entries, persist save_config) 
+        : entries(entries), save_config(save_config)
     {
     }
 
@@ -163,12 +170,9 @@ namespace studio::configurations
         entries.erase(iter, entries.end());
     }
 
-    void binary_game_config::persist(std::function<void(const std::vector<config_entry>&)> func) const
+    void binary_game_config::save(std::ostream& stream) const
     {
-        if (func)
-        {
-            func(entries);
-        }
+        save_config(entries, stream);
     }
 
 }

@@ -10,7 +10,7 @@ namespace studio::configurations::jedi
     {
         std::optional<binary_game_config> load_config(std::istream&, std::size_t);
 
-        void save_config(std::ostream&, const binary_game_config&);
+        void save_config(const std::vector<binary_game_config::config_entry>& entries, std::ostream& raw_data);
     }
 
     namespace jedi_knight

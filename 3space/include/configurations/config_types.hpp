@@ -32,6 +32,30 @@ namespace studio::configurations
             }
         }
 
+        inline bool operator==(std::string_view rhs) const 
+        { 
+            return std::visit([&](auto& a) {
+                if (a.size() > 0)
+                {
+                    return a[0] == rhs;
+                }
+
+                return false;
+            }, data);
+        }
+
+        inline std::string_view at(std::size_t index) const 
+        { 
+            return std::visit([&](auto& a) -> std::string_view {
+                if (index > a.size() - 1)
+                {
+                    return "";
+                }
+
+                return a[index];
+            }, data);
+        }
+
         inline bool operator==(const key_type& rhs) const 
         { 
             if (data.index() == rhs.data.index())
@@ -56,31 +80,31 @@ namespace studio::configurations
             return !(*this == rhs);  
         }
 
-                template<std::size_t ArraySize>
-                inline std::array<std::string_view, ArraySize> to_array() const
+        template<std::size_t ArraySize>
+        inline std::array<std::string_view, ArraySize> to_array() const
+        {
+            if (std::holds_alternative<std::array<std::string_view, ArraySize>>(data))
+            {
+                return std::get<std::array<std::string_view, ArraySize>>(data);
+            }
+
+            return std::visit([](auto& value) {
+                std::array<std::string_view, ArraySize> result;
+
+                if (value.size() > ArraySize)
                 {
-                    if (std::holds_alternative<std::array<std::string_view, ArraySize>>(data))
-                    {
-                        return std::get<std::array<std::string_view, ArraySize>>(data);
-                    }
-
-                    return std::visit([](auto& value) {
-                        std::array<std::string_view, ArraySize> result;
-
-                        if (value.size() > ArraySize)
-                        {
-                            std::copy_n(value.begin(), ArraySize, result.begin());
-                        }
-                        else
-                        {
-                            std::copy_n(value.begin(), value.size(), result.begin());
-                        }
-
-                        return result;
-                    }, data);
+                    std::copy_n(value.begin(), ArraySize, result.begin());
+                }
+                else
+                {
+                    std::copy_n(value.begin(), value.size(), result.begin());
                 }
 
-                std::variant<std::array<std::string_view, 1>, std::array<std::string_view, 2>, std::vector<std::string_view>> data;
+                return result;
+            }, data);
+        }
+
+        std::variant<std::array<std::string_view, 1>, std::array<std::string_view, 2>, std::vector<std::string_view>> data;
     };
 
     struct config_value

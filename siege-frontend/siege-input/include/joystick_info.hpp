@@ -150,6 +150,12 @@ namespace siege
         std::string_view target_meta_name;
     };
 
+    struct alias
+    {
+        std::string_view name;
+        std::string_view target_action;
+    };
+
     struct button
     {
         std::size_t index;
@@ -193,6 +199,7 @@ namespace siege
         std::vector<button> buttons;
         std::vector<axis> axes;
         std::vector<hat> hats;
+        std::vector<alias> aliases;
     };
 
     std::vector<joystick_info> get_all_joysticks();
