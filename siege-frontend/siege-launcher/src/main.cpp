@@ -93,67 +93,75 @@ struct GameLauncherOnFrameBeginCallback
                 if (ImGui::BeginTabItem("Controls"))
                 {
 
-                  for (auto& joystick : joysticks)
+                  if (selected_game.has_value())
                   {
-                    ImGui::BeginGroup();
+                    decltype(joysticks) game_joysticks;
+                    game_joysticks.reserve(joysticks.size());
+                    std::transform(joysticks.begin(), joysticks.end(), std::back_inserter(game_joysticks), [&](const auto& joystick) {
+                        auto add_actions = selected_game.value().add_default_actions;
+                        auto add_metadata = selected_game.value().add_input_metadata;
 
-                    if (selected_game.has_value())
+                        return add_actions(add_metadata(amend_controller_info(joystick)));
+                    });
+
+                    if (ImGui::Button("Save files"))
                     {
-                      auto joystick_info = selected_game.value()
-                            .add_default_actions(selected_game.value()
-                            .add_input_metadata(amend_controller_info(joysticks[0])));
+                          auto configs = selected_game.value().create_game_configs(game_joysticks);
 
-                      if (ImGui::Button("Save file"))
-                      {
-                        auto config = selected_game.value().create_game_config(joystick_info);
-
-                        std::visit([](const auto& raw_config) {
-                           std::ofstream config_file("temp.cfg", std::ios::trunc | std::ios::binary);
-                           raw_config.save(config_file);
-                        }, config);
-                      }
-
-
-                      ImGui::Text("%s", to_string(joystick_info.name).c_str());
-
-                      for (auto& axis : joystick_info.axes)
-                      {
-                        if (axis.axis_type.has_value())
-                        {
-                          for (auto& action : axis.actions)
+                          for (auto& config : configs)
                           {
-                            ImGui::Text("%s: %s %s", to_string(action.name).c_str(), 
-                                    to_string(action.target_meta_name, 1).c_str(), 
-                                    to_string(axis.axis_type.value(), 2).c_str());
+                              std::visit([&](const auto& raw_config) {
+                                std::ofstream config_file(config.path, std::ios::trunc | std::ios::binary);
+                                raw_config.save(config_file);
+                              }, config.config);
                           }
-                        }
-                      }
-
-                      for (auto& button : joystick_info.buttons)
-                      {
-                        if (button.button_type.has_value())
-                        {
-                          for (auto& action : button.actions)
-                          {
-                            ImGui::Text("%s: %s %s", to_string(action.name).c_str(), 
-                                    to_string(action.target_meta_name, 1).c_str(), 
-                                    to_string(button.button_type.value(), 2).c_str());
-                          }
-
-                        }
-                      }
-
-                      for (auto& hat : joystick_info.hats)
-                      {
-                          for (auto& action : hat.actions)
-                          {
-                            ImGui::Text("%s: %s", to_string(action.name).c_str(), 
-                                    to_string(action.target_meta_name, 1).c_str());
-                          }
-                      }
+                          
                     }
 
-                  ImGui::EndGroup();
+                    for (auto& joystick_info : game_joysticks)
+                    {
+                      ImGui::BeginGroup();
+
+                        ImGui::Text("%s", to_string(joystick_info.name).c_str());
+
+                        for (auto& axis : joystick_info.axes)
+                        {
+                          if (axis.axis_type.has_value())
+                          {
+                            for (auto& action : axis.actions)
+                            {
+                              ImGui::Text("%s: %s %s", to_string(action.name).c_str(), 
+                                      to_string(action.target_meta_name, 1).c_str(), 
+                                      to_string(axis.axis_type.value(), 2).c_str());
+                            }
+                          }
+                        }
+
+                        for (auto& button : joystick_info.buttons)
+                        {
+                          if (button.button_type.has_value())
+                          {
+                            for (auto& action : button.actions)
+                            {
+                              ImGui::Text("%s: %s %s", to_string(action.name).c_str(), 
+                                      to_string(action.target_meta_name, 1).c_str(), 
+                                      to_string(button.button_type.value(), 2).c_str());
+                            }
+
+                          }
+                        }
+
+                        for (auto& hat : joystick_info.hats)
+                        {
+                            for (auto& action : hat.actions)
+                            {
+                              ImGui::Text("%s: %s", to_string(action.name).c_str(), 
+                                      to_string(action.target_meta_name, 1).c_str());
+                            }
+                        }
+
+                    ImGui::EndGroup();
+                    }
                   }
                    
                   ImGui::EndTabItem();

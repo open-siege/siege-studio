@@ -65,7 +65,7 @@ namespace siege
     {
         info.aliases.reserve(ArraySize);
 
-        std::transform(defaults.begin(), defaults.end(), std::back_inserter(info.aliases), [](const auto& values) { return alias{values[0], values[1]} });
+        std::transform(defaults.begin(), defaults.end(), std::back_inserter(info.aliases), [](const auto& values) { return alias{values[0], values[1]}; });
         return info;
     }
 
@@ -272,9 +272,9 @@ namespace siege
     joystick_info add_quake_1_input_metadata(joystick_info info);
     joystick_info add_quake_2_input_metadata(joystick_info info);
     joystick_info add_quake_3_input_metadata(joystick_info info);
-    std::vector<game_config> convert_to_quake_config(joystick_info joystick);
-    std::vector<game_config> convert_to_quake_2_config(joystick_info joystick);
-    std::vector<game_config> convert_to_quake_3_config(joystick_info joystick);
+    std::vector<game_config> convert_to_quake_config(std::vector<joystick_info> joystick);
+    std::vector<game_config> convert_to_quake_2_config(std::vector<joystick_info> joystick);
+    std::vector<game_config> convert_to_quake_3_config(std::vector<joystick_info> joystick);
 
     std::vector<game_info> get_id_tech_games()
     {
@@ -373,13 +373,30 @@ namespace siege
         return "0";
     }
 
-    std::vector<game_config> convert_to_quake_config(joystick_info joystick)
+    std::vector<game_config> convert_to_quake_config(std::vector<joystick_info> joysticks)
     {
-        return std::vector<game_config>{ game_config{ "autoexec.cfg", [&] () {
+        std::vector<game_config> results;
+        results.reserve(joysticks.size() + 1);
+
+        results.emplace_back("autoexec.cfg", [&] () {
+            text_game_config config(studio::configurations::id_tech::id_tech_2::save_config);
+
+            config.emplace("exec"sv, "joystick.cfg"sv);
+
+            return config;
+        }());
+
+        std::transform(joysticks.begin(), joysticks.end(), std::back_inserter(results), [](auto& joystick) {
+            constexpr static auto extension = ".cfg"sv;
+            std::string file_name;
+            file_name.reserve(joystick.name.size() + extension.size());
+            file_name.assign(joystick.name);
+            file_name.append(extension);
+            return game_config{ file_name, [&] () {
             text_game_config config(studio::configurations::id_tech::id_tech_2::save_config);
 
             auto create_bind = [&] (const auto& action) {
-                            config.emplace({"bind", action.target_meta_name}, action.name);
+                config.emplace({"bind", action.target_meta_name}, action.name);
             };
 
             std::for_each(joystick.buttons.cbegin(), joystick.buttons.cend(), [&] (const auto& button) {
@@ -399,15 +416,36 @@ namespace siege
             });
 
             return config;
-        } } };
+        }() };
+        });
+
+        return results;
     }
 
-    std::vector<game_config> convert_to_quake_2_config(joystick_info joystick)
+    std::vector<game_config> convert_to_quake_2_config(std::vector<joystick_info> joysticks)
     {
-        return std::vector<game_config>{ game_config{ "autoexec.cfg", [&] () {
+        std::vector<game_config> results;
+        results.reserve(joysticks.size() + 1);
+
+        results.emplace_back("autoexec.cfg", [&] () {
             text_game_config config(studio::configurations::id_tech::id_tech_2::save_config);
+
+            config.emplace("exec"sv, "joystick.cfg"sv);
+
+            return config;
+        }());
+
+        std::transform(joysticks.begin(), joysticks.end(), std::back_inserter(results), [](auto& joystick) {
+            constexpr static auto extension = ".cfg"sv;
+            std::string file_name;
+            file_name.reserve(joystick.name.size() + extension.size());
+            file_name.assign(joystick.name);
+            file_name.append(extension);
+            return game_config{ file_name, [&] () {
+            text_game_config config(studio::configurations::id_tech::id_tech_2::save_config);
+
             auto create_bind = [&] (const auto& action) {
-                        config.emplace({"bind", action.target_meta_name}, action.name);
+                config.emplace({"bind", action.target_meta_name}, action.name);
             };
 
             std::for_each(joystick.buttons.cbegin(), joystick.buttons.cend(), [&] (const auto& button) {
@@ -427,12 +465,32 @@ namespace siege
             });
 
             return config;
-        }() } };
+        }() };
+        });
+
+        return results;
     }
 
-    std::vector<game_config> convert_to_quake_3_config(joystick_info joystick)
+    std::vector<game_config> convert_to_quake_3_config(std::vector<joystick_info> joysticks)
     {
-        return std::vector<game_config>{ game_config{ "autoexec.cfg", [&] () {
+        std::vector<game_config> results;
+        results.reserve(joysticks.size() + 1);
+
+        results.emplace_back("autoexec.cfg", [&] () {
+            text_game_config config(studio::configurations::id_tech::id_tech_2::save_config);
+
+            config.emplace("exec"sv, "joystick.cfg"sv);
+
+            return config;
+        }());
+
+        std::transform(joysticks.begin(), joysticks.end(), std::back_inserter(results), [](auto& joystick) {
+            constexpr static auto extension = ".cfg"sv;
+            std::string file_name;
+            file_name.reserve(joystick.name.size() + extension.size());
+            file_name.assign(joystick.name);
+            file_name.append(extension);
+            return game_config{ file_name, [&] () {
             text_game_config config(studio::configurations::id_tech::id_tech_2::save_config);
 
             auto create_bind = [&] (const auto& action) {
@@ -452,7 +510,10 @@ namespace siege
             });
 
             return config;
-            }() } };
+        }() };
+        });
+
+        return results;
     }
 
     constexpr static auto binding_sensitivity = std::array<std::string_view, 5> {{

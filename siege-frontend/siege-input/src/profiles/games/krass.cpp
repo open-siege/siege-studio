@@ -94,24 +94,26 @@ namespace siege
         return info;
     }
 
-    std::vector<game_config> convert_to_krass_config(joystick_info joystick)
+    std::vector<game_config> convert_to_krass_config(std::vector<joystick_info> joysticks)
     {
-        text_game_config config(studio::configurations::krass::save_config);
-        return config;
+        std::vector<game_config> results;
+        results.emplace_back("User.ini", studio::configurations::krass::save_config);
+        return results;
     }
-
 
     std::vector<game_info> get_krass_games()
     {
        return {
         game_info {
                     "AquaNox", 
+                    common::types::playstation,
                     add_krass_input_metadata, 
                     add_krass_default_actions, 
                     convert_to_krass_config
         },
         game_info {
                     "AquaNox 2: Revelation", 
+                    common::types::playstation,
                     add_krass_input_metadata, 
                     add_krass_default_actions, 
                     convert_to_krass_config

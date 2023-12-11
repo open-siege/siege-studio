@@ -175,8 +175,19 @@ namespace siege
         return info;
     }
 
-    std::vector<game_config> convert_to_unreal_config(joystick_info joystick)
+    std::vector<game_config> convert_to_unreal_config(std::vector<joystick_info> joysticks)
     {
+        std::vector<game_config> results;
+
+        if (joysticks.empty())
+        {
+            return results;
+        }
+
+        results.reserve(1);
+
+        auto& joystick = joysticks.front();
+
         text_game_config config(studio::configurations::unreal::unreal_1::save_config);
 
         for (auto& button : joystick.buttons)
@@ -203,12 +214,14 @@ namespace siege
             }
         }
 
-        return { game_config{ "User.ini", config } };
+        results.emplace_back("User.ini", config);
+
+        return results;
     }
 
     std::vector<game_info> get_unreal_games()
     {
-        constexpr static auto unreal = game_info {
+        const static auto unreal = game_info {
                     "Unreal", 
                     { common::types::playstation },
                     add_unreal_input_metadata, 
@@ -216,7 +229,7 @@ namespace siege
                     convert_to_unreal_config 
         };
 
-        constexpr static auto unreal_tournament_2003 = game_info {
+        const static auto unreal_tournament_2003 = game_info {
                     "Unreal Tournament 2003", 
                     { common::types::playstation },
                     add_unreal_input_metadata, 
@@ -224,7 +237,7 @@ namespace siege
                     convert_to_unreal_config 
         };
 
-        constexpr static auto unreal_tournament_3 = game_info {
+        const static auto unreal_tournament_3 = game_info {
                     "Unreal Tournament 3", 
                     { common::types::xbox, common::types::playstation },
                     add_unreal_input_metadata, 
