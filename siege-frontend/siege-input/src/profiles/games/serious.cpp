@@ -4,15 +4,17 @@
 #include <cstdint>
 #include <algorithm>
 #include "joystick_info.hpp"
+#include "game_info.hpp"
+#include "configurations/serious.hpp"
 
 namespace siege
 {
-
-    using game_info = siege::game_info;
     using joystick_info = siege::joystick_info;
     using button = siege::button;
     using hat = siege::hat;
     using axis = siege::axis;
+    using game_info = siege::game_info;
+    using text_game_config = studio::configurations::text_game_config;
 
     button add_serious_button_metadata(button result)
     {
@@ -45,7 +47,6 @@ namespace siege
 
     axis add_serious_axis_metadata(axis result)
     {
-
         constexpr static auto axis_names = std::array<std::string_view, 6> {{
             "Joy 1 Axis X",
             "Joy 1 Axis Y",
@@ -91,17 +92,19 @@ namespace siege
         return info;
     }
 
-    std::vector<game_config> convert_to_serious_config(joystick_info joystick)
+    std::vector<game_config> convert_to_serious_config(std::vector<joystick_info> joysticks)
     {
-        text_game_config config(studio::configurations::id_tech::id_tech_2::save_config);
-        return { game_config{ "autoexec.cfg", config } };
+        std::vector<game_config> results;
+        results.emplace_back("autoexec.cfg", text_game_config(studio::configurations::serious::serious_1::save_config));
+
+        return results;
     }
 
     std::vector<game_info> get_serious_games()
     {
-        constexpr static auto serious_sam = game_info {
+        const static auto serious_sam = game_info {
                     "Serious Sam: The First Encounter", 
-                    { common::types::playstation },
+                    common::types::playstation,
                     add_serious_input_metadata, 
                     add_serious_default_actions, 
                     convert_to_serious_config

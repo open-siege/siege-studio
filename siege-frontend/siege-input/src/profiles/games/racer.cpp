@@ -83,10 +83,11 @@ namespace siege
         return info;
     }
 
-    std::vector<game_config> convert_to_racer_config(joystick_info joystick)
+    std::vector<game_config> convert_to_racer_config(std::vector<joystick_info> joysticks)
     {
-        text_game_config config(studio::configurations::id_tech::id_tech_2::save_config);
-        return config;
+        std::vector<game_config> results;
+        results.emplace_back("User.ini", studio::configurations::id_tech::id_tech_2::save_config);
+        return results;
     }
 
     std::vector<game_info> get_star_wars_games()
@@ -94,7 +95,7 @@ namespace siege
         return {
             game_info {
                 "Star Wars Racer", 
-                { common::types::playstation },
+                common::types::playstation,
                 add_racer_input_metadata, 
                 add_racer_default_actions, 
                 convert_to_racer_config
