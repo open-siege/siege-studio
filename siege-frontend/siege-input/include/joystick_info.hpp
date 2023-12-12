@@ -195,6 +195,7 @@ namespace siege
         std::string name;
         std::optional<std::string_view> type;
         std::optional<std::string_view> controller_type;
+        std::optional<std::size_t> player_number;
 
         std::vector<button> buttons;
         std::vector<axis> axes;
