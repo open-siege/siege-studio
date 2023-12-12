@@ -16,10 +16,9 @@
 
 #include <SDL.h>
 #include <imgui.h>
-
-#include "id_tech.hpp"
 #include "platform/platform.hpp"
 #include "joystick_info.hpp"
+#include "game_info.hpp"
 #include "virtual_joystick.hpp"
 #include "interface/main.hpp"
 
@@ -51,7 +50,7 @@ struct GameLauncherOnFrameBeginCallback
   std::vector<siege::joystick_info> joysticks;
 
   GameLauncherOnFrameBeginCallback()
-    : games(siege::get_id_tech_games())
+    : games(siege::get_supported_games())
   {
   }
 

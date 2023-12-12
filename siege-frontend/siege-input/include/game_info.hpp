@@ -13,6 +13,15 @@
 
 namespace siege
 {
+    struct environment_info
+    {
+        std::string_view config_dir;
+        std::string_view exe_dir;
+        std::array<std::string_view, 4> root_dir_hints;
+        std::unordered_map<std::string_view, std::string_view> file_hints;
+    };
+
+
     struct game_config
     {
         using text_game_config = studio::configurations::text_game_config;
@@ -27,7 +36,7 @@ namespace siege
         : path(std::move(path)), config(std::move(config))
         {
         }
-
+        
         std::filesystem::path path;
         std::variant<text_game_config, binary_game_config> config;
     };
@@ -76,6 +85,9 @@ namespace siege
         {
         }
     };
+
+    std::vector<game_info> get_supported_games();
+    std::optional<environment_info> environment_for_game(const game_info&);
 }
 
 
