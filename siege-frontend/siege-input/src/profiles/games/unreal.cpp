@@ -214,7 +214,7 @@ namespace siege
             }
         }
 
-        results.emplace_back("User.ini", config);
+        results.emplace_back("User.ini", std::move(config));
 
         return results;
     }
@@ -223,7 +223,7 @@ namespace siege
     {
         const static auto unreal = game_info {
                     "Unreal", 
-                    { common::types::playstation },
+                    common::types::playstation,
                     add_unreal_input_metadata, 
                     add_unreal_default_actions, 
                     convert_to_unreal_config 
@@ -231,7 +231,7 @@ namespace siege
 
         const static auto unreal_tournament_2003 = game_info {
                     "Unreal Tournament 2003", 
-                    { common::types::playstation },
+                    common::types::playstation,
                     add_unreal_input_metadata, 
                     add_unreal_default_actions, 
                     convert_to_unreal_config 
@@ -239,7 +239,7 @@ namespace siege
 
         const static auto unreal_tournament_3 = game_info {
                     "Unreal Tournament 3", 
-                    { common::types::xbox, common::types::playstation },
+                    common::types::xbox,
                     add_unreal_input_metadata, 
                     add_unreal_default_actions, 
                     convert_to_unreal_config

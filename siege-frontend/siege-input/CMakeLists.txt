@@ -12,22 +12,28 @@ if(WIN32)
     src/platform/common.cpp 
     src/platform/windows.cpp src/config.cpp 
     src/virtual_joystick.cpp 
+    src/profiles/games/game_info.cpp 
     src/profiles/games/id_tech_2.actions.cpp
     src/profiles/games/id_tech_2.meta.cpp
     src/profiles/games/dosbox.cpp
+    src/profiles/games/racer.cpp
     src/profiles/games/krass.cpp
-    src/profiles/games/serious.cpp) 
+    src/profiles/games/serious.cpp
+    src/profiles/games/unreal.cpp) 
 else()
     add_library(siege-input STATIC 
     src/platform/common.cpp 
     src/platform/other.cpp 
     src/config.cpp 
-    src/virtual_joystick.cpp 
+    src/virtual_joystick.cpp
+    src/profiles/games/game_info.cpp
     src/profiles/games/id_tech_2.meta.cpp
     src/profiles/games/id_tech_2.actions.cpp
     src/profiles/games/dosbox.cpp
+    src/profiles/games/racer.cpp
     src/profiles/games/krass.cpp
-    src/profiles/games/serious.cpp)
+    src/profiles/games/serious.cpp
+    src/profiles/games/unreal.cpp)
 endif()
 
 add_custom_command(TARGET siege-input
