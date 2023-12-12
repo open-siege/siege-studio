@@ -4,14 +4,18 @@
 #include <cstdint>
 #include <algorithm>
 #include "joystick_info.hpp"
+#include "game_info.hpp"
+#include "configurations/id_tech.hpp"
 
 namespace siege
 {
-    using game_info = siege::game_info;
     using joystick_info = siege::joystick_info;
     using button = siege::button;
     using hat = siege::hat;
     using axis = siege::axis;
+    using alias = siege::alias;
+    using game_info = siege::game_info;
+    using text_game_config = studio::configurations::text_game_config;
 
     button add_racer_button_metadata(button result)
     {
