@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <vector>
 #include <string_view>
+#include <cstdlib>
 #include "game_info.hpp"
 
 namespace siege
@@ -143,14 +144,14 @@ namespace siege
         return "";
     }
 
-    std::optional<environment_info> environment_for_game(const game_info& info)
+    environment_info environment_for_game(const game_info& info)
     {
         constexpr static auto alt_names = std::array<std::array<std::string_view, 2>, 1> {{
             {"Quake II"sv, "Quake 2"sv},
         }};
 
-        environment_info env{};
-        env.root_dir_hints[0] = info.english_name;
+        environment_info env{info};
+        env.working_dir_hints[0] = info.english_name;
 
         auto alt_name = std::find_if(alt_names.begin(), alt_names.end(), [&](auto name) {
             return name[0] == info.english_name;
@@ -158,12 +159,56 @@ namespace siege
 
         if (alt_name != alt_names.end())
         {
-            env.root_dir_hints[1] = alt_name->back();
+            env.working_dir_hints[1] = alt_name->back();
         }
 
         env.config_dir = get_config_dir(info);
         env.exe_dir = get_exe_dir(info);
         
-        return std::nullopt;
-    }   
+        return env;
+    } 
+
+    std::vector<std::filesystem::path> get_common_search_paths()
+    {
+        constexpr static auto variables = std::array<const char*, 3>
+        {
+            "ProgramFiles",
+            "ProgramFiles(x86)",
+            "SystemDrive"
+        };
+
+        constexpr static auto folders = std::array<std::string_view, 4> {{
+            "/GOG Galaxy/Games"sv,
+            "/Steam/steamapps/common"sv,
+            "/GOG Games"sv,
+            "/ZOOM PLATFORM"sv,
+        }};
+
+        std::vector<std::filesystem::path> results;
+        results.reserve(variables.size() * folders.size());
+
+        for (auto& variable : variables)
+        {
+            if (auto* env = std::getenv(variable))
+            {
+                auto env_path = std::filesystem::path(env);
+
+                for (auto& folder : folders)
+                {
+                    if (std::filesystem::exists(env_path / folder))
+                    {
+                        results.emplace_back(env_path / folder);
+                    }
+                }
+            }
+        }
+
+
+       return results; 
+    }
+
+    std::vector<environment_info> find_installed_game(const std::vector<std::filesystem::path>&, environment_info info)
+    {
+        return {};
+    } 
 }
