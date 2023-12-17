@@ -77,9 +77,8 @@ namespace siege
         }
     };
 
-    struct environment_info
+    struct environment_info_hint
     {
-        const game_info& controller_info;
         std::optional<std::filesystem::path> working_dir;
         std::string_view config_dir;
         std::string_view exe_dir;
@@ -87,10 +86,18 @@ namespace siege
         std::unordered_map<std::string_view, std::string_view> file_hints;
     };
 
+    struct environment_info
+    {
+        std::filesystem::path working_dir;
+        std::filesystem::path config_dir;
+        std::filesystem::path exe_dir;
+    };
+
     std::vector<game_info> get_supported_games();
-    environment_info environment_for_game(const game_info&);
+    environment_info_hint environment_for_game(const game_info&);
     std::vector<std::filesystem::path> get_common_search_paths();
-    std::vector<environment_info> find_installed_game(const std::vector<std::filesystem::path>&, environment_info info);
+    std::vector<environment_info_hint> find_installed_game_hints(const std::vector<std::filesystem::path>&, environment_info_hint info);
+    std::vector<environment_info> verity_game_hints(const std::vector<environment_info_hint>&);
 }
 
 

@@ -45,12 +45,19 @@ const std::string& to_string(std::string_view value, std::size_t index = 0)
 
 struct GameLauncherOnFrameBeginCallback
 {
-  std::optional<siege::game_info> selected_game;
+  /*
+      std::vector<std::filesystem::path> get_common_search_paths();
+    std::vector<environment_info> find_installed_game_hints(const std::vector<std::filesystem::path>&, environment_info info);
+    std::vector<environment_info> verity_game_hints(const std::vector<environment_info>&);
+  */
   std::vector<siege::game_info> games;
+  std::vector<std::filesystem::path> search_paths;
   std::vector<siege::joystick_info> joysticks;
+  std::optional<siege::game_info> selected_game;
+  std::vector<siege::environment_info> game_paths;
 
   GameLauncherOnFrameBeginCallback()
-    : games(siege::get_supported_games())
+    : games(siege::get_supported_games()), search_paths(siege::get_common_search_paths())
   {
   }
 
@@ -80,6 +87,7 @@ struct GameLauncherOnFrameBeginCallback
             if (ImGui::Button(to_string(game.english_name).c_str()))
             {
               selected_game.emplace(game);
+              game_paths.clear();
             }
         }
        ImGui::End();
@@ -91,7 +99,6 @@ struct GameLauncherOnFrameBeginCallback
         {
                 if (ImGui::BeginTabItem("Controls"))
                 {
-
                   if (selected_game.has_value())
                   {
                     decltype(joysticks) game_joysticks;
@@ -103,18 +110,26 @@ struct GameLauncherOnFrameBeginCallback
                         return add_actions(add_metadata(amend_controller_info(joystick)));
                     });
 
-                    if (ImGui::Button("Save files"))
+                    if (game_paths.empty())
                     {
+                          auto hints = siege::find_installed_game_hints(search_paths, siege::environment_for_game(selected_game.value()));
+                          game_paths = siege::verity_game_hints(hints);
+                    }
+
+                    for (auto& path : game_paths)
+                    {
+                      if (ImGui::Button(path.working_dir.c_str()))
+                      {
                           auto configs = selected_game.value().create_game_configs(game_joysticks);
 
-                          for (auto& config : configs)
-                          {
-                              std::visit([&](const auto& raw_config) {
-                                std::ofstream config_file(config.path, std::ios::trunc | std::ios::binary);
-                                raw_config.save(config_file);
-                              }, config.config);
-                          }
-                          
+                            for (auto& config : configs)
+                            {
+                                std::visit([&](const auto& raw_config) {
+                                    std::ofstream config_file(config.path, std::ios::trunc | std::ios::binary);
+                                    raw_config.save(config_file);
+                                  }, config.config);
+                            }
+                      }
                     }
 
                     for (auto& joystick_info : game_joysticks)
