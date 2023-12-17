@@ -11,7 +11,6 @@
 
 namespace siege
 {
-
   constexpr static auto sdl_mapping = std::array<std::array<std::string_view, 2>, 14> {{
         { "leftstick", xbox::ls },
         { "rightstick", xbox::rs },

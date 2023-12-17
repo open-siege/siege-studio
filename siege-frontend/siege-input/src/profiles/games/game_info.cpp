@@ -3,6 +3,8 @@
 #include <vector>
 #include <string_view>
 #include <cstdlib>
+#include <deque>
+#include <iostream>
 #include "game_info.hpp"
 
 namespace siege
@@ -144,13 +146,14 @@ namespace siege
         return "";
     }
 
-    environment_info environment_for_game(const game_info& info)
+    environment_info_hint environment_for_game(const game_info& info)
     {
-        constexpr static auto alt_names = std::array<std::array<std::string_view, 2>, 1> {{
+        constexpr static auto alt_names = std::array<std::array<std::string_view, 2>, 2> {{
             {"Quake II"sv, "Quake 2"sv},
+            {"Unreal"sv, "Unreal Gold"sv},
         }};
 
-        environment_info env{info};
+        environment_info_hint env;
         env.working_dir_hints[0] = info.english_name;
 
         auto alt_name = std::find_if(alt_names.begin(), alt_names.end(), [&](auto name) {
@@ -178,14 +181,13 @@ namespace siege
         };
 
         constexpr static auto folders = std::array<std::string_view, 4> {{
-            "/GOG Galaxy/Games"sv,
-            "/Steam/steamapps/common"sv,
-            "/GOG Games"sv,
-            "/ZOOM PLATFORM"sv,
+            "GOG Galaxy/Games"sv,
+            "Steam/steamapps/common"sv,
+            "GOG Games"sv,
+            "ZOOM PLATFORM"sv,
         }};
 
-        std::vector<std::filesystem::path> results;
-        results.reserve(variables.size() * folders.size());
+        std::deque<std::filesystem::path> results;
 
         for (auto& variable : variables)
         {
@@ -203,12 +205,127 @@ namespace siege
             }
         }
 
+        if (auto* home = std::getenv("HOME"))
+        {
+            auto home_path = std::filesystem::path(home);
 
-       return results; 
+            std::deque<std::filesystem::path> drive_root_paths;
+
+            if (std::filesystem::exists(home_path / ".cxoffice"))
+            {
+                for (auto entry = std::filesystem::recursive_directory_iterator(home_path / ".cxoffice"); 
+                        entry != std::filesystem::recursive_directory_iterator();
+                        ++entry)
+                {
+                    if (entry.depth() == 1 && entry->path().filename() == "drive_c")
+                    {
+                        drive_root_paths.emplace_back(entry->path());
+                    }
+                }
+            }
+
+            if (std::filesystem::exists(home_path / ".wine" / "drive_c"))
+            {
+                drive_root_paths.emplace_back(home_path / ".wine" / "drive_c");
+            }
+
+            std::for_each(drive_root_paths.begin(), drive_root_paths.end(), [](auto& path) {
+                std::cout << "Root path: " << path << std::endl;
+            });
+
+            for (auto& root : drive_root_paths)
+            {
+                for (auto folder : folders)
+                {
+                    if (std::filesystem::exists(root / folder))
+                    {
+                        results.emplace_back(root / folder);
+                    }
+
+                    if (std::filesystem::exists(root / "Program Files" / folder))
+                    {
+                        results.emplace_back(root / "Program Files" / folder);
+                    }
+
+                    if (std::filesystem::exists(root / "Program Files (x86)" / folder))
+                    {
+                        results.emplace_back(root / "Program Files (x86)" / folder);
+                    }
+                }
+
+                results.emplace_back(root);
+            }
+
+            if (std::filesystem::exists(home_path / "Games" / "Heroic"))
+            {
+                results.emplace_back(home_path / "Games" / "Heroic");
+            }
+        }
+
+        std::for_each(results.begin(), results.end(), [](auto& path) {
+            std::cout << "Search path: " << path << std::endl;
+        });
+
+       return {results.begin(), results.end()}; 
     }
 
-    std::vector<environment_info> find_installed_game(const std::vector<std::filesystem::path>&, environment_info info)
+    std::vector<environment_info_hint> find_installed_game_hints(const std::vector<std::filesystem::path>& search_paths, environment_info_hint info)
     {
-        return {};
+        std::deque<environment_info_hint> results;
+
+        for (auto& path : search_paths)
+        {
+            for (auto hint : info.working_dir_hints)
+            {
+                if (hint.empty())
+                {
+                    continue;
+                }
+                if (std::filesystem::exists(path / hint))
+                {
+                    auto& temp = results.emplace_back(info);
+                    std::cout << "Game path is " << path << " " << hint << std::endl;
+                    temp.working_dir.emplace(path / hint);
+                    break;
+                }
+            }
+        }
+
+        return {results.begin(), results.end()}; 
     } 
+
+    std::vector<environment_info> verity_game_hints(const std::vector<environment_info_hint>& games)
+    {
+        std::deque<environment_info> results;
+
+        for (auto& game : games)
+        {
+            if (!game.working_dir.has_value())
+            {
+                continue;
+            }
+
+            bool has_exe_dir = false;
+
+            for (auto& file : std::filesystem::directory_iterator(game.working_dir.value() / game.exe_dir))    
+            {
+                if (file.path().extension() == ".exe" || 
+                    file.path().extension() == ".EXE" ||
+                    file.path().extension() == ".bat" || 
+                    file.path().extension() == ".BAT")
+                {
+                    has_exe_dir = true;
+                    break;
+                }
+            }
+
+            bool has_config_dir = std::filesystem::exists(game.working_dir.value() / game.config_dir);
+
+            if (has_exe_dir && has_config_dir)
+            {
+                results.emplace_back(environment_info { game.working_dir.value(), game.working_dir.value() / game.config_dir, game.working_dir.value() / game.exe_dir });
+            }
+        }
+        return {results.begin(), results.end()}; 
+    }
 }
