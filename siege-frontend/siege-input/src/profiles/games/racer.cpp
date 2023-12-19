@@ -5,7 +5,7 @@
 #include <algorithm>
 #include "joystick_info.hpp"
 #include "game_info.hpp"
-#include "configurations/id_tech.hpp"
+#include "configurations/jedi.hpp"
 
 namespace siege
 {
@@ -90,7 +90,7 @@ namespace siege
     std::vector<game_config> convert_to_racer_config(std::vector<joystick_info> joysticks)
     {
         std::vector<game_config> results;
-        results.emplace_back("User.ini", studio::configurations::id_tech::id_tech_2::save_config);
+        results.emplace_back("User.ini", studio::configurations::jedi::racer::save_config);
         return results;
     }
 

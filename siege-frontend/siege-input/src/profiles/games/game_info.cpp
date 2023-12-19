@@ -62,6 +62,25 @@ namespace siege
     joystick_info add_hexen_2_default_actions(joystick_info);
     joystick_info add_kingpin_default_actions(joystick_info);
 
+    joystick_info add_battlemetal_default_actions(joystick_info);
+    joystick_info add_heretic_2_default_actions(joystick_info);
+    joystick_info add_sin_default_actions(joystick_info);
+    joystick_info add_kingpin_default_actions(joystick_info);
+    joystick_info add_daikatana_default_actions(joystick_info);
+    joystick_info add_action_quake_2_default_actions(joystick_info);
+    joystick_info add_soldier_of_fortune_default_actions(joystick_info);
+    joystick_info add_half_life_default_actions(joystick_info);
+    joystick_info add_iron_grip_default_actions(joystick_info);
+    joystick_info add_elite_force_default_actions(joystick_info);
+    joystick_info add_elite_force_2_default_actions(joystick_info);
+    joystick_info add_jedi_outcast_default_actions(joystick_info);
+    joystick_info add_jedi_academy_default_actions(joystick_info);
+    joystick_info add_castle_wolfenstein_default_actions(joystick_info);
+    joystick_info add_soldier_of_fortune_2_default_actions(joystick_info);
+    joystick_info add_medal_of_honor_default_actions(joystick_info);
+    joystick_info add_call_of_duty_default_action(joystick_info);
+    joystick_info add_space_trader_default_actions(joystick_info);
+
     using config_pair = std::pair<joystick_info(&)(joystick_info), std::string_view>;
 
 
@@ -77,6 +96,16 @@ namespace siege
             config_pair(add_quake_3_default_actions, "baseq3"sv),
             config_pair(add_hexen_2_default_actions, "data1"sv),
             config_pair(add_kingpin_default_actions, "main"sv),
+            config_pair(add_daikatana_default_actions, "data"sv),
+            config_pair(add_elite_force_default_actions, "BaseEF"sv),
+            config_pair(add_medal_of_honor_default_actions, "main"sv),
+            config_pair(add_jedi_outcast_default_actions, "GameData/base"sv),
+            config_pair(add_jedi_academy_default_actions, "GameData/base"sv),
+            config_pair(add_space_trader_default_actions, "st"sv),
+            config_pair(add_call_of_duty_default_action, "Main"sv),
+            config_pair(add_castle_wolfenstein_default_actions, "Main"sv),
+            config_pair(add_battlemetal_default_actions, "metaldata"sv),
+            config_pair(add_action_quake_2_default_actions, "baseaq"sv),
              //quake qw
             //quake rogue
             //quake hipnotic
@@ -84,16 +113,8 @@ namespace siege
             //quake 2 xatrix
             //quake 3 missionpack
             //sin 2015
-            //daikatana data
-            //kingpin main
-            //elite force BaseEF
-            //moh main
             //moh mainta
             //moh maintt
-            //jedi outcast GameData base
-            //jedi academy GameData base
-            //space trader st
-            //call of duty Main
             //call of duty uo
             //quake live baseq3
             //Half life valve
@@ -101,10 +122,7 @@ namespace siege
             //half life bshift
             //half life czero
             //half life czeror
-            //rtcw Main
             //cry of fear cryoffear
-            //battlemetal metaldata
-            //action baseaq
             //action action
             //anachronox anoxdata
         }};
