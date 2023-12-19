@@ -126,7 +126,17 @@ namespace siege
         return add_actions_to_joystick_info(idtech_dual_stick_defaults, info);
     }
 
+    joystick_info add_battlemetal_default_actions(joystick_info info)
+    {
+        return add_actions_to_joystick_info(idtech_dual_stick_defaults, info);
+    }
+
     joystick_info add_hexen_2_default_actions(joystick_info info)
+    {
+        return add_actions_to_joystick_info(idtech_dual_stick_defaults, info);
+    }
+
+    joystick_info add_half_life_default_actions(joystick_info info)
     {
         return add_actions_to_joystick_info(idtech_dual_stick_defaults, info);
     }
@@ -247,6 +257,66 @@ namespace siege
                         add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info))));
     }
 
+    joystick_info add_daikatana_default_actions(joystick_info info)
+    {
+        return add_actions_to_joystick_info(idtech_dual_stick_defaults, info);
+    }
+
+    joystick_info add_action_quake_2_default_actions(joystick_info info)
+    {
+        return add_actions_to_joystick_info(idtech_dual_stick_defaults, info);
+    }
+
+    joystick_info add_space_trader_default_actions(joystick_info info)
+    {
+        return add_actions_to_joystick_info(idtech_dual_stick_defaults, info);
+    }
+
+    joystick_info add_call_of_duty_default_action(joystick_info info)
+    {
+        return add_actions_to_joystick_info(idtech_dual_stick_defaults, info);
+    }
+
+    joystick_info add_medal_of_honor_default_actions(joystick_info info)
+    {
+        return add_actions_to_joystick_info(idtech_dual_stick_defaults, info);
+    }
+
+    joystick_info add_soldier_of_fortune_2_default_actions(joystick_info info)
+    {
+        return add_actions_to_joystick_info(idtech_dual_stick_defaults, info);
+    }
+
+    joystick_info add_castle_wolfenstein_default_actions(joystick_info info)
+    {
+        return add_actions_to_joystick_info(idtech_dual_stick_defaults, info);
+    }
+
+    joystick_info add_jedi_academy_default_actions(joystick_info info)
+    {
+        return add_actions_to_joystick_info(idtech_dual_stick_defaults, info);
+    }
+
+    joystick_info add_jedi_outcast_default_actions(joystick_info info)
+    {
+        return add_actions_to_joystick_info(idtech_dual_stick_defaults, info);
+    }
+
+    joystick_info add_elite_force_default_actions(joystick_info info)
+    {
+        return add_actions_to_joystick_info(idtech_dual_stick_defaults, info);
+    }
+
+    joystick_info add_elite_force_2_default_actions(joystick_info info)
+    {
+        return add_actions_to_joystick_info(idtech_dual_stick_defaults, info);
+    }
+
+    joystick_info add_iron_grip_default_actions(joystick_info info)
+    {
+        return add_actions_to_joystick_info(idtech_dual_stick_defaults, info);
+    }
+    
     joystick_info add_quake_3_default_actions(joystick_info info)
     {
         constexpr static auto quake3_dual_stick_defaults = std::array<std::array<std::string_view, 2>, 7> {{
@@ -267,6 +337,11 @@ namespace siege
         return add_aliases_to_joystick_info(quake3_aliases, 
                     add_actions_to_joystick_info(quake3_dual_stick_defaults, 
                         add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info))));
+    }
+
+    joystick_info add_half_life_default_actions(joystick_info info)
+    {
+        return add_actions_to_joystick_info(idtech_dual_stick_defaults, info);
     }
 
     joystick_info add_quake_1_input_metadata(joystick_info info);
@@ -306,43 +381,43 @@ namespace siege
                     "Half-Life"sv, 
                     common::types::playstation,
                     add_quake_2_input_metadata, 
-                    add_quake_2_default_actions, 
+                    add_half_life_default_actions, 
                     convert_to_quake_2_config
         };
 
         return {
             quake,
-            game_info {quake, "battleMETAL"sv, add_quake_1_default_actions},
+            game_info {quake, "battleMETAL"sv, add_battlemetal_default_actions},
             game_info {quake, "Hexen II"sv, add_hexen_2_default_actions},
             quake_2,
             game_info {quake_2, "Heretic 2"sv, add_heretic_2_default_actions},
             game_info {quake_2, "SiN"sv, add_sin_default_actions},
             game_info {quake_2, "Kingpin: Life of Crime"sv, add_kingpin_default_actions},
-            game_info {quake_2, "Daikatana"sv, add_quake_2_default_actions},
-            game_info {quake_2, "AQtion"sv, add_quake_2_default_actions},
+            game_info {quake_2, "Daikatana"sv, add_daikatana_default_actions},
+            game_info {quake_2, "AQtion"sv, add_action_quake_2_default_actions},
             game_info {quake_2, "Soldier of Fortune"sv, add_soldier_of_fortune_default_actions},
             half_life,
-            game_info {half_life, "Half-Life: Opposing Force"sv, add_quake_2_default_actions},
-            game_info {half_life, "Half-Life: Blue Shift"sv, add_quake_2_default_actions},
-            game_info {half_life, "Counter-Strike"sv, add_quake_2_default_actions},
-            game_info {half_life, "Counter-Strike: Condition Zero"sv, add_quake_2_default_actions},
-            game_info {half_life, "Counter-Strike: Condition Zero Deleted Scenes"sv, add_quake_2_default_actions},
-            game_info {half_life, "Cry of Fear"sv, add_quake_2_default_actions},
-            game_info {half_life, "Day of Defeat"sv, add_quake_2_default_actions},
-            game_info {half_life, "Deathmatch Classic"sv, add_quake_2_default_actions},
-            game_info {half_life, "Ricochet"sv, add_quake_2_default_actions},
+            game_info {half_life, "Half-Life: Opposing Force"sv, add_half_life_default_actions},
+            game_info {half_life, "Half-Life: Blue Shift"sv, add_half_life_default_actions},
+            game_info {half_life, "Counter-Strike"sv, add_half_life_default_actions},
+            game_info {half_life, "Counter-Strike: Condition Zero"sv, add_half_life_default_actions},
+            game_info {half_life, "Counter-Strike: Condition Zero Deleted Scenes"sv, add_half_life_default_actions},
+            game_info {half_life, "Cry of Fear"sv, add_half_life_default_actions},
+            game_info {half_life, "Day of Defeat"sv, add_half_life_default_actions},
+            game_info {half_life, "Deathmatch Classic"sv, add_half_life_default_actions},
+            game_info {half_life, "Ricochet"sv, add_half_life_default_actions},
             quake_3,
             game_info {quake_3, "Quake Live"sv, add_quake_3_default_actions},
-            game_info {quake_3, "Iron Grip: Warlord"sv, add_quake_3_default_actions},
-            game_info {quake_3, "Star Trek: Voyager - Elite Force"sv, add_quake_3_default_actions},
-            game_info {quake_3, "Star Trek: Elite Force II"sv, add_quake_3_default_actions},
-            game_info {quake_3, "Star Wars: Jedi Knight II - Jedi Outcast"sv, add_quake_3_default_actions},
-            game_info {quake_3, "Star Wars: Jedi Knight - Jedi Academy"sv, add_quake_3_default_actions},
-            game_info {quake_3, "Return to Castle Wolfenstein"sv, add_quake_3_default_actions},
-            game_info {quake_3, "Soldier of Fortune II: Double Helix"sv, add_quake_3_default_actions},
-            game_info {quake_3, "Medal of Honor: Allied Assault"sv, add_quake_3_default_actions},
-            game_info {quake_3, "Call of Duty"sv, add_quake_3_default_actions},
-            game_info {quake_3, "Space Trader: Merchant Marine"sv, add_quake_3_default_actions}
+            game_info {quake_3, "Iron Grip: Warlord"sv, add_iron_grip_default_actions},
+            game_info {quake_3, "Star Trek: Voyager - Elite Force"sv, add_elite_force_default_actions},
+            game_info {quake_3, "Star Trek: Elite Force II"sv, add_elite_force_2_default_actions},
+            game_info {quake_3, "Star Wars: Jedi Knight II - Jedi Outcast"sv, add_jedi_outcast_default_actions},
+            game_info {quake_3, "Star Wars: Jedi Knight - Jedi Academy"sv, add_jedi_academy_default_actions},
+            game_info {quake_3, "Return to Castle Wolfenstein"sv, add_castle_wolfenstein_default_actions},
+            game_info {quake_3, "Soldier of Fortune II: Double Helix"sv, add_soldier_of_fortune_2_default_actions},
+            game_info {quake_3, "Medal of Honor: Allied Assault"sv, add_medal_of_honor_default_actions},
+            game_info {quake_3, "Call of Duty"sv, add_call_of_duty_default_action},
+            game_info {quake_3, "Space Trader: Merchant Marine"sv, add_space_trader_default_actions}
         };
     }
 
