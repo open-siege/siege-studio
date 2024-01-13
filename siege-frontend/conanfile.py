@@ -11,7 +11,7 @@ class SiegeLauncherConanFile(ConanFile):
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
     build_requires = "cmake/3.26.4"
-    requires = "3space/0.6.3", "imgui/cci.20230105+1.89.2.docking", "sdl/2.28.3", "catch2/3.3.2", "cpr/1.10.1"
+    requires = "3space/0.6.3", "imgui/cci.20230105+1.89.2.docking", "sdl/2.28.5", "catch2/3.3.2", "cpr/1.10.5"
     settings = "os", "compiler", "build_type", "arch"
     generators = "CMakeToolchain", "CMakeDeps"
 

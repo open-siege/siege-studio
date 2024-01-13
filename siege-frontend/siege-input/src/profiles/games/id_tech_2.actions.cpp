@@ -339,11 +339,6 @@ namespace siege
                         add_actions_to_joystick_info(idtech_dual_stick_defaults, std::move(info))));
     }
 
-    joystick_info add_half_life_default_actions(joystick_info info)
-    {
-        return add_actions_to_joystick_info(idtech_dual_stick_defaults, info);
-    }
-
     joystick_info add_quake_1_input_metadata(joystick_info info);
     joystick_info add_quake_2_input_metadata(joystick_info info);
     joystick_info add_quake_3_input_metadata(joystick_info info);

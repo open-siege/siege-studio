@@ -86,7 +86,7 @@ namespace siege
 
     std::string_view get_config_dir(const game_info& info)
     {
-        constexpr static auto config_dirs = std::array<config_pair, 9> {{
+        constexpr static auto config_dirs = std::array<config_pair, 19> {{
             config_pair(add_unreal_input_metadata, "System"sv),
             config_pair(add_quake_1_input_metadata, "base"sv),
             config_pair(add_quake_2_input_metadata, "base"sv),
