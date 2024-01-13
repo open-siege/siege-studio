@@ -226,7 +226,7 @@ namespace studio::content::dts::darkstar
       };
     }
 
-    throw std::invalid_argument("The material list version provided is not supported: " + std::to_string(object_header.version));
+    throw std::invalid_argument("The material list version provided is not supported: " + to_string(object_header.version));
   }
 
   template<typename ShapeType>
@@ -337,13 +337,13 @@ namespace studio::content::dts::darkstar
   void write_header(std::ostream& stream, const RootType& root)
   {
     constexpr static auto empty = std::byte{ '\0' };
-    boost::endian::little_uint32_t size_in_bytes{};
+    studio::endian::little_uint32_t size_in_bytes{};
     write(stream, pers_tag);
     // This is a placeholder for the real size which will come later
     write(stream, size_in_bytes);
 
     constexpr std::string_view type_name = std::remove_reference_t<decltype(root)>::type_name;
-    const boost::endian::little_int16_t type_size = static_cast<std::uint16_t>(type_name.size());
+    const studio::endian::little_int16_t type_size = static_cast<std::uint16_t>(type_name.size());
 
     write(stream, type_size);
     write(stream, type_name.data(), type_size);
@@ -353,13 +353,13 @@ namespace studio::content::dts::darkstar
       write(stream, empty);
     }
 
-    const boost::endian::little_int32_t version = std::remove_reference_t<decltype(root)>::version;
+    const studio::endian::little_int32_t version = std::remove_reference_t<decltype(root)>::version;
     write(stream, version);
   }
 
   void write_size(std::ostream& stream, std::optional<std::uint32_t> start_offset = std::nullopt)
   {
-    boost::endian::little_uint32_t size_in_bytes{};
+    studio::endian::little_uint32_t size_in_bytes{};
 
     start_offset = start_offset.has_value() ? start_offset.value() + static_cast<std::uint32_t>(pers_tag.size()) : static_cast<std::uint32_t>(pers_tag.size());
     std::uint32_t end_offset = static_cast<std::uint32_t>(stream.tellp());
@@ -422,7 +422,7 @@ namespace studio::content::dts::darkstar
           mesh_var);
       }
 
-      const boost::endian::little_uint32_t has_materials = 1u;
+      const studio::endian::little_uint32_t has_materials = 1u;
       write(stream, has_materials);
 
       const auto start_offset = static_cast<std::uint32_t>(stream.tellp());

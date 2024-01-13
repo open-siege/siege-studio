@@ -16,7 +16,7 @@ namespace studio::resources
     return std::filesystem::current_path();
   }
 
-  void resource_explorer::add_archive_type(std::string extension, std::unique_ptr<studio::resources::archive_plugin> archive_type, std::optional<nonstd::span<std::string_view>> explicit_extensions)
+  void resource_explorer::add_archive_type(std::string extension, std::unique_ptr<studio::resources::archive_plugin> archive_type, std::optional<std::span<std::string_view>> explicit_extensions)
   {
     auto result = archive_types.insert(std::make_pair(shared::to_lower(extension), std::move(archive_type)));
 

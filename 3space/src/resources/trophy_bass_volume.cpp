@@ -7,7 +7,7 @@
 
 namespace studio::resources::vol::trophy_bass
 {
-  namespace endian = boost::endian;
+  namespace endian = studio::endian;
 
   constexpr auto tbv_tag = shared::to_tag<9>({ 'T', 'B', 'V', 'o', 'l', 'u', 'm', 'e', '\0' });
 

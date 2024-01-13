@@ -9,7 +9,7 @@
 
 namespace studio::content::dts::torque
 {
-  namespace endian = boost::endian;
+  namespace endian = studio::endian;
 
   struct guard
   {

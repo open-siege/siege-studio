@@ -3,13 +3,14 @@
 #include <fstream>
 #include <utility>
 #include <string>
+#include <cstring>
 
 #include "resources/three_space_volume.hpp"
 #include "stream.hpp"
 
 namespace studio::resources::vol::three_space
 {
-  namespace endian = boost::endian;
+  namespace endian = studio::endian;
 
   constexpr auto rmf_tags = std::array<std::array<std::byte, 4>, 12>{
     shared::to_tag<4>({ 0x00, 0x01, 0x05, 0x07 }),

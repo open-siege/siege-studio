@@ -11,7 +11,7 @@
 
 namespace studio::content::dts::darkstar
 {
-  namespace endian = boost::endian;
+  namespace endian = studio::endian;
   using file_tag = std::array<std::byte, 4>;
 
   constexpr file_tag pers_tag = shared::to_tag<4>({ 'P', 'E', 'R', 'S' });

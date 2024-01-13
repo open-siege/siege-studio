@@ -8,7 +8,7 @@
 #include <locale>
 #include <fstream>
 #include <optional>
-#include <nonstd/span.hpp>
+#include <span>
 #include "archive_plugin.hpp"
 
 namespace studio::resources
@@ -25,7 +25,7 @@ namespace studio::resources
   public:
     std::filesystem::path get_search_path() const;
 
-    void add_archive_type(std::string extension, std::unique_ptr<studio::resources::archive_plugin> archive_type, std::optional<nonstd::span<std::string_view>> explicit_extensions = std::nullopt);
+    void add_archive_type(std::string extension, std::unique_ptr<studio::resources::archive_plugin> archive_type, std::optional<std::span<std::string_view>> explicit_extensions = std::nullopt);
 
     std::vector<std::string_view> get_archive_extensions() const;
 
@@ -50,7 +50,7 @@ namespace studio::resources
   private:
     std::locale default_locale;
 
-    std::map<std::string, nonstd::span<std::string_view>> archive_explicit_extensions;
+    std::map<std::string, std::span<std::string_view>> archive_explicit_extensions;
 
     std::multimap<std::string, std::unique_ptr<studio::resources::archive_plugin>> archive_types;
 

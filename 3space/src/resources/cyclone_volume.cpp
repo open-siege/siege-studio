@@ -9,7 +9,7 @@
 
 namespace studio::resources::cln
 {
-  namespace endian = boost::endian;
+  namespace endian = studio::endian;
 
 
   bool cln_file_archive::is_supported(std::istream& stream)

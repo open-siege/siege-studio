@@ -11,7 +11,7 @@
 
 namespace studio::resources::vol::darkstar
 {
-  namespace endian = boost::endian;
+  namespace endian = studio::endian;
   using namespace std::literals;
 
   using file_tag = std::array<std::byte, 4>;
@@ -150,7 +150,7 @@ namespace studio::resources::vol::darkstar
       studio::write(output, &tag, 1);
 
       std::copy_n(std::istreambuf_iterator(*file.stream),
-                  narrowed_size,
+                  narrowed_size.value(),
                   std::ostreambuf_iterator(output));
 
       auto size_for_padding = int(output.tellp());

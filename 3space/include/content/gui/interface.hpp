@@ -14,7 +14,7 @@
 
 namespace studio::gui::darkstar
 {
-  namespace endian = boost::endian;
+  namespace endian = studio::endian;
   struct sim_control;
   struct sim_active_control;
   struct sim_bitmap_control;

@@ -9,7 +9,7 @@
 
 namespace idtech2::mdl
 {
-  namespace endian = boost::endian;
+  namespace endian = studio::endian;
   using file_tag = std::array<std::byte, 4>;
 
   template<std::size_t Size>

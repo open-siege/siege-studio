@@ -2,12 +2,13 @@
 #define DARKSTARDTSCONVERTER_3D_STRUCTURES_HPP
 
 #include <array>
+#include <climits>
 #include "shared.hpp"
 #include "endian_arithmetic.hpp"
 
 namespace studio::content
 {
-  namespace endian = boost::endian;
+  namespace endian = studio::endian;
   struct texture_vertex
   {
     KEYS_CONSTEXPR static auto keys = shared::make_keys({ "x", "y" });

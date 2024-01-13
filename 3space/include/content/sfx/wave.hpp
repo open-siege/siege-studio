@@ -7,7 +7,7 @@
 
 namespace studio::content::sfx
 {
-  namespace endian = boost::endian;
+  namespace endian = studio::endian;
   using file_tag = std::array<std::byte, 4>;
 
   constexpr file_tag riff_tag = shared::to_tag<4>({ 'R', 'I', 'F', 'F' });

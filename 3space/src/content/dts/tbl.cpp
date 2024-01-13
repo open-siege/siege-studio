@@ -4,7 +4,7 @@
 
 namespace studio::content::tbl::three_space
 {
-  namespace endian = boost::endian;
+  namespace endian = studio::endian;
 
   using file_tag = std::array<std::byte, 4>;
 

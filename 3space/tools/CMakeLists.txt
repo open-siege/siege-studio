@@ -1,5 +1,5 @@
 project(open-siege-tools)
-cmake_minimum_required(VERSION 3.17)
+cmake_minimum_required(VERSION 3.20)
 
 add_subdirectory(dts-to-json)
 # TODO json library errors when building

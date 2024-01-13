@@ -4,7 +4,7 @@
 
 namespace studio::configurations
 {
-    namespace endian = boost::endian;
+    namespace endian = studio::endian;
 
     std::uint32_t little_endian_stream_reader::read_uint32()
     {
