@@ -10,7 +10,7 @@
 
 namespace studio::content::bmp
 {
-  namespace endian = boost::endian;
+  namespace endian = studio::endian;
 
   struct windows_bmp_header
   {

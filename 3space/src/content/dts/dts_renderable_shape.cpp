@@ -266,25 +266,25 @@ namespace studio::content::dts::darkstar
          auto& temp = results.emplace_back();
          temp.filename = raw_material.file_name.data();
 
-         temp.metadata.emplace("flags", raw_material.flags);
+         temp.metadata.emplace("flags", raw_material.flags.value());
          temp.metadata.emplace("alpha", raw_material.alpha);
-         temp.metadata.emplace("index", raw_material.index);
+         temp.metadata.emplace("index", raw_material.index.value());
          temp.metadata.emplace("rgbData", raw_material.rgb_data);
 
          using T = std::decay_t<decltype(raw_material)>;
 
          if constexpr (std::is_same_v<T, material_list::v3::material>)
          {
-           temp.metadata.emplace("type", raw_material.type);
+           temp.metadata.emplace("type", raw_material.type.value());
            temp.metadata.emplace("friction", raw_material.friction);
            temp.metadata.emplace("elasticity", raw_material.elasticity);
          }
          if constexpr (std::is_same_v<T, material_list::v4::material>)
          {
-           temp.metadata.emplace("type", raw_material.type);
+           temp.metadata.emplace("type", raw_material.type.value());
            temp.metadata.emplace("friction", raw_material.friction);
            temp.metadata.emplace("elasticity", raw_material.elasticity);
-           temp.metadata.emplace("useDefaultProperties", raw_material.use_default_properties);
+           temp.metadata.emplace("useDefaultProperties", raw_material.use_default_properties.value());
          }
         }
         return results;

@@ -15,7 +15,7 @@
 
 namespace studio::mis::darkstar
 {
-  namespace endian = boost::endian;
+  namespace endian = studio::endian;
   struct sim_set;
   struct sim_group;
   struct sim_volume;

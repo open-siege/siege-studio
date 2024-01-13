@@ -12,7 +12,7 @@
 
 namespace studio::content::pal
 {
-  namespace endian = boost::endian;
+  namespace endian = studio::endian;
   using file_tag = std::array<std::byte, 4>;
 
   enum class palette_type

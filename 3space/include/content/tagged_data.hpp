@@ -12,7 +12,7 @@
 
 namespace studio
 {
-  namespace endian = boost::endian;
+  namespace endian = studio::endian;
 
   struct object_header
   {
@@ -118,7 +118,7 @@ namespace studio
     std::uint32_t children_count,
     typename tagged_item_map<ChildType>::tagged_item_reader_map& readers)
   {
-    namespace endian = boost::endian;
+    namespace endian = studio::endian;
     std::vector<ChildType> children;
 
     children.reserve(children_count);

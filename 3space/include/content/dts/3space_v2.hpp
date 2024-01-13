@@ -11,7 +11,7 @@
 
 namespace studio::content::dts::three_space
 {
-  namespace endian = boost::endian;
+  namespace endian = studio::endian;
 
   namespace v2
   {

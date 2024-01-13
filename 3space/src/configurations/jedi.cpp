@@ -5,7 +5,7 @@
 namespace studio::configurations::jedi
 {
     using config_entry = binary_game_config::config_entry;
-    namespace endian = boost::endian;
+    namespace endian = studio::endian;
 
     namespace jedi_knight
     {

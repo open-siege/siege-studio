@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <iostream>
 #include <deque>
+#include <cstring>
 
 #include "resources/iso_volume.hpp"
 #include "resources/external_utils.hpp"
@@ -28,7 +29,7 @@ overloaded(Ts...) -> overloaded<Ts...>;
 // TODO extract audio from iso
 namespace studio::resources::iso
 {
-  namespace endian = boost::endian;
+  namespace endian = studio::endian;
   using folder_info = studio::resources::folder_info;
   constexpr auto cue_file_record_tag = shared::to_tag<4>({ 'F', 'I', 'L', 'E' });
   constexpr auto ccd_file_record_tag = shared::to_tag<9>({ '[', 'C', 'l', 'o', 'n', 'e', 'C', 'D', ']' });

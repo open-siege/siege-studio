@@ -41,10 +41,10 @@ namespace nlohmann
     }
   };
 
-  template<boost::endian::order ByteOrder, typename IntType, std::size_t Size>
-  struct adl_serializer<boost::endian::endian_arithmetic<ByteOrder, IntType, Size>>
+  template<std::endian ByteOrder, std::integral IntType, std::size_t Size>
+  struct adl_serializer<studio::endian::endian_int_t<ByteOrder, IntType, Size>>
   {
-    using EndianType = boost::endian::endian_arithmetic<ByteOrder, IntType, Size>;
+    using EndianType = studio::endian::endian_int_t<ByteOrder, IntType, Size>;
     using ValueType = typename EndianType::value_type;
 
     template<typename BasicJsonType>

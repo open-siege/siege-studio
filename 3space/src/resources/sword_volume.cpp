@@ -8,7 +8,7 @@
 
 namespace studio::resources::atd
 {
-  namespace endian = boost::endian;
+  namespace endian = studio::endian;
 
   bool atd_file_archive::is_supported(std::istream& stream)
   {

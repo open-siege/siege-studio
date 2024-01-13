@@ -2,7 +2,7 @@
 
 namespace studio::content::fnt
 {
-  namespace endian = boost::endian;
+  namespace endian = studio::endian;
   constexpr auto pft_tag = shared::to_tag<4>({ 'P', 'F', 'O', 'N' });
 
   struct phoenix_font_header

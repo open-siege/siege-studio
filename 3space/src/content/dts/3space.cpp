@@ -9,7 +9,7 @@
 
 namespace studio::content::dts::three_space
 {
-  namespace endian = boost::endian;
+  namespace endian = studio::endian;
   using file_tag = std::array<std::byte, 4>;
 
   namespace v1
