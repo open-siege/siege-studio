@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 project(siege-interface)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -19,7 +19,7 @@ else()
             src/interface/main.cpp)
 endif()
 
-set_property(TARGET siege-interface PROPERTY CXX_STANDARD 17)
+set_property(TARGET siege-interface PROPERTY CXX_STANDARD 23)
 target_include_directories(siege-interface PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/bindings ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_include_directories(siege-interface PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(siege-interface PUBLIC SDL2::SDL2-static imgui::imgui)

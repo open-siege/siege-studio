@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 project(siege-installer)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -8,7 +8,7 @@ find_package(Catch2 REQUIRED)
 find_package(3space REQUIRED)
 
 add_executable(siege-installer src/installer.cpp src/games/games.cpp)
-set_property(TARGET siege-installer PROPERTY CXX_STANDARD 17)
+set_property(TARGET siege-installer PROPERTY CXX_STANDARD 23)
 target_link_libraries(siege-installer PRIVATE cpr::cpr 3space::3space)
 target_include_directories(siege-installer PRIVATE src)
 

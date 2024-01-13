@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 project(siege-input)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -41,7 +41,7 @@ add_custom_command(TARGET siege-input
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/src/profiles $<TARGET_FILE_DIR:siege-input>/
         )
 
-set_property(TARGET siege-input PROPERTY CXX_STANDARD 17)
+set_property(TARGET siege-input PROPERTY CXX_STANDARD 23)
 target_include_directories(siege-input PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_include_directories(siege-input PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(siege-input PUBLIC SDL2::SDL2-static nlohmann_json::nlohmann_json 3space::3space)
