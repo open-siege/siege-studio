@@ -1,0 +1,12 @@
+cmake_minimum_required(VERSION 3.20)
+project(siege-launcher-win32)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
+add_executable(siege-launcher-win32 WIN32 siege-launcher-win32.cpp siege-launcher-win32.rc)
+
+set_property(TARGET siege-launcher-win32 PROPERTY CXX_STANDARD 23)
+target_compile_definitions(siege-launcher-win32 PRIVATE UNICODE)
+target_include_directories(siege-launcher-win32 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+install(TARGETS siege-launcher-win32 CONFIGURATIONS Debug Release RUNTIME DESTINATION bin)
