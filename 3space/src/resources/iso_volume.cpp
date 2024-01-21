@@ -466,7 +466,7 @@ namespace studio::resources::iso
         }
         else
         {
-          music_track.size = std::size_t(tracks[i].offset - track.offset);
+          music_track.size = std::size_t(tracks[i].offset.value() - track.offset.value());
         }
 
         results.emplace_back(music_track);

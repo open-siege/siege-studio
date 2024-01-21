@@ -118,7 +118,7 @@ struct GameLauncherOnFrameBeginCallback
 
                     for (auto& path : game_paths)
                     {
-                      if (ImGui::Button(path.working_dir.c_str()))
+                      if (ImGui::Button(path.working_dir.string().c_str()))
                       {
                           auto configs = selected_game.value().create_game_configs(game_joysticks);
 

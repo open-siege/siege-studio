@@ -12,8 +12,6 @@
 
 namespace studio
 {
-  namespace endian = studio::endian;
-
   struct object_header
   {
     KEYS_CONSTEXPR static auto keys = shared::make_keys({ "objectTag", "objectSize" });

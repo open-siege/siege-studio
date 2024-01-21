@@ -126,37 +126,44 @@ namespace studio::endian
             return OtherInt(TInt(*this));
         }
 
-        constexpr bool operator==(std::integral auto b) const noexcept
+        template<std::integral OtherInt>
+        constexpr bool operator==(OtherInt b) const noexcept
         {
             return TInt(*this) == b;
         }
 
-        constexpr bool operator<=(std::integral auto b) const noexcept
+        template<std::integral OtherInt>
+        constexpr bool operator<=(OtherInt b) const noexcept
         {
             return TInt(*this) <= b;
         }
 
-        constexpr bool operator<(std::integral auto b) const noexcept
+        template<std::integral OtherInt>
+        constexpr bool operator<(OtherInt b) const noexcept
         {
             return TInt(*this) < b;
         }
 
-        friend constexpr bool operator<(std::integral auto a, int_type b) noexcept
+        template<std::integral OtherInt>
+        friend constexpr bool operator<(OtherInt a, int_type b) noexcept
         {
             return a < TInt(b);
         }
 
-        constexpr bool operator>=(std::integral auto b) const noexcept
+        template<std::integral OtherInt>
+        constexpr bool operator>=(OtherInt b) const noexcept
         {
             return TInt(*this) >= b;
         }
 
-        friend constexpr bool operator>(std::integral auto a, int_type b) noexcept
+        template<std::integral OtherInt>
+        friend constexpr bool operator>(OtherInt a, int_type b) noexcept
         {
             return a > TInt(b);
         }
 
-        constexpr bool operator>(std::integral auto b) const noexcept
+        template<std::integral OtherInt>
+        constexpr bool operator>(OtherInt b) const noexcept
         {
             return TInt(*this) > b;
         }
@@ -175,82 +182,91 @@ namespace studio::endian
             return copy;
         }
 
-        constexpr int_type operator*(endian_int_t<TByteOrder, std::integral auto> b) const noexcept
+        constexpr int_type operator*(int_type b) const noexcept
         {
             return TInt(*this) * typename decltype (b)::value_type(b);
         }
 
-        friend constexpr int_type operator*(endian_int_t<TByteOrder, std::integral auto> a, int_type b) noexcept
+        friend constexpr int_type operator*(int_type a, int_type b) noexcept
         {
             return typename decltype (b)::value_type(b) * TInt(b);
         }
 
-        constexpr int_type operator+(endian_int_t<TByteOrder, std::integral auto> b) const noexcept
+        constexpr int_type operator+(int_type b) const noexcept
         {
             return TInt(*this) + typename decltype (b)::value_type(b);
         }
 
-        friend constexpr int_type operator+(endian_int_t<TByteOrder, std::integral auto> a, int_type b) noexcept
+        friend constexpr int_type operator+(int_type a, int_type b) noexcept
         {
             return typename decltype (b)::value_type(b) + TInt(b);
         }
 
-        constexpr int_type operator-(endian_int_t<TByteOrder, std::integral auto> b) const noexcept
+        constexpr int_type operator-(int_type b) const noexcept
         {
             return TInt(*this) - typename decltype (b)::value_type(b);
         }
 
-        friend constexpr int_type operator-(endian_int_t<TByteOrder, std::integral auto> a, int_type b) noexcept
+        friend constexpr int_type operator-(int_type a, int_type b) noexcept
         {
             return typename decltype (b)::value_type(b) - TInt(b);
         }
 
-        constexpr int_type operator/(endian_int_t<TByteOrder, std::integral auto> b) const noexcept
+        constexpr int_type operator/(int_type b) const noexcept
         {
             return TInt(*this) / typename decltype (b)::value_type(b);
         }
 
-        friend constexpr int_type operator/(endian_int_t<TByteOrder, std::integral auto> a, int_type b) noexcept
+        friend constexpr int_type operator/(int_type a, int_type b) noexcept
         {
             return typename decltype (b)::value_type(b) / TInt(b);
         }
 
-        constexpr std::integral auto operator*(std::integral auto b) const noexcept
+        template<std::integral OtherInt>
+        constexpr OtherInt operator*(OtherInt b) const noexcept
         {
             return TInt(*this) * b;
         }
 
-        friend constexpr std::integral auto operator*(std::integral auto a, int_type b) noexcept
+        template<std::integral OtherInt>
+        friend constexpr OtherInt operator*(OtherInt a, int_type b) noexcept
         {
             return a * TInt(b);
         }
 
-        constexpr std::integral auto operator+(std::integral auto b) const noexcept
+
+        template<std::integral OtherInt>
+        constexpr OtherInt operator+(OtherInt b) const noexcept
         {
             return TInt(*this) + b;
         }
 
-        friend constexpr std::integral auto operator-(std::integral auto a, int_type b) noexcept
+        template<std::integral OtherInt>
+        friend constexpr OtherInt operator-(OtherInt a, int_type b) noexcept
         {
             return a - TInt(b);
         }
 
-        constexpr std::integral auto operator-(std::integral auto b) const noexcept
+        template<std::integral OtherInt>
+        constexpr OtherInt operator-(OtherInt b) const noexcept
         {
             return TInt(*this) - b;
         }
 
-        friend constexpr std::integral auto operator+(std::integral auto a, int_type b) noexcept
+        template<std::integral OtherInt>
+        friend constexpr OtherInt operator+(OtherInt a, int_type b) noexcept
         {
             return a + TInt(b);
         }
 
-        constexpr std::integral auto operator/(std::integral auto b) const noexcept
+        template<std::integral OtherInt>
+        constexpr OtherInt operator/(OtherInt b) const noexcept
         {
             return TInt(*this) / b;
         }
 
-        friend constexpr std::integral auto operator/(std::integral auto a, int_type b) noexcept
+        template<std::integral OtherInt>
+        friend constexpr OtherInt operator/(OtherInt a, int_type b) noexcept
         {
             return a / TInt(b);
         }
@@ -350,8 +366,11 @@ namespace studio::endian
         return true;
     }
 
+    #ifndef _MSC_VER 
     static_assert(little_int24_t_test<little_int24_t>());
     static_assert(little_int24_t_test<little_uint24_t>());
+    #endif
+
 
     template<typename TEndianInt>
     consteval bool big_int24_t_test()
@@ -370,8 +389,10 @@ namespace studio::endian
         return true;
     }
 
+    #ifndef _MSC_VER 
     static_assert(big_int24_t_test<big_int24_t>());
     static_assert(big_int24_t_test<big_uint24_t>());
+    #endif
 }
 
 

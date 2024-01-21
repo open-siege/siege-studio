@@ -180,7 +180,7 @@ namespace studio::content::dts::darkstar
             if (sub_sequence.num_key_frames > 0)
             {
               info.min_position = local_shape.keyframes[sub_sequence.first_key_frame_index].position;
-              info.max_position = local_shape.keyframes[sub_sequence.first_key_frame_index + sub_sequence.num_key_frames - 1].position;
+              info.max_position = local_shape.keyframes[sub_sequence.first_key_frame_index.value() + sub_sequence.num_key_frames - 1].position;
             }
             else
             {
@@ -200,7 +200,7 @@ namespace studio::content::dts::darkstar
             {
               if (object.node_index == node_index)
               {
-                for (auto i = object.first_sub_sequence_index; i < object.first_sub_sequence_index + object.num_sub_sequences; ++i)
+                for (auto i = object.first_sub_sequence_index; i < object.first_sub_sequence_index.value() + object.num_sub_sequences; ++i)
                 {
                   auto& sub_sequence = local_shape.sub_sequences[i];
                   auto& sequence = results[sub_sequence.sequence_index];
@@ -213,7 +213,7 @@ namespace studio::content::dts::darkstar
           }
           else
           {
-            for (auto i = node.first_sub_sequence_index; i < node.first_sub_sequence_index + node.num_sub_sequences; ++i)
+            for (auto i = node.first_sub_sequence_index; i < node.first_sub_sequence_index.value() + node.num_sub_sequences; ++i)
             {
               auto& sub_sequence = local_shape.sub_sequences[i];
               auto& sequence = results[sub_sequence.sequence_index];
