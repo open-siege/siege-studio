@@ -202,7 +202,7 @@ namespace studio::content::dts::darkstar
 
       return v2::material_list{
         main_header,
-        read_vector<v2::material>(stream, main_header.num_materials * main_header.num_details)
+        read_vector<v2::material>(stream, main_header.num_materials.value() * main_header.num_details)
       };
     }
 
@@ -212,7 +212,7 @@ namespace studio::content::dts::darkstar
 
       return v3::material_list{
         main_header,
-        read_vector<v3::material>(stream, main_header.num_materials * main_header.num_details)
+        read_vector<v3::material>(stream, main_header.num_materials.value() * main_header.num_details)
       };
     }
 
@@ -222,7 +222,7 @@ namespace studio::content::dts::darkstar
 
       return v4::material_list{
         main_header,
-        read_vector<v4::material>(stream, main_header.num_materials * main_header.num_details)
+        read_vector<v4::material>(stream, main_header.num_materials.value() * main_header.num_details)
       };
     }
 

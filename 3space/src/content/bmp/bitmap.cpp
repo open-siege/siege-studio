@@ -184,7 +184,7 @@ namespace studio::content::bmp
 
     std::vector<pal::colour> colours;
 
-    const auto num_pixels = info.width * info.height;
+    const auto num_pixels = info.width.value() * info.height;
     std::vector<std::int32_t> indexes;
     if (info.bit_depth <= 8)
     {
@@ -279,14 +279,14 @@ namespace studio::content::bmp
     const auto x_stride = width * bit_depth / 8;
     const auto padding = shared::get_padding_size(x_stride, sizeof(AlignmentType));
 
-    const auto num_pixels = info.width * info.height * (info.bit_depth / 8);
+    const auto num_pixels = info.width.value() * info.height * (info.bit_depth / 8);
 
 
     if (info.bit_depth <= 8 && pixels.size() != num_pixels)
     {
       throw std::invalid_argument("The pixels vector does not have the correct number of pixels.");
     }
-    else if (info.bit_depth > 8 && colours.size() != (info.width * info.height))
+    else if (info.bit_depth > 8 && colours.size() != (info.width.value() * info.height))
     {
       throw std::invalid_argument("The colours vector does not have the correct number of pixels.");
     }
@@ -375,7 +375,7 @@ namespace studio::content::bmp
       {
         studio::read(raw_data, reinterpret_cast<char*>(&bmp_header), sizeof(bmp_header));
 
-        const auto num_pixels = bmp_header.width * bmp_header.height * (bmp_header.bit_depth / 8);
+        const auto num_pixels = bmp_header.width.value() * bmp_header.height * (bmp_header.bit_depth / 8);
         pixels = std::vector<std::byte>(num_pixels, std::byte{});
       }
       else if (chunk_header == data_tag)

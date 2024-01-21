@@ -86,7 +86,7 @@ namespace studio::content::dts::three_space
       file.read(reinterpret_cast<char*>(&shape.material_count), sizeof(shape.material_count));
       file.read(reinterpret_cast<char*>(&shape.detail_count), sizeof(shape.detail_count));
 
-      const auto total_materials = shape.material_count * shape.detail_count;
+      const auto total_materials = shape.material_count.value() * shape.detail_count;
 
       for (auto i = 0u; i < total_materials; ++i)
       {

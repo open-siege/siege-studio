@@ -33,7 +33,6 @@ namespace siege
 
     constexpr static auto melee_attack_on = "+melee-attack";
 
-    namespace playstation = siege::playstation;
     using joystick_info = siege::joystick_info;
     using button = siege::button;
     using hat = siege::hat;
