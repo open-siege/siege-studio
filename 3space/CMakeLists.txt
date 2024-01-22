@@ -35,7 +35,7 @@ target_link_libraries(3space
 
 # TODO fix linker error with tests on Windows
 if (WIN32)
-        add_executable(3space-tests  ${CMAKE_CURRENT_SOURCE_DIR}/src/empty.cpp)
+        add_executable(3space-tests ${CMAKE_CURRENT_SOURCE_DIR}/src/empty.cpp)
         target_link_libraries(3space-tests PRIVATE Catch2::Catch2WithMain)        
 else()
         add_executable(3space-tests ${TESTABLE_SRC_FILES} ${TEST_SRC_FILES})
