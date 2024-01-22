@@ -14,7 +14,7 @@ class LocalConanFile(ConanFile):
     build_requires = "cmake/3.26.4"
     settings = "os", "compiler", "build_type", "arch"
     # openssl is here to force package resolution issue with cmake on linux
-    requires = "glm/cci.20230113", "taocpp-pegtl/3.2.7", "libzip/1.9.2", "catch2/3.3.2"
+    requires = "glm/cci.20230113", "taocpp-pegtl/3.2.7", "libzip/1.9.2", "catch2/3.5.2"
     generators = "CMakeToolchain", "CMakeDeps"
     exports_sources = "CMakeLists.txt", "include/*", "src/*", "tools/*"
 
