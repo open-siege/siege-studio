@@ -56,14 +56,25 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	// Initialize global strings
 	LoadStringW(hInstance, IDS_APP_TITLE, app_title.data(), int(app_title.size()));
-	static auto descriptor = main_window::get_descriptor(hInstance);
-	RegisterClassExW(&descriptor);
 
-	std::vector<dialog> child_dialogs;
 	std::vector<client_control> controls;
 
-	main_window window{ .HandleMessage {
-		[&](main_window& window, auto message) -> std::optional<LRESULT>
+	window main_window{WNDCLASSEXW {
+		.style{CS_HREDRAW | CS_VREDRAW},
+		.hInstance = hInstance,
+		.hIcon = LoadIconW(hInstance, MAKEINTRESOURCE(IDI_SIEGELAUNCHERWIN32)),
+		.hCursor = LoadCursorW(hInstance, IDC_ARROW),
+		.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1),
+		.lpszMenuName = MAKEINTRESOURCEW(IDC_SIEGELAUNCHERWIN32),
+		.lpszClassName{L"SiegeLauncherMainWindow"},
+		.hIconSm = LoadIconW(hInstance, MAKEINTRESOURCE(IDI_SMALL)),
+	}, CREATESTRUCTW {
+		.cx = CW_USEDEFAULT,
+		.x = CW_USEDEFAULT,
+		.style = WS_OVERLAPPEDWINDOW,
+		.lpszName = app_title.data()
+	}, 
+		[&](window& self, auto message) -> std::optional<LRESULT>
 	{
 		 return std::visit(overloaded {
 			 [&](create_message& command) -> std::optional<LRESULT> {
@@ -82,18 +93,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 					PostThreadMessageW(GetThreadId(worker.native_handle()), WM_COUT, 0, reinterpret_cast<LPARAM>(L"Main window created"));
 
-					auto& button_instance = controls.emplace_back(button{ CreateWindowW(
-						L"BUTTON",  // Predefined class; Unicode assumed 
-						L"Click me",      // Button text 
-						WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
-						10,         // x position 
-						10,         // y position 
-						100,        // Button width
-						100,        // Button height
-						window.handle,     // Parent window
-						NULL,       // No menu.
-						(HINSTANCE)GetWindowLongPtr(window.handle, GWLP_HINSTANCE),
-						NULL), [&](auto& self, UINT_PTR uIdSubclass, auto button_message) -> std::optional<LRESULT>
+					auto& button_instance = controls.emplace_back(button{ CREATESTRUCTW{
+						.hwndParent = self.handle,
+						.cy = 100,  
+						.cx = 100,
+						.y = 10,       
+						.x = 10,       
+						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+						.lpszName = L"Click me"}, 
+						[&](auto& self, UINT_PTR uIdSubclass, auto button_message) -> std::optional<LRESULT>
 						{
 							return std::visit(overloaded{
 								[&](command_message& command) -> std::optional<LRESULT> {
@@ -107,35 +115,25 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 						}
 						});
 
-					auto& edit_instance = controls.emplace_back(edit{ CreateWindowW(
-						L"EDIT",  // Predefined class; Unicode assumed 
-						L"",      // Button text 
-						WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
-						10,         // x position 
-						110,         // y position 
-						100,        // Button width
-						100,        // Button height
-						window.handle,     // Parent window
-						NULL,       // No menu.
-						(HINSTANCE)GetWindowLongPtr(window.handle, GWLP_HINSTANCE),
-						NULL), [&](auto& self, UINT_PTR uIdSubclass, auto message) -> std::optional<LRESULT>
+					auto& edit_instance = controls.emplace_back(edit{ CREATESTRUCTW{
+						.hwndParent = self.handle,              
+						.cy = 100,
+						.cx = 100,                
+						.y = 110, 
+						.x = 10,       
+						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON}, [&](auto& self, UINT_PTR uIdSubclass, auto message) -> std::optional<LRESULT>
 						{
 							return std::nullopt;
 						}
 						});
 
-					auto& combo_box_instance = controls.emplace_back(combo_box{ CreateWindowW(
-						L"COMBOBOX",  // Predefined class; Unicode assumed 
-						L"",      // Button text 
-						WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
-						10,         // x position 
-						210,         // y position 
-						100,        // Button width
-						100,        // Button height
-						window.handle,     // Parent window
-						NULL,       // No menu.
-						(HINSTANCE)GetWindowLongPtr(window.handle, GWLP_HINSTANCE),
-						NULL), [&](auto& self, UINT_PTR uIdSubclass, auto message) -> std::optional<LRESULT>
+					auto& combo_box_instance = controls.emplace_back(combo_box{CREATESTRUCTW{
+						.hwndParent = self.handle,
+						.cy = 100,
+						.cx = 100,
+						.y = 210,
+						.x = 10,   
+						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON}, [&](auto& self, UINT_PTR uIdSubclass, auto message) -> std::optional<LRESULT>
 						{
 							return std::nullopt;
 						}
@@ -159,10 +157,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 				{
 					return SendMessageW(command.handle, command_message::id, command.wparam(), command.lparam());
 				}
-
+					
 				if (command.identifier == IDM_ABOUT)
 				{
-					auto& modal = child_dialogs.emplace_back([&](dialog& self, auto dialog_message) -> INT_PTR {
+                    dialog::show_modal(self.handle, MAKEINTRESOURCE(IDD_ABOUTBOX), [&](dialog& self, auto dialog_message) -> INT_PTR {
 						return std::visit(overloaded{
 									[&](command_message& dialog_command) -> INT_PTR {
 										if (dialog_command.identifier == IDOK || dialog_command.identifier == IDCANCEL)
@@ -178,15 +176,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 									}
 						}, dialog_message);
 						});
-					DialogBoxParamW(hInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), window.handle, dialog::HandleAboutDialogMessage, reinterpret_cast<LPARAM>(&modal));
-
-					child_dialogs.erase(std::remove_if(child_dialogs.begin(), child_dialogs.end(), [](auto& dialog) {
-						return !dialog.HandleMessage;
-						}), child_dialogs.end());
 				}
 				else if (command.identifier == IDM_EXIT)
 				{
-					DestroyWindow(window.handle);
+					DestroyWindow(self.handle);
 					return 0;
 				}
 
@@ -197,18 +190,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			}
 		}, message);
 	}
-	} };
+	};
 
-	HWND hWnd = CreateWindowW(descriptor.lpszClassName, app_title.data(), WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, &window);
-
-	if (!hWnd)
+	if (!main_window.handle)
 	{
 		return FALSE;
 	}
 
-	ShowWindow(hWnd, nCmdShow);
-	UpdateWindow(hWnd);
+	ShowWindow(main_window.handle, nCmdShow);
+	UpdateWindow(main_window.handle);
 
 
 	HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_SIEGELAUNCHERWIN32));
