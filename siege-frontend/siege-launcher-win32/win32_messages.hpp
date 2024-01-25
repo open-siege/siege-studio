@@ -1,26 +1,25 @@
 #ifndef WIN32_MESSAGES_HPP
 #define WIN32_MESSAGES_HPP
 
-#include "framework.h"
-#include "Resource.h"
 #include <array>
 #include <functional>
 #include <variant>
 #include <optional>
 #include <bit>
 #include <cstdint>
+#include <wtypes.h>
+#include <WinDef.h>
+#include <WinUser.h>
 
 namespace win32
 {
 	static_assert(sizeof(void*) == sizeof(LONG_PTR));
 
-	constexpr static auto WM_COUT = WM_APP + 1;
-
 	using wparam_t = WPARAM;
 	using lparam_t = LPARAM;
 	using wparam_array = std::array<std::byte, sizeof(WPARAM)>;
 	using lparam_array = std::array<std::byte, sizeof(LPARAM)>;
-	static_assert(sizeof(std::uint32_t == UINT));
+	static_assert(sizeof(std::uint32_t) == sizeof(UINT));
 
 	using class_descriptor = WNDCLASSEXW;
     using instance_descriptor = CREATESTRUCTW;
@@ -121,7 +120,7 @@ namespace win32
 			return destroy_message{};
 		}
 
-		return ::message{
+		return win32::message{
 			.message = message,
 			.wParam = wParam,
 			.lParam = lParam
