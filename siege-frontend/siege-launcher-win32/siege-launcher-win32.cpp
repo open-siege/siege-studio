@@ -11,10 +11,16 @@
 #include <functional>
 #include <thread>
 #include <iostream>
-#include "windows.hpp"
+#include "win32_controls.hpp"
+#include "framework.h"
+#include "Resource.h"
 //#include "http_client.hpp"
 
 std::array<wchar_t, 100> app_title;
+
+using win32::overloaded;
+
+constexpr static auto WM_COUT = WM_APP + 1;
 
 void worker_thread_main()
 {
@@ -22,10 +28,10 @@ void worker_thread_main()
 
 	while (GetMessageW(&msg, nullptr, 0, 0))
 	{
-		auto cracked_message = make_window_message(msg);
+		auto cracked_message = win32::make_window_message(msg);
 
 		std::visit(overloaded {
-			[&](::message& message) -> std::optional<LRESULT> {
+			[&](win32::message& message) -> std::optional<LRESULT> {
 				if (message.message == WM_COUT)
 				{
 					if (message.wParam == 0)
@@ -57,9 +63,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	// Initialize global strings
 	LoadStringW(hInstance, IDS_APP_TITLE, app_title.data(), int(app_title.size()));
 
-	std::vector<client_control> controls;
+	std::vector<win32::client_control> controls;
 
-	window main_window{WNDCLASSEXW {
+	win32::window main_window{WNDCLASSEXW {
 		.style{CS_HREDRAW | CS_VREDRAW},
 		.hInstance = hInstance,
 		.hIcon = LoadIconW(hInstance, MAKEINTRESOURCE(IDI_SIEGELAUNCHERWIN32)),
@@ -74,10 +80,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		.style = WS_OVERLAPPEDWINDOW,
 		.lpszName = app_title.data()
 	}, 
-		[&](window& self, auto message) -> std::optional<LRESULT>
+		[&](win32::window& self, auto message) -> std::optional<LRESULT>
 	{
 		 return std::visit(overloaded {
-			 [&](create_message& command) -> std::optional<LRESULT> {
+			 [&](win32::create_message& command) -> std::optional<LRESULT> {
 					
 #if _DEBUG
 						AllocConsole();
@@ -91,9 +97,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 					controls.reserve(10);
 
-					PostThreadMessageW(GetThreadId(worker.native_handle()), WM_COUT, 0, reinterpret_cast<LPARAM>(L"Main window created"));
+					PostThreadMessageW(GetThreadId(worker.native_handle()), WM_COUT, 0, reinterpret_cast<win32::lparam_t>(L"Main window created"));
 
-					auto& button_instance = controls.emplace_back(button{ CREATESTRUCTW{
+					auto& button_instance = controls.emplace_back(win32::button{ CREATESTRUCTW{
 						.hwndParent = self.handle,
 						.cy = 100,  
 						.cx = 100,
@@ -104,7 +110,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 						[&](auto& self, UINT_PTR uIdSubclass, auto button_message) -> std::optional<LRESULT>
 						{
 							return std::visit(overloaded{
-								[&](command_message& command) -> std::optional<LRESULT> {
+								[&](win32::command_message& command) -> std::optional<LRESULT> {
 									MessageBoxExW(self.handle, L"Hello world", L"Test Message", 0, 0);
 									return TRUE;
 								},
@@ -115,7 +121,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 						}
 						});
 
-					auto& edit_instance = controls.emplace_back(edit{ CREATESTRUCTW{
+					auto& edit_instance = controls.emplace_back(win32::edit{ CREATESTRUCTW{
 						.hwndParent = self.handle,              
 						.cy = 100,
 						.cx = 100,                
@@ -127,7 +133,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 						}
 						});
 
-					auto& combo_box_instance = controls.emplace_back(combo_box{CREATESTRUCTW{
+					auto& combo_box_instance = controls.emplace_back(win32::combo_box{CREATESTRUCTW{
 						.hwndParent = self.handle,
 						.cy = 100,
 						.cx = 100,
@@ -141,28 +147,28 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 				return 0;
 			 },
-			 [&](destroy_message& command) -> std::optional<LRESULT> {
+			 [&](win32::destroy_message& command) -> std::optional<LRESULT> {
 				controls.erase(std::remove_if(controls.begin(), controls.end(), [](auto& button) {
 						 return std::visit([](auto& real_control) { return !real_control.HandleMessage; }, button);
 						 }), controls.end());
 				PostQuitMessage(0);
 				return 0;
 			 },
-			 [&](command_message& command) -> std::optional<LRESULT> {
+			 [&](win32::command_message& command) -> std::optional<LRESULT> {
 				auto child_control = std::find_if(controls.begin(), controls.end(), [&](auto& control) {
 					return command.handle == std::visit([](auto& real_control) { return real_control.handle; }, control);
 					});
 
 				if (child_control != controls.end())
 				{
-					return SendMessageW(command.handle, command_message::id, command.wparam(), command.lparam());
+					return SendMessageW(command.handle, win32::command_message::id, command.wparam(), command.lparam());
 				}
 					
 				if (command.identifier == IDM_ABOUT)
 				{
-                    dialog::show_modal(self.handle, MAKEINTRESOURCE(IDD_ABOUTBOX), [&](dialog& self, auto dialog_message) -> INT_PTR {
+                    win32::dialog::show_modal(self.handle, MAKEINTRESOURCE(IDD_ABOUTBOX), [&](win32::dialog& self, auto dialog_message) -> INT_PTR {
 						return std::visit(overloaded{
-									[&](command_message& dialog_command) -> INT_PTR {
+									[&](win32::command_message& dialog_command) -> INT_PTR {
 										if (dialog_command.identifier == IDOK || dialog_command.identifier == IDCANCEL)
 										{
 											EndDialog(self.handle, dialog_command.identifier);

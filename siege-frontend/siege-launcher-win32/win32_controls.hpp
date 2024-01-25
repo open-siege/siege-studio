@@ -2,6 +2,7 @@
 #define WIN32_CONTROLS_HPP
 
 #include "win32_messages.hpp"
+#include "CommCtrl.h"
 
 namespace win32
 {
@@ -88,7 +89,7 @@ namespace win32
         {
         }
 
-        operator hwnd_t
+        operator hwnd_t()
         {
             return handle;
         }
@@ -228,20 +229,7 @@ namespace win32
         using control::control;
 
         constexpr static auto class_name = WC_BUTTONW;
-    };
-
-    struct combo_box : control<combo_box>
-    {
-        using control::control;
-
-        constexpr static auto class_name = WC_COMBOBOXW;
-    };
-
-    struct combo_box_ex : control<combo_box_ex>
-    {
-        using control::control;
-
-        constexpr static auto class_name = WC_COMBOBOXEXW;
+        constexpr static std::int16_t dialog_id = 0x0080;
     };
 
     struct edit : control<edit>
@@ -249,20 +237,7 @@ namespace win32
         using control::control;
 
         constexpr static auto class_name = WC_EDITW;
-    };
-
-    struct list_box : control<list_box>
-    {
-        using control::control;
-
-        constexpr static auto class_name = WC_LISTBOXW;
-    };
-
-    struct scroll_bar : control<scroll_bar>
-    {
-        using control::control;
-        
-        constexpr static auto class_name = WC_SCROLLBARW;
+        constexpr static std::int16_t dialog_id = 0x0081;
     };
 
     struct static_text : control<static_text>
@@ -270,6 +245,38 @@ namespace win32
         using control::control;
 
         constexpr static auto class_name = WC_STATICW;
+        constexpr static std::int16_t dialog_id = 0x0082;
+    };
+
+    struct list_box : control<list_box>
+    {
+        using control::control;
+
+        constexpr static auto class_name = WC_LISTBOXW;
+        constexpr static std::int16_t dialog_id = 0x0083;
+    };
+
+    struct scroll_bar : control<scroll_bar>
+    {
+        using control::control;
+        
+        constexpr static auto class_name = WC_SCROLLBARW;
+        constexpr static std::int16_t dialog_id = 0x0084;
+    };
+
+    struct combo_box : control<combo_box>
+    {
+        using control::control;
+
+        constexpr static auto class_name = WC_COMBOBOXW;
+        constexpr static std::int16_t dialog_id = 0x0085;
+    };
+
+    struct combo_box_ex : control<combo_box_ex>
+    {
+        using control::control;
+
+        constexpr static auto class_name = WC_COMBOBOXEXW;
     };
 
     struct header : control<header>
@@ -283,7 +290,7 @@ namespace win32
     {
         using control::control;
 
-        constexpr static auto class_name = WC_LINKW;
+        constexpr static auto class_name = WC_LINK;
     };
 
     struct ip_address : control<ip_address>
