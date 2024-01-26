@@ -166,12 +166,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 				if (command.identifier == IDM_ABOUT)
 				{
 					win32::dialog_builder builder = win32::dialog_builder{}
-						.create_dialog(DLGTEMPLATE{}, std::wstring_view{L"Hello World"})
-						.add_child(DLGITEMTEMPLATE{}, win32::static_text::class_name, std::wstring_view{L"Test Dialog"})
-						.add_child(DLGITEMTEMPLATE{}, win32::button::dialog_id, std::wstring_view{L"Click Me"});
+                        .create_dialog(DLGTEMPLATE{ .style = WS_POPUP | WS_BORDER | WS_SYSMENU | DS_MODALFRAME | WS_CAPTION, .cx = 300, .cy = 300 }, std::wstring_view{ L"Hello World" })
+						.add_child(DLGITEMTEMPLATE{.style = WS_CHILD | WS_VISIBLE, .x = 10, .y = 10, .cx = 200, .cy = 100}, win32::static_text::dialog_id, std::wstring_view{L"Test Dialog"})
+						.add_child(DLGITEMTEMPLATE{.style = WS_CHILD | WS_VISIBLE, .x = 10, .y = 110, .cx = 200, .cy = 100}, win32::button::class_name, std::wstring_view{L"Click Me"});
 
 
-                    win32::dialog::show_modal(self.handle, MAKEINTRESOURCE(IDD_ABOUTBOX), [&](win32::dialog& self, auto dialog_message) -> INT_PTR {
+                    win32::dialog::show_modal(self.handle, builder.result(), [&](win32::dialog& self, auto dialog_message) -> INT_PTR {
 						return std::visit(overloaded{
 									[&](win32::command_message& dialog_command) -> INT_PTR {
 										if (dialog_command.identifier == IDOK || dialog_command.identifier == IDCANCEL)
