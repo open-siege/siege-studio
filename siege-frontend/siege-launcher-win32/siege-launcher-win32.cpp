@@ -167,6 +167,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 				{
 					win32::dialog_builder builder = win32::dialog_builder{}
 						.create_dialog(DLGTEMPLATE{}, std::wstring_view{L"Hello World"})
+						.add_child(DLGITEMTEMPLATE{}, win32::static_text::class_name, std::wstring_view{L"Test Dialog"})
 						.add_child(DLGITEMTEMPLATE{}, win32::button::dialog_id, std::wstring_view{L"Click Me"});
 
 
