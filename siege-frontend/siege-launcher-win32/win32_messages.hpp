@@ -21,8 +21,6 @@ namespace win32
 	using lparam_array = std::array<std::byte, sizeof(LPARAM)>;
 	static_assert(sizeof(std::uint32_t) == sizeof(UINT));
 
-	using class_descriptor = WNDCLASSEXW;
-    using instance_descriptor = CREATESTRUCTW;
 	using hwnd_t = HWND;
 
 	struct message
@@ -97,14 +95,14 @@ namespace win32
 		if (message == pre_create_message::id)
 		{
 			return pre_create_message{
-				.data = *std::bit_cast<instance_descriptor*>(lParam)
+				.data = *std::bit_cast<CREATESTRUCTW*>(lParam)
 			};
 		}
 
 		if (message == create_message::id)
 		{
 			return create_message{
-				.data = *std::bit_cast<instance_descriptor*>(lParam)
+				.data = *std::bit_cast<CREATESTRUCTW*>(lParam)
 			};
 		}
 

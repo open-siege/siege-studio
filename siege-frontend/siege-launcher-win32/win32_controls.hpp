@@ -17,11 +17,11 @@ namespace win32
         callback_type HandleMessage;
         
 
-        window(class_descriptor descriptor, instance_descriptor params, callback_type handler) 
+        window(WNDCLASSEXW descriptor, CREATESTRUCTW params, callback_type handler) 
             : handle(0),
             HandleMessage(std::move(handler))
             {
-                descriptor.cbSize = sizeof(class_descriptor);
+                descriptor.cbSize = sizeof(WNDCLASSEXW);
                 descriptor.lpfnWndProc = WindowHandler;
                 
                 if (GetClassInfoExW(descriptor.hInstance, descriptor.lpszClassName, &descriptor) == FALSE)
@@ -43,6 +43,25 @@ namespace win32
                     std::bit_cast<LPVOID>(this));
             }
 
+        window(WNDCLASSEXW descriptor, DLGTEMPLATE params, hwnd_t parent, std::wstring caption, callback_type handler)
+            : window(std::move(descriptor), CREATESTRUCTW{
+                .hwndParent = parent,
+                .cy = params.cy,
+                .cx = params.cx,
+                .y = params.y,
+                .x = params.x,
+                .style = std::bit_cast<LONG>(params.style),
+                .lpszName = caption.c_str(),
+                .dwExStyle = params.dwExtendedStyle
+            }, std::move(handler))
+        {
+        }
+
+        window(WNDCLASSEXW descriptor, DLGTEMPLATE params, std::wstring caption, callback_type handler)
+            : window(std::move(descriptor), std::move(params), 0, std::move(caption), std::move(handler))
+        {
+        }
+
         operator hwnd_t()
         {
             return handle;
@@ -54,7 +73,7 @@ namespace win32
 
             if (message == pre_create_message::id)
             {
-                auto* pCreate = std::bit_cast<instance_descriptor*>(lParam);
+                auto* pCreate = std::bit_cast<CREATESTRUCTW*>(lParam);
                 self = std::bit_cast<window*>(pCreate->lpCreateParams);
                 SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
                 self->handle = hWnd;
@@ -94,7 +113,7 @@ namespace win32
             return handle;
         }
 
-        [[maybe_unused]] static auto show_modal(HWND parent, LPWSTR templateName, callback_type handler)
+        [[maybe_unused]] static auto show_modal(hwnd_t parent, LPWSTR templateName, callback_type handler)
         {
             dialog temp{std::move(handler)};
             auto hInstance = std::bit_cast<hinstance_t>(GetWindowLongPtrW(parent, GWLP_HINSTANCE));
@@ -102,7 +121,7 @@ namespace win32
         }
         
 
-        static INT_PTR CALLBACK HandleAboutDialogMessage(HWND hDlg, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+        static INT_PTR CALLBACK HandleAboutDialogMessage(hwnd_t hDlg, std::uint32_t message, wparam_t wParam, lparam_t lParam)
         {
             dialog* child = nullptr;
 
@@ -187,7 +206,25 @@ namespace win32
             SetWindowSubclass(handle, control::CustomButtonHandler, 0, std::bit_cast<DWORD_PTR>(this));
         }
 
-        control(instance_descriptor params, callback_type handler)
+        control(DLGITEMTEMPLATE params, hwnd_t parent, std::wstring caption, callback_type handler)
+            : control(CreateWindowExW(
+                params.dwExtendedStyle,
+                Control::class_name,
+                caption.c_str(),
+                params.style,
+                params.x,
+                params.y,
+                params.cx,
+                params.cy,
+                parent,
+                0,
+                std::bit_cast<hinstance_t>(GetWindowLongPtrW(parent, GWLP_HINSTANCE)),
+                0
+            ), std::move(handler)) 
+        {
+        }
+
+        control(CREATESTRUCTW params, callback_type handler)
             : control(CreateWindowExW(
                 params.dwExStyle,
                 params.lpszClass ? params.lpszClass : Control::class_name,
