@@ -7,6 +7,7 @@
 #include <utility>
 #include <optional>
 #include <string>
+#include <memory_resource>
 #include "win32_messages.hpp"
 #include "CommCtrl.h"
 
@@ -428,11 +429,81 @@ namespace win32
         dialog_builder&& add_child(DLGITEMTEMPLATE child, TClass&& child_class, TCaption&& caption, std::span<std::byte> data = std::span<std::byte>{})
         {
             auto& new_child = children.emplace_back(std::move(child));
-            new_child.child_class = child_class;
-            new_child.caption = convert(std::forward<TCaption>(caption));
+            new_child.child_class.emplace(convert(std::forward<TClass>(child_class)));
+            new_child.caption.emplace(convert(std::forward<TCaption>(caption)));
             new_child.data.assign(data.begin(), data.end());
 
             return std::move(*this);
+        }
+
+        DLGTEMPLATE* result()
+        {
+            std::vector<std::byte> buffer{128, std::byte{}}; 
+            std::pmr::monotonic_buffer_resource resource{buffer.data(), buffer.size()};
+
+            void* root_storage = resource.do_allocate(sizeof(root.root), alignof(DWORD));
+            DLGTEMPLATE* result = new (root_storage)DLGITEMTEMPLATE{root.root};
+
+            if (std::holds_alternative<std::monostate>(this->root.menu_resource))
+            {
+                
+            }
+            else if (std::holds_alternative<std::uint16_t>(this->root.menu_resource))
+            {
+
+            }
+            else if (std::holds_alternative<std::wstring>(this->root.menu_resource))
+            {
+                
+            }
+
+            if (std::holds_alternative<std::monostate>(this->root.root_class))
+            {
+                
+            }
+            else if (std::holds_alternative<std::uint16_t>(this->root.root_class))
+            {
+
+            }
+            else if (std::holds_alternative<std::wstring>(this->root.root_class))
+            {
+                
+            }
+
+            for (auto& child : children)
+            {
+                // allocate child
+                // 
+
+                if (std::holds_alternative<std::uint16_t>(child.child_class))
+                {
+
+                }
+                else if (std::holds_alternative<std::wstring>(child.child_class))
+                {
+                    
+                }
+
+                if (std::holds_alternative<std::uint16_t>(child.caption))
+                {
+
+                }
+                else if (std::holds_alternative<std::wstring>(child.caption))
+                {
+                    
+                }
+
+                if (!child.data.empty()
+                {
+
+                }
+                else
+                {
+                    
+                }
+            }
+
+            return result;
         }
 
         std::uint16_t convert(std::uint16_t value)
@@ -442,9 +513,13 @@ namespace win32
 
         std::wstring convert(std::wstring_view value)
         {
-            return std::wstring {value};
+            return std::wstring{value};
         }
 
+        std::wstring convert(std::wstring value)
+        {
+            return value;
+        }
     };
 }
 
