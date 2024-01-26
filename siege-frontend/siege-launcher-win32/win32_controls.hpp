@@ -1,6 +1,12 @@
 #ifndef WIN32_CONTROLS_HPP
 #define WIN32_CONTROLS_HPP
 
+#include <deque>
+#include <vector>
+#include <span>
+#include <utility>
+#include <optional>
+#include <string>
 #include "win32_messages.hpp"
 #include "CommCtrl.h"
 
@@ -266,7 +272,7 @@ namespace win32
         using control::control;
 
         constexpr static auto class_name = WC_BUTTONW;
-        constexpr static std::int16_t dialog_id = 0x0080;
+        constexpr static std::uint16_t dialog_id = 0x0080;
     };
 
     struct edit : control<edit>
@@ -274,7 +280,7 @@ namespace win32
         using control::control;
 
         constexpr static auto class_name = WC_EDITW;
-        constexpr static std::int16_t dialog_id = 0x0081;
+        constexpr static std::uint16_t dialog_id = 0x0081;
     };
 
     struct static_text : control<static_text>
@@ -282,7 +288,7 @@ namespace win32
         using control::control;
 
         constexpr static auto class_name = WC_STATICW;
-        constexpr static std::int16_t dialog_id = 0x0082;
+        constexpr static std::uint16_t dialog_id = 0x0082;
     };
 
     struct list_box : control<list_box>
@@ -290,7 +296,7 @@ namespace win32
         using control::control;
 
         constexpr static auto class_name = WC_LISTBOXW;
-        constexpr static std::int16_t dialog_id = 0x0083;
+        constexpr static std::uint16_t dialog_id = 0x0083;
     };
 
     struct scroll_bar : control<scroll_bar>
@@ -298,7 +304,7 @@ namespace win32
         using control::control;
         
         constexpr static auto class_name = WC_SCROLLBARW;
-        constexpr static std::int16_t dialog_id = 0x0084;
+        constexpr static std::uint16_t dialog_id = 0x0084;
     };
 
     struct combo_box : control<combo_box>
@@ -306,7 +312,7 @@ namespace win32
         using control::control;
 
         constexpr static auto class_name = WC_COMBOBOXW;
-        constexpr static std::int16_t dialog_id = 0x0085;
+        constexpr static std::uint16_t dialog_id = 0x0085;
     };
 
     struct combo_box_ex : control<combo_box_ex>
@@ -373,6 +379,73 @@ namespace win32
     };
 
     using client_control = std::variant<button, combo_box, edit, list_box, scroll_bar, static_text>;
+
+
+    struct dialog_builder
+    {
+        struct root_template
+        {
+            DLGTEMPLATE root;
+            std::variant<std::monostate, std::uint16_t, std::wstring> menu_resource;
+            std::variant<std::monostate, std::uint16_t, std::wstring> root_class;
+            std::wstring title;
+        } root;
+
+        template<typename TClass = std::monostate, typename TMenu = std::monostate>
+        dialog_builder&& create_dialog(DLGTEMPLATE root, std::wstring_view title = L"", std::optional<TClass> root_class = std::nullopt, std::optional<TMenu> menu = std::nullopt)
+        {
+            this->root.root = std::move(root);
+
+            if (!title.empty())
+            {
+                this->root.title = std::move(title);
+            }
+
+            if (root_class.has_value())
+            {
+                this->root.root_class = std::move(root_class.value());
+            }
+
+            if (menu.has_value())
+            {
+                this->root.menu_resource = std::move(menu.value());
+            }
+
+            return std::move(*this);
+        }
+
+        struct child_template
+        {
+            DLGITEMTEMPLATE child;
+            std::variant<std::uint16_t, std::wstring> child_class;
+            std::variant<std::uint16_t, std::wstring> caption;
+            std::vector<std::byte> data;
+        };
+
+        std::deque<child_template> children;
+
+        template<typename TClass = std::wstring_view, typename TCaption = std::wstring_view>
+        dialog_builder&& add_child(DLGITEMTEMPLATE child, TClass&& child_class, TCaption&& caption, std::span<std::byte> data = std::span<std::byte>{})
+        {
+            auto& new_child = children.emplace_back(std::move(child));
+            new_child.child_class = child_class;
+            new_child.caption = convert(std::forward<TCaption>(caption));
+            new_child.data.assign(data.begin(), data.end());
+
+            return std::move(*this);
+        }
+
+        std::uint16_t convert(std::uint16_t value)
+        {
+            return value;
+        }
+
+        std::wstring convert(std::wstring_view value)
+        {
+            return std::wstring {value};
+        }
+
+    };
 }
 
 #endif

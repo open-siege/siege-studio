@@ -165,6 +165,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 					
 				if (command.identifier == IDM_ABOUT)
 				{
+					win32::dialog_builder builder = win32::dialog_builder{}
+						.create_dialog(DLGTEMPLATE{}, std::wstring_view{L"Hello World"})
+						.add_child(DLGITEMTEMPLATE{}, win32::button::dialog_id, std::wstring_view{L"Click Me"});
+
+
                     win32::dialog::show_modal(self.handle, MAKEINTRESOURCE(IDD_ABOUTBOX), [&](win32::dialog& self, auto dialog_message) -> INT_PTR {
 						return std::visit(overloaded{
 									[&](win32::command_message& dialog_command) -> INT_PTR {
