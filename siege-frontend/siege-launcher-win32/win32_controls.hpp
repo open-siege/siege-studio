@@ -120,6 +120,13 @@ namespace win32
             return handle;
         }
 
+        [[maybe_unused]] static auto show_modal(hwnd_t parent, DLGTEMPLATE* dialog_template, callback_type handler)
+        {
+            dialog temp{std::move(handler)};
+            auto hInstance = std::bit_cast<hinstance_t>(GetWindowLongPtrW(parent, GWLP_HINSTANCE));
+            return DialogBoxIndirectParamW(hInstance, dialog_template, parent, dialog::HandleAboutDialogMessage, std::bit_cast<lparam_t>(&temp));
+        }
+
         [[maybe_unused]] static auto show_modal(hwnd_t parent, LPWSTR templateName, callback_type handler)
         {
             dialog temp{std::move(handler)};
@@ -425,87 +432,6 @@ namespace win32
 
         std::deque<child_template> children;
 
-        template<typename TClass = std::wstring_view, typename TCaption = std::wstring_view>
-        dialog_builder&& add_child(DLGITEMTEMPLATE child, TClass&& child_class, TCaption&& caption, std::span<std::byte> data = std::span<std::byte>{})
-        {
-            auto& new_child = children.emplace_back(std::move(child));
-            new_child.child_class.emplace(convert(std::forward<TClass>(child_class)));
-            new_child.caption.emplace(convert(std::forward<TCaption>(caption)));
-            new_child.data.assign(data.begin(), data.end());
-
-            return std::move(*this);
-        }
-
-        DLGTEMPLATE* result()
-        {
-            std::vector<std::byte> buffer{128, std::byte{}}; 
-            std::pmr::monotonic_buffer_resource resource{buffer.data(), buffer.size()};
-
-            void* root_storage = resource.do_allocate(sizeof(root.root), alignof(DWORD));
-            DLGTEMPLATE* result = new (root_storage)DLGITEMTEMPLATE{root.root};
-
-            if (std::holds_alternative<std::monostate>(this->root.menu_resource))
-            {
-                
-            }
-            else if (std::holds_alternative<std::uint16_t>(this->root.menu_resource))
-            {
-
-            }
-            else if (std::holds_alternative<std::wstring>(this->root.menu_resource))
-            {
-                
-            }
-
-            if (std::holds_alternative<std::monostate>(this->root.root_class))
-            {
-                
-            }
-            else if (std::holds_alternative<std::uint16_t>(this->root.root_class))
-            {
-
-            }
-            else if (std::holds_alternative<std::wstring>(this->root.root_class))
-            {
-                
-            }
-
-            for (auto& child : children)
-            {
-                // allocate child
-                // 
-
-                if (std::holds_alternative<std::uint16_t>(child.child_class))
-                {
-
-                }
-                else if (std::holds_alternative<std::wstring>(child.child_class))
-                {
-                    
-                }
-
-                if (std::holds_alternative<std::uint16_t>(child.caption))
-                {
-
-                }
-                else if (std::holds_alternative<std::wstring>(child.caption))
-                {
-                    
-                }
-
-                if (!child.data.empty()
-                {
-
-                }
-                else
-                {
-                    
-                }
-            }
-
-            return result;
-        }
-
         std::uint16_t convert(std::uint16_t value)
         {
             return value;
@@ -516,9 +442,114 @@ namespace win32
             return std::wstring{value};
         }
 
-        std::wstring convert(std::wstring value)
+        template<typename TClass, typename TCaption>
+        dialog_builder&& add_child(DLGITEMTEMPLATE child, TClass&& child_class, TCaption&& caption, std::span<std::byte> data = std::span<std::byte>{})
         {
-            return value;
+            auto& new_child = children.emplace_back(std::move(child), convert(std::forward<TClass>(child_class)), convert(std::forward<TCaption>(caption)));
+            new_child.data.assign(data.begin(), data.end());
+
+            root.root.cdit = std::uint16_t(children.size());
+            return std::move(*this);
+        }
+
+        std::vector<std::byte> buffer{1024, std::byte{}}; 
+
+        DLGTEMPLATE* result()
+        {
+            std::pmr::monotonic_buffer_resource resource{buffer.data(), buffer.size()};
+
+            void* root_storage = resource.allocate(sizeof(root.root), alignof(std::uint32_t));
+            DLGTEMPLATE* result = new (root_storage)DLGTEMPLATE{root.root};
+
+            auto specify_no_data = [&]() {
+              void* temp = resource.allocate(sizeof(std::uint16_t), alignof(std::uint16_t));
+                new (temp)std::uint16_t(0x0000);
+            };
+
+            auto specify_id = [&](std::uint16_t resource_id) {
+              void* temp = resource.allocate(sizeof(std::array<std::uint16_t, 2>), alignof(std::uint16_t));
+                new (temp) std::array<std::uint16_t, 2>{{0xFFFF, resource_id}};
+            };
+
+            auto specify_string = [&](std::wstring& temp_str) {
+              const auto str_size = (temp_str.size() + 1) * sizeof(wchar_t);
+              void* temp = resource.allocate(str_size, alignof(std::uint16_t));
+              std::memcpy(temp, temp_str.c_str(), str_size);
+            };
+
+            if (std::holds_alternative<std::monostate>(this->root.menu_resource))
+            {
+                specify_no_data();
+            }
+            else if (std::holds_alternative<std::uint16_t>(this->root.menu_resource))
+            {
+                specify_id(std::get<std::uint16_t>(this->root.menu_resource));
+            }
+            else if (std::holds_alternative<std::wstring>(this->root.menu_resource))
+            {
+                specify_string(std::get<std::wstring>(this->root.menu_resource));
+            }
+
+            if (std::holds_alternative<std::monostate>(this->root.root_class))
+            {
+                specify_no_data();
+            }
+            else if (std::holds_alternative<std::uint16_t>(this->root.root_class))
+            {
+                specify_id(std::get<std::uint16_t>(this->root.root_class));
+            }
+            else if (std::holds_alternative<std::wstring>(this->root.root_class))
+            {
+                specify_string(std::get<std::wstring>(this->root.root_class));
+            }
+
+            if (!root.title.empty())
+            {
+                specify_string(root.title);
+            }
+            else
+            {
+                specify_no_data();
+            }
+
+            for (auto& child : children)
+            {
+                void* temp = resource.allocate(sizeof(child.child), alignof(std::uint32_t));
+                new (temp)DLGITEMTEMPLATE{child.child};
+
+                if (std::holds_alternative<std::uint16_t>(child.child_class))
+                {
+                    specify_id(std::get<std::uint16_t>(child.child_class));
+                }
+                else if (std::holds_alternative<std::wstring>(child.child_class))
+                {
+                    specify_string(std::get<std::wstring>(child.child_class));
+                }
+
+                if (std::holds_alternative<std::uint16_t>(child.caption))
+                {
+                    specify_id(std::get<std::uint16_t>(child.caption));
+                }
+                else if (std::holds_alternative<std::wstring>(child.caption))
+                {
+                    specify_string(std::get<std::wstring>(child.caption));
+                }
+
+                if (!child.data.empty())
+                {
+                    std::uint16_t data_size = sizeof(std::uint16_t) + std::uint16_t(child.data.size());
+                    void* temp = resource.allocate(data_size, alignof(std::uint16_t));
+
+                    std::memcpy(temp, &data_size, sizeof(data_size));
+                    std::memcpy(reinterpret_cast<std::uint16_t*>(temp) + sizeof(data_size), child.data.data(), child.data.size() + 1);
+                }
+                else
+                {
+                    specify_no_data();
+                }
+            }
+
+            return result;
         }
     };
 }
