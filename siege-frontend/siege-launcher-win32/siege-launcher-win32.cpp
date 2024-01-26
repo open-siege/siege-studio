@@ -99,14 +99,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 					PostThreadMessageW(GetThreadId(worker.native_handle()), WM_COUT, 0, reinterpret_cast<win32::lparam_t>(L"Main window created"));
 
-					auto& button_instance = controls.emplace_back(win32::button{ CREATESTRUCTW{
-						.hwndParent = self.handle,
-						.cy = 100,  
-						.cx = 100,
-						.y = 10,       
-						.x = 10,       
+					auto& button_instance = controls.emplace_back(win32::button{ DLGITEMTEMPLATE{
 						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-						.lpszName = L"Click me"}, 
+						.x = 10,       
+						.y = 10,
+						.cx = 100,  
+						.cy = 100       
+						}, self.handle, L"Click me",
 						[&](auto& self, UINT_PTR uIdSubclass, auto button_message) -> std::optional<LRESULT>
 						{
 							return std::visit(overloaded{
