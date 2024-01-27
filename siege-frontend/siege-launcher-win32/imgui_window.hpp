@@ -97,6 +97,33 @@ struct imgui_window
         assert(map_key(VK_NUMPAD0) == ImGuiKey::ImGuiKey_Keypad0);
         assert(map_key(VK_NUMPAD5) == ImGuiKey::ImGuiKey_Keypad5);
         assert(map_key(VK_NUMPAD9) == ImGuiKey::ImGuiKey_Keypad9);
+
+        ImGuiIO& io = ImGui::GetIO();
+        io.BackendPlatformName = "ImguiSiegeWin32";
+    }
+
+    std::optional<win32::lresult_t> on_keyboard_key_up(win32::keyboard_key_up_message& event)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        io.AddKeyEvent(map_key(event.virtual_key_code), false);
+
+        return 0;
+    }
+
+    std::optional<win32::lresult_t> on_keyboard_key_down(win32::keyboard_key_down_message& event)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        io.AddKeyEvent(map_key(event.virtual_key_code), true);
+
+        return 0;
+    }
+
+    std::optional<win32::lresult_t> on_keyboard_key_down(win32::keyboard_char_message& event)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        io.AddInputCharacterUTF16(event.translated_char);
+
+        return 0;
     }
 
     std::optional<win32::lresult_t> on_mouse_move(win32::mouse_move_message& event)
