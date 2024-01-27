@@ -17,8 +17,6 @@ class SiegeLauncherConanFile(ConanFile):
 
     def requirements(self):
         self.requires("xz_utils/5.4.4", override=True)
-        if self.settings.os == "Windows":
-            self.requires("vigemclient/1.21.222.0")
 
     def layout(self):
         cmake_layout(self)
