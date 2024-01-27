@@ -83,6 +83,28 @@ namespace win32
 		xbutton_2
 	};
 
+	struct keyboard_message
+	{
+		std::uint16_t virtual_key_code;
+	};
+
+	struct keyboard_key_up_message : keyboard_message
+	{
+		constexpr static std::uint32_t id = WM_KEYUP;	
+	
+	};
+
+	struct keyboard_key_down_message : keyboard_message
+	{
+		constexpr static std::uint32_t id = WM_KEYDOWN;
+	};
+
+	struct keyboard_char_message
+	{
+		constexpr static std::uint32_t id = WM_CHAR;
+		wchar_t translated_char;
+	};
+
 	struct mouse_message
 	{
 		std::int16_t x;
@@ -159,6 +181,9 @@ namespace win32
 		create_message,
 		init_dialog_message,
 		destroy_message,
+		keyboard_key_down_message,
+		keyboard_key_up_message,
+		keyboard_char_message,
 		mouse_move_message,
 		mouse_hover_message,
 		mouse_leave_message,
@@ -204,6 +229,21 @@ namespace win32
 		if (message == destroy_message::id)
 		{
 			return destroy_message{};
+		}
+
+		if (message == keyboard_key_up_message::id)
+		{
+			return keyboard_key_up_message{std::uint16_t(wParam)};
+		}
+
+		if (message == keyboard_key_down_message::id)
+		{
+			return keyboard_key_down_message{std::uint16_t(wParam)};
+		}
+
+		if (message == keyboard_char_message::id)
+		{
+			return keyboard_char_message{wchar_t(wParam)};
 		}
 
 		if (message == mouse_move_message::id || 
