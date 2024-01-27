@@ -48,10 +48,3 @@ ImageMagick
 /logo/logo.png
 /siege-studio/tools/install.bat
 CMakeUserPresets.json
-ViGEmClient/.github
-ViGEmClient/include
-ViGEmClient/src
-ViGEmClient/build
-ViGEmClient/*
-!ViGEmClient/conanfile.py
-!ViGEmClient/cmake_update.patch
