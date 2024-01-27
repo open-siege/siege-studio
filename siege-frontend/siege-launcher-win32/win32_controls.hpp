@@ -22,6 +22,7 @@ namespace win32
         
         hwnd_t handle;
         callback_type HandleMessage;
+        std::function<BOOL()> unregister_class;
         
 
         window(WNDCLASSEXW descriptor, CREATESTRUCTW params, callback_type handler) 
@@ -33,7 +34,8 @@ namespace win32
                 
                 if (GetClassInfoExW(descriptor.hInstance, descriptor.lpszClassName, &descriptor) == FALSE)
                 {
-                    RegisterClassExW(&descriptor);
+                    auto result = RegisterClassExW(&descriptor);
+                    unregister_class = std::bind(UnregisterClassW, descriptor.lpszClassName, descriptor.hInstance);
                 }
 
                 handle = CreateWindowExW(params.dwExStyle,
@@ -94,6 +96,21 @@ namespace win32
             {
                 auto result = self->HandleMessage(*self, make_window_message(message, wParam, lParam));
 
+                if (message == WM_DESTROY)
+                {
+                  SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(nullptr));
+                  self->HandleMessage = nullptr;
+                  self->handle = 0;
+
+                  if (self->unregister_class)
+                  {
+                    self->unregister_class();
+                    self->unregister_class = nullptr;
+
+                  }
+                  return 0;
+                }
+
                 if (result.has_value())
                 {
                     return result.value();
@@ -103,7 +120,6 @@ namespace win32
             return DefWindowProc(hWnd, message, wParam, lParam);
         }
     };
-
 
     struct dialog
     {
@@ -188,6 +204,17 @@ namespace win32
             return handle;
         }
 
+        void cleanup(UINT_PTR uIdSubclass = 0) noexcept
+        {
+            if (handle && IsWindow(handle))
+            {
+                RemoveWindowSubclass(handle, Control::CustomButtonHandler, uIdSubclass);
+            }
+
+            HandleMessage = nullptr;
+            handle = 0;
+        }
+
         static lresult_t CALLBACK CustomButtonHandler(hwnd_t hWnd, std::uint32_t uMsg, wparam_t wParam,
             lparam_t lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
         {
@@ -199,9 +226,7 @@ namespace win32
 
                 if (uMsg == destroy_message::id)
                 {
-                    RemoveWindowSubclass(child->handle, Control::CustomButtonHandler, uIdSubclass);
-                    child->HandleMessage = nullptr;
-                    child->handle = 0;
+                    child->cleanup();
                     return TRUE;
                 }
 
@@ -261,6 +286,8 @@ namespace win32
         control(control&& other) noexcept
             : control(other.handle, std::move(other.HandleMessage))
         {
+            other.handle = 0;
+            other.HandleMessage = nullptr;
             if (IsWindow(handle))
             {
                 SetWindowSubclass(handle, control::CustomButtonHandler, 0, std::bit_cast<DWORD_PTR>(this));
@@ -272,6 +299,11 @@ namespace win32
             this->handle = std::move(other.handle);
             this->HandleMessage = std::move(other.HandleMessage);
             return *this;
+        }
+
+        ~control() noexcept
+        {
+            cleanup();
         }
     };
 
@@ -435,6 +467,11 @@ namespace win32
         std::uint16_t convert(std::uint16_t value)
         {
             return value;
+        }
+
+        std::wstring convert(std::u16string_view value)
+        {
+            return std::wstring{value.begin(), value.end()};
         }
 
         std::wstring convert(std::wstring_view value)
