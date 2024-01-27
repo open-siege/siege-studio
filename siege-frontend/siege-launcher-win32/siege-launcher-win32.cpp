@@ -14,6 +14,7 @@
 #include "win32_controls.hpp"
 #include "framework.h"
 #include "Resource.h"
+#include "imgui_window.hpp"
 //#include "http_client.hpp"
 
 std::array<wchar_t, 100> app_title;
@@ -80,10 +81,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		.style = WS_OVERLAPPEDWINDOW,
 		.lpszName = app_title.data()
 	}, 
-		[&](win32::window& self, auto message) -> std::optional<LRESULT>
+		[&, controls = std::move(controls)](win32::window& self, auto message) mutable -> std::optional<LRESULT>
 	{
 		 return std::visit(overloaded {
-			 [&](win32::create_message& command) -> std::optional<LRESULT> {
+			 [&](win32::create_message& command) mutable -> std::optional<LRESULT> {
 					
 #if _DEBUG
 						AllocConsole();
