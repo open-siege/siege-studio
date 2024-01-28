@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <any>
+#include <string_view>
 #include <filesystem>
 #include <memory>
 #include <combaseapi.h>
@@ -13,22 +14,43 @@ auto make_unique(T* value, void(*deleter)(T*))
 	return std::unique_ptr<T, void(*)(T*)>(value, deleter);
 }
 
-std::vector<std::any> load_data(std::filesystem::path path)
+
+std::vector<std::any> load_data(std::unique_ptr<wchar_t, void(*)(wchar_t*)> xml_data)
 {
 	HRESULT result;
 
 	result = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-	void* raw = nullptr;
-	result = CoCreateInstance(CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, IID_IXMLDOMDocument3, &raw);
 
-	auto document = make_unique<IXMLDOMDocument3>(reinterpret_cast<IXMLDOMDocument3*>(raw), [](IXMLDOMDocument3* self) { if (self) self->Release(); });
-	auto mapping_handle = make_unique<void>(OpenFileMappingW(FILE_MAP_READ, FALSE, path.c_str()), [](HANDLE base) {CloseHandle(base);});
-	auto file_data = make_unique<void>(MapViewOfFile(mapping_handle.get(), FILE_MAP_READ, 0, 0, 0), [](void* base) {UnmapViewOfFile(base);});
+	auto com_handle = make_unique<HRESULT>(&result, [](auto*){ CoUninitialize(); });
 
-	auto unparsed_data = make_unique<wchar_t>(SysAllocString(reinterpret_cast<wchar_t*>(file_data.get())), [](wchar_t* data) { SysFreeString(data); });
+	{
+		void* raw = nullptr;
+		result = CoCreateInstance(CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, IID_IXMLDOMDocument3, &raw);
 
-	VARIANT_BOOL success;
-	result = document->loadXML(unparsed_data.get(), &success);
+		auto document = make_unique<IXMLDOMDocument3>(reinterpret_cast<IXMLDOMDocument3*>(raw), [](auto* self) { if (self) self->Release(); });
+		VARIANT_BOOL success;
+		result = document->loadXML(xml_data.get(), &success);
+	}
 
 	return {};
+}
+
+std::vector<std::any> load_data(std::string_view xml_data)
+{
+	auto raw_string = make_unique<wchar_t>(SysAllocStringByteLen(xml_data.data(), xml_data.size()), [](wchar_t* data) { SysFreeString(data); });
+	return load_data(std::move(raw_string));
+}
+
+std::vector<std::any> load_data(std::wstring_view xml_data)
+{
+	auto raw_string = make_unique<wchar_t>(SysAllocStringLen(xml_data.data(), xml_data.size()), [](wchar_t* data) { SysFreeString(data); });
+	return load_data(std::move(raw_string));
+}
+
+std::vector<std::any> load_data(std::filesystem::path path)
+{
+	auto file_size = std::filesystem::file_size(path);
+	auto mapping_handle = make_unique<void>(OpenFileMappingW(FILE_MAP_READ, FALSE, path.c_str()), [](auto base) {CloseHandle(base);});
+	auto file_data = make_unique<void>(MapViewOfFile(mapping_handle.get(), FILE_MAP_READ, 0, 0, file_size), [](auto* base) {UnmapViewOfFile(base);});
+	return load_data(std::string_view(reinterpret_cast<char*>(file_data.get()), file_size));
 }
