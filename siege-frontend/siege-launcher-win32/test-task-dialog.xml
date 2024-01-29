@@ -1,0 +1,38 @@
+<task-dialog title="Window title">
+    <instruction>Do something</instruction>
+    <content>Main message</content>
+
+    <common-buttons>
+        <button type="ok" default="default" />
+        <button type="yes" />
+        <button type="no" />
+        <button type="cancel" />
+        <button type="retry" />
+        <button type="close" />
+    </common-buttons>
+
+    <buttons>
+        <button id="10">
+            Help
+        </button>
+        <button>
+            Thanks
+        </button>
+    </buttons>
+
+    <ratio-buttons>
+        <radio-button>
+            Special value
+        </radio-button>
+        <radio-button>
+            Another special value
+        </radio-button>
+    </radio-buttons>
+
+    <expansion expanded-caption="Hide" collapsed-caption="Show more">
+        Make sure to clean your room everday
+    </expansion>
+    <footer>
+        This is some footer text with partial hyper text support.
+    </footer>
+</task-dialog>
