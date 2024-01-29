@@ -1,0 +1,49 @@
+<window title="SFX View">
+    <panel title="File Info">
+        <stack-panel orientation="vertical">
+            <static>
+                Duration (in seconds)
+            </static>
+            <static>
+                Sample Rate
+            </static>
+
+            <button>    
+                Export Options
+            </button>
+
+            <stack-panel orientation="horizonal">
+                <button>
+                    Set Export Directory
+                </button>
+            </stack-panel>
+
+            <button>
+                Export to WAV
+            </button>
+
+            <button>
+                Export All SFX files to WAV
+            </button>
+        </stack-panel>
+    </panel>
+
+    <panel title="Playback">
+        <stack-panel orientation="vertical">
+            <button>    
+                Play
+            </button>
+
+            <button>    
+                Pause
+            </button>
+
+            <stack-panel orientation="horizontal">
+                <static>
+                    Loop
+                </static>
+                <check-box />
+            </stack-panel>
+        </stack-panel>
+    </panel>
+</window>

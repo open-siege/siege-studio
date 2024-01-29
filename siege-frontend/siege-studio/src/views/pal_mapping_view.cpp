@@ -17,8 +17,7 @@ namespace studio::views
     : context(std::move(context))
   {
   }
-
-
+  
   void pal_mapping_view::setup_view(wxWindow& parent)
   {
     auto palettes = context.explorer.find_files(context.actions.get_extensions_by_category("all_palettes"));
