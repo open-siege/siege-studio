@@ -168,25 +168,23 @@ struct siege_main_window
 						.add_child(DLGITEMTEMPLATE{.style = WS_CHILD | WS_VISIBLE, .x = 10, .y = 10, .cx = 200, .cy = 100}, win32::static_text::dialog_id, std::wstring_view{L"Test Dialog"})
 						.add_child(DLGITEMTEMPLATE{.style = WS_CHILD | WS_VISIBLE, .x = 10, .y = 110, .cx = 200, .cy = 100}, win32::button::class_name, std::wstring_view{L"Click Me"});
 
+                    win32::DialogBoxIndirectParamW(self, builder.result(), [](win32::hwnd_t self, const win32::message& dialog_message) -> INT_PTR {
 
-                    win32::dialog::show_modal(self, builder.result(), [&](win32::dialog& self, auto dialog_message) -> INT_PTR {
-						return std::visit(overloaded{
-									[&](win32::command_message& dialog_command) -> INT_PTR {
-										if (dialog_command.identifier == IDOK || dialog_command.identifier == IDCANCEL)
+						if (dialog_message.message == win32::command_message::id)
+						{
+							win32::command_message dialog_command{dialog_message.wParam, dialog_message.lParam};
+
+							if (dialog_command.identifier == IDOK || dialog_command.identifier == IDCANCEL)
 										{
 											std::array<wchar_t, 32> class_name;
-											GetClassName(self.handle, class_name.data(), class_name.size());
+											GetClassName(self, class_name.data(), class_name.size());
 										//	PostThreadMessageW(GetThreadId(worker.native_handle()), WM_COUT, 0, reinterpret_cast<win32::lparam_t>(class_name.data()));
-											EndDialog(self.handle, dialog_command.identifier);
+											EndDialog(self, dialog_command.identifier);
 											return (INT_PTR)TRUE;
 										}
+						}
 
-										return (INT_PTR)FALSE;
-									},
-								[](auto&) -> INT_PTR {
-									return (INT_PTR)FALSE;
-									}
-						}, dialog_message);
+						return (INT_PTR)FALSE;
 						});
 				}
 				else if (command.identifier == IDM_EXIT)
@@ -217,7 +215,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	INITCOMMONCONTROLSEX settings{.dwSize{sizeof(INITCOMMONCONTROLSEX)}};
 	InitCommonControlsEx(&settings);
 
-	win32::RegisterClassEx<siege_main_window>(WNDCLASSEXW {
+	win32::RegisterClassExW<siege_main_window>(WNDCLASSEXW {
 		.style{CS_HREDRAW | CS_VREDRAW},
 		.hInstance = hInstance,
 		.hIcon = LoadIconW(hInstance, MAKEINTRESOURCE(IDI_SIEGELAUNCHERWIN32)),
@@ -228,7 +226,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		.hIconSm = LoadIconW(hInstance, MAKEINTRESOURCE(IDI_SMALL)),
 	});
 
-	auto main_window = win32::CreateWindowEx(CREATESTRUCTW {
+	auto main_window = win32::CreateWindowExW(CREATESTRUCTW {
 		.cx = CW_USEDEFAULT,
 		.x = CW_USEDEFAULT,
 		.style = WS_OVERLAPPEDWINDOW,

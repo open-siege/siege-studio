@@ -94,7 +94,7 @@ namespace win32
 
 
     template <typename TWindow>
-    auto RegisterClassEx(WNDCLASSEXW descriptor)
+    auto RegisterClassExW(WNDCLASSEXW descriptor)
     {
         struct handler
         {
@@ -143,7 +143,7 @@ namespace win32
     }
     
 
-    auto CreateWindowEx(CREATESTRUCTW params)
+    auto CreateWindowExW(CREATESTRUCTW params)
     {
         return ::CreateWindowExW(params.dwExStyle,
                     params.lpszClass,
@@ -159,76 +159,46 @@ namespace win32
                     params.lpCreateParams);
     }
 
-
-    struct dialog
+    auto DialogBoxIndirectParamW(hwnd_t parent, DLGTEMPLATE* dialog_template, std::move_only_function<INT_PTR(hwnd_t, win32::message)> on_message)
     {
-        using callback_type = std::move_only_function<INT_PTR(dialog&, window_message)>;
-        hwnd_t handle;
-        callback_type HandleMessage;
-        
-        dialog(callback_type handler): handle(0), HandleMessage(std::move(handler))
+        struct handler
         {
-        }
-
-        operator hwnd_t()
-        {
-            return handle;
-        }
-
-        [[maybe_unused]] static auto show_modal(hwnd_t parent, DLGTEMPLATE* dialog_template, callback_type handler)
-        {
-            dialog temp{std::move(handler)};
-            auto hInstance = std::bit_cast<hinstance_t>(GetWindowLongPtrW(parent, GWLP_HINSTANCE));
-            return DialogBoxIndirectParamW(hInstance, dialog_template, parent, dialog::HandleAboutDialogMessage, std::bit_cast<lparam_t>(&temp));
-        }
-
-        [[maybe_unused]] static auto show_modal(hwnd_t parent, LPWSTR templateName, callback_type handler)
-        {
-            dialog temp{std::move(handler)};
-            auto hInstance = std::bit_cast<hinstance_t>(GetWindowLongPtrW(parent, GWLP_HINSTANCE));
-            return DialogBoxParamW(hInstance, templateName, parent, dialog::HandleAboutDialogMessage, std::bit_cast<lparam_t>(&temp));
-        }
-        
-
-        static INT_PTR CALLBACK HandleAboutDialogMessage(hwnd_t hDlg, std::uint32_t message, wparam_t wParam, lparam_t lParam)
-        {
-            dialog* child = nullptr;
-
-            if (message == init_dialog_message::id)
+            using callback_type = std::move_only_function<INT_PTR(hwnd_t, win32::message)>;
+            static INT_PTR CALLBACK DialogHandler(hwnd_t hDlg, std::uint32_t message, wparam_t wParam, lparam_t lParam)
             {
-                child = std::bit_cast<dialog*>(lParam);
-                
-                if (child->handle == 0)
+                callback_type* child = nullptr;
+
+                if (message == init_dialog_message::id)
                 {
-                    child->handle = hDlg;
-                }
-
-                SetWindowLongPtr(hDlg, DWLP_USER, std::bit_cast<LONG_PTR>(child));
-                return (INT_PTR)TRUE;
-            }
-            else
-            {
-                child = std::bit_cast<dialog*>(GetWindowLongPtr(hDlg, DWLP_USER));
-            }
-
-            if (child && child->HandleMessage)
-            {
-                auto result = child->HandleMessage(*child, make_window_message(message, wParam, lParam));
-
-                if (message == WM_DESTROY)
-                {
-                    SetWindowLongPtr(child->handle, DWLP_USER, std::bit_cast<LONG_PTR>(nullptr));
-                    child->HandleMessage = nullptr;
-                    child->handle = 0;
+                    child = std::bit_cast<callback_type*>(lParam);
+                    SetWindowLongPtr(hDlg, DWLP_USER, std::bit_cast<LONG_PTR>(child));
                     return (INT_PTR)TRUE;
                 }
+                else
+                {
+                    child = std::bit_cast<callback_type*>(GetWindowLongPtr(hDlg, DWLP_USER));
+                }
 
-                return result;
+                if (child)
+                {
+                    auto result = child->operator()(hDlg, win32::message(message, wParam, lParam));
+
+                    if (message == WM_DESTROY)
+                    {
+                        SetWindowLongPtr(hDlg, DWLP_USER, std::bit_cast<LONG_PTR>(nullptr));
+                        return (INT_PTR)TRUE;
+                    }
+
+                    return result;
+                }
+
+                return (INT_PTR)FALSE;
             }
+        };
 
-            return (INT_PTR)FALSE;
-        }
-    };
+        auto hInstance = std::bit_cast<hinstance_t>(GetWindowLongPtrW(parent, GWLP_HINSTANCE));
+        return ::DialogBoxIndirectParamW(hInstance, dialog_template, parent, handler::DialogHandler, std::bit_cast<lparam_t>(&on_message));
+    }
 
     template<typename Control>
     struct control
