@@ -36,23 +36,39 @@ namespace win32
 	{
 		constexpr static std::uint32_t id = WM_CREATE;
 		CREATESTRUCTW& data;
+
+		create_message(wparam_t, lparam_t lParam) : data(*std::bit_cast<CREATESTRUCTW*>(lParam))
+		{
+		}
 	};
 
 	struct pre_create_message
 	{
 		constexpr static std::uint32_t id = WM_NCCREATE;
 		CREATESTRUCTW& data;
+
+		pre_create_message(wparam_t, lparam_t lParam) : data(*std::bit_cast<CREATESTRUCTW*>(lParam))
+		{
+		}
 	};
 
 	struct init_dialog_message
 	{
 		constexpr static std::uint32_t id = WM_INITDIALOG;
 		hwnd_t default_focus_control;
+
+		init_dialog_message(wparam_t wParam, lparam_t) : default_focus_control(std::bit_cast<hwnd_t>(wParam))
+		{
+		}
 	};
 
 	struct destroy_message
 	{
 		constexpr static std::uint32_t id = WM_DESTROY;
+
+		destroy_message(wparam_t, lparam_t)
+		{
+		}
 	};
 
 	struct command_message
@@ -62,6 +78,12 @@ namespace win32
 		int notification_code;
 		int identifier;
 		hwnd_t handle;
+
+		command_message(wparam_t wParam, lparam_t lParam) : notification_code(HIWORD(wParam)),
+				identifier(LOWORD(wParam)),
+				handle(std::bit_cast<hwnd_t>(lParam))
+		{
+		}
 
 		inline wparam_t wparam() const noexcept
 		{
@@ -86,23 +108,32 @@ namespace win32
 	struct keyboard_message
 	{
 		std::uint16_t virtual_key_code;
+		keyboard_message(wparam_t wParam, lparam_t) : virtual_key_code(std::uint16_t(wParam))
+		{
+		}
+
 	};
 
 	struct keyboard_key_up_message : keyboard_message
 	{
 		constexpr static std::uint32_t id = WM_KEYUP;	
-	
+		using keyboard_message::keyboard_message;
 	};
 
 	struct keyboard_key_down_message : keyboard_message
 	{
 		constexpr static std::uint32_t id = WM_KEYDOWN;
+		using keyboard_message::keyboard_message;
 	};
 
 	struct keyboard_char_message
 	{
 		constexpr static std::uint32_t id = WM_CHAR;
 		wchar_t translated_char;
+
+		keyboard_char_message(wparam_t wParam, lparam_t) : translated_char(wchar_t(wParam))
+		{
+		}
 	};
 
 	struct mouse_message
@@ -196,56 +227,6 @@ namespace win32
 
 	constexpr window_message make_window_message(std::uint32_t message, wparam_t wParam, lparam_t lParam) noexcept
 	{
-		if (message == command_message::id)
-		{
-			return command_message{
-				.notification_code = HIWORD(wParam),
-				.identifier = LOWORD(wParam),
-				.handle = std::bit_cast<hwnd_t>(lParam)
-			};
-		}
-
-		if (message == pre_create_message::id)
-		{
-			return pre_create_message{
-				.data = *std::bit_cast<CREATESTRUCTW*>(lParam)
-			};
-		}
-
-		if (message == create_message::id)
-		{
-			return create_message{
-				.data = *std::bit_cast<CREATESTRUCTW*>(lParam)
-			};
-		}
-
-		if (message == init_dialog_message::id)
-		{
-			return init_dialog_message{
-				.default_focus_control = std::bit_cast<hwnd_t>(wParam)
-			};
-		}
-
-		if (message == destroy_message::id)
-		{
-			return destroy_message{};
-		}
-
-		if (message == keyboard_key_up_message::id)
-		{
-			return keyboard_key_up_message{std::uint16_t(wParam)};
-		}
-
-		if (message == keyboard_key_down_message::id)
-		{
-			return keyboard_key_down_message{std::uint16_t(wParam)};
-		}
-
-		if (message == keyboard_char_message::id)
-		{
-			return keyboard_char_message{wchar_t(wParam)};
-		}
-
 		if (message == mouse_move_message::id || 
 			message == mouse_hover_message::id ||
 			message == mouse_wheel_message::id ||

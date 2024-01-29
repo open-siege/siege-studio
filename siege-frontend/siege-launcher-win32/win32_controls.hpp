@@ -16,30 +16,137 @@ namespace win32
     using hinstance_t = HINSTANCE;
     using lresult_t = LRESULT;
 
-    struct window
-    {
-        using callback_type = std::move_only_function<std::optional<lresult_t>(window&, window_message)>;
-        
-        hwnd_t handle;
-        callback_type HandleMessage;
-        std::function<BOOL()> unregister_class;
-        
 
-        window(WNDCLASSEXW descriptor, CREATESTRUCTW params, callback_type handler) 
-            : handle(0),
-            HandleMessage(std::move(handler))
+    template<typename TWindow>
+    std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+    {
+        if constexpr (requires(TWindow t) { t.on_pre_create(pre_create_message{wParam, lParam}); })
+        {
+            if (message == pre_create_message::id)
             {
-                descriptor.cbSize = sizeof(WNDCLASSEXW);
-                descriptor.lpfnWndProc = WindowHandler;
-                
-                if (GetClassInfoExW(descriptor.hInstance, descriptor.lpszClassName, &descriptor) == FALSE)
+                return self->on_pre_create(pre_create_message{wParam, lParam});
+            }
+        }
+
+        if constexpr (requires(TWindow t) { t.on_create(create_message{wParam, lParam}); })
+        {
+            if (message == create_message::id)
+            {
+                return self->on_create(create_message{wParam, lParam});
+            }
+        }
+
+        if constexpr (requires(TWindow t) { t.on_init_dialog(init_dialog_message{wParam, lParam}); })
+        {
+            if (message == init_dialog_message::id)
+            {
+                return self->on_init_dialog(init_dialog_message{wParam, lParam});
+            }
+        }
+
+        if constexpr (requires(TWindow t) { t.on_destroy(destroy_message{wParam, lParam}); })
+        {
+            if (message == destroy_message::id)
+            {
+                return self->on_destroy(destroy_message{wParam, lParam});
+            }
+        }
+
+        if constexpr (requires(TWindow t) { t.on_command(command_message{wParam, lParam}); })
+        {
+            if (message == command_message::id)
+            {
+                return self->on_command(command_message{wParam, lParam});
+            }
+        }
+
+        if constexpr (requires(TWindow t) { t.on_keyboard_key_up(keyboard_key_up_message{wParam, lParam}); })
+        {
+            if (message == keyboard_key_up_message::id)
+            {
+                return self->on_keyboard_key_up(keyboard_key_up_message{wParam, lParam});
+            }
+        }
+
+        if constexpr (requires(TWindow t) { t.on_keyboard_key_down(keyboard_key_down_message{wParam, lParam}); })
+        {
+            if (message == keyboard_key_down_message::id)
+            {
+                return self->on_keyboard_key_down(keyboard_key_down_message{wParam, lParam});
+            }
+        }
+
+        if constexpr (requires(TWindow t) { t.on_keyboard_char(keyboard_char_message{wParam, lParam}); })
+        {
+            if (message == keyboard_key_down_message::id)
+            {
+                return self->on_keyboard_char(keyboard_char_message{wParam, lParam});
+            }
+        }
+
+        if constexpr (requires(TWindow t) { t.on_message(win32::message{message, wParam, lParam}); })
+        {
+            return self->on_message(win32::message{message, wParam, lParam});
+        }
+
+        return std::nullopt;
+    }
+
+
+    template <typename TWindow>
+    auto RegisterClassEx(WNDCLASSEXW descriptor)
+    {
+        struct handler
+        {
+            static lresult_t CALLBACK WindowHandler(hwnd_t hWnd, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+            {
+                TWindow* self = nullptr;
+
+                if (message == pre_create_message::id)
                 {
-                    auto result = RegisterClassExW(&descriptor);
-                    unregister_class = std::bind(UnregisterClassW, descriptor.lpszClassName, descriptor.hInstance);
+                    auto* pCreate = std::bit_cast<CREATESTRUCTW*>(lParam);
+
+                    auto* allocator = std::pmr::get_default_resource();
+                    auto* data = allocator->allocate(sizeof(TWindow), alignof(TWindow));
+                    self = new (data) TWindow(hWnd, *pCreate);
+                    SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
+                }
+                else
+                {
+                    self = std::bit_cast<TWindow*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
                 }
 
-                handle = CreateWindowExW(params.dwExStyle,
-                    descriptor.lpszClassName,
+                std::optional<lresult_t> result = std::nullopt;
+
+                if (self)
+                {
+                    result = dispatch_message(self, message, wParam, lParam);
+
+                    if (message == WM_DESTROY)
+                    {
+                      SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(nullptr));
+                      self->~TWindow();
+                      auto* allocator = std::pmr::get_default_resource();
+                      allocator->deallocate(self, sizeof(TWindow), alignof(TWindow));
+                      return 0;
+                    }
+                }
+                    
+                return result.or_else([&]{ return std::make_optional(DefWindowProc(hWnd, message, wParam, lParam)); }).value();
+            }
+        };
+
+        descriptor.cbSize = sizeof(WNDCLASSEXW);
+        descriptor.lpfnWndProc = handler::WindowHandler;
+            
+        return ::RegisterClassExW(&descriptor);
+    }
+    
+
+    auto CreateWindowEx(CREATESTRUCTW params)
+    {
+        return ::CreateWindowExW(params.dwExStyle,
+                    params.lpszClass,
                     params.lpszName,
                     params.style,
                     params.x,
@@ -48,78 +155,10 @@ namespace win32
                     params.cy,
                     params.hwndParent,
                     params.hMenu,
-                    descriptor.hInstance,
-                    std::bit_cast<LPVOID>(this));
-            }
+                    params.hInstance ? params.hInstance : ::GetModuleHandleW(nullptr),
+                    params.lpCreateParams);
+    }
 
-        window(WNDCLASSEXW descriptor, DLGTEMPLATE params, hwnd_t parent, std::wstring caption, callback_type handler)
-            : window(std::move(descriptor), CREATESTRUCTW{
-                .hwndParent = parent,
-                .cy = params.cy,
-                .cx = params.cx,
-                .y = params.y,
-                .x = params.x,
-                .style = std::bit_cast<LONG>(params.style),
-                .lpszName = caption.c_str(),
-                .dwExStyle = params.dwExtendedStyle
-            }, std::move(handler))
-        {
-        }
-
-        window(WNDCLASSEXW descriptor, DLGTEMPLATE params, std::wstring caption, callback_type handler)
-            : window(std::move(descriptor), std::move(params), 0, std::move(caption), std::move(handler))
-        {
-        }
-
-        operator hwnd_t()
-        {
-            return handle;
-        }
-
-        static lresult_t CALLBACK WindowHandler(hwnd_t hWnd, std::uint32_t message, wparam_t wParam, lparam_t lParam)
-        {
-            window* self = nullptr;
-
-            if (message == pre_create_message::id)
-            {
-                auto* pCreate = std::bit_cast<CREATESTRUCTW*>(lParam);
-                self = std::bit_cast<window*>(pCreate->lpCreateParams);
-                SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
-                self->handle = hWnd;
-            }
-            else
-            {
-                self = std::bit_cast<window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-            }
-
-            if (self && self->HandleMessage)
-            {
-                auto result = self->HandleMessage(*self, make_window_message(message, wParam, lParam));
-
-                if (message == WM_DESTROY)
-                {
-                  SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(nullptr));
-                  self->HandleMessage = nullptr;
-                  self->handle = 0;
-
-                  if (self->unregister_class)
-                  {
-                    self->unregister_class();
-                    self->unregister_class = nullptr;
-
-                  }
-                  return 0;
-                }
-
-                if (result.has_value())
-                {
-                    return result.value();
-                }
-            }
-
-            return DefWindowProc(hWnd, message, wParam, lParam);
-        }
-    };
 
     struct dialog
     {
@@ -418,7 +457,7 @@ namespace win32
         constexpr static auto class_name = WC_TREEVIEWW;
     };
 
-    using client_control = std::variant<button, combo_box, edit, list_box, scroll_bar, static_text>;
+    using client_control = std::variant<button, combo_box, edit, list_box, scroll_bar, static_text, tree_view, tab_control, page_scroller, list_view>;
 
 
     struct dialog_builder

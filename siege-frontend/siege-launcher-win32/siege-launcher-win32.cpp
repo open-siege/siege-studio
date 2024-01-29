@@ -52,62 +52,23 @@ void worker_thread_main()
 	}
 }
 
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-	_In_opt_ HINSTANCE hPrevInstance,
-	_In_ LPWSTR    lpCmdLine,
-	_In_ int       nCmdShow)
+struct siege_main_window
 {
-	UNREFERENCED_PARAMETER(hPrevInstance);
-	UNREFERENCED_PARAMETER(lpCmdLine);
-
-	std::thread worker(worker_thread_main);
-
-	// Initialize global strings
-	LoadStringW(hInstance, IDS_APP_TITLE, app_title.data(), int(app_title.size()));
-
 	std::vector<win32::client_control> controls;
-
-	win32::window main_window{WNDCLASSEXW {
-		.style{CS_HREDRAW | CS_VREDRAW},
-		.hInstance = hInstance,
-		.hIcon = LoadIconW(hInstance, MAKEINTRESOURCE(IDI_SIEGELAUNCHERWIN32)),
-		.hCursor = LoadCursorW(hInstance, IDC_ARROW),
-		.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1),
-		.lpszMenuName = MAKEINTRESOURCEW(IDC_SIEGELAUNCHERWIN32),
-		.lpszClassName{L"SiegeLauncherMainWindow"},
-		.hIconSm = LoadIconW(hInstance, MAKEINTRESOURCE(IDI_SMALL)),
-	}, CREATESTRUCTW {
-		.cx = CW_USEDEFAULT,
-		.x = CW_USEDEFAULT,
-		.style = WS_OVERLAPPEDWINDOW,
-		.lpszName = app_title.data()
-	}, 
-		[&, controls = std::move(controls)](win32::window& self, auto message) mutable -> std::optional<LRESULT>
+	win32::hwnd_t self;
+	siege_main_window(win32::hwnd_t self, const CREATESTRUCTW&) : self(self)
 	{
-		 return std::visit(overloaded {
-			 [&](win32::create_message& command) mutable -> std::optional<LRESULT> {
-					
-#if _DEBUG
-						AllocConsole();
+	}
 
-						freopen("CONOUT$", "w", stdout);
-						freopen("CONOUT$", "w", stderr);
-#endif
-
-					INITCOMMONCONTROLSEX settings{.dwSize{sizeof(INITCOMMONCONTROLSEX)}};
-					InitCommonControlsEx(&settings);
-
-					controls.reserve(10);
-
-					PostThreadMessageW(GetThreadId(worker.native_handle()), WM_COUT, 0, reinterpret_cast<win32::lparam_t>(L"Main window created"));
-
-					auto& button_instance = controls.emplace_back(win32::button{ DLGITEMTEMPLATE{
+	auto on_create(const win32::create_message&)
+	{
+		auto& button_instance = controls.emplace_back(win32::button{ DLGITEMTEMPLATE{
 						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
 						.x = 10,       
 						.y = 10,
 						.cx = 100,  
 						.cy = 100       
-						}, self.handle, L"Click me",
+						}, self, L"Click me",
 						[&](auto& self, UINT_PTR uIdSubclass, auto button_message) -> std::optional<LRESULT>
 						{
 							return std::visit(overloaded{
@@ -123,7 +84,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 						});
 
 					auto& edit_instance = controls.emplace_back(win32::edit{ CREATESTRUCTW{
-						.hwndParent = self.handle,              
+						.hwndParent = self,              
 						.cy = 100,
 						.cx = 100,                
 						.y = 110, 
@@ -135,7 +96,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 						});
 
 					auto& combo_box_instance = controls.emplace_back(win32::combo_box{CREATESTRUCTW{
-						.hwndParent = self.handle,
+						.hwndParent = self,
 						.cy = 100,
 						.cx = 100,
 						.y = 210,
@@ -146,16 +107,51 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 						}
 						});
 
-				return 0;
-			 },
-			 [&](win32::destroy_message& command) -> std::optional<LRESULT> {
+
+					auto& tab_control_instance = controls.emplace_back(win32::tab_control{CREATESTRUCTW {
+						.hwndParent = self,
+						.cy = 300,
+						.cx = 600,
+						.y = 310,
+						.x = 10,
+						.style = WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE | TCS_MULTILINE | TCS_RIGHTJUSTIFY 
+						}, [&](auto& self, UINT_PTR uIdSubclass, auto message) -> std::optional<LRESULT>
+						{
+							return std::nullopt;
+						}
+					});
+
+					std::array<wchar_t, 10> text {L"Test"};
+
+					TCITEMW newItem {
+						.mask = TCIF_TEXT,
+						.pszText = text.data()
+					};
+
+					SendMessageW(std::get<win32::tab_control>(tab_control_instance), TCM_INSERTITEM, 0, std::bit_cast<win32::lparam_t>(&newItem));
+					
+					text.fill('\0');
+					std::memcpy(text.data(), L"Another", 14);
+					newItem.pszText = text.data();
+					SendMessageW(std::get<win32::tab_control>(tab_control_instance), TCM_INSERTITEM, 1, std::bit_cast<win32::lparam_t>(&newItem));
+
+					text.fill('\0');
+					std::memcpy(text.data(), L"Tab", 6);
+					newItem.pszText = text.data();
+					SendMessageW(std::get<win32::tab_control>(tab_control_instance), TCM_INSERTITEM, 2, std::bit_cast<win32::lparam_t>(&newItem));
+		return 0;
+	}
+
+
+	std::optional<LRESULT> on_destroy(const win32::destroy_message& command) {
 				controls.erase(std::remove_if(controls.begin(), controls.end(), [](auto& button) {
 						 return std::visit([](auto& real_control) { return !real_control.HandleMessage; }, button);
 						 }), controls.end());
 				PostQuitMessage(0);
 				return 0;
-			 },
-			 [&](win32::command_message& command) -> std::optional<LRESULT> {
+	}
+
+	std::optional<LRESULT> on_command(const win32::command_message& command) {
 				auto child_control = std::find_if(controls.begin(), controls.end(), [&](auto& control) {
 					return command.handle == std::visit([](auto& real_control) { return real_control.handle; }, control);
 					});
@@ -173,11 +169,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 						.add_child(DLGITEMTEMPLATE{.style = WS_CHILD | WS_VISIBLE, .x = 10, .y = 110, .cx = 200, .cy = 100}, win32::button::class_name, std::wstring_view{L"Click Me"});
 
 
-                    win32::dialog::show_modal(self.handle, builder.result(), [&](win32::dialog& self, auto dialog_message) -> INT_PTR {
+                    win32::dialog::show_modal(self, builder.result(), [&](win32::dialog& self, auto dialog_message) -> INT_PTR {
 						return std::visit(overloaded{
 									[&](win32::command_message& dialog_command) -> INT_PTR {
 										if (dialog_command.identifier == IDOK || dialog_command.identifier == IDCANCEL)
 										{
+											std::array<wchar_t, 32> class_name;
+											GetClassName(self.handle, class_name.data(), class_name.size());
+										//	PostThreadMessageW(GetThreadId(worker.native_handle()), WM_COUT, 0, reinterpret_cast<win32::lparam_t>(class_name.data()));
 											EndDialog(self.handle, dialog_command.identifier);
 											return (INT_PTR)TRUE;
 										}
@@ -192,26 +191,58 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 				}
 				else if (command.identifier == IDM_EXIT)
 				{
-					DestroyWindow(self.handle);
+					DestroyWindow(self);
 					return 0;
 				}
 
 				return std::nullopt;
-			},
-			 [&](auto& raw_message) -> std::optional<LRESULT> {
-				 return std::nullopt;
-			}
-		}, message);
 	}
-	};
+};
 
-	if (!main_window.handle)
+
+int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
+	_In_opt_ HINSTANCE hPrevInstance,
+	_In_ LPWSTR    lpCmdLine,
+	_In_ int       nCmdShow)
+{
+	UNREFERENCED_PARAMETER(hPrevInstance);
+	UNREFERENCED_PARAMETER(lpCmdLine);
+
+	std::thread worker(worker_thread_main);
+
+	// Initialize global strings
+	LoadStringW(hInstance, IDS_APP_TITLE, app_title.data(), int(app_title.size()));
+
+
+	INITCOMMONCONTROLSEX settings{.dwSize{sizeof(INITCOMMONCONTROLSEX)}};
+	InitCommonControlsEx(&settings);
+
+	win32::RegisterClassEx<siege_main_window>(WNDCLASSEXW {
+		.style{CS_HREDRAW | CS_VREDRAW},
+		.hInstance = hInstance,
+		.hIcon = LoadIconW(hInstance, MAKEINTRESOURCE(IDI_SIEGELAUNCHERWIN32)),
+		.hCursor = LoadCursorW(hInstance, IDC_ARROW),
+		.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1),
+		.lpszMenuName = MAKEINTRESOURCEW(IDC_SIEGELAUNCHERWIN32),
+		.lpszClassName{L"SiegeLauncherMainWindow"},
+		.hIconSm = LoadIconW(hInstance, MAKEINTRESOURCE(IDI_SMALL)),
+	});
+
+	auto main_window = win32::CreateWindowEx(CREATESTRUCTW {
+		.cx = CW_USEDEFAULT,
+		.x = CW_USEDEFAULT,
+		.style = WS_OVERLAPPEDWINDOW,
+		.lpszName = app_title.data(),
+		.lpszClass = L"SiegeLauncherMainWindow"
+	});
+
+	if (!main_window)
 	{
 		return FALSE;
 	}
 
-	ShowWindow(main_window.handle, nCmdShow);
-	UpdateWindow(main_window.handle);
+	ShowWindow(main_window, nCmdShow);
+	UpdateWindow(main_window);
 
 
 	HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_SIEGELAUNCHERWIN32));
