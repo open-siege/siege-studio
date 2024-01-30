@@ -54,7 +54,6 @@ void worker_thread_main()
 
 struct siege_main_window
 {
-	std::vector<win32::client_control> controls;
 	win32::hwnd_t self;
 	siege_main_window(win32::hwnd_t self, const CREATESTRUCTW&) : self(self)
 	{
@@ -62,101 +61,85 @@ struct siege_main_window
 
 	auto on_create(const win32::create_message&)
 	{
-		auto& button_instance = controls.emplace_back(win32::button{ DLGITEMTEMPLATE{
+		auto button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
 						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
 						.x = 10,       
 						.y = 10,
 						.cx = 100,  
 						.cy = 100       
-						}, self, L"Click me",
-						[&](auto& self, UINT_PTR uIdSubclass, auto button_message) -> std::optional<LRESULT>
+						}, self, win32::button::class_name, L"Click me");
+
+		win32::SetWindowSubclass(button_instance, [](win32::hwnd_t button, win32::message button_message) -> std::optional<LRESULT>
 						{
-							return std::visit(overloaded{
-								[&](win32::command_message& command) -> std::optional<LRESULT> {
-									MessageBoxExW(self.handle, L"Hello world", L"Test Message", 0, 0);
-									return TRUE;
-								},
-								[](auto&) -> std::optional<LRESULT> { return std::nullopt; }
-							}, button_message);
+							if (button_message.message == win32::command_message::id)
+							{
+								MessageBoxExW(GetParent(button), L"Hello world", L"Test Message", 0, 0);
+								return 0;
+							}
 
 							return std::nullopt;
-						}
 						});
 
-					auto& edit_instance = controls.emplace_back(win32::edit{ CREATESTRUCTW{
+		win32::CreateWindowExW(CREATESTRUCTW{
 						.hwndParent = self,              
 						.cy = 100,
 						.cx = 100,                
 						.y = 110, 
 						.x = 10,       
-						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON}, [&](auto& self, UINT_PTR uIdSubclass, auto message) -> std::optional<LRESULT>
-						{
-							return std::nullopt;
-						}
-						});
+						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+						.lpszClass = win32::edit::class_name});
 
-					auto& combo_box_instance = controls.emplace_back(win32::combo_box{CREATESTRUCTW{
+		win32::CreateWindowExW(CREATESTRUCTW{
 						.hwndParent = self,
 						.cy = 100,
 						.cx = 100,
 						.y = 210,
 						.x = 10,   
-						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON}, [&](auto& self, UINT_PTR uIdSubclass, auto message) -> std::optional<LRESULT>
-						{
-							return std::nullopt;
-						}
-						});
+						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+						.lpszClass = win32::combo_box::class_name
+		});
 
 
-					auto& tab_control_instance = controls.emplace_back(win32::tab_control{CREATESTRUCTW {
+		auto tab_control_instance = win32::CreateWindowExW(CREATESTRUCTW {
 						.hwndParent = self,
 						.cy = 300,
 						.cx = 600,
 						.y = 310,
 						.x = 10,
-						.style = WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE | TCS_MULTILINE | TCS_RIGHTJUSTIFY 
-						}, [&](auto& self, UINT_PTR uIdSubclass, auto message) -> std::optional<LRESULT>
-						{
-							return std::nullopt;
-						}
+						.style = WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE | TCS_MULTILINE | TCS_RIGHTJUSTIFY, 
+						.lpszClass = win32::tab_control::class_name
 					});
 
-					std::array<wchar_t, 10> text {L"Test"};
+		std::array<wchar_t, 10> text {L"Test"};
 
-					TCITEMW newItem {
+		TCITEMW newItem {
 						.mask = TCIF_TEXT,
 						.pszText = text.data()
 					};
 
-					SendMessageW(std::get<win32::tab_control>(tab_control_instance), TCM_INSERTITEM, 0, std::bit_cast<win32::lparam_t>(&newItem));
+		SendMessageW(tab_control_instance, TCM_INSERTITEM, 0, std::bit_cast<win32::lparam_t>(&newItem));
 					
-					text.fill('\0');
-					std::memcpy(text.data(), L"Another", 14);
-					newItem.pszText = text.data();
-					SendMessageW(std::get<win32::tab_control>(tab_control_instance), TCM_INSERTITEM, 1, std::bit_cast<win32::lparam_t>(&newItem));
+		text.fill('\0');
+		std::memcpy(text.data(), L"Another", 14);
+		newItem.pszText = text.data();
+		SendMessageW(tab_control_instance, TCM_INSERTITEM, 1, std::bit_cast<win32::lparam_t>(&newItem));
 
-					text.fill('\0');
-					std::memcpy(text.data(), L"Tab", 6);
-					newItem.pszText = text.data();
-					SendMessageW(std::get<win32::tab_control>(tab_control_instance), TCM_INSERTITEM, 2, std::bit_cast<win32::lparam_t>(&newItem));
+		text.fill('\0');
+		std::memcpy(text.data(), L"Tab", 6);
+		newItem.pszText = text.data();
+		SendMessageW(tab_control_instance, TCM_INSERTITEM, 2, std::bit_cast<win32::lparam_t>(&newItem));
+		
 		return 0;
 	}
 
 
-	std::optional<LRESULT> on_destroy(const win32::destroy_message& command) {
-				controls.erase(std::remove_if(controls.begin(), controls.end(), [](auto& button) {
-						 return std::visit([](auto& real_control) { return !real_control.HandleMessage; }, button);
-						 }), controls.end());
+	std::optional<LRESULT> on_destroy(const win32::destroy_message& command) {	
 				PostQuitMessage(0);
 				return 0;
 	}
 
 	std::optional<LRESULT> on_command(const win32::command_message& command) {
-				auto child_control = std::find_if(controls.begin(), controls.end(), [&](auto& control) {
-					return command.handle == std::visit([](auto& real_control) { return real_control.handle; }, control);
-					});
-
-				if (child_control != controls.end())
+				if (IsChild(self, command.handle))
 				{
 					return SendMessageW(command.handle, win32::command_message::id, command.wparam(), command.lparam());
 				}

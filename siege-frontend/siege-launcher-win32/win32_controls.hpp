@@ -122,7 +122,7 @@ namespace win32
                 {
                     result = dispatch_message(self, message, wParam, lParam);
 
-                    if (message == WM_DESTROY)
+                    if (message == WM_NCDESTROY)
                     {
                       SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(nullptr));
                       self->~TWindow();
@@ -141,22 +141,44 @@ namespace win32
             
         return ::RegisterClassExW(&descriptor);
     }
-    
 
     auto CreateWindowExW(CREATESTRUCTW params)
     {
-        return ::CreateWindowExW(params.dwExStyle,
-                    params.lpszClass,
-                    params.lpszName,
-                    params.style,
-                    params.x,
-                    params.y,
-                    params.cx,
-                    params.cy,
-                    params.hwndParent,
-                    params.hMenu,
-                    params.hInstance ? params.hInstance : ::GetModuleHandleW(nullptr),
-                    params.lpCreateParams);
+        hinstance_t hinstance = params.hInstance;
+        auto parent_hinstance = hinstance == nullptr && params.hwndParent != nullptr ? std::bit_cast<hinstance_t>(GetWindowLongPtrW(params.hwndParent, GWLP_HINSTANCE)) : nullptr;
+        hinstance = hinstance ? hinstance : ::GetModuleHandleW(nullptr);
+        return ::CreateWindowExW(
+                params.dwExStyle,
+                params.lpszClass,
+                params.lpszName,
+                params.style,
+                params.x,
+                params.y,
+                params.cx,
+                params.cy,
+                params.hwndParent,
+                params.hMenu,
+                hinstance,
+                params.lpCreateParams
+            );
+    }
+
+    auto CreateWindowExW(DLGITEMTEMPLATE params, hwnd_t parent, std::wstring class_name, std::wstring caption)
+    {
+        return ::CreateWindowExW(
+                params.dwExtendedStyle,
+                class_name.c_str(),
+                caption.c_str(),
+                params.style,
+                params.x,
+                params.y,
+                params.cx,
+                params.cy,
+                parent,
+                0,
+                std::bit_cast<hinstance_t>(GetWindowLongPtrW(parent, GWLP_HINSTANCE)),
+                0
+            );
     }
 
     auto DialogBoxIndirectParamW(hwnd_t parent, DLGTEMPLATE* dialog_template, std::move_only_function<INT_PTR(hwnd_t, win32::message)> on_message)
@@ -183,7 +205,7 @@ namespace win32
                 {
                     auto result = child->operator()(hDlg, win32::message(message, wParam, lParam));
 
-                    if (message == WM_DESTROY)
+                    if (message == WM_NCDESTROY)
                     {
                         SetWindowLongPtr(hDlg, DWLP_USER, std::bit_cast<LONG_PTR>(nullptr));
                         return (INT_PTR)TRUE;
@@ -200,235 +222,159 @@ namespace win32
         return ::DialogBoxIndirectParamW(hInstance, dialog_template, parent, handler::DialogHandler, std::bit_cast<lparam_t>(&on_message));
     }
 
-    template<typename Control>
-    struct control
+    auto SetWindowSubclass(hwnd_t handle, std::optional<lresult_t> (*on_message)(hwnd_t, win32::message))
     {
-        hwnd_t handle;
-
-        using callback_type = std::move_only_function<std::optional<lresult_t>(Control&, UINT_PTR uIdSubclass, window_message)>;
-        callback_type HandleMessage;
-
-        operator hwnd_t()
+        struct handler
         {
-            return handle;
-        }
-
-        void cleanup(UINT_PTR uIdSubclass = 0) noexcept
-        {
-            if (handle && IsWindow(handle))
+            static lresult_t CALLBACK HandleMessage(hwnd_t hWnd, std::uint32_t uMsg, wparam_t wParam,
+                lparam_t lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
             {
-                RemoveWindowSubclass(handle, Control::CustomButtonHandler, uIdSubclass);
-            }
 
-            HandleMessage = nullptr;
-            handle = 0;
-        }
+                using callback_type = decltype(on_message);
+                auto* child = reinterpret_cast<callback_type>(dwRefData);
 
-        static lresult_t CALLBACK CustomButtonHandler(hwnd_t hWnd, std::uint32_t uMsg, wparam_t wParam,
-            lparam_t lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
-        {
-            auto* child = reinterpret_cast<Control*>(dwRefData);
-
-            if (child && child->HandleMessage)
-            {
-                auto result = child->HandleMessage(*child, uIdSubclass, make_window_message(uMsg, wParam, lParam));
-
-                if (uMsg == destroy_message::id)
+                if (child && child == std::bit_cast<callback_type>(uIdSubclass))
                 {
-                    child->cleanup();
-                    return TRUE;
+                    auto result = child(hWnd, win32::message(uMsg, wParam, lParam));
+
+                    if (uMsg == WM_NCDESTROY)
+                    {
+                        ::RemoveWindowSubclass(hWnd, handler::HandleMessage, std::bit_cast<UINT_PTR>(child));
+                        return TRUE;
+                    }
+
+                    if (result.has_value())
+                    {
+                        return result.value();
+                    }
                 }
 
-                if (result.has_value())
-                {
-                    return result.value();
-                }
+                return DefSubclassProc(hWnd, uMsg, wParam, lParam);
             }
+        };
 
-            return DefSubclassProc(hWnd, uMsg, wParam, lParam);
-        }
+        return ::SetWindowSubclass(handle, handler::HandleMessage, std::bit_cast<UINT_PTR>(on_message), std::bit_cast<DWORD_PTR>(on_message));
+    }
 
-        control(hwnd_t handle, callback_type handler)
-            : handle(handle), HandleMessage(std::move(handler))
-        {
-            SetWindowSubclass(handle, control::CustomButtonHandler, 0, std::bit_cast<DWORD_PTR>(this));
-        }
-
-        control(DLGITEMTEMPLATE params, hwnd_t parent, std::wstring caption, callback_type handler)
-            : control(CreateWindowExW(
-                params.dwExtendedStyle,
-                Control::class_name,
-                caption.c_str(),
-                params.style,
-                params.x,
-                params.y,
-                params.cx,
-                params.cy,
-                parent,
-                0,
-                std::bit_cast<hinstance_t>(GetWindowLongPtrW(parent, GWLP_HINSTANCE)),
-                0
-            ), std::move(handler)) 
-        {
-        }
-
-        control(CREATESTRUCTW params, callback_type handler)
-            : control(CreateWindowExW(
-                params.dwExStyle,
-                params.lpszClass ? params.lpszClass : Control::class_name,
-                params.lpszName,
-                params.style,
-                params.x,
-                params.y,
-                params.cx,
-                params.cy,
-                params.hwndParent,
-                params.hMenu,
-                params.hInstance != 0 ? params.hInstance : std::bit_cast<hinstance_t>(GetWindowLongPtrW(params.hwndParent, GWLP_HINSTANCE)),
-                params.lpCreateParams
-            ), std::move(handler)) 
-        {
-        }
-
-        control(const control&) = delete;
-
-        control(control&& other) noexcept
-            : control(other.handle, std::move(other.HandleMessage))
-        {
-            other.handle = 0;
-            other.HandleMessage = nullptr;
-            if (IsWindow(handle))
-            {
-                SetWindowSubclass(handle, control::CustomButtonHandler, 0, std::bit_cast<DWORD_PTR>(this));
-            }
-        }
-
-        control& operator=(control&& other) noexcept
-        {
-            this->handle = std::move(other.handle);
-            this->HandleMessage = std::move(other.HandleMessage);
-            return *this;
-        }
-
-        ~control() noexcept
-        {
-            cleanup();
-        }
-    };
-
-    struct button : control<button>
+    template<typename TWindow>
+    auto SetWindowSubclass(hwnd_t handle)
     {
-        using control::control;
+        struct handler
+        {
+            static lresult_t CALLBACK HandleMessage(hwnd_t hWnd, std::uint32_t uMsg, wparam_t wParam,
+                lparam_t lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+            {
+                TWindow* self = std::bit_cast<TWindow*>(dwRefData);
 
+                std::optional<lresult_t> result = std::nullopt;
+
+                if (self && typeid(TWindow).hash_code() == std::bit_cast<std::size_t>(uIdSubclass))
+                {
+                    result = dispatch_message(self, uMsg, wParam, lParam);
+
+                    if (uMsg == WM_NCDESTROY)
+                    {
+                      ::RemoveWindowSubclass(hWnd, handler::HandleMessage, uIdSubclass);
+                      self->~TWindow();
+                      auto* allocator = std::pmr::get_default_resource();
+                      allocator->deallocate(self, sizeof(TWindow), alignof(TWindow));
+                      return 0;
+                    }
+                }
+                    
+
+                return result.or_else([&]{ return std::make_optional(DefSubclassProc(hWnd, uMsg, wParam, lParam)); }).value();
+            }
+        };
+
+        auto* allocator = std::pmr::get_default_resource();
+        auto* data = allocator->allocate(sizeof(TWindow), alignof(TWindow));
+        auto* self = new (data) TWindow(handle, CREATESTRUCTW{});
+
+        return ::SetWindowSubclass(handle, handler::HandleMessage, std::bit_cast<UINT_PTR>(typeid(TWindow).hash_code()), std::bit_cast<DWORD_PTR>(self));
+    }
+
+    struct button
+    {
         constexpr static auto class_name = WC_BUTTONW;
         constexpr static std::uint16_t dialog_id = 0x0080;
     };
 
-    struct edit : control<edit>
+    struct edit
     {
-        using control::control;
-
         constexpr static auto class_name = WC_EDITW;
         constexpr static std::uint16_t dialog_id = 0x0081;
     };
 
-    struct static_text : control<static_text>
+    struct static_text
     {
-        using control::control;
-
         constexpr static auto class_name = WC_STATICW;
         constexpr static std::uint16_t dialog_id = 0x0082;
     };
 
-    struct list_box : control<list_box>
+    struct list_box
     {
-        using control::control;
-
         constexpr static auto class_name = WC_LISTBOXW;
         constexpr static std::uint16_t dialog_id = 0x0083;
     };
 
-    struct scroll_bar : control<scroll_bar>
+    struct scroll_bar
     {
-        using control::control;
-        
         constexpr static auto class_name = WC_SCROLLBARW;
         constexpr static std::uint16_t dialog_id = 0x0084;
     };
 
-    struct combo_box : control<combo_box>
+    struct combo_box
     {
-        using control::control;
-
         constexpr static auto class_name = WC_COMBOBOXW;
         constexpr static std::uint16_t dialog_id = 0x0085;
     };
 
-    struct combo_box_ex : control<combo_box_ex>
+    struct combo_box_ex
     {
-        using control::control;
-
         constexpr static auto class_name = WC_COMBOBOXEXW;
     };
 
-    struct header : control<header>
+    struct header
     {
-        using control::control;
-
         constexpr static auto class_name = WC_HEADERW;
     };
 
-    struct link : control<link>
+    struct link
     {
-        using control::control;
-
         constexpr static auto class_name = WC_LINK;
     };
 
-    struct ip_address : control<ip_address>
+    struct ip_address
     {
-        using control::control;
-
         constexpr static auto class_name = WC_IPADDRESSW;
     };
 
-    struct list_view : control<list_view>
+    struct list_view
     {
-        using control::control;
-
         constexpr static auto class_name = WC_LISTVIEWW;
     };
 
-    struct native_font : control<native_font>
+    struct native_font
     {
-        using control::control;
-
         constexpr static auto class_name = WC_NATIVEFONTCTLW;
     };
 
-    struct page_scroller : control<page_scroller>
+    struct page_scroller
     {
-        using control::control;
 
         constexpr static auto class_name = WC_PAGESCROLLERW;
     };
 
-    struct tab_control : control<tab_control>
+    struct tab_control
     {
-        using control::control;
-
         constexpr static auto class_name = WC_TABCONTROLW;
     };
 
-    struct tree_view : control<tree_view>
+    struct tree_view
     {
-        using control::control;
-
         constexpr static auto class_name = WC_TREEVIEWW;
     };
-
-    using client_control = std::variant<button, combo_box, edit, list_box, scroll_bar, static_text, tree_view, tab_control, page_scroller, list_view>;
-
 
     struct dialog_builder
     {
