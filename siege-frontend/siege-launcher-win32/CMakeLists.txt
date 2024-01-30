@@ -3,7 +3,7 @@ project(siege-launcher-win32)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-add_executable(siege-launcher-win32 WIN32 siege-launcher-win32.cpp siege-launcher-win32.rc)
+add_executable(siege-launcher-win32 WIN32 siege-launcher-win32.cpp siege-launcher-win32.rc bindings/imgui_impl_dx11.cpp)
 
 set_property(TARGET siege-launcher-win32 PROPERTY CXX_STANDARD 23)
 target_compile_definitions(siege-launcher-win32 PRIVATE UNICODE)
