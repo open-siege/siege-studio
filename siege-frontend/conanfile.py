@@ -45,12 +45,13 @@ class SiegeLauncherConanFile(ConanFile):
         dep = self.dependencies["imgui"]
         (base, other) = os.path.split(dep.cpp_info.libdirs[0])
         fullDir = os.path.join(base, "res", "bindings")
-        dstDir = os.path.join(self.source_folder, "siege-interface", "bindings")
+        dstDirs = [os.path.join(self.source_folder, "siege-interface", "bindings"), os.path.join(self.source_folder, "siege-launcher-win32", "bindings")]
         print(fullDir)
-        print(dstDir)
+        print(dstDirs)
 
-        if not os.path.exists(dstDir):
-            os.makedirs(dstDir)
-        copy(self, "*.h", fullDir, dstDir)
-        copy(self, "*.cpp", fullDir, dstDir)       
+        for dstDir in dstDirs:
+            if not os.path.exists(dstDir):
+                os.makedirs(dstDir)
+            copy(self, "*.h", fullDir, dstDir)
+            copy(self, "*.cpp", fullDir, dstDir)       
             
