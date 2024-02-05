@@ -136,8 +136,8 @@ namespace win32
         descriptor.cbWndExtra = int(sizeof(TWindow));
         descriptor.cbClsExtra = StaticSize;
 
-        static_assert(sizeof(TWindow) > 40, "TWindow is too big for cbWndExtra");
-        static_assert(StaticSize > 40, "StaticSize is too big for cbClsExtra");
+        static_assert(sizeof(TWindow) <= 40, "TWindow is too big for cbWndExtra");
+        static_assert(StaticSize <= 40, "StaticSize is too big for cbClsExtra");
         
         return ::RegisterClassExW(&descriptor);
     }
@@ -165,7 +165,7 @@ namespace win32
                 }
                 else
                 {
-                    self = std::bit_cast<TWindow*>(GetClassLongPtrW(hWnd, 0));
+                    self = data->second;
                 }
 
                 std::optional<lresult_t> result = std::nullopt;
@@ -196,7 +196,7 @@ namespace win32
         descriptor.cbWndExtra = 0;
         descriptor.cbClsExtra = int(sizeof(std::pair<int, TWindow>));
 
-        static_assert(sizeof(std::pair<int, TWindow>) > 40, "TWindow is too big for cbClsExtra");
+        static_assert(sizeof(std::pair<int, TWindow>) <= 40, "TWindow is too big for cbClsExtra");
         
         return ::RegisterClassExW(&descriptor);
     }

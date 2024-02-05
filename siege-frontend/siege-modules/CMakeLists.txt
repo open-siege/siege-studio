@@ -1,0 +1,10 @@
+cmake_minimum_required(VERSION 3.20)
+project(siege-modules)
+
+if (WIN32)
+    add_subdirectory(siege-win32)
+    add_subdirectory(siege-bmp)
+    add_subdirectory(siege-dts)
+    add_subdirectory(siege-sfx)
+    add_subdirectory(siege-vol)
+endif()

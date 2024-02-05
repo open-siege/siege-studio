@@ -8,5 +8,6 @@ add_subdirectory(siege-launcher)
 add_subdirectory(siege-studio)
 
 if (WIN32)
+    add_subdirectory(siege-modules)
     add_subdirectory(siege-launcher-win32)
 endif()
