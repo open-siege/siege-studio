@@ -93,7 +93,7 @@ namespace win32
     }
 
 
-    template <typename TWindow>
+    template <typename TWindow, typename TMeta = decltype(typeid(TWindow))>
     auto RegisterClassExW(WNDCLASSEXW descriptor)
     {
         struct handler
@@ -106,14 +106,12 @@ namespace win32
                 {
                     auto* pCreate = std::bit_cast<CREATESTRUCTW*>(lParam);
 
-                    auto* allocator = std::pmr::get_default_resource();
-                    auto* data = allocator->allocate(sizeof(TWindow), alignof(TWindow));
+                    auto data = GetWindowLongPtrW(hWnd, 0);
                     self = new (data) TWindow(hWnd, *pCreate);
-                    SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
                 }
                 else
                 {
-                    self = std::bit_cast<TWindow*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+                    self = std::bit_cast<TWindow*>(GetWindowLongPtr(hWnd, 0));
                 }
 
                 std::optional<lresult_t> result = std::nullopt;
@@ -124,10 +122,7 @@ namespace win32
 
                     if (message == WM_NCDESTROY)
                     {
-                      SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(nullptr));
                       self->~TWindow();
-                      auto* allocator = std::pmr::get_default_resource();
-                      allocator->deallocate(self, sizeof(TWindow), alignof(TWindow));
                       return 0;
                     }
                 }
@@ -138,6 +133,8 @@ namespace win32
 
         descriptor.cbSize = sizeof(WNDCLASSEXW);
         descriptor.lpfnWndProc = handler::WindowHandler;
+        descriptor.cbWndExtra = int(sizeof(TWindow));
+        descriptor.cbClsExtra = int(sizeof(TMeta));
             
         return ::RegisterClassExW(&descriptor);
     }
