@@ -93,7 +93,7 @@ namespace win32
     }
 
 
-    template <typename TWindow, typename TMeta = decltype(typeid(TWindow))>
+    template <typename TWindow, int StaticSize = 0>
     auto RegisterClassExW(WNDCLASSEXW descriptor)
     {
         struct handler
@@ -106,12 +106,12 @@ namespace win32
                 {
                     auto* pCreate = std::bit_cast<CREATESTRUCTW*>(lParam);
 
-                    auto data = GetWindowLongPtrW(hWnd, 0);
+                    auto data = std::bit_cast<std::byte*>(GetWindowLongPtrW(hWnd, 0));
                     self = new (data) TWindow(hWnd, *pCreate);
                 }
                 else
                 {
-                    self = std::bit_cast<TWindow*>(GetWindowLongPtr(hWnd, 0));
+                    self = std::bit_cast<TWindow*>(GetWindowLongPtrW(hWnd, 0));
                 }
 
                 std::optional<lresult_t> result = std::nullopt;
@@ -134,8 +134,70 @@ namespace win32
         descriptor.cbSize = sizeof(WNDCLASSEXW);
         descriptor.lpfnWndProc = handler::WindowHandler;
         descriptor.cbWndExtra = int(sizeof(TWindow));
-        descriptor.cbClsExtra = int(sizeof(TMeta));
-            
+        descriptor.cbClsExtra = StaticSize;
+
+        static_assert(sizeof(TWindow) > 40, "TWindow is too big for cbWndExtra");
+        static_assert(StaticSize > 40, "StaticSize is too big for cbClsExtra");
+        
+        return ::RegisterClassExW(&descriptor);
+    }
+
+    template <typename TWindow>
+    auto RegisterStaticClassExW(WNDCLASSEXW descriptor)
+    {
+        struct handler
+        {
+            static lresult_t CALLBACK WindowHandler(hwnd_t hWnd, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+            {
+                TWindow* self = nullptr;
+
+                auto data = std::bit_cast<std::pair<int, TWindow>*>(GetClassLongPtrW(hWnd, 0));
+
+                if (message == pre_create_message::id)
+                {
+                    auto* pCreate = std::bit_cast<CREATESTRUCTW*>(lParam);
+
+                    if (data->first == 0)
+                    {
+                        self = new (data->second) TWindow(hWnd, *pCreate);
+                    }
+                    data->first++;
+                }
+                else
+                {
+                    self = std::bit_cast<TWindow*>(GetClassLongPtrW(hWnd, 0));
+                }
+
+                std::optional<lresult_t> result = std::nullopt;
+
+                if (self)
+                {
+                    result = dispatch_message(self, message, wParam, lParam);
+
+                    if (message == WM_NCDESTROY)
+                    {
+                        data->first--;
+
+                        if (data->first < 0)
+                        {
+                            self->~TWindow();
+                            data->first = 0;
+                        }
+                      return 0;
+                    }
+                }
+                    
+                return result.or_else([&]{ return std::make_optional(DefWindowProc(hWnd, message, wParam, lParam)); }).value();
+            }
+        };
+
+        descriptor.cbSize = sizeof(WNDCLASSEXW);
+        descriptor.lpfnWndProc = handler::WindowHandler;
+        descriptor.cbWndExtra = 0;
+        descriptor.cbClsExtra = int(sizeof(std::pair<int, TWindow>));
+
+        static_assert(sizeof(std::pair<int, TWindow>) > 40, "TWindow is too big for cbClsExtra");
+        
         return ::RegisterClassExW(&descriptor);
     }
 
