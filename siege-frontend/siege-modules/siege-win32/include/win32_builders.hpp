@@ -250,7 +250,7 @@ namespace win32
             TASKDIALOGCONFIG root;
         } root;
 
-        task_dialog_builder&& create_task_dialog(PROPSHEETHEADER root)
+        task_dialog_builder&& create_task_dialog(TASKDIALOGCONFIG root)
         {
             this->root.root = std::move(root);
             return std::move(*this);
@@ -309,11 +309,11 @@ namespace win32
         {
             auto toolbar = win32::CreateWindowExW(std::move(root.root));
 
-            auto children = std::pmr::vector<TBBUTTON>{children.size(), *upstream};
+            auto results = std::pmr::vector<TBBUTTON>(children.size(), upstream);
 
-            SendMessageW(toolbar, TB_ADDBUTTONS, children.size(), std::bit_cast<LPARAM>(children.data()));
+            SendMessageW(toolbar, TB_ADDBUTTONS, results.size(), std::bit_cast<LPARAM>(results.data()));
 
-            return result;
+            return toolbar;
         }
     };
 
@@ -336,7 +336,7 @@ namespace win32
 
         list_view_builder&& add_child(LVITEMW child)
         {
-            auto& new_child = children.emplace_back(std::move(child));
+            auto& new_child = items.emplace_back(std::move(child));
             return std::move(*this);
         }
 
@@ -371,7 +371,7 @@ namespace win32
                 SendMessageW(toolbar, LVM_INSERTGROUP, -1, std::bit_cast<LPARAM>(&group));
             }
 
-            return result;
+            return toolbar;
         }
     };
 }
