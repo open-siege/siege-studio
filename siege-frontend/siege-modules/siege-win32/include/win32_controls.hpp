@@ -201,6 +201,13 @@ namespace win32
         return ::RegisterClassExW(&descriptor);
     }
 
+    template <typename TWindow>
+    auto UnregisterClassW(HINSTANCE instance)
+    {
+        // TODO get class name from type info
+        return ::UnregisterClassW(nullptr, instance);
+    }
+
     auto CreateWindowExW(CREATESTRUCTW params)
     {
         hinstance_t hinstance = params.hInstance;
