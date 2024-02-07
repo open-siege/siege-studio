@@ -8,6 +8,7 @@
 #include <bit>
 #include <cstdint>
 #include <bitset>
+#include <algorithm>
 #include <wtypes.h>
 #include <WinDef.h>
 #include <WinUser.h>
