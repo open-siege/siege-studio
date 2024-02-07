@@ -96,13 +96,17 @@ namespace win32
     template <typename TWindow, int StaticSize = 0>
     auto RegisterClassExW(WNDCLASSEXW descriptor)
     {
+        constexpr static auto data_size = sizeof(TWindow) / sizeof(LONG_PTR);
+        constexpr static auto extra_size = sizeof(TWindow) % sizeof(LONG_PTR) == 0 ? 0 : 1;
+        constexpr static auto total_size = (data_size + extra_size) * sizeof(LONG_PTR);
+
         struct handler
         {
             static lresult_t CALLBACK WindowHandler(hwnd_t hWnd, std::uint32_t message, wparam_t wParam, lparam_t lParam)
             {
                 TWindow* self = nullptr;
 
-                std::array<std::byte, sizeof(TWindow)> raw_data{};
+                std::array<LONG_PTR, data_size + extra_size> raw_data{};
 
                 if (message == pre_create_message::id)
                 {
@@ -110,19 +114,16 @@ namespace win32
 
                     self = new (raw_data.data()) TWindow(hWnd, *pCreate);
 
-                    for (auto i = 0; i < raw_data.size(); i += sizeof(LONG_PTR))
+                    for (auto i = 0; i < raw_data.size(); i++)
                     {
-                        LONG_PTR temp;
-                        std::memcpy(&temp, raw_data.data() + i, sizeof(LONG_PTR));
-                        SetWindowLongPtrW(hWnd, i, temp);
+                        SetWindowLongPtrW(hWnd, i * sizeof(LONG_PTR), raw_data[i]);
                     }
                 }
                 else
                 {
-                    for (auto i = 0; i < raw_data.size(); i += sizeof(LONG_PTR))
+                    for (auto i = 0; i < raw_data.size(); i++)
                     {
-                        auto data = GetWindowLongPtrW(hWnd, i);
-                        std::memcpy(raw_data.data() + i, &data, sizeof(LONG_PTR));
+                        raw_data[i] = GetWindowLongPtrW(hWnd, i * sizeof(LONG_PTR));
                     }
 
                     self = std::bit_cast<TWindow*>(raw_data.data());
@@ -147,10 +148,11 @@ namespace win32
 
         descriptor.cbSize = sizeof(WNDCLASSEXW);
         descriptor.lpfnWndProc = handler::WindowHandler;
-        descriptor.cbWndExtra = int(sizeof(TWindow));
+        descriptor.cbWndExtra = int(total_size);
         descriptor.cbClsExtra = StaticSize;
 
-        static_assert(sizeof(TWindow) <= 40, "TWindow is too big for cbWndExtra");
+        static_assert(total_size <= 40, "TWindow is too big for cbWndExtra");
+        static_assert(std::is_trivially_copyable_v<TWindow>, "TWindow must be trivially copyable");
         static_assert(StaticSize <= 40, "StaticSize is too big for cbClsExtra");
         
         return ::RegisterClassExW(&descriptor);
@@ -159,29 +161,48 @@ namespace win32
     template <typename TWindow>
     auto RegisterStaticClassExW(WNDCLASSEXW descriptor)
     {
-        using storage_type = std::pair<int, std::array<std::byte, sizeof(TWindow)>>;
-
+        constexpr static auto data_size = sizeof(TWindow) / sizeof(LONG_PTR);
+        constexpr static auto extra_size = sizeof(TWindow) % sizeof(LONG_PTR) == 0 ? 0 : 1;
+        constexpr static auto total_size = (data_size + extra_size) * sizeof(LONG_PTR);
+        
         struct handler
         {
             static lresult_t CALLBACK WindowHandler(hwnd_t hWnd, std::uint32_t message, wparam_t wParam, lparam_t lParam)
             {
                 TWindow* self = nullptr;
 
-                auto data = std::bit_cast<storage_type*>(GetClassLongPtrW(hWnd, 0));
+                auto data = GetClassLongPtrW(hWnd, 0);
+
+                std::array<LONG_PTR, data_size + extra_size> raw_data{};
 
                 if (message == pre_create_message::id)
                 {
                     auto* pCreate = std::bit_cast<CREATESTRUCTW*>(lParam);
 
-                    if (data->first == 0)
+                    std::array<LONG_PTR, data_size + extra_size> raw_data{};
+
+                    if (data == 0)
                     {
-                        self = new (data->second.data()) TWindow(hWnd, *pCreate);
+                        self = new (raw_data.data()) TWindow(hWnd, *pCreate);
+
+                        for (auto i = 0; i < raw_data.size(); i++)
+                        {
+                            SetClassLongPtrW(hWnd, (i + 1) * sizeof(LONG_PTR), raw_data[i]);
+                        }
+
                     }
-                    data->first++;
+                    data++;
+
+                    SetClassLongPtrW(hWnd, 0, data);
                 }
                 else
                 {
-                    self = std::bit_cast<TWindow*>(data->second.data());
+                    for (auto i = 0; i < raw_data.size(); i++)
+                    {
+                        raw_data[i] = GetClassLongPtrW(hWnd, i * sizeof(LONG_PTR));
+                    }
+
+                    self = std::bit_cast<TWindow*>(raw_data.data());
                 }
 
                 std::optional<lresult_t> result = std::nullopt;
@@ -192,13 +213,15 @@ namespace win32
 
                     if (message == WM_NCDESTROY)
                     {
-                        data->first--;
+                        data--;
 
-                        if (data->first == 0)
+                        if (data == 0)
                         {
                             self->~TWindow();
                         }
-                      return 0;
+
+                        SetClassLongPtrW(hWnd, 0, data);
+                        return 0;
                     }
                 }
                     
@@ -209,9 +232,10 @@ namespace win32
         descriptor.cbSize = sizeof(WNDCLASSEXW);
         descriptor.lpfnWndProc = handler::WindowHandler;
         descriptor.cbWndExtra = 0;
-        descriptor.cbClsExtra = int(sizeof(storage_type));
+        descriptor.cbClsExtra = int(total_size + sizeof(LONG_PTR));
 
-        static_assert(sizeof(storage_type) <= 40, "TWindow is too big for cbClsExtra");
+        static_assert(total_size <= 40 - sizeof(LONG_PTR), "TWindow is too big for cbClsExtra");
+        static_assert(std::is_trivially_copyable_v<TWindow>, "TWindow must be trivially copyable");
         
         return ::RegisterClassExW(&descriptor);
     }
