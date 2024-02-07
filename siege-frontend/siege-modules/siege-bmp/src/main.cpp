@@ -1,33 +1,41 @@
 #include <win32_controls.hpp>
+#include <bit>
 
 struct bitmap_window
 {
     constexpr static std::u8string_view formats = u8".jpg .jpeg .gif .png .tag .bmp .dib .pba .dmb .db0 .db1 .db2 .hba .hb0 .hb1 .hb2";
 
+    bitmap_window(win32::hwnd_t self, const CREATESTRUCTW&)
+	{
+	}
+
     static bool is_bitmap(std::istream& raw_data)
     {
-
+        return false;
     }
 };
 
 struct pal_window
 {
-    constexpr static std::u8string_view formats = ".pal .ipl .ppl .dpl";
+    constexpr static std::u8string_view formats = u8".pal .ipl .ppl .dpl";
+
+    pal_window(win32::hwnd_t self, const CREATESTRUCTW&)
+	{
+	}
 
     static bool is_pal(std::istream& raw_data)
     {
-        std::array<std::byte, 4> header{};
-        studio::read(raw_data, header.data(), sizeof(header));
-
-        raw_data.seekg(-int(sizeof(header)), std::ios::cur);
-
-        return header == dba_tag;
+        return false;
     }
 };
 
 struct pal_mapping_window
 {
-    constexpr static std::u8string_view formats = "palettes.settings.json";
+    constexpr static std::u8string_view formats = u8"palettes.settings.json";
+
+    pal_mapping_window(win32::hwnd_t self, const CREATESTRUCTW&)
+	{
+	}
 };
 
 
@@ -43,18 +51,19 @@ struct is_supported_message
     int size;
 };
 
+
 struct module_info
 {
     std::uint32_t is_supported_id;
 
     module_info(win32::hwnd_t self, const CREATESTRUCTW&)
     {
-        SetPropA(self, typeid(bitmap_window).name(), bitmap_window::formats.data());
-        SetPropA(self, typeid(pal_window).name(), pal_window::formats.data());
-        SetPropA(self, typeid(pal_mapping_window).name(), pal_mapping_window::formats.data());
+        SetPropW(self, win32::type_name<bitmap_window>().c_str(), std::bit_cast<void*>(bitmap_window::formats.data()));
+        SetPropW(self, win32::type_name<pal_window>().c_str(), std::bit_cast<void*>(pal_window::formats.data()));
+        SetPropW(self, win32::type_name<pal_mapping_window>().c_str(), std::bit_cast<void*>(pal_mapping_window::formats.data()));
 
-        SetPropW(self, L"All Images", bitmap_window::formats.data());
-        SetPropW(self, L"All Palettes", pal_window::formats.data());
+        SetPropW(self, L"All Images", std::bit_cast<void*>(bitmap_window::formats.data()));
+        SetPropW(self, L"All Palettes", std::bit_cast<void*>(pal_window::formats.data()));
 
         is_supported_id = RegisterWindowMessageW(L"is_supported_message");
     }
@@ -76,12 +85,7 @@ struct module_info
     }
 };
 
-
-
-__declspec(dllexport) auto* name = "siege-bmp"; 
-
-
-extern "C" BOOL WINAPI DllMain(
+BOOL WINAPI DllMain(
     HINSTANCE hinstDLL,  // handle to DLL module
     DWORD fdwReason,     // reason for calling function
     LPVOID lpvReserved )  // reserved

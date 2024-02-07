@@ -102,16 +102,30 @@ namespace win32
             {
                 TWindow* self = nullptr;
 
+                std::array<std::byte, sizeof(TWindow)> raw_data{};
+
                 if (message == pre_create_message::id)
                 {
                     auto* pCreate = std::bit_cast<CREATESTRUCTW*>(lParam);
 
-                    auto data = std::bit_cast<std::byte*>(GetWindowLongPtrW(hWnd, 0));
-                    self = new (data) TWindow(hWnd, *pCreate);
+                    self = new (raw_data.data()) TWindow(hWnd, *pCreate);
+
+                    for (auto i = 0; i < raw_data.size(); i += sizeof(LONG_PTR))
+                    {
+                        LONG_PTR temp;
+                        std::memcpy(&temp, raw_data.data() + i, sizeof(LONG_PTR));
+                        SetWindowLongPtrW(hWnd, i, temp);
+                    }
                 }
                 else
                 {
-                    self = std::bit_cast<TWindow*>(GetWindowLongPtrW(hWnd, 0));
+                    for (auto i = 0; i < raw_data.size(); i += sizeof(LONG_PTR))
+                    {
+                        auto data = GetWindowLongPtrW(hWnd, i);
+                        std::memcpy(raw_data.data() + i, &data, sizeof(LONG_PTR));
+                    }
+
+                    self = std::bit_cast<TWindow*>(raw_data.data());
                 }
 
                 std::optional<lresult_t> result = std::nullopt;
@@ -145,13 +159,15 @@ namespace win32
     template <typename TWindow>
     auto RegisterStaticClassExW(WNDCLASSEXW descriptor)
     {
+        using storage_type = std::pair<int, std::array<std::byte, sizeof(TWindow)>>;
+
         struct handler
         {
             static lresult_t CALLBACK WindowHandler(hwnd_t hWnd, std::uint32_t message, wparam_t wParam, lparam_t lParam)
             {
                 TWindow* self = nullptr;
 
-                auto data = std::bit_cast<std::pair<int, TWindow>*>(GetClassLongPtrW(hWnd, 0));
+                auto data = std::bit_cast<storage_type*>(GetClassLongPtrW(hWnd, 0));
 
                 if (message == pre_create_message::id)
                 {
@@ -159,13 +175,13 @@ namespace win32
 
                     if (data->first == 0)
                     {
-                        self = new (data->second) TWindow(hWnd, *pCreate);
+                        self = new (data->second.data()) TWindow(hWnd, *pCreate);
                     }
                     data->first++;
                 }
                 else
                 {
-                    self = data->second;
+                    self = std::bit_cast<TWindow*>(data->second.data());
                 }
 
                 std::optional<lresult_t> result = std::nullopt;
@@ -178,10 +194,9 @@ namespace win32
                     {
                         data->first--;
 
-                        if (data->first < 0)
+                        if (data->first == 0)
                         {
                             self->~TWindow();
-                            data->first = 0;
                         }
                       return 0;
                     }
@@ -194,18 +209,28 @@ namespace win32
         descriptor.cbSize = sizeof(WNDCLASSEXW);
         descriptor.lpfnWndProc = handler::WindowHandler;
         descriptor.cbWndExtra = 0;
-        descriptor.cbClsExtra = int(sizeof(std::pair<int, TWindow>));
+        descriptor.cbClsExtra = int(sizeof(storage_type));
 
-        static_assert(sizeof(std::pair<int, TWindow>) <= 40, "TWindow is too big for cbClsExtra");
+        static_assert(sizeof(storage_type) <= 40, "TWindow is too big for cbClsExtra");
         
         return ::RegisterClassExW(&descriptor);
+    }
+
+    auto widen(std::string_view data)
+    {
+        return std::wstring(data.begin(), data.end());
+    }
+
+    template <typename TType>
+    auto type_name()
+    {
+        return widen(typeid(TType).name());
     }
 
     template <typename TWindow>
     auto UnregisterClassW(HINSTANCE instance)
     {
-        // TODO get class name from type info
-        return ::UnregisterClassW(nullptr, instance);
+        return ::UnregisterClassW(type_name<TWindow>().c_str(), instance);
     }
 
     auto CreateWindowExW(CREATESTRUCTW params)
