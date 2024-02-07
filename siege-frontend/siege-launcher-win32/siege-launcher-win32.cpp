@@ -173,7 +173,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		.hCursor = LoadCursorW(hInstance, IDC_ARROW),
 		.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1),
 		.lpszMenuName = MAKEINTRESOURCEW(IDC_SIEGELAUNCHERWIN32),
-		.lpszClassName{L"SiegeLauncherMainWindow"},
+		.lpszClassName{win32::type_name<siege_main_window>().c_str()},
 		.hIconSm = LoadIconW(hInstance, MAKEINTRESOURCE(IDI_SMALL)),
 	});
 
@@ -182,7 +182,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		.x = CW_USEDEFAULT,
 		.style = WS_OVERLAPPEDWINDOW,
 		.lpszName = app_title.data(),
-		.lpszClass = L"SiegeLauncherMainWindow"
+		.lpszClass = win32::type_name<siege_main_window>().c_str()
 	});
 
 	if (!main_window)
