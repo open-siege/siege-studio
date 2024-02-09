@@ -162,6 +162,39 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	// Initialize global strings
 	LoadStringW(hInstance, IDS_APP_TITLE, app_title.data(), int(app_title.size()));
 
+	std::wstring full_app_path(256, '\0');
+
+	GetModuleFileName(hInstance, full_app_path.data(), full_app_path.size());
+
+	std::filesystem::path app_path = std::filesystem::path(full_app_path).parent_path();
+
+
+	std::unordered_map<HMODULE, HWND> loaded_modules;
+	std::unordered_map<std::wstring_view, std::u8string_view> available_classes;
+	std::unordered_map<std::wstring_view, std::u8string_view> available_categories;
+
+	for (auto const& dir_entry : std::filesystem::directory_iterator{app_path}) 
+	{
+		if (dir_entry.path().extension() == ".dll")
+		{
+			auto plugin = LoadLibraryExW(dir_entry.path().c_str(), nullptr, LOAD_LIBRARY_SEARCH_APPLICATION_DIR));
+			auto descriptor = FindWindowExW(HWND_MESSAGE, nullptr, dir_entry.path().stem().c_str(), nullptr);
+
+			WNDCLASSEXW temp;
+			win32::EnumPropsExW(descriptor, [&](auto, auto* name, auto* handle) {
+				if (GetClassInfoExW(plugin, name, &temp))
+				{
+					available_classes.emplace_back(name, std::u8string_view(std::bit_cast<char8_t*>(handle)));
+				}
+				else
+				{
+					available_categories.emplace_back(name, std::u8string_view(std::bit_cast<char8_t*>(handle)));
+				}
+			});
+
+			loaded_modules.emplace_back(plugin, descriptor);
+		}
+	}
 
 	INITCOMMONCONTROLSEX settings{.dwSize{sizeof(INITCOMMONCONTROLSEX)}};
 	InitCommonControlsEx(&settings);
