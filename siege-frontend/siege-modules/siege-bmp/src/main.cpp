@@ -1,5 +1,6 @@
 #include <win32_controls.hpp>
 #include <bit>
+#include <filesystem>
 
 struct bitmap_window
 {
@@ -52,12 +53,24 @@ struct is_supported_message
 };
 
 
-struct module_info
+struct bmp_module
 {
+    HINSTANCE module_instance;
     std::uint32_t is_supported_id;
 
-    module_info(win32::hwnd_t self, const CREATESTRUCTW&)
+    bmp_module(win32::hwnd_t self, const CREATESTRUCTW& args)
     {
+        module_instance = args.hInstance;
+        win32::RegisterClassExW<bitmap_window>(WNDCLASSEXW{
+            .hInstance = module_instance
+            });
+        win32::RegisterClassExW<pal_window>(WNDCLASSEXW{
+            .hInstance = module_instance
+            });
+        win32::RegisterClassExW<pal_mapping_window>(WNDCLASSEXW{
+            .hInstance = module_instance
+            });
+
         SetPropW(self, win32::type_name<bitmap_window>().c_str(), std::bit_cast<void*>(bitmap_window::formats.data()));
         SetPropW(self, win32::type_name<pal_window>().c_str(), std::bit_cast<void*>(pal_window::formats.data()));
         SetPropW(self, win32::type_name<pal_mapping_window>().c_str(), std::bit_cast<void*>(pal_mapping_window::formats.data()));
@@ -66,6 +79,13 @@ struct module_info
         SetPropW(self, L"All Palettes", std::bit_cast<void*>(pal_window::formats.data()));
 
         is_supported_id = RegisterWindowMessageW(L"is_supported_message");
+    }
+
+    ~bmp_module()
+    {
+       win32::UnregisterClassW<bitmap_window>(module_instance);
+       win32::UnregisterClassW<pal_window>(module_instance);
+       win32::UnregisterClassW<pal_mapping_window>(module_instance);
     }
 
     std::optional<win32::lresult_t> on_is_supported(is_supported_message message)
@@ -90,48 +110,41 @@ BOOL WINAPI DllMain(
     DWORD fdwReason,     // reason for calling function
     LPVOID lpvReserved )  // reserved
 {
-    // Perform actions based on the reason for calling.
-    switch( fdwReason ) 
-    { 
-        case DLL_PROCESS_ATTACH:
 
-        win32::RegisterClassExW<bitmap_window>(WNDCLASSEXW{});
-        win32::RegisterClassExW<pal_window>(WNDCLASSEXW{});
-        win32::RegisterClassExW<pal_mapping_window>(WNDCLASSEXW{});
+    if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
+    {
+        if (lpvReserved != nullptr)
+        {
+            return TRUE; // do not do cleanup if process termination scenario
+        }
 
-        win32::RegisterStaticClassExW<module_info>(WNDCLASSEXW{});
+        static win32::hwnd_t info_instance = nullptr;
 
-        static auto info_instance = win32::CreateWindowExW(CREATESTRUCTW{
-            .hwndParent = HWND_MESSAGE
-        });
-         // Initialize once for each new process.
-         // Return FALSE to fail DLL load.
-            break;
+        static std::wstring module_file_name(255, '\0');
+        GetModuleFileNameW(hinstDLL, module_file_name.data(), module_file_name.size());
 
-        case DLL_THREAD_ATTACH:
-         // Do thread-specific initialization.
-            break;
+       std::filesystem::path module_path(module_file_name.data());
 
-        case DLL_THREAD_DETACH:
-         // Do thread-specific cleanup.
-            break;
 
-        case DLL_PROCESS_DETACH:
-        
-            if (lpvReserved != nullptr)
-            {
-                break; // do not do cleanup if process termination scenario
-            }
+       if (fdwReason == DLL_PROCESS_ATTACH)
+       {
+           win32::RegisterStaticClassExW<bmp_module>(WNDCLASSEXW{
+                  .hInstance = hinstDLL,
+                  .lpszClassName = module_path.stem().c_str()
+           });
 
-        DestroyWindow(info_instance);
-        win32::UnregisterClassW<module_info>(hinstDLL);
-
-        win32::UnregisterClassW<bitmap_window>(hinstDLL);
-        win32::UnregisterClassW<pal_window>(hinstDLL);
-        win32::UnregisterClassW<pal_mapping_window>(hinstDLL);
-            
-         // Perform any necessary cleanup.
-        break;
+          info_instance = win32::CreateWindowExW(CREATESTRUCTW{
+                .hInstance = hinstDLL,
+                .hwndParent = HWND_MESSAGE,
+                .lpszClass = module_path.stem().c_str()
+            });
+        }
+        else if (fdwReason == DLL_PROCESS_DETACH)
+        {
+            DestroyWindow(info_instance);
+            UnregisterClassW(module_path.stem().c_str(), hinstDLL);
+        }
     }
-    return TRUE;  // Successful DLL_PROCESS_ATTACH.
+
+    return TRUE;
 }
