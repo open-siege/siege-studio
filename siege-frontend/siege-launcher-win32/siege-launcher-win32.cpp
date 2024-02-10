@@ -177,22 +177,33 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	{
 		if (dir_entry.path().extension() == ".dll")
 		{
-			auto plugin = LoadLibraryExW(dir_entry.path().c_str(), nullptr, LOAD_LIBRARY_SEARCH_APPLICATION_DIR));
-			auto descriptor = FindWindowExW(HWND_MESSAGE, nullptr, dir_entry.path().stem().c_str(), nullptr);
+			auto dll_path = dir_entry.path();
+			auto plugin = LoadLibraryExW(dll_path.filename().c_str(), nullptr, LOAD_LIBRARY_SEARCH_APPLICATION_DIR);
+
+			auto stem = dll_path.stem();
+			auto descriptor = FindWindowExW(HWND_MESSAGE, nullptr, stem.c_str(), nullptr);
+
+			if (!descriptor)
+			{
+				continue;
+			}
 
 			WNDCLASSEXW temp;
-			win32::EnumPropsExW(descriptor, [&](auto, auto* name, auto* handle) {
-				if (GetClassInfoExW(plugin, name, &temp))
+
+			auto result = GetClassInfoExW(plugin, stem.c_str(), &temp);
+
+			win32::ForEachPropertyExW(descriptor, [&](auto, auto name, HANDLE handle) {
+				if (GetClassInfoExW(plugin, name.data(), &temp))
 				{
-					available_classes.emplace_back(name, std::u8string_view(std::bit_cast<char8_t*>(handle)));
+					available_classes.emplace(name, std::u8string_view(std::bit_cast<char8_t*>(handle)));
 				}
 				else
 				{
-					available_categories.emplace_back(name, std::u8string_view(std::bit_cast<char8_t*>(handle)));
+					available_categories.emplace(name, std::u8string_view(std::bit_cast<char8_t*>(handle)));
 				}
 			});
 
-			loaded_modules.emplace_back(plugin, descriptor);
+			loaded_modules.emplace(plugin, descriptor);
 		}
 	}
 

@@ -92,6 +92,16 @@ namespace win32
         return std::nullopt;
     }
 
+    auto widen(std::string_view data)
+    {
+        return std::wstring(data.begin(), data.end());
+    }
+
+    template <typename TType>
+    auto type_name()
+    {
+        return widen(typeid(TType).name());
+    }
 
     template <typename TWindow, int StaticSize = 0>
     auto RegisterClassExW(WNDCLASSEXW descriptor)
@@ -106,6 +116,32 @@ namespace win32
             static lresult_t CALLBACK WindowHandler(hwnd_t hWnd, std::uint32_t message, wparam_t wParam, lparam_t lParam)
             {
                 TWindow* self = nullptr;
+
+                auto do_dispatch = [&]() -> lresult_t {
+                       std::optional<lresult_t> result = std::nullopt;
+
+                    if (self)
+                    {
+                        result = dispatch_message(self, message, wParam, lParam);
+
+                        if (message == WM_NCDESTROY)
+                        {
+                          self->~TWindow();
+
+                          if constexpr (!can_fit)
+                          {
+                            auto heap = std::bit_cast<HANDLE>(GetWindowLongPtrW(hWnd, 0));
+                            //auto size = GetWindowLongPtrW(hWnd, sizeof(LONG_PTR));
+                            auto data = std::bit_cast<TWindow*>(GetWindowLongPtrW(hWnd, 2 * sizeof(LONG_PTR)));
+
+                            ::HeapFree(heap, 0, data);
+                          }
+                          return 0;
+                        }
+                    }
+                    
+                    return result.or_else([&]{ return std::make_optional(DefWindowProc(hWnd, message, wParam, lParam)); }).value();
+                };
 
                 if constexpr (can_fit)
                 {
@@ -131,6 +167,8 @@ namespace win32
 
                         self = std::bit_cast<TWindow*>(raw_data.data());
                     }
+
+                    return do_dispatch();
                 }
                 else
                 {
@@ -144,7 +182,7 @@ namespace win32
 
                         self = new (raw_data) TWindow(hWnd, *pCreate);
 
-                        SetWindowLongPtrW(hWnd, 0, heap);
+                        SetWindowLongPtrW(hWnd, 0, std::bit_cast<LONG_PTR>(heap));
                         SetWindowLongPtrW(hWnd, sizeof(LONG_PTR), size);
                         SetWindowLongPtrW(hWnd, 2 * sizeof(LONG_PTR), raw_data);
                     }
@@ -154,36 +192,16 @@ namespace win32
                         //auto size = GetWindowLongPtrW(hWnd, sizeof(LONG_PTR));
                         self = std::bit_cast<TWindow*>(GetWindowLongPtrW(hWnd, 2 * sizeof(LONG_PTR)));
                     }
+
+                    return do_dispatch();
                 }
-
-                std::optional<lresult_t> result = std::nullopt;
-
-                if (self)
-                {
-                    result = dispatch_message(self, message, wParam, lParam);
-
-                    if (message == WM_NCDESTROY)
-                    {
-                      self->~TWindow();
-
-                      if constexpr (!can_fit)
-                      {
-                        auto heap = GetWindowLongPtrW(hWnd, 0);
-                        //auto size = GetWindowLongPtrW(hWnd, sizeof(LONG_PTR));
-                        auto data = std::bit_cast<TWindow*>(GetWindowLongPtrW(hWnd, 2 * sizeof(LONG_PTR)));
-
-                        ::HeapFree(heap, 0, data);
-                      }
-                      return 0;
-                    }
-                }
-                    
-                return result.or_else([&]{ return std::make_optional(DefWindowProc(hWnd, message, wParam, lParam)); }).value();
             }
         };
 
         descriptor.cbSize = sizeof(WNDCLASSEXW);
         descriptor.lpfnWndProc = handler::WindowHandler;
+        auto window_type_name = type_name<TWindow>();
+        descriptor.lpszClassName = descriptor.lpszClassName ? descriptor.lpszClassName : window_type_name.c_str();
 
         static_assert(StaticSize <= 40, "StaticSize is too big for cbClsExtra");
         descriptor.cbClsExtra = StaticSize;
@@ -196,7 +214,7 @@ namespace win32
         }
         else
         {
-            descriptor.cbWndExtra = sizeof(std::size_t[3]);
+            descriptor.cbWndExtra = sizeof(std::size_t) * 3;
         }
         
         return ::RegisterClassExW(&descriptor);
@@ -208,6 +226,7 @@ namespace win32
         constexpr static auto data_size = sizeof(TWindow) / sizeof(LONG_PTR);
         constexpr static auto extra_size = sizeof(TWindow) % sizeof(LONG_PTR) == 0 ? 0 : 1;
         constexpr static auto total_size = (data_size + extra_size) * sizeof(LONG_PTR);
+        constexpr static auto can_fit = std::is_trivially_copyable_v<TWindow> && total_size <= 40 - sizeof(LONG_PTR);
         
         struct handler
         {
@@ -215,84 +234,128 @@ namespace win32
             {
                 TWindow* self = nullptr;
 
-                auto data = GetClassLongPtrW(hWnd, 0);
-
-                std::array<LONG_PTR, data_size + extra_size> raw_data{};
-
-                if (message == pre_create_message::id)
+                auto do_dispatch = [&]() -> lresult_t
                 {
-                    auto* pCreate = std::bit_cast<CREATESTRUCTW*>(lParam);
+                    std::optional<lresult_t> result = std::nullopt;
 
+                    if (self)
+                    {
+                        result = dispatch_message(self, message, wParam, lParam);
+
+                        if (message == WM_NCDESTROY)
+                        {
+                            auto ref_count = GetClassLongPtrW(hWnd, 0);
+                            ref_count--;
+
+                            if (ref_count == 0)
+                            {
+                                self->~TWindow();
+
+                                if constexpr (!can_fit)
+                                {
+                                    auto heap = std::bit_cast<HANDLE>(GetClassLongPtrW(hWnd, sizeof(LONG_PTR)));
+                                    //auto size = GetWindowLongPtrW(hWnd, sizeof(LONG_PTR));
+                                    auto data = std::bit_cast<TWindow*>(GetClassLongPtrW(hWnd, 3 * sizeof(LONG_PTR)));
+
+                                    ::HeapFree(heap, 0, data);
+                                }
+                            }
+
+                            SetClassLongPtrW(hWnd, 0, ref_count);
+                            return 0;
+                        }
+                    }
+                    
+                    return result.or_else([&]{ return std::make_optional(DefWindowProc(hWnd, message, wParam, lParam)); }).value();  
+                };
+          
+                if constexpr (can_fit)
+                {
                     std::array<LONG_PTR, data_size + extra_size> raw_data{};
 
-                    if (data == 0)
+                    if (message == pre_create_message::id)
                     {
-                        self = new (raw_data.data()) TWindow(hWnd, *pCreate);
+                        auto ref_count = GetClassLongPtrW(hWnd, 0);
+                        auto* pCreate = std::bit_cast<CREATESTRUCTW*>(lParam);
 
+                        if (ref_count == 0)
+                        {
+                            self = new (raw_data.data()) TWindow(hWnd, *pCreate);
+
+                            for (auto i = 0; i < raw_data.size(); i++)
+                            {
+                                SetClassLongPtrW(hWnd, (i + 1) * sizeof(LONG_PTR), raw_data[i]);
+                            }
+
+                        }
+                        ref_count++;
+
+                        SetClassLongPtrW(hWnd, 0, ref_count);
+                    }
+                    else
+                    {
                         for (auto i = 0; i < raw_data.size(); i++)
                         {
-                            SetClassLongPtrW(hWnd, (i + 1) * sizeof(LONG_PTR), raw_data[i]);
+                            raw_data[i] = GetClassLongPtrW(hWnd, i * sizeof(LONG_PTR));
                         }
 
+                        self = std::bit_cast<TWindow*>(raw_data.data());
                     }
-                    data++;
 
-                    SetClassLongPtrW(hWnd, 0, data);
+                    return do_dispatch();
                 }
                 else
                 {
-                    for (auto i = 0; i < raw_data.size(); i++)
+                    if (message == pre_create_message::id)
                     {
-                        raw_data[i] = GetClassLongPtrW(hWnd, i * sizeof(LONG_PTR));
-                    }
+                        auto ref_count = GetClassLongPtrW(hWnd, 0);
 
-                    self = std::bit_cast<TWindow*>(raw_data.data());
-                }
-
-                std::optional<lresult_t> result = std::nullopt;
-
-                if (self)
-                {
-                    result = dispatch_message(self, message, wParam, lParam);
-
-                    if (message == WM_NCDESTROY)
-                    {
-                        data--;
-
-                        if (data == 0)
+                        if (ref_count == 0)
                         {
-                            self->~TWindow();
+                            auto heap = ::GetProcessHeap();
+                            auto size = sizeof(TWindow);
+                            auto raw_data = ::HeapAlloc(heap, 0, size);
+
+                            auto* pCreate = std::bit_cast<CREATESTRUCTW*>(lParam);
+
+                            self = new (raw_data) TWindow(hWnd, *pCreate);
+
+                            SetClassLongPtrW(hWnd, sizeof(LONG_PTR), std::bit_cast<LONG_PTR>(heap));
+                            SetClassLongPtrW(hWnd, 2 * sizeof(LONG_PTR), size);
+                            SetClassLongPtrW(hWnd, 3 * sizeof(LONG_PTR), std::bit_cast<LONG_PTR>(raw_data));
                         }
 
-                        SetClassLongPtrW(hWnd, 0, data);
-                        return 0;
+                        ref_count++;
+                        SetClassLongPtrW(hWnd, 0, ref_count);
                     }
+                    else
+                    {
+                        //auto heap = GetWindowLongPtrW(hWnd, sizeof(LONG_PTR);
+                        //auto size = GetWindowLongPtrW(hWnd, 2 * sizeof(LONG_PTR));
+                        self = std::bit_cast<TWindow*>(GetClassLongPtrW(hWnd, 3 * sizeof(LONG_PTR)));
+                    }
+
+                    return do_dispatch();
                 }
-                    
-                return result.or_else([&]{ return std::make_optional(DefWindowProc(hWnd, message, wParam, lParam)); }).value();
             }
         };
 
         descriptor.cbSize = sizeof(WNDCLASSEXW);
         descriptor.lpfnWndProc = handler::WindowHandler;
         descriptor.cbWndExtra = 0;
-        descriptor.cbClsExtra = int(total_size + sizeof(LONG_PTR));
 
-        static_assert(total_size <= 40 - sizeof(LONG_PTR), "TWindow is too big for cbClsExtra");
-        static_assert(std::is_trivially_copyable_v<TWindow>, "TWindow must be trivially copyable");
-        
+        if constexpr (can_fit)
+        {
+            static_assert(total_size <= 40 - sizeof(LONG_PTR), "TWindow is too big for cbClsExtra");
+            static_assert(std::is_trivially_copyable_v<TWindow>, "TWindow must be trivially copyable");
+            descriptor.cbClsExtra = int(total_size + sizeof(LONG_PTR));
+        }
+        else
+        {
+            descriptor.cbClsExtra =  sizeof(std::size_t) * 4;
+        }
+     
         return ::RegisterClassExW(&descriptor);
-    }
-
-    auto widen(std::string_view data)
-    {
-        return std::wstring(data.begin(), data.end());
-    }
-
-    template <typename TType>
-    auto type_name()
-    {
-        return widen(typeid(TType).name());
     }
 
     template <typename TWindow>
@@ -451,6 +514,35 @@ namespace win32
         auto* self = new (data) TWindow(handle, CREATESTRUCTW{});
 
         return ::SetWindowSubclass(handle, handler::HandleMessage, std::bit_cast<UINT_PTR>(typeid(TWindow).hash_code()), std::bit_cast<DWORD_PTR>(self));
+    }
+
+    [[maybe_unused]] auto EnumPropsExW(hwnd_t control, std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback)
+    {
+        struct Handler
+        {
+            static BOOL HandleEnum(hwnd_t self, LPWSTR key, HANDLE data, ULONG_PTR raw_callback)
+            {
+                if (key == nullptr)
+                {
+                    return TRUE;
+                }
+
+                auto real_callback = std::bit_cast<std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)>*>(raw_callback);
+
+                return real_callback->operator()(self, key, data) ? TRUE : FALSE;
+            }
+        };
+
+        return ::EnumPropsExW(control, Handler::HandleEnum, std::bit_cast<LPARAM>(&callback));
+    }
+
+    [[maybe_unused]] auto ForEachPropertyExW(hwnd_t control, std::move_only_function<void(hwnd_t, std::wstring_view, HANDLE)> callback)
+    {
+        return EnumPropsExW(control, [callback = std::move(callback)] (auto self, auto key, auto value) mutable
+        {
+            callback(self, key, value);
+            return true;
+        });
     }
 
     struct button
