@@ -184,7 +184,7 @@ namespace win32
 
                         SetWindowLongPtrW(hWnd, 0, std::bit_cast<LONG_PTR>(heap));
                         SetWindowLongPtrW(hWnd, sizeof(LONG_PTR), size);
-                        SetWindowLongPtrW(hWnd, 2 * sizeof(LONG_PTR), raw_data);
+                        SetWindowLongPtrW(hWnd, 2 * sizeof(LONG_PTR), std::bit_cast<LONG_PTR>(raw_data));
                     }
                     else
                     {

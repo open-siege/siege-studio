@@ -22,11 +22,98 @@ std::array<wchar_t, 100> app_title;
 
 using win32::overloaded;
 
+
+
+struct siege_module
+{
+	std::unique_ptr<HINSTANCE__, void(*)(HINSTANCE)> module;
+	HWND descriptor;
+
+	struct module_data
+	{
+		module_data(std::unique_ptr<void, void(*)(void*)> buffer, std::size_t size) :
+			raw(std::move(buffer)),
+			storage(raw.get(), size, std::pmr::get_default_resource()),
+			pool(&storage),
+			available_classes(&pool),
+			available_categories(&pool)
+		{
+		}
+
+		std::unique_ptr<void, void(*)(void*)> raw;
+		std::pmr::monotonic_buffer_resource storage;
+		std::pmr::unsynchronized_pool_resource pool;
+		std::pmr::unordered_map<std::pmr::wstring, std::u8string_view> available_classes;
+		std::pmr::unordered_map<std::pmr::wstring, std::u8string_view> available_categories;
+	};
+
+	std::optional<module_data> data;
+
+	siege_module(std::filesystem::path module_path) : module(LoadLibraryExW(module_path.filename().c_str(), nullptr, LOAD_LIBRARY_SEARCH_APPLICATION_DIR), [](auto module) {
+		if (module) {
+			FreeLibrary(module);
+		}
+		}), 
+		descriptor(module ? FindWindowExW(HWND_MESSAGE, nullptr, module_path.stem().c_str(), nullptr) : nullptr),
+		data(std::nullopt)
+		
+	{
+		WNDCLASSEXW temp;
+
+		if (!descriptor)
+		{
+			return;
+		}
+
+		data.emplace(std::unique_ptr<void, void(*)(void*)>(HeapAlloc(GetProcessHeap(), 0, 4096 * 2), [](void* data) {
+				if (data)
+				{
+					HeapFree(GetProcessHeap(), 0, data);
+				}
+				}), 4096 * 2);
+
+		win32::ForEachPropertyExW(descriptor, [&](auto, auto name, HANDLE handle) {
+			if (GetClassInfoExW(module.get(), name.data(), &temp))
+			{
+				data->available_classes.emplace(name, std::u8string_view(std::bit_cast<char8_t*>(handle)));
+			}
+			else
+			{
+				data->available_categories.emplace(name, std::u8string_view(std::bit_cast<char8_t*>(handle)));
+			}
+		});
+	}
+
+	operator bool()
+	{
+		return module && descriptor;
+	}
+};
+
+
 struct siege_main_window
 {
 	win32::hwnd_t self;
-	siege_main_window(win32::hwnd_t self, const CREATESTRUCTW&) : self(self)
+	std::list<siege_module> loaded_modules;
+	
+	siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : self(self)
 	{
+		std::wstring full_app_path(256, '\0');
+
+		GetModuleFileName(params.hInstance, full_app_path.data(), full_app_path.size());
+
+		std::filesystem::path app_path = std::filesystem::path(full_app_path).parent_path();
+
+		for (auto const& dir_entry : std::filesystem::directory_iterator{app_path}) 
+		{
+			if (dir_entry.path().extension() == ".dll")
+			{
+				if (auto& plugin = loaded_modules.emplace_back(dir_entry.path()); !plugin)
+				{
+					loaded_modules.pop_back();
+				}
+			}
+		}
 	}
 
 	auto on_create(const win32::create_message&)
@@ -80,24 +167,41 @@ struct siege_main_window
 						.lpszClass = win32::tab_control::class_name
 					});
 
-		std::array<wchar_t, 10> text {L"Test"};
-
-		TCITEMW newItem {
+		for (auto& plugin : loaded_modules)
+		{
+			int index = 0;
+			for (auto& window : plugin.data->available_classes)
+			{
+				TCITEMW newItem {
 						.mask = TCIF_TEXT,
-						.pszText = text.data()
+						.pszText = const_cast<wchar_t*>(window.first.c_str())
 					};
 
-		SendMessageW(tab_control_instance, TCM_INSERTITEM, 0, std::bit_cast<win32::lparam_t>(&newItem));
-					
-		text.fill('\0');
-		std::memcpy(text.data(), L"Another", 14);
-		newItem.pszText = text.data();
-		SendMessageW(tab_control_instance, TCM_INSERTITEM, 1, std::bit_cast<win32::lparam_t>(&newItem));
+				SendMessageW(tab_control_instance, TCM_INSERTITEM, index, std::bit_cast<win32::lparam_t>(&newItem));
+				index++;
+			}
 
-		text.fill('\0');
-		std::memcpy(text.data(), L"Tab", 6);
-		newItem.pszText = text.data();
-		SendMessageW(tab_control_instance, TCM_INSERTITEM, 2, std::bit_cast<win32::lparam_t>(&newItem));
+		}
+
+
+		//std::array<wchar_t, 10> text {L"Test"};
+
+		//TCITEMW newItem {
+		//				.mask = TCIF_TEXT,
+		//				.pszText = text.data()
+		//			};
+
+		//SendMessageW(tab_control_instance, TCM_INSERTITEM, 0, std::bit_cast<win32::lparam_t>(&newItem));
+		//			
+		//text.fill('\0');
+		//std::memcpy(text.data(), L"Another", 14);
+		//newItem.pszText = text.data();
+		//SendMessageW(tab_control_instance, TCM_INSERTITEM, 1, std::bit_cast<win32::lparam_t>(&newItem));
+
+		//text.fill('\0');
+		//std::memcpy(text.data(), L"Tab", 6);
+		//newItem.pszText = text.data();
+		//SendMessageW(tab_control_instance, TCM_INSERTITEM, 2, std::bit_cast<win32::lparam_t>(&newItem));
 		
 		return 0;
 	}
@@ -151,6 +255,8 @@ struct siege_main_window
 };
 
 
+
+
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,
 	_In_ LPWSTR    lpCmdLine,
@@ -159,53 +265,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 
+	if (IsDebuggerPresent())
+	{
+		std::pmr::set_default_resource(std::pmr::null_memory_resource());
+	}
+
 	// Initialize global strings
 	LoadStringW(hInstance, IDS_APP_TITLE, app_title.data(), int(app_title.size()));
-
-	std::wstring full_app_path(256, '\0');
-
-	GetModuleFileName(hInstance, full_app_path.data(), full_app_path.size());
-
-	std::filesystem::path app_path = std::filesystem::path(full_app_path).parent_path();
-
-
-	std::unordered_map<HMODULE, HWND> loaded_modules;
-	std::unordered_map<std::wstring_view, std::u8string_view> available_classes;
-	std::unordered_map<std::wstring_view, std::u8string_view> available_categories;
-
-	for (auto const& dir_entry : std::filesystem::directory_iterator{app_path}) 
-	{
-		if (dir_entry.path().extension() == ".dll")
-		{
-			auto dll_path = dir_entry.path();
-			auto plugin = LoadLibraryExW(dll_path.filename().c_str(), nullptr, LOAD_LIBRARY_SEARCH_APPLICATION_DIR);
-
-			auto stem = dll_path.stem();
-			auto descriptor = FindWindowExW(HWND_MESSAGE, nullptr, stem.c_str(), nullptr);
-
-			if (!descriptor)
-			{
-				continue;
-			}
-
-			WNDCLASSEXW temp;
-
-			auto result = GetClassInfoExW(plugin, stem.c_str(), &temp);
-
-			win32::ForEachPropertyExW(descriptor, [&](auto, auto name, HANDLE handle) {
-				if (GetClassInfoExW(plugin, name.data(), &temp))
-				{
-					available_classes.emplace(name, std::u8string_view(std::bit_cast<char8_t*>(handle)));
-				}
-				else
-				{
-					available_categories.emplace(name, std::u8string_view(std::bit_cast<char8_t*>(handle)));
-				}
-			});
-
-			loaded_modules.emplace(plugin, descriptor);
-		}
-	}
 
 	INITCOMMONCONTROLSEX settings{.dwSize{sizeof(INITCOMMONCONTROLSEX)}};
 	InitCommonControlsEx(&settings);
