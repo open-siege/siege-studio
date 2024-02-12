@@ -10,6 +10,30 @@ struct bitmap_window
 	{
 	}
 
+    auto on_create(const win32::create_message&)
+    {
+        auto button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
+						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+						.x = CW_USEDEFAULT,       
+						.y = 10,
+						.cx = CW_USEDEFAULT,  
+						.cy = 100       
+						}, self, win32::button::class_name, L"Bitmap window");
+
+		win32::SetWindowSubclass(button_instance, [](win32::hwnd_t button, win32::message button_message) -> std::optional<LRESULT>
+						{
+							if (button_message.message == win32::command_message::id)
+							{
+								MessageBoxExW(GetParent(button), L"Hello world", L"Test Message", 0, 0);
+								return 0;
+							}
+
+							return std::nullopt;
+						});
+        return 0;
+    }
+
+
     static bool is_bitmap(std::istream& raw_data)
     {
         return false;
@@ -24,6 +48,29 @@ struct pal_window
 	{
 	}
 
+    auto on_create(const win32::create_message&)
+    {
+        auto button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
+						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+						.x = 10,       
+						.y = 10,
+						.cx = 100,  
+						.cy = 100       
+						}, self, win32::button::class_name, L"Pal window");
+
+		win32::SetWindowSubclass(button_instance, [](win32::hwnd_t button, win32::message button_message) -> std::optional<LRESULT>
+						{
+							if (button_message.message == win32::command_message::id)
+							{
+								MessageBoxExW(GetParent(button), L"Hello world", L"Test Message", 0, 0);
+								return 0;
+							}
+
+							return std::nullopt;
+						});
+        return 0;
+    }
+
     static bool is_pal(std::istream& raw_data)
     {
         return false;
@@ -37,6 +84,29 @@ struct pal_mapping_window
     pal_mapping_window(win32::hwnd_t self, const CREATESTRUCTW&)
 	{
 	}
+
+    auto on_create(const win32::create_message&)
+    {
+        auto button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
+						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+						.x = 10,       
+						.y = 10,
+						.cx = 100,  
+						.cy = 100       
+						}, self, win32::button::class_name, L"Pal Mapping window");
+
+		win32::SetWindowSubclass(button_instance, [](win32::hwnd_t button, win32::message button_message) -> std::optional<LRESULT>
+						{
+							if (button_message.message == win32::command_message::id)
+							{
+								MessageBoxExW(GetParent(button), L"Hello world", L"Test Message", 0, 0);
+								return 0;
+							}
+
+							return std::nullopt;
+						});
+        return 0;
+    }
 };
 
 
