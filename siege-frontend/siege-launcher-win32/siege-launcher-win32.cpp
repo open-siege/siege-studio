@@ -118,51 +118,19 @@ struct siege_main_window
 
 	auto on_create(const win32::create_message&)
 	{
-		auto button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
-						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-						.x = 10,       
-						.y = 10,
-						.cx = 100,  
-						.cy = 100       
-						}, self, win32::button::class_name, L"Click me");
+		RECT parent_size{};
 
-		win32::SetWindowSubclass(button_instance, [](win32::hwnd_t button, win32::message button_message) -> std::optional<LRESULT>
-						{
-							if (button_message.message == win32::command_message::id)
-							{
-								MessageBoxExW(GetParent(button), L"Hello world", L"Test Message", 0, 0);
-								return 0;
-							}
-
-							return std::nullopt;
-						});
-
-		win32::CreateWindowExW(CREATESTRUCTW{
-						.hwndParent = self,              
-						.cy = 100,
-						.cx = 100,                
-						.y = 110, 
-						.x = 10,       
-						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-						.lpszClass = win32::edit::class_name});
-
-		win32::CreateWindowExW(CREATESTRUCTW{
-						.hwndParent = self,
-						.cy = 100,
-						.cx = 100,
-						.y = 210,
-						.x = 10,   
-						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-						.lpszClass = win32::combo_box::class_name
-		});
-
+		if (GetWindowRect(self, &parent_size))
+		{
+						
+		}
 
 		auto tab_control_instance = win32::CreateWindowExW(CREATESTRUCTW {
 						.hwndParent = self,
-						.cy = 300,
-						.cx = 600,
-						.y = 310,
-						.x = 10,
+						.cy = parent_size.bottom,
+						.cx = parent_size.right,
+						.y = 0,
+						.x = 0,
 						.style = WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE | TCS_MULTILINE | TCS_RIGHTJUSTIFY, 
 						.lpszClass = win32::tab_control::class_name
 					});
@@ -178,30 +146,24 @@ struct siege_main_window
 					};
 
 				SendMessageW(tab_control_instance, TCM_INSERTITEM, index, std::bit_cast<win32::lparam_t>(&newItem));
+
+				if (index == 1)
+				{
+					SetRectEmpty(&parent_size);
+					SendMessageW(tab_control_instance, TCM_GETITEMRECT, index, &parent_size);
+					win32::CreateWindowExW(CREATESTRUCTW {
+							.hwndParent = tab_control_instance,
+							.cy = parent_size.bottom,
+							.cx = parent_size.right,
+							.y = parent_size.top,
+							.x = parent_size.left,
+							.style = WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE | TCS_MULTILINE | TCS_RIGHTJUSTIFY, 
+							.lpszClass = window.first.c_str()
+						});	
+				}
 				index++;
 			}
-
 		}
-
-
-		//std::array<wchar_t, 10> text {L"Test"};
-
-		//TCITEMW newItem {
-		//				.mask = TCIF_TEXT,
-		//				.pszText = text.data()
-		//			};
-
-		//SendMessageW(tab_control_instance, TCM_INSERTITEM, 0, std::bit_cast<win32::lparam_t>(&newItem));
-		//			
-		//text.fill('\0');
-		//std::memcpy(text.data(), L"Another", 14);
-		//newItem.pszText = text.data();
-		//SendMessageW(tab_control_instance, TCM_INSERTITEM, 1, std::bit_cast<win32::lparam_t>(&newItem));
-
-		//text.fill('\0');
-		//std::memcpy(text.data(), L"Tab", 6);
-		//newItem.pszText = text.data();
-		//SendMessageW(tab_control_instance, TCM_INSERTITEM, 2, std::bit_cast<win32::lparam_t>(&newItem));
 		
 		return 0;
 	}
