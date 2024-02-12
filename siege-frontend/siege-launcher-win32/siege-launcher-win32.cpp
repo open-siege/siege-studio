@@ -150,14 +150,14 @@ struct siege_main_window
 				if (index == 1)
 				{
 					SetRectEmpty(&parent_size);
-					SendMessageW(tab_control_instance, TCM_GETITEMRECT, index, &parent_size);
+					SendMessageW(tab_control_instance, TCM_GETITEMRECT, index, std::bit_cast<win32::lparam_t>(&parent_size));
 					win32::CreateWindowExW(CREATESTRUCTW {
 							.hwndParent = tab_control_instance,
 							.cy = parent_size.bottom,
 							.cx = parent_size.right,
 							.y = parent_size.top,
 							.x = parent_size.left,
-							.style = WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE | TCS_MULTILINE | TCS_RIGHTJUSTIFY, 
+							.style = WS_CHILD | WS_VISIBLE | CCS_BOTTOM, 
 							.lpszClass = window.first.c_str()
 						});	
 				}
