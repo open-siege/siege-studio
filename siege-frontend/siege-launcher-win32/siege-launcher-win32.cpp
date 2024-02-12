@@ -120,7 +120,7 @@ struct siege_main_window
 	{
 		RECT parent_size{};
 
-		if (GetWindowRect(self, &parent_size))
+		if (GetClientRect (self, &parent_size))
 		{
 						
 		}
@@ -134,6 +134,11 @@ struct siege_main_window
 						.style = WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE | TCS_MULTILINE | TCS_RIGHTJUSTIFY, 
 						.lpszClass = win32::tab_control::class_name
 					});
+
+		if (GetClientRect (tab_control_instance, &parent_size))
+		{
+						
+		}
 
 		for (auto& plugin : loaded_modules)
 		{
@@ -149,17 +154,21 @@ struct siege_main_window
 
 				if (index == 1)
 				{
-					SetRectEmpty(&parent_size);
-					SendMessageW(tab_control_instance, TCM_GETITEMRECT, index, std::bit_cast<win32::lparam_t>(&parent_size));
-					win32::CreateWindowExW(CREATESTRUCTW {
+				//	SetRectEmpty(&parent_size);
+					SendMessageW(tab_control_instance, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&parent_size));
+					if (!win32::CreateWindowExW(CREATESTRUCTW {
+							.hInstance = plugin.module.get(),
 							.hwndParent = tab_control_instance,
 							.cy = parent_size.bottom,
 							.cx = parent_size.right,
 							.y = parent_size.top,
 							.x = parent_size.left,
-							.style = WS_CHILD | WS_VISIBLE | CCS_BOTTOM, 
+							.style = WS_CHILD | WS_VISIBLE, 
 							.lpszClass = window.first.c_str()
-						});	
+						}))
+					{
+						DebugBreak();
+					}
 				}
 				index++;
 			}

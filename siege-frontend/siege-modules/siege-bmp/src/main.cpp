@@ -6,7 +6,9 @@ struct bitmap_window
 {
     constexpr static std::u8string_view formats = u8".jpg .jpeg .gif .png .tag .bmp .dib .pba .dmb .db0 .db1 .db2 .hba .hb0 .hb1 .hb2";
 
-    bitmap_window(win32::hwnd_t self, const CREATESTRUCTW&)
+    win32::hwnd_t self;
+
+    bitmap_window(win32::hwnd_t self, const CREATESTRUCTW&) : self(self)
 	{
 	}
 
@@ -14,9 +16,9 @@ struct bitmap_window
     {
         auto button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
 						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-						.x = CW_USEDEFAULT,       
-						.y = 10,
-						.cx = CW_USEDEFAULT,  
+						.x = 0,       
+						.y = 0,
+						.cx = 100,  
 						.cy = 100       
 						}, self, win32::button::class_name, L"Bitmap window");
 
@@ -44,18 +46,27 @@ struct pal_window
 {
     constexpr static std::u8string_view formats = u8".pal .ipl .ppl .dpl";
 
-    pal_window(win32::hwnd_t self, const CREATESTRUCTW&)
+    win32::hwnd_t self;
+
+    pal_window(win32::hwnd_t self, const CREATESTRUCTW&) : self(self)
 	{
 	}
 
     auto on_create(const win32::create_message&)
     {
+        RECT parent_size{};
+
+		if (GetClientRect(self, &parent_size))
+		{
+						
+		}
+
         auto button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
 						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-						.x = 10,       
-						.y = 10,
-						.cx = 100,  
-						.cy = 100       
+						.x = 0,       
+						.y = 0,
+						.cx = short(parent_size.right),  
+						.cy = short(parent_size.bottom)     
 						}, self, win32::button::class_name, L"Pal window");
 
 		win32::SetWindowSubclass(button_instance, [](win32::hwnd_t button, win32::message button_message) -> std::optional<LRESULT>
@@ -81,7 +92,8 @@ struct pal_mapping_window
 {
     constexpr static std::u8string_view formats = u8"palettes.settings.json";
 
-    pal_mapping_window(win32::hwnd_t self, const CREATESTRUCTW&)
+    win32::hwnd_t self;
+    pal_mapping_window(win32::hwnd_t self, const CREATESTRUCTW&) : self(self)
 	{
 	}
 
@@ -89,8 +101,8 @@ struct pal_mapping_window
     {
         auto button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
 						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-						.x = 10,       
-						.y = 10,
+						.x = 0,       
+						.y = 0,
 						.cx = 100,  
 						.cy = 100       
 						}, self, win32::button::class_name, L"Pal Mapping window");

@@ -7,6 +7,8 @@ struct volume_window
     constexpr static std::u8string_view formats = 
             u8".vol .rmf .mis .rmf .map .rbx .tbv .zip .vl2 .pk3 .iso .mds .cue .nrg .7z .tgz .rar .cab .z .cln .atd";
 
+    win32::hwnd_t self;
+
     volume_window(win32::hwnd_t self, const CREATESTRUCTW&) : self(self)
 	{
 	}
@@ -15,25 +17,25 @@ struct volume_window
     {
         RECT parent_size{};
 
-		if (GetWindowRect(self, &parent_size))
+		if (GetClientRect(self, &parent_size))
 		{
 						
 		}
 
         auto table = win32::CreateWindowExW(DLGITEMTEMPLATE{
-						.style = WS_VISIBLE | WS_CHILD | LVS_REPORT, CCS_TOP
+						.style = WS_VISIBLE | WS_CHILD | LVS_REPORT | CCS_TOP,
 						.x = 0,       
 						.y = 0,
-						.cx = parent_size.right,  
-						.cy = parent_size.bottom       
+						.cx = short(parent_size.right),  
+						.cy = short(parent_size.bottom)       
 						}, self, win32::list_view::class_name, L"Volume");
 
         std::array<LVCOLUMNW, 4> columns{{
-            LVCOLUMNW{.mask = LVCF_TEXT, .pszText = "Filename"},
-            LVCOLUMNW{.mask = LVCF_TEXT, .pszText = "Path"},
-            LVCOLUMNW{.mask = LVCF_TEXT, .pszText = "Size (in bytes)"},
-            LVCOLUMNW{.mask = LVCF_TEXT, .pszText = "Compression Method"}
-        }};
+            LVCOLUMNW{.mask = LVCF_TEXT, .pszText = const_cast<wchar_t*>(L"Filename")},
+            LVCOLUMNW{.mask = LVCF_TEXT, .pszText = const_cast<wchar_t*>(L"Path")},
+            LVCOLUMNW{.mask = LVCF_TEXT, .pszText = const_cast<wchar_t*>(L"Size (in bytes)")},
+            LVCOLUMNW{.mask = LVCF_TEXT, .pszText = const_cast<wchar_t*>(L"Compression Method")}
+    }};
 
         auto index = 0;
         for (auto& column : columns)
@@ -65,9 +67,6 @@ struct vol_module
             });
 
         SetPropW(self, win32::type_name<volume_window>().c_str(), std::bit_cast<void*>(volume_window::formats.data()));
-
-        SetPropW(self, L"All Images", std::bit_cast<void*>(volume_window::formats.data()));
-        SetPropW(self, L"All Palettes", std::bit_cast<void*>(pal_window::formats.data()));
 
         is_supported_id = RegisterWindowMessageW(L"is_supported_message");
     }
