@@ -54,7 +54,9 @@ struct siege_module
 			FreeLibrary(module);
 		}
 		}), 
-		descriptor(module ? FindWindowExW(HWND_MESSAGE, nullptr, module_path.stem().c_str(), nullptr) : nullptr),
+		descriptor(module ? FindDirectChildWindow(HWND_MESSAGE, module_path.stem().c_str(), [instance = module.get()](hwnd_t child) {
+			return GetWindowLongPtrW(child, GWLP_HINSTANCE) == instance;
+		}) : nullptr),
 		data(std::nullopt)
 		
 	{
