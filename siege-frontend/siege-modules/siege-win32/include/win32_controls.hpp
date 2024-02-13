@@ -16,7 +16,6 @@ namespace win32
     using hinstance_t = HINSTANCE;
     using lresult_t = LRESULT;
 
-
     template<typename TWindow>
     std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
     {
@@ -57,6 +56,14 @@ namespace win32
             if (message == command_message::id)
             {
                 return self->on_command(command_message{wParam, lParam});
+            }
+        }
+
+        if constexpr (requires(TWindow t) { t.on_notify(notify_message{wParam, lParam}); })
+        {
+            if (message == notify_message::id)
+            {
+                return self->on_notify(notify_message{wParam, lParam});
             }
         }
 
@@ -542,6 +549,125 @@ namespace win32
         {
             callback(self, key, value);
             return true;
+        });
+    }
+
+    [[maybe_unused]] auto FindPropertyExW(hwnd_t control, std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback)
+    {
+        return EnumPropsExW(control, [callback = std::move(callback)] (auto self, auto key, auto value) mutable
+        {
+            return callback(self, key, value) != false;
+        });
+    }
+
+    struct EnumWindowHandler
+    {
+        static BOOL CALLBACK HandleWindow(hwnd_t window, LPARAM raw_callback)
+        {
+            auto real_callback = std::bit_cast<std::move_only_function<bool(hwnd_t)>*>(raw_callback);
+
+            return real_callback->operator()(window) ? TRUE : FALSE;
+        }
+    };
+
+    [[maybe_unused]] auto EnumWindows(std::move_only_function<bool(hwnd_t)> callback)
+    {
+        return ::EnumWindows(EnumWindowHandler::HandleWindow, std::bit_cast<LPARAM>(&callback));
+    }
+
+    [[maybe_unused]] auto EnumChildWindows(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
+    {
+        return ::EnumChildWindows(parent, EnumWindowHandler::HandleWindow, std::bit_cast<LPARAM>(&callback));
+    }
+
+    [[maybe_unused]] auto EnumThreadWindows(DWORD thread_id, std::move_only_function<bool(hwnd_t)> callback)
+    {
+        return ::EnumThreadWindows(thread_id, EnumWindowHandler::HandleWindow, std::bit_cast<LPARAM>(&callback));
+    }
+
+    [[maybe_unused]] auto ForEachWindow(std::move_only_function<void(hwnd_t)> callback)
+    {
+        return EnumWindows(parent, [callback = std::move(callback)] (auto window) mutable
+        {
+            callback(window);
+            return true;
+        });
+    }
+
+    [[maybe_unused]] auto ForEachChildWindow(hwnd_t parent, std::move_only_function<void(hwnd_t)> callback)
+    {
+        return EnumChildWindows(parent, [callback = std::move(callback)] (auto window) mutable
+        {
+            callback(window);
+            return true;
+        });
+    }
+
+    [[maybe_unused]] auto ForEachThreadWindow(DWORD thread_id, std::move_only_function<void(hwnd_t)> callback)
+    {
+        return EnumThreadWindows(parent, [callback = std::move(callback)] (auto window) mutable
+        {
+            callback(window);
+            return true;
+        });
+    }
+
+    [[maybe_unused]] auto FindWindow(std::move_only_function<bool(hwnd_t)> callback)
+    {
+        return EnumWindows([callback = std::move(callback)] (auto window) mutable
+        {
+            return callback(window) != false;
+        });
+    }
+
+    [[maybe_unused]] auto FindThreadWindow(DWORD thread_id, std::move_only_function<bool(hwnd_t)> callback)
+    {
+        return EnumThreadWindows(thread_id, [callback = std::move(callback)] (auto window) mutable
+        {
+            return callback(window) != false;
+        });
+    }
+
+    auto FindWindowExW(hwnd_t parent, std::wstring_view class_name, std::wstring_view title, std::move_only_function<bool(hwnd_t)> callback)
+    {
+        hwnd_t current_child = nullptr;
+
+        wchar_t* class_name_data = class_name.empty() ? nullptr : class_name.data();
+        wchar_t* title_data = class_name.empty() ? nullptr : title.data();
+
+        do  {
+            current_child = ::FindWindowExW(parent, current_child, class_name_data, title_data);
+
+            if (callback(current_child))
+            {
+                return current_child;
+            }
+        }
+        while (current_child != nullptr);    
+
+        return nullptr;
+    }
+
+    auto FindWindowExW(hwnd_t parent, std::wstring_view class_name, std::move_only_function<bool(hwnd_t)> callback)
+    {
+        return FindWindowExW(parent, class_name, "", std::move(callback));
+    }
+
+    auto FindWindowExW(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
+    {
+        return FindWindowExW(parent, "", "", std::move(callback));
+    }
+
+    [[maybe_unused]] auto FindChildWindow(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
+    {
+        if (parent == HWND_MESSAGE)
+        {
+            return FindWindowExW(parent, std::move(callback));
+        }
+
+        return EnumChildWindows(parent, [callback = std::move(callback)] (auto window) mutable
+        {
+            return callback(window) != false;
         });
     }
 
