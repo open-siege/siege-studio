@@ -43,12 +43,28 @@ namespace win32
 		}
 	};
 
-	struct pre_create_message
+	struct size_message
+	{
+		constexpr static std::uint32_t id = WM_SIZE;
+
+		int type;
+		int width;
+		int height;
+
+		size_message(wparam_t wParam, lparam_t lParam) : 
+			type(wParam),
+			width(LOWORD(lParam)),	
+			height(HIWORD(lParam))
+		{
+		}
+	}
+
+	struct non_client_create_message
 	{
 		constexpr static std::uint32_t id = WM_NCCREATE;
 		CREATESTRUCTW& data;
 
-		pre_create_message(wparam_t, lparam_t lParam) : data(*std::bit_cast<CREATESTRUCTW*>(lParam))
+		non_client_create_message(wparam_t, lparam_t lParam) : data(*std::bit_cast<CREATESTRUCTW*>(lParam))
 		{
 		}
 	};
@@ -230,7 +246,7 @@ namespace win32
 
 	using window_message = std::variant<message,
 		command_message,
-		pre_create_message,
+		non_client_create_message,
 		create_message,
 		init_dialog_message,
 		destroy_message,

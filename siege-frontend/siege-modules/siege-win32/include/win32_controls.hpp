@@ -19,11 +19,11 @@ namespace win32
     template<typename TWindow>
     std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
     {
-        if constexpr (requires(TWindow t) { t.on_pre_create(pre_create_message{wParam, lParam}); })
+        if constexpr (requires(TWindow t) { t.on_non_client_create(non_client_create_message{wParam, lParam}); })
         {
-            if (message == pre_create_message::id)
+            if (message == non_client_create_message::id)
             {
-                return self->on_pre_create(pre_create_message{wParam, lParam});
+                return self->on_non_client_create(non_client_create_message{wParam, lParam});
             }
         }
 
@@ -64,6 +64,14 @@ namespace win32
             if (message == notify_message::id)
             {
                 return self->on_notify(notify_message{wParam, lParam});
+            }
+        }
+
+        if constexpr (requires(TWindow t) { t.on_size(size_message{wParam, lParam}); })
+        {
+            if (message == size_message::id)
+            {
+                return self->on_size(size_message{wParam, lParam});
             }
         }
 
@@ -154,7 +162,7 @@ namespace win32
                 {
                     std::array<LONG_PTR, data_size + extra_size> raw_data{};
 
-                    if (message == pre_create_message::id)
+                    if (message == non_client_create_message::id)
                     {
                         auto* pCreate = std::bit_cast<CREATESTRUCTW*>(lParam);
 
@@ -179,7 +187,7 @@ namespace win32
                 }
                 else
                 {
-                    if (message == pre_create_message::id)
+                    if (message == non_client_create_message::id)
                     {
                         auto heap = ::GetProcessHeap();
                         auto size = sizeof(TWindow);
@@ -280,7 +288,7 @@ namespace win32
                 {
                     std::array<LONG_PTR, data_size + extra_size> raw_data{};
 
-                    if (message == pre_create_message::id)
+                    if (message == non_client_create_message::id)
                     {
                         auto ref_count = GetClassLongPtrW(hWnd, 0);
                         auto* pCreate = std::bit_cast<CREATESTRUCTW*>(lParam);
@@ -313,7 +321,7 @@ namespace win32
                 }
                 else
                 {
-                    if (message == pre_create_message::id)
+                    if (message == non_client_create_message::id)
                     {
                         auto ref_count = GetClassLongPtrW(hWnd, 0);
 
