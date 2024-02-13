@@ -54,8 +54,8 @@ struct siege_module
 			FreeLibrary(module);
 		}
 		}), 
-		descriptor(module ? FindDirectChildWindow(HWND_MESSAGE, module_path.stem().c_str(), [instance = module.get()](hwnd_t child) {
-			return GetWindowLongPtrW(child, GWLP_HINSTANCE) == instance;
+		descriptor(module ? win32::FindDirectChildWindow(HWND_MESSAGE, module_path.stem().c_str(), [instance = module.get()](win32::hwnd_t child) {
+			return GetWindowLongPtrW(child, GWLP_HINSTANCE) == reinterpret_cast<LONG_PTR>(instance);
 		}) : nullptr),
 		data(std::nullopt)
 		
@@ -179,12 +179,15 @@ struct siege_main_window
 		if (code == TCN_SELCHANGE)
 		{
 			auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
-			auto child = FindDirectChildWindow(sender, [index = 0](auto) mutable {
+			auto child = win32::FindDirectChildWindow(sender, [index = 0, current_index](auto) mutable {
 				return index++ == current_index;
 			});
 			
-			ForEachChildWindow(sender, [](auto child) {
-				ShowWindow(child, SW_HIDE);
+			win32::ForEachChildWindow(sender, [sender](auto child) {
+				if (GetParent(child) == sender)
+				{
+					ShowWindow(child, SW_HIDE);
+				}
 			});
 
 			ShowWindow(child, SW_SHOW);
@@ -200,9 +203,9 @@ struct siege_main_window
 	}
 
 	std::optional<LRESULT> on_command(const win32::command_message& command) {
-				if (IsChild(self, command.handle))
+				if (IsChild(self, command.sender))
 				{
-					return SendMessageW(command.handle, win32::command_message::id, command.wparam(), command.lparam());
+					return SendMessageW(command.sender, win32::command_message::id, command.wparam(), command.lparam());
 				}
 					
 				if (command.identifier == IDM_ABOUT)
