@@ -154,24 +154,17 @@ struct siege_main_window
 
 				SendMessageW(tab_control_instance, TCM_INSERTITEM, index, std::bit_cast<win32::lparam_t>(&newItem));
 
-				if (index == 1)
-				{
-				//	SetRectEmpty(&parent_size);
-					SendMessageW(tab_control_instance, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&parent_size));
-					if (!win32::CreateWindowExW(CREATESTRUCTW {
+				SendMessageW(tab_control_instance, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&parent_size));
+				win32::CreateWindowExW(CREATESTRUCTW {
 							.hInstance = plugin.module.get(),
 							.hwndParent = tab_control_instance,
 							.cy = parent_size.bottom,
 							.cx = parent_size.right,
 							.y = parent_size.top,
 							.x = parent_size.left,
-							.style = WS_CHILD | WS_VISIBLE, 
+							.style = index == 0 ? WS_CHILD | WS_VISIBLE : WS_CHILD, 
 							.lpszClass = window.first.c_str()
-						}))
-					{
-						DebugBreak();
-					}
-				}
+						});
 				index++;
 			}
 		}
@@ -186,6 +179,15 @@ struct siege_main_window
 		if (code == TCN_SELCHANGE)
 		{
 			auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
+			auto child = FindDirectChildWindow(sender, [index = 0](auto) mutable {
+				return index++ == current_index;
+			});
+			
+			ForEachChildWindow(sender, [](auto child) {
+				ShowWindow(child, SW_HIDE);
+			});
+
+			ShowWindow(child, SW_SHOW);
 		}
 
 		return 0;
@@ -220,7 +222,6 @@ struct siege_main_window
 										{
 											std::array<wchar_t, 32> class_name;
 											GetClassName(self, class_name.data(), class_name.size());
-										//	PostThreadMessageW(GetThreadId(worker.native_handle()), WM_COUT, 0, reinterpret_cast<win32::lparam_t>(class_name.data()));
 											EndDialog(self, dialog_command.identifier);
 											return (INT_PTR)TRUE;
 										}
