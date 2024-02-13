@@ -177,6 +177,18 @@ struct siege_main_window
 		return 0;
 	}
 
+	auto on_notify(win32::notify_message notification)
+	{
+		auto [sender, id, code] = notification;
+
+		if (code == TCN_SELCHANGE)
+		{
+			auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
+		}
+
+		return 0;
+	}
+
 
 	std::optional<LRESULT> on_destroy(const win32::destroy_message& command) {	
 				PostQuitMessage(0);

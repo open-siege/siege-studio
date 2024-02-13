@@ -76,13 +76,14 @@ namespace win32
 	{
 		constexpr static std::uint32_t id = WM_COMMAND;
 		
-		int notification_code;
+		hwnd_t sender;
 		int identifier;
-		hwnd_t handle;
+		int notification_code;
 
-		command_message(wparam_t wParam, lparam_t lParam) : notification_code(HIWORD(wParam)),
-				identifier(LOWORD(wParam)),
-				handle(std::bit_cast<hwnd_t>(lParam))
+		command_message(wparam_t wParam, lparam_t lParam) : 
+			sender(std::bit_cast<hwnd_t>(lParam)),
+			identifier(LOWORD(wParam)),
+			notification_code(HIWORD(wParam))
 		{
 		}
 
@@ -93,7 +94,27 @@ namespace win32
 
 		inline lparam_t lparam() const noexcept
 		{
-			return std::bit_cast<lparam_t>(handle);
+			return std::bit_cast<lparam_t>(sender);
+		}
+	};
+
+	struct notify_message
+	{
+		constexpr static std::uint32_t id = WM_NOTIFY;
+
+		hwnd_t sender;
+		int identifier;
+		int notification_code;
+
+		notify_message(wparam_t, lparam_t lParam) : 
+			sender(nullptr),
+			identifier(0),
+			notification_code(0)
+		{
+			NMHDR* header = std::bit_cast<NMHDR*>(lParam);
+			sender = header->hwndFrom;
+			identifier = header->idFrom;
+			notification_code = header->code;
 		}
 	};
 
