@@ -595,7 +595,7 @@ namespace win32
 
     [[maybe_unused]] auto ForEachWindow(std::move_only_function<void(hwnd_t)> callback)
     {
-        return EnumWindows(parent, [callback = std::move(callback)] (auto window) mutable
+        return EnumWindows([callback = std::move(callback)] (auto window) mutable
         {
             callback(window);
             return true;
@@ -613,7 +613,7 @@ namespace win32
 
     [[maybe_unused]] auto ForEachThreadWindow(DWORD thread_id, std::move_only_function<void(hwnd_t)> callback)
     {
-        return EnumThreadWindows(parent, [callback = std::move(callback)] (auto window) mutable
+        return EnumThreadWindows(thread_id, [callback = std::move(callback)] (auto window) mutable
         {
             callback(window);
             return true;
@@ -622,26 +622,44 @@ namespace win32
 
     [[maybe_unused]] auto FindWindow(std::move_only_function<bool(hwnd_t)> callback)
     {
-        return EnumWindows([callback = std::move(callback)] (auto window) mutable
+        hwnd_t result = nullptr;
+        EnumWindows([callback = std::move(callback), &result] (auto window) mutable
         {
-            return callback(window) != false;
+            if (callback(window))
+            {
+                result = window;
+                return false;
+            }
+            return true;
         });
+
+        return result;
     }
 
     [[maybe_unused]] auto FindThreadWindow(DWORD thread_id, std::move_only_function<bool(hwnd_t)> callback)
     {
-        return EnumThreadWindows(thread_id, [callback = std::move(callback)] (auto window) mutable
+        hwnd_t result = nullptr;
+        
+        EnumThreadWindows(thread_id, [callback = std::move(callback), &result] (auto window) mutable
         {
-            return callback(window) != false;
+            if (callback(window))
+            {
+                result = window;
+                return false;
+            }
+
+            return true;
         });
+
+        return result;
     }
 
-    auto FindDirectChildWindow(hwnd_t parent, std::wstring_view class_name, std::wstring_view title, std::move_only_function<bool(hwnd_t)> callback)
+    hwnd_t FindDirectChildWindow(hwnd_t parent, std::wstring_view class_name, std::wstring_view title, std::move_only_function<bool(hwnd_t)> callback)
     {
         hwnd_t current_child = nullptr;
 
-        wchar_t* class_name_data = class_name.empty() ? nullptr : class_name.data();
-        wchar_t* title_data = class_name.empty() ? nullptr : title.data();
+        const wchar_t* class_name_data = class_name.empty() ? nullptr : class_name.data();
+        const wchar_t* title_data = class_name.empty() ? nullptr : title.data();
 
         do  {
             current_child = ::FindWindowExW(parent, current_child, class_name_data, title_data);
@@ -658,12 +676,12 @@ namespace win32
 
     auto FindDirectChildWindow(hwnd_t parent, std::wstring_view class_name, std::move_only_function<bool(hwnd_t)> callback)
     {
-        return FindDirectChildWindow(parent, class_name, "", std::move(callback));
+        return FindDirectChildWindow(parent, class_name, L"", std::move(callback));
     }
 
     auto FindDirectChildWindow(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
     {
-        return FindDirectChildWindow(parent, "", "", std::move(callback));
+        return FindDirectChildWindow(parent, L"", L"", std::move(callback));
     }
 
     [[maybe_unused]] auto FindChildWindow(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
@@ -673,10 +691,20 @@ namespace win32
             return FindDirectChildWindow(parent, std::move(callback));
         }
 
-        return EnumChildWindows(parent, [callback = std::move(callback)] (auto window) mutable
+        hwnd_t result = nullptr;
+
+        EnumChildWindows(parent, [callback = std::move(callback), &result] (auto window) mutable
         {
-            return callback(window) != false;
+            if (callback(window))
+            {
+                result = window;
+                return false;
+            }
+
+            return true;
         });
+
+        return result;
     }
 
     struct button

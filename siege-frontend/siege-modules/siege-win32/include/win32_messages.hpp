@@ -57,7 +57,7 @@ namespace win32
 			height(HIWORD(lParam))
 		{
 		}
-	}
+	};
 
 	struct non_client_create_message
 	{
