@@ -628,7 +628,7 @@ namespace win32
         });
     }
 
-    auto FindWindowExW(hwnd_t parent, std::wstring_view class_name, std::wstring_view title, std::move_only_function<bool(hwnd_t)> callback)
+    auto FindDirectChildWindow(hwnd_t parent, std::wstring_view class_name, std::wstring_view title, std::move_only_function<bool(hwnd_t)> callback)
     {
         hwnd_t current_child = nullptr;
 
@@ -648,21 +648,21 @@ namespace win32
         return nullptr;
     }
 
-    auto FindWindowExW(hwnd_t parent, std::wstring_view class_name, std::move_only_function<bool(hwnd_t)> callback)
+    auto FindDirectChildWindow(hwnd_t parent, std::wstring_view class_name, std::move_only_function<bool(hwnd_t)> callback)
     {
-        return FindWindowExW(parent, class_name, "", std::move(callback));
+        return FindDirectChildWindow(parent, class_name, "", std::move(callback));
     }
 
-    auto FindWindowExW(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
+    auto FindDirectChildWindow(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
     {
-        return FindWindowExW(parent, "", "", std::move(callback));
+        return FindDirectChildWindow(parent, "", "", std::move(callback));
     }
 
     [[maybe_unused]] auto FindChildWindow(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
     {
         if (parent == HWND_MESSAGE)
         {
-            return FindWindowExW(parent, std::move(callback));
+            return FindDirectChildWindow(parent, std::move(callback));
         }
 
         return EnumChildWindows(parent, [callback = std::move(callback)] (auto window) mutable
