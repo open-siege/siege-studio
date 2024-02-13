@@ -17,5 +17,5 @@ if (WIN32)
                 COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-dts> $<TARGET_FILE_DIR:siege-launcher-win32>
                 COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-vol> $<TARGET_FILE_DIR:siege-launcher-win32>)
 
-    add_dependencies(copy-when-done siege-bmp siege-launcher-win32)
+    add_dependencies(copy-when-done siege-bmp siege-dts siege-vol siege-sfx siege-launcher-win32)
 endif()

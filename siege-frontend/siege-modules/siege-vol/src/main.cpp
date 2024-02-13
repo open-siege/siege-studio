@@ -23,7 +23,7 @@ struct volume_window
 		}
 
         auto table = win32::CreateWindowExW(DLGITEMTEMPLATE{
-						.style = WS_VISIBLE | WS_CHILD | LVS_REPORT | CCS_TOP,
+						.style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
 						.x = 0,       
 						.y = 0,
 						.cx = short(parent_size.right),  
@@ -31,10 +31,10 @@ struct volume_window
 						}, self, win32::list_view::class_name, L"Volume");
 
         std::array<LVCOLUMNW, 4> columns{{
-            LVCOLUMNW{.mask = LVCF_TEXT, .pszText = const_cast<wchar_t*>(L"Filename")},
-            LVCOLUMNW{.mask = LVCF_TEXT, .pszText = const_cast<wchar_t*>(L"Path")},
-            LVCOLUMNW{.mask = LVCF_TEXT, .pszText = const_cast<wchar_t*>(L"Size (in bytes)")},
-            LVCOLUMNW{.mask = LVCF_TEXT, .pszText = const_cast<wchar_t*>(L"Compression Method")}
+            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size.right / 4, .pszText = const_cast<wchar_t*>(L"Filename"), .cchTextMax = 8},
+            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size.right / 4, .pszText = const_cast<wchar_t*>(L"Path"), .cchTextMax = 4},
+            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size.right / 4 ,.pszText = const_cast<wchar_t*>(L"Size (in bytes)"), .cchTextMax = 15},
+            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size.right / 4 ,.pszText = const_cast<wchar_t*>(L"Compression Method"), .cchTextMax = 18}
     }};
 
         auto index = 0;
@@ -46,7 +46,6 @@ struct volume_window
 
         return 0;
     }
-
 
     static bool is_bitmap(std::istream& raw_data)
     {
