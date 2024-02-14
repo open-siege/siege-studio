@@ -35,6 +35,15 @@ struct bitmap_window
         return 0;
     }
 
+    auto on_pos_changed(win32::pos_changed_message sized)
+	{
+		win32::ForEachDirectChildWindow(self, [&](auto child) {
+			win32::SetWindowPos(child, SIZE{sized.data.cx, sized.data.cy});
+		});
+
+		return std::nullopt;
+	}
+
 
     static bool is_bitmap(std::istream& raw_data)
     {

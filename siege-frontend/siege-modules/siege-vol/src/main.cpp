@@ -23,7 +23,7 @@ struct volume_window
 		}
 
         auto table = win32::CreateWindowExW(DLGITEMTEMPLATE{
-						.style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
+						.style = WS_VISIBLE | WS_CHILD | LVS_REPORT | CCS_TOP,
 						.x = 0,       
 						.y = 0,
 						.cx = short(parent_size.right),  
@@ -46,6 +46,15 @@ struct volume_window
 
         return 0;
     }
+
+    auto on_pos_changed(win32::pos_changed_message sized)
+	{
+		win32::ForEachDirectChildWindow(self, [&](auto child) {
+			win32::SetWindowPos(child, SIZE{sized.data.cx, sized.data.cy});
+		});
+
+		return std::nullopt;
+	}
 
     static bool is_bitmap(std::istream& raw_data)
     {

@@ -75,6 +75,14 @@ namespace win32
             }
         }
 
+        if constexpr (requires(TWindow t) { t.on_pos_changed(pos_changed_message{wParam, lParam}); })
+        {
+            if (message == pos_changed_message::id)
+            {
+                return self->on_pos_changed(pos_changed_message{wParam, lParam});
+            }
+        }
+
         if constexpr (requires(TWindow t) { t.on_keyboard_key_up(keyboard_key_up_message{wParam, lParam}); })
         {
             if (message == keyboard_key_up_message::id)
@@ -664,7 +672,7 @@ namespace win32
         do  {
             current_child = ::FindWindowExW(parent, current_child, class_name_data, title_data);
 
-            if (callback(current_child))
+            if (current_child && callback(current_child))
             {
                 return current_child;
             }
@@ -682,6 +690,19 @@ namespace win32
     auto FindDirectChildWindow(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
     {
         return FindDirectChildWindow(parent, L"", L"", std::move(callback));
+    }
+
+    auto ForEachDirectChildWindow(hwnd_t parent, std::move_only_function<void(hwnd_t)> callback)
+    {
+        return EnumChildWindows(parent, [callback = std::move(callback), parent] (auto window) mutable
+        {
+            if (GetParent(window) == parent)
+            {
+                callback(window);
+            }
+
+            return true;
+        });
     }
 
     [[maybe_unused]] auto FindChildWindow(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
@@ -705,6 +726,58 @@ namespace win32
         });
 
         return result;
+    }
+
+    std::optional<RECT> GetWindowRect(hwnd_t control)
+    {
+        RECT result;
+        if (::GetWindowRect(control, &result))
+        {
+            return result;
+        }
+
+        return std::nullopt;
+    }
+
+    std::optional<RECT> GetClientRect(hwnd_t control)
+    {
+        RECT result;
+        if (::GetClientRect(control, &result))
+        {
+            return result;
+        }
+
+        return std::nullopt;
+    }
+
+    auto SetWindowPos(hwnd_t hWnd, RECT position_and_size, hwnd_t hWndInsertAfter = nullptr, UINT uFlags = 0)
+    {
+        return ::SetWindowPos(hWnd, hWndInsertAfter, position_and_size.left, position_and_size.top, position_and_size.right, position_and_size.bottom, uFlags);
+    }
+
+    auto SetWindowPos(hwnd_t hWnd, POINT position, SIZE size, hwnd_t hWndInsertAfter = nullptr, UINT uFlags = 0)
+    {
+        return ::SetWindowPos(hWnd, hWndInsertAfter, position.x, position.y, size.cx, size.cy, uFlags);
+    }
+
+    auto SetWindowPos(hwnd_t hWnd, POINT position, hwnd_t hWndInsertAfter = nullptr, UINT uFlags = 0)
+    {
+        return ::SetWindowPos(hWnd, hWndInsertAfter, position.x, position.y, 0, 0, uFlags | SWP_NOSIZE);
+    }
+
+    auto SetWindowPos(hwnd_t hWnd , SIZE size, hwnd_t hWndInsertAfter = nullptr, UINT uFlags = 0)
+    {
+        return ::SetWindowPos(hWnd, hWndInsertAfter, 0, 0, size.cx, size.cy, uFlags | SWP_NOMOVE);
+    }
+
+    auto MoveWindow(hwnd_t hWnd, RECT position_and_size, bool repaint)
+    {
+        return ::MoveWindow(hWnd, position_and_size.left, position_and_size.top, position_and_size.right, position_and_size.bottom, repaint ? TRUE : FALSE);
+    }
+
+    auto MoveWindow(hwnd_t hWnd, POINT position, SIZE size, bool repaint)
+    {
+        return ::MoveWindow(hWnd, position.x, position.y, size.cx, size.cy, repaint ? TRUE : FALSE);
     }
 
     struct button

@@ -48,13 +48,20 @@ namespace win32
 		constexpr static std::uint32_t id = WM_SIZE;
 
 		int type;
-		int width;
-		int height;
+		SIZE client_size;
 
 		size_message(wparam_t wParam, lparam_t lParam) : 
 			type(wParam),
-			width(LOWORD(lParam)),	
-			height(HIWORD(lParam))
+			client_size(SIZE{LOWORD(lParam), HIWORD(lParam)})
+		{
+		}
+	};
+
+	struct pos_changed_message
+	{
+		constexpr static std::uint32_t id = WM_WINDOWPOSCHANGED;
+		WINDOWPOS& data;
+		pos_changed_message(wparam_t, lparam_t lParam) : data(*std::bit_cast<WINDOWPOS*>(lParam))
 		{
 		}
 	};
