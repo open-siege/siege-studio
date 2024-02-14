@@ -177,6 +177,24 @@ struct siege_main_window
 		return 0;
 	}
 
+	auto on_size(win32::size_message sized)
+	{
+		win32::ForEachDirectChildWindow(self, [&](auto child) {
+			win32::SetWindowPos(child, sized.client_size);
+			RECT temp {.left = 0, .top = 0, .right = sized.client_size.cx, .bottom = sized.client_size.cy };
+
+			SendMessageW(child, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&temp));
+
+			win32::ForEachDirectChildWindow(child, [&](auto inner) {
+
+//				DebugBreak();
+				win32::SetWindowPos(inner, temp);
+			});
+		});
+
+		return std::nullopt;
+	}
+
 	auto on_notify(win32::notify_message notification)
 	{
 		auto [sender, id, code] = notification;
