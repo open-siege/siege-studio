@@ -31,16 +31,16 @@ struct volume_window
 						}, self, win32::list_view::class_name, L"Volume");
 
         std::array<LVCOLUMNW, 4> columns{{
-            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size.right / 4, .pszText = const_cast<wchar_t*>(L"Filename"), .cchTextMax = 8},
-            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size.right / 4, .pszText = const_cast<wchar_t*>(L"Path"), .cchTextMax = 4},
-            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size.right / 4 ,.pszText = const_cast<wchar_t*>(L"Size (in bytes)"), .cchTextMax = 15},
-            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size.right / 4 ,.pszText = const_cast<wchar_t*>(L"Compression Method"), .cchTextMax = 18}
+            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size.right / 4, .pszText = const_cast<wchar_t*>(L"Filename")},
+            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size.right / 4, .pszText = const_cast<wchar_t*>(L"Path")},
+            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size.right / 4 ,.pszText = const_cast<wchar_t*>(L"Size (in bytes)")},
+            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size.right / 4 ,.pszText = const_cast<wchar_t*>(L"Compression Method")}
     }};
 
         auto index = 0;
         for (auto& column : columns)
         {
-            SendMessageW(table, LVM_INSERTCOLUMN, index, std::bit_cast<win32::lparam_t>(&column));
+            SendMessageW(table, LVM_INSERTCOLUMNW, index, std::bit_cast<win32::lparam_t>(&column));
             index++;
         }
 
