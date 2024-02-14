@@ -750,24 +750,29 @@ namespace win32
         return std::nullopt;
     }
 
-    auto SetWindowPos(hwnd_t hWnd, RECT position_and_size, hwnd_t hWndInsertAfter = nullptr, UINT uFlags = 0)
+    auto SetWindowPos(hwnd_t hWnd, hwnd_t hWndInsertAfter, UINT uFlags = 0)
     {
-        return ::SetWindowPos(hWnd, hWndInsertAfter, position_and_size.left, position_and_size.top, position_and_size.right, position_and_size.bottom, uFlags);
+        return ::SetWindowPos(hWnd, hWndInsertAfter, 0, 0, 0, 0, uFlags | SWP_NOMOVE | SWP_NOSIZE);
     }
 
-    auto SetWindowPos(hwnd_t hWnd, POINT position, SIZE size, hwnd_t hWndInsertAfter = nullptr, UINT uFlags = 0)
+    auto SetWindowPos(hwnd_t hWnd, RECT position_and_size, UINT uFlags = 0)
     {
-        return ::SetWindowPos(hWnd, hWndInsertAfter, position.x, position.y, size.cx, size.cy, uFlags);
+        return ::SetWindowPos(hWnd, nullptr, position_and_size.left, position_and_size.top, position_and_size.right, position_and_size.bottom, uFlags | SWP_NOZORDER);
     }
 
-    auto SetWindowPos(hwnd_t hWnd, POINT position, hwnd_t hWndInsertAfter = nullptr, UINT uFlags = 0)
+    auto SetWindowPos(hwnd_t hWnd, POINT position, SIZE size, UINT uFlags = 0)
     {
-        return ::SetWindowPos(hWnd, hWndInsertAfter, position.x, position.y, 0, 0, uFlags | SWP_NOSIZE);
+        return ::SetWindowPos(hWnd, nullptr, position.x, position.y, size.cx, size.cy, uFlags | SWP_NOZORDER);
     }
 
-    auto SetWindowPos(hwnd_t hWnd , SIZE size, hwnd_t hWndInsertAfter = nullptr, UINT uFlags = 0)
+    auto SetWindowPos(hwnd_t hWnd, POINT position, UINT uFlags = 0)
     {
-        return ::SetWindowPos(hWnd, hWndInsertAfter, 0, 0, size.cx, size.cy, uFlags | SWP_NOMOVE);
+        return ::SetWindowPos(hWnd, nullptr, position.x, position.y, 0, 0, uFlags | SWP_NOSIZE | SWP_NOZORDER);
+    }
+
+    auto SetWindowPos(hwnd_t hWnd, SIZE size, UINT uFlags = 0)
+    {
+        return ::SetWindowPos(hWnd, nullptr, 0, 0, size.cx, size.cy, uFlags | SWP_NOMOVE | SWP_NOZORDER);
     }
 
     auto MoveWindow(hwnd_t hWnd, RECT position_and_size, bool repaint)

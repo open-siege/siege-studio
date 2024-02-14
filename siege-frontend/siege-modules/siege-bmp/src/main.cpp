@@ -35,15 +35,14 @@ struct bitmap_window
         return 0;
     }
 
-    auto on_pos_changed(win32::pos_changed_message sized)
+    auto on_size(win32::size_message sized)
 	{
 		win32::ForEachDirectChildWindow(self, [&](auto child) {
-			win32::SetWindowPos(child, SIZE{sized.data.cx, sized.data.cy});
+			win32::SetWindowPos(child, sized.client_size);
 		});
 
 		return std::nullopt;
 	}
-
 
     static bool is_bitmap(std::istream& raw_data)
     {
@@ -91,6 +90,15 @@ struct pal_window
         return 0;
     }
 
+    auto on_size(win32::size_message sized)
+	{
+		win32::ForEachDirectChildWindow(self, [&](auto child) {
+			win32::SetWindowPos(child, sized.client_size);
+		});
+
+		return std::nullopt;
+	}
+
     static bool is_pal(std::istream& raw_data)
     {
         return false;
@@ -128,6 +136,15 @@ struct pal_mapping_window
 						});
         return 0;
     }
+
+    auto on_size(win32::size_message sized)
+	{
+		win32::ForEachDirectChildWindow(self, [&](auto child) {
+			win32::SetWindowPos(child, sized.client_size);
+		});
+
+		return std::nullopt;
+	}
 };
 
 
