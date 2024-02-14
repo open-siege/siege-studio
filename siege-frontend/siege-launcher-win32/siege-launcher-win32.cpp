@@ -67,7 +67,7 @@ struct siege_module
 			return;
 		}
 
-		data.emplace(std::unique_ptr<void, void(*)(void*)>(HeapAlloc(GetProcessHeap(), 0, 4096 * 2), [](void* data) {
+		data.emplace(std::unique_ptr<void, void(*)(void*)>(HeapAlloc(GetProcessHeap(), 0, 4096 * 4), [](void* data) {
 				if (data)
 				{
 					HeapFree(GetProcessHeap(), 0, data);
@@ -142,9 +142,9 @@ struct siege_main_window
 						
 		}
 
+		int index = 0;
 		for (auto& plugin : loaded_modules)
 		{
-			int index = 0;
 			for (auto& window : plugin.data->available_classes)
 			{
 				TCITEMW newItem {
@@ -152,11 +152,11 @@ struct siege_main_window
 						.pszText = const_cast<wchar_t*>(window.first.c_str())
 					};
 
-				SendMessageW(tab_control_instance, TCM_INSERTITEM, index, std::bit_cast<win32::lparam_t>(&newItem));
+				SendMessageW(tab_control_instance, TCM_INSERTITEMW, index, std::bit_cast<win32::lparam_t>(&newItem));
 
 				SendMessageW(tab_control_instance, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&parent_size));
 
-				win32::CreateWindowExW(CREATESTRUCTW {
+				auto child = win32::CreateWindowExW(CREATESTRUCTW {
 							.hInstance = plugin.module.get(),
 							.hwndParent = tab_control_instance,
 							.cy = parent_size.bottom,
@@ -166,6 +166,8 @@ struct siege_main_window
 							.style = WS_CHILD, 
 							.lpszClass = window.first.c_str()
 						});
+
+				SetWindowLongPtrW(child, GWLP_ID, index);
 				index++;
 			}
 
@@ -180,16 +182,14 @@ struct siege_main_window
 	auto on_size(win32::size_message sized)
 	{
 		win32::ForEachDirectChildWindow(self, [&](auto child) {
-			win32::SetWindowPos(child, sized.client_size);
+			win32::SetWindowPos(child, POINT{}, sized.client_size);
 			RECT temp {.left = 0, .top = 0, .right = sized.client_size.cx, .bottom = sized.client_size.cy };
 
 			SendMessageW(child, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&temp));
 
-			win32::ForEachDirectChildWindow(child, [&](auto inner) {
+			auto top_child = GetWindow(child, GW_CHILD);
 
-//				DebugBreak();
-				win32::SetWindowPos(inner, temp);
-			});
+			win32::SetWindowPos(top_child, temp);
 		});
 
 		return std::nullopt;
@@ -202,9 +202,16 @@ struct siege_main_window
 		if (code == TCN_SELCHANGE)
 		{
 			auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
-			auto child = win32::FindDirectChildWindow(sender, [index = 0, current_index](auto) mutable {
-				return index++ == current_index;
-			});
+			win32::hwnd_t child = GetWindow(sender, GW_CHILD);
+
+			for (auto first = GetWindow(child, GW_HWNDFIRST); first != nullptr; first = GetWindow(first, GW_HWNDNEXT))
+			{
+				if (GetWindowLongPtrW(first, GWLP_ID) == current_index)
+				{
+					child = first;
+					break;
+				}
+			}
 			
 			win32::ForEachChildWindow(sender, [sender](auto child) {
 				if (GetParent(child) == sender)
@@ -212,6 +219,15 @@ struct siege_main_window
 					ShowWindow(child, SW_HIDE);
 				}
 			});
+
+			win32::SetWindowPos(child, HWND_TOP);
+
+			auto temp = win32::GetClientRect(GetParent(sender));
+
+			SendMessageW(sender, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&temp.value()));
+
+			win32::SetWindowPos(child, *temp);
+
 
 			ShowWindow(child, SW_SHOW);
 		}

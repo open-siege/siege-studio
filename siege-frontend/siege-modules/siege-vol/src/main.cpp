@@ -13,7 +13,7 @@ struct volume_window
 	{
 	}
 
-    auto on_create(const win32::create_message&)
+    auto on_create(const win32::create_message& data)
     {
         RECT parent_size{};
 
@@ -41,6 +41,7 @@ struct volume_window
         for (auto& column : columns)
         {
             SendMessageW(table, LVM_INSERTCOLUMNW, index, std::bit_cast<win32::lparam_t>(&column));
+            SendMessageW(table, LVM_SETCOLUMNWIDTH, index, LVSCW_AUTOSIZE);
             index++;
         }
 
