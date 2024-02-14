@@ -155,6 +155,7 @@ struct siege_main_window
 				SendMessageW(tab_control_instance, TCM_INSERTITEM, index, std::bit_cast<win32::lparam_t>(&newItem));
 
 				SendMessageW(tab_control_instance, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&parent_size));
+
 				win32::CreateWindowExW(CREATESTRUCTW {
 							.hInstance = plugin.module.get(),
 							.hwndParent = tab_control_instance,
@@ -162,11 +163,15 @@ struct siege_main_window
 							.cx = parent_size.right,
 							.y = parent_size.top,
 							.x = parent_size.left,
-							.style = index == 0 ? WS_CHILD | WS_VISIBLE : WS_CHILD, 
+							.style = WS_CHILD, 
 							.lpszClass = window.first.c_str()
 						});
 				index++;
 			}
+
+			SendMessageW(tab_control_instance, TCM_SETCURSEL, 0, 0);
+			NMHDR notification{.hwndFrom = tab_control_instance, .code = TCN_SELCHANGE};
+			SendMessageW(self, WM_NOTIFY, 0, std::bit_cast<LPARAM>(&notification));
 		}
 		
 		return 0;
