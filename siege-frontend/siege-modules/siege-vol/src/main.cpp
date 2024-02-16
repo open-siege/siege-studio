@@ -25,16 +25,16 @@ struct volume_window
         short height = 20;
 
         auto toolbar = win32::CreateWindowExW(DLGITEMTEMPLATE{
-						.style = WS_VISIBLE | WS_CHILD | CCS_TOP,
+						.style = WS_VISIBLE | WS_CHILD | CCS_TOP | TBSTYLE_LIST,
 						.x = 0,       
 						.y = height,
 						.cx = short(parent_size.right),  
 						.cy = height       
-						}, self, win32::toolbar::class_name, L"Toolbar");
+						}, self, win32::tool_bar::class_name, L"Toolbar");
 
         std::array<TBBUTTON, 4> buttons{{
-            TBBUTTON{.idCommand = 0, .fsStyle = BTNS_BUTTON},
-            TBBUTTON{.idCommand = 1m .fsStyle = BTNS_DROPDOWN},
+            TBBUTTON{.idCommand = 0, .fsStyle = BTNS_BUTTON | BTNS_SHOWTEXT | BTNS_AUTOSIZE},
+            TBBUTTON{.idCommand = 1, .fsStyle = BTNS_DROPDOWN | BTNS_SHOWTEXT | BTNS_AUTOSIZE},
         }};
 
         buttons[0].iString = SendMessageW(toolbar, TB_ADDSTRING, 0, std::bit_cast<win32::lparam_t>(
@@ -70,6 +70,23 @@ struct volume_window
             SendMessageW(table, LVM_SETCOLUMNWIDTH, index, LVSCW_AUTOSIZE);
             index++;
         }
+
+        return 0;
+    }
+
+    auto on_notify(win32::toolbar_notify_message notification)
+    {
+        auto [sender, id, code] = notification;
+        auto mapped_result = win32::MapWindowPoints(sender, HWND_DESKTOP, *win32::tool_bar::GetRect(sender, id));
+
+        // create menu here
+
+        win32::menu_builder builder;
+
+        // add menu items
+        win32::TrackPopupMenuEx(LoadMenuIndirectW(builder.result()), 0, POINT{mapped_result.second.left, mapped.result.second.bottom}, sender, TPMPARAMS {
+            .rcExclude = mapped_result.second
+        });
 
         return 0;
     }
