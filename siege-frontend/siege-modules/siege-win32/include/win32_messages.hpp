@@ -141,6 +141,14 @@ namespace win32
 		}
 	};
 
+	struct toolbar_notify_message : notify_message
+	{
+		toolbar_notify_message(wparam_t wParam, lparam_t lParam) : notify_message(wParam, lParam)
+		{
+
+		}
+	};
+
 	enum struct mouse_button : std::uint16_t
 	{
 		lbutton = 0,

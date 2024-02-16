@@ -785,6 +785,31 @@ namespace win32
         return ::MoveWindow(hWnd, position.x, position.y, size.cx, size.cy, repaint ? TRUE : FALSE);
     }
 
+    auto TrackPopupMenuEx(HMENU menu, UINT flags, POINT coords, hwnd_t owner, std::optional<TPMPARAMS> params = std::nullopt)
+    {
+        if (params)
+        {
+            params.value().cbSize = sizeof(TPMPARAMS);
+            return ::TrackPopupMenuEx(menu, flags, coords.x, coords.y, owner, &params.value());
+        }
+        else
+        {
+            return ::TrackPopupMenuEx(menu, flags, coords.x, coords.y, owner, nullptr);
+        }
+    }
+
+    std::optional<std::pair<POINT, RECT>> MapWindowPoints(hwnd_t from, hwnd_t to, RECT source)
+    {
+        auto result = ::MapWindowPoints(from, to, reinterpret_cast<POINT*>(&source), sizeof(RECT) / sizeof(POINT));
+
+        if (result)
+        {
+            return std::_make_pair(POINT{LOWORD(result), HIWORD(result)}, source);
+        }
+
+        return std::nullptr;
+    }
+
     struct button
     {
         constexpr static auto class_name = WC_BUTTONW;
@@ -819,6 +844,22 @@ namespace win32
     {
         constexpr static auto class_name = WC_COMBOBOXW;
         constexpr static std::uint16_t dialog_id = 0x0085;
+    };
+
+    struct tool_bar
+    {
+        constexpr static auto class_name = TOOLBARCLASSNAME;
+
+        std::optional<RECT> GetRect(hwnd_t self, wparam_t id)
+        {
+            RECT result;
+            if (SendMessage(self, TB_GETRECT, id, std::bit_cast<lparam_t>(&result)))
+            {
+                return result;
+            }
+
+            return std::nullopt;
+        }
     };
 
     struct combo_box_ex
