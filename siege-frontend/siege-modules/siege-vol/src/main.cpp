@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <cassert>
 
+
 struct volume_window
 {
     constexpr static std::u8string_view formats = 
@@ -19,28 +20,68 @@ struct volume_window
     {
         auto parent_size = win32::GetClientRect(self);
 
-        short height = 20;
+        short height = 200;
+
+
+        auto rebar = win32::CreateWindowExW(win32::window_params<>{
+            .parent = self,
+            .class_name = win32::rebar::class_Name,
+            .style{win32::window_style(WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS |
+                                        WS_CLIPCHILDREN | RBS_VARHEIGHT | RBS_BANDBORDERS) }
+        });
 
         auto toolbar = win32::CreateWindowExW(DLGITEMTEMPLATE{
-						.style = WS_VISIBLE | WS_CHILD | CCS_TOP | TBSTYLE_LIST,
-						.x = 0,       
-						.y = 0,
-						.cx = short(parent_size->right),  
-						.cy = height       
-						}, self, win32::tool_bar::class_name, L"Toolbar");
+						.style = WS_VISIBLE | WS_CHILD | CCS_NOPARENTALIGN | CCS_NORESIZE | TBSTYLE_LIST,   
+						}, *rebar, win32::tool_bar::class_name, L"Toolbar");
 
         assert(toolbar);
-        SendMessageW(*toolbar, TB_BUTTONSTRUCTSIZE, sizeof(TBBUTTON), 0);
-        SendMessageW(*toolbar, TB_SETEXTENDEDSTYLE, 0, TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
 
+        win32::tool_bar::SetExtendedStyle(*toolbar, win32::tool_bar::mixed_buttons | win32::tool_bar::draw_drop_down_arrows);
+     
         std::array<TBBUTTON, 2> buttons{{
-            TBBUTTON{.iBitmap = I_IMAGENONE, .idCommand = 0, .fsState = TBSTATE_ENABLED, 
-                        .fsStyle = BTNS_BUTTON | BTNS_SHOWTEXT, .iString = INT_PTR(L"Open")},
-            TBBUTTON{.iBitmap = I_IMAGENONE, .idCommand = 1, .fsState = TBSTATE_ENABLED, 
-                        .fsStyle = BTNS_DROPDOWN | BTNS_SHOWTEXT, .iString = INT_PTR(L"Extract")},
-        }};
+              TBBUTTON{.iBitmap = I_IMAGENONE, .idCommand = 0, .fsState = TBSTATE_ENABLED, 
+                                .fsStyle = BTNS_BUTTON | BTNS_SHOWTEXT, .iString = INT_PTR(L"Open")},
+              TBBUTTON{.iBitmap = I_IMAGENONE, .idCommand = 1, .fsState = TBSTATE_ENABLED, 
+                                .fsStyle = BTNS_DROPDOWN | BTNS_SHOWTEXT, .iString = INT_PTR(L"Extract")},
+         }};
 
-        if (!SendMessageW(*toolbar, TB_ADDBUTTONSW, win32::wparam_t(buttons.size()), std::bit_cast<win32::lparam_t>(buttons.data())))
+         if (!win32::tool_bar::AddButtons(*toolbar, buttons))
+         {
+            DebugBreak();       
+         }
+
+         auto button_size = win32::tool_bar::GetButtonSize(*toolbar);
+
+        assert(rebar);
+        if (!win32::rebar::InsertBand(*rebar, -1, REBARBANDINFOW{
+            .fStyle = RBBS_CHILDEDGE | RBBS_GRIPPERALWAYS,
+            .lpText = const_cast<wchar_t*>(L""),
+            .hwndChild = *toolbar,
+            .cxMinChild = UINT(button_size.cx * 2),
+            .cyMinChild = UINT(button_size.cy),
+            .cx = UINT(parent_size->right / 3 * 2),
+            .cyChild = UINT(button_size.cy)
+            }))
+        {
+            DebugBreak();
+        }
+
+        if (!win32::rebar::InsertBand(*rebar, -1, REBARBANDINFOW{
+            .fStyle = RBBS_CHILDEDGE | RBBS_GRIPPERALWAYS,
+            .lpText = const_cast<wchar_t*>(L"Search"),
+            .hwndChild = [&]{
+              auto search = win32::CreateWindowExW(DLGITEMTEMPLATE{
+						.style = WS_VISIBLE | WS_BORDER | WS_EX_STATICEDGE | WS_CHILD
+						}, *rebar, win32::edit::class_name, L"");
+
+                assert(search);
+
+                win32::edit::SetCueBanner(*search, false, L"Enter search text here");
+
+                return *search;
+            }(),
+            .cx = UINT(parent_size->right / 3)
+            }))
         {
             DebugBreak();
         }
@@ -48,9 +89,9 @@ struct volume_window
         auto table = win32::CreateWindowExW(DLGITEMTEMPLATE{
 						.style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
 						.x = 0,       
-						.y = short(win32::GetClientRect(*toolbar)->bottom),
+						.y = short(win32::rebar::GetBarHeight(*rebar) + 2),
 						.cx = short(parent_size->right),  
-						.cy = short(parent_size->bottom)       
+						.cy = short(parent_size->bottom - 2 - win32::rebar::GetBarHeight(*rebar))       
 						}, self, win32::list_view::class_name, L"Volume");
 
         std::array<LVCOLUMNW, 4> columns{{

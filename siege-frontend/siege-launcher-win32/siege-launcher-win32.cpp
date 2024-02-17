@@ -295,7 +295,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	// Initialize global strings
 	LoadStringW(hInstance, IDS_APP_TITLE, app_title.data(), int(app_title.size()));
 
-	INITCOMMONCONTROLSEX settings{.dwSize{sizeof(INITCOMMONCONTROLSEX)}};
+	INITCOMMONCONTROLSEX settings{
+		.dwSize{sizeof(INITCOMMONCONTROLSEX)}
+	};
 	InitCommonControlsEx(&settings);
 
 	win32::RegisterClassExW<siege_main_window>(WNDCLASSEXW {
