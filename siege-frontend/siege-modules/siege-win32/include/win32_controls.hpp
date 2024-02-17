@@ -5,6 +5,7 @@
 #include <vector>
 #include <span>
 #include <utility>
+#include <span>
 #include <optional>
 #include <string>
 #include <expected>
@@ -18,7 +19,7 @@ namespace win32
     using lresult_t = LRESULT;
 
     template<typename TWindow>
-    std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+    inline std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
     {
         if constexpr (requires(TWindow t) { t.on_non_client_create(non_client_create_message{wParam, lParam}); })
         {
@@ -116,19 +117,19 @@ namespace win32
         return std::nullopt;
     }
 
-    auto widen(std::string_view data)
+    inline auto widen(std::string_view data)
     {
         return std::wstring(data.begin(), data.end());
     }
 
     template <typename TType>
-    auto type_name()
+    inline auto type_name()
     {
         return widen(typeid(TType).name());
     }
 
     template <typename TWindow, int StaticSize = 0>
-    auto RegisterClassExW(WNDCLASSEXW descriptor)
+    inline auto RegisterClassExW(WNDCLASSEXW descriptor)
     {
         constexpr static auto data_size = sizeof(TWindow) / sizeof(LONG_PTR);
         constexpr static auto extra_size = sizeof(TWindow) % sizeof(LONG_PTR) == 0 ? 0 : 1;
@@ -245,7 +246,7 @@ namespace win32
     }
 
     template <typename TWindow>
-    auto RegisterStaticClassExW(WNDCLASSEXW descriptor)
+    inline auto RegisterStaticClassExW(WNDCLASSEXW descriptor)
     {
         constexpr static auto data_size = sizeof(TWindow) / sizeof(LONG_PTR);
         constexpr static auto extra_size = sizeof(TWindow) % sizeof(LONG_PTR) == 0 ? 0 : 1;
@@ -383,7 +384,7 @@ namespace win32
     }
 
     template <typename TWindow>
-    auto UnregisterClassW(HINSTANCE instance)
+    inline auto UnregisterClassW(HINSTANCE instance)
     {
         return ::UnregisterClassW(type_name<TWindow>().c_str(), instance);
     }
@@ -408,7 +409,7 @@ namespace win32
     
     };
 
-    std::expected<hwnd_t, DWORD> CreateWindowExW(CREATESTRUCTW params)
+    inline std::expected<hwnd_t, DWORD> CreateWindowExW(CREATESTRUCTW params)
     {
         hinstance_t hinstance = params.hInstance;
         auto parent_hinstance = hinstance == nullptr && params.hwndParent != nullptr ? std::bit_cast<hinstance_t>(GetWindowLongPtrW(params.hwndParent, GWLP_HINSTANCE)) : nullptr;
@@ -437,7 +438,7 @@ namespace win32
         return result;
     }
 
-    auto CreateWindowExW(DLGITEMTEMPLATE params, hwnd_t parent, std::wstring class_name, std::wstring caption)
+    inline auto CreateWindowExW(DLGITEMTEMPLATE params, hwnd_t parent, std::wstring class_name, std::wstring caption)
     {
         return CreateWindowExW(CREATESTRUCTW{
             .hwndParent = parent,
@@ -452,7 +453,7 @@ namespace win32
             });
     }
 
-    template<typename TPosition = std::byte, typename TSize = std::byte>
+    template<typename TPosition = LONG, typename TSize = LONG>
     struct window_params
     {
         hwnd_t parent;
@@ -475,7 +476,7 @@ namespace win32
         }
     };
 
-    auto CreateWindowExW(window_params<POINT, SIZE> params)
+    inline auto CreateWindowExW(window_params<POINT, SIZE> params)
     {
         return CreateWindowExW(CREATESTRUCTW{
             .hInstance = params.class_module ? *params.class_module : nullptr,
@@ -491,8 +492,8 @@ namespace win32
             });
     }
 
-     auto CreateWindowExW(window_params<RECT> params)
-    {
+     inline auto CreateWindowExW(window_params<RECT> params)
+     {
         return CreateWindowExW(CREATESTRUCTW{
             .hInstance = params.class_module ? *params.class_module : nullptr,
             .hwndParent = params.parent,
@@ -505,13 +506,17 @@ namespace win32
             .lpszClass = params.class_name.c_str(),
             .dwExStyle = params.extended_style ? DWORD(*params.extended_style) : 0
             });
-    }
+     }
 
-    auto CreateWindowExW(window_params<> params)
+    inline auto CreateWindowExW(window_params<> params)
     {
         return CreateWindowExW(CREATESTRUCTW{
             .hInstance = params.class_module ? *params.class_module : nullptr,
             .hwndParent = params.parent,
+            .cy = LONG(params.size),
+            .cx = LONG(params.size),
+            .y = LONG(params.position),
+            .x = LONG(params.position),
             .style = params.style ? LONG(*params.style) : 0,
             .lpszName = params.caption.c_str(),
             .lpszClass = params.class_name.c_str(),
@@ -519,7 +524,7 @@ namespace win32
             });
     }
 
-    auto DialogBoxIndirectParamW(hwnd_t parent, DLGTEMPLATE* dialog_template, std::move_only_function<INT_PTR(hwnd_t, win32::message)> on_message)
+    inline auto DialogBoxIndirectParamW(hwnd_t parent, DLGTEMPLATE* dialog_template, std::move_only_function<INT_PTR(hwnd_t, win32::message)> on_message)
     {
         struct handler
         {
@@ -560,7 +565,7 @@ namespace win32
         return ::DialogBoxIndirectParamW(hInstance, dialog_template, parent, handler::DialogHandler, std::bit_cast<lparam_t>(&on_message));
     }
 
-    auto SetWindowSubclass(hwnd_t handle, std::optional<lresult_t> (*on_message)(hwnd_t, win32::message))
+    inline auto SetWindowSubclass(hwnd_t handle, std::optional<lresult_t> (*on_message)(hwnd_t, win32::message))
     {
         struct handler
         {
@@ -595,7 +600,7 @@ namespace win32
     }
 
     template<typename TWindow>
-    auto SetWindowSubclass(hwnd_t handle)
+    inline auto SetWindowSubclass(hwnd_t handle)
     {
         struct handler
         {
@@ -632,7 +637,7 @@ namespace win32
         return ::SetWindowSubclass(handle, handler::HandleMessage, std::bit_cast<UINT_PTR>(typeid(TWindow).hash_code()), std::bit_cast<DWORD_PTR>(self));
     }
 
-    [[maybe_unused]] auto EnumPropsExW(hwnd_t control, std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback)
+    inline [[maybe_unused]] auto EnumPropsExW(hwnd_t control, std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback)
     {
         struct Handler
         {
@@ -652,7 +657,7 @@ namespace win32
         return ::EnumPropsExW(control, Handler::HandleEnum, std::bit_cast<LPARAM>(&callback));
     }
 
-    [[maybe_unused]] auto ForEachPropertyExW(hwnd_t control, std::move_only_function<void(hwnd_t, std::wstring_view, HANDLE)> callback)
+    inline [[maybe_unused]] auto ForEachPropertyExW(hwnd_t control, std::move_only_function<void(hwnd_t, std::wstring_view, HANDLE)> callback)
     {
         return EnumPropsExW(control, [callback = std::move(callback)] (auto self, auto key, auto value) mutable
         {
@@ -661,7 +666,7 @@ namespace win32
         });
     }
 
-    [[maybe_unused]] auto FindPropertyExW(hwnd_t control, std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback)
+    inline [[maybe_unused]] auto FindPropertyExW(hwnd_t control, std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback)
     {
         return EnumPropsExW(control, [callback = std::move(callback)] (auto self, auto key, auto value) mutable
         {
@@ -679,22 +684,22 @@ namespace win32
         }
     };
 
-    [[maybe_unused]] auto EnumWindows(std::move_only_function<bool(hwnd_t)> callback)
+    inline [[maybe_unused]] auto EnumWindows(std::move_only_function<bool(hwnd_t)> callback)
     {
         return ::EnumWindows(EnumWindowHandler::HandleWindow, std::bit_cast<LPARAM>(&callback));
     }
 
-    [[maybe_unused]] auto EnumChildWindows(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
+    inline [[maybe_unused]] auto EnumChildWindows(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
     {
         return ::EnumChildWindows(parent, EnumWindowHandler::HandleWindow, std::bit_cast<LPARAM>(&callback));
     }
 
-    [[maybe_unused]] auto EnumThreadWindows(DWORD thread_id, std::move_only_function<bool(hwnd_t)> callback)
+    inline [[maybe_unused]] auto EnumThreadWindows(DWORD thread_id, std::move_only_function<bool(hwnd_t)> callback)
     {
         return ::EnumThreadWindows(thread_id, EnumWindowHandler::HandleWindow, std::bit_cast<LPARAM>(&callback));
     }
 
-    [[maybe_unused]] auto ForEachWindow(std::move_only_function<void(hwnd_t)> callback)
+    inline [[maybe_unused]] auto ForEachWindow(std::move_only_function<void(hwnd_t)> callback)
     {
         return EnumWindows([callback = std::move(callback)] (auto window) mutable
         {
@@ -703,7 +708,7 @@ namespace win32
         });
     }
 
-    [[maybe_unused]] auto ForEachChildWindow(hwnd_t parent, std::move_only_function<void(hwnd_t)> callback)
+    inline [[maybe_unused]] auto ForEachChildWindow(hwnd_t parent, std::move_only_function<void(hwnd_t)> callback)
     {
         return EnumChildWindows(parent, [callback = std::move(callback)] (auto window) mutable
         {
@@ -712,7 +717,7 @@ namespace win32
         });
     }
 
-    [[maybe_unused]] auto ForEachThreadWindow(DWORD thread_id, std::move_only_function<void(hwnd_t)> callback)
+    inline [[maybe_unused]] auto ForEachThreadWindow(DWORD thread_id, std::move_only_function<void(hwnd_t)> callback)
     {
         return EnumThreadWindows(thread_id, [callback = std::move(callback)] (auto window) mutable
         {
@@ -721,7 +726,7 @@ namespace win32
         });
     }
 
-    [[maybe_unused]] auto FindWindow(std::move_only_function<bool(hwnd_t)> callback)
+    inline [[maybe_unused]] auto FindWindow(std::move_only_function<bool(hwnd_t)> callback)
     {
         hwnd_t result = nullptr;
         EnumWindows([callback = std::move(callback), &result] (auto window) mutable
@@ -737,7 +742,7 @@ namespace win32
         return result;
     }
 
-    [[maybe_unused]] auto FindThreadWindow(DWORD thread_id, std::move_only_function<bool(hwnd_t)> callback)
+    inline [[maybe_unused]] auto FindThreadWindow(DWORD thread_id, std::move_only_function<bool(hwnd_t)> callback)
     {
         hwnd_t result = nullptr;
         
@@ -755,7 +760,7 @@ namespace win32
         return result;
     }
 
-    hwnd_t FindDirectChildWindow(hwnd_t parent, std::wstring_view class_name, std::wstring_view title, std::move_only_function<bool(hwnd_t)> callback)
+    inline hwnd_t FindDirectChildWindow(hwnd_t parent, std::wstring_view class_name, std::wstring_view title, std::move_only_function<bool(hwnd_t)> callback)
     {
         hwnd_t current_child = nullptr;
 
@@ -775,17 +780,17 @@ namespace win32
         return nullptr;
     }
 
-    auto FindDirectChildWindow(hwnd_t parent, std::wstring_view class_name, std::move_only_function<bool(hwnd_t)> callback)
+    inline auto FindDirectChildWindow(hwnd_t parent, std::wstring_view class_name, std::move_only_function<bool(hwnd_t)> callback)
     {
         return FindDirectChildWindow(parent, class_name, L"", std::move(callback));
     }
 
-    auto FindDirectChildWindow(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
+    inline auto FindDirectChildWindow(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
     {
         return FindDirectChildWindow(parent, L"", L"", std::move(callback));
     }
 
-    auto ForEachDirectChildWindow(hwnd_t parent, std::move_only_function<void(hwnd_t)> callback)
+    inline auto ForEachDirectChildWindow(hwnd_t parent, std::move_only_function<void(hwnd_t)> callback)
     {
         return EnumChildWindows(parent, [callback = std::move(callback), parent] (auto window) mutable
         {
@@ -798,7 +803,7 @@ namespace win32
         });
     }
 
-    [[maybe_unused]] auto FindChildWindow(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
+    inline [[maybe_unused]] auto FindChildWindow(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
     {
         if (parent == HWND_MESSAGE)
         {
@@ -821,7 +826,7 @@ namespace win32
         return result;
     }
 
-    std::optional<RECT> GetWindowRect(hwnd_t control)
+    inline std::optional<RECT> GetWindowRect(hwnd_t control)
     {
         RECT result;
         if (::GetWindowRect(control, &result))
@@ -832,7 +837,7 @@ namespace win32
         return std::nullopt;
     }
 
-    std::optional<RECT> GetClientRect(hwnd_t control)
+    inline std::optional<RECT> GetClientRect(hwnd_t control)
     {
         RECT result;
         if (::GetClientRect(control, &result))
@@ -843,42 +848,42 @@ namespace win32
         return std::nullopt;
     }
 
-    auto SetWindowPos(hwnd_t hWnd, hwnd_t hWndInsertAfter, UINT uFlags = 0)
+    inline auto SetWindowPos(hwnd_t hWnd, hwnd_t hWndInsertAfter, UINT uFlags = 0)
     {
         return ::SetWindowPos(hWnd, hWndInsertAfter, 0, 0, 0, 0, uFlags | SWP_NOMOVE | SWP_NOSIZE);
     }
 
-    auto SetWindowPos(hwnd_t hWnd, RECT position_and_size, UINT uFlags = 0)
+    inline auto SetWindowPos(hwnd_t hWnd, RECT position_and_size, UINT uFlags = 0)
     {
         return ::SetWindowPos(hWnd, nullptr, position_and_size.left, position_and_size.top, position_and_size.right, position_and_size.bottom, uFlags | SWP_NOZORDER);
     }
 
-    auto SetWindowPos(hwnd_t hWnd, POINT position, SIZE size, UINT uFlags = 0)
+    inline auto SetWindowPos(hwnd_t hWnd, POINT position, SIZE size, UINT uFlags = 0)
     {
         return ::SetWindowPos(hWnd, nullptr, position.x, position.y, size.cx, size.cy, uFlags | SWP_NOZORDER);
     }
 
-    auto SetWindowPos(hwnd_t hWnd, POINT position, UINT uFlags = 0)
+    inline auto SetWindowPos(hwnd_t hWnd, POINT position, UINT uFlags = 0)
     {
         return ::SetWindowPos(hWnd, nullptr, position.x, position.y, 0, 0, uFlags | SWP_NOSIZE | SWP_NOZORDER);
     }
 
-    auto SetWindowPos(hwnd_t hWnd, SIZE size, UINT uFlags = 0)
+    inline auto SetWindowPos(hwnd_t hWnd, SIZE size, UINT uFlags = 0)
     {
         return ::SetWindowPos(hWnd, nullptr, 0, 0, size.cx, size.cy, uFlags | SWP_NOMOVE | SWP_NOZORDER);
     }
 
-    auto MoveWindow(hwnd_t hWnd, RECT position_and_size, bool repaint)
+    inline auto MoveWindow(hwnd_t hWnd, RECT position_and_size, bool repaint)
     {
         return ::MoveWindow(hWnd, position_and_size.left, position_and_size.top, position_and_size.right, position_and_size.bottom, repaint ? TRUE : FALSE);
     }
 
-    auto MoveWindow(hwnd_t hWnd, POINT position, SIZE size, bool repaint)
+    inline auto MoveWindow(hwnd_t hWnd, POINT position, SIZE size, bool repaint)
     {
         return ::MoveWindow(hWnd, position.x, position.y, size.cx, size.cy, repaint ? TRUE : FALSE);
     }
 
-    auto TrackPopupMenuEx(HMENU menu, UINT flags, POINT coords, hwnd_t owner, std::optional<TPMPARAMS> params = std::nullopt)
+    inline auto TrackPopupMenuEx(HMENU menu, UINT flags, POINT coords, hwnd_t owner, std::optional<TPMPARAMS> params = std::nullopt)
     {
         if (params)
         {
@@ -891,7 +896,7 @@ namespace win32
         }
     }
 
-    std::optional<std::pair<POINT, RECT>> MapWindowPoints(hwnd_t from, hwnd_t to, RECT source)
+    inline std::optional<std::pair<POINT, RECT>> MapWindowPoints(hwnd_t from, hwnd_t to, RECT source)
     {
         auto result = ::MapWindowPoints(from, to, reinterpret_cast<POINT*>(&source), sizeof(RECT) / sizeof(POINT));
 
@@ -913,6 +918,11 @@ namespace win32
     {
         constexpr static auto class_name = WC_EDITW;
         constexpr static std::uint16_t dialog_id = 0x0081;
+
+       [[maybe_unused]] inline static bool SetCueBanner(hwnd_t self, bool show_on_focus, std::wstring text)
+       {
+          return SendMessageW(self, EM_SETCUEBANNER, show_on_focus ? TRUE : FALSE, std::bit_cast<lparam_t>(text.c_str()));
+       }
     };
 
     struct static_text
@@ -943,7 +953,20 @@ namespace win32
     {
         constexpr static auto class_name = TOOLBARCLASSNAMEW;
 
-        static std::optional<RECT> GetRect(hwnd_t self, wparam_t id)
+        enum extended_style : DWORD
+        {
+            mixed_buttons = TBSTYLE_EX_MIXEDBUTTONS,
+            draw_drop_down_arrows = TBSTYLE_EX_DRAWDDARROWS
+        };
+
+        [[nodiscard]] inline static SIZE GetButtonSize(hwnd_t self)
+        {
+            auto result = SendMessage(self, TB_GETBUTTONSIZE, 0, 0);
+
+            return SIZE {.cx = LOWORD(result), .cy = HIWORD(result)};
+        }
+
+        [[nodiscard]] inline static std::optional<RECT> GetRect(hwnd_t self, wparam_t id)
         {
             RECT result;
             if (SendMessage(self, TB_GETRECT, id, std::bit_cast<lparam_t>(&result)))
@@ -953,6 +976,94 @@ namespace win32
 
             return std::nullopt;
         }
+
+        [[maybe_unused]] inline static extended_style SetExtendedStyle(hwnd_t self, lparam_t style)
+        {
+            return extended_style(SendMessageW(self, 
+                TB_SETEXTENDEDSTYLE, 0, style));
+        
+        }
+
+        [[maybe_unused]] inline static bool AddButtons(hwnd_t self, std::span<TBBUTTON> buttons)
+        {
+            SendMessageW(self, TB_BUTTONSTRUCTSIZE, sizeof(TBBUTTON), 0);
+            return SendMessageW(self, TB_ADDBUTTONSW, wparam_t(buttons.size()), 
+                std::bit_cast<win32::lparam_t>(buttons.data()));
+        }
+    };
+
+    struct rebar
+    {
+        constexpr static auto class_Name = REBARCLASSNAMEW;
+
+        [[nodiscard]] inline static std::optional<RECT> GetRect(hwnd_t self, wparam_t index)
+        {
+            RECT result;
+
+            if (SendMessageW(self, RB_GETRECT, index, std::bit_cast<lparam_t>(&result)))
+            {
+                return result;
+            }
+
+            return std::nullopt;
+        }
+
+        [[nodiscoard]] inline static std::uint32_t GetBarHeight(hwnd_t self)
+        {
+            return std::uint32_t(SendMessageW(self, RB_GETBARHEIGHT, 0, 0));
+        
+        }
+
+        [[maybe_unused]] inline static bool InsertBand(hwnd_t self, int position, REBARBANDINFOW band)
+        {
+            band.cbSize = sizeof(band);
+
+            bool mask_not_set = band.fMask == 0;
+
+            if (mask_not_set && band.hwndChild)
+            {
+                band.fMask |= RBBIM_CHILD;
+            }
+
+            if (mask_not_set && band.lpText)
+            {
+                band.fMask |= RBBIM_TEXT;
+            }
+
+            if (mask_not_set && (
+                band.cxMinChild ||
+                band.cyMinChild ||
+                band.cyChild ||
+                band.cyMaxChild
+                ))
+            {
+                band.fMask |= RBBIM_CHILDSIZE;
+            }
+
+            if (mask_not_set && band.cx)
+            {
+                band.fMask |= RBBIM_SIZE;
+            }
+
+            if (mask_not_set && band.cxIdeal)
+            {
+                band.fMask |= RBBIM_IDEALSIZE;
+            }
+
+            if (mask_not_set && band.cxHeader)
+            {
+                band.fMask |= RBBIM_HEADERSIZE;
+            }
+
+            if (mask_not_set && band.fStyle)
+            {
+                band.fMask |= RBBIM_STYLE;
+            }
+            
+            return SendMessageW(self, RB_INSERTBANDW, 
+                position, std::bit_cast<win32::lparam_t>(&band));
+        }
+    
     };
 
     struct combo_box_ex
