@@ -11,6 +11,7 @@
 #include <functional>
 #include <thread>
 #include <iostream>
+#include <cassert>
 #include "win32_controls.hpp"
 #include "win32_builders.hpp"
 #include "framework.h"
@@ -120,27 +121,22 @@ struct siege_main_window
 
 	auto on_create(const win32::create_message&)
 	{
-		RECT parent_size{};
+		auto parent_size = win32::GetClientRect(self);
 
-		if (GetClientRect (self, &parent_size))
-		{
-						
-		}
-
+		assert(parent_size);
 		auto tab_control_instance = win32::CreateWindowExW(CREATESTRUCTW {
 						.hwndParent = self,
-						.cy = parent_size.bottom,
-						.cx = parent_size.right,
+						.cy = parent_size->bottom,
+						.cx = parent_size->right,
 						.y = 0,
 						.x = 0,
 						.style = WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE | TCS_MULTILINE | TCS_RIGHTJUSTIFY, 
 						.lpszClass = win32::tab_control::class_name
 					});
 
-		if (GetClientRect (tab_control_instance, &parent_size))
-		{
-						
-		}
+		assert(tab_control_instance);
+
+		parent_size = win32::GetClientRect(*tab_control_instance);
 
 		int index = 0;
 		for (auto& plugin : loaded_modules)
@@ -152,27 +148,25 @@ struct siege_main_window
 						.pszText = const_cast<wchar_t*>(window.first.c_str())
 					};
 
-				SendMessageW(tab_control_instance, TCM_INSERTITEMW, index, std::bit_cast<win32::lparam_t>(&newItem));
+				SendMessageW(*tab_control_instance, TCM_INSERTITEMW, index, std::bit_cast<win32::lparam_t>(&newItem));
 
-				SendMessageW(tab_control_instance, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&parent_size));
+				SendMessageW(*tab_control_instance, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&parent_size));
 
-				auto child = win32::CreateWindowExW(CREATESTRUCTW {
-							.hInstance = plugin.module.get(),
-							.hwndParent = tab_control_instance,
-							.cy = parent_size.bottom,
-							.cx = parent_size.right,
-							.y = parent_size.top,
-							.x = parent_size.left,
-							.style = WS_CHILD, 
-							.lpszClass = window.first.c_str()
-						});
+				auto child = win32::CreateWindowExW(win32::window_params<RECT>{
+					.parent = *tab_control_instance,
+					.class_name = window.first.c_str(),
+					.class_module = plugin.module.get(),
+					.position = *parent_size
+				});
 
-				SetWindowLongPtrW(child, GWLP_ID, index);
+				assert(child);
+
+				SetWindowLongPtrW(*child, GWLP_ID, index);
 				index++;
 			}
 
-			SendMessageW(tab_control_instance, TCM_SETCURSEL, 0, 0);
-			NMHDR notification{.hwndFrom = tab_control_instance, .code = TCN_SELCHANGE};
+			SendMessageW(*tab_control_instance, TCM_SETCURSEL, 0, 0);
+			NMHDR notification{.hwndFrom = *tab_control_instance, .code = TCN_SELCHANGE};
 			SendMessageW(self, WM_NOTIFY, 0, std::bit_cast<LPARAM>(&notification));
 		}
 		
@@ -325,11 +319,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	if (!main_window)
 	{
-		return FALSE;
+		return main_window.error();
 	}
 
-	ShowWindow(main_window, nCmdShow);
-	UpdateWindow(main_window);
+	ShowWindow(*main_window, nCmdShow);
+	UpdateWindow(*main_window);
 
 
 	HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_SIEGELAUNCHERWIN32));

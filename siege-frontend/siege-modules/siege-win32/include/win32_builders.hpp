@@ -311,9 +311,9 @@ namespace win32
 
             auto results = std::pmr::vector<TBBUTTON>(children.size(), upstream);
 
-            SendMessageW(toolbar, TB_ADDBUTTONS, results.size(), std::bit_cast<LPARAM>(results.data()));
+            SendMessageW(*toolbar, TB_ADDBUTTONS, results.size(), std::bit_cast<LPARAM>(results.data()));
 
-            return toolbar;
+            return *toolbar;
         }
     };
 
@@ -358,20 +358,20 @@ namespace win32
 
             for (auto& item : items)
             {
-                SendMessageW(toolbar, LVM_INSERTITEM, 0, std::bit_cast<LPARAM>(&item));
+                SendMessageW(*toolbar, LVM_INSERTITEM, 0, std::bit_cast<LPARAM>(&item));
             }
 
             for (auto& column : columns)
             {
-                SendMessageW(toolbar, LVM_INSERTCOLUMN, 0, std::bit_cast<LPARAM>(&column));
+                SendMessageW(*toolbar, LVM_INSERTCOLUMN, 0, std::bit_cast<LPARAM>(&column));
             }
 
             for (auto& group : groups)
             {
-                SendMessageW(toolbar, LVM_INSERTGROUP, -1, std::bit_cast<LPARAM>(&group));
+                SendMessageW(*toolbar, LVM_INSERTGROUP, -1, std::bit_cast<LPARAM>(&group));
             }
 
-            return toolbar;
+            return *toolbar;
         }
     };
 }
