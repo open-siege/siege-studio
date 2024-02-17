@@ -804,10 +804,10 @@ namespace win32
 
         if (result)
         {
-            return std::_make_pair(POINT{LOWORD(result), HIWORD(result)}, source);
+            return std::make_pair(POINT{LOWORD(result), HIWORD(result)}, source);
         }
 
-        return std::nullptr;
+        return std::nullopt;
     }
 
     struct button
@@ -848,9 +848,9 @@ namespace win32
 
     struct tool_bar
     {
-        constexpr static auto class_name = TOOLBARCLASSNAME;
+        constexpr static auto class_name = TOOLBARCLASSNAMEW;
 
-        std::optional<RECT> GetRect(hwnd_t self, wparam_t id)
+        static std::optional<RECT> GetRect(hwnd_t self, wparam_t id)
         {
             RECT result;
             if (SendMessage(self, TB_GETRECT, id, std::bit_cast<lparam_t>(&result)))

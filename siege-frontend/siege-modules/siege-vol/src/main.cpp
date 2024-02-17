@@ -1,4 +1,5 @@
 #include <win32_controls.hpp>
+#include <win32_builders.hpp>
 #include <bit>
 #include <filesystem>
 
@@ -15,52 +16,46 @@ struct volume_window
 
     auto on_create(const win32::create_message& data)
     {
-        RECT parent_size{};
-
-		if (GetClientRect(self, &parent_size))
-		{
-						
-		}
+        auto parent_size = win32::GetClientRect(self);
 
         short height = 20;
 
         auto toolbar = win32::CreateWindowExW(DLGITEMTEMPLATE{
 						.style = WS_VISIBLE | WS_CHILD | CCS_TOP | TBSTYLE_LIST,
 						.x = 0,       
-						.y = height,
-						.cx = short(parent_size.right),  
+						.y = 0,
+						.cx = short(parent_size->right),  
 						.cy = height       
 						}, self, win32::tool_bar::class_name, L"Toolbar");
 
-        std::array<TBBUTTON, 4> buttons{{
-            TBBUTTON{.idCommand = 0, .fsStyle = BTNS_BUTTON | BTNS_SHOWTEXT | BTNS_AUTOSIZE},
-            TBBUTTON{.idCommand = 1, .fsStyle = BTNS_DROPDOWN | BTNS_SHOWTEXT | BTNS_AUTOSIZE},
+        SendMessageW(toolbar, TB_BUTTONSTRUCTSIZE, sizeof(TBBUTTON), 0);
+        SendMessageW(toolbar, TB_SETEXTENDEDSTYLE, 0, TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
+
+        std::array<TBBUTTON, 2> buttons{{
+            TBBUTTON{.iBitmap = I_IMAGENONE, .idCommand = 0, .fsState = TBSTATE_ENABLED, 
+                        .fsStyle = BTNS_BUTTON | BTNS_SHOWTEXT, .iString = INT_PTR(L"Open")},
+            TBBUTTON{.iBitmap = I_IMAGENONE, .idCommand = 1, .fsState = TBSTATE_ENABLED, 
+                        .fsStyle = BTNS_DROPDOWN | BTNS_SHOWTEXT, .iString = INT_PTR(L"Extract")},
         }};
 
-        buttons[0].iString = SendMessageW(toolbar, TB_ADDSTRING, 0, std::bit_cast<win32::lparam_t>(
-            std::array<wchar_t, 6>{"Open"}.data()
-        ));
-
-        buttons[1].iString = SendMessageW(toolbar, TB_ADDSTRING, 0, std::bit_cast<win32::lparam_t>(
-            std::array<wchar_t, 9>{"Extract"}.data()
-        ));
-
-        SendMessageW(toolbar, TB_ADDBUTTONS, wparam_t(buttons.size()), std::bit_cast<win32::lparam_t>(buttons.data()));
-
+        if (!SendMessageW(toolbar, TB_ADDBUTTONSW, win32::wparam_t(buttons.size()), std::bit_cast<win32::lparam_t>(buttons.data())))
+        {
+            DebugBreak();
+        }
 
         auto table = win32::CreateWindowExW(DLGITEMTEMPLATE{
-						.style = WS_VISIBLE | WS_CHILD | LVS_REPORT | CCS_BOTTOM,
+						.style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
 						.x = 0,       
-						.y = height,
-						.cx = short(parent_size.right),  
-						.cy = short(parent_size.bottom)       
+						.y = short(win32::GetClientRect(toolbar)->bottom),
+						.cx = short(parent_size->right),  
+						.cy = short(parent_size->bottom)       
 						}, self, win32::list_view::class_name, L"Volume");
 
         std::array<LVCOLUMNW, 4> columns{{
-            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size.right / 4, .pszText = const_cast<wchar_t*>(L"Filename")},
-            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size.right / 4, .pszText = const_cast<wchar_t*>(L"Path")},
-            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size.right / 4 ,.pszText = const_cast<wchar_t*>(L"Size (in bytes)")},
-            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size.right / 4 ,.pszText = const_cast<wchar_t*>(L"Compression Method")}
+            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size->right / 4, .pszText = const_cast<wchar_t*>(L"Filename")},
+            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size->right / 4, .pszText = const_cast<wchar_t*>(L"Path")},
+            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size->right / 4 ,.pszText = const_cast<wchar_t*>(L"Size (in bytes)")},
+            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size->right / 4 ,.pszText = const_cast<wchar_t*>(L"Compression Method")}
         }};
 
         auto index = 0;
@@ -84,8 +79,8 @@ struct volume_window
         win32::menu_builder builder;
 
         // add menu items
-        win32::TrackPopupMenuEx(LoadMenuIndirectW(builder.result()), 0, POINT{mapped_result.second.left, mapped.result.second.bottom}, sender, TPMPARAMS {
-            .rcExclude = mapped_result.second
+        win32::TrackPopupMenuEx(LoadMenuIndirectW(builder.result()), 0, POINT{mapped_result->second.left, mapped_result->second.bottom}, sender, TPMPARAMS {
+            .rcExclude = mapped_result->second
         });
 
         return 0;
