@@ -2,6 +2,7 @@
 #include <win32_builders.hpp>
 #include <bit>
 #include <filesystem>
+#include <cassert>
 
 struct volume_window
 {
@@ -28,8 +29,9 @@ struct volume_window
 						.cy = height       
 						}, self, win32::tool_bar::class_name, L"Toolbar");
 
-        SendMessageW(toolbar, TB_BUTTONSTRUCTSIZE, sizeof(TBBUTTON), 0);
-        SendMessageW(toolbar, TB_SETEXTENDEDSTYLE, 0, TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
+        assert(toolbar);
+        SendMessageW(*toolbar, TB_BUTTONSTRUCTSIZE, sizeof(TBBUTTON), 0);
+        SendMessageW(*toolbar, TB_SETEXTENDEDSTYLE, 0, TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
 
         std::array<TBBUTTON, 2> buttons{{
             TBBUTTON{.iBitmap = I_IMAGENONE, .idCommand = 0, .fsState = TBSTATE_ENABLED, 
@@ -38,7 +40,7 @@ struct volume_window
                         .fsStyle = BTNS_DROPDOWN | BTNS_SHOWTEXT, .iString = INT_PTR(L"Extract")},
         }};
 
-        if (!SendMessageW(toolbar, TB_ADDBUTTONSW, win32::wparam_t(buttons.size()), std::bit_cast<win32::lparam_t>(buttons.data())))
+        if (!SendMessageW(*toolbar, TB_ADDBUTTONSW, win32::wparam_t(buttons.size()), std::bit_cast<win32::lparam_t>(buttons.data())))
         {
             DebugBreak();
         }
@@ -46,7 +48,7 @@ struct volume_window
         auto table = win32::CreateWindowExW(DLGITEMTEMPLATE{
 						.style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
 						.x = 0,       
-						.y = short(win32::GetClientRect(toolbar)->bottom),
+						.y = short(win32::GetClientRect(*toolbar)->bottom),
 						.cx = short(parent_size->right),  
 						.cy = short(parent_size->bottom)       
 						}, self, win32::list_view::class_name, L"Volume");
@@ -61,8 +63,8 @@ struct volume_window
         auto index = 0;
         for (auto& column : columns)
         {
-            SendMessageW(table, LVM_INSERTCOLUMNW, index, std::bit_cast<win32::lparam_t>(&column));
-            SendMessageW(table, LVM_SETCOLUMNWIDTH, index, LVSCW_AUTOSIZE);
+            SendMessageW(*table, LVM_INSERTCOLUMNW, index, std::bit_cast<win32::lparam_t>(&column));
+            SendMessageW(*table, LVM_SETCOLUMNWIDTH, index, LVSCW_AUTOSIZE);
             index++;
         }
 
@@ -154,7 +156,7 @@ BOOL WINAPI DllMain(
                   .lpszClassName = module_path.stem().c_str()
            });
 
-          info_instance = win32::CreateWindowExW(CREATESTRUCTW{
+          info_instance = *win32::CreateWindowExW(CREATESTRUCTW{
                 .hInstance = hinstDLL,
                 .hwndParent = HWND_MESSAGE,
                 .lpszClass = module_path.stem().c_str()

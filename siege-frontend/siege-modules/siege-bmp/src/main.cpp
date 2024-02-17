@@ -16,13 +16,11 @@ struct bitmap_window
     {
         auto button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
 						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-						.x = 0,       
-						.y = 0,
 						.cx = 100,  
 						.cy = 100       
 						}, self, win32::button::class_name, L"Bitmap window");
 
-		win32::SetWindowSubclass(button_instance, [](win32::hwnd_t button, win32::message button_message) -> std::optional<LRESULT>
+		win32::SetWindowSubclass(*button_instance, [](win32::hwnd_t button, win32::message button_message) -> std::optional<LRESULT>
 						{
 							if (button_message.message == win32::command_message::id)
 							{
@@ -71,13 +69,11 @@ struct pal_window
 
         auto button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
 						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-						.x = 0,       
-						.y = 0,
 						.cx = short(parent_size.right),  
 						.cy = short(parent_size.bottom)     
 						}, self, win32::button::class_name, L"Pal window");
 
-		win32::SetWindowSubclass(button_instance, [](win32::hwnd_t button, win32::message button_message) -> std::optional<LRESULT>
+		win32::SetWindowSubclass(*button_instance, [](win32::hwnd_t button, win32::message button_message) -> std::optional<LRESULT>
 						{
 							if (button_message.message == win32::command_message::id)
 							{
@@ -124,7 +120,7 @@ struct pal_mapping_window
 						.cy = 100       
 						}, self, win32::button::class_name, L"Pal Mapping window");
 
-		win32::SetWindowSubclass(button_instance, [](win32::hwnd_t button, win32::message button_message) -> std::optional<LRESULT>
+		win32::SetWindowSubclass(*button_instance, [](win32::hwnd_t button, win32::message button_message) -> std::optional<LRESULT>
 						{
 							if (button_message.message == win32::command_message::id)
 							{
@@ -241,7 +237,7 @@ BOOL WINAPI DllMain(
                   .lpszClassName = module_path.stem().c_str()
            });
 
-          info_instance = win32::CreateWindowExW(CREATESTRUCTW{
+          info_instance = *win32::CreateWindowExW(CREATESTRUCTW{
                 .hInstance = hinstDLL,
                 .hwndParent = HWND_MESSAGE,
                 .lpszClass = module_path.stem().c_str()
