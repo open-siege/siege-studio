@@ -848,6 +848,17 @@ namespace win32
         return std::nullopt;
     }
 
+    inline std::optional<std::pair<POINT, SIZE>> GetClientPositionAndSize(hwnd_t control)
+    {
+        RECT result;
+        if (::GetClientRect(control, &result))
+        {
+            return std::make_pair(POINT{.x = result.left, .y = result.top}, SIZE {.cx = result.right, .cy = result.bottom });
+        }
+
+        return std::nullopt;
+    }
+
     inline auto SetWindowPos(hwnd_t hWnd, hwnd_t hWndInsertAfter, UINT uFlags = 0)
     {
         return ::SetWindowPos(hWnd, hWndInsertAfter, 0, 0, 0, 0, uFlags | SWP_NOMOVE | SWP_NOSIZE);
@@ -1008,7 +1019,7 @@ namespace win32
             return std::nullopt;
         }
 
-        [[nodiscoard]] inline static std::uint32_t GetBarHeight(hwnd_t self)
+        [[nodiscard]] inline static std::uint32_t GetBarHeight(hwnd_t self)
         {
             return std::uint32_t(SendMessageW(self, RB_GETBARHEIGHT, 0, 0));
         
@@ -1074,6 +1085,11 @@ namespace win32
     struct header
     {
         constexpr static auto class_name = WC_HEADERW;
+
+        [[nodiscard]] inline static wparam_t GetItemCount(hwnd_t self)
+        {
+            return SendMessageW(self, HDM_GETITEMCOUNT, 0, 0);
+        }
     };
 
     struct link
@@ -1089,6 +1105,91 @@ namespace win32
     struct list_view
     {
         constexpr static auto class_name = WC_LISTVIEWW;
+
+        [[nodiscard]] inline static hwnd_t GetHeader(hwnd_t self)
+        {
+            return hwnd_t(SendMessageW(self, LVM_GETHEADER, 0, 0));
+        }
+
+        [[nodiscard]] inline static wparam_t GetColumnCount(hwnd_t self)
+        {
+            return header::GetItemCount(GetHeader(self));
+        }
+
+        [[nodiscard]] inline static std::optional<LVCOLUMNW> GetColumn(hwnd_t self, wparam_t index)
+        {
+            LVCOLUMNW result;
+
+            if (SendMessageW(self, LVM_GETCOLUMNW, index, std::bit_cast<lparam_t>(&result)))
+            {
+                return result;
+            }
+
+            return std::nullopt;
+        }
+
+        [[maybe_unused]] inline static bool SetColumnWidth(hwnd_t self, wparam_t index, lparam_t width)
+        {
+            return SendMessageW(self, LVM_SETCOLUMNWIDTH, index, width);
+        }
+
+        [[maybe_unused]] inline static wparam_t InsertColumn(hwnd_t self, wparam_t position, LVCOLUMNW column)
+        {
+            bool mask_not_set = column.mask == 0;
+
+
+
+            if (mask_not_set && column.fmt)
+            {
+                column.mask |= LVCF_FMT;
+            }
+
+            if (mask_not_set && column.pszText)
+            {
+                column.mask |= LVCF_TEXT;
+            }
+
+            if (mask_not_set && column.cx)
+            {
+                if (!(column.cx == LVSCW_AUTOSIZE || column.cx == LVSCW_AUTOSIZE_USEHEADER))
+                {
+                    column.mask |= LVCF_WIDTH;
+                }
+            }
+
+            if (mask_not_set && column.cxMin)
+            {
+                column.mask |= LVCF_MINWIDTH;
+            }
+
+            if (mask_not_set && column.cxDefault)
+            {
+                column.mask |= LVCF_DEFAULTWIDTH;
+            }
+
+            if (mask_not_set && column.cxIdeal)
+            {
+                column.mask |= LVCF_IDEALWIDTH;
+            }
+
+            if (mask_not_set && column.iOrder)
+            {
+                column.mask |= LVCF_ORDER;
+            }
+
+            position = position == -1 ? GetColumnCount(self) : position;
+            
+            auto index = SendMessageW(self, LVM_INSERTCOLUMNW, 
+                position, std::bit_cast<win32::lparam_t>(&column));
+
+            
+            if (column.cx)
+            {
+                SetColumnWidth(self, index, column.cx);
+            }
+
+            return index;
+        }
     };
 
     struct native_font
