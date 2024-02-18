@@ -94,20 +94,30 @@ struct volume_window
 						.cy = short(parent_size->bottom - 2 - win32::rebar::GetBarHeight(*rebar))       
 						}, self, win32::list_view::class_name, L"Volume");
 
-        std::array<LVCOLUMNW, 4> columns{{
-            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size->right / 4, .pszText = const_cast<wchar_t*>(L"Filename")},
-            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size->right / 4, .pszText = const_cast<wchar_t*>(L"Path")},
-            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size->right / 4 ,.pszText = const_cast<wchar_t*>(L"Size (in bytes)")},
-            LVCOLUMNW{.mask = LVCF_TEXT | LVCF_WIDTH, .cx = parent_size->right / 4 ,.pszText = const_cast<wchar_t*>(L"Compression Method")}
-        }};
+        // TODO: make table columns have a split button
+         win32::list_view::InsertColumn(*table, -1, LVCOLUMNW {
+                .cx = LVSCW_AUTOSIZE,
+                .pszText = const_cast<wchar_t*>(L"Filename"),
+                .cxMin = parent_size->right / 10
+        });
 
-        auto index = 0;
-        for (auto& column : columns)
-        {
-            SendMessageW(*table, LVM_INSERTCOLUMNW, index, std::bit_cast<win32::lparam_t>(&column));
-            SendMessageW(*table, LVM_SETCOLUMNWIDTH, index, LVSCW_AUTOSIZE);
-            index++;
-        }
+        win32::list_view::InsertColumn(*table, -1, LVCOLUMNW {
+                .cx = LVSCW_AUTOSIZE,
+                .pszText = const_cast<wchar_t*>(L"Path"),
+                .cxMin = parent_size->right / 10,
+        });
+
+        win32::list_view::InsertColumn(*table, -1, LVCOLUMNW {
+                .cx = LVSCW_AUTOSIZE,
+                .pszText = const_cast<wchar_t*>(L"Size (in bytes)"),
+                .cxMin = parent_size->right / 10,
+        });
+
+        win32::list_view::InsertColumn(*table, -1, LVCOLUMNW {
+              .cx = LVSCW_AUTOSIZE,
+              .pszText = const_cast<wchar_t*>(L"Compression Method"),
+              .cxMin = parent_size->right / 10
+        });
 
         return 0;
     }
@@ -117,11 +127,9 @@ struct volume_window
         auto [sender, id, code] = notification;
         auto mapped_result = win32::MapWindowPoints(sender, HWND_DESKTOP, *win32::tool_bar::GetRect(sender, id));
 
-        // create menu here
-
         win32::menu_builder builder;
 
-        // add menu items
+        // TODO: create and add menu items
         win32::TrackPopupMenuEx(LoadMenuIndirectW(builder.result()), 0, POINT{mapped_result->second.left, mapped_result->second.bottom}, sender, TPMPARAMS {
             .rcExclude = mapped_result->second
         });
@@ -129,16 +137,21 @@ struct volume_window
         return 0;
     }
 
-/*
+
     auto on_size(win32::size_message sized)
 	{
 		win32::ForEachDirectChildWindow(self, [&](auto child) {
-			win32::SetWindowPos(child, sized.client_size);
+            auto child_rect = win32::GetClientPositionAndSize(child);
+            auto child_size = std::get<SIZE>(*child_rect);
+            child_size.cx = sized.client_size.cx;
+
+            // TODO fix table height when resizing vertically
+			win32::SetWindowPos(child, child_size);
 		});
 
 		return std::nullopt;
 	}
-*/
+
 
     static bool is_bitmap(std::istream& raw_data)
     {
