@@ -20,14 +20,21 @@ struct volume_window
     {
         auto parent_size = win32::GetClientRect(self);
 
-        short height = 200;
-
-
-        auto rebar = win32::CreateWindowExW(win32::window_params<>{
+        auto root = win32::CreateWindowExW(win32::window_params<>{
             .parent = self,
             .class_name = win32::rebar::class_Name,
             .style{win32::window_style(WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS |
-                                        WS_CLIPCHILDREN | RBS_VARHEIGHT | RBS_BANDBORDERS) }
+                                        WS_CLIPCHILDREN | CCS_TOP | 
+                                        CCS_VERT | RBS_AUTOSIZE | RBS_FIXEDORDER | RBS_VERTICALGRIPPER) }
+        });
+
+        assert(root);
+
+        auto rebar = win32::CreateWindowExW(win32::window_params<>{
+            .parent = *root,
+            .class_name = win32::rebar::class_Name,
+            .style{win32::window_style(WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS |
+                WS_CLIPCHILDREN | RBS_VARHEIGHT | RBS_BANDBORDERS)}
         });
 
         auto toolbar = win32::CreateWindowExW(DLGITEMTEMPLATE{
@@ -53,7 +60,7 @@ struct volume_window
          auto button_size = win32::tool_bar::GetButtonSize(*toolbar);
 
         assert(rebar);
-        if (!win32::rebar::InsertBand(*rebar, -1, REBARBANDINFOW{
+        win32::rebar::InsertBand(*rebar, -1, REBARBANDINFOW{
             .fStyle = RBBS_CHILDEDGE | RBBS_GRIPPERALWAYS,
             .lpText = const_cast<wchar_t*>(L""),
             .hwndChild = *toolbar,
@@ -61,12 +68,9 @@ struct volume_window
             .cyMinChild = UINT(button_size.cy),
             .cx = UINT(parent_size->right / 3 * 2),
             .cyChild = UINT(button_size.cy)
-            }))
-        {
-            DebugBreak();
-        }
+            });
 
-        if (!win32::rebar::InsertBand(*rebar, -1, REBARBANDINFOW{
+        win32::rebar::InsertBand(*rebar, -1, REBARBANDINFOW{
             .fStyle = RBBS_CHILDEDGE | RBBS_GRIPPERALWAYS,
             .lpText = const_cast<wchar_t*>(L"Search"),
             .hwndChild = [&]{
@@ -81,18 +85,15 @@ struct volume_window
                 return *search;
             }(),
             .cx = UINT(parent_size->right / 3)
-            }))
-        {
-            DebugBreak();
-        }
+            });
 
         auto table = win32::CreateWindowExW(DLGITEMTEMPLATE{
 						.style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
-						.x = 0,       
-						.y = short(win32::rebar::GetBarHeight(*rebar) + 2),
-						.cx = short(parent_size->right),  
-						.cy = short(parent_size->bottom - 2 - win32::rebar::GetBarHeight(*rebar))       
-						}, self, win32::list_view::class_name, L"Volume");
+				//		.x = 0,       
+				//		.y = short(win32::GetClientRect(*rebar)->bottom + 2),
+				//		.cx = short(parent_size->right),  
+				//		.cy = short(parent_size->bottom - 2 - win32::rebar::GetBarHeight(*rebar))       
+						}, *root, win32::list_view::class_name, L"Volume");
 
         // TODO: make table columns have a split button
          win32::list_view::InsertColumn(*table, -1, LVCOLUMNW {
@@ -119,6 +120,39 @@ struct volume_window
               .cxMin = parent_size->right / 10
         });
 
+
+        auto min_height = parent_size->bottom / 10;
+        auto min_width = parent_size->right / 2;
+
+       // auto rebar_rect = win32::GetClientRect(*toolbar);
+
+        win32::rebar::InsertBand(*root, -1, REBARBANDINFOW {
+            .fStyle = RBBS_NOGRIPPER | RBBS_HIDETITLE | RBBS_TOPALIGN,
+            .hwndChild = *rebar,  
+            .cxMinChild = UINT(button_size.cy), // min height
+            .cyMinChild = UINT(button_size.cx), // min width
+            .cx = UINT(button_size.cy), // default height
+   //         .cyChild = UINT(parent_size->right), // default width
+            .cyChild = UINT(parent_size->right),
+       //     .cxIdeal = UINT(parent_size->right - 20),
+         //  .cx = UINT(parent_size->right - 100),
+            });
+
+        win32::rebar::InsertBand(*root, -1, REBARBANDINFOW {
+            .fStyle = RBBS_NOGRIPPER | RBBS_HIDETITLE | RBBS_TOPALIGN,
+            .hwndChild = *table,
+            .cxMinChild = UINT(min_height), // min height
+            .cyMinChild = UINT(parent_size->right), // min width
+            .cx = UINT(parent_size->bottom - button_size.cy), // default height
+            .cyChild = UINT(parent_size->right),
+    //        .cxIdeal = UINT(parent_size->right - 20)
+       //     .cx = UINT(parent_size->right - 100),
+            });
+
+
+    //    win32::rebar::MaximizeBand(*root, 0, parent_size->right - 100);
+ //       win32::rebar::MaximizeBand(*root, 1, parent_size->right - 100);
+
         return 0;
     }
 
@@ -138,15 +172,20 @@ struct volume_window
     }
 
 
-    auto on_size(win32::size_message sized)
+   auto on_size(win32::size_message sized)
 	{
-		win32::ForEachDirectChildWindow(self, [&](auto child) {
-            auto child_rect = win32::GetClientPositionAndSize(child);
-            auto child_size = std::get<SIZE>(*child_rect);
-            child_size.cx = sized.client_size.cx;
+		win32::ForEachDirectChildWindow(self, [&](auto child) {            
+            for (auto i = 0; i < win32::rebar::GetBandCount(child); ++i)
+            {
+                auto info = win32::rebar::GetBandChildSize(child, i);
 
-            // TODO fix table height when resizing vertically
-			win32::SetWindowPos(child, child_size);
+                if (info)
+                {
+                    info->cyMinChild = sized.client_size.cx;
+                    info->cyChild = sized.client_size.cx;
+                    win32::rebar::SetBandInfo(child, i, std::move(*info));
+                }
+            }
 		});
 
 		return std::nullopt;
