@@ -14,30 +14,79 @@ struct bitmap_window
 
     auto on_create(const win32::create_message&)
     {
+        short y_pos = 0;
+
+        auto width = win32::GetClientRect(self)->right;
+
         auto button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
-						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-						.cx = 100,  
-						.cy = 100       
+						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+						.y = y_pos,
+                        .cx = short(width),  
+						.cy = 100,
 						}, self, win32::button::class_name, L"Bitmap window");
 
-		win32::SetWindowSubclass(*button_instance, [](win32::hwnd_t button, win32::message button_message) -> std::optional<LRESULT>
-						{
-							if (button_message.message == win32::command_message::id)
-							{
-								MessageBoxExW(GetParent(button), L"Hello world", L"Test Message", 0, 0);
-								return 0;
-							}
+        y_pos += 100;
 
-							return std::nullopt;
-						});
+        button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
+						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_SPLITBUTTON,
+                        .y = y_pos,
+						.cx = short(width),  
+						.cy = 100,
+						}, self, win32::button::class_name, L"Bitmap window");
+
+        y_pos += 100;
+                
+        button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
+						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
+                        .y = y_pos,
+						.cx = short(width),  
+						.cy = 100,
+						}, self, win32::button::class_name, L"Bitmap window");
+
+        y_pos += 100;
+
+        button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
+						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_RADIOBUTTON,
+                        .y = y_pos,
+						.cx = short(width),  
+						.cy = 100,
+						}, self, win32::button::class_name, L"Bitmap window");
+
+        y_pos += 100;
+
+        button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
+						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_COMMANDLINK,
+                        .y = y_pos,
+						.cx = short(width),  
+						.cy = 100,
+						}, self, win32::button::class_name, L"Bitmap window");
+
+        y_pos += 100;
+
+        button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
+						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFCOMMANDLINK,
+                        .y = y_pos,
+						.cx = short(width),  
+						.cy = 100,
+						}, self, win32::button::class_name, L"Bitmap window");
+
+        y_pos += 100;
+
+        button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
+						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFSPLITBUTTON,
+                        .y = y_pos,
+						.cx = short(width),  
+						.cy = 100,
+						}, self, win32::button::class_name, L"Bitmap window");
+
         return 0;
     }
 
     auto on_size(win32::size_message sized)
 	{
-		win32::ForEachDirectChildWindow(self, [&](auto child) {
-			win32::SetWindowPos(child, sized.client_size);
-		});
+	//	win32::ForEachDirectChildWindow(self, [&](auto child) {
+	//		win32::SetWindowPos(child, sized.client_size);
+		//});
 
 		return std::nullopt;
 	}
