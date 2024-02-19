@@ -970,9 +970,28 @@ namespace win32
             draw_drop_down_arrows = TBSTYLE_EX_DRAWDDARROWS
         };
 
+
+
+        inline static void AutoSize(hwnd_t self)
+        {
+            SendMessageW(self, TB_AUTOSIZE, 0, 0);
+        }
+
+        [[maybe_unused]] inline static bool SetButtonWidth(hwnd_t self, std::array<int, 2> range)
+        {
+            auto [min, max] = range;
+
+            return SendMessageW(self, TB_SETBUTTONWIDTH, 0, MAKELPARAM(min, max));
+        }
+
+        [[maybe_unused]] inline static bool SetButtonSize(hwnd_t self, SIZE size)
+        {
+            return SendMessageW(self, TB_SETBUTTONSIZE , 0, MAKELPARAM(size.cx, size.cy));
+        }
+
         [[nodiscard]] inline static SIZE GetButtonSize(hwnd_t self)
         {
-            auto result = SendMessage(self, TB_GETBUTTONSIZE, 0, 0);
+            auto result = SendMessageW(self, TB_GETBUTTONSIZE, 0, 0);
 
             return SIZE {.cx = LOWORD(result), .cy = HIWORD(result)};
         }
@@ -980,7 +999,7 @@ namespace win32
         [[nodiscard]] inline static std::optional<RECT> GetRect(hwnd_t self, wparam_t id)
         {
             RECT result;
-            if (SendMessage(self, TB_GETRECT, id, std::bit_cast<lparam_t>(&result)))
+            if (SendMessageW(self, TB_GETRECT, id, std::bit_cast<lparam_t>(&result)))
             {
                 return result;
             }
