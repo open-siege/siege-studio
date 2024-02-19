@@ -946,6 +946,16 @@ namespace win32
     {
         constexpr static auto class_name = WC_LISTBOXW;
         constexpr static std::uint16_t dialog_id = 0x0083;
+
+        [[maybe_unused]] inline wparam_t AddString(hwnd_t self, wparam_t index, std::string_view text)
+        {
+            return SendMessageW(self, LB_ADDSTRING, index, text.data());
+        }
+
+        [[maybe_unused]] inline wparam_t InsertString(hwnd_t self, wparam_t index, std::string_view text)
+        {
+            return SendMessageW(self, LB_INSERTSTRING, index, text.data());
+        }
     };
 
     struct scroll_bar
@@ -958,6 +968,16 @@ namespace win32
     {
         constexpr static auto class_name = WC_COMBOBOXW;
         constexpr static std::uint16_t dialog_id = 0x0085;
+
+        [[maybe_unused]] inline wparam_t AddString(hwnd_t self, wparam_t index, std::string_view text)
+        {
+            return SendMessageW(self, CB_ADDSTRING, index, text.data());
+        }
+
+        [[maybe_unused]] inline wparam_t InsertString(hwnd_t self, wparam_t index, std::string_view text)
+        {
+            return SendMessageW(self, CB_INSERTSTRING, index, text.data());
+        }
     };
 
     struct tool_bar
@@ -969,8 +989,6 @@ namespace win32
             mixed_buttons = TBSTYLE_EX_MIXEDBUTTONS,
             draw_drop_down_arrows = TBSTYLE_EX_DRAWDDARROWS
         };
-
-
 
         inline static void AutoSize(hwnd_t self)
         {
@@ -1014,10 +1032,17 @@ namespace win32
         
         }
 
-        [[maybe_unused]] inline static bool AddButtons(hwnd_t self, std::span<TBBUTTON> buttons)
+        [[maybe_unused]] inline static bool InsertButton(hwnd_t self, wparam_t index, TBBUTTON button)
         {
             SendMessageW(self, TB_BUTTONSTRUCTSIZE, sizeof(TBBUTTON), 0);
             return SendMessageW(self, TB_ADDBUTTONSW, wparam_t(buttons.size()), 
+                std::bit_cast<win32::lparam_t>(&button));
+        }
+
+        [[maybe_unused]] inline static bool AddButtons(hwnd_t self, std::span<TBBUTTON> buttons)
+        {
+            SendMessageW(self, TB_BUTTONSTRUCTSIZE, sizeof(TBBUTTON), 0);
+            return SendMessageW(self, TB_INSERTBUTTONW, wparam_t(buttons.size()), 
                 std::bit_cast<win32::lparam_t>(buttons.data()));
         }
     };
@@ -1057,8 +1082,6 @@ namespace win32
         {
             SendMessageW(self, RB_MAXIMIZEBAND, index, ideal_width);
         }
-
-    
 
         [[maybe_unused]] inline static std::optional<REBARBANDINFOW> GetBandChildSize(hwnd_t self, wparam_t index)
         {
@@ -1135,6 +1158,11 @@ namespace win32
     struct combo_box_ex
     {
         constexpr static auto class_name = WC_COMBOBOXEXW;
+
+        [[maybe_unused]] inline wparam_t InsertItem(hwnd_t self, COMBOBOXEXITEMW info)
+        {
+            return SendMessageW(self, CBEM_INSERTITEM, 0, std::bit_cast<win32::lparam_t>(&info));
+        }
     };
 
     struct header
@@ -1144,6 +1172,11 @@ namespace win32
         [[nodiscard]] inline static wparam_t GetItemCount(hwnd_t self)
         {
             return SendMessageW(self, HDM_GETITEMCOUNT, 0, 0);
+        }
+
+        [[maybe_unused]] inline wparam_t InsertItem(hwnd_t self, wparam_t index, HDITEMW info)
+        {
+            return SendMessageW(self, HDM_INSERTITEM, index, std::bit_cast<win32::lparam_t>(&info));
         }
     };
 
@@ -1191,8 +1224,6 @@ namespace win32
         [[maybe_unused]] inline static wparam_t InsertColumn(hwnd_t self, wparam_t position, LVCOLUMNW column)
         {
             bool mask_not_set = column.mask == 0;
-
-
 
             if (mask_not_set && column.fmt)
             {
@@ -1254,18 +1285,32 @@ namespace win32
 
     struct page_scroller
     {
-
         constexpr static auto class_name = WC_PAGESCROLLERW;
     };
 
     struct tab_control
     {
         constexpr static auto class_name = WC_TABCONTROLW;
+
+        [[maybe_unused]] inline wparam_t InsertItem(hwnd_t self, wparam_t index, TCITEMW info)
+        {
+            return SendMessageW(self, TCM_INSERTITEM, index, std::bit_cast<lparam_t>(&info));
+        }
     };
 
     struct tree_view
     {
         constexpr static auto class_name = WC_TREEVIEWW;
+
+        [[maybe_unused]] inline std::optional<HTREEITEM> InsertItem(hwnd_t self, wparam_t index, TVINSERTSTRUCTW info)
+        {
+            if (auto result = HTREEITEM(SendMessageW(self, TVM_INSERTITEM, index, std::bit_cast<lparam_t>(&info))); result)
+            {
+                return result;
+            }
+
+            return std::nullopt;
+        }
     };
 }
 
