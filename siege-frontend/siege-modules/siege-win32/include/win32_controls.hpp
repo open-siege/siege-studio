@@ -7,6 +7,7 @@
 #include <utility>
 #include <span>
 #include <optional>
+#include <map>
 #include <string>
 #include <expected>
 #include <memory_resource>
@@ -826,6 +827,11 @@ namespace win32
         return result;
     }
 
+    enum struct StackDirection
+    {
+        Vertical,
+        Horizonal
+    };
     inline std::optional<RECT> GetWindowRect(hwnd_t control)
     {
         RECT result;
@@ -919,6 +925,57 @@ namespace win32
         return std::nullopt;
     }
 
+    inline void StackChildren(hwnd_t parent, direction = StackDirection::Vertical)
+    {
+        auto child = GetWindow(parent, GW_CHILD);
+
+        auto first = GetWindow(child, GW_HWNDFIRST);
+
+        auto parent_rect = win32::GetClientRect(i);
+
+        std::map<int, hwnd_t> children;
+
+        for (auto i = first; i != nullptr; GetWindow(i, GW_HWNDNEXT))
+        {
+            auto rect = win32::GetClientRect(i);
+
+            if (rect)
+            {
+                children.emplace(rect->right, i);
+            }
+        }
+
+        auto y_pos = 0;
+        auto x_pos = 0;
+
+        if (direction == StackDirection::Vertical)
+        {
+            for (auto& child : children)
+            {
+                auto child_hwnd = std::get<hwnd_t>(child);
+                auto rect = win32::GetClientRect(child_hwnd);
+
+                rect->right = parent_rect->right;
+                rect->top = y_pos;
+                win32::SetWindowPos(child_hwnd, rect);
+                y_pos += rect->bottom;
+            }
+        }
+        else if (direction == StackDirection::Horizonal)
+        {
+            for (auto& child : children)
+            {
+                auto child_hwnd = std::get<hwnd_t>(child);
+                auto rect = win32::GetClientRect(child_hwnd);
+
+                rect->bottom = parent_rect->bottom;
+                rect->left = x_pos;
+                win32::SetWindowPos(child_hwnd, rect);
+                x_pos += rect->right;
+            }
+        }
+    }
+
     struct button
     {
         constexpr static auto class_name = WC_BUTTONW;
@@ -936,7 +993,7 @@ namespace win32
        }
     };
 
-    struct static_text
+    struct static_control
     {
         constexpr static auto class_name = WC_STATICW;
         constexpr static std::uint16_t dialog_id = 0x0082;
