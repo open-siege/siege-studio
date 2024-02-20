@@ -1,7 +1,7 @@
 #include <win32_controls.hpp>
 #include <bit>
 #include <filesystem>
-
+#include "views/bitmap_window.hpp"
 
 struct pal_window
 {
