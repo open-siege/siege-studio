@@ -10,6 +10,7 @@
 #include <map>
 #include <string>
 #include <expected>
+#include <algorithm>
 #include <memory_resource>
 #include "win32_messages.hpp"
 #include "CommCtrl.h"
@@ -827,11 +828,6 @@ namespace win32
         return result;
     }
 
-    enum struct StackDirection
-    {
-        Vertical,
-        Horizonal
-    };
     inline std::optional<RECT> GetWindowRect(hwnd_t control)
     {
         RECT result;
@@ -849,6 +845,17 @@ namespace win32
         if (::GetClientRect(control, &result))
         {
             return result;
+        }
+
+        return std::nullopt;
+    }
+
+    inline std::optional<SIZE> GetClientSize(hwnd_t control)
+    {
+        RECT result;
+        if (::GetClientRect(control, &result))
+        {
+            return SIZE {.cx = result.right, .cy = result.bottom };
         }
 
         return std::nullopt;
@@ -925,61 +932,113 @@ namespace win32
         return std::nullopt;
     }
 
-    inline void StackChildren(hwnd_t parent, direction = StackDirection::Vertical)
+    enum struct StackDirection
     {
-        auto child = GetWindow(parent, GW_CHILD);
+        Vertical,
+        Horizontal
+    };
 
-        auto first = GetWindow(child, GW_HWNDFIRST);
-
-        auto parent_rect = win32::GetClientRect(i);
-
-        std::map<int, hwnd_t> children;
-
-        for (auto i = first; i != nullptr; GetWindow(i, GW_HWNDNEXT))
-        {
-            auto rect = win32::GetClientRect(i);
-
-            if (rect)
+    inline void StackChildren(SIZE parent_size, std::span<hwnd_t> children, StackDirection direction = StackDirection::Vertical, std::optional<POINT> start_pos = std::nullopt)
+    {
+        std::stable_sort(children.begin(), children.end(), [&](hwnd_t a, hwnd_t b) {
+            auto rect_a = win32::GetClientRect(a);
+            auto rect_b = win32::GetClientRect(b);
+            if (rect_a && rect_b)
             {
-                children.emplace(rect->right, i);
+                if (direction == StackDirection::Vertical)
+                {
+                    return rect_a->top < rect_b->top;
+                }
+                else if (direction == StackDirection::Horizontal)
+                {
+                    return rect_a->left < rect_b->left;
+                }
             }
-        }
 
-        auto y_pos = 0;
-        auto x_pos = 0;
+            return false;
+        });
+
+        std::stable_sort(children.begin(), children.end(), [&](hwnd_t a, hwnd_t b) {
+            return GetWindowLongPtrW(a, GWLP_ID) < GetWindowLongPtrW(b, GWLP_ID);
+        });
+
+        auto x_pos = start_pos ? start_pos->x : 0;
+        auto y_pos = start_pos ? start_pos->y : 0;
 
         if (direction == StackDirection::Vertical)
         {
             for (auto& child : children)
             {
-                auto child_hwnd = std::get<hwnd_t>(child);
-                auto rect = win32::GetClientRect(child_hwnd);
+                auto rect = win32::GetClientRect(child);
 
-                rect->right = parent_rect->right;
+                rect->right = parent_size.cx;
                 rect->top = y_pos;
-                win32::SetWindowPos(child_hwnd, rect);
+                win32::SetWindowPos(child, *rect);
                 y_pos += rect->bottom;
             }
         }
-        else if (direction == StackDirection::Horizonal)
+        else if (direction == StackDirection::Horizontal)
         {
             for (auto& child : children)
             {
-                auto child_hwnd = std::get<hwnd_t>(child);
-                auto rect = win32::GetClientRect(child_hwnd);
+                auto rect = win32::GetClientRect(child);
 
-                rect->bottom = parent_rect->bottom;
+                rect->bottom = parent_size.cy;
                 rect->left = x_pos;
-                win32::SetWindowPos(child_hwnd, rect);
+                
+                if (start_pos)
+                {
+                    rect->top = y_pos;
+                }
+
+                win32::SetWindowPos(child, *rect);
                 x_pos += rect->right;
             }
         }
+    }
+
+    inline void StackChildren(hwnd_t parent, StackDirection direction = StackDirection::Vertical)
+    {
+        std::vector<hwnd_t> children;
+        children.reserve(8);
+
+        for (auto i = GetWindow(GetWindow(parent, GW_CHILD), GW_HWNDFIRST); i != nullptr; i = GetWindow(i, GW_HWNDNEXT))
+        {
+            children.emplace_back(i);
+        }
+
+        auto rect = win32::GetClientRect(parent);
+        return StackChildren(SIZE {.cx = rect->left, .cy = rect->bottom }, children, direction);
     }
 
     struct button
     {
         constexpr static auto class_name = WC_BUTTONW;
         constexpr static std::uint16_t dialog_id = 0x0080;
+
+        [[nodiscard]] inline static std::optional<RECT> GetTextMargin(hwnd_t self)
+        {
+            RECT result;
+
+            if (SendMessageW(self, BCM_GETTEXTMARGIN, 0, std::bit_cast<lparam_t>(&result)))
+            {
+                return result;
+            }
+
+            return std::nullopt;
+        }
+
+        [[nodiscard]] inline static std::optional<SIZE> GetIdealSize(hwnd_t self, LONG ideal_width = 0)
+        {
+            SIZE result{.cx = ideal_width };
+
+            if (SendMessageW(self, BCM_GETIDEALSIZE, 0, std::bit_cast<lparam_t>(&result)))
+            {
+                return result;
+            }
+
+            return std::nullopt;
+        }
     };
 
     struct edit
@@ -1006,12 +1065,12 @@ namespace win32
 
         [[maybe_unused]] inline wparam_t AddString(hwnd_t self, wparam_t index, std::string_view text)
         {
-            return SendMessageW(self, LB_ADDSTRING, index, text.data());
+            return SendMessageW(self, LB_ADDSTRING, index, std::bit_cast<LPARAM>(text.data()));
         }
 
         [[maybe_unused]] inline wparam_t InsertString(hwnd_t self, wparam_t index, std::string_view text)
         {
-            return SendMessageW(self, LB_INSERTSTRING, index, text.data());
+            return SendMessageW(self, LB_INSERTSTRING, index, std::bit_cast<LPARAM>(text.data()));
         }
     };
 
@@ -1028,12 +1087,12 @@ namespace win32
 
         [[maybe_unused]] inline wparam_t AddString(hwnd_t self, wparam_t index, std::string_view text)
         {
-            return SendMessageW(self, CB_ADDSTRING, index, text.data());
+            return SendMessageW(self, CB_ADDSTRING, index, std::bit_cast<LPARAM>(text.data()));
         }
 
         [[maybe_unused]] inline wparam_t InsertString(hwnd_t self, wparam_t index, std::string_view text)
         {
-            return SendMessageW(self, CB_INSERTSTRING, index, text.data());
+            return SendMessageW(self, CB_INSERTSTRING, index, std::bit_cast<LPARAM>(text.data()));
         }
     };
 
@@ -1092,14 +1151,14 @@ namespace win32
         [[maybe_unused]] inline static bool InsertButton(hwnd_t self, wparam_t index, TBBUTTON button)
         {
             SendMessageW(self, TB_BUTTONSTRUCTSIZE, sizeof(TBBUTTON), 0);
-            return SendMessageW(self, TB_ADDBUTTONSW, wparam_t(buttons.size()), 
+            return SendMessageW(self, TB_INSERTBUTTONW, index, 
                 std::bit_cast<win32::lparam_t>(&button));
         }
 
         [[maybe_unused]] inline static bool AddButtons(hwnd_t self, std::span<TBBUTTON> buttons)
         {
             SendMessageW(self, TB_BUTTONSTRUCTSIZE, sizeof(TBBUTTON), 0);
-            return SendMessageW(self, TB_INSERTBUTTONW, wparam_t(buttons.size()), 
+            return SendMessageW(self, TB_ADDBUTTONSW, wparam_t(buttons.size()), 
                 std::bit_cast<win32::lparam_t>(buttons.data()));
         }
     };
