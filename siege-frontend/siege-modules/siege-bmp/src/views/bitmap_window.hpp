@@ -66,10 +66,71 @@ struct bitmap_window
         assert(win32::tool_bar::AddButtons(*strategy_toolbar, buttons));
 
         auto palettes_tree = win32::CreateWindowExW(DLGITEMTEMPLATE{
-						.style = WS_VISIBLE | WS_CHILD,
+						.style = WS_VISIBLE | WS_CHILD | TVS_HASBUTTONS | TVS_CHECKBOXES, 
                         .y = 2,
                         .cy = 300,
 						}, self, win32::tree_view::class_name, L"Palettes");
+
+        auto root_item = win32::tree_view::InsertItem(*palettes_tree, TVINSERTSTRUCTW{
+            .hInsertAfter = TVI_ROOT,
+            .itemex = {
+                .pszText = const_cast<wchar_t*>(L"menu.pal"),
+                .cChildren = 1
+                }
+            });
+
+        win32::tree_view::InsertItem(*palettes_tree, TVINSERTSTRUCTW{
+            .hParent = *root_item,
+            .hInsertAfter = TVI_LAST,
+            .itemex = {
+                .pszText = const_cast<wchar_t*>(L"palette 1")
+                }
+            });
+
+        win32::tree_view::InsertItem(*palettes_tree, TVINSERTSTRUCTW{
+            .hParent = *root_item,
+            .hInsertAfter = TVI_LAST,
+            .itemex = {
+                .pszText = const_cast<wchar_t*>(L"palette 2")
+                }
+            });
+
+        win32::tree_view::InsertItem(*palettes_tree, TVINSERTSTRUCTW{
+            .hParent = *root_item,
+            .hInsertAfter = TVI_LAST,
+            .itemex = {
+                .pszText = const_cast<wchar_t*>(L"palette 3")
+                }
+            });
+
+        win32::tree_view::InsertItem(*palettes_tree, TVINSERTSTRUCTW{
+            .hParent = *root_item,
+            .hInsertAfter = TVI_LAST,
+            .itemex = {
+                .pszText = const_cast<wchar_t*>(L"palette 4")
+                }
+            });
+
+        root_item = win32::tree_view::InsertItem(*palettes_tree, TVINSERTSTRUCTW{
+            .hInsertAfter = TVI_ROOT,
+            .itemex = {
+                .pszText = const_cast<wchar_t*>(L"test.dpl")
+                }
+            });
+
+        root_item = win32::tree_view::InsertItem(*palettes_tree, TVINSERTSTRUCTW{
+            .hInsertAfter = TVI_ROOT,
+            .itemex = {
+                .pszText = const_cast<wchar_t*>(L"ui.ppl")
+                }
+            });
+
+        root_item = win32::tree_view::InsertItem(*palettes_tree, TVINSERTSTRUCTW{
+            .hInsertAfter = TVI_ROOT,
+            .itemex = {
+                .pszText = const_cast<wchar_t*>(L"other.pal")
+                }
+            });
 
         // TODO add example palette file names as root items and then palette names as children
 
@@ -87,7 +148,7 @@ struct bitmap_window
       //                  .cy = 300,
 						//}, self, win32::static_control::class_name, L"Image");
 
-        auto children = std::array{*group_box, *strategy_toolbar};
+        auto children = std::array{*group_box, *strategy_toolbar, *palettes_tree};
         win32::StackChildren(*win32::GetClientSize(self), children);
 
         auto rect = win32::GetClientRect(*group_box);

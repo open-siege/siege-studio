@@ -1408,9 +1408,9 @@ namespace win32
     {
         constexpr static auto class_name = WC_TABCONTROLW;
 
-        [[maybe_unused]] inline wparam_t InsertItem(hwnd_t self, wparam_t index, TCITEMW info)
+        [[maybe_unused]] inline static wparam_t InsertItem(hwnd_t self, wparam_t index, TCITEMW info)
         {
-            return SendMessageW(self, TCM_INSERTITEM, index, std::bit_cast<lparam_t>(&info));
+            return SendMessageW(self, TCM_INSERTITEMW, index, std::bit_cast<lparam_t>(&info));
         }
     };
 
@@ -1418,9 +1418,46 @@ namespace win32
     {
         constexpr static auto class_name = WC_TREEVIEWW;
 
-        [[maybe_unused]] inline std::optional<HTREEITEM> InsertItem(hwnd_t self, wparam_t index, TVINSERTSTRUCTW info)
+        [[maybe_unused]] inline static std::optional<HTREEITEM> InsertItem(hwnd_t self, TVINSERTSTRUCTW info)
         {
-            if (auto result = HTREEITEM(SendMessageW(self, TVM_INSERTITEM, index, std::bit_cast<lparam_t>(&info))); result)
+            bool mask_not_set = info.itemex.mask == 0;
+
+            if (mask_not_set && info.itemex.pszText)
+            {
+                info.itemex.mask |= TVIF_TEXT;
+            }
+
+            if (mask_not_set && info.itemex.hItem)
+            {
+                info.itemex.mask |= TVIF_HANDLE;
+            }
+
+            if (mask_not_set && info.itemex.iImage)
+            {
+                info.itemex.mask |= TVIF_IMAGE;
+            }
+
+            if (mask_not_set && info.itemex.lParam)
+            {
+                info.itemex.mask |= TVIF_PARAM;
+            }
+
+            if (mask_not_set && info.itemex.iSelectedImage)
+            {
+                info.itemex.mask |= TVIF_SELECTEDIMAGE;
+            }
+
+            if (mask_not_set && (info.itemex.state || info.itemex.stateMask))
+            {
+                info.itemex.mask |= TVIF_STATE;
+            }
+
+            if (mask_not_set && info.itemex.cChildren)
+            {
+                info.itemex.mask |= TVIF_CHILDREN;
+            }
+
+            if (auto result = HTREEITEM(SendMessageW(self, TVM_INSERTITEMW, 0, std::bit_cast<lparam_t>(&info))); result)
             {
                 return result;
             }
