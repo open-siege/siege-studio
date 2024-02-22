@@ -1094,6 +1094,18 @@ namespace win32
         {
             return SendMessageW(self, CB_INSERTSTRING, index, std::bit_cast<LPARAM>(text.data()));
         }
+
+        [[nodiscard]] inline std::expected<COMBOBOXINFO, DWORD> GetComboBoxInfo(hwnd_t self)
+        {
+            COMBOBOXINFO result;
+
+            if (SendMessageW(self, CB_GETCOMBOBOXINFO, 0, std::bit_cast<LPARAM>(&result))
+            {
+                return result;
+            }
+
+            return std::unexpected(GetLastError());
+        }
     };
 
     struct tool_bar
@@ -1310,6 +1322,114 @@ namespace win32
     {
         constexpr static auto class_name = WC_LISTVIEWW;
 
+        enum view_type : DWORD
+        {
+            details_view = LV_VIEW_DETAILS,
+            icon_view = LV_VIEW_ICON,
+            list_view = LV_VIEW_LIST,
+            small_icon_view = LV_VIEW_LIST,
+            tile_view = LV_VIEW_TILE
+        };
+
+        static bool SetView(hwnd_t self, view_type type)
+        {
+            return SendMessageW(self, LVM_SETVIEW, wparam_t(type), 0) == 1;
+        }
+
+        static view_type GetView(hwnd_t self)
+        {
+            return view_type(SendMessageW(self, LVM_GETVIEW, 0, 0));
+        }
+
+        static bool IsGroupViewEnabled(hwnd_t self)
+        {
+            return SendMessageW(self, LVM_ISGROUPVIEWENABLED, 0, 0);
+        }
+
+        static lparam_t GetGroupCount(hwnd_t self)
+        {
+            return SendMessageW(self, LVM_GETGROUPCOUNT, index, 0);
+        }
+
+        static wparam_t InsertGroup(hwnd_t self, wparam_t index, LVGROUP group)
+        {
+            group.cbSize = sizeof(group);
+
+            bool mask_not_set = group.mask == 0;
+            
+            if (mask_not_set && group.pszHeader)
+            {
+                group.mask |= LVGF_HEADER;
+            }
+
+            if (mask_not_set && group.pszFooter)
+            {
+                group.mask |= LVGF_FOOTER;
+            }
+
+            if (mask_not_set && group.state)
+            {
+                group.mask |= LVGF_STATE;
+            }
+
+            if (mask_not_set && group.uAlign)
+            {
+                group.mask |= LVGF_ALIGN;
+            }
+
+            if (mask_not_set && group.iGroupId)
+            {
+                group.mask |= LVGF_GROUPID;
+            }
+
+            if (mask_not_set && group.pszSubtitle)
+            {
+                group.mask |= LVGF_SUBTITLE;
+            }
+
+            if (mask_not_set && group.pszTask)
+            {
+                group.mask |= LVGF_TASK;
+            }
+
+            if (mask_not_set && group.pszDescriptionTop)
+            {
+                group.mask |= LVGF_DESCRIPTIONTOP;
+            }
+
+            if (mask_not_set && group.pszDescriptionBottom)
+            {
+                group.mask |= LVGF_DESCRIPTIONBOTTOM;
+            }
+
+            if (mask_not_set && group.iTitleImage)
+            {
+                group.mask |= LVGF_TITLEIMAGE;
+            }
+
+            if (mask_not_set && group.iExtendedImage)
+            {
+                group.mask |= LVGF_EXTENDEDIMAGE;
+            }
+
+            if (mask_not_set && group.cItems)
+            {
+                group.mask |= LVGF_ITEMS;
+            }
+
+            if (mask_not_set && group.pszSubsetTitle)
+            {
+                group.mask |= LVGF_SUBSET;
+            }
+
+            if (mask_not_set && group.cchSubsetTitle)
+            {
+                group.mask |= LVGF_SUBSETITEMS;
+            }
+
+            return SendMessageW(self, LVM_INSERTGROUP, index, std::bit_cast<lparam_t>(&group));
+        }
+
         [[nodiscard]] inline static hwnd_t GetHeader(hwnd_t self)
         {
             return hwnd_t(SendMessageW(self, LVM_GETHEADER, 0, 0));
@@ -1330,6 +1450,11 @@ namespace win32
             }
 
             return std::nullopt;
+        }
+
+        static lparam_t GetColumnWidth(hwnd_t self, wparam_t index)
+        {
+            return SendMessageW(self, LVM_GETCOLUMNWIDTH, index, 0);
         }
 
         [[maybe_unused]] inline static bool SetColumnWidth(hwnd_t self, wparam_t index, lparam_t width)
@@ -1392,6 +1517,60 @@ namespace win32
 
             return index;
         }
+
+        static wparam_t InsertItem(hwnd_t self, wparam_t index, LVITEM item)
+        {
+            item.cbSize = sizeof(item);
+
+            bool mask_not_set = item.mask == 0;
+            
+            if (mask_not_set && item.piColFmt)
+            {
+                item.mask |= LVIF_COLFMT;
+            }
+
+            if (mask_not_set && item.cColumns)
+            {
+                item.mask |= LVIF_COLUMNS;
+            }
+
+            if (mask_not_set && item.iGroupId)
+            {
+                item.mask |= LVIF_GROUPID;
+            }
+
+            if (mask_not_set && item.iImage)
+            {
+                item.mask |= LVIF_IMAGE;
+            }
+
+            if (mask_not_set && item.iIndent)
+            {
+                item.mask |= LVIF_INDENT;
+            }
+
+            if (mask_not_set && item.pszText == LPSTR_TEXTCALLBACK)
+            {
+                item.mask |= LVIF_NORECOMPUTE;
+            }
+
+            if (mask_not_set && item.lParam)
+            {
+                item.mask |= LVIF_PARAM;
+            }
+
+            if (mask_not_set && item.state)
+            {
+                item.mask |= LVIF_STATE;
+            }
+
+            if (mask_not_set && item.pszText)
+            {
+                item.mask |= LVIF_TEXT;
+            }
+
+            return SendMessageW(self, LVM_INSERTITEM, index, std::bit_cast<lparam_t>(&group));
+        }
     };
 
     struct native_font
@@ -1411,6 +1590,12 @@ namespace win32
         [[maybe_unused]] inline static wparam_t InsertItem(hwnd_t self, wparam_t index, TCITEMW info)
         {
             return SendMessageW(self, TCM_INSERTITEMW, index, std::bit_cast<lparam_t>(&info));
+        }
+
+        static RECT AdjustRect(hwnd_t self, bool dispay_to_window, RECT rect)
+        {
+            SendMessageW(self, TCM_ADJUSTRECT, dispay_to_window ? TRUE : FALSE, std::bit_cast<lparam_t>(&rect));
+            return rect;
         }
     };
 
