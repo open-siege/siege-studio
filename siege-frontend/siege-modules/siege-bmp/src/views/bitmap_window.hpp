@@ -14,18 +14,13 @@ struct bitmap_window
 
     PROCESS_INFORMATION powershell;
 
-    HHOOK hook;
-
     bitmap_window(win32::hwnd_t self, const CREATESTRUCTW&) : self(self)
 	{
-                hook = nullptr;
-
 	}
 
 
     ~bitmap_window()
     {
-        UnhookWindowsHookEx(hook);
         PostThreadMessageW(powershell.dwThreadId, WM_QUIT, 0, 0);
 
         for (auto i = 0; i < 10; ++i)
@@ -77,23 +72,24 @@ struct bitmap_window
         command << "Add-Type -AssemblyName System.Drawing;";
         command << "$hwnd = " << std::size_t(self) << ";";
         command << "$style = " << (WS_CHILD | WS_VISIBLE) << ";";
+        command << "$wm_command = " << WM_COMMAND << ";";
+        command << "$bn_clicked = " << MAKEWPARAM(0, BN_CLICKED) << ";";
         command << "$signature = '";
         command << "[DllImport(\"\"\"user32.dll\"\"\")] public static extern IntPtr SetParent(IntPtr hwndChild, IntPtr hwndNewParent);";
-        command << "[DllImport(\"\"\"user32.dll\"\"\")] public static extern IntPtr SetWindowLongPtrW(IntPtr hwnd, int index, IntPtr value);';";
-        command << "$type = Add-Type -MemberDefinition $signature -Name Win32Utils -Namespace Win32Utils -Using System.Text -PassThru;";
-
-        command << "$native = [System.Windows.Forms.NativeWindow]::FromHandle($hwnd);";
-
+        command << "[DllImport(\"\"\"user32.dll\"\"\")] public static extern IntPtr SetWindowLongPtrW(IntPtr hwnd, int index, IntPtr value);";
+        command << "[DllImport(\"\"\"user32.dll\"\"\")] public static extern byte PostMessageW(IntPtr hwnd, uint msg, IntPtr wparam, IntPtr lparam);';";
+        command << "$type = Add-Type -MemberDefinition $signature -Name user32 -Namespace win32 -Using System.Text -PassThru;";
         command <<  "$form = New-Object System.Windows.Forms.Form;";
-        command << "$form.Text = 'Matthew wuvs Claudia';";
+        command << "$form.Text = 'Win Forms Form';";
         command << "$form.Size = New-Object System.Drawing.Size(300,200);";
         command << "$form.Location = New-Object System.Drawing.Point(0, 0);";
 
         command << "$okButton = New-Object System.Windows.Forms.Button;";
         command << "$okButton.Location = New-Object System.Drawing.Point(75,120);";
         command << "$okButton.Size = New-Object System.Drawing.Size(75,23);";
-        command << "$okButton.Text = 'Extra Wuv';";
+        command << "$okButton.Text = 'Panda Wuv';";
         command << "$okButton.DialogResult = [System.Windows.Forms.DialogResult]::OK;";
+        command << "$okButton.add_Click({ param($sender, $eventArgs); $type::PostMessageW($hwnd, $wm_command, $bn_clicked, $sender.Handle); });";
         command << "$form.AcceptButton = $okButton;";
         command << "$form.Controls.Add($okButton);";
         
@@ -105,7 +101,7 @@ struct bitmap_window
         command << '\"';
 
       
-        std::wstring args = L"powershell -NoExit -Command " + command.str();
+        std::wstring args = L"powershell -WindowStyle hidden -Command " + command.str();
 
         assert(args.size() < 32766);
 
@@ -114,7 +110,7 @@ struct bitmap_window
                     nullptr, 
                     nullptr, 
                     TRUE, 
-                NORMAL_PRIORITY_CLASS | CREATE_NEW_CONSOLE | CREATE_NEW_PROCESS_GROUP,
+                NORMAL_PRIORITY_CLASS,
                 nullptr, 
             nullptr, &startup_info, &powershell))
         {
@@ -122,23 +118,6 @@ struct bitmap_window
         }
 
 
-        win32::hwnd_t child = nullptr;
-
-        for (auto i = 0; i < 10; i ++)
-        {
-            child = GetWindow(self, GW_CHILD);
-
-            if (child)
-            {
-                break;
-            }
-
-            Sleep(100);
-        }
-
-        auto real_thread_id = GetWindowThreadProcessId(child, 0);
-
-        hook = SetWindowsHookExW(WH_CALLWNDPROC, CallWndProc, info.data.hInstance, real_thread_id);
 
 
 //        auto group_box = win32::CreateWindowExW(DLGITEMTEMPLATE{
@@ -300,6 +279,7 @@ struct bitmap_window
     {
    //     DebugBreak();
 
+        MessageBoxW(self, L"Panda Wuv is the best", L"Happy Dame, Happy Hame", 0);
         return std::nullopt;
     }
 
