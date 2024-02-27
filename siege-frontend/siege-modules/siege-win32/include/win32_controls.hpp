@@ -1063,6 +1063,11 @@ namespace win32
         constexpr static auto class_name = WC_LISTBOXW;
         constexpr static std::uint16_t dialog_id = 0x0083;
 
+        [[nodiscard]] static lresult_t GetCount(hwnd_t self)
+        {
+            return SendMessageW(self, LB_GETCOUNT, 0, 0);
+        }
+
         [[maybe_unused]] static wparam_t AddString(hwnd_t self, wparam_t index, std::string_view text)
         {
             return SendMessageW(self, LB_ADDSTRING, index, std::bit_cast<LPARAM>(text.data()));
@@ -1647,6 +1652,87 @@ namespace win32
             return std::nullopt;
         }
     };
+
+    using item_variant = std::variant<std::wstring_view, LVITEMW, TVINSERTSTRUCTW, TBBUTTON>;
+
+    hwnd_t CopyTo(hwnd_t from, hwnd_t to)
+    {
+        std::array<wchar_t, 32> from_class{};
+        std::array<wchar_t, 32> to_class{};
+
+        GetClassNameW(from, from_class.data(), from_class.size());
+        GetClassNameW(to, from_class.data(), from_class.size());
+
+        auto from_class_str = std::wstring_view(from_class.data());
+        auto to_class_str = std::wstring_view(from_class.data());
+
+        std::wstring string_buffer;
+        std::vector<item_variant> from_items;
+
+        if (from_class_str == list_box::class_name)
+        {
+            auto count = list_box::GetCount(from);
+
+            if (count != LB_ERR)
+            {
+                items.reserve(count);
+                string_buffer.reserve(count * sizeof(item_variant));
+
+                for (auto i = 0; i < count; ++i)
+                {
+                    std::wstring_view data(string_buffer.data() + (i * sizeof(item_variant)));
+
+                    if (auto text_length = SendMessageW(from, LB_GETTEXTLEN, i, 0); text_length != LB_ERR)
+                    {
+                        if (text_length >= sizeof(item_variant))
+                        {
+                            break;
+                        }
+
+                        if (SendMessageW(from, LB_GETTEXT, i, std::bit_cast<lparam>(data.data())) == LB_ERR)
+                        {
+                            break;
+                        }
+
+                        from_items.emplace_back(data);
+                    }
+                }
+            }
+        }
+        else if (from_class_str == combo_box::class_name)
+        {
+            auto count = combo_box::GetCount(from);
+
+            if (count != LB_ERR)
+            {
+                items.reserve(count);
+                string_buffer.reserve(count * sizeof(item_variant));
+
+                for (auto i = 0; i < count; ++i)
+                {
+                    std::wstring_view data(string_buffer.data() + (i * sizeof(item_variant)));
+
+                    if (auto text_length = SendMessageW(from, LB_GETTEXTLEN, i, 0); text_length != LB_ERR)
+                    {
+                        if (text_length >= sizeof(item_variant))
+                        {
+                            break;
+                        }
+
+                        if (SendMessageW(from, LB_GETTEXT, i, std::bit_cast<lparam>(data.data())) == LB_ERR)
+                        {
+                            break;
+                        }
+
+                        from_items.emplace_back(data);
+                    }
+                }
+            }
+        }
+
+
+        return to;
+    }
 }
 
 #endif
