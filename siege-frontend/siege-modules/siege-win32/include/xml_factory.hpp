@@ -23,7 +23,6 @@ HRESULT init_com()
 	return result;
 }
 
-
 std::expected<IXMLDOMDocument3*, HRESULT> load_data(std::unique_ptr<wchar_t, void(*)(wchar_t*)> xml_data)
 {
 	HRESULT result = init_com();
