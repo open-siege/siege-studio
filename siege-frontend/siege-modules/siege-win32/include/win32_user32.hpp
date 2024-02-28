@@ -538,7 +538,7 @@ namespace win32
                 {
                     child = std::bit_cast<callback_type*>(lParam);
                     SetWindowLongPtr(hDlg, DWLP_USER, std::bit_cast<LONG_PTR>(child));
-                    return (INT_PTR)TRUE;
+                    return child->operator()(hDlg, win32::message(message, wParam, lParam));
                 }
                 else
                 {
@@ -564,78 +564,6 @@ namespace win32
 
         auto hInstance = std::bit_cast<hinstance_t>(GetWindowLongPtrW(parent, GWLP_HINSTANCE));
         return ::DialogBoxIndirectParamW(hInstance, dialog_template, parent, handler::DialogHandler, std::bit_cast<lparam_t>(&on_message));
-    }
-
-    auto SetWindowSubclass(hwnd_t handle, std::optional<lresult_t> (*on_message)(hwnd_t, win32::message))
-    {
-        struct handler
-        {
-            static lresult_t CALLBACK HandleMessage(hwnd_t hWnd, std::uint32_t uMsg, wparam_t wParam,
-                lparam_t lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
-            {
-
-                using callback_type = decltype(on_message);
-                auto* child = reinterpret_cast<callback_type>(dwRefData);
-
-                if (child && child == std::bit_cast<callback_type>(uIdSubclass))
-                {
-                    auto result = child(hWnd, win32::message(uMsg, wParam, lParam));
-
-                    if (uMsg == WM_NCDESTROY)
-                    {
-                        ::RemoveWindowSubclass(hWnd, handler::HandleMessage, std::bit_cast<UINT_PTR>(child));
-                        return TRUE;
-                    }
-
-                    if (result.has_value())
-                    {
-                        return result.value();
-                    }
-                }
-
-                return DefSubclassProc(hWnd, uMsg, wParam, lParam);
-            }
-        };
-
-        return ::SetWindowSubclass(handle, handler::HandleMessage, std::bit_cast<UINT_PTR>(on_message), std::bit_cast<DWORD_PTR>(on_message));
-    }
-
-    template<typename TWindow>
-    auto SetWindowSubclass(hwnd_t handle)
-    {
-        struct handler
-        {
-            static lresult_t CALLBACK HandleMessage(hwnd_t hWnd, std::uint32_t uMsg, wparam_t wParam,
-                lparam_t lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
-            {
-                TWindow* self = std::bit_cast<TWindow*>(dwRefData);
-
-                std::optional<lresult_t> result = std::nullopt;
-
-                if (self && typeid(TWindow).hash_code() == std::bit_cast<std::size_t>(uIdSubclass))
-                {
-                    result = dispatch_message(self, uMsg, wParam, lParam);
-
-                    if (uMsg == WM_NCDESTROY)
-                    {
-                      ::RemoveWindowSubclass(hWnd, handler::HandleMessage, uIdSubclass);
-                      self->~TWindow();
-                      auto* allocator = std::pmr::get_default_resource();
-                      allocator->deallocate(self, sizeof(TWindow), alignof(TWindow));
-                      return 0;
-                    }
-                }
-                    
-
-                return result.or_else([&]{ return std::make_optional(DefSubclassProc(hWnd, uMsg, wParam, lParam)); }).value();
-            }
-        };
-
-        auto* allocator = std::pmr::get_default_resource();
-        auto* data = allocator->allocate(sizeof(TWindow), alignof(TWindow));
-        auto* self = new (data) TWindow(handle, CREATESTRUCTW{});
-
-        return ::SetWindowSubclass(handle, handler::HandleMessage, std::bit_cast<UINT_PTR>(typeid(TWindow).hash_code()), std::bit_cast<DWORD_PTR>(self));
     }
 
     [[maybe_unused]] auto EnumPropsExW(hwnd_t control, std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback)

@@ -243,14 +243,43 @@ struct siege_main_window
 					
 				if (command.identifier == IDM_ABOUT)
 				{
-					win32::dialog_builder builder = win32::dialog_builder{}
-                        .create_dialog(DLGTEMPLATE{ .style = WS_POPUP | WS_BORDER | WS_SYSMENU | DS_MODALFRAME | WS_CAPTION, .cx = 300, .cy = 300 }, std::wstring_view{ L"Hello World" })
-						.add_child(DLGITEMTEMPLATE{.style = WS_CHILD | WS_VISIBLE, .x = 10, .y = 10, .cx = 200, .cy = 100}, win32::static_control::dialog_id, std::wstring_view{L"Test Dialog"})
-						.add_child(DLGITEMTEMPLATE{.style = WS_CHILD | WS_VISIBLE, .x = 10, .y = 110, .cx = 200, .cy = 100}, win32::button::class_name, std::wstring_view{L"Click Me"});
+					auto dialog = win32::MakeDialogTemplate(
+						DLGTEMPLATE{.style = WS_POPUP | WS_BORDER | WS_SYSMENU | DS_MODALFRAME | WS_CAPTION, .cx = 300, .cy = 300 }
+					);
 
-                    win32::DialogBoxIndirectParamW(self, builder.result(), [](win32::hwnd_t self, const win32::message& dialog_message) -> INT_PTR {
+					/*
+					auto dialog = win32::MakeDialogTemplate(
+					DLGTEMPLATE{.style = WS_POPUP | WS_BORDER | WS_SYSMENU | DS_MODALFRAME | WS_CAPTION, .cdit = 2, .cx = 300, .cy = 300 },
+						std::array<wchar_t, 12>{L"Test Dialog"},
+						std::make_pair(
+							win32::MakeDialogItemTemplate(DLGITEMTEMPLATE{.style = WS_CHILD | WS_VISIBLE, .x = 10, .y = 10, .cx = 200, .cy = 100}, std::array<wchar_t, 12>{L"Hello World"} ),
+							win32::MakeDialogItemTemplate(DLGITEMTEMPLATE{.style = WS_CHILD | WS_VISIBLE, .x = 10, .y = 110, .cx = 200, .cy = 100}, std::array<wchar_t, 9>{L"Click me"}, std::array<wchar_t, 2>{{0xffff, win32::button::dialog_id}})
+						)
+						);
+					*/
+				
+                    win32::DialogBoxIndirectParamW(self, &dialog.dialog, [](win32::hwnd_t self, const win32::message& dialog_message) -> INT_PTR {
+						if (dialog_message.message == win32::init_dialog_message::id)
+						{
+							SetWindowTextW(self, L"Test Dialog Title");
 
-						if (dialog_message.message == win32::command_message::id)
+							RECT size {
+								.right = 300,
+								.bottom = 100
+							};
+							MapDialogRect(self, &size);
+
+							win32::CreateWindowExW(win32::window_params<RECT>{
+								.parent = self,
+								.class_name = win32::button::class_name,
+								.caption = L"Hello world",
+								.style = win32::window_style(WS_CHILD | WS_VISIBLE),
+								.position = size,
+								
+							});
+							return (INT_PTR)TRUE;
+						}
+						else if (dialog_message.message == win32::command_message::id)
 						{
 							win32::command_message dialog_command{dialog_message.wParam, dialog_message.lParam};
 
