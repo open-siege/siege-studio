@@ -28,16 +28,6 @@ struct pal_window
 						.cy = short(parent_size.bottom)     
 						}, self, win32::button::class_name, L"Pal window");
 
-		win32::SetWindowSubclass(*button_instance, [](win32::hwnd_t button, win32::message button_message) -> std::optional<LRESULT>
-						{
-							if (button_message.message == win32::command_message::id)
-							{
-								MessageBoxExW(GetParent(button), L"Hello world", L"Test Message", 0, 0);
-								return 0;
-							}
-
-							return std::nullopt;
-						});
         return 0;
     }
 
@@ -74,17 +64,6 @@ struct pal_mapping_window
 						.cx = 100,  
 						.cy = 100       
 						}, self, win32::button::class_name, L"Pal Mapping window");
-
-		win32::SetWindowSubclass(*button_instance, [](win32::hwnd_t button, win32::message button_message) -> std::optional<LRESULT>
-						{
-							if (button_message.message == win32::command_message::id)
-							{
-								MessageBoxExW(GetParent(button), L"Hello world", L"Test Message", 0, 0);
-								return 0;
-							}
-
-							return std::nullopt;
-						});
         return 0;
     }
 
