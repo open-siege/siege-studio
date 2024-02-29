@@ -31,6 +31,18 @@ namespace win32
             return view_type(SendMessageW(self, LVM_GETVIEW, 0, 0));
         }
 
+        static std::optional<bool> EnableGroupView(hwnd_t self, bool should_enable)
+        {
+            auto result = SendMessageW(self, LVM_ENABLEGROUPVIEW, should_enable ? TRUE : FALSE, 0);
+
+            if (result == 0)
+            {
+                return std::nullopt;
+            }
+
+            return result == 1;
+        }
+
         static bool IsGroupViewEnabled(hwnd_t self)
         {
             return SendMessageW(self, LVM_ISGROUPVIEWENABLED, 0, 0);
@@ -39,6 +51,38 @@ namespace win32
         static lparam_t GetGroupCount(hwnd_t self)
         {
             return SendMessageW(self, LVM_GETGROUPCOUNT, 0, 0);
+        }
+
+        static lresult_t SetExtendedListViewStyle(hwnd_t self, wparam_t wParam, lparam_t lParam)
+        {
+            return SendMessageW(self, LVM_SETEXTENDEDLISTVIEWSTYLE, wParam, lParam);
+        }
+
+        static bool SetTileViewInfo(hwnd_t self, LVTILEVIEWINFO info)
+        {
+            info.cbSize = sizeof(info);
+
+            bool mask_not_set = info.dwMask == 0;
+            
+            if (mask_not_set && (info.sizeTile.cx || info.sizeTile.cy))
+            {
+                info.dwMask |= LVTVIM_TILESIZE; 
+            }
+
+            if (mask_not_set && info.cLines)
+            {
+                info.dwMask |= LVTVIM_COLUMNS;
+            }
+
+            if (mask_not_set && (info.rcLabelMargin.left || 
+                info.rcLabelMargin.right || 
+                info.rcLabelMargin.top || 
+                info.rcLabelMargin.bottom))
+            {
+                info.dwMask |= LVTVIM_LABELMARGIN;
+            }
+
+            return SendMessageW(self, LVM_SETTILEVIEWINFO, 0, std::bit_cast<lparam_t>(&info));
         }
 
         static wparam_t InsertGroup(hwnd_t self, wparam_t index, LVGROUP group)

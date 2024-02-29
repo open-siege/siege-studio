@@ -141,6 +141,76 @@ struct bitmap_window
                         .cy = 300,
 						}, self, win32::list_view::class_name, L"Palettes");
 
+
+        win32::list_view::SetView(*palettes_list, win32::list_view::view_type::tile_view);
+        assert(*win32::list_view::EnableGroupView(*palettes_list, true));
+        assert(win32::list_view::SetTileViewInfo(*palettes_list, LVTILEVIEWINFO {
+            .dwFlags = LVTVIF_FIXEDWIDTH,
+            .sizeTile = SIZE {.cx = win32::GetClientSize(self)->cx, .cy = 50},
+            }));
+        
+        win32::list_view::SetExtendedListViewStyle(*palettes_list, LVS_EX_CHECKBOXES, LVS_EX_CHECKBOXES);
+
+        assert(win32::list_view::InsertGroup(*palettes_list, -1, LVGROUP {
+            .pszHeader = const_cast<wchar_t*>(L"menu.pal"),
+            .iGroupId = 1
+            }) == 0);
+
+        win32::list_view::InsertGroup(*palettes_list, -1, LVGROUP {
+            .pszHeader = const_cast<wchar_t*>(L"test.dpl"),
+            .iGroupId = 2
+            });
+
+
+        win32::list_view::InsertGroup(*palettes_list, -1, LVGROUP {
+            .pszHeader = const_cast<wchar_t*>(L"ui.pal"),
+            .iGroupId = 3
+            });
+
+        assert(win32::list_view::InsertItem(*palettes_list, -1, LVITEMW{
+            .pszText = const_cast<wchar_t*>(L"palette 1"),
+            .iGroupId = 1
+            }) == 0);
+
+        win32::list_view::InsertItem(*palettes_list, -1, LVITEMW{
+            .pszText = const_cast<wchar_t*>(L"palette 2"),
+            .iGroupId = 1
+            });
+
+        win32::list_view::InsertItem(*palettes_list, -1, LVITEMW{
+            .pszText = const_cast<wchar_t*>(L"palette 3"),
+            .iGroupId = 1
+            });
+
+        win32::list_view::InsertItem(*palettes_list, -1, LVITEMW{
+            .pszText = const_cast<wchar_t*>(L"palette 1"),
+            .iGroupId = 2
+            });
+
+        win32::list_view::InsertItem(*palettes_list, -1, LVITEMW{
+            .pszText = const_cast<wchar_t*>(L"palette 2"),
+            .iGroupId = 2
+            });
+
+        win32::list_view::InsertItem(*palettes_list, -1, LVITEMW{
+            .pszText = const_cast<wchar_t*>(L"palette 3"),
+            .iGroupId = 2
+            });
+
+
+        win32::list_view::InsertItem(*palettes_list, -1, LVITEMW{
+            .pszText = const_cast<wchar_t*>(L"palette 1"),
+            .iGroupId = 3
+            });
+
+        win32::list_view::InsertItem(*palettes_list, -1, LVITEMW{
+            .pszText = const_cast<wchar_t*>(L"palette 2"),
+            .iGroupId = 3
+            });
+
+
+
+
       //  // TODO add example palette file names as groups and then palette names as items
 
       //  auto static_image = win32::CreateWindowExW(DLGITEMTEMPLATE{
@@ -149,7 +219,7 @@ struct bitmap_window
       //                  .cy = 300,
 						//}, self, win32::static_control::class_name, L"Image");
 
-        auto children = std::array{*group_box, *strategy_toolbar, *palettes_tree};
+        auto children = std::array{*group_box, *strategy_toolbar, *palettes_tree, *palettes_list};
         win32::StackChildren(*win32::GetClientSize(self), children);
 
         auto rect = win32::GetClientRect(*group_box);

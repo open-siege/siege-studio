@@ -161,10 +161,8 @@ struct volume_window
         auto [sender, id, code] = notification;
         auto mapped_result = win32::MapWindowPoints(sender, HWND_DESKTOP, *win32::tool_bar::GetRect(sender, id));
 
-        win32::menu_builder builder;
-
         // TODO: create and add menu items
-        win32::TrackPopupMenuEx(LoadMenuIndirectW(builder.result()), 0, POINT{mapped_result->second.left, mapped_result->second.bottom}, sender, TPMPARAMS {
+        win32::TrackPopupMenuEx(LoadMenuIndirectW(nullptr), 0, POINT{mapped_result->second.left, mapped_result->second.bottom}, sender, TPMPARAMS {
             .rcExclude = mapped_result->second
         });
 
