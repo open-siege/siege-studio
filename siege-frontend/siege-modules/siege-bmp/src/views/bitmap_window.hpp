@@ -72,10 +72,35 @@ struct bitmap_window
                         .cy = 300,
 						}, self, win32::tree_view::class_name, L"Palettes");
 
+        auto temp_letter = win32::CreateWindowExW(DLGITEMTEMPLATE{
+						.style = WS_CHILD,
+                        .cy = 100
+						}, self, win32::button::class_name, L"A");
+
+        auto temp_space = win32::CreateWindowExW(DLGITEMTEMPLATE{
+						.style = WS_CHILD,
+                        .cy = 100
+						}, self, win32::button::class_name, L" ");
+
+        auto letter_size = win32::button::GetIdealSize(*temp_letter);
+        auto space_size = win32::button::GetIdealSize(*temp_space);
+
+        DestroyWindow(*temp_letter);
+        DestroyWindow(*temp_space);
+
+        std::wstring temp = L"menu.pal";
+        
+        auto parent_size = win32::GetClientSize(self);
+        if (auto remaining_size = parent_size->cx - letter_size->cx * temp.size(); remaining_size >= 0)
+        {
+          auto space_count = remaining_size / space_size->cx;
+          temp.append(space_count * 2,  L' ');
+        }
+
         auto root_item = win32::tree_view::InsertItem(*palettes_tree, TVINSERTSTRUCTW{
             .hInsertAfter = TVI_ROOT,
             .itemex = {
-                .pszText = const_cast<wchar_t*>(L"menu.pal"),
+                .pszText = temp.data(),
                 .cChildren = 1
                 }
             });
@@ -152,7 +177,7 @@ struct bitmap_window
         win32::list_view::SetExtendedListViewStyle(*palettes_list, LVS_EX_CHECKBOXES, LVS_EX_CHECKBOXES);
 
         assert(win32::list_view::InsertGroup(*palettes_list, -1, LVGROUP {
-            .pszHeader = const_cast<wchar_t*>(L"menu.pal"),
+            .pszHeader =  const_cast<wchar_t*>(L"menu.pal"),
             .iGroupId = 1
             }) == 0);
 
@@ -161,14 +186,13 @@ struct bitmap_window
             .iGroupId = 2
             });
 
-
         win32::list_view::InsertGroup(*palettes_list, -1, LVGROUP {
             .pszHeader = const_cast<wchar_t*>(L"ui.pal"),
             .iGroupId = 3
             });
 
         assert(win32::list_view::InsertItem(*palettes_list, -1, LVITEMW{
-            .pszText = const_cast<wchar_t*>(L"palette 1"),
+            .pszText = temp.data(),
             .iGroupId = 1
             }) == 0);
 
@@ -207,8 +231,6 @@ struct bitmap_window
             .pszText = const_cast<wchar_t*>(L"palette 2"),
             .iGroupId = 3
             });
-
-
 
         auto palettes_button =  win32::CreateWindowExW(CREATESTRUCTW{
                         .hMenu = [] {
@@ -231,7 +253,7 @@ struct bitmap_window
                         }(),            
                         .hwndParent = self,                        
                         .cy = 100,
-						.style = WS_VISIBLE | WS_CHILD | BS_SPLITBUTTON,
+						.style = WS_CHILD | BS_SPLITBUTTON,
                         .lpszName =  L"Palettes",
                         .lpszClass = win32::button::class_name,
         });
@@ -245,7 +267,7 @@ struct bitmap_window
       //                  .cy = 300,
 						//}, self, win32::static_control::class_name, L"Image");
 
-        auto children = std::array{*group_box, *strategy_toolbar, *palettes_tree, *palettes_button};
+        auto children = std::array{*group_box, *strategy_toolbar, *palettes_tree, *palettes_list};
         win32::StackChildren(*win32::GetClientSize(self), children);
 
         auto rect = win32::GetClientRect(*group_box);
