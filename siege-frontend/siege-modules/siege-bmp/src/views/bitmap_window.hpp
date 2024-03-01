@@ -210,6 +210,32 @@ struct bitmap_window
 
 
 
+        auto palettes_button =  win32::CreateWindowExW(CREATESTRUCTW{
+                        .hMenu = [] {
+                            auto menu = CreatePopupMenu();
+
+                            int id = 1;
+
+                            auto menu2 = CreatePopupMenu();
+
+                            AppendMenuW(menu2, MF_CHECKED | MF_STRING, id++, L"palette 1");
+                            AppendMenuW(menu2, MF_UNCHECKED | MF_STRING, id++, L"palette 2");
+                            AppendMenuW(menu2, MF_UNCHECKED | MF_STRING, id++, L"palette 3");
+
+
+                            AppendMenuW(menu, MF_CHECKED | MF_STRING | MF_POPUP, reinterpret_cast<INT_PTR>(menu2), L"menu.pal");
+                            AppendMenuW(menu, MF_SEPARATOR , id++, nullptr);
+                            AppendMenuW(menu, MF_UNCHECKED | MF_STRING, id++, L"test.dpl");
+                            
+                            return menu;
+                        }(),            
+                        .hwndParent = self,                        
+                        .cy = 100,
+						.style = WS_VISIBLE | WS_CHILD | BS_SPLITBUTTON,
+                        .lpszName =  L"Palettes",
+                        .lpszClass = win32::button::class_name,
+        });
+
 
       //  // TODO add example palette file names as groups and then palette names as items
 
@@ -219,7 +245,7 @@ struct bitmap_window
       //                  .cy = 300,
 						//}, self, win32::static_control::class_name, L"Image");
 
-        auto children = std::array{*group_box, *strategy_toolbar, *palettes_tree, *palettes_list};
+        auto children = std::array{*group_box, *strategy_toolbar, *palettes_tree, *palettes_button};
         win32::StackChildren(*win32::GetClientSize(self), children);
 
         auto rect = win32::GetClientRect(*group_box);
@@ -233,11 +259,25 @@ struct bitmap_window
         return 0;
     }
 
-    auto on_command(win32::command_message)
+    auto on_command(win32::command_message message)
     {
-   //     DebugBreak();
+        auto sender = message.sender;
 
-        MessageBoxW(self, L"Panda Wuv is the best", L"Happy Dame, Happy Hame", 0);
+        auto menu = GetMenu(sender);
+
+        if (menu)
+        {
+            auto rect = win32::GetClientRect(sender);
+
+            POINT pos {
+                .x = rect->left,
+                .y = rect->top
+            };
+
+            ClientToScreen(sender, &pos);
+            TrackPopupMenu(menu, TPM_LEFTALIGN, pos.x, pos.y + rect->bottom,  0, sender, nullptr);
+        }
+
         return std::nullopt;
     }
 
