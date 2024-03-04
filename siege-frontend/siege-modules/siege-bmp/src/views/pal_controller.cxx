@@ -1,27 +1,33 @@
-#include "pal_view.hpp"
+#include "pal_controller.hpp"
 #include "content/bmp/bitmap.hpp"
 
 namespace studio::views
 {
+  
 
-  pal_view::pal_view(std::istream& image_stream)
+
+  void pal_controller::load_content(std::istream& image_stream)
   {
     auto generate_rectangles = [&](auto& colours) {
       rectangles = &all_rectangles.emplace_back();
 
       rectangles->reserve(colours.size());
 
-      float x = 0;
-      float y = 0;
+      int x = 0;
+      int y = 0;
       auto size = colours.size() / 8;
 
       for (auto& colour : colours)
       {
-        rectangles->emplace_back(sf::Vector2f(size, size));
-        auto& rect = rectangles->back();
-
-        rect.setPosition(x, y);
-        rect.setFillColor(sf::Color(int(colour.red), int(colour.green), int(colour.blue)));
+        rectangles->emplace_back(surface {
+          .position = rect {
+            .x = x,
+            .y = y,
+            .width = size,
+            .height = size
+          }
+          .colour = colour
+        });
 
         y += size;
 
@@ -73,7 +79,26 @@ namespace studio::views
     }
   }
 
-  void pal_view::render_ui(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext)
+  void pal_controller::setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext&)
+  {
+    if (rectangles)
+    {
+      auto [width, height] = parent.GetClientSize();
+
+      auto image_width = rectangles->size() / 8 * rectangles->size();
+      auto image_height = rectangles->size() / 8 * (rectangles->size() / 8);
+
+      auto width_ratio = float(image_width) / float(width);
+      auto height_ratio = float(image_height) / float(height);
+
+      sf::FloatRect visibleArea(0, 0, image_width, image_height);
+      sf::View view(visibleArea);
+      view.setViewport(sf::FloatRect(0.5 - width_ratio / 16, 0.5 - height_ratio / 8, width_ratio, height_ratio));
+      window.setView(view);
+    }
+  }
+
+  void pal_controller::render_ui(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext)
   {
     window.clear();
 
@@ -103,22 +128,5 @@ namespace studio::views
     }
   }
 
-  void pal_view::setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext&)
-  {
-    if (rectangles)
-    {
-      auto [width, height] = parent.GetClientSize();
-
-      auto image_width = rectangles->size() / 8 * rectangles->size();
-      auto image_height = rectangles->size() / 8 * (rectangles->size() / 8);
-
-      auto width_ratio = float(image_width) / float(width);
-      auto height_ratio = float(image_height) / float(height);
-
-      sf::FloatRect visibleArea(0, 0, image_width, image_height);
-      sf::View view(visibleArea);
-      view.setViewport(sf::FloatRect(0.5 - width_ratio / 16, 0.5 - height_ratio / 8, width_ratio, height_ratio));
-      window.setView(view);
-    }
-  }
+  
 }// namespace studio::views
