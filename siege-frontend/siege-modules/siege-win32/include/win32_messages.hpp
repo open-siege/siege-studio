@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <bitset>
 #include <algorithm>
+#include <span>
 #include <wtypes.h>
 #include <WinDef.h>
 #include <WinUser.h>
@@ -54,6 +55,31 @@ namespace win32
 			type(wParam),
 			client_size(SIZE{LOWORD(lParam), HIWORD(lParam)})
 		{
+		}
+	};
+
+
+	template<typename TChar = std::byte>
+	struct copy_data_message
+	{
+		hwnd_t sender;
+		std::size_t data_type;
+		std::span<TChar> data;
+
+		copy_data_message(wparam_t wParam, lparam_t lParam) : 
+			sender(hwnd_t(wParam)), data_type(0), data()
+		{
+			COPYDATASTRUCT* raw_data = std::bit_cast<COPYDATASTRUCT*>(lParam);
+			if (raw_data)
+			{
+				data_type = raw_data->dwData;
+				if (raw_data->cbData == 0 || raw_data->lpData == nullptr)
+				{
+					return;				
+				}
+
+				data = std::span<TChar>(std::bit_cast<TChar*>(raw_data->lpData), raw_data->cbData);
+			}
 		}
 	};
 
