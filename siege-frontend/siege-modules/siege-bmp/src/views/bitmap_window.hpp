@@ -177,7 +177,7 @@ struct bitmap_window
         win32::list_view::SetExtendedListViewStyle(*palettes_list, LVS_EX_CHECKBOXES, LVS_EX_CHECKBOXES);
 
         assert(win32::list_view::InsertGroup(*palettes_list, -1, LVGROUP {
-            .pszHeader =  const_cast<wchar_t*>(L"menu.pal"),
+            .pszHeader = temp.data(),
             .iGroupId = 1
             }) == 0);
 
