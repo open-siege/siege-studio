@@ -1,16 +1,15 @@
 #ifndef DARKSTARDTSCONVERTER_PAL_VIEW_HPP
 #define DARKSTARDTSCONVERTER_PAL_VIEW_HPP
 
+#include <string>
+#include <vector>
+#include "content/pal/palette.hpp"
 
-namespace studio::views
+namespace siege::views
 {
   class pal_controller
   {
   public:
-    void load_content(std::istream& image_stream);
-
-  private:
-
     struct rect
     {
       int x;
@@ -19,15 +18,17 @@ namespace studio::views
       int height;
     };
 
-    struct surface
+    struct palette
     {
       rect position;
       studio::content::pal::colour colour;
-    };
+      std::u8string name;
+    };    
 
-    std::vector<surface>* rectangles = nullptr;
+    bool is_pal(std::istream& image_stream) const;
 
-    std::vector<surface> all_rectangles;
+    std::vector<std::vector<palette>> load_palettes(std::istream& image_stream);
+  private:
   };
 }// namespace studio::views
 

@@ -54,6 +54,22 @@ namespace win32
             }
         }
 
+        if constexpr (requires(TWindow t) { t.on_copy_data(copy_data_message<char>{wParam, lParam}); })
+        {
+            if (message == destroy_message::id)
+            {
+                return self->on_copy_data(copy_data_message<char>{wParam, lParam});
+            }
+        }
+
+        if constexpr (requires(TWindow t) { t.on_copy_data(copy_data_message<std::byte>{wParam, lParam}); })
+        {
+            if (message == destroy_message::id)
+            {
+                return self->on_copy_data(copy_data_message<std::byte>{wParam, lParam});
+            }
+        }
+
         if constexpr (requires(TWindow t) { t.on_command(command_message{wParam, lParam}); })
         {
             if (message == command_message::id)
@@ -118,6 +134,43 @@ namespace win32
         return std::nullopt;
     }
 
+    [[maybe_unused]] auto EnumPropsExW(hwnd_t control, std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback)
+    {
+        struct Handler
+        {
+            static BOOL HandleEnum(hwnd_t self, LPWSTR key, HANDLE data, ULONG_PTR raw_callback)
+            {
+                if (key == nullptr)
+                {
+                    return TRUE;
+                }
+
+                auto real_callback = std::bit_cast<std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)>*>(raw_callback);
+
+                return real_callback->operator()(self, key, data) ? TRUE : FALSE;
+            }
+        };
+
+        return ::EnumPropsExW(control, Handler::HandleEnum, std::bit_cast<LPARAM>(&callback));
+    }
+
+    [[maybe_unused]] auto ForEachPropertyExW(hwnd_t control, std::move_only_function<void(hwnd_t, std::wstring_view, HANDLE)> callback)
+    {
+        return EnumPropsExW(control, [callback = std::move(callback)] (auto self, auto key, auto value) mutable
+        {
+            callback(self, key, value);
+            return true;
+        });
+    }
+
+    [[maybe_unused]] auto FindPropertyExW(hwnd_t control, std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback)
+    {
+        return EnumPropsExW(control, [callback = std::move(callback)] (auto self, auto key, auto value) mutable
+        {
+            return callback(self, key, value) != false;
+        });
+    }
+
     inline auto widen(std::string_view data)
     {
         return std::wstring(data.begin(), data.end());
@@ -162,6 +215,10 @@ namespace win32
 
                             ::HeapFree(heap, 0, data);
                           }
+
+                          ForEachPropertyExW(hWnd, [](auto wnd, std::wstring_view name, HANDLE handle) {
+                              ::RemovePropW(wnd, name.data());
+                          });
                           return 0;
                         }
                     }
@@ -285,9 +342,14 @@ namespace win32
 
                                     ::HeapFree(heap, 0, data);
                                 }
+
+                                ForEachPropertyExW(hWnd, [](auto wnd, std::wstring_view name, HANDLE handle) {
+                                    ::RemovePropW(wnd, name.data());
+                                });
                             }
 
                             SetClassLongPtrW(hWnd, 0, ref_count);
+
                             return 0;
                         }
                     }
@@ -564,43 +626,6 @@ namespace win32
 
         auto hInstance = std::bit_cast<hinstance_t>(GetWindowLongPtrW(parent, GWLP_HINSTANCE));
         return ::DialogBoxIndirectParamW(hInstance, dialog_template, parent, handler::DialogHandler, std::bit_cast<lparam_t>(&on_message));
-    }
-
-    [[maybe_unused]] auto EnumPropsExW(hwnd_t control, std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback)
-    {
-        struct Handler
-        {
-            static BOOL HandleEnum(hwnd_t self, LPWSTR key, HANDLE data, ULONG_PTR raw_callback)
-            {
-                if (key == nullptr)
-                {
-                    return TRUE;
-                }
-
-                auto real_callback = std::bit_cast<std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)>*>(raw_callback);
-
-                return real_callback->operator()(self, key, data) ? TRUE : FALSE;
-            }
-        };
-
-        return ::EnumPropsExW(control, Handler::HandleEnum, std::bit_cast<LPARAM>(&callback));
-    }
-
-    [[maybe_unused]] auto ForEachPropertyExW(hwnd_t control, std::move_only_function<void(hwnd_t, std::wstring_view, HANDLE)> callback)
-    {
-        return EnumPropsExW(control, [callback = std::move(callback)] (auto self, auto key, auto value) mutable
-        {
-            callback(self, key, value);
-            return true;
-        });
-    }
-
-    [[maybe_unused]] auto FindPropertyExW(hwnd_t control, std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback)
-    {
-        return EnumPropsExW(control, [callback = std::move(callback)] (auto self, auto key, auto value) mutable
-        {
-            return callback(self, key, value) != false;
-        });
     }
 
     struct EnumWindowHandler
