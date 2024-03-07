@@ -560,8 +560,8 @@ namespace win32
         return CreateWindowExW(CREATESTRUCTW{
             .hInstance = params.class_module ? *params.class_module : nullptr,
             .hwndParent = params.parent,
-            .cy = params.position.bottom,
-            .cx = params.position.right,
+            .cy = params.position.bottom - params.position.top,
+            .cx = params.position.right - params.position.left,
             .y = params.position.top,
             .x = params.position.left,
             .style = params.default_style() ? LONG(*params.default_style()) : 0,
@@ -807,7 +807,7 @@ namespace win32
         RECT result;
         if (::GetClientRect(control, &result))
         {
-            return SIZE {.cx = result.right, .cy = result.bottom };
+            return SIZE {.cx = result.right - result.left, .cy = result.bottom - result.top };
         }
 
         return std::nullopt;
@@ -818,7 +818,7 @@ namespace win32
         RECT result;
         if (::GetClientRect(control, &result))
         {
-            return std::make_pair(POINT{.x = result.left, .y = result.top}, SIZE {.cx = result.right, .cy = result.bottom });
+            return std::make_pair(POINT{.x = result.left, .y = result.top}, SIZE {.cx = result.right - result.left, .cy = result.bottom - result.top });
         }
 
         return std::nullopt;
@@ -923,7 +923,7 @@ namespace win32
             {
                 auto rect = win32::GetClientRect(child);
 
-                rect->right = parent_size.cx;
+                rect->right = parent_size.cx + rect->left;
                 rect->top = y_pos;
                 win32::SetWindowPos(child, *rect);
                 y_pos += rect->bottom;
@@ -935,7 +935,7 @@ namespace win32
             {
                 auto rect = win32::GetClientRect(child);
 
-                rect->bottom = parent_size.cy;
+                rect->bottom = parent_size.cy + rect->top;
                 rect->left = x_pos;
                 
                 if (start_pos)

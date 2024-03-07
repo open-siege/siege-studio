@@ -15,8 +15,9 @@ if (WIN32)
     add_custom_command(TARGET copy-when-done POST_BUILD 
                 COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-sfx> $<TARGET_FILE_DIR:siege-launcher-win32>
                 COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-dts> $<TARGET_FILE_DIR:siege-launcher-win32>
+                COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-mfc> $<TARGET_FILE_DIR:siege-launcher-win32>
                 COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-vol> $<TARGET_FILE_DIR:siege-launcher-win32>)
 
-    add_dependencies(copy-when-done siege-bmp siege-dts siege-vol siege-sfx)
+    add_dependencies(copy-when-done siege-bmp siege-dts siege-vol siege-dts siege-mfc siege-sfx)
     add_dependencies(siege-launcher-win32 copy-when-done)
 endif()

@@ -17,6 +17,12 @@ struct bitmap_window
 
     auto on_create(const win32::create_message& info)
     {
+        auto mfc = LoadLibraryExW(L"mfc140ud.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+        assert(mfc);
+        auto module = LoadLibraryExW(L"siege-mfc.dll", nullptr, LOAD_LIBRARY_SEARCH_APPLICATION_DIR);
+        assert(module);
+
+
         auto group_box = win32::CreateWindowExW(DLGITEMTEMPLATE{
 						.style = WS_VISIBLE | WS_CHILD | BS_GROUPBOX,
                         .cy = 100
@@ -46,25 +52,43 @@ struct bitmap_window
         ideal_size = win32::button::GetIdealSize(*remap_unique);
         win32::SetWindowPos(*remap_unique, *ideal_size);
 
-        auto strategy_toolbar = win32::CreateWindowExW(DLGITEMTEMPLATE{
-						.style = WS_VISIBLE | WS_CHILD | CCS_NOPARENTALIGN | TBSTYLE_LIST,   
-                        .cy = 400,
-						}, self, win32::tool_bar::class_name, L"Colour strategy");
+        auto strategy_toolbar = win32::CreateWindowExW(CREATESTRUCTW{
+                        .hInstance = module,
+                        .hwndParent = self,
+                        .cy = 100,
+                        .cx = 300,
+                        .y = 100,
+						.style = WS_VISIBLE | WS_CHILD,   
+                        .lpszClass = L"Mfc::CVSListBox",
+                       
+			            //.lpszClass = win32::list_box::class_name			
+            });
 
         assert(strategy_toolbar);
 
-        win32::tool_bar::SetExtendedStyle(*strategy_toolbar, win32::tool_bar::mixed_buttons | win32::tool_bar::draw_drop_down_arrows);
-     
-        std::array<TBBUTTON, 3> buttons{{
-            TBBUTTON{.iBitmap = I_IMAGENONE, .idCommand = 0, .fsState = TBSTATE_ENABLED, 
-                                .fsStyle = BTNS_CHECKGROUP | BTNS_SHOWTEXT, .iString = INT_PTR(L"Do nothing")},
-            TBBUTTON{.iBitmap = I_IMAGENONE, .idCommand = 1, .fsState = TBSTATE_ENABLED, 
-                                .fsStyle = BTNS_CHECKGROUP | BTNS_SHOWTEXT, .iString = INT_PTR(L"Remap")},
-            TBBUTTON{.iBitmap = I_IMAGENONE, .idCommand = 2, .fsState = TBSTATE_ENABLED, 
-                                .fsStyle = BTNS_CHECKGROUP | BTNS_SHOWTEXT, .iString = INT_PTR(L"Remap (only unique colours)")},
-         }};
+        win32::list_box::InsertString(*strategy_toolbar, -1, L"Do nothing");
+        win32::list_box::InsertString(*strategy_toolbar, -1, L"Remap");
+        win32::list_box::InsertString(*strategy_toolbar, -1, L"Remap (only unique colours)");
 
-        assert(win32::tool_bar::AddButtons(*strategy_toolbar, buttons));
+        /*auto strategy_toolbar = win32::CreateWindowExW(DLGITEMTEMPLATE{
+						.style = WS_VISIBLE | WS_CHILD | CCS_NOPARENTALIGN | TBSTYLE_LIST,   
+                        .cy = 400,
+						}, self, win32::tool_bar::class_name, L"Colour strategy");*/
+
+        
+
+        //win32::tool_bar::SetExtendedStyle(*strategy_toolbar, win32::tool_bar::mixed_buttons | win32::tool_bar::draw_drop_down_arrows);
+     
+        //std::array<TBBUTTON, 3> buttons{{
+        //    TBBUTTON{.iBitmap = I_IMAGENONE, .idCommand = 0, .fsState = TBSTATE_ENABLED, 
+        //                        .fsStyle = BTNS_CHECKGROUP | BTNS_SHOWTEXT, .iString = INT_PTR(L"Do nothing")},
+        //    TBBUTTON{.iBitmap = I_IMAGENONE, .idCommand = 1, .fsState = TBSTATE_ENABLED, 
+        //                        .fsStyle = BTNS_CHECKGROUP | BTNS_SHOWTEXT, .iString = INT_PTR(L"Remap")},
+        //    TBBUTTON{.iBitmap = I_IMAGENONE, .idCommand = 2, .fsState = TBSTATE_ENABLED, 
+        //                        .fsStyle = BTNS_CHECKGROUP | BTNS_SHOWTEXT, .iString = INT_PTR(L"Remap (only unique colours)")},
+        // }};
+
+        //assert(win32::tool_bar::AddButtons(*strategy_toolbar, buttons));
 
         auto palettes_tree = win32::CreateWindowExW(DLGITEMTEMPLATE{
 						.style = WS_VISIBLE | WS_CHILD | TVS_HASBUTTONS | TVS_CHECKBOXES, 
@@ -72,30 +96,10 @@ struct bitmap_window
                         .cy = 300,
 						}, self, win32::tree_view::class_name, L"Palettes");
 
-        auto temp_letter = win32::CreateWindowExW(DLGITEMTEMPLATE{
-						.style = WS_CHILD,
-                        .cy = 100
-						}, self, win32::button::class_name, L"A");
-
-        auto temp_space = win32::CreateWindowExW(DLGITEMTEMPLATE{
-						.style = WS_CHILD,
-                        .cy = 100
-						}, self, win32::button::class_name, L" ");
-
-        auto letter_size = win32::button::GetIdealSize(*temp_letter);
-        auto space_size = win32::button::GetIdealSize(*temp_space);
-
-        DestroyWindow(*temp_letter);
-        DestroyWindow(*temp_space);
 
         std::wstring temp = L"menu.pal";
         
         auto parent_size = win32::GetClientSize(self);
-        if (auto remaining_size = parent_size->cx - letter_size->cx * temp.size(); remaining_size >= 0)
-        {
-          auto space_count = remaining_size / space_size->cx;
-          temp.append(space_count * 2,  L' ');
-        }
 
         auto root_item = win32::tree_view::InsertItem(*palettes_tree, TVINSERTSTRUCTW{
             .hInsertAfter = TVI_ROOT,
@@ -279,6 +283,19 @@ struct bitmap_window
                 POINT{.x = rect->left, .y = rect->top});
 
         return 0;
+    }
+
+    auto on_message(win32::message message)
+    {
+        if (message.message == WM_MEASUREITEM || message.message == WM_DRAWITEM)
+        {
+            win32::ForEachDirectChildWindow(self, [&](auto child) {
+
+            
+		    });
+        
+        }
+		return std::nullopt;
     }
 
     auto on_command(win32::command_message message)

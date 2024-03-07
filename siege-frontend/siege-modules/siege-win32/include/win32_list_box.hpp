@@ -15,12 +15,12 @@ namespace win32
             return SendMessageW(self, LB_GETCOUNT, 0, 0);
         }
 
-        [[maybe_unused]] static wparam_t AddString(hwnd_t self, wparam_t index, std::string_view text)
+        [[maybe_unused]] static wparam_t AddString(hwnd_t self, wparam_t index, std::wstring_view text)
         {
             return SendMessageW(self, LB_ADDSTRING, index, std::bit_cast<LPARAM>(text.data()));
         }
 
-        [[maybe_unused]] static wparam_t InsertString(hwnd_t self, wparam_t index, std::string_view text)
+        [[maybe_unused]] static wparam_t InsertString(hwnd_t self, wparam_t index, std::wstring_view text)
         {
             return SendMessageW(self, LB_INSERTSTRING, index, std::bit_cast<LPARAM>(text.data()));
         }
