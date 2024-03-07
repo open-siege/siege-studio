@@ -52,7 +52,7 @@ struct siege_module
 
 	siege_module(std::filesystem::path module_path) : module(LoadLibraryExW(module_path.filename().c_str(), nullptr, LOAD_LIBRARY_SEARCH_APPLICATION_DIR), [](auto module) {
 		if (module) {
-			FreeLibrary(module);
+			assert(FreeLibrary(module));
 		}
 		}), 
 		descriptor(module ? win32::FindDirectChildWindow(HWND_MESSAGE, module_path.stem().c_str(), [instance = module.get()](win32::hwnd_t child) {
@@ -143,23 +143,22 @@ struct siege_main_window
 		{
 			for (auto& window : plugin.data->available_classes)
 			{
-				TCITEMW newItem {
-						.mask = TCIF_TEXT,
-						.pszText = const_cast<wchar_t*>(window.first.c_str())
-					};
-
-				SendMessageW(*tab_control_instance, TCM_INSERTITEMW, index, std::bit_cast<win32::lparam_t>(&newItem));
-
-				SendMessageW(*tab_control_instance, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&parent_size));
-
 				auto child = win32::CreateWindowExW(win32::window_params<RECT>{
-					.parent = *tab_control_instance,
+					.parent = self,
 					.class_name = window.first.c_str(),
 					.class_module = plugin.module.get(),
 					.position = *parent_size
 				});
 
 				assert(child);
+
+				win32::tab_control::InsertItem(*tab_control_instance, index, TCITEMW {
+						.mask = TCIF_TEXT | TCIF_PARAM,
+						.pszText = const_cast<wchar_t*>(window.first.c_str()),
+						.lParam = win32::lparam_t(*child)
+					});
+
+				SendMessageW(*tab_control_instance, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&parent_size));
 
 				SetWindowLongPtrW(*child, GWLP_ID, index);
 				index++;
@@ -175,16 +174,20 @@ struct siege_main_window
 
 	auto on_size(win32::size_message sized)
 	{
-		win32::ForEachDirectChildWindow(self, [&](auto child) {
-			win32::SetWindowPos(child, POINT{}, sized.client_size);
-			RECT temp {.left = 0, .top = 0, .right = sized.client_size.cx, .bottom = sized.client_size.cy };
+		auto tab = ::FindWindowExW(self, nullptr, win32::tab_control::class_name, nullptr);
+		assert(tab);
 
-			SendMessageW(child, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&temp));
+		win32::SetWindowPos(tab, POINT{}, sized.client_size);
+			
+		RECT temp {.left = 0, .top = 0, .right = sized.client_size.cx, .bottom = sized.client_size.cy };
 
-			auto top_child = GetWindow(child, GW_CHILD);
+		SendMessageW(tab, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&temp));
 
-			win32::SetWindowPos(top_child, temp);
-		});
+		for (auto i = 0; i < win32::tab_control::GetItemCount(tab); ++i)
+		{
+			auto tab_item = win32::tab_control::GetItem(tab, i);
+			assert(win32::SetWindowPos(win32::hwnd_t(tab_item->lParam), temp));		
+		}
 
 		return std::nullopt;
 	}
@@ -196,34 +199,25 @@ struct siege_main_window
 		if (code == TCN_SELCHANGE)
 		{
 			auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
-			win32::hwnd_t child = GetWindow(sender, GW_CHILD);
-
-			for (auto first = GetWindow(child, GW_HWNDFIRST); first != nullptr; first = GetWindow(first, GW_HWNDNEXT))
-			{
-				if (GetWindowLongPtrW(first, GWLP_ID) == current_index)
-				{
-					child = first;
-					break;
-				}
-			}
+			auto tab_item = win32::tab_control::GetItem(sender, current_index);
 			
-			win32::ForEachChildWindow(sender, [sender](auto child) {
-				if (GetParent(child) == sender)
+			win32::ForEachChildWindow(self, [this, sender](auto child) {
+				if (GetParent(child) == self && child != sender)
 				{
 					ShowWindow(child, SW_HIDE);
 				}
 			});
 
-			win32::SetWindowPos(child, HWND_TOP);
+			win32::SetWindowPos(win32::hwnd_t(tab_item->lParam), HWND_TOP);
 
 			auto temp = win32::GetClientRect(GetParent(sender));
 
 			SendMessageW(sender, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&temp.value()));
 
-			win32::SetWindowPos(child, *temp);
+			win32::SetWindowPos(win32::hwnd_t(tab_item->lParam), *temp);
 
 
-			ShowWindow(child, SW_SHOW);
+			ShowWindow(win32::hwnd_t(tab_item->lParam), SW_SHOW);
 		}
 
 		return 0;
@@ -345,7 +339,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		.x = CW_USEDEFAULT,
 		.style = WS_OVERLAPPEDWINDOW,
 		.lpszName = app_title.data(),
-		.lpszClass = win32::type_name<siege_main_window>().c_str()
+		.lpszClass = win32::type_name<siege_main_window>().c_str(),	
+		.dwExStyle = WS_EX_COMPOSITED,
 	});
 
 	if (!main_window)
