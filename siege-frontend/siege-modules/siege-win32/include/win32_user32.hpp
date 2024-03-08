@@ -831,7 +831,10 @@ namespace win32
 
     auto SetWindowPos(hwnd_t hWnd, RECT position_and_size, UINT uFlags = 0)
     {
-        return ::SetWindowPos(hWnd, nullptr, position_and_size.left, position_and_size.top, position_and_size.right, position_and_size.bottom, uFlags | SWP_NOZORDER);
+        return ::SetWindowPos(hWnd, nullptr, position_and_size.left, 
+            position_and_size.top, 
+            position_and_size.right - position_and_size.left, 
+            position_and_size.bottom - position_and_size.top, uFlags | SWP_NOZORDER);
     }
 
     auto SetWindowPos(hwnd_t hWnd, POINT position, SIZE size, UINT uFlags = 0)
@@ -910,10 +913,6 @@ namespace win32
             return false;
         });
 
-        std::stable_sort(children.begin(), children.end(), [&](hwnd_t a, hwnd_t b) {
-            return GetWindowLongPtrW(a, GWLP_ID) < GetWindowLongPtrW(b, GWLP_ID);
-        });
-
         auto x_pos = start_pos ? start_pos->x : 0;
         auto y_pos = start_pos ? start_pos->y : 0;
 
@@ -924,9 +923,13 @@ namespace win32
                 auto rect = win32::GetClientRect(child);
 
                 rect->right = parent_size.cx + rect->left;
+                
+                auto height = rect->bottom - rect->top;
                 rect->top = y_pos;
+                rect->bottom = rect->top + height;
+                
                 win32::SetWindowPos(child, *rect);
-                y_pos += rect->bottom;
+                y_pos += height;
             }
         }
         else if (direction == StackDirection::Horizontal)
@@ -936,7 +939,11 @@ namespace win32
                 auto rect = win32::GetClientRect(child);
 
                 rect->bottom = parent_size.cy + rect->top;
+
+                auto width = rect->right - rect->left;
                 rect->left = x_pos;
+                rect->right = rect->left + width;
+
                 
                 if (start_pos)
                 {
@@ -944,7 +951,7 @@ namespace win32
                 }
 
                 win32::SetWindowPos(child, *rect);
-                x_pos += rect->right;
+                x_pos += width;
             }
         }
     }

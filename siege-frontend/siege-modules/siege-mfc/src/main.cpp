@@ -1,37 +1,14 @@
-#ifndef VC_EXTRALEAN
-#define VC_EXTRALEAN            // Exclude rarely-used stuff from Windows headers
-#endif
-
 #include "targetver.h"
-
-#define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS      // some CString constructors will be explicit
 
 #include <afxwin.h>         // MFC core and standard components
 #include <afxext.h>         // MFC extensions
 #include <afxcontrolbars.h>
+#include <afxcmn.h>    
 
-#ifndef _AFX_NO_OLE_SUPPORT
-#include <afxole.h>         // MFC OLE classes
-#include <afxodlgs.h>       // MFC OLE dialog classes
-#include <afxdisp.h>        // MFC Automation classes
-#endif // _AFX_NO_OLE_SUPPORT
-
-#ifndef _AFX_NO_DB_SUPPORT
-#include <afxdb.h>                      // MFC ODBC database classes
-#endif // _AFX_NO_DB_SUPPORT
-
-#ifndef _AFX_NO_DAO_SUPPORT
-#include <afxdao.h>                     // MFC DAO database classes
-#endif // _AFX_NO_DAO_SUPPORT
-
-#ifndef _AFX_NO_OLE_SUPPORT
-#include <afxdtctl.h>           // MFC support for Internet Explorer 4 Common Controls
-#endif
-#ifndef _AFX_NO_AFXCMN_SUPPORT
-#include <afxcmn.h>                     // MFC support for Windows Common Controls
-#endif // _AFX_NO_AFXCMN_SUPPORT
-#include <cassert>
+#include <map>
 #include <array>
+#include <cassert>
+
 
 #pragma warning(disable: 4311)
 
@@ -42,14 +19,14 @@ TClass* AllocateClass()
 }
 
 template<typename TClass>
-BOOL CreateClass(TClass* instance, CREATESTRUCTW* params, HWND wrapper)
+BOOL CreateClass(TClass* instance, CREATESTRUCTW* params)
 {
 	RECT position{params->x, params->y, params->cx + params->x, params->cy + params->y};
 	return instance->Create(params->style, position, CWnd::FromHandlePermanent(params->hwndParent), reinterpret_cast<UINT>(params->hMenu));
 }
 
 template<>
-BOOL CreateClass(CVSListBox* instance, CREATESTRUCTW* params, HWND wrapper)
+BOOL CreateClass(CVSListBox* instance, CREATESTRUCTW* params)
 {
 	RECT position{params->x, params->y, params->cx + params->x, params->cy + params->y};
 	auto result = instance->Create(params->lpszName, params->style, position, CWnd::FromHandlePermanent(params->hwndParent), reinterpret_cast<UINT>(params->hMenu));
@@ -63,40 +40,79 @@ BOOL CreateClass(CVSListBox* instance, CREATESTRUCTW* params, HWND wrapper)
 }
 
 template<>
-BOOL CreateClass(CMFCRibbonBar* instance, CREATESTRUCTW* params, HWND wrapper)
+BOOL CreateClass(CMFCRibbonBar* instance, CREATESTRUCTW* params)
 {
 	return instance->Create(CWnd::FromHandlePermanent(params->hwndParent), reinterpret_cast<UINT>(params->hMenu));
 }
 
 template<>
-BOOL CreateClass(CButton* instance, CREATESTRUCTW* params, HWND wrapper)
+BOOL CreateClass(CButton* instance, CREATESTRUCTW* params)
 {
 	RECT position{params->x, params->y, params->cx + params->x, params->cy + params->y};
 	return instance->Create(params->lpszName, params->style, position, CWnd::FromHandlePermanent(params->hwndParent), reinterpret_cast<UINT>(params->hMenu));
 }
 
 template<>
-BOOL CreateClass(CMFCMenuButton* instance, CREATESTRUCTW* params, HWND wrapper)
+BOOL CreateClass(CMFCMenuButton* instance, CREATESTRUCTW* params)
 {
-	return CreateClass(static_cast<CButton*>(instance), params, wrapper);
+	return CreateClass(static_cast<CButton*>(instance), params);
 }
 
 template<>
-BOOL CreateClass(CMFCColorButton* instance, CREATESTRUCTW* params, HWND wrapper)
+BOOL CreateClass(CMFCColorButton* instance, CREATESTRUCTW* params)
 {
-	return CreateClass(static_cast<CButton*>(instance), params, wrapper);
+	return CreateClass(static_cast<CButton*>(instance), params);
 }
 
 template<>
-BOOL CreateClass(CMFCButton* instance, CREATESTRUCTW* params, HWND wrapper)
+BOOL CreateClass(CMFCButton* instance, CREATESTRUCTW* params)
 {
-	return CreateClass(static_cast<CButton*>(instance), params, wrapper);
+	return CreateClass(static_cast<CButton*>(instance), params);
+}
+
+template<>
+BOOL CreateClass(CMFCLinkCtrl* instance, CREATESTRUCTW* params)
+{
+	return CreateClass(static_cast<CButton*>(instance), params);
+}
+
+template<>
+BOOL CreateClass(CSplitButton* instance, CREATESTRUCTW* params)
+{
+	return CreateClass(static_cast<CButton*>(instance), params);
+}
+
+template<>
+BOOL CreateClass(CMFCColorPickerCtrl* instance, CREATESTRUCTW* params)
+{
+	return CreateClass(static_cast<CButton*>(instance), params);
+}
+
+template<>
+BOOL CreateClass(CMFCTabCtrl* instance, CREATESTRUCTW* params)
+{
+	RECT position{params->x, params->y, params->cx + params->x, params->cy + params->y};
+	return instance->Create(CMFCTabCtrl::Style(params->style), position, CWnd::FromHandlePermanent(params->hwndParent), reinterpret_cast<UINT>(params->hMenu));
+}
+
+template<>
+BOOL CreateClass(CMFCOutlookBarTabCtrl* instance, CREATESTRUCTW* params)
+{
+	RECT position{params->x, params->y, params->cx + params->x, params->cy + params->y};
+	return instance->Create(position, CWnd::FromHandlePermanent(params->hwndParent), reinterpret_cast<UINT>(params->hMenu));
+}
+
+
+template<>
+BOOL CreateClass(CMFCReBar* instance, CREATESTRUCTW* params)
+{
+	return instance->Create(CWnd::FromHandlePermanent(params->hwndParent), params->style, reinterpret_cast<UINT>(params->hMenu));
 }
 
 template<typename TClass>
 LRESULT ProcessMessage(TClass* control, UINT message, WPARAM wparam, LPARAM lparam)
 {
-	return ::SendMessageW(*control, message, wparam, lparam);
+	return AfxCallWndProc(control, *control, message, wparam, lparam);
 }
 
 template<>
@@ -165,179 +181,271 @@ LRESULT ProcessMessage(CVSListBox* control, UINT message, WPARAM wparam, LPARAM 
 		return 0;
 	}
 
+	return AfxCallWndProc(control, *control, message, wparam, lparam);
+}
+
+template<>
+LRESULT ProcessMessage(CMFCPropertyGridCtrl* control, UINT message, WPARAM wparam, LPARAM lparam)
+{
+
+	if (message == LVM_GETHEADER) 
+	//LVM_GETITEM LVM_DELETEITEM LVM_INSERTITEM
+	//LVM_INSERTGROUP LVM_GETGROUPINFO
+	//LVM_GETCOLUMN LVM_GETHEADER LVM_ENABLEGROUPVIEW LVM_GETGROUPCOUNT
+		//LVM_GETGROUPINFO
+		//LVM_GETGROUPINFOBYINDEX
+		//LVM_REMOVEGROUP
+		//LVM_GETITEMCOUNT
+	{
+		//TODO call SetItemData
+	}
+
 	return ::SendMessageW(*control, message, wparam, lparam);
 }
 
+using ClassMap = std::map<ATOM, HWND(*)(CREATESTRUCTW* params)>;
+
+auto& GetClassMap()
+{
+	static ClassMap classes;
+
+	return classes;
+}
+
+ extern "C" __declspec(dllexport) HWND __stdcall CreateMFCWindow(CREATESTRUCTW* params) noexcept
+{
+	 if (params == nullptr)
+	 {
+		return nullptr;
+	 }
+
+	 if (params->lpszClass == nullptr)
+	 {
+		return nullptr;
+	 }
+
+	 ATOM result = FindAtomW(params->lpszClass);
+
+	 if (result == 0)
+	 {
+		return nullptr;
+	 }
+
+	 auto findIter = GetClassMap().find(result);
+
+	 if (findIter == GetClassMap().end())
+	 {
+		return nullptr;
+	 }
+
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	return findIter->second(params);
+}
+
+
+ ATOM RegisterMFCClass(wchar_t* classname, HWND(*creator)(CREATESTRUCTW* params))
+ {
+	ATOM result = AddAtomW(classname);
+	GetClassMap()[result] = creator;
+	return result;
+ }
+
+BOOL UnregisterMFCClass(ATOM classname)
+{
+	GetClassMap().erase(classname);
+	return DeleteAtom(classname) == 0 ? TRUE : FALSE;
+}
+
+
+BOOL UnregisterMFCClass(wchar_t* classname)
+{
+	 if (classname == nullptr)
+	 {
+		return FALSE;
+	 }
+
+	ATOM result = FindAtomW(classname);
+	
+	if (result == 0)
+	{
+		return FALSE;
+	}
+
+	return UnregisterMFCClass(result);
+}
+
+
+
+
 struct parent_wrapper
-		{
-			static LRESULT OwnerDrawProc(HWND hWnd,
+{
+	static LRESULT OwnerDrawProc(HWND hWnd,
 					  UINT uMsg,
 					  WPARAM wParam,
 					  LPARAM lParam,
 					  UINT_PTR uIdSubclass,
 					  DWORD_PTR dwRefData)
-			{
-					if (uIdSubclass == WM_DRAWITEM)
-					{
-						if (uMsg == WM_MEASUREITEM || 
+	{
+				AFX_MANAGE_STATE(AfxGetStaticModuleState());
+				if (uIdSubclass == WM_DRAWITEM)
+				{
+					if (uMsg == WM_MEASUREITEM || 
 							uMsg == WM_DRAWITEM || 
 							uMsg == WM_COMPAREITEM ||
 							uMsg == WM_DELETEITEM)
-						{
+					{
 							HWND child = GetDlgItem(hWnd, int(wParam));
 
 							if (child != nullptr && ::SendMessageW(child, uMsg, wParam, lParam))
 							{
 								return TRUE;
 							}				
-						}
-						else if (uMsg == WM_NCDESTROY)
-						{	
-							RemoveWindowSubclass(hWnd, OwnerDrawProc, WM_DRAWITEM);
-						}
 					}
+					else if (uMsg == WM_NCDESTROY)
+					{	
+							RemoveWindowSubclass(hWnd, OwnerDrawProc, WM_DRAWITEM);
+					}
+				}
 
-					return DefSubclassProc(hWnd, uMsg, wParam, lParam);
-			}
+				return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+	}
 		
-		static LRESULT CwndProc(HWND hWnd,
+	static LRESULT CwndProc(HWND hWnd,
 					  UINT uMsg,
 					  WPARAM wParam,
 					  LPARAM lParam,
 					  UINT_PTR uIdSubclass,
 					  DWORD_PTR dwRefData)
+	{
+		if (DWORD_PTR(uIdSubclass) == dwRefData && uMsg == WM_NCDESTROY)
 		{
-					if (DWORD_PTR(uIdSubclass) == dwRefData && uMsg == WM_NCDESTROY)
-					{
-						CWnd* self = (CWnd*)dwRefData;
-						self->Detach();
-						delete self;
+			CWnd* self = (CWnd*)dwRefData;
+			self->Detach();
+			delete self;
 
-						RemoveWindowSubclass(hWnd, CwndProc, uIdSubclass);
-					}
+			RemoveWindowSubclass(hWnd, CwndProc, uIdSubclass);
+		}
 
-					return DefSubclassProc(hWnd, uMsg, wParam, lParam);
-			}
-		};
+		return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+	}
+};
+
+
+WNDCLASSEXW GetSystemClass(wchar_t* className)
+{
+	WNDCLASSEXW info{sizeof(WNDCLASSEXW)};
+
+	assert(::GetClassInfoExW(nullptr, className, &info));
+
+	return info;
+}
 
 template<typename TClass>
 struct class_wrapper
 {
-	static LRESULT WndProc(HWND self, UINT message, WPARAM wparam, LPARAM lparam)
-			{
-//				OutputDebugStringW(L"class_wrapper::WndProc Enter\n");
-				AFX_MANAGE_STATE(AfxGetStaticModuleState());
-//				OutputDebugStringW(L"class_wrapper::WndProc Afx State set\n");
+	static LRESULT CwndProc(HWND hWnd,
+					  UINT uMsg,
+					  WPARAM wParam,
+					  LPARAM lParam,
+					  UINT_PTR uIdSubclass,
+					  DWORD_PTR dwRefData)
+	{
+		AFX_MANAGE_STATE(AfxGetStaticModuleState());
+		TClass* control = (TClass*)dwRefData;
 
-				TClass* control = nullptr;
-
-				if (message == WM_NCCREATE)
-				{
-					CREATESTRUCTW* data = (CREATESTRUCTW*)lparam;
-					OutputDebugStringW(L"class_wrapper::WndProc non client create\n");
-					control = AllocateClass<TClass>();
-
-					
-					OutputDebugStringW(L"class_wrapper::WndProc new CCheckListBox\n");
-					SetWindowLongPtrW(self, 0, (LONG_PTR)control);
-
-					CWnd* parent = CWnd::FromHandlePermanent(data->hwndParent);
-
-					if (parent == nullptr)
-					{
-						OutputDebugStringW(L"class_wrapper::WndProc Creating CWnd wrapper\n");
-
-						parent = new CWnd();
-						parent->Attach(data->hwndParent);
-
-						SetWindowSubclass(data->hwndParent, parent_wrapper::CwndProc, UINT_PTR(parent), DWORD_PTR(parent));
-						SetWindowSubclass(data->hwndParent, parent_wrapper::OwnerDrawProc, WM_DRAWITEM, 0);
-						assert(CWnd::FromHandlePermanent(data->hwndParent));
-					}
-
-					return TRUE;
-				}
-				else
-				{
-					control = (TClass*)::GetWindowLongPtrW(self, 0);
-				}
-
-				if (control == nullptr)
-				{
-					OutputDebugStringW(L"class_wrapper::WndProc list is nul\n");
-					return 0;
-				}
-
-				if (message == WM_CREATE)
-				{
-					OutputDebugStringW(L"class_wrapper::WndProc WM_CREATE\n");
-					CREATESTRUCTW* data = (CREATESTRUCTW*)lparam;
-
-					OutputDebugStringW(L"class_wrapper::WndProc CCheckListBox::Create");
-					if(!CreateClass<TClass>(control, data, self))
-					{
-						delete control;
-						SetWindowLongPtrW(self, 0, 0);
-						return -1;
-					}
-
-					return 0;
-				}
-
-				if (message == WM_NCDESTROY)
-				{
-					OutputDebugStringW(L"class_wrapper::WndProc WM_NCDESTROY\n");
-					auto result = ::SendMessageW(*control, message, wparam, lparam);
-					delete control;
-					SetWindowLongPtrW(self, 0, 0);
-					return result;
-				}
-
-		if (message == WM_WINDOWPOSCHANGED || message == WM_SIZE || message == WM_MOVE)
+		if (uMsg == WM_WINDOWPOSCHANGED)
 		{
-			DefWindowProc(self, message, wparam, lparam);
+			auto* windowPos = (WINDOWPOS*)lParam;
+			control->SetWindowPos(CWnd::FromHandle(windowPos->hwndInsertAfter), windowPos->x, windowPos->y, windowPos->cx, windowPos->cy, windowPos->flags);
 		}
 
-		if (message == WM_WINDOWPOSCHANGED)
+		if (uMsg == WM_NCDESTROY)
 		{
-			auto* windowPos = (WINDOWPOS*)lparam;
-			control->SetWindowPos(CWnd::FromHandle(windowPos->hwndInsertAfter), windowPos->x, windowPos->y, windowPos->cx, windowPos->cy, windowPos->flags); 
-			return 0;
+
+			OutputDebugStringW(L"class_wrapper::WndProc WM_NCDESTROY\n");
+			auto result = ProcessMessage(control, uMsg, wParam, lParam);
+			RemoveWindowSubclass(*control, CwndProc, uIdSubclass);
+			delete control;
+			return result;
 		}
 
-		if (message == WM_SIZE)
-		{
-			UINT width = LOWORD(lparam);
-			UINT height = HIWORD(lparam);
-
-			control->SetWindowPos(CWnd::FromHandle(nullptr), 0, 0, width, height, SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOSENDCHANGING); 
-
-			return 0;
-		}
-
-		if (message == WM_MOVE)
-		{
-			UINT x = LOWORD(lparam);
-			UINT y = HIWORD(lparam);	
-			control->SetWindowPos(CWnd::FromHandle(nullptr), x, y, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOSENDCHANGING); 
-
-			return 0;
-		}
-
-		return ProcessMessage(control, message, wparam, lparam);
+		return ProcessMessage(control, uMsg, wParam, lParam);
 	}
 
-	static WNDCLASSEXW* CreateDescriptor(HINSTANCE instance, wchar_t* classname)
+	static HWND CreateInstance(CREATESTRUCTW* params)
 	{
-		static WNDCLASSEXW result{};
+		TClass* control = AllocateClass<TClass>();
 
-		result.cbSize = sizeof(WNDCLASSEXW);
-		result.lpfnWndProc = WndProc;
-		result.hInstance = instance;
-		result.lpszClassName = classname;
-		result.cbWndExtra = sizeof(void*);
+		CWnd* parent = CWnd::FromHandlePermanent(params->hwndParent);
 
-		return &result;
+		if (parent == nullptr)
+		{
+			OutputDebugStringW(L"class_wrapper::WndProc Creating CWnd wrapper\n");
+
+			parent = new CWnd();
+			parent->Attach(params->hwndParent);
+
+			SetWindowSubclass(params->hwndParent, parent_wrapper::CwndProc, UINT_PTR(parent), DWORD_PTR(parent));
+			SetWindowSubclass(params->hwndParent, parent_wrapper::OwnerDrawProc, WM_DRAWITEM, 0);
+			assert(CWnd::FromHandlePermanent(params->hwndParent));
+		}
+
+		if (CreateClass<TClass>(control, params))
+		{
+			SetWindowSubclass(*control, CwndProc, UINT_PTR(control), DWORD_PTR(control));
+			return *control;
+		}
+		delete control;
+		return nullptr;
+	}
+
+	inline static WNDCLASSEXW ParentClassInfo{};
+
+	static LRESULT SuperProc(HWND hWnd,
+					  UINT uMsg,
+					  WPARAM wParam,
+					  LPARAM lParam)
+	{
+		AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+		auto proc = DefWindowProcW;
+
+		if (ParentClassInfo.lpfnWndProc != nullptr)
+		{
+			proc = ParentClassInfo.lpfnWndProc;			
+		}
+
+		if (uMsg == WM_NCCREATE)
+		{
+			if (proc(hWnd, uMsg, wParam, lParam))
+			{
+				TClass* control = AllocateClass<TClass>();
+
+				CREATESTRUCTW* params = reinterpret_cast<CREATESTRUCTW*>(lParam);
+				CWnd* parent = CWnd::FromHandlePermanent(params->hwndParent);
+
+				if (parent == nullptr)
+				{
+					OutputDebugStringW(L"class_wrapper::WndProc Creating CWnd wrapper\n");
+
+					parent = new CWnd();
+					parent->Attach(params->hwndParent);
+
+					SetWindowSubclass(params->hwndParent, parent_wrapper::CwndProc, UINT_PTR(parent), DWORD_PTR(parent));
+					SetWindowSubclass(params->hwndParent, parent_wrapper::OwnerDrawProc, WM_DRAWITEM, 0);
+					assert(CWnd::FromHandlePermanent(params->hwndParent));
+				}
+
+				control->SubclassWindow(hWnd);
+				//control->SetStandardButtons();
+				SetWindowSubclass(*control, CwndProc, UINT_PTR(control), DWORD_PTR(control));
+			
+				return TRUE;
+			}
+		}
+
+		return proc(hWnd, uMsg, wParam, lParam);
 	}
 };
 
@@ -351,36 +459,91 @@ struct CMFCLibrary : public CWinApp
 		bool result = true;
 
 		
-		// common controls
-		::RegisterClassExW(class_wrapper<CButton>::CreateDescriptor(this->m_hInstance, L"Mfc::CButton"));
-		::RegisterClassExW(class_wrapper<CComboBox>::CreateDescriptor(this->m_hInstance, L"Mfc::CComboBox"));
-		::RegisterClassExW(class_wrapper<CDateTimeCtrl>::CreateDescriptor(this->m_hInstance, L"Mfc::CDateTimeCtrl"));
-		::RegisterClassExW(class_wrapper<CEdit>::CreateDescriptor(this->m_hInstance, L"Mfc::CEdit"));
-		::RegisterClassExW(class_wrapper<CComboBoxEx>::CreateDescriptor(this->m_hInstance, L"Mfc::CComboBoxEx"));
-		::RegisterClassExW(class_wrapper<CListBox>::CreateDescriptor(this->m_hInstance, L"Mfc::CListBox"));
-		::RegisterClassExW(class_wrapper<CListCtrl>::CreateDescriptor(this->m_hInstance, L"Mfc::CListCtrl"));
+		WNDCLASSEXW classInfo = class_wrapper<CVSListBox>::ParentClassInfo = GetSystemClass(WC_STATICW);
 
+		classInfo.hInstance = AfxGetInstanceHandle();
+		classInfo.lpszClassName = L"Mfc::CVSListBox";
+		classInfo.lpfnWndProc = class_wrapper<CVSListBox>::SuperProc;
 		
+		assert(::RegisterClassEx(&classInfo));
+
+		classInfo = class_wrapper<CDragListBox>::ParentClassInfo = GetSystemClass(WC_LISTBOXW);
+
+		classInfo.hInstance = AfxGetInstanceHandle();
+		classInfo.lpszClassName = L"Mfc::CDragListBox";
+		classInfo.lpfnWndProc = class_wrapper<CDragListBox>::SuperProc;
 		
+		assert(::RegisterClassEx(&classInfo));
+
+		classInfo = class_wrapper<CListBox>::ParentClassInfo = GetSystemClass(WC_LISTBOXW);
+
+		classInfo.hInstance = AfxGetInstanceHandle();
+		classInfo.lpszClassName = L"Mfc::CListBox";
+		classInfo.lpfnWndProc = class_wrapper<CListBox>::SuperProc;
+		
+		assert(::RegisterClassEx(&classInfo));
+
+		classInfo = class_wrapper<CCheckListBox>::ParentClassInfo = GetSystemClass(WC_LISTBOXW);
+
+		classInfo.hInstance = AfxGetInstanceHandle();
+		classInfo.lpszClassName = L"Mfc::CCheckListBox";
+		classInfo.lpfnWndProc = class_wrapper<CCheckListBox>::SuperProc;
+		
+		assert(::RegisterClassEx(&classInfo));
+
+		// common controls
+		::RegisterMFCClass(L"Mfc::CButton", class_wrapper<CButton>::CreateInstance);
+		::RegisterMFCClass(L"Mfc::CSplitButton", class_wrapper<CSplitButton>::CreateInstance);
+		::RegisterMFCClass(L"Mfc::CComboBox", class_wrapper<CComboBox>::CreateInstance);
+		::RegisterMFCClass(L"Mfc::CDateTimeCtrl", class_wrapper<CDateTimeCtrl>::CreateInstance);
+		::RegisterMFCClass(L"Mfc::CEdit", class_wrapper<CEdit>::CreateInstance);
+		::RegisterMFCClass(L"Mfc::CComboBoxEx", class_wrapper<CComboBoxEx>::CreateInstance);
+		::RegisterMFCClass(L"Mfc::CListBox", class_wrapper<CListBox>::CreateInstance);
+		::RegisterMFCClass(L"Mfc::CListCtrl", class_wrapper<CListCtrl>::CreateInstance);
+
 		// extended controls
 		// list boxes
-		::RegisterClassExW(class_wrapper<CDragListBox>::CreateDescriptor(this->m_hInstance, L"Mfc::CDragListBox"));
-		::RegisterClassExW(class_wrapper<CVSListBox>::CreateDescriptor(this->m_hInstance, L"Mfc::CVSListBox"));
-		::RegisterClassExW(class_wrapper<CCheckListBox>::CreateDescriptor(this->m_hInstance, L"Mfc::CCheckListBox"));
-		
+		::RegisterMFCClass(L"Mfc::CDragListBox", class_wrapper<CDragListBox>::CreateInstance);
+		//::RegisterMFCClass(L"Mfc::CVSListBox", class_wrapper<CVSListBox>::CreateInstance);
+		::RegisterMFCClass(L"Mfc::CCheckListBox", class_wrapper<CCheckListBox>::CreateInstance);
 		
 		// buttons
-		::RegisterClassExW(class_wrapper<CMFCMenuButton>::CreateDescriptor(this->m_hInstance, L"Mfc::CMFCMenuButton"));
-		::RegisterClassExW(class_wrapper<CMFCButton>::CreateDescriptor(this->m_hInstance, L"Mfc::CMFCButton"));
-		::RegisterClassExW(class_wrapper<CMFCColorButton>::CreateDescriptor(this->m_hInstance, L"Mfc::CMFCColorButton"));
-		
-		
-		// lists
-		::RegisterClassExW(class_wrapper<CMFCPropertyGridCtrl>::CreateDescriptor(this->m_hInstance, L"Mfc::CMFCPropertyGridCtrl"));
+		::RegisterMFCClass(L"Mfc::CMFCMenuButton", class_wrapper<CMFCMenuButton>::CreateInstance);
+		::RegisterMFCClass(L"Mfc::CMFCButton", class_wrapper<CMFCButton>::CreateInstance);
+		::RegisterMFCClass(L"Mfc::CMFCColorButton", class_wrapper<CMFCColorButton>::CreateInstance);
+		::RegisterMFCClass(L"Mfc::CMFCColorPickerCtrl", class_wrapper<CMFCColorPickerCtrl>::CreateInstance);
+		::RegisterMFCClass(L"Mfc::CMFCLinkCtrl", class_wrapper<CMFCLinkCtrl>::CreateInstance);
 
+		// edits
+		::RegisterMFCClass(L"Mfc::CMFCEditBrowseCtrl", class_wrapper<CMFCEditBrowseCtrl>::CreateInstance);
+		::RegisterMFCClass(L"Mfc::CMFCMaskedEdit", class_wrapper<CMFCMaskedEdit>::CreateInstance);
+		
+		// combo boxes
+		::RegisterMFCClass(L"Mfc::CMFCFontComboBox", class_wrapper<CMFCFontComboBox>::CreateInstance);
+
+		// lists
+		::RegisterMFCClass(L"Mfc::CMFCPropertyGridCtrl", class_wrapper<CMFCPropertyGridCtrl>::CreateInstance);
+		::RegisterMFCClass(L"Mfc::CMFCListCtrl", class_wrapper<CMFCListCtrl>::CreateInstance);
+		::RegisterMFCClass(L"Mfc::CMFCShellListCtrl", class_wrapper<CMFCShellListCtrl>::CreateInstance);
+		
+		//trees
+		::RegisterMFCClass(L"Mfc::CMFCShellTreeCtrl", class_wrapper<CMFCShellTreeCtrl>::CreateInstance);
+
+		// spinners
+		::RegisterMFCClass(L"Mfc::CMFCSpinButtonCtrl", class_wrapper<CMFCSpinButtonCtrl>::CreateInstance);
+		
+		//headers
+		::RegisterMFCClass(L"Mfc::CMFCHeaderCtrl", class_wrapper<CMFCHeaderCtrl>::CreateInstance);
+
+		//rebars
+		::RegisterMFCClass(L"Mfc::CMFCReBar", class_wrapper<CMFCReBar>::CreateInstance);
+
+		//tabs
+		::RegisterMFCClass(L"Mfc::CMFCTabCtrl", class_wrapper<CMFCTabCtrl>::CreateInstance);
+		::RegisterMFCClass(L"Mfc::CMFCOutlookBarTabCtrl", class_wrapper<CMFCOutlookBarTabCtrl>::CreateInstance);
 
 		// TODO to fix
-		::RegisterClassExW(class_wrapper<CMFCRibbonBar>::CreateDescriptor(this->m_hInstance, L"Mfc::CMFCRibbonBar"));
+		::RegisterMFCClass(L"Mfc::CMFCRibbonBar", class_wrapper<CMFCRibbonBar>::CreateInstance);
 
 		return CWinApp::InitInstance();
 	}
@@ -389,9 +552,11 @@ struct CMFCLibrary : public CWinApp
 	{
 		OutputDebugStringW(L"CMFCLibrary::ExitInstance unregistering class\n");
 		
-		if (!::UnregisterClassW(L"Mfc::CCheckListBox", m_hInstance))
+		auto& classes = GetClassMap();
+
+		for (auto& item : classes)
 		{
-			OutputDebugStringW(L"CMFCLibrary::ExitInstance could not unregister Mfc::CCheckListBox\n");			
+			UnregisterMFCClass(item.first);
 		}
 
 		return CWinApp::ExitInstance();

@@ -17,13 +17,14 @@ struct bitmap_window
 
     auto on_create(const win32::create_message& info)
     {
-        auto mfc = LoadLibraryExW(L"mfc140ud.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
-        assert(mfc);
-        auto module = LoadLibraryExW(L"siege-mfc.dll", nullptr, LOAD_LIBRARY_SEARCH_APPLICATION_DIR);
+        auto module = LoadLibraryExW(L"siege-mfc.dll", nullptr, 0);
         assert(module);
 
+//        auto createControl = reinterpret_cast<win32::hwnd_t(*)(CREATESTRUCTW*)>(GetProcAddress(module, "CreateMFCWindow"));
 
-        auto group_box = win32::CreateWindowExW(DLGITEMTEMPLATE{
+//        assert(createControl);
+
+      /*  auto group_box = win32::CreateWindowExW(DLGITEMTEMPLATE{
 						.style = WS_VISIBLE | WS_CHILD | BS_GROUPBOX,
                         .cy = 100
 						}, self, win32::button::class_name, L"Colour strategy");
@@ -50,19 +51,20 @@ struct bitmap_window
 						}, self, win32::button::class_name, L"Remap (only unique colours)");
 
         ideal_size = win32::button::GetIdealSize(*remap_unique);
-        win32::SetWindowPos(*remap_unique, *ideal_size);
+        win32::SetWindowPos(*remap_unique, *ideal_size);*/
 
-        auto strategy_toolbar = win32::CreateWindowExW(CREATESTRUCTW{
+        CREATESTRUCTW listBoxInfo{
                         .hInstance = module,
                         .hwndParent = self,
                         .cy = 100,
                         .cx = 300,
-                        .y = 100,
-						.style = WS_VISIBLE | WS_CHILD,   
-                        .lpszClass = L"Mfc::CVSListBox",
+                        .y = 1,
+						.style = WS_VISIBLE | WS_CHILD | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS,   
+                        .lpszClass = L"Mfc::CCheckListBox",
                        
 			            //.lpszClass = win32::list_box::class_name			
-            });
+            };
+        auto strategy_toolbar = win32::CreateWindowExW(listBoxInfo);
 
         assert(strategy_toolbar);
 
@@ -271,16 +273,16 @@ struct bitmap_window
       //                  .cy = 300,
 						//}, self, win32::static_control::class_name, L"Image");
 
-        auto children = std::array{*group_box, *strategy_toolbar, *palettes_tree, *palettes_list};
+        auto children = std::array{*strategy_toolbar, *palettes_tree, *palettes_list};
         win32::StackChildren(*win32::GetClientSize(self), children);
 
-        auto rect = win32::GetClientRect(*group_box);
-        rect->top += 15;
-        rect->left += 5;
+        //auto rect = win32::GetClientRect(*group_box);
+        //rect->top += 15;
+        //rect->left += 5;
 
-        auto radios = std::array{*do_nothing, *remap, *remap_unique};
-        win32::StackChildren(SIZE{.cx = rect->right, .cy = rect->bottom - 20}, radios, win32::StackDirection::Horizontal,
-                POINT{.x = rect->left, .y = rect->top});
+     //   auto radios = std::array{*do_nothing, *remap, *remap_unique};
+      //  win32::StackChildren(SIZE{.cx = rect->right, .cy = rect->bottom - 20}, radios, win32::StackDirection::Horizontal,
+       //         POINT{.x = rect->left, .y = rect->top});
 
         return 0;
     }
