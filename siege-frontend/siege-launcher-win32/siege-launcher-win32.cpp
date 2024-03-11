@@ -340,7 +340,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		.style = WS_OVERLAPPEDWINDOW,
 		.lpszName = app_title.data(),
 		.lpszClass = win32::type_name<siege_main_window>().c_str(),	
-		.dwExStyle = WS_EX_COMPOSITED,
+		//.dwExStyle = WS_EX_COMPOSITED,
 	});
 
 	if (!main_window)
