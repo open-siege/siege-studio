@@ -167,20 +167,28 @@ struct bitmap_window
         // TODO add example palette file names as root items and then palette names as children
 
         auto palettes_list = win32::CreateWindowExW(DLGITEMTEMPLATE{
-						.style = WS_VISIBLE | WS_CHILD,
+						.style = WS_VISIBLE | WS_CHILD | LVS_NOCOLUMNHEADER | LVS_SINGLESEL | LVS_SHOWSELALWAYS,
                         .y = 3,
+                        .cx = 400,
                         .cy = 300,
 						}, self, win32::list_view::class_name, L"Palettes");
 
 
-        win32::list_view::SetView(*palettes_list, win32::list_view::view_type::tile_view);
+        win32::list_view::SetView(*palettes_list, win32::list_view::view_type::details_view);
         assert(*win32::list_view::EnableGroupView(*palettes_list, true));
         assert(win32::list_view::SetTileViewInfo(*palettes_list, LVTILEVIEWINFO {
             .dwFlags = LVTVIF_FIXEDWIDTH,
             .sizeTile = SIZE {.cx = win32::GetClientSize(self)->cx, .cy = 50},
             }));
         
-        win32::list_view::SetExtendedListViewStyle(*palettes_list, LVS_EX_CHECKBOXES, LVS_EX_CHECKBOXES);
+        win32::list_view::SetExtendedListViewStyle(*palettes_list, 0, 
+                LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT);
+
+        win32::list_view::InsertColumn(*palettes_list, -1, LVCOLUMNW {
+           // .cx = LVSCW_AUTOSIZE,
+            .pszText = const_cast<wchar_t*>(L""),
+                        .cxIdeal = win32::GetClientSize(self)->cx,
+            });
 
         assert(win32::list_view::InsertGroup(*palettes_list, -1, LVGROUP {
             .pszHeader = temp.data(),
