@@ -474,9 +474,27 @@ namespace win32
 
     std::expected<hwnd_t, DWORD> CreateWindowExW(CREATESTRUCTW params)
     {
-        hinstance_t hinstance = params.hInstance;
-        auto parent_hinstance = hinstance == nullptr && params.hwndParent != nullptr ? std::bit_cast<hinstance_t>(GetWindowLongPtrW(params.hwndParent, GWLP_HINSTANCE)) : nullptr;
-        hinstance = hinstance ? hinstance : ::GetModuleHandleW(nullptr);
+        hinstance_t hinstance = nullptr;
+        auto parent_hinstance = params.hwndParent != nullptr ? std::bit_cast<hinstance_t>(GetWindowLongPtrW(params.hwndParent, GWLP_HINSTANCE)) : nullptr;
+        auto module_instance = ::GetModuleHandleW(nullptr);
+        thread_local WNDCLASSEXW info{sizeof(WNDCLASSEXW)};
+
+        std::array modules_to_check = {{
+                  params.hInstance,
+                  module_instance,  
+                  parent_hinstance,
+                  ::GetModuleHandleW(L"comctrl32.dll"),
+                  nullptr
+            }};
+
+        for (auto module : modules_to_check)
+        {
+            if (module && ::GetClassInfoExW(module, params.lpszClass, &info))
+            {
+                hinstance = module;
+                break;
+            }   
+        }
 
         auto result = ::CreateWindowExW(
                 params.dwExStyle,

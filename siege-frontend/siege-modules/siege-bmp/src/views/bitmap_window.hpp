@@ -17,14 +17,10 @@ struct bitmap_window
 
     auto on_create(const win32::create_message& info)
     {
-        auto module = GetModuleHandleW(L"siege-mfc.dll");
-        assert(module);
+        auto mfcModule = GetModuleHandleW(L"siege-mfc.dll");
+        assert(mfcModule);
 
-//        auto createControl = reinterpret_cast<win32::hwnd_t(*)(CREATESTRUCTW*)>(GetProcAddress(module, "CreateMFCWindow"));
-
-//        assert(createControl);
-
-      /*  auto group_box = win32::CreateWindowExW(DLGITEMTEMPLATE{
+        auto group_box = win32::CreateWindowExW(DLGITEMTEMPLATE{
 						.style = WS_VISIBLE | WS_CHILD | BS_GROUPBOX,
                         .cy = 100
 						}, self, win32::button::class_name, L"Colour strategy");
@@ -51,20 +47,26 @@ struct bitmap_window
 						}, self, win32::button::class_name, L"Remap (only unique colours)");
 
         ideal_size = win32::button::GetIdealSize(*remap_unique);
-        win32::SetWindowPos(*remap_unique, *ideal_size);*/
+        win32::SetWindowPos(*remap_unique, *ideal_size);
 
-        CREATESTRUCTW listBoxInfo{
-                        .hInstance = module,
+        auto strategy_toolbar = win32::CreateWindowExW(CREATESTRUCTW {
+                        .hInstance = mfcModule,
                         .hwndParent = self,
                         .cy = 100,
                         .cx = 300,
                         .y = 1,
 						.style = WS_VISIBLE | WS_CHILD | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS,
-                        .lpszClass = L"Mfc::CCheckListBox",
-                       
-			            //.lpszClass = win32::list_box::class_name			
-            };
-        auto strategy_toolbar = win32::CreateWindowExW(listBoxInfo);
+                        .lpszClass = L"MFC::CCheckListBox",
+            }).or_else([&]() {
+                return win32::CreateWindowExW(CREATESTRUCTW {
+                        .hwndParent = self,
+                        .cy = 100,
+                        .cx = 300,
+                        .y = 1,
+						.style = WS_VISIBLE | WS_CHILD,
+                        .lpszClass = win32::list_box::class_name,
+                });     
+            });
 
         assert(strategy_toolbar);
 
