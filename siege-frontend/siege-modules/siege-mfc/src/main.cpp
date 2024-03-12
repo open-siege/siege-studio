@@ -445,7 +445,7 @@ auto RegisterMFCClass(std::string className = std::string{})
 }
 
 
-struct CMFCLibrary : public CWinApp
+struct CMFCLibrary : public CWinAppEx
 {
 	BOOL InitInstance() override
 	{
@@ -535,7 +535,7 @@ struct CMFCLibrary : public CWinApp
 		RegisterMFCClass<CMFCRibbonBar>();
 		RegisterMFCClass<CDockablePane>();
 
-		return CWinApp::InitInstance();
+		return InitShellManager() && CWinApp::InitInstance();
 	}
 
 	int ExitInstance() override
