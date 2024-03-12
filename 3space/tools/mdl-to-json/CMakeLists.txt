@@ -8,6 +8,10 @@ add_executable(mdl-to-json src/convert_mdl.cpp)
 set_property(TARGET mdl-to-json PROPERTY CXX_STANDARD 23)
 target_link_libraries(mdl-to-json 3space::3space)
 
+if (MSVC)
+        set_property(TARGET mdl-to-json PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 install(TARGETS mdl-to-json
         CONFIGURATIONS Debug Release
         RUNTIME DESTINATION bin)

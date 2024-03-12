@@ -13,6 +13,10 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(dts-to-json TBB::tbb)
 endif()
 
+if (MSVC)
+        set_property(TARGET dts-to-json PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 install(TARGETS dts-to-json
         CONFIGURATIONS Debug Release
         RUNTIME DESTINATION bin)
