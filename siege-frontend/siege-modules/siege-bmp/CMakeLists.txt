@@ -8,6 +8,7 @@ file(GLOB_RECURSE SRC_FILES
 
 add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)
+set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/include)
 target_link_libraries(${PROJECT_NAME} PRIVATE 3space::3space)
 target_link_libraries(${PROJECT_NAME} PUBLIC siege-win32)

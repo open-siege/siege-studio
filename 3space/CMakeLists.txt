@@ -33,6 +33,10 @@ target_link_libraries(3space
                         taocpp::pegtl
                         libzip::zip)
 
+if (MSVC)
+        set_property(TARGET 3space PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 # TODO fix linker error with tests on Windows
 if (WIN32)
         add_executable(3space-tests ${CMAKE_CURRENT_SOURCE_DIR}/src/empty.cpp)

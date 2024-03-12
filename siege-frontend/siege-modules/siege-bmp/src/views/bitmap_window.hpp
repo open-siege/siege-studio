@@ -59,7 +59,7 @@ struct bitmap_window
                         .cy = 100,
                         .cx = 300,
                         .y = 1,
-						.style = WS_VISIBLE | WS_CHILD | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS,   
+						.style = WS_VISIBLE | WS_CHILD | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS,
                         .lpszClass = L"Mfc::CCheckListBox",
                        
 			            //.lpszClass = win32::list_box::class_name			

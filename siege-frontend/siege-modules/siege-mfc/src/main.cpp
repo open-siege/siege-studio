@@ -169,12 +169,13 @@ struct parent_wrapper
 };
 
 
-WNDCLASSEXW GetSystemClass(wchar_t* className)
+WNDCLASSEXW GetSystemClass(const wchar_t* className)
 {
 	WNDCLASSEXW info{sizeof(WNDCLASSEXW)};
 
-	assert(::GetClassInfoExW(nullptr, className, &info));
+	assert(::GetClassInfoExW(GetModuleHandleW(L"comctrl32.dll"), className, &info));
 
+	info.lpszClassName = className;
 	return info;
 }
 
@@ -203,6 +204,11 @@ WNDCLASSEXW GetSystemClass(const CRuntimeClass& info)
 		{&CSliderCtrl::classCSliderCtrl, GetSystemClass(TRACKBAR_CLASS)},
 	};
 
+	if (info.IsDerivedFrom(RUNTIME_CLASS(CComboBoxEx)))
+	{
+		return knownClasses.at(RUNTIME_CLASS(CComboBoxEx));
+	}
+
 	for (auto& other : knownClasses)
 	{
 		if (info.IsDerivedFrom(other.first))
@@ -224,6 +230,8 @@ WNDCLASSEXW GetSystemClass(const CRuntimeClass& info)
 		fallback.cbWndExtra = int(sizeof(void*));
 	}
 
+	fallback.lpszClassName = L"";
+
 	return fallback;
 }
 
@@ -243,13 +251,13 @@ struct class_wrapper
 
 		if (uMsg == WM_WINDOWPOSCHANGED)
 		{
+			OutputDebugStringW(L"class_wrapper::WndProc WM_WINDOWPOSCHANGED\n");
 			auto* windowPos = (WINDOWPOS*)lParam;
 			control->SetWindowPos(CWnd::FromHandle(windowPos->hwndInsertAfter), windowPos->x, windowPos->y, windowPos->cx, windowPos->cy, windowPos->flags);
 		}
 
 		if (uMsg == WM_NCDESTROY)
 		{
-
 			OutputDebugStringW(L"class_wrapper::WndProc WM_NCDESTROY\n");
 			auto result = ProcessMessage(control, uMsg, wParam, lParam);
 			RemoveWindowSubclass(*control, CwndProc, uIdSubclass);
@@ -307,14 +315,22 @@ struct class_wrapper
 		{
 			if (proc(hWnd, uMsg, wParam, lParam))
 			{
+				OutputDebugStringW(L"class_wrapper::Allocating class ");
+				
 				TClass* control = AllocateClass<TClass>();
+
+				OutputDebugStringA(control->GetRuntimeClass()->m_lpszClassName);
+				OutputDebugStringW(L"(");
+				OutputDebugStringW(ParentClassInfo.lpszClassName);
+				OutputDebugStringW(L")");
+				OutputDebugStringW(L"\n");
 
 				CREATESTRUCTW* params = reinterpret_cast<CREATESTRUCTW*>(lParam);
 				CWnd* parent = CWnd::FromHandlePermanent(params->hwndParent);
 
 				if (parent == nullptr)
 				{
-					OutputDebugStringW(L"class_wrapper::WndProc Creating CWnd wrapper\n");
+					OutputDebugStringW(L"class_wrapper::WndProc Creating parent CWnd wrapper\n");
 
 					parent = new CWnd();
 					parent->Attach(params->hwndParent);
@@ -324,11 +340,19 @@ struct class_wrapper
 					assert(CWnd::FromHandlePermanent(params->hwndParent));
 				}
 
-				control->SubclassWindow(hWnd);
-				//control->SetStandardButtons();
-				SetWindowSubclass(*control, CwndProc, UINT_PTR(control), DWORD_PTR(control));
+				if (control->SubclassWindow(hWnd))
+				{
+					//control->SetStandardButtons();
+					SetWindowSubclass(*control, CwndProc, UINT_PTR(control), DWORD_PTR(control));
 			
-				return TRUE;
+					OutputDebugStringW(L"class_wrapper::Successfully subclassed window\n");
+					return TRUE;				
+				}
+
+				OutputDebugStringW(L"class_wrapper::Counld not subclass window\n");
+				delete control;
+
+				return FALSE;
 			}
 		}
 
@@ -373,13 +397,23 @@ CRuntimeClass* GetRuntimeClass()
 
 
 template<typename TClass>
-auto RegisterClass(std::string className = std::string{})
+auto RegisterMFCClass(std::string className = std::string{})
 {		
-		auto metaInfo = GetRuntimeClass<TClass>();
+		CRuntimeClass* metaInfo = nullptr;
 
 		if (className.empty())
 		{
-			className = std::string(metaInfo->m_lpszClassName);		
+			metaInfo = GetRuntimeClass<TClass>();
+			className = std::string(metaInfo->m_lpszClassName);
+		}
+		else
+		{
+			metaInfo = CRuntimeClass::FromName(className.c_str());
+		}
+
+		if (metaInfo == nullptr)
+		{
+			metaInfo = GetRuntimeClass<TClass>();
 		}
 
 		auto temp = L"MFC::" + std::wstring(className.begin(), className.end());
@@ -387,7 +421,7 @@ auto RegisterClass(std::string className = std::string{})
 
 		classInfo.hInstance = AfxGetInstanceHandle();
 		
-		OutputDebugStringW((L"Registering " + temp + L"\n").c_str());
+		OutputDebugStringW((L"Registering " + temp + L"(" + classInfo.lpszClassName + L")" +  L"\n").c_str());
 		classInfo.lpszClassName = temp.c_str();
 		classInfo.lpfnWndProc = class_wrapper<TClass>::SuperProc;
 		
@@ -403,69 +437,68 @@ struct CMFCLibrary : public CWinApp
 	BOOL InitInstance() override
 	{
 		OutputDebugStringW(L"CMFCLibrary::InitInstance enter\n");
-		
+	
 		bool result = true;
-
 		// common controls
-		RegisterClass<CButton>();
-		RegisterClass<CSplitButton>();
-		RegisterClass<CComboBox>();
-		RegisterClass<CDateTimeCtrl>();
-		RegisterClass<CEdit>();
-		RegisterClass<CComboBoxEx>();
-		RegisterClass<CListBox>();
-		RegisterClass<CListCtrl>();
-		RegisterClass<CStatic>();
-		RegisterClass<CHeaderCtrl>();
-		RegisterClass<CToolBarCtrl>();
-		RegisterClass<CTreeCtrl>();
-		RegisterClass<CTabCtrl>();
-		RegisterClass<CStatusBarCtrl>();
+		RegisterMFCClass<CButton>();
+		RegisterMFCClass<CSplitButton>();
+		RegisterMFCClass<CComboBox>();
+		RegisterMFCClass<CDateTimeCtrl>();
+		RegisterMFCClass<CEdit>();
+		RegisterMFCClass<CComboBoxEx>();
+		RegisterMFCClass<CListBox>();
+		RegisterMFCClass<CListCtrl>();
+		RegisterMFCClass<CStatic>();
+		RegisterMFCClass<CHeaderCtrl>();
+		RegisterMFCClass<CToolBarCtrl>();
+		RegisterMFCClass<CTreeCtrl>();
+		RegisterMFCClass<CTabCtrl>();
+		RegisterMFCClass<CStatusBarCtrl>();
 		
 
 		//extended controls
 		//list boxes
-		RegisterClass<CDragListBox>();
-		RegisterClass<CVSListBox>();
-		RegisterClass<CCheckListBox>();
+		RegisterMFCClass<CDragListBox>();
+		RegisterMFCClass<CVSListBox>();
+		RegisterMFCClass<CCheckListBox>();
 	
 
 		//buttons
-		RegisterClass<CMFCMenuButton>();
-		RegisterClass<CMFCButton>();
-		RegisterClass<CMFCColorButton>();
-		RegisterClass<CMFCColorPickerCtrl>("CMFCColorPickerCtrl");
-		RegisterClass<CMFCLinkCtrl>();
+		RegisterMFCClass<CMFCMenuButton>();
+		RegisterMFCClass<CMFCButton>();
+		RegisterMFCClass<CMFCColorButton>();
+		RegisterMFCClass<CMFCColorPickerCtrl>("CMFCColorPickerCtrl");
+		RegisterMFCClass<CMFCLinkCtrl>();
 
-		//edits
-		RegisterClass<CMFCEditBrowseCtrl>();
-		RegisterClass<CMFCMaskedEdit>();
-		//// combo boxes
-		RegisterClass<CMFCFontComboBox>("CMFCFontComboBox");
+		////edits
+		RegisterMFCClass<CMFCEditBrowseCtrl>();
+		RegisterMFCClass<CMFCMaskedEdit>();
+		////// combo boxes
+		RegisterMFCClass<CMFCFontComboBox>("CMFCFontComboBox");
 
-		//// lists
-		RegisterClass<CMFCPropertyGridCtrl>();
-		RegisterClass<CMFCListCtrl>();
-		RegisterClass<CMFCShellListCtrl>();
+		////// lists
+		RegisterMFCClass<CMFCPropertyGridCtrl>();
+		RegisterMFCClass<CMFCListCtrl>();
+		RegisterMFCClass<CMFCShellListCtrl>();
 
-		////trees
-		RegisterClass<CMFCShellTreeCtrl>();
+		//////trees
+		RegisterMFCClass<CMFCShellTreeCtrl>();
 
-		//// spinners
-		RegisterClass<CMFCSpinButtonCtrl>();
+		////// spinners
+		RegisterMFCClass<CMFCSpinButtonCtrl>();
+		////
+		//////headers
+		RegisterMFCClass<CMFCHeaderCtrl>();
 		//
-		////headers
-		RegisterClass<CMFCHeaderCtrl>();
-		
-		////rebars
-		RegisterClass<CMFCReBar>();		
+		//////rebars
+		RegisterMFCClass<CMFCReBar>();		
 
-		////tabs
-		RegisterClass<CMFCTabCtrl>();
-		RegisterClass<CMFCOutlookBarTabCtrl>();
+		//////tabs
+		RegisterMFCClass<CMFCTabCtrl>();
+		RegisterMFCClass<CMFCOutlookBarTabCtrl>();
 
-		//// TODO to fix
-		RegisterClass<CMFCRibbonBar>();
+		////// TODO to fix
+		RegisterMFCClass<CMFCRibbonBar>();
 
 		return CWinApp::InitInstance();
 	}
