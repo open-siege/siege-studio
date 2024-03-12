@@ -479,7 +479,7 @@ namespace win32
         auto module_instance = ::GetModuleHandleW(nullptr);
         thread_local WNDCLASSEXW info{sizeof(WNDCLASSEXW)};
 
-        std::array modules_to_check = {{
+        std::array<HMODULE, 5> modules_to_check = {{
                   params.hInstance,
                   module_instance,  
                   parent_hinstance,

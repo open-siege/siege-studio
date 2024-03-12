@@ -319,6 +319,7 @@ struct class_wrapper
 
 			auto newStyle = params->style;
 			auto newExStyle = params->dwExStyle;
+			auto newId = params->hMenu;
 
 
 			if (proc(hWnd, uMsg, wParam, lParam))
@@ -327,7 +328,7 @@ struct class_wrapper
 
 				SetWindowLongPtrW(hWnd, GWL_STYLE, newStyle);
 				SetWindowLongPtrW(hWnd, GWL_EXSTYLE, newExStyle);
-				SetWindowPos(hWnd, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+				SetWindowLongPtrW(hWnd, GWL_ID, DWORD_PTR(newId));
 				
 				OutputDebugStringA(control->GetRuntimeClass()->m_lpszClassName);
 				OutputDebugStringW(L"(");
@@ -352,7 +353,6 @@ struct class_wrapper
 
 				if (InitFromHandle(control, hWnd))
 				{
-					//control->SetStandardButtons();
 					SetWindowSubclass(*control, CwndProc, UINT_PTR(control), DWORD_PTR(control));
 			
 					OutputDebugStringW(L"class_wrapper::Successfully subclassed window\n");
@@ -515,15 +515,24 @@ struct CMFCLibrary : public CWinApp
 		RegisterMFCClass<CMFCTabCtrl>();
 		RegisterMFCClass<CMFCOutlookBarTabCtrl>();
 
+		//dialogs
+		RegisterMFCClass<CMFCColorDialog>();
+
+		//tooltips
+		RegisterMFCClass<CMFCToolTipCtrl>();
+
 		// status bars
 		RegisterMFCClass<CMFCStatusBar>();
 
 
 		////// TODO to fix
+		RegisterMFCClass<CMFCPopupMenuBar>();
+		RegisterMFCClass<CPaneDivider>();
+		RegisterMFCClass<CSplitterWndEx>();
+		RegisterMFCClass<CSplitterWnd>();
 		RegisterMFCClass<CMFCCaptionBar>();
 		RegisterMFCClass<CMFCAutoHideBar>();
 		RegisterMFCClass<CMFCRibbonBar>();
-		RegisterMFCClass<CPane>();
 		RegisterMFCClass<CDockablePane>();
 
 		return CWinApp::InitInstance();

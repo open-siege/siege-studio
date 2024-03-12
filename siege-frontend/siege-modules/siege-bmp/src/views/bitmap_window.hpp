@@ -57,15 +57,6 @@ struct bitmap_window
                         .y = 1,
 						.style = WS_VISIBLE | WS_CHILD | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS,
                         .lpszClass = L"MFC::CCheckListBox",
-            }).or_else([&]() {
-                return win32::CreateWindowExW(CREATESTRUCTW {
-                        .hwndParent = self,
-                        .cy = 100,
-                        .cx = 300,
-                        .y = 1,
-						.style = WS_VISIBLE | WS_CHILD,
-                        .lpszClass = win32::list_box::class_name,
-                });     
             });
 
         assert(strategy_toolbar);
@@ -168,12 +159,16 @@ struct bitmap_window
 
         // TODO add example palette file names as root items and then palette names as children
 
-        auto palettes_list = win32::CreateWindowExW(DLGITEMTEMPLATE{
-						.style = WS_VISIBLE | WS_CHILD | LVS_NOCOLUMNHEADER | LVS_SINGLESEL | LVS_SHOWSELALWAYS,
-                        .y = 3,
+        auto palettes_list = win32::CreateWindowExW(CREATESTRUCTW{
+                        .hInstance = mfcModule,
+                        .hwndParent = self,
+						.cy = 300,  
                         .cx = 400,
-                        .cy = 300,
-						}, self, win32::list_view::class_name, L"Palettes");
+	            		.y = 3,		
+                        .style = WS_VISIBLE | WS_CHILD  | LVS_SINGLESEL | LVS_SHOWSELALWAYS,
+                        .lpszName =  L"Palettes",
+                        .lpszClass = L"MFC::CMFCListCtrl"
+            });
 
 
         win32::list_view::SetView(*palettes_list, win32::list_view::view_type::details_view);
@@ -187,9 +182,10 @@ struct bitmap_window
                 LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT);
 
         win32::list_view::InsertColumn(*palettes_list, -1, LVCOLUMNW {
-           // .cx = LVSCW_AUTOSIZE,
+             .cx = LVSCW_AUTOSIZE,
             .pszText = const_cast<wchar_t*>(L""),
-                        .cxIdeal = win32::GetClientSize(self)->cx,
+            .cxMin = 100,
+            .cxDefault = win32::GetClientSize(self)->cx,
             });
 
         assert(win32::list_view::InsertGroup(*palettes_list, -1, LVGROUP {
@@ -283,16 +279,16 @@ struct bitmap_window
       //                  .cy = 300,
 						//}, self, win32::static_control::class_name, L"Image");
 
-        auto children = std::array{*strategy_toolbar, *palettes_tree, *palettes_list};
+        auto children = std::array{*group_box, *strategy_toolbar, *palettes_tree, *palettes_list};
         win32::StackChildren(*win32::GetClientSize(self), children);
 
-        //auto rect = win32::GetClientRect(*group_box);
-        //rect->top += 15;
-        //rect->left += 5;
+        auto rect = win32::GetClientRect(*group_box);
+        rect->top += 15;
+        rect->left += 5;
 
-     //   auto radios = std::array{*do_nothing, *remap, *remap_unique};
-      //  win32::StackChildren(SIZE{.cx = rect->right, .cy = rect->bottom - 20}, radios, win32::StackDirection::Horizontal,
-       //         POINT{.x = rect->left, .y = rect->top});
+        auto radios = std::array{*do_nothing, *remap, *remap_unique};
+        win32::StackChildren(SIZE{.cx = rect->right, .cy = rect->bottom - 20}, radios, win32::StackDirection::Horizontal,
+                POINT{.x = rect->left, .y = rect->top});
 
         return 0;
     }
