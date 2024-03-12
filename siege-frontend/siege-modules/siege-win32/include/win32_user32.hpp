@@ -872,7 +872,7 @@ namespace win32
 
     auto MoveWindow(hwnd_t hWnd, RECT position_and_size, bool repaint)
     {
-        return ::MoveWindow(hWnd, position_and_size.left, position_and_size.top, position_and_size.right, position_and_size.bottom, repaint ? TRUE : FALSE);
+        return ::MoveWindow(hWnd, position_and_size.left, position_and_size.top, position_and_size.right - position_and_size.left, position_and_size.bottom - position_and_size.top, repaint ? TRUE : FALSE);
     }
 
     auto MoveWindow(hwnd_t hWnd, POINT position, SIZE size, bool repaint)

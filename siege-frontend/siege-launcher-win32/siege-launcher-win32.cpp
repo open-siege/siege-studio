@@ -124,17 +124,35 @@ struct siege_main_window
 		auto parent_size = win32::GetClientRect(self);
 
 		assert(parent_size);
-		auto tab_control_instance = win32::CreateWindowExW(CREATESTRUCTW {
+
+		auto mfcModule = GetModuleHandleW(L"siege-mfc.dll");
+
+		auto left_size = (parent_size->right - parent_size->left) / 9;
+		auto dir_list = win32::CreateWindowExW(CREATESTRUCTW {
 						.hwndParent = self,
-						.cy = parent_size->bottom,
-						.cx = parent_size->right,
+						.cy = parent_size->bottom - parent_size->top,
+						.cx = left_size,
 						.y = 0,
 						.x = 0,
-						.style = WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE | TCS_MULTILINE | TCS_RIGHTJUSTIFY, 
+						.style = WS_CHILD  | WS_VISIBLE, 
+						.lpszClass = L"MFC::CMFCShellTreeCtrl"
+					});
+		assert(dir_list);
+
+		auto tab_control_instance = win32::CreateWindowExW(CREATESTRUCTW {
+						.hwndParent = self,
+						.cy = parent_size->bottom - parent_size->top,
+						.cx = parent_size->right  - parent_size->left - left_size,
+						.y = 0,
+						.x = left_size,
+						.style = WS_CHILD | WS_VISIBLE | TCS_MULTILINE | TCS_RIGHTJUSTIFY, 
 						.lpszClass = win32::tab_control::class_name
 					});
 
 		assert(tab_control_instance);
+
+		auto children = std::array{*dir_list, *tab_control_instance};
+  //      win32::StackChildren(*win32::GetClientSize(self), children, win32::StackDirection::Horizontal);
 
 		parent_size = win32::GetClientRect(*tab_control_instance);
 
@@ -174,7 +192,7 @@ struct siege_main_window
 
 	auto on_size(win32::size_message sized)
 	{
-		auto tab = ::FindWindowExW(self, nullptr, win32::tab_control::class_name, nullptr);
+		/*auto tab = ::FindWindowExW(self, nullptr, win32::tab_control::class_name, nullptr);
 		assert(tab);
 
 		win32::SetWindowPos(tab, POINT{}, sized.client_size);
@@ -187,7 +205,7 @@ struct siege_main_window
 		{
 			auto tab_item = win32::tab_control::GetItem(tab, i);
 			assert(win32::SetWindowPos(win32::hwnd_t(tab_item->lParam), temp));		
-		}
+		}*/
 
 		return std::nullopt;
 	}
@@ -213,6 +231,9 @@ struct siege_main_window
 			auto temp = win32::GetClientRect(GetParent(sender));
 
 			SendMessageW(sender, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&temp.value()));
+
+	//		auto offset = win32::GetClientRect(sender);
+//			::OffsetRect(&*temp, offset->left, offset->top);
 
 			win32::SetWindowPos(win32::hwnd_t(tab_item->lParam), *temp);
 

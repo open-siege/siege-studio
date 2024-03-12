@@ -165,7 +165,7 @@ struct bitmap_window
 						.cy = 300,  
                         .cx = 400,
 	            		.y = 3,		
-                        .style = WS_VISIBLE | WS_CHILD  | LVS_SINGLESEL | LVS_SHOWSELALWAYS,
+                        .style = WS_VISIBLE | WS_CHILD | LVS_SINGLESEL | LVS_SHOWSELALWAYS,
                         .lpszName =  L"Palettes",
                         .lpszClass = L"MFC::CMFCListCtrl"
             });
