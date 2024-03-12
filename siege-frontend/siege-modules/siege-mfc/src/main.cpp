@@ -452,6 +452,7 @@ struct CMFCLibrary : public CWinApp
 		OutputDebugStringW(L"CMFCLibrary::InitInstance enter\n");
 	
 		bool result = true;
+
 		// common controls
 		RegisterMFCClass<CButton>();
 		RegisterMFCClass<CSplitButton>();
@@ -467,6 +468,9 @@ struct CMFCLibrary : public CWinApp
 		RegisterMFCClass<CTreeCtrl>();
 		RegisterMFCClass<CTabCtrl>();
 		RegisterMFCClass<CStatusBarCtrl>();
+		RegisterMFCClass<CNetAddressCtrl>();
+		RegisterMFCClass<CIPAddressCtrl>();
+		RegisterMFCClass<CPagerCtrl>();
 		
 
 		//extended controls
@@ -477,6 +481,7 @@ struct CMFCLibrary : public CWinApp
 	
 
 		//buttons
+		RegisterMFCClass<CBitmapButton>();
 		RegisterMFCClass<CMFCMenuButton>();
 		RegisterMFCClass<CMFCButton>();
 		RegisterMFCClass<CMFCColorButton>();
@@ -510,8 +515,16 @@ struct CMFCLibrary : public CWinApp
 		RegisterMFCClass<CMFCTabCtrl>();
 		RegisterMFCClass<CMFCOutlookBarTabCtrl>();
 
+		// status bars
+		RegisterMFCClass<CMFCStatusBar>();
+
+
 		////// TODO to fix
+		RegisterMFCClass<CMFCCaptionBar>();
+		RegisterMFCClass<CMFCAutoHideBar>();
 		RegisterMFCClass<CMFCRibbonBar>();
+		RegisterMFCClass<CPane>();
+		RegisterMFCClass<CDockablePane>();
 
 		return CWinApp::InitInstance();
 	}
