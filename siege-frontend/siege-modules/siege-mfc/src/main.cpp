@@ -235,6 +235,29 @@ WNDCLASSEXW GetSystemClass(const CRuntimeClass& info)
 	return fallback;
 }
 
+template<typename TClass>
+BOOL InitFromHandle(TClass* instance, HWND handle)
+{
+	return instance->SubclassWindow(handle);
+}
+
+template<>
+BOOL InitFromHandle(CVSListBox* instance, HWND handle)
+{
+	if (instance->SubclassWindow(handle))
+	{
+		instance->SetStandardButtons();
+	}
+
+	return FALSE;
+}
+
+template<typename TClass>
+BOOL PreCreateWindow(TClass* instance, CREATESTRUCT& cs)
+{
+	return static_cast<CWnd*>(instance)->PreCreateWindow(cs);
+}
+
 
 template<typename TClass>
 struct class_wrapper
@@ -268,33 +291,6 @@ struct class_wrapper
 		return ProcessMessage(control, uMsg, wParam, lParam);
 	}
 
-	static HWND CreateInstance(CREATESTRUCTW* params)
-	{
-		TClass* control = AllocateClass<TClass>();
-
-		CWnd* parent = CWnd::FromHandlePermanent(params->hwndParent);
-
-		if (parent == nullptr)
-		{
-			OutputDebugStringW(L"class_wrapper::WndProc Creating CWnd wrapper\n");
-
-			parent = new CWnd();
-			parent->Attach(params->hwndParent);
-
-			SetWindowSubclass(params->hwndParent, parent_wrapper::CwndProc, UINT_PTR(parent), DWORD_PTR(parent));
-			SetWindowSubclass(params->hwndParent, parent_wrapper::OwnerDrawProc, WM_DRAWITEM, 0);
-			assert(CWnd::FromHandlePermanent(params->hwndParent));
-		}
-
-		if (CreateClass<TClass>(control, params))
-		{
-			SetWindowSubclass(*control, CwndProc, UINT_PTR(control), DWORD_PTR(control));
-			return *control;
-		}
-		delete control;
-		return nullptr;
-	}
-
 	inline static WNDCLASSEXW ParentClassInfo{};
 
 	static LRESULT SuperProc(HWND hWnd,
@@ -313,19 +309,33 @@ struct class_wrapper
 
 		if (uMsg == WM_NCCREATE)
 		{
+			CREATESTRUCTW* params = reinterpret_cast<CREATESTRUCTW*>(lParam);
+			TClass* control = AllocateClass<TClass>();
+
+			if (!PreCreateWindow(control, *params))
+			{
+				goto Failed;
+			}
+
+			auto newStyle = params->style;
+			auto newExStyle = params->dwExStyle;
+
+
 			if (proc(hWnd, uMsg, wParam, lParam))
 			{
 				OutputDebugStringW(L"class_wrapper::Allocating class ");
-				
-				TClass* control = AllocateClass<TClass>();
 
+				SetWindowLongPtrW(hWnd, GWL_STYLE, newStyle);
+				SetWindowLongPtrW(hWnd, GWL_EXSTYLE, newExStyle);
+				SetWindowPos(hWnd, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+				
 				OutputDebugStringA(control->GetRuntimeClass()->m_lpszClassName);
 				OutputDebugStringW(L"(");
 				OutputDebugStringW(ParentClassInfo.lpszClassName);
 				OutputDebugStringW(L")");
 				OutputDebugStringW(L"\n");
 
-				CREATESTRUCTW* params = reinterpret_cast<CREATESTRUCTW*>(lParam);
+				
 				CWnd* parent = CWnd::FromHandlePermanent(params->hwndParent);
 
 				if (parent == nullptr)
@@ -340,7 +350,7 @@ struct class_wrapper
 					assert(CWnd::FromHandlePermanent(params->hwndParent));
 				}
 
-				if (control->SubclassWindow(hWnd))
+				if (InitFromHandle(control, hWnd))
 				{
 					//control->SetStandardButtons();
 					SetWindowSubclass(*control, CwndProc, UINT_PTR(control), DWORD_PTR(control));
@@ -350,10 +360,13 @@ struct class_wrapper
 				}
 
 				OutputDebugStringW(L"class_wrapper::Counld not subclass window\n");
+			}
+		Failed:
+			{
 				delete control;
-
 				return FALSE;
 			}
+			
 		}
 
 		return proc(hWnd, uMsg, wParam, lParam);

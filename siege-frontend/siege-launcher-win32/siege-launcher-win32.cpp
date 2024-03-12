@@ -323,6 +323,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	};
 	InitCommonControlsEx(&settings);
 
+
+	auto mfcHandle = LoadLibraryExW(L"siege-mfc.dll", nullptr, 0);
+
 	win32::RegisterClassExW<siege_main_window>(WNDCLASSEXW {
 		.style{CS_HREDRAW | CS_VREDRAW},
 		.hInstance = hInstance,
@@ -365,6 +368,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			DispatchMessageW(&msg);
 		}
 	}
+
+	FreeLibrary(mfcHandle);
 
 	return (int)msg.wParam;
 }

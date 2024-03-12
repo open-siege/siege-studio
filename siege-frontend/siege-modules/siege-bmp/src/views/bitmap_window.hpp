@@ -17,7 +17,7 @@ struct bitmap_window
 
     auto on_create(const win32::create_message& info)
     {
-        auto module = LoadLibraryExW(L"siege-mfc.dll", nullptr, 0);
+        auto module = GetModuleHandleW(L"siege-mfc.dll");
         assert(module);
 
 //        auto createControl = reinterpret_cast<win32::hwnd_t(*)(CREATESTRUCTW*)>(GetProcAddress(module, "CreateMFCWindow"));
