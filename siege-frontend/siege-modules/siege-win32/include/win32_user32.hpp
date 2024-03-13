@@ -11,6 +11,7 @@
 #include <string>
 #include <expected>
 #include <algorithm>
+#include <cassert>
 #include <memory_resource>
 #include "win32_messages.hpp"
 
@@ -147,7 +148,23 @@ namespace win32
 
                 auto real_callback = std::bit_cast<std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)>*>(raw_callback);
 
-                return real_callback->operator()(self, key, data) ? TRUE : FALSE;
+
+                std::wstring_view keyView;
+
+                auto intAtom = ::GlobalFindAtomW(key);
+                if (intAtom == (ATOM)key)
+                {
+                    thread_local std::array<wchar_t, 256> temp;
+                    auto size = GlobalGetAtomNameW(intAtom, temp.data(), temp.size());
+                    temp[size] = 0;
+                    keyView = temp.data();
+                }
+                else
+                {
+                    keyView = key;
+                }
+
+                return real_callback->operator()(self, keyView, data) ? TRUE : FALSE;
             }
         };
 
