@@ -142,9 +142,9 @@ struct siege_main_window
 		auto tab_control_instance = win32::CreateWindowExW(CREATESTRUCTW {
 						.hwndParent = self,
 						.cy = parent_size->bottom - parent_size->top,
-						.cx = parent_size->right  - parent_size->left - left_size,
+						.cx = parent_size->right  - parent_size->left - left_size - 10,
 						.y = 0,
-						.x = left_size,
+						.x = left_size + 10,
 						.style = WS_CHILD | WS_VISIBLE | TCS_MULTILINE | TCS_RIGHTJUSTIFY, 
 						.lpszClass = win32::tab_control::class_name
 					});
@@ -152,7 +152,7 @@ struct siege_main_window
 		assert(tab_control_instance);
 
 		auto children = std::array{*dir_list, *tab_control_instance};
-  //      win32::StackChildren(*win32::GetClientSize(self), children, win32::StackDirection::Horizontal);
+        win32::StackChildren(*win32::GetClientSize(self), children, win32::StackDirection::Horizontal);
 
 		parent_size = win32::GetClientRect(*tab_control_instance);
 
@@ -186,6 +186,12 @@ struct siege_main_window
 			NMHDR notification{.hwndFrom = *tab_control_instance, .code = TCN_SELCHANGE};
 			SendMessageW(self, WM_NOTIFY, 0, std::bit_cast<LPARAM>(&notification));
 		}
+
+		win32::tab_control::InsertItem(*tab_control_instance, index, TCITEMW {
+						.mask = TCIF_TEXT,
+						.pszText = const_cast<wchar_t*>(L"+"),
+					});
+
 		
 		return 0;
 	}
@@ -214,26 +220,32 @@ struct siege_main_window
 	{
 		auto [sender, id, code] = notification;
 
-		if (code == TCN_SELCHANGE)
+		
+		if (code == TCN_SELCHANGING)
+		{
+			auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
+			auto tab_item = win32::tab_control::GetItem(sender, current_index);
+
+			::ShowWindow(win32::hwnd_t(tab_item->lParam), SW_HIDE);
+		}
+		else if (code == TCN_SELCHANGE)
 		{
 			auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
 			auto tab_item = win32::tab_control::GetItem(sender, current_index);
 			
-			win32::ForEachChildWindow(self, [this, sender](auto child) {
-				if (GetParent(child) == self && child != sender)
-				{
-					ShowWindow(child, SW_HIDE);
-				}
-			});
+
+			if (tab_item->lParam == 0)
+			{
+				return 0;
+			}
 
 			win32::SetWindowPos(win32::hwnd_t(tab_item->lParam), HWND_TOP);
 
-			auto temp = win32::GetClientRect(GetParent(sender));
+			auto temp = win32::GetClientRect(sender);
+
+			::MapWindowPoints(sender, GetParent(sender), std::bit_cast<POINT*>(&temp), 2);
 
 			SendMessageW(sender, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&temp.value()));
-
-	//		auto offset = win32::GetClientRect(sender);
-//			::OffsetRect(&*temp, offset->left, offset->top);
 
 			win32::SetWindowPos(win32::hwnd_t(tab_item->lParam), *temp);
 

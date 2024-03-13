@@ -9,22 +9,74 @@
 #include <string>
 #include <array>
 #include <string_view>
+#include <filesystem>
+#include <set>
 #include <cassert>
+#include <memory>
 
 
 
 #pragma warning(disable: 4311)
 
-template<typename TClass>
-TClass* AllocateClass()
+
+HANDLE GetParentHeap(HWND parent)
 {
-	return new TClass();
+	auto heap = ::GetPropW(parent, L"MFC::ControlHeap");
+
+	if (heap == nullptr)
+	{
+		heap = HeapCreate(0, sizeof(CWnd) * 32, 0);
+	
+		if (!heap)
+		{
+			heap = ::GetProcessHeap();
+		}
+
+		assert(heap);
+		assert(::SetPropW(parent, L"MFC::ControlHeap", heap));
+	}
+
+	return heap;
+}
+
+template<typename TClass>
+TClass* AllocateClass(HWND parent)
+{
+	auto heap = GetParentHeap(parent);
+	
+	if (!heap)
+	{
+		return nullptr;
+	}
+	
+	auto space = ::HeapAlloc(heap, HEAP_ZERO_MEMORY, sizeof(TClass));
+
+	if (!space)
+	{
+		return nullptr;
+	}
+
+	auto* result = new (space) TClass();
+	return result;
+}
+
+template<typename TClass>
+void DeallocateClass(HWND parent, TClass* self)
+{
+	if (self == nullptr)
+	{
+		return;
+	}
+	
+	self->~TClass();
+	auto heap = GetParentHeap(parent);
+	::HeapFree(heap, 0, self);
 }
 
 template<typename TClass>
 LRESULT ProcessMessage(TClass* control, UINT message, WPARAM wparam, LPARAM lparam)
 {
-	return AfxCallWndProc(control, *control, message, wparam, lparam);
+	return DefSubclassProc(*control, message, wparam, lparam);
 }
 
 template<>
@@ -93,7 +145,7 @@ LRESULT ProcessMessage(CVSListBox* control, UINT message, WPARAM wparam, LPARAM 
 		return 0;
 	}
 
-	return AfxCallWndProc(control, *control, message, wparam, lparam);
+	return DefSubclassProc(*control, message, wparam, lparam);
 }
 
 template<>
@@ -112,7 +164,7 @@ LRESULT ProcessMessage(CMFCPropertyGridCtrl* control, UINT message, WPARAM wpara
 		//TODO call SetItemData
 	}
 
-	return ::SendMessageW(*control, message, wparam, lparam);
+	return DefSubclassProc(*control, message, wparam, lparam);
 }
 
 struct parent_wrapper
@@ -124,28 +176,72 @@ struct parent_wrapper
 					  UINT_PTR uIdSubclass,
 					  DWORD_PTR dwRefData)
 	{
-				AFX_MANAGE_STATE(AfxGetStaticModuleState());
-				if (uIdSubclass == WM_DRAWITEM)
-				{
-					if (uMsg == WM_MEASUREITEM || 
-							uMsg == WM_DRAWITEM || 
-							uMsg == WM_COMPAREITEM ||
-							uMsg == WM_DELETEITEM)
-					{
-							HWND child = GetDlgItem(hWnd, int(wParam));
+		AFX_MANAGE_STATE(AfxGetStaticModuleState());
+		
+		
+		if (uMsg == WM_COMPAREITEM)
+		{
+			HWND child = GetDlgItem(hWnd, int(wParam));
 
-							if (child != nullptr && ::SendMessageW(child, uMsg, wParam, lParam))
-							{
-								return TRUE;
-							}				
-					}
-					else if (uMsg == WM_NCDESTROY)
-					{	
-							RemoveWindowSubclass(hWnd, OwnerDrawProc, WM_DRAWITEM);
-					}
-				}
+			if (child && !CWnd::FromHandlePermanent(child))
+			{
+				goto DefaultProc;
+			}
 
-				return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+			auto result = ::SendMessageW(child, uMsg + WM_REFLECT_BASE, wParam, lParam);
+
+			if (result == 1 || result == -1)
+			{
+				return result;
+			}
+
+			return ::SendMessageW(child, uMsg, wParam, lParam);				
+		}
+
+		if (uMsg == WM_MEASUREITEM || 
+			uMsg == WM_DRAWITEM || 
+			uMsg == WM_DELETEITEM)
+		{
+			HWND child = GetDlgItem(hWnd, int(wParam));
+
+			if (child && !CWnd::FromHandlePermanent(child))
+			{
+				goto DefaultProc;
+			}
+
+			if (child != nullptr && ::SendMessageW(child, uMsg, wParam, lParam))
+			{
+				return TRUE;
+			}				
+		}
+		else if (uMsg == WM_NOTIFY)
+		{	
+			auto params = (NMHDR*)lParam;
+
+			if (!CWnd::FromHandlePermanent(params->hwndFrom))
+			{
+				goto DefaultProc;
+			}
+
+			SendMessageW(params->hwndFrom, uMsg, wParam, lParam);		
+		}
+		else if (uMsg == WM_COMMAND)
+		{	
+			if (!CWnd::FromHandlePermanent((HWND)lParam))
+			{
+				goto DefaultProc;
+			}
+
+			SendMessageW((HWND)lParam, uMsg, wParam, lParam);
+		}
+		else if (uMsg == WM_NCDESTROY)
+		{	
+			RemoveWindowSubclass(hWnd, OwnerDrawProc, WM_DRAWITEM);
+		}
+
+		DefaultProc:
+
+		return DefSubclassProc(hWnd, uMsg, wParam, lParam);
 	}
 		
 	static LRESULT CwndProc(HWND hWnd,
@@ -157,10 +253,28 @@ struct parent_wrapper
 	{
 		if (DWORD_PTR(uIdSubclass) == dwRefData && uMsg == WM_NCDESTROY)
 		{
+			OutputDebugStringW(L"parent_wrapper::CwndProc WM_NCDESTROY for ");
+
+			thread_local std::array<wchar_t, 256> temp{};
+			temp[::GetWindowTextLengthW(hWnd)] = 0;
+
+			::GetWindowTextW(hWnd, temp.data(), 256);
+
+			OutputDebugStringW(temp.data());
+			OutputDebugStringW(L"\n");
+
 			CWnd* self = (CWnd*)dwRefData;
 			self->Detach();
 			delete self;
 
+			auto heap = ::GetPropW(hWnd, L"MFC::ControlHeap");
+
+			if (heap && heap != ::GetProcessHeap())
+			{
+				assert(::HeapDestroy(heap));
+				assert(::RemovePropW(hWnd, L"MFC::ControlHeap"));
+				OutputDebugStringW(L"parent_wrapper::CwndProc Destroying control heap\n");
+			}
 			RemoveWindowSubclass(hWnd, CwndProc, uIdSubclass);
 		}
 
@@ -236,13 +350,13 @@ WNDCLASSEXW GetSystemClass(const CRuntimeClass& info)
 }
 
 template<typename TClass>
-BOOL InitFromHandle(TClass* instance, HWND handle)
+BOOL SubclassHandle(TClass* instance, HWND handle)
 {
 	return instance->SubclassWindow(handle);
 }
 
 template<>
-BOOL InitFromHandle(CVSListBox* instance, HWND handle)
+BOOL SubclassHandle(CVSListBox* instance, HWND handle)
 {
 	if (instance->SubclassWindow(handle))
 	{
@@ -252,17 +366,80 @@ BOOL InitFromHandle(CVSListBox* instance, HWND handle)
 	return FALSE;
 }
 
+template<>
+BOOL SubclassHandle(CMFCShellTreeCtrl* instance, HWND handle)
+{
+	struct TreeViewSubClass
+	{
+		static LRESULT UpdateRootToCurrentPath(HWND hWnd,
+					  UINT uMsg,
+					  WPARAM wParam,
+					  LPARAM lParam,
+					  UINT_PTR uIdSubclass,
+					  DWORD_PTR dwRefData) {
+		
+			AFX_MANAGE_STATE(AfxGetStaticModuleState());
+			if (uMsg == TVM_INSERTITEMW && wParam == 0 && lParam != 0)
+			{
+				TVINSERTSTRUCT* data = (TVINSERTSTRUCT*)lParam;
+
+				if (data->hParent == TVI_ROOT)
+				{
+					static bool isAdded = false;
+					AFX_SHELLITEMINFO* innerData = (AFX_SHELLITEMINFO*)data->item.lParam;
+					
+					if (innerData->pParentFolder == nullptr)
+					{
+						CMFCShellTreeCtrl* realInstance = (CMFCShellTreeCtrl*)dwRefData;	
+						auto current_path = std::filesystem::current_path();
+
+//						LPITEMIDLIST root;
+
+						assert(SHParseDisplayName(current_path.c_str(), nullptr, &innerData->pidlFQ, 0, nullptr) == NOERROR);
+
+						assert(SHBindToParent(innerData->pidlFQ, IID_IShellFolder, (void**)&innerData->pParentFolder, (LPCITEMIDLIST*)&innerData->pidlRel) == NOERROR);
+
+						auto itemItext = realInstance->OnGetItemText(innerData);
+
+						data->item.pszText = itemItext.GetBuffer(itemItext.GetLength());
+						data->item.iImage = realInstance->OnGetItemIcon(innerData, FALSE);
+						data->item.iSelectedImage = realInstance->OnGetItemIcon(innerData, TRUE);
+						data->item.iSelectedImage = realInstance->OnGetItemIcon(innerData, TRUE);
+						isAdded = true;
+						return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+					}
+				}
+			}
+
+			if (uMsg == WM_NCDESTROY)
+			{
+				OutputDebugStringW(L"TreeViewSubClass::UpdateRootToCurrentPath WM_NCDESTROY\n");
+//				auto result = DefSubclassProc(hWnd, uMsg, wParam, lParam);
+				RemoveWindowSubclass(hWnd, UpdateRootToCurrentPath, 0);
+	//			return result;
+				return 0;
+			}
+
+			return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+		
+		}
+	};
+
+	::SetWindowSubclass(handle, TreeViewSubClass::UpdateRootToCurrentPath, 0, (DWORD_PTR)instance);
+
+	return instance->SubclassWindow(handle);
+}
+
 template<typename TClass>
 BOOL PreCreateWindow(TClass* instance, CREATESTRUCT& cs)
 {
 	return static_cast<CWnd*>(instance)->PreCreateWindow(cs);
 }
 
-
 template<typename TClass>
 struct class_wrapper
 {
-	static LRESULT CwndProc(HWND hWnd,
+	static LRESULT ChildSubClassProc(HWND hWnd,
 					  UINT uMsg,
 					  WPARAM wParam,
 					  LPARAM lParam,
@@ -272,20 +449,23 @@ struct class_wrapper
 		AFX_MANAGE_STATE(AfxGetStaticModuleState());
 		TClass* control = (TClass*)dwRefData;
 
+		if (!control)
+		{
+			return 0;
+		}
+
 		if (uMsg == WM_WINDOWPOSCHANGED)
 		{
-			OutputDebugStringW(L"class_wrapper::WndProc WM_WINDOWPOSCHANGED\n");
+			OutputDebugStringW(L"class_wrapper::ChildSubClassProc WM_WINDOWPOSCHANGED\n");
 			auto* windowPos = (WINDOWPOS*)lParam;
 			control->SetWindowPos(CWnd::FromHandle(windowPos->hwndInsertAfter), windowPos->x, windowPos->y, windowPos->cx, windowPos->cy, windowPos->flags);
 		}
 
 		if (uMsg == WM_NCDESTROY)
 		{
-			OutputDebugStringW(L"class_wrapper::WndProc WM_NCDESTROY\n");
-			auto result = ProcessMessage(control, uMsg, wParam, lParam);
-			RemoveWindowSubclass(*control, CwndProc, uIdSubclass);
-			delete control;
-			return result;
+			OutputDebugStringW(L"class_wrapper::ChildSubClassProc WM_NCDESTROY\n");
+			SetWindowSubclass(*control, ChildSubClassProc, uIdSubclass, 0);
+			RemoveWindowSubclass(*control, ChildSubClassProc, uIdSubclass);
 		}
 
 		return ProcessMessage(control, uMsg, wParam, lParam);
@@ -310,7 +490,7 @@ struct class_wrapper
 		if (uMsg == WM_NCCREATE)
 		{
 			CREATESTRUCTW* params = reinterpret_cast<CREATESTRUCTW*>(lParam);
-			TClass* control = AllocateClass<TClass>();
+			TClass* control = AllocateClass<TClass>(params->hwndParent);
 
 			if (!PreCreateWindow(control, *params))
 			{
@@ -328,15 +508,18 @@ struct class_wrapper
 
 				SetWindowLongPtrW(hWnd, GWL_STYLE, newStyle);
 				SetWindowLongPtrW(hWnd, GWL_EXSTYLE, newExStyle);
-				SetWindowLongPtrW(hWnd, GWL_ID, DWORD_PTR(newId));
-				
+
+				if (!IsMenu(newId))
+				{
+					SetWindowLongPtrW(hWnd, GWL_ID, DWORD_PTR(newId));
+				}
+			
 				OutputDebugStringA(control->GetRuntimeClass()->m_lpszClassName);
 				OutputDebugStringW(L"(");
 				OutputDebugStringW(ParentClassInfo.lpszClassName);
 				OutputDebugStringW(L")");
 				OutputDebugStringW(L"\n");
 
-				
 				CWnd* parent = CWnd::FromHandlePermanent(params->hwndParent);
 
 				if (parent == nullptr)
@@ -347,13 +530,13 @@ struct class_wrapper
 					parent->Attach(params->hwndParent);
 
 					SetWindowSubclass(params->hwndParent, parent_wrapper::CwndProc, UINT_PTR(parent), DWORD_PTR(parent));
-					SetWindowSubclass(params->hwndParent, parent_wrapper::OwnerDrawProc, WM_DRAWITEM, 0);
+					SetWindowSubclass(params->hwndParent, parent_wrapper::OwnerDrawProc, 0, 0);
 					assert(CWnd::FromHandlePermanent(params->hwndParent));
 				}
 
-				if (InitFromHandle(control, hWnd))
+				if (SubclassHandle(control, hWnd))
 				{
-					SetWindowSubclass(*control, CwndProc, UINT_PTR(control), DWORD_PTR(control));
+					SetWindowSubclass(*control, ChildSubClassProc, DWORD_PTR(control), DWORD_PTR(control));
 			
 					OutputDebugStringW(L"class_wrapper::Successfully subclassed window\n");
 					return TRUE;				
@@ -363,10 +546,24 @@ struct class_wrapper
 			}
 		Failed:
 			{
-				delete control;
+				DeallocateClass<TClass>(params->hwndParent, control);
 				return FALSE;
 			}
 			
+		}
+		else if (uMsg == WM_NCDESTROY)
+		{
+			OutputDebugStringW(L"SuperProc WM_NCDESTROY\n");
+			auto* control = CWnd::FromHandlePermanent(hWnd);
+			if (!control)
+			{
+				return 0;
+			}
+
+			control->UnsubclassWindow();
+			control->~CWnd();
+
+			return 0;
 		}
 
 		return proc(hWnd, uMsg, wParam, lParam);
@@ -408,6 +605,12 @@ CRuntimeClass* GetRuntimeClass()
 	}
 }
 
+std::set<ATOM>& GetRegisteredClasses()
+{
+	static std::set<ATOM> registeredClasses;
+
+	return registeredClasses;
+}
 
 template<typename TClass>
 auto RegisterMFCClass(std::string className = std::string{})
@@ -440,6 +643,8 @@ auto RegisterMFCClass(std::string className = std::string{})
 		
 		auto result = ::RegisterClassEx(&classInfo);
 		assert(result);
+
+		GetRegisteredClasses().emplace(result);
 
 		return result;
 }
@@ -497,11 +702,10 @@ struct CMFCLibrary : public CWinAppEx
 		////// lists
 		RegisterMFCClass<CMFCPropertyGridCtrl>();
 		RegisterMFCClass<CMFCListCtrl>();
-		RegisterMFCClass<CMFCShellListCtrl>();
+
 
 		//////trees
-		RegisterMFCClass<CMFCShellTreeCtrl>();
-
+		
 		////// spinners
 		RegisterMFCClass<CMFCSpinButtonCtrl>();
 		////
@@ -535,14 +739,23 @@ struct CMFCLibrary : public CWinAppEx
 		RegisterMFCClass<CMFCRibbonBar>();
 		RegisterMFCClass<CDockablePane>();
 
-		return InitShellManager() && CWinApp::InitInstance();
+		if (InitShellManager())
+		{
+			RegisterMFCClass<CMFCShellListCtrl>();
+			RegisterMFCClass<CMFCShellTreeCtrl>();
+		}
+
+		return CWinApp::InitInstance();
 	}
 
 	int ExitInstance() override
 	{
-		OutputDebugStringW(L"CMFCLibrary::ExitInstance unregistering class\n");
+		OutputDebugStringW(L"CMFCLibrary::ExitInstance unregistering classes\n");
 		
-		// TODO remove all the registered classes
+		for (auto atom : GetRegisteredClasses())
+		{
+			assert(::UnregisterClassW(MAKEINTATOM(atom), AfxGetInstanceHandle()));
+		}
 
 		return CWinApp::ExitInstance();
 	}
