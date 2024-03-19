@@ -39,6 +39,14 @@ namespace win32
             }
         }
 
+        if constexpr (requires(TWindow t) { t.on_paint(paint_message{wParam, lParam}); })
+        {
+            if (message == paint_message::id)
+            {
+                return self->on_paint(paint_message{wParam, lParam});
+            }
+        }
+
         if constexpr (requires(TWindow t) { t.on_init_dialog(init_dialog_message{wParam, lParam}); })
         {
             if (message == init_dialog_message::id)

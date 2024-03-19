@@ -58,6 +58,15 @@ namespace win32
 		}
 	};
 
+	struct paint_message
+	{
+		constexpr static std::uint32_t id = WM_PAINT;
+
+		paint_message(wparam_t, lparam_t) 
+		{
+		}
+	};
+
 
 	template<typename TChar = std::byte>
 	struct copy_data_message

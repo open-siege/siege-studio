@@ -21,6 +21,12 @@ namespace win32
             tile_view = LV_VIEW_TILE
         };
 
+
+        static HIMAGELIST SetImageList(hwnd_t self, wparam_t wparam, HIMAGELIST image_list)
+        {
+            return std::bit_cast<HIMAGELIST>(SendMessageW(self, LVM_SETIMAGELIST, wparam, std::bit_cast<lparam_t>(image_list)));
+        }
+
         static bool SetView(hwnd_t self, view_type type)
         {
             return SendMessageW(self, LVM_SETVIEW, wparam_t(type), 0) == 1;
@@ -251,6 +257,8 @@ namespace win32
 
             return index;
         }
+
+        //LVM_SETIMAGELIST
 
         static wparam_t InsertItem(hwnd_t self, wparam_t index, LVITEMW item)
         {
