@@ -16,32 +16,59 @@ namespace siege::views
 		win32::hwnd_t self;
 		pal_controller controller;
 		std::vector<std::vector<pal_controller::palette>> palettes;
+		PAINTSTRUCT paint_data;
+
+		std::array<HBRUSH, 16> brushes;
 
 		pal_view(win32::hwnd_t self, const CREATESTRUCTW&) : self(self)
 		{
+			for (auto i = 0u; i < brushes.size(); ++i)
+			{
+				brushes[i] = CreateSolidBrush(RGB(i, i * 8, i * 4));
+			}
+		}
+
+		~pal_view()
+		{
+			for (auto brush : brushes)
+			{
+				DeleteObject(brush);
+			}
 		}
 
 		auto on_create(const win32::create_message&)
 		{
-			auto parent_size = win32::GetClientRect(self);
-			assert(parent_size);
+			win32::CreateWindowExW(CREATESTRUCTW{
+				.hwndParent = self,
+				.cy = 200,
+				.cx = 100,
+				.y = 100,
+				.style = WS_CHILD | WS_VISIBLE,
+				.lpszName = L"Hello world",
+				.lpszClass = win32::button::class_name,			
+			});
 
-			auto button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
-							.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-							.cx = short(parent_size->right),  
-							.cy = short(parent_size->bottom)     
-							}, self, win32::button::class_name, L"Pal window");
 
 			return 0;
 		}
 
-		auto on_size(win32::size_message sized)
+		auto on_paint(win32::paint_message)
 		{
-			win32::ForEachDirectChildWindow(self, [&](auto child) {
-				win32::SetWindowPos(child, sized.client_size);
-			});
+			HDC context = BeginPaint(self, &paint_data);
 
-			return std::nullopt;
+			RECT pos{};
+			pos.right = 100;
+			pos.bottom = 100;
+
+			for (auto i = 0; i < brushes.size(); ++i)
+			{
+				FillRect(context, &pos, brushes[i]);
+				OffsetRect(&pos, 100, 0);
+			}
+
+			EndPaint(self, &paint_data);
+			
+			return 0;
 		}
 
 		auto on_copy_data(win32::copy_data_message<char> message)
