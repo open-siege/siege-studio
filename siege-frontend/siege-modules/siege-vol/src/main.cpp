@@ -3,6 +3,328 @@
 #include <bit>
 #include <filesystem>
 #include <cassert>
+#include <atomic>
+
+
+//CreateStreamOverRandomAccessStream 
+//CreateStreamOnHGlobal 
+//SHCreateMemStream 
+//CreateILockBytesOnHGlobal 
+//StgCreateDocfileOnILockBytes
+//CreateFile2 
+//CreateFile2FromAppW 
+//OpenFileMappingFromApp 
+//MapViewOfFile3FromApp
+//MapViewOfFileFromApp
+//CreateFileMappingFromApp
+//MFCreateCollection 
+//MFCreateMFByteStreamOnStreamEx 
+//IWICStream 
+//CLSID_WICImagingFactory
+//CreateXmlReader
+//CreateXmlWriter
+
+struct OleVariant
+{
+    VARIANT variant;
+
+    OleVariant() noexcept
+    {
+        VariantInit(&variant);
+    }
+
+    ~OleVariant() noexcept
+    {
+        VariantClear(&variant);
+    }
+
+};
+
+struct IEnumerable : IDispatch
+{
+    std::expected<std::unique_ptr<IEnumVARIANT, void(*)(IEnumVARIANT*)>, HRESULT> NewEnum()
+    {
+        DISPPARAMS dp = {nullptr, nullptr, 0, 0};
+        VARIANT result;
+        auto hresult = Invoke(DISPID_NEWENUM, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_PROPERTYGET | DISPATCH_METHOD, &dp, &result, nullptr, nullptr);
+        
+        auto temp = std::unique_ptr<IEnumVARIANT, void(*)(IEnumVARIANT*)>(nullptr, [](auto* self) {
+                if (self)
+                {
+                    self->Release();
+                }
+            });
+
+        if (hresult == S_OK && (result.vt == VT_DISPATCH || result.vt == VT_UNKNOWN))
+        {
+            IEnumVARIANT* self = nullptr;
+            result.punkVal->QueryInterface(IID_IEnumVARIANT, (void**)&self);
+
+            temp.reset(self);
+            return temp;
+        }
+
+        return std::unexpected(hresult);
+
+    }
+};
+
+struct IReadOnlyCollection : IEnumerable
+{
+    std::expected<std::uint32_t, HRESULT> Count()
+    {
+        //GetIDsOfNames
+        //Invoke
+
+        return std::unexpected(0);
+    }
+
+    std::expected<VARIANT, HRESULT> Item(std::uint32_t )
+    {
+        //DISPID_VALUE
+        return std::unexpected(0);
+    }
+};
+
+
+struct ICollection : IReadOnlyCollection
+{
+    std::expected<VARIANT, HRESULT> Add(VARIANT)
+    {
+        //GetIDsOfNames
+        //Invoke
+        return std::unexpected(0);
+    }
+
+    std::expected<VARIANT, HRESULT> Remove(std::uint32_t)
+    {
+        //GetIDsOfNames
+        //Invoke
+
+        return std::unexpected(0);
+    }
+};
+
+
+struct VectorCollection : IDispatch
+{
+    std::atomic_int refCount = 0;
+    std::vector<OleVariant> items;
+    ATOM countAtom = 0;
+    ATOM addAtom = 0;
+    ATOM removeAtom = 0;
+
+    HRESULT __stdcall QueryInterface(const GUID& riid, void** ppvObj) noexcept override
+    {
+        if (IsEqualGUID(riid, IID_IUnknown) || IsEqualGUID(riid, IID_IDispatch))
+        {
+            AddRef();
+            *ppvObj = this;
+        }
+
+        return E_NOINTERFACE;
+    }
+
+    [[maybe_unused]] ULONG __stdcall AddRef() noexcept override
+    {
+        countAtom  = AddAtomW(L"Count");
+        addAtom = AddAtomW(L"Add");
+        removeAtom = AddAtomW(L"Remove");
+        return ++refCount;
+    }
+
+    [[maybe_unused]] ULONG __stdcall Release() noexcept override
+    {
+        if (refCount == 0)
+        {
+            return 0;
+        }
+
+        --refCount;
+
+        DeleteAtom(countAtom);
+        DeleteAtom(addAtom);
+        DeleteAtom(removeAtom);
+
+        if (refCount == 0)
+        {
+            items.clear();
+        }
+
+        return refCount;
+    }
+
+    HRESULT __stdcall GetIDsOfNames(const GUID& riid, wchar_t **rgszNames, UINT cNames, LCID  lcid, DISPID  *rgDispId) noexcept override
+    {
+        assert(IsEqualGUID(riid, IID_NULL));
+
+        if (cNames >= 0)
+        {
+            assert(rgszNames);
+
+            auto atom = FindAtomW(rgszNames[0]);
+
+            if (atom)
+            {
+                *rgDispId = atom;
+                return S_OK;
+            }
+    
+            std::wstring_view temp = rgszNames[0];
+
+            constexpr static auto NewEnum = std::wstring_view(L"_NewEnum");
+
+            if (CompareStringW(lcid, NORM_IGNORECASE, NewEnum.data(), NewEnum.size(), temp.data(), temp.size()) == CSTR_EQUAL)
+            {    
+                *rgDispId = DISPID_NEWENUM;
+                return S_OK;
+            }
+
+            constexpr static auto Item = std::wstring_view(L"Item");
+            
+            if (CompareStringW(lcid, NORM_IGNORECASE, Item.data(), Item.size(), temp.data(), temp.size()) == CSTR_EQUAL)
+            {
+                *rgDispId = DISPID_VALUE;
+                return S_OK;
+            }
+
+            *rgDispId = DISPID_UNKNOWN;
+        }
+
+        return DISP_E_UNKNOWNNAME;
+    }
+
+    HRESULT __stdcall GetTypeInfo(UINT iTInfo, LCID lcid, ITypeInfo **ppTInfo) noexcept override
+    {
+        assert(ppTInfo);
+        *ppTInfo = nullptr;
+        return S_OK;
+    }
+
+    HRESULT __stdcall GetTypeInfoCount(UINT *pctinfo) override
+    {
+        assert(pctinfo);
+        *pctinfo = 0;
+        return S_OK;
+    }
+
+    HRESULT __stdcall Invoke(DISPID dispIdMember, const GUID& riid, LCID lcid, WORD wFlags, DISPPARAMS *pDispParams, VARIANT *pVarResult, EXCEPINFO *pExcepInfo, UINT *puArgErr) override
+    {
+        assert(IsEqualGUID(riid, IID_NULL));
+
+        if (pVarResult == nullptr)
+        {
+            return DISP_E_PARAMNOTOPTIONAL;
+        }
+
+        OleVariant temp;
+
+        if (dispIdMember == addAtom && wFlags & DISPATCH_METHOD)
+        {
+            if (pDispParams->cArgs != 1)
+            {
+                return DISP_E_BADPARAMCOUNT;
+            }
+
+            auto changed = VariantChangeType(&temp.variant, pDispParams->rgvarg, 0, VT_UNKNOWN);
+
+            if (changed != S_OK)
+            {
+                *puArgErr = 0;
+                return changed;
+            }
+
+            return Add(temp.variant, *pVarResult);
+        }
+
+        if (dispIdMember == removeAtom && wFlags & DISPATCH_METHOD)
+        {
+            if (pDispParams->cArgs != 1)
+            {
+                return DISP_E_BADPARAMCOUNT;
+            }
+
+            auto changed = VariantChangeType(&temp.variant, pDispParams->rgvarg, 0, VT_UI4);
+
+            if (changed != S_OK)
+            {
+                *puArgErr = 0;
+                return changed;
+            }
+
+            return Remove(temp.variant, *pVarResult);
+        }
+
+        if (dispIdMember == countAtom && (wFlags & DISPATCH_METHOD || wFlags & DISPATCH_PROPERTYGET))
+        {
+            return Count(*pVarResult);
+        }
+
+        if (dispIdMember == DISPID_VALUE && wFlags & DISPATCH_METHOD)
+        {
+            if (pDispParams->cArgs != 1)
+            {
+                return DISP_E_BADPARAMCOUNT;
+            }
+
+            auto changed = VariantChangeType(&temp.variant, pDispParams->rgvarg, 0, VT_UI4);
+
+            if (changed != S_OK)
+            {
+                *puArgErr = 0;
+                return changed;
+            }
+
+            return Item(temp.variant, *pVarResult);
+        }
+
+        if (dispIdMember == DISPID_NEWENUM && (wFlags & DISPATCH_METHOD || wFlags & DISPATCH_PROPERTYGET))
+        {
+            return NewEnum(*pVarResult);
+        }
+
+        return DISP_E_MEMBERNOTFOUND;
+    }
+
+    HRESULT Add(VARIANTARG& value, VARIANT& result) noexcept
+    {
+        auto& newItem = items.emplace_back();
+        result.vt = VT_EMPTY;
+        return VariantCopy(&newItem.variant, &value);
+    }
+
+    HRESULT Remove(VARIANTARG& value, VARIANT& result) noexcept
+    {
+        auto begin = items.begin() + result.uintVal;
+        items.erase(begin);
+        result.vt = VT_EMPTY;
+        return S_OK;
+    }
+
+    HRESULT Count(VARIANT& result) noexcept
+    {
+        result.vt = VT_I4;
+        result.intVal = int(items.size());
+        return S_OK;
+    }
+
+    HRESULT Item(VARIANTARG& value, VARIANT& result) noexcept
+    {
+        std::size_t index = std::size_t(value.uintVal); 
+
+        if (items.size() > index)
+        {
+            return VariantCopy(&result, &items[index].variant);
+        }
+
+        return S_OK;
+    }
+
+    HRESULT NewEnum(VARIANT& result) noexcept
+    {
+        return S_OK;
+    }
+};
 
 
 struct volume_window
@@ -79,13 +401,14 @@ struct volume_window
 						}, *rebar, win32::edit::class_name, L"");
 
                 assert(search);
-
                 win32::edit::SetCueBanner(*search, false, L"Enter search text here");
 
+                SendMessageW(*search, CCM_SETWINDOWTHEME , 0, reinterpret_cast<win32::lparam_t>(L"SearchBoxEdit"));
                 return *search;
             }(),
-            .cx = UINT(parent_size->right / 3)
+            .cx = UINT(parent_size->right / 8)
             });
+
 
         auto table = win32::CreateWindowExW(DLGITEMTEMPLATE{
 						.style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
