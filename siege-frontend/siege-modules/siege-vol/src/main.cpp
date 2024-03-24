@@ -42,13 +42,14 @@ struct OleVariant
 
 struct IEnumerable : IDispatch
 {
-    std::expected<std::unique_ptr<IEnumVARIANT, void(*)(IEnumVARIANT*)>, HRESULT> NewEnum()
+    template<typename IEnum = IEnumVARIANT>
+    std::expected<std::unique_ptr<IEnumVARIANT, void(*)(IEnum*)>, HRESULT> NewEnum()  noexcept
     {
         DISPPARAMS dp = {nullptr, nullptr, 0, 0};
         VARIANT result;
         auto hresult = Invoke(DISPID_NEWENUM, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_PROPERTYGET | DISPATCH_METHOD, &dp, &result, nullptr, nullptr);
         
-        auto temp = std::unique_ptr<IEnumVARIANT, void(*)(IEnumVARIANT*)>(nullptr, [](auto* self) {
+        auto temp = std::unique_ptr<IEnum, void(*)(IEnum*)>(nullptr, [](auto* self) {
                 if (self)
                 {
                     self->Release();
@@ -57,8 +58,14 @@ struct IEnumerable : IDispatch
 
         if (hresult == S_OK && (result.vt == VT_DISPATCH || result.vt == VT_UNKNOWN))
         {
-            IEnumVARIANT* self = nullptr;
-            result.punkVal->QueryInterface(IID_IEnumVARIANT, (void**)&self);
+            IEnum* self = nullptr;
+
+            hresult = result.punkVal->QueryInterface(__uuidof(IEnum), (void**)&self);
+
+            if (hresult != S_OK)
+            {
+                return std::unexpected(hresult);
+            }
 
             temp.reset(self);
             return temp;
@@ -69,39 +76,127 @@ struct IEnumerable : IDispatch
     }
 };
 
+
 struct IReadOnlyCollection : IEnumerable
 {
-    std::expected<std::uint32_t, HRESULT> Count()
+    std::expected<std::uint32_t, HRESULT> Count() noexcept
     {
-        //GetIDsOfNames
-        //Invoke
+        static auto count = std::wstring(L"Count");
 
-        return std::unexpected(0);
+        wchar_t* data = count.data();
+
+        DISPID id = 0;
+
+        auto result = this->GetIDsOfNames(IID_NULL, &data, 1,  LOCALE_USER_DEFAULT,  &id);
+        
+        if (result != S_OK)
+        {
+            return std::unexpected(result);
+        }
+        
+         DISPPARAMS args = {};
+
+         OleVariant returnValue;
+
+         result = this->Invoke(id, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_PROPERTYGET | DISPATCH_METHOD, &args, &returnValue.variant, nullptr, nullptr);
+
+         if (result != S_OK)
+         {
+            return std::unexpected(result);
+         }
+
+         result = VariantChangeType(&returnValue.variant, &returnValue.variant, 0, VT_UI4);
+
+         if (result != S_OK)
+         {
+            return std::unexpected(result);
+         }
+
+        return returnValue.variant.uintVal;
     }
 
-    std::expected<VARIANT, HRESULT> Item(std::uint32_t )
+    std::expected<OleVariant, HRESULT> Item(std::uint32_t index)  noexcept
     {
-        //DISPID_VALUE
-        return std::unexpected(0);
+         DISPPARAMS args = {};
+
+         OleVariant returnValue;
+
+         auto result = this->Invoke(DISPID_VALUE, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_PROPERTYGET | DISPATCH_METHOD, &args, &returnValue.variant, nullptr, nullptr);
+
+        if (result != S_OK)
+        {
+            return std::unexpected(result);
+        }
+
+        return returnValue;
     }
 };
 
 
 struct ICollection : IReadOnlyCollection
 {
-    std::expected<VARIANT, HRESULT> Add(VARIANT)
+    std::expected<OleVariant, HRESULT> Add(std::optional<OleVariant> newValue = std::nullopt)  noexcept
     {
-        //GetIDsOfNames
-        //Invoke
-        return std::unexpected(0);
+        static auto count = std::wstring(L"Add");
+
+        wchar_t* data = count.data();
+
+        DISPID id = 0;
+
+        auto result = this->GetIDsOfNames(IID_NULL, &data, 1,  LOCALE_USER_DEFAULT,  &id);
+        
+        if (result != S_OK)
+        {
+            return std::unexpected(result);
+        }
+        
+         DISPPARAMS args = {};
+
+         if (newValue)
+         {
+            args.cArgs = 1;
+            args.rgvarg = &newValue->variant;
+         }
+
+         OleVariant returnValue;
+
+         result = this->Invoke(id, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &args, &returnValue.variant, nullptr, nullptr);
+
+         if (result != S_OK)
+         {
+            return std::unexpected(result);
+         }
+
+        return returnValue;
     }
 
-    std::expected<VARIANT, HRESULT> Remove(std::uint32_t)
+    std::expected<void, HRESULT> Remove(std::uint32_t)
     {
-        //GetIDsOfNames
-        //Invoke
+        static auto count = std::wstring(L"Remove");
 
-        return std::unexpected(0);
+        wchar_t* data = count.data();
+
+        DISPID id = 0;
+
+        auto result = this->GetIDsOfNames(IID_NULL, &data, 1,  LOCALE_USER_DEFAULT,  &id);
+        
+        if (result != S_OK)
+        {
+            return std::unexpected(result);
+        }
+        
+         DISPPARAMS args = {};
+
+         OleVariant returnValue;
+
+         result = this->Invoke(id, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &args, &returnValue.variant, nullptr, nullptr);
+
+         if (result != S_OK)
+         {
+            return std::unexpected(result);
+         }
+
+         return std::expected<void, HRESULT>{};
     }
 };
 
@@ -114,12 +209,19 @@ struct VectorCollection : IDispatch
     ATOM addAtom = 0;
     ATOM removeAtom = 0;
 
+    ~VectorCollection()
+    {
+        Release();
+    }
+
     HRESULT __stdcall QueryInterface(const GUID& riid, void** ppvObj) noexcept override
     {
-        if (IsEqualGUID(riid, IID_IUnknown) || IsEqualGUID(riid, IID_IDispatch))
+        if (IsEqualGUID(riid, __uuidof(IUnknown)) || 
+            IsEqualGUID(riid,  __uuidof(IDispatch)))
         {
             AddRef();
             *ppvObj = this;
+            return S_OK;
         }
 
         return E_NOINTERFACE;
@@ -324,6 +426,169 @@ struct VectorCollection : IDispatch
     {
         return S_OK;
     }
+
+    struct VectorEnumerator : IEnumVARIANT, IEnumUnknown
+    {
+        std::function<std::vector<OleVariant>&()> getVector;
+        std::size_t index;
+        std::atomic_int refCount = 0;
+        //std::optional<VectorEnumerator> other;
+
+        VectorEnumerator(std::function<std::vector<OleVariant>&()> getVector,  std::size_t index = 0) :  getVector(getVector), index(index)
+        {
+        
+        }
+
+        ~VectorEnumerator()
+        {
+            Release();
+        }
+
+        HRESULT __stdcall QueryInterface(const GUID& riid, void** ppvObj) noexcept override
+        {
+            if (IsEqualGUID(riid, __uuidof(IUnknown)))
+            {
+                AddRef();
+                *ppvObj = this;
+                return S_OK;
+            }
+
+            if (IsEqualGUID(riid, __uuidof(IEnumVARIANT)))
+            {
+                AddRef();
+                *ppvObj = static_cast<IEnumVARIANT*>(this);
+                return S_OK;
+            }
+
+            if (IsEqualGUID(riid, __uuidof(IEnumUnknown)))
+            {
+                AddRef();
+                *ppvObj = static_cast<IEnumUnknown*>(this);
+                return S_OK;
+            }
+
+            return E_NOINTERFACE;
+        }
+
+        [[maybe_unused]] ULONG __stdcall AddRef() noexcept override
+        {
+            return ++refCount;
+        }
+
+        [[maybe_unused]] ULONG __stdcall Release() noexcept override
+        {
+            if (refCount == 0)
+            {
+                return 0;
+            }
+
+            --refCount;
+
+            if (refCount == 0)
+            {
+                getVector = nullptr;
+                index = 0;
+         //       other.reset();
+            }
+
+            return refCount;
+        }
+
+        HRESULT __stdcall Clone(IEnumVARIANT** other) noexcept
+        {
+            return E_NOTIMPL;
+        }
+
+        HRESULT __stdcall Clone(IEnumUnknown** other) noexcept
+        {
+            return E_NOTIMPL;
+        }
+
+        HRESULT __stdcall Next(ULONG celt, VARIANT *rgVar, ULONG *pCeltFetched) noexcept
+        {
+            if (rgVar == nullptr)
+            {
+                return S_FALSE;
+            }
+
+            if (getVector)
+            {
+                auto& vector = getVector();
+                auto begin = vector.begin() + index;
+                auto end = index + celt > vector.size() ? vector.end() : vector.begin() + index + celt;
+
+                auto distance = std::distance(begin, end);
+
+                for (auto iter = begin; iter != end; ++iter)
+                {
+                    assert(VariantCopy(rgVar + std::distance(iter, end), &iter->variant) == S_OK);
+                }
+
+                *pCeltFetched = ULONG(distance);
+
+                if (distance == celt)
+                {
+                    return S_OK;
+                }
+            }
+
+            return S_FALSE;
+        }
+
+        HRESULT __stdcall Next(ULONG celt, IUnknown **rgVar, ULONG *pCeltFetched) noexcept
+        {
+            if (rgVar == nullptr)
+            {
+                return S_FALSE;
+            }
+
+            if (getVector)
+            {
+                auto& vector = getVector();
+                auto begin = vector.begin() + index;
+                auto end = index + celt > vector.size() ? vector.end() : vector.begin() + index + celt;
+
+                auto count = 0;
+
+                for (auto iter = begin; iter != end; ++iter)
+                {
+                    if (iter->variant.vt == VT_UNKNOWN || iter->variant.vt == VT_DISPATCH)
+                    {
+                        assert(iter->variant.punkVal);
+                        iter->variant.punkVal->AddRef();
+                        rgVar[std::distance(iter, end)] = iter->variant.punkVal;
+                        count++;
+                    }
+                }
+
+                *pCeltFetched = ULONG(count);
+
+                if (count == celt)
+                {
+                    return S_OK;
+                }
+            }
+
+            return S_FALSE;
+        }
+
+        HRESULT __stdcall Reset() noexcept
+        {
+            index = 0;
+            return S_OK;
+        }
+
+        HRESULT __stdcall Skip(ULONG celt) noexcept
+        {
+            if (getVector && getVector().size() < celt)
+            {
+                return S_FALSE;
+            }
+
+            index += index;
+            return S_OK;
+        }
+    };
 };
 
 
