@@ -11,12 +11,14 @@
 #include <functional>
 #include <thread>
 #include <iostream>
+#include <filesystem>
 #include <cassert>
 #include "win32_controls.hpp"
 #include "win32_builders.hpp"
 #include "framework.h"
 #include "Resource.h"
-#include "xml_factory.hpp"
+#include <oleacc.h>
+#include "win32_com_client.hpp"
 //#include "http_client.hpp"
 
 std::array<wchar_t, 100> app_title;
@@ -249,7 +251,36 @@ struct siege_main_window
 
 			win32::SetWindowPos(win32::hwnd_t(tab_item->lParam), *temp);
 
+			win32::com::ICollection* object = nullptr;
 
+			auto com_result = AccessibleObjectFromWindow(win32::hwnd_t(tab_item->lParam), OBJID_NATIVEOM, __uuidof(IDispatch), reinterpret_cast<void**>(&object));
+			
+			if (com_result == S_OK && object)
+			{
+				auto count = object->Count();
+
+				assert(count);
+				assert(*count == 0);
+
+				win32::com::OleVariant streamHolder;
+				
+				streamHolder.variant.vt = VT_UNKNOWN;
+				
+				if (CreateStreamOnHGlobal(nullptr, TRUE, reinterpret_cast<IStream**>(&streamHolder.variant.punkVal)) == S_OK)
+				{
+					auto addResult = object->Add(streamHolder);
+
+					assert(addResult);
+					assert(addResult->variant.vt == VT_EMPTY);
+
+					count = object->Count();
+
+					assert(count);
+					assert(*count == 1);
+				}
+
+			}
+			
 			ShowWindow(win32::hwnd_t(tab_item->lParam), SW_SHOW);
 		}
 
@@ -351,6 +382,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	// Initialize global strings
 	LoadStringW(hInstance, IDS_APP_TITLE, app_title.data(), int(app_title.size()));
 
+	CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+
 	INITCOMMONCONTROLSEX settings{
 		.dwSize{sizeof(INITCOMMONCONTROLSEX)}
 	};
@@ -402,6 +435,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 	}
 
+	CoUninitialize();
 	FreeLibrary(mfcHandle);
 
 	return (int)msg.wParam;

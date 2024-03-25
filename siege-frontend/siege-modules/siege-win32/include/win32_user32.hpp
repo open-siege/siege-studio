@@ -65,17 +65,17 @@ namespace win32
 
         if constexpr (requires(TWindow t) { t.on_copy_data(copy_data_message<char>{wParam, lParam}); })
         {
-            if (message == destroy_message::id)
+            if (message == copy_data_message<char>::id)
             {
                 return self->on_copy_data(copy_data_message<char>{wParam, lParam});
             }
         }
 
-        if constexpr (requires(TWindow t) { t.on_copy_data(copy_data_message<std::byte>{wParam, lParam}); })
+        if constexpr (requires(TWindow t) { t.on_get_object(get_object_message{wParam, lParam}); })
         {
-            if (message == destroy_message::id)
+            if (message == get_object_message::id)
             {
-                return self->on_copy_data(copy_data_message<std::byte>{wParam, lParam});
+                return self->on_get_object(get_object_message{wParam, lParam});
             }
         }
 
