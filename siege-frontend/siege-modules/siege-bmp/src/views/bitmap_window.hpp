@@ -2,14 +2,18 @@
 #define BITMAPWINDOW_HPP
 
 #include <win32_controls.hpp>
+#include <win32_com_server.hpp>
 #include <cassert>
 #include <sstream>
+#include <oleacc.h>
 
 struct bitmap_window
 {
     constexpr static std::u8string_view formats = u8".jpg .jpeg .gif .png .tag .bmp .dib .pba .dmb .db0 .db1 .db2 .hba .hb0 .hb1 .hb2";
 
     win32::hwnd_t self;
+
+    win32::com::VectorCollection documents;
 
     bitmap_window(win32::hwnd_t self, const CREATESTRUCTW&) : self(self)
 	{
@@ -291,6 +295,17 @@ struct bitmap_window
                 POINT{.x = rect->left, .y = rect->top});
 
         return 0;
+    }
+
+    std::optional<LRESULT> on_get_object(win32::get_object_message message)
+    {
+        if (message.object_id == OBJID_NATIVEOM)
+        {
+            return LresultFromObject(__uuidof(IDispatch), message.flags, static_cast<IDispatch*>(&documents));
+            
+        }
+
+        return std::nullopt;
     }
 
     auto on_message(win32::message message)

@@ -67,10 +67,25 @@ namespace win32
 		}
 	};
 
+	struct get_object_message
+	{
+		constexpr static std::uint32_t id = WM_GETOBJECT;
+		
+		std::uint32_t flags;
+		std::uint32_t object_id;
+
+
+		get_object_message(wparam_t flags, lparam_t objectId) : flags(std::uint32_t(flags)), object_id(std::uint32_t(objectId))
+		{
+
+		}
+	};
+
 
 	template<typename TChar = std::byte>
 	struct copy_data_message
 	{
+		constexpr static std::uint32_t id = WM_COPYDATA;
 		hwnd_t sender;
 		std::size_t data_type;
 		std::span<TChar> data;
