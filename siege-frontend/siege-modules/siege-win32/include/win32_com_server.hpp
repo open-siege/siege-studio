@@ -43,6 +43,32 @@ namespace win32::com
         }
     };
 
+    template<typename TBase, typename TInterface, typename TObject>
+    std::optional<HRESULT> ComCast(TObject& self, const GUID& riid, void** ppvObj)
+    {
+        if (IsEqualGUID(riid, __uuidof(TBase)))
+        {
+            self.AddRef();
+            *ppvObj = static_cast<TInterface*>(&self);
+            return S_OK;
+        }
+
+        return std::nullopt;
+    }
+
+    template<typename TInterface, typename TObject>
+    std::optional<HRESULT> ComCast(TObject& self, const GUID& riid, void** ppvObj)
+    {
+        if (IsEqualGUID(riid, __uuidof(TInterface)))
+        {
+            self.AddRef();
+            *ppvObj = static_cast<TInterface*>(&self);
+            return S_OK;
+        }
+
+        return std::nullopt;
+    }
+
     struct VectorEnumerator : IEnumVARIANT, IEnumUnknown
     {
         std::function<std::vector<OleVariant>&()> getVector;
@@ -51,7 +77,7 @@ namespace win32::com
 
         VectorEnumerator(std::function<std::vector<OleVariant>&()> getVector,  std::size_t index = 0) :  getVector(getVector), index(index), refCount(0)
         {
-                
+            AddRef();
         }
 
         ~VectorEnumerator()
@@ -61,28 +87,10 @@ namespace win32::com
 
         HRESULT __stdcall QueryInterface(const GUID& riid, void** ppvObj) noexcept override
         {
-            if (IsEqualGUID(riid, __uuidof(IUnknown)))
-            {
-                AddRef();
-                *ppvObj = this;
-                return S_OK;
-            }
-
-            if (IsEqualGUID(riid, __uuidof(IEnumVARIANT)))
-            {
-                AddRef();
-                *ppvObj = static_cast<IEnumVARIANT*>(this);
-                return S_OK;
-            }
-
-            if (IsEqualGUID(riid, __uuidof(IEnumUnknown)))
-            {
-                AddRef();
-                *ppvObj = static_cast<IEnumUnknown*>(this);
-                return S_OK;
-            }
-
-            return E_NOINTERFACE;
+            return ComCast<IUnknown, IEnumVARIANT>(*this, riid, ppvObj)
+                .or_else([&]() { return ComCast<IEnumVARIANT>(*this, riid, ppvObj); })
+                .or_else([&]() { return ComCast<IEnumUnknown>(*this, riid, ppvObj); })
+                .value_or(E_NOINTERFACE);
         }
 
         [[maybe_unused]] ULONG __stdcall AddRef() noexcept override
@@ -230,21 +238,8 @@ namespace win32::com
 
         HRESULT __stdcall QueryInterface(const GUID& riid, void** ppvObj) noexcept override
         {
-            if (IsEqualGUID(riid, __uuidof(IUnknown)))
-            {
-                AddRef();
-                *ppvObj = this;
-                return S_OK;
-            }
-
-            if (IsEqualGUID(riid, __uuidof(IDispatch)))
-            {
-                AddRef();
-                *ppvObj = static_cast<IDispatch*>(this);
-                return S_OK;
-            }
-
-            return E_NOINTERFACE;
+            return ComCast<IUnknown, IDispatch>(*this, riid, ppvObj)
+                .value_or(E_NOINTERFACE);
         }
 
         [[maybe_unused]] ULONG __stdcall AddRef() noexcept override
