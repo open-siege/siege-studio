@@ -51,6 +51,7 @@ namespace win32::com
                 }
 
                 temp.reset(self);
+                VariantClear(&result);
                 return temp;
             }
 

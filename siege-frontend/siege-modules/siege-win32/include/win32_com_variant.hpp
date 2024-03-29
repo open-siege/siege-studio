@@ -1,9 +1,9 @@
 #ifndef WIN32_COM_VARIANT_HPP
 #define WIN32_COM_VARIANT_HPP
 
-#include <oaidl.h>
 #include <istream>
 #include <memory>
+#include <oaidl.h>
 
 namespace win32::com
 {
@@ -24,6 +24,27 @@ namespace win32::com
     //CLSID_WICImagingFactory
     //CreateXmlReader
     //CreateXmlWriter
+
+    template<typename ComInterface>
+    void Release(ComInterface* obj)
+    {
+        if (obj)
+        {
+            obj->Release();
+        }
+    }
+
+    template <typename ComInterface>
+    struct Releasable
+    {
+        using Func = decltype(&Release<ComInterface>);
+        using UniquePtr = std::unique_ptr<ComInterface, Func>;
+
+        auto MakeUnique(ComInterface* obj)
+        {
+            return std::unique_ptr<ComInterface, Func>(obj, &Release<ComInterface>);
+        }
+    };
 
     class IStreamBuf : std::streambuf
     {
