@@ -259,26 +259,45 @@ struct siege_main_window
 			{
 				auto count = object->Count();
 
-				assert(count);
-				assert(*count == 0);
-
-				win32::com::OleVariant streamHolder;
-				
-				streamHolder.variant.vt = VT_UNKNOWN;
-				
-				if (CreateStreamOnHGlobal(nullptr, TRUE, reinterpret_cast<IStream**>(&streamHolder.variant.punkVal)) == S_OK)
+				if (count == 0)
 				{
-					auto addResult = object->Add(streamHolder);
-
-					assert(addResult);
-					assert(addResult->variant.vt == VT_EMPTY);
-
-					count = object->Count();
-
 					assert(count);
-					assert(*count == 1);
-				}
+					assert(*count == 0);
 
+					win32::com::OleVariant streamHolder;
+				
+					streamHolder.variant.vt = VT_UNKNOWN;
+				
+					if (CreateStreamOnHGlobal(nullptr, TRUE, reinterpret_cast<IStream**>(&streamHolder.variant.punkVal)) == S_OK)
+					{
+						auto addResult = object->Add(streamHolder);
+
+						assert(addResult);
+						assert(addResult->variant.vt == VT_EMPTY);
+
+						count = object->Count();
+
+						assert(count);
+						assert(*count == 1);
+
+						auto enumerator = object->NewEnum();
+
+						assert(enumerator);
+
+						std::array<VARIANT, 8> files{};
+						ULONG actual = 0;
+
+						assert(enumerator.value()->Next(files.size(), files.data(), &actual) == S_FALSE);
+						assert(actual == 1);
+						assert(files[0].vt == VT_UNKNOWN);
+
+						assert(enumerator.value()->Release() == 0);
+
+						VariantClear(&files[0]);
+						assert(files[0].punkVal->AddRef() == 2);
+						assert(files[0].punkVal->Release() == 1);
+					}
+				}
 			}
 			
 			ShowWindow(win32::hwnd_t(tab_item->lParam), SW_SHOW);
