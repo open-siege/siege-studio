@@ -8,8 +8,10 @@
 
 namespace win32::com
 {
-    struct ComAllocatorAware
+    struct ComAllocatorAware : IUnknown
     {
+        std::atomic_int refCount = 1;
+
         static std::set<void*>& GetHeapAllocations()
         {
             static std::set<void*> allocations;
@@ -17,21 +19,20 @@ namespace win32::com
             return allocations;
         }
 
+        static bool IsHeapAllocated(void* object)
+        {
+            auto& allocations = GetHeapAllocations();
+
+            auto item = allocations.find(object);
+
+            return item != allocations.end();
+        }
 
         static void* operator new(std::size_t count)
         {
             IMalloc* allocator = nullptr;
 
-            void* result = nullptr;
-
-            if (::CoGetMalloc(1, &allocator) == S_OK)
-            {
-                result = allocator->Alloc(count);
-            }
-            else
-            {
-                result = ::operator new(count);
-            }
+            void* result = ::CoTaskMemAlloc(count);
 
             GetHeapAllocations().insert(result);
 
@@ -40,22 +41,40 @@ namespace win32::com
 
         static void operator delete(void* ptr, std::size_t sz)
         {
-            if (GetHeapAllocations().count(ptr) == 0)
+            if (IsHeapAllocated(ptr))
             {
                 return;
             }
 
-            IMalloc* allocator = nullptr;
+            return ::CoTaskMemFree(ptr);
+        }
 
-            if (::CoGetMalloc(1, &allocator) == S_OK && allocator->DidAlloc(ptr) == 1)
+        [[maybe_unused]] ULONG __stdcall AddRef() noexcept override
+        {
+            return ++refCount;
+        }
+
+        [[maybe_unused]] ULONG __stdcall Release() noexcept override
+        {
+            if (refCount == 0)
             {
-                allocator->Free(ptr);
-                return;
+                return 0;
             }
-            else
+
+            if (refCount == 1 && !IsHeapAllocated(this))
             {
-                ::operator delete(ptr, sz);
+                return 1;
             }
+
+            --refCount;
+
+            if (refCount == 0)
+            {
+                delete this;
+                return 0;
+            }
+
+            return refCount;
         }
     };
 
@@ -154,7 +173,7 @@ namespace win32::com
                 return refCount = owner->AddRef();
             }
 
-            return ++refCount;
+            return ComAllocatorAware::AddRef();
         }
 
         [[maybe_unused]] ULONG __stdcall Release() noexcept override
@@ -164,20 +183,7 @@ namespace win32::com
                 return refCount = owner->Release();
             }
 
-            if (refCount == 0)
-            {
-                return 0;
-            }
-
-            --refCount;
-
-            if (refCount == 0)
-            {
-                delete this;
-                return 0;
-            }
-
-            return refCount;
+            return ComAllocatorAware::Release();
         }
 
         HRESULT __stdcall Clone(TInterface** other) noexcept override
@@ -212,8 +218,10 @@ namespace win32::com
         HRESULT __stdcall Skip(ULONG celt) noexcept override
         {
             auto currentDistance = std::distance(current, end);
+            
             if (currentDistance < celt)
             {
+                current = end;
                 return S_FALSE;
             }
 
@@ -298,7 +306,7 @@ namespace win32::com
         
         VariantEnumeratorAdapter(std::unique_ptr<TEnum, void(*)(TEnum*)> enumerator) : enumerator(std::move(enumerator)), refCount(1)
         {
-            this->enumerator->SetParent(static_cast<IUnknown*>(this));
+            this->enumerator->SetParent(static_cast<IEnumVARIANT*>(this));
         }
 
         ~VariantEnumeratorAdapter()
@@ -367,7 +375,10 @@ namespace win32::com
                 temp[i]->Release();
             }
 
-            *pCeltFetched = fetched;
+            if (pCeltFetched)
+            {
+                *pCeltFetched = fetched;            
+            }
 
             return result;
         }

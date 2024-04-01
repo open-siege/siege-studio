@@ -2,6 +2,7 @@
 //
 
 #define _CRT_SECURE_NO_WARNINGS
+#define NOMINMAX
 #include <array>
 #include <optional>
 #include <algorithm>
@@ -296,6 +297,14 @@ struct siege_main_window
 						VariantClear(&files[0]);
 						assert(files[0].punkVal->AddRef() == 2);
 						assert(files[0].punkVal->Release() == 1);
+
+						for (auto& item : *object)
+						{
+							if (IsDebuggerPresent())
+							{
+								assert(&item);							
+							}
+						}
 					}
 				}
 			}

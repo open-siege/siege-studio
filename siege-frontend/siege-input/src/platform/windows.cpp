@@ -13,6 +13,7 @@
 #define DIRECTINPUT_VERSION 0x0800
 #include <windows.h>
 #include <dinput.h>
+#undef CINTERFACE
 
 namespace siege
 {

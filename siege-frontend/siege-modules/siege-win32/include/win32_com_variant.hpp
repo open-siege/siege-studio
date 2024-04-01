@@ -3,6 +3,7 @@
 
 #include <istream>
 #include <memory>
+#undef CINTERFACE
 #include <oaidl.h>
 
 namespace win32::com
@@ -31,6 +32,14 @@ namespace win32::com
         if (obj)
         {
             obj->Release();
+        }
+    }
+
+    void Release(VARIANT* variant)
+    {
+        if (variant)
+        {
+            VariantClear(variant);
         }
     }
 

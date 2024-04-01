@@ -2,11 +2,111 @@
 #define WIN32_COM_CLIENT_HPP
 
 #include <expected>
+#include <limits>
 #include "win32_com_variant.hpp"
 
 
 namespace win32::com
 {   
+    void ResetMember(VARIANT& value)
+    {
+        VariantClear(&value);   
+    }
+
+    void ResetMember(IUnknown* value)
+    {
+        if (value)
+        {
+            value->Release();
+        }
+    }
+
+    void CopyMember(const VARIANT& value, VARIANT& other)
+    {
+        VariantCopy(&other, &value);
+    }
+
+    void CopyMember(IUnknown* value, IUnknown*&other)
+    {
+        if (!value)
+        {
+            other = nullptr;
+            return;
+        }
+
+        value->AddRef();
+        other = value;
+    }
+
+    template <typename TValue, typename TEnumerator, typename TEnumeratorContainer = std::unique_ptr<TEnumerator, void(*)(TEnumerator*)>> 
+    struct EnumeratorIterator
+    {
+        TEnumeratorContainer enumerator;
+        std::size_t position = 0;
+        TValue temp;
+
+        EnumeratorIterator(TEnumeratorContainer container, std::size_t position = 0) : enumerator(std::move(container)), position(position), temp{}
+        {
+        
+        }
+
+        EnumeratorIterator(const EnumeratorIterator& other) : enumerator(nullptr, [](TEnumerator* self) {
+               if (self)
+               {
+                    self->Release();
+               }
+            }), position{other.position}, temp{}
+        {
+            IEnumVARIANT* temp;
+
+            if (other.enumerator && other.enumerator->Clone(&temp) == S_OK)
+            {
+                enumerator.reset(temp);            
+            }
+
+            CopyMember(other.temp, temp);
+        }
+
+        ~EnumeratorIterator()
+        {
+            ResetMember(temp);
+        }
+
+        EnumeratorIterator& operator++()
+        {
+            enumerator->Next(1, &temp, nullptr);
+
+            position++;
+            return *this;
+        }
+
+        EnumeratorIterator operator++(int)
+        {
+            EnumeratorIterator old = *this;
+            operator++();
+            return old; 
+        }
+
+        TValue& operator*()
+        {
+            return temp;
+        }
+
+        TValue* operator->()
+        {
+            return &temp;
+        }
+
+        friend inline bool operator< (const EnumeratorIterator& lhs, const EnumeratorIterator& rhs) { return lhs.position < rhs.position; }
+        friend inline bool operator==(const EnumeratorIterator& lhs, const EnumeratorIterator& rhs) { return lhs.position == rhs.position; }
+
+        friend inline bool operator> (const EnumeratorIterator& lhs, const EnumeratorIterator& rhs) { return rhs < lhs; }
+        friend inline bool operator<=(const EnumeratorIterator& lhs, const EnumeratorIterator& rhs) { return !(lhs > rhs); }
+        friend inline bool operator>=(const EnumeratorIterator& lhs, const EnumeratorIterator& rhs) { return !(lhs < rhs); }
+
+        friend inline bool operator!=(const EnumeratorIterator& lhs, const EnumeratorIterator& rhs) { return !(lhs == rhs); }
+    };
+
     struct IEnumerable : IDispatch
     {
         std::expected<DISPID, HRESULT> GetDispId(std::wstring& value)
@@ -56,7 +156,33 @@ namespace win32::com
             }
 
             return std::unexpected(hresult);
+        }
 
+        template<typename IEnum = IEnumVARIANT>
+        auto begin()
+        {
+            auto newEnum = NewEnum<IEnum>();
+
+            return EnumeratorIterator<VARIANT, IEnum, decltype(newEnum)::value_type>(std::move(*newEnum));
+        }
+
+        template<typename IEnum = IEnumVARIANT>
+        auto end()
+        {
+            auto newEnum = NewEnum<IEnum>();
+            constexpr static auto max = std::numeric_limits<ULONG>::max();
+
+            ULONG count = 0u;
+
+            for (count = 0u; count < max; ++count)
+            {
+                if ((*newEnum)->Skip(1) == S_FALSE)
+                {
+                    break;
+                }
+            }
+
+            return EnumeratorIterator<VARIANT, IEnum, decltype(newEnum)::value_type>(std::move(*newEnum), count);
         }
     };
 
