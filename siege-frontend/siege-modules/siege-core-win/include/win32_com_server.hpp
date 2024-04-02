@@ -12,70 +12,12 @@ namespace win32::com
     {
         std::atomic_int refCount = 1;
 
-        static std::set<void*>& GetHeapAllocations()
-        {
-            static std::set<void*> allocations;
+        static bool IsHeapAllocated(void* object);
+        static void* operator new(std::size_t count);
+        static void operator delete(void* ptr, std::size_t sz);
 
-            return allocations;
-        }
-
-        static bool IsHeapAllocated(void* object)
-        {
-            auto& allocations = GetHeapAllocations();
-
-            auto item = allocations.find(object);
-
-            return item != allocations.end();
-        }
-
-        static void* operator new(std::size_t count)
-        {
-            IMalloc* allocator = nullptr;
-
-            void* result = ::CoTaskMemAlloc(count);
-
-            GetHeapAllocations().insert(result);
-
-            return result;
-        }
-
-        static void operator delete(void* ptr, std::size_t sz)
-        {
-            if (IsHeapAllocated(ptr))
-            {
-                return;
-            }
-
-            return ::CoTaskMemFree(ptr);
-        }
-
-        [[maybe_unused]] ULONG __stdcall AddRef() noexcept override
-        {
-            return ++refCount;
-        }
-
-        [[maybe_unused]] ULONG __stdcall Release() noexcept override
-        {
-            if (refCount == 0)
-            {
-                return 0;
-            }
-
-            if (refCount == 1 && !IsHeapAllocated(this))
-            {
-                return 1;
-            }
-
-            --refCount;
-
-            if (refCount == 0)
-            {
-                delete this;
-                return 0;
-            }
-
-            return refCount;
-        }
+        [[maybe_unused]] ULONG __stdcall AddRef() noexcept override;
+        [[maybe_unused]] ULONG __stdcall Release() noexcept override;
     };
 
     template<typename TBase, typename TInterface, typename TObject>
@@ -115,7 +57,6 @@ namespace win32::com
     {
         VariantCopy(output, iter->get());
     }
-
 
     template<typename TInterface, typename TOut, typename TIter>
     struct RangeEnumerator : TInterface, ComAllocatorAware
