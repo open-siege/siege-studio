@@ -5,22 +5,8 @@
 #include <limits>
 #include "win32_com_variant.hpp"
 
-
 namespace win32::com
 {   
-    void ResetMember(VARIANT& value)
-    {
-        VariantClear(&value);   
-    }
-
-    void ResetMember(IUnknown* value)
-    {
-        if (value)
-        {
-            value->Release();
-        }
-    }
-
     void CopyMember(const VARIANT& value, VARIANT& other)
     {
         VariantCopy(&other, &value);
@@ -65,11 +51,6 @@ namespace win32::com
             }
 
             CopyMember(other.temp, temp);
-        }
-
-        ~EnumeratorIterator()
-        {
-            ResetMember(temp);
         }
 
         EnumeratorIterator& operator++()
@@ -163,7 +144,7 @@ namespace win32::com
         {
             auto newEnum = NewEnum<IEnum>();
 
-            return EnumeratorIterator<VARIANT, IEnum, decltype(newEnum)::value_type>(std::move(*newEnum));
+            return EnumeratorIterator<Variant, IEnum, decltype(newEnum)::value_type>(std::move(*newEnum));
         }
 
         template<typename IEnum = IEnumVARIANT>
@@ -182,7 +163,7 @@ namespace win32::com
                 }
             }
 
-            return EnumeratorIterator<VARIANT, IEnum, decltype(newEnum)::value_type>(std::move(*newEnum), count);
+            return EnumeratorIterator<Variant, IEnum, decltype(newEnum)::value_type>(std::move(*newEnum), count);
         }
     };
 

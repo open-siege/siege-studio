@@ -3,58 +3,10 @@
 
 #include <istream>
 #include <memory>
-#undef CINTERFACE
-#include <oaidl.h>
+#include <objidl.h>
 
 namespace win32::com
 {
-    //CreateStreamOverRandomAccessStream 
-    //CreateStreamOnHGlobal 
-    //SHCreateMemStream 
-    //CreateILockBytesOnHGlobal 
-    //StgCreateDocfileOnILockBytes
-    //CreateFile2 
-    //CreateFile2FromAppW 
-    //OpenFileMappingFromApp 
-    //MapViewOfFile3FromApp
-    //MapViewOfFileFromApp
-    //CreateFileMappingFromApp
-    //MFCreateCollection 
-    //MFCreateMFByteStreamOnStreamEx 
-    //IWICStream 
-    //CLSID_WICImagingFactory
-    //CreateXmlReader
-    //CreateXmlWriter
-
-    template<typename ComInterface>
-    void Release(ComInterface* obj)
-    {
-        if (obj)
-        {
-            obj->Release();
-        }
-    }
-
-    void Release(VARIANT* variant)
-    {
-        if (variant)
-        {
-            VariantClear(variant);
-        }
-    }
-
-    template <typename ComInterface>
-    struct Releasable
-    {
-        using Func = decltype(&Release<ComInterface>);
-        using UniquePtr = std::unique_ptr<ComInterface, Func>;
-
-        auto MakeUnique(ComInterface* obj)
-        {
-            return std::unique_ptr<ComInterface, Func>(obj, &Release<ComInterface>);
-        }
-    };
-
     class IStreamBuf : std::streambuf
     {
         
@@ -70,13 +22,13 @@ namespace win32::com
         }
 
     protected:
-        std::streambuf* setbuf(char_type* s, std::streamsize n) override
+        std::streambuf* setbuf(char_type* s, std::streamsize n) override final
         {
             return this;
         }
 
         pos_type seekpos( pos_type pos,
-                          std::ios_base::openmode which = std::ios_base::in | std::ios_base::out ) override
+                          std::ios_base::openmode which = std::ios_base::in | std::ios_base::out ) override final
         {
             ULARGE_INTEGER result{};
             LARGE_INTEGER largePos{};
@@ -91,7 +43,7 @@ namespace win32::com
         }
 
         pos_type seekoff( off_type off, std::ios_base::seekdir dir,
-                          std::ios_base::openmode which = std::ios_base::in | std::ios_base::out ) override
+                          std::ios_base::openmode which = std::ios_base::in | std::ios_base::out ) override final
         {
             ULARGE_INTEGER result{};
             LARGE_INTEGER largePos{};
@@ -116,12 +68,12 @@ namespace win32::com
             return 0;
         }
 
-        int sync() override
+        int sync() override final
         {
             return data.Commit(STGC_DEFAULT) == S_OK ? 0 : 1;
         }
 
-        std::streamsize showmanyc() override
+        std::streamsize showmanyc() override final
         {
             STATSTG result{};
 
@@ -134,7 +86,7 @@ namespace win32::com
             return 0;        
         }
 
-        std::streamsize xsgetn( char_type* s, std::streamsize count ) override
+        std::streamsize xsgetn( char_type* s, std::streamsize count ) override final
         {
             ULONG result = 0;
 
@@ -148,7 +100,7 @@ namespace win32::com
             return 0;
         }
 
-        std::streambuf::int_type underflow() override
+        std::streambuf::int_type underflow() override final
         {
             ULONG result = 0;
 
@@ -163,7 +115,7 @@ namespace win32::com
             return traits_type::eof();
         }
 
-        std::streamsize xsputn( const char_type* s, std::streamsize count) override
+        std::streamsize xsputn( const char_type* s, std::streamsize count) override final
         {
             ULONG result = 0;
 
@@ -177,7 +129,7 @@ namespace win32::com
             return 0;
         }
 
-        std::streambuf::int_type overflow(std::streambuf::int_type charater) override
+        std::streambuf::int_type overflow(std::streambuf::int_type charater) override final
         {
             ULONG result = 0;
 
@@ -192,20 +144,6 @@ namespace win32::com
         }
     };
 
-    struct OleVariant
-    {
-        VARIANT variant;
-
-        OleVariant() noexcept
-        {
-            VariantInit(&variant);
-        }
-
-        ~OleVariant() noexcept
-        {
-            VariantClear(&variant);
-        }
-    };
 }
 
 #endif
