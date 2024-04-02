@@ -110,7 +110,7 @@ namespace win32::com
         std::expected<std::unique_ptr<IEnumVARIANT, void(*)(IEnum*)>, HRESULT> NewEnum()  noexcept
         {
             DISPPARAMS dp = {nullptr, nullptr, 0, 0};
-            VARIANT result;
+            Variant result;
             auto hresult = Invoke(DISPID_NEWENUM, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_PROPERTYGET | DISPATCH_METHOD, &dp, &result, nullptr, nullptr);
             
             auto temp = std::unique_ptr<IEnum, void(*)(IEnum*)>(nullptr, [](auto* self) {
@@ -132,7 +132,6 @@ namespace win32::com
                 }
 
                 temp.reset(self);
-                VariantClear(&result);
                 return temp;
             }
 
@@ -183,32 +182,32 @@ namespace win32::com
             
             DISPPARAMS args = {};
 
-            OleVariant returnValue;
+            Variant returnValue;
 
-            auto result = this->Invoke(*id, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_PROPERTYGET | DISPATCH_METHOD, &args, &returnValue.variant, nullptr, nullptr);
-
-            if (result != S_OK)
-            {
-                return std::unexpected(result);
-            }
-
-            result = VariantChangeType(&returnValue.variant, &returnValue.variant, 0, VT_UI4);
+            auto result = this->Invoke(*id, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_PROPERTYGET | DISPATCH_METHOD, &args, &returnValue, nullptr, nullptr);
 
             if (result != S_OK)
             {
                 return std::unexpected(result);
             }
 
-            return returnValue.variant.uintVal;
+            result = VariantChangeType(&returnValue, &returnValue, 0, VT_UI4);
+
+            if (result != S_OK)
+            {
+                return std::unexpected(result);
+            }
+
+            return returnValue.uintVal;
         }
 
-        std::expected<OleVariant, HRESULT> Item(std::uint32_t index)  noexcept
+        std::expected<Variant, HRESULT> Item(std::uint32_t index)  noexcept
         {
             DISPPARAMS args = {};
 
-            OleVariant returnValue;
+            Variant returnValue;
 
-            auto result = this->Invoke(DISPID_VALUE, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_PROPERTYGET | DISPATCH_METHOD, &args, &returnValue.variant, nullptr, nullptr);
+            auto result = this->Invoke(DISPID_VALUE, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_PROPERTYGET | DISPATCH_METHOD, &args, &returnValue, nullptr, nullptr);
 
             if (result != S_OK)
             {
@@ -222,7 +221,7 @@ namespace win32::com
 
     struct ICollection : IReadOnlyCollection
     {
-        std::expected<OleVariant, HRESULT> Add(std::optional<OleVariant> newValue = std::nullopt)  noexcept
+        std::expected<Variant, HRESULT> Add(std::optional<Variant> newValue = std::nullopt)  noexcept
         {
             static auto count = std::wstring(L"Add");
 
@@ -238,12 +237,12 @@ namespace win32::com
             if (newValue)
             {
                 args.cArgs = 1;
-                args.rgvarg = &newValue->variant;
+                args.rgvarg = &*newValue;
             }
 
-            OleVariant returnValue;
+            Variant returnValue;
 
-            auto result = this->Invoke(*id, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &args, &returnValue.variant, nullptr, nullptr);
+            auto result = this->Invoke(*id, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &args, &returnValue, nullptr, nullptr);
 
             if (result != S_OK)
             {
@@ -266,9 +265,9 @@ namespace win32::com
             
             DISPPARAMS args = {};
 
-            OleVariant returnValue;
+            Variant returnValue;
 
-            auto result = this->Invoke(*id, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &args, &returnValue.variant, nullptr, nullptr);
+            auto result = this->Invoke(*id, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &args, &returnValue, nullptr, nullptr);
 
             if (result != S_OK)
             {

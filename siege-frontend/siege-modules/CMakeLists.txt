@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 project(siege-modules)
 
 if (WIN32)
+    add_subdirectory(siege-core-win)
     add_subdirectory(siege-win32)
     add_subdirectory(siege-mfc)
     add_subdirectory(siege-bmp)
