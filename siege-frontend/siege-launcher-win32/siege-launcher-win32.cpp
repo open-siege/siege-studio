@@ -265,16 +265,16 @@ struct siege_main_window
 					assert(count);
 					assert(*count == 0);
 
-					win32::com::OleVariant streamHolder;
+					win32::com::Variant streamHolder;
 				
-					streamHolder.variant.vt = VT_UNKNOWN;
+					streamHolder.vt = VT_UNKNOWN;
 				
-					if (CreateStreamOnHGlobal(nullptr, TRUE, reinterpret_cast<IStream**>(&streamHolder.variant.punkVal)) == S_OK)
+					if (CreateStreamOnHGlobal(nullptr, TRUE, reinterpret_cast<IStream**>(&streamHolder.punkVal)) == S_OK)
 					{
 						auto addResult = object->Add(streamHolder);
 
 						assert(addResult);
-						assert(addResult->variant.vt == VT_EMPTY);
+						assert(addResult->vt == VT_EMPTY);
 
 						count = object->Count();
 
@@ -285,7 +285,7 @@ struct siege_main_window
 
 						assert(enumerator);
 
-						std::array<VARIANT, 8> files{};
+						std::array<win32::com::Variant, 8> files{};
 						ULONG actual = 0;
 
 						assert(enumerator.value()->Next(files.size(), files.data(), &actual) == S_FALSE);
@@ -294,9 +294,8 @@ struct siege_main_window
 
 						assert(enumerator.value()->Release() == 0);
 
-						VariantClear(&files[0]);
-						assert(files[0].punkVal->AddRef() == 2);
-						assert(files[0].punkVal->Release() == 1);
+						assert(files[0].punkVal->AddRef() == 3);
+						assert(files[0].punkVal->Release() == 2);
 
 						for (auto& item : *object)
 						{

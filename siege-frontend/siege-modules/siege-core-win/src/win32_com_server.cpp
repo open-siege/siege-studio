@@ -1,39 +1,43 @@
+#include <set>
 #include "win32_com_server.hpp"
+
 
 namespace win32::com
 {
-    struct ComAllocatorAware : IUnknown
-    {
-        std::atomic_int refCount = 1;
-
-        static std::set<void*>& ComAllocatorAware::GetHeapAllocations()
+        std::set<void*>& GetHeapAllocations()
         {
             static std::set<void*> allocations;
 
             return allocations;
         }
 
-        static bool ComAllocatorAware::IsHeapAllocated(void* object)
+        bool ComAllocatorAware::IsHeapAllocated(void* object, std::size_t size)
         {
             auto& allocations = GetHeapAllocations();
 
-            auto item = allocations.find(object);
+            auto objectValue = reinterpret_cast<std::size_t>(object);
+            auto item = std::find_if(allocations.begin(), allocations.end(), [&](auto start) {
+                    
+                    auto startRange = reinterpret_cast<std::size_t>(start);
+                    auto endRange = startRange + size;
 
+                    return objectValue >= startRange && objectValue < endRange;
+            });
             return item != allocations.end();
         }
 
-        static void* ComAllocatorAware::operator new(std::size_t count)
+        void* ComAllocatorAware::operator new(std::size_t count)
         {
             void* result = ::CoTaskMemAlloc(count);
-
+            assert(result);
             GetHeapAllocations().insert(result);
 
             return result;
         }
 
-        static void ComAllocatorAware::operator delete(void* ptr, std::size_t sz)
+        void ComAllocatorAware::operator delete(void* ptr, std::size_t sz)
         {
-            if (IsHeapAllocated(ptr))
+            if (IsHeapAllocated(ptr, sz))
             {
                 return;
             }
@@ -41,19 +45,19 @@ namespace win32::com
             return ::CoTaskMemFree(ptr);
         }
 
-        ULONG __stdcall ComAllocatorAware::AddRef()
+        ULONG __stdcall ComAllocatorAware::AddRef() noexcept
         {
             return ++refCount;
         }
 
-        ULONG __stdcall ComAllocatorAware::Release()
+        ULONG __stdcall ComAllocatorAware::Release() noexcept
         {
             if (refCount == 0)
             {
                 return 0;
             }
 
-            if (refCount == 1 && !IsHeapAllocated(this))
+            if (refCount == 1 && !IsHeapAllocated(this, sizeof(*this)))
             {
                 return 1;
             }
@@ -68,5 +72,4 @@ namespace win32::com
 
             return refCount;
         }
-    };
 }

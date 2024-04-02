@@ -4,20 +4,23 @@
 #include "win32_com_variant.hpp"
 #include <array>
 #include <atomic>
-#include <set>
+#include <optional>
+#include <memory>
+#include <string_view>
+#include <vector>
 
 namespace win32::com
 {
     struct ComAllocatorAware : IUnknown
     {
-        std::atomic_int refCount = 1;
+        std::atomic_uint refCount = 1;
 
-        static bool IsHeapAllocated(void* object);
+        static bool IsHeapAllocated(void* object, std::size_t);
         static void* operator new(std::size_t count);
         static void operator delete(void* ptr, std::size_t sz);
 
-        [[maybe_unused]] ULONG __stdcall AddRef() noexcept override;
-        [[maybe_unused]] ULONG __stdcall Release() noexcept override;
+        [[maybe_unused]] ULONG __stdcall IUnknown::AddRef() noexcept override;
+        [[maybe_unused]] ULONG __stdcall IUnknown::Release() noexcept override;
     };
 
     template<typename TBase, typename TInterface, typename TObject>
@@ -62,8 +65,7 @@ namespace win32::com
     struct RangeEnumerator : TInterface, ComAllocatorAware
     {
         IUnknown* owner;
-        std::atomic_uint refCount;
-
+        
         TIter begin;
         TIter current;
         TIter end;
@@ -74,7 +76,6 @@ namespace win32::com
 
         RangeEnumerator(TIter begin, TIter current, TIter end) : 
             owner(nullptr), 
-            refCount(1), 
             begin(begin), 
             current(current), 
             end(end)
@@ -83,7 +84,6 @@ namespace win32::com
 
         RangeEnumerator(IUnknown* owner, TIter begin, TIter current, TIter end) : 
             owner(owner), 
-            refCount(1), 
             begin(begin), 
             current(current), 
             end(end)
@@ -225,14 +225,14 @@ namespace win32::com
                 });
     }
 
-    void ToVariant(IUnknown* src, VARIANT* dst)
+    inline void ToVariant(IUnknown* src, VARIANT* dst)
     {
         dst->vt = VT_UNKNOWN;
         src->AddRef();
         dst->punkVal = src;
     }
 
-    void ToVariant(IDispatch* src, VARIANT* dst)
+    inline void ToVariant(IDispatch* src, VARIANT* dst)
     {
         dst->vt = VT_DISPATCH;
         src->AddRef();
@@ -243,15 +243,10 @@ namespace win32::com
     struct VariantEnumeratorAdapter : IEnumVARIANT, ComAllocatorAware
     {
         std::unique_ptr<TEnum, void(*)(TEnum*)> enumerator;
-        std::atomic_int refCount;
         
-        VariantEnumeratorAdapter(std::unique_ptr<TEnum, void(*)(TEnum*)> enumerator) : enumerator(std::move(enumerator)), refCount(1)
+        VariantEnumeratorAdapter(std::unique_ptr<TEnum, void(*)(TEnum*)> enumerator) : enumerator(std::move(enumerator))
         {
             this->enumerator->SetParent(static_cast<IEnumVARIANT*>(this));
-        }
-
-        ~VariantEnumeratorAdapter()
-        {
         }
 
         HRESULT __stdcall QueryInterface(const GUID& riid, void** ppvObj) noexcept override
@@ -264,25 +259,12 @@ namespace win32::com
 
         [[maybe_unused]] ULONG __stdcall AddRef() noexcept override
         {
-            return ++refCount;
+            return ComAllocatorAware::AddRef();
         }
 
         [[maybe_unused]] ULONG __stdcall Release() noexcept override
         {
-            if (refCount == 0)
-            {
-                return 0;
-            }
-            
-            --refCount;
-            
-            if (refCount == 0)
-            {
-                delete this;
-                return 0;
-            }
-
-            return refCount;
+            return ComAllocatorAware::Release();
         }
 
         HRESULT __stdcall Clone(IEnumVARIANT** other) noexcept
@@ -336,23 +318,32 @@ namespace win32::com
     };
 
     template<typename TObject>
-    struct VectorCollection : IDispatch
+    struct VectorCollection : IDispatch, ComAllocatorAware
     {
         std::vector<std::unique_ptr<TObject, void(*)(TObject*)>> &items;
-        std::atomic_uint refCount = 1;
 
-        ATOM countAtom = 0;
-        ATOM addAtom = 0;
-        ATOM removeAtom = 0;
+        constexpr static std::array<std::wstring_view, 4> names = {{
+            std::wstring_view(L"Item"),  
+            std::wstring_view(L"Count"),  
+            std::wstring_view(L"Add"),  
+            std::wstring_view(L"Remove"),  
+        }};
 
-        VectorCollection(std::vector<std::unique_ptr<TObject, void(*)(TObject*)>> &items) : items(items)
+        constexpr static DISPID DispIdOf(std::wstring_view name, LCID lcid = LOCALE_USER_DEFAULT)
         {
-            countAtom  = AddAtomW(L"Count");
-            addAtom = AddAtomW(L"Add");
-            removeAtom = AddAtomW(L"Remove");
+            auto existingName = std::find_if(names.begin(), names.end(), [&](auto& value) {
+                    return CompareStringW(lcid, NORM_IGNORECASE, value.data(), value.size(), name.data(), name.size()) == CSTR_EQUAL;
+                 });
+
+            if (existingName != names.end())
+            {
+                return static_cast<DISPID>(std::distance(names.begin(), existingName));
+            }
+
+            return DISPID_UNKNOWN;
         }
 
-        ~VectorCollection()
+        VectorCollection(std::vector<std::unique_ptr<TObject, void(*)(TObject*)>> &items) : items(items)
         {
         }
 
@@ -365,21 +356,15 @@ namespace win32::com
 
         [[maybe_unused]] ULONG __stdcall AddRef() noexcept override
         {
-            countAtom  = AddAtomW(L"Count");
-            addAtom = AddAtomW(L"Add");
-            removeAtom = AddAtomW(L"Remove");
-            return ++refCount;
+            return ComAllocatorAware::AddRef();
         }
 
         [[maybe_unused]] ULONG __stdcall Release() noexcept override
         {
-            DeleteAtom(countAtom);
-            DeleteAtom(addAtom);
-            DeleteAtom(removeAtom);
-            return --refCount;
+            return ComAllocatorAware::Release();
         }
 
-        HRESULT __stdcall GetIDsOfNames(const GUID& riid, wchar_t **rgszNames, UINT cNames, LCID  lcid, DISPID  *rgDispId) noexcept override
+        HRESULT __stdcall GetIDsOfNames(const GUID& riid, wchar_t **rgszNames, UINT cNames, LCID lcid, DISPID  *rgDispId) noexcept override
         {
             assert(IsEqualGUID(riid, IID_NULL));
 
@@ -387,14 +372,6 @@ namespace win32::com
             {
                 assert(rgszNames);
 
-                auto atom = FindAtomW(rgszNames[0]);
-
-                if (atom)
-                {
-                    *rgDispId = atom;
-                    return S_OK;
-                }
-        
                 std::wstring_view temp = rgszNames[0];
 
                 constexpr static auto NewEnum = std::wstring_view(L"_NewEnum");
@@ -413,7 +390,12 @@ namespace win32::com
                     return S_OK;
                 }
 
-                *rgDispId = DISPID_UNKNOWN;
+                *rgDispId = DispIdOf(temp);
+
+                if (*rgDispId != DISPID_UNKNOWN)
+                {
+                    return S_OK;
+                }
             }
 
             return DISP_E_UNKNOWNNAME;
@@ -440,16 +422,16 @@ namespace win32::com
                 return DISP_E_PARAMNOTOPTIONAL;
             }
 
-            OleVariant temp;
+            Variant temp;
 
-            if (dispIdMember == addAtom && wFlags & DISPATCH_METHOD)
+            if (dispIdMember == DispIdOf(L"Add") && wFlags & DISPATCH_METHOD)
             {
                 if (pDispParams->cArgs != 1)
                 {
                     return DISP_E_BADPARAMCOUNT;
                 }
 
-                auto changed = VariantChangeType(&temp.variant, pDispParams->rgvarg, 0, VT_UNKNOWN);
+                auto changed = VariantChangeType(&temp, pDispParams->rgvarg, 0, VT_UNKNOWN);
 
                 if (changed != S_OK)
                 {
@@ -457,17 +439,17 @@ namespace win32::com
                     return changed;
                 }
 
-                return Add(temp.variant, *pVarResult);
+                return Add(temp, *pVarResult);
             }
 
-            if (dispIdMember == removeAtom && wFlags & DISPATCH_METHOD)
+            if (dispIdMember == DispIdOf(L"Remove") && wFlags & DISPATCH_METHOD)
             {
                 if (pDispParams->cArgs != 1)
                 {
                     return DISP_E_BADPARAMCOUNT;
                 }
 
-                auto changed = VariantChangeType(&temp.variant, pDispParams->rgvarg, 0, VT_UI4);
+                auto changed = VariantChangeType(&temp, pDispParams->rgvarg, 0, VT_UI4);
 
                 if (changed != S_OK)
                 {
@@ -475,10 +457,10 @@ namespace win32::com
                     return changed;
                 }
 
-                return Remove(temp.variant, *pVarResult);
+                return Remove(temp, *pVarResult);
             }
 
-            if (dispIdMember == countAtom && (wFlags & DISPATCH_METHOD || wFlags & DISPATCH_PROPERTYGET))
+            if (dispIdMember == DispIdOf(L"Count") && (wFlags & DISPATCH_METHOD || wFlags & DISPATCH_PROPERTYGET))
             {
                 return Count(*pVarResult);
             }
@@ -490,7 +472,7 @@ namespace win32::com
                     return DISP_E_BADPARAMCOUNT;
                 }
 
-                auto changed = VariantChangeType(&temp.variant, pDispParams->rgvarg, 0, VT_UI4);
+                auto changed = VariantChangeType(&temp, pDispParams->rgvarg, 0, VT_UI4);
 
                 if (changed != S_OK)
                 {
@@ -498,7 +480,7 @@ namespace win32::com
                     return changed;
                 }
 
-                return Item(temp.variant, *pVarResult);
+                return Item(temp, *pVarResult);
             }
 
             if (dispIdMember == DISPID_NEWENUM && (wFlags & DISPATCH_METHOD || wFlags & DISPATCH_PROPERTYGET))

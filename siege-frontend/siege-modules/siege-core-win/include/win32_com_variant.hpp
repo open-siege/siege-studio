@@ -2,6 +2,7 @@
 #define WIN32_COM_VARIANT_HPP
 
 #include <oaidl.h>
+#include <cassert>
 
 namespace win32::com
 {
@@ -17,7 +18,6 @@ namespace win32::com
             assert(::VariantClear(this) == S_OK);
         }
     };
-}
 }
 
 #endif

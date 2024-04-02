@@ -5,6 +5,8 @@
 #include <win32_com_server.hpp>
 #include <cassert>
 #include <sstream>
+#include <vector>
+#include <memory>
 #include <oleacc.h>
 
 struct bitmap_window
@@ -13,7 +15,7 @@ struct bitmap_window
 
     win32::hwnd_t self;
 
-    std::vector<win32::com::Releasable<IStream>::UniquePtr> documents;
+    std::vector<std::unique_ptr<IStream, void(*)(IStream*)>> documents;
 
     win32::com::VectorCollection<IStream> collection;
 
