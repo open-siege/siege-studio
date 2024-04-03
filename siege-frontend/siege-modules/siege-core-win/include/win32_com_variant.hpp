@@ -13,6 +13,11 @@ namespace win32::com
             ::VariantInit(this);
         }
 
+        Variant(const ::VARIANT& other) : Variant()
+        {
+            assert(::VariantCopy(this, &other) == S_OK);
+        }
+
         Variant(const Variant& other) : Variant()
         {
             assert(::VariantCopy(this, &other) == S_OK);

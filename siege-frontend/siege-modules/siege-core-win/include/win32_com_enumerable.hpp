@@ -11,12 +11,12 @@
 
 namespace win32::com
 {   
-    void CopyMember(const VARIANT& value, VARIANT& other)
+    inline void CopyMember(const VARIANT& value, VARIANT& other)
     {
-        VariantCopy(&other, &value);
+        other = value;
     }
 
-    void CopyMember(IUnknown* value, IUnknown*&other)
+    inline void CopyMember(IUnknown* value, IUnknown*&other)
     {
         if (!value)
         {
