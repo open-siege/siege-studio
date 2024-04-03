@@ -23,12 +23,7 @@ namespace win32::com
 		});
 	}
 
-	HRESULT init_com()
-	{
-		thread_local HRESULT result = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-		thread_local auto com_handle = as_unique<HRESULT>(&result, [](auto*){ CoUninitialize(); });
-		return result;
-	}
+	HRESULT init_com();
 }
 
 #endif

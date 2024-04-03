@@ -1,5 +1,5 @@
-#ifndef WIN32_COM_VARIANT_HPP
-#define WIN32_COM_VARIANT_HPP
+#ifndef WIN32_STREAM_BUF_HPP
+#define WIN32_STREAM_BUF_HPP
 
 #include <istream>
 #include <memory>
@@ -7,15 +7,16 @@
 
 namespace win32::com
 {
+    template<typename IStreamContainer = std::unique_ptr<IStream, void(*)(IStream*)>>
     class IStreamBuf : std::streambuf
     {
         
     private:
-        IStream& data;
+        IStreamContainer data;
         std::array<char, 16> read_buffer;
         std::array<char, 16> write_buffer;
     public:
-        IStreamBuf(IStream& data) : data(data)
+        IStreamBuf(IStreamContainer data) : data(data)
         {
             setg(read_buffer.data(), read_buffer.data() + read_buffer.size(), read_buffer.data() + read_buffer.size());
             setp(write_buffer.data() + write_buffer.size(), write_buffer.data() + write_buffer.size());
@@ -115,7 +116,7 @@ namespace win32::com
             return traits_type::eof();
         }
 
-        std::streamsize xsputn( const char_type* s, std::streamsize count) override final
+        std::streamsize xsputn(const char_type* s, std::streamsize count) override final
         {
             ULONG result = 0;
 

@@ -2,12 +2,14 @@
 #define WIN32_COM_SERVER_HPP
 
 #include "win32_com_variant.hpp"
+#include "win32_com.hpp"
 #include <array>
 #include <atomic>
 #include <optional>
 #include <memory>
 #include <string_view>
 #include <vector>
+#include <expected>
 
 namespace win32::com
 {
@@ -225,18 +227,23 @@ namespace win32::com
                 });
     }
 
-    inline void ToVariant(IUnknown* src, VARIANT* dst)
+    inline Variant ToVariant(IUnknown* src)
     {
-        dst->vt = VT_UNKNOWN;
+        Variant dst;
+        dst.vt = VT_UNKNOWN;
         src->AddRef();
-        dst->punkVal = src;
+        dst.punkVal = src;
+        return dst;
     }
 
-    inline void ToVariant(IDispatch* src, VARIANT* dst)
+    inline Variant ToVariant(IDispatch* src)
     {
-        dst->vt = VT_DISPATCH;
+        Variant dst;
+        dst.vt = VT_DISPATCH;
         src->AddRef();
-        dst->pdispVal = src;
+        dst.pdispVal = src;
+
+        return dst;
     }
 
     template<typename TEnum>
@@ -293,8 +300,7 @@ namespace win32::com
 
             for (auto i = 0; i < fetched; ++i)
             {
-                VariantInit(&rgVar[i]);
-                ToVariant(temp[i], &rgVar[i]);
+                rgVar[i] = ToVariant(temp[i]);
                 temp[i]->Release();
             }
 
@@ -434,8 +440,6 @@ namespace win32::com
                 return DISP_E_PARAMNOTOPTIONAL;
             }
 
-            Variant temp;
-
             if (dispIdMember == DispIdOf(L"Add") && wFlags & DISPATCH_METHOD)
             {
                 if (pDispParams->cArgs != 1)
@@ -443,15 +447,15 @@ namespace win32::com
                     return DISP_E_BADPARAMCOUNT;
                 }
 
-                auto changed = VariantChangeType(&temp, pDispParams->rgvarg, 0, VT_UNKNOWN);
+                auto result = Add(*pDispParams->rgvarg);
 
-                if (changed != S_OK)
+                if (result)
                 {
-                    *puArgErr = 0;
-                    return changed;
+                    *pVarResult = *result;
+                    return S_OK;
                 }
 
-                return Add(temp, *pVarResult);
+                return result.error();
             }
 
             if (dispIdMember == DispIdOf(L"Remove") && wFlags & DISPATCH_METHOD)
@@ -461,20 +465,28 @@ namespace win32::com
                     return DISP_E_BADPARAMCOUNT;
                 }
 
-                auto changed = VariantChangeType(&temp, pDispParams->rgvarg, 0, VT_UI4);
+                auto result = Remove(*pDispParams->rgvarg);
 
-                if (changed != S_OK)
+                if (result)
                 {
-                    *puArgErr = 0;
-                    return changed;
+                    *pVarResult = *result;
+                    return S_OK;
                 }
 
-                return Remove(temp, *pVarResult);
+                return result.error();
             }
 
             if (dispIdMember == DispIdOf(L"Count") && (wFlags & DISPATCH_METHOD || wFlags & DISPATCH_PROPERTYGET))
             {
-                return Count(*pVarResult);
+                auto result = Count();
+
+                if (result)
+                {
+                    *pVarResult = *result;
+                    return S_OK;
+                }
+
+                return result.error();
             }
 
             if (dispIdMember == DISPID_VALUE && wFlags & DISPATCH_METHOD)
@@ -484,80 +496,105 @@ namespace win32::com
                     return DISP_E_BADPARAMCOUNT;
                 }
 
-                auto changed = VariantChangeType(&temp, pDispParams->rgvarg, 0, VT_UI4);
+                auto result = Item(*pDispParams->rgvarg);
 
-                if (changed != S_OK)
+                if (result)
                 {
-                    *puArgErr = 0;
-                    return changed;
+                    *pVarResult = *result;
+                    return S_OK;
                 }
 
-                return Item(temp, *pVarResult);
+                return result.error();
             }
 
             if (dispIdMember == DISPID_NEWENUM && (wFlags & DISPATCH_METHOD || wFlags & DISPATCH_PROPERTYGET))
             {
-                return NewEnum(*pVarResult);
+                auto result = NewEnum();
+
+                if (result)
+                {
+                    *pVarResult = *result;
+                    return S_OK;
+                }
+
+                return result.error();
             }
 
             return DISP_E_MEMBERNOTFOUND;
         }
 
-        HRESULT Add(VARIANTARG& value, VARIANT& result) noexcept
+        std::expected<Variant, HRESULT> Add(Variant value) noexcept
         {
+            auto changed = VariantChangeType(&value, &value, 0, VT_UNKNOWN);
+
+            if (changed != S_OK)
+            {
+                return std::unexpected(changed);
+            }
+
+            Variant result;
             result.vt = VT_EMPTY;
             TObject* temp = nullptr;
 
             if ((value.vt == VT_UNKNOWN || value.vt == VT_DISPATCH) && value.punkVal->QueryInterface<TObject>(&temp) == S_OK)
             {
-               items.emplace_back(temp, [](TObject* self) { 
-                   if (self)
-                   {
-                    self->Release();
-                   }
-                   
-             });
+               items.emplace_back(com::as_unique<TObject>(temp));
             }
 
-            return S_OK;
+            return result;
         }
 
-        HRESULT Remove(VARIANTARG& value, VARIANT& result) noexcept
+        std::expected<Variant, HRESULT> Remove(Variant value) noexcept
         {
-            auto begin = items.begin() + result.uintVal;
+            auto changed = VariantChangeType(&value, &value, 0, VT_UI4);
+
+            if (changed != S_OK)
+            {
+                return std::unexpected(changed);
+            }
+
+            auto begin = items.begin() + value.uintVal;
             items.erase(begin);
-            result.vt = VT_EMPTY;
-            return S_OK;
+            return Variant();
         }
 
-        HRESULT Count(VARIANT& result) noexcept
+        std::expected<Variant, HRESULT> Count() noexcept
         {
+            Variant result;
             result.vt = VT_I4;
             result.intVal = int(items.size());
-            return S_OK;
+            return result;
         }
 
-        HRESULT Item(VARIANTARG& value, VARIANT& result) noexcept
+        std::expected<Variant, HRESULT> Item(Variant value) noexcept
         {
+            auto changed = VariantChangeType(&value, &value, 0, VT_UI4);
+
+            if (changed != S_OK)
+            {
+                return std::unexpected(changed);
+            }
+
             std::size_t index = std::size_t(value.uintVal); 
 
             if (items.size() > index)
             {
-                ToVariant(items[index].get(), &result);
+                return ToVariant(items[index].get());
             }
 
-            return S_OK;
+            return Variant();
         }
 
-        HRESULT NewEnum(VARIANT& result) noexcept
+        std::expected<Variant, HRESULT> NewEnum() noexcept
         {
             auto enumerator = MakeRangeEnumerator<IEnumUnknown, IUnknown>(items.begin(), items.begin(), items.end());
             auto item = std::make_unique<VariantEnumeratorAdapter<decltype(enumerator)::element_type>>(std::move(enumerator));
 
+            Variant result;
             result.vt = VT_UNKNOWN;
             result.punkVal = static_cast<IEnumVARIANT*>(item.release());
 
-            return S_OK;
+            return result;
         }
     };
 }
