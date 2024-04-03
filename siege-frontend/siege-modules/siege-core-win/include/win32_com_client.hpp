@@ -216,6 +216,21 @@ namespace win32::com
 
             return returnValue;
         }
+
+        template<typename IEnum = IEnumVARIANT>
+        auto end()
+        {
+            auto count = Count();
+
+            if (count)
+            {
+                auto newEnum = NewEnum<IEnum>();
+                return EnumeratorIterator<Variant, IEnum, decltype(newEnum)::value_type>(std::move(*newEnum), *count);
+            }
+
+            return IEnumerable::end<IEnum>();
+            
+        }
     };
 
 
