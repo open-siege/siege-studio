@@ -1,0 +1,5 @@
+#include "win32_com_client.hpp"
+#include "win32_com_variant.hpp"
+#include "win32_property_variant.hpp"
+#include "win32_stream_buf.hpp"
+#include "win32_com_xml.hpp"

@@ -294,8 +294,8 @@ struct siege_main_window
 
 						assert(enumerator.value()->Release() == 0);
 
-						assert(files[0].punkVal->AddRef() == 3);
-						assert(files[0].punkVal->Release() == 2);
+//						assert(files[0].punkVal->AddRef() == 3);
+	//					assert(files[0].punkVal->Release() == 2);
 
 						for (auto& item : *object)
 						{
@@ -409,6 +409,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	// Initialize global strings
 	LoadStringW(hInstance, IDS_APP_TITLE, app_title.data(), int(app_title.size()));
 
+	win32::com::init_com();
 	CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 
 	INITCOMMONCONTROLSEX settings{

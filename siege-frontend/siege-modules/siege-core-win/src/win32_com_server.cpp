@@ -1,6 +1,5 @@
 #include <set>
 #include "win32_com_server.hpp"
-#include "win32_property_variant.hpp"
 
 namespace win32::com
 {

@@ -4,11 +4,12 @@
 #include <expected>
 #include <memory>
 #include <propsys.h>
+#include "win32_com.hpp"
 
 namespace win32::com
 {
     template <typename TCollection>
-    std::unique_ptr<TCollection, void(*)(TCollection*)> PSCreateMemoryPropertyStore()
+    std::expected<std::unique_ptr<TCollection, void(*)(TCollection*)>, HRESULT> PSCreateMemoryPropertyStore()
     {
         TCollection* result = nullptr;
         auto hresult = PSCreateMemoryPropertyStore(IID_PPV_ARGS(&result));
@@ -18,9 +19,7 @@ namespace win32::com
             return std::unexpected(hresult);
         }
 
-        return std::unique_ptr<TCollection, void(*)(TCollection*)>(result, [](auto* object) {
-            assert(object->Release() >= 0);
-        });
+        return as_unique<TCollection>(result);
     }
 
     struct PropVariant : ::PROPVARIANT
@@ -29,6 +28,12 @@ namespace win32::com
             : ::PROPVARIANT{}
         {
         }
+
+        PropVariant(const PropVariant& other)
+        {
+            assert(::PropVariantCopy(this, &other) == S_OK);
+        }
+
         ~PropVariant() noexcept
         {
             assert(::PropVariantClear(this) == S_OK);
