@@ -21,6 +21,7 @@
 #include <oleacc.h>
 #include <shobjidl.h> 
 #include "win32_com_client.hpp"
+#include "win32_dialogs.hpp"
 //#include "http_client.hpp"
 
 std::array<wchar_t, 100> app_title;
@@ -329,27 +330,21 @@ struct siege_main_window
 					
 				if (command.identifier == 100)
 				{
-					IFileOpenDialog *pFileOpen;
-					
-					auto hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL, IID_PPV_ARGS(&pFileOpen));
+					auto dialog = win32::com::CreateFileDialog();
 
-					if (hr == S_OK)
+					if (dialog)
 					{
-						auto handle = win32::com::as_unique<IFileOpenDialog>(pFileOpen);
-						hr = handle->Show(nullptr);
+						auto result = dialog.value()->Show(nullptr);
 
-						IShellItem* item;
-
-						if (handle->GetResult(&item) == S_OK)
+						if (result == S_OK)
 						{
-							auto autoItem = win32::com::as_unique<IShellItem>(item);
+							auto item = dialog.value()->GetResult();
 
-							wchar_t* pszFilePath;
-		                    hr = autoItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
-
-							if (hr == S_OK)
+							if (item)
 							{
-								CoTaskMemFree(pszFilePath);							
+								auto path = item.value()->GetFileSysPath();
+
+								OutputDebugStringW(path->c_str());
 							}
 						}
 					}
