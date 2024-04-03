@@ -19,6 +19,7 @@
 #include "framework.h"
 #include "Resource.h"
 #include <oleacc.h>
+#include <shobjidl.h> 
 #include "win32_com_client.hpp"
 //#include "http_client.hpp"
 
@@ -326,6 +327,34 @@ struct siege_main_window
 					return SendMessageW(command.sender, win32::command_message::id, command.wparam(), command.lparam());
 				}
 					
+				if (command.identifier == 100)
+				{
+					IFileOpenDialog *pFileOpen;
+					
+					auto hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL, IID_PPV_ARGS(&pFileOpen));
+
+					if (hr == S_OK)
+					{
+						auto handle = win32::com::as_unique<IFileOpenDialog>(pFileOpen);
+						hr = handle->Show(nullptr);
+
+						IShellItem* item;
+
+						if (handle->GetResult(&item) == S_OK)
+						{
+							auto autoItem = win32::com::as_unique<IShellItem>(item);
+
+							wchar_t* pszFilePath;
+		                    hr = autoItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+
+							if (hr == S_OK)
+							{
+								CoTaskMemFree(pszFilePath);							
+							}
+						}
+					}
+				}
+
 				if (command.identifier == IDM_ABOUT)
 				{
 					auto dialog = win32::MakeDialogTemplate(
@@ -410,7 +439,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	LoadStringW(hInstance, IDS_APP_TITLE, app_title.data(), int(app_title.size()));
 
 	win32::com::init_com();
-	CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 
 	INITCOMMONCONTROLSEX settings{
 		.dwSize{sizeof(INITCOMMONCONTROLSEX)}
