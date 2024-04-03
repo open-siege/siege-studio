@@ -330,7 +330,7 @@ struct siege_main_window
 					
 				if (command.identifier == 100)
 				{
-					auto dialog = win32::com::CreateFileDialog();
+					auto dialog = win32::com::CreateFileOpenDialog();
 
 					if (dialog)
 					{

@@ -43,7 +43,7 @@ namespace win32::com
 		}
 	};
 
-	std::expected<std::unique_ptr<IFileOpenDialogEx, void(*)(IFileOpenDialogEx*)>, HRESULT> CreateFileDialog()
+	std::expected<std::unique_ptr<IFileOpenDialogEx, void(*)(IFileOpenDialogEx*)>, HRESULT> CreateFileOpenDialog()
 	{
 		IFileOpenDialogEx *pFileOpen;
 					
@@ -55,6 +55,20 @@ namespace win32::com
 		}
 
 		return win32::com::as_unique<IFileOpenDialogEx>(pFileOpen);
+	}
+
+	std::expected<std::unique_ptr<IFileSaveDialog, void(*)(IFileSaveDialog*)>, HRESULT> CreateFileSaveDialog()
+	{
+		IFileSaveDialog *pFileOpen;
+					
+		auto hr = CoCreateInstance(CLSID_FileSaveDialog, nullptr, CLSCTX_ALL, __uuidof(::IFileSaveDialog), (void**)&pFileOpen);
+
+		if (hr != S_OK)
+		{
+			return std::unexpected(hr);
+		}
+
+		return win32::com::as_unique<IFileSaveDialog>(pFileOpen);
 	}
 }
 
