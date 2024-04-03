@@ -329,7 +329,19 @@ namespace win32::com
             std::wstring_view(L"Remove"),  
         }};
 
-        constexpr static DISPID DispIdOf(std::wstring_view name, LCID lcid = LOCALE_USER_DEFAULT)
+        constexpr static DISPID DispIdOf(std::wstring_view name)
+        {
+            auto existingName = std::find(names.begin(), names.end(), name);
+
+            if (existingName != names.end())
+            {
+                return static_cast<DISPID>(std::distance(names.begin(), existingName));
+            }
+
+            return DISPID_UNKNOWN;
+        }
+
+        constexpr static DISPID DispIdOf(std::wstring_view name, LCID lcid)
         {
             auto existingName = std::find_if(names.begin(), names.end(), [&](auto& value) {
                     return CompareStringW(lcid, NORM_IGNORECASE, value.data(), value.size(), name.data(), name.size()) == CSTR_EQUAL;
@@ -390,7 +402,7 @@ namespace win32::com
                     return S_OK;
                 }
 
-                *rgDispId = DispIdOf(temp);
+                *rgDispId = DispIdOf(temp, lcid);
 
                 if (*rgDispId != DISPID_UNKNOWN)
                 {
