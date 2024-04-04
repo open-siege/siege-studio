@@ -10,6 +10,8 @@
 #include <string_view>
 #include <vector>
 #include <expected>
+#include <ocidl.h>
+#include <olectl.h>
 
 namespace win32::com
 {
@@ -51,30 +53,73 @@ namespace win32::com
         return std::nullopt;
     }
 
-    template <typename Iter>
-    void Copy(IUnknown **output, Iter iter)
-    {
-        (*iter)->QueryInterface<IUnknown>(output);
-    }
 
-    template <typename Iter>
-    void Copy(VARIANT *output, Iter iter)
+    template<IUnknown type>
+    struct EnumTraits
     {
-        VariantCopy(output, iter->get());
-    }
+        using PtrType = IUnknown*;
+        using OutType = IUnknown**;
+        using EnumType = IEnumUnknown;
+        
+        template <typename Iter>
+        static void Copy(IUnknown **output, Iter iter)
+        {
+            (*iter)->QueryInterface<IUnknown>(output);
+        }
+    };
 
-    template<typename TInterface, typename TOut, typename TIter>
-    struct RangeEnumerator : TInterface, ComAllocatorAware
+    template<IConnectionPoint type>
+    struct EnumTraits
+    {
+        using PtrType = IConnectionPoint*;
+        using OutType = IConnectionPoint**;
+        using EnumType = IEnumConnectionPoints;
+
+        template <typename Iter>
+        static void Copy(IConnectionPoint **output, Iter iter)
+        {
+            (*iter)->QueryInterface<IConnectionPoint>(output);
+        }
+    };
+
+    template<VARIANT type>
+    struct EnumTraits
+    {
+        using PtrType = VARIANT*;
+        using OutType = VARIANT*;
+        using EnumType = IEnumVARIANT;
+
+        template <typename Iter>
+        static void Copy(VARIANT *output, Iter iter)
+        {
+            VariantCopy(output, iter->get());
+        }
+    };
+
+    template<CONNECTDATA type>
+    struct EnumTraits
+    {
+        using PtrType = CONNECTDATA*;
+        using OutType = CONNECTDATA*;
+        using EnumType = IEnumConnections;
+
+        template <typename Iter>
+        static void Copy(CONNECTDATA *output, Iter iter)
+        {
+            output->dwCookie = iter->dwCookie;
+            output->pUnk = iter->pUnk;
+            output->pUnk->AddRef();
+        }
+    };
+
+    template<typename TElem, typename TIter>
+    struct RangeEnumerator : EnumTraits<TElem>::EnumType, ComAllocatorAware
     {
         IUnknown* owner;
         
         TIter begin;
         TIter current;
         TIter end;
-
-        using EnumeratorType = TInterface;
-        using ElementType = TOut;
-        using ElementPtrType = TOut*;
 
         RangeEnumerator(TIter begin, TIter current, TIter end) : 
             owner(nullptr), 
@@ -129,9 +174,9 @@ namespace win32::com
             return ComAllocatorAware::Release();
         }
 
-        HRESULT __stdcall Clone(TInterface** other) noexcept override
+        HRESULT __stdcall Clone(EnumTraits<TElem>::EnumType** other) noexcept override
         {
-            auto temp = std::make_unique<RangeEnumerator<TInterface, TOut, TIter>>(begin, current, end);
+            auto temp = std::make_unique<RangeEnumerator<TElem, TIter>>(begin, current, end);
             *other = static_cast<TInterface*>(temp.release());
 
             return S_OK;
@@ -139,10 +184,10 @@ namespace win32::com
 
         auto Clone()
         {
-            auto* temp = new RangeEnumerator<TInterface, TOut, TIter>(begin, current, end);
+            auto* temp = new RangeEnumerator<TElem, TIter>(begin, current, end);
             return std::unique_ptr<
-                RangeEnumerator<TInterface, TOut, TIter>, 
-                void(*)(RangeEnumerator<TInterface, TOut, TIter>*)
+                RangeEnumerator<TElem, TIter>, 
+                void(*)(RangeEnumerator<TElem, TIter>*)
             >
                 (temp, [](auto* self) {
                         if (self)
@@ -172,7 +217,7 @@ namespace win32::com
             return S_OK;
         }
 
-        HRESULT __stdcall Next(ULONG celt, TOut **rgVar, ULONG *pCeltFetched) noexcept override
+        HRESULT __stdcall Next(ULONG celt, EnumTraits<TElem>::OutType rgVar, ULONG *pCeltFetched) noexcept override
         {
             if (rgVar == nullptr)
             {
@@ -195,7 +240,7 @@ namespace win32::com
 
             for (auto iter = first; iter != last; std::advance(iter, 1))
             {
-                Copy(&rgVar[count], iter);
+                EnumTraits<TElem>::Copy(&rgVar[count], iter);
                 count++;   
             }
 
@@ -211,13 +256,13 @@ namespace win32::com
     };
 
     
-    template<typename TInterface, typename TOut, typename TIter>
+    template<typename TElem, typename TIter>
     auto MakeRangeEnumerator(TIter begin, TIter current, TIter end)
     {
-        auto* temp = new RangeEnumerator<TInterface, TOut, TIter>(begin, current, end);
+        auto* temp = new RangeEnumerator<TElem, TIter>(begin, current, end);
         return std::unique_ptr<
-            RangeEnumerator<TInterface, TOut, TIter>, 
-            void(*)(RangeEnumerator<TInterface, TOut, TIter>*)
+            RangeEnumerator<TElem, TIter>, 
+            void(*)(RangeEnumerator<TElem, TIter>*)
         >
             (temp, [](auto* self) {
                     if (self)
@@ -321,6 +366,183 @@ namespace win32::com
         {
             return enumerator->Reset();
         }
+    };
+
+    struct ConnectData : ::CONNECTDATA
+    {
+        std::unique_ptr<IDispatch, void(*)(IDispatch*)> sink;
+
+        ConnectData(std::unique_ptr<IDispatch, void(*)(IDispatch*)> sink, DWORD cookie) : 
+            ::CONNECTDATA{static_cast<IUnknown*>(sink.get()), cookie}, sink(std::move(sink))
+        {
+        
+        }
+    };
+
+
+    struct ConnectionPoint : IConnectionPoint, ComAllocatorAware
+    {
+        std::unique_ptr<IConnectionPointContainer, void(*)(IConnectionPointContainer*)> container; 
+        std::vector<ConnectData> callbacks;
+
+        ConnectionPoint(std::unique_ptr<IConnectionPointContainer, void(*)(IConnectionPointContainer*)> container) : container(std::move(container))
+        {
+            callbacks.reserve(4);
+        }
+
+        HRESULT __stdcall QueryInterface(const GUID& riid, void** ppvObj) noexcept override
+        {
+            return ComCast<IUnknown, IConnectionPoint>(*this, riid, ppvObj)
+                .or_else([&]() { return ComCast<IConnectionPoint>(*this, riid, ppvObj); })
+                .value_or(E_NOINTERFACE);
+        }
+
+        [[maybe_unused]] ULONG __stdcall AddRef() noexcept override
+        {
+            return ComAllocatorAware::AddRef();
+        }
+
+        [[maybe_unused]] ULONG __stdcall Release() noexcept override
+        {
+            return ComAllocatorAware::Release();
+        }
+
+        HRESULT Advise(IUnknown *pUnkSink, DWORD *pdwCookie) noexcept override
+        {
+            if (!(pUnkSink || pdwCookie))
+            {
+                return E_INVALIDARG;
+            }
+
+            IDispatch* dispatch = nullptr;
+
+            if (pUnkSink->QueryInterface<IDispatch>(&dispatch) == S_OK)
+            {
+                DWORD cookie = callbacks.size() + 1;
+
+                if (!callbacks.empty())
+                {
+                    cookie = callbacks.rbegin()->dwCookie + 1;
+                }
+
+                auto& back = callbacks.emplace_back(as_unique(dispatch), cookie);
+                *pdwCookie = back.dwCookie;               
+                return S_OK;
+            }
+
+            return CONNECT_E_CANNOTCONNECT;
+        }
+
+        HRESULT Unadvise(DWORD dwCookie) override
+        {
+            auto result = std::find_if(callbacks.begin(), callbacks.end(), [&](auto& callback) {
+                    return callback.dwCookie == dwCookie;
+            });
+
+            if (result == callbacks.end())
+            {
+                return E_POINTER;
+            }
+
+            callbacks.erase(result);
+
+            return S_OK;
+        }
+
+        HRESULT GetConnectionInterface(IID* pIID) override
+        {
+            if (!pIID)
+            {
+                return E_POINTER;
+            }
+
+            *pIID = __uuidof(IDispatch);
+
+            return S_OK;
+        }
+
+        HRESULT GetConnectionPointContainer(IConnectionPointContainer** ppCPC) override
+        {
+            if (!ppCPC)
+            {
+                return E_POINTER;
+            }
+
+            container->AddRef();
+            *ppCPC = container.get();
+
+            return S_OK;
+        }
+
+        HRESULT EnumConnections(IEnumConnections** ppEnum) override
+        {
+            if (!ppEnum)
+            {
+                return E_POINTER;
+            }
+
+            auto enumerator = MakeRangeEnumerator<CONNECTDATA>(callbacks.begin(), callbacks.begin(), callbacks.end());
+            *ppEnum = static_cast<IEnumConnections*>(enumerator.release());
+
+            return S_OK;
+        }
+    };
+
+    struct ConnectionPointContainer : IConnectionPointContainer, ComAllocatorAware
+    {
+        std::vector<std::unique_ptr<IConnectionPoint, void(*)(IConnectionPoint*)>> points;
+    
+        HRESULT __stdcall QueryInterface(const GUID& riid, void** ppvObj) noexcept override
+        {
+            return ComCast<IUnknown, IConnectionPointContainer>(*this, riid, ppvObj)
+                .or_else([&]() { return ComCast<IConnectionPointContainer>(*this, riid, ppvObj); })
+                .value_or(E_NOINTERFACE);
+        }
+
+        [[maybe_unused]] ULONG __stdcall AddRef() noexcept override
+        {
+            return ComAllocatorAware::AddRef();
+        }
+
+        [[maybe_unused]] ULONG __stdcall Release() noexcept override
+        {
+            return ComAllocatorAware::Release();
+        }
+
+        HRESULT EnumConnectionPoints(IEnumConnectionPoints **ppEnum) noexcept override
+        {
+            if (!ppEnum)
+            {
+                return E_POINTER;
+            }
+
+            auto enumerator = MakeRangeEnumerator<IConnectionPoint>(points.begin(), points.begin(), points.end());
+            *ppEnum = static_cast<IEnumConnectionPoints*>(enumerator.release());
+
+            return S_OK;
+        }
+
+        HRESULT FindConnectionPoint(REFIID riid, IConnectionPoint **ppCP) noexcept override
+        {
+            if (!ppCP)
+            {
+                return E_POINTER;
+            }
+
+            auto result = std::find_if(points.begin(), points.end(), [&](auto& item) {
+                IID temp;
+
+                return item->GetConnectionInterface(&temp) == S_OK && IsEqualGUID(riid, temp);
+            });
+
+            if (result == points.end())
+            {
+                return CONNECT_E_NOCONNECTION;
+            }
+
+            return S_OK;
+        }
+
     };
 
     template<typename TObject>
@@ -587,7 +809,7 @@ namespace win32::com
 
         std::expected<Variant, HRESULT> NewEnum() noexcept
         {
-            auto enumerator = MakeRangeEnumerator<IEnumUnknown, IUnknown>(items.begin(), items.begin(), items.end());
+            auto enumerator = MakeRangeEnumerator<IUnknown>(items.begin(), items.begin(), items.end());
             auto item = std::make_unique<VariantEnumeratorAdapter<decltype(enumerator)::element_type>>(std::move(enumerator));
 
             Variant result;
