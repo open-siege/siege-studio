@@ -7,6 +7,7 @@
 #include <atomic>
 #include <optional>
 #include <memory>
+#include <type_traits>
 #include <string_view>
 #include <vector>
 #include <expected>
@@ -53,14 +54,28 @@ namespace win32::com
         return std::nullopt;
     }
 
-
-    template<IUnknown type>
-    struct EnumTraits
+    template<typename InterfaceType = IUnknown>
+    struct Interface_EnumTraits
     {
-        using PtrType = IUnknown*;
-        using OutType = IUnknown**;
+        using ElemType = InterfaceType;
+        using PtrType = std::add_pointer_t<ElemType>;
+        using OutType = std::add_pointer_t<PtrType>;
+    };
+
+    template<typename StructType>
+    struct Struct_EnumTraits
+    {
+        using ElemType = StructType;
+        using PtrType = std::add_pointer_t<ElemType>;
+        using OutType = PtrType;
+    };
+
+    template<typename InterfaceType = IUnknown>
+    struct IUnknown_EnumTraits : Interface_EnumTraits<InterfaceType>
+    {
         using EnumType = IEnumUnknown;
-        
+        using OutType = std::add_pointer_t<IUnknown*>;
+
         template <typename Iter>
         static void Copy(IUnknown **output, Iter iter)
         {
@@ -68,11 +83,8 @@ namespace win32::com
         }
     };
 
-    template<IConnectionPoint type>
-    struct EnumTraits
+    struct IConnectionPoint_EnumTraits : Interface_EnumTraits<IConnectionPoint>
     {
-        using PtrType = IConnectionPoint*;
-        using OutType = IConnectionPoint**;
         using EnumType = IEnumConnectionPoints;
 
         template <typename Iter>
@@ -81,13 +93,12 @@ namespace win32::com
             (*iter)->QueryInterface<IConnectionPoint>(output);
         }
     };
-
-    template<VARIANT type>
-    struct EnumTraits
+    
+    template<typename TVariant = VARIANT>
+    struct VARIANT_EnumTraits : Struct_EnumTraits<TVariant>
     {
-        using PtrType = VARIANT*;
-        using OutType = VARIANT*;
         using EnumType = IEnumVARIANT;
+        using OutType = std::add_pointer_t<VARIANT>;
 
         template <typename Iter>
         static void Copy(VARIANT *output, Iter iter)
@@ -96,12 +107,11 @@ namespace win32::com
         }
     };
 
-    template<CONNECTDATA type>
-    struct EnumTraits
+    template<typename TConnectData = CONNECTDATA>
+    struct CONNECTDATA_EnumTraits : Struct_EnumTraits<TConnectData>
     {
-        using PtrType = CONNECTDATA*;
-        using OutType = CONNECTDATA*;
         using EnumType = IEnumConnections;
+        using OutType = std::add_pointer_t<CONNECTDATA>;
 
         template <typename Iter>
         static void Copy(CONNECTDATA *output, Iter iter)
@@ -112,9 +122,13 @@ namespace win32::com
         }
     };
 
-    template<typename TElem, typename TIter>
-    struct RangeEnumerator : EnumTraits<TElem>::EnumType, ComAllocatorAware
+    template<typename TEnumTraits, typename TIter>
+    struct RangeEnumerator : TEnumTraits::EnumType, ComAllocatorAware
     {
+        using ElemType = TEnumTraits::ElemType;
+        using EnumType = TEnumTraits::EnumType;
+        using OutType = TEnumTraits::OutType;
+
         IUnknown* owner;
         
         TIter begin;
@@ -149,8 +163,8 @@ namespace win32::com
                 return owner->QueryInterface(riid, ppvObj);
             }
 
-            return ComCast<IUnknown, TInterface>(*this, riid, ppvObj)
-                .or_else([&]() { return ComCast<TInterface>(*this, riid, ppvObj); })
+            return ComCast<IUnknown, EnumType>(*this, riid, ppvObj)
+                .or_else([&]() { return ComCast<EnumType>(*this, riid, ppvObj); })
                 .value_or(E_NOINTERFACE);
         }
 
@@ -174,20 +188,20 @@ namespace win32::com
             return ComAllocatorAware::Release();
         }
 
-        HRESULT __stdcall Clone(EnumTraits<TElem>::EnumType** other) noexcept override
+        HRESULT __stdcall Clone(EnumType** other) noexcept override
         {
-            auto temp = std::make_unique<RangeEnumerator<TElem, TIter>>(begin, current, end);
-            *other = static_cast<TInterface*>(temp.release());
+            auto temp = std::make_unique<RangeEnumerator<TEnumTraits, TIter>>(begin, current, end);
+            *other = static_cast<EnumType*>(temp.release());
 
             return S_OK;
         }
 
         auto Clone()
         {
-            auto* temp = new RangeEnumerator<TElem, TIter>(begin, current, end);
+            auto* temp = new RangeEnumerator<TEnumTraits, TIter>(begin, current, end);
             return std::unique_ptr<
-                RangeEnumerator<TElem, TIter>, 
-                void(*)(RangeEnumerator<TElem, TIter>*)
+                RangeEnumerator<TEnumTraits, TIter>, 
+                void(*)(RangeEnumerator<TEnumTraits, TIter>*)
             >
                 (temp, [](auto* self) {
                         if (self)
@@ -217,7 +231,7 @@ namespace win32::com
             return S_OK;
         }
 
-        HRESULT __stdcall Next(ULONG celt, EnumTraits<TElem>::OutType rgVar, ULONG *pCeltFetched) noexcept override
+        HRESULT __stdcall Next(ULONG celt, TEnumTraits::OutType rgVar, ULONG *pCeltFetched) noexcept override
         {
             if (rgVar == nullptr)
             {
@@ -240,7 +254,7 @@ namespace win32::com
 
             for (auto iter = first; iter != last; std::advance(iter, 1))
             {
-                EnumTraits<TElem>::Copy(&rgVar[count], iter);
+                TEnumTraits::Copy(&rgVar[count], iter);
                 count++;   
             }
 
@@ -256,13 +270,13 @@ namespace win32::com
     };
 
     
-    template<typename TElem, typename TIter>
-    auto MakeRangeEnumerator(TIter begin, TIter current, TIter end)
+    template<typename TEnumTraits, typename TIter>
+    auto make_unique_range_enumerator_from_traits(TIter begin, TIter current, TIter end)
     {
-        auto* temp = new RangeEnumerator<TElem, TIter>(begin, current, end);
+        auto* temp = new RangeEnumerator<TEnumTraits, TIter>(begin, current, end);
         return std::unique_ptr<
-            RangeEnumerator<TElem, TIter>, 
-            void(*)(RangeEnumerator<TElem, TIter>*)
+            RangeEnumerator<TEnumTraits, TIter>, 
+            void(*)(RangeEnumerator<TEnumTraits, TIter>*)
         >
             (temp, [](auto* self) {
                     if (self)
@@ -271,6 +285,31 @@ namespace win32::com
                     }
                 });
     }
+
+    template<typename TElement, typename TIter>
+    auto make_unique_range_enumerator(TIter begin, TIter current, TIter end)
+    {
+        if constexpr(std::is_same_v<VARIANT, TElement> || std::is_base_of_v<VARIANT, TElement>)
+        {
+            return make_unique_range_enumerator_from_traits<VARIANT_EnumTraits<TElement>, TIter>(begin, current, end);
+        }
+        else if constexpr(std::is_same_v<CONNECTDATA, TElement> || std::is_base_of_v<CONNECTDATA, TElement>)
+        {
+            return make_unique_range_enumerator_from_traits<CONNECTDATA_EnumTraits<TElement>, TIter>(begin, current, end);
+        }
+        else if constexpr(std::is_same_v<IConnectionPoint, TElement>)
+        {
+            return make_unique_range_enumerator_from_traits<IConnectionPoint_EnumTraits, TIter>(begin, current, end);
+        }
+        else if constexpr(std::is_same_v<IUnknown, TElement> || std::is_base_of_v<IUnknown, TElement>)
+        {
+            return make_unique_range_enumerator_from_traits<IUnknown_EnumTraits<TElement>, TIter>(begin, current, end);
+        }
+        else
+        {
+            return make_unique_range_enumerator_from_traits<Struct_EnumTraits<TElement>, TIter>(begin, current, end);        
+        }
+     }
 
     inline Variant ToVariant(IUnknown* src)
     {
@@ -305,7 +344,7 @@ namespace win32::com
         {
             return ComCast<IUnknown, IEnumVARIANT>(*this, riid, ppvObj)
                 .or_else([&]() { return ComCast<IEnumVARIANT>(*this, riid, ppvObj); })
-                .or_else([&]() { return ComCast<TEnum::EnumeratorType>(*enumerator.get(), riid, ppvObj); })
+                .or_else([&]() { return ComCast<TEnum::EnumType>(*enumerator.get(), riid, ppvObj); })
                 .value_or(E_NOINTERFACE);
         }
 
@@ -337,16 +376,34 @@ namespace win32::com
                 return S_FALSE;
             }
 
-            std::vector<TEnum::ElementPtrType> temp(celt, nullptr);
-
+            
             ULONG fetched = 0;
+            HRESULT result = S_FALSE;
 
-            auto result = enumerator->Next(celt, temp.data(), &fetched);
-
-            for (auto i = 0; i < fetched; ++i)
+            if constexpr (std::is_abstract_v<TEnum::ElemType>)
             {
-                rgVar[i] = ToVariant(temp[i]);
-                temp[i]->Release();
+                std::vector<std::add_pointer_t<TEnum::ElemType>> temp(celt, nullptr);
+                result = enumerator->Next(celt, reinterpret_cast<TEnum::OutType>(temp.data()), &fetched);
+
+                for (auto i = 0; i < fetched; ++i)
+                {
+                    rgVar[i] = ToVariant(temp[i]);
+
+                    if constexpr(std::is_same_v<IUnknown, TEnum::ElemType> || std::is_base_of_v<IUnknown, TEnum::ElemType>)
+                    {
+                        temp[i]->Release();
+                    }
+                }
+            }
+            else
+            {
+                std::vector<TEnum::ElemType> temp(celt);
+                result = enumerator->Next(celt, temp.data(), &fetched);
+
+                for (auto i = 0; i < fetched; ++i)
+                {
+                    rgVar[i] = ToVariant(temp[i]);
+                }
             }
 
             if (pCeltFetched)
@@ -481,7 +538,7 @@ namespace win32::com
                 return E_POINTER;
             }
 
-            auto enumerator = MakeRangeEnumerator<CONNECTDATA>(callbacks.begin(), callbacks.begin(), callbacks.end());
+            auto enumerator = make_unique_range_enumerator<CONNECTDATA>(callbacks.begin(), callbacks.begin(), callbacks.end());
             *ppEnum = static_cast<IEnumConnections*>(enumerator.release());
 
             return S_OK;
@@ -516,7 +573,7 @@ namespace win32::com
                 return E_POINTER;
             }
 
-            auto enumerator = MakeRangeEnumerator<IConnectionPoint>(points.begin(), points.begin(), points.end());
+            auto enumerator = make_unique_range_enumerator<IConnectionPoint>(points.begin(), points.begin(), points.end());
             *ppEnum = static_cast<IEnumConnectionPoints*>(enumerator.release());
 
             return S_OK;
@@ -809,7 +866,8 @@ namespace win32::com
 
         std::expected<Variant, HRESULT> NewEnum() noexcept
         {
-            auto enumerator = MakeRangeEnumerator<IUnknown>(items.begin(), items.begin(), items.end());
+            auto enumerator = make_unique_range_enumerator<TObject>(items.begin(), items.begin(), items.end());
+         
             auto item = std::make_unique<VariantEnumeratorAdapter<decltype(enumerator)::element_type>>(std::move(enumerator));
 
             Variant result;
