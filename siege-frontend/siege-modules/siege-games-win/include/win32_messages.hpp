@@ -81,7 +81,6 @@ namespace win32
 		}
 	};
 
-
 	template<typename TChar = std::byte>
 	struct copy_data_message
 	{
@@ -89,6 +88,14 @@ namespace win32
 		hwnd_t sender;
 		std::size_t data_type;
 		std::span<TChar> data;
+
+		#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+			struct COPYDATASTRUCT {
+			  ULONG_PTR dwData;
+			  DWORD     cbData;
+			  PVOID     lpData;
+			};
+		#endif
 
 		copy_data_message(wparam_t wParam, lparam_t lParam) : 
 			sender(hwnd_t(wParam)), data_type(0), data()
@@ -110,11 +117,24 @@ namespace win32
 	struct pos_changed_message
 	{
 		constexpr static std::uint32_t id = WM_WINDOWPOSCHANGED;
+		
+		#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+		struct WINDOWPOS {
+				  HWND hwnd;
+				  HWND hwndInsertAfter;
+				  int  x;
+				  int  y;
+				  int  cx;
+				  int  cy;
+				  UINT flags;
+				};
+		#endif
 		WINDOWPOS& data;
 		pos_changed_message(wparam_t, lparam_t lParam) : data(*std::bit_cast<WINDOWPOS*>(lParam))
 		{
 		}
 	};
+
 
 	struct non_client_create_message
 	{
@@ -178,7 +198,13 @@ namespace win32
 		hwnd_t sender;
 		int identifier;
 		int notification_code;
-
+		#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+		struct NMHDR {
+			  HWND     hwndFrom;
+			  UINT_PTR idFrom;
+			  UINT     code;
+		};
+		#endif
 		notify_message(wparam_t, lparam_t lParam) : 
 			sender(nullptr),
 			identifier(0),
@@ -191,6 +217,7 @@ namespace win32
 		}
 	};
 
+
 	struct toolbar_notify_message : notify_message
 	{
 		toolbar_notify_message(wparam_t wParam, lparam_t lParam) : notify_message(wParam, lParam)
@@ -198,6 +225,7 @@ namespace win32
 
 		}
 	};
+
 
 	enum struct mouse_button : std::uint16_t
 	{
@@ -338,8 +366,8 @@ namespace win32
 			mouse_button_up_message::matches_message(message))
 		{
 			mouse_button_message mouse_data{};
-			mouse_data.x = GET_X_LPARAM(lParam);
-			mouse_data.y = GET_Y_LPARAM(lParam);
+			mouse_data.x = LOWORD(lParam);
+			mouse_data.y = HIWORD(lParam);
 
 			auto set_key_state = [&](auto keys) {
 				mouse_data.control_key_is_down = keys & MK_CONTROL;
