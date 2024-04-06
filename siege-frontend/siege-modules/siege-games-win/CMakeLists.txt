@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(siege-core-win)
+project(siege-games-win)
 
 file(GLOB_RECURSE SRC_FILES
         src/*.cpp)
@@ -10,7 +10,7 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/include)
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE WINAPI_FAMILY=WINAPI_FAMILY_PC_APP COM_NO_WINDOWS_H NOMINMAX STRICT)
-target_link_libraries(${PROJECT_NAME} PUBLIC OneCore)
+target_compile_definitions(${PROJECT_NAME} PRIVATE WINAPI_FAMILY=WINAPI_FAMILY_GAMES NOMINMAXCOM_NO_WINDOWS_H NOMINMAX STRICT)
+target_link_libraries(${PROJECT_NAME} PUBLIC siege-core-win)
 
 install(TARGETS ${PROJECT_NAME} CONFIGURATIONS Debug Release RUNTIME DESTINATION bin)

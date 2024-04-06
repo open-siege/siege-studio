@@ -143,6 +143,7 @@ namespace win32
         return std::nullopt;
     }
 
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     [[maybe_unused]] auto EnumPropsExW(hwnd_t control, std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback)
     {
         struct Handler
@@ -195,6 +196,7 @@ namespace win32
             return callback(self, key, value) != false;
         });
     }
+#endif
 
     inline auto widen(std::string_view data)
     {
@@ -328,6 +330,7 @@ namespace win32
         return ::RegisterClassExW(&descriptor);
     }
 
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     template <typename TWindow>
     auto RegisterStaticClassExW(WNDCLASSEXW descriptor)
     {
@@ -470,6 +473,7 @@ namespace win32
      
         return ::RegisterClassExW(&descriptor);
     }
+#endif
 
     template <typename TWindow>
     auto UnregisterClassW(HINSTANCE instance)
@@ -511,7 +515,7 @@ namespace win32
                   ::GetModuleHandleW(L"comctrl32.dll"),
                   nullptr
             }};
-
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         for (auto module : modules_to_check)
         {
             if (module && ::GetClassInfoExW(module, params.lpszClass, &info))
@@ -520,6 +524,7 @@ namespace win32
                 break;
             }   
         }
+#endif
 
         auto result = ::CreateWindowExW(
                 params.dwExStyle,
@@ -543,8 +548,8 @@ namespace win32
 
         return result;
     }
-
-    auto CreateWindowExW(DLGITEMTEMPLATE params, hwnd_t parent, std::wstring class_name, std::wstring caption)
+    #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+	auto CreateWindowExW(DLGITEMTEMPLATE params, hwnd_t parent, std::wstring class_name, std::wstring caption)
     {
         return CreateWindowExW(CREATESTRUCTW{
             .hwndParent = parent,
@@ -558,6 +563,7 @@ namespace win32
             .dwExStyle = params.dwExtendedStyle
             });
     }
+	#endif
 
     template<typename TPosition = LONG, typename TSize = LONG>
     struct window_params
@@ -630,6 +636,7 @@ namespace win32
             });
     }
 
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     auto DialogBoxIndirectParamW(hwnd_t parent, DLGTEMPLATE* dialog_template, std::move_only_function<INT_PTR(hwnd_t, win32::message)> on_message)
     {
         struct handler
@@ -791,7 +798,7 @@ namespace win32
     {
         return EnumChildWindows(parent, [callback = std::move(callback), parent] (auto window) mutable
         {
-            if (GetParent(window) == parent)
+            if (::GetParent(window) == parent)
             {
                 callback(window);
             }
@@ -833,6 +840,7 @@ namespace win32
 
         return std::nullopt;
     }
+#endif
 
     std::optional<RECT> GetClientRect(hwnd_t control)
     {
@@ -905,6 +913,7 @@ namespace win32
         return ::MoveWindow(hWnd, position.x, position.y, size.cx, size.cy, repaint ? TRUE : FALSE);
     }
 
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     auto TrackPopupMenuEx(HMENU menu, UINT flags, POINT coords, hwnd_t owner, std::optional<TPMPARAMS> params = std::nullopt)
     {
         if (params)
@@ -929,6 +938,7 @@ namespace win32
 
         return std::nullopt;
     }
+#endif
 
     enum struct StackDirection
     {
@@ -999,6 +1009,7 @@ namespace win32
         }
     }
 
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     void StackChildren(hwnd_t parent, StackDirection direction = StackDirection::Vertical)
     {
         std::vector<hwnd_t> children;
@@ -1012,6 +1023,7 @@ namespace win32
         auto rect = win32::GetClientRect(parent);
         return StackChildren(SIZE {.cx = rect->left, .cy = rect->bottom }, children, direction);
     }
+#endif
 }
 
 #endif

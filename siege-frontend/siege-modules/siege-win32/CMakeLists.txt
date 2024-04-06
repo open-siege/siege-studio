@@ -10,10 +10,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/include)
 #target_precompile_headers(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include/win32_messages.hpp ${PROJECT_SOURCE_DIR}/include/win32_controls.hpp)
 
-if (CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
-        target_link_libraries(${PROJECT_NAME} PUBLIC siege-core-win)
-else()
-        target_link_libraries(${PROJECT_NAME} PUBLIC comctl32 oleacc siege-core-win)
-endif()
+target_compile_definitions(${PROJECT_NAME} PRIVATE WINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP NOMINMAX COM_NO_WINDOWS_H)
+
+target_link_libraries(${PROJECT_NAME} PUBLIC comctl32 oleacc siege-games-win)
 
 install(TARGETS ${PROJECT_NAME} CONFIGURATIONS Debug Release RUNTIME DESTINATION bin)
