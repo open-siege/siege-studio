@@ -1,8 +1,10 @@
-// siege-launcher-win32.cpp : Defines the entry point for the application.
-//
-
 #define _CRT_SECURE_NO_WARNINGS
 #define NOMINMAX
+
+#pragma comment(lib,"comctl32.lib")
+#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+
+#include <SDKDDKVer.h>
 #include <array>
 #include <optional>
 #include <algorithm>
@@ -16,19 +18,16 @@
 #include <cassert>
 #include "win32_controls.hpp"
 #include "win32_builders.hpp"
-#include "framework.h"
-#include "Resource.h"
+#include <commctrl.h>
 #include <oleacc.h>
 #include <shobjidl.h> 
 #include "win32_com_client.hpp"
 #include "win32_dialogs.hpp"
 //#include "http_client.hpp"
 
-std::array<wchar_t, 100> app_title;
+constexpr static std::wstring_view app_title = L"Siege Studio";
 
 using win32::overloaded;
-
-
 
 struct siege_module
 {
@@ -350,7 +349,7 @@ struct siege_main_window
 					}
 				}
 
-				if (command.identifier == IDM_ABOUT)
+				if (command.identifier == 101)
 				{
 					auto dialog = win32::MakeDialogTemplate(
 						DLGTEMPLATE{.style = WS_POPUP | WS_BORDER | WS_SYSMENU | DS_MODALFRAME | WS_CAPTION, .cx = 300, .cy = 300 }
@@ -404,7 +403,7 @@ struct siege_main_window
 						return (INT_PTR)FALSE;
 						});
 				}
-				else if (command.identifier == IDM_EXIT)
+				else if (command.identifier == 100)
 				{
 					DestroyWindow(self);
 					return 0;
@@ -430,9 +429,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		std::pmr::set_default_resource(std::pmr::null_memory_resource());
 	}
 
-	// Initialize global strings
-	LoadStringW(hInstance, IDS_APP_TITLE, app_title.data(), int(app_title.size()));
-
 	win32::com::init_com();
 
 	INITCOMMONCONTROLSEX settings{
@@ -446,12 +442,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	win32::RegisterClassExW<siege_main_window>(WNDCLASSEXW {
 		.style{CS_HREDRAW | CS_VREDRAW},
 		.hInstance = hInstance,
-		.hIcon = LoadIconW(hInstance, MAKEINTRESOURCE(IDI_SIEGELAUNCHERWIN32)),
 		.hCursor = LoadCursorW(hInstance, IDC_ARROW),
 		.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1),
-		.lpszMenuName = MAKEINTRESOURCEW(IDC_SIEGELAUNCHERWIN32),
 		.lpszClassName{win32::type_name<siege_main_window>().c_str()},
-		.hIconSm = LoadIconW(hInstance, MAKEINTRESOURCE(IDI_SMALL)),
 	});
 
 	auto main_window = win32::CreateWindowExW(CREATESTRUCTW {
@@ -472,18 +465,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	UpdateWindow(*main_window);
 
 
-	HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_SIEGELAUNCHERWIN32));
-
 	MSG msg;
 
 	// Main message loop:
 	while (GetMessageW(&msg, nullptr, 0, 0))
 	{
-		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-		{
-			TranslateMessage(&msg);
-			DispatchMessageW(&msg);
-		}
+		TranslateMessage(&msg);
+		DispatchMessageW(&msg);
 	}
 
 	CoUninitialize();
