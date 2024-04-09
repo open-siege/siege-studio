@@ -602,10 +602,11 @@ namespace win32::com
 
     };
 
-    template<typename TObject>
-    struct VectorCollection : IDispatch, ComAllocatorAware
+    template<typename TObject, typename TContainer = std::vector<std::unique_ptr<TObject, void(*)(TObject*)>>>
+    struct CollectionRef : IDispatch, ComAllocatorAware
     {
-        std::vector<std::unique_ptr<TObject, void(*)(TObject*)>> &items;
+//        std::vector<std::unique_ptr<TObject, void(*)(TObject*)>> &items;
+        TContainer& items;
 
         constexpr static std::array<std::wstring_view, 4> names = {{
             std::wstring_view(L"Item"),  
@@ -640,7 +641,7 @@ namespace win32::com
             return DISPID_UNKNOWN;
         }
 
-        VectorCollection(std::vector<std::unique_ptr<TObject, void(*)(TObject*)>> &items) : items(items)
+        CollectionRef(TContainer &items) : items(items)
         {
         }
 
@@ -875,6 +876,17 @@ namespace win32::com
             result.punkVal = static_cast<IEnumVARIANT*>(item.release());
 
             return result;
+        }
+    };
+
+    template<typename TObject, typename TContainer = std::vector<std::unique_ptr<TObject, void(*)(TObject*)>>>
+    struct OwningCollection : public CollectionRef<TObject>
+    {
+        TContainer value;
+
+        OwningCollection() : CollectionRef<TObject>(value)
+        {
+        
         }
     };
 }
