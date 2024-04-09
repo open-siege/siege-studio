@@ -5,18 +5,19 @@
 #include <set>
 #include <variant>
 #include <utility>
-#include "graphics_view.hpp"
-#include "view_context.hpp"
 #include "resources/resource_explorer.hpp"
 #include "content/pal/palette.hpp"
 #include "content/bmp/bitmap.hpp"
 #include "bmp_shared.hpp"
 
-namespace studio::views
+namespace siege::views
 {
-  class bmp_view 
+  class bmp_controller 
   {
   public:
+      static bool is_bmp(std::istream& image_stream);
+
+  /*public:
     bmp_view(view_context context, std::istream& image_stream);
     std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks();
     void setup_view(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext);
@@ -82,6 +83,7 @@ namespace studio::views
 
     std::function<void(const sf::Event&)> zoom_in;
     std::function<void(const sf::Event&)> zoom_out;
+  */
   };
 
 }
