@@ -11,7 +11,7 @@ namespace siege::views
 {
 	struct pal_view
 	{
-		constexpr static std::u8string_view formats = u8".pal .ipl .ppl .dpl";
+		constexpr static auto formats = std::array<std::wstring_view, 4>{{ L".pal", L".ipl", L".ppl", L".dpl"}};
 
 		win32::hwnd_t self;
 		pal_controller controller;

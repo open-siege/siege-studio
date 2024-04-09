@@ -25,7 +25,7 @@ namespace siege::views
       std::u8string name;
     };    
 
-    bool is_pal(std::istream& image_stream) const;
+    static bool is_pal(std::istream& image_stream);
 
     std::size_t load_palettes(std::istream& image_stream);
   private:

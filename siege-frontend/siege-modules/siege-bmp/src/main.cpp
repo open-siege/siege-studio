@@ -1,13 +1,16 @@
 #include <win32_controls.hpp>
 #include <bit>
 #include <filesystem>
-#include "views/bitmap_window.hpp"
+#include "views/bmp_view.hpp"
 #include "views/pal_view.hpp"
+#include "win32_com_server.hpp"
+#include "win32_com_collection.hpp"
+#include "win32_stream_buf.hpp"
 
 struct pal_mapping_window
 {
-    constexpr static std::u8string_view formats = u8"palettes.settings.json";
-
+    constexpr static auto formats = std::array<std::wstring_view, 1>{{L"palettes.settings.json"}};
+    
     win32::hwnd_t self;
     pal_mapping_window(win32::hwnd_t self, const CREATESTRUCTW&) : self(self)
 	{
@@ -35,112 +38,172 @@ struct pal_mapping_window
 	}
 };
 
-
-struct is_supported_message
+extern "C"
 {
-    enum class handle_type
+    HRESULT __stdcall GetSupportedExtensions(_Outptr_ win32::com::ICollection** formats) noexcept
     {
-        path,
-        file,
-        view
-    } type;
+        if (!formats)
+        {
+            return E_POINTER;
+        }
 
-    int size;
-};
+        static std::vector<std::wstring_view> supported_extensions = []{
+                std::vector<std::wstring_view> extensions;
+                extensions.reserve(32);
 
+                std::copy(siege::views::bmp_view::formats.begin(), siege::views::bmp_view::formats.end(), std::back_inserter(extensions));
+                std::copy(siege::views::pal_view::formats.begin(), siege::views::pal_view::formats.end(), std::back_inserter(extensions));
+                std::copy(pal_mapping_window::formats.begin(), pal_mapping_window::formats.end(), std::back_inserter(extensions));
+              
+                return extensions;
+            }();
 
-struct bmp_module
-{
-    HINSTANCE module_instance;
-    std::uint32_t is_supported_id;
-
-    bmp_module(win32::hwnd_t self, const CREATESTRUCTW& args)
-    {
-        module_instance = args.hInstance;
-        win32::RegisterClassExW<bitmap_window>(WNDCLASSEXW{
-            .hInstance = module_instance
-            });
-        win32::RegisterClassExW<siege::views::pal_view>(WNDCLASSEXW{
-            .hInstance = module_instance
-            });
-        win32::RegisterClassExW<pal_mapping_window>(WNDCLASSEXW{
-            .hInstance = module_instance
-            });
-
-        SetPropW(self, win32::type_name<bitmap_window>().c_str(), std::bit_cast<void*>(bitmap_window::formats.data()));
-        SetPropW(self, win32::type_name<siege::views::pal_view>().c_str(), std::bit_cast<void*>(siege::views::pal_view::formats.data()));
-        SetPropW(self, win32::type_name<pal_mapping_window>().c_str(), std::bit_cast<void*>(pal_mapping_window::formats.data()));
-
-        SetPropW(self, L"All Images", std::bit_cast<void*>(bitmap_window::formats.data()));
-        SetPropW(self, L"All Palettes", std::bit_cast<void*>(siege::views::pal_view::formats.data()));
-
-        is_supported_id = RegisterWindowMessageW(L"is_supported_message");
+        return S_OK;
     }
 
-    ~bmp_module()
+    HRESULT __stdcall GetSupportedFormatCategories(_In_ LCID, _Outptr_ win32::com::ICollection** formats) noexcept
     {
-       win32::UnregisterClassW<bitmap_window>(module_instance);
-       win32::UnregisterClassW<siege::views::pal_view>(module_instance);
-       win32::UnregisterClassW<pal_mapping_window>(module_instance);
+        if (!formats)
+        {
+            return E_POINTER;
+        }
+
+        static auto categories = std::array<std::wstring_view, 2> {{
+            L"All Images",
+            L"All Palettes"
+        }};
+
+//        win32::com::CollectionRef<
+
+        return S_OK;
     }
 
-    std::optional<win32::lresult_t> on_is_supported(is_supported_message message)
+    HRESULT __stdcall GetSupportedExtensionsForCategory(_In_ const wchar_t* category, _Outptr_ win32::com::ICollection** formats) noexcept
     {
-        if (message.type == is_supported_message::handle_type::path)
+        if (!category)
         {
-            return FALSE;
+            return E_INVALIDARG;
         }
-        else if (message.type == is_supported_message::handle_type::file)
+
+        if (!formats)
         {
-            return FALSE;
-        }
-        else if (message.type == is_supported_message::handle_type::view)
-        {
-            return FALSE;
-        }
-    }
-};
-
-BOOL WINAPI DllMain(
-    HINSTANCE hinstDLL,  // handle to DLL module
-    DWORD fdwReason,     // reason for calling function
-    LPVOID lpvReserved )  // reserved
-{
-
-    if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
-    {
-        if (lpvReserved != nullptr)
-        {
-            return TRUE; // do not do cleanup if process termination scenario
+            return E_POINTER;
         }
 
-        static win32::hwnd_t info_instance = nullptr;
-
-        static std::wstring module_file_name(255, '\0');
-        GetModuleFileNameW(hinstDLL, module_file_name.data(), module_file_name.size());
-
-       std::filesystem::path module_path(module_file_name.data());
-
-
-       if (fdwReason == DLL_PROCESS_ATTACH)
-       {
-           win32::RegisterStaticClassExW<bmp_module>(WNDCLASSEXW{
-                  .hInstance = hinstDLL,
-                  .lpszClassName = module_path.stem().c_str()
-           });
-
-          info_instance = *win32::CreateWindowExW(CREATESTRUCTW{
-                .hInstance = hinstDLL,
-                .hwndParent = HWND_MESSAGE,
-                .lpszClass = module_path.stem().c_str()
-            });
-        }
-        else if (fdwReason == DLL_PROCESS_DETACH)
-        {
-            DestroyWindow(info_instance);
-            UnregisterClassW(module_path.stem().c_str(), hinstDLL);
-        }
+        return S_OK;
     }
 
-    return TRUE;
+    HRESULT __stdcall IsStreamSupported(_In_ IStream* data) noexcept
+    {
+        if (!data)
+        {
+            return E_INVALIDARG;
+        }
+
+        win32::com::StreamBufRef buffer(*data);
+        std::istream stream(&buffer);
+
+        if (siege::views::pal_controller::is_pal(stream))
+        {
+            return S_OK;
+        }
+
+        if (siege::views::bmp_controller::is_bmp(stream))
+        {
+            return S_OK;
+        }
+
+        return S_FALSE;
+    }
+
+    _Success_(return == S_OK || return == S_FALSE)
+    static HRESULT __stdcall GetWindowClassForStream(_In_ IStream* data, _Outptr_ wchar_t** class_name) noexcept
+    {
+        if (!data)
+        {
+            return E_INVALIDARG;
+        }
+
+        if (!class_name)
+        {
+            return E_POINTER;
+        }
+
+        static std::wstring empty;
+        *class_name = empty.data();
+        
+        win32::com::StreamBufRef buffer(*data);
+        std::istream stream(&buffer);
+
+        static HMODULE hModule = []{
+            HMODULE temp = nullptr;
+            GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+               GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+               (LPCWSTR)&GetWindowClassForStream, &temp);
+
+            return temp;
+            }();
+
+        if(!hModule)
+        {
+            return S_FALSE;        
+        }
+
+        thread_local WNDCLASSEXW info{};
+
+        if (siege::views::pal_controller::is_pal(stream))
+        {
+            static auto window_type_name = win32::type_name<siege::views::pal_view>();
+
+            if (::GetClassInfoExW(hModule, window_type_name.c_str(), &info))
+            {
+                *class_name = window_type_name.data();
+                return S_OK;
+            }
+        }
+
+        if (siege::views::bmp_controller::is_bmp(stream))
+        {
+            static auto window_type_name = win32::type_name<siege::views::bmp_view>();
+
+            if (::GetClassInfoExW(hModule, window_type_name.c_str(), &info))
+            {
+                *class_name = window_type_name.data();
+                return S_OK;
+            }
+        }
+
+        return S_FALSE;
+    }
+
+    BOOL WINAPI DllMain(
+        HINSTANCE hinstDLL,  
+        DWORD fdwReason, 
+        LPVOID lpvReserved ) noexcept
+    {
+
+        if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
+        {
+            if (lpvReserved != nullptr)
+            {
+                return TRUE; // do not do cleanup if process termination scenario
+            }
+
+           if (fdwReason == DLL_PROCESS_ATTACH)
+           {
+                win32::RegisterClassExW<siege::views::bmp_view>(WNDCLASSEXW{.hInstance = hinstDLL });
+                win32::RegisterClassExW<siege::views::pal_view>(WNDCLASSEXW{.hInstance = hinstDLL});
+                win32::RegisterClassExW<pal_mapping_window>(WNDCLASSEXW{.hInstance = hinstDLL});
+            }
+            else if (fdwReason == DLL_PROCESS_DETACH)
+            {
+               win32::UnregisterClassW<siege::views::bmp_view>(hinstDLL);
+               win32::UnregisterClassW<siege::views::pal_view>(hinstDLL);
+               win32::UnregisterClassW<pal_mapping_window>(hinstDLL);
+            }
+        }
+
+        return TRUE;
+    }
 }
+

@@ -3,7 +3,7 @@
 
 namespace siege::views
 {
-  bool pal_controller::is_pal(std::istream& image_stream) const
+  bool pal_controller::is_pal(std::istream& image_stream)
   {
     return studio::content::pal::is_microsoft_pal(image_stream) ||
            studio::content::pal::is_earthsiege_pal(image_stream) ||

@@ -8,7 +8,7 @@
 
 namespace win32::com
 {
-    class StreamBufRef : std::streambuf
+    class StreamBufRef : public std::streambuf
     {
     private:
         IStream& data;
