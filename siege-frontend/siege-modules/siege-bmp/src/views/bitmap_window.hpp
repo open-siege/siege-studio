@@ -15,12 +15,7 @@ struct bitmap_window
 
     win32::hwnd_t self;
 
-    std::vector<std::unique_ptr<IStream, void(*)(IStream*)>> documents;
-
-    win32::com::VectorCollection<IStream> collection;
-
-
-    bitmap_window(win32::hwnd_t self, const CREATESTRUCTW&) : self(self), collection(documents)
+    bitmap_window(win32::hwnd_t self, const CREATESTRUCTW&) : self(self)
 	{
 	}
 
@@ -306,7 +301,9 @@ struct bitmap_window
     {
         if (message.object_id == OBJID_NATIVEOM)
         {
-            return LresultFromObject(__uuidof(IDispatch), message.flags, static_cast<IDispatch*>(&collection));   
+            auto collection = std::make_unique<win32::com::OwningCollection<IStream>>();
+
+            return LresultFromObject(__uuidof(IDispatch), message.flags, static_cast<IDispatch*>(collection.release()));   
         }
 
         return std::nullopt;

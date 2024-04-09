@@ -3,20 +3,19 @@
 
 #include <istream>
 #include <memory>
+#include <array>
 #include <objidl.h>
 
 namespace win32::com
 {
-    template<typename IStreamContainer = std::unique_ptr<IStream, void(*)(IStream*)>>
-    class IStreamBuf : std::streambuf
+    class StreamBufRef : std::streambuf
     {
-        
     private:
-        IStreamContainer data;
+        IStream& data;
         std::array<char, 16> read_buffer;
         std::array<char, 16> write_buffer;
     public:
-        IStreamBuf(IStreamContainer data) : data(data)
+        StreamBufRef(IStream& data) : data(data)
         {
             setg(read_buffer.data(), read_buffer.data() + read_buffer.size(), read_buffer.data() + read_buffer.size());
             setp(write_buffer.data() + write_buffer.size(), write_buffer.data() + write_buffer.size());
@@ -145,6 +144,16 @@ namespace win32::com
         }
     };
 
+
+    template<typename IStreamContainer = std::unique_ptr<IStream, void(*)(IStream*)>>
+    struct OwningStreamBuf : StreamBufRef
+    {
+        IStreamContainer container;
+
+        OwningStreamBuf(IStreamContainer container) : StreamBufRef(*container), container(std::move(container))
+        {
+        }
+    };
 }
 
 #endif

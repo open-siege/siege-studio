@@ -15,7 +15,6 @@ namespace siege::views
 
 		win32::hwnd_t self;
 		pal_controller controller;
-		std::vector<std::vector<pal_controller::palette>> palettes;
 		PAINTSTRUCT paint_data;
 
 		std::array<HBRUSH, 16> brushes;
@@ -77,12 +76,22 @@ namespace siege::views
 			
 			if (controller.is_pal(stream))
 			{
-				palettes = controller.load_palettes(stream);
-
-				return TRUE;
+				return controller.load_palettes(stream) > 0 ? TRUE : FALSE;
 			}
 
 			return FALSE;
+		}
+
+		std::optional<LRESULT> on_get_object(win32::get_object_message message)
+		{
+			if (message.object_id == OBJID_NATIVEOM)
+			{
+				auto collection = std::make_unique<win32::com::OwningCollection<IStream>>();
+
+				return LresultFromObject(__uuidof(IDispatch), message.flags, static_cast<IDispatch*>(collection.release()));   
+			}
+
+			return std::nullopt;
 		}
 
 		static bool is_pal(std::istream& raw_data)

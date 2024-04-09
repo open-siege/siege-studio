@@ -27,8 +27,9 @@ namespace siege::views
 
     bool is_pal(std::istream& image_stream) const;
 
-    std::vector<std::vector<palette>> load_palettes(std::istream& image_stream);
+    std::size_t load_palettes(std::istream& image_stream);
   private:
+      std::vector<std::vector<palette>> palettes;
   };
 }// namespace studio::views
 

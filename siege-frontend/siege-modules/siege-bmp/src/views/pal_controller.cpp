@@ -11,7 +11,7 @@ namespace siege::views
            studio::content::pal::is_phoenix_pal(image_stream);
   }
 
-  std::vector<std::vector<pal_controller::palette>> pal_controller::load_palettes(std::istream& image_stream)
+  std::size_t pal_controller::load_palettes(std::istream& image_stream)
   {
     std::vector<std::vector<pal_controller::palette>> all_rectangles;
 
@@ -82,7 +82,8 @@ namespace siege::views
       }
     }
 
-    return all_rectangles;
+    this->palettes = all_rectangles;
+    return this->palettes.size();
   }
 
   
