@@ -1,5 +1,4 @@
 #define _CRT_SECURE_NO_WARNINGS
-#define NOMINMAX
 
 #pragma comment(lib,"comctl32.lib")
 #pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
@@ -23,85 +22,17 @@
 #include <shobjidl.h> 
 #include "win32_com_client.hpp"
 #include "win32_dialogs.hpp"
+#include "siege-plugin.hpp"
 //#include "http_client.hpp"
 
 constexpr static std::wstring_view app_title = L"Siege Studio";
 
 using win32::overloaded;
 
-struct siege_module
-{
-	std::unique_ptr<HINSTANCE__, void(*)(HINSTANCE)> module;
-	HWND descriptor;
-
-	struct module_data
-	{
-		module_data(std::unique_ptr<void, void(*)(void*)> buffer, std::size_t size) :
-			raw(std::move(buffer)),
-			storage(raw.get(), size, std::pmr::get_default_resource()),
-			pool(&storage),
-			available_classes(&pool),
-			available_categories(&pool)
-		{
-		}
-
-		std::unique_ptr<void, void(*)(void*)> raw;
-		std::pmr::monotonic_buffer_resource storage;
-		std::pmr::unsynchronized_pool_resource pool;
-		std::pmr::unordered_map<std::pmr::wstring, std::u8string_view> available_classes;
-		std::pmr::unordered_map<std::pmr::wstring, std::u8string_view> available_categories;
-	};
-
-	std::optional<module_data> data;
-
-	siege_module(std::filesystem::path module_path) : module(LoadLibraryExW(module_path.filename().c_str(), nullptr, LOAD_LIBRARY_SEARCH_APPLICATION_DIR), [](auto module) {
-		if (module) {
-			assert(FreeLibrary(module));
-		}
-		}), 
-		descriptor(module ? win32::FindDirectChildWindow(HWND_MESSAGE, module_path.stem().c_str(), [instance = module.get()](win32::hwnd_t child) {
-			return GetWindowLongPtrW(child, GWLP_HINSTANCE) == reinterpret_cast<LONG_PTR>(instance);
-		}) : nullptr),
-		data(std::nullopt)
-		
-	{
-		WNDCLASSEXW temp;
-
-		if (!descriptor)
-		{
-			return;
-		}
-
-		data.emplace(std::unique_ptr<void, void(*)(void*)>(HeapAlloc(GetProcessHeap(), 0, 4096 * 4), [](void* data) {
-				if (data)
-				{
-					HeapFree(GetProcessHeap(), 0, data);
-				}
-				}), 4096 * 2);
-
-		win32::ForEachPropertyExW(descriptor, [&](auto, auto name, HANDLE handle) {
-			if (GetClassInfoExW(module.get(), name.data(), &temp))
-			{
-				data->available_classes.emplace(name, std::u8string_view(std::bit_cast<char8_t*>(handle)));
-			}
-			else
-			{
-				data->available_categories.emplace(name, std::u8string_view(std::bit_cast<char8_t*>(handle)));
-			}
-		});
-	}
-
-	operator bool()
-	{
-		return module && descriptor;
-	}
-};
-
-
 struct siege_main_window
 {
 	win32::hwnd_t self;
-	std::list<siege_module> loaded_modules;
+	std::list<siege::siege_plugin> loaded_modules;
 	
 	siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : self(self)
 	{
@@ -115,9 +46,12 @@ struct siege_main_window
 		{
 			if (dir_entry.path().extension() == ".dll")
 			{
-				if (auto& plugin = loaded_modules.emplace_back(dir_entry.path()); !plugin)
+				try
 				{
-					loaded_modules.pop_back();
+					loaded_modules.emplace_back(dir_entry.path());			
+				}
+				catch(...)
+				{
 				}
 			}
 		}
@@ -163,7 +97,7 @@ struct siege_main_window
 		int index = 0;
 		for (auto& plugin : loaded_modules)
 		{
-			for (auto& window : plugin.data->available_classes)
+			/*for (auto& window : plugin.data->available_classes)
 			{
 				auto child = win32::CreateWindowExW(win32::window_params<RECT>{
 					.parent = self,
@@ -188,7 +122,7 @@ struct siege_main_window
 
 			SendMessageW(*tab_control_instance, TCM_SETCURSEL, 0, 0);
 			NMHDR notification{.hwndFrom = *tab_control_instance, .code = TCN_SELCHANGE};
-			SendMessageW(self, WM_NOTIFY, 0, std::bit_cast<LPARAM>(&notification));
+			SendMessageW(self, WM_NOTIFY, 0, std::bit_cast<LPARAM>(&notification));*/
 		}
 
 		win32::tab_control::InsertItem(*tab_control_instance, index, TCITEMW {

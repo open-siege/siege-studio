@@ -4,12 +4,16 @@
 #include <filesystem>
 #include <cassert>
 #include <atomic>
-
+#include "win32_com_server.hpp"
+#include "win32_com_collection.hpp"
+#include "win32_stream_buf.hpp"
 
 struct volume_window
 {
-    constexpr static std::u8string_view formats = 
-            u8".vol .rmf .mis .rmf .map .rbx .tbv .zip .vl2 .pk3 .iso .mds .cue .nrg .7z .tgz .rar .cab .z .cln .atd";
+    constexpr static auto formats = std::array<std::wstring_view, 20>{{
+        L".vol", L".rmf", L".mis", L".map", L".rbx", L".tbv" , L".zip", L".vl2", L".pk3",
+        L".iso", L".mds", L".cue", L".nrg", L".7z", L".tgz", L".rar", L".cab", L".z", L".cln", L".atd"    
+    }};
 
     win32::hwnd_t self;
 
@@ -198,69 +202,145 @@ struct volume_window
     }
 };
 
-struct vol_module
+extern "C"
 {
-    HINSTANCE module_instance;
-    std::uint32_t is_supported_id;
-
-    vol_module(win32::hwnd_t self, const CREATESTRUCTW& args)
+    HRESULT __stdcall GetSupportedExtensions(_Outptr_ win32::com::ICollection** formats) noexcept
     {
-        module_instance = args.hInstance;
-        win32::RegisterClassExW<volume_window>(WNDCLASSEXW{
-            .hInstance = module_instance
-            });
-
-        SetPropW(self, win32::type_name<volume_window>().c_str(), std::bit_cast<void*>(volume_window::formats.data()));
-
-        is_supported_id = RegisterWindowMessageW(L"is_supported_message");
-    }
-
-    ~vol_module()
-    {
-       win32::UnregisterClassW<volume_window>(module_instance);
-    }
-};
-
-BOOL WINAPI DllMain(
-    HINSTANCE hinstDLL,  // handle to DLL module
-    DWORD fdwReason,     // reason for calling function
-    LPVOID lpvReserved )  // reserved
-{
-
-    if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
-    {
-        if (lpvReserved != nullptr)
+        if (!formats)
         {
-            return TRUE; // do not do cleanup if process termination scenario
+            return E_POINTER;
         }
 
-        static win32::hwnd_t info_instance = nullptr;
+        static std::vector<std::wstring_view> supported_extensions = []{
+                std::vector<std::wstring_view> extensions;
+                extensions.reserve(32);
 
-        static std::wstring module_file_name(255, '\0');
-        GetModuleFileNameW(hinstDLL, module_file_name.data(), module_file_name.size());
+                std::copy(volume_window::formats.begin(), volume_window::formats.end(), std::back_inserter(extensions));
+              
+                return extensions;
+            }();
 
-       std::filesystem::path module_path(module_file_name.data());
-
-
-       if (fdwReason == DLL_PROCESS_ATTACH)
-       {
-           win32::RegisterStaticClassExW<vol_module>(WNDCLASSEXW{
-                  .hInstance = hinstDLL,
-                  .lpszClassName = module_path.stem().c_str()
-           });
-
-          info_instance = *win32::CreateWindowExW(CREATESTRUCTW{
-                .hInstance = hinstDLL,
-                .hwndParent = HWND_MESSAGE,
-                .lpszClass = module_path.stem().c_str()
-            });
-        }
-        else if (fdwReason == DLL_PROCESS_DETACH)
-        {
-            DestroyWindow(info_instance);
-            UnregisterClassW(module_path.stem().c_str(), hinstDLL);
-        }
+        return S_OK;
     }
 
-    return TRUE;
+    HRESULT __stdcall GetSupportedFormatCategories(_In_ LCID, _Outptr_ win32::com::ICollection** formats) noexcept
+    {
+        if (!formats)
+        {
+            return E_POINTER;
+        }
+
+        static auto categories = std::array<std::wstring_view, 2> {{
+            L"All Images",
+            L"All Palettes"
+        }};
+
+//        win32::com::CollectionRef<
+
+        return S_OK;
+    }
+
+    HRESULT __stdcall GetSupportedExtensionsForCategory(_In_ const wchar_t* category, _Outptr_ win32::com::ICollection** formats) noexcept
+    {
+        if (!category)
+        {
+            return E_INVALIDARG;
+        }
+
+        if (!formats)
+        {
+            return E_POINTER;
+        }
+
+        return S_OK;
+    }
+
+    HRESULT __stdcall IsStreamSupported(_In_ IStream* data) noexcept
+    {
+        if (!data)
+        {
+            return E_INVALIDARG;
+        }
+
+        win32::com::StreamBufRef buffer(*data);
+        std::istream stream(&buffer);
+
+        return S_FALSE;
+    }
+
+    _Success_(return == S_OK || return == S_FALSE)
+    static HRESULT __stdcall GetWindowClassForStream(_In_ IStream* data, _Outptr_ wchar_t** class_name) noexcept
+    {
+        if (!data)
+        {
+            return E_INVALIDARG;
+        }
+
+        if (!class_name)
+        {
+            return E_POINTER;
+        }
+
+        static std::wstring empty;
+        *class_name = empty.data();
+        
+        win32::com::StreamBufRef buffer(*data);
+        std::istream stream(&buffer);
+
+        static HMODULE hModule = []{
+            HMODULE temp = nullptr;
+            GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+               GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+               (LPCWSTR)&GetWindowClassForStream, &temp);
+
+            return temp;
+            }();
+
+        if(!hModule)
+        {
+            return S_FALSE;        
+        }
+
+        thread_local WNDCLASSEXW info{};
+
+
+        return S_FALSE;
+    }
+
+    
+    BOOL WINAPI DllMain(
+        HINSTANCE hinstDLL,  // handle to DLL module
+        DWORD fdwReason,     // reason for calling function
+        LPVOID lpvReserved )  // reserved
+    {
+
+        if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
+        {
+            if (lpvReserved != nullptr)
+            {
+                return TRUE; // do not do cleanup if process termination scenario
+            }
+
+            static win32::hwnd_t info_instance = nullptr;
+
+            static std::wstring module_file_name(255, '\0');
+            GetModuleFileNameW(hinstDLL, module_file_name.data(), module_file_name.size());
+
+           std::filesystem::path module_path(module_file_name.data());
+
+
+           if (fdwReason == DLL_PROCESS_ATTACH)
+           {
+               win32::RegisterClassExW<volume_window>(WNDCLASSEXW{
+                .hInstance = hinstDLL
+                });
+            }
+            else if (fdwReason == DLL_PROCESS_DETACH)
+            {
+               win32::UnregisterClassW<volume_window>(hinstDLL);
+            }
+        }
+
+        return TRUE;
+    }
 }
