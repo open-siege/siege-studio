@@ -4,9 +4,8 @@
 #include <filesystem>
 #include <cassert>
 #include <atomic>
-#include "win32_com_server.hpp"
-#include "win32_com_collection.hpp"
-#include "win32_stream_buf.hpp"
+#include <win32_com_collection.hpp>
+#include <win32_stream_buf.hpp>
 
 struct volume_window
 {

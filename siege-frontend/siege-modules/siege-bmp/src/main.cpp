@@ -4,9 +4,8 @@
 #include <memory>
 #include "views/bmp_view.hpp"
 #include "views/pal_view.hpp"
-#include "win32_com_server.hpp"
-#include "win32_com_collection.hpp"
-#include "win32_stream_buf.hpp"
+#include <win32_com_collection.hpp>
+#include <win32_stream_buf.hpp>
 
 struct pal_mapping_window
 {
