@@ -1,6 +1,7 @@
 #include <win32_controls.hpp>
 #include <bit>
 #include <filesystem>
+#include <memory>
 #include "views/bmp_view.hpp"
 #include "views/pal_view.hpp"
 #include "win32_com_server.hpp"
@@ -58,6 +59,8 @@ extern "C"
                 return extensions;
             }();
 
+        win32::com::CollectionRef<std::wstring_view> temp(supported_extensions);
+
         return S_OK;
     }
 
@@ -93,6 +96,7 @@ extern "C"
         return S_OK;
     }
 
+    _Success_(return == S_OK || return == S_FALSE)
     HRESULT __stdcall IsStreamSupported(_In_ IStream* data) noexcept
     {
         if (!data)

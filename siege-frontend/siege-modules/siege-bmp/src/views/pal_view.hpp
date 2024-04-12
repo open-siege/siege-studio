@@ -86,7 +86,7 @@ namespace siege::views
 		{
 			if (message.object_id == OBJID_NATIVEOM)
 			{
-				auto collection = std::make_unique<win32::com::OwningCollection<IStream>>();
+                auto collection = std::make_unique<win32::com::OwningCollection<std::unique_ptr<IStream, void(*)(IStream*)>>>();
 
 				return LresultFromObject(__uuidof(IDispatch), message.flags, static_cast<IDispatch*>(collection.release()));   
 			}
