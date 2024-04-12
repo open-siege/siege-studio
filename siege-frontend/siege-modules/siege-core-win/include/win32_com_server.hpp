@@ -58,23 +58,21 @@ namespace win32::com
     struct Interface_EnumTraits
     {
         using ElemType = InterfaceType;
-        using PtrType = std::add_pointer_t<ElemType>;
-        using OutType = std::add_pointer_t<PtrType>;
+        using OutType = ElemType**;
     };
 
     template<typename StructType>
     struct Struct_EnumTraits
     {
         using ElemType = StructType;
-        using PtrType = std::add_pointer_t<ElemType>;
-        using OutType = PtrType;
+        using OutType = ElemType*;
     };
 
     template<typename InterfaceType = IUnknown>
     struct IUnknown_EnumTraits : Interface_EnumTraits<InterfaceType>
     {
         using EnumType = IEnumUnknown;
-        using OutType = std::add_pointer_t<IUnknown*>;
+        using OutType = IUnknown**;
 
         template <typename Iter>
         static void Copy(IUnknown **output, Iter iter)
@@ -98,7 +96,7 @@ namespace win32::com
     struct VARIANT_EnumTraits : Struct_EnumTraits<TVariant>
     {
         using EnumType = IEnumVARIANT;
-        using OutType = std::add_pointer_t<VARIANT>;
+        using OutType = VARIANT*;
 
         template <typename Iter>
         static void Copy(VARIANT *output, Iter iter)
@@ -111,7 +109,7 @@ namespace win32::com
     struct CONNECTDATA_EnumTraits : Struct_EnumTraits<TConnectData>
     {
         using EnumType = IEnumConnections;
-        using OutType = std::add_pointer_t<CONNECTDATA>;
+        using OutType = CONNECTDATA*;
 
         template <typename Iter>
         static void Copy(CONNECTDATA *output, Iter iter)
@@ -119,6 +117,34 @@ namespace win32::com
             output->dwCookie = iter->dwCookie;
             output->pUnk = iter->pUnk;
             output->pUnk->AddRef();
+        }
+    };
+
+    struct String_EnumTraits
+    {
+        using EnumType = IEnumString;
+        using ElemType = std::wstring;
+        using OutType = wchar_t**;
+
+        template <typename Iter>
+        static void Copy(wchar_t **output, Iter iter)
+        {
+            *output = (wchar_t*)::CoTaskMemAlloc(iter->size() * sizeof(wchar_t));
+            iter->copy(*output, iter->size());
+        }
+    };
+
+    struct StringView_EnumTraits
+    {
+        using EnumType = IEnumString;
+        using ElemType = std::wstring_view;
+        using OutType = wchar_t**;
+
+        template <typename Iter>
+        static void Copy(wchar_t **output, Iter iter)
+        {
+            *output = (wchar_t*)::CoTaskMemAlloc(iter->size() * sizeof(wchar_t));
+            iter->copy(*output, iter->size());
         }
     };
 
@@ -297,38 +323,32 @@ namespace win32::com
         {
             return make_unique_range_enumerator_from_traits<CONNECTDATA_EnumTraits<TElement>, TIter>(begin, current, end);
         }
-        else if constexpr(std::is_same_v<IConnectionPoint, TElement>)
+        else if constexpr(std::is_same_v<std::wstring, TElement> || std::is_base_of_v<std::wstring, TElement>)
         {
-            return make_unique_range_enumerator_from_traits<IConnectionPoint_EnumTraits, TIter>(begin, current, end);
+            return make_unique_range_enumerator_from_traits<String_EnumTraits, TIter>(begin, current, end);
         }
-        else if constexpr(std::is_same_v<IUnknown, TElement> || std::is_base_of_v<IUnknown, TElement>)
+        else if constexpr(std::is_same_v<std::wstring_view, TElement> || std::is_base_of_v<std::wstring_view, TElement>)
         {
-            return make_unique_range_enumerator_from_traits<IUnknown_EnumTraits<TElement>, TIter>(begin, current, end);
+            return make_unique_range_enumerator_from_traits<StringView_EnumTraits, TIter>(begin, current, end);
         }
         else
         {
-            return make_unique_range_enumerator_from_traits<Struct_EnumTraits<TElement>, TIter>(begin, current, end);        
+            using element_type = typename TElement::element_type;
+
+            if constexpr(std::is_same_v<IConnectionPoint, element_type>)
+            {
+                return make_unique_range_enumerator_from_traits<IConnectionPoint_EnumTraits, TIter>(begin, current, end);
+            }
+            else if constexpr(std::is_same_v<IUnknown, element_type> || std::is_base_of_v<IUnknown, element_type>)
+            {
+                return make_unique_range_enumerator_from_traits<IUnknown_EnumTraits<element_type>, TIter>(begin, current, end);
+            }
+            else
+            {
+                return make_unique_range_enumerator_from_traits<Struct_EnumTraits<TElement>, TIter>(begin, current, end);        
+            }
         }
      }
-
-    inline Variant ToVariant(IUnknown* src)
-    {
-        Variant dst;
-        dst.vt = VT_UNKNOWN;
-        src->AddRef();
-        dst.punkVal = src;
-        return dst;
-    }
-
-    inline Variant ToVariant(IDispatch* src)
-    {
-        Variant dst;
-        dst.vt = VT_DISPATCH;
-        src->AddRef();
-        dst.pdispVal = src;
-
-        return dst;
-    }
 
     template<typename TEnum>
     struct VariantEnumeratorAdapter : IEnumVARIANT, ComAllocatorAware
@@ -387,12 +407,24 @@ namespace win32::com
 
                 for (auto i = 0; i < fetched; ++i)
                 {
-                    rgVar[i] = ToVariant(temp[i]);
+                    rgVar[i] = Variant(*temp[i]);
 
                     if constexpr(std::is_same_v<IUnknown, TEnum::ElemType> || std::is_base_of_v<IUnknown, TEnum::ElemType>)
                     {
                         temp[i]->Release();
                     }
+                }
+            }
+            else if constexpr(std::is_same_v<TEnum::ElemType, std::wstring_view> || std::is_same_v<TEnum::ElemType, std::wstring>)
+            {
+                std::vector<wchar_t*> temp(celt);
+
+                result = enumerator->Next(celt, temp.data(), &fetched);
+
+                for (auto i = 0; i < fetched; ++i)
+                {
+                    rgVar[i] = Variant(std::wstring_view(temp[i]));
+                    ::CoTaskMemFree(temp[i]);
                 }
             }
             else
@@ -402,7 +434,7 @@ namespace win32::com
 
                 for (auto i = 0; i < fetched; ++i)
                 {
-                    rgVar[i] = ToVariant(temp[i]);
+                    rgVar[i] = Variant(temp[i]);
                 }
             }
 
@@ -435,7 +467,6 @@ namespace win32::com
         
         }
     };
-
 
     struct ConnectionPoint : IConnectionPoint, ComAllocatorAware
     {
@@ -573,7 +604,7 @@ namespace win32::com
                 return E_POINTER;
             }
 
-            auto enumerator = make_unique_range_enumerator<IConnectionPoint>(points.begin(), points.begin(), points.end());
+            auto enumerator = make_unique_range_enumerator<decltype(points)::value_type>(points.begin(), points.begin(), points.end());
             *ppEnum = static_cast<IEnumConnectionPoints*>(enumerator.release());
 
             return S_OK;
@@ -602,10 +633,9 @@ namespace win32::com
 
     };
 
-    template<typename TObject, typename TContainer = std::vector<std::unique_ptr<TObject, void(*)(TObject*)>>>
+    template<typename TObject, typename TContainer = std::vector<TObject>>
     struct CollectionRef : IDispatch, ComAllocatorAware
     {
-//        std::vector<std::unique_ptr<TObject, void(*)(TObject*)>> &items;
         TContainer& items;
 
         constexpr static std::array<std::wstring_view, 4> names = {{
@@ -701,6 +731,10 @@ namespace win32::com
 
         HRESULT __stdcall GetTypeInfo(UINT iTInfo, LCID lcid, ITypeInfo **ppTInfo) noexcept override
         {
+            if (ppTInfo)
+            {
+                *ppTInfo = nullptr;
+            }
             return DISP_E_BADINDEX;
         }
 
@@ -814,12 +848,8 @@ namespace win32::com
 
             Variant result;
             result.vt = VT_EMPTY;
-            TObject* temp = nullptr;
 
-            if ((value.vt == VT_UNKNOWN || value.vt == VT_DISPATCH) && value.punkVal->QueryInterface<TObject>(&temp) == S_OK)
-            {
-               items.emplace_back(com::as_unique<TObject>(temp));
-            }
+            items.emplace_back(value);
 
             return result;
         }
@@ -859,7 +889,7 @@ namespace win32::com
 
             if (items.size() > index)
             {
-                return ToVariant(items[index].get());
+                return Variant(items[index]);
             }
 
             return Variant();
@@ -879,12 +909,12 @@ namespace win32::com
         }
     };
 
-    template<typename TObject, typename TContainer = std::vector<std::unique_ptr<TObject, void(*)(TObject*)>>>
-    struct OwningCollection : public CollectionRef<TObject>
+    template<typename TObject, typename TContainer = std::vector<TObject>>
+    struct OwningCollection : public CollectionRef<TObject, TContainer>
     {
         TContainer value;
 
-        OwningCollection() : CollectionRef<TObject>(value)
+        OwningCollection() : CollectionRef<TObject, TContainer>(value)
         {
         
         }
