@@ -2,7 +2,7 @@
 #define BITMAPWINDOW_HPP
 
 #include <win32_controls.hpp>
-#include <win32_com_server.hpp>
+#include <win32_com_collection.hpp>
 #include <cassert>
 #include <sstream>
 #include <vector>
