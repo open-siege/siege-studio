@@ -40,7 +40,7 @@ namespace win32::com
 
         EnumeratorIterator(TEnumeratorContainer container, std::size_t position = 0) : enumerator(std::move(container)), position(position), temp{}
         {
-        
+            this->enumerator->Next(1, &temp, nullptr);
         }
 
         EnumeratorIterator(const EnumeratorIterator& other) : enumerator(nullptr, [](TEnumerator* self) {
@@ -239,20 +239,6 @@ namespace win32::com
         }
     };
 
-    struct String_EnumTraits
-    {
-        using EnumType = IEnumString;
-        using ElemType = std::wstring;
-        using OutType = wchar_t**;
-
-        template <typename Iter>
-        static void Copy(wchar_t **output, Iter iter)
-        {
-            *output = (wchar_t*)::CoTaskMemAlloc(iter->size() * sizeof(wchar_t));
-            iter->copy(*output, iter->size());
-        }
-    };
-
     struct StringView_EnumTraits
     {
         using EnumType = IEnumString;
@@ -262,8 +248,24 @@ namespace win32::com
         template <typename Iter>
         static void Copy(wchar_t **output, Iter iter)
         {
-            *output = (wchar_t*)::CoTaskMemAlloc(iter->size() * sizeof(wchar_t));
-            iter->copy(*output, iter->size());
+            auto* result = (wchar_t*)CoTaskMemAlloc((iter->size() + 1) * sizeof(wchar_t));
+            assert(result);
+            assert(iter->copy(result, iter->size()) == iter->size());
+            result[iter->size()] = L'\0';
+            *output = result;
+        }
+    };
+
+    struct String_EnumTraits
+    {
+        using EnumType = IEnumString;
+        using ElemType = std::wstring;
+        using OutType = wchar_t**;
+
+        template <typename Iter>
+        static void Copy(wchar_t **output, Iter iter)
+        {
+            StringView_EnumTraits::Copy(output, iter);
         }
     };
 
@@ -383,8 +385,8 @@ namespace win32::com
                 return S_FALSE;
             }
 
-            auto index = std::distance(current, end);
             auto size = std::distance(begin, end);
+            auto index = size - std::distance(current, end);
             auto first = this->current;
 
             auto last = end;
@@ -399,9 +401,11 @@ namespace win32::com
 
             for (auto iter = first; iter != last; std::advance(iter, 1))
             {
-                TEnumTraits::Copy(&rgVar[count], iter);
+                TEnumTraits::Copy(rgVar + count, iter);
                 count++;   
             }
+
+            std::advance(this->current, count);
 
             *pCeltFetched = ULONG(count);
 
@@ -535,14 +539,18 @@ namespace win32::com
             }
             else if constexpr(std::is_same_v<TEnum::ElemType, std::wstring_view> || std::is_same_v<TEnum::ElemType, std::wstring>)
             {
-                std::vector<wchar_t*> temp(celt);
+                std::vector<wchar_t*> temp(celt, nullptr);
 
                 result = enumerator->Next(celt, temp.data(), &fetched);
 
                 for (auto i = 0; i < fetched; ++i)
                 {
-                    rgVar[i] = Variant(std::wstring_view(temp[i]));
-                    ::CoTaskMemFree(temp[i]);
+                    assert(temp[i]);
+                    if (temp[i])
+                    {
+                        rgVar[i] = Variant(std::wstring_view(temp[i]));
+                        CoTaskMemFree(static_cast<wchar_t*>(temp[i]));                    
+                    }
                 }
             }
             else
