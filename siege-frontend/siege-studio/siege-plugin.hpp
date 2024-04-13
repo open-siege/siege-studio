@@ -12,17 +12,17 @@
 
 namespace siege
 {
-	struct siege_plugin
+	class siege_plugin
 	{
 		std::unique_ptr<HINSTANCE__, void(*)(HINSTANCE)> plugin;
 
-		HRESULT (__stdcall *GetSupportedExtensionsProc)(win32::com::ICollection** formats) = nullptr;
-		HRESULT (__stdcall *GetSupportedFormatCategoriesProc)(LCID, win32::com::ICollection** formats) = nullptr;
-		HRESULT (__stdcall *GetSupportedExtensionsForCategoryProc)(const wchar_t* category, win32::com::ICollection** formats) = nullptr;
+		HRESULT (__stdcall *GetSupportedExtensionsProc)(win32::com::IReadOnlyCollection** formats) = nullptr;
+		HRESULT (__stdcall *GetSupportedFormatCategoriesProc)(LCID, win32::com::IReadOnlyCollection** formats) = nullptr;
+		HRESULT (__stdcall *GetSupportedExtensionsForCategoryProc)(const wchar_t* category, win32::com::IReadOnlyCollection** formats) = nullptr;
 		HRESULT (__stdcall *IsStreamSupportedProc)(::IStream* data) = nullptr;
-		HRESULT (__stdcall *GetWindowClassForStreamProc)(::IStream data, wchar_t**) = nullptr;
+		HRESULT (__stdcall *GetWindowClassForStreamProc)(::IStream* data, wchar_t**) = nullptr;
 
-
+	public: 
 		siege_plugin(std::filesystem::path plugin_path) : plugin(nullptr, [](auto handle) { assert(FreeLibrary(handle) == TRUE); })
 		{
 			if (!std::filesystem::exists(plugin_path))
@@ -58,21 +58,49 @@ namespace siege
 		{
 			std::vector<std::wstring> results;
 
+			win32::com::IReadOnlyCollection* raw = nullptr;
+
+			if (GetSupportedExtensionsProc(&raw) == S_OK)
+			{
+				for (auto& value : *raw)
+				{
+					results.emplace_back(std::wstring(value));
+				}
+			}
 
 			return results;
 		}
 
-		std::vector<std::wstring> GetSupportedFormatCategories(LCID) const noexcept
+		std::vector<std::wstring> GetSupportedFormatCategories(LCID locale_id) const noexcept
 		{
 			std::vector<std::wstring> results;
 
+			win32::com::IReadOnlyCollection* raw = nullptr;
+
+			if (GetSupportedFormatCategoriesProc(locale_id, &raw) == S_OK)
+			{
+				for (auto& value : *raw)
+				{
+					results.emplace_back(value);
+				}
+			}
 
 			return results;
 		}
 
-		std::vector<std::wstring> GetSupportedExtensionsForCategory(const std::wstring&) const noexcept
+		std::vector<std::wstring> GetSupportedExtensionsForCategory(const std::wstring& category) const noexcept
 		{
 			std::vector<std::wstring> results;
+
+			win32::com::IReadOnlyCollection* raw = nullptr;
+
+			if (GetSupportedExtensionsForCategoryProc(category.c_str(), &raw) == S_OK)
+			{
+				for (auto& value : *raw)
+				{
+					results.emplace_back(value);
+				}
+			}
 
 			return results;
 		}
@@ -84,9 +112,14 @@ namespace siege
 
 		std::wstring GetWindowClassForStream(IStream& data) const noexcept
 		{
-			std::wstring result;
+			wchar_t* result;
 
-			return result;
+			if (GetWindowClassForStreamProc(&data, &result) == S_OK)
+			{
+				return result;
+			}
+
+			return L"";
 		}
 	};
 

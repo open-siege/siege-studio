@@ -203,7 +203,7 @@ struct volume_window
 
 extern "C"
 {
-    HRESULT __stdcall GetSupportedExtensions(_Outptr_ win32::com::ICollection** formats) noexcept
+    HRESULT __stdcall GetSupportedExtensions(_Outptr_ win32::com::IReadOnlyCollection** formats) noexcept
     {
         if (!formats)
         {
@@ -219,10 +219,12 @@ extern "C"
                 return extensions;
             }();
 
+        *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view>>(supported_extensions).release();
+
         return S_OK;
     }
 
-    HRESULT __stdcall GetSupportedFormatCategories(_In_ LCID, _Outptr_ win32::com::ICollection** formats) noexcept
+    HRESULT __stdcall GetSupportedFormatCategories(_In_ LCID, _Outptr_ win32::com::IReadOnlyCollection** formats) noexcept
     {
         if (!formats)
         {
@@ -230,16 +232,15 @@ extern "C"
         }
 
         static auto categories = std::array<std::wstring_view, 2> {{
-            L"All Images",
-            L"All Palettes"
+            L"All Archives"
         }};
 
-//        win32::com::CollectionRef<
+        *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(categories)>>(categories).release();
 
         return S_OK;
     }
 
-    HRESULT __stdcall GetSupportedExtensionsForCategory(_In_ const wchar_t* category, _Outptr_ win32::com::ICollection** formats) noexcept
+    HRESULT __stdcall GetSupportedExtensionsForCategory(_In_ const wchar_t* category, _Outptr_ win32::com::IReadOnlyCollection** formats) noexcept
     {
         if (!category)
         {
@@ -249,6 +250,17 @@ extern "C"
         if (!formats)
         {
             return E_POINTER;
+        }
+
+        std::wstring_view category_str = category;
+
+        if (category_str == L"All Archives")
+        {
+            *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(volume_window::formats)>>(volume_window::formats).release();
+        }
+        else
+        {
+            *formats = std::make_unique<win32::com::OwningCollection<std::wstring_view>>().release();
         }
 
         return S_OK;
@@ -268,7 +280,7 @@ extern "C"
     }
 
     _Success_(return == S_OK || return == S_FALSE)
-    static HRESULT __stdcall GetWindowClassForStream(_In_ IStream* data, _Outptr_ wchar_t** class_name) noexcept
+    HRESULT __stdcall GetWindowClassForStream(_In_ IStream* data, _Outptr_ wchar_t** class_name) noexcept
     {
         if (!data)
         {

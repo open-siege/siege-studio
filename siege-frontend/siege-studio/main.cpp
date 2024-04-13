@@ -8,6 +8,7 @@
 #include <optional>
 #include <algorithm>
 #include <vector>
+#include <set>
 #include <bit>
 #include <variant>
 #include <functional>
@@ -34,6 +35,9 @@ struct siege_main_window
 	win32::hwnd_t self;
 	std::list<siege::siege_plugin> loaded_modules;
 	
+	std::set<std::wstring> extensions;
+	std::set<std::wstring> categories;
+
 	siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : self(self)
 	{
 		std::wstring full_app_path(256, '\0');
@@ -54,6 +58,15 @@ struct siege_main_window
 				{
 				}
 			}
+		}
+
+		for (auto& module : loaded_modules)
+		{
+			auto module_exts = module.GetSupportedExtensions();
+			std::copy(module_exts.begin(), module_exts.end(), std::inserter(extensions, extensions.begin()));
+
+			auto category_exts = module.GetSupportedFormatCategories(LOCALE_USER_DEFAULT);
+			std::copy(category_exts.begin(), category_exts.end(), std::inserter(categories, categories.begin()));
 		}
 	}
 

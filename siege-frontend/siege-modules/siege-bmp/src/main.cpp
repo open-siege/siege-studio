@@ -58,8 +58,8 @@ extern "C"
                 return extensions;
             }();
 
-        win32::com::ReadOnlyCollectionRef<std::wstring_view> temp(supported_extensions);
-        *formats = static_cast<win32::com::IReadOnlyCollection*>(&temp);
+;
+        *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view>>(supported_extensions).release();
 
         return S_OK;
     }
@@ -75,9 +75,8 @@ extern "C"
             L"All Images",
             L"All Palettes"
         }};
-
-        win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(categories)> temp(categories);
-        *formats = static_cast<win32::com::IReadOnlyCollection*>(&temp);
+        
+        *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(categories)>>(categories).release();
 
         return S_OK;
     }
@@ -98,19 +97,15 @@ extern "C"
 
         if (category_str == L"All Images")
         {
-            //siege::views::bmp_view::formats
-            win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(siege::views::bmp_view::formats)> temp(siege::views::bmp_view::formats);
-            *formats = static_cast<win32::com::IReadOnlyCollection*>(&temp);
+            *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(siege::views::bmp_view::formats)>>(siege::views::bmp_view::formats).release();
         }
         else if (category_str == L"All Palettes")
         {
-            win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(siege::views::bmp_view::formats)> temp(siege::views::bmp_view::formats);
-            *formats = static_cast<win32::com::IReadOnlyCollection*>(&temp);
+            *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(siege::views::pal_view::formats)>>(siege::views::pal_view::formats).release();
         }
         else
         {
-            win32::com::OwningCollection<std::wstring_view> temp;
-            *formats = static_cast<win32::com::IReadOnlyCollection*>(&temp);
+            *formats = std::make_unique<win32::com::OwningCollection<std::wstring_view>>().release();
         }
 
         return S_OK;
@@ -141,7 +136,7 @@ extern "C"
     }
 
     _Success_(return == S_OK || return == S_FALSE)
-    static HRESULT __stdcall GetWindowClassForStream(_In_ IStream* data, _Outptr_ wchar_t** class_name) noexcept
+    HRESULT __stdcall GetWindowClassForStream(_In_ IStream* data, _Outptr_ wchar_t** class_name) noexcept
     {
         if (!data)
         {
