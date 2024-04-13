@@ -1,5 +1,6 @@
 #include <set>
-#include "win32_com_server.hpp"
+#include <cassert>
+#include "win32_com.hpp"
 
 namespace win32::com
 {
@@ -10,7 +11,7 @@ namespace win32::com
             return allocations;
         }
 
-        bool ComAllocatorAware::IsHeapAllocated(void* object, std::size_t size)
+        bool ComObject::IsHeapAllocated(void* object, std::size_t size)
         {
             auto& allocations = GetHeapAllocations();
 
@@ -25,7 +26,7 @@ namespace win32::com
             return item != allocations.end();
         }
 
-        void* ComAllocatorAware::operator new(std::size_t count)
+        void* ComObject::operator new(std::size_t count)
         {
             void* result = ::CoTaskMemAlloc(count);
             assert(result);
@@ -34,7 +35,7 @@ namespace win32::com
             return result;
         }
 
-        void ComAllocatorAware::operator delete(void* ptr, std::size_t sz)
+        void ComObject::operator delete(void* ptr, std::size_t sz)
         {
             if (IsHeapAllocated(ptr, sz))
             {
@@ -44,12 +45,12 @@ namespace win32::com
             return ::CoTaskMemFree(ptr);
         }
 
-        ULONG __stdcall ComAllocatorAware::AddRef() noexcept
+        ULONG __stdcall ComObject::AddRef() noexcept
         {
             return ++refCount;
         }
 
-        ULONG __stdcall ComAllocatorAware::Release() noexcept
+        ULONG __stdcall ComObject::Release() noexcept
         {
             if (refCount == 0)
             {

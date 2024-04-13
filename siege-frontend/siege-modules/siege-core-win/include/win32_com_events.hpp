@@ -19,7 +19,7 @@ namespace win32::com
         }
     };
 
-    struct ConnectionPoint : IConnectionPoint, ComAllocatorAware
+    struct ConnectionPoint : IConnectionPoint, ComObject
     {
         std::unique_ptr<IConnectionPointContainer, void(*)(IConnectionPointContainer*)> container; 
         std::vector<ConnectData> callbacks;
@@ -38,12 +38,12 @@ namespace win32::com
 
         [[maybe_unused]] ULONG __stdcall AddRef() noexcept override
         {
-            return ComAllocatorAware::AddRef();
+            return ComObject::AddRef();
         }
 
         [[maybe_unused]] ULONG __stdcall Release() noexcept override
         {
-            return ComAllocatorAware::Release();
+            return ComObject::Release();
         }
 
         HRESULT Advise(IUnknown *pUnkSink, DWORD *pdwCookie) noexcept override
@@ -127,7 +127,7 @@ namespace win32::com
         }
     };
 
-    struct ConnectionPointContainer : IConnectionPointContainer, ComAllocatorAware
+    struct ConnectionPointContainer : IConnectionPointContainer, ComObject
     {
         std::vector<std::unique_ptr<IConnectionPoint, void(*)(IConnectionPoint*)>> points;
     
@@ -140,12 +140,12 @@ namespace win32::com
 
         [[maybe_unused]] ULONG __stdcall AddRef() noexcept override
         {
-            return ComAllocatorAware::AddRef();
+            return ComObject::AddRef();
         }
 
         [[maybe_unused]] ULONG __stdcall Release() noexcept override
         {
-            return ComAllocatorAware::Release();
+            return ComObject::Release();
         }
 
         HRESULT EnumConnectionPoints(IEnumConnectionPoints **ppEnum) noexcept override
