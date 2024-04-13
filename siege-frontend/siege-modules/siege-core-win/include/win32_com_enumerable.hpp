@@ -268,7 +268,7 @@ namespace win32::com
     };
 
     template<typename TEnumTraits, typename TIter>
-    struct RangeEnumerator : TEnumTraits::EnumType, ComAllocatorAware
+    struct RangeEnumerator : TEnumTraits::EnumType, ComObject
     {
         using ElemType = TEnumTraits::ElemType;
         using EnumType = TEnumTraits::EnumType;
@@ -320,7 +320,7 @@ namespace win32::com
                 return refCount = owner->AddRef();
             }
 
-            return ComAllocatorAware::AddRef();
+            return ComObject::AddRef();
         }
 
         [[maybe_unused]] ULONG __stdcall Release() noexcept override
@@ -330,7 +330,7 @@ namespace win32::com
                 return refCount = owner->Release();
             }
 
-            return ComAllocatorAware::Release();
+            return ComObject::Release();
         }
 
         HRESULT __stdcall Clone(EnumType** other) noexcept override
@@ -470,7 +470,7 @@ namespace win32::com
      }
 
     template<typename TEnum>
-    struct VariantEnumeratorAdapter : IEnumVARIANT, ComAllocatorAware
+    struct VariantEnumeratorAdapter : IEnumVARIANT, ComObject
     {
         std::unique_ptr<TEnum, void(*)(TEnum*)> enumerator;
         
@@ -489,12 +489,12 @@ namespace win32::com
 
         [[maybe_unused]] ULONG __stdcall AddRef() noexcept override
         {
-            return ComAllocatorAware::AddRef();
+            return ComObject::AddRef();
         }
 
         [[maybe_unused]] ULONG __stdcall Release() noexcept override
         {
-            return ComAllocatorAware::Release();
+            return ComObject::Release();
         }
 
         HRESULT __stdcall Clone(IEnumVARIANT** other) noexcept

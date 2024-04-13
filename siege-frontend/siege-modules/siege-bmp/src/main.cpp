@@ -40,7 +40,7 @@ struct pal_mapping_window
 
 extern "C"
 {
-    HRESULT __stdcall GetSupportedExtensions(_Outptr_ win32::com::ICollection** formats) noexcept
+    HRESULT __stdcall GetSupportedExtensions(_Outptr_ win32::com::IReadOnlyCollection** formats) noexcept
     {
         if (!formats)
         {
@@ -58,13 +58,13 @@ extern "C"
                 return extensions;
             }();
 
-        win32::com::CollectionRef<std::wstring_view> temp(supported_extensions);
-        *formats = static_cast<win32::com::ICollection*>(&temp);
+        win32::com::ReadOnlyCollectionRef<std::wstring_view> temp(supported_extensions);
+        *formats = static_cast<win32::com::IReadOnlyCollection*>(&temp);
 
         return S_OK;
     }
 
-    HRESULT __stdcall GetSupportedFormatCategories(_In_ LCID, _Outptr_ win32::com::ICollection** formats) noexcept
+    HRESULT __stdcall GetSupportedFormatCategories(_In_ LCID, _Outptr_ win32::com::IReadOnlyCollection** formats) noexcept
     {
         if (!formats)
         {
@@ -76,13 +76,13 @@ extern "C"
             L"All Palettes"
         }};
 
-        win32::com::CollectionRef<std::wstring_view, decltype(categories)> temp(categories);
-        *formats = static_cast<win32::com::ICollection*>(&temp);
+        win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(categories)> temp(categories);
+        *formats = static_cast<win32::com::IReadOnlyCollection*>(&temp);
 
         return S_OK;
     }
 
-    HRESULT __stdcall GetSupportedExtensionsForCategory(_In_ const wchar_t* category, _Outptr_ win32::com::ICollection** formats) noexcept
+    HRESULT __stdcall GetSupportedExtensionsForCategory(_In_ const wchar_t* category, _Outptr_ win32::com::IReadOnlyCollection** formats) noexcept
     {
         if (!category)
         {
@@ -99,18 +99,18 @@ extern "C"
         if (category_str == L"All Images")
         {
             //siege::views::bmp_view::formats
-            win32::com::CollectionRef<std::wstring_view, decltype(siege::views::bmp_view::formats)> temp(siege::views::bmp_view::formats);
-            *formats = static_cast<win32::com::ICollection*>(&temp);
+            win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(siege::views::bmp_view::formats)> temp(siege::views::bmp_view::formats);
+            *formats = static_cast<win32::com::IReadOnlyCollection*>(&temp);
         }
         else if (category_str == L"All Palettes")
         {
-            win32::com::CollectionRef<std::wstring_view, decltype(siege::views::bmp_view::formats)> temp(siege::views::bmp_view::formats);
-            *formats = static_cast<win32::com::ICollection*>(&temp);
+            win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(siege::views::bmp_view::formats)> temp(siege::views::bmp_view::formats);
+            *formats = static_cast<win32::com::IReadOnlyCollection*>(&temp);
         }
         else
         {
             win32::com::OwningCollection<std::wstring_view> temp;
-            *formats = static_cast<win32::com::ICollection*>(&temp);
+            *formats = static_cast<win32::com::IReadOnlyCollection*>(&temp);
         }
 
         return S_OK;

@@ -33,7 +33,7 @@ namespace win32::com
 		return std::unique_ptr<T, void(*)(T*)>(value, deleter);
 	}
 
-	struct ComAllocatorAware : IUnknown
+	struct ComObject : IUnknown
     {
         std::atomic_uint refCount = 1;
 
