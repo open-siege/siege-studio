@@ -66,6 +66,8 @@ namespace siege
 				{
 					results.emplace_back(std::wstring(value));
 				}
+
+				assert(raw->Release() == 0);
 			}
 
 			return results;
@@ -83,6 +85,8 @@ namespace siege
 				{
 					results.emplace_back(value);
 				}
+				
+				assert(raw->Release() == 0);
 			}
 
 			return results;
@@ -100,6 +104,8 @@ namespace siege
 				{
 					results.emplace_back(value);
 				}
+
+				assert(raw->Release() == 0);
 			}
 
 			return results;

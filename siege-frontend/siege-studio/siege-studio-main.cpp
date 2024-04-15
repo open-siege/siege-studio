@@ -38,8 +38,11 @@ struct siege_main_window
 	std::set<std::wstring> extensions;
 	std::set<std::wstring> categories;
 
+	std::size_t open_id = 0u;
+
 	siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : self(self)
 	{
+		open_id = RegisterWindowMessageW(L"COMMAND_OPEN");
 		std::wstring full_app_path(256, '\0');
 
 		GetModuleFileName(params.hInstance, full_app_path.data(), full_app_path.size());
@@ -274,12 +277,24 @@ struct siege_main_window
 					return SendMessageW(command.sender, win32::command_message::id, command.wparam(), command.lparam());
 				}
 					
-				if (command.identifier == 100)
+				if (command.notification_code == 0 && command.identifier == open_id)
 				{
 					auto dialog = win32::com::CreateFileOpenDialog();
 
 					if (dialog)
 					{
+						std::vector<COMDLG_FILTERSPEC> filetypes;
+
+						filetypes.reserve(extensions.size());
+
+						for (auto& extension : extensions)
+						{
+							auto& temp = filetypes.emplace_back();
+							temp.pszName = L"";
+							temp.pszSpec = extension.c_str();
+						}
+
+						dialog.value()->SetFileTypes(filetypes.size(), filetypes.data());
 						auto result = dialog.value()->Show(nullptr);
 
 						if (result == S_OK)
@@ -394,12 +409,29 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		.lpszClassName{win32::type_name<siege_main_window>().c_str()},
 	});
 
-	auto main_window = win32::CreateWindowExW(CREATESTRUCTW {
+	auto main_menu = ::CreateMenu();
+
+	std::size_t id = 1u;
+
+	auto file_menu = ::CreatePopupMenu();	
+	AppendMenuW(main_menu, MF_POPUP, reinterpret_cast<INT_PTR>(file_menu), L"File");
+	AppendMenuW(file_menu, MF_STRING, RegisterWindowMessageW(L"COMMAND_OPEN"), L"Open");
+	AppendMenuW(file_menu, MF_STRING, RegisterWindowMessageW(L"COMMAND_SAVE"), L"Save");
+	AppendMenuW(file_menu, MF_STRING, RegisterWindowMessageW(L"COMMAND_SAVE_AS"), L"Save As");
+	AppendMenuW(file_menu, MF_SEPARATOR , id++, nullptr);
+	AppendMenuW(file_menu, MF_STRING, RegisterWindowMessageW(L"COMMAND_EXIT"), L"Exit");
+
+	AppendMenuW(main_menu, MF_STRING, id++, L"Edit");
+    AppendMenuW(main_menu, MF_STRING, id++, L"View");
+    AppendMenuW(main_menu, MF_STRING, id++, L"Help");
+
+    auto main_window = win32::CreateWindowExW(CREATESTRUCTW {
+		.hMenu = main_menu,
 		.cx = CW_USEDEFAULT,
 		.x = CW_USEDEFAULT,
 		.style = WS_OVERLAPPEDWINDOW,
 		.lpszName = app_title.data(),
-		.lpszClass = win32::type_name<siege_main_window>().c_str(),	
+		.lpszClass = win32::type_name<siege_main_window>().c_str(),
 		//.dwExStyle = WS_EX_COMPOSITED,
 	});
 
