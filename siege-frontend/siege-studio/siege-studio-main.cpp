@@ -21,6 +21,7 @@
 #include <commctrl.h>
 #include <oleacc.h>
 #include <shobjidl.h> 
+#include <shlwapi.h> 
 #include "win32_com_client.hpp"
 #include "win32_dialogs.hpp"
 #include "siege-plugin.hpp"
@@ -33,6 +34,7 @@ using win32::overloaded;
 struct siege_main_window
 {
 	win32::hwnd_t self;
+	win32::hwnd_t tab_control;
 	std::list<siege::siege_plugin> loaded_modules;
 	
 	std::set<std::wstring> extensions;
@@ -104,6 +106,7 @@ struct siege_main_window
 					});
 
 		assert(tab_control_instance);
+		tab_control = *tab_control_instance;
 
 		auto children = std::array{*dir_list, *tab_control_instance};
         win32::StackChildren(*win32::GetClientSize(self), children, win32::StackDirection::Horizontal);
@@ -283,17 +286,28 @@ struct siege_main_window
 
 					if (dialog)
 					{
-						std::vector<COMDLG_FILTERSPEC> filetypes;
+						struct filter : COMDLG_FILTERSPEC
+						{
+							std::wstring name;
+							std::wstring spec;
 
-						filetypes.reserve(extensions.size());
+							filter(std::wstring name, std::wstring spec) noexcept : name(std::move(name)), spec(std::move(spec)) 
+							{
+								this->pszName = this->name.c_str();
+								this->pszSpec = this->spec.c_str();
+							}
+						};
+
+						std::vector<filter> temp;
+
+						temp.reserve(extensions.size());
 
 						for (auto& extension : extensions)
 						{
-							auto& temp = filetypes.emplace_back();
-							temp.pszName = L"";
-							temp.pszSpec = extension.c_str();
+							temp.emplace_back(L"", L"*" + extension);
 						}
 
+						std::vector<COMDLG_FILTERSPEC> filetypes(temp.begin(), temp.end());
 						dialog.value()->SetFileTypes(filetypes.size(), filetypes.data());
 						auto result = dialog.value()->Show(nullptr);
 
@@ -305,7 +319,44 @@ struct siege_main_window
 							{
 								auto path = item.value()->GetFileSysPath();
 
-								OutputDebugStringW(path->c_str());
+								IStream* stream = nullptr;
+
+								if (SHCreateStreamOnFileEx(path->c_str(), STGM_READ, 0, FALSE, nullptr, &stream) == S_OK)
+								{
+									auto plugin = std::find_if(loaded_modules.begin(), loaded_modules.end(), [&](auto& module) {
+										return 	module.IsStreamSupported(*stream);
+									});			
+
+									if (plugin != loaded_modules.end())
+									{
+										auto class_name = plugin->GetWindowClassForStream(*stream);
+
+										auto parent_size = win32::GetClientRect(self);
+
+										auto child = win32::CreateWindowExW(win32::window_params<RECT>{
+											.parent = self,
+											.class_name = class_name.c_str(),
+											.class_module = plugin->GetHandle(),
+											.position = *parent_size
+										});
+
+										assert(child);
+
+										auto index = win32::tab_control::GetItemCount(tab_control);
+
+										win32::tab_control::InsertItem(tab_control, index, TCITEMW {
+												.mask = TCIF_TEXT | TCIF_PARAM,
+												.pszText = const_cast<wchar_t*>(path->filename().c_str()),
+												.lParam = win32::lparam_t(*child)
+											});
+
+										SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&parent_size));
+
+										SetWindowLongPtrW(*child, GWLP_ID, index);
+									}
+
+									stream->Release();
+								}
 							}
 						}
 					}
@@ -354,12 +405,12 @@ struct siege_main_window
 							win32::command_message dialog_command{dialog_message.wParam, dialog_message.lParam};
 
 							if (dialog_command.identifier == IDOK || dialog_command.identifier == IDCANCEL)
-										{
-											std::array<wchar_t, 32> class_name;
-											GetClassName(self, class_name.data(), class_name.size());
-											EndDialog(self, dialog_command.identifier);
-											return (INT_PTR)TRUE;
-										}
+							{
+								std::array<wchar_t, 32> class_name;
+								GetClassName(self, class_name.data(), class_name.size());
+								EndDialog(self, dialog_command.identifier);
+								return (INT_PTR)TRUE;
+							}
 						}
 
 						return (INT_PTR)FALSE;

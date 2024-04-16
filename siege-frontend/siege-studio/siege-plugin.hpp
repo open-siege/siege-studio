@@ -127,6 +127,11 @@ namespace siege
 
 			return L"";
 		}
+
+		auto GetHandle()
+		{
+			return plugin.get();
+		}
 	};
 
 }
