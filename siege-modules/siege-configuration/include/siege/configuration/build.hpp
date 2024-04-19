@@ -1,7 +1,7 @@
 #ifndef BUILD_CONFIG_HPP
 #define BUILD_CONFIG_HPP
 
-#include "configurations/shared.hpp"
+#include <siege/configuration/shared.hpp>
 #include <istream>
 
 namespace siege::configuration::build

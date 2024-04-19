@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <sstream>
-#include "configurations/unreal.hpp"
+#include <siege/configuration/unreal.hpp>
 
 namespace unreal = siege::configuration::unreal;
 

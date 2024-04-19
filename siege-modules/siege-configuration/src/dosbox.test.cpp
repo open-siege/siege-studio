@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <sstream>
-#include "configurations/dosbox.hpp"
+#include <siege/configuration/dosbox.hpp>
 
 namespace dosbox = siege::configuration::dosbox;
 

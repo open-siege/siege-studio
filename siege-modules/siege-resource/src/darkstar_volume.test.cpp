@@ -27,54 +27,54 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
     std::array<std::byte, 4> temp = {};
 
     constexpr auto little_endian_48_in_hex = std::array<std::byte, 4>{ std::byte(0x30), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_48_in_hex);
 
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == siege::platform::to_tag<4>({ 'V', 'B', 'L', 'K' }));
 
     constexpr auto little_endian_32_in_hex_with_end_byte_tag = std::array<std::byte, 4>{ std::byte(0x20), std::byte(0x00), std::byte(0x00), std::byte(0x80) };
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_32_in_hex_with_end_byte_tag);
 
     std::string content(32, '\0');
-    platform::read(mem_buffer, reinterpret_cast<char*>(content.data()), content.size());
+    siege::platform::read(mem_buffer, reinterpret_cast<char*>(content.data()), content.size());
     REQUIRE(content == std::string_view{ "Hello Darkness, my old friend..." });
 
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == siege::platform::to_tag<4>({ 'v', 'o', 'l', 's' }));
 
     constexpr auto little_endian_10_in_hex = std::array<std::byte, 4>{ std::byte(0x0A), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_10_in_hex);
 
     std::array<char, 10> filename = {};
-    platform::read(mem_buffer, reinterpret_cast<char*>(filename.data()), filename.size());
+    siege::platform::read(mem_buffer, reinterpret_cast<char*>(filename.data()), filename.size());
     REQUIRE(filename == std::array<char, 10>{ "hello.txt" });
 
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == siege::platform::to_tag<4>({ 'v', 'o', 'l', 'i' }));
 
     constexpr auto little_endian_17_in_hex = std::array<std::byte, 4>{ std::byte(0x11), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_17_in_hex);
 
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == std::array<std::byte, 4>());
 
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == std::array<std::byte, 4>());
 
     constexpr auto little_endian_8_in_hex = std::array<std::byte, 4>{ std::byte(0x08), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_8_in_hex);
 
     constexpr auto little_endian_32_in_hex = std::array<std::byte, 4>{ std::byte(0x20), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_32_in_hex);
 
     std::byte file_type{};
-    platform::read(mem_buffer, &file_type, 1);
+    siege::platform::read(mem_buffer, &file_type, 1);
     REQUIRE(file_type == std::byte{ 0x00 });
   }
 
@@ -97,58 +97,58 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
     std::array<std::byte, 4> temp = {};
 
     constexpr auto little_endian_52_in_hex = std::array<std::byte, 4>{ std::byte(0x34), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_52_in_hex);
 
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == siege::platform::to_tag<4>({ 'V', 'B', 'L', 'K' }));
 
     constexpr auto little_endian_34_in_hex_with_end_byte_tag = std::array<std::byte, 4>{ std::byte(0x22), std::byte(0x00), std::byte(0x00), std::byte(0x80) };
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_34_in_hex_with_end_byte_tag);
 
     std::string content(34, '\0');
-    platform::read(mem_buffer, reinterpret_cast<char*>(content.data()), content.size());
+    siege::platform::read(mem_buffer, reinterpret_cast<char*>(content.data()), content.size());
     REQUIRE(content == std::string_view{ "I've come to talk with you again.." });
 
-    platform::read(mem_buffer, temp.data(), 2);
+    siege::platform::read(mem_buffer, temp.data(), 2);
     REQUIRE(temp[0] == std::byte(0x00));
     REQUIRE(temp[1] == std::byte(0x00));
 
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == siege::platform::to_tag<4>({ 'v', 'o', 'l', 's' }));
 
     constexpr auto little_endian_10_in_hex = std::array<std::byte, 4>{ std::byte(0x0A), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_10_in_hex);
 
     std::array<char, 10> filename = {};
-    platform::read(mem_buffer, reinterpret_cast<char*>(filename.data()), filename.size());
+    siege::platform::read(mem_buffer, reinterpret_cast<char*>(filename.data()), filename.size());
     REQUIRE(filename == std::array<char, 10>{ "hello.txt" });
 
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == siege::platform::to_tag<4>({ 'v', 'o', 'l', 'i' }));
 
     constexpr auto little_endian_17_in_hex = std::array<std::byte, 4>{ std::byte(0x11), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_17_in_hex);
 
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == std::array<std::byte, 4>());
 
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == std::array<std::byte, 4>());
 
     constexpr auto little_endian_8_in_hex = std::array<std::byte, 4>{ std::byte(0x08), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_8_in_hex);
 
     constexpr auto little_endian_32_in_hex = std::array<std::byte, 4>{ std::byte(0x22), std::byte(0x00), std::byte(0x00), std::byte(0x00) };
-    platform::read(mem_buffer, temp.data(), temp.size());
+    siege::platform::read(mem_buffer, temp.data(), temp.size());
     REQUIRE(temp == little_endian_32_in_hex);
 
     std::byte file_type{};
-    platform::read(mem_buffer, &file_type, 1);
+    siege::platform::read(mem_buffer, &file_type, 1);
     REQUIRE(file_type == std::byte{ 0x00 });
   }
 
