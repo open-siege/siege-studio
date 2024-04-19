@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <sstream>
-#include "configurations/id_tech.hpp"
+#include <siege/configuration/id_tech.hpp>
 
 namespace id_tech = siege::configuration::id_tech;
 

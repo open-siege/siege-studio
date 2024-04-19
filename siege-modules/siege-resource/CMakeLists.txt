@@ -20,19 +20,12 @@ if (MSVC)
         set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
-# TODO fix linker error with tests on Windows
-if (WIN32)
-        add_executable(${PROJECT_NAME}-tests ${CMAKE_CURRENT_SOURCE_DIR}/src/empty.cpp)
-        target_link_libraries(${PROJECT_NAME}-tests PRIVATE Catch2::Catch2WithMain)        
-else()
-        add_executable(${PROJECT_NAME}-tests ${TESTABLE_SRC_FILES} ${TEST_SRC_FILES})
-        set_property(TARGET ${PROJECT_NAME}-tests PROPERTY CXX_STANDARD 23)
-        target_include_directories(${PROJECT_NAME}-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-        target_link_libraries(${PROJECT_NAME}-tests PRIVATE Catch2::Catch2WithMain 
-                                siege-platform
-                                libzip::zip)
-endif()
-
+add_executable(${PROJECT_NAME}-tests ${TESTABLE_SRC_FILES} ${TEST_SRC_FILES})
+set_property(TARGET ${PROJECT_NAME}-tests PROPERTY CXX_STANDARD 23)
+target_include_directories(${PROJECT_NAME}-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(${PROJECT_NAME}-tests PRIVATE Catch2::Catch2WithMain 
+                        siege-platform
+                        libzip::zip)
 include(CTest)
 include(Catch)
 catch_discover_tests(${PROJECT_NAME}-tests)
