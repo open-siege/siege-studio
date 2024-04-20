@@ -17,23 +17,21 @@
 #include <filesystem>
 #include <cassert>
 
-#include "win32_builders.hpp"
+#include <siege/platform/win/desktop/win32_builders.hpp>
+#include <siege/platform/win/desktop/win32_dialogs.hpp>
+#include <siege/platform/win/core/com_client.hpp>
 #include <commctrl.h>
 #include <oleacc.h>
 #include <shobjidl.h> 
 #include <shlwapi.h> 
-#include "win32_com_client.hpp"
-#include "win32_dialogs.hpp"
+
+#include "siege_main_window.hpp"
 
 //#include "http_client.hpp"
 
 constexpr static std::wstring_view app_title = L"Siege Studio";
 
 using win32::overloaded;
-
-
-
-
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,
@@ -56,7 +54,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	InitCommonControlsEx(&settings);
 
 
-	auto mfcHandle = LoadLibraryExW(L"siege-mfc.dll", nullptr, 0);
+	auto mfcHandle = LoadLibraryExW(L"siege-win-mfc.dll", nullptr, 0);
 
 	win32::RegisterClassExW<siege_main_window>(WNDCLASSEXW {
 		.style{CS_HREDRAW | CS_VREDRAW},

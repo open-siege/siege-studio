@@ -4,7 +4,7 @@
 #include <memory>
 #include <filesystem>
 #include <shobjidl.h> 
-#include "win32_com.hpp"
+#include <siege/platform/win/core/com.hpp>
 
 namespace win32::com
 {

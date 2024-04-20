@@ -16,12 +16,12 @@
 #include <filesystem>
 #include <cassert>
 
-#include "win32_controls.hpp"
-#include "win32_builders.hpp"
+#include <siege/platform/win/desktop/win32_controls.hpp>
+#include <siege/platform/win/desktop/win32_builders.hpp>
+#include <siege/platform/win/desktop/win32_dialogs.hpp>
+#include <siege/platform/win/core/com_client.hpp>
 #include <oleacc.h>
 #include <shobjidl.h> 
-#include "win32_com_client.hpp"
-#include "win32_dialogs.hpp"
 //#include "http_client.hpp"
 
 

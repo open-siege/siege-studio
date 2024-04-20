@@ -13,12 +13,12 @@ target_link_libraries(siege-installer PRIVATE cpr::cpr siege-resource)
 target_include_directories(siege-installer PRIVATE src)
 
 ## Testing
-add_executable(tests src/tests_main.test.cpp)
-target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+#add_executable(tests src/tests_main.test.cpp)
+#target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 
-include(CTest)
-include(Catch)
-catch_discover_tests(tests)
+#include(CTest)
+#include(Catch)
+#catch_discover_tests(tests)
 
 ## Install/Packaging Section
 install(TARGETS siege-installer

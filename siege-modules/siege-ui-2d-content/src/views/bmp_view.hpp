@@ -26,7 +26,7 @@ namespace siege::views
 
         auto on_create(const win32::create_message& info)
         {
-            auto mfcModule = GetModuleHandleW(L"siege-mfc.dll");
+            auto mfcModule = GetModuleHandleW(L"siege-win-mfc.dll");
             assert(mfcModule);
 
             auto group_box = win32::CreateWindowExW(DLGITEMTEMPLATE{

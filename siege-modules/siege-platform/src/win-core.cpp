@@ -4,15 +4,31 @@
 #include <siege/platform/win/core/com_stream_buf.hpp>
 #include <siege/platform/win/core/com_xml.hpp>
 #include <siege/platform/win/core/com.hpp>
+#include <siege/platform/win/core/xcom.hpp>
+#include <cassert>
 #include <set>
 
 namespace win32::com
 {
+    static_assert(sizeof(xcom::variant_t) == sizeof(VARIANT));
+    static_assert(sizeof(xcom::variant_t::type) == sizeof(VARIANT::vt));
+    static_assert(offsetof(xcom::variant_t, xcom::variant_t::data) == offsetof(VARIANT, VARIANT::boolVal));
+    static_assert(offsetof(xcom::variant_t, xcom::variant_t::data) == offsetof(VARIANT, VARIANT::byref));
+    static_assert(offsetof(xcom::variant_t, xcom::variant_t::data) == offsetof(VARIANT, VARIANT::punkVal));
+    static_assert(offsetof(xcom::variant_t, xcom::variant_t::data) == offsetof(VARIANT, VARIANT::pdispVal));
+    static_assert(sizeof(xcom::hresult_t) == sizeof(HRESULT));
+    static_assert(sizeof(xcom::guid_t) == sizeof(GUID));
+    static_assert(sizeof(std::uint32_t) == sizeof(ULONG));
+    static_assert(sizeof(std::uint32_t) == sizeof(LCID));
+    static_assert(sizeof(char16_t) == sizeof(wchar_t));
+
 	HRESULT init_com()
 	{
 		thread_local HRESULT result = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 		thread_local auto com_handle = as_unique<HRESULT>(&result, [](auto*){ CoUninitialize(); });
-		return result;
+
+        assert(std::memcmp(&IID_IUnknown, &xcom::IUnknown::iid, sizeof(GUID)) == 0);
+        return result;
 	}
 
 	std::set<void*>& GetHeapAllocations()
