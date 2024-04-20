@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(siege-ui-auido-content)
+project(siege-ui-audio-content)
 
 file(GLOB_RECURSE SRC_FILES
         src/*.cpp)

@@ -1,10 +1,8 @@
 #ifndef SIEGE_MAIN_WINDOW_HPP
 #define SIEGE_MAIN_WINDOW_HPP
 
-#include "siege/platform/win-desktop/win32_controls.hpp"
+#include <siege/platform/win/desktop/win32_controls.hpp>
 #include "siege-plugin.hpp"
-
-
 
 struct siege_main_window
 {
@@ -56,7 +54,7 @@ struct siege_main_window
 
 		assert(parent_size);
 
-		auto mfcModule = GetModuleHandleW(L"siege-mfc.dll");
+		auto mfcModule = GetModuleHandleW(L"siege-win-mfc.dll");
 
 		auto left_size = (parent_size->right - parent_size->left) / 9;
 		auto dir_list = win32::CreateWindowExW(CREATESTRUCTW {

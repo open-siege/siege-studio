@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 #include <libloaderapi.h>
-#include "win32_com_collection.hpp"
+#include <siege/platform/win/core/com_collection.hpp>
 
 namespace siege
 {
