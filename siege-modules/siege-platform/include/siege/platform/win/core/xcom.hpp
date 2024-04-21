@@ -65,11 +65,91 @@ namespace xcom
 
     struct IUnknown
     {
-        //00000000-0000-0000-C000-000000000046
         constexpr static guid_t iid = {.as_guid { 0x00000000, 0x0000, 0x0000, 0x46000000000000C0 }};
         virtual hresult_t stdcall QueryInterface(const guid_t& id, void** out) = 0;
         virtual std::uint32_t stdcall AddRef() = 0;
         virtual std::uint32_t stdcall Release() = 0;
+    };
+
+    template<typename TOut>
+    struct IEnum : IUnknown
+    {
+        virtual hresult_t stdcall Clone(IEnum**) = 0;
+        virtual hresult_t stdcall Next(std::uint32_t, TOut*, std::uint32_t*) = 0;
+        virtual hresult_t stdcall Reset() = 0;
+        virtual hresult_t stdcall Skip(std::uint32_t) = 0;
+    };
+
+    struct ILockBytes : IUnknown
+    {
+      constexpr static guid_t iid = {.as_guid { 0xa, 0x0000, 0x0000, 0x46000000000000C0 }};
+      virtual hresult_t stdcall Flush() = 0;
+      virtual hresult_t stdcall LockRegion() = 0;
+      virtual hresult_t stdcall ReadAt() = 0;
+      virtual hresult_t stdcall SetSize() = 0;
+      virtual hresult_t stdcall Stat() = 0;
+      virtual hresult_t stdcall UnlockRegion() = 0;
+      virtual hresult_t stdcall WriteAt() = 0;
+    };
+    
+    struct IStream;
+    struct IEnumSTATSTG;
+    struct STATSTG;
+
+    struct IStorage : IUnknown
+    {
+      constexpr static guid_t iid = {.as_guid { 0xb, 0x0000, 0x0000, 0x46000000000000C0 }};
+      virtual hresult_t stdcall Commit(std::uint32_t) = 0;
+      virtual hresult_t stdcall CopyTo(std::uint32_t, const guid_t*, char16_t**, IStorage*) = 0;
+      virtual hresult_t stdcall CreateStorage(char16_t**, std::uint32_t, std::uint32_t, std::uint32_t, IStorage**) = 0;
+      virtual hresult_t stdcall CreateStream(char16_t**, std::uint32_t, std::uint32_t, std::uint32_t, IStream**) = 0;
+      virtual hresult_t stdcall DestroyElement(char16_t*) = 0;
+      virtual hresult_t stdcall EnumElements(std::uint32_t, void*, std::uint32_t, IEnumSTATSTG*) = 0;
+      virtual hresult_t stdcall MoveElementTo(char16_t*, IStorage*, char16_t*, std::uint32_t) = 0;
+      virtual hresult_t stdcall OpenStorage(char16_t*, IStorage*, std::uint32_t, char16_t, std::uint32_t, IStorage**) = 0;
+      virtual hresult_t stdcall OpenStream(char16_t*, void*, std::uint32_t, std::uint32_t, IStream*) = 0;
+      virtual hresult_t stdcall RenameElement(char16_t*, char16_t*) = 0;
+      virtual hresult_t stdcall Revert() = 0;
+      virtual hresult_t stdcall SetClass(const guid_t&) = 0;
+      virtual hresult_t stdcall SetElementTimes(const char16_t, void*, void*, void*) = 0;
+      virtual hresult_t stdcall SetStateBits(std::uint32_t, std::uint32_t) = 0;
+      virtual hresult_t stdcall Stat(STATSTG*, std::uint32_t) = 0;
+    };
+
+    struct ISequentialStream : public IUnknown
+    {
+      constexpr static guid_t iid = {.as_guid { 0x0c733a30, 0x2a1c, 0x11ce, 0x3d774400aa00e5ad }};
+      virtual hresult_t stdcall Read(void*, std::uint32_t, std::uint32_t*) = 0;
+      virtual hresult_t stdcall Write(const void*, std::uint32_t, std::uint32_t*) = 0;
+    };
+
+    struct IStream : ISequentialStream
+    {
+      constexpr static guid_t iid = {.as_guid { 0xc, 0x0000, 0x0000, 0x46000000000000C0 }};
+      virtual hresult_t stdcall Clone(IStream*) = 0;
+      virtual hresult_t stdcall Commit(std::uint32_t) = 0;
+      virtual hresult_t stdcall CopyTo(IStream*, std::uint64_t, std::uint64_t*, std::uint64_t*) = 0;
+      virtual hresult_t stdcall LockRegion(std::uint64_t, std::uint64_t, std::uint32_t) = 0;
+      virtual hresult_t stdcall Revert() = 0;
+      virtual hresult_t stdcall Seek(std::int64_t, std::uint32_t, std::uint64_t*) = 0;
+      virtual hresult_t stdcall SetSize(std::uint64_t) = 0;
+      virtual hresult_t stdcall Stat(STATSTG*, std::uint32_t) = 0;
+      virtual hresult_t stdcall UnlockRegion(std::uint64_t, std::uint64_t, std::uint32_t) = 0;
+    };
+
+    struct IEnumSTATSTG : IEnum<STATSTG>
+    {
+        constexpr static guid_t iid = {.as_guid { 0xd, 0x0000, 0x0000, 0x46000000000000C0 }};    
+    };
+
+    struct IEnumUnknown : IEnum<IUnknown*>
+    {
+        constexpr static guid_t iid = {.as_guid { 0x100, 0x0000, 0x0000, 0x46000000000000C0 }};
+    };
+
+    struct IEnumString : IEnum<char16_t*>
+    {
+        constexpr static guid_t iid = {.as_guid { 0x101, 0x0000, 0x0000, 0x46000000000000C0 }};
     };
 
     struct variant_t;
@@ -84,8 +164,9 @@ namespace xcom
 
     struct ITypeInfo;
 
-    struct IDispatch : public IUnknown
+    struct IDispatch : IUnknown
     {
+        constexpr static guid_t iid = {.as_guid { 0x20400, 0x0000, 0x0000, 0x46000000000000C0 }};
         virtual hresult_t stdcall GetTypeInfoCount(std::uint32_t *pctinfo) = 0;
         virtual hresult_t stdcall GetTypeInfo(std::uint32_t, std::uint32_t, ITypeInfo**) = 0;
         virtual hresult_t stdcall GetIDsOfNames(const guid_t&, char16_t**, std::uint32_t, std::uint32_t, std::uint32_t*) = 0;
@@ -162,93 +243,50 @@ namespace xcom
 
     struct IConnectionPoint;
 
-    template<typename TOut>
-    struct IEnum : public IUnknown
+
+    struct IEnumVARIANT : IEnum<variant_t>
     {
-        virtual hresult_t stdcall Clone(IEnum**) = 0;
-        virtual hresult_t stdcall Next(std::uint32_t, TOut*, std::uint32_t*) = 0;
-        virtual hresult_t stdcall Reset() = 0;
-        virtual hresult_t stdcall Skip(std::uint32_t) = 0;
+        constexpr static guid_t iid = {.as_guid { 0x20404, 0x0000, 0x0000, 0x46000000000000C0 }};
     };
 
-    struct STATSTG;
-
-    using IEnumvariant_t = IEnum<variant_t>;
-    using IEnumString = IEnum<char16_t*>;
-    using IEnumUnknown = IEnum<IUnknown*>;
-    using IEnumConnections = IEnum<CONNECTDATA>;
-    using IEnumConnectionPoints = IEnum<IConnectionPoint*>;
-    using IEnumGUID = IEnum<guid_t>;
-    using IEnumSTATSTG = IEnum<STATSTG>;
-
-    struct IConnectionPoint : public IUnknown
+    struct IEnumGUID : IEnum<guid_t>
     {
+        constexpr static guid_t iid = {.as_guid { 0x2E000, 0x0000, 0x0000, 0x46000000000000C0 }};    
+    };
+    
+    struct IEnumConnectionPoints : IEnum<IConnectionPoint*>
+    {
+        constexpr static guid_t iid = {.as_guid { 0xB196B285, 0xbAb4, 0x101A, 0x071d3400aa009cb6 }};    
+    };
+
+    struct IEnumConnections : IEnum<CONNECTDATA>
+    {
+        constexpr static guid_t iid = {.as_guid { 0xB196B287, 0xBAB4, 0x101A, 0x071d3400aa009cb6 }};
+    };
+
+    struct IConnectionPoint : IUnknown
+    {        
+        constexpr static guid_t iid = {.as_guid { 0xB196B286, 0xBAB4, 0x101A, 0x071d3400aa009cb6 }};
         virtual hresult_t stdcall Advise(IUnknown* sink, std::uint32_t* cookie) = 0;
         virtual hresult_t stdcall EnumConnections(IEnumConnections**) = 0;
         virtual hresult_t stdcall GetConnectionInterface(guid_t*) = 0;
         virtual hresult_t stdcall Unadvise(std::uint32_t cookie) = 0;
     };
 
-    struct IConnectionPointContainer : public IUnknown
+    struct IConnectionPointContainer : IUnknown
     {
+        constexpr static guid_t iid = {.as_guid { 0xB196B284, 0xBAB4, 0x101A, 0x071d3400aa009cb6 }};
         virtual hresult_t stdcall FindConnectionPoint(const guid_t&, IConnectionPoint**) = 0;
         virtual hresult_t stdcall EnumConnectionPoints(IEnumConnectionPoints**) = 0;
     };
 
-    struct ILockBytes : public IUnknown
-    {
-      virtual hresult_t stdcall Flush() = 0;
-      virtual hresult_t stdcall LockRegion() = 0;
-      virtual hresult_t stdcall ReadAt() = 0;
-      virtual hresult_t stdcall SetSize() = 0;
-      virtual hresult_t stdcall Stat() = 0;
-      virtual hresult_t stdcall UnlockRegion() = 0;
-      virtual hresult_t stdcall WriteAt() = 0;
-    };
-
-    struct ISequentialStream : public IUnknown
-    {
-      virtual hresult_t stdcall Read(void*, std::uint32_t, std::uint32_t*) = 0;
-      virtual hresult_t stdcall Write(const void*, std::uint32_t, std::uint32_t*) = 0;
-    };
-
-    struct IStream : public ISequentialStream
-    {
-      virtual hresult_t stdcall Clone(IStream*) = 0;
-      virtual hresult_t stdcall Commit(std::uint32_t) = 0;
-      virtual hresult_t stdcall CopyTo(IStream*, std::uint64_t, std::uint64_t*, std::uint64_t*) = 0;
-      virtual hresult_t stdcall LockRegion(std::uint64_t, std::uint64_t, std::uint32_t) = 0;
-      virtual hresult_t stdcall Revert() = 0;
-      virtual hresult_t stdcall Seek(std::int64_t, std::uint32_t, std::uint64_t*) = 0;
-      virtual hresult_t stdcall SetSize(std::uint64_t) = 0;
-      virtual hresult_t stdcall Stat(STATSTG*, std::uint32_t) = 0;
-      virtual hresult_t stdcall UnlockRegion(std::uint64_t, std::uint64_t, std::uint32_t) = 0;
-    };
-
-    struct IStorage : public IUnknown
-    {
-      virtual hresult_t stdcall Commit(std::uint32_t) = 0;
-      virtual hresult_t stdcall CopyTo(std::uint32_t, const guid_t*, char16_t**, IStorage*) = 0;
-      virtual hresult_t stdcall CreateStorage(char16_t**, std::uint32_t, std::uint32_t, std::uint32_t, IStorage**) = 0;
-      virtual hresult_t stdcall CreateStream(char16_t**, std::uint32_t, std::uint32_t, std::uint32_t, IStream**) = 0;
-      virtual hresult_t stdcall DestroyElement(char16_t*) = 0;
-      virtual hresult_t stdcall EnumElements(std::uint32_t, void*, std::uint32_t, IEnumSTATSTG*) = 0;
-      virtual hresult_t stdcall MoveElementTo(char16_t*, IStorage*, char16_t*, std::uint32_t) = 0;
-      virtual hresult_t stdcall OpenStorage(char16_t*, IStorage*, std::uint32_t, char16_t, std::uint32_t, IStorage**) = 0;
-      virtual hresult_t stdcall OpenStream(char16_t*, void*, std::uint32_t, std::uint32_t, IStream*) = 0;
-      virtual hresult_t stdcall RenameElement(char16_t*, char16_t*) = 0;
-      virtual hresult_t stdcall Revert() = 0;
-      virtual hresult_t stdcall SetClass(const guid_t&) = 0;
-      virtual hresult_t stdcall SetElementTimes(const char16_t, void*, void*, void*) = 0;
-      virtual hresult_t stdcall SetStateBits(std::uint32_t, std::uint32_t) = 0;
-      virtual hresult_t stdcall Stat(STATSTG*, std::uint32_t) = 0;
-    };
 
     struct PROPERTYKEY;
     struct PROPVARIANT;
 
-    struct IPropertyStore : public IUnknown
+    struct IPropertyStore : IUnknown
     {
+      constexpr static guid_t iid = {.as_guid { 0x100, 0x0000, 0x0000, 0x46000000000000C0 }};
       virtual hresult_t stdcall Commit() = 0;
       virtual hresult_t stdcall GetAt(std::uint32_t, PROPERTYKEY*) = 0;
       virtual hresult_t stdcall GetCount(std::uint32_t*) = 0;
@@ -256,8 +294,9 @@ namespace xcom
       virtual hresult_t stdcall SetValue(PROPERTYKEY&, PROPVARIANT&) = 0;
     };
 
-    struct INamedPropertyStore : public IUnknown
+    struct INamedPropertyStore : IUnknown
     {
+      constexpr static guid_t iid = {.as_guid { 0x100, 0x0000, 0x0000, 0x46000000000000C0 }};
       virtual hresult_t stdcall GetNameAt(std::uint32_t, char16_t*) = 0;
       virtual hresult_t stdcall GetNameCount(std::uint32_t*) = 0;
       virtual hresult_t stdcall GetNamedValue(char16_t*, PROPVARIANT*) = 0;
