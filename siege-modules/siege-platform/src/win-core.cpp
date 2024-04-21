@@ -7,6 +7,7 @@
 #include <siege/platform/win/core/xcom.hpp>
 #include <cassert>
 #include <set>
+#include <comcat.h>
 
 namespace win32::com
 {
@@ -28,6 +29,32 @@ namespace win32::com
 		thread_local auto com_handle = as_unique<HRESULT>(&result, [](auto*){ CoUninitialize(); });
 
         assert(std::memcmp(&IID_IUnknown, &xcom::IUnknown::iid, sizeof(GUID)) == 0);
+
+        //ole structured storage
+        assert(std::memcmp(&IID_ILockBytes, &xcom::ILockBytes::iid, sizeof(GUID)) == 0);
+        assert(std::memcmp(&IID_IStorage, &xcom::IStorage::iid, sizeof(GUID)) == 0);
+        assert(std::memcmp(&IID_ISequentialStream, &xcom::ISequentialStream::iid, sizeof(GUID)) == 0);
+        assert(std::memcmp(&IID_IStream, &xcom::IStream::iid, sizeof(GUID)) == 0);
+        assert(std::memcmp(&IID_IEnumSTATSTG, &xcom::IEnumSTATSTG::iid, sizeof(GUID)) == 0);
+
+        // ole base?
+        assert(std::memcmp(&IID_IEnumUnknown, &xcom::IEnumUnknown::iid, sizeof(GUID)) == 0);
+        assert(std::memcmp(&IID_IEnumString, &xcom::IEnumString::iid, sizeof(GUID)) == 0);
+
+
+        //ole automation
+        assert(std::memcmp(&IID_IDispatch, &xcom::IDispatch::iid, sizeof(GUID)) == 0);
+        assert(std::memcmp(&IID_IEnumVARIANT, &xcom::IEnumVARIANT::iid, sizeof(GUID)) == 0);
+        
+        //com cat?
+        assert(std::memcmp(&IID_IEnumGUID, &xcom::IEnumGUID::iid, sizeof(GUID)) == 0);
+        
+        //ole eventing?
+        assert(std::memcmp(&IID_IEnumConnectionPoints, &xcom::IEnumConnectionPoints::iid, sizeof(GUID)) == 0);
+        assert(std::memcmp(&IID_IEnumConnections, &xcom::IEnumConnections::iid, sizeof(GUID)) == 0);
+        assert(std::memcmp(&IID_IConnectionPoint, &xcom::IConnectionPoint::iid, sizeof(GUID)) == 0);
+        assert(std::memcmp(&IID_IConnectionPointContainer, &xcom::IConnectionPointContainer::iid, sizeof(GUID)) == 0);
+      
         return result;
 	}
 
