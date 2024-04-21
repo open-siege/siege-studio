@@ -11,5 +11,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/src ${P
 
 target_link_libraries(${PROJECT_NAME} PRIVATE siege-win-desktop siege-content)
 
+add_subdirectory(Siege.UI.2D.Content)
 
 install(TARGETS ${PROJECT_NAME} CONFIGURATIONS Debug Release RUNTIME DESTINATION bin)
