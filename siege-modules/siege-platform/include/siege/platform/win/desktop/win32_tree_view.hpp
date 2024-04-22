@@ -11,7 +11,18 @@ namespace win32
     {
         constexpr static auto class_name = WC_TREEVIEWW;
 
-        [[maybe_unused]] static std::optional<HTREEITEM> InsertItem(hwnd_t self, TVINSERTSTRUCTW info)
+        hwnd_t self;
+
+        inline tree_view(hwnd_t self) : self(self)
+        {
+        }
+
+        inline operator hwnd_t()
+        {
+            return self;
+        }
+
+        [[maybe_unused]] inline static std::optional<HTREEITEM> InsertItem(hwnd_t self, TVINSERTSTRUCTW info)
         {
             bool mask_not_set = info.itemex.mask == 0;
 
@@ -58,9 +69,9 @@ namespace win32
             return std::nullopt;
         }
 
-        static std::span<TVINSERTSTRUCTW> GetChildItems(hwnd_t self, std::span<TVINSERTSTRUCTW> items)
+        inline auto InsertItem(TVINSERTSTRUCTW info)
         {
-            return items;
+            return tree_view::InsertItem(self, std::move(info));
         }
     };
 }

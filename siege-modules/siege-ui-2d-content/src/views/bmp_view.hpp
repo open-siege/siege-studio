@@ -58,117 +58,14 @@ namespace siege::views
             ideal_size = win32::button::GetIdealSize(*remap_unique);
             win32::SetWindowPos(*remap_unique, *ideal_size);
 
-            auto strategy_toolbar = win32::CreateWindowExW(CREATESTRUCTW {
-                            .hInstance = mfcModule,
-                            .hwndParent = self,
-                            .cy = 100,
-                            .cx = 300,
-                            .y = 1,
-						    .style = WS_VISIBLE | WS_CHILD | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS,
-                            .lpszClass = L"MFC::CCheckListBox",
-                });
-
-            assert(strategy_toolbar);
-
-            win32::list_box::InsertString(*strategy_toolbar, -1, L"Do nothing");
-            win32::list_box::InsertString(*strategy_toolbar, -1, L"Remap");
-            win32::list_box::InsertString(*strategy_toolbar, -1, L"Remap (only unique colours)");
-
-            /*auto strategy_toolbar = win32::CreateWindowExW(DLGITEMTEMPLATE{
-						    .style = WS_VISIBLE | WS_CHILD | CCS_NOPARENTALIGN | TBSTYLE_LIST,   
-                            .cy = 400,
-						    }, self, win32::tool_bar::class_name, L"Colour strategy");*/
-
-        
-
-            //win32::tool_bar::SetExtendedStyle(*strategy_toolbar, win32::tool_bar::mixed_buttons | win32::tool_bar::draw_drop_down_arrows);
-     
-            //std::array<TBBUTTON, 3> buttons{{
-            //    TBBUTTON{.iBitmap = I_IMAGENONE, .idCommand = 0, .fsState = TBSTATE_ENABLED, 
-            //                        .fsStyle = BTNS_CHECKGROUP | BTNS_SHOWTEXT, .iString = INT_PTR(L"Do nothing")},
-            //    TBBUTTON{.iBitmap = I_IMAGENONE, .idCommand = 1, .fsState = TBSTATE_ENABLED, 
-            //                        .fsStyle = BTNS_CHECKGROUP | BTNS_SHOWTEXT, .iString = INT_PTR(L"Remap")},
-            //    TBBUTTON{.iBitmap = I_IMAGENONE, .idCommand = 2, .fsState = TBSTATE_ENABLED, 
-            //                        .fsStyle = BTNS_CHECKGROUP | BTNS_SHOWTEXT, .iString = INT_PTR(L"Remap (only unique colours)")},
-            // }};
-
-            //assert(win32::tool_bar::AddButtons(*strategy_toolbar, buttons));
-
-            auto palettes_tree = win32::CreateWindowExW(DLGITEMTEMPLATE{
-						    .style = WS_VISIBLE | WS_CHILD | TVS_HASBUTTONS | TVS_CHECKBOXES, 
-                            .y = 2,
-                            .cy = 300,
-						    }, self, win32::tree_view::class_name, L"Palettes");
-
 
             std::wstring temp = L"menu.pal";
         
             auto parent_size = win32::GetClientSize(self);
 
-            auto root_item = win32::tree_view::InsertItem(*palettes_tree, TVINSERTSTRUCTW{
-                .hInsertAfter = TVI_ROOT,
-                .itemex = {
-                    .pszText = temp.data(),
-                    .cChildren = 1
-                    }
-                });
-
-            win32::tree_view::InsertItem(*palettes_tree, TVINSERTSTRUCTW{
-                .hParent = *root_item,
-                .hInsertAfter = TVI_LAST,
-                .itemex = {
-                    .pszText = const_cast<wchar_t*>(L"palette 1")
-                    }
-                });
-
-            win32::tree_view::InsertItem(*palettes_tree, TVINSERTSTRUCTW{
-                .hParent = *root_item,
-                .hInsertAfter = TVI_LAST,
-                .itemex = {
-                    .pszText = const_cast<wchar_t*>(L"palette 2")
-                    }
-                });
-
-            win32::tree_view::InsertItem(*palettes_tree, TVINSERTSTRUCTW{
-                .hParent = *root_item,
-                .hInsertAfter = TVI_LAST,
-                .itemex = {
-                    .pszText = const_cast<wchar_t*>(L"palette 3")
-                    }
-                });
-
-            win32::tree_view::InsertItem(*palettes_tree, TVINSERTSTRUCTW{
-                .hParent = *root_item,
-                .hInsertAfter = TVI_LAST,
-                .itemex = {
-                    .pszText = const_cast<wchar_t*>(L"palette 4")
-                    }
-                });
-
-            root_item = win32::tree_view::InsertItem(*palettes_tree, TVINSERTSTRUCTW{
-                .hInsertAfter = TVI_ROOT,
-                .itemex = {
-                    .pszText = const_cast<wchar_t*>(L"test.dpl")
-                    }
-                });
-
-            root_item = win32::tree_view::InsertItem(*palettes_tree, TVINSERTSTRUCTW{
-                .hInsertAfter = TVI_ROOT,
-                .itemex = {
-                    .pszText = const_cast<wchar_t*>(L"ui.ppl")
-                    }
-                });
-
-            root_item = win32::tree_view::InsertItem(*palettes_tree, TVINSERTSTRUCTW{
-                .hInsertAfter = TVI_ROOT,
-                .itemex = {
-                    .pszText = const_cast<wchar_t*>(L"other.pal")
-                    }
-                });
-
             // TODO add example palette file names as root items and then palette names as children
 
-            auto palettes_list = win32::CreateWindowExW(CREATESTRUCTW{
+            win32::list_view palettes_list = *win32::CreateWindowExW(CREATESTRUCTW{
                             .hInstance = mfcModule,
                             .hwndParent = self,
 						    .cy = 300,  
@@ -180,80 +77,81 @@ namespace siege::views
                 });
 
 
-            win32::list_view::SetView(*palettes_list, win32::list_view::view_type::details_view);
-            assert(*win32::list_view::EnableGroupView(*palettes_list, true));
-            assert(win32::list_view::SetTileViewInfo(*palettes_list, LVTILEVIEWINFO {
+
+            palettes_list.SetView(win32::list_view::view_type::details_view);
+            assert(palettes_list.EnableGroupView(true));
+            assert(palettes_list.SetTileViewInfo(LVTILEVIEWINFO {
                 .dwFlags = LVTVIF_FIXEDWIDTH,
                 .sizeTile = SIZE {.cx = win32::GetClientSize(self)->cx, .cy = 50},
                 }));
         
-            win32::list_view::SetExtendedListViewStyle(*palettes_list, 0, 
+            palettes_list.SetExtendedListViewStyle(0, 
                     LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT);
 
-            win32::list_view::InsertColumn(*palettes_list, -1, LVCOLUMNW {
+            win32::list_view::InsertColumn(palettes_list, -1, LVCOLUMNW {
                  .cx = LVSCW_AUTOSIZE,
                 .pszText = const_cast<wchar_t*>(L""),
                 .cxMin = 100,
                 .cxDefault = win32::GetClientSize(self)->cx,
                 });
 
-            assert(win32::list_view::InsertGroup(*palettes_list, -1, LVGROUP {
+            assert(palettes_list.InsertGroup(-1, LVGROUP {
                 .pszHeader = temp.data(),
                 .iGroupId = 1
                 }) == 0);
 
-            win32::list_view::InsertGroup(*palettes_list, -1, LVGROUP {
+            palettes_list.InsertGroup(-1, LVGROUP {
                 .pszHeader = const_cast<wchar_t*>(L"test.dpl"),
                 .iGroupId = 2
                 });
 
-            win32::list_view::InsertGroup(*palettes_list, -1, LVGROUP {
+            palettes_list.InsertGroup(-1, LVGROUP {
                 .pszHeader = const_cast<wchar_t*>(L"ui.pal"),
                 .iGroupId = 3
                 });
 
-            assert(win32::list_view::InsertItem(*palettes_list, -1, LVITEMW{
+            assert(palettes_list.InsertItem(-1, LVITEMW{
                 .pszText = temp.data(),
                 .iGroupId = 1
                 }) == 0);
 
-            win32::list_view::InsertItem(*palettes_list, -1, LVITEMW{
+            palettes_list.InsertItem(-1, LVITEMW{
                 .pszText = const_cast<wchar_t*>(L"palette 2"),
                 .iGroupId = 1
                 });
 
-            win32::list_view::InsertItem(*palettes_list, -1, LVITEMW{
+            palettes_list.InsertItem(-1, LVITEMW{
                 .pszText = const_cast<wchar_t*>(L"palette 3"),
                 .iGroupId = 1
                 });
 
-            win32::list_view::InsertItem(*palettes_list, -1, LVITEMW{
+            palettes_list.InsertItem(-1, LVITEMW{
                 .pszText = const_cast<wchar_t*>(L"palette 1"),
                 .iGroupId = 2
                 });
 
-            win32::list_view::InsertItem(*palettes_list, -1, LVITEMW{
+            palettes_list.InsertItem(-1, LVITEMW{
                 .pszText = const_cast<wchar_t*>(L"palette 2"),
                 .iGroupId = 2
                 });
 
-            win32::list_view::InsertItem(*palettes_list, -1, LVITEMW{
+            palettes_list.InsertItem(-1, LVITEMW{
                 .pszText = const_cast<wchar_t*>(L"palette 3"),
                 .iGroupId = 2
                 });
 
 
-            win32::list_view::InsertItem(*palettes_list, -1, LVITEMW{
+            palettes_list.InsertItem(-1, LVITEMW{
                 .pszText = const_cast<wchar_t*>(L"palette 1"),
                 .iGroupId = 3
                 });
 
-            win32::list_view::InsertItem(*palettes_list, -1, LVITEMW{
+            palettes_list.InsertItem(-1, LVITEMW{
                 .pszText = const_cast<wchar_t*>(L"palette 2"),
                 .iGroupId = 3
                 });
 
-            auto palettes_button =  win32::CreateWindowExW(CREATESTRUCTW{
+            auto palettes_button = win32::CreateWindowExW(CREATESTRUCTW{
                             .hMenu = [] {
                                 auto menu = CreatePopupMenu();
 
@@ -287,8 +185,8 @@ namespace siege::views
           //                  .y = 4,
           //                  .cy = 300,
 						    //}, self, win32::static_control::class_name, L"Image");
-
-            auto children = std::array{*group_box, *strategy_toolbar, *palettes_tree, *palettes_list};
+           
+            auto children = std::array{*group_box, win32::hwnd_t(palettes_list)};
             win32::StackChildren(*win32::GetClientSize(self), children);
 
             auto rect = win32::GetClientRect(*group_box);

@@ -5,6 +5,8 @@
 #include <array>
 #include <system_error>
 #include <type_traits>
+#include <expected>
+#include <memory>
 #include <cstdint>
 
 #if _WIN32 || _WIN64
@@ -69,6 +71,38 @@ namespace xcom
         virtual hresult_t stdcall QueryInterface(const guid_t& id, void** out) = 0;
         virtual std::uint32_t stdcall AddRef() = 0;
         virtual std::uint32_t stdcall Release() = 0;
+
+        template<typename TOut>
+        hresult_t QueryInterface(TOut** value)
+        {
+            if constexpr (std::is_base_of_v<IUnknown, TOut>)
+            {
+                return this->QueryInterface(TOut::iid, reinterpret_cast<void**>(value));
+            }
+            else
+            {
+                #if MSVC
+                return this->QueryInterface(__uuidof(TOut), reinterpret_cast<void**>(value));
+                #endif
+            }
+
+            return E_NOINTERFACE;
+        }
+
+        template<typename TOut>
+        std::expected<std::unique_ptr<TOut, void(*)(TOut*)>, hresult_t> QueryInterface()
+        {
+            TOut* value = nullptr;
+
+            auto hresult = this->QueryInterface<TOut>(&value);
+
+            if (hresult != S_OK)
+            {
+                return std::unexpected(hresult);
+            }
+
+            return std::unique_ptr(value, [](auto* self) { self->Release(); });
+        }
     };
 
     template<typename TOut>
@@ -156,12 +190,6 @@ namespace xcom
     struct DISPPARAMS;
     struct EXCEPTINFO;
 
-    struct CONNECTDATA
-    {
-      IUnknown* sink;
-      std::uint32_t cookie;
-    };
-
     struct ITypeInfo;
 
     struct IDispatch : IUnknown
@@ -242,7 +270,11 @@ namespace xcom
     static_assert(sizeof(variant_t) == sizeof(std::array<void*, 3>));
 
     struct IConnectionPoint;
-
+    struct CONNECTDATA
+    {
+      IUnknown* sink;
+      std::uint32_t cookie;
+    };
 
     struct IEnumVARIANT : IEnum<variant_t>
     {
