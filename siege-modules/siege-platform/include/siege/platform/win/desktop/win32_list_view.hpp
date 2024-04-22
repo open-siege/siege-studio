@@ -12,6 +12,17 @@ namespace win32
     {
         constexpr static auto class_name = WC_LISTVIEWW;
 
+        hwnd_t self;
+
+        list_view(hwnd_t self) : self(self)
+        {
+        }
+
+        operator hwnd_t()
+        {
+            return self;
+        }
+
         enum struct view_type : DWORD
         {
             details_view = LV_VIEW_DETAILS,
@@ -27,14 +38,29 @@ namespace win32
             return std::bit_cast<HIMAGELIST>(SendMessageW(self, LVM_SETIMAGELIST, wparam, std::bit_cast<lparam_t>(image_list)));
         }
 
-        static bool SetView(hwnd_t self, view_type type)
+        inline auto SetImageList(wparam_t wparam, HIMAGELIST image_list)
+        {
+            return SetImageList(self, wparam, image_list);
+        }
+
+        inline static bool SetView(hwnd_t self, view_type type)
         {
             return SendMessageW(self, LVM_SETVIEW, wparam_t(type), 0) == 1;
+        }
+
+        inline auto SetView(view_type type)
+        {
+            return SetView(self, type);
         }
 
         static view_type GetView(hwnd_t self)
         {
             return view_type(SendMessageW(self, LVM_GETVIEW, 0, 0));
+        }
+
+        inline auto GetView()
+        {
+            return GetView(self);
         }
 
         static std::optional<bool> EnableGroupView(hwnd_t self, bool should_enable)
@@ -49,9 +75,19 @@ namespace win32
             return result == 1;
         }
 
+        inline auto EnableGroupView(bool should_enable)
+        {
+            return EnableGroupView(self, should_enable);
+        }
+
         static bool IsGroupViewEnabled(hwnd_t self)
         {
             return SendMessageW(self, LVM_ISGROUPVIEWENABLED, 0, 0);
+        }
+
+        inline auto IsGroupViewEnabled()
+        {
+            return IsGroupViewEnabled(self);
         }
 
         static lparam_t GetGroupCount(hwnd_t self)
@@ -64,7 +100,12 @@ namespace win32
             return SendMessageW(self, LVM_SETEXTENDEDLISTVIEWSTYLE, wParam, lParam);
         }
 
-        static bool SetTileViewInfo(hwnd_t self, LVTILEVIEWINFO info)
+        inline auto SetExtendedListViewStyle(wparam_t wParam, lparam_t lParam)
+        {
+            return SetExtendedListViewStyle(self, wParam, lParam);
+        }
+
+        inline static bool SetTileViewInfo(hwnd_t self, LVTILEVIEWINFO info)
         {
             info.cbSize = sizeof(info);
 
@@ -89,6 +130,11 @@ namespace win32
             }
 
             return SendMessageW(self, LVM_SETTILEVIEWINFO, 0, std::bit_cast<lparam_t>(&info));
+        }
+
+        inline auto SetTileViewInfo(LVTILEVIEWINFO info)
+        {
+            return SetTileViewInfo(self, info);
         }
 
         static wparam_t InsertGroup(hwnd_t self, wparam_t index, LVGROUP group)
@@ -168,6 +214,11 @@ namespace win32
             }
 
             return SendMessageW(self, LVM_INSERTGROUP, index, std::bit_cast<lparam_t>(&group));
+        }
+
+        inline auto InsertGroup(wparam_t index, LVGROUP group)
+        {
+            return InsertGroup(self, index, std::move(group));        
         }
 
         [[nodiscard]] static hwnd_t GetHeader(hwnd_t self)
@@ -258,7 +309,10 @@ namespace win32
             return index;
         }
 
-        //LVM_SETIMAGELIST
+        inline auto InsertColumn(wparam_t position, LVCOLUMNW col)
+        {
+            return InsertColumn(self, position, std::move(col));
+        }
 
         static wparam_t InsertItem(hwnd_t self, wparam_t index, LVITEMW item)
         {
@@ -312,9 +366,9 @@ namespace win32
             return SendMessageW(self, LVM_INSERTITEMW, index, std::bit_cast<lparam_t>(&item));
         }
 
-        static std::span<LVITEMW> GetChildItems(hwnd_t self, std::span<LVITEMW> items)
+        inline auto InsertItem(wparam_t index, LVITEMW item)
         {
-            return items;
+            return InsertItem(self, index, std::move(item));
         }
     };
 }
