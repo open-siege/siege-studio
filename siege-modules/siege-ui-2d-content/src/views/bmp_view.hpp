@@ -2,6 +2,7 @@
 #define BITMAPWINDOW_HPP
 
 #include <siege/platform/win/desktop/win32_controls.hpp>
+#include <siege/platform/win/desktop/win32_builders.hpp>
 #include <siege/platform/win/core/com_collection.hpp>
 #include <cassert>
 #include <sstream>
@@ -29,31 +30,37 @@ namespace siege::views
             auto mfcModule = GetModuleHandleW(L"siege-win-mfc.dll");
             assert(mfcModule);
 
+            auto parent_size = win32::GetClientSize(self);
+            auto dialog_template = win32::MakeDialogTemplate(::DLGTEMPLATE{ .style = WS_VISIBLE | WS_CHILD , .x = 400, .cx = short(parent_size->cx - 1200), .cy = short(parent_size->cy), });
+            auto control_dialog = ::CreateDialogIndirectParamW(info.data.hInstance, &dialog_template.dialog, self, [](win32::hwnd_t, std::uint32_t, win32::wparam_t, win32::lparam_t) -> INT_PTR {
+                    return FALSE;
+                }, 0);
+
             auto group_box = win32::CreateWindowExW(DLGITEMTEMPLATE{
 						    .style = WS_VISIBLE | WS_CHILD | BS_GROUPBOX,
                             .cy = 100
-						    }, self, win32::button::class_name, L"Colour strategy");
+						    }, control_dialog, win32::button::class_name, L"Colour strategy");
 
             assert(group_box);
 
 
             auto do_nothing = win32::CreateWindowExW(DLGITEMTEMPLATE{
 						    .style = WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON
-						    }, self, win32::button::class_name, L"Do nothing");
+						    }, control_dialog, win32::button::class_name, L"Do nothing");
 
             auto ideal_size = win32::button::GetIdealSize(*do_nothing);
             win32::SetWindowPos(*do_nothing, *ideal_size);
 
             auto remap = win32::CreateWindowExW(DLGITEMTEMPLATE{
 						    .style = WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON,
-						    }, self, win32::button::class_name, L"Remap");
+						    }, control_dialog, win32::button::class_name, L"Remap");
 
             ideal_size = win32::button::GetIdealSize(*remap);
             win32::SetWindowPos(*remap, *ideal_size);
 
             auto remap_unique = win32::CreateWindowExW(DLGITEMTEMPLATE{
 						    .style = WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON,
-						    }, self, win32::button::class_name, L"Remap (only unique colours)");
+						    }, control_dialog, win32::button::class_name, L"Remap (only unique colours)");
 
             ideal_size = win32::button::GetIdealSize(*remap_unique);
             win32::SetWindowPos(*remap_unique, *ideal_size);
@@ -61,13 +68,14 @@ namespace siege::views
 
             std::wstring temp = L"menu.pal";
         
-            auto parent_size = win32::GetClientSize(self);
+
 
             // TODO add example palette file names as root items and then palette names as children
 
-            win32::list_view palettes_list = *win32::CreateWindowExW(CREATESTRUCTW{
+            win32::list_view palettes_list = [&] {
+                auto palettes_list = *win32::CreateWindowExW<win32::list_view>(CREATESTRUCTW{
                             .hInstance = mfcModule,
-                            .hwndParent = self,
+                            .hwndParent = control_dialog,
 						    .cy = 300,  
                             .cx = 400,
 	            		    .y = 3,		
@@ -76,13 +84,11 @@ namespace siege::views
                             .lpszClass = L"MFC::CMFCListCtrl"
                 });
 
-
-
-            palettes_list.SetView(win32::list_view::view_type::details_view);
+                palettes_list.SetView(win32::list_view::view_type::details_view);
             assert(palettes_list.EnableGroupView(true));
             assert(palettes_list.SetTileViewInfo(LVTILEVIEWINFO {
                 .dwFlags = LVTVIF_FIXEDWIDTH,
-                .sizeTile = SIZE {.cx = win32::GetClientSize(self)->cx, .cy = 50},
+                .sizeTile = SIZE {.cx = win32::GetClientSize(control_dialog)->cx, .cy = 50},
                 }));
         
             palettes_list.SetExtendedListViewStyle(0, 
@@ -92,7 +98,7 @@ namespace siege::views
                  .cx = LVSCW_AUTOSIZE,
                 .pszText = const_cast<wchar_t*>(L""),
                 .cxMin = 100,
-                .cxDefault = win32::GetClientSize(self)->cx,
+                .cxDefault = win32::GetClientSize(control_dialog)->cx,
                 });
 
             assert(palettes_list.InsertGroup(-1, LVGROUP {
@@ -151,32 +157,8 @@ namespace siege::views
                 .iGroupId = 3
                 });
 
-            auto palettes_button = win32::CreateWindowExW(CREATESTRUCTW{
-                            .hMenu = [] {
-                                auto menu = CreatePopupMenu();
-
-                                int id = 1;
-
-                                auto menu2 = CreatePopupMenu();
-
-                                AppendMenuW(menu2, MF_CHECKED | MF_STRING, id++, L"palette 1");
-                                AppendMenuW(menu2, MF_UNCHECKED | MF_STRING, id++, L"palette 2");
-                                AppendMenuW(menu2, MF_UNCHECKED | MF_STRING, id++, L"palette 3");
-
-
-                                AppendMenuW(menu, MF_CHECKED | MF_STRING | MF_POPUP, reinterpret_cast<INT_PTR>(menu2), L"menu.pal");
-                                AppendMenuW(menu, MF_SEPARATOR , id++, nullptr);
-                                AppendMenuW(menu, MF_UNCHECKED | MF_STRING, id++, L"test.dpl");
-                            
-                                return menu;
-                            }(),            
-                            .hwndParent = self,                        
-                            .cy = 100,
-						    .style = WS_CHILD | BS_SPLITBUTTON,
-                            .lpszName =  L"Palettes",
-                            .lpszClass = win32::button::class_name,
-            });
-
+                return palettes_list;
+          }();
 
           //  // TODO add example palette file names as groups and then palette names as items
 
@@ -187,7 +169,7 @@ namespace siege::views
 						    //}, self, win32::static_control::class_name, L"Image");
            
             auto children = std::array{*group_box, win32::hwnd_t(palettes_list)};
-            win32::StackChildren(*win32::GetClientSize(self), children);
+            win32::StackChildren(*win32::GetClientSize(control_dialog), children);
 
             auto rect = win32::GetClientRect(*group_box);
             rect->top += 15;
