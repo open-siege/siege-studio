@@ -14,7 +14,7 @@ namespace win32
 
         hwnd_t self;
 
-        list_view(hwnd_t self) : self(self)
+        explicit list_view(hwnd_t self) : self(self)
         {
         }
 

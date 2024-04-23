@@ -501,7 +501,8 @@ namespace win32
     
     };
 
-    std::expected<hwnd_t, DWORD> CreateWindowExW(CREATESTRUCTW params)
+    template <typename TControl = hwnd_t>
+    std::expected<TControl, DWORD> CreateWindowExW(CREATESTRUCTW params)
     {
         hinstance_t hinstance = nullptr;
         auto parent_hinstance = params.hwndParent != nullptr ? std::bit_cast<hinstance_t>(GetWindowLongPtrW(params.hwndParent, GWLP_HINSTANCE)) : nullptr;
@@ -546,12 +547,13 @@ namespace win32
             return std::unexpected(GetLastError());
         }
 
-        return result;
+        return TControl(result);
     }
     #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    template <typename TControl = hwnd_t>
 	auto CreateWindowExW(DLGITEMTEMPLATE params, hwnd_t parent, std::wstring class_name, std::wstring caption)
     {
-        return CreateWindowExW(CREATESTRUCTW{
+        return CreateWindowExW<TControl>(CREATESTRUCTW{
             .hwndParent = parent,
             .cy = params.cy,
             .cx = params.cx,

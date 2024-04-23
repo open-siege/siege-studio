@@ -86,7 +86,6 @@ struct siege_main_window
 
 		parent_size = win32::GetClientRect(*tab_control_instance);
 
-		int index = 0;
 		for (auto& plugin : loaded_modules)
 		{
 			/*for (auto& window : plugin.data->available_classes)
@@ -117,7 +116,7 @@ struct siege_main_window
 			SendMessageW(self, WM_NOTIFY, 0, std::bit_cast<LPARAM>(&notification));*/
 		}
 
-		win32::tab_control::InsertItem(*tab_control_instance, index, TCITEMW {
+		win32::tab_control::InsertItem(*tab_control_instance, 0, TCITEMW {
 						.mask = TCIF_TEXT,
 						.pszText = const_cast<wchar_t*>(L"+"),
 					});
@@ -315,7 +314,7 @@ struct siege_main_window
 
 										assert(child);
 
-										auto index = win32::tab_control::GetItemCount(tab_control);
+										auto index = win32::tab_control::GetItemCount(tab_control) - 1;
 
 										win32::tab_control::InsertItem(tab_control, index, TCITEMW {
 												.mask = TCIF_TEXT | TCIF_PARAM,
