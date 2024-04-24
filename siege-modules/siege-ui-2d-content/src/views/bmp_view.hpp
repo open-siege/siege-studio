@@ -31,7 +31,9 @@ namespace siege::views
             assert(mfcModule);
 
             auto parent_size = win32::GetClientSize(self);
-            auto dialog_template = win32::MakeDialogTemplate(::DLGTEMPLATE{ .style = WS_VISIBLE | WS_CHILD , .x = 400, .cx = short(parent_size->cx - 1200), .cy = short(parent_size->cy), });
+
+            auto width = parent_size->cx;
+            auto dialog_template = win32::MakeDialogTemplate(::DLGTEMPLATE{ .style = WS_VISIBLE | WS_CHILD , .x = short(width - width / 3), .cx = short(width / 3), .cy = short(parent_size->cy), });
             auto control_dialog = ::CreateDialogIndirectParamW(info.data.hInstance, &dialog_template.dialog, self, [](win32::hwnd_t, std::uint32_t, win32::wparam_t, win32::lparam_t) -> INT_PTR {
                     return FALSE;
                 }, 0);
