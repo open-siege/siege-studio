@@ -46,33 +46,30 @@ namespace siege::views
             assert(group_box);
 
 
-            auto do_nothing = win32::CreateWindowExW(DLGITEMTEMPLATE{
+            auto do_nothing = win32::CreateWindowExW<win32::button>(DLGITEMTEMPLATE{
 						    .style = WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON
 						    }, control_dialog, win32::button::class_name, L"Do nothing");
 
-            auto ideal_size = win32::button::GetIdealSize(*do_nothing);
+            auto ideal_size = do_nothing->GetIdealSize();
             win32::SetWindowPos(*do_nothing, *ideal_size);
 
-            auto remap = win32::CreateWindowExW(DLGITEMTEMPLATE{
+            auto remap = win32::CreateWindowExW<win32::button>(DLGITEMTEMPLATE{
 						    .style = WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON,
 						    }, control_dialog, win32::button::class_name, L"Remap");
 
-            ideal_size = win32::button::GetIdealSize(*remap);
+            ideal_size = remap->GetIdealSize();
             win32::SetWindowPos(*remap, *ideal_size);
 
-            auto remap_unique = win32::CreateWindowExW(DLGITEMTEMPLATE{
+            auto remap_unique = win32::CreateWindowExW<win32::button>(DLGITEMTEMPLATE{
 						    .style = WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON,
 						    }, control_dialog, win32::button::class_name, L"Remap (only unique colours)");
 
-            ideal_size = win32::button::GetIdealSize(*remap_unique);
+            ideal_size = remap_unique->GetIdealSize();
             win32::SetWindowPos(*remap_unique, *ideal_size);
 
 
             std::wstring temp = L"menu.pal";
         
-
-
-            // TODO add example palette file names as root items and then palette names as children
 
             win32::list_view palettes_list = [&] {
                 auto palettes_list = *win32::CreateWindowExW<win32::list_view>(CREATESTRUCTW{
@@ -96,7 +93,7 @@ namespace siege::views
             palettes_list.SetExtendedListViewStyle(0, 
                     LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT);
 
-            win32::list_view::InsertColumn(palettes_list, -1, LVCOLUMNW {
+            palettes_list.win32::list_view::InsertColumn(-1, LVCOLUMNW {
                  .cx = LVSCW_AUTOSIZE,
                 .pszText = const_cast<wchar_t*>(L""),
                 .cxMin = 100,
@@ -164,22 +161,30 @@ namespace siege::views
 
           //  // TODO add example palette file names as groups and then palette names as items
 
-          //  auto static_image = win32::CreateWindowExW(DLGITEMTEMPLATE{
-						    //.style = WS_VISIBLE | WS_CHILD,
-          //                  .y = 4,
-          //                  .cy = 300,
-						    //}, self, win32::static_control::class_name, L"Image");
+            auto static_image = win32::CreateWindowExW<win32::static_control>(DLGITEMTEMPLATE{
+						    .style = WS_VISIBLE | WS_CHILD,
+                            .x = 0,
+                            .y = 4,
+                            .cx = short((width / 3) * 2),
+                            .cy = 300
+						    }, self, win32::static_control::class_name, L"Image");
            
-            auto children = std::array{*group_box, win32::hwnd_t(palettes_list)};
-            win32::StackChildren(*win32::GetClientSize(control_dialog), children);
 
+            auto root_children = std::array<win32::hwnd_t, 2>{*static_image, control_dialog};
+
+            win32::StackChildren(*win32::GetClientSize(self), root_children, win32::StackDirection::Horizontal);
+           
+
+            auto children = std::array<win32::hwnd_t, 2>{*group_box, palettes_list};
+            win32::StackChildren(*win32::GetClientSize(control_dialog), children);
+            
             auto rect = win32::GetClientRect(*group_box);
             rect->top += 15;
             rect->left += 5;
 
-            auto radios = std::array{*do_nothing, *remap, *remap_unique};
+            auto radios = std::array<win32::hwnd_t, 3>{*do_nothing, *remap, *remap_unique};
             win32::StackChildren(SIZE{.cx = rect->right, .cy = rect->bottom - 20}, radios, win32::StackDirection::Horizontal,
-                    POINT{.x = rect->left, .y = rect->top});
+              POINT{.x = rect->left, .y = rect->top});
 
             return 0;
         }

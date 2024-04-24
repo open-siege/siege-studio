@@ -24,7 +24,7 @@ struct volume_window
     {
         auto parent_size = win32::GetClientRect(self);
 
-        auto root = win32::CreateWindowExW(win32::window_params<>{
+        auto root = win32::CreateWindowExW<win32::rebar>(win32::window_params<>{
             .parent = self,
             .class_name = win32::rebar::class_Name,
             .style{win32::window_style(WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS |
@@ -34,20 +34,20 @@ struct volume_window
 
         assert(root);
 
-        auto rebar = win32::CreateWindowExW(win32::window_params<>{
+        auto rebar = win32::CreateWindowExW<win32::rebar>(win32::window_params<>{
             .parent = *root,
             .class_name = win32::rebar::class_Name,
             .style{win32::window_style(WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS |
                 WS_CLIPCHILDREN | RBS_VARHEIGHT | RBS_BANDBORDERS)}
         });
 
-        auto toolbar = win32::CreateWindowExW(DLGITEMTEMPLATE{
+        auto toolbar = win32::CreateWindowExW<win32::tool_bar>(DLGITEMTEMPLATE{
 						.style = WS_VISIBLE | WS_CHILD | CCS_NOPARENTALIGN | CCS_NORESIZE | TBSTYLE_LIST,   
 						}, *rebar, win32::tool_bar::class_name, L"Toolbar");
 
         assert(toolbar);
 
-        win32::tool_bar::SetExtendedStyle(*toolbar, win32::tool_bar::mixed_buttons | win32::tool_bar::draw_drop_down_arrows);
+        toolbar->SetExtendedStyle(win32::tool_bar::mixed_buttons | win32::tool_bar::draw_drop_down_arrows);
      
         std::array<TBBUTTON, 2> buttons{{
               TBBUTTON{.iBitmap = I_IMAGENONE, .idCommand = 0, .fsState = TBSTATE_ENABLED, 
@@ -56,15 +56,15 @@ struct volume_window
                                 .fsStyle = BTNS_DROPDOWN | BTNS_SHOWTEXT, .iString = INT_PTR(L"Extract")},
          }};
 
-         if (!win32::tool_bar::AddButtons(*toolbar, buttons))
+         if (!toolbar->AddButtons(buttons))
          {
             DebugBreak();       
          }
 
-         auto button_size = win32::tool_bar::GetButtonSize(*toolbar);
+         auto button_size = toolbar->GetButtonSize();
 
         assert(rebar);
-        win32::rebar::InsertBand(*rebar, -1, REBARBANDINFOW{
+        rebar->InsertBand(-1, REBARBANDINFOW{
             .fStyle = RBBS_CHILDEDGE | RBBS_GRIPPERALWAYS,
             .lpText = const_cast<wchar_t*>(L""),
             .hwndChild = *toolbar,
@@ -74,16 +74,16 @@ struct volume_window
             .cyChild = UINT(button_size.cy)
             });
 
-        win32::rebar::InsertBand(*rebar, -1, REBARBANDINFOW{
+        rebar->InsertBand(-1, REBARBANDINFOW{
             .fStyle = RBBS_CHILDEDGE | RBBS_GRIPPERALWAYS,
             .lpText = const_cast<wchar_t*>(L"Search"),
             .hwndChild = [&]{
-              auto search = win32::CreateWindowExW(DLGITEMTEMPLATE{
+              auto search = win32::CreateWindowExW<win32::edit>(DLGITEMTEMPLATE{
 						.style = WS_VISIBLE | WS_BORDER | WS_EX_STATICEDGE | WS_CHILD
 						}, *rebar, win32::edit::class_name, L"");
 
                 assert(search);
-                win32::edit::SetCueBanner(*search, false, L"Enter search text here");
+                search->SetCueBanner(false, L"Enter search text here");
 
                 SendMessageW(*search, CCM_SETWINDOWTHEME , 0, reinterpret_cast<win32::lparam_t>(L"SearchBoxEdit"));
                 return *search;
@@ -92,7 +92,7 @@ struct volume_window
             });
 
 
-        auto table = win32::CreateWindowExW(DLGITEMTEMPLATE{
+        auto table = win32::CreateWindowExW<win32::list_view>(DLGITEMTEMPLATE{
 						.style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
 				//		.x = 0,       
 				//		.y = short(win32::GetClientRect(*rebar)->bottom + 2),
@@ -101,37 +101,36 @@ struct volume_window
 						}, *root, win32::list_view::class_name, L"Volume");
 
         // TODO: make table columns have a split button
-         win32::list_view::InsertColumn(*table, -1, LVCOLUMNW {
+        table->InsertColumn(-1, LVCOLUMNW {
                 .cx = LVSCW_AUTOSIZE,
                 .pszText = const_cast<wchar_t*>(L"Filename"),
                 .cxMin = parent_size->right / 10
         });
 
-        win32::list_view::InsertColumn(*table, -1, LVCOLUMNW {
+        table->InsertColumn(-1, LVCOLUMNW {
                 .cx = LVSCW_AUTOSIZE,
                 .pszText = const_cast<wchar_t*>(L"Path"),
                 .cxMin = parent_size->right / 10,
         });
 
-        win32::list_view::InsertColumn(*table, -1, LVCOLUMNW {
+        table->InsertColumn(-1, LVCOLUMNW {
                 .cx = LVSCW_AUTOSIZE,
                 .pszText = const_cast<wchar_t*>(L"Size (in bytes)"),
                 .cxMin = parent_size->right / 10,
         });
 
-        win32::list_view::InsertColumn(*table, -1, LVCOLUMNW {
+        table->InsertColumn(-1, LVCOLUMNW {
               .cx = LVSCW_AUTOSIZE,
               .pszText = const_cast<wchar_t*>(L"Compression Method"),
               .cxMin = parent_size->right / 10
         });
-
 
         auto min_height = parent_size->bottom / 10;
         auto min_width = parent_size->right / 2;
 
        // auto rebar_rect = win32::GetClientRect(*toolbar);
 
-        win32::rebar::InsertBand(*root, -1, REBARBANDINFOW {
+        root->InsertBand(-1, REBARBANDINFOW {
             .fStyle = RBBS_NOGRIPPER | RBBS_HIDETITLE | RBBS_TOPALIGN,
             .hwndChild = *rebar,  
             .cxMinChild = UINT(button_size.cy), // min height
@@ -143,7 +142,7 @@ struct volume_window
          //  .cx = UINT(parent_size->right - 100),
             });
 
-        win32::rebar::InsertBand(*root, -1, REBARBANDINFOW {
+        root->InsertBand(-1, REBARBANDINFOW {
             .fStyle = RBBS_NOGRIPPER | RBBS_HIDETITLE | RBBS_TOPALIGN,
             .hwndChild = *table,
             .cxMinChild = UINT(min_height), // min height
@@ -164,7 +163,7 @@ struct volume_window
     auto on_notify(win32::toolbar_notify_message notification)
     {
         auto [sender, id, code] = notification;
-        auto mapped_result = win32::MapWindowPoints(sender, HWND_DESKTOP, *win32::tool_bar::GetRect(sender, id));
+        auto mapped_result = win32::MapWindowPoints(sender, HWND_DESKTOP, *win32::tool_bar(sender).GetRect(id));
 
         // TODO: create and add menu items
         win32::TrackPopupMenuEx(LoadMenuIndirectW(nullptr), 0, POINT{mapped_result->second.left, mapped_result->second.bottom}, sender, TPMPARAMS {
@@ -178,15 +177,15 @@ struct volume_window
    auto on_size(win32::size_message sized)
 	{
 		win32::ForEachDirectChildWindow(self, [&](auto child) {            
-            for (auto i = 0; i < win32::rebar::GetBandCount(child); ++i)
+            for (auto i = 0; i < win32::rebar(child).GetBandCount(); ++i)
             {
-                auto info = win32::rebar::GetBandChildSize(child, i);
+                auto info = win32::rebar(child).GetBandChildSize(i);
 
                 if (info)
                 {
                     info->cyMinChild = sized.client_size.cx;
                     info->cyChild = sized.client_size.cx;
-                    win32::rebar::SetBandInfo(child, i, std::move(*info));
+                    win32::rebar(child).SetBandInfo(i, std::move(*info));
                 }
             }
 		});

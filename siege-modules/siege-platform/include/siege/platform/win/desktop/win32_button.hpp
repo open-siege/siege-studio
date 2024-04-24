@@ -1,17 +1,18 @@
 #ifndef WIN32_BUTTON_HPP
 #define WIN32_BUTTON_HPP
 
-#include <siege/platform/win/gaming/win32_user32.hpp>
+#include <siege/platform/win/desktop/win32_window.hpp>
 #include <CommCtrl.h>
 
 namespace win32
 {
-    struct button
+    struct button : window
     {
+        using window::window;
         constexpr static auto class_name = WC_BUTTONW;
         constexpr static std::uint16_t dialog_id = 0x0080;
 
-        [[nodiscard]] static std::optional<RECT> GetTextMargin(hwnd_t self)
+        [[nodiscard]] inline std::optional<RECT> GetTextMargin(hwnd_t self)
         {
             RECT result;
 
@@ -23,7 +24,7 @@ namespace win32
             return std::nullopt;
         }
 
-        [[nodiscard]] static std::optional<SIZE> GetIdealSize(hwnd_t self, LONG ideal_width = 0)
+        [[nodiscard]] inline std::optional<SIZE> GetIdealSize(LONG ideal_width = 0)
         {
             SIZE result{.cx = ideal_width };
 

@@ -1,16 +1,17 @@
 #ifndef WIN32_REBAR_HPP
 #define WIN32_REBAR_HPP
 
-#include <siege/platform/win/gaming/win32_user32.hpp>
+#include <siege/platform/win/desktop/win32_window.hpp>
 #include <CommCtrl.h>
 
 namespace win32
 {
-    struct rebar
+    struct rebar : window
     {
+        using window::window;
         constexpr static auto class_Name = REBARCLASSNAMEW;
 
-        [[nodiscard]] static std::optional<RECT> GetRect(hwnd_t self, wparam_t index)
+        [[nodiscard]] inline std::optional<RECT> GetRect(wparam_t index)
         {
             RECT result;
 
@@ -22,27 +23,27 @@ namespace win32
             return std::nullopt;
         }
 
-        [[nodiscard]] static std::uint32_t GetBarHeight(hwnd_t self)
+        [[nodiscard]] inline std::uint32_t GetBarHeight()
         {
             return std::uint32_t(SendMessageW(self, RB_GETBARHEIGHT, 0, 0));
         }
 
-        [[nodiscard]] static lparam_t GetBandCount(hwnd_t self)
+        [[nodiscard]] inline lparam_t GetBandCount()
         {
             return SendMessageW(self, RB_GETBANDCOUNT, 0, 0);
         }
 
-        [[maybe_unused]] static void SetBandWidth(hwnd_t self, wparam_t index, lparam_t new_width)
+        [[maybe_unused]] inline void SetBandWidth(wparam_t index, lparam_t new_width)
         {
             SendMessageW(self, RB_SETBANDWIDTH, index, new_width);
         }
 
-        [[maybe_unused]] static void MaximizeBand(hwnd_t self, wparam_t index, lparam_t ideal_width = 0)
+        [[maybe_unused]] inline void MaximizeBand(wparam_t index, lparam_t ideal_width = 0)
         {
             SendMessageW(self, RB_MAXIMIZEBAND, index, ideal_width);
         }
 
-        [[maybe_unused]] static std::optional<REBARBANDINFOW> GetBandChildSize(hwnd_t self, wparam_t index)
+        [[maybe_unused]] inline std::optional<REBARBANDINFOW> GetBandChildSize(wparam_t index)
         {
             REBARBANDINFOW band {.cbSize = sizeof(REBARBANDINFOW), .fMask = RBBIM_CHILDSIZE};
             
@@ -54,14 +55,14 @@ namespace win32
             return std::nullopt;
         }
 
-        [[maybe_unused]] static bool SetBandInfo(hwnd_t self, wparam_t index, REBARBANDINFOW band)
+        [[maybe_unused]] inline bool SetBandInfo(wparam_t index, REBARBANDINFOW band)
         {
             band.cbSize = sizeof(band);
             return SendMessageW(self, RB_SETBANDINFOW, 
                 index, std::bit_cast<win32::lparam_t>(&band));
         }
 
-        [[maybe_unused]] static bool InsertBand(hwnd_t self, wparam_t position, REBARBANDINFOW band)
+        [[maybe_unused]] inline bool InsertBand(wparam_t position, REBARBANDINFOW band)
         {
             band.cbSize = sizeof(band);
 

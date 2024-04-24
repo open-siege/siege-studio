@@ -8,20 +8,11 @@
 
 namespace win32
 {
-    struct list_view
+    struct list_view : window
     {
         constexpr static auto class_name = WC_LISTVIEWW;
 
-        hwnd_t self;
-
-        explicit list_view(hwnd_t self) : self(self)
-        {
-        }
-
-        operator hwnd_t()
-        {
-            return self;
-        }
+        using window::window;
 
         enum struct view_type : DWORD
         {
@@ -31,39 +22,23 @@ namespace win32
             small_icon_view = LV_VIEW_LIST,
             tile_view = LV_VIEW_TILE
         };
-
-
-        static HIMAGELIST SetImageList(hwnd_t self, wparam_t wparam, HIMAGELIST image_list)
+        
+        inline HIMAGELIST SetImageList(wparam_t wparam, HIMAGELIST image_list)
         {
             return std::bit_cast<HIMAGELIST>(SendMessageW(self, LVM_SETIMAGELIST, wparam, std::bit_cast<lparam_t>(image_list)));
         }
 
-        inline auto SetImageList(wparam_t wparam, HIMAGELIST image_list)
-        {
-            return SetImageList(self, wparam, image_list);
-        }
-
-        inline static bool SetView(hwnd_t self, view_type type)
+        inline bool SetView(view_type type)
         {
             return SendMessageW(self, LVM_SETVIEW, wparam_t(type), 0) == 1;
         }
 
-        inline auto SetView(view_type type)
-        {
-            return SetView(self, type);
-        }
-
-        static view_type GetView(hwnd_t self)
+        inline view_type GetView()
         {
             return view_type(SendMessageW(self, LVM_GETVIEW, 0, 0));
         }
 
-        inline auto GetView()
-        {
-            return GetView(self);
-        }
-
-        static std::optional<bool> EnableGroupView(hwnd_t self, bool should_enable)
+        inline std::optional<bool> EnableGroupView(bool should_enable)
         {
             auto result = SendMessageW(self, LVM_ENABLEGROUPVIEW, should_enable ? TRUE : FALSE, 0);
 
@@ -75,37 +50,22 @@ namespace win32
             return result == 1;
         }
 
-        inline auto EnableGroupView(bool should_enable)
-        {
-            return EnableGroupView(self, should_enable);
-        }
-
-        static bool IsGroupViewEnabled(hwnd_t self)
+        inline bool IsGroupViewEnabled()
         {
             return SendMessageW(self, LVM_ISGROUPVIEWENABLED, 0, 0);
         }
 
-        inline auto IsGroupViewEnabled()
-        {
-            return IsGroupViewEnabled(self);
-        }
-
-        static lparam_t GetGroupCount(hwnd_t self)
+        inline lparam_t GetGroupCount()
         {
             return SendMessageW(self, LVM_GETGROUPCOUNT, 0, 0);
         }
 
-        static lresult_t SetExtendedListViewStyle(hwnd_t self, wparam_t wParam, lparam_t lParam)
+        inline lresult_t SetExtendedListViewStyle(wparam_t wParam, lparam_t lParam)
         {
             return SendMessageW(self, LVM_SETEXTENDEDLISTVIEWSTYLE, wParam, lParam);
         }
 
-        inline auto SetExtendedListViewStyle(wparam_t wParam, lparam_t lParam)
-        {
-            return SetExtendedListViewStyle(self, wParam, lParam);
-        }
-
-        inline static bool SetTileViewInfo(hwnd_t self, LVTILEVIEWINFO info)
+        inline bool SetTileViewInfo(LVTILEVIEWINFO info)
         {
             info.cbSize = sizeof(info);
 
@@ -132,12 +92,7 @@ namespace win32
             return SendMessageW(self, LVM_SETTILEVIEWINFO, 0, std::bit_cast<lparam_t>(&info));
         }
 
-        inline auto SetTileViewInfo(LVTILEVIEWINFO info)
-        {
-            return SetTileViewInfo(self, info);
-        }
-
-        static wparam_t InsertGroup(hwnd_t self, wparam_t index, LVGROUP group)
+        inline wparam_t InsertGroup(wparam_t index, LVGROUP group)
         {
             group.cbSize = sizeof(group);
 
@@ -216,22 +171,17 @@ namespace win32
             return SendMessageW(self, LVM_INSERTGROUP, index, std::bit_cast<lparam_t>(&group));
         }
 
-        inline auto InsertGroup(wparam_t index, LVGROUP group)
+        [[nodiscard]] inline win32::header GetHeader()
         {
-            return InsertGroup(self, index, std::move(group));        
+            return win32::header(hwnd_t(SendMessageW(self, LVM_GETHEADER, 0, 0)));
         }
 
-        [[nodiscard]] static hwnd_t GetHeader(hwnd_t self)
+        [[nodiscard]] inline wparam_t GetColumnCount()
         {
-            return hwnd_t(SendMessageW(self, LVM_GETHEADER, 0, 0));
+            return GetHeader().GetItemCount();
         }
 
-        [[nodiscard]] static wparam_t GetColumnCount(hwnd_t self)
-        {
-            return header::GetItemCount(GetHeader(self));
-        }
-
-        [[nodiscard]] static std::optional<LVCOLUMNW> GetColumn(hwnd_t self, wparam_t index)
+        [[nodiscard]] inline std::optional<LVCOLUMNW> GetColumn(wparam_t index)
         {
             LVCOLUMNW result;
 
@@ -243,17 +193,17 @@ namespace win32
             return std::nullopt;
         }
 
-        static lparam_t GetColumnWidth(hwnd_t self, wparam_t index)
+        inline lparam_t GetColumnWidth(wparam_t index)
         {
             return SendMessageW(self, LVM_GETCOLUMNWIDTH, index, 0);
         }
 
-        [[maybe_unused]] static bool SetColumnWidth(hwnd_t self, wparam_t index, lparam_t width)
+        [[maybe_unused]] inline bool SetColumnWidth(wparam_t index, lparam_t width)
         {
             return SendMessageW(self, LVM_SETCOLUMNWIDTH, index, width);
         }
 
-        [[maybe_unused]] static wparam_t InsertColumn(hwnd_t self, wparam_t position, LVCOLUMNW column)
+        [[maybe_unused]] inline wparam_t InsertColumn(wparam_t position, LVCOLUMNW column)
         {
             bool mask_not_set = column.mask == 0;
 
@@ -295,7 +245,7 @@ namespace win32
                 column.mask |= LVCF_ORDER;
             }
 
-            position = position == -1 ? GetColumnCount(self) : position;
+            position = position == -1 ? GetColumnCount() : position;
             
             auto index = SendMessageW(self, LVM_INSERTCOLUMNW, 
                 position, std::bit_cast<win32::lparam_t>(&column));
@@ -303,18 +253,13 @@ namespace win32
             
             if (column.cx)
             {
-                SetColumnWidth(self, index, column.cx);
+                SetColumnWidth(index, column.cx);
             }
 
             return index;
         }
 
-        inline auto InsertColumn(wparam_t position, LVCOLUMNW col)
-        {
-            return InsertColumn(self, position, std::move(col));
-        }
-
-        static wparam_t InsertItem(hwnd_t self, wparam_t index, LVITEMW item)
+        inline wparam_t InsertItem(wparam_t index, LVITEMW item)
         {
             bool mask_not_set = item.mask == 0;
             
@@ -364,11 +309,6 @@ namespace win32
             }
 
             return SendMessageW(self, LVM_INSERTITEMW, index, std::bit_cast<lparam_t>(&item));
-        }
-
-        inline auto InsertItem(wparam_t index, LVITEMW item)
-        {
-            return InsertItem(self, index, std::move(item));
         }
     };
 }

@@ -7,7 +7,7 @@
 struct siege_main_window
 {
 	win32::hwnd_t self;
-	win32::hwnd_t tab_control;
+	win32::tab_control tab_control;
 	std::list<siege::siege_plugin> loaded_modules;
 	
 	std::set<std::wstring> extensions;
@@ -15,7 +15,7 @@ struct siege_main_window
 
 	std::size_t open_id = 0u;
 
-	siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : self(self)
+	siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : self(self), tab_control(nullptr)
 	{
 		open_id = RegisterWindowMessageW(L"COMMAND_OPEN");
 		std::wstring full_app_path(256, '\0');
@@ -68,7 +68,7 @@ struct siege_main_window
 					});
 		assert(dir_list);
 
-		auto tab_control_instance = win32::CreateWindowExW(CREATESTRUCTW {
+		auto tab_control_instance = win32::CreateWindowExW<win32::tab_control>(CREATESTRUCTW {
 						.hwndParent = self,
 						.cy = parent_size->bottom - parent_size->top,
 						.cx = parent_size->right  - parent_size->left - left_size - 10,
@@ -81,7 +81,7 @@ struct siege_main_window
 		assert(tab_control_instance);
 		tab_control = *tab_control_instance;
 
-		auto children = std::array{*dir_list, *tab_control_instance};
+		auto children = std::array<win32::hwnd_t, 2>{*dir_list, *tab_control_instance};
         win32::StackChildren(*win32::GetClientSize(self), children, win32::StackDirection::Horizontal);
 
 		parent_size = win32::GetClientRect(*tab_control_instance);
@@ -116,7 +116,7 @@ struct siege_main_window
 			SendMessageW(self, WM_NOTIFY, 0, std::bit_cast<LPARAM>(&notification));*/
 		}
 
-		win32::tab_control::InsertItem(*tab_control_instance, 0, TCITEMW {
+		tab_control_instance->InsertItem(0, TCITEMW {
 						.mask = TCIF_TEXT,
 						.pszText = const_cast<wchar_t*>(L"+"),
 					});
@@ -153,14 +153,14 @@ struct siege_main_window
 		if (code == TCN_SELCHANGING)
 		{
 			auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
-			auto tab_item = win32::tab_control::GetItem(sender, current_index);
+			auto tab_item = win32::tab_control(sender).GetItem(current_index);
 
 			::ShowWindow(win32::hwnd_t(tab_item->lParam), SW_HIDE);
 		}
 		else if (code == TCN_SELCHANGE)
 		{
 			auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
-			auto tab_item = win32::tab_control::GetItem(sender, current_index);
+			auto tab_item = win32::tab_control(sender).GetItem(current_index);
 			
 
 			if (tab_item->lParam == 0)
@@ -314,9 +314,9 @@ struct siege_main_window
 
 										assert(child);
 
-										auto index = win32::tab_control::GetItemCount(tab_control) - 1;
+										auto index = tab_control.GetItemCount() - 1;
 
-										win32::tab_control::InsertItem(tab_control, index, TCITEMW {
+										tab_control.InsertItem(index, TCITEMW {
 												.mask = TCIF_TEXT | TCIF_PARAM,
 												.pszText = const_cast<wchar_t*>(path->filename().c_str()),
 												.lParam = win32::lparam_t(*child)

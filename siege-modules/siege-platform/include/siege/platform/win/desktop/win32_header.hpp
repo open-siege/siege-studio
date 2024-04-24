@@ -1,21 +1,22 @@
 #ifndef WIN32_HEADER_HPP
 #define WIN32_HEADER_HPP
 
-#include <siege/platform/win/gaming/win32_user32.hpp>
+#include <siege/platform/win/desktop/win32_window.hpp>
 #include <CommCtrl.h>
 
 namespace win32
 {
-    struct header
+    struct header : window
     {
+        using window::window;
         constexpr static auto class_name = WC_HEADERW;
 
-        [[nodiscard]] static wparam_t GetItemCount(hwnd_t self)
+        [[nodiscard]] inline wparam_t GetItemCount()
         {
             return SendMessageW(self, HDM_GETITEMCOUNT, 0, 0);
         }
 
-        [[maybe_unused]] wparam_t InsertItem(hwnd_t self, wparam_t index, HDITEMW info)
+        [[maybe_unused]] inline wparam_t InsertItem(wparam_t index, HDITEMW info)
         {
             return SendMessageW(self, HDM_INSERTITEMW, index, std::bit_cast<win32::lparam_t>(&info));
         }
