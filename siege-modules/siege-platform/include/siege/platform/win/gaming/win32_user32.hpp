@@ -842,6 +842,16 @@ namespace win32
 
         return std::nullopt;
     }
+
+    std::optional<RECT> MapDialogRect(hwnd_t control, RECT raw)
+    {
+        if (::MapDialogRect(control, &raw))
+        {
+            return raw;
+        }
+
+        return std::nullopt;
+    }
 #endif
 
     std::optional<RECT> GetClientRect(hwnd_t control)
