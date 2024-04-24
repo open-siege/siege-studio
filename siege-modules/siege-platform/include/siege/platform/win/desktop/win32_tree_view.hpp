@@ -1,28 +1,18 @@
 #ifndef WIN32_TREE_VIEW_HPP
 #define WIN32_TREE_VIEW_HPP
 
-#include <siege/platform/win/gaming/win32_user32.hpp>
+#include <siege/platform/win/desktop/win32_window.hpp>
 #include <siege/platform/win/desktop/win32_edit.hpp>
 #include <CommCtrl.h>
 
 namespace win32
 {
-    struct tree_view
+    struct tree_view : window
     {
+        using window::window;
         constexpr static auto class_name = WC_TREEVIEWW;
 
-        hwnd_t self;
-
-        inline tree_view(hwnd_t self) : self(self)
-        {
-        }
-
-        inline operator hwnd_t()
-        {
-            return self;
-        }
-
-        [[maybe_unused]] inline static std::optional<HTREEITEM> InsertItem(hwnd_t self, TVINSERTSTRUCTW info)
+        [[maybe_unused]] inline std::optional<HTREEITEM> InsertItem(TVINSERTSTRUCTW info)
         {
             bool mask_not_set = info.itemex.mask == 0;
 
@@ -67,11 +57,6 @@ namespace win32
             }
 
             return std::nullopt;
-        }
-
-        inline auto InsertItem(TVINSERTSTRUCTW info)
-        {
-            return tree_view::InsertItem(self, std::move(info));
         }
     };
 }

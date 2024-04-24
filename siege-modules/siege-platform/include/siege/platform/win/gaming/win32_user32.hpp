@@ -590,9 +590,10 @@ namespace win32
         }
     };
 
+    template <typename TControl = hwnd_t>
     auto CreateWindowExW(window_params<POINT, SIZE> params)
     {
-        return CreateWindowExW(CREATESTRUCTW{
+        return CreateWindowExW<TControl>(CREATESTRUCTW{
             .hInstance = params.class_module ? *params.class_module : nullptr,
             .hwndParent = params.parent,
             .cy = params.size.cy,
@@ -606,9 +607,10 @@ namespace win32
             });
     }
 
+    template <typename TControl = hwnd_t>
      auto CreateWindowExW(window_params<RECT> params)
      {
-        return CreateWindowExW(CREATESTRUCTW{
+        return CreateWindowExW<TControl>(CREATESTRUCTW{
             .hInstance = params.class_module ? *params.class_module : nullptr,
             .hwndParent = params.parent,
             .cy = params.position.bottom - params.position.top,
@@ -622,9 +624,10 @@ namespace win32
             });
      }
 
+     template <typename TControl = hwnd_t>
     auto CreateWindowExW(window_params<> params)
     {
-        return CreateWindowExW(CREATESTRUCTW{
+        return CreateWindowExW<TControl>(CREATESTRUCTW{
             .hInstance = params.class_module ? *params.class_module : nullptr,
             .hwndParent = params.parent,
             .cy = LONG(params.size),
