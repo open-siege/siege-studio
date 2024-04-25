@@ -20,6 +20,7 @@ namespace siege::views
         }};
 
         win32::hwnd_t self;
+        std::vector<std::unique_ptr<IStream, void(*)(IStream*)>> streams;
 
         bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : self(self)
 	    {
@@ -193,9 +194,13 @@ namespace siege::views
         {
             if (message.object_id == OBJID_NATIVEOM)
             {
-                auto collection = std::make_unique<win32::com::OwningCollection<std::unique_ptr<IStream, void(*)(IStream*)>>>();
+                auto collection = std::make_unique<win32::com::CollectionRef<std::unique_ptr<IStream, void(*)(IStream*)>>>(streams);
 
-                return LresultFromObject(__uuidof(IDispatch), message.flags, static_cast<IDispatch*>(collection.release()));   
+                auto result = LresultFromObject(__uuidof(IDispatch), message.flags, static_cast<IDispatch*>(collection.get()));
+
+                collection.release()->Release();
+
+                return result;
             }
 
             return std::nullopt;

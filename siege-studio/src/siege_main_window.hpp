@@ -177,69 +177,12 @@ struct siege_main_window
 			SendMessageW(sender, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&temp.value()));
 
 			win32::SetWindowPos(win32::hwnd_t(tab_item->lParam), *temp);
-
-			win32::com::ICollection* object = nullptr;
-
-			auto com_result = AccessibleObjectFromWindow(win32::hwnd_t(tab_item->lParam), OBJID_NATIVEOM, __uuidof(IDispatch), reinterpret_cast<void**>(&object));
-			
-			if (com_result == S_OK && object)
-			{
-				auto count = object->Count();
-
-				if (count == 0)
-				{
-					assert(count);
-					assert(*count == 0);
-
-					win32::com::Variant streamHolder;
-				
-					streamHolder.vt = VT_UNKNOWN;
-				
-					if (CreateStreamOnHGlobal(nullptr, TRUE, reinterpret_cast<IStream**>(&streamHolder.punkVal)) == S_OK)
-					{
-						auto addResult = object->Add(streamHolder);
-
-						assert(addResult);
-						assert(addResult->vt == VT_EMPTY);
-
-						count = object->Count();
-
-						assert(count);
-						assert(*count == 1);
-
-						auto enumerator = object->NewEnum();
-
-						assert(enumerator);
-
-						std::array<win32::com::Variant, 8> files{};
-						ULONG actual = 0;
-
-						assert(enumerator.value()->Next(files.size(), files.data(), &actual) == S_FALSE);
-						assert(actual == 1);
-						assert(files[0].vt == VT_UNKNOWN);
-
-						assert(enumerator.value()->Release() == 0);
-
-//						assert(files[0].punkVal->AddRef() == 3);
-	//					assert(files[0].punkVal->Release() == 2);
-
-						for (auto& item : *object)
-						{
-							if (IsDebuggerPresent())
-							{
-								assert(&item);							
-							}
-						}
-					}
-				}
-			}
 			
 			ShowWindow(win32::hwnd_t(tab_item->lParam), SW_SHOW);
 		}
 
 		return 0;
 	}
-
 
 	std::optional<LRESULT> on_destroy(const win32::destroy_message& command) {	
 				PostQuitMessage(0);
@@ -314,6 +257,22 @@ struct siege_main_window
 
 										assert(child);
 
+										win32::com::ICollection* object = nullptr;
+
+										auto com_result = AccessibleObjectFromWindow(*child, OBJID_NATIVEOM, __uuidof(IDispatch), reinterpret_cast<void**>(&object));
+			
+										if (com_result == S_OK && object)
+										{
+											win32::com::Variant streamHolder;
+											streamHolder.vt = VT_UNKNOWN;
+											streamHolder.punkVal = stream;
+											assert(stream->AddRef() == 2);
+
+											auto addResult = object->Add(streamHolder);
+											assert(addResult);
+											assert(addResult->vt == VT_EMPTY);
+										}
+
 										auto index = tab_control.GetItemCount() - 1;
 
 										tab_control.InsertItem(index, TCITEMW {
@@ -327,7 +286,7 @@ struct siege_main_window
 										SetWindowLongPtrW(*child, GWLP_ID, index);
 									}
 
-									stream->Release();
+									assert(stream->Release() == 1);
 								}
 							}
 						}
