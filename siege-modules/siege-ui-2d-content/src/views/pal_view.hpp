@@ -5,6 +5,7 @@
 #include <istream>
 #include <spanstream>
 #include <siege/platform/win/desktop/win32_controls.hpp>
+#include <siege/platform/win/gaming/win32_shapes.hpp>
 #include "pal_controller.hpp"
 
 namespace siege::views
@@ -15,7 +16,7 @@ namespace siege::views
 
 		win32::hwnd_t self;
 		pal_controller controller;
-		PAINTSTRUCT paint_data;
+		win32::paint_context paint_data;
 
 		std::array<HBRUSH, 16> brushes;
 
@@ -53,20 +54,18 @@ namespace siege::views
 
 		auto on_paint(win32::paint_message)
 		{
-			HDC context = BeginPaint(self, &paint_data);
+			auto context = paint_data.BeginPaint(self);
 
-			RECT pos{};
+			win32::rect pos{};
 			pos.right = 100;
 			pos.bottom = 100;
 
 			for (auto i = 0; i < brushes.size(); ++i)
 			{
-				FillRect(context, &pos, brushes[i]);
-				OffsetRect(&pos, 100, 0);
+				context.FillRect(pos, brushes[i]);
+				pos.Offset(100, 0);
 			}
 
-			EndPaint(self, &paint_data);
-			
 			return 0;
 		}
 
