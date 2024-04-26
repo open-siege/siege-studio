@@ -5,7 +5,6 @@
 #include <set>
 #include <variant>
 #include <utility>
-//#include <siege/resource/resource_explorer.hpp>
 #include <siege/content/pal/palette.hpp>
 #include <siege/content/bmp/bitmap.hpp>
 #include "bmp_shared.hpp"
@@ -14,11 +13,34 @@ namespace siege::views
 {
   class bmp_controller 
   {
+
   public:
       static bool is_bmp(std::istream& image_stream);
 
       std::size_t load_bitmap(std::istream& image_stream);
 
+      struct image_data
+      {
+          int width;
+          int height;
+          int bit_depth;
+          std::vector<std::int32_t> pixels;
+      };
+    
+      enum class colour_strategy : int
+      {
+        do_nothing,
+        remap,
+        remap_unique
+      };
+
+      using bmp_variant = std::variant<std::monostate, 
+          siege::content::bmp::windows_bmp_data, 
+          siege::content::bmp::pbmp_data,
+          siege::content::bmp::dbm_data>;
+  private:
+        bmp_variant raw_image;
+        std::vector<image_data> original_images;
   /*public:
     bmp_view(view_context context, std::istream& image_stream);
     std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks();
@@ -26,20 +48,9 @@ namespace siege::views
     void render_gl(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext) {}
     void render_ui(wxWindow& parent, sf::RenderWindow& window, ImGuiContext& guiContext);
 
-    struct image_data
-    {
-      int width;
-      int height;
-      int bit_depth;
-      std::vector<std::int32_t> pixels;
-    };
+    
 
-    enum class colour_strategy : int
-    {
-      do_nothing,
-      remap,
-      remap_unique
-    };
+
   private:
     struct selection_state
     {
@@ -75,7 +86,7 @@ namespace siege::views
 
     float image_scale = 1;
 
-    std::vector<image_data> original_pixels;
+
 
     sf::Image loaded_image;
     sf::Texture texture;
