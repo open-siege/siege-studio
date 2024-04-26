@@ -257,21 +257,23 @@ struct siege_main_window
 
 										assert(child);
 
-										win32::com::ICollection* object = nullptr;
+										::STATSTG info{};
 
-										auto com_result = AccessibleObjectFromWindow(*child, OBJID_NATIVEOM, __uuidof(IDispatch), reinterpret_cast<void**>(&object));
-			
-										if (com_result == S_OK && object)
-										{
-											win32::com::Variant streamHolder;
-											streamHolder.vt = VT_UNKNOWN;
-											streamHolder.punkVal = stream;
-											assert(stream->AddRef() == 2);
+										stream->Stat(&info, STATFLAG::STATFLAG_NONAME);
+										auto handle = ::CreateFileW(path->c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 
-											auto addResult = object->Add(streamHolder);
-											assert(addResult);
-											assert(addResult->vt == VT_EMPTY);
-										}
+										auto mapping = ::CreateFileMapping(handle, nullptr, PAGE_READONLY, 0, 0, nullptr);
+
+										COPYDATASTRUCT data{
+											.cbData = DWORD(info.cbSize.QuadPart),
+											.lpData = ::MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, std::size_t(info.cbSize.QuadPart))
+										};
+										SendMessageW(*child, WM_COPYDATA, win32::wparam_t(self), win32::lparam_t(&data));
+
+
+										::UnmapViewOfFile(data.lpData);
+										::CloseHandle(mapping);
+										::CloseHandle(handle);
 
 										auto index = tab_control.GetItemCount() - 1;
 
@@ -286,7 +288,7 @@ struct siege_main_window
 										SetWindowLongPtrW(*child, GWLP_ID, index);
 									}
 
-									assert(stream->Release() == 1);
+									assert(stream->Release() == 0);
 								}
 							}
 						}

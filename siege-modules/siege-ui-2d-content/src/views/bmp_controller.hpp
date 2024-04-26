@@ -17,6 +17,8 @@ namespace siege::views
   public:
       static bool is_bmp(std::istream& image_stream);
 
+      std::size_t load_bitmap(std::istream& image_stream);
+
   /*public:
     bmp_view(view_context context, std::istream& image_stream);
     std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks();
