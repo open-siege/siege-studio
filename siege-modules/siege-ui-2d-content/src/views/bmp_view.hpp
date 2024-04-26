@@ -8,6 +8,8 @@
 #include <sstream>
 #include <vector>
 #include <memory>
+#include <istream>
+#include <spanstream>
 #include <oleacc.h>
 #include "bmp_controller.hpp"
 
@@ -20,7 +22,7 @@ namespace siege::views
         }};
 
         win32::hwnd_t self;
-        std::vector<std::unique_ptr<IStream, void(*)(IStream*)>> streams;
+        bmp_controller controller;
 
         bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : self(self)
 	    {
@@ -194,7 +196,7 @@ namespace siege::views
         {
             if (message.object_id == OBJID_NATIVEOM)
             {
-                auto collection = std::make_unique<win32::com::CollectionRef<std::unique_ptr<IStream, void(*)(IStream*)>>>(streams);
+                auto collection = std::make_unique<win32::com::OwningCollection<std::unique_ptr<IStream, void(*)(IStream*)>>>();
 
                 auto result = LresultFromObject(__uuidof(IDispatch), message.flags, static_cast<IDispatch*>(collection.get()));
 
@@ -205,6 +207,18 @@ namespace siege::views
 
             return std::nullopt;
         }
+
+        auto on_copy_data(win32::copy_data_message<char> message)
+		{
+			std::spanstream stream(message.data);
+			
+			if (bmp_controller::is_bmp(stream))
+			{
+				return controller.load_bitmap(stream) > 0 ? TRUE : FALSE;
+			}
+
+			return FALSE;
+		}
 
         auto on_message(win32::message message)
         {
