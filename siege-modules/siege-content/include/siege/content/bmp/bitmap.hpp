@@ -61,6 +61,7 @@ namespace siege::content::bmp
   struct platform_bitmap
   {
       explicit platform_bitmap(windows_bmp_data);
+      explicit platform_bitmap(gdi_bitmap);
       
 #if WIN32
       HBITMAP handle;
