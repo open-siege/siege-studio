@@ -31,7 +31,9 @@ namespace siege::content::bmp
         }
         else
         {
-            handle = ::CreateDIBitmap(wnd_dc, &info.bmiHeader, CBM_INIT, bitmap.indexes.data(), &info, DIB_PAL_COLORS);
+            std::vector<std::uint16_t> indexes(bitmap.indexes.begin(), bitmap.indexes.end());
+
+            handle = ::CreateDIBitmap(wnd_dc, &info.bmiHeader, CBM_INIT, indexes.data(), &info, DIB_PAL_COLORS);
         }
 
         if (!handle)
