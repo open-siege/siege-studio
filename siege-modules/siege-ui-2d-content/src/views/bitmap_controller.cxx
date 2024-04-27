@@ -3,11 +3,11 @@
 #include <execution>
 #include <wx/quantize.h>
 #include "bmp_view.hpp"
-#include <siege/content/bmp/bitmap.hpp"
+#include <siege/content/bmp/bitmap.hpp>
 #include "sfml_keys.hpp"
 #include "utility.hpp"
 #include "bmp_shared.hpp"
-#include <siege/content/json_boost.hpp"
+#include <siege/content/json_boost.hpp>
 
 namespace siege::content::pal
 {

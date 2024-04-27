@@ -22,6 +22,7 @@ namespace siege::views
         }};
 
         win32::hwnd_t self;
+        win32::static_control static_image;
         bmp_controller controller;
 
         bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : self(self)
@@ -164,16 +165,15 @@ namespace siege::views
 
           //  // TODO add example palette file names as groups and then palette names as items
 
-            auto static_image = win32::CreateWindowExW<win32::static_control>(DLGITEMTEMPLATE{
-						    .style = WS_VISIBLE | WS_CHILD,
+            static_image = *win32::CreateWindowExW<win32::static_control>(DLGITEMTEMPLATE{
+						    .style = WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_REALSIZECONTROL,
                             .x = 0,
-                            .y = 4,
+                            .y = 0,
                             .cx = short((width / 3) * 2),
                             .cy = 300
 						    }, self, win32::static_control::class_name, L"Image");
            
-
-            auto root_children = std::array<win32::hwnd_t, 2>{*static_image, control_dialog};
+            auto root_children = std::array<win32::hwnd_t, 2>{static_image, control_dialog};
 
             win32::StackChildren(*win32::GetClientSize(self), root_children, win32::StackDirection::Horizontal);
            
@@ -214,7 +214,17 @@ namespace siege::views
 			
 			if (bmp_controller::is_bmp(stream))
 			{
-				return controller.load_bitmap(stream) > 0 ? TRUE : FALSE;
+                auto count = controller.load_bitmap(stream);
+
+                if (count > 0)
+                {
+
+                    static_image.SetImage(controller.get_bitmap(0));
+
+                    return TRUE;
+                }
+
+                return FALSE;
 			}
 
 			return FALSE;

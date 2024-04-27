@@ -9,6 +9,10 @@ namespace win32
 	{
     	hwnd_t self;
 
+        window() : self(nullptr)
+        {
+        }
+
         explicit window(hwnd_t self) : self(self)
         {
         }
@@ -16,6 +20,11 @@ namespace win32
         operator hwnd_t()
         {
             return self;
+        }
+
+        operator bool()
+        {
+            return self != nullptr;
         }
 	};
 }

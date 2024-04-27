@@ -11,6 +11,11 @@ namespace win32
         using window::window;
         constexpr static auto class_name = WC_STATICW;
         constexpr static std::uint16_t dialog_id = 0x0082;
+
+        HBITMAP SetImage(HBITMAP image)
+        {
+            return HBITMAP(SendMessageW(self, STM_SETIMAGE, IMAGE_BITMAP, lparam_t(image)));
+        }
     };
 
     struct native_font : window
