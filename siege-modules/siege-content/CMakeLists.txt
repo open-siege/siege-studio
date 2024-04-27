@@ -9,11 +9,17 @@ find_package(Catch2 REQUIRED)
 find_package(pegtl REQUIRED)
 
 file(GLOB_RECURSE TEST_SRC_FILES src/*.test.cpp)
+file(GLOB_RECURSE WIN32_SRC_FILES src/*.win32.cpp)
 file(GLOB LIB_SRC_FILES src/*.cpp src/**/*.cpp)
-list(REMOVE_ITEM LIB_SRC_FILES ${TEST_SRC_FILES})
+list(REMOVE_ITEM LIB_SRC_FILES ${TEST_SRC_FILES} ${WIN32_SRC_FILES})
 file(GLOB TESTABLE_SRC_FILES src/*.cpp src/**/*.cpp)
 
 add_library(${PROJECT_NAME} STATIC ${LIB_SRC_FILES})
+
+if (WIN32)
+    target_sources(${PROJECT_NAME} PRIVATE ${WIN32_SRC_FILES})
+endif()
+
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(${PROJECT_NAME} nlohmann_json::nlohmann_json glm::glm taocpp::pegtl siege-platform)

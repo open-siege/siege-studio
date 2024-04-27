@@ -7,6 +7,7 @@
 #include <optional>
 #include <siege/content/pal/palette.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
+#include <siege/platform/drawing.hpp>
 
 namespace siege::content::bmp
 {
@@ -43,6 +44,36 @@ namespace siege::content::bmp
     std::vector<pal::colour> colours;
     std::vector<std::int32_t> indexes;
   };
+
+  struct gdi_bitmap
+  {
+    std::int32_t type;
+    std::int32_t width;
+    std::int32_t height;
+    std::int32_t stride;
+    std::int16_t planes;
+    std::int16_t bit_depth;
+    std::byte* bytes; 
+  };
+
+  static_assert(std::is_trivially_copyable_v<gdi_bitmap>);
+
+  struct platform_bitmap
+  {
+      explicit platform_bitmap(windows_bmp_data);
+      
+#if WIN32
+      HBITMAP handle;
+
+      operator HBITMAP() const
+      {
+        return handle;
+      }
+#endif
+
+      ~platform_bitmap();
+  };
+
 
   struct pbmp_header
   {

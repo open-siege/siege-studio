@@ -144,11 +144,11 @@ namespace win32
     }
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    [[maybe_unused]] auto EnumPropsExW(hwnd_t control, std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback)
+    [[maybe_unused]] inline auto EnumPropsExW(hwnd_t control, std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback)
     {
         struct Handler
         {
-            static BOOL HandleEnum(hwnd_t self, LPWSTR key, HANDLE data, ULONG_PTR raw_callback)
+            inline static BOOL HandleEnum(hwnd_t self, LPWSTR key, HANDLE data, ULONG_PTR raw_callback)
             {
                 if (key == nullptr)
                 {
@@ -180,7 +180,7 @@ namespace win32
         return ::EnumPropsExW(control, Handler::HandleEnum, std::bit_cast<LPARAM>(&callback));
     }
 
-    [[maybe_unused]] auto ForEachPropertyExW(hwnd_t control, std::move_only_function<void(hwnd_t, std::wstring_view, HANDLE)> callback)
+    [[maybe_unused]] inline auto ForEachPropertyExW(hwnd_t control, std::move_only_function<void(hwnd_t, std::wstring_view, HANDLE)> callback)
     {
         return EnumPropsExW(control, [callback = std::move(callback)] (auto self, auto key, auto value) mutable
         {
@@ -189,7 +189,7 @@ namespace win32
         });
     }
 
-    [[maybe_unused]] auto FindPropertyExW(hwnd_t control, std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback)
+    [[maybe_unused]] inline auto FindPropertyExW(hwnd_t control, std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback)
     {
         return EnumPropsExW(control, [callback = std::move(callback)] (auto self, auto key, auto value) mutable
         {
@@ -642,7 +642,7 @@ namespace win32
     }
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    auto DialogBoxIndirectParamW(hwnd_t parent, DLGTEMPLATE* dialog_template, std::move_only_function<INT_PTR(hwnd_t, win32::message)> on_message)
+    inline auto DialogBoxIndirectParamW(hwnd_t parent, DLGTEMPLATE* dialog_template, std::move_only_function<INT_PTR(hwnd_t, win32::message)> on_message)
     {
         struct handler
         {
@@ -685,7 +685,7 @@ namespace win32
 
     struct EnumWindowHandler
     {
-        static BOOL CALLBACK HandleWindow(hwnd_t window, LPARAM raw_callback)
+        inline static BOOL CALLBACK HandleWindow(hwnd_t window, LPARAM raw_callback)
         {
             auto real_callback = std::bit_cast<std::move_only_function<bool(hwnd_t)>*>(raw_callback);
 
@@ -693,22 +693,22 @@ namespace win32
         }
     };
 
-    [[maybe_unused]] auto EnumWindows(std::move_only_function<bool(hwnd_t)> callback)
+    [[maybe_unused]] inline auto EnumWindows(std::move_only_function<bool(hwnd_t)> callback)
     {
         return ::EnumWindows(EnumWindowHandler::HandleWindow, std::bit_cast<LPARAM>(&callback));
     }
 
-    [[maybe_unused]] auto EnumChildWindows(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
+    [[maybe_unused]] inline auto EnumChildWindows(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
     {
         return ::EnumChildWindows(parent, EnumWindowHandler::HandleWindow, std::bit_cast<LPARAM>(&callback));
     }
 
-    [[maybe_unused]] auto EnumThreadWindows(DWORD thread_id, std::move_only_function<bool(hwnd_t)> callback)
+    [[maybe_unused]] inline auto EnumThreadWindows(DWORD thread_id, std::move_only_function<bool(hwnd_t)> callback)
     {
         return ::EnumThreadWindows(thread_id, EnumWindowHandler::HandleWindow, std::bit_cast<LPARAM>(&callback));
     }
 
-    [[maybe_unused]] auto ForEachWindow(std::move_only_function<void(hwnd_t)> callback)
+    [[maybe_unused]] inline auto ForEachWindow(std::move_only_function<void(hwnd_t)> callback)
     {
         return EnumWindows([callback = std::move(callback)] (auto window) mutable
         {
@@ -717,7 +717,7 @@ namespace win32
         });
     }
 
-    [[maybe_unused]] auto ForEachChildWindow(hwnd_t parent, std::move_only_function<void(hwnd_t)> callback)
+    [[maybe_unused]] inline auto ForEachChildWindow(hwnd_t parent, std::move_only_function<void(hwnd_t)> callback)
     {
         return EnumChildWindows(parent, [callback = std::move(callback)] (auto window) mutable
         {
@@ -726,7 +726,7 @@ namespace win32
         });
     }
 
-    [[maybe_unused]] auto ForEachThreadWindow(DWORD thread_id, std::move_only_function<void(hwnd_t)> callback)
+    [[maybe_unused]] inline auto ForEachThreadWindow(DWORD thread_id, std::move_only_function<void(hwnd_t)> callback)
     {
         return EnumThreadWindows(thread_id, [callback = std::move(callback)] (auto window) mutable
         {
@@ -735,7 +735,7 @@ namespace win32
         });
     }
 
-    [[maybe_unused]] auto FindWindow(std::move_only_function<bool(hwnd_t)> callback)
+    [[maybe_unused]] inline auto FindWindow(std::move_only_function<bool(hwnd_t)> callback)
     {
         hwnd_t result = nullptr;
         EnumWindows([callback = std::move(callback), &result] (auto window) mutable
@@ -751,7 +751,7 @@ namespace win32
         return result;
     }
 
-    [[maybe_unused]] auto FindThreadWindow(DWORD thread_id, std::move_only_function<bool(hwnd_t)> callback)
+    [[maybe_unused]] inline auto FindThreadWindow(DWORD thread_id, std::move_only_function<bool(hwnd_t)> callback)
     {
         hwnd_t result = nullptr;
         
@@ -769,7 +769,7 @@ namespace win32
         return result;
     }
 
-    hwnd_t FindDirectChildWindow(hwnd_t parent, std::wstring_view class_name, std::wstring_view title, std::move_only_function<bool(hwnd_t)> callback)
+    inline hwnd_t FindDirectChildWindow(hwnd_t parent, std::wstring_view class_name, std::wstring_view title, std::move_only_function<bool(hwnd_t)> callback)
     {
         hwnd_t current_child = nullptr;
 
@@ -789,17 +789,17 @@ namespace win32
         return nullptr;
     }
 
-    auto FindDirectChildWindow(hwnd_t parent, std::wstring_view class_name, std::move_only_function<bool(hwnd_t)> callback)
+    inline auto FindDirectChildWindow(hwnd_t parent, std::wstring_view class_name, std::move_only_function<bool(hwnd_t)> callback)
     {
         return FindDirectChildWindow(parent, class_name, L"", std::move(callback));
     }
 
-    auto FindDirectChildWindow(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
+    inline auto FindDirectChildWindow(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
     {
         return FindDirectChildWindow(parent, L"", L"", std::move(callback));
     }
 
-    auto ForEachDirectChildWindow(hwnd_t parent, std::move_only_function<void(hwnd_t)> callback)
+    inline auto ForEachDirectChildWindow(hwnd_t parent, std::move_only_function<void(hwnd_t)> callback)
     {
         return EnumChildWindows(parent, [callback = std::move(callback), parent] (auto window) mutable
         {
@@ -812,7 +812,7 @@ namespace win32
         });
     }
 
-    [[maybe_unused]] auto FindChildWindow(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
+    [[maybe_unused]] inline auto FindChildWindow(hwnd_t parent, std::move_only_function<bool(hwnd_t)> callback)
     {
         if (parent == HWND_MESSAGE)
         {
@@ -835,7 +835,7 @@ namespace win32
         return result;
     }
 
-    std::optional<RECT> GetWindowRect(hwnd_t control)
+    inline std::optional<RECT> GetWindowRect(hwnd_t control)
     {
         RECT result;
         if (::GetWindowRect(control, &result))
@@ -846,7 +846,7 @@ namespace win32
         return std::nullopt;
     }
 
-    std::optional<RECT> MapDialogRect(hwnd_t control, RECT raw)
+    inline std::optional<RECT> MapDialogRect(hwnd_t control, RECT raw)
     {
         if (::MapDialogRect(control, &raw))
         {
@@ -857,7 +857,7 @@ namespace win32
     }
 #endif
 
-    std::optional<RECT> GetClientRect(hwnd_t control)
+    inline std::optional<RECT> GetClientRect(hwnd_t control)
     {
         RECT result;
         if (::GetClientRect(control, &result))
@@ -868,7 +868,7 @@ namespace win32
         return std::nullopt;
     }
 
-    std::optional<SIZE> GetClientSize(hwnd_t control)
+    inline std::optional<SIZE> GetClientSize(hwnd_t control)
     {
         RECT result;
         if (::GetClientRect(control, &result))
@@ -879,7 +879,7 @@ namespace win32
         return std::nullopt;
     }
 
-    std::optional<std::pair<POINT, SIZE>> GetClientPositionAndSize(hwnd_t control)
+    inline std::optional<std::pair<POINT, SIZE>> GetClientPositionAndSize(hwnd_t control)
     {
         RECT result;
         if (::GetClientRect(control, &result))
@@ -890,12 +890,12 @@ namespace win32
         return std::nullopt;
     }
 
-    auto SetWindowPos(hwnd_t hWnd, hwnd_t hWndInsertAfter, UINT uFlags = 0)
+    inline auto SetWindowPos(hwnd_t hWnd, hwnd_t hWndInsertAfter, UINT uFlags = 0)
     {
         return ::SetWindowPos(hWnd, hWndInsertAfter, 0, 0, 0, 0, uFlags | SWP_NOMOVE | SWP_NOSIZE);
     }
 
-    auto SetWindowPos(hwnd_t hWnd, RECT position_and_size, UINT uFlags = 0)
+    inline auto SetWindowPos(hwnd_t hWnd, RECT position_and_size, UINT uFlags = 0)
     {
         return ::SetWindowPos(hWnd, nullptr, position_and_size.left, 
             position_and_size.top, 
@@ -903,33 +903,33 @@ namespace win32
             position_and_size.bottom - position_and_size.top, uFlags | SWP_NOZORDER);
     }
 
-    auto SetWindowPos(hwnd_t hWnd, POINT position, SIZE size, UINT uFlags = 0)
+    inline auto SetWindowPos(hwnd_t hWnd, POINT position, SIZE size, UINT uFlags = 0)
     {
         return ::SetWindowPos(hWnd, nullptr, position.x, position.y, size.cx, size.cy, uFlags | SWP_NOZORDER);
     }
 
-    auto SetWindowPos(hwnd_t hWnd, POINT position, UINT uFlags = 0)
+    inline auto SetWindowPos(hwnd_t hWnd, POINT position, UINT uFlags = 0)
     {
         return ::SetWindowPos(hWnd, nullptr, position.x, position.y, 0, 0, uFlags | SWP_NOSIZE | SWP_NOZORDER);
     }
 
-    auto SetWindowPos(hwnd_t hWnd, SIZE size, UINT uFlags = 0)
+    inline auto SetWindowPos(hwnd_t hWnd, SIZE size, UINT uFlags = 0)
     {
         return ::SetWindowPos(hWnd, nullptr, 0, 0, size.cx, size.cy, uFlags | SWP_NOMOVE | SWP_NOZORDER);
     }
 
-    auto MoveWindow(hwnd_t hWnd, RECT position_and_size, bool repaint)
+    inline auto MoveWindow(hwnd_t hWnd, RECT position_and_size, bool repaint)
     {
         return ::MoveWindow(hWnd, position_and_size.left, position_and_size.top, position_and_size.right - position_and_size.left, position_and_size.bottom - position_and_size.top, repaint ? TRUE : FALSE);
     }
 
-    auto MoveWindow(hwnd_t hWnd, POINT position, SIZE size, bool repaint)
+    inline auto MoveWindow(hwnd_t hWnd, POINT position, SIZE size, bool repaint)
     {
         return ::MoveWindow(hWnd, position.x, position.y, size.cx, size.cy, repaint ? TRUE : FALSE);
     }
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    auto TrackPopupMenuEx(HMENU menu, UINT flags, POINT coords, hwnd_t owner, std::optional<TPMPARAMS> params = std::nullopt)
+    inline auto TrackPopupMenuEx(HMENU menu, UINT flags, POINT coords, hwnd_t owner, std::optional<TPMPARAMS> params = std::nullopt)
     {
         if (params)
         {
@@ -942,7 +942,7 @@ namespace win32
         }
     }
 
-    std::optional<std::pair<POINT, RECT>> MapWindowPoints(hwnd_t from, hwnd_t to, RECT source)
+    inline std::optional<std::pair<POINT, RECT>> MapWindowPoints(hwnd_t from, hwnd_t to, RECT source)
     {
         auto result = ::MapWindowPoints(from, to, reinterpret_cast<POINT*>(&source), sizeof(RECT) / sizeof(POINT));
 
@@ -961,7 +961,7 @@ namespace win32
         Horizontal
     };
 
-    void StackChildren(SIZE parent_size, std::span<hwnd_t> children, StackDirection direction = StackDirection::Vertical, std::optional<POINT> start_pos = std::nullopt)
+    inline void StackChildren(SIZE parent_size, std::span<hwnd_t> children, StackDirection direction = StackDirection::Vertical, std::optional<POINT> start_pos = std::nullopt)
     {
         std::stable_sort(children.begin(), children.end(), [&](hwnd_t a, hwnd_t b) {
             auto rect_a = win32::GetClientRect(a);
@@ -1025,7 +1025,7 @@ namespace win32
     }
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    void StackChildren(hwnd_t parent, StackDirection direction = StackDirection::Vertical)
+    inline void StackChildren(hwnd_t parent, StackDirection direction = StackDirection::Vertical)
     {
         std::vector<hwnd_t> children;
         children.reserve(8);

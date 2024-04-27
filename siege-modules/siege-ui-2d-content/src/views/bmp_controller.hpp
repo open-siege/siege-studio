@@ -15,17 +15,9 @@ namespace siege::views
   {
 
   public:
-      static bool is_bmp(std::istream& image_stream);
+      static bool is_bmp(std::istream& image_stream) noexcept;
 
-      std::size_t load_bitmap(std::istream& image_stream);
-
-      struct image_data
-      {
-          int width;
-          int height;
-          int bit_depth;
-          std::vector<std::int32_t> pixels;
-      };
+      std::size_t load_bitmap(std::istream& image_stream) noexcept;
     
       enum class colour_strategy : int
       {
@@ -35,12 +27,13 @@ namespace siege::views
       };
 
       using bmp_variant = std::variant<std::monostate, 
-          siege::content::bmp::windows_bmp_data, 
-          siege::content::bmp::pbmp_data,
-          siege::content::bmp::dbm_data>;
+          content::bmp::windows_bmp_data, 
+          content::bmp::pbmp_data,
+          content::bmp::dbm_data>;
+
+      content::bmp::platform_bitmap& get_bitmap(std::size_t) noexcept;
   private:
-        bmp_variant raw_image;
-        std::vector<image_data> original_images;
+        std::vector<content::bmp::platform_bitmap> original_images;
   /*public:
     bmp_view(view_context context, std::istream& image_stream);
     std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks();
