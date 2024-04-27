@@ -1,5 +1,6 @@
 #include "bmp_controller.hpp"
 #include <siege/content/bmp/bitmap.hpp>
+#include <siege/content/bmp/image.hpp>
 
 
 namespace siege::views
@@ -8,7 +9,8 @@ namespace siege::views
   {
       return siege::content::bmp::is_earthsiege_bmp(image_stream)
            || siege::content::bmp::is_microsoft_bmp(image_stream)
-          || siege::content::bmp::is_phoenix_bmp(image_stream);
+          || siege::content::bmp::is_phoenix_bmp(image_stream)
+          || siege::content::bmp::is_png(image_stream);
   }
 
   std::size_t bmp_controller::load_bitmap(std::istream& image_stream) noexcept
@@ -35,6 +37,18 @@ namespace siege::views
       }
       else if (bmp::is_earthsiege_bmp(image_stream))
       {
+      }
+      else
+      {
+          try
+          {
+                original_images.emplace_back(image_stream);
+                return 1;        
+          }
+          catch(std::exception& ex)
+          {
+            OutputDebugStringA(ex.what());
+          }
       }
 
      return 0;

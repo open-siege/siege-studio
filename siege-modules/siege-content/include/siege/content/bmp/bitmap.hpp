@@ -62,6 +62,8 @@ namespace siege::content::bmp
   {
       explicit platform_bitmap(windows_bmp_data);
       explicit platform_bitmap(gdi_bitmap);
+      explicit platform_bitmap(std::filesystem::path);
+      explicit platform_bitmap(std::istream&);
       
 #if WIN32
       HBITMAP handle;
