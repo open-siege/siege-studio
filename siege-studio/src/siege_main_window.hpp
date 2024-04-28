@@ -260,6 +260,7 @@ struct siege_main_window
 										::STATSTG info{};
 
 										stream->Stat(&info, STATFLAG::STATFLAG_NONAME);
+										
 										auto handle = ::CreateFileW(path->c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 
 										auto mapping = ::CreateFileMapping(handle, nullptr, PAGE_READONLY, 0, 0, nullptr);
@@ -268,6 +269,9 @@ struct siege_main_window
 											.cbData = DWORD(info.cbSize.QuadPart),
 											.lpData = ::MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, std::size_t(info.cbSize.QuadPart))
 										};
+
+										assert(stream->Release() == 0);
+	
 										SendMessageW(*child, WM_COPYDATA, win32::wparam_t(self), win32::lparam_t(&data));
 
 
@@ -287,8 +291,6 @@ struct siege_main_window
 
 										SetWindowLongPtrW(*child, GWLP_ID, index);
 									}
-
-									assert(stream->Release() == 0);
 								}
 							}
 						}

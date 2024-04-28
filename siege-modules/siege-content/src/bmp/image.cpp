@@ -8,7 +8,7 @@ namespace siege::content::bmp
   using file_tag = std::array<std::byte, 4>;
   constexpr file_tag png_tag = platform::to_tag<4>({ 0x89, 'P', 'N', 'G' });
   constexpr std::array<std::byte, 3> gif_tag = platform::to_tag<3>({ 'G', 'I', 'F' });
-  constexpr std::array<std::byte, 2> jpg_tag = platform::to_tag<2>({ 0xff, 0x28 });
+  constexpr std::array<std::byte, 2> jpg_tag = platform::to_tag<2>({ 0xff, 0xd8 });
 
   bool is_jpg(std::istream& raw_data)
   {
