@@ -66,6 +66,7 @@ namespace siege::content::bmp
       explicit platform_bitmap(std::istream&);
       
 #if WIN32
+      explicit platform_bitmap(HBITMAP);
       HBITMAP handle;
 
       operator HBITMAP() const
