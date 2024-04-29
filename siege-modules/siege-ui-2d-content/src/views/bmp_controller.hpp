@@ -6,7 +6,7 @@
 #include <variant>
 #include <utility>
 #include <siege/content/pal/palette.hpp>
-#include <siege/content/bmp/bitmap.hpp>
+#include <siege/content/bmp/image.hpp>
 #include "bmp_shared.hpp"
 
 namespace siege::views
@@ -31,9 +31,9 @@ namespace siege::views
           content::bmp::pbmp_data,
           content::bmp::dbm_data>;
 
-      content::bmp::platform_bitmap& get_bitmap(std::size_t) noexcept;
+      std::size_t convert(std::size_t frame, std::pair<int, int> size, int bits, std::span<std::byte> destination) const noexcept;
   private:
-        std::vector<content::bmp::platform_bitmap> original_images;
+        std::optional<content::bmp::platform_image> original_image;
   /*public:
     bmp_view(view_context context, std::istream& image_stream);
     std::map<sf::Keyboard::Key, std::reference_wrapper<std::function<void(const sf::Event&)>>> get_callbacks();

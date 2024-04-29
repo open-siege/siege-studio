@@ -218,8 +218,25 @@ namespace siege::views
 
                 if (count > 0)
                 {
+                    auto size = win32::GetClientSize(static_image);
+                    BITMAPINFO info{
+                                .bmiHeader {
+                                    .biSize = sizeof(BITMAPINFOHEADER),
+                                    .biWidth = LONG(size->cx),
+                                    .biHeight = LONG(size->cy),
+                                    .biPlanes = 1,
+                                    .biBitCount = 32,
+                                    .biCompression = BI_RGB
+                                }
+                            };
+                   auto wnd_dc = ::GetDC(nullptr);
 
-                    static_image.SetImage(controller.get_bitmap(0));
+                    void* pixels = nullptr;
+                    auto handle = ::CreateDIBSection(wnd_dc, &info, DIB_RGB_COLORS, &pixels, nullptr, 0);
+
+                    controller.convert(0, std::make_pair(size->cx, size->cy), 32, std::span(reinterpret_cast<std::byte*>(pixels), size->cx * size->cy * 4));
+
+                    static_image.SetImage(handle);
 
                     return TRUE;
                 }
