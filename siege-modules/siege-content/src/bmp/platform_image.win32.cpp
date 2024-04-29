@@ -13,17 +13,17 @@ namespace siege::content::bmp
 
     auto& bitmap_factory()
     {
-        thread_local std::unique_ptr<IWICImagingFactory, void(*)(IWICImagingFactory*)> factory = [] {
-           
-                    IWICImagingFactory* temp = nullptr;
+        thread_local win32::com::com_ptr factory = [] 
+        {
+            win32::com::com_ptr<IWICImagingFactory> temp;
 
-                    if (CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&temp)) != S_OK)
-                    {
-                        throw std::exception("Could not create imaging factory");
-                    }
+            if (CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory), temp.put_void()) != S_OK)
+            {
+                throw std::exception("Could not create imaging factory");
+            }
 
-                    return std::unique_ptr<IWICImagingFactory, void(*)(IWICImagingFactory*)>(temp, [](auto* self) { self->Release(); } );
-                }();
+            return temp;
+        }();
 
         return *factory;
     }
@@ -90,7 +90,7 @@ namespace siege::content::bmp
 
     void platform_image::load(std::filesystem::path filename)
     {
-        win32::com::com_ptr<IWICBitmapDecoder> decoder(nullptr);
+        win32::com::com_ptr<IWICBitmapDecoder> decoder;
       
         auto hresult = bitmap_factory().CreateDecoderFromFilename(
                 filename.c_str(),            
@@ -146,21 +146,18 @@ namespace siege::content::bmp
 
         const auto& item = frames[frame];
 
-        if (item.type().hash_code() == typeid(wic_bitmap).hash_code())
-        {
-            const auto& bitmap = std::any_cast<const wic_bitmap&>(item);
-            
-            IWICBitmapScaler *scaler = nullptr;
-            assert(bitmap_factory().CreateBitmapScaler(&scaler) == S_OK);
+        auto scale_bitmap = [size, pixels](const wic_bitmap& bitmap) {
+            win32::com::com_ptr<IWICBitmapScaler> scaler;
+            assert(bitmap_factory().CreateBitmapScaler(scaler.put()) == S_OK);
             scaler->Initialize(bitmap.get(), size.first, size.second, WICBitmapInterpolationModeFant);
 
-            IWICFormatConverter *converter = nullptr;
-            assert(bitmap_factory().CreateFormatConverter(&converter) == S_OK);
+            win32::com::com_ptr<IWICFormatConverter> converter;
+            assert(bitmap_factory().CreateFormatConverter(converter.put()) == S_OK);
             converter->Initialize(
-                        scaler,             
+                        scaler.get(),             
                         GUID_WICPixelFormat32bppBGR, 
                         WICBitmapDitherTypeNone, 
-                        static_cast<IWICPalette*>(nullptr),
+                        win32::com::com_ptr<IWICPalette>().get(),
                         0.f,    
                         WICBitmapPaletteTypeCustom
             );
@@ -171,10 +168,12 @@ namespace siege::content::bmp
             assert(converter->GetSize(&width, &height) == S_OK);
             assert(converter->CopyPixels(nullptr, width * sizeof(std::int32_t), height * width * sizeof(std::int32_t), reinterpret_cast<BYTE*>(pixels.data())) == S_OK);
 
-            scaler->Release();
-            converter->Release();
-
             return height * width * sizeof(int32_t);
+        };
+
+        if (item.type().hash_code() == typeid(wic_bitmap).hash_code())
+        {
+            return scale_bitmap(std::any_cast<const wic_bitmap&>(item));   
         }
         else if (item.type().hash_code() == typeid(windows_bmp_data).hash_code())
         {
@@ -190,13 +189,21 @@ namespace siege::content::bmp
             }
             else if (bitmap.indexes.empty() && !bitmap.colours.empty())
             {
+                win32::com::com_ptr<IWICBitmap> wic_bitmap;
+
+                assert(bitmap_factory().CreateBitmapFromMemory(bitmap.info.width, 
+                            bitmap.info.height, 
+                            GUID_WICPixelFormat32bppRGB, 
+                            bitmap.info.width * 4,
+                            bitmap.info.width * 4 * bitmap.info.height,
+                            reinterpret_cast<BYTE*>(const_cast<pal::colour*>(bitmap.colours.data())),
+                            wic_bitmap.put()
+                    ) == S_OK);
             
-            }
-            
+                return scale_bitmap(wic_bitmap.as<IWICBitmapSource>());
+            }    
             // TODO either copy or scale CreateBitmapFromMemory
-
         }
-
 
         return 0;                
     }
