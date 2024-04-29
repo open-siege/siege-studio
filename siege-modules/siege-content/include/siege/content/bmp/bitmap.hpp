@@ -45,40 +45,6 @@ namespace siege::content::bmp
     std::vector<std::int32_t> indexes;
   };
 
-  struct gdi_bitmap
-  {
-    std::int32_t type;
-    std::int32_t width;
-    std::int32_t height;
-    std::int32_t stride;
-    std::int16_t planes;
-    std::int16_t bit_depth;
-    std::byte* bytes; 
-  };
-
-  static_assert(std::is_trivially_copyable_v<gdi_bitmap>);
-
-  struct platform_bitmap
-  {
-      explicit platform_bitmap(windows_bmp_data);
-      explicit platform_bitmap(gdi_bitmap);
-      explicit platform_bitmap(std::filesystem::path);
-      explicit platform_bitmap(std::istream&);
-      
-#if WIN32
-      explicit platform_bitmap(HBITMAP);
-      HBITMAP handle;
-
-      operator HBITMAP() const
-      {
-        return handle;
-      }
-#endif
-
-      ~platform_bitmap();
-  };
-
-
   struct pbmp_header
   {
     endian::little_uint32_t version;
