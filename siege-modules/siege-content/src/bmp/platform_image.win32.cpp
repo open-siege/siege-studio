@@ -28,17 +28,35 @@ namespace siege::content::bmp
         return *factory;
     }
 
+    void apply_palette(windows_bmp_data& bitmap)
+    {
+        if (!bitmap.indexes.empty() && !bitmap.colours.empty())
+        {
+            std::vector<pal::colour> colours(bitmap.indexes.size());
+
+            std::transform(bitmap.indexes.begin(), bitmap.indexes.end(), colours.begin(), [&](auto index) {
+                return bitmap.colours.at(index);
+            });
+
+            bitmap.colours = colours;
+            bitmap.indexes.clear();
+        }
+    }
+
     platform_image::platform_image(std::span<windows_bmp_data> bitmaps)
     {
         frames.reserve(bitmaps.size());
 
         std::transform(bitmaps.begin(), bitmaps.end(), std::back_inserter(frames), [&](auto& value) {
+            apply_palette(value);
             return std::move(value);    
         });
     }
 
     platform_image::platform_image(windows_bmp_data bitmap)
     {
+        apply_palette(bitmap);
+
         frames.emplace_back(std::move(bitmap));
     }
 
@@ -202,7 +220,6 @@ namespace siege::content::bmp
             
                 return scale_bitmap(wic_bitmap.as<IWICBitmapSource>());
             }    
-            // TODO either copy or scale CreateBitmapFromMemory
         }
 
         return 0;                
