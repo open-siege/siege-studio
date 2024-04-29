@@ -12,17 +12,17 @@
 
 namespace win32::com
 {
-	std::expected<std::unique_ptr<IXmlReader, void(*)(IXmlReader*)>, HRESULT> CreateXmlReader()
+	std::expected<std::unique_ptr<IXmlReader, com_deleter<IXmlReader>>, HRESULT> CreateXmlReader()
 	{
-		IXmlReader* raw = nullptr;
-		auto result = CreateXmlReader(__uuidof(IXmlReader), (void**)&raw, nullptr);
+		com_ptr<IXmlReader> raw = nullptr;
+		auto result = ::CreateXmlReader(__uuidof(IXmlReader), raw.put_void(), nullptr);
 
 		if (result != S_OK)
 		{
 			return std::unexpected(result);
 		}
 
-		return as_unique<IXmlReader>(raw);
+		return raw;
 	}
 }
 

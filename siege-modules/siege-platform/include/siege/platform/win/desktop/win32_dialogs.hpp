@@ -28,47 +28,47 @@ namespace win32::com
 
 	struct IFileOpenDialogEx : ::IFileOpenDialog
 	{
-		std::expected<std::unique_ptr<IShellItemEx, void(*)(IShellItemEx*)>, HRESULT> GetResult()
+		std::expected<std::unique_ptr<IShellItemEx, com_deleter<IShellItemEx>>, HRESULT> GetResult()
 		{
-			IShellItemEx* result = nullptr;
+			com_ptr<IShellItem> result(nullptr);
 
-			auto hr = static_cast<IFileOpenDialog*>(this)->GetResult((IShellItem**)&result);
+			auto hr = static_cast<IFileOpenDialog*>(this)->GetResult(result.put());
 
 			if (hr != S_OK)
 			{
 				return std::unexpected(hr);
 			}
 
-			return win32::com::as_unique<IShellItemEx>(result);
+			return result.as<IShellItemEx>();
 		}
 	};
 
-	std::expected<std::unique_ptr<IFileOpenDialogEx, void(*)(IFileOpenDialogEx*)>, HRESULT> CreateFileOpenDialog()
+	std::expected<std::unique_ptr<IFileOpenDialogEx, com_deleter<IFileOpenDialogEx>>, HRESULT> CreateFileOpenDialog()
 	{
-		IFileOpenDialogEx *pFileOpen;
+		com_ptr<IFileOpenDialog> pFileOpen(nullptr);
 					
-		auto hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, __uuidof(::IFileOpenDialog), (void**)&pFileOpen);
+		auto hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, __uuidof(::IFileOpenDialog), pFileOpen.put_void());
 
 		if (hr != S_OK)
 		{
 			return std::unexpected(hr);
 		}
 
-		return win32::com::as_unique<IFileOpenDialogEx>(pFileOpen);
+		return pFileOpen.as<IFileOpenDialogEx>();
 	}
 
-	std::expected<std::unique_ptr<IFileSaveDialog, void(*)(IFileSaveDialog*)>, HRESULT> CreateFileSaveDialog()
+	std::expected<std::unique_ptr<IFileSaveDialog, com_deleter<IFileSaveDialog>>, HRESULT> CreateFileSaveDialog()
 	{
-		IFileSaveDialog *pFileOpen;
+		com_ptr<IFileSaveDialog> pFileOpen;
 					
-		auto hr = CoCreateInstance(CLSID_FileSaveDialog, nullptr, CLSCTX_ALL, __uuidof(::IFileSaveDialog), (void**)&pFileOpen);
+		auto hr = CoCreateInstance(CLSID_FileSaveDialog, nullptr, CLSCTX_ALL, __uuidof(::IFileSaveDialog), pFileOpen.put_void());
 
 		if (hr != S_OK)
 		{
 			return std::unexpected(hr);
 		}
 
-		return win32::com::as_unique<IFileSaveDialog>(pFileOpen);
+		return pFileOpen;
 	}
 }
 

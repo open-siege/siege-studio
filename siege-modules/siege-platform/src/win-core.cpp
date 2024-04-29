@@ -26,7 +26,7 @@ namespace win32::com
 	HRESULT init_com()
 	{
 		thread_local HRESULT result = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-		thread_local auto com_handle = as_unique<HRESULT>(&result, [](auto*){ CoUninitialize(); });
+		thread_local auto com_handle = std::unique_ptr<HRESULT, void(*)(HRESULT*)>(&result, [](auto*){ CoUninitialize(); });
 
         assert(std::memcmp(&IID_IUnknown, &xcom::IUnknown::iid, sizeof(GUID)) == 0);
 

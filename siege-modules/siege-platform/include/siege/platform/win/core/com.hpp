@@ -7,31 +7,62 @@
 
 namespace win32::com
 {
-	template <typename T>
-	constexpr auto get_com_deleter()
-	{
-		return [](T* value) {
-			if constexpr(std::is_same_v<IUnknown, T> || std::is_base_of_v<IUnknown, T>)
+    template<typename TUnknown>
+    struct com_deleter
+    {
+        void operator()(TUnknown* self)
+        {
+            if (self)
             {
-				if (value)
-				{
-					value->Release();
-				}
+                self->Release();
             }
-		};
-	}
+        }
+    
+    };
 
-	template<typename T>
-	constexpr auto as_unique(T* value)
-	{
-		return std::unique_ptr<T, decltype(get_com_deleter<T>())>(value, get_com_deleter<T>());
-	}
+    template<typename TUnknown>
+    struct com_ptr : std::unique_ptr<TUnknown, com_deleter<TUnknown>>
+    {
+        using base = std::unique_ptr<TUnknown, com_deleter<TUnknown>>;
+        using base::base;
 
-	template<typename T>
-	auto as_unique(T* value, void(*deleter)(T*))
-	{
-		return std::unique_ptr<T, void(*)(T*)>(value, deleter);
-	}
+        com_ptr(TUnknown* value) : base(value)
+        {
+        }
+
+        com_ptr(const com_ptr& other) : base([&]() -> base {
+                other->AddRef();
+                return base(other.get());
+            }())
+        {
+        }
+
+        template <typename TOther>
+        com_ptr<TOther> as()
+        {
+            static_assert(std::is_same_v<TUnknown, TOther> || std::is_base_of_v<TUnknown, TOther> || std::is_base_of_v<TOther, TUnknown>);
+
+            if (this->get())
+            {
+                this->get()->AddRef();
+            }
+            return com_ptr<TOther>(static_cast<TOther*>(this->get()));
+        }
+
+        TUnknown** put()
+        {
+            static_assert(sizeof(base) == sizeof(void*));
+            static_assert(std::is_standard_layout_v<com_ptr>);
+            return reinterpret_cast<TUnknown**>(this);
+        }
+
+        void** put_void()
+        {
+            static_assert(sizeof(base) == sizeof(void*));
+            static_assert(std::is_standard_layout_v<com_ptr>);
+            return reinterpret_cast<void**>(this);
+        }
+    };
 
 	struct ComObject : IUnknown
     {

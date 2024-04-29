@@ -1,4 +1,5 @@
 #include <siege/content/bmp/image.hpp>
+#include <siege/platform/win/core/com.hpp>
 #include <exception>
 #include <spanstream>
 #include <memory>
@@ -8,37 +9,7 @@
 
 namespace siege::content::bmp
 {
-    template<typename TUnknown>
-    struct com_ptr : std::unique_ptr<TUnknown, void(*)(TUnknown*)>
-    {
-        using base = std::unique_ptr<TUnknown, void(*)(TUnknown*)>;
-        using base::base;
-
-        com_ptr(TUnknown* value) : base(value, [](auto* self) { self->Release(); })
-        {
-        }
-
-        com_ptr(const com_ptr& other) : base([&]() -> base {
-                other->AddRef();
-                return base(other.get(), [](auto* self){ self->Release();});
-            }())
-        {
-        }
-
-        template <typename TOther>
-        com_ptr<TOther> as()
-        {
-            static_assert(std::is_same_v<TUnknown, TOther> || std::is_base_of_v<TUnknown, TOther> || std::is_base_of_v<TOther, TUnknown>);
-
-            if (this->get())
-            {
-                this->get()->AddRef();
-            }
-            return com_ptr<TOther>(static_cast<TOther*>(this->get()));
-        }
-    };
-
-    using wic_bitmap = com_ptr<IWICBitmapSource>;
+    using wic_bitmap = win32::com::com_ptr<IWICBitmapSource>;
 
     auto& bitmap_factory()
     {
@@ -119,14 +90,14 @@ namespace siege::content::bmp
 
     void platform_image::load(std::filesystem::path filename)
     {
-        IWICBitmapDecoder* decoder = nullptr;
+        win32::com::com_ptr<IWICBitmapDecoder> decoder(nullptr);
       
         auto hresult = bitmap_factory().CreateDecoderFromFilename(
                 filename.c_str(),            
                 nullptr,        
                 GENERIC_READ,   
                 WICDecodeMetadataCacheOnDemand, 
-                &decoder
+                decoder.put()
             );
 
          
@@ -135,14 +106,13 @@ namespace siege::content::bmp
 
         for (auto i = 0u; i < count; ++i)
         {
-            IWICBitmapFrameDecode* frame = nullptr;
-            if (decoder->GetFrame(i, &frame) == S_OK)
+            win32::com::com_ptr<IWICBitmapFrameDecode> frame;
+
+            if (decoder->GetFrame(i, frame.put()) == S_OK)
             {
-                frames.emplace_back(wic_bitmap(frame));            
+                frames.emplace_back(wic_bitmap(frame.as<IWICBitmapSource>()));            
             }
         }
-
-        decoder->Release();
     }
 
     std::size_t platform_image::frame_count() const
