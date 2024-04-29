@@ -8,7 +8,37 @@
 
 namespace siege::content::bmp
 {
-    using wic_bitmap = std::shared_ptr<IWICBitmapSource>;
+    template<typename TUnknown>
+    struct com_ptr : std::unique_ptr<TUnknown, void(*)(TUnknown*)>
+    {
+        using base = std::unique_ptr<TUnknown, void(*)(TUnknown*)>;
+        using base::base;
+
+        com_ptr(TUnknown* value) : base(value, [](auto* self) { self->Release(); })
+        {
+        }
+
+        com_ptr(const com_ptr& other) : base([&]() -> base {
+                other->AddRef();
+                return base(other.get(), [](auto* self){ self->Release();});
+            }())
+        {
+        }
+
+        template <typename TOther>
+        com_ptr<TOther> as()
+        {
+            static_assert(std::is_same_v<TUnknown, TOther> || std::is_base_of_v<TUnknown, TOther> || std::is_base_of_v<TOther, TUnknown>);
+
+            if (this->get())
+            {
+                this->get()->AddRef();
+            }
+            return com_ptr<TOther>(static_cast<TOther*>(this->get()));
+        }
+    };
+
+    using wic_bitmap = com_ptr<IWICBitmapSource>;
 
     auto& bitmap_factory()
     {
@@ -89,8 +119,8 @@ namespace siege::content::bmp
 
     void platform_image::load(std::filesystem::path filename)
     {
-        IWICBitmapDecoder *decoder = nullptr;
-       
+        IWICBitmapDecoder* decoder = nullptr;
+      
         auto hresult = bitmap_factory().CreateDecoderFromFilename(
                 filename.c_str(),            
                 nullptr,        
@@ -105,12 +135,13 @@ namespace siege::content::bmp
 
         for (auto i = 0u; i < count; ++i)
         {
-            IWICBitmapFrameDecode *frame = nullptr;
+            IWICBitmapFrameDecode* frame = nullptr;
             if (decoder->GetFrame(i, &frame) == S_OK)
             {
-                frames.emplace_back(wic_bitmap(frame, [](auto* self){ self->Release(); }));            
+                frames.emplace_back(wic_bitmap(frame));            
             }
         }
+
         decoder->Release();
     }
 
@@ -148,17 +179,13 @@ namespace siege::content::bmp
         if (item.type().hash_code() == typeid(wic_bitmap).hash_code())
         {
             const auto& bitmap = std::any_cast<const wic_bitmap&>(item);
-            IWICFormatConverter *converter = nullptr;
-
-
+            
             IWICBitmapScaler *scaler = nullptr;
-
             assert(bitmap_factory().CreateBitmapScaler(&scaler) == S_OK);
-
             scaler->Initialize(bitmap.get(), size.first, size.second, WICBitmapInterpolationModeFant);
 
+            IWICFormatConverter *converter = nullptr;
             assert(bitmap_factory().CreateFormatConverter(&converter) == S_OK);
-
             converter->Initialize(
                         scaler,             
                         GUID_WICPixelFormat32bppBGR, 
@@ -172,16 +199,29 @@ namespace siege::content::bmp
             std::uint32_t height = 0;
 
             assert(converter->GetSize(&width, &height) == S_OK);
-
             assert(converter->CopyPixels(nullptr, width * sizeof(std::int32_t), height * width * sizeof(std::int32_t), reinterpret_cast<BYTE*>(pixels.data())) == S_OK);
 
-            
+            scaler->Release();
             converter->Release();
 
             return height * width * sizeof(int32_t);
         }
         else if (item.type().hash_code() == typeid(windows_bmp_data).hash_code())
         {
+            const auto& bitmap = std::any_cast<const windows_bmp_data&>(item);
+            
+            if (bitmap.indexes.empty() && !bitmap.colours.empty() && 
+                bitmap.info.bit_depth == bits && 
+                bitmap.info.width == size.first &&
+                bitmap.info.height == size.second)
+            {
+                std::memcpy(pixels.data(), bitmap.colours.data(), sizeof(pal::colour) * bitmap.colours.size());
+                return sizeof(pal::colour) * bitmap.colours.size();
+            }
+            else if (bitmap.indexes.empty() && !bitmap.colours.empty())
+            {
+            
+            }
             
             // TODO either copy or scale CreateBitmapFromMemory
 
