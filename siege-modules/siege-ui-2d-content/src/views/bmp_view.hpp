@@ -15,6 +15,59 @@
 
 namespace siege::views
 {
+    using gdi_bitmap = std::decay_t<decltype(*std::declval<HBITMAP>())>;
+    using gdi_brush = std::decay_t<decltype(*std::declval<HBRUSH>())>;
+    using gdi_palette = std::decay_t<decltype(*std::declval<HPALETTE>())>;
+    using gdi_pen = std::decay_t<decltype(*std::declval<HPEN>())>;
+    using gdi_font = std::decay_t<decltype(*std::declval<HFONT>())>;
+    using window = std::decay_t<decltype(*std::declval<HWND>())>;
+    using menu = std::decay_t<decltype(*std::declval<HMENU>())>;
+
+    struct handle_deleter
+    {
+        void operator()(gdi_bitmap* bitmap)
+        {
+            DeleteObject(bitmap);
+        }
+
+        void operator()(gdi_brush* brush)
+        {
+            DeleteObject(brush);
+        }
+
+        void operator()(gdi_palette* brush)
+        {
+            DeleteObject(brush);
+        }
+
+        void operator()(gdi_pen* brush)
+        {
+            DeleteObject(brush);
+        }
+
+        void operator()(gdi_font* brush)
+        {
+            DeleteObject(brush);
+        }
+
+        void operator()(window* window)
+        {
+            DestroyWindow(window);
+        }
+
+        void operator()(menu* menu)
+        {
+            DestroyMenu(menu);
+        }
+
+        void operator()(void* handle)
+        {
+            CloseHandle(handle);
+        }
+    };
+
+    static_assert(std::is_same_v<gdi_bitmap*, HBITMAP>);
+
 	struct bmp_view
     {
         constexpr static auto formats = std::array<std::wstring_view, 16>{{
@@ -24,6 +77,8 @@ namespace siege::views
         win32::hwnd_t self;
         win32::static_control static_image;
         bmp_controller controller;
+
+        std::unique_ptr<gdi_bitmap, handle_deleter> current_bitmap;
 
         bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : self(self)
 	    {
@@ -232,11 +287,11 @@ namespace siege::views
                    auto wnd_dc = ::GetDC(nullptr);
 
                     void* pixels = nullptr;
-                    auto handle = ::CreateDIBSection(wnd_dc, &info, DIB_RGB_COLORS, &pixels, nullptr, 0);
+                    current_bitmap.reset(::CreateDIBSection(wnd_dc, &info, DIB_RGB_COLORS, &pixels, nullptr, 0));
 
                     controller.convert(0, std::make_pair(size->cx, size->cy), 32, std::span(reinterpret_cast<std::byte*>(pixels), size->cx * size->cy * 4));
 
-                    static_image.SetImage(handle);
+                    static_image.SetImage(current_bitmap.get());
 
                     return TRUE;
                 }
