@@ -9,17 +9,17 @@
 namespace win32::com
 {
     template <typename TCollection>
-    std::expected<std::unique_ptr<TCollection, void(*)(TCollection*)>, HRESULT> PSCreateMemoryPropertyStore()
+    std::expected<std::unique_ptr<TCollection, com_deleter<TCollection>>, HRESULT> PSCreateMemoryPropertyStore()
     {
-        TCollection* result = nullptr;
-        auto hresult = PSCreateMemoryPropertyStore(IID_PPV_ARGS(&result));
+        com_ptr<TCollection> result;
+        auto hresult = ::PSCreateMemoryPropertyStore(__uuidof(TCollection), result.put_void());
 
         if (hresult != S_OK)
         {
             return std::unexpected(hresult);
         }
 
-        return as_unique<TCollection>(result);
+        return result;
     }
 
     struct PropVariant : ::PROPVARIANT
