@@ -12,17 +12,17 @@ namespace win32
 
         [[nodiscard]] inline lresult_t GetCount()
         {
-            return SendMessageW(self, LB_GETCOUNT, 0, 0);
+            return SendMessageW(*this, LB_GETCOUNT, 0, 0);
         }
 
         [[maybe_unused]] inline wparam_t AddString(wparam_t index, std::wstring_view text)
         {
-            return SendMessageW(self, LB_ADDSTRING, index, std::bit_cast<LPARAM>(text.data()));
+            return SendMessageW(*this, LB_ADDSTRING, index, std::bit_cast<LPARAM>(text.data()));
         }
 
         [[maybe_unused]] inline wparam_t InsertString(wparam_t index, std::wstring_view text)
         {
-            return SendMessageW(self, LB_INSERTSTRING, index, std::bit_cast<LPARAM>(text.data()));
+            return SendMessageW(*this, LB_INSERTSTRING, index, std::bit_cast<LPARAM>(text.data()));
         }
     };
 }

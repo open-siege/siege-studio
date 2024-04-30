@@ -3,6 +3,7 @@
 
 #include <siege/platform/win/desktop/win32_controls.hpp>
 #include <siege/platform/win/desktop/win32_builders.hpp>
+#include <siege/platform/win/auto_handle.hpp>
 #include <siege/platform/win/core/com_collection.hpp>
 #include <cassert>
 #include <sstream>
@@ -15,58 +16,20 @@
 
 namespace siege::views
 {
-    using gdi_bitmap = std::decay_t<decltype(*std::declval<HBITMAP>())>;
-    using gdi_brush = std::decay_t<decltype(*std::declval<HBRUSH>())>;
-    using gdi_palette = std::decay_t<decltype(*std::declval<HPALETTE>())>;
-    using gdi_pen = std::decay_t<decltype(*std::declval<HPEN>())>;
-    using gdi_font = std::decay_t<decltype(*std::declval<HFONT>())>;
-    using window = std::decay_t<decltype(*std::declval<HWND>())>;
-    using menu = std::decay_t<decltype(*std::declval<HMENU>())>;
-
-    struct handle_deleter
+ 
+    struct gdi_deleter
     {
-        void operator()(gdi_bitmap* bitmap)
+        void operator()(HGDIOBJ gdi_obj)
         {
-            DeleteObject(bitmap);
-        }
-
-        void operator()(gdi_brush* brush)
-        {
-            DeleteObject(brush);
-        }
-
-        void operator()(gdi_palette* brush)
-        {
-            DeleteObject(brush);
-        }
-
-        void operator()(gdi_pen* brush)
-        {
-            DeleteObject(brush);
-        }
-
-        void operator()(gdi_font* brush)
-        {
-            DeleteObject(brush);
-        }
-
-        void operator()(window* window)
-        {
-            DestroyWindow(window);
-        }
-
-        void operator()(menu* menu)
-        {
-            DestroyMenu(menu);
-        }
-
-        void operator()(void* handle)
-        {
-            CloseHandle(handle);
+            assert(::DeleteObject(gdi_obj) == TRUE);
         }
     };
 
-    static_assert(std::is_same_v<gdi_bitmap*, HBITMAP>);
+    using gdi_bitmap = win32::auto_handle<HBITMAP, gdi_deleter>;
+    using gdi_brush = win32::auto_handle<HBRUSH, gdi_deleter>;
+    using gdi_palette = win32::auto_handle<HPALETTE, gdi_deleter>;
+    using gdi_pen = win32::auto_handle<HPEN, gdi_deleter>;
+    using gdi_font = win32::auto_handle<HFONT, gdi_deleter>;
 
 	struct bmp_view
     {
@@ -78,7 +41,7 @@ namespace siege::views
         win32::static_control static_image;
         bmp_controller controller;
 
-        std::unique_ptr<gdi_bitmap, handle_deleter> current_bitmap;
+        win32::auto_handle<HBITMAP, gdi_deleter> current_bitmap;
 
         bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : self(self)
 	    {

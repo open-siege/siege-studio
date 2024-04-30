@@ -14,7 +14,7 @@ namespace win32
 
         HBITMAP SetImage(HBITMAP image)
         {
-            return HBITMAP(SendMessageW(self, STM_SETIMAGE, IMAGE_BITMAP, lparam_t(image)));
+            return HBITMAP(SendMessageW(*this, STM_SETIMAGE, IMAGE_BITMAP, lparam_t(image)));
         }
     };
 

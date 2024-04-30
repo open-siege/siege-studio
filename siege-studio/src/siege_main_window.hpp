@@ -79,12 +79,12 @@ struct siege_main_window
 					});
 
 		assert(tab_control_instance);
-		tab_control = *tab_control_instance;
+		tab_control = std::move(*tab_control_instance);
 
-		auto children = std::array<win32::hwnd_t, 2>{*dir_list, *tab_control_instance};
+		auto children = std::array<win32::hwnd_t, 2>{*dir_list, tab_control};
         win32::StackChildren(*win32::GetClientSize(self), children, win32::StackDirection::Horizontal);
 
-		parent_size = win32::GetClientRect(*tab_control_instance);
+		parent_size = win32::GetClientRect(tab_control);
 
 		for (auto& plugin : loaded_modules)
 		{
@@ -113,10 +113,10 @@ struct siege_main_window
 
 			SendMessageW(*tab_control_instance, TCM_SETCURSEL, 0, 0);
 			NMHDR notification{.hwndFrom = *tab_control_instance, .code = TCN_SELCHANGE};
-			SendMessageW(self, WM_NOTIFY, 0, std::bit_cast<LPARAM>(&notification));*/
+			SendMessageW(*this, WM_NOTIFY, 0, std::bit_cast<LPARAM>(&notification));*/
 		}
 
-		tab_control_instance->InsertItem(0, TCITEMW {
+		tab_control.InsertItem(0, TCITEMW {
 						.mask = TCIF_TEXT,
 						.pszText = const_cast<wchar_t*>(L"+"),
 					});

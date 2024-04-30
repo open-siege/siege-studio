@@ -13,12 +13,12 @@ namespace win32
 
         [[nodiscard]] inline wparam_t GetItemCount()
         {
-            return SendMessageW(self, HDM_GETITEMCOUNT, 0, 0);
+            return SendMessageW(*this, HDM_GETITEMCOUNT, 0, 0);
         }
 
         [[maybe_unused]] inline wparam_t InsertItem(wparam_t index, HDITEMW info)
         {
-            return SendMessageW(self, HDM_INSERTITEMW, index, std::bit_cast<win32::lparam_t>(&info));
+            return SendMessageW(*this, HDM_INSERTITEMW, index, std::bit_cast<win32::lparam_t>(&info));
         }
     };
 }

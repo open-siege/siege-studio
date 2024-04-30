@@ -25,22 +25,22 @@ namespace win32
         
         inline HIMAGELIST SetImageList(wparam_t wparam, HIMAGELIST image_list)
         {
-            return std::bit_cast<HIMAGELIST>(SendMessageW(self, LVM_SETIMAGELIST, wparam, std::bit_cast<lparam_t>(image_list)));
+            return std::bit_cast<HIMAGELIST>(SendMessageW(*this, LVM_SETIMAGELIST, wparam, std::bit_cast<lparam_t>(image_list)));
         }
 
         inline bool SetView(view_type type)
         {
-            return SendMessageW(self, LVM_SETVIEW, wparam_t(type), 0) == 1;
+            return SendMessageW(*this, LVM_SETVIEW, wparam_t(type), 0) == 1;
         }
 
         inline view_type GetView()
         {
-            return view_type(SendMessageW(self, LVM_GETVIEW, 0, 0));
+            return view_type(SendMessageW(*this, LVM_GETVIEW, 0, 0));
         }
 
         inline std::optional<bool> EnableGroupView(bool should_enable)
         {
-            auto result = SendMessageW(self, LVM_ENABLEGROUPVIEW, should_enable ? TRUE : FALSE, 0);
+            auto result = SendMessageW(*this, LVM_ENABLEGROUPVIEW, should_enable ? TRUE : FALSE, 0);
 
             if (result == 0)
             {
@@ -52,17 +52,17 @@ namespace win32
 
         inline bool IsGroupViewEnabled()
         {
-            return SendMessageW(self, LVM_ISGROUPVIEWENABLED, 0, 0);
+            return SendMessageW(*this, LVM_ISGROUPVIEWENABLED, 0, 0);
         }
 
         inline lparam_t GetGroupCount()
         {
-            return SendMessageW(self, LVM_GETGROUPCOUNT, 0, 0);
+            return SendMessageW(*this, LVM_GETGROUPCOUNT, 0, 0);
         }
 
         inline lresult_t SetExtendedListViewStyle(wparam_t wParam, lparam_t lParam)
         {
-            return SendMessageW(self, LVM_SETEXTENDEDLISTVIEWSTYLE, wParam, lParam);
+            return SendMessageW(*this, LVM_SETEXTENDEDLISTVIEWSTYLE, wParam, lParam);
         }
 
         inline bool SetTileViewInfo(LVTILEVIEWINFO info)
@@ -89,7 +89,7 @@ namespace win32
                 info.dwMask |= LVTVIM_LABELMARGIN;
             }
 
-            return SendMessageW(self, LVM_SETTILEVIEWINFO, 0, std::bit_cast<lparam_t>(&info));
+            return SendMessageW(*this, LVM_SETTILEVIEWINFO, 0, std::bit_cast<lparam_t>(&info));
         }
 
         inline wparam_t InsertGroup(wparam_t index, LVGROUP group)
@@ -168,12 +168,12 @@ namespace win32
                 group.mask |= LVGF_SUBSETITEMS;
             }
 
-            return SendMessageW(self, LVM_INSERTGROUP, index, std::bit_cast<lparam_t>(&group));
+            return SendMessageW(*this, LVM_INSERTGROUP, index, std::bit_cast<lparam_t>(&group));
         }
 
         [[nodiscard]] inline win32::header GetHeader()
         {
-            return win32::header(hwnd_t(SendMessageW(self, LVM_GETHEADER, 0, 0)));
+            return win32::header(hwnd_t(SendMessageW(*this, LVM_GETHEADER, 0, 0)));
         }
 
         [[nodiscard]] inline wparam_t GetColumnCount()
@@ -185,7 +185,7 @@ namespace win32
         {
             LVCOLUMNW result;
 
-            if (SendMessageW(self, LVM_GETCOLUMNW, index, std::bit_cast<lparam_t>(&result)))
+            if (SendMessageW(*this, LVM_GETCOLUMNW, index, std::bit_cast<lparam_t>(&result)))
             {
                 return result;
             }
@@ -195,12 +195,12 @@ namespace win32
 
         inline lparam_t GetColumnWidth(wparam_t index)
         {
-            return SendMessageW(self, LVM_GETCOLUMNWIDTH, index, 0);
+            return SendMessageW(*this, LVM_GETCOLUMNWIDTH, index, 0);
         }
 
         [[maybe_unused]] inline bool SetColumnWidth(wparam_t index, lparam_t width)
         {
-            return SendMessageW(self, LVM_SETCOLUMNWIDTH, index, width);
+            return SendMessageW(*this, LVM_SETCOLUMNWIDTH, index, width);
         }
 
         [[maybe_unused]] inline wparam_t InsertColumn(wparam_t position, LVCOLUMNW column)
@@ -247,7 +247,7 @@ namespace win32
 
             position = position == -1 ? GetColumnCount() : position;
             
-            auto index = SendMessageW(self, LVM_INSERTCOLUMNW, 
+            auto index = SendMessageW(*this, LVM_INSERTCOLUMNW, 
                 position, std::bit_cast<win32::lparam_t>(&column));
 
             
@@ -308,7 +308,7 @@ namespace win32
                 item.mask |= LVIF_TEXT;
             }
 
-            return SendMessageW(self, LVM_INSERTITEMW, index, std::bit_cast<lparam_t>(&item));
+            return SendMessageW(*this, LVM_INSERTITEMW, index, std::bit_cast<lparam_t>(&item));
         }
     };
 }

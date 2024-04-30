@@ -16,19 +16,19 @@ namespace win32
 
         [[maybe_unused]] inline wparam_t AddString(wparam_t index, std::string_view text)
         {
-            return SendMessageW(self, CB_ADDSTRING, index, std::bit_cast<LPARAM>(text.data()));
+            return SendMessageW(*this, CB_ADDSTRING, index, std::bit_cast<LPARAM>(text.data()));
         }
 
         [[maybe_unused]] inline wparam_t InsertString(wparam_t index, std::string_view text)
         {
-            return SendMessageW(self, CB_INSERTSTRING, index, std::bit_cast<LPARAM>(text.data()));
+            return SendMessageW(*this, CB_INSERTSTRING, index, std::bit_cast<LPARAM>(text.data()));
         }
 
         [[nodiscard]] inline std::expected<COMBOBOXINFO, DWORD> GetComboBoxInfo()
         {
             COMBOBOXINFO result;
 
-            if (SendMessageW(self, CB_GETCOMBOBOXINFO, 0, std::bit_cast<LPARAM>(&result)))
+            if (SendMessageW(*this, CB_GETCOMBOBOXINFO, 0, std::bit_cast<LPARAM>(&result)))
             {
                 return result;
             }
@@ -44,7 +44,7 @@ namespace win32
 
         [[maybe_unused]] inline wparam_t InsertItem(COMBOBOXEXITEMW info)
         {
-            return SendMessageW(self, CBEM_INSERTITEMW, 0, std::bit_cast<win32::lparam_t>(&info));
+            return SendMessageW(*this, CBEM_INSERTITEMW, 0, std::bit_cast<win32::lparam_t>(&info));
         }
 
         inline std::span<COMBOBOXEXITEMW> GetChildItems(std::span<COMBOBOXEXITEMW> items)
