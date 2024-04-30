@@ -16,7 +16,7 @@ namespace win32
         {
             RECT result;
 
-            if (SendMessageW(self, BCM_GETTEXTMARGIN, 0, std::bit_cast<lparam_t>(&result)))
+            if (SendMessageW(*this, BCM_GETTEXTMARGIN, 0, std::bit_cast<lparam_t>(&result)))
             {
                 return result;
             }
@@ -28,7 +28,7 @@ namespace win32
         {
             SIZE result{.cx = ideal_width };
 
-            if (SendMessageW(self, BCM_GETIDEALSIZE, 0, std::bit_cast<lparam_t>(&result)))
+            if (SendMessageW(*this, BCM_GETIDEALSIZE, 0, std::bit_cast<lparam_t>(&result)))
             {
                 return result;
             }

@@ -13,7 +13,7 @@ namespace win32
 
        [[maybe_unused]] inline bool SetCueBanner(bool show_on_focus, std::wstring text)
        {
-          return SendMessageW(self, EM_SETCUEBANNER, show_on_focus ? TRUE : FALSE, std::bit_cast<lparam_t>(text.c_str()));
+          return SendMessageW(*this, EM_SETCUEBANNER, show_on_focus ? TRUE : FALSE, std::bit_cast<lparam_t>(text.c_str()));
        }
     };
 

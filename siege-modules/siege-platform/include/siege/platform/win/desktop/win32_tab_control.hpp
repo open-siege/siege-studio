@@ -13,19 +13,19 @@ namespace win32
 
         [[maybe_unused]] inline wparam_t InsertItem(wparam_t index, TCITEMW info)
         {
-            return SendMessageW(self, TCM_INSERTITEMW, index, std::bit_cast<lparam_t>(&info));
+            return SendMessageW(*this, TCM_INSERTITEMW, index, std::bit_cast<lparam_t>(&info));
         }
 
         [[nodiscard]] inline wparam_t GetItemCount()
         {
-            return SendMessageW(self, TCM_GETITEMCOUNT, 0, 0);
+            return SendMessageW(*this, TCM_GETITEMCOUNT, 0, 0);
         }
 
         [[nodiscard]] inline std::optional<TCITEMW> GetItem(wparam_t index, std::uint32_t mask = TCIF_PARAM | TCIF_STATE)
         {
             TCITEMW result { .mask = mask };
 
-            if (SendMessageW(self, TCM_GETITEM, index, std::bit_cast<lparam_t>(&result)))
+            if (SendMessageW(*this, TCM_GETITEM, index, std::bit_cast<lparam_t>(&result)))
             {
                 return result;
             }
@@ -35,7 +35,7 @@ namespace win32
 
         inline RECT AdjustRect(bool dispay_to_window, RECT rect)
         {
-            SendMessageW(self, TCM_ADJUSTRECT, dispay_to_window ? TRUE : FALSE, std::bit_cast<lparam_t>(&rect));
+            SendMessageW(*this, TCM_ADJUSTRECT, dispay_to_window ? TRUE : FALSE, std::bit_cast<lparam_t>(&rect));
             return rect;
         }
     };

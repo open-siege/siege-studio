@@ -51,7 +51,7 @@ namespace win32
                 info.itemex.mask |= TVIF_CHILDREN;
             }
 
-            if (auto result = HTREEITEM(SendMessageW(self, TVM_INSERTITEMW, 0, std::bit_cast<lparam_t>(&info))); result)
+            if (auto result = HTREEITEM(SendMessageW(*this, TVM_INSERTITEMW, 0, std::bit_cast<lparam_t>(&info))); result)
             {
                 return result;
             }

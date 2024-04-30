@@ -86,7 +86,7 @@ struct volume_window
                 search->SetCueBanner(false, L"Enter search text here");
 
                 SendMessageW(*search, CCM_SETWINDOWTHEME , 0, reinterpret_cast<win32::lparam_t>(L"SearchBoxEdit"));
-                return *search;
+                return search->release();
             }(),
             .cx = UINT(parent_size->right / 8)
             });

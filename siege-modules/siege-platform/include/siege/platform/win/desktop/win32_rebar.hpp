@@ -15,7 +15,7 @@ namespace win32
         {
             RECT result;
 
-            if (SendMessageW(self, RB_GETRECT, index, std::bit_cast<lparam_t>(&result)))
+            if (SendMessageW(*this, RB_GETRECT, index, std::bit_cast<lparam_t>(&result)))
             {
                 return result;
             }
@@ -25,29 +25,29 @@ namespace win32
 
         [[nodiscard]] inline std::uint32_t GetBarHeight()
         {
-            return std::uint32_t(SendMessageW(self, RB_GETBARHEIGHT, 0, 0));
+            return std::uint32_t(SendMessageW(*this, RB_GETBARHEIGHT, 0, 0));
         }
 
         [[nodiscard]] inline lparam_t GetBandCount()
         {
-            return SendMessageW(self, RB_GETBANDCOUNT, 0, 0);
+            return SendMessageW(*this, RB_GETBANDCOUNT, 0, 0);
         }
 
         [[maybe_unused]] inline void SetBandWidth(wparam_t index, lparam_t new_width)
         {
-            SendMessageW(self, RB_SETBANDWIDTH, index, new_width);
+            SendMessageW(*this, RB_SETBANDWIDTH, index, new_width);
         }
 
         [[maybe_unused]] inline void MaximizeBand(wparam_t index, lparam_t ideal_width = 0)
         {
-            SendMessageW(self, RB_MAXIMIZEBAND, index, ideal_width);
+            SendMessageW(*this, RB_MAXIMIZEBAND, index, ideal_width);
         }
 
         [[maybe_unused]] inline std::optional<REBARBANDINFOW> GetBandChildSize(wparam_t index)
         {
             REBARBANDINFOW band {.cbSize = sizeof(REBARBANDINFOW), .fMask = RBBIM_CHILDSIZE};
             
-            if (SendMessageW(self, RB_GETBANDINFOW, index, std::bit_cast<win32::lparam_t>(&band)))
+            if (SendMessageW(*this, RB_GETBANDINFOW, index, std::bit_cast<win32::lparam_t>(&band)))
             {
                 return band;
             }
@@ -58,7 +58,7 @@ namespace win32
         [[maybe_unused]] inline bool SetBandInfo(wparam_t index, REBARBANDINFOW band)
         {
             band.cbSize = sizeof(band);
-            return SendMessageW(self, RB_SETBANDINFOW, 
+            return SendMessageW(*this, RB_SETBANDINFOW, 
                 index, std::bit_cast<win32::lparam_t>(&band));
         }
 
@@ -108,7 +108,7 @@ namespace win32
                 band.fMask |= RBBIM_STYLE;
             }
             
-            return SendMessageW(self, RB_INSERTBANDW, 
+            return SendMessageW(*this, RB_INSERTBANDW, 
                 position, std::bit_cast<win32::lparam_t>(&band));
         }
     };
