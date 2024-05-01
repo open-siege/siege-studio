@@ -31,7 +31,7 @@ struct pal_mapping_window
     auto on_size(win32::size_message sized)
 	{
 		win32::ForEachDirectChildWindow(self, [&](auto child) {
-			win32::SetWindowPos(child, sized.client_size);
+	//		win32::SetWindowPos(child, sized.client_size);
 		});
 
 		return std::nullopt;
