@@ -2,7 +2,6 @@
 #define BITMAPWINDOW_HPP
 
 #include <siege/platform/win/desktop/win32_controls.hpp>
-#include <siege/platform/win/desktop/win32_builders.hpp>
 #include <siege/platform/win/auto_handle.hpp>
 #include <siege/platform/win/core/com_collection.hpp>
 #include <cassert>
@@ -36,6 +35,8 @@ namespace siege::views
         L".jpg", L".jpeg", L".gif", L".png", L".tag", L".bmp", L".dib" , L".pba", L".dmb", L".db0", L".db1", L".db2", L".hba", L".hb0", L".hb1", L".hb2"    
         }};
 
+        win32::stack_panel control_panel;
+        win32::stack_panel image_panel;
         win32::static_control static_image;
         win32::track_bar slider;
         bmp_controller controller;
@@ -54,36 +55,38 @@ namespace siege::views
             auto parent_size = this->GetClientSize();
 
             auto width = parent_size->cx;
-            auto dialog_template = win32::MakeDialogTemplate(::DLGTEMPLATE{ .style = DS_CONTROL | WS_VISIBLE | WS_CHILD , .x = 1, .cx = short(width / 3), .cy = short(parent_size->cy), });
-            auto control_dialog = window(::CreateDialogIndirectParamW(info.data.hInstance, &dialog_template.dialog, *this, [](win32::hwnd_t, std::uint32_t, win32::wparam_t, win32::lparam_t) -> INT_PTR {
-                    return FALSE;
-                }, 0));
+            
+            control_panel = *win32::CreateWindowExW<win32::stack_panel>(::DLGITEMTEMPLATE{ 
+                .style = WS_VISIBLE | WS_CHILD , 
+                .x = 1, .cx = short(width / 3), 
+                .cy = short(parent_size->cy), }, *this, win32::type_name<win32::stack_panel>(), L""
+            );
 
             auto group_box = win32::CreateWindowExW<win32::button>(DLGITEMTEMPLATE{
 						    .style = WS_VISIBLE | WS_CHILD | BS_GROUPBOX,
                             .cy = 100
-						    }, control_dialog, win32::button::class_name, L"Colour strategy");
+						    }, control_panel, win32::button::class_name, L"Colour strategy");
 
             assert(group_box);
 
 
             auto do_nothing = win32::CreateWindowExW<win32::button>(DLGITEMTEMPLATE{
 						    .style = WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON
-						    }, control_dialog, win32::button::class_name, L"Do nothing");
+						    }, control_panel, win32::button::class_name, L"Do nothing");
 
             auto ideal_size = do_nothing->GetIdealSize();
             do_nothing->SetWindowPos(*ideal_size);
 
             auto remap = win32::CreateWindowExW<win32::button>(DLGITEMTEMPLATE{
 						    .style = WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON,
-						    }, control_dialog, win32::button::class_name, L"Remap");
+						    }, control_panel, win32::button::class_name, L"Remap");
 
             ideal_size = remap->GetIdealSize();
             remap->SetWindowPos(*ideal_size);
 
             auto remap_unique = win32::CreateWindowExW<win32::button>(DLGITEMTEMPLATE{
 						    .style = WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON,
-						    }, control_dialog, win32::button::class_name, L"Remap (only unique colours)");
+						    }, control_panel, win32::button::class_name, L"Remap (only unique colours)");
 
             ideal_size = remap_unique->GetIdealSize();
             remap_unique->SetWindowPos(*ideal_size);
@@ -95,7 +98,7 @@ namespace siege::views
             win32::list_view palettes_list = [&] {
                 auto palettes_list = *win32::CreateWindowExW<win32::list_view>(CREATESTRUCTW{
                             .hInstance = mfcModule,
-                            .hwndParent = control_dialog,
+                            .hwndParent = control_panel,
 						    .cy = 300,  
                             .cx = 400,
 	            		    .y = 3,		
@@ -108,7 +111,7 @@ namespace siege::views
             assert(palettes_list.EnableGroupView(true));
             assert(palettes_list.SetTileViewInfo(LVTILEVIEWINFO {
                 .dwFlags = LVTVIF_FIXEDWIDTH,
-                .sizeTile = SIZE {.cx = control_dialog.GetClientSize()->cx, .cy = 50},
+                .sizeTile = SIZE {.cx = control_panel.GetClientSize()->cx, .cy = 50},
                 }));
         
             palettes_list.SetExtendedListViewStyle(0, 
@@ -118,7 +121,7 @@ namespace siege::views
                  .cx = LVSCW_AUTOSIZE,
                 .pszText = const_cast<wchar_t*>(L""),
                 .cxMin = 100,
-                .cxDefault = control_dialog.GetClientSize()->cx,
+                .cxDefault = control_panel.GetClientSize()->cx,
                 });
 
             assert(palettes_list.InsertGroup(-1, LVGROUP {
@@ -180,12 +183,12 @@ namespace siege::views
                 return palettes_list;
           }();
 
-          //  // TODO add example palette file names as groups and then palette names as items
-
-            auto image_dialog_template = win32::MakeDialogTemplate(::DLGTEMPLATE{ .style = DS_CONTROL | WS_CHILD | WS_VISIBLE, .x = 0, .cx = short(width / 3), .cy = short(parent_size->cy), });
-            auto image_dialog = window(::CreateDialogIndirectParamW(info.data.hInstance, &image_dialog_template.dialog, *this, [](win32::hwnd_t, std::uint32_t, win32::wparam_t, win32::lparam_t) -> INT_PTR {
-                    return FALSE;
-                }, 0));
+          image_panel = *win32::CreateWindowExW<win32::stack_panel>(::DLGITEMTEMPLATE{ 
+                 .x = 0,
+                 .cx = short(width / 3), 
+                 .cy = short(parent_size->cy) 
+              }, *this, win32::type_name<win32::stack_panel>(), L""
+            );
 
             static_image = *win32::CreateWindowExW<win32::static_control>(DLGITEMTEMPLATE{
 						    .style = WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_REALSIZECONTROL,
@@ -193,7 +196,7 @@ namespace siege::views
                             .y = 0,
                             .cx = short((width / 3) * 2),
                             .cy = short(parent_size->cy - 20)
-						    }, image_dialog, win32::static_control::class_name, L"Image");
+						    }, image_panel, win32::static_control::class_name, L"Image");
            
 
             slider = *win32::CreateWindowExW<win32::track_bar>(DLGITEMTEMPLATE{
@@ -202,14 +205,14 @@ namespace siege::views
                             .y = short(parent_size->cy - 20),
                             .cx = short((width / 3) * 2),
                             .cy = 20
-						    }, image_dialog, win32::track_bar::class_name, L"Image");
+						    }, image_panel, win32::track_bar::class_name, L"Image");
 
-            auto root_children = std::array<win32::window_ref, 2>{image_dialog.ref(), control_dialog.ref()};
+            auto root_children = std::array<win32::window_ref, 2>{image_panel.ref(), control_panel.ref()};
 
             win32::StackChildren(*this->GetClientSize(), root_children, win32::StackDirection::Horizontal);
            
             auto children = std::array<win32::window_ref, 2>{group_box->ref(), palettes_list.ref()};
-            win32::StackChildren(*control_dialog.GetClientSize(), children);
+            win32::StackChildren(*control_panel.GetClientSize(), children);
             
             auto rect = group_box->GetClientRect();
             rect->top += 15;

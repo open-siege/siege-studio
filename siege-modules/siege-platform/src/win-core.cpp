@@ -5,6 +5,7 @@
 #include <siege/platform/win/core/com_xml.hpp>
 #include <siege/platform/win/core/com.hpp>
 #include <siege/platform/win/core/xcom.hpp>
+#include <siege/platform/win/core/module.hpp>
 #include <cassert>
 #include <set>
 #include <comcat.h>

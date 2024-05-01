@@ -1,7 +1,7 @@
 #ifndef WIN32_WINDOW_HPP
 #define WIN32_WINDOW_HPP
 
-#include <siege/platform/win/gaming/win32_user32.hpp>
+#include <siege/platform/win/desktop/win32_user32.hpp>
 #include <siege/platform/win/auto_handle.hpp>
 
 #undef GetFirstSibling
@@ -192,7 +192,6 @@ namespace win32
         using base = window_base<window_deleter, window_ref>;
         using base::base;
     };
-
     
     enum struct StackDirection
     {
