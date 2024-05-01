@@ -26,11 +26,6 @@ namespace siege::views
         remap_unique
       };
 
-      using bmp_variant = std::variant<std::monostate, 
-          content::bmp::windows_bmp_data, 
-          content::bmp::pbmp_data,
-          content::bmp::dbm_data>;
-
       std::size_t convert(std::size_t frame, std::pair<int, int> size, int bits, std::span<std::byte> destination) const noexcept;
   private:
         std::optional<content::bmp::platform_image> original_image;
