@@ -16,7 +16,6 @@
 
 namespace siege::views
 {
- 
     struct gdi_deleter
     {
         void operator()(HGDIOBJ gdi_obj)
@@ -39,6 +38,7 @@ namespace siege::views
 
         win32::hwnd_t self;
         win32::static_control static_image;
+        win32::track_bar slider;
         bmp_controller controller;
 
         win32::auto_handle<HBITMAP, gdi_deleter> current_bitmap;
@@ -55,7 +55,7 @@ namespace siege::views
             auto parent_size = win32::GetClientSize(self);
 
             auto width = parent_size->cx;
-            auto dialog_template = win32::MakeDialogTemplate(::DLGTEMPLATE{ .style = WS_VISIBLE | WS_CHILD , .x = short(width - width / 3), .cx = short(width / 3), .cy = short(parent_size->cy), });
+            auto dialog_template = win32::MakeDialogTemplate(::DLGTEMPLATE{ .style = DS_CONTROL | WS_VISIBLE | WS_CHILD , .x = 1, .cx = short(width / 3), .cy = short(parent_size->cy), });
             auto control_dialog = ::CreateDialogIndirectParamW(info.data.hInstance, &dialog_template.dialog, self, [](win32::hwnd_t, std::uint32_t, win32::wparam_t, win32::lparam_t) -> INT_PTR {
                     return FALSE;
                 }, 0);
@@ -183,19 +183,32 @@ namespace siege::views
 
           //  // TODO add example palette file names as groups and then palette names as items
 
+            auto image_dialog_template = win32::MakeDialogTemplate(::DLGTEMPLATE{ .style = DS_CONTROL | WS_CHILD | WS_VISIBLE, .x = 0, .cx = short(width / 3), .cy = short(parent_size->cy), });
+            auto image_dialog = ::CreateDialogIndirectParamW(info.data.hInstance, &image_dialog_template.dialog, self, [](win32::hwnd_t, std::uint32_t, win32::wparam_t, win32::lparam_t) -> INT_PTR {
+                    return FALSE;
+                }, 0);
+
             static_image = *win32::CreateWindowExW<win32::static_control>(DLGITEMTEMPLATE{
 						    .style = WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_REALSIZECONTROL,
                             .x = 0,
                             .y = 0,
                             .cx = short((width / 3) * 2),
-                            .cy = 300
-						    }, self, win32::static_control::class_name, L"Image");
+                            .cy = short(parent_size->cy - 20)
+						    }, image_dialog, win32::static_control::class_name, L"Image");
            
-            auto root_children = std::array<win32::hwnd_t, 2>{static_image, control_dialog};
+
+            slider = *win32::CreateWindowExW<win32::track_bar>(DLGITEMTEMPLATE{
+						    .style = WS_VISIBLE | WS_CHILD,
+                            .x = 0,
+                            .y = short(parent_size->cy - 20),
+                            .cx = short((width / 3) * 2),
+                            .cy = 20
+						    }, image_dialog, win32::track_bar::class_name, L"Image");
+
+            auto root_children = std::array<win32::hwnd_t, 2>{image_dialog, control_dialog};
 
             win32::StackChildren(*win32::GetClientSize(self), root_children, win32::StackDirection::Horizontal);
            
-
             auto children = std::array<win32::hwnd_t, 2>{*group_box, palettes_list};
             win32::StackChildren(*win32::GetClientSize(control_dialog), children);
             

@@ -15,5 +15,6 @@
 #include "win32_list_view.hpp"
 #include "win32_tool_bar.hpp"
 #include "win32_rebar.hpp"
+#include "win32_track_bar.hpp"
 
 #endif

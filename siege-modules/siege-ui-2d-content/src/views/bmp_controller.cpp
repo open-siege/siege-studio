@@ -13,6 +13,7 @@ namespace siege::views
            || siege::content::bmp::is_microsoft_bmp(image_stream)
           || siege::content::bmp::is_phoenix_bmp(image_stream)
           || siege::content::bmp::is_jpg(image_stream)
+          || siege::content::bmp::is_gif(image_stream)
           || siege::content::bmp::is_png(image_stream);
   }
 
@@ -27,7 +28,6 @@ namespace siege::views
           if (bmp::is_microsoft_bmp(image_stream))
           {
                 original_image.emplace(bmp::get_bmp_data(image_stream));
-                return 1;        
           }
           else if (bmp::is_phoenix_bmp(image_stream))
           {
