@@ -76,7 +76,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     AppendMenuW(main_menu, MF_STRING, id++, L"View");
     AppendMenuW(main_menu, MF_STRING, id++, L"Help");
 
-    auto main_window = win32::CreateWindowExW(CREATESTRUCTW {
+    auto main_window = win32::window_module_ref::current_module().CreateWindowExW(CREATESTRUCTW {
 		.hMenu = main_menu,
 		.cx = CW_USEDEFAULT,
 		.x = CW_USEDEFAULT,

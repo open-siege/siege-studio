@@ -1,4 +1,5 @@
 #include <siege/platform/win/desktop/win32_controls.hpp>
+#include <siege/platform/win/desktop/window_factory.hpp>
 #include <bit>
 #include <filesystem>
 #include <cassert>
@@ -21,7 +22,9 @@ struct volume_window : win32::window
     {
         auto parent_size = this->GetClientRect();
 
-        auto root = win32::CreateWindowExW<win32::rebar>(win32::window_params<>{
+        win32::window_factory factory;
+
+        auto root = factory.CreateWindowExW<win32::rebar>(win32::window_params<>{
             .parent = *this,
             .class_name = win32::rebar::class_Name,
             .style{win32::window_style(WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS |
@@ -31,16 +34,16 @@ struct volume_window : win32::window
 
         assert(root);
 
-        auto rebar = win32::CreateWindowExW<win32::rebar>(win32::window_params<>{
+        auto rebar = factory.CreateWindowExW<win32::rebar>(win32::window_params<>{
             .parent = *root,
             .class_name = win32::rebar::class_Name,
             .style{win32::window_style(WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS |
                 WS_CLIPCHILDREN | RBS_VARHEIGHT | RBS_BANDBORDERS)}
         });
 
-        auto toolbar = win32::CreateWindowExW<win32::tool_bar>(DLGITEMTEMPLATE{
+        auto toolbar = factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{
 						.style = WS_VISIBLE | WS_CHILD | CCS_NOPARENTALIGN | CCS_NORESIZE | TBSTYLE_LIST,   
-						}, *rebar, win32::tool_bar::class_name, L"Toolbar");
+						});//, *rebar, win32::tool_bar::class_name, L"Toolbar");
 
         assert(toolbar);
 
@@ -75,9 +78,9 @@ struct volume_window : win32::window
             .fStyle = RBBS_CHILDEDGE | RBBS_GRIPPERALWAYS,
             .lpText = const_cast<wchar_t*>(L"Search"),
             .hwndChild = [&]{
-              auto search = win32::CreateWindowExW<win32::edit>(DLGITEMTEMPLATE{
+              auto search = factory.CreateWindowExW<win32::edit>(CREATESTRUCTW{
 						.style = WS_VISIBLE | WS_BORDER | WS_EX_STATICEDGE | WS_CHILD
-						}, *rebar, win32::edit::class_name, L"");
+						});//, *rebar, win32::edit::class_name, L"");
 
                 assert(search);
                 search->SetCueBanner(false, L"Enter search text here");
@@ -89,13 +92,13 @@ struct volume_window : win32::window
             });
 
 
-        auto table = win32::CreateWindowExW<win32::list_view>(DLGITEMTEMPLATE{
+        auto table = factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{
 						.style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
 				//		.x = 0,       
 				//		.y = short(win32::GetClientRect(*rebar)->bottom + 2),
 				//		.cx = short(parent_size->right),  
 				//		.cy = short(parent_size->bottom - 2 - win32::rebar::GetBarHeight(*rebar))       
-						}, *root, win32::list_view::class_name, L"Volume");
+						}); //*root, win32::list_view::class_name, L"Volume");
 
         // TODO: make table columns have a split button
         table->InsertColumn(-1, LVCOLUMNW {

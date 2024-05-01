@@ -2,14 +2,11 @@
 #define WIN_CORE_MODULE_HPP
 
 #include <system_error>
+#include <optional>
 #include <siege/platform/win/auto_handle.hpp>
-#include <libloaderapi.h>
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 #include <wtypes.h>
 #include <WinDef.h>
-#include <WinUser.h>
-#endif
+#include <libloaderapi.h>
 
 namespace win32
 {
@@ -46,7 +43,7 @@ namespace win32
 		explicit module_ref(void* func) : base([=]() {
 				HMODULE temp = nullptr;
 
-				GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+				::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
                GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
                (LPCWSTR)func, &temp);
 
@@ -59,19 +56,6 @@ namespace win32
 			}())
 		{
 		}
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-		std::optional<WNDCLASSEXW> GetClassInfoExW(std::wstring_view name)
-		{
-			WNDCLASSEXW temp{.cbSize = sizeof(WNDCLASSEXW)};
-
-			if (::GetClassInfoExW(*this, name.data(), &temp));
-			{
-				return temp;
-			}
-
-			return std::nullopt;
-		}
-#endif
 
 	};
 
@@ -80,8 +64,6 @@ namespace win32
 		using base = win32::auto_handle<HMODULE, module_deleter>;
 		using base::base;
 	};
-
-	
 }
 
 #endif // !WIN_CORE_MODULE_HPP

@@ -9,13 +9,13 @@
 #include <vector>
 #include <libloaderapi.h>
 #include <siege/platform/win/core/com_collection.hpp>
+#include <siege/platform/win/desktop/window_module.hpp>
 
 namespace siege
 {
-	class siege_plugin
+	class siege_plugin : public win32::window_module_ref
 	{
-		std::unique_ptr<HINSTANCE__, void(*)(HINSTANCE)> plugin;
-
+		using base = win32::window_module_ref;
 		HRESULT (__stdcall *GetSupportedExtensionsProc)(win32::com::IReadOnlyCollection** formats) = nullptr;
 		HRESULT (__stdcall *GetSupportedFormatCategoriesProc)(LCID, win32::com::IReadOnlyCollection** formats) = nullptr;
 		HRESULT (__stdcall *GetSupportedExtensionsForCategoryProc)(const wchar_t* category, win32::com::IReadOnlyCollection** formats) = nullptr;
@@ -23,7 +23,7 @@ namespace siege
 		HRESULT (__stdcall *GetWindowClassForStreamProc)(::IStream* data, wchar_t**) = nullptr;
 
 	public: 
-		siege_plugin(std::filesystem::path plugin_path) : plugin(nullptr, [](auto handle) { assert(FreeLibrary(handle) == TRUE); })
+		siege_plugin(std::filesystem::path plugin_path) : base(nullptr)
 		{
 			if (!std::filesystem::exists(plugin_path))
 			{
@@ -37,7 +37,7 @@ namespace siege
 				throw std::runtime_error("Could not load dll");
 			}
 
-			plugin.reset(temp);
+			this->reset(temp);
 
 			GetSupportedExtensionsProc = reinterpret_cast<decltype(GetSupportedExtensionsProc)>(::GetProcAddress(temp, "GetSupportedExtensions"));
 			GetSupportedFormatCategoriesProc = reinterpret_cast<decltype(GetSupportedFormatCategoriesProc)>(::GetProcAddress(temp, "GetSupportedFormatCategories"));
@@ -126,11 +126,6 @@ namespace siege
 			}
 
 			return L"";
-		}
-
-		auto GetHandle()
-		{
-			return plugin.get();
 		}
 	};
 
