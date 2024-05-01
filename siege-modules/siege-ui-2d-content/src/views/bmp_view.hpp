@@ -30,20 +30,19 @@ namespace siege::views
     using gdi_pen = win32::auto_handle<HPEN, gdi_deleter>;
     using gdi_font = win32::auto_handle<HFONT, gdi_deleter>;
 
-	struct bmp_view
+	struct bmp_view : win32::window
     {
         constexpr static auto formats = std::array<std::wstring_view, 16>{{
         L".jpg", L".jpeg", L".gif", L".png", L".tag", L".bmp", L".dib" , L".pba", L".dmb", L".db0", L".db1", L".db2", L".hba", L".hb0", L".hb1", L".hb2"    
         }};
 
-        win32::hwnd_t self;
         win32::static_control static_image;
         win32::track_bar slider;
         bmp_controller controller;
 
         win32::auto_handle<HBITMAP, gdi_deleter> current_bitmap;
 
-        bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : self(self)
+        bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window(self)
 	    {
 	    }
 
@@ -52,11 +51,11 @@ namespace siege::views
             auto mfcModule = GetModuleHandleW(L"siege-win-mfc.dll");
             assert(mfcModule);
 
-            auto parent_size = win32::GetClientSize(self);
+            auto parent_size = win32::GetClientSize(*this);
 
             auto width = parent_size->cx;
             auto dialog_template = win32::MakeDialogTemplate(::DLGTEMPLATE{ .style = DS_CONTROL | WS_VISIBLE | WS_CHILD , .x = 1, .cx = short(width / 3), .cy = short(parent_size->cy), });
-            auto control_dialog = ::CreateDialogIndirectParamW(info.data.hInstance, &dialog_template.dialog, self, [](win32::hwnd_t, std::uint32_t, win32::wparam_t, win32::lparam_t) -> INT_PTR {
+            auto control_dialog = ::CreateDialogIndirectParamW(info.data.hInstance, &dialog_template.dialog, *this, [](win32::hwnd_t, std::uint32_t, win32::wparam_t, win32::lparam_t) -> INT_PTR {
                     return FALSE;
                 }, 0);
 
@@ -184,7 +183,7 @@ namespace siege::views
           //  // TODO add example palette file names as groups and then palette names as items
 
             auto image_dialog_template = win32::MakeDialogTemplate(::DLGTEMPLATE{ .style = DS_CONTROL | WS_CHILD | WS_VISIBLE, .x = 0, .cx = short(width / 3), .cy = short(parent_size->cy), });
-            auto image_dialog = ::CreateDialogIndirectParamW(info.data.hInstance, &image_dialog_template.dialog, self, [](win32::hwnd_t, std::uint32_t, win32::wparam_t, win32::lparam_t) -> INT_PTR {
+            auto image_dialog = ::CreateDialogIndirectParamW(info.data.hInstance, &image_dialog_template.dialog, *this, [](win32::hwnd_t, std::uint32_t, win32::wparam_t, win32::lparam_t) -> INT_PTR {
                     return FALSE;
                 }, 0);
 
@@ -207,7 +206,7 @@ namespace siege::views
 
             auto root_children = std::array<win32::hwnd_t, 2>{image_dialog, control_dialog};
 
-            win32::StackChildren(*win32::GetClientSize(self), root_children, win32::StackDirection::Horizontal);
+            win32::StackChildren(*win32::GetClientSize(*this), root_children, win32::StackDirection::Horizontal);
            
             auto children = std::array<win32::hwnd_t, 2>{*group_box, palettes_list};
             win32::StackChildren(*win32::GetClientSize(control_dialog), children);
@@ -282,7 +281,7 @@ namespace siege::views
         {
             if (message.message == WM_MEASUREITEM || message.message == WM_DRAWITEM)
             {
-                win32::ForEachDirectChildWindow(self, [&](auto child) {
+                win32::ForEachDirectChildWindow(*this, [&](auto child) {
 
             
 		        });
@@ -315,7 +314,7 @@ namespace siege::views
 
         auto on_size(win32::size_message sized)
 	    {
-		    win32::ForEachDirectChildWindow(self, [&](auto child) {
+		    win32::ForEachDirectChildWindow(*this, [&](auto child) {
 
     //			win32::SetWindowPos(child, sized.client_size);
 		    });
