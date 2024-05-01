@@ -2,6 +2,7 @@
 #define BITMAPWINDOW_HPP
 
 #include <siege/platform/win/desktop/win32_controls.hpp>
+#include <siege/platform/win/desktop/window_factory.hpp>
 #include <siege/platform/win/auto_handle.hpp>
 #include <siege/platform/win/core/com_collection.hpp>
 #include <cassert>
@@ -49,44 +50,53 @@ namespace siege::views
 
         auto on_create(const win32::create_message& info)
         {
-            auto mfcModule = GetModuleHandleW(L"siege-win-mfc.dll");
-            assert(mfcModule);
-
             auto parent_size = this->GetClientSize();
+            auto this_module = win32::window_factory();
 
             auto width = parent_size->cx;
             
-            control_panel = *win32::CreateWindowExW<win32::stack_panel>(::DLGITEMTEMPLATE{ 
-                .style = WS_VISIBLE | WS_CHILD , 
-                .x = 1, .cx = short(width / 3), 
-                .cy = short(parent_size->cy), }, *this, win32::type_name<win32::stack_panel>(), L""
-            );
+            control_panel = *this_module.CreateWindowExW<win32::stack_panel>(win32::window_point_size{ 
+                .parent = *this,
+                .class_name = win32::type_name<win32::stack_panel>(),
+                .style = win32::window_style(WS_VISIBLE | WS_CHILD),
+                .position{.x = 1},
+                .size{.cx = short(width / 3), .cy = short(parent_size->cy)}
+                });
 
-            auto group_box = win32::CreateWindowExW<win32::button>(DLGITEMTEMPLATE{
-						    .style = WS_VISIBLE | WS_CHILD | BS_GROUPBOX,
-                            .cy = 100
-						    }, control_panel, win32::button::class_name, L"Colour strategy");
-
+            auto group_box = *this_module.CreateWindowExW<win32::button>(
+                win32::window_point_size{ 
+                .parent = control_panel,
+                .class_name = win32::button::class_name,
+                .caption = L"Colour strategy",
+                .style = win32::window_style(WS_VISIBLE | WS_CHILD | BS_GROUPBOX),
+                .size{.cx = short(width / 3), .cy = 100}
+                });
             assert(group_box);
 
 
-            auto do_nothing = win32::CreateWindowExW<win32::button>(DLGITEMTEMPLATE{
-						    .style = WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON
-						    }, control_panel, win32::button::class_name, L"Do nothing");
+            auto do_nothing = this_module.CreateWindowExW<win32::button>(win32::window_point_size{
+                            .parent = control_panel,
+                            .class_name = win32::button::class_name,
+						    .style = win32::window_style(WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON),
+						    });//, control_panel, win32::button::class_name, L"Do nothing");
 
             auto ideal_size = do_nothing->GetIdealSize();
             do_nothing->SetWindowPos(*ideal_size);
 
-            auto remap = win32::CreateWindowExW<win32::button>(DLGITEMTEMPLATE{
-						    .style = WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON,
-						    }, control_panel, win32::button::class_name, L"Remap");
+            auto remap = this_module.CreateWindowExW<win32::button>(win32::window_point_size{
+                            .parent = control_panel,
+                            .class_name = win32::button::class_name,
+						    .style = win32::window_style(WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON),
+						    });//, control_panel, win32::button::class_name, L"Remap");
 
             ideal_size = remap->GetIdealSize();
             remap->SetWindowPos(*ideal_size);
 
-            auto remap_unique = win32::CreateWindowExW<win32::button>(DLGITEMTEMPLATE{
-						    .style = WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON,
-						    }, control_panel, win32::button::class_name, L"Remap (only unique colours)");
+            auto remap_unique = this_module.CreateWindowExW<win32::button>(win32::window_point_size{
+                            .parent = control_panel,
+                            .class_name = win32::button::class_name,
+						    .style = win32::window_style(WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON),
+						    }); //, control_panel, win32::button::class_name, L"Remap (only unique colours)");
 
             ideal_size = remap_unique->GetIdealSize();
             remap_unique->SetWindowPos(*ideal_size);
@@ -96,8 +106,7 @@ namespace siege::views
         
 
             win32::list_view palettes_list = [&] {
-                auto palettes_list = *win32::CreateWindowExW<win32::list_view>(CREATESTRUCTW{
-                            .hInstance = mfcModule,
+                auto palettes_list = *this_module.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
                             .hwndParent = control_panel,
 						    .cy = 300,  
                             .cx = 400,
@@ -183,38 +192,38 @@ namespace siege::views
                 return palettes_list;
           }();
 
-          image_panel = *win32::CreateWindowExW<win32::stack_panel>(::DLGITEMTEMPLATE{ 
-                 .x = 0,
-                 .cx = short(width / 3), 
-                 .cy = short(parent_size->cy) 
-              }, *this, win32::type_name<win32::stack_panel>(), L""
-            );
+          image_panel = *this_module.CreateWindowExW<win32::stack_panel>(
+              win32::window_point_size{ 
+                .parent = *this,
+                .class_name = win32::type_name<win32::stack_panel>(),
+                .style = win32::window_style(WS_VISIBLE | WS_CHILD),
+                .size{.cx = short(width / 3), .cy = parent_size->cy}
+                });
 
-            static_image = *win32::CreateWindowExW<win32::static_control>(DLGITEMTEMPLATE{
-						    .style = WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_REALSIZECONTROL,
-                            .x = 0,
-                            .y = 0,
-                            .cx = short((width / 3) * 2),
-                            .cy = short(parent_size->cy - 20)
-						    }, image_panel, win32::static_control::class_name, L"Image");
-           
+          static_image = *this_module.CreateWindowExW<win32::static_control>(
+              win32::window_point_size{ 
+                .parent = image_panel,
+                .class_name = win32::static_control::class_name,
+                .style = win32::window_style(WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_REALSIZECONTROL),
+                .size{.cx = (width / 3) * 2, .cy = parent_size->cy - 20}
+                });
 
-            slider = *win32::CreateWindowExW<win32::track_bar>(DLGITEMTEMPLATE{
-						    .style = WS_VISIBLE | WS_CHILD,
-                            .x = 0,
-                            .y = short(parent_size->cy - 20),
-                            .cx = short((width / 3) * 2),
-                            .cy = 20
-						    }, image_panel, win32::track_bar::class_name, L"Image");
+          //  slider = *this_module.CreateWindowExW<win32::track_bar>(::CREATESTRUCTW{
+						    //.style = WS_VISIBLE | WS_CHILD,
+          //                  //.x = 0,
+          //                  //.y = short(parent_size->cy - 20),
+          //                  //.cx = short((width / 3) * 2),
+          //                  //.cy = 20
+						    //});//, image_panel, win32::track_bar::class_name, L"Image");
 
             auto root_children = std::array<win32::window_ref, 2>{image_panel.ref(), control_panel.ref()};
 
             win32::StackChildren(*this->GetClientSize(), root_children, win32::StackDirection::Horizontal);
            
-            auto children = std::array<win32::window_ref, 2>{group_box->ref(), palettes_list.ref()};
+            auto children = std::array<win32::window_ref, 2>{group_box.ref(), palettes_list.ref()};
             win32::StackChildren(*control_panel.GetClientSize(), children);
             
-            auto rect = group_box->GetClientRect();
+            auto rect = group_box.GetClientRect();
             rect->top += 15;
             rect->left += 5;
 

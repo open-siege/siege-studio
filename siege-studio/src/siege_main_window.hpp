@@ -2,6 +2,7 @@
 #define SIEGE_MAIN_WINDOW_HPP
 
 #include <siege/platform/win/desktop/win32_controls.hpp>
+#include <siege/platform/win/desktop/window_factory.hpp>
 #include "siege-plugin.hpp"
 
 struct siege_main_window : win32::window
@@ -55,8 +56,10 @@ struct siege_main_window : win32::window
 
 		auto mfcModule = GetModuleHandleW(L"siege-win-mfc.dll");
 
+		win32::window_factory factory;
+
 		auto left_size = (parent_size->right - parent_size->left) / 9;
-		auto dir_list = win32::CreateWindowExW(CREATESTRUCTW {
+		auto dir_list = factory.CreateWindowExW(CREATESTRUCTW {
 						.hwndParent = *this,
 						.cy = parent_size->bottom - parent_size->top,
 						.cx = left_size,
@@ -67,7 +70,7 @@ struct siege_main_window : win32::window
 					});
 		assert(dir_list);
 
-		auto tab_control_instance = win32::CreateWindowExW<win32::tab_control>(CREATESTRUCTW {
+		auto tab_control_instance = factory.CreateWindowExW<win32::tab_control>(CREATESTRUCTW {
 						.hwndParent = *this,
 						.cy = parent_size->bottom - parent_size->top,
 						.cx = parent_size->right  - parent_size->left - left_size - 10,
@@ -244,10 +247,9 @@ struct siege_main_window : win32::window
 
 										auto parent_size = this->GetClientRect();
 
-										auto child = win32::CreateWindowExW(win32::window_params<RECT>{
+										auto child = plugin->CreateWindowExW(win32::window_params<RECT>{
 											.parent = *this,
 											.class_name = class_name.c_str(),
-											.class_module = plugin->GetHandle(),
 											.position = *parent_size
 										});
 
@@ -280,7 +282,7 @@ struct siege_main_window : win32::window
 										tab_control.InsertItem(index, TCITEMW {
 												.mask = TCIF_TEXT | TCIF_PARAM,
 												.pszText = const_cast<wchar_t*>(path->filename().c_str()),
-												.lParam = win32::lparam_t(*child)
+												.lParam = win32::lparam_t(child->get())
 											});
 
 										SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&parent_size));

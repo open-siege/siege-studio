@@ -38,7 +38,7 @@ namespace siege::views
 
 		auto on_create(const win32::create_message&)
 		{
-			win32::CreateWindowExW(CREATESTRUCTW{
+			/*win32::CreateWindowExW(CREATESTRUCTW{
 				.hwndParent = self,
 				.cy = 200,
 				.cx = 100,
@@ -46,7 +46,7 @@ namespace siege::views
 				.style = WS_CHILD | WS_VISIBLE,
 				.lpszName = L"Hello world",
 				.lpszClass = win32::button::class_name,			
-			});
+			});*/
 
 
 			return 0;

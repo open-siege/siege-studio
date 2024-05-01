@@ -6,7 +6,7 @@
 #include "views/pal_view.hpp"
 #include <siege/platform/win/core/com_collection.hpp>
 #include <siege/platform/win/core/com_stream_buf.hpp>
-#include <siege/platform/win/core/module.hpp>
+#include <siege/platform/win/desktop/window_module.hpp>
 
 struct pal_mapping_window
 {
@@ -19,13 +19,13 @@ struct pal_mapping_window
 
     auto on_create(const win32::create_message&)
     {
-        auto button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
+        /*auto button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
 						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
 						.x = 0,       
 						.y = 0,
 						.cx = 100,  
 						.cy = 100       
-						}, self, win32::button::class_name, L"Pal Mapping window");
+						}, self, win32::button::class_name, L"Pal Mapping window");*/
         return 0;
     }
 
@@ -157,7 +157,7 @@ extern "C"
         
         try
         {
-            static auto this_module =  win32::module_ref::current_module();
+            static auto this_module =  win32::window_module_ref::current_module();
             
             if (siege::views::pal_controller::is_pal(stream))
             {
