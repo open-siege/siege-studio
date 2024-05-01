@@ -7,25 +7,23 @@
 #include <siege/platform/win/core/com_collection.hpp>
 #include <siege/platform/win/core/com_stream_buf.hpp>
 
-struct volume_window
+struct volume_window : win32::window
 {
     constexpr static auto formats = std::array<std::wstring_view, 20>{{
         L".vol", L".rmf", L".mis", L".map", L".rbx", L".tbv" , L".zip", L".vl2", L".pk3",
         L".iso", L".mds", L".cue", L".nrg", L".7z", L".tgz", L".rar", L".cab", L".z", L".cln", L".atd"    
     }};
 
-    win32::hwnd_t self;
-
-    volume_window(win32::hwnd_t self, const CREATESTRUCTW&) : self(self)
+    volume_window(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window(self)
 	{
 	}
 
     auto on_create(const win32::create_message& data)
     {
-        auto parent_size = win32::GetClientRect(self);
+        auto parent_size = this->GetClientRect();
 
         auto root = win32::CreateWindowExW<win32::rebar>(win32::window_params<>{
-            .parent = self,
+            .parent = *this,
             .class_name = win32::rebar::class_Name,
             .style{win32::window_style(WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS |
                                         WS_CLIPCHILDREN | CCS_TOP | 
@@ -176,7 +174,7 @@ struct volume_window
 
    auto on_size(win32::size_message sized)
 	{
-		win32::ForEachDirectChildWindow(self, [&](auto child) {            
+		win32::ForEachDirectChildWindow(*this, [&](auto child) {            
             for (auto i = 0; i < win32::rebar(child).GetBandCount(); ++i)
             {
                 auto info = win32::rebar(child).GetBandChildSize(i);

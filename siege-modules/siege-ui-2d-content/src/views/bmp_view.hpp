@@ -51,15 +51,15 @@ namespace siege::views
             auto mfcModule = GetModuleHandleW(L"siege-win-mfc.dll");
             assert(mfcModule);
 
-            auto parent_size = win32::GetClientSize(*this);
+            auto parent_size = this->GetClientSize();
 
             auto width = parent_size->cx;
             auto dialog_template = win32::MakeDialogTemplate(::DLGTEMPLATE{ .style = DS_CONTROL | WS_VISIBLE | WS_CHILD , .x = 1, .cx = short(width / 3), .cy = short(parent_size->cy), });
-            auto control_dialog = ::CreateDialogIndirectParamW(info.data.hInstance, &dialog_template.dialog, *this, [](win32::hwnd_t, std::uint32_t, win32::wparam_t, win32::lparam_t) -> INT_PTR {
+            auto control_dialog = window(::CreateDialogIndirectParamW(info.data.hInstance, &dialog_template.dialog, *this, [](win32::hwnd_t, std::uint32_t, win32::wparam_t, win32::lparam_t) -> INT_PTR {
                     return FALSE;
-                }, 0);
+                }, 0));
 
-            auto group_box = win32::CreateWindowExW(DLGITEMTEMPLATE{
+            auto group_box = win32::CreateWindowExW<win32::button>(DLGITEMTEMPLATE{
 						    .style = WS_VISIBLE | WS_CHILD | BS_GROUPBOX,
                             .cy = 100
 						    }, control_dialog, win32::button::class_name, L"Colour strategy");
@@ -72,21 +72,21 @@ namespace siege::views
 						    }, control_dialog, win32::button::class_name, L"Do nothing");
 
             auto ideal_size = do_nothing->GetIdealSize();
-            win32::SetWindowPos(*do_nothing, *ideal_size);
+            do_nothing->SetWindowPos(*ideal_size);
 
             auto remap = win32::CreateWindowExW<win32::button>(DLGITEMTEMPLATE{
 						    .style = WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON,
 						    }, control_dialog, win32::button::class_name, L"Remap");
 
             ideal_size = remap->GetIdealSize();
-            win32::SetWindowPos(*remap, *ideal_size);
+            remap->SetWindowPos(*ideal_size);
 
             auto remap_unique = win32::CreateWindowExW<win32::button>(DLGITEMTEMPLATE{
 						    .style = WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON,
 						    }, control_dialog, win32::button::class_name, L"Remap (only unique colours)");
 
             ideal_size = remap_unique->GetIdealSize();
-            win32::SetWindowPos(*remap_unique, *ideal_size);
+            remap_unique->SetWindowPos(*ideal_size);
 
 
             std::wstring temp = L"menu.pal";
@@ -108,7 +108,7 @@ namespace siege::views
             assert(palettes_list.EnableGroupView(true));
             assert(palettes_list.SetTileViewInfo(LVTILEVIEWINFO {
                 .dwFlags = LVTVIF_FIXEDWIDTH,
-                .sizeTile = SIZE {.cx = win32::GetClientSize(control_dialog)->cx, .cy = 50},
+                .sizeTile = SIZE {.cx = control_dialog.GetClientSize()->cx, .cy = 50},
                 }));
         
             palettes_list.SetExtendedListViewStyle(0, 
@@ -118,7 +118,7 @@ namespace siege::views
                  .cx = LVSCW_AUTOSIZE,
                 .pszText = const_cast<wchar_t*>(L""),
                 .cxMin = 100,
-                .cxDefault = win32::GetClientSize(control_dialog)->cx,
+                .cxDefault = control_dialog.GetClientSize()->cx,
                 });
 
             assert(palettes_list.InsertGroup(-1, LVGROUP {
@@ -183,9 +183,9 @@ namespace siege::views
           //  // TODO add example palette file names as groups and then palette names as items
 
             auto image_dialog_template = win32::MakeDialogTemplate(::DLGTEMPLATE{ .style = DS_CONTROL | WS_CHILD | WS_VISIBLE, .x = 0, .cx = short(width / 3), .cy = short(parent_size->cy), });
-            auto image_dialog = ::CreateDialogIndirectParamW(info.data.hInstance, &image_dialog_template.dialog, *this, [](win32::hwnd_t, std::uint32_t, win32::wparam_t, win32::lparam_t) -> INT_PTR {
+            auto image_dialog = window(::CreateDialogIndirectParamW(info.data.hInstance, &image_dialog_template.dialog, *this, [](win32::hwnd_t, std::uint32_t, win32::wparam_t, win32::lparam_t) -> INT_PTR {
                     return FALSE;
-                }, 0);
+                }, 0));
 
             static_image = *win32::CreateWindowExW<win32::static_control>(DLGITEMTEMPLATE{
 						    .style = WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_REALSIZECONTROL,
@@ -204,18 +204,18 @@ namespace siege::views
                             .cy = 20
 						    }, image_dialog, win32::track_bar::class_name, L"Image");
 
-            auto root_children = std::array<win32::hwnd_t, 2>{image_dialog, control_dialog};
+            auto root_children = std::array<win32::window_ref, 2>{image_dialog.ref(), control_dialog.ref()};
 
-            win32::StackChildren(*win32::GetClientSize(*this), root_children, win32::StackDirection::Horizontal);
+            win32::StackChildren(*this->GetClientSize(), root_children, win32::StackDirection::Horizontal);
            
-            auto children = std::array<win32::hwnd_t, 2>{*group_box, palettes_list};
-            win32::StackChildren(*win32::GetClientSize(control_dialog), children);
+            auto children = std::array<win32::window_ref, 2>{group_box->ref(), palettes_list.ref()};
+            win32::StackChildren(*control_dialog.GetClientSize(), children);
             
-            auto rect = win32::GetClientRect(*group_box);
+            auto rect = group_box->GetClientRect();
             rect->top += 15;
             rect->left += 5;
 
-            auto radios = std::array<win32::hwnd_t, 3>{*do_nothing, *remap, *remap_unique};
+            auto radios = std::array<win32::window_ref, 3>{do_nothing->ref(), remap->ref(), remap_unique->ref()};
             win32::StackChildren(SIZE{.cx = rect->right, .cy = rect->bottom - 20}, radios, win32::StackDirection::Horizontal,
               POINT{.x = rect->left, .y = rect->top});
 
@@ -248,7 +248,7 @@ namespace siege::views
 
                 if (count > 0)
                 {
-                    auto size = win32::GetClientSize(static_image);
+                    auto size = static_image.GetClientSize();
                     BITMAPINFO info{
                                 .bmiHeader {
                                     .biSize = sizeof(BITMAPINFOHEADER),
@@ -298,7 +298,7 @@ namespace siege::views
 
             if (menu)
             {
-                auto rect = win32::GetClientRect(sender);
+                auto rect = win32::window(sender).GetClientRect();
 
                 POINT pos {
                     .x = rect->left,

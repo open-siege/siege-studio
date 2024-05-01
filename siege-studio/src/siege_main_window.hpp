@@ -4,9 +4,8 @@
 #include <siege/platform/win/desktop/win32_controls.hpp>
 #include "siege-plugin.hpp"
 
-struct siege_main_window
+struct siege_main_window : win32::window
 {
-	win32::hwnd_t self;
 	win32::tab_control tab_control;
 	std::list<siege::siege_plugin> loaded_modules;
 	
@@ -15,7 +14,7 @@ struct siege_main_window
 
 	std::size_t open_id = 0u;
 
-	siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : self(self), tab_control(nullptr)
+	siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window(self), tab_control(nullptr)
 	{
 		open_id = RegisterWindowMessageW(L"COMMAND_OPEN");
 		std::wstring full_app_path(256, '\0');
@@ -50,7 +49,7 @@ struct siege_main_window
 
 	auto on_create(const win32::create_message&)
 	{
-		auto parent_size = win32::GetClientRect(self);
+		auto parent_size = this->GetClientRect();
 
 		assert(parent_size);
 
@@ -58,7 +57,7 @@ struct siege_main_window
 
 		auto left_size = (parent_size->right - parent_size->left) / 9;
 		auto dir_list = win32::CreateWindowExW(CREATESTRUCTW {
-						.hwndParent = self,
+						.hwndParent = *this,
 						.cy = parent_size->bottom - parent_size->top,
 						.cx = left_size,
 						.y = 0,
@@ -69,7 +68,7 @@ struct siege_main_window
 		assert(dir_list);
 
 		auto tab_control_instance = win32::CreateWindowExW<win32::tab_control>(CREATESTRUCTW {
-						.hwndParent = self,
+						.hwndParent = *this,
 						.cy = parent_size->bottom - parent_size->top,
 						.cx = parent_size->right  - parent_size->left - left_size - 10,
 						.y = 0,
@@ -81,10 +80,10 @@ struct siege_main_window
 		assert(tab_control_instance);
 		tab_control = std::move(*tab_control_instance);
 
-		auto children = std::array<win32::hwnd_t, 2>{*dir_list, tab_control};
-        win32::StackChildren(*win32::GetClientSize(self), children, win32::StackDirection::Horizontal);
+		auto children = std::array<win32::window_ref, 2>{win32::window_ref(*dir_list), tab_control.ref()};
+        win32::StackChildren(*this->GetClientSize(), children, win32::StackDirection::Horizontal);
 
-		parent_size = win32::GetClientRect(tab_control);
+		parent_size = tab_control.GetClientRect();
 
 		for (auto& plugin : loaded_modules)
 		{
@@ -168,15 +167,17 @@ struct siege_main_window
 				return 0;
 			}
 
-			win32::SetWindowPos(win32::hwnd_t(tab_item->lParam), HWND_TOP);
+			auto temp_window = win32::window_ref(win32::hwnd_t(tab_item->lParam));
 
-			auto temp = win32::GetClientRect(sender);
+			temp_window.SetWindowPos(HWND_TOP);
 
-			::MapWindowPoints(sender, GetParent(sender), std::bit_cast<POINT*>(&temp), 2);
+			auto temp = temp_window.GetClientRect();
+
+			::MapWindowPoints(sender, *win32::window_ref(sender).GetParent(), std::bit_cast<POINT*>(&temp), 2);
 
 			SendMessageW(sender, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&temp.value()));
 
-			win32::SetWindowPos(win32::hwnd_t(tab_item->lParam), *temp);
+			temp_window.SetWindowPos(*temp);
 			
 			ShowWindow(win32::hwnd_t(tab_item->lParam), SW_SHOW);
 		}
@@ -189,12 +190,7 @@ struct siege_main_window
 				return 0;
 	}
 
-	std::optional<LRESULT> on_command(const win32::command_message& command) {
-				if (IsChild(self, command.sender))
-				{
-					return SendMessageW(command.sender, win32::command_message::id, command.wparam(), command.lparam());
-				}
-					
+	std::optional<LRESULT> on_command(const win32::command_message& command) {					
 				if (command.notification_code == 0 && command.identifier == open_id)
 				{
 					auto dialog = win32::com::CreateFileOpenDialog();
@@ -246,10 +242,10 @@ struct siege_main_window
 									{
 										auto class_name = plugin->GetWindowClassForStream(*stream);
 
-										auto parent_size = win32::GetClientRect(self);
+										auto parent_size = this->GetClientRect();
 
 										auto child = win32::CreateWindowExW(win32::window_params<RECT>{
-											.parent = self,
+											.parent = *this,
 											.class_name = class_name.c_str(),
 											.class_module = plugin->GetHandle(),
 											.position = *parent_size
@@ -272,7 +268,7 @@ struct siege_main_window
 
 										assert(stream->Release() == 0);
 	
-										SendMessageW(*child, WM_COPYDATA, win32::wparam_t(self), win32::lparam_t(&data));
+										SendMessageW(*child, WM_COPYDATA, win32::wparam_t(win32::hwnd_t(*this)), win32::lparam_t(&data));
 
 
 										::UnmapViewOfFile(data.lpData);
@@ -299,61 +295,11 @@ struct siege_main_window
 
 				if (command.identifier == 101)
 				{
-					auto dialog = win32::MakeDialogTemplate(
-						DLGTEMPLATE{.style = WS_POPUP | WS_BORDER | WS_SYSMENU | DS_MODALFRAME | WS_CAPTION, .cx = 300, .cy = 300 }
-					);
 
-					/*
-					auto dialog = win32::MakeDialogTemplate(
-					DLGTEMPLATE{.style = WS_POPUP | WS_BORDER | WS_SYSMENU | DS_MODALFRAME | WS_CAPTION, .cdit = 2, .cx = 300, .cy = 300 },
-						std::array<wchar_t, 12>{L"Test Dialog"},
-						std::make_pair(
-							win32::MakeDialogItemTemplate(DLGITEMTEMPLATE{.style = WS_CHILD | WS_VISIBLE, .x = 10, .y = 10, .cx = 200, .cy = 100}, std::array<wchar_t, 12>{L"Hello World"} ),
-							win32::MakeDialogItemTemplate(DLGITEMTEMPLATE{.style = WS_CHILD | WS_VISIBLE, .x = 10, .y = 110, .cx = 200, .cy = 100}, std::array<wchar_t, 9>{L"Click me"}, std::array<wchar_t, 2>{{0xffff, win32::button::dialog_id}})
-						)
-						);
-					*/
-				
-                    win32::DialogBoxIndirectParamW(self, &dialog.dialog, [](win32::hwnd_t self, const win32::message& dialog_message) -> INT_PTR {
-						if (dialog_message.message == win32::init_dialog_message::id)
-						{
-							SetWindowTextW(self, L"Test Dialog Title");
-
-							RECT size {
-								.right = 300,
-								.bottom = 100
-							};
-							MapDialogRect(self, &size);
-
-							win32::CreateWindowExW(win32::window_params<RECT>{
-								.parent = self,
-								.class_name = win32::button::class_name,
-								.caption = L"Hello world",
-								.style = win32::window_style(WS_CHILD | WS_VISIBLE),
-								.position = size,
-								
-							});
-							return (INT_PTR)TRUE;
-						}
-						else if (dialog_message.message == win32::command_message::id)
-						{
-							win32::command_message dialog_command{dialog_message.wParam, dialog_message.lParam};
-
-							if (dialog_command.identifier == IDOK || dialog_command.identifier == IDCANCEL)
-							{
-								std::array<wchar_t, 32> class_name;
-								GetClassName(self, class_name.data(), class_name.size());
-								EndDialog(self, dialog_command.identifier);
-								return (INT_PTR)TRUE;
-							}
-						}
-
-						return (INT_PTR)FALSE;
-						});
 				}
 				else if (command.identifier == 100)
 				{
-					DestroyWindow(self);
+					DestroyWindow(*this);
 					return 0;
 				}
 
