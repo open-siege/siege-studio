@@ -1,7 +1,7 @@
 #ifndef WIN32_LIST_VIEW_HPP
 #define WIN32_LIST_VIEW_HPP
 
-#include <siege/platform/win/gaming/win32_user32.hpp>
+#include <siege/platform/win/desktop/win32_user32.hpp>
 #include <siege/platform/win/desktop/win32_header.hpp>
 #include <siege/platform/win/desktop/win32_edit.hpp>
 #include <CommCtrl.h>

@@ -6,6 +6,7 @@
 #include "views/pal_view.hpp"
 #include <siege/platform/win/core/com_collection.hpp>
 #include <siege/platform/win/core/com_stream_buf.hpp>
+#include <siege/platform/win/core/module.hpp>
 
 struct pal_mapping_window
 {
@@ -153,46 +154,39 @@ extern "C"
         
         win32::com::StreamBufRef buffer(*data);
         std::istream stream(&buffer);
-
-        static HMODULE hModule = []{
-            HMODULE temp = nullptr;
-            GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-               GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-               (LPCWSTR)&GetWindowClassForStream, &temp);
-
-            return temp;
-            }();
-
-        if(!hModule)
+        
+        try
         {
-            return S_FALSE;        
-        }
-
-        thread_local WNDCLASSEXW info{};
-
-        if (siege::views::pal_controller::is_pal(stream))
-        {
-            static auto window_type_name = win32::type_name<siege::views::pal_view>();
-
-            if (::GetClassInfoExW(hModule, window_type_name.c_str(), &info))
+            static auto this_module =  win32::module_ref::current_module();
+            
+            if (siege::views::pal_controller::is_pal(stream))
             {
-                *class_name = window_type_name.data();
-                return S_OK;
+                static auto window_type_name = win32::type_name<siege::views::pal_view>();
+
+                if (this_module.GetClassInfoExW(window_type_name))
+                {
+                    *class_name = window_type_name.data();
+                    return S_OK;
+                }
             }
-        }
 
-        if (siege::views::bmp_controller::is_bmp(stream))
-        {
-            static auto window_type_name = win32::type_name<siege::views::bmp_view>();
-
-            if (::GetClassInfoExW(hModule, window_type_name.c_str(), &info))
+            if (siege::views::bmp_controller::is_bmp(stream))
             {
-                *class_name = window_type_name.data();
-                return S_OK;
-            }
-        }
+                static auto window_type_name = win32::type_name<siege::views::bmp_view>();
 
-        return S_FALSE;
+                if (this_module.GetClassInfoExW(window_type_name))
+                {
+                    *class_name = window_type_name.data();
+                    return S_OK;
+                }
+            }
+
+            return S_FALSE;
+        }
+        catch(...)
+        {
+            return S_FALSE;
+        }
     }
 
     BOOL WINAPI DllMain(
@@ -210,12 +204,14 @@ extern "C"
 
            if (fdwReason == DLL_PROCESS_ATTACH)
            {
+                win32::RegisterClassExW<win32::stack_panel>(WNDCLASSEXW{.hInstance = hinstDLL });
                 win32::RegisterClassExW<siege::views::bmp_view>(WNDCLASSEXW{.hInstance = hinstDLL });
                 win32::RegisterClassExW<siege::views::pal_view>(WNDCLASSEXW{.hInstance = hinstDLL});
                 win32::RegisterClassExW<pal_mapping_window>(WNDCLASSEXW{.hInstance = hinstDLL});
             }
             else if (fdwReason == DLL_PROCESS_DETACH)
             {
+               win32::UnregisterClassW<win32::stack_panel>(hinstDLL);
                win32::UnregisterClassW<siege::views::bmp_view>(hinstDLL);
                win32::UnregisterClassW<siege::views::pal_view>(hinstDLL);
                win32::UnregisterClassW<pal_mapping_window>(hinstDLL);

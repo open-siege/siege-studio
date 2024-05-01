@@ -14,6 +14,7 @@
 #include <cassert>
 #include <memory_resource>
 #include "win32_messages.hpp"
+#include <siege/platform/win/core/module.hpp>
 
 namespace win32
 {
@@ -206,7 +207,8 @@ namespace win32
     template <typename TType>
     auto type_name()
     {
-        return widen(typeid(TType).name());
+        static auto name = widen(typeid(TType).name());
+        return name;
     }
 
     template <typename TWindow, int StaticSize = 0>
@@ -506,7 +508,7 @@ namespace win32
     {
         hinstance_t hinstance = nullptr;
         auto parent_hinstance = params.hwndParent != nullptr ? std::bit_cast<hinstance_t>(GetWindowLongPtrW(params.hwndParent, GWLP_HINSTANCE)) : nullptr;
-        auto module_instance = ::GetModuleHandleW(nullptr);
+        auto module_instance = win32::module_ref::current_module();
         thread_local WNDCLASSEXW info{sizeof(WNDCLASSEXW)};
 
         std::array<HMODULE, 5> modules_to_check = {{
