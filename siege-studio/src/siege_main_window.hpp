@@ -130,20 +130,24 @@ struct siege_main_window : win32::window
 
 	auto on_size(win32::size_message sized)
 	{
-		/*auto tab = ::FindWindowExW(self, nullptr, win32::tab_control::class_name, nullptr);
+		auto tab = win32::tab_control(::FindWindowExW(*this, nullptr, win32::tab_control::class_name, nullptr));
 		assert(tab);
 
-		win32::SetWindowPos(tab, POINT{}, sized.client_size);
+		tab.SetWindowPos(POINT{}, sized.client_size);
 			
 		RECT temp {.left = 0, .top = 0, .right = sized.client_size.cx, .bottom = sized.client_size.cy };
 
 		SendMessageW(tab, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&temp));
 
-		for (auto i = 0; i < win32::tab_control::GetItemCount(tab); ++i)
+		for (auto i = 0; i < tab.GetItemCount(); ++i)
 		{
-			auto tab_item = win32::tab_control::GetItem(tab, i);
-			assert(win32::SetWindowPos(win32::hwnd_t(tab_item->lParam), temp));		
-		}*/
+			auto tab_item = tab.GetItem(i);
+
+			if (tab_item->lParam)
+			{
+				assert(win32::window_ref(win32::hwnd_t(tab_item->lParam)).SetWindowPos(temp));	
+			}
+		}
 
 		return std::nullopt;
 	}
