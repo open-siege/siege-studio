@@ -7,9 +7,6 @@ namespace win32
 {
 	struct stack_panel : window
 	{
-		// for client code
-		using window::window;
-
 		stack_panel(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window(self)
 	    {
 	    }

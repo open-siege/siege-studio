@@ -27,7 +27,7 @@ namespace win32
             return TType::class_name;
         }
      
-        return type_name<TType>();
+        return L"";
      }
 
 	struct window_module_ref : win32::module_ref
@@ -46,6 +46,19 @@ namespace win32
 
 			if (::GetClassInfoExW(*this, name.data(), &temp));
 			{
+                if (!temp.lpfnWndProc)
+                {
+                    return std::nullopt;
+                }
+
+                try
+                {
+                    temp.hInstance = win32::module_ref(temp.lpfnWndProc);
+                }
+                catch(...)
+                {
+                }
+
 				return temp;
 			}
 

@@ -7,7 +7,6 @@
 
 struct siege_main_window : win32::window
 {
-	using window::window;
 	win32::tab_control tab_control;
 	std::list<siege::siege_plugin> loaded_modules;
 	

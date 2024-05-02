@@ -23,21 +23,34 @@ namespace win32
         {
             thread_local WNDCLASSEXW info{sizeof(WNDCLASSEXW)};
 
-            std::wstring class_name;
+            std::wstring class_name = params.lpszClass ? params.lpszClass : L"";
 
-            if (!params.lpszClass || params.lpszClass[0] == L'\0')
+            if (class_name.empty())
             {
                 class_name = window_class_name<TControl>();
                 params.lpszClass = class_name.c_str();
             }
 
-            for (auto& module : modules)
+            auto module_iter = std::find_if(modules.begin(), modules.end(), [&](auto& module) {
+                    return module && module.GetClassInfoExW(class_name).has_value();
+            });
+
+            if (module_iter != modules.end())
             {
-                if (module && ::GetClassInfoExW(module, params.lpszClass, &info))
+                params.hInstance = *module_iter;
+            }
+            else if (module_iter == modules.end())
+            {
+                module_iter = std::find_if(modules.begin(), modules.end(), [&](auto& module) {
+                    return module && module.GetClassInfoExW(window_class_name<TControl>());
+                });
+                
+                if (module_iter != modules.end())
                 {
-                    params.hInstance = module;
-                    break;
-                }   
+                    class_name = window_class_name<TControl>();
+                    params.lpszClass = class_name.c_str();
+                    params.hInstance = *module_iter;
+                }
             }
 
             return window_module_ref(params.hInstance).CreateWindowExW<TControl>(params);
