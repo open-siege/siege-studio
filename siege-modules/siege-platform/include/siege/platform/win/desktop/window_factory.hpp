@@ -14,7 +14,7 @@ namespace win32
         window_factory()
         {
             modules.emplace_back(win32::window_module_ref::current_module());
-            modules.emplace_back(::GetModuleHandleW(L"comctrl32.dll"));
+            modules.emplace_back(::GetModuleHandleW(L"comctl32.dll"));
             modules.emplace_back(::GetModuleHandleW(L"siege-win-mfc.dll"));
         }
 
@@ -22,6 +22,14 @@ namespace win32
         std::expected<TControl, DWORD> CreateWindowExW(CREATESTRUCTW params)
         {
             thread_local WNDCLASSEXW info{sizeof(WNDCLASSEXW)};
+
+            std::wstring class_name;
+
+            if (!params.lpszClass || params.lpszClass[0] == L'\0')
+            {
+                class_name = window_class_name<TControl>();
+                params.lpszClass = class_name.c_str();
+            }
 
             for (auto& module : modules)
             {
