@@ -57,7 +57,6 @@ namespace siege::views
             
             control_panel = *this_module.CreateWindowExW<win32::stack_panel>(win32::window_point_size{ 
                 .parent = *this,
-                .class_name = win32::type_name<win32::stack_panel>(),
                 .style = win32::window_style(WS_VISIBLE | WS_CHILD),
                 .position{.x = 1},
                 .size{.cx = short(width / 3), .cy = short(parent_size->cy)}
@@ -66,7 +65,6 @@ namespace siege::views
             auto group_box = *this_module.CreateWindowExW<win32::button>(
                 win32::window_point_size{ 
                 .parent = control_panel,
-                .class_name = win32::button::class_name,
                 .caption = L"Colour strategy",
                 .style = win32::window_style(WS_VISIBLE | WS_CHILD | BS_GROUPBOX),
                 .size{.cx = short(width / 3), .cy = 100}
@@ -76,27 +74,27 @@ namespace siege::views
 
             auto do_nothing = this_module.CreateWindowExW<win32::button>(win32::window_point_size{
                             .parent = control_panel,
-                            .class_name = win32::button::class_name,
+                            .caption = L"Do nothing",
 						    .style = win32::window_style(WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON),
-						    });//, control_panel, win32::button::class_name, L"Do nothing");
+						    });
 
             auto ideal_size = do_nothing->GetIdealSize();
             do_nothing->SetWindowPos(*ideal_size);
 
             auto remap = this_module.CreateWindowExW<win32::button>(win32::window_point_size{
                             .parent = control_panel,
-                            .class_name = win32::button::class_name,
+                            .caption = L"Remap",
 						    .style = win32::window_style(WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON),
-						    });//, control_panel, win32::button::class_name, L"Remap");
+						    });
 
             ideal_size = remap->GetIdealSize();
             remap->SetWindowPos(*ideal_size);
 
             auto remap_unique = this_module.CreateWindowExW<win32::button>(win32::window_point_size{
                             .parent = control_panel,
-                            .class_name = win32::button::class_name,
+                            .caption = L"Remap (only unique colours)",
 						    .style = win32::window_style(WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON),
-						    }); //, control_panel, win32::button::class_name, L"Remap (only unique colours)");
+						    });
 
             ideal_size = remap_unique->GetIdealSize();
             remap_unique->SetWindowPos(*ideal_size);
@@ -195,7 +193,6 @@ namespace siege::views
           image_panel = *this_module.CreateWindowExW<win32::stack_panel>(
               win32::window_point_size{ 
                 .parent = *this,
-                .class_name = win32::type_name<win32::stack_panel>(),
                 .style = win32::window_style(WS_VISIBLE | WS_CHILD),
                 .size{.cx = short(width / 3), .cy = parent_size->cy}
                 });
@@ -203,7 +200,6 @@ namespace siege::views
           static_image = *this_module.CreateWindowExW<win32::static_control>(
               win32::window_point_size{ 
                 .parent = image_panel,
-                .class_name = win32::static_control::class_name,
                 .style = win32::window_style(WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_REALSIZECONTROL),
                 .size{.cx = (width / 3) * 2, .cy = parent_size->cy - 20}
                 });

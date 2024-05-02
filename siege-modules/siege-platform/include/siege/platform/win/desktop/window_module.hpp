@@ -7,6 +7,28 @@
 
 namespace win32
 {
+    inline auto widen(std::string_view data)
+     {
+            return std::wstring(data.begin(), data.end());
+     }
+
+     template <typename TType>
+     auto type_name()
+     {
+            static auto name = widen(typeid(TType).name());
+            return name;
+     }
+
+     template <typename TType>
+     std::wstring window_class_name()
+     {
+        if constexpr (requires(TType t) { TType::class_name; })
+        {
+            return TType::class_name;
+        }
+     
+        return type_name<TType>();
+     }
 
 	struct window_module_ref : win32::module_ref
 	{
@@ -31,9 +53,19 @@ namespace win32
 		}
 #endif
 
+        
+
 		template <typename TControl = window>
         std::expected<TControl, DWORD> CreateWindowExW(CREATESTRUCTW params)
         {
+            std::wstring class_name;
+
+            if (!params.lpszClass || std::wstring_view(params.lpszClass).empty())
+            {
+                class_name = window_class_name<TControl>();
+                params.lpszClass = class_name.c_str();
+            }
+
             auto result = ::CreateWindowExW(
                     params.dwExStyle,
                     params.lpszClass,
