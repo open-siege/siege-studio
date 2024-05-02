@@ -36,8 +36,8 @@ namespace siege::views
         L".jpg", L".jpeg", L".gif", L".png", L".tag", L".bmp", L".dib" , L".pba", L".dmb", L".db0", L".db1", L".db2", L".hba", L".hb0", L".hb1", L".hb2"    
         }};
 
-        win32::stack_panel control_panel;
-        win32::stack_panel image_panel;
+        win32::window control_panel;
+        win32::window image_panel;
         win32::static_control static_image;
         win32::track_bar slider;
         bmp_controller controller;
@@ -55,8 +55,9 @@ namespace siege::views
 
             auto width = parent_size->cx;
             
-            control_panel = *this_module.CreateWindowExW<win32::stack_panel>(win32::window_point_size{ 
+            control_panel = *this_module.CreateWindowExW(win32::window_point_size{ 
                 .parent = *this,
+                .class_name = win32::type_name<win32::stack_panel>(),
                 .style = win32::window_style(WS_VISIBLE | WS_CHILD),
                 .position{.x = 1},
                 .size{.cx = short(width / 3), .cy = short(parent_size->cy)}
@@ -190,9 +191,10 @@ namespace siege::views
                 return palettes_list;
           }();
 
-          image_panel = *this_module.CreateWindowExW<win32::stack_panel>(
+          image_panel = *this_module.CreateWindowExW(
               win32::window_point_size{ 
                 .parent = *this,
+                .class_name = win32::type_name<win32::stack_panel>(),
                 .style = win32::window_style(WS_VISIBLE | WS_CHILD),
                 .size{.cx = short(width / 3), .cy = parent_size->cy}
                 });
