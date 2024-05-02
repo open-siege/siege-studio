@@ -76,13 +76,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     AppendMenuW(main_menu, MF_STRING, id++, L"View");
     AppendMenuW(main_menu, MF_STRING, id++, L"Help");
 
-    auto main_window = win32::window_module_ref::current_module().CreateWindowExW(CREATESTRUCTW {
+    auto main_window = win32::window_module_ref::current_module().CreateWindowExW<siege_main_window>(CREATESTRUCTW {
 		.hMenu = main_menu,
 		.cx = CW_USEDEFAULT,
 		.x = CW_USEDEFAULT,
 		.style = WS_OVERLAPPEDWINDOW,
-		.lpszName = app_title.data(),
-		.lpszClass = win32::type_name<siege_main_window>().c_str(),
+		.lpszName = app_title.data()
 		//.dwExStyle = WS_EX_COMPOSITED,
 	});
 

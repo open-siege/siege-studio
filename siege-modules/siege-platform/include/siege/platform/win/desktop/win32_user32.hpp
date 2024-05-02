@@ -199,18 +199,6 @@ namespace win32
     }
 #endif
 
-    inline auto widen(std::string_view data)
-    {
-        return std::wstring(data.begin(), data.end());
-    }
-
-    template <typename TType>
-    auto type_name()
-    {
-        static auto name = widen(typeid(TType).name());
-        return name;
-    }
-
     template <typename TWindow, int StaticSize = 0>
     auto RegisterClassExW(WNDCLASSEXW descriptor)
     {
