@@ -215,9 +215,6 @@ namespace siege::views
             auto root_children = std::array<win32::window_ref, 2>{image_panel.ref(), control_panel.ref()};
 
             win32::StackChildren(*this->GetClientSize(), root_children, win32::StackDirection::Horizontal);
-           
-            auto children = std::array<win32::window_ref, 2>{group_box.ref(), palettes_list.ref()};
-            win32::StackChildren(*control_panel.GetClientSize(), children);
             
             auto rect = group_box.GetClientRect();
             rect->top += 15;
@@ -320,14 +317,11 @@ namespace siege::views
             return std::nullopt;
         }
 
-        auto on_size(win32::size_message sized)
-	    {
-		    win32::ForEachDirectChildWindow(*this, [&](auto child) {
-
-    //			win32::SetWindowPos(child, sized.client_size);
-		    });
-		    return std::nullopt;
-	    }
+     //   auto on_size(win32::size_message sized)
+	    //{
+		   // control_panel.SetWindowPos(nullptr, SWP_NOZORDER);
+     //       return std::nullopt;
+     //   }
 
         static bool is_bitmap(std::istream& raw_data)
         {
