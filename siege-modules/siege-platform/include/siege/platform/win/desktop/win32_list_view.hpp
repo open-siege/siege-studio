@@ -8,6 +8,36 @@
 
 namespace win32
 {
+    struct list_view_column : ::LVCOLUMNW
+    {
+    
+    };
+
+    struct list_view_item : ::LVITEMW
+    {
+        std::wstring text;
+
+        list_view_item(std::wstring text) : text(std::move(text))
+        {
+            this->pszText = text.data();
+        }
+    };
+
+    struct list_view_group : ::LVGROUP
+    {
+        std::wstring text;
+        
+        std::vector<list_view_item> items;
+
+        list_view_group(std::wstring text) : text(std::move(text))
+        {
+        }
+
+        list_view_group(std::wstring text, std::vector<list_view_item> items) : text(std::move(text)), items(std::move(items))
+        {
+        }
+    };
+
     struct list_view : window
     {
         constexpr static auto class_name = WC_LISTVIEWW;
@@ -309,6 +339,11 @@ namespace win32
             }
 
             return SendMessageW(*this, LVM_INSERTITEMW, index, std::bit_cast<lparam_t>(&item));
+        }
+
+        inline void InsertGroups(std::span<list_view_group> groups)
+        {
+        
         }
     };
 }

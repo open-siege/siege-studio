@@ -84,63 +84,15 @@ namespace siege::views
                 .cxDefault = this->GetClientSize()->cx,
                 });
 
-            assert(palettes_list.InsertGroup(-1, LVGROUP {
-                .pszHeader = temp.data(),
-                .iGroupId = 1
-                }) == 0);
+            std::vector<win32::list_view_group> groups {
+                    { L"test.dpl", {
+                        { L"palette 1" }
+                    }
+                }};
 
-            palettes_list.InsertGroup(-1, LVGROUP {
-                .pszHeader = const_cast<wchar_t*>(L"test.dpl"),
-                .iGroupId = 2
-                });
+            palettes_list.InsertGroups(groups);
 
-            palettes_list.InsertGroup(-1, LVGROUP {
-                .pszHeader = const_cast<wchar_t*>(L"ui.pal"),
-                .iGroupId = 3
-                });
-
-            assert(palettes_list.InsertItem(-1, LVITEMW{
-                .pszText = temp.data(),
-                .iGroupId = 1
-                }) == 0);
-
-            palettes_list.InsertItem(-1, LVITEMW{
-                .pszText = const_cast<wchar_t*>(L"palette 2"),
-                .iGroupId = 1
-                });
-
-            palettes_list.InsertItem(-1, LVITEMW{
-                .pszText = const_cast<wchar_t*>(L"palette 3"),
-                .iGroupId = 1
-                });
-
-            palettes_list.InsertItem(-1, LVITEMW{
-                .pszText = const_cast<wchar_t*>(L"palette 1"),
-                .iGroupId = 2
-                });
-
-            palettes_list.InsertItem(-1, LVITEMW{
-                .pszText = const_cast<wchar_t*>(L"palette 2"),
-                .iGroupId = 2
-                });
-
-            palettes_list.InsertItem(-1, LVITEMW{
-                .pszText = const_cast<wchar_t*>(L"palette 3"),
-                .iGroupId = 2
-                });
-
-
-            palettes_list.InsertItem(-1, LVITEMW{
-                .pszText = const_cast<wchar_t*>(L"palette 1"),
-                .iGroupId = 3
-                });
-
-            palettes_list.InsertItem(-1, LVITEMW{
-                .pszText = const_cast<wchar_t*>(L"palette 2"),
-                .iGroupId = 3
-                });
-
-                return palettes_list;
+            return palettes_list;
           }();
 
           static_image = *this_module.CreateWindowExW<win32::static_control>(
