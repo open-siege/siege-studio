@@ -7,9 +7,11 @@
 
 struct siege_main_window : win32::window
 {
-	win32::tab_control tab_control;
-	std::list<siege::siege_plugin> loaded_modules;
 	
+	win32::tree_view dir_list;
+	win32::tab_control tab_control;
+
+	std::list<siege::siege_plugin> loaded_modules;
 	std::set<std::wstring> extensions;
 	std::set<std::wstring> categories;
 
@@ -59,7 +61,7 @@ struct siege_main_window : win32::window
 		win32::window_factory factory;
 
 		auto left_size = (parent_size->right - parent_size->left) / 9;
-		auto dir_list = factory.CreateWindowExW(CREATESTRUCTW {
+		dir_list = *factory.CreateWindowExW<win32::tree_view>(CREATESTRUCTW {
 						.hwndParent = *this,
 						.cy = parent_size->bottom - parent_size->top,
 						.cx = left_size,
@@ -70,7 +72,7 @@ struct siege_main_window : win32::window
 					});
 		assert(dir_list);
 
-		auto tab_control_instance = factory.CreateWindowExW<win32::tab_control>(CREATESTRUCTW {
+		tab_control = *factory.CreateWindowExW<win32::tab_control>(CREATESTRUCTW {
 						.hwndParent = *this,
 						.cy = parent_size->bottom - parent_size->top,
 						.cx = parent_size->right  - parent_size->left - left_size - 10,
@@ -80,41 +82,7 @@ struct siege_main_window : win32::window
 						.lpszClass = win32::tab_control::class_name
 					});
 
-		assert(tab_control_instance);
-		tab_control = std::move(*tab_control_instance);
-
-
 		parent_size = tab_control.GetClientRect();
-
-		for (auto& plugin : loaded_modules)
-		{
-			/*for (auto& window : plugin.data->available_classes)
-			{
-				auto child = win32::CreateWindowExW(win32::window_params<RECT>{
-					.parent = self,
-					.class_name = window.first.c_str(),
-					.class_module = plugin.module.get(),
-					.position = *parent_size
-				});
-
-				assert(child);
-
-				win32::tab_control::InsertItem(*tab_control_instance, index, TCITEMW {
-						.mask = TCIF_TEXT | TCIF_PARAM,
-						.pszText = const_cast<wchar_t*>(window.first.c_str()),
-						.lParam = win32::lparam_t(*child)
-					});
-
-				SendMessageW(*tab_control_instance, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&parent_size));
-
-				SetWindowLongPtrW(*child, GWLP_ID, index);
-				index++;
-			}
-
-			SendMessageW(*tab_control_instance, TCM_SETCURSEL, 0, 0);
-			NMHDR notification{.hwndFrom = *tab_control_instance, .code = TCN_SELCHANGE};
-			SendMessageW(*this, WM_NOTIFY, 0, std::bit_cast<LPARAM>(&notification));*/
-		}
 
 		tab_control.InsertItem(0, TCITEMW {
 						.mask = TCIF_TEXT,
@@ -145,6 +113,17 @@ struct siege_main_window : win32::window
 				assert(win32::window_ref(win32::hwnd_t(tab_item->lParam)).SetWindowPos(temp));	
 			}
 		}*/
+
+		auto left_size = sized.client_size;
+        left_size.cx = left_size.cx / 8;
+        auto right_size = sized.client_size;
+        right_size.cx -= left_size.cx;
+
+        dir_list.SetWindowPos(POINT{});
+        dir_list.SetWindowPos(left_size);
+
+        tab_control.SetWindowPos(POINT{.x = left_size.cx});
+        tab_control.SetWindowPos(right_size);
 
 		return std::nullopt;
 	}
