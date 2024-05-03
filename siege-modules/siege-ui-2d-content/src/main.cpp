@@ -204,14 +204,12 @@ extern "C"
 
            if (fdwReason == DLL_PROCESS_ATTACH)
            {
-                win32::RegisterClassExW<win32::stack_panel>(WNDCLASSEXW{.hInstance = hinstDLL });
                 win32::RegisterClassExW<siege::views::bmp_view>(WNDCLASSEXW{.hInstance = hinstDLL });
                 win32::RegisterClassExW<siege::views::pal_view>(WNDCLASSEXW{.hInstance = hinstDLL});
                 win32::RegisterClassExW<pal_mapping_window>(WNDCLASSEXW{.hInstance = hinstDLL});
             }
             else if (fdwReason == DLL_PROCESS_DETACH)
             {
-               win32::UnregisterClassW<win32::stack_panel>(hinstDLL);
                win32::UnregisterClassW<siege::views::bmp_view>(hinstDLL);
                win32::UnregisterClassW<siege::views::pal_view>(hinstDLL);
                win32::UnregisterClassW<pal_mapping_window>(hinstDLL);

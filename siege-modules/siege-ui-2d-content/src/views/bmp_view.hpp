@@ -36,10 +36,7 @@ namespace siege::views
         L".jpg", L".jpeg", L".gif", L".png", L".tag", L".bmp", L".dib" , L".pba", L".dmb", L".db0", L".db1", L".db2", L".hba", L".hb0", L".hb1", L".hb2"    
         }};
 
-        win32::window control_panel;
-        win32::window image_panel;
         win32::static_control static_image;
-        win32::track_bar slider;
         bmp_controller controller;
 
         win32::auto_handle<HBITMAP, gdi_deleter> current_bitmap;
@@ -54,51 +51,6 @@ namespace siege::views
             auto this_module = win32::window_factory();
 
             auto width = parent_size->cx;
-            
-            control_panel = *this_module.CreateWindowExW(win32::window_point_size{ 
-                .parent = *this,
-                .class_name = win32::type_name<win32::stack_panel>(),
-                .style = win32::window_style(WS_VISIBLE | WS_CHILD),
-                .position{.x = 1},
-                .size{.cx = short(width / 3), .cy = short(parent_size->cy)}
-                });
-
-            auto group_box = *this_module.CreateWindowExW<win32::button>(
-                win32::window_point_size{ 
-                .parent = control_panel,
-                .caption = L"Colour strategy",
-                .style = win32::window_style(WS_VISIBLE | WS_CHILD | BS_GROUPBOX),
-                .size{.cx = short(width / 3), .cy = 100}
-                });
-            assert(group_box);
-
-
-            auto do_nothing = this_module.CreateWindowExW<win32::button>(win32::window_point_size{
-                            .parent = control_panel,
-                            .caption = L"Do nothing",
-						    .style = win32::window_style(WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON),
-						    });
-
-            auto ideal_size = do_nothing->GetIdealSize();
-            do_nothing->SetWindowPos(*ideal_size);
-
-            auto remap = this_module.CreateWindowExW<win32::button>(win32::window_point_size{
-                            .parent = control_panel,
-                            .caption = L"Remap",
-						    .style = win32::window_style(WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON),
-						    });
-
-            ideal_size = remap->GetIdealSize();
-            remap->SetWindowPos(*ideal_size);
-
-            auto remap_unique = this_module.CreateWindowExW<win32::button>(win32::window_point_size{
-                            .parent = control_panel,
-                            .caption = L"Remap (only unique colours)",
-						    .style = win32::window_style(WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON),
-						    });
-
-            ideal_size = remap_unique->GetIdealSize();
-            remap_unique->SetWindowPos(*ideal_size);
 
 
             std::wstring temp = L"menu.pal";
@@ -106,7 +58,7 @@ namespace siege::views
 
             win32::list_view palettes_list = [&] {
                 auto palettes_list = *this_module.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
-                            .hwndParent = control_panel,
+                            .hwndParent = *this,
 						    .cy = 300,  
                             .cx = 400,
 	            		    .y = 3,		
@@ -119,7 +71,7 @@ namespace siege::views
             assert(palettes_list.EnableGroupView(true));
             assert(palettes_list.SetTileViewInfo(LVTILEVIEWINFO {
                 .dwFlags = LVTVIF_FIXEDWIDTH,
-                .sizeTile = SIZE {.cx = control_panel.GetClientSize()->cx, .cy = 50},
+                .sizeTile = SIZE {.cx = this->GetClientSize()->cx, .cy = 50},
                 }));
         
             palettes_list.SetExtendedListViewStyle(0, 
@@ -129,7 +81,7 @@ namespace siege::views
                  .cx = LVSCW_AUTOSIZE,
                 .pszText = const_cast<wchar_t*>(L""),
                 .cxMin = 100,
-                .cxDefault = control_panel.GetClientSize()->cx,
+                .cxDefault = this->GetClientSize()->cx,
                 });
 
             assert(palettes_list.InsertGroup(-1, LVGROUP {
@@ -191,40 +143,13 @@ namespace siege::views
                 return palettes_list;
           }();
 
-          image_panel = *this_module.CreateWindowExW(
-              win32::window_point_size{ 
-                .parent = *this,
-                .class_name = win32::type_name<win32::stack_panel>(),
-                .style = win32::window_style(WS_VISIBLE | WS_CHILD),
-                .size{.cx = short(width / 3), .cy = parent_size->cy}
-                });
-
           static_image = *this_module.CreateWindowExW<win32::static_control>(
               win32::window_point_size{ 
-                .parent = image_panel,
+                .parent = *this,
                 .style = win32::window_style(WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_REALSIZECONTROL),
                 .size{.cx = (width / 3) * 2, .cy = parent_size->cy - 20}
                 });
 
-          //  slider = *this_module.CreateWindowExW<win32::track_bar>(::CREATESTRUCTW{
-						    //.style = WS_VISIBLE | WS_CHILD,
-          //                  //.x = 0,
-          //                  //.y = short(parent_size->cy - 20),
-          //                  //.cx = short((width / 3) * 2),
-          //                  //.cy = 20
-						    //});//, image_panel, win32::track_bar::class_name, L"Image");
-
-            auto root_children = std::array<win32::window_ref, 2>{image_panel.ref(), control_panel.ref()};
-
-            win32::StackChildren(*this->GetClientSize(), root_children, win32::StackDirection::Horizontal);
-            
-            auto rect = group_box.GetClientRect();
-            rect->top += 15;
-            rect->left += 5;
-
-            auto radios = std::array<win32::window_ref, 3>{do_nothing->ref(), remap->ref(), remap_unique->ref()};
-            win32::StackChildren(SIZE{.cx = rect->right, .cy = rect->bottom - 20}, radios, win32::StackDirection::Horizontal,
-              POINT{.x = rect->left, .y = rect->top});
 
             return 0;
         }
