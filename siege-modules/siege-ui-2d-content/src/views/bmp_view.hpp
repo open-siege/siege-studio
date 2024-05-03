@@ -52,7 +52,6 @@ namespace siege::views
 
             auto width = parent_size->cx;
 
-
             std::wstring temp = L"menu.pal";
         
 
@@ -60,8 +59,9 @@ namespace siege::views
                 auto palettes_list = *this_module.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
                             .hwndParent = *this,
 						    .cy = 300,  
-                            .cx = 400,
+                            .cx = 200,
 	            		    .y = 3,		
+                            .x = width - 200, 
                             .style = WS_VISIBLE | WS_CHILD | LVS_SINGLESEL | LVS_SHOWSELALWAYS,
                             .lpszName =  L"Palettes",
                             .lpszClass = L"MFC::CMFCListCtrl"
@@ -85,10 +85,10 @@ namespace siege::views
                 });
 
             std::vector<win32::list_view_group> groups {
-                    { L"test.dpl", {
-                        { L"palette 1" }
-                    }
-                }};
+                {L"main.dpl", {{ L"palette 1"}, { L"palette 2"}, { L"palette 3"}}},
+                {L"test.pal", {{ L"palette 1"}}},
+                {L"other.ipl", {{ L"palette 1"}}},
+            };
 
             palettes_list.InsertGroups(groups);
 

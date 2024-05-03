@@ -127,7 +127,7 @@ struct siege_main_window : win32::window
 
 	auto on_size(win32::size_message sized)
 	{
-		auto tab = win32::tab_control(::FindWindowExW(*this, nullptr, win32::tab_control::class_name, nullptr));
+		/*auto tab = win32::tab_control(::FindWindowExW(*this, nullptr, win32::tab_control::class_name, nullptr));
 		assert(tab);
 
 		tab.SetWindowPos(POINT{}, sized.client_size);
@@ -144,7 +144,7 @@ struct siege_main_window : win32::window
 			{
 				assert(win32::window_ref(win32::hwnd_t(tab_item->lParam)).SetWindowPos(temp));	
 			}
-		}
+		}*/
 
 		return std::nullopt;
 	}
@@ -287,8 +287,8 @@ struct siege_main_window : win32::window
 												.lParam = win32::lparam_t(child->get())
 											});
 
-										SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&parent_size));
-										child->SetWindowPos(*parent_size);
+										//SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&parent_size));
+										//child->SetWindowPos(*parent_size);
 										SetWindowLongPtrW(*child, GWLP_ID, index);
 									}
 								}
