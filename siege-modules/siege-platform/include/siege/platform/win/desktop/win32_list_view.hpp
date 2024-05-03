@@ -17,7 +17,12 @@ namespace win32
     {
         std::wstring text;
 
-        list_view_item(std::wstring text) : text(std::move(text))
+        list_view_item(std::wstring text) : ::LVITEMW{}, text(std::move(text))
+        {
+            this->pszText = this->text.data();
+        }
+
+        list_view_item(const list_view_item& item) : ::LVITEMW(item), text(item.text)
         {
             this->pszText = text.data();
         }
@@ -29,12 +34,19 @@ namespace win32
         
         std::vector<list_view_item> items;
 
-        list_view_group(std::wstring text) : text(std::move(text))
+        list_view_group(std::wstring text) : ::LVGROUP{}, text(std::move(text))
         {
+            this->pszHeader = this->text.data();
         }
 
-        list_view_group(std::wstring text, std::vector<list_view_item> items) : text(std::move(text)), items(std::move(items))
+        list_view_group(std::wstring text, std::vector<list_view_item> items) : ::LVGROUP{}, text(std::move(text)), items(std::move(items))
         {
+            this->pszHeader = this->text.data();
+        }
+
+        list_view_group(const list_view_group& group) : ::LVGROUP(group), text(group.text), items(group.items)
+        {
+            this->pszHeader = text.data();
         }
     };
 
@@ -343,7 +355,22 @@ namespace win32
 
         inline void InsertGroups(std::span<list_view_group> groups)
         {
-        
+            int group_id = int(GetGroupCount() + 1);
+            for (auto& group : groups)
+            {
+                group.iGroupId = group_id;
+                
+                InsertGroup(-1, group);
+                auto items = std::move(group.items);
+
+                for (auto& item : items)
+                {
+                    item.iGroupId = group_id;
+                    InsertItem(-1, item);
+                }
+
+                group_id++;
+            }
         }
     };
 }
