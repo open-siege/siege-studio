@@ -6,8 +6,7 @@
 #include "siege-plugin.hpp"
 
 struct siege_main_window : win32::window
-{
-	
+{	
 	win32::tree_view dir_list;
 	win32::tab_control tab_control;
 
@@ -95,25 +94,6 @@ struct siege_main_window : win32::window
 
 	auto on_size(win32::size_message sized)
 	{
-		/*auto tab = win32::tab_control(::FindWindowExW(*this, nullptr, win32::tab_control::class_name, nullptr));
-		assert(tab);
-
-		tab.SetWindowPos(POINT{}, sized.client_size);
-			
-		RECT temp {.left = 0, .top = 0, .right = sized.client_size.cx, .bottom = sized.client_size.cy };
-
-		SendMessageW(tab, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&temp));
-
-		for (auto i = 0; i < tab.GetItemCount(); ++i)
-		{
-			auto tab_item = tab.GetItem(i);
-
-			if (tab_item->lParam)
-			{
-				assert(win32::window_ref(win32::hwnd_t(tab_item->lParam)).SetWindowPos(temp));	
-			}
-		}*/
-
 		auto left_size = sized.client_size;
         left_size.cx = left_size.cx / 8;
         auto right_size = sized.client_size;
@@ -122,8 +102,22 @@ struct siege_main_window : win32::window
         dir_list.SetWindowPos(POINT{});
         dir_list.SetWindowPos(left_size);
 
-        tab_control.SetWindowPos(POINT{.x = left_size.cx});
+        tab_control.SetWindowPos(POINT{.x = sized.client_size.cx - right_size.cx});
         tab_control.SetWindowPos(right_size);
+
+		auto tab_rect = *this->GetClientRect();
+
+		SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&tab_rect));
+
+		for (auto i = 0; i < tab_control.GetItemCount(); ++i)
+		{
+			auto tab_item = tab_control.GetItem(i);
+
+			if (tab_item->lParam)
+			{
+				assert(win32::window_ref(win32::hwnd_t(tab_item->lParam)).SetWindowPos(tab_rect));
+			}
+		}
 
 		return std::nullopt;
 	}
@@ -155,13 +149,6 @@ struct siege_main_window : win32::window
 
 			temp_window.SetWindowPos(HWND_TOP);
 
-			auto temp = temp_window.GetClientRect();
-
-			::MapWindowPoints(sender, *win32::window_ref(sender).GetParent(), std::bit_cast<POINT*>(&temp), 2);
-
-			SendMessageW(sender, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&temp.value()));
-
-			temp_window.SetWindowPos(*temp);
 			
 			ShowWindow(win32::hwnd_t(tab_item->lParam), SW_SHOW);
 		}
@@ -226,12 +213,14 @@ struct siege_main_window : win32::window
 									{
 										auto class_name = plugin->GetWindowClassForStream(*stream);
 
-										auto parent_size = this->GetClientRect();
+										auto parent_size = *this->GetClientRect();
+
+										SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&parent_size));
 
 										auto child = plugin->CreateWindowExW(win32::window_params<RECT>{
 											.parent = *this,
 											.class_name = class_name.c_str(),
-											.position = *parent_size
+											.position = parent_size
 										});
 
 										assert(child);
@@ -252,8 +241,6 @@ struct siege_main_window : win32::window
 										assert(stream->Release() == 0);
 	
 										SendMessageW(*child, WM_COPYDATA, win32::wparam_t(win32::hwnd_t(*this)), win32::lparam_t(&data));
-
-
 										::UnmapViewOfFile(data.lpData);
 										::CloseHandle(mapping);
 										::CloseHandle(handle);
@@ -266,7 +253,7 @@ struct siege_main_window : win32::window
 												.lParam = win32::lparam_t(child->get())
 											});
 
-										//SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&parent_size));
+										
 										//child->SetWindowPos(*parent_size);
 										SetWindowLongPtrW(*child, GWLP_ID, index);
 									}

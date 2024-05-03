@@ -206,7 +206,7 @@ namespace siege::views
             static_image.SetWindowPos(POINT{});
             static_image.SetWindowPos(left_size);
 
-            palettes_list.SetWindowPos(POINT{.x = left_size.cx});
+            palettes_list.SetWindowPos(POINT{.x = sized.client_size.cx - right_size.cx});
             palettes_list.SetWindowPos(right_size);
 
             return std::nullopt;
