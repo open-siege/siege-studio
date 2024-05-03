@@ -205,6 +205,30 @@ namespace win32
 
             return std::nullopt;
         }
+
+        template <typename TValue>
+        inline TValue GetPropW(std::wstring_view name) const
+        {
+            if constexpr(std::is_integral_v<TValue> || std::is_enum_v<TValue> || std::is_pointer_v<TValue>)
+            {
+                auto raw = std::size_t(::GetPropW(*this, name.data()));
+                return TValue(raw);
+            }
+
+            return TValue(); 
+        }
+
+        template <typename TValue>
+        inline auto SetPropW(std::wstring_view name, TValue value)
+        {
+            if constexpr(std::is_integral_v<TValue> || std::is_enum_v<TValue> || std::is_pointer_v<TValue>)
+            {
+                return ::SetPropW(*this, name.data(), HANDLE(value));                 
+            }
+
+            return ::SetProp(*this, name.data(), nullptr);
+        }
+
         #endif
 
         inline std::optional<RECT> GetClientRect() const
@@ -290,97 +314,6 @@ namespace win32
         using base = window_base<window_deleter, window_ref>;
         using base::base;
     };
-    
-    enum struct StackDirection
-    {
-        Vertical,
-        Horizontal
-    };
-
-    inline void StackChildren(SIZE parent_size, std::span<window_ref> children, StackDirection direction = StackDirection::Vertical, std::optional<POINT> start_pos = std::nullopt)
-    {
-        std::stable_sort(children.begin(), children.end(), [&](const window_ref& a, const window_ref& b) {
-            auto rect_a = a.GetClientRect();
-            auto rect_b = b.GetClientRect();
-            if (rect_a && rect_b)
-            {
-                if (direction == StackDirection::Vertical)
-                {
-                    return rect_a->top < rect_b->top;
-                }
-                else if (direction == StackDirection::Horizontal)
-                {
-                    return rect_a->left < rect_b->left;
-                }
-            }
-
-            return false;
-        });
-
-        auto x_pos = start_pos ? start_pos->x : 0;
-        auto y_pos = start_pos ? start_pos->y : 0;
-
-        if (direction == StackDirection::Vertical)
-        {
-            for (auto& child : children)
-            {
-                auto rect = child.GetClientRect();
-
-                rect->right = parent_size.cx + rect->left;
-                
-                auto height = rect->bottom - rect->top;
-                rect->top = y_pos;
-                rect->bottom = rect->top + height;
-                
-                child.SetWindowPos(*rect);
-                y_pos += height;
-            }
-        }
-        else if (direction == StackDirection::Horizontal)
-        {
-            for (auto& child : children)
-            {
-                auto rect = child.GetClientRect();
-
-                rect->bottom = parent_size.cy + rect->top;
-
-                auto width = rect->right - rect->left;
-                rect->left = x_pos;
-                rect->right = rect->left + width;
-
-                
-                if (start_pos)
-                {
-                    rect->top = y_pos;
-                }
-
-                child.SetWindowPos(*rect);
-                x_pos += width;
-            }
-        }
-    }
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    inline void StackChildren(const window& parent, StackDirection direction = StackDirection::Vertical)
-    {
-        std::vector<window_ref> children;
-        children.reserve(8);
-
-        if (auto child = parent.GetChild(); child)
-        {
-          for (auto i = child->GetFirstSibling(); i != std::nullopt; i = i->GetNextSibling())
-          {
-              if (i)
-              {
-                children.emplace_back(std::move(*i));              
-              }
-          }
-        }
-
-        auto rect = parent.GetClientRect();
-        return StackChildren(SIZE {.cx = rect->left, .cy = rect->bottom }, children, direction);
-    }
-#endif
 }
 
 

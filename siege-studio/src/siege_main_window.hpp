@@ -83,8 +83,6 @@ struct siege_main_window : win32::window
 		assert(tab_control_instance);
 		tab_control = std::move(*tab_control_instance);
 
-		auto children = std::array<win32::window_ref, 2>{win32::window_ref(*dir_list), tab_control.ref()};
-        win32::StackChildren(*this->GetClientSize(), children, win32::StackDirection::Horizontal);
 
 		parent_size = tab_control.GetClientRect();
 
@@ -290,7 +288,7 @@ struct siege_main_window : win32::window
 											});
 
 										SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&parent_size));
-
+										child->SetWindowPos(*parent_size);
 										SetWindowLongPtrW(*child, GWLP_ID, index);
 									}
 								}

@@ -17,7 +17,4 @@
 #include "win32_rebar.hpp"
 #include "win32_track_bar.hpp"
 
-// custom controls
-#include "win32_stack_panel.hpp"
-
 #endif
