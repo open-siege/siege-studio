@@ -37,6 +37,7 @@ namespace siege::views
         }};
 
         win32::static_control static_image;
+        win32::list_view palettes_list;
         bmp_controller controller;
 
         win32::auto_handle<HBITMAP, gdi_deleter> current_bitmap;
@@ -53,9 +54,8 @@ namespace siege::views
             auto width = parent_size->cx;
 
             std::wstring temp = L"menu.pal";
-        
-
-            win32::list_view palettes_list = [&] {
+      
+            palettes_list = [&] {
                 auto palettes_list = *this_module.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
                             .hwndParent = *this,
 						    .cy = 300,  
@@ -196,11 +196,21 @@ namespace siege::views
             return std::nullopt;
         }
 
-     //   auto on_size(win32::size_message sized)
-	    //{
-		   // control_panel.SetWindowPos(nullptr, SWP_NOZORDER);
-     //       return std::nullopt;
-     //   }
+        auto on_size(win32::size_message sized)
+	    {
+            auto left_size = sized.client_size;
+            left_size.cx = (left_size.cx / 3) * 2;
+            auto right_size = sized.client_size;
+            right_size.cx -= left_size.cx;
+
+            static_image.SetWindowPos(POINT{});
+            static_image.SetWindowPos(left_size);
+
+            palettes_list.SetWindowPos(POINT{.x = left_size.cx});
+            palettes_list.SetWindowPos(right_size);
+
+            return std::nullopt;
+        }
 
         static bool is_bitmap(std::istream& raw_data)
         {
