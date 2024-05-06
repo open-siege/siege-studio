@@ -58,10 +58,6 @@ namespace siege::views
             palettes_list = [&] {
                 auto palettes_list = *this_module.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
                             .hwndParent = *this,
-						    .cy = 300,  
-                            .cx = 200,
-	            		    .y = 3,		
-                            .x = width - 200, 
                             .style = WS_VISIBLE | WS_CHILD | LVS_SINGLESEL | LVS_SHOWSELALWAYS,
                             .lpszName =  L"Palettes",
                             .lpszClass = L"MFC::CMFCListCtrl"
@@ -98,10 +94,8 @@ namespace siege::views
           static_image = *this_module.CreateWindowExW<win32::static_control>(
               win32::window_point_size{ 
                 .parent = *this,
-                .style = win32::window_style(WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_REALSIZECONTROL),
-                .size{.cx = (width / 3) * 2, .cy = parent_size->cy - 20}
+                .style = win32::window_style(WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_REALSIZECONTROL)
                 });
-
 
             return 0;
         }
