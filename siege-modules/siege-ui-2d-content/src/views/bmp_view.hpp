@@ -38,6 +38,15 @@ namespace siege::views
 
         win32::static_control static_image;
         win32::list_view palettes_list;
+        win32::window zoom;
+        win32::window frame_selector;
+        
+        win32::static_control frame_label;
+        win32::static_control frame_value;
+
+        win32::static_control zoom_label;
+        win32::static_control zoom_value;
+
         bmp_controller controller;
 
         win32::auto_handle<HBITMAP, gdi_deleter> current_bitmap;
@@ -55,10 +64,57 @@ namespace siege::views
 
             std::wstring temp = L"menu.pal";
       
+            frame_selector = *this_module.CreateWindowExW(::CREATESTRUCTW{
+                            .hwndParent = *this,
+                            .style = WS_VISIBLE | WS_CHILD | UDS_HORZ | UDS_SETBUDDYINT,
+                            .lpszName =  L"Frame Selector",
+                            .lpszClass = UPDOWN_CLASSW
+            });
+
+            frame_label = *this_module.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
+                            .hwndParent = *this,
+                            .style = WS_VISIBLE | WS_CHILD | SS_LEFT,
+                            .lpszName =  L"Frame: "
+            });
+
+            frame_value = *this_module.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
+                            .hwndParent = *this,
+                            .style = WS_VISIBLE | WS_CHILD | SS_LEFT,
+                            .lpszName =  L""
+            });
+
+
+            ::SendMessageW(frame_selector, UDM_SETBUDDY, win32::wparam_t(win32::hwnd_t(frame_value)), 0);
+            ::SendMessageW(frame_selector, UDM_SETRANGE, 0, MAKELPARAM(1, 1));
+                
+            zoom = *this_module.CreateWindowExW(::CREATESTRUCTW{
+                            .hwndParent = *this,
+                            .style = WS_VISIBLE | WS_CHILD | UDS_SETBUDDYINT,
+                            .lpszName =  L"Zoom",
+                            .lpszClass = UPDOWN_CLASSW
+                });
+
+            zoom_label = *this_module.CreateWindowExW<win32::static_control>(
+              win32::window_point_size{ 
+                .parent = *this,
+                .caption = L"Zoom: ",
+                .style = win32::window_style(WS_VISIBLE | WS_CHILD | SS_LEFT),
+                });
+
+            zoom_value = *this_module.CreateWindowExW<win32::static_control>(
+              win32::window_point_size{ 
+                .parent = *this,
+                .style = win32::window_style(WS_VISIBLE | WS_CHILD | SS_LEFT),
+                });
+
+            ::SendMessageW(zoom, UDM_SETBUDDY, win32::wparam_t(win32::hwnd_t(zoom_value)), 0);
+
+            ::SendMessageW(zoom, UDM_SETRANGE, 0, MAKELPARAM(100, 1));
+
             palettes_list = [&] {
                 auto palettes_list = *this_module.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
                             .hwndParent = *this,
-                            .style = WS_VISIBLE | WS_CHILD | LVS_SINGLESEL | LVS_SHOWSELALWAYS,
+                            .style = WS_VISIBLE | WS_CHILD | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER,
                             .lpszName =  L"Palettes",
                             .lpszClass = L"MFC::CMFCListCtrl"
                 });
@@ -71,14 +127,11 @@ namespace siege::views
                 }));
         
             palettes_list.SetExtendedListViewStyle(0, 
-                    LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT);
+                    LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_AUTOSIZECOLUMNS);
 
             palettes_list.win32::list_view::InsertColumn(-1, LVCOLUMNW {
-                 .cx = LVSCW_AUTOSIZE,
-                .pszText = const_cast<wchar_t*>(L""),
-                .cxMin = 100,
-                .cxDefault = this->GetClientSize()->cx,
-                });
+                .pszText = const_cast<wchar_t*>(L"")
+               });
 
             std::vector<win32::list_view_group> groups {
                 {L"main.dpl", {{ L"palette 1"}, { L"palette 2"}, { L"palette 3"}}},
@@ -99,6 +152,50 @@ namespace siege::views
 
             return 0;
         }
+
+        auto on_size(win32::size_message sized)
+	    {
+            auto left_size = SIZE{ .cx = (sized.client_size.cx / 3) * 2, .cy = sized.client_size.cy };
+            auto right_size = SIZE{ .cx = sized.client_size.cx - left_size.cx, .cy = sized.client_size.cy };
+
+            const auto top_left_height = left_size.cy / 20;
+            const auto top_left_width = left_size.cx / 6;
+
+            auto x = 0;
+
+            frame_label.SetWindowPos(POINT{.x = x });
+            frame_label.SetWindowPos(SIZE{ .cx = left_size.cx / 6, .cy = top_left_height });
+            x += top_left_width;
+
+            frame_value.SetWindowPos(POINT{.x = x });
+            frame_value.SetWindowPos(SIZE{ .cx = left_size.cx / 6, .cy = top_left_height });
+            x += top_left_width;
+
+            frame_selector.SetWindowPos(POINT{.x = x});
+            frame_selector.SetWindowPos(SIZE{ .cx = left_size.cx / 6, .cy = top_left_height });
+            x += top_left_width;
+
+            zoom_label.SetWindowPos(POINT{.x =  x});
+            zoom_label.SetWindowPos(SIZE{ .cx = left_size.cx / 6, .cy = top_left_height });
+            x += top_left_width;
+
+            zoom_value.SetWindowPos(POINT{.x = x });
+            zoom_value.SetWindowPos(SIZE{ .cx = left_size.cx / 6, .cy = top_left_height });
+            x += top_left_width;
+
+            zoom.SetWindowPos(POINT{.x = x });
+            zoom.SetWindowPos(SIZE{ .cx = left_size.cx / 6, .cy = top_left_height });
+
+            static_image.SetWindowPos(POINT{ .y = top_left_height });
+            static_image.SetWindowPos(SIZE{ .cx = left_size.cx, .cy = left_size.cy - top_left_height });
+
+            palettes_list.SetWindowPos(POINT{.x = left_size.cx });
+            palettes_list.SetWindowPos(right_size);
+            palettes_list.SetColumnWidth(0, right_size.cx);
+
+            return std::nullopt;
+        }
+
 
         std::optional<LRESULT> on_get_object(win32::get_object_message message)
         {
@@ -126,6 +223,7 @@ namespace siege::views
 
                 if (count > 0)
                 {
+                    ::SendMessageW(frame_selector, UDM_SETRANGE, 0, MAKELPARAM(count, 1));
                     auto size = static_image.GetClientSize();
                     BITMAPINFO info{
                                 .bmiHeader {
@@ -137,7 +235,7 @@ namespace siege::views
                                     .biCompression = BI_RGB
                                 }
                             };
-                   auto wnd_dc = ::GetDC(nullptr);
+                    auto wnd_dc = ::GetDC(nullptr);
 
                     void* pixels = nullptr;
                     current_bitmap.reset(::CreateDIBSection(wnd_dc, &info, DIB_RGB_COLORS, &pixels, nullptr, 0));
@@ -186,22 +284,6 @@ namespace siege::views
                 ClientToScreen(sender, &pos);
                 TrackPopupMenu(menu, TPM_LEFTALIGN, pos.x, pos.y + rect->bottom,  0, sender, nullptr);
             }
-
-            return std::nullopt;
-        }
-
-        auto on_size(win32::size_message sized)
-	    {
-            auto left_size = sized.client_size;
-            left_size.cx = (left_size.cx / 3) * 2;
-            auto right_size = sized.client_size;
-            right_size.cx -= left_size.cx;
-
-            static_image.SetWindowPos(POINT{});
-            static_image.SetWindowPos(left_size);
-
-            palettes_list.SetWindowPos(POINT{.x = sized.client_size.cx - right_size.cx});
-            palettes_list.SetWindowPos(right_size);
 
             return std::nullopt;
         }

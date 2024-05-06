@@ -231,23 +231,31 @@ namespace win32
 
         #endif
 
-        inline std::optional<RECT> GetClientRect() const
+        inline std::optional<RECT> GetClientRect(bool mapped = true) const
         {
             RECT result;
             if (::GetClientRect(*this, &result))
             {
-                return result;
+                if (mapped && ::MapWindowPoints(*this, ::GetParent(*this), (LPPOINT)&result,2) != 0)
+                {
+                    return result;
+                }
+                else if (!mapped)
+                {
+                    return result;
+                }
             }
 
             return std::nullopt;
         }
 
-        inline std::optional<SIZE> GetClientSize() const
+        inline std::optional<SIZE> GetClientSize(bool mapped = true) const
         {
-            RECT result;
-            if (::GetClientRect(*this, &result))
+            auto rect = GetClientRect(mapped);
+
+            if (rect)
             {
-                return SIZE {.cx = result.right - result.left, .cy = result.bottom - result.top };
+               return SIZE {.cx = rect->right - rect->left, .cy = rect->bottom - rect->top };                
             }
 
             return std::nullopt;
