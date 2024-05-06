@@ -105,7 +105,7 @@ struct siege_main_window : win32::window
         tab_control.SetWindowPos(POINT{.x = sized.client_size.cx - right_size.cx});
         tab_control.SetWindowPos(right_size);
 
-		auto tab_rect = *this->GetClientRect();
+		auto tab_rect = *tab_control.GetClientRect();
 
 		SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&tab_rect));
 
@@ -213,7 +213,7 @@ struct siege_main_window : win32::window
 									{
 										auto class_name = plugin->GetWindowClassForStream(*stream);
 
-										auto parent_size = *this->GetClientRect();
+										auto parent_size = *tab_control.GetClientRect();
 
 										SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&parent_size));
 
