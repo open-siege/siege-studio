@@ -1,0 +1,32 @@
+<window title="Volume View">
+    <stack-panel orientation="vertical">
+        <stack-panel>
+            <button>
+                Select file
+            </button>
+
+            <button>
+                Extract This File
+            </button>
+
+            <button>
+                Extract All Files
+            </button>
+
+            <edit />
+        </stack-panel>
+
+        <header>
+            <header.items>
+                <heading>Image Folder</heading>
+                <heading>Image</heading>
+                <heading>Default Palette</heading>
+                <heading>Default Palette Index</heading>
+                <heading>Selected Palette</heading>
+                <heading>Selected Palette Index</heading>
+                <heading>Actions</heading>
+            </header.items>
+
+        </header>
+    </stack-panel>
+</window>

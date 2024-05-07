@@ -1,0 +1,28 @@
+#ifndef WIN32_STATIC_HPP
+#define WIN32_STATIC_HPP
+
+#include <siege/platform/win/desktop/win32_window.hpp>
+#include <CommCtrl.h>
+
+namespace win32
+{
+    struct static_control : window
+    {
+        using window::window;
+        constexpr static auto class_name = WC_STATICW;
+        constexpr static std::uint16_t dialog_id = 0x0082;
+
+        HBITMAP SetImage(HBITMAP image)
+        {
+            return HBITMAP(SendMessageW(*this, STM_SETIMAGE, IMAGE_BITMAP, lparam_t(image)));
+        }
+    };
+
+    struct native_font : window
+    {
+        using window::window;
+        constexpr static auto class_name = WC_NATIVEFONTCTLW;
+    };
+}
+
+#endif
