@@ -1,7 +1,7 @@
 #ifndef WIN32_SINGULAR_CONTROLS_HPP
 #define WIN32_SINGULAR_CONTROLS_HPP
 
-
+#include <expected>
 #include <siege/platform/win/desktop/win32_window.hpp>
 #include <CommCtrl.h>
 

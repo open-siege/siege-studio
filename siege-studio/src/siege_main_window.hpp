@@ -1,7 +1,7 @@
 #ifndef SIEGE_MAIN_WINDOW_HPP
 #define SIEGE_MAIN_WINDOW_HPP
 
-#include <siege/platform/win/desktop/win32_controls.hpp>
+#include <siege/platform/win/desktop/win32_common_controls.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include "siege-plugin.hpp"
 

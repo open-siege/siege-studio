@@ -1,7 +1,7 @@
 #ifndef BITMAPWINDOW_HPP
 #define BITMAPWINDOW_HPP
 
-#include <siege/platform/win/desktop/win32_controls.hpp>
+#include <siege/platform/win/desktop/win32_common_controls.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include <siege/platform/win/auto_handle.hpp>
 #include <siege/platform/win/core/com_collection.hpp>
@@ -97,7 +97,7 @@ namespace siege::views
             zoom_label = *this_module.CreateWindowExW<win32::static_control>(
               ::CREATESTRUCTW{ 
                 .hwndParent = *this,
-                .style = win32::window_style(WS_VISIBLE | WS_CHILD | SS_LEFT),
+                .style = WS_VISIBLE | WS_CHILD | SS_LEFT,
                 .lpszName = L"Zoom: ",
                 });
 
@@ -254,14 +254,6 @@ namespace siege::views
 
         auto on_message(win32::message message)
         {
-            if (message.message == WM_MEASUREITEM || message.message == WM_DRAWITEM)
-            {
-                win32::ForEachDirectChildWindow(*this, [&](auto child) {
-
-            
-		        });
-        
-            }
 		    return std::nullopt;
         }
 

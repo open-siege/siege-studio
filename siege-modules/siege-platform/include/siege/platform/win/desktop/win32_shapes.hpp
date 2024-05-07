@@ -1,7 +1,7 @@
 #ifndef WIN32_SHAPES_HPP
 #define WIN32_SHAPES_HPP
 
-#include <siege/platform/win/desktop/win32_user32.hpp>
+#include <siege/platform/win/desktop/win32_messages.hpp>
 
 namespace win32
 {

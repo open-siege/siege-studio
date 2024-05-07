@@ -39,11 +39,6 @@ namespace win32
 
         }
 
-        inline void SetWindowTheme()
-        {
-
-        }
-
     };
 
     struct link : window
@@ -610,7 +605,7 @@ namespace win32
     
     struct tool_bar : control
     {
-        using window::window;
+        using control::control;
         constexpr static auto class_name = TOOLBARCLASSNAMEW;
 
         enum extended_style : DWORD

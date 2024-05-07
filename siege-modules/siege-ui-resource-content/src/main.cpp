@@ -1,5 +1,7 @@
-#include <siege/platform/win/desktop/win32_controls.hpp>
+#include <siege/platform/win/desktop/win32_common_controls.hpp>
+#include <siege/platform/win/desktop/win32_class.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
+#include <siege/platform/win/desktop/win32_menu.hpp>
 #include <bit>
 #include <filesystem>
 #include <cassert>
@@ -24,21 +26,21 @@ struct volume_window : win32::window
 
         win32::window_factory factory;
 
-        auto root = factory.CreateWindowExW<win32::rebar>(win32::window_params<>{
-            .parent = *this,
-            .class_name = win32::rebar::class_Name,
-            .style{win32::window_style(WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS |
+        auto root = factory.CreateWindowExW<win32::rebar>(::CREATESTRUCTW{
+            .hwndParent = *this,
+            .style{WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS |
                                         WS_CLIPCHILDREN | CCS_TOP | 
-                                        CCS_VERT | RBS_AUTOSIZE | RBS_FIXEDORDER | RBS_VERTICALGRIPPER) }
+                                        CCS_VERT | RBS_AUTOSIZE | RBS_FIXEDORDER | RBS_VERTICALGRIPPER },
+            .lpszClass = win32::rebar::class_Name,
         });
 
         assert(root);
 
-        auto rebar = factory.CreateWindowExW<win32::rebar>(win32::window_params<>{
-            .parent = *root,
-            .class_name = win32::rebar::class_Name,
-            .style{win32::window_style(WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS |
-                WS_CLIPCHILDREN | RBS_VARHEIGHT | RBS_BANDBORDERS)}
+        auto rebar = factory.CreateWindowExW<win32::rebar>(::CREATESTRUCTW{
+            .hwndParent = *this,
+            .style{WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS |
+                WS_CLIPCHILDREN | RBS_VARHEIGHT | RBS_BANDBORDERS},
+            .lpszClass = win32::rebar::class_Name,
         });
 
         auto toolbar = factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{
@@ -160,39 +162,10 @@ struct volume_window : win32::window
         return 0;
     }
 
-    auto on_notify(win32::toolbar_notify_message notification)
-    {
-        auto [sender, id, code] = notification;
-        auto mapped_result = win32::MapWindowPoints(sender, HWND_DESKTOP, *win32::tool_bar(sender).GetRect(id));
-
-        // TODO: create and add menu items
-        win32::TrackPopupMenuEx(LoadMenuIndirectW(nullptr), 0, POINT{mapped_result->second.left, mapped_result->second.bottom}, sender, TPMPARAMS {
-            .rcExclude = mapped_result->second
-        });
-
-        return 0;
-    }
-
-
-   auto on_size(win32::size_message sized)
+    auto on_size(win32::size_message sized)
 	{
-		win32::ForEachDirectChildWindow(*this, [&](auto child) {            
-            for (auto i = 0; i < win32::rebar(child).GetBandCount(); ++i)
-            {
-                auto info = win32::rebar(child).GetBandChildSize(i);
-
-                if (info)
-                {
-                    info->cyMinChild = sized.client_size.cx;
-                    info->cyChild = sized.client_size.cx;
-                    win32::rebar(child).SetBandInfo(i, std::move(*info));
-                }
-            }
-		});
-
 		return std::nullopt;
 	}
-
 
     static bool is_bitmap(std::istream& raw_data)
     {
@@ -338,16 +311,15 @@ extern "C"
 
            std::filesystem::path module_path(module_file_name.data());
 
-
+           win32::window_module_ref this_module(hinstDLL);
            if (fdwReason == DLL_PROCESS_ATTACH)
            {
-               win32::RegisterClassExW<volume_window>(WNDCLASSEXW{
-                .hInstance = hinstDLL
-                });
+               this_module.RegisterClassW(win32::window_meta_class<volume_window>());
+
             }
             else if (fdwReason == DLL_PROCESS_DETACH)
             {
-               win32::UnregisterClassW<volume_window>(hinstDLL);
+               this_module.UnregisterClassW<volume_window>();
             }
         }
 

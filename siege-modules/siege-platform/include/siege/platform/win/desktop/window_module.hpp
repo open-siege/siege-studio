@@ -1,6 +1,7 @@
 #ifndef WINDOW_MODULE_HPP
 #define WINDOW_MODULE_HPP
 
+#include <expected>
 #include <siege/platform/win/core/module.hpp>
 #include <siege/platform/win/desktop/win32_window.hpp>
 #include <WinUser.h>
@@ -39,10 +40,16 @@ namespace win32
 			return window_module_ref(module_ref::current_module().get()); 
 		}
 
-        template <typename TClass>
-        auto UnregisterClassW(HINSTANCE instance)
+        auto RegisterClassW(::WNDCLASSEXW meta)
         {
-            return ::UnregisterClassW(type_name<TClass>().c_str(), instance);
+            meta.cbSize = sizeof(::WNDCLASSEXW);
+            return ::RegisterClassExW(&meta);
+        }
+
+        template <typename TClass>
+        auto UnregisterClassW()
+        {
+            return ::UnregisterClassW(type_name<TClass>().c_str(), get());
         }
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -71,8 +78,6 @@ namespace win32
 			return std::nullopt;
 		}
 #endif
-
-        
 
 		template <typename TControl = window>
         std::expected<TControl, DWORD> CreateWindowExW(CREATESTRUCTW params)

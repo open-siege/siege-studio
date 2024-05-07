@@ -4,7 +4,7 @@
 #include <string_view>
 #include <istream>
 #include <spanstream>
-#include <siege/platform/win/desktop/win32_controls.hpp>
+#include <siege/platform/win/desktop/win32_common_controls.hpp>
 #include <siege/platform/win/desktop/win32_shapes.hpp>
 #include "pal_controller.hpp"
 

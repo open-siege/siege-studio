@@ -1,4 +1,5 @@
-#include <siege/platform/win/desktop/win32_controls.hpp>
+#include <siege/platform/win/desktop/win32_common_controls.hpp>
+#include <siege/platform/win/desktop/win32_class.hpp>
 #include <bit>
 #include <filesystem>
 #include <memory>
@@ -31,10 +32,6 @@ struct pal_mapping_window
 
     auto on_size(win32::size_message sized)
 	{
-		win32::ForEachDirectChildWindow(self, [&](auto child) {
-	//		win32::SetWindowPos(child, sized.client_size);
-		});
-
 		return std::nullopt;
 	}
 };
@@ -202,17 +199,23 @@ extern "C"
                 return TRUE; // do not do cleanup if process termination scenario
             }
 
+            win32::window_module_ref this_module(hinstDLL);
+
            if (fdwReason == DLL_PROCESS_ATTACH)
            {
-                win32::RegisterClassExW<siege::views::bmp_view>(WNDCLASSEXW{.hInstance = hinstDLL });
-                win32::RegisterClassExW<siege::views::pal_view>(WNDCLASSEXW{.hInstance = hinstDLL});
-                win32::RegisterClassExW<pal_mapping_window>(WNDCLASSEXW{.hInstance = hinstDLL});
+               this_module.RegisterClassW(win32::window_meta_class<siege::views::bmp_view>());
+               this_module.RegisterClassW(win32::window_meta_class<siege::views::pal_view>());
+               this_module.RegisterClassW(win32::window_meta_class<pal_mapping_window>());
             }
             else if (fdwReason == DLL_PROCESS_DETACH)
             {
-               win32::UnregisterClassW<siege::views::bmp_view>(hinstDLL);
-               win32::UnregisterClassW<siege::views::pal_view>(hinstDLL);
-               win32::UnregisterClassW<pal_mapping_window>(hinstDLL);
+               this_module.UnregisterClassW<siege::views::bmp_view>();
+               this_module.UnregisterClassW<siege::views::pal_view>();
+               this_module.UnregisterClassW<pal_mapping_window>();
+
+               this_module.UnregisterClassW<siege::views::bmp_view>();
+               this_module.UnregisterClassW<siege::views::pal_view>();
+               this_module.UnregisterClassW<pal_mapping_window>();
             }
         }
 
