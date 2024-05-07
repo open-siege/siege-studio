@@ -39,6 +39,12 @@ namespace win32
 			return window_module_ref(module_ref::current_module().get()); 
 		}
 
+        template <typename TClass>
+        auto UnregisterClassW(HINSTANCE instance)
+        {
+            return ::UnregisterClassW(type_name<TClass>().c_str(), instance);
+        }
+
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 		std::optional<WNDCLASSEXW> GetClassInfoExW(std::wstring_view name)
 		{

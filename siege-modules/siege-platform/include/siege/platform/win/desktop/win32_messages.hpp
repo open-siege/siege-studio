@@ -25,6 +25,9 @@ namespace win32
 	using lparam_array = std::array<std::byte, sizeof(LPARAM)>;
 	static_assert(sizeof(std::uint32_t) == sizeof(UINT));
 
+	using hinstance_t = HINSTANCE;
+    using lresult_t = LRESULT;
+
 	using hwnd_t = HWND;
 
 	struct message

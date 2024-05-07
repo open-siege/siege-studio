@@ -233,6 +233,77 @@ namespace win32
         {
             return ::MoveWindow(*this, position.x, position.y, size.cx, size.cy, repaint ? TRUE : FALSE);
         }
+
+        #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        [[maybe_unused]] inline auto EnumPropsExW(hwnd_t control, std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback)
+        {
+            struct Handler
+            {
+                inline static BOOL HandleEnum(hwnd_t self, LPWSTR key, HANDLE data, ULONG_PTR raw_callback)
+                {
+                    if (key == nullptr)
+                    {
+                        return TRUE;
+                    }
+
+                    auto real_callback = std::bit_cast<std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)>*>(raw_callback);
+
+
+                    std::wstring_view keyView;
+
+                    auto intAtom = ::GlobalFindAtomW(key);
+                    if (intAtom == (ATOM)key)
+                    {
+                        thread_local std::array<wchar_t, 256> temp;
+                        auto size = GlobalGetAtomNameW(intAtom, temp.data(), temp.size());
+                        temp[size] = 0;
+                        keyView = temp.data();
+                    }
+                    else
+                    {
+                        keyView = key;
+                    }
+
+                    return real_callback->operator()(self, keyView, data) ? TRUE : FALSE;
+                }
+            };
+
+            return ::EnumPropsExW(control, Handler::HandleEnum, std::bit_cast<LPARAM>(&callback));
+        }
+
+        [[maybe_unused]] inline auto ForEachPropertyExW(hwnd_t control, std::move_only_function<void(hwnd_t, std::wstring_view, HANDLE)> callback)
+        {
+            return EnumPropsExW(control, [callback = std::move(callback)] (auto self, auto key, auto value) mutable
+            {
+                callback(self, key, value);
+                return true;
+            });
+        }
+
+        [[maybe_unused]] inline auto FindPropertyExW(hwnd_t control, std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback)
+        {
+            return EnumPropsExW(control, [callback = std::move(callback)] (auto self, auto key, auto value) mutable
+            {
+                return callback(self, key, value) != false;
+            });
+        }
+        #endif
+
+        #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    
+
+    inline std::optional<std::pair<POINT, RECT>> MapWindowPoints(hwnd_t from, hwnd_t to, RECT source)
+    {
+        auto result = ::MapWindowPoints(from, to, reinterpret_cast<POINT*>(&source), sizeof(RECT) / sizeof(POINT));
+
+        if (result)
+        {
+            return std::make_pair(POINT{LOWORD(result), HIWORD(result)}, source);
+        }
+
+        return std::nullopt;
+    }
+#endif
 	};
 
     struct window_ref : window_base<no_deleter, window_ref>
