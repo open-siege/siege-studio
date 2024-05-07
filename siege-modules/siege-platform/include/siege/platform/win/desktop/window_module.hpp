@@ -40,9 +40,10 @@ namespace win32
 			return window_module_ref(module_ref::current_module().get()); 
 		}
 
-        auto RegisterClassW(::WNDCLASSEXW meta)
+        auto RegisterClassExW(::WNDCLASSEXW meta)
         {
             meta.cbSize = sizeof(::WNDCLASSEXW);
+            meta.hInstance = *this;
             return ::RegisterClassExW(&meta);
         }
 

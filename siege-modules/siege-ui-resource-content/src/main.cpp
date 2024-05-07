@@ -314,7 +314,7 @@ extern "C"
            win32::window_module_ref this_module(hinstDLL);
            if (fdwReason == DLL_PROCESS_ATTACH)
            {
-               this_module.RegisterClassW(win32::window_meta_class<volume_window>());
+               this_module.RegisterClassExW(win32::window_meta_class<volume_window>());
 
             }
             else if (fdwReason == DLL_PROCESS_DETACH)
