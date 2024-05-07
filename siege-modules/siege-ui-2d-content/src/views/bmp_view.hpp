@@ -95,16 +95,16 @@ namespace siege::views
                 });
 
             zoom_label = *this_module.CreateWindowExW<win32::static_control>(
-              win32::window_point_size{ 
-                .parent = *this,
-                .caption = L"Zoom: ",
+              ::CREATESTRUCTW{ 
+                .hwndParent = *this,
                 .style = win32::window_style(WS_VISIBLE | WS_CHILD | SS_LEFT),
+                .lpszName = L"Zoom: ",
                 });
 
             zoom_value = *this_module.CreateWindowExW<win32::static_control>(
-              win32::window_point_size{ 
-                .parent = *this,
-                .style = win32::window_style(WS_VISIBLE | WS_CHILD | SS_LEFT),
+              ::CREATESTRUCTW{ 
+                .hwndParent = *this,
+                .style = WS_VISIBLE | WS_CHILD | SS_LEFT,
                 });
 
             ::SendMessageW(zoom, UDM_SETBUDDY, win32::wparam_t(win32::hwnd_t(zoom_value)), 0);
@@ -144,10 +144,9 @@ namespace siege::views
             return palettes_list;
           }();
 
-          static_image = *this_module.CreateWindowExW<win32::static_control>(
-              win32::window_point_size{ 
-                .parent = *this,
-                .style = win32::window_style(WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_REALSIZECONTROL)
+          static_image = *this_module.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
+                .hwndParent = *this,
+                .style = WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_REALSIZECONTROL
                 });
 
             return 0;
