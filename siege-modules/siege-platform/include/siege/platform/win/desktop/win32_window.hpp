@@ -1,7 +1,7 @@
 #ifndef WIN32_WINDOW_HPP
 #define WIN32_WINDOW_HPP
 
-#include <siege/platform/win/desktop/win32_user32.hpp>
+#include <siege/platform/win/desktop/win32_messages.hpp>
 #include <siege/platform/win/auto_handle.hpp>
 
 #undef GetFirstSibling
@@ -271,18 +271,18 @@ namespace win32
             return ::EnumPropsExW(control, Handler::HandleEnum, std::bit_cast<LPARAM>(&callback));
         }
 
-        [[maybe_unused]] inline auto ForEachPropertyExW(hwnd_t control, std::move_only_function<void(hwnd_t, std::wstring_view, HANDLE)> callback)
+        [[maybe_unused]] inline auto ForEachPropertyExW(std::move_only_function<void(hwnd_t, std::wstring_view, HANDLE)> callback)
         {
-            return EnumPropsExW(control, [callback = std::move(callback)] (auto self, auto key, auto value) mutable
+            return EnumPropsExW(*this, [callback = std::move(callback)] (auto self, auto key, auto value) mutable
             {
                 callback(self, key, value);
                 return true;
             });
         }
 
-        [[maybe_unused]] inline auto FindPropertyExW(hwnd_t control, std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback)
+        [[maybe_unused]] inline auto FindPropertyExW(std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback)
         {
-            return EnumPropsExW(control, [callback = std::move(callback)] (auto self, auto key, auto value) mutable
+            return EnumPropsExW(*this, [callback = std::move(callback)] (auto self, auto key, auto value) mutable
             {
                 return callback(self, key, value) != false;
             });

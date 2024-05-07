@@ -132,7 +132,7 @@ namespace win32
     template <typename TWindow, int StaticSize = 0>
     struct window_meta_class : WNDCLASSEXW
     {
-        window_meta_class() : WNDCLASSEXW
+        window_meta_class() : WNDCLASSEXW{}
         {
             constexpr static auto data_size = sizeof(TWindow) / sizeof(LONG_PTR);
             constexpr static auto extra_size = sizeof(TWindow) % sizeof(LONG_PTR) == 0 ? 0 : 1;
@@ -165,7 +165,7 @@ namespace win32
                                 ::HeapFree(heap, 0, data);
                             }
 
-                            ForEachPropertyExW(hWnd, [](auto wnd, std::wstring_view name, HANDLE handle) {
+                            win32::window_ref(hWnd).ForEachPropertyExW([](auto wnd, std::wstring_view name, HANDLE handle) {
                                 ::RemovePropW(wnd, name.data());
                             });
                             return 0;
@@ -249,9 +249,9 @@ namespace win32
                 this->cbWndExtra = sizeof(std::size_t) * 3;
             }
         }
-    }
+    };
 
-    template <TWindow>
+    template <typename TWindow>
     struct static_window_meta_class : ::WNDCLASSEXW
     {
         static_window_meta_class() : ::WNDCLASSEXW{}
@@ -393,7 +393,7 @@ namespace win32
                 this->cbClsExtra =  sizeof(std::size_t) * 4;
             }
         }
-    }
+    };
 }
 
 #endif
