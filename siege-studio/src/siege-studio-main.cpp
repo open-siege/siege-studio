@@ -15,6 +15,7 @@
 #include <cassert>
 
 #include <siege/platform/win/desktop/win32_dialogs.hpp>
+#include <siege/platform/win/desktop/win32_class.hpp>
 #include <siege/platform/win/core/com_client.hpp>
 #include <commctrl.h>
 #include <oleacc.h>
@@ -39,7 +40,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	if (IsDebuggerPresent())
 	{
-		std::pmr::set_default_resource(std::pmr::null_memory_resource());
+//		std::pmr::set_default_resource(std::pmr::null_memory_resource());
 	}
 
 	win32::com::init_com();
@@ -52,13 +53,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	auto mfcHandle = LoadLibraryExW(L"siege-win-mfc.dll", nullptr, 0);
 
-	win32::RegisterClassExW<siege_main_window>(WNDCLASSEXW {
-		.style{CS_HREDRAW | CS_VREDRAW},
-		.hInstance = hInstance,
-		.hCursor = LoadCursorW(hInstance, IDC_ARROW),
-		.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1),
-		.lpszClassName{win32::type_name<siege_main_window>().c_str()},
-	});
+	win32::window_module_ref this_module(hInstance);
+
+	win32::window_meta_class<siege_main_window> info{};
+	info.style = CS_HREDRAW | CS_VREDRAW;
+	info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
+	info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	this_module.RegisterClassExW(info);
 
 	auto main_menu = ::CreateMenu();
 

@@ -203,9 +203,9 @@ extern "C"
 
            if (fdwReason == DLL_PROCESS_ATTACH)
            {
-               this_module.RegisterClassW(win32::window_meta_class<siege::views::bmp_view>());
-               this_module.RegisterClassW(win32::window_meta_class<siege::views::pal_view>());
-               this_module.RegisterClassW(win32::window_meta_class<pal_mapping_window>());
+               this_module.RegisterClassExW(win32::window_meta_class<siege::views::bmp_view>());
+               this_module.RegisterClassExW(win32::window_meta_class<siege::views::pal_view>());
+               this_module.RegisterClassExW(win32::window_meta_class<pal_mapping_window>());
             }
             else if (fdwReason == DLL_PROCESS_DETACH)
             {

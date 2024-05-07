@@ -155,27 +155,32 @@ namespace win32
 
         #endif
 
-        inline std::optional<RECT> GetClientRect(bool mapped = true) const
+        inline std::optional<RECT> GetClientRect() const
         {
             RECT result;
             if (::GetClientRect(*this, &result))
             {
-                if (mapped && ::MapWindowPoints(*this, ::GetParent(*this), (LPPOINT)&result,2) != 0)
-                {
-                    return result;
-                }
-                else if (!mapped)
-                {
-                    return result;
-                }
+                return result;
             }
 
             return std::nullopt;
         }
 
-        inline std::optional<SIZE> GetClientSize(bool mapped = true) const
+        inline std::optional<std::pair<POINT, RECT>> MapWindowPoints(hwnd_t to, RECT source)
         {
-            auto rect = GetClientRect(mapped);
+            auto result = ::MapWindowPoints(*this, to, reinterpret_cast<POINT*>(&source), sizeof(RECT) / sizeof(POINT));
+
+            if (result)
+            {
+                return std::make_pair(POINT{LOWORD(result), HIWORD(result)}, source);
+            }
+
+            return std::nullopt;
+        }
+
+        inline std::optional<SIZE> GetClientSize() const
+        {
+            auto rect = GetClientRect();
 
             if (rect)
             {
@@ -289,21 +294,6 @@ namespace win32
         }
         #endif
 
-        #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    
-
-    inline std::optional<std::pair<POINT, RECT>> MapWindowPoints(hwnd_t from, hwnd_t to, RECT source)
-    {
-        auto result = ::MapWindowPoints(from, to, reinterpret_cast<POINT*>(&source), sizeof(RECT) / sizeof(POINT));
-
-        if (result)
-        {
-            return std::make_pair(POINT{LOWORD(result), HIWORD(result)}, source);
-        }
-
-        return std::nullopt;
-    }
-#endif
 	};
 
     struct window_ref : window_base<no_deleter, window_ref>

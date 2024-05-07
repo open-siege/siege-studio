@@ -2,6 +2,7 @@
 #define WIN32_CLASS_HPP
 
 #include "win32_messages.hpp"
+#include "win32_window.hpp"
 
 namespace win32
 {
@@ -232,7 +233,7 @@ namespace win32
 
             this->cbSize = sizeof(WNDCLASSEXW);
             this->lpfnWndProc = handler::WindowHandler;
-            auto window_type_name = type_name<TWindow>();
+            static auto window_type_name = type_name<TWindow>();
             this->lpszClassName = this->lpszClassName ? this->lpszClassName : window_type_name.c_str();
 
             static_assert(StaticSize <= 40, "StaticSize is too big for cbClsExtra");

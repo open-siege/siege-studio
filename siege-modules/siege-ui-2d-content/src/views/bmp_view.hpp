@@ -251,38 +251,6 @@ namespace siege::views
 
 			return FALSE;
 		}
-
-        auto on_message(win32::message message)
-        {
-		    return std::nullopt;
-        }
-
-        auto on_command(win32::command_message message)
-        {
-            auto sender = message.sender;
-
-            auto menu = GetMenu(sender);
-
-            if (menu)
-            {
-                auto rect = win32::window(sender).GetClientRect();
-
-                POINT pos {
-                    .x = rect->left,
-                    .y = rect->top
-                };
-
-                ClientToScreen(sender, &pos);
-                TrackPopupMenu(menu, TPM_LEFTALIGN, pos.x, pos.y + rect->bottom,  0, sender, nullptr);
-            }
-
-            return std::nullopt;
-        }
-
-        static bool is_bitmap(std::istream& raw_data)
-        {
-            return false;
-        }
     };
 }
 
