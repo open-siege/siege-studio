@@ -2,10 +2,26 @@
 #define WIN32_SHAPES_HPP
 
 #include <siege/platform/win/desktop/win32_messages.hpp>
+#include <siege/platform/win/auto_handle.hpp>
 
 namespace win32
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+
+	struct gdi_deleter
+    {
+        void operator()(HGDIOBJ gdi_obj)
+        {
+            assert(::DeleteObject(gdi_obj) == TRUE);
+        }
+    };
+
+    using gdi_bitmap = win32::auto_handle<HBITMAP, gdi_deleter>;
+    using gdi_brush = win32::auto_handle<HBRUSH, gdi_deleter>;
+    using gdi_palette = win32::auto_handle<HPALETTE, gdi_deleter>;
+    using gdi_pen = win32::auto_handle<HPEN, gdi_deleter>;
+    using gdi_font = win32::auto_handle<HFONT, gdi_deleter>;
+
 	struct paint_context : ::PAINTSTRUCT
 	{
 		paint_context() : ::PAINTSTRUCT{}

@@ -64,6 +64,7 @@ namespace win32
 
     struct list_box : window
     {
+        using window::window;
         constexpr static auto class_name = WC_LISTBOXW;
         constexpr static std::uint16_t dialog_id = 0x0083;
 

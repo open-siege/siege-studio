@@ -4,12 +4,14 @@
 #include <vector>
 #include <siege/platform/win/desktop/window_module.hpp>
 
-
 namespace win32
 {
 	struct window_factory
 	{
 		std::vector<window_module_ref> modules;
+
+        win32::window_ref parent;
+
 
         window_factory()
         {
@@ -17,6 +19,12 @@ namespace win32
             modules.emplace_back(::GetModuleHandleW(L"comctl32.dll"));
             modules.emplace_back(::GetModuleHandleW(L"siege-win-mfc.dll"));
         }
+
+        window_factory(win32::window_ref parent) : window_factory()
+        {
+            this->parent = std::move(parent);
+        }
+
 
 		template <typename TControl = window>
         std::expected<TControl, DWORD> CreateWindowExW(CREATESTRUCTW params)
@@ -51,6 +59,11 @@ namespace win32
                     params.lpszClass = class_name.c_str();
                     params.hInstance = *module_iter;
                 }
+            }
+
+            if (!params.hwndParent && this->parent)
+            {
+                params.hwndParent = this->parent;
             }
 
             return window_module_ref(params.hInstance).CreateWindowExW<TControl>(params);

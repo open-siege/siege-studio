@@ -3,8 +3,8 @@
 
 #include <siege/platform/win/desktop/win32_common_controls.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
-#include <siege/platform/win/auto_handle.hpp>
 #include <siege/platform/win/core/com_collection.hpp>
+#include <siege/platform/win/desktop/win32_drawing.hpp>
 #include <cassert>
 #include <sstream>
 #include <vector>
@@ -16,20 +16,6 @@
 
 namespace siege::views
 {
-    struct gdi_deleter
-    {
-        void operator()(HGDIOBJ gdi_obj)
-        {
-            assert(::DeleteObject(gdi_obj) == TRUE);
-        }
-    };
-
-    using gdi_bitmap = win32::auto_handle<HBITMAP, gdi_deleter>;
-    using gdi_brush = win32::auto_handle<HBRUSH, gdi_deleter>;
-    using gdi_palette = win32::auto_handle<HPALETTE, gdi_deleter>;
-    using gdi_pen = win32::auto_handle<HPEN, gdi_deleter>;
-    using gdi_font = win32::auto_handle<HFONT, gdi_deleter>;
-
 	struct bmp_view : win32::window
     {
         constexpr static auto formats = std::array<std::wstring_view, 16>{{
@@ -49,7 +35,7 @@ namespace siege::views
 
         bmp_controller controller;
 
-        win32::auto_handle<HBITMAP, gdi_deleter> current_bitmap;
+        win32::gdi_bitmap current_bitmap;
 
         bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window(self)
 	    {
@@ -57,28 +43,22 @@ namespace siege::views
 
         auto on_create(const win32::create_message& info)
         {
-            auto parent_size = this->GetClientSize();
-            auto this_module = win32::window_factory();
-
-            auto width = parent_size->cx;
+            auto this_module = win32::window_factory(win32::window_ref(*this));
 
             std::wstring temp = L"menu.pal";
       
             frame_selector = *this_module.CreateWindowExW(::CREATESTRUCTW{
-                            .hwndParent = *this,
                             .style = WS_VISIBLE | WS_CHILD | UDS_HORZ | UDS_SETBUDDYINT,
                             .lpszName =  L"Frame Selector",
                             .lpszClass = UPDOWN_CLASSW
             });
 
             frame_label = *this_module.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
-                            .hwndParent = *this,
                             .style = WS_VISIBLE | WS_CHILD | SS_LEFT,
                             .lpszName =  L"Frame: "
             });
 
             frame_value = *this_module.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
-                            .hwndParent = *this,
                             .style = WS_VISIBLE | WS_CHILD | SS_LEFT,
                             .lpszName =  L""
             });
@@ -88,7 +68,6 @@ namespace siege::views
             ::SendMessageW(frame_selector, UDM_SETRANGE, 0, MAKELPARAM(1, 1));
                 
             zoom = *this_module.CreateWindowExW(::CREATESTRUCTW{
-                            .hwndParent = *this,
                             .style = WS_VISIBLE | WS_CHILD | UDS_SETBUDDYINT,
                             .lpszName =  L"Zoom",
                             .lpszClass = UPDOWN_CLASSW
@@ -96,14 +75,12 @@ namespace siege::views
 
             zoom_label = *this_module.CreateWindowExW<win32::static_control>(
               ::CREATESTRUCTW{ 
-                .hwndParent = *this,
                 .style = WS_VISIBLE | WS_CHILD | SS_LEFT,
                 .lpszName = L"Zoom: ",
                 });
 
             zoom_value = *this_module.CreateWindowExW<win32::static_control>(
               ::CREATESTRUCTW{ 
-                .hwndParent = *this,
                 .style = WS_VISIBLE | WS_CHILD | SS_LEFT,
                 });
 
@@ -113,7 +90,6 @@ namespace siege::views
 
             palettes_list = [&] {
                 auto palettes_list = *this_module.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
-                            .hwndParent = *this,
                             .style = WS_VISIBLE | WS_CHILD | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER,
                             .lpszName =  L"Palettes",
                             .lpszClass = L"MFC::CMFCListCtrl"
@@ -192,7 +168,7 @@ namespace siege::views
             palettes_list.SetWindowPos(right_size);
             palettes_list.SetColumnWidth(0, right_size.cx);
 
-            return std::nullopt;
+            return 0;
         }
 
 
