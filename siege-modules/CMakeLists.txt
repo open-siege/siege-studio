@@ -8,12 +8,12 @@ add_subdirectory(siege-content)
 add_subdirectory(siege-configuration)
 
 # for siege-studio and siege-launcher
-add_subdirectory(siege-ui-2d-content)
-add_subdirectory(siege-ui-3d-content)
-add_subdirectory(siege-ui-resource-content)
-add_subdirectory(siege-ui-audio-content)
+add_subdirectory(siege-2d-content)
+add_subdirectory(siege-3d-content)
+add_subdirectory(siege-resource-content)
+add_subdirectory(siege-audio-content)
 
 # for siege-launcher only
-add_subdirectory(siege-ui-game-input)
-add_subdirectory(siege-ui-game-installer)
+add_subdirectory(siege-game-input)
+add_subdirectory(siege-installation)
 
