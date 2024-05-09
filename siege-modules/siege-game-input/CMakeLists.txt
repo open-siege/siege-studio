@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(siege-ui-game-input)
+project(siege-game-input)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
