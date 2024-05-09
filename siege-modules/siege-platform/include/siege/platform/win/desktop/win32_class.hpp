@@ -25,14 +25,6 @@ namespace win32
             }
         }
 
-        if constexpr (requires(TWindow t) { t.on_paint(paint_message{wParam, lParam}); })
-        {
-            if (message == paint_message::id)
-            {
-                return self->on_paint(paint_message{wParam, lParam});
-            }
-        }
-
         if constexpr (requires(TWindow t) { t.on_init_dialog(init_dialog_message{wParam, lParam}); })
         {
             if (message == init_dialog_message::id)
@@ -97,6 +89,22 @@ namespace win32
             }
         }
 
+        if constexpr (requires(TWindow t) { t.on_paint(paint_message{wParam, lParam}); })
+        {
+            if (message == paint_message::id)
+            {
+                return self->on_paint(paint_message{wParam, lParam});
+            }
+        }
+
+        if constexpr (requires(TWindow t) { t.on_draw_item(draw_item_message{wParam, lParam}); })
+        {
+            if (message == draw_item_message::id)
+            {
+                return self->on_draw_item(draw_item_message{wParam, lParam});
+            }
+        }
+
         if constexpr (requires(TWindow t) { t.on_keyboard_key_up(keyboard_key_up_message{wParam, lParam}); })
         {
             if (message == keyboard_key_up_message::id)
@@ -124,6 +132,11 @@ namespace win32
         if constexpr (requires(TWindow t) { t.on_message(win32::message{message, wParam, lParam}); })
         {
             return self->on_message(win32::message{message, wParam, lParam});
+        }
+
+        if constexpr (requires(TWindow t) { t(win32::window_message{message, wParam, lParam}); })
+        {
+            return self->operator()(win32::make_window_message(message, wParam, lParam));
         }
 
         return std::nullopt;

@@ -42,7 +42,7 @@ namespace win32
         }
     };
 
-    struct no_deleter
+    struct window_no_deleter
     {
         void operator()(hwnd_t window) 
         {
@@ -296,9 +296,9 @@ namespace win32
 
 	};
 
-    struct window_ref : window_base<no_deleter, window_ref>
+    struct window_ref : window_base<window_no_deleter, window_ref>
     {
-        using base = window_base<no_deleter, window_ref>;
+        using base = window_base<window_no_deleter, window_ref>;
         using base::base;
     };
 

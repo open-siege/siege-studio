@@ -70,6 +70,32 @@ namespace win32
 		}
 	};
 
+	struct draw_item_message
+	{
+		constexpr static std::uint32_t id = WM_DRAWITEM;
+
+		#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+			struct DRAWITEMSTRUCT {
+		      UINT      CtlType;
+			  UINT      CtlID;
+			  UINT      itemID;
+			  UINT      itemAction;
+			  UINT      itemState;
+			  HWND      hwndItem;
+			  HDC       hDC;
+			  RECT      rcItem;
+			  ULONG_PTR itemData;
+			};
+		#endif
+
+		std::size_t control_id;
+		DRAWITEMSTRUCT& item;
+
+		draw_item_message(wparam_t control_id, lparam_t item) : control_id(control_id), item(*reinterpret_cast<DRAWITEMSTRUCT*>(item))
+		{
+		}
+	};
+
 	struct get_object_message
 	{
 		constexpr static std::uint32_t id = WM_GETOBJECT;
