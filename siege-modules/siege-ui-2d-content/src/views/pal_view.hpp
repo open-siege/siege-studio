@@ -86,6 +86,26 @@ namespace siege::views
 			return FALSE;
 		}
 
+		auto on_draw_item(win32::draw_item_message message)
+		{
+			if (message.item.itemAction == ODA_DRAWENTIRE)
+			{
+				auto context = win32::gdi_drawing_context_ref(message.item.hDC);
+
+				win32::rect pos{};
+				pos.right = 100;
+				pos.bottom = 100;
+
+				for (auto i = 0; i < brushes.size(); ++i)
+				{
+					context.FillRect(pos, brushes[i]);
+					pos.Offset(100, 0);
+				}
+			}
+
+			return TRUE;
+		}
+
 		std::optional<LRESULT> on_get_object(win32::get_object_message message)
 		{
 			if (message.object_id == OBJID_NATIVEOM)
@@ -98,7 +118,6 @@ namespace siege::views
 			return std::nullopt;
 		}
 
-		
 
 		//auto on_paint(win32::paint_message)
 		//{
