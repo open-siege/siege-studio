@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(Siege.UI.TwoD.Content VERSION 1.0.0.0 LANGUAGES CSharp)
+project(Siege.TwoD.Content VERSION 1.0.0.0 LANGUAGES CSharp)
 
 include(CSharpUtilities)
 

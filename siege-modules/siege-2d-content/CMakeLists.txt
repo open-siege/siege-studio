@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(siege-ui-2d-content)
+project(siege-2d-content)
 
 file(GLOB_RECURSE SRC_FILES
         src/*.cpp)
