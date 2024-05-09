@@ -1,9 +1,6 @@
 #include "bmp_controller.hpp"
 #include <siege/content/bmp/bitmap.hpp>
 #include <siege/content/bmp/image.hpp>
-#include <spanstream>
-#include <psapi.h>
-#include <wincodec.h>
 
 namespace siege::views
 {

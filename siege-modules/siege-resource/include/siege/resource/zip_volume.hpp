@@ -12,7 +12,7 @@
 
 namespace siege::resource::zip
 {
-  struct zip_file_archive : siege::platform::archive_plugin
+  struct zip_file_archive final : siege::platform::archive_plugin
   {
     static bool is_supported(std::istream& stream);
 

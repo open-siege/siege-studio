@@ -6,7 +6,7 @@
 
 namespace siege::resource::cln
 {
-  struct cln_file_archive : siege::platform::archive_plugin
+  struct cln_file_archive final : siege::platform::archive_plugin
   {
     static bool is_supported(std::istream& stream);
 

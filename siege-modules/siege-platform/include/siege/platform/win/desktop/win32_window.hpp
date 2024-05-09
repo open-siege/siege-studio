@@ -153,6 +153,12 @@ namespace win32
             return ::SetProp(*this, name.data(), nullptr);
         }
 
+        template <typename TValue = HANDLE>
+        [[maybe_unused]] inline TValue RemovePropW(std::wstring_view name)
+        {
+            return reinterpret_cast<TValue>(::RemovePropW(*this, name.data()));
+        }
+
         #endif
 
         inline std::optional<RECT> GetClientRect() const

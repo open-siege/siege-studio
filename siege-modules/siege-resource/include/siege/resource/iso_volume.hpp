@@ -12,7 +12,7 @@
 
 namespace siege::resource::iso
 {
-  struct iso_file_archive : siege::platform::archive_plugin
+  struct iso_file_archive final : siege::platform::archive_plugin
   {
     static bool is_supported(std::istream& stream);
 

@@ -6,7 +6,7 @@
 
 namespace siege::resource::vol::three_space
 {
-  struct rmf_file_archive : siege::platform::archive_plugin
+  struct rmf_file_archive final : siege::platform::archive_plugin
   {
     static bool is_supported(std::istream& stream);
 
@@ -22,7 +22,7 @@ namespace siege::resource::vol::three_space
       std::optional<std::reference_wrapper<platform::batch_storage>> = std::nullopt) const override;
   };
 
-  struct dyn_file_archive : siege::platform::archive_plugin
+  struct dyn_file_archive final : siege::platform::archive_plugin
   {
     static bool is_supported(std::istream& stream);
 
@@ -38,7 +38,7 @@ namespace siege::resource::vol::three_space
       std::optional<std::reference_wrapper<platform::batch_storage>> = std::nullopt) const override;
   };
 
-  struct vol_file_archive : siege::platform::archive_plugin
+  struct vol_file_archive final : siege::platform::archive_plugin
   {
     static bool is_supported(std::istream& stream);
 

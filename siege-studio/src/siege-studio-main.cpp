@@ -38,11 +38,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 
-	if (IsDebuggerPresent())
-	{
-//		std::pmr::set_default_resource(std::pmr::null_memory_resource());
-	}
-
 	win32::com::init_com();
 
 	INITCOMMONCONTROLSEX settings{

@@ -5,7 +5,7 @@
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include "siege-plugin.hpp"
 
-struct siege_main_window : win32::window
+struct siege_main_window : win32::window_ref
 {	
 	win32::tree_view dir_list;
 	win32::tab_control tab_control;
@@ -16,7 +16,7 @@ struct siege_main_window : win32::window
 
 	std::size_t open_id = 0u;
 
-	siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window(self), tab_control(nullptr)
+	siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self), tab_control(nullptr)
 	{
 		open_id = RegisterWindowMessageW(L"COMMAND_OPEN");
 		std::wstring full_app_path(256, '\0');
@@ -218,7 +218,9 @@ struct siege_main_window : win32::window
 
 										stream->Stat(&info, STATFLAG::STATFLAG_NONAME);
 										
-										auto handle = ::CreateFileW(path->c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+										auto path_ref = path->c_str();
+
+										auto handle = ::CreateFileW(path_ref, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 
 										auto mapping = ::CreateFileMapping(handle, nullptr, PAGE_READONLY, 0, 0, nullptr);
 
@@ -229,20 +231,31 @@ struct siege_main_window : win32::window
 
 										assert(stream->Release() == 0);
 	
-										SendMessageW(*child, WM_COPYDATA, win32::wparam_t(win32::hwnd_t(*this)), win32::lparam_t(&data));
+										child->SetPropW(L"Filename", path_ref);
+
+										if (SendMessageW(*child, WM_COPYDATA, win32::wparam_t(win32::hwnd_t(*this)), win32::lparam_t(&data)))
+										{
+											child->RemovePropW(L"Filename");
+
+											auto index = tab_control.GetItemCount() - 1;
+
+											tab_control.InsertItem(index, TCITEMW {
+													.mask = TCIF_TEXT | TCIF_PARAM,
+													.pszText = const_cast<wchar_t*>(path->filename().c_str()),
+													.lParam = win32::lparam_t(child->get())
+												});
+
+											SetWindowLongPtrW(*child, GWLP_ID, index);										
+										}
+										else
+										{
+											child->RemovePropW(L"Filename");
+											::DestroyWindow(*child);
+										}
+
 										::UnmapViewOfFile(data.lpData);
 										::CloseHandle(mapping);
 										::CloseHandle(handle);
-
-										auto index = tab_control.GetItemCount() - 1;
-
-										tab_control.InsertItem(index, TCITEMW {
-												.mask = TCIF_TEXT | TCIF_PARAM,
-												.pszText = const_cast<wchar_t*>(path->filename().c_str()),
-												.lParam = win32::lparam_t(child->get())
-											});
-
-										SetWindowLongPtrW(*child, GWLP_ID, index);
 									}
 								}
 							}

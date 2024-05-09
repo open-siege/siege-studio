@@ -6,7 +6,7 @@
 
 namespace siege::resource::atd
 {
-  struct atd_file_archive : siege::platform::archive_plugin
+  struct atd_file_archive final : siege::platform::archive_plugin
   {
     static bool is_supported(std::istream& stream);
 

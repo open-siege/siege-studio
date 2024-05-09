@@ -6,7 +6,7 @@
 
 namespace siege::resource::vol::trophy_bass
 {
-  struct rbx_file_archive : siege::platform::archive_plugin
+  struct rbx_file_archive final : siege::platform::archive_plugin
   {
     static bool is_supported(std::istream& stream);
 
@@ -22,7 +22,7 @@ namespace siege::resource::vol::trophy_bass
       std::optional<std::reference_wrapper<platform::batch_storage>> = std::nullopt) const override;
   };
 
-  struct tbv_file_archive : siege::platform::archive_plugin
+  struct tbv_file_archive final : siege::platform::archive_plugin
   {
     static bool is_supported(std::istream& stream);
 
