@@ -11,4 +11,4 @@ PyInstaller==3.6
 pywin32-ctypes==0.2.0
 requests==2.23.0
 tinydb==3.15.2
-urllib3==1.26.5
+urllib3==1.26.18
