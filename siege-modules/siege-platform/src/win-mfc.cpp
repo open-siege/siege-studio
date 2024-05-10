@@ -366,70 +366,6 @@ BOOL SubclassHandle(CVSListBox* instance, HWND handle)
 	return FALSE;
 }
 
-template<>
-BOOL SubclassHandle(CMFCShellTreeCtrl* instance, HWND handle)
-{
-	struct TreeViewSubClass
-	{
-		static LRESULT UpdateRootToCurrentPath(HWND hWnd,
-					  UINT uMsg,
-					  WPARAM wParam,
-					  LPARAM lParam,
-					  UINT_PTR uIdSubclass,
-					  DWORD_PTR dwRefData) {
-		
-			AFX_MANAGE_STATE(AfxGetStaticModuleState());
-			if (uMsg == TVM_INSERTITEMW && wParam == 0 && lParam != 0)
-			{
-				TVINSERTSTRUCT* data = (TVINSERTSTRUCT*)lParam;
-
-				if (data->hParent == TVI_ROOT)
-				{
-					static bool isAdded = false;
-					AFX_SHELLITEMINFO* innerData = (AFX_SHELLITEMINFO*)data->item.lParam;
-					
-					if (innerData->pParentFolder == nullptr)
-					{
-						CMFCShellTreeCtrl* realInstance = (CMFCShellTreeCtrl*)dwRefData;	
-						auto current_path = std::filesystem::current_path();
-
-//						LPITEMIDLIST root;
-
-						assert(SHParseDisplayName(current_path.c_str(), nullptr, &innerData->pidlFQ, 0, nullptr) == NOERROR);
-
-						assert(SHBindToParent(innerData->pidlFQ, IID_IShellFolder, (void**)&innerData->pParentFolder, (LPCITEMIDLIST*)&innerData->pidlRel) == NOERROR);
-
-						auto itemItext = realInstance->OnGetItemText(innerData);
-
-						data->item.pszText = itemItext.GetBuffer(itemItext.GetLength());
-						data->item.iImage = realInstance->OnGetItemIcon(innerData, FALSE);
-						data->item.iSelectedImage = realInstance->OnGetItemIcon(innerData, TRUE);
-						data->item.iSelectedImage = realInstance->OnGetItemIcon(innerData, TRUE);
-						isAdded = true;
-						return DefSubclassProc(hWnd, uMsg, wParam, lParam);
-					}
-				}
-			}
-
-			if (uMsg == WM_NCDESTROY)
-			{
-				OutputDebugStringW(L"TreeViewSubClass::UpdateRootToCurrentPath WM_NCDESTROY\n");
-//				auto result = DefSubclassProc(hWnd, uMsg, wParam, lParam);
-				RemoveWindowSubclass(hWnd, UpdateRootToCurrentPath, 0);
-	//			return result;
-				return 0;
-			}
-
-			return DefSubclassProc(hWnd, uMsg, wParam, lParam);
-		
-		}
-	};
-
-	::SetWindowSubclass(handle, TreeViewSubClass::UpdateRootToCurrentPath, 0, (DWORD_PTR)instance);
-
-	return instance->SubclassWindow(handle);
-}
-
 template<typename TClass>
 BOOL PreCreateWindow(TClass* instance, CREATESTRUCT& cs)
 {
@@ -574,29 +510,13 @@ struct class_wrapper
 template <typename TClass>
 CRuntimeClass* GetRuntimeClass()
 {
-	if constexpr (std::is_same_v<CMFCRibbonBar, TClass>)
-	{
-		return RUNTIME_CLASS(CMFCRibbonBar);
-	}
-	else if constexpr (std::is_same_v<CMFCShellTreeCtrl, TClass>)
-	{
-		return RUNTIME_CLASS(CMFCShellTreeCtrl);
-	}
-	else if constexpr (std::is_same_v<CMFCShellListCtrl, TClass>)
-	{
-		return RUNTIME_CLASS(CMFCShellListCtrl);
-	}
-	else if constexpr (std::is_same_v<CMFCPropertyGridCtrl, TClass>)
+	if constexpr (std::is_same_v<CMFCPropertyGridCtrl, TClass>)
 	{
 		return RUNTIME_CLASS(CMFCPropertyGridCtrl);
 	}
 	else if constexpr (std::is_same_v<CVSListBox, TClass>)
 	{
 		return RUNTIME_CLASS(CVSListBox);
-	}
-	else if constexpr (std::is_same_v<CMFCOutlookBarTabCtrl, TClass>)
-	{
-		return RUNTIME_CLASS(CMFCOutlookBarTabCtrl);
 	}
 	else
 	{
@@ -658,92 +578,17 @@ struct CMFCLibrary : public CWinAppEx
 	
 		bool result = true;
 
-		// common controls
-		RegisterMFCClass<CButton>();
-		RegisterMFCClass<CSplitButton>();
-		RegisterMFCClass<CComboBox>();
-		RegisterMFCClass<CDateTimeCtrl>();
-		RegisterMFCClass<CEdit>();
-		RegisterMFCClass<CComboBoxEx>();
-		RegisterMFCClass<CListBox>();
-		RegisterMFCClass<CListCtrl>();
-		RegisterMFCClass<CStatic>();
-		RegisterMFCClass<CHeaderCtrl>();
-		RegisterMFCClass<CToolBarCtrl>();
-		RegisterMFCClass<CTreeCtrl>();
-		RegisterMFCClass<CTabCtrl>();
-		RegisterMFCClass<CStatusBarCtrl>();
-		RegisterMFCClass<CNetAddressCtrl>();
-		RegisterMFCClass<CIPAddressCtrl>();
-		RegisterMFCClass<CPagerCtrl>();
-		
-
-		//extended controls
-		//list boxes
-		RegisterMFCClass<CDragListBox>();
 		RegisterMFCClass<CVSListBox>();
 		RegisterMFCClass<CCheckListBox>();
-	
-
-		//buttons
-		RegisterMFCClass<CBitmapButton>();
-		RegisterMFCClass<CMFCMenuButton>();
 		RegisterMFCClass<CMFCButton>();
 		RegisterMFCClass<CMFCColorButton>();
-		RegisterMFCClass<CMFCColorPickerCtrl>("CMFCColorPickerCtrl");
 		RegisterMFCClass<CMFCLinkCtrl>();
-
-		////edits
-		RegisterMFCClass<CMFCEditBrowseCtrl>();
-		RegisterMFCClass<CMFCMaskedEdit>();
-		////// combo boxes
-		RegisterMFCClass<CMFCFontComboBox>("CMFCFontComboBox");
-
-		////// lists
 		RegisterMFCClass<CMFCPropertyGridCtrl>();
 		RegisterMFCClass<CMFCListCtrl>();
-
-
-		//////trees
-		
-		////// spinners
-		RegisterMFCClass<CMFCSpinButtonCtrl>();
-		////
-		//////headers
 		RegisterMFCClass<CMFCHeaderCtrl>();
-		//
-		//////rebars
-		RegisterMFCClass<CMFCReBar>();		
-
-		//////tabs
+		RegisterMFCClass<CMFCSpinButtonCtrl>();		
 		RegisterMFCClass<CMFCTabCtrl>();
-		RegisterMFCClass<CMFCOutlookBarTabCtrl>();
-
-		//dialogs
-		RegisterMFCClass<CMFCColorDialog>();
-
-		//tooltips
 		RegisterMFCClass<CMFCToolTipCtrl>();
-
-		// status bars
-		RegisterMFCClass<CMFCStatusBar>();
-
-
-		////// TODO to fix
-		RegisterMFCClass<CMFCPopupMenuBar>();
-		RegisterMFCClass<CPaneDivider>();
-		RegisterMFCClass<CSplitterWndEx>();
-		RegisterMFCClass<CSplitterWnd>();
-		RegisterMFCClass<CMFCCaptionBar>();
-		RegisterMFCClass<CMFCAutoHideBar>();
-		RegisterMFCClass<CMFCRibbonBar>();
-		RegisterMFCClass<CDockablePane>();
-
-		if (InitShellManager())
-		{
-			RegisterMFCClass<CMFCShellListCtrl>();
-			RegisterMFCClass<CMFCShellTreeCtrl>();
-		}
 
 		return CWinApp::InitInstance();
 	}
