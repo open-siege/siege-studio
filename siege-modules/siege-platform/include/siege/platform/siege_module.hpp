@@ -21,6 +21,7 @@ namespace siege
 		HRESULT (__stdcall *GetSupportedExtensionsForCategoryProc)(const wchar_t* category, win32::com::IReadOnlyCollection** formats) = nullptr;
 		HRESULT (__stdcall *IsStreamSupportedProc)(::IStream* data) = nullptr;
 		HRESULT (__stdcall *GetWindowClassForStreamProc)(::IStream* data, wchar_t**) = nullptr;
+		uint32_t DefaultIcon = 0;
 
 	public: 
 		siege_module(std::filesystem::path plugin_path) : base(nullptr)
@@ -45,6 +46,12 @@ namespace siege
 			IsStreamSupportedProc = reinterpret_cast<decltype(IsStreamSupportedProc)>(::GetProcAddress(temp, "IsStreamSupported"));
 			GetWindowClassForStreamProc = reinterpret_cast<decltype(GetWindowClassForStreamProc)>(::GetProcAddress(temp, "GetWindowClassForStream"));
 		
+			auto default_icon = ::GetProcAddress(temp, "DefaultFileIcon");
+
+			if (default_icon)
+			{
+				std::memcpy(&DefaultIcon, default_icon, sizeof(DefaultIcon));
+			}
 
 			if (!(GetSupportedExtensionsProc || GetSupportedFormatCategoriesProc || GetSupportedExtensionsForCategoryProc || IsStreamSupportedProc
 				|| GetWindowClassForStreamProc
@@ -52,6 +59,11 @@ namespace siege
 			{
 				throw std::runtime_error("Could not find module functions");
 			}
+		}
+
+		auto GetDefaultFileIcon() const noexcept
+		{
+			return DefaultIcon;
 		}
 
 		std::vector<std::wstring> GetSupportedExtensions() const noexcept

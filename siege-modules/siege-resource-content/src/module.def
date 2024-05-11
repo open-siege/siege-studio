@@ -4,3 +4,4 @@ EXPORTS
 	GetSupportedExtensionsForCategory
 	IsStreamSupported
 	GetWindowClassForStream
+	DefaultFileIcon

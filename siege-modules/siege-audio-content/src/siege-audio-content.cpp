@@ -1,6 +1,12 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
+extern "C"
+{
+    //SIID_AUDIOFILES
+
+}
+
 BOOL WINAPI DllMain(
     HINSTANCE hinstDLL,  // handle to DLL module
     DWORD fdwReason,     // reason for calling function
