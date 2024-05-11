@@ -22,9 +22,7 @@
 #include <shobjidl.h> 
 #include <shlwapi.h> 
 
-#include "siege_main_window.hpp"
-
-//#include "http_client.hpp"
+#include "views/siege_main_window.hpp"
 
 constexpr static std::wstring_view app_title = L"Siege Studio";
 
@@ -46,11 +44,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	InitCommonControlsEx(&settings);
 
 
-	auto mfcHandle = LoadLibraryExW(L"siege-win-mfc.dll", nullptr, 0);
+	auto mfcHandle = win32::module(LoadLibraryExW(L"siege-win-mfc.dll", nullptr, 0));
 
 	win32::window_module_ref this_module(hInstance);
 
-	win32::window_meta_class<siege_main_window> info{};
+	win32::window_meta_class<siege::views::siege_main_window> info{};
 	info.style = CS_HREDRAW | CS_VREDRAW;
 	info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
 	info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
@@ -72,14 +70,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     AppendMenuW(main_menu, MF_STRING, id++, L"View");
     AppendMenuW(main_menu, MF_STRING, id++, L"Help");
 
-    auto main_window = win32::window_module_ref::current_module().CreateWindowExW(CREATESTRUCTW {
+    auto main_window = this_module.CreateWindowExW(CREATESTRUCTW {
 		.hMenu = main_menu,
 		.cx = CW_USEDEFAULT,
 		.x = CW_USEDEFAULT,
 		.style = WS_OVERLAPPEDWINDOW,
 		.lpszName = app_title.data(),
-		.lpszClass = win32::type_name<siege_main_window>().c_str(),
-		//.dwExStyle = WS_EX_COMPOSITED,
+		.lpszClass = win32::type_name<siege::views::siege_main_window>().c_str()
 	});
 
 	if (!main_window)
@@ -90,18 +87,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	ShowWindow(*main_window, nCmdShow);
 	UpdateWindow(*main_window);
 
-
 	MSG msg;
 
-	// Main message loop:
 	while (GetMessageW(&msg, nullptr, 0, 0))
 	{
 		TranslateMessage(&msg);
 		DispatchMessageW(&msg);
 	}
-
-	CoUninitialize();
-	FreeLibrary(mfcHandle);
 
 	return (int)msg.wParam;
 }

@@ -1,13 +1,13 @@
 #include "vol_controller.hpp"
-#include <siege/resource/darkstar_volume.hpp>
-#include <siege/resource/three_space_volume.hpp>
-#include <siege/resource/zip_volume.hpp>
-#include <siege/resource/trophy_bass_volume.hpp>
-#include <siege/resource/sword_volume.hpp>
-#include <siege/resource/cyclone_volume.hpp>
-#include <siege/resource/iso_volume.hpp>
-#include <siege/resource/seven_zip_volume.hpp>
-#include <siege/resource/cab_volume.hpp>
+#include <siege/resource/darkstar_resource.hpp>
+#include <siege/resource/three_space_resource.hpp>
+#include <siege/resource/zip_resource.hpp>
+#include <siege/resource/trophy_bass_resource.hpp>
+#include <siege/resource/sword_resource.hpp>
+#include <siege/resource/cyclone_resource.hpp>
+#include <siege/resource/iso_resource.hpp>
+#include <siege/resource/seven_zip_resource.hpp>
+#include <siege/resource/cab_resource.hpp>
 
 namespace siege::views
 {
@@ -15,61 +15,61 @@ namespace siege::views
 
   bool vol_controller::is_vol(std::istream& image_stream) noexcept
   {
-      return vol::darkstar::vol_file_archive::is_supported(image_stream) ||
-          vol::three_space::vol_file_archive::is_supported(image_stream) ||
-          vol::three_space::dyn_file_archive::is_supported(image_stream) ||
-          vol::three_space::rmf_file_archive::is_supported(image_stream) ||
-          vol::three_space::vol_file_archive::is_supported(image_stream) ||
-          vol::trophy_bass::rbx_file_archive::is_supported(image_stream) ||
-          vol::trophy_bass::tbv_file_archive::is_supported(image_stream) ||
-          cln::cln_file_archive::is_supported(image_stream) ||
-          atd::atd_file_archive::is_supported(image_stream) ||
-          zip::zip_file_archive::is_supported(image_stream) ||
-          cab::cab_file_archive::is_supported(image_stream) ||
-          iso::iso_file_archive::is_supported(image_stream);
+      return vol::darkstar::vol_resource_reader::is_supported(image_stream) ||
+          vol::three_space::vol_resource_reader::is_supported(image_stream) ||
+          vol::three_space::dyn_resource_reader::is_supported(image_stream) ||
+          vol::three_space::rmf_resource_reader::is_supported(image_stream) ||
+          vol::three_space::vol_resource_reader::is_supported(image_stream) ||
+          vol::trophy_bass::rbx_resource_reader::is_supported(image_stream) ||
+          vol::trophy_bass::tbv_resource_reader::is_supported(image_stream) ||
+          cln::cln_resource_reader::is_supported(image_stream) ||
+          atd::atd_resource_reader::is_supported(image_stream) ||
+          zip::zip_resource_reader::is_supported(image_stream) ||
+          cab::cab_resource_reader::is_supported(image_stream) ||
+          iso::iso_resource_reader::is_supported(image_stream);
   }
 
   std::size_t vol_controller::load_volume(std::istream& image_stream, std::optional<std::filesystem::path> path)
   {
-    if (vol::darkstar::vol_file_archive::is_supported(image_stream))
+    if (vol::darkstar::vol_resource_reader::is_supported(image_stream))
     {
-        resource.reset(new vol::darkstar::vol_file_archive());
+        resource.reset(new vol::darkstar::vol_resource_reader());
     }
-    else if (vol::three_space::vol_file_archive::is_supported(image_stream))
+    else if (vol::three_space::vol_resource_reader::is_supported(image_stream))
     {
-        resource.reset(new vol::three_space::vol_file_archive());
+        resource.reset(new vol::three_space::vol_resource_reader());
     }
-    else if (vol::three_space::dyn_file_archive::is_supported(image_stream))
+    else if (vol::three_space::dyn_resource_reader::is_supported(image_stream))
     {
-        resource.reset(new vol::three_space::dyn_file_archive());
+        resource.reset(new vol::three_space::dyn_resource_reader());
     }
-    else if (vol::three_space::rmf_file_archive::is_supported(image_stream))
+    else if (vol::three_space::rmf_resource_reader::is_supported(image_stream))
     {
-        resource.reset(new vol::three_space::rmf_file_archive());
+        resource.reset(new vol::three_space::rmf_resource_reader());
     }
-    else if (vol::trophy_bass::rbx_file_archive::is_supported(image_stream))
+    else if (vol::trophy_bass::rbx_resource_reader::is_supported(image_stream))
     {
-        resource.reset(new vol::trophy_bass::rbx_file_archive());
+        resource.reset(new vol::trophy_bass::rbx_resource_reader());
     }
-    else if (cln::cln_file_archive::is_supported(image_stream))
+    else if (cln::cln_resource_reader::is_supported(image_stream))
     {
-        resource.reset(new cln::cln_file_archive());
+        resource.reset(new cln::cln_resource_reader());
     }
-    else if (atd::atd_file_archive::is_supported(image_stream))
+    else if (atd::atd_resource_reader::is_supported(image_stream))
     {
-        resource.reset(new atd::atd_file_archive());
+        resource.reset(new atd::atd_resource_reader());
     }
-    else if (zip::zip_file_archive::is_supported(image_stream))
+    else if (zip::zip_resource_reader::is_supported(image_stream))
     {
-        resource.reset(new zip::zip_file_archive());
+        resource.reset(new zip::zip_resource_reader());
     }
-    else if (cab::cab_file_archive::is_supported(image_stream))
+    else if (cab::cab_resource_reader::is_supported(image_stream))
     {
-        resource.reset(new cab::cab_file_archive());
+        resource.reset(new cab::cab_resource_reader());
     }
-    else if (iso::iso_file_archive::is_supported(image_stream))
+    else if (iso::iso_resource_reader::is_supported(image_stream))
     {
-        resource.reset(new iso::iso_file_archive());
+        resource.reset(new iso::iso_resource_reader());
     }
 
     if (resource && path)

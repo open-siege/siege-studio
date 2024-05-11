@@ -3,7 +3,7 @@
 
 #include <map>
 #include <SFML/OpenGL.hpp>
-#include <siege/content/renderable_shape.hpp"
+#include <siege/content/renderable_shape.hpp>
 
 namespace siege::views
 {

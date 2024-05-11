@@ -3,11 +3,16 @@ project(siege-studio)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-add_executable(siege-studio WIN32 "src/siege-studio-main.cpp" src/siege-studio.manifest)
-set_property(TARGET siege-studio PROPERTY CXX_STANDARD 23)
-set_property(TARGET siege-studio PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-target_compile_definitions(siege-studio PRIVATE UNICODE)
-target_include_directories(siege-studio PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(siege-studio PRIVATE siege-win-desktop)
+if (WIN32)
+	add_executable(siege-studio WIN32 "src/siege-studio-main.cpp" src/siege-studio.manifest "src/linux.cpp")
+	target_compile_definitions(siege-studio PRIVATE UNICODE)
+	target_link_libraries(siege-studio PRIVATE siege-win-desktop)
+else()
+	add_executable(siege-studio src/linux.cpp)	
+	target_link_libraries(siege-studio PRIVATE siege-platform)
+endif()
 
+set_property(TARGET siege-studio PROPERTY CXX_STANDARD 23)
+target_include_directories(siege-studio PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
+	
 install(TARGETS siege-studio CONFIGURATIONS Debug Release RUNTIME DESTINATION bin)

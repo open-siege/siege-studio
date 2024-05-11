@@ -211,12 +211,12 @@ namespace siege::resource::mis::darkstar
 {
   using namespace siege::mis::darkstar;
 
-  bool mis_file_archive::is_supported(std::istream& stream)
+  bool mis_resource_reader::is_supported(std::istream& stream)
   {
     return is_mission_data(stream);
   }
 
-  bool mis_file_archive::stream_is_supported(std::istream& stream) const
+  bool mis_resource_reader::stream_is_supported(std::istream& stream) const
   {
     return is_mission_data(stream);
   }
@@ -239,7 +239,7 @@ namespace siege::resource::mis::darkstar
     return archive_path;
   }
 
-  decltype(mis_file_archive::content_list_info)::iterator mis_file_archive::cache_data(std::istream& stream,
+  decltype(mis_resource_reader::content_list_info)::iterator mis_resource_reader::cache_data(std::istream& stream,
     const std::filesystem::path& archive_or_folder_path) const
   {
     auto archive_path = get_archive_path(archive_or_folder_path);
@@ -270,7 +270,7 @@ namespace siege::resource::mis::darkstar
           {
             auto& child_as_group = static_cast<sim_group&>(real_child);
 
-            mis_file_archive::folder_info folder{};
+            mis_resource_reader::folder_info folder{};
             folder.full_path = child.first;
             folder.name = child.first.filename().string();
             folder.file_count = child_as_group.children.size();
@@ -291,7 +291,7 @@ namespace siege::resource::mis::darkstar
           {
             auto& child_as_set = static_cast<sim_set&>(real_child);
 
-            mis_file_archive::folder_info folder{};
+            mis_resource_reader::folder_info folder{};
             folder.full_path = child.first;
             folder.name = child.first.filename().string();
             folder.file_count = child_as_set.children.size();
@@ -310,7 +310,7 @@ namespace siege::resource::mis::darkstar
             if (parent.has_value())
             {
               auto& child_as_vehicle = static_cast<vehicle&>(real_child);
-              mis_file_archive::file_info file{};
+              mis_resource_reader::file_info file{};
               file.folder_path = child.first.parent_path();
               file.filename = child.first.filename().replace_extension(".veh");
               file.size = sizeof(object_header) + child_as_vehicle.header.object_size;
@@ -333,10 +333,10 @@ namespace siege::resource::mis::darkstar
     return existing_info;
   }
 
-  std::vector<mis_file_archive::content_info> mis_file_archive::get_content_listing(std::istream& stream, const platform::listing_query& query) const
+  std::vector<mis_resource_reader::content_info> mis_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
   {
     auto existing_info = cache_data(stream, query.folder_path);
-    std::vector<mis_file_archive::content_info> final_results;
+    std::vector<mis_resource_reader::content_info> final_results;
     final_results.reserve(existing_info->second.size());
 
     for (auto& ref : existing_info->second)
@@ -366,12 +366,12 @@ namespace siege::resource::mis::darkstar
     return final_results;
   }
 
-  void mis_file_archive::set_stream_position(std::istream& stream, const siege::platform::file_info& info) const
+  void mis_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info) const
   {
     stream.seekg(info.offset, std::ios::beg);
   }
 
-  void mis_file_archive::extract_file_contents(std::istream& stream,
+  void mis_resource_reader::extract_file_contents(std::istream& stream,
     const siege::platform::file_info& info,
     std::ostream& output,
     std::optional<std::reference_wrapper<platform::batch_storage>>) const

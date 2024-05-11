@@ -38,17 +38,17 @@ auto create_archive()
   return std::unique_ptr<siege::platform>(new ArchiveType());
 }
 
-using CheckerType = decltype(&dio::vol::darkstar::vol_file_archive::is_supported);
-using CreatorType = decltype(&create_archive<dio::vol::darkstar::vol_file_archive>);
+using CheckerType = decltype(&dio::vol::darkstar::vol_resource_reader::is_supported);
+using CreatorType = decltype(&create_archive<dio::vol::darkstar::vol_resource_reader>);
 
 constexpr static auto vol_checkers = std::array<std::pair<CheckerType, CreatorType>, 7> {{
-    { dio::vol::darkstar::vol_file_archive::is_supported, create_archive<dio::vol::darkstar::vol_file_archive> },
-    { dio::mis::darkstar::mis_file_archive::is_supported, create_archive<dio::mis::darkstar::mis_file_archive> },
-    { dio::vol::three_space::vol_file_archive::is_supported, create_archive<dio::vol::three_space::vol_file_archive> },
-    { dio::vol::three_space::rmf_file_archive::is_supported, create_archive<dio::vol::three_space::rmf_file_archive> },
-    { dio::vol::three_space::dyn_file_archive::is_supported, create_archive<dio::vol::three_space::dyn_file_archive> },
-    { dio::vol::trophy_bass::rbx_file_archive::is_supported, create_archive<dio::vol::trophy_bass::rbx_file_archive> },
-    { dio::vol::trophy_bass::tbv_file_archive::is_supported, create_archive<dio::vol::trophy_bass::tbv_file_archive> }
+    { dio::vol::darkstar::vol_resource_reader::is_supported, create_archive<dio::vol::darkstar::vol_resource_reader> },
+    { dio::mis::darkstar::mis_resource_reader::is_supported, create_archive<dio::mis::darkstar::mis_resource_reader> },
+    { dio::vol::three_space::vol_resource_reader::is_supported, create_archive<dio::vol::three_space::vol_resource_reader> },
+    { dio::vol::three_space::rmf_resource_reader::is_supported, create_archive<dio::vol::three_space::rmf_resource_reader> },
+    { dio::vol::three_space::dyn_resource_reader::is_supported, create_archive<dio::vol::three_space::dyn_resource_reader> },
+    { dio::vol::trophy_bass::rbx_resource_reader::is_supported, create_archive<dio::vol::trophy_bass::rbx_resource_reader> },
+    { dio::vol::trophy_bass::tbv_resource_reader::is_supported, create_archive<dio::vol::trophy_bass::tbv_resource_reader> }
 }};
 
 int main(int, const char** argv)

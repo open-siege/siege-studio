@@ -11,11 +11,15 @@ class SiegeLauncherConanFile(ConanFile):
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
     build_requires = "cmake/3.26.4"
-    requires = "sdl/2.28.5", "cpr/1.10.5", "glm/cci.20230113", "taocpp-pegtl/3.2.7", "libzip/1.9.2", "catch2/3.5.4", "nlohmann_json/3.9.1"
+    requires = "glm/cci.20230113", "taocpp-pegtl/3.2.7", "libzip/1.9.2", "catch2/3.5.4", "nlohmann_json/3.9.1"
     settings = "os", "compiler", "build_type", "arch"
     generators = "CMakeToolchain", "CMakeDeps"
 
     def requirements(self):
+        if os.path.isdir("siege-launcher"):
+               self.requires("sdl/2.28.5")
+               self.requires("cpr/1.10.5")
+               
         self.requires("xz_utils/5.4.4", override=True)
 
     def layout(self):
