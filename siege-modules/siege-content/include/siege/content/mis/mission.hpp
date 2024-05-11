@@ -8,7 +8,7 @@
 #include <istream>
 #include <variant>
 #include <filesystem>
-#include <siege/platform/archive_plugin.hpp>
+#include <siege/platform/resource.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
 #include <siege/platform/shared.hpp>
 #include <siege/content/tagged_data.hpp>
@@ -158,7 +158,7 @@ namespace siege::mis::darkstar
 
 namespace siege::resource::mis::darkstar
 {
-  struct mis_file_archive : siege::platform::archive_plugin
+  struct mis_resource_reader : siege::platform::resource_reader
   {
     inline static std::array<std::string_view, 1> supported_extensions = std::array<std::string_view, 1>{ std::string_view{".veh"} };
     using ref_vector = std::vector<std::pair<std::reference_wrapper<::siege::mis::darkstar::sim_item>, content_info>>;

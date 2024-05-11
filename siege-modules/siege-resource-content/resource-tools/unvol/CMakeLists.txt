@@ -12,10 +12,6 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(unvol TBB::tbb)
 endif()
 
-if (MSVC)
-        set_property(TARGET unvol PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-endif()
-
 install(TARGETS unvol
         CONFIGURATIONS Debug Release
         RUNTIME DESTINATION bin)

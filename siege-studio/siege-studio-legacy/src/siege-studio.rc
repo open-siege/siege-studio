@@ -1,3 +1,0 @@
-MAINICON ICON "logo.ico"
-
-#include <wx/msw/wx.rc>

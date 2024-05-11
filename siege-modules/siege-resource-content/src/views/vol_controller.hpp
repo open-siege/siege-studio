@@ -6,7 +6,7 @@
 #include <variant>
 #include <filesystem>
 #include <sstream>
-#include <siege/platform/archive_plugin.hpp>
+#include <siege/platform/resource.hpp>
 
 namespace siege::views
 {
@@ -19,8 +19,8 @@ namespace siege::views
 	    std::size_t load_volume(std::istream& image_stream, std::optional<std::filesystem::path> path);
 
 	private: 
-		std::unique_ptr<siege::platform::archive_plugin> resource;
-		std::vector<siege::platform::archive_plugin::content_info> contents;
+		std::unique_ptr<siege::platform::resource_reader> resource;
+		std::vector<siege::platform::resource_reader::content_info> contents;
 		std::variant<std::monostate, std::filesystem::path, std::stringstream> storage;
 	};
 }

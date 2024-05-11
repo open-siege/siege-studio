@@ -9,7 +9,7 @@
 #include <fstream>
 #include <optional>
 #include <span>
-#include <siege/platform/archive_plugin.hpp>
+#include <siege/platform/resource.hpp>
 
 namespace siege::resource
 {
@@ -25,7 +25,7 @@ namespace siege::resource
   public:
     std::filesystem::path get_search_path() const;
 
-    void add_archive_type(std::string extension, std::unique_ptr<siege::platform::archive_plugin> archive_type, std::optional<std::span<std::string_view>> explicit_extensions = std::nullopt);
+    void add_archive_type(std::string extension, std::unique_ptr<siege::platform::resource_reader> archive_type, std::optional<std::span<std::string_view>> explicit_extensions = std::nullopt);
 
     std::vector<std::string_view> get_archive_extensions() const;
 
@@ -39,7 +39,7 @@ namespace siege::resource
 
     bool is_regular_file(const std::filesystem::path& folder_path) const;
 
-    std::optional<std::reference_wrapper<siege::platform::archive_plugin>> get_archive_type(const std::filesystem::path& file_path) const;
+    std::optional<std::reference_wrapper<siege::platform::resource_reader>> get_archive_type(const std::filesystem::path& file_path) const;
     std::filesystem::path get_archive_path(const std::filesystem::path& folder_path) const;
 
     void extract_file_contents(std::istream& archive_file,
@@ -52,7 +52,7 @@ namespace siege::resource
 
     std::map<std::string, std::span<std::string_view>> archive_explicit_extensions;
 
-    std::multimap<std::string, std::unique_ptr<siege::platform::archive_plugin>> archive_types;
+    std::multimap<std::string, std::unique_ptr<siege::platform::resource_reader>> archive_types;
 
     mutable std::map<std::string, std::vector<siege::platform::file_info>> info_cache;
   };

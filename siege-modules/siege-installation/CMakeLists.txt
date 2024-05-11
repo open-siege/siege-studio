@@ -8,7 +8,6 @@ find_package(Catch2 REQUIRED)
 
 add_executable(siege-installer src/installer.cpp src/games/games.cpp)
 set_property(TARGET siege-installer PROPERTY CXX_STANDARD 23)
-set_property(TARGET siege-installer PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 target_link_libraries(siege-installer PRIVATE cpr::cpr siege-resource)
 target_include_directories(siege-installer PRIVATE src)
 

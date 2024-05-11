@@ -11,15 +11,15 @@
 #include <functional>
 #include <cpr/cpr.h>
 #include "games/games.hpp"
-#include <siege/resource/darkstar_volume.hpp>
-#include <siege/resource/three_space_volume.hpp>
-#include <siege/resource/trophy_bass_volume.hpp>
-#include <siege/resource/zip_volume.hpp>
-#include <siege/resource/cyclone_volume.hpp>
-#include <siege/resource/sword_volume.hpp>
-#include <siege/resource/seven_zip_volume.hpp>
-#include <siege/resource/iso_volume.hpp>
-#include <siege/resource/cab_volume.hpp>
+#include <siege/resource/darkstar_resource.hpp>
+#include <siege/resource/three_space_resource.hpp>
+#include <siege/resource/trophy_bass_resource.hpp>
+#include <siege/resource/zip_resource.hpp>
+#include <siege/resource/cyclone_resource.hpp>
+#include <siege/resource/sword_resource.hpp>
+#include <siege/resource/seven_zip_resource.hpp>
+#include <siege/resource/iso_resource.hpp>
+#include <siege/resource/cab_resource.hpp>
 #include <siege/resource/resource_explorer.hpp>
 
 namespace fs = std::filesystem;
@@ -41,35 +41,35 @@ siege::resource::resource_explorer create_resource_explorer()
 {
   siege::resource::resource_explorer archive;
 
-  archive.add_archive_type(".tbv", std::make_unique<dio::vol::trophy_bass::tbv_file_archive>());
-  archive.add_archive_type(".rbx", std::make_unique<dio::vol::trophy_bass::rbx_file_archive>());
-  archive.add_archive_type(".rmf", std::make_unique<dio::vol::three_space::rmf_file_archive>());
-  archive.add_archive_type(".map", std::make_unique<dio::vol::three_space::rmf_file_archive>());
-  archive.add_archive_type(".vga", std::make_unique<dio::vol::three_space::rmf_file_archive>());
-  archive.add_archive_type(".zip", std::make_unique<dio::zip::zip_file_archive>());
-  archive.add_archive_type(".vl2", std::make_unique<dio::zip::zip_file_archive>());
-  archive.add_archive_type(".pk3", std::make_unique<dio::zip::zip_file_archive>());
-  archive.add_archive_type(".docx", std::make_unique<dio::zip::zip_file_archive>());
-  archive.add_archive_type(".pptx", std::make_unique<dio::zip::zip_file_archive>());
-  archive.add_archive_type(".xlxs", std::make_unique<dio::zip::zip_file_archive>());
+  archive.add_archive_type(".tbv", std::make_unique<dio::vol::trophy_bass::tbv_resource_reader>());
+  archive.add_archive_type(".rbx", std::make_unique<dio::vol::trophy_bass::rbx_resource_reader>());
+  archive.add_archive_type(".rmf", std::make_unique<dio::vol::three_space::rmf_resource_reader>());
+  archive.add_archive_type(".map", std::make_unique<dio::vol::three_space::rmf_resource_reader>());
+  archive.add_archive_type(".vga", std::make_unique<dio::vol::three_space::rmf_resource_reader>());
+  archive.add_archive_type(".zip", std::make_unique<dio::zip::zip_resource_reader>());
+  archive.add_archive_type(".vl2", std::make_unique<dio::zip::zip_resource_reader>());
+  archive.add_archive_type(".pk3", std::make_unique<dio::zip::zip_resource_reader>());
+  archive.add_archive_type(".docx", std::make_unique<dio::zip::zip_resource_reader>());
+  archive.add_archive_type(".pptx", std::make_unique<dio::zip::zip_resource_reader>());
+  archive.add_archive_type(".xlxs", std::make_unique<dio::zip::zip_resource_reader>());
 
-  archive.add_archive_type(".dyn", std::make_unique<dio::vol::three_space::dyn_file_archive>());
-  archive.add_archive_type(".vol", std::make_unique<dio::vol::three_space::vol_file_archive>());
-  archive.add_archive_type(".vol", std::make_unique<dio::vol::darkstar::vol_file_archive>());
+  archive.add_archive_type(".dyn", std::make_unique<dio::vol::three_space::dyn_resource_reader>());
+  archive.add_archive_type(".vol", std::make_unique<dio::vol::three_space::vol_resource_reader>());
+  archive.add_archive_type(".vol", std::make_unique<dio::vol::darkstar::vol_resource_reader>());
 
-  archive.add_archive_type(".cln", std::make_unique<dio::cln::cln_file_archive>());
-  archive.add_archive_type(".atd", std::make_unique<dio::atd::atd_file_archive>());
+  archive.add_archive_type(".cln", std::make_unique<dio::cln::cln_resource_reader>());
+  archive.add_archive_type(".atd", std::make_unique<dio::atd::atd_resource_reader>());
 
-  archive.add_archive_type(".7z", std::make_unique<dio::zip::seven_zip_file_archive>());
+  archive.add_archive_type(".7z", std::make_unique<dio::zip::seven_zip_resource_reader>());
 
-  archive.add_archive_type(".cue", std::make_unique<dio::iso::iso_file_archive>());
-  archive.add_archive_type(".mds", std::make_unique<dio::iso::iso_file_archive>());
-  archive.add_archive_type(".iso", std::make_unique<dio::iso::iso_file_archive>());
-  archive.add_archive_type(".img", std::make_unique<dio::iso::iso_file_archive>());
-  archive.add_archive_type(".bin", std::make_unique<dio::iso::iso_file_archive>());
-  archive.add_archive_type(".mdf", std::make_unique<dio::iso::iso_file_archive>());
+  archive.add_archive_type(".cue", std::make_unique<dio::iso::iso_resource_reader>());
+  archive.add_archive_type(".mds", std::make_unique<dio::iso::iso_resource_reader>());
+  archive.add_archive_type(".iso", std::make_unique<dio::iso::iso_resource_reader>());
+  archive.add_archive_type(".img", std::make_unique<dio::iso::iso_resource_reader>());
+  archive.add_archive_type(".bin", std::make_unique<dio::iso::iso_resource_reader>());
+  archive.add_archive_type(".mdf", std::make_unique<dio::iso::iso_resource_reader>());
 
-  archive.add_archive_type(".cab", std::make_unique<dio::cab::cab_file_archive>());
+  archive.add_archive_type(".cab", std::make_unique<dio::cab::cab_resource_reader>());
 
   return archive;
 }
@@ -616,7 +616,7 @@ int main(int argc, char** argv)
       }
 
       std::string archive_input;
-      std::optional<std::reference_wrapper<siege::platform::archive_plugin>> archive_input_plugin;
+      std::optional<std::reference_wrapper<siege::platform::resource_reader>> archive_input_plugin;
       std::vector<siege::platform::file_info> archive_files;
 
       if (fs::exists(content_path.value() / "original-archive-path.txt"))

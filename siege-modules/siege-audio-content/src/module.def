@@ -1,0 +1,6 @@
+EXPORTS
+	GetSupportedExtensions
+	GetSupportedFormatCategories
+	GetSupportedExtensionsForCategory
+	IsStreamSupported
+	GetWindowClassForStream

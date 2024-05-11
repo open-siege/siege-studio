@@ -2,7 +2,7 @@
 #define OPEN_SIEGE_EXTERNAL_UTILS_HPP
 
 #include <vector>
-#include <siege/platform/archive_plugin.hpp>
+#include <siege/platform/resource.hpp>
 
 namespace siege::resource
 {

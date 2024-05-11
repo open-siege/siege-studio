@@ -8,7 +8,7 @@
 #include <utility>
 #include <variant>
 //#include "siege/resource/resource_explorer.hpp"
-#include <siege/platform/archive_plugin.hpp>
+#include <siege/platform/resource.hpp>
 #include <siege/content/pal/palette.hpp>
 #include <siege/content/bmp/bitmap.hpp>
 #include <siege/content/json_boost.hpp>

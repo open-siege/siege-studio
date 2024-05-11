@@ -13,7 +13,6 @@ add_subdirectory(siege-resource-content)
 add_subdirectory(siege-audio-content)
 
 # for siege-launcher only (which is private code)
-
 if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/siege-configuration)
     add_subdirectory(siege-configuration)
 endif()
@@ -22,8 +21,12 @@ if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/siege-installation)
     add_subdirectory(siege-installation)
 endif()
 
-if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/siege-game-input)
-    add_subdirectory(siege-game-input)
+if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/siege-input)
+    add_subdirectory(siege-input)
+endif()
+
+if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/siege-game-content)
+    add_subdirectory(siege-game-content)
 endif()
 
 

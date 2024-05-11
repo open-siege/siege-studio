@@ -16,7 +16,7 @@ namespace siege::resource
     return std::filesystem::current_path();
   }
 
-  void resource_explorer::add_archive_type(std::string extension, std::unique_ptr<siege::platform::archive_plugin> archive_type, std::optional<std::span<std::string_view>> explicit_extensions)
+  void resource_explorer::add_archive_type(std::string extension, std::unique_ptr<siege::platform::resource_reader> archive_type, std::optional<std::span<std::string_view>> explicit_extensions)
   {
     auto result = archive_types.insert(std::make_pair(platform::to_lower(extension), std::move(archive_type)));
 
@@ -264,7 +264,7 @@ namespace siege::resource
     return archive_path;
   }
 
-  std::optional<std::reference_wrapper<siege::platform::archive_plugin>> resource_explorer::get_archive_type(const std::filesystem::path& file_path) const
+  std::optional<std::reference_wrapper<siege::platform::resource_reader>> resource_explorer::get_archive_type(const std::filesystem::path& file_path) const
   {
     auto ext = platform::to_lower(file_path.filename().extension().string());
     auto archive_type = archive_types.equal_range(ext);
