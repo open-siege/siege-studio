@@ -4,6 +4,7 @@
 #include <siege/platform/win/desktop/win32_common_controls.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include <siege/platform/siege_module.hpp>
+#include <map>
 
 namespace siege::views
 {
@@ -13,14 +14,18 @@ namespace siege::views
 		win32::tab_control tab_control;
 
 		std::list<siege::siege_module> loaded_modules;
-		std::set<std::wstring> extensions;
+		std::map<std::wstring, std::int32_t> extensions;
 		std::set<std::wstring> categories;
 
-		std::size_t open_id = 0u;
+		std::list<std::filesystem::path> folders;
+		std::list<std::filesystem::path> files;
+
+		std::uint32_t open_id = RegisterWindowMessageW(L"COMMAND_OPEN");
+		std::uint32_t open_new_tab_id = RegisterWindowMessageW(L"COMMAND_OPEN_NEW_TAB");
+		std::uint32_t open_workspace = RegisterWindowMessageW(L"COMMAND_OPEN_WORKSPACE");
 
 		siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self), tab_control(nullptr)
 		{
-			open_id = RegisterWindowMessageW(L"COMMAND_OPEN");
 			std::wstring full_app_path(256, '\0');
 
 			GetModuleFileName(params.hInstance, full_app_path.data(), full_app_path.size());
@@ -44,37 +49,98 @@ namespace siege::views
 			for (auto& module : loaded_modules)
 			{
 				auto module_exts = module.GetSupportedExtensions();
-				std::copy(module_exts.begin(), module_exts.end(), std::inserter(extensions, extensions.begin()));
+				std::transform(module_exts.begin(), module_exts.end(), std::inserter(extensions, extensions.begin()), [&](auto ext) {
+						return std::make_pair(std::move(ext), module.GetDefaultFileIcon());
+					});
 
 				auto category_exts = module.GetSupportedFormatCategories(LOCALE_USER_DEFAULT);
 				std::copy(category_exts.begin(), category_exts.end(), std::inserter(categories, categories.begin()));
 			}
 		}
 
+		void repopulate_tree_view(std::filesystem::path path)
+		{
+			dir_list.DeleteItem(nullptr);
+			folders.clear();
+			files.clear();
+			
+			auto& current_path = folders.emplace_back(std::move(path));
+			std::array<win32::tree_view_item, 1> root{win32::tree_view_item(current_path)};
+
+
+			HIMAGELIST image_list = nullptr;
+			auto hresult = SHGetImageList(SHIL_SMALL, IID_IImageList, (void**)&image_list);
+			
+			SHSTOCKICONINFO info{.cbSize = sizeof(SHSTOCKICONINFO)};
+
+			if (hresult == S_OK)
+			{
+				dir_list.SetImageList(TVSIL_NORMAL, image_list);
+				hresult = SHGetStockIconInfo(SIID_FOLDER, SHGSI_SYSICONINDEX, &info);
+
+				if (hresult == S_OK)
+				{
+					root[0].item.iImage = info.iSysImageIndex;
+				}
+			}
+
+			for (auto const& dir_entry : std::filesystem::directory_iterator{current_path}) 
+			{
+				if (dir_entry.is_directory())
+				{
+					folders.emplace_back(dir_entry.path());
+				}
+				else
+				{
+					files.emplace_back(dir_entry.path());				
+				}
+			}
+
+			for (auto& folder : folders)
+			{
+				if (folder == current_path)
+				{
+					continue;
+				}
+				auto& info = root[0].children.emplace_back(folder, folder.filename());
+				info.item.iImage = root[0].item.iImage;
+				info.item.iSelectedImage = root[0].item.iImage;
+			}
+
+			for (auto& file : files)
+			{
+				auto& tree_item = root[0].children.emplace_back(file, file.filename());
+
+				auto ext_icon = extensions.find(file.extension());
+
+				if (ext_icon != extensions.end())
+				{
+					hresult = SHGetStockIconInfo(SHSTOCKICONID(ext_icon->second), SHGSI_SYSICONINDEX, &info);
+
+					if (hresult == S_OK)
+					{	
+						tree_item.item.iImage = info.iSysImageIndex;
+						tree_item.item.iSelectedImage = info.iSysImageIndex;
+					}
+				}
+			}
+
+			dir_list.InsertRoots(root);
+		}
+
 		auto on_create(const win32::create_message&)
 		{
-			auto mfcModule = GetModuleHandleW(L"siege-win-mfc.dll");
+			win32::window_factory factory(ref());
 
-			win32::window_factory factory;
+			dir_list = *factory.CreateWindowExW<win32::tree_view>(CREATESTRUCTW { .style = WS_CHILD  | WS_VISIBLE });
 
-			dir_list = *factory.CreateWindowExW<win32::tree_view>(CREATESTRUCTW {
-							.hwndParent = *this,
-							.style = WS_CHILD  | WS_VISIBLE, 
-							.lpszClass = L"MFC::CMFCShellTreeCtrl"
-						});
-			assert(dir_list);
+			repopulate_tree_view(std::filesystem::current_path());
 
-			tab_control = *factory.CreateWindowExW<win32::tab_control>(CREATESTRUCTW {
-							.hwndParent = *this,
-							.style = WS_CHILD | WS_VISIBLE | TCS_MULTILINE | TCS_RIGHTJUSTIFY, 
-							.lpszClass = win32::tab_control::class_name
-						});
-
+			tab_control = *factory.CreateWindowExW<win32::tab_control>(CREATESTRUCTW { .style = WS_CHILD | WS_VISIBLE | TCS_MULTILINE | TCS_RIGHTJUSTIFY });
 			tab_control.InsertItem(0, TCITEMW {
 							.mask = TCIF_TEXT,
 							.pszText = const_cast<wchar_t*>(L"+"),
 						});
-
 		
 			return 0;
 		}
@@ -148,8 +214,33 @@ namespace siege::views
 					return 0;
 		}
 
-		std::optional<LRESULT> on_command(const win32::command_message& command) {					
-					if (command.notification_code == 0 && command.identifier == open_id)
+		std::optional<LRESULT> on_command(const win32::command_message& command) {		
+
+					if (command.notification_code == 0 && command.identifier == open_workspace)
+					{
+						auto dialog = win32::com::CreateFileOpenDialog();
+
+						if (dialog)
+						{
+							auto open_dialog = *dialog;
+							open_dialog->SetOptions(FOS_PICKFOLDERS);
+							auto result = open_dialog->Show(nullptr);
+
+							if (result == S_OK)
+							{
+								auto selection = open_dialog.GetResult();
+
+								if (selection)
+								{
+									auto path = selection.value().GetFileSysPath(); 
+									std::filesystem::current_path(*path);
+
+									repopulate_tree_view(std::move(*path));
+								}
+							}
+						}
+					}
+					else if (command.notification_code == 0 && command.identifier == open_id)
 					{
 						auto dialog = win32::com::CreateFileOpenDialog();
 
@@ -173,7 +264,7 @@ namespace siege::views
 
 							for (auto& extension : extensions)
 							{
-								temp.emplace_back(L"", L"*" + extension);
+								temp.emplace_back(L"", L"*" + extension.first);
 							}
 
 							std::vector<COMDLG_FILTERSPEC> filetypes(temp.begin(), temp.end());
@@ -182,11 +273,11 @@ namespace siege::views
 
 							if (result == S_OK)
 							{
-								auto item = dialog.value()->GetResult();
+								auto item = dialog.value().GetResult();
 
 								if (item)
 								{
-									auto path = item.value()->GetFileSysPath();
+									auto path = item.value().GetFileSysPath();
 
 									IStream* stream = nullptr;
 

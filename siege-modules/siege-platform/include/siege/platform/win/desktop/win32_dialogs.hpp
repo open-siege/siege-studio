@@ -8,12 +8,14 @@
 
 namespace win32::com
 {
-	struct IShellItemEx : ::IShellItem
+	struct ShellItemEx : com_ptr<::IShellItem>
 	{
+		using com_ptr<::IShellItem>::com_ptr;
+
 		std::expected<std::filesystem::path, HRESULT> GetFileSysPath()
 		{
 			wchar_t* pszFilePath;
-		    auto hr = this->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+		    auto hr = get()->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
 
 			if (hr != S_OK)
 			{
@@ -26,26 +28,28 @@ namespace win32::com
 		}
 	};
 
-	struct IFileOpenDialogEx : ::IFileOpenDialog
+	struct FileOpenDialogEx : com_ptr<::IFileOpenDialog>
 	{
-		std::expected<std::unique_ptr<IShellItemEx, com_deleter<IShellItemEx>>, HRESULT> GetResult()
-		{
-			com_ptr<IShellItem> result(nullptr);
+		using com_ptr<::IFileOpenDialog>::com_ptr;
 
-			auto hr = static_cast<IFileOpenDialog*>(this)->GetResult(result.put());
+		std::expected<ShellItemEx, HRESULT> GetResult()
+		{
+			ShellItemEx result(nullptr);
+
+			auto hr = get()->GetResult(result.put());
 
 			if (hr != S_OK)
 			{
 				return std::unexpected(hr);
 			}
 
-			return result.as<IShellItemEx>();
+			return result;
 		}
 	};
 
-	std::expected<std::unique_ptr<IFileOpenDialogEx, com_deleter<IFileOpenDialogEx>>, HRESULT> CreateFileOpenDialog()
+	std::expected<FileOpenDialogEx, HRESULT> CreateFileOpenDialog()
 	{
-		com_ptr<IFileOpenDialog> pFileOpen(nullptr);
+		FileOpenDialogEx pFileOpen(nullptr);
 					
 		auto hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, __uuidof(::IFileOpenDialog), pFileOpen.put_void());
 
@@ -54,10 +58,10 @@ namespace win32::com
 			return std::unexpected(hr);
 		}
 
-		return pFileOpen.as<IFileOpenDialogEx>();
+		return pFileOpen;
 	}
 
-	std::expected<std::unique_ptr<IFileSaveDialog, com_deleter<IFileSaveDialog>>, HRESULT> CreateFileSaveDialog()
+	std::expected<com_ptr<IFileSaveDialog>, HRESULT> CreateFileSaveDialog()
 	{
 		com_ptr<IFileSaveDialog> pFileOpen;
 					

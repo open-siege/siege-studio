@@ -1,7 +1,9 @@
 #ifndef WIN32_COMPOSITE_CONTROLS_HPP
 #define WIN32_COMPOSITE_CONTROLS_HPP
 
+#include <filesystem>
 #include <siege/platform/win/desktop/win32_user_controls.hpp>
+#include <commoncontrols.h>
 
 namespace win32
 {
@@ -671,49 +673,110 @@ namespace win32
         }
     };
 
+    struct tree_view_item : ::TVINSERTSTRUCTW
+    {
+        std::wstring text;
+
+        std::vector<tree_view_item> children;
+
+        tree_view_item(const std::filesystem::path& path) : ::TVINSERTSTRUCTW{}, text(path.wstring())
+        {
+            this->item.pszText = this->text.data();
+            this->item.lParam = (LPARAM)path.c_str();
+        }
+
+        tree_view_item(const std::filesystem::path& path, std::wstring text) : ::TVINSERTSTRUCTW{}, text(std::move(text))
+        {
+            this->item.pszText = this->text.data();
+            this->item.lParam = (LPARAM)path.c_str();
+        }
+
+        tree_view_item(const std::filesystem::path& path, std::wstring text, std::vector<tree_view_item> children) : ::TVINSERTSTRUCTW{}, text(std::move(text)), children(std::move(children))
+        {
+            this->item.pszText = this->text.data();
+            this->item.lParam = (LPARAM)path.c_str();
+        }
+
+        tree_view_item(const tree_view_item& item) : ::TVINSERTSTRUCTW(item), text(item.text), children(item.children)
+        {
+            this->item.pszText = text.data();
+        }    
+    };
+
+
     struct tree_view : control
     {
         using control::control;
         constexpr static auto class_name = WC_TREEVIEWW;
 
+        [[maube_unused]] inline bool Expand(HTREEITEM item, wparam_t action = TVE_EXPAND)
+        {
+            return SendMessageW(*this, TVM_EXPAND, action, std::bit_cast<lparam_t>(item));
+        }
+
+        [[maube_unused]] inline bool Collapse(HTREEITEM item, wparam_t action = TVE_COLLAPSE)
+        {
+            return SendMessageW(*this, TVM_EXPAND, action, std::bit_cast<lparam_t>(item));
+        }
+
+        [[maybe_unused]] inline bool EnsureVisible(HTREEITEM item)
+        {
+            return SendMessageW(*this, TVM_ENSUREVISIBLE, 0, std::bit_cast<lparam_t>(item));
+        }
+
+        [[maybe_unused]] inline bool DeleteItem(HTREEITEM item)
+        {
+            return SendMessageW(*this, TVM_DELETEITEM, 0, std::bit_cast<lparam_t>(item));
+        }
+
+        [[maybe_unused]] inline bool SetImageList(wparam_t type, HIMAGELIST list)
+        {
+            return SendMessageW(*this, TVM_SETIMAGELIST, type, std::bit_cast<lparam_t>(list));
+        }
+
+        void SetItemMask(TVITEMW& info)
+        {
+             bool mask_not_set = info.mask == 0;
+
+            if (mask_not_set && info.pszText)
+            {
+                info.mask |= TVIF_TEXT;
+            }
+
+            if (mask_not_set && info.hItem)
+            {
+                info.mask |= TVIF_HANDLE;
+            }
+
+            if (mask_not_set && info.iImage)
+            {
+                info.mask |= TVIF_IMAGE;
+            }
+
+            if (mask_not_set && info.lParam)
+            {
+                info.mask |= TVIF_PARAM;
+            }
+
+            if (mask_not_set && info.iSelectedImage)
+            {
+                info.mask |= TVIF_SELECTEDIMAGE;
+            }
+
+            if (mask_not_set && (info.state || info.stateMask))
+            {
+                info.mask |= TVIF_STATE;
+            }
+
+            if (mask_not_set && info.cChildren)
+            {
+                info.mask |= TVIF_CHILDREN;
+            }
+        }
+
         [[maybe_unused]] inline std::optional<HTREEITEM> InsertItem(TVINSERTSTRUCTW info)
         {
-            bool mask_not_set = info.itemex.mask == 0;
-
-            if (mask_not_set && info.itemex.pszText)
-            {
-                info.itemex.mask |= TVIF_TEXT;
-            }
-
-            if (mask_not_set && info.itemex.hItem)
-            {
-                info.itemex.mask |= TVIF_HANDLE;
-            }
-
-            if (mask_not_set && info.itemex.iImage)
-            {
-                info.itemex.mask |= TVIF_IMAGE;
-            }
-
-            if (mask_not_set && info.itemex.lParam)
-            {
-                info.itemex.mask |= TVIF_PARAM;
-            }
-
-            if (mask_not_set && info.itemex.iSelectedImage)
-            {
-                info.itemex.mask |= TVIF_SELECTEDIMAGE;
-            }
-
-            if (mask_not_set && (info.itemex.state || info.itemex.stateMask))
-            {
-                info.itemex.mask |= TVIF_STATE;
-            }
-
-            if (mask_not_set && info.itemex.cChildren)
-            {
-                info.itemex.mask |= TVIF_CHILDREN;
-            }
+            SetItemMask(info.item);
 
             if (auto result = HTREEITEM(SendMessageW(*this, TVM_INSERTITEMW, 0, std::bit_cast<lparam_t>(&info))); result)
             {
@@ -721,6 +784,35 @@ namespace win32
             }
 
             return std::nullopt;
+        }
+
+        [[maybe_unused]] inline bool SetItem(TVITEMW info)
+        {
+            SetItemMask(info);
+
+            return SendMessageW(*this, TVM_SETITEMW, 0, std::bit_cast<lparam_t>(&info));
+        }
+
+        [[maybe_unused]] inline void InsertRoots(std::span<tree_view_item> items)
+        {
+            for (auto& item : items)
+            {
+                item.hParent = TVI_ROOT; 
+                item.item.cChildren = 1;
+
+                auto result = InsertItem(item);
+
+                auto children = std::move(item.children);
+
+                for (auto& child : children)
+                {
+                    child.hParent = *result;
+                    child.hInsertAfter = TVI_LAST;
+                    InsertItem(child);
+                }
+
+                Expand(*result);
+            }
         }
     };
 

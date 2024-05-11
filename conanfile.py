@@ -17,6 +17,7 @@ class SiegeLauncherConanFile(ConanFile):
 
     def requirements(self):
         if os.path.isdir("siege-launcher"):
+               # TODO - The Windows version of Siege Launcher will eventually use platform APIs directly, so these will only be relevant for Linux.  
                self.requires("sdl/2.28.5")
                self.requires("cpr/1.10.5")
                
