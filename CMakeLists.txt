@@ -11,7 +11,10 @@ add_custom_command(TARGET siege-studio-dependencies POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-2d-content> $<TARGET_FILE_DIR:siege-studio>
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-3d-content> $<TARGET_FILE_DIR:siege-studio>
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-resource-content> $<TARGET_FILE_DIR:siege-studio>
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-audio-content> $<TARGET_FILE_DIR:siege-studio>)
+            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-audio-content> $<TARGET_FILE_DIR:siege-studio>
+            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:unvol> $<TARGET_FILE_DIR:siege-studio>
+            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:dts-to-json> $<TARGET_FILE_DIR:siege-studio>
+            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:dts-to-obj> $<TARGET_FILE_DIR:siege-studio>)
 
 if (WIN32)
     add_custom_command(TARGET siege-studio-dependencies POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-win-mfc> $<TARGET_FILE_DIR:siege-studio>)

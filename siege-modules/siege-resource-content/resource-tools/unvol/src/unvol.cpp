@@ -5,10 +5,10 @@
 #include <functional>
 #include <utility>
 #include <iostream>
-#include <siege/content/mis/mission.hpp"
-#include "siege/resource/darkstar_volume.hpp"
-#include "siege/resource/three_space_volume.hpp"
-#include "siege/resource/trophy_bass_volume.hpp"
+#include <siege/content/mis/mission.hpp>
+#include <siege/resource/darkstar_resource.hpp>
+#include <siege/resource/three_space_resource.hpp>
+#include <siege/resource/trophy_bass_resource.hpp>
 
 auto replace_extension(std::string output_folder)
 {
@@ -35,7 +35,7 @@ namespace dio
 template <typename ArchiveType>
 auto create_archive()
 {
-  return std::unique_ptr<siege::platform>(new ArchiveType());
+  return std::unique_ptr<siege::platform::resource_reader>(new ArchiveType());
 }
 
 using CheckerType = decltype(&dio::vol::darkstar::vol_resource_reader::is_supported);
@@ -56,7 +56,7 @@ int main(int, const char** argv)
   std::string volume_file(argv[1]);
   auto volume_stream = std::ifstream{ volume_file, std::ios::binary };
 
-  std::unique_ptr<siege::platform> archive;
+  std::unique_ptr<siege::platform::resource_reader> archive;
 
   for (const auto [checker, creator] : vol_checkers)
   {
@@ -77,7 +77,7 @@ int main(int, const char** argv)
 
   std::string output_folder = replace_extension(volume_file);
 
-  siege::resource::batch_storage storage;
+  siege::platform::batch_storage storage;
 
   std::function<void(decltype(files)&)> extract_files = [&](const auto& files){
     for (const auto& some_file : files)
