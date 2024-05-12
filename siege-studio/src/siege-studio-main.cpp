@@ -14,7 +14,7 @@
 #include <filesystem>
 #include <cassert>
 
-#include <siege/platform/win/desktop/win32_dialogs.hpp>
+#include <siege/platform/win/desktop/win32_shell.hpp>
 #include <siege/platform/win/desktop/win32_class.hpp>
 #include <siege/platform/win/core/com_client.hpp>
 #include <commctrl.h>
