@@ -18,6 +18,8 @@ namespace siege::views
 
         vol_controller controller;
 
+        win32::list_view table;
+
         vol_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window(self)
 	    {
 	    }
@@ -26,102 +28,42 @@ namespace siege::views
         {
             auto factory = win32::window_factory(win32::window_ref(*this));
 
-            auto root = factory.CreateWindowExW<win32::rebar>(::CREATESTRUCTW{
-                .style{WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS |
-                                            WS_CLIPCHILDREN | CCS_TOP | 
-                                            CCS_VERT | RBS_AUTOSIZE | RBS_FIXEDORDER | RBS_VERTICALGRIPPER },
-                .lpszClass = win32::rebar::class_Name,
-            });
-
-            assert(root);
-
-            auto rebar = factory.CreateWindowExW<win32::rebar>(::CREATESTRUCTW{
-                .style{WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS |
-                    WS_CLIPCHILDREN | RBS_VARHEIGHT | RBS_BANDBORDERS},
-                .lpszClass = win32::rebar::class_Name,
-            });
-
-            auto toolbar = factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{
-						    .style = WS_VISIBLE | WS_CHILD | CCS_NOPARENTALIGN | CCS_NORESIZE | TBSTYLE_LIST,   
-						    });
-
-            assert(toolbar);
-
-            toolbar->SetExtendedStyle(win32::tool_bar::mixed_buttons | win32::tool_bar::draw_drop_down_arrows);
-     
-            std::array<TBBUTTON, 2> buttons{{
-                  TBBUTTON{.iBitmap = I_IMAGENONE, .idCommand = 0, .fsState = TBSTATE_ENABLED, 
-                                    .fsStyle = BTNS_BUTTON | BTNS_SHOWTEXT, .iString = INT_PTR(L"Open")},
-                  TBBUTTON{.iBitmap = I_IMAGENONE, .idCommand = 1, .fsState = TBSTATE_ENABLED, 
-                                    .fsStyle = BTNS_DROPDOWN | BTNS_SHOWTEXT, .iString = INT_PTR(L"Extract")},
-             }};
-
-             if (!toolbar->AddButtons(buttons))
-             {
-                DebugBreak();       
-             }
-
-             auto button_size = toolbar->GetButtonSize();
-
-            assert(rebar);
-            rebar->InsertBand(-1, REBARBANDINFOW{
-                .fStyle = RBBS_CHILDEDGE | RBBS_GRIPPERALWAYS,
-                .lpText = const_cast<wchar_t*>(L""),
-                .hwndChild = *toolbar,
-                });
-
-            rebar->InsertBand(-1, REBARBANDINFOW{
-                .fStyle = RBBS_CHILDEDGE | RBBS_GRIPPERALWAYS,
-                .lpText = const_cast<wchar_t*>(L"Search"),
-                .hwndChild = [&]{
-                  auto search = factory.CreateWindowExW<win32::edit>(CREATESTRUCTW{
-						    .style = WS_VISIBLE | WS_BORDER | WS_EX_STATICEDGE | WS_CHILD
-						    });
-
-                    assert(search);
-                    search->SetCueBanner(false, L"Enter search text here");
-
-                    SendMessageW(*search, CCM_SETWINDOWTHEME , 0, reinterpret_cast<win32::lparam_t>(L"SearchBoxEdit"));
-                    return search->release();
-                }()
-                });
-
-
-            auto table = factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{
+            table = *factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{
 						    .style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
 						    }); 
 
-            table->InsertColumn(-1, LVCOLUMNW {
+            table.InsertColumn(-1, LVCOLUMNW {
                     .pszText = const_cast<wchar_t*>(L"Filename"),
             });
 
-            table->InsertColumn(-1, LVCOLUMNW {
+            table.InsertColumn(-1, LVCOLUMNW {
                     .pszText = const_cast<wchar_t*>(L"Path"),
             });
 
-            table->InsertColumn(-1, LVCOLUMNW {
+            table.InsertColumn(-1, LVCOLUMNW {
                     .pszText = const_cast<wchar_t*>(L"Size (in bytes)"),
             });
 
-            table->InsertColumn(-1, LVCOLUMNW {
+            table.InsertColumn(-1, LVCOLUMNW {
                   .pszText = const_cast<wchar_t*>(L"Compression Method"),
             });
 
-            root->InsertBand(-1, REBARBANDINFOW {
-                .fStyle = RBBS_NOGRIPPER | RBBS_HIDETITLE | RBBS_TOPALIGN,
-                .hwndChild = *rebar
-                });
-
-            root->InsertBand(-1, REBARBANDINFOW {
-                .fStyle = RBBS_NOGRIPPER | RBBS_HIDETITLE | RBBS_TOPALIGN,
-                .hwndChild = *table
-                });
             return 0;
         }
 
         auto on_size(win32::size_message sized)
 	    {
-		    return std::nullopt;
+            table.SetWindowPos(sized.client_size);
+            auto column_count = table.GetColumnCount();
+
+            auto column_width = sized.client_size.cx / column_count;
+
+            for (auto i = 0u; i < column_count; ++i)
+            {
+                table.SetColumnWidth(i, column_width);            
+            }
+
+		    return 0;
 	    }
 
         auto on_copy_data(win32::copy_data_message<char> message)
@@ -141,6 +83,23 @@ namespace siege::views
 
                 if (count > 0)
                 {
+                    auto contents = controller.get_contents();
+
+                    for (auto& content : contents)
+                    {
+                        if (auto* file = std::get_if<siege::platform::file_info>(&content))
+                        {
+                            win32::list_view_item item{file->filename};
+
+                            item.sub_items = {
+                                std::filesystem::relative(file->archive_path, file->folder_path).wstring(),
+                                std::to_wstring(file->size)
+                            };
+
+                            table.InsertRow(item);
+                        }
+                    }
+
                     return TRUE;
                 }
 

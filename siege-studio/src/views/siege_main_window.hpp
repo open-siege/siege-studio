@@ -185,6 +185,55 @@ namespace siege::views
 			return std::nullopt;
 		}
 
+		std::optional<LRESULT> on_notify(win32::notify_message notification)
+		{
+			auto [sender, id, code] = notification;
+
+			switch (code)
+			{
+			case NM_DBLCLK:
+			{
+				if (sender == dir_list && selected_file != files.end() && AddTabFromPath(*selected_file))
+				{
+					return 0;
+				}
+
+				return std::nullopt;
+			}
+			case TCN_SELCHANGING:
+			{
+				auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
+				auto tab_item = win32::tab_control(sender).GetItem(current_index);
+				::ShowWindow(win32::hwnd_t(tab_item->lParam), SW_HIDE);
+				return 0;
+			}
+			case TCN_SELCHANGE:
+			{
+				auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
+				auto tab_item = win32::tab_control(sender).GetItem(current_index);
+
+
+				if (tab_item->lParam == 0)
+				{
+					return std::nullopt;
+				}
+
+				auto temp_window = win32::window_ref(win32::hwnd_t(tab_item->lParam));
+
+				temp_window.SetWindowPos(HWND_TOP);
+
+
+				ShowWindow(win32::hwnd_t(tab_item->lParam), SW_SHOW);
+
+				return 0;
+			}
+			default:
+			{
+				return std::nullopt;
+			}
+			}
+		}
+
 		bool AddTabFromPath(std::filesystem::path file_path)
 		{
 			IStream* stream = nullptr;
@@ -246,7 +295,13 @@ namespace siege::views
 										.lParam = win32::lparam_t(child->get())
 							});
 
-						SetWindowLongPtrW(*child, GWLP_ID, index);
+						SetWindowLongPtrW(*child, GWLP_ID, index + 1);
+
+						on_notify(win32::notify_message{NMHDR{.hwndFrom = tab_control, .code = TCN_SELCHANGING}});
+
+						tab_control.SetCurrentSelection(index + 1);
+
+						on_notify(win32::notify_message{NMHDR{.hwndFrom = tab_control, .code = TCN_SELCHANGE}});
 					}
 					else
 					{
@@ -283,55 +338,6 @@ namespace siege::views
 			{
 
 				return FALSE;
-			}
-			default:
-			{
-				return std::nullopt;
-			}
-			}
-		}
-
-		std::optional<LRESULT> on_notify(win32::notify_message notification)
-		{
-			auto [sender, id, code] = notification;
-
-			switch (code)
-			{
-			case NM_DBLCLK:
-			{
-				if (sender == dir_list && selected_file != files.end() && AddTabFromPath(*selected_file))
-				{
-					return 0;
-				}
-
-				return std::nullopt;
-			}
-			case TCN_SELCHANGING:
-			{
-				auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
-				auto tab_item = win32::tab_control(sender).GetItem(current_index);
-				::ShowWindow(win32::hwnd_t(tab_item->lParam), SW_HIDE);
-				return 0;
-			}
-			case TCN_SELCHANGE:
-			{
-				auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
-				auto tab_item = win32::tab_control(sender).GetItem(current_index);
-
-
-				if (tab_item->lParam == 0)
-				{
-					return std::nullopt;
-				}
-
-				auto temp_window = win32::window_ref(win32::hwnd_t(tab_item->lParam));
-
-				temp_window.SetWindowPos(HWND_TOP);
-
-
-				ShowWindow(win32::hwnd_t(tab_item->lParam), SW_SHOW);
-
-				return 0;
 			}
 			default:
 			{
