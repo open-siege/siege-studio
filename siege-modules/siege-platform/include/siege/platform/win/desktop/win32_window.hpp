@@ -130,6 +130,11 @@ namespace win32
             return std::nullopt;
         }
 
+        inline bool CopyData(win32::hwnd_t sender, ::COPYDATASTRUCT data)
+        {
+            return SendMessage(*this, WM_COPYDATA, win32::wparam_t(win32::hwnd_t(sender)), win32::lparam_t(&data));        
+        }
+
         template <typename TValue>
         inline TValue GetPropW(std::wstring_view name) const
         {

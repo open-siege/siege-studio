@@ -10,7 +10,7 @@
 
 extern "C"
 {
-    const std::uint32_t DefaultFileIcon = SIID_ZIPFILE;
+    extern const std::uint32_t DefaultFileIcon = SIID_ZIPFILE;
 
     HRESULT __stdcall GetSupportedExtensions(_Outptr_ win32::com::IReadOnlyCollection** formats) noexcept
     {

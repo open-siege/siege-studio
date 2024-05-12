@@ -3,7 +3,6 @@
 
 #include <expected>
 #include <siege/platform/win/desktop/win32_window.hpp>
-#include <CommCtrl.h>
 
 namespace win32
 {

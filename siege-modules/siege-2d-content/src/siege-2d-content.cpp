@@ -38,7 +38,7 @@ struct pal_mapping_window
 
 extern "C"
 {
-    const std::uint32_t DefaultFileIcon = SIID_IMAGEFILES;
+    extern const std::uint32_t DefaultFileIcon = SIID_IMAGEFILES;
 
     HRESULT __stdcall GetSupportedExtensions(_Outptr_ win32::com::IReadOnlyCollection** formats) noexcept
     {

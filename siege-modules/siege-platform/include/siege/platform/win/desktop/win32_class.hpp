@@ -6,40 +6,28 @@
 
 namespace win32
 {
+    #define DO_DISPATCH(message_name, event_name) \
+    if constexpr (requires(TWindow t) { t.##event_name({wParam, lParam}); }) \
+        { \
+            if (message == ##message_name::id) \
+            { \
+                return self->##event_name({wParam, lParam}); \
+            } \
+        } \
+
     template<typename TWindow>
     std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
     {
-        if constexpr (requires(TWindow t) { t.on_non_client_create(non_client_create_message{wParam, lParam}); })
-        {
-            if (message == non_client_create_message::id)
-            {
-                return self->on_non_client_create(non_client_create_message{wParam, lParam});
-            }
-        }
-
-        if constexpr (requires(TWindow t) { t.on_create(create_message{wParam, lParam}); })
-        {
-            if (message == create_message::id)
-            {
-                return self->on_create(create_message{wParam, lParam});
-            }
-        }
-
-        if constexpr (requires(TWindow t) { t.on_init_dialog(init_dialog_message{wParam, lParam}); })
-        {
-            if (message == init_dialog_message::id)
-            {
-                return self->on_init_dialog(init_dialog_message{wParam, lParam});
-            }
-        }
-
-        if constexpr (requires(TWindow t) { t.on_destroy(destroy_message{wParam, lParam}); })
-        {
-            if (message == destroy_message::id)
-            {
-                return self->on_destroy(destroy_message{wParam, lParam});
-            }
-        }
+        DO_DISPATCH(create_message, on_create);
+        DO_DISPATCH(init_dialog_message, on_init_dialog);
+        DO_DISPATCH(destroy_message, on_destroy);
+        DO_DISPATCH(get_object_message, on_get_object);
+        DO_DISPATCH(size_message, on_size);
+        DO_DISPATCH(pos_changed_message, on_pos_changed);
+        DO_DISPATCH(paint_message, on_paint);
+        DO_DISPATCH(keyboard_key_up_message, on_keyboard_key_up);
+        DO_DISPATCH(keyboard_key_down_message, on_keyboard_key_down);
+        DO_DISPATCH(keyboard_char_message, on_keyboard_char);
 
         if constexpr (requires(TWindow t) { t.on_copy_data(copy_data_message<char>{wParam, lParam}); })
         {
@@ -49,11 +37,19 @@ namespace win32
             }
         }
 
-        if constexpr (requires(TWindow t) { t.on_get_object(get_object_message{wParam, lParam}); })
+        if constexpr (requires(TWindow t) { t.on_menu_command(menu_command_message{wParam, lParam}); })
         {
-            if (message == get_object_message::id)
+            if (message == command_message::id && menu_command_message::is_menu_command(wParam, lParam))
             {
-                return self->on_get_object(get_object_message{wParam, lParam});
+                return self->on_menu_command(menu_command_message{wParam, lParam});
+            }
+        }
+
+        if constexpr (requires(TWindow t) { t.on_accelerator_command(accelerator_command_message{wParam, lParam}); })
+        {
+            if (message == command_message::id && accelerator_command_message::is_accelerator_command(wParam, lParam))
+            {
+                return self->on_accelerator_command(accelerator_command_message{wParam, lParam});
             }
         }
 
@@ -67,76 +63,43 @@ namespace win32
 
         if constexpr (requires(TWindow t) { t.on_notify(notify_message{wParam, lParam}); })
         {
-            if (message == notify_message::id)
+            if (message == command_message::id && 
+                    !(accelerator_command_message::is_accelerator_command(wParam, lParam) || menu_command_message::is_menu_command(wParam, lParam)))
             {
-                return self->on_notify(notify_message{wParam, lParam});
+                return self->on_notify(notify_message{command_message{wParam, lParam}});
             }
         }
 
-        if constexpr (requires(TWindow t) { t.on_size(size_message{wParam, lParam}); })
+        if (message == notify_message::id)
         {
-            if (message == size_message::id)
-            {
-                return self->on_size(size_message{wParam, lParam});
-            }
-        }
+            notify_message header(wParam, lParam);
 
-        if constexpr (requires(TWindow t) { t.on_pos_changed(pos_changed_message{wParam, lParam}); })
-        {
-            if (message == pos_changed_message::id)
+            if constexpr (requires(TWindow t) { t.on_notify(tree_view_notify_message{wParam, lParam}); })
             {
-                return self->on_pos_changed(pos_changed_message{wParam, lParam});
+                if (header.code == TVN_ITEMEXPANDINGW || 
+                    header.code == TVN_ITEMEXPANDEDW ||
+                    header.code == TVN_SELCHANGINGW ||
+                    header.code == TVN_SELCHANGEDW ||
+                    header.code == TVN_SINGLEEXPAND ||
+                    header.code == TVN_BEGINDRAGW ||
+                    header.code == TVN_DELETEITEMW)
+                {
+                    return self->on_notify(tree_view_notify_message{wParam, lParam});            
+                }
             }
-        }
 
-        if constexpr (requires(TWindow t) { t.on_paint(paint_message{wParam, lParam}); })
-        {
-            if (message == paint_message::id)
+            if constexpr (requires(TWindow t) { t.on_notify(notify_message{wParam, lParam}); })
             {
-                return self->on_paint(paint_message{wParam, lParam});
-            }
-        }
-
-        if constexpr (requires(TWindow t) { t.on_draw_item(draw_item_message{wParam, lParam}); })
-        {
-            if (message == draw_item_message::id)
-            {
-                return self->on_draw_item(draw_item_message{wParam, lParam});
-            }
-        }
-
-        if constexpr (requires(TWindow t) { t.on_keyboard_key_up(keyboard_key_up_message{wParam, lParam}); })
-        {
-            if (message == keyboard_key_up_message::id)
-            {
-                return self->on_keyboard_key_up(keyboard_key_up_message{wParam, lParam});
-            }
-        }
-
-        if constexpr (requires(TWindow t) { t.on_keyboard_key_down(keyboard_key_down_message{wParam, lParam}); })
-        {
-            if (message == keyboard_key_down_message::id)
-            {
-                return self->on_keyboard_key_down(keyboard_key_down_message{wParam, lParam});
-            }
-        }
-
-        if constexpr (requires(TWindow t) { t.on_keyboard_char(keyboard_char_message{wParam, lParam}); })
-        {
-            if (message == keyboard_key_down_message::id)
-            {
-                return self->on_keyboard_char(keyboard_char_message{wParam, lParam});
+                if (message == notify_message::id)
+                {
+                    return self->on_notify(std::move(header));
+                }
             }
         }
 
         if constexpr (requires(TWindow t) { t.on_message(win32::message{message, wParam, lParam}); })
         {
             return self->on_message(win32::message{message, wParam, lParam});
-        }
-
-        if constexpr (requires(TWindow t) { t(win32::window_message{message, wParam, lParam}); })
-        {
-            return self->operator()(win32::make_window_message(message, wParam, lParam));
         }
 
         return std::nullopt;

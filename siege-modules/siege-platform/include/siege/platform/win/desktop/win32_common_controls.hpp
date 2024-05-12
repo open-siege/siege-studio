@@ -3,7 +3,6 @@
 
 #include <filesystem>
 #include <siege/platform/win/desktop/win32_user_controls.hpp>
-#include <commoncontrols.h>
 
 namespace win32
 {

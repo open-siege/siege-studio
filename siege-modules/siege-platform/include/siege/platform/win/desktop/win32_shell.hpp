@@ -3,7 +3,8 @@
 #include <expected>
 #include <memory>
 #include <filesystem>
-#include <shobjidl.h> 
+#include <shobjidl.h>
+#include <commoncontrols.h>
 #include <siege/platform/win/core/com.hpp>
 
 namespace win32::com

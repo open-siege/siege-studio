@@ -14,6 +14,7 @@
 #include <WinDef.h>
 #include <WinUser.h>
 #include <windowsx.h>
+#include <CommCtrl.h>
 
 namespace win32
 {
@@ -194,13 +195,72 @@ namespace win32
 		}
 	};
 
+	#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+		struct NMHDR {
+			  HWND     hwndFrom;
+			  UINT_PTR idFrom;
+			  UINT     code;
+		};
+	#endif
+
+	template<typename TNotification = NMHDR>
+	struct notify_message_base : TNotification
+	{
+		constexpr static std::uint32_t id = WM_NOTIFY;
+
+		notify_message_base(NMHDR base) : TNotification{}
+		{
+			std::memcpy(this, &base, sizeof(NMHDR));
+		}
+
+		notify_message_base(wparam_t, lparam_t lParam) : TNotification{}
+		{
+			std::memcpy(this, (void*)lParam, sizeof(TNotification));
+		}
+	};
+
+	using notify_message = notify_message_base<>;
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+	using tree_view_notify_message = notify_message_base<NMTREEVIEWW>;
+	using tree_view_notify_message = notify_message_base<NMTREEVIEWW>;
+#endif
+
+	struct menu_command_message
+	{
+		constexpr static std::uint32_t id = WM_COMMAND;
+		int identifier;
+
+		menu_command_message(wparam_t wParam, lparam_t) : 
+			identifier(LOWORD(wParam))
+		{
+		}
+
+		static bool is_menu_command(wparam_t wParam, lparam_t lParam)
+		{
+			return HIWORD(wParam) == 0 && lParam == 0;
+		}
+	};
+
+	struct accelerator_command_message
+	{
+		constexpr static std::uint32_t id = WM_COMMAND;
+		
+		int notification_code;	
+
+		static bool is_accelerator_command(wparam_t wParam, lparam_t lParam)
+		{
+			return HIWORD(wParam) == 1 && lParam == 0;
+		}
+	};
+
 	struct command_message
 	{
 		constexpr static std::uint32_t id = WM_COMMAND;
 		
 		hwnd_t sender;
-		int identifier;
-		int notification_code;
+		std::size_t identifier;
+		std::uint32_t notification_code;
 
 		command_message(wparam_t wParam, lparam_t lParam) : 
 			sender(std::bit_cast<hwnd_t>(lParam)),
@@ -218,40 +278,10 @@ namespace win32
 		{
 			return std::bit_cast<lparam_t>(sender);
 		}
-	};
 
-	struct notify_message
-	{
-		constexpr static std::uint32_t id = WM_NOTIFY;
-
-		hwnd_t sender;
-		int identifier;
-		int notification_code;
-		#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-		struct NMHDR {
-			  HWND     hwndFrom;
-			  UINT_PTR idFrom;
-			  UINT     code;
-		};
-		#endif
-		notify_message(wparam_t, lparam_t lParam) : 
-			sender(nullptr),
-			identifier(0),
-			notification_code(0)
+		operator NMHDR()
 		{
-			NMHDR* header = std::bit_cast<NMHDR*>(lParam);
-			sender = header->hwndFrom;
-			identifier = header->idFrom;
-			notification_code = header->code;
-		}
-	};
-
-
-	struct toolbar_notify_message : notify_message
-	{
-		toolbar_notify_message(wparam_t wParam, lparam_t lParam) : notify_message(wParam, lParam)
-		{
-
+			return NMHDR{.hwndFrom = sender, .idFrom = identifier, .code = notification_code };
 		}
 	};
 
@@ -366,6 +396,7 @@ namespace win32
 		constexpr static std::uint32_t id = WM_MOUSELEAVE;
 	};
 
+	// TODO move this logic to win32_class.hpp
 	using window_message = std::variant<message,
 		command_message,
 		non_client_create_message,
