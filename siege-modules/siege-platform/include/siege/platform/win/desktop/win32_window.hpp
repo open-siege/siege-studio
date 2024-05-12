@@ -6,6 +6,7 @@
 
 #undef GetFirstSibling
 #undef GetNextSibling
+#undef GetWindowStyle
 
 namespace win32
 {
@@ -132,7 +133,17 @@ namespace win32
 
         inline bool CopyData(win32::hwnd_t sender, ::COPYDATASTRUCT data)
         {
-            return SendMessage(*this, WM_COPYDATA, win32::wparam_t(win32::hwnd_t(sender)), win32::lparam_t(&data));        
+            return SendMessageW(*this, WM_COPYDATA, win32::wparam_t(win32::hwnd_t(sender)), win32::lparam_t(&data));        
+        }
+
+        inline auto GetWindowStyle() const
+        {
+            return ::GetWindowLongPtrW(*this, GWL_STYLE);
+        }
+
+        inline auto SetWindowStyle(LONG_PTR style)
+        {
+            return ::SetWindowLongPtrW(*this, GWL_STYLE, style);
         }
 
         template <typename TValue>
