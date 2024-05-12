@@ -6,14 +6,9 @@
 
 Classic Games, Modern Technology.
 
-Open Siege is a suite of tools to enable the compatibility and playability of classic games, primarily focusing on vehicle simulations and first person shooters from the DOS and early Windows era.
+Siege Studio is a tool for previewing, converting and (eventually) editing reverse engineered files for games such as Earthsiege, Starsiege and beyond.
 
-The eventual goal is to become an open-source reimplementation of the 3Space game engine, used by several games such as the Earthsiege/Starsiege series, the Red Baron/Great War Planes series and several others.
-
-Until then, the focus is currently on the following goals:
-* Installability: making games easier to install and integrating them with modern game launchers.
-* Controllability: configuring modern controllers, both common and niche, with popular control schemes and fixing compatibility issues.
-* Modability: being able to explore, preview and edit assets which belong to a game.
+The core modules of the project are meant to be used for a future open-source reimplementation of the 3Space game engine, used by several games such as the Earthsiege/Starsiege series, the Red Baron/Great War Planes series and several others.
 
 The project contains the following components:
 * Siege Studio (in this repo)
@@ -34,14 +29,7 @@ The project contains the following components:
   * Support for adding the game to a launcher such as GOG or Steam.
   * Support for adding a game to an existing entry in GOG or Steam, especially for sequels or related games (for example adding Fury3 to Terminal Velocity).
 
-
 ### Setup and Build Instructions
-
-_Caution!_ The instructions are currently incorrect because of a move from Conan 1 to Conan 2 and thus are no longer correct.
-Updates are coming soon.
-
-New to C++, CMake or Conan? Checkout this set of examples with instructions to get started: https://github.com/matthew-rindel/hello-cpp-durban
-
 If you don't already have Conan on your system, find instructions here: https://conan.io/downloads.html
 
 To configure and build a debug build, use:
