@@ -6,19 +6,25 @@
 
 Classic Games, Modern Technology.
 
-Siege Studio is a tool for previewing, converting and (eventually) editing reverse engineered files for games such as Earthsiege, Starsiege and beyond.
+Siege Studio is a tool for previewing, converting and (eventually) editing reverse engineered files for games such as Earthsiege, Starsiege and other related games from the 1990s and early 2000s.
 
 The core modules of the project are meant to be used for a future open-source reimplementation of the 3Space game engine, used by several games such as the Earthsiege/Starsiege series, the Red Baron/Great War Planes series and several others.
 
 The project contains the following components:
 * Siege Studio (in this repo)
   * Supports browsing of game files and previewing the contents of supported formats.
-  * Allows for conversion to and from certain formats.
+  * Allows for conversion to and from supported formats.
   * Supports extraction of game archive files.
 * Siege Modules (also in this repo)
   * The core of the file format support in the project. 
   * It contains all the logic to parse game archive and asset files as well as configuration files.
-* Siege Launcher (a commercial product soon to be available on Steam)
+  * The modules are grouped as such:
+      * Siege Platform: a connection of static libraries, especially to handle platform specific features and make each platform easier to use.
+      * Siege Content: a static library used to read, write and parse file formats such as Phoenix Bitmap (pba), Dynamix 3Space Shape (dts) and many more.
+      * Siege Resource: a static library used to read, write and parse compound file formats, such as VOL or ZIP, which can contain many files within.
+      * Siege 2D Content, Siege 3D Content, Siege Audio Content, Siege Resource Content: dynamic libraries containing UI and other logic to be loaded by a host program dynamically.
+  * Each dynamic module will eventually have their own C# wrapper with related packages published to NuGet.    
+* Siege Launcher (a commercial product to be available on Steam later this year, but not in this repo)
   * A configuration tool for detecting controllers and games and creating matching configurations for them.
   * It supports editing game configuration files to match the physical layout of the controller, and modern control schemes for the genre.
   * It takes care of the differences between DirectInput and XInput controllers and makes sure the game works with both.
