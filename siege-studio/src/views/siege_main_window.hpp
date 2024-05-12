@@ -63,6 +63,11 @@ namespace siege::views
 			selected_file = files.end();
 		}
 
+		std::optional<LRESULT> on_destroy(win32::destroy_message) {
+			PostQuitMessage(0);
+			return 0;
+		}
+
 		void repopulate_tree_view(std::filesystem::path path)
 		{
 			dir_list.DeleteItem(nullptr);
@@ -335,13 +340,7 @@ namespace siege::views
 			}
 		}
 
-
-		std::optional<LRESULT> on_destroy(win32::destroy_message) {
-			PostQuitMessage(0);
-			return 0;
-		}
-
-		std::optional<LRESULT> on_menu_command(win32::menu_command_message command)
+		std::optional<LRESULT> on_command(win32::menu_command_message command)
 		{
 			if (command.identifier == open_workspace)
 			{

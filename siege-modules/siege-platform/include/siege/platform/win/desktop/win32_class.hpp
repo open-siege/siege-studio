@@ -37,19 +37,19 @@ namespace win32
             }
         }
 
-        if constexpr (requires(TWindow t) { t.on_menu_command(menu_command_message{wParam, lParam}); })
+        if constexpr (requires(TWindow t) { t.on_command(menu_command_message{wParam, lParam}); })
         {
             if (message == command_message::id && menu_command_message::is_menu_command(wParam, lParam))
             {
-                return self->on_menu_command(menu_command_message{wParam, lParam});
+                return self->on_command(menu_command_message{wParam, lParam});
             }
         }
 
-        if constexpr (requires(TWindow t) { t.on_accelerator_command(accelerator_command_message{wParam, lParam}); })
+        if constexpr (requires(TWindow t) { t.on_command(accelerator_command_message{wParam, lParam}); })
         {
             if (message == command_message::id && accelerator_command_message::is_accelerator_command(wParam, lParam))
             {
-                return self->on_accelerator_command(accelerator_command_message{wParam, lParam});
+                return self->on_command(accelerator_command_message{wParam, lParam});
             }
         }
 
