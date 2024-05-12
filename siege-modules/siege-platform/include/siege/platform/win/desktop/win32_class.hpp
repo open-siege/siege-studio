@@ -89,6 +89,18 @@ namespace win32
                 }
             }
 
+            if constexpr (requires(TWindow t) { t.on_notify(header_notify_message{wParam, lParam}); })
+            {
+                if (header.code >= HDN_FIRST ||
+                    header.code <= HDN_LAST)
+                {
+                    if (header.code != HDN_FILTERBTNCLICK && header.code != HDN_GETDISPINFO)
+                    {
+                        return self->on_notify(header_notify_message{wParam, lParam});                            
+                    }
+                }
+            }
+
             if constexpr (requires(TWindow t) { t.on_notify(notify_message{wParam, lParam}); })
             {
                 if (message == notify_message::id)

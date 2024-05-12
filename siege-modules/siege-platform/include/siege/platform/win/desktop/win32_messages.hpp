@@ -223,7 +223,7 @@ namespace win32
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	using tree_view_notify_message = notify_message_base<NMTREEVIEWW>;
-	using tree_view_notify_message = notify_message_base<NMTREEVIEWW>;
+	using header_notify_message = notify_message_base<NMHEADERW>;
 #endif
 
 	struct menu_command_message
