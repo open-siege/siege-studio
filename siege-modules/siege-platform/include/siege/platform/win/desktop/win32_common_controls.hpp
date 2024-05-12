@@ -106,12 +106,14 @@ namespace win32
     {
         std::wstring text;
 
-        list_view_item(std::wstring text) : ::LVITEMW{}, text(std::move(text))
+        std::vector<std::wstring> sub_items;
+
+        list_view_item(std::wstring text) : ::LVITEMW{}, text(std::move(text)), sub_items{}
         {
             this->pszText = this->text.data();
         }
 
-        list_view_item(const list_view_item& item) : ::LVITEMW(item), text(item.text)
+        list_view_item(const list_view_item& item) : ::LVITEMW(item), text(item.text), sub_items(item.sub_items)
         {
             this->pszText = text.data();
         }
@@ -461,6 +463,21 @@ namespace win32
                 group_id++;
             }
         }
+
+        inline void InsertRow(list_view_item row)
+        {
+            auto index = this->InsertItem(-1, row);
+
+            LVITEMW sub_item{};
+           
+            for (auto i = 1u; i <= row.sub_items.size(); ++i)
+            {
+                sub_item.iSubItem = i;
+                sub_item.pszText = row.sub_items[i - 1].data();
+                sub_item.mask = LVIF_TEXT;
+                ::SendMessageW(*this, LVM_SETITEMTEXT, index, (LPARAM)&sub_item);
+            }
+        }
     };
 
     struct rebar : window
@@ -583,6 +600,11 @@ namespace win32
         [[nodiscard]] inline wparam_t GetItemCount()
         {
             return SendMessageW(*this, TCM_GETITEMCOUNT, 0, 0);
+        }
+
+        [[maybe_unused]] inline wparam_t SetCurrentSelection(wparam_t index)
+        {
+            return SendMessageW(*this, TCM_SETCURSEL, 0, 0);
         }
 
         [[nodiscard]] inline std::optional<TCITEMW> GetItem(wparam_t index, std::uint32_t mask = TCIF_PARAM | TCIF_STATE)

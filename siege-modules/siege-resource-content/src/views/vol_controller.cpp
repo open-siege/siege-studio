@@ -90,4 +90,9 @@ namespace siege::views
     }
     return 0;
   }
+
+  std::span<siege::platform::resource_reader::content_info> vol_controller::get_contents()
+  {
+    return contents;
+  }
 }

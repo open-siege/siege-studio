@@ -6,6 +6,7 @@
 #include <variant>
 #include <filesystem>
 #include <sstream>
+#include <span>
 #include <siege/platform/resource.hpp>
 
 namespace siege::views
@@ -18,6 +19,7 @@ namespace siege::views
 
 	    std::size_t load_volume(std::istream& image_stream, std::optional<std::filesystem::path> path);
 
+		std::span<siege::platform::resource_reader::content_info> get_contents();
 	private: 
 		std::unique_ptr<siege::platform::resource_reader> resource;
 		std::vector<siege::platform::resource_reader::content_info> contents;
