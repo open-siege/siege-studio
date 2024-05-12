@@ -1,13 +1,13 @@
-#include <siege/platform/win/desktop/win32_common_controls.hpp>
-#include <siege/platform/win/desktop/win32_class.hpp>
 #include <bit>
 #include <filesystem>
 #include <memory>
-#include "views/bmp_view.hpp"
-#include "views/pal_view.hpp"
+#include <siege/platform/win/desktop/win32_common_controls.hpp>
+#include <siege/platform/win/desktop/win32_class.hpp>
 #include <siege/platform/win/core/com_collection.hpp>
 #include <siege/platform/win/core/com_stream_buf.hpp>
 #include <siege/platform/win/desktop/window_module.hpp>
+#include "views/bmp_view.hpp"
+#include "views/pal_view.hpp"
 
 struct pal_mapping_window
 {
@@ -20,13 +20,6 @@ struct pal_mapping_window
 
     auto on_create(const win32::create_message&)
     {
-        /*auto button_instance = win32::CreateWindowExW(DLGITEMTEMPLATE{
-						.style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-						.x = 0,       
-						.y = 0,
-						.cx = 100,  
-						.cy = 100       
-						}, self, win32::button::class_name, L"Pal Mapping window");*/
         return 0;
     }
 
@@ -211,10 +204,6 @@ extern "C"
             }
             else if (fdwReason == DLL_PROCESS_DETACH)
             {
-               this_module.UnregisterClassW<siege::views::bmp_view>();
-               this_module.UnregisterClassW<siege::views::pal_view>();
-               this_module.UnregisterClassW<pal_mapping_window>();
-
                this_module.UnregisterClassW<siege::views::bmp_view>();
                this_module.UnregisterClassW<siege::views::pal_view>();
                this_module.UnregisterClassW<pal_mapping_window>();
