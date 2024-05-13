@@ -1,11 +1,13 @@
 #include <bit>
 #include <filesystem>
 #include <memory>
-#include <siege/platform/win/desktop/win32_common_controls.hpp>
 #include <siege/platform/win/desktop/win32_class.hpp>
 #include <siege/platform/win/core/com_collection.hpp>
 #include <siege/platform/win/core/com_stream_buf.hpp>
 #include <siege/platform/win/desktop/window_module.hpp>
+#include "views/sfx_view.hpp"
+
+using namespace siege::views;
 
 extern "C"
 {
@@ -119,11 +121,12 @@ extern "C"
 
            if (fdwReason == DLL_PROCESS_ATTACH)
            {
-
-            }
-            else if (fdwReason == DLL_PROCESS_DETACH)
-            {
-            }
+                this_module.RegisterClassExW(win32::window_meta_class<sfx_view>());
+           }
+           else if (fdwReason == DLL_PROCESS_DETACH)
+           {
+               this_module.UnregisterClassW<sfx_view>();
+           }
         }
 
         return TRUE;

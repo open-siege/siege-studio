@@ -18,10 +18,6 @@ namespace siege::views
 {
 	struct bmp_view : win32::window
     {
-        constexpr static auto formats = std::array<std::wstring_view, 16>{{
-        L".jpg", L".jpeg", L".gif", L".png", L".tag", L".bmp", L".dib" , L".pba", L".dmb", L".db0", L".db1", L".db2", L".hba", L".hb0", L".hb1", L".hb2"    
-        }};
-
         win32::static_control static_image;
         win32::list_view palettes_list;
         win32::window zoom;

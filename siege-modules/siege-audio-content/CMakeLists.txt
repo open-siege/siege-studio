@@ -4,7 +4,6 @@ project(siege-audio-content)
 file(GLOB_RECURSE SRC_FILES
         src/*.cpp)
 
-
 if (WIN32)
     add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
     target_link_libraries(${PROJECT_NAME} PRIVATE siege-win-desktop siege-content)

@@ -1,5 +1,5 @@
-#ifndef DARKSTARDTSCONVERTER_PAL_VIEW_HPP
-#define DARKSTARDTSCONVERTER_PAL_VIEW_HPP
+#ifndef SIEGE_PAL_CONTROLLER_HPP
+#define SIEGE_PAL_CONTROLLER_HPP
 
 #include <string>
 #include <vector>
@@ -10,6 +10,8 @@ namespace siege::views
   class pal_controller
   {
   public:
+    constexpr static auto formats = std::array<std::wstring_view, 4>{{ L".pal", L".ipl", L".ppl", L".dpl"}};
+    
     struct rect
     {
       int x;

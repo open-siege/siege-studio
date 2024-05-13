@@ -88,7 +88,7 @@ namespace siege::content::sfx
     format_data.sample_rate = 11025;
     format_data.bits_per_sample = 8;
     format_data.byte_rate = format_data.sample_rate * format_data.num_channels * format_data.bits_per_sample / 8;
-    format_data.block_alignment = format_data.num_channels * format_data.bits_per_sample / 8;
+    format_data.block_alignment = std::int16_t(format_data.num_channels) * format_data.bits_per_sample / 8;
 
     endian::little_int32_t data_size = static_cast<int32_t>(sample_size * format_data.num_channels * format_data.bits_per_sample / 8);
     endian::little_int32_t file_size = static_cast<int32_t>(sizeof(std::array<std::int32_t, 5>) + sizeof(format_header) + data_size);

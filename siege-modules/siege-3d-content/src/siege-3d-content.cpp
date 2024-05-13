@@ -1,11 +1,13 @@
 #include <bit>
 #include <filesystem>
 #include <memory>
-#include <siege/platform/win/desktop/win32_common_controls.hpp>
 #include <siege/platform/win/desktop/win32_class.hpp>
 #include <siege/platform/win/core/com_collection.hpp>
 #include <siege/platform/win/core/com_stream_buf.hpp>
 #include <siege/platform/win/desktop/window_module.hpp>
+#include "views/dts_view.hpp"
+
+using namespace siege::views;
 
 extern "C"
 {
@@ -21,6 +23,8 @@ extern "C"
         static std::vector<std::wstring_view> supported_extensions = []{
                 std::vector<std::wstring_view> extensions;
                 extensions.reserve(32);
+
+                std::copy(dts_controller::formats.begin(), dts_controller::formats.end(), std::back_inserter(extensions));
                 return extensions;
             }();
 
@@ -115,15 +119,16 @@ extern "C"
                 return TRUE; // do not do cleanup if process termination scenario
             }
 
-            win32::window_module_ref this_module(hinstDLL);
+           win32::window_module_ref this_module(hinstDLL);
 
            if (fdwReason == DLL_PROCESS_ATTACH)
            {
-
-            }
-            else if (fdwReason == DLL_PROCESS_DETACH)
-            {
-            }
+                this_module.RegisterClassExW(win32::window_meta_class<dts_view>());
+           }
+           else if (fdwReason == DLL_PROCESS_DETACH)
+           {
+               this_module.UnregisterClassW<dts_view>();
+           }
         }
 
         return TRUE;
