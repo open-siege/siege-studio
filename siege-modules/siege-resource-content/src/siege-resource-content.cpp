@@ -8,6 +8,8 @@
 #include <siege/platform/win/core/com_collection.hpp>
 #include <siege/platform/win/core/com_stream_buf.hpp>
 
+using namespace siege::views;
+
 extern "C"
 {
     extern const std::uint32_t DefaultFileIcon = SIID_ZIPFILE;
@@ -23,7 +25,7 @@ extern "C"
                 std::vector<std::wstring_view> extensions;
                 extensions.reserve(32);
 
-                std::copy(siege::views::vol_view::formats.begin(), siege::views::vol_view::formats.end(), std::back_inserter(extensions));
+                std::copy(vol_controller::formats.begin(), vol_controller::formats.end(), std::back_inserter(extensions));
               
                 return extensions;
             }();
@@ -65,7 +67,7 @@ extern "C"
 
         if (category_str == L"All Archives")
         {
-            *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(siege::views::vol_view::formats)>>(siege::views::vol_view::formats).release();
+            *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(vol_controller::formats)>>(vol_controller::formats).release();
         }
         else
         {

@@ -9,24 +9,19 @@
 
 namespace siege::views
 {
-	struct vol_view : win32::window
+	struct vol_view : win32::window_ref
 	{
-		constexpr static auto formats = std::array<std::wstring_view, 20>{{
-				L".vol", L".rmf", L".mis", L".map", L".rbx", L".tbv", L".zip", L".vl2", L".pk3",
-					L".iso", L".mds", L".cue", L".nrg", L".7z", L".tgz", L".rar", L".cab", L".z", L".cln", L".atd"
-			}};
-
 		vol_controller controller;
 
 		win32::list_view table;
 
-		vol_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window(self)
+		vol_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
 		{
 		}
 
 		auto on_create(const win32::create_message& data)
 		{
-			auto factory = win32::window_factory(win32::window_ref(*this));
+			auto factory = win32::window_factory(ref());
 
 			table = *factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{
 							.style = WS_VISIBLE | WS_CHILD | LVS_REPORT,

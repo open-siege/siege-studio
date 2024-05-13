@@ -2,7 +2,7 @@
 #include <execution>
 #include <algorithm>
 #include "sfx_view.hpp"
-#include <siege/content/sfx/wave.hpp"
+#include <siege/content/sfx/wave.hpp>
 
 namespace siege::views
 {

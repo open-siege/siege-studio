@@ -1,25 +1,32 @@
 #ifndef DARKSTARDTSCONVERTER_PAL_MAPPING_VIEW_HPP
 #define DARKSTARDTSCONVERTER_PAL_MAPPING_VIEW_HPP
 
-#include <future>
-#include "graphics_view.hpp"
-#include "view_context.hpp"
-#include "bmp_shared.hpp"
-#include "siege/resource/resource_explorer.hpp"
+#include <string_view>
+#include <istream>
+#include <spanstream>
+#include <siege/platform/win/desktop/win32_common_controls.hpp>
+#include <siege/platform/win/desktop/win32_drawing.hpp>
 
 namespace siege::views
 {
-  class pal_mapping_view
-  {
-  public:
-    explicit pal_mapping_view(view_context context);
-    void setup_view(wxWindow& parent);
+    struct pal_mapping_view : win32::window_ref
+    {
+        constexpr static auto formats = std::array<std::wstring_view, 1>{{L"palettes.settings.json"}};
+    
+        pal_mapping_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
+	    {
+	    }
 
-  private:
-    view_context context;
-    palette_context palette_data;
-    std::future<void> pending_load;
-  };
+        auto on_create(const win32::create_message&)
+        {
+            return 0;
+        }
+
+        auto on_size(win32::size_message sized)
+	    {
+		    return std::nullopt;
+	    }
+    };
 }
 
 #endif//DARKSTARDTSCONVERTER_PAL_MAPPING_VIEW_HPP

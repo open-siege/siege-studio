@@ -6,20 +6,21 @@
 #include <spanstream>
 #include <siege/platform/win/desktop/win32_common_controls.hpp>
 #include <siege/platform/win/desktop/win32_drawing.hpp>
-#include "pal_controller.hpp"
+#include <siege/platform/win/desktop/window_factory.hpp>
+#include "dts_controller.hpp"
 
 namespace siege::views
 {
-	struct pal_view : win32::window_ref
+	struct dts_view : win32::window_ref
 	{
-		pal_controller controller;
+		dts_controller controller;
 
 		std::array<win32::gdi_brush, 16> brushes;
 
 		win32::static_control render_view;
 		win32::list_box selection;
 
-		pal_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
+		dts_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
 		{
 
 		}
@@ -62,9 +63,9 @@ namespace siege::views
 		{
 			std::spanstream stream(message.data);
 			
-			if (controller.is_pal(stream))
+			if (controller.is_dts(stream))
 			{
-				auto size = controller.load_palettes(stream);
+				auto size = controller.load_shape(stream);
 
 				if (size > 0)
 				{
@@ -101,18 +102,6 @@ namespace siege::views
 			}
 
 			return TRUE;
-		}
-
-		std::optional<LRESULT> on_get_object(win32::get_object_message message)
-		{
-			if (message.object_id == OBJID_NATIVEOM)
-			{
-                auto collection = std::make_unique<win32::com::OwningCollection<std::unique_ptr<IStream, void(*)(IStream*)>>>();
-
-				return LresultFromObject(__uuidof(IDispatch), message.flags, static_cast<IDispatch*>(collection.release()));   
-			}
-
-			return std::nullopt;
 		}
 	};
 }

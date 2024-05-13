@@ -8,26 +8,9 @@
 #include <siege/platform/win/desktop/window_module.hpp>
 #include "views/bmp_view.hpp"
 #include "views/pal_view.hpp"
+#include "views/pal_mapping_view.hpp"
 
-struct pal_mapping_window
-{
-    constexpr static auto formats = std::array<std::wstring_view, 1>{{L"palettes.settings.json"}};
-    
-    win32::hwnd_t self;
-    pal_mapping_window(win32::hwnd_t self, const CREATESTRUCTW&) : self(self)
-	{
-	}
-
-    auto on_create(const win32::create_message&)
-    {
-        return 0;
-    }
-
-    auto on_size(win32::size_message sized)
-	{
-		return std::nullopt;
-	}
-};
+using namespace siege::views;
 
 extern "C"
 {
@@ -44,9 +27,9 @@ extern "C"
                 std::vector<std::wstring_view> extensions;
                 extensions.reserve(32);
 
-                std::copy(siege::views::bmp_view::formats.begin(), siege::views::bmp_view::formats.end(), std::back_inserter(extensions));
-                std::copy(siege::views::pal_view::formats.begin(), siege::views::pal_view::formats.end(), std::back_inserter(extensions));
-                std::copy(pal_mapping_window::formats.begin(), pal_mapping_window::formats.end(), std::back_inserter(extensions));
+                std::copy(bmp_controller::formats.begin(), bmp_controller::formats.end(), std::back_inserter(extensions));
+                std::copy(pal_controller::formats.begin(), pal_controller::formats.end(), std::back_inserter(extensions));
+                std::copy(pal_mapping_view::formats.begin(), pal_mapping_view::formats.end(), std::back_inserter(extensions));
               
                 return extensions;
             }();
@@ -90,11 +73,11 @@ extern "C"
 
         if (category_str == L"All Images")
         {
-            *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(siege::views::bmp_view::formats)>>(siege::views::bmp_view::formats).release();
+            *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(bmp_controller::formats)>>(bmp_controller::formats).release();
         }
         else if (category_str == L"All Palettes")
         {
-            *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(siege::views::pal_view::formats)>>(siege::views::pal_view::formats).release();
+            *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(bmp_controller::formats)>>(bmp_controller::formats).release();
         }
         else
         {
@@ -115,12 +98,12 @@ extern "C"
         win32::com::StreamBufRef buffer(*data);
         std::istream stream(&buffer);
 
-        if (siege::views::pal_controller::is_pal(stream))
+        if (pal_controller::is_pal(stream))
         {
             return S_OK;
         }
 
-        if (siege::views::bmp_controller::is_bmp(stream))
+        if (bmp_controller::is_bmp(stream))
         {
             return S_OK;
         }
@@ -151,9 +134,9 @@ extern "C"
         {
             static auto this_module =  win32::window_module_ref::current_module();
             
-            if (siege::views::pal_controller::is_pal(stream))
+            if (pal_controller::is_pal(stream))
             {
-                static auto window_type_name = win32::type_name<siege::views::pal_view>();
+                static auto window_type_name = win32::type_name<pal_view>();
 
                 if (this_module.GetClassInfoExW(window_type_name))
                 {
@@ -162,9 +145,9 @@ extern "C"
                 }
             }
 
-            if (siege::views::bmp_controller::is_bmp(stream))
+            if (bmp_controller::is_bmp(stream))
             {
-                static auto window_type_name = win32::type_name<siege::views::bmp_view>();
+                static auto window_type_name = win32::type_name<bmp_view>();
 
                 if (this_module.GetClassInfoExW(window_type_name))
                 {
@@ -198,15 +181,15 @@ extern "C"
 
            if (fdwReason == DLL_PROCESS_ATTACH)
            {
-               this_module.RegisterClassExW(win32::window_meta_class<siege::views::bmp_view>());
-               this_module.RegisterClassExW(win32::window_meta_class<siege::views::pal_view>());
-               this_module.RegisterClassExW(win32::window_meta_class<pal_mapping_window>());
+               this_module.RegisterClassExW(win32::window_meta_class<bmp_view>());
+               this_module.RegisterClassExW(win32::window_meta_class<pal_view>());
+               this_module.RegisterClassExW(win32::window_meta_class<pal_mapping_view>());
             }
             else if (fdwReason == DLL_PROCESS_DETACH)
             {
-               this_module.UnregisterClassW<siege::views::bmp_view>();
-               this_module.UnregisterClassW<siege::views::pal_view>();
-               this_module.UnregisterClassW<pal_mapping_window>();
+               this_module.UnregisterClassW<bmp_view>();
+               this_module.UnregisterClassW<pal_view>();
+               this_module.UnregisterClassW<pal_mapping_view>();
             }
         }
 
