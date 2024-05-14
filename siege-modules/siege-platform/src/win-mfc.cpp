@@ -392,7 +392,6 @@ struct class_wrapper
 
 		if (uMsg == WM_WINDOWPOSCHANGED)
 		{
-			OutputDebugStringW(L"class_wrapper::ChildSubClassProc WM_WINDOWPOSCHANGED\n");
 			auto* windowPos = (WINDOWPOS*)lParam;
 			control->SetWindowPos(CWnd::FromHandle(windowPos->hwndInsertAfter), windowPos->x, windowPos->y, windowPos->cx, windowPos->cy, windowPos->flags);
 		}

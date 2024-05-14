@@ -20,7 +20,7 @@ namespace siege::views
       int height;
     };
 
-    struct palette
+    struct colour_entry
     {
       rect position;
       siege::content::pal::colour colour;
@@ -30,8 +30,10 @@ namespace siege::views
     static bool is_pal(std::istream& image_stream);
 
     std::size_t load_palettes(std::istream& image_stream);
+
+    const std::vector<colour_entry>& get_palette(std::size_t) const;
   private:
-      std::vector<std::vector<palette>> palettes;
+      std::vector<std::vector<colour_entry>> palettes;
   };
 }// namespace siege::views
 
