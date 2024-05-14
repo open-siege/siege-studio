@@ -29,11 +29,9 @@ namespace siege::views
 
 		siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self), tab_control(nullptr)
 		{
-			std::wstring full_app_path(256, '\0');
+			std::filesystem::path app_path = std::filesystem::path(win32::module_ref(params.hInstance).GetModuleFileNameW()).parent_path();
 
-			GetModuleFileName(params.hInstance, full_app_path.data(), full_app_path.size());
-
-			std::filesystem::path app_path = std::filesystem::path(full_app_path).parent_path();
+			loaded_modules = siege_module::LoadSiegeModules(std::filesystem::path(app_path));
 
 			for (auto const& dir_entry : std::filesystem::directory_iterator{ app_path })
 			{
@@ -57,7 +55,9 @@ namespace siege::views
 					});
 
 				auto category_exts = module.GetSupportedFormatCategories(LOCALE_USER_DEFAULT);
-				std::copy(category_exts.begin(), category_exts.end(), std::inserter(categories, categories.begin()));
+				std::transform(category_exts.begin(), category_exts.end(), std::inserter(categories, categories.begin()), [&](auto& ext) {
+					return std::move(ext);
+				});
 			}
 
 			selected_file = files.end();

@@ -3,6 +3,7 @@
 
 #include <system_error>
 #include <optional>
+#include <filesystem>
 #include <siege/platform/win/auto_handle.hpp>
 #include <wtypes.h>
 #include <WinDef.h>
@@ -10,11 +11,22 @@
 
 namespace win32
 {
-	struct module_deleter
+	template<typename TDeleter>
+	struct module_base : win32::auto_handle<HMODULE, TDeleter>
 	{
-		void operator()(HMODULE lib)
+		using base = win32::auto_handle<HMODULE, TDeleter>;
+		using base::base;
+
+		auto GetProcAddress(std::string name)
 		{
-			FreeLibrary(lib);
+			return ::GetProcAddress(*this, name.c_str());
+		}
+
+		auto GetModuleFileNameW()
+		{
+			std::wstring result(256, L'\0');
+			::GetModuleFileNameW(*this, result.data(), result.size());
+			return result;
 		}
 	};
 
@@ -25,20 +37,10 @@ namespace win32
 		}
 	};
 
-	struct module_ref : win32::auto_handle<HMODULE, module_no_deleter>
+	struct module_ref : module_base<module_no_deleter>
 	{
-		using base = win32::auto_handle<HMODULE, module_no_deleter>;
+		using base = module_base<module_no_deleter>;
 		using base::base;
-
-		operator HMODULE() const
-		{
-			return get();
-		}
-
-		inline static module_ref current_module()
-		{
-			return module_ref(&current_module); 
-		}
 
 		explicit module_ref(void* func) : base([=]() {
 				HMODULE temp = nullptr;
@@ -57,12 +59,52 @@ namespace win32
 		{
 		}
 
+		inline static module_ref current_module()
+		{
+			return module_ref(&current_module); 
+		}
+
+		inline static module_ref current_application()
+		{
+			return module_ref(::GetModuleHandleW(nullptr));
+		}
 	};
 
-	struct module : win32::auto_handle<HMODULE, module_deleter>
+	struct module_deleter
 	{
-		using base = win32::auto_handle<HMODULE, module_deleter>;
+		void operator()(HMODULE lib)
+		{
+			FreeLibrary(lib);
+		}
+	};
+
+	struct module : module_base<module_deleter>
+	{
+		using base = module_base<module_deleter>;
 		using base::base;
+
+		explicit module(std::filesystem::path path) : base([=]() {
+				if (!std::filesystem::exists(path))
+				{
+					throw std::invalid_argument("path");
+				}
+
+				HMODULE temp = ::LoadLibraryW(path.c_str());
+
+				if (!temp)
+				{
+					throw std::system_error(std::error_code(GetLastError(),  std::system_category()));
+				}
+
+				return temp;
+			}())
+		{
+		}
+
+		auto ref()
+		{
+			return module_ref(get());
+		}
 	};
 }
 
