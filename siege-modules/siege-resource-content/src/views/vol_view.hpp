@@ -4,7 +4,10 @@
 #include <siege/platform/win/desktop/win32_common_controls.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include <siege/platform/win/desktop/win32_menu.hpp>
+#include <siege/platform/siege_module.hpp>
 #include <spanstream>
+#include <map>
+#include <set>
 #include "vol_controller.hpp"
 
 namespace siege::views
@@ -15,17 +18,75 @@ namespace siege::views
 
 		win32::list_view table;
 
+		std::list<siege_module> modules;
+
+		std::set<std::wstring> all_categories;
+		std::map<std::wstring_view, std::set<std::wstring>> category_extensions;
+		std::map<std::wstring_view, win32::wparam_t> categories_to_groups;
+		std::map<std::wstring_view, std::wstring_view> extensions_to_categories;
+
 		vol_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
 		{
 		}
 
 		auto on_create(const win32::create_message& data)
 		{
+			auto app_path = std::filesystem::path(win32::module_ref().current_application().GetModuleFileNameW());
+			modules = siege_module::LoadSiegeModules(app_path.parent_path());
+
+			for (const auto& module : modules)
+			{
+				auto categories = module.GetSupportedFormatCategories(LOCALE_USER_DEFAULT);
+
+				for (auto& category : categories)
+				{
+					auto& stored_category = *all_categories.insert(std::move(category)).first;
+					auto extensions = module.GetSupportedExtensionsForCategory(stored_category);
+
+					auto existing = category_extensions.find(stored_category);
+
+					if (existing == category_extensions.end())
+					{
+						existing = category_extensions.emplace(stored_category, std::move(extensions)).first;
+					}
+					else
+					{
+						std::transform(extensions.begin(), extensions.end(), std::inserter(existing->second, existing->second.end()), [&](auto& ext) {
+							return std::move(ext);
+						});
+					}
+
+					for (auto& item : existing->second)
+					{
+						extensions_to_categories.emplace(item, stored_category);
+					}
+				}
+			}
+
 			auto factory = win32::window_factory(ref());
 
 			table = *factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{
 							.style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
 				});
+
+			int id = 1;
+			for (auto& item : category_extensions)
+			{
+				auto index = table.InsertGroup(-1, LVGROUP{
+					.pszHeader = const_cast<wchar_t*>(item.first.data()),
+					.iGroupId = id
+					});
+
+				if (index != -1)
+				{
+					categories_to_groups.emplace(item.first, id++);
+				}
+			}
+
+			if (!categories_to_groups.empty())
+			{
+				table.EnableGroupView(true);
+			}
 
 			table.InsertColumn(-1, LVCOLUMNW{
 					.pszText = const_cast<wchar_t*>(L"Filename"),
@@ -110,12 +171,19 @@ namespace siege::views
 						{
 							win32::list_view_item item{ file->filename };
 
-							item.sub_items = {
-								std::filesystem::relative(file->archive_path, file->folder_path).wstring(),
-								std::to_wstring(file->size)
-							};
+							auto extension = file->filename.extension().wstring();
+							auto category = extensions_to_categories.find(extension);
 
-							table.InsertRow(item);
+							if (category != extensions_to_categories.end())
+							{
+								item.iGroupId = categories_to_groups[category->second];
+								item.sub_items = {
+									std::filesystem::relative(file->archive_path, file->folder_path).wstring(),
+									std::to_wstring(file->size)
+								};
+
+								table.InsertRow(item);
+							}
 						}
 					}
 

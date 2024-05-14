@@ -31,14 +31,10 @@ namespace win32
         return L"";
      }
 
-	struct window_module_ref : win32::module_ref
-	{
-		using module_ref::module_ref;
-	
-		inline static window_module_ref current_module()
-		{
-			return window_module_ref(module_ref::current_module().get()); 
-		}
+     template <typename TModule = win32::module>
+     struct window_module_base : TModule
+     {
+        using TModule::TModule;
 
         auto RegisterClassExW(::WNDCLASSEXW meta)
         {
@@ -50,7 +46,7 @@ namespace win32
         template <typename TClass>
         auto UnregisterClassW()
         {
-            return ::UnregisterClassW(type_name<TClass>().c_str(), get());
+            return ::UnregisterClassW(type_name<TClass>().c_str(), this->get());
         }
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -113,8 +109,19 @@ namespace win32
 
             return TControl(result);
         }
-	};
+     };
 
+     using window_module = window_module_base<module>;
+     
+     struct window_module_ref : window_module_base<module_ref>
+     {
+        using window_module_base<module_ref>::window_module_base;
+
+        inline static window_module_ref current_module()
+		{
+			return window_module_ref(module_ref::current_module().get()); 
+		}
+     };
 }
 
 
