@@ -42,6 +42,7 @@ extern "C"
         }
 
         static auto categories = std::array<std::wstring_view, 1> {{
+                L"All 3D Models"
         }};
         
         *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(categories)>>(categories).release();
@@ -63,7 +64,14 @@ extern "C"
 
         std::wstring_view category_str = category;
 
-        *formats = std::make_unique<win32::com::OwningCollection<std::wstring_view>>().release();
+        if (category_str == L"All 3D Models")
+        {
+            *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(dts_controller::formats)>>(dts_controller::formats).release();
+        }
+        else
+        {
+            *formats = std::make_unique<win32::com::OwningCollection<std::wstring_view>>().release();
+        }
         
         return S_OK;
     }

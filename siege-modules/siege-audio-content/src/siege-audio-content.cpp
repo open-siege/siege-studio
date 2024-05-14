@@ -23,6 +23,8 @@ extern "C"
         static std::vector<std::wstring_view> supported_extensions = []{
                 std::vector<std::wstring_view> extensions;
                 extensions.reserve(32);
+
+                std::copy(sfx_controller::formats.begin(), sfx_controller::formats.end(), std::back_inserter(extensions));
                 return extensions;
             }();
 
@@ -40,6 +42,7 @@ extern "C"
         }
 
         static auto categories = std::array<std::wstring_view, 1> {{
+                L"All Audio"
         }};
         
         *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(categories)>>(categories).release();
@@ -61,7 +64,14 @@ extern "C"
 
         std::wstring_view category_str = category;
 
-        *formats = std::make_unique<win32::com::OwningCollection<std::wstring_view>>().release();
+        if (category_str == L"All Audio")
+        {
+            *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(sfx_controller::formats)>>(sfx_controller::formats).release();
+        }
+        else
+        {
+            *formats = std::make_unique<win32::com::OwningCollection<std::wstring_view>>().release();
+        }
         
         return S_OK;
     }
