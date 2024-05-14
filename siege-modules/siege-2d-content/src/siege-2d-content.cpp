@@ -77,7 +77,7 @@ extern "C"
         }
         else if (category_str == L"All Palettes")
         {
-            *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(bmp_controller::formats)>>(bmp_controller::formats).release();
+            *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(pal_controller::formats)>>(pal_controller::formats).release();
         }
         else
         {

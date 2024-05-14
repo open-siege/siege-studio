@@ -176,6 +176,20 @@ namespace siege::platform
     return result;
   }
 
+  inline std::wstring to_lower(std::wstring_view some_string, const std::locale& locale)
+  {
+    std::wstring result(some_string);
+    std::transform(result.begin(), result.end(), result.begin(), [&](auto c) { return std::tolower(c, locale); });
+    return result;
+  }
+
+  inline std::wstring to_lower(std::wstring_view some_string)
+  {
+    std::wstring result(some_string);
+    std::transform(result.begin(), result.end(), result.begin(), [&](auto c) { return std::tolower(c, std::locale()); });
+    return result;
+  }
+
   inline bool ends_with(std::string_view value, std::string_view ending)
   {
     if (ending.size() > value.size())

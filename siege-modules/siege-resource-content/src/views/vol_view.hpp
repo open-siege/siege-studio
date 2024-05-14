@@ -5,6 +5,7 @@
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include <siege/platform/win/desktop/win32_menu.hpp>
 #include <siege/platform/siege_module.hpp>
+#include <siege/platform/shared.hpp>
 #include <spanstream>
 #include <map>
 #include <set>
@@ -74,7 +75,8 @@ namespace siege::views
 			{
 				auto index = table.InsertGroup(-1, LVGROUP{
 					.pszHeader = const_cast<wchar_t*>(item.first.data()),
-					.iGroupId = id
+					.iGroupId = id,
+					.state = LVGS_COLLAPSIBLE,
 					});
 
 				if (index != -1)
@@ -171,7 +173,7 @@ namespace siege::views
 						{
 							win32::list_view_item item{ file->filename };
 
-							auto extension = file->filename.extension().wstring();
+							auto extension = platform::to_lower(file->filename.extension().wstring());
 							auto category = extensions_to_categories.find(extension);
 
 							if (category != extensions_to_categories.end())

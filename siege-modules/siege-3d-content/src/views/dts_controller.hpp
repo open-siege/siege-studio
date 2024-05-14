@@ -10,7 +10,7 @@ namespace siege::views
   class dts_controller
   {
   public:
-    constexpr static auto formats = std::array<std::wstring_view, 4>{{ L".pal", L".ipl", L".ppl", L".dpl"}};
+    constexpr static auto formats = std::array<std::wstring_view, 4>{{ L".dts" }};
     static bool is_dts(std::istream& image_stream);
 
     std::size_t load_shape(std::istream& image_stream);
