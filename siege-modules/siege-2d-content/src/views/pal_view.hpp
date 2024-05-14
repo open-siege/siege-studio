@@ -14,7 +14,7 @@ namespace siege::views
 	{
 		pal_controller controller;
 
-		std::array<win32::gdi_brush, 16> brushes;
+		std::vector<win32::gdi_brush> brushes;
 
 		win32::static_control render_view;
 		win32::list_box selection;
@@ -34,11 +34,6 @@ namespace siege::views
 				.style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS | LBS_OWNERDRAWFIXED, 
 				.lpszClass = L"MFC::CCheckListBox"
 				});
-
-
-			selection.InsertString(-1, L"Palette 1");
-			selection.InsertString(-1, L"Palette 2");
-			selection.InsertString(-1, L"Palette 3");
 
 			return 0;
 		}
@@ -68,10 +63,24 @@ namespace siege::views
 
 				if (size > 0)
 				{
-							
-					for (auto i = 0u; i < brushes.size(); ++i)
+					auto& colours = controller.get_palette(0);
+
+					brushes.reserve(colours.size());
+
+					::COLORREF temp;
+					
+					for (auto i = 0u; i < colours.size(); ++i)
 					{
-						brushes[i].reset(::CreateSolidBrush(RGB(i, i * 8, i * 4)));
+						auto temp_colour = colours[i].colour;
+						temp_colour.flags = std::byte{};
+						std::memcpy(&temp, &temp_colour, sizeof(temp));
+						brushes.emplace_back(::CreateSolidBrush(temp));
+					}
+
+					for(auto i = 1u; i <= size; ++i)
+					{
+						selection.InsertString(-1, L"Palette " + std::to_wstring(i));
+					
 					}
 				
 					return TRUE;
@@ -89,14 +98,26 @@ namespace siege::views
 			{
 				auto context = win32::gdi_drawing_context_ref(message.item.hDC);
 
+				auto total_width = message.item.rcItem.right - message.item.rcItem.left;
+				auto total_height = message.item.rcItem.bottom - message.item.rcItem.top;
+				auto total_area = total_width * total_height;
+				auto best_size = (int)std::sqrt(double(total_area) / brushes.size());
+
 				win32::rect pos{};
-				pos.right = 100;
-				pos.bottom = 100;
+				pos.right = best_size;
+				pos.bottom = best_size;
 
 				for (auto i = 0; i < brushes.size(); ++i)
 				{
 					context.FillRect(pos, brushes[i]);
-					pos.Offset(100, 0);
+					pos.Offset(best_size, 0);
+
+					if (pos.right >= total_width)
+					{
+						pos.left = 0;
+						pos.right = best_size;
+						pos.Offset(0, best_size);
+					}
 				}
 			}
 

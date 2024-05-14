@@ -13,7 +13,7 @@ namespace siege::views
 
   std::size_t pal_controller::load_palettes(std::istream& image_stream)
   {
-    std::vector<std::vector<pal_controller::palette>> all_rectangles;
+    std::vector<std::vector<pal_controller::colour_entry>> all_rectangles;
 
     auto generate_rectangles = [&](auto& colours) {
       auto& rectangles = all_rectangles.emplace_back();
@@ -31,7 +31,7 @@ namespace siege::views
       for (auto& colour : colours)
       {
         auto temp = std::to_string(index++);
-        rectangles.emplace_back(pal_controller::palette {
+        rectangles.emplace_back(pal_controller::colour_entry {
           .position = pal_controller::rect {
             .x = x,
             .y = y,
@@ -82,8 +82,13 @@ namespace siege::views
       }
     }
 
-    this->palettes = all_rectangles;
+    this->palettes = std::move(all_rectangles);
     return this->palettes.size();
+  }
+
+  const std::vector<pal_controller::colour_entry>& pal_controller::get_palette(std::size_t index) const
+  {
+    return palettes[index];
   }
 
   
