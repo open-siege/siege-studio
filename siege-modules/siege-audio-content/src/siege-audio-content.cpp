@@ -84,6 +84,14 @@ extern "C"
             return E_INVALIDARG;
         }
 
+        win32::com::StreamBufRef buffer(*data);
+        std::istream stream(&buffer);
+
+        if (sfx_controller::is_sfx(stream))
+        {
+            return S_OK;
+        }
+
         return S_FALSE;
     }
 
@@ -103,9 +111,24 @@ extern "C"
         static std::wstring empty;
         *class_name = empty.data();
         
+        win32::com::StreamBufRef buffer(*data);
+        std::istream stream(&buffer);
+        
         try
         {
             static auto this_module =  win32::window_module_ref::current_module();
+            
+            if (sfx_controller::is_sfx(stream))
+            {
+                static auto window_type_name = win32::type_name<sfx_view>();
+
+                if (this_module.GetClassInfoExW(window_type_name))
+                {
+                    *class_name = window_type_name.data();
+                    return S_OK;
+                }
+            }
+
             return S_FALSE;
         }
         catch(...)

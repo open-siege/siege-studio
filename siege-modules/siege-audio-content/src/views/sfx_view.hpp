@@ -8,6 +8,7 @@
 #include <siege/platform/win/desktop/win32_drawing.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include "sfx_controller.hpp"
+#include "media_module.hpp"
 
 namespace siege::views
 {
@@ -15,21 +16,20 @@ namespace siege::views
 	{
 		sfx_controller controller;
 
-		std::array<win32::gdi_brush, 16> brushes;
-
 		win32::static_control render_view;
 		win32::list_box selection;
 
-		sfx_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
-		{
+		media_module media;
 
+		sfx_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self), media{}
+		{
 		}
 
 		auto on_create(const win32::create_message&)
 		{
 			auto control_factory = win32::window_factory(ref());
 
-			render_view = *control_factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | SS_OWNERDRAW });
+			render_view = *control_factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD, .lpszName = L"Test" });
 
 			selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
 				.style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS | LBS_OWNERDRAWFIXED, 
@@ -68,12 +68,6 @@ namespace siege::views
 
 				if (size > 0)
 				{
-							
-					for (auto i = 0u; i < brushes.size(); ++i)
-					{
-						brushes[i].reset(::CreateSolidBrush(RGB(i, i * 8, i * 4)));
-					}
-				
 					return TRUE;
 				}
 
@@ -81,26 +75,6 @@ namespace siege::views
 			}
 
 			return FALSE;
-		}
-
-		auto on_draw_item(win32::draw_item_message message)
-		{
-			if (message.item.itemAction == ODA_DRAWENTIRE)
-			{
-				auto context = win32::gdi_drawing_context_ref(message.item.hDC);
-
-				win32::rect pos{};
-				pos.right = 100;
-				pos.bottom = 100;
-
-				for (auto i = 0; i < brushes.size(); ++i)
-				{
-					context.FillRect(pos, brushes[i]);
-					pos.Offset(100, 0);
-				}
-			}
-
-			return TRUE;
 		}
 	};
 }
