@@ -586,7 +586,6 @@ struct CMFCLibrary : public CWinAppEx
 		RegisterMFCClass<CMFCListCtrl>();
 		RegisterMFCClass<CMFCHeaderCtrl>();
 		RegisterMFCClass<CMFCSpinButtonCtrl>();		
-		RegisterMFCClass<CMFCTabCtrl>();
 		RegisterMFCClass<CMFCToolTipCtrl>();
 
 		return CWinApp::InitInstance();

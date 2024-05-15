@@ -18,10 +18,6 @@ namespace siege::content::sfx
 
   constexpr file_tag data_tag = platform::to_tag<4>({ 'd', 'a', 't', 'a' });
 
-  constexpr file_tag ogg_tag = platform::to_tag<4>({ 'O', 'g', 'g', 'S' });
-
-  constexpr file_tag flac_tag = platform::to_tag<4>({ 'f', 'L', 'a', 'C' });
-
   constexpr file_tag voc_tag = platform::to_tag<4>({ 'C', 'r', 'e', 'a' });
 
   constexpr file_tag empty_tag = platform::to_tag<4>({ '\0', '\0', '\0', '\0' });
@@ -36,17 +32,25 @@ namespace siege::content::sfx
     endian::little_int16_t bits_per_sample;
   };
 
-  inline bool is_sfx_file(std::istream& stream)
+  bool is_ogg(std::istream& raw_data);
+  bool is_flac(std::istream& raw_data);
+
+  inline bool is_sfx(std::istream& stream)
   {
+    if (is_ogg(stream) || is_flac(stream))
+    {
+        return false;
+    }
+
     std::array<std::byte, 4> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
 
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
-    return tag != riff_tag && tag != ogg_tag && tag != voc_tag && tag != empty_tag && tag != flac_tag;
+    return tag != riff_tag && tag != voc_tag && tag != empty_tag;
   }
 
-  inline bool is_wav_file(std::istream& stream)
+  inline bool is_wav(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -58,26 +62,6 @@ namespace siege::content::sfx
     stream.seekg(-int(sizeof(tag)) * 3, std::ios::cur);
 
     return tag == riff_tag && temp == wave_tag;
-  }
-
-  inline bool is_ogg_file(std::istream& stream)
-  {
-    std::array<std::byte, 4> tag{};
-    stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
-
-    stream.seekg(-int(sizeof(tag)), std::ios::cur);
-
-    return tag == ogg_tag;
-  }
-
-  inline bool is_flac_file(std::istream& stream)
-  {
-    std::array<std::byte, 4> tag{};
-    stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
-
-    stream.seekg(-int(sizeof(tag)), std::ios::cur);
-
-    return tag == flac_tag;
   }
 
   inline std::int32_t write_wav_header(std::ostream& raw_data, std::size_t sample_size)
