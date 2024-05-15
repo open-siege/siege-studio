@@ -12,6 +12,6 @@ namespace siege::views
 
 	std::size_t sfx_controller::load_sound(std::istream& image_stream)
 	{
-		return 0;
+		return 1;
 	}
 }

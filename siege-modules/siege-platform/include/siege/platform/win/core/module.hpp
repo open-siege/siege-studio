@@ -17,9 +17,11 @@ namespace win32
 		using base = win32::auto_handle<HMODULE, TDeleter>;
 		using base::base;
 
+		template<typename TPointer = void*>
 		auto GetProcAddress(std::string name)
 		{
-			return ::GetProcAddress(*this, name.c_str());
+			static_assert(std::is_pointer_v<TPointer>);
+			return reinterpret_cast<TPointer>(::GetProcAddress(*this, name.c_str()));
 		}
 
 		auto GetModuleFileNameW()
@@ -83,8 +85,8 @@ namespace win32
 		using base = module_base<module_deleter>;
 		using base::base;
 
-		explicit module(std::filesystem::path path) : base([=]() {
-				if (!std::filesystem::exists(path))
+		explicit module(std::filesystem::path path, bool is_system = false) : base([=]() {
+				if (!is_system && !std::filesystem::exists(path))
 				{
 					throw std::invalid_argument("path");
 				}

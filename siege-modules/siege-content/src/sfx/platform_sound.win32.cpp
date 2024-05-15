@@ -31,4 +31,9 @@ namespace siege::content::sfx
 	platform_sound::platform_sound(std::istream&)
 	{
 	}
+
+	std::variant<std::filesystem::path, std::span<std::byte>> platform_sound::get_sound_data()
+	{
+		return "";
+	}
 }
