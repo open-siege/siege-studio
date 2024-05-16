@@ -84,6 +84,14 @@ extern "C"
             return E_INVALIDARG;
         }
 
+        win32::com::StreamBufRef buffer(*data);
+        std::istream stream(&buffer);
+
+        if (dts_controller::is_dts(stream))
+        {
+            return S_OK;
+        }
+
         return S_FALSE;
     }
 
@@ -100,12 +108,27 @@ extern "C"
             return E_POINTER;
         }
 
-        static std::wstring empty;
+         std::wstring empty;
         *class_name = empty.data();
+        
+        win32::com::StreamBufRef buffer(*data);
+        std::istream stream(&buffer);
         
         try
         {
             static auto this_module =  win32::window_module_ref::current_module();
+            
+            if (dts_controller::is_dts(stream))
+            {
+                static auto window_type_name = win32::type_name<dts_view>();
+
+                if (this_module.GetClassInfoExW(window_type_name))
+                {
+                    *class_name = window_type_name.data();
+                    return S_OK;
+                }
+            }
+
             return S_FALSE;
         }
         catch(...)
