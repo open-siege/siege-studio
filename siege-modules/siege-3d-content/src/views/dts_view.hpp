@@ -15,8 +15,6 @@ namespace siege::views
 	{
 		dts_controller controller;
 
-		std::array<win32::gdi_brush, 16> brushes;
-
 		win32::static_control render_view;
 		win32::list_box selection;
 
@@ -29,7 +27,7 @@ namespace siege::views
 		{
 			auto control_factory = win32::window_factory(ref());
 
-			render_view = *control_factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | SS_OWNERDRAW });
+			render_view = *control_factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD });
 
 			selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
 				.style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS | LBS_OWNERDRAWFIXED, 
@@ -69,12 +67,6 @@ namespace siege::views
 
 				if (size > 0)
 				{
-							
-					for (auto i = 0u; i < brushes.size(); ++i)
-					{
-						brushes[i].reset(::CreateSolidBrush(RGB(i, i * 8, i * 4)));
-					}
-				
 					return TRUE;
 				}
 
@@ -84,25 +76,6 @@ namespace siege::views
 			return FALSE;
 		}
 
-		auto on_draw_item(win32::draw_item_message message)
-		{
-			if (message.item.itemAction == ODA_DRAWENTIRE)
-			{
-				auto context = win32::gdi_drawing_context_ref(message.item.hDC);
-
-				win32::rect pos{};
-				pos.right = 100;
-				pos.bottom = 100;
-
-				for (auto i = 0; i < brushes.size(); ++i)
-				{
-					context.FillRect(pos, brushes[i]);
-					pos.Offset(100, 0);
-				}
-			}
-
-			return TRUE;
-		}
 	};
 }
 
