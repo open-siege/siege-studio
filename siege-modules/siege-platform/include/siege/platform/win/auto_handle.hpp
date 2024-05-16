@@ -17,7 +17,6 @@ namespace win32
 			return this->get();
 		}
 	};
-
 }
 
 #endif

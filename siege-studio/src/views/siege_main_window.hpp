@@ -4,6 +4,7 @@
 #include <siege/platform/win/desktop/win32_common_controls.hpp>
 #include <siege/platform/win/desktop/win32_shell.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
+#include <siege/platform/win/core/file.hpp>
 #include <siege/platform/siege_module.hpp>
 #include <map>
 #include <spanstream>
@@ -269,14 +270,20 @@ namespace siege::views
 					stream->Stat(&info, STATFLAG::STATFLAG_NONAME);
 
 					auto path_ref = file_path.c_str();
+					win32::file file_to_read(file_path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
 
-					auto handle = ::CreateFileW(path_ref, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+					auto mapping = file_to_read.CreateFileMapping(std::nullopt, PAGE_READONLY, 0, 0, L"");
 
-					auto mapping = ::CreateFileMapping(handle, nullptr, PAGE_READONLY, 0, 0, nullptr);
+					if (!mapping)
+					{
+						return false;
+					}
+
+					auto view = mapping->MapViewOfFile(FILE_MAP_READ, std::size_t(info.cbSize.QuadPart));
 
 					COPYDATASTRUCT data{
 								.cbData = DWORD(info.cbSize.QuadPart),
-								.lpData = ::MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, std::size_t(info.cbSize.QuadPart))
+								.lpData = view.get()
 					};
 
 					assert(stream->Release() == 0);
@@ -308,10 +315,6 @@ namespace siege::views
 						child->RemovePropW(L"Filename");
 						::DestroyWindow(*child);
 					}
-
-					::UnmapViewOfFile(data.lpData);
-					::CloseHandle(mapping);
-					::CloseHandle(handle);
 					return true;
 				}
 			}
