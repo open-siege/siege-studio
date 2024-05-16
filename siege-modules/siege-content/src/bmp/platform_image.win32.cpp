@@ -1,10 +1,10 @@
 #include <siege/content/bmp/image.hpp>
 #include <siege/platform/win/core/com.hpp>
+#include <siege/platform/win/core/file.hpp>
 #include <exception>
 #include <spanstream>
 #include <memory>
 #include <cassert>
-#include <psapi.h>
 #include <wincodec.h>
 
 namespace siege::content::bmp
@@ -70,39 +70,17 @@ namespace siege::content::bmp
         if (std::spanstream* span_stream = dynamic_cast<std::spanstream*>(&image_stream); span_stream != nullptr)
         {
             auto span = span_stream->rdbuf()->span();
-            std::wstring filename(255, L'\0');
-            auto size = ::GetMappedFileNameW(::GetCurrentProcess(), span.data(), filename.data(), filename.size());
+            auto view = win32::file_view(span.data());
 
-            if (size == 0)
+            auto filename = view.GetMappedFilename();
+            view.release();
+
+            if (!filename)
             {
                  throw std::invalid_argument("stream");
             }
 
-            std::wstring drive = L"A:";
-
-            std::wstring buffer(32, L'\0');
-
-            for (auto i = drive[0]; i <= L'Z'; ++i)
-            {
-                    drive[0] = i;
-
-                    auto vol_size = ::QueryDosDeviceW(drive.c_str(), buffer.data(), buffer.size());
-
-                    if (vol_size != 0)
-                    {
-                       buffer = buffer.c_str();
-
-                       auto index = filename.find(buffer, 0);
-
-                       if (index == 0)
-                       {
-                           filename = filename.replace(0, buffer.size(), drive);              
-                           break;
-                       }
-                    }
-            }
-
-            load(filename.c_str());
+            load(std::move(*filename));
         } 
     }
 
