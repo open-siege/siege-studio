@@ -222,16 +222,17 @@ namespace win32
 	using notify_message = notify_message_base<>;
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-	using tree_view_notify_message = notify_message_base<NMTREEVIEWW>;
-	using header_notify_message = notify_message_base<NMHEADERW>;
+	using tree_view_notification = notify_message_base<NMTREEVIEWW>;
+	using header_notification = notify_message_base<NMHEADERW>;
+	using list_view_item_activation = notify_message_base<NMITEMACTIVATE>;
 #endif
 
-	struct menu_command_message
+	struct menu_command
 	{
 		constexpr static std::uint32_t id = WM_COMMAND;
 		int identifier;
 
-		menu_command_message(wparam_t wParam, lparam_t) : 
+		menu_command(wparam_t wParam, lparam_t) : 
 			identifier(LOWORD(wParam))
 		{
 		}
@@ -242,7 +243,7 @@ namespace win32
 		}
 	};
 
-	struct accelerator_command_message
+	struct accelerator_command
 	{
 		constexpr static std::uint32_t id = WM_COMMAND;
 		

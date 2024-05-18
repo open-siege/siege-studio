@@ -70,6 +70,18 @@ namespace win32
 
         #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 
+        inline std::optional<window_ref> GetAncestor(std::uint32_t flags) const
+        {
+            auto parent = ::GetAncestor(*this, flags);
+
+            if (!parent)
+            {
+                return std::nullopt;
+            }
+
+            return window_ref(parent);
+        }
+
         inline std::optional<window_ref> GetParent() const
         {
             auto parent = ::GetParent(*this);

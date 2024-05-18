@@ -1,32 +1,16 @@
 ### Setup and Build Instructions
 
-New to C++, CMake or Conan? Checkout this set of examples with instructions to get started: https://github.com/matthew-rindel/hello-cpp-durban
-
 If you don't already have Conan on your system, find instructions here: https://conan.io/downloads.html
 
 To configure and build a debug build, use:
-```conan install . -s build_type=Debug --build=missing```
-```conan build .```
+```conan build . -s build_type=Debug --build=missing```
 
 To configure and build a release build, use:
-```conan install . --build=missing```
-```conan build .```
-
-For x86 builds, which triggers building of additional projects, use:
-```conan install . -s arch=x86 --build=missing```
-```conan build .```
+```conan build . -s build_type=Release -s compiler.runtime=static --build=missing```
 
 Generated files will go into the **build/Release/bin** or **build/Debug/bin** folder.
 
-
 ### Usage Instructions
-
-TODO: add information for all of the other working build targets
-
-#### siege-studio
-
-TODO: write a decent description of how to use the Siege Studio GUI.
-
 #### dts-to-json
 With dts-to-json, you can convert either individual or multiple DTS or DML files to JSON.
 

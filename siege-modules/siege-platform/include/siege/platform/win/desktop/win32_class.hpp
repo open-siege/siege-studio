@@ -38,19 +38,27 @@ namespace win32
             }
         }
 
-        if constexpr (requires(TWindow t) { t.on_command(menu_command_message{wParam, lParam}); })
+        if constexpr (requires(TWindow t) { t.on_copy_data(copy_data_message<std::uint8_t>{wParam, lParam}); })
         {
-            if (message == command_message::id && menu_command_message::is_menu_command(wParam, lParam))
+            if (message == copy_data_message<std::uint8_t>::id)
             {
-                return self->on_command(menu_command_message{wParam, lParam});
+                return self->on_copy_data(copy_data_message<std::uint8_t>{wParam, lParam});
             }
         }
 
-        if constexpr (requires(TWindow t) { t.on_command(accelerator_command_message{wParam, lParam}); })
+        if constexpr (requires(TWindow t) { t.on_command(menu_command{wParam, lParam}); })
         {
-            if (message == command_message::id && accelerator_command_message::is_accelerator_command(wParam, lParam))
+            if (message == command_message::id && menu_command::is_menu_command(wParam, lParam))
             {
-                return self->on_command(accelerator_command_message{wParam, lParam});
+                return self->on_command(menu_command{wParam, lParam});
+            }
+        }
+
+        if constexpr (requires(TWindow t) { t.on_command(accelerator_command{wParam, lParam}); })
+        {
+            if (message == command_message::id && accelerator_command::is_accelerator_command(wParam, lParam))
+            {
+                return self->on_command(accelerator_command{wParam, lParam});
             }
         }
 
@@ -65,7 +73,7 @@ namespace win32
         if constexpr (requires(TWindow t) { t.on_notify(notify_message{wParam, lParam}); })
         {
             if (message == command_message::id && 
-                    !(accelerator_command_message::is_accelerator_command(wParam, lParam) || menu_command_message::is_menu_command(wParam, lParam)))
+                    !(accelerator_command::is_accelerator_command(wParam, lParam) || menu_command::is_menu_command(wParam, lParam)))
             {
                 return self->on_notify(notify_message{command_message{wParam, lParam}});
             }
@@ -75,7 +83,7 @@ namespace win32
         {
             notify_message header(wParam, lParam);
 
-            if constexpr (requires(TWindow t) { t.on_notify(tree_view_notify_message{wParam, lParam}); })
+            if constexpr (requires(TWindow t) { t.on_notify(tree_view_notification{wParam, lParam}); })
             {
                 if (header.code == TVN_ITEMEXPANDINGW || 
                     header.code == TVN_ITEMEXPANDEDW ||
@@ -85,18 +93,32 @@ namespace win32
                     header.code == TVN_BEGINDRAGW ||
                     header.code == TVN_DELETEITEMW)
                 {
-                    return self->on_notify(tree_view_notify_message{wParam, lParam});            
+                    return self->on_notify(tree_view_notification{wParam, lParam});            
                 }
             }
 
-            if constexpr (requires(TWindow t) { t.on_notify(header_notify_message{wParam, lParam}); })
+            if constexpr (requires(TWindow t) { t.on_notify(list_view_item_activation{wParam, lParam}); })
+            {
+                static std::array<wchar_t, 256> name{};
+
+                if ((header.code == NM_CLICK  || 
+                    header.code == NM_DBLCLK ||
+                    header.code == NM_RCLICK ||
+                    header.code == NM_RDBLCLK)
+                    && ::RealGetWindowClassW(header.hwndFrom, name.data(), 255) > 0 && std::wstring_view(name.data()) == WC_LISTVIEWW)
+                {
+                    return self->on_notify(list_view_item_activation{wParam, lParam});     
+                }
+            }
+
+            if constexpr (requires(TWindow t) { t.on_notify(header_notification{wParam, lParam}); })
             {
                 if (header.code >= HDN_FIRST ||
                     header.code <= HDN_LAST)
                 {
                     if (header.code != HDN_FILTERBTNCLICK && header.code != HDN_GETDISPINFO)
                     {
-                        return self->on_notify(header_notify_message{wParam, lParam});                            
+                        return self->on_notify(header_notification{wParam, lParam});                            
                     }
                 }
             }

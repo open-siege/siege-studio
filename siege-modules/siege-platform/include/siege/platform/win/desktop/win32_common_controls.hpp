@@ -444,6 +444,16 @@ namespace win32
             return SendMessageW(*this, LVM_INSERTITEMW, index, std::bit_cast<lparam_t>(&item));
         }
 
+        inline std::optional<LVITEMW> GetItem(LVITEMW item)
+        {
+            if (SendMessageW(*this, LVM_GETITEM, 0, std::bit_cast<lparam_t>(&item)))
+            {
+                return item;
+            }
+
+            return std::nullopt;
+        }
+
         inline void InsertGroups(std::span<list_view_group> groups)
         {
             int group_id = int(GetGroupCount() + 1);
@@ -604,7 +614,7 @@ namespace win32
 
         [[maybe_unused]] inline wparam_t SetCurrentSelection(wparam_t index)
         {
-            return SendMessageW(*this, TCM_SETCURSEL, 0, 0);
+            return SendMessageW(*this, TCM_SETCURSEL, index, 0);
         }
 
         [[nodiscard]] inline std::optional<TCITEMW> GetItem(wparam_t index, std::uint32_t mask = TCIF_PARAM | TCIF_STATE)

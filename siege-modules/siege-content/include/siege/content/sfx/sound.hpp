@@ -19,10 +19,12 @@ namespace siege::content::sfx
   public:
       explicit platform_sound(std::filesystem::path);
       explicit platform_sound(std::istream&);
+
+      std::size_t track_count() const;
       
-      std::variant<std::filesystem::path, std::span<std::byte>> get_sound_data();
+      std::variant<std::monostate, std::filesystem::path, std::span<std::byte>> get_sound_data(std::size_t);
   private:
-      std::any sound;
+      std::vector<std::any> tracks;
   };
 }
 

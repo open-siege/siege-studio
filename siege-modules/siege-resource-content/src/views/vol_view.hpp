@@ -114,7 +114,62 @@ namespace siege::views
 			return 0;
 		}
 
-		std::optional<win32::lresult_t> on_notify(win32::header_notify_message message)
+		std::optional<win32::lresult_t> on_notify(win32::list_view_item_activation message)
+		{
+			switch (message.hdr.code)
+			{
+				case NM_DBLCLK:
+				{
+					auto root = this->GetAncestor(GA_ROOT);
+
+					if (root)
+					{
+						std::array<wchar_t, 256> temp{};
+
+						auto item_info = table.GetItem(LVITEMW {
+							.mask = LVIF_TEXT,
+							.iItem = message.iItem,
+							.pszText = temp.data(),
+							.cchTextMax = 256
+							});
+
+						if (item_info)
+						{
+							auto items = controller.get_contents();
+
+							auto item = std::find_if(items.begin(), items.end(), [&](auto& content) {
+								if (auto* file = std::get_if<siege::platform::file_info>(&content))
+								{
+									return std::wstring_view(file->filename.c_str()) == item_info->pszText;
+								}
+
+								return false;
+								});
+
+							if (item != items.end())
+							{
+								auto data = controller.load_content_data(*item);
+
+								root->SetPropW(L"Filename", temp.data());
+								root->CopyData(*this, COPYDATASTRUCT {
+										.cbData = DWORD(data.size()),
+										.lpData = data.data()
+									});
+
+								root->RemovePropW(L"Filename");
+							}
+						}
+					}
+					return 0;
+				}
+				default:
+				{
+					return std::nullopt;
+				}
+			}
+		}
+
+		std::optional<win32::lresult_t> on_notify(win32::header_notification message)
 		{
 			switch (message.hdr.code)
 			{

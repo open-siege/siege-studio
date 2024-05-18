@@ -11,7 +11,7 @@ if (WIN32)
     target_compile_definitions(siege-win-core PRIVATE WINAPI_FAMILY=WINAPI_FAMILY_PC_APP)
     target_compile_definitions(siege-win-core PUBLIC COM_NO_WINDOWS_H NOMINMAX STRICT UNICODE)
     target_include_directories(siege-win-core PUBLIC ${PROJECT_SOURCE_DIR}/include)
-    target_link_libraries(siege-win-core PUBLIC OneCore siege-std)
+    target_link_libraries(siege-win-core PUBLIC OneCore mfplat mfreadwrite siege-std)
 
     add_library(siege-platform ALIAS siege-win-core)
 

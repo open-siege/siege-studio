@@ -18,8 +18,6 @@ namespace siege::views
   {
       using namespace siege::content;
 
-      auto start = image_stream.tellg();
-
       try
       {
           if (bmp::is_microsoft_bmp(image_stream))
@@ -37,9 +35,8 @@ namespace siege::views
             original_image.emplace(image_stream);
           }
       }
-      catch(std::exception& ex)
+      catch(...)
       {
-        OutputDebugStringA(ex.what());
       }
 
       if (original_image)
