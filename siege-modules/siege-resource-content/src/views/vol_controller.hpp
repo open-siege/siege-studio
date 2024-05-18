@@ -18,11 +18,10 @@ namespace siege::views
 				L".vol", L".rmf", L".mis", L".map", L".rbx", L".tbv", L".zip", L".vl2", L".pk3",
 					L".iso", L".mds", L".cue", L".nrg", L".7z", L".tgz", L".rar", L".cab", L".z", L".cln", L".atd"
 			}};
-		static bool is_vol(std::istream& image_stream) noexcept;
-
-	    std::size_t load_volume(std::istream& image_stream, std::optional<std::filesystem::path> path);
-
+		static bool is_vol(std::istream&) noexcept;
+	    std::size_t load_volume(std::istream&, std::optional<std::filesystem::path>);
 		std::span<siege::platform::resource_reader::content_info> get_contents();
+		std::vector<char> load_content_data(const siege::platform::resource_reader::content_info&);
 	private: 
 		std::unique_ptr<siege::platform::resource_reader> resource;
 		std::vector<siege::platform::resource_reader::content_info> contents;

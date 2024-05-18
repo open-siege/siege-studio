@@ -10,8 +10,23 @@ namespace siege::views
 			|| siege::content::sfx::is_ogg(stream);
 	}
 
-	std::size_t sfx_controller::load_sound(std::istream& image_stream)
+	std::size_t sfx_controller::load_sound(std::istream& image_stream) noexcept
 	{
-		return 1;
+		using namespace siege::content;
+
+        try
+        {
+            original_sound.emplace(image_stream);
+        }
+        catch(...)
+        {
+        }
+
+        if (original_sound)
+        {
+            return original_sound->track_count();
+        }
+
+        return 1;
 	}
 }

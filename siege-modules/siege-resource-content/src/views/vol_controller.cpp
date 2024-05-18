@@ -8,6 +8,12 @@
 #include <siege/resource/iso_resource.hpp>
 #include <siege/resource/seven_zip_resource.hpp>
 #include <siege/resource/cab_resource.hpp>
+#include <fstream>
+#include <spanstream>
+
+#if WIN32
+    #include <siege/platform/win/core/file.hpp>
+#endif
 
 namespace siege::views
 {
@@ -72,6 +78,25 @@ namespace siege::views
         resource.reset(new iso::iso_resource_reader());
     }
 
+#if WIN32
+    if (!path)
+    {
+        if (std::spanstream* span_stream = dynamic_cast<std::spanstream*>(&image_stream); span_stream != nullptr)
+        {
+            auto span = span_stream->rdbuf()->span();
+            auto view = win32::file_view(span.data());
+
+            auto filename = view.GetMappedFilename();
+            view.release();
+
+            if (filename)
+            {
+                path = std::move(filename);
+            }
+        } 
+    }
+#endif
+
     if (resource && path)
     {
         contents = resource->get_content_listing(image_stream, platform::listing_query {
@@ -81,14 +106,47 @@ namespace siege::views
 
         storage = std::move(*path);
 
-        return 1;
+        return contents.size();
     }
     else if (resource)
     {
-        // TODO get path from stream or copy stream to memory
+        // TODO copy stream to memory
     
     }
     return 0;
+  }
+
+  std::vector<char> vol_controller::load_content_data(const siege::platform::resource_reader::content_info& content)
+  {
+    std::vector<char> results;
+
+    if (!resource)
+    {
+        return results;
+    }
+
+    if (storage.index() == 0)
+    {
+        return results;
+    }
+
+    if (auto* file = std::get_if<siege::platform::file_info>(&content))
+	{
+        results.assign(file->size, char{});
+        std::ospanstream output(results);
+
+        if (auto* path = std::get_if<std::filesystem::path>(&storage); path)
+        {
+            std::ifstream fstream{*path, std::ios_base::binary};
+            resource->extract_file_contents(fstream, *file, output);
+        }
+        else if (auto* memory = std::get_if<std::stringstream>(&storage); memory)
+        {
+            resource->extract_file_contents(*memory, *file, output);
+        }
+    }
+
+    return results;
   }
 
   std::span<siege::platform::resource_reader::content_info> vol_controller::get_contents()

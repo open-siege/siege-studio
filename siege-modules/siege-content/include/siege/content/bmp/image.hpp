@@ -27,7 +27,6 @@ namespace siege::content::bmp
 
       std::size_t convert(std::size_t frame, std::pair<int, int> size, int bits, std::span<std::byte> destination) const noexcept;
   private:
-      void load(std::filesystem::path);
       std::vector<std::any> frames;
   };
 }

@@ -186,6 +186,75 @@ namespace siege::views
 			return std::nullopt;
 		}
 
+		auto on_copy_data(win32::copy_data_message<std::uint8_t> message)
+		{
+			auto filename = GetPropW<wchar_t*>(L"Filename");
+
+			if (!filename)
+			{
+				return FALSE;
+			}
+
+			//TODO create a stream adapter for wrapping std::streams as IStream
+//			std::spanstream stream(message.data);
+
+			auto stream = ::SHCreateMemStream(message.data.data(), message.data.size());
+
+			if (!stream)
+			{
+				return FALSE;
+			}
+
+			auto plugin = std::find_if(loaded_modules.begin(), loaded_modules.end(), [&](auto& module) {
+					return 	module.IsStreamSupported(*stream);
+					});
+
+			if (plugin != loaded_modules.end())
+			{
+				auto class_name = plugin->GetWindowClassForStream(*stream);
+
+				auto tab_rect = tab_control.GetClientRect()
+						.and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value);  }).value().second;
+
+				SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&tab_rect));
+
+				auto child = plugin->CreateWindowExW(::CREATESTRUCTW{
+								.hwndParent = *this,
+								.cy = tab_rect.bottom - tab_rect.top,
+								.cx = tab_rect.right - tab_rect.left,
+								.y = tab_rect.top,
+								.x = tab_rect.left,
+								.style = WS_CHILD,
+								.lpszClass = class_name.c_str(),
+				});
+
+				if (child->CopyData(*this, COPYDATASTRUCT{.cbData = DWORD(message.data.size()), .lpData = message.data.data()}))
+				{
+						auto index = tab_control.GetItemCount() - 1;
+
+						tab_control.InsertItem(index, TCITEMW{
+										.mask = TCIF_TEXT | TCIF_PARAM,
+										.pszText = filename,
+										.lParam = win32::lparam_t(child->get())
+							});
+
+					SetWindowLongPtrW(*child, GWLP_ID, index + 1);
+
+					on_notify(win32::notify_message{NMHDR{.hwndFrom = tab_control, .code = TCN_SELCHANGING}});
+
+					tab_control.SetCurrentSelection(index);
+
+					on_notify(win32::notify_message{NMHDR{.hwndFrom = tab_control, .code = TCN_SELCHANGE}});
+				}
+				else
+				{
+					::DestroyWindow(*child);
+				}
+			}
+
+			return FALSE;
+		}
+
 		std::optional<LRESULT> on_notify(win32::notify_message notification)
 		{
 			auto [sender, id, code] = notification;
@@ -250,6 +319,7 @@ namespace siege::views
 					auto class_name = plugin->GetWindowClassForStream(*stream);
 
 					auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value);  }).value().second;
+
 					SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&tab_rect));
 
 					auto child = plugin->CreateWindowExW(::CREATESTRUCTW{
@@ -306,7 +376,7 @@ namespace siege::views
 
 						on_notify(win32::notify_message{NMHDR{.hwndFrom = tab_control, .code = TCN_SELCHANGING}});
 
-						tab_control.SetCurrentSelection(index + 1);
+						tab_control.SetCurrentSelection(index);
 
 						on_notify(win32::notify_message{NMHDR{.hwndFrom = tab_control, .code = TCN_SELCHANGE}});
 					}
@@ -315,6 +385,7 @@ namespace siege::views
 						child->RemovePropW(L"Filename");
 						::DestroyWindow(*child);
 					}
+
 					return true;
 				}
 			}
@@ -322,7 +393,7 @@ namespace siege::views
 			return false;
 		}
 
-		std::optional<LRESULT> on_notify(win32::tree_view_notify_message notification)
+		std::optional<LRESULT> on_notify(win32::tree_view_notification notification)
 		{
 			auto sender = notification.hdr.hwndFrom;
 			auto code = notification.hdr.code;
@@ -349,7 +420,7 @@ namespace siege::views
 			}
 		}
 
-		std::optional<LRESULT> on_command(win32::menu_command_message command)
+		std::optional<LRESULT> on_command(win32::menu_command command)
 		{
 			if (command.identifier == open_workspace)
 			{
