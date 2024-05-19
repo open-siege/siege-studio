@@ -1,8 +1,8 @@
 #ifndef SIEGE_MAIN_WINDOW_HPP
 #define SIEGE_MAIN_WINDOW_HPP
 
-#include <siege/platform/win/desktop/win32_common_controls.hpp>
-#include <siege/platform/win/desktop/win32_shell.hpp>
+#include <siege/platform/win/desktop/common_controls.hpp>
+#include <siege/platform/win/desktop/shell.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include <siege/platform/win/core/file.hpp>
 #include <siege/platform/siege_module.hpp>

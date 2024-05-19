@@ -3,7 +3,7 @@
 
 #include <expected>
 #include <siege/platform/win/core/module.hpp>
-#include <siege/platform/win/desktop/win32_window.hpp>
+#include <siege/platform/win/desktop/window.hpp>
 #include <WinUser.h>
 
 namespace win32

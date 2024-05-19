@@ -1,8 +1,9 @@
 #ifndef WIN32_CLASS_HPP
 #define WIN32_CLASS_HPP
 
-#include "win32_messages.hpp"
-#include "win32_window.hpp"
+#include <siege/platform/win/desktop/notifications.hpp>
+#include "window.hpp"
+#include <any>
 
 namespace win32
 {
@@ -262,6 +263,98 @@ namespace win32
             }
         }
     };
+
+    // TODO incorporate this logic into the main dispatch method
+    inline std::any make_mouse_message(std::uint32_t message, wparam_t wParam, lparam_t lParam) noexcept
+	{
+		if (message == mouse_move_message::id || 
+			message == mouse_hover_message::id ||
+			message == mouse_wheel_message::id ||
+			mouse_button_double_click_message::matches_message(message) ||
+			mouse_button_down_message::matches_message(message) ||
+			mouse_button_up_message::matches_message(message))
+		{
+			mouse_button_message mouse_data{};
+			mouse_data.x = LOWORD(lParam);
+			mouse_data.y = HIWORD(lParam);
+
+			auto set_key_state = [&](auto keys) {
+				mouse_data.control_key_is_down = keys & MK_CONTROL;
+				mouse_data.shift_key_is_down = keys & MK_SHIFT;
+				mouse_data.mouse_buttons_down[std::size_t(mouse_button::lbutton)] = keys & MK_LBUTTON;
+				mouse_data.mouse_buttons_down[std::size_t(mouse_button::rbutton)] = keys & MK_RBUTTON;
+				mouse_data.mouse_buttons_down[std::size_t(mouse_button::mbutton)] = keys & MK_MBUTTON;
+				mouse_data.mouse_buttons_down[std::size_t(mouse_button::xbutton_1)] = keys & MK_XBUTTON1;
+				mouse_data.mouse_buttons_down[std::size_t(mouse_button::xbutton_2)] = keys & MK_XBUTTON2;
+			};
+
+			if (message == mouse_button_up_message::ids[0] || message == mouse_button_down_message::ids[0] || message == mouse_button_double_click_message::ids[0])
+			{
+				mouse_data.source = mouse_button::lbutton;
+			}
+			else if (message == mouse_button_up_message::ids[1] || message == mouse_button_down_message::ids[1] || message == mouse_button_double_click_message::ids[1])
+			{
+				mouse_data.source = mouse_button::rbutton;
+			}
+			else if (message == mouse_button_up_message::ids[2] || message == mouse_button_down_message::ids[2] || message == mouse_button_double_click_message::ids[2])
+			{
+				mouse_data.source = mouse_button::mbutton;
+			}
+			else if (message == mouse_button_up_message::ids[3] || message == mouse_button_down_message::ids[3] || message == mouse_button_double_click_message::ids[3])
+			{
+				mouse_data.source = GET_XBUTTON_WPARAM(wParam) == XBUTTON1 ? mouse_button::xbutton_1 : mouse_button::xbutton_2;
+
+				auto keys = GET_KEYSTATE_WPARAM(wParam);
+				set_key_state(keys);
+			}
+			else if (message == mouse_wheel_message::id)
+			{
+				auto keys = GET_KEYSTATE_WPARAM(wParam);
+                set_key_state(keys);
+			}
+			else
+			{
+                set_key_state(wParam);
+			}
+
+			if (message == mouse_move_message::id)
+			{
+				return mouse_move_message{std::move(mouse_data)};
+			}
+			else if (message == mouse_hover_message::id)
+			{
+				return mouse_hover_message{std::move(mouse_data)};
+			}
+			else if (message == mouse_wheel_message::id)
+			{
+				auto delta = GET_WHEEL_DELTA_WPARAM(wParam);
+				return mouse_wheel_message{std::move(mouse_data), delta};
+			}
+			else if (mouse_button_down_message::matches_message(message))
+			{
+				return mouse_button_down_message{std::move(mouse_data)};
+			}
+			else if (mouse_button_up_message::matches_message(message))
+			{
+				return mouse_button_up_message{std::move(mouse_data)};
+			}
+			else if (mouse_button_double_click_message::matches_message(message))
+			{
+				return mouse_button_double_click_message{std::move(mouse_data)};
+			}
+		}
+
+		if (message == mouse_leave_message::id)
+		{
+			return mouse_leave_message{};
+		}
+
+		return win32::message{
+			.message = message,
+			.wParam = wParam,
+			.lParam = lParam
+		};
+	}
 
     template <typename TWindow>
     struct static_window_meta_class : ::WNDCLASSEXW
