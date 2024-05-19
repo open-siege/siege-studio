@@ -83,6 +83,7 @@ namespace win32
         if (message == notify_message::id)
         {
             notify_message header(wParam, lParam);
+            thread_local std::array<wchar_t, 256> name{};
 
             if constexpr (requires(TWindow t) { t.on_notify(tree_view_notification{wParam, lParam}); })
             {
@@ -100,13 +101,11 @@ namespace win32
 
             if constexpr (requires(TWindow t) { t.on_notify(list_view_item_activation{wParam, lParam}); })
             {
-                static std::array<wchar_t, 256> name{};
-
                 if ((header.code == NM_CLICK  || 
                     header.code == NM_DBLCLK ||
                     header.code == NM_RCLICK ||
                     header.code == NM_RDBLCLK)
-                    && ::RealGetWindowClassW(header.hwndFrom, name.data(), 255) > 0 && std::wstring_view(name.data()) == WC_LISTVIEWW)
+                    && ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == WC_LISTVIEWW)
                 {
                     return self->on_notify(list_view_item_activation{wParam, lParam});     
                 }
@@ -114,13 +113,26 @@ namespace win32
 
             if constexpr (requires(TWindow t) { t.on_notify(header_notification{wParam, lParam}); })
             {
-                if (header.code >= HDN_FIRST ||
-                    header.code <= HDN_LAST)
+                if ((header.code >= HDN_FIRST ||
+                    header.code <= HDN_LAST) && 
+                    ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == WC_HEADERW)
                 {
                     if (header.code != HDN_FILTERBTNCLICK && header.code != HDN_GETDISPINFO)
                     {
                         return self->on_notify(header_notification{wParam, lParam});                            
                     }
+                }
+            }
+
+            if constexpr (requires(TWindow t) { t.on_notify(mouse_notification{wParam, lParam}); })
+            {
+                if ((header.code == NM_CLICK  || 
+                    header.code == NM_DBLCLK ||
+                    header.code == NM_RCLICK ||
+                    header.code == NM_RDBLCLK)
+                    && ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == TOOLBARCLASSNAMEW)
+                {
+                    return self->on_notify(mouse_notification{wParam, lParam});     
                 }
             }
 
