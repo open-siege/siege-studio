@@ -7,7 +7,7 @@ file(GLOB_RECURSE SRC_FILES
 if (WIN32)
     add_library(${PROJECT_NAME} SHARED ${SRC_FILES} src/module.def)
     target_link_libraries(${PROJECT_NAME} PRIVATE siege-win-desktop siege-content)
-    add_subdirectory(Siege.UI.2D.Content)
+    add_subdirectory(Siege.2D.Content)
 else()
     add_library(${PROJECT_NAME} SHARED src/views/bmp_controller.cpp src/views/pal_controller.cpp)
 endif()
