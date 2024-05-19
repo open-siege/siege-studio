@@ -8,7 +8,7 @@ if (WIN32)
     add_library(${PROJECT_NAME} SHARED ${SRC_FILES} src/module.def)
     target_link_libraries(${PROJECT_NAME} PRIVATE siege-win-desktop siege-content)
 else()
-    add_library(${PROJECT_NAME} SHARED src/linux.cpp)
+    add_library(${PROJECT_NAME} SHARED src/views/sfx_controller.cpp)
     target_link_libraries(${PROJECT_NAME} PRIVATE siege-content)
 endif()
 

@@ -9,7 +9,7 @@ if (WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE siege-win-desktop siege-content)
     add_subdirectory(Siege.UI.2D.Content)
 else()
-    add_library(${PROJECT_NAME} SHARED src/linux.cpp)
+    add_library(${PROJECT_NAME} SHARED src/views/bmp_controller.cpp src/views/pal_controller.cpp)
 endif()
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)
