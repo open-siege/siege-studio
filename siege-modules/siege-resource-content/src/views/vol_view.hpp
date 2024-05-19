@@ -17,6 +17,7 @@ namespace siege::views
 	{
 		vol_controller controller;
 
+		win32::tool_bar table_settings;
 		win32::list_view table;
 
 		std::list<siege_module> modules;
@@ -66,6 +67,41 @@ namespace siege::views
 
 			auto factory = win32::window_factory(ref());
 
+			table_settings = *factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
+			table_settings.LoadImages(IDB_VIEW_SMALL_COLOR);
+
+			table_settings.InsertButton(-1, {
+				.iBitmap = VIEW_DETAILS,
+				.idCommand = LV_VIEW_DETAILS,
+				.fsState = TBSTATE_ENABLED | TBSTATE_CHECKED,
+				.fsStyle = BTNS_CHECKGROUP,
+				.iString = (INT_PTR)L"Details"
+				});
+
+			table_settings.InsertButton(-1, {
+				.iBitmap = VIEW_LARGEICONS,
+				.idCommand = LV_VIEW_ICON,
+				.fsState = TBSTATE_ENABLED,
+				.fsStyle = BTNS_CHECKGROUP,
+				.iString = (INT_PTR)L"Large Icons"
+				});
+
+			table_settings.InsertButton(-1, {
+				.iBitmap = VIEW_SMALLICONS,
+				.idCommand = LV_VIEW_SMALLICON,
+				.fsState = TBSTATE_ENABLED,
+				.fsStyle = BTNS_CHECKGROUP,
+				.iString = (INT_PTR)L"Small Icons"
+				});
+
+			table_settings.InsertButton(-1, {
+				.iBitmap = VIEW_LIST,
+				.idCommand = LV_VIEW_LIST,
+				.fsState = TBSTATE_ENABLED,
+				.fsStyle = BTNS_CHECKGROUP,
+				.iString = (INT_PTR)L"List"
+				});
+
 			table = *factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{
 							.style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
 				});
@@ -110,87 +146,21 @@ namespace siege::views
 
 			auto style = header.GetWindowStyle();
 			header.SetWindowStyle(style | HDS_FILTERBAR);
+			header.SetFilterChangeTimeout();
 
 			return 0;
 		}
 
-		std::optional<win32::lresult_t> on_notify(win32::list_view_item_activation message)
-		{
-			switch (message.hdr.code)
-			{
-				case NM_DBLCLK:
-				{
-					auto root = this->GetAncestor(GA_ROOT);
-
-					if (root)
-					{
-						std::array<wchar_t, 256> temp{};
-
-						auto item_info = table.GetItem(LVITEMW {
-							.mask = LVIF_TEXT,
-							.iItem = message.iItem,
-							.pszText = temp.data(),
-							.cchTextMax = 256
-							});
-
-						if (item_info)
-						{
-							auto items = controller.get_contents();
-
-							auto item = std::find_if(items.begin(), items.end(), [&](auto& content) {
-								if (auto* file = std::get_if<siege::platform::file_info>(&content))
-								{
-									return std::wstring_view(file->filename.c_str()) == item_info->pszText;
-								}
-
-								return false;
-								});
-
-							if (item != items.end())
-							{
-								auto data = controller.load_content_data(*item);
-
-								root->SetPropW(L"Filename", temp.data());
-								root->CopyData(*this, COPYDATASTRUCT {
-										.cbData = DWORD(data.size()),
-										.lpData = data.data()
-									});
-
-								root->RemovePropW(L"Filename");
-							}
-						}
-					}
-					return 0;
-				}
-				default:
-				{
-					return std::nullopt;
-				}
-			}
-		}
-
-		std::optional<win32::lresult_t> on_notify(win32::header_notification message)
-		{
-			switch (message.hdr.code)
-			{
-				case HDN_FILTERCHANGE:
-				{
-					return 0;
-				}
-				case HDN_ENDFILTEREDIT:
-				{
-					return 0;
-				}
-				default:
-				{
-					return std::nullopt;
-				}
-			}
-		}
-
 		auto on_size(win32::size_message sized)
 		{
-			table.SetWindowPos(sized.client_size);
+			auto top_size = SIZE{ .cx = sized.client_size.cx, .cy = sized.client_size.cy / 12 };
+			table_settings.SetWindowPos(top_size);
+			table_settings.SetWindowPos(POINT{});
+			table_settings.AutoSize();
+
+			table.SetWindowPos(SIZE{ .cx = sized.client_size.cx, .cy = sized.client_size.cy - top_size.cy });
+			table.SetWindowPos(POINT{.y = top_size.cy });
+
 			auto column_count = table.GetColumnCount();
 
 			auto column_width = sized.client_size.cx / column_count;
@@ -251,6 +221,96 @@ namespace siege::views
 			}
 
 			return FALSE;
+		}
+
+		std::optional<win32::lresult_t> on_notify(win32::list_view_item_activation message)
+		{
+			switch (message.hdr.code)
+			{
+				case NM_DBLCLK:
+				{
+					auto root = this->GetAncestor(GA_ROOT);
+
+					if (root)
+					{
+						std::array<wchar_t, 256> temp{};
+
+						auto item_info = table.GetItem(LVITEMW {
+							.mask = LVIF_TEXT,
+							.iItem = message.iItem,
+							.pszText = temp.data(),
+							.cchTextMax = 256
+							});
+
+						if (item_info)
+						{
+							auto items = controller.get_contents();
+
+							auto item = std::find_if(items.begin(), items.end(), [&](auto& content) {
+								if (auto* file = std::get_if<siege::platform::file_info>(&content))
+								{
+									return std::wstring_view(file->filename.c_str()) == item_info->pszText;
+								}
+
+								return false;
+								});
+
+							if (item != items.end())
+							{
+								auto data = controller.load_content_data(*item);
+
+								root->SetPropW(L"Filename", temp.data());
+								root->CopyData(*this, COPYDATASTRUCT {
+										.cbData = DWORD(data.size()),
+										.lpData = data.data()
+									});
+
+								root->RemovePropW(L"Filename");
+							}
+						}
+					}
+					return 0;
+				}
+				default:
+				{
+					return std::nullopt;
+				}
+			}
+		}
+
+		std::optional<win32::lresult_t> on_notify(win32::mouse_notification message)
+		{
+			switch (message.hdr.code)
+			{
+				case NM_CLICK:
+				{
+					table.SetView(win32::list_view::view_type(message.dwItemSpec));
+					return 0;
+				}
+				default:
+				{
+					return std::nullopt;
+				}
+			}
+		}
+
+		std::optional<win32::lresult_t> on_notify(win32::header_notification message)
+		{
+			switch (message.hdr.code)
+			{
+				case HDN_FILTERCHANGE:
+				{
+					return 0;
+				}
+				case HDN_ENDFILTEREDIT:
+				{
+					return 0;
+				}
+				default:
+				{
+					return std::nullopt;
+				}
+			}
 		}
 	};
 
