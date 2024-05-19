@@ -1,4 +1,4 @@
-#ifndef PAL_VIEW_HPP
+﻿#ifndef PAL_VIEW_HPP
 #define PAL_VIEW_HPP
 
 #include <string_view>
@@ -35,22 +35,15 @@ namespace siege::views
 			player_buttons.InsertButton(-1, {
 				.iBitmap = I_IMAGENONE,
 				.fsState = TBSTATE_ENABLED,
-				.fsStyle = BTNS_BUTTON | BTNS_SHOWTEXT,
-				.iString = (INT_PTR)L"Play"
+				.fsStyle = BTNS_BUTTON | BTNS_CHECK | BTNS_SHOWTEXT,
+				.iString = (INT_PTR)L"⏯"
 				});
 
 			player_buttons.InsertButton(-1, {
 				.iBitmap = I_IMAGENONE,
 				.fsState = TBSTATE_ENABLED,
 				.fsStyle = BTNS_BUTTON | BTNS_SHOWTEXT,
-				.iString = (INT_PTR)L"Pause"
-				});
-
-			player_buttons.InsertButton(-1, {
-				.iBitmap = I_IMAGENONE,
-				.fsState = TBSTATE_ENABLED,
-				.fsStyle = BTNS_BUTTON | BTNS_SHOWTEXT,
-				.iString = (INT_PTR)L"Stop"
+				.iString = (INT_PTR)L"⏹"
 				});
 
 			render_view = *control_factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD, .lpszName = L"Test" });
