@@ -95,6 +95,11 @@ namespace win32
         {
             return SendMessageW(*this, HDM_INSERTITEMW, index, std::bit_cast<win32::lparam_t>(&info));
         }
+
+        [[maybe_unused]] inline wparam_t SetFilterChangeTimeout(int timeout = 1000)
+        {
+            return SendMessageW(*this, HDM_SETFILTERCHANGETIMEOUT, 0, lparam_t(timeout));
+        }
     };
 
     struct list_view_column : ::LVCOLUMNW
@@ -664,6 +669,11 @@ namespace win32
             return SendMessageW(*this, TB_SETBUTTONSIZE , 0, MAKELPARAM(size.cx, size.cy));
         }
 
+        [[nodiscard]] inline auto ButtonCount() const
+        {
+            return SendMessageW(*this, TB_BUTTONCOUNT, 0, 0);
+        }
+
         [[nodiscard]] inline SIZE GetButtonSize()
         {
             auto result = SendMessageW(*this, TB_GETBUTTONSIZE, 0, 0);
@@ -691,6 +701,11 @@ namespace win32
 
         [[maybe_unused]] inline bool InsertButton(wparam_t index, TBBUTTON button)
         {
+            if (index < 0)
+            {
+                index = ButtonCount() - index + 1;
+            }
+
             SendMessageW(*this, TB_BUTTONSTRUCTSIZE, sizeof(TBBUTTON), 0);
             return SendMessageW(*this, TB_INSERTBUTTONW, index, 
                 std::bit_cast<win32::lparam_t>(&button));
@@ -701,6 +716,16 @@ namespace win32
             SendMessageW(*this, TB_BUTTONSTRUCTSIZE, sizeof(TBBUTTON), 0);
             return SendMessageW(*this, TB_ADDBUTTONSW, wparam_t(buttons.size()), 
                 std::bit_cast<win32::lparam_t>(buttons.data()));
+        }
+
+        inline auto LoadImages(wparam_t image_list_id)
+        {
+            return SendMessageW(*this, TB_LOADIMAGES, image_list_id, (LPARAM)HINST_COMMCTRL);
+        }
+
+        inline auto PressButton(wparam_t id, bool is_pressed = true)
+        {
+            return SendMessageW(*this, TB_PRESSBUTTON, id, MAKELPARAM(is_pressed ? TRUE : FALSE, 0));
         }
     };
 
