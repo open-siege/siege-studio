@@ -10,6 +10,7 @@
 #include <bitset>
 #include <algorithm>
 #include <span>
+#include <bit>
 #include <wtypes.h>
 #include <WinDef.h>
 #include <WinUser.h>
@@ -49,6 +50,8 @@ namespace win32
 	using tree_view_notification = notify_message_base<NMTREEVIEWW>;
 	using header_notification = notify_message_base<NMHEADERW>;
 	using list_view_item_activation = notify_message_base<NMITEMACTIVATE>;
+	using mouse_notification = notify_message_base<NMMOUSE>;
+	using keyboard_notification = notify_message_base<NMKEY>;
 #endif
 
 	struct menu_command
