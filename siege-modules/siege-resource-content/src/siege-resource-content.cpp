@@ -1,4 +1,4 @@
-#include <siege/platform/win/desktop/win32_class.hpp>
+#include <siege/platform/win/desktop/window_impl.hpp>
 
 #include <bit>
 #include <filesystem>

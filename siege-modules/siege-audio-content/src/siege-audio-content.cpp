@@ -1,7 +1,7 @@
 #include <bit>
 #include <filesystem>
 #include <memory>
-#include <siege/platform/win/desktop/win32_class.hpp>
+#include <siege/platform/win/desktop/window_impl.hpp>
 #include <siege/platform/win/core/com_collection.hpp>
 #include <siege/platform/win/core/com_stream_buf.hpp>
 #include <siege/platform/win/desktop/window_module.hpp>

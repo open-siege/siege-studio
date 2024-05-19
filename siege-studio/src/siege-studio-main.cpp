@@ -14,8 +14,8 @@
 #include <filesystem>
 #include <cassert>
 
-#include <siege/platform/win/desktop/win32_shell.hpp>
-#include <siege/platform/win/desktop/win32_class.hpp>
+#include <siege/platform/win/desktop/shell.hpp>
+#include <siege/platform/win/desktop/window_impl.hpp>
 #include <siege/platform/win/core/com_client.hpp>
 #include <commctrl.h>
 #include <oleacc.h>
@@ -26,16 +26,8 @@
 
 constexpr static std::wstring_view app_title = L"Siege Studio";
 
-using win32::overloaded;
-
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-	_In_opt_ HINSTANCE hPrevInstance,
-	_In_ LPWSTR    lpCmdLine,
-	_In_ int       nCmdShow)
+int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 {
-	UNREFERENCED_PARAMETER(hPrevInstance);
-	UNREFERENCED_PARAMETER(lpCmdLine);
-
 	win32::com::init_com();
 
 	INITCOMMONCONTROLSEX settings{

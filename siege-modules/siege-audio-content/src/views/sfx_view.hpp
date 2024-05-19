@@ -4,8 +4,8 @@
 #include <string_view>
 #include <istream>
 #include <spanstream>
-#include <siege/platform/win/desktop/win32_common_controls.hpp>
-#include <siege/platform/win/desktop/win32_drawing.hpp>
+#include <siege/platform/win/desktop/common_controls.hpp>
+#include <siege/platform/win/desktop/drawing.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include "sfx_controller.hpp"
 #include "media_module.hpp"

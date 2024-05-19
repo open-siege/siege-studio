@@ -2,7 +2,7 @@
 #define WIN32_COMPOSITE_CONTROLS_HPP
 
 #include <filesystem>
-#include <siege/platform/win/desktop/win32_user_controls.hpp>
+#include <siege/platform/win/desktop/user_controls.hpp>
 
 namespace win32
 {

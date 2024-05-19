@@ -1,9 +1,9 @@
 #ifndef VOL_VIEW_HPP
 #define VOL_VIEW_HPP
 
-#include <siege/platform/win/desktop/win32_common_controls.hpp>
+#include <siege/platform/win/desktop/common_controls.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
-#include <siege/platform/win/desktop/win32_menu.hpp>
+#include <siege/platform/win/desktop/menu.hpp>
 #include <siege/platform/siege_module.hpp>
 #include <siege/platform/shared.hpp>
 #include <spanstream>
