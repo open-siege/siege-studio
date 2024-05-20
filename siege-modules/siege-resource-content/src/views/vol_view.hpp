@@ -304,6 +304,11 @@ namespace siege::views
 			}
 		}
 
+		std::optional<win32::lresult_t> on_notify(win32::header_filter_button_notification message)
+		{
+			return FALSE;
+		}
+
 		std::optional<win32::lresult_t> on_notify(win32::header_notification message)
 		{
 			switch (message.hdr.code)
