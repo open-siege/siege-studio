@@ -49,6 +49,7 @@ namespace win32
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	using tree_view_notification = notify_message_base<NMTREEVIEWW>;
 	using header_notification = notify_message_base<NMHEADERW>;
+	using header_filter_button_notification = notify_message_base<NMHDFILTERBTNCLICK>;
 	using list_view_item_activation = notify_message_base<NMITEMACTIVATE>;
 	using mouse_notification = notify_message_base<NMMOUSE>;
 	using keyboard_notification = notify_message_base<NMKEY>;

@@ -99,6 +99,30 @@ namespace win32
                 }
             }
 
+            if constexpr (requires(TWindow t) { t.on_notify(header_filter_button_notification{wParam, lParam}); })
+            {
+                if (header.code == HDN_FILTERBTNCLICK)
+                {
+                    return self->on_notify(header_filter_button_notification{wParam, lParam});     
+                }
+            }
+
+            if constexpr (requires(TWindow t) { t.on_notify(header_notification{wParam, lParam}); })
+            {
+                if (header.code == HDN_FILTERCHANGE ||
+                    header.code == HDN_BEGINFILTEREDIT ||
+                    header.code == HDN_ENDFILTEREDIT || 
+                    header.code == HDN_ITEMCLICK  || 
+                    header.code == HDN_ITEMDBLCLICK  || 
+                    header.code == HDN_ITEMKEYDOWN  || 
+                    header.code == HDN_ITEMSTATEICONCLICK  || 
+                    header.code == HDN_OVERFLOWCLICK   || 
+                    header.code == HDN_DIVIDERDBLCLICK)
+                {
+                    return self->on_notify(header_notification{wParam, lParam});     
+                }
+            }
+
             if constexpr (requires(TWindow t) { t.on_notify(list_view_item_activation{wParam, lParam}); })
             {
                 if ((header.code == NM_CLICK  || 
@@ -108,23 +132,6 @@ namespace win32
                     && ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == WC_LISTVIEWW)
                 {
                     return self->on_notify(list_view_item_activation{wParam, lParam});     
-                }
-            }
-
-            if constexpr (requires(TWindow t) { t.on_notify(header_notification{wParam, lParam}); })
-            {
-                if ((header.code == HDN_FILTERCHANGE ||
-                    header.code == HDN_BEGINFILTEREDIT ||
-                    header.code == HDN_ENDFILTEREDIT || 
-                    header.code == HDN_ITEMCLICK  || 
-                    header.code == HDN_ITEMDBLCLICK  || 
-                    header.code == HDN_ITEMKEYDOWN  || 
-                    header.code == HDN_ITEMSTATEICONCLICK  || 
-                    header.code == HDN_OVERFLOWCLICK   || 
-                    header.code == HDN_DIVIDERDBLCLICK) && 
-                    ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == WC_HEADERW)
-                {
-                    return self->on_notify(header_notification{wParam, lParam});     
                 }
             }
 
