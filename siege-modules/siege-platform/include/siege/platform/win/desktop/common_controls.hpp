@@ -357,6 +357,11 @@ namespace win32
             return SendMessageW(*this, LVM_SETGROUPINFO, id, lparam_t(&group));        
         }
 
+        [[maybe_unsued]] inline wparam_t SetItem(LVITEMW item)
+        {
+            return SendMessageW(*this, LVM_SETITEMW, 0, lparam_t(&item));        
+        }
+
         [[maybe_unused]] inline wparam_t InsertColumn(wparam_t position, LVCOLUMNW column)
         {
             bool mask_not_set = column.mask == 0;
@@ -413,6 +418,12 @@ namespace win32
             return index;
         }
 
+        inline wparam_t GetItemCount() const
+        {
+            return SendMessageW(*this, LVM_GETITEMCOUNT, 0, 0);
+        }
+
+
         inline wparam_t InsertItem(wparam_t index, LVITEMW item)
         {
             bool mask_not_set = item.mask == 0;
@@ -462,7 +473,14 @@ namespace win32
                 item.mask |= LVIF_TEXT;
             }
 
-            return SendMessageW(*this, LVM_INSERTITEMW, index, std::bit_cast<lparam_t>(&item));
+            if (index == -1)
+            {
+                index = GetItemCount();
+            }
+
+            item.iItem = index;
+
+            return SendMessageW(*this, LVM_INSERTITEMW, 0, std::bit_cast<lparam_t>(&item));
         }
 
         inline std::optional<LVITEMW> GetItem(LVITEMW item)
@@ -495,7 +513,7 @@ namespace win32
             }
         }
 
-        inline void InsertRow(list_view_item row)
+        inline auto InsertRow(list_view_item row)
         {
             auto index = this->InsertItem(-1, row);
 
@@ -508,6 +526,8 @@ namespace win32
                 sub_item.mask = LVIF_TEXT;
                 ::SendMessageW(*this, LVM_SETITEMTEXT, index, (LPARAM)&sub_item);
             }
+
+            return index;
         }
     };
 

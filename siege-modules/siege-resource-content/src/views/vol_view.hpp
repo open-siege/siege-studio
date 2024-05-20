@@ -26,6 +26,7 @@ namespace siege::views
 		std::map<std::wstring_view, std::set<std::wstring>> category_extensions;
 		std::map<std::wstring_view, win32::wparam_t> categories_to_groups;
 		std::map<std::wstring_view, std::wstring_view> extensions_to_categories;
+		std::map<siege::platform::file_info*, win32::wparam_t> file_indices;
 		std::wstring filter_value;
 
 		vol_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
@@ -110,7 +111,7 @@ namespace siege::views
 			table.InsertGroup(-1, LVGROUP{
 					.pszHeader = const_cast<wchar_t*>(L"Hidden"),
 					.iGroupId = 1,
-					.state = LVGS_HIDDEN | LVGS_NOHEADER,
+					.state = LVGS_HIDDEN | LVGS_NOHEADER | LVGS_COLLAPSED,
 					});
 
 			int id = 2;
@@ -218,7 +219,7 @@ namespace siege::views
 									std::to_wstring(file->size)
 								};
 
-								table.InsertRow(item);
+								file_indices.emplace(file, table.InsertRow(item));
 							}
 						}
 					}
@@ -361,6 +362,44 @@ namespace siege::views
 											.stateMask = LVGS_HIDDEN | LVGS_NOHEADER | LVGS_COLLAPSED,
 											.state = LVGS_HIDDEN | LVGS_NOHEADER | LVGS_COLLAPSED,
 											});
+									}
+								}
+							}
+
+							auto contents = controller.get_contents();
+
+							for (auto& content : contents)
+							{
+								if (auto* file = std::get_if<siege::platform::file_info>(&content))
+								{
+									auto index_iter = file_indices.find(file);
+
+									if (index_iter == file_indices.end())
+									{
+										continue;
+									}
+
+									if (std::wstring_view(file->filename.c_str()).find(filter_value) == std::wstring_view::npos)
+									{
+										table.SetItem({
+											.mask = LVIF_GROUPID,
+											.iItem = int(index_iter->second),
+											.iGroupId = 1,
+											});									
+									}
+									else
+									{
+										auto extension = platform::to_lower(file->filename.extension().wstring());
+										auto category = extensions_to_categories.find(extension);
+
+										if (category != extensions_to_categories.end())
+										{
+											table.SetItem({
+											.mask = LVIF_GROUPID,
+											.iItem = int(index_iter->second),
+											.iGroupId = int(categories_to_groups[category->second]),
+											});	
+										}
 									}
 								}
 							}
