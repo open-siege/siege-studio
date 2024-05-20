@@ -91,6 +91,16 @@ namespace win32
             return SendMessageW(*this, HDM_GETITEMCOUNT, 0, 0);
         }
 
+        [[maybe_unused]] inline std::optional<HDITEMW> GetItem(wparam_t index, HDITEMW item)
+        {
+            if (SendMessageW(*this, HDM_GETITEMW, index, lparam_t(&item)))
+            {
+                return item;
+            }
+
+            return std::nullopt;
+        }
+
         [[maybe_unused]] inline wparam_t InsertItem(wparam_t index, HDITEMW info)
         {
             return SendMessageW(*this, HDM_INSERTITEMW, index, std::bit_cast<win32::lparam_t>(&info));
@@ -339,6 +349,12 @@ namespace win32
         [[maybe_unused]] inline bool SetColumnWidth(wparam_t index, lparam_t width)
         {
             return SendMessageW(*this, LVM_SETCOLUMNWIDTH, index, width);
+        }
+
+        [[maybe_unsued]] inline wparam_t SetGroupInfo(wparam_t id, LVGROUP group)
+        {
+            group.cbSize = sizeof(LVGROUP);
+            return SendMessageW(*this, LVM_SETGROUPINFO, id, lparam_t(&group));        
         }
 
         [[maybe_unused]] inline wparam_t InsertColumn(wparam_t position, LVCOLUMNW column)

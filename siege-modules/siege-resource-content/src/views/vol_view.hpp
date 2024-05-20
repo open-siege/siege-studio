@@ -26,6 +26,7 @@ namespace siege::views
 		std::map<std::wstring_view, std::set<std::wstring>> category_extensions;
 		std::map<std::wstring_view, win32::wparam_t> categories_to_groups;
 		std::map<std::wstring_view, std::wstring_view> extensions_to_categories;
+		std::wstring filter_value;
 
 		vol_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
 		{
@@ -106,7 +107,13 @@ namespace siege::views
 							.style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
 				});
 
-			int id = 1;
+			table.InsertGroup(-1, LVGROUP{
+					.pszHeader = const_cast<wchar_t*>(L"Hidden"),
+					.iGroupId = 1,
+					.state = LVGS_HIDDEN | LVGS_NOHEADER,
+					});
+
+			int id = 2;
 			for (auto& item : category_extensions)
 			{
 				auto index = table.InsertGroup(-1, LVGROUP{
@@ -141,6 +148,8 @@ namespace siege::views
 			table.InsertColumn(-1, LVCOLUMNW{
 				  .pszText = const_cast<wchar_t*>(L"Compression Method"),
 				});
+
+			table.SetExtendedListViewStyle(LVS_EX_HEADERINALLVIEWS | LVS_EX_FULLROWSELECT, LVS_EX_HEADERINALLVIEWS | LVS_EX_FULLROWSELECT);
 
 			auto header = table.GetHeader();
 
@@ -299,11 +308,64 @@ namespace siege::views
 			switch (message.hdr.code)
 			{
 				case HDN_FILTERCHANGE:
-				{
-					return 0;
-				}
 				case HDN_ENDFILTEREDIT:
 				{
+					if (message.iItem == 0)
+					{
+						filter_value.clear();
+						filter_value.resize(255, L'\0');
+						HD_TEXTFILTERW string_filter{
+								.pszText = filter_value.data(),
+								.cchTextMax = (int)filter_value.capacity(),
+						};
+
+						auto header_item = table.GetHeader().GetItem(0, {
+							.mask = HDI_FILTER,
+							.type = HDFT_ISSTRING,
+							.pvFilter = &string_filter
+							});
+
+						filter_value.resize(filter_value.find(L'\0'));
+
+						if (header_item)
+						{
+							for (auto& item : categories_to_groups)
+							{
+										table.SetGroupInfo(item.second, {
+												.mask = LVGF_STATE,
+												.stateMask = LVGS_HIDDEN | LVGS_NOHEADER | LVGS_COLLAPSED,
+												.state = 0,
+												});
+							}
+
+							auto category_iter = categories_to_groups.find(filter_value);
+
+							if (category_iter == categories_to_groups.end() && !filter_value.empty())
+							{
+								auto extension_iter = extensions_to_categories.find(filter_value);
+
+								if (extension_iter != extensions_to_categories.end())
+								{
+									category_iter = categories_to_groups.find(extension_iter->second);
+								}
+							}
+
+							if (category_iter != categories_to_groups.end())
+							{
+								for (auto& item : categories_to_groups)
+								{
+									if (item.first != category_iter->first)
+									{
+										table.SetGroupInfo(item.second, {
+											.mask = LVGF_STATE,
+											.stateMask = LVGS_HIDDEN | LVGS_NOHEADER | LVGS_COLLAPSED,
+											.state = LVGS_HIDDEN | LVGS_NOHEADER | LVGS_COLLAPSED,
+											});
+									}
+								}
+							}
+						}
+					}
 					return 0;
 				}
 				default:
