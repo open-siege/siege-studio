@@ -4,7 +4,7 @@ project(siege-studio)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 if (WIN32)
-	add_executable(siege-studio WIN32 "src/siege-studio-main.cpp" src/siege-studio.manifest "src/linux.cpp")
+	add_executable(siege-studio WIN32 "src/siege-studio-main.cpp" src/siege-studio.manifest)
 	target_compile_definitions(siege-studio PRIVATE UNICODE)
 	target_link_libraries(siege-studio PRIVATE siege-win-desktop)
 else()

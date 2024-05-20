@@ -29,7 +29,7 @@ namespace siege::platform
     std::size_t offset;
     std::size_t size;
     std::optional<std::size_t> compressed_size;
-    compression_type compression_type;
+    siege::platform::compression_type compression_type;
     std::filesystem::path folder_path;
     std::filesystem::path archive_path;
   };
