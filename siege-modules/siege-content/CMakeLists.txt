@@ -11,8 +11,8 @@ find_package(pegtl REQUIRED)
 file(GLOB_RECURSE TEST_SRC_FILES src/*.test.cpp)
 file(GLOB_RECURSE WIN32_SRC_FILES src/*.win32.cpp)
 file(GLOB LIB_SRC_FILES src/*.cpp src/**/*.cpp)
+
 list(REMOVE_ITEM LIB_SRC_FILES ${TEST_SRC_FILES} ${WIN32_SRC_FILES})
-file(GLOB TESTABLE_SRC_FILES src/*.cpp src/**/*.cpp)
 
 add_library(${PROJECT_NAME} STATIC ${LIB_SRC_FILES})
 
@@ -23,7 +23,20 @@ endif()
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(${PROJECT_NAME} nlohmann_json::nlohmann_json glm::glm taocpp::pegtl siege-platform)
+install(DIRECTORY include
+        DESTINATION .
+        COMPONENT devel
+        FILES_MATCHING PATTERN "*.hpp")
 
+install(TARGETS ${PROJECT_NAME}
+        CONFIGURATIONS Debug Release
+        RUNTIME DESTINATION lib)
+
+# test code
+file(GLOB TESTABLE_SRC_FILES src/*.cpp src/**/*.cpp)
+if (NOT WIN32)
+        list(REMOVE_ITEM TESTABLE_SRC_FILES ${TEST_SRC_FILES} ${WIN32_SRC_FILES})
+endif()
 add_executable(${PROJECT_NAME}-tests ${TESTABLE_SRC_FILES} ${TEST_SRC_FILES})
 set_property(TARGET ${PROJECT_NAME}-tests PROPERTY CXX_STANDARD 23)
 target_include_directories(${PROJECT_NAME}-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -36,14 +49,3 @@ endif()
 include(CTest)
 include(Catch)
 catch_discover_tests(${PROJECT_NAME}-tests)
-
-install(DIRECTORY include
-        DESTINATION .
-        COMPONENT devel
-        FILES_MATCHING PATTERN "*.hpp")
-
-install(TARGETS ${PROJECT_NAME}
-        CONFIGURATIONS Debug Release
-        RUNTIME DESTINATION lib)
-
-
