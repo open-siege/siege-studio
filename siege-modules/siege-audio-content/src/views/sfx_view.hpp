@@ -36,21 +36,34 @@ namespace siege::views
 				.iBitmap = I_IMAGENONE,
 				.fsState = TBSTATE_ENABLED,
 				.fsStyle = BTNS_BUTTON | BTNS_CHECK | BTNS_SHOWTEXT,
-				.iString = (INT_PTR)L"⏯"
+				.iString = (INT_PTR)L"Play"
 				});
 
 			player_buttons.InsertButton(-1, {
 				.iBitmap = I_IMAGENONE,
 				.fsState = TBSTATE_ENABLED,
-				.fsStyle = BTNS_BUTTON | BTNS_SHOWTEXT,
-				.iString = (INT_PTR)L"⏹"
+				.fsStyle = BTNS_BUTTON | BTNS_CHECK | BTNS_SHOWTEXT,
+				.iString = (INT_PTR)L"Pause"
+				});
+
+			player_buttons.InsertButton(-1, {
+				.iBitmap = I_IMAGENONE,
+				.fsState = TBSTATE_ENABLED,
+				.fsStyle = BTNS_BUTTON | BTNS_CHECK | BTNS_SHOWTEXT,
+				.iString = (INT_PTR)L"Stop"
+				});
+
+			player_buttons.InsertButton(-1, {
+				.iBitmap = I_IMAGENONE,
+				.fsState = TBSTATE_ENABLED,
+				.fsStyle = BTNS_BUTTON | BTNS_CHECK | BTNS_SHOWTEXT,
+				.iString = (INT_PTR)L"Loop"
 				});
 
 			render_view = *control_factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD, .lpszName = L"Test" });
 
 			selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-				.style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS | LBS_OWNERDRAWFIXED, 
-				.lpszClass = L"MFC::CCheckListBox"
+				.style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS
 				});
 
 

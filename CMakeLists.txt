@@ -16,10 +16,6 @@ add_custom_command(TARGET siege-studio-dependencies POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:dts-to-json> $<TARGET_FILE_DIR:siege-studio>
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:dts-to-obj> $<TARGET_FILE_DIR:siege-studio>)
 
-if (WIN32)
-    add_custom_command(TARGET siege-studio-dependencies POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-win-mfc> $<TARGET_FILE_DIR:siege-studio>)
-endif()
-
 add_dependencies(siege-studio-dependencies siege-2d-content siege-3d-content siege-resource-content siege-audio-content)
 add_dependencies(siege-studio siege-studio-dependencies)
 
@@ -33,8 +29,4 @@ if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/siege-launcher)
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-resource-content> $<TARGET_FILE_DIR:siege-launcher>
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-audio-content> $<TARGET_FILE_DIR:siege-launcher>
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-game-content> $<TARGET_FILE_DIR:siege-launcher>)
-
-    if (WIN32)
-        add_custom_command(TARGET siege-launcher-dependencies POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-win-mfc> $<TARGET_FILE_DIR:siege-launcher>)
-    endif()
 endif()

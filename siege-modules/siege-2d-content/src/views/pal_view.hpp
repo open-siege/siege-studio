@@ -31,8 +31,7 @@ namespace siege::views
 			render_view = *control_factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | SS_OWNERDRAW });
 
 			selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-				.style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS | LBS_OWNERDRAWFIXED, 
-				.lpszClass = L"MFC::CCheckListBox"
+				.style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS
 				});
 
 			return 0;
