@@ -17,7 +17,6 @@ namespace win32
         {
             modules.emplace_back(win32::window_module_ref::current_module());
             modules.emplace_back(::GetModuleHandleW(L"comctl32.dll"));
-            modules.emplace_back(::GetModuleHandleW(L"siege-win-mfc.dll"));
         }
 
         window_factory(win32::window_ref parent) : window_factory()

@@ -87,8 +87,7 @@ namespace siege::views
             palettes_list = [&] {
                 auto palettes_list = *this_module.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
                             .style = WS_VISIBLE | WS_CHILD | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER,
-                            .lpszName =  L"Palettes",
-                            .lpszClass = L"MFC::CMFCListCtrl"
+                            .lpszName =  L"Palettes"
                 });
 
                 palettes_list.SetView(win32::list_view::view_type::details_view);

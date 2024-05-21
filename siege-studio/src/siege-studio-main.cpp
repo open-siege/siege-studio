@@ -35,9 +35,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 	};
 	InitCommonControlsEx(&settings);
 
-
-	auto mfcHandle = win32::module(LoadLibraryExW(L"siege-win-mfc.dll", nullptr, 0));
-
 	win32::window_module_ref this_module(hInstance);
 
 	win32::window_meta_class<siege::views::siege_main_window> info{};

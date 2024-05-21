@@ -27,13 +27,7 @@ if (WIN32)
     target_include_directories(siege-win-desktop PUBLIC ${PROJECT_SOURCE_DIR}/include)
     target_link_libraries(siege-win-desktop PUBLIC siege-win-gaming user32 comctl32 oleacc)
 
-    add_library(siege-win-mfc SHARED src/win-mfc.cpp src/win-mfc.rc)
-    set_property(TARGET siege-win-mfc PROPERTY CXX_STANDARD 17)
-    target_compile_definitions(siege-win-mfc PRIVATE UNICODE VC_EXTRALEAN _ATL_CSTRING_EXPLICIT_CONSTRUCTORS _AFX_NO_DAO_SUPPORT)
-    target_include_directories(siege-win-mfc PUBLIC ${PROJECT_SOURCE_DIR}/include)
-    set_property(TARGET siege-win-mfc PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-
-    install(TARGETS siege-std siege-win-core siege-win-gaming siege-win-desktop siege-win-mfc CONFIGURATIONS Debug Release RUNTIME DESTINATION bin)
+    install(TARGETS siege-std siege-win-core siege-win-gaming siege-win-desktop CONFIGURATIONS Debug Release RUNTIME DESTINATION bin)
 else()
     # TODO make GTK or SDL the other platform
     add_library(siege-platform ALIAS siege-std)
