@@ -18,6 +18,9 @@ Package/
 final build/
 wiki/
 
+bin/
+obj/
+
 *.dig
 *.obj
 *.dts

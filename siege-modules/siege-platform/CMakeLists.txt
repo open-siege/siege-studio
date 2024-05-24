@@ -33,3 +33,4 @@ else()
     add_library(siege-platform ALIAS siege-std)
 endif()
 
+add_subdirectory(Siege.Platform)
