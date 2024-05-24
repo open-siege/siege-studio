@@ -13,6 +13,25 @@
 
 namespace siege::views
 {
+	/*
+	
+	HIMAGELIST image_list = nullptr;
+			auto hresult = SHGetImageList(SHIL_SMALL, IID_IImageList, (void**)&image_list);
+
+			SHSTOCKICONINFO info{ .cbSize = sizeof(SHSTOCKICONINFO) };
+
+			if (hresult == S_OK)
+			{
+				dir_list.SetImageList(TVSIL_NORMAL, image_list);
+				hresult = SHGetStockIconInfo(SIID_FOLDER, SHGSI_SYSICONINDEX, &info);
+
+				if (hresult == S_OK)
+				{
+					root[0].item.iImage = info.iSysImageIndex;
+				}
+			}
+	*/
+
 	struct vol_view : win32::window_ref
 	{
 		vol_controller controller;

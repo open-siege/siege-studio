@@ -1,0 +1,8 @@
+EXPORTS
+	ExportModuleIsValid
+	ExportFunctionsStr
+	DeleteFunctionsStr
+	ExecStr
+	GetGameRoot
+	ConsoleGetConsole
+	ConsoleExec

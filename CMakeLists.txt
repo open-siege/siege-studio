@@ -6,6 +6,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 add_subdirectory(siege-modules)
 add_subdirectory(siege-studio)
 
+get_target_property(NUVOL_BINARY_DIR nuvol BINARY_DIR)
+
+message(${NUVOL_BINARY_DIR})
+
 add_custom_target(siege-studio-dependencies ALL COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:siege-studio>)
 add_custom_command(TARGET siege-studio-dependencies POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-2d-content> $<TARGET_FILE_DIR:siege-studio>
@@ -14,9 +18,10 @@ add_custom_command(TARGET siege-studio-dependencies POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-audio-content> $<TARGET_FILE_DIR:siege-studio>
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:unvol> $<TARGET_FILE_DIR:siege-studio>
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:dts-to-json> $<TARGET_FILE_DIR:siege-studio>
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:dts-to-obj> $<TARGET_FILE_DIR:siege-studio>)
+            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:dts-to-obj> $<TARGET_FILE_DIR:siege-studio>
+            COMMAND ${CMAKE_COMMAND} -E copy_directory ${NUVOL_BINARY_DIR} $<TARGET_FILE_DIR:siege-studio>)
 
-add_dependencies(siege-studio-dependencies siege-2d-content siege-3d-content siege-resource-content siege-audio-content)
+add_dependencies(siege-studio-dependencies siege-2d-content siege-3d-content siege-resource-content siege-audio-content nuvol)
 add_dependencies(siege-studio siege-studio-dependencies)
 
 if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/siege-launcher)

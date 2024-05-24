@@ -278,7 +278,7 @@ namespace win32
         {
             struct Handler
             {
-                inline static BOOL HandleEnum(hwnd_t self, LPWSTR key, HANDLE data, ULONG_PTR raw_callback)
+                inline static BOOL CALLBACK HandleEnum(hwnd_t self, LPWSTR key, HANDLE data, ULONG_PTR raw_callback)
                 {
                     if (key == nullptr)
                     {

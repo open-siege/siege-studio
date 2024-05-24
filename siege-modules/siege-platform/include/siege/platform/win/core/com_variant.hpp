@@ -57,6 +57,7 @@ namespace win32::com
             this->vt = VT_BSTR;
             this->bstrVal = ::SysAllocStringLen(other.data(), other.size());
             assert(this->bstrVal != other.data());
+            assert(::SysStringLen(this->bstrVal) == other.size());
         }
 
         operator std::wstring_view() const
