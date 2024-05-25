@@ -21,7 +21,7 @@ set_property(TARGET ${PROJECT_NAME}-tests PROPERTY CXX_STANDARD 23)
 target_include_directories(${PROJECT_NAME}-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(${PROJECT_NAME}-tests PRIVATE Catch2::Catch2WithMain siege-platform nlohmann_json::nlohmann_json)
 
-add_subdirectory(siege-exports)
+add_subdirectory(siege-extension)
 
 include(CTest)
 include(Catch)
