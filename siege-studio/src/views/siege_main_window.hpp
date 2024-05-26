@@ -31,22 +31,7 @@ namespace siege::views
 		siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self), tab_control(nullptr)
 		{
 			std::filesystem::path app_path = std::filesystem::path(win32::module_ref(params.hInstance).GetModuleFileNameW()).parent_path();
-
 			loaded_modules = siege_module::LoadSiegeModules(std::filesystem::path(app_path));
-
-			for (auto const& dir_entry : std::filesystem::directory_iterator{ app_path })
-			{
-				if (dir_entry.path().extension() == ".dll")
-				{
-					try
-					{
-						loaded_modules.emplace_back(dir_entry.path());
-					}
-					catch (...)
-					{
-					}
-				}
-			}
 
 			for (auto& module : loaded_modules)
 			{
