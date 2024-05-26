@@ -7,7 +7,6 @@ file(GLOB_RECURSE SRC_FILES
 if (WIN32)
     add_library(${PROJECT_NAME} SHARED ${SRC_FILES} src/module.def)
     target_link_libraries(${PROJECT_NAME} PRIVATE siege-win-desktop siege-content)
-    add_subdirectory(Siege.2D.Content)
 else()
     add_library(${PROJECT_NAME} SHARED src/views/bmp_controller.cpp src/views/pal_controller.cpp)
     target_link_libraries(${PROJECT_NAME} PRIVATE siege-platform siege-content)
@@ -16,4 +15,15 @@ endif()
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/include)
 
+
+set(OUTPUT_DIR $<$<CONFIG:Debug>:Debug> $<$<CONFIG:RelWithDebInfo>:Debug> $<$<CONFIG:Release>:Release> $<$<CONFIG:MinSizeRel>:Release>)
+
+add_custom_target(Siege.2D.Content
+        COMMAND dotnet build "${CMAKE_CURRENT_SOURCE_DIR}" --output "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/Siege.2D.Content.dll
+        DEPENDS Siege.Platform siege-2d-content
+)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Siege.2D.Content.dll CONFIGURATIONS Debug Release RUNTIME DESTINATION bin)
 install(TARGETS ${PROJECT_NAME} CONFIGURATIONS Debug Release RUNTIME DESTINATION bin)

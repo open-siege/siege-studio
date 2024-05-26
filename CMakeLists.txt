@@ -4,6 +4,7 @@ project(siege-frontend)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 add_subdirectory(siege-modules)
+add_subdirectory(siege-tools)
 add_subdirectory(siege-studio)
 
 get_target_property(NUVOL_BINARY_DIR nuvol BINARY_DIR)
