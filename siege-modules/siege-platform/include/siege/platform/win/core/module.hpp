@@ -63,7 +63,7 @@ namespace win32
 
 		inline static module_ref current_module()
 		{
-			return module_ref(&current_module); 
+			return module_ref((void*)&current_module); 
 		}
 
 		inline static module_ref current_application()
