@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(nuvol VERSION 1.0.0.0 LANGUAGES CSharp)
+project(nuvol)
 
 add_custom_target(${PROJECT_NAME}
         COMMAND dotnet build "${CMAKE_CURRENT_SOURCE_DIR}" --output "${CMAKE_CURRENT_BINARY_DIR}/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>"
