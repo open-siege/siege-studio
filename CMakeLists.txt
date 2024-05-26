@@ -8,8 +8,6 @@ add_subdirectory(siege-studio)
 
 get_target_property(NUVOL_BINARY_DIR nuvol BINARY_DIR)
 
-message(${NUVOL_BINARY_DIR})
-
 add_custom_target(siege-studio-dependencies ALL COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:siege-studio>)
 add_custom_command(TARGET siege-studio-dependencies POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-2d-content> $<TARGET_FILE_DIR:siege-studio>

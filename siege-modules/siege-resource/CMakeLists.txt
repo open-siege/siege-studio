@@ -35,4 +35,12 @@ install(TARGETS ${PROJECT_NAME}
         CONFIGURATIONS Debug Release
         RUNTIME DESTINATION lib)
 
+add_custom_command(
+     TARGET ${PROJECT_NAME}-tests
+     COMMENT "Running ${PROJECT_NAME}-tests"
+     POST_BUILD 
+     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+     COMMAND ${CMAKE_CTEST_COMMAND} -C $<CONFIGURATION> --output-on-failures
+)
+
 
