@@ -150,7 +150,7 @@ namespace win32::com
         {
             auto newEnum = NewEnum<IEnum>();
 
-            return EnumeratorIterator<Variant, IEnum, decltype(newEnum)::value_type>(std::move(*newEnum));
+            return EnumeratorIterator<Variant, IEnum, typename decltype(newEnum)::value_type>(std::move(*newEnum));
         }
 
         template<typename IEnum = IEnumVARIANT>
@@ -169,7 +169,7 @@ namespace win32::com
                 }
             }
 
-            return EnumeratorIterator<Variant, IEnum, decltype(newEnum)::value_type>(std::move(*newEnum), count);
+            return EnumeratorIterator<Variant, IEnum, typename decltype(newEnum)::value_type>(std::move(*newEnum), count);
         }
     };
 

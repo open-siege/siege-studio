@@ -16,7 +16,7 @@
 
 namespace siege::views
 {
-	struct bmp_view : win32::window
+	struct bmp_view : win32::window_ref
     {
         win32::static_control static_image;
         win32::list_view palettes_list;
@@ -33,13 +33,13 @@ namespace siege::views
 
         win32::gdi_bitmap current_bitmap;
 
-        bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window(self)
+        bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
 	    {
 	    }
 
         auto on_create(const win32::create_message& info)
         {
-            auto this_module = win32::window_factory(win32::window_ref(*this));
+            auto this_module = win32::window_factory(ref());
 
             std::wstring temp = L"menu.pal";
       
@@ -165,7 +165,6 @@ namespace siege::views
 
             return 0;
         }
-
 
         std::optional<LRESULT> on_get_object(win32::get_object_message message)
         {
