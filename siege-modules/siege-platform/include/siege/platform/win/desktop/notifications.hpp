@@ -77,6 +77,10 @@ namespace win32
 		
 		int notification_code;	
 
+		accelerator_command(wparam_t wParam, lparam_t) : notification_code(HIWORD(wParam))
+		{
+		}
+
 		static bool is_accelerator_command(wparam_t wParam, lparam_t lParam)
 		{
 			return HIWORD(wParam) == 1 && lParam == 0;

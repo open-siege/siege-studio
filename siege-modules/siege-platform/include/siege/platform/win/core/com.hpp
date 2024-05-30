@@ -72,8 +72,8 @@ namespace win32::com
         static void* operator new(std::size_t count);
         static void operator delete(void* ptr, std::size_t sz);
 
-        [[maybe_unused]] ULONG __stdcall IUnknown::AddRef() noexcept override;
-        [[maybe_unused]] ULONG __stdcall IUnknown::Release() noexcept override;
+        [[maybe_unused]] ULONG __stdcall AddRef() noexcept override;
+        [[maybe_unused]] ULONG __stdcall Release() noexcept override;
     };
 
     template<typename TBase, typename TInterface, typename TObject>

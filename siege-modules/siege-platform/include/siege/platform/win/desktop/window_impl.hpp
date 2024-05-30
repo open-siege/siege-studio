@@ -8,11 +8,11 @@
 namespace win32
 {
     #define DO_DISPATCH(message_name, event_name) \
-    if constexpr (requires(TWindow t) { t.##event_name({wParam, lParam}); }) \
+    if constexpr (requires(TWindow t) { t.event_name({wParam, lParam}); }) \
         { \
-            if (message == ##message_name::id) \
+            if (message == message_name::id) \
             { \
-                return self->##event_name({wParam, lParam}); \
+                return self->event_name({wParam, lParam}); \
             } \
         } \
 
@@ -382,13 +382,13 @@ namespace win32
     template <typename TWindow>
     struct static_window_meta_class : ::WNDCLASSEXW
     {
+        constexpr static auto data_size = sizeof(TWindow) / sizeof(LONG_PTR);
+        constexpr static auto extra_size = sizeof(TWindow) % sizeof(LONG_PTR) == 0 ? 0 : 1;
+        constexpr static auto total_size = (data_size + extra_size) * sizeof(LONG_PTR);
+        constexpr static auto can_fit = std::is_trivially_copyable_v<TWindow> && total_size <= 40 - sizeof(LONG_PTR);
+       
         static_window_meta_class() : ::WNDCLASSEXW{}
         {
-            constexpr static auto data_size = sizeof(TWindow) / sizeof(LONG_PTR);
-            constexpr static auto extra_size = sizeof(TWindow) % sizeof(LONG_PTR) == 0 ? 0 : 1;
-            constexpr static auto total_size = (data_size + extra_size) * sizeof(LONG_PTR);
-            constexpr static auto can_fit = std::is_trivially_copyable_v<TWindow> && total_size <= 40 - sizeof(LONG_PTR);
-            
             struct handler
             {
                 static lresult_t CALLBACK WindowHandler(hwnd_t hWnd, std::uint32_t message, wparam_t wParam, lparam_t lParam)
@@ -421,7 +421,7 @@ namespace win32
                                         ::HeapFree(heap, 0, data);
                                     }
 
-                                    ForEachPropertyExW(hWnd, [](auto wnd, std::wstring_view name, HANDLE handle) {
+                                    win32::window_ref(hWnd).ForEachPropertyExW([](auto wnd, std::wstring_view name, HANDLE handle) {
                                         ::RemovePropW(wnd, name.data());
                                     });
                                 }
@@ -508,6 +508,8 @@ namespace win32
 
             this->cbSize = sizeof(WNDCLASSEXW);
             this->lpfnWndProc = handler::WindowHandler;
+            static auto window_type_name = type_name<TWindow>();
+            this->lpszClassName = this->lpszClassName ? this->lpszClassName : window_type_name.c_str();
             this->cbWndExtra = 0;
 
             if constexpr (can_fit)
