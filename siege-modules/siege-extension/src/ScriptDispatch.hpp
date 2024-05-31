@@ -13,10 +13,10 @@ namespace siege::extension
         std::unordered_set<std::string_view> functions;
         std::unordered_set<std::string_view> variables;
 
-        std::move_only_function<std::string(std::string_view)> eval;
+        std::move_only_function<std::string_view(std::string_view)> eval;
 
 
-        ScriptDispatch(std::unordered_set<std::string_view> functions, std::unordered_set<std::string_view> variables, std::move_only_function<std::string(std::string_view)> eval) : 
+        ScriptDispatch(std::unordered_set<std::string_view> functions, std::unordered_set<std::string_view> variables, std::move_only_function<std::string_view(std::string_view)> eval) : 
             functions(std::move(functions)), 
             variables(std::move(variables)),
             eval(std::move(eval))
@@ -115,10 +115,10 @@ namespace siege::extension
             auto func_iter = functions.begin();
             std::advance(func_iter, index);
 
-            thread_local std::string exec_string;
+            std::string exec_string;
 
             exec_string.clear();
-            exec_string.reserve(func_iter->size() + 4 + pDispParams->cArgs * 4);
+            exec_string.reserve(func_iter->size() + 4 + (pDispParams->cArgs * sizeof(std::string) + 2));
             
             exec_string.append(*func_iter);
 

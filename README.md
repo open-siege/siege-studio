@@ -23,7 +23,8 @@ The project contains the following components:
       * Siege Content: a static library used to read, write and parse file formats such as Phoenix Bitmap (pba), Dynamix 3Space Shape (dts) and many more.
       * Siege Resource: a static library used to read, write and parse compound file formats, such as VOL or ZIP, which can contain many files within.
       * Siege 2D Content, Siege 3D Content, Siege Audio Content, Siege Resource Content: dynamic libraries containing UI and other logic to be loaded by a host program dynamically.
-  * Each dynamic module will eventually have their own C# wrapper with related packages published to NuGet.    
+      * TODO add a description for the other modules 
+* * Each dynamic module will eventually have their own C# wrapper with related packages published to NuGet.    
 * Siege Launcher (a commercial product to be available on Steam later this year, but not in this repo)
   * A configuration tool for detecting controllers and games and creating matching configurations for them.
   * It supports editing game configuration files to match the physical layout of the controller, and modern control schemes for the genre.
