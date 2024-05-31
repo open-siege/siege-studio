@@ -11,7 +11,10 @@ if (WIN32)
     target_link_libraries(siege-extension PRIVATE siege-win-desktop detours)
 
     add_library(siege-extension-starsiege SHARED src/starsiege.cpp src/starsiege.def)
-    set_property(TARGET siege-extension-starsiege PROPERTY CXX_STANDARD 23)
-    set_target_properties(siege-extension-starsiege PROPERTIES VS_PLATFORM_TOOLSET ClangCL)
+    set_target_properties(siege-extension-starsiege PROPERTIES VS_PLATFORM_TOOLSET ClangCL CXX_STANDARD 23)
     target_link_libraries(siege-extension-starsiege PRIVATE siege-win-desktop detours)
+
+    add_library(siege-extension-tribes SHARED src/tribes.cpp src/tribes.def)
+    set_target_properties(siege-extension-tribes PROPERTIES VS_PLATFORM_TOOLSET ClangCL CXX_STANDARD 23)
+    target_link_libraries(siege-extension-tribes PRIVATE siege-win-desktop detours)
 endif()
