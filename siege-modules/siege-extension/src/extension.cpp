@@ -6,6 +6,8 @@
 
 extern "C"
 {	
+	HRESULT __stdcall ExecutableIsSupported(const wchar_t* filename) noexcept;
+
 	HRESULT __stdcall LaunchGameWithExtension(const char* game_name, const wchar_t* exe_path_str, std::uint32_t argc, const wchar_t** argv, PROCESS_INFORMATION* process_info) noexcept
 	{
 		if (!exe_path_str)
@@ -41,6 +43,27 @@ extern "C"
 			return E_INVALIDARG;
 		}
 
+		try
+		{
+			win32::module extension(extension_path);
+
+			auto exe_is_supported = extension.GetProcAddress<decltype(ExecutableIsSupported)*>("ExecutableIsSupported");
+
+			if (exe_is_supported)
+			{
+				auto result = exe_is_supported(exe_path_str);
+
+				if (result != S_OK)
+				{
+					return E_INVALIDARG;
+				}
+			}
+		}
+		catch(...)
+		{
+		
+		}
+
 		std::wstring args;
 		args.reserve(argc + 3 * sizeof(std::wstring) + 3);
 
@@ -52,7 +75,6 @@ extern "C"
 		if (argv && argc > 0)
 		{
 			args.append(1, L' ');
-			// TODO there is more work to be done here.
 			for (auto i = 0u; i < argc; ++i)
 			{
 				args.append(argv[i]);
