@@ -18,13 +18,18 @@ extern "C"
 {
     #define DARKCALL __attribute__((regparm(3)))
 
-    static bool module_is_valid = false;
-    static DARKCALL void* (*GetGameRoot)() = nullptr;
-    static DARKCALL void* (*ConsoleGetConsole)(void*) = nullptr;
     static DARKCALL char* (*ConsoleEval)(void*, std::int32_t, std::int32_t, const char**) = nullptr;
 
     static auto* TrueSetWindowsHookExA = SetWindowsHookExA;
     static auto* TrueAllocConsole = AllocConsole;
+    static auto* TrueGetLogicalDrives = GetLogicalDrives;
+    static auto* TrueGetDriveTypeA = GetDriveTypeA;
+    static auto* TrueGetVolumeInformationA = GetVolumeInformationA;
+
+    static std::string VirtualDriveLetter;
+    constexpr static std::string_view StarsiegeDisc1 = "STARSIEGE1";
+    constexpr static std::string_view StarsiegeDisc2 = "STARSIEGE2";
+    constexpr static std::string_view StarsiegeBetaDisc = "STARSIEGE";
 
 
     BOOL WINAPI WrappedAllocConsole()
@@ -46,10 +51,77 @@ extern "C"
       return TrueSetWindowsHookExA(idHook, lpfn, hmod, dwThreadId);
     }
 
-    static std::array<std::pair<void**, void*>, 2> detour_functions{{ 
-        { &(void*&)TrueSetWindowsHookExA, WrappedSetWindowsHookExA },
-        { &(void*&)TrueAllocConsole, WrappedAllocConsole } 
-    }};
+DWORD WINAPI WrappedGetLogicalDrives()
+{
+  auto result = TrueGetLogicalDrives();
+  std::bitset<sizeof(DWORD) * 8> bits(result);
+
+  int driveLetter = static_cast<int>('A');
+
+  for (auto i = 2; i < bits.size(); ++i)
+  {
+    if (bits[i] == false)
+    {
+      driveLetter += i;
+      bits[i] = true;
+
+      if (VirtualDriveLetter.empty())
+      {
+        VirtualDriveLetter = static_cast<char>(driveLetter) + std::string(":\\");
+      }
+      break;
+    }
+  }
+
+
+  return bits.to_ulong();
+}
+
+UINT WINAPI WrappedGetDriveTypeA(LPCSTR lpRootPathName)
+{
+  if (lpRootPathName && VirtualDriveLetter == lpRootPathName)
+  {
+    return DRIVE_CDROM;
+  }
+
+  return TrueGetDriveTypeA(lpRootPathName);
+}
+
+BOOL WINAPI WrappedGetVolumeInformationA(
+  LPCSTR lpRootPathName,
+  LPSTR lpVolumeNameBuffer,
+  DWORD nVolumeNameSize,
+  LPDWORD lpVolumeSerialNumber,
+  LPDWORD lpMaximumComponentLength,
+  LPDWORD lpFileSystemFlags,
+  LPSTR lpFileSystemNameBuffer,
+  DWORD nFileSystemNameSize)
+{
+  if (lpRootPathName && lpRootPathName == VirtualDriveLetter)
+  {
+    std::vector<char> data(nVolumeNameSize, '\0');
+    std::copy(StarsiegeDisc2.begin(), StarsiegeDisc2.end(), data.begin());
+    std::copy(data.begin(), data.end(), lpVolumeNameBuffer);
+    return TRUE;
+  }
+
+  return TrueGetVolumeInformationA(lpRootPathName,
+    lpVolumeNameBuffer,
+    nVolumeNameSize,
+    lpVolumeSerialNumber,
+    lpMaximumComponentLength,
+    lpFileSystemFlags,
+    lpFileSystemNameBuffer,
+    nFileSystemNameSize);
+}
+
+    static std::array<std::pair<void**, void*>, 5> detour_functions{{
+  { &(void*&)TrueSetWindowsHookExA, WrappedSetWindowsHookExA },
+  { &(void*&)TrueGetLogicalDrives, WrappedGetLogicalDrives },
+  { &(void*&)TrueGetDriveTypeA, WrappedGetDriveTypeA },
+  { &(void*&)TrueGetVolumeInformationA, WrappedGetVolumeInformationA },
+  { &(void*&)TrueAllocConsole, WrappedAllocConsole } } };
+
     
     constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 4>, 4> verification_strings = {{
     std::array<std::pair<std::string_view, std::size_t>, 4>{{
@@ -125,29 +197,21 @@ extern "C"
 
     inline void set_1000_exports()
     {
-        GetGameRoot = (decltype(GetGameRoot))0x58eff8;
-        ConsoleGetConsole = (decltype(ConsoleGetConsole))0x58ede4;
         ConsoleEval = (decltype(ConsoleEval))0x5d3d00;
     }
 
     inline void set_1002_exports()
     {
-        GetGameRoot = (decltype(GetGameRoot))0x598968;
-        ConsoleGetConsole = (decltype(ConsoleGetConsole))0x598754;
         ConsoleEval = (decltype(ConsoleEval))0x5d4dd8;
     }
 
     inline void set_1003_exports()
     {
-        GetGameRoot = (decltype(GetGameRoot))0x59d9b0;
-        ConsoleGetConsole = (decltype(ConsoleGetConsole))0x59d79c;
         ConsoleEval = (decltype(ConsoleEval))0x5e2bbc;
     }
 
     inline void set_1004_exports()
     {
-        GetGameRoot = (decltype(GetGameRoot))0x5a1558;
-        ConsoleGetConsole = (decltype(ConsoleGetConsole))0x5a0fb8;
         ConsoleEval = (decltype(ConsoleEval))0x5e6460;
     }
 
@@ -158,7 +222,6 @@ extern "C"
             set_1004_exports
         }};
 
-    static std::ofstream file{ "log.txt" };
 
 	BOOL WINAPI DllMain(
         HINSTANCE hinstDLL,  
@@ -167,7 +230,6 @@ extern "C"
     {
         if (DetourIsHelperProcess())
         {   
-            file << "Detour helper process" << std::endl;
             return TRUE;
         }
 
@@ -176,18 +238,17 @@ extern "C"
            if (fdwReason == DLL_PROCESS_ATTACH)
            {
                int index = 0;
-               file << "Attaching to process" << std::endl;
                try
                {
-                   file << "Getting app module\n";
                    auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
 
                    std::unordered_set<std::string_view> functions;
                    std::unordered_set<std::string_view> variables;
 
+                   bool module_is_valid = false;
+
                    for (const auto& item : verification_strings)
                    {   
-                       file << "Verifying app " << std::endl;
                        win32::module_ref temp((void*)item[0].second);
 
                        if (temp != app_module)
@@ -199,9 +260,9 @@ extern "C"
                             return std::memcmp(str.first.data(), (void*)str.second, str.first.size()) == 0;        
                         });
 
+     
                         if (module_is_valid)
                         {
-                            file << "Functions detected\n";
                             export_functions[index]();
 
                             std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 2);
@@ -233,7 +294,6 @@ extern "C"
                                             {
                                                 break;
                                             }
-                                            file << "Importing " << temp << '\n';
 
                                             functions.emplace(temp);
                                         }
@@ -243,40 +303,43 @@ extern "C"
 
                             break;
                         }
-                        else
-                        {
-                            file << "No functions detected\n";
-                        }
                         index++;
                    }
 
-                   if (module_is_valid)
+                   if (!module_is_valid)
                    {
-                        DetourRestoreAfterWith();
+                        return FALSE;
+                   }
 
-                        DetourTransactionBegin();
-                        DetourUpdateThread(GetCurrentThread());
+                   DetourRestoreAfterWith();
 
-                        std::for_each(detour_functions.begin(), detour_functions.end(), [] (auto& func) { DetourAttach(func.first, func.second);});
+                   DetourTransactionBegin();
+                   DetourUpdateThread(GetCurrentThread());
 
-                        DetourTransactionCommit();
+                   std::for_each(detour_functions.begin(), detour_functions.end(), [] (auto& func) { DetourAttach(func.first, func.second);});
 
-                       auto self = win32::window_module_ref(hinstDLL);
-                       auto atom = self.RegisterClassExW(win32::static_window_meta_class<siege::extension::MessageHandler>{});
+                   DetourTransactionCommit();
 
-                       auto type_name = win32::type_name<siege::extension::MessageHandler>();
-                       file << "Registered class with name " << std::string(type_name.begin(), type_name.end()) << std::endl;
-                       file << "Registered class with atom " << int(atom) << std::endl;
+                   auto self = win32::window_module_ref(hinstDLL);
+                   auto atom = self.RegisterClassExW(win32::static_window_meta_class<siege::extension::MessageHandler>{});
 
-                       auto host = std::make_unique<siege::extension::ScriptDispatch>(std::move(functions), std::move(variables), [](std::string_view eval_string) -> std::string {
-                     //       void* game = GetGameRoot();
-                       //     void* console = ConsoleGetConsole(game);
-                  
+                   auto type_name = win32::type_name<siege::extension::MessageHandler>();
+                   
+                   auto host = std::make_unique<siege::extension::ScriptDispatch>(std::move(functions), std::move(variables), [] (std::string_view eval_string) -> std::string_view {
                             std::array<const char*, 2> args{"eval", eval_string.data()};
 
-                            return ConsoleEval(nullptr, 0, args.size(), args.data());
-                       
-                           });
+                            // Luckily this function is static and doesn't need the console instance object nor
+                            // an ID to identify the callback. It doesn't even check for "eval" and skips straight to the second argument.
+                            auto result = ConsoleEval(nullptr, 0, 2, args.data());
+
+                            if (result == nullptr)
+                            {
+                                return "";
+                            }
+
+
+                            return result; 
+                       });
 
                        if (auto message = self.CreateWindowExW(CREATESTRUCTW{
                            .lpCreateParams = host.release(),
@@ -286,53 +349,26 @@ extern "C"
                            .lpszClass = win32::type_name<siege::extension::MessageHandler>().c_str()
                            }); message)
                        {
-                           file << "Created message only window" << std::endl;
-
-                           auto window = ::FindWindowExW(HWND_MESSAGE, nullptr, nullptr, L"siege::extension::starsiege::ScriptHost");
-
-                           if (window)
-                           {
-                                file << "Found message only window" << std::endl;
-                           }
-                           else
-                           {
-                                file << "Could not find message only window" << std::endl;
-                           }
                        }
-                       else
-                       {
-                           file << "Could not create window" << std::endl;
-                       }
-                   }
                }
                catch(...)
                {
-                    file << "Exception thrown\n";               
+                   return FALSE;
                }
-
-               file << "Dll attached\n";
            }
            else if (fdwReason == DLL_PROCESS_DETACH)
            {
-               if (module_is_valid)
-               {
-                    DetourTransactionBegin();
-                    DetourUpdateThread(GetCurrentThread());
+                DetourTransactionBegin();
+                DetourUpdateThread(GetCurrentThread());
 
-                    std::for_each(detour_functions.begin(), detour_functions.end(), [] (auto& func) { DetourDetach(func.first, func.second);});
-                    DetourTransactionCommit();
+                std::for_each(detour_functions.begin(), detour_functions.end(), [] (auto& func) { DetourDetach(func.first, func.second);});
+                DetourTransactionCommit();
 
-                    std::ofstream log("log.txt", std::ios::app);
+                auto window = ::FindWindowExW(HWND_MESSAGE, nullptr, win32::type_name<siege::extension::MessageHandler>().c_str(), L"siege::extension::starsiege::ScriptHost");
+                ::DestroyWindow(window);
+                auto self = win32::window_module(hinstDLL);
 
-                    auto window = ::FindWindowExW(HWND_MESSAGE, nullptr, win32::type_name<siege::extension::MessageHandler>().c_str(), L"siege::extension::starsiege::ScriptHost");
-                    ::DestroyWindow(window);
-                    auto self = win32::window_module(hinstDLL);
-
-                    self.UnregisterClassW<siege::extension::MessageHandler>();
-
-                   file << "Dll detached\n";               
-               }
-
+                self.UnregisterClassW<siege::extension::MessageHandler>();
            }
         }
 
