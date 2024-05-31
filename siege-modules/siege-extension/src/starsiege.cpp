@@ -16,87 +16,89 @@
 
 extern "C"
 {
-	#define DARKCALL __attribute__((regparm(3)))
+#define DARKCALL __attribute__((regparm(3)))
 
 	static DARKCALL char* (*ConsoleEval)(void*, std::int32_t, std::int32_t, const char**) = nullptr;
 
+	using namespace std::literals;
+
 	constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 4>, 4> verification_strings = { {
 	std::array<std::pair<std::string_view, std::size_t>, 4>{{
-		{std::string_view("cls"), std::size_t(0x6fb741)},
-		{std::string_view("trace"), std::size_t(0x6fb7af)},
-		{std::string_view("Console::logBufferEnabled"), std::size_t(0x6fb7b5)},
-		{std::string_view("Console::logMode"), std::size_t(0x6fb7fa)},
+		{"cls"sv, std::size_t(0x6fb741)},
+		{"trace"sv, std::size_t(0x6fb7af)},
+		{"Console::logBufferEnabled"sv, std::size_t(0x6fb7b5)},
+		{"Console::logMode"sv, std::size_t(0x6fb7fa)},
 		}},
 	std::array<std::pair<std::string_view, std::size_t>, 4>{{
-		{std::string_view("cls"), std::size_t(0x6fe551)},
-		{std::string_view("trace"), std::size_t(0x6fe5bf)},
-		{std::string_view("Console::logBufferEnabled"), std::size_t(0x6fe5c5)},
-		{std::string_view("Console::logMode"), std::size_t(0x6fe60a)},
+		{"cls"sv, std::size_t(0x6fe551)},
+		{"trace"sv, std::size_t(0x6fe5bf)},
+		{"Console::logBufferEnabled"sv, std::size_t(0x6fe5c5)},
+		{"Console::logMode"sv, std::size_t(0x6fe60a)},
 		}},
 	std::array<std::pair<std::string_view, std::size_t>, 4>{{
-		{std::string_view("cls"), std::size_t(0x712cf9)},
-		{std::string_view("trace"), std::size_t(0x712d67)},
-		{std::string_view("Console::logBufferEnabled"), std::size_t(0x712d6d)},
-		{std::string_view("Console::logMode"), std::size_t(0x712db2)},
+		{"cls"sv, std::size_t(0x712cf9)},
+		{"trace"sv, std::size_t(0x712d67)},
+		{"Console::logBufferEnabled"sv, std::size_t(0x712d6d)},
+		{"Console::logMode"sv, std::size_t(0x712db2)},
 		}},
 	std::array<std::pair<std::string_view, std::size_t>, 4>{{
-		{std::string_view("cls"), std::size_t(0x723169)},
-		{std::string_view("trace"), std::size_t(0x7231d7)},
-		{std::string_view("Console::logBufferEnabled"), std::size_t(0x7231dd)},
-		{std::string_view("Console::logMode"), std::size_t(0x723222)},
+		{"cls"sv, std::size_t(0x723169)},
+		{"trace"sv, std::size_t(0x7231d7)},
+		{"Console::logBufferEnabled"sv, std::size_t(0x7231dd)},
+		{"Console::logMode"sv, std::size_t(0x723222)},
 		}}
 	} };
 
 	constexpr static std::array<std::pair<std::string_view, std::string_view>, 25> function_name_ranges{ {
-		{std::string_view("icDefaultButtonAction"), std::string_view("icActionAllowed")},
-		{std::string_view("dataStore"), std::string_view("dataRelease")},
-		{std::string_view("defaultWeapons"), std::string_view("allowWeapon")},
-		{std::string_view("goto"), std::string_view("violate")},
-		{std::string_view("initializeServer"), std::string_view("isEqualIP")},
-		{std::string_view("say"), std::string_view("flushChannel")},
-		{std::string_view("dynDataWriteObject"), std::string_view("FlushPilots")},
-		{std::string_view("ME::Create"), std::string_view("ME::RebuildCommandMap")},
-		{std::string_view("loadObject"), std::string_view("getNextObject")},
-		{std::string_view("HTMLOpen"), std::string_view("HTMLOpenAndGoWin")},
-		{std::string_view("swapSurfaces"), std::string_view("isGfxDriver")},
-		{std::string_view("newMovPlay"), std::string_view("pauseMovie")},
-		{std::string_view("netStats"), std::string_view("net::kick")},
-		{std::string_view("newRedbook"), std::string_view("rbSetPlayMode")},
-		{std::string_view("newInputManager"), std::string_view("defineKey")},
-		{std::string_view("simTreeCreate"), std::string_view("simTreeRegScript")},
-		{std::string_view("newSfx"), std::string_view("sfxGetMaxBuffers")},
-		{std::string_view("newToolWindow"), std::string_view("saveFileAs")},
-		{std::string_view("newTerrain"), std::string_view("reCalcCRC")},
-		{std::string_view("GuiEditMode"), std::string_view("windowsKeyboardDisable")},
-		{std::string_view("LS::Create"), std::string_view("LS::parseCommands")},
-		{std::string_view("ircConnect"), std::string_view("ircEcho")},
-		{std::string_view("globeLines"), std::string_view("loadSky")},
-		{std::string_view("MissionRegType"), std::string_view("missionUndoMoveRotate")},
-		{std::string_view("cls"), std::string_view("trace")},
+		{"icDefaultButtonAction"sv, "icActionAllowed"sv},
+		{"dataStore"sv, "dataRelease"sv},
+		{"defaultWeapons"sv, "allowWeapon"sv},
+		{"goto"sv, "violate"sv},
+		{"initializeServer"sv, "isEqualIP"sv},
+		{"say"sv, "flushChannel"sv},
+		{"dynDataWriteObject"sv, "FlushPilots"sv},
+		{"ME::Create"sv, "ME::RebuildCommandMap"sv},
+		{"loadObject"sv, "getNextObject"sv},
+		{"HTMLOpen"sv, "HTMLOpenAndGoWin"sv},
+		{"swapSurfaces"sv, "isGfxDriver"sv},
+		{"newMovPlay"sv, "pauseMovie"sv},
+		{"netStats"sv, "net::kick"sv},
+		{"newRedbook"sv, "rbSetPlayMode"sv},
+		{"newInputManager"sv, "defineKey"sv},
+		{"simTreeCreate"sv, "simTreeRegScript"sv},
+		{"newSfx"sv, "sfxGetMaxBuffers"sv},
+		{"newToolWindow"sv, "saveFileAs"sv},
+		{"newTerrain"sv, "reCalcCRC"sv},
+		{"GuiEditMode"sv, "windowsKeyboardDisable"sv},
+		{"LS::Create"sv, "LS::parseCommands"sv},
+		{"ircConnect"sv, "ircEcho"sv},
+		{"globeLines"sv, "loadSky"sv},
+		{"MissionRegType"sv, "missionUndoMoveRotate"sv},
+		{"cls"sv, "trace"sv}
 		} };
 
 	constexpr static std::array<std::pair<std::string_view, std::string_view>, 13> variable_name_ranges{ {
-		{std::string_view("$pref::softwareTranslucency"), std::string_view("$pref::canvasCursorTrapped")},
-		{std::string_view("suspended"), std::string_view("SimGui::firstPreRender")},
-		{std::string_view("Console::ForeRGB"), std::string_view("Console::LastLineTimeout")},
-		{std::string_view("$pref::mipcap"), std::string_view("$OpenGL::AFK")},
-		{std::string_view("GFXMetrics::EmittedPolys"), std::string_view("useLowRes3D")},
-		{std::string_view("pref::sfx2DVolume"), std::string_view("pref::sfx3DVolume")},
-		{std::string_view("dynDataWriteObject"), std::string_view("FlushPilots")},
-		{std::string_view("GuiEdit::GridSnapX"), std::string_view("pref::politeGui")},
-		{std::string_view("Console::logBufferEnabled"), std::string_view("Console::logMode")},
-		{std::string_view("DNet::ShowStats"), std::string_view("DNet::PacketLoss")},
-		{std::string_view("GameInfo::SpawnLimit"), std::string_view("GameInfo::TimeLimit")},
-		{std::string_view("ITRMetrics::OutsideBits"), std::string_view("ITRMetrics::NumInteriorLinks")},
-		{std::string_view("$server::Mission"), std::string_view("$server::TeamMassLimit")},
+		{"$pref::softwareTranslucency"sv, "$pref::canvasCursorTrapped"sv},
+		{"suspended"sv, "SimGui::firstPreRender"sv},
+		{"Console::ForeRGB"sv, "Console::LastLineTimeout"sv},
+		{"$pref::mipcap"sv, "$OpenGL::AFK"sv},
+		{"GFXMetrics::EmittedPolys"sv, "useLowRes3D"sv},
+		{"pref::sfx2DVolume"sv, "pref::sfx3DVolume"sv},
+		{"dynDataWriteObject"sv, "FlushPilots"sv},
+		{"GuiEdit::GridSnapX"sv, "pref::politeGui"sv},
+		{"Console::logBufferEnabled"sv, "Console::logMode"sv},
+		{"DNet::ShowStats"sv, "DNet::PacketLoss"sv},
+		{"GameInfo::SpawnLimit"sv, "GameInfo::TimeLimit"sv},
+		{"ITRMetrics::OutsideBits"sv, "ITRMetrics::NumInteriorLinks"sv},
+		{"$server::Mission"sv, "$server::TeamMassLimit"sv}
 		} };
 
-	
+
 	HRESULT __stdcall ExecutableIsSupported(_In_ const wchar_t* filename) noexcept
 	{
 		if (filename == nullptr)
 		{
-			return E_POINTER;	
+			return E_POINTER;
 		}
 
 		if (!std::filesystem::exists(filename))
@@ -126,7 +128,7 @@ extern "C"
 
 				bool has_all_verification_strings = is_executable && std::all_of(verification_strings[0].begin(), verification_strings[0].end(), [&](auto& item) {
 					return data.find(item.first) != std::string_view::npos;
-				});		
+					});
 
 				bool has_all_functions = has_all_verification_strings && std::all_of(function_name_ranges.begin(), function_name_ranges.end(), [&](auto& item) {
 
@@ -137,7 +139,7 @@ extern "C"
 						return data.find(item.second, first_index) != std::string_view::npos;
 					}
 					return false;
-				});		
+					});
 
 				bool has_all_variables = has_all_functions && std::all_of(variable_name_ranges.begin(), variable_name_ranges.end(), [&](auto& item) {
 
@@ -148,7 +150,7 @@ extern "C"
 						return data.find(item.second, first_index) != std::string_view::npos;
 					}
 					return false;
-				});		
+					});
 
 				return has_all_variables ? S_OK : S_FALSE;
 			}
@@ -156,7 +158,7 @@ extern "C"
 			return S_FALSE;
 
 		}
-		catch(...)
+		catch (...)
 		{
 			return S_FALSE;
 		}

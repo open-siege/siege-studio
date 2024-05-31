@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Collections;
 using System.Runtime.InteropServices;
 
-namespace Siege.Extension.Starsiege
+namespace Siege.Extension.Tribes
 {
     public static class Guids
     {
