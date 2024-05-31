@@ -11,7 +11,7 @@
 #include <siege/platform/win/desktop/window_module.hpp>
 #include <siege/platform/win/desktop/window_impl.hpp>
 #include <detours.h>
-#include "ScriptDispatch.hpp"
+#include "DarkstarScriptDispatch.hpp"
 #include "MessageHandler.hpp"
 
 extern "C"
@@ -407,7 +407,7 @@ extern "C"
 
 					auto type_name = win32::type_name<siege::extension::MessageHandler>();
 
-					auto host = std::make_unique<siege::extension::ScriptDispatch>(std::move(functions), std::move(variables), [](std::string_view eval_string) -> std::string_view {
+					auto host = std::make_unique<siege::extension::DarkstarScriptDispatch>(std::move(functions), std::move(variables), [](std::string_view eval_string) -> std::string_view {
 						std::array<const char*, 2> args{ "eval", eval_string.data() };
 
 						// Luckily this function is static and doesn't need the console instance object nor
