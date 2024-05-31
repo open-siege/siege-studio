@@ -17,4 +17,8 @@ if (WIN32)
     add_library(siege-extension-tribes SHARED src/tribes.cpp src/tribes.def)
     set_target_properties(siege-extension-tribes PROPERTIES VS_PLATFORM_TOOLSET ClangCL CXX_STANDARD 23)
     target_link_libraries(siege-extension-tribes PRIVATE siege-win-desktop detours)
+
+    add_library(siege-extension-sof SHARED src/sof.cpp src/sof.def)
+    set_target_properties(siege-extension-sof PROPERTIES CXX_STANDARD 23)
+    target_link_libraries(siege-extension-sof PRIVATE siege-win-desktop detours)
 endif()

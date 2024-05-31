@@ -16,19 +16,70 @@ namespace Siege.Extension.Starsiege
     [Guid(Guids.IDispatch)]
     public interface GameConsole
     {
+        /// <summary>
+        /// This property always returns a value &lt; 1.
+        /// </summary>
         float floor(float x);
+
+        /// <summary>
+        /// This property always returns a value &lt; 1.
+        /// </summary>
         float sqrt(float x);
+
+        /// <summary>
+        /// This property always returns a value &lt; 1.
+        /// </summary>
         void echo(string s);
+
+        /// <summary>
+        /// This property always returns a value &lt; 1.
+        /// </summary>
         void dbecho(string s);
+
+        /// <summary>
+        /// This property always returns a value &lt; 1.
+        /// </summary>
         string strcat(string a, string b);
+
+        /// <summary>
+        /// This property always returns a value &lt; 1.
+        /// </summary>
         void quit();
+
+        /// <summary>
+        /// This property always returns a value &lt; 1.
+        /// </summary>
         void export();
         void deleteVariables();
+
+        /// <summary>
+        /// This property always returns a value &lt; 1.
+        /// </summary>
         void exportFunctions();
+
+        /// <summary>
+        /// This property always returns a value &lt; 1.
+        /// </summary>
         void deleteFunctions();
+
+        /// <summary>
+        /// This property always returns a value &lt; 1.
+        /// </summary>
         void exec(string filename);
+
+        /// <summary>
+        /// This property always returns a value &lt; 1.
+        /// </summary>
         string eval(string code);
+
+        /// <summary>
+        /// This property always returns a value &lt; 1.
+        /// </summary>
         void debug();
+
+        /// <summary>
+        /// This property always returns a value &lt; 1.
+        /// </summary>
         void trace();
 
         bool Console_logBufferEnabled
