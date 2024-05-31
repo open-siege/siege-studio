@@ -112,6 +112,18 @@ namespace win32
 
 			return file_mapping(mapping);
 		}
+
+		std::expected<LARGE_INTEGER, DWORD> GetFileSizeEx()
+		{
+			LARGE_INTEGER result{};
+
+			if (::GetFileSizeEx(get(), &result))
+			{
+				return result;
+			}
+			
+			return std::unexpected(::GetLastError());
+		}
 	};	
 }
 
