@@ -188,6 +188,7 @@ namespace siege::views
 			
 			if (bmp_controller::is_bmp(stream))
 			{
+                auto task = controller.load_palettes_async(std::nullopt);
                 auto count = controller.load_bitmap(stream);
 
                 if (count > 0)
