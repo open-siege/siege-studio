@@ -26,6 +26,26 @@ namespace siege::views
           }
           else if (bmp::is_phoenix_bmp(image_stream))
           {
+              auto image = bmp::get_pbmp_data(image_stream);
+
+              bmp::windows_bmp_data dest{};
+
+              dest.info.bit_depth = 32;
+              dest.info.width = image.bmp_header.width;
+              dest.info.height = image.bmp_header.height;
+
+              for (auto i = 0; i < 256; ++i)
+              {
+                dest.colours.emplace_back(std::byte(i), std::byte(i), std::byte(i), std::byte(i));
+              }
+
+              dest.indexes.reserve(image.pixels.size());
+              std::transform(image.pixels.begin(), image.pixels.end(), std::back_inserter(dest.indexes), [](auto& value) {
+                    return std::int32_t(value);
+                    
+                  });
+
+              original_image.emplace(std::move(dest));
           }
           else if (bmp::is_earthsiege_bmp(image_stream))
           {
