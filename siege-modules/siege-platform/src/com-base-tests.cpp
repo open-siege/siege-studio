@@ -1,7 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
-#include <sstream>
 #include <siege/platform/win/core/com/base.hpp>
-#include <siege/platform/win/core/com/stream_buf.hpp>
 
 struct test_class : win32::com::ComObject
 {
