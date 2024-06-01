@@ -3,6 +3,8 @@
 #include <siege/content/bmp/bitmap.hpp>
 #include <siege/content/bmp/image.hpp>
 #include <deque>
+#include <fstream>
+#include <spanstream>
 #include <filesystem>
 #include <future>
 #include <execution>
@@ -40,11 +42,13 @@ namespace siege::views
 		return temp;
 	}
 
-	std::future<void> bmp_controller::load_palettes_async(std::optional<std::filesystem::path> folder_hint)
+	std::future<void> bmp_controller::load_palettes_async(std::optional<std::filesystem::path> folder_hint,
+		std::move_only_function<get_embedded_pal_filenames> get_palettes,
+		std::move_only_function<resolve_embedded_pal> resolve_data)
 	{
 		namespace fs = std::filesystem;
 
-		return std::async(std::launch::async, [this]() {
+		return std::async(std::launch::async, [this, get_palettes = std::move(get_palettes), resolve_data = std::move(resolve_data)]() mutable {
 
 			std::lock_guard<std::mutex> guard(get_lock());
 			std::deque<fs::path> pal_paths;
@@ -61,42 +65,59 @@ namespace siege::views
 
 				if (!fs::is_directory(entry->path()))
 				{
-					auto is_pal = std::find_if(pal_controller::formats.begin(), pal_controller::formats.end(), [&](auto& ext) {
-						return entry->path().extension() == ext;
-						}) != pal_controller::formats.end();
+					auto is_pal = std::any_of(pal_controller::formats.begin(), pal_controller::formats.end(), [&](auto& ext) { return entry->path().extension() == ext; });
 
-						if (is_pal)
-						{
-							pal_paths.emplace_back(entry->path());
-
-						}
+					if (is_pal)
+					{
+						pal_paths.emplace_back(entry->path());
+					}
+					else
+					{
+						auto palettes = get_palettes(entry->path());
+						pal_paths.insert(pal_paths.end(), palettes.cbegin(), palettes.cend());
+					}
 				}
 			}
 			palettes.resize(pal_paths.size());
 
-			std::transform(std::execution::par_unseq, pal_paths.begin(), pal_paths.end(), palettes.begin(), [](auto& path) {
-				std::fstream temp(path);
+			std::transform(std::execution::par_unseq, pal_paths.begin(), pal_paths.end(), palettes.begin(), [resolve_data = std::move(resolve_data)](auto& path) mutable {
+				auto is_pal = std::any_of(pal_controller::formats.begin(), pal_controller::formats.end(), [&](auto& ext) {	return path.extension() == ext; });
 
-				std::vector<content::pal::palette> results;
-				if (siege::content::pal::is_microsoft_pal(temp))
+				auto load_palette = [&](std::istream& temp) {
+					std::vector<content::pal::palette> results;
+					if (siege::content::pal::is_microsoft_pal(temp))
+					{
+						results.emplace_back().colours = siege::content::pal::get_pal_data(temp);
+					}
+					else if (siege::content::pal::is_earthsiege_pal(temp))
+					{
+						results.emplace_back().colours = siege::content::pal::get_earthsiege_pal(temp);
+					}
+					else if (siege::content::pal::is_phoenix_pal(temp))
+					{
+						return siege::content::pal::get_ppl_data(temp);
+					}
+
+					if (results.empty())
+					{
+						results.emplace_back(get_default_palette());
+					}
+
+					return results;
+					};
+
+				if (is_pal)
 				{
-					results.emplace_back().colours = siege::content::pal::get_pal_data(temp);
+					std::fstream file_data(std::move(path));
+					return load_palette(file_data);
 				}
-				else if (siege::content::pal::is_earthsiege_pal(temp))
+				else
 				{
-					results.emplace_back().colours = siege::content::pal::get_earthsiege_pal(temp);
-				}
-				else if (siege::content::pal::is_phoenix_pal(temp))
-				{
-					return siege::content::pal::get_ppl_data(temp);
+					auto data = resolve_data(std::move(path));
+					std::spanstream stream(data);
+					return load_palette(stream);
 				}
 
-				if (results.empty())
-				{
-					auto& back = results.emplace_back(get_default_palette());
-				}
-
-				return results;
 				});
 
 			});
