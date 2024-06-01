@@ -39,36 +39,39 @@ namespace win32
 		std::optional<std::wstring> GetMappedFilename()
 		{
 			std::wstring filename(255, L'\0');
-		    auto size = ::GetMappedFileNameW(::GetCurrentProcess(), get(), filename.data(), filename.size());
-			
+			auto size = ::GetMappedFileNameW(::GetCurrentProcess(), get(), filename.data(), filename.size());
+
 			if (size == 0)
 			{
 				return std::nullopt;
 			}
 
+// If this code ever has to run on Xbox with the GAMING family, we'll need a way to get the correct path
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 			std::wstring drive = L"A:";
 
-            std::wstring buffer(32, L'\0');
+			std::wstring buffer(32, L'\0');
 
-            for (auto i = drive[0]; i <= L'Z'; ++i)
-            {
-                    drive[0] = i;
+			for (auto i = drive[0]; i <= L'Z'; ++i)
+			{
+				drive[0] = i;
 
-                    auto vol_size = ::QueryDosDeviceW(drive.c_str(), buffer.data(), buffer.size());
+				auto vol_size = ::QueryDosDeviceW(drive.c_str(), buffer.data(), buffer.size());
 
-                    if (vol_size != 0)
-                    {
-                       buffer = buffer.c_str();
+				if (vol_size != 0)
+				{
+					buffer = buffer.c_str();
 
-                       auto index = filename.find(buffer, 0);
+					auto index = filename.find(buffer, 0);
 
-                       if (index == 0)
-                       {
-                           filename = filename.replace(0, buffer.size(), drive);              
-                           break;
-                       }
-                    }
-            }
+					if (index == 0)
+					{
+						filename = filename.replace(0, buffer.size(), drive);
+						break;
+					}
+				}
+			}
+#endif
 
 			filename.erase(filename.find(L'\0'));
 
@@ -97,7 +100,7 @@ namespace win32
 		{
 			if (this->get() == INVALID_HANDLE_VALUE)
 			{
-				throw std::system_error(std::error_code(GetLastError(),  std::system_category()));
+				throw std::system_error(std::error_code(GetLastError(), std::system_category()));
 			}
 		}
 
@@ -121,10 +124,10 @@ namespace win32
 			{
 				return result;
 			}
-			
+
 			return std::unexpected(::GetLastError());
 		}
-	};	
+	};
 }
 
 #endif

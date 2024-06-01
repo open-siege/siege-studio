@@ -1,6 +1,8 @@
 #ifndef WIN32_MENU_HPP
 #define WIN32_MENU_HPP
 
+#include <siege/platform/win/desktop/messages.hpp>
+
 namespace win32
 {
     inline auto TrackPopupMenuEx(HMENU menu, UINT flags, POINT coords, hwnd_t owner, std::optional<TPMPARAMS> params = std::nullopt)
