@@ -49,7 +49,9 @@ namespace siege::extension
 				assert(rgszNames);
 
 				std::wstring_view temp_view = rgszNames[0];
-				std::string temp(temp_view.begin(), temp_view.end());
+				thread_local std::string temp;
+				temp.resize(temp_view.size(), '\0');
+				std::transform(temp_view.begin(), temp_view.end(), temp.begin(), [](auto wide) { return static_cast<char>(wide);});
 
 				auto function_iter = std::find_if(functions.begin(), functions.end(), [&](auto& name) {
 					return CompareStringA(lcid, NORM_IGNORECASE, name.data(), name.size(), temp.data(), temp.size()) == CSTR_EQUAL;

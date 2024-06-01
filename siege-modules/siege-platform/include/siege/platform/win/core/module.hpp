@@ -1,6 +1,7 @@
 #ifndef WIN_CORE_MODULE_HPP
 #define WIN_CORE_MODULE_HPP
 
+#include <SDKDDKVer.h>
 #include <system_error>
 #include <optional>
 #include <filesystem>

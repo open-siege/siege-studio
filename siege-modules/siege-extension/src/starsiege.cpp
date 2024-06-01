@@ -270,6 +270,9 @@ extern "C"
 	{
 		if (lpRootPathName && lpRootPathName == VirtualDriveLetter)
 		{
+			// To be referenced when disc swapping can be implemented
+			UNREFERENCED_PARAMETER(StarsiegeDisc1);
+			UNREFERENCED_PARAMETER(StarsiegeBetaDisc);
 			std::vector<char> data(nVolumeNameSize, '\0');
 			std::copy(StarsiegeDisc2.begin(), StarsiegeDisc2.end(), data.begin());
 			std::copy(data.begin(), data.end(), lpVolumeNameBuffer);
@@ -298,166 +301,167 @@ extern "C"
 		DWORD fdwReason,
 		LPVOID lpvReserved) noexcept
 	{
-		if (DetourIsHelperProcess())
+		if constexpr (sizeof(void*) == sizeof(std::uint32_t))
 		{
-			return TRUE;
-		}
-
-		if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
-		{
-			auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
-
-			auto value = app_module.GetProcAddress<std::uint32_t*>("DisableSiegeExtensionModule");
-
-			if (value && *value == -1)
+			if (DetourIsHelperProcess())
 			{
 				return TRUE;
 			}
-		}
 
-		if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
-		{
-			if (fdwReason == DLL_PROCESS_ATTACH)
+			if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
 			{
-				int index = 0;
-				try
+				auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
+
+				auto value = app_module.GetProcAddress<std::uint32_t*>("DisableSiegeExtensionModule");
+
+				if (value && *value == -1)
 				{
-					auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
+					return TRUE;
+				}
+			}
 
-					std::unordered_set<std::string_view> functions;
-					std::unordered_set<std::string_view> variables;
-
-					bool module_is_valid = false;
-
-					for (const auto& item : verification_strings)
+			if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
+			{
+				if (fdwReason == DLL_PROCESS_ATTACH)
+				{
+					int index = 0;
+					try
 					{
-						win32::module_ref temp((void*)item[0].second);
+						auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
 
-						if (temp != app_module)
+						std::unordered_set<std::string_view> functions;
+						std::unordered_set<std::string_view> variables;
+
+						bool module_is_valid = false;
+
+						for (const auto& item : verification_strings)
 						{
-							continue;
-						}
+							win32::module_ref temp((void*)item[0].second);
 
-						module_is_valid = std::all_of(item.begin(), item.end(), [](const auto& str) {
-							return std::memcmp(str.first.data(), (void*)str.second, str.first.size()) == 0;
-							});
-
-
-						if (module_is_valid)
-						{
-							export_functions[index]();
-
-							std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 2);
-
-
-							for (auto& pair : function_name_ranges)
+							if (temp != app_module)
 							{
-								auto first_index = string_section.find(pair.first.data(), 0, pair.first.size() + 1);
+								continue;
+							}
 
-								if (first_index != std::string_view::npos)
+							module_is_valid = std::all_of(item.begin(), item.end(), [](const auto& str) {
+								return std::memcmp(str.first.data(), (void*)str.second, str.first.size()) == 0;
+								});
+
+
+							if (module_is_valid)
+							{
+								export_functions[index]();
+
+								std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 2);
+
+
+								for (auto& pair : function_name_ranges)
 								{
-									auto second_index = string_section.find(pair.second.data(), first_index, pair.second.size() + 1);
+									auto first_index = string_section.find(pair.first.data(), 0, pair.first.size() + 1);
 
-									if (second_index != std::string_view::npos)
+									if (first_index != std::string_view::npos)
 									{
-										auto second_ptr = string_section.data() + second_index;
-										auto end = second_ptr + std::strlen(second_ptr) + 1;
+										auto second_index = string_section.find(pair.second.data(), first_index, pair.second.size() + 1);
 
-										for (auto start = string_section.data() + first_index; start != end; start += std::strlen(start) + 1)
+										if (second_index != std::string_view::npos)
 										{
-											std::string_view temp(start);
+											auto second_ptr = string_section.data() + second_index;
+											auto end = second_ptr + std::strlen(second_ptr) + 1;
 
-											if (temp.size() == 1)
+											for (auto start = string_section.data() + first_index; start != end; start += std::strlen(start) + 1)
 											{
-												continue;
-											}
+												std::string_view temp(start);
 
-											if (!std::all_of(temp.begin(), temp.end(), [](auto c) { return std::isalnum(c) != 0; }))
-											{
-												break;
-											}
+												if (temp.size() == 1)
+												{
+													continue;
+												}
 
-											functions.emplace(temp);
+												if (!std::all_of(temp.begin(), temp.end(), [](auto c) { return std::isalnum(c) != 0; }))
+												{
+													break;
+												}
+
+												functions.emplace(temp);
+											}
 										}
 									}
 								}
+
+								break;
+							}
+							index++;
+						}
+
+						if (!module_is_valid)
+						{
+							return FALSE;
+						}
+
+						DetourRestoreAfterWith();
+
+						DetourTransactionBegin();
+						DetourUpdateThread(GetCurrentThread());
+
+						std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourAttach(func.first, func.second); });
+
+						DetourTransactionCommit();
+
+						auto self = win32::window_module_ref(hinstDLL);
+						self.RegisterClassExW(win32::static_window_meta_class<siege::extension::MessageHandler>{});
+
+						auto host = std::make_unique<siege::extension::DarkstarScriptDispatch>(std::move(functions), std::move(variables), [](std::string_view eval_string) -> std::string_view {
+							std::array<const char*, 2> args{ "eval", eval_string.data() };
+
+							// Luckily this function is static and doesn't need the console instance object nor
+							// an ID to identify the callback. It doesn't even check for "eval" and skips straight to the second argument.
+							auto result = ConsoleEval(nullptr, 0, 2, args.data());
+
+							if (result == nullptr)
+							{
+								return "";
 							}
 
-							break;
-						}
-						index++;
-					}
 
-					if (!module_is_valid)
+							return result;
+							});
+
+						// TODO register multiple script hosts
+						// using the following convention:
+						// siege::extension::starsiege::ScriptHost (first instance)
+						// siege::extension::starsiege::ScriptHost.1 (alternative name for first instance)
+						// siege::extension::starsiege::ScriptHost[0] (alternative name for first instance)
+						// siege::extension::starsiege::ScriptHost.2 (second instance)
+						// siege::extension::starsiege::ScriptHost[1] (second instance)
+						if (auto message = self.CreateWindowExW(CREATESTRUCTW{
+							.lpCreateParams = host.release(),
+							.hwndParent = HWND_MESSAGE,
+							.style = WS_CHILD,
+							.lpszName = L"siege::extension::starsiege::ScriptHost",
+							.lpszClass = win32::type_name<siege::extension::MessageHandler>().c_str()
+							}); message)
+						{
+						}
+					}
+					catch (...)
 					{
 						return FALSE;
 					}
-
-					DetourRestoreAfterWith();
-
+				}
+				else if (fdwReason == DLL_PROCESS_DETACH)
+				{
 					DetourTransactionBegin();
 					DetourUpdateThread(GetCurrentThread());
 
-					std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourAttach(func.first, func.second); });
-
+					std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourDetach(func.first, func.second); });
 					DetourTransactionCommit();
 
-					auto self = win32::window_module_ref(hinstDLL);
-					auto atom = self.RegisterClassExW(win32::static_window_meta_class<siege::extension::MessageHandler>{});
+					auto window = ::FindWindowExW(HWND_MESSAGE, nullptr, win32::type_name<siege::extension::MessageHandler>().c_str(), L"siege::extension::starsiege::ScriptHost");
+					::DestroyWindow(window);
+					auto self = win32::window_module(hinstDLL);
 
-					auto type_name = win32::type_name<siege::extension::MessageHandler>();
-
-					auto host = std::make_unique<siege::extension::DarkstarScriptDispatch>(std::move(functions), std::move(variables), [](std::string_view eval_string) -> std::string_view {
-						std::array<const char*, 2> args{ "eval", eval_string.data() };
-
-						// Luckily this function is static and doesn't need the console instance object nor
-						// an ID to identify the callback. It doesn't even check for "eval" and skips straight to the second argument.
-						auto result = ConsoleEval(nullptr, 0, 2, args.data());
-
-						if (result == nullptr)
-						{
-							return "";
-						}
-
-
-						return result;
-						});
-
-					// TODO register multiple script hosts
-					// using the following convention:
-					// siege::extension::starsiege::ScriptHost (first instance)
-					// siege::extension::starsiege::ScriptHost.1 (alternative name for first instance)
-					// siege::extension::starsiege::ScriptHost[0] (alternative name for first instance)
-					// siege::extension::starsiege::ScriptHost.2 (second instance)
-					// siege::extension::starsiege::ScriptHost[1] (second instance)
-					if (auto message = self.CreateWindowExW(CREATESTRUCTW{
-						.lpCreateParams = host.release(),
-						.hwndParent = HWND_MESSAGE,
-						.style = WS_CHILD,
-						.lpszName = L"siege::extension::starsiege::ScriptHost",
-						.lpszClass = win32::type_name<siege::extension::MessageHandler>().c_str()
-						}); message)
-					{
-					}
+					self.UnregisterClassW<siege::extension::MessageHandler>();
 				}
-				catch (...)
-				{
-					return FALSE;
-				}
-			}
-			else if (fdwReason == DLL_PROCESS_DETACH)
-			{
-				DetourTransactionBegin();
-				DetourUpdateThread(GetCurrentThread());
-
-				std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourDetach(func.first, func.second); });
-				DetourTransactionCommit();
-
-				auto window = ::FindWindowExW(HWND_MESSAGE, nullptr, win32::type_name<siege::extension::MessageHandler>().c_str(), L"siege::extension::starsiege::ScriptHost");
-				::DestroyWindow(window);
-				auto self = win32::window_module(hinstDLL);
-
-				self.UnregisterClassW<siege::extension::MessageHandler>();
 			}
 		}
 

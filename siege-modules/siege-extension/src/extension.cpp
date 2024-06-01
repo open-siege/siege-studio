@@ -1,4 +1,4 @@
-#include <siege/platform/win/desktop/window_module.hpp>
+#include <siege/platform/extension_module.hpp>
 #include <siege/platform/win/core/com_client.hpp>
 #include <siege/platform/shared.hpp>
 #include <oleacc.h>
@@ -6,8 +6,6 @@
 
 extern "C"
 {	
-	HRESULT __stdcall ExecutableIsSupported(const wchar_t* filename) noexcept;
-
 	HRESULT __stdcall LaunchGameWithExtension(const char* game_name, const wchar_t* exe_path_str, std::uint32_t argc, const wchar_t** argv, PROCESS_INFORMATION* process_info) noexcept
 	{
 		if (!exe_path_str)
@@ -45,18 +43,13 @@ extern "C"
 
 		try
 		{
-			win32::module extension(extension_path);
+			siege::game_extension_module extension(extension_path);
 
-			auto exe_is_supported = extension.GetProcAddress<decltype(ExecutableIsSupported)*>("ExecutableIsSupported");
+			auto exe_is_supported = extension.ExecutableIsSupported(exe_path);
 
-			if (exe_is_supported)
+			if (exe_is_supported == false)
 			{
-				auto result = exe_is_supported(exe_path_str);
-
-				if (result != S_OK)
-				{
-					return E_INVALIDARG;
-				}
+				return E_INVALIDARG;
 			}
 		}
 		catch(...)
