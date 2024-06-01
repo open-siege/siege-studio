@@ -5,8 +5,8 @@
 #include <cassert>
 #include <atomic>
 #include "views/vol_view.hpp"
-#include <siege/platform/win/core/com_collection.hpp>
-#include <siege/platform/win/core/com_stream_buf.hpp>
+#include <siege/platform/win/core/com/collection.hpp>
+#include <siege/platform/win/core/com/stream_buf.hpp>
 
 using namespace siege::views;
 

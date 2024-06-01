@@ -3,8 +3,8 @@
 #include <memory>
 #include <siege/platform/win/desktop/common_controls.hpp>
 #include <siege/platform/win/desktop/window_impl.hpp>
-#include <siege/platform/win/core/com_collection.hpp>
-#include <siege/platform/win/core/com_stream_buf.hpp>
+#include <siege/platform/win/core/com/collection.hpp>
+#include <siege/platform/win/core/com/stream_buf.hpp>
 #include <siege/platform/win/desktop/window_module.hpp>
 #include "views/bmp_view.hpp"
 #include "views/pal_view.hpp"

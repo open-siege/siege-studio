@@ -2,7 +2,7 @@
 #define MESSAGE_HANDLER_HPP
 
 #include <siege/platform/win/desktop/window.hpp>
-#include <siege/platform/win/core/com.hpp>
+#include <siege/platform/win/core/com/base.hpp>
 #include <oleacc.h>
 
 namespace siege::extension
