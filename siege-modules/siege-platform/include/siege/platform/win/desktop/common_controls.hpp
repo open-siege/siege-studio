@@ -933,5 +933,4 @@ namespace win32
     };
 }
 
-
 #endif

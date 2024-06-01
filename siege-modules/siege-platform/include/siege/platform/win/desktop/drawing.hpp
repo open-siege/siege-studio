@@ -76,8 +76,6 @@ namespace win32
 	
 	};
 
-#endif
-
 	struct rect : ::RECT
 	{
 		auto Offset(int dx, int dy)
@@ -85,6 +83,8 @@ namespace win32
 			return ::OffsetRect(this, dx, dy) == TRUE;
 		}
 	};
+
+#endif
 
 }
 

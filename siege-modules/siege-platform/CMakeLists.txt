@@ -15,7 +15,7 @@ if (WIN32)
 
     add_library(siege-platform ALIAS siege-win-core)
 
-    add_library(siege-win-gaming STATIC src/win-games.cpp)
+    add_library(siege-win-gaming STATIC src/win-gaming.cpp)
     set_property(TARGET siege-win-gaming PROPERTY CXX_STANDARD 23)
     target_compile_definitions(siege-win-gaming PRIVATE WINAPI_FAMILY=WINAPI_FAMILY_GAMES)
     target_include_directories(siege-win-gaming PUBLIC ${PROJECT_SOURCE_DIR}/include)
