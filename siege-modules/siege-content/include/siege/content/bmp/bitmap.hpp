@@ -7,7 +7,6 @@
 #include <optional>
 #include <siege/content/pal/palette.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
-#include <siege/platform/drawing.hpp>
 
 namespace siege::content::bmp
 {

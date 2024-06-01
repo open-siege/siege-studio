@@ -291,7 +291,7 @@ namespace win32
                     std::wstring_view keyView;
 
                     auto intAtom = ::GlobalFindAtomW(key);
-                    if (intAtom == (ATOM)key)
+                    if (intAtom == (ATOM)(std::size_t)key)
                     {
                         thread_local std::array<wchar_t, 256> temp;
                         auto size = GlobalGetAtomNameW(intAtom, temp.data(), temp.size());

@@ -4,7 +4,7 @@
 #include <siege/platform/win/desktop/common_controls.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include <siege/platform/win/desktop/menu.hpp>
-#include <siege/platform/siege_module.hpp>
+#include <siege/platform/content_module.hpp>
 #include <siege/platform/shared.hpp>
 #include <spanstream>
 #include <map>
@@ -39,7 +39,7 @@ namespace siege::views
 		win32::tool_bar table_settings;
 		win32::list_view table;
 
-		std::list<siege_module> modules;
+		std::list<content_module> modules;
 
 		std::set<std::wstring> all_categories;
 		std::map<std::wstring_view, std::set<std::wstring>> category_extensions;
@@ -55,7 +55,7 @@ namespace siege::views
 		auto on_create(const win32::create_message& data)
 		{
 			auto app_path = std::filesystem::path(win32::module_ref().current_application().GetModuleFileNameW());
-			modules = siege_module::LoadSiegeModules(app_path.parent_path());
+			modules = content_module::load_modules(app_path.parent_path());
 
 			for (const auto& module : modules)
 			{

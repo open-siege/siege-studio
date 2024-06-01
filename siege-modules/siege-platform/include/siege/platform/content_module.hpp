@@ -1,5 +1,5 @@
-#ifndef SIEGEPLUGINHPP
-#define SIEGEPLUGINHPP
+#ifndef SIEGE_CONTENT_MODULE_HPP
+#define SIEGE_CONTENT_MODULE_HPP
 
 #include <memory>
 #include <filesystem>
@@ -9,36 +9,43 @@
 #include <string>
 #include <vector>
 #include <set>
-#include <libloaderapi.h>
 #include <siege/platform/win/core/com_collection.hpp>
 #include <siege/platform/win/desktop/window_module.hpp>
 
 namespace siege
 {
-	class siege_module : public win32::window_module
+	//TODO cross platform versions of this code will use "xcom" (cross com) and char16_t instead of wchar_t
+	using GetSupportedExtensions = HRESULT __stdcall(win32::com::IReadOnlyCollection** formats);
+	using GetSupportedFormatCategories = HRESULT __stdcall(LCID, win32::com::IReadOnlyCollection** formats);
+	using GetSupportedExtensionsForCategory = HRESULT __stdcall(const wchar_t* category, win32::com::IReadOnlyCollection** formats);
+	using IsStreamSupported = HRESULT __stdcall(::IStream* data);
+	using GetWindowClassForStream = HRESULT __stdcall(::IStream* data, wchar_t**);
+
+	//TODO Port this code to linux using a "platform::module" instead of a "win32::module"
+	class content_module : public win32::window_module
 	{
 		using base = win32::window_module;
-		HRESULT (__stdcall *GetSupportedExtensionsProc)(win32::com::IReadOnlyCollection** formats) = nullptr;
-		HRESULT (__stdcall *GetSupportedFormatCategoriesProc)(LCID, win32::com::IReadOnlyCollection** formats) = nullptr;
-		HRESULT (__stdcall *GetSupportedExtensionsForCategoryProc)(const wchar_t* category, win32::com::IReadOnlyCollection** formats) = nullptr;
-		HRESULT (__stdcall *IsStreamSupportedProc)(::IStream* data) = nullptr;
-		HRESULT (__stdcall *GetWindowClassForStreamProc)(::IStream* data, wchar_t**) = nullptr;
+		GetSupportedExtensions* GetSupportedExtensionsProc = nullptr;
+		GetSupportedFormatCategories* GetSupportedFormatCategoriesProc = nullptr;
+		GetSupportedExtensionsForCategory* GetSupportedExtensionsForCategoryProc = nullptr;
+		IsStreamSupported* IsStreamSupportedProc = nullptr;
+		GetWindowClassForStream* GetWindowClassForStreamProc = nullptr;
 		uint32_t DefaultIcon = 0;
 
 	public: 
-		siege_module(std::filesystem::path plugin_path) : base(plugin_path)
+		content_module(std::filesystem::path module_path) : base(module_path)
 		{
-			GetSupportedExtensionsProc = reinterpret_cast<decltype(GetSupportedExtensionsProc)>(GetProcAddress("GetSupportedExtensions"));
-			GetSupportedFormatCategoriesProc = reinterpret_cast<decltype(GetSupportedFormatCategoriesProc)>(GetProcAddress("GetSupportedFormatCategories"));
-			GetSupportedExtensionsForCategoryProc = reinterpret_cast<decltype(GetSupportedExtensionsForCategoryProc)>(GetProcAddress("GetSupportedExtensionsForCategory"));
-			IsStreamSupportedProc = reinterpret_cast<decltype(IsStreamSupportedProc)>(GetProcAddress("IsStreamSupported"));
-			GetWindowClassForStreamProc = reinterpret_cast<decltype(GetWindowClassForStreamProc)>(GetProcAddress("GetWindowClassForStream"));
+			GetSupportedExtensionsProc = GetProcAddress<decltype(GetSupportedExtensionsProc)>("GetSupportedExtensions");
+			GetSupportedFormatCategoriesProc = GetProcAddress<decltype(GetSupportedFormatCategoriesProc)>("GetSupportedFormatCategories");
+			GetSupportedExtensionsForCategoryProc = GetProcAddress<decltype(GetSupportedExtensionsForCategoryProc)>("GetSupportedExtensionsForCategory");
+			IsStreamSupportedProc = GetProcAddress<decltype(IsStreamSupportedProc)>("IsStreamSupported");
+			GetWindowClassForStreamProc = GetProcAddress<decltype(GetWindowClassForStreamProc)>("GetWindowClassForStream");
 		
-			auto default_icon = GetProcAddress("DefaultFileIcon");
+			auto default_icon = GetProcAddress<std::uint32_t*>("DefaultFileIcon");
 
 			if (default_icon)
 			{
-				std::memcpy(&DefaultIcon, default_icon, sizeof(DefaultIcon));
+				DefaultIcon = *default_icon;
 			}
 
 			if (!(GetSupportedExtensionsProc || GetSupportedFormatCategoriesProc || GetSupportedExtensionsForCategoryProc || IsStreamSupportedProc
@@ -49,9 +56,9 @@ namespace siege
 			}
 		}
 
-		static std::list<siege_module> LoadSiegeModules(std::filesystem::path search_path)
+		static std::list<content_module> load_modules(std::filesystem::path search_path)
 		{
-			std::list<siege_module> loaded_modules;
+			std::list<content_module> loaded_modules;
 
 			for (auto const& dir_entry : std::filesystem::directory_iterator{ search_path })
 			{

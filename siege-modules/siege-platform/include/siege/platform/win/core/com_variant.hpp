@@ -3,6 +3,7 @@
 
 #include <string_view>
 #include <string>
+#include <algorithm>
 #include <memory>
 #include <oaidl.h>
 #include <cassert>
@@ -222,8 +223,10 @@ namespace win32::com
 		}
 		case VT_BSTR:
 		{
-			std::wstring_view temp(variant.bstrVal, ::SysStringLen(variant.bstrVal));
-			return std::string(temp.begin(), temp.end());
+			std::wstring_view wide_temp(variant.bstrVal, ::SysStringLen(variant.bstrVal));
+			std::string narrow_temp(wide_temp.size(), '\0');
+			std::transform(wide_temp.begin(), wide_temp.end(), narrow_temp.begin(), [](auto wide_char) { return static_cast<char>(wide_char); });
+			return narrow_temp;
 		}
 		default:
 		{

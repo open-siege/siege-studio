@@ -5,7 +5,7 @@
 #include <siege/platform/win/desktop/shell.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include <siege/platform/win/core/file.hpp>
-#include <siege/platform/siege_module.hpp>
+#include <siege/platform/content_module.hpp>
 #include <map>
 #include <spanstream>
 
@@ -16,7 +16,7 @@ namespace siege::views
 		win32::tree_view dir_list;
 		win32::tab_control tab_control;
 
-		std::list<siege::siege_module> loaded_modules;
+		std::list<siege::content_module> loaded_modules;
 		std::map<std::wstring, std::int32_t> extensions;
 		std::set<std::wstring> categories;
 
@@ -31,7 +31,7 @@ namespace siege::views
 		siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self), tab_control(nullptr)
 		{
 			std::filesystem::path app_path = std::filesystem::path(win32::module_ref(params.hInstance).GetModuleFileNameW()).parent_path();
-			loaded_modules = siege_module::LoadSiegeModules(std::filesystem::path(app_path));
+			loaded_modules = content_module::load_modules(std::filesystem::path(app_path));
 
 			for (auto& module : loaded_modules)
 			{
