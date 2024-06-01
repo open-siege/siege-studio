@@ -45,7 +45,6 @@ namespace Siege.Extension.MaskOfEternity
         void loadVolume();
         void newGroup();
         void addGroup();
-        void addGroup();
         void purgeRsources();
         void purgeResource();
         void setTimedPurge();

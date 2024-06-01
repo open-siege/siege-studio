@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<ItemGroup>
-		<ProjectReference Include="..\..\siege-platform\Siege.Platform\Siege.Platform.csproj" />
+		<ProjectReference Include="..\siege-platform\Siege.Platform.csproj" />
 	</ItemGroup>
 
 	<PropertyGroup>

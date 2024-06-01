@@ -53,3 +53,5 @@ ImageMagick
 /logo/logo.png
 /siege-studio/tools/install.bat
 CMakeUserPresets.json
+_site
+api
