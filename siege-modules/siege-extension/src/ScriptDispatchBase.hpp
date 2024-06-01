@@ -4,7 +4,7 @@
 #include <unordered_set>
 #include <string>
 #include <functional>
-#include <siege/platform/win/core/com_collection.hpp>
+#include <siege/platform/win/core/com/collection.hpp>
 
 namespace siege::extension
 {

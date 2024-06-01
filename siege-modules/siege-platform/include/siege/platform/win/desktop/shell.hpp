@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <shobjidl.h>
 #include <commoncontrols.h>
-#include <siege/platform/win/core/com.hpp>
+#include <siege/platform/win/core/com/base.hpp>
 
 namespace win32::com
 {

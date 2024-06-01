@@ -1,7 +1,7 @@
 #ifndef WIN32_COM_COLLECTION_HPP
 #define WIN32_COM_COLLECTION_HPP
 
-#include <siege/platform/win/core/com_enumerable.hpp>
+#include <siege/platform/win/core/com/enumerable.hpp>
 
 namespace win32::com
 {   

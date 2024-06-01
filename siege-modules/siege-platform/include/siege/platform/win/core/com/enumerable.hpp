@@ -7,8 +7,8 @@
 #include <memory>
 #include <optional>
 #include <vector>
-#include <siege/platform/win/core/com.hpp>
-#include <siege/platform/win/core/com_variant.hpp>
+#include <siege/platform/win/core/com/base.hpp>
+#include <siege/platform/win/core/com/variant.hpp>
 #include <ocidl.h>
 #include <olectl.h>
 

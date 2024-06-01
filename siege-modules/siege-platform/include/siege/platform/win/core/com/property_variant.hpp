@@ -4,7 +4,7 @@
 #include <expected>
 #include <memory>
 #include <propsys.h>
-#include <siege/platform/win/core/com.hpp>
+#include <siege/platform/win/core/com/base.hpp>
 
 namespace win32::com
 {

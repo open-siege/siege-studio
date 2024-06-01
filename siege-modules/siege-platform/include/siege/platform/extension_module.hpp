@@ -4,7 +4,7 @@
 #include <optional>
 #include <filesystem>
 #include <siege/platform/win/core/module.hpp>
-#include <siege/platform/win/core/com_collection.hpp>
+#include <siege/platform/win/core/com/collection.hpp>
 
 
 namespace siege

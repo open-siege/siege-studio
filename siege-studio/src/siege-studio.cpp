@@ -16,7 +16,7 @@
 
 #include <siege/platform/win/desktop/shell.hpp>
 #include <siege/platform/win/desktop/window_impl.hpp>
-#include <siege/platform/win/core/com_client.hpp>
+#include <siege/platform/win/core/com/client.hpp>
 #include <commctrl.h>
 #include <oleacc.h>
 #include <shobjidl.h> 

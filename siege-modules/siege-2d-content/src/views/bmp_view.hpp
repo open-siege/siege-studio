@@ -3,7 +3,7 @@
 
 #include <siege/platform/win/desktop/common_controls.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
-#include <siege/platform/win/core/com_collection.hpp>
+#include <siege/platform/win/core/com/collection.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
 #include <cassert>
 #include <sstream>

@@ -1,5 +1,5 @@
 #include <siege/content/bmp/image.hpp>
-#include <siege/platform/win/core/com.hpp>
+#include <siege/platform/win/core/com/base.hpp>
 #include <siege/platform/win/core/file.hpp>
 #include <exception>
 #include <spanstream>

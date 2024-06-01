@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 #include <set>
-#include <siege/platform/win/core/com_collection.hpp>
+#include <siege/platform/win/core/com/collection.hpp>
 #include <siege/platform/win/desktop/window_module.hpp>
 
 namespace siege

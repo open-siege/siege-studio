@@ -1,9 +1,9 @@
-#include <siege/platform/win/core/com_client.hpp>
-#include <siege/platform/win/core/com_variant.hpp>
-#include <siege/platform/win/core/com_property_variant.hpp>
-#include <siege/platform/win/core/com_stream_buf.hpp>
-#include <siege/platform/win/core/com_xml.hpp>
-#include <siege/platform/win/core/com.hpp>
+#include <siege/platform/win/core/com/client.hpp>
+#include <siege/platform/win/core/com/variant.hpp>
+#include <siege/platform/win/core/com/property_variant.hpp>
+#include <siege/platform/win/core/com/stream_buf.hpp>
+#include <siege/platform/win/core/com/xml.hpp>
+#include <siege/platform/win/core/com/base.hpp>
 #include <siege/platform/win/core/xcom.hpp>
 #include <siege/platform/win/core/module.hpp>
 #include <cassert>
