@@ -8,6 +8,7 @@
 #include <siege/platform/win/core/com/base.hpp>
 #include <siege/platform/win/core/xcom.hpp>
 #include <siege/platform/win/core/module.hpp>
+#include <siege/platform/resource_storage.hpp>
 #include <cassert>
 #include <set>
 #include <comcat.h>
