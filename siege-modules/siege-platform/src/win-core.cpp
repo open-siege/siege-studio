@@ -27,9 +27,9 @@ namespace win32::com
 	static_assert(sizeof(std::uint32_t) == sizeof(LCID));
 	static_assert(sizeof(char16_t) == sizeof(wchar_t));
 
-	HRESULT init_com()
+	HRESULT init_com(COINIT apartment_model)
 	{
-		thread_local HRESULT result = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+		thread_local HRESULT result = CoInitializeEx(nullptr, apartment_model);
 		thread_local auto com_handle = std::unique_ptr<HRESULT, void(*)(HRESULT*)>(&result, [](auto*) { CoUninitialize(); });
 
 		assert(std::memcmp(&IID_IUnknown, &xcom::IUnknown::iid, sizeof(GUID)) == 0);

@@ -205,14 +205,14 @@ extern "C"
 
 	BOOL WINAPI WrappedAllocConsole()
 	{
-		win32::com::init_com();
+		win32::com::init_com(COINIT_APARTMENTTHREADED);
 
 		return TrueAllocConsole();
 	}
 
 	HHOOK WINAPI WrappedSetWindowsHookExA(int idHook, HOOKPROC lpfn, HINSTANCE hmod, DWORD dwThreadId)
 	{
-		win32::com::init_com();
+		win32::com::init_com(COINIT_APARTMENTTHREADED);
 
 		if (dwThreadId == 0)
 		{

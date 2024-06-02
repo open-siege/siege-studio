@@ -102,7 +102,7 @@ namespace win32::com
         return std::nullopt;
     }
 
-	HRESULT init_com();
+	HRESULT init_com(COINIT apartment_model = COINIT_MULTITHREADED);
 }
 
 #endif

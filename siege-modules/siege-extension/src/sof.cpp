@@ -52,7 +52,7 @@ extern "C"
 
 	UINT WINAPI WrappedRegisterWindowMessageA(LPCSTR lpString)
 	{
-		win32::com::init_com();
+		win32::com::init_com(COINIT_APARTMENTTHREADED);
 
 		return TrueRegisterWindowMessageA(lpString);
 	}
