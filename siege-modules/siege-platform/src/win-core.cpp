@@ -112,8 +112,8 @@ namespace win32::com
 			return;
 		}
 
-		allocations.erase(iter);
-		return ::CoTaskMemFree(ptr);
+		::CoTaskMemFree(*iter);
+		allocations.erase(iter); 
 	}
 
 	ULONG __stdcall ComObject::AddRef() noexcept
