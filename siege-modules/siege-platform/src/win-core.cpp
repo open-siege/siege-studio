@@ -2,6 +2,7 @@
 #include <siege/platform/win/core/com/variant.hpp>
 #include <siege/platform/win/core/com/property_variant.hpp>
 #include <siege/platform/win/core/com/stream.hpp>
+#include <siege/platform/win/core/com/storage.hpp>
 #include <siege/platform/win/core/com/stream_buf.hpp>
 #include <siege/platform/win/core/com/xml.hpp>
 #include <siege/platform/win/core/com/base.hpp>
