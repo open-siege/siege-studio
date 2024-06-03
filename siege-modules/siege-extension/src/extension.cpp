@@ -6,7 +6,9 @@
 
 extern "C"
 {	
-	HRESULT __stdcall LaunchGameWithExtension(const char* game_name, const wchar_t* exe_path_str, std::uint32_t argc, const wchar_t** argv, PROCESS_INFORMATION* process_info) noexcept
+	HRESULT __stdcall ExecutableIsSupported(const wchar_t* filename) noexcept;
+
+	HRESULT __stdcall LaunchGameWithExtension(const wchar_t* exe_path_str, std::uint32_t argc, const wchar_t** argv, PROCESS_INFORMATION* process_info) noexcept
 	{
 		if (!exe_path_str)
 		{
@@ -30,24 +32,13 @@ extern "C"
 			return E_POINTER;
 		}
 
-		std::string extension_path = (std::filesystem::current_path() / "siege-extension-").string();
-		
-		extension_path.append(game_name);
-		extension_path.append(".dll");
-
-
-		if (!std::filesystem::exists(extension_path))
-		{
-			return E_INVALIDARG;
-		}
+		std::string extension_path = win32::module_ref::current_module().GetModuleFileName<char>();
 
 		try
 		{
-			siege::game_extension_module extension(extension_path);
+			auto exe_is_supported = ExecutableIsSupported(exe_path.c_str());
 
-			auto exe_is_supported = extension.ExecutableIsSupported(exe_path);
-
-			if (exe_is_supported == false)
+			if (exe_is_supported != S_OK)
 			{
 				return E_INVALIDARG;
 			}

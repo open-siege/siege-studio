@@ -321,7 +321,7 @@ extern "C"
 					DetourTransactionCommit();
 
 					auto self = win32::window_module_ref(hinstDLL);
-					auto atom = self.RegisterClassExW(win32::static_window_meta_class<siege::extension::MessageHandler>{});
+					self.RegisterClassExW(win32::static_window_meta_class<siege::extension::MessageHandler>{});
 
 					auto type_name = win32::type_name<siege::extension::MessageHandler>();
 

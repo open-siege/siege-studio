@@ -9,6 +9,7 @@
 #include <wtypes.h>
 #include <WinDef.h>
 #include <libloaderapi.h>
+#undef GetModuleFileName
 
 namespace win32
 {
@@ -25,11 +26,27 @@ namespace win32
 			return reinterpret_cast<TPointer>(::GetProcAddress(*this, name.c_str()));
 		}
 
-		auto GetModuleFileNameW()
+		template<typename TChar = wchar_t>
+		std::basic_string<TChar> GetModuleFileName()
 		{
-			std::wstring result(256, L'\0');
-			::GetModuleFileNameW(*this, result.data(), result.size());
-			return result;
+			if constexpr (sizeof(TChar) == sizeof(char16_t))
+			{
+				std::basic_string<TChar> result(256, '\0');
+                ::GetModuleFileNameW(*this, reinterpret_cast<wchar_t*>(result.data()), result.size());
+                
+				result.erase(result.find(TChar('\0')));
+				return result;
+			}
+			else if constexpr (sizeof(TChar) == sizeof(char8_t))
+			{
+                std::basic_string<TChar> result(256, '\0');
+                ::GetModuleFileNameA(*this, reinterpret_cast<char*>(result.data()), result.size());
+
+				result.erase(result.find(TChar('\0')));
+                return result;
+			}
+
+			return std::basic_string<TChar>{};
 		}
 	};
 

@@ -47,19 +47,10 @@ extern "C"
 			set_gog_exports,
 		} };
 
-
-	static auto* TrueRegisterWindowMessageA = RegisterWindowMessageA;
-
-	UINT WINAPI WrappedRegisterWindowMessageA(LPCSTR lpString)
+	HRESULT __stdcall ExecutableIsSupported(_In_ const wchar_t* filename) noexcept
 	{
-		win32::com::init_com(COINIT_APARTMENTTHREADED);
-
-		return TrueRegisterWindowMessageA(lpString);
+	  return S_OK;
 	}
-
-	static std::array<std::pair<void**, void*>, 1> detour_functions{ {
-		{ &(void*&)TrueRegisterWindowMessageA, TrueRegisterWindowMessageA }
-	} };
 
 	BOOL WINAPI DllMain(
 		HINSTANCE hinstDLL,
@@ -108,7 +99,7 @@ extern "C"
 
 						module_is_valid = std::all_of(item.begin(), item.end(), [](const auto& str) {
 							return std::memcmp(str.first.data(), (void*)str.second, str.first.size()) == 0;
-							});
+						});
 
 
 						if (module_is_valid)
@@ -163,13 +154,6 @@ extern "C"
 
 					DetourRestoreAfterWith();
 
-					DetourTransactionBegin();
-					DetourUpdateThread(GetCurrentThread());
-
-					std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourAttach(func.first, func.second); });
-
-					DetourTransactionCommit();
-
 					auto self = win32::window_module_ref(hinstDLL);
 					auto atom = self.RegisterClassExW(win32::static_window_meta_class<siege::extension::MessageHandler>{});
 
@@ -191,6 +175,24 @@ extern "C"
 						}); message)
 					{
 					}
+
+					thread_local HHOOK hook;
+					struct hook_data
+					{
+				      static LRESULT CALLBACK do_hook(int code, WPARAM wparam, LPARAM lparam)
+                      {
+						if (code == HC_ACTION)
+                        {
+							win32::com::init_com(COINIT_APARTMENTTHREADED);
+                            UnhookWindowsHookEx(hook);
+                        }
+
+                        return CallNextHookEx(nullptr, code, wparam, lparam);
+                      }
+
+					};
+
+					hook = ::SetWindowsHookExW(WH_GETMESSAGE, hook_data::do_hook, self, ::GetCurrentThreadId());
 				}
 				catch (...)
 				{
@@ -199,12 +201,6 @@ extern "C"
 			}
 			else if (fdwReason == DLL_PROCESS_DETACH)
 			{
-				DetourTransactionBegin();
-				DetourUpdateThread(GetCurrentThread());
-
-				std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourDetach(func.first, func.second); });
-				DetourTransactionCommit();
-
 				auto window = ::FindWindowExW(HWND_MESSAGE, nullptr, win32::type_name<siege::extension::MessageHandler>().c_str(), L"siege::extension::soldierOfFortune::ScriptHost");
 				::DestroyWindow(window);
 				auto self = win32::window_module(hinstDLL);

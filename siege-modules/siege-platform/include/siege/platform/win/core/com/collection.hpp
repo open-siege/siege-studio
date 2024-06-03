@@ -1,6 +1,8 @@
 #ifndef WIN32_COM_COLLECTION_HPP
 #define WIN32_COM_COLLECTION_HPP
 
+#include <array>
+#include <string_view>
 #include <siege/platform/win/core/com/enumerable.hpp>
 
 namespace win32::com
@@ -321,7 +323,7 @@ namespace win32::com
             std::wstring_view(L"Remove"),  
         }};
 
-        constexpr static DISPID DispIdOf(std::wstring_view name)
+        constexpr DISPID DispIdOf(std::wstring_view name)
         {
             auto existingName = std::find(names.begin(), names.end(), name);
 
@@ -333,7 +335,7 @@ namespace win32::com
             return DISPID_UNKNOWN;
         }
 
-        constexpr static DISPID DispIdOf(std::wstring_view name, LCID lcid)
+        DISPID DispIdOf(std::wstring_view name, LCID lcid)
         {
             auto existingName = std::find_if(names.begin(), names.end(), [&](auto& value) {
                     return CompareStringW(lcid, NORM_IGNORECASE, value.data(), value.size(), name.data(), name.size()) == CSTR_EQUAL;

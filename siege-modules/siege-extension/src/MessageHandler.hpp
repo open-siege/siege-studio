@@ -17,8 +17,6 @@ namespace siege::extension
 
 		std::optional<LRESULT> on_get_object(win32::get_object_message message)
 		{
-			win32::com::init_com(COINIT_APARTMENTTHREADED);
-
 			if (message.object_id == OBJID_NATIVEOM)
 			{
 				auto temp = script_host;
