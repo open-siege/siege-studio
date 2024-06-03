@@ -80,7 +80,7 @@ namespace siege::views
 			}
 			palettes.resize(pal_paths.size());
 
-			std::transform(std::execution::par_unseq, pal_paths.begin(), pal_paths.end(), palettes.begin(), [resolve_data = std::move(resolve_data)](auto& path) mutable {
+			std::transform(std::execution::par_unseq, pal_paths.begin(), pal_paths.end(), palettes.begin(), [&resolve_data](auto& path) mutable {
 				auto is_pal = std::any_of(pal_controller::formats.begin(), pal_controller::formats.end(), [&](auto& ext) {	return path.extension() == ext; });
 
 				auto load_palette = [&](std::istream& temp) {

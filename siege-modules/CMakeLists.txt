@@ -17,11 +17,3 @@ add_subdirectory(siege-configuration)
 add_subdirectory(siege-extension)
 add_subdirectory(siege-installation)
 add_subdirectory(siege-input)
-
-# private code for siege-launcher
-if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/siege-game-content)
-    add_subdirectory(siege-game-content)
-endif()
-
-
-
