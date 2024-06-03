@@ -12,22 +12,24 @@ namespace siege::extension
 		win32::com::com_ptr<IDispatch> script_host;
 
 		MessageHandler(win32::hwnd_t self, const CREATESTRUCTW& args) : win32::window_ref(self), script_host((IDispatch*)args.lpCreateParams)
-	    {
-	    }
+		{
+		}
 
 		std::optional<LRESULT> on_get_object(win32::get_object_message message)
-        {
-            if (message.object_id == OBJID_NATIVEOM)
-            {
-                auto temp = script_host;
+		{
+			win32::com::init_com(COINIT_APARTMENTTHREADED);
 
-                auto result = LresultFromObject(__uuidof(IDispatch), message.flags, temp.get());
+			if (message.object_id == OBJID_NATIVEOM)
+			{
+				auto temp = script_host;
 
-                return result;
-            }
+				auto result = LresultFromObject(__uuidof(IDispatch), message.flags, temp.get());
 
-            return std::nullopt;
-        }
+				return result;
+			}
+
+			return std::nullopt;
+		}
 	};
 
 }
