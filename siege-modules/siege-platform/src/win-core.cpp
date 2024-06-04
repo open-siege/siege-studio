@@ -137,7 +137,7 @@ namespace win32::com
 
 		if (refCount == 0)
 		{
-			delete this;
+			delete static_cast<ComObject*>(this);
 			return 0;
 		}
 
