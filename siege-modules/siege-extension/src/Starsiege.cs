@@ -6,97 +6,100 @@ using System.Runtime.InteropServices;
 
 namespace Siege.Extension.Starsiege
 {
-    public static class Guids
-    {
-        public const string IDispatch = "00020400-0000-0000-C000-000000000046";
-    }
-
     [ComImport]
     [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
     [Guid(Guids.IDispatch)]
     public interface GameConsole
     {
         /// <summary>
-        /// This property always returns a value &lt; 1.
+        /// Returns only the integer portion of a number.
         /// </summary>
         float floor(float x);
 
         /// <summary>
-        /// This property always returns a value &lt; 1.
+        /// Returns the square root of a number.
         /// </summary>
         float sqrt(float x);
 
         /// <summary>
-        /// This property always returns a value &lt; 1.
+        /// Writes a message to the console
         /// </summary>
         void echo(string s);
 
         /// <summary>
-        /// This property always returns a value &lt; 1.
+        /// 
         /// </summary>
         void dbecho(string s);
 
         /// <summary>
-        /// This property always returns a value &lt; 1.
+        /// Joins two strings into one.
         /// </summary>
         string strcat(string a, string b);
 
         /// <summary>
-        /// This property always returns a value &lt; 1.
+        /// Quits the game.
         /// </summary>
         void quit();
 
         /// <summary>
-        /// This property always returns a value &lt; 1.
+        /// 
         /// </summary>
         void export();
+
+        /// <summary>
+        /// Deletes variables based on a filter string
+        /// </summary>
         void deleteVariables();
 
         /// <summary>
-        /// This property always returns a value &lt; 1.
+        /// Exports registered functions to a file.
         /// </summary>
         void exportFunctions();
 
         /// <summary>
-        /// This property always returns a value &lt; 1.
+        /// Deletes functions based on a filter string.
         /// </summary>
         void deleteFunctions();
 
         /// <summary>
-        /// This property always returns a value &lt; 1.
+        /// Executes a script file.
         /// </summary>
         void exec(string filename);
 
         /// <summary>
-        /// This property always returns a value &lt; 1.
+        /// Executes a script string.
         /// </summary>
         string eval(string code);
 
         /// <summary>
-        /// This property always returns a value &lt; 1.
+        /// Triggers a manual breakpoint if a debugger is attached.
         /// </summary>
         void debug();
 
         /// <summary>
-        /// This property always returns a value &lt; 1.
+        /// 
         /// </summary>
         void trace();
 
+        [RealExportName("Console::logBufferEnabled")]
         bool Console_logBufferEnabled
         {
             get;
         }
 
+        [RealExportName("Console::printLevel")]
         int Console_printLevel
         {
             get;
         }
 
+        [RealExportName("Console::updateMetrics")]
         int Console_updateMetrics
         {
             get;
         }
 
+        [RealExportName("Console::logMode")]
         int Console_logMode
         {
             get;
@@ -108,27 +111,114 @@ namespace Siege.Extension.Starsiege
     [Guid(Guids.IDispatch)]
     public interface DynamicDataPlugin
     {
+        /// <summary>
+        /// 
+        /// </summary>
         void dynDataWriteObject();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void dynDataReadObject();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void dynDataWriteClassType();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void dynDataReadClassType();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void scanXLoad();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void scanXWrite();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void scanXFlush();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void scanXEcho();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void EncyclopediaLoad();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void EncyclopediaWrite();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void EncyclopediaFlush();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void EncyclopediaEcho();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void MissionBriefLoad();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void MissionBriefFlush();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void MissionBriefEcho();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void CampaignLoad();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void CampaignEcho();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void GameLoad();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void GameSave();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void GameSetSquadMate();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void GameSetVehicle();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void FlushPilots();
     }
 
@@ -322,6 +412,8 @@ namespace Siege.Extension.Starsiege
     {
         void netStats();
         void logPacketStats();
+
+        [RealExportName("DNet::TranslateAddress")]
         void DNet_TranslateAddress();
         void playDemo();
         void connect();
