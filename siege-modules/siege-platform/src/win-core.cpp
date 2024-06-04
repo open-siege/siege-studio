@@ -128,7 +128,7 @@ namespace win32::com
 			return 0;
 		}
 
-		if (refCount == 1 && !IsHeapAllocated(static_cast<ComObject*>(this), sizeof(*this)))
+		if (refCount == 1 && !IsHeapAllocated(this, sizeof(*this)))
 		{
 			return 1;
 		}
@@ -137,7 +137,7 @@ namespace win32::com
 
 		if (refCount == 0)
 		{
-			delete static_cast<ComObject*>(this);
+			delete this;
 			return 0;
 		}
 

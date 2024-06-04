@@ -19,7 +19,7 @@ namespace win32::com
         }
     };
 
-    struct ConnectionPoint : IConnectionPoint, ComObject
+    struct ConnectionPoint : ComObject, IConnectionPoint
     {
         std::unique_ptr<IConnectionPointContainer, void(*)(IConnectionPointContainer*)> container; 
         std::vector<ConnectData> callbacks;
@@ -127,7 +127,7 @@ namespace win32::com
         }
     };
 
-    struct ConnectionPointContainer : IConnectionPointContainer, ComObject
+    struct ConnectionPointContainer : ComObject, IConnectionPointContainer
     {
         std::vector<std::unique_ptr<IConnectionPoint, void(*)(IConnectionPoint*)>> points;
     

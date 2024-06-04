@@ -120,31 +120,23 @@ namespace win32::com
     }
 
     template<typename IEnum = IEnumVARIANT>
-    std::expected<std::unique_ptr<IEnumVARIANT, void (*)(IEnum*)>, HRESULT> NewEnum() noexcept
+    std::expected<win32::com::com_ptr<IEnumVARIANT>, HRESULT> NewEnum() noexcept
     {
       DISPPARAMS dp = { nullptr, nullptr, 0, 0 };
       Variant result;
       auto hresult = Invoke(DISPID_NEWENUM, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_PROPERTYGET | DISPATCH_METHOD, &dp, &result, nullptr, nullptr);
 
-      auto temp = std::unique_ptr<IEnum, void (*)(IEnum*)>(nullptr, [](auto* self) {
-        if (self)
-        {
-          self->Release();
-        }
-      });
+      win32::com::com_ptr<IEnum> temp;
 
       if (hresult == S_OK && (result.vt == VT_DISPATCH || result.vt == VT_UNKNOWN))
       {
-        IEnum* self = nullptr;
-
-        hresult = result.punkVal->QueryInterface(__uuidof(IEnum), (void**)&self);
+        hresult = result.punkVal->QueryInterface(__uuidof(IEnum), temp.put_void());
 
         if (hresult != S_OK)
         {
           return std::unexpected(hresult);
         }
 
-        temp.reset(self);
         return temp;
       }
 
@@ -276,8 +268,7 @@ namespace win32::com
   };
 
   template<typename TEnumTraits, typename TIter>
-  struct RangeEnumerator : TEnumTraits::EnumType
-    , ComObject
+  struct RangeEnumerator : ComObject, TEnumTraits::EnumType
   {
     using ElemType = TEnumTraits::ElemType;
     using EnumType = TEnumTraits::EnumType;
@@ -475,8 +466,7 @@ namespace win32::com
   }
 
   template<typename TEnum>
-  struct VariantEnumeratorAdapter : IEnumVARIANT
-    , ComObject
+  struct VariantEnumeratorAdapter : ComObject, IEnumVARIANT
   {
     std::unique_ptr<TEnum, void (*)(TEnum*)> enumerator;
 

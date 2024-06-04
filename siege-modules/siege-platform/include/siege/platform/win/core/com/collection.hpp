@@ -133,7 +133,7 @@ namespace win32::com
     };
 
     template<typename TObject, typename TContainer = std::vector<TObject>>
-    struct ReadOnlyCollectionRef : IReadOnlyCollection, ComObject
+    struct ReadOnlyCollectionRef : ComObject, IReadOnlyCollection
     {
         TContainer& items;
 
@@ -312,7 +312,7 @@ namespace win32::com
     };
 
     template<typename TObject, typename TContainer = std::vector<TObject>>
-    struct CollectionRef : ICollection, ComObject
+    struct CollectionRef : ComObject, ICollection
     {
         TContainer& items;
 
