@@ -65,6 +65,11 @@ namespace win32::com
             if (count)
             {
                 auto newEnum = NewEnum<IEnum>();
+
+                if (!newEnum)
+                {
+                  return IEnumerable::end<IEnum>();
+                }
                 return EnumeratorIterator<Variant, IEnum, typename decltype(newEnum)::value_type>(std::move(*newEnum), *count);
             }
 

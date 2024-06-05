@@ -5,7 +5,7 @@
 #include <string_view>
 #include <array>
 #include <unordered_map>
-#include "games/games.hpp"
+#include <siege/installation/games.hpp>
 
 /* For Indeo playback
  * [HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\Drivers32]

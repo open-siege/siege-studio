@@ -9,7 +9,7 @@ add_custom_target(${PROJECT_NAME}
 )
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-resource-content> ${CMAKE_CURRENT_BINARY_DIR}/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>)
+            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-content-resource> ${CMAKE_CURRENT_BINARY_DIR}/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>)
 
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>/${PROJECT_NAME}.exe CONFIGURATIONS Debug Release RUNTIME DESTINATION bin)

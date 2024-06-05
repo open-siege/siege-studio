@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\siege-modules\siege-resource-content\Siege.Resource.Content.csproj" />
+    <ProjectReference Include="..\..\siege-modules\siege-content-resource\Siege.Content.Resource.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

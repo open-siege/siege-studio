@@ -7,5 +7,7 @@ add_subdirectory(nuvol)
 add_subdirectory(dts-to-json)
 add_subdirectory(dts-to-obj)
 
+add_subdirectory(game-unpack)
+
 # TODO fix compile issues with json library
 #add_subdirectory(json-to-dts)

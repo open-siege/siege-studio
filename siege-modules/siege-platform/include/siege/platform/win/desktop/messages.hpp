@@ -70,6 +70,36 @@ namespace win32
 		}
 	};
 
+	struct input_message
+	{
+		constexpr static std::uint32_t id = WM_INPUT;
+		wparam_t code;
+#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+		HANDLE handle;
+
+		input_message(wparam_t code, lparam_t item) : code(code & 0xff), handle(reinterpret_cast<HANDLE>(item))
+        {
+        }
+#else
+        HRAWINPUT handle;
+
+		input_message(wparam_t code, lparam_t item) : code(GET_RAWINPUT_CODE_WPARAM(code)), handle(reinterpret_cast<HRAWINPUT>(item))
+        {
+        }
+#endif
+	};
+
+	struct input_device_change_message
+	{
+		constexpr static std::uint32_t id = WM_INPUT_DEVICE_CHANGE;
+        wparam_t code;
+        HANDLE device_handle;
+
+		input_device_change_message(wparam_t code, lparam_t handle) : code(code), device_handle(reinterpret_cast<HANDLE>(handle))
+        {
+        }
+	};
+
 	struct draw_item_message
 	{
 		constexpr static std::uint32_t id = WM_DRAWITEM;

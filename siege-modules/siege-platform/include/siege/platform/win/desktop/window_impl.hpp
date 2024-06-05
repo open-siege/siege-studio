@@ -30,6 +30,8 @@ namespace win32
 		DO_DISPATCH(keyboard_key_up_message, on_keyboard_key_up);
 		DO_DISPATCH(keyboard_key_down_message, on_keyboard_key_down);
 		DO_DISPATCH(keyboard_char_message, on_keyboard_char);
+		DO_DISPATCH(input_message, on_input);
+		DO_DISPATCH(input_device_change_message	, on_input_device_change);
 
 		if constexpr (requires(TWindow t) { t.on_copy_data(copy_data_message<char>{wParam, lParam}); })
 		{

@@ -40,6 +40,10 @@ namespace win32::com
 
     EnumeratorIterator(TEnumeratorContainer container, std::size_t position = 0) : enumerator(std::move(container)), position(position), temp{}
     {
+      if (!this->enumerator)
+      {
+          return;
+      }
       this->enumerator->Next(1, &temp, nullptr);
     }
 
@@ -490,7 +494,12 @@ namespace win32::com
 
     [[maybe_unused]] ULONG __stdcall Release() noexcept override
     {
-      return ComObject::Release();
+      auto result = ComObject::Release();
+
+      if (result == 0)
+          {
+      }
+      return result;
     }
 
     HRESULT __stdcall Clone(IEnumVARIANT** other) noexcept
