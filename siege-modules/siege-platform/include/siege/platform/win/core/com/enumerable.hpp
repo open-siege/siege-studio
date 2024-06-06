@@ -222,7 +222,7 @@ namespace win32::com
     template<typename Iter>
     static void Copy(VARIANT* output, Iter iter)
     {
-      VariantCopy(output, iter->get());
+      VariantCopy(output, &*iter);
     }
   };
 
