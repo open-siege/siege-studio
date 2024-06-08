@@ -131,7 +131,7 @@ extern "C"
 												continue;
 											}
 
-											if (!std::all_of(temp.begin(), temp.end(), [](auto c) { return std::isalnum(c) != 0; }))
+											if (!std::all_of(temp.begin(), temp.end(), [](auto c) { return c == '+' || c == '-' || std::isalnum(c) != 0; }))
 											{
 												break;
 											}
