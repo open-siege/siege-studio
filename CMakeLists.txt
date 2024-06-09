@@ -35,12 +35,7 @@ add_dependencies(siege-studio siege-studio-dependencies)
 if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/siege-launcher)
     add_subdirectory(siege-launcher)
     add_custom_target(siege-launcher-dependencies ALL COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:siege-launcher>)
-    add_dependencies(siege-launcher-dependencies siege-studio-dependencies)
-
-    if (WIN32)
-        add_dependencies(siege-launcher-dependencies siege-configuration siege-extension-soldier-of-fortune siege-extension-starsiege siege-extension-tribes)
-    endif()
-
+    add_dependencies(siege-launcher-dependencies siege-studio-dependencies siege-configuration)
     add_dependencies(siege-launcher siege-launcher-dependencies)
 
     add_custom_command(TARGET siege-launcher-dependencies POST_BUILD
@@ -50,9 +45,20 @@ if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/siege-launcher)
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-content-audio> $<TARGET_FILE_DIR:siege-launcher>)
 
     if (WIN32)
-        add_custom_command(TARGET siege-launcher-dependencies POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-extension-starsiege> $<TARGET_FILE_DIR:siege-launcher>
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-extension-tribes> $<TARGET_FILE_DIR:siege-launcher>
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-extension-soldier-of-fortune> $<TARGET_FILE_DIR:siege-launcher>)
+        get_property(ID_TECH_TARGETS
+                DIRECTORY siege-modules/siege-extension-id-tech PROPERTY BUILDSYSTEM_TARGETS)
+
+        get_property(DARKSTAR_TARGETS
+                DIRECTORY siege-modules/siege-extension-darkstar PROPERTY BUILDSYSTEM_TARGETS)
+
+
+        set(EXT_TARGETS)
+        list(APPEND EXT_TARGETS ${ID_TECH_TARGETS} ${DARKSTAR_TARGETS})
+
+        foreach(EXT_TARGET IN ITEMS ${EXT_TARGETS})
+            add_dependencies(siege-launcher-dependencies ${EXT_TARGET})
+            add_custom_command(TARGET siege-launcher-dependencies POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${EXT_TARGET}> $<TARGET_FILE_DIR:siege-launcher>)
+        endforeach()
     endif()
 endif()
