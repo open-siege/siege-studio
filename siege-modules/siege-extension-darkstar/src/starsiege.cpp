@@ -11,6 +11,7 @@
 #include <siege/platform/win/desktop/window_module.hpp>
 #include <siege/platform/win/desktop/window_impl.hpp>
 #include <detours.h>
+#include "ExecutableIsSupported.hpp"
 #include "DarkstarScriptDispatch.hpp"
 #include "MessageHandler.hpp"
 
@@ -96,72 +97,7 @@ extern "C"
 
 	HRESULT __stdcall ExecutableIsSupported(_In_ const wchar_t* filename) noexcept
 	{
-		if (filename == nullptr)
-		{
-			return E_POINTER;
-		}
-
-		if (!std::filesystem::exists(filename))
-		{
-			return E_INVALIDARG;
-		}
-
-
-		try
-		{
-			win32::file filw(std::filesystem::path(filename), GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
-
-			auto file_size = filw.GetFileSizeEx();
-			auto mapping = filw.CreateFileMapping(std::nullopt, PAGE_READONLY, 0, 0, L"");
-
-			if (mapping && file_size)
-			{
-				auto view = mapping->MapViewOfFile(FILE_MAP_READ, (std::size_t)file_size->QuadPart);
-				std::string_view data((char*)view.get(), (std::size_t)file_size->QuadPart);
-
-				if (data.empty())
-				{
-					return S_FALSE;
-				}
-
-				auto is_executable = data.find("MZ") == 0 && data.find("PE") != std::string_view::npos;
-
-				bool has_all_verification_strings = is_executable && std::all_of(verification_strings[0].begin(), verification_strings[0].end(), [&](auto& item) {
-					return data.find(item.first) != std::string_view::npos;
-					});
-
-				bool has_all_functions = has_all_verification_strings && std::all_of(function_name_ranges.begin(), function_name_ranges.end(), [&](auto& item) {
-
-					auto first_index = data.find(item.first);
-
-					if (first_index != std::string_view::npos)
-					{
-						return data.find(item.second, first_index) != std::string_view::npos;
-					}
-					return false;
-					});
-
-				bool has_all_variables = has_all_functions && std::all_of(variable_name_ranges.begin(), variable_name_ranges.end(), [&](auto& item) {
-
-					auto first_index = data.find(item.first);
-
-					if (first_index != std::string_view::npos)
-					{
-						return data.find(item.second, first_index) != std::string_view::npos;
-					}
-					return false;
-					});
-
-				return has_all_variables ? S_OK : S_FALSE;
-			}
-
-			return S_FALSE;
-
-		}
-		catch (...)
-		{
-			return S_FALSE;
-		}
+		return siege::ExecutableIsSupported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 	}
 
 	inline void set_1000_exports()
