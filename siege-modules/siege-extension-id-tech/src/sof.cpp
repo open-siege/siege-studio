@@ -49,6 +49,11 @@ BOOL WINAPI DllMain(
   DWORD fdwReason,
   LPVOID lpvReserved) noexcept
 {
+  if constexpr (sizeof(void*) != sizeof(std::uint32_t))
+  {
+    return TRUE;
+  }
+
   if (DetourIsHelperProcess())
   {
     return TRUE;

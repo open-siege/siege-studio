@@ -20,6 +20,10 @@ namespace siege::extension
 
 			auto index = dispIdMember - 1;
 
+			if (dispIdMember == DISPID_UNKNOWN)
+			{
+				return DISP_E_MEMBERNOTFOUND;
+			}
 
 			if ((index + 1) > functions.size())
 			{

@@ -15,394 +15,385 @@
 #include "DarkstarScriptDispatch.hpp"
 #include "MessageHandler.hpp"
 
-extern "C"
+extern "C" 
 {
 #define DARKCALL __attribute__((regparm(3)))
 
-	static DARKCALL char* (*ConsoleEval)(void*, std::int32_t, std::int32_t, const char**) = nullptr;
+static DARKCALL char* (*ConsoleEval)(void*, std::int32_t, std::int32_t, const char**) = nullptr;
 
-	using namespace std::literals;
+using namespace std::literals;
 
-	constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 4>, 4> verification_strings = { {
-	std::array<std::pair<std::string_view, std::size_t>, 4>{{
-		{"cls"sv, std::size_t(0x6fb741)},
-		{"trace"sv, std::size_t(0x6fb7af)},
-		{"Console::logBufferEnabled"sv, std::size_t(0x6fb7b5)},
-		{"Console::logMode"sv, std::size_t(0x6fb7fa)},
-		}},
-	std::array<std::pair<std::string_view, std::size_t>, 4>{{
-		{"cls"sv, std::size_t(0x6fe551)},
-		{"trace"sv, std::size_t(0x6fe5bf)},
-		{"Console::logBufferEnabled"sv, std::size_t(0x6fe5c5)},
-		{"Console::logMode"sv, std::size_t(0x6fe60a)},
-		}},
-	std::array<std::pair<std::string_view, std::size_t>, 4>{{
-		{"cls"sv, std::size_t(0x712cf9)},
-		{"trace"sv, std::size_t(0x712d67)},
-		{"Console::logBufferEnabled"sv, std::size_t(0x712d6d)},
-		{"Console::logMode"sv, std::size_t(0x712db2)},
-		}},
-	std::array<std::pair<std::string_view, std::size_t>, 4>{{
-		{"cls"sv, std::size_t(0x723169)},
-		{"trace"sv, std::size_t(0x7231d7)},
-		{"Console::logBufferEnabled"sv, std::size_t(0x7231dd)},
-		{"Console::logMode"sv, std::size_t(0x723222)},
-		}}
-	} };
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 4>, 4> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 4>{ {
+                                                                                                              { "cls"sv, std::size_t(0x6fb741) },
+                                                                                                              { "trace"sv, std::size_t(0x6fb7af) },
+                                                                                                              { "Console::logBufferEnabled"sv, std::size_t(0x6fb7b5) },
+                                                                                                              { "Console::logMode"sv, std::size_t(0x6fb7fa) },
+                                                                                                            } },
+  std::array<std::pair<std::string_view, std::size_t>, 4>{ {
+    { "cls"sv, std::size_t(0x6fe551) },
+    { "trace"sv, std::size_t(0x6fe5bf) },
+    { "Console::logBufferEnabled"sv, std::size_t(0x6fe5c5) },
+    { "Console::logMode"sv, std::size_t(0x6fe60a) },
+  } },
+  std::array<std::pair<std::string_view, std::size_t>, 4>{ {
+    { "cls"sv, std::size_t(0x712cf9) },
+    { "trace"sv, std::size_t(0x712d67) },
+    { "Console::logBufferEnabled"sv, std::size_t(0x712d6d) },
+    { "Console::logMode"sv, std::size_t(0x712db2) },
+  } },
+  std::array<std::pair<std::string_view, std::size_t>, 4>{ {
+    { "cls"sv, std::size_t(0x723169) },
+    { "trace"sv, std::size_t(0x7231d7) },
+    { "Console::logBufferEnabled"sv, std::size_t(0x7231dd) },
+    { "Console::logMode"sv, std::size_t(0x723222) },
+  } } } };
 
-	constexpr static std::array<std::pair<std::string_view, std::string_view>, 25> function_name_ranges{ {
-		{"icDefaultButtonAction"sv, "icActionAllowed"sv},
-		{"dataStore"sv, "dataRelease"sv},
-		{"defaultWeapons"sv, "allowWeapon"sv},
-		{"goto"sv, "violate"sv},
-		{"initializeServer"sv, "isEqualIP"sv},
-		{"say"sv, "flushChannel"sv},
-		{"dynDataWriteObject"sv, "FlushPilots"sv},
-		{"ME::Create"sv, "ME::RebuildCommandMap"sv},
-		{"loadObject"sv, "getNextObject"sv},
-		{"HTMLOpen"sv, "HTMLOpenAndGoWin"sv},
-		{"swapSurfaces"sv, "isGfxDriver"sv},
-		{"newMovPlay"sv, "pauseMovie"sv},
-		{"netStats"sv, "net::kick"sv},
-		{"newRedbook"sv, "rbSetPlayMode"sv},
-		{"newInputManager"sv, "defineKey"sv},
-		{"simTreeCreate"sv, "simTreeRegScript"sv},
-		{"newSfx"sv, "sfxGetMaxBuffers"sv},
-		{"newToolWindow"sv, "saveFileAs"sv},
-		{"newTerrain"sv, "reCalcCRC"sv},
-		{"GuiEditMode"sv, "windowsKeyboardDisable"sv},
-		{"LS::Create"sv, "LS::parseCommands"sv},
-		{"ircConnect"sv, "ircEcho"sv},
-		{"globeLines"sv, "loadSky"sv},
-		{"MissionRegType"sv, "missionUndoMoveRotate"sv},
-		{"cls"sv, "trace"sv}
-		} };
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 25> function_name_ranges{ { { "icDefaultButtonAction"sv, "icActionAllowed"sv },
+  { "dataStore"sv, "dataRelease"sv },
+  { "defaultWeapons"sv, "allowWeapon"sv },
+  { "goto"sv, "violate"sv },
+  { "initializeServer"sv, "isEqualIP"sv },
+  { "say"sv, "flushChannel"sv },
+  { "dynDataWriteObject"sv, "FlushPilots"sv },
+  { "ME::Create"sv, "ME::RebuildCommandMap"sv },
+  { "loadObject"sv, "getNextObject"sv },
+  { "HTMLOpen"sv, "HTMLOpenAndGoWin"sv },
+  { "swapSurfaces"sv, "isGfxDriver"sv },
+  { "newMovPlay"sv, "pauseMovie"sv },
+  { "netStats"sv, "net::kick"sv },
+  { "newRedbook"sv, "rbSetPlayMode"sv },
+  { "newInputManager"sv, "defineKey"sv },
+  { "simTreeCreate"sv, "simTreeRegScript"sv },
+  { "newSfx"sv, "sfxGetMaxBuffers"sv },
+  { "newToolWindow"sv, "saveFileAs"sv },
+  { "newTerrain"sv, "reCalcCRC"sv },
+  { "GuiEditMode"sv, "windowsKeyboardDisable"sv },
+  { "LS::Create"sv, "LS::parseCommands"sv },
+  { "ircConnect"sv, "ircEcho"sv },
+  { "globeLines"sv, "loadSky"sv },
+  { "MissionRegType"sv, "missionUndoMoveRotate"sv },
+  { "cls"sv, "trace"sv } } };
 
-	constexpr static std::array<std::pair<std::string_view, std::string_view>, 13> variable_name_ranges{ {
-		{"$pref::softwareTranslucency"sv, "$pref::canvasCursorTrapped"sv},
-		{"suspended"sv, "SimGui::firstPreRender"sv},
-		{"Console::ForeRGB"sv, "Console::LastLineTimeout"sv},
-		{"$pref::mipcap"sv, "$OpenGL::AFK"sv},
-		{"GFXMetrics::EmittedPolys"sv, "useLowRes3D"sv},
-		{"pref::sfx2DVolume"sv, "pref::sfx3DVolume"sv},
-		{"dynDataWriteObject"sv, "FlushPilots"sv},
-		{"GuiEdit::GridSnapX"sv, "pref::politeGui"sv},
-		{"Console::logBufferEnabled"sv, "Console::logMode"sv},
-		{"DNet::ShowStats"sv, "DNet::PacketLoss"sv},
-		{"GameInfo::SpawnLimit"sv, "GameInfo::TimeLimit"sv},
-		{"ITRMetrics::OutsideBits"sv, "ITRMetrics::NumInteriorLinks"sv},
-		{"$server::Mission"sv, "$server::TeamMassLimit"sv}
-		} };
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 13> variable_name_ranges{ { { "$pref::softwareTranslucency"sv, "$pref::canvasCursorTrapped"sv },
+  { "suspended"sv, "SimGui::firstPreRender"sv },
+  { "Console::ForeRGB"sv, "Console::LastLineTimeout"sv },
+  { "$pref::mipcap"sv, "$OpenGL::AFK"sv },
+  { "GFXMetrics::EmittedPolys"sv, "useLowRes3D"sv },
+  { "pref::sfx2DVolume"sv, "pref::sfx3DVolume"sv },
+  { "dynDataWriteObject"sv, "FlushPilots"sv },
+  { "GuiEdit::GridSnapX"sv, "pref::politeGui"sv },
+  { "Console::logBufferEnabled"sv, "Console::logMode"sv },
+  { "DNet::ShowStats"sv, "DNet::PacketLoss"sv },
+  { "GameInfo::SpawnLimit"sv, "GameInfo::TimeLimit"sv },
+  { "ITRMetrics::OutsideBits"sv, "ITRMetrics::NumInteriorLinks"sv },
+  { "$server::Mission"sv, "$server::TeamMassLimit"sv } } };
 
 
-	HRESULT __stdcall ExecutableIsSupported(_In_ const wchar_t* filename) noexcept
-	{
-		return siege::ExecutableIsSupported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
-	}
+HRESULT __stdcall ExecutableIsSupported(_In_ const wchar_t* filename) noexcept
+{
+  return siege::ExecutableIsSupported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
+}
 
-	inline void set_1000_exports()
-	{
-		ConsoleEval = (decltype(ConsoleEval))0x5d3d00;
-	}
+inline void set_1000_exports()
+{
+  ConsoleEval = (decltype(ConsoleEval))0x5d3d00;
+}
 
-	inline void set_1002_exports()
-	{
-		ConsoleEval = (decltype(ConsoleEval))0x5d4dd8;
-	}
+inline void set_1002_exports()
+{
+  ConsoleEval = (decltype(ConsoleEval))0x5d4dd8;
+}
 
-	inline void set_1003_exports()
-	{
-		ConsoleEval = (decltype(ConsoleEval))0x5e2bbc;
-	}
+inline void set_1003_exports()
+{
+  ConsoleEval = (decltype(ConsoleEval))0x5e2bbc;
+}
 
-	inline void set_1004_exports()
-	{
-		ConsoleEval = (decltype(ConsoleEval))0x5e6460;
-	}
+inline void set_1004_exports()
+{
+  ConsoleEval = (decltype(ConsoleEval))0x5e6460;
+}
 
-	constexpr std::array<void(*)(), 4> export_functions = { {
-			set_1000_exports,
-			set_1002_exports,
-			set_1003_exports,
-			set_1004_exports
-		} };
+constexpr std::array<void (*)(), 4> export_functions = { { set_1000_exports,
+  set_1002_exports,
+  set_1003_exports,
+  set_1004_exports } };
 
 
-	static auto* TrueSetWindowsHookExA = SetWindowsHookExA;
-	static auto* TrueAllocConsole = AllocConsole;
-	static auto* TrueGetLogicalDrives = GetLogicalDrives;
-	static auto* TrueGetDriveTypeA = GetDriveTypeA;
-	static auto* TrueGetVolumeInformationA = GetVolumeInformationA;
+static auto* TrueSetWindowsHookExA = SetWindowsHookExA;
+static auto* TrueAllocConsole = AllocConsole;
+static auto* TrueGetLogicalDrives = GetLogicalDrives;
+static auto* TrueGetDriveTypeA = GetDriveTypeA;
+static auto* TrueGetVolumeInformationA = GetVolumeInformationA;
 
-	static std::string VirtualDriveLetter;
-	constexpr static std::string_view StarsiegeDisc1 = "STARSIEGE1";
-	constexpr static std::string_view StarsiegeDisc2 = "STARSIEGE2";
-	constexpr static std::string_view StarsiegeBetaDisc = "STARSIEGE";
+static std::string VirtualDriveLetter;
+constexpr static std::string_view StarsiegeDisc1 = "STARSIEGE1";
+constexpr static std::string_view StarsiegeDisc2 = "STARSIEGE2";
+constexpr static std::string_view StarsiegeBetaDisc = "STARSIEGE";
 
-	BOOL WINAPI WrappedAllocConsole()
-	{
-		win32::com::init_com(COINIT_APARTMENTTHREADED);
+BOOL WINAPI WrappedAllocConsole()
+{
+  win32::com::init_com(COINIT_APARTMENTTHREADED);
 
-		return TrueAllocConsole();
-	}
+  return TrueAllocConsole();
+}
 
-	HHOOK WINAPI WrappedSetWindowsHookExA(int idHook, HOOKPROC lpfn, HINSTANCE hmod, DWORD dwThreadId)
-	{
-		win32::com::init_com(COINIT_APARTMENTTHREADED);
+HHOOK WINAPI WrappedSetWindowsHookExA(int idHook, HOOKPROC lpfn, HINSTANCE hmod, DWORD dwThreadId)
+{
+  win32::com::init_com(COINIT_APARTMENTTHREADED);
 
-		if (dwThreadId == 0)
-		{
-			dwThreadId = ::GetCurrentThreadId();
-		}
+  if (dwThreadId == 0)
+  {
+    dwThreadId = ::GetCurrentThreadId();
+  }
 
-		return TrueSetWindowsHookExA(idHook, lpfn, hmod, dwThreadId);
-	}
+  return TrueSetWindowsHookExA(idHook, lpfn, hmod, dwThreadId);
+}
 
-	DWORD WINAPI WrappedGetLogicalDrives()
-	{
-		auto result = TrueGetLogicalDrives();
-		std::bitset<sizeof(DWORD) * 8> bits(result);
+DWORD WINAPI WrappedGetLogicalDrives()
+{
+  auto result = TrueGetLogicalDrives();
+  std::bitset<sizeof(DWORD) * 8> bits(result);
 
-		int driveLetter = static_cast<int>('A');
+  int driveLetter = static_cast<int>('A');
 
-		for (auto i = 2; i < bits.size(); ++i)
-		{
-			if (bits[i] == false)
-			{
-				driveLetter += i;
-				bits[i] = true;
+  for (auto i = 2; i < bits.size(); ++i)
+  {
+    if (bits[i] == false)
+    {
+      driveLetter += i;
+      bits[i] = true;
 
-				if (VirtualDriveLetter.empty())
-				{
-					VirtualDriveLetter = static_cast<char>(driveLetter) + std::string(":\\");
-				}
-				break;
-			}
-		}
+      if (VirtualDriveLetter.empty())
+      {
+        VirtualDriveLetter = static_cast<char>(driveLetter) + std::string(":\\");
+      }
+      break;
+    }
+  }
 
 
-		return bits.to_ulong();
-	}
+  return bits.to_ulong();
+}
 
-	UINT WINAPI WrappedGetDriveTypeA(LPCSTR lpRootPathName)
-	{
-		if (lpRootPathName && VirtualDriveLetter == lpRootPathName)
-		{
-			return DRIVE_CDROM;
-		}
+UINT WINAPI WrappedGetDriveTypeA(LPCSTR lpRootPathName)
+{
+  if (lpRootPathName && VirtualDriveLetter == lpRootPathName)
+  {
+    return DRIVE_CDROM;
+  }
 
-		return TrueGetDriveTypeA(lpRootPathName);
-	}
+  return TrueGetDriveTypeA(lpRootPathName);
+}
 
-	BOOL WINAPI WrappedGetVolumeInformationA(
-		LPCSTR lpRootPathName,
-		LPSTR lpVolumeNameBuffer,
-		DWORD nVolumeNameSize,
-		LPDWORD lpVolumeSerialNumber,
-		LPDWORD lpMaximumComponentLength,
-		LPDWORD lpFileSystemFlags,
-		LPSTR lpFileSystemNameBuffer,
-		DWORD nFileSystemNameSize)
-	{
-		if (lpRootPathName && lpRootPathName == VirtualDriveLetter)
-		{
-			// To be referenced when disc swapping can be implemented
-			UNREFERENCED_PARAMETER(StarsiegeDisc1);
-			UNREFERENCED_PARAMETER(StarsiegeBetaDisc);
-			std::vector<char> data(nVolumeNameSize, '\0');
-			std::copy(StarsiegeDisc2.begin(), StarsiegeDisc2.end(), data.begin());
-			std::copy(data.begin(), data.end(), lpVolumeNameBuffer);
-			return TRUE;
-		}
+BOOL WINAPI WrappedGetVolumeInformationA(
+  LPCSTR lpRootPathName,
+  LPSTR lpVolumeNameBuffer,
+  DWORD nVolumeNameSize,
+  LPDWORD lpVolumeSerialNumber,
+  LPDWORD lpMaximumComponentLength,
+  LPDWORD lpFileSystemFlags,
+  LPSTR lpFileSystemNameBuffer,
+  DWORD nFileSystemNameSize)
+{
+  if (lpRootPathName && lpRootPathName == VirtualDriveLetter)
+  {
+    // To be referenced when disc swapping can be implemented
+    UNREFERENCED_PARAMETER(StarsiegeDisc1);
+    UNREFERENCED_PARAMETER(StarsiegeBetaDisc);
+    std::vector<char> data(nVolumeNameSize, '\0');
+    std::copy(StarsiegeDisc2.begin(), StarsiegeDisc2.end(), data.begin());
+    std::copy(data.begin(), data.end(), lpVolumeNameBuffer);
+    return TRUE;
+  }
 
-		return TrueGetVolumeInformationA(lpRootPathName,
-			lpVolumeNameBuffer,
-			nVolumeNameSize,
-			lpVolumeSerialNumber,
-			lpMaximumComponentLength,
-			lpFileSystemFlags,
-			lpFileSystemNameBuffer,
-			nFileSystemNameSize);
-	}
+  return TrueGetVolumeInformationA(lpRootPathName,
+    lpVolumeNameBuffer,
+    nVolumeNameSize,
+    lpVolumeSerialNumber,
+    lpMaximumComponentLength,
+    lpFileSystemFlags,
+    lpFileSystemNameBuffer,
+    nFileSystemNameSize);
+}
 
-	static std::array<std::pair<void**, void*>, 5> detour_functions{ {
-  { &(void*&)TrueSetWindowsHookExA, WrappedSetWindowsHookExA },
+static std::array<std::pair<void**, void*>, 5> detour_functions{ { { &(void*&)TrueSetWindowsHookExA, WrappedSetWindowsHookExA },
   { &(void*&)TrueGetLogicalDrives, WrappedGetLogicalDrives },
   { &(void*&)TrueGetDriveTypeA, WrappedGetDriveTypeA },
   { &(void*&)TrueGetVolumeInformationA, WrappedGetVolumeInformationA },
   { &(void*&)TrueAllocConsole, WrappedAllocConsole } } };
 
-	BOOL WINAPI DllMain(
-		HINSTANCE hinstDLL,
-		DWORD fdwReason,
-		LPVOID lpvReserved) noexcept
-	{
-		if constexpr (sizeof(void*) == sizeof(std::uint32_t))
-		{
-			if (DetourIsHelperProcess())
-			{
-				return TRUE;
-			}
+BOOL WINAPI DllMain(
+  HINSTANCE hinstDLL,
+  DWORD fdwReason,
+  LPVOID lpvReserved) noexcept
+{
+  if constexpr (sizeof(void*) != sizeof(std::uint32_t))
+  {
+    return TRUE;
+  }
 
-			if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
-			{
-				auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
+  if (DetourIsHelperProcess())
+  {
+    return TRUE;
+  }
 
-				auto value = app_module.GetProcAddress<std::uint32_t*>("DisableSiegeExtensionModule");
+  if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
+  {
+    auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
 
-				if (value && *value == -1)
-				{
-					return TRUE;
-				}
-			}
+    auto value = app_module.GetProcAddress<std::uint32_t*>("DisableSiegeExtensionModule");
 
-			if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
-			{
-				if (fdwReason == DLL_PROCESS_ATTACH)
-				{
-					int index = 0;
-					try
-					{
-						auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
+    if (value && *value == -1)
+    {
+      return TRUE;
+    }
+  }
 
-						std::unordered_set<std::string_view> functions;
-						std::unordered_set<std::string_view> variables;
+  if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
+  {
+    if (fdwReason == DLL_PROCESS_ATTACH)
+    {
+      int index = 0;
+      try
+      {
+        auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
 
-						bool module_is_valid = false;
+        std::unordered_set<std::string_view> functions;
+        std::unordered_set<std::string_view> variables;
 
-						for (const auto& item : verification_strings)
-						{
-							win32::module_ref temp((void*)item[0].second);
+        bool module_is_valid = false;
 
-							if (temp != app_module)
-							{
-								continue;
-							}
+        for (const auto& item : verification_strings)
+        {
+          win32::module_ref temp((void*)item[0].second);
 
-							module_is_valid = std::all_of(item.begin(), item.end(), [](const auto& str) {
-								return std::memcmp(str.first.data(), (void*)str.second, str.first.size()) == 0;
-								});
+          if (temp != app_module)
+          {
+            continue;
+          }
 
-
-							if (module_is_valid)
-							{
-								export_functions[index]();
-
-								std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 2);
+          module_is_valid = std::all_of(item.begin(), item.end(), [](const auto& str) {
+            return std::memcmp(str.first.data(), (void*)str.second, str.first.size()) == 0;
+          });
 
 
-								for (auto& pair : function_name_ranges)
-								{
-									auto first_index = string_section.find(pair.first.data(), 0, pair.first.size() + 1);
+          if (module_is_valid)
+          {
+            export_functions[index]();
 
-									if (first_index != std::string_view::npos)
-									{
-										auto second_index = string_section.find(pair.second.data(), first_index, pair.second.size() + 1);
-
-										if (second_index != std::string_view::npos)
-										{
-											auto second_ptr = string_section.data() + second_index;
-											auto end = second_ptr + std::strlen(second_ptr) + 1;
-
-											for (auto start = string_section.data() + first_index; start != end; start += std::strlen(start) + 1)
-											{
-												std::string_view temp(start);
-
-												if (temp.size() == 1)
-												{
-													continue;
-												}
-
-												if (!std::all_of(temp.begin(), temp.end(), [](auto c) { return std::isalnum(c) != 0; }))
-												{
-													break;
-												}
-
-												functions.emplace(temp);
-											}
-										}
-									}
-								}
-
-								break;
-							}
-							index++;
-						}
-
-						if (!module_is_valid)
-						{
-							return FALSE;
-						}
-
-						DetourRestoreAfterWith();
-
-						DetourTransactionBegin();
-						DetourUpdateThread(GetCurrentThread());
-
-						std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourAttach(func.first, func.second); });
-
-						DetourTransactionCommit();
-
-						auto self = win32::window_module_ref(hinstDLL);
-						self.RegisterClassExW(win32::static_window_meta_class<siege::extension::MessageHandler>{});
-
-						auto host = std::make_unique<siege::extension::DarkstarScriptDispatch>(std::move(functions), std::move(variables), [](std::string_view eval_string) -> std::string_view {
-							std::array<const char*, 2> args{ "eval", eval_string.data() };
-
-							// Luckily this function is static and doesn't need the console instance object nor
-							// an ID to identify the callback. It doesn't even check for "eval" and skips straight to the second argument.
-							auto result = ConsoleEval(nullptr, 0, 2, args.data());
-
-							if (result == nullptr)
-							{
-								return "";
-							}
+            std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 2);
 
 
-							return result;
-							});
+            for (auto& pair : function_name_ranges)
+            {
+              auto first_index = string_section.find(pair.first.data(), 0, pair.first.size() + 1);
 
-						// TODO register multiple script hosts
-						// using the following convention:
-						// siege::extension::starsiege::ScriptHost (first instance)
-						// siege::extension::starsiege::ScriptHost.1 (alternative name for first instance)
-						// siege::extension::starsiege::ScriptHost[0] (alternative name for first instance)
-						// siege::extension::starsiege::ScriptHost.2 (second instance)
-						// siege::extension::starsiege::ScriptHost[1] (second instance)
-						if (auto message = self.CreateWindowExW(CREATESTRUCTW{
-							.lpCreateParams = host.release(),
-							.hwndParent = HWND_MESSAGE,
-							.style = WS_CHILD,
-							.lpszName = L"siege::extension::starsiege::ScriptHost",
-							.lpszClass = win32::type_name<siege::extension::MessageHandler>().c_str()
-							}); message)
-						{
-						}
-					}
-					catch (...)
-					{
-						return FALSE;
-					}
-				}
-				else if (fdwReason == DLL_PROCESS_DETACH)
-				{
-					DetourTransactionBegin();
-					DetourUpdateThread(GetCurrentThread());
+              if (first_index != std::string_view::npos)
+              {
+                auto second_index = string_section.find(pair.second.data(), first_index, pair.second.size() + 1);
 
-					std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourDetach(func.first, func.second); });
-					DetourTransactionCommit();
+                if (second_index != std::string_view::npos)
+                {
+                  auto second_ptr = string_section.data() + second_index;
+                  auto end = second_ptr + std::strlen(second_ptr) + 1;
 
-					auto window = ::FindWindowExW(HWND_MESSAGE, nullptr, win32::type_name<siege::extension::MessageHandler>().c_str(), L"siege::extension::starsiege::ScriptHost");
-					::DestroyWindow(window);
-					auto self = win32::window_module(hinstDLL);
+                  for (auto start = string_section.data() + first_index; start != end; start += std::strlen(start) + 1)
+                  {
+                    std::string_view temp(start);
 
-					self.UnregisterClassW<siege::extension::MessageHandler>();
-				}
-			}
-		}
+                    if (temp.size() == 1)
+                    {
+                      continue;
+                    }
 
-		return TRUE;
-	}
+                    if (!std::all_of(temp.begin(), temp.end(), [](auto c) { return std::isalnum(c) != 0; }))
+                    {
+                      break;
+                    }
+
+                    functions.emplace(temp);
+                  }
+                }
+              }
+            }
+
+            break;
+          }
+          index++;
+        }
+
+        if (!module_is_valid)
+        {
+          return FALSE;
+        }
+
+        DetourRestoreAfterWith();
+
+        DetourTransactionBegin();
+        DetourUpdateThread(GetCurrentThread());
+
+        std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourAttach(func.first, func.second); });
+
+        DetourTransactionCommit();
+
+        auto self = win32::window_module_ref(hinstDLL);
+        self.RegisterClassExW(win32::static_window_meta_class<siege::extension::MessageHandler>{});
+
+        auto host = std::make_unique<siege::extension::DarkstarScriptDispatch>(std::move(functions), std::move(variables), [](std::string_view eval_string) -> std::string_view {
+          std::array<const char*, 2> args{ "eval", eval_string.data() };
+
+          // Luckily this function is static and doesn't need the console instance object nor
+          // an ID to identify the callback. It doesn't even check for "eval" and skips straight to the second argument.
+          auto result = ConsoleEval(nullptr, 0, 2, args.data());
+
+          if (result == nullptr)
+          {
+            return "";
+          }
+
+
+          return result;
+        });
+
+        // TODO register multiple script hosts
+        // using the following convention:
+        // siege::extension::starsiege::ScriptHost (first instance)
+        // siege::extension::starsiege::ScriptHost.1 (alternative name for first instance)
+        // siege::extension::starsiege::ScriptHost[0] (alternative name for first instance)
+        // siege::extension::starsiege::ScriptHost.2 (second instance)
+        // siege::extension::starsiege::ScriptHost[1] (second instance)
+        if (auto message = self.CreateWindowExW(CREATESTRUCTW{
+              .lpCreateParams = host.release(),
+              .hwndParent = HWND_MESSAGE,
+              .style = WS_CHILD,
+              .lpszName = L"siege::extension::starsiege::ScriptHost",
+              .lpszClass = win32::type_name<siege::extension::MessageHandler>().c_str() });
+            message)
+        {
+        }
+      }
+      catch (...)
+      {
+        return FALSE;
+      }
+    }
+    else if (fdwReason == DLL_PROCESS_DETACH)
+    {
+      DetourTransactionBegin();
+      DetourUpdateThread(GetCurrentThread());
+
+      std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourDetach(func.first, func.second); });
+      DetourTransactionCommit();
+
+      auto window = ::FindWindowExW(HWND_MESSAGE, nullptr, win32::type_name<siege::extension::MessageHandler>().c_str(), L"siege::extension::starsiege::ScriptHost");
+      ::DestroyWindow(window);
+      auto self = win32::window_module(hinstDLL);
+
+      self.UnregisterClassW<siege::extension::MessageHandler>();
+    }
+  }
+
+  return TRUE;
 }
-
-
+}
