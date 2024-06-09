@@ -38,7 +38,7 @@ if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/siege-launcher)
     add_dependencies(siege-launcher-dependencies siege-studio-dependencies)
 
     if (WIN32)
-        add_dependencies(siege-launcher-dependencies siege-configuration siege-extension-sof siege-extension-starsiege siege-extension-tribes)
+        add_dependencies(siege-launcher-dependencies siege-configuration siege-extension-soldier-of-fortune siege-extension-starsiege siege-extension-tribes)
     endif()
 
     add_dependencies(siege-launcher siege-launcher-dependencies)
@@ -53,6 +53,6 @@ if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/siege-launcher)
         add_custom_command(TARGET siege-launcher-dependencies POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-extension-starsiege> $<TARGET_FILE_DIR:siege-launcher>
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-extension-tribes> $<TARGET_FILE_DIR:siege-launcher>
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-extension-sof> $<TARGET_FILE_DIR:siege-launcher>)
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-extension-soldier-of-fortune> $<TARGET_FILE_DIR:siege-launcher>)
     endif()
 endif()

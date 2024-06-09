@@ -1,0 +1,5 @@
+EXPORTS
+	DetourFinishHelperProcess @1
+	LaunchGameWithExtension
+	GetGameScriptHost
+	ExecutableIsSupported
