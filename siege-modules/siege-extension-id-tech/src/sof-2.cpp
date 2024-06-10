@@ -25,11 +25,9 @@ constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1>
   { "cmdlist"sv, std::size_t(0x2012049c) },
   { "cl_minfps"sv, std::size_t(0x2011e600) } } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{{ 
-    { "-klook"sv, "centerview"sv },
-    { "joy_advancedupdate"sv, "+mlook"sv },
-    { "rejected_violence"sv, "print"sv } 
- }};
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{ { { "-klook"sv, "centerview"sv },
+  { "joy_advancedupdate"sv, "+mlook"sv },
+  { "echo"sv, "echo"sv } } };
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "joy_yawsensitivity"sv, "in_mouse"sv } } };
 
@@ -138,7 +136,7 @@ BOOL WINAPI DllMain(
               .lpCreateParams = host.release(),
               .hwndParent = HWND_MESSAGE,
               .style = WS_CHILD,
-              .lpszName = L"siege::extension::SoldierOfFortune::ScriptHost",
+              .lpszName = L"siege::extension::soldierOfFortune::ScriptHost",
               .lpszClass = win32::type_name<siege::extension::MessageHandler>().c_str() });
             message)
         {

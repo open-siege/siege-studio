@@ -1,8 +1,9 @@
-#ifndef DARKSTAR_SCRIPT_DISPATCH_HPP
-#define DARKSTAR_SCRIPT_DISPATCH_HPP
+#ifndef GET_GAME_FUNCTION_NAMES_HPP
+#define GET_GAME_FUNCTION_NAMES_HPP
 
 #include <string_view>
 #include <unordered_set>
+#include <fstream>
 
 namespace siege::extension
 {
@@ -13,11 +14,10 @@ namespace siege::extension
     for (auto& pair : function_name_ranges)
     {
       auto first_index = string_section.find(pair.first.data(), 0, pair.first.size() + 1);
-
       if (first_index != std::string_view::npos)
       {
         auto second_index = string_section.find(pair.second.data(), first_index, pair.second.size() + 1);
-
+        
         if (second_index != std::string_view::npos)
         {
           auto second_ptr = string_section.data() + second_index;
@@ -27,14 +27,14 @@ namespace siege::extension
           {
             std::string_view temp(start);
 
-            if (temp.size() == 1)
+            if (temp.empty() || temp.size() == 1)
             {
               continue;
             }
 
             if (!std::all_of(temp.begin(), temp.end(), [](auto c) { return c == '+' || c == '-' || std::isalnum(c) != 0; }))
             {
-              break;
+              continue;
             }
 
             functions.emplace(temp);
@@ -42,8 +42,9 @@ namespace siege::extension
         }
       }
 
-      return functions;
     }
+
+    return functions;
   }
 }// namespace siege::extension
 

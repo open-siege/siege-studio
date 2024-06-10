@@ -22,24 +22,26 @@ static void(__cdecl* ConsoleEval)(const char*) = nullptr;
 using namespace std::literals;
 
 constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
-  { "cmdlist"sv, std::size_t(0x2012049c) },
-  { "cl_minfps"sv, std::size_t(0x2011e600) } } } } };
+  { "cmdlist"sv, std::size_t(0x45189c) },
+  { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{{ 
-    { "-klook"sv, "centerview"sv },
-    { "joy_advancedupdate"sv, "+mlook"sv },
-    { "rejected_violence"sv, "print"sv } 
- }};
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{};
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "joy_yawsensitivity"sv, "in_mouse"sv } } };
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{};
 
-inline void set_gog_exports()
+inline void set_gog_sp_exports()
 {
-  ConsoleEval = (decltype(ConsoleEval))0x200194f0;
+  ConsoleEval = (decltype(ConsoleEval))0x414520;
 }
 
-constexpr std::array<void (*)(), 5> export_functions = { {
-  set_gog_exports,
+inline void set_gog_mp_exports()
+{
+  ConsoleEval = (decltype(ConsoleEval))0x4283d0;
+}
+
+constexpr std::array<void (*)(), 2> export_functions = { {
+  set_gog_sp_exports,
+  set_gog_mp_exports,
 } };
 
 HRESULT __stdcall ExecutableIsSupported(_In_ const wchar_t* filename) noexcept
@@ -138,7 +140,7 @@ BOOL WINAPI DllMain(
               .lpCreateParams = host.release(),
               .hwndParent = HWND_MESSAGE,
               .style = WS_CHILD,
-              .lpszName = L"siege::extension::SoldierOfFortune::ScriptHost",
+              .lpszName = L"siege::extension::Anachronox::ScriptHost",
               .lpszClass = win32::type_name<siege::extension::MessageHandler>().c_str() });
             message)
         {
