@@ -12,6 +12,7 @@
 #include <siege/platform/win/desktop/window_impl.hpp>
 #include <detours.h>
 #include "ExecutableIsSupported.hpp"
+#include "GetGameFunctionNames.hpp"
 #include "IdTechScriptDispatch.hpp"
 #include "MessageHandler.hpp"
 
@@ -105,39 +106,7 @@ BOOL WINAPI DllMain(
 
             std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 2);
 
-
-            for (auto& pair : function_name_ranges)
-            {
-              auto first_index = string_section.find(pair.first.data(), 0, pair.first.size() + 1);
-
-              if (first_index != std::string_view::npos)
-              {
-                auto second_index = string_section.find(pair.second.data(), first_index, pair.second.size() + 1);
-
-                if (second_index != std::string_view::npos)
-                {
-                  auto second_ptr = string_section.data() + second_index;
-                  auto end = second_ptr + std::strlen(second_ptr) + 1;
-
-                  for (auto start = string_section.data() + first_index; start != end; start += std::strlen(start) + 1)
-                  {
-                    std::string_view temp(start);
-
-                    if (temp.size() == 1)
-                    {
-                      continue;
-                    }
-
-                    if (!std::all_of(temp.begin(), temp.end(), [](auto c) { return c == '+' || c == '-' || std::isalnum(c) != 0; }))
-                    {
-                      break;
-                    }
-
-                    functions.emplace(temp);
-                  }
-                }
-              }
-            }
+            functions = siege::extension::GetGameFunctionNames(string_section, function_name_ranges);
 
             break;
           }
