@@ -21,20 +21,24 @@ static void(__cdecl* ConsoleEval)(const char*) = nullptr;
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x451894) },
   { "cmdlist"sv, std::size_t(0x45189c) },
   { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{};
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 4> function_name_ranges{ { 
+  { "-klook"sv, "centerview"sv },
+  { "+mlook"sv, "-mlook"sv },
+  { "wait"sv, "cmdlist"sv },
+  { "echo"sv, "print"sv } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{};
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "in_mouse"sv, "in_joystick"sv } } };
 
 inline void set_gog_exports()
 {
   ConsoleEval = (decltype(ConsoleEval))0x41db30;
 }
 
-constexpr std::array<void (*)(), 5> export_functions = { {
+constexpr std::array<void (*)(), 1> export_functions = { {
   set_gog_exports,
 } };
 
@@ -102,7 +106,7 @@ BOOL WINAPI DllMain(
           {
             export_functions[index]();
 
-            std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 2);
+            std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 4);
 
             functions = siege::extension::GetGameFunctionNames(string_section, function_name_ranges);
 
@@ -134,7 +138,7 @@ BOOL WINAPI DllMain(
               .lpCreateParams = host.release(),
               .hwndParent = HWND_MESSAGE,
               .style = WS_CHILD,
-              .lpszName = L"siege::extension::Anachronox::ScriptHost",
+              .lpszName = L"siege::extension::Kingpin::ScriptHost",
               .lpszClass = win32::type_name<siege::extension::MessageHandler>().c_str() });
             message)
         {
@@ -147,7 +151,6 @@ BOOL WINAPI DllMain(
           {
             if (code == HC_ACTION)
             {
-              win32::com::init_com(COINIT_APARTMENTTHREADED);
               UnhookWindowsHookEx(hook);
             }
 

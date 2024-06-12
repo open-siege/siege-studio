@@ -21,12 +21,14 @@ static void(__cdecl* ConsoleEval)(const char*) = nullptr;
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = {{ std::array<std::pair<std::string_view, std::size_t>, 3>{ 
+    { { "exec"sv, std::size_t(0x461274) },
   { "cmdlist"sv, std::size_t(0x46126c) },
   { "cl_minfps"sv, std::size_t(0x45e6c0) } } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{ { { "+moveup"sv, "-actionb"sv },
-  { "joy_advancedupdate"sv, "+mlook"sv },
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{ { 
+  { "+moveup"sv, "-actionb"sv },
+  { "+mlook"sv, "-mlook"sv },
   { "echo"sv, "echo"sv } } };
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "in_initmouse"sv, "in_joystick"sv } } };
@@ -36,7 +38,7 @@ inline void set_gog_exports()
   ConsoleEval = (decltype(ConsoleEval))0x4356da;
 }
 
-constexpr std::array<void (*)(), 5> export_functions = { {
+constexpr std::array<void (*)(), 1> export_functions = { {
   set_gog_exports,
 } };
 
@@ -104,7 +106,7 @@ BOOL WINAPI DllMain(
           {
             export_functions[index]();
 
-            std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 2);
+            std::string_view string_section((const char*)ConsoleEval, 1024 * 1024);
 
             functions = siege::extension::GetGameFunctionNames(string_section, function_name_ranges);
 
@@ -115,7 +117,7 @@ BOOL WINAPI DllMain(
 
         if (!module_is_valid)
         {
-          return FALSE;
+            return FALSE;
         }
 
         DetourRestoreAfterWith();
