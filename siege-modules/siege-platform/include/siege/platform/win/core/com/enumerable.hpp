@@ -37,14 +37,16 @@ namespace win32::com
     TEnumeratorContainer enumerator;
     std::size_t position = 0;
     TValue temp;
+    bool end = false;
 
     EnumeratorIterator(TEnumeratorContainer container, std::size_t position = 0) : enumerator(std::move(container)), position(position), temp{}
     {
       if (!this->enumerator)
       {
-          return;
+        end = true;
+        return;
       }
-      this->enumerator->Next(1, &temp, nullptr);
+      end = this->enumerator->Next(1, &temp, nullptr) != S_OK;
     }
 
     EnumeratorIterator(const EnumeratorIterator& other) : enumerator(nullptr, [](TEnumerator* self) {
@@ -67,9 +69,9 @@ namespace win32::com
 
     EnumeratorIterator& operator++()
     {
-      if (!enumerator)
+      if (end)
       {
-        return *this;
+          return *this;
       }
 
       enumerator->Next(1, &temp, nullptr);
@@ -87,11 +89,13 @@ namespace win32::com
 
     TValue& operator*()
     {
+      assert(!end);
       return temp;
     }
 
     TValue* operator->()
     {
+      assert(!end);
       return &temp;
     }
 
@@ -293,23 +297,13 @@ namespace win32::com
 
     RangeEnumerator(IUnknown* owner, TIter begin, TIter current, TIter end) : owner(owner),
                                                                               begin(begin),
-                                                                              current(current),
-                                                                              end(end)
+                                                             current(current),
+                                                             end(end)
     {
-    }
-
-    void SetParent(IUnknown* owner)
-    {
-      this->owner = owner;
     }
 
     HRESULT __stdcall QueryInterface(const GUID& riid, void** ppvObj) noexcept override
     {
-      if (owner)
-      {
-        return owner->QueryInterface(riid, ppvObj);
-      }
-
       return ComQuery<IUnknown, EnumType>(*this, riid, ppvObj)
         .or_else([&]() { return ComQuery<EnumType>(*this, riid, ppvObj); })
         .value_or(E_NOINTERFACE);
@@ -317,21 +311,11 @@ namespace win32::com
 
     [[maybe_unused]] ULONG __stdcall AddRef() noexcept override
     {
-      if (owner)
-      {
-        return refCount = owner->AddRef();
-      }
-
       return ComObject::AddRef();
     }
 
     [[maybe_unused]] ULONG __stdcall Release() noexcept override
     {
-      if (owner)
-      {
-        return refCount = owner->Release();
-      }
-
       return ComObject::Release();
     }
 
@@ -476,7 +460,6 @@ namespace win32::com
 
     VariantEnumeratorAdapter(std::unique_ptr<TEnum, void (*)(TEnum*)> enumerator) : enumerator(std::move(enumerator))
     {
-      this->enumerator->SetParent(static_cast<IEnumVARIANT*>(this));
     }
 
     HRESULT __stdcall QueryInterface(const GUID& riid, void** ppvObj) noexcept override
@@ -494,12 +477,7 @@ namespace win32::com
 
     [[maybe_unused]] ULONG __stdcall Release() noexcept override
     {
-      auto result = ComObject::Release();
-
-      if (result == 0)
-          {
-      }
-      return result;
+      return ComObject::Release();
     }
 
     HRESULT __stdcall Clone(IEnumVARIANT** other) noexcept

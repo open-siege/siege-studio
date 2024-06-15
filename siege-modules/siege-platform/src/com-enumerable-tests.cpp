@@ -186,3 +186,77 @@ TEST_CASE("When RangeEnumerator<com_ptr<IConnectionPoint>>.QueryInterface has IE
 
   REQUIRE(test->QueryInterface(IID_IEnumVARIANT, temp.put_void()) == E_NOINTERFACE);
 }
+
+TEST_CASE("Integration test of RangeEnumerator<wstring>")
+{
+    using namespace std::literals;
+  std::array<std::wstring, 4> storage{
+    L"Hello",
+    L"World",
+    L"String",
+    L"Test"
+  };
+  auto test = win32::com::make_unique_range_enumerator<std::wstring>(storage.begin(), storage.begin(), storage.end());
+
+  std::vector<wchar_t*> results(4, nullptr);
+
+  ULONG fetched = 0;
+  auto hresult = test->Next(1, results.data(), &fetched);
+  REQUIRE(hresult == S_OK);
+  REQUIRE(fetched == 1);
+  REQUIRE(results[0] == L"Hello"sv);
+  REQUIRE(results[1] == nullptr);
+
+
+  hresult = test->Skip(1);
+  REQUIRE(hresult == S_OK);
+  REQUIRE(results[0] == L"Hello"sv);
+  REQUIRE(results[1] == nullptr);
+ 
+  hresult = test->Next(2, results.data() + 2, &fetched);
+  REQUIRE(hresult == S_OK);
+  REQUIRE(fetched == 2);
+  REQUIRE(results[0] == L"Hello"sv);
+  REQUIRE(results[1] == nullptr);
+  REQUIRE(results[2] == L"String"sv);
+  REQUIRE(results[3] == L"Test"sv);
+
+  hresult = test->Next(4, results.data(), &fetched);
+  REQUIRE(hresult == S_FALSE);
+  REQUIRE(fetched == 0);
+  REQUIRE(results[0] == L"Hello"sv);
+  REQUIRE(results[1] == nullptr);
+  REQUIRE(results[2] == L"String"sv);
+  REQUIRE(results[3] == L"Test"sv);
+
+  hresult = test->Skip(1);
+  REQUIRE(hresult == S_FALSE);
+  
+  for (auto* item : results)
+  {
+    ::CoTaskMemFree(item);
+  }
+
+  hresult = test->Reset();
+  REQUIRE(hresult == S_OK);
+
+  hresult = test->Next(4, results.data(), &fetched);
+  REQUIRE(hresult == S_OK);
+  REQUIRE(fetched == 4);
+  REQUIRE(results[0] == L"Hello"sv);
+  REQUIRE(results[1] == L"World"sv);
+  REQUIRE(results[2] == L"String"sv);
+  REQUIRE(results[3] == L"Test"sv);
+  REQUIRE(results[0] != storage[0].data());
+  REQUIRE(results[1] != storage[1].data());
+  REQUIRE(results[2] != storage[2].data());
+  REQUIRE(results[3] != storage[3].data());
+ 
+  for (auto* item : results)
+  {
+    ::CoTaskMemFree(item);
+  }
+
+  REQUIRE(test->Release() == 0);
+ // test.release();
+}

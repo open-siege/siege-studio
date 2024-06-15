@@ -17,7 +17,6 @@ namespace win32::com
                 self->Release();
             }
         }
-    
     };
 
     template<typename TUnknown>

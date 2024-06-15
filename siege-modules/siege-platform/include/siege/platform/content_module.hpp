@@ -66,6 +66,7 @@ namespace siege
 				{
 					try
 					{
+						OutputDebugStringW(dir_entry.path().c_str());
 						loaded_modules.emplace_back(dir_entry.path());
 					}
 					catch (...)

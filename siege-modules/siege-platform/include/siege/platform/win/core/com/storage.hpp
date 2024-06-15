@@ -39,6 +39,11 @@ namespace win32::com
 			return E_NOTIMPL;			
 		}
 
+		HRESULT __stdcall CreateStorage(const OLECHAR* name, DWORD mode, DWORD, DWORD, IStorage**) override
+		{
+			return E_NOTIMPL;
+		}
+
 		HRESULT __stdcall OpenStorage(const OLECHAR*, IStorage*, DWORD, SNB, DWORD, IStorage**) override
 		{
 			return E_NOTIMPL;
