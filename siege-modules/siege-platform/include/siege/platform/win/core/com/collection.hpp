@@ -56,26 +56,6 @@ namespace win32::com
 
             return returnValue;
         }
-
-        template<typename IEnum = IEnumVARIANT>
-        auto end()
-        {
-            auto count = Count();
-
-            if (count)
-            {
-                auto newEnum = NewEnum<IEnum>();
-
-                if (!newEnum)
-                {
-                  return IEnumerable::end<IEnum>();
-                }
-                return EnumeratorIterator<Variant, IEnum, typename decltype(newEnum)::value_type>(std::move(*newEnum), *count);
-            }
-
-            return IEnumerable::end<IEnum>();
-            
-        }
     };
 
     struct __declspec(uuid("00020400-0000-0000-C000-000000000046")) ICollection : IReadOnlyCollection
@@ -309,8 +289,10 @@ namespace win32::com
             auto item = std::make_unique<VariantEnumeratorAdapter<decltype(enumerator)::element_type>>(std::move(enumerator));
 
             Variant result;
+            item->AddRef();
             result.vt = VT_UNKNOWN;
             result.punkVal = static_cast<IEnumVARIANT*>(item.release());
+           
 
             return result;
         }

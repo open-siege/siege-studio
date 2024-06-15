@@ -457,7 +457,7 @@ namespace siege::views
 
 					for (auto& extension : extensions)
 					{
-						temp.emplace_back(L"", L"*" + extension.first);
+						temp.emplace_back(extension.first, L"*" + extension.first);
 					}
 
 					std::vector<COMDLG_FILTERSPEC> filetypes(temp.begin(), temp.end());

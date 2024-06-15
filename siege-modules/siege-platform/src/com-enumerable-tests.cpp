@@ -258,5 +258,4 @@ TEST_CASE("Integration test of RangeEnumerator<wstring>")
   }
 
   REQUIRE(test->Release() == 0);
- // test.release();
 }

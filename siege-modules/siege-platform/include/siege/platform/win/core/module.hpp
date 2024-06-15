@@ -27,12 +27,12 @@ namespace win32
 		}
 
 		template<typename TChar = wchar_t>
-		std::basic_string<TChar> GetModuleFileName()
+		std::basic_string<TChar> GetModuleFileName() const
 		{
 			if constexpr (sizeof(TChar) == sizeof(char16_t))
 			{
 				std::basic_string<TChar> result(256, '\0');
-                ::GetModuleFileNameW(*this, reinterpret_cast<wchar_t*>(result.data()), result.size());
+                ::GetModuleFileNameW(this->get(), reinterpret_cast<wchar_t*>(result.data()), result.size());
                 
 				result.erase(result.find(TChar('\0')));
 				return result;
@@ -40,7 +40,7 @@ namespace win32
 			else if constexpr (sizeof(TChar) == sizeof(char8_t))
 			{
                 std::basic_string<TChar> result(256, '\0');
-                ::GetModuleFileNameA(*this, reinterpret_cast<char*>(result.data()), result.size());
+                ::GetModuleFileNameA(this->get(), reinterpret_cast<char*>(result.data()), result.size());
 
 				result.erase(result.find(TChar('\0')));
                 return result;

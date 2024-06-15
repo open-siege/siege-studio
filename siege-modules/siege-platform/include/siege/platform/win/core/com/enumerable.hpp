@@ -14,101 +14,6 @@
 
 namespace win32::com
 {
-  inline void CopyMember(const VARIANT& value, VARIANT& other)
-  {
-    other = value;
-  }
-
-  inline void CopyMember(IUnknown* value, IUnknown*& other)
-  {
-    if (!value)
-    {
-      other = nullptr;
-      return;
-    }
-
-    value->AddRef();
-    other = value;
-  }
-
-  template<typename TValue, typename TEnumerator, typename TEnumeratorContainer = std::unique_ptr<TEnumerator, void (*)(TEnumerator*)>>
-  struct EnumeratorIterator
-  {
-    TEnumeratorContainer enumerator;
-    std::size_t position = 0;
-    TValue temp;
-    bool end = false;
-
-    EnumeratorIterator(TEnumeratorContainer container, std::size_t position = 0) : enumerator(std::move(container)), position(position), temp{}
-    {
-      if (!this->enumerator)
-      {
-        end = true;
-        return;
-      }
-      end = this->enumerator->Next(1, &temp, nullptr) != S_OK;
-    }
-
-    EnumeratorIterator(const EnumeratorIterator& other) : enumerator(nullptr, [](TEnumerator* self) {
-                                                            if (self)
-                                                            {
-                                                              self->Release();
-                                                            }
-                                                          }),
-                                                          position{ other.position }, temp{}
-    {
-      IEnumVARIANT* temp;
-
-      if (other.enumerator && other.enumerator->Clone(&temp) == S_OK)
-      {
-        enumerator.reset(temp);
-      }
-
-      CopyMember(other.temp, temp);
-    }
-
-    EnumeratorIterator& operator++()
-    {
-      if (end)
-      {
-          return *this;
-      }
-
-      enumerator->Next(1, &temp, nullptr);
-
-      position++;
-      return *this;
-    }
-
-    EnumeratorIterator operator++(int)
-    {
-      EnumeratorIterator old = *this;
-      operator++();
-      return old;
-    }
-
-    TValue& operator*()
-    {
-      assert(!end);
-      return temp;
-    }
-
-    TValue* operator->()
-    {
-      assert(!end);
-      return &temp;
-    }
-
-    friend inline bool operator<(const EnumeratorIterator& lhs, const EnumeratorIterator& rhs) { return lhs.position < rhs.position; }
-    friend inline bool operator==(const EnumeratorIterator& lhs, const EnumeratorIterator& rhs) { return lhs.position == rhs.position; }
-
-    friend inline bool operator>(const EnumeratorIterator& lhs, const EnumeratorIterator& rhs) { return rhs < lhs; }
-    friend inline bool operator<=(const EnumeratorIterator& lhs, const EnumeratorIterator& rhs) { return !(lhs > rhs); }
-    friend inline bool operator>=(const EnumeratorIterator& lhs, const EnumeratorIterator& rhs) { return !(lhs < rhs); }
-
-    friend inline bool operator!=(const EnumeratorIterator& lhs, const EnumeratorIterator& rhs) { return !(lhs == rhs); }
-  };
-
   struct __declspec(uuid("00020400-0000-0000-C000-000000000046")) IEnumerable : IDispatch
   {
     std::expected<DISPID, HRESULT> GetDispId(std::wstring& value)
@@ -128,7 +33,7 @@ namespace win32::com
     }
 
     template<typename IEnum = IEnumVARIANT>
-    std::expected<win32::com::com_ptr<IEnumVARIANT>, HRESULT> NewEnum() noexcept
+    std::expected<win32::com::com_ptr<IEnum>, HRESULT> NewEnum() noexcept
     {
       DISPPARAMS dp = { nullptr, nullptr, 0, 0 };
       Variant result;
@@ -144,38 +49,11 @@ namespace win32::com
         {
           return std::unexpected(hresult);
         }
-
+        result.punkVal->Release();
         return temp;
       }
 
       return std::unexpected(hresult);
-    }
-
-    template<typename IEnum = IEnumVARIANT>
-    auto begin()
-    {
-      auto newEnum = NewEnum<IEnum>();
-
-      return EnumeratorIterator<Variant, IEnum, typename decltype(newEnum)::value_type>(std::move(*newEnum));
-    }
-
-    template<typename IEnum = IEnumVARIANT>
-    auto end()
-    {
-      auto newEnum = NewEnum<IEnum>();
-      constexpr static auto max = std::numeric_limits<ULONG>::max();
-
-      ULONG count = 0u;
-
-      for (count = 0u; count < max; ++count)
-      {
-        if ((*newEnum)->Skip(1) == S_FALSE)
-        {
-          break;
-        }
-      }
-
-      return EnumeratorIterator<Variant, IEnum, typename decltype(newEnum)::value_type>(std::move(*newEnum), count);
     }
   };
 
@@ -302,8 +180,18 @@ namespace win32::com
     {
     }
 
+    void SetOwner(IUnknown* owner)
+    {
+      this->owner = owner;
+    }
+
     HRESULT __stdcall QueryInterface(const GUID& riid, void** ppvObj) noexcept override
     {
+      if (owner)
+      {
+        return owner->QueryInterface(riid, ppvObj);
+      }
+
       return ComQuery<IUnknown, EnumType>(*this, riid, ppvObj)
         .or_else([&]() { return ComQuery<EnumType>(*this, riid, ppvObj); })
         .value_or(E_NOINTERFACE);
@@ -311,11 +199,28 @@ namespace win32::com
 
     [[maybe_unused]] ULONG __stdcall AddRef() noexcept override
     {
+      if (owner)
+      {
+          return this->refCount = owner->AddRef();
+      }
+
       return ComObject::AddRef();
     }
 
     [[maybe_unused]] ULONG __stdcall Release() noexcept override
     {
+      if (owner)
+      {
+        auto ref = owner->Release();
+
+        if (ref > 0)
+        {
+          this->refCount = ref;
+        }
+
+        return ref;
+      }
+    
       return ComObject::Release();
     }
 
@@ -460,6 +365,7 @@ namespace win32::com
 
     VariantEnumeratorAdapter(std::unique_ptr<TEnum, void (*)(TEnum*)> enumerator) : enumerator(std::move(enumerator))
     {
+      this->enumerator->SetOwner(static_cast<IEnumVARIANT*>(this));
     }
 
     HRESULT __stdcall QueryInterface(const GUID& riid, void** ppvObj) noexcept override
