@@ -19,12 +19,13 @@ namespace siege::resource
         vol::three_space::rmf_resource_reader::is_supported(stream) || 
         vol::three_space::vol_resource_reader::is_supported(stream) || 
         vol::trophy_bass::rbx_resource_reader::is_supported(stream) || 
-        vol::trophy_bass::tbv_resource_reader::is_supported(stream) || 
-        cln::cln_resource_reader::is_supported(stream) || 
-        atd::atd_resource_reader::is_supported(stream) || 
-        zip::zip_resource_reader::is_supported(stream) || 
-        cab::cab_resource_reader::is_supported(stream) || 
-        iso::iso_resource_reader::is_supported(stream);
+        vol::trophy_bass::tbv_resource_reader::is_supported(stream); 
+        // TODO make the check for cyclone resources stronger
+//        cln::cln_resource_reader::is_supported(stream) || 
+    //    atd::atd_resource_reader::is_supported(stream) || 
+    //    zip::zip_resource_reader::is_supported(stream) || 
+    //    cab::cab_resource_reader::is_supported(stream) || 
+    //    iso::iso_resource_reader::is_supported(stream);
   }
   std::unique_ptr<siege::platform::resource_reader> make_resource_reader(std::istream& stream)
   {
@@ -49,10 +50,11 @@ namespace siege::resource
     {
       resource.reset(new vol::trophy_bass::rbx_resource_reader());
     }
-    else if (cln::cln_resource_reader::is_supported(stream))
-    {
-      resource.reset(new cln::cln_resource_reader());
-    }
+    // TODO make the check for cyclone resources stronger
+ //   else if (cln::cln_resource_reader::is_supported(stream))
+  //  {
+ //     resource.reset(new cln::cln_resource_reader());
+  //  }
     else if (atd::atd_resource_reader::is_supported(stream))
     {
       resource.reset(new atd::atd_resource_reader());

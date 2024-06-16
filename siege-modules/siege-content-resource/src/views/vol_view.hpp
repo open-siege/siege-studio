@@ -39,7 +39,7 @@ namespace siege::views
 		win32::tool_bar table_settings;
 		win32::list_view table;
 
-		std::list<content_module> modules;
+		std::list<platform::content_module> modules;
 
 		std::set<std::wstring> all_categories;
 		std::map<std::wstring_view, std::set<std::wstring>> category_extensions;
@@ -55,7 +55,7 @@ namespace siege::views
 		auto on_create(const win32::create_message& data)
 		{
 			auto app_path = std::filesystem::path(win32::module_ref().current_application().GetModuleFileName());
-			modules = content_module::load_modules(app_path.parent_path());
+			modules = platform::content_module::load_modules(app_path.parent_path());
 
 			for (const auto& module : modules)
 			{

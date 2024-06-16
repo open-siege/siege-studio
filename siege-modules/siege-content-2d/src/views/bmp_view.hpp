@@ -5,6 +5,8 @@
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include <siege/platform/win/core/com/collection.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
+#include <siege/platform/win/desktop/shell.hpp>
+#include <siege/platform/storage_module.hpp>
 #include <cassert>
 #include <sstream>
 #include <vector>
@@ -13,6 +15,7 @@
 #include <spanstream>
 #include <oleacc.h>
 #include "bmp_controller.hpp"
+#include "pal_controller.hpp"
 
 namespace siege::views
 {
@@ -33,28 +36,33 @@ namespace siege::views
 
 		win32::gdi_bitmap current_bitmap;
 
+		std::list<platform::storage_module> loaded_modules;
+
 		bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
 		{
 		}
 
 		auto on_create(const win32::create_message& info)
 		{
-			auto this_module = win32::window_factory(ref());
+            std::filesystem::path app_path = std::filesystem::path(win32::module_ref::current_application().GetModuleFileName()).parent_path();
+            loaded_modules = platform::storage_module::load_modules(std::filesystem::path(app_path));
+
+			auto factory = win32::window_factory(ref());
 
 			std::wstring temp = L"menu.pal";
 
-			frame_selector = *this_module.CreateWindowExW(::CREATESTRUCTW{
+			frame_selector = *factory.CreateWindowExW(::CREATESTRUCTW{
 							.style = WS_VISIBLE | WS_CHILD | UDS_HORZ | UDS_SETBUDDYINT,
 							.lpszName = L"Frame Selector",
 							.lpszClass = UPDOWN_CLASSW
 				});
 
-			frame_label = *this_module.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
+			frame_label = *factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
 							.style = WS_VISIBLE | WS_CHILD | SS_LEFT,
 							.lpszName = L"Frame: "
 				});
 
-			frame_value = *this_module.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
+			frame_value = *factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
 							.style = WS_VISIBLE | WS_CHILD | SS_LEFT,
 							.lpszName = L""
 				});
@@ -63,19 +71,19 @@ namespace siege::views
 			::SendMessageW(frame_selector, UDM_SETBUDDY, win32::wparam_t(win32::hwnd_t(frame_value)), 0);
 			::SendMessageW(frame_selector, UDM_SETRANGE, 0, MAKELPARAM(1, 1));
 
-			zoom = *this_module.CreateWindowExW(::CREATESTRUCTW{
+			zoom = *factory.CreateWindowExW(::CREATESTRUCTW{
 							.style = WS_VISIBLE | WS_CHILD | UDS_SETBUDDYINT,
 							.lpszName = L"Zoom",
 							.lpszClass = UPDOWN_CLASSW
 				});
 
-			zoom_label = *this_module.CreateWindowExW<win32::static_control>(
+			zoom_label = *factory.CreateWindowExW<win32::static_control>(
 				::CREATESTRUCTW{
 				  .style = WS_VISIBLE | WS_CHILD | SS_LEFT,
 				  .lpszName = L"Zoom: ",
 				});
 
-			zoom_value = *this_module.CreateWindowExW<win32::static_control>(
+			zoom_value = *factory.CreateWindowExW<win32::static_control>(
 				::CREATESTRUCTW{
 				  .style = WS_VISIBLE | WS_CHILD | SS_LEFT,
 				});
@@ -85,7 +93,7 @@ namespace siege::views
 			::SendMessageW(zoom, UDM_SETRANGE, 0, MAKELPARAM(100, 1));
 
 			palettes_list = [&] {
-				auto palettes_list = *this_module.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
+				auto palettes_list = *factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
 							.style = WS_VISIBLE | WS_CHILD | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER,
 							.lpszName = L"Palettes"
 					});
@@ -115,7 +123,7 @@ namespace siege::views
 				return palettes_list;
 				}();
 
-				static_image = *this_module.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
+				static_image = *factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
 					  .hwndParent = *this,
 					  .style = WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_REALSIZECONTROL
 					});
@@ -188,11 +196,89 @@ namespace siege::views
 
 			if (bmp_controller::is_bmp(stream))
 			{
-				auto task = controller.load_palettes_async(std::nullopt, [](auto) {
-					return std::set<std::filesystem::path>{};
-					}, [](auto) {
-						return std::vector<char>{};
-						});
+				auto task = controller.load_palettes_async(std::nullopt, [&](auto path) {
+					if (path.extension() == ".cs")
+					{
+						return std::set<std::filesystem::path>{};
+					}
+
+					win32::com::com_ptr<IStream> stream;
+					auto hresult = ::SHCreateStreamOnFileEx(path.c_str(), STGM_READ, 0, FALSE, nullptr, stream.put());
+    
+					if (hresult != S_OK)
+					{
+						return std::set<std::filesystem::path>{};
+					}
+
+					auto resource_module = std::find_if(loaded_modules.begin(), loaded_modules.end(), [&](auto& module) {
+						return module.StreamIsStorage(*stream);
+					});
+
+					if (resource_module == loaded_modules.end())
+					{
+						return std::set<std::filesystem::path>{};
+					}
+
+					auto storage = resource_module->CreateStorageFromStream(*stream);
+
+					win32::com::com_ptr<IEnumSTATSTG> enumerator;
+
+					hresult = storage->EnumElements(0, nullptr, 0, enumerator.put());
+
+					if (hresult != S_OK)
+					{
+						return std::set<std::filesystem::path>{};
+					}
+
+					std::vector<STATSTG> children(512);
+                    DWORD fetched;
+					hresult = enumerator->Next(children.size(), children.data(), &fetched);
+
+					children.resize(fetched);
+
+					std::set<std::filesystem::path> results{};
+
+					for (auto& info : children)
+					{
+						assert(info.pwcsName);
+						auto is_pal = std::any_of(pal_controller::formats.begin(), pal_controller::formats.end(), [&](auto& ext) { return std::wstring_view(info.pwcsName).rfind(ext) != std::wstring_view::npos; });
+                          
+						if (is_pal)
+						{
+							results.insert(path / info.pwcsName);
+						}
+						::CoTaskMemFree(info.pwcsName);
+					}
+					return results;
+					}, 
+					
+					[&](auto path) 
+					{
+						// TODO add correct logic to find storage
+                        auto storage_path = path.parent_path();
+                        win32::com::com_ptr<IStream> stream;
+                        auto hresult = ::SHCreateStreamOnFileEx(storage_path.c_str(), STGM_READ, 0, FALSE, nullptr, stream.put());
+                        
+						// TODO find correct module first
+						auto storage = loaded_modules.begin()->CreateStorageFromStream(*stream);
+                        
+						std::vector<char> data{};
+
+						if (storage->OpenStream(path.filename().c_str(), nullptr, STGM_READ, 0, stream.put()) == S_OK)
+						{
+							STATSTG info{};
+
+							if (stream->Stat(&info, STATFLAG_NONAME) == S_OK)
+							{
+								data.resize(static_cast<std::size_t>(info.cbSize.QuadPart),'\0');
+								ULONG read = 0;
+								stream->Read(data.data(), data.size(), &read);
+								data.resize(read);
+							}
+						}
+
+						return data;
+					});
 				auto count = controller.load_bitmap(stream);
 
 				if (count > 0)

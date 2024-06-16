@@ -4,6 +4,7 @@
 #include <memory>
 #include <filesystem>
 #include <shobjidl.h>
+#include <shlwapi.h>
 #include <commoncontrols.h>
 #include <siege/platform/win/core/com/base.hpp>
 

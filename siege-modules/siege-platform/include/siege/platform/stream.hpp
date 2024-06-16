@@ -175,6 +175,7 @@ namespace siege::platform
 #if WIN32
   inline std::unique_ptr<std::istream> shallow_clone(::IStream& stream)
   {
+    namespace fs = std::filesystem;
     STATSTG stream_info{};
 
     if (stream.Stat(&stream_info, STATFLAG_DEFAULT) == S_OK && stream_info.pwcsName)
@@ -190,8 +191,31 @@ namespace siege::platform
         }
         return std::unique_ptr<std::istream>(new ifstream_with_path(std::move(path), std::ios::binary));
       }
+      else if (!path.is_absolute())
+      {
+        for (auto entry = fs::recursive_directory_iterator(fs::current_path());
+             entry != fs::recursive_directory_iterator();
+             ++entry)
+        {
+          if (entry.depth() > 3)
+          {
+            entry.disable_recursion_pending();
+            continue;
+          }
+          
+          if (entry->exists() 
+              && !entry->is_directory()
+              && entry->path().filename() == path.filename()
+              && entry->file_size() == static_cast<std::size_t>(stream_info.cbSize.QuadPart))
+          {
+            return std::unique_ptr<std::istream>(new ifstream_with_path(entry->path(), std::ios::binary));
+          }
+        }
+      }
     }
 
+    // TODO there are runtime problems with this code.
+    // Either fix it or come up with a new approach
     win32::com::com_ptr<IStream> stream_ref(&stream);
     stream_ref->AddRef();
     win32::com::OwningStreamBuf buffer(std::move(stream_ref));

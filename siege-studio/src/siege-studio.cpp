@@ -19,8 +19,6 @@
 #include <siege/platform/win/core/com/client.hpp>
 #include <commctrl.h>
 #include <oleacc.h>
-#include <shobjidl.h> 
-#include <shlwapi.h> 
 
 #include "views/siege_main_window.hpp"
 

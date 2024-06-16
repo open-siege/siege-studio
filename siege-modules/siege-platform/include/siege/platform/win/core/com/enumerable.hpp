@@ -154,7 +154,8 @@ namespace win32::com
   };
 
   template<typename TEnumTraits, typename TIter>
-  struct RangeEnumerator : ComObject, TEnumTraits::EnumType
+  struct RangeEnumerator : ComObject
+    , TEnumTraits::EnumType
   {
     using ElemType = TEnumTraits::ElemType;
     using EnumType = TEnumTraits::EnumType;
@@ -175,8 +176,8 @@ namespace win32::com
 
     RangeEnumerator(IUnknown* owner, TIter begin, TIter current, TIter end) : owner(owner),
                                                                               begin(begin),
-                                                             current(current),
-                                                             end(end)
+                                                                              current(current),
+                                                                              end(end)
     {
     }
 
@@ -201,7 +202,7 @@ namespace win32::com
     {
       if (owner)
       {
-          return this->refCount = owner->AddRef();
+        return this->refCount = owner->AddRef();
       }
 
       return ComObject::AddRef();
@@ -220,7 +221,7 @@ namespace win32::com
 
         return ref;
       }
-    
+
       return ComObject::Release();
     }
 
@@ -359,7 +360,8 @@ namespace win32::com
   }
 
   template<typename TEnum>
-  struct VariantEnumeratorAdapter : ComObject, IEnumVARIANT
+  struct VariantEnumeratorAdapter : ComObject
+    , IEnumVARIANT
   {
     std::unique_ptr<TEnum, void (*)(TEnum*)> enumerator;
 
@@ -383,6 +385,11 @@ namespace win32::com
 
     [[maybe_unused]] ULONG __stdcall Release() noexcept override
     {
+      if (this->refCount == 1)
+      {
+        this->enumerator->SetOwner(nullptr);
+      }
+
       return ComObject::Release();
     }
 

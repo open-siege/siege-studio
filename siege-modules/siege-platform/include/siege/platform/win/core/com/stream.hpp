@@ -5,6 +5,7 @@
 #include <memory>
 #include <array>
 #include <siege/platform/win/core/com/base.hpp>
+#include <siege/platform/stream.hpp>
 #include <objidl.h>
 
 namespace win32::com
@@ -142,9 +143,16 @@ namespace win32::com
       return S_OK;
     }
 
-    HRESULT __stdcall Stat(STATSTG*, DWORD) override
+    HRESULT __stdcall Stat(STATSTG* data, DWORD) override
     {
-      return STG_E_ACCESSDENIED;
+      if (data == nullptr)
+      {
+        return E_POINTER;
+      }
+
+      data->cbSize.QuadPart = siege::platform::get_stream_size(stream);
+
+      return S_OK;
     }
   };
 
@@ -227,9 +235,16 @@ namespace win32::com
       return S_OK;
     }
 
-    HRESULT __stdcall Stat(STATSTG*, DWORD) override
+    HRESULT __stdcall Stat(STATSTG* data, DWORD) override
     {
-      return STG_E_ACCESSDENIED;
+      if (data == nullptr)
+      {
+        return E_POINTER;
+      }
+
+      data->cbSize.QuadPart = siege::platform::get_stream_size(stream);
+
+      return S_OK;
     }
 
     HRESULT __stdcall Commit(DWORD) override

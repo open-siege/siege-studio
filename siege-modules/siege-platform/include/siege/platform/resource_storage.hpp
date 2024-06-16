@@ -87,7 +87,7 @@ namespace siege::platform
         *outstream = temp.release();
       }
 
-      return E_NOTIMPL;
+      return S_OK;
     }
 
     HRESULT __stdcall OpenStorage(const OLECHAR* name, IStorage*, DWORD, SNB, DWORD, IStorage** outstorage) override
@@ -144,9 +144,9 @@ namespace siege::platform
         if (auto* file_info = std::get_if<siege::platform::resource_reader::file_info>(&info); file_info)
         {
           auto filename = file_info->filename.wstring();
-          wchar_t* text = (wchar_t*)::CoTaskMemAlloc(sizeof(wchar_t) * filename.size());
-          std::memcpy(text, filename.data(), filename.size());
-
+          wchar_t* text = (wchar_t*)::CoTaskMemAlloc(sizeof(wchar_t) * filename.size() + 1);
+          std::memcpy(text, filename.data(), filename.size() * sizeof(wchar_t));
+          text[filename.size()] = 0;
           return ::STATSTG{
             .pwcsName = text,
             .type = STGTY::STGTY_STREAM,
@@ -187,7 +187,7 @@ namespace siege::platform
         return E_POINTER;
       }
 
-      return E_NOTIMPL;
+      return S_OK;
     }
   };
 
