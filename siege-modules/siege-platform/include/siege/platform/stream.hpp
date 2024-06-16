@@ -11,6 +11,7 @@
 
 #if WIN32
 #include <siege/platform/win/core/file.hpp>
+#include <siege/platform/win/core/com/stream_buf.hpp>
 #endif
 
 namespace siege::platform
@@ -79,7 +80,7 @@ namespace siege::platform
       return ofstream->path;
     }
 
-    if (auto* ifstream = dynamic_cast<ofstream_with_path*>(&stream); ifstream)
+    if (auto* ifstream = dynamic_cast<ifstream_with_path*>(&stream); ifstream)
     {
       return ifstream->path;
     }
@@ -170,6 +171,34 @@ namespace siege::platform
     return 0;
   }
 
+// For now
+#if WIN32
+  inline std::unique_ptr<std::istream> shallow_clone(::IStream& stream)
+  {
+    STATSTG stream_info{};
+
+    if (stream.Stat(&stream_info, STATFLAG_DEFAULT) == S_OK && stream_info.pwcsName)
+    {
+      std::filesystem::path path = stream_info.pwcsName;
+      ::CoTaskMemFree(stream_info.pwcsName);
+
+      if (std::filesystem::exists(path) && !std::filesystem::is_directory(path))
+      {
+        if (!path.is_absolute())
+        {
+          path = std::filesystem::current_path() / path;
+        }
+        return std::unique_ptr<std::istream>(new ifstream_with_path(std::move(path), std::ios::binary));
+      }
+    }
+
+    win32::com::com_ptr<IStream> stream_ref(&stream);
+    stream_ref->AddRef();
+    win32::com::OwningStreamBuf buffer(std::move(stream_ref));
+
+    return std::unique_ptr<std::istream>(new win32::com::owning_istream<decltype(buffer)>(std::move(buffer)));
+  }
+#endif
 
   inline std::unique_ptr<std::istream> shallow_clone(std::istream& stream)
   {

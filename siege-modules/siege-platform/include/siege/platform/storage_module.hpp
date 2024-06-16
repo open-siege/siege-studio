@@ -14,50 +14,65 @@
 
 namespace siege
 {
-	using StreamIsStorage = HRESULT __stdcall(::IStream*) noexcept;
-	using CreateStorageFromStream = HRESULT __stdcall(::IStream*, ::IStorage**);
+  using StreamIsStorage = HRESULT __stdcall(::IStream*) noexcept;
+  using CreateStorageFromStream = HRESULT __stdcall(::IStream*, ::IStorage**);
 
-	class storage_module : public win32::module
-	{
-		using base = win32::module;
+  class storage_module : public win32::module
+  {
+    using base = win32::module;
 
-		StreamIsStorage* StreamIsStorageProc = nullptr;
-		CreateStorageFromStream* CreateStorageFromStreamProc = nullptr;
-	public: 
-		storage_module(std::filesystem::path module_path) : base(module_path)
-		{
-			StreamIsStorageProc = GetProcAddress<decltype(StreamIsStorageProc)>("StreamIsStorage"));
-			CreateStorageFromStreamProc = GetProcAddress<decltype(CreateStorageFromStreamProc)>("CreateStorageFromStream"));
-	
-			if (!(StreamIsStorageProc || CreateStorageFromStreamProc))
-			{
-				throw std::runtime_error("Could not find module functions");
-			}
-		}
+    StreamIsStorage* StreamIsStorageProc = nullptr;
+    CreateStorageFromStream* CreateStorageFromStreamProc = nullptr;
 
-		static std::list<storage_module> load_modules(std::filesystem::path search_path)
-		{
-			std::list<storage_module> loaded_modules;
+  public:
+    storage_module(std::filesystem::path module_path) : base(module_path)
+    {
+        StreamIsStorageProc = GetProcAddress<decltype(StreamIsStorageProc)>("StreamIsStorage");
+        CreateStorageFromStreamProc = GetProcAddress<decltype(CreateStorageFromStreamProc)>("CreateStorageFromStream");
 
-			for (auto const& dir_entry : std::filesystem::directory_iterator{ search_path })
-			{
-				if (dir_entry.path().extension() == ".dll")
-				{
-					try
-					{
-						loaded_modules.emplace_back(dir_entry.path());
-					}
-					catch (...)
-					{
-					}
-				}
-			}
+        if (!(StreamIsStorageProc || CreateStorageFromStreamProc))
+        {
+            throw std::runtime_error("Could not find module functions");
+        }
+    }
 
-			return loaded_modules;
-		}
-	};
+    static std::list<storage_module> load_modules(std::filesystem::path search_path)
+    {
+      std::list<storage_module> loaded_modules;
 
-}
+      for (auto const& dir_entry : std::filesystem::directory_iterator{ search_path })
+      {
+        if (dir_entry.path().extension() == ".dll")
+        {
+          try
+          {
+            loaded_modules.emplace_back(dir_entry.path());
+          }
+          catch (...)
+          {
+          }
+        }
+      }
+
+      return loaded_modules;
+    }
+
+    bool StreamIsStorage(IStream& data) const noexcept
+    {
+      return StreamIsStorageProc(&data) == S_OK;
+    }
+
+    win32::com::com_ptr<IStorage> CreateStorageFromStream(IStream& data) const noexcept
+    {
+      win32::com::com_ptr<IStorage> result;
+
+      CreateStorageFromStreamProc(&data, result.put());
+
+      return result;
+    }
+  };
+
+}// namespace siege
 
 
-#endif // !SIEGEPLUGINHPP
+#endif// !SIEGEPLUGINHPP

@@ -4,6 +4,7 @@
 #include <istream>
 #include <memory>
 #include <array>
+#include <siege/platform/win/core/com/base.hpp>
 #include <objidl.h>
 
 namespace win32::com
@@ -144,8 +145,7 @@ namespace win32::com
         }
     };
 
-
-    template<typename IStreamContainer = std::unique_ptr<IStream, void(*)(IStream*)>>
+    template<typename IStreamContainer = com_ptr<IStream>>
     struct OwningStreamBuf : StreamBufRef
     {
         IStreamContainer container;
@@ -153,6 +153,17 @@ namespace win32::com
         OwningStreamBuf(IStreamContainer container) : StreamBufRef(*container), container(std::move(container))
         {
         }
+    };
+
+    template <typename TStreamBuf>
+    struct owning_istream : std::istream
+    {
+      TStreamBuf buffer;
+
+      owning_istream(TStreamBuf buffer) : std::istream(nullptr), buffer(std::move(buffer))
+      {
+        this->set_rdbuf(&buffer);
+      }
     };
 }
 

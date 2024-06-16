@@ -5,3 +5,5 @@ EXPORTS
 	IsStreamSupported
 	GetWindowClassForStream
 	DefaultFileIcon
+	StreamIsStorage
+	CreateStorageFromStream

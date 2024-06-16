@@ -18,14 +18,22 @@ namespace siege::platform
     std::vector<siege::platform::resource_reader::content_info> storage_contents;
     std::vector<::STATSTG> enum_data;
 
-    public:
+  public:
     StorageReaderRef(std::istream& stream, resource_reader& reader, siege::platform::listing_query query) : stream(stream), reader(reader), current_query(std::move(query))
     {
       initial_position = stream.tellg();
       storage_contents = reader.get_content_listing(stream, current_query);
     }
 
-    StorageReaderRef(std::istream& stream, resource_reader& reader, std::filesystem::path current_path = std::filesystem::path{}) : StorageReaderRef(stream, reader, listing_query{ current_path, std::move(current_path) })
+    StorageReaderRef(std::istream& stream, resource_reader& reader) : StorageReaderRef(stream, reader, [&] {
+                                           auto path = siege::platform::get_stream_path(stream);
+
+                                           if (path)
+                                           {
+                                                return listing_query{ *path, std::move(*path) };
+                                           }
+                                           return listing_query{};
+                                        }())
     {
     }
 
@@ -110,7 +118,7 @@ namespace siege::platform
 
       auto& folder_info = std::get<siege::platform::resource_reader::folder_info>(*existing_folder);
 
-      auto temp = std::make_unique<StorageReaderRef>(stream, reader, folder_info.full_path);
+      auto temp = std::make_unique<StorageReaderRef>(stream, reader, listing_query{ .archive_path = folder_info.archive_path, .folder_path = folder_info.full_path });
       *outstorage = temp.release();
 
       return E_NOTIMPL;
@@ -157,6 +165,8 @@ namespace siege::platform
             .type = STGTY::STGTY_STORAGE
           };
         }
+
+        return ::STATSTG{};
       });
 
       auto enumerator = win32::com::make_unique_range_enumerator_from_traits<STATSTG_EnumTraits>(enum_data.begin(), enum_data.begin(), enum_data.end());
@@ -178,6 +188,20 @@ namespace siege::platform
       }
 
       return E_NOTIMPL;
+    }
+  };
+
+
+  template<typename TStream = std::unique_ptr<std::istream>, typename TReader = std::unique_ptr<resource_reader>>
+  struct OwningStorageReader : StorageReaderRef
+  {
+    TStream stream;
+    TReader reader;
+
+    OwningStorageReader(TStream stream, TReader reader) : StorageReaderRef(*stream, *reader),
+                                                          stream(std::move(stream)),
+                                                          reader(std::move(reader))
+    {
     }
   };
 }// namespace siege::platform

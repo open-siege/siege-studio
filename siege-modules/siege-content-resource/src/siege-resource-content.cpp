@@ -7,6 +7,8 @@
 #include "views/vol_view.hpp"
 #include <siege/platform/win/core/com/collection.hpp>
 #include <siege/platform/win/core/com/stream_buf.hpp>
+#include <siege/platform/resource_storage.hpp>
+#include <siege/resource/resource_maker.hpp>
 
 using namespace siege::views;
 
@@ -135,6 +137,57 @@ extern "C"
         {
             return S_FALSE;
         }
+    }
+
+    HRESULT __stdcall StreamIsStorage(_In_ IStream* data) noexcept
+    {
+      if (!data)
+      {
+        return E_INVALIDARG;
+      }
+
+      win32::com::StreamBufRef buffer(*data);
+      std::istream stream(&buffer);
+
+      if (siege::resource::is_resource_reader(stream))
+      {
+        return S_OK;
+      }
+
+      return S_FALSE;
+    }
+
+    HRESULT __stdcall CreateStorageFromStream(_In_ IStream* data, _Outptr_ ::IStorage** storage) noexcept
+    {
+      if (!data)
+      {
+        return E_INVALIDARG;
+      }
+
+      if (!storage)
+      {
+        return E_POINTER;
+      }
+
+      win32::com::StreamBufRef buffer(*data);
+      std::istream temp_stream(&buffer);
+      
+      if (siege::resource::is_resource_reader(temp_stream))
+      {
+        auto final_stream = siege::platform::shallow_clone(*data);
+        auto reader = siege::resource::make_resource_reader(*final_stream);
+
+        auto temp = std::make_unique<siege::platform::OwningStorageReader<>>(
+            std::move(final_stream),
+            std::move(reader));
+
+        *storage = temp.release(); 
+        return S_OK;
+      }
+
+      *storage = nullptr;
+
+      return S_FALSE;
     }
     
     BOOL WINAPI DllMain(
