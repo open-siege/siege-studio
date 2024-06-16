@@ -90,29 +90,31 @@ namespace siege::platform
       return fstream->path;
     }
 
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    if (auto* ispan = dynamic_cast<std::ispanstream*>(&stream); ispan)
-    {
-      auto span = ispan->span();
-      auto view = win32::file_view((void*)span.data());
+#if WIN32
+  #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+      if (auto* ispan = dynamic_cast<std::ispanstream*>(&stream); ispan)
+      {
+        auto span = ispan->span();
+        auto view = win32::file_view((void*)span.data());
 
-      return view.GetMappedFilename();
-    }
+        return view.GetMappedFilename();
+      }
 
-    if (auto* ospan = dynamic_cast<std::ospanstream*>(&stream); ospan)
-    {
-      auto span = ospan->span();
-      auto view = win32::file_view((void*)span.data());
+      if (auto* ospan = dynamic_cast<std::ospanstream*>(&stream); ospan)
+      {
+        auto span = ospan->span();
+        auto view = win32::file_view((void*)span.data());
 
-      return view.GetMappedFilename();
-    }
+        return view.GetMappedFilename();
+      }
 
-    if (auto* span = dynamic_cast<std::spanstream*>(&stream); span)
-    {
-      auto view = win32::file_view((void*)span->span().data());
+      if (auto* span = dynamic_cast<std::spanstream*>(&stream); span)
+      {
+        auto view = win32::file_view((void*)span->span().data());
 
-      return view.GetMappedFilename();
-    }
+        return view.GetMappedFilename();
+      }
+  #endif
 #endif
 
     return std::nullopt;
@@ -175,6 +177,7 @@ namespace siege::platform
 #if WIN32
   inline std::unique_ptr<std::istream> shallow_clone(::IStream& stream)
   {
+    namespace fs = std::filesystem;
     STATSTG stream_info{};
 
     if (stream.Stat(&stream_info, STATFLAG_DEFAULT) == S_OK && stream_info.pwcsName)
@@ -190,8 +193,31 @@ namespace siege::platform
         }
         return std::unique_ptr<std::istream>(new ifstream_with_path(std::move(path), std::ios::binary));
       }
+      else if (!path.is_absolute())
+      {
+        for (auto entry = fs::recursive_directory_iterator(fs::current_path());
+             entry != fs::recursive_directory_iterator();
+             ++entry)
+        {
+          if (entry.depth() > 3)
+          {
+            entry.disable_recursion_pending();
+            continue;
+          }
+          
+          if (entry->exists() 
+              && !entry->is_directory()
+              && entry->path().filename() == path.filename()
+              && entry->file_size() == static_cast<std::size_t>(stream_info.cbSize.QuadPart))
+          {
+            return std::unique_ptr<std::istream>(new ifstream_with_path(entry->path(), std::ios::binary));
+          }
+        }
+      }
     }
 
+    // TODO there are runtime problems with this code.
+    // Either fix it or come up with a new approach
     win32::com::com_ptr<IStream> stream_ref(&stream);
     stream_ref->AddRef();
     win32::com::OwningStreamBuf buffer(std::move(stream_ref));

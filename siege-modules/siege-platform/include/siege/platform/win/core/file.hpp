@@ -39,6 +39,8 @@ namespace win32
 		std::optional<std::wstring> GetMappedFilename()
 		{
 			std::wstring filename(255, L'\0');
+                  // If this code ever has to run on Xbox with the GAMING family, we'll need a way to get the correct path
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 			auto size = ::GetMappedFileNameW(::GetCurrentProcess(), get(), filename.data(), filename.size());
 
 			if (size == 0)
@@ -46,8 +48,7 @@ namespace win32
 				return std::nullopt;
 			}
 
-// If this code ever has to run on Xbox with the GAMING family, we'll need a way to get the correct path
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+
 			std::wstring drive = L"A:";
 
 			std::wstring buffer(32, L'\0');
@@ -95,6 +96,7 @@ namespace win32
 		using base = std::unique_ptr<void, handle_deleter>;
 		using base::base;
 
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 		file(std::filesystem::path path, DWORD access, DWORD share_mode, std::optional<SECURITY_ATTRIBUTES> attributes, DWORD creation_disposition, DWORD flags)
 			: base(::CreateFileW(path.c_str(), access, share_mode, attributes.has_value() ? &*attributes : nullptr, creation_disposition, flags, nullptr))
 		{
@@ -103,6 +105,7 @@ namespace win32
 				throw std::system_error(std::error_code(GetLastError(), std::system_category()));
 			}
 		}
+#endif
 
 		std::expected<file_mapping, DWORD> CreateFileMapping(std::optional<SECURITY_ATTRIBUTES> attributes, DWORD protect, DWORD maxSzeHigh, DWORD maxSizeLow, std::wstring name)
 		{

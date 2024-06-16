@@ -22,6 +22,14 @@ namespace win32::com
             setp(write_buffer.data() + write_buffer.size(), write_buffer.data() + write_buffer.size());
         }
 
+        StreamBufRef(StreamBufRef&& other) : data(data), 
+            read_buffer(std::move(other.read_buffer)), 
+            write_buffer(std::move(other.write_buffer))
+        {
+          setg(read_buffer.data(), read_buffer.data() + read_buffer.size(), read_buffer.data() + read_buffer.size());
+          setp(write_buffer.data() + write_buffer.size(), write_buffer.data() + write_buffer.size());
+        }
+
     protected:
         std::streambuf* setbuf(char_type* s, std::streamsize n) override final
         {
@@ -160,7 +168,7 @@ namespace win32::com
     {
       TStreamBuf buffer;
 
-      owning_istream(TStreamBuf buffer) : std::istream(nullptr), buffer(std::move(buffer))
+      owning_istream(TStreamBuf buffer) : std::istream(&buffer), buffer(std::move(buffer))
       {
         this->set_rdbuf(&buffer);
       }

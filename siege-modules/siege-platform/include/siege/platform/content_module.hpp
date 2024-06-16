@@ -12,7 +12,7 @@
 #include <siege/platform/win/core/com/collection.hpp>
 #include <siege/platform/win/desktop/window_module.hpp>
 
-namespace siege
+namespace siege::platform
 {
   // TODO cross platform versions of this code will use "xcom" (cross com) and char16_t instead of wchar_t
   using GetSupportedExtensions = HRESULT __stdcall(win32::com::IReadOnlyCollection** formats);

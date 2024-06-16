@@ -12,7 +12,7 @@
 #include <siege/platform/win/core/com/collection.hpp>
 #include <siege/platform/win/desktop/window_module.hpp>
 
-namespace siege
+namespace siege::platform
 {
   using StreamIsStorage = HRESULT __stdcall(::IStream*) noexcept;
   using CreateStorageFromStream = HRESULT __stdcall(::IStream*, ::IStorage**);
