@@ -95,7 +95,8 @@ namespace siege::platform
         if (enumerator)
         {
           value = enumerator->get();
-          std::vector<win32::com::com_string> raw_results(64);
+          auto size = raw->Count().value_or(64);
+          std::vector<win32::com::com_string> raw_results(size);
 
           ULONG fetched = 0u;
           enumerator->get()->Next(raw_results.size(), raw_results.data()->put(), &fetched);
@@ -122,7 +123,8 @@ namespace siege::platform
 
         if (enumerator)
         {
-          std::vector<win32::com::com_string> raw_results(16);
+          auto size = raw->Count().value_or(16);
+          std::vector<win32::com::com_string> raw_results(size);
 
           ULONG fetched = 0u;
           enumerator->get()->Next(raw_results.size(), raw_results.data()->put(), &fetched);
@@ -148,7 +150,8 @@ namespace siege::platform
 
         if (enumerator)
         {
-          std::vector<win32::com::com_string> raw_results(64);
+          auto size = raw->Count().value_or(64);
+          std::vector<win32::com::com_string> raw_results(size);
 
           ULONG fetched = 0u;
           enumerator->get()->Next(raw_results.size(), raw_results.data()->put(), &fetched);
