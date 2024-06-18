@@ -4,4 +4,5 @@ EXPORTS
 	GetSupportedExtensionsForCategory
 	IsStreamSupported
 	GetWindowClassForStream
+	GetModuleBindCtx
 	DefaultFileIcon

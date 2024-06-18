@@ -12,6 +12,24 @@
 #include <set>
 #include <comcat.h>
 
+extern "C" HRESULT __stdcall GetModuleBindCtx(::IBindCtx** context) noexcept
+{
+  if (!context)
+  {
+    return E_POINTER;
+  }
+
+  static win32::com::com_ptr<::IBindCtx> module_context;
+  static auto create_result = ::CreateBindCtx(0, module_context.put());
+
+  if (create_result == S_OK)
+  {
+    module_context->AddRef();
+  }
+  *context = module_context.get();
+  return create_result;
+}
+
 namespace win32::com
 {
 	static_assert(sizeof(xcom::variant_t) == sizeof(VARIANT));

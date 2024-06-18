@@ -12,6 +12,7 @@
 #if WIN32
 #include <siege/platform/win/core/file.hpp>
 #include <siege/platform/win/core/com/stream_buf.hpp>
+#include <siege/platform/win/core/com/bindctx.hpp>
 #endif
 
 namespace siege::platform
@@ -179,6 +180,30 @@ namespace siege::platform
   {
     namespace fs = std::filesystem;
     STATSTG stream_info{};
+
+    auto context = win32::com::GetModuleBindCtx();
+
+    win32::com::com_ptr<::IEnumString> context_strings;
+    
+    if (context && (*context)->EnumObjectParam(context_strings.put()) == S_OK)
+    {
+      std::vector<win32::com::com_string> strings(16);
+
+      ULONG items = 0;
+      context_strings->Next(strings.size(), strings.begin()->put(), &items);
+
+      strings.resize(items);
+
+      for (auto& string : strings)
+      {
+        win32::com::com_ptr<::IUnknown> possible_stream;
+        if ((*context)->GetObjectParam(string.get(), possible_stream.put()) == S_OK && 
+            possible_stream.get() == &stream)
+        {
+          return std::unique_ptr<std::istream>(new ifstream_with_path(string.get(), std::ios::binary));
+        }
+      }
+    }
 
     if (stream.Stat(&stream_info, STATFLAG_DEFAULT) == S_OK && stream_info.pwcsName)
     {
