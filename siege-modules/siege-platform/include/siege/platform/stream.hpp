@@ -90,29 +90,31 @@ namespace siege::platform
       return fstream->path;
     }
 
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    if (auto* ispan = dynamic_cast<std::ispanstream*>(&stream); ispan)
-    {
-      auto span = ispan->span();
-      auto view = win32::file_view((void*)span.data());
+#if WIN32
+  #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+      if (auto* ispan = dynamic_cast<std::ispanstream*>(&stream); ispan)
+      {
+        auto span = ispan->span();
+        auto view = win32::file_view((void*)span.data());
 
-      return view.GetMappedFilename();
-    }
+        return view.GetMappedFilename();
+      }
 
-    if (auto* ospan = dynamic_cast<std::ospanstream*>(&stream); ospan)
-    {
-      auto span = ospan->span();
-      auto view = win32::file_view((void*)span.data());
+      if (auto* ospan = dynamic_cast<std::ospanstream*>(&stream); ospan)
+      {
+        auto span = ospan->span();
+        auto view = win32::file_view((void*)span.data());
 
-      return view.GetMappedFilename();
-    }
+        return view.GetMappedFilename();
+      }
 
-    if (auto* span = dynamic_cast<std::spanstream*>(&stream); span)
-    {
-      auto view = win32::file_view((void*)span->span().data());
+      if (auto* span = dynamic_cast<std::spanstream*>(&stream); span)
+      {
+        auto view = win32::file_view((void*)span->span().data());
 
-      return view.GetMappedFilename();
-    }
+        return view.GetMappedFilename();
+      }
+  #endif
 #endif
 
     return std::nullopt;
