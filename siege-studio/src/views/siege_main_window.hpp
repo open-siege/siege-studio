@@ -5,7 +5,6 @@
 #include <siege/platform/win/desktop/shell.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include <siege/platform/win/core/file.hpp>
-#include <siege/platform/win/core/com/bindctx.hpp>
 #include <siege/platform/content_module.hpp>
 #include <map>
 #include <spanstream>
@@ -297,14 +296,6 @@ namespace siege::views
 
         if (plugin != loaded_modules.end())
         {
-          auto* get_context = plugin->GetProcAddress<decltype(::GetModuleBindCtx)*>("GetModuleBindCtx");
-          auto string_path = file_path.wstring();
-          win32::com::com_ptr<::IBindCtx> context;
-          if (get_context && get_context(context.put()) == S_OK)
-          {
-            context->RegisterObjectParam(string_path.data(), stream.get());
-          }
-
           auto class_name = plugin->GetWindowClassForStream(*stream);
 
           auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
@@ -369,11 +360,6 @@ namespace siege::views
           {
             child->RemovePropW(L"Filename");
             ::DestroyWindow(*child);
-          }
-
-          if (context)
-          {
-            context->RevokeObjectParam(string_path.data());
           }
 
           return true;
