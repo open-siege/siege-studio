@@ -104,9 +104,11 @@ namespace siege::views
         return results;
       };
 
-      std::transform(std::execution::par_unseq, pal_paths.begin(), pal_paths.end(), palettes.begin(), [&load_palette](auto& path) mutable {
-        std::fstream file_data(std::move(path));
-        return load_palette(file_data);
+      auto task_a = std::async(std::launch::async, [&]() {
+        std::transform(std::execution::par_unseq, pal_paths.begin(), pal_paths.end(), palettes.begin(), [&load_palette](auto& path) mutable {
+          std::fstream file_data(std::move(path));
+          return load_palette(file_data);
+        });
       });
 
       std::transform(std::execution::par_unseq,
@@ -119,6 +121,8 @@ namespace siege::views
           std::spanstream span_data(data);
           return load_palette(span_data);
         });
+        
+      task_a.wait();
     });
   }
 
