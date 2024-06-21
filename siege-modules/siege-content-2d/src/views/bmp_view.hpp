@@ -4,6 +4,7 @@
 #include <siege/platform/win/desktop/common_controls.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include <siege/platform/win/core/com/collection.hpp>
+#include <siege/platform/win/core/com/storage.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
 #include <siege/platform/win/desktop/shell.hpp>
 #include <siege/platform/storage_module.hpp>
@@ -230,7 +231,7 @@ namespace siege::views
 						return std::set<std::filesystem::path>{};
 					}
 
-					std::vector<STATSTG> children(512);
+					std::vector<win32::com::storage_info> children(512);
                     DWORD fetched;
 					hresult = enumerator->Next(children.size(), children.data(), &fetched);
 
@@ -247,7 +248,6 @@ namespace siege::views
 						{
 							results.insert(path / info.pwcsName);
 						}
-						::CoTaskMemFree(info.pwcsName);
 					}
 					return results;
 					}, 

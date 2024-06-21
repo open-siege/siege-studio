@@ -5,6 +5,7 @@
 #include <siege/platform/win/desktop/shell.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include <siege/platform/win/core/file.hpp>
+#include <siege/platform/win/core/com/storage.hpp>
 #include <siege/platform/content_module.hpp>
 #include <map>
 #include <spanstream>
@@ -315,7 +316,7 @@ namespace siege::views
 
           assert(child);
 
-          ::STATSTG info{};
+          win32::com::storage_info info{};
 
           stream->Stat(&info, STATFLAG::STATFLAG_NONAME);
 
