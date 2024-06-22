@@ -78,6 +78,16 @@ namespace win32
           return SendMessageW(*this, LB_GETCURSEL, 0, 0);
         }
 
+        [[nodiscard]] inline lresult_t GetTextLength(wparam_t index)
+        {
+          return SendMessageW(*this, LB_GETTEXTLEN, index, 0);
+        }
+
+        [[maybe_unused]] inline lresult_t GetText(wparam_t index, wchar_t* data)
+        {
+          return SendMessageW(*this, LB_GETTEXT, index, (LPARAM)data);
+        }
+
         [[maybe_unused]] inline lresult_t SetCurrentSelection(wparam_t index)
         {
           return SendMessageW(*this, LB_SETCURSEL, index, 0);

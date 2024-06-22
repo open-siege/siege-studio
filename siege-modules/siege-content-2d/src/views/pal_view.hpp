@@ -18,9 +18,11 @@ namespace siege::views
 
     win32::static_control render_view;
     win32::list_box selection;
+    std::wstring buffer;
 
     pal_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
+      buffer.reserve(64);
     }
 
     auto on_create(const win32::create_message&)
@@ -30,7 +32,7 @@ namespace siege::views
       render_view = *control_factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | SS_OWNERDRAW });
 
       selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
+        .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS });
 
       return 0;
     }
@@ -122,9 +124,32 @@ namespace siege::views
       return FALSE;
     }
 
+    auto on_measure_item(win32::measure_item_message message)
+    {
+      message.item.itemHeight = 30;
+      return TRUE;
+    }
+
     auto on_draw_item(win32::draw_item_message message)
     {
-      if (message.item.itemAction == ODA_DRAWENTIRE)
+      if (message.item.hwndItem == selection && message.item.itemAction == ODA_DRAWENTIRE ||
+          message.item.hwndItem == selection && message.item.itemAction == ODA_SELECT)
+      {
+        static auto black_brush = ::CreateSolidBrush(0x00000000);
+        static auto grey_brush = ::CreateSolidBrush(0x00383838);
+        auto context = win32::gdi_drawing_context_ref(message.item.hDC);
+        
+        context.FillRect(message.item.rcItem, message.item.itemState & ODS_SELECTED ? grey_brush : black_brush);
+        ::SetTextColor(context, 0x00FFFFFF);
+
+        buffer.resize(selection.GetTextLength(message.item.itemID));
+
+        selection.GetText(message.item.itemID, buffer.data());
+
+        ::TextOut(context, message.item.rcItem.left, message.item.rcItem.top, buffer.c_str(), buffer.size());
+      }
+
+      if (message.item.hwndItem == render_view && message.item.itemAction == ODA_DRAWENTIRE)
       {
         auto context = win32::gdi_drawing_context_ref(message.item.hDC);
 

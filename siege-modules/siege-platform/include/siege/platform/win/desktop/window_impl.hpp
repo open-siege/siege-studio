@@ -27,6 +27,7 @@ namespace win32
 		DO_DISPATCH(pos_changed_message, on_pos_changed);
 		DO_DISPATCH(paint_message, on_paint);
 		DO_DISPATCH(draw_item_message, on_draw_item);
+		DO_DISPATCH(measure_item_message, on_measure_item);
 		DO_DISPATCH(keyboard_key_up_message, on_keyboard_key_up);
 		DO_DISPATCH(keyboard_key_down_message, on_keyboard_key_down);
 		DO_DISPATCH(keyboard_char_message, on_keyboard_char);
