@@ -106,6 +106,11 @@ namespace siege::views
         .style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
       });
 
+      ListView_SetBkColor(table, 0x00000000);
+      ListView_SetTextBkColor(table, 0x00383838);
+      ListView_SetTextColor(table, 0x00FFFFFF);
+      ListView_SetOutlineColor(table, 0x00AAAAAA);
+
       table.InsertGroup(-1, LVGROUP{
                               .pszHeader = const_cast<wchar_t*>(L"Hidden"),
                               .iGroupId = 1,

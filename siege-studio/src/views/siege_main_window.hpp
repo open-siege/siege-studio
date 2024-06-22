@@ -132,6 +132,10 @@ namespace siege::views
 
       dir_list = *factory.CreateWindowExW<win32::tree_view>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE });
 
+      TreeView_SetBkColor(dir_list, 0x00000000);
+      TreeView_SetTextColor(dir_list, 0x00FFFFFF);
+      TreeView_SetLineColor (dir_list, 0x00383838);
+
       repopulate_tree_view(std::filesystem::current_path());
 
       tab_control = *factory.CreateWindowExW<win32::tab_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | TCS_MULTILINE | TCS_RIGHTJUSTIFY });

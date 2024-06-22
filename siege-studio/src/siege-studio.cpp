@@ -57,6 +57,13 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
     AppendMenuW(main_menu, MF_STRING, id++, L"View");
     AppendMenuW(main_menu, MF_STRING, id++, L"Help");
 
+	MENUINFO mi = { 0 };
+    mi.cbSize = sizeof(mi);
+    mi.fMask = MIM_BACKGROUND | MIM_APPLYTOSUBMENUS;
+    mi.hbrBack = ::CreateSolidBrush(0x00383838);
+
+    SetMenuInfo(main_menu, &mi); 
+
     auto main_window = this_module.CreateWindowExW(CREATESTRUCTW {
 		.hMenu = main_menu,
 		.cx = CW_USEDEFAULT,

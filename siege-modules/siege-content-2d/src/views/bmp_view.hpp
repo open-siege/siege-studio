@@ -95,6 +95,11 @@ namespace siege::views
           .style = WS_VISIBLE | WS_CHILD | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER,
           .lpszName = L"Palettes" });
 
+        ListView_SetBkColor(palettes_list, 0x00000000);
+        ListView_SetTextBkColor(palettes_list, 0x00383838);
+        ListView_SetTextColor(palettes_list, 0x00FFFFFF);
+        ListView_SetOutlineColor(palettes_list, 0x00AAAAAA);
+
         palettes_list.SetView(win32::list_view::view_type::details_view);
         assert(palettes_list.EnableGroupView(true));
         assert(palettes_list.SetTileViewInfo(LVTILEVIEWINFO{
@@ -165,35 +170,6 @@ namespace siege::views
 
 
       return 0;
-    }
-
-    std::optional<win32::lresult_t> on_notify(win32::list_view_custom_draw_notification message)
-    {
-      if (message.ref.nmcd.dwDrawStage == CDDS_PREPAINT && message.ref.nmcd.dwItemSpec == LVCDI_GROUP)
-      {
-        return CDRF_SKIPDEFAULT;
-      }
-
-      if (message.ref.nmcd.dwDrawStage == CDDS_PREPAINT)
-      {
-        return CDRF_NOTIFYITEMDRAW;
-      }
-
-      if (message.ref.nmcd.dwDrawStage == CDDS_ITEMPREPAINT)
-      {
-        message.ref.clrTextBk = 0x00000000;
-        message.ref.clrText = 0x00FFFFFF;
-        return CDRF_NEWFONT;
-      }
-
-      if (message.ref.nmcd.dwDrawStage == (CDDS_SUBITEM | CDDS_ITEMPREPAINT))
-      {
-        message.ref.clrTextBk = 0x00000000;
-        message.ref.clrText = 0x00FFFFFF;
-        return CDRF_NEWFONT;
-      }
-
-      return CDRF_DODEFAULT;
     }
 
     auto on_copy_data(win32::copy_data_message<char> message)
