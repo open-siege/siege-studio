@@ -35,14 +35,14 @@ namespace siege::views
     return temp;
   }
 
-  std::future<std::deque<std::vector<content::pal::palette>>&> bmp_controller::load_palettes_async(std::optional<std::filesystem::path> folder_hint,
+  std::future<const std::deque<palette_info>&> bmp_controller::load_palettes_async(std::optional<std::filesystem::path> folder_hint,
     std::move_only_function<get_embedded_pal_filenames> get_palettes,
     std::move_only_function<resolve_embedded_pal> resolve_data)
   {
     namespace fs = std::filesystem;
 
     return std::async(std::launch::async, 
-        [this, get_palettes = std::move(get_palettes), resolve_data = std::move(resolve_data)]() mutable -> std::deque<std::vector<content::pal::palette>>& {
+        [this, get_palettes = std::move(get_palettes), resolve_data = std::move(resolve_data)]() mutable -> const std::deque<palette_info>& {
       std::deque<fs::path> pal_paths;
       std::deque<fs::path> embedded_pal_paths;
 
@@ -74,7 +74,7 @@ namespace siege::views
 
       palettes.resize(pal_paths.size() + embedded_pal_paths.size());
 
-      auto load_palette = [&](std::istream& temp) {
+      auto load_palette = [&](std::filesystem::path&& path, std::istream& temp) -> palette_info {
         std::vector<content::pal::palette> results;
         if (siege::content::pal::is_microsoft_pal(temp))
         {
@@ -86,7 +86,7 @@ namespace siege::views
         }
         else if (siege::content::pal::is_phoenix_pal(temp))
         {
-          return siege::content::pal::get_ppl_data(temp);
+          return { path, siege::content::pal::get_ppl_data(temp) };
         }
 
         if (results.empty())
@@ -94,13 +94,13 @@ namespace siege::views
           results.emplace_back(get_default_palette());
         }
 
-        return results;
+        return { path, results };
       };
 
       auto task_a = std::async(std::launch::async, [&]() {
         std::transform(std::execution::par_unseq, pal_paths.begin(), pal_paths.end(), palettes.begin(), [&load_palette](auto& path) mutable {
-          std::fstream file_data(std::move(path));
-          return load_palette(file_data);
+          std::fstream file_data(path);
+          return load_palette(std::move(path), file_data);
         });
       });
 
@@ -109,9 +109,9 @@ namespace siege::views
         embedded_pal_paths.end(),
         palettes.begin() + pal_paths.size(),
         [&resolve_data, &load_palette](auto& path) mutable {
-          auto data = resolve_data(std::move(path));
+          auto data = resolve_data(path);
           std::spanstream span_data(data);
-          return load_palette(span_data);
+          return load_palette(std::move(path), span_data);
         });
 
       task_a.wait();
@@ -120,7 +120,7 @@ namespace siege::views
     });
   }
 
-  std::size_t bmp_controller::load_bitmap(std::istream& image_stream, const std::future<std::deque<std::vector<content::pal::palette>>&>& pending_load) noexcept
+  std::size_t bmp_controller::load_bitmap(std::istream& image_stream, const std::future<const std::deque<palette_info>&>& pending_load) noexcept
   {
     using namespace siege::content;
 
@@ -143,15 +143,15 @@ namespace siege::views
         pending_load.wait();
         if (!palettes.empty())
         {
-          auto palette_iter = std::find_if(palettes.begin(), palettes.end(), [&](std::vector<pal::palette>& group) {
-            return std::any_of(group.begin(), group.end(), [&](pal::palette& pal) {
+          auto palette_iter = std::find_if(palettes.begin(), palettes.end(), [&](palette_info& group) {
+            return std::any_of(group.children.begin(), group.children.end(), [&](pal::palette& pal) {
               return pal.index == image.palette_index;
             });
           });
 
           if (palette_iter != palettes.end())
           {
-            auto exepcted_pal = std::find_if(palette_iter->begin(), palette_iter->end(), [&](pal::palette& pal) {
+            auto exepcted_pal = std::find_if(palette_iter->children.begin(), palette_iter->children.end(), [&](pal::palette& pal) {
               return pal.index == image.palette_index;
             });
 
@@ -159,7 +159,7 @@ namespace siege::views
           }
           else
           {
-            dest.colours = palettes.begin()->begin()->colours;
+            dest.colours = palettes.begin()->children.begin()->colours;
           }
         }
         else

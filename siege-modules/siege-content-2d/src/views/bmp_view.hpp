@@ -281,13 +281,6 @@ namespace siege::views
 
 					static_image.SetImage(current_bitmap.get());
 
-					/*std::vector<win32::list_view_group> groups{
-                                          { L"main.dpl", { { L"palette 1" }, { L"palette 2" }, { L"palette 3" } } },
-                                          { L"test.pal", { { L"palette 1" } } },
-                                          { L"other.ipl", { { L"palette 1" } } },
-                                        };*/
-					//std::wstring text, std::vector<list_view_item> items
-
 					auto& palettes = task.get();
 
 					auto p = 1u;
@@ -297,15 +290,15 @@ namespace siege::views
 					for (auto& pal : palettes)
 					{
 						std::vector<win32::list_view_item> items;
-                        items.reserve(pal.size());
+                        items.reserve(pal.children.size());
 
                         auto c = 1u;						
-						for (auto& child : pal)
+						for (auto& child : pal.children)
 						{
-							items.emplace_back(win32::list_view_item(L"Child " + std::to_wstring(c++)));
+							items.emplace_back(win32::list_view_item(L"Palette " + std::to_wstring(c++)));
 						}
 
-						groups.emplace_back(L"Palette " + std::to_wstring(p++), std::move(items));
+						groups.emplace_back(pal.path.filename().wstring(), std::move(items));
 					}
 
 					palettes_list.InsertGroups(groups);
