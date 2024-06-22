@@ -73,6 +73,16 @@ namespace win32
             return SendMessageW(*this, LB_GETCOUNT, 0, 0);
         }
 
+        [[nodiscard]] inline lresult_t GetCurrentSelection()
+        {
+          return SendMessageW(*this, LB_GETCURSEL, 0, 0);
+        }
+
+        [[maybe_unused]] inline lresult_t SetCurrentSelection(wparam_t index)
+        {
+          return SendMessageW(*this, LB_SETCURSEL, index, 0);
+        }
+
         [[maybe_unused]] inline wparam_t AddString(wparam_t index, std::wstring_view text)
         {
             return SendMessageW(*this, LB_ADDSTRING, index, std::bit_cast<LPARAM>(text.data()));
@@ -81,7 +91,7 @@ namespace win32
         [[maybe_unused]] inline wparam_t InsertString(wparam_t index, std::wstring_view text)
         {
             return SendMessageW(*this, LB_INSERTSTRING, index, std::bit_cast<LPARAM>(text.data()));
-        }
+        } 
     };
 
     struct scroll_bar : window
