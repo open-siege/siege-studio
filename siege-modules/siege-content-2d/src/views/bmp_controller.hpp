@@ -49,6 +49,15 @@ namespace siege::views
   private:
         std::optional<content::bmp::platform_image> original_image;
         std::deque<palette_info> palettes;
+        std::deque<palette_info>::iterator selected_palette_file;
+        std::size_t selected_palette;
+
+    public:
+
+        inline auto get_selected_palette() const
+        {
+          return std::make_pair(selected_palette_file, selected_palette);
+        }
   };
 
 }

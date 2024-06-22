@@ -116,6 +116,9 @@ namespace siege::views
 
       task_a.wait();
 
+      selected_palette_file = palettes.begin();
+      selected_palette = 0;
+
       return palettes;
     });
   }
@@ -143,22 +146,25 @@ namespace siege::views
         pending_load.wait();
         if (!palettes.empty())
         {
-          auto palette_iter = std::find_if(palettes.begin(), palettes.end(), [&](palette_info& group) {
+          selected_palette = 0;
+          selected_palette_file = std::find_if(palettes.begin(), palettes.end(), [&](palette_info& group) {
             return std::any_of(group.children.begin(), group.children.end(), [&](pal::palette& pal) {
               return pal.index == image.palette_index;
             });
           });
 
-          if (palette_iter != palettes.end())
+          if (selected_palette_file != palettes.end())
           {
-            auto exepcted_pal = std::find_if(palette_iter->children.begin(), palette_iter->children.end(), [&](pal::palette& pal) {
+            auto expected_pal = std::find_if(selected_palette_file->children.begin(), selected_palette_file->children.end(), [&](pal::palette& pal) {
               return pal.index == image.palette_index;
             });
 
-            dest.colours = exepcted_pal->colours;
+            selected_palette = std::distance(selected_palette_file->children.begin(), expected_pal);
+            dest.colours = expected_pal->colours;
           }
           else
           {
+            selected_palette_file = palettes.begin();
             dest.colours = palettes.begin()->children.begin()->colours;
           }
         }
