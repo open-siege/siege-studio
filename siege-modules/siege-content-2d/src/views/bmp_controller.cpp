@@ -21,13 +21,6 @@ namespace siege::views
            || siege::content::bmp::is_png(image_stream);
   }
 
-  std::mutex& get_lock()
-  {
-    static std::mutex palette_lock;
-
-    return palette_lock;
-  }
-
   auto get_default_palette()
   {
     siege::content::pal::palette temp;
@@ -42,14 +35,14 @@ namespace siege::views
     return temp;
   }
 
-  std::future<void> bmp_controller::load_palettes_async(std::optional<std::filesystem::path> folder_hint,
+  std::future<std::deque<std::vector<content::pal::palette>>&> bmp_controller::load_palettes_async(std::optional<std::filesystem::path> folder_hint,
     std::move_only_function<get_embedded_pal_filenames> get_palettes,
     std::move_only_function<resolve_embedded_pal> resolve_data)
   {
     namespace fs = std::filesystem;
 
-    return std::async(std::launch::async, [this, get_palettes = std::move(get_palettes), resolve_data = std::move(resolve_data)]() mutable {
-      std::lock_guard<std::mutex> guard(get_lock());
+    return std::async(std::launch::async, 
+        [this, get_palettes = std::move(get_palettes), resolve_data = std::move(resolve_data)]() mutable -> std::deque<std::vector<content::pal::palette>>& {
       std::deque<fs::path> pal_paths;
       std::deque<fs::path> embedded_pal_paths;
 
@@ -116,17 +109,18 @@ namespace siege::views
         embedded_pal_paths.end(),
         palettes.begin() + pal_paths.size(),
         [&resolve_data, &load_palette](auto& path) mutable {
-
           auto data = resolve_data(std::move(path));
           std::spanstream span_data(data);
           return load_palette(span_data);
         });
-        
+
       task_a.wait();
+
+      return palettes;
     });
   }
 
-  std::size_t bmp_controller::load_bitmap(std::istream& image_stream) noexcept
+  std::size_t bmp_controller::load_bitmap(std::istream& image_stream, const std::future<std::deque<std::vector<content::pal::palette>>&>& pending_load) noexcept
   {
     using namespace siege::content;
 
@@ -146,34 +140,31 @@ namespace siege::views
         dest.info.width = image.bmp_header.width;
         dest.info.height = image.bmp_header.height;
 
+        pending_load.wait();
+        if (!palettes.empty())
         {
-          std::lock_guard<std::mutex> guard(get_lock());
+          auto palette_iter = std::find_if(palettes.begin(), palettes.end(), [&](std::vector<pal::palette>& group) {
+            return std::any_of(group.begin(), group.end(), [&](pal::palette& pal) {
+              return pal.index == image.palette_index;
+            });
+          });
 
-          if (!palettes.empty())
+          if (palette_iter != palettes.end())
           {
-            auto palette_iter = std::find_if(palettes.begin(), palettes.end(), [&](std::vector<pal::palette>& group) {
-              return std::any_of(group.begin(), group.end(), [&](pal::palette& pal) {
-                return pal.index == image.palette_index;
-              });
+            auto exepcted_pal = std::find_if(palette_iter->begin(), palette_iter->end(), [&](pal::palette& pal) {
+              return pal.index == image.palette_index;
             });
 
-            if (palette_iter != palettes.end())
-            {
-              auto exepcted_pal = std::find_if(palette_iter->begin(), palette_iter->end(), [&](pal::palette& pal) {
-                return pal.index == image.palette_index;
-              });
-
-              dest.colours = exepcted_pal->colours;
-            }
-            else
-            {
-              dest.colours = palettes.begin()->begin()->colours;
-            }
+            dest.colours = exepcted_pal->colours;
           }
           else
           {
-            dest.colours = get_default_palette().colours;
+            dest.colours = palettes.begin()->begin()->colours;
           }
+        }
+        else
+        {
+          dest.colours = get_default_palette().colours;
         }
 
         dest.indexes.reserve(image.pixels.size());

@@ -113,14 +113,6 @@ namespace siege::views
 					.pszText = const_cast<wchar_t*>(L"")
 					});
 
-				std::vector<win32::list_view_group> groups{
-					{L"main.dpl", {{ L"palette 1"}, { L"palette 2"}, { L"palette 3"}}},
-					{L"test.pal", {{ L"palette 1"}}},
-					{L"other.ipl", {{ L"palette 1"}}},
-				};
-
-				palettes_list.InsertGroups(groups);
-
 				return palettes_list;
 				}();
 
@@ -173,22 +165,6 @@ namespace siege::views
 			palettes_list.SetColumnWidth(0, right_size.cx);
 
 			return 0;
-		}
-
-		std::optional<LRESULT> on_get_object(win32::get_object_message message)
-		{
-			if (message.object_id == OBJID_NATIVEOM)
-			{
-				auto collection = std::make_unique<win32::com::OwningCollection<std::unique_ptr<IStream, void(*)(IStream*)>>>();
-
-				auto result = LresultFromObject(__uuidof(IDispatch), message.flags, static_cast<IDispatch*>(collection.get()));
-
-				collection.release()->Release();
-
-				return result;
-			}
-
-			return std::nullopt;
 		}
 
 		auto on_copy_data(win32::copy_data_message<char> message)
@@ -279,7 +255,8 @@ namespace siege::views
 
 						return data;
 					});
-				auto count = controller.load_bitmap(stream);
+
+				auto count = controller.load_bitmap(stream, task);
 
 				if (count > 0)
 				{
@@ -303,6 +280,35 @@ namespace siege::views
 					controller.convert(0, std::make_pair(size->cx, size->cy), 32, std::span(reinterpret_cast<std::byte*>(pixels), size->cx * size->cy * 4));
 
 					static_image.SetImage(current_bitmap.get());
+
+					/*std::vector<win32::list_view_group> groups{
+                                          { L"main.dpl", { { L"palette 1" }, { L"palette 2" }, { L"palette 3" } } },
+                                          { L"test.pal", { { L"palette 1" } } },
+                                          { L"other.ipl", { { L"palette 1" } } },
+                                        };*/
+					//std::wstring text, std::vector<list_view_item> items
+
+					auto& palettes = task.get();
+
+					auto p = 1u;
+
+					std::vector<win32::list_view_group> groups;
+
+					for (auto& pal : palettes)
+					{
+						std::vector<win32::list_view_item> items;
+                        items.reserve(pal.size());
+
+                        auto c = 1u;						
+						for (auto& child : pal)
+						{
+							items.emplace_back(win32::list_view_item(L"Child " + std::to_wstring(c++)));
+						}
+
+						groups.emplace_back(L"Palette " + std::to_wstring(p++), std::move(items));
+					}
+
+					palettes_list.InsertGroups(groups);
 
 					return TRUE;
 				}
