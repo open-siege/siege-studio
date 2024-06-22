@@ -15,6 +15,7 @@
 #include <istream>
 #include <spanstream>
 #include <oleacc.h>
+#include <Uxtheme.h>
 #include "bmp_controller.hpp"
 #include "pal_controller.hpp"
 
@@ -160,7 +161,39 @@ namespace siege::views
       palettes_list.SetWindowPos(right_size);
       palettes_list.SetColumnWidth(0, right_size.cx);
 
+      ::SetWindowTheme(palettes_list, L"", L"");
+
+
       return 0;
+    }
+
+    std::optional<win32::lresult_t> on_notify(win32::list_view_custom_draw_notification message)
+    {
+      if (message.ref.nmcd.dwDrawStage == CDDS_PREPAINT && message.ref.nmcd.dwItemSpec == LVCDI_GROUP)
+      {
+        return CDRF_SKIPDEFAULT;
+      }
+
+      if (message.ref.nmcd.dwDrawStage == CDDS_PREPAINT)
+      {
+        return CDRF_NOTIFYITEMDRAW;
+      }
+
+      if (message.ref.nmcd.dwDrawStage == CDDS_ITEMPREPAINT)
+      {
+        message.ref.clrTextBk = 0x00000000;
+        message.ref.clrText = 0x00FFFFFF;
+        return CDRF_NEWFONT;
+      }
+
+      if (message.ref.nmcd.dwDrawStage == (CDDS_SUBITEM | CDDS_ITEMPREPAINT))
+      {
+        message.ref.clrTextBk = 0x00000000;
+        message.ref.clrText = 0x00FFFFFF;
+        return CDRF_NEWFONT;
+      }
+
+      return CDRF_DODEFAULT;
     }
 
     auto on_copy_data(win32::copy_data_message<char> message)
@@ -293,9 +326,9 @@ namespace siege::views
             for (auto& child : pal.children)
             {
               auto& child_item = items.emplace_back(win32::list_view_item(L"Palette " + std::to_wstring(c++)));
-              
+
               if (selection.first->path == pal.path && selection.second == (c - 2))
-              { 
+              {
                 selected_index = index;
               }
 

@@ -44,6 +44,18 @@ namespace win32
 		}
 	};
 
+	template<typename TNotification = NMHDR>
+	struct notify_message_ref
+	{
+		constexpr static std::uint32_t id = WM_NOTIFY;
+
+		TNotification& ref;
+
+		notify_message_ref(wparam_t, lparam_t lParam) : ref(*(TNotification*)lParam)
+		{
+		}
+	};
+
 	using notify_message = notify_message_base<>;
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -53,6 +65,10 @@ namespace win32
 	using list_view_item_activation = notify_message_base<NMITEMACTIVATE>;
 	using mouse_notification = notify_message_base<NMMOUSE>;
 	using keyboard_notification = notify_message_base<NMKEY>;
+	using custom_draw_notification = notify_message_ref<NMCUSTOMDRAW>;
+	using list_view_custom_draw_notification = notify_message_ref<NMLVCUSTOMDRAW>;
+	using tree_view_custom_draw_notification = notify_message_ref<NMTVCUSTOMDRAW>;
+	using tool_bar_custom_draw_notification = notify_message_ref<NMTBCUSTOMDRAW>;
 #endif
 
 	struct menu_command

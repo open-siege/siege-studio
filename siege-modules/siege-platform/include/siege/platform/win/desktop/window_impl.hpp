@@ -104,6 +104,41 @@ namespace win32
 				}
 			}
 
+			if constexpr (requires(TWindow t) { t.on_notify(list_view_custom_draw_notification{ wParam, lParam }); })
+			{
+				if (header.code == NM_CUSTOMDRAW
+					&& ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == WC_LISTVIEWW)
+				{
+					return self->on_notify(list_view_custom_draw_notification{ wParam, lParam });
+				}
+			}
+
+			if constexpr (requires(TWindow t) { t.on_notify(tree_view_custom_draw_notification{ wParam, lParam }); })
+			{
+				if (header.code == NM_CUSTOMDRAW
+					&& ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == WC_TREEVIEWW)
+				{
+					return self->on_notify(tree_view_custom_draw_notification{ wParam, lParam });
+				}
+			}
+
+			if constexpr (requires(TWindow t) { t.on_notify(tool_bar_custom_draw_notification{ wParam, lParam }); })
+			{
+				if (header.code == NM_CUSTOMDRAW
+					&& ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == TOOLBARCLASSNAMEW)
+				{
+					return self->on_notify(tool_bar_custom_draw_notification{ wParam, lParam });
+				}
+			}
+
+			if constexpr (requires(TWindow t) { t.on_notify(custom_draw_notification{ wParam, lParam }); })
+			{
+				if (header.code == NM_CUSTOMDRAW)
+				{
+					return self->on_notify(custom_draw_notification{ wParam, lParam });
+				}
+			}
+
 			if constexpr (requires(TWindow t) { t.on_notify(header_filter_button_notification{ wParam, lParam }); })
 			{
 				if (header.code == HDN_FILTERBTNCLICK)
