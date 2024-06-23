@@ -60,6 +60,20 @@ namespace win32
     }
   };
 
+  struct setting_change_message
+  {
+    constexpr static std::uint32_t id = WM_SETTINGCHANGE;
+
+    wparam_t wparam;
+
+    std::wstring setting;
+
+    setting_change_message(wparam_t wParam, lparam_t lParam) : wparam(wParam),
+                                                               setting(lParam != 0 ? (wchar_t*)lParam : L"")
+    {
+    }
+  };
+
   struct paint_message
   {
     constexpr static std::uint32_t id = WM_PAINT;

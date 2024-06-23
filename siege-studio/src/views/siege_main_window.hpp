@@ -10,6 +10,7 @@
 #include <siege/platform/win/desktop/drawing.hpp>
 #include <map>
 #include <spanstream>
+#include <dwmapi.h>
 
 namespace siege::views
 {
@@ -32,6 +33,11 @@ namespace siege::views
 
     std::wstring buffer;
 
+    HMENU light_menu;
+    HMENU dark_menu;
+
+    bool is_dark_mode = false;
+
     siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self), tab_control(nullptr)
     {
       std::filesystem::path app_path = std::filesystem::path(win32::module_ref(params.hInstance).GetModuleFileName()).parent_path();
@@ -53,6 +59,44 @@ namespace siege::views
       }
 
       selected_file = files.end();
+
+      light_menu = ::CreateMenu();
+      dark_menu = ::CreateMenu();
+
+
+      auto menus = std::array<HMENU, 2>{ light_menu, dark_menu };
+
+      bool is_light = true;
+
+      for (auto& menu : menus)
+      {
+        std::size_t id = 1u;
+        auto file_menu = ::CreatePopupMenu();
+
+        auto popup = is_light ? MF_POPUP : MF_OWNERDRAW | MF_POPUP;
+        auto string = is_light ? MF_STRING : MF_OWNERDRAW | MF_STRING;
+        auto separator = is_light ? MF_SEPARATOR : MF_OWNERDRAW | MF_SEPARATOR;
+
+        AppendMenuW(menu, popup, reinterpret_cast<INT_PTR>(file_menu), L"File");
+        AppendMenuW(file_menu, string, open_id, L"Open...");
+        AppendMenuW(file_menu, string, open_new_tab_id, L"Open in New Tab...");
+        AppendMenuW(file_menu, string, open_workspace, L"Open Folder as Workspace");
+        AppendMenuW(file_menu, separator, id++, nullptr);
+        AppendMenuW(file_menu, string, RegisterWindowMessageW(L"COMMAND_EXIT"), L"Quit");
+
+        AppendMenuW(menu, string, id++, L"Edit");
+        AppendMenuW(menu, string, id++, L"View");
+        AppendMenuW(menu, string, id++, L"Help");
+        is_light = false;
+      }
+      
+      MENUINFO mi = { 0 };
+      mi.cbSize = sizeof(mi);
+      mi.fMask = MIM_BACKGROUND | MIM_APPLYTOSUBMENUS;
+      mi.hbrBack = ::CreateSolidBrush(0x00383838);
+
+      SetMenuInfo(dark_menu, &mi); 
+      SetMenu(self, light_menu);
     }
 
     void repopulate_tree_view(std::filesystem::path path)
@@ -130,10 +174,6 @@ namespace siege::views
       win32::window_factory factory(ref());
 
       dir_list = *factory.CreateWindowExW<win32::tree_view>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE });
-
-      TreeView_SetBkColor(dir_list, 0x00000000);
-      TreeView_SetTextColor(dir_list, 0x00FFFFFF);
-      TreeView_SetLineColor (dir_list, 0x00383838);
 
       repopulate_tree_view(std::filesystem::current_path());
 
@@ -247,6 +287,55 @@ namespace siege::views
       }
 
       return FALSE;
+    }
+
+    std::optional<win32::lresult_t> on_setting_change(win32::setting_change_message message)
+    {
+      if (message.setting == L"ImmersiveColorSet")
+      {
+        HKEY key = nullptr;
+        if (RegOpenKeyExW(HKEY_CURRENT_USER,
+            L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+            0, KEY_READ, &key)
+            == ERROR_SUCCESS)
+        {
+          DWORD value = 0;
+          DWORD size = sizeof(DWORD);
+
+          DWORD type = REG_DWORD;
+          if (RegQueryValueExW(key, L"AppsUseLightTheme", nullptr, &type, (LPBYTE)&value, &size) == ERROR_SUCCESS)
+          {
+            if (value == 1)
+            {
+              auto style = tab_control.GetWindowStyle();
+              tab_control.SetWindowStyle(style & ~TCS_OWNERDRAWFIXED);
+
+              TreeView_SetBkColor(dir_list, -1);
+              TreeView_SetTextColor(dir_list, -1);
+              TreeView_SetLineColor(dir_list, -1);
+              SetMenu(*this, light_menu);
+              BOOL value = FALSE;
+              ::DwmSetWindowAttribute(*this, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
+            }
+            else
+            {
+              auto style = tab_control.GetWindowStyle();
+              tab_control.SetWindowStyle(style | TCS_OWNERDRAWFIXED);
+
+              TreeView_SetBkColor(dir_list, 0x00000000);
+              TreeView_SetTextColor(dir_list, 0x00FFFFFF);
+              TreeView_SetLineColor(dir_list, 0x00383838);
+              SetMenu(*this, dark_menu);
+              BOOL value = TRUE;
+              ::DwmSetWindowAttribute(*this, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
+            }
+          }
+
+          RegCloseKey(key);
+        }
+      }
+
+      return std::nullopt;
     }
 
     auto on_control_color(win32::scroll_bar_control_color_message)

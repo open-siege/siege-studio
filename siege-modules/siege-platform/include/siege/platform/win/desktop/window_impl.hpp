@@ -29,6 +29,7 @@ namespace win32
 		DO_DISPATCH(erase_background_message, on_erase_background);
 		DO_DISPATCH(draw_item_message, on_draw_item);
 		DO_DISPATCH(measure_item_message, on_measure_item);
+		DO_DISPATCH(setting_change_message, on_setting_change);
 
 		DO_DISPATCH(button_control_color_message, on_control_color);
         DO_DISPATCH(list_box_control_color_message, on_control_color);

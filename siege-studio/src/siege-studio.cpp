@@ -19,7 +19,6 @@
 #include <siege/platform/win/core/com/client.hpp>
 #include <commctrl.h>
 #include <oleacc.h>
-#include <dwmapi.h>
 
 #include "views/siege_main_window.hpp"
 
@@ -42,31 +41,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 	info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
 	this_module.RegisterClassExW(info);
 
-	auto main_menu = ::CreateMenu();
-
-	std::size_t id = 1u;
-
-	auto file_menu = ::CreatePopupMenu();	
-	AppendMenuW(main_menu, MF_OWNERDRAW | MF_POPUP, reinterpret_cast<INT_PTR>(file_menu), L"File");
-	AppendMenuW(file_menu, MF_OWNERDRAW | MF_STRING, RegisterWindowMessageW(L"COMMAND_OPEN"), L"Open...");
-	AppendMenuW(file_menu, MF_OWNERDRAW | MF_STRING, RegisterWindowMessageW(L"COMMAND_OPEN_NEW_TAB"), L"Open in New Tab...");
-	AppendMenuW(file_menu, MF_OWNERDRAW | MF_STRING, RegisterWindowMessageW(L"COMMAND_OPEN_WORKSPACE"), L"Open Folder as Workspace");
-	AppendMenuW(file_menu, MF_OWNERDRAW | MF_SEPARATOR , id++, nullptr);
-	AppendMenuW(file_menu, MF_OWNERDRAW | MF_STRING, RegisterWindowMessageW(L"COMMAND_EXIT"), L"Quit");
-
-	AppendMenuW(main_menu, MF_OWNERDRAW | MF_STRING, id++, L"Edit");
-    AppendMenuW(main_menu, MF_OWNERDRAW | MF_STRING, id++, L"View");
-    AppendMenuW(main_menu, MF_OWNERDRAW | MF_STRING, id++, L"Help");
-
-	MENUINFO mi = { 0 };
-    mi.cbSize = sizeof(mi);
-    mi.fMask = MIM_BACKGROUND | MIM_APPLYTOSUBMENUS;
-    mi.hbrBack = ::CreateSolidBrush(0x00383838);
-
-    SetMenuInfo(main_menu, &mi); 
-
     auto main_window = this_module.CreateWindowExW(CREATESTRUCTW {
-		.hMenu = main_menu,
 		.cx = CW_USEDEFAULT,
 		.x = CW_USEDEFAULT,
 		.style = WS_OVERLAPPEDWINDOW,
@@ -78,9 +53,6 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 	{
 		return main_window.error();
 	}
-
-	BOOL value = TRUE;
-    ::DwmSetWindowAttribute(*main_window, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
 
 	ShowWindow(*main_window, nCmdShow);
 	UpdateWindow(*main_window);
