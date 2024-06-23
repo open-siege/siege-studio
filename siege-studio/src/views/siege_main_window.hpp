@@ -30,10 +30,14 @@ namespace siege::views
     std::uint32_t open_new_tab_id = RegisterWindowMessageW(L"COMMAND_OPEN_NEW_TAB");
     std::uint32_t open_workspace = RegisterWindowMessageW(L"COMMAND_OPEN_WORKSPACE");
 
+    std::wstring buffer;
+
     siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self), tab_control(nullptr)
     {
       std::filesystem::path app_path = std::filesystem::path(win32::module_ref(params.hInstance).GetModuleFileName()).parent_path();
       loaded_modules = platform::content_module::load_modules(std::filesystem::path(app_path));
+
+      buffer.resize(64);
 
       for (auto& module : loaded_modules)
       {
@@ -49,12 +53,6 @@ namespace siege::views
       }
 
       selected_file = files.end();
-    }
-
-    std::optional<LRESULT> on_destroy(win32::destroy_message)
-    {
-      PostQuitMessage(0);
-      return 0;
     }
 
     void repopulate_tree_view(std::filesystem::path path)
@@ -139,12 +137,18 @@ namespace siege::views
 
       repopulate_tree_view(std::filesystem::current_path());
 
-      tab_control = *factory.CreateWindowExW<win32::tab_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | TCS_MULTILINE | TCS_RIGHTJUSTIFY });
+      tab_control = *factory.CreateWindowExW<win32::tab_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | TCS_MULTILINE | TCS_RIGHTJUSTIFY | TCS_OWNERDRAWFIXED });
       tab_control.InsertItem(0, TCITEMW{
                                   .mask = TCIF_TEXT,
                                   .pszText = const_cast<wchar_t*>(L"+"),
                                 });
 
+      return 0;
+    }
+
+    std::optional<LRESULT> on_destroy(win32::destroy_message)
+    {
+      PostQuitMessage(0);
       return 0;
     }
 
@@ -256,6 +260,7 @@ namespace siege::views
     {
       static auto black_brush = ::CreateSolidBrush(0x00000000);
       static auto grey_brush = ::CreateSolidBrush(0x00383838);
+
       auto context = win32::gdi_drawing_context_ref(message.item.hDC);
 
       SetBkMode(context, TRANSPARENT);
@@ -275,6 +280,22 @@ namespace siege::views
 
 
       ::SetTextColor(context, 0x00FFFFFF);
+      
+      if (message.item.hwndItem == tab_control)
+      {
+        auto item = tab_control.GetItem(message.item.itemID, TCITEMW{
+            .mask = TCIF_TEXT,
+            .pszText = buffer.data(),
+            .cchTextMax = int(buffer.size())
+        });
+        
+        if (item)
+        {
+          ::DrawTextW(context, (LPCWSTR)item->pszText, -1, &message.item.rcItem, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+        }
+        return TRUE;
+      }
+
       ::DrawTextW(context, (LPCWSTR)message.item.itemData, -1, &message.item.rcItem, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
 
       return TRUE;
