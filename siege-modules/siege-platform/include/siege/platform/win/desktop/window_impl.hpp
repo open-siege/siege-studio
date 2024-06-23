@@ -8,11 +8,11 @@
 namespace win32
 {
 #define DO_DISPATCH(message_name, event_name) \
-    if constexpr (requires(TWindow t) { t.event_name({wParam, lParam}); }) \
+    if constexpr (requires(TWindow t) { t.event_name(message_name{ wParam, lParam }); }) \
         { \
             if (message == message_name::id) \
             { \
-                return self->event_name({wParam, lParam}); \
+                return self->event_name(message_name{ wParam, lParam }); \
             } \
         } \
 
@@ -26,8 +26,16 @@ namespace win32
 		DO_DISPATCH(size_message, on_size);
 		DO_DISPATCH(pos_changed_message, on_pos_changed);
 		DO_DISPATCH(paint_message, on_paint);
+		DO_DISPATCH(erase_background_message, on_erase_background);
 		DO_DISPATCH(draw_item_message, on_draw_item);
 		DO_DISPATCH(measure_item_message, on_measure_item);
+
+		DO_DISPATCH(button_control_color_message, on_control_color);
+        DO_DISPATCH(list_box_control_color_message, on_control_color);
+        DO_DISPATCH(scroll_bar_control_color_message, on_control_color);
+        DO_DISPATCH(edit_control_color_message, on_control_color);
+        DO_DISPATCH(static_control_color_message, on_control_color);
+
 		DO_DISPATCH(keyboard_key_up_message, on_keyboard_key_up);
 		DO_DISPATCH(keyboard_key_down_message, on_keyboard_key_down);
 		DO_DISPATCH(keyboard_char_message, on_keyboard_char);

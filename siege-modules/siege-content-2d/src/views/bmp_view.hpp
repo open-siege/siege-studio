@@ -168,6 +168,15 @@ namespace siege::views
       return 0;
     }
 
+    auto on_control_color(win32::static_control_color_message message)
+    {
+      static auto black_brush = ::CreateSolidBrush(0x00000000);
+      ::SetBkColor(message.context, 0x00000000);
+      ::SetTextColor(message.context, 0x00FFFFFF);
+
+      return (LRESULT)black_brush;
+    }
+
     auto on_copy_data(win32::copy_data_message<char> message)
     {
       std::spanstream stream(message.data);

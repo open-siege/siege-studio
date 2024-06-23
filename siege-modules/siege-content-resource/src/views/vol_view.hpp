@@ -3,6 +3,7 @@
 
 #include <siege/platform/win/desktop/common_controls.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
+#include <siege/platform/win/desktop/drawing.hpp>
 #include <siege/platform/win/desktop/menu.hpp>
 #include <siege/platform/content_module.hpp>
 #include <siege/platform/shared.hpp>
@@ -236,6 +237,16 @@ namespace siege::views
       return FALSE;
     }
 
+    auto on_erase_background(win32::erase_background_message message)
+    {
+      static auto black_brush = ::CreateSolidBrush(0x00000000);
+      auto context = win32::gdi_drawing_context_ref(message.context);
+
+      auto rect = GetClientRect();
+      context.FillRect(*rect, black_brush);
+
+      return TRUE;
+    }
 
     std::optional<win32::lresult_t> on_notify(win32::tool_bar_custom_draw_notification message)
     {

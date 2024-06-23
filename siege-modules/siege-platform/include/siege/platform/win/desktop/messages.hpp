@@ -69,6 +69,78 @@ namespace win32
     }
   };
 
+  struct erase_background_message
+  {
+    constexpr static std::uint32_t id = WM_ERASEBKGND;
+
+    HDC context;
+
+    erase_background_message(wparam_t wParam, lparam_t) : context((HDC)wParam)
+    {
+
+    }
+  };
+
+  struct button_control_color_message
+  {
+    constexpr static std::uint32_t id = WM_CTLCOLORBTN;
+
+    HDC context;
+    HWND control;
+
+    button_control_color_message(wparam_t wParam, lparam_t lParam) : context((HDC)wParam), control((HWND)control)
+    {
+    }
+  };
+
+  struct edit_control_color_message
+  {
+    constexpr static std::uint32_t id = WM_CTLCOLOREDIT;
+
+    HDC context;
+    HWND control;
+
+    edit_control_color_message(wparam_t wParam, lparam_t lParam) : context((HDC)wParam), control((HWND)control)
+    {
+    }
+  };
+
+  struct static_control_color_message
+  {
+    constexpr static std::uint32_t id = WM_CTLCOLORSTATIC;
+
+    HDC context;
+    HWND control;
+
+    static_control_color_message(wparam_t wParam, lparam_t lParam) : context((HDC)wParam), control((HWND)control)
+    {
+    }
+  };
+
+  struct list_box_control_color_message
+  {
+    constexpr static std::uint32_t id = WM_CTLCOLORLISTBOX;
+
+    HDC context;
+    HWND control;
+
+    list_box_control_color_message(wparam_t wParam, lparam_t lParam) : context((HDC)wParam), control((HWND)control)
+    {
+    }
+  };
+
+  struct scroll_bar_control_color_message
+  {
+    constexpr static std::uint32_t id = WM_CTLCOLORSCROLLBAR;
+
+    HDC context;
+    HWND control;
+
+    scroll_bar_control_color_message(wparam_t wParam, lparam_t lParam) : context((HDC)wParam), control((HWND)control)
+    {
+    }
+  };
+
   struct input_message
   {
     constexpr static std::uint32_t id = WM_INPUT;

@@ -249,6 +249,23 @@ namespace siege::views
       return FALSE;
     }
 
+    auto on_control_color(win32::scroll_bar_control_color_message)
+    {
+      static auto grey_brush = ::CreateSolidBrush(0x00AA0000);
+      return (LRESULT)grey_brush;
+    }
+
+    auto on_erase_background(win32::erase_background_message message)
+    {
+      static auto black_brush = ::CreateSolidBrush(0x00000000);
+      auto context = win32::gdi_drawing_context_ref(message.context);
+
+      auto rect = GetClientRect();
+      context.FillRect(*rect, black_brush);
+
+      return TRUE;
+    }
+
     auto on_measure_item(win32::measure_item_message message)
     {
       message.item.itemHeight = 30;
