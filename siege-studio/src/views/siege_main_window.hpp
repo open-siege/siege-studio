@@ -7,6 +7,7 @@
 #include <siege/platform/win/core/file.hpp>
 #include <siege/platform/win/core/com/storage.hpp>
 #include <siege/platform/content_module.hpp>
+#include <siege/platform/win/desktop/drawing.hpp>
 #include <map>
 #include <spanstream>
 
@@ -242,6 +243,41 @@ namespace siege::views
       }
 
       return FALSE;
+    }
+
+    auto on_measure_item(win32::measure_item_message message)
+    {
+      message.item.itemHeight = 30;
+      message.item.itemWidth = 90;
+      return TRUE;
+    }
+
+    auto on_draw_item(win32::draw_item_message message)
+    {
+      static auto black_brush = ::CreateSolidBrush(0x00000000);
+      static auto grey_brush = ::CreateSolidBrush(0x00383838);
+      auto context = win32::gdi_drawing_context_ref(message.item.hDC);
+
+      SetBkMode(context, TRANSPARENT);
+      
+      if (message.item.itemState & ODS_HOTLIGHT)
+      {
+        context.FillRect(message.item.rcItem, grey_brush);
+      }
+      else if (message.item.itemState & ODS_SELECTED)
+      {
+        context.FillRect(message.item.rcItem, grey_brush);
+      }
+      else
+      {
+        context.FillRect(message.item.rcItem, black_brush);
+      }
+
+
+      ::SetTextColor(context, 0x00FFFFFF);
+      ::DrawTextW(context, (LPCWSTR)message.item.itemData, -1, &message.item.rcItem, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+
+      return TRUE;
     }
 
     std::optional<LRESULT> on_notify(win32::notify_message notification)

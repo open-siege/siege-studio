@@ -47,16 +47,16 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 	std::size_t id = 1u;
 
 	auto file_menu = ::CreatePopupMenu();	
-	AppendMenuW(main_menu, MF_POPUP, reinterpret_cast<INT_PTR>(file_menu), L"File");
-	AppendMenuW(file_menu, MF_STRING, RegisterWindowMessageW(L"COMMAND_OPEN"), L"Open...");
-	AppendMenuW(file_menu, MF_STRING, RegisterWindowMessageW(L"COMMAND_OPEN_NEW_TAB"), L"Open in New Tab...");
-	AppendMenuW(file_menu, MF_STRING, RegisterWindowMessageW(L"COMMAND_OPEN_WORKSPACE"), L"Open Folder as Workspace");
-	AppendMenuW(file_menu, MF_SEPARATOR , id++, nullptr);
-	AppendMenuW(file_menu, MF_STRING, RegisterWindowMessageW(L"COMMAND_EXIT"), L"Quit");
+	AppendMenuW(main_menu, MF_OWNERDRAW | MF_POPUP, reinterpret_cast<INT_PTR>(file_menu), L"File");
+	AppendMenuW(file_menu, MF_OWNERDRAW | MF_STRING, RegisterWindowMessageW(L"COMMAND_OPEN"), L"Open...");
+	AppendMenuW(file_menu, MF_OWNERDRAW | MF_STRING, RegisterWindowMessageW(L"COMMAND_OPEN_NEW_TAB"), L"Open in New Tab...");
+	AppendMenuW(file_menu, MF_OWNERDRAW | MF_STRING, RegisterWindowMessageW(L"COMMAND_OPEN_WORKSPACE"), L"Open Folder as Workspace");
+	AppendMenuW(file_menu, MF_OWNERDRAW | MF_SEPARATOR , id++, nullptr);
+	AppendMenuW(file_menu, MF_OWNERDRAW | MF_STRING, RegisterWindowMessageW(L"COMMAND_EXIT"), L"Quit");
 
-	AppendMenuW(main_menu, MF_STRING, id++, L"Edit");
-    AppendMenuW(main_menu, MF_STRING, id++, L"View");
-    AppendMenuW(main_menu, MF_STRING, id++, L"Help");
+	AppendMenuW(main_menu, MF_OWNERDRAW | MF_STRING, id++, L"Edit");
+    AppendMenuW(main_menu, MF_OWNERDRAW | MF_STRING, id++, L"View");
+    AppendMenuW(main_menu, MF_OWNERDRAW | MF_STRING, id++, L"Help");
 
 	MENUINFO mi = { 0 };
     mi.cbSize = sizeof(mi);
