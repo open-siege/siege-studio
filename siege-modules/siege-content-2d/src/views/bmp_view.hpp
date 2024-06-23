@@ -15,7 +15,6 @@
 #include <istream>
 #include <spanstream>
 #include <oleacc.h>
-#include <Uxtheme.h>
 #include "bmp_controller.hpp"
 #include "pal_controller.hpp"
 
@@ -165,9 +164,6 @@ namespace siege::views
       palettes_list.SetWindowPos(POINT{ .x = left_size.cx });
       palettes_list.SetWindowPos(right_size);
       palettes_list.SetColumnWidth(0, right_size.cx);
-
-      ::SetWindowTheme(palettes_list, L"", L"");
-
 
       return 0;
     }

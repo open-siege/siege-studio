@@ -20,11 +20,6 @@ namespace win32
 
         }
 
-        inline void SetWindowTheme()
-        {
-
-        }
-
         inline void DpiScale()
         {
 

@@ -9,7 +9,7 @@
 #include <spanstream>
 #include <map>
 #include <set>
-#include <Uxtheme.h>
+#include <siege/platform/win/desktop/theme_module.hpp>
 #include "vol_controller.hpp"
 
 namespace siege::views
@@ -100,7 +100,7 @@ namespace siege::views
 
       table_settings.InsertButton(-1, { .iBitmap = VIEW_LIST, .idCommand = LV_VIEW_LIST, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"List" });
 
-      ::SetWindowTheme(table_settings, L"", L"");
+      win32::theme_module().SetWindowTheme(table_settings, L"", L"");
 
       table = *factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LVS_REPORT,

@@ -19,6 +19,7 @@
 #include <siege/platform/win/core/com/client.hpp>
 #include <commctrl.h>
 #include <oleacc.h>
+#include <dwmapi.h>
 
 #include "views/siege_main_window.hpp"
 
@@ -77,6 +78,9 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 	{
 		return main_window.error();
 	}
+
+	BOOL value = TRUE;
+    ::DwmSetWindowAttribute(*main_window, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
 
 	ShowWindow(*main_window, nCmdShow);
 	UpdateWindow(*main_window);
