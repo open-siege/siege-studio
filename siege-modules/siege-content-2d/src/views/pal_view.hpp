@@ -49,12 +49,14 @@ namespace siege::views
           auto style = selection.GetWindowStyle();
           selection.SetWindowStyle(style | LBS_OWNERDRAWFIXED);
           list_background.reset(::CreateSolidBrush(0x00000000));
+          RedrawWindow(selection, nullptr, nullptr, RDW_INVALIDATE);
         }
         else
         {
           auto style = selection.GetWindowStyle();
           selection.SetWindowStyle(style & ~LBS_OWNERDRAWFIXED);
           list_background.reset();
+          RedrawWindow(selection, nullptr, nullptr, RDW_INVALIDATE);
         }
         return 0;
       }

@@ -7,6 +7,7 @@
 #include <siege/platform/win/core/com/storage.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
 #include <siege/platform/win/desktop/shell.hpp>
+#include <siege/platform/win/desktop/theme_module.hpp>
 #include <siege/platform/storage_module.hpp>
 #include <cassert>
 #include <sstream>
@@ -38,6 +39,11 @@ namespace siege::views
     win32::gdi_bitmap current_bitmap;
 
     std::list<platform::storage_module> loaded_modules;
+
+    LRESULT old_bk_color;
+    LRESULT old_text_color;
+    LRESULT old_text_bk_color;
+    LRESULT old_outline_color;
 
     bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
@@ -94,11 +100,6 @@ namespace siege::views
           .style = WS_VISIBLE | WS_CHILD | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER,
           .lpszName = L"Palettes" });
 
-        ListView_SetBkColor(palettes_list, 0x00000000);
-        ListView_SetTextBkColor(palettes_list, 0x00383838);
-        ListView_SetTextColor(palettes_list, 0x00FFFFFF);
-        ListView_SetOutlineColor(palettes_list, 0x00AAAAAA);
-
         palettes_list.SetView(win32::list_view::view_type::details_view);
         assert(palettes_list.EnableGroupView(true));
         assert(palettes_list.SetTileViewInfo(LVTILEVIEWINFO{
@@ -110,6 +111,11 @@ namespace siege::views
           LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_AUTOSIZECOLUMNS);
 
         palettes_list.win32::list_view::InsertColumn(-1, LVCOLUMNW{ .pszText = const_cast<wchar_t*>(L"Available Palettes") });
+
+        old_bk_color = ListView_GetBkColor(palettes_list);
+        old_text_color = ListView_GetTextColor(palettes_list);
+        old_text_bk_color = ListView_GetTextBkColor(palettes_list);
+        old_outline_color = ListView_GetOutlineColor(palettes_list);
 
         auto header = palettes_list.GetHeader();
 
@@ -166,6 +172,37 @@ namespace siege::views
       palettes_list.SetColumnWidth(0, right_size.cx);
 
       return 0;
+    }
+
+    std::optional<win32::lresult_t> on_setting_change(win32::setting_change_message message)
+    {
+      if (message.setting == L"ImmersiveColorSet")
+      {
+        auto parent = this->GetParent();
+
+        if (parent->GetPropW<bool>(L"AppsUseDarkTheme"))
+        {
+
+          ListView_SetBkColor(palettes_list, 0x00000000);
+          ListView_SetTextBkColor(palettes_list, 0x00383838);
+          ListView_SetTextColor(palettes_list, 0x00FFFFFF);
+          ListView_SetOutlineColor(palettes_list, 0x00AAAAAA);
+          win32::theme_module().SetWindowTheme(palettes_list, L"DarkMode_Explorer", nullptr);
+          RedrawWindow(palettes_list, nullptr, nullptr, RDW_INVALIDATE);
+        }
+        else
+        {
+          ListView_SetBkColor(palettes_list, old_bk_color);
+          ListView_SetTextBkColor(palettes_list, old_text_bk_color);
+          ListView_SetTextColor(palettes_list, old_text_color);
+          ListView_SetOutlineColor(palettes_list, old_outline_color);
+          win32::theme_module().SetWindowTheme(palettes_list, L"Explorer", nullptr);
+          RedrawWindow(palettes_list, nullptr, nullptr, RDW_INVALIDATE);
+        }
+        return 0;
+      }
+
+      return std::nullopt;
     }
 
     auto on_control_color(win32::static_control_color_message message)
