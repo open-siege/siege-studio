@@ -183,6 +183,8 @@ namespace siege::views
                                   .pszText = const_cast<wchar_t*>(L"+"),
                                 });
 
+      on_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
+
       return 0;
     }
 
@@ -305,6 +307,7 @@ namespace siege::views
           DWORD type = REG_DWORD;
           if (RegQueryValueExW(key, L"AppsUseLightTheme", nullptr, &type, (LPBYTE)&value, &size) == ERROR_SUCCESS)
           {
+            this->SetPropW(L"AppsUseDarkTheme", value == 0);
             if (value == 1)
             {
               auto style = tab_control.GetWindowStyle();
@@ -316,6 +319,18 @@ namespace siege::views
               SetMenu(*this, light_menu);
               BOOL value = FALSE;
               ::DwmSetWindowAttribute(*this, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
+
+              ::EnumChildWindows(
+                *this, [](HWND child, LPARAM parent) -> BOOL __stdcall {
+                  
+                  if (::GetParent(child) == (HWND)parent)
+                  {
+                    ::SendMessageW(child, WM_SETTINGCHANGE, 0, (LPARAM)L"ImmersiveColorSet");
+                  }
+                  
+                  return TRUE;
+                },
+                (LPARAM)(HWND)*this);
             }
             else
             {
@@ -328,31 +343,25 @@ namespace siege::views
               SetMenu(*this, dark_menu);
               BOOL value = TRUE;
               ::DwmSetWindowAttribute(*this, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
+             ::EnumChildWindows(
+                *this, [](HWND child, LPARAM parent) -> BOOL __stdcall {
+                  if (::GetParent(child) == (HWND)parent)
+                  {
+                    ::SendMessageW(child, WM_SETTINGCHANGE, 0, (LPARAM)L"ImmersiveColorSet");
+                  }
+
+                  return TRUE;
+                },
+                (LPARAM)(HWND) * this);
             }
           }
 
           RegCloseKey(key);
+          return 0;
         }
       }
 
       return std::nullopt;
-    }
-
-    auto on_control_color(win32::scroll_bar_control_color_message)
-    {
-      static auto grey_brush = ::CreateSolidBrush(0x00AA0000);
-      return (LRESULT)grey_brush;
-    }
-
-    auto on_erase_background(win32::erase_background_message message)
-    {
-      static auto black_brush = ::CreateSolidBrush(0x00000000);
-      auto context = win32::gdi_drawing_context_ref(message.context);
-
-      auto rect = GetClientRect();
-      context.FillRect(*rect, black_brush);
-
-      return TRUE;
     }
 
     auto on_measure_item(win32::measure_item_message message)

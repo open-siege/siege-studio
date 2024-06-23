@@ -19,6 +19,7 @@ namespace siege::views
     win32::static_control render_view;
     win32::list_box selection;
     std::wstring buffer;
+    win32::gdi_brush list_background;
 
     pal_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
@@ -32,9 +33,33 @@ namespace siege::views
       render_view = *control_factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | SS_OWNERDRAW });
 
       selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS });
+        .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
       return 0;
+    }
+
+    std::optional<win32::lresult_t> on_setting_change(win32::setting_change_message message)
+    {
+      if (message.setting == L"ImmersiveColorSet")
+      {
+        auto parent = this->GetParent();
+
+        if (parent->GetPropW<bool>(L"AppsUseDarkTheme"))
+        {
+          auto style = selection.GetWindowStyle();
+          selection.SetWindowStyle(style | LBS_OWNERDRAWFIXED);
+          list_background.reset(::CreateSolidBrush(0x00000000));
+        }
+        else
+        {
+          auto style = selection.GetWindowStyle();
+          selection.SetWindowStyle(style & ~LBS_OWNERDRAWFIXED);
+          list_background.reset();
+        }
+        return 0;
+      }
+
+      return std::nullopt;
     }
 
     auto on_size(win32::size_message sized)
@@ -124,21 +149,28 @@ namespace siege::views
       return FALSE;
     }
 
-    auto on_control_color(win32::list_box_control_color_message)
+    std::optional<LRESULT> on_control_color(win32::list_box_control_color_message)
     {
-      static auto black_brush = ::CreateSolidBrush(0x00000000);
-      return (LRESULT)black_brush;
+      if (list_background)
+      {
+        return (LRESULT)list_background.get();
+      }
+
+      return std::nullopt;
     }
 
-    auto on_erase_background(win32::erase_background_message message)
+    std::optional<LRESULT> on_erase_background(win32::erase_background_message message)
     {
-      static auto black_brush = ::CreateSolidBrush(0x00000000);
-      auto context = win32::gdi_drawing_context_ref(message.context);
+      if (list_background)
+      {
+        auto context = win32::gdi_drawing_context_ref(message.context);
 
-      auto rect = GetClientRect();
-      context.FillRect(*rect, black_brush);
+        auto rect = GetClientRect();
+        context.FillRect(*rect, list_background);
+        return TRUE;
+      }
 
-      return TRUE;
+      return 0;
     }
 
     auto on_measure_item(win32::measure_item_message message)
@@ -149,13 +181,12 @@ namespace siege::views
 
     auto on_draw_item(win32::draw_item_message message)
     {
-      if (message.item.hwndItem == selection && message.item.itemAction == ODA_DRAWENTIRE ||
-          message.item.hwndItem == selection && message.item.itemAction == ODA_SELECT)
+      if (message.item.hwndItem == selection && message.item.itemAction == ODA_DRAWENTIRE || message.item.hwndItem == selection && message.item.itemAction == ODA_SELECT)
       {
         static auto black_brush = ::CreateSolidBrush(0x00000000);
         static auto grey_brush = ::CreateSolidBrush(0x00383838);
         auto context = win32::gdi_drawing_context_ref(message.item.hDC);
-        
+
         context.FillRect(message.item.rcItem, message.item.itemState & ODS_SELECTED ? grey_brush : black_brush);
         ::SetTextColor(context, 0x00FFFFFF);
 
