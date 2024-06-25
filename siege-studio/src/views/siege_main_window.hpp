@@ -8,6 +8,7 @@
 #include <siege/platform/win/core/com/storage.hpp>
 #include <siege/platform/content_module.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
+#include <siege/platform/win/desktop/theme.hpp>
 #include <map>
 #include <spanstream>
 #include <dwmapi.h>
@@ -313,6 +314,29 @@ namespace siege::views
               auto style = tab_control.GetWindowStyle();
               tab_control.SetWindowStyle(style & ~TCS_OWNERDRAWFIXED);
 
+              static auto props = std::array<std::wstring_view, 32>{ {
+                      win32::properties::tree_view::bk_color,
+                      win32::properties::tree_view::text_color,
+                      win32::properties::tree_view::text_color,
+                      win32::properties::list_view::bk_color,
+                      win32::properties::list_view::text_color,
+                      win32::properties::list_view::text_bk_color,
+                      win32::properties::list_view::outline_color,
+                      win32::properties::tool_bar::btn_face_color,
+                      win32::properties::tool_bar::btn_highlight_color,
+                      win32::properties::tool_bar::btn_shadow_color,
+                      win32::properties::tool_bar::text_color,
+                      win32::properties::tool_bar::text_highlight_color,
+                      win32::properties::tool_bar::mark_color,
+                      win32::properties::window::bk_color,
+                      win32::properties::menu::bk_color,
+              } };
+
+              for (auto& prop : props)
+              {
+                this->RemovePropW(prop);
+              }
+
               TreeView_SetBkColor(dir_list, -1);
               TreeView_SetTextColor(dir_list, -1);
               TreeView_SetLineColor(dir_list, -1);
@@ -330,13 +354,31 @@ namespace siege::views
                   
                   return TRUE;
                 },
-                (LPARAM)(HWND)*this);
+                (LPARAM)(HWND) * this); 
             }
             else
             {
               auto style = tab_control.GetWindowStyle();
               tab_control.SetWindowStyle(style | TCS_OWNERDRAWFIXED);
 
+              this->SetPropW(win32::properties::tree_view::bk_color, 0x00000000);
+              this->SetPropW(win32::properties::tree_view::text_color, 0x00FFFFFF);
+              this->SetPropW(win32::properties::tree_view::line_color, 0x00383838);
+              this->SetPropW(win32::properties::list_view::bk_color, 0x00000000);
+              this->SetPropW(win32::properties::list_view::text_color, 0x00383838);
+              this->SetPropW(win32::properties::list_view::text_bk_color, 0x00FFFFFF);
+              this->SetPropW(win32::properties::list_view::outline_color, 0x00AAAAAA);
+              this->SetPropW(win32::properties::tool_bar::btn_highlight_color, 0x00383838);
+            //  this->SetPropW(win32::properties::tool_bar::btn_shadow_color, 0x00AAAAAA);
+              this->SetPropW(win32::properties::tool_bar::btn_face_color, 0x00000000);
+              //this->SetPropW(win32::properties::tool_bar::btn_shadow_color, 0x00AAAAAA);
+              this->SetPropW(win32::properties::tool_bar::text_color, 0x00FFFFFF);
+              //this->SetPropW(win32::properties::tool_bar::text_highlight_color, 0x00AAAAAA);
+              //this->SetPropW(win32::properties::tool_bar::mark_color, 0x00AAAAAA);
+              this->SetPropW(win32::properties::window::bk_color, 0x00383838);
+              this->SetPropW(win32::properties::window::bk_color, 0x00383838);
+
+                
               TreeView_SetBkColor(dir_list, 0x00000000);
               TreeView_SetTextColor(dir_list, 0x00FFFFFF);
               TreeView_SetLineColor(dir_list, 0x00383838);

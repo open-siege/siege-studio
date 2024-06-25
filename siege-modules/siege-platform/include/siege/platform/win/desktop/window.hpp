@@ -178,7 +178,7 @@ namespace win32
                 return ::SetPropW(*this, name.data(), HANDLE(value));                 
             }
 
-            return ::SetProp(*this, name.data(), nullptr);
+            return ::SetPropW(*this, name.data(), nullptr);
         }
 
         template <typename TValue = HANDLE>

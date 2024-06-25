@@ -10,7 +10,7 @@
 #include <spanstream>
 #include <map>
 #include <set>
-#include <siege/platform/win/desktop/theme_module.hpp>
+#include <siege/platform/win/desktop/theme.hpp>
 #include "vol_controller.hpp"
 
 namespace siege::views
@@ -101,8 +101,6 @@ namespace siege::views
 
       table_settings.InsertButton(-1, { .iBitmap = VIEW_LIST, .idCommand = LV_VIEW_LIST, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"List" });
 
-      win32::theme_module().SetWindowTheme(table_settings, L"", L"");
-
       table = *factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
       });
@@ -187,6 +185,74 @@ namespace siege::views
       return 0;
     }
 
+    bool is_dark = false;
+    inline static std::set<std::wstring> strings;
+
+    std::optional<win32::lresult_t> on_setting_change(win32::setting_change_message message)
+    {
+      if (message.setting == L"ImmersiveColorSet")
+      {
+        auto parent = this->GetParent();
+
+        if (parent->GetPropW<bool>(L"AppsUseDarkTheme"))
+        {
+          if (is_dark)
+          {
+            return 0;
+          }
+          is_dark = true;
+
+
+          std::map<std::wstring_view, COLORREF> colors;
+
+          ::EnumPropsExW(
+            *parent, [](HWND, LPWSTR key, HANDLE value, ULONG_PTR lparam) -> BOOL __stdcall {
+              auto* items = (std::map<std::wstring_view, COLORREF>*)lparam;
+
+              if (key)
+              {
+                auto key_view = std::wstring_view(*strings.emplace(key).first);
+                items->emplace(key_view, (COLORREF)value);
+              }
+
+              return TRUE;
+            },
+            (LPARAM)&colors);
+
+          win32::apply_theme(table_settings, colors);
+        }
+        else
+        {
+          if (!is_dark)
+          {
+            return 0;
+          }
+
+          std::map<std::wstring_view, COLORREF> colors;
+
+          ::EnumPropsExW(
+            *parent, [](HWND, LPWSTR key, HANDLE value, ULONG_PTR lparam) -> BOOL __stdcall {
+              auto* items = (std::map<std::wstring_view, COLORREF>*)lparam;
+
+              if (key)
+              {
+                auto key_view = std::wstring_view(*strings.emplace(key).first);
+                items->emplace(key_view, (COLORREF)value);
+              }
+
+              return TRUE;
+            },
+            (LPARAM)&colors);
+
+          win32::apply_theme(table_settings, colors);
+          is_dark = false;
+        }
+        return 0;
+      }
+
+      return std::nullopt;
+    }
+
     auto on_copy_data(win32::copy_data_message<char> message)
     {
       std::spanstream stream(message.data);
@@ -246,34 +312,6 @@ namespace siege::views
       context.FillRect(*rect, black_brush);
 
       return TRUE;
-    }
-
-    std::optional<win32::lresult_t> on_notify(win32::tool_bar_custom_draw_notification message)
-    {
-      if (message.ref.nmcd.dwDrawStage == CDDS_PREPAINT)
-      {
-        return CDRF_NOTIFYITEMDRAW ;
-      }
-
-      if (message.ref.nmcd.dwDrawStage == CDDS_ITEMPREPAINT)
-      {
-        message.ref.clrBtnFace = 0x00000000;
-        message.ref.clrBtnHighlight = 0x00383838;
-        message.ref.clrText = 0x00FFFFFF;
-  //      message.ref.nStringBkMode = OPAQUE;
-        return CDRF_NEWFONT | TBCDRF_USECDCOLORS;
-      }
-
-      if (message.ref.nmcd.dwDrawStage == (CDDS_SUBITEM | CDDS_ITEMPREPAINT))
-      {
-        message.ref.clrBtnFace = 0x00000000;
-        message.ref.clrBtnHighlight = 0x00383838;
-        message.ref.clrText = 0x00FFFFFF;
-//        message.ref.nStringBkMode = OPAQUE;
-        return CDRF_NEWFONT | TBCDRF_USECDCOLORS;
-      }
-
-      return CDRF_DODEFAULT;
     }
 
     std::optional<win32::lresult_t> on_notify(win32::list_view_item_activation message)
