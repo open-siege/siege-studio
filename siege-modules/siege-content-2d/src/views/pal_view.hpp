@@ -18,6 +18,7 @@ namespace siege::views
 
     win32::static_control render_view;
     win32::list_box selection;
+    win32::list_box themed_selection;
     std::wstring buffer;
     win32::gdi_brush list_background;
 
@@ -35,8 +36,13 @@ namespace siege::views
       selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
+      themed_selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
+        .style = WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS | LBS_OWNERDRAWFIXED });
+
       return 0;
     }
+
+    bool is_dark = false;
 
     std::optional<win32::lresult_t> on_setting_change(win32::setting_change_message message)
     {
@@ -46,17 +52,26 @@ namespace siege::views
 
         if (parent->GetPropW<bool>(L"AppsUseDarkTheme"))
         {
-          auto style = selection.GetWindowStyle();
-          selection.SetWindowStyle(style | LBS_OWNERDRAWFIXED);
+          if (is_dark)
+          {
+            return 0;
+          }
+          is_dark = true;
+          selection.SetWindowStyle(selection.GetWindowStyle() & ~WS_VISIBLE);
+          themed_selection.SetWindowStyle(themed_selection.GetWindowStyle() | WS_VISIBLE);
           list_background.reset(::CreateSolidBrush(0x00000000));
-          RedrawWindow(selection, nullptr, nullptr, RDW_INVALIDATE);
         }
         else
         {
-          auto style = selection.GetWindowStyle();
-          selection.SetWindowStyle(style & ~LBS_OWNERDRAWFIXED);
+          if (!is_dark)
+          {
+            return 0;
+          }
+
+          is_dark = false;
+          themed_selection.SetWindowStyle(themed_selection.GetWindowStyle() & ~WS_VISIBLE);
+          selection.SetWindowStyle(selection.GetWindowStyle() | WS_VISIBLE);
           list_background.reset();
-          RedrawWindow(selection, nullptr, nullptr, RDW_INVALIDATE);
         }
         return 0;
       }
@@ -75,14 +90,28 @@ namespace siege::views
       selection.SetWindowPos(right_size);
       selection.SetWindowPos(POINT{ .x = left_size.cx });
 
+      themed_selection.SetWindowPos(right_size);
+      themed_selection.SetWindowPos(POINT{ .x = left_size.cx });
+
       return 0;
     }
 
     std::optional<win32::lresult_t> on_notify(win32::notify_message message)
     {
-      if (message.hwndFrom == selection && message.code == LBN_SELCHANGE)
+      if (message.code == LBN_SELCHANGE && (message.hwndFrom == selection || message.hwndFrom == themed_selection))
       {
-        auto& colours = controller.get_palette(selection.GetCurrentSelection());
+        auto selected = message.hwndFrom == selection ? selection.GetCurrentSelection() : themed_selection.GetCurrentSelection();
+        
+        if (message.hwndFrom == selection)
+        {
+          themed_selection.SetCurrentSelection(selected);
+        }
+        else
+        {
+          selection.SetCurrentSelection(selected);
+        }
+
+        auto& colours = controller.get_palette(selected);
 
         brushes.clear();
         brushes.reserve(colours.size());
@@ -138,9 +167,11 @@ namespace siege::views
           for (auto i = 1u; i <= size; ++i)
           {
             selection.InsertString(-1, L"Palette " + std::to_wstring(i));
+            themed_selection.InsertString(-1, L"Palette " + std::to_wstring(i));
           }
 
           selection.SetCurrentSelection(0);
+          themed_selection.SetCurrentSelection(0);
 
           return TRUE;
         }
@@ -183,7 +214,9 @@ namespace siege::views
 
     auto on_draw_item(win32::draw_item_message message)
     {
-      if (message.item.hwndItem == selection && message.item.itemAction == ODA_DRAWENTIRE || message.item.hwndItem == selection && message.item.itemAction == ODA_SELECT)
+      if (message.item.hwndItem == themed_selection && 
+          (message.item.itemAction == ODA_DRAWENTIRE || 
+          message.item.itemAction == ODA_SELECT))
       {
         static auto black_brush = ::CreateSolidBrush(0x00000000);
         static auto grey_brush = ::CreateSolidBrush(0x00383838);
@@ -192,9 +225,9 @@ namespace siege::views
         context.FillRect(message.item.rcItem, message.item.itemState & ODS_SELECTED ? grey_brush : black_brush);
         ::SetTextColor(context, 0x00FFFFFF);
 
-        buffer.resize(selection.GetTextLength(message.item.itemID));
+        buffer.resize(themed_selection.GetTextLength(message.item.itemID));
 
-        selection.GetText(message.item.itemID, buffer.data());
+        themed_selection.GetText(message.item.itemID, buffer.data());
 
         ::TextOut(context, message.item.rcItem.left, message.item.rcItem.top, buffer.c_str(), buffer.size());
       }
