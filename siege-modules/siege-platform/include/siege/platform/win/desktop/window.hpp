@@ -316,14 +316,15 @@ namespace win32
       });
     }
 
-    [[maybe_unused]] inline std::optional<HANDLE> FindPropertyExW(std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback) const
+    template<typename TResult = HANDLE>
+    [[maybe_unused]] inline std::optional<TResult> FindPropertyExW(std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback) const
     {
-      std::optional<HANDLE> result = std::nullopt;
+      std::optional<TResult> result = std::nullopt;
 
       EnumPropsExW([&result, callback = std::move(callback)](auto self, auto key, auto value) mutable {
         if (callback(self, key, value))
         {
-          result.emplace(value);
+          result.emplace((TResult)value);
           return false;
         }
         return true;
@@ -332,9 +333,10 @@ namespace win32
       return result;
     }
 
-    [[maybe_unused]] inline std::optional<HANDLE> FindPropertyExW(std::wstring_view find_key) const
+    template<typename TResult = HANDLE>
+    [[maybe_unused]] inline std::optional<TResult> FindPropertyExW(std::wstring_view find_key) const
     {
-      return FindPropertyExW([find_key](auto, auto key, auto) {
+      return FindPropertyExW<TResult>([find_key](auto, auto key, auto) {
         return key == find_key;
       });
     }

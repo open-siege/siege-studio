@@ -105,10 +105,7 @@ namespace siege::views
         .style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
       });
 
-      ListView_SetBkColor(table, 0x00000000);
-      ListView_SetTextBkColor(table, 0x00383838);
-      ListView_SetTextColor(table, 0x00FFFFFF);
-      ListView_SetOutlineColor(table, 0x00AAAAAA);
+       on_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
       table.InsertGroup(-1, LVGROUP{
                               .pszHeader = const_cast<wchar_t*>(L"Hidden"),
@@ -203,6 +200,7 @@ namespace siege::views
           is_dark = true;
 
           win32::apply_theme(*parent, table_settings);
+          win32::apply_theme(*parent, table);
         }
         else
         {
@@ -212,6 +210,8 @@ namespace siege::views
           }
 
           win32::apply_theme(*parent, table_settings);
+          win32::apply_theme(*parent, table);
+          RedrawWindow(table, nullptr, nullptr, 0);
           is_dark = false;
         }
         return 0;

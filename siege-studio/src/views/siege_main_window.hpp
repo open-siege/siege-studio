@@ -337,9 +337,7 @@ namespace siege::views
                 this->RemovePropW(prop);
               }
 
-              TreeView_SetBkColor(dir_list, -1);
-              TreeView_SetTextColor(dir_list, -1);
-              TreeView_SetLineColor(dir_list, -1);
+              win32::apply_theme(*this, dir_list);
               SetMenu(*this, light_menu);
               BOOL value = FALSE;
               ::DwmSetWindowAttribute(*this, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
@@ -365,9 +363,10 @@ namespace siege::views
               this->SetPropW(win32::properties::tree_view::text_color, 0x00FFFFFF);
               this->SetPropW(win32::properties::tree_view::line_color, 0x00383838);
               this->SetPropW(win32::properties::list_view::bk_color, 0x00000000);
-              this->SetPropW(win32::properties::list_view::text_color, 0x00383838);
-              this->SetPropW(win32::properties::list_view::text_bk_color, 0x00FFFFFF);
+              this->SetPropW(win32::properties::list_view::text_color,  0x00FFFFFF);
+              this->SetPropW(win32::properties::list_view::text_bk_color, 0x00383838);
               this->SetPropW(win32::properties::list_view::outline_color, 0x00AAAAAA);
+
               this->SetPropW(win32::properties::tool_bar::btn_highlight_color, 0x00383838);
             //  this->SetPropW(win32::properties::tool_bar::btn_shadow_color, 0x00AAAAAA);
               this->SetPropW(win32::properties::tool_bar::btn_face_color, 0x00000000);
@@ -377,11 +376,9 @@ namespace siege::views
               //this->SetPropW(win32::properties::tool_bar::mark_color, 0x00AAAAAA);
               this->SetPropW(win32::properties::window::bk_color, 0x00383838);
               this->SetPropW(win32::properties::window::bk_color, 0x00383838);
-
-                
-              TreeView_SetBkColor(dir_list, 0x00000000);
-              TreeView_SetTextColor(dir_list, 0x00FFFFFF);
-              TreeView_SetLineColor(dir_list, 0x00383838);
+  
+              win32::apply_theme(*this, dir_list);
+              
               SetMenu(*this, dark_menu);
               BOOL value = TRUE;
               ::DwmSetWindowAttribute(*this, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));

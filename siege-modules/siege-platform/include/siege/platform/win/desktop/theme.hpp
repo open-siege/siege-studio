@@ -69,62 +69,38 @@ namespace win32
     };
   };
 
-  inline void apply_theme(win32::list_view& list, const std::map<std::wstring, COLORREF>& colors)
+  inline void apply_theme(const win32::window_ref& colors, win32::list_view& control)
   {
-    auto color = colors.find(properties::list_view::bk_color);
+    static auto default_bk_color = ListView_GetBkColor(control);
+    auto color = colors.FindPropertyExW<COLORREF>(properties::list_view::bk_color).value_or(default_bk_color);
+    ListView_SetBkColor(control, color);
 
-    if (color != colors.end())
-    {
-      ListView_SetBkColor(list, color->second);
-    }
+    static auto default_text_color = ListView_GetTextColor(control);
+    color = colors.FindPropertyExW<COLORREF>(properties::list_view::text_color).value_or(default_text_color);
+    ListView_SetTextColor(control, color);
+   
+    static auto default_text_bk_color = ListView_GetTextBkColor(control);
+    color = colors.FindPropertyExW<COLORREF>(properties::list_view::text_bk_color).value_or(default_text_bk_color);
+    ListView_SetTextBkColor(control, color);
 
-    color = colors.find(properties::list_view::text_color);
-
-    if (color != colors.end())
-    {
-      ListView_SetTextColor(list, color->second);
-    }
-
-    color = colors.find(properties::list_view::text_bk_color);
-
-    if (color != colors.end())
-    {
-      ListView_SetTextBkColor(list, color->second);
-    }
-
-    color = colors.find(properties::list_view::outline_color);
-
-    if (color != colors.end())
-    {
-      ListView_SetOutlineColor(list, color->second);
-    }
+    static auto default_outline_color = ListView_GetOutlineColor(control);
+    color = colors.FindPropertyExW<COLORREF>(properties::list_view::outline_color).value_or(default_outline_color);
+    ListView_SetOutlineColor(control, color);
   }
 
-  inline void apply_theme(win32::tree_view& list, const std::map<std::wstring, COLORREF>& colors)
+  inline void apply_theme(const win32::window_ref& colors, win32::tree_view& control)
   {
-    auto color = colors.find(properties::tree_view::bk_color);
+    auto color = colors.FindPropertyExW<COLORREF>(properties::tree_view::bk_color).value_or(CLR_NONE);
+    TreeView_SetBkColor(control, color); 
+   
+    color = colors.FindPropertyExW<COLORREF>(properties::tree_view::text_color).value_or(CLR_NONE);
+    TreeView_SetTextColor(control, color);
 
-    if (color != colors.end())
-    {
-      ListView_SetBkColor(list, color->second);
-    }
-
-    color = colors.find(properties::tree_view::text_color);
-
-    if (color != colors.end())
-    {
-      ListView_SetTextColor(list, color->second);
-    }
-
-    color = colors.find(properties::tree_view::line_color);
-
-    if (color != colors.end())
-    {
-      ListView_SetTextBkColor(list, color->second);
-    }
+    color = colors.FindPropertyExW<COLORREF>(properties::tree_view::line_color).value_or(CLR_NONE);
+    TreeView_SetLineColor(control, color);
   }
 
-  inline void apply_theme(const win32::window_ref& colors, win32::tool_bar& list)
+  inline void apply_theme(const win32::window_ref& colors, win32::tool_bar& control)
   {
     auto highlight_color = colors.FindPropertyExW(properties::tool_bar::btn_highlight_color);
     auto shadow_color = colors.FindPropertyExW(properties::tool_bar::btn_shadow_color);
@@ -146,7 +122,7 @@ namespace win32
         scheme.clrBtnShadow = (COLORREF)*shadow_color;
       }
 
-      ::SendMessageW(list, TB_SETCOLORSCHEME, 0, (LPARAM)&scheme);
+      ::SendMessageW(control, TB_SETCOLORSCHEME, 0, (LPARAM)&scheme);
     }
 
     static auto change_color = [](HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) -> LRESULT __stdcall
@@ -201,22 +177,22 @@ namespace win32
       colors.ForEachPropertyExW([&](auto, auto key, auto value) {
         if (key.find(win32::tool_bar::class_name) != std::wstring_view::npos)
         {
-          list.SetPropW(key, value);
+          control.SetPropW(key, value);
         }
       });
 
     ::SetWindowSubclass(
-        *list.GetParent(), change_color, (UINT_PTR)list.get(), (DWORD_PTR)list.get());
+        *control.GetParent(), change_color, (UINT_PTR)control.get(), (DWORD_PTR)control.get());
     }
 
     if (change_theme)
     {
-      win32::theme_module().SetWindowTheme(list, L"", L"");
+      win32::theme_module().SetWindowTheme(control, L"", L"");
     }
     else
     {
-      win32::theme_module().SetWindowTheme(list, nullptr, nullptr);
-      ::RemoveWindowSubclass(*list.GetParent(), change_color, (UINT_PTR)list.get());
+      win32::theme_module().SetWindowTheme(control, nullptr, nullptr);
+      ::RemoveWindowSubclass(*control.GetParent(), change_color, (UINT_PTR)control.get());
     }
   }
 
