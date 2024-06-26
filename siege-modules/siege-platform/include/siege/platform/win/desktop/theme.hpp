@@ -124,30 +124,28 @@ namespace win32
     }
   }
 
-  inline void apply_theme(win32::tool_bar& list, const std::map<std::wstring_view, COLORREF>& colors)
+  inline void apply_theme(const win32::window_ref& colors, win32::tool_bar& list)
   {
-    auto color = colors.find(properties::tool_bar::btn_highlight_color);
+    auto highlight_color = colors.FindPropertyExW(properties::tool_bar::btn_highlight_color);
+    auto shadow_color = colors.FindPropertyExW(properties::tool_bar::btn_shadow_color);
 
     bool change_theme = false;
 
-    COLORSCHEME scheme{ .dwSize = sizeof(COLORSCHEME), .clrBtnHighlight = CLR_DEFAULT, .clrBtnShadow = CLR_DEFAULT };
-
-    if (color != colors.end())
+    if (highlight_color || shadow_color)
     {
       change_theme = true;
-      scheme.clrBtnHighlight = color->second;
-    }
+      COLORSCHEME scheme{ .dwSize = sizeof(COLORSCHEME), .clrBtnHighlight = CLR_DEFAULT, .clrBtnShadow = CLR_DEFAULT };
 
-    color = colors.find(properties::tool_bar::btn_shadow_color);
+      if (highlight_color)
+      {
+        scheme.clrBtnHighlight = (COLORREF)*highlight_color;
+      }
 
-    if (color != colors.end())
-    {
-      change_theme = true;
-      scheme.clrBtnShadow = color->second;
-    }
+      if (shadow_color)
+      {
+        scheme.clrBtnShadow = (COLORREF)*shadow_color;
+      }
 
-    if (scheme.clrBtnHighlight != CLR_DEFAULT || scheme.clrBtnShadow != CLR_DEFAULT)
-    {
       ::SendMessageW(list, TB_SETCOLORSCHEME, 0, (LPARAM)&scheme);
     }
 
@@ -158,7 +156,7 @@ namespace win32
       {
         NMHDR* header = (NMHDR*)lParam;
 
-        if (header->code == NM_CUSTOMDRAW && header->hwndFrom == (HWND)dwRefData)
+        if (header->code == NM_CUSTOMDRAW && header->hwndFrom == (HWND)uIdSubclass)
         {
           NMTBCUSTOMDRAW* custom_draw = (NMTBCUSTOMDRAW*)lParam;
 
@@ -169,37 +167,24 @@ namespace win32
 
           if (custom_draw->nmcd.dwDrawStage == CDDS_ITEMPREPAINT || custom_draw->nmcd.dwDrawStage == (CDDS_SUBITEM | CDDS_ITEMPREPAINT))
           {
-            ::EnumPropsExW(
-              header->hwndFrom, [](HWND, LPWSTR key, HANDLE value, ULONG_PTR lparam) -> BOOL __stdcall {
-                auto* inner = (NMTBCUSTOMDRAW*)lparam;
+            win32::window_ref(header->hwndFrom).ForEachPropertyExW([=](win32::hwnd_t, std::wstring_view key, HANDLE value) {
+              if (key == properties::tool_bar::btn_face_color)
+              {
+                custom_draw->clrBtnFace = (COLORREF)value;
+              }
 
-                auto intAtom = ::GlobalFindAtomW(key);
-                if (intAtom == (ATOM)(std::size_t)key)
-                {
-                  return TRUE;
-                }
+              if (key == properties::tool_bar::btn_highlight_color)
+              {
+                custom_draw->clrBtnHighlight = (COLORREF)value;
+              }
 
-                if (key && key == properties::tool_bar::btn_face_color)
-                {
-                  inner->clrBtnFace = (COLORREF)value;
-                }
-
-                if (key && key == properties::tool_bar::btn_highlight_color)
-                {
-                  inner->clrBtnHighlight = (COLORREF)value;
-                }
-
-                if (key && key == properties::tool_bar::text_color)
-                {
-                  inner->clrText = (COLORREF)value;
-                }
-
-                return TRUE;
-              },
-              (LPARAM)custom_draw);
+              if (key == properties::tool_bar::text_color)
+              {
+                custom_draw->clrText = (COLORREF)value;
+              }
+            });
             return CDRF_NEWFONT | TBCDRF_USECDCOLORS;
           }
-
 
           return CDRF_DODEFAULT;
         }
@@ -208,20 +193,20 @@ namespace win32
       return DefSubclassProc(hWnd, uMsg, wParam, lParam);
     };
 
-    if (colors.contains(properties::tool_bar::btn_face_color) || colors.contains(properties::tool_bar::btn_highlight_color) || colors.contains(properties::tool_bar::text_color))
+    if (colors.FindPropertyExW(properties::tool_bar::btn_face_color) || 
+        colors.FindPropertyExW(properties::tool_bar::text_color))
     {
-      for (auto& prop : colors)
-      {
-        if (prop.first.find(win32::tool_bar::class_name) != std::wstring_view::npos)
-        {
-          list.SetPropW(prop.first, prop.second);
-        }
-      }
-
-
       change_theme = true;
-      ::SetWindowSubclass(
-        *list.GetParent(), change_color, (UINT_PTR)properties::tool_bar::text_color.data(), (DWORD_PTR)list.get());
+
+      colors.ForEachPropertyExW([&](auto, auto key, auto value) {
+        if (key.find(win32::tool_bar::class_name) != std::wstring_view::npos)
+        {
+          list.SetPropW(key, value);
+        }
+      });
+
+    ::SetWindowSubclass(
+        *list.GetParent(), change_color, (UINT_PTR)list.get(), (DWORD_PTR)list.get());
     }
 
     if (change_theme)
@@ -231,7 +216,7 @@ namespace win32
     else
     {
       win32::theme_module().SetWindowTheme(list, nullptr, nullptr);
-      ::RemoveWindowSubclass(*list.GetParent(), change_color, (UINT_PTR)properties::tool_bar::text_color.data());
+      ::RemoveWindowSubclass(*list.GetParent(), change_color, (UINT_PTR)list.get());
     }
   }
 

@@ -202,24 +202,7 @@ namespace siege::views
           }
           is_dark = true;
 
-
-          std::map<std::wstring_view, COLORREF> colors;
-
-          ::EnumPropsExW(
-            *parent, [](HWND, LPWSTR key, HANDLE value, ULONG_PTR lparam) -> BOOL __stdcall {
-              auto* items = (std::map<std::wstring_view, COLORREF>*)lparam;
-
-              if (key)
-              {
-                auto key_view = std::wstring_view(*strings.emplace(key).first);
-                items->emplace(key_view, (COLORREF)value);
-              }
-
-              return TRUE;
-            },
-            (LPARAM)&colors);
-
-          win32::apply_theme(table_settings, colors);
+          win32::apply_theme(*parent, table_settings);
         }
         else
         {
@@ -228,23 +211,7 @@ namespace siege::views
             return 0;
           }
 
-          std::map<std::wstring_view, COLORREF> colors;
-
-          ::EnumPropsExW(
-            *parent, [](HWND, LPWSTR key, HANDLE value, ULONG_PTR lparam) -> BOOL __stdcall {
-              auto* items = (std::map<std::wstring_view, COLORREF>*)lparam;
-
-              if (key)
-              {
-                auto key_view = std::wstring_view(*strings.emplace(key).first);
-                items->emplace(key_view, (COLORREF)value);
-              }
-
-              return TRUE;
-            },
-            (LPARAM)&colors);
-
-          win32::apply_theme(table_settings, colors);
+          win32::apply_theme(*parent, table_settings);
           is_dark = false;
         }
         return 0;
