@@ -378,6 +378,16 @@ namespace siege::views
               this->SetPropW(win32::properties::list_box::text_bk_color, 0x00111111);
               this->SetPropW(win32::properties::list_box::text_highlight_color, 0x00383838);
 
+              this->SetPropW(win32::properties::header::bk_color, 0x00000000);
+              this->SetPropW(win32::properties::header::text_color, 0x00FFFFFF);
+              this->SetPropW(win32::properties::header::text_bk_color, 0x00111111);
+              this->SetPropW(win32::properties::header::text_highlight_color, 0x00383838);
+
+              this->SetPropW(win32::properties::tab_control::bk_color, 0x00000000);
+              this->SetPropW(win32::properties::tab_control::text_color, 0x00FFFFFF);
+              this->SetPropW(win32::properties::tab_control::text_bk_color, 0x00111111);
+              this->SetPropW(win32::properties::tab_control::text_highlight_color, 0x00383838);
+
               this->SetPropW(win32::properties::tool_bar::btn_highlight_color, 0x00383838);
               //  this->SetPropW(win32::properties::tool_bar::btn_shadow_color, 0x00AAAAAA);
               this->SetPropW(win32::properties::tool_bar::btn_face_color, 0x00000000);

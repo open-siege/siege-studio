@@ -66,6 +66,22 @@ namespace win32
       inline static auto text_highlight_color = std::wstring(win32::list_box::class_name) + L"." + L"TextHighlightColor";
     };
 
+    struct header
+    {
+      inline static auto bk_color = std::wstring(win32::header::class_name) + L"." + L"BkColor";
+      inline static auto text_color = std::wstring(win32::header::class_name) + L"." + L"TextColor";
+      inline static auto text_bk_color = std::wstring(win32::header::class_name) + L"." + L"TextBkColor";
+      inline static auto text_highlight_color = std::wstring(win32::header::class_name) + L"." + L"TextHighlightColor";
+    };
+
+    struct tab_control
+    {
+      inline static auto bk_color = std::wstring(win32::tab_control::class_name) + L"." + L"BkColor";
+      inline static auto text_color = std::wstring(win32::tab_control::class_name) + L"." + L"TextColor";
+      inline static auto text_bk_color = std::wstring(win32::tab_control::class_name) + L"." + L"TextBkColor";
+      inline static auto text_highlight_color = std::wstring(win32::tab_control::class_name) + L"." + L"TextHighlightColor";
+    };
+
     struct menu
     {
       constexpr static auto bk_color = std::wstring_view(L"Menu.BkColor");

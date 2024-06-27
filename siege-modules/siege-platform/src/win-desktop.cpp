@@ -37,10 +37,9 @@ namespace win32
           DRAWITEMSTRUCT& item = *(DRAWITEMSTRUCT*)lParam;
           if (item.hwndItem == (HWND)uIdSubclass && (item.itemAction == ODA_DRAWENTIRE || item.itemAction == ODA_SELECT))
           {
-            static auto black_brush = ::CreateSolidBrush(0x00000000);
-            static auto white_brush = ::CreateSolidBrush(0x00FFFFFF);
-            static auto grey_brush = ::CreateSolidBrush(0x00383838);
-
+            auto control = win32::header((HWND)uIdSubclass);
+            
+            
             auto context = win32::gdi_drawing_context_ref(item.hDC);
             auto header = win32::header(item.hwndItem);
 
@@ -49,7 +48,9 @@ namespace win32
 
             if (item.itemAction == ODA_DRAWENTIRE)
             {
-              context.FillRect(rect, grey_brush);
+              auto bk_color = control.FindPropertyExW<COLORREF>(win32::properties::header::bk_color);
+
+              context.FillRect(rect, get_solid_brush(*bk_color));
             }
 
             if (header.GetWindowStyle() & HDS_FILTERBAR)
@@ -60,20 +61,24 @@ namespace win32
 
             SetBkMode(context, TRANSPARENT);
 
+            auto text_highlight_color = control.FindPropertyExW<COLORREF>(win32::properties::header::text_highlight_color);
+            auto text_bk_color = control.FindPropertyExW<COLORREF>(win32::properties::header::text_bk_color);
+
             if (item.itemState & ODS_HOTLIGHT)
             {
-              context.FillRect(rect, grey_brush);
+              context.FillRect(rect, get_solid_brush(*text_highlight_color));
             }
             else if (item.itemState & ODS_SELECTED)
             {
-              context.FillRect(rect, grey_brush);
+              context.FillRect(rect, get_solid_brush(*text_highlight_color));
             }
             else
             {
-              context.FillRect(rect, black_brush);
+              context.FillRect(rect, get_solid_brush(*text_bk_color));
             }
 
-            ::SetTextColor(context, 0x00FFFFFF);
+            auto text_color = control.FindPropertyExW<COLORREF>(win32::properties::header::text_color);
+            ::SetTextColor(context, *text_color);
 
             auto item_info = header.GetItem(item.itemID, HDITEMW{ .mask = HDI_TEXT, .pszText = buffer.data(), .cchTextMax = int(buffer.size()) });
 
@@ -138,10 +143,21 @@ namespace win32
 
     if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
     {
+      colors.ForEachPropertyExW([&](auto, auto key, auto value) {
+        if (key.find(win32::header::class_name) != std::wstring_view::npos)
+        {
+          control.SetPropW(key, value);
+        }
+      });
+
       ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR)control.get());
     }
     else
     {
+      control.RemovePropW(win32::properties::header::bk_color);
+      control.RemovePropW(win32::properties::header::text_color);
+      control.RemovePropW(win32::properties::header::text_bk_color);
+      control.RemovePropW(win32::properties::header::text_highlight_color);
       ::RemoveWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get());
     }
   }
@@ -175,9 +191,6 @@ namespace win32
           DRAWITEMSTRUCT& item = *(DRAWITEMSTRUCT*)lParam;
           if (item.hwndItem == (HWND)uIdSubclass && (item.itemAction == ODA_DRAWENTIRE || item.itemAction == ODA_SELECT))
           {
-            static auto black_brush = ::CreateSolidBrush(0x00000000);
-            static auto grey_brush = ::CreateSolidBrush(0x00383838);
-
             if (item.itemAction == ODA_DRAWENTIRE)
             {
               auto parent_context = win32::gdi_drawing_context_ref(::GetDC(item.hwndItem));
@@ -194,29 +207,36 @@ namespace win32
                 rect->bottom = tab_rect->bottom;
               }
 
-              parent_context.FillRect(*rect, grey_brush);
+              auto bk_color = tabs.FindPropertyExW<COLORREF>(win32::properties::tab_control::bk_color);
+
+              parent_context.FillRect(*rect, get_solid_brush(*bk_color));
             }
 
             auto context = win32::gdi_drawing_context_ref(item.hDC);
 
             SetBkMode(context, TRANSPARENT);
 
+            win32::tab_control control(item.hwndItem);
+            auto text_highlight_color = control.FindPropertyExW<COLORREF>(win32::properties::tab_control::text_highlight_color);
+            auto text_bk_color = control.FindPropertyExW<COLORREF>(win32::properties::tab_control::text_bk_color);
+
             if (item.itemState & ODS_HOTLIGHT)
             {
-              context.FillRect(item.rcItem, grey_brush);
+              context.FillRect(item.rcItem, get_solid_brush(*text_highlight_color));
             }
             else if (item.itemState & ODS_SELECTED)
             {
-              context.FillRect(item.rcItem, grey_brush);
+              context.FillRect(item.rcItem, get_solid_brush(*text_highlight_color));
             }
             else
             {
-              context.FillRect(item.rcItem, black_brush);
+              context.FillRect(item.rcItem, get_solid_brush(*text_bk_color));
             }
 
-            ::SetTextColor(context, 0x00FFFFFF);
+            auto text_color = control.FindPropertyExW<COLORREF>(win32::properties::tab_control::text_color);
+            ::SetTextColor(context, *text_color);
 
-            auto item_info = win32::tab_control(item.hwndItem).GetItem(item.itemID, TCITEMW{ .mask = TCIF_TEXT, .pszText = buffer.data(), .cchTextMax = int(buffer.size()) });
+            auto item_info = control.GetItem(item.itemID, TCITEMW{ .mask = TCIF_TEXT, .pszText = buffer.data(), .cchTextMax = int(buffer.size()) });
 
             if (item_info)
             {
@@ -234,12 +254,25 @@ namespace win32
     {
       auto style = control.GetWindowStyle();
       control.SetWindowStyle(style | TCS_OWNERDRAWFIXED);
+
+      colors.ForEachPropertyExW([&](auto, auto key, auto value) {
+        if (key.find(win32::tab_control::class_name) != std::wstring_view::npos)
+        {
+          control.SetPropW(key, value);
+        }
+      });
+
       ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR)control.get());
     }
     else
     {
       auto style = control.GetWindowStyle();
       control.SetWindowStyle(style & ~TCS_OWNERDRAWFIXED);
+
+      control.RemovePropW(win32::properties::tab_control::bk_color);
+      control.RemovePropW(win32::properties::tab_control::text_color);
+      control.RemovePropW(win32::properties::tab_control::text_bk_color);
+      control.RemovePropW(win32::properties::tab_control::text_highlight_color);
       ::RemoveWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get());
     }
   }
