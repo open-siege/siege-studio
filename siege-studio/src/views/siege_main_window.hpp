@@ -365,28 +365,33 @@ namespace siege::views
               auto style = tab_control.GetWindowStyle();
               tab_control.SetWindowStyle(style | TCS_OWNERDRAWFIXED);
 
-              this->SetPropW(win32::properties::tree_view::bk_color, 0x00000000);
-              this->SetPropW(win32::properties::tree_view::text_color, 0x00FFFFFF);
+              COLORREF bk_color = 0x00000000;
+              COLORREF text_color = 0x00FFFFFF;
+              COLORREF text_bk_color = 0x00111111;
+              COLORREF text_highlight_color = 0x00383838;
+
+              this->SetPropW(win32::properties::tree_view::bk_color, bk_color);
+              this->SetPropW(win32::properties::tree_view::text_color, text_color);
               this->SetPropW(win32::properties::tree_view::line_color, 0x00383838);
-              this->SetPropW(win32::properties::list_view::bk_color, 0x00000000);
+              this->SetPropW(win32::properties::list_view::bk_color, bk_color);
               this->SetPropW(win32::properties::list_view::text_color, 0x00FFFFFF);
-              this->SetPropW(win32::properties::list_view::text_bk_color, 0x00383838);
+              this->SetPropW(win32::properties::list_view::text_bk_color, text_bk_color);
               this->SetPropW(win32::properties::list_view::outline_color, 0x00AAAAAA);
 
-              this->SetPropW(win32::properties::list_box::bk_color, 0x00000000);
-              this->SetPropW(win32::properties::list_box::text_color, 0x00FFFFFF);
-              this->SetPropW(win32::properties::list_box::text_bk_color, 0x00111111);
+              this->SetPropW(win32::properties::list_box::bk_color, bk_color);
+              this->SetPropW(win32::properties::list_box::text_color, text_color);
+              this->SetPropW(win32::properties::list_box::text_bk_color, text_bk_color);
               this->SetPropW(win32::properties::list_box::text_highlight_color, 0x00383838);
 
-              this->SetPropW(win32::properties::header::bk_color, 0x00000000);
-              this->SetPropW(win32::properties::header::text_color, 0x00FFFFFF);
-              this->SetPropW(win32::properties::header::text_bk_color, 0x00111111);
-              this->SetPropW(win32::properties::header::text_highlight_color, 0x00383838);
+              this->SetPropW(win32::properties::header::bk_color, bk_color);
+              this->SetPropW(win32::properties::header::text_color, text_color);
+              this->SetPropW(win32::properties::header::text_bk_color, text_bk_color);
+              this->SetPropW(win32::properties::header::text_highlight_color, text_highlight_color);
 
-              this->SetPropW(win32::properties::tab_control::bk_color, 0x00000000);
-              this->SetPropW(win32::properties::tab_control::text_color, 0x00FFFFFF);
-              this->SetPropW(win32::properties::tab_control::text_bk_color, 0x00111111);
-              this->SetPropW(win32::properties::tab_control::text_highlight_color, 0x00383838);
+              this->SetPropW(win32::properties::tab_control::bk_color, bk_color);
+              this->SetPropW(win32::properties::tab_control::text_color, text_color);
+              this->SetPropW(win32::properties::tab_control::text_bk_color, text_bk_color);
+              this->SetPropW(win32::properties::tab_control::text_highlight_color, text_highlight_color);
 
               this->SetPropW(win32::properties::tool_bar::btn_highlight_color, 0x00383838);
               //  this->SetPropW(win32::properties::tool_bar::btn_shadow_color, 0x00AAAAAA);
@@ -395,8 +400,7 @@ namespace siege::views
               this->SetPropW(win32::properties::tool_bar::text_color, 0x00FFFFFF);
               // this->SetPropW(win32::properties::tool_bar::text_highlight_color, 0x00AAAAAA);
               // this->SetPropW(win32::properties::tool_bar::mark_color, 0x00AAAAAA);
-              this->SetPropW(win32::properties::window::bk_color, 0x00383838);
-              this->SetPropW(win32::properties::window::bk_color, 0x00383838);
+              this->SetPropW(win32::properties::window::bk_color, bk_color);
 
               win32::apply_theme(*this, dir_list);
               win32::apply_theme(*this, tab_control);
