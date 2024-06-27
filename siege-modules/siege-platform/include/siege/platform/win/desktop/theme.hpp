@@ -77,6 +77,127 @@ namespace win32
     };
   };
 
+  inline void apply_theme(const win32::window_ref& colors, win32::header& control)
+  {
+    struct sub_class
+    {
+      static LRESULT __stdcall HandleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      {
+        if (uMsg == WM_DRAWITEM && lParam)
+        {
+          thread_local std::wstring buffer(256, '\0');
+          DRAWITEMSTRUCT& item = *(DRAWITEMSTRUCT*)lParam;
+          if (item.hwndItem == (HWND)uIdSubclass && (item.itemAction == ODA_DRAWENTIRE || item.itemAction == ODA_SELECT))
+          {
+            static auto black_brush = ::CreateSolidBrush(0x00000000);
+            static auto white_brush = ::CreateSolidBrush(0x00FFFFFF);
+            static auto grey_brush = ::CreateSolidBrush(0x00383838);
+
+            auto context = win32::gdi_drawing_context_ref(item.hDC);
+            auto header = win32::header(item.hwndItem);
+
+            auto rect = item.rcItem;
+            auto bottom = item.rcItem;
+
+            if (item.itemAction == ODA_DRAWENTIRE)
+            {
+              context.FillRect(rect, grey_brush);
+            }
+
+            if (header.GetWindowStyle() & HDS_FILTERBAR)
+            {
+              rect.bottom = rect.bottom / 2;
+              bottom.top = rect.bottom;
+            }
+
+            SetBkMode(context, TRANSPARENT);
+
+            if (item.itemState & ODS_HOTLIGHT)
+            {
+              context.FillRect(rect, grey_brush);
+            }
+            else if (item.itemState & ODS_SELECTED)
+            {
+              context.FillRect(rect, grey_brush);
+            }
+            else
+            {
+              context.FillRect(rect, black_brush);
+            }
+
+            ::SetTextColor(context, 0x00FFFFFF);
+
+            auto item_info = header.GetItem(item.itemID, HDITEMW{ .mask = HDI_TEXT, .pszText = buffer.data(), .cchTextMax = int(buffer.size()) });
+
+            if (item_info)
+            {
+              ::DrawTextW(context, (LPCWSTR)item_info->pszText, -1, &rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+            }
+
+            if (header.GetWindowStyle() & HDS_FILTERBAR)
+            {
+              thread_local std::wstring filter_value;
+              filter_value.clear();
+              filter_value.resize(255, L'\0');
+              HD_TEXTFILTERW string_filter{
+                .pszText = filter_value.data(),
+                .cchTextMax = (int)filter_value.size(),
+              };
+
+              auto header_item = header.GetItem(item.itemID, { .mask = HDI_FILTER, .type = HDFT_ISSTRING, .pvFilter = &string_filter });
+
+              filter_value.erase(std::wcslen(filter_value.data()));
+
+              if (filter_value.empty())
+              {
+                ::DrawTextW(context, L"Enter text here", -1, &bottom, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+              }
+              else
+              {
+                ::DrawTextW(context, filter_value.c_str(), -1, &bottom, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+              }
+            }
+
+            return TRUE;
+          }
+        }
+
+        return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+      }
+    };
+
+    auto count = control.GetItemCount();
+
+    for (auto i = 0; i < count; ++i)
+    {
+      auto item = control.GetItem(
+        i, HDITEMW{ .mask = HDI_FORMAT });
+
+      if (item)
+      {
+        if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
+        {
+          item->fmt = item->fmt | HDF_OWNERDRAW;
+        }
+        else
+        {
+          item->fmt = item->fmt & ~HDF_OWNERDRAW;
+        }
+
+        control.SetItem(i, *item);
+      }
+    }
+
+    if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
+    {
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR)control.get());
+    }
+    else
+    {
+      ::RemoveWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get());
+    }
+  }
+
   inline void apply_theme(const win32::window_ref& colors, win32::tab_control& control)
   {
     struct sub_class
@@ -128,7 +249,7 @@ namespace win32
 
             ::SetTextColor(context, 0x00FFFFFF);
 
-             auto item_info = win32::tab_control(item.hwndItem).GetItem(item.itemID, TCITEMW{ .mask = TCIF_TEXT, .pszText = buffer.data(), .cchTextMax = int(buffer.size()) });
+            auto item_info = win32::tab_control(item.hwndItem).GetItem(item.itemID, TCITEMW{ .mask = TCIF_TEXT, .pszText = buffer.data(), .cchTextMax = int(buffer.size()) });
 
             if (item_info)
             {

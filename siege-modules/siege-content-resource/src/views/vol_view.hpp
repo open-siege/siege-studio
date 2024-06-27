@@ -105,8 +105,6 @@ namespace siege::views
         .style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
       });
 
-      on_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
-
       table.InsertGroup(-1, LVGROUP{
                               .pszHeader = const_cast<wchar_t*>(L"Hidden"),
                               .iGroupId = 1,
@@ -156,6 +154,8 @@ namespace siege::views
       auto style = header.GetWindowStyle();
       header.SetWindowStyle(style | HDS_FILTERBAR);
       header.SetFilterChangeTimeout();
+
+      on_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
       return 0;
     }
@@ -210,6 +210,8 @@ namespace siege::views
 
         win32::apply_theme(*parent, table_settings);
         win32::apply_theme(*parent, table);
+        auto header = table.GetHeader();
+        win32::apply_theme(*parent, header);
 
         RedrawWindow(table, nullptr, nullptr, RDW_INVALIDATE);
 

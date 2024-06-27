@@ -88,6 +88,22 @@ namespace win32
       return std::nullopt;
     }
 
+    [[maybe_unused]] inline std::optional<RECT> GetItemRect(wparam_t index)
+    {
+      RECT item;
+      if (SendMessageW(*this, HDM_GETITEMRECT, index, lparam_t(&item)))
+      {
+        return item;
+      }
+
+      return std::nullopt;
+    }
+
+    [[maybe_unused]] inline bool SetItem(wparam_t index, HDITEMW item)
+    {
+      return SendMessageW(*this, HDM_SETITEM, index, lparam_t(&item)) != 0;
+    }
+
     [[maybe_unused]] inline wparam_t InsertItem(wparam_t index, HDITEMW info)
     {
       return SendMessageW(*this, HDM_INSERTITEMW, index, std::bit_cast<win32::lparam_t>(&info));
