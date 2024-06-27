@@ -230,6 +230,25 @@ namespace win32
             static auto black_brush = ::CreateSolidBrush(0x00000000);
             static auto grey_brush = ::CreateSolidBrush(0x00383838);
 
+            if (item.itemAction == ODA_DRAWENTIRE)
+            {
+              auto parent_context = win32::gdi_drawing_context_ref(::GetDC(item.hwndItem));
+              
+              auto tabs = win32::tab_control(item.hwndItem);
+              auto rect = tabs.GetClientRect();
+
+              auto count = tabs.GetItemCount();
+
+              if (count > 0)
+              {
+                auto tab_rect = tabs.GetItemRect(count - 1);
+                rect->left = tab_rect->right;
+                rect->bottom = tab_rect->bottom;
+              }
+                
+              parent_context.FillRect(*rect, grey_brush);
+            }
+
             auto context = win32::gdi_drawing_context_ref(item.hDC);
 
             SetBkMode(context, TRANSPARENT);

@@ -665,6 +665,17 @@ namespace win32
       return std::nullopt;
     }
 
+    [[nodiscard]] inline std::optional<RECT> GetItemRect(wparam_t index)
+    {
+      RECT result;
+      if (SendMessageW(*this, TCM_GETITEMRECT, index, std::bit_cast<lparam_t>(&result)))
+      {
+        return result;
+      }
+
+      return std::nullopt;
+    }
+
     [[nodiscard]] inline std::optional<TCITEMW> GetItem(wparam_t index, std::uint32_t mask = TCIF_PARAM | TCIF_STATE)
     {
       TCITEMW result{ .mask = mask };
