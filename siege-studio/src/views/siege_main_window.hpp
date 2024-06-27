@@ -90,13 +90,13 @@ namespace siege::views
         AppendMenuW(menu, string, id++, L"Help");
         is_light = false;
       }
-      
+
       MENUINFO mi = { 0 };
       mi.cbSize = sizeof(mi);
       mi.fMask = MIM_BACKGROUND | MIM_APPLYTOSUBMENUS;
       mi.hbrBack = ::CreateSolidBrush(0x00383838);
 
-      SetMenuInfo(dark_menu, &mi); 
+      SetMenuInfo(dark_menu, &mi);
       SetMenu(self, light_menu);
     }
 
@@ -298,8 +298,10 @@ namespace siege::views
       {
         HKEY key = nullptr;
         if (RegOpenKeyExW(HKEY_CURRENT_USER,
-            L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
-            0, KEY_READ, &key)
+              L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+              0,
+              KEY_READ,
+              &key)
             == ERROR_SUCCESS)
         {
           DWORD value = 0;
@@ -315,24 +317,24 @@ namespace siege::views
               tab_control.SetWindowStyle(style & ~TCS_OWNERDRAWFIXED);
 
               static auto props = std::array<std::wstring_view, 32>{ {
-                      win32::properties::tree_view::bk_color,
-                      win32::properties::tree_view::text_color,
-                      win32::properties::tree_view::text_color,
-                      win32::properties::list_view::bk_color,
-                      win32::properties::list_view::text_color,
-                      win32::properties::list_view::text_bk_color,
-                      win32::properties::list_view::outline_color,
-                      win32::properties::tool_bar::btn_face_color,
-                      win32::properties::tool_bar::btn_highlight_color,
-                      win32::properties::tool_bar::btn_shadow_color,
-                      win32::properties::tool_bar::text_color,
-                      win32::properties::tool_bar::text_highlight_color,
-                      win32::properties::tool_bar::mark_color,
-                      win32::properties::list_box::bk_color,
-                      win32::properties::list_box::highlight_color,
-                      win32::properties::list_box::text_color,
-                      win32::properties::window::bk_color,
-                      win32::properties::menu::bk_color,
+                win32::properties::tree_view::bk_color,
+                win32::properties::tree_view::text_color,
+                win32::properties::tree_view::text_color,
+                win32::properties::list_view::bk_color,
+                win32::properties::list_view::text_color,
+                win32::properties::list_view::text_bk_color,
+                win32::properties::list_view::outline_color,
+                win32::properties::tool_bar::btn_face_color,
+                win32::properties::tool_bar::btn_highlight_color,
+                win32::properties::tool_bar::btn_shadow_color,
+                win32::properties::tool_bar::text_color,
+                win32::properties::tool_bar::text_highlight_color,
+                win32::properties::tool_bar::mark_color,
+                win32::properties::list_box::bk_color,
+                win32::properties::list_box::highlight_color,
+                win32::properties::list_box::text_color,
+                win32::properties::window::bk_color,
+                win32::properties::menu::bk_color,
               } };
 
               for (auto& prop : props)
@@ -348,15 +350,14 @@ namespace siege::views
 
               ::EnumChildWindows(
                 *this, [](HWND child, LPARAM parent) -> BOOL __stdcall {
-                  
                   if (::GetParent(child) == (HWND)parent)
                   {
                     ::SendMessageW(child, WM_SETTINGCHANGE, 0, (LPARAM)L"ImmersiveColorSet");
                   }
-                  
+
                   return TRUE;
                 },
-                (LPARAM)(HWND) * this); 
+                (LPARAM)(HWND) * this);
             }
             else
             {
@@ -367,27 +368,27 @@ namespace siege::views
               this->SetPropW(win32::properties::tree_view::text_color, 0x00FFFFFF);
               this->SetPropW(win32::properties::tree_view::line_color, 0x00383838);
               this->SetPropW(win32::properties::list_view::bk_color, 0x00000000);
-              this->SetPropW(win32::properties::list_view::text_color,  0x00FFFFFF);
+              this->SetPropW(win32::properties::list_view::text_color, 0x00FFFFFF);
               this->SetPropW(win32::properties::list_view::text_bk_color, 0x00383838);
               this->SetPropW(win32::properties::list_view::outline_color, 0x00AAAAAA);
 
               this->SetPropW(win32::properties::tool_bar::btn_highlight_color, 0x00383838);
-            //  this->SetPropW(win32::properties::tool_bar::btn_shadow_color, 0x00AAAAAA);
+              //  this->SetPropW(win32::properties::tool_bar::btn_shadow_color, 0x00AAAAAA);
               this->SetPropW(win32::properties::tool_bar::btn_face_color, 0x00000000);
-              //this->SetPropW(win32::properties::tool_bar::btn_shadow_color, 0x00AAAAAA);
+              // this->SetPropW(win32::properties::tool_bar::btn_shadow_color, 0x00AAAAAA);
               this->SetPropW(win32::properties::tool_bar::text_color, 0x00FFFFFF);
-              //this->SetPropW(win32::properties::tool_bar::text_highlight_color, 0x00AAAAAA);
-              //this->SetPropW(win32::properties::tool_bar::mark_color, 0x00AAAAAA);
+              // this->SetPropW(win32::properties::tool_bar::text_highlight_color, 0x00AAAAAA);
+              // this->SetPropW(win32::properties::tool_bar::mark_color, 0x00AAAAAA);
               this->SetPropW(win32::properties::window::bk_color, 0x00383838);
               this->SetPropW(win32::properties::window::bk_color, 0x00383838);
-  
+
               win32::apply_theme(*this, dir_list);
               win32::apply_theme(*this, tab_control);
-              
+
               SetMenu(*this, dark_menu);
               BOOL value = TRUE;
               ::DwmSetWindowAttribute(*this, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
-             ::EnumChildWindows(
+              ::EnumChildWindows(
                 *this, [](HWND child, LPARAM parent) -> BOOL __stdcall {
                   if (::GetParent(child) == (HWND)parent)
                   {
@@ -410,8 +411,20 @@ namespace siege::views
 
     auto on_measure_item(win32::measure_item_message message)
     {
-      message.item.itemHeight = 30;
-      message.item.itemWidth = 90;
+      if (message.item.itemData)
+      {
+          HDC hDC = ::GetDC(*this);
+        TEXTMETRIC tm{};
+        ::GetTextMetricsW(hDC, &tm);
+        message.item.itemWidth = tm.tmAveCharWidth * std::wcslen((wchar_t*)message.item.itemData);
+        message.item.itemHeight = ::GetSystemMetrics(SM_CYMENUSIZE);
+      }
+      else
+      {
+        message.item.itemWidth = ::GetSystemMetrics(SM_CXMENUSIZE) * 2;
+        message.item.itemHeight = ::GetSystemMetrics(SM_CYMENUSIZE);
+      }
+
       return TRUE;
     }
 
@@ -423,7 +436,7 @@ namespace siege::views
       auto context = win32::gdi_drawing_context_ref(message.item.hDC);
 
       SetBkMode(context, TRANSPARENT);
-      
+
       if (message.item.itemState & ODS_HOTLIGHT)
       {
         context.FillRect(message.item.rcItem, grey_brush);
@@ -438,7 +451,8 @@ namespace siege::views
       }
 
       ::SetTextColor(context, 0x00FFFFFF);
-      ::DrawTextW(context, (LPCWSTR)message.item.itemData, -1, &message.item.rcItem, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+      message.item.rcItem.left += (message.item.rcItem.right - message.item.rcItem.left) / 10;
+      ::DrawTextW(context, (LPCWSTR)message.item.itemData, -1, &message.item.rcItem, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
 
       return TRUE;
     }
