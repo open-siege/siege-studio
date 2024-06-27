@@ -38,8 +38,8 @@ namespace win32
           if (item.hwndItem == (HWND)uIdSubclass && (item.itemAction == ODA_DRAWENTIRE || item.itemAction == ODA_SELECT))
           {
             auto control = win32::header((HWND)uIdSubclass);
-            
-            
+
+
             auto context = win32::gdi_drawing_context_ref(item.hDC);
             auto header = win32::header(item.hwndItem);
 
@@ -321,7 +321,7 @@ namespace win32
 
               auto& normal_brush = get_solid_brush(*text_bk_color);
               auto& selected_brush = get_solid_brush(text_highlight_color);
-              
+
               context.FillRect(item.rcItem, item.itemState & ODS_SELECTED ? selected_brush : normal_brush);
             }
 
@@ -477,66 +477,69 @@ namespace win32
       ::SendMessageW(control, TB_SETCOLORSCHEME, 0, (LPARAM)&scheme);
     }
 
-    static auto change_color = [](HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) -> LRESULT __stdcall
+    struct sub_class
     {
-      // TODO remove this sub class on destroy
-      if (uMsg == WM_NOTIFY && lParam != 0)
+      static LRESULT __stdcall HandleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
       {
-        NMHDR* header = (NMHDR*)lParam;
-
-        if (header->code == NM_CUSTOMDRAW && header->hwndFrom == (HWND)uIdSubclass)
+        // TODO remove this sub class on destroy
+        if (uMsg == WM_NOTIFY && lParam != 0)
         {
-          NMTBCUSTOMDRAW* custom_draw = (NMTBCUSTOMDRAW*)lParam;
+          NMHDR* header = (NMHDR*)lParam;
 
-          if (custom_draw->nmcd.dwDrawStage == CDDS_PREPAINT)
+          if (header->code == NM_CUSTOMDRAW && header->hwndFrom == (HWND)uIdSubclass)
           {
-            return CDRF_NOTIFYITEMDRAW | CDRF_NOTIFYPOSTPAINT;
-          }
+            NMTBCUSTOMDRAW* custom_draw = (NMTBCUSTOMDRAW*)lParam;
 
-          if (custom_draw->nmcd.dwDrawStage == CDDS_ITEMPREPAINT || custom_draw->nmcd.dwDrawStage == (CDDS_SUBITEM | CDDS_ITEMPREPAINT))
-          {
-            win32::window_ref(header->hwndFrom).ForEachPropertyExW([=](win32::hwnd_t, std::wstring_view key, HANDLE value) {
-              if (key == properties::tool_bar::btn_face_color)
-              {
-                custom_draw->clrBtnFace = (COLORREF)value;
-              }
-
-              if (key == properties::tool_bar::btn_highlight_color)
-              {
-                custom_draw->clrBtnHighlight = (COLORREF)value;
-              }
-
-              if (key == properties::tool_bar::text_color)
-              {
-                custom_draw->clrText = (COLORREF)value;
-              }
-            });
-            return CDRF_NEWFONT | TBCDRF_USECDCOLORS;
-          }
-
-          if (custom_draw->nmcd.dwDrawStage == CDDS_POSTPAINT)
-          {
-            static auto grey_brush = ::CreateSolidBrush(0x00383838);
-            win32::gdi_drawing_context_ref context(custom_draw->nmcd.hdc);
-
-            auto buttons = win32::tool_bar(custom_draw->nmcd.hdr.hwndFrom);
-            auto count = buttons.ButtonCount();
-            auto rect = buttons.GetClientRect();
-            if (count > 0)
+            if (custom_draw->nmcd.dwDrawStage == CDDS_PREPAINT)
             {
-              auto button_rect = buttons.GetItemRect(count - 1);
-
-              rect->left = button_rect->right;
-              rect->bottom = button_rect->bottom;
-              context.FillRect(*rect, grey_brush);
+              return CDRF_NOTIFYITEMDRAW | CDRF_NOTIFYPOSTPAINT;
             }
+
+            if (custom_draw->nmcd.dwDrawStage == CDDS_ITEMPREPAINT || custom_draw->nmcd.dwDrawStage == (CDDS_SUBITEM | CDDS_ITEMPREPAINT))
+            {
+              win32::window_ref(header->hwndFrom).ForEachPropertyExW([=](win32::hwnd_t, std::wstring_view key, HANDLE value) {
+                if (key == properties::tool_bar::btn_face_color)
+                {
+                  custom_draw->clrBtnFace = (COLORREF)value;
+                }
+
+                if (key == properties::tool_bar::btn_highlight_color)
+                {
+                  custom_draw->clrBtnHighlight = (COLORREF)value;
+                }
+
+                if (key == properties::tool_bar::text_color)
+                {
+                  custom_draw->clrText = (COLORREF)value;
+                }
+              });
+              return CDRF_NEWFONT | TBCDRF_USECDCOLORS;
+            }
+
+            if (custom_draw->nmcd.dwDrawStage == CDDS_POSTPAINT)
+            {
+              static auto grey_brush = ::CreateSolidBrush(0x00383838);
+              win32::gdi_drawing_context_ref context(custom_draw->nmcd.hdc);
+
+              auto buttons = win32::tool_bar(custom_draw->nmcd.hdr.hwndFrom);
+              auto count = buttons.ButtonCount();
+              auto rect = buttons.GetClientRect();
+              if (count > 0)
+              {
+                auto button_rect = buttons.GetItemRect(count - 1);
+
+                rect->left = button_rect->right;
+                rect->bottom = button_rect->bottom;
+                context.FillRect(*rect, grey_brush);
+              }
+            }
+
+            return CDRF_DODEFAULT;
           }
-
-          return CDRF_DODEFAULT;
         }
-      }
 
-      return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+        return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+      }
     };
 
     if (colors.FindPropertyExW(properties::tool_bar::btn_face_color) || colors.FindPropertyExW(properties::tool_bar::text_color))
@@ -554,13 +557,13 @@ namespace win32
     if (change_theme)
     {
       ::SetWindowSubclass(
-        *control.GetParent(), change_color, (UINT_PTR)control.get(), (DWORD_PTR)control.get());
+        *control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR)control.get());
       win32::theme_module().SetWindowTheme(control, L"", L"");
     }
     else
     {
       win32::theme_module().SetWindowTheme(control, nullptr, nullptr);
-      ::RemoveWindowSubclass(*control.GetParent(), change_color, (UINT_PTR)control.get());
+      ::RemoveWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get());
     }
   }
 }// namespace win32
