@@ -83,6 +83,11 @@ namespace win32
           return SendMessageW(*this, LB_GETTEXTLEN, index, 0);
         }
 
+        [[nodiscard]] inline lresult_t GetItemHeight(wparam_t index)
+        {
+          return SendMessageW(*this, LB_GETITEMHEIGHT, index, 0);
+        }
+
         [[maybe_unused]] inline lresult_t GetText(wparam_t index, wchar_t* data)
         {
           return SendMessageW(*this, LB_GETTEXT, index, (LPARAM)data);
@@ -93,9 +98,9 @@ namespace win32
           return SendMessageW(*this, LB_SETCURSEL, index, 0);
         }
 
-        [[maybe_unused]] inline wparam_t AddString(wparam_t index, std::wstring_view text)
+        [[maybe_unused]] inline wparam_t AddString(std::wstring_view text)
         {
-            return SendMessageW(*this, LB_ADDSTRING, index, std::bit_cast<LPARAM>(text.data()));
+            return SendMessageW(*this, LB_ADDSTRING, 0, std::bit_cast<LPARAM>(text.data()));
         }
 
         [[maybe_unused]] inline wparam_t InsertString(wparam_t index, std::wstring_view text)

@@ -40,11 +40,6 @@ namespace siege::views
 
     std::list<platform::storage_module> loaded_modules;
 
-    LRESULT old_bk_color;
-    LRESULT old_text_color;
-    LRESULT old_text_bk_color;
-    LRESULT old_outline_color;
-
     bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
     }
@@ -112,11 +107,6 @@ namespace siege::views
 
         palettes_list.win32::list_view::InsertColumn(-1, LVCOLUMNW{ .pszText = const_cast<wchar_t*>(L"Available Palettes") });
 
-        old_bk_color = ListView_GetBkColor(palettes_list);
-        old_text_color = ListView_GetTextColor(palettes_list);
-        old_text_bk_color = ListView_GetTextBkColor(palettes_list);
-        old_outline_color = ListView_GetOutlineColor(palettes_list);
-
         auto header = palettes_list.GetHeader();
 
         auto style = header.GetWindowStyle();
@@ -127,6 +117,8 @@ namespace siege::views
       static_image = *factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
         .hwndParent = *this,
         .style = WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_REALSIZECONTROL });
+
+      on_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
       return 0;
     }
@@ -180,25 +172,9 @@ namespace siege::views
       {
         auto parent = this->GetParent();
 
-        if (parent->GetPropW<bool>(L"AppsUseDarkTheme"))
-        {
-
-          ListView_SetBkColor(palettes_list, 0x00000000);
-          ListView_SetTextBkColor(palettes_list, 0x00383838);
-          ListView_SetTextColor(palettes_list, 0x00FFFFFF);
-          ListView_SetOutlineColor(palettes_list, 0x00AAAAAA);
-          win32::theme_module().SetWindowTheme(palettes_list, L"DarkMode_Explorer", nullptr);
-          RedrawWindow(palettes_list, nullptr, nullptr, RDW_INVALIDATE);
-        }
-        else
-        {
-          ListView_SetBkColor(palettes_list, old_bk_color);
-          ListView_SetTextBkColor(palettes_list, old_text_bk_color);
-          ListView_SetTextColor(palettes_list, old_text_color);
-          ListView_SetOutlineColor(palettes_list, old_outline_color);
-          win32::theme_module().SetWindowTheme(palettes_list, L"Explorer", nullptr);
-          RedrawWindow(palettes_list, nullptr, nullptr, RDW_INVALIDATE);
-        }
+        win32::apply_theme(*parent, palettes_list);
+        RedrawWindow(palettes_list, nullptr, nullptr, RDW_INVALIDATE);
+        
         return 0;
       }
 

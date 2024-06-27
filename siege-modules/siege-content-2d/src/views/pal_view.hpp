@@ -18,7 +18,6 @@ namespace siege::views
 
     win32::static_control render_view;
     win32::list_box selection;
-    win32::list_box themed_selection;
     std::wstring buffer;
     win32::gdi_brush list_background;
 
@@ -36,8 +35,7 @@ namespace siege::views
       selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
-      themed_selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .style = WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS | LBS_OWNERDRAWFIXED });
+      on_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
       return 0;
     }
@@ -57,8 +55,7 @@ namespace siege::views
             return 0;
           }
           is_dark = true;
-          selection.SetWindowStyle(selection.GetWindowStyle() & ~WS_VISIBLE);
-          themed_selection.SetWindowStyle(themed_selection.GetWindowStyle() | WS_VISIBLE);
+
           list_background.reset(::CreateSolidBrush(0x00000000));
         }
         else
@@ -69,10 +66,11 @@ namespace siege::views
           }
 
           is_dark = false;
-          themed_selection.SetWindowStyle(themed_selection.GetWindowStyle() & ~WS_VISIBLE);
-          selection.SetWindowStyle(selection.GetWindowStyle() | WS_VISIBLE);
           list_background.reset();
         }
+
+        win32::apply_theme(*parent, selection);
+        
         return 0;
       }
 
@@ -90,27 +88,14 @@ namespace siege::views
       selection.SetWindowPos(right_size);
       selection.SetWindowPos(POINT{ .x = left_size.cx });
 
-      themed_selection.SetWindowPos(right_size);
-      themed_selection.SetWindowPos(POINT{ .x = left_size.cx });
-
       return 0;
     }
 
     std::optional<win32::lresult_t> on_notify(win32::notify_message message)
     {
-      if (message.code == LBN_SELCHANGE && (message.hwndFrom == selection || message.hwndFrom == themed_selection))
+      if (message.code == LBN_SELCHANGE && (message.hwndFrom == selection))
       {
-        auto selected = message.hwndFrom == selection ? selection.GetCurrentSelection() : themed_selection.GetCurrentSelection();
-        
-        if (message.hwndFrom == selection)
-        {
-          themed_selection.SetCurrentSelection(selected);
-        }
-        else
-        {
-          selection.SetCurrentSelection(selected);
-        }
-
+        auto selected = selection.GetCurrentSelection();
         auto& colours = controller.get_palette(selected);
 
         brushes.clear();
@@ -167,12 +152,10 @@ namespace siege::views
           for (auto i = 1u; i <= size; ++i)
           {
             selection.InsertString(-1, L"Palette " + std::to_wstring(i));
-            themed_selection.InsertString(-1, L"Palette " + std::to_wstring(i));
           }
 
           selection.SetCurrentSelection(0);
-          themed_selection.SetCurrentSelection(0);
-
+ 
           return TRUE;
         }
 
@@ -180,16 +163,6 @@ namespace siege::views
       }
 
       return FALSE;
-    }
-
-    std::optional<LRESULT> on_control_color(win32::list_box_control_color_message)
-    {
-      if (list_background)
-      {
-        return (LRESULT)list_background.get();
-      }
-
-      return std::nullopt;
     }
 
     std::optional<LRESULT> on_erase_background(win32::erase_background_message message)
@@ -206,32 +179,8 @@ namespace siege::views
       return 0;
     }
 
-    auto on_measure_item(win32::measure_item_message message)
-    {
-      message.item.itemHeight = 30;
-      return TRUE;
-    }
-
     auto on_draw_item(win32::draw_item_message message)
     {
-      if (message.item.hwndItem == themed_selection && 
-          (message.item.itemAction == ODA_DRAWENTIRE || 
-          message.item.itemAction == ODA_SELECT))
-      {
-        static auto black_brush = ::CreateSolidBrush(0x00000000);
-        static auto grey_brush = ::CreateSolidBrush(0x00383838);
-        auto context = win32::gdi_drawing_context_ref(message.item.hDC);
-
-        context.FillRect(message.item.rcItem, message.item.itemState & ODS_SELECTED ? grey_brush : black_brush);
-        ::SetTextColor(context, 0x00FFFFFF);
-
-        buffer.resize(themed_selection.GetTextLength(message.item.itemID));
-
-        themed_selection.GetText(message.item.itemID, buffer.data());
-
-        ::TextOut(context, message.item.rcItem.left, message.item.rcItem.top, buffer.c_str(), buffer.size());
-      }
-
       if (message.item.hwndItem == render_view && message.item.itemAction == ODA_DRAWENTIRE)
       {
         auto context = win32::gdi_drawing_context_ref(message.item.hDC);

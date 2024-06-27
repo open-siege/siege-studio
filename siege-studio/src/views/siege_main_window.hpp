@@ -328,6 +328,9 @@ namespace siege::views
                       win32::properties::tool_bar::text_color,
                       win32::properties::tool_bar::text_highlight_color,
                       win32::properties::tool_bar::mark_color,
+                      win32::properties::list_box::bk_color,
+                      win32::properties::list_box::highlight_color,
+                      win32::properties::list_box::text_color,
                       win32::properties::window::bk_color,
                       win32::properties::menu::bk_color,
               } };
@@ -338,6 +341,7 @@ namespace siege::views
               }
 
               win32::apply_theme(*this, dir_list);
+              win32::apply_theme(*this, tab_control);
               SetMenu(*this, light_menu);
               BOOL value = FALSE;
               ::DwmSetWindowAttribute(*this, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
@@ -378,6 +382,7 @@ namespace siege::views
               this->SetPropW(win32::properties::window::bk_color, 0x00383838);
   
               win32::apply_theme(*this, dir_list);
+              win32::apply_theme(*this, tab_control);
               
               SetMenu(*this, dark_menu);
               BOOL value = TRUE;
@@ -432,24 +437,7 @@ namespace siege::views
         context.FillRect(message.item.rcItem, black_brush);
       }
 
-
       ::SetTextColor(context, 0x00FFFFFF);
-      
-      if (message.item.hwndItem == tab_control)
-      {
-        auto item = tab_control.GetItem(message.item.itemID, TCITEMW{
-            .mask = TCIF_TEXT,
-            .pszText = buffer.data(),
-            .cchTextMax = int(buffer.size())
-        });
-        
-        if (item)
-        {
-          ::DrawTextW(context, (LPCWSTR)item->pszText, -1, &message.item.rcItem, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
-        }
-        return TRUE;
-      }
-
       ::DrawTextW(context, (LPCWSTR)message.item.itemData, -1, &message.item.rcItem, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
 
       return TRUE;

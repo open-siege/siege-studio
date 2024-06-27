@@ -3,6 +3,7 @@
 
 #include <siege/platform/win/core/module.hpp>
 #include <siege/platform/win/desktop/common_controls.hpp>
+#include <siege/platform/win/desktop/drawing.hpp>
 #include <map>
 #include <string>
 #include <uxtheme.h>
@@ -58,6 +59,13 @@ namespace win32
       inline static auto mark_color = std::wstring(win32::tool_bar::class_name) + L"." + L"MarkColor";
     };
 
+    struct list_box
+    {
+      inline static auto bk_color = std::wstring(win32::list_box::class_name) + L"." + L"BkColor";
+      inline static auto text_color = std::wstring(win32::list_box::class_name) + L"." + L"TextColor";
+      inline static auto highlight_color = std::wstring(win32::list_box::class_name) + L"." + L"HighlightColor";
+    };
+
     struct menu
     {
       constexpr static auto bk_color = std::wstring_view(L"Menu.BkColor");
@@ -69,6 +77,189 @@ namespace win32
     };
   };
 
+  inline void apply_theme(const win32::window_ref& colors, win32::tab_control& control)
+  {
+    struct sub_class
+    {
+      static LRESULT __stdcall HandleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      {
+        if (uMsg == WM_MEASUREITEM && lParam)
+        {
+          MEASUREITEMSTRUCT& item = *(MEASUREITEMSTRUCT*)lParam;
+
+          if (item.CtlType == ODT_TAB)
+          {
+            auto control = win32::tab_control((HWND)uIdSubclass);
+
+            auto size = control.SetItemSize(SIZE{ .cx = 90, .cy = 30 });
+            control.SetItemSize(size);
+
+            item.itemWidth = size.cx;
+            item.itemHeight = size.cy;
+            return TRUE;
+          }
+        }
+
+        if (uMsg == WM_DRAWITEM && lParam)
+        {
+          thread_local std::wstring buffer(256, '\0');
+          DRAWITEMSTRUCT& item = *(DRAWITEMSTRUCT*)lParam;
+          if (item.hwndItem == (HWND)uIdSubclass && (item.itemAction == ODA_DRAWENTIRE || item.itemAction == ODA_SELECT))
+          {
+            static auto black_brush = ::CreateSolidBrush(0x00000000);
+            static auto grey_brush = ::CreateSolidBrush(0x00383838);
+
+            auto context = win32::gdi_drawing_context_ref(item.hDC);
+
+            SetBkMode(context, TRANSPARENT);
+
+            if (item.itemState & ODS_HOTLIGHT)
+            {
+              context.FillRect(item.rcItem, grey_brush);
+            }
+            else if (item.itemState & ODS_SELECTED)
+            {
+              context.FillRect(item.rcItem, grey_brush);
+            }
+            else
+            {
+              context.FillRect(item.rcItem, black_brush);
+            }
+
+            ::SetTextColor(context, 0x00FFFFFF);
+
+             auto item_info = win32::tab_control(item.hwndItem).GetItem(item.itemID, TCITEMW{ .mask = TCIF_TEXT, .pszText = buffer.data(), .cchTextMax = int(buffer.size()) });
+
+            if (item_info)
+            {
+              ::DrawTextW(context, (LPCWSTR)item_info->pszText, -1, &item.rcItem, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+            }
+            return TRUE;
+          }
+        }
+
+        return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+      }
+    };
+
+    if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
+    {
+      auto style = control.GetWindowStyle();
+      control.SetWindowStyle(style | TCS_OWNERDRAWFIXED);
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR)control.get());
+    }
+    else
+    {
+      auto style = control.GetWindowStyle();
+      control.SetWindowStyle(style & ~TCS_OWNERDRAWFIXED);
+      ::RemoveWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get());
+    }
+  }
+
+  inline void apply_theme(const win32::window_ref& colors, win32::list_box& control)
+  {
+    auto bk_color = colors.FindPropertyExW<COLORREF>(properties::list_box::bk_color);
+    auto text_color = colors.FindPropertyExW<COLORREF>(properties::list_box::text_color);
+    auto highlight_color = colors.FindPropertyExW<COLORREF>(properties::list_box::highlight_color);
+
+    struct sub_class
+    {
+      static LRESULT __stdcall HandleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      {
+        if (uMsg == WM_CTLCOLORLISTBOX && lParam == uIdSubclass)
+        {
+          // win32::gdi_brush list_background;
+          //  if (list_background)
+          //{
+          //  return (LRESULT)list_background.get();
+          //}
+        }
+
+        if (uMsg == WM_MEASUREITEM && lParam)
+        {
+          MEASUREITEMSTRUCT& item = *(MEASUREITEMSTRUCT*)lParam;
+
+          if (item.CtlType == ODT_LISTBOX)
+          {
+            auto themed_selection = win32::list_box((HWND)uIdSubclass);
+
+            item.itemHeight = themed_selection.GetItemHeight(item.itemID);
+          }
+        }
+
+        if (uMsg == WM_DRAWITEM && lParam)
+        {
+          thread_local std::wstring buffer;
+          DRAWITEMSTRUCT& item = *(DRAWITEMSTRUCT*)lParam;
+          if (item.hwndItem == (HWND)uIdSubclass && (item.itemAction == ODA_DRAWENTIRE || item.itemAction == ODA_SELECT))
+          {
+            static auto black_brush = ::CreateSolidBrush(0x00000000);
+            static auto grey_brush = ::CreateSolidBrush(0x00383838);
+            auto context = win32::gdi_drawing_context_ref(item.hDC);
+
+            context.FillRect(item.rcItem, item.itemState & ODS_SELECTED ? grey_brush : black_brush);
+            ::SetTextColor(context, 0x00FFFFFF);
+
+            auto themed_selection = win32::list_box(item.hwndItem);
+            buffer.resize(themed_selection.GetTextLength(item.itemID));
+
+            themed_selection.GetText(item.itemID, buffer.data());
+
+            ::TextOut(context, item.rcItem.left, item.rcItem.top, buffer.c_str(), buffer.size());
+          }
+        }
+
+        return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+      }
+    };
+
+    auto copy_control = [&](LONG style) {
+      auto size = control.GetClientRect();
+      auto parent = control.GetParent();
+      if (auto real_size = control.MapWindowPoints(*parent, *size); real_size)
+      {
+        size = real_size->second;
+      }
+
+      auto copy = win32::window_module_ref::current_module().CreateWindowExW<win32::list_box>(CREATESTRUCTW{
+        .hwndParent = *parent,
+        .cy = size->bottom - size->top,
+        .cx = size->right - size->left,
+        .y = size->top,
+        .x = size->left,
+        .style = style,
+      });
+
+      std::wstring temp(256, '\0');
+
+      auto count = control.GetCount();
+
+      for (auto i = 0; i < count; ++i)
+      {
+        control.GetText(i, temp.data());
+        copy->AddString(temp.data());
+      }
+
+      ::DestroyWindow(control);
+      control.reset(copy->release());
+    };
+
+    if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
+    {
+      auto style = control.GetWindowStyle();
+      copy_control(style | LBS_OWNERDRAWFIXED);
+
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR)control.get());
+    }
+    else
+    {
+      auto style = control.GetWindowStyle();
+      copy_control(style & ~LBS_OWNERDRAWFIXED);
+      ::RemoveWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get());
+    }
+  }
+
+
   inline void apply_theme(const win32::window_ref& colors, win32::list_view& control)
   {
     static auto default_bk_color = ListView_GetBkColor(control);
@@ -78,7 +269,7 @@ namespace win32
     static auto default_text_color = ListView_GetTextColor(control);
     color = colors.FindPropertyExW<COLORREF>(properties::list_view::text_color).value_or(default_text_color);
     ListView_SetTextColor(control, color);
-   
+
     static auto default_text_bk_color = ListView_GetTextBkColor(control);
     color = colors.FindPropertyExW<COLORREF>(properties::list_view::text_bk_color).value_or(default_text_bk_color);
     ListView_SetTextBkColor(control, color);
@@ -86,18 +277,36 @@ namespace win32
     static auto default_outline_color = ListView_GetOutlineColor(control);
     color = colors.FindPropertyExW<COLORREF>(properties::list_view::outline_color).value_or(default_outline_color);
     ListView_SetOutlineColor(control, color);
+
+    if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
+    {
+      win32::theme_module().SetWindowTheme(control, L"DarkMode_Explorer", nullptr);
+    }
+    else
+    {
+      win32::theme_module().SetWindowTheme(control, nullptr, nullptr);
+    }
   }
 
   inline void apply_theme(const win32::window_ref& colors, win32::tree_view& control)
   {
     auto color = colors.FindPropertyExW<COLORREF>(properties::tree_view::bk_color).value_or(CLR_NONE);
-    TreeView_SetBkColor(control, color); 
-   
+    TreeView_SetBkColor(control, color);
+
     color = colors.FindPropertyExW<COLORREF>(properties::tree_view::text_color).value_or(CLR_NONE);
     TreeView_SetTextColor(control, color);
 
     color = colors.FindPropertyExW<COLORREF>(properties::tree_view::line_color).value_or(CLR_NONE);
     TreeView_SetLineColor(control, color);
+
+    if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
+    {
+      win32::theme_module().SetWindowTheme(control, L"DarkMode_Explorer", nullptr);
+    }
+    else
+    {
+      win32::theme_module().SetWindowTheme(control, nullptr, nullptr);
+    }
   }
 
   inline void apply_theme(const win32::window_ref& colors, win32::tool_bar& control)
@@ -169,8 +378,7 @@ namespace win32
       return DefSubclassProc(hWnd, uMsg, wParam, lParam);
     };
 
-    if (colors.FindPropertyExW(properties::tool_bar::btn_face_color) || 
-        colors.FindPropertyExW(properties::tool_bar::text_color))
+    if (colors.FindPropertyExW(properties::tool_bar::btn_face_color) || colors.FindPropertyExW(properties::tool_bar::text_color))
     {
       change_theme = true;
 
@@ -180,13 +388,12 @@ namespace win32
           control.SetPropW(key, value);
         }
       });
-
-    ::SetWindowSubclass(
-        *control.GetParent(), change_color, (UINT_PTR)control.get(), (DWORD_PTR)control.get());
     }
 
     if (change_theme)
     {
+      ::SetWindowSubclass(
+        *control.GetParent(), change_color, (UINT_PTR)control.get(), (DWORD_PTR)control.get());
       win32::theme_module().SetWindowTheme(control, L"", L"");
     }
     else

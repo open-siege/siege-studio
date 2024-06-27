@@ -105,7 +105,7 @@ namespace siege::views
         .style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
       });
 
-       on_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
+      on_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
       table.InsertGroup(-1, LVGROUP{
                               .pszHeader = const_cast<wchar_t*>(L"Hidden"),
@@ -198,9 +198,6 @@ namespace siege::views
             return 0;
           }
           is_dark = true;
-
-          win32::apply_theme(*parent, table_settings);
-          win32::apply_theme(*parent, table);
         }
         else
         {
@@ -208,12 +205,14 @@ namespace siege::views
           {
             return 0;
           }
-
-          win32::apply_theme(*parent, table_settings);
-          win32::apply_theme(*parent, table);
-          RedrawWindow(table, nullptr, nullptr, 0);
           is_dark = false;
         }
+
+        win32::apply_theme(*parent, table_settings);
+        win32::apply_theme(*parent, table);
+
+        RedrawWindow(table, nullptr, nullptr, RDW_INVALIDATE);
+
         return 0;
       }
 
