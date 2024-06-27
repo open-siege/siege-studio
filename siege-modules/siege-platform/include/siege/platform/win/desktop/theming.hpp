@@ -62,7 +62,8 @@ namespace win32
     {
       inline static auto bk_color = std::wstring(win32::list_box::class_name) + L"." + L"BkColor";
       inline static auto text_color = std::wstring(win32::list_box::class_name) + L"." + L"TextColor";
-      inline static auto highlight_color = std::wstring(win32::list_box::class_name) + L"." + L"HighlightColor";
+      inline static auto text_bk_color = std::wstring(win32::list_box::class_name) + L"." + L"TextBkColor";
+      inline static auto text_highlight_color = std::wstring(win32::list_box::class_name) + L"." + L"TextHighlightColor";
     };
 
     struct menu

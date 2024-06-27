@@ -331,7 +331,8 @@ namespace siege::views
                 win32::properties::tool_bar::text_highlight_color,
                 win32::properties::tool_bar::mark_color,
                 win32::properties::list_box::bk_color,
-                win32::properties::list_box::highlight_color,
+                win32::properties::list_box::text_highlight_color,
+                win32::properties::list_box::text_bk_color,
                 win32::properties::list_box::text_color,
                 win32::properties::window::bk_color,
                 win32::properties::menu::bk_color,
@@ -371,6 +372,11 @@ namespace siege::views
               this->SetPropW(win32::properties::list_view::text_color, 0x00FFFFFF);
               this->SetPropW(win32::properties::list_view::text_bk_color, 0x00383838);
               this->SetPropW(win32::properties::list_view::outline_color, 0x00AAAAAA);
+
+              this->SetPropW(win32::properties::list_box::bk_color, 0x00000000);
+              this->SetPropW(win32::properties::list_box::text_color, 0x00FFFFFF);
+              this->SetPropW(win32::properties::list_box::text_bk_color, 0x00111111);
+              this->SetPropW(win32::properties::list_box::text_highlight_color, 0x00383838);
 
               this->SetPropW(win32::properties::tool_bar::btn_highlight_color, 0x00383838);
               //  this->SetPropW(win32::properties::tool_bar::btn_shadow_color, 0x00AAAAAA);

@@ -5,6 +5,26 @@
 
 namespace win32
 {
+  std::map<COLORREF, win32::gdi_brush>& get_color_map()
+  {
+    thread_local std::map<COLORREF, win32::gdi_brush> cache;
+    return cache;
+  }
+
+  win32::gdi_brush& get_solid_brush(COLORREF color)
+  {
+    auto& colors = get_color_map();
+
+    auto brush = colors.find(color);
+
+    if (brush != colors.end())
+    {
+      return brush->second;
+    }
+
+    return colors.emplace(color, ::CreateSolidBrush(color)).first->second;
+  }
+
   void apply_theme(const win32::window_ref& colors, win32::header& control)
   {
     struct sub_class
@@ -226,21 +246,17 @@ namespace win32
 
   void apply_theme(const win32::window_ref& colors, win32::list_box& control)
   {
-    auto bk_color = colors.FindPropertyExW<COLORREF>(properties::list_box::bk_color);
-    auto text_color = colors.FindPropertyExW<COLORREF>(properties::list_box::text_color);
-    auto highlight_color = colors.FindPropertyExW<COLORREF>(properties::list_box::highlight_color);
-
     struct sub_class
     {
       static LRESULT __stdcall HandleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
       {
         if (uMsg == WM_CTLCOLORLISTBOX && lParam == uIdSubclass)
         {
-          // win32::gdi_brush list_background;
-          //  if (list_background)
-          //{
-          //  return (LRESULT)list_background.get();
-          //}
+          auto bk_color = win32::list_box((HWND)uIdSubclass).FindPropertyExW<COLORREF>(properties::list_box::bk_color);
+          if (bk_color)
+          {
+            return (LRESULT)get_solid_brush(*bk_color).release();
+          }
         }
 
         if (uMsg == WM_MEASUREITEM && lParam)
@@ -261,20 +277,39 @@ namespace win32
           DRAWITEMSTRUCT& item = *(DRAWITEMSTRUCT*)lParam;
           if (item.hwndItem == (HWND)uIdSubclass && (item.itemAction == ODA_DRAWENTIRE || item.itemAction == ODA_SELECT))
           {
-            static auto black_brush = ::CreateSolidBrush(0x00000000);
-            static auto grey_brush = ::CreateSolidBrush(0x00383838);
+            auto list = win32::list_box(item.hwndItem);
             auto context = win32::gdi_drawing_context_ref(item.hDC);
 
-            context.FillRect(item.rcItem, item.itemState & ODS_SELECTED ? grey_brush : black_brush);
-            ::SetTextColor(context, 0x00FFFFFF);
+            auto text_bk_color = list.FindPropertyExW<COLORREF>(properties::list_box::text_bk_color);
 
-            auto themed_selection = win32::list_box(item.hwndItem);
-            buffer.resize(themed_selection.GetTextLength(item.itemID));
+            if (text_bk_color)
+            {
+              auto text_highlight_color = list.FindPropertyExW<COLORREF>(properties::list_box::text_highlight_color).value_or(*text_bk_color);
 
-            themed_selection.GetText(item.itemID, buffer.data());
+              auto& normal_brush = get_solid_brush(*text_bk_color);
+              auto& selected_brush = get_solid_brush(text_highlight_color);
+              
+              context.FillRect(item.rcItem, item.itemState & ODS_SELECTED ? selected_brush : normal_brush);
+            }
+
+            auto text_color = list.FindPropertyExW<COLORREF>(properties::list_box::text_color);
+
+            if (text_color)
+            {
+              ::SetTextColor(context, *text_color);
+            }
+
+            buffer.resize(list.GetTextLength(item.itemID));
+
+            list.GetText(item.itemID, buffer.data());
 
             ::TextOut(context, item.rcItem.left, item.rcItem.top, buffer.c_str(), buffer.size());
           }
+        }
+
+        if (uMsg == WM_DESTROY)
+        {
+          ::RemoveWindowSubclass(hWnd, sub_class::HandleMessage, uIdSubclass);
         }
 
         return DefSubclassProc(hWnd, uMsg, wParam, lParam);
@@ -316,6 +351,13 @@ namespace win32
     {
       auto style = control.GetWindowStyle();
       copy_control(style | LBS_OWNERDRAWFIXED);
+
+      colors.ForEachPropertyExW([&](auto, auto key, auto value) {
+        if (key.find(win32::list_box::class_name) != std::wstring_view::npos)
+        {
+          control.SetPropW(key, value);
+        }
+      });
 
       ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR)control.get());
     }
