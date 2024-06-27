@@ -735,6 +735,17 @@ namespace win32
       return SIZE{ .cx = LOWORD(result), .cy = HIWORD(result) };
     }
 
+    [[nodiscard]] inline std::optional<RECT> GetItemRect(wparam_t index)
+    {
+      RECT result;
+      if (SendMessageW(*this, TB_GETITEMRECT, index, std::bit_cast<lparam_t>(&result)))
+      {
+        return result;
+      }
+
+      return std::nullopt;
+    }
+
     [[nodiscard]] inline std::optional<RECT> GetRect(wparam_t id)
     {
       RECT result;

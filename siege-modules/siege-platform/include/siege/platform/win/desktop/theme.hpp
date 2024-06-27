@@ -487,7 +487,7 @@ namespace win32
 
           if (custom_draw->nmcd.dwDrawStage == CDDS_PREPAINT)
           {
-            return CDRF_NOTIFYITEMDRAW;
+            return CDRF_NOTIFYITEMDRAW | CDRF_NOTIFYPOSTPAINT;
           }
 
           if (custom_draw->nmcd.dwDrawStage == CDDS_ITEMPREPAINT || custom_draw->nmcd.dwDrawStage == (CDDS_SUBITEM | CDDS_ITEMPREPAINT))
@@ -509,6 +509,24 @@ namespace win32
               }
             });
             return CDRF_NEWFONT | TBCDRF_USECDCOLORS;
+          }
+
+          if (custom_draw->nmcd.dwDrawStage == CDDS_POSTPAINT)
+          {
+            static auto grey_brush = ::CreateSolidBrush(0x00383838);
+            win32::gdi_drawing_context_ref context(custom_draw->nmcd.hdc);
+
+            auto buttons = win32::tool_bar(custom_draw->nmcd.hdr.hwndFrom);
+            auto count = buttons.ButtonCount();
+            auto rect = buttons.GetClientRect();
+            if (count > 0)
+            {
+              auto button_rect = buttons.GetItemRect(count - 1);
+              
+              rect->left = button_rect->right;
+              rect->bottom = button_rect->bottom;
+              context.FillRect(*rect, grey_brush);
+            }
           }
 
           return CDRF_DODEFAULT;
