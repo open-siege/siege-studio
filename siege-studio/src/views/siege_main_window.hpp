@@ -8,7 +8,7 @@
 #include <siege/platform/win/core/com/storage.hpp>
 #include <siege/platform/content_module.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
-#include <siege/platform/win/desktop/theme.hpp>
+#include <siege/platform/win/desktop/theming.hpp>
 #include <map>
 #include <spanstream>
 #include <dwmapi.h>

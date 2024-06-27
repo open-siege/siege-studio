@@ -7,7 +7,7 @@
 #include <siege/platform/win/core/com/storage.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
 #include <siege/platform/win/desktop/shell.hpp>
-#include <siege/platform/win/desktop/theme.hpp>
+#include <siege/platform/win/desktop/theming.hpp>
 #include <siege/platform/storage_module.hpp>
 #include <cassert>
 #include <sstream>

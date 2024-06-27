@@ -3,6 +3,7 @@
 
 #include <siege/platform/win/desktop/messages.hpp>
 #include <siege/platform/win/auto_handle.hpp>
+#include <cassert>
 
 namespace win32
 {

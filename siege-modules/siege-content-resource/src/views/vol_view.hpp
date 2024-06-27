@@ -10,7 +10,7 @@
 #include <spanstream>
 #include <map>
 #include <set>
-#include <siege/platform/win/desktop/theme.hpp>
+#include <siege/platform/win/desktop/theming.hpp>
 #include "vol_controller.hpp"
 
 namespace siege::views
