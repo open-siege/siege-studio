@@ -19,8 +19,7 @@ namespace siege::views
     win32::static_control render_view;
     win32::list_box selection;
     std::wstring buffer;
-    win32::gdi_brush list_background;
-
+    
     pal_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
       buffer.reserve(64);
@@ -40,37 +39,15 @@ namespace siege::views
       return 0;
     }
 
-    bool is_dark = false;
-
     std::optional<win32::lresult_t> on_setting_change(win32::setting_change_message message)
     {
       if (message.setting == L"ImmersiveColorSet")
       {
         auto parent = this->GetParent();
 
-        if (parent->GetPropW<bool>(L"AppsUseDarkTheme"))
-        {
-          if (is_dark)
-          {
-            return 0;
-          }
-          is_dark = true;
-
-          list_background.reset(::CreateSolidBrush(0x00000000));
-        }
-        else
-        {
-          if (!is_dark)
-          {
-            return 0;
-          }
-
-          is_dark = false;
-          list_background.reset();
-        }
-
         win32::apply_theme(*parent, selection);
-        
+        win32::apply_theme(*parent, *this);
+
         return 0;
       }
 
@@ -87,7 +64,7 @@ namespace siege::views
 
       selection.SetWindowPos(right_size);
       selection.SetWindowPos(POINT{ .x = left_size.cx });
-
+  
       return 0;
     }
 
@@ -163,20 +140,6 @@ namespace siege::views
       }
 
       return FALSE;
-    }
-
-    std::optional<LRESULT> on_erase_background(win32::erase_background_message message)
-    {
-      if (list_background)
-      {
-        auto context = win32::gdi_drawing_context_ref(message.context);
-
-        auto rect = GetClientRect();
-        context.FillRect(*rect, list_background);
-        return TRUE;
-      }
-
-      return 0;
     }
 
     auto on_draw_item(win32::draw_item_message message)

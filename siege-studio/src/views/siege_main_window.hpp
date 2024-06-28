@@ -98,6 +98,7 @@ namespace siege::views
 
       SetMenuInfo(dark_menu, &mi);
       SetMenu(self, light_menu);
+      this->SetPropW(L"AppsUseDarkTheme", is_dark_mode);
     }
 
     void repopulate_tree_view(std::filesystem::path path)
@@ -178,7 +179,7 @@ namespace siege::views
 
       repopulate_tree_view(std::filesystem::current_path());
 
-      tab_control = *factory.CreateWindowExW<win32::tab_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | TCS_MULTILINE | TCS_RIGHTJUSTIFY | TCS_OWNERDRAWFIXED });
+      tab_control = *factory.CreateWindowExW<win32::tab_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | TCS_MULTILINE | TCS_RIGHTJUSTIFY });
       tab_control.InsertItem(0, TCITEMW{
                                   .mask = TCIF_TEXT,
                                   .pszText = const_cast<wchar_t*>(L"+"),
@@ -310,12 +311,24 @@ namespace siege::views
           DWORD type = REG_DWORD;
           if (RegQueryValueExW(key, L"AppsUseLightTheme", nullptr, &type, (LPBYTE)&value, &size) == ERROR_SUCCESS)
           {
-            this->SetPropW(L"AppsUseDarkTheme", value == 0);
+            value == 0;
+
+            if (value == 0 && is_dark_mode)
+            {
+              RegCloseKey(key);
+              return 0;
+            }
+
+            if (value == 1 && !is_dark_mode)
+            {
+              RegCloseKey(key);
+              return 0;
+            }
+
+            is_dark_mode = value == 0;
+            this->SetPropW(L"AppsUseDarkTheme", is_dark_mode);
             if (value == 1)
             {
-              auto style = tab_control.GetWindowStyle();
-              tab_control.SetWindowStyle(style & ~TCS_OWNERDRAWFIXED);
-
               static auto props = std::array<std::wstring_view, 32>{ {
                 win32::properties::tree_view::bk_color,
                 win32::properties::tree_view::text_color,
@@ -349,22 +362,9 @@ namespace siege::views
               BOOL value = FALSE;
               ::DwmSetWindowAttribute(*this, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
 
-              ::EnumChildWindows(
-                *this, [](HWND child, LPARAM parent) -> BOOL __stdcall {
-                  if (::GetParent(child) == (HWND)parent)
-                  {
-                    ::SendMessageW(child, WM_SETTINGCHANGE, 0, (LPARAM)L"ImmersiveColorSet");
-                  }
-
-                  return TRUE;
-                },
-                (LPARAM)(HWND) * this);
             }
             else
             {
-              auto style = tab_control.GetWindowStyle();
-              tab_control.SetWindowStyle(style | TCS_OWNERDRAWFIXED);
-
               COLORREF bk_color = 0x00000000;
               COLORREF text_color = 0x00FFFFFF;
               COLORREF text_bk_color = 0x00111111;
@@ -393,11 +393,12 @@ namespace siege::views
               this->SetPropW(win32::properties::tab_control::text_bk_color, text_bk_color);
               this->SetPropW(win32::properties::tab_control::text_highlight_color, text_highlight_color);
 
-              this->SetPropW(win32::properties::tool_bar::btn_highlight_color, 0x00383838);
+              this->SetPropW(win32::properties::tool_bar::bk_color, bk_color);
+              this->SetPropW(win32::properties::tool_bar::text_color, text_color);
+              this->SetPropW(win32::properties::tool_bar::btn_face_color, text_bk_color);
+              this->SetPropW(win32::properties::tool_bar::btn_highlight_color, text_highlight_color);
               //  this->SetPropW(win32::properties::tool_bar::btn_shadow_color, 0x00AAAAAA);
-              this->SetPropW(win32::properties::tool_bar::btn_face_color, 0x00000000);
               // this->SetPropW(win32::properties::tool_bar::btn_shadow_color, 0x00AAAAAA);
-              this->SetPropW(win32::properties::tool_bar::text_color, 0x00FFFFFF);
               // this->SetPropW(win32::properties::tool_bar::text_highlight_color, 0x00AAAAAA);
               // this->SetPropW(win32::properties::tool_bar::mark_color, 0x00AAAAAA);
               this->SetPropW(win32::properties::window::bk_color, bk_color);
@@ -408,16 +409,16 @@ namespace siege::views
               SetMenu(*this, dark_menu);
               BOOL value = TRUE;
               ::DwmSetWindowAttribute(*this, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
-              ::EnumChildWindows(
-                *this, [](HWND child, LPARAM parent) -> BOOL __stdcall {
-                  if (::GetParent(child) == (HWND)parent)
-                  {
-                    ::SendMessageW(child, WM_SETTINGCHANGE, 0, (LPARAM)L"ImmersiveColorSet");
-                  }
+            }
 
-                  return TRUE;
-                },
-                (LPARAM)(HWND) * this);
+            for (auto i = 0; i < tab_control.GetItemCount(); ++i)
+            {
+              auto tab_item = tab_control.GetItem(i);
+
+              if (tab_item->lParam)
+              {
+                ::SendMessageW((HWND)tab_item->lParam, WM_SETTINGCHANGE, 0, (LPARAM)L"ImmersiveColorSet");
+              }
             }
           }
 

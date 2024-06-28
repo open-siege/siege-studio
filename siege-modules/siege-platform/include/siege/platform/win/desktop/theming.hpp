@@ -50,6 +50,7 @@ namespace win32
 
     struct tool_bar
     {
+      inline static auto bk_color = std::wstring(win32::tool_bar::class_name) + L"." + L"BkColor";
       inline static auto btn_highlight_color = std::wstring(win32::tool_bar::class_name) + L"." + L"BtnHighlightColor";
       inline static auto btn_shadow_color = std::wstring(win32::tool_bar::class_name) + L"." + L"BtnShadowColor";
       inline static auto btn_face_color = std::wstring(win32::tool_bar::class_name) + L"." + L"BtnFaceColor";
@@ -93,6 +94,7 @@ namespace win32
     };
   };
 
+  void apply_theme(const win32::window_ref& colors, win32::window_ref& control);
   void apply_theme(const win32::window_ref& colors, win32::header& control);
   void apply_theme(const win32::window_ref& colors, win32::tab_control& control);
   void apply_theme(const win32::window_ref& colors, win32::list_box& control);
