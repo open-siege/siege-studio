@@ -182,7 +182,6 @@ namespace siege::views
       return 0;
     }
 
-    bool is_dark = false;
     inline static std::set<std::wstring> strings;
 
     std::optional<win32::lresult_t> on_setting_change(win32::setting_change_message message)
@@ -190,23 +189,6 @@ namespace siege::views
       if (message.setting == L"ImmersiveColorSet")
       {
         auto parent = this->GetParent();
-
-        if (parent->GetPropW<bool>(L"AppsUseDarkTheme"))
-        {
-          if (is_dark)
-          {
-            return 0;
-          }
-          is_dark = true;
-        }
-        else
-        {
-          if (!is_dark)
-          {
-            return 0;
-          }
-          is_dark = false;
-        }
 
         win32::apply_theme(*parent, table_settings);
         win32::apply_theme(*parent, table);

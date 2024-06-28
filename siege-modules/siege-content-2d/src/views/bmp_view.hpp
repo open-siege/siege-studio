@@ -173,6 +173,9 @@ namespace siege::views
         auto parent = this->GetParent();
 
         win32::apply_theme(*parent, palettes_list);
+        auto header = palettes_list.GetHeader();
+        win32::apply_theme(*parent, header);
+
         RedrawWindow(palettes_list, nullptr, nullptr, RDW_INVALIDATE);
         
         return 0;
