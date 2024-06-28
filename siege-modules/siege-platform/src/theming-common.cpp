@@ -295,6 +295,9 @@ namespace win32
     {
       win32::theme_module().SetWindowTheme(control, nullptr, nullptr);
     }
+
+    ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
+        
   }
 
   void apply_theme(const win32::window_ref& colors, win32::tree_view& control)
@@ -316,6 +319,7 @@ namespace win32
     {
       win32::theme_module().SetWindowTheme(control, nullptr, nullptr);
     }
+    ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);       
   }
 
   void apply_theme(const win32::window_ref& colors, win32::tool_bar& control)
@@ -437,6 +441,7 @@ namespace win32
       win32::theme_module().SetWindowTheme(control, nullptr, nullptr);
       ::RemoveWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get());
     }
+    ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);       
   }
 
   void apply_theme(const win32::window_ref& colors, win32::up_down& control)

@@ -182,8 +182,6 @@ namespace siege::views
         win32::apply_theme(*parent, zoom);
         win32::apply_theme(*parent, frame_selector);
 
-        RedrawWindow(palettes_list, nullptr, nullptr, RDW_INVALIDATE);
-        
         return 0;
       }
 

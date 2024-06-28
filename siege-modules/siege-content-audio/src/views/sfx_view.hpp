@@ -32,11 +32,6 @@ namespace siege::views
       auto control_factory = win32::window_factory(ref());
 
       player_buttons = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_LIST | TBSTYLE_WRAPABLE });
-      win32::theme_module().SetWindowTheme(player_buttons, L"", L"");
-
-      ::COLORSCHEME colors{ .dwSize = sizeof(::COLORSCHEME), .clrBtnHighlight = 0x00383838 };
-
-      SendMessageW(player_buttons, TB_SETCOLORSCHEME, 0, (LPARAM)&colors);
 
       player_buttons.InsertButton(-1, { .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK | BTNS_SHOWTEXT, .iString = (INT_PTR)L"Play" });
 
@@ -51,12 +46,12 @@ namespace siege::views
       selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS });
 
-
       selection.InsertString(-1, L"Palette 1");
       selection.InsertString(-1, L"Palette 2");
       selection.InsertString(-1, L"Palette 3");
 
-
+      on_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
+      
       return 0;
     }
 
@@ -99,34 +94,21 @@ namespace siege::views
       return FALSE;
     }
 
-    std::optional<win32::lresult_t> on_notify(win32::tool_bar_custom_draw_notification message)
+    std::optional<win32::lresult_t> on_setting_change(win32::setting_change_message message)
     {
-      if (message.ref.nmcd.dwDrawStage == CDDS_PREPAINT)
+      if (message.setting == L"ImmersiveColorSet")
       {
-        return CDRF_NOTIFYITEMDRAW;
+        auto parent = this->GetParent();
+
+        win32::apply_theme(*parent, selection);
+        win32::apply_theme(*parent, player_buttons);
+        win32::apply_theme(*parent, render_view);
+        
+        return 0;
       }
 
-      if (message.ref.nmcd.dwDrawStage == CDDS_ITEMPREPAINT)
-      {
-        message.ref.clrBtnFace = 0x00000000;
-        message.ref.clrBtnHighlight = 0x00383838;
-        message.ref.clrText = 0x00FFFFFF;
-        //      message.ref.nStringBkMode = OPAQUE;
-        return CDRF_NEWFONT | TBCDRF_USECDCOLORS;
-      }
-
-      if (message.ref.nmcd.dwDrawStage == (CDDS_SUBITEM | CDDS_ITEMPREPAINT))
-      {
-        message.ref.clrBtnFace = 0x00000000;
-        message.ref.clrBtnHighlight = 0x00383838;
-        message.ref.clrText = 0x00FFFFFF;
-        //        message.ref.nStringBkMode = OPAQUE;
-        return CDRF_NEWFONT | TBCDRF_USECDCOLORS;
-      }
-
-      return CDRF_DODEFAULT;
+      return std::nullopt;
     }
-
 
     std::optional<win32::lresult_t> on_notify(win32::mouse_notification message)
     {

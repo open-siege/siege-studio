@@ -195,8 +195,6 @@ namespace siege::views
         auto header = table.GetHeader();
         win32::apply_theme(*parent, header);
 
-        RedrawWindow(table, nullptr, nullptr, RDW_INVALIDATE);
-
         return 0;
       }
 

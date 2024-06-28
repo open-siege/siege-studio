@@ -47,12 +47,13 @@ namespace win32
       }
 
       ::SetWindowSubclass(control, sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR)control.get());
+      ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
     else
     {
       control.RemovePropW(win32::properties::window::bk_color);
       ::RemoveWindowSubclass(control, sub_class::HandleMessage, (UINT_PTR)control.get());
-      ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
+      ::RedrawWindow(control, nullptr, nullptr, RDW_ERASENOW);
     }
   }
 
@@ -98,13 +99,15 @@ namespace win32
       });
 
       ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR)control.get());
+      ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
     else
     {
       control.RemovePropW(win32::properties::static_control::bk_color);
       control.RemovePropW(win32::properties::static_control::text_color);
- 
       ::RemoveWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get());
+      ::RedrawWindow(control, nullptr, nullptr, RDW_ERASENOW);
+      
     }
   }
 
@@ -235,5 +238,7 @@ namespace win32
       copy_control(style & ~LBS_OWNERDRAWFIXED);
       ::RemoveWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get());
     }
+
+    ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
   }
 }// namespace win32
