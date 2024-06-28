@@ -25,8 +25,8 @@ namespace siege::views
   {
     win32::static_control static_image;
     win32::list_view palettes_list;
-    win32::window zoom;
-    win32::window frame_selector;
+    win32::up_down zoom;
+    win32::up_down frame_selector;
 
     win32::static_control frame_label;
     win32::static_control frame_value;
@@ -53,7 +53,7 @@ namespace siege::views
 
       std::wstring temp = L"menu.pal";
 
-      frame_selector = *factory.CreateWindowExW(::CREATESTRUCTW{
+      frame_selector = *factory.CreateWindowExW<win32::up_down>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | UDS_HORZ | UDS_SETBUDDYINT,
         .lpszName = L"Frame Selector",
         .lpszClass = UPDOWN_CLASSW });
@@ -70,7 +70,7 @@ namespace siege::views
       ::SendMessageW(frame_selector, UDM_SETBUDDY, win32::wparam_t(win32::hwnd_t(frame_value)), 0);
       ::SendMessageW(frame_selector, UDM_SETRANGE, 0, MAKELPARAM(1, 1));
 
-      zoom = *factory.CreateWindowExW(::CREATESTRUCTW{
+      zoom = *factory.CreateWindowExW<win32::up_down>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | UDS_SETBUDDYINT,
         .lpszName = L"Zoom",
         .lpszClass = UPDOWN_CLASSW });
@@ -119,7 +119,7 @@ namespace siege::views
         .style = WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_REALSIZECONTROL });
 
       on_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
-
+ 
       return 0;
     }
 
@@ -179,6 +179,8 @@ namespace siege::views
         win32::apply_theme(*parent, frame_value);
         win32::apply_theme(*parent, zoom_label);
         win32::apply_theme(*parent, zoom_value);
+        win32::apply_theme(*parent, zoom);
+        win32::apply_theme(*parent, frame_selector);
 
         RedrawWindow(palettes_list, nullptr, nullptr, RDW_INVALIDATE);
         

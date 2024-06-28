@@ -313,18 +313,6 @@ namespace siege::views
           {
             value == 0;
 
-            if (value == 0 && is_dark_mode)
-            {
-              RegCloseKey(key);
-              return 0;
-            }
-
-            if (value == 1 && !is_dark_mode)
-            {
-              RegCloseKey(key);
-              return 0;
-            }
-
             is_dark_mode = value == 0;
             this->SetPropW(L"AppsUseDarkTheme", is_dark_mode);
             if (value == 1)

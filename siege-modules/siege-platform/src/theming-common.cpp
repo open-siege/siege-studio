@@ -438,4 +438,16 @@ namespace win32
       ::RemoveWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get());
     }
   }
+
+  void apply_theme(const win32::window_ref& colors, win32::up_down& control)
+  {
+    if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
+    {
+      win32::theme_module().SetWindowTheme(control, L"DarkMode_Explorer", nullptr);
+    }
+    else
+    {
+      win32::theme_module().SetWindowTheme(control, nullptr, nullptr);
+    }
+  }
 }// namespace win32

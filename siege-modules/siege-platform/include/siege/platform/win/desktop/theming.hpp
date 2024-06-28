@@ -112,6 +112,7 @@ namespace win32
   void apply_theme(const win32::window_ref& colors, win32::tab_control& control);  
   void apply_theme(const win32::window_ref& colors, win32::header& control);
   void apply_theme(const win32::window_ref& colors, win32::tool_bar& control);
+  void apply_theme(const win32::window_ref& colors, win32::up_down& control);
 }// namespace win32
 
 #endif
