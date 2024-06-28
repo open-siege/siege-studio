@@ -186,47 +186,28 @@ namespace siege::platform
 
     if (stream.Stat(&stream_info, STATFLAG_DEFAULT) == S_OK && stream_info.pwcsName)
     {
-      std::filesystem::path path = stream_info.pwcsName;
+      auto mapping = win32::file_mapping(::OpenFileMappingW(FILE_MAP_READ, FALSE, stream_info.pwcsName));
       ::CoTaskMemFree(stream_info.pwcsName);
 
-      if (std::filesystem::exists(path) && !std::filesystem::is_directory(path))
+      if (mapping)
       {
-        if (!path.is_absolute())
+        auto view = mapping.MapViewOfFile(FILE_MAP_READ, sizeof(void*));
+        auto full_path = view.GetMappedFilename();
+
+        if (full_path)
         {
-          path = std::filesystem::current_path() / path;
-        }
-        return std::unique_ptr<std::istream>(new ifstream_with_path(std::move(path), std::ios::binary));
-      }
-      else if (!path.is_absolute())
-      {
-        for (auto entry = fs::recursive_directory_iterator(fs::current_path());
-             entry != fs::recursive_directory_iterator();
-             ++entry)
-        {
-          if (entry.depth() > 3)
-          {
-            entry.disable_recursion_pending();
-            continue;
-          }
-          
-          if (entry->exists() 
-              && !entry->is_directory()
-              && entry->path().filename() == path.filename()
-              && entry->file_size() == static_cast<std::size_t>(stream_info.cbSize.QuadPart))
-          {
-            return std::unique_ptr<std::istream>(new ifstream_with_path(entry->path(), std::ios::binary));
-          }
+          return std::unique_ptr<std::istream>(new ifstream_with_path(std::move(*full_path), std::ios::binary));
         }
       }
     }
 
-    // TODO there are runtime problems with this code.
-    // Either fix it or come up with a new approach
-    win32::com::com_ptr<IStream> stream_ref(&stream);
-    stream_ref->AddRef();
-    win32::com::OwningStreamBuf buffer(std::move(stream_ref));
-
-    return std::unique_ptr<std::istream>(new win32::com::owning_istream<decltype(buffer)>(std::move(buffer)));
+    std::string temp;
+    temp.resize((std::size_t)stream_info.cbSize.QuadPart);
+    ULONG count = temp.size();
+    stream.Read(temp.data(), count, &count);
+    temp.resize(count);
+    
+    return std::unique_ptr<std::istream>(new std::stringstream(std::move(temp)));
   }
 #endif
 

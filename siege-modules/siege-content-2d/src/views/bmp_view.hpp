@@ -7,6 +7,7 @@
 #include <siege/platform/win/core/com/storage.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
 #include <siege/platform/win/desktop/shell.hpp>
+#include <siege/platform/win/core/file.hpp>
 #include <siege/platform/win/desktop/theming.hpp>
 #include <siege/platform/storage_module.hpp>
 #include <cassert>
@@ -208,6 +209,10 @@ namespace siege::views
 					{
 						return std::set<std::filesystem::path>{};
 					}
+
+                    win32::file file_handle = win32::file(path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, 0);
+
+                    auto mapping = file_handle.CreateFileMapping(std::nullopt, PAGE_READONLY, 0, 0, path.filename());
 
 					auto resource_module = std::find_if(loaded_modules.begin(), loaded_modules.end(), [&](auto& module) {
 						return module.StreamIsStorage(*stream);
