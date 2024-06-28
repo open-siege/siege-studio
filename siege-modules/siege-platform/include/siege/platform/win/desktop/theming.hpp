@@ -83,6 +83,12 @@ namespace win32
       inline static auto text_highlight_color = std::wstring(win32::tab_control::class_name) + L"." + L"TextHighlightColor";
     };
 
+    struct static_control
+    {
+      inline static auto bk_color = std::wstring(win32::static_control::class_name) + L"." + L"BkColor";
+      inline static auto text_color = std::wstring(win32::static_control::class_name) + L"." + L"TextColor";
+    };
+
     struct menu
     {
       constexpr static auto bk_color = std::wstring_view(L"Menu.BkColor");
@@ -94,12 +100,17 @@ namespace win32
     };
   };
 
+  // user controls
   void apply_theme(const win32::window_ref& colors, win32::window_ref& control);
-  void apply_theme(const win32::window_ref& colors, win32::header& control);
-  void apply_theme(const win32::window_ref& colors, win32::tab_control& control);
+  void apply_theme(const win32::window_ref& colors, win32::static_control& control);
   void apply_theme(const win32::window_ref& colors, win32::list_box& control);
-  void apply_theme(const win32::window_ref& colors, win32::list_view& control);
+  
+  
+  // common controls
   void apply_theme(const win32::window_ref& colors, win32::tree_view& control);
+  void apply_theme(const win32::window_ref& colors, win32::list_view& control);
+  void apply_theme(const win32::window_ref& colors, win32::tab_control& control);  
+  void apply_theme(const win32::window_ref& colors, win32::header& control);
   void apply_theme(const win32::window_ref& colors, win32::tool_bar& control);
 }// namespace win32
 

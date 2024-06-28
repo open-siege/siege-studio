@@ -402,6 +402,8 @@ namespace siege::views
               // this->SetPropW(win32::properties::tool_bar::text_highlight_color, 0x00AAAAAA);
               // this->SetPropW(win32::properties::tool_bar::mark_color, 0x00AAAAAA);
               this->SetPropW(win32::properties::window::bk_color, bk_color);
+              this->SetPropW(win32::properties::static_control::bk_color, bk_color);
+              this->SetPropW(win32::properties::static_control::text_color, text_color);
 
               win32::apply_theme(*this, dir_list);
               win32::apply_theme(*this, tab_control);

@@ -175,6 +175,10 @@ namespace siege::views
         win32::apply_theme(*parent, palettes_list);
         auto header = palettes_list.GetHeader();
         win32::apply_theme(*parent, header);
+        win32::apply_theme(*parent, frame_label);
+        win32::apply_theme(*parent, frame_value);
+        win32::apply_theme(*parent, zoom_label);
+        win32::apply_theme(*parent, zoom_value);
 
         RedrawWindow(palettes_list, nullptr, nullptr, RDW_INVALIDATE);
         
@@ -182,15 +186,6 @@ namespace siege::views
       }
 
       return std::nullopt;
-    }
-
-    auto on_control_color(win32::static_control_color_message message)
-    {
-      static auto black_brush = ::CreateSolidBrush(0x00000000);
-      ::SetBkColor(message.context, 0x00000000);
-      ::SetTextColor(message.context, 0x00FFFFFF);
-
-      return (LRESULT)black_brush;
     }
 
     auto on_copy_data(win32::copy_data_message<char> message)

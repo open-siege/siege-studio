@@ -56,6 +56,58 @@ namespace win32
     }
   }
 
+  void apply_theme(const win32::window_ref& colors, win32::static_control& control)
+  {
+    struct sub_class
+    {
+      static LRESULT __stdcall HandleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      {
+        if (uMsg == WM_CTLCOLORSTATIC && lParam == uIdSubclass)
+        {
+          auto text_color = win32::static_control((HWND)uIdSubclass).FindPropertyExW<COLORREF>(properties::static_control::text_color);
+          if (text_color)
+          {
+            ::SetTextColor((HDC)wParam, *text_color);
+          }
+
+          auto bk_color = win32::static_control((HWND)uIdSubclass).FindPropertyExW<COLORREF>(properties::static_control::bk_color);
+          if (bk_color)
+          {
+            ::SetBkColor((HDC)wParam, *bk_color);
+            return (LRESULT)get_solid_brush(*bk_color);
+          }
+        }
+
+        if (uMsg == WM_DESTROY)
+        {
+          ::RemoveWindowSubclass(hWnd, sub_class::HandleMessage, uIdSubclass);
+        }
+
+        return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+      }
+    };
+
+    if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
+    {
+
+      colors.ForEachPropertyExW([&](auto, auto key, auto value) {
+        if (key.find(win32::static_control::class_name) != std::wstring_view::npos)
+        {
+          control.SetPropW(key, value);
+        }
+      });
+
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR)control.get());
+    }
+    else
+    {
+      control.RemovePropW(win32::properties::static_control::bk_color);
+      control.RemovePropW(win32::properties::static_control::text_color);
+ 
+      ::RemoveWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get());
+    }
+  }
+
   
   void apply_theme(const win32::window_ref& colors, win32::list_box& control)
   {
