@@ -16,6 +16,8 @@ namespace siege::views
   {
     cfg_controller controller;
 
+    win32::list_view table;
+
     cfg_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
     }
@@ -24,20 +26,35 @@ namespace siege::views
     {
       auto control_factory = win32::window_factory(ref());
 
+      table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_VISIBLE | WS_CHILD | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
+
       on_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
-      
+
       return 0;
     }
 
     auto on_size(win32::size_message sized)
     {
-     
+      table.SetWindowPos(sized.client_size);
+      table.SetWindowPos(POINT{});
+
       return 0;
     }
 
     auto on_copy_data(win32::copy_data_message<char> message)
     {
-     
+      std::ispanstream stream(message.data);
+
+      if (controller.is_cfg(stream))
+      {
+        auto size = controller.load_config(stream);
+
+        if (size > 0)
+        {
+          return TRUE;
+        }
+      }
+
       return FALSE;
     }
 

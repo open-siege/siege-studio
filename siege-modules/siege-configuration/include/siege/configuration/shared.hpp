@@ -88,6 +88,8 @@ namespace siege::configuration
             std::unique_ptr<char[]>  raw_data;
             std::vector<config_line> line_entries;
     };
+
+    bool is_ascii_text_config(std::istream&);
 }
 
 #endif

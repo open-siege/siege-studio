@@ -149,7 +149,11 @@ namespace siege::platform
 
     if (auto* span = dynamic_cast<std::spanstream*>(&stream); span)
     {
-      return span->span().size();
+      if (auto size = span->span().size(); size)
+      {
+        return size;
+      }
+      return span->rdbuf()->in_avail();
     }
 
     if (auto* istream = dynamic_cast<std::istream*>(&stream); istream)

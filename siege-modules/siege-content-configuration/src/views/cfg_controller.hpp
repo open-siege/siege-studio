@@ -1,10 +1,11 @@
-#ifndef SIEGE_SFX_CONTROLLER_HPP
-#define SIEGE_SFX_CONTROLLER_HPP
+#ifndef SIEGE_CFG_CONTROLLER_HPP
+#define SIEGE_CFG_CONTROLLER_HPP
 
 #include <string>
 #include <string_view>
 #include <vector>
 #include <array>
+#include <siege/configuration/shared.hpp>
 
 namespace siege::views
 {
@@ -16,6 +17,7 @@ namespace siege::views
 
     std::size_t load_config(std::istream& image_stream) noexcept;
   private:
+    std::optional<siege::configuration::text_game_config> text_config;
   };
 }// namespace siege::views
 
