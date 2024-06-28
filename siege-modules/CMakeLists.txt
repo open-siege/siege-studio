@@ -11,6 +11,8 @@ add_subdirectory(siege-content-2d)
 add_subdirectory(siege-content-3d)
 add_subdirectory(siege-content-resource)
 add_subdirectory(siege-content-audio)
+add_subdirectory(siege-content-configuration)
+add_subdirectory(siege-content-executable)
 
 # the public parts of siege-launcher
 add_subdirectory(siege-configuration)

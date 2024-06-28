@@ -90,12 +90,24 @@ namespace siege::configuration::id_tech
                 return std::nullopt;
             }
 
+            auto current_pos = raw_data.tellg();
+            int count = 0;
+            if (!std::all_of(std::istreambuf_iterator<char>{ raw_data }, std::istreambuf_iterator<char>{}, [&](char raw) {
+               
+                  auto value = static_cast<unsigned char>(raw);
+                  return count++ != 4096 && std::isalpha(value) || std::isdigit(value) || std::isspace(value) || std::ispunct(value);
+                }))
+            {
+              raw_data.seekg(current_pos, std::ios::beg);
+              return std::nullopt;
+            }
+
             std::unique_ptr<char[]> buffer(new char[stream_size]);
             std::fill_n(buffer.get(), stream_size, '\0');
             std::string_view buffer_str(buffer.get(), stream_size);
 
-            auto current_pos = raw_data.tellg();
-            raw_data.read(buffer.get(),  stream_size);
+            raw_data.seekg(current_pos, std::ios::beg);
+            raw_data.read(buffer.get(), stream_size);
             raw_data.seekg(current_pos, std::ios::beg);
 
             auto lines = split_into_lines(buffer_str, end_line, stream_size / average_line_size);

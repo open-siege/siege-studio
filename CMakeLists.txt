@@ -11,14 +11,24 @@ get_target_property(NUVOL_BINARY_DIR nuvol BINARY_DIR)
 
 add_custom_target(siege-studio-dependencies ALL COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:siege-studio>)
 add_custom_command(TARGET siege-studio-dependencies POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-content-2d> $<TARGET_FILE_DIR:siege-studio>
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-content-3d> $<TARGET_FILE_DIR:siege-studio>
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-content-resource> $<TARGET_FILE_DIR:siege-studio>
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-content-audio> $<TARGET_FILE_DIR:siege-studio>
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:unvol> $<TARGET_FILE_DIR:siege-studio>
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:dts-to-json> $<TARGET_FILE_DIR:siege-studio>
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:dts-to-obj> $<TARGET_FILE_DIR:siege-studio>
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${NUVOL_BINARY_DIR} $<TARGET_FILE_DIR:siege-studio>)
+
+set(CONTENT_TARGETS siege-content-2d 
+                    siege-content-3d 
+                    siege-content-resource 
+                    siege-content-audio 
+                    siege-content-configuration
+                    siege-content-executable)
+
+foreach(CONTENT_TARGET IN ITEMS ${CONTENT_TARGETS})
+            add_dependencies(siege-studio-dependencies ${CONTENT_TARGET})
+            add_custom_command(TARGET siege-studio-dependencies POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${CONTENT_TARGET}> $<TARGET_FILE_DIR:siege-studio>)
+endforeach()
+
 
 add_dependencies(siege-studio-dependencies 
         siege-content-2d 
