@@ -48,6 +48,7 @@ namespace siege::views
 
       if (count > 0)
       {
+        auto values = controller.get_resource_names();
         return TRUE;
       }
 

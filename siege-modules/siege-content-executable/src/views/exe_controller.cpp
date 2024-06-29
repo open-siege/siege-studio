@@ -1,5 +1,7 @@
 #include <vector>
+#include <algorithm>
 #include <istream>
+#include <string>
 #include "exe_controller.hpp"
 
 namespace siege::views
@@ -34,5 +36,63 @@ namespace siege::views
     }
 
     return 0;
+  }
+
+  std::map<std::wstring, std::set<std::wstring>> exe_controller::get_resource_names()
+  {
+    std::map<std::wstring, std::set<std::wstring>> results;
+
+    if (loaded_module)
+    {
+      struct enumerator
+      {
+        static BOOL CALLBACK next_type(HMODULE hModule, LPWSTR lpType, LONG_PTR lParam)
+        {
+          auto* temp = (std::map<std::wstring, std::set<std::wstring>>*)lParam;
+
+          if (IS_INTRESOURCE(lpType))
+          {
+            temp->emplace(L"#" + std::to_wstring((int)lpType), std::set<std::wstring>{});
+            return TRUE;
+          }
+
+
+          temp->emplace(lpType, std::set<std::wstring>{});
+          return TRUE;
+        }
+
+        static BOOL CALLBACK next_name(HMODULE hModule, LPCWSTR lpType, LPWSTR lpName, LONG_PTR lParam)
+        {
+          auto* temp = (std::set<std::wstring>*)lParam;
+          if (IS_INTRESOURCE(lpName))
+          {
+            temp->emplace(L"#" + std::to_wstring((int)lpName));
+            return TRUE;
+          }
+
+          temp->emplace(lpName);
+          return TRUE;
+        }
+      };
+
+      if (::EnumResourceTypesW(loaded_module, enumerator::next_type, (LONG_PTR)&results))
+      {
+        for (auto& result : results)
+        {
+          if (result.first[0] == L'#')
+          {
+            auto value = std::stoi(result.first.substr(1));
+            ::EnumResourceNamesW(loaded_module, (wchar_t*)value, enumerator::next_name, (LONG_PTR)&result.second);
+          }
+          else
+          {
+            ::EnumResourceNamesW(loaded_module, result.first.c_str(), enumerator::next_name, (LONG_PTR)&result.second);
+          }
+        }
+      }
+    }
+
+
+    return results;
   }
 }// namespace siege::views

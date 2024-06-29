@@ -6,6 +6,8 @@
 #include <optional>
 #include <filesystem>
 #include <istream>
+#include <map>
+#include <set>
 #include <siege/platform/win/core/module.hpp>
 
 namespace siege::views
@@ -17,6 +19,8 @@ namespace siege::views
     constexpr static auto lib_formats = std::array<std::wstring_view, 6>{{ L".dll", L".ocx", L".olb", L".lib", L".asi", L".ovl", }};
     
     static bool is_exe(std::istream& image_stream);
+
+    std::map<std::wstring, std::set<std::wstring>> get_resource_names();
 
     std::size_t load_executable(std::istream& image_stream, std::optional<std::filesystem::path>) noexcept;
   private:
