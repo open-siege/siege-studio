@@ -1,11 +1,12 @@
 #ifndef SIEGE_SFX_CONTROLLER_HPP
 #define SIEGE_SFX_CONTROLLER_HPP
 
-#include <string>
 #include <string_view>
-#include <vector>
 #include <array>
-#include <any>
+#include <optional>
+#include <filesystem>
+#include <istream>
+#include <siege/platform/win/core/module.hpp>
 
 namespace siege::views
 {
@@ -17,8 +18,9 @@ namespace siege::views
     
     static bool is_exe(std::istream& image_stream);
 
-    std::size_t load_executable(std::istream& image_stream) noexcept;
+    std::size_t load_executable(std::istream& image_stream, std::optional<std::filesystem::path>) noexcept;
   private:
+    win32::module loaded_module;
   };
 }// namespace siege::views
 

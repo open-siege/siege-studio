@@ -228,7 +228,7 @@ namespace siege::views
 
     auto on_copy_data(win32::copy_data_message<std::uint8_t> message)
     {
-      auto filename = GetPropW<wchar_t*>(L"Filename");
+      auto filename = GetPropW<wchar_t*>(L"FilePath");
 
       if (!filename)
       {
@@ -567,11 +567,11 @@ namespace siege::views
 
           stream.reset(nullptr);
 
-          child->SetPropW(L"Filename", path_ref);
+          child->SetPropW(L"FilePath", path_ref);
 
           if (child->CopyData(*this, data))
           {
-            child->RemovePropW(L"Filename");
+            child->RemovePropW(L"FilePath");
 
             auto index = tab_control.GetItemCount() - 1;
 
@@ -587,7 +587,7 @@ namespace siege::views
           }
           else
           {
-            child->RemovePropW(L"Filename");
+            child->RemovePropW(L"FilePath");
             ::DestroyWindow(*child);
           }
 

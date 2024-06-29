@@ -209,7 +209,7 @@ namespace siege::views
       {
         std::optional<std::filesystem::path> path;
 
-        if (wchar_t* filename = this->GetPropW<wchar_t*>(L"Filename"); filename)
+        if (wchar_t* filename = this->GetPropW<wchar_t*>(L"FilePath"); filename)
         {
           path = filename;
         }
@@ -296,10 +296,10 @@ namespace siege::views
             {
               auto data = controller.load_content_data(*item);
 
-              root->SetPropW(L"Filename", temp.data());
+              root->SetPropW(L"FilePath", temp.data());
               root->CopyData(*this, COPYDATASTRUCT{ .cbData = DWORD(data.size()), .lpData = data.data() });
 
-              root->RemovePropW(L"Filename");
+              root->RemovePropW(L"FilePath");
             }
           }
         }

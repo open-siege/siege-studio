@@ -1,5 +1,6 @@
 #include "vol_controller.hpp"
 #include <siege/resource/resource_maker.hpp>
+#include <siege/platform/stream.hpp>
 #include <fstream>
 #include <spanstream>
 
@@ -19,24 +20,11 @@ namespace siege::views
   std::size_t vol_controller::load_volume(std::istream& vol_stream, std::optional<std::filesystem::path> path)
   {
     resource.reset(make_resource_reader(vol_stream).release());
-#if WIN32
+    
     if (!path)
     {
-      if (std::spanstream* span_stream = dynamic_cast<std::spanstream*>(&vol_stream); span_stream != nullptr)
-      {
-        auto span = span_stream->rdbuf()->span();
-        auto view = win32::file_view(span.data());
-
-        auto filename = view.GetMappedFilename();
-        view.release();
-
-        if (filename)
-        {
-          path = std::move(filename);
-        }
-      }
+      path = siege::platform::get_stream_path(vol_stream);
     }
-#endif
 
     if (resource && path)
     {

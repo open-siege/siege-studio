@@ -37,6 +37,20 @@ namespace siege::views
     {
       std::spanstream stream(message.data);
 
+      std::optional<std::filesystem::path> path;
+
+      if (wchar_t* filename = this->GetPropW<wchar_t*>(L"FilePath"); filename)
+      {
+        path = filename;
+      }
+
+      auto count = controller.load_executable(stream, std::move(path));
+
+      if (count > 0)
+      {
+        return TRUE;
+      }
+
       return FALSE;
     }
 
