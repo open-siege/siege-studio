@@ -201,6 +201,8 @@ namespace siege::platform
       }
     }
 
+    // TODO this is a deep copy, but the previous code used to crash.
+    // Let's add some tests and fix things so that we only refer to the original stream.
     std::string temp;
     temp.resize((std::size_t)stream_info.cbSize.QuadPart);
     ULONG count = temp.size();

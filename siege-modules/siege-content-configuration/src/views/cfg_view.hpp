@@ -26,7 +26,15 @@ namespace siege::views
     {
       auto control_factory = win32::window_factory(ref());
 
-      table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_VISIBLE | WS_CHILD | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
+      table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
+
+      table.InsertColumn(-1, LVCOLUMNW{
+                               .pszText = const_cast<wchar_t*>(L"Key"),
+                             });
+
+      table.InsertColumn(-1, LVCOLUMNW{
+                               .pszText = const_cast<wchar_t*>(L"Value"),
+                             });
 
       on_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
@@ -37,6 +45,15 @@ namespace siege::views
     {
       table.SetWindowPos(sized.client_size);
       table.SetWindowPos(POINT{});
+
+      auto column_count = table.GetColumnCount();
+
+      auto column_width = sized.client_size.cx / column_count;
+
+      for (auto i = 0u; i < column_count; ++i)
+      {
+        table.SetColumnWidth(i, column_width);
+      }
 
       return 0;
     }
@@ -51,6 +68,17 @@ namespace siege::views
 
         if (size > 0)
         {
+          auto values = controller.get_key_values();
+
+          for (auto& value : values)
+          {
+            win32::list_view_item item{ value.first };
+            item.sub_items = {
+              value.second
+            };
+
+            table.InsertRow(item);
+          }
           return TRUE;
         }
       }
@@ -62,6 +90,8 @@ namespace siege::views
     {
       if (message.setting == L"ImmersiveColorSet")
       {
+        auto parent = this->GetParent();
+        win32::apply_theme(*parent, table);
         return 0;
       }
 

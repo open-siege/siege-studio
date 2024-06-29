@@ -287,6 +287,13 @@ namespace win32
     color = colors.FindPropertyExW<COLORREF>(properties::list_view::outline_color).value_or(default_outline_color);
     ListView_SetOutlineColor(control, color);
 
+    auto header = control.GetHeader();
+
+    if (header)
+    {
+      win32::apply_theme(colors, header);
+    }
+    
     if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
     {
       win32::theme_module().SetWindowTheme(control, L"DarkMode_Explorer", nullptr);

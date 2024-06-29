@@ -16,6 +16,8 @@ namespace siege::views
     static bool is_cfg(std::istream& image_stream);
 
     std::size_t load_config(std::istream& image_stream) noexcept;
+
+    std::map<std::wstring, std::wstring> get_key_values(); 
   private:
     std::optional<siege::configuration::text_game_config> text_config;
   };

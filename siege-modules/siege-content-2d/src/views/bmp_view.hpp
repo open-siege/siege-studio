@@ -174,8 +174,6 @@ namespace siege::views
         auto parent = this->GetParent();
 
         win32::apply_theme(*parent, palettes_list);
-        auto header = palettes_list.GetHeader();
-        win32::apply_theme(*parent, header);
         win32::apply_theme(*parent, frame_label);
         win32::apply_theme(*parent, frame_value);
         win32::apply_theme(*parent, zoom_label);
@@ -195,6 +193,8 @@ namespace siege::views
 
       if (bmp_controller::is_bmp(stream))
       {
+        std::vector<std::pair<win32::file, win32::file_mapping>> mappings;
+        mappings.reserve(256);
         auto task = controller.load_palettes_async(
           std::nullopt, [&](auto path) {
 					if (path.extension() == ".cs")
@@ -213,6 +213,11 @@ namespace siege::views
                     win32::file file_handle = win32::file(path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, 0);
 
                     auto mapping = file_handle.CreateFileMapping(std::nullopt, PAGE_READONLY, 0, 0, path.filename());
+
+                    if (mapping)
+                    {
+                      mappings.emplace_back(std::make_pair(std::move(file_handle), std::move(*mapping)));
+                    }
 
 					auto resource_module = std::find_if(loaded_modules.begin(), loaded_modules.end(), [&](auto& module) {
 						return module.StreamIsStorage(*stream);
@@ -282,7 +287,8 @@ namespace siege::views
           });
 
         auto count = controller.load_bitmap(stream, task);
-
+        mappings.clear();
+        
         if (count > 0)
         {
           ::SendMessageW(frame_selector, UDM_SETRANGE, 0, MAKELPARAM(count, 1));
