@@ -527,6 +527,11 @@ namespace siege::views
         {
           auto class_name = plugin->GetWindowClassForStream(*stream);
 
+          if (::FindWindowExW(*this, nullptr, class_name.c_str(), file_path.c_str()) != nullptr)
+          {
+            return false;
+          }
+
           auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
 
           SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&tab_rect));
@@ -538,6 +543,7 @@ namespace siege::views
             .y = tab_rect.top,
             .x = tab_rect.left,
             .style = WS_CHILD,
+            .lpszName = file_path.c_str(),
             .lpszClass = class_name.c_str(),
           });
 

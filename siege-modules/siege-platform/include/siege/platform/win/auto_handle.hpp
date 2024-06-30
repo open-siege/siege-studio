@@ -16,6 +16,11 @@ namespace win32
 		{
 			return this->get();
 		}
+
+		operator THandle() const
+		{
+			return this->get();
+		}
 	};
 }
 

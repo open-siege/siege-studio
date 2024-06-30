@@ -8,7 +8,9 @@
 #include <istream>
 #include <map>
 #include <set>
+#include <list>
 #include <siege/platform/win/core/module.hpp>
+#include <siege/platform/extension_module.hpp>
 
 namespace siege::views
 {
@@ -20,11 +22,13 @@ namespace siege::views
     
     static bool is_exe(std::istream& image_stream);
 
-    std::map<std::wstring, std::set<std::wstring>> get_resource_names();
+    std::map<std::wstring, std::set<std::wstring>> get_resource_names() const;
 
     std::size_t load_executable(std::istream& image_stream, std::optional<std::filesystem::path>) noexcept;
   private:
+    std::list<siege::platform::game_extension_module> extensions;
     win32::module loaded_module;
+    std::list<siege::platform::game_extension_module>::iterator matching_extension;
   };
 }// namespace siege::views
 

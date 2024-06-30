@@ -22,6 +22,7 @@
 
 #include "views/siege_main_window.hpp"
 
+extern "C" __declspec(dllexport) std::uint32_t DisableSiegeExtensionModule = -1;
 constexpr static std::wstring_view app_title = L"Siege Studio";
 
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)

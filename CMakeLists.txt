@@ -29,6 +29,23 @@ foreach(CONTENT_TARGET IN ITEMS ${CONTENT_TARGETS})
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${CONTENT_TARGET}> $<TARGET_FILE_DIR:siege-studio>)
 endforeach()
 
+if (WIN32)
+        get_property(ID_TECH_TARGETS
+                DIRECTORY siege-modules/siege-extension-id-tech PROPERTY BUILDSYSTEM_TARGETS)
+
+        get_property(DARKSTAR_TARGETS
+                DIRECTORY siege-modules/siege-extension-darkstar PROPERTY BUILDSYSTEM_TARGETS)
+
+
+        set(EXT_TARGETS)
+        list(APPEND EXT_TARGETS ${ID_TECH_TARGETS} ${DARKSTAR_TARGETS})
+
+        foreach(EXT_TARGET IN ITEMS ${EXT_TARGETS})
+            add_dependencies(siege-studio-dependencies ${EXT_TARGET})
+            add_custom_command(TARGET siege-studio-dependencies POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${EXT_TARGET}> $<TARGET_FILE_DIR:siege-studio>)
+        endforeach()
+endif()
 
 add_dependencies(siege-studio-dependencies 
         siege-content-2d 
@@ -55,16 +72,6 @@ if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/siege-launcher)
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-content-audio> $<TARGET_FILE_DIR:siege-launcher>)
 
     if (WIN32)
-        get_property(ID_TECH_TARGETS
-                DIRECTORY siege-modules/siege-extension-id-tech PROPERTY BUILDSYSTEM_TARGETS)
-
-        get_property(DARKSTAR_TARGETS
-                DIRECTORY siege-modules/siege-extension-darkstar PROPERTY BUILDSYSTEM_TARGETS)
-
-
-        set(EXT_TARGETS)
-        list(APPEND EXT_TARGETS ${ID_TECH_TARGETS} ${DARKSTAR_TARGETS})
-
         foreach(EXT_TARGET IN ITEMS ${EXT_TARGETS})
             add_dependencies(siege-launcher-dependencies ${EXT_TARGET})
             add_custom_command(TARGET siege-launcher-dependencies POST_BUILD

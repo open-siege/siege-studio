@@ -3,10 +3,11 @@
 
 #include <optional>
 #include <filesystem>
+#include <list>
 #include <siege/platform/win/core/module.hpp>
 #include <siege/platform/win/core/com/collection.hpp>
 
-namespace siege
+namespace siege::platform
 {
   // TODO cross platform versions of this code will use "xcom" (cross com) and char16_t instead of wchar_t
   using ExecutableIsSupported = HRESULT __stdcall(const wchar_t* filename) noexcept;
@@ -54,6 +55,27 @@ namespace siege
       }
 
       return std::nullopt;
+    }
+
+    static std::list<game_extension_module> load_modules(std::filesystem::path search_path)
+    {
+      std::list<game_extension_module> loaded_modules;
+
+      for (auto const& dir_entry : std::filesystem::directory_iterator{ search_path })
+      {
+        if (dir_entry.path().extension() == ".dll")
+        {
+          try
+          {
+            loaded_modules.emplace_back(dir_entry.path());
+          }
+          catch (...)
+          {
+          }
+        }
+      }
+
+      return loaded_modules;
     }
   };
 

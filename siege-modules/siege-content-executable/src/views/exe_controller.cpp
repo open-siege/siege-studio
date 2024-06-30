@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <istream>
 #include <string>
+#include <siege/platform/stream.hpp>
 #include "exe_controller.hpp"
 
 namespace siege::views
@@ -29,16 +30,35 @@ namespace siege::views
 
   std::size_t exe_controller::load_executable(std::istream& image_stream, std::optional<std::filesystem::path> path) noexcept
   {
+    if (!path)
+    {
+      path = platform::get_stream_path(image_stream);
+    }
+
     if (path)
     {
       loaded_module.reset(::LoadLibraryExW(path->c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE));
-      return loaded_module ? 1 : 0;
+
+      if (loaded_module)
+      {
+        if (extensions.empty())
+        {
+          std::filesystem::path app_path = std::filesystem::path(win32::module_ref::current_application().GetModuleFileName()).parent_path();
+          extensions = platform::game_extension_module::load_modules(app_path);
+
+          matching_extension = std::find_if(extensions.begin(), extensions.end(), [&](platform::game_extension_module& ext) {
+            return ext.ExecutableIsSupported(*path);
+          });
+        }
+
+        return 1;
+      }
     }
 
     return 0;
   }
 
-  std::map<std::wstring, std::set<std::wstring>> exe_controller::get_resource_names()
+  std::map<std::wstring, std::set<std::wstring>> exe_controller::get_resource_names() const
   {
     std::map<std::wstring, std::set<std::wstring>> results;
 
@@ -79,15 +99,7 @@ namespace siege::views
       {
         for (auto& result : results)
         {
-          if (result.first[0] == L'#')
-          {
-            auto value = std::stoi(result.first.substr(1));
-            ::EnumResourceNamesW(loaded_module, (wchar_t*)value, enumerator::next_name, (LONG_PTR)&result.second);
-          }
-          else
-          {
-            ::EnumResourceNamesW(loaded_module, result.first.c_str(), enumerator::next_name, (LONG_PTR)&result.second);
-          }
+          ::EnumResourceNamesW(loaded_module, result.first.c_str(), enumerator::next_name, (LONG_PTR)&result.second);
         }
       }
     }
