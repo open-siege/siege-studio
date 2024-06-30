@@ -24,9 +24,12 @@ namespace siege::views
 
     std::map<std::wstring, std::set<std::wstring>> get_resource_names() const;
 
+    std::set<std::wstring> get_strings() const;
+
     std::size_t load_executable(std::istream& image_stream, std::optional<std::filesystem::path>) noexcept;
   private:
     std::list<siege::platform::game_extension_module> extensions;
+    std::filesystem::path loaded_path;
     win32::module loaded_module;
     std::list<siege::platform::game_extension_module>::iterator matching_extension;
   };

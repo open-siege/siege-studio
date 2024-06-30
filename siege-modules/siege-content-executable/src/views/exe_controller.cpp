@@ -51,11 +51,126 @@ namespace siege::views
           });
         }
 
+        loaded_path = std::move(*path);
         return 1;
       }
     }
 
     return 0;
+  }
+
+  std::set<std::wstring> exe_controller::get_strings() const
+  {
+    std::set<std::wstring> results;
+
+    if (loaded_module)
+    {
+      auto file = win32::file(loaded_path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, 0);
+      auto file_size = file.GetFileSizeEx();
+      auto mapping = file.CreateFileMapping(std::nullopt, PAGE_READONLY, 0, 0, L"");
+
+      if (mapping && file_size)
+      {
+        auto view = mapping->MapViewOfFile(FILE_MAP_READ, (std::size_t)file_size->QuadPart);
+
+        if (view)
+        {
+          std::string_view data((char*)view.get(), (std::size_t)file_size->QuadPart);
+
+          auto is_whitespace = [](char raw) {
+            auto value = static_cast<unsigned char>(raw);
+            return std::isspace(value);
+          };
+
+          auto is_ascii = [](char raw) {
+            auto value = static_cast<unsigned char>(raw);
+            return std::isalpha(value) || std::isdigit(value) || std::isspace(value) || std::ispunct(value);
+          };
+
+          auto first = data.begin();
+          auto second = data.begin() + 1;
+
+          do
+          {
+            first = std::find_if(first, data.end(), is_ascii);
+
+            if (first == data.end())
+            {
+              break;
+            }
+
+            second = first + 1;
+
+            if (second == data.end())
+            {
+              break;
+            }
+
+            second = std::find_if(second, data.end(), [](char raw) {
+              return raw == '\0';
+            });
+
+            if (second != data.end() && std::distance(first, second) > 1)
+            {
+              if (std::all_of(first, second, is_ascii) && !std::all_of(first, second, is_whitespace) && !(is_whitespace(*first) && first + 1 == second - 1))
+              {
+                std::wstring final;
+
+                if (is_whitespace(*first))
+                {
+                  first += 1;
+                }
+
+                if (is_whitespace(*(second - 1)))
+                {
+                  second -= 1;
+                }
+
+                if (std::distance(first, second) > 4)
+                {
+                  final.reserve(std::distance(first, second));
+                  std::transform(first, second, std::back_inserter(final), [](char raw) { return (wchar_t)raw; });
+
+                  auto first_char = std::find_if(final.begin(), final.end(), [](wchar_t raw) { return !std::isspace(int(raw)); });
+                  auto left_begin = std::find_if(final.begin(), first_char, [](wchar_t raw) { return std::isspace(int(raw)); });
+
+                  if (left_begin != first_char)
+                  {
+                    final.erase(left_begin, first_char);
+                  }
+
+                  auto last_char = std::find_if(final.rbegin(), final.rend(), [](wchar_t raw) { return !std::isspace(int(raw)); });
+
+                  auto right_begin = std::find_if(final.rbegin(), last_char, [](wchar_t raw) { return std::isspace(int(raw)); });
+
+                  if (right_begin != last_char)
+                  {
+                    final.erase(last_char.base(), right_begin.base());
+                  }
+
+                  results.emplace(std::move(final));
+                }
+              }
+            }
+
+            if (second == data.end())
+            {
+              break;
+            }
+
+            first = second + 1;
+
+            if (first == data.end())
+            {
+              break;
+            }
+
+          } while (first != data.end());
+        }
+      }
+    }
+
+    return results;
   }
 
   std::map<std::wstring, std::set<std::wstring>> exe_controller::get_resource_names() const
