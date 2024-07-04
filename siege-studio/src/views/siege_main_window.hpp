@@ -48,12 +48,12 @@ namespace siege::views
 
       for (auto& module : loaded_modules)
       {
-        auto module_exts = module.GetSupportedExtensions();
+        auto module_exts = module.get_supported_extensions();
         std::transform(module_exts.begin(), module_exts.end(), std::inserter(extensions, extensions.begin()), [&](auto ext) {
-          return std::make_pair(std::move(ext), module.GetDefaultFileIcon());
+          return std::make_pair(std::move(ext), module.get_default_file_icon());
         });
 
-        auto category_exts = module.GetSupportedFormatCategories(LOCALE_USER_DEFAULT);
+        auto category_exts = module.get_supported_format_categories();
         std::transform(category_exts.begin(), category_exts.end(), std::inserter(categories, categories.begin()), [&](auto& ext) {
           return std::move(ext);
         });
@@ -246,12 +246,12 @@ namespace siege::views
       }
 
       auto plugin = std::find_if(loaded_modules.begin(), loaded_modules.end(), [&](auto& module) {
-        return module.IsStreamSupported(*stream);
+        return module.is_stream_supported(*stream);
       });
 
       if (plugin != loaded_modules.end())
       {
-        auto class_name = plugin->GetWindowClassForStream(*stream);
+        auto class_name = plugin->get_window_class_for_stream(*stream);
 
         auto tab_rect = tab_control.GetClientRect()
                           .and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); })
@@ -520,12 +520,12 @@ namespace siege::views
       if (::SHCreateStreamOnFileEx(file_path.c_str(), STGM_READ, 0, FALSE, nullptr, stream.put()) == S_OK)
       {
         auto plugin = std::find_if(loaded_modules.begin(), loaded_modules.end(), [&](auto& module) {
-          return module.IsStreamSupported(*stream);
+          return module.is_stream_supported(*stream);
         });
 
         if (plugin != loaded_modules.end())
         {
-          auto class_name = plugin->GetWindowClassForStream(*stream);
+          auto class_name = plugin->get_window_class_for_stream(*stream);
 
           if (::FindWindowExW(*this, nullptr, class_name.c_str(), file_path.c_str()) != nullptr)
           {

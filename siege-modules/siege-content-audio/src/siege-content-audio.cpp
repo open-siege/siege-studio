@@ -1,6 +1,7 @@
 #include <bit>
 #include <filesystem>
 #include <memory>
+#include <system_error>
 #include <siege/platform/win/desktop/window_impl.hpp>
 #include <siege/platform/win/core/com/collection.hpp>
 #include <siege/platform/win/core/com/stream_buf.hpp>
@@ -8,160 +9,184 @@
 #include "views/sfx_view.hpp"
 
 using namespace siege::views;
+using namespace std::literals;
 
-extern "C"
+extern "C" {
+extern const std::uint32_t default_file_icon = SIID_AUDIOFILES;
+
+std::errc __stdcall get_supported_extensions(std::size_t count, wchar_t const** strings, std::size_t* fetched) noexcept
 {
-    extern const std::uint32_t DefaultFileIcon = SIID_AUDIOFILES;
-
-    HRESULT __stdcall GetSupportedExtensions(_Outptr_ win32::com::IReadOnlyCollection** formats) noexcept
+  if (!strings)
+  {
+    if (fetched)
     {
-        if (!formats)
-        {
-            return E_POINTER;
-        }
-
-        static std::vector<std::wstring_view> supported_extensions = []{
-                std::vector<std::wstring_view> extensions;
-                extensions.reserve(32);
-
-                std::copy(sfx_controller::formats.begin(), sfx_controller::formats.end(), std::back_inserter(extensions));
-                return extensions;
-            }();
-
-;
-        *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view>>(supported_extensions).release();
-
-        return S_OK;
+      *fetched = 0;
     }
 
-    HRESULT __stdcall GetSupportedFormatCategories(_In_ LCID, _Outptr_ win32::com::IReadOnlyCollection** formats) noexcept
+    return std::errc::invalid_argument;
+  }
+
+  count = std::clamp<std::size_t>(count, 0u, sfx_controller::formats.size());
+
+  std::transform(sfx_controller::formats.begin(), sfx_controller::formats.begin() + count, strings, [](const std::wstring_view value) {
+    return value.data();
+  });
+
+  if (fetched)
+  {
+    *fetched = count;
+  }
+
+  return std::errc(0);
+}
+
+std::errc __stdcall get_supported_format_categories(std::size_t count, const wchar_t** strings, std::size_t* fetched) noexcept
+{
+  if (!strings)
+  {
+    if (fetched)
     {
-        if (!formats)
-        {
-            return E_POINTER;
-        }
+      *fetched = 0;
+    }
+    return std::errc::invalid_argument;
+  }
 
-        static auto categories = std::array<std::wstring_view, 1> {{
-                L"All Audio"
-        }};
-        
-        *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(categories)>>(categories).release();
+  static auto categories = std::array<std::wstring_view, 1>{ { L"All Audio" } };
 
-        return S_OK;
+  count = std::clamp<std::size_t>(count, 0u, categories.size());
+
+  std::transform(categories.begin(), categories.begin() + count, strings, [](const std::wstring_view value) {
+    return value.data();
+  });
+
+  if (fetched)
+  {
+    *fetched = count;
+  }
+
+  return std::errc(0);
+}
+
+std::errc __stdcall get_supported_extensions_for_category(const wchar_t* category, std::size_t count, const wchar_t** strings, std::size_t* fetched) noexcept
+{
+  if (fetched)
+  {
+    *fetched = 0;
+  }
+
+  if (!category)
+  {
+    return std::errc::invalid_argument;
+  }
+
+  if (!strings)
+  {
+    return std::errc::invalid_argument;
+  }
+
+  if (category == L"All Audio"sv)
+  {
+    count = std::clamp<std::size_t>(count, 0u, sfx_controller::formats.size());
+
+    std::transform(sfx_controller::formats.begin(), sfx_controller::formats.begin() + count, strings, [](const std::wstring_view value) {
+      return value.data();
+    });
+
+    if (fetched)
+    {
+      *fetched = count;
     }
 
-    HRESULT __stdcall GetSupportedExtensionsForCategory(_In_ const wchar_t* category, _Outptr_ win32::com::IReadOnlyCollection** formats) noexcept
+    return std::errc(0);
+  }
+
+  return std::errc::not_supported;
+}
+
+std::errc __stdcall is_stream_supported(_In_ IStream* data) noexcept
+{
+  if (!data)
+  {
+    return std::errc::invalid_argument;
+  }
+
+  win32::com::StreamBufRef buffer(*data);
+  std::istream stream(&buffer);
+
+  if (sfx_controller::is_sfx(stream))
+  {
+    return std::errc(0);
+  }
+
+  return std::errc::not_supported;
+}
+
+std::errc __stdcall get_window_class_for_stream(_In_ IStream* data, _Outptr_ wchar_t** class_name) noexcept
+{
+  if (!data)
+  {
+    return std::errc::invalid_argument;
+  }
+
+  if (!class_name)
+  {
+    return std::errc::invalid_argument;
+  }
+
+  static std::wstring empty;
+  *class_name = empty.data();
+
+  win32::com::StreamBufRef buffer(*data);
+  std::istream stream(&buffer);
+
+  try
+  {
+    static auto this_module = win32::window_module_ref::current_module();
+
+    if (sfx_controller::is_sfx(stream))
     {
-        if (!category)
-        {
-            return E_INVALIDARG;
-        }
+      static auto window_type_name = win32::type_name<sfx_view>();
 
-        if (!formats)
-        {
-            return E_POINTER;
-        }
-
-        std::wstring_view category_str = category;
-
-        if (category_str == L"All Audio")
-        {
-            *formats = std::make_unique<win32::com::ReadOnlyCollectionRef<std::wstring_view, decltype(sfx_controller::formats)>>(sfx_controller::formats).release();
-        }
-        else
-        {
-            *formats = std::make_unique<win32::com::OwningCollection<std::wstring_view>>().release();
-        }
-        
-        return S_OK;
+      if (this_module.GetClassInfoExW(window_type_name))
+      {
+        *class_name = window_type_name.data();
+        return std::errc(0);
+      }
     }
 
-    _Success_(return == S_OK || return == S_FALSE)
-    HRESULT __stdcall IsStreamSupported(_In_ IStream* data) noexcept
+    return std::errc::invalid_argument;
+  }
+  catch (...)
+  {
+    return std::errc::invalid_argument;
+  }
+}
+
+BOOL WINAPI DllMain(
+  HINSTANCE hinstDLL,
+  DWORD fdwReason,
+  LPVOID lpvReserved) noexcept
+{
+
+  if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
+  {
+    if (lpvReserved != nullptr)
     {
-        if (!data)
-        {
-            return E_INVALIDARG;
-        }
-
-        win32::com::StreamBufRef buffer(*data);
-        std::istream stream(&buffer);
-
-        if (sfx_controller::is_sfx(stream))
-        {
-            return S_OK;
-        }
-
-        return S_FALSE;
+      return TRUE;// do not do cleanup if process termination scenario
     }
 
-    _Success_(return == S_OK || return == S_FALSE)
-    HRESULT __stdcall GetWindowClassForStream(_In_ IStream* data, _Outptr_ wchar_t** class_name) noexcept
+    win32::window_module_ref this_module(hinstDLL);
+
+    if (fdwReason == DLL_PROCESS_ATTACH)
     {
-        if (!data)
-        {
-            return E_INVALIDARG;
-        }
-
-        if (!class_name)
-        {
-            return E_POINTER;
-        }
-
-        static std::wstring empty;
-        *class_name = empty.data();
-        
-        win32::com::StreamBufRef buffer(*data);
-        std::istream stream(&buffer);
-        
-        try
-        {
-            static auto this_module =  win32::window_module_ref::current_module();
-            
-            if (sfx_controller::is_sfx(stream))
-            {
-                static auto window_type_name = win32::type_name<sfx_view>();
-
-                if (this_module.GetClassInfoExW(window_type_name))
-                {
-                    *class_name = window_type_name.data();
-                    return S_OK;
-                }
-            }
-
-            return S_FALSE;
-        }
-        catch(...)
-        {
-            return S_FALSE;
-        }
+      this_module.RegisterClassExW(win32::window_meta_class<sfx_view>());
     }
-
-    BOOL WINAPI DllMain(
-        HINSTANCE hinstDLL,  
-        DWORD fdwReason, 
-        LPVOID lpvReserved ) noexcept
+    else if (fdwReason == DLL_PROCESS_DETACH)
     {
-
-        if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
-        {
-            if (lpvReserved != nullptr)
-            {
-                return TRUE; // do not do cleanup if process termination scenario
-            }
-
-            win32::window_module_ref this_module(hinstDLL);
-
-           if (fdwReason == DLL_PROCESS_ATTACH)
-           {
-                this_module.RegisterClassExW(win32::window_meta_class<sfx_view>());
-           }
-           else if (fdwReason == DLL_PROCESS_DETACH)
-           {
-               this_module.UnregisterClassW<sfx_view>();
-           }
-        }
-
-        return TRUE;
+      this_module.UnregisterClassW<sfx_view>();
     }
+  }
+
+  return TRUE;
+}
 }

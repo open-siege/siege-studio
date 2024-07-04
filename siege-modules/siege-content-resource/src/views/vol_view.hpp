@@ -61,12 +61,12 @@ namespace siege::views
 
       for (const auto& module : modules)
       {
-        auto categories = module.GetSupportedFormatCategories(LOCALE_USER_DEFAULT);
+        auto categories = module.get_supported_format_categories();
 
         for (auto& category : categories)
         {
           auto& stored_category = *all_categories.insert(std::move(category)).first;
-          auto extensions = module.GetSupportedExtensionsForCategory(stored_category);
+          auto extensions = module.get_supported_extensions_for_category(stored_category);
 
           auto existing = category_extensions.find(stored_category);
 

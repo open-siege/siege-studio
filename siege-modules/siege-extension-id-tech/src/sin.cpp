@@ -8,6 +8,7 @@
 #include <string_view>
 #include <fstream>
 #include <siege/platform/win/core/file.hpp>
+#include <siege/platform/win/core/com/base.hpp>
 #include <siege/platform/win/desktop/window_module.hpp>
 #include <siege/platform/win/desktop/window_impl.hpp>
 #include <detours.h>
@@ -22,7 +23,7 @@ static void(__fastcall* ConsoleEval)(const char*) = nullptr;
 
 using namespace std::literals;
 
-constexpr static auto game_export = siege::GameExport<>{
+constexpr static auto game_export = siege::game_export<>{
   .preferred_base_address = 0x400000,
   .module_size = 1024 * 1024 * 2,
   .verification_strings = std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x540b6c) },
@@ -35,6 +36,63 @@ constexpr static auto game_export = siege::GameExport<>{
   .variable_name_ranges = std::array<std::pair<std::string_view, std::string_view>, 1>{ { { "in_initmouse"sv, "in_joystick"sv } } },
   .console_eval = 0x4774b0
 };
+
+HRESULT __stdcall GetFunctionNameRanges(std::array<wchar_t*, 2>* data, std::size_t length, std::size_t* saved) noexcept
+{
+  if (!data)
+  {
+    return E_POINTER;
+  }
+
+  auto i = 0u;
+
+  if (length > game_export.function_name_ranges.size())
+  {
+    length = game_export.function_name_ranges.size();
+  }
+
+  for (; i < length; ++i)
+  {
+
+    data[i][0] = win32::com::com_string(game_export.function_name_ranges[i].first).release();
+    data[i][1] = win32::com::com_string(game_export.function_name_ranges[i].second).release();
+  }
+
+  if (saved)
+  {
+    *saved = i;
+  }
+
+  return i == length ? S_OK : S_FALSE;
+}
+
+HRESULT __stdcall GetVariableNameRanges(std::array<wchar_t*, 2>* data, std::size_t length, std::size_t* saved) noexcept
+{
+  if (!data)
+  {
+    return E_POINTER;
+  }
+
+  auto i = 0u;
+
+  if (length > game_export.variable_name_ranges.size())
+  {
+    length = game_export.variable_name_ranges.size();
+  }
+
+  for (; i < length; ++i)
+  {
+    data[i][0] = win32::com::com_string(game_export.variable_name_ranges[i].first).release();
+    data[i][1] = win32::com::com_string(game_export.variable_name_ranges[i].second).release();
+  }
+
+  if (saved)
+  {
+    *saved = i;
+  }
+
+  return i == length ? S_OK : S_FALSE;
+}
 
 
 HRESULT __stdcall ExecutableIsSupported(_In_ const wchar_t* filename) noexcept

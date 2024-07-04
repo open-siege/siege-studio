@@ -9,47 +9,47 @@ namespace Siege.Content
 {
     public static class Resource
     {
-        public static IReadOnlyCollection<string> GetSupportedExtensions()
+        public static IReadOnlyCollection<string> get_supported_extensions()
         {
-            return new Platform.ReadOnlyStringCollection(Imports.GetSupportedExtensions());
+            return new Platform.ReadOnlyStringCollection(Imports.get_supported_extensions());
         }
 
-        public static IReadOnlyCollection<string> GetSupportedFormatCategories(uint locale)
+        public static IReadOnlyCollection<string> get_supported_format_categories(uint locale)
         {
-            return new Platform.ReadOnlyStringCollection(Imports.GetSupportedFormatCategories(locale));
+            return new Platform.ReadOnlyStringCollection(Imports.get_supported_format_categories(locale));
         }
 
-        public static IReadOnlyCollection<string> GetSupportedExtensions(string category)
+        public static IReadOnlyCollection<string> get_supported_extensions(string category)
         {
-            return new Platform.ReadOnlyStringCollection(Imports.GetSupportedExtensionsForCategory(category));
+            return new Platform.ReadOnlyStringCollection(Imports.get_supported_extensions_for_category(category));
         }
 
-        public static bool IsStreamSupported(System.IO.Stream reader)
+        public static bool is_stream_supported(System.IO.Stream reader)
         {
-            return Imports.IsStreamSupported(new StreamAdaptor(reader)) == 0;
+            return Imports.is_stream_supported(new StreamAdaptor(reader)) == 0;
         }
 
-        public static string GetWindowClassForStream(System.IO.Stream reader)
+        public static string get_window_class_for_stream(System.IO.Stream reader)
         {
-            return Marshal.PtrToStringAuto(Imports.GetWindowClassForStream(new StreamAdaptor(reader))) ?? string.Empty;
+            return Marshal.PtrToStringAuto(Imports.get_window_class_for_stream(new StreamAdaptor(reader))) ?? string.Empty;
         }
     }
 
     internal static class Imports
     {
         [DllImport("siege-content-resource.dll", CharSet = CharSet.Unicode, PreserveSig = false)]
-        public static extern Platform.IReadOnlyCollection GetSupportedExtensions();
+        public static extern Platform.IReadOnlyCollection get_supported_extensions();
 
         [DllImport("siege-content-resource.dll", CharSet = CharSet.Unicode, PreserveSig = false)]
-        public static extern Platform.IReadOnlyCollection GetSupportedFormatCategories(uint locale);
+        public static extern Platform.IReadOnlyCollection get_supported_format_categories(uint locale);
 
         [DllImport("siege-content-resource.dll", CharSet = CharSet.Unicode, PreserveSig = false)]
-        public static extern Platform.IReadOnlyCollection GetSupportedExtensionsForCategory(string category);
+        public static extern Platform.IReadOnlyCollection get_supported_extensions_for_category(string category);
 
         [DllImport("siege-content-resource.dll", CharSet = CharSet.Unicode, PreserveSig = true)]
-        public static extern uint IsStreamSupported(System.Runtime.InteropServices.ComTypes.IStream stream);
+        public static extern uint is_stream_supported(System.Runtime.InteropServices.ComTypes.IStream stream);
 
         [DllImport("siege-content-resource.dll", CharSet = CharSet.Unicode, PreserveSig = false)]
-        public static extern IntPtr GetWindowClassForStream(System.Runtime.InteropServices.ComTypes.IStream stream);
+        public static extern IntPtr get_window_class_for_stream(System.Runtime.InteropServices.ComTypes.IStream stream);
     }
 }

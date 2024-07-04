@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <optional>
+#include <algorithm>
 #include <combaseapi.h>
 
 namespace win32::com
@@ -28,6 +29,18 @@ namespace win32::com
   {
     using base = std::unique_ptr<wchar_t[], com_string_deleter>;
     using base::base;
+
+    com_string(std::string_view ascii)
+    {
+      this->reset((wchar_t*)::CoTaskMemAlloc(ascii.size()));
+
+      if (this->get())
+      {
+        std::transform(ascii.begin(), ascii.end(), this->get(), [](char value) {
+          return static_cast<wchar_t>(value);
+        });
+      }
+    }
 
     operator std::wstring_view()
     {

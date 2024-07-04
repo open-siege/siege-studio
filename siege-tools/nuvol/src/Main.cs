@@ -11,7 +11,7 @@ namespace Siege.Tools
         {
             Console.WriteLine("Hello Nuvol");
 
-            var extensions = Siege.Content.Resource.GetSupportedExtensions();
+            var extensions = Siege.Content.Resource.get_supported_extensions();
 
             foreach (var value in extensions)
             {
@@ -19,11 +19,11 @@ namespace Siege.Tools
                 Console.WriteLine(value);
             }
 
-            var categories = Siege.Content.Resource.GetSupportedFormatCategories(0);
+            var categories = Siege.Content.Resource.get_supported_format_categories(0);
 
             foreach (string value in categories)
             {
-                var extensionsForCategory = Siege.Content.Resource.GetSupportedExtensions(category: value);
+                var extensionsForCategory = Siege.Content.Resource.get_supported_extensions(category: value);
 
                 foreach (var ext in extensionsForCategory)
                 {
@@ -33,10 +33,10 @@ namespace Siege.Tools
 
             var stream1 = new FileStream("C:\\open-siege\\Games\\Starsiege 1.0.0.0\\Desert.Sim.vol", FileMode.Open);
 
-            if (Siege.Content.Resource.IsStreamSupported(stream1))
+            if (Siege.Content.Resource.is_stream_supported(stream1))
             {
                 Console.WriteLine("Stream is supported");
-                Console.WriteLine(Siege.Content.Resource.GetWindowClassForStream(stream1));
+                Console.WriteLine(Siege.Content.Resource.get_window_class_for_stream(stream1));
             }
             else
             {

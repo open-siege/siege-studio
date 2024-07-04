@@ -9,47 +9,45 @@
 #include <string>
 #include <vector>
 #include <set>
-#include <siege/platform/win/core/com/collection.hpp>
 #include <siege/platform/win/desktop/window_module.hpp>
 
 namespace siege::platform
 {
-  // TODO cross platform versions of this code will use "xcom" (cross com) and char16_t instead of wchar_t
-  using GetSupportedExtensions = HRESULT __stdcall(win32::com::IReadOnlyCollection** formats);
-  using GetSupportedFormatCategories = HRESULT __stdcall(LCID, win32::com::IReadOnlyCollection** formats);
-  using GetSupportedExtensionsForCategory = HRESULT __stdcall(const wchar_t* category, win32::com::IReadOnlyCollection** formats);
-  using IsStreamSupported = HRESULT __stdcall(::IStream* data);
-  using GetWindowClassForStream = HRESULT __stdcall(::IStream* data, wchar_t**);
+  using get_supported_extensions = std::errc __stdcall(std::size_t, wchar_t**, std::size_t*);
+  using get_supported_format_categories = std::errc __stdcall(std::size_t, wchar_t**, std::size_t*);
+  using get_supported_extensions_for_category = std::errc __stdcall(const wchar_t*, std::size_t count, const wchar_t** strings, std::size_t* fetched);
+  using is_stream_supported = std::errc __stdcall(::IStream* data);
+  using get_window_class_for_stream = std::errc __stdcall(::IStream* data, wchar_t**);
 
   // TODO Port this code to linux using a "platform::module" instead of a "win32::module"
   class content_module : public win32::window_module
   {
     using base = win32::window_module;
-    GetSupportedExtensions* GetSupportedExtensionsProc = nullptr;
-    GetSupportedFormatCategories* GetSupportedFormatCategoriesProc = nullptr;
-    GetSupportedExtensionsForCategory* GetSupportedExtensionsForCategoryProc = nullptr;
-    IsStreamSupported* IsStreamSupportedProc = nullptr;
-    GetWindowClassForStream* GetWindowClassForStreamProc = nullptr;
+    get_supported_extensions* get_supported_extensionsProc = nullptr;
+    get_supported_format_categories* get_supported_format_categoriesProc = nullptr;
+    get_supported_extensions_for_category* get_supported_extensions_for_categoryProc = nullptr;
+    is_stream_supported* is_stream_supportedProc = nullptr;
+    get_window_class_for_stream* get_window_class_for_streamProc = nullptr;
     uint32_t DefaultIcon = 0;
 
   public:
     content_module(std::filesystem::path module_path) : base(module_path)
     {
-      GetSupportedExtensionsProc = GetProcAddress<decltype(GetSupportedExtensionsProc)>("GetSupportedExtensions");
-      GetSupportedFormatCategoriesProc = GetProcAddress<decltype(GetSupportedFormatCategoriesProc)>("GetSupportedFormatCategories");
-      GetSupportedExtensionsForCategoryProc = GetProcAddress<decltype(GetSupportedExtensionsForCategoryProc)>("GetSupportedExtensionsForCategory");
-      IsStreamSupportedProc = GetProcAddress<decltype(IsStreamSupportedProc)>("IsStreamSupported");
-      GetWindowClassForStreamProc = GetProcAddress<decltype(GetWindowClassForStreamProc)>("GetWindowClassForStream");
+      get_supported_extensionsProc = GetProcAddress<decltype(get_supported_extensionsProc)>("get_supported_extensions");
+      get_supported_format_categoriesProc = GetProcAddress<decltype(get_supported_format_categoriesProc)>("get_supported_format_categories");
+      get_supported_extensions_for_categoryProc = GetProcAddress<decltype(get_supported_extensions_for_categoryProc)>("get_supported_extensions_for_category");
+      is_stream_supportedProc = GetProcAddress<decltype(is_stream_supportedProc)>("is_stream_supported");
+      get_window_class_for_streamProc = GetProcAddress<decltype(get_window_class_for_streamProc)>("get_window_class_for_stream");
 
-      auto default_icon = GetProcAddress<std::uint32_t*>("DefaultFileIcon");
+      auto default_icon = GetProcAddress<std::uint32_t*>("default_file_icon");
 
       if (default_icon)
       {
         DefaultIcon = *default_icon;
       }
 
-      if (!(GetSupportedExtensionsProc || GetSupportedFormatCategoriesProc || GetSupportedExtensionsForCategoryProc || IsStreamSupportedProc
-            || GetWindowClassForStreamProc))
+      if (!(get_supported_extensionsProc || get_supported_format_categoriesProc || get_supported_extensions_for_categoryProc || is_stream_supportedProc
+            || get_window_class_for_streamProc))
       {
         throw std::runtime_error("Could not find module functions");
       }
@@ -76,105 +74,63 @@ namespace siege::platform
       return loaded_modules;
     }
 
-    auto GetDefaultFileIcon() const noexcept
+    auto get_default_file_icon() const noexcept
     {
       return DefaultIcon;
     }
 
-    std::vector<std::wstring> GetSupportedExtensions() const noexcept
+    std::vector<std::wstring> get_supported_extensions() const noexcept
     {
-      std::vector<std::wstring> results;
-
-      win32::com::IReadOnlyCollection* raw = nullptr;
-
-      IEnumString* value = nullptr;
-      if (GetSupportedExtensionsProc(&raw) == S_OK)
+      std::vector<wchar_t*> temp(64, nullptr);
+      std::size_t read = 0;
+      if (get_supported_extensionsProc(temp.size(), temp.data(), &read) == std::errc(0))
       {
-        auto enumerator = raw->NewEnum<IEnumString>();
-
-        if (enumerator)
-        {
-          value = enumerator->get();
-          auto size = raw->Count().value_or(64);
-          std::vector<win32::com::com_string> raw_results(size);
-
-          ULONG fetched = 0u;
-          enumerator->get()->Next(raw_results.size(), raw_results.data()->put(), &fetched);
-
-          results.reserve(fetched);
-          std::copy(raw_results.begin(), raw_results.begin() + fetched, std::back_inserter(results));
-        }
-
-        assert(raw->Release() == 0);
+        temp.resize(read);
+        return std::vector<std::wstring>(temp.begin(), temp.end());
       }
 
-      return results;
+      return std::vector<std::wstring>{};
     }
 
-    std::set<std::wstring> GetSupportedFormatCategories(LCID locale_id) const noexcept
+    std::set<std::wstring> get_supported_format_categories() const noexcept
     {
       std::set<std::wstring> results;
 
-      win32::com::IReadOnlyCollection* raw = nullptr;
+      std::size_t read = 0;
+      std::vector<wchar_t*> temp(8, nullptr);
 
-      if (GetSupportedFormatCategoriesProc(locale_id, &raw) == S_OK)
+      if (get_supported_format_categoriesProc(temp.size(), temp.data(), &read) == std::errc(0))
       {
-        auto enumerator = raw->NewEnum<IEnumString>();
-
-        if (enumerator)
-        {
-          auto size = raw->Count().value_or(16);
-          std::vector<win32::com::com_string> raw_results(size);
-
-          ULONG fetched = 0u;
-          enumerator->get()->Next(raw_results.size(), raw_results.data()->put(), &fetched);
-
-          std::copy(raw_results.begin(), raw_results.begin() + fetched, std::inserter(results, results.begin()));
-        }
-
-        assert(raw->Release() == 0);
+        std::copy(temp.begin(), temp.begin() + read, std::inserter(results, results.begin()));
       }
 
       return results;
     }
 
-    std::set<std::wstring> GetSupportedExtensionsForCategory(const std::wstring& category) const noexcept
+    std::set<std::wstring> get_supported_extensions_for_category(const std::wstring& category) const noexcept
     {
       std::set<std::wstring> results;
 
-      win32::com::IReadOnlyCollection* raw = nullptr;
-
-      if (GetSupportedExtensionsForCategoryProc(category.c_str(), &raw) == S_OK)
+      std::vector<const wchar_t*> temp(64, nullptr);
+      std::size_t read = 0;
+      if (get_supported_extensions_for_categoryProc(category.c_str(), temp.size(), temp.data(), &read) == std::errc(0))
       {
-        auto enumerator = raw->NewEnum<IEnumString>();
-
-        if (enumerator)
-        {
-          auto size = raw->Count().value_or(64);
-          std::vector<win32::com::com_string> raw_results(size);
-
-          ULONG fetched = 0u;
-          enumerator->get()->Next(raw_results.size(), raw_results.data()->put(), &fetched);
-
-          std::copy(raw_results.begin(), raw_results.begin() + fetched, std::inserter(results, results.begin()));
-        }
-
-        assert(raw->Release() == 0);
+        std::copy(temp.begin(), temp.begin() + read, std::inserter(results, results.begin()));
       }
 
       return results;
     }
 
-    bool IsStreamSupported(IStream& data) const noexcept
+    bool is_stream_supported(IStream& data) const noexcept
     {
-      return IsStreamSupportedProc(&data) == S_OK;
+      return is_stream_supportedProc(&data) == std::errc(0);
     }
 
-    std::wstring GetWindowClassForStream(IStream& data) const noexcept
+    std::wstring get_window_class_for_stream(IStream& data) const noexcept
     {
       wchar_t* result;
 
-      if (GetWindowClassForStreamProc(&data, &result) == S_OK)
+      if (get_window_class_for_streamProc(&data, &result) == std::errc(0))
       {
         return result;
       }
@@ -183,7 +139,7 @@ namespace siege::platform
     }
   };
 
-}// namespace siege
+}// namespace siege::platform
 
 
 #endif// !SIEGEPLUGINHPP

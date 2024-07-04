@@ -1,7 +1,7 @@
 EXPORTS
-	GetSupportedExtensions
-	GetSupportedFormatCategories
-	GetSupportedExtensionsForCategory
-	IsStreamSupported
-	GetWindowClassForStream
-	DefaultFileIcon
+	get_supported_extensions
+	get_supported_format_categories
+	get_supported_extensions_for_category
+	is_stream_supported
+	get_window_class_for_stream
+	default_file_icon

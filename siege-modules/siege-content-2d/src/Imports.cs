@@ -7,6 +7,6 @@ namespace Siege.Content
     public static class Exports
     {
         [DllImport("siege-content-2d.dll")]
-        public static extern ICollection GetSupportedExtensions();
+        public static extern ICollection get_supported_extensions();
     }
 }
