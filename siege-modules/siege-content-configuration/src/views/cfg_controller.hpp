@@ -5,6 +5,7 @@
 #include <string_view>
 #include <vector>
 #include <array>
+#include <map>
 #include <siege/configuration/shared.hpp>
 
 namespace siege::views
@@ -12,7 +13,7 @@ namespace siege::views
   class cfg_controller
   {
   public:
-    constexpr static auto formats = std::array<std::wstring_view, 4>{{ L".cfg", L".ini", L".txt", L".cs" }};
+    constexpr static auto formats = std::array<siege::fs_string_view, 4>{{ FSL".cfg", FSL".ini", FSL"txt", FSL".cs" }};
     static bool is_cfg(std::istream& image_stream);
 
     std::size_t load_config(std::istream& image_stream) noexcept;

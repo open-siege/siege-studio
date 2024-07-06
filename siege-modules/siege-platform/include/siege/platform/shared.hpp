@@ -11,6 +11,19 @@
 #include <filesystem>
 #include <algorithm>
 
+#if WIN32
+#define FSL L""
+#else
+#define FSL
+#endif
+
+namespace siege
+{
+  using fs_char = std::filesystem::path::value_type;
+  using fs_string = std::filesystem::path::string_type;
+  using fs_string_view = std::basic_string_view<fs_char>;
+}
+
 namespace siege::platform
 {
   namespace fs = ::std::filesystem;

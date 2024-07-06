@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <siege/platform/shared.hpp>
 #include <siege/content/pal/palette.hpp>
 
 namespace siege::views
@@ -10,7 +11,7 @@ namespace siege::views
   class pal_controller
   {
   public:
-    constexpr static auto formats = std::array<std::wstring_view, 4>{{ L".pal", L".ipl", L".ppl", L".dpl"}};
+    constexpr static auto formats = std::array<siege::fs_string_view, 4>{{ FSL".pal", FSL".ipl", FSL".ppl", FSL".dpl"}};
     
     struct rect
     {

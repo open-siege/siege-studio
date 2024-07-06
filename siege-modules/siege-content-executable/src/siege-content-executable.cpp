@@ -13,7 +13,7 @@ using storage_info = siege::platform::storage_info;
 extern "C" {
 extern const std::uint32_t default_file_icon = SIID_APPLICATION;
 
-std::errc __stdcall get_supported_extensions(std::size_t count, wchar_t const** strings, std::size_t* fetched) noexcept
+std::errc get_supported_extensions(std::size_t count, const siege::fs_char** strings, std::size_t* fetched) noexcept
 {
   if (!strings)
   {
@@ -31,7 +31,7 @@ std::errc __stdcall get_supported_extensions(std::size_t count, wchar_t const** 
 
   count = std::clamp<std::size_t>(count, 0u, supported_extensions.size());
 
-  std::transform(supported_extensions.begin(), supported_extensions.begin() + count, strings, [](const std::wstring_view value) {
+  std::transform(supported_extensions.begin(), supported_extensions.begin() + count, strings, [](const auto value) {
     return value.data();
   });
 
@@ -43,7 +43,7 @@ std::errc __stdcall get_supported_extensions(std::size_t count, wchar_t const** 
   return std::errc(0);
 }
 
-std::errc __stdcall get_supported_format_categories(std::size_t count, const wchar_t** strings, std::size_t* fetched) noexcept
+std::errc get_supported_format_categories(std::size_t count, const siege::fs_char** strings, std::size_t* fetched) noexcept
 {
   if (!strings)
   {
@@ -58,7 +58,7 @@ std::errc __stdcall get_supported_format_categories(std::size_t count, const wch
 
   count = std::clamp<std::size_t>(count, 0u, categories.size());
 
-  std::transform(categories.begin(), categories.begin() + count, strings, [](const std::wstring_view value) {
+  std::transform(categories.begin(), categories.begin() + count, strings, [](const auto value) {
     return value.data();
   });
 
@@ -70,7 +70,7 @@ std::errc __stdcall get_supported_format_categories(std::size_t count, const wch
   return std::errc(0);
 }
 
-std::errc __stdcall get_supported_extensions_for_category(const wchar_t* category, std::size_t count, const wchar_t** strings, std::size_t* fetched) noexcept
+std::errc get_supported_extensions_for_category(const wchar_t* category, std::size_t count, const wchar_t** strings, std::size_t* fetched) noexcept
 {
   if (!category)
   {
@@ -88,7 +88,7 @@ std::errc __stdcall get_supported_extensions_for_category(const wchar_t* categor
   {
     count = std::clamp<std::size_t>(count, 0u, exe_controller::exe_formats.size());
 
-    std::transform(exe_controller::exe_formats.begin(), exe_controller::exe_formats.begin() + count, strings, [](const std::wstring_view value) {
+    std::transform(exe_controller::exe_formats.begin(), exe_controller::exe_formats.begin() + count, strings, [](const auto value) {
       return value.data();
     });
   }
@@ -96,7 +96,7 @@ std::errc __stdcall get_supported_extensions_for_category(const wchar_t* categor
   {
     count = std::clamp<std::size_t>(count, 0u, exe_controller::lib_formats.size());
 
-    std::transform(exe_controller::lib_formats.begin(), exe_controller::lib_formats.begin() + count, strings, [](const std::wstring_view value) {
+    std::transform(exe_controller::lib_formats.begin(), exe_controller::lib_formats.begin() + count, strings, [](const auto value) {
       return value.data();
     });
   }
@@ -113,7 +113,7 @@ std::errc __stdcall get_supported_extensions_for_category(const wchar_t* categor
   return count == 0 ? std::errc::not_supported : std::errc(0);
 }
 
-std::errc __stdcall is_stream_supported(_In_ storage_info* data) noexcept
+std::errc is_stream_supported(_In_ storage_info* data) noexcept
 {
   if (!data)
   {
@@ -130,7 +130,7 @@ std::errc __stdcall is_stream_supported(_In_ storage_info* data) noexcept
   return std::errc::not_supported;
 }
 
-std::errc __stdcall get_window_class_for_stream(storage_info* data, wchar_t** class_name) noexcept
+std::errc get_window_class_for_stream(storage_info* data, wchar_t** class_name) noexcept
 {
   if (!data)
   {

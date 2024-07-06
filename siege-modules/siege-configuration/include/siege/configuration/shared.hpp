@@ -1,6 +1,7 @@
 #ifndef SHARED_CONFIG_HPP
 #define SHARED_CONFIG_HPP
 
+#include <siege/platform/shared.hpp>
 #include <siege/configuration/config_types.hpp>
 #include <vector>
 #include <array>

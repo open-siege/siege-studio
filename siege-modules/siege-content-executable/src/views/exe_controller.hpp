@@ -11,14 +11,22 @@
 #include <list>
 #include <siege/platform/win/core/module.hpp>
 #include <siege/platform/extension_module.hpp>
+#include <siege/platform/shared.hpp>
 
 namespace siege::views
 {
   class exe_controller
   {
   public:
-    constexpr static auto exe_formats = std::array<std::wstring_view, 2>{{ L".exe", L".com" }};
-    constexpr static auto lib_formats = std::array<std::wstring_view, 6>{{ L".dll", L".ocx", L".olb", L".lib", L".asi", L".ovl", }};
+    constexpr static auto exe_formats = std::array<siege::fs_string_view, 2>{ { FSL ".exe", FSL ".com" } };
+    constexpr static auto lib_formats = std::array<siege::fs_string_view, 6>{ {
+      FSL ".dll",
+      FSL ".ocx",
+      FSL ".olb",
+      FSL ".lib",
+      FSL ".asi",
+      FSL ".ovl",
+    } };
     
     static bool is_exe(std::istream& image_stream);
 

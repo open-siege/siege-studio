@@ -4,13 +4,14 @@
 #include <string>
 #include <vector>
 #include <any>
+#include <siege/platform/shared.hpp>
 
 namespace siege::views
 {
   class dts_controller
   {
   public:
-    constexpr static auto formats = std::array<std::wstring_view, 1>{{ L".dts" }};
+    constexpr static auto formats = std::array<siege::fs_string_view, 1>{{ FSL".dts" }};
     static bool is_dts(std::istream& image_stream);
 
     std::size_t load_shape(std::istream& image_stream);

@@ -1,4 +1,3 @@
-#include <siege/platform/win/desktop/window_impl.hpp>
 
 #include <bit>
 #include <filesystem>
@@ -7,17 +6,16 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <system_error>
-#include "views/vol_view.hpp"
 #include <siege/platform/stream.hpp>
 #include <siege/resource/resource_maker.hpp>
+#include "views/vol_controller.hpp"
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;
 
 extern "C" {
-extern const std::uint32_t default_file_icon = SIID_ZIPFILE;
 
-std::errc __stdcall get_supported_extensions(std::size_t count, wchar_t const** strings, std::size_t* fetched) noexcept
+std::errc get_supported_extensions(std::size_t count, const siege::fs_char** strings, std::size_t* fetched) noexcept
 {
   if (!strings)
   {
@@ -26,7 +24,7 @@ std::errc __stdcall get_supported_extensions(std::size_t count, wchar_t const** 
 
   count = std::clamp<std::size_t>(count, 0u, vol_controller::formats.size());
 
-  std::transform(vol_controller::formats.begin(), vol_controller::formats.begin() + count, strings, [](const std::wstring_view value) {
+  std::transform(vol_controller::formats.begin(), vol_controller::formats.begin() + count, strings, [](const auto value) {
     return value.data();
   });
 
@@ -38,7 +36,7 @@ std::errc __stdcall get_supported_extensions(std::size_t count, wchar_t const** 
   return std::errc(0);
 }
 
-std::errc __stdcall get_supported_format_categories(std::size_t count, const wchar_t** strings, std::size_t* fetched) noexcept
+std::errc get_supported_format_categories(std::size_t count, const wchar_t** strings, std::size_t* fetched) noexcept
 {
   if (!strings)
   {
@@ -49,7 +47,7 @@ std::errc __stdcall get_supported_format_categories(std::size_t count, const wch
 
   count = std::clamp<std::size_t>(count, 0u, categories.size());
 
-  std::transform(categories.begin(), categories.begin() + count, strings, [](const std::wstring_view value) {
+  std::transform(categories.begin(), categories.begin() + count, strings, [](const auto value) {
     return value.data();
   });
 
@@ -61,7 +59,7 @@ std::errc __stdcall get_supported_format_categories(std::size_t count, const wch
   return std::errc(0);
 }
 
-std::errc __stdcall get_supported_extensions_for_category(const wchar_t* category, std::size_t count, const wchar_t** strings, std::size_t* fetched) noexcept
+std::errc get_supported_extensions_for_category(const wchar_t* category, std::size_t count, const siege::fs_char** strings, std::size_t* fetched) noexcept
 {
   if (!category)
   {
@@ -79,7 +77,7 @@ std::errc __stdcall get_supported_extensions_for_category(const wchar_t* categor
   {
     count = std::clamp<std::size_t>(count, 0u, vol_controller::formats.size());
 
-    std::transform(vol_controller::formats.begin(), vol_controller::formats.begin() + count, strings, [](const std::wstring_view value) {
+    std::transform(vol_controller::formats.begin(), vol_controller::formats.begin() + count, strings, [](const auto value) {
       return value.data();
     });
   }
@@ -96,7 +94,7 @@ std::errc __stdcall get_supported_extensions_for_category(const wchar_t* categor
   return count == 0 ? std::errc::not_supported : std::errc(0);
 }
 
-std::errc __stdcall is_stream_supported(storage_info* data) noexcept
+std::errc is_stream_supported(storage_info* data) noexcept
 {
   if (!data)
   {
@@ -113,47 +111,7 @@ std::errc __stdcall is_stream_supported(storage_info* data) noexcept
   return std::errc::not_supported;
 }
 
-std::errc __stdcall get_window_class_for_stream(storage_info* data, wchar_t** class_name) noexcept
-{
-  if (!data)
-  {
-    return std::errc::invalid_argument;
-  }
-
-  if (!class_name)
-  {
-    return std::errc::invalid_argument;
-  }
-
-  static std::wstring empty;
-  *class_name = empty.data();
-
-  auto stream = siege::platform::create_istream(*data);
-
-  try
-  {
-    static auto this_module = win32::window_module_ref::current_module();
-
-    if (siege::views::vol_controller::is_vol(*stream))
-    {
-      static auto window_type_name = win32::type_name<siege::views::vol_view>();
-
-      if (this_module.GetClassInfoExW(window_type_name))
-      {
-        *class_name = window_type_name.data();
-        return std::errc(0);
-      }
-    }
-
-    return std::errc::not_supported;
-  }
-  catch (...)
-  {
-    return std::errc::not_supported;
-  }
-}
-
-std::errc __stdcall stream_is_resource_reader(storage_info* data) noexcept
+std::errc stream_is_resource_reader(storage_info* data) noexcept
 {
   if (!data)
   {
@@ -185,7 +143,7 @@ struct siege::platform::resource_reader_context
     index;
 };
 
-std::errc __stdcall create_reader_context(storage_info* data, siege::platform::resource_reader_context** storage) noexcept
+std::errc create_reader_context(storage_info* data, siege::platform::resource_reader_context** storage) noexcept
 {
   if (!data)
   {
@@ -215,7 +173,7 @@ std::errc __stdcall create_reader_context(storage_info* data, siege::platform::r
   return std::errc::not_supported;
 }
 
-std::errc __stdcall get_reader_folder_listing(siege::platform::resource_reader_context* context, const fs_char* parent_path, std::size_t count, const fs_char** folders, std::size_t* expected)
+std::errc get_reader_folder_listing(siege::platform::resource_reader_context* context, const fs_char* parent_path, std::size_t count, const fs_char** folders, std::size_t* expected)
 {
   if (!context)
   {
@@ -268,7 +226,7 @@ std::errc __stdcall get_reader_folder_listing(siege::platform::resource_reader_c
   return std::errc(0);
 }
 
-std::errc __stdcall get_reader_file_listing(siege::platform::resource_reader_context* context, const fs_char* parent_path, std::size_t count, const fs_char** files, std::size_t* expected)
+std::errc get_reader_file_listing(siege::platform::resource_reader_context* context, const fs_char* parent_path, std::size_t count, const fs_char** files, std::size_t* expected)
 {
   if (!context)
   {
@@ -322,7 +280,7 @@ std::errc __stdcall get_reader_file_listing(siege::platform::resource_reader_con
   return std::errc(0);
 }
 
-std::errc __stdcall extract_file_contents(siege::platform::resource_reader_context* context, const fs_char* file_path, std::size_t size, std::byte* buffer, std::size_t* written)
+std::errc extract_file_contents(siege::platform::resource_reader_context* context, const fs_char* file_path, std::size_t size, std::byte* buffer, std::size_t* written)
 {
   if (!context)
   {
@@ -377,7 +335,7 @@ std::errc __stdcall extract_file_contents(siege::platform::resource_reader_conte
   return std::errc(0);
 }
 
-std::errc __stdcall destroy_reader_context(siege::platform::resource_reader_context* context)
+std::errc destroy_reader_context(siege::platform::resource_reader_context* context)
 {
   if (context)
   {
@@ -388,37 +346,4 @@ std::errc __stdcall destroy_reader_context(siege::platform::resource_reader_cont
   return std::errc::invalid_argument;
 }
 
-BOOL WINAPI DllMain(
-  HINSTANCE hinstDLL,// handle to DLL module
-  DWORD fdwReason,// reason for calling function
-  LPVOID lpvReserved)// reserved
-{
-
-  if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
-  {
-    if (lpvReserved != nullptr)
-    {
-      return TRUE;// do not do cleanup if process termination scenario
-    }
-
-    static win32::hwnd_t info_instance = nullptr;
-
-    static std::wstring module_file_name(255, '\0');
-    GetModuleFileNameW(hinstDLL, module_file_name.data(), module_file_name.size());
-
-    std::filesystem::path module_path(module_file_name.data());
-
-    win32::window_module_ref this_module(hinstDLL);
-    if (fdwReason == DLL_PROCESS_ATTACH)
-    {
-      this_module.RegisterClassExW(win32::window_meta_class<siege::views::vol_view>());
-    }
-    else if (fdwReason == DLL_PROCESS_DETACH)
-    {
-      this_module.UnregisterClassW<siege::views::vol_view>();
-    }
-  }
-
-  return TRUE;
-}
 }

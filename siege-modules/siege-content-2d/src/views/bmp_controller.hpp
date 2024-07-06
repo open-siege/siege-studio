@@ -15,50 +15,63 @@
 
 namespace siege::views
 {
-    struct palette_info
-    {
-      std::filesystem::path path;
-      std::vector<content::pal::palette> children;
-    };
-
-  class bmp_controller 
+  struct palette_info
   {
-  public:
-      constexpr static auto formats = std::array<std::wstring_view, 16>{{
-        L".jpg", L".jpeg", L".gif", L".png", L".tag", L".bmp", L".dib" , L".pba", L".dmb", L".db0", L".db1", L".db2", L".hba", L".hb0", L".hb1", L".hb2"    
-        }};
-
-      static bool is_bmp(std::istream& image_stream) noexcept;
-
-      using get_embedded_pal_filenames = std::set<std::filesystem::path>(std::filesystem::path);
-      using resolve_embedded_pal = std::vector<char>(std::filesystem::path);
-
-      std::future<const std::deque<palette_info>&>
-          load_palettes_async(std::optional<std::filesystem::path> folder_hint, std::move_only_function<get_embedded_pal_filenames>, std::move_only_function<resolve_embedded_pal>);
-
-      std::size_t load_bitmap(std::istream& image_stream, const std::future<const std::deque<palette_info>&>&) noexcept;
-    
-      enum class colour_strategy : int
-      {
-        do_nothing,
-        remap,
-        remap_unique
-      };
-
-      std::size_t convert(std::size_t frame, std::pair<int, int> size, int bits, std::span<std::byte> destination) const noexcept;
-  private:
-        std::optional<content::bmp::platform_image> original_image;
-        std::deque<palette_info> palettes;
-        std::deque<palette_info>::iterator selected_palette_file;
-        std::size_t selected_palette;
-
-    public:
-
-        inline auto get_selected_palette() const
-        {
-          return std::make_pair(selected_palette_file, selected_palette);
-        }
+    std::filesystem::path path;
+    std::vector<content::pal::palette> children;
   };
 
-}
-#endif//DARKSTARDTSCONVERTER_BMP_VIEW_HPP
+  class bmp_controller
+  {
+  public:
+    constexpr static auto formats = std::array<siege::fs_string_view, 16>{ { FSL ".jpg",
+      FSL ".jpeg",
+      FSL ".gif",
+      FSL ".png",
+      FSL ".tag",
+      FSL ".bmp",
+      FSL ".dib",
+      FSL ".pba",
+      FSL ".dmb",
+      FSL ".db0",
+      FSL ".db1",
+      FSL ".db2",
+      FSL ".hba",
+      FSL ".hb0",
+      FSL ".hb1",
+      FSL ".hb2" } };
+
+    static bool is_bmp(std::istream& image_stream) noexcept;
+
+    using get_embedded_pal_filenames = std::set<std::filesystem::path>(std::filesystem::path);
+    using resolve_embedded_pal = std::vector<char>(std::filesystem::path);
+
+    std::future<const std::deque<palette_info>&>
+      load_palettes_async(std::optional<std::filesystem::path> folder_hint, std::move_only_function<get_embedded_pal_filenames>, std::move_only_function<resolve_embedded_pal>);
+
+    std::size_t load_bitmap(std::istream& image_stream, const std::future<const std::deque<palette_info>&>&) noexcept;
+
+    enum class colour_strategy : int
+    {
+      do_nothing,
+      remap,
+      remap_unique
+    };
+
+    std::size_t convert(std::size_t frame, std::pair<int, int> size, int bits, std::span<std::byte> destination) const noexcept;
+
+  private:
+    std::optional<content::bmp::platform_image> original_image;
+    std::deque<palette_info> palettes;
+    std::deque<palette_info>::iterator selected_palette_file;
+    std::size_t selected_palette;
+
+  public:
+    inline auto get_selected_palette() const
+    {
+      return std::make_pair(selected_palette_file, selected_palette);
+    }
+  };
+
+}// namespace siege::views
+#endif// DARKSTARDTSCONVERTER_BMP_VIEW_HPP

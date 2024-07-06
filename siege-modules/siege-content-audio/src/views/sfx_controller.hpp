@@ -13,7 +13,7 @@ namespace siege::views
   class sfx_controller
   {
   public:
-    constexpr static auto formats = std::array<std::wstring_view, 5>{{ L".sfx", L".wav", L".mp3", L".ogg", L".wma"}};
+    constexpr static auto formats = std::array<siege::fs_string_view, 5>{{ FSL".sfx", FSL".wav", FSL".mp3", FSL".ogg", FSL".wma"}};
     static bool is_sfx(std::istream& image_stream);
 
     std::size_t load_sound(std::istream& image_stream) noexcept;

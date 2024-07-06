@@ -11,7 +11,7 @@ namespace siege::views
 {
     struct pal_mapping_view : win32::window_ref
     {
-        constexpr static auto formats = std::array<std::wstring_view, 1>{{L"palettes.settings.json"}};
+        constexpr static auto formats = std::array<siege::fs_string_view, 1>{{L"palettes.settings.json"}};
     
         pal_mapping_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
 	    {

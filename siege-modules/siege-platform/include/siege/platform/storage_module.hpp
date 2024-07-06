@@ -18,12 +18,12 @@
 namespace siege::platform
 {
   using fs_char = std::filesystem::path::value_type;
-  using stream_is_resource_reader = std::errc __stdcall(storage_info* data);
-  using create_reader_context = std::errc __stdcall(storage_info* data, resource_reader_context** storage);
-  using get_reader_folder_listing = std::errc __stdcall(resource_reader_context* context, const fs_char* parent_path, std::size_t count, const fs_char** folders, std::size_t*);
-  using get_reader_file_listing = std::errc __stdcall(resource_reader_context* context, const fs_char* parent_path, std::size_t, const fs_char** folders, std::size_t*);
-  using extract_file_contents = std::errc __stdcall(resource_reader_context* context, const fs_char* file_path, std::size_t size, std::byte* buffer, std::size_t* written);
-  using destroy_reader_context = std::errc __stdcall(resource_reader_context* context);
+  using stream_is_resource_reader = std::errc(storage_info* data);
+  using create_reader_context = std::errc(storage_info* data, resource_reader_context** storage);
+  using get_reader_folder_listing = std::errc(resource_reader_context* context, const fs_char* parent_path, std::size_t count, const fs_char** folders, std::size_t*);
+  using get_reader_file_listing = std::errc(resource_reader_context* context, const fs_char* parent_path, std::size_t, const fs_char** folders, std::size_t*);
+  using extract_file_contents = std::errc(resource_reader_context* context, const fs_char* file_path, std::size_t size, std::byte* buffer, std::size_t* written);
+  using destroy_reader_context = std::errc(resource_reader_context* context);
 
   class storage_module : public win32::module
   {
