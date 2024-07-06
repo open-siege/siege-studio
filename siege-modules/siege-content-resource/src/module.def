@@ -4,6 +4,7 @@ EXPORTS
 	get_supported_extensions_for_category
 	is_stream_supported
 	get_window_class_for_stream
+	std_errc_to_hresult
 	default_file_icon
 	stream_is_resource_reader
 	create_reader_context

@@ -4,6 +4,7 @@
 #include <system_error>
 #include <algorithm>
 #include <array>
+#include <siege/platform/win/core/hresult.hpp>
 #include <siege/platform/stream.hpp>
 #include "views/dts_controller.hpp"
 

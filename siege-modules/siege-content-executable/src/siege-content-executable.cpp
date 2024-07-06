@@ -4,6 +4,7 @@
 #include <system_error>
 #include <siege/platform/win/desktop/window_impl.hpp>
 #include <siege/platform/win/desktop/window_module.hpp>
+#include <siege/platform/win/core/hresult.hpp>
 #include <siege/platform/stream.hpp>
 #include "views/exe_view.hpp"
 

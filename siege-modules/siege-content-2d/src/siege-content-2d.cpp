@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <memory>
 #include <system_error>
+#include <siege/platform/win/core/hresult.hpp>
 #include <siege/platform/stream.hpp>
 
 #include "views/bmp_controller.hpp"

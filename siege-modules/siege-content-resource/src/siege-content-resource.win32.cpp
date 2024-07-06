@@ -1,4 +1,5 @@
 #include <siege/platform/win/desktop/window_impl.hpp>
+#include <siege/platform/win/core/hresult.hpp>
 #include "views/vol_view.hpp"
 
 using namespace siege::views;
