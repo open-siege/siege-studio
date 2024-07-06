@@ -31,11 +31,7 @@ if (WIN32)
 
     # Tests
     find_package(Catch2 REQUIRED)
-    add_executable(com-tests src/com-base-tests.cpp 
-                             src/com-enumerable-tests.cpp 
-                             src/com-collection-tests.cpp 
-                             src/com-stream-tests.cpp
-                             src/resource-storage-tests.cpp)
+    add_executable(com-tests src/com-base-tests.cpp)
     set_property(TARGET com-tests PROPERTY CXX_STANDARD 23)
     target_include_directories(com-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
     target_link_libraries(com-tests PRIVATE Catch2::Catch2WithMain siege-win-core)

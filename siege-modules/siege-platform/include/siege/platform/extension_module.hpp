@@ -5,7 +5,6 @@
 #include <filesystem>
 #include <list>
 #include <siege/platform/win/core/module.hpp>
-#include <siege/platform/win/core/com/collection.hpp>
 
 namespace siege::platform
 {

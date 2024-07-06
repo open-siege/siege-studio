@@ -3,8 +3,6 @@
 
 #include <siege/platform/win/desktop/common_controls.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
-#include <siege/platform/win/core/com/collection.hpp>
-#include <siege/platform/win/core/com/storage.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
 #include <siege/platform/win/desktop/shell.hpp>
 #include <siege/platform/win/core/file.hpp>
@@ -120,7 +118,7 @@ namespace siege::views
         .style = WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_REALSIZECONTROL });
 
       on_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
- 
+
       return 0;
     }
 
@@ -193,102 +191,84 @@ namespace siege::views
 
       if (bmp_controller::is_bmp(stream))
       {
-        std::vector<std::pair<win32::file, win32::file_mapping>> mappings;
-        mappings.reserve(256);
+        std::unordered_map<std::filesystem::path, siege::platform::storage_module::context_ptr> loaded_contexts;
+
         auto task = controller.load_palettes_async(
           std::nullopt, [&](auto path) {
-					if (path.extension() == ".cs")
-					{
-						return std::set<std::filesystem::path>{};
-					}
+          if (path.extension() == ".cs")
+          {
+            return std::set<std::filesystem::path>{};
+          }
 
-					win32::com::com_ptr<IStream> stream;
-					auto hresult = ::SHCreateStreamOnFileEx(path.c_str(), STGM_READ, 0, FALSE, nullptr, stream.put());
-    
-					if (hresult != S_OK)
-					{
-						return std::set<std::filesystem::path>{};
-					}
+          siege::platform::storage_info info{
+            .type = siege::platform::storage_info::file
+          };
+          info.info.path = path.c_str();
 
-                    win32::file file_handle = win32::file(path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, 0);
+          auto resource_module = std::find_if(loaded_modules.begin(), loaded_modules.end(), [&](auto& module) {
+            return module.stream_is_resource_reader(info);
+          });
 
-                    auto mapping = file_handle.CreateFileMapping(std::nullopt, PAGE_READONLY, 0, 0, path.filename());
+          if (resource_module == loaded_modules.end())
+          {
+            return std::set<std::filesystem::path>{};
+          }
 
-                    if (mapping)
-                    {
-                      mappings.emplace_back(std::make_pair(std::move(file_handle), std::move(*mapping)));
-                    }
+          auto context = resource_module->create_reader_context(info);
 
-					auto resource_module = std::find_if(loaded_modules.begin(), loaded_modules.end(), [&](auto& module) {
-						return module.StreamIsStorage(*stream);
-					});
+          if (!context)
+          {
+            return std::set<std::filesystem::path>{};
+          }
 
-					if (resource_module == loaded_modules.end())
-					{
-						return std::set<std::filesystem::path>{};
-					}
+          auto files = resource_module->get_reader_file_listing(*context.value(), path);
 
-					auto storage = resource_module->CreateStorageFromStream(*stream);
+          if (!files)
+          {
+            return std::set<std::filesystem::path>{};
+          }
 
-					win32::com::com_ptr<IEnumSTATSTG> enumerator;
+          std::set<std::filesystem::path> results;
 
-					hresult = storage->EnumElements(0, nullptr, 0, enumerator.put());
+          for (auto& file : files.value())
+          {
+            auto is_pal = std::any_of(pal_controller::formats.begin(), pal_controller::formats.end(), [&](auto& ext) { return file.extension().c_str() == ext; });
 
-					if (hresult != S_OK)
-					{
-						return std::set<std::filesystem::path>{};
-					}
+            if (is_pal)
+            {
+              results.emplace(std::move(file));
+            }
+          }
 
-					std::vector<win32::com::storage_info> children(512);
-                    DWORD fetched;
-					hresult = enumerator->Next(children.size(), children.data(), &fetched);
+          if (!results.empty())
+          {
+            loaded_contexts.emplace(std::move(path), std::move(context.value()));
+          }
 
-					children.resize(fetched);
-
-					std::set<std::filesystem::path> results{};
-
-					for (auto& info : children)
-					{
-						assert(info.pwcsName);
-						auto is_pal = std::any_of(pal_controller::formats.begin(), pal_controller::formats.end(), [&](auto& ext) { return std::wstring_view(info.pwcsName).rfind(ext) != std::wstring_view::npos; });
-                          
-						if (is_pal)
-						{
-							results.insert(path / info.pwcsName);
-						}
-					}
-					return results; },
+          return results; 
+          },
 
           [&](auto path) {
-            // TODO add correct logic to find storage
             auto storage_path = path.parent_path();
-            win32::com::com_ptr<IStream> stream;
-            auto hresult = ::SHCreateStreamOnFileEx(storage_path.c_str(), STGM_READ, 0, FALSE, nullptr, stream.put());
 
-            // TODO find correct module first
-            auto storage = loaded_modules.begin()->CreateStorageFromStream(*stream);
+            auto existing = loaded_contexts.find(storage_path);
 
-            std::vector<char> data{};
-
-            if (storage->OpenStream(path.filename().c_str(), nullptr, STGM_READ, 0, stream.put()) == S_OK)
+            if (existing != loaded_contexts.end())
             {
-              STATSTG info{};
+              // TODO create bound wrapper so that we don't have to find the module again
+              auto result = loaded_modules.begin()->extract_file_contents(*existing->second.get(), path);
 
-              if (stream->Stat(&info, STATFLAG_NONAME) == S_OK)
+              if (result)
               {
-                data.resize(static_cast<std::size_t>(info.cbSize.QuadPart), '\0');
-                ULONG read = 0;
-                stream->Read(data.data(), data.size(), &read);
-                data.resize(read);
+                return std::move(result.value());
               }
             }
 
-            return data;
+            return std::vector<char>{};
           });
 
         auto count = controller.load_bitmap(stream, task);
-        mappings.clear();
-        
+
         if (count > 0)
         {
           ::SendMessageW(frame_selector, UDM_SETRANGE, 0, MAKELPARAM(count, 1));

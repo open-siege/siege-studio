@@ -8,6 +8,5 @@
 #include <optional>
 #include <siege/platform/win/core/com/base.hpp>
 #include <siege/platform/win/core/com/variant.hpp>
-#include <siege/platform/win/core/com/collection.hpp>
 
 #endif

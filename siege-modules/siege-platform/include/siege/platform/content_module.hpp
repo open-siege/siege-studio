@@ -10,15 +10,15 @@
 #include <vector>
 #include <set>
 #include <siege/platform/win/desktop/window_module.hpp>
+#include <siege/platform/stream.hpp>
 
 namespace siege::platform
 {
   using get_supported_extensions = std::errc __stdcall(std::size_t, wchar_t**, std::size_t*);
   using get_supported_format_categories = std::errc __stdcall(std::size_t, wchar_t**, std::size_t*);
   using get_supported_extensions_for_category = std::errc __stdcall(const wchar_t*, std::size_t count, const wchar_t** strings, std::size_t* fetched);
-  using is_stream_supported = std::errc __stdcall(::IStream* data);
-  using get_window_class_for_stream = std::errc __stdcall(::IStream* data, wchar_t**);
-
+  using is_stream_supported = std::errc __stdcall(storage_info* data);
+  using get_window_class_for_stream = std::errc __stdcall(storage_info* data, wchar_t**);
   // TODO Port this code to linux using a "platform::module" instead of a "win32::module"
   class content_module : public win32::window_module
   {
@@ -121,12 +121,12 @@ namespace siege::platform
       return results;
     }
 
-    bool is_stream_supported(IStream& data) const noexcept
+    bool is_stream_supported(storage_info data) const noexcept
     {
       return is_stream_supportedProc(&data) == std::errc(0);
     }
 
-    std::wstring get_window_class_for_stream(IStream& data) const noexcept
+    std::wstring get_window_class_for_stream(storage_info data) const noexcept
     {
       wchar_t* result;
 

@@ -69,6 +69,8 @@ namespace siege::platform
     resource_writer(resource_writer&&) = delete;
   };
 
+  struct resource_write_context;
+
   struct resource_reader
   {
     using folder_info = siege::platform::folder_info;
@@ -91,6 +93,8 @@ namespace siege::platform
     resource_reader(const resource_reader&) = delete;
     resource_reader(resource_reader&&) = delete;
   };
+
+  struct resource_reader_context;
 
   template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
   template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;

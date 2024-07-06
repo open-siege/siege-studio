@@ -4,7 +4,9 @@
 #include <unordered_set>
 #include <string>
 #include <functional>
-#include <siege/platform/win/core/com/collection.hpp>
+#include <cassert>
+#include <siege/platform/win/core/com/base.hpp>
+#include <siege/platform/win/core/com/variant.hpp>
 
 namespace siege::extension
 {

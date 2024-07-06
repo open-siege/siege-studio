@@ -5,7 +5,6 @@
 #include <siege/platform/win/desktop/shell.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include <siege/platform/win/core/file.hpp>
-#include <siege/platform/win/core/com/storage.hpp>
 #include <siege/platform/content_module.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
 #include <siege/platform/win/desktop/theming.hpp>
@@ -226,7 +225,7 @@ namespace siege::views
       return std::nullopt;
     }
 
-    auto on_copy_data(win32::copy_data_message<std::uint8_t> message)
+    auto on_copy_data(win32::copy_data_message<std::byte> message)
     {
       auto filename = GetPropW<wchar_t*>(L"FilePath");
 
@@ -235,23 +234,19 @@ namespace siege::views
         return FALSE;
       }
 
-      // TODO create a stream adapter for wrapping std::streams as IStream
-      //			std::spanstream stream(message.data);
-
-      auto stream = ::SHCreateMemStream(message.data.data(), message.data.size());
-
-      if (!stream)
-      {
-        return FALSE;
-      }
+      siege::platform::storage_info storage{
+        .type = siege::platform::storage_info::buffer
+      };
+      storage.info.data.data = message.data.data();
+      storage.info.data.size = message.data.size();
 
       auto plugin = std::find_if(loaded_modules.begin(), loaded_modules.end(), [&](auto& module) {
-        return module.is_stream_supported(*stream);
+        return module.is_stream_supported(storage);
       });
 
       if (plugin != loaded_modules.end())
       {
-        auto class_name = plugin->get_window_class_for_stream(*stream);
+        auto class_name = plugin->get_window_class_for_stream(std::move(storage));
 
         auto tab_rect = tab_control.GetClientRect()
                           .and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); })
@@ -349,7 +344,6 @@ namespace siege::views
               SetMenu(*this, light_menu);
               BOOL value = FALSE;
               ::DwmSetWindowAttribute(*this, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
-
             }
             else
             {
@@ -424,7 +418,7 @@ namespace siege::views
     {
       if (message.item.itemData)
       {
-          HDC hDC = ::GetDC(*this);
+        HDC hDC = ::GetDC(*this);
         TEXTMETRIC tm{};
         ::GetTextMetricsW(hDC, &tm);
         message.item.itemWidth = tm.tmAveCharWidth * std::wcslen((wchar_t*)message.item.itemData);
@@ -515,17 +509,35 @@ namespace siege::views
 
     bool AddTabFromPath(std::filesystem::path file_path)
     {
-      win32::com::com_ptr<IStream> stream;
-
-      if (::SHCreateStreamOnFileEx(file_path.c_str(), STGM_READ, 0, FALSE, nullptr, stream.put()) == S_OK)
+      try
       {
+        auto path_ref = file_path.c_str();
+        win32::file file_to_read(file_path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
+
+        auto mapping = file_to_read.CreateFileMapping(std::nullopt, PAGE_READONLY, 0, 0, L"");
+
+        if (!mapping)
+        {
+          return false;
+        }
+
+        std::size_t size = (std::size_t)file_to_read.GetFileSizeEx().value_or(LARGE_INTEGER{}).QuadPart;
+
+        auto view = mapping->MapViewOfFile(FILE_MAP_READ, size);
+
+        siege::platform::storage_info storage{
+          .type = siege::platform::storage_info::buffer
+        };
+        storage.info.data.data = (std::byte*)view.get();
+        storage.info.data.size = size;
+
         auto plugin = std::find_if(loaded_modules.begin(), loaded_modules.end(), [&](auto& module) {
-          return module.is_stream_supported(*stream);
+          return module.is_stream_supported(storage);
         });
 
         if (plugin != loaded_modules.end())
         {
-          auto class_name = plugin->get_window_class_for_stream(*stream);
+          auto class_name = plugin->get_window_class_for_stream(storage);
 
           if (::FindWindowExW(*this, nullptr, class_name.c_str(), file_path.c_str()) != nullptr)
           {
@@ -550,29 +562,11 @@ namespace siege::views
 
           assert(child);
 
-          win32::com::storage_info info{};
-
-          stream->Stat(&info, STATFLAG::STATFLAG_NONAME);
-
-          auto path_ref = file_path.c_str();
-          win32::file file_to_read(file_path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
-
-          auto mapping = file_to_read.CreateFileMapping(std::nullopt, PAGE_READONLY, 0, 0, L"");
-
-          if (!mapping)
-          {
-            return false;
-          }
-
-          auto view = mapping->MapViewOfFile(FILE_MAP_READ, std::size_t(info.cbSize.QuadPart));
-
           COPYDATASTRUCT data{
-            .cbData = DWORD(info.cbSize.QuadPart),
+            .cbData = DWORD(size),
             .lpData = view.get()
           };
-
-          stream.reset(nullptr);
-
+          
           child->SetPropW(L"FilePath", path_ref);
 
           if (child->CopyData(*this, data))
@@ -599,6 +593,9 @@ namespace siege::views
 
           return true;
         }
+      }
+      catch (...)
+      {
       }
 
       return false;

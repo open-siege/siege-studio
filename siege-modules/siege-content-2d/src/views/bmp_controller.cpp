@@ -98,22 +98,22 @@ namespace siege::views
       };
 
       auto task_a = std::async(std::launch::async, [&]() {
-        std::transform(std::execution::par_unseq, pal_paths.begin(), pal_paths.end(), palettes.begin(), [&load_palette](auto& path) mutable {
-          std::fstream file_data(path);
-          return load_palette(std::move(path), file_data);
-        });
+        std::transform(embedded_pal_paths.begin(),
+          embedded_pal_paths.end(),
+          palettes.begin() + pal_paths.size(),
+          [&resolve_data, &load_palette](auto& path) mutable {
+            auto data = resolve_data(path);
+            std::spanstream span_data(data);
+            return load_palette(std::move(path), span_data);
+          });  
       });
 
-      std::transform(std::execution::par_unseq,
-        embedded_pal_paths.begin(),
-        embedded_pal_paths.end(),
-        palettes.begin() + pal_paths.size(),
-        [&resolve_data, &load_palette](auto& path) mutable {
-          auto data = resolve_data(path);
-          std::spanstream span_data(data);
-          return load_palette(std::move(path), span_data);
-        });
+      std::transform(std::execution::par_unseq, pal_paths.begin(), pal_paths.end(), palettes.begin(), [&load_palette](auto& path) mutable {
+        std::fstream file_data(path);
+        return load_palette(std::move(path), file_data);
+      });
 
+      
       task_a.wait();
 
       selected_palette_file = palettes.begin();

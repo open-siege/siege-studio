@@ -4,6 +4,7 @@
 #include <memory>
 #include <optional>
 #include <algorithm>
+#include <string_view>
 #include <combaseapi.h>
 
 namespace win32::com

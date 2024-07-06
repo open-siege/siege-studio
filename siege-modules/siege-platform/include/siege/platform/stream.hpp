@@ -11,7 +11,6 @@
 
 #if WIN32
 #include <siege/platform/win/core/file.hpp>
-#include <siege/platform/win/core/com/stream_buf.hpp>
 #endif
 
 namespace siege::platform
@@ -91,30 +90,30 @@ namespace siege::platform
     }
 
 #if WIN32
-  #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-      if (auto* ispan = dynamic_cast<std::ispanstream*>(&stream); ispan)
-      {
-        auto span = ispan->span();
-        auto view = win32::file_view((void*)span.data());
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    if (auto* ispan = dynamic_cast<std::ispanstream*>(&stream); ispan)
+    {
+      auto span = ispan->span();
+      auto view = win32::file_view((void*)span.data());
 
-        return view.GetMappedFilename();
-      }
+      return view.GetMappedFilename();
+    }
 
-      if (auto* ospan = dynamic_cast<std::ospanstream*>(&stream); ospan)
-      {
-        auto span = ospan->span();
-        auto view = win32::file_view((void*)span.data());
+    if (auto* ospan = dynamic_cast<std::ospanstream*>(&stream); ospan)
+    {
+      auto span = ospan->span();
+      auto view = win32::file_view((void*)span.data());
 
-        return view.GetMappedFilename();
-      }
+      return view.GetMappedFilename();
+    }
 
-      if (auto* span = dynamic_cast<std::spanstream*>(&stream); span)
-      {
-        auto view = win32::file_view((void*)span->span().data());
+    if (auto* span = dynamic_cast<std::spanstream*>(&stream); span)
+    {
+      auto view = win32::file_view((void*)span->span().data());
 
-        return view.GetMappedFilename();
-      }
-  #endif
+      return view.GetMappedFilename();
+    }
+#endif
 #endif
 
     return std::nullopt;
@@ -176,73 +175,47 @@ namespace siege::platform
 
     return 0;
   }
-
-// For now
-#if WIN32
-  inline std::unique_ptr<std::istream> shallow_clone(::IStream& stream)
+  struct storage_info
   {
-    namespace fs = std::filesystem;
-    STATSTG stream_info{};
-
-    if (stream.Stat(&stream_info, STATFLAG_DEFAULT) == S_OK && stream_info.pwcsName)
+    enum info_type
     {
-      auto mapping = win32::file_mapping(::OpenFileMappingW(FILE_MAP_READ, FALSE, stream_info.pwcsName));
-      ::CoTaskMemFree(stream_info.pwcsName);
-
-      if (mapping)
+      null,
+      file,
+      buffer
+    } type;
+    union
+    {
+      const std::filesystem::path::value_type* path;
+      struct
       {
-        auto view = mapping.MapViewOfFile(FILE_MAP_READ, sizeof(void*));
-        auto full_path = view.GetMappedFilename();
+        std::size_t size;
+        std::byte* data;
+      } data;
+    } info;
+  };
 
-        if (full_path)
-        {
-          return std::unique_ptr<std::istream>(new ifstream_with_path(std::move(*full_path), std::ios::binary));
-        }
-      }
-    }
-
-    // TODO this is a deep copy, but the previous code used to crash.
-    // Let's add some tests and fix things so that we only refer to the original stream.
-    std::string temp;
-    temp.resize((std::size_t)stream_info.cbSize.QuadPart);
-    ULONG count = temp.size();
-    stream.Read(temp.data(), count, &count);
-    temp.resize(count);
-    
-    return std::unique_ptr<std::istream>(new std::stringstream(std::move(temp)));
-  }
-#endif
-
-  inline std::unique_ptr<std::istream> shallow_clone(std::istream& stream)
+  inline std::unique_ptr<std::istream> create_istream(storage_info& info, bool owning = false)
   {
-    auto filename = get_stream_path(stream);
-    auto offset = stream.tellg();
-
-    if (filename)
+    if (info.type == storage_info::file && info.info.path)
     {
-      auto result = std::unique_ptr<std::istream>(new std::ifstream(*filename, std::ios::binary));
-      result->seekg(offset);
-
-      return result;
+      return std::make_unique<ifstream_with_path>(info.info.path, std::ios_base::in | std::ios_base::binary);
     }
 
-    if (auto* ispan = dynamic_cast<std::ispanstream*>(&stream); ispan)
+    if (info.type == storage_info::buffer && !owning && info.info.data.data)
     {
-      auto result = std::unique_ptr<std::istream>(new std::ispanstream(ispan->span()));
-      result->seekg(offset);
-      return result;
+      std::span temp((char*)info.info.data.data, info.info.data.size);
+      return std::make_unique<std::ispanstream>(temp, std::ios_base::in | std::ios_base::binary);
     }
 
-    if (auto* span = dynamic_cast<std::spanstream*>(&stream); span)
+    if (info.type == storage_info::buffer && owning && info.info.data.data)
     {
-      auto result = std::unique_ptr<std::istream>(new std::spanstream(span->span()));
-      result->seekg(offset);
-      return result;
+      std::string temp((char*)info.info.data.data, info.info.data.size);
+      return std::make_unique<std::istringstream>(std::move(temp), std::ios_base::in | std::ios_base::binary);
     }
 
-    // TODO wrap the stream_buf so that each stream can have its own independent pointer into the data
-    return std::unique_ptr<std::istream>(new std::istream(stream.rdbuf()));
+    return std::make_unique<std::istringstream>();
   }
+
 }// namespace siege::platform
 
 #endif// OPEN_SIEGE_STREAM_HPP

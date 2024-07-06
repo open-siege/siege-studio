@@ -5,5 +5,9 @@ EXPORTS
 	is_stream_supported
 	get_window_class_for_stream
 	default_file_icon
-	StreamIsStorage
-	CreateStorageFromStream
+	stream_is_resource_reader
+	create_reader_context
+	get_reader_folder_listing
+	get_reader_file_listing
+	extract_file_contents
+	destroy_reader_context

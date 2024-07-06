@@ -3,12 +3,12 @@
 #include <memory>
 #include <system_error>
 #include <siege/platform/win/desktop/window_impl.hpp>
-#include <siege/platform/win/core/com/collection.hpp>
-#include <siege/platform/win/core/com/stream_buf.hpp>
 #include <siege/platform/win/desktop/window_module.hpp>
+#include <siege/platform/stream.hpp>
 #include "views/exe_view.hpp"
 
 using namespace siege::views;
+using storage_info = siege::platform::storage_info;
 
 extern "C" {
 extern const std::uint32_t default_file_icon = SIID_APPLICATION;
@@ -113,17 +113,16 @@ std::errc __stdcall get_supported_extensions_for_category(const wchar_t* categor
   return count == 0 ? std::errc::not_supported : std::errc(0);
 }
 
-std::errc __stdcall is_stream_supported(_In_ IStream* data) noexcept
+std::errc __stdcall is_stream_supported(_In_ storage_info* data) noexcept
 {
   if (!data)
   {
     return std::errc::invalid_argument;
   }
 
-  win32::com::StreamBufRef buffer(*data);
-  std::istream stream(&buffer);
+  auto stream = siege::platform::create_istream(*data);
 
-  if (exe_controller::is_exe(stream))
+  if (exe_controller::is_exe(*stream))
   {
     return std::errc(0);
   }
@@ -131,7 +130,7 @@ std::errc __stdcall is_stream_supported(_In_ IStream* data) noexcept
   return std::errc::not_supported;
 }
 
-std::errc __stdcall get_window_class_for_stream(_In_ IStream* data, _Outptr_ wchar_t** class_name) noexcept
+std::errc __stdcall get_window_class_for_stream(storage_info* data, wchar_t** class_name) noexcept
 {
   if (!data)
   {
@@ -146,14 +145,13 @@ std::errc __stdcall get_window_class_for_stream(_In_ IStream* data, _Outptr_ wch
   static std::wstring empty;
   *class_name = empty.data();
 
-  win32::com::StreamBufRef buffer(*data);
-  std::istream stream(&buffer);
+  auto stream = siege::platform::create_istream(*data);
 
   try
   {
     static auto this_module = win32::window_module_ref::current_module();
 
-    if (exe_controller::is_exe(stream))
+    if (exe_controller::is_exe(*stream))
     {
       static auto window_type_name = win32::type_name<exe_view>();
 
