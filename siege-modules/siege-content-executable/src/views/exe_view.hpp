@@ -19,6 +19,7 @@ namespace siege::views
   {
     exe_controller controller;
 
+    win32::list_box options;
     win32::list_view resource_table;
     win32::list_view string_table;
     win32::list_view launch_table;
@@ -44,6 +45,15 @@ namespace siege::views
     {
       auto control_factory = win32::window_factory(ref());
 
+      options = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
+        .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
+
+
+      options.InsertString(-1, L"Resources");
+      options.InsertString(-1, L"Scripting");
+      options.InsertString(-1, L"Launch Options");
+      options.SetCurrentSelection(0);
+
       resource_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
 
       resource_table.InsertColumn(-1, LVCOLUMNW{
@@ -56,14 +66,14 @@ namespace siege::views
 
       resource_table.EnableGroupView(true);
 
-      string_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
+      string_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
       string_table.InsertColumn(-1, LVCOLUMNW{
                                       .pszText = const_cast<wchar_t*>(L"Text"),
                                     });
 
       string_table.EnableGroupView(true);
 
-      launch_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
+      launch_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
 
       launch_table.InsertColumn(-1, LVCOLUMNW{
                                       .pszText = const_cast<wchar_t*>(L"Type"),
@@ -82,16 +92,20 @@ namespace siege::views
 
     auto on_size(win32::size_message sized)
     {
-      auto one_third = SIZE{ .cx = sized.client_size.cx, .cy = sized.client_size.cy / 3 };
+      auto one_quarter = SIZE{ .cx = sized.client_size.cx / 4, .cy = sized.client_size.cy };
 
-      resource_table.SetWindowPos(one_third);
-      resource_table.SetWindowPos(POINT{});
+      options.SetWindowPos(one_quarter);
+      options.SetWindowPos(POINT{});
 
-      string_table.SetWindowPos(one_third);
-      string_table.SetWindowPos(POINT{ .y = one_third.cy });
+      auto three_quarters = SIZE{ .cx = sized.client_size.cx - one_quarter.cx, .cy = sized.client_size.cy };
+      resource_table.SetWindowPos(three_quarters);
+      resource_table.SetWindowPos(POINT{ .x = one_quarter.cx });
 
-      launch_table.SetWindowPos(one_third);
-      launch_table.SetWindowPos(POINT{ .y = one_third.cy * 2 });
+      string_table.SetWindowPos(three_quarters);
+      string_table.SetWindowPos(POINT{ .x = one_quarter.cx });
+
+      launch_table.SetWindowPos(three_quarters);
+      launch_table.SetWindowPos(POINT{ .x = one_quarter.cx });
 
       std::array<std::reference_wrapper<win32::list_view>, 3> tables = { { std::ref(resource_table), std::ref(string_table), std::ref(launch_table) } };
 
@@ -104,7 +118,7 @@ namespace siege::views
           continue;
         }
 
-        auto column_width = sized.client_size.cx / column_count;
+        auto column_width = three_quarters.cx / column_count;
 
         for (auto i = 0u; i < column_count; ++i)
         {
@@ -113,6 +127,35 @@ namespace siege::views
       }
 
       return 0;
+    }
+
+    std::optional<win32::lresult_t> on_notify(win32::notify_message message)
+    {
+      if (message.code == LBN_SELCHANGE && (message.hwndFrom == options))
+      {
+        auto selected = options.GetCurrentSelection();
+        ::ShowWindow(resource_table, SW_HIDE);
+        ::ShowWindow(string_table, SW_HIDE);
+        ::ShowWindow(launch_table, SW_HIDE);
+
+        if (selected == 0)
+        {
+          ::ShowWindow(resource_table, SW_SHOW);
+        }
+        else if (selected == 1)
+        {
+          ::ShowWindow(string_table, SW_SHOW);
+        }
+        else if (selected == 2)
+        {
+          ::ShowWindow(launch_table, SW_SHOW);
+        }
+
+
+        return 0;
+      }
+
+      return std::nullopt;
     }
 
     auto on_copy_data(win32::copy_data_message<char> message)
@@ -145,7 +188,7 @@ namespace siege::views
           {
             items.emplace_back(win32::list_view_item(child));
           }
-          
+
           if (group_names.contains(value.first))
           {
             auto& group = groups.emplace_back(std::wstring(group_names[value.first]), std::move(items));
