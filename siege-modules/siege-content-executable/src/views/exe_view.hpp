@@ -134,7 +134,8 @@ namespace siege::views
 
         resource_table.InsertGroups(groups);
 
-        auto strings = controller.get_strings();
+        auto functions = controller.get_function_names();
+        auto variables = controller.get_variable_names();
 
         return TRUE;
       }

@@ -49,13 +49,6 @@ namespace siege::views
           matching_extension = std::find_if(extensions.begin(), extensions.end(), [&](platform::game_extension_module& ext) {
             return ext.executable_is_supported(*path) == true;
           });
-
-          if (matching_extension != extensions.end())
-          {
-            auto functions = matching_extension->get_function_name_ranges();
-            auto variables = matching_extension->get_variable_name_ranges();
-            DebugBreak();
-          }
         }
 
         loaded_path = std::move(*path);
@@ -66,10 +59,9 @@ namespace siege::views
     return 0;
   }
 
-  std::set<std::wstring> exe_controller::get_strings() const
+  std::vector<std::string> get_strings(const std::filesystem::path& loaded_path, const win32::module& loaded_module)
   {
-    std::set<std::wstring> results;
-
+    std::vector<std::string> results;
     if (loaded_module)
     {
       auto file = win32::file(loaded_path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, 0);
@@ -78,6 +70,7 @@ namespace siege::views
 
       if (mapping && file_size)
       {
+        results.reserve((std::size_t)file_size->QuadPart / 32);
         auto view = mapping->MapViewOfFile(FILE_MAP_READ, (std::size_t)file_size->QuadPart);
 
         if (view)
@@ -121,7 +114,7 @@ namespace siege::views
             {
               if (std::all_of(first, second, is_ascii) && !std::all_of(first, second, is_whitespace) && !(is_whitespace(*first) && first + 1 == second - 1))
               {
-                std::wstring final;
+                std::string final;
 
                 if (is_whitespace(*first))
                 {
@@ -155,7 +148,7 @@ namespace siege::views
                     final.erase(last_char.base(), right_begin.base());
                   }
 
-                  results.emplace(std::move(final));
+                  results.emplace_back(std::move(final));
                 }
               }
             }
@@ -173,6 +166,142 @@ namespace siege::views
             }
 
           } while (first != data.end());
+        }
+      }
+    }
+
+    return results;
+  }
+
+  std::map<std::filesystem::path, std::vector<std::string>>& get_string_cache()
+  {
+    static std::map<std::filesystem::path, std::vector<std::string>> cache{};
+
+    return cache;
+  }
+
+  std::set<std::string_view> exe_controller::get_function_names() const
+  {
+    auto& cache = get_string_cache();
+    auto existing = cache.find(loaded_path);
+
+    if (existing == cache.end())
+    {
+      existing = cache.emplace(loaded_path, get_strings(loaded_path, loaded_module)).first;
+    }
+
+    std::vector<std::string_view> cache_set(existing->second.begin(), existing->second.end());
+    std::set<std::string_view> results;
+
+    if (matching_extension != extensions.end())
+    {
+
+      auto functions = matching_extension->get_function_name_ranges();
+
+      for (auto& range : functions)
+      {
+        auto& [first, last] = range;
+
+        std::set<std::size_t> first_indexes;
+        std::map<std::size_t, std::size_t> range_sizes;
+        
+        for (auto first_iter = std::find(cache_set.begin(), cache_set.end(), first); 
+            first_iter != cache_set.end(); 
+            first_iter = std::find(++first_iter, cache_set.end(), first))
+        {
+          first_indexes.emplace(std::distance(cache_set.begin(), first_iter));
+        }
+
+        for (auto index : first_indexes)
+        {
+          auto iter = cache_set.begin();
+          std::advance(iter, index);
+          auto last_iter = std::find(iter, cache_set.end(), last);
+
+          if (last_iter == cache_set.end())
+          {
+            break;
+          }
+
+          range_sizes[std::distance(iter, last_iter)] = index;
+        }
+
+        if (!range_sizes.empty())
+        {
+          auto first_iter = cache_set.begin();
+          std::advance(first_iter, range_sizes.begin()->second);
+          auto last_iter = cache_set.begin();
+          std::advance(last_iter, range_sizes.begin()->second);
+          std::advance(last_iter, range_sizes.begin()->first + 1);
+          std::copy_if(first_iter, last_iter, std::inserter(results, results.end()), [](std::string_view view) {
+            if (view.empty())
+            {
+              return false;
+            }
+
+            if (view.contains("%"))
+            {
+              return false;
+            }
+
+            auto first_count = std::count(view.begin(), view.end(), view[0]);
+            if (first_count == view.size())
+            {
+              return false;
+            }
+
+            auto space_count = std::count(view.begin(), view.end(), ' ');
+
+            if (first_count == view.size() - space_count)
+            {
+              return false;
+            }
+
+            if (view.size() > 4 && std::ispunct((int)view[0]))
+            {
+              auto first_count = std::count(view.begin(), view.begin() + 2, view[0]);
+              auto second_count = std::count(view.rbegin(), view.rbegin() + 2, view[0]);
+              return first_count != second_count;
+            }
+
+            return true;
+          });
+
+        } 
+      }
+    }
+
+    return results;
+  }
+
+  std::set<std::string_view> exe_controller::get_variable_names() const
+  {
+    auto& cache = get_string_cache();
+    auto existing = cache.find(loaded_path);
+
+    if (existing == cache.end())
+    {
+      existing = cache.emplace(loaded_path, get_strings(loaded_path, loaded_module)).first;
+    }
+
+    std::set<std::string_view> cache_set(existing->second.begin(), existing->second.end());
+    std::set<std::string_view> results;
+
+    if (matching_extension != extensions.end())
+    {
+      auto functions = matching_extension->get_variable_name_ranges();
+
+      for (auto& range : functions)
+      {
+        auto& [first, last] = range;
+
+        auto first_iter = cache_set.find(first);
+        auto last_iter = cache_set.find(last);
+
+        if (first_iter != cache_set.end() && last_iter != cache_set.end())
+        {
+          std::advance(last_iter, 1);
+          std::copy(first_iter, last_iter, std::inserter(results, results.end()));
         }
       }
     }

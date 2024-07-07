@@ -39,7 +39,7 @@ constexpr static auto game_export = siege::game_export<>{
 
 HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
-  return siege::get_name_ranges(game_export.variable_name_ranges, length, data, saved);
+  return siege::get_name_ranges(game_export.function_name_ranges, length, data, saved);
 }
 
 HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept

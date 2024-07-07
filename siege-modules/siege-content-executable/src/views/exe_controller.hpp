@@ -32,7 +32,9 @@ namespace siege::views
 
     std::map<std::wstring, std::set<std::wstring>> get_resource_names() const;
 
-    std::set<std::wstring> get_strings() const;
+    std::set<std::string_view> get_function_names() const;
+
+    std::set<std::string_view> get_variable_names() const;
 
     std::size_t load_executable(std::istream& image_stream, std::optional<std::filesystem::path>) noexcept;
   private:
