@@ -9,9 +9,13 @@
 #include <string>
 #include <vector>
 #include <set>
-#include <siege/platform/win/desktop/window_module.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/shared.hpp>
+
+// This is not yet cross platform code. But the plan is to make it so.
+#if WIN32
+#include <siege/platform/win/desktop/window_module.hpp>
+#endif
 
 namespace siege::platform
 {
@@ -19,7 +23,12 @@ namespace siege::platform
   using get_supported_format_categories = std::errc(std::size_t, wchar_t**, std::size_t*);
   using get_supported_extensions_for_category = std::errc(const wchar_t*, std::size_t count, const siege::fs_char** strings, std::size_t* fetched);
   using is_stream_supported = std::errc(storage_info* data);
-  using get_window_class_for_stream = std::errc(storage_info* data, wchar_t**);
+
+// Win32 only methods get to return HRESULT. This helps C# interop as well.
+#if WIN32
+  using get_window_class_for_stream = HRESULT(storage_info* data, wchar_t**);
+#endif
+
   // TODO Port this code to linux using a "platform::module" instead of a "win32::module"
   class content_module : public win32::window_module
   {
@@ -112,7 +121,7 @@ namespace siege::platform
     {
       std::set<siege::fs_string> results;
 
-      std::vector<const wchar_t*> temp(64, nullptr);
+      std::vector<const siege::fs_char*> temp(64, nullptr);
       std::size_t read = 0;
       if (get_supported_extensions_for_categoryProc(category.c_str(), temp.size(), temp.data(), &read) == std::errc(0))
       {
@@ -127,17 +136,19 @@ namespace siege::platform
       return is_stream_supportedProc(&data) == std::errc(0);
     }
 
+#if WIN32
     std::wstring get_window_class_for_stream(storage_info data) const noexcept
     {
       wchar_t* result;
 
-      if (get_window_class_for_streamProc(&data, &result) == std::errc(0))
+      if (get_window_class_for_streamProc(&data, &result) == S_OK)
       {
         return result;
       }
 
       return L"";
     }
+#endif
   };
 
 }// namespace siege::platform

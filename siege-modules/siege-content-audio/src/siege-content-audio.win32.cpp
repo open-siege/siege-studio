@@ -10,16 +10,16 @@ using storage_info = siege::platform::storage_info;
 extern "C" {
 extern const std::uint32_t default_file_icon = SIID_AUDIOFILES;
 
-std::errc get_window_class_for_stream(storage_info* data, wchar_t** class_name) noexcept
+HRESULT get_window_class_for_stream(storage_info* data, wchar_t** class_name) noexcept
 {
   if (!data)
   {
-    return std::errc::invalid_argument;
+    return E_INVALIDARG;
   }
 
   if (!class_name)
   {
-    return std::errc::invalid_argument;
+    return E_INVALIDARG;
   }
 
   static std::wstring empty;
@@ -38,15 +38,15 @@ std::errc get_window_class_for_stream(storage_info* data, wchar_t** class_name) 
       if (this_module.GetClassInfoExW(window_type_name))
       {
         *class_name = window_type_name.data();
-        return std::errc(0);
+        return S_OK;
       }
     }
 
-    return std::errc::invalid_argument;
+    return S_FALSE;
   }
   catch (...)
   {
-    return std::errc::invalid_argument;
+    return S_FALSE;
   }
 }
 
