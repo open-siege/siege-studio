@@ -11,7 +11,7 @@
 #include <siege/platform/win/desktop/window_module.hpp>
 #include <siege/platform/win/desktop/window_impl.hpp>
 #include <detours.h>
-#include "ExecutableIsSupported.hpp"
+#include "shared.hpp"
 #include "GetGameFunctionNames.hpp"
 #include "IdTechScriptDispatch.hpp"
 #include "MessageHandler.hpp"
@@ -42,9 +42,19 @@ constexpr std::array<void (*)(), 5> export_functions = { {
   set_gog_exports,
 } };
 
-HRESULT __stdcall ExecutableIsSupported(_In_ const wchar_t* filename) noexcept
+HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
-  return siege::ExecutableIsSupported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
+  return siege::get_name_ranges(function_name_ranges, length, data, saved);
+}
+
+HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
+{
+  return siege::get_name_ranges(variable_name_ranges, length, data, saved);
+}
+
+HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
+{
+  return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
 
 BOOL WINAPI DllMain(

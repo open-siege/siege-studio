@@ -6,9 +6,9 @@
 
 extern "C"
 {	
-	HRESULT __stdcall ExecutableIsSupported(const wchar_t* filename) noexcept;
+	HRESULT executable_is_supported(const wchar_t* filename) noexcept;
 
-	HRESULT __stdcall LaunchGameWithExtension(const wchar_t* exe_path_str, std::uint32_t argc, const wchar_t** argv, PROCESS_INFORMATION* process_info) noexcept
+	HRESULT launch_game_with_extension(const wchar_t* exe_path_str, std::uint32_t argc, const wchar_t** argv, PROCESS_INFORMATION* process_info) noexcept
 	{
 		if (!exe_path_str)
 		{
@@ -36,7 +36,7 @@ extern "C"
 
 		try
 		{
-			auto exe_is_supported = ExecutableIsSupported(exe_path.c_str());
+			auto exe_is_supported = executable_is_supported(exe_path.c_str());
 
 			if (exe_is_supported != S_OK)
 			{
@@ -92,7 +92,7 @@ extern "C"
 		return HRESULT_FROM_WIN32(last_error);
 	}
 
-	HRESULT __stdcall GetGameScriptHost(_In_ const wchar_t* game, _Outptr_ ::IDispatch** host) noexcept
+	HRESULT get_game_script_host(_In_ const wchar_t* game, _Outptr_ ::IDispatch** host) noexcept
 	{
 		if (game == nullptr || host == nullptr)
 		{

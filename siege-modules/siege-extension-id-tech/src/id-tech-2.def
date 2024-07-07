@@ -1,5 +1,7 @@
 EXPORTS
 	DetourFinishHelperProcess @1
-	LaunchGameWithExtension
-	GetGameScriptHost
-	ExecutableIsSupported
+	launch_game_with_extension
+	get_game_script_host
+	executable_is_supported
+	get_function_name_ranges
+	get_variable_name_ranges

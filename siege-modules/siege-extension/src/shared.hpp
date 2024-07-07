@@ -1,5 +1,5 @@
-#ifndef EXE_IS_SUPPORTED_HPP
-#define EXE_IS_SUPPORTED_HPP
+#ifndef EXT_SHARED_HPP
+#define EXT_SHARED_HPP
 
 #include <filesystem>
 #include <span>
@@ -10,10 +10,47 @@
 
 namespace siege
 {
-  HRESULT ExecutableIsSupported(const wchar_t* filename, 
-        const auto& verification_strings,
-        const auto& function_name_ranges,
-        const auto& variable_name_ranges) noexcept
+  template<std::size_t PairCount>
+  HRESULT get_name_ranges(
+    const std::array<std::pair<std::string_view, std::string_view>, PairCount>& ranges,
+    std::size_t length,
+    std::array<const char*, 2>* data,
+    std::size_t* saved) noexcept
+  {
+    if ((length == 0 || data == nullptr) && saved)
+    {
+      *saved = ranges.size();
+      return S_OK;
+    }
+
+    if (!data)
+    {
+      return E_POINTER;
+    }
+
+    auto i = 0u;
+
+    length = std::clamp<std::size_t>(length, 0, ranges.size());
+
+    for (; i < length; ++i)
+    {
+
+      data[i][0] = ranges[i].first.data();
+      data[i][1] = ranges[i].second.data();
+    }
+
+    if (saved)
+    {
+      *saved = i;
+    }
+
+    return i == length ? S_OK : S_FALSE;
+  }
+
+  HRESULT executable_is_supported(const wchar_t* filename,
+    const auto& verification_strings,
+    const auto& function_name_ranges,
+    const auto& variable_name_ranges) noexcept
   {
     if (filename == nullptr)
     {
@@ -48,7 +85,7 @@ namespace siege
           return data.find(item.first) != std::string_view::npos;
         });
 
-        bool has_all_functions = has_all_verification_strings && std::all_of(function_name_ranges.begin(), function_name_ranges.end(), [&](auto& item) {
+        bool has_all_functions = has_all_verification_strings && !function_name_ranges.empty() && std::all_of(function_name_ranges.begin(), function_name_ranges.end(), [&](auto& item) {
           auto first_index = data.find(item.first);
 
           if (first_index != std::string_view::npos)
@@ -58,7 +95,7 @@ namespace siege
           return false;
         });
 
-        bool has_all_variables = has_all_functions && std::all_of(variable_name_ranges.begin(), variable_name_ranges.end(), [&](auto& item) {
+        bool has_all_variables = has_all_functions && !variable_name_ranges.empty() && std::all_of(variable_name_ranges.begin(), variable_name_ranges.end(), [&](auto& item) {
           auto first_index = data.find(item.first);
 
           if (first_index != std::string_view::npos)
@@ -79,6 +116,6 @@ namespace siege
     }
   }
 
-}
+}// namespace siege
 
 #endif// !EXE_IS_SUPPORTED_HPP

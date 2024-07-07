@@ -12,7 +12,7 @@
 #include <siege/platform/win/desktop/window_module.hpp>
 #include <siege/platform/win/desktop/window_impl.hpp>
 #include <detours.h>
-#include "ExecutableIsSupported.hpp"
+#include "shared.hpp"
 #include "GameExport.hpp"
 #include "GetGameFunctionNames.hpp"
 #include "IdTechScriptDispatch.hpp"
@@ -37,67 +37,19 @@ constexpr static auto game_export = siege::game_export<>{
   .console_eval = 0x4774b0
 };
 
-HRESULT __stdcall GetFunctionNameRanges(std::array<wchar_t*, 2>* data, std::size_t length, std::size_t* saved) noexcept
+HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
-  if (!data)
-  {
-    return E_POINTER;
-  }
-
-  auto i = 0u;
-
-  if (length > game_export.function_name_ranges.size())
-  {
-    length = game_export.function_name_ranges.size();
-  }
-
-  for (; i < length; ++i)
-  {
-
-    data[i][0] = win32::com::com_string(game_export.function_name_ranges[i].first).release();
-    data[i][1] = win32::com::com_string(game_export.function_name_ranges[i].second).release();
-  }
-
-  if (saved)
-  {
-    *saved = i;
-  }
-
-  return i == length ? S_OK : S_FALSE;
+  return siege::get_name_ranges(game_export.variable_name_ranges, length, data, saved);
 }
 
-HRESULT __stdcall GetVariableNameRanges(std::array<wchar_t*, 2>* data, std::size_t length, std::size_t* saved) noexcept
+HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
-  if (!data)
-  {
-    return E_POINTER;
-  }
-
-  auto i = 0u;
-
-  if (length > game_export.variable_name_ranges.size())
-  {
-    length = game_export.variable_name_ranges.size();
-  }
-
-  for (; i < length; ++i)
-  {
-    data[i][0] = win32::com::com_string(game_export.variable_name_ranges[i].first).release();
-    data[i][1] = win32::com::com_string(game_export.variable_name_ranges[i].second).release();
-  }
-
-  if (saved)
-  {
-    *saved = i;
-  }
-
-  return i == length ? S_OK : S_FALSE;
+  return siege::get_name_ranges(game_export.variable_name_ranges, length, data, saved);
 }
 
-
-HRESULT __stdcall ExecutableIsSupported(_In_ const wchar_t* filename) noexcept
+HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
 {
-  return siege::ExecutableIsSupported(filename, game_export.verification_strings, game_export.function_name_ranges, game_export.variable_name_ranges);
+  return siege::executable_is_supported(filename, game_export.verification_strings, game_export.function_name_ranges, game_export.variable_name_ranges);
 }
 
 BOOL WINAPI DllMain(

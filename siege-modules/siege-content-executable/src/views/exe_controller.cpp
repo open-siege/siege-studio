@@ -47,8 +47,15 @@ namespace siege::views
           extensions = platform::game_extension_module::load_modules(app_path);
 
           matching_extension = std::find_if(extensions.begin(), extensions.end(), [&](platform::game_extension_module& ext) {
-            return ext.ExecutableIsSupported(*path);
+            return ext.executable_is_supported(*path) == true;
           });
+
+          if (matching_extension != extensions.end())
+          {
+            auto functions = matching_extension->get_function_name_ranges();
+            auto variables = matching_extension->get_variable_name_ranges();
+            DebugBreak();
+          }
         }
 
         loaded_path = std::move(*path);
