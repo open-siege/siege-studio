@@ -31,7 +31,7 @@ namespace siege::views
     {
       auto control_factory = win32::window_factory(ref());
 
-      resource_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
+      resource_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
 
       resource_table.InsertColumn(-1, LVCOLUMNW{
                                         .pszText = const_cast<wchar_t*>(L"Name"),
@@ -43,9 +43,14 @@ namespace siege::views
 
       resource_table.EnableGroupView(true);
 
+      string_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
       string_table.InsertColumn(-1, LVCOLUMNW{
                                       .pszText = const_cast<wchar_t*>(L"Text"),
                                     });
+
+      string_table.EnableGroupView(true);
+
+      launch_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
 
       launch_table.InsertColumn(-1, LVCOLUMNW{
                                       .pszText = const_cast<wchar_t*>(L"Type"),
@@ -134,8 +139,34 @@ namespace siege::views
 
         resource_table.InsertGroups(groups);
 
+        groups.clear();
+        groups.reserve(2);
+
         auto functions = controller.get_function_names();
+        std::vector<win32::list_view_item> items;
+        items.reserve(functions.size());
+
+        for (auto& child : functions)
+        {
+          items.emplace_back(win32::list_view_item(win32::widen(child)));
+        }
+
+        auto& group1 = groups.emplace_back(L"Script/Console Functions", std::move(items));
+        group1.state = LVGS_COLLAPSIBLE;
+
         auto variables = controller.get_variable_names();
+        items.clear();
+        items.reserve(variables.size());
+
+        for (auto& child : variables)
+        {
+          items.emplace_back(win32::list_view_item(win32::widen(child)));
+        }
+
+        auto& group2 = groups.emplace_back(L"Script/Console Variables", std::move(items));
+        group2.state = LVGS_COLLAPSIBLE;
+
+        string_table.InsertGroups(groups);
 
         return TRUE;
       }

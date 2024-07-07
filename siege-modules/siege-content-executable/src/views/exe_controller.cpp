@@ -180,6 +180,83 @@ namespace siege::views
     return cache;
   }
 
+  std::set<std::string_view> get_function_names_for_range(auto functions, std::vector<std::string_view> strings)
+  {
+    std::set<std::string_view> results;
+    for (auto& range : functions)
+    {
+      auto& [first, last] = range;
+
+      std::set<std::size_t> first_indexes;
+      std::map<std::size_t, std::size_t> range_sizes;
+
+      for (auto first_iter = std::find(strings.begin(), strings.end(), first);
+           first_iter != strings.end();
+           first_iter = std::find(++first_iter, strings.end(), first))
+      {
+        first_indexes.emplace(std::distance(strings.begin(), first_iter));
+      }
+
+      for (auto index : first_indexes)
+      {
+        auto iter = strings.begin();
+        std::advance(iter, index);
+        auto last_iter = std::find(iter, strings.end(), last);
+
+        if (last_iter == strings.end())
+        {
+          break;
+        }
+
+        range_sizes[std::distance(iter, last_iter)] = index;
+      }
+
+      if (!range_sizes.empty())
+      {
+        auto first_iter = strings.begin();
+        std::advance(first_iter, range_sizes.begin()->second);
+        auto last_iter = strings.begin();
+        std::advance(last_iter, range_sizes.begin()->second);
+        std::advance(last_iter, range_sizes.begin()->first + 1);
+        std::copy_if(first_iter, last_iter, std::inserter(results, results.end()), [](std::string_view view) {
+          if (view.empty())
+          {
+            return false;
+          }
+
+          if (view.contains("%"))
+          {
+            return false;
+          }
+
+          auto first_count = std::count(view.begin(), view.end(), view[0]);
+          if (first_count == view.size())
+          {
+            return false;
+          }
+
+          auto space_count = std::count(view.begin(), view.end(), ' ');
+
+          if (first_count == view.size() - space_count)
+          {
+            return false;
+          }
+
+          if (view.size() > 4 && std::ispunct((int)view[0]))
+          {
+            auto first_count = std::count(view.begin(), view.begin() + 2, view[0]);
+            auto second_count = std::count(view.rbegin(), view.rbegin() + 2, view[0]);
+            return first_count != second_count;
+          }
+
+          return true;
+        });
+      }
+    }
+
+    return results;
+  }
+
   std::set<std::string_view> exe_controller::get_function_names() const
   {
     auto& cache = get_string_cache();
@@ -190,85 +267,12 @@ namespace siege::views
       existing = cache.emplace(loaded_path, get_strings(loaded_path, loaded_module)).first;
     }
 
-    std::vector<std::string_view> cache_set(existing->second.begin(), existing->second.end());
     std::set<std::string_view> results;
 
     if (matching_extension != extensions.end())
     {
-
-      auto functions = matching_extension->get_function_name_ranges();
-
-      for (auto& range : functions)
-      {
-        auto& [first, last] = range;
-
-        std::set<std::size_t> first_indexes;
-        std::map<std::size_t, std::size_t> range_sizes;
-        
-        for (auto first_iter = std::find(cache_set.begin(), cache_set.end(), first); 
-            first_iter != cache_set.end(); 
-            first_iter = std::find(++first_iter, cache_set.end(), first))
-        {
-          first_indexes.emplace(std::distance(cache_set.begin(), first_iter));
-        }
-
-        for (auto index : first_indexes)
-        {
-          auto iter = cache_set.begin();
-          std::advance(iter, index);
-          auto last_iter = std::find(iter, cache_set.end(), last);
-
-          if (last_iter == cache_set.end())
-          {
-            break;
-          }
-
-          range_sizes[std::distance(iter, last_iter)] = index;
-        }
-
-        if (!range_sizes.empty())
-        {
-          auto first_iter = cache_set.begin();
-          std::advance(first_iter, range_sizes.begin()->second);
-          auto last_iter = cache_set.begin();
-          std::advance(last_iter, range_sizes.begin()->second);
-          std::advance(last_iter, range_sizes.begin()->first + 1);
-          std::copy_if(first_iter, last_iter, std::inserter(results, results.end()), [](std::string_view view) {
-            if (view.empty())
-            {
-              return false;
-            }
-
-            if (view.contains("%"))
-            {
-              return false;
-            }
-
-            auto first_count = std::count(view.begin(), view.end(), view[0]);
-            if (first_count == view.size())
-            {
-              return false;
-            }
-
-            auto space_count = std::count(view.begin(), view.end(), ' ');
-
-            if (first_count == view.size() - space_count)
-            {
-              return false;
-            }
-
-            if (view.size() > 4 && std::ispunct((int)view[0]))
-            {
-              auto first_count = std::count(view.begin(), view.begin() + 2, view[0]);
-              auto second_count = std::count(view.rbegin(), view.rbegin() + 2, view[0]);
-              return first_count != second_count;
-            }
-
-            return true;
-          });
-
-        } 
-      }
+      return get_function_names_for_range(matching_extension->get_function_name_ranges(), 
+          std::vector<std::string_view>(existing->second.begin(), existing->second.end()));
     }
 
     return results;
@@ -284,26 +288,12 @@ namespace siege::views
       existing = cache.emplace(loaded_path, get_strings(loaded_path, loaded_module)).first;
     }
 
-    std::set<std::string_view> cache_set(existing->second.begin(), existing->second.end());
     std::set<std::string_view> results;
 
     if (matching_extension != extensions.end())
     {
-      auto functions = matching_extension->get_variable_name_ranges();
-
-      for (auto& range : functions)
-      {
-        auto& [first, last] = range;
-
-        auto first_iter = cache_set.find(first);
-        auto last_iter = cache_set.find(last);
-
-        if (first_iter != cache_set.end() && last_iter != cache_set.end())
-        {
-          std::advance(last_iter, 1);
-          std::copy(first_iter, last_iter, std::inserter(results, results.end()));
-        }
-      }
+      return get_function_names_for_range(matching_extension->get_variable_name_ranges(),
+        std::vector<std::string_view>(existing->second.begin(), existing->second.end()));
     }
 
     return results;
