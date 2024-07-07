@@ -3,6 +3,7 @@
 
 #include <string_view>
 #include <istream>
+#include <map>
 #include <spanstream>
 #include <siege/platform/win/desktop/common_controls.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
@@ -12,16 +13,28 @@
 
 namespace siege::views
 {
+  using namespace std::literals;
+
   struct exe_view : win32::window_ref
   {
     exe_controller controller;
 
-    // TODO implement tabbing of each table
-    win32::tab_control tabs;
-
     win32::list_view resource_table;
     win32::list_view string_table;
     win32::list_view launch_table;
+
+    std::map<std::wstring_view, std::wstring_view> group_names = {
+      { L"#1"sv, L"Hardware Dependent Cursor"sv },
+      { L"#2"sv, L"Bitmap"sv },
+      { L"#3"sv, L"Hardware Dependent Icon"sv },
+      { L"#6"sv, L"String Table"sv },
+      { L"#8"sv, L"Font"sv },
+      { L"#10"sv, L"Raw Data"sv },
+      { L"#12"sv, L"Hardware Independent Cursor"sv },
+      { L"#14"sv, L"Hardware Independent Icon"sv },
+      { L"#22"sv, L"Animated Icon"sv },
+      { L"#23"sv, L"HTML"sv },
+    };
 
     exe_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
@@ -132,9 +145,17 @@ namespace siege::views
           {
             items.emplace_back(win32::list_view_item(child));
           }
-
-          auto& group = groups.emplace_back(value.first, std::move(items));
-          group.state = LVGS_COLLAPSIBLE;
+          
+          if (group_names.contains(value.first))
+          {
+            auto& group = groups.emplace_back(std::wstring(group_names[value.first]), std::move(items));
+            group.state = LVGS_COLLAPSIBLE;
+          }
+          else
+          {
+            auto& group = groups.emplace_back(value.first, std::move(items));
+            group.state = LVGS_COLLAPSIBLE;
+          }
         }
 
         resource_table.InsertGroups(groups);
