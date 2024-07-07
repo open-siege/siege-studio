@@ -24,22 +24,22 @@ namespace siege::views
   class bmp_controller
   {
   public:
-    constexpr static auto formats = std::array<siege::fs_string_view, 16>{ { FSL ".jpg",
-      FSL ".jpeg",
-      FSL ".gif",
-      FSL ".png",
-      FSL ".tag",
-      FSL ".bmp",
-      FSL ".dib",
-      FSL ".pba",
-      FSL ".dmb",
-      FSL ".db0",
-      FSL ".db1",
-      FSL ".db2",
-      FSL ".hba",
-      FSL ".hb0",
-      FSL ".hb1",
-      FSL ".hb2" } };
+    constexpr static auto formats = std::array<siege::fs_string_view, 16>{ { FSL".jpg",
+      FSL".jpeg",
+      FSL".gif",
+      FSL".png",
+      FSL".tag",
+      FSL".bmp",
+      FSL".dib",
+      FSL".pba",
+      FSL".dmb",
+      FSL".db0",
+      FSL".db1",
+      FSL".db2",
+      FSL".hba",
+      FSL".hb0",
+      FSL".hb1",
+      FSL".hb2" } };
 
     static bool is_bmp(std::istream& image_stream) noexcept;
 
