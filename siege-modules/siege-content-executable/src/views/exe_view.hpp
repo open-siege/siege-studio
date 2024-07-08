@@ -93,19 +93,19 @@ namespace siege::views
     auto on_size(win32::size_message sized)
     {
       auto one_quarter = SIZE{ .cx = sized.client_size.cx / 4, .cy = sized.client_size.cy };
-
-      options.SetWindowPos(one_quarter);
-      options.SetWindowPos(POINT{});
-
       auto three_quarters = SIZE{ .cx = sized.client_size.cx - one_quarter.cx, .cy = sized.client_size.cy };
+
       resource_table.SetWindowPos(three_quarters);
-      resource_table.SetWindowPos(POINT{ .x = one_quarter.cx });
+      resource_table.SetWindowPos(POINT{});
 
       string_table.SetWindowPos(three_quarters);
-      string_table.SetWindowPos(POINT{ .x = one_quarter.cx });
+      string_table.SetWindowPos(POINT{});
 
       launch_table.SetWindowPos(three_quarters);
-      launch_table.SetWindowPos(POINT{ .x = one_quarter.cx });
+      launch_table.SetWindowPos(POINT{});
+
+      options.SetWindowPos(one_quarter);
+      options.SetWindowPos(POINT{ .x = three_quarters.cx });
 
       std::array<std::reference_wrapper<win32::list_view>, 3> tables = { { std::ref(resource_table), std::ref(string_table), std::ref(launch_table) } };
 

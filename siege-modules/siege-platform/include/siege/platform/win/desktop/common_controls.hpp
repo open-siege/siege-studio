@@ -765,11 +765,16 @@ namespace win32
         style));
     }
 
-    [[maybe_unused]] inline bool InsertButton(wparam_t index, TBBUTTON button)
+    [[maybe_unused]] inline bool InsertButton(wparam_t index, TBBUTTON button, bool auto_id = true)
     {
       if (index < 0)
       {
         index = ButtonCount() - index + 1;
+      }
+
+      if (auto_id)
+      {
+        button.idCommand = ButtonCount();
       }
 
       SendMessageW(*this, TB_BUTTONSTRUCTSIZE, sizeof(TBBUTTON), 0);

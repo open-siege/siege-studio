@@ -46,12 +46,8 @@ namespace siege::views
       selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS });
 
-      selection.InsertString(-1, L"Palette 1");
-      selection.InsertString(-1, L"Palette 2");
-      selection.InsertString(-1, L"Palette 3");
-
       on_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
-      
+
       return 0;
     }
 
@@ -85,6 +81,11 @@ namespace siege::views
 
         if (size > 0)
         {
+          for (auto i = 0u; i < size; ++i)
+          {
+            selection.InsertString(-1, L"Palette" + std::to_wstring(i + 1));
+          }
+
           return TRUE;
         }
 
@@ -103,7 +104,7 @@ namespace siege::views
         win32::apply_theme(*parent, selection);
         win32::apply_theme(*parent, player_buttons);
         win32::apply_theme(*parent, render_view);
-        
+
         return 0;
       }
 
@@ -115,6 +116,32 @@ namespace siege::views
       switch (message.hdr.code)
       {
       case NM_CLICK: {
+        if (message.hdr.hwndFrom == player_buttons)
+        {
+          auto index = message.dwItemSpec;
+
+          if (index == 0)
+          {
+            auto path = controller.get_sound_path(0);
+
+            if (path)
+            {
+              media.PlaySound(*path);
+            }
+
+            auto data = controller.get_sound_data(0);
+
+            if (data)
+            {
+              media.PlaySound(*data);
+            }
+          }
+
+          if (index == 1)
+          {
+            media.StopSound();
+          }
+        }
         return 0;
       }
       default: {
