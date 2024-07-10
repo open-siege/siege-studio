@@ -644,6 +644,11 @@ namespace win32
       return SendMessageW(*this, TCM_GETITEMCOUNT, 0, 0);
     }
 
+    [[nodiscard]] inline wparam_t GetCurrentSelection()
+    {
+      return SendMessageW(*this, TCM_GETCURSEL, 0, 0);
+    }
+
     [[maybe_unused]] inline wparam_t SetCurrentSelection(wparam_t index)
     {
       return SendMessageW(*this, TCM_SETCURSEL, index, 0);
@@ -686,6 +691,16 @@ namespace win32
       }
 
       return std::nullopt;
+    }
+
+    [[maybe_unused]] inline bool SetItem(wparam_t index, TCITEMW result)
+    {
+      if (SendMessageW(*this, TCM_GETITEM, index, std::bit_cast<lparam_t>(&result)))
+      {
+        return true;
+      }
+
+      return false;
     }
 
     inline RECT AdjustRect(bool dispay_to_window, RECT rect)

@@ -18,6 +18,7 @@ namespace siege::views
   {
     win32::tree_view dir_list;
     win32::tab_control tab_control;
+    win32::button close_button;
 
     std::list<platform::content_module> loaded_modules;
     std::map<std::wstring, std::int32_t> extensions;
@@ -35,6 +36,7 @@ namespace siege::views
 
     HMENU light_menu;
     HMENU dark_menu;
+    HIMAGELIST shell_images = nullptr;
 
     bool is_dark_mode = false;
 
@@ -109,15 +111,18 @@ namespace siege::views
       auto& current_path = folders.emplace_back(std::move(path));
       std::array<win32::tree_view_item, 1> root{ win32::tree_view_item(current_path) };
 
+      HRESULT hresult = S_FALSE;
 
-      HIMAGELIST image_list = nullptr;
-      auto hresult = SHGetImageList(SHIL_SMALL, IID_IImageList, (void**)&image_list);
+      if (!shell_images)
+      {
+        hresult = SHGetImageList(SHIL_SMALL, IID_IImageList, (void**)&shell_images);
+      }
 
       SHSTOCKICONINFO info{ .cbSize = sizeof(SHSTOCKICONINFO) };
 
-      if (hresult == S_OK)
+      if (shell_images)
       {
-        dir_list.SetImageList(TVSIL_NORMAL, image_list);
+        dir_list.SetImageList(TVSIL_NORMAL, shell_images);
         hresult = SHGetStockIconInfo(SIID_FOLDER, SHGSI_SYSICONINDEX, &info);
 
         if (hresult == S_OK)
@@ -178,11 +183,13 @@ namespace siege::views
 
       repopulate_tree_view(std::filesystem::current_path());
 
-      tab_control = *factory.CreateWindowExW<win32::tab_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | TCS_MULTILINE | TCS_RIGHTJUSTIFY });
+      tab_control = *factory.CreateWindowExW<win32::tab_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | TCS_MULTILINE | TCS_FORCELABELLEFT });
       tab_control.InsertItem(0, TCITEMW{
                                   .mask = TCIF_TEXT,
                                   .pszText = const_cast<wchar_t*>(L"+"),
                                 });
+
+      close_button = *factory.CreateWindowExW<win32::button>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"X" });
 
       on_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
@@ -209,6 +216,16 @@ namespace siege::views
       tab_control.SetWindowPos(right_size);
 
       auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
+
+      if (auto count = tab_control.GetItemCount(); count > 1)
+      {
+        auto rect = tab_control.GetItemRect(tab_control.GetCurrentSelection());
+        auto width = (rect->right - rect->left) / 3;
+        close_button.SetWindowPos(POINT{ .x = tab_rect.left + rect->right - width, .y = tab_rect.top + rect->top });
+        close_button.SetWindowPos(SIZE{ .cx = width, .cy = rect->bottom - rect->top });
+        close_button.SetWindowPos(HWND_TOP);
+      }
+
 
       SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&tab_rect));
 
@@ -478,13 +495,20 @@ namespace siege::views
       }
       case TCN_SELCHANGING: {
         auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
-        auto tab_item = win32::tab_control(sender).GetItem(current_index);
+
+        auto tab_item = tab_control.GetItem(current_index);
         ::ShowWindow(win32::hwnd_t(tab_item->lParam), SW_HIDE);
         return 0;
       }
       case TCN_SELCHANGE: {
         auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
-        auto tab_item = win32::tab_control(sender).GetItem(current_index);
+
+        if (current_index == -1)
+        {
+          return 0;
+        }
+
+        auto tab_item = tab_control.GetItem(current_index);
 
 
         if (tab_item->lParam == 0)
@@ -495,6 +519,17 @@ namespace siege::views
         auto temp_window = win32::window_ref(win32::hwnd_t(tab_item->lParam));
 
         temp_window.SetWindowPos(HWND_TOP);
+
+        auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
+
+        if (auto count = tab_control.GetItemCount(); count > 1)
+        {
+          auto rect = tab_control.GetItemRect(current_index);
+          auto width = (rect->right - rect->left) / 3;
+           close_button.SetWindowPos(POINT{ .x = tab_rect.left + rect->right - width, .y = tab_rect.top + rect->top });
+           close_button.SetWindowPos(SIZE{ .cx = width, .cy = rect->bottom - rect->top });
+           close_button.SetWindowPos(HWND_TOP);
+        }
 
 
         ShowWindow(win32::hwnd_t(tab_item->lParam), SW_SHOW);
@@ -566,7 +601,7 @@ namespace siege::views
             .cbData = DWORD(size),
             .lpData = view.get()
           };
-          
+
           child->SetPropW(L"FilePath", path_ref);
 
           if (child->CopyData(*this, data))
@@ -575,7 +610,14 @@ namespace siege::views
 
             auto index = tab_control.GetItemCount() - 1;
 
-            tab_control.InsertItem(index, TCITEMW{ .mask = TCIF_TEXT | TCIF_PARAM, .pszText = const_cast<wchar_t*>(file_path.filename().c_str()), .lParam = win32::lparam_t(child->get()) });
+            auto temp = file_path.filename().wstring();
+            temp.resize(temp.size() + 15, ' ');
+
+            tab_control.InsertItem(index, TCITEMW{
+                                            .mask = TCIF_TEXT | TCIF_PARAM,
+                                            .pszText = temp.data(),
+                                            .lParam = win32::lparam_t(child->get()),
+                                          });
 
             SetWindowLongPtrW(*child, GWLP_ID, index + 1);
 
