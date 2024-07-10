@@ -52,12 +52,3 @@ else()
     # TODO make GTK or SDL the other platform
     add_library(siege-platform ALIAS siege-std)
 endif()
-
-add_custom_target(Siege.Platform
-        COMMAND dotnet build "${CMAKE_CURRENT_SOURCE_DIR}" --output "${CMAKE_CURRENT_BINARY_DIR}/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>"
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>/Siege.Platform.dll
-        COMMENT "Building Siege.Platform"
-)
-
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>/Siege.Platform.dll CONFIGURATIONS Debug Release RUNTIME DESTINATION bin)
