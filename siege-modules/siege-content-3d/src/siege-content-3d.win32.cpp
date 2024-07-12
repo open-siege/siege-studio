@@ -3,6 +3,7 @@
 #include <siege/platform/win/core/hresult.hpp>
 #include <siege/platform/stream.hpp>
 #include "views/dts_view.hpp"
+#include "views/dml_view.hpp"
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;
@@ -31,9 +32,20 @@ HRESULT get_window_class_for_stream(storage_info* data, wchar_t** class_name) no
   {
     static auto this_module = win32::window_module_ref::current_module();
 
-    if (dts_controller::is_dts(*stream))
+    if (dts_controller::is_shape(*stream))
     {
       static auto window_type_name = win32::type_name<dts_view>();
+
+      if (this_module.GetClassInfoExW(window_type_name))
+      {
+        *class_name = window_type_name.data();
+        return S_OK;
+      }
+    }
+
+    if (dml_controller::is_material(*stream))
+    {
+      static auto window_type_name = win32::type_name<dml_view>();
 
       if (this_module.GetClassInfoExW(window_type_name))
       {
@@ -68,10 +80,12 @@ BOOL WINAPI DllMain(
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
       this_module.RegisterClassExW(win32::window_meta_class<dts_view>());
+      this_module.RegisterClassExW(win32::window_meta_class<dml_view>());
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
       this_module.UnregisterClassW<dts_view>();
+      this_module.UnregisterClassW<dml_view>();
     }
   }
 

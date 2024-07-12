@@ -5,7 +5,7 @@
 
 namespace siege::views
 {
-	bool dts_controller::is_dts(std::istream& image_stream)
+	bool dts_controller::is_shape(std::istream& image_stream)
 	{
 		return siege::content::dts::darkstar::is_darkstar_dts(image_stream)
 			|| siege::content::dts::three_space::v1::is_3space_dts(image_stream);

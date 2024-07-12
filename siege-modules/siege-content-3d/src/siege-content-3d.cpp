@@ -6,6 +6,7 @@
 #include <array>
 #include <siege/platform/stream.hpp>
 #include "views/dts_controller.hpp"
+#include "views/dml_controller.hpp"
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;
@@ -18,9 +19,19 @@ std::errc get_supported_extensions(std::size_t count, const siege::fs_char** str
     return std::errc::invalid_argument;
   }
 
-  count = std::clamp<std::size_t>(count, 0u, dts_controller::formats.size());
+  static std::vector<siege::fs_string_view> supported_extensions = [] {
+    std::vector<siege::fs_string_view> extensions;
+    extensions.reserve(8);
 
-  std::transform(dts_controller::formats.begin(), dts_controller::formats.begin() + count, strings, [](const auto value) {
+    std::copy(dts_controller::formats.begin(), dts_controller::formats.end(), std::back_inserter(extensions));
+    std::copy(dml_controller::formats.begin(), dml_controller::formats.end(), std::back_inserter(extensions));
+
+    return extensions;
+  }();
+
+  count = std::clamp<std::size_t>(count, 0u, supported_extensions.size());
+
+  std::transform(supported_extensions.begin(), supported_extensions.begin() + count, strings, [](const auto value) {
     return value.data();
   });
 
@@ -106,7 +117,12 @@ std::errc is_stream_supported(storage_info* data) noexcept
 
   auto stream = siege::platform::create_istream(*data);
 
-  if (dts_controller::is_dts(*stream))
+  if (dts_controller::is_shape(*stream))
+  {
+    return std::errc(0);
+  }
+
+  if (dml_controller::is_material(*stream))
   {
     return std::errc(0);
   }

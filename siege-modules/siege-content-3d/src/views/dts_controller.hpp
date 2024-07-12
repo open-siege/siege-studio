@@ -12,7 +12,7 @@ namespace siege::views
   {
   public:
     constexpr static auto formats = std::array<siege::fs_string_view, 1>{{ FSL".dts" }};
-    static bool is_dts(std::istream& image_stream);
+    static bool is_shape(std::istream& image_stream);
 
     std::size_t load_shape(std::istream& image_stream);
   private:

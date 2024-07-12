@@ -323,8 +323,6 @@ namespace siege::views
           DWORD type = REG_DWORD;
           if (RegQueryValueExW(key, L"AppsUseLightTheme", nullptr, &type, (LPBYTE)&value, &size) == ERROR_SUCCESS)
           {
-            value == 0;
-
             is_dark_mode = value == 0;
             this->SetPropW(L"AppsUseDarkTheme", is_dark_mode);
             if (value == 1)

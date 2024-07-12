@@ -1,8 +1,8 @@
-#ifndef DARKSTARDTSCONVERTER_GL_RENDERER_HPP
-#define DARKSTARDTSCONVERTER_GL_RENDERER_HPP
+#ifndef GL_RENDERER_HPP
+#define GL_RENDERER_HPP
 
 #include <map>
-#include <SFML/OpenGL.hpp>
+#include <opengl.h>
 #include <siege/content/renderable_shape.hpp>
 
 namespace siege::views

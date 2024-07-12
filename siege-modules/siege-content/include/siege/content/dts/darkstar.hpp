@@ -8,6 +8,7 @@
 namespace siege::content::dts::darkstar
 {
   bool is_darkstar_dts(std::istream& stream);
+  bool is_darkstar_dml(std::istream& stream);
 
   shape_variant read_shape(std::istream& stream, std::optional<tag_header> file_header);
 

@@ -99,6 +99,28 @@ namespace siege::content::dts::darkstar
     return file_header.class_name == shape::v2::shape::type_name;
   }
 
+  bool is_darkstar_dml(std::istream& stream)
+  {
+    auto starting_point = stream.tellg();
+
+    tag_header file_header = {
+      read<sizeof(file_tag)>(stream),
+      read<file_info>(stream)
+    };
+
+    if (file_header.tag != pers_tag)
+    {
+      stream.seekg(starting_point, std::ios::beg);
+      return false;
+    }
+
+    file_header.class_name = read_string(stream, file_header.file_info.class_name_length);
+
+    stream.seekg(starting_point, std::ios::beg);
+
+    return file_header.class_name == material_list::v2::material_list::type_name;
+  }
+
   tag_header read_object_header(std::istream& stream)
   {
     tag_header file_header = {

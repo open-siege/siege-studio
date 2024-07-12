@@ -1,5 +1,5 @@
-#ifndef PAL_VIEW_HPP
-#define PAL_VIEW_HPP
+#ifndef DTS_VIEW_HPP
+#define DTS_VIEW_HPP
 
 #include <string_view>
 #include <istream>
@@ -59,7 +59,7 @@ namespace siege::views
 		{
 			std::spanstream stream(message.data);
 			
-			if (controller.is_dts(stream))
+			if (controller.is_shape(stream))
 			{
 				auto size = controller.load_shape(stream);
 
@@ -67,8 +67,6 @@ namespace siege::views
 				{
 					return TRUE;
 				}
-
-				return FALSE;
 			}
 
 			return FALSE;
