@@ -653,10 +653,32 @@ namespace siege::views
           return existing.c_str() == (wchar_t*)notification.itemNew.lParam;
         });
 
+        auto folder = std::find_if(folders.begin(), folders.end(), [&](const auto& existing) {
+          return existing.c_str() == (wchar_t*)notification.itemNew.lParam;
+        });
+
+        if (folder != folders.end() && notification.itemNew.cChildren == 0)
+        {
+          for (auto const& dir_entry : std::filesystem::directory_iterator{ *folder })
+          {
+            if (!dir_entry.is_directory())
+            {
+              auto& temp = files.emplace_back(dir_entry.path());
+              win32::tree_view_item child(temp, temp.filename());
+              child.hParent = notification.itemNew.hItem;
+              child.hInsertAfter = TVI_LAST;
+
+
+              dir_list.InsertItem(child);
+
+            }
+          }
+        }
+
         return 0;
       }
       case TVN_ITEMEXPANDING: {
-
+      
         return FALSE;
       }
       default: {
