@@ -120,20 +120,37 @@ namespace siege::views
         {
           auto index = message.dwItemSpec;
 
+          if (index == 3)
+          {
+            auto state = ::SendMessageW(player_buttons, TB_GETSTATE, 3, 0);
+
+            if (!(state & TBSTATE_CHECKED))
+            {
+              media.StopSound();
+            }
+          }
+
           if (index == 0)
           {
+            auto state = ::SendMessageW(player_buttons, TB_GETSTATE, 3, 0);
+
+            bool loop = false;
+            if (state & TBSTATE_CHECKED)
+            {
+              loop = true;
+            }
             auto path = controller.get_sound_path(0);
 
             if (path)
             {
-              media.PlaySound(*path);
+              media.PlaySound(*path, true, loop);
             }
 
             auto data = controller.get_sound_data(0);
 
             if (data)
             {
-              media.PlaySound(*data);
+              media.PlaySound(*data, true, loop);
             }
           }
 

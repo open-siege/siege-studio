@@ -23,14 +23,38 @@ namespace siege
       }
     }
 
-    bool PlaySound(std::filesystem::path path)
+    bool PlaySound(std::filesystem::path path, bool async = true, bool loop = false)
     {
-      return play_sound_utf(path.c_str(), nullptr, SND_NODEFAULT | SND_FILENAME | SND_ASYNC);
+      auto flag = SND_NODEFAULT | SND_FILENAME;
+
+      if (async)
+      {
+        flag |= SND_ASYNC;
+      }
+
+      if (loop)
+      {
+        flag |= SND_LOOP;
+      }
+
+      return play_sound_utf(path.c_str(), nullptr, flag);
     }
 
-    bool PlaySound(std::span<std::byte> data)
+    bool PlaySound(std::span<std::byte> data, bool async = true, bool loop = false)
     {
-      return play_sound_ascii((char*)data.data(), nullptr, SND_NODEFAULT | SND_MEMORY | SND_ASYNC);
+      auto flag = SND_NODEFAULT | SND_MEMORY;
+
+      if (async)
+      {
+        flag |= SND_ASYNC;
+      }
+
+      if (loop)
+      {
+        flag |= SND_LOOP;
+      }
+
+      return play_sound_ascii((char*)data.data(), nullptr, flag);
     }
 
     bool StopSound()
