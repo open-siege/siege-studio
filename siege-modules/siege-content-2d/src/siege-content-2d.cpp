@@ -42,15 +42,15 @@ std::errc get_supported_extensions(std::size_t count, const siege::fs_char** str
   return std::errc(0);
 }
 
-std::errc get_supported_format_categories(std::size_t count, const wchar_t** strings, std::size_t* fetched) noexcept
+std::errc get_supported_format_categories(std::size_t count, const char16_t** strings, std::size_t* fetched) noexcept
 {
   if (!strings)
   {
     return std::errc::invalid_argument;
   }
 
-  static auto categories = std::array<std::wstring_view, 2>{ { L"All Images",
-    L"All Palettes" } };
+  static auto categories = std::array<std::u16string_view, 2>{ { u"All Images",
+    u"All Palettes" } };
 
   count = std::clamp<std::size_t>(count, 0u, categories.size());
 
@@ -66,7 +66,7 @@ std::errc get_supported_format_categories(std::size_t count, const wchar_t** str
   return std::errc(0);
 }
 
-std::errc get_supported_extensions_for_category(const wchar_t* category, std::size_t count, const siege::fs_char** strings, std::size_t* fetched) noexcept
+std::errc get_supported_extensions_for_category(const char16_t* category, std::size_t count, const siege::fs_char** strings, std::size_t* fetched) noexcept
 {
   if (!category)
   {
@@ -78,9 +78,9 @@ std::errc get_supported_extensions_for_category(const wchar_t* category, std::si
     return std::errc::invalid_argument;
   }
 
-  std::wstring_view category_str = category;
+  std::u16string_view category_str = category;
 
-  if (category_str == L"All Images")
+  if (category_str == u"All Images")
   {
     count = std::clamp<std::size_t>(count, 0u, bmp_controller::formats.size());
 
@@ -88,7 +88,7 @@ std::errc get_supported_extensions_for_category(const wchar_t* category, std::si
       return value.data();
     });
   }
-  else if (category_str == L"All Palettes")
+  else if (category_str == u"All Palettes")
   {
     count = std::clamp<std::size_t>(count, 0u, pal_controller::formats.size());
 

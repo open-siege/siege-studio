@@ -22,7 +22,7 @@ namespace siege::views
 
     std::list<platform::content_module> loaded_modules;
     std::map<std::wstring, std::int32_t> extensions;
-    std::set<std::wstring> categories;
+    std::set<std::u16string> categories;
 
     std::list<std::filesystem::path> folders;
     std::list<std::filesystem::path> files;

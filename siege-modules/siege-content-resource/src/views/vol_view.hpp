@@ -43,12 +43,12 @@ namespace siege::views
 
     std::list<platform::content_module> modules;
 
-    std::set<std::wstring> all_categories;
-    std::map<std::wstring_view, std::set<std::wstring>> category_extensions;
-    std::map<std::wstring_view, win32::wparam_t> categories_to_groups;
-    std::map<std::wstring_view, std::wstring_view> extensions_to_categories;
+    std::set<std::u16string> all_categories;
+    std::map<std::u16string, std::set<std::wstring>> category_extensions;
+    std::map<std::u16string, win32::wparam_t> categories_to_groups;
+    std::map<std::wstring_view, std::u16string> extensions_to_categories;
     std::map<siege::platform::file_info*, win32::wparam_t> file_indices;
-    std::wstring filter_value;
+    std::u16string filter_value;
 
     vol_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
@@ -115,7 +115,7 @@ namespace siege::views
       for (auto& item : category_extensions)
       {
         auto index = table.InsertGroup(-1, LVGROUP{
-                                             .pszHeader = const_cast<wchar_t*>(item.first.data()),
+                                             .pszHeader = (wchar_t*)const_cast<char16_t*>(item.first.data()),
                                              .iGroupId = id,
                                              .state = LVGS_COLLAPSIBLE,
                                            });
@@ -341,13 +341,13 @@ namespace siege::views
           filter_value.clear();
           filter_value.resize(255, L'\0');
           HD_TEXTFILTERW string_filter{
-            .pszText = filter_value.data(),
+            .pszText = (wchar_t*)filter_value.data(),
             .cchTextMax = (int)filter_value.capacity(),
           };
 
           auto header_item = table.GetHeader().GetItem(0, { .mask = HDI_FILTER, .type = HDFT_ISSTRING, .pvFilter = &string_filter });
 
-          filter_value.resize(filter_value.find(L'\0'));
+          filter_value.resize(filter_value.find(u'\0'));
 
           if (header_item)
           {
@@ -364,7 +364,7 @@ namespace siege::views
 
             if (category_iter == categories_to_groups.end() && !filter_value.empty())
             {
-              auto extension_iter = extensions_to_categories.find(filter_value);
+              auto extension_iter = extensions_to_categories.find(std::wstring_view((wchar_t*)filter_value.data(), filter_value.size()));
 
               if (extension_iter != extensions_to_categories.end())
               {
@@ -400,7 +400,7 @@ namespace siege::views
                   continue;
                 }
 
-                if (std::wstring_view(file->filename.c_str()).find(filter_value) == std::wstring_view::npos)
+                if (file->filename.u16string().find(filter_value) == std::u16string_view::npos)
                 {
                   table.SetItem({
                     .mask = LVIF_GROUPID,

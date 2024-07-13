@@ -20,8 +20,8 @@
 namespace siege::platform
 {
   using get_supported_extensions = std::errc(std::size_t, siege::fs_char**, std::size_t*);
-  using get_supported_format_categories = std::errc(std::size_t, wchar_t**, std::size_t*);
-  using get_supported_extensions_for_category = std::errc(const wchar_t*, std::size_t count, const siege::fs_char** strings, std::size_t* fetched);
+  using get_supported_format_categories = std::errc(std::size_t, char16_t**, std::size_t*);
+  using get_supported_extensions_for_category = std::errc(const char16_t*, std::size_t count, const siege::fs_char** strings, std::size_t* fetched);
   using is_stream_supported = std::errc(storage_info* data);
 
 // Win32 only methods get to return HRESULT. This helps C# interop as well.
@@ -102,12 +102,12 @@ namespace siege::platform
       return std::vector<std::wstring>{};
     }
 
-    std::set<std::wstring> get_supported_format_categories() const noexcept
+    std::set<std::u16string> get_supported_format_categories() const noexcept
     {
-      std::set<std::wstring> results;
+      std::set<std::u16string> results;
 
       std::size_t read = 0;
-      std::vector<wchar_t*> temp(8, nullptr);
+      std::vector<char16_t*> temp(8, nullptr);
 
       if (get_supported_format_categoriesProc(temp.size(), temp.data(), &read) == std::errc(0))
       {
@@ -117,7 +117,7 @@ namespace siege::platform
       return results;
     }
 
-    std::set<siege::fs_string> get_supported_extensions_for_category(const std::wstring& category) const noexcept
+    std::set<siege::fs_string> get_supported_extensions_for_category(const std::u16string& category) const noexcept
     {
       std::set<siege::fs_string> results;
 

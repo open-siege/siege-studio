@@ -26,14 +26,14 @@ std::errc get_supported_extensions(std::size_t count, const siege::fs_char** str
   return std::errc(0);
 }
 
-std::errc get_supported_format_categories(std::size_t count, const wchar_t** strings, std::size_t* fetched) noexcept
+std::errc get_supported_format_categories(std::size_t count, const char16_t** strings, std::size_t* fetched) noexcept
 {
   if (!strings)
   {
     return std::errc::invalid_argument;
   }
 
-  static auto categories = std::array<std::wstring_view, 1>{ { L"All Configurations" } };
+  static auto categories = std::array<std::u16string_view, 1>{ { u"All Configurations" } };
 
   count = std::clamp<std::size_t>(count, 0u, categories.size());
 
@@ -44,7 +44,7 @@ std::errc get_supported_format_categories(std::size_t count, const wchar_t** str
   return std::errc(0);
 }
 
-std::errc get_supported_extensions_for_category(const wchar_t* category, std::size_t count, const siege::fs_char** strings, std::size_t* fetched) noexcept
+std::errc get_supported_extensions_for_category(const char16_t* category, std::size_t count, const siege::fs_char** strings, std::size_t* fetched) noexcept
 {
   if (!category)
   {
@@ -56,9 +56,9 @@ std::errc get_supported_extensions_for_category(const wchar_t* category, std::si
     return std::errc::invalid_argument;
   }
 
-  std::wstring_view category_str = category;
+  std::u16string_view category_str = category;
 
-  if (category_str == L"All Configurations")
+  if (category_str == u"All Configurations")
   {
     count = std::clamp<std::size_t>(count, 0u, cfg_controller::formats.size());
 
