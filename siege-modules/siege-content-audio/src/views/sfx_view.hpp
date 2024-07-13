@@ -111,6 +111,60 @@ namespace siege::views
       return std::nullopt;
     }
 
+    std::optional<win32::lresult_t> on_notify(win32::tool_bar_custom_draw_notification message)
+    {
+      if (message.ref.nmcd.dwDrawStage == CDDS_PREPAINT)
+      {
+        return CDRF_NOTIFYITEMDRAW;
+      }
+
+      if (message.ref.nmcd.dwDrawStage == CDDS_ITEMPREPAINT)
+      {
+        if (message.ref.nmcd.dwItemSpec == 0)
+        {
+          RECT rect = message.ref.nmcd.rc;
+          SIZE one_third = SIZE{ .cx = (rect.right - rect.left) / 12, .cy = (rect.bottom - rect.top) };
+          POINT vertices[] = { { rect.left, rect.top }, { rect.left + ((rect.right - rect.left) / 4), rect.top + ((rect.bottom - rect.top) / 2) }, { rect.left, rect.bottom } };
+
+          ::SelectObject(message.ref.nmcd.hdc, ::GetSysColorBrush(COLOR_BTNTEXT));
+          ::Polygon(message.ref.nmcd.hdc, vertices, sizeof(vertices) / sizeof(POINT));
+        }
+
+        if (message.ref.nmcd.dwItemSpec == 1)
+        {
+          RECT rect = message.ref.nmcd.rc;
+            
+          SIZE one_third = SIZE{ .cx = (rect.right - rect.left) / 12, .cy = (rect.bottom - rect.top) };
+          RECT left = RECT{ .left = rect.left, .top = rect.top, .right = rect.left + one_third.cx, .bottom = rect.bottom };
+          RECT middle = RECT{ .left = left.right, .top = rect.top, .right = left.right + one_third.cx, .bottom = rect.bottom };
+          RECT right = RECT{ .left = middle.right, .top = rect.top, .right = middle.right + one_third.cx, .bottom = rect.bottom };
+
+          ::FillRect(message.ref.nmcd.hdc, &left, ::GetSysColorBrush(COLOR_BTNTEXT));
+
+          ::FillRect(message.ref.nmcd.hdc, &right, ::GetSysColorBrush(COLOR_BTNTEXT));
+        }
+
+        if (message.ref.nmcd.dwItemSpec == 2)
+        {
+          auto min = std::min<int>(message.ref.nmcd.rc.right - message.ref.nmcd.rc.left, message.ref.nmcd.rc.bottom - message.ref.nmcd.rc.top);
+          RECT rect = {
+            .left = message.ref.nmcd.rc.left,
+            .top = message.ref.nmcd.rc.top,
+            .right = message.ref.nmcd.rc.left + min,
+            .bottom = message.ref.nmcd.rc.top + min
+          };
+
+          FillRect(message.ref.nmcd.hdc, &rect, ::GetSysColorBrush(COLOR_BTNTEXT));
+        }
+
+        if (message.ref.nmcd.dwItemSpec == 3)
+        {
+          return 0;
+        }
+        return CDRF_SKIPDEFAULT;
+      }
+    }
+
     std::optional<win32::lresult_t> on_notify(win32::mouse_notification message)
     {
       switch (message.hdr.code)
