@@ -1,6 +1,7 @@
 #include <siege/platform/win/desktop/common_controls.hpp>
 #include <siege/platform/win/desktop/window_impl.hpp>
 #include <siege/platform/win/desktop/window_module.hpp>
+#include <siege/platform/win/core/hresult.hpp>
 #include "views/bmp_view.hpp"
 #include "views/pal_view.hpp"
 #include "views/pal_mapping_view.hpp"
