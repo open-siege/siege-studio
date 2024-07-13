@@ -83,7 +83,7 @@ namespace siege::views
         {
           for (auto i = 0u; i < size; ++i)
           {
-            selection.InsertString(-1, L"Palette" + std::to_wstring(i + 1));
+            selection.InsertString(-1, L"Stream " + std::to_wstring(i + 1));
           }
 
           return TRUE;
@@ -140,6 +140,21 @@ namespace siege::views
           if (index == 1)
           {
             media.StopSound();
+          }
+
+          if (index == 2)
+          {
+            media.StopSound();
+          }
+
+          for (auto i = 0; i < 3; ++i)
+          {
+            if (i == index && i != 2)
+            {
+              continue;
+            }
+            auto state = ::SendMessageW(player_buttons, TB_GETSTATE, i, 0);
+            ::SendMessage(player_buttons, TB_SETSTATE, i, MAKELPARAM(state & ~TBSTATE_CHECKED, 0));
           }
         }
         return 0;
