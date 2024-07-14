@@ -15,7 +15,7 @@
 
 namespace siege::content::dts::darkstar
 {
-  class dts_renderable_shape : public renderable_shape
+  class dts_renderable_shape final : public renderable_shape
   {
   public:
     dts_renderable_shape(shape_variant shape)

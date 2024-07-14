@@ -5,7 +5,6 @@
 #include <functional>
 #include <utility>
 #include <iostream>
-#include <siege/content/mis/mission.hpp>
 #include <siege/resource/darkstar_resource.hpp>
 #include <siege/resource/three_space_resource.hpp>
 #include <siege/resource/trophy_bass_resource.hpp>
@@ -27,7 +26,6 @@ auto replace_extension(std::string output_folder)
 
 namespace dio
 {
-  namespace mis = siege::resource::mis;
   namespace vol = siege::resource::vol;
 }
 
@@ -43,7 +41,6 @@ using CreatorType = decltype(&create_archive<dio::vol::darkstar::vol_resource_re
 
 constexpr static auto vol_checkers = std::array<std::pair<CheckerType, CreatorType>, 7> {{
     { dio::vol::darkstar::vol_resource_reader::is_supported, create_archive<dio::vol::darkstar::vol_resource_reader> },
-    { dio::mis::darkstar::mis_resource_reader::is_supported, create_archive<dio::mis::darkstar::mis_resource_reader> },
     { dio::vol::three_space::vol_resource_reader::is_supported, create_archive<dio::vol::three_space::vol_resource_reader> },
     { dio::vol::three_space::rmf_resource_reader::is_supported, create_archive<dio::vol::three_space::rmf_resource_reader> },
     { dio::vol::three_space::dyn_resource_reader::is_supported, create_archive<dio::vol::three_space::dyn_resource_reader> },

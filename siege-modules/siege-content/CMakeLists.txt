@@ -6,7 +6,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 find_package(nlohmann_json REQUIRED)
 find_package(glm REQUIRED)
 find_package(Catch2 REQUIRED)
-find_package(pegtl REQUIRED)
 
 file(GLOB_RECURSE TEST_SRC_FILES src/*.test.cpp)
 file(GLOB_RECURSE WIN32_SRC_FILES src/*.win32.cpp)
@@ -22,7 +21,7 @@ endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23 POSITION_INDEPENDENT_CODE ON)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(${PROJECT_NAME} nlohmann_json::nlohmann_json glm::glm taocpp::pegtl siege-platform)
+target_link_libraries(${PROJECT_NAME} nlohmann_json::nlohmann_json glm::glm siege-platform)
 install(DIRECTORY include
         DESTINATION .
         COMPONENT devel
@@ -40,7 +39,7 @@ endif()
 add_executable(${PROJECT_NAME}-tests ${TESTABLE_SRC_FILES} ${TEST_SRC_FILES})
 set_property(TARGET ${PROJECT_NAME}-tests PROPERTY CXX_STANDARD 23)
 target_include_directories(${PROJECT_NAME}-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(${PROJECT_NAME}-tests PRIVATE Catch2::Catch2WithMain nlohmann_json::nlohmann_json glm::glm taocpp::pegtl siege-platform)
+target_link_libraries(${PROJECT_NAME}-tests PRIVATE Catch2::Catch2WithMain nlohmann_json::nlohmann_json glm::glm siege-platform)
 
 if (MSVC)
         target_compile_options(${PROJECT_NAME}-tests PRIVATE /bigobj)

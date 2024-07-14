@@ -3,7 +3,7 @@
 #include <vector>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
-#include <siege/content/tagged_data.hpp>
+#include <siege/platform/tagged_data.hpp>
 #include <siege/content/dts/3space_v2.hpp>
 
 namespace siege::content::dts::three_space

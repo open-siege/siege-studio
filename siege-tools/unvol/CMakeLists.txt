@@ -5,7 +5,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 add_executable(unvol src/unvol.cpp)
 set_property(TARGET unvol PROPERTY CXX_STANDARD 23)
-target_link_libraries(unvol siege-content siege-resource)
+target_link_libraries(unvol siege-resource)
 
 if(UNIX AND NOT APPLE)
     find_package(TBB REQUIRED)

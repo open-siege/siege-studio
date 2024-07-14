@@ -2,7 +2,7 @@
 #include <sstream>
 #include <functional>
 //#include <siege/resource/darkstar_volume.hpp>
-#include <siege/content/mis/mission.hpp>
+#include <siege/configuration/mis/mission.hpp>
 #include <siege/platform/stream.hpp>
 
 namespace siege::mis::darkstar

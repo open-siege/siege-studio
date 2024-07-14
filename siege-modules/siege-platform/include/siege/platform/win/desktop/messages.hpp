@@ -102,7 +102,7 @@ namespace win32
     HDC context;
     HWND control;
 
-    button_control_color_message(wparam_t wParam, lparam_t lParam) : context((HDC)wParam), control((HWND)control)
+    button_control_color_message(wparam_t wParam, lparam_t lParam) : context((HDC)wParam), control((HWND)lParam)
     {
     }
   };
@@ -114,7 +114,7 @@ namespace win32
     HDC context;
     HWND control;
 
-    edit_control_color_message(wparam_t wParam, lparam_t lParam) : context((HDC)wParam), control((HWND)control)
+    edit_control_color_message(wparam_t wParam, lparam_t lParam) : context((HDC)wParam), control((HWND)lParam)
     {
     }
   };
@@ -126,7 +126,7 @@ namespace win32
     HDC context;
     HWND control;
 
-    static_control_color_message(wparam_t wParam, lparam_t lParam) : context((HDC)wParam), control((HWND)control)
+    static_control_color_message(wparam_t wParam, lparam_t lParam) : context((HDC)wParam), control((HWND)lParam)
     {
     }
   };
@@ -138,7 +138,7 @@ namespace win32
     HDC context;
     HWND control;
 
-    list_box_control_color_message(wparam_t wParam, lparam_t lParam) : context((HDC)wParam), control((HWND)control)
+    list_box_control_color_message(wparam_t wParam, lparam_t lParam) : context((HDC)wParam), control((HWND)lParam)
     {
     }
   };
@@ -150,7 +150,7 @@ namespace win32
     HDC context;
     HWND control;
 
-    scroll_bar_control_color_message(wparam_t wParam, lparam_t lParam) : context((HDC)wParam), control((HWND)control)
+    scroll_bar_control_color_message(wparam_t wParam, lparam_t lParam) : context((HDC)wParam), control((HWND)lParam)
     {
     }
   };

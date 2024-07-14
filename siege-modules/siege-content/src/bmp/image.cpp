@@ -1,6 +1,6 @@
 #include <vector>
 #include <siege/content/bmp/image.hpp>
-#include <siege/content/tagged_data.hpp>
+#include <siege/platform/tagged_data.hpp>
 #include <siege/platform/stream.hpp>
 
 namespace siege::content::bmp

@@ -2,7 +2,7 @@
 #include <map>
 #include <cmath>
 #include <siege/content/bmp/bitmap.hpp>
-#include <siege/content/tagged_data.hpp>
+#include <siege/platform/tagged_data.hpp>
 #include <siege/platform/stream.hpp>
 
 namespace siege::content::bmp

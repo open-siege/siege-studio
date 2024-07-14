@@ -1,5 +1,7 @@
-#ifndef INC_3SPACESTUDIO_RENDERABLE_SHAPE_FACTORY_HPP
-#define INC_3SPACESTUDIO_RENDERABLE_SHAPE_FACTORY_HPP
+#ifndef RENDERABLE_SHAPE_FACTORY_HPP
+#define RENDERABLE_SHAPE_FACTORY_HPP
+
+#include <siege/content/renderable_shape.hpp>
 
 namespace siege::content::dts
 {

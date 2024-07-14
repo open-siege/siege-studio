@@ -9,84 +9,95 @@ namespace win32
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 
-	struct gdi_deleter
+  struct gdi_deleter
+  {
+    void operator()(HGDIOBJ gdi_obj)
     {
-        void operator()(HGDIOBJ gdi_obj)
-        {
-            assert(::DeleteObject(gdi_obj) == TRUE);
-        }
-    };
+      assert(::DeleteObject(gdi_obj) == TRUE);
+    }
+  };
 
-	struct gdi_no_deleter
+  struct hdc_deleter
+  {
+    HWND window;
+    std::optional<PAINTSTRUCT> paint_info;
+    hdc_deleter(HWND window) : window(window)
     {
-        void operator()(HGDIOBJ window) 
-        {
-        }
-    };
+    }
 
-    using gdi_bitmap = win32::auto_handle<HBITMAP, gdi_deleter>;
-    using gdi_brush = win32::auto_handle<HBRUSH, gdi_deleter>;
-    using gdi_palette = win32::auto_handle<HPALETTE, gdi_deleter>;
-    using gdi_pen = win32::auto_handle<HPEN, gdi_deleter>;
-    using gdi_font = win32::auto_handle<HFONT, gdi_deleter>;
+    hdc_deleter(HWND window, PAINTSTRUCT info) : window(window), paint_info(std::move(paint_info))
+    {
+    }
 
-	struct gdi_drawing_context_ref : win32::auto_handle<HDC, gdi_no_deleter>
-	{
-		using base = win32::auto_handle<HDC, gdi_no_deleter>;
-		using base::base;
+    void operator()(HDC dc)
+    {
+      if (paint_info)
+      {
+        ::EndPaint(window, &*paint_info);
+      }
+      else
+      {
+        ::ReleaseDC(window, dc);
+      }
+    }
+  };
 
-		auto FillRect(const ::RECT& pos, HBRUSH brush)
-		{
-			return ::FillRect(*this, &pos, brush);
-		}
-	};
+  struct gdi_no_deleter
+  {
+    void operator()(HGDIOBJ window)
+    {
+    }
+  };
+
+  using gdi_bitmap = win32::auto_handle<HBITMAP, gdi_deleter>;
+  using gdi_brush = win32::auto_handle<HBRUSH, gdi_deleter>;
+  using gdi_palette = win32::auto_handle<HPALETTE, gdi_deleter>;
+  using gdi_pen = win32::auto_handle<HPEN, gdi_deleter>;
+  using gdi_font = win32::auto_handle<HFONT, gdi_deleter>;
+
+  struct gdi_drawing_context : win32::auto_handle<HDC, hdc_deleter>
+  {
+    using base = win32::auto_handle<HDC, hdc_deleter>;
+    using base::base;
+
+    gdi_drawing_context(HWND window) : base(::GetDC(window), hdc_deleter(window))
+    {
+
+    }
+
+    gdi_drawing_context(HWND window, ::PAINTSTRUCT paint_info) : base(::BeginPaint(window, &paint_info), hdc_deleter(window, std::move(paint_info)))
+    {
+    }
+
+    auto FillRect(const ::RECT& pos, HBRUSH brush)
+    {
+      return ::FillRect(*this, &pos, brush);
+    }
+  };
+
+  struct gdi_drawing_context_ref : win32::auto_handle<HDC, gdi_no_deleter>
+  {
+    using base = win32::auto_handle<HDC, gdi_no_deleter>;
+    using base::base;
 
 
-	struct paint_context : ::PAINTSTRUCT
-	{
-		paint_context() : ::PAINTSTRUCT{}
-		{
-		}
+    auto FillRect(const ::RECT& pos, HBRUSH brush)
+    {
+      return ::FillRect(*this, &pos, brush);
+    }
+  };
 
-		struct drawing_context
-		{
-			paint_context& context;
-			hwnd_t target;
-			HDC dc;
 
-			operator HDC()
-			{
-				return dc;
-			}
-
-			auto FillRect(const ::RECT& pos, HBRUSH brush)
-			{
-				return ::FillRect(dc, &pos, brush);
-			}
-
-			~drawing_context()
-			{
-				::EndPaint(target, &context);
-			}
-		};
-
-		[[no_discard]] inline drawing_context BeginPaint(hwnd_t target)
-		{
-			return drawing_context{*this, target, ::BeginPaint(target, this)};
-		}
-	
-	};
-
-	struct rect : ::RECT
-	{
-		auto Offset(int dx, int dy)
-		{
-			return ::OffsetRect(this, dx, dy) == TRUE;
-		}
-	};
+  struct rect : ::RECT
+  {
+    auto Offset(int dx, int dy)
+    {
+      return ::OffsetRect(this, dx, dy) == TRUE;
+    }
+  };
 
 #endif
 
-}
+}// namespace win32
 
-#endif // !WIN32_SHAPES_HPP
+#endif// !WIN32_SHAPES_HPP

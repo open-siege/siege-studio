@@ -6,7 +6,7 @@
 
 namespace siege::content::dts::three_space
 {
-  class dts_renderable_shape : public renderable_shape
+  class dts_renderable_shape final : public renderable_shape
   {
   public:
     dts_renderable_shape(v1::shape_item shape)

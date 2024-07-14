@@ -5,7 +5,6 @@
 #include <siege/platform/shared.hpp>
 #include <siege/content/dts/darkstar.hpp>
 
-
 namespace siege::views
 {
   class dml_controller
@@ -16,7 +15,6 @@ namespace siege::views
     static bool is_material(std::istream& image_stream);
 
     std::size_t load_material(std::istream& image_stream);
-
     private:
     std::optional<siege::content::dts::darkstar::material_list_variant> material_list;
   };

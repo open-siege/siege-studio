@@ -2,7 +2,7 @@
 #define GL_RENDERER_HPP
 
 #include <map>
-#include <opengl.h>
+#include <GL/GL.h>
 #include <siege/content/renderable_shape.hpp>
 
 namespace siege::views

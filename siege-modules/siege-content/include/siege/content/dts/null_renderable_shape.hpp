@@ -1,11 +1,11 @@
-#ifndef INC_3SPACESTUDIO_NULL_RENDERABLE_SHAPE_HPP
-#define INC_3SPACESTUDIO_NULL_RENDERABLE_SHAPE_HPP
+#ifndef NULL_RENDERABLE_SHAPE_HPP
+#define NULL_RENDERABLE_SHAPE_HPP
 
 #include <siege/content/renderable_shape.hpp>
 
 namespace siege::content::dts
 {
-  struct null_renderable_shape : public renderable_shape
+  struct null_renderable_shape final : public renderable_shape
   {
     null_renderable_shape()
     {

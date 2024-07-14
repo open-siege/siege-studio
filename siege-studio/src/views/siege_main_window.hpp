@@ -220,7 +220,7 @@ namespace siege::views
       if (auto count = tab_control.GetItemCount(); count > 1)
       {
         auto rect = tab_control.GetItemRect(tab_control.GetCurrentSelection());
-        auto width = (rect->right - rect->left) / 3;
+        auto width = (rect->right - rect->left) / 12;
         close_button.SetWindowPos(POINT{ .x = tab_rect.left + rect->right - width, .y = tab_rect.top + rect->top });
         close_button.SetWindowPos(SIZE{ .cx = width, .cy = rect->bottom - rect->top });
         close_button.SetWindowPos(HWND_TOP);
@@ -524,9 +524,9 @@ namespace siege::views
         {
           auto rect = tab_control.GetItemRect(current_index);
           auto width = (rect->right - rect->left) / 3;
-           close_button.SetWindowPos(POINT{ .x = tab_rect.left + rect->right - width, .y = tab_rect.top + rect->top });
-           close_button.SetWindowPos(SIZE{ .cx = width, .cy = rect->bottom - rect->top });
-           close_button.SetWindowPos(HWND_TOP);
+          close_button.SetWindowPos(POINT{ .x = tab_rect.left + rect->right - width, .y = tab_rect.top + rect->top });
+          close_button.SetWindowPos(SIZE{ .cx = width, .cy = rect->bottom - rect->top });
+          close_button.SetWindowPos(HWND_TOP);
         }
 
 
@@ -608,12 +608,9 @@ namespace siege::views
 
             auto index = tab_control.GetItemCount() - 1;
 
-            auto temp = file_path.filename().wstring();
-            temp.resize(temp.size() + 15, ' ');
-
             tab_control.InsertItem(index, TCITEMW{
                                             .mask = TCIF_TEXT | TCIF_PARAM,
-                                            .pszText = temp.data(),
+                                            .pszText = (wchar_t*)file_path.filename().c_str(),
                                             .lParam = win32::lparam_t(child->get()),
                                           });
 
@@ -670,7 +667,6 @@ namespace siege::views
 
 
               dir_list.InsertItem(child);
-
             }
           }
         }
@@ -678,7 +674,7 @@ namespace siege::views
         return 0;
       }
       case TVN_ITEMEXPANDING: {
-      
+
         return FALSE;
       }
       default: {

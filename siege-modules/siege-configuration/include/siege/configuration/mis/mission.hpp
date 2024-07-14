@@ -11,7 +11,7 @@
 #include <siege/platform/resource.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
 #include <siege/platform/shared.hpp>
-#include <siege/content/tagged_data.hpp>
+#include <siege/platform/tagged_data.hpp>
 
 namespace siege::mis::darkstar
 {

@@ -7,7 +7,7 @@ list(REMOVE_ITEM LIB_SRC_FILES ${WIN32_SRC_FILES})
 
 if (WIN32)
     add_library(${PROJECT_NAME} SHARED ${LIB_SRC_FILES} ${WIN32_SRC_FILES} src/module.def)
-    target_link_libraries(${PROJECT_NAME} PRIVATE siege-win-desktop siege-content)
+    target_link_libraries(${PROJECT_NAME} PRIVATE siege-win-desktop siege-content opengl32)
 else()
     add_library(${PROJECT_NAME} SHARED ${LIB_SRC_FILES})
     target_link_libraries(${PROJECT_NAME} PRIVATE siege-content)
