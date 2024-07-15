@@ -9,6 +9,8 @@
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include "dts_controller.hpp"
 #include "gl_renderer.hpp"
+#include <glm/ext/vector_float3.hpp>
+
 
 namespace siege::views
 {
@@ -29,7 +31,13 @@ namespace siege::views
 
     std::optional<gl_renderer> renderer;
 
+    std::map<std::optional<std::string>, std::map<std::string, bool>> visible_nodes;
+    std::map<std::string, std::map<std::string, bool>> visible_objects;
+
     std::map<win32::gdi_drawing_context_ref, win32::auto_handle<HGLRC, opengl_deleter>> contexts;
+
+    glm::vec3 translation = { 0, 0, -20 };
+    content::vector3f rotation = { 115, 180, -35 };
 
     dts_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
@@ -69,6 +77,7 @@ namespace siege::views
 
         if (size > 0)
         {
+          renderer.emplace(visible_nodes, visible_objects);
           ::InvalidateRect(render_view, nullptr, TRUE);
           return TRUE;
         }
@@ -124,7 +133,18 @@ namespace siege::views
       win32::gdi_drawing_context gdi_context(render_view);
       auto context = create_or_get_gl_context(win32::gdi_drawing_context_ref(gdi_context.get()));
       glViewport(0, 0, left_size.cx, left_size.cy);
+      glClearDepth(1.f);
 
+      glEnable(GL_DEPTH_TEST);
+      glDepthMask(GL_TRUE);
+
+      glEnable(GL_CULL_FACE);
+      glCullFace(GL_BACK);
+
+      glMatrixMode(GL_PROJECTION);
+      glLoadIdentity();
+
+      perspectiveGL(90.f, double(left_size.cx) / double(left_size.cy), 1.f, 1200.0f);
       selection.SetWindowPos(right_size);
       selection.SetWindowPos(POINT{ .x = left_size.cx });
 
@@ -134,24 +154,28 @@ namespace siege::views
     auto on_control_color(win32::static_control_color_message message)
     {
       auto context = create_or_get_gl_context(win32::gdi_drawing_context_ref(message.context));
-      glClearColor(1.0f, 0.0f, 0.0f, 0.0f);
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      glClearColor(0.3f, 0.3f, 0.3f, 0.f);
+    
       return (LRESULT)GetStockBrush(DC_BRUSH);
     }
 
     auto on_draw_item(win32::draw_item_message message)
     {
-      if (message.item.hwndItem == render_view && message.item.itemAction == ODA_DRAWENTIRE)
+      if (message.item.hwndItem == render_view && message.item.itemAction == ODA_DRAWENTIRE && renderer)
       {
         auto existing_gl_context = create_or_get_gl_context(win32::gdi_drawing_context_ref(message.item.hDC));
         
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+        glTranslatef(translation.x, translation.y, translation.z);
+
+        glRotatef(rotation.x, 1.f, 0.f, 0.f);
+        glRotatef(rotation.y, 0.f, 1.f, 0.f);
+        glRotatef(rotation.z, 0.f, 0.f, 1.f);
+
         glBegin(GL_TRIANGLES);
-        glColor3f(1.0f, 0.0f, 0.0f);
-        glVertex2i(0, 1);
-        glColor3f(0.0f, 1.0f, 0.0f);
-        glVertex2i(-1, -1);
-        glColor3f(0.0f, 0.0f, 1.0f);
-        glVertex2i(1, -1);
+        controller.render_shape(0, *renderer);
         glEnd();
         glFlush();
       }
