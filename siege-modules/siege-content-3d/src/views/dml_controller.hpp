@@ -15,9 +15,11 @@ namespace siege::views
     static bool is_material(std::istream& image_stream);
 
     std::size_t load_material(std::istream& image_stream);
-    private:
+
+    std::optional<std::filesystem::path> get_filename(std::size_t index);
+  private:
     std::optional<siege::content::dts::darkstar::material_list_variant> material_list;
   };
 }// namespace siege::views
 
-#endif//DARKSTARDTSCONVERTER_DARKSTAR_DTS_VIEW_HPP
+#endif// DARKSTARDTSCONVERTER_DARKSTAR_DTS_VIEW_HPP
