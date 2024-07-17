@@ -17,12 +17,12 @@ namespace siege::views
 	    {
 	    }
 
-        auto on_create(const win32::create_message&)
+        auto wm_create(win32::create_message)
         {
             return 0;
         }
 
-        auto on_size(win32::size_message sized)
+        auto wm_size(win32::size_message sized)
 	    {
 		    return std::nullopt;
 	    }

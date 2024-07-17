@@ -43,7 +43,7 @@ namespace siege::views
     {
     }
 
-    auto on_create(const win32::create_message& info)
+    auto wm_create(win32::create_message info)
     {
       std::filesystem::path app_path = std::filesystem::path(win32::module_ref::current_application().GetModuleFileName()).parent_path();
       loaded_modules = platform::storage_module::load_modules(std::filesystem::path(app_path));
@@ -117,12 +117,12 @@ namespace siege::views
         .hwndParent = *this,
         .style = WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_REALSIZECONTROL });
 
-      on_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
+      wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
       return 0;
     }
 
-    auto on_size(win32::size_message sized)
+    auto wm_size(win32::size_message sized)
     {
       auto left_size = SIZE{ .cx = (sized.client_size.cx / 3) * 2, .cy = sized.client_size.cy };
       auto right_size = SIZE{ .cx = sized.client_size.cx - left_size.cx, .cy = sized.client_size.cy };
@@ -165,7 +165,7 @@ namespace siege::views
       return 0;
     }
 
-    std::optional<win32::lresult_t> on_setting_change(win32::setting_change_message message)
+    std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
     {
       if (message.setting == L"ImmersiveColorSet")
       {
@@ -185,7 +185,7 @@ namespace siege::views
       return std::nullopt;
     }
 
-    auto on_copy_data(win32::copy_data_message<char> message)
+    auto wm_copy_data(win32::copy_data_message<char> message)
     {
       std::spanstream stream(message.data);
 

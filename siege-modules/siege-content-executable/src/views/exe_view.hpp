@@ -41,7 +41,7 @@ namespace siege::views
     {
     }
 
-    auto on_create(const win32::create_message&)
+    auto wm_create(win32::create_message)
     {
       auto control_factory = win32::window_factory(ref());
 
@@ -90,7 +90,7 @@ namespace siege::views
       return 0;
     }
 
-    auto on_size(win32::size_message sized)
+    auto wm_size(win32::size_message sized)
     {
       auto one_quarter = SIZE{ .cx = sized.client_size.cx / 4, .cy = sized.client_size.cy };
       auto three_quarters = SIZE{ .cx = sized.client_size.cx - one_quarter.cx, .cy = sized.client_size.cy };
@@ -129,7 +129,7 @@ namespace siege::views
       return 0;
     }
 
-    std::optional<win32::lresult_t> on_notify(win32::notify_message message)
+    std::optional<win32::lresult_t> wm_notify(win32::notify_message message)
     {
       if (message.code == LBN_SELCHANGE && (message.hwndFrom == options))
       {
@@ -158,7 +158,7 @@ namespace siege::views
       return std::nullopt;
     }
 
-    auto on_copy_data(win32::copy_data_message<char> message)
+    auto wm_copy_data(win32::copy_data_message<char> message)
     {
       std::spanstream stream(message.data);
 
@@ -238,7 +238,7 @@ namespace siege::views
       return FALSE;
     }
 
-    std::optional<win32::lresult_t> on_setting_change(win32::setting_change_message message)
+    std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
     {
       if (message.setting == L"ImmersiveColorSet")
       {

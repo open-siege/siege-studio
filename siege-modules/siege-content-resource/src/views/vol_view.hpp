@@ -54,7 +54,7 @@ namespace siege::views
     {
     }
 
-    auto on_create(const win32::create_message& data)
+    auto wm_create(win32::create_message data)
     {
       auto app_path = std::filesystem::path(win32::module_ref().current_application().GetModuleFileName());
       modules = platform::content_module::load_modules(app_path.parent_path());
@@ -155,12 +155,12 @@ namespace siege::views
       header.SetWindowStyle(style | HDS_FILTERBAR);
       header.SetFilterChangeTimeout();
 
-      on_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
+      wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
       return 0;
     }
 
-    auto on_size(win32::size_message sized)
+    auto wm_size(win32::size_message sized)
     {
       auto top_size = SIZE{ .cx = sized.client_size.cx, .cy = sized.client_size.cy / 12 };
       table_settings.SetWindowPos(top_size);
@@ -184,7 +184,7 @@ namespace siege::views
 
     inline static std::set<std::wstring> strings;
 
-    std::optional<win32::lresult_t> on_setting_change(win32::setting_change_message message)
+    std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
     {
       if (message.setting == L"ImmersiveColorSet")
       {
@@ -201,7 +201,7 @@ namespace siege::views
       return std::nullopt;
     }
 
-    auto on_copy_data(win32::copy_data_message<char> message)
+    auto wm_copy_data(win32::copy_data_message<char> message)
     {
       std::spanstream stream(message.data);
 
@@ -251,7 +251,7 @@ namespace siege::views
       return FALSE;
     }
 
-    auto on_erase_background(win32::erase_background_message message)
+    auto wm_erase_background(win32::erase_background_message message)
     {
       static auto black_brush = ::CreateSolidBrush(0x00000000);
       auto context = win32::gdi_drawing_context_ref(message.context);
@@ -262,7 +262,7 @@ namespace siege::views
       return TRUE;
     }
 
-    std::optional<win32::lresult_t> on_notify(win32::list_view_item_activation message)
+    std::optional<win32::lresult_t> wm_notify(win32::list_view_item_activation message)
     {
       switch (message.hdr.code)
       {
@@ -311,7 +311,7 @@ namespace siege::views
       }
     }
 
-    std::optional<win32::lresult_t> on_notify(win32::mouse_notification message)
+    std::optional<win32::lresult_t> wm_notify(win32::mouse_notification message)
     {
       switch (message.hdr.code)
       {
@@ -325,12 +325,12 @@ namespace siege::views
       }
     }
 
-    std::optional<win32::lresult_t> on_notify(win32::header_filter_button_notification message)
+    std::optional<win32::lresult_t> wm_notify(win32::header_filter_button_notification message)
     {
       return FALSE;
     }
 
-    std::optional<win32::lresult_t> on_notify(win32::header_notification message)
+    std::optional<win32::lresult_t> wm_notify(win32::header_notification message)
     {
       switch (message.hdr.code)
       {

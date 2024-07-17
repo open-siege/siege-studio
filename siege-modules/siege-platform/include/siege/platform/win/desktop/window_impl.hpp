@@ -19,83 +19,83 @@ namespace win32
   template<typename TWindow>
   std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
   {
-    DO_DISPATCH(create_message, on_create);
-    DO_DISPATCH(init_dialog_message, on_init_dialog);
-    DO_DISPATCH(destroy_message, on_destroy);
-    DO_DISPATCH(get_object_message, on_get_object);
-    DO_DISPATCH(size_message, on_size);
-    DO_DISPATCH(pos_changed_message, on_pos_changed);
-    DO_DISPATCH(paint_message, on_paint);
-    DO_DISPATCH(erase_background_message, on_erase_background);
-    DO_DISPATCH(draw_item_message, on_draw_item);
-    DO_DISPATCH(measure_item_message, on_measure_item);
-    DO_DISPATCH(setting_change_message, on_setting_change);
+    DO_DISPATCH(create_message, wm_create);
+    DO_DISPATCH(init_dialog_message, wm_init_dialog);
+    DO_DISPATCH(destroy_message, wm_destroy);
+    DO_DISPATCH(get_object_message, wm_get_object);
+    DO_DISPATCH(size_message, wm_size);
+    DO_DISPATCH(pos_changed_message, wm_pos_changed);
+    DO_DISPATCH(paint_message, wm_paint);
+    DO_DISPATCH(erase_background_message, wm_erase_background);
+    DO_DISPATCH(draw_item_message, wm_draw_item);
+    DO_DISPATCH(measure_item_message, wm_measure_item);
+    DO_DISPATCH(setting_change_message, wm_setting_change);
 
-    DO_DISPATCH(button_control_color_message, on_control_color);
-    DO_DISPATCH(list_box_control_color_message, on_control_color);
-    DO_DISPATCH(scroll_bar_control_color_message, on_control_color);
-    DO_DISPATCH(edit_control_color_message, on_control_color);
-    DO_DISPATCH(static_control_color_message, on_control_color);
+    DO_DISPATCH(button_control_color_message, wm_control_color);
+    DO_DISPATCH(list_box_control_color_message, wm_control_color);
+    DO_DISPATCH(scroll_bar_control_color_message, wm_control_color);
+    DO_DISPATCH(edit_control_color_message, wm_control_color);
+    DO_DISPATCH(static_control_color_message, wm_control_color);
 
-    DO_DISPATCH(keyboard_key_up_message, on_keyboard_key_up);
-    DO_DISPATCH(keyboard_key_down_message, on_keyboard_key_down);
-    DO_DISPATCH(keyboard_char_message, on_keyboard_char);
-    DO_DISPATCH(input_message, on_input);
-    DO_DISPATCH(input_device_change_message, on_input_device_change);
+    DO_DISPATCH(keyboard_key_up_message, wm_keyboard_key_up);
+    DO_DISPATCH(keyboard_key_down_message, wm_keyboard_key_down);
+    DO_DISPATCH(keyboard_char_message, wm_keyboard_char);
+    DO_DISPATCH(input_message, wm_input);
+    DO_DISPATCH(input_device_change_message, wm_input_device_change);
 
-    if constexpr (requires(TWindow t) { t.on_copy_data(copy_data_message<char>{ wParam, lParam }); })
+    if constexpr (requires(TWindow t) { t.wm_copy_data(copy_data_message<char>{ wParam, lParam }); })
     {
       if (message == copy_data_message<char>::id)
       {
-        return self->on_copy_data(copy_data_message<char>{ wParam, lParam });
+        return self->wm_copy_data(copy_data_message<char>{ wParam, lParam });
       }
     }
 
-    if constexpr (requires(TWindow t) { t.on_copy_data(copy_data_message<std::uint8_t>{ wParam, lParam }); })
+    if constexpr (requires(TWindow t) { t.wm_copy_data(copy_data_message<std::uint8_t>{ wParam, lParam }); })
     {
       if (message == copy_data_message<std::uint8_t>::id)
       {
-        return self->on_copy_data(copy_data_message<std::uint8_t>{ wParam, lParam });
+        return self->wm_copy_data(copy_data_message<std::uint8_t>{ wParam, lParam });
       }
     }
 
-    if constexpr (requires(TWindow t) { t.on_copy_data(copy_data_message<std::byte>{ wParam, lParam }); })
+    if constexpr (requires(TWindow t) { t.wm_copy_data(copy_data_message<std::byte>{ wParam, lParam }); })
     {
       if (message == copy_data_message<std::byte>::id)
       {
-        return self->on_copy_data(copy_data_message<std::byte>{ wParam, lParam });
+        return self->wm_copy_data(copy_data_message<std::byte>{ wParam, lParam });
       }
     }
 
-    if constexpr (requires(TWindow t) { t.on_command(menu_command{ wParam, lParam }); })
+    if constexpr (requires(TWindow t) { t.wm_command(menu_command{ wParam, lParam }); })
     {
       if (message == command_message::id && menu_command::is_menu_command(wParam, lParam))
       {
-        return self->on_command(menu_command{ wParam, lParam });
+        return self->wm_command(menu_command{ wParam, lParam });
       }
     }
 
-    if constexpr (requires(TWindow t) { t.on_command(accelerator_command{ wParam, lParam }); })
+    if constexpr (requires(TWindow t) { t.wm_command(accelerator_command{ wParam, lParam }); })
     {
       if (message == command_message::id && accelerator_command::is_accelerator_command(wParam, lParam))
       {
-        return self->on_command(accelerator_command{ wParam, lParam });
+        return self->wm_command(accelerator_command{ wParam, lParam });
       }
     }
 
-    if constexpr (requires(TWindow t) { t.on_command(command_message{ wParam, lParam }); })
+    if constexpr (requires(TWindow t) { t.wm_command(command_message{ wParam, lParam }); })
     {
       if (message == command_message::id)
       {
-        return self->on_command(command_message{ wParam, lParam });
+        return self->wm_command(command_message{ wParam, lParam });
       }
     }
 
-    if constexpr (requires(TWindow t) { t.on_notify(notify_message{ wParam, lParam }); })
+    if constexpr (requires(TWindow t) { t.wm_notify(notify_message{ wParam, lParam }); })
     {
       if (message == command_message::id && !(accelerator_command::is_accelerator_command(wParam, lParam) || menu_command::is_menu_command(wParam, lParam)))
       {
-        return self->on_notify(notify_message{ command_message{ wParam, lParam } });
+        return self->wm_notify(notify_message{ command_message{ wParam, lParam } });
       }
     }
 
@@ -106,96 +106,91 @@ namespace win32
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 
-      if constexpr (requires(TWindow t) { t.on_notify(tree_view_notification{ wParam, lParam }); })
+      if constexpr (requires(TWindow t) { t.wm_notify(tree_view_notification{ wParam, lParam }); })
       {
         if (header.code == TVN_ITEMEXPANDINGW || header.code == TVN_ITEMEXPANDEDW || header.code == TVN_SELCHANGINGW || header.code == TVN_SELCHANGEDW || header.code == TVN_SINGLEEXPAND || header.code == TVN_BEGINDRAGW || header.code == TVN_DELETEITEMW)
         {
-          return self->on_notify(tree_view_notification{ wParam, lParam });
+          return self->wm_notify(tree_view_notification{ wParam, lParam });
         }
       }
 
-      if constexpr (requires(TWindow t) { t.on_notify(list_view_custom_draw_notification{ wParam, lParam }); })
+      if constexpr (requires(TWindow t) { t.wm_notify(list_view_custom_draw_notification{ wParam, lParam }); })
       {
         if (header.code == NM_CUSTOMDRAW
             && ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == WC_LISTVIEWW)
         {
-          return self->on_notify(list_view_custom_draw_notification{ wParam, lParam });
+          return self->wm_notify(list_view_custom_draw_notification{ wParam, lParam });
         }
       }
 
-      if constexpr (requires(TWindow t) { t.on_notify(tree_view_custom_draw_notification{ wParam, lParam }); })
+      if constexpr (requires(TWindow t) { t.wm_notify(tree_view_custom_draw_notification{ wParam, lParam }); })
       {
         if (header.code == NM_CUSTOMDRAW
             && ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == WC_TREEVIEWW)
         {
-          return self->on_notify(tree_view_custom_draw_notification{ wParam, lParam });
+          return self->wm_notify(tree_view_custom_draw_notification{ wParam, lParam });
         }
       }
 
-      if constexpr (requires(TWindow t) { t.on_notify(tool_bar_custom_draw_notification{ wParam, lParam }); })
+      if constexpr (requires(TWindow t) { t.wm_notify(tool_bar_custom_draw_notification{ wParam, lParam }); })
       {
         if (header.code == NM_CUSTOMDRAW
             && ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == TOOLBARCLASSNAMEW)
         {
-          return self->on_notify(tool_bar_custom_draw_notification{ wParam, lParam });
+          return self->wm_notify(tool_bar_custom_draw_notification{ wParam, lParam });
         }
       }
 
-      if constexpr (requires(TWindow t) { t.on_notify(custom_draw_notification{ wParam, lParam }); })
+      if constexpr (requires(TWindow t) { t.wm_notify(custom_draw_notification{ wParam, lParam }); })
       {
         if (header.code == NM_CUSTOMDRAW)
         {
-          return self->on_notify(custom_draw_notification{ wParam, lParam });
+          return self->wm_notify(custom_draw_notification{ wParam, lParam });
         }
       }
 
-      if constexpr (requires(TWindow t) { t.on_notify(header_filter_button_notification{ wParam, lParam }); })
+      if constexpr (requires(TWindow t) { t.wm_notify(header_filter_button_notification{ wParam, lParam }); })
       {
         if (header.code == HDN_FILTERBTNCLICK)
         {
-          return self->on_notify(header_filter_button_notification{ wParam, lParam });
+          return self->wm_notify(header_filter_button_notification{ wParam, lParam });
         }
       }
 
-      if constexpr (requires(TWindow t) { t.on_notify(header_notification{ wParam, lParam }); })
+      if constexpr (requires(TWindow t) { t.wm_notify(header_notification{ wParam, lParam }); })
       {
         if (header.code == HDN_FILTERCHANGE || header.code == HDN_BEGINFILTEREDIT || header.code == HDN_ENDFILTEREDIT || header.code == HDN_ITEMCLICK || header.code == HDN_ITEMDBLCLICK || header.code == HDN_ITEMKEYDOWN || header.code == HDN_ITEMSTATEICONCLICK || header.code == HDN_OVERFLOWCLICK || header.code == HDN_DIVIDERDBLCLICK)
         {
-          return self->on_notify(header_notification{ wParam, lParam });
+          return self->wm_notify(header_notification{ wParam, lParam });
         }
       }
 
-      if constexpr (requires(TWindow t) { t.on_notify(list_view_item_activation{ wParam, lParam }); })
+      if constexpr (requires(TWindow t) { t.wm_notify(list_view_item_activation{ wParam, lParam }); })
       {
         if ((header.code == NM_CLICK || header.code == NM_DBLCLK || header.code == NM_RCLICK || header.code == NM_RDBLCLK)
             && ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == WC_LISTVIEWW)
         {
-          return self->on_notify(list_view_item_activation{ wParam, lParam });
+          return self->wm_notify(list_view_item_activation{ wParam, lParam });
         }
       }
 
-      if constexpr (requires(TWindow t) { t.on_notify(mouse_notification{ wParam, lParam }); })
+      if constexpr (requires(TWindow t) { t.wm_notify(mouse_notification{ wParam, lParam }); })
       {
         if ((header.code == NM_CLICK || header.code == NM_DBLCLK || header.code == NM_RCLICK || header.code == NM_RDBLCLK)
             && ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == TOOLBARCLASSNAMEW)
         {
-          return self->on_notify(mouse_notification{ wParam, lParam });
+          return self->wm_notify(mouse_notification{ wParam, lParam });
         }
       }
 #endif
 
-      if constexpr (requires(TWindow t) { t.on_notify(notify_message{ wParam, lParam }); })
+      if constexpr (requires(TWindow t) { t.wm_notify(notify_message{ wParam, lParam }); })
       {
         if (message == notify_message::id)
         {
-          return self->on_notify(std::move(header));
+          return self->wm_notify(std::move(header));
         }
       }
-    }
-
-    if constexpr (requires(TWindow t) { t.on_message(win32::message{ message, wParam, lParam }); })
-    {
-      return self->on_message(win32::message{ message, wParam, lParam });
     }
 
     return std::nullopt;

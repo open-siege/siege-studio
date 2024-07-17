@@ -25,7 +25,7 @@ namespace siege::views
       buffer.reserve(64);
     }
 
-    auto on_create(const win32::create_message&)
+    auto wm_create(win32::create_message)
     {
       auto control_factory = win32::window_factory(ref());
 
@@ -34,12 +34,12 @@ namespace siege::views
       selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
-      on_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
+      wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
       return 0;
     }
 
-    std::optional<win32::lresult_t> on_setting_change(win32::setting_change_message message)
+    std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
     {
       if (message.setting == L"ImmersiveColorSet")
       {
@@ -54,7 +54,7 @@ namespace siege::views
       return std::nullopt;
     }
 
-    auto on_size(win32::size_message sized)
+    auto wm_size(win32::size_message sized)
     {
       auto left_size = SIZE{ .cx = (sized.client_size.cx / 3) * 2, .cy = sized.client_size.cy };
       auto right_size = SIZE{ .cx = sized.client_size.cx - left_size.cx, .cy = sized.client_size.cy };
@@ -68,7 +68,7 @@ namespace siege::views
       return 0;
     }
 
-    std::optional<win32::lresult_t> on_notify(win32::notify_message message)
+    std::optional<win32::lresult_t> wm_notify(win32::notify_message message)
     {
       if (message.code == LBN_SELCHANGE && (message.hwndFrom == selection))
       {
@@ -102,7 +102,7 @@ namespace siege::views
     }
 
 
-    auto on_copy_data(win32::copy_data_message<char> message)
+    auto wm_copy_data(win32::copy_data_message<char> message)
     {
       std::spanstream stream(message.data);
 
@@ -142,7 +142,7 @@ namespace siege::views
       return FALSE;
     }
 
-    auto on_draw_item(win32::draw_item_message message)
+    auto wm_draw_item(win32::draw_item_message message)
     {
       if (message.item.hwndItem == render_view && message.item.itemAction == ODA_DRAWENTIRE)
       {

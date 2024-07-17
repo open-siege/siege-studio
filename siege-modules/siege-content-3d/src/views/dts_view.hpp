@@ -43,7 +43,7 @@ namespace siege::views
     {
     }
 
-    auto on_create(const win32::create_message&)
+    auto wm_create(win32::create_message)
     {
       auto control_factory = win32::window_factory(ref());
 
@@ -60,14 +60,14 @@ namespace siege::views
       return 0;
     }
 
-    auto on_destroy(win32::destroy_message)
+    auto wm_destroy(win32::destroy_message)
     {
       ::wglMakeCurrent(nullptr, nullptr);
 
       return 0;
     }
 
-    auto on_copy_data(win32::copy_data_message<char> message)
+    auto wm_copy_data(win32::copy_data_message<char> message)
     {
       std::spanstream stream(message.data);
 
@@ -122,7 +122,7 @@ namespace siege::views
       return existing_gl_context;
     }
 
-    auto on_size(win32::size_message sized)
+    auto wm_size(win32::size_message sized)
     {
       auto left_size = SIZE{ .cx = (sized.client_size.cx / 3) * 2, .cy = sized.client_size.cy };
       auto right_size = SIZE{ .cx = sized.client_size.cx - left_size.cx, .cy = sized.client_size.cy };
@@ -151,7 +151,7 @@ namespace siege::views
       return 0;
     }
 
-    auto on_control_color(win32::static_control_color_message message)
+    auto wm_control_color(win32::static_control_color_message message)
     {
       auto context = create_or_get_gl_context(win32::gdi_drawing_context_ref(message.context));
       glClearColor(0.3f, 0.3f, 0.3f, 0.f);
@@ -159,7 +159,7 @@ namespace siege::views
       return (LRESULT)GetStockBrush(DC_BRUSH);
     }
 
-    auto on_draw_item(win32::draw_item_message message)
+    auto wm_draw_item(win32::draw_item_message message)
     {
       if (message.item.hwndItem == render_view && message.item.itemAction == ODA_DRAWENTIRE && renderer)
       {

@@ -15,7 +15,7 @@ namespace siege::extension
 		{
 		}
 
-		std::optional<LRESULT> on_get_object(win32::get_object_message message)
+		std::optional<LRESULT> wm_get_object(win32::get_object_message message)
 		{
 			if (message.object_id == OBJID_NATIVEOM)
 			{

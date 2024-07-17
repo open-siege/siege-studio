@@ -15,7 +15,7 @@ namespace siege::views
     {
     }
 
-    auto on_create(const win32::create_message&)
+    auto wm_create(win32::create_message)
     {
       auto control_factory = win32::window_factory(ref());
 
@@ -26,7 +26,7 @@ namespace siege::views
       return 0;
     }
 
-    auto on_size(win32::size_message sized)
+    auto wm_size(win32::size_message sized)
     {
       ref_names.SetWindowPos(sized.client_size);
       ref_names.SetWindowPos(POINT{});
@@ -34,7 +34,7 @@ namespace siege::views
       return 0;
     }
 
-    auto on_copy_data(win32::copy_data_message<char> message)
+    auto wm_copy_data(win32::copy_data_message<char> message)
     {
       std::spanstream stream(message.data);
 

@@ -175,7 +175,7 @@ namespace siege::views
       dir_list.InsertRoots(root);
     }
 
-    auto on_create(const win32::create_message&)
+    auto wm_create(win32::create_message)
     {
       win32::window_factory factory(ref());
 
@@ -191,18 +191,18 @@ namespace siege::views
 
       close_button = *factory.CreateWindowExW<win32::button>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"X" });
 
-      on_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
+      wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
       return 0;
     }
 
-    std::optional<LRESULT> on_destroy(win32::destroy_message)
+    std::optional<LRESULT> wm_destroy(win32::destroy_message)
     {
       PostQuitMessage(0);
       return 0;
     }
 
-    auto on_size(win32::size_message sized)
+    auto wm_size(win32::size_message sized)
     {
       auto left_size = sized.client_size;
       left_size.cx = left_size.cx / 8;
@@ -242,7 +242,7 @@ namespace siege::views
       return std::nullopt;
     }
 
-    auto on_copy_data(win32::copy_data_message<std::byte> message)
+    auto wm_copy_data(win32::copy_data_message<std::byte> message)
     {
       auto filename = GetPropW<wchar_t*>(L"FilePath");
 
@@ -290,11 +290,11 @@ namespace siege::views
 
           SetWindowLongPtrW(*child, GWLP_ID, index + 1);
 
-          on_notify(win32::notify_message{ NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGING } });
+          wm_notify(win32::notify_message{ NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGING } });
 
           tab_control.SetCurrentSelection(index);
 
-          on_notify(win32::notify_message{ NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE } });
+          wm_notify(win32::notify_message{ NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE } });
         }
         else
         {
@@ -305,7 +305,7 @@ namespace siege::views
       return FALSE;
     }
 
-    std::optional<win32::lresult_t> on_setting_change(win32::setting_change_message message)
+    std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
     {
       if (message.setting == L"ImmersiveColorSet")
       {
@@ -429,7 +429,7 @@ namespace siege::views
       return std::nullopt;
     }
 
-    auto on_measure_item(win32::measure_item_message message)
+    auto wm_measure_item(win32::measure_item_message message)
     {
       if (message.item.itemData)
       {
@@ -448,7 +448,7 @@ namespace siege::views
       return TRUE;
     }
 
-    auto on_draw_item(win32::draw_item_message message)
+    auto wm_draw_item(win32::draw_item_message message)
     {
       static auto black_brush = ::CreateSolidBrush(0x00000000);
       static auto grey_brush = ::CreateSolidBrush(0x00383838);
@@ -477,7 +477,7 @@ namespace siege::views
       return TRUE;
     }
 
-    std::optional<LRESULT> on_notify(win32::notify_message notification)
+    std::optional<LRESULT> wm_notify(win32::notify_message notification)
     {
       auto [sender, id, code] = notification;
 
@@ -616,11 +616,11 @@ namespace siege::views
 
             SetWindowLongPtrW(*child, GWLP_ID, index + 1);
 
-            on_notify(win32::notify_message{ NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGING } });
+            wm_notify(win32::notify_message{ NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGING } });
 
             tab_control.SetCurrentSelection(index);
 
-            on_notify(win32::notify_message{ NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE } });
+            wm_notify(win32::notify_message{ NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE } });
           }
           else
           {
@@ -638,7 +638,7 @@ namespace siege::views
       return false;
     }
 
-    std::optional<LRESULT> on_notify(win32::tree_view_notification notification)
+    std::optional<LRESULT> wm_notify(win32::tree_view_notification notification)
     {
       auto sender = notification.hdr.hwndFrom;
       auto code = notification.hdr.code;
@@ -683,7 +683,7 @@ namespace siege::views
       }
     }
 
-    std::optional<LRESULT> on_command(win32::menu_command command)
+    std::optional<LRESULT> wm_command(win32::menu_command command)
     {
       if (command.identifier == open_workspace)
       {

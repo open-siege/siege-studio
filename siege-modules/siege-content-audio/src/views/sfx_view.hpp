@@ -27,7 +27,7 @@ namespace siege::views
     {
     }
 
-    auto on_create(const win32::create_message&)
+    auto wm_create(win32::create_message)
     {
       auto control_factory = win32::window_factory(ref());
 
@@ -46,12 +46,12 @@ namespace siege::views
       selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS });
 
-      on_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
+      wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
       return 0;
     }
 
-    auto on_size(win32::size_message sized)
+    auto wm_size(win32::size_message sized)
     {
       auto left_size = SIZE{ .cx = (sized.client_size.cx / 3) * 2, .cy = sized.client_size.cy };
       auto right_size = SIZE{ .cx = sized.client_size.cx - left_size.cx, .cy = sized.client_size.cy };
@@ -71,7 +71,7 @@ namespace siege::views
       return 0;
     }
 
-    auto on_copy_data(win32::copy_data_message<char> message)
+    auto wm_copy_data(win32::copy_data_message<char> message)
     {
       std::spanstream stream(message.data);
 
@@ -95,7 +95,7 @@ namespace siege::views
       return FALSE;
     }
 
-    std::optional<win32::lresult_t> on_setting_change(win32::setting_change_message message)
+    std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
     {
       if (message.setting == L"ImmersiveColorSet")
       {
@@ -111,7 +111,7 @@ namespace siege::views
       return std::nullopt;
     }
 
-    std::optional<win32::lresult_t> on_notify(win32::tool_bar_custom_draw_notification message)
+    std::optional<win32::lresult_t> wm_notify(win32::tool_bar_custom_draw_notification message)
     {
       if (message.ref.nmcd.dwDrawStage == CDDS_PREPAINT)
       {
@@ -165,7 +165,7 @@ namespace siege::views
       }
     }
 
-    std::optional<win32::lresult_t> on_notify(win32::mouse_notification message)
+    std::optional<win32::lresult_t> wm_notify(win32::mouse_notification message)
     {
       switch (message.hdr.code)
       {
