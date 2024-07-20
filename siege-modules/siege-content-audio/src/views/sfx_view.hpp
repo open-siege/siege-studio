@@ -133,7 +133,7 @@ namespace siege::views
         if (message.ref.nmcd.dwItemSpec == 1)
         {
           RECT rect = message.ref.nmcd.rc;
-            
+
           SIZE one_third = SIZE{ .cx = (rect.right - rect.left) / 12, .cy = (rect.bottom - rect.top) };
           RECT left = RECT{ .left = rect.left, .top = rect.top, .right = rect.left + one_third.cx, .bottom = rect.bottom };
           RECT middle = RECT{ .left = left.right, .top = rect.top, .right = left.right + one_third.cx, .bottom = rect.bottom };
@@ -163,6 +163,8 @@ namespace siege::views
         }
         return CDRF_SKIPDEFAULT;
       }
+
+      return std::nullopt;
     }
 
     std::optional<win32::lresult_t> wm_notify(win32::mouse_notification message)

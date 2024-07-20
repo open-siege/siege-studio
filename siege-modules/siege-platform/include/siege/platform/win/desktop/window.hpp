@@ -202,9 +202,10 @@ namespace win32
 
     inline std::optional<std::pair<POINT, RECT>> MapWindowPoints(hwnd_t to, RECT source)
     {
+      SetLastError(0);
       auto result = ::MapWindowPoints(*this, to, reinterpret_cast<POINT*>(&source), sizeof(RECT) / sizeof(POINT));
 
-      if (result)
+      if (result || (result == 0 && GetLastError() == 0))
       {
         return std::make_pair(POINT{ LOWORD(result), HIWORD(result) }, source);
       }

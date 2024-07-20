@@ -14,6 +14,14 @@
 
 namespace siege::views
 {
+  struct cursor_deleter
+  {
+    void operator()(HCURSOR cursor)
+    {
+      //      assert(::DestroyCursor(cursor) == TRUE);
+    }
+  };
+
   struct siege_main_window : win32::window_ref
   {
     win32::tree_view dir_list;
@@ -31,6 +39,9 @@ namespace siege::views
     std::uint32_t open_id = RegisterWindowMessageW(L"COMMAND_OPEN");
     std::uint32_t open_new_tab_id = RegisterWindowMessageW(L"COMMAND_OPEN_NEW_TAB");
     std::uint32_t open_workspace = RegisterWindowMessageW(L"COMMAND_OPEN_WORKSPACE");
+
+    win32::auto_handle<HCURSOR, cursor_deleter> resize_cursor;
+    HCURSOR previous_cursor = nullptr;
 
     std::wstring buffer;
 
@@ -100,6 +111,8 @@ namespace siege::views
       SetMenuInfo(dark_menu, &mi);
       SetMenu(self, light_menu);
       this->SetPropW(L"AppsUseDarkTheme", is_dark_mode);
+
+      resize_cursor.reset((HCURSOR)LoadImageW(nullptr, IDC_SIZEWE, IMAGE_CURSOR, LR_DEFAULTSIZE, LR_DEFAULTSIZE, LR_SHARED));
     }
 
     void repopulate_tree_view(std::filesystem::path path)
@@ -476,6 +489,80 @@ namespace siege::views
       ::DrawTextW(context, (LPCWSTR)item.itemData, -1, &rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
 
       return TRUE;
+    }
+
+    auto wm_mouse_button_down(std::size_t buttons, POINTS pos)
+    {
+      if (buttons & MK_LBUTTON)
+      {
+        if (!resize_cursor)
+        {
+          return 0;
+        }
+
+        if (GetCursor() != resize_cursor)
+        {
+          return 0;
+        }
+
+        RECT dest{};
+        auto tree_rect = dir_list.GetClientRect();
+
+        if (!tree_rect)
+        {
+          return 0;
+        }
+
+        auto mapped_rect = dir_list.MapWindowPoints(*this, *tree_rect);
+
+        if (!mapped_rect)
+        {
+          return 0;
+        }
+
+        auto window_rect = this->GetClientSize();
+        mapped_rect->second.right = mapped_rect->second.left + pos.x;
+
+        dir_list.SetWindowPos(SIZE{ .cx = mapped_rect->second.left + pos.x, .cy = window_rect->cy });
+      }
+    }
+
+    auto wm_mouse_move(std::size_t button, POINTS pos)
+    {
+      if (!resize_cursor)
+      {
+        return 0;
+      }
+
+      RECT dest{};
+      auto tree_rect = dir_list.GetClientRect();
+
+      if (!tree_rect)
+      {
+        return 0;
+      }
+
+      auto mapped_rect = dir_list.MapWindowPoints(*this, *tree_rect);
+
+      if (!mapped_rect)
+      {
+        return 0;
+      }
+
+      if (pos.x < (mapped_rect->second.right + 50))
+      {
+        auto previous = ::SetCursor(resize_cursor);
+
+        if (previous != resize_cursor)
+        {
+          previous_cursor = previous;
+        }
+      }
+      else if (previous_cursor)
+      {
+        ::SetCursor(previous_cursor);
+      }
+      return 0;
     }
 
     std::optional<LRESULT> wm_notify(win32::notify_message notification)

@@ -3,6 +3,7 @@
 
 #include <siege/platform/win/desktop/notifications.hpp>
 #include "window.hpp"
+#include <windowsx.h>
 #include <any>
 
 namespace win32
@@ -68,6 +69,22 @@ namespace win32
 
     DO_DISPATCH(input_message, wm_input);
     DO_DISPATCH(input_device_change_message, wm_input_device_change);
+
+    if constexpr (requires(TWindow t) { t.wm_mouse_move(std::size_t{}, POINTS{}); })
+    {
+      if (message == WM_MOUSEMOVE)
+      {
+        return self->wm_mouse_move(std::size_t(wParam), POINTS{ .x = SHORT(GET_X_LPARAM(lParam)), .y = SHORT(GET_Y_LPARAM(lParam)) });
+      }
+    }
+
+    if constexpr (requires(TWindow t) { t.wm_mouse_button_down(std::size_t{}, POINTS{}); })
+    {
+      if (message == WM_LBUTTONDOWN || message == WM_MBUTTONDOWN || message == WM_RBUTTONDOWN)
+      {
+        return self->wm_mouse_button_down(std::size_t(wParam), POINTS{ .x = SHORT(GET_X_LPARAM(lParam)), .y = SHORT(GET_Y_LPARAM(lParam)) });
+      }
+    }
 
     if constexpr (requires(TWindow t) { t.wm_copy_data(copy_data_message<char>{ wParam, lParam }); })
     {
