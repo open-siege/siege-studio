@@ -41,7 +41,7 @@ namespace siege::views
     {
     }
 
-    auto wm_create(win32::create_message)
+    auto wm_create()
     {
       auto control_factory = win32::window_factory(ref());
 

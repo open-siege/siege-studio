@@ -175,7 +175,7 @@ namespace siege::views
       dir_list.InsertRoots(root);
     }
 
-    auto wm_create(win32::create_message)
+    auto wm_create()
     {
       win32::window_factory factory(ref());
 
@@ -196,7 +196,7 @@ namespace siege::views
       return 0;
     }
 
-    std::optional<LRESULT> wm_destroy(win32::destroy_message)
+    std::optional<LRESULT> wm_destroy()
     {
       PostQuitMessage(0);
       return 0;

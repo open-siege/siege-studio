@@ -43,7 +43,7 @@ namespace siege::views
     {
     }
 
-    auto wm_create(win32::create_message)
+    auto wm_create()
     {
       auto control_factory = win32::window_factory(ref());
 
@@ -60,7 +60,7 @@ namespace siege::views
       return 0;
     }
 
-    auto wm_destroy(win32::destroy_message)
+    auto wm_destroy()
     {
       ::wglMakeCurrent(nullptr, nullptr);
 

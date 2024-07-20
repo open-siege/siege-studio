@@ -17,7 +17,7 @@ namespace siege::views
 	    {
 	    }
 
-        auto wm_create(win32::create_message)
+        auto wm_create()
         {
             return 0;
         }

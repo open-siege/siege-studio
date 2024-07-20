@@ -16,12 +16,30 @@ namespace win32
     }                                                                                  \
   }
 
+#define DO_DISPATCH_NOPARAM(message_id, event_name)      \
+  if constexpr (requires(TWindow t) { t.event_name(); }) \
+  {                                                      \
+    if (message == message_id)                           \
+    {                                                    \
+      return self->event_name();                         \
+    }                                                    \
+  }
+
+#define DO_DISPATCH_LPARAM(message_id, lparam_type, event_name)       \
+  if constexpr (requires(TWindow t) { t.event_name(lparam_type{}); }) \
+  {                                                                   \
+    if (message == message_id)                                        \
+    {                                                                 \
+      return self->event_name(*(lparam_type*)lParam);                 \
+    }                                                                 \
+  }
+
   template<typename TWindow>
   std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
   {
-    DO_DISPATCH(create_message, wm_create);
-    DO_DISPATCH(init_dialog_message, wm_init_dialog);
-    DO_DISPATCH(destroy_message, wm_destroy);
+    DO_DISPATCH_NOPARAM(WM_CREATE, wm_create);
+    DO_DISPATCH_NOPARAM(WM_DESTROY, wm_destroy);
+    DO_DISPATCH_LPARAM(WM_CREATE, CREATESTRUCTW, wm_create);
     DO_DISPATCH(get_object_message, wm_get_object);
     DO_DISPATCH(size_message, wm_size);
     DO_DISPATCH(pos_changed_message, wm_pos_changed);
@@ -37,9 +55,6 @@ namespace win32
     DO_DISPATCH(edit_control_color_message, wm_control_color);
     DO_DISPATCH(static_control_color_message, wm_control_color);
 
-    DO_DISPATCH(keyboard_key_up_message, wm_keyboard_key_up);
-    DO_DISPATCH(keyboard_key_down_message, wm_keyboard_key_down);
-    DO_DISPATCH(keyboard_char_message, wm_keyboard_char);
     DO_DISPATCH(input_message, wm_input);
     DO_DISPATCH(input_device_change_message, wm_input_device_change);
 
@@ -248,7 +263,7 @@ namespace win32
           {
             std::array<LONG_PTR, data_size + extra_size> raw_data{};
 
-            if (message == non_client_create_message::id)
+            if (message == WM_NCCREATE)
             {
               auto* pCreate = std::bit_cast<CREATESTRUCTW*>(lParam);
 
@@ -273,7 +288,7 @@ namespace win32
           }
           else
           {
-            if (message == non_client_create_message::id)
+            if (message == WM_NCCREATE)
             {
               auto heap = ::GetProcessHeap();
               auto size = sizeof(TWindow);
@@ -319,93 +334,6 @@ namespace win32
       }
     }
   };
-
-  // TODO incorporate this logic into the main dispatch method
-  inline std::any make_mouse_message(std::uint32_t message, wparam_t wParam, lparam_t lParam) noexcept
-  {
-    if (message == mouse_move_message::id || message == mouse_hover_message::id || message == mouse_wheel_message::id || mouse_button_double_click_message::matches_message(message) || mouse_button_down_message::matches_message(message) || mouse_button_up_message::matches_message(message))
-    {
-      mouse_button_message mouse_data{};
-      mouse_data.x = LOWORD(lParam);
-      mouse_data.y = HIWORD(lParam);
-
-      auto set_key_state = [&](auto keys) {
-        mouse_data.control_key_is_down = keys & MK_CONTROL;
-        mouse_data.shift_key_is_down = keys & MK_SHIFT;
-        mouse_data.mouse_buttons_down[std::size_t(mouse_button::lbutton)] = keys & MK_LBUTTON;
-        mouse_data.mouse_buttons_down[std::size_t(mouse_button::rbutton)] = keys & MK_RBUTTON;
-        mouse_data.mouse_buttons_down[std::size_t(mouse_button::mbutton)] = keys & MK_MBUTTON;
-        mouse_data.mouse_buttons_down[std::size_t(mouse_button::xbutton_1)] = keys & MK_XBUTTON1;
-        mouse_data.mouse_buttons_down[std::size_t(mouse_button::xbutton_2)] = keys & MK_XBUTTON2;
-      };
-
-      if (message == mouse_button_up_message::ids[0] || message == mouse_button_down_message::ids[0] || message == mouse_button_double_click_message::ids[0])
-      {
-        mouse_data.source = mouse_button::lbutton;
-      }
-      else if (message == mouse_button_up_message::ids[1] || message == mouse_button_down_message::ids[1] || message == mouse_button_double_click_message::ids[1])
-      {
-        mouse_data.source = mouse_button::rbutton;
-      }
-      else if (message == mouse_button_up_message::ids[2] || message == mouse_button_down_message::ids[2] || message == mouse_button_double_click_message::ids[2])
-      {
-        mouse_data.source = mouse_button::mbutton;
-      }
-      else if (message == mouse_button_up_message::ids[3] || message == mouse_button_down_message::ids[3] || message == mouse_button_double_click_message::ids[3])
-      {
-        mouse_data.source = GET_XBUTTON_WPARAM(wParam) == XBUTTON1 ? mouse_button::xbutton_1 : mouse_button::xbutton_2;
-
-        auto keys = GET_KEYSTATE_WPARAM(wParam);
-        set_key_state(keys);
-      }
-      else if (message == mouse_wheel_message::id)
-      {
-        auto keys = GET_KEYSTATE_WPARAM(wParam);
-        set_key_state(keys);
-      }
-      else
-      {
-        set_key_state(wParam);
-      }
-
-      if (message == mouse_move_message::id)
-      {
-        return mouse_move_message{ std::move(mouse_data) };
-      }
-      else if (message == mouse_hover_message::id)
-      {
-        return mouse_hover_message{ std::move(mouse_data) };
-      }
-      else if (message == mouse_wheel_message::id)
-      {
-        auto delta = GET_WHEEL_DELTA_WPARAM(wParam);
-        return mouse_wheel_message{ std::move(mouse_data), delta };
-      }
-      else if (mouse_button_down_message::matches_message(message))
-      {
-        return mouse_button_down_message{ std::move(mouse_data) };
-      }
-      else if (mouse_button_up_message::matches_message(message))
-      {
-        return mouse_button_up_message{ std::move(mouse_data) };
-      }
-      else if (mouse_button_double_click_message::matches_message(message))
-      {
-        return mouse_button_double_click_message{ std::move(mouse_data) };
-      }
-    }
-
-    if (message == mouse_leave_message::id)
-    {
-      return mouse_leave_message{};
-    }
-
-    return win32::message{
-      .message = message,
-      .wParam = wParam,
-      .lParam = lParam
-    };
-  }
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   template<typename TWindow>
@@ -470,7 +398,7 @@ namespace win32
           {
             std::array<LONG_PTR, data_size + extra_size> raw_data{};
 
-            if (message == non_client_create_message::id)
+            if (message == WM_NCCREATE)
             {
               auto ref_count = GetClassLongPtrW(hWnd, 0);
               auto* pCreate = std::bit_cast<CREATESTRUCTW*>(lParam);
@@ -502,7 +430,7 @@ namespace win32
           }
           else
           {
-            if (message == non_client_create_message::id)
+            if (message == WM_NCCREATE)
             {
               auto ref_count = GetClassLongPtrW(hWnd, 0);
 
