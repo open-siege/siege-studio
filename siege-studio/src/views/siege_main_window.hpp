@@ -192,7 +192,7 @@ namespace siege::views
     {
       win32::window_factory factory(ref());
 
-      dir_list = *factory.CreateWindowExW<win32::tree_view>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE });
+      dir_list = *factory.CreateWindowExW<win32::tree_view>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | WS_SIZEBOX });
 
       repopulate_tree_view(std::filesystem::current_path());
 
@@ -489,80 +489,6 @@ namespace siege::views
       ::DrawTextW(context, (LPCWSTR)item.itemData, -1, &rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
 
       return TRUE;
-    }
-
-    auto wm_mouse_button_down(std::size_t buttons, POINTS pos)
-    {
-      if (buttons & MK_LBUTTON)
-      {
-        if (!resize_cursor)
-        {
-          return 0;
-        }
-
-        if (GetCursor() != resize_cursor)
-        {
-          return 0;
-        }
-
-        RECT dest{};
-        auto tree_rect = dir_list.GetClientRect();
-
-        if (!tree_rect)
-        {
-          return 0;
-        }
-
-        auto mapped_rect = dir_list.MapWindowPoints(*this, *tree_rect);
-
-        if (!mapped_rect)
-        {
-          return 0;
-        }
-
-        auto window_rect = this->GetClientSize();
-        mapped_rect->second.right = mapped_rect->second.left + pos.x;
-
-        dir_list.SetWindowPos(SIZE{ .cx = mapped_rect->second.left + pos.x, .cy = window_rect->cy });
-      }
-    }
-
-    auto wm_mouse_move(std::size_t button, POINTS pos)
-    {
-      if (!resize_cursor)
-      {
-        return 0;
-      }
-
-      RECT dest{};
-      auto tree_rect = dir_list.GetClientRect();
-
-      if (!tree_rect)
-      {
-        return 0;
-      }
-
-      auto mapped_rect = dir_list.MapWindowPoints(*this, *tree_rect);
-
-      if (!mapped_rect)
-      {
-        return 0;
-      }
-
-      if (pos.x < (mapped_rect->second.right + 50))
-      {
-        auto previous = ::SetCursor(resize_cursor);
-
-        if (previous != resize_cursor)
-        {
-          previous_cursor = previous;
-        }
-      }
-      else if (previous_cursor)
-      {
-        ::SetCursor(previous_cursor);
-      }
-      return 0;
     }
 
     std::optional<LRESULT> wm_notify(win32::notify_message notification)
