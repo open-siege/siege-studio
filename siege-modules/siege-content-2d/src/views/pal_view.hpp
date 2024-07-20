@@ -142,14 +142,14 @@ namespace siege::views
       return FALSE;
     }
 
-    auto wm_draw_item(win32::draw_item_message message)
+    auto wm_draw_item(std::size_t, const DRAWITEMSTRUCT& item)
     {
-      if (message.item.hwndItem == render_view && message.item.itemAction == ODA_DRAWENTIRE)
+      if (item.hwndItem == render_view && item.itemAction == ODA_DRAWENTIRE)
       {
-        auto context = win32::gdi_drawing_context_ref(message.item.hDC);
+        auto context = win32::gdi_drawing_context_ref(item.hDC);
 
-        auto total_width = message.item.rcItem.right - message.item.rcItem.left;
-        auto total_height = message.item.rcItem.bottom - message.item.rcItem.top;
+        auto total_width = item.rcItem.right - item.rcItem.left;
+        auto total_height = item.rcItem.bottom - item.rcItem.top;
         auto total_area = total_width * total_height;
         auto best_size = (int)std::sqrt(double(total_area) / brushes.size());
 

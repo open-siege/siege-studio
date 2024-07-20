@@ -429,50 +429,51 @@ namespace siege::views
       return std::nullopt;
     }
 
-    auto wm_measure_item(win32::measure_item_message message)
+    auto wm_measure_item(std::size_t, MEASUREITEMSTRUCT& item)
     {
-      if (message.item.itemData)
+      if (item.itemData)
       {
         HDC hDC = ::GetDC(*this);
         TEXTMETRIC tm{};
         ::GetTextMetricsW(hDC, &tm);
-        message.item.itemWidth = tm.tmAveCharWidth * std::wcslen((wchar_t*)message.item.itemData);
-        message.item.itemHeight = ::GetSystemMetrics(SM_CYMENUSIZE);
+        item.itemWidth = tm.tmAveCharWidth * std::wcslen((wchar_t*)item.itemData);
+        item.itemHeight = ::GetSystemMetrics(SM_CYMENUSIZE);
       }
       else
       {
-        message.item.itemWidth = ::GetSystemMetrics(SM_CXMENUSIZE) * 2;
-        message.item.itemHeight = ::GetSystemMetrics(SM_CYMENUSIZE);
+        item.itemWidth = ::GetSystemMetrics(SM_CXMENUSIZE) * 2;
+        item.itemHeight = ::GetSystemMetrics(SM_CYMENUSIZE);
       }
 
       return TRUE;
     }
 
-    auto wm_draw_item(win32::draw_item_message message)
+    auto wm_draw_item(std::size_t, const DRAWITEMSTRUCT& item)
     {
       static auto black_brush = ::CreateSolidBrush(0x00000000);
       static auto grey_brush = ::CreateSolidBrush(0x00383838);
 
-      auto context = win32::gdi_drawing_context_ref(message.item.hDC);
+      auto context = win32::gdi_drawing_context_ref(item.hDC);
 
       SetBkMode(context, TRANSPARENT);
 
-      if (message.item.itemState & ODS_HOTLIGHT)
+      if (item.itemState & ODS_HOTLIGHT)
       {
-        context.FillRect(message.item.rcItem, grey_brush);
+        context.FillRect(item.rcItem, grey_brush);
       }
-      else if (message.item.itemState & ODS_SELECTED)
+      else if (item.itemState & ODS_SELECTED)
       {
-        context.FillRect(message.item.rcItem, grey_brush);
+        context.FillRect(item.rcItem, grey_brush);
       }
       else
       {
-        context.FillRect(message.item.rcItem, black_brush);
+        context.FillRect(item.rcItem, black_brush);
       }
 
       ::SetTextColor(context, 0x00FFFFFF);
-      message.item.rcItem.left += (message.item.rcItem.right - message.item.rcItem.left) / 10;
-      ::DrawTextW(context, (LPCWSTR)message.item.itemData, -1, &message.item.rcItem, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+      auto rect = item.rcItem;
+      rect.left += (rect.right - rect.left) / 10;
+      ::DrawTextW(context, (LPCWSTR)item.itemData, -1, &rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
 
       return TRUE;
     }

@@ -34,21 +34,32 @@ namespace win32
     }                                                                 \
   }
 
+#define DO_DISPATCH_WPARAM_AND_LPARAM(message_id, wparam_type, lparam_type, event_name)       \
+  if constexpr (requires(TWindow t) { t.event_name(wparam_type{}, lparam_type{}); }) \
+  {                                                                   \
+    if (message == message_id)                                        \
+    {                                                                 \
+      return self->event_name((wparam_type)wParam, *(lparam_type*)lParam);                 \
+    }                                                                 \
+  }
+
+
   template<typename TWindow>
   std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
   {
     DO_DISPATCH_NOPARAM(WM_CREATE, wm_create);
-    DO_DISPATCH_NOPARAM(WM_DESTROY, wm_destroy);
     DO_DISPATCH_LPARAM(WM_CREATE, CREATESTRUCTW, wm_create);
+    DO_DISPATCH_NOPARAM(WM_DESTROY, wm_destroy);
     DO_DISPATCH(get_object_message, wm_get_object);
     DO_DISPATCH(size_message, wm_size);
     DO_DISPATCH(pos_changed_message, wm_pos_changed);
     DO_DISPATCH(paint_message, wm_paint);
     DO_DISPATCH(erase_background_message, wm_erase_background);
-    DO_DISPATCH(draw_item_message, wm_draw_item);
-    DO_DISPATCH(measure_item_message, wm_measure_item);
-    DO_DISPATCH(setting_change_message, wm_setting_change);
 
+    DO_DISPATCH_WPARAM_AND_LPARAM(WM_MEASUREITEM, std::size_t, MEASUREITEMSTRUCT, wm_measure_item);
+    DO_DISPATCH_WPARAM_AND_LPARAM(WM_DRAWITEM, std::size_t, DRAWITEMSTRUCT, wm_draw_item);
+    
+    DO_DISPATCH(setting_change_message, wm_setting_change);
     DO_DISPATCH(button_control_color_message, wm_control_color);
     DO_DISPATCH(list_box_control_color_message, wm_control_color);
     DO_DISPATCH(scroll_bar_control_color_message, wm_control_color);

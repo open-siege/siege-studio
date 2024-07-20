@@ -159,11 +159,11 @@ namespace siege::views
       return (LRESULT)GetStockBrush(DC_BRUSH);
     }
 
-    auto wm_draw_item(win32::draw_item_message message)
+    auto wm_draw_item(std::size_t, const DRAWITEMSTRUCT& item)
     {
-      if (message.item.hwndItem == render_view && message.item.itemAction == ODA_DRAWENTIRE && renderer)
+      if (item.hwndItem == render_view && item.itemAction == ODA_DRAWENTIRE && renderer)
       {
-        auto existing_gl_context = create_or_get_gl_context(win32::gdi_drawing_context_ref(message.item.hDC));
+        auto existing_gl_context = create_or_get_gl_context(win32::gdi_drawing_context_ref(item.hDC));
         
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glMatrixMode(GL_MODELVIEW);
