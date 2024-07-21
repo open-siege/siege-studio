@@ -101,6 +101,17 @@ std::errc is_stream_supported(storage_info* data) noexcept
     return std::errc::invalid_argument;
   }
 
+  if (data->type == storage_info::file && data->info.path)
+  {
+    auto extension = std::filesystem::path(data->info.path).extension().native();
+    if (!std::any_of(vol_controller::formats.begin(), vol_controller::formats.end(), [&](const auto value) {
+        return value == extension;
+        }))
+    {
+      return std::errc::not_supported;
+    }
+  }
+
   auto stream = siege::platform::create_istream(*data);
 
   if (siege::views::vol_controller::is_vol(*stream))

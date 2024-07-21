@@ -195,11 +195,7 @@ namespace siege::views
 
         auto task = controller.load_palettes_async(
           std::nullopt, [&](auto path) {
-          if (path.extension() == ".cs")
-          {
-            return std::set<std::filesystem::path>{};
-          }
-
+          
           siege::platform::storage_info info{
             .type = siege::platform::storage_info::file
           };
