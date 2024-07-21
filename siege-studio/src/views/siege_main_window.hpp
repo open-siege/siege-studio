@@ -25,6 +25,7 @@ namespace siege::views
   struct siege_main_window : win32::window_ref
   {
     win32::tree_view dir_list;
+    win32::button separator;
     win32::tab_control tab_control;
     win32::button close_button;
 
@@ -40,8 +41,10 @@ namespace siege::views
     std::uint32_t open_new_tab_id = RegisterWindowMessageW(L"COMMAND_OPEN_NEW_TAB");
     std::uint32_t open_workspace = RegisterWindowMessageW(L"COMMAND_OPEN_WORKSPACE");
 
+    bool is_resizing = false;
     win32::auto_handle<HCURSOR, cursor_deleter> resize_cursor;
     HCURSOR previous_cursor = nullptr;
+    SIZE tree_size{};
 
     std::wstring buffer;
 
@@ -188,11 +191,81 @@ namespace siege::views
       dir_list.InsertRoots(root);
     }
 
+    LRESULT static CALLBACK static_sub_class(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+    {
+      auto self = (siege_main_window*)dwRefData;
+      if (msg == WM_MOUSEMOVE)
+      {
+        auto previous = ::SetCursor(self->resize_cursor);
+
+        if (previous != self->resize_cursor)
+        {
+          self->previous_cursor = previous;
+        }
+      }
+
+      if (msg == WM_LBUTTONDOWN)
+      {
+        self->is_resizing = true;
+      }
+
+      if (msg == WM_LBUTTONUP)
+      {
+        self->is_resizing = false;
+      }
+
+      if (self->is_resizing && (msg == WM_MOUSEMOVE || msg == WM_LBUTTONDOWN))
+      {
+        POINT temp{};
+        if (GetCursorPos(&temp) && ScreenToClient(*self, &temp))
+        {
+          auto window_rect = self->dir_list.GetWindowRect();
+          auto size = SIZE{ .cx = temp.x, .cy = window_rect->bottom - window_rect->top };
+          
+          self->tree_size.cx = temp.x;
+
+          self->on_size(*self->GetClientSize());
+        }
+      }
+
+      if (msg == WM_MOUSELEAVE)
+      {
+        ::SetCursor(self->previous_cursor);
+      }
+
+      if (msg == WM_NCDESTROY)
+      {
+        TRACKMOUSEEVENT event{
+          .cbSize = sizeof(TRACKMOUSEEVENT),
+          .dwFlags = TME_LEAVE | TME_CANCEL,
+          .hwndTrack = hWnd
+        };
+        ::TrackMouseEvent(&event);
+        RemoveWindowSubclass(hWnd, static_sub_class, uIdSubclass);
+      }
+
+      return DefSubclassProc(hWnd, msg, wParam, lParam);
+    }
+
     auto wm_create()
     {
       win32::window_factory factory(ref());
 
-      dir_list = *factory.CreateWindowExW<win32::tree_view>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | WS_SIZEBOX });
+      dir_list = *factory.CreateWindowExW<win32::tree_view>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE });
+
+      separator = *factory.CreateWindowEx<win32::button>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | BS_FLAT });
+
+      if (::SetWindowSubclass(separator, static_sub_class, (UINT_PTR)this, (DWORD_PTR)this))
+      {
+        TRACKMOUSEEVENT event{
+          .cbSize = sizeof(TRACKMOUSEEVENT),
+          .dwFlags = TME_LEAVE,
+          .hwndTrack = separator,
+          .dwHoverTime = HOVER_DEFAULT
+        };
+        assert(::TrackMouseEvent(&event) == TRUE);
+      }
+
 
       repopulate_tree_view(std::filesystem::current_path());
 
@@ -215,17 +288,29 @@ namespace siege::views
       return 0;
     }
 
-    auto wm_size(win32::size_message sized)
+    void on_size(SIZE new_size)
     {
-      auto left_size = sized.client_size;
-      left_size.cx = left_size.cx / 8;
-      auto right_size = sized.client_size;
-      right_size.cx -= left_size.cx;
+      if (tree_size.cx == 0)
+      {
+        tree_size = new_size;
+        tree_size.cx = tree_size.cx / 6;
+      }
+
+      tree_size.cy = new_size.cy;
+
+      auto divider = new_size;
+      divider.cx /= 128;
+
+      auto right_size = new_size;
+      right_size.cx -= tree_size.cx - divider.cx;
 
       dir_list.SetWindowPos(POINT{});
-      dir_list.SetWindowPos(left_size);
+      dir_list.SetWindowPos(tree_size);
 
-      tab_control.SetWindowPos(POINT{ .x = sized.client_size.cx - right_size.cx });
+      separator.SetWindowPos(POINT{ .x = tree_size.cx });
+      separator.SetWindowPos(divider);
+
+      tab_control.SetWindowPos(POINT{ .x = tree_size.cx + divider.cx });
       tab_control.SetWindowPos(right_size);
 
       auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
@@ -239,7 +324,6 @@ namespace siege::views
         close_button.SetWindowPos(HWND_TOP);
       }
 
-
       SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&tab_rect));
 
       for (auto i = 0; i < tab_control.GetItemCount(); ++i)
@@ -251,8 +335,13 @@ namespace siege::views
           assert(win32::window_ref(win32::hwnd_t(tab_item->lParam)).SetWindowPos(tab_rect));
         }
       }
+    }
 
-      return std::nullopt;
+    auto wm_size(win32::size_message sized)
+    {
+      on_size(sized.client_size);
+
+      return 0;
     }
 
     auto wm_copy_data(win32::copy_data_message<std::byte> message)
@@ -461,7 +550,7 @@ namespace siege::views
       return TRUE;
     }
 
-    auto wm_draw_item(std::size_t, const DRAWITEMSTRUCT& item)
+    auto wm_draw_item(std::size_t, DRAWITEMSTRUCT& item)
     {
       static auto black_brush = ::CreateSolidBrush(0x00000000);
       static auto grey_brush = ::CreateSolidBrush(0x00383838);

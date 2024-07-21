@@ -36,7 +36,7 @@ namespace win32
   }
 
 #define DO_DISPATCH_WPARAM_AND_LPARAM(message_id, wparam_type, lparam_type, event_name)       \
-  if constexpr (requires(TWindow t) { t.event_name(wparam_type{}, lparam_type{}); }) \
+  if constexpr (requires(TWindow t, lparam_type temp) { t.event_name(wparam_type{}, temp); }) \
   {                                                                   \
     if (message == message_id)                                        \
     {                                                                 \
@@ -75,6 +75,14 @@ namespace win32
       if (message == WM_MOUSEMOVE)
       {
         return self->wm_mouse_move(std::size_t(wParam), POINTS{ .x = SHORT(GET_X_LPARAM(lParam)), .y = SHORT(GET_Y_LPARAM(lParam)) });
+      }
+    }
+
+    if constexpr (requires(TWindow t) { t.wm_mouse_leave(); })
+    {
+      if (message == WM_MOUSELEAVE)
+      {
+        return self->wm_mouse_leave();
       }
     }
 
