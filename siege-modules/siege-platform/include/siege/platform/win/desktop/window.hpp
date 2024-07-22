@@ -236,6 +236,21 @@ namespace win32
       return std::nullopt;
     }
 
+    inline HANDLE DeferWindowPos(HANDLE hWinPosInfo, POINT position, UINT uFlags = 0)
+    {
+      return ::DeferWindowPos(hWinPosInfo, *this, nullptr, position.x, position.y, 0, 0, uFlags | SWP_NOSIZE | SWP_NOZORDER);
+    }
+
+    inline HANDLE DeferWindowPos(HANDLE hWinPosInfo, SIZE size, UINT uFlags = 0)
+    {
+      return ::DeferWindowPos(hWinPosInfo, *this, nullptr, 0, 0, size.cx, size.cy, uFlags | SWP_NOMOVE | SWP_NOZORDER);
+    }
+
+    inline HANDLE DeferWindowPos(HANDLE hWinPosInfo, hwnd_t hWndInsertAfter, UINT uFlags = 0)
+    {
+      return ::DeferWindowPos(hWinPosInfo, *this, hWndInsertAfter, 0, 0, 0, 0, uFlags | SWP_NOMOVE | SWP_NOSIZE);
+    }
+
     inline auto SetWindowPos(hwnd_t hWndInsertAfter, UINT uFlags = 0)
     {
       return ::SetWindowPos(*this, hWndInsertAfter, 0, 0, 0, 0, uFlags | SWP_NOMOVE | SWP_NOSIZE);
