@@ -122,10 +122,15 @@ namespace siege::views
       return 0;
     }
 
-    auto wm_size(win32::size_message sized)
+    std::optional<win32::lresult_t> wm_size(std::size_t type, SIZE client_size)
     {
-      auto left_size = SIZE{ .cx = (sized.client_size.cx / 3) * 2, .cy = sized.client_size.cy };
-      auto right_size = SIZE{ .cx = sized.client_size.cx - left_size.cx, .cy = sized.client_size.cy };
+      if (type == SIZE_MINIMIZED || type == SIZE_MAXHIDE || type == SIZE_MAXSHOW)
+      {
+        return std::nullopt;
+      }
+
+      auto left_size = SIZE{ .cx = (client_size.cx / 3) * 2, .cy = client_size.cy };
+      auto right_size = SIZE{ .cx = client_size.cx - left_size.cx, .cy = client_size.cy };
 
       const auto top_left_height = left_size.cy / 20;
       const auto top_left_width = left_size.cx / 6;
@@ -241,8 +246,7 @@ namespace siege::views
             loaded_contexts.emplace(std::move(path), std::move(context.value()));
           }
 
-          return results; 
-          },
+          return results; },
 
           [&](auto path) {
             auto storage_path = path.parent_path();

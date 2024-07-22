@@ -51,10 +51,10 @@ namespace siege::views
       return 0;
     }
 
-    auto wm_size(win32::size_message sized)
+    auto wm_size(std::size_t type, SIZE client_size)
     {
-      auto left_size = SIZE{ .cx = (sized.client_size.cx / 3) * 2, .cy = sized.client_size.cy };
-      auto right_size = SIZE{ .cx = sized.client_size.cx - left_size.cx, .cy = sized.client_size.cy };
+      auto left_size = SIZE{ .cx = (client_size.cx / 3) * 2, .cy = client_size.cy };
+      auto right_size = SIZE{ .cx = client_size.cx - left_size.cx, .cy = client_size.cy };
 
       auto height = left_size.cy / 12;
       player_buttons.SetWindowPos(SIZE{ .cx = left_size.cx, .cy = height });
@@ -227,7 +227,7 @@ namespace siege::views
               continue;
             }
             auto state = ::SendMessageW(player_buttons, TB_GETSTATE, i, 0);
-            ::SendMessage(player_buttons, TB_SETSTATE, i, MAKELPARAM(state & ~TBSTATE_CHECKED, 0));
+            ::SendMessageW(player_buttons, TB_SETSTATE, i, MAKELPARAM(state & ~TBSTATE_CHECKED, 0));
           }
         }
         return 0;

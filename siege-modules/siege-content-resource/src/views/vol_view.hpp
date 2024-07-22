@@ -160,19 +160,19 @@ namespace siege::views
       return 0;
     }
 
-    auto wm_size(win32::size_message sized)
+    auto wm_size(std::size_t type, SIZE client_size)
     {
-      auto top_size = SIZE{ .cx = sized.client_size.cx, .cy = sized.client_size.cy / 12 };
+      auto top_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy / 12 };
       table_settings.SetWindowPos(top_size);
       table_settings.SetWindowPos(POINT{});
       table_settings.AutoSize();
 
-      table.SetWindowPos(SIZE{ .cx = sized.client_size.cx, .cy = sized.client_size.cy - top_size.cy });
+      table.SetWindowPos(SIZE{ .cx = client_size.cx, .cy = client_size.cy - top_size.cy });
       table.SetWindowPos(POINT{ .y = top_size.cy });
 
       auto column_count = table.GetColumnCount();
 
-      auto column_width = sized.client_size.cx / column_count;
+      auto column_width = client_size.cx / column_count;
 
       for (auto i = 0u; i < column_count; ++i)
       {

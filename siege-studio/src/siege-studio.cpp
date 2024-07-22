@@ -21,50 +21,56 @@
 #include <oleacc.h>
 
 #include "views/siege_main_window.hpp"
+#include "views/theme_view.hpp"
 
 extern "C" __declspec(dllexport) std::uint32_t DisableSiegeExtensionModule = -1;
 constexpr static std::wstring_view app_title = L"Siege Studio";
 
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 {
-	win32::com::init_com();
+  win32::com::init_com();
 
-	INITCOMMONCONTROLSEX settings{
-		.dwSize{sizeof(INITCOMMONCONTROLSEX)}
-	};
-	InitCommonControlsEx(&settings);
+  INITCOMMONCONTROLSEX settings{
+    .dwSize{ sizeof(INITCOMMONCONTROLSEX) }
+  };
+  InitCommonControlsEx(&settings);
 
-	win32::window_module_ref this_module(hInstance);
+  win32::window_module_ref this_module(hInstance);
 
-	win32::window_meta_class<siege::views::siege_main_window> info{};
-	info.style = CS_HREDRAW | CS_VREDRAW;
-	info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
-	info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-	this_module.RegisterClassExW(info);
+  win32::window_meta_class<siege::views::siege_main_window> info{};
+  info.style = CS_HREDRAW | CS_VREDRAW;
+  info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
+  info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+  this_module.RegisterClassExW(info);
 
-    auto main_window = this_module.CreateWindowExW(CREATESTRUCTW {
-		.cx = CW_USEDEFAULT,
-		.x = CW_USEDEFAULT,
-		.style = WS_OVERLAPPEDWINDOW,
-		.lpszName = app_title.data(),
-		.lpszClass = win32::type_name<siege::views::siege_main_window>().c_str()
-	});
+  win32::window_meta_class<siege::views::theme_view> theme_info{};
+  theme_info.style = CS_HREDRAW | CS_VREDRAW;
+  theme_info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
+  theme_info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+  this_module.RegisterClassExW(theme_info);
 
-	if (!main_window)
-	{
-		return main_window.error();
-	}
+  auto main_window = this_module.CreateWindowExW(CREATESTRUCTW{
+    .cx = CW_USEDEFAULT,
+    .x = CW_USEDEFAULT,
+    .style = WS_OVERLAPPEDWINDOW,
+    .lpszName = app_title.data(),
+    .lpszClass = win32::type_name<siege::views::siege_main_window>().c_str() });
 
-	ShowWindow(*main_window, nCmdShow);
-	UpdateWindow(*main_window);
+  if (!main_window)
+  {
+    return main_window.error();
+  }
 
-	MSG msg;
+  ShowWindow(*main_window, nCmdShow);
+  UpdateWindow(*main_window);
 
-	while (GetMessageW(&msg, nullptr, 0, 0))
-	{
-		TranslateMessage(&msg);
-		DispatchMessageW(&msg);
-	}
+  MSG msg;
 
-	return (int)msg.wParam;
+  while (GetMessageW(&msg, nullptr, 0, 0))
+  {
+    TranslateMessage(&msg);
+    DispatchMessageW(&msg);
+  }
+
+  return (int)msg.wParam;
 }

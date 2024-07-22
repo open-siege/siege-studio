@@ -52,7 +52,6 @@ namespace win32
     DO_DISPATCH_LPARAM(WM_CREATE, CREATESTRUCTW, wm_create);
     DO_DISPATCH_NOPARAM(WM_DESTROY, wm_destroy);
     DO_DISPATCH(get_object_message, wm_get_object);
-    DO_DISPATCH(size_message, wm_size);
     DO_DISPATCH(pos_changed_message, wm_pos_changed);
     DO_DISPATCH(paint_message, wm_paint);
     DO_DISPATCH(erase_background_message, wm_erase_background);
@@ -69,6 +68,14 @@ namespace win32
 
     DO_DISPATCH(input_message, wm_input);
     DO_DISPATCH(input_device_change_message, wm_input_device_change);
+
+    if constexpr (requires(TWindow t) { t.wm_size(std::size_t{}, SIZE{}); })
+    {
+      if (message == WM_SIZE)
+      {
+        return self->wm_size(std::size_t(wParam), SIZE{ .cx = SHORT(LOWORD(lParam)), .cy = SHORT(HIWORD(lParam)) });
+      }
+    }
 
     if constexpr (requires(TWindow t) { t.wm_mouse_move(std::size_t{}, POINTS{}); })
     {

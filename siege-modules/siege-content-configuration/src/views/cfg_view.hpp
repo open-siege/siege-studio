@@ -41,14 +41,14 @@ namespace siege::views
       return 0;
     }
 
-    auto wm_size(win32::size_message sized)
+    auto wm_size(std::size_t type, SIZE client_size)
     {
-      table.SetWindowPos(sized.client_size);
+      table.SetWindowPos(client_size);
       table.SetWindowPos(POINT{});
 
       auto column_count = table.GetColumnCount();
 
-      auto column_width = sized.client_size.cx / column_count;
+      auto column_width = client_size.cx / column_count;
 
       for (auto i = 0u; i < column_count; ++i)
       {

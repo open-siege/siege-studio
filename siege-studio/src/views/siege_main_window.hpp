@@ -8,6 +8,7 @@
 #include <siege/platform/content_module.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
 #include <siege/platform/win/desktop/theming.hpp>
+#include "views/theme_view.hpp"
 #include <map>
 #include <spanstream>
 #include <dwmapi.h>
@@ -28,6 +29,7 @@ namespace siege::views
     win32::button separator;
     win32::tab_control tab_control;
     win32::button close_button;
+    win32::window theme_window;
 
     std::list<platform::content_module> loaded_modules;
     std::map<std::wstring, std::int32_t> extensions;
@@ -39,7 +41,8 @@ namespace siege::views
 
     std::uint32_t open_id = RegisterWindowMessageW(L"COMMAND_OPEN");
     std::uint32_t open_new_tab_id = RegisterWindowMessageW(L"COMMAND_OPEN_NEW_TAB");
-    std::uint32_t open_workspace = RegisterWindowMessageW(L"COMMAND_OPEN_WORKSPACE");
+    std::uint32_t open_workspace_id = RegisterWindowMessageW(L"COMMAND_OPEN_WORKSPACE");
+    std::uint32_t edit_theme_id = RegisterWindowMessageW(L"COMMAND_EDIT_THEME");
 
     bool is_resizing = false;
     win32::auto_handle<HCURSOR, cursor_deleter> resize_cursor;
@@ -51,6 +54,7 @@ namespace siege::views
     HMENU light_menu;
     HMENU dark_menu;
     HIMAGELIST shell_images = nullptr;
+    
 
     bool is_dark_mode = false;
 
@@ -88,7 +92,7 @@ namespace siege::views
       {
         std::size_t id = 1u;
         auto file_menu = ::CreatePopupMenu();
-
+        auto edit_menu = ::CreatePopupMenu();
         auto popup = is_light ? MF_POPUP : MF_OWNERDRAW | MF_POPUP;
         auto string = is_light ? MF_STRING : MF_OWNERDRAW | MF_STRING;
         auto separator = is_light ? MF_SEPARATOR : MF_OWNERDRAW | MF_SEPARATOR;
@@ -96,11 +100,12 @@ namespace siege::views
         AppendMenuW(menu, popup, reinterpret_cast<INT_PTR>(file_menu), L"File");
         AppendMenuW(file_menu, string, open_id, L"Open...");
         AppendMenuW(file_menu, string, open_new_tab_id, L"Open in New Tab...");
-        AppendMenuW(file_menu, string, open_workspace, L"Open Folder as Workspace");
+        AppendMenuW(file_menu, string, open_workspace_id, L"Open Folder as Workspace");
         AppendMenuW(file_menu, separator, id++, nullptr);
         AppendMenuW(file_menu, string, RegisterWindowMessageW(L"COMMAND_EXIT"), L"Quit");
 
-        AppendMenuW(menu, string, id++, L"Edit");
+        AppendMenuW(menu, popup, reinterpret_cast<INT_PTR>(edit_menu), L"Edit");
+        AppendMenuW(edit_menu, string, edit_theme_id, L"Theme");
         AppendMenuW(menu, string, id++, L"View");
         AppendMenuW(menu, string, id++, L"Help");
         is_light = false;
@@ -221,7 +226,7 @@ namespace siege::views
         {
           auto window_rect = self->dir_list.GetWindowRect();
           auto size = SIZE{ .cx = temp.x, .cy = window_rect->bottom - window_rect->top };
-          
+
           self->tree_size.cx = temp.x;
 
           self->on_size(*self->GetClientSize());
@@ -265,7 +270,6 @@ namespace siege::views
         };
         assert(::TrackMouseEvent(&event) == TRUE);
       }
-
 
       repopulate_tree_view(std::filesystem::current_path());
 
@@ -337,9 +341,9 @@ namespace siege::views
       }
     }
 
-    auto wm_size(win32::size_message sized)
+    auto wm_size(std::size_t type, SIZE client_size)
     {
-      on_size(sized.client_size);
+      on_size(client_size);
 
       return 0;
     }
@@ -788,7 +792,21 @@ namespace siege::views
 
     std::optional<LRESULT> wm_command(win32::menu_command command)
     {
-      if (command.identifier == open_workspace)
+      if (command.identifier == edit_theme_id && !theme_window)
+      {
+        theme_window = *win32::window_module_ref::current_module().CreateWindowExW(CREATESTRUCTW{
+          .lpCreateParams = *this,
+          .cx = CW_USEDEFAULT,
+          .x = CW_USEDEFAULT,
+          .style = WS_OVERLAPPEDWINDOW,
+          .lpszName = L"Theme Window",
+          .lpszClass = win32::type_name<theme_view>().c_str()
+        });
+
+        ShowWindow(theme_window, SW_NORMAL);
+      }
+
+      if (command.identifier == open_workspace_id)
       {
         auto dialog = win32::com::CreateFileOpenDialog();
 

@@ -26,9 +26,9 @@ namespace siege::views
       return 0;
     }
 
-    auto wm_size(win32::size_message sized)
+    auto wm_size(std::size_t type, SIZE client_size)
     {
-      ref_names.SetWindowPos(sized.client_size);
+      ref_names.SetWindowPos(client_size);
       ref_names.SetWindowPos(POINT{});
 
       return 0;

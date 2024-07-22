@@ -90,10 +90,10 @@ namespace siege::views
       return 0;
     }
 
-    auto wm_size(win32::size_message sized)
+    auto wm_size(std::size_t type, SIZE client_size)
     {
-      auto one_quarter = SIZE{ .cx = sized.client_size.cx / 4, .cy = sized.client_size.cy };
-      auto three_quarters = SIZE{ .cx = sized.client_size.cx - one_quarter.cx, .cy = sized.client_size.cy };
+      auto one_quarter = SIZE{ .cx = client_size.cx / 4, .cy = client_size.cy };
+      auto three_quarters = SIZE{ .cx = client_size.cx - one_quarter.cx, .cy = client_size.cy };
 
       resource_table.SetWindowPos(three_quarters);
       resource_table.SetWindowPos(POINT{});
