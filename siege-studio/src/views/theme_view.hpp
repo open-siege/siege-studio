@@ -14,6 +14,8 @@ namespace siege::views
 
     win32::list_view control_settings;
 
+    std::vector<win32::button> combo_boxes;
+
     std::map<std::wstring_view, std::wstring_view> control_labels = {
       { win32::button::class_name, L"Button" },
       { win32::edit::class_name, L"Edit" },
@@ -72,7 +74,7 @@ namespace siege::views
       ListBox_SetItemHeight(options, 0, options.GetItemHeight(0) * 2);
 
       control_settings = *control_factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
-        .style = WS_CHILD | LVS_REPORT | LVS_EDITLABELS });
+        .style = WS_CHILD | LVS_REPORT });
 
       control_settings.EnableGroupView(true);
 
@@ -118,16 +120,18 @@ namespace siege::views
         auto existing_group = std::find_if(groups.begin(), groups.end(), [&](auto& item) {
           return item.text == control_name;
         });
-
+        auto& combo_box = combo_boxes.emplace_back(*control_factory.CreateWindowExW<win32::button>(::CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, .lpszName = L"Test" }));
         if (existing_group == groups.end())
         {
           win32::list_view_item item{ std::wstring(property_name) };
           item.sub_items.emplace_back(property_value);
+          item.lParam = (LPARAM)combo_box.get();
           groups.emplace_back(std::wstring(control_name), std::vector<win32::list_view_item>{ std::move(item) });
         }
         else
         {
           auto& item = existing_group->items.emplace_back(std::wstring(property_name));
+          item.lParam = (LPARAM)combo_box.get();
           item.sub_items.emplace_back(property_value);
         }
       }
@@ -140,6 +144,56 @@ namespace siege::views
       control_settings.InsertGroups(groups);
 
       return 0;
+    }
+
+    std::optional<win32::lresult_t> wm_notify(win32::list_view_custom_draw_notification custom_draw)
+    {
+      if (custom_draw.ref.nmcd.dwDrawStage == CDDS_PREPAINT)
+      {
+        return CDRF_NOTIFYITEMDRAW;
+      }
+
+      if (custom_draw.ref.nmcd.dwDrawStage == CDDS_ITEMPREPAINT)
+      {
+        return CDRF_NOTIFYSUBITEMDRAW;
+      }
+
+      if (custom_draw.ref.nmcd.dwDrawStage == (CDDS_SUBITEM | CDDS_ITEMPREPAINT) && custom_draw.ref.dwItemType == LVCDI_ITEM)
+      {
+        if (custom_draw.ref.iSubItem == 0)
+        {
+          return CDRF_DODEFAULT;
+        }
+        auto item = control_settings.GetItem(LVITEMW{
+          .mask = LVIF_PARAM,
+          .iItem = (int)custom_draw.ref.nmcd.dwItemSpec,
+          .iSubItem = custom_draw.ref.iSubItem
+        });
+
+        RECT item_rect{};
+        RECT temp{};
+ 
+        ListView_GetSubItemRect(control_settings, custom_draw.ref.nmcd.dwItemSpec, 0, LVIR_BOUNDS, &item_rect);
+        auto height = item_rect.bottom - item_rect.top - 30;
+        
+        ListView_GetSubItemRect(control_settings, custom_draw.ref.nmcd.dwItemSpec, custom_draw.ref.iSubItem, LVIR_BOUNDS, &temp);
+
+        auto list_view_rect = control_settings.MapWindowPoints(*this, *control_settings.GetClientRect());
+        temp.left += list_view_rect->second.left;
+        temp.right += list_view_rect->second.left;
+        temp.right = std::clamp<LONG>(temp.right, list_view_rect->second.left, list_view_rect->second.right);
+        
+        
+        temp.top += list_view_rect->second.top;
+        temp.bottom += list_view_rect->second.top + height;
+
+
+        win32::button((HWND)item->lParam).SetWindowPos(temp);
+        win32::button((HWND)item->lParam).SetWindowPos(HWND_TOP);
+        return CDRF_DOERASE;
+      }
+
+      return CDRF_DODEFAULT;
     }
 
     std::optional<win32::lresult_t> wm_notify(win32::notify_message message)
