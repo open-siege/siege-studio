@@ -179,6 +179,15 @@ namespace siege::views
         table.SetColumnWidth(i, column_width);
       }
 
+      LVTILEVIEWINFO tileViewInfo = { 0 };
+
+      tileViewInfo.cbSize = sizeof(tileViewInfo);
+      tileViewInfo.dwFlags = LVTVIF_AUTOSIZE;
+      tileViewInfo.dwMask = LVTVIM_COLUMNS;
+      tileViewInfo.cLines = 2;
+      
+      ListView_SetTileViewInfo(table, &tileViewInfo);
+
       return 0;
     }
 
@@ -237,7 +246,14 @@ namespace siege::views
                   std::to_wstring(file->size)
                 };
 
-                file_indices.emplace(file, table.InsertRow(item));
+                auto index = table.InsertRow(item);
+                file_indices.emplace(file, index);
+
+                UINT columns[2] = { 2, 3 };
+                int formats[2] = { LVCFMT_LEFT, LVCFMT_LEFT };
+                LVTILEINFO item_info{ .cbSize = sizeof(LVTILEINFO), .iItem = (int)index, .cColumns = 2, .puColumns = columns, .piColFmt = formats };
+
+                ListView_SetTileInfo(table, &item_info);
               }
             }
           }
