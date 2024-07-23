@@ -38,6 +38,12 @@ namespace win32
       inline static auto bk_color = std::wstring(win32::tree_view::class_name) + L"." + L"BkColor";
       inline static auto text_color = std::wstring(win32::tree_view::class_name) + L"." + L"TextColor";
       inline static auto line_color = std::wstring(win32::tree_view::class_name) + L"." + L"LineColor";
+
+      inline static auto props = std::array<std::wstring_view, 3>{
+          bk_color,
+          text_color,
+          line_color
+      };
     };
 
     struct list_view

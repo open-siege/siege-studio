@@ -14,6 +14,34 @@ namespace siege::views
 
     win32::list_view control_settings;
 
+    std::map<std::wstring_view, std::wstring_view> control_labels = {
+      { win32::button::class_name, L"Button" },
+      { win32::edit::class_name, L"Edit" },
+      { win32::static_control::class_name, L"Static Control" },
+      { win32::list_box::class_name, L"List Box" },
+      { win32::scroll_bar::class_name, L"Scroll Bar" },
+      { win32::combo_box::class_name, L"Combo Box" },
+      { win32::list_view::class_name, L"List View" },
+      { win32::tab_control::class_name, L"Tab Control" },
+      { win32::tree_view::class_name, L"Tree View" },
+      { win32::combo_box_ex::class_name, L"Combo Box Ex" },
+      { L"Menu", L"Menu" },
+      { L"Window", L"Window" }
+    };
+
+    std::map<std::wstring_view, std::wstring_view> property_labels = {
+      { L"BkColor", L"Background Color" },
+      { L"TextColor", L"Text Color" },
+      { L"LineColor", L"Line Color" },
+      { L"TextBkColor", L"Text Background Color" },
+      { L"OutlineColor", L"Outline Color" },
+      { L"BtnHighlightColor", L"Button Highlight Color" },
+      { L"BtnShadowColor", L"Button Shadow Color" },
+      { L"BtnFaceColor", L"Button Face Color" },
+      { L"TextHighlightColor", L"Text Highlight Color" },
+      { L"Mark Color", L"Mark Color" },
+    };
+
     // list box for simple and advanced settings
     // simple settings has preferred theme option (from system or user-defined)
     // simple settings has preferred accent color (from system or user-defined)
@@ -54,6 +82,12 @@ namespace siege::views
       control_settings.InsertColumn(-1, LVCOLUMNW{
                                       .pszText = const_cast<wchar_t*>(L"Value"),
                                     });
+
+
+      std::vector<std::wstring_view> property_names = {
+
+
+      };
 
       std::vector<win32::list_view_group> groups;
       groups.reserve(16);

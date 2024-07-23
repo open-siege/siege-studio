@@ -9,26 +9,6 @@ namespace win32
   struct control : window
   {
     using window::window;
-
-    inline void SetVersion()
-    {
-    }
-
-    inline void GetVersion()
-    {
-    }
-
-    inline void DpiScale()
-    {
-    }
-
-    inline void GetUnicodeFormat()
-    {
-    }
-
-    inline void SetUnicodeFormat()
-    {
-    }
   };
 
   struct link : window
@@ -58,14 +38,6 @@ namespace win32
   {
     using window::window;
     constexpr static auto class_name = UPDOWN_CLASSW;
-
-    inline void SetBuddy()
-    {
-    }
-
-    inline void SetRange()
-    {
-    }
   };
 
   struct header : control
@@ -75,12 +47,12 @@ namespace win32
 
     [[nodiscard]] inline wparam_t GetItemCount()
     {
-      return SendMessageW(*this, HDM_GETITEMCOUNT, 0, 0);
+      return Header_GetItemCount(*this);
     }
 
     [[maybe_unused]] inline std::optional<HDITEMW> GetItem(wparam_t index, HDITEMW item)
     {
-      if (SendMessageW(*this, HDM_GETITEMW, index, lparam_t(&item)))
+      if (Header_GetItem(*this, index, &item))
       {
         return item;
       }
@@ -91,7 +63,8 @@ namespace win32
     [[maybe_unused]] inline std::optional<RECT> GetItemRect(wparam_t index)
     {
       RECT item;
-      if (SendMessageW(*this, HDM_GETITEMRECT, index, lparam_t(&item)))
+
+      if (Header_GetItemRect(*this, index, &item))
       {
         return item;
       }
@@ -101,17 +74,17 @@ namespace win32
 
     [[maybe_unused]] inline bool SetItem(wparam_t index, HDITEMW item)
     {
-      return SendMessageW(*this, HDM_SETITEM, index, lparam_t(&item)) != 0;
+      return Header_SetItem(*this, index, &item) != 0;
     }
 
     [[maybe_unused]] inline wparam_t InsertItem(wparam_t index, HDITEMW info)
     {
-      return SendMessageW(*this, HDM_INSERTITEMW, index, std::bit_cast<win32::lparam_t>(&info));
+      return Header_InsertItem(*this, index, &info);
     }
 
     [[maybe_unused]] inline wparam_t SetFilterChangeTimeout(int timeout = 1000)
     {
-      return SendMessageW(*this, HDM_SETFILTERCHANGETIMEOUT, 0, lparam_t(timeout));
+      return Header_SetFilterChangeTimeout(*this, timeout);
     }
   };
 
@@ -533,100 +506,6 @@ namespace win32
   {
     using window::window;
     constexpr static auto class_Name = REBARCLASSNAMEW;
-
-    [[nodiscard]] inline std::optional<RECT> GetRect(wparam_t index)
-    {
-      RECT result;
-
-      if (SendMessageW(*this, RB_GETRECT, index, std::bit_cast<lparam_t>(&result)))
-      {
-        return result;
-      }
-
-      return std::nullopt;
-    }
-
-    [[nodiscard]] inline std::uint32_t GetBarHeight()
-    {
-      return std::uint32_t(SendMessageW(*this, RB_GETBARHEIGHT, 0, 0));
-    }
-
-    [[nodiscard]] inline lparam_t GetBandCount()
-    {
-      return SendMessageW(*this, RB_GETBANDCOUNT, 0, 0);
-    }
-
-    [[maybe_unused]] inline void SetBandWidth(wparam_t index, lparam_t new_width)
-    {
-      SendMessageW(*this, RB_SETBANDWIDTH, index, new_width);
-    }
-
-    [[maybe_unused]] inline void MaximizeBand(wparam_t index, lparam_t ideal_width = 0)
-    {
-      SendMessageW(*this, RB_MAXIMIZEBAND, index, ideal_width);
-    }
-
-    [[maybe_unused]] inline std::optional<REBARBANDINFOW> GetBandChildSize(wparam_t index)
-    {
-      REBARBANDINFOW band{ .cbSize = sizeof(REBARBANDINFOW), .fMask = RBBIM_CHILDSIZE };
-
-      if (SendMessageW(*this, RB_GETBANDINFOW, index, std::bit_cast<win32::lparam_t>(&band)))
-      {
-        return band;
-      }
-
-      return std::nullopt;
-    }
-
-    [[maybe_unused]] inline bool SetBandInfo(wparam_t index, REBARBANDINFOW band)
-    {
-      band.cbSize = sizeof(band);
-      return SendMessageW(*this, RB_SETBANDINFOW, index, std::bit_cast<win32::lparam_t>(&band));
-    }
-
-    [[maybe_unused]] inline bool InsertBand(wparam_t position, REBARBANDINFOW band)
-    {
-      band.cbSize = sizeof(band);
-
-      bool mask_not_set = band.fMask == 0;
-
-      if (mask_not_set && band.hwndChild)
-      {
-        band.fMask |= RBBIM_CHILD;
-      }
-
-      if (mask_not_set && band.lpText)
-      {
-        band.fMask |= RBBIM_TEXT;
-      }
-
-      if (mask_not_set && (band.cxMinChild || band.cyMinChild || band.cyChild || band.cyMaxChild))
-      {
-        band.fMask |= RBBIM_CHILDSIZE;
-      }
-
-      if (mask_not_set && band.cx)
-      {
-        band.fMask |= RBBIM_SIZE;
-      }
-
-      if (mask_not_set && band.cxIdeal)
-      {
-        band.fMask |= RBBIM_IDEALSIZE;
-      }
-
-      if (mask_not_set && band.cxHeader)
-      {
-        band.fMask |= RBBIM_HEADERSIZE;
-      }
-
-      if (mask_not_set && band.fStyle)
-      {
-        band.fMask |= RBBIM_STYLE;
-      }
-
-      return SendMessageW(*this, RB_INSERTBANDW, position, std::bit_cast<win32::lparam_t>(&band));
-    }
   };
 
   struct tab_control : window
@@ -636,33 +515,33 @@ namespace win32
 
     [[maybe_unused]] inline wparam_t InsertItem(wparam_t index, TCITEMW info)
     {
-      return SendMessageW(*this, TCM_INSERTITEMW, index, std::bit_cast<lparam_t>(&info));
+      return TabCtrl_InsertItem(*this, index, &info);
     }
 
     [[nodiscard]] inline wparam_t GetItemCount()
     {
-      return SendMessageW(*this, TCM_GETITEMCOUNT, 0, 0);
+      return TabCtrl_GetItemCount(*this);
     }
 
     [[nodiscard]] inline wparam_t GetCurrentSelection()
     {
-      return SendMessageW(*this, TCM_GETCURSEL, 0, 0);
+      return TabCtrl_GetCurSel(*this);
     }
 
     [[maybe_unused]] inline wparam_t SetCurrentSelection(wparam_t index)
     {
-      return SendMessageW(*this, TCM_SETCURSEL, index, 0);
+      return TabCtrl_SetCurSel(*this, index);
     }
 
     [[maybe_unused]] inline SIZE SetItemSize(SIZE size)
     {
-      auto result = SendMessageW(*this, TCM_SETITEMSIZE, 0, MAKEWORD(size.cx, size.cy));
+      auto result = TabCtrl_SetItemSize(*this, size.cx, size.cy);
       return SIZE{ .cx = LOWORD(result), .cy = HIWORD(result) };
     }
 
     [[nodiscard]] inline std::optional<TCITEMW> GetItem(wparam_t index, TCITEMW result)
     {
-      if (SendMessageW(*this, TCM_GETITEM, index, std::bit_cast<lparam_t>(&result)))
+      if (TabCtrl_GetItem(*this, index, &result))
       {
         return result;
       }
@@ -673,7 +552,8 @@ namespace win32
     [[nodiscard]] inline std::optional<RECT> GetItemRect(wparam_t index)
     {
       RECT result;
-      if (SendMessageW(*this, TCM_GETITEMRECT, index, std::bit_cast<lparam_t>(&result)))
+
+      if (TabCtrl_GetItemRect(*this, index, &result))
       {
         return result;
       }
@@ -685,7 +565,7 @@ namespace win32
     {
       TCITEMW result{ .mask = mask };
 
-      if (SendMessageW(*this, TCM_GETITEM, index, std::bit_cast<lparam_t>(&result)))
+      if (TabCtrl_GetItem(*this, index, &result))
       {
         return result;
       }
@@ -695,7 +575,7 @@ namespace win32
 
     [[maybe_unused]] inline bool SetItem(wparam_t index, TCITEMW result)
     {
-      if (SendMessageW(*this, TCM_GETITEM, index, std::bit_cast<lparam_t>(&result)))
+      if (TabCtrl_SetItem(*this, index, &result))
       {
         return true;
       }
@@ -705,7 +585,7 @@ namespace win32
 
     inline RECT AdjustRect(bool dispay_to_window, RECT rect)
     {
-      SendMessageW(*this, TCM_ADJUSTRECT, dispay_to_window ? TRUE : FALSE, std::bit_cast<lparam_t>(&rect));
+      TabCtrl_AdjustRect(*this, dispay_to_window ? TRUE : FALSE, &rect);
       return rect;
     }
   };
@@ -851,12 +731,12 @@ namespace win32
 
     [[maube_unused]] inline bool Expand(HTREEITEM item, wparam_t action = TVE_EXPAND)
     {
-      return SendMessageW(*this, TVM_EXPAND, action, std::bit_cast<lparam_t>(item));
+      return TreeView_Expand(*this, item, action);
     }
 
     [[maube_unused]] inline bool Collapse(HTREEITEM item, wparam_t action = TVE_COLLAPSE)
     {
-      return SendMessageW(*this, TVM_EXPAND, action, std::bit_cast<lparam_t>(item));
+      return TreeView_Expand(*this, item, action);
     }
 
     [[maybe_unused]] inline bool EnsureVisible(HTREEITEM item)
@@ -967,16 +847,6 @@ namespace win32
   {
     using control::control;
     constexpr static auto class_name = WC_COMBOBOXEXW;
-
-    [[maybe_unused]] inline wparam_t InsertItem(COMBOBOXEXITEMW info)
-    {
-      return SendMessageW(*this, CBEM_INSERTITEMW, 0, std::bit_cast<win32::lparam_t>(&info));
-    }
-
-    inline std::span<COMBOBOXEXITEMW> GetChildItems(std::span<COMBOBOXEXITEMW> items)
-    {
-      return items;
-    }
   };
 }// namespace win32
 

@@ -55,7 +55,6 @@ namespace siege::views
     HMENU dark_menu;
     HIMAGELIST shell_images = nullptr;
     
-
     bool is_dark_mode = false;
 
     siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self), tab_control(nullptr)
