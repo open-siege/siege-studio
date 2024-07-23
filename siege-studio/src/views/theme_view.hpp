@@ -25,6 +25,8 @@ namespace siege::views
       { win32::tab_control::class_name, L"Tab Control" },
       { win32::tree_view::class_name, L"Tree View" },
       { win32::combo_box_ex::class_name, L"Combo Box Ex" },
+      { win32::header::class_name, L"Header" },
+      { win32::tool_bar::class_name, L"Toolbar" },
       { L"Menu", L"Menu" },
       { L"Window", L"Window" }
     };
@@ -39,10 +41,9 @@ namespace siege::views
       { L"BtnShadowColor", L"Button Shadow Color" },
       { L"BtnFaceColor", L"Button Face Color" },
       { L"TextHighlightColor", L"Text Highlight Color" },
-      { L"Mark Color", L"Mark Color" },
+      { L"MarkColor", L"Mark Color" },
     };
 
-    // list box for simple and advanced settings
     // simple settings has preferred theme option (from system or user-defined)
     // simple settings has preferred accent color (from system or user-defined)
     // simple settings has theme selection (light, dark)
@@ -71,47 +72,65 @@ namespace siege::views
       ListBox_SetItemHeight(options, 0, options.GetItemHeight(0) * 2);
 
       control_settings = *control_factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
-        .style = WS_CHILD | LVS_REPORT });
+        .style = WS_CHILD | LVS_REPORT | LVS_EDITLABELS });
 
       control_settings.EnableGroupView(true);
 
       control_settings.InsertColumn(-1, LVCOLUMNW{
-                                      .pszText = const_cast<wchar_t*>(L"Property"),
-                                    });
+                                          .pszText = const_cast<wchar_t*>(L"Property"),
+                                        });
 
       control_settings.InsertColumn(-1, LVCOLUMNW{
-                                      .pszText = const_cast<wchar_t*>(L"Value"),
-                                    });
+                                          .pszText = const_cast<wchar_t*>(L"Value"),
+                                        });
 
 
-      std::vector<std::wstring_view> property_names = {
-
-
-      };
+      std::vector<std::wstring_view> property_names = [] {
+        std::vector<std::wstring_view> results;
+        results.reserve(32);
+        std::copy(win32::properties::tree_view::props.begin(), win32::properties::tree_view::props.end(), std::back_inserter(results));
+        std::copy(win32::properties::list_view::props.begin(), win32::properties::list_view::props.end(), std::back_inserter(results));
+        std::copy(win32::properties::tool_bar::props.begin(), win32::properties::tool_bar::props.end(), std::back_inserter(results));
+        std::copy(win32::properties::list_box::props.begin(), win32::properties::list_box::props.end(), std::back_inserter(results));
+        std::copy(win32::properties::window::props.begin(), win32::properties::window::props.end(), std::back_inserter(results));
+        std::copy(win32::properties::menu::props.begin(), win32::properties::menu::props.end(), std::back_inserter(results));
+        std::copy(win32::properties::header::props.begin(), win32::properties::header::props.end(), std::back_inserter(results));
+        std::copy(win32::properties::static_control::props.begin(), win32::properties::static_control::props.end(), std::back_inserter(results));
+        std::copy(win32::properties::tab_control::props.begin(), win32::properties::tab_control::props.end(), std::back_inserter(results));
+        return results;
+      }();
 
       std::vector<win32::list_view_group> groups;
       groups.reserve(16);
 
-      groups.emplace_back(L"Window", std::vector<win32::list_view_item>{ win32::list_view_item{ L"Background Color" }, win32::list_view_item{ L"" } });
+      for (auto& name : property_names)
+      {
+        std::vector<win32::list_view_item> items;
 
-      groups.emplace_back(L"Menu", std::vector<win32::list_view_item>{ win32::list_view_item{ L"Background Color" }, win32::list_view_item{ L"" } });
+        auto temp = theme_properties.GetPropW<COLORREF>(name);
 
-      groups.emplace_back(L"Static", std::vector<win32::list_view_item>{ win32::list_view_item{ L"Background Color" }, win32::list_view_item{ L"" } });
+        std::wstring property_value = temp ? std::to_wstring(temp) : std::wstring(L"System Default");
 
-      groups.emplace_back(L"Button", std::vector<win32::list_view_item>{ win32::list_view_item{ L"Background Color" }, win32::list_view_item{ L"" } });
+        auto separator = name.find(L'.');
+        auto control_name = control_labels.at(name.substr(0, separator));
+        auto property_name = property_labels.at(name.substr(separator + 1));
 
-      groups.emplace_back(L"List Box", std::vector<win32::list_view_item>{ win32::list_view_item{ L"Background Color" }, win32::list_view_item{ L"" } });
+        auto existing_group = std::find_if(groups.begin(), groups.end(), [&](auto& item) {
+          return item.text == control_name;
+        });
 
-      groups.emplace_back(L"Combo Box", std::vector<win32::list_view_item>{ win32::list_view_item{ L"Background Color" }, win32::list_view_item{ L"" } });
-
-      groups.emplace_back(L"Edit", std::vector<win32::list_view_item>{ win32::list_view_item{ L"Background Color" }, win32::list_view_item{ L"" } });
-
-      groups.emplace_back(L"List View", std::vector<win32::list_view_item>{ win32::list_view_item{ L"Background Color" }, win32::list_view_item{ L"" } });
-
-      groups.emplace_back(L"Tree View", std::vector<win32::list_view_item>{ win32::list_view_item{ L"Background Color" }, win32::list_view_item{ L"" } });
-
-      groups.emplace_back(L"Tab Control", std::vector<win32::list_view_item>{ win32::list_view_item{ L"Background Color" }, win32::list_view_item{ L"" } });
-
+        if (existing_group == groups.end())
+        {
+          win32::list_view_item item{ std::wstring(property_name) };
+          item.sub_items.emplace_back(property_value);
+          groups.emplace_back(std::wstring(control_name), std::vector<win32::list_view_item>{ std::move(item) });
+        }
+        else
+        {
+          auto& item = existing_group->items.emplace_back(std::wstring(property_name));
+          item.sub_items.emplace_back(property_value);
+        }
+      }
 
       for (auto& group : groups)
       {
@@ -128,6 +147,25 @@ namespace siege::views
       if (message.code == LBN_SELCHANGE && message.hwndFrom == options)
       {
         ShowWindow(control_settings, options.GetCurrentSelection() == 1 ? SW_SHOW : SW_HIDE);
+      }
+
+      return std::nullopt;
+    }
+
+    std::optional<win32::lresult_t> wm_notify(win32::list_view_display_info_notfication message)
+    {
+      if (message.hdr.code == LVN_BEGINLABELEDITW && message.hdr.hwndFrom == control_settings)
+      {
+        if (message.item.iSubItem == 0)
+        {
+          return FALSE;
+        }
+        return TRUE;
+      }
+
+      if (message.hdr.code == LVN_ENDLABELEDITW && message.hdr.hwndFrom == control_settings)
+      {
+        return TRUE;
       }
 
       return std::nullopt;

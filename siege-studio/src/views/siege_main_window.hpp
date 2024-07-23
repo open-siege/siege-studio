@@ -54,7 +54,7 @@ namespace siege::views
     HMENU light_menu;
     HMENU dark_menu;
     HIMAGELIST shell_images = nullptr;
-    
+
     bool is_dark_mode = false;
 
     siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self), tab_control(nullptr)
@@ -432,27 +432,20 @@ namespace siege::views
             this->SetPropW(L"AppsUseDarkTheme", is_dark_mode);
             if (value == 1)
             {
-              static auto props = std::array<std::wstring_view, 32>{ {
-                win32::properties::tree_view::bk_color,
-                win32::properties::tree_view::text_color,
-                win32::properties::tree_view::text_color,
-                win32::properties::list_view::bk_color,
-                win32::properties::list_view::text_color,
-                win32::properties::list_view::text_bk_color,
-                win32::properties::list_view::outline_color,
-                win32::properties::tool_bar::btn_face_color,
-                win32::properties::tool_bar::btn_highlight_color,
-                win32::properties::tool_bar::btn_shadow_color,
-                win32::properties::tool_bar::text_color,
-                win32::properties::tool_bar::text_highlight_color,
-                win32::properties::tool_bar::mark_color,
-                win32::properties::list_box::bk_color,
-                win32::properties::list_box::text_highlight_color,
-                win32::properties::list_box::text_bk_color,
-                win32::properties::list_box::text_color,
-                win32::properties::window::bk_color,
-                win32::properties::menu::bk_color,
-              } };
+              static auto props = [] {
+                std::vector<std::wstring_view> results;
+                results.reserve(32);
+                std::copy(win32::properties::tree_view::props.begin(), win32::properties::tree_view::props.end(), std::back_inserter(results));
+                std::copy(win32::properties::list_view::props.begin(), win32::properties::list_view::props.end(), std::back_inserter(results));
+                std::copy(win32::properties::tool_bar::props.begin(), win32::properties::tool_bar::props.end(), std::back_inserter(results));
+                std::copy(win32::properties::list_box::props.begin(), win32::properties::list_box::props.end(), std::back_inserter(results));
+                std::copy(win32::properties::window::props.begin(), win32::properties::window::props.end(), std::back_inserter(results));
+                std::copy(win32::properties::menu::props.begin(), win32::properties::menu::props.end(), std::back_inserter(results));
+                std::copy(win32::properties::header::props.begin(), win32::properties::header::props.end(), std::back_inserter(results));
+                std::copy(win32::properties::static_control::props.begin(), win32::properties::static_control::props.end(), std::back_inserter(results));
+                std::copy(win32::properties::tab_control::props.begin(), win32::properties::tab_control::props.end(), std::back_inserter(results));
+                return results;
+              }();
 
               for (auto& prop : props)
               {
@@ -799,8 +792,7 @@ namespace siege::views
           .x = CW_USEDEFAULT,
           .style = WS_OVERLAPPEDWINDOW,
           .lpszName = L"Theme Window",
-          .lpszClass = win32::type_name<theme_view>().c_str()
-        });
+          .lpszClass = win32::type_name<theme_view>().c_str() });
 
         ShowWindow(theme_window, SW_NORMAL);
       }

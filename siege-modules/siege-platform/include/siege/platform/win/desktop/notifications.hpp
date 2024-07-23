@@ -63,6 +63,7 @@ namespace win32
 	using header_notification = notify_message_base<NMHEADERW>;
 	using header_filter_button_notification = notify_message_base<NMHDFILTERBTNCLICK>;
 	using list_view_item_activation = notify_message_base<NMITEMACTIVATE>;
+	using list_view_display_info_notfication = notify_message_base<NMLVDISPINFO>;
 	using mouse_notification = notify_message_base<NMMOUSE>;
 	using keyboard_notification = notify_message_base<NMKEY>;
 	using custom_draw_notification = notify_message_ref<NMCUSTOMDRAW>;

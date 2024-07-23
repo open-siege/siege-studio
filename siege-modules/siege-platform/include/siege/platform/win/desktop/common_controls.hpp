@@ -464,26 +464,6 @@ namespace win32
       return std::nullopt;
     }
 
-    inline void InsertGroups(std::span<list_view_group> groups)
-    {
-      int group_id = int(GetGroupCount() + 1);
-      for (auto& group : groups)
-      {
-        group.iGroupId = group_id;
-
-        InsertGroup(-1, group);
-        auto items = std::move(group.items);
-
-        for (auto& item : items)
-        {
-          item.iGroupId = group_id;
-          InsertItem(-1, item);
-        }
-
-        group_id++;
-      }
-    }
-
     inline auto InsertRow(list_view_item row)
     {
       auto index = this->InsertItem(-1, row);
@@ -500,6 +480,27 @@ namespace win32
 
       return index;
     }
+
+    inline void InsertGroups(std::span<list_view_group> groups)
+    {
+      int group_id = int(GetGroupCount() + 1);
+      for (auto& group : groups)
+      {
+        group.iGroupId = group_id;
+
+        InsertGroup(-1, group);
+        auto items = std::move(group.items);
+
+        for (auto& item : items)
+        {
+          item.iGroupId = group_id;
+          InsertRow(item);
+        }
+
+        group_id++;
+      }
+    }
+
   };
 
   struct rebar : window

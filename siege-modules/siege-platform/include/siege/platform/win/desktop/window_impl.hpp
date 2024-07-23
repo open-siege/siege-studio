@@ -232,6 +232,15 @@ namespace win32
         }
       }
 
+      if constexpr (requires(TWindow t) { t.wm_notify(list_view_display_info_notfication{ wParam, lParam }); })
+      {
+        if ((header.code == LVN_BEGINLABELEDITW || header.code == LVN_ENDLABELEDITW || header.code == LVN_SETDISPINFOW)
+            && ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == WC_LISTVIEWW)
+        {
+          return self->wm_notify(list_view_display_info_notfication{ wParam, lParam });
+        }
+      }
+
       if constexpr (requires(TWindow t) { t.wm_notify(mouse_notification{ wParam, lParam }); })
       {
         if ((header.code == NM_CLICK || header.code == NM_DBLCLK || header.code == NM_RCLICK || header.code == NM_RDBLCLK)
