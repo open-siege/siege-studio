@@ -2,6 +2,8 @@
 #define WIN32_CLASS_HPP
 
 #include <siege/platform/win/desktop/notifications.hpp>
+#include <siege/platform/win/desktop/user_controls.hpp>
+#include <siege/platform/win/desktop/common_controls.hpp>
 #include "window.hpp"
 #include <windowsx.h>
 #include <any>
@@ -37,11 +39,11 @@ namespace win32
 
 #define DO_DISPATCH_WPARAM_AND_LPARAM(message_id, wparam_type, lparam_type, event_name)       \
   if constexpr (requires(TWindow t, lparam_type temp) { t.event_name(wparam_type{}, temp); }) \
-  {                                                                   \
-    if (message == message_id)                                        \
-    {                                                                 \
-      return self->event_name((wparam_type)wParam, *(lparam_type*)lParam);                 \
-    }                                                                 \
+  {                                                                                           \
+    if (message == message_id)                                                                \
+    {                                                                                         \
+      return self->event_name((wparam_type)wParam, *(lparam_type*)lParam);                    \
+    }                                                                                         \
   }
 
 
@@ -58,7 +60,7 @@ namespace win32
 
     DO_DISPATCH_WPARAM_AND_LPARAM(WM_MEASUREITEM, std::size_t, MEASUREITEMSTRUCT, wm_measure_item);
     DO_DISPATCH_WPARAM_AND_LPARAM(WM_DRAWITEM, std::size_t, DRAWITEMSTRUCT, wm_draw_item);
-    
+
     DO_DISPATCH(setting_change_message, wm_setting_change);
     DO_DISPATCH(button_control_color_message, wm_control_color);
     DO_DISPATCH(list_box_control_color_message, wm_control_color);
@@ -157,6 +159,19 @@ namespace win32
       }
     }
 
+    if constexpr (std::is_base_of_v<win32::button::notifications, TWindow>)
+    {
+      if (message == WM_DRAWITEM)
+      {
+        auto& context = *(DRAWITEMSTRUCT*)lParam;
+
+        if (context.CtlType == ODT_BUTTON)
+        {
+          return self->wm_draw_item(win32::button(context.hwndItem), wParam, context);
+        }
+      }
+    }
+
     if (message == notify_message::id)
     {
       notify_message header(wParam, lParam);
@@ -169,6 +184,18 @@ namespace win32
         if (header.code == TVN_ITEMEXPANDINGW || header.code == TVN_ITEMEXPANDEDW || header.code == TVN_SELCHANGINGW || header.code == TVN_SELCHANGEDW || header.code == TVN_SINGLEEXPAND || header.code == TVN_BEGINDRAGW || header.code == TVN_DELETEITEMW)
         {
           return self->wm_notify(tree_view_notification{ wParam, lParam });
+        }
+      }
+
+      if constexpr (std::is_base_of_v<win32::list_view::notifications, TWindow>)
+      {
+        if (message == WM_NOTIFY)
+        {
+          if (header.code == NM_CUSTOMDRAW
+              && ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == win32::list_view::class_name)
+          {
+            return self->wm_notify(win32::list_view(header.hwndFrom), *(NMLVCUSTOMDRAW*)lParam);
+          }
         }
       }
 

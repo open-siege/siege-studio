@@ -12,6 +12,14 @@ namespace win32
     using window::window;
     constexpr static auto class_name = WC_BUTTONW;
     constexpr static std::uint16_t dialog_id = 0x0080;
+
+    struct notifications
+    {
+      virtual std::optional<win32::lresult_t> wm_draw_item(win32::button, unsigned int, DRAWITEMSTRUCT&)
+      {
+        return std::nullopt;
+      }
+    };
   };
 
   struct edit : window

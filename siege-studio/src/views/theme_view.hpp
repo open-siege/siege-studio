@@ -4,11 +4,15 @@
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include <siege/platform/win/desktop/common_controls.hpp>
 
+#include <type_traits>
 
 namespace siege::views
 {
-  struct theme_view : win32::window_ref
+  struct theme_view final : win32::window_ref, 
+      win32::button::notifications,
+      win32::list_view::notifications
   {
+
     win32::window_ref theme_properties;
     win32::list_box options;
 
@@ -120,7 +124,9 @@ namespace siege::views
         auto existing_group = std::find_if(groups.begin(), groups.end(), [&](auto& item) {
           return item.text == control_name;
         });
-        auto& combo_box = combo_boxes.emplace_back(*control_factory.CreateWindowExW<win32::button>(::CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, .lpszName = L"Test" }));
+        auto& combo_box = combo_boxes.emplace_back(*control_factory.CreateWindowExW<win32::button>(::CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | BS_OWNERDRAW, .lpszName = L"Test" }));
+        win32::theme_module().SetWindowTheme(combo_box, L"", L"");
+
         if (existing_group == groups.end())
         {
           win32::list_view_item item{ std::wstring(property_name) };
@@ -146,50 +152,48 @@ namespace siege::views
       return 0;
     }
 
-    std::optional<win32::lresult_t> wm_notify(win32::list_view_custom_draw_notification custom_draw)
+
+    std::optional<win32::lresult_t> wm_draw_item(win32::button button, unsigned int, DRAWITEMSTRUCT& custom_draw) override
     {
-      if (custom_draw.ref.nmcd.dwDrawStage == CDDS_PREPAINT)
+      return std::nullopt;
+    }
+
+    std::optional<win32::lresult_t> wm_notify(win32::list_view, NMLVCUSTOMDRAW& custom_draw) override
+    {
+      if (custom_draw.nmcd.dwDrawStage == CDDS_PREPAINT)
       {
         return CDRF_NOTIFYITEMDRAW;
       }
 
-      if (custom_draw.ref.nmcd.dwDrawStage == CDDS_ITEMPREPAINT)
+      if (custom_draw.nmcd.dwDrawStage == CDDS_ITEMPREPAINT)
       {
         return CDRF_NOTIFYSUBITEMDRAW;
       }
 
-      if (custom_draw.ref.nmcd.dwDrawStage == (CDDS_SUBITEM | CDDS_ITEMPREPAINT) && custom_draw.ref.dwItemType == LVCDI_ITEM)
+      if (custom_draw.nmcd.dwDrawStage == (CDDS_SUBITEM | CDDS_ITEMPREPAINT) && custom_draw.dwItemType == LVCDI_ITEM)
       {
-        if (custom_draw.ref.iSubItem == 0)
+        if (custom_draw.iSubItem == 0)
         {
           return CDRF_DODEFAULT;
         }
-        auto item = control_settings.GetItem(LVITEMW{
-          .mask = LVIF_PARAM,
-          .iItem = (int)custom_draw.ref.nmcd.dwItemSpec,
-          .iSubItem = custom_draw.ref.iSubItem
-        });
 
         RECT item_rect{};
         RECT temp{};
- 
-        ListView_GetSubItemRect(control_settings, custom_draw.ref.nmcd.dwItemSpec, 0, LVIR_BOUNDS, &item_rect);
+
+        ListView_GetSubItemRect(control_settings, custom_draw.nmcd.dwItemSpec, 0, LVIR_BOUNDS, &item_rect);
         auto height = item_rect.bottom - item_rect.top - 30;
-        
-        ListView_GetSubItemRect(control_settings, custom_draw.ref.nmcd.dwItemSpec, custom_draw.ref.iSubItem, LVIR_BOUNDS, &temp);
+
+        ListView_GetSubItemRect(control_settings, custom_draw.nmcd.dwItemSpec, custom_draw.iSubItem, LVIR_BOUNDS, &temp);
 
         auto list_view_rect = control_settings.MapWindowPoints(*this, *control_settings.GetClientRect());
         temp.left += list_view_rect->second.left;
-        temp.right += list_view_rect->second.left;
-        temp.right = std::clamp<LONG>(temp.right, list_view_rect->second.left, list_view_rect->second.right);
-        
-        
+        temp.right += list_view_rect->second.left - 30;
         temp.top += list_view_rect->second.top;
         temp.bottom += list_view_rect->second.top + height;
 
 
-        win32::button((HWND)item->lParam).SetWindowPos(temp);
-        win32::button((HWND)item->lParam).SetWindowPos(HWND_TOP);
+        win32::button((HWND)custom_draw.nmcd.lItemlParam).SetWindowPos(temp);
+        win32::button((HWND)custom_draw.nmcd.lItemlParam).SetWindowPos(HWND_TOP);
         return CDRF_DOERASE;
       }
 
@@ -223,6 +227,17 @@ namespace siege::views
       }
 
       return std::nullopt;
+    }
+
+    auto wm_erase_background(win32::erase_background_message message)
+    {
+      static auto black_brush = ::CreateSolidBrush(0x00000000);
+      auto context = win32::gdi_drawing_context_ref(message.context);
+
+      auto rect = GetClientRect();
+      context.FillRect(*rect, black_brush);
+
+      return TRUE;
     }
 
     auto wm_size(std::size_t, SIZE client_size)

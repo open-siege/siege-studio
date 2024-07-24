@@ -146,6 +146,14 @@ namespace win32
       tile_view = LV_VIEW_TILE
     };
 
+    struct notifications
+    {
+      virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, NMLVCUSTOMDRAW&)
+      {
+        return std::nullopt;
+      }
+    };
+
     inline HIMAGELIST SetImageList(wparam_t wparam, HIMAGELIST image_list)
     {
       return std::bit_cast<HIMAGELIST>(SendMessageW(*this, LVM_SETIMAGELIST, wparam, std::bit_cast<lparam_t>(image_list)));
