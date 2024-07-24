@@ -34,8 +34,13 @@ namespace siege::views
                   }
   */
 
-  struct vol_view : win32::window_ref
+  struct vol_view final : win32::window_ref
+    , win32::list_view::notifications
+    , win32::tool_bar::notifications
+    , win32::header::notifications
   {
+    using win32::list_view::notifications::wm_notify;
+    using win32::tool_bar::notifications::wm_notify;
     vol_controller controller;
 
     win32::tool_bar table_settings;
@@ -185,7 +190,7 @@ namespace siege::views
       tileViewInfo.dwFlags = LVTVIF_AUTOSIZE;
       tileViewInfo.dwMask = LVTVIM_COLUMNS;
       tileViewInfo.cLines = 2;
-      
+
       ListView_SetTileViewInfo(table, &tileViewInfo);
 
       return 0;
@@ -278,7 +283,7 @@ namespace siege::views
       return TRUE;
     }
 
-    std::optional<win32::lresult_t> wm_notify(win32::list_view_item_activation message)
+    std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMITEMACTIVATE& message) override
     {
       switch (message.hdr.code)
       {
@@ -327,26 +332,26 @@ namespace siege::views
       }
     }
 
-    std::optional<win32::lresult_t> wm_notify(win32::mouse_notification message)
+    BOOL wm_notify(win32::tool_bar, const NMMOUSE& message) override
     {
       switch (message.hdr.code)
       {
       case NM_CLICK: {
         table.SetView(win32::list_view::view_type(message.dwItemSpec));
-        return 0;
+        return TRUE;
       }
       default: {
-        return std::nullopt;
+        return FALSE;
       }
       }
     }
 
-    std::optional<win32::lresult_t> wm_notify(win32::header_filter_button_notification message)
+    BOOL wm_notify(win32::header, NMHDFILTERBTNCLICK& message) override
     {
       return FALSE;
     }
 
-    std::optional<win32::lresult_t> wm_notify(win32::header_notification message)
+    std::optional<win32::lresult_t> wm_notify(win32::header, NMHEADERW& message) override
     {
       switch (message.hdr.code)
       {

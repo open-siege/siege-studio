@@ -451,15 +451,4 @@ namespace win32
     ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);       
   }
 
-  void apply_theme(const win32::window_ref& colors, win32::up_down& control)
-  {
-    if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
-    {
-      win32::theme_module().SetWindowTheme(control, L"DarkMode_Explorer", nullptr);
-    }
-    else
-    {
-      win32::theme_module().SetWindowTheme(control, nullptr, nullptr);
-    }
-  }
 }// namespace win32

@@ -22,7 +22,8 @@ namespace siege::views
     }
   };
 
-  struct dts_view : win32::window_ref
+  struct dts_view final : win32::window_ref, 
+      win32::static_control::notifications
   {
     dts_controller controller;
 

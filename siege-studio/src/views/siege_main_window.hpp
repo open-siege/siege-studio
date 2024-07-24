@@ -23,8 +23,13 @@ namespace siege::views
     }
   };
 
-  struct siege_main_window : win32::window_ref
+  struct siege_main_window final : win32::window_ref, 
+      win32::tree_view::notifications,
+      win32::tab_control::notifications,
+      win32::menu::notifications
   {
+    using win32::tree_view::notifications::wm_notify;
+    using win32::menu::notifications::wm_draw_item;
     win32::tree_view dir_list;
     win32::button separator;
     win32::tab_control tab_control;
@@ -395,11 +400,11 @@ namespace siege::views
 
           SetWindowLongPtrW(*child, GWLP_ID, index + 1);
 
-          wm_notify(win32::notify_message{ NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGING } });
+          wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGING });
 
           tab_control.SetCurrentSelection(index);
 
-          wm_notify(win32::notify_message{ NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE } });
+          wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE });
         }
         else
         {
@@ -576,20 +581,12 @@ namespace siege::views
       return TRUE;
     }
 
-    std::optional<LRESULT> wm_notify(win32::notify_message notification)
+    std::optional<LRESULT> wm_notify(win32::tab_control sender, const NMHDR& notification) override
     {
-      auto [sender, id, code] = notification;
+      auto code = notification.code;
 
       switch (code)
       {
-      case NM_DBLCLK: {
-        if (sender == dir_list && selected_file != files.end() && AddTabFromPath(*selected_file))
-        {
-          return 0;
-        }
-
-        return std::nullopt;
-      }
       case TCN_SELCHANGING: {
         auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
 
@@ -715,11 +712,11 @@ namespace siege::views
 
             SetWindowLongPtrW(*child, GWLP_ID, index + 1);
 
-            wm_notify(win32::notify_message{ NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGING } });
+            wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGING });
 
             tab_control.SetCurrentSelection(index);
 
-            wm_notify(win32::notify_message{ NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE } });
+            wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE });
           }
           else
           {
@@ -737,7 +734,19 @@ namespace siege::views
       return false;
     }
 
-    std::optional<LRESULT> wm_notify(win32::tree_view_notification notification)
+    std::optional<LRESULT> wm_notify(win32::tree_view sender, const NMHDR& notification) override
+    {
+      auto code = notification.code;
+
+      if (code == NM_DBLCLK && sender == dir_list && selected_file != files.end() && AddTabFromPath(*selected_file))
+      {
+        return 0;
+      }
+
+      return std::nullopt;
+    }
+
+    std::optional<LRESULT> wm_notify(win32::tree_view, const NMTREEVIEWW& notification) override
     {
       auto sender = notification.hdr.hwndFrom;
       auto code = notification.hdr.code;
@@ -782,9 +791,9 @@ namespace siege::views
       }
     }
 
-    std::optional<LRESULT> wm_command(win32::menu_command command)
+    std::optional<LRESULT> wm_command(win32::menu, int identifier) override
     {
-      if (command.identifier == edit_theme_id && !theme_window)
+      if (identifier == edit_theme_id && !theme_window)
       {
         theme_window = *win32::window_module_ref::current_module().CreateWindowExW(CREATESTRUCTW{
           .lpCreateParams = *this,
@@ -797,7 +806,7 @@ namespace siege::views
         ShowWindow(theme_window, SW_NORMAL);
       }
 
-      if (command.identifier == open_workspace_id)
+      if (identifier == open_workspace_id)
       {
         auto dialog = win32::com::CreateFileOpenDialog();
 
@@ -823,7 +832,7 @@ namespace siege::views
         }
       }
 
-      if (command.identifier == open_id)
+      if (identifier == open_id)
       {
         auto dialog = win32::com::CreateFileOpenDialog();
 

@@ -24,8 +24,8 @@ namespace siege::views
   {
     win32::static_control static_image;
     win32::list_view palettes_list;
-    win32::up_down zoom;
-    win32::up_down frame_selector;
+    win32::button zoom;
+    win32::button frame_selector;
 
     win32::static_control frame_label;
     win32::static_control frame_value;
@@ -52,10 +52,9 @@ namespace siege::views
 
       std::wstring temp = L"menu.pal";
 
-      frame_selector = *factory.CreateWindowExW<win32::up_down>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | UDS_HORZ | UDS_SETBUDDYINT,
-        .lpszName = L"Frame Selector",
-        .lpszClass = UPDOWN_CLASSW });
+      frame_selector = *factory.CreateWindowExW<win32::button>(::CREATESTRUCTW{
+        .style = WS_VISIBLE | WS_CHILD | BTNS_BUTTON,
+        .lpszName = L"Frame Selector" });
 
       frame_label = *factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | SS_LEFT,
@@ -65,14 +64,9 @@ namespace siege::views
         .style = WS_VISIBLE | WS_CHILD | SS_LEFT,
         .lpszName = L"" });
 
-
-      ::SendMessageW(frame_selector, UDM_SETBUDDY, win32::wparam_t(win32::hwnd_t(frame_value)), 0);
-      ::SendMessageW(frame_selector, UDM_SETRANGE, 0, MAKELPARAM(1, 1));
-
-      zoom = *factory.CreateWindowExW<win32::up_down>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | UDS_SETBUDDYINT,
-        .lpszName = L"Zoom",
-        .lpszClass = UPDOWN_CLASSW });
+      zoom = *factory.CreateWindowExW<win32::button>(::CREATESTRUCTW{
+        .style = WS_VISIBLE | WS_CHILD | BTNS_BUTTON,
+        .lpszName = L"Zoom" });
 
       zoom_label = *factory.CreateWindowExW<win32::static_control>(
         ::CREATESTRUCTW{
@@ -181,8 +175,8 @@ namespace siege::views
         win32::apply_theme(*parent, frame_value);
         win32::apply_theme(*parent, zoom_label);
         win32::apply_theme(*parent, zoom_value);
-        win32::apply_theme(*parent, zoom);
-        win32::apply_theme(*parent, frame_selector);
+        //win32::apply_theme(*parent, zoom);
+        //win32::apply_theme(*parent, frame_selector);
 
         return 0;
       }

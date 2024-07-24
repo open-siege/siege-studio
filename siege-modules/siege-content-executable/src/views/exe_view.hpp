@@ -15,7 +15,9 @@ namespace siege::views
 {
   using namespace std::literals;
 
-  struct exe_view : win32::window_ref
+  struct exe_view final : win32::window_ref, 
+      win32::list_box::notifications,
+      win32::list_view::notifications
   {
     exe_controller controller;
 
@@ -129,9 +131,9 @@ namespace siege::views
       return 0;
     }
 
-    std::optional<win32::lresult_t> wm_notify(win32::notify_message message)
+    std::optional<win32::lresult_t> wm_command(win32::list_box hwndFrom, int code) override
     {
-      if (message.code == LBN_SELCHANGE && (message.hwndFrom == options))
+      if (code == LBN_SELCHANGE && hwndFrom == options)
       {
         auto selected = options.GetCurrentSelection();
         ::ShowWindow(resource_table, SW_HIDE);

@@ -20,58 +20,6 @@
 
 namespace win32
 {
-	#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-		struct NMHDR {
-			  HWND     hwndFrom;
-			  UINT_PTR idFrom;
-			  UINT     code;
-		};
-	#endif
-
-	template<typename TNotification = NMHDR>
-	struct notify_message_base : TNotification
-	{
-		constexpr static std::uint32_t id = WM_NOTIFY;
-
-		notify_message_base(NMHDR base) : TNotification{}
-		{
-			std::memcpy(this, &base, sizeof(NMHDR));
-		}
-
-		notify_message_base(wparam_t, lparam_t lParam) : TNotification{}
-		{
-			std::memcpy(this, (void*)lParam, sizeof(TNotification));
-		}
-	};
-
-	template<typename TNotification = NMHDR>
-	struct notify_message_ref
-	{
-		constexpr static std::uint32_t id = WM_NOTIFY;
-
-		TNotification& ref;
-
-		notify_message_ref(wparam_t, lparam_t lParam) : ref(*(TNotification*)lParam)
-		{
-		}
-	};
-
-	using notify_message = notify_message_base<>;
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-	using tree_view_notification = notify_message_base<NMTREEVIEWW>;
-	using header_notification = notify_message_base<NMHEADERW>;
-	using header_filter_button_notification = notify_message_base<NMHDFILTERBTNCLICK>;
-	using list_view_item_activation = notify_message_base<NMITEMACTIVATE>;
-	using list_view_display_info_notfication = notify_message_base<NMLVDISPINFO>;
-	using mouse_notification = notify_message_base<NMMOUSE>;
-	using keyboard_notification = notify_message_base<NMKEY>;
-	using custom_draw_notification = notify_message_ref<NMCUSTOMDRAW>;
-	using list_view_custom_draw_notification = notify_message_ref<NMLVCUSTOMDRAW>;
-	using tree_view_custom_draw_notification = notify_message_ref<NMTVCUSTOMDRAW>;
-	using tool_bar_custom_draw_notification = notify_message_ref<NMTBCUSTOMDRAW>;
-#endif
-
 	struct menu_command
 	{
 		constexpr static std::uint32_t id = WM_COMMAND;
@@ -117,21 +65,6 @@ namespace win32
 			identifier(LOWORD(wParam)),
 			notification_code(HIWORD(wParam))
 		{
-		}
-
-		inline wparam_t wparam() const noexcept
-		{
-			return MAKEWPARAM(identifier, notification_code);
-		}
-
-		inline lparam_t lparam() const noexcept
-		{
-			return std::bit_cast<lparam_t>(sender);
-		}
-
-		operator NMHDR()
-		{
-			return NMHDR{.hwndFrom = sender, .idFrom = identifier, .code = notification_code };
 		}
 	};
 }

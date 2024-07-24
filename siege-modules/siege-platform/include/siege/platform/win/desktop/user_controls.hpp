@@ -3,6 +3,7 @@
 
 #include <expected>
 #include <siege/platform/win/desktop/window.hpp>
+#include <siege/platform/win/desktop/drawing.hpp>
 #include <siege/platform/win/desktop/notifications.hpp>
 
 namespace win32
@@ -29,6 +30,25 @@ namespace win32
       {
         return std::nullopt;
       }
+
+      template<typename TWindow>
+      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      {
+        if constexpr (std::is_base_of_v<notifications, TWindow>)
+        {
+          if (message == WM_DRAWITEM)
+          {
+            auto& context = *(DRAWITEMSTRUCT*)lParam;
+
+            if (context.CtlType == ODT_BUTTON)
+            {
+              return self->wm_draw_item(win32::button(context.hwndItem), context);
+            }
+          }
+        }
+
+        return std::nullopt;
+      }
     };
   };
 
@@ -47,6 +67,17 @@ namespace win32
 
       virtual std::optional<HBRUSH> wm_control_color(win32::edit, win32::gdi_drawing_context_ref)
       {
+        return std::nullopt;
+      }
+
+      template<typename TWindow>
+      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      {
+        if constexpr (std::is_base_of_v<notifications, TWindow>)
+        {
+
+        }
+
         return std::nullopt;
       }
     };
@@ -72,6 +103,17 @@ namespace win32
 
       virtual std::optional<win32::lresult_t> wm_draw_item(win32::static_control, DRAWITEMSTRUCT&)
       {
+        return std::nullopt;
+      }
+
+      template<typename TWindow>
+      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      {
+        if constexpr (std::is_base_of_v<notifications, TWindow>)
+        {
+
+        }
+
         return std::nullopt;
       }
     };
@@ -107,6 +149,20 @@ namespace win32
 
       virtual std::optional<win32::lresult_t> wm_draw_item(win32::list_box, MEASUREITEMSTRUCT&)
       {
+        return std::nullopt;
+      }
+
+      template<typename TWindow>
+      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      {
+        if constexpr (std::is_base_of_v<notifications, TWindow>)
+        {
+          if (message == WM_COMMAND && HIWORD(wParam) > 1)
+          {
+            return self->wm_command(list_box((HWND)lParam), HIWORD(wParam));
+          }
+        }
+
         return std::nullopt;
       }
     };
@@ -164,6 +220,17 @@ namespace win32
       {
           return std::nullopt;
       }
+
+      template<typename TWindow>
+      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      {
+        if constexpr (std::is_base_of_v<notifications, TWindow>)
+        {
+
+        }
+
+        return std::nullopt;
+      }
     };
 
   };
@@ -193,6 +260,17 @@ namespace win32
 
       virtual std::optional<win32::lresult_t> wm_draw_item(win32::combo_box, MEASUREITEMSTRUCT&)
       {
+        return std::nullopt;
+      }
+
+      template<typename TWindow>
+      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      {
+        if constexpr (std::is_base_of_v<notifications, TWindow>)
+        {
+
+        }
+
         return std::nullopt;
       }
     };

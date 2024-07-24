@@ -12,7 +12,7 @@
 
 namespace siege::views
 {
-  struct cfg_view : win32::window_ref
+  struct cfg_view final : win32::window_ref
   {
     cfg_controller controller;
 

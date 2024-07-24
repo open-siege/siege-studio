@@ -62,11 +62,6 @@ namespace win32
     DO_DISPATCH_WPARAM_AND_LPARAM(WM_DRAWITEM, std::size_t, DRAWITEMSTRUCT, wm_draw_item);
 
     DO_DISPATCH(setting_change_message, wm_setting_change);
-    DO_DISPATCH(button_control_color_message, wm_control_color);
-    DO_DISPATCH(list_box_control_color_message, wm_control_color);
-    DO_DISPATCH(scroll_bar_control_color_message, wm_control_color);
-    DO_DISPATCH(edit_control_color_message, wm_control_color);
-    DO_DISPATCH(static_control_color_message, wm_control_color);
 
     DO_DISPATCH(input_message, wm_input);
     DO_DISPATCH(input_device_change_message, wm_input_device_change);
@@ -127,175 +122,19 @@ namespace win32
       }
     }
 
-    if constexpr (requires(TWindow t) { t.wm_command(menu_command{ wParam, lParam }); })
-    {
-      if (message == command_message::id && menu_command::is_menu_command(wParam, lParam))
-      {
-        return self->wm_command(menu_command{ wParam, lParam });
-      }
-    }
-
-    if constexpr (requires(TWindow t) { t.wm_command(accelerator_command{ wParam, lParam }); })
-    {
-      if (message == command_message::id && accelerator_command::is_accelerator_command(wParam, lParam))
-      {
-        return self->wm_command(accelerator_command{ wParam, lParam });
-      }
-    }
-
-    if constexpr (requires(TWindow t) { t.wm_command(command_message{ wParam, lParam }); })
-    {
-      if (message == command_message::id)
-      {
-        return self->wm_command(command_message{ wParam, lParam });
-      }
-    }
-
-    if constexpr (requires(TWindow t) { t.wm_notify(notify_message{ wParam, lParam }); })
-    {
-      if (message == command_message::id && !(accelerator_command::is_accelerator_command(wParam, lParam) || menu_command::is_menu_command(wParam, lParam)))
-      {
-        return self->wm_notify(notify_message{ command_message{ wParam, lParam } });
-      }
-    }
-
-    if constexpr (std::is_base_of_v<win32::button::notifications, TWindow>)
-    {
-      if (message == WM_DRAWITEM)
-      {
-        auto& context = *(DRAWITEMSTRUCT*)lParam;
-
-        if (context.CtlType == ODT_BUTTON)
-        {
-          return self->wm_draw_item(win32::button(context.hwndItem), wParam, context);
-        }
-      }
-    }
-
-    thread_local std::array<wchar_t, 256> name{};
-
-    if (message == WM_NOTIFY)
-    {
-      ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size());
-    }
-
-    if constexpr (std::is_base_of_v<win32::edit::notifications, TWindow>)
-    {
-
-    }
-
-    if constexpr (std::is_base_of_v<win32::static_control::notifications, TWindow>)
-    {
-      
-    }
-
-    if constexpr (std::is_base_of_v<win32::list_box::notifications, TWindow>)
-    {
-      
-    }
-
-    if constexpr (std::is_base_of_v<win32::scroll_bar::notifications, TWindow>)
-    {
-      
-    }
-
-    if constexpr (std::is_base_of_v<win32::combo_box::notifications, TWindow>)
-    {
-      
-    }
-
-    if constexpr (std::is_base_of_v<win32::sys_link::notifications, TWindow>)
-    {
-      
-    }
-
-    if constexpr (std::is_base_of_v<win32::track_bar::notifications, TWindow>)
-    {
-      
-    }
-
-    if constexpr (std::is_base_of_v<win32::header::notifications, TWindow>)
-    {
-      if (header.code == HDN_FILTERBTNCLICK)
-      {
-          return self->wm_notify(header_filter_button_notification{ wParam, lParam });
-      }
-
-      if (header.code == HDN_FILTERCHANGE || header.code == HDN_BEGINFILTEREDIT || header.code == HDN_ENDFILTEREDIT || header.code == HDN_ITEMCLICK || header.code == HDN_ITEMDBLCLICK || header.code == HDN_ITEMKEYDOWN || header.code == HDN_ITEMSTATEICONCLICK || header.code == HDN_OVERFLOWCLICK || header.code == HDN_DIVIDERDBLCLICK)
-      {
-          return self->wm_notify(header_notification{ wParam, lParam });
-      }
-    }
-
-    if constexpr (std::is_base_of_v<win32::notifications::notifications, TWindow>)
-    {
-      
-    }
-
-    if constexpr (std::is_base_of_v<win32::rebar::notifications, TWindow>)
-    {
-      
-    }
-
-    if constexpr (std::is_base_of_v<win32::tab_control::notifications, TWindow>)
-    {
-      
-    }
-
-    if constexpr (std::is_base_of_v<win32::tool_bar::notifications, TWindow>)
-    {
-      if ((header.code == NM_CLICK || header.code == NM_DBLCLK || header.code == NM_RCLICK || header.code == NM_RDBLCLK)
-            && ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == TOOLBARCLASSNAMEW)
-        {
-          return self->wm_notify(mouse_notification{ wParam, lParam });
-        }
-
-        if (header.code == NM_CUSTOMDRAW
-            && ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == TOOLBARCLASSNAMEW)
-        {
-          return self->wm_notify(tool_bar_custom_draw_notification{ wParam, lParam });
-        }
-    }
-
-    if constexpr (std::is_base_of_v<win32::tree_view::notifications, TWindow>)
-    {
-      if (header.code == TVN_ITEMEXPANDINGW || header.code == TVN_ITEMEXPANDEDW || header.code == TVN_SELCHANGINGW || header.code == TVN_SELCHANGEDW || header.code == TVN_SINGLEEXPAND || header.code == TVN_BEGINDRAGW || header.code == TVN_DELETEITEMW)
-      {
-          return self->wm_notify(tree_view_notification{ wParam, lParam });
-      }
-
-      if (header.code == NM_CUSTOMDRAW
-            && ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == WC_TREEVIEWW)
-        {
-          return self->wm_notify(tree_view_custom_draw_notification{ wParam, lParam });
-        }
-    }
-
-    if constexpr (std::is_base_of_v<win32::list_view::notifications, TWindow>)
-      {
-        if (message == WM_NOTIFY)
-        {
-          if (header.code == NM_CUSTOMDRAW
-              && ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == win32::list_view::class_name)
-          {
-            return self->wm_notify(win32::list_view(header.hwndFrom), *(NMLVCUSTOMDRAW*)lParam);
-          }
-        }
-
-        if ((header.code == NM_CLICK || header.code == NM_DBLCLK || header.code == NM_RCLICK || header.code == NM_RDBLCLK)
-            && ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == WC_LISTVIEWW)
-        {
-          return self->wm_notify(list_view_item_activation{ wParam, lParam });
-        }
-
-        if ((header.code == LVN_BEGINLABELEDITW || header.code == LVN_ENDLABELEDITW || header.code == LVN_SETDISPINFOW)
-            && ::RealGetWindowClassW(header.hwndFrom, name.data(), name.size()) > 0 && std::wstring_view(name.data()) == WC_LISTVIEWW)
-        {
-          return self->wm_notify(list_view_display_info_notfication{ wParam, lParam });
-        }
-      }
-
-    return std::nullopt;
+    return win32::button::notifications::dispatch_message(self, message, wParam, lParam)
+      .or_else([&] { return win32::menu::notifications::dispatch_message(self, message, wParam, lParam); })
+      .or_else([&] { return win32::edit::notifications::dispatch_message(self, message, wParam, lParam); })
+      .or_else([&] { return win32::list_box::notifications::dispatch_message(self, message, wParam, lParam); })
+      .or_else([&] { return win32::scroll_bar::notifications::dispatch_message(self, message, wParam, lParam); })
+      .or_else([&] { return win32::combo_box::notifications::dispatch_message(self, message, wParam, lParam); })
+      .or_else([&] { return win32::sys_link::notifications::dispatch_message(self, message, wParam, lParam); })
+      .or_else([&] { return win32::track_bar::notifications::dispatch_message(self, message, wParam, lParam); })
+      .or_else([&] { return win32::list_view::notifications::dispatch_message(self, message, wParam, lParam); })
+      .or_else([&] { return win32::rebar::notifications::dispatch_message(self, message, wParam, lParam); })
+      .or_else([&] { return win32::tab_control::notifications::dispatch_message(self, message, wParam, lParam); })
+      .or_else([&] { return win32::tool_bar::notifications::dispatch_message(self, message, wParam, lParam); })
+      .or_else([&] { return win32::tree_view::notifications::dispatch_message(self, message, wParam, lParam); });
   }
 
 
@@ -329,11 +168,10 @@ namespace win32
                 auto data = std::bit_cast<TWindow*>(GetWindowLongPtrW(hWnd, 2 * sizeof(LONG_PTR)));
 
                 ::HeapFree(heap, 0, data);
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
                 win32::window_ref(hWnd).ForEachPropertyExW([](auto wnd, std::wstring_view name, HANDLE handle) {
                   ::RemovePropW(wnd, name.data());
                 });
-#endif
+
                 return 0;
               }
             }
@@ -343,17 +181,17 @@ namespace win32
 
           if (message == WM_NCCREATE)
           {
-              auto heap = ::GetProcessHeap();
-              auto size = sizeof(TWindow);
-              auto raw_data = ::HeapAlloc(heap, 0, size);
+            auto heap = ::GetProcessHeap();
+            auto size = sizeof(TWindow);
+            auto raw_data = ::HeapAlloc(heap, 0, size);
 
-              auto* pCreate = std::bit_cast<CREATESTRUCTW*>(lParam);
+            auto* pCreate = std::bit_cast<CREATESTRUCTW*>(lParam);
 
-              self = new (raw_data) TWindow(hWnd, *pCreate);
+            self = new (raw_data) TWindow(hWnd, *pCreate);
 
-              SetWindowLongPtrW(hWnd, 0, std::bit_cast<LONG_PTR>(heap));
-              SetWindowLongPtrW(hWnd, sizeof(LONG_PTR), size);
-              SetWindowLongPtrW(hWnd, 2 * sizeof(LONG_PTR), std::bit_cast<LONG_PTR>(raw_data));
+            SetWindowLongPtrW(hWnd, 0, std::bit_cast<LONG_PTR>(heap));
+            SetWindowLongPtrW(hWnd, sizeof(LONG_PTR), size);
+            SetWindowLongPtrW(hWnd, 2 * sizeof(LONG_PTR), std::bit_cast<LONG_PTR>(raw_data));
           }
           else
           {
@@ -363,7 +201,9 @@ namespace win32
           }
 
           return do_dispatch();
+        }
       };
+
 
       this->cbSize = sizeof(WNDCLASSEXW);
       this->lpfnWndProc = handler::WindowHandler;
@@ -376,7 +216,6 @@ namespace win32
     }
   };
 
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   template<typename TWindow>
   struct static_window_meta_class : ::WNDCLASSEXW
   {
@@ -412,13 +251,10 @@ namespace win32
                   auto data = std::bit_cast<TWindow*>(GetClassLongPtrW(hWnd, 3 * sizeof(LONG_PTR)));
 
                   ::HeapFree(heap, 0, data);
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 
                   win32::window_ref(hWnd).ForEachPropertyExW([](auto wnd, std::wstring_view name, HANDLE handle) {
                     ::RemovePropW(wnd, name.data());
                   });
-
-#endif
                 }
 
                 SetClassLongPtrW(hWnd, 0, ref_count);
@@ -471,7 +307,6 @@ namespace win32
       this->cbClsExtra = sizeof(std::size_t) * 4;
     }
   };
-#endif
 }// namespace win32
 
 #endif

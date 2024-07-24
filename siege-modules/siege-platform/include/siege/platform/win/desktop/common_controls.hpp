@@ -18,9 +18,22 @@ namespace win32
 
     struct notifications
     {
-      virtual std::optional<win32::lresult_t> wm_notify(win32::sys_link, NMCUSTOMTEXT&) 
+      virtual void wm_notify(win32::sys_link, NMCUSTOMTEXT&)
       {
-          return std::nullopt;
+      }
+
+      virtual void wm_notify(win32::sys_link, NMLINK&)
+      {
+      }
+
+      template<typename TWindow>
+      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      {
+        if constexpr (std::is_base_of_v<notifications, TWindow>)
+        {
+        }
+
+        return std::nullopt;
       }
     };
   };
@@ -32,9 +45,19 @@ namespace win32
 
     struct notifications
     {
-      virtual std::optional<win32::lresult_t> wm_notify(win32::track_bar, NMCUSTOMDRAW&)
+      virtual win32::lresult_t wm_notify(win32::track_bar, NMCUSTOMDRAW&)
       {
-          return std::nullopt;
+        return CDRF_DODEFAULT;
+      }
+
+      template<typename TWindow>
+      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      {
+        if constexpr (std::is_base_of_v<notifications, TWindow>)
+        {
+        }
+
+        return std::nullopt;
       }
     };
   };
@@ -46,9 +69,42 @@ namespace win32
 
     struct notifications
     {
-      virtual std::optional<win32::lresult_t> wm_notify(win32::header, NMCUSTOMDRAW) // custom draw
+      virtual win32::lresult_t wm_notify(win32::header, NMCUSTOMDRAW&)
       {
-          return std::nullopt;
+        return CDRF_DODEFAULT;
+      }
+
+      virtual BOOL wm_notify(win32::header, NMHDFILTERBTNCLICK&)
+      {
+        return FALSE;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_notify(win32::header, NMHEADERW&)
+      {
+        return std::nullopt;
+      }
+
+      template<typename TWindow>
+      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      {
+        if constexpr (std::is_base_of_v<notifications, TWindow>)
+        {
+          if (message == WM_NOTIFY)
+          {
+            auto& header = *(NMHDR*)lParam;
+            if (header.code == HDN_FILTERBTNCLICK)
+            {
+              return self->wm_notify(win32::header(header.hwndFrom), *(NMHDFILTERBTNCLICK*)lParam);
+            }
+
+            if (header.code == HDN_FILTERCHANGE || header.code == HDN_BEGINFILTEREDIT || header.code == HDN_ENDFILTEREDIT || header.code == HDN_ITEMCLICK || header.code == HDN_ITEMDBLCLICK || header.code == HDN_ITEMKEYDOWN || header.code == HDN_ITEMSTATEICONCLICK || header.code == HDN_OVERFLOWCLICK || header.code == HDN_DIVIDERDBLCLICK)
+            {
+              return self->wm_notify(win32::header(header.hwndFrom), *(NMHEADERW*)lParam);
+            }
+          }
+        }
+
+        return std::nullopt;
       }
     };
 
@@ -146,8 +202,72 @@ namespace win32
 
     struct notifications
     {
-      virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, NMLVCUSTOMDRAW&)
+      virtual win32::lresult_t wm_notify(win32::list_view, NMLVCUSTOMDRAW&)
       {
+        return CDRF_DODEFAULT;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMITEMACTIVATE&)
+      {
+        return std::nullopt;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMLVODSTATECHANGE&)
+      {
+        return std::nullopt;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMLVFINDITEM&)
+      {
+        return std::nullopt;
+      }
+
+      virtual void wm_notify(win32::list_view, const NMLVLINK&)
+      {
+      }
+
+      virtual void wm_notify(win32::list_view, const NMLVKEYDOWN&)
+      {
+      }
+
+      virtual std::optional<win32::lresult_t> wm_notify(list_view, const NMHDR&)
+      {
+        return std::nullopt;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_notify(list_view, const NMLVDISPINFO&)
+      {
+        return std::nullopt;
+      }
+
+      template<typename TWindow>
+      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      {
+        if constexpr (std::is_base_of_v<notifications, TWindow>)
+        {
+          if (message == WM_NOTIFY)
+          {
+            auto& header = *(NMHDR*)lParam;
+            if (header.code == NM_CUSTOMDRAW
+                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == list_view::class_name)
+            {
+              return self->wm_notify(list_view(header.hwndFrom), *(NMLVCUSTOMDRAW*)lParam);
+            }
+
+            if ((header.code == NM_CLICK || header.code == NM_DBLCLK || header.code == NM_RCLICK || header.code == NM_RDBLCLK)
+                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == list_view::class_name)
+            {
+              return self->wm_notify(list_view(header.hwndFrom), *(NMITEMACTIVATE*)lParam);
+            }
+
+            if ((header.code == LVN_BEGINLABELEDITW || header.code == LVN_ENDLABELEDITW || header.code == LVN_SETDISPINFOW)
+                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == list_view::class_name)
+            {
+              return self->wm_notify(list_view(header.hwndFrom), *(NMLVDISPINFO*)lParam);
+            }
+          }
+        }
+
         return std::nullopt;
       }
     };
@@ -338,13 +458,13 @@ namespace win32
       return SendMessageW(*this, LVM_SETCOLUMNWIDTH, index, width);
     }
 
-    [[maybe_unsued]] inline wparam_t SetGroupInfo(wparam_t id, LVGROUP group)
+    [[maybe_unused]] inline wparam_t SetGroupInfo(wparam_t id, LVGROUP group)
     {
       group.cbSize = sizeof(LVGROUP);
       return SendMessageW(*this, LVM_SETGROUPINFO, id, lparam_t(&group));
     }
 
-    [[maybe_unsued]] inline wparam_t SetItem(LVITEMW item)
+    [[maybe_unused]] inline wparam_t SetItem(LVITEMW item)
     {
       return SendMessageW(*this, LVM_SETITEMW, 0, lparam_t(&item));
     }
@@ -515,7 +635,6 @@ namespace win32
         group_id++;
       }
     }
-
   };
 
   struct rebar : window
@@ -527,7 +646,17 @@ namespace win32
     {
       virtual std::optional<win32::lresult_t> wm_notify(win32::track_bar, NMCUSTOMDRAW&)
       {
-          return std::nullopt;
+        return std::nullopt;
+      }
+
+      template<typename TWindow>
+      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      {
+        if constexpr (std::is_base_of_v<notifications, TWindow>)
+        {
+        }
+
+        return std::nullopt;
       }
     };
   };
@@ -538,13 +667,28 @@ namespace win32
 
     struct notifications
     {
-      virtual std::optional<win32::lresult_t> wm_measure_item(win32::combo_box, DRAWITEMSTRUCT&)
+      virtual std::optional<win32::lresult_t> wm_measure_item(win32::tab_control, DRAWITEMSTRUCT&)
       {
         return std::nullopt;
       }
 
-      virtual std::optional<win32::lresult_t> wm_draw_item(win32::combo_box, MEASUREITEMSTRUCT&)
+      virtual std::optional<win32::lresult_t> wm_draw_item(win32::tab_control, MEASUREITEMSTRUCT&)
       {
+        return std::nullopt;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_notify(win32::tab_control, const NMHDR&)
+      {
+        return std::nullopt;
+      }
+
+      template<typename TWindow>
+      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      {
+        if constexpr (std::is_base_of_v<notifications, TWindow>)
+        {
+        }
+
         return std::nullopt;
       }
     };
@@ -630,17 +774,48 @@ namespace win32
   struct tool_bar : control
   {
     using control::control;
+    constexpr static auto class_name = TOOLBARCLASSNAMEW;
 
     struct notifications
     {
-      virtual std::optional<win32::lresult_t> wm_notify(win32::track_bar, NMTBCUSTOMDRAW&)
+      virtual win32::lresult_t wm_notify(win32::tool_bar, NMTBCUSTOMDRAW&)
       {
-          return std::nullopt;
+        return CDRF_DODEFAULT;
+      }
+
+      virtual BOOL wm_notify(win32::tool_bar, const NMMOUSE&)
+      {
+        return FALSE;
+      }
+
+      template<typename TWindow>
+      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      {
+        if constexpr (std::is_base_of_v<notifications, TWindow>)
+        {
+          if (message == WM_NOTIFY)
+          {
+            auto& header = *(NMHDR*)lParam;
+
+            if ((header.code == NM_CLICK || header.code == NM_DBLCLK || header.code == NM_RCLICK || header.code == NM_RDBLCLK)
+                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == tool_bar::class_name)
+            {
+              return self->wm_notify(win32::tool_bar(header.hwndFrom), *(NMMOUSE*)lParam);
+            }
+
+            if (header.code == NM_CUSTOMDRAW
+                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == tool_bar::class_name)
+            {
+              auto& temp = *(NMTBCUSTOMDRAW*)lParam;
+              return self->wm_notify(win32::tool_bar(header.hwndFrom), temp);
+            }
+          }
+        }
+
+        return std::nullopt;
       }
     };
 
-
-    constexpr static auto class_name = TOOLBARCLASSNAMEW;
 
     enum extended_style : DWORD
     {
@@ -778,18 +953,61 @@ namespace win32
 
     struct notifications
     {
-      virtual std::optional<win32::lresult_t> wm_notify(win32::track_bar, NMTVCUSTOMDRAW&)
+      virtual std::optional<win32::lresult_t> wm_notify(win32::tree_view, NMTVCUSTOMDRAW&)
       {
-          return std::nullopt;
+        return std::nullopt;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_notify(win32::tree_view, const NMTREEVIEWW&)
+      {
+        return std::nullopt;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_notify(win32::tree_view, const NMHDR&)
+      {
+        return std::nullopt;
+      }
+
+      template<typename TWindow>
+      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      {
+        if constexpr (std::is_base_of_v<notifications, TWindow>)
+        {
+          if (message == WM_NOTIFY)
+          {
+            auto& header = *(NMHDR*)lParam;
+            if ((header.code == TVN_ITEMEXPANDINGW || header.code == TVN_ITEMEXPANDEDW 
+                || header.code == TVN_SELCHANGINGW || header.code == TVN_SELCHANGEDW 
+                || header.code == TVN_SINGLEEXPAND || header.code == TVN_BEGINDRAGW || header.code == TVN_DELETEITEMW) &&
+                win32::window_ref(header.hwndFrom).RealGetWindowClassW() == tree_view::class_name)
+            {
+              return self->wm_notify(tree_view(header.hwndFrom), *(NMTREEVIEWW*)lParam);
+            }
+
+            if ((header.code == NM_DBLCLK)
+                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == tree_view::class_name)
+            {
+              return self->wm_notify(tree_view(header.hwndFrom), *(NMHDR*)lParam);
+            }
+
+            if (header.code == NM_CUSTOMDRAW
+                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == tree_view::class_name)
+            {
+              return self->wm_notify(tree_view(header.hwndFrom), *(NMTVCUSTOMDRAW*)lParam);
+            }
+          }
+        }
+
+        return std::nullopt;
       }
     };
 
-    [[maube_unused]] inline bool Expand(HTREEITEM item, wparam_t action = TVE_EXPAND)
+    [[maybe_unused]] inline bool Expand(HTREEITEM item, wparam_t action = TVE_EXPAND)
     {
       return TreeView_Expand(*this, item, action);
     }
 
-    [[maube_unused]] inline bool Collapse(HTREEITEM item, wparam_t action = TVE_COLLAPSE)
+    [[maybe_unused]] inline bool Collapse(HTREEITEM item, wparam_t action = TVE_COLLAPSE)
     {
       return TreeView_Expand(*this, item, action);
     }

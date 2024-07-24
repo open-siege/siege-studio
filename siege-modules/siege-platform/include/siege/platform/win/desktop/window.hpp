@@ -50,6 +50,56 @@ namespace win32
     }
   };
 
+  struct menu_no_deleter
+  {
+    void operator()(HMENU menu)
+    {
+    }
+  };
+
+  struct menu : win32::auto_handle<HMENU, menu_no_deleter>
+  {
+    using base = win32::auto_handle<HMENU, menu_no_deleter>;
+    using base::base;
+
+    struct notifications
+    {
+      virtual std::optional<win32::lresult_t> wm_command(menu, int)
+      {
+        return std::nullopt;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_draw_item(menu, DRAWITEMSTRUCT&)
+      {
+        return std::nullopt;
+      }
+
+      template<typename TWindow>
+      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      {
+        if constexpr (std::is_base_of_v<notifications, TWindow>)
+        {
+          if (message == WM_COMMAND && HIWORD(wParam) == 0)
+          {
+            return self->wm_command(win32::menu(GetMenu(*self)), LOWORD(wParam));
+          }
+
+          if (message == WM_DRAWITEM)
+          {
+            auto& context = *(DRAWITEMSTRUCT*)lParam;
+
+            if (context.CtlType == ODT_MENU)
+            {
+              return self->wm_draw_item(win32::menu((HMENU)context.hwndItem), context);
+            }
+          }
+        }
+
+        return std::nullopt;
+      }
+    };
+  };
+
   struct window_ref;
 
   template<typename TDeleter, typename window_ref>
@@ -66,6 +116,14 @@ namespace win32
     window_ref ref() const
     {
       return window_ref(*this);
+    }
+
+    std::wstring_view RealGetWindowClassW()
+    {
+      thread_local std::array<wchar_t, 256> name{};
+      name.fill(L'\0');
+      ::RealGetWindowClassW(*this, name.data(), name.size());
+      return name.data();
     }
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)

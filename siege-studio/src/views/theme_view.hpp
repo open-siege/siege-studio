@@ -8,10 +8,12 @@
 
 namespace siege::views
 {
-  struct theme_view final : win32::window_ref, 
-      win32::button::notifications,
-      win32::list_view::notifications
+  struct theme_view final : win32::window_ref
+    , win32::list_box::notifications
+    , win32::list_view::notifications
+    , win32::button::notifications
   {
+    using win32::list_view::notifications::wm_notify;
 
     win32::window_ref theme_properties;
     win32::list_box options;
@@ -153,12 +155,12 @@ namespace siege::views
     }
 
 
-    std::optional<win32::lresult_t> wm_draw_item(win32::button button, unsigned int, DRAWITEMSTRUCT& custom_draw) override
+    std::optional<win32::lresult_t> wm_draw_item(win32::button button, DRAWITEMSTRUCT& custom_draw) override
     {
       return std::nullopt;
     }
 
-    std::optional<win32::lresult_t> wm_notify(win32::list_view, NMLVCUSTOMDRAW& custom_draw) override
+    win32::lresult_t wm_notify(win32::list_view, NMLVCUSTOMDRAW& custom_draw) override
     {
       if (custom_draw.nmcd.dwDrawStage == CDDS_PREPAINT)
       {
@@ -200,9 +202,9 @@ namespace siege::views
       return CDRF_DODEFAULT;
     }
 
-    std::optional<win32::lresult_t> wm_notify(win32::notify_message message)
+    std::optional<win32::lresult_t> wm_command(win32::list_box hwndFrom, int code) override
     {
-      if (message.code == LBN_SELCHANGE && message.hwndFrom == options)
+      if (code == LBN_SELCHANGE && hwndFrom == options)
       {
         ShowWindow(control_settings, options.GetCurrentSelection() == 1 ? SW_SHOW : SW_HIDE);
       }
@@ -210,9 +212,9 @@ namespace siege::views
       return std::nullopt;
     }
 
-    std::optional<win32::lresult_t> wm_notify(win32::list_view_display_info_notfication message)
+    std::optional<win32::lresult_t> wm_notify(win32::list_view hwndFrom, const NMLVDISPINFO& message) override
     {
-      if (message.hdr.code == LVN_BEGINLABELEDITW && message.hdr.hwndFrom == control_settings)
+      if (message.hdr.code == LVN_BEGINLABELEDITW && hwndFrom == control_settings)
       {
         if (message.item.iSubItem == 0)
         {
@@ -221,7 +223,7 @@ namespace siege::views
         return TRUE;
       }
 
-      if (message.hdr.code == LVN_ENDLABELEDITW && message.hdr.hwndFrom == control_settings)
+      if (message.hdr.code == LVN_ENDLABELEDITW && hwndFrom == control_settings)
       {
         return TRUE;
       }

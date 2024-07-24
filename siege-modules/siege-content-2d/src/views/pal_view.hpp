@@ -10,7 +10,9 @@
 
 namespace siege::views
 {
-  struct pal_view : win32::window_ref
+  struct pal_view final : win32::window_ref,
+      win32::static_control::notifications,
+      win32::list_box::notifications
   {
     pal_controller controller;
 
@@ -71,9 +73,9 @@ namespace siege::views
       return 0;
     }
 
-    std::optional<win32::lresult_t> wm_notify(win32::notify_message message)
+    std::optional<win32::lresult_t> wm_command(win32::list_box hwndFrom, int code)
     {
-      if (message.code == LBN_SELCHANGE && (message.hwndFrom == selection))
+      if (code == LBN_SELCHANGE && hwndFrom == selection)
       {
         auto selected = selection.GetCurrentSelection();
         auto& colours = controller.get_palette(selected);
