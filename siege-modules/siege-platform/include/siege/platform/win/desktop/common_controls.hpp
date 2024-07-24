@@ -11,39 +11,46 @@ namespace win32
     using window::window;
   };
 
-  struct link : window
+  struct sys_link : window
   {
     using window::window;
     constexpr static auto class_name = WC_LINK;
-  };
 
-  struct ip_address : window
-  {
-    constexpr static auto class_name = WC_IPADDRESSW;
-  };
-
-  struct native_font : window
-  {
-    using window::window;
-    constexpr static auto class_name = WC_NATIVEFONTCTLW;
+    struct notifications
+    {
+      virtual std::optional<win32::lresult_t> wm_notify(win32::sys_link, NMCUSTOMTEXT&) 
+      {
+          return std::nullopt;
+      }
+    };
   };
 
   struct track_bar : window
   {
     using window::window;
     constexpr static auto class_name = TRACKBAR_CLASSW;
-  };
 
-  struct up_down : window
-  {
-    using window::window;
-    constexpr static auto class_name = UPDOWN_CLASSW;
+    struct notifications
+    {
+      virtual std::optional<win32::lresult_t> wm_notify(win32::track_bar, NMCUSTOMDRAW&)
+      {
+          return std::nullopt;
+      }
+    };
   };
 
   struct header : control
   {
     using control::control;
     constexpr static auto class_name = WC_HEADERW;
+
+    struct notifications
+    {
+      virtual std::optional<win32::lresult_t> wm_notify(win32::header, NMCUSTOMDRAW) // custom draw
+      {
+          return std::nullopt;
+      }
+    };
 
     [[nodiscard]] inline wparam_t GetItemCount()
     {
@@ -137,6 +144,14 @@ namespace win32
 
     using control::control;
 
+    struct notifications
+    {
+      virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, NMLVCUSTOMDRAW&)
+      {
+        return std::nullopt;
+      }
+    };
+
     enum struct view_type : DWORD
     {
       details_view = LV_VIEW_DETAILS,
@@ -144,14 +159,6 @@ namespace win32
       list_view = LV_VIEW_LIST,
       small_icon_view = LV_VIEW_LIST,
       tile_view = LV_VIEW_TILE
-    };
-
-    struct notifications
-    {
-      virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, NMLVCUSTOMDRAW&)
-      {
-        return std::nullopt;
-      }
     };
 
     inline HIMAGELIST SetImageList(wparam_t wparam, HIMAGELIST image_list)
@@ -515,11 +522,32 @@ namespace win32
   {
     using window::window;
     constexpr static auto class_Name = REBARCLASSNAMEW;
+
+    struct notifications
+    {
+      virtual std::optional<win32::lresult_t> wm_notify(win32::track_bar, NMCUSTOMDRAW&)
+      {
+          return std::nullopt;
+      }
+    };
   };
 
   struct tab_control : window
   {
     using window::window;
+
+    struct notifications
+    {
+      virtual std::optional<win32::lresult_t> wm_measure_item(win32::combo_box, DRAWITEMSTRUCT&)
+      {
+        return std::nullopt;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_draw_item(win32::combo_box, MEASUREITEMSTRUCT&)
+      {
+        return std::nullopt;
+      }
+    };
     constexpr static auto class_name = WC_TABCONTROLW;
 
     [[maybe_unused]] inline wparam_t InsertItem(wparam_t index, TCITEMW info)
@@ -602,6 +630,16 @@ namespace win32
   struct tool_bar : control
   {
     using control::control;
+
+    struct notifications
+    {
+      virtual std::optional<win32::lresult_t> wm_notify(win32::track_bar, NMTBCUSTOMDRAW&)
+      {
+          return std::nullopt;
+      }
+    };
+
+
     constexpr static auto class_name = TOOLBARCLASSNAMEW;
 
     enum extended_style : DWORD
@@ -737,6 +775,14 @@ namespace win32
   {
     using control::control;
     constexpr static auto class_name = WC_TREEVIEWW;
+
+    struct notifications
+    {
+      virtual std::optional<win32::lresult_t> wm_notify(win32::track_bar, NMTVCUSTOMDRAW&)
+      {
+          return std::nullopt;
+      }
+    };
 
     [[maube_unused]] inline bool Expand(HTREEITEM item, wparam_t action = TVE_EXPAND)
     {

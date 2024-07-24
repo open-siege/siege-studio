@@ -15,7 +15,17 @@ namespace win32
 
     struct notifications
     {
-      virtual std::optional<win32::lresult_t> wm_draw_item(win32::button, unsigned int, DRAWITEMSTRUCT&)
+      virtual std::optional<win32::lresult_t> wm_command(win32::button, int)
+      {
+        return std::nullopt;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_draw_item(win32::button, DRAWITEMSTRUCT&)
+      {
+        return std::nullopt;
+      }
+
+      virtual std::optional<HBRUSH> wm_control_color(win32::button, win32::gdi_drawing_context_ref)
       {
         return std::nullopt;
       }
@@ -27,6 +37,19 @@ namespace win32
     using window::window;
     constexpr static auto class_name = WC_EDITW;
     constexpr static std::uint16_t dialog_id = 0x0081;
+
+    struct notifications
+    {
+      virtual std::optional<win32::lresult_t> wm_command(win32::edit, int)
+      {
+        return std::nullopt;
+      }
+
+      virtual std::optional<HBRUSH> wm_control_color(win32::edit, win32::gdi_drawing_context_ref)
+      {
+        return std::nullopt;
+      }
+    };
   };
 
   struct static_control : window
@@ -34,6 +57,24 @@ namespace win32
     using window::window;
     constexpr static auto class_name = WC_STATICW;
     constexpr static std::uint16_t dialog_id = 0x0082;
+
+    struct notifications
+    {
+      virtual std::optional<win32::lresult_t> wm_command(win32::static_control, int)
+      {
+          return std::nullopt;
+      }
+
+      virtual std::optional<HBRUSH> wm_control_color(win32::static_control, win32::gdi_drawing_context_ref)
+      {
+          return std::nullopt;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_draw_item(win32::static_control, DRAWITEMSTRUCT&)
+      {
+        return std::nullopt;
+      }
+    };
 
     HBITMAP SetImage(HBITMAP image)
     {
@@ -46,6 +87,29 @@ namespace win32
     using window::window;
     constexpr static auto class_name = WC_LISTBOXW;
     constexpr static std::uint16_t dialog_id = 0x0083;
+
+    struct notifications
+    {
+      virtual std::optional<win32::lresult_t> wm_command(win32::list_box, int)
+      {
+          return std::nullopt;
+      }
+
+      virtual std::optional<HBRUSH> wm_control_color(win32::list_box, win32::gdi_drawing_context_ref)
+      {
+          return std::nullopt;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_measure_item(win32::list_box, DRAWITEMSTRUCT&)
+      {
+        return std::nullopt;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_draw_item(win32::list_box, MEASUREITEMSTRUCT&)
+      {
+        return std::nullopt;
+      }
+    };
 
     [[nodiscard]] inline DWORD GetCount()
     {
@@ -93,6 +157,15 @@ namespace win32
     using window::window;
     constexpr static auto class_name = WC_SCROLLBARW;
     constexpr static std::uint16_t dialog_id = 0x0084;
+
+    struct notifications
+    {
+      virtual std::optional<HBRUSH> wm_control_color(win32::scroll_bar, win32::gdi_drawing_context_ref)
+      {
+          return std::nullopt;
+      }
+    };
+
   };
 
   struct combo_box : window
@@ -100,6 +173,29 @@ namespace win32
     using window::window;
     constexpr static auto class_name = WC_COMBOBOXW;
     constexpr static std::uint16_t dialog_id = 0x0085;
+
+    struct notifications
+    {
+      virtual std::optional<win32::lresult_t> wm_command(win32::combo_box, int)
+      {
+          return std::nullopt;
+      }
+
+      virtual std::optional<HBRUSH> wm_control_color(win32::combo_box, win32::gdi_drawing_context_ref)
+      {
+          return std::nullopt;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_measure_item(win32::combo_box, DRAWITEMSTRUCT&)
+      {
+        return std::nullopt;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_draw_item(win32::combo_box, MEASUREITEMSTRUCT&)
+      {
+        return std::nullopt;
+      }
+    };
   };
 }// namespace win32
 
