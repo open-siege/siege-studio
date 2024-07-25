@@ -14,7 +14,9 @@ namespace siege::views
     , win32::button::notifications
   {
     using win32::list_view::notifications::wm_notify;
+    using win32::button::notifications::wm_notify;
     using win32::list_box::notifications::wm_draw_item;
+    using win32::button::notifications::wm_draw_item;
 
     win32::window_ref theme_properties;
     win32::list_box options;
@@ -83,6 +85,7 @@ namespace siege::views
       control_settings = *control_factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
         .style = WS_CHILD | LVS_REPORT });
 
+      control_settings.SetExtendedListViewStyle(LVS_EX_TRACKSELECT, LVS_EX_TRACKSELECT);
       control_settings.EnableGroupView(true);
 
       control_settings.InsertColumn(-1, LVCOLUMNW{
@@ -127,20 +130,16 @@ namespace siege::views
         auto existing_group = std::find_if(groups.begin(), groups.end(), [&](auto& item) {
           return item.text == control_name;
         });
-        auto& combo_box = combo_boxes.emplace_back(*control_factory.CreateWindowExW<win32::button>(::CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | BS_OWNERDRAW, .lpszName = L"Test" }));
-        win32::theme_module().SetWindowTheme(combo_box, L"", L"");
 
         if (existing_group == groups.end())
         {
           win32::list_view_item item{ std::wstring(property_name) };
           item.sub_items.emplace_back(property_value);
-          item.lParam = (LPARAM)combo_box.get();
           groups.emplace_back(std::wstring(control_name), std::vector<win32::list_view_item>{ std::move(item) });
         }
         else
         {
           auto& item = existing_group->items.emplace_back(std::wstring(property_name));
-          item.lParam = (LPARAM)combo_box.get();
           item.sub_items.emplace_back(property_value);
         }
       }
@@ -156,10 +155,12 @@ namespace siege::views
     }
 
 
-    std::optional<win32::lresult_t> wm_draw_item(win32::button button, DRAWITEMSTRUCT& custom_draw) override
+    std::optional<win32::lresult_t> wm_notify(win32::button button, NMCUSTOMDRAW& custom_draw) override
     {
       return std::nullopt;
     }
+
+    std::map<std::wstring, COLORREF> hover_colors;
 
     win32::lresult_t wm_notify(win32::list_view, NMLVCUSTOMDRAW& custom_draw) override
     {
@@ -180,24 +181,19 @@ namespace siege::views
           return CDRF_DODEFAULT;
         }
 
-        RECT item_rect{};
-        RECT temp{};
+        std::wstring temp;
+        temp.push_back((wchar_t)custom_draw.nmcd.dwItemSpec);
+        temp.push_back((wchar_t)custom_draw.iSubItem);
 
-        ListView_GetSubItemRect(control_settings, custom_draw.nmcd.dwItemSpec, 0, LVIR_BOUNDS, &item_rect);
-        auto height = item_rect.bottom - item_rect.top - 30;
+        auto color = hover_colors.find(temp);
 
-        ListView_GetSubItemRect(control_settings, custom_draw.nmcd.dwItemSpec, custom_draw.iSubItem, LVIR_BOUNDS, &temp);
+        if (color != hover_colors.end())
+        {
+          //          custom_draw.clrTextBk = 0x00aaffaa;
+          custom_draw.clrTextBk = color->second;
+        }
 
-        auto list_view_rect = control_settings.MapWindowPoints(*this, *control_settings.GetClientRect());
-        temp.left += list_view_rect->second.left;
-        temp.right += list_view_rect->second.left - 30;
-        temp.top += list_view_rect->second.top;
-        temp.bottom += list_view_rect->second.top + height;
-
-
-        win32::button((HWND)custom_draw.nmcd.lItemlParam).SetWindowPos(temp);
-        win32::button((HWND)custom_draw.nmcd.lItemlParam).SetWindowPos(HWND_TOP);
-        return CDRF_DOERASE;
+        return CDRF_DODEFAULT;
       }
 
       return CDRF_DODEFAULT;
@@ -230,6 +226,43 @@ namespace siege::views
       }
 
       return std::nullopt;
+    }
+
+    std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMHDR& notice) override
+    {
+      POINT point;
+      if (notice.code == NM_HOVER && ::GetCursorPos(&point))
+      {
+        if (::ScreenToClient(control_settings, &point))
+        {
+          LVHITTESTINFO info{};
+          info.pt = point;
+          info.flags = LVHT_ONITEM;
+          ListView_SubItemHitTest(control_settings, &info);
+
+          if (info.iSubItem && info.iItem != -1)
+          {
+            RECT item_rect{};
+            for (auto& hover : hover_colors)
+            {
+              ListView_GetSubItemRect(control_settings, hover.first[0], hover.first[1], LVIR_BOUNDS, &item_rect);
+              ::InvalidateRect(control_settings, &item_rect, TRUE);
+            }
+
+            hover_colors.clear();
+
+            ListView_GetSubItemRect(control_settings, info.iItem, info.iSubItem, LVIR_BOUNDS, &item_rect);
+
+            std::wstring temp;
+            temp.push_back(info.iItem);
+            temp.push_back(info.iSubItem);
+
+            auto color = hover_colors.emplace(temp, 0x00aaffaa);
+            ::InvalidateRect(control_settings, &item_rect, TRUE);
+          }
+        }
+      }
+      return 0;
     }
 
     auto wm_erase_background(win32::erase_background_message message)

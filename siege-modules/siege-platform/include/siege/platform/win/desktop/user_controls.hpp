@@ -21,6 +21,11 @@ namespace win32
         return std::nullopt;
       }
 
+      virtual std::optional<win32::lresult_t> wm_notify(win32::button, NMCUSTOMDRAW&)
+      {
+        return std::nullopt;
+      }
+
       virtual std::optional<win32::lresult_t> wm_draw_item(win32::button, DRAWITEMSTRUCT&)
       {
         return std::nullopt;
@@ -36,6 +41,17 @@ namespace win32
       {
         if constexpr (std::is_base_of_v<notifications, TWindow>)
         {
+          if (message == WM_NOTIFY)
+          {
+            auto& header = *(NMHDR*)lParam;
+
+            if (header.code == NM_CUSTOMDRAW
+                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == button::class_name)
+            {
+              return self->wm_notify(button(header.hwndFrom), *(NMCUSTOMDRAW*)lParam);
+            }
+          }
+
           if (message == WM_DRAWITEM)
           {
             auto& context = *(DRAWITEMSTRUCT*)lParam;

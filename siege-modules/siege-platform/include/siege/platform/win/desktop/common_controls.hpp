@@ -276,6 +276,12 @@ namespace win32
               return self->wm_notify(list_view(header.hwndFrom), *(NMITEMACTIVATE*)lParam);
             }
 
+            if (header.code == NM_HOVER
+                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == list_view::class_name)
+            {
+              return self->wm_notify(list_view(header.hwndFrom), *(NMHDR*)lParam);
+            }
+
             if ((header.code == LVN_BEGINLABELEDITW || header.code == LVN_ENDLABELEDITW || header.code == LVN_SETDISPINFOW)
                 && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == list_view::class_name)
             {
