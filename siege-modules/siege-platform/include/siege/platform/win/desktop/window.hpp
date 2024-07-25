@@ -74,6 +74,11 @@ namespace win32
         return std::nullopt;
       }
 
+      virtual std::optional<win32::lresult_t> wm_measure_item(menu, MEASUREITEMSTRUCT&)
+      {
+        return std::nullopt;
+      }
+
       template<typename TWindow>
       static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
       {
@@ -81,7 +86,17 @@ namespace win32
         {
           if (message == WM_COMMAND && HIWORD(wParam) == 0)
           {
-            return self->wm_command(win32::menu(GetMenu(*self)), LOWORD(wParam));
+            return self->wm_command(menu(GetMenu(*self)), LOWORD(wParam));
+          }
+
+          if (message == WM_MEASUREITEM)
+          {
+            auto& context = *(MEASUREITEMSTRUCT*)lParam;
+
+            if (context.CtlType == ODT_MENU)
+            {
+              return self->wm_measure_item(menu(GetMenu(*self)), context);
+            }
           }
 
           if (message == WM_DRAWITEM)
@@ -90,7 +105,7 @@ namespace win32
 
             if (context.CtlType == ODT_MENU)
             {
-              return self->wm_draw_item(win32::menu((HMENU)context.hwndItem), context);
+              return self->wm_draw_item(menu((HMENU)context.hwndItem), context);
             }
           }
         }

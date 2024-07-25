@@ -10,10 +10,13 @@
 
 namespace siege::views
 {
-  struct pal_view final : win32::window_ref,
-      win32::static_control::notifications,
-      win32::list_box::notifications
+  struct pal_view final : win32::window_ref
+    , win32::static_control::notifications
+    , win32::list_box::notifications
   {
+    using win32::static_control::notifications::wm_draw_item;
+    using win32::list_box::notifications::wm_draw_item;
+
     pal_controller controller;
 
     std::vector<win32::gdi_brush> brushes;
@@ -151,7 +154,7 @@ namespace siege::views
       return FALSE;
     }
 
-    auto wm_draw_item(std::size_t, const DRAWITEMSTRUCT& item)
+    std::optional<win32::lresult_t> wm_draw_item(win32::static_control, DRAWITEMSTRUCT& item) override
     {
       if (item.hwndItem == render_view && item.itemAction == ODA_DRAWENTIRE)
       {

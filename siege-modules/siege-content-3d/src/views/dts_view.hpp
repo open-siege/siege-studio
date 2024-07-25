@@ -160,7 +160,7 @@ namespace siege::views
       return (LRESULT)GetStockBrush(DC_BRUSH);
     }
 
-    auto wm_draw_item(std::size_t, const DRAWITEMSTRUCT& item)
+    std::optional<win32::lresult_t> wm_draw_item(win32::static_control, DRAWITEMSTRUCT& item) override
     {
       if (item.hwndItem == render_view && item.itemAction == ODA_DRAWENTIRE && renderer)
       {

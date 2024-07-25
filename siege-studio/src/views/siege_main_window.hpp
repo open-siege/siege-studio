@@ -30,6 +30,8 @@ namespace siege::views
   {
     using win32::tree_view::notifications::wm_notify;
     using win32::menu::notifications::wm_draw_item;
+    using win32::tab_control::notifications::wm_draw_item;
+
     win32::tree_view dir_list;
     win32::button separator;
     win32::tab_control tab_control;
@@ -532,7 +534,7 @@ namespace siege::views
       return std::nullopt;
     }
 
-    auto wm_measure_item(std::size_t, MEASUREITEMSTRUCT& item)
+    std::optional<win32::lresult_t> wm_measure_item(win32::menu, MEASUREITEMSTRUCT& item) override
     {
       if (item.itemData)
       {
@@ -541,6 +543,7 @@ namespace siege::views
         ::GetTextMetricsW(hDC, &tm);
         item.itemWidth = tm.tmAveCharWidth * std::wcslen((wchar_t*)item.itemData);
         item.itemHeight = ::GetSystemMetrics(SM_CYMENUSIZE);
+        ReleaseDC(*this, hDC);
       }
       else
       {
@@ -551,7 +554,7 @@ namespace siege::views
       return TRUE;
     }
 
-    auto wm_draw_item(std::size_t, DRAWITEMSTRUCT& item)
+    std::optional<win32::lresult_t> wm_draw_item(win32::menu, DRAWITEMSTRUCT& item) override
     {
       static auto black_brush = ::CreateSolidBrush(0x00000000);
       static auto grey_brush = ::CreateSolidBrush(0x00383838);

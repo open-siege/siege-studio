@@ -111,7 +111,15 @@ namespace win32
       {
         if constexpr (std::is_base_of_v<notifications, TWindow>)
         {
+          if (message == WM_DRAWITEM)
+          {
+            auto& context = *(DRAWITEMSTRUCT*)lParam;
 
+            if (context.CtlType == ODT_STATIC)
+            {
+              return self->wm_draw_item(win32::static_control(context.hwndItem), context);
+            }
+          }
         }
 
         return std::nullopt;
@@ -142,12 +150,12 @@ namespace win32
           return std::nullopt;
       }
 
-      virtual std::optional<win32::lresult_t> wm_measure_item(win32::list_box, DRAWITEMSTRUCT&)
+      virtual std::optional<win32::lresult_t> wm_measure_item(win32::list_box, MEASUREITEMSTRUCT&)
       {
         return std::nullopt;
       }
 
-      virtual std::optional<win32::lresult_t> wm_draw_item(win32::list_box, MEASUREITEMSTRUCT&)
+      virtual std::optional<win32::lresult_t> wm_draw_item(win32::list_box, DRAWITEMSTRUCT&)
       {
         return std::nullopt;
       }
@@ -157,7 +165,36 @@ namespace win32
       {
         if constexpr (std::is_base_of_v<notifications, TWindow>)
         {
-          if (message == WM_COMMAND && HIWORD(wParam) > 1)
+          if (message == WM_DRAWITEM)
+          {
+            auto& context = *(DRAWITEMSTRUCT*)lParam;
+
+            if (context.CtlType == ODT_LISTBOX)
+            {
+              return self->wm_draw_item(list_box(context.hwndItem), context);
+            }
+          }
+
+          if (message == WM_MEASUREITEM)
+          {
+            auto& context = *(MEASUREITEMSTRUCT*)lParam;
+
+            if (context.CtlType == ODT_LISTBOX)
+            {
+              auto control = ::GetDlgItem(*self, wParam);
+
+              if (!control)
+              {
+                control = ::FindWindowExW(*self, nullptr, list_box::class_name, nullptr);
+              }
+
+              return self->wm_measure_item(list_box(control), context);
+            }
+          }
+
+          if (message == WM_COMMAND && 
+              !(HIWORD(wParam) == 0 && HIWORD(wParam) == 1) &&
+              win32::window_ref((HWND)lParam).RealGetWindowClassW() == list_box::class_name)
           {
             return self->wm_command(list_box((HWND)lParam), HIWORD(wParam));
           }
@@ -268,7 +305,32 @@ namespace win32
       {
         if constexpr (std::is_base_of_v<notifications, TWindow>)
         {
+          if (message == WM_DRAWITEM)
+          {
+            auto& context = *(DRAWITEMSTRUCT*)lParam;
 
+            if (context.CtlType == ODT_COMBOBOX)
+            {
+              return self->wm_draw_item(combo_box(context.hwndItem), context);
+            }
+          }
+
+          if (message == WM_MEASUREITEM)
+          {
+            auto& context = *(MEASUREITEMSTRUCT*)lParam;
+
+            if (context.CtlType == ODT_COMBOBOX)
+            {
+              auto control = ::GetDlgItem(*self, wParam);
+
+              if (!control)
+              {
+                control = ::FindWindowExW(*self, nullptr, combo_box::class_name, nullptr);
+              }
+
+              return self->wm_measure_item(combo_box(control), context);
+            }
+          }
         }
 
         return std::nullopt;

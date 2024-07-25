@@ -55,6 +55,16 @@ namespace win32
       {
         if constexpr (std::is_base_of_v<notifications, TWindow>)
         {
+          if (message == WM_NOTIFY)
+          {
+            auto& header = *(NMHDR*)lParam;
+
+            if (header.code == NM_CUSTOMDRAW
+                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == track_bar::class_name)
+            {
+              return self->wm_notify(track_bar(header.hwndFrom), *(NMCUSTOMDRAW*)lParam);
+            }
+          }
         }
 
         return std::nullopt;
@@ -100,6 +110,12 @@ namespace win32
             if (header.code == HDN_FILTERCHANGE || header.code == HDN_BEGINFILTEREDIT || header.code == HDN_ENDFILTEREDIT || header.code == HDN_ITEMCLICK || header.code == HDN_ITEMDBLCLICK || header.code == HDN_ITEMKEYDOWN || header.code == HDN_ITEMSTATEICONCLICK || header.code == HDN_OVERFLOWCLICK || header.code == HDN_DIVIDERDBLCLICK)
             {
               return self->wm_notify(win32::header(header.hwndFrom), *(NMHEADERW*)lParam);
+            }
+
+            if (header.code == NM_CUSTOMDRAW
+                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == header::class_name)
+            {
+              return self->wm_notify(header(header.hwndFrom), *(NMCUSTOMDRAW*)lParam);
             }
           }
         }
@@ -667,12 +683,7 @@ namespace win32
 
     struct notifications
     {
-      virtual std::optional<win32::lresult_t> wm_measure_item(win32::tab_control, DRAWITEMSTRUCT&)
-      {
-        return std::nullopt;
-      }
-
-      virtual std::optional<win32::lresult_t> wm_draw_item(win32::tab_control, MEASUREITEMSTRUCT&)
+      virtual std::optional<win32::lresult_t> wm_draw_item(win32::tab_control, DRAWITEMSTRUCT&)
       {
         return std::nullopt;
       }
@@ -687,6 +698,15 @@ namespace win32
       {
         if constexpr (std::is_base_of_v<notifications, TWindow>)
         {
+          if (message == WM_DRAWITEM)
+          {
+            auto& context = *(DRAWITEMSTRUCT*)lParam;
+
+            if (context.CtlType == ODT_TAB)
+            {
+              return self->wm_draw_item(tab_control(context.hwndItem), context);
+            }
+          }
         }
 
         return std::nullopt;
