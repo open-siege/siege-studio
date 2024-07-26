@@ -152,32 +152,6 @@ namespace win32
         {
           TWindow* self = nullptr;
 
-          auto do_dispatch = [&]() -> lresult_t {
-            std::optional<lresult_t> result = std::nullopt;
-
-            if (self)
-            {
-              result = dispatch_message(self, message, wParam, lParam);
-
-              if (message == WM_NCDESTROY)
-              {
-                self->~TWindow();
-                auto heap = std::bit_cast<HANDLE>(GetWindowLongPtrW(hWnd, 0));
-                // auto size = GetWindowLongPtrW(hWnd, sizeof(LONG_PTR));
-                auto data = std::bit_cast<TWindow*>(GetWindowLongPtrW(hWnd, 2 * sizeof(LONG_PTR)));
-
-                ::HeapFree(heap, 0, data);
-                win32::window_ref(hWnd).ForEachPropertyExW([](auto wnd, std::wstring_view name, HANDLE handle) {
-                  ::RemovePropW(wnd, name.data());
-                });
-
-                return 0;
-              }
-            }
-
-            return result.or_else([&] { return std::make_optional(DefWindowProc(hWnd, message, wParam, lParam)); }).value();
-          };
-
           if (message == WM_NCCREATE)
           {
             auto heap = ::GetProcessHeap();
@@ -199,7 +173,29 @@ namespace win32
             self = std::bit_cast<TWindow*>(GetWindowLongPtrW(hWnd, 2 * sizeof(LONG_PTR)));
           }
 
-          return do_dispatch();
+          std::optional<lresult_t> result = std::nullopt;
+
+          if (self)
+          {
+            result = dispatch_message(self, message, wParam, lParam);
+
+            if (message == WM_NCDESTROY)
+            {
+              self->~TWindow();
+              auto heap = std::bit_cast<HANDLE>(GetWindowLongPtrW(hWnd, 0));
+              // auto size = GetWindowLongPtrW(hWnd, sizeof(LONG_PTR));
+              auto data = std::bit_cast<TWindow*>(GetWindowLongPtrW(hWnd, 2 * sizeof(LONG_PTR)));
+
+              ::HeapFree(heap, 0, data);
+              win32::window_ref(hWnd).ForEachPropertyExW([](auto wnd, std::wstring_view name, HANDLE handle) {
+                  ::RemovePropW(wnd, name.data());
+                });
+
+              return 0;
+            }
+          }
+
+          return result.or_else([&] { return std::make_optional(DefWindowProc(hWnd, message, wParam, lParam)); }).value();
         }
       };
 
@@ -229,42 +225,6 @@ namespace win32
         static lresult_t CALLBACK WindowHandler(hwnd_t hWnd, std::uint32_t message, wparam_t wParam, lparam_t lParam)
         {
           TWindow* self = nullptr;
-
-          auto do_dispatch = [&]() -> lresult_t {
-            std::optional<lresult_t> result = std::nullopt;
-
-            if (self)
-            {
-              result = dispatch_message(self, message, wParam, lParam);
-
-              if (message == WM_NCDESTROY)
-              {
-                auto ref_count = GetClassLongPtrW(hWnd, 0);
-                ref_count--;
-
-                if (ref_count == 0)
-                {
-                  self->~TWindow();
-                  auto heap = std::bit_cast<HANDLE>(GetClassLongPtrW(hWnd, sizeof(LONG_PTR)));
-                  // auto size = GetWindowLongPtrW(hWnd, sizeof(LONG_PTR));
-                  auto data = std::bit_cast<TWindow*>(GetClassLongPtrW(hWnd, 3 * sizeof(LONG_PTR)));
-
-                  ::HeapFree(heap, 0, data);
-
-                  win32::window_ref(hWnd).ForEachPropertyExW([](auto wnd, std::wstring_view name, HANDLE handle) {
-                    ::RemovePropW(wnd, name.data());
-                  });
-                }
-
-                SetClassLongPtrW(hWnd, 0, ref_count);
-
-                return 0;
-              }
-            }
-
-            return result.or_else([&] { return std::make_optional(DefWindowProc(hWnd, message, wParam, lParam)); }).value();
-          };
-
           if (message == WM_NCCREATE)
           {
             auto ref_count = GetClassLongPtrW(hWnd, 0);
@@ -294,7 +254,38 @@ namespace win32
             self = std::bit_cast<TWindow*>(GetClassLongPtrW(hWnd, 3 * sizeof(LONG_PTR)));
           }
 
-          return do_dispatch();
+          std::optional<lresult_t> result = std::nullopt;
+
+          if (self)
+          {
+            result = dispatch_message(self, message, wParam, lParam);
+
+              if (message == WM_NCDESTROY)
+              {
+                auto ref_count = GetClassLongPtrW(hWnd, 0);
+                ref_count--;
+
+                if (ref_count == 0)
+                {
+                  self->~TWindow();
+                  auto heap = std::bit_cast<HANDLE>(GetClassLongPtrW(hWnd, sizeof(LONG_PTR)));
+                  // auto size = GetWindowLongPtrW(hWnd, sizeof(LONG_PTR));
+                  auto data = std::bit_cast<TWindow*>(GetClassLongPtrW(hWnd, 3 * sizeof(LONG_PTR)));
+
+                  ::HeapFree(heap, 0, data);
+
+                  win32::window_ref(hWnd).ForEachPropertyExW([](auto wnd, std::wstring_view name, HANDLE handle) {
+                    ::RemovePropW(wnd, name.data());
+                  });
+                }
+
+                SetClassLongPtrW(hWnd, 0, ref_count);
+
+                return 0;
+              }
+            }
+
+          return result.or_else([&] { return std::make_optional(DefWindowProc(hWnd, message, wParam, lParam)); }).value();
         }
       };
 

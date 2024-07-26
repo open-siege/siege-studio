@@ -229,14 +229,40 @@ namespace siege::views
       return std::nullopt;
     }
 
+    virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMITEMACTIVATE& notice)
+    {
+        POINT point;
+        
+        if (notice.hdr.code == NM_CLICK && ::GetCursorPos(&point) && ::ScreenToClient(control_settings, &point))
+        {
+          LVHITTESTINFO info{};
+          info.pt = point;
+          info.flags = LVHT_ONITEM;
+          ListView_SubItemHitTest(control_settings, &info);
+
+          if (info.iSubItem && info.iItem != -1)
+          {
+            CHOOSECOLOR dialog{};
+            dialog.lStructSize = sizeof(CHOOSECOLOR);
+            dialog.hwndOwner = *this;
+            dialog.Flags = CC_FULLOPEN | CC_RGBINIT;
+
+            if (::ChooseColor(&dialog))
+            {
+
+            }
+          }
+        }
+
+        return std::nullopt;
+    }
+
     std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMHDR& notice) override
     {
       POINT point;
-      if (notice.code == NM_HOVER && ::GetCursorPos(&point))
+      if (notice.code == NM_HOVER && ::GetCursorPos(&point) && ::ScreenToClient(control_settings, &point))
       {
-        if (::ScreenToClient(control_settings, &point))
-        {
-          LVHITTESTINFO info{};
+        LVHITTESTINFO info{};
           info.pt = point;
           info.flags = LVHT_ONITEM;
           ListView_SubItemHitTest(control_settings, &info);
@@ -261,7 +287,6 @@ namespace siege::views
             auto color = hover_colors.emplace(temp, 0x00aaffaa);
             ::InvalidateRect(control_settings, &item_rect, TRUE);
           }
-        }
       }
       return 0;
     }
