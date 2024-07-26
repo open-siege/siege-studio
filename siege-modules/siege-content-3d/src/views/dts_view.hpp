@@ -154,7 +154,7 @@ namespace siege::views
 
     std::optional<HBRUSH> wm_control_color(win32::static_control, win32::gdi_drawing_context_ref context) override
     {
-      auto context = create_or_get_gl_context(context);
+      auto gl_context = create_or_get_gl_context(std::move(context));
       glClearColor(0.3f, 0.3f, 0.3f, 0.f);
     
       return GetStockBrush(DC_BRUSH);

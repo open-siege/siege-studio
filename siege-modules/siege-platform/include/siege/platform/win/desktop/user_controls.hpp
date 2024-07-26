@@ -4,6 +4,7 @@
 #include <expected>
 #include <siege/platform/win/desktop/window.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
+#include <CommCtrl.h>
 
 namespace win32
 {
@@ -138,7 +139,7 @@ namespace win32
 
           if (message == WM_CTLCOLORSTATIC && win32::window_ref((HWND)lParam).RealGetWindowClassW() == static_control::class_name)
           {
-            return (LRESULT)self->wm_control_color(static_control(lParam), win32::gdi_drawing_context_ref((HDC)wParam)) override
+            return (LRESULT)self->wm_control_color(static_control(lParam), win32::gdi_drawing_context_ref((HDC)wParam));
           }
         }
 

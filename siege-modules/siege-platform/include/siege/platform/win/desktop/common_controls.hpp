@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <siege/platform/win/desktop/user_controls.hpp>
+#include <CommCtrl.h>
 
 namespace win32
 {
@@ -276,7 +277,7 @@ namespace win32
               return self->wm_notify(list_view(header.hwndFrom), *(NMITEMACTIVATE*)lParam);
             }
 
-            if (header.code == NM_HOVER
+            if ((header.code == NM_HOVER || header.code == NM_SETFOCUS)
                 && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == list_view::class_name)
             {
               return self->wm_notify(list_view(header.hwndFrom), *(NMHDR*)lParam);

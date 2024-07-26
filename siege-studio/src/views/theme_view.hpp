@@ -95,7 +95,7 @@ namespace siege::views
                                           .pszText = const_cast<wchar_t*>(L"Value"),
                                         });
 
-      ListView_SetHoverTime(control_settings, 0);
+      ListView_SetHoverTime(control_settings, 10);
 
 
       std::vector<std::wstring_view> property_names = [] {
@@ -229,64 +229,86 @@ namespace siege::views
       return std::nullopt;
     }
 
+    std::array<COLORREF, 16> colors{};
+
+    static UINT_PTR CALLBACK DialogColorHook(HWND dialog, UINT message, WPARAM wParam, LPARAM lParam)
+    {
+      if (message == WM_INITDIALOG)
+      {
+        auto* item = (CHOOSECOLORW*)lParam;
+        auto x = LOWORD(item->lCustData);
+        auto y = HIWORD(item->lCustData);
+        win32::window_ref(dialog).SetWindowPos(POINT{ x, y });
+      }
+
+      return 0;
+    }
+
     virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMITEMACTIVATE& notice)
     {
-        POINT point;
-        
-        if (notice.hdr.code == NM_CLICK && ::GetCursorPos(&point) && ::ScreenToClient(control_settings, &point))
+      POINT point;
+
+      if (notice.hdr.code == NM_CLICK && ::GetCursorPos(&point) && ::ScreenToClient(control_settings, &point))
+      {
+        LVHITTESTINFO info{};
+        info.pt = point;
+        info.flags = LVHT_ONITEM | LVHT_EX_ONCONTENTS;
+        ListView_SubItemHitTest(control_settings, &info);
+
+        if (info.iSubItem && info.iItem != -1)
         {
-          LVHITTESTINFO info{};
-          info.pt = point;
-          info.flags = LVHT_ONITEM;
-          ListView_SubItemHitTest(control_settings, &info);
+          RECT item_rect{};
+          ListView_GetSubItemRect(control_settings, info.iItem, info.iSubItem, LVIR_BOUNDS, &item_rect);
+          ::ClientToScreen(control_settings, (POINT*)&item_rect);
 
-          if (info.iSubItem && info.iItem != -1)
+          CHOOSECOLORW dialog{};
+          dialog.lStructSize = sizeof(CHOOSECOLOR);
+          dialog.hwndOwner = *this;
+          dialog.lpCustColors = colors.data();
+          dialog.Flags = CC_ENABLEHOOK;
+          dialog.lpfnHook = DialogColorHook;
+          dialog.lCustData = MAKELPARAM(item_rect.left, item_rect.top);
+
+          if (::ChooseColorW(&dialog))
           {
-            CHOOSECOLOR dialog{};
-            dialog.lStructSize = sizeof(CHOOSECOLOR);
-            dialog.hwndOwner = *this;
-            dialog.Flags = CC_FULLOPEN | CC_RGBINIT;
-
-            if (::ChooseColor(&dialog))
-            {
-
-            }
           }
         }
+      }
 
-        return std::nullopt;
+      return std::nullopt;
     }
 
     std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMHDR& notice) override
     {
       POINT point;
-      if (notice.code == NM_HOVER && ::GetCursorPos(&point) && ::ScreenToClient(control_settings, &point))
+      if ((notice.code == NM_HOVER) && ::GetCursorPos(&point) && ::ScreenToClient(control_settings, &point))
       {
         LVHITTESTINFO info{};
-          info.pt = point;
-          info.flags = LVHT_ONITEM;
-          ListView_SubItemHitTest(control_settings, &info);
+        info.pt = point;
+        info.flags = LVHT_ONITEM;
+        ListView_SubItemHitTest(control_settings, &info);
 
-          if (info.iSubItem && info.iItem != -1)
+        if (info.iSubItem && info.iItem != -1)
+        {
+          RECT item_rect{};
+          for (auto& hover : hover_colors)
           {
-            RECT item_rect{};
-            for (auto& hover : hover_colors)
-            {
-              ListView_GetSubItemRect(control_settings, hover.first[0], hover.first[1], LVIR_BOUNDS, &item_rect);
-              ::InvalidateRect(control_settings, &item_rect, TRUE);
-            }
-
-            hover_colors.clear();
-
-            ListView_GetSubItemRect(control_settings, info.iItem, info.iSubItem, LVIR_BOUNDS, &item_rect);
-
-            std::wstring temp;
-            temp.push_back(info.iItem);
-            temp.push_back(info.iSubItem);
-
-            auto color = hover_colors.emplace(temp, 0x00aaffaa);
+            ListView_GetSubItemRect(control_settings, hover.first[0], hover.first[1], LVIR_BOUNDS, &item_rect);
             ::InvalidateRect(control_settings, &item_rect, TRUE);
           }
+
+          hover_colors.clear();
+
+          ListView_GetSubItemRect(control_settings, info.iItem, info.iSubItem, LVIR_BOUNDS, &item_rect);
+
+          std::wstring temp;
+          temp.push_back(info.iItem);
+          temp.push_back(info.iSubItem);
+
+          auto color = hover_colors.emplace(temp, 0x00aaffaa);
+          ::InvalidateRect(control_settings, &item_rect, TRUE);
+          ListView_SetHotItem(control_settings, info.iItem);
+        }
       }
       return 0;
     }

@@ -15,19 +15,13 @@ if (WIN32)
 
     add_library(siege-platform ALIAS siege-win-core)
 
-    add_library(siege-win-gaming STATIC src/win-gaming.cpp)
-    set_property(TARGET siege-win-gaming PROPERTY CXX_STANDARD 23)
-    target_compile_definitions(siege-win-gaming PRIVATE WINAPI_FAMILY=WINAPI_FAMILY_GAMES)
-    target_include_directories(siege-win-gaming PUBLIC ${PROJECT_SOURCE_DIR}/include)
-    target_link_libraries(siege-win-gaming PUBLIC siege-win-core)
-
     add_library(siege-win-desktop STATIC src/win-desktop.cpp src/theming-user.cpp src/theming-common.cpp)
     set_property(TARGET siege-win-desktop PROPERTY CXX_STANDARD 23)
     target_compile_definitions(siege-win-desktop PRIVATE WINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP)
     target_include_directories(siege-win-desktop PUBLIC ${PROJECT_SOURCE_DIR}/include)
-    target_link_libraries(siege-win-desktop PUBLIC siege-win-gaming user32 comctl32 oleacc)
+    target_link_libraries(siege-win-desktop PUBLIC siege-win-core user32 comctl32 oleacc)
 
-    install(TARGETS siege-std siege-win-core siege-win-gaming siege-win-desktop CONFIGURATIONS Debug Release RUNTIME DESTINATION bin)
+    install(TARGETS siege-std siege-win-core siege-win-desktop CONFIGURATIONS Debug Release RUNTIME DESTINATION bin)
 
     # Tests
     find_package(Catch2 REQUIRED)

@@ -541,10 +541,9 @@ namespace siege::views
         HDC hDC = ::GetDC(*this);
         TEXTMETRIC tm{};
         ::GetTextMetricsW(hDC, &tm);
-        item.itemWidth = tm.tmAveCharWidth * std::wcslen((wchar_t*)item.itemData);
         ReleaseDC(*this, hDC);
 
-        return SIZE {.cx = tm.tmAveCharWidth * std::wcslen((wchar_t*)item.itemData), .cy = ::GetSystemMetrics(SM_CYMENUSIZE)};
+        return SIZE {.cx = (LONG)(tm.tmAveCharWidth * std::wcslen((wchar_t*)item.itemData)), .cy = ::GetSystemMetrics(SM_CYMENUSIZE)};
       }
       else
       {

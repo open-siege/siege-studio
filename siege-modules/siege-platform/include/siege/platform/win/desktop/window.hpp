@@ -76,7 +76,7 @@ namespace win32
 
       virtual SIZE wm_measure_item(menu, const MEASUREITEMSTRUCT&)
       {
-        return {};
+        return SIZE{};
       }
 
       template<typename TWindow>
