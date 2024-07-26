@@ -152,12 +152,12 @@ namespace siege::views
       return 0;
     }
 
-    auto wm_control_color(win32::static_control_color_message message)
+    std::optional<HBRUSH> wm_control_color(win32::static_control, win32::gdi_drawing_context_ref context) override
     {
-      auto context = create_or_get_gl_context(win32::gdi_drawing_context_ref(message.context));
+      auto context = create_or_get_gl_context(context);
       glClearColor(0.3f, 0.3f, 0.3f, 0.f);
     
-      return (LRESULT)GetStockBrush(DC_BRUSH);
+      return GetStockBrush(DC_BRUSH);
     }
 
     std::optional<win32::lresult_t> wm_draw_item(win32::static_control, DRAWITEMSTRUCT& item) override

@@ -74,9 +74,9 @@ namespace win32
         return std::nullopt;
       }
 
-      virtual std::optional<win32::lresult_t> wm_measure_item(menu, MEASUREITEMSTRUCT&)
+      virtual SIZE wm_measure_item(menu, const MEASUREITEMSTRUCT&)
       {
-        return std::nullopt;
+        return {};
       }
 
       template<typename TWindow>
@@ -95,7 +95,10 @@ namespace win32
 
             if (context.CtlType == ODT_MENU)
             {
-              return self->wm_measure_item(menu(GetMenu(*self)), context);
+              auto size = self->wm_measure_item(menu(GetMenu(*self)), context);
+              context.itemWidth = size.cx;
+              context.itemHeight = size.cy;
+              return 0;
             }
           }
 

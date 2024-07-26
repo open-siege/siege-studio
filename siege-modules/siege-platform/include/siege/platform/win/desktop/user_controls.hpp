@@ -4,7 +4,6 @@
 #include <expected>
 #include <siege/platform/win/desktop/window.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
-#include <siege/platform/win/desktop/notifications.hpp>
 
 namespace win32
 {
@@ -136,6 +135,11 @@ namespace win32
               return self->wm_draw_item(win32::static_control(context.hwndItem), context);
             }
           }
+
+          if (message == WM_CTLCOLORSTATIC && win32::window_ref((HWND)lParam).RealGetWindowClassW() == static_control::class_name)
+          {
+            return (LRESULT)self->wm_control_color(static_control(lParam), win32::gdi_drawing_context_ref((HDC)wParam)) override
+          }
         }
 
         return std::nullopt;
@@ -166,9 +170,9 @@ namespace win32
           return std::nullopt;
       }
 
-      virtual std::optional<win32::lresult_t> wm_measure_item(win32::list_box, MEASUREITEMSTRUCT&)
+      virtual SIZE wm_measure_item(win32::list_box, const MEASUREITEMSTRUCT&)
       {
-        return std::nullopt;
+        return {};
       }
 
       virtual std::optional<win32::lresult_t> wm_draw_item(win32::list_box, DRAWITEMSTRUCT&)
@@ -204,7 +208,10 @@ namespace win32
                 control = ::FindWindowExW(*self, nullptr, list_box::class_name, nullptr);
               }
 
-              return self->wm_measure_item(list_box(control), context);
+              auto size = self->wm_measure_item(list_box(control), context);
+              context.itemWidth = size.cx;
+              context.itemHeight = size.cy;
+              return 0;
             }
           }
 
@@ -306,9 +313,9 @@ namespace win32
           return std::nullopt;
       }
 
-      virtual std::optional<win32::lresult_t> wm_measure_item(win32::combo_box, DRAWITEMSTRUCT&)
+      virtual SIZE wm_measure_item(win32::combo_box, const MEASUREITEMSTRUCT&)
       {
-        return std::nullopt;
+        return {};
       }
 
       virtual std::optional<win32::lresult_t> wm_draw_item(win32::combo_box, MEASUREITEMSTRUCT&)
@@ -344,7 +351,10 @@ namespace win32
                 control = ::FindWindowExW(*self, nullptr, combo_box::class_name, nullptr);
               }
 
-              return self->wm_measure_item(combo_box(control), context);
+              auto size = self->wm_measure_item(combo_box(control), context);
+              context.itemWidth = size.cx;
+              context.itemHeight = size.cy;
+              return 0;
             }
           }
         }

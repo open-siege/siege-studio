@@ -81,7 +81,6 @@ namespace siege::views
       options.InsertString(-1, L"Advanced");
       options.SetCurrentSelection(0);
       ListBox_SetItemHeight(options, 0, options.GetItemHeight(0) * 2);
-
       control_settings = *control_factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
         .style = WS_CHILD | LVS_REPORT });
 
@@ -95,6 +94,8 @@ namespace siege::views
       control_settings.InsertColumn(-1, LVCOLUMNW{
                                           .pszText = const_cast<wchar_t*>(L"Value"),
                                         });
+
+      ListView_SetHoverTime(control_settings, 0);
 
 
       std::vector<std::wstring_view> property_names = [] {

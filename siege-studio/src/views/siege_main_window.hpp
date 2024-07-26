@@ -534,7 +534,7 @@ namespace siege::views
       return std::nullopt;
     }
 
-    std::optional<win32::lresult_t> wm_measure_item(win32::menu, MEASUREITEMSTRUCT& item) override
+    SIZE wm_measure_item(win32::menu, const MEASUREITEMSTRUCT& item) override
     {
       if (item.itemData)
       {
@@ -542,16 +542,14 @@ namespace siege::views
         TEXTMETRIC tm{};
         ::GetTextMetricsW(hDC, &tm);
         item.itemWidth = tm.tmAveCharWidth * std::wcslen((wchar_t*)item.itemData);
-        item.itemHeight = ::GetSystemMetrics(SM_CYMENUSIZE);
         ReleaseDC(*this, hDC);
+
+        return SIZE {.cx = tm.tmAveCharWidth * std::wcslen((wchar_t*)item.itemData), .cy = ::GetSystemMetrics(SM_CYMENUSIZE)};
       }
       else
       {
-        item.itemWidth = ::GetSystemMetrics(SM_CXMENUSIZE) * 2;
-        item.itemHeight = ::GetSystemMetrics(SM_CYMENUSIZE);
+        return SIZE {.cx = ::GetSystemMetrics(SM_CXMENUSIZE) * 2, .cy = ::GetSystemMetrics(SM_CYMENUSIZE)};
       }
-
-      return TRUE;
     }
 
     std::optional<win32::lresult_t> wm_draw_item(win32::menu, DRAWITEMSTRUCT& item) override

@@ -85,66 +85,6 @@ namespace win32
     }
   };
 
-  struct button_control_color_message
-  {
-    constexpr static std::uint32_t id = WM_CTLCOLORBTN;
-
-    HDC context;
-    HWND control;
-
-    button_control_color_message(wparam_t wParam, lparam_t lParam) : context((HDC)wParam), control((HWND)lParam)
-    {
-    }
-  };
-
-  struct edit_control_color_message
-  {
-    constexpr static std::uint32_t id = WM_CTLCOLOREDIT;
-
-    HDC context;
-    HWND control;
-
-    edit_control_color_message(wparam_t wParam, lparam_t lParam) : context((HDC)wParam), control((HWND)lParam)
-    {
-    }
-  };
-
-  struct static_control_color_message
-  {
-    constexpr static std::uint32_t id = WM_CTLCOLORSTATIC;
-
-    HDC context;
-    HWND control;
-
-    static_control_color_message(wparam_t wParam, lparam_t lParam) : context((HDC)wParam), control((HWND)lParam)
-    {
-    }
-  };
-
-  struct list_box_control_color_message
-  {
-    constexpr static std::uint32_t id = WM_CTLCOLORLISTBOX;
-
-    HDC context;
-    HWND control;
-
-    list_box_control_color_message(wparam_t wParam, lparam_t lParam) : context((HDC)wParam), control((HWND)lParam)
-    {
-    }
-  };
-
-  struct scroll_bar_control_color_message
-  {
-    constexpr static std::uint32_t id = WM_CTLCOLORSCROLLBAR;
-
-    HDC context;
-    HWND control;
-
-    scroll_bar_control_color_message(wparam_t wParam, lparam_t lParam) : context((HDC)wParam), control((HWND)lParam)
-    {
-    }
-  };
-
   struct input_message
   {
     constexpr static std::uint32_t id = WM_INPUT;
@@ -174,34 +114,6 @@ namespace win32
     {
     }
   };
-
-  #if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-  struct DRAWITEMSTRUCT
-  {
-    UINT CtlType;
-    UINT CtlID;
-    UINT itemID;
-    UINT itemAction;
-    UINT itemState;
-    HWND hwndItem;
-    HDC hDC;
-    RECT rcItem;
-    ULONG_PTR itemData;
-  };
-#endif
-
-  
-#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-  struct MEASUREITEMSTRUCT
-  {
-    UINT CtlType;
-    UINT CtlID;
-    UINT itemID;
-    UINT itemWidth;
-    UINT itemHeight;
-    ULONG_PTR itemData;
-  };
-#endif
 
   struct get_object_message
   {
