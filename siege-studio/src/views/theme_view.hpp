@@ -3,6 +3,7 @@
 
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include <siege/platform/win/desktop/common_controls.hpp>
+#include <siege/platform/win/desktop/theming.hpp>
 
 #include <type_traits>
 
@@ -92,8 +93,9 @@ namespace siege::views
 
       sample.button = *control_factory.CreateWindowExW<win32::button>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-        .lpszName = L"Sample button"
-      });
+        .lpszName = L"Sample button" });
+
+      win32::apply_theme(theme_properties, sample.button);
 
       sample.combo_box = *control_factory.CreateWindowExW<win32::combo_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | CBS_DROPDOWN,
@@ -101,8 +103,7 @@ namespace siege::views
 
       sample.combo_box_ex = *control_factory.CreateWindowExW<win32::combo_box_ex>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | CBS_DROPDOWN,
-        .lpszName = L"Sample combo box ex"
-      });
+        .lpszName = L"Sample combo box ex" });
 
       sample.edit = *control_factory.CreateWindowExW<win32::edit>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD });
@@ -110,15 +111,18 @@ namespace siege::views
       sample.header = *control_factory.CreateWindowExW<win32::header>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD });
 
+      sample.header.InsertItem(-1, HDITEMW{ .mask = HDI_TEXT | HDI_WIDTH, .cxy = 30, .pszText = const_cast<wchar_t*>(L"Sample") });
+      sample.header.InsertItem(-1, HDITEMW{ .mask = HDI_TEXT | HDI_WIDTH, .cxy = 30, .pszText = const_cast<wchar_t*>(L"Header"), .cchTextMax = 5 });
+      sample.header.InsertItem(-1, HDITEMW{ .mask = HDI_TEXT | HDI_WIDTH, .cxy = 30, .pszText = const_cast<wchar_t*>(L"Test"), .cchTextMax = 5 });
+
       sample.list_box = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD });
 
-       sample.list_view = *control_factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
+      sample.list_view = *control_factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD });
 
       options = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS 
-      });
+        .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
       options.InsertString(-1, L"Simple");
       options.InsertString(-1, L"Advanced");
@@ -202,12 +206,6 @@ namespace siege::views
       return 0;
     }
 
-
-    std::optional<win32::lresult_t> wm_notify(win32::button button, NMCUSTOMDRAW& custom_draw) override
-    {
-      return std::nullopt;
-    }
-
     std::map<std::wstring, COLORREF> hover_colors;
 
     win32::lresult_t wm_notify(win32::list_view, NMLVCUSTOMDRAW& custom_draw) override
@@ -237,7 +235,6 @@ namespace siege::views
 
         if (color != hover_colors.end())
         {
-          //          custom_draw.clrTextBk = 0x00aaffaa;
           custom_draw.clrTextBk = color->second;
         }
 
@@ -449,7 +446,6 @@ namespace siege::views
 
         if (i == 7)
         {
-
         }
 
         if (i == 8)

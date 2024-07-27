@@ -19,7 +19,7 @@ namespace win32
 
           auto self = win32::window_ref(hWnd);
           auto bk_color = self.FindPropertyExW<COLORREF>(win32::properties::window::bk_color);
-          
+
           if (bk_color)
           {
             auto rect = self.GetClientRect();
@@ -54,6 +54,114 @@ namespace win32
       control.RemovePropW(win32::properties::window::bk_color);
       ::RemoveWindowSubclass(control, sub_class::HandleMessage, (UINT_PTR)control.get());
       ::RedrawWindow(control, nullptr, nullptr, RDW_ERASENOW);
+    }
+  }
+
+  void apply_theme(const win32::window_ref& colors, win32::button& control)
+  {
+    struct sub_class final : win32::button::notifications
+    {
+      win32::lresult_t wm_notify(win32::button button, NMCUSTOMDRAW& custom_draw) override
+      {
+        if (custom_draw.dwDrawStage == CDDS_PREPAINT)
+        {
+          auto text_color = button.FindPropertyExW<COLORREF>(properties::button::text_color);
+
+          if (text_color)
+          {
+            ::SetTextColor(custom_draw.hdc, *text_color);
+          }
+          else
+          {
+            ::SetTextColor(custom_draw.hdc, RGB(128, 0, 128));
+          }
+
+          auto bk_color = button.FindPropertyExW<COLORREF>(properties::button::bk_color);
+
+          if (bk_color)
+          {
+            ::SetBkColor(custom_draw.hdc, *bk_color);
+          }
+          else
+          {
+            ::SetBkColor(custom_draw.hdc, RGB(0, 128, 128));
+          }
+
+          return CDRF_DODEFAULT | CDRF_NEWFONT;
+        }
+
+
+        return CDRF_DODEFAULT;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_draw_item(win32::button, DRAWITEMSTRUCT&) override
+      {
+        return std::nullopt;
+      }
+
+      virtual std::optional<HBRUSH> wm_control_color(win32::button button, win32::gdi_drawing_context_ref context) override
+      {
+        auto text_color = button.FindPropertyExW<COLORREF>(properties::button::text_color);
+
+        if (text_color)
+        {
+          ::SetTextColor(context, *text_color);
+        }
+
+        auto bk_color = button.FindPropertyExW<COLORREF>(properties::button::bk_color);
+
+        if (bk_color)
+        {
+          ::SetBkColor(context, *bk_color);
+          return get_solid_brush(*bk_color);
+        }
+
+        return std::nullopt;
+      }
+
+      static LRESULT __stdcall HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      {
+        auto result = win32::button::notifications::dispatch_message((sub_class*)dwRefData, message, wParam, lParam);
+
+        if (result)
+        {
+          return *result;
+        }
+
+        if (message == WM_DESTROY)
+        {
+          ::RemoveWindowSubclass(hWnd, sub_class::HandleMessage, uIdSubclass);
+        }
+
+        return DefSubclassProc(hWnd, message, wParam, lParam);
+      }
+    };
+
+    if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
+    {
+      colors.ForEachPropertyExW([&](auto, auto key, auto value) {
+        if (key.find(win32::button::class_name) != std::wstring_view::npos)
+        {
+          control.SetPropW(key, value);
+        }
+      });
+
+      win32::theme_module().SetWindowTheme(control, L"", L"");
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR) new sub_class());
+      ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
+    }
+    else
+    {
+      control.RemovePropW(win32::properties::button::bk_color);
+      control.RemovePropW(win32::properties::button::text_color);
+      control.RemovePropW(win32::properties::button::line_color);
+      sub_class* object = nullptr;
+      if (::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR*)&object))
+      {
+        ::RemoveWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get());
+        delete object;
+        ::RedrawWindow(control, nullptr, nullptr, RDW_ERASENOW);
+      }
     }
   }
 
@@ -107,11 +215,10 @@ namespace win32
       control.RemovePropW(win32::properties::static_control::text_color);
       ::RemoveWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get());
       ::RedrawWindow(control, nullptr, nullptr, RDW_ERASENOW);
-      
     }
   }
 
-  
+
   void apply_theme(const win32::window_ref& colors, win32::list_box& control)
   {
     struct sub_class

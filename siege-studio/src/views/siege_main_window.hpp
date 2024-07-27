@@ -23,10 +23,10 @@ namespace siege::views
     }
   };
 
-  struct siege_main_window final : win32::window_ref, 
-      win32::tree_view::notifications,
-      win32::tab_control::notifications,
-      win32::menu::notifications
+  struct siege_main_window final : win32::window_ref
+    , win32::tree_view::notifications
+    , win32::tab_control::notifications
+    , win32::menu::notifications
   {
     using win32::tree_view::notifications::wm_notify;
     using win32::menu::notifications::wm_draw_item;
@@ -443,6 +443,7 @@ namespace siege::views
                 std::vector<std::wstring_view> results;
                 results.reserve(32);
                 std::copy(win32::properties::tree_view::props.begin(), win32::properties::tree_view::props.end(), std::back_inserter(results));
+                std::copy(win32::properties::button::props.begin(), win32::properties::button::props.end(), std::back_inserter(results));
                 std::copy(win32::properties::list_view::props.begin(), win32::properties::list_view::props.end(), std::back_inserter(results));
                 std::copy(win32::properties::tool_bar::props.begin(), win32::properties::tool_bar::props.end(), std::back_inserter(results));
                 std::copy(win32::properties::list_box::props.begin(), win32::properties::list_box::props.end(), std::back_inserter(results));
@@ -471,6 +472,9 @@ namespace siege::views
               COLORREF text_color = 0x00FFFFFF;
               COLORREF text_bk_color = 0x00111111;
               COLORREF text_highlight_color = 0x00383838;
+
+              this->SetPropW(win32::properties::button::bk_color, bk_color);
+              this->SetPropW(win32::properties::button::text_color, text_color);
 
               this->SetPropW(win32::properties::tree_view::bk_color, bk_color);
               this->SetPropW(win32::properties::tree_view::text_color, text_color);
@@ -543,11 +547,11 @@ namespace siege::views
         ::GetTextMetricsW(hDC, &tm);
         ReleaseDC(*this, hDC);
 
-        return SIZE {.cx = (LONG)(tm.tmAveCharWidth * std::wcslen((wchar_t*)item.itemData)), .cy = ::GetSystemMetrics(SM_CYMENUSIZE)};
+        return SIZE{ .cx = (LONG)(tm.tmAveCharWidth * std::wcslen((wchar_t*)item.itemData)), .cy = ::GetSystemMetrics(SM_CYMENUSIZE) };
       }
       else
       {
-        return SIZE {.cx = ::GetSystemMetrics(SM_CXMENUSIZE) * 2, .cy = ::GetSystemMetrics(SM_CYMENUSIZE)};
+        return SIZE{ .cx = ::GetSystemMetrics(SM_CXMENUSIZE) * 2, .cy = ::GetSystemMetrics(SM_CYMENUSIZE) };
       }
     }
 

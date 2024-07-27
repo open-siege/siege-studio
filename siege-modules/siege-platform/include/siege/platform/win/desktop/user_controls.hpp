@@ -21,9 +21,9 @@ namespace win32
         return std::nullopt;
       }
 
-      virtual std::optional<win32::lresult_t> wm_notify(win32::button, NMCUSTOMDRAW&)
+      virtual win32::lresult_t wm_notify(win32::button, NMCUSTOMDRAW&)
       {
-        return std::nullopt;
+        return CDRF_DODEFAULT;
       }
 
       virtual std::optional<win32::lresult_t> wm_draw_item(win32::button, DRAWITEMSTRUCT&)

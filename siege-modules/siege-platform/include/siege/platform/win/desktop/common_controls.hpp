@@ -159,6 +159,11 @@ namespace win32
 
     [[maybe_unused]] inline wparam_t InsertItem(wparam_t index, HDITEMW info)
     {
+      if (index == -1)
+      {
+        index = this->GetItemCount();
+      }
+
       return Header_InsertItem(*this, index, &info);
     }
 
@@ -1003,10 +1008,10 @@ namespace win32
           if (message == WM_NOTIFY)
           {
             auto& header = *(NMHDR*)lParam;
-            if ((header.code == TVN_ITEMEXPANDINGW || header.code == TVN_ITEMEXPANDEDW 
-                || header.code == TVN_SELCHANGINGW || header.code == TVN_SELCHANGEDW 
-                || header.code == TVN_SINGLEEXPAND || header.code == TVN_BEGINDRAGW || header.code == TVN_DELETEITEMW) &&
-                win32::window_ref(header.hwndFrom).RealGetWindowClassW() == tree_view::class_name)
+            if ((header.code == TVN_ITEMEXPANDINGW || header.code == TVN_ITEMEXPANDEDW
+                  || header.code == TVN_SELCHANGINGW || header.code == TVN_SELCHANGEDW
+                  || header.code == TVN_SINGLEEXPAND || header.code == TVN_BEGINDRAGW || header.code == TVN_DELETEITEMW)
+                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == tree_view::class_name)
             {
               return self->wm_notify(tree_view(header.hwndFrom), *(NMTREEVIEWW*)lParam);
             }
