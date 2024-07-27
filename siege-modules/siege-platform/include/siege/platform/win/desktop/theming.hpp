@@ -33,6 +33,74 @@ namespace win32
 
   struct properties
   {
+    struct button
+    {
+      inline static auto bk_color = std::wstring(win32::button::class_name) + L"." + L"BkColor";
+      inline static auto text_color = std::wstring(win32::button::class_name) + L"." + L"TextColor";
+      inline static auto line_color = std::wstring(win32::button::class_name) + L"." + L"LineColor";
+
+      inline static auto props = std::array<std::wstring_view, 3>{
+        bk_color,
+        text_color,
+        line_color
+      };
+    };
+
+    struct edit
+    {
+      inline static auto bk_color = std::wstring(win32::edit::class_name) + L"." + L"BkColor";
+      inline static auto text_color = std::wstring(win32::edit::class_name) + L"." + L"TextColor";
+      inline static auto line_color = std::wstring(win32::edit::class_name) + L"." + L"LineColor";
+
+      inline static auto props = std::array<std::wstring_view, 3>{
+        bk_color,
+        text_color,
+        line_color
+      };
+    };
+
+    struct combo_box
+    {
+      inline static auto bk_color = std::wstring(win32::combo_box::class_name) + L"." + L"BkColor";
+      inline static auto text_color = std::wstring(win32::combo_box::class_name) + L"." + L"TextColor";
+      inline static auto line_color = std::wstring(win32::combo_box::class_name) + L"." + L"LineColor";
+
+      inline static auto props = std::array<std::wstring_view, 3>{
+        bk_color,
+        text_color,
+        line_color
+      };
+    };
+
+    struct combo_box_ex
+    {
+      inline static auto bk_color = std::wstring(win32::combo_box_ex::class_name) + L"." + L"BkColor";
+      inline static auto text_color = std::wstring(win32::combo_box_ex::class_name) + L"." + L"TextColor";
+      inline static auto line_color = std::wstring(win32::combo_box_ex::class_name) + L"." + L"LineColor";
+
+      inline static auto props = std::array<std::wstring_view, 3>{
+        bk_color,
+        text_color,
+        line_color
+      };
+    };
+
+    
+    struct header
+    {
+      inline static auto bk_color = std::wstring(win32::header::class_name) + L"." + L"BkColor";
+      inline static auto text_color = std::wstring(win32::header::class_name) + L"." + L"TextColor";
+      inline static auto text_bk_color = std::wstring(win32::header::class_name) + L"." + L"TextBkColor";
+      inline static auto text_highlight_color = std::wstring(win32::header::class_name) + L"." + L"TextHighlightColor";
+
+      inline static auto props = std::array<std::wstring_view, 4>{
+        bk_color,
+        text_color,
+        text_bk_color,
+        text_highlight_color
+      };
+    };
+
     struct tree_view
     {
       inline static auto bk_color = std::wstring(win32::tree_view::class_name) + L"." + L"BkColor";
@@ -40,9 +108,9 @@ namespace win32
       inline static auto line_color = std::wstring(win32::tree_view::class_name) + L"." + L"LineColor";
 
       inline static auto props = std::array<std::wstring_view, 3>{
-          bk_color,
-          text_color,
-          line_color
+        bk_color,
+        text_color,
+        line_color
       };
     };
 
@@ -97,20 +165,6 @@ namespace win32
       };
     };
 
-    struct header
-    {
-      inline static auto bk_color = std::wstring(win32::header::class_name) + L"." + L"BkColor";
-      inline static auto text_color = std::wstring(win32::header::class_name) + L"." + L"TextColor";
-      inline static auto text_bk_color = std::wstring(win32::header::class_name) + L"." + L"TextBkColor";
-      inline static auto text_highlight_color = std::wstring(win32::header::class_name) + L"." + L"TextHighlightColor";
-
-      inline static auto props = std::array<std::wstring_view, 4>{
-        bk_color,
-        text_color,
-        text_bk_color,
-        text_highlight_color
-      };
-    };
 
     struct tab_control
     {
@@ -161,12 +215,12 @@ namespace win32
   void apply_theme(const win32::window_ref& colors, win32::window_ref& control);
   void apply_theme(const win32::window_ref& colors, win32::static_control& control);
   void apply_theme(const win32::window_ref& colors, win32::list_box& control);
-  
-  
+
+
   // common controls
   void apply_theme(const win32::window_ref& colors, win32::tree_view& control);
   void apply_theme(const win32::window_ref& colors, win32::list_view& control);
-  void apply_theme(const win32::window_ref& colors, win32::tab_control& control);  
+  void apply_theme(const win32::window_ref& colors, win32::tab_control& control);
   void apply_theme(const win32::window_ref& colors, win32::header& control);
   void apply_theme(const win32::window_ref& colors, win32::tool_bar& control);
 }// namespace win32

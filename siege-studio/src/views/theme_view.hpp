@@ -23,20 +23,36 @@ namespace siege::views
 
     win32::list_view control_settings;
 
-    std::vector<win32::button> combo_boxes;
+    struct
+    {
+      win32::button button;
+      win32::combo_box combo_box;
+      win32::combo_box_ex combo_box_ex;
+      win32::edit edit;
+      win32::header header;
+      win32::list_box list_box;
+      win32::list_view list_view;
+      win32::menu menu;
+      win32::scroll_bar scroll_bar;
+      win32::static_control static_control;
+      win32::tab_control tab_control;
+      win32::tool_bar toolbar;
+      win32::window window;
+    } sample;
 
     std::map<std::wstring_view, std::wstring_view> control_labels = {
       { win32::button::class_name, L"Button" },
-      { win32::edit::class_name, L"Edit" },
-      { win32::static_control::class_name, L"Static Control" },
-      { win32::list_box::class_name, L"List Box" },
-      { win32::scroll_bar::class_name, L"Scroll Bar" },
       { win32::combo_box::class_name, L"Combo Box" },
+      { win32::combo_box_ex::class_name, L"Combo Box Ex" },
+      { win32::edit::class_name, L"Edit" },
+      { win32::header::class_name, L"Header" },
+      { win32::list_box::class_name, L"List Box" },
       { win32::list_view::class_name, L"List View" },
+      { win32::static_control::class_name, L"Static Control" },
+      { win32::scroll_bar::class_name, L"Scroll Bar" },
       { win32::tab_control::class_name, L"Tab Control" },
       { win32::tree_view::class_name, L"Tree View" },
-      { win32::combo_box_ex::class_name, L"Combo Box Ex" },
-      { win32::header::class_name, L"Header" },
+
       { win32::tool_bar::class_name, L"Toolbar" },
       { L"Menu", L"Menu" },
       { L"Window", L"Window" }
@@ -74,8 +90,35 @@ namespace siege::views
     {
       auto control_factory = win32::window_factory(ref());
 
+      sample.button = *control_factory.CreateWindowExW<win32::button>(::CREATESTRUCTW{
+        .style = WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+        .lpszName = L"Sample button"
+      });
+
+      sample.combo_box = *control_factory.CreateWindowExW<win32::combo_box>(::CREATESTRUCTW{
+        .style = WS_VISIBLE | WS_CHILD | CBS_DROPDOWN,
+        .lpszName = L"Sample combo box" });
+
+      sample.combo_box_ex = *control_factory.CreateWindowExW<win32::combo_box_ex>(::CREATESTRUCTW{
+        .style = WS_VISIBLE | WS_CHILD | CBS_DROPDOWN,
+        .lpszName = L"Sample combo box ex"
+      });
+
+      sample.edit = *control_factory.CreateWindowExW<win32::edit>(::CREATESTRUCTW{
+        .style = WS_VISIBLE | WS_CHILD });
+
+      sample.header = *control_factory.CreateWindowExW<win32::header>(::CREATESTRUCTW{
+        .style = WS_VISIBLE | WS_CHILD });
+
+      sample.list_box = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
+        .style = WS_VISIBLE | WS_CHILD });
+
+       sample.list_view = *control_factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
+        .style = WS_VISIBLE | WS_CHILD });
+
       options = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
+        .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS 
+      });
 
       options.InsertString(-1, L"Simple");
       options.InsertString(-1, L"Advanced");
@@ -101,13 +144,17 @@ namespace siege::views
       std::vector<std::wstring_view> property_names = [] {
         std::vector<std::wstring_view> results;
         results.reserve(32);
+        std::copy(win32::properties::button::props.begin(), win32::properties::button::props.end(), std::back_inserter(results));
+        std::copy(win32::properties::combo_box::props.begin(), win32::properties::combo_box::props.end(), std::back_inserter(results));
+        std::copy(win32::properties::combo_box_ex::props.begin(), win32::properties::combo_box_ex::props.end(), std::back_inserter(results));
+        std::copy(win32::properties::edit::props.begin(), win32::properties::edit::props.end(), std::back_inserter(results));
+        std::copy(win32::properties::header::props.begin(), win32::properties::header::props.end(), std::back_inserter(results));
         std::copy(win32::properties::tree_view::props.begin(), win32::properties::tree_view::props.end(), std::back_inserter(results));
         std::copy(win32::properties::list_view::props.begin(), win32::properties::list_view::props.end(), std::back_inserter(results));
         std::copy(win32::properties::tool_bar::props.begin(), win32::properties::tool_bar::props.end(), std::back_inserter(results));
         std::copy(win32::properties::list_box::props.begin(), win32::properties::list_box::props.end(), std::back_inserter(results));
         std::copy(win32::properties::window::props.begin(), win32::properties::window::props.end(), std::back_inserter(results));
         std::copy(win32::properties::menu::props.begin(), win32::properties::menu::props.end(), std::back_inserter(results));
-        std::copy(win32::properties::header::props.begin(), win32::properties::header::props.end(), std::back_inserter(results));
         std::copy(win32::properties::static_control::props.begin(), win32::properties::static_control::props.end(), std::back_inserter(results));
         std::copy(win32::properties::tab_control::props.begin(), win32::properties::tab_control::props.end(), std::back_inserter(results));
         return results;
@@ -326,14 +373,16 @@ namespace siege::views
 
     auto wm_size(std::size_t, SIZE client_size)
     {
-      auto left_size = SIZE{ .cx = client_size.cx / 3, .cy = client_size.cy };
-      auto right_size = SIZE{ .cx = client_size.cx - left_size.cx, .cy = client_size.cy };
+      auto min_width = client_size.cx / 12;
+      auto left_size = SIZE{ .cx = min_width * 2, .cy = client_size.cy };
+      auto middle_size = SIZE{ .cx = min_width * 4, .cy = client_size.cy };
+      auto right_size = SIZE{ .cx = client_size.cx - middle_size.cx - left_size.cx, .cy = client_size.cy };
 
       options.SetWindowPos(POINT{});
       options.SetWindowPos(left_size);
 
       control_settings.SetWindowPos(POINT{ .x = left_size.cx });
-      control_settings.SetWindowPos(right_size);
+      control_settings.SetWindowPos(middle_size);
 
       auto column_count = control_settings.GetColumnCount();
 
@@ -342,11 +391,70 @@ namespace siege::views
         return 0;
       }
 
-      auto column_width = right_size.cx / column_count;
+      auto column_width = middle_size.cx / column_count;
 
       for (auto i = 0u; i < column_count; ++i)
       {
         control_settings.SetColumnWidth(i, column_width);
+      }
+
+      RECT temp{};
+
+      for (auto i = 0; i < control_settings.GetGroupCount(); ++i)
+      {
+        ListView_GetGroupRect(control_settings, i + 1, LVGGR_GROUP, &temp);
+
+        SIZE temp_size{ .cx = right_size.cx, .cy = temp.bottom - temp.top };
+        POINT temp_point{ .x = middle_size.cx + left_size.cx, .y = temp.top };
+
+        auto set_pos = [&](auto& window) {
+          window.SetWindowPos(temp_size);
+          window.SetWindowPos(temp_point);
+        };
+
+        if (i == 0)
+        {
+          set_pos(sample.button);
+        }
+
+        if (i == 1)
+        {
+          set_pos(sample.combo_box);
+        }
+
+        if (i == 2)
+        {
+          set_pos(sample.combo_box_ex);
+        }
+
+        if (i == 3)
+        {
+          set_pos(sample.edit);
+        }
+
+        if (i == 4)
+        {
+          set_pos(sample.header);
+        }
+
+        if (i == 5)
+        {
+          set_pos(sample.list_box);
+        }
+
+        if (i == 6)
+        {
+          set_pos(sample.list_view);
+        }
+
+        if (i == 7)
+        {
+
+        }
+
+        if (i == 8)
+        {
+        }
       }
 
       return 0;
