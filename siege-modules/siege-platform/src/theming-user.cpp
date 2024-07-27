@@ -61,35 +61,66 @@ namespace win32
   {
     struct sub_class final : win32::button::notifications
     {
+      HFONT font = ::CreateFontW(0,
+        0,
+        0,
+        0,
+        FW_DONTCARE,
+        FALSE,
+        FALSE,
+        FALSE,
+        DEFAULT_CHARSET,
+        OUT_OUTLINE_PRECIS,
+        CLIP_DEFAULT_PRECIS,
+        CLEARTYPE_QUALITY,
+        VARIABLE_PITCH,
+        L"Segoe UI");
+
+      std::wstring test = std::wstring(255, '\0');
+
       win32::lresult_t wm_notify(win32::button button, NMCUSTOMDRAW& custom_draw) override
       {
         if (custom_draw.dwDrawStage == CDDS_PREPAINT)
         {
-          auto text_color = button.FindPropertyExW<COLORREF>(properties::button::text_color);
+          auto text_color = button.FindPropertyExW<COLORREF>(properties::button::text_color).value_or(RGB(128, 0, 0));
+          auto bk_color = button.FindPropertyExW<COLORREF>(properties::button::bk_color).value_or(RGB(0, 128, 0));
+          auto state = Button_GetState(button);
 
-          if (text_color)
+          SelectFont(custom_draw.hdc, font);
+
+          if (state & BST_HOT)
           {
-            ::SetTextColor(custom_draw.hdc, *text_color);
+            ::SetTextColor(custom_draw.hdc, RGB(255, 255, 255));
+            ::SetBkColor(custom_draw.hdc, RGB(0, 0, 255));
+            ::FillRect(custom_draw.hdc, &custom_draw.rc, get_solid_brush(RGB(0, 0, 255)));
+          }
+          else if (state & BST_FOCUS)
+          {
+            ::SetTextColor(custom_draw.hdc, RGB(255, 255, 255));
+            ::SetBkColor(custom_draw.hdc, RGB(0, 255, 255));
+            ::FillRect(custom_draw.hdc, &custom_draw.rc, get_solid_brush(RGB(0, 255, 255)));
+          }
+          else if (state & BST_PUSHED)
+          {
+            ::SetTextColor(custom_draw.hdc, RGB(255, 255, 255));
+            ::SetBkColor(custom_draw.hdc, RGB(255, 0, 255));
+            ::FillRect(custom_draw.hdc, &custom_draw.rc, get_solid_brush(RGB(255, 0, 255)));
           }
           else
           {
-            ::SetTextColor(custom_draw.hdc, RGB(128, 0, 128));
+            ::SetTextColor(custom_draw.hdc, text_color);
+            ::SetBkColor(custom_draw.hdc, bk_color);
+            ::FillRect(custom_draw.hdc, &custom_draw.rc, get_solid_brush(bk_color));
           }
 
-          auto bk_color = button.FindPropertyExW<COLORREF>(properties::button::bk_color);
-
-          if (bk_color)
-          {
-            ::SetBkColor(custom_draw.hdc, *bk_color);
-          }
-          else
-          {
-            ::SetBkColor(custom_draw.hdc, RGB(0, 128, 128));
-          }
-
-          return CDRF_DODEFAULT | CDRF_NEWFONT;
+          return CDRF_NEWFONT | CDRF_NOTIFYPOSTPAINT;
         }
 
+        if (custom_draw.dwDrawStage == CDDS_POSTPAINT)
+        {
+          Button_GetText(button, test.data(), test.size());
+          ::DrawTextExW(custom_draw.hdc, test.data(), -1, &custom_draw.rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOCLIP, nullptr);
+        }
 
         return CDRF_DODEFAULT;
       }
@@ -146,7 +177,7 @@ namespace win32
         }
       });
 
-      win32::theme_module().SetWindowTheme(control, L"", L"");
+      //  win32::theme_module().SetWindowTheme(control, L"", L"");
       ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR) new sub_class());
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
