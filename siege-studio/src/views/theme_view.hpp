@@ -72,6 +72,8 @@ namespace siege::views
       { L"MarkColor", L"Mark Color" },
     };
 
+    std::array<COLORREF, 16> colors{};
+
     // simple settings has preferred theme option (from system or user-defined)
     // simple settings has preferred accent color (from system or user-defined)
     // simple settings has theme selection (light, dark)
@@ -165,18 +167,32 @@ namespace siege::views
       std::vector<win32::list_view_group> groups;
       groups.reserve(16);
 
+      std::set<COLORREF> unique_colors;
+
       for (auto& name : property_names)
       {
         std::vector<win32::list_view_item> items;
 
         auto temp = theme_properties.FindPropertyExW<COLORREF>(name);
 
+        
+        std::wstringstream stream;
+        std::wstring property_value;
         if (temp)
         {
+          unique_colors.emplace(*temp);
           this->SetPropW(name, *temp);
+          
+          stream << L"#";
+          stream << std::setfill(L'0') << std::setw(2) << std::hex << GetRValue(*temp);
+          stream << std::setfill(L'0') << std::setw(2) << std::hex << GetGValue(*temp);
+          stream << std::setfill(L'0') << std::setw(2) << std::hex << GetBValue(*temp);
+          property_value = stream.str();
         }
-
-        std::wstring property_value = temp ? std::to_wstring(*temp) : std::wstring(L"System Default");
+        else
+        {
+          property_value = L"System Default";
+        }
 
         auto separator = name.find(L'.');
         auto control_name = control_labels.at(name.substr(0, separator));
@@ -189,12 +205,23 @@ namespace siege::views
         if (existing_group == groups.end())
         {
           win32::list_view_item item{ std::wstring(property_name) };
+          if (temp)
+          {
+            item.lParam = *temp;
+          }
+
           item.sub_items.emplace_back(property_value);
           groups.emplace_back(std::wstring(control_name), std::vector<win32::list_view_item>{ std::move(item) });
         }
         else
         {
           auto& item = existing_group->items.emplace_back(std::wstring(property_name));
+          
+          if (temp)
+          {
+            item.lParam = *temp;
+          }
+
           item.sub_items.emplace_back(property_value);
         }
       }
@@ -205,6 +232,9 @@ namespace siege::views
       }
 
       control_settings.InsertGroups(groups);
+
+      auto copy_count = unique_colors.size() > colors.size() ? colors.size() : unique_colors.size();
+      std::copy_n(unique_colors.begin(), copy_count, colors.begin());
 
       win32::apply_theme(theme_properties, sample.button);
 
@@ -278,8 +308,6 @@ namespace siege::views
       return std::nullopt;
     }
 
-    std::array<COLORREF, 16> colors{};
-
     static UINT_PTR CALLBACK DialogColorHook(HWND dialog, UINT message, WPARAM wParam, LPARAM lParam)
     {
       if (message == WM_INITDIALOG)
@@ -292,6 +320,8 @@ namespace siege::views
 
       return 0;
     }
+
+    std::wstring temp_text = std::wstring(255, L'\0');
 
     virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMITEMACTIVATE& notice)
     {
@@ -310,16 +340,28 @@ namespace siege::views
           ListView_GetSubItemRect(control_settings, info.iItem, info.iSubItem, LVIR_BOUNDS, &item_rect);
           ::ClientToScreen(control_settings, (POINT*)&item_rect);
 
+          ListView_GetItemText(control_settings, info.iItem, info.iSubItem, temp_text.data(), temp_text.size());
+
           CHOOSECOLORW dialog{};
           dialog.lStructSize = sizeof(CHOOSECOLOR);
           dialog.hwndOwner = *this;
           dialog.lpCustColors = colors.data();
-          dialog.Flags = CC_ENABLEHOOK;
+          dialog.Flags = CC_ENABLEHOOK | CC_FULLOPEN;
+
+          if (temp_text != L"System Default")
+          {
+            LVITEMW item_info{ .mask = LVIF_PARAM, .iItem = info.iItem, .iSubItem = info.iSubItem };
+            ListView_GetItem(control_settings, &info);
+            dialog.Flags |= CC_RGBINIT;
+            dialog.rgbResult = item_info.lParam;
+          }
+
           dialog.lpfnHook = DialogColorHook;
           dialog.lCustData = MAKELPARAM(item_rect.left, item_rect.top);
 
           if (::ChooseColorW(&dialog))
           {
+
           }
         }
       }
