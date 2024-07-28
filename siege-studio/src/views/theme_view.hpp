@@ -24,6 +24,15 @@ namespace siege::views
 
     win32::list_view control_settings;
 
+    struct item_context
+    {
+      std::size_t item_index;
+      std::wstring_view key;
+      std::optional<COLORREF> value;
+    };
+
+    std::vector<item_context> color_items;
+
     struct
     {
       win32::button button;
@@ -168,25 +177,30 @@ namespace siege::views
       groups.reserve(16);
 
       std::set<COLORREF> unique_colors;
+      color_items.reserve(property_names.size());
+
+      std::size_t item_index = 0;
 
       for (auto& name : property_names)
       {
         std::vector<win32::list_view_item> items;
 
-        auto temp = theme_properties.FindPropertyExW<COLORREF>(name);
-
+        auto& item = color_items.emplace_back();
+        item.item_index = item_index++;
+        item.key = name;
+        item.value = theme_properties.FindPropertyExW<COLORREF>(name);
         
         std::wstringstream stream;
         std::wstring property_value;
-        if (temp)
+
+        if (item.value)
         {
-          unique_colors.emplace(*temp);
-          this->SetPropW(name, *temp);
+          unique_colors.emplace(*item.value);
           
           stream << L"#";
-          stream << std::setfill(L'0') << std::setw(2) << std::hex << GetRValue(*temp);
-          stream << std::setfill(L'0') << std::setw(2) << std::hex << GetGValue(*temp);
-          stream << std::setfill(L'0') << std::setw(2) << std::hex << GetBValue(*temp);
+          stream << std::setfill(L'0') << std::setw(2) << std::hex << GetRValue(*item.value);
+          stream << std::setfill(L'0') << std::setw(2) << std::hex << GetGValue(*item.value);
+          stream << std::setfill(L'0') << std::setw(2) << std::hex << GetBValue(*item.value);
           property_value = stream.str();
         }
         else
@@ -205,11 +219,7 @@ namespace siege::views
         if (existing_group == groups.end())
         {
           win32::list_view_item item{ std::wstring(property_name) };
-          if (temp)
-          {
-            item.lParam = *temp;
-          }
-
+          item.mask = LVIF_TEXT | LVIF_GROUPID;
           item.sub_items.emplace_back(property_value);
           groups.emplace_back(std::wstring(control_name), std::vector<win32::list_view_item>{ std::move(item) });
         }
@@ -217,11 +227,7 @@ namespace siege::views
         {
           auto& item = existing_group->items.emplace_back(std::wstring(property_name));
           
-          if (temp)
-          {
-            item.lParam = *temp;
-          }
-
+          item.mask = LVIF_TEXT | LVIF_GROUPID;
           item.sub_items.emplace_back(property_value);
         }
       }
@@ -348,20 +354,38 @@ namespace siege::views
           dialog.lpCustColors = colors.data();
           dialog.Flags = CC_ENABLEHOOK | CC_FULLOPEN;
 
-          if (temp_text != L"System Default")
-          {
-            LVITEMW item_info{ .mask = LVIF_PARAM, .iItem = info.iItem, .iSubItem = info.iSubItem };
-            ListView_GetItem(control_settings, &info);
-            dialog.Flags |= CC_RGBINIT;
-            dialog.rgbResult = item_info.lParam;
-          }
+          LVITEMW item_info{ .mask = LVIF_PARAM, .iItem = info.iItem, .iSubItem = info.iSubItem };
+          ListView_GetItem(control_settings, &info);
+          
+          auto context = std::find_if(color_items.begin(), color_items.end(), [&](auto& item) {
+            return item.item_index == info.iItem;
+          });
 
+          if (context != color_items.end() && context->value)
+          {
+            dialog.Flags |= CC_RGBINIT;
+            dialog.rgbResult = *context->value;
+          }
+          
           dialog.lpfnHook = DialogColorHook;
           dialog.lCustData = MAKELPARAM(item_rect.left, item_rect.top);
 
-          if (::ChooseColorW(&dialog))
+          if (::ChooseColorW(&dialog) && context != color_items.end())
           {
+            std::wstringstream stream;
+            std::wstring property_value;
 
+            stream << L"#";
+            stream << std::setfill(L'0') << std::setw(2) << std::hex << GetRValue(dialog.rgbResult);
+            stream << std::setfill(L'0') << std::setw(2) << std::hex << GetGValue(dialog.rgbResult);
+            stream << std::setfill(L'0') << std::setw(2) << std::hex << GetBValue(dialog.rgbResult);
+            property_value = stream.str();
+
+            ListView_SetItemText(control_settings, info.iItem, info.iSubItem, property_value.data(), property_value.size());
+
+            context->value = dialog.rgbResult;
+            theme_properties.SetPropW(context->key, dialog.rgbResult);
+            win32::apply_theme(theme_properties, sample.button);
           }
         }
       }
@@ -402,17 +426,6 @@ namespace siege::views
         }
       }
       return 0;
-    }
-
-    auto wm_erase_background(win32::erase_background_message message)
-    {
-      static auto black_brush = ::CreateSolidBrush(0x00000000);
-      auto context = win32::gdi_drawing_context_ref(message.context);
-
-      auto rect = GetClientRect();
-      context.FillRect(*rect, black_brush);
-
-      return TRUE;
     }
 
     auto wm_size(std::size_t, SIZE client_size)
