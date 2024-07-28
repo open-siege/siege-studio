@@ -436,7 +436,6 @@ namespace siege::views
           if (RegQueryValueExW(key, L"AppsUseLightTheme", nullptr, &type, (LPBYTE)&value, &size) == ERROR_SUCCESS)
           {
             is_dark_mode = value == 0;
-            this->SetPropW(L"AppsUseDarkTheme", is_dark_mode);
             if (value == 1)
             {
               static auto props = [] {
@@ -518,6 +517,8 @@ namespace siege::views
               BOOL value = TRUE;
               ::DwmSetWindowAttribute(*this, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
             }
+
+            this->SetPropW(L"AppsUseDarkTheme", is_dark_mode);
 
             for (auto i = 0; i < tab_control.GetItemCount(); ++i)
             {
@@ -799,8 +800,10 @@ namespace siege::views
     {
       if (identifier == edit_theme_id && !theme_window)
       {
+
         theme_window = *win32::window_module_ref::current_module().CreateWindowExW(CREATESTRUCTW{
           .lpCreateParams = *this,
+          .hwndParent = *this,
           .cx = CW_USEDEFAULT,
           .x = CW_USEDEFAULT,
           .style = WS_OVERLAPPEDWINDOW,
@@ -812,6 +815,7 @@ namespace siege::views
 
       if (identifier == open_workspace_id)
       {
+        auto prop = this->FindPropertyExW(win32::properties::button::bk_color);
         auto dialog = win32::com::CreateFileOpenDialog();
 
         if (dialog)

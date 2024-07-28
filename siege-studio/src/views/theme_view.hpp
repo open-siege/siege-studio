@@ -95,8 +95,6 @@ namespace siege::views
         .style = WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
         .lpszName = L"Sample button" });
 
-      win32::apply_theme(theme_properties, sample.button);
-
       sample.combo_box = *control_factory.CreateWindowExW<win32::combo_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | CBS_DROPDOWN,
         .lpszName = L"Sample combo box" });
@@ -171,9 +169,14 @@ namespace siege::views
       {
         std::vector<win32::list_view_item> items;
 
-        auto temp = theme_properties.GetPropW<COLORREF>(name);
+        auto temp = theme_properties.FindPropertyExW<COLORREF>(name);
 
-        std::wstring property_value = temp ? std::to_wstring(temp) : std::wstring(L"System Default");
+        if (temp)
+        {
+          this->SetPropW(name, *temp);
+        }
+
+        std::wstring property_value = temp ? std::to_wstring(*temp) : std::wstring(L"System Default");
 
         auto separator = name.find(L'.');
         auto control_name = control_labels.at(name.substr(0, separator));
@@ -202,6 +205,8 @@ namespace siege::views
       }
 
       control_settings.InsertGroups(groups);
+
+      win32::apply_theme(theme_properties, sample.button);
 
       return 0;
     }

@@ -409,11 +409,11 @@ namespace win32
     }
 
     template<typename TResult = HANDLE>
-    [[maybe_unused]] inline std::optional<TResult> FindPropertyExW(std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback) const
+    [[maybe_unused]] inline std::expected<TResult, int> FindPropertyExW(std::move_only_function<bool(hwnd_t, std::wstring_view, HANDLE)> callback) const
     {
       std::optional<TResult> result = std::nullopt;
 
-      EnumPropsExW([&result, callback = std::move(callback)](auto self, auto key, auto value) mutable {
+      auto enum_result = EnumPropsExW([&result, callback = std::move(callback)](auto self, auto key, auto value) mutable {
         if (callback(self, key, value))
         {
           result.emplace((TResult)value);
@@ -422,15 +422,46 @@ namespace win32
         return true;
       });
 
-      return result;
+      if (enum_result == -1)
+      {
+        return std::unexpected(enum_result);
+      }
+
+      if (!result)
+      {
+        return std::unexpected(0);
+      }
+
+      return *result;
     }
 
     template<typename TResult = HANDLE>
     [[maybe_unused]] inline std::optional<TResult> FindPropertyExW(std::wstring_view find_key) const
     {
-      return FindPropertyExW<TResult>([find_key](auto, auto key, auto) {
+      auto result = FindPropertyExW<TResult>([find_key](auto, auto key, auto) {
         return key == find_key;
       });
+
+      if (!result && result.error() == -1)
+      {
+        auto prop = GetPropW<TResult>(find_key);
+
+        if (!prop)
+        {
+          return prop;
+        }
+        else
+        {
+          return std::nullopt;
+        }
+      }
+
+      if (!result)
+      {
+        return std::nullopt;
+      }
+
+      return *result;
     }
 #endif
   };

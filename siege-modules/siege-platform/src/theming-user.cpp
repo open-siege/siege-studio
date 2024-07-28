@@ -90,19 +90,19 @@ namespace win32
 
           if (state & BST_HOT)
           {
-            ::SetTextColor(custom_draw.hdc, RGB(255, 255, 255));
+            ::SetTextColor(custom_draw.hdc, text_color);
             ::SetBkColor(custom_draw.hdc, RGB(0, 0, 255));
             ::FillRect(custom_draw.hdc, &custom_draw.rc, get_solid_brush(RGB(0, 0, 255)));
           }
           else if (state & BST_FOCUS)
           {
-            ::SetTextColor(custom_draw.hdc, RGB(255, 255, 255));
+            ::SetTextColor(custom_draw.hdc, text_color);
             ::SetBkColor(custom_draw.hdc, RGB(0, 255, 255));
             ::FillRect(custom_draw.hdc, &custom_draw.rc, get_solid_brush(RGB(0, 255, 255)));
           }
           else if (state & BST_PUSHED)
           {
-            ::SetTextColor(custom_draw.hdc, RGB(255, 255, 255));
+            ::SetTextColor(custom_draw.hdc, text_color);
             ::SetBkColor(custom_draw.hdc, RGB(255, 0, 255));
             ::FillRect(custom_draw.hdc, &custom_draw.rc, get_solid_brush(RGB(255, 0, 255)));
           }
@@ -170,13 +170,12 @@ namespace win32
 
     if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
     {
-      colors.ForEachPropertyExW([&](auto, auto key, auto value) {
-        if (key.find(win32::button::class_name) != std::wstring_view::npos)
-        {
-          control.SetPropW(key, value);
-        }
-      });
-
+      auto bk_color = colors.FindPropertyExW<COLORREF>(properties::button::bk_color).value_or(0);
+      auto text_color = colors.FindPropertyExW<COLORREF>(properties::button::text_color).value_or(0xffffffff);
+      auto line_color = colors.FindPropertyExW<COLORREF>(properties::button::line_color).value_or(0x11111111);
+      control.SetPropW(win32::properties::button::bk_color, bk_color);
+      control.SetPropW(win32::properties::button::text_color, text_color);
+      control.SetPropW(win32::properties::button::line_color, line_color);
       //  win32::theme_module().SetWindowTheme(control, L"", L"");
       ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR) new sub_class());
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
