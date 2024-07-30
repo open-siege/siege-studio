@@ -68,6 +68,75 @@ namespace win32
     };
   };
 
+  struct combo_box : window
+  {
+    using window::window;
+    constexpr static auto class_name = WC_COMBOBOXW;
+    constexpr static std::uint16_t dialog_id = 0x0085;
+
+    struct notifications
+    {
+      virtual std::optional<win32::lresult_t> wm_command(win32::combo_box, int)
+      {
+        return std::nullopt;
+      }
+
+      virtual std::optional<HBRUSH> wm_control_color(win32::combo_box, win32::gdi_drawing_context_ref)
+      {
+        return std::nullopt;
+      }
+
+      virtual SIZE wm_measure_item(win32::combo_box, const MEASUREITEMSTRUCT&)
+      {
+        return {};
+      }
+
+      virtual std::optional<win32::lresult_t> wm_draw_item(win32::combo_box, MEASUREITEMSTRUCT&)
+      {
+        return std::nullopt;
+      }
+
+      template<typename TWindow>
+      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      {
+        if constexpr (std::is_base_of_v<notifications, TWindow>)
+        {
+          if (message == WM_DRAWITEM)
+          {
+            auto& context = *(DRAWITEMSTRUCT*)lParam;
+
+            if (context.CtlType == ODT_COMBOBOX)
+            {
+              return self->wm_draw_item(combo_box(context.hwndItem), context);
+            }
+          }
+
+          if (message == WM_MEASUREITEM)
+          {
+            auto& context = *(MEASUREITEMSTRUCT*)lParam;
+
+            if (context.CtlType == ODT_COMBOBOX)
+            {
+              auto control = ::GetDlgItem(*self, wParam);
+
+              if (!control)
+              {
+                control = ::FindWindowExW(*self, nullptr, combo_box::class_name, nullptr);
+              }
+
+              auto size = self->wm_measure_item(combo_box(control), context);
+              context.itemWidth = size.cx;
+              context.itemHeight = size.cy;
+              return 0;
+            }
+          }
+        }
+
+        return std::nullopt;
+      }
+    };
+  };
+
   struct edit : window
   {
     using window::window;
@@ -91,7 +160,25 @@ namespace win32
       {
         if constexpr (std::is_base_of_v<notifications, TWindow>)
         {
+          if (message == WM_CTLCOLORSTATIC && win32::window_ref((HWND)lParam).RealGetWindowClassW() == edit::class_name)
+          {
+            auto result = self->wm_control_color(edit((hwnd_t)lParam), win32::gdi_drawing_context_ref((HDC)wParam));
 
+            if (result)
+            {
+              return (LRESULT)*result;
+            }
+          }
+
+          if (message == WM_CTLCOLOREDIT)
+          {
+            auto result = self->wm_control_color(edit((hwnd_t)lParam), win32::gdi_drawing_context_ref((HDC)wParam));
+
+            if (result)
+            {
+              return (LRESULT)*result;
+            }
+          }
         }
 
         return std::nullopt;
@@ -109,12 +196,12 @@ namespace win32
     {
       virtual std::optional<win32::lresult_t> wm_command(win32::static_control, int)
       {
-          return std::nullopt;
+        return std::nullopt;
       }
 
       virtual std::optional<HBRUSH> wm_control_color(win32::static_control, win32::gdi_drawing_context_ref)
       {
-          return std::nullopt;
+        return std::nullopt;
       }
 
       virtual std::optional<win32::lresult_t> wm_draw_item(win32::static_control, DRAWITEMSTRUCT&)
@@ -163,12 +250,12 @@ namespace win32
     {
       virtual std::optional<win32::lresult_t> wm_command(win32::list_box, int)
       {
-          return std::nullopt;
+        return std::nullopt;
       }
 
       virtual std::optional<HBRUSH> wm_control_color(win32::list_box, win32::gdi_drawing_context_ref)
       {
-          return std::nullopt;
+        return std::nullopt;
       }
 
       virtual SIZE wm_measure_item(win32::list_box, const MEASUREITEMSTRUCT&)
@@ -216,9 +303,7 @@ namespace win32
             }
           }
 
-          if (message == WM_COMMAND && 
-              !(HIWORD(wParam) == 0 && HIWORD(wParam) == 1) &&
-              win32::window_ref((HWND)lParam).RealGetWindowClassW() == list_box::class_name)
+          if (message == WM_COMMAND && !(HIWORD(wParam) == 0 && HIWORD(wParam) == 1) && win32::window_ref((HWND)lParam).RealGetWindowClassW() == list_box::class_name)
           {
             return self->wm_command(list_box((HWND)lParam), HIWORD(wParam));
           }
@@ -279,48 +364,6 @@ namespace win32
     {
       virtual std::optional<HBRUSH> wm_control_color(win32::scroll_bar, win32::gdi_drawing_context_ref)
       {
-          return std::nullopt;
-      }
-
-      template<typename TWindow>
-      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
-      {
-        if constexpr (std::is_base_of_v<notifications, TWindow>)
-        {
-
-        }
-
-        return std::nullopt;
-      }
-    };
-
-  };
-
-  struct combo_box : window
-  {
-    using window::window;
-    constexpr static auto class_name = WC_COMBOBOXW;
-    constexpr static std::uint16_t dialog_id = 0x0085;
-
-    struct notifications
-    {
-      virtual std::optional<win32::lresult_t> wm_command(win32::combo_box, int)
-      {
-          return std::nullopt;
-      }
-
-      virtual std::optional<HBRUSH> wm_control_color(win32::combo_box, win32::gdi_drawing_context_ref)
-      {
-          return std::nullopt;
-      }
-
-      virtual SIZE wm_measure_item(win32::combo_box, const MEASUREITEMSTRUCT&)
-      {
-        return {};
-      }
-
-      virtual std::optional<win32::lresult_t> wm_draw_item(win32::combo_box, MEASUREITEMSTRUCT&)
-      {
         return std::nullopt;
       }
 
@@ -329,41 +372,13 @@ namespace win32
       {
         if constexpr (std::is_base_of_v<notifications, TWindow>)
         {
-          if (message == WM_DRAWITEM)
-          {
-            auto& context = *(DRAWITEMSTRUCT*)lParam;
-
-            if (context.CtlType == ODT_COMBOBOX)
-            {
-              return self->wm_draw_item(combo_box(context.hwndItem), context);
-            }
-          }
-
-          if (message == WM_MEASUREITEM)
-          {
-            auto& context = *(MEASUREITEMSTRUCT*)lParam;
-
-            if (context.CtlType == ODT_COMBOBOX)
-            {
-              auto control = ::GetDlgItem(*self, wParam);
-
-              if (!control)
-              {
-                control = ::FindWindowExW(*self, nullptr, combo_box::class_name, nullptr);
-              }
-
-              auto size = self->wm_measure_item(combo_box(control), context);
-              context.itemWidth = size.cx;
-              context.itemHeight = size.cy;
-              return 0;
-            }
-          }
         }
 
         return std::nullopt;
       }
     };
   };
+
 }// namespace win32
 
 

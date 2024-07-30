@@ -127,6 +127,11 @@ namespace siege::views
       sample.list_box = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD });
 
+
+      sample.list_box.InsertString(-1, L"Sample");
+      sample.list_box.InsertString(-1, L"List");
+      sample.list_box.InsertString(-1, L"Test");
+
       sample.list_view = *control_factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD });
 
@@ -243,6 +248,9 @@ namespace siege::views
       std::copy_n(unique_colors.begin(), copy_count, colors.begin());
 
       win32::apply_theme(theme_properties, sample.button);
+      win32::apply_theme(theme_properties, sample.header);
+      win32::apply_theme(theme_properties, sample.list_box);
+      win32::apply_theme(theme_properties, sample.edit);
 
       return 0;
     }
@@ -405,6 +413,8 @@ namespace siege::views
             context->value = dialog.rgbResult;
             theme_properties.SetPropW(context->key, dialog.rgbResult);
             win32::apply_theme(theme_properties, sample.button);
+            win32::apply_theme(theme_properties, sample.header);
+            win32::apply_theme(theme_properties, sample.list_box);
           }
         }
       }

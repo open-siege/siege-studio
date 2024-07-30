@@ -57,6 +57,59 @@ namespace win32
     }
   }
 
+  void apply_theme(const win32::window_ref& colors, win32::edit& control)
+  {
+    struct sub_class final : win32::edit::notifications
+    {
+      std::optional<HBRUSH> wm_control_color(win32::edit control, win32::gdi_drawing_context_ref dc) override
+      {
+        SetTextColor(dc, RGB(0, 0, 255));
+ 
+        auto rect = control.GetClientRect();
+        SetDCPenColor(dc, RGB(255, 255, 0));
+        SetDCBrushColor(dc, RGB(255, 255, 50));
+        SelectObject(dc, get_solid_brush(RGB(250, 25, 80)));
+        RoundRect(dc, rect->left, rect->top, rect->right, rect->bottom, 25, 25);
+        
+               SetBkMode(dc, TRANSPARENT);
+        return (HBRUSH)GetStockObject(HOLLOW_BRUSH);
+      }
+
+      static LRESULT __stdcall HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      {
+        auto result = win32::edit::notifications::dispatch_message((sub_class*)dwRefData, message, wParam, lParam);
+
+        if (result)
+        {
+          return *result;
+        }
+
+        if (message == WM_DESTROY)
+        {
+          ::RemoveWindowSubclass(hWnd, sub_class::HandleMessage, uIdSubclass);
+        }
+
+        return DefSubclassProc(hWnd, message, wParam, lParam);
+      }
+    };
+
+    if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
+    {
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR) new sub_class());
+      ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
+    }
+    else
+    {
+       sub_class* object = nullptr;
+      if (::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR*)&object))
+      {
+        ::RemoveWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get());
+        delete object;
+        ::RedrawWindow(control, nullptr, nullptr, RDW_ERASENOW);
+      }
+    }
+  }
+
   void apply_theme(const win32::window_ref& colors, win32::button& control)
   {
     struct sub_class final : win32::button::notifications
@@ -176,7 +229,6 @@ namespace win32
       control.SetPropW(win32::properties::button::bk_color, bk_color);
       control.SetPropW(win32::properties::button::text_color, text_color);
       control.SetPropW(win32::properties::button::line_color, line_color);
-      //  win32::theme_module().SetWindowTheme(control, L"", L"");
       ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR) new sub_class());
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }

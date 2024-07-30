@@ -214,6 +214,7 @@ namespace win32
   // user controls
   void apply_theme(const win32::window_ref& colors, win32::window_ref& control);
   void apply_theme(const win32::window_ref& colors, win32::button& control);
+  void apply_theme(const win32::window_ref& colors, win32::edit& control);
   void apply_theme(const win32::window_ref& colors, win32::static_control& control);
   void apply_theme(const win32::window_ref& colors, win32::list_box& control);
 
