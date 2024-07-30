@@ -189,14 +189,14 @@ namespace siege::views
         item.item_index = item_index++;
         item.key = name;
         item.value = theme_properties.FindPropertyExW<COLORREF>(name);
-        
+
         std::wstringstream stream;
         std::wstring property_value;
 
         if (item.value)
         {
           unique_colors.emplace(*item.value);
-          
+
           stream << L"#";
           stream << std::setfill(L'0') << std::setw(2) << std::hex << GetRValue(*item.value);
           stream << std::setfill(L'0') << std::setw(2) << std::hex << GetGValue(*item.value);
@@ -226,7 +226,7 @@ namespace siege::views
         else
         {
           auto& item = existing_group->items.emplace_back(std::wstring(property_name));
-          
+
           item.mask = LVIF_TEXT | LVIF_GROUPID;
           item.sub_items.emplace_back(property_value);
         }
@@ -295,7 +295,26 @@ namespace siege::views
       return std::nullopt;
     }
 
-    std::optional<win32::lresult_t> wm_notify(win32::list_view hwndFrom, const NMLVDISPINFO& message) override
+    std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMLVSCROLL& notice) override
+    {
+      if (notice.hdr.code == LVN_ENDSCROLL)
+      {
+        auto client_size = this->GetClientSize();
+
+        if (client_size)
+        {
+          auto min_width = client_size->cx / 12;
+          auto left_size = SIZE{ .cx = min_width * 2, .cy = client_size->cy };
+          auto middle_size = SIZE{ .cx = min_width * 4, .cy = client_size->cy };
+          auto right_size = SIZE{ .cx = client_size->cx - middle_size.cx - left_size.cx, .cy = client_size->cy };
+          resize_controls(left_size, right_size, middle_size);
+        }
+      }
+
+      return std::nullopt;
+    }
+
+    std::optional<win32::lresult_t> wm_notify(win32::list_view hwndFrom, const NMLVDISPINFOW& message) override
     {
       if (message.hdr.code == LVN_BEGINLABELEDITW && hwndFrom == control_settings)
       {
@@ -356,7 +375,7 @@ namespace siege::views
 
           LVITEMW item_info{ .mask = LVIF_PARAM, .iItem = info.iItem, .iSubItem = info.iSubItem };
           ListView_GetItem(control_settings, &info);
-          
+
           auto context = std::find_if(color_items.begin(), color_items.end(), [&](auto& item) {
             return item.item_index == info.iItem;
           });
@@ -366,7 +385,7 @@ namespace siege::views
             dialog.Flags |= CC_RGBINIT;
             dialog.rgbResult = *context->value;
           }
-          
+
           dialog.lpfnHook = DialogColorHook;
           dialog.lCustData = MAKELPARAM(item_rect.left, item_rect.top);
 
@@ -455,6 +474,13 @@ namespace siege::views
         control_settings.SetColumnWidth(i, column_width);
       }
 
+      resize_controls(left_size, right_size, middle_size);
+
+      return 0;
+    }
+
+    void resize_controls(SIZE left_size, SIZE right_size, SIZE middle_size)
+    {
       RECT temp{};
 
       for (auto i = 0; i < control_settings.GetGroupCount(); ++i)
@@ -512,8 +538,6 @@ namespace siege::views
         {
         }
       }
-
-      return 0;
     }
 
     std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)

@@ -798,9 +798,8 @@ namespace siege::views
 
     std::optional<LRESULT> wm_command(win32::menu, int identifier) override
     {
-      if (identifier == edit_theme_id && !theme_window)
+      if (identifier == edit_theme_id)
       {
-
         theme_window = *win32::window_module_ref::current_module().CreateWindowExW(CREATESTRUCTW{
           .lpCreateParams = *this,
           .hwndParent = *this,

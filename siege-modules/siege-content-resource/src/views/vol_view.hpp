@@ -272,10 +272,9 @@ namespace siege::views
       return FALSE;
     }
 
-    auto wm_erase_background(win32::erase_background_message message)
+    auto wm_erase_background(win32::gdi_drawing_context_ref context)
     {
       static auto black_brush = ::CreateSolidBrush(0x00000000);
-      auto context = win32::gdi_drawing_context_ref(message.context);
 
       auto rect = GetClientRect();
       context.FillRect(*rect, black_brush);

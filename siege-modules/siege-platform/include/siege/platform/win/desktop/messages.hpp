@@ -64,44 +64,15 @@ namespace win32
     }
   };
 
-  struct paint_message
-  {
-    constexpr static std::uint32_t id = WM_PAINT;
-
-    paint_message(wparam_t, lparam_t)
-    {
-    }
-  };
-
-  struct erase_background_message
-  {
-    constexpr static std::uint32_t id = WM_ERASEBKGND;
-
-    HDC context;
-
-    erase_background_message(wparam_t wParam, lparam_t) : context((HDC)wParam)
-    {
-
-    }
-  };
-
   struct input_message
   {
     constexpr static std::uint32_t id = WM_INPUT;
     wparam_t code;
-#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    HANDLE handle;
-
-    input_message(wparam_t code, lparam_t item) : code(code & 0xff), handle(reinterpret_cast<HANDLE>(item))
-    {
-    }
-#else
     HRAWINPUT handle;
 
     input_message(wparam_t code, lparam_t item) : code(GET_RAWINPUT_CODE_WPARAM(code)), handle(reinterpret_cast<HRAWINPUT>(item))
     {
     }
-#endif
   };
 
   struct input_device_change_message
@@ -136,15 +107,6 @@ namespace win32
     std::size_t data_type;
     std::span<TChar> data;
 
-#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    struct COPYDATASTRUCT
-    {
-      ULONG_PTR dwData;
-      DWORD cbData;
-      PVOID lpData;
-    };
-#endif
-
     copy_data_message(wparam_t wParam, lparam_t lParam) : sender(hwnd_t(wParam)), data_type(0), data()
     {
       COPYDATASTRUCT* raw_data = std::bit_cast<COPYDATASTRUCT*>(lParam);
@@ -158,28 +120,6 @@ namespace win32
 
         data = std::span<TChar>(std::bit_cast<TChar*>(raw_data->lpData), raw_data->cbData);
       }
-    }
-  };
-
-  struct pos_changed_message
-  {
-    constexpr static std::uint32_t id = WM_WINDOWPOSCHANGED;
-
-#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    struct WINDOWPOS
-    {
-      HWND hwnd;
-      HWND hwndInsertAfter;
-      int x;
-      int y;
-      int cx;
-      int cy;
-      UINT flags;
-    };
-#endif
-    WINDOWPOS& data;
-    pos_changed_message(wparam_t, lparam_t lParam) : data(*std::bit_cast<WINDOWPOS*>(lParam))
-    {
     }
   };
 }// namespace win32

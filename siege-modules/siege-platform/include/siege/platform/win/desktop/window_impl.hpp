@@ -3,6 +3,7 @@
 
 #include <siege/platform/win/desktop/user_controls.hpp>
 #include <siege/platform/win/desktop/common_controls.hpp>
+#include <siege/platform/win/desktop/drawing.hpp>
 #include "window.hpp"
 #include <windowsx.h>
 #include <any>
@@ -53,9 +54,6 @@ namespace win32
     DO_DISPATCH_LPARAM(WM_CREATE, CREATESTRUCTW, wm_create);
     DO_DISPATCH_NOPARAM(WM_DESTROY, wm_destroy);
     DO_DISPATCH(get_object_message, wm_get_object);
-    DO_DISPATCH(pos_changed_message, wm_pos_changed);
-    DO_DISPATCH(paint_message, wm_paint);
-    DO_DISPATCH(erase_background_message, wm_erase_background);
 
     DO_DISPATCH_WPARAM_AND_LPARAM(WM_MEASUREITEM, std::size_t, MEASUREITEMSTRUCT, wm_measure_item);
     DO_DISPATCH_WPARAM_AND_LPARAM(WM_DRAWITEM, std::size_t, DRAWITEMSTRUCT, wm_draw_item);
@@ -70,6 +68,14 @@ namespace win32
       if (message == WM_SIZE)
       {
         return self->wm_size(std::size_t(wParam), SIZE{ .cx = SHORT(LOWORD(lParam)), .cy = SHORT(HIWORD(lParam)) });
+      }
+    }
+
+    if constexpr (requires(TWindow t) { t.wm_erase_background(win32::gdi_drawing_context_ref{}); })
+    {
+      if (message == WM_ERASEBKGND)
+      {
+        return self->wm_erase_background(win32::gdi_drawing_context_ref((HDC)wParam));
       }
     }
 
@@ -102,14 +108,6 @@ namespace win32
       if (message == copy_data_message<char>::id)
       {
         return self->wm_copy_data(copy_data_message<char>{ wParam, lParam });
-      }
-    }
-
-    if constexpr (requires(TWindow t) { t.wm_copy_data(copy_data_message<std::uint8_t>{ wParam, lParam }); })
-    {
-      if (message == copy_data_message<std::uint8_t>::id)
-      {
-        return self->wm_copy_data(copy_data_message<std::uint8_t>{ wParam, lParam });
       }
     }
 

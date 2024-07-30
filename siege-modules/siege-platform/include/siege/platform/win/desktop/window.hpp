@@ -3,6 +3,7 @@
 
 #include <siege/platform/win/desktop/messages.hpp>
 #include <siege/platform/win/auto_handle.hpp>
+#include <siege/platform/win/desktop/menu.hpp>
 
 #undef GetFirstSibling
 #undef GetNextSibling
@@ -48,74 +49,6 @@ namespace win32
     void operator()(hwnd_t window)
     {
     }
-  };
-
-  struct menu_no_deleter
-  {
-    void operator()(HMENU menu)
-    {
-    }
-  };
-
-  struct menu : win32::auto_handle<HMENU, menu_no_deleter>
-  {
-    using base = win32::auto_handle<HMENU, menu_no_deleter>;
-    using base::base;
-
-    struct notifications
-    {
-      virtual std::optional<win32::lresult_t> wm_command(menu, int)
-      {
-        return std::nullopt;
-      }
-
-      virtual std::optional<win32::lresult_t> wm_draw_item(menu, DRAWITEMSTRUCT&)
-      {
-        return std::nullopt;
-      }
-
-      virtual SIZE wm_measure_item(menu, const MEASUREITEMSTRUCT&)
-      {
-        return SIZE{};
-      }
-
-      template<typename TWindow>
-      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
-      {
-        if constexpr (std::is_base_of_v<notifications, TWindow>)
-        {
-          if (message == WM_COMMAND && HIWORD(wParam) == 0)
-          {
-            return self->wm_command(menu(GetMenu(*self)), LOWORD(wParam));
-          }
-
-          if (message == WM_MEASUREITEM)
-          {
-            auto& context = *(MEASUREITEMSTRUCT*)lParam;
-
-            if (context.CtlType == ODT_MENU)
-            {
-              auto size = self->wm_measure_item(menu(GetMenu(*self)), context);
-              context.itemWidth = size.cx;
-              context.itemHeight = size.cy;
-              return 0;
-            }
-          }
-
-          if (message == WM_DRAWITEM)
-          {
-            auto& context = *(DRAWITEMSTRUCT*)lParam;
-
-            if (context.CtlType == ODT_MENU)
-            {
-              return self->wm_draw_item(menu((HMENU)context.hwndItem), context);
-            }
-          }
-        }
-
-        return std::nullopt;
-      }
-    };
   };
 
   struct window_ref;

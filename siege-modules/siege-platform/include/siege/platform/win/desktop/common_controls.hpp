@@ -239,7 +239,12 @@ namespace win32
         return std::nullopt;
       }
 
-      virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMLVFINDITEM&)
+      virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMLVSCROLL&)
+      {
+        return std::nullopt;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMLVFINDITEMW&)
       {
         return std::nullopt;
       }
@@ -257,7 +262,7 @@ namespace win32
         return std::nullopt;
       }
 
-      virtual std::optional<win32::lresult_t> wm_notify(list_view, const NMLVDISPINFO&)
+      virtual std::optional<win32::lresult_t> wm_notify(list_view, const NMLVDISPINFOW&)
       {
         return std::nullopt;
       }
@@ -286,6 +291,12 @@ namespace win32
                 && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == list_view::class_name)
             {
               return self->wm_notify(list_view(header.hwndFrom), *(NMHDR*)lParam);
+            }
+
+            if ((header.code == LVN_BEGINSCROLL || header.code == LVN_ENDSCROLL)
+                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == list_view::class_name)
+            {
+              return self->wm_notify(list_view(header.hwndFrom), *(NMLVSCROLL*)lParam);
             }
 
             if ((header.code == LVN_BEGINLABELEDITW || header.code == LVN_ENDLABELEDITW || header.code == LVN_SETDISPINFOW)
