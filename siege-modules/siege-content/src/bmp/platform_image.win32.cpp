@@ -6,6 +6,7 @@
 #include <memory>
 #include <cassert>
 #include <wincodec.h>
+#include <VersionHelpers.h>
 
 namespace siege::content::bmp
 {
@@ -151,7 +152,14 @@ namespace siege::content::bmp
         auto scale_bitmap = [size, pixels](const wic_bitmap& bitmap) {
             win32::com::com_ptr<IWICBitmapScaler> scaler;
             assert(bitmap_factory().CreateBitmapScaler(scaler.put()) == S_OK);
-            scaler->Initialize(bitmap.get(), size.first, size.second, WICBitmapInterpolationModeFant);
+            if (IsWindows10OrGreater())
+            {
+              scaler->Initialize(bitmap.get(), size.first, size.second, WICBitmapInterpolationModeHighQualityCubic);
+            }
+            else
+            {
+              scaler->Initialize(bitmap.get(), size.first, size.second, WICBitmapInterpolationModeFant);
+            }
 
             win32::com::com_ptr<IWICFormatConverter> converter;
             assert(bitmap_factory().CreateFormatConverter(converter.put()) == S_OK);
