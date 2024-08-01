@@ -801,7 +801,7 @@ namespace siege::views
       if (identifier == edit_theme_id)
       {
         theme_window = *win32::window_module_ref::current_module().CreateWindowExW(CREATESTRUCTW{
-          .lpCreateParams = *this,
+          .lpCreateParams = (HWND)*this,
           .hwndParent = *this,
           .cx = CW_USEDEFAULT,
           .x = CW_USEDEFAULT,

@@ -2,6 +2,7 @@
 #include <siege/platform/win/desktop/theming.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
 #include <siege/platform/stream.hpp>
+#include <VersionHelpers.h>
 
 namespace win32
 {
@@ -61,17 +62,38 @@ namespace win32
   {
     struct sub_class final : win32::edit::notifications
     {
+      std::pair<int, int> size;
+      HRGN region = nullptr;
+
       std::optional<HBRUSH> wm_control_color(win32::edit control, win32::gdi_drawing_context_ref dc) override
       {
         SetTextColor(dc, RGB(0, 0, 255));
- 
+
         auto rect = control.GetClientRect();
-        SetDCPenColor(dc, RGB(255, 255, 0));
-        SetDCBrushColor(dc, RGB(255, 255, 50));
+
+        auto new_pair = std::make_pair<int, int>(rect->right - rect->left, rect->bottom - rect->top);
+
+        if (new_pair != size)
+        {
+          size.first = rect->right - rect->left;
+          size.second = rect->bottom - rect->top;
+
+          if (region)
+          {
+            DeleteObject(region);
+            SetWindowRgn(control, nullptr, FALSE);
+          }
+
+          region = CreateRoundRectRgn(rect->left, rect->top, rect->right, rect->bottom, 25, 25);
+          SetWindowRgn(control, region, FALSE);
+        }
+
+        //        SetDCPenColor(dc, RGB(255, 255, 0));
+        //      SetDCBrushColor(dc, RGB(255, 255, 50));
         SelectObject(dc, get_solid_brush(RGB(250, 25, 80)));
         RoundRect(dc, rect->left, rect->top, rect->right, rect->bottom, 25, 25);
-        
-               SetBkMode(dc, TRANSPARENT);
+
+        SetBkMode(dc, TRANSPARENT);
         return (HBRUSH)GetStockObject(HOLLOW_BRUSH);
       }
 
@@ -100,7 +122,7 @@ namespace win32
     }
     else
     {
-       sub_class* object = nullptr;
+      sub_class* object = nullptr;
       if (::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR*)&object))
       {
         ::RemoveWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get());
@@ -129,17 +151,66 @@ namespace win32
         VARIABLE_PITCH,
         L"Segoe UI");
 
+      std::pair<int, int> size{};
+      HRGN region = nullptr;
+      HBITMAP bitmap = nullptr;
+      HPEN temp_pen = CreatePen(PS_SOLID, 20, RGB(255, 255, 255));
+
       std::wstring test = std::wstring(255, '\0');
 
       win32::lresult_t wm_notify(win32::button button, NMCUSTOMDRAW& custom_draw) override
       {
         if (custom_draw.dwDrawStage == CDDS_PREPAINT)
         {
+
+          auto rect = custom_draw.rc;
+          auto new_pair = std::make_pair<int, int>(rect.right - rect.left, rect.bottom - rect.top);
+
+          if (new_pair != size)
+          {
+            size = new_pair;
+
+            if (IsWindows8OrGreater())
+            {
+              if (bitmap)
+              {
+                DeleteObject(bitmap);
+              }
+              auto scale = 16;
+              auto width = custom_draw.rc.right - custom_draw.rc.left;
+              auto height = custom_draw.rc.bottom - custom_draw.rc.top;
+
+              BITMAPINFO info{
+                .bmiHeader{
+                  .biSize = sizeof(BITMAPINFOHEADER),
+                  .biWidth = LONG(width * scale),
+                  .biHeight = LONG(height * scale),
+                  .biPlanes = 1,
+                  .biBitCount = 32,
+                  .biCompression = BI_RGB }
+              };
+              void* pixels = nullptr;
+              bitmap = ::CreateDIBSection(custom_draw.hdc, &info, DIB_RGB_COLORS, &pixels, nullptr, 0);
+            }
+            else
+            {
+              if (region)
+              {
+                SetWindowRgn(button, nullptr, FALSE);
+                DeleteObject(region);
+              }
+              region = CreateRoundRectRgn(0, 0, size.first, size.second, 25, 25);
+              SetWindowRgn(button, region, FALSE);
+            }
+          }
+
           auto text_color = button.FindPropertyExW<COLORREF>(properties::button::text_color).value_or(RGB(128, 0, 0));
           auto bk_color = button.FindPropertyExW<COLORREF>(properties::button::bk_color).value_or(RGB(0, 128, 0));
           auto state = Button_GetState(button);
 
+
           SelectFont(custom_draw.hdc, font);
+
 
           if (state & BST_HOT)
           {
@@ -173,6 +244,61 @@ namespace win32
         {
           Button_GetText(button, test.data(), test.size());
           ::DrawTextExW(custom_draw.hdc, test.data(), -1, &custom_draw.rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOCLIP, nullptr);
+
+          if (IsWindows8OrGreater())
+          {
+            auto scale = 16;
+            auto width = custom_draw.rc.right - custom_draw.rc.left;
+            auto height = custom_draw.rc.bottom - custom_draw.rc.top;
+            auto temp = CreateCompatibleDC(custom_draw.hdc);
+
+
+            auto old_bitmap = (HBITMAP)SelectObject(temp, bitmap);
+            RECT temp_rect{ .left = 0, .top = 0, .right = width * scale, .bottom = height * scale };
+            FillRect(temp, &temp_rect, get_solid_brush(RGB(255, 0, 255)));
+
+            SelectObject(temp, get_solid_brush(RGB(0, 0, 0)));
+            //  SelectObject(temp, (HBRUSH)GetStockObject(HOLLOW_BRUSH));
+
+            SelectObject(temp, temp_pen);
+
+            RoundRect(temp, 0, 0, width * scale, height * scale, (height * scale) / 2, height * scale);
+
+            SetStretchBltMode(temp, HALFTONE);
+
+            StretchBlt(custom_draw.hdc, custom_draw.rc.left, custom_draw.rc.top, width, height, temp, 0, 0, width * scale, height * scale, SRCPAINT);
+
+            BLENDFUNCTION function{
+              .BlendOp = AC_SRC_OVER,
+              .SourceConstantAlpha = 127
+            };
+
+            auto screen_rect = std::make_optional(button.MapWindowPoints(*button.GetParent(), *button.GetClientRect())->second);
+            POINT pos{ .x = screen_rect->left, .y = screen_rect->top };
+            SIZE size{ .cx = screen_rect->right - screen_rect->left, .cy = screen_rect->bottom - screen_rect->top };
+            POINT dc_pos{};
+
+
+            if (UpdateLayeredWindow(button, nullptr, &pos, &size, custom_draw.hdc, &dc_pos, RGB(255, 0, 255), &function, ULW_COLORKEY))
+            {
+              //  DebugBreak();
+            }
+            else
+            {
+              DebugBreak();
+            }
+
+            SelectObject(temp, old_bitmap);
+            DeleteObject(old_bitmap);
+            DeleteObject(temp);
+          }
+          else
+          {
+            if (region)
+            {
+              SetWindowRgn(button, region, TRUE);
+            }
+          }
         }
 
         return CDRF_DODEFAULT;
@@ -223,6 +349,19 @@ namespace win32
 
     if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
     {
+      if (IsWindows8OrGreater())
+      {
+        SetWindowLongPtrW(control,
+          GWL_EXSTYLE,
+          GetWindowLongPtrW(control, GWL_EXSTYLE) | WS_EX_LAYERED);
+      }
+      else
+      {
+        SetWindowLongPtrW(control,
+          GWL_STYLE,
+          GetWindowLongPtrW(control, GWL_STYLE) | WS_CLIPSIBLINGS);
+      }
+
       auto bk_color = colors.FindPropertyExW<COLORREF>(properties::button::bk_color).value_or(0);
       auto text_color = colors.FindPropertyExW<COLORREF>(properties::button::text_color).value_or(0xffffffff);
       auto line_color = colors.FindPropertyExW<COLORREF>(properties::button::line_color).value_or(0x11111111);
@@ -234,6 +373,19 @@ namespace win32
     }
     else
     {
+      if (IsWindows8OrGreater())
+      {
+        SetWindowLongPtrW(control,
+          GWL_EXSTYLE,
+          GetWindowLongPtrW(control, GWL_EXSTYLE) | WS_EX_LAYERED);
+      }
+      else
+      {
+        SetWindowLongPtrW(control,
+          GWL_STYLE,
+          GetWindowLongPtrW(control, GWL_STYLE) & ~WS_CLIPSIBLINGS);
+      }
+
       control.RemovePropW(win32::properties::button::bk_color);
       control.RemovePropW(win32::properties::button::text_color);
       control.RemovePropW(win32::properties::button::line_color);

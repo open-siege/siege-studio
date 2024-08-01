@@ -100,6 +100,8 @@ namespace siege::views
 
     auto wm_create()
     {
+      auto style = this->GetWindowStyle();
+      this->SetWindowStyle(style | WS_CLIPCHILDREN);
       auto control_factory = win32::window_factory(ref());
 
       sample.button = *control_factory.CreateWindowExW<win32::button>(::CREATESTRUCTW{
@@ -507,7 +509,9 @@ namespace siege::views
 
         if (i == 0)
         {
-          set_pos(sample.button);
+          sample.button.SetWindowPos(SIZE{ .cx = right_size.cx, .cy = 50 });
+          sample.button.SetWindowPos(temp_point);
+          InvalidateRect(sample.button, nullptr, TRUE);
         }
 
         if (i == 1)
