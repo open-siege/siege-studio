@@ -9,6 +9,10 @@
 
 namespace win32
 {
+  HBITMAP create_layer_mask(SIZE size, int scale, std::move_only_function<void(HDC, int)> painter);
+
+  HDC apply_layer_mask(HDC source, HBITMAP bitmap);
+
   struct theme_module : private win32::module
   {
     theme_module() : win32::module("uxtheme.dll", true)

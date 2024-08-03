@@ -1,9 +1,7 @@
 #include <siege/platform/win/desktop/window_module.hpp>
 #include <siege/platform/win/desktop/theming.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
-#include <siege/platform/win/core/com/base.hpp>
 #include <siege/platform/stream.hpp>
-#include <wincodec.h>
 #include <VersionHelpers.h>
 
 namespace win32
@@ -134,26 +132,8 @@ namespace win32
     }
   }
 
-  auto& bitmap_factory()
-  {
-    thread_local win32::com::com_ptr factory = [] {
-      win32::com::com_ptr<IWICImagingFactory> temp;
-
-      if (CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory), temp.put_void()) != S_OK)
-      {
-        throw std::exception("Could not create imaging factory");
-      }
-
-      return temp;
-    }();
-
-    return *factory;
-  }
-
   void apply_theme(const win32::window_ref& colors, win32::button& control)
   {
-    using wic_bitmap = win32::com::com_ptr<IWICBitmapSource>;
-
     struct sub_class final : win32::button::notifications
     {
       HFONT font = ::CreateFontW(0,
@@ -174,10 +154,6 @@ namespace win32
       std::pair<int, int> size{};
       HRGN region = nullptr;
       HBITMAP mask_bitmap = nullptr;
-      std::span<RGBQUAD> mask_pixels;
-      HBITMAP control_bitmap = nullptr;
-      std::span<RGBQUAD> control_pixels;
-      HPEN temp_pen = CreatePen(PS_SOLID, 20, RGB(255, 255, 255));
 
       std::wstring test = std::wstring(255, '\0');
 
@@ -195,110 +171,11 @@ namespace win32
 
             if (IsWindows8OrGreater())
             {
-              if (mask_bitmap)
-              {
-                DeleteObject(mask_bitmap);
-              }
-
               auto scale = 16;
-
-              BITMAPINFO info{
-                .bmiHeader{
-                  .biSize = sizeof(BITMAPINFOHEADER),
-                  .biWidth = LONG(size.first * scale),
-                  .biHeight = LONG(size.second * scale),
-                  .biPlanes = 1,
-                  .biBitCount = 32,
-                  .biCompression = BI_RGB }
-              };
-              void* pixels = nullptr;
-              auto temp_bitmap = ::CreateDIBSection(custom_draw.hdc, &info, DIB_RGB_COLORS, &pixels, nullptr, 0);
-
-              auto temp = CreateCompatibleDC(custom_draw.hdc);
-              auto old_bitmap = (HBITMAP)SelectObject(temp, temp_bitmap);
-              RECT temp_rect{ .left = 0, .top = 0, .right = size.first * scale, .bottom = size.second * scale };
-              FillRect(temp, &temp_rect, get_solid_brush(RGB(0, 0, 0)));
-
-              SelectObject(temp, get_solid_brush(RGB(255, 255, 255)));
-              //  SelectObject(temp, (HBRUSH)GetStockObject(HOLLOW_BRUSH));
-//              SelectObject(temp, temp_pen);
-
-              RoundRect(temp, 0, 0, size.first * scale, size.second * scale, (size.second * scale) / 2, size.second * scale);
-
-              COLORREF temp_color = RGB(0, 0, 0);
-
-              std::span<RGBQUAD> colors((RGBQUAD*)pixels, size.first * scale * size.second * scale);
-              for (auto& color : colors)
-              {
-                if (std::memcmp(&temp_color, &color, sizeof(COLORREF)) != 0)
-                {
-                  color.rgbReserved = 0xff;
-                }
-              }
-
-              win32::com::com_ptr<IWICBitmap> downscaled_mask;
-              assert(bitmap_factory().CreateBitmapFromHBITMAP(temp_bitmap, nullptr, WICBitmapAlphaChannelOption::WICBitmapUseAlpha, downscaled_mask.put()) == S_OK);
-
-              win32::com::com_ptr<IWICBitmapScaler> scaler;
-              assert(bitmap_factory().CreateBitmapScaler(scaler.put()) == S_OK);
-
-              if (IsWindows10OrGreater())
-              {
-                scaler->Initialize(downscaled_mask.get(), size.first, size.second, WICBitmapInterpolationModeHighQualityCubic);
-              }
-              else
-              {
-                scaler->Initialize(downscaled_mask.get(), size.first, size.second, WICBitmapInterpolationModeFant);
-              }
-
-              //              win32::com::com_ptr<IWICPalette> palette;
-              //            bitmap_factory().CreatePalette(palette.put());
-
-              //          palette->InitializeFromBitmap(downscaled_mask.as<IWICBitmap>().get(), 3, TRUE);
-
-              win32::com::com_ptr<IWICFormatConverter> converter;
-              assert(bitmap_factory().CreateFormatConverter(converter.put()) == S_OK);
-              converter->Initialize(
-                scaler.get(),
-                GUID_WICPixelFormat32bppBGRA,
-                WICBitmapDitherTypeNone,
-                nullptr,
-                0.f,
-                WICBitmapPaletteTypeCustom);
-
-
-              BITMAPINFO final_info{
-                .bmiHeader{
-                  .biSize = sizeof(BITMAPINFOHEADER),
-                  .biWidth = LONG(size.first),
-                  .biHeight = LONG(size.second),
-                  .biPlanes = 1,
-                  .biBitCount = 32,
-                  .biCompression = BI_RGB }
-              };
-              void* final_pixels = nullptr;
-              mask_bitmap = ::CreateDIBSection(custom_draw.hdc, &final_info, DIB_RGB_COLORS, &final_pixels, nullptr, 0);
-
-              //              std::memcpy(final_pixels, pixels, size.first * size.second);
-              //          auto temp_dc = CreateCompatibleDC(custom_draw.hdc);
-
-              // SelectObject(temp_dc, mask_bitmap);
-
-              //        StretchBlt(temp_dc, 0, 0, size.first, size.second, temp, 0, 0, size.first * scale, size.second * scale, SRCCOPY);
-
-              //              auto stride = ((size.first / sizeof(std::int32_t)) + 1) * sizeof(std::int32_t);
-              auto stride = size.first * sizeof(std::int32_t);
-
-              assert(converter->CopyPixels(nullptr, stride, size.second * stride * sizeof(std::int32_t), reinterpret_cast<BYTE*>(final_pixels)) == S_OK);
-              mask_pixels = std::span<RGBQUAD>((RGBQUAD*)final_pixels, size.first * size.second);
-
-              control_bitmap = ::CreateDIBSection(custom_draw.hdc, &final_info, DIB_RGB_COLORS, &final_pixels, nullptr, 0);
-              control_pixels = std::span<RGBQUAD>((RGBQUAD*)final_pixels, size.first * size.second);
-
-              //              DeleteObject(temp_dc);
-              SelectObject(temp, old_bitmap);
-              DeleteObject(temp);
-              DeleteObject(old_bitmap);
+              
+              mask_bitmap = win32::create_layer_mask(SIZE{ size.first, size.second }, scale, [size = size](auto dc, auto scale) {
+                RoundRect(dc, 0, 0, size.first * scale, size.second * scale, (size.second * scale) / 2, size.second * scale);
+              });
             }
             else
             {
@@ -358,9 +235,7 @@ namespace win32
             auto width = custom_draw.rc.right - custom_draw.rc.left;
             auto height = custom_draw.rc.bottom - custom_draw.rc.top;
 
-            auto temp_dc = CreateCompatibleDC(custom_draw.hdc);
-            auto old_bitmap = SelectObject(temp_dc, control_bitmap);
-            BitBlt(temp_dc, 0, 0, width, height, custom_draw.hdc, 0, 0, SRCCOPY);
+            auto new_dc = win32::apply_layer_mask(custom_draw.hdc, mask_bitmap);
 
             BLENDFUNCTION function{
               .BlendOp = AC_SRC_OVER,
@@ -368,18 +243,13 @@ namespace win32
               .AlphaFormat = AC_SRC_ALPHA
             };
 
-            for (auto i = 0u; i < mask_pixels.size(); ++i)
-            {
-              control_pixels[i].rgbReserved = mask_pixels[i].rgbReserved;
-            }
-
             auto screen_rect = std::make_optional(button.MapWindowPoints(*button.GetParent(), *button.GetClientRect())->second);
             POINT pos{ .x = screen_rect->left, .y = screen_rect->top };
             SIZE size{ .cx = screen_rect->right - screen_rect->left, .cy = screen_rect->bottom - screen_rect->top };
             POINT dc_pos{};
 
 
-            if (UpdateLayeredWindow(button, nullptr, &pos, &size, temp_dc, &dc_pos, 0, &function, ULW_ALPHA))
+            if (UpdateLayeredWindow(button, nullptr, &pos, &size, new_dc, &dc_pos, 0, &function, ULW_ALPHA))
             {
               //  DebugBreak();
             }
@@ -387,10 +257,6 @@ namespace win32
             {
               DebugBreak();
             }
-
-            SelectObject(temp_dc, old_bitmap);
-            DeleteDC(temp_dc);
-            DeleteObject(old_bitmap);
           }
           else
           {
