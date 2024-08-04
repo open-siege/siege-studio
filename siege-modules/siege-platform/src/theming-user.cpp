@@ -60,6 +60,21 @@ namespace win32
 
   void apply_theme(const win32::window_ref& colors, win32::edit& control)
   {
+    static HFONT font = ::CreateFontW(0,
+      0,
+      0,
+      0,
+      FW_DONTCARE,
+      FALSE,
+      FALSE,
+      FALSE,
+      DEFAULT_CHARSET,
+      OUT_OUTLINE_PRECIS,
+      CLIP_DEFAULT_PRECIS,
+      CLEARTYPE_QUALITY,
+      VARIABLE_PITCH,
+      L"Segoe UI");
+
     struct sub_class final : win32::edit::notifications
     {
       std::pair<int, int> size;
@@ -84,7 +99,7 @@ namespace win32
             SetWindowRgn(control, nullptr, FALSE);
           }
 
-          region = CreateRoundRectRgn(rect->left, rect->top, rect->right, rect->bottom, 25, 25);
+          region = CreateRoundRectRgn(rect->left, rect->top, rect->right, rect->bottom, 10, 10);
           SetWindowRgn(control, region, FALSE);
         }
 
@@ -117,6 +132,11 @@ namespace win32
 
     if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
     {
+      SetWindowLongPtrW(control,
+        GWL_STYLE,
+        GetWindowLongPtrW(control, GWL_STYLE) & ~WS_CLIPSIBLINGS);
+
+      SendMessageW(control, WM_SETFONT, (WPARAM)font, FALSE);
       ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR) new sub_class());
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
@@ -151,7 +171,7 @@ namespace win32
         VARIABLE_PITCH,
         L"Segoe UI");
 
-      std::pair<int, int> size{};
+      SIZE size{};
       HRGN region = nullptr;
       HBITMAP mask_bitmap = nullptr;
 
@@ -159,22 +179,21 @@ namespace win32
 
       win32::lresult_t wm_notify(win32::button button, NMCUSTOMDRAW& custom_draw) override
       {
+
         if (custom_draw.dwDrawStage == CDDS_PREPAINT)
         {
-
           auto rect = custom_draw.rc;
-          auto new_pair = std::make_pair<int, int>(rect.right - rect.left, rect.bottom - rect.top);
-
-          if (new_pair != size)
+          auto new_size = SIZE(rect.right - rect.left, rect.bottom - rect.top);
+          if (new_size.cx != size.cx || new_size.cy != size.cy)
           {
-            size = new_pair;
+            size = new_size;
 
             if (IsWindows8OrGreater())
             {
               auto scale = 16;
-              
-              mask_bitmap = win32::create_layer_mask(SIZE{ size.first, size.second }, scale, [size = size](auto dc, auto scale) {
-                RoundRect(dc, 0, 0, size.first * scale, size.second * scale, (size.second * scale) / 2, size.second * scale);
+
+              mask_bitmap = win32::create_layer_mask(size, scale, [size = size](auto dc, auto scale) {
+                RoundRect(dc, 0, 0, size.cx * scale, size.cy * scale, (size.cy * scale) / 2, size.cy * scale);
               });
             }
             else
@@ -184,7 +203,7 @@ namespace win32
                 SetWindowRgn(button, nullptr, FALSE);
                 DeleteObject(region);
               }
-              region = CreateRoundRectRgn(0, 0, size.first, size.second, 25, 25);
+              region = CreateRoundRectRgn(0, 0, size.cx, size.cy, 25, 25);
               SetWindowRgn(button, region, FALSE);
             }
           }
@@ -193,10 +212,7 @@ namespace win32
           auto bk_color = button.FindPropertyExW<COLORREF>(properties::button::bk_color).value_or(RGB(0, 128, 0));
           auto state = Button_GetState(button);
 
-
           SelectFont(custom_draw.hdc, font);
-
-
           if (state & BST_HOT)
           {
             ::SetTextColor(custom_draw.hdc, text_color);
@@ -245,18 +261,9 @@ namespace win32
 
             auto screen_rect = std::make_optional(button.MapWindowPoints(*button.GetParent(), *button.GetClientRect())->second);
             POINT pos{ .x = screen_rect->left, .y = screen_rect->top };
-            SIZE size{ .cx = screen_rect->right - screen_rect->left, .cy = screen_rect->bottom - screen_rect->top };
             POINT dc_pos{};
 
-
-            if (UpdateLayeredWindow(button, nullptr, &pos, &size, new_dc, &dc_pos, 0, &function, ULW_ALPHA))
-            {
-              //  DebugBreak();
-            }
-            else
-            {
-              DebugBreak();
-            }
+            UpdateLayeredWindow(button, nullptr, &pos, &size, new_dc, &dc_pos, 0, &function, ULW_ALPHA);
           }
           else
           {
@@ -309,59 +316,52 @@ namespace win32
           ::RemoveWindowSubclass(hWnd, sub_class::HandleMessage, uIdSubclass);
         }
 
-        return DefSubclassProc(hWnd, message, wParam, lParam);
+        auto lresult = DefSubclassProc(hWnd, message, wParam, lParam);
+
+        if (message == WM_SIZE || message == WM_MOVE)
+        {
+          for (HWND button = FindWindowExW(hWnd, nullptr, win32::button::class_name, nullptr);
+               button != nullptr;
+               button = FindWindowExW(hWnd, button, win32::button::class_name, nullptr))
+          {
+            if (button && GetWindowLongPtrW(button, GWL_EXSTYLE) & WS_EX_LAYERED)
+            {
+              InvalidateRect(button, nullptr, TRUE);
+            }
+          }
+        }
+
+        return lresult;
       }
     };
 
-    if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
-    {
-      if (IsWindows8OrGreater())
-      {
-        SetWindowLongPtrW(control,
-          GWL_EXSTYLE,
-          GetWindowLongPtrW(control, GWL_EXSTYLE) | WS_EX_LAYERED);
-      }
-      else
-      {
-        SetWindowLongPtrW(control,
-          GWL_STYLE,
-          GetWindowLongPtrW(control, GWL_STYLE) | WS_CLIPSIBLINGS);
-      }
 
-      auto bk_color = colors.FindPropertyExW<COLORREF>(properties::button::bk_color).value_or(0);
-      auto text_color = colors.FindPropertyExW<COLORREF>(properties::button::text_color).value_or(0xffffffff);
-      auto line_color = colors.FindPropertyExW<COLORREF>(properties::button::line_color).value_or(0x11111111);
-      control.SetPropW(win32::properties::button::bk_color, bk_color);
-      control.SetPropW(win32::properties::button::text_color, text_color);
-      control.SetPropW(win32::properties::button::line_color, line_color);
-      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR) new sub_class());
-      ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
+    if (IsWindows8OrGreater())
+    {
+      SetWindowLongPtrW(control,
+        GWL_EXSTYLE,
+        GetWindowLongPtrW(control, GWL_EXSTYLE) | WS_EX_LAYERED);
     }
     else
     {
-      if (IsWindows8OrGreater())
-      {
-        SetWindowLongPtrW(control,
-          GWL_EXSTYLE,
-          GetWindowLongPtrW(control, GWL_EXSTYLE) | WS_EX_LAYERED);
-      }
-      else
-      {
-        SetWindowLongPtrW(control,
-          GWL_STYLE,
-          GetWindowLongPtrW(control, GWL_STYLE) & ~WS_CLIPSIBLINGS);
-      }
+      SetWindowLongPtrW(control,
+        GWL_STYLE,
+        GetWindowLongPtrW(control, GWL_STYLE) | WS_CLIPSIBLINGS);
+    }
 
-      control.RemovePropW(win32::properties::button::bk_color);
-      control.RemovePropW(win32::properties::button::text_color);
-      control.RemovePropW(win32::properties::button::line_color);
-      sub_class* object = nullptr;
-      if (::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR*)&object))
-      {
-        ::RemoveWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get());
-        delete object;
-        ::RedrawWindow(control, nullptr, nullptr, RDW_ERASENOW);
-      }
+    auto use_dark_theme = colors.GetPropW<bool>(L"AppsUseDarkTheme");
+    auto bk_color = colors.FindPropertyExW<COLORREF>(properties::button::bk_color).value_or(use_dark_theme ? 0 : 0xffffffff);
+    auto text_color = colors.FindPropertyExW<COLORREF>(properties::button::text_color).value_or(use_dark_theme ? 0xffffffff : 0);
+    auto line_color = colors.FindPropertyExW<COLORREF>(properties::button::line_color).value_or(0x11111111);
+    control.SetPropW(win32::properties::button::bk_color, bk_color);
+    control.SetPropW(win32::properties::button::text_color, text_color);
+    control.SetPropW(win32::properties::button::line_color, line_color);
+
+    DWORD_PTR existing_object{};
+    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::button::class_name, &existing_object) && existing_object == 0)
+    {
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::button::class_name, (DWORD_PTR) new sub_class());
+      ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
   }
 

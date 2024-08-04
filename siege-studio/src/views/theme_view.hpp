@@ -511,7 +511,6 @@ namespace siege::views
         {
           sample.button.SetWindowPos(SIZE{ .cx = right_size.cx, .cy = 50 });
           sample.button.SetWindowPos(temp_point);
-          InvalidateRect(sample.button, nullptr, TRUE);
         }
 
         if (i == 1)
