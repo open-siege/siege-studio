@@ -38,6 +38,12 @@ namespace win32
       }
     };
 
+    auto font = win32::load_font(LOGFONTW{
+      .lfPitchAndFamily = VARIABLE_PITCH,
+      .lfFaceName = L"Segoe UI" });
+
+    SendMessageW(control, WM_SETFONT, (WPARAM)font, FALSE);
+
     if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
     {
       auto bk_color = colors.FindPropertyExW(win32::properties::window::bk_color);
@@ -60,21 +66,6 @@ namespace win32
 
   void apply_theme(const win32::window_ref& colors, win32::edit& control)
   {
-    static HFONT font = ::CreateFontW(0,
-      0,
-      0,
-      0,
-      FW_DONTCARE,
-      FALSE,
-      FALSE,
-      FALSE,
-      DEFAULT_CHARSET,
-      OUT_OUTLINE_PRECIS,
-      CLIP_DEFAULT_PRECIS,
-      CLEARTYPE_QUALITY,
-      VARIABLE_PITCH,
-      L"Segoe UI");
-
     struct sub_class final : win32::edit::notifications
     {
       std::pair<int, int> size;
@@ -130,13 +121,17 @@ namespace win32
       }
     };
 
+    auto font = win32::load_font(LOGFONTW{
+      .lfPitchAndFamily = VARIABLE_PITCH,
+      .lfFaceName = L"Segoe UI" });
+
+    SendMessageW(control, WM_SETFONT, (WPARAM)font, FALSE);
+
     if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
     {
       SetWindowLongPtrW(control,
         GWL_STYLE,
         GetWindowLongPtrW(control, GWL_STYLE) & ~WS_CLIPSIBLINGS);
-
-      SendMessageW(control, WM_SETFONT, (WPARAM)font, FALSE);
       ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR) new sub_class());
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
@@ -156,20 +151,9 @@ namespace win32
   {
     struct sub_class final : win32::button::notifications
     {
-      HFONT font = ::CreateFontW(0,
-        0,
-        0,
-        0,
-        FW_DONTCARE,
-        FALSE,
-        FALSE,
-        FALSE,
-        DEFAULT_CHARSET,
-        OUT_OUTLINE_PRECIS,
-        CLIP_DEFAULT_PRECIS,
-        CLEARTYPE_QUALITY,
-        VARIABLE_PITCH,
-        L"Segoe UI");
+      HFONT font = win32::load_font(LOGFONTW{
+        .lfPitchAndFamily = VARIABLE_PITCH,
+        .lfFaceName = L"Segoe UI" });
 
       SIZE size{};
       HRGN region = nullptr;
@@ -395,9 +379,14 @@ namespace win32
       }
     };
 
+    HFONT font = win32::load_font(LOGFONTW{
+      .lfPitchAndFamily = VARIABLE_PITCH,
+      .lfFaceName = L"Segoe UI" });
+
+    SendMessageW(control, WM_SETFONT, (WPARAM)font, FALSE);
+
     if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
     {
-
       colors.ForEachPropertyExW([&](auto, auto key, auto value) {
         if (key.find(win32::static_control::class_name) != std::wstring_view::npos)
         {
@@ -454,6 +443,13 @@ namespace win32
           {
             auto list = win32::list_box(item.hwndItem);
             auto context = win32::gdi_drawing_context_ref(item.hDC);
+
+            auto item_height = list.GetItemHeight(0);
+            HFONT font = win32::load_font(LOGFONTW{
+              .lfPitchAndFamily = VARIABLE_PITCH,
+              .lfFaceName = L"Segoe UI" });
+
+            SelectFont(context, font);
 
             auto text_bk_color = list.FindPropertyExW<COLORREF>(properties::list_box::text_bk_color);
 
@@ -518,11 +514,27 @@ namespace win32
       {
         control.GetText(i, temp.data());
         copy->AddString(temp.data());
+
+        auto item_height = control.GetItemHeight(i);
+        ListBox_SetItemHeight(*copy, i, item_height);
       }
 
       ::DestroyWindow(control);
       control.reset(copy->release());
     };
+
+    HFONT font = win32::load_font(LOGFONTW{
+      .lfPitchAndFamily = VARIABLE_PITCH,
+      .lfFaceName = L"Segoe UI" });
+
+    SendMessageW(control, WM_SETFONT, (WPARAM)font, FALSE);
+
+    auto size = get_font_size_for_string(font, L"A");
+
+    if (size)
+    {
+      ListBox_SetItemHeight(control, 0, size->cy);
+    }
 
     if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
     {

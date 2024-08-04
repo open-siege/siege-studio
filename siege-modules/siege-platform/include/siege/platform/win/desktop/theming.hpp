@@ -5,6 +5,7 @@
 #include <siege/platform/win/desktop/common_controls.hpp>
 #include <map>
 #include <string>
+#include <optional>
 #include <uxtheme.h>
 
 namespace win32
@@ -12,6 +13,10 @@ namespace win32
   HBITMAP create_layer_mask(SIZE size, int scale, std::move_only_function<void(HDC, int)> painter);
 
   HDC apply_layer_mask(HDC source, HBITMAP bitmap);
+
+  HFONT load_font(LOGFONTW font_info);
+
+  std::optional<SIZE> get_font_size_for_string(HFONT, std::wstring_view);
 
   struct theme_module : private win32::module
   {

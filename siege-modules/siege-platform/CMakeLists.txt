@@ -15,7 +15,11 @@ if (WIN32)
 
     add_library(siege-platform ALIAS siege-win-core)
 
-    add_library(siege-win-desktop STATIC src/win-desktop.cpp src/theming-user.cpp src/theming-common.cpp src/theming-masking.cpp)
+    add_library(siege-win-desktop STATIC src/win-desktop.cpp 
+        src/theming-user.cpp 
+        src/theming-common.cpp 
+        src/theming-masking.cpp
+        src/theming-font.cpp)
     set_property(TARGET siege-win-desktop PROPERTY CXX_STANDARD 23)
     target_compile_definitions(siege-win-desktop PRIVATE WINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP)
     target_include_directories(siege-win-desktop PUBLIC ${PROJECT_SOURCE_DIR}/include)
