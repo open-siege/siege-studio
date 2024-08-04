@@ -160,7 +160,16 @@ namespace win32
       {
         if constexpr (std::is_base_of_v<notifications, TWindow>)
         {
-          if (message == WM_CTLCOLORSTATIC && win32::window_ref((HWND)lParam).RealGetWindowClassW() == edit::class_name)
+          std::optional<window_ref> parent;
+          if (message == WM_CTLCOLORSTATIC || message == WM_CTLCOLOREDIT)
+          {
+            parent = win32::window_ref((HWND)lParam).GetParent();
+          }
+
+          if (message == WM_CTLCOLORSTATIC && 
+              win32::window_ref((HWND)lParam).RealGetWindowClassW() == edit::class_name &&
+              parent &&
+              parent->RealGetWindowClassW() != combo_box::class_name)
           {
             auto result = self->wm_control_color(edit((hwnd_t)lParam), win32::gdi_drawing_context_ref((HDC)wParam));
 
@@ -170,7 +179,10 @@ namespace win32
             }
           }
 
-          if (message == WM_CTLCOLOREDIT)
+          if (message == WM_CTLCOLOREDIT && 
+              win32::window_ref((HWND)lParam).RealGetWindowClassW() == edit::class_name &&
+              parent &&
+              parent->RealGetWindowClassW() != combo_box::class_name)
           {
             auto result = self->wm_control_color(edit((hwnd_t)lParam), win32::gdi_drawing_context_ref((HDC)wParam));
 
