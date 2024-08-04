@@ -98,13 +98,13 @@ namespace siege::views
       table_settings = *factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
       table_settings.LoadImages(IDB_VIEW_SMALL_COLOR);
 
-      table_settings.InsertButton(-1, { .iBitmap = VIEW_DETAILS, .idCommand = LV_VIEW_DETAILS, .fsState = TBSTATE_ENABLED | TBSTATE_CHECKED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Details" });
+      table_settings.InsertButton(-1, { .iBitmap = VIEW_DETAILS, .idCommand = LV_VIEW_DETAILS, .fsState = TBSTATE_ENABLED | TBSTATE_CHECKED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Details" }, false);
 
-      table_settings.InsertButton(-1, { .iBitmap = VIEW_LARGEICONS, .idCommand = LV_VIEW_ICON, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Large Icons" });
+      table_settings.InsertButton(-1, { .iBitmap = VIEW_LARGEICONS, .idCommand = LV_VIEW_ICON, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Large Icons" }, false);
 
-      table_settings.InsertButton(-1, { .iBitmap = VIEW_SMALLICONS, .idCommand = LV_VIEW_SMALLICON, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Small Icons" });
+      table_settings.InsertButton(-1, { .iBitmap = VIEW_SMALLICONS, .idCommand = LV_VIEW_SMALLICON, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Small Icons" }, false);
 
-      table_settings.InsertButton(-1, { .iBitmap = VIEW_LIST, .idCommand = LV_VIEW_LIST, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"List" });
+      table_settings.InsertButton(-1, { .iBitmap = VIEW_LIST, .idCommand = LV_VIEW_LIST, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"List" }, false);
 
       table = *factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
