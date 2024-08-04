@@ -45,10 +45,10 @@ namespace siege::views
       win32::tool_bar toolbar;
       win32::list_box list_box;
       win32::menu menu;
-      win32::scroll_bar scroll_bar;
+      win32::window window;
       win32::static_control static_control;
       win32::tab_control tab_control;
-      win32::window window;
+      win32::scroll_bar scroll_bar;
     } sample;
 
     std::map<std::wstring_view, std::wstring_view> control_labels = {
@@ -134,9 +134,7 @@ namespace siege::views
         .hInsertAfter = TVI_ROOT,
         .item = TVITEMW{
           .mask = TVIF_TEXT,
-          .pszText = const_cast<wchar_t*>(L"Tree")
-        }
-      });
+          .pszText = const_cast<wchar_t*>(L"Tree") } });
 
       sample.tree_view.InsertItem(TVINSERTSTRUCTW{
         .hInsertAfter = TVI_ROOT,
@@ -153,13 +151,20 @@ namespace siege::views
       sample.list_view = *control_factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD });
 
-      sample.list_view.InsertItem(-1, LVITEMW{
-                        .mask = LVIF_TEXT, .pszText = const_cast<wchar_t*>(L"List")
-                                      });
+      sample.list_view.InsertItem(-1, LVITEMW{ .mask = LVIF_TEXT, .pszText = const_cast<wchar_t*>(L"List") });
 
       sample.list_view.InsertItem(-1, LVITEMW{ .mask = LVIF_TEXT, .pszText = const_cast<wchar_t*>(L"View") });
 
       sample.list_view.InsertItem(-1, LVITEMW{ .mask = LVIF_TEXT, .pszText = const_cast<wchar_t*>(L"Sample") });
+
+      sample.toolbar = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{
+        .style = WS_VISIBLE | WS_CHILD | CCS_NOPARENTALIGN | CCS_NODIVIDER });
+
+      sample.toolbar.InsertButton(-1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR) const_cast<wchar_t*>(L"Tool") });
+
+      sample.toolbar.InsertButton(-1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR) const_cast<wchar_t*>(L"Bar") });
+
+      sample.toolbar.InsertButton(-1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR) const_cast<wchar_t*>(L"Sample") });
 
       sample.list_box = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS });
@@ -168,6 +173,16 @@ namespace siege::views
       sample.list_box.InsertString(-1, L"List");
       sample.list_box.InsertString(-1, L"Test");
 
+      sample.static_control = *control_factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
+        .style = WS_VISIBLE | WS_CHILD,
+        .lpszName = L"Static Control Example" });
+
+      sample.tab_control = *control_factory.CreateWindowExW<win32::tab_control>(::CREATESTRUCTW{
+        .style = WS_VISIBLE | WS_CHILD });
+
+      sample.tab_control.InsertItem(-1, TCITEMW{ .mask = TCIF_TEXT, .pszText = const_cast<wchar_t*>(L"Tab")});
+      sample.tab_control.InsertItem(-1, TCITEMW{ .mask = TCIF_TEXT, .pszText = const_cast<wchar_t*>(L"Control")});
+      sample.tab_control.InsertItem(-1, TCITEMW{ .mask = TCIF_TEXT, .pszText = const_cast<wchar_t*>(L"Sample")});
 
       options = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
@@ -287,6 +302,11 @@ namespace siege::views
       win32::apply_theme(theme_properties, sample.edit);
       win32::apply_theme(theme_properties, sample.tree_view);
       win32::apply_theme(theme_properties, sample.list_view);
+      win32::apply_theme(theme_properties, sample.toolbar);
+      win32::apply_theme(theme_properties, sample.static_control);
+      win32::apply_theme(theme_properties, sample.tab_control);
+      win32::apply_theme(theme_properties, control_settings);
+      win32::apply_theme(theme_properties, options);
 
       return 0;
     }
@@ -579,6 +599,10 @@ namespace siege::views
         if (i == 7)
         {
           set_pos(sample.toolbar);
+          auto button_size = temp_size;
+          auto button_count = sample.toolbar.ButtonCount();
+          button_size.cx /= button_count;
+          sample.toolbar.SetButtonSize(button_size);
         }
 
         if (i == 8)
@@ -586,12 +610,12 @@ namespace siege::views
           set_pos(sample.list_box);
         }
 
-        if (i == 10)
+        if (i == 11)
         {
           set_pos(sample.static_control);
         }
 
-        if (i == 11)
+        if (i == 12)
         {
           set_pos(sample.tab_control);
         }

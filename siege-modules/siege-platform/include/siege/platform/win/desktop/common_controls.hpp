@@ -745,15 +745,22 @@ namespace win32
     };
     constexpr static auto class_name = WC_TABCONTROLW;
 
-    [[maybe_unused]] inline wparam_t InsertItem(wparam_t index, TCITEMW info)
-    {
-      return TabCtrl_InsertItem(*this, index, &info);
-    }
-
+    
     [[nodiscard]] inline wparam_t GetItemCount()
     {
       return TabCtrl_GetItemCount(*this);
     }
+
+    [[maybe_unused]] inline wparam_t InsertItem(wparam_t index, TCITEMW info)
+    {
+      if (index == -1)
+      {
+        index = GetItemCount();
+      }
+
+      return TabCtrl_InsertItem(*this, index, &info);
+    }
+
 
     [[nodiscard]] inline wparam_t GetCurrentSelection()
     {

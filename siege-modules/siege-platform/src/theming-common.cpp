@@ -322,7 +322,6 @@ namespace win32
     }
 
     ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
-        
   }
 
   void apply_theme(const win32::window_ref& colors, win32::tree_view& control)
@@ -351,7 +350,7 @@ namespace win32
     {
       win32::theme_module().SetWindowTheme(control, nullptr, nullptr);
     }
-    ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);       
+    ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
   }
 
   void apply_theme(const win32::window_ref& colors, win32::tool_bar& control)
@@ -381,9 +380,10 @@ namespace win32
 
     struct sub_class
     {
+
+
       static LRESULT __stdcall HandleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
       {
-        // TODO remove this sub class on destroy
         if (uMsg == WM_NOTIFY && lParam != 0)
         {
           NMHDR* header = (NMHDR*)lParam;
@@ -394,6 +394,11 @@ namespace win32
 
             if (custom_draw->nmcd.dwDrawStage == CDDS_PREPAINT)
             {
+              auto font = win32::load_font(LOGFONTW{
+                .lfPitchAndFamily = VARIABLE_PITCH,
+                .lfFaceName = L"Segoe UI" });
+
+              SelectFont(custom_draw->nmcd.hdc, font);
               return CDRF_NOTIFYITEMDRAW | CDRF_NOTIFYPOSTPAINT;
             }
 
@@ -473,7 +478,7 @@ namespace win32
       win32::theme_module().SetWindowTheme(control, nullptr, nullptr);
       ::RemoveWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get());
     }
-    ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);       
+    ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
   }
 
 }// namespace win32
