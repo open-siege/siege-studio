@@ -5,24 +5,6 @@
 
 namespace win32
 {
-  struct font_deleter
-  {
-    HFONT font = ::CreateFontW(0,
-      0,
-      0,
-      0,
-      FW_DONTCARE,
-      FALSE,
-      FALSE,
-      FALSE,
-      DEFAULT_CHARSET,
-      OUT_OUTLINE_PRECIS,
-      CLIP_DEFAULT_PRECIS,
-      CLEARTYPE_QUALITY,
-      VARIABLE_PITCH,
-      L"Segoe UI");
-  };
-
   HFONT load_font(LOGFONTW font_info)
   {
     thread_local std::map<std::wstring, win32::auto_handle<HFONT, gdi_deleter>> loaded_fonts;

@@ -40,13 +40,14 @@ namespace siege::views
       win32::combo_box_ex combo_box_ex;
       win32::edit edit;
       win32::header header;
-      win32::list_box list_box;
+      win32::tree_view tree_view;
       win32::list_view list_view;
+      win32::tool_bar toolbar;
+      win32::list_box list_box;
       win32::menu menu;
       win32::scroll_bar scroll_bar;
       win32::static_control static_control;
       win32::tab_control tab_control;
-      win32::tool_bar toolbar;
       win32::window window;
     } sample;
 
@@ -55,11 +56,11 @@ namespace siege::views
       { win32::combo_box::class_name, L"Combo Box" },
       { win32::combo_box_ex::class_name, L"Combo Box Ex" },
       { win32::edit::class_name, L"Edit" },
-      { win32::header::class_name, L"Header" },
       { win32::list_box::class_name, L"List Box" },
-      { win32::list_view::class_name, L"List View" },
-      { win32::static_control::class_name, L"Static Control" },
       { win32::scroll_bar::class_name, L"Scroll Bar" },
+      { win32::static_control::class_name, L"Static Control" },
+      { win32::header::class_name, L"Header" },
+      { win32::list_view::class_name, L"List View" },
       { win32::tab_control::class_name, L"Tab Control" },
       { win32::tree_view::class_name, L"Tree View" },
 
@@ -126,16 +127,47 @@ namespace siege::views
       sample.header.InsertItem(-1, HDITEMW{ .mask = HDI_TEXT | HDI_WIDTH, .cxy = 30, .pszText = const_cast<wchar_t*>(L"Header"), .cchTextMax = 5 });
       sample.header.InsertItem(-1, HDITEMW{ .mask = HDI_TEXT | HDI_WIDTH, .cxy = 30, .pszText = const_cast<wchar_t*>(L"Test"), .cchTextMax = 5 });
 
+      sample.tree_view = *control_factory.CreateWindowExW<win32::tree_view>(::CREATESTRUCTW{
+        .style = WS_VISIBLE | WS_CHILD });
+
+      sample.tree_view.InsertItem(TVINSERTSTRUCTW{
+        .hInsertAfter = TVI_ROOT,
+        .item = TVITEMW{
+          .mask = TVIF_TEXT,
+          .pszText = const_cast<wchar_t*>(L"Tree")
+        }
+      });
+
+      sample.tree_view.InsertItem(TVINSERTSTRUCTW{
+        .hInsertAfter = TVI_ROOT,
+        .item = TVITEMW{
+          .mask = TVIF_TEXT,
+          .pszText = const_cast<wchar_t*>(L"View") } });
+
+      sample.tree_view.InsertItem(TVINSERTSTRUCTW{
+        .hInsertAfter = TVI_ROOT,
+        .item = TVITEMW{
+          .mask = TVIF_TEXT,
+          .pszText = const_cast<wchar_t*>(L"Sample") } });
+
+      sample.list_view = *control_factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
+        .style = WS_VISIBLE | WS_CHILD });
+
+      sample.list_view.InsertItem(-1, LVITEMW{
+                        .mask = LVIF_TEXT, .pszText = const_cast<wchar_t*>(L"List")
+                                      });
+
+      sample.list_view.InsertItem(-1, LVITEMW{ .mask = LVIF_TEXT, .pszText = const_cast<wchar_t*>(L"View") });
+
+      sample.list_view.InsertItem(-1, LVITEMW{ .mask = LVIF_TEXT, .pszText = const_cast<wchar_t*>(L"Sample") });
+
       sample.list_box = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS });
-
 
       sample.list_box.InsertString(-1, L"Sample");
       sample.list_box.InsertString(-1, L"List");
       sample.list_box.InsertString(-1, L"Test");
 
-      sample.list_view = *control_factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD });
 
       options = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
@@ -253,6 +285,8 @@ namespace siege::views
       win32::apply_theme(theme_properties, sample.header);
       win32::apply_theme(theme_properties, sample.list_box);
       win32::apply_theme(theme_properties, sample.edit);
+      win32::apply_theme(theme_properties, sample.tree_view);
+      win32::apply_theme(theme_properties, sample.list_view);
 
       return 0;
     }
@@ -509,8 +543,7 @@ namespace siege::views
 
         if (i == 0)
         {
-          sample.button.SetWindowPos(SIZE{ .cx = right_size.cx, .cy = 50 });
-          sample.button.SetWindowPos(temp_point);
+          set_pos(sample.button);
         }
 
         if (i == 1)
@@ -535,7 +568,7 @@ namespace siege::views
 
         if (i == 5)
         {
-          set_pos(sample.list_box);
+          set_pos(sample.tree_view);
         }
 
         if (i == 6)
@@ -545,10 +578,22 @@ namespace siege::views
 
         if (i == 7)
         {
+          set_pos(sample.toolbar);
         }
 
         if (i == 8)
         {
+          set_pos(sample.list_box);
+        }
+
+        if (i == 10)
+        {
+          set_pos(sample.static_control);
+        }
+
+        if (i == 11)
+        {
+          set_pos(sample.tab_control);
         }
       }
     }

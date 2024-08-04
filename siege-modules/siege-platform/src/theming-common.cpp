@@ -128,6 +128,12 @@ namespace win32
       }
     }
 
+    auto font = win32::load_font(LOGFONTW{
+      .lfPitchAndFamily = VARIABLE_PITCH,
+      .lfFaceName = L"Segoe UI" });
+
+    SendMessageW(control, WM_SETFONT, (WPARAM)font, FALSE);
+
     if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
     {
       colors.ForEachPropertyExW([&](auto, auto key, auto value) {
@@ -242,6 +248,12 @@ namespace win32
       }
     };
 
+    auto font = win32::load_font(LOGFONTW{
+      .lfPitchAndFamily = VARIABLE_PITCH,
+      .lfFaceName = L"Segoe UI" });
+
+    SendMessageW(control, WM_SETFONT, (WPARAM)font, FALSE);
+
     if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
     {
       auto style = control.GetWindowStyle();
@@ -293,7 +305,13 @@ namespace win32
     {
       win32::apply_theme(colors, header);
     }
-    
+
+    auto font = win32::load_font(LOGFONTW{
+      .lfPitchAndFamily = VARIABLE_PITCH,
+      .lfFaceName = L"Segoe UI" });
+
+    SendMessageW(control, WM_SETFONT, (WPARAM)font, FALSE);
+
     if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
     {
       win32::theme_module().SetWindowTheme(control, L"DarkMode_Explorer", nullptr);
@@ -317,6 +335,13 @@ namespace win32
 
     color = colors.FindPropertyExW<COLORREF>(properties::tree_view::line_color).value_or(CLR_NONE);
     TreeView_SetLineColor(control, color);
+
+    auto font = win32::load_font(LOGFONTW{
+      .lfPitchAndFamily = VARIABLE_PITCH,
+      .lfFaceName = L"Segoe UI" });
+
+    SendMessageW(control, WM_SETFONT, (WPARAM)font, FALSE);
+
 
     if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
     {
