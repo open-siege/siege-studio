@@ -16,7 +16,7 @@ namespace win32
 
     if (!font_info.lfQuality)
     {
-      font_info.lfCharSet = CLEARTYPE_QUALITY;
+      font_info.lfQuality = CLEARTYPE_QUALITY;
     }
 
     if (!font_info.lfOutPrecision && font_info.lfQuality == CLEARTYPE_QUALITY)
