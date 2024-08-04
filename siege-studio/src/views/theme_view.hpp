@@ -127,7 +127,7 @@ namespace siege::views
       sample.header.InsertItem(-1, HDITEMW{ .mask = HDI_TEXT | HDI_WIDTH, .cxy = 30, .pszText = const_cast<wchar_t*>(L"Test"), .cchTextMax = 5 });
 
       sample.list_box = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD });
+        .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS });
 
 
       sample.list_box.InsertString(-1, L"Sample");

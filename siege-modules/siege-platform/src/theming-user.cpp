@@ -179,7 +179,6 @@ namespace win32
 
       win32::lresult_t wm_notify(win32::button button, NMCUSTOMDRAW& custom_draw) override
       {
-
         if (custom_draw.dwDrawStage == CDDS_PREPAINT)
         {
           auto rect = custom_draw.rc;
@@ -475,7 +474,7 @@ namespace win32
               ::SetTextColor(context, *text_color);
             }
 
-            buffer.resize(list.GetTextLength(item.itemID));
+            buffer.resize(list.GetTextLength(item.itemID), '\0');
 
             list.GetText(item.itemID, buffer.data());
 
