@@ -561,7 +561,7 @@ namespace siege::views
       static auto black_brush = ::CreateSolidBrush(0x00000000);
       static auto grey_brush = ::CreateSolidBrush(0x00383838);
 
-      auto context = win32::gdi_drawing_context_ref(item.hDC);
+      auto context = win32::gdi::drawing_context_ref(item.hDC);
 
       SetBkMode(context, TRANSPARENT);
 

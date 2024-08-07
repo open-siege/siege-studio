@@ -31,7 +31,7 @@ namespace win32
         return std::nullopt;
       }
 
-      virtual std::optional<HBRUSH> wm_control_color(win32::button, win32::gdi_drawing_context_ref)
+      virtual std::optional<HBRUSH> wm_control_color(win32::button, win32::gdi::drawing_context_ref)
       {
         return std::nullopt;
       }
@@ -81,7 +81,7 @@ namespace win32
         return std::nullopt;
       }
 
-      virtual std::optional<HBRUSH> wm_control_color(win32::combo_box, win32::gdi_drawing_context_ref)
+      virtual std::optional<HBRUSH> wm_control_color(win32::combo_box, win32::gdi::drawing_context_ref)
       {
         return std::nullopt;
       }
@@ -150,7 +150,7 @@ namespace win32
         return std::nullopt;
       }
 
-      virtual std::optional<HBRUSH> wm_control_color(win32::edit, win32::gdi_drawing_context_ref)
+      virtual std::optional<HBRUSH> wm_control_color(win32::edit, win32::gdi::drawing_context_ref)
       {
         return std::nullopt;
       }
@@ -171,7 +171,7 @@ namespace win32
               parent &&
               parent->RealGetWindowClassW() != combo_box::class_name)
           {
-            auto result = self->wm_control_color(edit((hwnd_t)lParam), win32::gdi_drawing_context_ref((HDC)wParam));
+            auto result = self->wm_control_color(edit((hwnd_t)lParam), win32::gdi::drawing_context_ref((HDC)wParam));
 
             if (result)
             {
@@ -184,7 +184,7 @@ namespace win32
               parent &&
               parent->RealGetWindowClassW() != combo_box::class_name)
           {
-            auto result = self->wm_control_color(edit((hwnd_t)lParam), win32::gdi_drawing_context_ref((HDC)wParam));
+            auto result = self->wm_control_color(edit((hwnd_t)lParam), win32::gdi::drawing_context_ref((HDC)wParam));
 
             if (result)
             {
@@ -211,7 +211,7 @@ namespace win32
         return std::nullopt;
       }
 
-      virtual std::optional<HBRUSH> wm_control_color(win32::static_control, win32::gdi_drawing_context_ref)
+      virtual std::optional<HBRUSH> wm_control_color(win32::static_control, win32::gdi::drawing_context_ref)
       {
         return std::nullopt;
       }
@@ -238,7 +238,7 @@ namespace win32
 
           if (message == WM_CTLCOLORSTATIC && win32::window_ref((HWND)lParam).RealGetWindowClassW() == static_control::class_name)
           {
-            return (LRESULT)self->wm_control_color(static_control(lParam), win32::gdi_drawing_context_ref((HDC)wParam));
+            return (LRESULT)self->wm_control_color(static_control(lParam), win32::gdi::drawing_context_ref((HDC)wParam));
           }
         }
 
@@ -265,7 +265,7 @@ namespace win32
         return std::nullopt;
       }
 
-      virtual std::optional<HBRUSH> wm_control_color(win32::list_box, win32::gdi_drawing_context_ref)
+      virtual std::optional<HBRUSH> wm_control_color(win32::list_box, win32::gdi::drawing_context_ref)
       {
         return std::nullopt;
       }
@@ -374,7 +374,7 @@ namespace win32
 
     struct notifications
     {
-      virtual std::optional<HBRUSH> wm_control_color(win32::scroll_bar, win32::gdi_drawing_context_ref)
+      virtual std::optional<HBRUSH> wm_control_color(win32::scroll_bar, win32::gdi::drawing_context_ref)
       {
         return std::nullopt;
       }

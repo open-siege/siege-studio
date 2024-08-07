@@ -6,7 +6,7 @@
 
 namespace win32
 {
-  HBRUSH get_solid_brush(COLORREF color);
+  gdi::brush_ref get_solid_brush(COLORREF color);
 
   void apply_theme(const win32::window_ref& colors, win32::window_ref& control)
   {
@@ -16,7 +16,7 @@ namespace win32
       {
         if (uMsg == WM_ERASEBKGND)
         {
-          auto context = win32::gdi_drawing_context_ref((HDC)wParam);
+          auto context = win32::gdi::drawing_context_ref((HDC)wParam);
 
           auto self = win32::window_ref(hWnd);
           auto bk_color = self.FindPropertyExW<COLORREF>(win32::properties::window::bk_color);
@@ -42,7 +42,7 @@ namespace win32
       .lfPitchAndFamily = VARIABLE_PITCH,
       .lfFaceName = L"Segoe UI" });
 
-    SendMessageW(control, WM_SETFONT, (WPARAM)font, FALSE);
+    SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), FALSE);
 
     if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
     {
@@ -71,7 +71,7 @@ namespace win32
       std::pair<int, int> size;
       HRGN region = nullptr;
 
-      std::optional<HBRUSH> wm_control_color(win32::edit control, win32::gdi_drawing_context_ref dc) override
+      std::optional<HBRUSH> wm_control_color(win32::edit control, win32::gdi::drawing_context_ref dc) override
       {
         SetTextColor(dc, RGB(0, 0, 255));
 
@@ -125,7 +125,7 @@ namespace win32
       .lfPitchAndFamily = VARIABLE_PITCH,
       .lfFaceName = L"Segoe UI" });
 
-    SendMessageW(control, WM_SETFONT, (WPARAM)font, FALSE);
+    SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), FALSE);
 
     if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
     {
@@ -234,7 +234,7 @@ namespace win32
             auto width = custom_draw.rc.right - custom_draw.rc.left;
             auto height = custom_draw.rc.bottom - custom_draw.rc.top;
 
-            auto new_dc = win32::apply_layer_mask(custom_draw.hdc, mask_bitmap);
+            auto new_dc = win32::apply_layer_mask(win32::gdi::drawing_context_ref(custom_draw.hdc), win32::gdi::bitmap_ref(mask_bitmap));
 
             BLENDFUNCTION function{
               .BlendOp = AC_SRC_OVER,
@@ -265,7 +265,7 @@ namespace win32
         return std::nullopt;
       }
 
-      virtual std::optional<HBRUSH> wm_control_color(win32::button button, win32::gdi_drawing_context_ref context) override
+      virtual std::optional<HBRUSH> wm_control_color(win32::button button, win32::gdi::drawing_context_ref context) override
       {
         auto text_color = button.FindPropertyExW<COLORREF>(properties::button::text_color);
 
@@ -366,7 +366,7 @@ namespace win32
           if (bk_color)
           {
             ::SetBkColor((HDC)wParam, *bk_color);
-            return (LRESULT)get_solid_brush(*bk_color);
+            return (LRESULT)get_solid_brush(*bk_color).get();
           }
         }
 
@@ -418,7 +418,7 @@ namespace win32
           auto bk_color = win32::list_box((HWND)uIdSubclass).FindPropertyExW<COLORREF>(properties::list_box::bk_color);
           if (bk_color)
           {
-            return (LRESULT)get_solid_brush(*bk_color);
+            return (LRESULT)get_solid_brush(*bk_color).get();
           }
         }
 
@@ -442,7 +442,7 @@ namespace win32
           if (item.hwndItem == (HWND)uIdSubclass && (item.itemAction == ODA_DRAWENTIRE || item.itemAction == ODA_SELECT))
           {
             auto list = win32::list_box(item.hwndItem);
-            auto context = win32::gdi_drawing_context_ref(item.hDC);
+            auto context = win32::gdi::drawing_context_ref(item.hDC);
 
             auto item_height = list.GetItemHeight(0);
             HFONT font = win32::load_font(LOGFONTW{
@@ -523,13 +523,13 @@ namespace win32
       control.reset(copy->release());
     };
 
-    HFONT font = win32::load_font(LOGFONTW{
+    gdi::font_ref font = win32::load_font(LOGFONTW{
       .lfPitchAndFamily = VARIABLE_PITCH,
       .lfFaceName = L"Segoe UI" });
 
-    SendMessageW(control, WM_SETFONT, (WPARAM)font, FALSE);
+    SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), FALSE);
 
-    auto size = get_font_size_for_string(font, L"A");
+    auto size = get_font_size_for_string(std::move(font), L"A");
 
     if (size)
     {

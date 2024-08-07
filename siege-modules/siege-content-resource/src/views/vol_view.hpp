@@ -272,7 +272,7 @@ namespace siege::views
       return FALSE;
     }
 
-    auto wm_erase_background(win32::gdi_drawing_context_ref context)
+    auto wm_erase_background(win32::gdi::drawing_context_ref context)
     {
       static auto black_brush = ::CreateSolidBrush(0x00000000);
 

@@ -19,7 +19,7 @@ namespace siege::views
 
     pal_controller controller;
 
-    std::vector<win32::gdi_brush> brushes;
+    std::vector<win32::gdi::brush> brushes;
 
     win32::static_control render_view;
     win32::list_box selection;
@@ -158,7 +158,7 @@ namespace siege::views
     {
       if (item.hwndItem == render_view && item.itemAction == ODA_DRAWENTIRE)
       {
-        auto context = win32::gdi_drawing_context_ref(item.hDC);
+        auto context = win32::gdi::drawing_context_ref(item.hDC);
 
         auto total_width = item.rcItem.right - item.rcItem.left;
         auto total_height = item.rcItem.bottom - item.rcItem.top;

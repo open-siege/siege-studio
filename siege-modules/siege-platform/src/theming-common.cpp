@@ -5,7 +5,7 @@
 
 namespace win32
 {
-  HBRUSH get_solid_brush(COLORREF color);
+  gdi::brush_ref get_solid_brush(COLORREF color);
 
   void apply_theme(const win32::window_ref& colors, win32::header& control)
   {
@@ -22,7 +22,7 @@ namespace win32
             auto control = win32::header((HWND)uIdSubclass);
 
 
-            auto context = win32::gdi_drawing_context_ref(item.hDC);
+            auto context = win32::gdi::drawing_context_ref(item.hDC);
             auto header = win32::header(item.hwndItem);
 
             auto rect = item.rcItem;
@@ -132,7 +132,7 @@ namespace win32
       .lfPitchAndFamily = VARIABLE_PITCH,
       .lfFaceName = L"Segoe UI" });
 
-    SendMessageW(control, WM_SETFONT, (WPARAM)font, FALSE);
+    SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), FALSE);
 
     if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
     {
@@ -186,7 +186,7 @@ namespace win32
           {
             if (item.itemAction == ODA_DRAWENTIRE)
             {
-              auto parent_context = win32::gdi_drawing_context_ref(::GetDC(item.hwndItem));
+              auto parent_context = win32::gdi::drawing_context_ref(::GetDC(item.hwndItem));
 
               auto tabs = win32::tab_control(item.hwndItem);
               auto rect = tabs.GetClientRect();
@@ -205,7 +205,7 @@ namespace win32
               parent_context.FillRect(*rect, get_solid_brush(*bk_color));
             }
 
-            auto context = win32::gdi_drawing_context_ref(item.hDC);
+            auto context = win32::gdi::drawing_context_ref(item.hDC);
 
             SetBkMode(context, TRANSPARENT);
 
@@ -252,7 +252,7 @@ namespace win32
       .lfPitchAndFamily = VARIABLE_PITCH,
       .lfFaceName = L"Segoe UI" });
 
-    SendMessageW(control, WM_SETFONT, (WPARAM)font, FALSE);
+    SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), FALSE);
 
     if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
     {
@@ -310,7 +310,7 @@ namespace win32
       .lfPitchAndFamily = VARIABLE_PITCH,
       .lfFaceName = L"Segoe UI" });
 
-    SendMessageW(control, WM_SETFONT, (WPARAM)font, FALSE);
+    SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), FALSE);
 
     if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
     {
@@ -339,7 +339,7 @@ namespace win32
       .lfPitchAndFamily = VARIABLE_PITCH,
       .lfFaceName = L"Segoe UI" });
 
-    SendMessageW(control, WM_SETFONT, (WPARAM)font, FALSE);
+    SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), FALSE);
 
 
     if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
@@ -425,7 +425,7 @@ namespace win32
 
             if (custom_draw->nmcd.dwDrawStage == CDDS_POSTPAINT)
             {
-              win32::gdi_drawing_context_ref context(custom_draw->nmcd.hdc);
+              win32::gdi::drawing_context_ref context(custom_draw->nmcd.hdc);
 
               auto buttons = win32::tool_bar(custom_draw->nmcd.hdr.hwndFrom);
               auto count = buttons.ButtonCount();

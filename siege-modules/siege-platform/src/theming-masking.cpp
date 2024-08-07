@@ -5,7 +5,7 @@
 
 namespace win32
 {
-  HBRUSH get_solid_brush(COLORREF color);
+  gdi::brush_ref get_solid_brush(COLORREF color);
 
   auto& bitmap_factory()
   {
@@ -22,7 +22,6 @@ namespace win32
 
     return *factory;
   }
-
 
   struct cache_info
   {
@@ -47,8 +46,12 @@ namespace win32
     return cache;
   }
 
+  /*gdi::bitmap_ref create_layer_mask(::SIZE size, int scale, gdi::font_ref font, std::wstring text);
+  {
 
-  HBITMAP create_layer_mask(SIZE size, int scale, std::move_only_function<void(HDC, int)> painter)
+  }*/
+
+  gdi::bitmap_ref create_layer_mask(SIZE size, int scale, std::move_only_function<void(gdi::drawing_context_ref, int)> painter)
   {
     static auto screen_dc = GetDC(nullptr);
 
@@ -59,7 +62,7 @@ namespace win32
 
     if (existing != cache.layer_masks.end())
     {
-      return existing->second.bitmap;
+      return gdi::bitmap_ref(existing->second.bitmap);
     }
 
     BITMAPINFO info{
@@ -83,7 +86,7 @@ namespace win32
     SelectObject(temp_dc, get_solid_brush(RGB(255, 255, 255)));
 
     BeginPath(temp_dc);
-    painter(temp_dc, scale);
+    painter(win32::gdi::drawing_context_ref(temp_dc), scale);
     EndPath(temp_dc);
 
     // TODO see how we can use the path for caching
@@ -136,10 +139,10 @@ namespace win32
     // TODO find out if the bitmap is copied or if a reference is kept to it
     DeleteObject(temp_bitmap);
 
-    return mask_cache.bitmap;
+    return gdi::bitmap_ref(mask_cache.bitmap);
   }
 
-  HDC apply_layer_mask(HDC source, HBITMAP bitmap)
+  win32::gdi::drawing_context_ref apply_layer_mask(win32::gdi::drawing_context_ref source, gdi::bitmap_ref bitmap)
   {
     auto& cache = get_image_cache();
     auto existing = cache.dc_cache.find(bitmap);
@@ -185,7 +188,7 @@ namespace win32
       control_pixels[i].rgbReserved = mask_pixels[i].rgbReserved;
     }
 
-    return existing->second;
+    return win32::gdi::drawing_context_ref(existing->second);
   }
 
 }// namespace win32

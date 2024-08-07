@@ -71,11 +71,11 @@ namespace win32
       }
     }
 
-    if constexpr (requires(TWindow t) { t.wm_erase_background(win32::gdi_drawing_context_ref{}); })
+    if constexpr (requires(TWindow t) { t.wm_erase_background(win32::gdi::drawing_context_ref{}); })
     {
       if (message == WM_ERASEBKGND)
       {
-        return self->wm_erase_background(win32::gdi_drawing_context_ref((HDC)wParam));
+        return self->wm_erase_background(win32::gdi::drawing_context_ref((HDC)wParam));
       }
     }
 

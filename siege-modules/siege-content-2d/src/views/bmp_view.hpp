@@ -35,7 +35,7 @@ namespace siege::views
 
     bmp_controller controller;
 
-    win32::gdi_bitmap current_bitmap;
+    win32::gdi::bitmap current_bitmap;
 
     std::list<platform::storage_module> loaded_modules;
 

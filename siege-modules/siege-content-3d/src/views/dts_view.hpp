@@ -35,7 +35,7 @@ namespace siege::views
     std::map<std::optional<std::string>, std::map<std::string, bool>> visible_nodes;
     std::map<std::string, std::map<std::string, bool>> visible_objects;
 
-    std::map<win32::gdi_drawing_context_ref, win32::auto_handle<HGLRC, opengl_deleter>> contexts;
+    std::map<win32::gdi::drawing_context_ref, win32::auto_handle<HGLRC, opengl_deleter>> contexts;
 
     glm::vec3 translation = { 0, 0, -20 };
     content::vector3f rotation = { 115, 180, -35 };
@@ -87,7 +87,7 @@ namespace siege::views
       return FALSE;
     }
 
-    auto create_or_get_gl_context(win32::gdi_drawing_context_ref gdi_context)
+    auto create_or_get_gl_context(win32::gdi::drawing_context_ref gdi_context)
     {
       auto existing_gl_context = contexts.find(gdi_context);
 
@@ -109,7 +109,7 @@ namespace siege::views
 
         assert(iPixelFormat != 0);
         assert(SetPixelFormat(gdi_context, iPixelFormat, &pfd) == TRUE);
-        auto temp = std::make_pair(win32::gdi_drawing_context_ref(gdi_context.get()), win32::auto_handle<HGLRC, opengl_deleter>(::wglCreateContext(gdi_context)));
+        auto temp = std::make_pair(win32::gdi::drawing_context_ref(gdi_context.get()), win32::auto_handle<HGLRC, opengl_deleter>(::wglCreateContext(gdi_context)));
 
         assert(temp.first != nullptr);
         assert(temp.second != nullptr);
@@ -131,8 +131,8 @@ namespace siege::views
       render_view.SetWindowPos(left_size);
       render_view.SetWindowPos(POINT{});
 
-      win32::gdi_drawing_context gdi_context(render_view);
-      auto context = create_or_get_gl_context(win32::gdi_drawing_context_ref(gdi_context.get()));
+      win32::gdi::drawing_context gdi_context(render_view.ref());
+      auto context = create_or_get_gl_context(win32::gdi::drawing_context_ref(gdi_context.get()));
       glViewport(0, 0, left_size.cx, left_size.cy);
       glClearDepth(1.f);
 
@@ -152,7 +152,7 @@ namespace siege::views
       return 0;
     }
 
-    std::optional<HBRUSH> wm_control_color(win32::static_control, win32::gdi_drawing_context_ref context) override
+    std::optional<HBRUSH> wm_control_color(win32::static_control, win32::gdi::drawing_context_ref context) override
     {
       auto gl_context = create_or_get_gl_context(std::move(context));
       glClearColor(0.3f, 0.3f, 0.3f, 0.f);
@@ -164,7 +164,7 @@ namespace siege::views
     {
       if (item.hwndItem == render_view && item.itemAction == ODA_DRAWENTIRE && renderer)
       {
-        auto existing_gl_context = create_or_get_gl_context(win32::gdi_drawing_context_ref(item.hDC));
+        auto existing_gl_context = create_or_get_gl_context(win32::gdi::drawing_context_ref(item.hDC));
         
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glMatrixMode(GL_MODELVIEW);

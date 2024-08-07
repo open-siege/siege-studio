@@ -5,9 +5,9 @@
 
 namespace win32
 {
-  HFONT load_font(LOGFONTW font_info)
+  gdi::font_ref load_font(LOGFONTW font_info)
   {
-    thread_local std::map<std::wstring, win32::auto_handle<HFONT, gdi_deleter>> loaded_fonts;
+    thread_local std::map<std::wstring, gdi::font> loaded_fonts;
 
     if (!font_info.lfCharSet)
     {
@@ -46,10 +46,10 @@ namespace win32
 
     if (existing_font != loaded_fonts.end())
     {
-      return existing_font->second;
+      return gdi::font_ref(existing_font->second);
     }
 
-    win32::auto_handle<HFONT, gdi_deleter> font(::CreateFontW(font_info.lfHeight,
+    gdi::font font(::CreateFontW(font_info.lfHeight,
       font_info.lfWidth,
       font_info.lfEscapement,
       font_info.lfOrientation,
@@ -65,10 +65,10 @@ namespace win32
       font_info.lfFaceName));
     auto result = loaded_fonts.emplace(key, std::move(font));
     
-    return result.first->second;
+    return gdi::font_ref(result.first->second);
   }
 
-  std::optional<SIZE> get_font_size_for_string(HFONT font, std::wstring_view text)
+  std::optional<SIZE> get_font_size_for_string(gdi::font_ref font, std::wstring_view text)
   {
     auto mem_dc = CreateCompatibleDC(GetDC(nullptr));
     auto old_font = SelectFont(mem_dc, font);

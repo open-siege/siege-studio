@@ -5,13 +5,13 @@
 
 namespace win32
 {
-  std::map<COLORREF, win32::gdi_brush>& get_color_map()
+  std::map<COLORREF, gdi::brush>& get_color_map()
   {
-    thread_local std::map<COLORREF, win32::gdi_brush> cache;
+    thread_local std::map<COLORREF, gdi::brush> cache;
     return cache;
   }
 
-  HBRUSH get_solid_brush(COLORREF color)
+  gdi::brush_ref get_solid_brush(COLORREF color)
   {
     auto& colors = get_color_map();
 
@@ -25,11 +25,11 @@ namespace win32
 
     if (brush != colors.end())
     {
-      return brush->second;
+      return gdi::brush_ref(brush->second);
     }
 
-    auto result = colors.emplace(color, win32::gdi_brush(::CreateSolidBrush(color)));
+    auto result = colors.emplace(color, gdi::brush(::CreateSolidBrush(color)));
 
-    return result.first->second.get();
+    return gdi::brush_ref(result.first->second.get());
   }
 }// namespace win32

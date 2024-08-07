@@ -1,14 +1,23 @@
-#ifndef WIN32_SHAPES_HPP
-#define WIN32_SHAPES_HPP
+#ifndef WIN32_DRAWING_HPP
+#define WIN32_DRAWING_HPP
 
-#include <siege/platform/win/desktop/messages.hpp>
+#include <siege/platform/win/desktop/window.hpp>
 #include <siege/platform/win/auto_handle.hpp>
 #include <cassert>
 
 namespace win32
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+  struct rect : ::RECT
+  {
+    auto Offset(int dx, int dy)
+    {
+      return ::OffsetRect(this, dx, dy) == TRUE;
+    }
+  };
+}
 
+namespace win32::gdi
+{
   struct gdi_deleter
   {
     void operator()(HGDIOBJ gdi_obj)
@@ -17,15 +26,18 @@ namespace win32
     }
   };
 
-  struct hdc_deleter
+  struct hdc_releaser
   {
-    HWND window;
-    std::optional<PAINTSTRUCT> paint_info;
-    hdc_deleter(HWND window) : window(window)
+    HWND window = nullptr;
+    std::optional<PAINTSTRUCT> paint_info = std::nullopt;
+
+    hdc_releaser() = default;
+
+    hdc_releaser(HWND window) : window(window)
     {
     }
 
-    hdc_deleter(HWND window, PAINTSTRUCT info) : window(window), paint_info(std::move(paint_info))
+    hdc_releaser(HWND window, PAINTSTRUCT info) : window(window), paint_info(std::move(paint_info))
     {
     }
 
@@ -49,24 +61,35 @@ namespace win32
     }
   };
 
-  using gdi_bitmap = win32::auto_handle<HBITMAP, gdi_deleter>;
-  using gdi_brush = win32::auto_handle<HBRUSH, gdi_deleter>;
-  using gdi_palette = win32::auto_handle<HPALETTE, gdi_deleter>;
-  using gdi_pen = win32::auto_handle<HPEN, gdi_deleter>;
-  using gdi_font = win32::auto_handle<HFONT, gdi_deleter>;
+  using bitmap = win32::auto_handle<HBITMAP, gdi_deleter>;
+  using brush = win32::auto_handle<HBRUSH, gdi_deleter>;
+  using palette = win32::auto_handle<HPALETTE, gdi_deleter>;
+  using pen = win32::auto_handle<HPEN, gdi_deleter>;
+  using font = win32::auto_handle<HFONT, gdi_deleter>;
 
-  struct gdi_drawing_context : win32::auto_handle<HDC, hdc_deleter>
+  using bitmap_ref = win32::auto_handle<HBITMAP, gdi_no_deleter>;
+  using icon_ref = win32::auto_handle<HICON, gdi_no_deleter>;
+  using brush_ref = win32::auto_handle<HBRUSH, gdi_no_deleter>;
+  using pen_ref = win32::auto_handle<HPEN, gdi_no_deleter>;
+  using palette_ref = win32::auto_handle<HPALETTE, gdi_no_deleter>;
+  using font_ref = win32::auto_handle<HFONT, gdi_no_deleter>;
+
+  struct drawing_context : win32::auto_handle<HDC, hdc_releaser>
   {
-    using base = win32::auto_handle<HDC, hdc_deleter>;
+    using base = win32::auto_handle<HDC, hdc_releaser>;
     using base::base;
 
-    gdi_drawing_context(HWND window) : base(::GetDC(window), hdc_deleter(window))
+    drawing_context(window_ref window) : base(::GetDC(window), hdc_releaser(window))
     {
-
     }
 
-    gdi_drawing_context(HWND window, ::PAINTSTRUCT paint_info) : base(::BeginPaint(window, &paint_info), hdc_deleter(window, std::move(paint_info)))
+    drawing_context(window_ref window, ::PAINTSTRUCT paint_info) : base(::BeginPaint(window, &paint_info), hdc_releaser(window, std::move(paint_info)))
     {
+    }
+
+    static drawing_context from_screen()
+    {
+      return drawing_context(window_ref(nullptr));
     }
 
     auto FillRect(const ::RECT& pos, HBRUSH brush)
@@ -75,7 +98,9 @@ namespace win32
     }
   };
 
-  struct gdi_drawing_context_ref : win32::auto_handle<HDC, gdi_no_deleter>
+  drawing_context GetDC(std::optional<window_ref> window = std::nullopt);
+
+  struct drawing_context_ref : win32::auto_handle<HDC, gdi_no_deleter>
   {
     using base = win32::auto_handle<HDC, gdi_no_deleter>;
     using base::base;
@@ -86,17 +111,6 @@ namespace win32
       return ::FillRect(*this, &pos, brush);
     }
   };
-
-
-  struct rect : ::RECT
-  {
-    auto Offset(int dx, int dy)
-    {
-      return ::OffsetRect(this, dx, dy) == TRUE;
-    }
-  };
-
-#endif
 
 }// namespace win32
 
