@@ -175,6 +175,16 @@ namespace win32
             {
               auto scale = 16;
 
+              //auto font_icon = win32::load_font(LOGFONTW{
+              //  .lfHeight = -1024,
+              //  .lfClipPrecision = CLIP_DEFAULT_PRECIS,
+              //  .lfQuality = NONANTIALIASED_QUALITY,
+              //  .lfFaceName = L"Segoe MDL2 Assets" 
+              //    });
+              //std::wstring icon_text;
+              //icon_text.push_back(0xE701);
+              //mask_bitmap = win32::create_layer_mask(size, std::move(font_icon), icon_text);
+
               mask_bitmap = win32::create_layer_mask(size, scale, [size = size](auto dc, auto scale) {
                 RoundRect(dc, 0, 0, size.cx * scale, size.cy * scale, (size.cy * scale) / 2, size.cy * scale);
               });

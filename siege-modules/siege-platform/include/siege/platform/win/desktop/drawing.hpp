@@ -14,7 +14,7 @@ namespace win32
       return ::OffsetRect(this, dx, dy) == TRUE;
     }
   };
-}
+}// namespace win32
 
 namespace win32::gdi
 {
@@ -54,6 +54,27 @@ namespace win32::gdi
     }
   };
 
+  struct hdc_deleter
+  {
+    int state_index = 0;
+
+    hdc_deleter() = default;
+
+    hdc_deleter(int state) : state_index(state)
+    {
+    }
+
+
+    void operator()(HDC dc)
+    {
+      if (state_index)
+      {
+        assert(RestoreDC(dc, state_index));
+      }
+      assert(DeleteDC(dc));
+    }
+  };
+
   struct gdi_no_deleter
   {
     void operator()(HGDIOBJ window)
@@ -73,6 +94,31 @@ namespace win32::gdi
   using pen_ref = win32::auto_handle<HPEN, gdi_no_deleter>;
   using palette_ref = win32::auto_handle<HPALETTE, gdi_no_deleter>;
   using font_ref = win32::auto_handle<HFONT, gdi_no_deleter>;
+
+  struct drawing_context_ref : win32::auto_handle<HDC, gdi_no_deleter>
+  {
+    using base = win32::auto_handle<HDC, gdi_no_deleter>;
+    using base::base;
+
+
+    auto FillRect(const ::RECT& pos, HBRUSH brush)
+    {
+      return ::FillRect(*this, &pos, brush);
+    }
+  };
+
+  struct memory_drawing_context : win32::auto_handle<HDC, hdc_deleter>
+  {
+    using base = win32::auto_handle<HDC, hdc_deleter>;
+    
+    memory_drawing_context(drawing_context_ref other, bool auto_restore = true) : base(::CreateCompatibleDC(other), hdc_deleter(auto_restore ? 1 : 0))
+    {
+      if (auto_restore)
+      {
+        this->get_deleter().state_index = ::SaveDC(*this);
+      }
+    }
+  };
 
   struct drawing_context : win32::auto_handle<HDC, hdc_releaser>
   {
@@ -100,18 +146,7 @@ namespace win32::gdi
 
   drawing_context GetDC(std::optional<window_ref> window = std::nullopt);
 
-  struct drawing_context_ref : win32::auto_handle<HDC, gdi_no_deleter>
-  {
-    using base = win32::auto_handle<HDC, gdi_no_deleter>;
-    using base::base;
 
-
-    auto FillRect(const ::RECT& pos, HBRUSH brush)
-    {
-      return ::FillRect(*this, &pos, brush);
-    }
-  };
-
-}// namespace win32
+}// namespace win32::gdi
 
 #endif// !WIN32_SHAPES_HPP

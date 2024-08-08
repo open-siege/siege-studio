@@ -276,10 +276,9 @@ namespace siege::views
               .biBitCount = 32,
               .biCompression = BI_RGB }
           };
-          auto wnd_dc = ::GetDC(nullptr);
 
           void* pixels = nullptr;
-          current_bitmap.reset(::CreateDIBSection(wnd_dc, &info, DIB_RGB_COLORS, &pixels, nullptr, 0));
+          current_bitmap.reset(::CreateDIBSection(nullptr, &info, DIB_RGB_COLORS, &pixels, nullptr, 0));
 
           controller.convert(0, std::make_pair(size->cx, size->cy), 32, std::span(reinterpret_cast<std::byte*>(pixels), size->cx * size->cy * 4));
 

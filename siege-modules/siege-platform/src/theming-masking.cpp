@@ -31,7 +31,7 @@ namespace win32
 
   struct image_cache
   {
-    std::map<std::array<int, 3>, cache_info> layer_masks;
+    std::map<std::wstring, cache_info> layer_masks;
     std::map<HBITMAP, HDC> dc_cache;
 
     std::map<HBITMAP, std::span<RGBQUAD>> mask_pixels;
@@ -46,16 +46,26 @@ namespace win32
     return cache;
   }
 
-  /*gdi::bitmap_ref create_layer_mask(::SIZE size, int scale, gdi::font_ref font, std::wstring text);
+  gdi::bitmap_ref create_layer_mask(::SIZE size, gdi::font_ref font, std::wstring text)
   {
+    std::wstring key;
+    key.reserve(3 + text.size());
 
-  }*/
+    key.append(1, size.cx);
+    key.append(1, size.cy);
+    key.append(1, (wchar_t)font.get());
 
-  gdi::bitmap_ref create_layer_mask(SIZE size, int scale, std::move_only_function<void(gdi::drawing_context_ref, int)> painter)
-  {
-    static auto screen_dc = GetDC(nullptr);
+    auto screen_dc = gdi::drawing_context::from_screen();
+    gdi::memory_drawing_context temp_dc(gdi::drawing_context_ref(screen_dc.get()));
+    screen_dc.reset();
 
-    std::array<int, 3> key{ { size.cx, size.cy, scale } };
+    SelectObject(temp_dc, font);
+    SIZE font_size{};
+    ::GetTextExtentPoint32W(temp_dc, text.data(), text.size(), &font_size);
+
+    key.append(1, font_size.cx);
+    key.append(1, font_size.cy);
+    key.append(text);
 
     auto& cache = get_image_cache();
     auto existing = cache.layer_masks.find(key);
@@ -68,43 +78,45 @@ namespace win32
     BITMAPINFO info{
       .bmiHeader{
         .biSize = sizeof(BITMAPINFOHEADER),
-        .biWidth = LONG(size.cx * scale),
-        .biHeight = LONG(size.cy * scale),
+        .biWidth = LONG(font_size.cx),
+        .biHeight = LONG(font_size.cy),
         .biPlanes = 1,
         .biBitCount = 32,
         .biCompression = BI_RGB }
     };
     void* pixels = nullptr;
-    auto temp_bitmap = ::CreateDIBSection(screen_dc, &info, DIB_RGB_COLORS, &pixels, nullptr, 0);
+    auto temp_bitmap = ::CreateDIBSection(nullptr, &info, DIB_RGB_COLORS, &pixels, nullptr, 0);
+    assert(temp_bitmap);
 
-    auto temp_dc = CreateCompatibleDC(screen_dc);
     auto old_bitmap = (HBITMAP)SelectObject(temp_dc, temp_bitmap);
-    RECT temp_rect{ .left = 0, .top = 0, .right = size.cx * scale, .bottom = size.cy * scale };
-    COLORREF temp_color = RGB(0, 0, 0);
-    FillRect(temp_dc, &temp_rect, get_solid_brush(temp_color));
 
-    SelectObject(temp_dc, get_solid_brush(RGB(255, 255, 255)));
+    RECT text_rect{
+      .right = font_size.cx,
+      .bottom = font_size.cy
+    };
 
-    BeginPath(temp_dc);
-    painter(win32::gdi::drawing_context_ref(temp_dc), scale);
-    EndPath(temp_dc);
+    COLORREF background_color = RGB(255, 255, 255);
+    COLORREF text_color = RGB(0, 0, 0);
 
-    // TODO see how we can use the path for caching
-    FillPath(temp_dc);
+    SetTextColor(temp_dc, text_color);
+    SelectObject(temp_dc, GetStockObject(DC_BRUSH));
+    SetDCBrushColor(temp_dc, text_color);
 
-    std::span<RGBQUAD> colors((RGBQUAD*)pixels, size.cx * scale * size.cy * scale);
+    SetBkColor(temp_dc, background_color);
+    SelectObject(temp_dc, GetStockObject(DC_PEN));
+    SetDCPenColor(temp_dc, background_color);
+
+    ::DrawTextW(temp_dc, text.data(), text.size(), &text_rect, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+    SelectObject(temp_dc, old_bitmap);
+
+    std::span<RGBQUAD> colors((RGBQUAD*)pixels, font_size.cx * font_size.cy);
+
     for (auto& color : colors)
     {
-      if (std::memcmp(&temp_color, &color, sizeof(COLORREF)) != 0)
-      {
-        color.rgbReserved = 0xff;
-      }
+      color.rgbReserved = color.rgbRed;
     }
 
     win32::com::com_ptr<IWICBitmap> downscaled_mask;
-
-    SelectObject(temp_dc, old_bitmap);
-    DeleteDC(temp_dc);
 
     assert(bitmap_factory().CreateBitmapFromHBITMAP(temp_bitmap, nullptr, WICBitmapAlphaChannelOption::WICBitmapUseAlpha, downscaled_mask.put()) == S_OK);
 
@@ -126,7 +138,115 @@ namespace win32
     void* final_pixels = nullptr;
     cache_info mask_cache{};
 
-    mask_cache.bitmap = ::CreateDIBSection(screen_dc, &final_info, DIB_RGB_COLORS, &final_pixels, nullptr, 0);
+    mask_cache.bitmap = ::CreateDIBSection(nullptr, &final_info, DIB_RGB_COLORS, &final_pixels, nullptr, 0);
+
+    auto stride = size.cx * sizeof(std::int32_t);
+
+    assert(scaler->CopyPixels(nullptr, stride, size.cy * stride * sizeof(std::int32_t), reinterpret_cast<BYTE*>(final_pixels)) == S_OK);
+    mask_cache.pixels = std::span<RGBQUAD>((RGBQUAD*)final_pixels, size.cx * size.cy);
+
+
+    cache.layer_masks.emplace(key, mask_cache);
+    cache.mask_pixels.emplace(mask_cache.bitmap, mask_cache.pixels);
+
+    DeleteObject(temp_bitmap);
+
+    return gdi::bitmap_ref(mask_cache.bitmap);
+  }
+
+  gdi::bitmap_ref create_layer_mask(SIZE size, int scale, std::move_only_function<void(gdi::drawing_context_ref, int)> painter)
+  {
+
+    std::wstring key;
+    key.reserve(3 + 16);
+    key.push_back(wchar_t(size.cx));
+    key.push_back(wchar_t(size.cy));
+    key.push_back(wchar_t(scale));
+
+    auto& cache = get_image_cache();
+
+    auto screen_dc = gdi::drawing_context::from_screen();
+    gdi::memory_drawing_context path_dc(gdi::drawing_context_ref(screen_dc.get()));
+
+    BeginPath(path_dc);
+    painter(win32::gdi::drawing_context_ref(path_dc), scale);
+    EndPath(path_dc);
+
+    std::array<POINT, 16> points{};
+    std::array<BYTE, 16> commands{};
+    GetPath(path_dc, points.data(), commands.data(), points.size());
+    AbortPath(path_dc);
+
+    for (auto command : commands)
+    {
+      key.push_back(wchar_t(command));
+    }
+
+    auto existing = cache.layer_masks.find(key);
+
+    if (existing != cache.layer_masks.end())
+    {
+      return gdi::bitmap_ref(existing->second.bitmap);
+    }
+
+    BITMAPINFO info{
+      .bmiHeader{
+        .biSize = sizeof(BITMAPINFOHEADER),
+        .biWidth = LONG(size.cx * scale),
+        .biHeight = LONG(size.cy * scale),
+        .biPlanes = 1,
+        .biBitCount = 32,
+        .biCompression = BI_RGB }
+    };
+    void* pixels = nullptr;
+    auto temp_bitmap = ::CreateDIBSection(nullptr, &info, DIB_RGB_COLORS, &pixels, nullptr, 0);
+
+    gdi::memory_drawing_context temp_dc(gdi::drawing_context_ref(screen_dc.get()));
+
+    auto old_bitmap = (HBITMAP)SelectObject(temp_dc, temp_bitmap);
+    RECT temp_rect{ .left = 0, .top = 0, .right = size.cx * scale, .bottom = size.cy * scale };
+    COLORREF temp_color = RGB(0, 0, 0);
+    FillRect(temp_dc, &temp_rect, get_solid_brush(temp_color));
+
+    SelectObject(temp_dc, get_solid_brush(RGB(255, 255, 255)));
+
+    BeginPath(temp_dc);
+    painter(win32::gdi::drawing_context_ref(temp_dc), scale);
+    EndPath(temp_dc);
+
+    // TODO see how we can use the path for caching
+    FillPath(temp_dc);
+    temp_dc.reset();
+
+    std::span<RGBQUAD> colors((RGBQUAD*)pixels, size.cx * scale * size.cy * scale);
+    for (auto& color : colors)
+    {
+      color.rgbReserved = color.rgbRed;
+    }
+
+    win32::com::com_ptr<IWICBitmap> downscaled_mask;
+
+    assert(bitmap_factory().CreateBitmapFromHBITMAP(temp_bitmap, nullptr, WICBitmapAlphaChannelOption::WICBitmapUseAlpha, downscaled_mask.put()) == S_OK);
+
+    win32::com::com_ptr<IWICBitmapScaler> scaler;
+    assert(bitmap_factory().CreateBitmapScaler(scaler.put()) == S_OK);
+
+    auto resampling_mode = IsWindows10OrGreater() ? WICBitmapInterpolationModeHighQualityCubic : WICBitmapInterpolationModeFant;
+    scaler->Initialize(downscaled_mask.get(), size.cx, size.cy, resampling_mode);
+
+    BITMAPINFO final_info{
+      .bmiHeader{
+        .biSize = sizeof(BITMAPINFOHEADER),
+        .biWidth = LONG(size.cx),
+        .biHeight = LONG(size.cy),
+        .biPlanes = 1,
+        .biBitCount = 32,
+        .biCompression = BI_RGB }
+    };
+    void* final_pixels = nullptr;
+    cache_info mask_cache{};
+
+    mask_cache.bitmap = ::CreateDIBSection(nullptr, &final_info, DIB_RGB_COLORS, &final_pixels, nullptr, 0);
 
     auto stride = size.cx * sizeof(std::int32_t);
 
@@ -164,7 +284,7 @@ namespace win32
           .biCompression = BI_RGB }
       };
       void* pixels = nullptr;
-      auto temp_bitmap = ::CreateDIBSection(source, &info, DIB_RGB_COLORS, &pixels, nullptr, 0);
+      auto temp_bitmap = ::CreateDIBSection(nullptr, &info, DIB_RGB_COLORS, &pixels, nullptr, 0);
 
       cache.target_pixels.emplace(bitmap, std::span<RGBQUAD>((RGBQUAD*)pixels, mask_info.bmWidth * mask_info.bmHeight));
 
