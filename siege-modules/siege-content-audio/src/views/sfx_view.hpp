@@ -13,8 +13,8 @@
 
 namespace siege::views
 {
-  struct sfx_view final : win32::window_ref, 
-      win32::tool_bar::notifications
+  struct sfx_view final : win32::window_ref
+    , win32::tool_bar::notifications
   {
     sfx_controller controller;
 
@@ -22,9 +22,14 @@ namespace siege::views
     win32::static_control render_view;
     win32::list_box selection;
 
+    HIMAGELIST image_list;
     media_module media;
 
     sfx_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self), media{}
+    {
+    }
+
+    ~sfx_view()
     {
     }
 
@@ -32,15 +37,15 @@ namespace siege::views
     {
       auto control_factory = win32::window_factory(ref());
 
-      player_buttons = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_LIST | TBSTYLE_WRAPABLE });
+      player_buttons = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_WRAPABLE });
 
-      player_buttons.InsertButton(-1, { .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK | BTNS_SHOWTEXT, .iString = (INT_PTR)L"Play" });
+      player_buttons.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Play" });
 
-      player_buttons.InsertButton(-1, { .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK | BTNS_SHOWTEXT, .iString = (INT_PTR)L"Pause" });
+      player_buttons.InsertButton(-1, { .iBitmap = 1, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Pause" });
 
-      player_buttons.InsertButton(-1, { .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK | BTNS_SHOWTEXT, .iString = (INT_PTR)L"Stop" });
+      player_buttons.InsertButton(-1, { .iBitmap = 2, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Stop" });
 
-      player_buttons.InsertButton(-1, { .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK | BTNS_SHOWTEXT, .iString = (INT_PTR)L"Loop" });
+      player_buttons.InsertButton(-1, { .iBitmap = 3, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Loop" });
 
       render_view = *control_factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD, .lpszName = L"Test" });
 
@@ -58,6 +63,44 @@ namespace siege::views
       auto right_size = SIZE{ .cx = client_size.cx - left_size.cx, .cy = client_size.cy };
 
       auto height = left_size.cy / 12;
+
+      SIZE icon_size{ .cx = height, .cy = height };
+
+      if (image_list)
+      {
+        ImageList_Destroy(image_list);
+        image_list = nullptr;
+      }
+
+      image_list = ImageList_Create(icon_size.cx, icon_size.cy, ILC_COLOR32, 4, 4);
+
+      // TODO create a font icon mapper to
+      // handle fallback icons
+      auto font_icon = win32::load_font(LOGFONTW{
+        .lfHeight = -1024,
+        .lfClipPrecision = CLIP_DEFAULT_PRECIS,
+        .lfQuality = NONANTIALIASED_QUALITY,
+        .lfFaceName = L"Segoe MDL2 Assets" });
+
+      // TODO make the image list creation easier (provide a list of icons then generate)
+      auto play_icon = win32::create_icon(icon_size, RGBQUAD{ .rgbRed = 255 }, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, 0xE768)));
+      ImageList_ReplaceIcon(image_list, -1, play_icon);
+
+      auto pause_icon = win32::create_icon(icon_size, RGBQUAD{ .rgbRed = 255 }, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, 0xE769)));
+      ImageList_ReplaceIcon(image_list, -1, pause_icon);
+
+      auto stop_icon = win32::create_icon(icon_size, RGBQUAD{ .rgbRed = 255 }, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, 0xE71A)));
+      ImageList_ReplaceIcon(image_list, -1, stop_icon);
+
+      auto loop_icon = win32::create_icon(icon_size, RGBQUAD{.rgbRed = 255}, win32::create_layer_mask(icon_size, 
+          win32::gdi::font_ref(font_icon.get()), 
+          std::wstring(1, 0xE8EE)));
+      ImageList_ReplaceIcon(image_list, -1, loop_icon);
+
+
+      SendMessageW(player_buttons, TB_SETIMAGELIST, 0, (LPARAM)image_list);
+
+
       player_buttons.SetWindowPos(SIZE{ .cx = left_size.cx, .cy = height });
       player_buttons.SetWindowPos(POINT{});
       player_buttons.SetButtonSize(SIZE{ .cx = left_size.cx / (LONG)player_buttons.ButtonCount(), .cy = height });

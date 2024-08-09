@@ -26,6 +26,14 @@ namespace win32::gdi
     }
   };
 
+  struct icon_deleter
+  {
+    void operator()(HICON gdi_obj)
+    {
+      assert(::DestroyIcon(gdi_obj) == TRUE);
+    }
+  };
+
   struct hdc_releaser
   {
     HWND window = nullptr;
@@ -83,6 +91,7 @@ namespace win32::gdi
   };
 
   using bitmap = win32::auto_handle<HBITMAP, gdi_deleter>;
+  using icon = win32::auto_handle<HICON, icon_deleter>;
   using brush = win32::auto_handle<HBRUSH, gdi_deleter>;
   using palette = win32::auto_handle<HPALETTE, gdi_deleter>;
   using pen = win32::auto_handle<HPEN, gdi_deleter>;

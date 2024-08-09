@@ -311,4 +311,32 @@ namespace win32
     return win32::gdi::drawing_context_ref(existing->second);
   }
 
+  gdi::icon create_icon(::SIZE size, ::RGBQUAD solid_color, gdi::bitmap_ref mask)
+  {
+    std::vector<RGBQUAD> pixels;
+    pixels.resize(size.cx * size.cy);
+
+    auto& cache = get_image_cache();
+    auto mask_pixels = cache.mask_pixels[mask];
+
+    std::size_t index = 0;
+    std::transform(pixels.begin(), pixels.end(), pixels.begin(), [solid_color, &mask, &index, &mask_pixels](RGBQUAD temp) {
+      std::memcpy(&temp, &solid_color, sizeof(solid_color));
+      temp.rgbReserved = 255 - mask_pixels[index++].rgbReserved;
+      return temp;
+    });
+
+    ::ICONINFO info{
+      .fIcon = TRUE,
+      .hbmMask = ::CreateBitmap(size.cx, size.cy, 1, 1, nullptr),
+      .hbmColor = ::CreateBitmap(size.cx, size.cy, 1, 32, pixels.data()),
+    };
+
+    auto icon = gdi::icon(::CreateIconIndirect(&info));
+
+    DeleteObject(info.hbmColor);
+    DeleteObject(info.hbmMask);
+    return icon;
+  }
+
 }// namespace win32
