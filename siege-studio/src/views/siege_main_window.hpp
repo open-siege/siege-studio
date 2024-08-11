@@ -26,16 +26,18 @@ namespace siege::views
   struct siege_main_window final : win32::window_ref
     , win32::tree_view::notifications
     , win32::tab_control::notifications
+    , win32::tool_bar::notifications
     , win32::menu::notifications
   {
     using win32::tree_view::notifications::wm_notify;
+    using win32::tool_bar::notifications::wm_notify;
     using win32::menu::notifications::wm_draw_item;
     using win32::tab_control::notifications::wm_draw_item;
 
     win32::tree_view dir_list;
     win32::button separator;
     win32::tab_control tab_control;
-    win32::button close_button;
+    //    win32::button close_button;
     win32::window theme_window;
 
     std::list<platform::content_module> loaded_modules;
@@ -58,8 +60,9 @@ namespace siege::views
 
     std::wstring buffer;
 
-    HMENU light_menu;
-    HMENU dark_menu;
+    win32::tool_bar main_menu;
+    std::array<win32::menu, 4> popup_menus;
+
     HIMAGELIST shell_images = nullptr;
 
     bool is_dark_mode = false;
@@ -86,44 +89,6 @@ namespace siege::views
 
       selected_file = files.end();
 
-      light_menu = ::CreateMenu();
-      dark_menu = ::CreateMenu();
-
-
-      auto menus = std::array<HMENU, 2>{ light_menu, dark_menu };
-
-      bool is_light = true;
-
-      for (auto& menu : menus)
-      {
-        std::size_t id = 1u;
-        auto file_menu = ::CreatePopupMenu();
-        auto edit_menu = ::CreatePopupMenu();
-        auto popup = is_light ? MF_POPUP : MF_OWNERDRAW | MF_POPUP;
-        auto string = is_light ? MF_STRING : MF_OWNERDRAW | MF_STRING;
-        auto separator = is_light ? MF_SEPARATOR : MF_OWNERDRAW | MF_SEPARATOR;
-
-        AppendMenuW(menu, popup, reinterpret_cast<INT_PTR>(file_menu), L"File");
-        AppendMenuW(file_menu, string, open_id, L"Open...");
-        AppendMenuW(file_menu, string, open_new_tab_id, L"Open in New Tab...");
-        AppendMenuW(file_menu, string, open_workspace_id, L"Open Folder as Workspace");
-        AppendMenuW(file_menu, separator, id++, nullptr);
-        AppendMenuW(file_menu, string, RegisterWindowMessageW(L"COMMAND_EXIT"), L"Quit");
-
-        AppendMenuW(menu, popup, reinterpret_cast<INT_PTR>(edit_menu), L"Edit");
-        AppendMenuW(edit_menu, string, edit_theme_id, L"Theme");
-        AppendMenuW(menu, string, id++, L"View");
-        AppendMenuW(menu, string, id++, L"Help");
-        is_light = false;
-      }
-
-      MENUINFO mi = { 0 };
-      mi.cbSize = sizeof(mi);
-      mi.fMask = MIM_BACKGROUND | MIM_APPLYTOSUBMENUS;
-      mi.hbrBack = ::CreateSolidBrush(0x00383838);
-
-      SetMenuInfo(dark_menu, &mi);
-      SetMenu(self, light_menu);
       this->SetPropW(L"AppsUseDarkTheme", is_dark_mode);
 
       resize_cursor.reset((HCURSOR)LoadImageW(nullptr, IDC_SIZEWE, IMAGE_CURSOR, LR_DEFAULTSIZE, LR_DEFAULTSIZE, LR_SHARED));
@@ -285,7 +250,37 @@ namespace siege::views
                                   .pszText = const_cast<wchar_t*>(L"+"),
                                 });
 
-      close_button = *factory.CreateWindowExW<win32::button>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"X" });
+      // close_button = *factory.CreateWindowExW<win32::button>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"X" });
+
+
+      main_menu = *factory.CreateWindowExW<win32::tool_bar>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | TBSTYLE_FLAT | TBSTYLE_LIST | CCS_NOPARENTALIGN | CCS_NODIVIDER });
+
+      std::size_t id = 1u;
+      popup_menus[0] = win32::menu(::CreatePopupMenu());
+      popup_menus[1] = win32::menu(::CreatePopupMenu());
+      auto popup = MF_OWNERDRAW | MF_POPUP;
+      auto string = MF_OWNERDRAW | MF_STRING;
+      auto separator = MF_OWNERDRAW | MF_SEPARATOR;
+
+      main_menu.InsertButton(
+        -1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_AUTOSIZE | BTNS_SHOWTEXT | BTNS_DROPDOWN, .iString = (INT_PTR)L"File" });
+
+      main_menu.InsertButton(
+        -1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_AUTOSIZE | BTNS_SHOWTEXT | BTNS_DROPDOWN, .iString = (INT_PTR)L"Edit" });
+
+      main_menu.InsertButton(
+        -1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_AUTOSIZE | BTNS_SHOWTEXT | BTNS_DROPDOWN, .iString = (INT_PTR)L"View" });
+
+      main_menu.InsertButton(
+        -1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_AUTOSIZE | BTNS_SHOWTEXT | BTNS_DROPDOWN, .iString = (INT_PTR)L"Help" });
+
+      AppendMenuW(popup_menus[0], string, open_id, L"Open...");
+      AppendMenuW(popup_menus[0], string, open_new_tab_id, L"Open in New Tab...");
+      AppendMenuW(popup_menus[0], string, open_workspace_id, L"Open Folder as Workspace");
+      AppendMenuW(popup_menus[0], separator, id++, nullptr);
+      AppendMenuW(popup_menus[0], string, RegisterWindowMessageW(L"COMMAND_EXIT"), L"Quit");
+
+      AppendMenuW(popup_menus[1], string, edit_theme_id, L"Theme");
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
@@ -298,8 +293,20 @@ namespace siege::views
       return 0;
     }
 
-    void on_size(SIZE new_size)
+
+    void on_size(SIZE total_size)
     {
+      auto menu_size = total_size;
+      menu_size.cy = menu_size.cy / 20;
+
+      main_menu.SetWindowPos(POINT{});
+      main_menu.SetWindowPos(menu_size);
+      main_menu.AutoSize();
+
+      auto new_size = total_size;
+      new_size.cy -= menu_size.cy;
+
+
       if (tree_size.cx == 0)
       {
         tree_size = new_size;
@@ -314,25 +321,31 @@ namespace siege::views
       auto right_size = new_size;
       right_size.cx -= tree_size.cx - divider.cx;
 
-      dir_list.SetWindowPos(POINT{});
+      dir_list.SetWindowPos(POINT{ .y = menu_size.cy });
       dir_list.SetWindowPos(tree_size);
 
-      separator.SetWindowPos(POINT{ .x = tree_size.cx });
+      separator.SetWindowPos(POINT{ .x = tree_size.cx, .y = menu_size.cy });
       separator.SetWindowPos(divider);
 
-      tab_control.SetWindowPos(POINT{ .x = tree_size.cx + divider.cx });
+      tab_control.SetWindowPos(POINT{ .x = tree_size.cx + divider.cx, .y = menu_size.cy });
       tab_control.SetWindowPos(right_size);
 
+      auto width = std::clamp<int>(right_size.cx / tab_control.GetItemCount() + 1, 150, right_size.cx);
+
+      TabCtrl_SetPadding(tab_control, 10, 0);
+      auto old_height = HIWORD(TabCtrl_SetItemSize(tab_control, width, 40));
+      TabCtrl_SetItemSize(tab_control, width, old_height);
       auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
 
-      if (auto count = tab_control.GetItemCount(); count > 1)
+      // TODO bring this back when the time is right
+      /*if (auto count = tab_control.GetItemCount(); count > 1)
       {
         auto rect = tab_control.GetItemRect(tab_control.GetCurrentSelection());
-        auto width = (rect->right - rect->left) / 12;
+        auto width = 50;
         close_button.SetWindowPos(POINT{ .x = tab_rect.left + rect->right - width, .y = tab_rect.top + rect->top });
         close_button.SetWindowPos(SIZE{ .cx = width, .cy = rect->bottom - rect->top });
         close_button.SetWindowPos(HWND_TOP);
-      }
+      }*/
 
       SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&tab_rect));
 
@@ -436,89 +449,80 @@ namespace siege::views
           if (RegQueryValueExW(key, L"AppsUseLightTheme", nullptr, &type, (LPBYTE)&value, &size) == ERROR_SUCCESS)
           {
             is_dark_mode = value == 0;
-            if (value == 1)
-            {
-              static auto props = [] {
-                std::vector<std::wstring_view> results;
-                results.reserve(32);
-                std::copy(win32::properties::tree_view::props.begin(), win32::properties::tree_view::props.end(), std::back_inserter(results));
-                std::copy(win32::properties::button::props.begin(), win32::properties::button::props.end(), std::back_inserter(results));
-                std::copy(win32::properties::list_view::props.begin(), win32::properties::list_view::props.end(), std::back_inserter(results));
-                std::copy(win32::properties::tool_bar::props.begin(), win32::properties::tool_bar::props.end(), std::back_inserter(results));
-                std::copy(win32::properties::list_box::props.begin(), win32::properties::list_box::props.end(), std::back_inserter(results));
-                std::copy(win32::properties::window::props.begin(), win32::properties::window::props.end(), std::back_inserter(results));
-                std::copy(win32::properties::menu::props.begin(), win32::properties::menu::props.end(), std::back_inserter(results));
-                std::copy(win32::properties::header::props.begin(), win32::properties::header::props.end(), std::back_inserter(results));
-                std::copy(win32::properties::static_control::props.begin(), win32::properties::static_control::props.end(), std::back_inserter(results));
-                std::copy(win32::properties::tab_control::props.begin(), win32::properties::tab_control::props.end(), std::back_inserter(results));
-                return results;
-              }();
-
-              for (auto& prop : props)
-              {
-                this->RemovePropW(prop);
-              }
-
-              win32::apply_theme(*this, dir_list);
-              win32::apply_theme(*this, tab_control);
-              SetMenu(*this, light_menu);
-              BOOL value = FALSE;
-              ::DwmSetWindowAttribute(*this, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
-            }
-            else
-            {
-              COLORREF bk_color = 0x00000000;
-              COLORREF text_color = 0x00FFFFFF;
-              COLORREF text_bk_color = 0x00111111;
-              COLORREF text_highlight_color = 0x00383838;
-
-              this->SetPropW(win32::properties::button::bk_color, bk_color);
-              this->SetPropW(win32::properties::button::text_color, text_color);
-
-              this->SetPropW(win32::properties::tree_view::bk_color, bk_color);
-              this->SetPropW(win32::properties::tree_view::text_color, text_color);
-              this->SetPropW(win32::properties::tree_view::line_color, 0x00383838);
-              this->SetPropW(win32::properties::list_view::bk_color, bk_color);
-              this->SetPropW(win32::properties::list_view::text_color, 0x00FFFFFF);
-              this->SetPropW(win32::properties::list_view::text_bk_color, text_bk_color);
-              this->SetPropW(win32::properties::list_view::outline_color, 0x00AAAAAA);
-
-              this->SetPropW(win32::properties::list_box::bk_color, bk_color);
-              this->SetPropW(win32::properties::list_box::text_color, text_color);
-              this->SetPropW(win32::properties::list_box::text_bk_color, text_bk_color);
-              this->SetPropW(win32::properties::list_box::text_highlight_color, 0x00383838);
-
-              this->SetPropW(win32::properties::header::bk_color, bk_color);
-              this->SetPropW(win32::properties::header::text_color, text_color);
-              this->SetPropW(win32::properties::header::text_bk_color, text_bk_color);
-              this->SetPropW(win32::properties::header::text_highlight_color, text_highlight_color);
-
-              this->SetPropW(win32::properties::tab_control::bk_color, bk_color);
-              this->SetPropW(win32::properties::tab_control::text_color, text_color);
-              this->SetPropW(win32::properties::tab_control::text_bk_color, text_bk_color);
-              this->SetPropW(win32::properties::tab_control::text_highlight_color, text_highlight_color);
-
-              this->SetPropW(win32::properties::tool_bar::bk_color, bk_color);
-              this->SetPropW(win32::properties::tool_bar::text_color, text_color);
-              this->SetPropW(win32::properties::tool_bar::btn_face_color, text_bk_color);
-              this->SetPropW(win32::properties::tool_bar::btn_highlight_color, text_highlight_color);
-              //  this->SetPropW(win32::properties::tool_bar::btn_shadow_color, 0x00AAAAAA);
-              // this->SetPropW(win32::properties::tool_bar::btn_shadow_color, 0x00AAAAAA);
-              // this->SetPropW(win32::properties::tool_bar::text_highlight_color, 0x00AAAAAA);
-              // this->SetPropW(win32::properties::tool_bar::mark_color, 0x00AAAAAA);
-              this->SetPropW(win32::properties::window::bk_color, bk_color);
-              this->SetPropW(win32::properties::static_control::bk_color, bk_color);
-              this->SetPropW(win32::properties::static_control::text_color, text_color);
-
-              win32::apply_theme(*this, dir_list);
-              win32::apply_theme(*this, tab_control);
-
-              SetMenu(*this, dark_menu);
-              BOOL value = TRUE;
-              ::DwmSetWindowAttribute(*this, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
-            }
 
             this->SetPropW(L"AppsUseDarkTheme", is_dark_mode);
+
+            COLORREF bk_color = RGB(0x20, 0x20, 0x20);
+            COLORREF text_color = 0x00FFFFFF;
+            COLORREF text_bk_color = RGB(0x2b, 0x2b, 0x2b);
+            COLORREF text_highlight_color = RGB(0x2d, 0x2d, 0x2d);
+            COLORREF btn_shadow_color = 0x00AAAAAA;
+
+            if (!is_dark_mode)
+            {
+              bk_color = RGB(0xfb, 0xfb, 0xfb) ;
+              text_color = RGB(0x1a, 0x1a, 0x1a);
+              text_bk_color = RGB(0xf3, 0xf3, 0xf3);
+              text_highlight_color = RGB(127, 127, 255);
+              btn_shadow_color = RGB(1, 1, 1);
+            }
+
+            this->SetPropW(win32::properties::button::bk_color, bk_color);
+            this->SetPropW(win32::properties::button::text_color, text_color);
+            this->SetPropW(win32::properties::button::line_color, text_color);
+
+            this->SetPropW(win32::properties::tree_view::bk_color, bk_color);
+            this->SetPropW(win32::properties::tree_view::text_color, text_color);
+            this->SetPropW(win32::properties::tree_view::line_color, 0x00383838);
+            this->SetPropW(win32::properties::list_view::bk_color, bk_color);
+            this->SetPropW(win32::properties::list_view::text_color, text_color);
+            this->SetPropW(win32::properties::list_view::text_bk_color, text_bk_color);
+            this->SetPropW(win32::properties::list_view::outline_color, 0x00AAAAAA);
+
+            this->SetPropW(win32::properties::list_box::bk_color, bk_color);
+            this->SetPropW(win32::properties::list_box::text_color, text_color);
+            this->SetPropW(win32::properties::list_box::text_bk_color, text_bk_color);
+            this->SetPropW(win32::properties::list_box::text_highlight_color, text_highlight_color);
+
+            this->SetPropW(win32::properties::header::bk_color, bk_color);
+            this->SetPropW(win32::properties::header::text_color, text_color);
+            this->SetPropW(win32::properties::header::text_bk_color, text_bk_color);
+            this->SetPropW(win32::properties::header::text_highlight_color, text_highlight_color);
+
+            this->SetPropW(win32::properties::tab_control::bk_color, bk_color);
+            this->SetPropW(win32::properties::tab_control::text_color, text_color);
+            this->SetPropW(win32::properties::tab_control::text_bk_color, text_bk_color);
+            this->SetPropW(win32::properties::tab_control::text_highlight_color, text_highlight_color);
+
+            OutputDebugStringW(L"main window [win32::properties::tab_control::bk_color] ");
+            auto str = std::to_wstring(bk_color);
+            OutputDebugStringW(str.c_str());
+            OutputDebugStringW(L"\n");
+
+            this->SetPropW(win32::properties::tool_bar::bk_color, bk_color);
+            this->SetPropW(win32::properties::tool_bar::text_color, text_color);
+            this->SetPropW(win32::properties::tool_bar::btn_face_color, text_bk_color);
+            this->SetPropW(win32::properties::tool_bar::btn_highlight_color, text_highlight_color);
+            this->SetPropW(win32::properties::tool_bar::btn_shadow_color, btn_shadow_color);
+            this->SetPropW(win32::properties::window::bk_color, bk_color);
+            this->SetPropW(win32::properties::menu::bk_color, bk_color);
+            this->SetPropW(win32::properties::menu::text_color, text_color);
+            this->SetPropW(win32::properties::menu::text_highlight_color, text_highlight_color);
+            this->SetPropW(win32::properties::static_control::bk_color, bk_color);
+            this->SetPropW(win32::properties::static_control::text_color, text_color);
+
+            MENUINFO mi = { 0 };
+            mi.cbSize = sizeof(mi);
+            mi.fMask = MIM_BACKGROUND | MIM_APPLYTOSUBMENUS;
+            mi.hbrBack = win32::get_solid_brush(bk_color);
+
+            SetMenuInfo(popup_menus[0], &mi);
+
+            win32::apply_theme(*this, dir_list);
+            win32::apply_theme(*this, tab_control);
+            win32::apply_theme(*this, main_menu);
+            win32::apply_theme(*this, *this);
+
 
             for (auto i = 0; i < tab_control.GetItemCount(); ++i)
             {
@@ -539,29 +543,57 @@ namespace siege::views
       return std::nullopt;
     }
 
+    std::optional<win32::lresult_t> wm_notify(win32::tool_bar menu_bar, const NMTOOLBARW& notice) override
+    {
+      auto window_rect = menu_bar.GetWindowRect();
+      auto height = window_rect->bottom - window_rect->top;
+
+      window_rect->left += notice.rcButton.left;
+      window_rect->top += notice.rcButton.top;
+      window_rect->right += notice.rcButton.right;
+      window_rect->bottom += notice.rcButton.bottom;
+
+      ::TrackPopupMenu(this->popup_menus[notice.iItem], 0, window_rect->left, window_rect->top + height, 0, *this, nullptr);
+      return TBDDRET_DEFAULT;
+    }
+
     SIZE wm_measure_item(win32::menu, const MEASUREITEMSTRUCT& item) override
     {
-      if (item.itemData)
-      {
-        HDC hDC = ::GetDC(*this);
-        TEXTMETRIC tm{};
-        ::GetTextMetricsW(hDC, &tm);
-        ReleaseDC(*this, hDC);
+      HDC hDC = ::GetDC(*this);
+      auto font = win32::load_font(LOGFONTW{
+        .lfPitchAndFamily = VARIABLE_PITCH,
+        .lfFaceName = L"Segoe UI" });
 
-        return SIZE{ .cx = (LONG)(tm.tmAveCharWidth * std::wcslen((wchar_t*)item.itemData)), .cy = ::GetSystemMetrics(SM_CYMENUSIZE) };
-      }
-      else
-      {
-        return SIZE{ .cx = ::GetSystemMetrics(SM_CXMENUSIZE) * 2, .cy = ::GetSystemMetrics(SM_CYMENUSIZE) };
-      }
+      SelectFont(hDC, font);
+
+      std::wstring text = item.itemData ? (wchar_t*)item.itemData : L"__________";
+      SIZE char_size{};
+      auto result = GetTextExtentPoint32W(hDC, text.data(), text.size(), &char_size);
+      char_size.cx += (GetSystemMetrics(SM_CXMENUCHECK) * 2);
+      ReleaseDC(*this, hDC);
+
+      return char_size;
     }
 
     std::optional<win32::lresult_t> wm_draw_item(win32::menu, DRAWITEMSTRUCT& item) override
     {
-      static auto black_brush = ::CreateSolidBrush(0x00000000);
-      static auto grey_brush = ::CreateSolidBrush(0x00383838);
+      auto font = win32::load_font(LOGFONTW{
+        .lfPitchAndFamily = VARIABLE_PITCH,
+        .lfFaceName = L"Segoe UI" });
+
+      SelectFont(item.hDC, font);
+
+
+      auto bk_color = *this->FindPropertyExW<COLORREF>(win32::properties::menu::bk_color);
+      auto text_highlight_color = *this->FindPropertyExW<COLORREF>(win32::properties::menu::text_highlight_color);
+      auto black_brush = win32::get_solid_brush(bk_color);
+      auto grey_brush = win32::get_solid_brush(*this->FindPropertyExW<COLORREF>(win32::properties::menu::text_highlight_color));
+      auto text_color = this->FindPropertyExW<COLORREF>(win32::properties::menu::text_color);
 
       auto context = win32::gdi::drawing_context_ref(item.hDC);
+
+      SelectObject(context, GetStockObject(DC_PEN));
+      SelectObject(context, GetStockObject(DC_BRUSH));
 
       SetBkMode(context, TRANSPARENT);
 
@@ -578,7 +610,11 @@ namespace siege::views
         context.FillRect(item.rcItem, black_brush);
       }
 
-      ::SetTextColor(context, 0x00FFFFFF);
+      if (text_color)
+      {
+        ::SetTextColor(context, *text_color);
+      }
+
       auto rect = item.rcItem;
       rect.left += (rect.right - rect.left) / 10;
       ::DrawTextW(context, (LPCWSTR)item.itemData, -1, &rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
@@ -621,14 +657,14 @@ namespace siege::views
 
         auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
 
-        if (auto count = tab_control.GetItemCount(); count > 1)
+        /*if (auto count = tab_control.GetItemCount(); count > 1)
         {
           auto rect = tab_control.GetItemRect(current_index);
           auto width = (rect->right - rect->left) / 3;
           close_button.SetWindowPos(POINT{ .x = tab_rect.left + rect->right - width, .y = tab_rect.top + rect->top });
           close_button.SetWindowPos(SIZE{ .cx = width, .cy = rect->bottom - rect->top });
           close_button.SetWindowPos(HWND_TOP);
-        }
+        }*/
 
 
         ShowWindow(win32::hwnd_t(tab_item->lParam), SW_SHOW);
@@ -801,7 +837,7 @@ namespace siege::views
       if (identifier == edit_theme_id)
       {
         theme_window = *win32::window_module_ref::current_module().CreateWindowExW(CREATESTRUCTW{
-          .lpCreateParams = (HWND)*this,
+          .lpCreateParams = (HWND) * this,
           .hwndParent = *this,
           .cx = CW_USEDEFAULT,
           .x = CW_USEDEFAULT,

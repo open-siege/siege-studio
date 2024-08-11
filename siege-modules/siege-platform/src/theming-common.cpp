@@ -9,124 +9,117 @@ namespace win32
 
   void apply_theme(const win32::window_ref& colors, win32::header& control)
   {
-    struct sub_class
+    struct sub_class final : win32::header::notifications
     {
-      static LRESULT __stdcall HandleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      using win32::header::notifications::wm_notify;
+
+      std::map<std::wstring_view, COLORREF> colors;
+
+      sub_class(std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
       {
-        if (uMsg == WM_DRAWITEM && lParam)
+      }
+
+      virtual std::optional<win32::lresult_t> wm_notify(win32::header header, NMCUSTOMDRAW& custom_draw) override
+      {
+
+        if (custom_draw.dwDrawStage == CDDS_PREPAINT)
         {
-          thread_local std::wstring buffer(256, '\0');
-          DRAWITEMSTRUCT& item = *(DRAWITEMSTRUCT*)lParam;
-          if (item.hwndItem == (HWND)uIdSubclass && (item.itemAction == ODA_DRAWENTIRE || item.itemAction == ODA_SELECT))
+          auto font = win32::load_font(LOGFONTW{
+            .lfPitchAndFamily = VARIABLE_PITCH,
+            .lfFaceName = L"Segoe UI" });
+
+          auto text_bk_color = colors[properties::header::text_bk_color];
+          FillRect(custom_draw.hdc, &custom_draw.rc, get_solid_brush(text_bk_color));
+
+          return CDRF_NOTIFYITEMDRAW | CDRF_NEWFONT;
+        }
+
+
+        if (custom_draw.dwDrawStage == CDDS_ITEMPREPAINT)
+        {
+          auto focused_item = Header_GetFocusedItem(header);
+
+          auto text_highlight_color = colors[properties::header::text_highlight_color];
+          auto text_bk_color = colors[properties::header::text_bk_color];
+
+          if (custom_draw.dwItemSpec == focused_item)
           {
-            auto control = win32::header((HWND)uIdSubclass);
+            ::SetBkColor(custom_draw.hdc, text_highlight_color);
+            ::SelectObject(custom_draw.hdc, get_solid_brush(text_highlight_color));
+          }
+          else
+          {
+            ::SetBkColor(custom_draw.hdc, text_bk_color);
+            ::SelectObject(custom_draw.hdc, get_solid_brush(text_bk_color));
+          }
+
+          auto text_color = colors[properties::header::text_color];
+          ::SetTextColor(custom_draw.hdc, text_color);
+
+          return CDRF_NEWFONT | CDRF_NOTIFYPOSTPAINT;
+        }
+
+        if (custom_draw.dwDrawStage == CDDS_ITEMPOSTPAINT)
+        {
+          auto rect = custom_draw.rc;
+
+          if (header.GetWindowStyle() & HDS_FILTERBAR)
+          {
+            thread_local std::wstring filter_value;
+            filter_value.clear();
+            filter_value.resize(255, L'\0');
+            HD_TEXTFILTERW string_filter{
+              .pszText = filter_value.data(),
+              .cchTextMax = (int)filter_value.size(),
+            };
+
+            win32::gdi::drawing_context_ref context(custom_draw.hdc);
+            auto header_item = header.GetItem(custom_draw.dwItemSpec, { .mask = HDI_FILTER, .type = HDFT_ISSTRING, .pvFilter = &string_filter });
+
+            filter_value.erase(std::wcslen(filter_value.data()));
 
 
-            auto context = win32::gdi::drawing_context_ref(item.hDC);
-            auto header = win32::header(item.hwndItem);
+            auto bottom = custom_draw.rc;
 
-            auto rect = item.rcItem;
-            auto bottom = item.rcItem;
+            rect.bottom = rect.bottom / 2;
+            bottom.top = rect.bottom;
+            FillRect(custom_draw.hdc, &bottom, get_solid_brush(colors[properties::header::text_bk_color]));
 
-            if (item.itemAction == ODA_DRAWENTIRE)
+            bottom.left += 10;
+            bottom.right -= 10;
+            if (filter_value.empty())
             {
-              auto bk_color = control.FindPropertyExW<COLORREF>(win32::properties::header::bk_color);
-
-              context.FillRect(rect, get_solid_brush(*bk_color));
-            }
-
-            if (header.GetWindowStyle() & HDS_FILTERBAR)
-            {
-              rect.bottom = rect.bottom / 2;
-              bottom.top = rect.bottom;
-            }
-
-            SetBkMode(context, TRANSPARENT);
-
-            auto text_highlight_color = control.FindPropertyExW<COLORREF>(win32::properties::header::text_highlight_color);
-            auto text_bk_color = control.FindPropertyExW<COLORREF>(win32::properties::header::text_bk_color);
-
-            if (item.itemState & ODS_HOTLIGHT)
-            {
-              context.FillRect(rect, get_solid_brush(*text_highlight_color));
-            }
-            else if (item.itemState & ODS_SELECTED)
-            {
-              context.FillRect(rect, get_solid_brush(*text_highlight_color));
+              ::DrawTextW(context, L"Enter text here", -1, &bottom, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
             }
             else
             {
-              context.FillRect(rect, get_solid_brush(*text_bk_color));
+              ::DrawTextW(context, filter_value.c_str(), -1, &bottom, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
             }
-
-            auto text_color = control.FindPropertyExW<COLORREF>(win32::properties::header::text_color);
-            ::SetTextColor(context, *text_color);
-
-            auto item_info = header.GetItem(item.itemID, HDITEMW{ .mask = HDI_TEXT, .pszText = buffer.data(), .cchTextMax = int(buffer.size()) });
-
-            if (item_info)
-            {
-              ::DrawTextW(context, (LPCWSTR)item_info->pszText, -1, &rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
-            }
-
-            if (header.GetWindowStyle() & HDS_FILTERBAR)
-            {
-              thread_local std::wstring filter_value;
-              filter_value.clear();
-              filter_value.resize(255, L'\0');
-              HD_TEXTFILTERW string_filter{
-                .pszText = filter_value.data(),
-                .cchTextMax = (int)filter_value.size(),
-              };
-
-              auto header_item = header.GetItem(item.itemID, { .mask = HDI_FILTER, .type = HDFT_ISSTRING, .pvFilter = &string_filter });
-
-              filter_value.erase(std::wcslen(filter_value.data()));
-
-              if (filter_value.empty())
-              {
-                ::DrawTextW(context, L"Enter text here", -1, &bottom, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
-              }
-              else
-              {
-                ::DrawTextW(context, filter_value.c_str(), -1, &bottom, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
-              }
-            }
-
-            return TRUE;
           }
+
+          return CDRF_DODEFAULT;
         }
 
-        if (uMsg == WM_DESTROY)
+        return CDRF_DODEFAULT;
+      }
+
+      static LRESULT __stdcall HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      {
+        auto result = win32::header::notifications::dispatch_message((sub_class*)dwRefData, message, wParam, lParam);
+
+        if (result)
+        {
+          return *result;
+        }
+
+        if (message == WM_DESTROY)
         {
           ::RemoveWindowSubclass(hWnd, sub_class::HandleMessage, uIdSubclass);
         }
 
-        return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+        return DefSubclassProc(hWnd, message, wParam, lParam);
       }
     };
-
-    auto count = control.GetItemCount();
-
-    for (auto i = 0; i < count; ++i)
-    {
-      auto item = control.GetItem(
-        i, HDITEMW{ .mask = HDI_FORMAT });
-
-      if (item)
-      {
-        if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
-        {
-          item->fmt = item->fmt | HDF_OWNERDRAW;
-        }
-        else
-        {
-          item->fmt = item->fmt & ~HDF_OWNERDRAW;
-        }
-
-        control.SetItem(i, *item);
-      }
-    }
 
     auto font = win32::load_font(LOGFONTW{
       .lfPitchAndFamily = VARIABLE_PITCH,
@@ -134,117 +127,140 @@ namespace win32
 
     SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), FALSE);
 
-    if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
-    {
-      colors.ForEachPropertyExW([&](auto, auto key, auto value) {
-        if (key.find(win32::header::class_name) != std::wstring_view::npos)
-        {
-          control.SetPropW(key, value);
-        }
-      });
+    std::map<std::wstring_view, COLORREF> color_map{
+      { win32::properties::header::bk_color, *colors.FindPropertyExW<COLORREF>(win32::properties::header::bk_color) },
+      { win32::properties::header::text_color, *colors.FindPropertyExW<COLORREF>(win32::properties::header::text_color) },
+      { win32::properties::header::text_bk_color, *colors.FindPropertyExW<COLORREF>(win32::properties::header::text_bk_color) },
+      { win32::properties::header::text_highlight_color, *colors.FindPropertyExW<COLORREF>(win32::properties::header::text_highlight_color) },
+    };
 
-      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR)control.get());
+    DWORD_PTR existing_object{};
+    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::header::class_name, &existing_object) && existing_object == 0)
+    {
+      win32::theme_module().SetWindowTheme(control, L"", L"");
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::header::class_name, (DWORD_PTR) new sub_class(std::move(color_map)));
+      ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
     else
     {
-      control.RemovePropW(win32::properties::header::bk_color);
-      control.RemovePropW(win32::properties::header::text_color);
-      control.RemovePropW(win32::properties::header::text_bk_color);
-      control.RemovePropW(win32::properties::header::text_highlight_color);
-      ::RemoveWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get());
+      ((sub_class*)existing_object)->colors = std::move(color_map);
     }
   }
 
   void apply_theme(const win32::window_ref& colors, win32::tab_control& control)
   {
-    struct sub_class
+    struct sub_class final : win32::tab_control::notifications
     {
-      static LRESULT __stdcall HandleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      std::map<std::wstring_view, COLORREF> colors;
+
+      sub_class(std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
       {
-        if (uMsg == WM_MEASUREITEM && lParam)
+      }
+
+      virtual std::optional<win32::lresult_t> wm_draw_item(win32::tab_control tabs, DRAWITEMSTRUCT& item) override
+      {
+        thread_local std::wstring buffer(256, '\0');
+
+        if (item.itemAction == ODA_DRAWENTIRE || item.itemAction == ODA_SELECT)
         {
-          MEASUREITEMSTRUCT& item = *(MEASUREITEMSTRUCT*)lParam;
+          auto x_border = GetSystemMetrics(SM_CXEDGE);
+          auto y_border = GetSystemMetrics(SM_CYEDGE);
 
-          if (item.CtlType == ODT_TAB)
+          if (item.itemAction == ODA_DRAWENTIRE)
           {
-            auto control = win32::tab_control((HWND)uIdSubclass);
+            auto parent_context = win32::gdi::drawing_context_ref(item.hDC);
 
-            auto size = control.SetItemSize(SIZE{ .cx = 90, .cy = 30 });
-            control.SetItemSize(size);
+            auto rect = tabs.GetClientRect();
+            auto client_area = tabs.GetClientRect();
 
-            item.itemWidth = size.cx;
-            item.itemHeight = size.cy;
-            return TRUE;
+            client_area = tabs.AdjustRect(false, *client_area);
+
+            client_area->left = std::clamp<LONG>(client_area->left - x_border, 0, client_area->left);
+            client_area->right += x_border;
+            client_area->top = std::clamp<LONG>(client_area->top - y_border, 0, client_area->top);
+            client_area->bottom += y_border;
+
+            auto count = tabs.GetItemCount();
+
+            if (count > 0)
+            {
+              auto tab_rect = tabs.GetItemRect(count - 1);
+              rect->left = tab_rect->right;
+              rect->bottom = tab_rect->bottom;
+            }
+
+            auto bk_color = colors[win32::properties::tab_control::bk_color];
+
+            parent_context.FillRect(*rect, get_solid_brush(bk_color));
+            parent_context.FillRect(*client_area, get_solid_brush(bk_color));
           }
+
+          auto context = win32::gdi::drawing_context_ref(item.hDC);
+
+          SetBkColor(context, colors[win32::properties::tab_control::bk_color]);
+
+          win32::tab_control control(item.hwndItem);
+
+          auto item_rect = item.rcItem;
+          item_rect.left = std::clamp<LONG>(item_rect.left - x_border, 0, item_rect.left);
+          item_rect.right += x_border;
+          item_rect.top = std::clamp<LONG>(item_rect.top - y_border, 0, item_rect.top);
+          item_rect.bottom += y_border;
+
+          auto text_highlight_color = colors[win32::properties::tab_control::text_highlight_color];
+          auto text_bk_color = colors[win32::properties::tab_control::text_bk_color];
+
+          if (item.itemState & ODS_HOTLIGHT)
+          {
+            context.FillRect(item_rect, get_solid_brush(text_highlight_color));
+          }
+          else if (item.itemState & ODS_SELECTED)
+          {
+            context.FillRect(item_rect, get_solid_brush(text_highlight_color));
+          }
+          else
+          {
+            auto y_focus = GetSystemMetrics(SM_CYFOCUSBORDER);
+            auto x_focus = GetSystemMetrics(SM_CXFOCUSBORDER);
+
+            item_rect.top = std::clamp<LONG>(item_rect.top - y_focus, 0, item_rect.top);
+            item_rect.bottom += y_focus;
+
+            context.FillRect(item_rect, get_solid_brush(text_bk_color));
+          }
+
+          auto text_color = colors[win32::properties::tab_control::text_color];
+          ::SetTextColor(context, text_color);
+          ::SetBkMode(context, TRANSPARENT);
+          ::SelectObject(context, get_solid_brush(text_bk_color));
+
+          auto item_info = control.GetItem(item.itemID, TCITEMW{ .mask = TCIF_TEXT, .pszText = buffer.data(), .cchTextMax = int(buffer.size()) });
+
+          if (item_info)
+          {
+            ::DrawTextW(context, (LPCWSTR)item_info->pszText, -1, &item.rcItem, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+          }
+          return TRUE;
         }
 
-        if (uMsg == WM_DRAWITEM && lParam)
+        return std::nullopt;
+      }
+
+      static LRESULT __stdcall HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      {
+        auto result = win32::tab_control::notifications::dispatch_message((sub_class*)dwRefData, message, wParam, lParam);
+
+        if (result)
         {
-          thread_local std::wstring buffer(256, '\0');
-          DRAWITEMSTRUCT& item = *(DRAWITEMSTRUCT*)lParam;
-          if (item.hwndItem == (HWND)uIdSubclass && (item.itemAction == ODA_DRAWENTIRE || item.itemAction == ODA_SELECT))
-          {
-            if (item.itemAction == ODA_DRAWENTIRE)
-            {
-              auto parent_context = win32::gdi::drawing_context_ref(::GetDC(item.hwndItem));
-
-              auto tabs = win32::tab_control(item.hwndItem);
-              auto rect = tabs.GetClientRect();
-
-              auto count = tabs.GetItemCount();
-
-              if (count > 0)
-              {
-                auto tab_rect = tabs.GetItemRect(count - 1);
-                rect->left = tab_rect->right;
-                rect->bottom = tab_rect->bottom;
-              }
-
-              auto bk_color = tabs.FindPropertyExW<COLORREF>(win32::properties::tab_control::bk_color);
-
-              parent_context.FillRect(*rect, get_solid_brush(*bk_color));
-            }
-
-            auto context = win32::gdi::drawing_context_ref(item.hDC);
-
-            SetBkMode(context, TRANSPARENT);
-
-            win32::tab_control control(item.hwndItem);
-            auto text_highlight_color = control.FindPropertyExW<COLORREF>(win32::properties::tab_control::text_highlight_color);
-            auto text_bk_color = control.FindPropertyExW<COLORREF>(win32::properties::tab_control::text_bk_color);
-
-            if (item.itemState & ODS_HOTLIGHT)
-            {
-              context.FillRect(item.rcItem, get_solid_brush(*text_highlight_color));
-            }
-            else if (item.itemState & ODS_SELECTED)
-            {
-              context.FillRect(item.rcItem, get_solid_brush(*text_highlight_color));
-            }
-            else
-            {
-              context.FillRect(item.rcItem, get_solid_brush(*text_bk_color));
-            }
-
-            auto text_color = control.FindPropertyExW<COLORREF>(win32::properties::tab_control::text_color);
-            ::SetTextColor(context, *text_color);
-
-            auto item_info = control.GetItem(item.itemID, TCITEMW{ .mask = TCIF_TEXT, .pszText = buffer.data(), .cchTextMax = int(buffer.size()) });
-
-            if (item_info)
-            {
-              ::DrawTextW(context, (LPCWSTR)item_info->pszText, -1, &item.rcItem, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
-            }
-            return TRUE;
-          }
+          return *result;
         }
 
-        if (uMsg == WM_DESTROY)
+        if (message == WM_DESTROY)
         {
           ::RemoveWindowSubclass(hWnd, sub_class::HandleMessage, uIdSubclass);
         }
 
-        return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+        return DefSubclassProc(hWnd, message, wParam, lParam);
       }
     };
 
@@ -254,30 +270,26 @@ namespace win32
 
     SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), FALSE);
 
-    if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
+    auto style = control.GetWindowStyle();
+    control.SetWindowStyle(style | TCS_OWNERDRAWFIXED);
+
+
+    std::map<std::wstring_view, COLORREF> color_map{
+      { win32::properties::tab_control::bk_color, *colors.FindPropertyExW<COLORREF>(win32::properties::tab_control::bk_color) },
+      { win32::properties::tab_control::text_color, *colors.FindPropertyExW<COLORREF>(win32::properties::tab_control::text_color) },
+      { win32::properties::tab_control::text_bk_color, *colors.FindPropertyExW<COLORREF>(win32::properties::tab_control::text_bk_color) },
+      { win32::properties::tab_control::text_highlight_color, *colors.FindPropertyExW<COLORREF>(win32::properties::tab_control::text_highlight_color) },
+    };
+
+    DWORD_PTR existing_object{};
+    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::tab_control::class_name, &existing_object) && existing_object == 0)
     {
-      auto style = control.GetWindowStyle();
-      control.SetWindowStyle(style | TCS_OWNERDRAWFIXED);
-
-      colors.ForEachPropertyExW([&](auto, auto key, auto value) {
-        if (key.find(win32::tab_control::class_name) != std::wstring_view::npos)
-        {
-          control.SetPropW(key, value);
-        }
-      });
-
-      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR)control.get());
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::tab_control::class_name, (DWORD_PTR) new sub_class(std::move(color_map)));
+      ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
     else
     {
-      auto style = control.GetWindowStyle();
-      control.SetWindowStyle(style & ~TCS_OWNERDRAWFIXED);
-
-      control.RemovePropW(win32::properties::tab_control::bk_color);
-      control.RemovePropW(win32::properties::tab_control::text_color);
-      control.RemovePropW(win32::properties::tab_control::text_bk_color);
-      control.RemovePropW(win32::properties::tab_control::text_highlight_color);
-      ::RemoveWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get());
+      ((sub_class*)existing_object)->colors = std::move(color_map);
     }
   }
 
@@ -326,6 +338,7 @@ namespace win32
 
   void apply_theme(const win32::window_ref& colors, win32::tree_view& control)
   {
+    auto useDarkMode = colors.FindPropertyExW<bool>(L"AppsUseDarkTheme").value_or(false);
     auto color = colors.FindPropertyExW<COLORREF>(properties::tree_view::bk_color).value_or(CLR_NONE);
     TreeView_SetBkColor(control, color);
 
@@ -341,8 +354,7 @@ namespace win32
 
     SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), FALSE);
 
-
-    if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
+    if (useDarkMode)
     {
       win32::theme_module().SetWindowTheme(control, L"DarkMode_Explorer", nullptr);
     }
@@ -355,10 +367,17 @@ namespace win32
 
   void apply_theme(const win32::window_ref& colors, win32::tool_bar& control)
   {
-    auto highlight_color = colors.FindPropertyExW(properties::tool_bar::btn_highlight_color);
-    auto shadow_color = colors.FindPropertyExW(properties::tool_bar::btn_shadow_color);
+    auto highlight_color = colors.FindPropertyExW<COLORREF>(properties::tool_bar::btn_highlight_color);
+    auto shadow_color = colors.FindPropertyExW<COLORREF>(properties::tool_bar::btn_shadow_color);
 
     bool change_theme = false;
+
+    auto font = win32::load_font(LOGFONTW{
+      .lfPitchAndFamily = VARIABLE_PITCH,
+      .lfFaceName = L"Segoe UI" });
+
+    win32::theme_module().SetWindowTheme(control, L"", L"");
+    SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), FALSE);
 
     if (highlight_color || shadow_color)
     {
@@ -367,118 +386,103 @@ namespace win32
 
       if (highlight_color)
       {
-        scheme.clrBtnHighlight = (COLORREF)*highlight_color;
+        scheme.clrBtnHighlight = *highlight_color;
       }
 
       if (shadow_color)
       {
-        scheme.clrBtnShadow = (COLORREF)*shadow_color;
+        scheme.clrBtnShadow = *shadow_color;
       }
-
       ::SendMessageW(control, TB_SETCOLORSCHEME, 0, (LPARAM)&scheme);
     }
 
-    struct sub_class
+    struct sub_class final : win32::tool_bar::notifications
     {
+      using win32::tool_bar::notifications::wm_notify;
 
+      std::map<std::wstring_view, COLORREF> colors;
 
-      static LRESULT __stdcall HandleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      sub_class(std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
       {
-        if (uMsg == WM_NOTIFY && lParam != 0)
+      }
+
+      std::optional<win32::lresult_t> wm_notify(win32::tool_bar buttons, NMTBCUSTOMDRAW& custom_draw) override
+      {
+        if (custom_draw.nmcd.dwDrawStage == CDDS_PREPAINT)
         {
-          NMHDR* header = (NMHDR*)lParam;
+          auto font = win32::load_font(LOGFONTW{
+            .lfPitchAndFamily = VARIABLE_PITCH,
+            .lfFaceName = L"Segoe UI" });
 
-          if (header->code == NM_CUSTOMDRAW && header->hwndFrom == (HWND)uIdSubclass)
+          SelectFont(custom_draw.nmcd.hdc, font);
+          return CDRF_NOTIFYITEMDRAW | CDRF_NOTIFYPOSTPAINT;
+        }
+
+        if (custom_draw.nmcd.dwDrawStage == CDDS_ITEMPREPAINT || custom_draw.nmcd.dwDrawStage == (CDDS_SUBITEM | CDDS_ITEMPREPAINT))
+        {
+          custom_draw.clrBtnFace = colors[properties::tool_bar::btn_face_color];
+          custom_draw.clrBtnHighlight = colors[properties::tool_bar::btn_highlight_color];
+          custom_draw.clrText = colors[properties::tool_bar::text_color];
+
+          return CDRF_NEWFONT | TBCDRF_USECDCOLORS;
+        }
+
+        if (custom_draw.nmcd.dwDrawStage == CDDS_POSTPAINT)
+        {
+          win32::gdi::drawing_context_ref context(custom_draw.nmcd.hdc);
+
+          auto count = buttons.ButtonCount();
+          auto rect = buttons.GetClientRect();
+          if (count > 0)
           {
-            NMTBCUSTOMDRAW* custom_draw = (NMTBCUSTOMDRAW*)lParam;
+            auto button_rect = buttons.GetItemRect(count - 1);
 
-            if (custom_draw->nmcd.dwDrawStage == CDDS_PREPAINT)
-            {
-              auto font = win32::load_font(LOGFONTW{
-                .lfPitchAndFamily = VARIABLE_PITCH,
-                .lfFaceName = L"Segoe UI" });
+            rect->left = button_rect->right;
+            rect->bottom = button_rect->bottom;
 
-              SelectFont(custom_draw->nmcd.hdc, font);
-              return CDRF_NOTIFYITEMDRAW | CDRF_NOTIFYPOSTPAINT;
-            }
-
-            if (custom_draw->nmcd.dwDrawStage == CDDS_ITEMPREPAINT || custom_draw->nmcd.dwDrawStage == (CDDS_SUBITEM | CDDS_ITEMPREPAINT))
-            {
-              win32::window_ref(header->hwndFrom).ForEachPropertyExW([=](win32::hwnd_t, std::wstring_view key, HANDLE value) {
-                if (key == properties::tool_bar::btn_face_color)
-                {
-                  custom_draw->clrBtnFace = (COLORREF)value;
-                }
-
-                if (key == properties::tool_bar::btn_highlight_color)
-                {
-                  custom_draw->clrBtnHighlight = (COLORREF)value;
-                }
-
-                if (key == properties::tool_bar::text_color)
-                {
-                  custom_draw->clrText = (COLORREF)value;
-                }
-              });
-              return CDRF_NEWFONT | TBCDRF_USECDCOLORS;
-            }
-
-            if (custom_draw->nmcd.dwDrawStage == CDDS_POSTPAINT)
-            {
-              win32::gdi::drawing_context_ref context(custom_draw->nmcd.hdc);
-
-              auto buttons = win32::tool_bar(custom_draw->nmcd.hdr.hwndFrom);
-              auto count = buttons.ButtonCount();
-              auto rect = buttons.GetClientRect();
-              if (count > 0)
-              {
-                auto button_rect = buttons.GetItemRect(count - 1);
-
-                rect->left = button_rect->right;
-                rect->bottom = button_rect->bottom;
-                auto bk_color = buttons.FindPropertyExW<COLORREF>(properties::tool_bar::bk_color);
-
-                context.FillRect(*rect, get_solid_brush(*bk_color));
-              }
-            }
-
-            return CDRF_DODEFAULT;
+            context.FillRect(*rect, get_solid_brush(colors[properties::tool_bar::bk_color]));
           }
         }
 
-        if (uMsg == WM_DESTROY)
+        return CDRF_DODEFAULT;
+      }
+
+      static LRESULT __stdcall HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      {
+        auto result = win32::tool_bar::notifications::dispatch_message((sub_class*)dwRefData, message, wParam, lParam);
+
+        if (result)
+        {
+          return *result;
+        }
+
+        if (message == WM_DESTROY)
         {
           ::RemoveWindowSubclass(hWnd, sub_class::HandleMessage, uIdSubclass);
         }
 
-        return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+        return DefSubclassProc(hWnd, message, wParam, lParam);
       }
     };
 
-    if (colors.FindPropertyExW(properties::tool_bar::btn_face_color) || colors.FindPropertyExW(properties::tool_bar::text_color))
-    {
-      change_theme = true;
+    std::map<std::wstring_view, COLORREF> color_map{
+      { win32::properties::tool_bar::bk_color, *colors.FindPropertyExW<COLORREF>(win32::properties::tool_bar::bk_color) },
+      { win32::properties::tool_bar::text_color, *colors.FindPropertyExW<COLORREF>(win32::properties::tool_bar::text_color) },
+      { win32::properties::tool_bar::btn_face_color, *colors.FindPropertyExW<COLORREF>(win32::properties::tool_bar::btn_face_color) },
+      { win32::properties::tool_bar::btn_highlight_color, *colors.FindPropertyExW<COLORREF>(win32::properties::tool_bar::btn_highlight_color) },
+      { win32::properties::tool_bar::btn_shadow_color, *colors.FindPropertyExW<COLORREF>(win32::properties::tool_bar::btn_shadow_color) },
+    };
 
-      colors.ForEachPropertyExW([&](auto, auto key, auto value) {
-        if (key.find(win32::tool_bar::class_name) != std::wstring_view::npos)
-        {
-          control.SetPropW(key, value);
-        }
-      });
-    }
-
-    if (change_theme)
+    DWORD_PTR existing_object{};
+    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::tool_bar::class_name, &existing_object) && existing_object == 0)
     {
-      ::SetWindowSubclass(
-        *control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR)control.get());
-      win32::theme_module().SetWindowTheme(control, L"", L"");
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::tool_bar::class_name, (DWORD_PTR) new sub_class(std::move(color_map)));
+      ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
     else
     {
-      win32::theme_module().SetWindowTheme(control, nullptr, nullptr);
-      ::RemoveWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get());
+      ((sub_class*)existing_object)->colors = std::move(color_map);
     }
-    ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
   }
 
 }// namespace win32

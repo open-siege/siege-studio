@@ -15,6 +15,7 @@ namespace win32
   gdi::icon create_icon(::SIZE size, ::RGBQUAD solid_color, gdi::bitmap_ref mask);
   gdi::drawing_context_ref apply_layer_mask(gdi::drawing_context_ref source, gdi::bitmap_ref bitmap);
   gdi::font_ref load_font(::LOGFONTW font_info);
+  gdi::brush_ref get_solid_brush(COLORREF color);
 
   std::optional<SIZE> get_font_size_for_string(gdi::font_ref, std::wstring_view);
 
@@ -204,9 +205,13 @@ namespace win32
     struct menu
     {
       constexpr static auto bk_color = std::wstring_view(L"Menu.BkColor");
+      constexpr static auto text_color = std::wstring_view(L"Menu.TextColor");
+      constexpr static auto text_highlight_color = std::wstring_view(L"Menu.TextHighlightColor");
 
-      inline static auto props = std::array<std::wstring_view, 1>{
-        bk_color
+      inline static auto props = std::array<std::wstring_view, 3>{
+        bk_color,
+        text_color,
+        text_highlight_color
       };
     };
 

@@ -379,7 +379,7 @@ namespace win32
       {
         auto prop = GetPropW<TResult>(find_key);
 
-        if (!prop)
+        if (prop)
         {
           return prop;
         }

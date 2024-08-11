@@ -21,9 +21,9 @@ namespace win32
         return std::nullopt;
       }
 
-      virtual win32::lresult_t wm_notify(win32::button, NMCUSTOMDRAW&)
+      virtual std::optional<win32::lresult_t> wm_notify(win32::button, NMCUSTOMDRAW&)
       {
-        return CDRF_DODEFAULT;
+        return std::nullopt;
       }
 
       virtual std::optional<win32::lresult_t> wm_draw_item(win32::button, DRAWITEMSTRUCT&)
@@ -238,7 +238,12 @@ namespace win32
 
           if (message == WM_CTLCOLORSTATIC && win32::window_ref((HWND)lParam).RealGetWindowClassW() == static_control::class_name)
           {
-            return (LRESULT)self->wm_control_color(static_control(lParam), win32::gdi::drawing_context_ref((HDC)wParam));
+            auto result = self->wm_control_color(static_control((HWND)lParam), win32::gdi::drawing_context_ref((HDC)wParam));
+
+            if (result)
+            {
+              return (LRESULT)*result;
+            }
           }
         }
 

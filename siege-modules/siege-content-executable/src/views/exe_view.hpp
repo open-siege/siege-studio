@@ -15,9 +15,9 @@ namespace siege::views
 {
   using namespace std::literals;
 
-  struct exe_view final : win32::window_ref, 
-      win32::list_box::notifications,
-      win32::list_view::notifications
+  struct exe_view final : win32::window_ref
+    , win32::list_box::notifications
+    , win32::list_view::notifications
   {
     exe_controller controller;
 
@@ -88,6 +88,8 @@ namespace siege::views
       launch_table.InsertColumn(-1, LVCOLUMNW{
                                       .pszText = const_cast<wchar_t*>(L"Value"),
                                     });
+
+      wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
       return 0;
     }
@@ -244,6 +246,13 @@ namespace siege::views
     {
       if (message.setting == L"ImmersiveColorSet")
       {
+        auto parent = this->GetParent();
+
+        win32::apply_theme(*parent, resource_table);
+        win32::apply_theme(*parent, launch_table);
+        win32::apply_theme(*parent, string_table);
+        win32::apply_theme(*parent, options);
+        win32::apply_theme(*parent, *this);
 
         return 0;
       }

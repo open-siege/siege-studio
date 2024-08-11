@@ -16,6 +16,8 @@ namespace siege::views
   struct sfx_view final : win32::window_ref
     , win32::tool_bar::notifications
   {
+    using win32::tool_bar::notifications::wm_notify;
+
     sfx_controller controller;
 
     win32::tool_bar player_buttons;
@@ -92,9 +94,7 @@ namespace siege::views
       auto stop_icon = win32::create_icon(icon_size, RGBQUAD{ .rgbRed = 255 }, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, 0xE71A)));
       ImageList_ReplaceIcon(image_list, -1, stop_icon);
 
-      auto loop_icon = win32::create_icon(icon_size, RGBQUAD{.rgbRed = 255}, win32::create_layer_mask(icon_size, 
-          win32::gdi::font_ref(font_icon.get()), 
-          std::wstring(1, 0xE8EE)));
+      auto loop_icon = win32::create_icon(icon_size, RGBQUAD{ .rgbRed = 255 }, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, 0xE8EE)));
       ImageList_ReplaceIcon(image_list, -1, loop_icon);
 
 
@@ -155,7 +155,7 @@ namespace siege::views
       return std::nullopt;
     }
 
-    win32::lresult_t wm_notify(win32::tool_bar, NMTBCUSTOMDRAW& message) override
+    std::optional<win32::lresult_t> wm_notify(win32::tool_bar, NMTBCUSTOMDRAW& message) override
     {
       if (message.nmcd.dwDrawStage == CDDS_PREPAINT)
       {
@@ -211,7 +211,7 @@ namespace siege::views
       return CDRF_DODEFAULT;
     }
 
-    BOOL wm_notify(win32::tool_bar, const NMMOUSE& message) override
+    std::optional<BOOL> wm_notify(win32::tool_bar, const NMMOUSE& message) override
     {
       switch (message.hdr.code)
       {

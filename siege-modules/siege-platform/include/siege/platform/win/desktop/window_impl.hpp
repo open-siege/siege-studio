@@ -123,6 +123,7 @@ namespace win32
       .or_else([&] { return win32::menu::notifications::dispatch_message(self, message, wParam, lParam); })
       .or_else([&] { return win32::edit::notifications::dispatch_message(self, message, wParam, lParam); })
       .or_else([&] { return win32::list_box::notifications::dispatch_message(self, message, wParam, lParam); })
+      .or_else([&] { return win32::static_control::notifications::dispatch_message(self, message, wParam, lParam); })
       .or_else([&] { return win32::scroll_bar::notifications::dispatch_message(self, message, wParam, lParam); })
       .or_else([&] { return win32::combo_box::notifications::dispatch_message(self, message, wParam, lParam); })
       .or_else([&] { return win32::sys_link::notifications::dispatch_message(self, message, wParam, lParam); })

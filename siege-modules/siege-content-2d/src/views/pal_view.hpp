@@ -16,6 +16,7 @@ namespace siege::views
   {
     using win32::static_control::notifications::wm_draw_item;
     using win32::list_box::notifications::wm_draw_item;
+    using win32::static_control::notifications::wm_control_color;
 
     pal_controller controller;
 

@@ -313,7 +313,7 @@ namespace siege::views
 
     std::map<std::wstring, COLORREF> hover_colors;
 
-    win32::lresult_t wm_notify(win32::list_view, NMLVCUSTOMDRAW& custom_draw) override
+    std::optional<win32::lresult_t> wm_notify(win32::list_view, NMLVCUSTOMDRAW& custom_draw) override
     {
       if (custom_draw.nmcd.dwDrawStage == CDDS_PREPAINT)
       {

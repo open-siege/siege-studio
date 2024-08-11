@@ -95,7 +95,7 @@ namespace siege::views
 
       auto factory = win32::window_factory(ref());
 
-      table_settings = *factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
+      table_settings = *factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
       table_settings.LoadImages(IDB_VIEW_SMALL_COLOR);
 
       table_settings.InsertButton(-1, { .iBitmap = VIEW_DETAILS, .idCommand = LV_VIEW_DETAILS, .fsState = TBSTATE_ENABLED | TBSTATE_CHECKED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Details" }, false);
@@ -157,7 +157,7 @@ namespace siege::views
       auto header = table.GetHeader();
 
       auto style = header.GetWindowStyle();
-      header.SetWindowStyle(style | HDS_FILTERBAR);
+      header.SetWindowStyle(style | HDS_FILTERBAR | HDS_FLAT);
       header.SetFilterChangeTimeout();
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
@@ -272,16 +272,6 @@ namespace siege::views
       return FALSE;
     }
 
-    auto wm_erase_background(win32::gdi::drawing_context_ref context)
-    {
-      static auto black_brush = ::CreateSolidBrush(0x00000000);
-
-      auto rect = GetClientRect();
-      context.FillRect(*rect, black_brush);
-
-      return TRUE;
-    }
-
     std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMITEMACTIVATE& message) override
     {
       switch (message.hdr.code)
@@ -331,7 +321,7 @@ namespace siege::views
       }
     }
 
-    BOOL wm_notify(win32::tool_bar, const NMMOUSE& message) override
+    std::optional<BOOL> wm_notify(win32::tool_bar, const NMMOUSE& message) override
     {
       switch (message.hdr.code)
       {
@@ -345,7 +335,7 @@ namespace siege::views
       }
     }
 
-    BOOL wm_notify(win32::header, NMHDFILTERBTNCLICK& message) override
+    std::optional<win32::lresult_t> wm_notify(win32::header, NMHDFILTERBTNCLICK& message) override
     {
       return FALSE;
     }
