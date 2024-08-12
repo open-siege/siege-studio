@@ -262,6 +262,46 @@ namespace win32
 
         return DefSubclassProc(hWnd, message, wParam, lParam);
       }
+
+      static LRESULT __stdcall HandleChildMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      {
+        if (message == WM_PAINT)
+        {
+          PAINTSTRUCT ps;
+          HDC hdc = BeginPaint(hWnd, &ps);
+          auto result = DefSubclassProc(hWnd, message, (WPARAM)hdc, lParam);
+
+          auto* self = (sub_class*)dwRefData;
+          auto text_bk_color = self->colors[win32::properties::tab_control::text_bk_color];
+          auto pen = CreatePen(PS_SOLID, 3, text_bk_color);
+
+          auto old_pen = SelectObject(hdc, pen);
+          SelectObject(hdc, GetStockObject(HOLLOW_BRUSH));
+
+          SetDCPenColor(hdc, RGB(0, 0, 0));
+
+          RECT item_rect;
+          for (auto i = 0; i < TabCtrl_GetItemCount(hWnd); ++i)
+          {
+            TabCtrl_GetItemRect(hWnd, i, &item_rect);
+            Rectangle(hdc, item_rect.left, item_rect.top, item_rect.right, item_rect.bottom);
+          }
+
+          SelectObject(hdc, old_pen);
+          DeleteObject(pen);
+
+          EndPaint(hWnd, &ps);
+
+          return result;
+        }
+
+        if (message == WM_DESTROY)
+        {
+          ::RemoveWindowSubclass(hWnd, sub_class::HandleMessage, uIdSubclass);
+        }
+
+        return DefSubclassProc(hWnd, message, wParam, lParam);
+      }
     };
 
     auto font = win32::load_font(LOGFONTW{
@@ -284,7 +324,9 @@ namespace win32
     DWORD_PTR existing_object{};
     if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::tab_control::class_name, &existing_object) && existing_object == 0)
     {
-      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::tab_control::class_name, (DWORD_PTR) new sub_class(std::move(color_map)));
+      auto data = (DWORD_PTR) new sub_class(std::move(color_map));
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::tab_control::class_name, data);
+      ::SetWindowSubclass(control, sub_class::HandleChildMessage, (UINT_PTR)win32::tab_control::class_name, data);
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
     else
