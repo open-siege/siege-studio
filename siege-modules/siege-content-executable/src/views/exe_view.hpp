@@ -30,13 +30,18 @@ namespace siege::views
       { L"#1"sv, L"Hardware Dependent Cursor"sv },
       { L"#2"sv, L"Bitmap"sv },
       { L"#3"sv, L"Hardware Dependent Icon"sv },
+      { L"#4"sv, L"Menu"sv },
+      { L"#5"sv, L"Dialog"sv },
       { L"#6"sv, L"String Table"sv },
       { L"#8"sv, L"Font"sv },
+      { L"#9"sv, L"Accelerator"sv },
       { L"#10"sv, L"Raw Data"sv },
       { L"#12"sv, L"Hardware Independent Cursor"sv },
       { L"#14"sv, L"Hardware Independent Icon"sv },
+      { L"#16"sv, L"Version"sv },
       { L"#22"sv, L"Animated Icon"sv },
       { L"#23"sv, L"HTML"sv },
+      { L"#24"sv, L"Side-by-Side Assembly Manifest"sv },
     };
 
     exe_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)

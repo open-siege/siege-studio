@@ -208,6 +208,7 @@ namespace siege::views
         win32::apply_theme(*parent, table);
         auto header = table.GetHeader();
         win32::apply_theme(*parent, header);
+        win32::apply_theme(*parent, *this);
 
         return 0;
       }
