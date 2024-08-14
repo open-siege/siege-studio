@@ -861,6 +861,11 @@ namespace win32
         return std::nullopt;
       }
 
+      virtual std::optional<win32::lresult_t> wm_notify(win32::tool_bar, const NMTBHOTITEM&)
+      {
+        return std::nullopt;
+      }
+
       virtual std::optional<BOOL> wm_notify(win32::tool_bar, const NMMOUSE&)
       {
         return std::nullopt;
@@ -888,6 +893,12 @@ namespace win32
                 && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == tool_bar::class_name)
             {
               return self->wm_notify(win32::tool_bar(header.hwndFrom), *(NMTOOLBARW*)lParam);
+            }
+
+            if ((header.code == TBN_HOTITEMCHANGE)
+                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == tool_bar::class_name)
+            {
+              return self->wm_notify(win32::tool_bar(header.hwndFrom), *(NMTBHOTITEM*)lParam);
             }
 
             if (header.code == NM_CUSTOMDRAW

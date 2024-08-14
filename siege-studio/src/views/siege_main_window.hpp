@@ -1,6 +1,8 @@
 #ifndef SIEGE_MAIN_WINDOW_HPP
 #define SIEGE_MAIN_WINDOW_HPP
 
+#include <oleacc.h>
+#include <dwmapi.h>
 #include <siege/platform/win/desktop/common_controls.hpp>
 #include <siege/platform/win/desktop/shell.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
@@ -11,7 +13,7 @@
 #include "views/theme_view.hpp"
 #include <map>
 #include <spanstream>
-#include <dwmapi.h>
+
 
 namespace siege::views
 {
@@ -22,6 +24,17 @@ namespace siege::views
       //      assert(::DestroyCursor(cursor) == TRUE);
     }
   };
+
+  win32::com::com_ptr<IAccPropServices> get_acc_props()
+  {
+    win32::com::com_ptr<IAccPropServices> result;
+    if (CoCreateInstance(CLSID_CAccPropServices, nullptr, CLSCTX_SERVER, IID_IAccPropServices, result.put_void()) != S_OK)
+    {
+      throw std::runtime_error("Could not create accessible service");
+    }
+
+    return result;
+  }
 
   struct siege_main_window final : win32::window_ref
     , win32::tree_view::notifications
@@ -258,21 +271,69 @@ namespace siege::views
       std::size_t id = 1u;
       popup_menus[0] = win32::menu(::CreatePopupMenu());
       popup_menus[1] = win32::menu(::CreatePopupMenu());
+
       auto popup = MF_OWNERDRAW | MF_POPUP;
       auto string = MF_OWNERDRAW | MF_STRING;
       auto separator = MF_OWNERDRAW | MF_SEPARATOR;
 
       main_menu.InsertButton(
-        -1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_AUTOSIZE | BTNS_SHOWTEXT | BTNS_DROPDOWN, .iString = (INT_PTR)L"File" });
+        -1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_GROUP | BTNS_AUTOSIZE | BTNS_SHOWTEXT | BTNS_DROPDOWN, .iString = (INT_PTR)L"&File" });
 
       main_menu.InsertButton(
-        -1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_AUTOSIZE | BTNS_SHOWTEXT | BTNS_DROPDOWN, .iString = (INT_PTR)L"Edit" });
+        -1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_GROUP | BTNS_AUTOSIZE | BTNS_SHOWTEXT | BTNS_DROPDOWN, .iString = (INT_PTR)L"Edit" });
 
       main_menu.InsertButton(
-        -1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_AUTOSIZE | BTNS_SHOWTEXT | BTNS_DROPDOWN, .iString = (INT_PTR)L"View" });
+        -1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_GROUP | BTNS_AUTOSIZE | BTNS_SHOWTEXT | BTNS_DROPDOWN, .iString = (INT_PTR)L"View" });
 
       main_menu.InsertButton(
-        -1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_AUTOSIZE | BTNS_SHOWTEXT | BTNS_DROPDOWN, .iString = (INT_PTR)L"Help" });
+        -1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_GROUP | BTNS_AUTOSIZE | BTNS_SHOWTEXT | BTNS_DROPDOWN, .iString = (INT_PTR)L"Help" });
+
+      VARIANT var{};
+      var.vt = VT_I4;
+      var.lVal = ROLE_SYSTEM_MENUBAR;
+
+      auto acc_props = get_acc_props();
+      assert(acc_props->SetHwndProp(main_menu, OBJID_CLIENT, CHILDID_SELF, PROPID_ACC_ROLE, var) == S_OK);
+
+      var.vt = VT_BSTR;
+      var.bstrVal = SysAllocString(L"Main menu");
+
+      assert(acc_props->SetHwndProp(main_menu, OBJID_CLIENT, CHILDID_SELF, PROPID_ACC_NAME, var) == S_OK);
+      assert(acc_props->SetHwndProp(main_menu, OBJID_CLIENT, CHILDID_SELF, PROPID_ACC_DESCRIPTION, var) == S_OK);
+      SysFreeString(var.bstrVal);
+
+      var.vt = VT_I4;
+      var.lVal = ROLE_SYSTEM_MENUITEM;
+
+      assert(acc_props->SetHwndProp(main_menu, OBJID_CLIENT, 1, PROPID_ACC_ROLE, var) == S_OK);
+
+      var.vt = VT_BSTR;
+      var.bstrVal = SysAllocString(L"File menu");
+      assert(acc_props->SetHwndProp(main_menu, OBJID_CLIENT, 1, PROPID_ACC_NAME, var) == S_OK);
+
+      SysFreeString(var.bstrVal);
+
+      var.vt = VT_I4;
+      var.lVal = ROLE_SYSTEM_MENUITEM;
+
+      assert(acc_props->SetHwndProp(main_menu, OBJID_CLIENT, 2, PROPID_ACC_ROLE, var) == S_OK);
+
+      var.vt = VT_BSTR;
+      var.bstrVal = SysAllocString(L"Edit menu");
+      assert(acc_props->SetHwndProp(main_menu, OBJID_CLIENT, 2, PROPID_ACC_NAME, var) == S_OK);
+
+      SysFreeString(var.bstrVal);
+
+      var.vt = VT_I4;
+      var.lVal = ROLE_SYSTEM_MENUITEM;
+
+      assert(acc_props->SetHwndProp(main_menu, OBJID_CLIENT, 3, PROPID_ACC_ROLE, var) == S_OK);
+
+      var.vt = VT_I4;
+      var.lVal = ROLE_SYSTEM_MENUITEM;
+
+      assert(acc_props->SetHwndProp(main_menu, OBJID_CLIENT, 4, PROPID_ACC_ROLE, var) == S_OK);
+
 
       AppendMenuW(popup_menus[0], string, open_id, L"Open...");
       AppendMenuW(popup_menus[0], string, open_new_tab_id, L"Open in New Tab...");
@@ -460,7 +521,7 @@ namespace siege::views
 
             if (!is_dark_mode)
             {
-              bk_color = RGB(0xfb, 0xfb, 0xfb) ;
+              bk_color = RGB(0xfb, 0xfb, 0xfb);
               text_color = RGB(0x1a, 0x1a, 0x1a);
               text_bk_color = RGB(0xf3, 0xf3, 0xf3);
               text_highlight_color = RGB(127, 127, 255);
@@ -513,16 +574,17 @@ namespace siege::views
 
             MENUINFO mi = { 0 };
             mi.cbSize = sizeof(mi);
-            mi.fMask = MIM_BACKGROUND | MIM_APPLYTOSUBMENUS;
+            mi.fMask = MIM_BACKGROUND | MIM_APPLYTOSUBMENUS | MIM_STYLE;
             mi.hbrBack = win32::get_solid_brush(bk_color);
+            mi.dwStyle = MNS_MODELESS;
 
             SetMenuInfo(popup_menus[0], &mi);
+            SetMenuInfo(popup_menus[1], &mi);
 
             win32::apply_theme(*this, dir_list);
             win32::apply_theme(*this, tab_control);
             win32::apply_theme(*this, main_menu);
             win32::apply_theme(*this, *this);
-
 
             for (auto i = 0; i < tab_control.GetItemCount(); ++i)
             {
@@ -543,6 +605,84 @@ namespace siege::views
       return std::nullopt;
     }
 
+    bool menu_open = false;
+    bool menu_bar_tracked = false;
+    bool hot_tracking_enabled = false;
+
+    std::optional<win32::lresult_t> wm_enter_menu_loop(bool is_popup_menu)
+    {
+      menu_open = true;
+
+      return 0;
+    }
+
+    std::optional<win32::lresult_t> wm_exit_menu_loop(bool is_popup_menu)
+    {
+      menu_open = false;
+
+      if ((GetKeyState(VK_LBUTTON) & 0x8000) != 0)
+      {
+        hot_tracking_enabled = false;
+      }
+      else if ((GetKeyState(VK_RBUTTON) & 0x8000) != 0)
+      {
+        hot_tracking_enabled = false;
+      }
+
+      auto last_item = SendMessageW(this->main_menu, TB_GETHOTITEM, 0, 0);
+      if (last_item >= 0)
+      {
+        static NMTBHOTITEM notice{};
+        notice = {
+          .hdr{
+            .hwndFrom = this->main_menu,
+            .code = TBN_HOTITEMCHANGE,
+          },
+          .idOld = last_item,
+          .idNew = last_item,
+          .dwFlags = HICF_RESELECT
+        };
+        PostMessageW(main_menu, WM_NOTIFY, (WPARAM)this->main_menu.get(), (LPARAM)&notice);
+      }
+
+      return 0;
+    }
+
+
+    std::optional<win32::lresult_t> wm_notify(win32::tool_bar menu_bar, const NMTBHOTITEM& notice) override
+    {
+      if (notice.dwFlags & HICF_ENTERING)
+      {
+        menu_bar_tracked = true;
+      }
+      else if (notice.dwFlags & HICF_LEAVING)
+      {
+        menu_bar_tracked = false;
+      }
+
+      if (notice.idNew != notice.idOld && menu_bar_tracked && menu_open)
+      {
+        EndMenu();
+      }
+
+      if (!menu_open && hot_tracking_enabled)
+      {
+        auto window_rect = main_menu.GetWindowRect();
+        auto height = window_rect->bottom - window_rect->top;
+
+        RECT item_rect{};
+
+        SendMessageW(main_menu, TB_GETITEMRECT, notice.idNew, (LPARAM)&item_rect);
+        window_rect->left += item_rect.left;
+        window_rect->top += item_rect.top;
+        window_rect->right += item_rect.right;
+        window_rect->bottom += item_rect.bottom;
+        ::TrackPopupMenu(popup_menus[notice.idNew], 0, window_rect->left, window_rect->top + height, 0, *this, nullptr);
+      }
+
+      return 0;
+    }
+
     std::optional<win32::lresult_t> wm_notify(win32::tool_bar menu_bar, const NMTOOLBARW& notice) override
     {
       auto window_rect = menu_bar.GetWindowRect();
@@ -553,7 +693,9 @@ namespace siege::views
       window_rect->right += notice.rcButton.right;
       window_rect->bottom += notice.rcButton.bottom;
 
-      ::TrackPopupMenu(this->popup_menus[notice.iItem], 0, window_rect->left, window_rect->top + height, 0, *this, nullptr);
+      auto result = ::TrackPopupMenu(this->popup_menus[notice.iItem], 0, window_rect->left, window_rect->top + height, 0, *this, nullptr);
+      hot_tracking_enabled = true;
+
       return TBDDRET_DEFAULT;
     }
 
@@ -834,6 +976,7 @@ namespace siege::views
 
     std::optional<LRESULT> wm_command(win32::menu, int identifier) override
     {
+      hot_tracking_enabled = false;
       if (identifier == edit_theme_id)
       {
         theme_window = *win32::window_module_ref::current_module().CreateWindowExW(CREATESTRUCTW{

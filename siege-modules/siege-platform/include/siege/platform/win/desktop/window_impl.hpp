@@ -71,6 +71,38 @@ namespace win32
       }
     }
 
+    if constexpr (requires(TWindow t) { t.wm_enter_menu_loop(bool{}); })
+    {
+      if (message == WM_ENTERMENULOOP)
+      {
+        return self->wm_enter_menu_loop(wParam == TRUE);
+      }
+    }
+
+    if constexpr (requires(TWindow t) { t.wm_set_focus(); })
+    {
+      if (message == WM_SETFOCUS)
+      {
+        return self->wm_set_focus();
+      }
+    }
+
+    if constexpr (requires(TWindow t) { t.wm_exit_menu_loop(bool{}); })
+    {
+      if (message == WM_EXITMENULOOP)
+      {
+        return self->wm_exit_menu_loop(wParam == TRUE);
+      }
+    }
+
+    if constexpr (requires(TWindow t) { t.wm_size(std::size_t{}, SIZE{}); })
+    {
+      if (message == WM_SIZE)
+      {
+        return self->wm_size(std::size_t(wParam), SIZE{ .cx = SHORT(LOWORD(lParam)), .cy = SHORT(HIWORD(lParam)) });
+      }
+    }
+
     if constexpr (requires(TWindow t) { t.wm_erase_background(win32::gdi::drawing_context_ref{}); })
     {
       if (message == WM_ERASEBKGND)
