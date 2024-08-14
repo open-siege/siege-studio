@@ -75,6 +75,7 @@ namespace siege::views
 
     win32::tool_bar main_menu;
     std::array<win32::menu, 4> popup_menus;
+    std::vector<MSAAMENUINFO> menu_item_text;
 
     HIMAGELIST shell_images = nullptr;
 
@@ -268,14 +269,6 @@ namespace siege::views
 
       main_menu = *factory.CreateWindowExW<win32::tool_bar>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | TBSTYLE_FLAT | TBSTYLE_LIST | CCS_NOPARENTALIGN | CCS_NODIVIDER });
 
-      std::size_t id = 1u;
-      popup_menus[0] = win32::menu(::CreatePopupMenu());
-      popup_menus[1] = win32::menu(::CreatePopupMenu());
-
-      auto popup = MF_OWNERDRAW | MF_POPUP;
-      auto string = MF_OWNERDRAW | MF_STRING;
-      auto separator = MF_OWNERDRAW | MF_SEPARATOR;
-
       main_menu.InsertButton(
         -1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_GROUP | BTNS_AUTOSIZE | BTNS_SHOWTEXT | BTNS_DROPDOWN, .iString = (INT_PTR)L"&File" });
 
@@ -295,53 +288,49 @@ namespace siege::views
       auto acc_props = get_acc_props();
       assert(acc_props->SetHwndProp(main_menu, OBJID_CLIENT, CHILDID_SELF, PROPID_ACC_ROLE, var) == S_OK);
 
-      var.vt = VT_BSTR;
-      var.bstrVal = SysAllocString(L"Main menu");
 
-      assert(acc_props->SetHwndProp(main_menu, OBJID_CLIENT, CHILDID_SELF, PROPID_ACC_NAME, var) == S_OK);
-      assert(acc_props->SetHwndProp(main_menu, OBJID_CLIENT, CHILDID_SELF, PROPID_ACC_DESCRIPTION, var) == S_OK);
-      SysFreeString(var.bstrVal);
+      menu_item_text.reserve(32);
 
-      var.vt = VT_I4;
-      var.lVal = ROLE_SYSTEM_MENUITEM;
+      std::size_t id = 1u;
+      popup_menus[0] = win32::menu(::CreatePopupMenu());
+      popup_menus[1] = win32::menu(::CreatePopupMenu());
 
-      assert(acc_props->SetHwndProp(main_menu, OBJID_CLIENT, 1, PROPID_ACC_ROLE, var) == S_OK);
+      auto popup = MF_OWNERDRAW | MF_POPUP;
+      auto string = MF_OWNERDRAW | MF_STRING;
+      auto separator = MF_OWNERDRAW | MF_SEPARATOR;
 
-      var.vt = VT_BSTR;
-      var.bstrVal = SysAllocString(L"File menu");
-      assert(acc_props->SetHwndProp(main_menu, OBJID_CLIENT, 1, PROPID_ACC_NAME, var) == S_OK);
+      MENUITEMINFOW info{
+        .cbSize = sizeof(MENUITEMINFOW),
+        .fMask = MIIM_TYPE | MIIM_DATA | MIIM_ID
+      };
 
-      SysFreeString(var.bstrVal);
+      info.fType = string;
+      info.dwItemData = (ULONG_PTR)&menu_item_text.emplace_back(MSAAMENUINFO{ MSAA_MENU_SIG, 0, (wchar_t*)L"Open..." });
+      info.wID = open_id;
+      InsertMenuItemW(popup_menus[0], open_id, FALSE, &info);
 
-      var.vt = VT_I4;
-      var.lVal = ROLE_SYSTEM_MENUITEM;
+      info.dwItemData = (ULONG_PTR)&menu_item_text.emplace_back(MSAAMENUINFO{ MSAA_MENU_SIG, 0, (wchar_t*)L"Open in New Tab..." });
+      info.wID = open_new_tab_id;
+      InsertMenuItemW(popup_menus[0], open_new_tab_id, FALSE, &info);
 
-      assert(acc_props->SetHwndProp(main_menu, OBJID_CLIENT, 2, PROPID_ACC_ROLE, var) == S_OK);
+      info.dwItemData = (ULONG_PTR)&menu_item_text.emplace_back(MSAAMENUINFO{ MSAA_MENU_SIG, 0, (wchar_t*)L"Open Folder as Workspace" });
+      info.wID = open_workspace_id;
+      InsertMenuItemW(popup_menus[0], open_workspace_id, FALSE, &info);
 
-      var.vt = VT_BSTR;
-      var.bstrVal = SysAllocString(L"Edit menu");
-      assert(acc_props->SetHwndProp(main_menu, OBJID_CLIENT, 2, PROPID_ACC_NAME, var) == S_OK);
-
-      SysFreeString(var.bstrVal);
-
-      var.vt = VT_I4;
-      var.lVal = ROLE_SYSTEM_MENUITEM;
-
-      assert(acc_props->SetHwndProp(main_menu, OBJID_CLIENT, 3, PROPID_ACC_ROLE, var) == S_OK);
-
-      var.vt = VT_I4;
-      var.lVal = ROLE_SYSTEM_MENUITEM;
-
-      assert(acc_props->SetHwndProp(main_menu, OBJID_CLIENT, 4, PROPID_ACC_ROLE, var) == S_OK);
-
-
-      AppendMenuW(popup_menus[0], string, open_id, L"Open...");
-      AppendMenuW(popup_menus[0], string, open_new_tab_id, L"Open in New Tab...");
-      AppendMenuW(popup_menus[0], string, open_workspace_id, L"Open Folder as Workspace");
       AppendMenuW(popup_menus[0], separator, id++, nullptr);
-      AppendMenuW(popup_menus[0], string, RegisterWindowMessageW(L"COMMAND_EXIT"), L"Quit");
 
-      AppendMenuW(popup_menus[1], string, edit_theme_id, L"Theme");
+      info.wID = RegisterWindowMessageW(L"COMMAND_EXIT");
+      info.dwItemData = (ULONG_PTR)&menu_item_text.emplace_back(MSAAMENUINFO{ MSAA_MENU_SIG, 0, (wchar_t*)L"Quit" });
+      InsertMenuItemW(popup_menus[0], RegisterWindowMessageW(L"COMMAND_EXIT"), FALSE, &info);
+
+      info.wID = edit_theme_id;
+      info.dwItemData = (ULONG_PTR)&menu_item_text.emplace_back(MSAAMENUINFO{ MSAA_MENU_SIG, 0, (wchar_t*)L"Theme" });
+      InsertMenuItemW(popup_menus[1], edit_theme_id, FALSE, &info);
+
+      for (auto& item : menu_item_text)
+      {
+        item.cchWText = std::wcslen(item.pszWText);
+      }
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
@@ -708,7 +697,7 @@ namespace siege::views
 
       SelectFont(hDC, font);
 
-      std::wstring text = item.itemData ? (wchar_t*)item.itemData : L"__________";
+      std::wstring text = item.itemData ? ((MSAAMENUINFO*)item.itemData)->pszWText : L"__________";
       SIZE char_size{};
       auto result = GetTextExtentPoint32W(hDC, text.data(), text.size(), &char_size);
       char_size.cx += (GetSystemMetrics(SM_CXMENUCHECK) * 2);
@@ -759,7 +748,11 @@ namespace siege::views
 
       auto rect = item.rcItem;
       rect.left += (rect.right - rect.left) / 10;
-      ::DrawTextW(context, (LPCWSTR)item.itemData, -1, &rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+      if (item.itemData)
+      {
+        auto& menu_item_info = *(MSAAMENUINFO*)item.itemData;
+        ::DrawTextW(context, menu_item_info.pszWText, -1, &rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+      }
 
       return TRUE;
     }
@@ -980,7 +973,7 @@ namespace siege::views
       if (identifier == edit_theme_id)
       {
         theme_window = *win32::window_module_ref::current_module().CreateWindowExW(CREATESTRUCTW{
-          .lpCreateParams = (HWND) * this,
+          .lpCreateParams = (HWND)this->get(),
           .hwndParent = *this,
           .cx = CW_USEDEFAULT,
           .x = CW_USEDEFAULT,
