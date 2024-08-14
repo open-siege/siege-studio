@@ -163,38 +163,6 @@ namespace win32
 
         if (item.itemAction == ODA_DRAWENTIRE || item.itemAction == ODA_SELECT)
         {
-          auto x_border = GetSystemMetrics(SM_CXEDGE);
-          auto y_border = GetSystemMetrics(SM_CYEDGE);
-
-          if (item.itemAction == ODA_DRAWENTIRE)
-          {
-            auto parent_context = win32::gdi::drawing_context_ref(item.hDC);
-
-            auto rect = tabs.GetClientRect();
-            auto client_area = tabs.GetClientRect();
-
-            client_area = tabs.AdjustRect(false, *client_area);
-
-            client_area->left = std::clamp<LONG>(client_area->left - x_border, 0, client_area->left);
-            client_area->right += x_border;
-            client_area->top = std::clamp<LONG>(client_area->top - y_border, 0, client_area->top);
-            client_area->bottom += y_border;
-
-            auto count = tabs.GetItemCount();
-
-            if (count > 0)
-            {
-              auto tab_rect = tabs.GetItemRect(count - 1);
-              rect->left = tab_rect->right;
-              rect->bottom = tab_rect->bottom;
-            }
-
-            auto bk_color = colors[win32::properties::tab_control::bk_color];
-
-            parent_context.FillRect(*rect, get_solid_brush(bk_color));
-            parent_context.FillRect(*client_area, get_solid_brush(bk_color));
-          }
-
           auto context = win32::gdi::drawing_context_ref(item.hDC);
 
           SetBkColor(context, colors[win32::properties::tab_control::bk_color]);
@@ -202,10 +170,6 @@ namespace win32
           win32::tab_control control(item.hwndItem);
 
           auto item_rect = item.rcItem;
-          item_rect.left = std::clamp<LONG>(item_rect.left - x_border, 0, item_rect.left);
-          item_rect.right += x_border;
-          item_rect.top = std::clamp<LONG>(item_rect.top - y_border, 0, item_rect.top);
-          item_rect.bottom += y_border;
 
           auto text_highlight_color = colors[win32::properties::tab_control::text_highlight_color];
           auto text_bk_color = colors[win32::properties::tab_control::text_bk_color];
@@ -220,12 +184,6 @@ namespace win32
           }
           else
           {
-            auto y_focus = GetSystemMetrics(SM_CYFOCUSBORDER);
-            auto x_focus = GetSystemMetrics(SM_CXFOCUSBORDER);
-
-            item_rect.top = std::clamp<LONG>(item_rect.top - y_focus, 0, item_rect.top);
-            item_rect.bottom += y_focus;
-
             context.FillRect(item_rect, get_solid_brush(text_bk_color));
           }
 
@@ -269,9 +227,18 @@ namespace win32
         {
           PAINTSTRUCT ps;
           HDC hdc = BeginPaint(hWnd, &ps);
+
+          
+          auto* self = (sub_class*)dwRefData;
+          auto tabs = win32::tab_control(hWnd);
+          auto parent_context = win32::gdi::drawing_context_ref(hdc);
+          auto rect = tabs.GetClientRect();
+          auto bk_color = self->colors[win32::properties::tab_control::bk_color];
+
+          parent_context.FillRect(*rect, get_solid_brush(bk_color));
+
           auto result = DefSubclassProc(hWnd, message, (WPARAM)hdc, lParam);
 
-          auto* self = (sub_class*)dwRefData;
           auto text_bk_color = self->colors[win32::properties::tab_control::text_bk_color];
           auto pen = CreatePen(PS_SOLID, 3, text_bk_color);
 
@@ -279,6 +246,32 @@ namespace win32
           SelectObject(hdc, GetStockObject(HOLLOW_BRUSH));
 
           SetDCPenColor(hdc, RGB(0, 0, 0));
+
+
+          auto x_border = GetSystemMetrics(SM_CXEDGE);
+          auto y_border = GetSystemMetrics(SM_CYEDGE);
+
+          
+          auto client_area = tabs.GetClientRect();
+
+          client_area = tabs.AdjustRect(false, *client_area);
+
+          client_area->left = std::clamp<LONG>(client_area->left - x_border, 0, client_area->left);
+          client_area->right += x_border;
+          client_area->top = std::clamp<LONG>(client_area->top - y_border, 0, client_area->top);
+          client_area->bottom += y_border;
+
+          auto count = tabs.GetItemCount();
+
+          if (count > 0)
+          {
+            auto tab_rect = tabs.GetItemRect(count - 1);
+            rect->left = tab_rect->right;
+            rect->bottom = tab_rect->bottom;
+          }
+
+          parent_context.FillRect(*rect, get_solid_brush(bk_color));
+          parent_context.FillRect(*client_area, get_solid_brush(bk_color));
 
           RECT item_rect;
           for (auto i = 0; i < TabCtrl_GetItemCount(hWnd); ++i)
@@ -335,7 +328,8 @@ namespace win32
     }
   }
 
-  void apply_theme(const win32::window_ref& colors, win32::list_view& control)
+  void
+    apply_theme(const win32::window_ref& colors, win32::list_view& control)
   {
     static auto default_bk_color = ListView_GetBkColor(control);
     auto color = colors.FindPropertyExW<COLORREF>(properties::list_view::bk_color).value_or(default_bk_color);
