@@ -157,7 +157,8 @@ namespace siege::views
       auto header = table.GetHeader();
 
       auto style = header.GetWindowStyle();
-      header.SetWindowStyle(style | HDS_FILTERBAR | HDS_FLAT);
+
+      header.SetWindowStyle(style | HDS_NOSIZING | HDS_FILTERBAR | HDS_FLAT);
       header.SetFilterChangeTimeout();
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
@@ -172,17 +173,27 @@ namespace siege::views
       table_settings.SetWindowPos(POINT{});
       table_settings.AutoSize();
 
-      table.SetWindowPos(SIZE{ .cx = client_size.cx, .cy = client_size.cy - top_size.cy });
+      table.SetWindowPos(SIZE{ .cx = top_size.cx, .cy = client_size.cy - top_size.cy });
       table.SetWindowPos(POINT{ .y = top_size.cy });
 
       auto column_count = table.GetColumnCount();
+      auto table_size = table.GetClientSize();
 
-      auto column_width = client_size.cx / column_count;
+      auto padding = Header_GetBitmapMargin(table.GetHeader());
+      auto column_width = (table_size->cx / column_count);
+      std::wstringstream temp;
+      temp << "Padding :" << padding << '\n';
+      temp << "Column width: " << column_width << '\n';
+      OutputDebugStringW(temp.str().c_str());
 
       for (auto i = 0u; i < column_count; ++i)
       {
         table.SetColumnWidth(i, column_width);
       }
+
+      auto header_size = table.GetHeader().GetClientSize();
+
+      table.GetHeader().SetWindowPos(SIZE{ .cx = top_size.cx, .cy = header_size->cy });
 
       LVTILEVIEWINFO tileViewInfo = { 0 };
 
@@ -191,7 +202,7 @@ namespace siege::views
       tileViewInfo.dwMask = LVTVIM_COLUMNS;
       tileViewInfo.cLines = 2;
 
-      ListView_SetTileViewInfo(table, &tileViewInfo);
+      //      ListView_SetTileViewInfo(table, &tileViewInfo);
 
       return 0;
     }

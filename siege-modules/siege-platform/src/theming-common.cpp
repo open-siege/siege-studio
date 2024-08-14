@@ -228,7 +228,7 @@ namespace win32
           PAINTSTRUCT ps;
           HDC hdc = BeginPaint(hWnd, &ps);
 
-          
+
           auto* self = (sub_class*)dwRefData;
           auto tabs = win32::tab_control(hWnd);
           auto parent_context = win32::gdi::drawing_context_ref(hdc);
@@ -251,7 +251,7 @@ namespace win32
           auto x_border = GetSystemMetrics(SM_CXEDGE);
           auto y_border = GetSystemMetrics(SM_CYEDGE);
 
-          
+
           auto client_area = tabs.GetClientRect();
 
           client_area = tabs.AdjustRect(false, *client_area);
@@ -328,24 +328,24 @@ namespace win32
     }
   }
 
-  void
-    apply_theme(const win32::window_ref& colors, win32::list_view& control)
+  void apply_theme(const win32::window_ref& colors, win32::list_view& control)
   {
     static auto default_bk_color = ListView_GetBkColor(control);
-    auto color = colors.FindPropertyExW<COLORREF>(properties::list_view::bk_color).value_or(default_bk_color);
-    ListView_SetBkColor(control, color);
-
     static auto default_text_color = ListView_GetTextColor(control);
-    color = colors.FindPropertyExW<COLORREF>(properties::list_view::text_color).value_or(default_text_color);
-    ListView_SetTextColor(control, color);
-
     static auto default_text_bk_color = ListView_GetTextBkColor(control);
-    color = colors.FindPropertyExW<COLORREF>(properties::list_view::text_bk_color).value_or(default_text_bk_color);
-    ListView_SetTextBkColor(control, color);
-
     static auto default_outline_color = ListView_GetOutlineColor(control);
-    color = colors.FindPropertyExW<COLORREF>(properties::list_view::outline_color).value_or(default_outline_color);
-    ListView_SetOutlineColor(control, color);
+
+    std::map<std::wstring_view, COLORREF> color_map{
+      { win32::properties::list_view::bk_color, colors.FindPropertyExW<COLORREF>(properties::list_view::bk_color).value_or(default_bk_color) },
+      { win32::properties::list_view::text_color, colors.FindPropertyExW<COLORREF>(win32::properties::list_view::text_color).value_or(default_text_color) },
+      { win32::properties::list_view::text_bk_color, colors.FindPropertyExW<COLORREF>(win32::properties::list_view::text_bk_color).value_or(default_text_bk_color) },
+      { win32::properties::list_view::outline_color, colors.FindPropertyExW<COLORREF>(win32::properties::list_view::outline_color).value_or(default_outline_color) },
+    };
+
+    ListView_SetBkColor(control, color_map[properties::list_view::bk_color]);
+    ListView_SetTextColor(control, color_map[properties::list_view::text_color]);
+    ListView_SetTextBkColor(control, color_map[properties::list_view::text_bk_color]);
+    ListView_SetOutlineColor(control, color_map[properties::list_view::outline_color]);
 
     auto header = control.GetHeader();
 
@@ -367,6 +367,112 @@ namespace win32
     else
     {
       win32::theme_module().SetWindowTheme(control, nullptr, nullptr);
+    }
+
+    struct sub_class final : win32::list_view::notifications
+    {
+      using win32::list_view::notifications::wm_notify;
+
+      std::map<std::wstring_view, COLORREF> colors;
+
+      sub_class(std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
+      {
+      }
+
+      std::optional<win32::lresult_t> wm_notify(win32::list_view control, NMLVCUSTOMDRAW& custom_draw) override
+      {
+        if (custom_draw.dwItemType == LVCDI_GROUP && custom_draw.nmcd.dwDrawStage == CDDS_PREPAINT)
+        {
+          const int nGroupId = int(custom_draw.nmcd.dwItemSpec);
+
+          std::array<wchar_t, 255> group_name{};
+          LVGROUP lvg = {
+            .cbSize = sizeof(LVGROUP),
+            .mask = LVGF_HEADER | LVGF_STATE,
+            .pszHeader = group_name.data(),
+            .cchHeader = 255,
+            .stateMask = 0xff,
+          };
+
+          if (ListView_GetGroupInfo(control, nGroupId, &lvg))
+          {
+            RECT header_rect{};
+            ListView_GetGroupRect(control, nGroupId, LVGGR_HEADER, &header_rect);
+
+            SetTextColor(custom_draw.nmcd.hdc, colors[properties::list_view::text_color]);
+
+            auto font = win32::load_font(LOGFONTW{
+              .lfPitchAndFamily = VARIABLE_PITCH,
+              .lfFaceName = L"Segoe MDL2 Assets" });
+
+            std::wstring icon;
+            
+            if (lvg.state & LVGS_COLLAPSED)
+            {
+              icon.push_back(0xE76C);// ChevronRight
+            }
+            else if (lvg.state & ~LVGS_HIDDEN)
+            {
+              icon.push_back(0xE70D);// ChevronDown
+            }
+
+            if (!icon.empty())
+            {
+              SelectFont(custom_draw.nmcd.hdc, font);
+              auto rect = header_rect;
+
+              SIZE text_size{};
+              GetTextExtentPoint32W(custom_draw.nmcd.hdc, icon.data(), 1, &text_size);
+
+              rect.right = rect.right - text_size.cx;
+
+              DrawTextExW(custom_draw.nmcd.hdc, icon.data(), -1, &rect, DT_SINGLELINE | DT_RIGHT | DT_VCENTER, nullptr);
+            }
+
+            font = win32::load_font(LOGFONTW{
+              .lfPitchAndFamily = VARIABLE_PITCH,
+              .lfFaceName = L"Segoe UI" });
+
+            SelectFont(custom_draw.nmcd.hdc, font);
+
+
+            DrawTextExW(custom_draw.nmcd.hdc, group_name.data(), -1, &header_rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER, nullptr);
+          }
+
+          return CDRF_SKIPDEFAULT;
+        }
+
+        return CDRF_DODEFAULT;
+      }
+
+      static LRESULT __stdcall HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      {
+        auto result = win32::list_view::notifications::dispatch_message((sub_class*)dwRefData, message, wParam, lParam);
+
+        if (result)
+        {
+          return *result;
+        }
+
+        if (message == WM_DESTROY)
+        {
+          ::RemoveWindowSubclass(hWnd, sub_class::HandleMessage, uIdSubclass);
+        }
+
+        return DefSubclassProc(hWnd, message, wParam, lParam);
+      }
+    };
+
+    DWORD_PTR existing_object{};
+    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::list_view::class_name, &existing_object) && existing_object == 0)
+    {
+      auto data = (DWORD_PTR) new sub_class(std::move(color_map));
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::list_view::class_name, data);
+      ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
+    }
+    else
+    {
+      ((sub_class*)existing_object)->colors = std::move(color_map);
     }
 
     ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
