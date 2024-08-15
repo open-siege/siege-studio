@@ -50,10 +50,8 @@ namespace siege::views
     {
       if (message.setting == L"ImmersiveColorSet")
       {
-        auto parent = this->GetParent();
-
-        win32::apply_theme(*parent, selection);
-        win32::apply_theme(*parent, *this);
+        win32::apply_theme(selection);
+        win32::apply_theme(*this);
 
         return 0;
       }

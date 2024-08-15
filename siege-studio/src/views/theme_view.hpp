@@ -242,7 +242,7 @@ namespace siege::views
         auto& item = color_items.emplace_back();
         item.item_index = item_index++;
         item.key = name;
-        item.value = theme_properties.FindPropertyExW<COLORREF>(name);
+        item.value = win32::get_color_for_window(ref(), name);
 
         std::wstringstream stream;
         std::wstring property_value;
@@ -296,17 +296,17 @@ namespace siege::views
       auto copy_count = unique_colors.size() > colors.size() ? colors.size() : unique_colors.size();
       std::copy_n(unique_colors.begin(), copy_count, colors.begin());
 
-      win32::apply_theme(theme_properties, sample.button);
-      win32::apply_theme(theme_properties, sample.header);
-      win32::apply_theme(theme_properties, sample.list_box);
-      win32::apply_theme(theme_properties, sample.edit);
-      win32::apply_theme(theme_properties, sample.tree_view);
-      win32::apply_theme(theme_properties, sample.list_view);
-      win32::apply_theme(theme_properties, sample.toolbar);
-      win32::apply_theme(theme_properties, sample.static_control);
-      win32::apply_theme(theme_properties, sample.tab_control);
-      win32::apply_theme(theme_properties, control_settings);
-      win32::apply_theme(theme_properties, options);
+      win32::apply_theme(sample.button);
+      win32::apply_theme(sample.header);
+      win32::apply_theme(sample.list_box);
+      win32::apply_theme(sample.edit);
+      win32::apply_theme(sample.tree_view);
+      win32::apply_theme(sample.list_view);
+      win32::apply_theme(sample.toolbar);
+      win32::apply_theme(sample.static_control);
+      win32::apply_theme(sample.tab_control);
+      win32::apply_theme(control_settings);
+      win32::apply_theme(options);
 
       return 0;
     }
@@ -467,10 +467,10 @@ namespace siege::views
             ListView_SetItemText(control_settings, info.iItem, info.iSubItem, property_value.data(), property_value.size());
 
             context->value = dialog.rgbResult;
-            theme_properties.SetPropW(context->key, dialog.rgbResult);
-            win32::apply_theme(theme_properties, sample.button);
-            win32::apply_theme(theme_properties, sample.header);
-            win32::apply_theme(theme_properties, sample.list_box);
+            win32::set_color_for_window(theme_properties.ref(), context->key, dialog.rgbResult);
+            win32::apply_theme(sample.button);
+            win32::apply_theme(sample.header);
+            win32::apply_theme(sample.list_box);
           }
         }
       }

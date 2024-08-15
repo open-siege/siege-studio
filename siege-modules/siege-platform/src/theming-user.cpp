@@ -9,7 +9,7 @@ namespace win32
 {
   gdi::brush_ref get_solid_brush(COLORREF color);
 
-  void apply_theme(const win32::window_ref& colors, win32::window_ref& control)
+  void apply_theme(win32::window_ref& control)
   {
     struct sub_class
     {
@@ -49,7 +49,7 @@ namespace win32
     SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), FALSE);
 
     std::map<std::wstring_view, COLORREF> color_map{
-      { win32::properties::window::bk_color, *colors.FindPropertyExW<COLORREF>(win32::properties::window::bk_color) }
+      { win32::properties::window::bk_color, win32::get_color_for_window(control.ref(),win32::properties::window::bk_color) }
     };
 
     DWORD_PTR existing_object{};
@@ -65,7 +65,7 @@ namespace win32
 
     if (control.GetWindowStyle() & ~WS_CHILD)
     {
-      BOOL value = colors.FindPropertyExW<bool>(L"AppsUseDarkTheme").value_or(false) ? TRUE : FALSE;
+      BOOL value = win32::is_dark_theme() ? TRUE : FALSE;
       if (::DwmSetWindowAttribute(control, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value)) == S_OK)
       {
         ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
@@ -73,7 +73,7 @@ namespace win32
     }
   }
 
-  void apply_theme(const win32::window_ref& colors, win32::edit& control)
+  void apply_theme(win32::edit& control)
   {
     struct sub_class final : win32::edit::notifications
     {
@@ -115,7 +115,7 @@ namespace win32
     }
   }
 
-  void apply_theme(const win32::window_ref& colors, win32::button& control)
+  void apply_theme(win32::button& control)
   {
     struct sub_class final : win32::button::notifications
     {
@@ -251,19 +251,19 @@ namespace win32
 
       virtual std::optional<HBRUSH> wm_control_color(win32::button button, win32::gdi::drawing_context_ref context) override
       {
-        auto text_color = button.GetAncestor(GA_ROOT)->FindPropertyExW<COLORREF>(properties::button::text_color);
+        auto text_color = colors[properties::button::text_color];
 
         if (text_color)
         {
-          ::SetTextColor(context, *text_color);
+          ::SetTextColor(context, text_color);
         }
 
-        auto bk_color = button.GetAncestor(GA_ROOT)->FindPropertyExW<COLORREF>(properties::button::bk_color);
+        auto bk_color = colors[properties::button::bk_color];
 
         if (bk_color)
         {
-          ::SetBkColor(context, *bk_color);
-          return get_solid_brush(*bk_color);
+          ::SetBkColor(context, bk_color);
+          return get_solid_brush(bk_color);
         }
 
         return std::nullopt;
@@ -317,9 +317,9 @@ namespace win32
     }
 
     std::map<std::wstring_view, COLORREF> color_map{
-      { win32::properties::button::bk_color, *colors.FindPropertyExW<COLORREF>(win32::properties::button::bk_color) },
-      { win32::properties::button::text_color, *colors.FindPropertyExW<COLORREF>(win32::properties::button::text_color) },
-      { win32::properties::button::line_color, *colors.FindPropertyExW<COLORREF>(win32::properties::button::line_color) },
+      { win32::properties::button::bk_color, win32::get_color_for_window(control.ref(),win32::properties::button::bk_color) },
+      { win32::properties::button::text_color, win32::get_color_for_window(control.ref(),win32::properties::button::text_color) },
+      { win32::properties::button::line_color, win32::get_color_for_window(control.ref(),win32::properties::button::line_color) },
     };
 
     DWORD_PTR existing_object{};
@@ -334,7 +334,7 @@ namespace win32
     }
   }
 
-  void apply_theme(const win32::window_ref& colors, win32::static_control& control)
+  void apply_theme(win32::static_control& control)
   {
     struct sub_class final : win32::static_control::notifications
     {
@@ -380,8 +380,8 @@ namespace win32
     SendMessageW(control, WM_SETFONT, (WPARAM)font, FALSE);
 
     std::map<std::wstring_view, COLORREF> color_map{
-      { win32::properties::static_control::bk_color, *colors.FindPropertyExW<COLORREF>(win32::properties::static_control::bk_color) },
-      { win32::properties::static_control::text_color, *colors.FindPropertyExW<COLORREF>(win32::properties::static_control::text_color) }
+      { win32::properties::static_control::bk_color, win32::get_color_for_window(control.ref(),win32::properties::static_control::bk_color) },
+      { win32::properties::static_control::text_color, win32::get_color_for_window(control.ref(),win32::properties::static_control::text_color) }
     };
 
     DWORD_PTR existing_object{};
@@ -397,7 +397,7 @@ namespace win32
   }
 
 
-  void apply_theme(const win32::window_ref& colors, win32::list_box& control)
+  void apply_theme(win32::list_box& control)
   {
     struct sub_class final : win32::list_box::notifications
     {
@@ -535,10 +535,10 @@ namespace win32
     copy_control(style | LBS_OWNERDRAWFIXED);
 
     std::map<std::wstring_view, COLORREF> color_map{
-      { win32::properties::list_box::bk_color, *colors.FindPropertyExW<COLORREF>(win32::properties::list_box::bk_color) },
-      { win32::properties::list_box::text_color, *colors.FindPropertyExW<COLORREF>(win32::properties::list_box::text_color) },
-      { win32::properties::list_box::text_bk_color, *colors.FindPropertyExW<COLORREF>(win32::properties::list_box::text_bk_color) },
-      { win32::properties::list_box::text_highlight_color, *colors.FindPropertyExW<COLORREF>(win32::properties::list_box::text_highlight_color) },
+      { win32::properties::list_box::bk_color, win32::get_color_for_window(control.ref(),win32::properties::list_box::bk_color) },
+      { win32::properties::list_box::text_color, win32::get_color_for_window(control.ref(),win32::properties::list_box::text_color) },
+      { win32::properties::list_box::text_bk_color, win32::get_color_for_window(control.ref(),win32::properties::list_box::text_bk_color) },
+      { win32::properties::list_box::text_highlight_color, win32::get_color_for_window(control.ref(),win32::properties::list_box::text_highlight_color) },
     };
 
     DWORD_PTR existing_object{};

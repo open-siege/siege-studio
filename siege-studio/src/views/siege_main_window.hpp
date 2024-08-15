@@ -103,7 +103,7 @@ namespace siege::views
 
       selected_file = files.end();
 
-      this->SetPropW(L"AppsUseDarkTheme", is_dark_mode);
+      win32::set_is_dark_theme(is_dark_mode);
 
       resize_cursor.reset((HCURSOR)LoadImageW(nullptr, IDC_SIZEWE, IMAGE_CURSOR, LR_DEFAULTSIZE, LR_DEFAULTSIZE, LR_SHARED));
     }
@@ -495,8 +495,8 @@ namespace siege::views
           {
             is_dark_mode = value == 0;
 
-            this->SetPropW(L"AppsUseDarkTheme", is_dark_mode);
-
+            win32::set_is_dark_theme(is_dark_mode);
+            
             COLORREF bk_color = RGB(0x20, 0x20, 0x20);
             COLORREF text_color = 0x00FFFFFF;
             COLORREF text_bk_color = RGB(0x2b, 0x2b, 0x2b);
@@ -512,44 +512,44 @@ namespace siege::views
               btn_shadow_color = RGB(1, 1, 1);
             }
 
-            this->SetPropW(win32::properties::button::bk_color, bk_color);
-            this->SetPropW(win32::properties::button::text_color, text_color);
-            this->SetPropW(win32::properties::button::line_color, text_color);
+            win32::set_color_for_window(this->ref(), win32::properties::button::bk_color, bk_color);
+            win32::set_color_for_window(this->ref(), win32::properties::button::text_color, text_color);
+            win32::set_color_for_window(this->ref(), win32::properties::button::line_color, text_color);
 
-            this->SetPropW(win32::properties::tree_view::bk_color, bk_color);
-            this->SetPropW(win32::properties::tree_view::text_color, text_color);
-            this->SetPropW(win32::properties::tree_view::line_color, 0x00383838);
-            this->SetPropW(win32::properties::list_view::bk_color, bk_color);
-            this->SetPropW(win32::properties::list_view::text_color, text_color);
-            this->SetPropW(win32::properties::list_view::text_bk_color, text_bk_color);
-            this->SetPropW(win32::properties::list_view::outline_color, 0x00AAAAAA);
+            win32::set_color_for_window(this->ref(), win32::properties::tree_view::bk_color, bk_color);
+            win32::set_color_for_window(this->ref(), win32::properties::tree_view::text_color, text_color);
+            win32::set_color_for_window(this->ref(), win32::properties::tree_view::line_color, 0x00383838);
+            win32::set_color_for_window(this->ref(), win32::properties::list_view::bk_color, bk_color);
+            win32::set_color_for_window(this->ref(), win32::properties::list_view::text_color, text_color);
+            win32::set_color_for_window(this->ref(), win32::properties::list_view::text_bk_color, text_bk_color);
+            win32::set_color_for_window(this->ref(), win32::properties::list_view::outline_color, 0x00AAAAAA);
 
-            this->SetPropW(win32::properties::list_box::bk_color, bk_color);
-            this->SetPropW(win32::properties::list_box::text_color, text_color);
-            this->SetPropW(win32::properties::list_box::text_bk_color, text_bk_color);
-            this->SetPropW(win32::properties::list_box::text_highlight_color, text_highlight_color);
+            win32::set_color_for_window(this->ref(), win32::properties::list_box::bk_color, bk_color);
+            win32::set_color_for_window(this->ref(), win32::properties::list_box::text_color, text_color);
+            win32::set_color_for_window(this->ref(), win32::properties::list_box::text_bk_color, text_bk_color);
+            win32::set_color_for_window(this->ref(), win32::properties::list_box::text_highlight_color, text_highlight_color);
 
-            this->SetPropW(win32::properties::header::bk_color, bk_color);
-            this->SetPropW(win32::properties::header::text_color, text_color);
-            this->SetPropW(win32::properties::header::text_bk_color, text_bk_color);
-            this->SetPropW(win32::properties::header::text_highlight_color, text_highlight_color);
+            win32::set_color_for_window(this->ref(), win32::properties::header::bk_color, bk_color);
+            win32::set_color_for_window(this->ref(), win32::properties::header::text_color, text_color);
+            win32::set_color_for_window(this->ref(), win32::properties::header::text_bk_color, text_bk_color);
+            win32::set_color_for_window(this->ref(), win32::properties::header::text_highlight_color, text_highlight_color);
 
-            this->SetPropW(win32::properties::tab_control::bk_color, bk_color);
-            this->SetPropW(win32::properties::tab_control::text_color, text_color);
-            this->SetPropW(win32::properties::tab_control::text_bk_color, text_bk_color);
-            this->SetPropW(win32::properties::tab_control::text_highlight_color, text_highlight_color);
+            win32::set_color_for_window(this->ref(), win32::properties::tab_control::bk_color, bk_color);
+            win32::set_color_for_window(this->ref(), win32::properties::tab_control::text_color, text_color);
+            win32::set_color_for_window(this->ref(), win32::properties::tab_control::text_bk_color, text_bk_color);
+            win32::set_color_for_window(this->ref(), win32::properties::tab_control::text_highlight_color, text_highlight_color);
 
-            this->SetPropW(win32::properties::tool_bar::bk_color, bk_color);
-            this->SetPropW(win32::properties::tool_bar::text_color, text_color);
-            this->SetPropW(win32::properties::tool_bar::btn_face_color, text_bk_color);
-            this->SetPropW(win32::properties::tool_bar::btn_highlight_color, text_highlight_color);
-            this->SetPropW(win32::properties::tool_bar::btn_shadow_color, btn_shadow_color);
-            this->SetPropW(win32::properties::window::bk_color, bk_color);
-            this->SetPropW(win32::properties::menu::bk_color, bk_color);
-            this->SetPropW(win32::properties::menu::text_color, text_color);
-            this->SetPropW(win32::properties::menu::text_highlight_color, text_highlight_color);
-            this->SetPropW(win32::properties::static_control::bk_color, bk_color);
-            this->SetPropW(win32::properties::static_control::text_color, text_color);
+            win32::set_color_for_window(this->ref(), win32::properties::tool_bar::bk_color, bk_color);
+            win32::set_color_for_window(this->ref(), win32::properties::tool_bar::text_color, text_color);
+            win32::set_color_for_window(this->ref(), win32::properties::tool_bar::btn_face_color, text_bk_color);
+            win32::set_color_for_window(this->ref(), win32::properties::tool_bar::btn_highlight_color, text_highlight_color);
+            win32::set_color_for_window(this->ref(), win32::properties::tool_bar::btn_shadow_color, btn_shadow_color);
+            win32::set_color_for_window(this->ref(), win32::properties::window::bk_color, bk_color);
+            win32::set_color_for_window(this->ref(), win32::properties::menu::bk_color, bk_color);
+            win32::set_color_for_window(this->ref(), win32::properties::menu::text_color, text_color);
+            win32::set_color_for_window(this->ref(), win32::properties::menu::text_highlight_color, text_highlight_color);
+            win32::set_color_for_window(this->ref(), win32::properties::static_control::bk_color, bk_color);
+            win32::set_color_for_window(this->ref(), win32::properties::static_control::text_color, text_color);
 
             MENUINFO mi = { 0 };
             mi.cbSize = sizeof(mi);
@@ -560,11 +560,11 @@ namespace siege::views
             SetMenuInfo(popup_menus[0], &mi);
             SetMenuInfo(popup_menus[1], &mi);
 
-            win32::apply_theme(*this, dir_list);
-            win32::apply_theme(*this, tab_control);
-            win32::apply_theme(*this, main_menu);
-            win32::apply_theme(*this, separator);
-            win32::apply_theme(*this, *this);
+            win32::apply_theme(dir_list);
+            win32::apply_theme(tab_control);
+            win32::apply_theme(main_menu);
+            win32::apply_theme(separator);
+            win32::apply_theme(*this);
 
             for (auto i = 0; i < tab_control.GetItemCount(); ++i)
             {
@@ -705,12 +705,11 @@ namespace siege::views
 
       SelectFont(item.hDC, font);
 
-
-      auto bk_color = *this->FindPropertyExW<COLORREF>(win32::properties::menu::bk_color);
-      auto text_highlight_color = *this->FindPropertyExW<COLORREF>(win32::properties::menu::text_highlight_color);
+      auto bk_color = win32::get_color_for_window(ref(), win32::properties::menu::bk_color);
+      auto text_highlight_color = win32::get_color_for_window(ref(), win32::properties::menu::text_highlight_color);
       auto black_brush = win32::get_solid_brush(bk_color);
-      auto grey_brush = win32::get_solid_brush(*this->FindPropertyExW<COLORREF>(win32::properties::menu::text_highlight_color));
-      auto text_color = this->FindPropertyExW<COLORREF>(win32::properties::menu::text_color);
+      auto grey_brush = win32::get_solid_brush(win32::get_color_for_window(ref(), win32::properties::menu::text_highlight_color));
+      auto text_color = win32::get_color_for_window(ref(), win32::properties::menu::text_color);
 
       auto context = win32::gdi::drawing_context_ref(item.hDC);
 
@@ -732,10 +731,7 @@ namespace siege::views
         context.FillRect(item.rcItem, black_brush);
       }
 
-      if (text_color)
-      {
-        ::SetTextColor(context, *text_color);
-      }
+      ::SetTextColor(context, text_color);
 
       auto rect = item.rcItem;
       rect.left += (rect.right - rect.left) / 10;
@@ -980,7 +976,7 @@ namespace siege::views
 
       if (identifier == open_workspace_id)
       {
-        auto prop = this->FindPropertyExW(win32::properties::button::bk_color);
+        auto prop = win32::get_color_for_window(ref(), win32::properties::button::bk_color);
         auto dialog = win32::com::CreateFileOpenDialog();
 
         if (dialog)

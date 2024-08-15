@@ -168,13 +168,11 @@ namespace siege::views
     {
       if (message.setting == L"ImmersiveColorSet")
       {
-        auto parent = this->GetParent();
-
-        win32::apply_theme(*parent, palettes_list);
-        win32::apply_theme(*parent, frame_label);
-        win32::apply_theme(*parent, frame_value);
-        win32::apply_theme(*parent, zoom_label);
-        win32::apply_theme(*parent, zoom_value);
+        win32::apply_theme(palettes_list);
+        win32::apply_theme(frame_label);
+        win32::apply_theme(frame_value);
+        win32::apply_theme(zoom_label);
+        win32::apply_theme(zoom_value);
         //win32::apply_theme(*parent, zoom);
         //win32::apply_theme(*parent, frame_selector);
 

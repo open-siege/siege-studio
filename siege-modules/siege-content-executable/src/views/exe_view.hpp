@@ -253,11 +253,11 @@ namespace siege::views
       {
         auto parent = this->GetParent();
 
-        win32::apply_theme(*parent, resource_table);
-        win32::apply_theme(*parent, launch_table);
-        win32::apply_theme(*parent, string_table);
-        win32::apply_theme(*parent, options);
-        win32::apply_theme(*parent, *this);
+        win32::apply_theme(resource_table);
+        win32::apply_theme(launch_table);
+        win32::apply_theme(string_table);
+        win32::apply_theme(options);
+        win32::apply_theme(*this);
 
         return 0;
       }

@@ -7,7 +7,7 @@ namespace win32
 {
   gdi::brush_ref get_solid_brush(COLORREF color);
 
-  void apply_theme(const win32::window_ref& colors, win32::header& control)
+  void apply_theme(win32::header& control)
   {
     struct sub_class final : win32::header::notifications
     {
@@ -128,10 +128,10 @@ namespace win32
     SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), FALSE);
 
     std::map<std::wstring_view, COLORREF> color_map{
-      { win32::properties::header::bk_color, *colors.FindPropertyExW<COLORREF>(win32::properties::header::bk_color) },
-      { win32::properties::header::text_color, *colors.FindPropertyExW<COLORREF>(win32::properties::header::text_color) },
-      { win32::properties::header::text_bk_color, *colors.FindPropertyExW<COLORREF>(win32::properties::header::text_bk_color) },
-      { win32::properties::header::text_highlight_color, *colors.FindPropertyExW<COLORREF>(win32::properties::header::text_highlight_color) },
+      { win32::properties::header::bk_color, win32::get_color_for_window(control.ref(), win32::properties::header::bk_color) },
+      { win32::properties::header::text_color, win32::get_color_for_window(control.ref(),win32::properties::header::text_color) },
+      { win32::properties::header::text_bk_color, win32::get_color_for_window(control.ref(),win32::properties::header::text_bk_color) },
+      { win32::properties::header::text_highlight_color, win32::get_color_for_window(control.ref(),win32::properties::header::text_highlight_color) },
     };
 
     DWORD_PTR existing_object{};
@@ -147,7 +147,7 @@ namespace win32
     }
   }
 
-  void apply_theme(const win32::window_ref& colors, win32::tab_control& control)
+  void apply_theme(win32::tab_control& control)
   {
     struct sub_class final : win32::tab_control::notifications
     {
@@ -308,10 +308,10 @@ namespace win32
 
 
     std::map<std::wstring_view, COLORREF> color_map{
-      { win32::properties::tab_control::bk_color, *colors.FindPropertyExW<COLORREF>(win32::properties::tab_control::bk_color) },
-      { win32::properties::tab_control::text_color, *colors.FindPropertyExW<COLORREF>(win32::properties::tab_control::text_color) },
-      { win32::properties::tab_control::text_bk_color, *colors.FindPropertyExW<COLORREF>(win32::properties::tab_control::text_bk_color) },
-      { win32::properties::tab_control::text_highlight_color, *colors.FindPropertyExW<COLORREF>(win32::properties::tab_control::text_highlight_color) },
+      { win32::properties::tab_control::bk_color, win32::get_color_for_window(control.ref(),win32::properties::tab_control::bk_color) },
+      { win32::properties::tab_control::text_color, win32::get_color_for_window(control.ref(),win32::properties::tab_control::text_color) },
+      { win32::properties::tab_control::text_bk_color, win32::get_color_for_window(control.ref(),win32::properties::tab_control::text_bk_color) },
+      { win32::properties::tab_control::text_highlight_color, win32::get_color_for_window(control.ref(),win32::properties::tab_control::text_highlight_color) },
     };
 
     DWORD_PTR existing_object{};
@@ -328,18 +328,13 @@ namespace win32
     }
   }
 
-  void apply_theme(const win32::window_ref& colors, win32::list_view& control)
+  void apply_theme(win32::list_view& control)
   {
-    static auto default_bk_color = ListView_GetBkColor(control);
-    static auto default_text_color = ListView_GetTextColor(control);
-    static auto default_text_bk_color = ListView_GetTextBkColor(control);
-    static auto default_outline_color = ListView_GetOutlineColor(control);
-
     std::map<std::wstring_view, COLORREF> color_map{
-      { win32::properties::list_view::bk_color, colors.FindPropertyExW<COLORREF>(properties::list_view::bk_color).value_or(default_bk_color) },
-      { win32::properties::list_view::text_color, colors.FindPropertyExW<COLORREF>(win32::properties::list_view::text_color).value_or(default_text_color) },
-      { win32::properties::list_view::text_bk_color, colors.FindPropertyExW<COLORREF>(win32::properties::list_view::text_bk_color).value_or(default_text_bk_color) },
-      { win32::properties::list_view::outline_color, colors.FindPropertyExW<COLORREF>(win32::properties::list_view::outline_color).value_or(default_outline_color) },
+      { win32::properties::list_view::bk_color, win32::get_color_for_window(control.ref(), properties::list_view::bk_color)},
+      { win32::properties::list_view::text_color, win32::get_color_for_window(control.ref(), win32::properties::list_view::text_color) },
+      { win32::properties::list_view::text_bk_color, win32::get_color_for_window(control.ref(), win32::properties::list_view::text_bk_color) },
+      { win32::properties::list_view::outline_color, win32::get_color_for_window(control.ref(), win32::properties::list_view::outline_color) },
     };
 
     ListView_SetBkColor(control, color_map[properties::list_view::bk_color]);
@@ -351,7 +346,7 @@ namespace win32
 
     if (header)
     {
-      win32::apply_theme(colors, header);
+      win32::apply_theme(header);
     }
 
     auto font = win32::load_font(LOGFONTW{
@@ -360,7 +355,7 @@ namespace win32
 
     SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), FALSE);
 
-    if (colors.GetPropW<bool>(L"AppsUseDarkTheme"))
+    if (win32::is_dark_theme())
     {
       win32::theme_module().SetWindowTheme(control, L"DarkMode_Explorer", nullptr);
     }
@@ -478,16 +473,16 @@ namespace win32
     ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
   }
 
-  void apply_theme(const win32::window_ref& colors, win32::tree_view& control)
+  void apply_theme(win32::tree_view& control)
   {
-    auto useDarkMode = colors.FindPropertyExW<bool>(L"AppsUseDarkTheme").value_or(false);
-    auto color = colors.FindPropertyExW<COLORREF>(properties::tree_view::bk_color).value_or(CLR_NONE);
+    auto useDarkMode = win32::is_dark_theme();
+    auto color = win32::get_color_for_window(control.ref(), properties::tree_view::bk_color);
     TreeView_SetBkColor(control, color);
 
-    color = colors.FindPropertyExW<COLORREF>(properties::tree_view::text_color).value_or(CLR_NONE);
+    color = win32::get_color_for_window(control.ref(), properties::tree_view::text_color);
     TreeView_SetTextColor(control, color);
 
-    color = colors.FindPropertyExW<COLORREF>(properties::tree_view::line_color).value_or(CLR_NONE);
+    color = win32::get_color_for_window(control.ref(), properties::tree_view::line_color);
     TreeView_SetLineColor(control, color);
 
     auto font = win32::load_font(LOGFONTW{
@@ -507,10 +502,10 @@ namespace win32
     ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
   }
 
-  void apply_theme(const win32::window_ref& colors, win32::tool_bar& control)
+  void apply_theme(win32::tool_bar& control)
   {
-    auto highlight_color = colors.FindPropertyExW<COLORREF>(properties::tool_bar::btn_highlight_color);
-    auto shadow_color = colors.FindPropertyExW<COLORREF>(properties::tool_bar::btn_shadow_color);
+    auto highlight_color = win32::get_color_for_window(control.ref(), properties::tool_bar::btn_highlight_color);
+    auto shadow_color = win32::get_color_for_window(control.ref(), properties::tool_bar::btn_shadow_color);
 
     bool change_theme = false;
 
@@ -521,22 +516,12 @@ namespace win32
     win32::theme_module().SetWindowTheme(control, L"", L"");
     SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), FALSE);
 
-    if (highlight_color || shadow_color)
-    {
-      change_theme = true;
-      COLORSCHEME scheme{ .dwSize = sizeof(COLORSCHEME), .clrBtnHighlight = CLR_DEFAULT, .clrBtnShadow = CLR_DEFAULT };
+    COLORSCHEME scheme{ .dwSize = sizeof(COLORSCHEME), .clrBtnHighlight = CLR_DEFAULT, .clrBtnShadow = CLR_DEFAULT };
 
-      if (highlight_color)
-      {
-        scheme.clrBtnHighlight = *highlight_color;
-      }
+    scheme.clrBtnHighlight = highlight_color;
+    scheme.clrBtnShadow = shadow_color;
 
-      if (shadow_color)
-      {
-        scheme.clrBtnShadow = *shadow_color;
-      }
-      ::SendMessageW(control, TB_SETCOLORSCHEME, 0, (LPARAM)&scheme);
-    }
+    ::SendMessageW(control, TB_SETCOLORSCHEME, 0, (LPARAM)&scheme);
 
     struct sub_class final : win32::tool_bar::notifications
     {
@@ -608,11 +593,11 @@ namespace win32
     };
 
     std::map<std::wstring_view, COLORREF> color_map{
-      { win32::properties::tool_bar::bk_color, *colors.FindPropertyExW<COLORREF>(win32::properties::tool_bar::bk_color) },
-      { win32::properties::tool_bar::text_color, *colors.FindPropertyExW<COLORREF>(win32::properties::tool_bar::text_color) },
-      { win32::properties::tool_bar::btn_face_color, *colors.FindPropertyExW<COLORREF>(win32::properties::tool_bar::btn_face_color) },
-      { win32::properties::tool_bar::btn_highlight_color, *colors.FindPropertyExW<COLORREF>(win32::properties::tool_bar::btn_highlight_color) },
-      { win32::properties::tool_bar::btn_shadow_color, *colors.FindPropertyExW<COLORREF>(win32::properties::tool_bar::btn_shadow_color) },
+      { win32::properties::tool_bar::bk_color, win32::get_color_for_window(control.ref(),win32::properties::tool_bar::bk_color) },
+      { win32::properties::tool_bar::text_color, win32::get_color_for_window(control.ref(),win32::properties::tool_bar::text_color) },
+      { win32::properties::tool_bar::btn_face_color, win32::get_color_for_window(control.ref(),win32::properties::tool_bar::btn_face_color) },
+      { win32::properties::tool_bar::btn_highlight_color, win32::get_color_for_window(control.ref(),win32::properties::tool_bar::btn_highlight_color) },
+      { win32::properties::tool_bar::btn_shadow_color, win32::get_color_for_window(control.ref(),win32::properties::tool_bar::btn_shadow_color) },
     };
 
     DWORD_PTR existing_object{};

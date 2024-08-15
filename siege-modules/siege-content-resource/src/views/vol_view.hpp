@@ -211,11 +211,11 @@ namespace siege::views
       {
         auto parent = this->GetParent();
 
-        win32::apply_theme(*parent, table_settings);
-        win32::apply_theme(*parent, table);
+        win32::apply_theme(table_settings);
+        win32::apply_theme(table);
         auto header = table.GetHeader();
-        win32::apply_theme(*parent, header);
-        win32::apply_theme(*parent, *this);
+        win32::apply_theme(header);
+        win32::apply_theme(*this);
 
         return 0;
       }

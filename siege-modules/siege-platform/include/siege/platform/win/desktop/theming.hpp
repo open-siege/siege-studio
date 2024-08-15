@@ -17,6 +17,13 @@ namespace win32
   gdi::font_ref load_font(::LOGFONTW font_info);
   gdi::brush_ref get_solid_brush(COLORREF color);
 
+  
+  bool is_dark_theme();
+  void set_is_dark_theme(bool);
+
+  COLORREF get_color_for_window(win32::window_ref, std::wstring_view);
+  std::optional<COLORREF> set_color_for_window(win32::window_ref, std::wstring_view, std::optional<COLORREF> color);
+
   std::optional<SIZE> get_font_size_for_string(gdi::font_ref, std::wstring_view);
 
   struct theme_module : private win32::module
@@ -226,19 +233,19 @@ namespace win32
   };
 
   // user controls
-  void apply_theme(const win32::window_ref& colors, win32::window_ref& control);
-  void apply_theme(const win32::window_ref& colors, win32::button& control);
-  void apply_theme(const win32::window_ref& colors, win32::edit& control);
-  void apply_theme(const win32::window_ref& colors, win32::static_control& control);
-  void apply_theme(const win32::window_ref& colors, win32::list_box& control);
+  void apply_theme(win32::window_ref& control);
+  void apply_theme(win32::button& control);
+  void apply_theme(win32::edit& control);
+  void apply_theme(win32::static_control& control);
+  void apply_theme(win32::list_box& control);
 
 
   // common controls
-  void apply_theme(const win32::window_ref& colors, win32::tree_view& control);
-  void apply_theme(const win32::window_ref& colors, win32::list_view& control);
-  void apply_theme(const win32::window_ref& colors, win32::tab_control& control);
-  void apply_theme(const win32::window_ref& colors, win32::header& control);
-  void apply_theme(const win32::window_ref& colors, win32::tool_bar& control);
+  void apply_theme(win32::tree_view& control);
+  void apply_theme(win32::list_view& control);
+  void apply_theme(win32::tab_control& control);
+  void apply_theme(win32::header& control);
+  void apply_theme(win32::tool_bar& control);
 }// namespace win32
 
 #endif
