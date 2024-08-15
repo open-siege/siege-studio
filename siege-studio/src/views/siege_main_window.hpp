@@ -259,11 +259,6 @@ namespace siege::views
       repopulate_tree_view(std::filesystem::current_path());
 
       tab_control = *factory.CreateWindowExW<win32::tab_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | TCS_MULTILINE | TCS_FORCELABELLEFT });
-      tab_control.InsertItem(0, TCITEMW{
-                                  .mask = TCIF_TEXT,
-                                  .pszText = const_cast<wchar_t*>(L"+"),
-                                });
-
       // close_button = *factory.CreateWindowExW<win32::button>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"X" });
 
 
@@ -380,7 +375,7 @@ namespace siege::views
       tab_control.SetWindowPos(POINT{ .x = tree_size.cx + divider.cx, .y = menu_size.cy });
       tab_control.SetWindowPos(right_size);
 
-      auto width = std::clamp<int>(right_size.cx / tab_control.GetItemCount() + 1, 150, right_size.cx);
+      auto width = std::clamp<int>(right_size.cx / (tab_control.GetItemCount() + 1), 150, right_size.cx);
 
       TabCtrl_SetPadding(tab_control, 10, 0);
       auto old_height = HIWORD(TabCtrl_SetItemSize(tab_control, width, 40));
@@ -459,7 +454,7 @@ namespace siege::views
 
         if (child->CopyData(*this, COPYDATASTRUCT{ .cbData = DWORD(message.data.size()), .lpData = message.data.data() }))
         {
-          auto index = tab_control.GetItemCount() - 1;
+          auto index = tab_control.GetItemCount();
 
           tab_control.InsertItem(index, TCITEMW{ .mask = TCIF_TEXT | TCIF_PARAM, .pszText = filename, .lParam = win32::lparam_t(child->get()) });
 
@@ -874,7 +869,7 @@ namespace siege::views
           {
             child->RemovePropW(L"FilePath");
 
-            auto index = tab_control.GetItemCount() - 1;
+            auto index = tab_control.GetItemCount();
 
             tab_control.InsertItem(index, TCITEMW{
                                             .mask = TCIF_TEXT | TCIF_PARAM,
@@ -882,7 +877,10 @@ namespace siege::views
                                             .lParam = win32::lparam_t(child->get()),
                                           });
 
-            SetWindowLongPtrW(*child, GWLP_ID, index + 1);
+            if (index == 0)
+            {
+              on_size(*this->GetClientSize());
+            }
 
             wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGING });
 
