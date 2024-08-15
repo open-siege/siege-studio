@@ -544,11 +544,6 @@ namespace siege::views
             this->SetPropW(win32::properties::tab_control::text_bk_color, text_bk_color);
             this->SetPropW(win32::properties::tab_control::text_highlight_color, text_highlight_color);
 
-            OutputDebugStringW(L"main window [win32::properties::tab_control::bk_color] ");
-            auto str = std::to_wstring(bk_color);
-            OutputDebugStringW(str.c_str());
-            OutputDebugStringW(L"\n");
-
             this->SetPropW(win32::properties::tool_bar::bk_color, bk_color);
             this->SetPropW(win32::properties::tool_bar::text_color, text_color);
             this->SetPropW(win32::properties::tool_bar::btn_face_color, text_bk_color);
@@ -573,6 +568,7 @@ namespace siege::views
             win32::apply_theme(*this, dir_list);
             win32::apply_theme(*this, tab_control);
             win32::apply_theme(*this, main_menu);
+            win32::apply_theme(*this, separator);
             win32::apply_theme(*this, *this);
 
             for (auto i = 0; i < tab_control.GetItemCount(); ++i)

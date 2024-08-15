@@ -181,11 +181,7 @@ namespace siege::views
 
       auto padding = Header_GetBitmapMargin(table.GetHeader());
       auto column_width = (table_size->cx / column_count);
-      std::wstringstream temp;
-      temp << "Padding :" << padding << '\n';
-      temp << "Column width: " << column_width << '\n';
-      OutputDebugStringW(temp.str().c_str());
-
+      
       for (auto i = 0u; i < column_count; ++i)
       {
         table.SetColumnWidth(i, column_width);
