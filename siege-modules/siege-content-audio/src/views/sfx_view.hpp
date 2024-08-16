@@ -39,7 +39,7 @@ namespace siege::views
     {
       auto control_factory = win32::window_factory(ref());
 
-      player_buttons = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_WRAPABLE });
+      player_buttons = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE });
 
       player_buttons.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Play" });
 
@@ -146,6 +146,7 @@ namespace siege::views
         win32::apply_theme(selection);
         win32::apply_theme(player_buttons);
         win32::apply_theme(render_view);
+        win32::apply_theme(*this);
 
         return 0;
       }

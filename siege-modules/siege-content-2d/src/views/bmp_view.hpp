@@ -101,9 +101,9 @@ namespace siege::views
         palettes_list.win32::list_view::InsertColumn(-1, LVCOLUMNW{ .pszText = const_cast<wchar_t*>(L"Available Palettes") });
 
         auto header = palettes_list.GetHeader();
-
+            
         auto style = header.GetWindowStyle();
-        header.SetWindowStyle(style | HDS_FILTERBAR);
+        header.SetWindowStyle(style | HDS_FLAT | HDS_NOSIZING | HDS_FILTERBAR);
         return palettes_list;
       }();
 

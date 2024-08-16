@@ -7,6 +7,7 @@
 #include <siege/platform/win/desktop/common_controls.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
+#include <siege/platform/win/desktop/theming.hpp>
 #include "dts_controller.hpp"
 #include "gl_renderer.hpp"
 #include <glm/ext/vector_float3.hpp>
@@ -58,7 +59,20 @@ namespace siege::views
       selection.InsertString(-1, L"Palette 2");
       selection.InsertString(-1, L"Palette 3");
 
+      wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
+
       return 0;
+    }
+
+    std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
+    {
+      if (message.setting == L"ImmersiveColorSet")
+      {
+        win32::apply_theme(selection);
+        return 0;
+      }
+
+      return std::nullopt;
     }
 
     auto wm_destroy()
