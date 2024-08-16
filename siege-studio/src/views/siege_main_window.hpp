@@ -258,7 +258,13 @@ namespace siege::views
 
       repopulate_tree_view(std::filesystem::current_path());
 
-      tab_control = *factory.CreateWindowExW<win32::tab_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | TCS_MULTILINE | TCS_FORCELABELLEFT });
+      auto tab_context_menu = CreatePopupMenu();
+
+      tab_control = *factory.CreateWindowExW<win32::tab_control>(
+        CREATESTRUCTW{
+          .hMenu = tab_context_menu,
+          .style = WS_CHILD | WS_VISIBLE | TCS_MULTILINE | TCS_FORCELABELLEFT,
+        });
       // close_button = *factory.CreateWindowExW<win32::button>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"X" });
 
 
@@ -321,6 +327,10 @@ namespace siege::views
       info.wID = edit_theme_id;
       info.dwItemData = (ULONG_PTR)&menu_item_text.emplace_back(MSAAMENUINFO{ MSAA_MENU_SIG, 0, (wchar_t*)L"Theme" });
       InsertMenuItemW(popup_menus[1], edit_theme_id, FALSE, &info);
+
+      info.wID = 1;
+      info.dwItemData = (ULONG_PTR)&menu_item_text.emplace_back(MSAAMENUINFO{ MSAA_MENU_SIG, 0, (wchar_t*)L"Close" });
+      InsertMenuItemW(tab_context_menu, 0, TRUE, &info);
 
       for (auto& item : menu_item_text)
       {
@@ -496,7 +506,7 @@ namespace siege::views
             is_dark_mode = value == 0;
 
             win32::set_is_dark_theme(is_dark_mode);
-            
+
             COLORREF bk_color = RGB(0x20, 0x20, 0x20);
             COLORREF text_color = 0x00FFFFFF;
             COLORREF text_bk_color = RGB(0x2b, 0x2b, 0x2b);
@@ -559,6 +569,10 @@ namespace siege::views
 
             SetMenuInfo(popup_menus[0], &mi);
             SetMenuInfo(popup_menus[1], &mi);
+
+            mi.dwStyle = 0;
+            SetMenuInfo(GetMenu(tab_control), &mi);
+
 
             win32::apply_theme(dir_list);
             win32::apply_theme(tab_control);
@@ -750,6 +764,46 @@ namespace siege::views
 
       switch (code)
       {
+      case NM_RCLICK: {
+        POINT mouse_pos;
+        if (GetCursorPos(&mouse_pos) && ScreenToClient(sender, &mouse_pos))
+        {
+          auto window_rect = sender.GetWindowRect();
+          TCHITTESTINFO hit_test{
+            .pt = mouse_pos,
+            .flags = TCHT_ONITEMLABEL
+          };
+
+          if (auto index = TabCtrl_HitTest(sender, &hit_test); index != -1)
+          {
+            auto tab_rect = sender.GetItemRect(index);
+            auto height = tab_rect->bottom - tab_rect->top;
+
+            auto action = ::TrackPopupMenu(GetMenu(sender), TPM_CENTERALIGN | TPM_NONOTIFY | TPM_RETURNCMD, window_rect->left + tab_rect->left, window_rect->top + height, 0, *this, nullptr);
+
+            if (action == 1)
+            {
+              auto item = sender.GetItem(index);
+
+              auto current_index = TabCtrl_GetCurSel(sender);
+
+              assert(::DestroyWindow(win32::hwnd_t(item->lParam)) == TRUE);
+              TabCtrl_DeleteItem(sender, index);
+
+              if (index == current_index)
+              {
+                auto count = TabCtrl_GetItemCount(sender);
+
+                index = std::clamp<int>(index, 0, count - 1);
+
+                TabCtrl_SetCurSel(sender, index);
+                wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE });
+              }
+            }
+          }
+        }
+        return 0;
+      }
       case TCN_SELCHANGING: {
         auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
 

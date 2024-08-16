@@ -737,7 +737,9 @@ namespace win32
           {
             auto& header = *(NMHDR*)lParam;
 
-            if ((header.code == TCN_SELCHANGE || header.code == TCN_SELCHANGING || header.code == TCN_FOCUSCHANGE || header.code == NM_CLICK)
+            if ((header.code == TCN_SELCHANGE || header.code == TCN_SELCHANGING || 
+                header.code == TCN_FOCUSCHANGE || header.code == NM_CLICK || 
+                header.code == NM_RCLICK || header.code == NM_DBLCLK || header.code == NM_RDBLCLK)
                 && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == tab_control::class_name)
             {
               return self->wm_notify(win32::tab_control(header.hwndFrom), header);
