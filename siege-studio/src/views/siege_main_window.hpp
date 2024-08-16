@@ -539,6 +539,10 @@ namespace siege::views
             win32::set_color_for_window(this->ref(), win32::properties::list_box::text_bk_color, text_bk_color);
             win32::set_color_for_window(this->ref(), win32::properties::list_box::text_highlight_color, text_highlight_color);
 
+            win32::set_color_for_window(this->ref(), win32::properties::track_bar::bk_color, bk_color);
+            win32::set_color_for_window(this->ref(), win32::properties::track_bar::text_color, text_color);
+            win32::set_color_for_window(this->ref(), win32::properties::track_bar::text_bk_color, text_bk_color);
+
             win32::set_color_for_window(this->ref(), win32::properties::header::bk_color, bk_color);
             win32::set_color_for_window(this->ref(), win32::properties::header::text_color, text_color);
             win32::set_color_for_window(this->ref(), win32::properties::header::text_bk_color, text_bk_color);

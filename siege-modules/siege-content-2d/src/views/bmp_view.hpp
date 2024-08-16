@@ -24,8 +24,8 @@ namespace siege::views
   {
     win32::static_control static_image;
     win32::list_view palettes_list;
-    win32::button zoom;
-    win32::button frame_selector;
+    win32::track_bar zoom;
+    win32::track_bar frame_selector;
 
     win32::static_control frame_label;
     win32::static_control frame_value;
@@ -52,7 +52,7 @@ namespace siege::views
 
       std::wstring temp = L"menu.pal";
 
-      frame_selector = *factory.CreateWindowExW<win32::button>(::CREATESTRUCTW{
+      frame_selector = *factory.CreateWindowExW<win32::track_bar>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | BTNS_BUTTON,
         .lpszName = L"Frame Selector" });
 
@@ -64,7 +64,7 @@ namespace siege::views
         .style = WS_VISIBLE | WS_CHILD | SS_LEFT,
         .lpszName = L"" });
 
-      zoom = *factory.CreateWindowExW<win32::button>(::CREATESTRUCTW{
+      zoom = *factory.CreateWindowExW<win32::track_bar>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | BTNS_BUTTON,
         .lpszName = L"Zoom" });
 
@@ -79,9 +79,7 @@ namespace siege::views
           .style = WS_VISIBLE | WS_CHILD | SS_LEFT,
         });
 
-      ::SendMessageW(zoom, UDM_SETBUDDY, win32::wparam_t(win32::hwnd_t(zoom_value)), 0);
-
-      ::SendMessageW(zoom, UDM_SETRANGE, 0, MAKELPARAM(100, 1));
+      ::SendMessageW(zoom, TBM_SETRANGE, FALSE, MAKELPARAM(1, 100));
 
       palettes_list = [&] {
         auto palettes_list = *factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
@@ -173,8 +171,8 @@ namespace siege::views
         win32::apply_theme(frame_value);
         win32::apply_theme(zoom_label);
         win32::apply_theme(zoom_value);
-        //win32::apply_theme(*parent, zoom);
-        //win32::apply_theme(*parent, frame_selector);
+        win32::apply_theme(zoom);
+        win32::apply_theme(frame_selector);
 
         return 0;
       }

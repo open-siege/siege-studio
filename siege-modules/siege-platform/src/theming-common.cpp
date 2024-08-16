@@ -129,15 +129,15 @@ namespace win32
 
     std::map<std::wstring_view, COLORREF> color_map{
       { win32::properties::header::bk_color, win32::get_color_for_window(control.ref(), win32::properties::header::bk_color) },
-      { win32::properties::header::text_color, win32::get_color_for_window(control.ref(),win32::properties::header::text_color) },
-      { win32::properties::header::text_bk_color, win32::get_color_for_window(control.ref(),win32::properties::header::text_bk_color) },
-      { win32::properties::header::text_highlight_color, win32::get_color_for_window(control.ref(),win32::properties::header::text_highlight_color) },
+      { win32::properties::header::text_color, win32::get_color_for_window(control.ref(), win32::properties::header::text_color) },
+      { win32::properties::header::text_bk_color, win32::get_color_for_window(control.ref(), win32::properties::header::text_bk_color) },
+      { win32::properties::header::text_highlight_color, win32::get_color_for_window(control.ref(), win32::properties::header::text_highlight_color) },
     };
 
+    win32::theme_module().SetWindowTheme(control, L"", L"");
     DWORD_PTR existing_object{};
     if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::header::class_name, &existing_object) && existing_object == 0)
     {
-      win32::theme_module().SetWindowTheme(control, L"", L"");
       ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::header::class_name, (DWORD_PTR) new sub_class(std::move(color_map)));
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
@@ -308,10 +308,10 @@ namespace win32
 
 
     std::map<std::wstring_view, COLORREF> color_map{
-      { win32::properties::tab_control::bk_color, win32::get_color_for_window(control.ref(),win32::properties::tab_control::bk_color) },
-      { win32::properties::tab_control::text_color, win32::get_color_for_window(control.ref(),win32::properties::tab_control::text_color) },
-      { win32::properties::tab_control::text_bk_color, win32::get_color_for_window(control.ref(),win32::properties::tab_control::text_bk_color) },
-      { win32::properties::tab_control::text_highlight_color, win32::get_color_for_window(control.ref(),win32::properties::tab_control::text_highlight_color) },
+      { win32::properties::tab_control::bk_color, win32::get_color_for_window(control.ref(), win32::properties::tab_control::bk_color) },
+      { win32::properties::tab_control::text_color, win32::get_color_for_window(control.ref(), win32::properties::tab_control::text_color) },
+      { win32::properties::tab_control::text_bk_color, win32::get_color_for_window(control.ref(), win32::properties::tab_control::text_bk_color) },
+      { win32::properties::tab_control::text_highlight_color, win32::get_color_for_window(control.ref(), win32::properties::tab_control::text_highlight_color) },
     };
 
     DWORD_PTR existing_object{};
@@ -331,7 +331,7 @@ namespace win32
   void apply_theme(win32::list_view& control)
   {
     std::map<std::wstring_view, COLORREF> color_map{
-      { win32::properties::list_view::bk_color, win32::get_color_for_window(control.ref(), properties::list_view::bk_color)},
+      { win32::properties::list_view::bk_color, win32::get_color_for_window(control.ref(), properties::list_view::bk_color) },
       { win32::properties::list_view::text_color, win32::get_color_for_window(control.ref(), win32::properties::list_view::text_color) },
       { win32::properties::list_view::text_bk_color, win32::get_color_for_window(control.ref(), win32::properties::list_view::text_bk_color) },
       { win32::properties::list_view::outline_color, win32::get_color_for_window(control.ref(), win32::properties::list_view::outline_color) },
@@ -401,7 +401,7 @@ namespace win32
               .lfFaceName = L"Segoe MDL2 Assets" });
 
             std::wstring icon;
-            
+
             if (lvg.state & LVGS_COLLAPSED)
             {
               icon.push_back(0xE76C);// ChevronRight
@@ -593,11 +593,11 @@ namespace win32
     };
 
     std::map<std::wstring_view, COLORREF> color_map{
-      { win32::properties::tool_bar::bk_color, win32::get_color_for_window(control.ref(),win32::properties::tool_bar::bk_color) },
-      { win32::properties::tool_bar::text_color, win32::get_color_for_window(control.ref(),win32::properties::tool_bar::text_color) },
-      { win32::properties::tool_bar::btn_face_color, win32::get_color_for_window(control.ref(),win32::properties::tool_bar::btn_face_color) },
-      { win32::properties::tool_bar::btn_highlight_color, win32::get_color_for_window(control.ref(),win32::properties::tool_bar::btn_highlight_color) },
-      { win32::properties::tool_bar::btn_shadow_color, win32::get_color_for_window(control.ref(),win32::properties::tool_bar::btn_shadow_color) },
+      { win32::properties::tool_bar::bk_color, win32::get_color_for_window(control.ref(), win32::properties::tool_bar::bk_color) },
+      { win32::properties::tool_bar::text_color, win32::get_color_for_window(control.ref(), win32::properties::tool_bar::text_color) },
+      { win32::properties::tool_bar::btn_face_color, win32::get_color_for_window(control.ref(), win32::properties::tool_bar::btn_face_color) },
+      { win32::properties::tool_bar::btn_highlight_color, win32::get_color_for_window(control.ref(), win32::properties::tool_bar::btn_highlight_color) },
+      { win32::properties::tool_bar::btn_shadow_color, win32::get_color_for_window(control.ref(), win32::properties::tool_bar::btn_shadow_color) },
     };
 
     DWORD_PTR existing_object{};
@@ -612,4 +612,116 @@ namespace win32
     }
   }
 
+
+  void apply_theme(win32::track_bar& control)
+  {
+
+
+    struct sub_class final : win32::track_bar::notifications
+    {
+      std::map<std::wstring_view, COLORREF> colors;
+      HPEN pen = CreatePen(PS_SOLID, 10, RGB(255, 255, 0));
+
+      gdi::font_ref ui_icons = win32::load_font(LOGFONTW{
+        .lfPitchAndFamily = VARIABLE_PITCH,
+        .lfFaceName = L"Segoe MDL2 Assets" });
+
+      std::optional<win32::lresult_t> wm_notify(win32::track_bar track_bar, NMCUSTOMDRAW& custom_draw) override
+      {
+        if (custom_draw.dwDrawStage == CDDS_PREPAINT)
+        {
+          return CDRF_NOTIFYITEMDRAW;
+        }
+
+        auto bk_color = colors[properties::track_bar::bk_color];
+        auto text_color = colors[properties::track_bar::text_color];
+        auto text_bk_color = colors[properties::track_bar::text_bk_color];
+
+        if (custom_draw.dwDrawStage == CDDS_ITEMPREPAINT && custom_draw.dwItemSpec == TBCD_CHANNEL)
+        {
+          auto client_rect = track_bar.GetClientRect();
+          FillRect(custom_draw.hdc, &*client_rect, get_solid_brush(bk_color));
+          FillRect(custom_draw.hdc, &custom_draw.rc, get_solid_brush(text_bk_color));
+          return CDRF_SKIPDEFAULT;
+        }
+
+        if (custom_draw.dwDrawStage == CDDS_ITEMPREPAINT && custom_draw.dwItemSpec == TBCD_THUMB)
+        {
+          SetBkColor(custom_draw.hdc, bk_color);
+          SetBkMode(custom_draw.hdc, TRANSPARENT);
+
+          if (custom_draw.uItemState & CDIS_SELECTED)
+          {
+            SetTextColor(custom_draw.hdc, is_dark_theme() ? RGB(127, 127, 200) : RGB(0, 0, 200));
+          }
+          else
+          {
+            POINT mouse{};
+            if (::GetCursorPos(&mouse) && ::ScreenToClient(track_bar, &mouse) && ::PtInRect(&custom_draw.rc, mouse))
+            {
+              SetTextColor(custom_draw.hdc, RGB(127, 127, 127));
+            }
+            else
+            {
+              SetTextColor(custom_draw.hdc, text_color);
+            }
+          }
+
+          SelectFont(custom_draw.hdc, ui_icons);
+          std::wstring slider_thumb(1, 0xEC13);
+          DrawTextExW(custom_draw.hdc, slider_thumb.data(), -1, &custom_draw.rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER, nullptr);
+
+          return CDRF_SKIPDEFAULT;
+        }
+
+        if (custom_draw.dwDrawStage == CDDS_ITEMPREPAINT && custom_draw.dwItemSpec == TBCD_TICS)
+        {
+          FillRect(custom_draw.hdc, &custom_draw.rc, get_solid_brush(text_color));
+          return CDRF_SKIPDEFAULT;
+        }
+
+        return CDRF_DODEFAULT;
+      }
+
+      sub_class(std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
+      {
+      }
+
+      static LRESULT __stdcall HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      {
+        auto result = win32::track_bar::notifications::dispatch_message((sub_class*)dwRefData, message, wParam, lParam);
+
+        if (result)
+        {
+          return *result;
+        }
+
+        if (message == WM_DESTROY)
+        {
+          ::RemoveWindowSubclass(hWnd, sub_class::HandleMessage, uIdSubclass);
+        }
+
+        return DefSubclassProc(hWnd, message, wParam, lParam);
+      }
+    };
+
+    std::map<std::wstring_view, COLORREF> color_map{
+      { win32::properties::track_bar::bk_color, win32::get_color_for_window(control.ref(), win32::properties::track_bar::bk_color) },
+      { win32::properties::track_bar::text_color, win32::get_color_for_window(control.ref(), win32::properties::track_bar::text_color) },
+      { win32::properties::track_bar::text_bk_color, win32::get_color_for_window(control.ref(), win32::properties::track_bar::text_bk_color) },
+    };
+
+    DWORD_PTR existing_object{};
+    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::track_bar::class_name, &existing_object) && existing_object == 0)
+    {
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::track_bar::class_name, (DWORD_PTR) new sub_class(std::move(color_map)));
+    }
+    else
+    {
+      ((sub_class*)existing_object)->colors = std::move(color_map);
+    }
+    auto pos = SendMessageW(control, TBM_GETPOS, 0, 0);
+    SendMessageW(control, TBM_SETPOS, FALSE, pos + 1);
+    SendMessageW(control, TBM_SETPOS, TRUE, pos);
+  }
 }// namespace win32

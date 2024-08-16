@@ -17,7 +17,7 @@ namespace win32
   gdi::font_ref load_font(::LOGFONTW font_info);
   gdi::brush_ref get_solid_brush(COLORREF color);
 
-  
+
   bool is_dark_theme();
   void set_is_dark_theme(bool);
 
@@ -76,6 +76,19 @@ namespace win32
       };
     };
 
+    struct track_bar
+    {
+      inline static auto bk_color = std::wstring(win32::header::class_name) + L"." + L"BkColor";
+      inline static auto text_color = std::wstring(win32::header::class_name) + L"." + L"TextColor";
+      inline static auto text_bk_color = std::wstring(win32::header::class_name) + L"." + L"TextBkColor";
+
+      inline static auto props = std::array<std::wstring_view, 3>{
+        bk_color,
+        text_color,
+        text_bk_color
+      };
+    };
+
     struct combo_box
     {
       inline static auto bk_color = std::wstring(win32::combo_box::class_name) + L"." + L"BkColor";
@@ -102,7 +115,7 @@ namespace win32
       };
     };
 
-    
+
     struct header
     {
       inline static auto bk_color = std::wstring(win32::header::class_name) + L"." + L"BkColor";
@@ -233,12 +246,12 @@ namespace win32
   };
 
   // user controls
+  // TODO add theming for menus
   void apply_theme(win32::window_ref& control);
   void apply_theme(win32::button& control);
   void apply_theme(win32::edit& control);
   void apply_theme(win32::static_control& control);
   void apply_theme(win32::list_box& control);
-
 
   // common controls
   void apply_theme(win32::tree_view& control);
@@ -246,6 +259,7 @@ namespace win32
   void apply_theme(win32::tab_control& control);
   void apply_theme(win32::header& control);
   void apply_theme(win32::tool_bar& control);
+  void apply_theme(win32::track_bar& control);
 }// namespace win32
 
 #endif
