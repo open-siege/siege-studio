@@ -168,20 +168,25 @@ namespace siege::views
 
     auto wm_size(std::size_t type, SIZE client_size)
     {
+      if (type == SIZE_MINIMIZED)
+      {
+        return 0;
+      }
+
       auto top_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy / 12 };
-      table_settings.SetWindowPos(top_size);
-      table_settings.SetWindowPos(POINT{});
+      table_settings.SetWindowPos(POINT{}, SWP_DEFERERASE | SWP_NOREDRAW);
+      table_settings.SetWindowPos(top_size, SWP_DEFERERASE);
       table_settings.AutoSize();
 
-      table.SetWindowPos(SIZE{ .cx = top_size.cx, .cy = client_size.cy - top_size.cy });
-      table.SetWindowPos(POINT{ .y = top_size.cy });
+      table.SetWindowPos(POINT{ .y = top_size.cy }, SWP_DEFERERASE | SWP_NOREDRAW);
+      table.SetWindowPos(SIZE{ .cx = top_size.cx, .cy = client_size.cy - top_size.cy }, SWP_DEFERERASE);
 
       auto column_count = table.GetColumnCount();
       auto table_size = table.GetClientSize();
 
       auto padding = Header_GetBitmapMargin(table.GetHeader());
       auto column_width = (table_size->cx / column_count);
-      
+
       for (auto i = 0u; i < column_count; ++i)
       {
         table.SetColumnWidth(i, column_width);
@@ -190,15 +195,6 @@ namespace siege::views
       auto header_size = table.GetHeader().GetClientSize();
 
       table.GetHeader().SetWindowPos(SIZE{ .cx = top_size.cx, .cy = header_size->cy });
-
-      LVTILEVIEWINFO tileViewInfo = { 0 };
-
-      tileViewInfo.cbSize = sizeof(tileViewInfo);
-      tileViewInfo.dwFlags = LVTVIF_AUTOSIZE;
-      tileViewInfo.dwMask = LVTVIM_COLUMNS;
-      tileViewInfo.cLines = 2;
-
-      //      ListView_SetTileViewInfo(table, &tileViewInfo);
 
       return 0;
     }
@@ -268,6 +264,8 @@ namespace siege::views
 
                 ListView_SetTileInfo(table, &item_info);
               }
+              auto client_size = this->GetClientSize();
+              wm_size(SIZE_RESTORED, *client_size);
             }
           }
 
