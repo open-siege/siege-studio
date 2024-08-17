@@ -36,6 +36,8 @@ namespace siege::views
                                .pszText = const_cast<wchar_t*>(L"Value"),
                              });
 
+      table.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT, LVS_EX_FULLROWSELECT);
+
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
       return 0;
