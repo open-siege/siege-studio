@@ -98,10 +98,12 @@ namespace win32
       }
 
       template<typename TWindow>
-      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      static std::optional<lresult_t> dispatch_message(TWindow* window, std::uint32_t message, wparam_t wParam, lparam_t lParam)
       {
         if constexpr (std::is_base_of_v<notifications, TWindow>)
         {
+          auto* self = static_cast<notifications*>(window);
+
           if (message == WM_NOTIFY)
           {
             auto& header = *(NMHDR*)lParam;
@@ -272,10 +274,12 @@ namespace win32
       }
 
       template<typename TWindow>
-      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      static std::optional<lresult_t> dispatch_message(TWindow* window, std::uint32_t message, wparam_t wParam, lparam_t lParam)
       {
         if constexpr (std::is_base_of_v<notifications, TWindow>)
         {
+          auto* self = static_cast<notifications*>(window);
+
           if (message == WM_NOTIFY)
           {
             auto& header = *(NMHDR*)lParam;
@@ -729,10 +733,11 @@ namespace win32
       }
 
       template<typename TWindow>
-      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      static std::optional<lresult_t> dispatch_message(TWindow* control, std::uint32_t message, wparam_t wParam, lparam_t lParam)
       {
         if constexpr (std::is_base_of_v<notifications, TWindow>)
         {
+          auto* self = static_cast<notifications*>(control);
           if (message == WM_NOTIFY)
           {
             auto& header = *(NMHDR*)lParam;
@@ -874,13 +879,15 @@ namespace win32
       }
 
       template<typename TWindow>
-      static std::optional<lresult_t> dispatch_message(TWindow* self,
+      static std::optional<lresult_t> dispatch_message(TWindow* control,
         std::uint32_t message,
         wparam_t wParam,
         lparam_t lParam)
       {
         if constexpr (std::is_base_of_v<notifications, TWindow>)
         {
+          auto* self = static_cast<notifications*>(control);
+
           if (message == WM_NOTIFY)
           {
             auto& header = *(NMHDR*)lParam;
@@ -1069,10 +1076,11 @@ namespace win32
       }
 
       template<typename TWindow>
-      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      static std::optional<lresult_t> dispatch_message(TWindow* control, std::uint32_t message, wparam_t wParam, lparam_t lParam)
       {
         if constexpr (std::is_base_of_v<notifications, TWindow>)
         {
+          auto* self = static_cast<notifications*>(control);
           if (message == WM_NOTIFY)
           {
             auto& header = *(NMHDR*)lParam;

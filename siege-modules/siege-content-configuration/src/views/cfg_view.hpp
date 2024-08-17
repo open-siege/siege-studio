@@ -38,6 +38,12 @@ namespace siege::views
 
       table.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT, LVS_EX_FULLROWSELECT);
 
+      auto header = table.GetHeader();
+
+      auto style = header.GetWindowStyle();
+
+      header.SetWindowStyle(style | HDS_NOSIZING | HDS_FLAT);
+
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
       return 0;

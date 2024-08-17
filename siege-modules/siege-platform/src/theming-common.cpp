@@ -11,8 +11,6 @@ namespace win32
   {
     struct sub_class final : win32::header::notifications
     {
-      using win32::header::notifications::wm_notify;
-
       std::map<std::wstring_view, COLORREF> colors;
 
       sub_class(std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
@@ -366,8 +364,6 @@ namespace win32
 
     struct sub_class final : win32::list_view::notifications
     {
-      using win32::list_view::notifications::wm_notify;
-
       std::map<std::wstring_view, COLORREF> colors;
 
       sub_class(std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
@@ -525,8 +521,6 @@ namespace win32
 
     struct sub_class final : win32::tool_bar::notifications
     {
-      using win32::tool_bar::notifications::wm_notify;
-
       std::map<std::wstring_view, COLORREF> colors;
 
       sub_class(std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))

@@ -442,6 +442,7 @@ namespace win32
         auto text_color = colors[properties::list_box::text_color];
 
         ::SetTextColor(context, text_color);
+        ::SetBkMode(context, TRANSPARENT);
 
         buffer.resize(list.GetTextLength(item.itemID), '\0');
 

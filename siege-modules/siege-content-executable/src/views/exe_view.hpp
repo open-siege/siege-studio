@@ -94,6 +94,13 @@ namespace siege::views
                                       .pszText = const_cast<wchar_t*>(L"Value"),
                                     });
 
+      auto header = launch_table.GetHeader();
+
+      auto style = header.GetWindowStyle();
+
+      header.SetWindowStyle(style | HDS_NOSIZING | HDS_FLAT);
+
+
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
       return 0;

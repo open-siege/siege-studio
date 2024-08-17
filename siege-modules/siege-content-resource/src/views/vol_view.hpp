@@ -39,8 +39,6 @@ namespace siege::views
     , win32::tool_bar::notifications
     , win32::header::notifications
   {
-    using win32::list_view::notifications::wm_notify;
-    using win32::tool_bar::notifications::wm_notify;
     vol_controller controller;
 
     win32::tool_bar table_settings;

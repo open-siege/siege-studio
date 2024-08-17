@@ -42,11 +42,6 @@ namespace siege::views
     , win32::tool_bar::notifications
     , win32::menu::notifications
   {
-    using win32::tree_view::notifications::wm_notify;
-    using win32::tool_bar::notifications::wm_notify;
-    using win32::menu::notifications::wm_draw_item;
-    using win32::tab_control::notifications::wm_draw_item;
-
     win32::tree_view dir_list;
     win32::button separator;
     win32::tab_control tab_control;

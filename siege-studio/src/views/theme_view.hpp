@@ -14,11 +14,6 @@ namespace siege::views
     , win32::list_view::notifications
     , win32::button::notifications
   {
-    using win32::list_view::notifications::wm_notify;
-    using win32::button::notifications::wm_notify;
-    using win32::list_box::notifications::wm_draw_item;
-    using win32::button::notifications::wm_draw_item;
-
     win32::window_ref theme_properties;
     win32::list_box options;
 

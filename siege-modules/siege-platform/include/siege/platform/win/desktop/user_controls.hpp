@@ -37,10 +37,12 @@ namespace win32
       }
 
       template<typename TWindow>
-      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      static std::optional<lresult_t> dispatch_message(TWindow* window, std::uint32_t message, wparam_t wParam, lparam_t lParam)
       {
         if constexpr (std::is_base_of_v<notifications, TWindow>)
         {
+          auto* self = static_cast<notifications*>(window);
+
           if (message == WM_NOTIFY)
           {
             auto& header = *(NMHDR*)lParam;
@@ -222,10 +224,12 @@ namespace win32
       }
 
       template<typename TWindow>
-      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      static std::optional<lresult_t> dispatch_message(TWindow* window, std::uint32_t message, wparam_t wParam, lparam_t lParam)
       {
         if constexpr (std::is_base_of_v<notifications, TWindow>)
         {
+          auto* self = static_cast<notifications*>(window);
+
           if (message == WM_DRAWITEM)
           {
             auto& context = *(DRAWITEMSTRUCT*)lParam;
@@ -286,10 +290,22 @@ namespace win32
       }
 
       template<typename TWindow>
-      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      static std::optional<lresult_t> dispatch_message(TWindow* window, std::uint32_t message, wparam_t wParam, lparam_t lParam)
       {
         if constexpr (std::is_base_of_v<notifications, TWindow>)
         {
+          auto* self = static_cast<notifications*>(window);
+
+          if (message == WM_CTLCOLORLISTBOX)
+          {
+            auto result = self->wm_control_color(list_box((HWND)lParam), win32::gdi::drawing_context_ref((HDC)wParam));
+
+            if (result)
+            {
+              return (LRESULT)*result;
+            }
+          }
+
           if (message == WM_DRAWITEM)
           {
             auto& context = *(DRAWITEMSTRUCT*)lParam;
@@ -306,11 +322,11 @@ namespace win32
 
             if (context.CtlType == ODT_LISTBOX)
             {
-              auto control = ::GetDlgItem(*self, wParam);
+              auto control = ::GetDlgItem(*window, wParam);
 
               if (!control)
               {
-                control = ::FindWindowExW(*self, nullptr, list_box::class_name, nullptr);
+                control = ::FindWindowExW(*window, nullptr, list_box::class_name, nullptr);
               }
 
               auto size = self->wm_measure_item(list_box(control), context);
@@ -320,7 +336,7 @@ namespace win32
             }
           }
 
-          if (message == WM_COMMAND && !(HIWORD(wParam) == 0 && HIWORD(wParam) == 1) && win32::window_ref((HWND)lParam).RealGetWindowClassW() == list_box::class_name)
+          if (message == WM_COMMAND && win32::window_ref((HWND)lParam).RealGetWindowClassW() == list_box::class_name)
           {
             return self->wm_command(list_box((HWND)lParam), HIWORD(wParam));
           }

@@ -13,17 +13,14 @@
 
 namespace siege::views
 {
-  struct sfx_view final : win32::window_ref
-    , win32::tool_bar::notifications
+  struct sfx_view final : win32::window_ref, win32::tool_bar::notifications
   {
-    using win32::tool_bar::notifications::wm_notify;
-
     sfx_controller controller;
 
     win32::tool_bar player_buttons;
     win32::list_box selection;
 
-    HIMAGELIST image_list;
+    HIMAGELIST image_list = nullptr;
     media_module media;
 
     sfx_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self), media{}
