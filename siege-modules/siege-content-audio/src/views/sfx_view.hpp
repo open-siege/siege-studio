@@ -21,7 +21,6 @@ namespace siege::views
     sfx_controller controller;
 
     win32::tool_bar player_buttons;
-    win32::static_control render_view;
     win32::list_box selection;
 
     HIMAGELIST image_list;
@@ -39,17 +38,16 @@ namespace siege::views
     {
       auto control_factory = win32::window_factory(ref());
 
-      player_buttons = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE });
+      player_buttons = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_LIST | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS });
 
-      player_buttons.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Play" });
+      player_buttons.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_NOPREFIX | BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Play" });
 
-      player_buttons.InsertButton(-1, { .iBitmap = 1, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Pause" });
+      player_buttons.InsertButton(-1, { .iBitmap = 1, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_NOPREFIX | BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Pause" });
 
-      player_buttons.InsertButton(-1, { .iBitmap = 2, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Stop" });
+      player_buttons.InsertButton(-1, { .iBitmap = 2, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_NOPREFIX | BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Stop" });
 
-      player_buttons.InsertButton(-1, { .iBitmap = 3, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Loop" });
-
-      render_view = *control_factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD, .lpszName = L"Test" });
+      player_buttons.InsertButton(-1, { .iBitmap = 3, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_NOPREFIX | BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Loop" });
+      player_buttons.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS);
 
       selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS });
@@ -59,18 +57,28 @@ namespace siege::views
       return 0;
     }
 
-    auto wm_size(std::size_t type, SIZE client_size)
+    HIMAGELIST recreate_image_list(std::optional<SIZE> possible_size)
     {
-      auto left_size = SIZE{ .cx = (client_size.cx / 3) * 2, .cy = client_size.cy };
-      auto right_size = SIZE{ .cx = client_size.cx - left_size.cx, .cy = client_size.cy };
-
-      auto height = left_size.cy / 12;
-
-      SIZE icon_size{ .cx = height, .cy = height };
+      SIZE icon_size;
+      int width;
+      int height;
+      if (possible_size)
+      {
+        icon_size = *possible_size;
+      }
+      else if (image_list && ImageList_GetIconSize(image_list, &width, &height))
+      {
+        icon_size.cx = width;
+        icon_size.cy = height;
+      }
+      else
+      {
+        return image_list;
+      }
 
       if (image_list)
       {
-        ImageList_Destroy(image_list);
+        assert(ImageList_Destroy(image_list) == TRUE);
         image_list = nullptr;
       }
 
@@ -84,30 +92,47 @@ namespace siege::views
         .lfQuality = NONANTIALIASED_QUALITY,
         .lfFaceName = L"Segoe MDL2 Assets" });
 
+      auto theme_color = win32::get_color_for_window(this->ref(), win32::properties::tool_bar::text_color);
+      RGBQUAD color = { .rgbBlue = GetBValue(theme_color),
+        .rgbGreen = GetGValue(theme_color),
+        .rgbRed = GetRValue(theme_color) };
+
       // TODO make the image list creation easier (provide a list of icons then generate)
-      auto play_icon = win32::create_icon(icon_size, RGBQUAD{ .rgbRed = 255 }, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, 0xE768)));
+      auto play_icon = win32::create_icon(icon_size, color, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, 0xE768)));
       ImageList_ReplaceIcon(image_list, -1, play_icon);
 
-      auto pause_icon = win32::create_icon(icon_size, RGBQUAD{ .rgbRed = 255 }, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, 0xE769)));
+      auto pause_icon = win32::create_icon(icon_size, color, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, 0xE769)));
       ImageList_ReplaceIcon(image_list, -1, pause_icon);
 
-      auto stop_icon = win32::create_icon(icon_size, RGBQUAD{ .rgbRed = 255 }, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, 0xE71A)));
+      auto stop_icon = win32::create_icon(icon_size, color, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, 0xE71A)));
       ImageList_ReplaceIcon(image_list, -1, stop_icon);
 
-      auto loop_icon = win32::create_icon(icon_size, RGBQUAD{ .rgbRed = 255 }, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, 0xE8EE)));
+      auto loop_icon = win32::create_icon(icon_size, color, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, 0xE8EE)));
       ImageList_ReplaceIcon(image_list, -1, loop_icon);
 
+      return image_list;
+    }
 
-      SendMessageW(player_buttons, TB_SETIMAGELIST, 0, (LPARAM)image_list);
+    auto wm_size(std::size_t type, SIZE client_size)
+    {
+      if (type == SIZE_MINIMIZED)
+      {
+        return 0;
+      }
+
+      auto left_size = SIZE{ .cx = (client_size.cx / 3) * 2, .cy = client_size.cy };
+      auto right_size = SIZE{ .cx = client_size.cx - left_size.cx, .cy = client_size.cy };
+
+      auto height = left_size.cy / 12;
+
+      auto updated_image_list = recreate_image_list(SIZE{ .cx = height, .cy = height });
+
+      SendMessageW(player_buttons, TB_SETIMAGELIST, 0, (LPARAM)updated_image_list);
 
 
       player_buttons.SetWindowPos(SIZE{ .cx = left_size.cx, .cy = height });
       player_buttons.SetWindowPos(POINT{});
-      player_buttons.SetButtonSize(SIZE{ .cx = left_size.cx / (LONG)player_buttons.ButtonCount(), .cy = height });
       player_buttons.AutoSize();
-
-      render_view.SetWindowPos(SIZE{ .cx = left_size.cx, .cy = left_size.cy - height });
-      render_view.SetWindowPos(POINT{ .y = height });
 
       selection.SetWindowPos(right_size);
       selection.SetWindowPos(POINT{ .x = left_size.cx });
@@ -144,8 +169,10 @@ namespace siege::views
       if (message.setting == L"ImmersiveColorSet")
       {
         win32::apply_theme(selection);
+        auto updated_image_list = recreate_image_list(std::nullopt);
         win32::apply_theme(player_buttons);
-        win32::apply_theme(render_view);
+        SendMessageW(player_buttons, TB_SETIMAGELIST, 0, (LPARAM)updated_image_list);
+        player_buttons.AutoSize();
         win32::apply_theme(*this);
 
         return 0;

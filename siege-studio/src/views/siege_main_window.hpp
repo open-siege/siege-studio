@@ -497,6 +497,7 @@ namespace siege::views
               &key)
             == ERROR_SUCCESS)
         {
+            //Software\Microsoft\Windows\CurrentVersion\Themes\History\Colors
           DWORD value = 0;
           DWORD size = sizeof(DWORD);
 
