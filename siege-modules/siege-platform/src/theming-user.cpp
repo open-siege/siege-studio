@@ -49,7 +49,7 @@ namespace win32
     SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), FALSE);
 
     std::map<std::wstring_view, COLORREF> color_map{
-      { win32::properties::window::bk_color, win32::get_color_for_window(control.ref(),win32::properties::window::bk_color) }
+      { win32::properties::window::bk_color, win32::get_color_for_window(control.ref(), win32::properties::window::bk_color) }
     };
 
     DWORD_PTR existing_object{};
@@ -177,7 +177,7 @@ namespace win32
               else
               {
                 context.mask_bitmap = win32::create_layer_mask(context.size, scale, [size = context.size](auto dc, auto scale) {
-                    RoundRect(dc, 0, 0, size.cx * scale, size.cy * scale, (size.cy * scale) / 2, size.cy * scale);
+                  RoundRect(dc, 0, 0, size.cx * scale, size.cy * scale, (size.cy * scale) / 2, size.cy * scale);
                 });
               }
             }
@@ -320,7 +320,7 @@ namespace win32
             {
               InvalidateRect(button, nullptr, TRUE);
             }
-          }          
+          }
         }
 
         return lresult;
@@ -341,12 +341,12 @@ namespace win32
     }
 
     std::map<std::wstring_view, COLORREF> color_map{
-      { win32::properties::button::bk_color, win32::get_color_for_window(control.ref(),win32::properties::button::bk_color) },
+      { win32::properties::button::bk_color, win32::get_color_for_window(control.ref(), win32::properties::button::bk_color) },
       { win32::properties::button::focus_bk_color, win32::get_color_for_window(control.ref(), win32::properties::button::focus_bk_color) },
       { win32::properties::button::hot_bk_color, win32::get_color_for_window(control.ref(), win32::properties::button::hot_bk_color) },
       { win32::properties::button::pushed_bk_color, win32::get_color_for_window(control.ref(), win32::properties::button::pushed_bk_color) },
-      { win32::properties::button::text_color, win32::get_color_for_window(control.ref(),win32::properties::button::text_color) },
-      { win32::properties::button::line_color, win32::get_color_for_window(control.ref(),win32::properties::button::line_color) },
+      { win32::properties::button::text_color, win32::get_color_for_window(control.ref(), win32::properties::button::text_color) },
+      { win32::properties::button::line_color, win32::get_color_for_window(control.ref(), win32::properties::button::line_color) },
     };
 
     DWORD_PTR existing_object{};
@@ -374,8 +374,8 @@ namespace win32
       std::optional<HBRUSH> wm_control_color(win32::static_control static_control, win32::gdi::drawing_context_ref context) override
       {
         auto text_color = colors[properties::static_control::text_color];
-       
-         ::SetTextColor(context, text_color);
+
+        ::SetTextColor(context, text_color);
 
         auto bk_color = colors[properties::static_control::bk_color];
         ::SetBkColor(context, bk_color);
@@ -407,8 +407,8 @@ namespace win32
     SendMessageW(control, WM_SETFONT, (WPARAM)font, FALSE);
 
     std::map<std::wstring_view, COLORREF> color_map{
-      { win32::properties::static_control::bk_color, win32::get_color_for_window(control.ref(),win32::properties::static_control::bk_color) },
-      { win32::properties::static_control::text_color, win32::get_color_for_window(control.ref(),win32::properties::static_control::text_color) }
+      { win32::properties::static_control::bk_color, win32::get_color_for_window(control.ref(), win32::properties::static_control::bk_color) },
+      { win32::properties::static_control::text_color, win32::get_color_for_window(control.ref(), win32::properties::static_control::text_color) }
     };
 
     DWORD_PTR existing_object{};
@@ -475,7 +475,7 @@ namespace win32
 
         list.GetText(item.itemID, buffer.data());
 
-        ::TextOut(context, item.rcItem.left, item.rcItem.top, buffer.c_str(), buffer.size());
+        ::TextOutW(context, item.rcItem.left, item.rcItem.top, buffer.c_str(), buffer.size());
 
         return TRUE;
       }
@@ -533,12 +533,15 @@ namespace win32
 
       auto count = control.GetCount();
 
+      auto item_height = control.GetItemHeight(0);
+      ListBox_SetItemHeight(*copy, 0, item_height);
+
       for (auto i = 0; i < count; ++i)
       {
         control.GetText(i, temp.data());
         copy->AddString(temp.data());
 
-        auto item_height = control.GetItemHeight(i);
+        item_height = control.GetItemHeight(i);
         ListBox_SetItemHeight(*copy, i, item_height);
       }
 
@@ -563,10 +566,10 @@ namespace win32
     copy_control(style | LBS_OWNERDRAWFIXED);
 
     std::map<std::wstring_view, COLORREF> color_map{
-      { win32::properties::list_box::bk_color, win32::get_color_for_window(control.ref(),win32::properties::list_box::bk_color) },
-      { win32::properties::list_box::text_color, win32::get_color_for_window(control.ref(),win32::properties::list_box::text_color) },
-      { win32::properties::list_box::text_bk_color, win32::get_color_for_window(control.ref(),win32::properties::list_box::text_bk_color) },
-      { win32::properties::list_box::text_highlight_color, win32::get_color_for_window(control.ref(),win32::properties::list_box::text_highlight_color) },
+      { win32::properties::list_box::bk_color, win32::get_color_for_window(control.ref(), win32::properties::list_box::bk_color) },
+      { win32::properties::list_box::text_color, win32::get_color_for_window(control.ref(), win32::properties::list_box::text_color) },
+      { win32::properties::list_box::text_bk_color, win32::get_color_for_window(control.ref(), win32::properties::list_box::text_bk_color) },
+      { win32::properties::list_box::text_highlight_color, win32::get_color_for_window(control.ref(), win32::properties::list_box::text_highlight_color) },
     };
 
     DWORD_PTR existing_object{};
