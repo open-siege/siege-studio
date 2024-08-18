@@ -176,7 +176,7 @@ namespace siege::views
       dir_list.InsertRoots(root);
     }
 
-    LRESULT static CALLBACK static_sub_class(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+    LRESULT static CALLBACK button_sub_class(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
     {
       auto self = (siege_main_window*)dwRefData;
       if (msg == WM_MOUSEMOVE)
@@ -197,6 +197,10 @@ namespace siege::views
       if (msg == WM_LBUTTONUP)
       {
         self->is_resizing = false;
+
+        auto state = Button_GetState(self->separator);
+
+        Button_SetState(self->separator, state & ~BST_PUSHED);
       }
 
       if (self->is_resizing && (msg == WM_MOUSEMOVE || msg == WM_LBUTTONDOWN))
@@ -226,7 +230,7 @@ namespace siege::views
           .hwndTrack = hWnd
         };
         ::TrackMouseEvent(&event);
-        RemoveWindowSubclass(hWnd, static_sub_class, uIdSubclass);
+        RemoveWindowSubclass(hWnd, button_sub_class, uIdSubclass);
       }
 
       return DefSubclassProc(hWnd, msg, wParam, lParam);
@@ -240,7 +244,7 @@ namespace siege::views
 
       separator = *factory.CreateWindowEx<win32::button>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | BS_FLAT });
 
-      if (::SetWindowSubclass(separator, static_sub_class, (UINT_PTR)this, (DWORD_PTR)this))
+      if (::SetWindowSubclass(separator, button_sub_class, (UINT_PTR)this, (DWORD_PTR)this))
       {
         TRACKMOUSEEVENT event{
           .cbSize = sizeof(TRACKMOUSEEVENT),
@@ -412,7 +416,10 @@ namespace siege::views
 
     auto wm_size(std::size_t type, SIZE client_size)
     {
-      on_size(client_size);
+      if (type == SIZE_MAXIMIZED || type == SIZE_RESTORED)
+      {
+        on_size(client_size);
+      }
 
       return 0;
     }
@@ -492,7 +499,7 @@ namespace siege::views
               &key)
             == ERROR_SUCCESS)
         {
-            //Software\Microsoft\Windows\CurrentVersion\Themes\History\Colors
+          // Software\Microsoft\Windows\CurrentVersion\Themes\History\Colors
           DWORD value = 0;
           DWORD size = sizeof(DWORD);
 
@@ -509,6 +516,11 @@ namespace siege::views
             COLORREF text_highlight_color = RGB(0x2d, 0x2d, 0x2d);
             COLORREF btn_shadow_color = 0x00AAAAAA;
 
+            COLORREF button_bk_color = RGB(0x2d, 0x2d, 0x2d);
+            COLORREF pushed_bk_color = RGB(0x27, 0x27, 0x27);
+            COLORREF focus_bk_color = RGB(0x32, 0x32, 0x32);
+            COLORREF hot_bk_color = RGB(0x32, 0x32, 0x32);
+
             if (!is_dark_mode)
             {
               bk_color = RGB(0xfb, 0xfb, 0xfb);
@@ -516,8 +528,17 @@ namespace siege::views
               text_bk_color = RGB(0xf3, 0xf3, 0xf3);
               text_highlight_color = RGB(127, 127, 255);
               btn_shadow_color = RGB(1, 1, 1);
+
+              button_bk_color = RGB(0xfb, 0xfb, 0xfb);
+              pushed_bk_color = RGB(0xf5, 0xf5, 0xf5);
+              focus_bk_color = RGB(0xfb, 0xf6, 0xf6);
+              hot_bk_color = RGB(0xfb, 0xf6, 0xf6);
             }
 
+            win32::set_color_for_window(this->ref(), win32::properties::button::bk_color, button_bk_color);
+            win32::set_color_for_window(this->ref(), win32::properties::button::hot_bk_color, hot_bk_color);
+            win32::set_color_for_window(this->ref(), win32::properties::button::focus_bk_color, focus_bk_color);
+            win32::set_color_for_window(this->ref(), win32::properties::button::pushed_bk_color, pushed_bk_color);
             win32::set_color_for_window(this->ref(), win32::properties::button::bk_color, bk_color);
             win32::set_color_for_window(this->ref(), win32::properties::button::text_color, text_color);
             win32::set_color_for_window(this->ref(), win32::properties::button::line_color, text_color);

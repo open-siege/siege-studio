@@ -53,6 +53,9 @@ namespace win32
     struct button
     {
       inline static auto bk_color = std::wstring(win32::button::class_name) + L"." + L"BkColor";
+      inline static auto hot_bk_color = std::wstring(win32::button::class_name) + L"." + L"HotBkColor";
+      inline static auto focus_bk_color = std::wstring(win32::button::class_name) + L"." + L"FocusBkColor";
+      inline static auto pushed_bk_color = std::wstring(win32::button::class_name) + L"." + L"PushedBkColor";
       inline static auto text_color = std::wstring(win32::button::class_name) + L"." + L"TextColor";
       inline static auto line_color = std::wstring(win32::button::class_name) + L"." + L"LineColor";
 

@@ -119,17 +119,23 @@ namespace win32
   {
     struct sub_class final : win32::button::notifications
     {
-      HFONT font = win32::load_font(LOGFONTW{
+      win32::gdi::font_ref font = win32::load_font(LOGFONTW{
         .lfPitchAndFamily = VARIABLE_PITCH,
         .lfFaceName = L"Segoe UI" });
 
-      SIZE size{};
-      HRGN region = nullptr;
-      HBITMAP mask_bitmap = nullptr;
+      struct theme_context
+      {
+        SIZE size{};
+        HRGN region = nullptr;
+        HBITMAP mask_bitmap = nullptr;
+        bool is_vertical = true;
+      };
 
       std::wstring test = std::wstring(255, '\0');
 
       std::map<std::wstring_view, COLORREF> colors;
+      std::map<win32::window_ref, theme_context> theme_info;
+
 
       sub_class(std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
       {
@@ -137,13 +143,16 @@ namespace win32
 
       std::optional<win32::lresult_t> wm_notify(win32::button button, NMCUSTOMDRAW& custom_draw) override
       {
+        auto& context = theme_info[button.ref()];
         if (custom_draw.dwDrawStage == CDDS_PREPAINT)
         {
           auto rect = custom_draw.rc;
           auto new_size = SIZE(rect.right - rect.left, rect.bottom - rect.top);
-          if (new_size.cx != size.cx || new_size.cy != size.cy)
+
+          if (new_size.cx != context.size.cx || new_size.cy != context.size.cy)
           {
-            size = new_size;
+            context.size = new_size;
+            context.is_vertical = context.size.cy > context.size.cx;
 
             if (IsWindows8OrGreater())
             {
@@ -159,44 +168,60 @@ namespace win32
               // icon_text.push_back(0xE701);
               // mask_bitmap = win32::create_layer_mask(size, std::move(font_icon), icon_text);
 
-              mask_bitmap = win32::create_layer_mask(size, scale, [size = size](auto dc, auto scale) {
-                RoundRect(dc, 0, 0, size.cx * scale, size.cy * scale, (size.cy * scale) / 2, size.cy * scale);
-              });
+              if (context.is_vertical)
+              {
+                context.mask_bitmap = win32::create_layer_mask(context.size, scale, [size = context.size](auto dc, auto scale) {
+                  Rectangle(dc, 0, 0, size.cx * scale, size.cy * scale);
+                });
+              }
+              else
+              {
+                context.mask_bitmap = win32::create_layer_mask(context.size, scale, [size = context.size](auto dc, auto scale) {
+                    RoundRect(dc, 0, 0, size.cx * scale, size.cy * scale, (size.cy * scale) / 2, size.cy * scale);
+                });
+              }
             }
             else
             {
-              if (region)
+              if (context.region)
               {
                 SetWindowRgn(button, nullptr, FALSE);
-                DeleteObject(region);
+                DeleteObject(context.region);
               }
-              region = CreateRoundRectRgn(0, 0, size.cx, size.cy, 25, 25);
-              SetWindowRgn(button, region, FALSE);
+
+              if (!context.is_vertical)
+              {
+                context.region = CreateRoundRectRgn(0, 0, context.size.cx, context.size.cy, 25, 25);
+                SetWindowRgn(button, context.region, FALSE);
+              }
             }
           }
 
           auto text_color = colors[properties::button::text_color];
           auto bk_color = colors[properties::button::bk_color];
+          auto hot_color = colors[properties::button::hot_bk_color];
+          auto focus_color = colors[properties::button::focus_bk_color];
+          auto pushed_color = colors[properties::button::pushed_bk_color];
           auto state = Button_GetState(button);
 
           SelectFont(custom_draw.hdc, font);
           if (state & BST_HOT)
           {
             ::SetTextColor(custom_draw.hdc, text_color);
-            ::SetBkColor(custom_draw.hdc, RGB(0, 0, 255));
-            ::FillRect(custom_draw.hdc, &custom_draw.rc, get_solid_brush(RGB(0, 0, 255)));
+            ::SetBkColor(custom_draw.hdc, hot_color);
+            ::FillRect(custom_draw.hdc, &custom_draw.rc, get_solid_brush(hot_color));
           }
           else if (state & BST_FOCUS)
           {
             ::SetTextColor(custom_draw.hdc, text_color);
-            ::SetBkColor(custom_draw.hdc, RGB(0, 255, 255));
-            ::FillRect(custom_draw.hdc, &custom_draw.rc, get_solid_brush(RGB(0, 255, 255)));
+            ::SetBkColor(custom_draw.hdc, focus_color);
+            ::FillRect(custom_draw.hdc, &custom_draw.rc, get_solid_brush(focus_color));
           }
           else if (state & BST_PUSHED)
           {
             ::SetTextColor(custom_draw.hdc, text_color);
-            ::SetBkColor(custom_draw.hdc, RGB(255, 0, 255));
-            ::FillRect(custom_draw.hdc, &custom_draw.rc, get_solid_brush(RGB(255, 0, 255)));
+            ::SetBkColor(custom_draw.hdc, pushed_color);
+            ::FillRect(custom_draw.hdc, &custom_draw.rc, get_solid_brush(pushed_color));
           }
           else
           {
@@ -218,7 +243,7 @@ namespace win32
             auto width = custom_draw.rc.right - custom_draw.rc.left;
             auto height = custom_draw.rc.bottom - custom_draw.rc.top;
 
-            auto new_dc = win32::apply_layer_mask(win32::gdi::drawing_context_ref(custom_draw.hdc), win32::gdi::bitmap_ref(mask_bitmap));
+            auto new_dc = win32::apply_layer_mask(win32::gdi::drawing_context_ref(custom_draw.hdc), win32::gdi::bitmap_ref(context.mask_bitmap));
 
             BLENDFUNCTION function{
               .BlendOp = AC_SRC_OVER,
@@ -230,13 +255,13 @@ namespace win32
             POINT pos{ .x = screen_rect->left, .y = screen_rect->top };
             POINT dc_pos{};
 
-            UpdateLayeredWindow(button, nullptr, &pos, &size, new_dc, &dc_pos, 0, &function, ULW_ALPHA);
+            UpdateLayeredWindow(button, nullptr, &pos, &context.size, new_dc, &dc_pos, 0, &function, ULW_ALPHA);
           }
           else
           {
-            if (region)
+            if (context.region)
             {
-              SetWindowRgn(button, region, TRUE);
+              SetWindowRgn(button, context.region, TRUE);
             }
           }
         }
@@ -295,13 +320,12 @@ namespace win32
             {
               InvalidateRect(button, nullptr, TRUE);
             }
-          }
+          }          
         }
 
         return lresult;
       }
     };
-
 
     if (IsWindows8OrGreater())
     {
@@ -318,6 +342,9 @@ namespace win32
 
     std::map<std::wstring_view, COLORREF> color_map{
       { win32::properties::button::bk_color, win32::get_color_for_window(control.ref(),win32::properties::button::bk_color) },
+      { win32::properties::button::focus_bk_color, win32::get_color_for_window(control.ref(), win32::properties::button::focus_bk_color) },
+      { win32::properties::button::hot_bk_color, win32::get_color_for_window(control.ref(), win32::properties::button::hot_bk_color) },
+      { win32::properties::button::pushed_bk_color, win32::get_color_for_window(control.ref(), win32::properties::button::pushed_bk_color) },
       { win32::properties::button::text_color, win32::get_color_for_window(control.ref(),win32::properties::button::text_color) },
       { win32::properties::button::line_color, win32::get_color_for_window(control.ref(),win32::properties::button::line_color) },
     };
