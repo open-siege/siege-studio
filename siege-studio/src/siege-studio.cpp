@@ -54,7 +54,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
   auto main_window = this_module.CreateWindowExW(CREATESTRUCTW{
     .cx = CW_USEDEFAULT,
     .x = CW_USEDEFAULT,
-    .style = WS_OVERLAPPEDWINDOW,
+    .style = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
     .lpszName = app_title.data(),
     .lpszClass = win32::type_name<siege::views::siege_main_window>().c_str() });
 

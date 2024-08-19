@@ -108,6 +108,8 @@ namespace siege::views
         .style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
       });
 
+      table.SetExtendedListViewStyle(LVS_EX_DOUBLEBUFFER, LVS_EX_DOUBLEBUFFER);
+
       table.InsertGroup(-1, LVGROUP{
                               .pszHeader = const_cast<wchar_t*>(L"Hidden"),
                               .iGroupId = 1,

@@ -348,14 +348,20 @@ namespace siege::views
     }
 
 
+    bool menu_is_sized = false;
+
     void on_size(SIZE total_size)
     {
       auto menu_size = total_size;
       menu_size.cy = menu_size.cy / 20;
 
-      main_menu.SetWindowPos(POINT{});
-      main_menu.SetWindowPos(menu_size);
-      main_menu.AutoSize();
+      if (!menu_is_sized)
+      {
+        main_menu.SetWindowPos(POINT{});
+        main_menu.SetWindowPos(menu_size);
+        main_menu.AutoSize();
+        menu_is_sized = true;
+      }
 
       auto new_size = total_size;
       new_size.cy -= menu_size.cy;

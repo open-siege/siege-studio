@@ -236,6 +236,8 @@ namespace win32
       static auto window_type_name = type_name<TWindow>();
       this->lpszClassName = this->lpszClassName ? this->lpszClassName : window_type_name.c_str();
 
+      this->style = CS_VREDRAW | CS_HREDRAW;
+
       static_assert(StaticSize <= 40, "StaticSize is too big for cbClsExtra");
       this->cbClsExtra = StaticSize;
       this->cbWndExtra = sizeof(std::size_t) * 3;
