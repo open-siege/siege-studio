@@ -63,6 +63,11 @@ namespace win32
               return self->wm_draw_item(win32::button(context.hwndItem), context);
             }
           }
+
+          if (message == WM_COMMAND && win32::window_ref((HWND)lParam).RealGetWindowClassW() == button::class_name)
+          {
+            return self->wm_command(win32::button((HWND)lParam), HIWORD(wParam));
+          }
         }
 
         return std::nullopt;

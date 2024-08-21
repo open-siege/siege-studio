@@ -40,12 +40,13 @@ namespace siege::views
     , win32::tree_view::notifications
     , win32::tab_control::notifications
     , win32::tool_bar::notifications
+    , win32::button::notifications
     , win32::menu::notifications
   {
     win32::tree_view dir_list;
     win32::button separator;
     win32::tab_control tab_control;
-    //    win32::button close_button;
+    win32::button close_button;
     win32::window theme_window;
 
     std::list<platform::content_module> loaded_modules;
@@ -264,8 +265,7 @@ namespace siege::views
           .hMenu = tab_context_menu,
           .style = WS_CHILD | WS_VISIBLE | TCS_FIXEDWIDTH | TCS_FORCELABELLEFT,
         });
-      // close_button = *factory.CreateWindowExW<win32::button>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"X" });
-
+      close_button = *factory.CreateWindowExW<win32::button>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"X" });
 
       main_menu = *factory.CreateWindowExW<win32::tool_bar>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | TBSTYLE_FLAT | TBSTYLE_LIST | CCS_NOPARENTALIGN | CCS_NODIVIDER });
 
@@ -350,6 +350,19 @@ namespace siege::views
 
     bool menu_is_sized = false;
 
+    void move_close_button()
+    {
+      if (auto count = tab_control.GetItemCount(); count > 1)
+      {
+        auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
+        auto rect = tab_control.GetItemRect(tab_control.GetCurrentSelection());
+        auto height = rect->bottom - rect->top;
+        close_button.SetWindowPos(POINT{ .x = tab_rect.left + rect->right - height, .y = tab_rect.top + rect->top });
+        close_button.SetWindowPos(SIZE{ .cx = height, .cy = height });
+        close_button.SetWindowPos(HWND_TOP);
+      }
+    }
+
     void on_size(SIZE total_size)
     {
       auto menu_size = total_size;
@@ -401,7 +414,7 @@ namespace siege::views
         count = 1;
       }
 
-      
+
       auto fallback = 150;
       auto total_width = right_size.cx;
 
@@ -414,28 +427,17 @@ namespace siege::views
         auto tab_size = tab_control.GetClientSize();
         auto child_size = child.GetClientSize();
         child_height = child_size->cy;
-        
+
         fallback = child_width * 4;
         total_width = total_width - child_width;
       }
 
       auto width = std::clamp<int>(total_width / count, fallback, right_size.cx);
 
-
       TabCtrl_SetPadding(tab_control, 10, 0);
       auto old_height = HIWORD(TabCtrl_SetItemSize(tab_control, width, 40));
       TabCtrl_SetItemSize(tab_control, width, old_height);
       auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
-
-      // TODO bring this back when the time is right
-      /*if (auto count = tab_control.GetItemCount(); count > 1)
-      {
-        auto rect = tab_control.GetItemRect(tab_control.GetCurrentSelection());
-        auto width = 50;
-        close_button.SetWindowPos(POINT{ .x = tab_rect.left + rect->right - width, .y = tab_rect.top + rect->top });
-        close_button.SetWindowPos(SIZE{ .cx = width, .cy = rect->bottom - rect->top });
-        close_button.SetWindowPos(HWND_TOP);
-      }*/
 
       SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&tab_rect));
 
@@ -454,6 +456,7 @@ namespace siege::views
         child.SetWindowPos(POINT{ .x = right_size.cx - child_width - (child_width / 4), .y = 0 });
         child.SetWindowPos(SIZE{ .cx = child_width, .cy = child_height });
       }
+      move_close_button();
     }
 
     auto wm_size(std::size_t type, SIZE client_size)
@@ -822,6 +825,26 @@ namespace siege::views
       return TRUE;
     }
 
+    void remove_tab(int index)
+    {
+      auto item = tab_control.GetItem(index);
+
+      auto current_index = TabCtrl_GetCurSel(tab_control);
+
+      assert(::DestroyWindow(win32::hwnd_t(item->lParam)) == TRUE);
+      TabCtrl_DeleteItem(tab_control, index);
+
+      if (index == current_index)
+      {
+        auto count = TabCtrl_GetItemCount(tab_control);
+
+        index = std::clamp<int>(index, 0, count - 1);
+
+        TabCtrl_SetCurSel(tab_control, index);
+        wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE });
+      }
+    }
+
     std::optional<LRESULT> wm_notify(win32::tab_control sender, const NMHDR& notification) override
     {
       auto code = notification.code;
@@ -847,22 +870,7 @@ namespace siege::views
 
             if (action == 1)
             {
-              auto item = sender.GetItem(index);
-
-              auto current_index = TabCtrl_GetCurSel(sender);
-
-              assert(::DestroyWindow(win32::hwnd_t(item->lParam)) == TRUE);
-              TabCtrl_DeleteItem(sender, index);
-
-              if (index == current_index)
-              {
-                auto count = TabCtrl_GetItemCount(sender);
-
-                index = std::clamp<int>(index, 0, count - 1);
-
-                TabCtrl_SetCurSel(sender, index);
-                wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE });
-              }
+              remove_tab(index);
             }
           }
         }
@@ -897,15 +905,7 @@ namespace siege::views
 
         auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
 
-        /*if (auto count = tab_control.GetItemCount(); count > 1)
-        {
-          auto rect = tab_control.GetItemRect(current_index);
-          auto width = (rect->right - rect->left) / 3;
-          close_button.SetWindowPos(POINT{ .x = tab_rect.left + rect->right - width, .y = tab_rect.top + rect->top });
-          close_button.SetWindowPos(SIZE{ .cx = width, .cy = rect->bottom - rect->top });
-          close_button.SetWindowPos(HWND_TOP);
-        }*/
-
+        move_close_button();
 
         ShowWindow(win32::hwnd_t(tab_item->lParam), SW_SHOW);
 
@@ -1075,6 +1075,19 @@ namespace siege::views
         return std::nullopt;
       }
       }
+    }
+
+    std::optional<LRESULT> wm_command(win32::button, int code) override
+    {
+      if (code == BN_CLICKED)
+      {
+        if (tab_control.GetItemCount())
+        {
+          remove_tab(TabCtrl_GetCurSel(tab_control));
+        }
+      }
+
+      return std::nullopt;
     }
 
     std::optional<LRESULT> wm_command(win32::menu, int identifier) override
