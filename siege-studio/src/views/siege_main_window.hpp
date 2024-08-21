@@ -262,7 +262,7 @@ namespace siege::views
       tab_control = *factory.CreateWindowExW<win32::tab_control>(
         CREATESTRUCTW{
           .hMenu = tab_context_menu,
-          .style = WS_CHILD | WS_VISIBLE | TCS_MULTILINE | TCS_FORCELABELLEFT,
+          .style = WS_CHILD | WS_VISIBLE | TCS_FIXEDWIDTH | TCS_FORCELABELLEFT,
         });
       // close_button = *factory.CreateWindowExW<win32::button>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"X" });
 
@@ -387,10 +387,40 @@ namespace siege::views
       separator.SetWindowPos(POINT{ .x = tree_size.cx, .y = menu_size.cy });
       separator.SetWindowPos(divider);
 
+      SendMessage(tab_control, WM_SETREDRAW, FALSE, 0);
+
       tab_control.SetWindowPos(POINT{ .x = tree_size.cx + divider.cx, .y = menu_size.cy });
       tab_control.SetWindowPos(right_size);
 
-      auto width = std::clamp<int>(right_size.cx / (tab_control.GetItemCount() + 1), 150, right_size.cx);
+      SendMessage(tab_control, WM_SETREDRAW, TRUE, 0);
+
+      auto count = tab_control.GetItemCount();
+
+      if (!count)
+      {
+        count = 1;
+      }
+
+      
+      auto fallback = 150;
+      auto total_width = right_size.cx;
+
+      auto child = win32::window_ref(::FindWindowExW(tab_control, nullptr, UPDOWN_CLASSW, nullptr));
+      auto child_width = total_width / 12;
+      auto child_height = 100;
+
+      if (child)
+      {
+        auto tab_size = tab_control.GetClientSize();
+        auto child_size = child.GetClientSize();
+        child_height = child_size->cy;
+        
+        fallback = child_width * 4;
+        total_width = total_width - child_width;
+      }
+
+      auto width = std::clamp<int>(total_width / count, fallback, right_size.cx);
+
 
       TabCtrl_SetPadding(tab_control, 10, 0);
       auto old_height = HIWORD(TabCtrl_SetItemSize(tab_control, width, 40));
@@ -417,6 +447,12 @@ namespace siege::views
         {
           assert(win32::window_ref(win32::hwnd_t(tab_item->lParam)).SetWindowPos(tab_rect));
         }
+      }
+
+      if (child)
+      {
+        child.SetWindowPos(POINT{ .x = right_size.cx - child_width - (child_width / 4), .y = 0 });
+        child.SetWindowPos(SIZE{ .cx = child_width, .cy = child_height });
       }
     }
 
@@ -483,6 +519,7 @@ namespace siege::views
           tab_control.SetCurrentSelection(index);
 
           wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE });
+          on_size(*this->GetClientSize());
         }
         else
         {
@@ -964,6 +1001,8 @@ namespace siege::views
             tab_control.SetCurrentSelection(index);
 
             wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE });
+
+            on_size(*this->GetClientSize());
           }
           else
           {

@@ -150,6 +150,7 @@ namespace win32
     struct sub_class final : win32::tab_control::notifications
     {
       std::map<std::wstring_view, COLORREF> colors;
+      std::optional<SIZE> padding;
 
       sub_class(std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
       {
@@ -194,8 +195,22 @@ namespace win32
 
           if (item_info)
           {
-            ::DrawTextW(context, (LPCWSTR)item_info->pszText, -1, &item.rcItem, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+            auto real_rect = item.rcItem;
+
+            if (this->padding)
+            {
+              real_rect.left += this->padding->cx;
+              real_rect.right -= this->padding->cx;
+              real_rect.top += this->padding->cy;
+              real_rect.bottom -= this->padding->cy;
+              ::DrawTextW(context, (LPCWSTR)item_info->pszText, -1, &real_rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+            }
+            else
+            {
+              ::DrawTextW(context, (LPCWSTR)item_info->pszText, -1, &real_rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+            }
           }
+
           return TRUE;
         }
 
@@ -221,13 +236,16 @@ namespace win32
 
       static LRESULT __stdcall HandleChildMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
       {
+        auto* self = (sub_class*)dwRefData;
+        if (message == TCM_SETPADDING)
+        {
+          self->padding = SIZE{ .cx = LOWORD(lParam), .cy = HIWORD(lParam) };
+        }
+
         if (message == WM_PAINT)
         {
           PAINTSTRUCT ps;
           HDC hdc = BeginPaint(hWnd, &ps);
-
-
-          auto* self = (sub_class*)dwRefData;
           auto tabs = win32::tab_control(hWnd);
           auto parent_context = win32::gdi::drawing_context_ref(hdc);
           auto rect = tabs.GetClientRect();
@@ -282,6 +300,20 @@ namespace win32
           DeleteObject(pen);
 
           EndPaint(hWnd, &ps);
+
+          auto up_down = win32::window_ref(::FindWindowExW(hWnd, nullptr, UPDOWN_CLASSW, nullptr));
+
+          if (up_down)
+          {
+            if (win32::is_dark_theme())
+            {
+              win32::theme_module().SetWindowTheme(up_down, L"DarkMode_Explorer", nullptr);
+            }
+            else
+            {
+              win32::theme_module().SetWindowTheme(up_down, nullptr, nullptr);
+            }
+          }
 
           return result;
         }
