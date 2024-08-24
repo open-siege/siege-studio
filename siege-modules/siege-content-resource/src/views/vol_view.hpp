@@ -5,6 +5,7 @@
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
 #include <siege/platform/win/desktop/menu.hpp>
+#include <siege/platform/win/desktop/shell.hpp>
 #include <siege/platform/content_module.hpp>
 #include <siege/platform/shared.hpp>
 #include <spanstream>
@@ -15,25 +16,6 @@
 
 namespace siege::views
 {
-  /*
-
-  HIMAGELIST image_list = nullptr;
-                  auto hresult = SHGetImageList(SHIL_SMALL, IID_IImageList, (void**)&image_list);
-
-                  SHSTOCKICONINFO info{ .cbSize = sizeof(SHSTOCKICONINFO) };
-
-                  if (hresult == S_OK)
-                  {
-                          dir_list.SetImageList(TVSIL_NORMAL, image_list);
-                          hresult = SHGetStockIconInfo(SIID_FOLDER, SHGSI_SYSICONINDEX, &info);
-
-                          if (hresult == S_OK)
-                          {
-                                  root[0].item.iImage = info.iSysImageIndex;
-                          }
-                  }
-  */
-
   struct vol_view final : win32::window_ref
     , win32::list_view::notifications
     , win32::tool_bar::notifications
@@ -53,6 +35,9 @@ namespace siege::views
     std::map<siege::platform::file_info*, win32::wparam_t> file_indices;
     std::u16string filter_value;
 
+    SHSTOCKICONINFO default_icon{ .cbSize = sizeof(SHSTOCKICONINFO) };
+    std::map<std::u16string_view, SHSTOCKICONINFO> category_icons;
+
     vol_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
     }
@@ -69,6 +54,14 @@ namespace siege::views
         for (auto& category : categories)
         {
           auto& stored_category = *all_categories.insert(std::move(category)).first;
+         
+          if (category_icons[stored_category].cbSize != sizeof(sizeof(SHSTOCKICONINFO)))
+          {
+            auto& info = category_icons[stored_category];
+            info.cbSize = sizeof(SHSTOCKICONINFO);
+            ::SHGetStockIconInfo((SHSTOCKICONID)module.get_default_file_icon(), SHGSI_SYSICONINDEX, &info);
+          }
+
           auto extensions = module.get_supported_extensions_for_category(stored_category);
 
           auto existing = category_extensions.find(stored_category);
@@ -161,6 +154,23 @@ namespace siege::views
       header.SetWindowStyle(style | HDS_NOSIZING | HDS_FILTERBAR | HDS_FLAT);
       header.SetFilterChangeTimeout();
 
+      HIMAGELIST image_list = nullptr;
+      auto hresult = SHGetImageList(SHIL_LARGE, IID_IImageList, (void**)&image_list);
+
+      if (hresult == S_OK)
+      {
+        table.SetImageList(LVSIL_NORMAL, image_list);
+      }
+
+      hresult = SHGetImageList(SHIL_SMALL, IID_IImageList, (void**)&image_list);
+
+      if (hresult == S_OK)
+      {
+        table.SetImageList(LVSIL_SMALL, image_list);
+      }
+
+       hresult = SHGetStockIconInfo(SIID_MIXEDFILES, SHGSI_SYSICONINDEX, &default_icon);
+
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
       return 0;
@@ -176,7 +186,7 @@ namespace siege::views
       auto top_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy / 12 };
       table_settings.SetWindowPos(POINT{}, SWP_DEFERERASE | SWP_NOREDRAW);
       table_settings.SetWindowPos(top_size, SWP_DEFERERASE);
-      table_settings.AutoSize();
+      table_settings.SetButtonSize(SIZE{ .cx = client_size.cx / 2 / table_settings.ButtonCount(), .cy = top_size.cy });
 
       table.SetWindowPos(POINT{ .y = top_size.cy }, SWP_DEFERERASE | SWP_NOREDRAW);
       table.SetWindowPos(SIZE{ .cx = top_size.cx, .cy = client_size.cy - top_size.cy }, SWP_DEFERERASE);
@@ -249,6 +259,13 @@ namespace siege::views
 
               if (category != extensions_to_categories.end())
               {
+                item.iImage = default_icon.iSysImageIndex;
+
+                if (auto icon = category_icons.find(category->second); icon != category_icons.end())
+                {
+                  item.iImage = icon->second.iSysImageIndex;
+                }
+
                 item.iGroupId = categories_to_groups[category->second];
                 item.sub_items = {
                   std::filesystem::relative(file->archive_path, file->folder_path).wstring(),

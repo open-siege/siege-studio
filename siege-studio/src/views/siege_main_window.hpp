@@ -838,10 +838,13 @@ namespace siege::views
       {
         auto count = TabCtrl_GetItemCount(tab_control);
 
-        index = std::clamp<int>(index, 0, count - 1);
+        if (count > 0)
+        {
+          index = std::clamp<int>(index, 0, count - 1);
 
-        TabCtrl_SetCurSel(tab_control, index);
-        wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE });
+          TabCtrl_SetCurSel(tab_control, index);
+          wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE });
+        }
       }
     }
 
@@ -1077,9 +1080,9 @@ namespace siege::views
       }
     }
 
-    std::optional<LRESULT> wm_command(win32::button, int code) override
+    std::optional<LRESULT> wm_command(win32::button sender, int code) override
     {
-      if (code == BN_CLICKED)
+      if (sender == close_button && code == BN_CLICKED)
       {
         if (tab_control.GetItemCount())
         {
