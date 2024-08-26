@@ -69,7 +69,7 @@ namespace siege::views
 
     std::wstring buffer;
 
-    win32::tool_bar main_menu;
+    win32::menu main_menu;
     std::array<win32::popup_menu, 4> popup_menus;
     win32::popup_menu tab_context_menu;
 
@@ -265,45 +265,28 @@ namespace siege::views
         });
       close_button = *factory.CreateWindowExW<win32::button>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"X" });
 
-      main_menu = *factory.CreateWindowExW<win32::tool_bar>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | TBSTYLE_FLAT | TBSTYLE_LIST | CCS_NOPARENTALIGN | CCS_NODIVIDER });
-
-      main_menu.InsertButton(
-        -1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_GROUP | BTNS_AUTOSIZE | BTNS_SHOWTEXT | BTNS_DROPDOWN, .iString = (INT_PTR)L"&File" });
-
-      main_menu.InsertButton(
-        -1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_GROUP | BTNS_AUTOSIZE | BTNS_SHOWTEXT | BTNS_DROPDOWN, .iString = (INT_PTR)L"Edit" });
-
-      main_menu.InsertButton(
-        -1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_GROUP | BTNS_AUTOSIZE | BTNS_SHOWTEXT | BTNS_DROPDOWN, .iString = (INT_PTR)L"View" });
-
-      main_menu.InsertButton(
-        -1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_GROUP | BTNS_AUTOSIZE | BTNS_SHOWTEXT | BTNS_DROPDOWN, .iString = (INT_PTR)L"Help" });
-
-      VARIANT var{};
-      var.vt = VT_I4;
-      var.lVal = ROLE_SYSTEM_MENUBAR;
-
-      auto acc_props = get_acc_props();
-      assert(acc_props->SetHwndProp(main_menu, OBJID_CLIENT, CHILDID_SELF, PROPID_ACC_ROLE, var) == S_OK);
 
       std::size_t id = 1u;
 
-      MENUITEMINFOW info{
-        .cbSize = sizeof(MENUITEMINFOW),
-        .fMask = MIIM_TYPE | MIIM_DATA | MIIM_ID
-      };
 
-      popup_menus[0].AppendMenuW(MF_STRING | MF_OWNERDRAW, open_id, L"Open...");
-      popup_menus[0].AppendMenuW(MF_STRING | MF_OWNERDRAW, open_new_tab_id, L"Open in New Tab...");
-      popup_menus[0].AppendMenuW(MF_STRING | MF_OWNERDRAW, open_workspace_id, L"Open Folder as Workspace");
+      popup_menus[0].AppendMenuW(MF_OWNERDRAW, open_id, L"Open...");
+      popup_menus[0].AppendMenuW(MF_OWNERDRAW, open_new_tab_id, L"Open in New Tab...");
+      popup_menus[0].AppendMenuW(MF_OWNERDRAW, open_workspace_id, L"Open Folder as Workspace");
       popup_menus[0].AppendMenuW(MF_SEPARATOR | MF_OWNERDRAW, id++);
 
-      popup_menus[0].AppendMenuW(MF_STRING | MF_OWNERDRAW, RegisterWindowMessageW(L"COMMAND_EXIT"), L"Quit");
+      popup_menus[0].AppendMenuW(MF_OWNERDRAW, RegisterWindowMessageW(L"COMMAND_EXIT"), L"Quit");
 
-      popup_menus[1].AppendMenuW(MF_STRING | MF_OWNERDRAW, edit_theme_id, L"Theme");
+      popup_menus[1].AppendMenuW(MF_OWNERDRAW, edit_theme_id, L"Theme");
 
+      SetMenu(*this, main_menu.get());
 
-      tab_context_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 1, L"Close");
+      main_menu.AppendMenuW(MF_POPUP | MF_OWNERDRAW, (UINT_PTR)popup_menus[0].get(), L"File");
+      main_menu.AppendMenuW(MF_POPUP | MF_OWNERDRAW, (UINT_PTR)popup_menus[1].get(), L"Edit");
+      main_menu.AppendMenuW(MF_POPUP | MF_OWNERDRAW, (UINT_PTR)popup_menus[2].get(), L"View");
+      main_menu.AppendMenuW(MF_POPUP | MF_OWNERDRAW, (UINT_PTR)popup_menus[3].get(), L"Help");
+      main_menu.AppendMenuW(MF_MENUBARBREAK | MF_OWNERDRAW, id++);
+      
+      tab_context_menu.AppendMenuW(MF_OWNERDRAW, 1, L"Close");
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
@@ -315,9 +298,6 @@ namespace siege::views
       PostQuitMessage(0);
       return 0;
     }
-
-
-    bool menu_is_sized = false;
 
     void move_close_button()
     {
@@ -334,20 +314,7 @@ namespace siege::views
 
     void on_size(SIZE total_size)
     {
-      auto menu_size = total_size;
-      menu_size.cy = menu_size.cy / 20;
-
-      if (!menu_is_sized)
-      {
-        main_menu.SetWindowPos(POINT{});
-        main_menu.SetWindowPos(menu_size);
-        main_menu.AutoSize();
-        menu_is_sized = true;
-      }
-
       auto new_size = total_size;
-      new_size.cy -= menu_size.cy;
-
 
       if (tree_size.cx == 0)
       {
@@ -363,15 +330,15 @@ namespace siege::views
       auto right_size = new_size;
       right_size.cx -= tree_size.cx - divider.cx;
 
-      dir_list.SetWindowPos(POINT{ .y = menu_size.cy });
+      dir_list.SetWindowPos(POINT{});
       dir_list.SetWindowPos(tree_size);
 
-      separator.SetWindowPos(POINT{ .x = tree_size.cx, .y = menu_size.cy });
+      separator.SetWindowPos(POINT{ .x = tree_size.cx });
       separator.SetWindowPos(divider);
 
       SendMessage(tab_control, WM_SETREDRAW, FALSE, 0);
 
-      tab_control.SetWindowPos(POINT{ .x = tree_size.cx + divider.cx, .y = menu_size.cy });
+      tab_control.SetWindowPos(POINT{ .x = tree_size.cx + divider.cx });
       tab_control.SetWindowPos(right_size);
 
       SendMessage(tab_control, WM_SETREDRAW, TRUE, 0);
@@ -425,6 +392,7 @@ namespace siege::views
         child.SetWindowPos(POINT{ .x = right_size.cx - child_width - (child_width / 4), .y = 0 });
         child.SetWindowPos(SIZE{ .cx = child_width, .cy = child_height });
       }
+
       move_close_button();
     }
 
@@ -597,21 +565,8 @@ namespace siege::views
             win32::set_color_for_window(this->ref(), win32::properties::static_control::bk_color, bk_color);
             win32::set_color_for_window(this->ref(), win32::properties::static_control::text_color, text_color);
 
-            MENUINFO mi = { 0 };
-            mi.cbSize = sizeof(mi);
-            mi.fMask = MIM_APPLYTOSUBMENUS | MIM_STYLE;
-            mi.dwStyle = MNS_MODELESS;
-
-            SetMenuInfo(popup_menus[0], &mi);
-            SetMenuInfo(popup_menus[1], &mi);
-
-            mi.dwStyle = 0;
-            SetMenuInfo(GetMenu(tab_control), &mi);
-
-
             win32::apply_theme(dir_list);
             win32::apply_theme(tab_control);
-            win32::apply_theme(main_menu);
             win32::apply_theme(separator);
             win32::apply_theme(*this);
 
@@ -632,100 +587,6 @@ namespace siege::views
       }
 
       return std::nullopt;
-    }
-
-    bool menu_open = false;
-    bool menu_bar_tracked = false;
-    bool hot_tracking_enabled = false;
-
-    std::optional<win32::lresult_t> wm_enter_menu_loop(bool is_popup_menu)
-    {
-      menu_open = true;
-
-      return 0;
-    }
-
-    std::optional<win32::lresult_t> wm_exit_menu_loop(bool is_popup_menu)
-    {
-      menu_open = false;
-
-      if ((GetKeyState(VK_LBUTTON) & 0x8000) != 0)
-      {
-        hot_tracking_enabled = false;
-      }
-      else if ((GetKeyState(VK_RBUTTON) & 0x8000) != 0)
-      {
-        hot_tracking_enabled = false;
-      }
-
-      auto last_item = SendMessageW(this->main_menu, TB_GETHOTITEM, 0, 0);
-      if (last_item >= 0)
-      {
-        static NMTBHOTITEM notice{};
-        notice = {
-          .hdr{
-            .hwndFrom = this->main_menu,
-            .code = TBN_HOTITEMCHANGE,
-          },
-          .idOld = last_item,
-          .idNew = last_item,
-          .dwFlags = HICF_RESELECT
-        };
-        PostMessageW(main_menu, WM_NOTIFY, (WPARAM)this->main_menu.get(), (LPARAM)&notice);
-      }
-
-      return 0;
-    }
-
-
-    std::optional<win32::lresult_t> wm_notify(win32::tool_bar menu_bar, const NMTBHOTITEM& notice) override
-    {
-      if (notice.dwFlags & HICF_ENTERING)
-      {
-        menu_bar_tracked = true;
-      }
-      else if (notice.dwFlags & HICF_LEAVING)
-      {
-        menu_bar_tracked = false;
-      }
-
-      if (notice.idNew != notice.idOld && menu_bar_tracked && menu_open)
-      {
-        EndMenu();
-      }
-
-      if (!menu_open && hot_tracking_enabled)
-      {
-        auto window_rect = main_menu.GetWindowRect();
-        auto height = window_rect->bottom - window_rect->top;
-
-        RECT item_rect{};
-
-        SendMessageW(main_menu, TB_GETITEMRECT, notice.idNew, (LPARAM)&item_rect);
-        window_rect->left += item_rect.left;
-        window_rect->top += item_rect.top;
-        window_rect->right += item_rect.right;
-        window_rect->bottom += item_rect.bottom;
-        ::TrackPopupMenu(popup_menus[notice.idNew], 0, window_rect->left, window_rect->top + height, 0, *this, nullptr);
-      }
-
-      return 0;
-    }
-
-    std::optional<win32::lresult_t> wm_notify(win32::tool_bar menu_bar, const NMTOOLBARW& notice) override
-    {
-      auto window_rect = menu_bar.GetWindowRect();
-      auto height = window_rect->bottom - window_rect->top;
-
-      window_rect->left += notice.rcButton.left;
-      window_rect->top += notice.rcButton.top;
-      window_rect->right += notice.rcButton.right;
-      window_rect->bottom += notice.rcButton.bottom;
-
-      auto result = ::TrackPopupMenu(this->popup_menus[notice.iItem], 0, window_rect->left, window_rect->top + height, 0, *this, nullptr);
-      hot_tracking_enabled = true;
-
-      return TBDDRET_DEFAULT;
     }
 
     void remove_tab(int index)
@@ -998,7 +859,6 @@ namespace siege::views
 
     std::optional<LRESULT> wm_command(win32::menu_ref, int identifier) override
     {
-      hot_tracking_enabled = false;
       if (identifier == edit_theme_id)
       {
         theme_window = *win32::window_module_ref::current_module().CreateWindowExW(CREATESTRUCTW{

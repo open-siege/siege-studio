@@ -42,6 +42,26 @@ namespace win32
         return std::nullopt;
       }
 
+      virtual std::optional<win32::lresult_t> wm_enter_menu_loop(bool)
+      {
+        return std::nullopt;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_exit_menu_loop(bool)
+      {
+        return std::nullopt;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_init_menu_popup(TMenu, int, bool)
+      {
+        return std::nullopt;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_uninit_menu_popup(TMenu, int)
+      {
+        return std::nullopt;
+      }
+
       virtual std::optional<win32::lresult_t> wm_draw_item(TMenu, DRAWITEMSTRUCT&)
       {
         return std::nullopt;
@@ -67,6 +87,26 @@ namespace win32
           if (message == WM_MENUCOMMAND)
           {
             return self->wm_menu_command(TMenu((HMENU)lParam), wParam);
+          }
+
+          if (message == WM_ENTERMENULOOP)
+          {
+            return self->wm_enter_menu_loop(wParam == TRUE);
+          }
+
+          if (message == WM_EXITMENULOOP)
+          {
+            return self->wm_exit_menu_loop(wParam == TRUE);
+          }
+
+          if (message == WM_INITMENUPOPUP)
+          {
+            return self->wm_init_menu_popup(TMenu((HMENU)wParam), LOWORD(lParam), HIWORD(lParam) == TRUE);
+          }
+
+          if (message == WM_UNINITMENUPOPUP)
+          {
+            return self->wm_uninit_menu_popup(TMenu((HMENU)wParam), HIWORD(lParam));
           }
 
           if (message == WM_MEASUREITEM)
@@ -139,13 +179,29 @@ namespace win32
 
         MENUITEMINFOW info{
           .cbSize = sizeof(MENUITEMINFOW),
-          .fMask = MIIM_TYPE | MIIM_DATA | MIIM_ID
-        };        
+          .fMask = MIIM_TYPE | MIIM_DATA
+        };
 
         info.fType = flags;
         info.dwItemData = (ULONG_PTR)iter->second.get();
-        info.wID = id;
-        return this->InsertMenuItemW(id, FALSE, info);
+
+        BOOL by_position = FALSE;
+        if (flags & MF_POPUP)
+        {
+          info.fType = info.fType & ~MF_POPUP;
+          info.fType = info.fType & MFT_OWNERDRAW;
+
+          info.fMask |= MIIM_SUBMENU;
+          info.hSubMenu = (HMENU)id;
+          by_position = TRUE;
+        }
+        else
+        {
+          info.fMask |= MIIM_ID;
+          info.wID = id;
+        }
+
+        return this->InsertMenuItemW(id, by_position, info);
       }
 
       return ::AppendMenuW(*this, flags, id, data.data());

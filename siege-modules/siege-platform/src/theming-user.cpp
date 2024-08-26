@@ -16,13 +16,35 @@ namespace win32
     {
       std::map<std::wstring_view, COLORREF> colors;
       std::optional<win32::gdi::memory_drawing_context> memory_dc;
-      std::set<win32::menu_ref> menu_bk_set;
+      std::set<win32::menu_ref> menu_set;
+
+      bool popup_visible = false;
 
       sub_class(std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
       {
       }
 
-      virtual SIZE wm_measure_item(win32::menu_ref, const MEASUREITEMSTRUCT& item) override
+      std::optional<win32::lresult_t> wm_init_menu_popup(win32::menu_ref sub_menu, int, bool) override
+      {
+        popup_visible = true;
+        MENUINFO mi = { .cbSize = sizeof(MENUINFO), .fMask = MIM_BACKGROUND };
+        auto bk_color = colors[win32::properties::menu::bk_color];
+        mi.hbrBack = win32::get_solid_brush(bk_color);
+        SetMenuInfo(sub_menu, &mi);
+        menu_set.emplace(sub_menu.get());
+        return 0;
+      }
+
+      std::optional<win32::lresult_t> wm_uninit_menu_popup(win32::menu_ref sub_menu, int) override
+      {
+        popup_visible = false;
+        menu_set.erase(win32::menu_ref(sub_menu.get()));
+        return 0;
+      }
+
+      SIZE main_menu_size{};
+
+      SIZE wm_measure_item(win32::menu_ref, const MEASUREITEMSTRUCT& item) override
       {
         if (!memory_dc)
         {
@@ -51,13 +73,65 @@ namespace win32
 
         SIZE char_size{};
         auto result = GetTextExtentPoint32W(*memory_dc, text.data(), text.size(), &char_size);
-        char_size.cx += (GetSystemMetrics(SM_CXMENUCHECK) * 2);
+
+        if (popup_visible)
+        {
+          char_size.cx += (GetSystemMetrics(SM_CXMENUCHECK) * 2);
+        }
+        else
+        {
+          char_size.cy = GetSystemMetrics(SM_CYMENU);
+
+          struct callback
+          {
+            static BOOL __stdcall do_callback(HWND window, LPARAM info)
+            {
+              if (GetMenuBarInfo(window, OBJID_MENU, 0, (MENUBARINFO*)info))
+              {
+                return FALSE;
+              }
+              return TRUE;
+            }
+          };
+
+          MENUBARINFO menu_bar_info{ .cbSize = sizeof(MENUBARINFO) };
+
+          if (EnumThreadWindows(GetCurrentThreadId(), callback::do_callback, (LPARAM)&menu_bar_info) == FALSE && menu_bar_info.hMenu)
+          {
+            MENUITEMINFOW item_info{ .cbSize = sizeof(MENUITEMINFO), .fMask = MIIM_FTYPE };
+
+            for (auto i = 0; i < GetMenuItemCount(menu_bar_info.hMenu); ++i)
+            {
+              if (GetMenuItemInfoW(menu_bar_info.hMenu, i, TRUE, &item_info))
+              {
+                if (item_info.fType & MFT_MENUBARBREAK)
+                {
+                  char_size.cy += GetSystemMetrics(SM_CYMENU);
+                }
+              }
+            }
+          }
+        }
+
+        if (!popup_visible)
+        {
+          main_menu_size = char_size;
+        }
 
         return char_size;
       }
 
-      virtual std::optional<win32::lresult_t> wm_draw_item(win32::menu_ref menu, DRAWITEMSTRUCT& item) override
+      std::optional<win32::lresult_t> wm_draw_item(win32::menu_ref menu, DRAWITEMSTRUCT& item) override
       {
+        if (!menu_set.contains(menu))
+        {
+          MENUINFO mi = { .cbSize = sizeof(MENUINFO), .fMask = MIM_BACKGROUND };
+          auto bk_color = colors[win32::properties::menu::bk_color];
+          mi.hbrBack = win32::get_solid_brush(bk_color);
+          SetMenuInfo(menu, &mi);
+          menu_set.emplace(menu.get());
+        }
+
         auto font = win32::load_font(LOGFONTW{
           .lfPitchAndFamily = VARIABLE_PITCH,
           .lfFaceName = L"Segoe UI" });
@@ -72,41 +146,38 @@ namespace win32
 
         auto context = win32::gdi::drawing_context_ref(item.hDC);
 
-        if (!menu_bk_set.contains(win32::menu_ref(menu.get())))
-        {
-          MENUINFO mi = { 0 };
-          mi.cbSize = sizeof(mi);
-          mi.fMask = MIM_BACKGROUND;
-          mi.hbrBack = win32::get_solid_brush(bk_color);
-          SetMenuInfo(menu, &mi);
-          menu_bk_set.emplace(menu.get());
-        }
-
         SelectObject(context, GetStockObject(DC_PEN));
         SelectObject(context, GetStockObject(DC_BRUSH));
 
         SetBkMode(context, TRANSPARENT);
 
-        if (item.itemState & ODS_HOTLIGHT)
-        {
-          context.FillRect(item.rcItem, grey_brush);
-        }
-        else if (item.itemState & ODS_SELECTED)
-        {
-          context.FillRect(item.rcItem, grey_brush);
-        }
-        else
-        {
-          context.FillRect(item.rcItem, black_brush);
-        }
-
-        ::SetTextColor(context, text_color);
-
-        auto rect = item.rcItem;
-        rect.left += (rect.right - rect.left) / 10;
-
         if (item.itemData && ((MSAAMENUINFO*)item.itemData)->dwMSAASignature == MSAA_MENU_SIG && ((MSAAMENUINFO*)item.itemData)->pszWText)
         {
+          auto rect = item.rcItem;
+
+          if (!popup_visible)
+          {
+            rect.bottom = rect.top + main_menu_size.cy - GetSystemMetrics(SM_CYEDGE);
+          }
+
+          if (item.itemState & ODS_HOTLIGHT)
+          {
+            context.FillRect(rect, grey_brush);
+          }
+          else if (item.itemState & ODS_SELECTED)
+          {
+            context.FillRect(rect, grey_brush);
+          }
+          else
+          {
+            context.FillRect(rect, black_brush);
+          }
+
+          ::SetTextColor(context, text_color);
+
+          rect.left += (rect.right - rect.left) / 10;
+
+
           auto& menu_item_info = *(MSAAMENUINFO*)item.itemData;
           ::DrawTextW(context, menu_item_info.pszWText, -1, &rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
         }
@@ -174,6 +245,19 @@ namespace win32
       if (::DwmSetWindowAttribute(control, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value)) == S_OK)
       {
         ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
+      }
+
+      auto menu = GetMenu(control);
+
+      if (menu)
+      {
+        MENUINFO mi = {};
+        mi.cbSize = sizeof(mi);
+        mi.fMask = MIM_BACKGROUND;
+        auto bk_color = color_map[win32::properties::menu::bk_color];
+        mi.hbrBack = win32::get_solid_brush(bk_color);
+        SetMenuInfo(menu, &mi);
+        DrawMenuBar(control);
       }
     }
   }

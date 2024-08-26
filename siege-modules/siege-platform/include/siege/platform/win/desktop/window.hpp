@@ -4,6 +4,7 @@
 #include <siege/platform/win/desktop/messages.hpp>
 #include <siege/platform/win/auto_handle.hpp>
 #include <siege/platform/win/desktop/menu.hpp>
+#include <expected>
 
 #undef GetFirstSibling
 #undef GetNextSibling
