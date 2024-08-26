@@ -38,7 +38,6 @@ namespace siege::views
     std::size_t load_volume(std::istream&, std::optional<std::filesystem::path>);
     std::span<siege::platform::resource_reader::content_info> get_contents();
     std::vector<char> load_content_data(const siege::platform::resource_reader::content_info&);
-
   private:
     std::unique_ptr<siege::platform::resource_reader> resource;
     std::vector<siege::platform::resource_reader::content_info> contents;

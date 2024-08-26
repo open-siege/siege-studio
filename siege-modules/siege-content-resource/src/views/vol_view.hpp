@@ -309,6 +309,45 @@ namespace siege::views
         if (ClientToScreen(table, &point))
         {
           auto result = table_menu.TrackPopupMenuEx(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD | TPM_NONOTIFY, point, ref());
+
+          if (result == 1)
+          {
+            auto items = controller.get_contents();
+           
+            std::wstring temp(255, L'\0');
+            LVITEMW item_info{
+              .mask = LVIF_TEXT,
+              .iItem = message.iItem,
+              .pszText = temp.data(),
+              .cchTextMax = (int)temp.size()
+            };
+
+            ListView_GetItem(table, &item_info);
+
+            temp.resize(temp.find(L'\0'));
+
+            auto item = std::find_if(items.begin(), items.end(), [&](auto& info) {
+              siege::platform::file_info* file = std::get_if<siege::platform::file_info>(&items[message.iItem]);
+              
+              return file && file->filename.wstring() == temp;
+            });
+
+            if (item != items.end())
+            {
+              auto& file_info = std::get<siege::platform::file_info>(*item);
+              std::ofstream extracted_file(file_info.filename, std::ios::trunc | std::ios::binary);
+              auto raw_data = controller.load_content_data(*item);
+
+              extracted_file.write(raw_data.data(), raw_data.size());
+            }
+          }
+          else if (result == 2)
+          {
+            auto selected_count = ListView_GetSelectedCount(table);
+            std::vector<siege::platform::file_info> results;
+            results.reserve(selected_count);
+
+          }
         }
 
         return 0;
