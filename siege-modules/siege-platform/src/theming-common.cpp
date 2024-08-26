@@ -19,7 +19,6 @@ namespace win32
 
       virtual std::optional<win32::lresult_t> wm_notify(win32::header header, NMCUSTOMDRAW& custom_draw) override
       {
-
         if (custom_draw.dwDrawStage == CDDS_PREPAINT)
         {
           auto font = win32::load_font(LOGFONTW{

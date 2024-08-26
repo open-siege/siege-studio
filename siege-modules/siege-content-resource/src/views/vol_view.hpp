@@ -35,6 +35,8 @@ namespace siege::views
     std::map<siege::platform::file_info*, win32::wparam_t> file_indices;
     std::u16string filter_value;
 
+    win32::popup_menu table_menu;
+
     SHSTOCKICONINFO default_icon{ .cbSize = sizeof(SHSTOCKICONINFO) };
     std::map<std::u16string_view, SHSTOCKICONINFO> category_icons;
 
@@ -95,9 +97,11 @@ namespace siege::views
 
       table_settings.InsertButton(-1, { .iBitmap = VIEW_SMALLICONS, .idCommand = LV_VIEW_SMALLICON, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Small Icons" }, false);
 
-      table_settings.InsertButton(-1, { .iBitmap = VIEW_LIST, .idCommand = LV_VIEW_LIST, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"List" }, false);
+      table_settings.InsertButton(-1, { .iBitmap = VIEW_LIST, .idCommand = LV_VIEW_LIST, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"List" }, false);      
+      table_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 1, L"Extract");
 
       table = *factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{
+        .hMenu = table_menu,
         .style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
       });
 
@@ -299,6 +303,16 @@ namespace siege::views
     {
       switch (message.hdr.code)
       {
+      case NM_RCLICK: {
+        auto point = message.ptAction;
+
+        if (ClientToScreen(table, &point))
+        {
+          auto result = table_menu.TrackPopupMenuEx(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD | TPM_NONOTIFY, point, ref());
+        }
+
+        return 0;
+      }
       case NM_DBLCLK: {
         auto root = this->GetAncestor(GA_ROOT);
 

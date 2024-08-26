@@ -120,7 +120,8 @@ namespace win32::gdi
   {
     using base = win32::auto_handle<HDC, hdc_deleter>;
     
-    memory_drawing_context(drawing_context_ref other, bool auto_restore = true) : base(::CreateCompatibleDC(other), hdc_deleter(auto_restore ? 1 : 0))
+    memory_drawing_context(drawing_context_ref other, 
+            bool auto_restore = true) : base(::CreateCompatibleDC(other), hdc_deleter(auto_restore ? 1 : 0))
     {
       if (auto_restore)
       {

@@ -70,8 +70,8 @@ namespace siege::views
     std::wstring buffer;
 
     win32::tool_bar main_menu;
-    std::array<win32::menu, 4> popup_menus;
-    std::vector<MSAAMENUINFO> menu_item_text;
+    std::array<win32::popup_menu, 4> popup_menus;
+    win32::popup_menu tab_context_menu;
 
     HIMAGELIST shell_images = nullptr;
 
@@ -258,8 +258,6 @@ namespace siege::views
 
       repopulate_tree_view(std::filesystem::current_path());
 
-      auto tab_context_menu = CreatePopupMenu();
-
       tab_control = *factory.CreateWindowExW<win32::tab_control>(
         CREATESTRUCTW{
           .hMenu = tab_context_menu,
@@ -288,53 +286,24 @@ namespace siege::views
       auto acc_props = get_acc_props();
       assert(acc_props->SetHwndProp(main_menu, OBJID_CLIENT, CHILDID_SELF, PROPID_ACC_ROLE, var) == S_OK);
 
-
-      menu_item_text.reserve(32);
-
       std::size_t id = 1u;
-      popup_menus[0] = win32::menu(::CreatePopupMenu());
-      popup_menus[1] = win32::menu(::CreatePopupMenu());
-
-      auto popup = MF_OWNERDRAW | MF_POPUP;
-      auto string = MF_OWNERDRAW | MF_STRING;
-      auto separator = MF_OWNERDRAW | MF_SEPARATOR;
 
       MENUITEMINFOW info{
         .cbSize = sizeof(MENUITEMINFOW),
         .fMask = MIIM_TYPE | MIIM_DATA | MIIM_ID
       };
 
-      info.fType = string;
-      info.dwItemData = (ULONG_PTR)&menu_item_text.emplace_back(MSAAMENUINFO{ MSAA_MENU_SIG, 0, (wchar_t*)L"Open..." });
-      info.wID = open_id;
-      InsertMenuItemW(popup_menus[0], open_id, FALSE, &info);
+      popup_menus[0].AppendMenuW(MF_STRING | MF_OWNERDRAW, open_id, L"Open...");
+      popup_menus[0].AppendMenuW(MF_STRING | MF_OWNERDRAW, open_new_tab_id, L"Open in New Tab...");
+      popup_menus[0].AppendMenuW(MF_STRING | MF_OWNERDRAW, open_workspace_id, L"Open Folder as Workspace");
+      popup_menus[0].AppendMenuW(MF_SEPARATOR | MF_OWNERDRAW, id++);
 
-      info.dwItemData = (ULONG_PTR)&menu_item_text.emplace_back(MSAAMENUINFO{ MSAA_MENU_SIG, 0, (wchar_t*)L"Open in New Tab..." });
-      info.wID = open_new_tab_id;
-      InsertMenuItemW(popup_menus[0], open_new_tab_id, FALSE, &info);
+      popup_menus[0].AppendMenuW(MF_STRING | MF_OWNERDRAW, RegisterWindowMessageW(L"COMMAND_EXIT"), L"Quit");
 
-      info.dwItemData = (ULONG_PTR)&menu_item_text.emplace_back(MSAAMENUINFO{ MSAA_MENU_SIG, 0, (wchar_t*)L"Open Folder as Workspace" });
-      info.wID = open_workspace_id;
-      InsertMenuItemW(popup_menus[0], open_workspace_id, FALSE, &info);
+      popup_menus[1].AppendMenuW(MF_STRING | MF_OWNERDRAW, edit_theme_id, L"Theme");
 
-      AppendMenuW(popup_menus[0], separator, id++, nullptr);
 
-      info.wID = RegisterWindowMessageW(L"COMMAND_EXIT");
-      info.dwItemData = (ULONG_PTR)&menu_item_text.emplace_back(MSAAMENUINFO{ MSAA_MENU_SIG, 0, (wchar_t*)L"Quit" });
-      InsertMenuItemW(popup_menus[0], RegisterWindowMessageW(L"COMMAND_EXIT"), FALSE, &info);
-
-      info.wID = edit_theme_id;
-      info.dwItemData = (ULONG_PTR)&menu_item_text.emplace_back(MSAAMENUINFO{ MSAA_MENU_SIG, 0, (wchar_t*)L"Theme" });
-      InsertMenuItemW(popup_menus[1], edit_theme_id, FALSE, &info);
-
-      info.wID = 1;
-      info.dwItemData = (ULONG_PTR)&menu_item_text.emplace_back(MSAAMENUINFO{ MSAA_MENU_SIG, 0, (wchar_t*)L"Close" });
-      InsertMenuItemW(tab_context_menu, 0, TRUE, &info);
-
-      for (auto& item : menu_item_text)
-      {
-        item.cchWText = std::wcslen(item.pszWText);
-      }
+      tab_context_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 1, L"Close");
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
@@ -630,8 +599,7 @@ namespace siege::views
 
             MENUINFO mi = { 0 };
             mi.cbSize = sizeof(mi);
-            mi.fMask = MIM_BACKGROUND | MIM_APPLYTOSUBMENUS | MIM_STYLE;
-            mi.hbrBack = win32::get_solid_brush(bk_color);
+            mi.fMask = MIM_APPLYTOSUBMENUS | MIM_STYLE;
             mi.dwStyle = MNS_MODELESS;
 
             SetMenuInfo(popup_menus[0], &mi);
@@ -758,71 +726,6 @@ namespace siege::views
       hot_tracking_enabled = true;
 
       return TBDDRET_DEFAULT;
-    }
-
-    SIZE wm_measure_item(win32::menu, const MEASUREITEMSTRUCT& item) override
-    {
-      HDC hDC = ::GetDC(*this);
-      auto font = win32::load_font(LOGFONTW{
-        .lfPitchAndFamily = VARIABLE_PITCH,
-        .lfFaceName = L"Segoe UI" });
-
-      SelectFont(hDC, font);
-
-      std::wstring text = item.itemData ? ((MSAAMENUINFO*)item.itemData)->pszWText : L"__________";
-      SIZE char_size{};
-      auto result = GetTextExtentPoint32W(hDC, text.data(), text.size(), &char_size);
-      char_size.cx += (GetSystemMetrics(SM_CXMENUCHECK) * 2);
-      ReleaseDC(*this, hDC);
-
-      return char_size;
-    }
-
-    std::optional<win32::lresult_t> wm_draw_item(win32::menu, DRAWITEMSTRUCT& item) override
-    {
-      auto font = win32::load_font(LOGFONTW{
-        .lfPitchAndFamily = VARIABLE_PITCH,
-        .lfFaceName = L"Segoe UI" });
-
-      SelectFont(item.hDC, font);
-
-      auto bk_color = win32::get_color_for_window(ref(), win32::properties::menu::bk_color);
-      auto text_highlight_color = win32::get_color_for_window(ref(), win32::properties::menu::text_highlight_color);
-      auto black_brush = win32::get_solid_brush(bk_color);
-      auto grey_brush = win32::get_solid_brush(win32::get_color_for_window(ref(), win32::properties::menu::text_highlight_color));
-      auto text_color = win32::get_color_for_window(ref(), win32::properties::menu::text_color);
-
-      auto context = win32::gdi::drawing_context_ref(item.hDC);
-
-      SelectObject(context, GetStockObject(DC_PEN));
-      SelectObject(context, GetStockObject(DC_BRUSH));
-
-      SetBkMode(context, TRANSPARENT);
-
-      if (item.itemState & ODS_HOTLIGHT)
-      {
-        context.FillRect(item.rcItem, grey_brush);
-      }
-      else if (item.itemState & ODS_SELECTED)
-      {
-        context.FillRect(item.rcItem, grey_brush);
-      }
-      else
-      {
-        context.FillRect(item.rcItem, black_brush);
-      }
-
-      ::SetTextColor(context, text_color);
-
-      auto rect = item.rcItem;
-      rect.left += (rect.right - rect.left) / 10;
-      if (item.itemData)
-      {
-        auto& menu_item_info = *(MSAAMENUINFO*)item.itemData;
-        ::DrawTextW(context, menu_item_info.pszWText, -1, &rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
-      }
-
-      return TRUE;
     }
 
     void remove_tab(int index)
@@ -1093,7 +996,7 @@ namespace siege::views
       return std::nullopt;
     }
 
-    std::optional<LRESULT> wm_command(win32::menu, int identifier) override
+    std::optional<LRESULT> wm_command(win32::menu_ref, int identifier) override
     {
       hot_tracking_enabled = false;
       if (identifier == edit_theme_id)

@@ -1,6 +1,5 @@
 #define _CRT_SECURE_NO_WARNINGS
 
-#include <initguid.h>
 #include <SDKDDKVer.h>
 #include <array>
 #include <optional>
@@ -20,7 +19,6 @@
 #include <siege/platform/win/desktop/window_impl.hpp>
 #include <siege/platform/win/core/com/client.hpp>
 #include <commctrl.h>
-#include <oleacc.h>
 
 #include "views/siege_main_window.hpp"
 #include "views/theme_view.hpp"

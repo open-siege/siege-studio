@@ -1,3 +1,4 @@
+#include <set>
 #include <siege/platform/win/desktop/window_module.hpp>
 #include <siege/platform/win/desktop/theming.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
@@ -11,17 +12,118 @@ namespace win32
 
   void apply_theme(win32::window_ref& control)
   {
-    struct sub_class
+    struct sub_class : win32::menu::notifications
     {
       std::map<std::wstring_view, COLORREF> colors;
+      std::optional<win32::gdi::memory_drawing_context> memory_dc;
+      std::set<win32::menu_ref> menu_bk_set;
 
       sub_class(std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
       {
       }
 
-      static LRESULT __stdcall HandleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      virtual SIZE wm_measure_item(win32::menu_ref, const MEASUREITEMSTRUCT& item) override
       {
-        if (uMsg == WM_ERASEBKGND)
+        if (!memory_dc)
+        {
+          auto screen_dc = ::GetDC(nullptr);
+          memory_dc = win32::gdi::memory_drawing_context(win32::gdi::drawing_context_ref(screen_dc));
+
+          ::ReleaseDC(nullptr, screen_dc);
+        }
+
+        auto font = win32::load_font(LOGFONTW{
+          .lfPitchAndFamily = VARIABLE_PITCH,
+          .lfFaceName = L"Segoe UI" });
+
+        SelectFont(*memory_dc, font);
+
+        std::wstring text;
+
+        if (item.itemData && ((MSAAMENUINFO*)item.itemData)->dwMSAASignature == MSAA_MENU_SIG && ((MSAAMENUINFO*)item.itemData)->pszWText)
+        {
+          text = ((MSAAMENUINFO*)item.itemData)->pszWText;
+        }
+        else
+        {
+          text = L"__________";
+        }
+
+        SIZE char_size{};
+        auto result = GetTextExtentPoint32W(*memory_dc, text.data(), text.size(), &char_size);
+        char_size.cx += (GetSystemMetrics(SM_CXMENUCHECK) * 2);
+
+        return char_size;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_draw_item(win32::menu_ref menu, DRAWITEMSTRUCT& item) override
+      {
+        auto font = win32::load_font(LOGFONTW{
+          .lfPitchAndFamily = VARIABLE_PITCH,
+          .lfFaceName = L"Segoe UI" });
+
+        SelectFont(item.hDC, font);
+
+        auto bk_color = colors[win32::properties::menu::bk_color];
+        auto text_highlight_color = colors[win32::properties::menu::text_highlight_color];
+        auto black_brush = win32::get_solid_brush(bk_color);
+        auto grey_brush = win32::get_solid_brush(colors[win32::properties::menu::text_highlight_color]);
+        auto text_color = colors[win32::properties::menu::text_color];
+
+        auto context = win32::gdi::drawing_context_ref(item.hDC);
+
+        if (!menu_bk_set.contains(win32::menu_ref(menu.get())))
+        {
+          MENUINFO mi = { 0 };
+          mi.cbSize = sizeof(mi);
+          mi.fMask = MIM_BACKGROUND;
+          mi.hbrBack = win32::get_solid_brush(bk_color);
+          SetMenuInfo(menu, &mi);
+          menu_bk_set.emplace(menu.get());
+        }
+
+        SelectObject(context, GetStockObject(DC_PEN));
+        SelectObject(context, GetStockObject(DC_BRUSH));
+
+        SetBkMode(context, TRANSPARENT);
+
+        if (item.itemState & ODS_HOTLIGHT)
+        {
+          context.FillRect(item.rcItem, grey_brush);
+        }
+        else if (item.itemState & ODS_SELECTED)
+        {
+          context.FillRect(item.rcItem, grey_brush);
+        }
+        else
+        {
+          context.FillRect(item.rcItem, black_brush);
+        }
+
+        ::SetTextColor(context, text_color);
+
+        auto rect = item.rcItem;
+        rect.left += (rect.right - rect.left) / 10;
+
+        if (item.itemData && ((MSAAMENUINFO*)item.itemData)->dwMSAASignature == MSAA_MENU_SIG && ((MSAAMENUINFO*)item.itemData)->pszWText)
+        {
+          auto& menu_item_info = *(MSAAMENUINFO*)item.itemData;
+          ::DrawTextW(context, menu_item_info.pszWText, -1, &rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+        }
+
+        return TRUE;
+      }
+
+      static LRESULT __stdcall HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      {
+        auto result = win32::menu::notifications::dispatch_message((sub_class*)dwRefData, message, wParam, lParam);
+
+        if (result)
+        {
+          return *result;
+        }
+
+        if (message == WM_ERASEBKGND)
         {
           auto context = win32::gdi::drawing_context_ref((HDC)wParam);
 
@@ -33,12 +135,12 @@ namespace win32
           return TRUE;
         }
 
-        if (uMsg == WM_DESTROY)
+        if (message == WM_DESTROY)
         {
           ::RemoveWindowSubclass(hWnd, sub_class::HandleMessage, uIdSubclass);
         }
 
-        return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+        return DefSubclassProc(hWnd, message, wParam, lParam);
       }
     };
 
@@ -49,7 +151,10 @@ namespace win32
     SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), FALSE);
 
     std::map<std::wstring_view, COLORREF> color_map{
-      { win32::properties::window::bk_color, win32::get_color_for_window(control.ref(), win32::properties::window::bk_color) }
+      { win32::properties::window::bk_color, win32::get_color_for_window(control.ref(), win32::properties::window::bk_color) },
+      { win32::properties::menu::bk_color, win32::get_color_for_window(control.ref(), win32::properties::menu::bk_color) },
+      { win32::properties::menu::text_color, win32::get_color_for_window(control.ref(), win32::properties::menu::text_color) },
+      { win32::properties::menu::text_highlight_color, win32::get_color_for_window(control.ref(), win32::properties::menu::text_highlight_color) },
     };
 
     DWORD_PTR existing_object{};
@@ -135,7 +240,6 @@ namespace win32
 
       std::map<std::wstring_view, COLORREF> colors;
       std::map<win32::window_ref, theme_context> theme_info;
-
 
       sub_class(std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
       {
