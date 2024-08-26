@@ -177,7 +177,6 @@ namespace win32
 
           rect.left += (rect.right - rect.left) / 10;
 
-
           auto& menu_item_info = *(MSAAMENUINFO*)item.itemData;
           ::DrawTextW(context, menu_item_info.pszWText, -1, &rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
         }
@@ -192,6 +191,35 @@ namespace win32
         if (result)
         {
           return *result;
+        }
+
+        if (message == WM_NCPAINT || message == WM_NCACTIVATE)
+        {
+          auto result = DefSubclassProc(hWnd, message, wParam, lParam);
+          MENUBARINFO menu_bar_info{ .cbSize = sizeof(MENUBARINFO) };
+
+          if (GetMenuBarInfo(hWnd, OBJID_MENU, 0, &menu_bar_info))
+          {
+            RECT client_rect = { 0 };
+            GetClientRect(hWnd, &client_rect);
+            MapWindowPoints(hWnd, nullptr, (POINT*)&client_rect, 2);
+
+            RECT window_rect = { 0 };
+            GetWindowRect(hWnd, &window_rect);
+
+            OffsetRect(&client_rect, -window_rect.left, -window_rect.top);
+
+            RECT line_rect = client_rect;
+            line_rect.bottom = line_rect.top;
+            line_rect.top = line_rect.top - GetSystemMetrics(SM_CYBORDER);
+
+            auto bk_color = ((sub_class*)dwRefData)->colors[win32::properties::window::bk_color];
+            HDC hdc = GetWindowDC(hWnd);
+            FillRect(hdc, &line_rect, win32::get_solid_brush(bk_color));
+            ReleaseDC(hWnd, hdc);
+          }
+
+          return result;
         }
 
         if (message == WM_ERASEBKGND)
