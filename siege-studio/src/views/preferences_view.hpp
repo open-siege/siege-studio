@@ -9,7 +9,7 @@
 
 namespace siege::views
 {
-  struct theme_view final : win32::window_ref
+  struct preferences_view final : win32::window_ref
     , win32::list_box::notifications
     , win32::list_view::notifications
     , win32::button::notifications
@@ -86,7 +86,7 @@ namespace siege::views
     // allows theme settings to be saved
     // theme settings changed per control type
 
-    theme_view(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self)
+    preferences_view(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self)
     {
       if (IsWindow((win32::hwnd_t)params.lpCreateParams))
       {
@@ -175,15 +175,15 @@ namespace siege::views
       sample.tab_control = *control_factory.CreateWindowExW<win32::tab_control>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD });
 
-      sample.tab_control.InsertItem(-1, TCITEMW{ .mask = TCIF_TEXT, .pszText = const_cast<wchar_t*>(L"Tab")});
-      sample.tab_control.InsertItem(-1, TCITEMW{ .mask = TCIF_TEXT, .pszText = const_cast<wchar_t*>(L"Control")});
-      sample.tab_control.InsertItem(-1, TCITEMW{ .mask = TCIF_TEXT, .pszText = const_cast<wchar_t*>(L"Sample")});
+      sample.tab_control.InsertItem(-1, TCITEMW{ .mask = TCIF_TEXT, .pszText = const_cast<wchar_t*>(L"Tab") });
+      sample.tab_control.InsertItem(-1, TCITEMW{ .mask = TCIF_TEXT, .pszText = const_cast<wchar_t*>(L"Control") });
+      sample.tab_control.InsertItem(-1, TCITEMW{ .mask = TCIF_TEXT, .pszText = const_cast<wchar_t*>(L"Sample") });
 
       options = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
-      options.InsertString(-1, L"Simple");
-      options.InsertString(-1, L"Advanced");
+      options.InsertString(-1, L"Theming (Simple)");
+      options.InsertString(-1, L"Theming (Advanced)");
       options.SetCurrentSelection(0);
       ListBox_SetItemHeight(options, 0, options.GetItemHeight(0) * 2);
       control_settings = *control_factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
@@ -199,6 +199,10 @@ namespace siege::views
       control_settings.InsertColumn(-1, LVCOLUMNW{
                                           .pszText = const_cast<wchar_t*>(L"Value"),
                                         });
+
+      auto header = control_settings.GetHeader();
+      auto header_style = header.GetWindowStyle();
+      header.SetWindowStyle(header_style | HDS_NOSIZING | HDS_FLAT);
 
       ListView_SetHoverTime(control_settings, 10);
 
@@ -302,6 +306,7 @@ namespace siege::views
       win32::apply_theme(sample.tab_control);
       win32::apply_theme(control_settings);
       win32::apply_theme(options);
+      win32::apply_theme(*this);
 
       return 0;
     }

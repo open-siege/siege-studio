@@ -10,7 +10,7 @@
 #include <siege/platform/content_module.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
 #include <siege/platform/win/desktop/theming.hpp>
-#include "views/theme_view.hpp"
+#include "views/preferences_view.hpp"
 #include <map>
 #include <spanstream>
 
@@ -70,7 +70,7 @@ namespace siege::views
     std::wstring buffer;
 
     win32::menu main_menu;
-    std::array<win32::popup_menu, 4> popup_menus;
+    std::array<win32::popup_menu, 3> popup_menus;
     win32::popup_menu tab_context_menu;
 
     HIMAGELIST shell_images = nullptr;
@@ -273,19 +273,17 @@ namespace siege::views
       popup_menus[0].AppendMenuW(MF_OWNERDRAW, open_new_tab_id, L"Open in New Tab...");
       popup_menus[0].AppendMenuW(MF_OWNERDRAW, open_workspace_id, L"Open Folder as Workspace");
       popup_menus[0].AppendMenuW(MF_SEPARATOR | MF_OWNERDRAW, id++);
-
       popup_menus[0].AppendMenuW(MF_OWNERDRAW, RegisterWindowMessageW(L"COMMAND_EXIT"), L"Quit");
-
-      popup_menus[1].AppendMenuW(MF_OWNERDRAW, edit_theme_id, L"Theme");
+      popup_menus[1].AppendMenuW(MF_OWNERDRAW, edit_theme_id, L"Preferences");
+      popup_menus[2].AppendMenuW(MF_OWNERDRAW, id++, L"About");
 
       SetMenu(*this, main_menu.get());
 
       main_menu.AppendMenuW(MF_POPUP | MF_OWNERDRAW, (UINT_PTR)popup_menus[0].get(), L"File");
       main_menu.AppendMenuW(MF_POPUP | MF_OWNERDRAW, (UINT_PTR)popup_menus[1].get(), L"Edit");
-      main_menu.AppendMenuW(MF_POPUP | MF_OWNERDRAW, (UINT_PTR)popup_menus[2].get(), L"View");
-      main_menu.AppendMenuW(MF_POPUP | MF_OWNERDRAW, (UINT_PTR)popup_menus[3].get(), L"Help");
+      main_menu.AppendMenuW(MF_POPUP | MF_OWNERDRAW, (UINT_PTR)popup_menus[2].get(), L"Help");
       main_menu.AppendMenuW(MF_MENUBARBREAK | MF_OWNERDRAW, id++);
-      
+
       tab_context_menu.AppendMenuW(MF_OWNERDRAW, 1, L"Close");
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
@@ -867,8 +865,8 @@ namespace siege::views
           .cx = CW_USEDEFAULT,
           .x = CW_USEDEFAULT,
           .style = WS_OVERLAPPEDWINDOW,
-          .lpszName = L"Theme Window",
-          .lpszClass = win32::type_name<theme_view>().c_str() });
+          .lpszName = L"Preferences",
+          .lpszClass = win32::type_name<preferences_view>().c_str() });
 
         ShowWindow(theme_window, SW_NORMAL);
       }

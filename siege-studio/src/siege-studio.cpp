@@ -21,13 +21,13 @@
 #include <commctrl.h>
 
 #include "views/siege_main_window.hpp"
-#include "views/theme_view.hpp"
+#include "views/preferences_view.hpp"
 
 extern "C" __declspec(dllexport) std::uint32_t DisableSiegeExtensionModule = -1;
 constexpr static std::wstring_view app_title = L"Siege Studio";
 
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
-{
+ {
   win32::com::init_com();
 
   INITCOMMONCONTROLSEX settings{
@@ -43,7 +43,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
   info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
   this_module.RegisterClassExW(info);
 
-  win32::window_meta_class<siege::views::theme_view> theme_info{};
+  win32::window_meta_class<siege::views::preferences_view> theme_info{};
   theme_info.style = CS_HREDRAW | CS_VREDRAW;
   theme_info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
   theme_info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
