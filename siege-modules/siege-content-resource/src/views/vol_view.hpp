@@ -308,7 +308,7 @@ namespace siege::views
 
         if (ClientToScreen(table, &point))
         {
-          auto result = table_menu.TrackPopupMenuEx(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD | TPM_NONOTIFY, point, ref());
+          auto result = table_menu.TrackPopupMenuEx(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, point, ref());
 
           if (result == 1)
           {

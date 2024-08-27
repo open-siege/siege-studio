@@ -509,7 +509,7 @@ namespace siege::views
               bk_color = RGB(0xfb, 0xfb, 0xfb);
               text_color = RGB(0x1a, 0x1a, 0x1a);
               text_bk_color = RGB(0xf3, 0xf3, 0xf3);
-              text_highlight_color = RGB(127, 127, 255);
+              text_highlight_color = RGB(0xea, 0xea, 0xea);
               btn_shadow_color = RGB(1, 1, 1);
 
               button_bk_color = RGB(0xfb, 0xfb, 0xfb);
@@ -633,7 +633,7 @@ namespace siege::views
             auto tab_rect = sender.GetItemRect(index);
             auto height = tab_rect->bottom - tab_rect->top;
 
-            auto action = ::TrackPopupMenu(GetMenu(sender), TPM_CENTERALIGN | TPM_NONOTIFY | TPM_RETURNCMD, window_rect->left + tab_rect->left, window_rect->top + height, 0, *this, nullptr);
+            auto action = ::TrackPopupMenu(GetMenu(sender), TPM_CENTERALIGN | TPM_RETURNCMD, window_rect->left + tab_rect->left, window_rect->top + height, 0, *this, nullptr);
 
             if (action == 1)
             {

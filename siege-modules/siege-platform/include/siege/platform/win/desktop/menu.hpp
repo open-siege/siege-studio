@@ -3,6 +3,7 @@
 
 #include <siege/platform/win/desktop/messages.hpp>
 #include <map>
+#include <set>
 #include <initguid.h>
 #include <oleacc.h>
 
@@ -29,7 +30,7 @@ namespace win32
     using base = win32::auto_handle<HMENU, TDeleter>;
     using base::base;
 
-    template<typename TMenu>
+    template<typename TMenu, typename TPopupMenu>
     struct notifications
     {
       virtual std::optional<win32::lresult_t> wm_command(TMenu, int)
@@ -52,14 +53,24 @@ namespace win32
         return std::nullopt;
       }
 
-      virtual std::optional<win32::lresult_t> wm_init_menu_popup(TMenu, int, bool)
+      virtual std::optional<win32::lresult_t> wm_init_menu_popup(TPopupMenu, int, bool)
       {
         return std::nullopt;
       }
 
-      virtual std::optional<win32::lresult_t> wm_uninit_menu_popup(TMenu, int)
+      virtual std::optional<win32::lresult_t> wm_uninit_menu_popup(TPopupMenu, int)
       {
         return std::nullopt;
+      }
+
+      virtual std::optional<win32::lresult_t> wm_draw_item(TPopupMenu, DRAWITEMSTRUCT&)
+      {
+        return std::nullopt;
+      }
+
+      virtual SIZE wm_measure_item(TPopupMenu, const MEASUREITEMSTRUCT&)
+      {
+        return SIZE{};
       }
 
       virtual std::optional<win32::lresult_t> wm_draw_item(TMenu, DRAWITEMSTRUCT&)
@@ -73,7 +84,7 @@ namespace win32
       }
 
       template<typename TWindow>
-      static std::optional<lresult_t> dispatch_message(TWindow* window, std::uint32_t message, wparam_t wParam, lparam_t lParam)
+      static std::optional<lresult_t> dispatch_message(TWindow* window, hwnd_t owner, std::uint32_t message, wparam_t wParam, lparam_t lParam)
       {
         if constexpr (std::is_base_of_v<notifications, TWindow>)
         {
@@ -81,7 +92,7 @@ namespace win32
 
           if (message == WM_COMMAND && HIWORD(wParam) == 0)
           {
-            return self->wm_command(TMenu(nullptr), LOWORD(wParam));
+            return self->wm_command(TMenu(::GetMenu(owner)), LOWORD(wParam));
           }
 
           if (message == WM_MENUCOMMAND)
@@ -99,14 +110,18 @@ namespace win32
             return self->wm_exit_menu_loop(wParam == TRUE);
           }
 
+          thread_local bool measuring_popup = false;
+
           if (message == WM_INITMENUPOPUP)
           {
-            return self->wm_init_menu_popup(TMenu((HMENU)wParam), LOWORD(lParam), HIWORD(lParam) == TRUE);
+            measuring_popup = true;
+            return self->wm_init_menu_popup(TPopupMenu((HMENU)wParam), LOWORD(lParam), HIWORD(lParam) == TRUE);
           }
 
           if (message == WM_UNINITMENUPOPUP)
           {
-            return self->wm_uninit_menu_popup(TMenu((HMENU)wParam), HIWORD(lParam));
+            measuring_popup = false;
+            return self->wm_uninit_menu_popup(TPopupMenu((HMENU)wParam), HIWORD(lParam));
           }
 
           if (message == WM_MEASUREITEM)
@@ -115,7 +130,17 @@ namespace win32
 
             if (context.CtlType == ODT_MENU)
             {
-              auto size = self->wm_measure_item(TMenu(nullptr), context);
+              SIZE size;
+
+              if (measuring_popup)
+              {
+                size = self->wm_measure_item(TPopupMenu(nullptr), context);
+              }
+              else
+              {
+                size = self->wm_measure_item(TMenu(::GetMenu(owner)), context);
+              }
+
               context.itemWidth = size.cx;
               context.itemHeight = size.cy;
               return 0;
@@ -128,7 +153,16 @@ namespace win32
 
             if (context.CtlType == ODT_MENU)
             {
-              return self->wm_draw_item(TMenu((HMENU)context.hwndItem), context);
+              if (GetWindowStyle(owner) & ~WS_CHILD)
+              {
+                auto menu = ::GetMenu(owner);
+
+                if (menu == (HMENU)context.hwndItem)
+                {
+                  return self->wm_draw_item(TMenu((HMENU)context.hwndItem), context);
+                }
+              }
+              return self->wm_draw_item(TPopupMenu((HMENU)context.hwndItem), context);
             }
           }
         }
@@ -218,19 +252,9 @@ namespace win32
   {
     using base = menu_base<menu_no_deleter>;
     using base::base;
-    using notifications = base::notifications<menu_ref>;
+    //   using notifications = base::notifications<menu_ref, popup_menu_ref>;
   };
 
-  struct menu : menu_base<menu_deleter>
-  {
-    using base = menu_base<menu_deleter>;
-    using notifications = base::notifications<menu_ref>;
-
-    menu()
-    {
-      this->reset(::CreateMenu());
-    }
-  };
 
   template<typename TDeleter>
   struct popup_menu_base : menu_base<TDeleter>
@@ -256,14 +280,24 @@ namespace win32
   {
     using base = popup_menu_base<menu_no_deleter>;
     using base::base;
-    using notifications = base::notifications<popup_menu_ref>;
+  };
+
+  struct menu : menu_base<menu_deleter>
+  {
+    using base = menu_base<menu_deleter>;
+    using notifications = base::notifications<menu_ref, popup_menu_ref>;
+
+    menu()
+    {
+      this->reset(::CreateMenu());
+    }
   };
 
   struct popup_menu : popup_menu_base<menu_deleter>
   {
     using base = popup_menu_base<menu_deleter>;
     using base::base;
-    using notifications = base::notifications<popup_menu_ref>;
+    using notifications = base::notifications<menu_ref, popup_menu_ref>;
 
     popup_menu()
     {
