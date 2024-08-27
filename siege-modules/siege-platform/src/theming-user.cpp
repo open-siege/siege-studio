@@ -251,6 +251,77 @@ namespace win32
           return *result;
         }
 
+        if (message == WM_NCHITTEST)
+        {
+          MENUBARINFO menu_bar_info{ .cbSize = sizeof(MENUBARINFO) };
+
+          if (GetMenuBarInfo(hWnd, OBJID_MENU, 0, &menu_bar_info) && menu_bar_info.hMenu)
+          {
+            auto x = GET_X_LPARAM(lParam);
+            auto y = GET_Y_LPARAM(lParam);
+
+            if (::PtInRect(&menu_bar_info.rcBar, POINT{ .x = x, .y = y }))
+            {
+              auto menu_height = GetSystemMetrics(SM_CYMENU);
+
+              auto item = MenuItemFromPoint(hWnd, menu_bar_info.hMenu, POINT{ .x = x, .y = menu_bar_info.rcBar.top });
+
+              for (auto i = 0; i < GetMenuItemCount(menu_bar_info.hMenu); ++i)
+              {
+                HiliteMenuItem(hWnd, menu_bar_info.hMenu, i, MF_BYPOSITION | MF_UNHILITE);
+              }
+
+              if (item != -1)
+              {
+                HiliteMenuItem(hWnd, menu_bar_info.hMenu, item, MF_BYPOSITION | MF_HILITE);
+              }
+
+              return HTMENU;
+            }
+          }
+        }
+
+        if ((message == WM_NCLBUTTONDOWN || message == WM_NCLBUTTONUP) && wParam == HTMENU && lParam)
+        {
+          MENUBARINFO menu_bar_info{ .cbSize = sizeof(MENUBARINFO) };
+
+          if (GetMenuBarInfo(hWnd, OBJID_MENU, 0, &menu_bar_info) && menu_bar_info.hMenu)
+          {
+            auto x = GET_X_LPARAM(lParam);
+            auto y = GET_Y_LPARAM(lParam);
+
+            if (::PtInRect(&menu_bar_info.rcBar, POINT{ .x = x, .y = y }))
+            {
+              auto menu_height = GetSystemMetrics(SM_CYMENU);
+
+              auto item = MenuItemFromPoint(hWnd, menu_bar_info.hMenu, POINT{ .x = x, .y = y });
+
+              if (item == -1 || item == GetMenuItemCount(menu_bar_info.hMenu) - 1)
+              {
+                item = MenuItemFromPoint(hWnd, menu_bar_info.hMenu, POINT{ .x = x, .y = menu_bar_info.rcBar.top });
+
+                if (item != -1)
+                {
+                  auto mouse_flag = message == WM_NCLBUTTONDOWN ? (DWORD)MOUSEEVENTF_LEFTDOWN : (DWORD)MOUSEEVENTF_LEFTUP;
+
+                  auto target_rect = menu_bar_info.rcBar;
+                  target_rect.bottom = target_rect.top + (menu_bar_info.rcBar.bottom - menu_bar_info.rcBar.top) / 2;
+
+                  auto new_y = target_rect.bottom - y - 1;
+
+                  INPUT simulated_input{
+                    .type = INPUT_MOUSE, .mi{ .dx = 0, .dy = new_y, .dwFlags = MOUSEEVENTF_MOVE | mouse_flag }
+                  };
+
+                  SendInput(1, &simulated_input, sizeof(INPUT));
+                }
+
+                return 0;
+              }
+            }
+          }
+        }
+
         if (message == WM_NCPAINT || message == WM_NCACTIVATE)
         {
           auto result = DefSubclassProc(hWnd, message, wParam, lParam);
@@ -258,18 +329,13 @@ namespace win32
 
           if (GetMenuBarInfo(hWnd, OBJID_MENU, 0, &menu_bar_info))
           {
-            RECT client_rect = { 0 };
-            GetClientRect(hWnd, &client_rect);
-            MapWindowPoints(hWnd, nullptr, (POINT*)&client_rect, 2);
-
             RECT window_rect = { 0 };
             GetWindowRect(hWnd, &window_rect);
 
-            OffsetRect(&client_rect, -window_rect.left, -window_rect.top);
-
-            RECT line_rect = client_rect;
-            line_rect.bottom = line_rect.top;
-            line_rect.top = line_rect.top - GetSystemMetrics(SM_CYBORDER);
+            RECT line_rect = menu_bar_info.rcBar;
+            line_rect.top = line_rect.bottom;
+            line_rect.bottom = line_rect.top + GetSystemMetrics(SM_CYBORDER) + 1;
+            OffsetRect(&line_rect, -window_rect.left, -window_rect.top);
 
             auto bk_color = ((sub_class*)dwRefData)->colors[win32::properties::window::bk_color];
             HDC hdc = GetWindowDC(hWnd);
