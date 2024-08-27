@@ -22,12 +22,14 @@
 
 #include "views/siege_main_window.hpp"
 #include "views/preferences_view.hpp"
+#include "views/about_view.hpp"
+#include "views/default_view.hpp"
 
 extern "C" __declspec(dllexport) std::uint32_t DisableSiegeExtensionModule = -1;
 constexpr static std::wstring_view app_title = L"Siege Studio";
 
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
- {
+{
   win32::com::init_com();
 
   INITCOMMONCONTROLSEX settings{
@@ -38,16 +40,24 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
   win32::window_module_ref this_module(hInstance);
 
   win32::window_meta_class<siege::views::siege_main_window> info{};
-  info.style = CS_HREDRAW | CS_VREDRAW;
   info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
   info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
   this_module.RegisterClassExW(info);
 
-  win32::window_meta_class<siege::views::preferences_view> theme_info{};
-  theme_info.style = CS_HREDRAW | CS_VREDRAW;
-  theme_info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
-  theme_info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-  this_module.RegisterClassExW(theme_info);
+  win32::window_meta_class<siege::views::preferences_view> pref_info{};
+  pref_info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
+  pref_info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+  this_module.RegisterClassExW(pref_info);
+
+  win32::window_meta_class<siege::views::about_view> about_info{};
+  about_info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
+  about_info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+  this_module.RegisterClassExW(about_info);
+
+  win32::window_meta_class<siege::views::default_view> default_info{};
+  default_info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
+  default_info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+  this_module.RegisterClassExW(default_info);
 
   auto main_window = this_module.CreateWindowExW(CREATESTRUCTW{
     .cx = CW_USEDEFAULT,

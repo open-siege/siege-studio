@@ -249,7 +249,6 @@ namespace win32
   };
 
   // user controls
-  // TODO add theming for menus
   void apply_theme(win32::window_ref& control);
   void apply_theme(win32::button& control);
   void apply_theme(win32::edit& control);
