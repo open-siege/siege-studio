@@ -316,9 +316,11 @@ namespace win32
 
     DWORD_PTR existing_object{};
 
-    if (!::GetWindowSubclass(control, sub_class::HandleMessage, (UINT_PTR)L"Window", &existing_object) && existing_object == 0)
+    constexpr static auto* subclass_id = L"Window";
+
+    if (!::GetWindowSubclass(control, sub_class::HandleMessage, (UINT_PTR)subclass_id, &existing_object) && existing_object == 0)
     {
-      ::SetWindowSubclass(control, sub_class::HandleMessage, (UINT_PTR)L"Window", (DWORD_PTR) new sub_class(std::move(color_map)));
+      ::SetWindowSubclass(control, sub_class::HandleMessage, (UINT_PTR)subclass_id, (DWORD_PTR) new sub_class(std::move(color_map)));
     }
     else
     {
