@@ -98,6 +98,11 @@ namespace siege::views
       table_settings.InsertButton(-1, { .iBitmap = VIEW_SMALLICONS, .idCommand = LV_VIEW_SMALLICON, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Small Icons" }, false);
 
       table_settings.InsertButton(-1, { .iBitmap = VIEW_LIST, .idCommand = LV_VIEW_LIST, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"List" }, false);      
+      table_settings.InsertButton(-1, { .fsStyle = BTNS_SEP }, false);      
+      table_settings.InsertButton(-1, { .iBitmap = VIEW_PARENTFOLDER, .idCommand = 10, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" }, false);      
+      
+      table_settings.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
+
       table_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 1, L"Extract");
 
       table = *factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{
@@ -190,7 +195,7 @@ namespace siege::views
       auto top_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy / 12 };
       table_settings.SetWindowPos(POINT{}, SWP_DEFERERASE | SWP_NOREDRAW);
       table_settings.SetWindowPos(top_size, SWP_DEFERERASE);
-      table_settings.SetButtonSize(SIZE{ .cx = client_size.cx / 2 / table_settings.ButtonCount(), .cy = top_size.cy });
+      table_settings.SetButtonSize(SIZE{ .cx = client_size.cx / table_settings.ButtonCount(), .cy = top_size.cy });
 
       table.SetWindowPos(POINT{ .y = top_size.cy }, SWP_DEFERERASE | SWP_NOREDRAW);
       table.SetWindowPos(SIZE{ .cx = top_size.cx, .cy = client_size.cy - top_size.cy }, SWP_DEFERERASE);
