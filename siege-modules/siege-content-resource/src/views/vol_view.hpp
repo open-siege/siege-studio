@@ -36,9 +36,14 @@ namespace siege::views
     std::u16string filter_value;
 
     win32::popup_menu table_menu;
+    win32::popup_menu table_settings_menu;
 
     SHSTOCKICONINFO default_icon{ .cbSize = sizeof(SHSTOCKICONINFO) };
     std::map<std::u16string_view, SHSTOCKICONINFO> category_icons;
+
+    std::set<int> selected_table_items;
+
+    constexpr static int extract_selected_id = 10;
 
     vol_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
@@ -56,7 +61,7 @@ namespace siege::views
         for (auto& category : categories)
         {
           auto& stored_category = *all_categories.insert(std::move(category)).first;
-         
+
           if (category_icons[stored_category].cbSize != sizeof(sizeof(SHSTOCKICONINFO)))
           {
             auto& info = category_icons[stored_category];
@@ -97,13 +102,14 @@ namespace siege::views
 
       table_settings.InsertButton(-1, { .iBitmap = VIEW_SMALLICONS, .idCommand = LV_VIEW_SMALLICON, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Small Icons" }, false);
 
-      table_settings.InsertButton(-1, { .iBitmap = VIEW_LIST, .idCommand = LV_VIEW_LIST, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"List" }, false);      
-      table_settings.InsertButton(-1, { .fsStyle = BTNS_SEP }, false);      
-      table_settings.InsertButton(-1, { .iBitmap = VIEW_PARENTFOLDER, .idCommand = 10, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" }, false);      
-      
+      table_settings.InsertButton(-1, { .iBitmap = VIEW_LIST, .idCommand = LV_VIEW_LIST, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"List" }, false);
+      table_settings.InsertButton(-1, { .fsStyle = BTNS_SEP }, false);
+      table_settings.InsertButton(-1, { .iBitmap = VIEW_PARENTFOLDER, .idCommand = extract_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" }, false);
+
       table_settings.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
 
       table_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 1, L"Extract");
+      table_settings_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 1, L"Extract All");
 
       table = *factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{
         .hMenu = table_menu,
@@ -178,7 +184,7 @@ namespace siege::views
         table.SetImageList(LVSIL_SMALL, image_list);
       }
 
-       hresult = SHGetStockIconInfo(SIID_MIXEDFILES, SHGSI_SYSICONINDEX, &default_icon);
+      hresult = SHGetStockIconInfo(SIID_MIXEDFILES, SHGSI_SYSICONINDEX, &default_icon);
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
@@ -302,6 +308,68 @@ namespace siege::views
       return FALSE;
     }
 
+    void extract_all_files()
+    {
+      auto items = controller.get_contents();
+
+      for (auto& item : items)
+      {
+        if (auto* file_info = std::get_if<siege::platform::file_info>(&item); file_info)
+        {
+          std::ofstream extracted_file(file_info->filename, std::ios::trunc | std::ios::binary);
+          auto raw_data = controller.load_content_data(item);
+
+          extracted_file.write(raw_data.data(), raw_data.size());
+        }
+      }
+    }
+
+    void extract_selected_files()
+    {
+      auto items = controller.get_contents();
+
+      std::vector<siege::platform::resource_reader::content_info> files_to_extract;
+      files_to_extract.reserve(selected_table_items.size());
+
+      std::wstring temp;
+
+      for (auto item_index : selected_table_items)
+      {
+        temp.assign(255, L'\0');
+
+        LVITEMW item_info{
+          .mask = LVIF_TEXT,
+          .iItem = item_index,
+          .pszText = temp.data(),
+          .cchTextMax = (int)temp.size()
+        };
+
+        ListView_GetItem(table, &item_info);
+
+        temp.resize(temp.find(L'\0'));
+
+        auto item = std::find_if(items.begin(), items.end(), [&](auto& info) {
+          siege::platform::file_info* file = std::get_if<siege::platform::file_info>(&info);
+
+          return file && file->filename.wstring() == temp;
+        });
+
+        if (item != items.end())
+        {
+          files_to_extract.emplace_back(*item);
+        }
+      }
+
+      for (auto& item : files_to_extract)
+      {
+        auto& file_info = std::get<siege::platform::file_info>(item);
+        std::ofstream extracted_file(file_info.filename, std::ios::trunc | std::ios::binary);
+        auto raw_data = controller.load_content_data(item);
+
+        extracted_file.write(raw_data.data(), raw_data.size());
+      }
+    }
+
     std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMITEMACTIVATE& message) override
     {
       switch (message.hdr.code)
@@ -315,41 +383,7 @@ namespace siege::views
 
           if (result == 1)
           {
-            auto items = controller.get_contents();
-           
-            std::wstring temp(255, L'\0');
-            LVITEMW item_info{
-              .mask = LVIF_TEXT,
-              .iItem = message.iItem,
-              .pszText = temp.data(),
-              .cchTextMax = (int)temp.size()
-            };
-
-            ListView_GetItem(table, &item_info);
-
-            temp.resize(temp.find(L'\0'));
-
-            auto item = std::find_if(items.begin(), items.end(), [&](auto& info) {
-              siege::platform::file_info* file = std::get_if<siege::platform::file_info>(&items[message.iItem]);
-              
-              return file && file->filename.wstring() == temp;
-            });
-
-            if (item != items.end())
-            {
-              auto& file_info = std::get<siege::platform::file_info>(*item);
-              std::ofstream extracted_file(file_info.filename, std::ios::trunc | std::ios::binary);
-              auto raw_data = controller.load_content_data(*item);
-
-              extracted_file.write(raw_data.data(), raw_data.size());
-            }
-          }
-          else if (result == 2)
-          {
-            auto selected_count = ListView_GetSelectedCount(table);
-            std::vector<siege::platform::file_info> results;
-            results.reserve(selected_count);
-
+            extract_selected_files();
           }
         }
 
@@ -400,11 +434,65 @@ namespace siege::views
       }
     }
 
+    std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMLISTVIEW& message) override
+    {
+      switch (message.hdr.code)
+      {
+      case LVN_ITEMCHANGED: {
+        if (message.uNewState & LVIS_SELECTED)
+        {
+          selected_table_items.emplace(message.iItem);
+        }
+        else if (message.uOldState & LVIS_SELECTED)
+        {
+          selected_table_items.emplace(message.iItem);
+        }
+        return 0;
+      }
+      default: {
+        return FALSE;
+      }
+      }
+    }
+
+    std::optional<win32::lresult_t> wm_notify(win32::tool_bar, const NMTOOLBARW& message) override
+    {
+      switch (message.hdr.code)
+      {
+      case TBN_DROPDOWN: {
+        POINT point{ .x = message.rcButton.left, .y = message.rcButton.top };
+
+        if (ClientToScreen(table, &point))
+        {
+          auto result = table_settings_menu.TrackPopupMenuEx(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, point, ref());
+
+          if (result == 1)
+          {
+            extract_all_files();
+          }
+
+          return TBDDRET_DEFAULT;
+        }
+
+        return TBDDRET_NODEFAULT;
+      }
+      default: {
+        return FALSE;
+      }
+      }
+    }
+
     std::optional<BOOL> wm_notify(win32::tool_bar, const NMMOUSE& message) override
     {
       switch (message.hdr.code)
       {
       case NM_CLICK: {
+        if (message.dwItemSpec == extract_selected_id)
+        {
+          extract_selected_files();
+          return TRUE;
+        }
+
         table.SetView(win32::list_view::view_type(message.dwItemSpec));
         return TRUE;
       }

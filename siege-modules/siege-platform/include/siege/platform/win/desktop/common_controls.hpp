@@ -112,9 +112,7 @@ namespace win32
               return self->wm_notify(win32::header(header.hwndFrom), *(NMHDFILTERBTNCLICK*)lParam);
             }
 
-            if (header.code == HDN_FILTERCHANGE || header.code == HDN_BEGINFILTEREDIT || header.code == HDN_ENDFILTEREDIT || 
-                header.code == HDN_ITEMCLICK || header.code == HDN_ITEMDBLCLICK || header.code == HDN_ITEMKEYDOWN || 
-                header.code == HDN_ITEMSTATEICONCLICK || header.code == HDN_OVERFLOWCLICK || header.code == HDN_DIVIDERDBLCLICK)
+            if (header.code == HDN_FILTERCHANGE || header.code == HDN_BEGINFILTEREDIT || header.code == HDN_ENDFILTEREDIT || header.code == HDN_ITEMCLICK || header.code == HDN_ITEMDBLCLICK || header.code == HDN_ITEMKEYDOWN || header.code == HDN_ITEMSTATEICONCLICK || header.code == HDN_OVERFLOWCLICK || header.code == HDN_DIVIDERDBLCLICK)
             {
               return self->wm_notify(win32::header(header.hwndFrom), *(NMHEADERW*)lParam);
             }
@@ -240,6 +238,11 @@ namespace win32
         return std::nullopt;
       }
 
+      virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMLISTVIEW&)
+      {
+        return std::nullopt;
+      }
+
       virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMLVODSTATECHANGE&)
       {
         return std::nullopt;
@@ -307,6 +310,12 @@ namespace win32
                 && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == list_view::class_name)
             {
               return self->wm_notify(list_view(header.hwndFrom), *(NMLVSCROLL*)lParam);
+            }
+
+            if ((header.code == LVN_ITEMCHANGING || header.code == LVN_ITEMCHANGED)
+                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == list_view::class_name)
+            {
+              return self->wm_notify(list_view(header.hwndFrom), *(NMLISTVIEW*)lParam);
             }
 
             if ((header.code == LVN_BEGINLABELEDITW || header.code == LVN_ENDLABELEDITW || header.code == LVN_SETDISPINFOW)
@@ -744,9 +753,7 @@ namespace win32
           {
             auto& header = *(NMHDR*)lParam;
 
-            if ((header.code == TCN_SELCHANGE || header.code == TCN_SELCHANGING || 
-                header.code == TCN_FOCUSCHANGE || header.code == NM_CLICK || 
-                header.code == NM_RCLICK || header.code == NM_DBLCLK || header.code == NM_RDBLCLK)
+            if ((header.code == TCN_SELCHANGE || header.code == TCN_SELCHANGING || header.code == TCN_FOCUSCHANGE || header.code == NM_CLICK || header.code == NM_RCLICK || header.code == NM_DBLCLK || header.code == NM_RDBLCLK)
                 && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == tab_control::class_name)
             {
               return self->wm_notify(win32::tab_control(header.hwndFrom), header);
