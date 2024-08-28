@@ -147,6 +147,7 @@ namespace win32
       .or_else([&] { return win32::sys_link::notifications::dispatch_message(self, message, wParam, lParam); })
       .or_else([&] { return win32::track_bar::notifications::dispatch_message(self, message, wParam, lParam); })
       .or_else([&] { return win32::list_view::notifications::dispatch_message(self, message, wParam, lParam); })
+      .or_else([&] { return win32::header::notifications::dispatch_message(self, message, wParam, lParam); })
       .or_else([&] { return win32::rebar::notifications::dispatch_message(self, message, wParam, lParam); })
       .or_else([&] { return win32::tab_control::notifications::dispatch_message(self, message, wParam, lParam); })
       .or_else([&] { return win32::tool_bar::notifications::dispatch_message(self, message, wParam, lParam); })
