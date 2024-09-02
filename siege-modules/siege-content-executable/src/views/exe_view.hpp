@@ -55,10 +55,7 @@ namespace siege::views
       options = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
-
       options.InsertString(-1, L"Resources");
-      options.InsertString(-1, L"Scripting");
-      options.InsertString(-1, L"Launch Options");
       options.SetCurrentSelection(0);
 
       resource_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
@@ -183,6 +180,12 @@ namespace siege::views
       if (wchar_t* filename = this->GetPropW<wchar_t*>(L"FilePath"); filename)
       {
         path = filename;
+
+        if (options.GetCount() < 3 && (path->extension() == ".exe" || path->extension() == ".EXE"))
+        {
+          options.InsertString(-1, L"Scripting");
+          options.InsertString(-1, L"Launch Options");
+        }
       }
 
       auto count = controller.load_executable(stream, std::move(path));
@@ -202,7 +205,48 @@ namespace siege::views
 
           for (auto& child : value.second)
           {
-            items.emplace_back(win32::list_view_item(child));
+            win32::list_view_item item(child);
+
+            if (value.first == L"#4")
+            {
+              auto data = controller.get_resource_menu_items(value.first, child);
+
+              std::wstring final_result;
+              
+              if (data && !data->menu_items.empty())
+              {
+                final_result.reserve(data->menu_items.size() * data->menu_items.size());
+
+                for (auto& str : data->menu_items)
+                {
+                  final_result.append(std::move(str.text));
+                  final_result.append(L" \n");
+                }
+              }
+
+              item.sub_items.emplace_back(std::move(final_result));
+            }
+            else if (value.first == L"#6")
+            {
+              auto data = controller.get_resource_strings(value.first, child);
+
+              std::wstring final_result;
+
+              if (!data.empty())
+              {
+                final_result.reserve(data.size() * data[0].size());
+
+                for (auto& str : data)
+                {
+                  final_result.append(std::move(str));
+                  final_result.append(L" \n");
+                }
+              }
+
+              item.sub_items.emplace_back(std::move(final_result));
+            }
+
+            items.emplace_back(std::move(item));
           }
 
           if (group_names.contains(value.first))

@@ -11,18 +11,14 @@ namespace siege::views
   {
     auto position = stream.tellg();
 
-    thread_local std::vector<char> data(1024, '\0');
+    thread_local std::string data(1024, '\0');
 
     stream.read(data.data(), data.size());
     stream.seekg(position, std::ios::beg);
 
     if (data[0] == 'M' && data[1] == 'Z')
     {
-      auto e_iter = std::find(data.rbegin(), data.rend(), 'E');
-      auto p_iter = std::find(e_iter, data.rend(), 'P');
-
-
-      return e_iter != data.rend() && p_iter != data.rend() && std::distance(e_iter, p_iter) == 1;
+      return data.find("PE") != std::string::npos;
     }
 
     return false;
@@ -271,8 +267,8 @@ namespace siege::views
 
     if (matching_extension != extensions.end())
     {
-      return get_function_names_for_range(matching_extension->get_function_name_ranges(), 
-          std::vector<std::string_view>(existing->second.begin(), existing->second.end()));
+      return get_function_names_for_range(matching_extension->get_function_name_ranges(),
+        std::vector<std::string_view>(existing->second.begin(), existing->second.end()));
     }
 
     return results;
@@ -317,7 +313,6 @@ namespace siege::views
             return TRUE;
           }
 
-
           temp->emplace(lpType, std::set<std::wstring>{});
           return TRUE;
         }
@@ -345,6 +340,137 @@ namespace siege::views
       }
     }
 
+    return results;
+  }
+
+  std::optional<menu_info> exe_controller::get_resource_menu_items(std::wstring type, std::wstring name) const
+  {
+    auto resource = ::FindResourceW(loaded_module, name.c_str(), type.c_str());
+
+    if (!resource)
+    {
+      return std::nullopt;
+    }
+
+    std::wstring raw_result;
+
+    raw_result.resize(::SizeofResource(loaded_module, resource) / 2);
+
+    if (raw_result.size() == 0)
+    {
+      return std::nullopt;
+    }
+
+    auto loaded_resource = ::LoadResource(loaded_module, resource);
+
+    if (!loaded_resource)
+    {
+      return std::nullopt;
+    }
+
+    auto raw_resource = ::LockResource(loaded_resource);
+
+    std::memcpy(raw_result.data(), raw_resource, raw_result.size() * 2);
+
+    std::vector<std::wstring> results;
+
+    menu_info result{};
+
+    while (!raw_result.empty())
+    {
+      auto code = raw_result[0];
+      raw_result.erase(0, 1);
+
+      if (code == 0)
+      {
+        continue;
+      }
+
+      if (code < 1000 && code & MF_POPUP)
+      {
+        std::wstring text = raw_result.substr(0, raw_result.find(L'\0'));
+
+        raw_result.erase(0, text.size() + 1);
+
+        auto& menu_item = result.menu_items.emplace_back(std::move(text));
+
+        while (!raw_result.empty())
+        {
+          auto state = raw_result[0];
+          auto sub_id = raw_result[1];
+
+          if (state < 1000 && state & MF_POPUP)
+          {
+            break;
+          }
+
+          raw_result.erase(0, 2);
+
+          std::wstring sub_text = raw_result.substr(0, raw_result.find(L'\0'));
+          raw_result.erase(0, sub_text.size() + 1);
+
+          auto& sub_item = menu_item.sub_items.emplace_back(std::move(sub_text));
+          
+          if (state == 0 && sub_id == 0)
+          {
+            sub_item.fType = MF_SEPARATOR;
+          }
+          else
+          {
+            sub_item.wID = sub_id;
+          }
+        }
+      }
+    }
+
+    return result;
+  }
+
+  std::vector<std::wstring> exe_controller::get_resource_strings(std::wstring type, std::wstring name) const
+  {
+    auto resource = ::FindResourceW(loaded_module, name.c_str(), type.c_str());
+
+    if (!resource)
+    {
+      return {};
+    }
+
+    std::wstring raw_result;
+
+    raw_result.resize(::SizeofResource(loaded_module, resource) / 2);
+
+    if (raw_result.size() == 0)
+    {
+      return {};
+    }
+
+    auto loaded_resource = ::LoadResource(loaded_module, resource);
+
+    if (!loaded_resource)
+    {
+      return {};
+    }
+
+    auto raw_resource = ::LockResource(loaded_resource);
+
+    std::memcpy(raw_result.data(), raw_resource, raw_result.size() * 2);
+
+    std::vector<std::wstring> results;
+    results.reserve(16);
+
+    while (!raw_result.empty())
+    {
+      auto size = raw_result[0];
+      raw_result.erase(0, 1);
+
+      if (size == 0)
+      {
+        continue;
+      }
+      results.emplace_back(raw_result.substr(0, size));
+
+      raw_result.erase(0, size);
+    }
 
     return results;
   }
