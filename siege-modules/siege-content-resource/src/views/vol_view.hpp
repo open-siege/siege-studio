@@ -11,6 +11,8 @@
 #include <spanstream>
 #include <map>
 #include <set>
+#include <algorithm>
+#include <future>
 #include <siege/platform/win/desktop/theming.hpp>
 #include "vol_controller.hpp"
 
@@ -42,6 +44,11 @@ namespace siege::views
     std::map<std::u16string_view, SHSTOCKICONINFO> category_icons;
 
     std::set<int> selected_table_items;
+
+    bool has_console = GetConsoleWindow() != nullptr;
+
+    std::future<void> pending_save;
+    std::optional<bool> has_saved = std::nullopt;
 
     constexpr static int extract_selected_id = 10;
 
@@ -308,24 +315,53 @@ namespace siege::views
       return FALSE;
     }
 
-    void extract_all_files()
+    // extracting of files may use external console applications,
+    // so we a console window if it doesn't already exist
+    void alloc_console()
     {
-      auto items = controller.get_contents();
-
-      for (auto& item : items)
+      if (!has_console)
       {
-        if (auto* file_info = std::get_if<siege::platform::file_info>(&item); file_info)
+        if (AllocConsole())
         {
-          std::ofstream extracted_file(file_info->filename, std::ios::trunc | std::ios::binary);
-          auto raw_data = controller.load_content_data(item);
-
-          extracted_file.write(raw_data.data(), raw_data.size());
+          has_console = true;
+          ShowWindow(GetConsoleWindow(), SW_HIDE);
         }
       }
     }
 
+    void extract_all_files()
+    {
+      alloc_console();
+      auto items = controller.get_contents();
+
+      if (has_saved == false)
+      {
+        return;
+      }
+
+      pending_save = std::async(
+        std::launch::async, [&](auto items) {
+          has_saved = false;
+
+          for (auto& item : items)
+          {
+            if (auto* file_info = std::get_if<siege::platform::file_info>(&item); file_info)
+            {
+              std::ofstream extracted_file(file_info->filename, std::ios::trunc | std::ios::binary);
+              auto raw_data = controller.load_content_data(item);
+
+              extracted_file.write(raw_data.data(), raw_data.size());
+            }
+          }
+
+          has_saved = true;
+        },
+        items);
+    }
+
     void extract_selected_files()
     {
+      alloc_console();
       auto items = controller.get_contents();
 
       std::vector<siege::platform::resource_reader::content_info> files_to_extract;

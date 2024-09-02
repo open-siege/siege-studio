@@ -41,6 +41,11 @@ std::errc get_supported_format_categories(std::size_t count, const char16_t** st
     return value.data();
   });
 
+  if (fetched)
+  {
+    *fetched = count;
+  }
+
   return std::errc(0);
 }
 
@@ -69,6 +74,11 @@ std::errc get_supported_extensions_for_category(const char16_t* category, std::s
   else
   {
     count = 0;
+  }
+
+  if (fetched)
+  {
+    *fetched = count;
   }
 
   return count == 0 ? std::errc::not_supported : std::errc(0);
