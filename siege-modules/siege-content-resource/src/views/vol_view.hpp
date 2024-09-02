@@ -330,6 +330,35 @@ namespace siege::views
       }
     }
 
+    std::optional<std::filesystem::path> get_destination_directory()
+    {
+      auto dialog = win32::com::CreateFileOpenDialog();
+
+      if (dialog)
+      {
+        auto open_dialog = *dialog;
+        open_dialog->SetOptions(FOS_PICKFOLDERS);
+        auto result = open_dialog->Show(nullptr);
+
+        if (result == S_OK)
+        {
+          auto selection = open_dialog.GetResult();
+
+          if (selection)
+          {
+            auto path = selection.value().GetFileSysPath();
+
+            if (path)
+            {
+              return *path;
+            }
+          }
+        }
+      }
+
+      return std::nullopt;
+    }
+
     void extract_all_files()
     {
       alloc_console();
@@ -340,15 +369,22 @@ namespace siege::views
         return;
       }
 
+      auto path = get_destination_directory();
+
+      if (!path)
+      {
+        return;
+      }
+
       pending_save = std::async(
-        std::launch::async, [&](auto items) {
+        std::launch::async, [path = std::move(path), this](auto items) {
           has_saved = false;
 
           for (auto& item : items)
           {
             if (auto* file_info = std::get_if<siege::platform::file_info>(&item); file_info)
             {
-              std::ofstream extracted_file(file_info->filename, std::ios::trunc | std::ios::binary);
+              std::ofstream extracted_file(*path / file_info->filename, std::ios::trunc | std::ios::binary);
               auto raw_data = controller.load_content_data(item);
 
               extracted_file.write(raw_data.data(), raw_data.size());
@@ -363,6 +399,15 @@ namespace siege::views
     void extract_selected_files()
     {
       alloc_console();
+      
+      
+      auto path = get_destination_directory();
+
+      if (!path)
+      {
+        return;
+      }
+      
       auto items = controller.get_contents();
 
       std::vector<siege::platform::resource_reader::content_info> files_to_extract;
@@ -400,7 +445,7 @@ namespace siege::views
       for (auto& item : files_to_extract)
       {
         auto& file_info = std::get<siege::platform::file_info>(item);
-        std::ofstream extracted_file(file_info.filename, std::ios::trunc | std::ios::binary);
+        std::ofstream extracted_file(*path / file_info.filename, std::ios::trunc | std::ios::binary);
         auto raw_data = controller.load_content_data(item);
 
         extracted_file.write(raw_data.data(), raw_data.size());
