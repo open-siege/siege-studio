@@ -48,36 +48,38 @@ constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 4>, 4>
     { "Console::logMode"sv, std::size_t(0x723222) },
   } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 25> function_name_ranges{ { { "icDefaultButtonAction"sv, "icActionAllowed"sv },
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 22> function_name_ranges{ { { "icDefaultButtonAction"sv, "icActionAllowed"sv },
   { "dataStore"sv, "dataRelease"sv },
   { "defaultWeapons"sv, "allowWeapon"sv },
   { "goto"sv, "violate"sv },
-  { "initializeServer"sv, "isEqualIP"sv },
+  { "initializeServer"sv, "checkDiskFreeSpace"sv }, // //isEqualIP added in 1.0.0.3
   { "say"sv, "flushChannel"sv },
   { "dynDataWriteObject"sv, "FlushPilots"sv },
-  { "ME::Create"sv, "ME::RebuildCommandMap"sv },
+//  { "ME::Create"sv, "ME::RebuildCommandMap"sv }, // added in 1.0.0.3
   { "loadObject"sv, "getNextObject"sv },
   { "HTMLOpen"sv, "HTMLOpenAndGoWin"sv },
   { "swapSurfaces"sv, "isGfxDriver"sv },
   { "newMovPlay"sv, "pauseMovie"sv },
   { "netStats"sv, "net::kick"sv },
   { "newRedbook"sv, "rbSetPlayMode"sv },
-  { "newInputManager"sv, "defineKey"sv },
+  { "newInputManager"sv, "unbind"sv }, //defineKey added in 1.0.0.3
   { "simTreeCreate"sv, "simTreeRegScript"sv },
   { "newSfx"sv, "sfxGetMaxBuffers"sv },
   { "newToolWindow"sv, "saveFileAs"sv },
-  { "newTerrain"sv, "reCalcCRC"sv },
+  { "newTerrain"sv, "lightTerrain"sv }, //reCalcCRC added in 1.0.0.3
   { "GuiEditMode"sv, "windowsKeyboardDisable"sv },
-  { "LS::Create"sv, "LS::parseCommands"sv },
+    //"LSCreate" "LSEditor" available in previous versions
+ // { "LS::Create"sv, "LS::parseCommands"sv }, added in 1.0.0.3
   { "ircConnect"sv, "ircEcho"sv },
-  { "globeLines"sv, "loadSky"sv },
+//  { "globeLines"sv, "loadSky"sv }, added in 1.0.0.3
   { "MissionRegType"sv, "missionUndoMoveRotate"sv },
   { "cls"sv, "trace"sv } } };
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 13> variable_name_ranges{ { { "$pref::softwareTranslucency"sv, "$pref::canvasCursorTrapped"sv },
-  { "suspended"sv, "SimGui::firstPreRender"sv },
+  //{ "suspended"sv, "SimGui::firstPreRender"sv }, // added in 1.0.0.3
+  { "suspended"sv, "ESBasePlugin::postProduction"sv },
   { "Console::ForeRGB"sv, "Console::LastLineTimeout"sv },
-  { "$pref::mipcap"sv, "$OpenGL::AFK"sv },
+  { "$pref::mipcap"sv, "$OpenGL::HSL"sv }, //$OpenGL::AFK added in 1.0.0.2
   { "GFXMetrics::EmittedPolys"sv, "useLowRes3D"sv },
   { "pref::sfx2DVolume"sv, "pref::sfx3DVolume"sv },
   { "dynDataWriteObject"sv, "FlushPilots"sv },
