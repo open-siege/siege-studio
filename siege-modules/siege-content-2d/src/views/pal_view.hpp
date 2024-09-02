@@ -21,7 +21,6 @@ namespace siege::views
 
     win32::static_control render_view;
     win32::list_box selection;
-    win32::wparam_t default_item_height = 0;
     std::wstring buffer;
 
     pal_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
@@ -58,8 +57,6 @@ namespace siege::views
 
     auto wm_size(std::size_t type, SIZE client_size)
     {
-      auto item_height = std::clamp<LONG>(default_item_height * 2, default_item_height, client_size.cy / 12);
-      ListBox_SetItemHeight(selection, 0, item_height);
       auto left_size = SIZE{ .cx = (client_size.cx / 3) * 2, .cy = client_size.cy };
       auto right_size = SIZE{ .cx = client_size.cx - left_size.cx, .cy = client_size.cy };
 
@@ -136,11 +133,6 @@ namespace siege::views
           }
 
           selection.SetCurrentSelection(0);
-          default_item_height = selection.GetItemHeight(0);
-
-          auto item_height = std::clamp<LONG>(default_item_height * 2, default_item_height, default_item_height * 2);
-          ListBox_SetItemHeight(selection, 0, item_height);
-
           return TRUE;
         }
 

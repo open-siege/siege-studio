@@ -793,7 +793,6 @@ namespace win32
         thread_local std::wstring buffer;
         auto context = win32::gdi::drawing_context_ref(item.hDC);
 
-        auto item_height = list.GetItemHeight(0);
         HFONT font = win32::load_font(LOGFONTW{
           .lfPitchAndFamily = VARIABLE_PITCH,
           .lfFaceName = L"Segoe UI" });
@@ -818,12 +817,13 @@ namespace win32
 
         list.GetText(item.itemID, buffer.data());
 
-        ::TextOutW(context, item.rcItem.left, item.rcItem.top, buffer.c_str(), buffer.size());
+        ::DrawTextW(context, buffer.c_str(), buffer.size(), &item.rcItem, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
 
         return TRUE;
       }
 
       HWND current = nullptr;
+
       operator HWND()
       {
         return current;
@@ -902,7 +902,7 @@ namespace win32
 
     if (size)
     {
-      ListBox_SetItemHeight(control, 0, size->cy);
+      ListBox_SetItemHeight(control, 0, size->cy * 2);
     }
 
     auto style = control.GetWindowStyle();

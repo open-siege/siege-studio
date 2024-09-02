@@ -13,7 +13,8 @@
 
 namespace siege::views
 {
-  struct sfx_view final : win32::window_ref, win32::tool_bar::notifications
+  struct sfx_view final : win32::window_ref
+    , win32::tool_bar::notifications
   {
     sfx_controller controller;
 
@@ -306,5 +307,31 @@ namespace siege::views
     }
   };
 }// namespace siege::views
+
+/* TODO reimplement old logic
+*
+* ImGui::Begin("File Info");
+
+    ImGui::LabelText("", "Duration (in seconds): %f", buffer.getDuration().asSeconds());
+    ImGui::LabelText("", "Sample Rate: %u", buffer.getSampleRate());
+
+
+    ImGui::End();
+
+    if (ImGui::Button("Export to WAV"))
+    {
+      auto new_file_name = info.filename.replace_extension(".wav");
+      std::filesystem::create_directories(export_path);
+
+      std::ofstream output(export_path / new_file_name, std::ios::binary);
+      output.write(original_data.data(), original_data.size());
+      if (!opened_folder)
+      {
+        wxLaunchDefaultApplication(export_path.string());
+        opened_folder = true;
+      }
+    }
+
+*/
 
 #endif
