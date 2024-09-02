@@ -115,7 +115,8 @@ namespace siege::views
 
       table_settings.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
 
-      table_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 1, L"Extract");
+      table_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 1, L"Open in New Tab");
+      table_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 2, L"Extract");
       table_settings_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 1, L"Extract All");
 
       table = *factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{
@@ -406,6 +407,33 @@ namespace siege::views
       }
     }
 
+    [[maybe_unused]] bool open_new_tab_for_item(LVITEMW item_info, win32::window_ref root)
+    {
+      auto items = controller.get_contents();
+
+      auto item = std::find_if(items.begin(), items.end(), [&](auto& content) {
+        if (auto* file = std::get_if<siege::platform::file_info>(&content))
+        {
+          return std::wstring_view(file->filename.c_str()) == item_info.pszText;
+        }
+
+        return false;
+      });
+
+      if (item != items.end())
+      {
+        auto data = controller.load_content_data(*item);
+
+        root.SetPropW(L"FilePath", item_info.pszText);
+        root.CopyData(*this, COPYDATASTRUCT{ .cbData = DWORD(data.size()), .lpData = data.data() });
+
+        root.RemovePropW(L"FilePath");
+        return true;
+      }
+
+      return false;
+    }
+
     std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMITEMACTIVATE& message) override
     {
       switch (message.hdr.code)
@@ -418,6 +446,30 @@ namespace siege::views
           auto result = table_menu.TrackPopupMenuEx(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, point, ref());
 
           if (result == 1)
+          {
+            auto root = this->GetAncestor(GA_ROOT);
+
+            if (root)
+            {
+              std::wstring temp;
+
+              for (auto item : selected_table_items)
+              {
+                temp.assign(255, L'\0');
+                auto item_info = table.GetItem(LVITEMW{
+                  .mask = LVIF_TEXT,
+                  .iItem = item,
+                  .pszText = temp.data(),
+                  .cchTextMax = 256 });
+
+                if (item_info)
+                {
+                  open_new_tab_for_item(*item_info, root->ref());
+                }
+              }
+            }
+          }
+          if (result == 2)
           {
             extract_selected_files();
           }
@@ -440,26 +492,7 @@ namespace siege::views
 
           if (item_info)
           {
-            auto items = controller.get_contents();
-
-            auto item = std::find_if(items.begin(), items.end(), [&](auto& content) {
-              if (auto* file = std::get_if<siege::platform::file_info>(&content))
-              {
-                return std::wstring_view(file->filename.c_str()) == item_info->pszText;
-              }
-
-              return false;
-            });
-
-            if (item != items.end())
-            {
-              auto data = controller.load_content_data(*item);
-
-              root->SetPropW(L"FilePath", temp.data());
-              root->CopyData(*this, COPYDATASTRUCT{ .cbData = DWORD(data.size()), .lpData = data.data() });
-
-              root->RemovePropW(L"FilePath");
-            }
+            open_new_tab_for_item(*item_info, root->ref());
           }
         }
         return 0;
