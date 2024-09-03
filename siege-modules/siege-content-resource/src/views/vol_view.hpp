@@ -254,8 +254,6 @@ namespace siege::views
       return 0;
     }
 
-    inline static std::set<std::wstring> strings;
-
     std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
     {
       if (message.setting == L"ImmersiveColorSet")

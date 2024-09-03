@@ -24,20 +24,12 @@ namespace siege::views
   {
     win32::static_control static_image;
     win32::list_view palettes_list;
-    win32::track_bar zoom;
-    win32::track_bar frame_selector;
-
-    win32::static_control frame_label;
-    win32::static_control frame_value;
-
-    win32::static_control zoom_label;
-    win32::static_control zoom_value;
+    win32::tool_bar bitmap_actions;
 
     bmp_controller controller;
-
     win32::gdi::bitmap current_bitmap;
-
     std::list<platform::storage_module> loaded_modules;
+    win32::image_list image_list;
 
     bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
@@ -50,36 +42,25 @@ namespace siege::views
 
       auto factory = win32::window_factory(ref());
 
+      bitmap_actions = *factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
+
+      bitmap_actions.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Zoom In" });
+
+      bitmap_actions.InsertButton(-1, { .iBitmap = 1, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Zoom Out" });
+
+      bitmap_actions.InsertButton(-1, { .iBitmap = 2, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECK, .iString = (INT_PTR)L"Pan" });
+
+      bitmap_actions.InsertButton(-1, { .fsStyle = BTNS_SEP });
+
+      bitmap_actions.InsertButton(-1, { .iBitmap = 3, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN | BTNS_WHOLEDROPDOWN, .iString = (INT_PTR)L"Frame" });
+
+      bitmap_actions.InsertButton(-1, { .fsStyle = BTNS_SEP });
+      bitmap_actions.InsertButton(-1, { .iBitmap = 4, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Save" });
+
+      bitmap_actions.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
+
+
       std::wstring temp = L"menu.pal";
-
-      frame_selector = *factory.CreateWindowExW<win32::track_bar>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | BTNS_BUTTON,
-        .lpszName = L"Frame Selector" });
-
-      frame_label = *factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | SS_LEFT,
-        .lpszName = L"Frame: " });
-
-      frame_value = *factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | SS_LEFT,
-        .lpszName = L"" });
-
-      zoom = *factory.CreateWindowExW<win32::track_bar>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | BTNS_BUTTON,
-        .lpszName = L"Zoom" });
-
-      zoom_label = *factory.CreateWindowExW<win32::static_control>(
-        ::CREATESTRUCTW{
-          .style = WS_VISIBLE | WS_CHILD | SS_LEFT,
-          .lpszName = L"Zoom: ",
-        });
-
-      zoom_value = *factory.CreateWindowExW<win32::static_control>(
-        ::CREATESTRUCTW{
-          .style = WS_VISIBLE | WS_CHILD | SS_LEFT,
-        });
-
-      ::SendMessageW(zoom, TBM_SETRANGE, FALSE, MAKELPARAM(1, 100));
 
       palettes_list = [&] {
         auto palettes_list = *factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
@@ -99,7 +80,7 @@ namespace siege::views
         palettes_list.win32::list_view::InsertColumn(-1, LVCOLUMNW{ .pszText = const_cast<wchar_t*>(L"Available Palettes") });
 
         auto header = palettes_list.GetHeader();
-            
+
         auto style = header.GetWindowStyle();
         header.SetWindowStyle(style | HDS_FLAT | HDS_NOSIZING | HDS_FILTERBAR);
         return palettes_list;
@@ -114,6 +95,35 @@ namespace siege::views
       return 0;
     }
 
+    void recreate_image_list(std::optional<SIZE> possible_size)
+    {
+
+      SIZE icon_size = possible_size.or_else([this] {
+                                      return image_list.GetIconSize();
+                                    })
+                         .or_else([] {
+                           return std::make_optional(SIZE{
+                             .cx = ::GetSystemMetrics(SM_CXSIZE),
+                             .cy = ::GetSystemMetrics(SM_CYSIZE) });
+                         })
+                         .value();
+
+      if (image_list)
+      {
+        image_list.reset();
+      }
+
+      std::vector icons{
+        win32::segoe_fluent_icons::zoom_in,
+        win32::segoe_fluent_icons::zoom_out,
+        win32::segoe_fluent_icons::pan_mode,
+        win32::segoe_fluent_icons::picture,
+        win32::segoe_fluent_icons::save,
+      };
+
+      image_list = win32::create_icon_list(icons, icon_size);
+    }
+
     std::optional<win32::lresult_t> wm_size(std::size_t type, SIZE client_size)
     {
       if (type == SIZE_MINIMIZED || type == SIZE_MAXHIDE || type == SIZE_MAXSHOW)
@@ -121,41 +131,24 @@ namespace siege::views
         return std::nullopt;
       }
 
-      auto left_size = SIZE{ .cx = (client_size.cx / 3) * 2, .cy = client_size.cy };
-      auto right_size = SIZE{ .cx = client_size.cx - left_size.cx, .cy = client_size.cy };
+      auto top_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy / 12 };
 
-      const auto top_left_height = left_size.cy / 20;
+      recreate_image_list(bitmap_actions.GetIdealIconSize(SIZE{ .cx = client_size.cx / bitmap_actions.ButtonCount(), .cy = top_size.cy }));
+      SendMessageW(bitmap_actions, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
+
+      bitmap_actions.SetWindowPos(POINT{}, SWP_DEFERERASE | SWP_NOREDRAW);
+      bitmap_actions.SetWindowPos(top_size, SWP_DEFERERASE);
+      bitmap_actions.SetButtonSize(SIZE{ .cx = top_size.cx / bitmap_actions.ButtonCount(), .cy = top_size.cy });
+
+      auto left_size = SIZE{ .cx = (client_size.cx / 3) * 2, .cy = client_size.cy };
+      auto right_size = SIZE{ .cx = client_size.cx - left_size.cx, .cy = client_size.cy - top_size.cy };
+
       const auto top_left_width = left_size.cx / 6;
 
-      auto x = 0;
+      static_image.SetWindowPos(POINT{ .y = top_size.cy });
+      static_image.SetWindowPos(SIZE{ .cx = left_size.cx, .cy = left_size.cy - top_size.cy });
 
-      frame_label.SetWindowPos(POINT{ .x = x });
-      frame_label.SetWindowPos(SIZE{ .cx = left_size.cx / 6, .cy = top_left_height });
-      x += top_left_width;
-
-      frame_value.SetWindowPos(POINT{ .x = x });
-      frame_value.SetWindowPos(SIZE{ .cx = left_size.cx / 6, .cy = top_left_height });
-      x += top_left_width;
-
-      frame_selector.SetWindowPos(POINT{ .x = x });
-      frame_selector.SetWindowPos(SIZE{ .cx = left_size.cx / 6, .cy = top_left_height });
-      x += top_left_width;
-
-      zoom_label.SetWindowPos(POINT{ .x = x });
-      zoom_label.SetWindowPos(SIZE{ .cx = left_size.cx / 6, .cy = top_left_height });
-      x += top_left_width;
-
-      zoom_value.SetWindowPos(POINT{ .x = x });
-      zoom_value.SetWindowPos(SIZE{ .cx = left_size.cx / 6, .cy = top_left_height });
-      x += top_left_width;
-
-      zoom.SetWindowPos(POINT{ .x = x });
-      zoom.SetWindowPos(SIZE{ .cx = left_size.cx / 6, .cy = top_left_height });
-
-      static_image.SetWindowPos(POINT{ .y = top_left_height });
-      static_image.SetWindowPos(SIZE{ .cx = left_size.cx, .cy = left_size.cy - top_left_height });
-
-      palettes_list.SetWindowPos(POINT{ .x = left_size.cx });
+      palettes_list.SetWindowPos(POINT{ .x = left_size.cx, .y = top_size.cy });
       palettes_list.SetWindowPos(right_size);
       palettes_list.SetColumnWidth(0, right_size.cx);
 
@@ -167,12 +160,12 @@ namespace siege::views
       if (message.setting == L"ImmersiveColorSet")
       {
         win32::apply_theme(palettes_list);
-        win32::apply_theme(frame_label);
-        win32::apply_theme(frame_value);
-        win32::apply_theme(zoom_label);
-        win32::apply_theme(zoom_value);
-        win32::apply_theme(zoom);
-        win32::apply_theme(frame_selector);
+        win32::apply_theme(bitmap_actions);
+        win32::apply_theme(*this);
+
+        recreate_image_list(std::nullopt);
+        SendMessageW(bitmap_actions, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
+
 
         return 0;
       }
@@ -261,7 +254,6 @@ namespace siege::views
 
         if (count > 0)
         {
-          ::SendMessageW(frame_selector, UDM_SETRANGE, 0, MAKELPARAM(count, 1));
           auto size = static_image.GetClientSize();
           BITMAPINFO info{
             .bmiHeader{

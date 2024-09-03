@@ -59,7 +59,9 @@ namespace win32
     radio_bullet = 0xE915,
     pan_mode = 0xece9,
     image_export = 0xee71,
-    picture = 0xe8b9
+    picture = 0xe8b9,
+    save = 0xE74E,
+    save_as = 0xE792,
   };
 
   win32::image_list create_icon_list(std::span<segoe_fluent_icons> icons, SIZE icon_size, std::optional<::RGBQUAD> color = std::nullopt);
