@@ -1,7 +1,3 @@
----
-_layout: landing
----
-
 ## Welcome to Siege Studio
 
 Siege Studio is a reverse engineering effort to preserve the legacy of Dynamix and their games. It serves as a tool for exploring the files of the various games, as well as converting those files to other formats. The core of Siege Studio can be used as a library for other projects.
@@ -12,9 +8,9 @@ Siege Studio is a reverse engineering effort to preserve the legacy of Dynamix a
 
 ### File Formats
 
-For more information on the supported file formats of Siege Studio, see the [Game Support](game-support) page.
+For more information on the supported file formats of Siege Studio, see the [Game Support](game-support.md) page.
 
-For technical information surrounding the file formats, see the [main wiki of this project](https://github.com/open-siege/open-siege/wiki).
+For technical information surrounding the file formats, see the [main wiki of this project](wiki).
 
 ### Roadmap
 
