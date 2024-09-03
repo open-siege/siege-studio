@@ -49,6 +49,7 @@ namespace siege::views
 
     std::future<void> pending_save;
     std::optional<bool> has_saved = std::nullopt;
+    win32::image_list image_list;
 
     constexpr static int extract_selected_id = 10;
 
@@ -101,17 +102,13 @@ namespace siege::views
       auto factory = win32::window_factory(ref());
 
       table_settings = *factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
-      table_settings.LoadImages(IDB_VIEW_SMALL_COLOR);
 
-      table_settings.InsertButton(-1, { .iBitmap = VIEW_DETAILS, .idCommand = LV_VIEW_DETAILS, .fsState = TBSTATE_ENABLED | TBSTATE_CHECKED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Details" }, false);
+      table_settings.InsertButton(-1, { .iBitmap = 0, .idCommand = LV_VIEW_DETAILS, .fsState = TBSTATE_ENABLED | TBSTATE_CHECKED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Details" }, false);
 
-      table_settings.InsertButton(-1, { .iBitmap = VIEW_LARGEICONS, .idCommand = LV_VIEW_ICON, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Large Icons" }, false);
+      table_settings.InsertButton(-1, { .iBitmap = 1, .idCommand = LV_VIEW_TILE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Tiles" }, false);
 
-      table_settings.InsertButton(-1, { .iBitmap = VIEW_SMALLICONS, .idCommand = LV_VIEW_SMALLICON, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Small Icons" }, false);
-
-      table_settings.InsertButton(-1, { .iBitmap = VIEW_LIST, .idCommand = LV_VIEW_LIST, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"List" }, false);
       table_settings.InsertButton(-1, { .fsStyle = BTNS_SEP }, false);
-      table_settings.InsertButton(-1, { .iBitmap = VIEW_PARENTFOLDER, .idCommand = extract_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" }, false);
+      table_settings.InsertButton(-1, { .iBitmap = 2, .idCommand = extract_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" }, false);
 
       table_settings.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
 
@@ -199,6 +196,28 @@ namespace siege::views
       return 0;
     }
 
+    void recreate_image_list(std::optional<SIZE> possible_size)
+    {
+
+      SIZE icon_size = possible_size.or_else([this] {
+                                      return image_list.GetIconSize();
+                                    })
+                         .or_else([] {
+                           return std::make_optional(SIZE{
+                             .cx = ::GetSystemMetrics(SM_CXSIZE),
+                             .cy = ::GetSystemMetrics(SM_CYSIZE) });
+                         })
+                         .value();
+
+      if (image_list)
+      {
+        image_list.reset();
+      }
+
+      std::vector icons{ win32::segoe_fluent_icons::group_list, win32::segoe_fluent_icons::grid_view, win32::segoe_fluent_icons::folder_open };
+      image_list = win32::create_icon_list(icons, icon_size);
+    }
+
     auto wm_size(std::size_t type, SIZE client_size)
     {
       if (type == SIZE_MINIMIZED)
@@ -207,10 +226,13 @@ namespace siege::views
       }
 
       auto top_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy / 12 };
+
+      recreate_image_list(table_settings.GetIdealIconSize(SIZE{ .cx = client_size.cx / table_settings.ButtonCount(), .cy = top_size.cy }));
+      SendMessageW(table_settings, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
+
       table_settings.SetWindowPos(POINT{}, SWP_DEFERERASE | SWP_NOREDRAW);
       table_settings.SetWindowPos(top_size, SWP_DEFERERASE);
       table_settings.SetButtonSize(SIZE{ .cx = client_size.cx / table_settings.ButtonCount(), .cy = top_size.cy });
-
       table.SetWindowPos(POINT{ .y = top_size.cy }, SWP_DEFERERASE | SWP_NOREDRAW);
       table.SetWindowPos(SIZE{ .cx = top_size.cx, .cy = client_size.cy - top_size.cy }, SWP_DEFERERASE);
 
@@ -239,9 +261,14 @@ namespace siege::views
       if (message.setting == L"ImmersiveColorSet")
       {
         win32::apply_theme(table_settings);
+
+        recreate_image_list(std::nullopt);
+        SendMessageW(table_settings, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
+
         win32::apply_theme(table);
         auto header = table.GetHeader();
         win32::apply_theme(header);
+
         win32::apply_theme(*this);
 
         return 0;
@@ -302,10 +329,11 @@ namespace siege::views
 
                 ListView_SetTileInfo(table, &item_info);
               }
-              auto client_size = this->GetClientSize();
-              wm_size(SIZE_RESTORED, *client_size);
             }
           }
+
+          auto client_size = this->GetClientSize();
+          wm_size(SIZE_RESTORED, *client_size);
 
           return TRUE;
         }
@@ -637,6 +665,7 @@ namespace siege::views
         }
 
         table.SetView(win32::list_view::view_type(message.dwItemSpec));
+
         return TRUE;
       }
       default: {

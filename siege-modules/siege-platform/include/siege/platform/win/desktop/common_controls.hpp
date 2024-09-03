@@ -1010,6 +1010,10 @@ namespace win32
     [[nodiscard]] inline SIZE GetIdealIconSize(std::optional<SIZE> size_hint = std::nullopt)
     {
       auto button_size = size_hint ? *size_hint : GetButtonSize();
+      auto padding = GetPadding();
+      
+      button_size.cx -= padding.cx;
+      button_size.cy -= padding.cy;
       
       if (this->GetWindowStyle() & TBSTYLE_FLAT)
       {

@@ -58,7 +58,6 @@ namespace siege::views
     void recreate_image_list(std::optional<SIZE> possible_size)
     {
 
-
       SIZE icon_size = possible_size.or_else([this] {
                                       return image_list.GetIconSize();
                                     })
@@ -135,8 +134,8 @@ namespace siege::views
       {
         win32::apply_theme(selection);
         recreate_image_list(std::nullopt);
-        win32::apply_theme(player_buttons);
         SendMessageW(player_buttons, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
+        win32::apply_theme(player_buttons);
         win32::apply_theme(*this);
 
         return 0;
