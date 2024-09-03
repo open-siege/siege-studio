@@ -21,7 +21,7 @@ namespace siege::views
     win32::tool_bar player_buttons;
     win32::list_box selection;
 
-    HIMAGELIST image_list = nullptr;
+    win32::image_list image_list;
     media_module media;
 
     sfx_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self), media{}
@@ -55,60 +55,26 @@ namespace siege::views
       return 0;
     }
 
-    HIMAGELIST recreate_image_list(std::optional<SIZE> possible_size)
+    void recreate_image_list(std::optional<SIZE> possible_size)
     {
-      SIZE icon_size;
-      int width;
-      int height;
-      if (possible_size)
-      {
-        icon_size = *possible_size;
-      }
-      else if (image_list && ImageList_GetIconSize(image_list, &width, &height))
-      {
-        icon_size.cx = width;
-        icon_size.cy = height;
-      }
-      else
-      {
-        return image_list;
-      }
+      SIZE icon_size = possible_size.or_else([this] {
+                         return image_list.GetIconSize();
+                            })
+                         .or_else([] {
+                           return std::make_optional(SIZE{
+                             .cx = ::GetSystemMetrics(SM_CXSIZE),
+                             .cy = ::GetSystemMetrics(SM_CYSIZE)
+                           });
+                         })
+                         .value();
 
       if (image_list)
       {
-        assert(ImageList_Destroy(image_list) == TRUE);
-        image_list = nullptr;
+        image_list.reset();
       }
 
-      image_list = ImageList_Create(icon_size.cx, icon_size.cy, ILC_COLOR32, 4, 4);
-
-      // TODO create a font icon mapper to
-      // handle fallback icons
-      auto font_icon = win32::load_font(LOGFONTW{
-        .lfHeight = -1024,
-        .lfClipPrecision = CLIP_DEFAULT_PRECIS,
-        .lfQuality = NONANTIALIASED_QUALITY,
-        .lfFaceName = L"Segoe MDL2 Assets" });
-
-      auto theme_color = win32::get_color_for_window(this->ref(), win32::properties::tool_bar::text_color);
-      RGBQUAD color = { .rgbBlue = GetBValue(theme_color),
-        .rgbGreen = GetGValue(theme_color),
-        .rgbRed = GetRValue(theme_color) };
-
-      // TODO make the image list creation easier (provide a list of icons then generate)
-      auto play_icon = win32::create_icon(icon_size, color, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, (wchar_t)win32::segoe_mdl2_assets_icons::play)));
-      ImageList_ReplaceIcon(image_list, -1, play_icon);
-
-      auto pause_icon = win32::create_icon(icon_size, color, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, (wchar_t)win32::segoe_mdl2_assets_icons::pause)));
-      ImageList_ReplaceIcon(image_list, -1, pause_icon);
-
-      auto stop_icon = win32::create_icon(icon_size, color, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, (wchar_t)win32::segoe_mdl2_assets_icons::stop)));
-      ImageList_ReplaceIcon(image_list, -1, stop_icon);
-
-      auto loop_icon = win32::create_icon(icon_size, color, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, (wchar_t)win32::segoe_mdl2_assets_icons::repeat_all)));
-      ImageList_ReplaceIcon(image_list, -1, loop_icon);
-
-      return image_list;
+      std::vector icons{ win32::segoe_fluent_icons::play, win32::segoe_fluent_icons::pause, win32::segoe_fluent_icons::stop, win32::segoe_fluent_icons::repeat_all };
+      image_list = win32::create_icon_list(icons, icon_size);
     }
 
     auto wm_size(std::size_t type, SIZE client_size)
@@ -140,9 +106,9 @@ namespace siege::views
       }
 
 
-      auto updated_image_list = recreate_image_list(SIZE{ .cx = icon_height, .cy = icon_height });
+      recreate_image_list(SIZE{ .cx = icon_height, .cy = icon_height });
 
-      SendMessageW(player_buttons, TB_SETIMAGELIST, 0, (LPARAM)updated_image_list);
+      SendMessageW(player_buttons, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
 
       player_buttons.SetWindowPos(SIZE{ .cx = left_size.cx, .cy = height });
       player_buttons.SetWindowPos(POINT{});
@@ -183,9 +149,9 @@ namespace siege::views
       if (message.setting == L"ImmersiveColorSet")
       {
         win32::apply_theme(selection);
-        auto updated_image_list = recreate_image_list(std::nullopt);
+        recreate_image_list(std::nullopt);
         win32::apply_theme(player_buttons);
-        SendMessageW(player_buttons, TB_SETIMAGELIST, 0, (LPARAM)updated_image_list);
+        SendMessageW(player_buttons, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
         player_buttons.AutoSize();
         win32::apply_theme(*this);
 

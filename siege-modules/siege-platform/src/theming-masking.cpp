@@ -339,4 +339,37 @@ namespace win32
     return icon;
   }
 
+  win32::image_list create_icon_list(std::span<segoe_fluent_icons> icons, SIZE icon_size, std::optional<::RGBQUAD> optional_color)
+  {
+    auto font_icon = win32::load_font(LOGFONTW{
+      .lfHeight = -1024,
+      .lfClipPrecision = CLIP_DEFAULT_PRECIS,
+      .lfQuality = NONANTIALIASED_QUALITY,
+      .lfFaceName = L"Segoe MDL2 Assets" });
+
+    win32::image_list image_list(ImageList_Create(icon_size.cx, icon_size.cy, ILC_COLOR32, icons.size(), icons.size()));
+
+    RGBQUAD color{};
+
+    if (optional_color)
+    {
+      color = *optional_color;
+    }
+    else
+    {
+      auto theme_color = win32::get_color_for_window(nullptr, win32::properties::button::text_color);
+      color = { .rgbBlue = GetBValue(theme_color),
+        .rgbGreen = GetGValue(theme_color),
+        .rgbRed = GetRValue(theme_color) };
+    }
+
+    for (auto icon : icons)
+    {
+      auto play_icon = win32::create_icon(icon_size, color, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, (wchar_t)icon)));
+      ImageList_ReplaceIcon(image_list.get(), -1, play_icon);
+    }
+
+    return image_list;
+  }
+
 }// namespace win32

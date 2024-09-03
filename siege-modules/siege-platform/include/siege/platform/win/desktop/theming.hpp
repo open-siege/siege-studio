@@ -17,37 +17,13 @@ namespace win32
   gdi::font_ref load_font(::LOGFONTW font_info);
   gdi::brush_ref get_solid_brush(COLORREF color);
 
-
   bool is_dark_theme();
   void set_is_dark_theme(bool);
-
   COLORREF get_color_for_window(win32::window_ref, std::wstring_view);
   std::optional<COLORREF> set_color_for_window(win32::window_ref, std::wstring_view, std::optional<COLORREF> color);
-
   std::optional<SIZE> get_font_size_for_string(gdi::font_ref, std::wstring_view);
 
-  struct theme_module : private win32::module
-  {
-    theme_module() : win32::module("uxtheme.dll", true)
-    {
-      set_window_theme = this->GetProcAddress<decltype(set_window_theme)>("SetWindowTheme");
-
-      if (set_window_theme == nullptr)
-      {
-        throw std::exception("Could not load theme window functions");
-      }
-    }
-
-    HRESULT SetWindowTheme(HWND window, const wchar_t* app_name, const wchar_t* id)
-    {
-      return set_window_theme(window, app_name, id);
-    }
-
-  private:
-    std::add_pointer_t<decltype(::SetWindowTheme)> set_window_theme;
-  };
-
-  enum struct segoe_mdl2_assets_icons : wchar_t
+  enum struct segoe_fluent_icons : wchar_t
   {
     global_navigation_button = 0xe700,
     chevron_up = 0xE70D,
@@ -84,6 +60,29 @@ namespace win32
     pan_mode = 0xece9,
     image_export = 0xee71,
     picture = 0xe8b9
+  };
+
+  win32::image_list create_icon_list(std::span<segoe_fluent_icons> icons, SIZE icon_size, std::optional<::RGBQUAD> color = std::nullopt);
+
+  struct theme_module : private win32::module
+  {
+    theme_module() : win32::module("uxtheme.dll", true)
+    {
+      set_window_theme = this->GetProcAddress<decltype(set_window_theme)>("SetWindowTheme");
+
+      if (set_window_theme == nullptr)
+      {
+        throw std::exception("Could not load theme window functions");
+      }
+    }
+
+    HRESULT SetWindowTheme(HWND window, const wchar_t* app_name, const wchar_t* id)
+    {
+      return set_window_theme(window, app_name, id);
+    }
+
+  private:
+    std::add_pointer_t<decltype(::SetWindowTheme)> set_window_theme;
   };
 
   struct properties

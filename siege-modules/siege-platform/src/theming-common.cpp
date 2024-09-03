@@ -693,7 +693,7 @@ namespace win32
           }
 
           SelectFont(custom_draw.hdc, ui_icons);
-          std::wstring slider_thumb(1, (wchar_t)segoe_mdl2_assets_icons::slider_thumb);
+          std::wstring slider_thumb(1, (wchar_t)segoe_fluent_icons::slider_thumb);
           DrawTextExW(custom_draw.hdc, slider_thumb.data(), -1, &custom_draw.rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER, nullptr);
 
           return CDRF_SKIPDEFAULT;

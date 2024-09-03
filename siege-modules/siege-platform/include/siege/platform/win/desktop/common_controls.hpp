@@ -7,6 +7,38 @@
 
 namespace win32
 {
+  struct image_list_deleter
+  {
+    void operator()(HIMAGELIST list)
+    {
+      assert(::ImageList_Destroy(list) == TRUE);
+    }
+  };
+
+  struct image_list : win32::auto_handle<HIMAGELIST, image_list_deleter>
+  {
+    using base = win32::auto_handle<HIMAGELIST, image_list_deleter>;
+    using base::base;
+
+    std::optional<SIZE> GetIconSize()
+    {
+      if (!get())
+      {
+        return std::nullopt;
+      }
+
+      int width;
+      int height;
+
+      if (ImageList_GetIconSize(get(), &width, &height))
+      {
+        return SIZE{ .cx = width, .cy = height };
+      }
+
+      return std::nullopt;
+    }
+  };
+
   struct control : window
   {
     using window::window;
