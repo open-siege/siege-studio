@@ -330,6 +330,33 @@ namespace siege::views
       }
     }
 
+    void launch_shell_process(const std::filesystem::path& path)
+    {
+
+      auto desktop = ::GetDesktopWindow();
+
+      auto filename = path.filename();
+
+      auto shell_window = ::FindWindowExW(desktop, nullptr, nullptr, filename.c_str());
+
+      if (shell_window)
+      {
+        ::ShowWindow(shell_window, SW_SHOW);
+      }
+      else if (!shell_window)
+      {
+        SHELLEXECUTEINFOW info{
+          .cbSize = sizeof(SHELLEXECUTEINFOW),
+          .fMask = SEE_MASK_DEFAULT | SEE_MASK_NOCLOSEPROCESS,
+          .lpVerb = L"explore",
+          .lpFile = path.c_str(),
+          .nShow = SW_NORMAL,
+        };
+
+        ::ShellExecuteExW(&info);
+      }
+    }
+
     std::optional<std::filesystem::path> get_destination_directory()
     {
       auto dialog = win32::com::CreateFileOpenDialog();
@@ -391,6 +418,7 @@ namespace siege::views
             }
           }
 
+          launch_shell_process(*path);
           has_saved = true;
         },
         items);
@@ -399,15 +427,14 @@ namespace siege::views
     void extract_selected_files()
     {
       alloc_console();
-      
-      
+
       auto path = get_destination_directory();
 
       if (!path)
       {
         return;
       }
-      
+
       auto items = controller.get_contents();
 
       std::vector<siege::platform::resource_reader::content_info> files_to_extract;
@@ -450,6 +477,8 @@ namespace siege::views
 
         extracted_file.write(raw_data.data(), raw_data.size());
       }
+
+      launch_shell_process(*path);
     }
 
     [[maybe_unused]] bool open_new_tab_for_item(LVITEMW item_info, win32::window_ref root)
