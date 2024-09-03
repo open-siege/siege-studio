@@ -47,6 +47,44 @@ namespace win32
     std::add_pointer_t<decltype(::SetWindowTheme)> set_window_theme;
   };
 
+  enum struct segoe_mdl2_assets_icons : wchar_t
+  {
+    global_navigation_button = 0xe700,
+    chevron_up = 0xE70D,
+    chevron_down = 0xE70E,
+    edit = 0xE70F,
+    add = 0xE710,
+    cancel = 0xE711,
+    more = 0xE712,
+    setting = 0xE713,
+    filter = 0xE71C,
+    zoom = 0xE71E,
+    zoom_out = 0xE71F,
+    zoom_in = 0xE8A3,
+    open_in_new_window = 0xE8A7,
+    open_file = 0xE8E5,
+    folder_open = 0xE838,
+    rotate = 0xE7AD,
+    stop = 0xE71A,
+    play = 0xE768,
+    pause = 0xE769,
+    repeat_all = 0xE8EE,
+    grid_view = 0xF0E2,
+    group_list = 0xF168,
+    toggle_filled = 0xEC11,
+    toggle_border = 0xEC12,
+    slider_thumb = 0xEC13,
+    toggle_thumb = 0xEC14,
+    file_explorer = 0xEC50,
+    scroll_up_down = 0xEC8F,
+    radio_btn_off = 0xecca,
+    radio_btn_on = 0xeccb,
+    radio_bullet_2 = 0xECCC,
+    radio_bullet = 0xE915,
+    pan_mode = 0xece9,
+    image_export = 0xee71,
+    picture = 0xe8b9
+  };
 
   struct properties
   {

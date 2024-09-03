@@ -96,16 +96,16 @@ namespace siege::views
         .rgbRed = GetRValue(theme_color) };
 
       // TODO make the image list creation easier (provide a list of icons then generate)
-      auto play_icon = win32::create_icon(icon_size, color, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, 0xE768)));
+      auto play_icon = win32::create_icon(icon_size, color, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, (wchar_t)win32::segoe_mdl2_assets_icons::play)));
       ImageList_ReplaceIcon(image_list, -1, play_icon);
 
-      auto pause_icon = win32::create_icon(icon_size, color, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, 0xE769)));
+      auto pause_icon = win32::create_icon(icon_size, color, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, (wchar_t)win32::segoe_mdl2_assets_icons::pause)));
       ImageList_ReplaceIcon(image_list, -1, pause_icon);
 
-      auto stop_icon = win32::create_icon(icon_size, color, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, 0xE71A)));
+      auto stop_icon = win32::create_icon(icon_size, color, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, (wchar_t)win32::segoe_mdl2_assets_icons::stop)));
       ImageList_ReplaceIcon(image_list, -1, stop_icon);
 
-      auto loop_icon = win32::create_icon(icon_size, color, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, 0xE8EE)));
+      auto loop_icon = win32::create_icon(icon_size, color, win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, (wchar_t)win32::segoe_mdl2_assets_icons::repeat_all)));
       ImageList_ReplaceIcon(image_list, -1, loop_icon);
 
       return image_list;
