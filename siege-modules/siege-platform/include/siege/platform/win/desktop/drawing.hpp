@@ -120,6 +120,20 @@ namespace win32::gdi
   {
     using base = win32::auto_handle<HDC, hdc_deleter>;
     
+    memory_drawing_context(bool auto_restore = true) : base(nullptr, hdc_deleter(auto_restore ? 1 : 0))
+    {
+      auto screen_dc = ::GetDC(nullptr);
+      auto dc = ::CreateCompatibleDC(screen_dc);
+
+      ReleaseDC(nullptr, screen_dc);
+      this->reset(dc);
+
+      if (auto_restore)
+      {
+        this->get_deleter().state_index = ::SaveDC(*this);
+      }
+    }
+
     memory_drawing_context(drawing_context_ref other, 
             bool auto_restore = true) : base(::CreateCompatibleDC(other), hdc_deleter(auto_restore ? 1 : 0))
     {

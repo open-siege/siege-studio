@@ -36,7 +36,7 @@ namespace siege::views
     {
       auto control_factory = win32::window_factory(ref());
 
-      player_buttons = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_LIST | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS });
+      player_buttons = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS });
 
       player_buttons.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_NOPREFIX | BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Play" });
 
@@ -118,19 +118,35 @@ namespace siege::views
         return 0;
       }
 
-      auto left_size = SIZE{ .cx = (client_size.cx / 3) * 2, .cy = client_size.cy };
-      auto right_size = SIZE{ .cx = client_size.cx - left_size.cx, .cy = client_size.cy };
+      auto right_size = SIZE{ .cx = client_size.cx / 3, .cy = client_size.cy };
+      auto left_size = SIZE{ .cx = client_size.cx - right_size.cx, .cy = client_size.cy };
 
       auto height = left_size.cy / 12;
+      auto icon_height = height;
 
-      auto updated_image_list = recreate_image_list(SIZE{ .cx = height, .cy = height });
+
+      auto font = SendMessage(player_buttons, WM_GETFONT, 0, 0);
+
+      if (font)
+      {
+        win32::gdi::memory_drawing_context context;
+        SelectFont(context, font);
+        SIZE font_size{};
+
+        if (GetTextExtentPoint32W(context, L"Play", 4, &font_size))
+        {
+          icon_height -= font_size.cy;
+        }
+      }
+
+
+      auto updated_image_list = recreate_image_list(SIZE{ .cx = icon_height, .cy = icon_height });
 
       SendMessageW(player_buttons, TB_SETIMAGELIST, 0, (LPARAM)updated_image_list);
 
-
       player_buttons.SetWindowPos(SIZE{ .cx = left_size.cx, .cy = height });
       player_buttons.SetWindowPos(POINT{});
-      player_buttons.AutoSize();
+      player_buttons.SetButtonSize(SIZE{ .cx = left_size.cx / player_buttons.ButtonCount(), .cy = height });
 
       selection.SetWindowPos(right_size);
       selection.SetWindowPos(POINT{ .x = left_size.cx });
