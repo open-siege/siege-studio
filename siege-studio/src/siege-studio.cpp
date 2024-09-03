@@ -42,7 +42,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
   win32::window_meta_class<siege::views::siege_main_window> info{};
   info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
   info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-  info.hIcon = LoadIconW(hInstance, L"AppIcon");
+  info.hIcon = (HICON)::LoadImageW(hInstance, L"AppIcon", IMAGE_ICON, 0, 0, 0);
   this_module.RegisterClassExW(info);
 
   win32::window_meta_class<siege::views::preferences_view> pref_info{};

@@ -10,7 +10,9 @@
 #include <siege/platform/content_module.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
 #include <siege/platform/win/desktop/theming.hpp>
+#include <siege/platform/win/desktop/dialog.hpp>
 #include "views/preferences_view.hpp"
+#include "views/about_view.hpp"
 #include <map>
 #include <spanstream>
 
@@ -61,6 +63,7 @@ namespace siege::views
     std::uint32_t open_new_tab_id = RegisterWindowMessageW(L"COMMAND_OPEN_NEW_TAB");
     std::uint32_t open_workspace_id = RegisterWindowMessageW(L"COMMAND_OPEN_WORKSPACE");
     std::uint32_t edit_theme_id = RegisterWindowMessageW(L"COMMAND_EDIT_THEME");
+    std::uint32_t about_id = RegisterWindowMessageW(L"COMMAND_ABOUT");
 
     bool is_resizing = false;
     win32::auto_handle<HCURSOR, cursor_deleter> resize_cursor;
@@ -275,7 +278,7 @@ namespace siege::views
       popup_menus[0].AppendMenuW(MF_SEPARATOR | MF_OWNERDRAW, id++);
       popup_menus[0].AppendMenuW(MF_OWNERDRAW, RegisterWindowMessageW(L"COMMAND_EXIT"), L"Quit");
       popup_menus[1].AppendMenuW(MF_OWNERDRAW, edit_theme_id, L"Preferences");
-      popup_menus[2].AppendMenuW(MF_OWNERDRAW, id++, L"About");
+      popup_menus[2].AppendMenuW(MF_OWNERDRAW, about_id, L"About");
 
       SetMenu(*this, main_menu.get());
 
@@ -887,7 +890,7 @@ namespace siege::views
           if (SHParseDisplayName(current_path.c_str(), nullptr, &path_id, SFGAO_FOLDER, nullptr) == S_OK)
           {
             win32::com::com_ptr<IShellItem> shell_item;
-            
+
             if (SHCreateItemFromIDList(path_id, IID_IShellItem, shell_item.put_void()) == S_OK)
             {
               open_dialog->SetFolder(shell_item.get());
@@ -961,6 +964,14 @@ namespace siege::views
             }
           }
         }
+      }
+
+      if (identifier == about_id)
+      {
+
+        win32::DialogBoxIndirectParamW<about_view>(::GetModuleHandleW(nullptr), 
+            win32::default_dialog{ { .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 200, .cy = 200 } },
+          ref());
       }
 
       return std::nullopt;

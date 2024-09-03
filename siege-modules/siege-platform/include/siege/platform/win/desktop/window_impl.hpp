@@ -51,6 +51,7 @@ namespace win32
   std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
   {
     DO_DISPATCH_NOPARAM(WM_CREATE, wm_create);
+    DO_DISPATCH_NOPARAM(WM_CLOSE, wm_close);
     DO_DISPATCH_LPARAM(WM_CREATE, CREATESTRUCTW, wm_create);
     DO_DISPATCH_NOPARAM(WM_DESTROY, wm_destroy);
     DO_DISPATCH(get_object_message, wm_get_object);
@@ -78,8 +79,6 @@ namespace win32
         return self->wm_set_focus();
       }
     }
-
-    
 
     if constexpr (requires(TWindow t) { t.wm_size(std::size_t{}, SIZE{}); })
     {
