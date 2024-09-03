@@ -880,6 +880,23 @@ namespace siege::views
         {
           auto open_dialog = *dialog;
           open_dialog->SetOptions(FOS_PICKFOLDERS);
+
+          auto current_path = std::filesystem::current_path();
+
+          ITEMIDLIST* path_id;
+          if (SHParseDisplayName(current_path.c_str(), nullptr, &path_id, SFGAO_FOLDER, nullptr) == S_OK)
+          {
+            win32::com::com_ptr<IShellItem> shell_item;
+            
+            if (SHCreateItemFromIDList(path_id, IID_IShellItem, shell_item.put_void()) == S_OK)
+            {
+              open_dialog->SetFolder(shell_item.get());
+            }
+
+            ::CoTaskMemFree(path_id);
+          }
+
+
           auto result = open_dialog->Show(nullptr);
 
           if (result == S_OK)
