@@ -993,11 +993,41 @@ namespace win32
       return SendMessageW(*this, TB_BUTTONCOUNT, 0, 0);
     }
 
+    [[nodiscard]] inline SIZE GetPadding()
+    {
+      auto result = SendMessageW(*this, TB_GETPADDING, 0, 0);
+
+      return SIZE{ .cx = LOWORD(result), .cy = HIWORD(result) };
+    }
+
     [[nodiscard]] inline SIZE GetButtonSize()
     {
       auto result = SendMessageW(*this, TB_GETBUTTONSIZE, 0, 0);
 
       return SIZE{ .cx = LOWORD(result), .cy = HIWORD(result) };
+    }
+
+    [[nodiscard]] inline SIZE GetIdealIconSize(std::optional<SIZE> size_hint = std::nullopt)
+    {
+      auto button_size = size_hint ? *size_hint : GetButtonSize();
+      
+      if (this->GetWindowStyle() & TBSTYLE_FLAT)
+      {
+        auto font = SendMessage(*this, WM_GETFONT, 0, 0);
+
+        if (font)
+        {
+          win32::gdi::memory_drawing_context context;
+          SelectFont(context, font);
+          ::SIZE text_size{};
+          if (::GetTextExtentPoint32W(context, L"MWQqPpYyZz", 11, &text_size))
+          {
+            button_size.cy -= text_size.cy;
+          }
+        }
+      }
+
+      return SIZE{ .cx = button_size.cy, .cy = button_size.cy };
     }
 
     [[nodiscard]] inline std::optional<RECT> GetItemRect(wparam_t index)

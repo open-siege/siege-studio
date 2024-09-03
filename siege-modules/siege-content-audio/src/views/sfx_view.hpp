@@ -38,13 +38,13 @@ namespace siege::views
 
       player_buttons = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS });
 
-      player_buttons.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_NOPREFIX | BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Play" });
+      player_buttons.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Play" });
 
-      player_buttons.InsertButton(-1, { .iBitmap = 1, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_NOPREFIX | BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Pause" });
+      player_buttons.InsertButton(-1, { .iBitmap = 1, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Pause" });
 
-      player_buttons.InsertButton(-1, { .iBitmap = 2, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_NOPREFIX | BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Stop" });
+      player_buttons.InsertButton(-1, { .iBitmap = 2, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Stop" });
 
-      player_buttons.InsertButton(-1, { .iBitmap = 3, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_NOPREFIX | BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Loop" });
+      player_buttons.InsertButton(-1, { .iBitmap = 3, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Loop" });
       player_buttons.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS);
 
       selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
@@ -57,14 +57,15 @@ namespace siege::views
 
     void recreate_image_list(std::optional<SIZE> possible_size)
     {
+
+
       SIZE icon_size = possible_size.or_else([this] {
-                         return image_list.GetIconSize();
-                            })
+                                      return image_list.GetIconSize();
+                                    })
                          .or_else([] {
                            return std::make_optional(SIZE{
                              .cx = ::GetSystemMetrics(SM_CXSIZE),
-                             .cy = ::GetSystemMetrics(SM_CYSIZE)
-                           });
+                             .cy = ::GetSystemMetrics(SM_CYSIZE) });
                          })
                          .value();
 
@@ -88,31 +89,15 @@ namespace siege::views
       auto left_size = SIZE{ .cx = client_size.cx - right_size.cx, .cy = client_size.cy };
 
       auto height = left_size.cy / 12;
-      auto icon_height = height;
 
-
-      auto font = SendMessage(player_buttons, WM_GETFONT, 0, 0);
-
-      if (font)
-      {
-        win32::gdi::memory_drawing_context context;
-        SelectFont(context, font);
-        SIZE font_size{};
-
-        if (GetTextExtentPoint32W(context, L"Play", 4, &font_size))
-        {
-          icon_height -= font_size.cy;
-        }
-      }
-
-
-      recreate_image_list(SIZE{ .cx = icon_height, .cy = icon_height });
+      auto button_size = SIZE{ .cx = left_size.cx / player_buttons.ButtonCount(), .cy = height };
+      recreate_image_list(player_buttons.GetIdealIconSize(button_size));
 
       SendMessageW(player_buttons, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
 
       player_buttons.SetWindowPos(SIZE{ .cx = left_size.cx, .cy = height });
       player_buttons.SetWindowPos(POINT{});
-      player_buttons.SetButtonSize(SIZE{ .cx = left_size.cx / player_buttons.ButtonCount(), .cy = height });
+      player_buttons.SetButtonSize(button_size);
 
       selection.SetWindowPos(right_size);
       selection.SetWindowPos(POINT{ .x = left_size.cx });
@@ -152,7 +137,6 @@ namespace siege::views
         recreate_image_list(std::nullopt);
         win32::apply_theme(player_buttons);
         SendMessageW(player_buttons, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
-        player_buttons.AutoSize();
         win32::apply_theme(*this);
 
         return 0;
