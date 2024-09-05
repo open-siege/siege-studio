@@ -23,8 +23,8 @@ namespace siege::views
     }
   };
 
-  struct dts_view final : win32::window_ref, 
-      win32::static_control::notifications
+  struct dts_view final : win32::window_ref
+    , win32::static_control::notifications
   {
     dts_controller controller;
 
@@ -35,8 +35,8 @@ namespace siege::views
 
     std::map<std::optional<std::string>, std::map<std::string, bool>> visible_nodes;
     std::map<std::string, std::map<std::string, bool>> visible_objects;
-
-    std::map<win32::gdi::drawing_context_ref, win32::auto_handle<HGLRC, opengl_deleter>> contexts;
+    win32::gdi::drawing_context gdi_context;
+    win32::auto_handle<HGLRC, opengl_deleter> opengl_context;
 
     glm::vec3 translation = { 0, 0, -20 };
     content::vector3f rotation = { 115, 180, -35 };
@@ -58,6 +58,27 @@ namespace siege::views
       selection.InsertString(-1, L"Palette 1");
       selection.InsertString(-1, L"Palette 2");
       selection.InsertString(-1, L"Palette 3");
+
+      gdi_context = win32::gdi::drawing_context(render_view.ref());
+
+      assert(gdi_context.get() != nullptr);
+      PIXELFORMATDESCRIPTOR pfd = {
+        .nSize = sizeof(PIXELFORMATDESCRIPTOR),
+        .nVersion = 1,
+        .dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL,
+        .iPixelType = PFD_TYPE_RGBA,
+        .cColorBits = 32,
+        .cAlphaBits = 8,
+        .cDepthBits = 32
+      };
+      int iPixelFormat;
+
+      iPixelFormat = ChoosePixelFormat(gdi_context, &pfd);
+
+      assert(iPixelFormat != 0);
+      assert(SetPixelFormat(gdi_context, iPixelFormat, &pfd) == TRUE);
+      opengl_context.reset(::wglCreateContext(gdi_context));
+      assert(opengl_context.get() != nullptr);
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
@@ -101,40 +122,13 @@ namespace siege::views
       return FALSE;
     }
 
-    auto create_or_get_gl_context(win32::gdi::drawing_context_ref gdi_context)
+    auto get_gl_context()
     {
-      auto existing_gl_context = contexts.find(gdi_context);
-
-      if (existing_gl_context == contexts.end())
-      {
-        PIXELFORMATDESCRIPTOR pfd = {
-          .nSize = sizeof(PIXELFORMATDESCRIPTOR),
-          .nVersion = 1,
-          .dwFlags = PFD_DRAW_TO_WINDOW |
-                     PFD_SUPPORT_OPENGL,
-          .iPixelType = PFD_TYPE_RGBA,
-          .cColorBits = 32,
-          .cAlphaBits = 8,
-          .cDepthBits = 32
-        };
-        int iPixelFormat;
-
-        iPixelFormat = ChoosePixelFormat(gdi_context, &pfd);
-
-        assert(iPixelFormat != 0);
-        assert(SetPixelFormat(gdi_context, iPixelFormat, &pfd) == TRUE);
-        auto temp = std::make_pair(win32::gdi::drawing_context_ref(gdi_context.get()), win32::auto_handle<HGLRC, opengl_deleter>(::wglCreateContext(gdi_context)));
-
-        assert(temp.first != nullptr);
-        assert(temp.second != nullptr);
-        existing_gl_context = contexts.emplace(std::move(temp)).first;
-      }
-
-      if (::wglMakeCurrent(existing_gl_context->first, existing_gl_context->second) == FALSE)
+      if (::wglMakeCurrent(gdi_context, opengl_context) == FALSE)
       {
       }
 
-      return existing_gl_context;
+      return opengl_context.get();
     }
 
     auto wm_size(std::size_t type, SIZE client_size)
@@ -146,7 +140,7 @@ namespace siege::views
       render_view.SetWindowPos(POINT{});
 
       win32::gdi::drawing_context gdi_context(render_view.ref());
-      auto context = create_or_get_gl_context(win32::gdi::drawing_context_ref(gdi_context.get()));
+      auto context = get_gl_context();
       glViewport(0, 0, left_size.cx, left_size.cy);
       glClearDepth(1.f);
 
@@ -166,11 +160,11 @@ namespace siege::views
       return 0;
     }
 
-    std::optional<HBRUSH> wm_control_color(win32::static_control, win32::gdi::drawing_context_ref context) override
+    std::optional<HBRUSH> wm_control_color(win32::static_control, win32::gdi::drawing_context_ref) override
     {
-      auto gl_context = create_or_get_gl_context(std::move(context));
+      auto gl_context = get_gl_context();
       glClearColor(0.3f, 0.3f, 0.3f, 0.f);
-    
+
       return GetStockBrush(DC_BRUSH);
     }
 
@@ -178,8 +172,8 @@ namespace siege::views
     {
       if (item.hwndItem == render_view && item.itemAction == ODA_DRAWENTIRE && renderer)
       {
-        auto existing_gl_context = create_or_get_gl_context(win32::gdi::drawing_context_ref(item.hDC));
-        
+        auto existing_gl_context = get_gl_context();
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
