@@ -25,6 +25,8 @@ namespace siege::views
     win32::list_view resource_table;
     win32::list_view string_table;
     win32::list_view launch_table;
+    win32::tool_bar exe_actions;
+    win32::image_list image_list;
 
     std::map<std::wstring_view, std::wstring_view> group_names = {
       { L"#1"sv, L"Hardware Dependent Cursor"sv },
@@ -57,6 +59,12 @@ namespace siege::views
 
       options.InsertString(-1, L"Resources");
       options.SetCurrentSelection(0);
+
+      exe_actions = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
+
+      exe_actions.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Launch" });
+      exe_actions.InsertButton(-1, { .iBitmap = 1, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" });
+      exe_actions.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
 
       resource_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
 
@@ -105,20 +113,29 @@ namespace siege::views
 
     auto wm_size(std::size_t type, SIZE client_size)
     {
-      auto one_quarter = SIZE{ .cx = client_size.cx / 4, .cy = client_size.cy };
-      auto three_quarters = SIZE{ .cx = client_size.cx - one_quarter.cx, .cy = client_size.cy };
+      auto top_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy / 12 };
+
+      auto one_quarter = SIZE{ .cx = client_size.cx / 4, .cy = client_size.cy - top_size.cy };
+      auto three_quarters = SIZE{ .cx = client_size.cx - one_quarter.cx, .cy = client_size.cy - top_size.cy };
+
+      recreate_image_list(exe_actions.GetIdealIconSize(SIZE{ .cx = client_size.cx / exe_actions.ButtonCount(), .cy = top_size.cy }));
+      SendMessageW(exe_actions, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
+
+      exe_actions.SetWindowPos(POINT{}, SWP_DEFERERASE | SWP_NOREDRAW);
+      exe_actions.SetWindowPos(top_size, SWP_DEFERERASE);
+      exe_actions.SetButtonSize(SIZE{ .cx = top_size.cx / exe_actions.ButtonCount(), .cy = top_size.cy });
 
       resource_table.SetWindowPos(three_quarters);
-      resource_table.SetWindowPos(POINT{});
+      resource_table.SetWindowPos(POINT{ .y = top_size.cy });
 
       string_table.SetWindowPos(three_quarters);
-      string_table.SetWindowPos(POINT{});
+      string_table.SetWindowPos(POINT{ .y = top_size.cy });
 
       launch_table.SetWindowPos(three_quarters);
-      launch_table.SetWindowPos(POINT{});
+      launch_table.SetWindowPos(POINT{ .y = top_size.cy });
 
       options.SetWindowPos(one_quarter);
-      options.SetWindowPos(POINT{ .x = three_quarters.cx });
+      options.SetWindowPos(POINT{ .x = three_quarters.cx, .y = top_size.cy });
 
       std::array<std::reference_wrapper<win32::list_view>, 3> tables = { { std::ref(resource_table), std::ref(string_table), std::ref(launch_table) } };
 
@@ -141,6 +158,33 @@ namespace siege::views
 
       return 0;
     }
+
+    void recreate_image_list(std::optional<SIZE> possible_size)
+    {
+
+      SIZE icon_size = possible_size.or_else([this] {
+                                      return image_list.GetIconSize();
+                                    })
+                         .or_else([] {
+                           return std::make_optional(SIZE{
+                             .cx = ::GetSystemMetrics(SM_CXSIZE),
+                             .cy = ::GetSystemMetrics(SM_CYSIZE) });
+                         })
+                         .value();
+
+      if (image_list)
+      {
+        image_list.reset();
+      }
+
+      std::vector icons{
+        win32::segoe_fluent_icons::new_window,
+        win32::segoe_fluent_icons::folder_open
+      };
+
+      image_list = win32::create_icon_list(icons, icon_size);
+    }
+
 
     std::optional<win32::lresult_t> wm_command(win32::list_box hwndFrom, int code) override
     {
@@ -212,7 +256,7 @@ namespace siege::views
               auto data = controller.get_resource_menu_items(value.first, child);
 
               std::wstring final_result;
-              
+
               if (data && !data->menu_items.empty())
               {
                 final_result.reserve(data->menu_items.size() * data->menu_items.size());
@@ -306,7 +350,12 @@ namespace siege::views
         win32::apply_theme(launch_table);
         win32::apply_theme(string_table);
         win32::apply_theme(options);
+        win32::apply_theme(exe_actions);
         win32::apply_theme(*this);
+
+        recreate_image_list(std::nullopt);
+        SendMessageW(exe_actions, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
+
 
         return 0;
       }

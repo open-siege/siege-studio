@@ -38,6 +38,7 @@ namespace win32
     zoom_out = 0xE71F,
     zoom_in = 0xE8A3,
     open_in_new_window = 0xE8A7,
+    new_window = 0xE78B,
     open_file = 0xE8E5,
     folder_open = 0xE838,
     rotate = 0xE7AD,
