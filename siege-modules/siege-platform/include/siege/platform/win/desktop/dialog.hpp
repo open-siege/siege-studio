@@ -45,7 +45,7 @@ namespace win32
 
         ::SetWindowLongPtrW(self, DWLP_USER, (LONG_PTR)window);
 
-        return TRUE;
+        return FALSE;
       }
       else
       {

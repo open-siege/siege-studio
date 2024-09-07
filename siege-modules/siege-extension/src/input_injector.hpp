@@ -142,35 +142,6 @@ namespace siege
       return 0;
     }
 
-    void post_input(::GUITHREADINFO gui_thread)
-    {
-      for (auto& input : simulated_inputs)
-      {
-        if (input.type == INPUT_KEYBOARD)
-        {
-          auto vk = MapVirtualKeyW(input.ki.wScan, MAPVK_VSC_TO_VK);
-          LPARAM lParam = 0;
-          lParam |= (input.ki.dwFlags & KEYEVENTF_KEYUP) ? 1 << 31 : 0;// Transition state
-          lParam |= (input.ki.dwFlags & KEYEVENTF_KEYUP) ? 1 << 30 : 0;// Previous key state
-          lParam |= input.ki.wScan << 16;// Scan code
-
-          WORD keyFlags = HIWORD(lParam);
-
-          WORD scanCode = LOBYTE(keyFlags);
-
-          if (input.ki.dwFlags & KEYEVENTF_KEYUP)
-          {
-            ::PostMessageW(gui_thread.hwndFocus, WM_KEYUP, vk, lParam);
-          }
-          else
-          {
-
-            ::PostMessageW(gui_thread.hwndFocus, WM_KEYDOWN, vk, lParam);
-          }
-        }
-      }
-
-    }
 
     auto calculate_deadzone(std::pair<short, short> x_y_pair, int deadzone)
     {
@@ -292,9 +263,11 @@ namespace siege
         {
           auto& button_a = simulated_inputs.emplace_back();
           button_a.type = INPUT_KEYBOARD;
-
           auto& button_b = simulated_inputs.emplace_back();
           button_b.type = INPUT_KEYBOARD;
+
+          button_a.ki.dwExtraInfo = 266;
+          button_b.ki.dwExtraInfo = 266;
 
           if (newLx == 0)
           {
@@ -327,6 +300,9 @@ namespace siege
 
           auto& button_b = simulated_inputs.emplace_back();
           button_b.type = INPUT_KEYBOARD;
+
+          button_a.ki.dwExtraInfo = 266;
+          button_b.ki.dwExtraInfo = 266;
 
           if (newLy == 0)
           {
@@ -366,6 +342,8 @@ namespace siege
           {
             shift_key.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
           }
+
+          shift_key.ki.dwExtraInfo = 266;
         }
 
         if (temp.Gamepad.wButtons & XINPUT_GAMEPAD_B)
@@ -374,6 +352,7 @@ namespace siege
           crouch_button.type = INPUT_KEYBOARD;
           crouch_button.ki.dwFlags = KEYEVENTF_SCANCODE;
           crouch_button.ki.wScan = 0x001D;// left control
+          crouch_button.ki.dwExtraInfo = 266;
         }
         else if (state.second.Gamepad.wButtons & XINPUT_GAMEPAD_B)
         {
@@ -381,6 +360,7 @@ namespace siege
           crouch_button.type = INPUT_KEYBOARD;
           crouch_button.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
           crouch_button.ki.wScan = 0x001D;// left control
+          crouch_button.ki.dwExtraInfo = 266;
         }
 
 
@@ -390,6 +370,7 @@ namespace siege
           jump_button.type = INPUT_KEYBOARD;
           jump_button.ki.wScan = 0x0039;// space
           jump_button.ki.dwFlags = KEYEVENTF_SCANCODE;
+          jump_button.ki.dwExtraInfo = 266;
         }
         else if (state.second.Gamepad.wButtons & XINPUT_GAMEPAD_A)
         {
@@ -397,6 +378,7 @@ namespace siege
           jump_button.type = INPUT_KEYBOARD;
           jump_button.ki.wScan = 0x0039;// space
           jump_button.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
+          jump_button.ki.dwExtraInfo = 266;
         }
 
         auto [newRx, newRy] = calculate_deadzone(std::make_pair(temp.Gamepad.sThumbRX, temp.Gamepad.sThumbRY), XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);

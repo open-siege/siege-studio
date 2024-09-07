@@ -35,7 +35,7 @@ if (WIN32)
 
 
         set(EXT_TARGETS)
-        list(APPEND EXT_TARGETS ${ID_TECH_TARGETS} ${DARKSTAR_TARGETS})
+        list(APPEND EXT_TARGETS ${ID_TECH_TARGETS} ${DARKSTAR_TARGETS} siege-extension-input-filter-low-level-hook siege-extension-input-filter-raw-input)
 
         foreach(EXT_TARGET IN ITEMS ${EXT_TARGETS})
             add_dependencies(siege-studio-dependencies ${EXT_TARGET})
