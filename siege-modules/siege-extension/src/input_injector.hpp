@@ -211,6 +211,13 @@ namespace siege
 #endif// ! DEBUG
 
 
+      DWORD exit_code = 0;
+      if (::GetExitCodeProcess(child_process.hProcess, &exit_code) && exit_code != STILL_ACTIVE)
+      {
+        ::DestroyWindow(*this);
+        return 0;
+      }
+
       RAWINPUTHEADER header{};
 
       UINT size = sizeof(header);
@@ -493,6 +500,13 @@ namespace siege
 
     auto wm_input_device_change(win32::input_device_change_message message)
     {
+      DWORD exit_code = 0;
+      if (::GetExitCodeProcess(child_process.hProcess, &exit_code) && exit_code != STILL_ACTIVE)
+      {
+        ::DestroyWindow(*this);
+        return 0;
+      }
+
       if (message.code == GIDC_ARRIVAL)
       {
         registered_controllers.insert(message.device_handle);
@@ -540,7 +554,7 @@ namespace siege
           controller_state.erase(key);
         }
       }
-      return std::nullopt;
+      return 0;
     }
   };
 
