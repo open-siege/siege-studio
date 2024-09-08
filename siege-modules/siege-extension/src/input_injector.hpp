@@ -16,38 +16,25 @@
 
 namespace siege
 {
+  struct input_injector_args
+  {
+    std::filesystem::path exe_path;
+    std::filesystem::path extension_path;
+    std::vector<std::wstring> command_line_args;
+    std::wstring script_host;
+  };
+
   struct input_injector : win32::window_ref
   {
+    input_injector_args injector_args;
     PROCESS_INFORMATION child_process;
-    win32::com::com_ptr<IDispatch> script_host;
     std::vector<INPUT> simulated_inputs;
 
-    std::map<HANDLE, std::uint32_t> handle_ids;
     std::set<HANDLE> registered_mice;
     std::set<HANDLE> registered_keyboards;
     std::set<HANDLE> registered_controllers;
     std::set<HANDLE> regular_controllers;
     std::map<int, XINPUT_STATE> controller_state;
-
-    std::map<std::wstring_view, DISPID> func_ids = {
-      std::make_pair(std::wstring_view{ L"+forward" }, DISPID{ DISPID_UNKNOWN }),
-      std::make_pair(std::wstring_view{ L"-forward" }, DISPID{ DISPID_UNKNOWN }),
-      std::make_pair(std::wstring_view{ L"+back" }, DISPID{ DISPID_UNKNOWN }),
-      std::make_pair(std::wstring_view{ L"-back" }, DISPID{ DISPID_UNKNOWN }),
-      std::make_pair(std::wstring_view{ L"+moveleft" }, DISPID{ DISPID_UNKNOWN }),
-      std::make_pair(std::wstring_view{ L"-moveleft" }, DISPID{ DISPID_UNKNOWN }),
-      std::make_pair(std::wstring_view{ L"+moveright" }, DISPID{ DISPID_UNKNOWN }),
-      std::make_pair(std::wstring_view{ L"-moveright" }, DISPID{ DISPID_UNKNOWN }),
-      std::make_pair(std::wstring_view{ L"+left" }, DISPID{ DISPID_UNKNOWN }),
-      std::make_pair(std::wstring_view{ L"-left" }, DISPID{ DISPID_UNKNOWN }),
-      std::make_pair(std::wstring_view{ L"+right" }, DISPID{ DISPID_UNKNOWN }),
-      std::make_pair(std::wstring_view{ L"-right" }, DISPID{ DISPID_UNKNOWN }),
-      std::make_pair(std::wstring_view{ L"+lookup" }, DISPID{ DISPID_UNKNOWN }),
-      std::make_pair(std::wstring_view{ L"-lookup" }, DISPID{ DISPID_UNKNOWN }),
-      std::make_pair(std::wstring_view{ L"+lookdown" }, DISPID{ DISPID_UNKNOWN }),
-      std::make_pair(std::wstring_view{ L"-lookdown" }, DISPID{ DISPID_UNKNOWN }),
-      std::make_pair(std::wstring_view{ L"echo" }, DISPID{ DISPID_UNKNOWN }),
-    };
 
     std::map<std::wstring_view, bool> action_states = {
       std::make_pair(std::wstring_view{ L"+forward" }, false),
@@ -60,9 +47,11 @@ namespace siege
       std::make_pair(std::wstring_view{ L"+lookdown" }, false),
     };
 
-    input_injector(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self), child_process{}, controller_state{}
+    input_injector(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self), child_process{}, controller_state{}
     {
       simulated_inputs.reserve(64);
+      injector_args = std::move(*(input_injector_args*)params.lpCreateParams);
+      siege::init_active_input_state();
     }
 
     auto wm_create()
@@ -99,13 +88,14 @@ namespace siege
 
       try
       {
-        siege::platform::game_extension_module extension("siege-extension-soldier-of-fortune.dll");
+        siege::platform::game_extension_module extension(injector_args.extension_path);
 
-        std::array<const wchar_t*, 3> args{ { L"+set",
-          L"console",
-          L"1" } };
+        std::vector<const wchar_t*> args(injector_args.command_line_args.size(), nullptr);
+        std::transform(injector_args.command_line_args.begin(), injector_args.command_line_args.end(), args.begin(), [](auto& arg) {
+          return arg.c_str();
+        });
 
-        if (extension.launch_game_with_extension(L"C:\\Program Files (x86)\\GOG Galaxy\\Games\\Soldier of Fortune\\SoF.exe", args.size(), args.data(), &child_process) == S_OK && child_process.hProcess)
+        if (extension.launch_game_with_extension(injector_args.exe_path.c_str(), args.size(), args.data(), &child_process) == S_OK && child_process.hProcess)
         {
           auto& state = siege::get_active_input_state();
 
@@ -113,25 +103,6 @@ namespace siege
           {
             group.process_id = child_process.dwProcessId;
             group.thread_id = child_process.dwThreadId;
-          }
-
-          WaitForSingleObject(child_process.hProcess, 1000);
-
-          if (extension.get_game_script_host(L"SoldierOfFortune", script_host.put()) == S_OK)
-          {
-            DISPID id = 0;
-
-            for (auto& pair : func_ids)
-            {
-              win32::com::Variant name(pair.first);
-
-              auto hresult = script_host->GetIDsOfNames(IID_NULL, &name.bstrVal, 1, LOCALE_USER_DEFAULT, &pair.second);
-
-              if (hresult != S_OK)
-              {
-                DebugBreak();
-              }
-            }
           }
         }
       }
@@ -195,7 +166,9 @@ namespace siege
       DWORD exit_code = 0;
       if (::GetExitCodeProcess(child_process.hProcess, &exit_code) && exit_code != STILL_ACTIVE)
       {
-        ::DestroyWindow(*this);
+        if (::EndDialog(*this, 0) || ::DestroyWindow(*this))
+        {
+        }
         return 0;
       }
 
@@ -207,9 +180,9 @@ namespace siege
         return 0;
       }
 
-      auto device_id = handle_ids.find(header.hDevice);
+      auto device_id = siege::find_device_id(header.hDevice);
 
-      if (device_id == handle_ids.end())
+      if (!device_id)
       {
         return 0;
       }
@@ -222,8 +195,8 @@ namespace siege
         if (::GetRawInputData(message.handle, RID_INPUT, &input, &size, sizeof(RAWINPUTHEADER)) > 0)
         {
           INPUT temp{ .type = INPUT_KEYBOARD };
-          temp.ki.dwExtraInfo = device_id->second;
-          temp.ki.wVk = input.data.keyboard.VKey;
+          temp.ki.dwExtraInfo = *device_id;
+      //    temp.ki.wVk = input.data.keyboard.VKey;
           temp.ki.wScan = input.data.keyboard.MakeCode;
           temp.ki.dwFlags = KEYEVENTF_SCANCODE;
 
@@ -250,8 +223,8 @@ namespace siege
 
         if (::GetRawInputData(message.handle, RID_INPUT, &input, &size, sizeof(RAWINPUTHEADER)) > 0)
         {
-  //        INPUT temp{ .type = INPUT_MOUSE };
-//          ::SendInput(1, &temp, sizeof(temp));
+          //        INPUT temp{ .type = INPUT_MOUSE };
+          //          ::SendInput(1, &temp, sizeof(temp));
         }
         return 0;
       }
@@ -325,8 +298,8 @@ namespace siege
           auto& button_b = simulated_inputs.emplace_back();
           button_b.type = INPUT_KEYBOARD;
 
-          button_a.ki.dwExtraInfo = device_id->second;
-          button_b.ki.dwExtraInfo = device_id->second;
+          button_a.ki.dwExtraInfo = *device_id;
+          button_b.ki.dwExtraInfo = *device_id;
 
           if (newLx == 0)
           {
@@ -360,8 +333,8 @@ namespace siege
           auto& button_b = simulated_inputs.emplace_back();
           button_b.type = INPUT_KEYBOARD;
 
-          button_a.ki.dwExtraInfo = device_id->second;
-          button_b.ki.dwExtraInfo = device_id->second;
+          button_a.ki.dwExtraInfo = *device_id;
+          button_b.ki.dwExtraInfo = *device_id;
 
           if (newLy == 0)
           {
@@ -402,7 +375,7 @@ namespace siege
             shift_key.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
           }
 
-          shift_key.ki.dwExtraInfo = device_id->second;
+          shift_key.ki.dwExtraInfo = *device_id;
         }
 
         if (temp.Gamepad.wButtons & XINPUT_GAMEPAD_B)
@@ -411,7 +384,7 @@ namespace siege
           crouch_button.type = INPUT_KEYBOARD;
           crouch_button.ki.dwFlags = KEYEVENTF_SCANCODE;
           crouch_button.ki.wScan = 0x001D;// left control
-          crouch_button.ki.dwExtraInfo = device_id->second;
+          crouch_button.ki.dwExtraInfo = *device_id;
         }
         else if (state.second.Gamepad.wButtons & XINPUT_GAMEPAD_B)
         {
@@ -419,9 +392,8 @@ namespace siege
           crouch_button.type = INPUT_KEYBOARD;
           crouch_button.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
           crouch_button.ki.wScan = 0x001D;// left control
-          crouch_button.ki.dwExtraInfo = device_id->second;
+          crouch_button.ki.dwExtraInfo = *device_id;
         }
-
 
         if (temp.Gamepad.wButtons & XINPUT_GAMEPAD_A)
         {
@@ -429,7 +401,7 @@ namespace siege
           jump_button.type = INPUT_KEYBOARD;
           jump_button.ki.wScan = 0x0039;// space
           jump_button.ki.dwFlags = KEYEVENTF_SCANCODE;
-          jump_button.ki.dwExtraInfo = device_id->second;
+          jump_button.ki.dwExtraInfo = *device_id;
         }
         else if (state.second.Gamepad.wButtons & XINPUT_GAMEPAD_A)
         {
@@ -437,7 +409,7 @@ namespace siege
           jump_button.type = INPUT_KEYBOARD;
           jump_button.ki.wScan = 0x0039;// space
           jump_button.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
-          jump_button.ki.dwExtraInfo = device_id->second;
+          jump_button.ki.dwExtraInfo = *device_id;
         }
 
         auto [newRx, newRy] = calculate_deadzone(std::make_pair(temp.Gamepad.sThumbRX, temp.Gamepad.sThumbRY), XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
@@ -451,25 +423,25 @@ namespace siege
           if (newRy >= 0 && action_states[L"+lookup"])
           {
             action_states[L"+lookup"] = false;
-            script_host->Invoke(func_ids[L"-lookup"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
+            // script_host->Invoke(func_ids[L"-lookup"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
           }
 
           if (newRy <= 0 && action_states[L"+lookdown"])
           {
             action_states[L"+lookdown"] = false;
-            script_host->Invoke(func_ids[L"-lookdown"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
+            // script_host->Invoke(func_ids[L"-lookdown"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
           }
 
           if (newRy > 0 && !action_states[L"+lookdown"])
           {
             action_states[L"+lookdown"] = true;
-            script_host->Invoke(func_ids[L"+lookdown"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
+            // script_host->Invoke(func_ids[L"+lookdown"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
           }
 
           if (newRy < 0 && !action_states[L"+lookup"])
           {
             action_states[L"+lookup"] = true;
-            script_host->Invoke(func_ids[L"+lookup"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
+            // script_host->Invoke(func_ids[L"+lookup"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
           }
         }
         if (newRx != oldRx)
@@ -477,25 +449,25 @@ namespace siege
           if (newRx >= 0 && action_states[L"+left"])
           {
             action_states[L"+left"] = false;
-            script_host->Invoke(func_ids[L"-left"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
+            // script_host->Invoke(func_ids[L"-left"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
           }
 
           if (newRx <= 0 && action_states[L"+right"])
           {
             action_states[L"+right"] = false;
-            script_host->Invoke(func_ids[L"-right"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
+            // script_host->Invoke(func_ids[L"-right"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
           }
 
           if (newRx < 0 && !action_states[L"+left"])
           {
             action_states[L"+left"] = true;
-            script_host->Invoke(func_ids[L"+left"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
+            // script_host->Invoke(func_ids[L"+left"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
           }
 
           if (newRx > 0 && !action_states[L"+right"])
           {
             action_states[L"+right"] = true;
-            script_host->Invoke(func_ids[L"+right"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
+            //  script_host->Invoke(func_ids[L"+right"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
           }
         }
 
@@ -527,10 +499,9 @@ namespace siege
           }
         }
 
-        GUITHREADINFO gui_thread{ .cbSize = sizeof(GUITHREADINFO) };
-        if (!simulated_inputs.empty() && GetGUIThreadInfo(child_process.dwThreadId, &gui_thread))
+        if (!simulated_inputs.empty())
         {
-          SendInput(simulated_inputs.size(), simulated_inputs.data(), sizeof(INPUT));
+          ::SendInput(simulated_inputs.size(), simulated_inputs.data(), sizeof(INPUT));
         }
 
         state.second = temp;
@@ -544,7 +515,9 @@ namespace siege
       DWORD exit_code = 0;
       if (::GetExitCodeProcess(child_process.hProcess, &exit_code) && exit_code != STILL_ACTIVE)
       {
-        ::DestroyWindow(*this);
+        if (::EndDialog(*this, 0) || ::DestroyWindow(*this))
+        {
+        }
         return 0;
       }
 
@@ -562,31 +535,26 @@ namespace siege
           return 0;
         }
 
-        device_iter->id = ::RegisterWindowMessageW(L"SiegeInputDeviceId") + std::distance(state.devices.begin(), device_iter);
-        handle_ids[message.device_handle] = device_iter->id;
-
         RID_DEVICE_INFO device_info{};
         UINT size = sizeof(device_info);
 
         if (::GetRawInputDeviceInfoW(message.device_handle, RIDI_DEVICEINFO, &device_info, &size) > 0)
         {
+          update_device_id(RAWINPUTDEVICELIST{
+            .hDevice = message.device_handle,
+            .dwType = device_info.dwType,
+          });
+
           if (device_info.dwType == RIM_TYPEMOUSE)
           {
             registered_mice.insert(message.device_handle);
-            device_iter->type = RIM_TYPEMOUSE;
             return 0;
           }
-
-          if (device_info.dwType == RIM_TYPEKEYBOARD)
+          else if (device_info.dwType == RIM_TYPEKEYBOARD)
           {
             registered_keyboards.insert(message.device_handle);
-            device_iter->type = RIM_TYPEKEYBOARD;
             return 0;
           }
-
-          device_iter->type = RIM_TYPEHID;
-          device_iter->product_id = device_info.hid.dwProductId;
-          device_iter->vendor_id = device_info.hid.dwVendorId;
         }
 
         registered_controllers.insert(message.device_handle);
@@ -616,7 +584,7 @@ namespace siege
       }
       else if (message.code == GIDC_REMOVAL)
       {
-        handle_ids.erase(message.device_handle);
+        remove_device(message.device_handle);
         registered_mice.erase(message.device_handle);
         registered_keyboards.erase(message.device_handle);
         registered_controllers.erase(message.device_handle);

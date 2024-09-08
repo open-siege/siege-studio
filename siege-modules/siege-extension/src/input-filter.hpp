@@ -2,6 +2,7 @@
 #define INPUT_FILTER_HPP
 
 #include <array>
+#include <optional>
 #include <type_traits>
 #include <cstdint>
 
@@ -21,10 +22,9 @@ namespace siege
     {
       std::uint32_t type = -1;// keyboard, mouse, controller
       std::uint32_t id = 0;
-      std::uint32_t group_id = 0;// can be 0
-      std::uint32_t vendor_id = 0;// can be 0
-      std::uint32_t product_id = 0;// can be 0
+      std::uint32_t group_id = 0;
       std::uint32_t enabled = true;
+      HANDLE device_handle;
     };
 
     std::uint32_t size = sizeof(active_input_state);// could change in future versions
@@ -34,6 +34,14 @@ namespace siege
   };
 
   static_assert(std::is_trivially_copyable_v<active_input_state>);
+
+  void init_active_input_state();
+
+  bool update_device_id(const RAWINPUTDEVICELIST&);
+
+  bool remove_device(HANDLE);
+
+  std::optional<std::uint32_t> find_device_id(HANDLE);
 
   active_input_state& get_active_input_state();
 }

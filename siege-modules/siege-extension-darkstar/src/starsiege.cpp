@@ -154,7 +154,7 @@ HHOOK WINAPI WrappedSetWindowsHookExA(int idHook, HOOKPROC lpfn, HINSTANCE hmod,
 {
   win32::com::init_com(COINIT_APARTMENTTHREADED);
 
-  if (dwThreadId == 0)
+  if (dwThreadId == 0 && idHook == WH_CBT)
   {
     dwThreadId = ::GetCurrentThreadId();
   }

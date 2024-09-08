@@ -9,7 +9,10 @@
 #include <siege/platform/win/desktop/drawing.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include <siege/platform/win/desktop/theming.hpp>
+#include <siege/platform/win/desktop/dialog.hpp>
 #include "exe_controller.hpp"
+#include "input-filter.hpp"
+#include "input_injector.hpp"
 
 namespace siege::views
 {
@@ -18,6 +21,7 @@ namespace siege::views
   struct exe_view final : win32::window_ref
     , win32::list_box::notifications
     , win32::list_view::notifications
+    , win32::tool_bar::notifications
   {
     exe_controller controller;
 
@@ -27,6 +31,9 @@ namespace siege::views
     win32::list_view launch_table;
     win32::tool_bar exe_actions;
     win32::image_list image_list;
+
+    constexpr static int launch_selected_id = 10;
+    constexpr static int extract_selected_id = 11;
 
     std::map<std::wstring_view, std::wstring_view> group_names = {
       { L"#1"sv, L"Hardware Dependent Cursor"sv },
@@ -62,8 +69,8 @@ namespace siege::views
 
       exe_actions = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
 
-      exe_actions.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Launch" });
-      exe_actions.InsertButton(-1, { .iBitmap = 1, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" });
+      exe_actions.InsertButton(-1, { .iBitmap = 0, .idCommand = launch_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Launch" }, false);
+      exe_actions.InsertButton(-1, { .iBitmap = 1, .idCommand = extract_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" }, false);
       exe_actions.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
 
       resource_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
@@ -229,6 +236,8 @@ namespace siege::views
         {
           options.InsertString(-1, L"Scripting");
           options.InsertString(-1, L"Launch Options");
+
+          siege::init_active_input_state();
         }
       }
 
@@ -340,6 +349,68 @@ namespace siege::views
       }
 
       return FALSE;
+    }
+
+    std::optional<win32::lresult_t> wm_notify(win32::tool_bar, const NMTOOLBARW& message) override
+    {
+      switch (message.hdr.code)
+      {
+      case TBN_DROPDOWN: {
+        POINT point{ .x = message.rcButton.left, .y = message.rcButton.top };
+
+        if (ClientToScreen(exe_actions, &point))
+        {
+          /*auto result = table_settings_menu.TrackPopupMenuEx(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, point, ref());
+
+          if (result == 1)
+          {
+            extract_all_files();
+          }*/
+
+          return TBDDRET_DEFAULT;
+        }
+
+        return TBDDRET_NODEFAULT;
+      }
+      default: {
+        return FALSE;
+      }
+      }
+    }
+
+    std::optional<BOOL> wm_notify(win32::tool_bar, const NMMOUSE& message) override
+    {
+      switch (message.hdr.code)
+      {
+      case NM_CLICK: {
+        if (message.dwItemSpec == extract_selected_id)
+        {
+          return TRUE;
+        }
+
+        if (message.dwItemSpec == launch_selected_id)
+        {
+          if (controller.has_extension_module())
+          {
+            input_injector_args args{
+              .exe_path = controller.get_exe_path(),
+              .extension_path = controller.get_extension().GetModuleFileName()
+            };
+
+            win32::DialogBoxIndirectParamW<siege::input_injector>(win32::module_ref::current_application(),
+              win32::default_dialog({ }),
+              ref(),
+              (LPARAM)&args);
+          }
+
+          return TRUE;
+        }
+        return FALSE;
+      }
+      default: {
+        return FALSE;
+      }
+      }
     }
 
     std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)

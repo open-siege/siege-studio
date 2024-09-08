@@ -45,7 +45,14 @@ namespace siege::platform
       this->get_game_script_host = GetProcAddress<decltype(game_extension_module::get_game_script_host)>("get_game_script_host");
       this->launch_game_with_extension = GetProcAddress<decltype(game_extension_module::launch_game_with_extension)>("launch_game_with_extension");
 #endif
-      if (!(this->get_game_script_host || this->launch_game_with_extension))
+
+      bool is_generic_extension = module_path.string().find("extension-generic") != std::string::npos;
+     
+      if (is_generic_extension && !this->launch_game_with_extension)
+      {
+        throw std::runtime_error("Could not find module functions");
+      }
+      else if (!(this->get_game_script_host || this->launch_game_with_extension))
       {
         throw std::runtime_error("Could not find module functions");
       }

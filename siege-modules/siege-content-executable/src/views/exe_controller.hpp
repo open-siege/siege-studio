@@ -62,6 +62,12 @@ namespace siege::views
 
     std::size_t load_executable(std::istream& image_stream, std::optional<std::filesystem::path>) noexcept;
 
+    inline std::filesystem::path get_exe_path() { return loaded_path; }
+
+    inline bool has_extension_module() { return matching_extension != extensions.end(); }
+
+    inline siege::platform::game_extension_module& get_extension() { return *matching_extension; }
+
   private:
     std::list<siege::platform::game_extension_module> extensions;
     std::filesystem::path loaded_path;
