@@ -12,6 +12,7 @@
 #include <hidusage.h>
 #include <xinput.h>
 #include <mmsystem.h>
+#include "input-filter.hpp"
 
 namespace siege
 {
@@ -20,6 +21,10 @@ namespace siege
     PROCESS_INFORMATION child_process;
     win32::com::com_ptr<IDispatch> script_host;
     std::vector<INPUT> simulated_inputs;
+
+    std::map<HANDLE, std::uint32_t> handle_ids;
+    std::set<HANDLE> registered_mice;
+    std::set<HANDLE> registered_keyboards;
     std::set<HANDLE> registered_controllers;
     std::set<HANDLE> regular_controllers;
     std::map<int, XINPUT_STATE> controller_state;
@@ -62,7 +67,7 @@ namespace siege
 
     auto wm_create()
     {
-      std::array<RAWINPUTDEVICE, 2> descriptors{};
+      std::array<RAWINPUTDEVICE, 4> descriptors{};
 
       auto flags = RIDEV_INPUTSINK | RIDEV_DEVNOTIFY;
       descriptors[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
@@ -75,7 +80,17 @@ namespace siege
       descriptors[1].dwFlags = flags;
       descriptors[1].hwndTarget = *this;
 
-      if (RegisterRawInputDevices(descriptors.data(), descriptors.size(), sizeof(RAWINPUTDEVICE)) == FALSE)
+      descriptors[2].usUsagePage = HID_USAGE_PAGE_GENERIC;
+      descriptors[2].usUsage = HID_USAGE_GENERIC_MOUSE;
+      descriptors[2].dwFlags = flags | RIDEV_NOLEGACY;
+      descriptors[2].hwndTarget = *this;
+
+      descriptors[3].usUsagePage = HID_USAGE_PAGE_GENERIC;
+      descriptors[3].usUsage = HID_USAGE_GENERIC_KEYBOARD;
+      descriptors[3].dwFlags = flags | RIDEV_NOLEGACY;
+      descriptors[3].hwndTarget = *this;
+
+      if (::RegisterRawInputDevices(descriptors.data(), descriptors.size(), sizeof(RAWINPUTDEVICE)) == FALSE)
       {
         auto error = GetLastError();
         DebugBreak();
@@ -92,6 +107,14 @@ namespace siege
 
         if (extension.launch_game_with_extension(L"C:\\Program Files (x86)\\GOG Galaxy\\Games\\Soldier of Fortune\\SoF.exe", args.size(), args.data(), &child_process) == S_OK && child_process.hProcess)
         {
+          auto& state = siege::get_active_input_state();
+
+          for (auto& group : state.groups)
+          {
+            group.process_id = child_process.dwProcessId;
+            group.thread_id = child_process.dwThreadId;
+          }
+
           WaitForSingleObject(child_process.hProcess, 1000);
 
           if (extension.get_game_script_host(L"SoldierOfFortune", script_host.put()) == S_OK)
@@ -121,7 +144,7 @@ namespace siege
 
     auto wm_destroy()
     {
-      std::array<RAWINPUTDEVICE, 2> descriptors{};
+      std::array<RAWINPUTDEVICE, 4> descriptors{};
 
       auto flags = RIDEV_REMOVE;
       descriptors[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
@@ -132,7 +155,15 @@ namespace siege
       descriptors[1].usUsage = HID_USAGE_GENERIC_JOYSTICK;
       descriptors[1].dwFlags = flags;
 
-      if (RegisterRawInputDevices(descriptors.data(), descriptors.size(), sizeof(RAWINPUTDEVICE)) == FALSE)
+      descriptors[2].usUsagePage = HID_USAGE_PAGE_GENERIC;
+      descriptors[2].usUsage = HID_USAGE_GENERIC_MOUSE;
+      descriptors[2].dwFlags = flags;
+
+      descriptors[3].usUsagePage = HID_USAGE_PAGE_GENERIC;
+      descriptors[3].usUsage = HID_USAGE_GENERIC_KEYBOARD;
+      descriptors[3].dwFlags = flags;
+
+      if (::RegisterRawInputDevices(descriptors.data(), descriptors.size(), sizeof(RAWINPUTDEVICE)) == FALSE)
       {
         auto error = GetLastError();
         DebugBreak();
@@ -161,27 +192,6 @@ namespace siege
 
     auto wm_input(win32::input_message message)
     {
-#ifndef _DEBUG
-      auto active_window = ::GetForegroundWindow();
-
-      if (!active_window)
-      {
-        return 0;
-      }
-
-      DWORD process_id = 0;
-      if (::GetWindowThreadProcessId(active_window, &process_id) == 0)
-      {
-        return 0;
-      }
-
-      if (process_id != child_process.dwProcessId)
-      {
-        return 0;
-      }
-#endif// ! DEBUG
-
-
       DWORD exit_code = 0;
       if (::GetExitCodeProcess(child_process.hProcess, &exit_code) && exit_code != STILL_ACTIVE)
       {
@@ -194,6 +204,55 @@ namespace siege
       UINT size = sizeof(header);
       if (::GetRawInputData(message.handle, RID_HEADER, &header, &size, sizeof(header)) == (UINT)-1)
       {
+        return 0;
+      }
+
+      auto device_id = handle_ids.find(header.hDevice);
+
+      if (device_id == handle_ids.end())
+      {
+        return 0;
+      }
+
+      if (header.dwType == RIM_TYPEKEYBOARD)
+      {
+        RAWINPUT input{};
+        UINT size = sizeof(input);
+
+        if (::GetRawInputData(message.handle, RID_INPUT, &input, &size, sizeof(RAWINPUTHEADER)) > 0)
+        {
+          INPUT temp{ .type = INPUT_KEYBOARD };
+          temp.ki.dwExtraInfo = device_id->second;
+          temp.ki.wVk = input.data.keyboard.VKey;
+          temp.ki.wScan = input.data.keyboard.MakeCode;
+          temp.ki.dwFlags = KEYEVENTF_SCANCODE;
+
+          if (input.data.keyboard.Flags & RI_KEY_BREAK)
+          {
+            temp.ki.dwFlags |= KEYEVENTF_KEYUP;
+          }
+
+          if (input.data.keyboard.Flags & RI_KEY_E0)
+          {
+            temp.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
+          }
+
+          ::SendInput(1, &temp, sizeof(temp));
+        }
+
+        return 0;
+      }
+
+      if (header.dwType == RIM_TYPEMOUSE)
+      {
+        RAWINPUT input{};
+        UINT size = sizeof(input);
+
+        if (::GetRawInputData(message.handle, RID_INPUT, &input, &size, sizeof(RAWINPUTHEADER)) > 0)
+        {
+  //        INPUT temp{ .type = INPUT_MOUSE };
+//          ::SendInput(1, &temp, sizeof(temp));
+        }
         return 0;
       }
 
@@ -266,8 +325,8 @@ namespace siege
           auto& button_b = simulated_inputs.emplace_back();
           button_b.type = INPUT_KEYBOARD;
 
-          button_a.ki.dwExtraInfo = 266;
-          button_b.ki.dwExtraInfo = 266;
+          button_a.ki.dwExtraInfo = device_id->second;
+          button_b.ki.dwExtraInfo = device_id->second;
 
           if (newLx == 0)
           {
@@ -301,8 +360,8 @@ namespace siege
           auto& button_b = simulated_inputs.emplace_back();
           button_b.type = INPUT_KEYBOARD;
 
-          button_a.ki.dwExtraInfo = 266;
-          button_b.ki.dwExtraInfo = 266;
+          button_a.ki.dwExtraInfo = device_id->second;
+          button_b.ki.dwExtraInfo = device_id->second;
 
           if (newLy == 0)
           {
@@ -343,7 +402,7 @@ namespace siege
             shift_key.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
           }
 
-          shift_key.ki.dwExtraInfo = 266;
+          shift_key.ki.dwExtraInfo = device_id->second;
         }
 
         if (temp.Gamepad.wButtons & XINPUT_GAMEPAD_B)
@@ -352,7 +411,7 @@ namespace siege
           crouch_button.type = INPUT_KEYBOARD;
           crouch_button.ki.dwFlags = KEYEVENTF_SCANCODE;
           crouch_button.ki.wScan = 0x001D;// left control
-          crouch_button.ki.dwExtraInfo = 266;
+          crouch_button.ki.dwExtraInfo = device_id->second;
         }
         else if (state.second.Gamepad.wButtons & XINPUT_GAMEPAD_B)
         {
@@ -360,7 +419,7 @@ namespace siege
           crouch_button.type = INPUT_KEYBOARD;
           crouch_button.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
           crouch_button.ki.wScan = 0x001D;// left control
-          crouch_button.ki.dwExtraInfo = 266;
+          crouch_button.ki.dwExtraInfo = device_id->second;
         }
 
 
@@ -370,7 +429,7 @@ namespace siege
           jump_button.type = INPUT_KEYBOARD;
           jump_button.ki.wScan = 0x0039;// space
           jump_button.ki.dwFlags = KEYEVENTF_SCANCODE;
-          jump_button.ki.dwExtraInfo = 266;
+          jump_button.ki.dwExtraInfo = device_id->second;
         }
         else if (state.second.Gamepad.wButtons & XINPUT_GAMEPAD_A)
         {
@@ -378,7 +437,7 @@ namespace siege
           jump_button.type = INPUT_KEYBOARD;
           jump_button.ki.wScan = 0x0039;// space
           jump_button.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
-          jump_button.ki.dwExtraInfo = 266;
+          jump_button.ki.dwExtraInfo = device_id->second;
         }
 
         auto [newRx, newRy] = calculate_deadzone(std::make_pair(temp.Gamepad.sThumbRX, temp.Gamepad.sThumbRY), XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
@@ -491,10 +550,49 @@ namespace siege
 
       if (message.code == GIDC_ARRIVAL)
       {
+        auto& state = siege::get_active_input_state();
+
+        auto device_iter = std::find_if(state.devices.begin(), state.devices.end(), [](auto& device) {
+          return device.id == 0;
+        });
+
+        // Max devices reached
+        if (device_iter == state.devices.end())
+        {
+          return 0;
+        }
+
+        device_iter->id = ::RegisterWindowMessageW(L"SiegeInputDeviceId") + std::distance(state.devices.begin(), device_iter);
+        handle_ids[message.device_handle] = device_iter->id;
+
+        RID_DEVICE_INFO device_info{};
+        UINT size = sizeof(device_info);
+
+        if (::GetRawInputDeviceInfoW(message.device_handle, RIDI_DEVICEINFO, &device_info, &size) > 0)
+        {
+          if (device_info.dwType == RIM_TYPEMOUSE)
+          {
+            registered_mice.insert(message.device_handle);
+            device_iter->type = RIM_TYPEMOUSE;
+            return 0;
+          }
+
+          if (device_info.dwType == RIM_TYPEKEYBOARD)
+          {
+            registered_keyboards.insert(message.device_handle);
+            device_iter->type = RIM_TYPEKEYBOARD;
+            return 0;
+          }
+
+          device_iter->type = RIM_TYPEHID;
+          device_iter->product_id = device_info.hid.dwProductId;
+          device_iter->vendor_id = device_info.hid.dwVendorId;
+        }
+
         registered_controllers.insert(message.device_handle);
 
         std::vector<wchar_t> device_buffer(255, '\0');
-        UINT size = 255;
+        size = device_buffer.size();
 
         if (::GetRawInputDeviceInfoW(message.device_handle, RIDI_DEVICENAME, device_buffer.data(), &size) > 0)
         {
@@ -518,6 +616,10 @@ namespace siege
       }
       else if (message.code == GIDC_REMOVAL)
       {
+        handle_ids.erase(message.device_handle);
+        registered_mice.erase(message.device_handle);
+        registered_keyboards.erase(message.device_handle);
+        registered_controllers.erase(message.device_handle);
         registered_controllers.erase(message.device_handle);
         regular_controllers.erase(message.device_handle);
 
