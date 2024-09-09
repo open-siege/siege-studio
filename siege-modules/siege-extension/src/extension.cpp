@@ -71,8 +71,7 @@ HRESULT launch_game_with_extension(const wchar_t* exe_path_str, std::uint32_t ar
   STARTUPINFOW startup_info{ .cb = sizeof(STARTUPINFOW) };
 
   auto hook_path = (std::filesystem::path(extension_path).parent_path() / "siege-extension-input-filter-raw-input.dll").string();
-  //auto hook_path = (std::filesystem::path(extension_path).parent_path() / "siege-extension-input-filter-low-level-hook.dll").string();
-
+  
   std::array<const char*, 2> dll_paths{
     hook_path.c_str(),
     extension_path.c_str(),

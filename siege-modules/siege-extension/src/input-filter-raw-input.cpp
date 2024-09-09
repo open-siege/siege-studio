@@ -2,13 +2,16 @@
 #include <windows.h>
 #include <detours.h>
 #include <hidusage.h>
-#undef NDEBUG 
-#include <cassert> 
+#undef NDEBUG
+#include <cassert>
 #include <fstream>
-#include <codecvt>
+#include <algorithm>
+#include <vector>
 #include "input-filter.hpp"
 
 extern "C" {
+
+static std::vector<HOOKPROC> ll_keyboard_hooks{};
 
 LRESULT CALLBACK CBTProc(
   int code,
@@ -101,26 +104,56 @@ LRESULT CALLBACK GetMsgProc(
 
             if (header.dwType == RIM_TYPEKEYBOARD)
             {
-              // TODO ::SetKeyboardState for more nosy games
               auto vk = ::MapVirtualKeyW(input.data.keyboard.MakeCode, MAPVK_VSC_TO_VK);
 
               LPARAM lParam = 0;
               lParam |= (input.data.keyboard.Flags & RI_KEY_BREAK) ? 1 << 31 : 0;// Transition state
               lParam |= (input.data.keyboard.Flags & RI_KEY_BREAK) ? 1 << 30 : 0;// Previous key state
+              lParam |= (input.data.keyboard.Flags & RI_KEY_E0) ? 1 << 24 : 0;
               lParam |= input.data.keyboard.MakeCode << 16;// Scan code
+
+              std::array<BYTE, 256> flags{};
+
+              if (::GetKeyboardState(flags.data()))
+              {
+                flags[vk] |= (input.data.keyboard.Flags & RI_KEY_BREAK) ? 0 : 1 << 7;
+
+                ::SetKeyboardState(flags.data());
+              }
+
+              auto event = WM_KEYDOWN;
 
               if (input.data.keyboard.Flags & RI_KEY_BREAK)
               {
-                ::PostMessageW(message->hwnd, WM_KEYUP, vk, lParam);
+                event = WM_KEYUP;
               }
-              else
+
+              ::PostMessageW(message->hwnd, event, vk, lParam);
+
+              KBDLLHOOKSTRUCT keyboard_event{
+              .vkCode = vk,
+              .scanCode = input.data.keyboard.MakeCode,
+              .dwExtraInfo = input.data.keyboard.ExtraInformation
+              };
+
+              if (input.data.keyboard.Flags & RI_KEY_BREAK)
               {
-                ::PostMessageW(message->hwnd, WM_KEYDOWN, vk, lParam);
+                keyboard_event.flags |= LLKHF_UP;
+              }
+
+              if (input.data.keyboard.Flags & RI_KEY_E0)
+              {
+                keyboard_event.flags |= LLKHF_EXTENDED;
+              }
+
+              for (auto& hook : ll_keyboard_hooks)
+              {
+                hook(0, event, (LPARAM)&keyboard_event);
               }
             }
             else
             {
-                // TODO mouse messages
+              // TODO mouse messages
             }
           }
         }
@@ -132,6 +165,32 @@ next_hook:
 
   return ::CallNextHookEx(nullptr, code, wParam, lParam);
 }
+
+
+static auto* TrueGetAsyncKeyState = GetAsyncKeyState;
+static auto* TrueSetWindowHookExW = SetWindowsHookExW;
+
+HHOOK WINAPI WrappedSetWindowsHookExW(int idHook, HOOKPROC lpfn, HINSTANCE hmod, DWORD dwThreadId)
+{
+  if (hmod == ::GetModuleHandleW(L"dinput.dll") && idHook == WH_KEYBOARD_LL)
+  {
+    ll_keyboard_hooks.emplace_back(lpfn);
+  }
+
+  return TrueSetWindowHookExW(idHook, lpfn, hmod, dwThreadId);
+}
+
+SHORT __stdcall WrappedGetAsyncKeyState(int vKey)
+{
+  return ::GetKeyState(vKey);
+}
+
+static std::array<std::pair<void**, void*>, 2> detour_functions{
+  {
+    { &(void*&)TrueGetAsyncKeyState, WrappedGetAsyncKeyState },
+    { &(void*&)TrueSetWindowHookExW, WrappedSetWindowsHookExW },
+  }
+};
 
 
 BOOL WINAPI DllMain(
@@ -151,6 +210,16 @@ BOOL WINAPI DllMain(
 
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
+      DetourRestoreAfterWith();
+
+      DetourTransactionBegin();
+      DetourUpdateThread(GetCurrentThread());
+
+      std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourAttach(func.first, func.second); });
+
+      DetourTransactionCommit();
+
+
       RAWINPUTDEVICE Rid[1];
 
       // Rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
@@ -188,6 +257,12 @@ BOOL WINAPI DllMain(
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
+      DetourTransactionBegin();
+      DetourUpdateThread(GetCurrentThread());
+
+      std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourDetach(func.first, func.second); });
+      DetourTransactionCommit();
+
       assert(::UnhookWindowsHookEx(cbt_hook) == TRUE);
       assert(::UnhookWindowsHookEx(get_message_hook) == TRUE);
 
