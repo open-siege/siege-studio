@@ -8,6 +8,7 @@
 #include <siege/platform/win/core/file.hpp>
 #include <siege/platform/win/desktop/theming.hpp>
 #include <siege/platform/storage_module.hpp>
+#undef NDEBUG 
 #include <cassert>
 #include <sstream>
 #include <vector>

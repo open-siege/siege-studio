@@ -3,6 +3,7 @@
 #include <siege/platform/win/core/com/property_variant.hpp>
 #include <siege/platform/win/core/com/base.hpp>
 #include <siege/platform/win/core/module.hpp>
+#undef NDEBUG 
 #include <cassert>
 #include <set>
 #include <comcat.h>

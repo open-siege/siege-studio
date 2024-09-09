@@ -1,6 +1,7 @@
 
 #include <bit>
 #include <filesystem>
+#undef NDEBUG 
 #include <cassert>
 #include <atomic>
 #include <unordered_set>

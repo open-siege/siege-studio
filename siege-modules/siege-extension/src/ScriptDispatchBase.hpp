@@ -4,6 +4,7 @@
 #include <unordered_set>
 #include <string>
 #include <functional>
+#undef NDEBUG 
 #include <cassert>
 #include <siege/platform/win/core/com/base.hpp>
 #include <siege/platform/win/core/com/variant.hpp>

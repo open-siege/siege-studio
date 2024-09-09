@@ -2,7 +2,8 @@
 #include <windows.h>
 #include <detours.h>
 #include <hidusage.h>
-#include <cassert>
+#undef NDEBUG 
+#include <cassert> 
 #include <fstream>
 #include <codecvt>
 #include "input-filter.hpp"

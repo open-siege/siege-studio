@@ -4,6 +4,7 @@
 #include <exception>
 #include <spanstream>
 #include <memory>
+#undef NDEBUG 
 #include <cassert>
 #include <wincodec.h>
 #include <VersionHelpers.h>

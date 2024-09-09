@@ -3,6 +3,7 @@
 
 #include <siege/platform/win/desktop/window.hpp>
 #include <siege/platform/win/auto_handle.hpp>
+#undef NDEBUG 
 #include <cassert>
 
 namespace win32

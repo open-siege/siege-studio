@@ -12,8 +12,8 @@
 #include <thread>
 #include <iostream>
 #include <filesystem>
+#undef NDEBUG 
 #include <cassert>
-
 
 #include <siege/platform/win/desktop/shell.hpp>
 #include <siege/platform/win/desktop/window_impl.hpp>

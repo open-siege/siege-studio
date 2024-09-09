@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <memory>
 #include <oaidl.h>
+#undef NDEBUG 
 #include <cassert>
 
 namespace win32::com
