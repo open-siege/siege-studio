@@ -29,6 +29,8 @@ namespace siege::views
     win32::list_view resource_table;
     win32::list_view string_table;
     win32::list_view launch_table;
+    win32::list_view keyboard_table;
+    win32::list_view controller_table;
     win32::tool_bar exe_actions;
     win32::image_list image_list;
 
@@ -106,12 +108,122 @@ namespace siege::views
                                       .pszText = const_cast<wchar_t*>(L"Value"),
                                     });
 
+      keyboard_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
+
+      controller_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
+
+      controller_table.InsertColumn(-1, LVCOLUMNW{
+                                          .pszText = const_cast<wchar_t*>(L""),
+                                        });
+
+      controller_table.InsertColumn(-1, LVCOLUMNW{
+                                          .fmt = LVCFMT_RIGHT,
+                                          .pszText = const_cast<wchar_t*>(L""),
+
+                                        });
+
+      controller_table.InsertColumn(-1, LVCOLUMNW{
+                                          .fmt = LVCFMT_RIGHT,
+                                          .pszText = const_cast<wchar_t*>(L""),
+                                        });
+
+      ListView_SetView(controller_table, LV_VIEW_TILE);
+
+      win32::list_view_item up(L"D-pad Up", 3);
+      up.sub_items.emplace_back(L"Keyboard");
+      up.sub_items.emplace_back(L"Up arrow");
+      controller_table.InsertRow(up);
+
+      win32::list_view_item down(L"D-pad Down", 4);
+      down.sub_items.emplace_back(L"Keyboard");
+      down.sub_items.emplace_back(L"Down arrow");
+      controller_table.InsertRow(down);
+
+      win32::list_view_item left(L"D-pad Left", 5);
+      left.sub_items.emplace_back(L"Keyboard");
+      left.sub_items.emplace_back(L"Left arrow");
+      controller_table.InsertRow(left);
+
+      win32::list_view_item right(L"D-pad Right", 6);
+      right.sub_items.emplace_back(L"Keyboard");
+      right.sub_items.emplace_back(L"Right arrow");
+      controller_table.InsertRow(right);
+
+      win32::list_view_item x(L"X Button", 15);
+      x.sub_items.emplace_back(L"Keyboard");
+      x.sub_items.emplace_back(L"F");
+      controller_table.InsertRow(x);
+
+
+      win32::list_view_item y(L"Y Button", 16);
+      y.sub_items.emplace_back(L"Keyboard");
+      y.sub_items.emplace_back(L"[");
+      controller_table.InsertRow(y);
+
+      win32::list_view_item a(L"A Button", 13);
+      a.sub_items.emplace_back(L"Keyboard");
+      a.sub_items.emplace_back(L"Spacebar");
+      controller_table.InsertRow(a);
+
+      win32::list_view_item b(L"B Button", 14);
+      b.sub_items.emplace_back(L"Keyboard");
+      b.sub_items.emplace_back(L"Left control");
+      controller_table.InsertRow(b);
+
+      win32::list_view_item lb(L"Left Bumper", 17);
+      lb.sub_items.emplace_back(L"Keyboard");
+      lb.sub_items.emplace_back(L"G");
+      controller_table.InsertRow(lb);
+
+
+      win32::list_view_item rb(L"Right Bumper", 18);
+      rb.sub_items.emplace_back(L"Keyboard");
+      rb.sub_items.emplace_back(L"T");
+      controller_table.InsertRow(rb);
+
+      win32::list_view_item lt(L"Left Trigger", 19);
+      lt.sub_items.emplace_back(L"Mouse");
+      lt.sub_items.emplace_back(L"Right click");
+      controller_table.InsertRow(lt);
+
+      win32::list_view_item rt(L"Right Trigger", 20);
+      rt.sub_items.emplace_back(L"Mouse");
+      rt.sub_items.emplace_back(L"Left click");
+      controller_table.InsertRow(rt);
+
+      win32::list_view_item ls(L"Left Stick", 7);
+      ls.sub_items.emplace_back(L"Keyboard");
+      ls.sub_items.emplace_back(L"Left shift");
+      controller_table.InsertRow(ls);
+
+      win32::list_view_item rs(L"Right Stick", 8);
+      rs.sub_items.emplace_back(L"Keyboard");
+      rs.sub_items.emplace_back(L"E");
+      controller_table.InsertRow(rs);
+
+      LVTILEVIEWINFO tileViewInfo = { 0 };
+
+      tileViewInfo.cbSize = sizeof(tileViewInfo);
+      tileViewInfo.dwMask = LVTVIM_COLUMNS;
+      tileViewInfo.dwFlags = LVTVIF_AUTOSIZE;
+      tileViewInfo.cLines = 2;
+
+      ListView_SetTileViewInfo(controller_table, &tileViewInfo);
+
+      for (auto i = 0; i < controller_table.GetItemCount(); ++i)
+      {
+        UINT columns[2] = { 1, 2 };
+        int formats[2] = { LVCFMT_LEFT, LVCFMT_RIGHT };
+        LVTILEINFO item_info{ .cbSize = sizeof(LVTILEINFO), .iItem = (int)i, .cColumns = 2, .puColumns = columns, .piColFmt = formats };
+
+        ListView_SetTileInfo(controller_table, &item_info);
+      }
+
       auto header = launch_table.GetHeader();
 
       auto style = header.GetWindowStyle();
 
       header.SetWindowStyle(style | HDS_NOSIZING | HDS_FLAT);
-
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
@@ -141,10 +253,20 @@ namespace siege::views
       launch_table.SetWindowPos(three_quarters);
       launch_table.SetWindowPos(POINT{ .y = top_size.cy });
 
+      keyboard_table.SetWindowPos(three_quarters);
+      keyboard_table.SetWindowPos(POINT{ .y = top_size.cy });
+
+      controller_table.SetWindowPos(three_quarters);
+      controller_table.SetWindowPos(POINT{ .y = top_size.cy });
+      controller_table.SetImageList(LVSIL_NORMAL, image_list);
+
       options.SetWindowPos(one_quarter);
       options.SetWindowPos(POINT{ .x = three_quarters.cx, .y = top_size.cy });
 
-      std::array<std::reference_wrapper<win32::list_view>, 3> tables = { { std::ref(resource_table), std::ref(string_table), std::ref(launch_table) } };
+      std::array<std::reference_wrapper<win32::list_view>, 4> tables = { { std::ref(resource_table),
+        std::ref(string_table),
+        std::ref(launch_table),
+        std::ref(controller_table) } };
 
       for (auto& table : tables)
       {
@@ -186,7 +308,26 @@ namespace siege::views
 
       std::vector icons{
         win32::segoe_fluent_icons::new_window,
-        win32::segoe_fluent_icons::folder_open
+        win32::segoe_fluent_icons::folder_open,
+        win32::segoe_fluent_icons::dpad,// 2
+        win32::segoe_fluent_icons::caret_solid_up,
+        win32::segoe_fluent_icons::caret_solid_down,
+        win32::segoe_fluent_icons::caret_solid_left,
+        win32::segoe_fluent_icons::caret_solid_right,
+        win32::segoe_fluent_icons::left_stick,// 7
+        win32::segoe_fluent_icons::right_stick,
+        win32::segoe_fluent_icons::arrow_up,// 9
+        win32::segoe_fluent_icons::arrow_down,
+        win32::segoe_fluent_icons::arrow_left,
+        win32::segoe_fluent_icons::arrow_right,
+        win32::segoe_fluent_icons::button_a,// 13
+        win32::segoe_fluent_icons::button_b,
+        win32::segoe_fluent_icons::button_x,
+        win32::segoe_fluent_icons::button_y,
+        win32::segoe_fluent_icons::bumper_left,// 17
+        win32::segoe_fluent_icons::bumper_right,
+        win32::segoe_fluent_icons::trigger_left,// 19
+        win32::segoe_fluent_icons::trigger_right,
       };
 
       image_list = win32::create_icon_list(icons, icon_size);
@@ -201,20 +342,14 @@ namespace siege::views
         ::ShowWindow(resource_table, SW_HIDE);
         ::ShowWindow(string_table, SW_HIDE);
         ::ShowWindow(launch_table, SW_HIDE);
+        ::ShowWindow(controller_table, SW_HIDE);
 
-        if (selected == 0)
-        {
-          ::ShowWindow(resource_table, SW_SHOW);
-        }
-        else if (selected == 1)
-        {
-          ::ShowWindow(string_table, SW_SHOW);
-        }
-        else if (selected == 2)
-        {
-          ::ShowWindow(launch_table, SW_SHOW);
-        }
+        std::array tables{ resource_table.ref(), string_table.ref(), launch_table.ref(), keyboard_table.ref(), controller_table.ref() };
 
+        if (selected < tables.size())
+        {
+          ::ShowWindow(tables[selected], SW_SHOW);
+        }
 
         return 0;
       }
@@ -236,6 +371,8 @@ namespace siege::views
         {
           options.InsertString(-1, L"Scripting");
           options.InsertString(-1, L"Launch Options");
+          options.InsertString(-1, L"Keyboard/Mouse Settings");
+          options.InsertString(-1, L"Controller");
 
           siege::init_active_input_state();
         }
@@ -398,7 +535,7 @@ namespace siege::views
             };
 
             win32::DialogBoxIndirectParamW<siege::input_injector>(win32::module_ref::current_application(),
-              win32::default_dialog({ }),
+              win32::default_dialog({}),
               ref(),
               (LPARAM)&args);
           }
@@ -420,6 +557,7 @@ namespace siege::views
         win32::apply_theme(resource_table);
         win32::apply_theme(launch_table);
         win32::apply_theme(string_table);
+        win32::apply_theme(controller_table);
         win32::apply_theme(options);
         win32::apply_theme(exe_actions);
         win32::apply_theme(*this);

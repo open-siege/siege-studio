@@ -224,6 +224,11 @@ namespace win32
       this->pszText = this->text.data();
     }
 
+    list_view_item(std::wstring text, int image_index) : ::LVITEMW{ .iImage = image_index }, text(std::move(text)), sub_items{}
+    {
+      this->pszText = this->text.data();
+    }
+
     list_view_item(const list_view_item& item) : ::LVITEMW(item), text(item.text), sub_items(item.sub_items)
     {
       this->pszText = text.data();
@@ -697,6 +702,7 @@ namespace win32
 
       for (auto i = 1u; i <= row.sub_items.size(); ++i)
       {
+        sub_item.iItem = index;
         sub_item.iSubItem = i;
         sub_item.pszText = row.sub_items[i - 1].data();
         sub_item.mask = LVIF_TEXT;
@@ -1011,10 +1017,10 @@ namespace win32
     {
       auto button_size = size_hint ? *size_hint : GetButtonSize();
       auto padding = GetPadding();
-      
+
       button_size.cx -= padding.cx;
       button_size.cy -= padding.cy;
-      
+
       if (this->GetWindowStyle() & TBSTYLE_FLAT)
       {
         auto font = SendMessage(*this, WM_GETFONT, 0, 0);
