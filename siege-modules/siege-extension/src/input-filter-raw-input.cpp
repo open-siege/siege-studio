@@ -6,12 +6,18 @@
 #include <cassert>
 #include <fstream>
 #include <algorithm>
-#include <vector>
+#include <optional>
 #include "input-filter.hpp"
 
 extern "C" {
 
-static std::vector<HOOKPROC> ll_keyboard_hooks{};
+struct direct_input_hook
+{
+  HOOKPROC proc;
+  HHOOK handle;
+};
+
+static std::optional<direct_input_hook> keyboard_hook = std::nullopt;
 
 LRESULT CALLBACK CBTProc(
   int code,
@@ -129,26 +135,25 @@ LRESULT CALLBACK GetMsgProc(
               }
 
               ::PostMessageW(message->hwnd, event, vk, lParam);
-
-              KBDLLHOOKSTRUCT keyboard_event{
-              .vkCode = vk,
-              .scanCode = input.data.keyboard.MakeCode,
-              .dwExtraInfo = input.data.keyboard.ExtraInformation
-              };
-
-              if (input.data.keyboard.Flags & RI_KEY_BREAK)
+              
+              if (keyboard_hook)
               {
-                keyboard_event.flags |= LLKHF_UP;
-              }
+                KBDLLHOOKSTRUCT keyboard_event{
+                  .vkCode = vk,
+                  .scanCode = input.data.keyboard.MakeCode,
+                  .dwExtraInfo = input.data.keyboard.ExtraInformation
+                };
 
-              if (input.data.keyboard.Flags & RI_KEY_E0)
-              {
-                keyboard_event.flags |= LLKHF_EXTENDED;
-              }
+                if (input.data.keyboard.Flags & RI_KEY_BREAK)
+                {
+                  keyboard_event.flags |= LLKHF_UP;
+                }
 
-              for (auto& hook : ll_keyboard_hooks)
-              {
-                hook(0, event, (LPARAM)&keyboard_event);
+                if (input.data.keyboard.Flags & RI_KEY_E0)
+                {
+                  keyboard_event.flags |= LLKHF_EXTENDED;
+                }
+                keyboard_hook->proc(0, event, (LPARAM)&keyboard_event);
               }
             }
             else
@@ -169,15 +174,35 @@ next_hook:
 
 static auto* TrueGetAsyncKeyState = GetAsyncKeyState;
 static auto* TrueSetWindowHookExW = SetWindowsHookExW;
+static auto* TrueUnhookWindowsHookEx = UnhookWindowsHookEx;
 
 HHOOK WINAPI WrappedSetWindowsHookExW(int idHook, HOOKPROC lpfn, HINSTANCE hmod, DWORD dwThreadId)
 {
-  if (hmod == ::GetModuleHandleW(L"dinput.dll") && idHook == WH_KEYBOARD_LL)
+  if (auto dinput = ::GetModuleHandleW(L"dinput.dll"); dinput && idHook == WH_KEYBOARD_LL)
   {
-    ll_keyboard_hooks.emplace_back(lpfn);
+    auto result = TrueSetWindowHookExW(idHook, lpfn, hmod, dwThreadId);
+    keyboard_hook = direct_input_hook{ .proc = lpfn, .handle = result };
+    return result;
+  }
+
+  if (auto dinput8 = ::GetModuleHandleW(L"dinput8.dll"); dinput8 && idHook == WH_KEYBOARD_LL)
+  {
+    auto result = TrueSetWindowHookExW(idHook, lpfn, hmod, dwThreadId);
+    keyboard_hook = direct_input_hook{ .proc = lpfn, .handle = result };
+    return result;
   }
 
   return TrueSetWindowHookExW(idHook, lpfn, hmod, dwThreadId);
+}
+
+BOOL WINAPI WrappedUnhookWindowsHookEx(HHOOK handle)
+{
+  if (keyboard_hook && keyboard_hook->handle == handle)
+  {
+    keyboard_hook = std::nullopt;
+  }
+
+  return TrueUnhookWindowsHookEx(handle);
 }
 
 SHORT __stdcall WrappedGetAsyncKeyState(int vKey)
@@ -185,10 +210,11 @@ SHORT __stdcall WrappedGetAsyncKeyState(int vKey)
   return ::GetKeyState(vKey);
 }
 
-static std::array<std::pair<void**, void*>, 2> detour_functions{
+static std::array<std::pair<void**, void*>, 3> detour_functions{
   {
     { &(void*&)TrueGetAsyncKeyState, WrappedGetAsyncKeyState },
     { &(void*&)TrueSetWindowHookExW, WrappedSetWindowsHookExW },
+    { &(void*&)TrueUnhookWindowsHookEx, WrappedUnhookWindowsHookEx },
   }
 };
 
