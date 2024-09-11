@@ -18,11 +18,108 @@ namespace siege
 {
   struct input_injector_args
   {
+    enum mode
+    {
+      none,
+      bind_input,
+      bind_action
+    };
+
     std::filesystem::path exe_path;
     std::filesystem::path extension_path;
     std::vector<std::wstring> command_line_args;
     std::wstring script_host;
+    mode input_mode = bind_input;
+    std::map<WORD, WORD> controller_key_mappings;
   };
+
+  enum class input_state
+  {
+    down,
+    up
+  };
+
+  ::INPUT vk_to_input(WORD key, std::uint32_t device_id, input_state state)
+  {
+    ::INPUT result{};
+
+    if (key >= WM_MOUSEMOVE && key <= WM_MOUSEMOVE + 4)
+    {
+      result.type = INPUT_MOUSE;
+      result.mi.dwFlags = MOUSEEVENTF_MOVE;
+      result.mi.dx = 1;
+      result.mi.dy = 1;
+      result.mi.dwExtraInfo = device_id;
+      return result;
+    }
+
+    if (key == WM_MOUSEWHEEL)
+    {
+      result.type = INPUT_MOUSE;
+      result.mi.dwFlags = MOUSEEVENTF_WHEEL;
+      result.mi.mouseData = WHEEL_DELTA;
+      result.mi.dwExtraInfo = device_id;
+      return result;
+    }
+
+    if (key == WM_MOUSEHWHEEL)
+    {
+      result.type = INPUT_MOUSE;
+      result.mi.dwFlags = MOUSEEVENTF_HWHEEL;
+      result.mi.mouseData = WHEEL_DELTA;
+      result.mi.dwExtraInfo = device_id;
+      return result;
+    }
+
+    if (key == VK_LBUTTON)
+    {
+      result.type = INPUT_MOUSE;
+      result.mi.dwFlags = state == input_state::up ? MOUSEEVENTF_LEFTUP : MOUSEEVENTF_LEFTDOWN;
+      result.mi.dwExtraInfo = device_id;
+      return result;
+    }
+
+    if (key == VK_RBUTTON)
+    {
+      result.type = INPUT_MOUSE;
+      result.mi.dwFlags = state == input_state::up ? MOUSEEVENTF_RIGHTUP : MOUSEEVENTF_RIGHTDOWN;
+      result.mi.dwExtraInfo = device_id;
+      return result;
+    }
+
+    if (key == VK_MBUTTON)
+    {
+      result.type = INPUT_MOUSE;
+      result.mi.dwFlags = state == input_state::up ? MOUSEEVENTF_MIDDLEUP : MOUSEEVENTF_MIDDLEDOWN;
+      result.mi.dwExtraInfo = device_id;
+      return result;
+    }
+
+    if (key == VK_XBUTTON1)
+    {
+      result.type = INPUT_MOUSE;
+      result.mi.dwFlags = XBUTTON1;
+      result.mi.dwFlags = state == input_state::up ? MOUSEEVENTF_XUP : MOUSEEVENTF_XDOWN;
+      result.mi.dwExtraInfo = device_id;
+      return result;
+    }
+
+    if (key == VK_XBUTTON2)
+    {
+      result.type = INPUT_MOUSE;
+      result.mi.dwFlags = XBUTTON2;
+      result.mi.dwFlags = state == input_state::up ? MOUSEEVENTF_XUP : MOUSEEVENTF_XDOWN;
+      result.mi.dwExtraInfo = device_id;
+      return result;
+    }
+
+    result.type = INPUT_KEYBOARD;
+    result.ki.wScan = ::MapVirtualKeyW(key, MAPVK_VK_TO_VSC);
+    result.ki.dwFlags = state == input_state::up ? KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP : KEYEVENTF_SCANCODE;
+    result.ki.dwExtraInfo = device_id;
+
+    return result;
+  }
 
   struct input_injector : win32::window_ref
   {
@@ -35,17 +132,6 @@ namespace siege
     std::set<HANDLE> registered_controllers;
     std::set<HANDLE> regular_controllers;
     std::map<int, XINPUT_STATE> controller_state;
-
-    std::map<std::wstring_view, bool> action_states = {
-      std::make_pair(std::wstring_view{ L"+forward" }, false),
-      std::make_pair(std::wstring_view{ L"+back" }, false),
-      std::make_pair(std::wstring_view{ L"+moveleft" }, false),
-      std::make_pair(std::wstring_view{ L"+moveright" }, false),
-      std::make_pair(std::wstring_view{ L"+left" }, false),
-      std::make_pair(std::wstring_view{ L"+right" }, false),
-      std::make_pair(std::wstring_view{ L"+lookup" }, false),
-      std::make_pair(std::wstring_view{ L"+lookdown" }, false),
-    };
 
     input_injector(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self), child_process{}, controller_state{}
     {
@@ -196,7 +282,7 @@ namespace siege
         {
           INPUT temp{ .type = INPUT_KEYBOARD };
           temp.ki.dwExtraInfo = *device_id;
-      //    temp.ki.wVk = input.data.keyboard.VKey;
+          //    temp.ki.wVk = input.data.keyboard.VKey;
           temp.ki.wScan = input.data.keyboard.MakeCode;
           temp.ki.dwFlags = KEYEVENTF_SCANCODE;
 
@@ -279,6 +365,8 @@ namespace siege
 
       XINPUT_STATE temp{};
 
+      auto& mappings = injector_args.controller_key_mappings;
+
       for (auto& state : controller_state)
       {
         auto result = XInputGetState(state.first, &temp);
@@ -291,125 +379,83 @@ namespace siege
         auto [newLx, newLy] = calculate_deadzone(std::make_pair(temp.Gamepad.sThumbLX, temp.Gamepad.sThumbLY), XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
         auto [oldLx, oldLy] = calculate_deadzone(std::make_pair(state.second.Gamepad.sThumbLX, state.second.Gamepad.sThumbLY), XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
 
-        if (newLx != oldLx)
+        auto mapping = mappings.find(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT);
+        auto mapping_alt = mappings.find(VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT);
+
+        if (newLx != oldLx && mapping != mappings.end()
+            && mapping_alt != mappings.end())
         {
-          auto& button_a = simulated_inputs.emplace_back();
-          button_a.type = INPUT_KEYBOARD;
-          auto& button_b = simulated_inputs.emplace_back();
-          button_b.type = INPUT_KEYBOARD;
-
-          button_a.ki.dwExtraInfo = *device_id;
-          button_b.ki.dwExtraInfo = *device_id;
-
           if (newLx == 0)
           {
-            button_a.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
-            button_a.ki.wScan = 30;// A
-
-            button_b.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
-            button_b.ki.wScan = 32;// D
+            simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
+            simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
           }
           else if (newLx < 0)
           {
-            button_a.ki.dwFlags = KEYEVENTF_SCANCODE;
-            button_a.ki.wScan = 30;
-            button_b.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
-            button_b.ki.wScan = 32;
+            simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::down));
+            simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
           }
           else if (newLx > 0)
           {
-            button_a.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
-            button_a.ki.wScan = 30;// A
-            button_b.ki.dwFlags = KEYEVENTF_SCANCODE;
-            button_b.ki.wScan = 32;// D
+            simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
+            simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::down));
           }
         }
 
-        if (newLy != oldLy)
+        mapping = mappings.find(VK_GAMEPAD_LEFT_THUMBSTICK_UP);
+        mapping_alt = mappings.find(VK_GAMEPAD_LEFT_THUMBSTICK_DOWN);
+
+        if (newLy != oldLy && mapping != mappings.end()
+            && mapping_alt != mappings.end())
         {
-          auto& button_a = simulated_inputs.emplace_back();
-          button_a.type = INPUT_KEYBOARD;
-
-          auto& button_b = simulated_inputs.emplace_back();
-          button_b.type = INPUT_KEYBOARD;
-
-          button_a.ki.dwExtraInfo = *device_id;
-          button_b.ki.dwExtraInfo = *device_id;
-
           if (newLy == 0)
           {
-            button_a.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
-            button_a.ki.wScan = 0x0011;// W
-            button_b.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
-            button_b.ki.wScan = 0x001F;// S
+            simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
+            simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
           }
           else if (newLy < 0)
           {
-            button_a.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
-            button_a.ki.wScan = 0x0011;// W
-            button_b.ki.dwFlags = KEYEVENTF_SCANCODE;
-            button_b.ki.wScan = 0x001F;// S
+            simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
+            simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::down));
           }
           else if (newLy > 0)
           {
-            button_a.ki.dwFlags = KEYEVENTF_SCANCODE;
-            button_a.ki.wScan = 0x0011;// W
-            button_b.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
-            button_b.ki.wScan = 0x001F;// S
+            simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::down));
+            simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
           }
         }
 
         constexpr static auto half_size = std::numeric_limits<short>().max() / 2;
 
-        if (newLx != oldLx || newLy != oldLy)
-        {
-          auto& shift_key = simulated_inputs.emplace_back();
-          shift_key.type = INPUT_KEYBOARD;
-          shift_key.ki.wScan = 0x002A;
-          if (std::abs(newLx) > half_size || std::abs(newLy) > half_size)
-          {
-            shift_key.ki.dwFlags = KEYEVENTF_SCANCODE;
-          }
-          else
-          {
-            shift_key.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
-          }
+        mapping = mappings.find(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON);
 
-          shift_key.ki.dwExtraInfo = *device_id;
+        if (mapping != mappings.end() && temp.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB)
+        {
+          simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::down));
+        }
+        else if (mapping != mappings.end() && state.second.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB)
+        {
+          simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
         }
 
-        if (temp.Gamepad.wButtons & XINPUT_GAMEPAD_B)
+        if (mapping != mappings.end() && temp.Gamepad.wButtons & XINPUT_GAMEPAD_B)
         {
-          auto& crouch_button = simulated_inputs.emplace_back();
-          crouch_button.type = INPUT_KEYBOARD;
-          crouch_button.ki.dwFlags = KEYEVENTF_SCANCODE;
-          crouch_button.ki.wScan = 0x001D;// left control
-          crouch_button.ki.dwExtraInfo = *device_id;
+          simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::down));
         }
-        else if (state.second.Gamepad.wButtons & XINPUT_GAMEPAD_B)
+        else if (mapping != mappings.end() && state.second.Gamepad.wButtons & XINPUT_GAMEPAD_B)
         {
-          auto& crouch_button = simulated_inputs.emplace_back();
-          crouch_button.type = INPUT_KEYBOARD;
-          crouch_button.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
-          crouch_button.ki.wScan = 0x001D;// left control
-          crouch_button.ki.dwExtraInfo = *device_id;
+          simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
         }
 
-        if (temp.Gamepad.wButtons & XINPUT_GAMEPAD_A)
+        mapping = mappings.find(VK_GAMEPAD_A);
+
+        if (mapping != mappings.end() && temp.Gamepad.wButtons & XINPUT_GAMEPAD_A)
         {
-          auto& jump_button = simulated_inputs.emplace_back();
-          jump_button.type = INPUT_KEYBOARD;
-          jump_button.ki.wScan = 0x0039;// space
-          jump_button.ki.dwFlags = KEYEVENTF_SCANCODE;
-          jump_button.ki.dwExtraInfo = *device_id;
+          simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::down));
         }
-        else if (state.second.Gamepad.wButtons & XINPUT_GAMEPAD_A)
+        else if (mapping != mappings.end() && state.second.Gamepad.wButtons & XINPUT_GAMEPAD_A)
         {
-          auto& jump_button = simulated_inputs.emplace_back();
-          jump_button.type = INPUT_KEYBOARD;
-          jump_button.ki.wScan = 0x0039;// space
-          jump_button.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
-          jump_button.ki.dwExtraInfo = *device_id;
+          simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
         }
 
         auto [newRx, newRy] = calculate_deadzone(std::make_pair(temp.Gamepad.sThumbRX, temp.Gamepad.sThumbRY), XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
@@ -420,82 +466,42 @@ namespace siege
 
         if (newRy != oldRy)
         {
-          if (newRy >= 0 && action_states[L"+lookup"])
-          {
-            action_states[L"+lookup"] = false;
-            // script_host->Invoke(func_ids[L"-lookup"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
-          }
-
-          if (newRy <= 0 && action_states[L"+lookdown"])
-          {
-            action_states[L"+lookdown"] = false;
-            // script_host->Invoke(func_ids[L"-lookdown"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
-          }
-
-          if (newRy > 0 && !action_states[L"+lookdown"])
-          {
-            action_states[L"+lookdown"] = true;
-            // script_host->Invoke(func_ids[L"+lookdown"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
-          }
-
-          if (newRy < 0 && !action_states[L"+lookup"])
-          {
-            action_states[L"+lookup"] = true;
-            // script_host->Invoke(func_ids[L"+lookup"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
-          }
+          // TODO deal with right stick input
         }
         if (newRx != oldRx)
         {
-          if (newRx >= 0 && action_states[L"+left"])
-          {
-            action_states[L"+left"] = false;
-            // script_host->Invoke(func_ids[L"-left"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
-          }
-
-          if (newRx <= 0 && action_states[L"+right"])
-          {
-            action_states[L"+right"] = false;
-            // script_host->Invoke(func_ids[L"-right"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
-          }
-
-          if (newRx < 0 && !action_states[L"+left"])
-          {
-            action_states[L"+left"] = true;
-            // script_host->Invoke(func_ids[L"+left"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
-          }
-
-          if (newRx > 0 && !action_states[L"+right"])
-          {
-            action_states[L"+right"] = true;
-            //  script_host->Invoke(func_ids[L"+right"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
-          }
+          // TODO deal with right stick input
         }
 
-        if (state.second.Gamepad.bLeftTrigger != temp.Gamepad.bLeftTrigger)
+        mapping = mappings.find(VK_GAMEPAD_LEFT_TRIGGER);
+
+        if (mapping != mappings.end() && state.second.Gamepad.bLeftTrigger != temp.Gamepad.bLeftTrigger)
         {
           auto& mouse = simulated_inputs.emplace_back();
 
           if (temp.Gamepad.bLeftTrigger > 127)
           {
-            mouse.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+            simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::down));
           }
           else
           {
-            mouse.mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+            simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
           }
         }
 
-        if (state.second.Gamepad.bRightTrigger != temp.Gamepad.bRightTrigger)
+        mapping = mappings.find(VK_GAMEPAD_RIGHT_TRIGGER);
+
+        if (mapping != mappings.end() && state.second.Gamepad.bRightTrigger != temp.Gamepad.bRightTrigger)
         {
           auto& mouse = simulated_inputs.emplace_back();
 
           if (temp.Gamepad.bRightTrigger > 127)
           {
-            mouse.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+            simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::down));
           }
           else
           {
-            mouse.mi.dwFlags = MOUSEEVENTF_LEFTUP;
+            simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
           }
         }
 

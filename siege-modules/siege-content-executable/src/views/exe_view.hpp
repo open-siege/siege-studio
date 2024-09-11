@@ -127,79 +127,202 @@ namespace siege::views
                                           .pszText = const_cast<wchar_t*>(L""),
                                         });
 
+      controller_table.EnableGroupView(true);
+
       ListView_SetView(controller_table, LV_VIEW_TILE);
+      int id = 1;
+      assert(controller_table.InsertGroup(-1, LVGROUP{
+                                                .pszHeader = const_cast<wchar_t*>(L"D-Pad"),
+                                                .iGroupId = id++,
+                                                .state = LVGS_COLLAPSIBLE,
+                                              })
+             != -1);
+      controller_table.InsertGroup(-1, LVGROUP{
+                                         .pszHeader = const_cast<wchar_t*>(L"Face Buttons"),
+                                         .iGroupId = id++,
+                                         .state = LVGS_COLLAPSIBLE,
+                                       });
+
+      controller_table.InsertGroup(-1, LVGROUP{
+                                         .pszHeader = const_cast<wchar_t*>(L"Bumpers and Triggers"),
+                                         .iGroupId = id++,
+                                         .state = LVGS_COLLAPSIBLE,
+                                       });
+      controller_table.InsertGroup(-1, LVGROUP{
+                                         .pszHeader = const_cast<wchar_t*>(L"Left Stick"),
+                                         .iGroupId = id++,
+                                         .state = LVGS_COLLAPSIBLE,
+                                       });
+
+      controller_table.InsertGroup(-1, LVGROUP{
+                                         .pszHeader = const_cast<wchar_t*>(L"Right Stick"),
+                                         .iGroupId = id++,
+                                         .state = LVGS_COLLAPSIBLE,
+                                       });
+
+      controller_table.InsertGroup(-1, LVGROUP{
+                                         .pszHeader = const_cast<wchar_t*>(L"System Buttons"),
+                                         .iGroupId = id++,
+                                         .state = LVGS_COLLAPSIBLE,
+                                       });
+
 
       win32::list_view_item up(L"D-pad Up", 3);
+      up.iGroupId = 1;
+      up.lParam = MAKELPARAM(VK_GAMEPAD_DPAD_UP, VK_UP);
       up.sub_items.emplace_back(L"Keyboard");
       up.sub_items.emplace_back(L"Up arrow");
       controller_table.InsertRow(up);
 
       win32::list_view_item down(L"D-pad Down", 4);
+      down.iGroupId = 1;
+      down.lParam = MAKELPARAM(VK_GAMEPAD_DPAD_DOWN, VK_DOWN);
       down.sub_items.emplace_back(L"Keyboard");
       down.sub_items.emplace_back(L"Down arrow");
       controller_table.InsertRow(down);
 
       win32::list_view_item left(L"D-pad Left", 5);
+      left.iGroupId = 1;
+      left.lParam = MAKELPARAM(VK_GAMEPAD_DPAD_LEFT, VK_LEFT);
       left.sub_items.emplace_back(L"Keyboard");
       left.sub_items.emplace_back(L"Left arrow");
       controller_table.InsertRow(left);
 
       win32::list_view_item right(L"D-pad Right", 6);
+      right.iGroupId = 1;
+      right.lParam = MAKELPARAM(VK_GAMEPAD_DPAD_RIGHT, VK_RIGHT);
       right.sub_items.emplace_back(L"Keyboard");
       right.sub_items.emplace_back(L"Right arrow");
       controller_table.InsertRow(right);
 
+      win32::list_view_item a(L"A Button", 13);
+      a.iGroupId = 2;
+      a.lParam = MAKELPARAM(VK_GAMEPAD_A, VK_SPACE);
+      a.sub_items.emplace_back(L"Keyboard");
+      a.sub_items.emplace_back(L"Spacebar");
+      controller_table.InsertRow(a);
+
+      win32::list_view_item b(L"B Button", 14);
+      b.iGroupId = 2;
+      b.lParam = MAKELPARAM(VK_GAMEPAD_B, VK_LCONTROL);
+      b.sub_items.emplace_back(L"Keyboard");
+      b.sub_items.emplace_back(L"Left control");
+      controller_table.InsertRow(b);
+
+
       win32::list_view_item x(L"X Button", 15);
+      x.iGroupId = 2;
+      x.lParam = MAKELPARAM(VK_GAMEPAD_X, 'F');
       x.sub_items.emplace_back(L"Keyboard");
       x.sub_items.emplace_back(L"F");
       controller_table.InsertRow(x);
 
 
       win32::list_view_item y(L"Y Button", 16);
+      y.iGroupId = 2;
+      y.lParam = MAKELPARAM(VK_GAMEPAD_Y, '[');
       y.sub_items.emplace_back(L"Keyboard");
       y.sub_items.emplace_back(L"[");
       controller_table.InsertRow(y);
 
-      win32::list_view_item a(L"A Button", 13);
-      a.sub_items.emplace_back(L"Keyboard");
-      a.sub_items.emplace_back(L"Spacebar");
-      controller_table.InsertRow(a);
-
-      win32::list_view_item b(L"B Button", 14);
-      b.sub_items.emplace_back(L"Keyboard");
-      b.sub_items.emplace_back(L"Left control");
-      controller_table.InsertRow(b);
-
       win32::list_view_item lb(L"Left Bumper", 17);
+      lb.iGroupId = 3;
+      lb.lParam = MAKELPARAM(VK_GAMEPAD_LEFT_SHOULDER, 'G');
       lb.sub_items.emplace_back(L"Keyboard");
       lb.sub_items.emplace_back(L"G");
       controller_table.InsertRow(lb);
 
 
       win32::list_view_item rb(L"Right Bumper", 18);
+      rb.iGroupId = 3;
+      rb.lParam = MAKELPARAM(VK_GAMEPAD_RIGHT_SHOULDER, 'T');
       rb.sub_items.emplace_back(L"Keyboard");
       rb.sub_items.emplace_back(L"T");
       controller_table.InsertRow(rb);
 
       win32::list_view_item lt(L"Left Trigger", 19);
+      lt.iGroupId = 3;
+      lt.lParam = MAKELPARAM(VK_GAMEPAD_LEFT_TRIGGER, VK_RBUTTON);
       lt.sub_items.emplace_back(L"Mouse");
       lt.sub_items.emplace_back(L"Right click");
       controller_table.InsertRow(lt);
 
       win32::list_view_item rt(L"Right Trigger", 20);
+      rt.iGroupId = 3;
+      rt.lParam = MAKELPARAM(VK_GAMEPAD_RIGHT_TRIGGER, VK_LBUTTON);
       rt.sub_items.emplace_back(L"Mouse");
       rt.sub_items.emplace_back(L"Left click");
       controller_table.InsertRow(rt);
 
-      win32::list_view_item ls(L"Left Stick", 7);
+      win32::list_view_item ls(L"Left Stick Button", 7);
+      ls.iGroupId = 4;
+      ls.lParam = MAKELPARAM(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, VK_LSHIFT);
       ls.sub_items.emplace_back(L"Keyboard");
       ls.sub_items.emplace_back(L"Left shift");
       controller_table.InsertRow(ls);
 
-      win32::list_view_item rs(L"Right Stick", 8);
+      win32::list_view_item lsu(L"Left Stick Up", 9);
+      lsu.iGroupId = 4;
+      lsu.lParam = MAKELPARAM(VK_GAMEPAD_LEFT_THUMBSTICK_UP, 'W');
+      lsu.sub_items.emplace_back(L"Keyboard");
+      lsu.sub_items.emplace_back(L"W");
+      controller_table.InsertRow(lsu);
+
+      win32::list_view_item lsd(L"Left Stick Down", 10);
+      lsd.iGroupId = 4;
+      lsd.lParam = MAKELPARAM(VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, 'S');
+      lsd.sub_items.emplace_back(L"Keyboard");
+      lsd.sub_items.emplace_back(L"S");
+      controller_table.InsertRow(lsd);
+
+      win32::list_view_item lsl(L"Left Stick Left", 10);
+      lsl.iGroupId = 4;
+      lsl.lParam = MAKELPARAM(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, 'A');
+      lsl.sub_items.emplace_back(L"Keyboard");
+      lsl.sub_items.emplace_back(L"A");
+      controller_table.InsertRow(lsl);
+      
+      win32::list_view_item lsr(L"Left Stick Right", 10);
+      lsr.iGroupId = 4;
+      lsr.lParam = MAKELPARAM(VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, 'D');
+      lsr.sub_items.emplace_back(L"Keyboard");
+      lsr.sub_items.emplace_back(L"D");
+      controller_table.InsertRow(lsr);
+
+      win32::list_view_item rs(L"Right Stick Button", 8);
+      rs.iGroupId = 5;
+      rs.lParam = MAKELPARAM(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, 'E');
       rs.sub_items.emplace_back(L"Keyboard");
       rs.sub_items.emplace_back(L"E");
       controller_table.InsertRow(rs);
+
+      win32::list_view_item rsu(L"Right Stick Up", 9);
+      rsu.iGroupId = 5;
+      rsu.lParam = MAKELPARAM(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, WM_MOUSEMOVE);
+      rsu.sub_items.emplace_back(L"Mouse");
+      rsu.sub_items.emplace_back(L"Mouse up");
+      controller_table.InsertRow(rsu);
+
+      win32::list_view_item rsd(L"Right Stick Down", 10);
+      rsd.iGroupId = 5;
+      rsd.lParam = MAKELPARAM(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, WM_MOUSEMOVE + 1);
+      rsd.sub_items.emplace_back(L"Mouse");
+      rsd.sub_items.emplace_back(L"Mouse down");
+      controller_table.InsertRow(rsd);
+
+      win32::list_view_item rsl(L"Right Stick Left", 11);
+      rsl.iGroupId = 5;
+      rsl.lParam = MAKELPARAM(VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, WM_MOUSEMOVE + 2);
+      rsl.sub_items.emplace_back(L"Mouse");
+      rsl.sub_items.emplace_back(L"Mouse left");
+      controller_table.InsertRow(rsl);
+      
+      win32::list_view_item rsr(L"Right Stick Right", 12);
+      rsr.iGroupId = 5;
+      rsr.lParam = MAKELPARAM(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, WM_MOUSEMOVE + 3);
+      rsr.sub_items.emplace_back(L"Mouse");
+      rsr.sub_items.emplace_back(L"Mouse right");
+      controller_table.InsertRow(rsr);
 
       LVTILEVIEWINFO tileViewInfo = { 0 };
 
@@ -529,9 +652,27 @@ namespace siege::views
         {
           if (controller.has_extension_module())
           {
+            std::map<WORD, WORD> input_mapping{};
+
+            for (auto i = 0; i < controller_table.GetItemCount(); ++i)
+            {
+              auto item = controller_table.GetItem(LVITEMW{
+                .mask = LVIF_PARAM,
+                .iItem = i
+              });
+
+              if (item && item->lParam)
+              {
+                auto controller_key = LOWORD(item->lParam);
+                auto keyboard_key = HIWORD(item->lParam);
+                input_mapping[controller_key] = keyboard_key;
+              }
+            }
+
             input_injector_args args{
               .exe_path = controller.get_exe_path(),
-              .extension_path = controller.get_extension().GetModuleFileName()
+              .extension_path = controller.get_extension().GetModuleFileName(),
+              .controller_key_mappings = std::move(input_mapping)
             };
 
             win32::DialogBoxIndirectParamW<siege::input_injector>(win32::module_ref::current_application(),

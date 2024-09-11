@@ -708,13 +708,6 @@ namespace win32
         sub_item.mask = LVIF_TEXT;
 
         ::SendMessageW(*this, LVM_SETITEMTEXT, index, (LPARAM)&sub_item);
-
-        if (row.lParam)
-        {
-          sub_item.mask = LVIF_PARAM;
-          sub_item.lParam = row.lParam;
-          ::SendMessageW(*this, LVM_SETITEM, index, (LPARAM)&sub_item);
-        }
       }
 
       return index;
