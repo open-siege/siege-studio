@@ -42,7 +42,7 @@ namespace win32
   {                                                                                           \
     if (message == message_id)                                                                \
     {                                                                                         \
-      return self->event_name((wparam_type)wParam, *(lparam_type*)lParam);                    \
+      return self->event_name((wparam_type)wParam, *(lparam_type)lParam);                    \
     }                                                                                         \
   }
 
@@ -55,9 +55,9 @@ namespace win32
     DO_DISPATCH_LPARAM(WM_CREATE, CREATESTRUCTW, wm_create);
     DO_DISPATCH_NOPARAM(WM_DESTROY, wm_destroy);
     DO_DISPATCH(get_object_message, wm_get_object);
-
-    DO_DISPATCH_WPARAM_AND_LPARAM(WM_MEASUREITEM, std::size_t, MEASUREITEMSTRUCT, wm_measure_item);
-    DO_DISPATCH_WPARAM_AND_LPARAM(WM_DRAWITEM, std::size_t, DRAWITEMSTRUCT, wm_draw_item);
+    DO_DISPATCH_WPARAM_AND_LPARAM(WM_TIMER, std::size_t, TIMERPROC, wm_timer);
+    DO_DISPATCH_WPARAM_AND_LPARAM(WM_MEASUREITEM, std::size_t, MEASUREITEMSTRUCT*, wm_measure_item);
+    DO_DISPATCH_WPARAM_AND_LPARAM(WM_DRAWITEM, std::size_t, DRAWITEMSTRUCT*, wm_draw_item);
 
     DO_DISPATCH(setting_change_message, wm_setting_change);
 

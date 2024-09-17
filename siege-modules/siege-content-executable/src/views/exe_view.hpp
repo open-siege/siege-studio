@@ -624,11 +624,73 @@ namespace siege::views
           auto wm_create()
           {
             SetWindowTextW(*this, L"Press a keyboard or mouse button");
+            SetTimer(*this, 1, USER_TIMER_MINIMUM, nullptr);
+            return 0;
+          }
+
+          auto wm_timer(std::size_t id, TIMERPROC)
+          {
+              if (::GetKeyState(VK_ESCAPE) & 0x80)
+              {
+                KillTimer(*this, 1);
+                EndDialog(*this, 0);
+                return 0;
+              }
+
+            constexpr static std::array<SHORT, 10> states = { { 
+                    VK_RETURN, VK_LMENU, VK_RMENU, VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_TAB, VK_F10, VK_SNAPSHOT } };
+
+            for (auto state : states)
+            {
+              if (::GetKeyState(state) & 0x80)
+              {
+                KillTimer(*this, 1);
+                EndDialog(*this, state);
+                break;
+              }
+            }
+
+            return 0;
+          }
+
+          auto wm_mouse_button_down(std::size_t state, POINTS)
+          {
+            if (state & MK_LBUTTON)
+            {
+              KillTimer(*this, 1);
+              EndDialog(*this, VK_LBUTTON);
+            }
+
+            if (state & MK_RBUTTON)
+            {
+              KillTimer(*this, 1);
+              EndDialog(*this, VK_RBUTTON);
+            }
+
+            if (state & MK_MBUTTON)
+            {
+              KillTimer(*this, 1);
+              EndDialog(*this, VK_MBUTTON);
+            }
+
+            if (state & MK_XBUTTON1)
+            {
+              KillTimer(*this, 1);
+              EndDialog(*this, VK_XBUTTON1);
+            }
+
+            if (state & MK_XBUTTON2)
+            {
+              KillTimer(*this, 1);
+              EndDialog(*this, MK_XBUTTON2);
+            }
+
             return 0;
           }
 
           auto wm_key_down(KEYBDINPUT input)
           {
+            KillTimer(*this, 1);
             EndDialog(*this, input.wVk);
             return 0;
           }
@@ -648,7 +710,14 @@ namespace siege::views
           temp = L"Mouse Up";
           ListView_SetItemText(controller_table, message.iItem, 2, temp.data());
         }
-        else
+        else if (result >= VK_LBUTTON && result <= VK_XBUTTON2)
+        {
+          std::wstring temp = L"Mouse";
+          ListView_SetItemText(controller_table, message.iItem, 1, temp.data());
+          temp = L"Mouse Button";
+          ListView_SetItemText(controller_table, message.iItem, 2, temp.data());
+        }
+        else if (result)
         {
 
           std::wstring temp = L"Keyboard";
@@ -656,7 +725,7 @@ namespace siege::views
           temp.clear();
           temp.push_back(result);
           ListView_SetItemText(controller_table, message.iItem, 2, temp.data());
-          
+
           LVITEMW item{
             .mask = LVIF_PARAM,
             .lParam = MAKELPARAM(game_pad_code, result)
