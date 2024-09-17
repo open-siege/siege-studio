@@ -120,31 +120,42 @@ namespace win32
       }
     }
 
+    auto create_input_struct = [](auto wParam, auto lParam) -> KEYBDINPUT {
+      KEYBDINPUT input{};
+      input.wVk = wParam;
+
+      WORD keyFlags = HIWORD(lParam);
+      input.wScan = LOBYTE(keyFlags);
+
+      if (input.wScan)
+      {
+        input.dwFlags |= KEYEVENTF_SCANCODE;
+      }
+
+      if ((keyFlags & KF_EXTENDED) == KF_EXTENDED)
+      {
+        input.dwFlags |= KEYEVENTF_EXTENDEDKEY;
+      }
+
+      input.time = ::GetMessageTime();
+      input.dwExtraInfo = lParam;
+
+      return input;
+    };
+
+    if constexpr (requires(TWindow t) { t.wm_sys_key_down(::KEYBDINPUT{}); })
+    {
+      if (message == WM_SYSKEYDOWN)
+      {
+        return self->wm_sys_key_down(create_input_struct(wParam, lParam));
+      }
+    }
+
     if constexpr (requires(TWindow t) { t.wm_key_down(::KEYBDINPUT{}); })
     {
       if (message == WM_KEYDOWN)
       {
-        KEYBDINPUT input{};
-        input.wVk = wParam;
-
-        WORD keyFlags = HIWORD(lParam);
-        input.wScan = LOBYTE(keyFlags);
-
-        if (input.wScan)
-        {
-          input.dwFlags |= KEYEVENTF_SCANCODE;
-        }
-
-        if ((keyFlags & KF_EXTENDED) == KF_EXTENDED)
-        {
-          input.dwFlags |= KEYEVENTF_EXTENDEDKEY;
-        }
-
-        input.time = ::GetMessageTime();
-        input.dwExtraInfo = lParam;
-
-
-        return self->wm_key_down(input);
+        return self->wm_key_down(create_input_struct(wParam, lParam));
       }
     }
 

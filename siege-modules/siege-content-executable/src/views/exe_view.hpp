@@ -18,6 +18,136 @@ namespace siege::views
 {
   using namespace std::literals;
 
+  std::wstring category_for_vkey(SHORT vkey)
+  {
+    if (vkey >= VK_LBUTTON && vkey <= VK_XBUTTON2)
+    {
+      return L"Mouse";
+    }
+
+    if (vkey >= VK_GAMEPAD_A && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)
+    {
+      return L"Controller";
+    }
+
+    return L"Keyboard";
+  }
+
+  std::wstring string_for_vkey(SHORT vkey)
+  {
+    if (vkey >= 'A' && vkey <= 'Z')
+    {
+      return std::wstring(1, vkey);
+    }
+
+    if (vkey >= '0' && vkey <= '9')
+    {
+      return std::wstring(1, vkey);
+    }
+
+    if (vkey >= '/' && vkey <= '9')
+    {
+      return std::wstring(1, vkey);
+    }
+
+    if (vkey >= VK_F1 && vkey <= VK_F9)
+    {
+      std::wstring result(1, 'F');
+      result.push_back(L'1' + vkey - VK_F1);
+      return result;
+    }
+
+    if (vkey >= VK_F10 && vkey <= VK_F19)
+    {
+      std::wstring result(1, 'F');
+      result.push_back(L'1');
+      result.push_back(L'0' + vkey - VK_F10);
+      return result;
+    }
+
+    switch (vkey)
+    {
+    case VK_LBUTTON:
+      return L"Left Mouse Button";
+    case VK_RBUTTON:
+      return L"Right Mouse Button";
+    case VK_MBUTTON:
+      return L"Middle Mouse Button";
+    case VK_XBUTTON1:
+      return L"Extra Mouse Button 1";
+    case VK_XBUTTON2:
+      return L"Extra Mouse Button 2";
+    case VK_TAB:
+      return L"Tab";
+    case VK_LCONTROL:
+      return L"Left Control";
+    case VK_RCONTROL:
+      return L"Right Control";
+    case VK_LMENU:
+      return L"Left Alt";
+    case VK_RMENU:
+      return L"Right Alt";
+    case VK_LSHIFT:
+      return L"Left Shift";
+    case VK_RSHIFT:
+      return L"Right Shift";
+    case VK_RETURN:
+      return L"Enter";
+    case VK_UP:
+      return L"Up Arrow";
+    case VK_DOWN:
+      return L"Down Arrow";
+    case VK_LEFT:
+      return L"Left Arrow";
+    case VK_RIGHT:
+      return L"Right Arrow";
+    case VK_SPACE:
+      return L"Spacebar";
+    case VK_SNAPSHOT:
+      return L"Print Screen";
+    case VK_CAPITAL:
+      return L"Caps Lock";
+    case VK_HOME:
+      return L"Home";
+    case VK_INSERT:
+      return L"Insert";
+    case VK_PRIOR:
+      return L"Page Down";
+    case VK_NEXT:
+      return L"Page Up";
+    case VK_PAUSE:
+      return L"Pause";
+    case VK_BACK:
+      return L"Backspace";
+    case VK_GAMEPAD_A:
+      return L"A Button";
+    case VK_GAMEPAD_B:
+      return L"B Button";
+    case VK_GAMEPAD_X:
+      return L"X Button";
+    case VK_GAMEPAD_Y:
+      return L"Y Button";
+    case VK_GAMEPAD_LEFT_SHOULDER:
+      return L"Left Bumper";
+    case VK_GAMEPAD_RIGHT_SHOULDER:
+      return L"Right Bumper";
+    case VK_GAMEPAD_LEFT_TRIGGER:
+      return L"Left Trigger";
+    case VK_GAMEPAD_RIGHT_TRIGGER:
+      return L"Right Trigger";
+    case VK_GAMEPAD_DPAD_UP:
+      return L"D-pad Up";
+    case VK_GAMEPAD_DPAD_DOWN:
+      return L"D-pad Down";
+    case VK_GAMEPAD_DPAD_LEFT:
+      return L"D-pad Left";
+    case VK_GAMEPAD_DPAD_RIGHT:
+      return L"D-pad Right";
+    default:
+      return L"N/A";
+    }
+  }
+
   struct exe_view final : win32::window_ref
     , win32::list_box::notifications
     , win32::list_view::notifications
@@ -630,15 +760,14 @@ namespace siege::views
 
           auto wm_timer(std::size_t id, TIMERPROC)
           {
-              if (::GetKeyState(VK_ESCAPE) & 0x80)
-              {
-                KillTimer(*this, 1);
-                EndDialog(*this, 0);
-                return 0;
-              }
+            if (::GetKeyState(VK_ESCAPE) & 0x80)
+            {
+              KillTimer(*this, 1);
+              EndDialog(*this, 0);
+              return 0;
+            }
 
-            constexpr static std::array<SHORT, 10> states = { { 
-                    VK_RETURN, VK_LMENU, VK_RMENU, VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_TAB, VK_F10, VK_SNAPSHOT } };
+            constexpr static std::array<SHORT, 7> states = { { VK_RETURN, VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_TAB, VK_SNAPSHOT } };
 
             for (auto state : states)
             {
@@ -688,10 +817,59 @@ namespace siege::views
             return 0;
           }
 
+          auto wm_sys_key_down(KEYBDINPUT input)
+          {
+            KillTimer(*this, 1);
+
+            if (input.wVk == VK_MENU)
+            {
+              if (::GetKeyState(VK_LMENU) & 0x80)
+              {
+                EndDialog(*this, VK_LMENU);
+              }
+              else
+              {
+                EndDialog(*this, VK_RMENU);
+              }
+            }
+            else
+            {
+              EndDialog(*this, input.wVk);
+            }
+
+            return 0;
+          }
+
           auto wm_key_down(KEYBDINPUT input)
           {
             KillTimer(*this, 1);
-            EndDialog(*this, input.wVk);
+
+            if (input.wVk == VK_SHIFT)
+            {
+              if (::GetKeyState(VK_LSHIFT) & 0x80)
+              {
+                EndDialog(*this, VK_LSHIFT);
+              }
+              else
+              {
+                EndDialog(*this, VK_RSHIFT);
+              }
+            }
+            else if (input.wVk == VK_CONTROL)
+            {
+              if (::GetKeyState(VK_LCONTROL) & 0x80)
+              {
+                EndDialog(*this, VK_LCONTROL);
+              }
+              else
+              {
+                EndDialog(*this, VK_RCONTROL);
+              }
+            }
+            else
+            {
+              EndDialog(*this, input.wVk);
+            }
             return 0;
           }
         };
@@ -710,20 +888,11 @@ namespace siege::views
           temp = L"Mouse Up";
           ListView_SetItemText(controller_table, message.iItem, 2, temp.data());
         }
-        else if (result >= VK_LBUTTON && result <= VK_XBUTTON2)
-        {
-          std::wstring temp = L"Mouse";
-          ListView_SetItemText(controller_table, message.iItem, 1, temp.data());
-          temp = L"Mouse Button";
-          ListView_SetItemText(controller_table, message.iItem, 2, temp.data());
-        }
         else if (result)
         {
-
-          std::wstring temp = L"Keyboard";
+          std::wstring temp = category_for_vkey(result);
           ListView_SetItemText(controller_table, message.iItem, 1, temp.data());
-          temp.clear();
-          temp.push_back(result);
+          temp = string_for_vkey(result);
           ListView_SetItemText(controller_table, message.iItem, 2, temp.data());
 
           LVITEMW item{
