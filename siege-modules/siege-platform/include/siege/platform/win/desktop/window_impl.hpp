@@ -114,9 +114,37 @@ namespace win32
 
     if constexpr (requires(TWindow t) { t.wm_mouse_button_down(std::size_t{}, POINTS{}); })
     {
-      if (message == WM_LBUTTONDOWN || message == WM_MBUTTONDOWN || message == WM_RBUTTONDOWN)
+      if (message == WM_LBUTTONDOWN || message == WM_MBUTTONDOWN || message == WM_RBUTTONDOWN || message == WM_XBUTTONDOWN)
       {
         return self->wm_mouse_button_down(std::size_t(wParam), POINTS{ .x = SHORT(GET_X_LPARAM(lParam)), .y = SHORT(GET_Y_LPARAM(lParam)) });
+      }
+    }
+
+    if constexpr (requires(TWindow t) { t.wm_key_down(::KEYBDINPUT{}); })
+    {
+      if (message == WM_KEYDOWN)
+      {
+        KEYBDINPUT input{};
+        input.wVk = wParam;
+
+        WORD keyFlags = HIWORD(lParam);
+        input.wScan = LOBYTE(keyFlags);
+
+        if (input.wScan)
+        {
+          input.dwFlags |= KEYEVENTF_SCANCODE;
+        }
+
+        if ((keyFlags & KF_EXTENDED) == KF_EXTENDED)
+        {
+          input.dwFlags |= KEYEVENTF_EXTENDEDKEY;
+        }
+
+        input.time = ::GetMessageTime();
+        input.dwExtraInfo = lParam;
+
+
+        return self->wm_key_down(input);
       }
     }
 
@@ -205,8 +233,8 @@ namespace win32
 
               ::HeapFree(heap, 0, data);
               win32::window_ref(hWnd).ForEachPropertyExW([](auto wnd, std::wstring_view name, HANDLE handle) {
-                  ::RemovePropW(wnd, name.data());
-                });
+                ::RemovePropW(wnd, name.data());
+              });
 
               return 0;
             }
@@ -279,30 +307,30 @@ namespace win32
           {
             result = dispatch_message(self, message, wParam, lParam);
 
-              if (message == WM_NCDESTROY)
+            if (message == WM_NCDESTROY)
+            {
+              auto ref_count = GetClassLongPtrW(hWnd, 0);
+              ref_count--;
+
+              if (ref_count == 0)
               {
-                auto ref_count = GetClassLongPtrW(hWnd, 0);
-                ref_count--;
+                self->~TWindow();
+                auto heap = std::bit_cast<HANDLE>(GetClassLongPtrW(hWnd, sizeof(LONG_PTR)));
+                // auto size = GetWindowLongPtrW(hWnd, sizeof(LONG_PTR));
+                auto data = std::bit_cast<TWindow*>(GetClassLongPtrW(hWnd, 3 * sizeof(LONG_PTR)));
 
-                if (ref_count == 0)
-                {
-                  self->~TWindow();
-                  auto heap = std::bit_cast<HANDLE>(GetClassLongPtrW(hWnd, sizeof(LONG_PTR)));
-                  // auto size = GetWindowLongPtrW(hWnd, sizeof(LONG_PTR));
-                  auto data = std::bit_cast<TWindow*>(GetClassLongPtrW(hWnd, 3 * sizeof(LONG_PTR)));
+                ::HeapFree(heap, 0, data);
 
-                  ::HeapFree(heap, 0, data);
-
-                  win32::window_ref(hWnd).ForEachPropertyExW([](auto wnd, std::wstring_view name, HANDLE handle) {
-                    ::RemovePropW(wnd, name.data());
-                  });
-                }
-
-                SetClassLongPtrW(hWnd, 0, ref_count);
-
-                return 0;
+                win32::window_ref(hWnd).ForEachPropertyExW([](auto wnd, std::wstring_view name, HANDLE handle) {
+                  ::RemovePropW(wnd, name.data());
+                });
               }
+
+              SetClassLongPtrW(hWnd, 0, ref_count);
+
+              return 0;
             }
+          }
 
           return result.or_else([&] { return std::make_optional(DefWindowProc(hWnd, message, wParam, lParam)); }).value();
         }

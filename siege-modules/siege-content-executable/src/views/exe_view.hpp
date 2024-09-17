@@ -281,7 +281,7 @@ namespace siege::views
       lsl.sub_items.emplace_back(L"Keyboard");
       lsl.sub_items.emplace_back(L"A");
       controller_table.InsertRow(lsl);
-      
+
       win32::list_view_item lsr(L"Left Stick Right", 10);
       lsr.iGroupId = 4;
       lsr.lParam = MAKELPARAM(VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, 'D');
@@ -316,7 +316,7 @@ namespace siege::views
       rsl.sub_items.emplace_back(L"Mouse");
       rsl.sub_items.emplace_back(L"Mouse left");
       controller_table.InsertRow(rsl);
-      
+
       win32::list_view_item rsr(L"Right Stick Right", 12);
       rsr.iGroupId = 5;
       rsr.lParam = MAKELPARAM(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, WM_MOUSEMOVE + 3);
@@ -611,6 +611,65 @@ namespace siege::views
       return FALSE;
     }
 
+    std::optional<win32::lresult_t> wm_notify(win32::list_view sender, const NMITEMACTIVATE& message) override
+    {
+      if (sender == controller_table)
+      {
+        struct handler : win32::window_ref
+        {
+          handler(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self)
+          {
+          }
+
+          auto wm_create()
+          {
+            SetWindowTextW(*this, L"Press a keyboard or mouse button");
+            return 0;
+          }
+
+          auto wm_key_down(KEYBDINPUT input)
+          {
+            EndDialog(*this, input.wVk);
+            return 0;
+          }
+        };
+
+        auto result = win32::DialogBoxIndirectParamW<handler>(win32::module_ref::current_application(),
+          win32::default_dialog({ .cx = 100, .cy = 50 }),
+          ref());
+
+        auto game_pad_code = LOWORD(message.lParam);
+
+
+        if (result >= WM_MOUSEMOVE && result <= WM_MOUSEMOVE + 3)
+        {
+          std::wstring temp = L"Mouse";
+          ListView_SetItemText(controller_table, message.iItem, 1, temp.data());
+          temp = L"Mouse Up";
+          ListView_SetItemText(controller_table, message.iItem, 2, temp.data());
+        }
+        else
+        {
+
+          std::wstring temp = L"Keyboard";
+          ListView_SetItemText(controller_table, message.iItem, 1, temp.data());
+          temp.clear();
+          temp.push_back(result);
+          ListView_SetItemText(controller_table, message.iItem, 2, temp.data());
+          
+          LVITEMW item{
+            .mask = LVIF_PARAM,
+            .lParam = MAKELPARAM(game_pad_code, result)
+          };
+          ListView_SetItem(controller_table, &item);
+        }
+
+        return 0;
+      }
+
+      return std::nullopt;
+    }
+
     std::optional<win32::lresult_t> wm_notify(win32::tool_bar, const NMTOOLBARW& message) override
     {
       switch (message.hdr.code)
@@ -658,8 +717,7 @@ namespace siege::views
             {
               auto item = controller_table.GetItem(LVITEMW{
                 .mask = LVIF_PARAM,
-                .iItem = i
-              });
+                .iItem = i });
 
               if (item && item->lParam)
               {
