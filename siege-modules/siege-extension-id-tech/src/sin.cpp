@@ -19,6 +19,50 @@
 #include "MessageHandler.hpp"
 
 extern "C" {
+using game_action = siege::game_action;
+using controller_binding = siege::controller_binding;
+
+extern auto game_actions = std::array<game_action, 32>{ {
+  game_action{ game_action::analog, "forward", L"Move Forward", L"Movement" },
+  game_action{ game_action::analog, "back", L"Move Backward", L"Movement" },
+  game_action{ game_action::analog, "moveleft", L"Strafe Left", L"Movement" },
+  game_action{ game_action::analog, "moveright", L"Strafe Right", L"Movement" },
+  game_action{ game_action::analog, "left", L"Turn Left", L"Movement" },
+  game_action{ game_action::analog, "right", L"Turn Right", L"Movement" },
+  game_action{ game_action::analog, "moveup", L"Jump", L"Movement" },
+  game_action{ game_action::analog, "movedown", L"Crouch", L"Movement" },
+  game_action{ game_action::digital, "weapnext", L"Next Weapon", L"Combat" },
+  game_action{ game_action::digital, "weaprev", L"Previous Weapon", L"Combat" },
+  game_action{ game_action::digital, "attack", L"Crouch", L"Combat" },
+  game_action{ game_action::digital, "altattack", L"Crouch", L"Combat" },
+  game_action{ game_action::digital, "itemnext", L"Crouch", L"Combat" },
+  game_action{ game_action::digital, "itemuse", L"Crouch", L"Combat" },
+} };
+
+extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
+extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
+extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
+extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
+extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"base/pak0.pak/default.cfg", L"base/default.cfg" } };
+extern auto autoexec_configuration_paths = std::array<const wchar_t*, 2>{ { L"base/autoexec.cfg" } };
+extern auto profile_configuration_paths = std::array<const wchar_t*, 3>{ { L"base/profiles/current.cfg", L"base/profiles/matthew.cfg" } };
+
+HRESULT bind_virtual_key_to_action_for_file(const char* filename, controller_binding* inputs, std::size_t inputs_size)
+{
+  return S_FALSE;
+}
+
+HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_binding* inputs, std::size_t inputs_size)
+{
+  return S_FALSE;
+}
+
+HRESULT update_action_intensity_for_process(DWORD process_id, const char* action, float intensity)
+{
+  return S_FALSE;
+}
+
+
 static void(__fastcall* ConsoleEval)(const char*) = nullptr;
 
 using namespace std::literals;

@@ -4,6 +4,7 @@
 #include <optional>
 #include <filesystem>
 #include <list>
+#include <span>
 #include <siege/platform/win/core/module.hpp>
 #include <siege/platform/shared.hpp>
 
@@ -25,7 +26,13 @@ namespace siege::platform
     executable_is_supported* executable_is_supported_proc = nullptr;
     get_function_name_ranges* get_function_name_ranges_proc = nullptr;
     get_variable_name_ranges* get_variable_name_ranges_proc = nullptr;
-
+    std::span<const wchar_t*> controller_input_backends;
+    std::span<const wchar_t*> keyboard_input_backends;
+    std::span<const wchar_t*> mouse_input_backends;
+    std::span<const wchar_t*> configuration_extensions;
+    std::span<const wchar_t*> template_configuration_paths;
+    std::span<const wchar_t*> autoexec_configuration_paths;
+    std::span<const wchar_t*> profile_configuration_paths;
   public:
 #if WIN32
     get_game_script_host* get_game_script_host = nullptr;
@@ -56,6 +63,34 @@ namespace siege::platform
       {
         throw std::runtime_error("Could not find module functions");
       }
+      
+      auto update_span = [this](auto* key, auto& span) {
+        auto* storage = GetProcAddress<const wchar_t**>(key);
+
+        if (storage)
+        {
+          int end = 0;
+
+          for (auto i = 0; i < 64; ++i)
+          {
+            if (storage[i] == nullptr)
+            {
+              end = i;
+              break;
+            }
+          }
+
+          span = std::span(storage, end);
+        }
+      };
+
+      update_span("controller_input_backends", controller_input_backends);
+      update_span("keyboard_input_backends", keyboard_input_backends);
+      update_span("mouse_input_backends", mouse_input_backends);
+      update_span("configuration_extensions", configuration_extensions);
+      update_span("template_configuration_paths", template_configuration_paths);
+      update_span("autoexec_configuration_paths", autoexec_configuration_paths);
+      update_span("profile_configuration_paths", profile_configuration_paths);
     }
 
     std::vector<std::pair<std::string, std::string>> get_function_name_ranges()

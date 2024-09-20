@@ -10,6 +10,31 @@
 
 namespace siege
 {
+  struct controller_binding
+  {
+    struct action_binding
+    {
+      int virtual_key;
+      std::array<char, 32> action_name;
+    };
+
+    int controller_id;
+    std::array<action_binding, 32> inputs;
+  };
+
+  struct game_action
+  {
+    enum
+    {
+      unknown,
+      digital,
+      analog
+    } type;
+    std::array<char, 32> action_name;
+    std::array<wchar_t, 64> action_display_name;
+    std::array<wchar_t, 64> group_display_name;
+  };
+
   template<std::size_t PairCount>
   HRESULT get_name_ranges(
     const std::array<std::pair<std::string_view, std::string_view>, PairCount>& ranges,
