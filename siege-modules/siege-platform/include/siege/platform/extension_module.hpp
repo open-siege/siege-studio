@@ -89,7 +89,7 @@ namespace siege::platform
 
 #if WIN32
   using bind_virtual_key_to_action_for_process = HRESULT(DWORD process_id, controller_binding* inputs, std::size_t inputs_size);
-  using update_action_intensity_for_process = HRESULT(DWORD process_id, const char* action, float intensity);
+  using update_action_intensity_for_process = HRESULT(DWORD process_id, DWORD thread_id, const char* action, float intensity);
   using flatten_game_command_line_args = HRESULT(game_command_line_args*, std::uint32_t argc, const wchar_t** argv, std::uint32_t*) noexcept;
   using launch_game_with_extension = HRESULT(const wchar_t* exe_path_str, std::uint32_t argc, const wchar_t** argv, PROCESS_INFORMATION*) noexcept;
   using get_game_script_host = HRESULT(const wchar_t* game, ::IDispatch** host) noexcept;
@@ -114,6 +114,7 @@ namespace siege::platform
   public:
 #if WIN32
     launch_game_with_extension* launch_game_with_extension = nullptr;
+    update_action_intensity_for_process* update_action_intensity_for_process = nullptr;
 #endif
 
     game_extension_module(std::filesystem::path module_path) : base(module_path)
@@ -127,6 +128,7 @@ namespace siege::platform
       // These functions are very Windows specific because the games being launched would all be Windows-based.
 #if WIN32
       this->launch_game_with_extension = GetProcAddress<decltype(game_extension_module::launch_game_with_extension)>("launch_game_with_extension");
+      this->update_action_intensity_for_process = GetProcAddress<decltype(game_extension_module::update_action_intensity_for_process)>("update_action_intensity_for_process");
 #endif
 
       if (!this->launch_game_with_extension)

@@ -31,6 +31,7 @@ namespace siege
     std::wstring script_host;
     mode input_mode = bind_input;
     std::map<WORD, WORD> controller_key_mappings;
+    siege::platform::game_extension_module* extension;
   };
 
   enum class input_state
@@ -463,13 +464,64 @@ namespace siege
 
         DISPPARAMS params{};
         win32::com::Variant invoke_result;
-
         if (newRy != oldRy)
         {
+          if (injector_args.extension && injector_args.extension->update_action_intensity_for_process)
+          {
+            if (newRy >= 0)
+            {
+              injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "lookup", 0);
+            }
+
+            if (newRy <= 0)
+            {
+              injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "lookdown", 0);
+            }
+
+            if (newRy > 0)
+            {
+              injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "lookdown", INFINITY);
+            }
+
+            if (newRy < 0)
+            {
+              injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "lookup", INFINITY);
+            }
+          }
           // TODO deal with right stick input
         }
         if (newRx != oldRx)
         {
+          if (injector_args.extension && injector_args.extension->update_action_intensity_for_process)
+          {
+            if (newRx >= 0)
+            {
+              injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "left", 0);
+
+              // script_host->Invoke(func_ids[L"-left"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
+            }
+
+            if (newRx <= 0)
+            {
+              injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "right", 0);
+
+              // script_host->Invoke(func_ids[L"-right"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
+            }
+
+            if (newRx < 0)
+            {
+              injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "left", INFINITY);
+
+              // script_host->Invoke(func_ids[L"+left"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
+            }
+
+            if (newRx > 0)
+            {
+              injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "right", INFINITY);
+
+              //  script_host->Invoke(func_ids[L"+right"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
+            }
+          }
           // TODO deal with right stick input
         }
 

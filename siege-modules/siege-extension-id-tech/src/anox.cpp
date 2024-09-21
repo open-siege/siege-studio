@@ -71,8 +71,72 @@ HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_bind
   return S_FALSE;
 }
 
-HRESULT update_action_intensity_for_process(DWORD process_id, const char* action, float intensity)
+HRESULT update_action_intensity_for_process(DWORD process_id, DWORD thread_id, const char* action, float intensity)
 {
+  if (!action)
+  {
+    return E_POINTER;
+  }
+  
+  GUITHREADINFO info{ .cbSize = sizeof(GUITHREADINFO) };
+
+  if (!::GetGUIThreadInfo(thread_id, &info))
+  {
+    return E_INVALIDARG;
+  }
+
+  if (!info.hwndActive)
+  {
+    return E_INVALIDARG;
+  }
+
+  if (std::string_view(action) == "left")
+  {
+    std::string command = intensity == INFINITY ? "+left" : "-left";
+    COPYDATASTRUCT data
+    {
+      .dwData = ::RegisterWindowMessageW(L"ConsoleCommand"),
+      .cbData = command.size(),
+      .lpData = command.data()
+    };
+    ::SendMessageW(info.hwndActive, WM_COPYDATA, (WPARAM)::GetActiveWindow(), (LPARAM)&data);
+  }
+
+  if (std::string_view(action) == "right")
+  {
+    std::string command = intensity == INFINITY ? "+right" : "-right";
+    COPYDATASTRUCT data{
+      .dwData = ::RegisterWindowMessageW(L"ConsoleCommand"),
+      .cbData = command.size(),
+      .lpData = command.data()
+    };
+    ::SendMessageW(info.hwndActive, WM_COPYDATA, (WPARAM)::GetActiveWindow(), (LPARAM)&data);
+  }
+
+  if (std::string_view(action) == "lookup")
+  {
+    std::string command = intensity == INFINITY ? "+lookup" : "-lookup";
+    COPYDATASTRUCT data{
+      .dwData = ::RegisterWindowMessageW(L"ConsoleCommand"),
+      .cbData = command.size(),
+      .lpData = command.data()
+    };
+
+    ::SendMessageW(info.hwndActive, WM_COPYDATA, (WPARAM)::GetActiveWindow(), (LPARAM)&data);
+  }
+
+  if (std::string_view(action) == "lookdown")
+  {
+    std::string command = intensity == INFINITY ? "+lookdown" : "-lookdown";
+    COPYDATASTRUCT data{
+      .dwData = ::RegisterWindowMessageW(L"ConsoleCommand"),
+      .cbData = command.size() + 1,
+      .lpData = command.data()
+    };
+
+    ::SendMessageW(info.hwndActive, WM_COPYDATA, (WPARAM)::GetActiveWindow(), (LPARAM)&data);
+  }
+
   return S_FALSE;
 }
 
@@ -80,13 +144,12 @@ static void(__cdecl* ConsoleEval)(const char*) = nullptr;
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = {{ std::array<std::pair<std::string_view, std::size_t>, 3>{ 
-    { { "exec"sv, std::size_t(0x461274) },
-  { "cmdlist"sv, std::size_t(0x46126c) },
-  { "cl_minfps"sv, std::size_t(0x45e6c0) } } } } };
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{
+  { { "exec"sv, std::size_t(0x461274) },
+    { "cmdlist"sv, std::size_t(0x46126c) },
+    { "cl_minfps"sv, std::size_t(0x45e6c0) } } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{ { 
-  { "+moveup"sv, "-actionb"sv },
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{ { { "+moveup"sv, "-actionb"sv },
   { "+mlook"sv, "-mlook"sv },
   { "echo"sv, "echo"sv } } };
 
@@ -114,6 +177,25 @@ HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>*
 HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
 {
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
+}
+
+static LRESULT CALLBACK DispatchInputToGameConsole(int code, WPARAM wParam, LPARAM lParam)
+{
+  if (code == HC_ACTION)
+  {
+    auto* message = (CWPSTRUCT*)lParam;
+
+    if (message->message == WM_COPYDATA && ConsoleEval)
+    {
+      auto* data = (COPYDATASTRUCT*)message->lParam;
+      if (data && data->dwData == ::RegisterWindowMessageW(L"ConsoleCommand"))
+      {
+        ConsoleEval((char*)data->lpData);
+      }
+    }
+  }
+
+  return CallNextHookEx(nullptr, code, wParam, lParam);
 }
 
 BOOL WINAPI DllMain(
@@ -188,13 +270,13 @@ BOOL WINAPI DllMain(
 
         if (!module_is_valid)
         {
-            return FALSE;
+          return FALSE;
         }
 
         DetourRestoreAfterWith();
 
         auto self = win32::window_module_ref(hinstDLL);
-        hook = ::SetWindowsHookExW(WH_GETMESSAGE, siege::extension::DispatchInputToGameConsole, self, ::GetCurrentThreadId());
+        hook = ::SetWindowsHookExW(WH_CALLWNDPROC, DispatchInputToGameConsole, self, ::GetCurrentThreadId());
       }
       catch (...)
       {

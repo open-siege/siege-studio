@@ -974,7 +974,8 @@ namespace siege::views
             input_injector_args args{
               .exe_path = controller.get_exe_path(),
               .extension_path = controller.get_extension().GetModuleFileName(),
-              .controller_key_mappings = std::move(input_mapping)
+              .controller_key_mappings = std::move(input_mapping),
+              .extension = &controller.get_extension()
             };
 
             win32::DialogBoxIndirectParamW<siege::input_injector>(win32::module_ref::current_application(),
