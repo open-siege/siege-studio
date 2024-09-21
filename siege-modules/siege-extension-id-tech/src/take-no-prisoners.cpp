@@ -44,6 +44,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "attack", u"Attack", u"Combat" },
   game_action{ game_action::digital, "altattack", u"Alt Attack", u"Combat" },
   game_action{ game_action::digital, "melee-attack", u"Melee Attack", u"Combat" },
+  game_action{ game_action::digital, "use-plus-speciau", u"Special Action", u"Combat" },
   game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
   game_action{ game_action::digital, "weaprev", u"Previous Weapon", u"Combat" },
   game_action{ game_action::digital, "itemnext", u"Next Item", u"Combat" },
@@ -58,11 +59,10 @@ extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm
 extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
 extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
 extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
-extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"data1/pak0.pak/default.cfg", L"data1/default.cfg" } };
-extern auto autoexec_configuration_paths = std::array<const wchar_t*, 2>{ { L"data1/Autoexec.cfg" } };
-extern auto profile_configuration_paths = std::array<const wchar_t*, 2>{ { L"data1/Config.cfg" } };
+extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"userdef.cfg" } };
+extern auto profile_configuration_paths = std::array<const wchar_t*, 2>{ { L"tnp.cfg" } };
 
-HRESULT bind_virtual_key_to_action_for_file(const siege::fs_char* filename, controller_binding* inputs, std::size_t inputs_size)
+HRESULT bind_virtual_key_to_action_for_file(const char* filename, controller_binding* inputs, std::size_t inputs_size)
 {
   return S_FALSE;
 }
@@ -82,29 +82,25 @@ static void(__cdecl* ConsoleEval)(const char*) = nullptr;
 using namespace std::literals;
 
 constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
-  { "cmdlist"sv, std::size_t(0x45189c) },
-  { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } } };
+  { "cmdlist"sv, std::size_t(0x2012049c) },
+  { "cl_minfps"sv, std::size_t(0x2011e600) } } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{ { { "+moveup"sv, "-crouch"sv },
-  { "midi_play"sv, "midi_volume"sv },
-  { "togglemenu"sv, "menu_class"sv } } };
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{{ 
+    { "-klook"sv, "centerview"sv },
+    { "joy_advancedupdate"sv, "+mlook"sv },
+    { "rejected_violence"sv, "print"sv } 
+ }};
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "joyadvanced"sv, "joyforwardthreshold"sv } } };
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "joy_yawsensitivity"sv, "in_mouse"sv } } };
 
-inline void set_gog_sw_exports()
+inline void set_gog_exports()
 {
-  ConsoleEval = (decltype(ConsoleEval))0x447180;
+  ConsoleEval = (decltype(ConsoleEval))0x200194f0;
 }
 
-inline void set_gog_gl_exports()
-{
-  ConsoleEval = (decltype(ConsoleEval))0x40e860;
-}
-
-constexpr std::array<void (*)(), 2> export_functions = {{
-  set_gog_sw_exports,
-  set_gog_gl_exports,
-}};
+constexpr std::array<void (*)(), 5> export_functions = { {
+  set_gog_exports,
+} };
 
 HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
@@ -198,6 +194,7 @@ BOOL WINAPI DllMain(
         DetourRestoreAfterWith();
 
         auto self = win32::window_module_ref(hinstDLL);
+     
         hook = ::SetWindowsHookExW(WH_GETMESSAGE, siege::extension::DispatchInputToGameConsole, self, ::GetCurrentThreadId());
       }
       catch (...)

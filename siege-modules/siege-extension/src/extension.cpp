@@ -71,11 +71,18 @@ HRESULT launch_game_with_extension(const wchar_t* exe_path_str, std::uint32_t ar
   STARTUPINFOW startup_info{ .cb = sizeof(STARTUPINFOW) };
 
   auto hook_path = (std::filesystem::path(extension_path).parent_path() / "siege-extension-input-filter-raw-input.dll").string();
-  
-  std::array<const char*, 2> dll_paths{
+
+  std::vector<const char*> dll_paths{
     hook_path.c_str(),
     extension_path.c_str(),
   };
+
+  auto steam_dll_path = (exe_path.parent_path().parent_path().parent_path().parent_path() / "Steam.dll").string();
+
+  if (std::filesystem::exists(steam_dll_path))
+  {
+    dll_paths.push_back(steam_dll_path.c_str());
+  }
 
   if (::DetourCreateProcessWithDllsW(exe_path.c_str(),
         args.data(),

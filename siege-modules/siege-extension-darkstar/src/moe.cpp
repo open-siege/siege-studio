@@ -12,7 +12,7 @@
 #include <siege/platform/win/desktop/window_impl.hpp>
 #include <detours.h>
 #include "DarkstarScriptDispatch.hpp"
-#include "MessageHandler.hpp"
+
 
 extern "C"
 {
@@ -190,38 +190,6 @@ extern "C"
 					std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourAttach(func.first, func.second); });
 
 					DetourTransactionCommit();
-
-					auto self = win32::window_module_ref(hinstDLL);
-					auto atom = self.RegisterClassExW(win32::static_window_meta_class<siege::extension::MessageHandler>{});
-
-					auto type_name = win32::type_name<siege::extension::MessageHandler>();
-
-					auto host = std::make_unique<siege::extension::ScriptDispatch>(std::move(functions), std::move(variables), [](std::string_view eval_string) -> std::string_view {
-						std::array<const char*, 2> args{ "eval", eval_string.data() };
-
-						// Luckily this function is static and doesn't need the console instance object nor
-						// an ID to identify the callback. It doesn't even check for "eval" and skips straight to the second argument.
-						auto result = ConsoleEval(nullptr, 0, 2, args.data());
-
-						if (result == nullptr)
-						{
-							return "";
-						}
-
-
-						return result;
-						});
-
-					// TODO register multiple script hosts
-					if (auto message = self.CreateWindowExW(CREATESTRUCTW{
-						.lpCreateParams = host.release(),
-						.hwndParent = HWND_MESSAGE,
-						.style = WS_CHILD,
-						.lpszName = L"siege::extension::maskOfEternity::ScriptHost",
-						.lpszClass = win32::type_name<siege::extension::MessageHandler>().c_str()
-						}); message)
-					{
-					}
 				}
 				catch (...)
 				{
@@ -235,12 +203,6 @@ extern "C"
 
 				std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourDetach(func.first, func.second); });
 				DetourTransactionCommit();
-
-				auto window = ::FindWindowExW(HWND_MESSAGE, nullptr, win32::type_name<siege::extension::MessageHandler>().c_str(), L"siege::extension::maskOfEternity::ScriptHost");
-				::DestroyWindow(window);
-				auto self = win32::window_module(hinstDLL);
-
-				self.UnregisterClassW<siege::extension::MessageHandler>();
 			}
 		}
 

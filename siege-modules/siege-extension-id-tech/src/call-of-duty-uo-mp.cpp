@@ -58,9 +58,9 @@ extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm
 extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
 extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
 extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
-extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"data1/pak0.pak/default.cfg", L"data1/default.cfg" } };
-extern auto autoexec_configuration_paths = std::array<const wchar_t*, 2>{ { L"data1/Autoexec.cfg" } };
-extern auto profile_configuration_paths = std::array<const wchar_t*, 2>{ { L"data1/Config.cfg" } };
+extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"uo/pak0.pak/default.cfg", L"uo/default.cfg" } };
+extern auto autoexec_configuration_paths = std::array<const wchar_t*, 4>{ { L"uo/autoexec.cfg" } };
+extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{ { L"uo/config.cfg" } };
 
 HRESULT bind_virtual_key_to_action_for_file(const siege::fs_char* filename, controller_binding* inputs, std::size_t inputs_size)
 {
@@ -77,34 +77,10 @@ HRESULT update_action_intensity_for_process(DWORD process_id, const char* action
   return S_FALSE;
 }
 
-static void(__cdecl* ConsoleEval)(const char*) = nullptr;
-
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
-  { "cmdlist"sv, std::size_t(0x45189c) },
-  { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } } };
-
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{ { { "+moveup"sv, "-crouch"sv },
-  { "midi_play"sv, "midi_volume"sv },
-  { "togglemenu"sv, "menu_class"sv } } };
-
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "joyadvanced"sv, "joyforwardthreshold"sv } } };
-
-inline void set_gog_sw_exports()
-{
-  ConsoleEval = (decltype(ConsoleEval))0x447180;
-}
-
-inline void set_gog_gl_exports()
-{
-  ConsoleEval = (decltype(ConsoleEval))0x40e860;
-}
-
-constexpr std::array<void (*)(), 2> export_functions = {{
-  set_gog_sw_exports,
-  set_gog_gl_exports,
-}};
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 0> function_name_ranges{};
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 0> variable_name_ranges{};
 
 HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
@@ -118,7 +94,30 @@ HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>*
 
 HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
 {
-  return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
+  if (filename == nullptr)
+  {
+    return E_POINTER;
+  }
+
+  if (!std::filesystem::exists(filename))
+  {
+    return E_INVALIDARG;
+  }
+
+  auto exe_path = std::filesystem::path(filename);
+  auto parent_path = exe_path.parent_path();
+
+  if (exe_path.stem() == "CoDUOMP" && 
+      exe_path.extension() == ".exe" &&
+      std::filesystem::exists(parent_path / "uo_gamex86.dll") &&
+      std::filesystem::exists(parent_path / "uo_cgamex86.dll") &&
+      std::filesystem::exists(parent_path / "uo_uix86.dll") &&
+      std::filesystem::is_directory(parent_path / "uo"))
+  {
+    return S_OK;
+  }
+
+  return S_FALSE;
 }
 
 BOOL WINAPI DllMain(
@@ -150,64 +149,12 @@ BOOL WINAPI DllMain(
 
   if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
   {
-    thread_local HHOOK hook;
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
-      int index = 0;
-      try
-      {
-        auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
-
-        std::unordered_set<std::string_view> functions;
-        std::unordered_set<std::string_view> variables;
-
-        bool module_is_valid = false;
-
-        for (const auto& item : verification_strings)
-        {
-          win32::module_ref temp((void*)item[0].second);
-
-          if (temp != app_module)
-          {
-            continue;
-          }
-
-          module_is_valid = std::all_of(item.begin(), item.end(), [](const auto& str) {
-            return std::memcmp(str.first.data(), (void*)str.second, str.first.size()) == 0;
-          });
-
-
-          if (module_is_valid)
-          {
-            export_functions[index]();
-
-            std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 2);
-
-            functions = siege::extension::GetGameFunctionNames(string_section, function_name_ranges);
-
-            break;
-          }
-          index++;
-        }
-
-        if (!module_is_valid)
-        {
-          return FALSE;
-        }
-
-        DetourRestoreAfterWith();
-
-        auto self = win32::window_module_ref(hinstDLL);
-        hook = ::SetWindowsHookExW(WH_GETMESSAGE, siege::extension::DispatchInputToGameConsole, self, ::GetCurrentThreadId());
-      }
-      catch (...)
-      {
-        return FALSE;
-      }
+      DetourRestoreAfterWith();
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
-      UnhookWindowsHookEx(hook);
     }
   }
 

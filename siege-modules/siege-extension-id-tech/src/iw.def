@@ -1,17 +1,15 @@
 EXPORTS
 	DetourFinishHelperProcess @1
 	game_actions
-	controller_input_backends
 	keyboard_input_backends
 	mouse_input_backends
 	configuration_extensions
 	template_configuration_paths
-	autoexec_configuration_paths
 	profile_configuration_paths
 	bind_virtual_key_to_action_for_file
-	bind_virtual_key_to_action_for_process
 	update_action_intensity_for_process
 	launch_game_with_extension
+	get_game_script_host
 	executable_is_supported
 	get_function_name_ranges
 	get_variable_name_ranges

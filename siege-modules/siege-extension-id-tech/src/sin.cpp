@@ -16,38 +16,55 @@
 #include "GameExport.hpp"
 #include "GetGameFunctionNames.hpp"
 #include "IdTechScriptDispatch.hpp"
-#include "MessageHandler.hpp"
+
 
 extern "C" {
-using game_action = siege::game_action;
-using controller_binding = siege::controller_binding;
+using game_action = siege::platform::game_action;
+using controller_binding = siege::platform::controller_binding;
+
+using game_command_line_caps = siege::platform::game_command_line_caps;
+
+extern auto command_line_caps = game_command_line_caps{
+  .supports_ip_connect = true,
+  .supports_ip_host = true,
+  .supports_custom_mod_folder = true,
+  .supports_custom_configurations = false
+};
 
 extern auto game_actions = std::array<game_action, 32>{ {
-  game_action{ game_action::analog, "forward", L"Move Forward", L"Movement" },
-  game_action{ game_action::analog, "back", L"Move Backward", L"Movement" },
-  game_action{ game_action::analog, "moveleft", L"Strafe Left", L"Movement" },
-  game_action{ game_action::analog, "moveright", L"Strafe Right", L"Movement" },
-  game_action{ game_action::analog, "left", L"Turn Left", L"Movement" },
-  game_action{ game_action::analog, "right", L"Turn Right", L"Movement" },
-  game_action{ game_action::analog, "moveup", L"Jump", L"Movement" },
-  game_action{ game_action::analog, "movedown", L"Crouch", L"Movement" },
-  game_action{ game_action::digital, "weapnext", L"Next Weapon", L"Combat" },
-  game_action{ game_action::digital, "weaprev", L"Previous Weapon", L"Combat" },
-  game_action{ game_action::digital, "attack", L"Crouch", L"Combat" },
-  game_action{ game_action::digital, "altattack", L"Crouch", L"Combat" },
-  game_action{ game_action::digital, "itemnext", L"Crouch", L"Combat" },
-  game_action{ game_action::digital, "itemuse", L"Crouch", L"Combat" },
+  game_action{ game_action::analog, "forward", u"Move Forward", u"Movement" },
+  game_action{ game_action::analog, "back", u"Move Backward", u"Movement" },
+  game_action{ game_action::analog, "moveleft", u"Strafe Left", u"Movement" },
+  game_action{ game_action::analog, "moveright", u"Strafe Right", u"Movement" },
+  game_action{ game_action::analog, "moveup", u"Jump", u"Movement" },
+  game_action{ game_action::analog, "movedown", u"Crouch", u"Movement" },
+  game_action{ game_action::digital, "speed", u"Run", u"Movement" },
+  game_action{ game_action::analog, "left", u"Turn Left", u"Aiming" },
+  game_action{ game_action::analog, "right", u"Turn Right", u"Aiming" },
+  game_action{ game_action::analog, "lookup", u"Look Up", u"Aiming" },
+  game_action{ game_action::analog, "lookdown", u"Look Down", u"Aiming" },
+  game_action{ game_action::digital, "attack", u"Attack", u"Combat" },
+  game_action{ game_action::digital, "altattack", u"Alt Attack", u"Combat" },
+  game_action{ game_action::digital, "melee-attack", u"Melee Attack", u"Combat" },
+  game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
+  game_action{ game_action::digital, "weaprev", u"Previous Weapon", u"Combat" },
+  game_action{ game_action::digital, "itemnext", u"Next Item", u"Combat" },
+  game_action{ game_action::digital, "itemuse", u"Use Item", u"Combat" },
+  game_action{ game_action::digital, "score", u"Score", u"Interface" },
+  game_action{ game_action::digital, "menu-objectives", u"Objectives", u"Interface" },
+  game_action{ game_action::digital, "klook", u"Keyboard Look", u"Misc" },
+  game_action{ game_action::digital, "mlook", u"Mouse Look", u"Misc" },
 } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
 extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
 extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
-extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"base/pak0.pak/default.cfg", L"base/default.cfg" } };
-extern auto autoexec_configuration_paths = std::array<const wchar_t*, 2>{ { L"base/autoexec.cfg" } };
-extern auto profile_configuration_paths = std::array<const wchar_t*, 3>{ { L"base/profiles/current.cfg", L"base/profiles/matthew.cfg" } };
+extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"base/default.cfg", L"2015/default.cfg" } };
+extern auto autoexec_configuration_paths = std::array<const wchar_t*, 2>{ { L"base/autoexec.cfg", L"2015/autoexec.cfg" } };
+extern auto profile_configuration_paths = std::array<const wchar_t*, 3>{ { L"base/players/*/config.cfg", L"2015/players/*/config.cfg" } };
 
-HRESULT bind_virtual_key_to_action_for_file(const char* filename, controller_binding* inputs, std::size_t inputs_size)
+HRESULT bind_virtual_key_to_action_for_file(const siege::fs_char* filename, controller_binding* inputs, std::size_t inputs_size)
 {
   return S_FALSE;
 }
@@ -125,6 +142,7 @@ BOOL WINAPI DllMain(
 
   if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
   {
+    thread_local HHOOK hook;
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
       int index = 0;
@@ -178,42 +196,7 @@ BOOL WINAPI DllMain(
         DetourRestoreAfterWith();
 
         auto self = win32::window_module_ref(hinstDLL);
-        auto atom = self.RegisterClassExW(win32::static_window_meta_class<siege::extension::MessageHandler>{});
-
-        auto type_name = win32::type_name<siege::extension::MessageHandler>();
-
-        auto host = std::make_unique<siege::extension::IdTechScriptDispatch>(std::move(functions), std::move(variables), [](std::string_view eval_string) -> std::string_view {
-          ConsoleEval(eval_string.data());
-
-          return "";
-        });
-
-        // TODO register multiple script hosts
-        if (auto message = self.CreateWindowExW(CREATESTRUCTW{
-              .lpCreateParams = host.release(),
-              .hwndParent = HWND_MESSAGE,
-              .style = WS_CHILD,
-              .lpszName = L"siege::extension::Sin::ScriptHost",
-              .lpszClass = win32::type_name<siege::extension::MessageHandler>().c_str() });
-            message)
-        {
-        }
-
-        thread_local HHOOK hook;
-        struct hook_data
-        {
-          static LRESULT CALLBACK do_hook(int code, WPARAM wparam, LPARAM lparam)
-          {
-            if (code == HC_ACTION)
-            {
-              UnhookWindowsHookEx(hook);
-            }
-
-            return CallNextHookEx(nullptr, code, wparam, lparam);
-          }
-        };
-
-        hook = ::SetWindowsHookExW(WH_GETMESSAGE, hook_data::do_hook, self, ::GetCurrentThreadId());
+        hook = ::SetWindowsHookExW(WH_GETMESSAGE, siege::extension::DispatchInputToGameConsole, self, ::GetCurrentThreadId());
       }
       catch (...)
       {
@@ -222,11 +205,7 @@ BOOL WINAPI DllMain(
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
-      auto window = ::FindWindowExW(HWND_MESSAGE, nullptr, win32::type_name<siege::extension::MessageHandler>().c_str(), L"siege::extension::soldierOfFortune::ScriptHost");
-      ::DestroyWindow(window);
-      auto self = win32::window_module(hinstDLL);
-
-      self.UnregisterClassW<siege::extension::MessageHandler>();
+      UnhookWindowsHookEx(hook);
     }
   }
 

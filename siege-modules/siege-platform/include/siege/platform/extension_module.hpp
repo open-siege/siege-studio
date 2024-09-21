@@ -10,11 +10,87 @@
 
 namespace siege::platform
 {
+  struct controller_binding
+  {
+    struct action_binding
+    {
+      int virtual_key;
+      std::array<char, 32> action_name;
+    };
+
+    int controller_id;
+    std::array<action_binding, 32> inputs;
+  };
+
+  struct game_action
+  {
+    enum
+    {
+      unknown,
+      digital,
+      analog
+    } type;
+    std::array<char, 32> action_name;
+    std::array<char16_t, 64> action_display_name;
+    std::array<char16_t, 64> group_display_name;
+  };
+
+  struct game_command_line_caps
+  {
+    bool supports_ip_connect = false;
+    bool supports_ip_host = false;
+    bool supports_custom_mod_folder = false;
+    bool supports_custom_configurations = false;
+    std::array<const char*, 32> flags;
+    std::array<const char*, 32> int_settings;
+    std::array<const char*, 32> float_settings;
+    std::array<const char*, 32> string_settings;
+  };
+
+  struct game_command_line_args
+  {
+    struct ip_address
+    {
+      std::array<char, 64> ip_address;
+      std::uint32_t port_number;
+    } connect_ip_address;
+
+    ip_address host_ip_address;
+    std::array<char, 64> mod_folder;
+    std::array<const char*, 8> configurations;
+    std::array<const char*, 32> flags;
+
+    struct int_setting
+    {
+      const char* name;
+      int value;
+    };
+    std::array<int_setting, 32> int_settings;
+
+    struct float_setting
+    {
+      const char* name;
+      float value;
+    };
+    std::array<float_setting, 32> float_settings;
+
+    struct string_setting
+    {
+      const char* name;
+      float value;
+    };
+    std::array<string_setting, 32> string_settings;
+  };
   // TODO replace HRESULT with std::errc for the cross-platform functions
   using executable_is_supported = HRESULT(const siege::fs_char* filename) noexcept;
   using get_function_name_ranges = HRESULT(std::size_t, std::array<const char*, 2>*, std::size_t*) noexcept;
   using get_variable_name_ranges = HRESULT(std::size_t, std::array<const char*, 2>*, std::size_t*) noexcept;
+  using bind_virtual_key_to_action_for_file = HRESULT(const siege::fs_char* filename, controller_binding* inputs, std::size_t inputs_size);
+
 #if WIN32
+  using bind_virtual_key_to_action_for_process = HRESULT(DWORD process_id, controller_binding* inputs, std::size_t inputs_size);
+  using update_action_intensity_for_process = HRESULT(DWORD process_id, const char* action, float intensity);
+  using flatten_game_command_line_args = HRESULT(game_command_line_args*, std::uint32_t argc, const wchar_t** argv, std::uint32_t*) noexcept;
   using launch_game_with_extension = HRESULT(const wchar_t* exe_path_str, std::uint32_t argc, const wchar_t** argv, PROCESS_INFORMATION*) noexcept;
   using get_game_script_host = HRESULT(const wchar_t* game, ::IDispatch** host) noexcept;
 #endif
@@ -26,6 +102,7 @@ namespace siege::platform
     executable_is_supported* executable_is_supported_proc = nullptr;
     get_function_name_ranges* get_function_name_ranges_proc = nullptr;
     get_variable_name_ranges* get_variable_name_ranges_proc = nullptr;
+    std::span<game_action> game_actions;
     std::span<const wchar_t*> controller_input_backends;
     std::span<const wchar_t*> keyboard_input_backends;
     std::span<const wchar_t*> mouse_input_backends;
@@ -33,9 +110,9 @@ namespace siege::platform
     std::span<const wchar_t*> template_configuration_paths;
     std::span<const wchar_t*> autoexec_configuration_paths;
     std::span<const wchar_t*> profile_configuration_paths;
+
   public:
 #if WIN32
-    get_game_script_host* get_game_script_host = nullptr;
     launch_game_with_extension* launch_game_with_extension = nullptr;
 #endif
 
@@ -49,21 +126,14 @@ namespace siege::platform
 
       // These functions are very Windows specific because the games being launched would all be Windows-based.
 #if WIN32
-      this->get_game_script_host = GetProcAddress<decltype(game_extension_module::get_game_script_host)>("get_game_script_host");
       this->launch_game_with_extension = GetProcAddress<decltype(game_extension_module::launch_game_with_extension)>("launch_game_with_extension");
 #endif
 
-      bool is_generic_extension = module_path.string().find("extension-generic") != std::string::npos;
-     
-      if (is_generic_extension && !this->launch_game_with_extension)
+      if (!this->launch_game_with_extension)
       {
         throw std::runtime_error("Could not find module functions");
       }
-      else if (!(this->get_game_script_host || this->launch_game_with_extension))
-      {
-        throw std::runtime_error("Could not find module functions");
-      }
-      
+
       auto update_span = [this](auto* key, auto& span) {
         auto* storage = GetProcAddress<const wchar_t**>(key);
 
@@ -91,6 +161,23 @@ namespace siege::platform
       update_span("template_configuration_paths", template_configuration_paths);
       update_span("autoexec_configuration_paths", autoexec_configuration_paths);
       update_span("profile_configuration_paths", profile_configuration_paths);
+
+      auto* actions = GetProcAddress<game_action*>("game_actions");
+
+      if (actions)
+      {
+        auto size = 0;
+        for (auto i = 0; i < 64; ++i)
+        {
+          if (actions[i].type == game_action::unknown)
+          {
+            size = i;
+            break;
+          }
+        }
+
+        this->game_actions = std::span(actions, size);
+      }
     }
 
     std::vector<std::pair<std::string, std::string>> get_function_name_ranges()
@@ -111,7 +198,6 @@ namespace siege::platform
             results.reserve(raw.size());
 
             std::transform(raw.begin(), raw.end(), std::back_inserter(results), [](auto& item) {
-              
               return std::make_pair<std::string, std::string>(item[0] ? item[0] : "", item[1] ? item[1] : "");
             });
           }

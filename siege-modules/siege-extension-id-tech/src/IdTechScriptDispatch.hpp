@@ -2,9 +2,40 @@
 #define ID_TECH_SCRIPT_DISPATCH_HPP
 
 #include "ScriptDispatchBase.hpp"
+#include <siege/platform/win/desktop/window_module.hpp>
 
 namespace siege::extension
 {
+  static LRESULT CALLBACK DispatchInputToGameConsole(int code, WPARAM wParam, LPARAM lParam)
+  {
+    if (code == HC_ACTION && wParam == PM_REMOVE)
+    {
+      auto* message = (MSG*)lParam;
+
+      if (message->message == WM_INPUT)
+      {
+        // TODO do dispatching on WM_INPUT here
+      }
+    }
+
+    return CallNextHookEx(nullptr, code, wParam, lParam);
+  }
+
+  static LRESULT CALLBACK DispatchInputToSendInput(int code, WPARAM wParam, LPARAM lParam)
+  {
+    if (code == HC_ACTION && wParam == PM_REMOVE)
+    {
+      auto* message = (MSG*)lParam;
+
+      if (message->message == WM_INPUT)
+      {
+        // TODO do dispatching on WM_INPUT here
+      }
+    }
+
+    return CallNextHookEx(nullptr, code, wParam, lParam);
+  }
+
 	struct IdTechScriptDispatch final : ScriptDispatchBase
 	{
 		using ScriptDispatchBase::ScriptDispatchBase;
