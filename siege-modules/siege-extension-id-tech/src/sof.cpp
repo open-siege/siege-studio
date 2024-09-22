@@ -13,7 +13,7 @@
 #include <detours.h>
 #include "shared.hpp"
 #include "GetGameFunctionNames.hpp"
-#include "IdTechScriptDispatch.hpp"
+#include "id-tech-shared.hpp"
 
 
 extern "C" {
@@ -73,18 +73,18 @@ HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_bind
   return S_FALSE;
 }
 
-HRESULT update_action_intensity_for_process(DWORD process_id, DWORD thread_id, const char* action, float intensity)
-{
-  return S_FALSE;
-}
 
-static void(__cdecl* ConsoleEval)(const char*) = nullptr;
+extern void(__cdecl* ConsoleEvalCdecl)(const char*);
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
-  { "cmdlist"sv, std::size_t(0x2012049c) },
-  { "cl_minfps"sv, std::size_t(0x2011e600) } } } } };
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = {{ 
+        std::array<std::pair<std::string_view, std::size_t>, 3>{{ 
+            { "exec"sv, std::size_t(0x20120494) },
+            { "cmdlist"sv, std::size_t(0x2012049c) },
+            { "cl_minfps"sv, std::size_t(0x2011e600) }
+         }}
+    }};
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{{ 
     { "-klook"sv, "centerview"sv },
@@ -96,7 +96,7 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> va
 
 inline void set_gog_exports()
 {
-  ConsoleEval = (decltype(ConsoleEval))0x200194f0;
+  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x200194f0;
 }
 
 constexpr std::array<void (*)(), 5> export_functions = { {
@@ -178,7 +178,7 @@ BOOL WINAPI DllMain(
           {
             export_functions[index]();
 
-            std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 2);
+            std::string_view string_section((const char*)ConsoleEvalCdecl, 1024 * 1024 * 2);
 
             functions = siege::extension::GetGameFunctionNames(string_section, function_name_ranges);
 
@@ -195,7 +195,7 @@ BOOL WINAPI DllMain(
         DetourRestoreAfterWith();
 
         auto self = win32::window_module_ref(hinstDLL);
-        hook = ::SetWindowsHookExW(WH_GETMESSAGE, siege::extension::DispatchInputToGameConsole, self, ::GetCurrentThreadId());
+        hook = ::SetWindowsHookExW(WH_CALLWNDPROC, dispatch_copy_data_to_cdecl_game_console, self, ::GetCurrentThreadId());
       }
       catch (...)
       {

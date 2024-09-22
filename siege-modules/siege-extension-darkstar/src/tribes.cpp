@@ -12,8 +12,6 @@
 #include <siege/platform/win/desktop/window_impl.hpp>
 #include <detours.h>
 #include "shared.hpp"
-#include "DarkstarScriptDispatch.hpp"
-
 
 extern "C" {
 #define DARKCALL __attribute__((regparm(3)))
@@ -127,15 +125,11 @@ static auto* TrueAllocConsole = AllocConsole;
 
 BOOL WINAPI WrappedAllocConsole()
 {
-  win32::com::init_com();
-
   return TrueAllocConsole();
 }
 
 HHOOK WINAPI WrappedSetWindowsHookExA(int idHook, HOOKPROC lpfn, HINSTANCE hmod, DWORD dwThreadId)
 {
-  win32::com::init_com();
-
   if (dwThreadId == 0)
   {
     dwThreadId = ::GetCurrentThreadId();

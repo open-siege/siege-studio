@@ -15,7 +15,6 @@
 #include <memory>
 #include <istream>
 #include <spanstream>
-#include <oleacc.h>
 #include "bmp_controller.hpp"
 #include "pal_controller.hpp"
 

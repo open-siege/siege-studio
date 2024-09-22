@@ -13,7 +13,7 @@
 #include <detours.h>
 #include "shared.hpp"
 #include "GetGameFunctionNames.hpp"
-#include "IdTechScriptDispatch.hpp"
+#include "id-tech-shared.hpp"
 
 
 extern "C" {
@@ -71,45 +71,7 @@ HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_bind
   return S_FALSE;
 }
 
-HRESULT update_action_intensity_for_process(DWORD process_id, DWORD thread_id, const char* action, float intensity)
-{
-  if (!action)
-  {
-    return E_POINTER;
-  }
-  
-  GUITHREADINFO info{ .cbSize = sizeof(GUITHREADINFO) };
-
-  if (!::GetGUIThreadInfo(thread_id, &info))
-  {
-    return E_INVALIDARG;
-  }
-
-  if (!info.hwndActive)
-  {
-    return E_INVALIDARG;
-  }
-
-  std::string_view temp_action(action);
-
-  thread_local std::string buffer;
-  buffer.clear();
-  buffer.reserve(temp_action.size() + 1);
-  buffer.append(intensity == INFINITY ? "+" : "-");
-  buffer.append(temp_action);
-
-   COPYDATASTRUCT data{
-    .dwData = ::RegisterWindowMessageW(L"ConsoleCommand"),
-    .cbData = buffer.size(),
-    .lpData = buffer.data()
-  };
-
-  ::SendMessageW(info.hwndActive, WM_COPYDATA, (WPARAM)::GetActiveWindow(), (LPARAM)&data);
-
-  return S_OK;
-}
-
-static void(__cdecl* ConsoleEval)(const char*) = nullptr;
+extern void(__cdecl* ConsoleEvalCdecl)(const char*);
 
 using namespace std::literals;
 
@@ -126,7 +88,7 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> va
 
 inline void set_gog_exports()
 {
-  ConsoleEval = (decltype(ConsoleEval))0x4356da;
+  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x4356da;
 }
 
 constexpr std::array<void (*)(), 1> export_functions = { {
@@ -146,25 +108,6 @@ HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>*
 HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
 {
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
-}
-
-static LRESULT CALLBACK DispatchInputToGameConsole(int code, WPARAM wParam, LPARAM lParam)
-{
-  if (code == HC_ACTION)
-  {
-    auto* message = (CWPSTRUCT*)lParam;
-
-    if (message->message == WM_COPYDATA && ConsoleEval)
-    {
-      auto* data = (COPYDATASTRUCT*)message->lParam;
-      if (data && data->dwData == ::RegisterWindowMessageW(L"ConsoleCommand"))
-      {
-        ConsoleEval((char*)data->lpData);
-      }
-    }
-  }
-
-  return CallNextHookEx(nullptr, code, wParam, lParam);
 }
 
 BOOL WINAPI DllMain(
@@ -228,7 +171,7 @@ BOOL WINAPI DllMain(
           {
             export_functions[index]();
 
-            std::string_view string_section((const char*)ConsoleEval, 1024 * 1024);
+            std::string_view string_section((const char*)ConsoleEvalCdecl, 1024 * 1024);
 
             functions = siege::extension::GetGameFunctionNames(string_section, function_name_ranges);
 
@@ -245,7 +188,7 @@ BOOL WINAPI DllMain(
         DetourRestoreAfterWith();
 
         auto self = win32::window_module_ref(hinstDLL);
-        hook = ::SetWindowsHookExW(WH_CALLWNDPROC, DispatchInputToGameConsole, self, ::GetCurrentThreadId());
+        hook = ::SetWindowsHookExW(WH_CALLWNDPROC, dispatch_copy_data_to_cdecl_game_console, self, ::GetCurrentThreadId());
       }
       catch (...)
       {

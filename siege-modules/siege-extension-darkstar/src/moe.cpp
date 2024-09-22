@@ -11,8 +11,6 @@
 #include <siege/platform/win/desktop/window_module.hpp>
 #include <siege/platform/win/desktop/window_impl.hpp>
 #include <detours.h>
-#include "DarkstarScriptDispatch.hpp"
-
 
 extern "C"
 {

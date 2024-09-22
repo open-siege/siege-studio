@@ -1,7 +1,6 @@
 #ifndef SIEGE_MAIN_WINDOW_HPP
 #define SIEGE_MAIN_WINDOW_HPP
 
-#include <oleacc.h>
 #include <dwmapi.h>
 #include <siege/platform/win/desktop/common_controls.hpp>
 #include <siege/platform/win/desktop/shell.hpp>

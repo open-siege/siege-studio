@@ -13,7 +13,7 @@
 #include <detours.h>
 #include "shared.hpp"
 #include "GetGameFunctionNames.hpp"
-#include "IdTechScriptDispatch.hpp"
+#include "id-tech-shared.hpp"
 
 
 extern "C" {
@@ -21,6 +21,8 @@ using game_action = siege::platform::game_action;
 using controller_binding = siege::platform::controller_binding;
 
 using game_command_line_caps = siege::platform::game_command_line_caps;
+
+extern bool allow_input_filtering;
 
 extern auto command_line_caps = game_command_line_caps{
   .supports_ip_connect = true,
@@ -72,26 +74,29 @@ HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_bind
   return S_FALSE;
 }
 
-HRESULT update_action_intensity_for_process(DWORD process_id, DWORD thread_id, const char* action, float intensity)
-{
-  return S_FALSE;
-}
-
-static void(__cdecl* ConsoleEval)(const char*) = nullptr;
+extern void(__cdecl* ConsoleEvalCdecl)(const char*);
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
-  { "cmdlist"sv, std::size_t(0x45189c) },
-  { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } } };
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x44ec2c) },
+  { "cmdlist"sv, std::size_t(0x44ec34) },
+  { "cl_pitchspeed"sv, std::size_t(0x44d5a8) } } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 0> function_name_ranges{};
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 6> function_name_ranges{ {
+  { "-klook"sv, "centerview"sv },
+  { "echo"sv, "print"sv },
+  { "gun_model"sv, "gun_next"sv },
+  { "wait"sv, "cmdlist"sv },
+  { "-mlook"sv, "+mlook"sv },
+  { "menu_quit"sv, "menu_quit"sv },
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 0> variable_name_ranges{};
+} };
+
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "in_joystick"sv, "in_mouse"sv } } };
 
 inline void set_gog_exports()
 {
-  ConsoleEval = (decltype(ConsoleEval))0x415a10;
+  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x415a10;
 }
 
 constexpr std::array<void (*)(), 1> export_functions = { {
@@ -118,6 +123,8 @@ BOOL WINAPI DllMain(
   DWORD fdwReason,
   LPVOID lpvReserved) noexcept
 {
+  allow_input_filtering = false;
+
   if constexpr (sizeof(void*) != sizeof(std::uint32_t))
   {
     return TRUE;
@@ -173,7 +180,7 @@ BOOL WINAPI DllMain(
           {
             export_functions[index]();
 
-            std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 2);
+            std::string_view string_section((const char*)ConsoleEvalCdecl, 1024 * 1024 * 2);
 
             functions = siege::extension::GetGameFunctionNames(string_section, function_name_ranges);
 
@@ -190,7 +197,7 @@ BOOL WINAPI DllMain(
         DetourRestoreAfterWith();
 
         auto self = win32::window_module_ref(hinstDLL);
-        hook = ::SetWindowsHookExW(WH_GETMESSAGE, siege::extension::DispatchInputToGameConsole, self, ::GetCurrentThreadId());
+        hook = ::SetWindowsHookExW(WH_CALLWNDPROC, dispatch_copy_data_to_cdecl_game_console, self, ::GetCurrentThreadId());
       }
       catch (...)
       {

@@ -13,7 +13,7 @@
 #include <detours.h>
 #include "shared.hpp"
 #include "GetGameFunctionNames.hpp"
-#include "IdTechScriptDispatch.hpp"
+#include "id-tech-shared.hpp"
 
 
 extern "C" {
@@ -21,6 +21,7 @@ using game_action = siege::platform::game_action;
 using controller_binding = siege::platform::controller_binding;
 
 using game_command_line_caps = siege::platform::game_command_line_caps;
+extern bool allow_input_filtering;
 
 extern auto command_line_caps = game_command_line_caps{
   .supports_ip_connect = true,
@@ -72,16 +73,11 @@ HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_bind
   return S_FALSE;
 }
 
-HRESULT update_action_intensity_for_process(DWORD process_id, DWORD thread_id, const char* action, float intensity)
-{
-  return S_FALSE;
-}
-
-static void(__cdecl* ConsoleEval)(const char*) = nullptr;
+extern void(__cdecl* ConsoleEvalCdecl)(const char*);
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x4ac5a0) },
   { "cmdlist"sv, std::size_t(0x4ac5a8) },
   { "cl_minfps"sv, std::size_t(0x4a928c) } } } } };
 
@@ -95,10 +91,10 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> va
 
 inline void set_gog_exports()
 {
-  ConsoleEval = (decltype(ConsoleEval))0x4599d0;
+  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x4599d0;
 }
 
-constexpr std::array<void (*)(), 5> export_functions = { {
+constexpr std::array<void (*)(), 1> export_functions = { {
   set_gog_exports,
 } };
 
@@ -117,11 +113,14 @@ HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
 
+static std::ofstream hook_log("hook.log", std::ios::trunc);
+
 BOOL WINAPI DllMain(
   HINSTANCE hinstDLL,
   DWORD fdwReason,
   LPVOID lpvReserved) noexcept
 {
+  allow_input_filtering = false;
   if constexpr (sizeof(void*) != sizeof(std::uint32_t))
   {
     return TRUE;
@@ -161,12 +160,16 @@ BOOL WINAPI DllMain(
 
         for (const auto& item : verification_strings)
         {
+          hook_log << "Verifying " << item[0].first << '\n';
           win32::module_ref temp((void*)item[0].second);
 
           if (temp != app_module)
           {
+            hook_log << "Could not find " << item[0].first << '\n';
             continue;
           }
+
+         hook_log << "Verifying all strings" << '\n';
 
           module_is_valid = std::all_of(item.begin(), item.end(), [](const auto& str) {
             return std::memcmp(str.first.data(), (void*)str.second, str.first.size()) == 0;
@@ -175,11 +178,16 @@ BOOL WINAPI DllMain(
 
           if (module_is_valid)
           {
+            hook_log << "All strings verified" << '\n';
+
             export_functions[index]();
 
-            std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 2);
+            hook_log << "Getting string section for function names" << '\n';
+
+            std::string_view string_section((const char*)ConsoleEvalCdecl, 1024 * 1024 * 2);
 
             functions = siege::extension::GetGameFunctionNames(string_section, function_name_ranges);
+            hook_log << "Functions retrieved" << '\n';
 
             break;
           }
@@ -194,7 +202,7 @@ BOOL WINAPI DllMain(
         DetourRestoreAfterWith();
 
         auto self = win32::window_module_ref(hinstDLL);
-        hook = ::SetWindowsHookExW(WH_GETMESSAGE, siege::extension::DispatchInputToGameConsole, self, ::GetCurrentThreadId());
+        hook = ::SetWindowsHookExW(WH_CALLWNDPROC, dispatch_copy_data_to_cdecl_game_console, self, ::GetCurrentThreadId());
       }
       catch (...)
       {

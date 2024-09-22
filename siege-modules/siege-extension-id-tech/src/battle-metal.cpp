@@ -13,7 +13,7 @@
 #include <detours.h>
 #include "shared.hpp"
 #include "GetGameFunctionNames.hpp"
-#include "IdTechScriptDispatch.hpp"
+#include "id-tech-shared.hpp"
 
 
 extern "C" {

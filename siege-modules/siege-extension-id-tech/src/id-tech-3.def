@@ -12,7 +12,6 @@ EXPORTS
 	bind_virtual_key_to_action_for_process
 	update_action_intensity_for_process
 	launch_game_with_extension
-	get_game_script_host
 	executable_is_supported
 	get_function_name_ranges
 	get_variable_name_ranges

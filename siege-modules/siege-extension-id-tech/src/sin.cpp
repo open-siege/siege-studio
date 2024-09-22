@@ -15,7 +15,7 @@
 #include "shared.hpp"
 #include "GameExport.hpp"
 #include "GetGameFunctionNames.hpp"
-#include "IdTechScriptDispatch.hpp"
+#include "id-tech-shared.hpp"
 
 
 extern "C" {
@@ -74,13 +74,7 @@ HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_bind
   return S_FALSE;
 }
 
-HRESULT update_action_intensity_for_process(DWORD process_id, DWORD thread_id, const char* action, float intensity)
-{
-  return S_FALSE;
-}
-
-
-static void(__fastcall* ConsoleEval)(const char*) = nullptr;
+extern void(__fastcall* ConsoleEvalFastcall)(const char*);
 
 using namespace std::literals;
 
@@ -187,7 +181,7 @@ BOOL WINAPI DllMain(
           return FALSE;
         }
 
-        ConsoleEval = (decltype(ConsoleEval))exports.console_eval;
+        ConsoleEvalFastcall = (decltype(ConsoleEvalFastcall))exports.console_eval;
 
         std::string_view string_section((const char*)exports.preferred_base_address, exports.module_size);
 
@@ -196,7 +190,7 @@ BOOL WINAPI DllMain(
         DetourRestoreAfterWith();
 
         auto self = win32::window_module_ref(hinstDLL);
-        hook = ::SetWindowsHookExW(WH_GETMESSAGE, siege::extension::DispatchInputToGameConsole, self, ::GetCurrentThreadId());
+        hook = ::SetWindowsHookExW(WH_CALLWNDPROC, dispatch_copy_data_to_fastcall_game_console, self, ::GetCurrentThreadId());
       }
       catch (...)
       {

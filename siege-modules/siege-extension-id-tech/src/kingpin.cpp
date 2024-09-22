@@ -13,7 +13,7 @@
 #include <detours.h>
 #include "shared.hpp"
 #include "GetGameFunctionNames.hpp"
-#include "IdTechScriptDispatch.hpp"
+#include "id-tech-shared.hpp"
 
 
 extern "C" {
@@ -21,6 +21,7 @@ using game_action = siege::platform::game_action;
 using controller_binding = siege::platform::controller_binding;
 
 using game_command_line_caps = siege::platform::game_command_line_caps;
+extern bool allow_input_filtering;
 
 extern auto command_line_caps = game_command_line_caps{
   .supports_ip_connect = true,
@@ -72,12 +73,7 @@ HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_bind
   return S_FALSE;
 }
 
-HRESULT update_action_intensity_for_process(DWORD process_id, DWORD thread_id, const char* action, float intensity)
-{
-  return S_FALSE;
-}
-
-static void(__cdecl* ConsoleEval)(const char*) = nullptr;
+extern void(__cdecl* ConsoleEvalCdecl)(const char*);
 
 using namespace std::literals;
 
@@ -95,7 +91,7 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> va
 
 inline void set_gog_exports()
 {
-  ConsoleEval = (decltype(ConsoleEval))0x41db30;
+  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x41db30;
 }
 
 constexpr std::array<void (*)(), 1> export_functions = { {
@@ -122,6 +118,7 @@ BOOL WINAPI DllMain(
   DWORD fdwReason,
   LPVOID lpvReserved) noexcept
 {
+  allow_input_filtering = false;
   if constexpr (sizeof(void*) != sizeof(std::uint32_t))
   {
     return TRUE;
@@ -178,7 +175,7 @@ BOOL WINAPI DllMain(
           {
             export_functions[index]();
 
-            std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 4);
+            std::string_view string_section((const char*)ConsoleEvalCdecl, 1024 * 1024 * 4);
 
             functions = siege::extension::GetGameFunctionNames(string_section, function_name_ranges);
 
@@ -195,7 +192,7 @@ BOOL WINAPI DllMain(
         DetourRestoreAfterWith();
 
         auto self = win32::window_module_ref(hinstDLL);
-        hook = ::SetWindowsHookExW(WH_GETMESSAGE, siege::extension::DispatchInputToGameConsole, self, ::GetCurrentThreadId());
+        hook = ::SetWindowsHookExW(WH_CALLWNDPROC, dispatch_copy_data_to_cdecl_game_console, self, ::GetCurrentThreadId());
       }
       catch (...)
       {

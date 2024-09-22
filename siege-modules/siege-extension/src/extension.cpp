@@ -1,10 +1,12 @@
 #include <siege/platform/extension_module.hpp>
 #include <siege/platform/win/core/com/client.hpp>
 #include <siege/platform/shared.hpp>
-#include <oleacc.h>
 #include <detours.h>
 
 extern "C" {
+
+extern bool allow_input_filtering = true;
+    
 HRESULT executable_is_supported(const wchar_t* filename) noexcept;
 
 HRESULT launch_game_with_extension(const wchar_t* exe_path_str, std::uint32_t argc, const wchar_t** argv, PROCESS_INFORMATION* process_info) noexcept
@@ -72,10 +74,14 @@ HRESULT launch_game_with_extension(const wchar_t* exe_path_str, std::uint32_t ar
 
   auto hook_path = (std::filesystem::path(extension_path).parent_path() / "siege-extension-input-filter-raw-input.dll").string();
 
-  std::vector<const char*> dll_paths{
-    hook_path.c_str(),
-    extension_path.c_str(),
-  };
+  std::vector<const char*> dll_paths;
+
+  if (allow_input_filtering)
+  {
+    dll_paths.emplace_back(hook_path.c_str());  
+  }
+
+  dll_paths.emplace_back(extension_path.c_str());
 
   auto steam_dll_path = (exe_path.parent_path().parent_path().parent_path().parent_path() / "Steam.dll").string();
 
@@ -103,30 +109,5 @@ HRESULT launch_game_with_extension(const wchar_t* exe_path_str, std::uint32_t ar
 
   auto last_error = ::GetLastError();
   return HRESULT_FROM_WIN32(last_error);
-}
-
-HRESULT get_game_script_host(_In_ const wchar_t* game, _Outptr_ ::IDispatch** host) noexcept
-{
-  if (game == nullptr || host == nullptr)
-  {
-    return E_POINTER;
-  }
-
-  *host = nullptr;
-
-  std::wstring name;
-  name.reserve(48);
-  name.append(L"siege::extension::");
-  name.append(siege::platform::to_lower(game));
-  name.append(L"::ScriptHost");
-
-  auto game_window = ::FindWindowExW(HWND_MESSAGE, nullptr, nullptr, name.c_str());
-
-  if (game_window)
-  {
-    return AccessibleObjectFromWindow(game_window, OBJID_NATIVEOM, IID_IDispatch, (void**)host);
-  }
-
-  return OLE_E_NOTRUNNING;
 }
 }

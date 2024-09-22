@@ -13,7 +13,7 @@
 #include <detours.h>
 #include "shared.hpp"
 #include "GetGameFunctionNames.hpp"
-#include "IdTechScriptDispatch.hpp"
+#include "id-tech-shared.hpp"
 
 
 extern "C" {
@@ -85,11 +85,14 @@ constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1>
   { "cmdlist"sv, std::size_t(0x2012049c) },
   { "cl_minfps"sv, std::size_t(0x2011e600) } } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{ { { "-klook"sv, "centerview"sv },
-  { "joy_advancedupdate"sv, "+mlook"sv },
-  { "echo"sv, "echo"sv } } };
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{ { { "-mlook"sv, "centerview"sv },
+  { "bindlist"sv, "bind"sv },
+  { "ff_restart"sv, "cs_list"sv } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "joy_yawsensitivity"sv, "in_mouse"sv } } };
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 2> variable_name_ranges{ { 
+    { "in_debug"sv, "in_midi"sv },
+    { "sp_globalDurationModifier"sv, "sp_language"sv },
+    }};
 
 inline void set_gog_exports()
 {

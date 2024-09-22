@@ -12,8 +12,6 @@
 #include <siege/platform/win/desktop/window_impl.hpp>
 #include <detours.h>
 #include "shared.hpp"
-#include "DarkstarScriptDispatch.hpp"
-
 
 extern "C" 
 {
@@ -145,15 +143,11 @@ constexpr static std::string_view StarsiegeBetaDisc = "STARSIEGE";
 
 BOOL WINAPI WrappedAllocConsole()
 {
-  win32::com::init_com(COINIT_APARTMENTTHREADED);
-
   return TrueAllocConsole();
 }
 
 HHOOK WINAPI WrappedSetWindowsHookExA(int idHook, HOOKPROC lpfn, HINSTANCE hmod, DWORD dwThreadId)
 {
-  win32::com::init_com(COINIT_APARTMENTTHREADED);
-
   if (dwThreadId == 0 && idHook == WH_CBT)
   {
     dwThreadId = ::GetCurrentThreadId();
