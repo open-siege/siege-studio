@@ -133,6 +133,7 @@ namespace siege
     std::set<HANDLE> registered_controllers;
     std::set<HANDLE> regular_controllers;
     std::map<int, XINPUT_STATE> controller_state;
+    std::map<std::string_view, bool> action_states;
 
     input_injector(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self), child_process{}, controller_state{}
     {
@@ -468,23 +469,27 @@ namespace siege
         {
           if (injector_args.extension && injector_args.extension->update_action_intensity_for_process)
           {
-            if (newRy >= 0)
+            if (newRy >= 0 && action_states["lookup"])
             {
+              action_states["lookup"] = false;
               injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "lookup", 0);
             }
 
-            if (newRy <= 0)
+            if (newRy <= 0 && action_states["lookdown"])
             {
+              action_states["lookdown"] = false;
               injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "lookdown", 0);
             }
 
-            if (newRy > 0)
+            if (newRy > 0 && !action_states["lookdown"])
             {
+              action_states["lookdown"] = true;
               injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "lookdown", INFINITY);
             }
 
-            if (newRy < 0)
+            if (newRy < 0 && !action_states["lookup"])
             {
+              action_states["lookup"] = true;
               injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "lookup", INFINITY);
             }
           }
@@ -494,32 +499,28 @@ namespace siege
         {
           if (injector_args.extension && injector_args.extension->update_action_intensity_for_process)
           {
-            if (newRx >= 0)
+            if (newRx >= 0 && action_states["left"])
             {
+              action_states["left"] = false;
               injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "left", 0);
-
-              // script_host->Invoke(func_ids[L"-left"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
             }
 
-            if (newRx <= 0)
+            if (newRx <= 0 && action_states["right"])
             {
+              action_states["right"] = false;
               injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "right", 0);
-
-              // script_host->Invoke(func_ids[L"-right"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
             }
 
-            if (newRx < 0)
+            if (newRx < 0 && !action_states["left"])
             {
+              action_states["left"] = true;
               injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "left", INFINITY);
-
-              // script_host->Invoke(func_ids[L"+left"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
             }
 
-            if (newRx > 0)
+            if (newRx > 0 && !action_states["right"])
             {
+              action_states["right"] = true;
               injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "right", INFINITY);
-
-              //  script_host->Invoke(func_ids[L"+right"], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &invoke_result, nullptr, nullptr);
             }
           }
           // TODO deal with right stick input
