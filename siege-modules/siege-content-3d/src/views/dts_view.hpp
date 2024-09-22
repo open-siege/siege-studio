@@ -57,9 +57,9 @@ namespace siege::views
         .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS,
       });
 
-      selection.InsertString(-1, L"Palette 1");
-      selection.InsertString(-1, L"Palette 2");
-      selection.InsertString(-1, L"Palette 3");
+      selection.InsertString(-1, L"Detail Level 1");
+      selection.InsertString(-1, L"Detail Level 2");
+      selection.InsertString(-1, L"Detail Level 3");
 
       shape_actions = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
 
