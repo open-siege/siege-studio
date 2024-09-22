@@ -90,54 +90,23 @@ HRESULT update_action_intensity_for_process(DWORD process_id, DWORD thread_id, c
     return E_INVALIDARG;
   }
 
-  if (std::string_view(action) == "left")
-  {
-    std::string command = intensity == INFINITY ? "+left" : "-left";
-    COPYDATASTRUCT data
-    {
-      .dwData = ::RegisterWindowMessageW(L"ConsoleCommand"),
-      .cbData = command.size(),
-      .lpData = command.data()
-    };
-    ::SendMessageW(info.hwndActive, WM_COPYDATA, (WPARAM)::GetActiveWindow(), (LPARAM)&data);
-  }
+  std::string_view temp_action(action);
 
-  if (std::string_view(action) == "right")
-  {
-    std::string command = intensity == INFINITY ? "+right" : "-right";
-    COPYDATASTRUCT data{
-      .dwData = ::RegisterWindowMessageW(L"ConsoleCommand"),
-      .cbData = command.size(),
-      .lpData = command.data()
-    };
-    ::SendMessageW(info.hwndActive, WM_COPYDATA, (WPARAM)::GetActiveWindow(), (LPARAM)&data);
-  }
+  thread_local std::string buffer;
+  buffer.clear();
+  buffer.reserve(temp_action.size() + 1);
+  buffer.append(intensity == INFINITY ? "+" : "-");
+  buffer.append(temp_action);
 
-  if (std::string_view(action) == "lookup")
-  {
-    std::string command = intensity == INFINITY ? "+lookup" : "-lookup";
-    COPYDATASTRUCT data{
-      .dwData = ::RegisterWindowMessageW(L"ConsoleCommand"),
-      .cbData = command.size(),
-      .lpData = command.data()
-    };
+   COPYDATASTRUCT data{
+    .dwData = ::RegisterWindowMessageW(L"ConsoleCommand"),
+    .cbData = buffer.size(),
+    .lpData = buffer.data()
+  };
 
-    ::SendMessageW(info.hwndActive, WM_COPYDATA, (WPARAM)::GetActiveWindow(), (LPARAM)&data);
-  }
+  ::SendMessageW(info.hwndActive, WM_COPYDATA, (WPARAM)::GetActiveWindow(), (LPARAM)&data);
 
-  if (std::string_view(action) == "lookdown")
-  {
-    std::string command = intensity == INFINITY ? "+lookdown" : "-lookdown";
-    COPYDATASTRUCT data{
-      .dwData = ::RegisterWindowMessageW(L"ConsoleCommand"),
-      .cbData = command.size() + 1,
-      .lpData = command.data()
-    };
-
-    ::SendMessageW(info.hwndActive, WM_COPYDATA, (WPARAM)::GetActiveWindow(), (LPARAM)&data);
-  }
-
-  return S_FALSE;
+  return S_OK;
 }
 
 static void(__cdecl* ConsoleEval)(const char*) = nullptr;
