@@ -21,7 +21,6 @@ using game_action = siege::platform::game_action;
 using controller_binding = siege::platform::controller_binding;
 
 using game_command_line_caps = siege::platform::game_command_line_caps;
-extern bool allow_input_filtering;
 
 extern auto command_line_caps = game_command_line_caps{
   .supports_ip_connect = true,
@@ -120,7 +119,6 @@ BOOL WINAPI DllMain(
   DWORD fdwReason,
   LPVOID lpvReserved) noexcept
 {
-  allow_input_filtering = false;
   if constexpr (sizeof(void*) != sizeof(std::uint32_t))
   {
     return TRUE;

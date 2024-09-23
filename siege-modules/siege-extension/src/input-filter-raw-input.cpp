@@ -17,7 +17,7 @@ struct direct_input_hook
   HHOOK handle;
 };
 
-static std::optional<direct_input_hook> keyboard_hook = std::nullopt;
+static std::optional<direct_input_hook> dinput_keyboard_hook = std::nullopt;
 
 LRESULT CALLBACK CBTProc(
   int code,
@@ -46,6 +46,99 @@ LRESULT CALLBACK CBTProc(
     // The only downside is that if the Window is a child Window, then maybe the parent won't get the input.
     // Something to work on but most games tend to only have one root Window anyway.
     ::RegisterRawInputDevices(Rid, 1, sizeof(Rid[0]));
+  }
+
+  return ::CallNextHookEx(nullptr, code, wParam, lParam);
+}
+
+LRESULT CALLBACK LowLevelKeyboardProc(
+  int code,
+  WPARAM wParam,
+  LPARAM lParam)
+{
+  if (code == HC_ACTION && lParam)
+  {
+    auto* info = (KBDLLHOOKSTRUCT*)lParam;
+
+    auto& state = siege::get_active_input_state();
+
+    auto device_id = info->dwExtraInfo;
+
+    auto device_iter = std::find_if(state.devices.begin(), state.devices.end(), [&](auto& device) {
+      return (device.type == RIM_TYPEKEYBOARD || device.type == RIM_TYPEHID) && device.id == device_id && device.enabled == 1;
+    });
+
+    if (device_iter == state.devices.end())
+    {
+      goto next_hook;
+    }
+
+    auto group_iter = std::find_if(state.groups.begin(), state.groups.end(), [&, thread_id = ::GetCurrentThreadId()](auto& group) {
+      return group.id == device_iter->group_id && group.enabled == 1 && group.thread_id == thread_id;
+    });
+
+    if (group_iter == state.groups.end())
+    {
+      goto next_hook;
+    }
+
+    auto vk = info->vkCode ? info->vkCode : ::MapVirtualKeyW(info->scanCode, MAPVK_VSC_TO_VK);
+
+    LPARAM lParam = 0;
+    lParam |= (info->flags & LLKHF_UP) ? 1 << 31 : 0;// Transition state
+    lParam |= (info->flags & LLKHF_UP) ? 1 << 30 : 0;// Previous key state
+    lParam |= (info->flags & LLKHF_EXTENDED) ? 1 << 24 : 0;
+    lParam |= info->scanCode << 16;// Scan code
+
+
+    std::array<BYTE, 256> flags{};
+
+    if (::GetKeyboardState(flags.data()) && vk)
+    {
+      flags[vk] |= (info->flags & LLKHF_UP) ? 0 : 1 << 7;
+
+      ::SetKeyboardState(flags.data());
+    }
+
+    auto event = WM_KEYDOWN;
+
+    if (info->flags & LLKHF_UP)
+    {
+      event = WM_KEYUP;
+    }
+
+    ::GUITHREADINFO gui_info{ .cbSize = sizeof(::GUITHREADINFO) };
+
+    if (::GetGUIThreadInfo(::GetCurrentThreadId(), &gui_info) && gui_info.hwndFocus)
+    {
+      ::SendMessageW(gui_info.hwndFocus, event, vk, lParam);
+    }
+
+    if (dinput_keyboard_hook)
+    {
+      KBDLLHOOKSTRUCT keyboard_event{
+        .vkCode = vk,
+        .scanCode = info->scanCode,
+        .flags = info->flags,
+        .time = info->time,
+        .dwExtraInfo = info->dwExtraInfo
+      };
+      dinput_keyboard_hook->proc(0, wParam, (LPARAM)&keyboard_event);
+    }
+  }
+
+next_hook:
+  return ::CallNextHookEx(nullptr, code, wParam, lParam);
+}
+
+LRESULT CALLBACK KeyboardProc(
+  int code,
+  WPARAM wParam,
+  LPARAM lParam)
+{
+  if (code == HC_ACTION)
+  {
+    return -1;
   }
 
   return ::CallNextHookEx(nullptr, code, wParam, lParam);
@@ -135,8 +228,8 @@ LRESULT CALLBACK GetMsgProc(
               }
 
               ::PostMessageW(message->hwnd, event, vk, lParam);
-              
-              if (keyboard_hook)
+
+              if (dinput_keyboard_hook)
               {
                 KBDLLHOOKSTRUCT keyboard_event{
                   .vkCode = vk,
@@ -153,7 +246,7 @@ LRESULT CALLBACK GetMsgProc(
                 {
                   keyboard_event.flags |= LLKHF_EXTENDED;
                 }
-                keyboard_hook->proc(0, event, (LPARAM)&keyboard_event);
+                dinput_keyboard_hook->proc(0, event, (LPARAM)&keyboard_event);
               }
             }
             else
@@ -176,19 +269,34 @@ static auto* TrueGetAsyncKeyState = GetAsyncKeyState;
 static auto* TrueSetWindowHookExW = SetWindowsHookExW;
 static auto* TrueUnhookWindowsHookEx = UnhookWindowsHookEx;
 
+static HHOOK keyboard_hook = nullptr;
+static HHOOK ll_keyboard_hook = nullptr;
+
 HHOOK WINAPI WrappedSetWindowsHookExW(int idHook, HOOKPROC lpfn, HINSTANCE hmod, DWORD dwThreadId)
 {
   if (auto dinput = ::GetModuleHandleW(L"dinput.dll"); dinput && idHook == WH_KEYBOARD_LL)
   {
+    if (ll_keyboard_hook)
+    {
+      dinput_keyboard_hook = direct_input_hook{ .proc = lpfn, .handle = ll_keyboard_hook };
+      return ll_keyboard_hook;
+    }
+
     auto result = TrueSetWindowHookExW(idHook, lpfn, hmod, dwThreadId);
-    keyboard_hook = direct_input_hook{ .proc = lpfn, .handle = result };
+    dinput_keyboard_hook = direct_input_hook{ .proc = lpfn, .handle = result };
     return result;
   }
 
   if (auto dinput8 = ::GetModuleHandleW(L"dinput8.dll"); dinput8 && idHook == WH_KEYBOARD_LL)
   {
+    if (ll_keyboard_hook)
+    {
+      dinput_keyboard_hook = direct_input_hook{ .proc = lpfn, .handle = ll_keyboard_hook };
+      return ll_keyboard_hook;
+    }
+
     auto result = TrueSetWindowHookExW(idHook, lpfn, hmod, dwThreadId);
-    keyboard_hook = direct_input_hook{ .proc = lpfn, .handle = result };
+    dinput_keyboard_hook = direct_input_hook{ .proc = lpfn, .handle = result };
     return result;
   }
 
@@ -197,9 +305,14 @@ HHOOK WINAPI WrappedSetWindowsHookExW(int idHook, HOOKPROC lpfn, HINSTANCE hmod,
 
 BOOL WINAPI WrappedUnhookWindowsHookEx(HHOOK handle)
 {
-  if (keyboard_hook && keyboard_hook->handle == handle)
+  if (handle == ll_keyboard_hook)
   {
-    keyboard_hook = std::nullopt;
+    ll_keyboard_hook = nullptr;
+  }
+
+  if (dinput_keyboard_hook && dinput_keyboard_hook->handle == handle)
+  {
+    dinput_keyboard_hook = std::nullopt;
   }
 
   return TrueUnhookWindowsHookEx(handle);
@@ -261,24 +374,50 @@ BOOL WINAPI DllMain(
       // first init to disable all legacy input
       // then the CBT hook will handle setting the hwndTarget for
       // receiving foreground and background input.
-      if (::RegisterRawInputDevices(Rid, 1, sizeof(Rid[0])) == FALSE)
+      if (::RegisterRawInputDevices(Rid, 1, sizeof(Rid[0])) == TRUE)
       {
-        return FALSE;
+        cbt_hook = ::SetWindowsHookExW(WH_CBT, CBTProc, hinstDLL, ::GetCurrentThreadId());
+
+        if (cbt_hook == nullptr)
+        {
+          Rid[0].dwFlags = RIDEV_REMOVE;
+          Rid[0].hwndTarget = 0;
+          assert(::RegisterRawInputDevices(Rid, 1, sizeof(Rid[0])) == TRUE);
+          return FALSE;
+        }
+
+        get_message_hook = ::SetWindowsHookExW(WH_GETMESSAGE, GetMsgProc, hinstDLL, ::GetCurrentThreadId());
+
+        if (get_message_hook == nullptr)
+        {
+          Rid[0].dwFlags = RIDEV_REMOVE;
+          Rid[0].hwndTarget = 0;
+          assert(::RegisterRawInputDevices(Rid, 1, sizeof(Rid[0])) == TRUE);
+          assert(::UnhookWindowsHookEx(cbt_hook) == TRUE);
+          return FALSE;
+        }
+
+        return TRUE;
       }
-
-      cbt_hook = ::SetWindowsHookExW(WH_CBT, CBTProc, hinstDLL, ::GetCurrentThreadId());
-
-      if (cbt_hook == nullptr)
+      else
       {
-        return FALSE;
-      }
+        ll_keyboard_hook = ::SetWindowsHookExW(WH_KEYBOARD_LL, LowLevelKeyboardProc, hinstDLL, 0);
 
-      get_message_hook = ::SetWindowsHookExW(WH_GETMESSAGE, GetMsgProc, hinstDLL, ::GetCurrentThreadId());
+        keyboard_hook = ::SetWindowsHookExW(WH_KEYBOARD, KeyboardProc, hinstDLL, ::GetCurrentThreadId());
 
-      if (get_message_hook == nullptr)
-      {
-        assert(::UnhookWindowsHookEx(cbt_hook) == TRUE);
-        return FALSE;
+        if (!(ll_keyboard_hook && keyboard_hook))
+        {
+          if (ll_keyboard_hook)
+          {
+            ::UnhookWindowsHookEx(ll_keyboard_hook);
+          }
+
+          if (keyboard_hook)
+          {
+            ::UnhookWindowsHookEx(keyboard_hook);
+          }
+          return FALSE;
+        }
       }
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
@@ -289,8 +428,25 @@ BOOL WINAPI DllMain(
       std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourDetach(func.first, func.second); });
       DetourTransactionCommit();
 
-      assert(::UnhookWindowsHookEx(cbt_hook) == TRUE);
-      assert(::UnhookWindowsHookEx(get_message_hook) == TRUE);
+      if (cbt_hook)
+      {
+        assert(::UnhookWindowsHookEx(cbt_hook) == TRUE);
+      }
+
+      if (get_message_hook)
+      {
+        assert(::UnhookWindowsHookEx(get_message_hook) == TRUE);
+      }
+
+      if (ll_keyboard_hook)
+      {
+        assert(::UnhookWindowsHookEx(ll_keyboard_hook) == TRUE);
+      }
+
+      if (keyboard_hook)
+      {
+        assert(::UnhookWindowsHookEx(keyboard_hook) == TRUE);
+      }
 
       RAWINPUTDEVICE Rid[1];
 
@@ -299,7 +455,7 @@ BOOL WINAPI DllMain(
       Rid[0].dwFlags = RIDEV_REMOVE;
       Rid[0].hwndTarget = 0;
 
-      assert(::RegisterRawInputDevices(Rid, 1, sizeof(Rid[0])) == TRUE);
+      ::RegisterRawInputDevices(Rid, 1, sizeof(Rid[0]));
     }
   }
 
