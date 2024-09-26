@@ -12,18 +12,18 @@ namespace siege
   {
     struct group
     {
-      std::uint32_t id = 0;
-      std::uint32_t enabled = true;
+      std::uint16_t id = 0;
+      std::uint16_t enabled = true;
       DWORD process_id = 0;
       DWORD thread_id = 0;
     };
 
     struct device
     {
-      std::uint32_t type = -1;// keyboard, mouse, controller
-      std::uint32_t id = 0;
-      std::uint32_t group_id = 0;
-      std::uint32_t enabled = true;
+      std::uint16_t type = -1;// keyboard, mouse, controller
+      std::uint16_t id = 0;
+      std::uint16_t group_id = 0;
+      std::uint16_t enabled = true;
       HANDLE device_handle;
     };
 
@@ -41,7 +41,7 @@ namespace siege
 
   bool remove_device(HANDLE);
 
-  std::optional<std::uint32_t> find_device_id(HANDLE);
+  std::optional<std::uint16_t> find_device_id(HANDLE);
 
   active_input_state& get_active_input_state();
 }

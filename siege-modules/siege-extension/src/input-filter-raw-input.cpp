@@ -62,7 +62,7 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 
     auto& state = siege::get_active_input_state();
 
-    auto device_id = info->dwExtraInfo;
+    auto device_id = LOWORD(info->dwExtraInfo);
 
     auto device_iter = std::find_if(state.devices.begin(), state.devices.end(), [&](auto& device) {
       return (device.type == RIM_TYPEKEYBOARD || device.type == RIM_TYPEHID) && device.id == device_id && device.enabled == 1;
@@ -90,6 +90,10 @@ LRESULT CALLBACK LowLevelKeyboardProc(
     lParam |= (info->flags & LLKHF_EXTENDED) ? 1 << 24 : 0;
     lParam |= info->scanCode << 16;// Scan code
 
+    thread_local std::array<WORD, 256> extended_states{};
+    WORD extra_state = HIWORD(info->dwExtraInfo);
+    extended_states[vk] = extra_state;
+
 
     std::array<BYTE, 256> flags{};
 
@@ -111,7 +115,16 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 
     if (::GetGUIThreadInfo(::GetCurrentThreadId(), &gui_info) && gui_info.hwndFocus)
     {
-      ::SendMessageW(gui_info.hwndFocus, event, vk, lParam);
+      ::PostMessageW(gui_info.hwndFocus, event, vk, lParam);
+
+      if (::IsWindowUnicode(gui_info.hwndFocus))
+      {
+        ::SetPropW(gui_info.hwndFocus, L"ExtendedVkStates", &extended_states);
+      }
+      else
+      {
+        ::SetPropA(gui_info.hwndFocus, "ExtendedVkStates", &extended_states);
+      }
     }
 
     if (dinput_keyboard_hook)
@@ -176,7 +189,7 @@ LRESULT CALLBACK GetMsgProc(
 
             if (header.dwType == RIM_TYPEKEYBOARD)
             {
-              device_id = input.data.keyboard.ExtraInformation;
+              device_id = LOWORD(input.data.keyboard.ExtraInformation);
             }
             else
             {
@@ -203,7 +216,7 @@ LRESULT CALLBACK GetMsgProc(
 
             if (header.dwType == RIM_TYPEKEYBOARD)
             {
-              auto vk = ::MapVirtualKeyW(input.data.keyboard.MakeCode, MAPVK_VSC_TO_VK);
+              auto vk = input.data.keyboard.VKey ? input.data.keyboard.VKey : ::MapVirtualKeyW(input.data.keyboard.MakeCode, MAPVK_VSC_TO_VK);
 
               LPARAM lParam = 0;
               lParam |= (input.data.keyboard.Flags & RI_KEY_BREAK) ? 1 << 31 : 0;// Transition state
@@ -213,10 +226,25 @@ LRESULT CALLBACK GetMsgProc(
 
               std::array<BYTE, 256> flags{};
 
+              thread_local std::array<WORD, 256> extended_states{};
+              WORD extra_state = HIWORD(input.data.keyboard.ExtraInformation);
+              extended_states[vk] = extra_state;
+
+              if (message->hwnd)
+              {
+                if (::IsWindowUnicode(message->hwnd))
+                {
+                  ::SetPropW(message->hwnd, L"ExtendedVkStates", &extended_states);
+                }
+                else
+                {
+                  ::SetPropA(message->hwnd, "ExtendedVkStates", &extended_states);
+                }
+              }
+
               if (::GetKeyboardState(flags.data()))
               {
                 flags[vk] |= (input.data.keyboard.Flags & RI_KEY_BREAK) ? 0 : 1 << 7;
-
                 ::SetKeyboardState(flags.data());
               }
 
@@ -229,7 +257,7 @@ LRESULT CALLBACK GetMsgProc(
 
               ::PostMessageW(message->hwnd, event, vk, lParam);
 
-              if (dinput_keyboard_hook)
+              if (dinput_keyboard_hook && input.data.keyboard.MakeCode)
               {
                 KBDLLHOOKSTRUCT keyboard_event{
                   .vkCode = vk,

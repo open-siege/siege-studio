@@ -89,7 +89,7 @@ namespace siege
     return true;
   }
 
-  std::optional<std::uint32_t> find_device_id(HANDLE handle)
+  std::optional<std::uint16_t> find_device_id(HANDLE handle)
   {
     if (handle == nullptr)
     {

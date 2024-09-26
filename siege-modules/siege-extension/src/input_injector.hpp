@@ -40,7 +40,7 @@ namespace siege
     up
   };
 
-  ::INPUT vk_to_input(WORD key, std::uint32_t device_id, input_state state)
+  ::INPUT vk_to_input(WORD key, std::uint32_t device_id, input_state state, std::optional<WORD> intensity = std::nullopt)
   {
     ::INPUT result{};
 
@@ -111,6 +111,22 @@ namespace siege
       result.mi.dwFlags = XBUTTON2;
       result.mi.dwFlags = state == input_state::up ? MOUSEEVENTF_XUP : MOUSEEVENTF_XDOWN;
       result.mi.dwExtraInfo = device_id;
+      return result;
+    }
+
+    if (key >= VK_GAMEPAD_A && key <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)
+    {
+      result.type = INPUT_KEYBOARD;
+      result.ki.wVk = key;
+
+
+      result.ki.dwFlags = state == input_state::up ? KEYEVENTF_KEYUP : 0;
+
+      std::uint16_t controller_intensity = intensity ? *intensity : state == input_state::up ? 0
+                                                                                             : (std::uint16_t)-1;
+
+      result.ki.dwExtraInfo = MAKELPARAM(device_id, controller_intensity);
+
       return result;
     }
 
@@ -232,6 +248,10 @@ namespace siege
       return 0;
     }
 
+    std::uint16_t normalise(std::int16_t value)
+    {
+      return ((std::uint16_t)std::abs(value) * 2) + 1;
+    }
 
     auto calculate_deadzone(std::pair<short, short> x_y_pair, int deadzone)
     {
@@ -389,18 +409,24 @@ namespace siege
         {
           if (newLx == 0)
           {
-            simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
-            simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
+            //   simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
+            //   simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
+            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, *device_id, input_state::up));
+            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, *device_id, input_state::up));
           }
           else if (newLx < 0)
           {
-            simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::down));
-            simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
+            // simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::down));
+            // simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
+            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, *device_id, input_state::down, normalise(newLx)));
+            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, *device_id, input_state::up));
           }
           else if (newLx > 0)
           {
-            simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
-            simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::down));
+            // simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
+            // simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::down));
+            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, *device_id, input_state::up));
+            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, *device_id, input_state::down, normalise(newLx)));
           }
         }
 
@@ -412,18 +438,34 @@ namespace siege
         {
           if (newLy == 0)
           {
-            simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
-            simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
+            // simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
+            // simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
+            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_UP, *device_id, input_state::up));
+            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, *device_id, input_state::up));
           }
           else if (newLy < 0)
           {
-            simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
-            simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::down));
+            // simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
+            // simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::down));
+
+            if (oldLy > 0)
+            {
+              simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_UP, *device_id, input_state::up));
+            }
+
+            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, *device_id, input_state::down, normalise(newLy)));
           }
           else if (newLy > 0)
           {
-            simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::down));
-            simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
+            // simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::down));
+            //  simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
+
+            if (oldLy < 0)
+            {
+              simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, *device_id, input_state::up));
+            }
+
+            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_UP, *device_id, input_state::down, normalise(newLy)));
           }
         }
 
@@ -434,10 +476,12 @@ namespace siege
         if (mapping != mappings.end() && temp.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB)
         {
           simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::down));
+          simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, *device_id, input_state::down));
         }
         else if (mapping != mappings.end() && state.second.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB)
         {
           simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
+          simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, *device_id, input_state::up));
         }
 
         if (mapping != mappings.end() && temp.Gamepad.wButtons & XINPUT_GAMEPAD_B)
@@ -465,65 +509,82 @@ namespace siege
 
         DISPPARAMS params{};
         win32::com::Variant invoke_result;
-        if (newRy != oldRy)
+
+        mapping = mappings.find(VK_GAMEPAD_RIGHT_THUMBSTICK_UP);
+        mapping_alt = mappings.find(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN);
+
+        if (newRy != oldRy && mapping != mappings.end()
+            && mapping_alt != mappings.end())
         {
-          if (injector_args.extension && injector_args.extension->update_action_intensity_for_process)
+          if (newRy == 0)
           {
-            if (newRy >= 0 && action_states["lookup"])
-            {
-              action_states["lookup"] = false;
-              injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "lookup", 0);
-            }
-
-            if (newRy <= 0 && action_states["lookdown"])
-            {
-              action_states["lookdown"] = false;
-              injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "lookdown", 0);
-            }
-
-            if (newRy > 0 && !action_states["lookdown"])
-            {
-              action_states["lookdown"] = true;
-              injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "lookdown", INFINITY);
-            }
-
-            if (newRy < 0 && !action_states["lookup"])
-            {
-              action_states["lookup"] = true;
-              injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "lookup", INFINITY);
-            }
+            //    simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
+            //    simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
+            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, *device_id, input_state::up));
+            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, *device_id, input_state::up));
           }
-          // TODO deal with right stick input
+          else if (newRy < 0)
+          {
+            //    simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
+            //   simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::down));
+
+            if (oldRy > 0)
+            {
+              simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, *device_id, input_state::up));
+            }
+
+            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, *device_id, input_state::down, normalise(newRy)));
+          }
+          else if (newRy > 0)
+          {
+            //       simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::down));
+            //      simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
+
+            if (oldRy < 0)
+            {
+              simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, *device_id, input_state::up));
+            }
+
+            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, *device_id, input_state::down, normalise(newRy)));
+          }
         }
-        if (newRx != oldRx)
+
+        mapping = mappings.find(VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT);
+        mapping_alt = mappings.find(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT);
+
+        if (newRx != oldRx && mapping != mappings.end()
+            && mapping_alt != mappings.end())
         {
-          if (injector_args.extension && injector_args.extension->update_action_intensity_for_process)
+          if (newRx == 0)
           {
-            if (newRx >= 0 && action_states["left"])
-            {
-              action_states["left"] = false;
-              injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "left", 0);
-            }
-
-            if (newRx <= 0 && action_states["right"])
-            {
-              action_states["right"] = false;
-              injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "right", 0);
-            }
-
-            if (newRx < 0 && !action_states["left"])
-            {
-              action_states["left"] = true;
-              injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "left", INFINITY);
-            }
-
-            if (newRx > 0 && !action_states["right"])
-            {
-              action_states["right"] = true;
-              injector_args.extension->update_action_intensity_for_process(child_process.dwProcessId, child_process.dwThreadId, "right", INFINITY);
-            }
+            //    simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
+            //    simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
+            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, *device_id, input_state::up));
+            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, *device_id, input_state::up));
           }
-          // TODO deal with right stick input
+          else if (newRx < 0)
+          {
+            //    simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
+            //   simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::down));
+            if (oldRx > 0)
+            {
+              simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, *device_id, input_state::up));
+            }
+
+            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, *device_id, input_state::down, normalise(newRx)));
+          }
+          else if (newRx > 0)
+          {
+            //       simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::down));
+            //      simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
+
+            if (oldRx < 0)
+            {
+              simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, *device_id, input_state::up));
+            }
+
+            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, *device_id, input_state::down, normalise(newRx)));
+          }
         }
 
         mapping = mappings.find(VK_GAMEPAD_LEFT_TRIGGER);
@@ -560,7 +621,7 @@ namespace siege
 
         if (!simulated_inputs.empty())
         {
-          ::SendInput(simulated_inputs.size(), simulated_inputs.data(), sizeof(INPUT));
+          assert(::SendInput(simulated_inputs.size(), simulated_inputs.data(), sizeof(INPUT)) == simulated_inputs.size());
         }
 
         state.second = temp;
