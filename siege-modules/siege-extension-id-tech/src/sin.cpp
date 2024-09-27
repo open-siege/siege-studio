@@ -190,7 +190,7 @@ BOOL WINAPI DllMain(
         DetourRestoreAfterWith();
 
         auto self = win32::window_module_ref(hinstDLL);
-        hook = ::SetWindowsHookExW(WH_CALLWNDPROC, dispatch_copy_data_to_fastcall_game_console, self, ::GetCurrentThreadId());
+        hook = ::SetWindowsHookExW(WH_GETMESSAGE, dispatch_copy_data_to_fastcall_game_console, self, ::GetCurrentThreadId());
       }
       catch (...)
       {

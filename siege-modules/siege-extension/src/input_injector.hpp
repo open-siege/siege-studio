@@ -250,7 +250,14 @@ namespace siege
 
     std::uint16_t normalise(std::int16_t value)
     {
-      return ((std::uint16_t)std::abs(value) * 2) + 1;
+      if (value > 0)
+      {
+        return ((std::uint16_t)std::abs(value) * 2) + 1;
+      }
+      else
+      {
+        return std::numeric_limits<std::uint16_t>::max() - ((std::uint16_t)std::abs(value) * 2);
+      }
     }
 
     auto calculate_deadzone(std::pair<short, short> x_y_pair, int deadzone)
@@ -411,21 +418,36 @@ namespace siege
           {
             //   simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
             //   simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
-            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, *device_id, input_state::up));
-            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, *device_id, input_state::up));
+
+            if (oldLx < 0)
+            {
+              simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, *device_id, input_state::up));
+            }
+
+            if (oldLx > 0)
+            {
+              simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, *device_id, input_state::up));
+            }
           }
           else if (newLx < 0)
           {
             // simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::down));
             // simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
+            if (oldLx > 0)
+            {
+              simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, *device_id, input_state::up));
+            }
             simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, *device_id, input_state::down, normalise(newLx)));
-            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, *device_id, input_state::up));
           }
           else if (newLx > 0)
           {
             // simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
             // simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::down));
-            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, *device_id, input_state::up));
+            if (oldLx < 0)
+            {
+              simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, *device_id, input_state::up));
+            }
+
             simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, *device_id, input_state::down, normalise(newLx)));
           }
         }
@@ -440,8 +462,16 @@ namespace siege
           {
             // simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
             // simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
-            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_UP, *device_id, input_state::up));
-            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, *device_id, input_state::up));
+
+            if (oldLy > 0)
+            {
+              simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_UP, *device_id, input_state::up));
+            }
+
+            if (oldLy < 0)
+            {
+              simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, *device_id, input_state::up));
+            }
           }
           else if (newLy < 0)
           {
@@ -520,8 +550,15 @@ namespace siege
           {
             //    simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
             //    simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
-            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, *device_id, input_state::up));
-            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, *device_id, input_state::up));
+            if (oldRy > 0)
+            {
+              simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, *device_id, input_state::up));
+            }
+
+            if (oldRy < 0)
+            {
+              simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, *device_id, input_state::up));
+            }
           }
           else if (newRy < 0)
           {
@@ -559,8 +596,15 @@ namespace siege
           {
             //    simulated_inputs.emplace_back(vk_to_input(mapping->second, *device_id, input_state::up));
             //    simulated_inputs.emplace_back(vk_to_input(mapping_alt->second, *device_id, input_state::up));
-            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, *device_id, input_state::up));
-            simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, *device_id, input_state::up));
+            if (oldRx > 0)
+            {
+              simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, *device_id, input_state::up));
+            }
+
+            if (oldRx < 0)
+            {
+              simulated_inputs.emplace_back(vk_to_input(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, *device_id, input_state::up));
+            }
           }
           else if (newRx < 0)
           {

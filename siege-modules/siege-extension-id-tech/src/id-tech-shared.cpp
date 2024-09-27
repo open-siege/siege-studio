@@ -57,20 +57,29 @@ HRESULT update_action_intensity_for_process_using_console_command(DWORD process_
   return S_OK;
 }
 
+LRESULT CALLBACK dispatch_copy_data_to_game_console(int code, WPARAM wParam, LPARAM lParam, void (*console_eval)(const char*));
+
+LRESULT CALLBACK dispatch_copy_data_to_cdecl_game_console(int code, WPARAM wParam, LPARAM lParam)
+{
+  if (ConsoleEvalCdecl)
+  {
+    return dispatch_copy_data_to_game_console(code, wParam, lParam, ConsoleEvalCdecl);
+  }
+
+  return CallNextHookEx(nullptr, code, wParam, lParam);
+}
+
+void do_console_eval_fastcall(const char* text)
+{
+  ConsoleEvalFastcall(text);
+}
+
+
 LRESULT CALLBACK dispatch_copy_data_to_fastcall_game_console(int code, WPARAM wParam, LPARAM lParam)
 {
-  if (code == HC_ACTION && lParam && ConsoleEvalCdecl)
+  if (ConsoleEvalFastcall)
   {
-    auto* message = (CWPSTRUCT*)lParam;
-
-    if (message->message == WM_COPYDATA)
-    {
-      auto* data = (COPYDATASTRUCT*)message->lParam;
-      if (data && data->dwData == ::RegisterWindowMessageW(L"ConsoleCommand"))
-      {
-        ConsoleEvalFastcall((char*)data->lpData);
-      }
-    }
+    return dispatch_copy_data_to_game_console(code, wParam, lParam, do_console_eval_fastcall);
   }
 
   return CallNextHookEx(nullptr, code, wParam, lParam);
@@ -97,27 +106,12 @@ WORD get_extended_state(BYTE vkey)
   return 0;
 }
 
-LRESULT CALLBACK dispatch_copy_data_to_cdecl_game_console(int code, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK dispatch_copy_data_to_game_console(int code, WPARAM wParam, LPARAM lParam, void (*console_eval)(const char*))
 {
-  if (code == HC_ACTION && wParam == PM_REMOVE && ConsoleEvalCdecl)
+  if (code == HC_ACTION && wParam == PM_REMOVE)
   {
     auto* message = (MSG*)lParam;
 
-    WORD vkCode = LOWORD(message->wParam);// virtual-key code
-
-    WORD keyFlags = HIWORD(message->lParam);
-
-    WORD scanCode = LOBYTE(keyFlags);// scan code
-    BOOL isExtendedKey = (keyFlags & KF_EXTENDED) == KF_EXTENDED;// extended-key flag, 1 if scancode has 0xE0 prefix
-
-    if (isExtendedKey)
-      scanCode = MAKEWORD(scanCode, 0xE0);
-
-    BOOL wasKeyDown = (keyFlags & KF_REPEAT) == KF_REPEAT;// previous key-state flag, 1 on autorepeat
-    WORD repeatCount = LOWORD(message->lParam);// repeat count, > 0 if several keydown messages was combined into one message
-
-    BOOL isKeyReleased = (keyFlags & KF_UP) == KF_UP;
-    
     constexpr static std::uint16_t uint_max = -1;
 
     if (message->message == WM_KEYDOWN)
@@ -128,104 +122,103 @@ LRESULT CALLBACK dispatch_copy_data_to_cdecl_game_console(int code, WPARAM wPara
 
         std::stringstream command;
         command << "cl_sidespeed " << (int)state;
-        ConsoleEvalCdecl(command.str().c_str());
-        ConsoleEvalCdecl("+moveleft");
+        console_eval(command.str().c_str());
+        console_eval("+moveleft");
       }
       else if (message->wParam == VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT)
       {
         auto state = ((float)get_extended_state(message->wParam) / (float)uint_max) * 160;
         std::stringstream command;
         command << "cl_sidespeed " << (int)state;
-        ConsoleEvalCdecl(command.str().c_str());
-        ConsoleEvalCdecl("+moveright");
+        console_eval(command.str().c_str());
+        console_eval("+moveright");
       }
       else if (message->wParam == VK_GAMEPAD_LEFT_THUMBSTICK_UP)
       {
         auto state = ((float)get_extended_state(message->wParam) / (float)uint_max) * 160;
         std::stringstream command;
         command << "cl_forwardspeed " << (int)state;
-        ConsoleEvalCdecl(command.str().c_str());
-        ConsoleEvalCdecl("+forward");
+        console_eval(command.str().c_str());
+        console_eval("+forward");
       }
       else if (message->wParam == VK_GAMEPAD_LEFT_THUMBSTICK_DOWN)
       {
         auto state = ((float)get_extended_state(message->wParam) / (float)uint_max) * 160;
         std::stringstream command;
         command << "cl_forwardspeed " << (int)state;
-        ConsoleEvalCdecl(command.str().c_str());
-        ConsoleEvalCdecl("+back");
+        console_eval(command.str().c_str());
+        console_eval("+back");
       }
 
       if (message->wParam == VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)
       {
         auto state = ((float)get_extended_state(message->wParam) / (float)uint_max) * 100;
         std::stringstream command;
-        command << "cl_pitchspeed " << (int)state;
-        ConsoleEvalCdecl(command.str().c_str());
-        ConsoleEvalCdecl("+left");
+        command << "cl_yawspeed " << (int)state;
+        console_eval(command.str().c_str());
+        console_eval("+left");
       }
       else if (message->wParam == VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT)
       {
         auto state = ((float)get_extended_state(message->wParam) / (float)uint_max) * 100;
         std::stringstream command;
-        command << "cl_pitchspeed " << (int)state;
-        ConsoleEvalCdecl(command.str().c_str());
-        ConsoleEvalCdecl("+right");
+        command << "cl_yawspeed " << (int)state;
+        console_eval(command.str().c_str());
+        console_eval("+right");
       }
       else if (message->wParam == VK_GAMEPAD_RIGHT_THUMBSTICK_UP)
       {
         auto state = ((float)get_extended_state(message->wParam) / (float)uint_max) * 100;
         std::stringstream command;
-        command << "cl_yawspeed " << (int)state;
-        ConsoleEvalCdecl(command.str().c_str());
-        ConsoleEvalCdecl("+lookup");
+        command << "cl_pitchspeed " << (int)state;
+        console_eval(command.str().c_str());
+        console_eval("+lookup");
       }
       else if (message->wParam == VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN)
       {
         auto state = ((float)get_extended_state(message->wParam) / (float)uint_max) * 100;
         std::stringstream command;
-        command << "cl_yawspeed " << (int)state;
-        ConsoleEvalCdecl(command.str().c_str());
-        ConsoleEvalCdecl("+lookdown");
+        command << "cl_pitchspeed " << (int)state;
+        console_eval(command.str().c_str());
+        console_eval("+lookdown");
       }
     }
     else if (message->message == WM_KEYUP)
     {
       if (message->wParam == VK_GAMEPAD_LEFT_THUMBSTICK_LEFT)
       {
-        ConsoleEvalCdecl("-moveleft");
+        console_eval("-moveleft");
       }
       else if (message->wParam == VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT)
       {
-        ConsoleEvalCdecl("-moveright");
+        console_eval("-moveright");
       }
       else if (message->wParam == VK_GAMEPAD_LEFT_THUMBSTICK_UP)
       {
-        ConsoleEvalCdecl("-forward");
+        console_eval("-forward");
       }
       else if (message->wParam == VK_GAMEPAD_LEFT_THUMBSTICK_DOWN)
       {
-        ConsoleEvalCdecl("-back");
+        console_eval("-back");
       }
 
       if (message->wParam == VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)
       {
-        ConsoleEvalCdecl("-left");
+        console_eval("-left");
       }
       else if (message->wParam == VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT)
       {
-        ConsoleEvalCdecl("-right");
+        console_eval("-right");
       }
       else if (message->wParam == VK_GAMEPAD_RIGHT_THUMBSTICK_UP)
       {
-        ConsoleEvalCdecl("-lookup");
+        console_eval("-lookup");
       }
       else if (message->wParam == VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN)
       {
-        ConsoleEvalCdecl("-lookdown");
+        console_eval("-lookdown");
       }
     }
-
   }
 
   return CallNextHookEx(nullptr, code, wParam, lParam);
