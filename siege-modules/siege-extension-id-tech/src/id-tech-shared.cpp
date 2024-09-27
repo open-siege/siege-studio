@@ -69,11 +69,28 @@ LRESULT CALLBACK dispatch_copy_data_to_cdecl_game_console(int code, WPARAM wPara
   return CallNextHookEx(nullptr, code, wParam, lParam);
 }
 
+void do_console_eval_cdecl_quake_1(const char* text)
+{
+  thread_local std::string temp;
+  temp.assign(text);
+  temp.append(1, '\n');
+  ConsoleEvalCdecl(temp.c_str());
+}
+
+LRESULT CALLBACK dispatch_copy_data_to_cdecl_quake_1_console(int code, WPARAM wParam, LPARAM lParam)
+{
+  if (ConsoleEvalCdecl)
+  {
+    return dispatch_copy_data_to_game_console(code, wParam, lParam, do_console_eval_cdecl_quake_1);
+  }
+
+  return CallNextHookEx(nullptr, code, wParam, lParam);
+}
+
 void do_console_eval_fastcall(const char* text)
 {
   ConsoleEvalFastcall(text);
 }
-
 
 LRESULT CALLBACK dispatch_copy_data_to_fastcall_game_console(int code, WPARAM wParam, LPARAM lParam)
 {
@@ -219,8 +236,8 @@ LRESULT CALLBACK dispatch_copy_data_to_game_console(int code, WPARAM wParam, LPA
         console_eval("-lookdown");
       }
     }
-  }
 
-  return CallNextHookEx(nullptr, code, wParam, lParam);
+    return CallNextHookEx(nullptr, code, wParam, lParam);
+  }
 }
 }

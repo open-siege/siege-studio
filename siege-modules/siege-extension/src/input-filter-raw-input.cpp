@@ -24,7 +24,7 @@ LRESULT CALLBACK CBTProc(
   WPARAM wParam,
   LPARAM lParam)
 {
-  if (code == HCBT_SETFOCUS && wParam)
+  if ((code == HCBT_SETFOCUS || code == HCBT_ACTIVATE) && wParam)
   {
     RAWINPUTDEVICE Rid[1];
 
@@ -113,17 +113,19 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 
     ::GUITHREADINFO gui_info{ .cbSize = sizeof(::GUITHREADINFO) };
 
-    if (::GetGUIThreadInfo(::GetCurrentThreadId(), &gui_info) && gui_info.hwndFocus)
+    if (::GetGUIThreadInfo(::GetCurrentThreadId(), &gui_info))
     {
-      ::PostMessageW(gui_info.hwndFocus, event, vk, lParam);
-
-      if (::IsWindowUnicode(gui_info.hwndFocus))
+      if (gui_info.hwndFocus)
       {
+        ::PostMessageW(gui_info.hwndFocus, event, vk, lParam);
+
         ::SetPropW(gui_info.hwndFocus, L"ExtendedVkStates", &extended_states);
       }
-      else
+      else if (gui_info.hwndActive)
       {
-        ::SetPropA(gui_info.hwndFocus, "ExtendedVkStates", &extended_states);
+        ::PostMessageW(gui_info.hwndFocus, event, vk, lParam);
+
+        ::SetPropW(gui_info.hwndFocus, L"ExtendedVkStates", &extended_states);
       }
     }
 
@@ -230,17 +232,6 @@ LRESULT CALLBACK GetMsgProc(
               WORD extra_state = HIWORD(input.data.keyboard.ExtraInformation);
               extended_states[vk] = extra_state;
 
-              if (message->hwnd)
-              {
-                if (::IsWindowUnicode(message->hwnd))
-                {
-                  ::SetPropW(message->hwnd, L"ExtendedVkStates", &extended_states);
-                }
-                else
-                {
-                  ::SetPropA(message->hwnd, "ExtendedVkStates", &extended_states);
-                }
-              }
 
               if (::GetKeyboardState(flags.data()))
               {
@@ -255,7 +246,11 @@ LRESULT CALLBACK GetMsgProc(
                 event = WM_KEYUP;
               }
 
-              ::PostMessageW(message->hwnd, event, vk, lParam);
+              if (message->hwnd)
+              {
+                ::SetPropW(message->hwnd, L"ExtendedVkStates", &extended_states);
+                ::PostMessageW(message->hwnd, event, vk, lParam);
+              }
 
               if (dinput_keyboard_hook && input.data.keyboard.MakeCode)
               {

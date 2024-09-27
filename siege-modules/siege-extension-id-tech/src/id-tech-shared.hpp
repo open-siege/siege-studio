@@ -5,6 +5,7 @@
 
 extern "C" {
 LRESULT CALLBACK dispatch_copy_data_to_cdecl_game_console(int code, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK dispatch_copy_data_to_cdecl_quake_1_console(int code, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK dispatch_copy_data_to_fastcall_game_console(int code, WPARAM wParam, LPARAM lParam);
 }
 

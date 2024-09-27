@@ -72,41 +72,69 @@ HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_bind
   return S_FALSE;
 }
 
-HRESULT update_action_intensity_for_process(DWORD process_id, DWORD thread_id, const char* action, float intensity)
-{
-  return S_FALSE;
-}
-
-static void(__cdecl* ConsoleEval)(const char*) = nullptr;
+extern void(__cdecl* ConsoleEvalCdecl)(const char*);
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
-  { "cmdlist"sv, std::size_t(0x45189c) },
-  { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } } };
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 4> verification_strings = { {
+  // win quake
+  std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x470e84) },
+    { "cmd"sv, std::size_t(0x470e9c) },
+    { "cl_pitchspeed"sv, std::size_t(0x475af8) } } },
+  // gl quake
+  std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x449594) },
+    { "cmd"sv, std::size_t(0x449580) },
+    { "cl_pitchspeed"sv, std::size_t(0x448704) } } },
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 0> function_name_ranges{};
+  // quake world
+  std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x47c6c8) },
+    { "cmd"sv, std::size_t(0x47c6ac) },
+    { "cl_pitchspeed"sv, std::size_t(0x47a348) } } },
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 0> variable_name_ranges{};
+  // gl quake world
+  std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x44eae4) },
+    { "cmd"sv, std::size_t(0x44eb04) },
+    { "cl_pitchspeed"sv, std::size_t(0x44c990) } } },
+} };
+
+// the order changes between regular quake and glquake, so each value has to be checked by itself
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 6> function_name_ranges{ {
+  { "timerefresh"sv, "timerefresh"sv },
+  { "pointfile"sv, "pointfile"sv },
+  { "joyadvancedupdate"sv, "joyadvancedupdate"sv },
+  { "force_centerview"sv, "force_centerview"sv },
+  { "stuffcmds"sv, "stuffcmds"sv },
+  { "wait"sv, "wait"sv },
+} };
+
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 7> variable_name_ranges{{ 
+    { "joyadvanced"sv, "joyadvanced"sv },
+    { "joyadvaxisx"sv, "joyadvaxisx"sv },
+    { "joyadvaxisy"sv, "joyadvaxisy"sv },
+    { "joyadvaxisz"sv, "joyadvaxisz"sv },
+    { "joyadvaxisr"sv, "joyadvaxisr"sv },
+    { "joyadvaxisu"sv, "joyadvaxisu"sv },
+    { "joyadvaxisv"sv, "joyadvaxisv"sv },
+ }};
 
 inline void set_gog_win_exports()
 {
-  ConsoleEval = (decltype(ConsoleEval))0x42bc80;
+  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x42bc80;
 }
 
 inline void set_gog_gl_exports()
 {
-  ConsoleEval = (decltype(ConsoleEval))0x4056c0;
+  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x4056c0;
 }
 
 inline void set_gog_qw_exports()
 {
-  ConsoleEval = (decltype(ConsoleEval))0x40fdd0;
+  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x40fdd0;
 }
 
 inline void set_gog_gl_qw_exports()
 {
-  ConsoleEval = (decltype(ConsoleEval))0x40c768;
+  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x40c768;
 }
 
 constexpr std::array<void (*)(), 4> export_functions = { {
@@ -192,13 +220,18 @@ BOOL WINAPI DllMain(
           {
             export_functions[index]();
 
-            std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 2);
+            std::string_view string_section((const char*)ConsoleEvalCdecl, 1024 * 1024 * 2);
 
             functions = siege::extension::GetGameFunctionNames(string_section, function_name_ranges);
 
             break;
           }
           index++;
+        }
+
+        if (!ConsoleEvalCdecl)
+        {
+          return FALSE;
         }
 
         if (!module_is_valid)
@@ -209,7 +242,7 @@ BOOL WINAPI DllMain(
         DetourRestoreAfterWith();
 
         auto self = win32::window_module_ref(hinstDLL);
-        hook = ::SetWindowsHookExW(WH_GETMESSAGE, siege::extension::DispatchInputToGameConsole, self, ::GetCurrentThreadId());
+        hook = ::SetWindowsHookExW(WH_GETMESSAGE, dispatch_copy_data_to_cdecl_quake_1_console, self, ::GetCurrentThreadId());
       }
       catch (...)
       {

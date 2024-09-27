@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 project(siege-extension-id-tech)
 
 if (WIN32)
-    add_library(siege-extension-quake SHARED src/quake.cpp src/id-tech-2.def)
+    add_library(siege-extension-quake SHARED src/id-tech-shared.cpp src/quake.cpp src/id-tech-2.def)
     add_library(siege-extension-hexen-2 SHARED src/hexen-2.cpp src/id-tech-2.def)
     add_library(siege-extension-battle-metal SHARED src/battle-metal.cpp src/id-tech-2.def)
     add_library(siege-extension-quake-2 SHARED src/quake-2.cpp src/id-tech-shared.cpp src/id-tech-2.5.def)
