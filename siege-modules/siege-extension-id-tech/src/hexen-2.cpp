@@ -72,33 +72,44 @@ HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_bind
   return S_FALSE;
 }
 
-HRESULT update_action_intensity_for_process(DWORD process_id, DWORD thread_id, const char* action, float intensity)
-{
-  return S_FALSE;
-}
-
-static void(__cdecl* ConsoleEval)(const char*) = nullptr;
+extern void(__cdecl* ConsoleEvalCdecl)(const char*);
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
-  { "cmdlist"sv, std::size_t(0x45189c) },
-  { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{ { { "+moveup"sv, "-crouch"sv },
-  { "midi_play"sv, "midi_volume"sv },
-  { "togglemenu"sv, "menu_class"sv } } };
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 2> verification_strings = { {
+  // win hexen 2
+  std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x491de4) },
+    { "cmd"sv, std::size_t(0x491dfc) },
+    { "cl_pitchspeed"sv, std::size_t(0x48ef60) } } },
+  // gl hexen 2
+  std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x465774) },
+    { "cmd"sv, std::size_t(0x46578c) },
+    { "cl_pitchspeed"sv, std::size_t(0x466190) } } },
+} };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "joyadvanced"sv, "joyforwardthreshold"sv } } };
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 6> function_name_ranges{ {
+  { "midi_play"sv, "midi_loop"sv },
+  { "togglemenu"sv, "menu_class"sv },
+  { "+showinfo"sv, "toggle_dm"sv },
+  { "slist"sv, "port"sv },
+  { "entities"sv, "sensitivity_save"sv },
+  { "playerclass"sv, "mcache"sv },
+} };
+
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 2> variable_name_ranges{ {
+  { "joyname"sv, "joyadvaxisv"sv },
+  { "sv_idealpitchscale"sv, "sv_accelerate"sv }
+} };
 
 inline void set_gog_sw_exports()
 {
-  ConsoleEval = (decltype(ConsoleEval))0x447180;
+  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x447180;
 }
 
 inline void set_gog_gl_exports()
 {
-  ConsoleEval = (decltype(ConsoleEval))0x40e860;
+  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x40e860;
 }
 
 constexpr std::array<void (*)(), 2> export_functions = {{
@@ -158,9 +169,6 @@ BOOL WINAPI DllMain(
       {
         auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
 
-        std::unordered_set<std::string_view> functions;
-        std::unordered_set<std::string_view> variables;
-
         bool module_is_valid = false;
 
         for (const auto& item : verification_strings)
@@ -180,11 +188,6 @@ BOOL WINAPI DllMain(
           if (module_is_valid)
           {
             export_functions[index]();
-
-            std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 2);
-
-            functions = siege::extension::GetGameFunctionNames(string_section, function_name_ranges);
-
             break;
           }
           index++;
@@ -198,7 +201,7 @@ BOOL WINAPI DllMain(
         DetourRestoreAfterWith();
 
         auto self = win32::window_module_ref(hinstDLL);
-        hook = ::SetWindowsHookExW(WH_GETMESSAGE, siege::extension::DispatchInputToGameConsole, self, ::GetCurrentThreadId());
+        hook = ::SetWindowsHookExW(WH_GETMESSAGE, dispatch_copy_data_to_cdecl_quake_1_console, self, ::GetCurrentThreadId());
       }
       catch (...)
       {

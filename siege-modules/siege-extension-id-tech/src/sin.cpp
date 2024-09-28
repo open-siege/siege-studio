@@ -160,9 +160,6 @@ BOOL WINAPI DllMain(
           exports.module_size = app_module_info.SizeOfImage;
         }
 
-        std::unordered_set<std::string_view> functions;
-        std::unordered_set<std::string_view> variables;
-
         bool module_is_valid = false;
 
         win32::module_ref temp((void*)exports.verification_strings[0].second);
@@ -182,11 +179,6 @@ BOOL WINAPI DllMain(
         }
 
         ConsoleEvalFastcall = (decltype(ConsoleEvalFastcall))exports.console_eval;
-
-        std::string_view string_section((const char*)exports.preferred_base_address, exports.module_size);
-
-        functions = siege::extension::GetGameFunctionNames(string_section, exports.function_name_ranges);
-
         DetourRestoreAfterWith();
 
         auto self = win32::window_module_ref(hinstDLL);

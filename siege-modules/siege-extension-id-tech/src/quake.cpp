@@ -197,9 +197,6 @@ BOOL WINAPI DllMain(
       {
         auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
 
-        std::unordered_set<std::string_view> functions;
-        std::unordered_set<std::string_view> variables;
-
         bool module_is_valid = false;
 
         for (const auto& item : verification_strings)
@@ -219,10 +216,6 @@ BOOL WINAPI DllMain(
           if (module_is_valid)
           {
             export_functions[index]();
-
-            std::string_view string_section((const char*)ConsoleEvalCdecl, 1024 * 1024 * 2);
-
-            functions = siege::extension::GetGameFunctionNames(string_section, function_name_ranges);
 
             break;
           }

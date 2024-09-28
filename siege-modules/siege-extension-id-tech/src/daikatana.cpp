@@ -150,24 +150,16 @@ BOOL WINAPI DllMain(
       try
       {
         auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
-
-        std::unordered_set<std::string_view> functions;
-        std::unordered_set<std::string_view> variables;
-
         bool module_is_valid = false;
 
         for (const auto& item : verification_strings)
         {
-          hook_log << "Verifying " << item[0].first << '\n';
           win32::module_ref temp((void*)item[0].second);
 
           if (temp != app_module)
           {
-            hook_log << "Could not find " << item[0].first << '\n';
             continue;
           }
-
-         hook_log << "Verifying all strings" << '\n';
 
           module_is_valid = std::all_of(item.begin(), item.end(), [](const auto& str) {
             return std::memcmp(str.first.data(), (void*)str.second, str.first.size()) == 0;
@@ -176,16 +168,7 @@ BOOL WINAPI DllMain(
 
           if (module_is_valid)
           {
-            hook_log << "All strings verified" << '\n';
-
             export_functions[index]();
-
-            hook_log << "Getting string section for function names" << '\n';
-
-            std::string_view string_section((const char*)ConsoleEvalCdecl, 1024 * 1024 * 2);
-
-            functions = siege::extension::GetGameFunctionNames(string_section, function_name_ranges);
-            hook_log << "Functions retrieved" << '\n';
 
             break;
           }
