@@ -10,7 +10,6 @@ EXPORTS
 	profile_configuration_paths
 	bind_virtual_key_to_action_for_file
 	bind_virtual_key_to_action_for_process
-	update_action_intensity_for_process
 	launch_game_with_extension
 	executable_is_supported
 	get_function_name_ranges

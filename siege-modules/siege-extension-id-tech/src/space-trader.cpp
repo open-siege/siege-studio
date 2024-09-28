@@ -191,7 +191,7 @@ BOOL WINAPI DllMain(
 
         auto self = win32::window_module_ref(hinstDLL);
         
-        hook = ::SetWindowsHookExW(WH_GETMESSAGE, siege::extension::DispatchInputToGameConsole, self, ::GetCurrentThreadId());
+        hook = ::SetWindowsHookExW(WH_GETMESSAGE, dispatch_input_to_cdecl_quake_3_console, self, ::GetCurrentThreadId());
       }
       catch (...)
       {

@@ -72,12 +72,7 @@ HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_bind
   return S_FALSE;
 }
 
-HRESULT update_action_intensity_for_process(DWORD process_id, DWORD thread_id, const char* action, float intensity)
-{
-  return S_FALSE;
-}
-
-static void(__cdecl* ConsoleEval)(const char*) = nullptr;
+extern void(__cdecl* ConsoleEvalCdecl)(const char*) ;
 
 using namespace std::literals;
 
@@ -93,7 +88,7 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> va
 
 inline void set_gog_exports()
 {
-  ConsoleEval = (decltype(ConsoleEval))0x200194f0;
+  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x200194f0;
 }
 
 constexpr std::array<void (*)(), 5> export_functions = { {
@@ -152,9 +147,6 @@ BOOL WINAPI DllMain(
       {
         auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
 
-        std::unordered_set<std::string_view> functions;
-        std::unordered_set<std::string_view> variables;
-
         bool module_is_valid = false;
 
         for (const auto& item : verification_strings)
@@ -175,10 +167,6 @@ BOOL WINAPI DllMain(
           {
             export_functions[index]();
 
-            std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 2);
-
-            functions = siege::extension::GetGameFunctionNames(string_section, function_name_ranges);
-
             break;
           }
           index++;
@@ -192,7 +180,7 @@ BOOL WINAPI DllMain(
         DetourRestoreAfterWith();
 
         auto self = win32::window_module_ref(hinstDLL);
-        hook = ::SetWindowsHookExW(WH_GETMESSAGE, siege::extension::DispatchInputToGameConsole, self, ::GetCurrentThreadId());
+        hook = ::SetWindowsHookExW(WH_GETMESSAGE, dispatch_input_to_cdecl_quake_3_console, self, ::GetCurrentThreadId());
       }
       catch (...)
       {

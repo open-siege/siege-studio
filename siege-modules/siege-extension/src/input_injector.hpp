@@ -250,14 +250,14 @@ namespace siege
 
     std::uint16_t normalise(std::int16_t value)
     {
-      if (value > 0)
+      auto result = (std::uint16_t)32768 + (std::uint16_t)value;
+
+      if (value < 0)
       {
-        return ((std::uint16_t)std::abs(value) * 2) + 1;
+        return std::numeric_limits<std::uint16_t>::max() - result;
       }
-      else
-      {
-        return std::numeric_limits<std::uint16_t>::max() - ((std::uint16_t)std::abs(value) * 2);
-      }
+
+      return result;
     }
 
     auto calculate_deadzone(std::pair<short, short> x_y_pair, int deadzone)

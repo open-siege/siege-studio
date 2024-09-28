@@ -235,7 +235,7 @@ BOOL WINAPI DllMain(
         DetourRestoreAfterWith();
 
         auto self = win32::window_module_ref(hinstDLL);
-        hook = ::SetWindowsHookExW(WH_GETMESSAGE, dispatch_copy_data_to_cdecl_quake_1_console, self, ::GetCurrentThreadId());
+        hook = ::SetWindowsHookExW(WH_GETMESSAGE, dispatch_input_to_cdecl_quake_1_console, self, ::GetCurrentThreadId());
       }
       catch (...)
       {
