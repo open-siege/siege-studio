@@ -89,7 +89,16 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 4> fu
   { "writeconfig"sv, "error"sv },
 } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "cl_motdString"sv, "cl_noprint"sv } } };
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 8> variable_name_ranges{{ 
+    { "cl_motdString"sv, "cl_noprint"sv }, 
+    { "headmodel"sv, "model"sv }, 
+    { "team_headmodel"sv, "team_model"sv }, 
+    { "g_blueTeam"sv, "g_redTeam"sv }, 
+    { "sv_master5"sv, "sv_master1"sv }, 
+    { "fs_copyfiles"sv, "fs_homepath"sv }, 
+    { "fs_basepath"sv, "fs_cdpath"sv }, 
+    { "fs_basegame"sv, "fs_debug"sv }, 
+    }};
 
 inline void set_gog_exports()
 {

@@ -78,7 +78,7 @@ using namespace std::literals;
 
 constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
   { "cmdlist"sv, std::size_t(0x2012049c) },
-  { "cl_minfps"sv, std::size_t(0x2011e600) } } } } };
+  { "com_avefps"sv, std::size_t(0x2011e600) } } } } };
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 6> function_name_ranges{ {
   { "-mlook"sv, "centerview"sv },

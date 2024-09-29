@@ -78,15 +78,15 @@ using namespace std::literals;
 
 constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
   { "cmdlist"sv, std::size_t(0x2012049c) },
-  { "cl_minfps"sv, std::size_t(0x2011e600) } } } } };
+  { "com_maxfps"sv, std::size_t(0x2011e600) } } } } };
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 8> function_name_ranges{ {
-  { "-mlook"sv, "centerview"sv },
+  { "-mlook"sv, "+mlook"sv },
+  { "-button14"sv, "+button0"sv },
+  { "-goggles"sv, "+firemode"sv },
+  { "-zoomout"sv, "+leanleft"sv },
+  { "-altattack"sv, "centerview"sv },
   { "bindlist"sv, "bind"sv },
-  { "ff_restart"sv, "cs_list"sv },
-  { "testnextmap"sv, "serverinfo"sv },
-  { "s_playtime"sv, "s_play"sv },
-  { "changepass"sv, "checkpass"sv },
   { "killserver"sv, "banclient"sv },
   { "vminfo"sv, "vmprofile"sv },
 } };    

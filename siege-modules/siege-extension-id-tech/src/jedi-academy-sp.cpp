@@ -60,7 +60,7 @@ extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } 
 extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
 extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"base/assets2.pk3/default.cfg", L"base/default.cfg" } };
 extern auto autoexec_configuration_paths = std::array<const wchar_t*, 4>{ { L"base/autoexec.cfg" } };
-extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{ { L"base/jaconfig.cfg" } }};
+extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{ { L"base/jaconfig.cfg" } };
 
 HRESULT bind_virtual_key_to_action_for_file(const siege::fs_char* filename, controller_binding* inputs, std::size_t inputs_size)
 {
@@ -84,7 +84,7 @@ constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1>
             }} 
 }};
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 6> function_name_ranges{ {
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 7> function_name_ranges{ {
   { "+use"sv, "+useforce"sv },
   { "+force_drain"sv, "+force_grip"sv },
   { "-mlook"sv, "+block"sv },
@@ -95,9 +95,9 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 6> fu
 } };
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> variable_name_ranges{ {
-  { "sv_running"sv, "com_introPlayed"sv },
+  { "sv_running"sv, "com_maxfps"sv },
   { "helpUsObi"sv, "helpUsObi"sv },
-  { "sp_leet"sv, "sp_language"sv },
+  { "sp_leet"sv, "se_language"sv },
 } };
 
 inline void set_gog_exports()

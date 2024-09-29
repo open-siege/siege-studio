@@ -76,20 +76,34 @@ extern void(__cdecl* ConsoleEvalCdecl)(const char*) ;
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { 
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = {{ 
+        std::array<std::pair<std::string_view, std::size_t>, 3>{{
   { "exec"sv, std::size_t(0x4c3dac) },
   { "cmdlist"sv, std::size_t(0x4c3db4) },
-  { "cl_pitchspeed"sv, std::size_t(0x4c2a50) } } } } };
+  { "cl_pitchspeed"sv, std::size_t(0x4c2a50) } } } 
+    }};
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 5> function_name_ranges{ {
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 7> function_name_ranges{ {
   { "condump"sv, "toggleconsole"sv },
-  { "-mlook"sv, "centerview"sv },
+  { "-mlook"sv, "+use"sv },
+  { "-button6"sv, "+button0"sv },
+  { "-altattack"sv, "centerview"sv },
   { "bindlist"sv, "bind"sv },
   { "writeconfig"sv, "quit"sv },
   { "vminfo"sv, "vmprofile"sv },
 } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "cl_packetdup"sv, "cl_nodelta"sv } } };
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 8> variable_name_ranges{{ 
+    { "cl_packetdup"sv, "cl_nodelta"sv }, 
+    { "g_pModSpecialties"sv, "g_pModAssimilation"sv }, 
+    { "g_gametype"sv, "g_gametype"sv }, 
+    { "ui_cdkeychecked2"sv, "ui_cdkeychecked2"sv }, 
+    { "s_occ_eq"sv, "s_polysize"sv }, 
+    { "s_polykeep"sv, "s_distance"sv }, 
+    { "s_doppler"sv, "s_enable_a3d"sv }, 
+    { "s_initsound"sv, "s_volume"sv }, 
+    
+ }};
 
 inline void set_gog_mp_exports()
 {
