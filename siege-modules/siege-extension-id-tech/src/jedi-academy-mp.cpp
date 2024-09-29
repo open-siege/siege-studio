@@ -76,18 +76,32 @@ extern void(__cdecl* ConsoleEvalCdecl)(const char*) ;
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
-  { "cmdlist"sv, std::size_t(0x45189c) },
-  { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } } };
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = {{ 
+        std::array<std::pair<std::string_view, std::size_t>, 3>{ { 
+            { "exec"sv, std::size_t(0x20120494) },
+            { "cmdlist"sv, std::size_t(0x45189c) },
+            { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } 
+ }};
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 4> function_name_ranges{ {
-  { "-statistics"sv, "pushmenu"sv },
-  { "ctrlbindlist"sv, "unbind"sv },
-  { "cl_dumpallclasses"sv, "cl_eventlist"sv },
-  { "cl_running"sv, "configstrings"sv },
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 9> function_name_ranges{ {
+  { "-mlook"sv, "+button0"sv },
+  { "-force_drain"sv, "+useforce"sv },
+  { "-altattack"sv, "+force_grip"sv },
+  { "-use"sv, "centerview"sv },
+  { "use_cloak"sv, "use_sentry"sv },
+  { "zoom"sv, "use_seeker"sv },
+  { "force_seeing"sv, "force_heal"sv },
+  { "engage_duel"sv, "sv_saberswitch"sv },
+  { "r_atihack"sv, "r_atihack"sv },
 } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "in_mouse"sv, "in_midi"sv } } };
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 4> variable_name_ranges{ {
+  { "com_buildScript"sv, "com_speeds"sv },
+  { "g_needpass"sv, "g_maxHolocronCarry"sv },
+  { "s_initsound"sv, "s_volume"sv },
+  { "r_noserverghoul2"sv, "r_noserverghoul2"sv },
+} };
+
 
 inline void set_gog_exports()
 {

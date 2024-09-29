@@ -72,13 +72,6 @@ HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_bind
   return S_FALSE;
 }
 
-HRESULT update_action_intensity_for_process(DWORD process_id, DWORD thread_id, const char* action, float intensity)
-{
-  return S_FALSE;
-}
-
-static void(__cdecl* ConsoleEval)(const char*) = nullptr;
-
 using namespace std::literals;
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 0> function_name_ranges{};

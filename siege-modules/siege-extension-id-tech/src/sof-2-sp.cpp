@@ -72,7 +72,7 @@ HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_bind
   return S_FALSE;
 }
 
-extern void(__cdecl* ConsoleEvalCdecl)(const char*) ;
+extern void(__cdecl* ConsoleEvalCdecl)(const char*);
 
 using namespace std::literals;
 
@@ -80,14 +80,24 @@ constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1>
   { "cmdlist"sv, std::size_t(0x2012049c) },
   { "cl_minfps"sv, std::size_t(0x2011e600) } } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{ { { "-mlook"sv, "centerview"sv },
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 6> function_name_ranges{ {
+  { "-mlook"sv, "centerview"sv },
   { "bindlist"sv, "bind"sv },
-  { "ff_restart"sv, "cs_list"sv } } };
+  { "ff_restart"sv, "cs_list"sv },
+  { "testnextmap"sv, "serverinfo"sv },
+  { "s_playtime"sv, "s_play"sv },
+  { "changepass"sv, "checkpass"sv },
+} };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 2> variable_name_ranges{ { 
-    { "in_debug"sv, "in_midi"sv },
-    { "sp_globalDurationModifier"sv, "sp_language"sv },
-    }};
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 7> variable_name_ranges{ {
+  { "com_introplayed"sv, "com_maxfps"sv },
+  { "raven"sv, "raven"sv },
+  { "sys_winversion"sv, "sys_memory"sv },
+  { "ar_distancecull"sv, "arioche"sv },
+  { "bloodless"sv, "bloodless"sv },
+  { "sp_globalDurationModifier"sv, "sp_language"sv },
+  { "r_noserverghoul2"sv, "r_noserverghoul2"sv },
+} };
 
 inline void set_gog_exports()
 {

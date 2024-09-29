@@ -80,11 +80,27 @@ constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1>
   { "cmdlist"sv, std::size_t(0x2012049c) },
   { "cl_minfps"sv, std::size_t(0x2011e600) } } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{ { { "-mlook"sv, "centerview"sv },
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 8> function_name_ranges{ {
+  { "-mlook"sv, "centerview"sv },
   { "bindlist"sv, "bind"sv },
-  { "ff_restart"sv, "cs_list"sv } } };
+  { "ff_restart"sv, "cs_list"sv },
+  { "testnextmap"sv, "serverinfo"sv },
+  { "s_playtime"sv, "s_play"sv },
+  { "changepass"sv, "checkpass"sv },
+  { "killserver"sv, "banclient"sv },
+  { "vminfo"sv, "vmprofile"sv },
+} };    
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "in_debug"sv, "in_midi"sv } } };
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 8> variable_name_ranges{ {
+  { "com_speeds"sv, "com_maxfps"sv },
+  { "cl_motdString"sv, "cl_noprint"sv },
+  { "graphshift"sv, "timegraph"sv },
+  { "net_qport"sv, "showpackets"sv },
+  { "sof2mp_game"sv, "sof2mp_game"sv },
+  { "bot_interbreedwrite"sv, "bot_enable"sv },
+  { "RMG_textseed"sv, "RMG_map"sv },
+  { "r_noserverghoul2"sv, "r_noserverghoul2"sv },
+} };
 
 inline void set_gog_exports()
 {

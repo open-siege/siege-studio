@@ -72,30 +72,39 @@ HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_bind
   return S_FALSE;
 }
 
-HRESULT update_action_intensity_for_process(DWORD process_id, DWORD thread_id, const char* action, float intensity)
-{
-  return S_FALSE;
-}
-
 static void(__cdecl* ConsoleEval)(const char*) = nullptr;
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { 
+        std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
   { "cmdlist"sv, std::size_t(0x45189c) },
   { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 0> function_name_ranges{};
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 6> function_name_ranges{ {
+  { "+moveup"sv, "-use"sv },
+  { "+button3"sv, "bestweapon"sv },
+  { "menu_main"sv, "menu_credits"sv },
+  { "crypto_reload"sv, "crypto_hostkeys"sv },
+  { "nextul"sv, "iplog_list"sv },
+  { "gamedir"sv, "which"sv },
+} };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 0> variable_name_ranges{};
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> variable_name_ranges{ {
+  { "cl_gameplayfix_nudgeoutofsolid_separation"sv, "cl_explosions_alpha_start"sv },
+  { "cl_movement_stopspeed"sv, "cl_itembobspeed"sv },
+  { "qw_svc_maxspeed"sv, "scr_printspeed"sv }
+} };
 
-inline void set_gog_exports()
+inline void set_steam_exports()
 {
+    //console var = 140b5f898
+    //console eval = 0x1400a77c0
   ConsoleEval = (decltype(ConsoleEval))0x41db30;
 }
 
 constexpr std::array<void (*)(), 5> export_functions = { {
-  set_gog_exports,
+  set_steam_exports,
 } };
 
 HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
@@ -150,9 +159,6 @@ BOOL WINAPI DllMain(
       {
         auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
 
-        std::unordered_set<std::string_view> functions;
-        std::unordered_set<std::string_view> variables;
-
         bool module_is_valid = false;
 
         for (const auto& item : verification_strings)
@@ -172,10 +178,6 @@ BOOL WINAPI DllMain(
           if (module_is_valid)
           {
             export_functions[index]();
-
-            std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 2);
-
-            functions = siege::extension::GetGameFunctionNames(string_section, function_name_ranges);
 
             break;
           }

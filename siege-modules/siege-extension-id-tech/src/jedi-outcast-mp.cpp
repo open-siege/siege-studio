@@ -80,27 +80,27 @@ constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1>
   { "cmdlist"sv, std::size_t(0x45189c) },
   { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 4> function_name_ranges{ {
-  { "-statistics"sv, "pushmenu"sv },
-  { "ctrlbindlist"sv, "unbind"sv },
-  { "cl_dumpallclasses"sv, "cl_eventlist"sv },
-  { "cl_running"sv, "configstrings"sv },
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 5> function_name_ranges{ {
+  { "-mlook"sv, "+button0"sv },
+  { "-force_drain"sv, "+force_grip"sv },
+  { "-use"sv, "centerview"sv },
+  { "showip"sv, "configstrings"sv },
+  { "forcepowers"sv, "forcepowers"sv },
 } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "in_mouse"sv, "in_midi"sv } } };
-
-inline void set_gog_sp_exports()
-{
-  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x414520;
-}
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 4> variable_name_ranges{ {
+  { "com_ignoreothertasks"sv, "com_buildScript"sv },
+  { "g_needpass"sv, "g_maxHolocronCarry"sv },
+  { "sp_show_strip"sv, "sp_language"sv },
+  { "r_noserverghoul2"sv, "r_noserverghoul2"sv },
+} };
 
 inline void set_gog_mp_exports()
 {
   ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x4283d0;
 }
 
-constexpr std::array<void (*)(), 2> export_functions = { {
-  set_gog_sp_exports,
+constexpr std::array<void (*)(), 1> export_functions = { {
   set_gog_mp_exports,
 } };
 

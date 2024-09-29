@@ -72,10 +72,6 @@ HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_bind
   return S_FALSE;
 }
 
-HRESULT update_action_intensity_for_process(DWORD process_id, DWORD thread_id, const char* action, float intensity)
-{
-  return S_FALSE;
-}
 
 static void(__cdecl* ConsoleEval)(const char*) = nullptr;
 
@@ -85,9 +81,23 @@ constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1>
   { "cmdlist"sv, std::size_t(0x45189c) },
   { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 0> function_name_ranges{};
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 6> function_name_ranges{ {
+  { "centerview"sv, "-mlook"sv },
+  { "vmprofile"sv, "vminfo"sv },
+  { "error"sv, "warmboot"sv },
+  { "devmap"sv, "spdevmap"sv },
+  { "in_restart"sv, "net_restart"sv },
+  { "toggle"sv, "bind"sv },
+} };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 0> variable_name_ranges{};
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 5> variable_name_ranges{ {
+  { "com_cmdline"sv, "use_steam"sv },
+  { "usernameandpassword"sv, "http_bugproject"sv },
+  { "r_bugreport"sv, "ui_username"sv },
+  { "journal"sv, "journal"sv },
+  { "s_volume"sv, "s_info"sv },
+} };
+
 
 inline void set_gog_exports()
 {

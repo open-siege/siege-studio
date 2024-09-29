@@ -80,28 +80,27 @@ constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1>
   { "cmdlist"sv, std::size_t(0x45189c) },
   { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 4> function_name_ranges{ {
-  { "-statistics"sv, "pushmenu"sv },
-  { "ctrlbindlist"sv, "unbind"sv },
-  { "cl_dumpallclasses"sv, "cl_eventlist"sv },
-  { "cl_running"sv, "configstrings"sv },
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 5> function_name_ranges{ {
+  { "-mlook"sv, "+altattack"sv },
+  { "-force_grip"sv, "+force_lightning"sv },
+  { "-attack"sv, "centerview"sv },
+  { "ff_restart"sv, "endscreendissolve"sv },
+  { "datapad"sv, "configstrings"sv },
 } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "in_mouse"sv, "in_midi"sv } } };
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> variable_name_ranges{{
+  { "com_introPlayed"sv, "com_introPlayed"sv },
+  { "helpUsObi"sv, "helpUsObi"sv },
+  { "sp_leet"sv, "sp_language"sv },
+}};
 
 inline void set_gog_sp_exports()
 {
   ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x414520;
 }
 
-inline void set_gog_mp_exports()
-{
-  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x4283d0;
-}
-
-constexpr std::array<void (*)(), 2> export_functions = { {
+constexpr std::array<void (*)(), 1> export_functions = { {
   set_gog_sp_exports,
-  set_gog_mp_exports,
 } };
 
 HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
@@ -155,9 +154,6 @@ BOOL WINAPI DllMain(
       try
       {
         auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
-
-        std::unordered_set<std::string_view> functions;
-        std::unordered_set<std::string_view> variables;
 
         bool module_is_valid = false;
 

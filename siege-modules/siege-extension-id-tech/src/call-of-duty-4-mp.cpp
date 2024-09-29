@@ -70,8 +70,6 @@ HRESULT update_action_intensity_for_process(DWORD process_id, DWORD thread_id, c
   return S_FALSE;
 }
 
-static void(__cdecl* ConsoleEval)(const char*) = nullptr;
-
 using namespace std::literals;
 
 constexpr static std::array<std::array<std::pair<std::string_view, std::size_t>, 1>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 1>{ { { "Call of Duty 4 Multiplayer requires Windows version 4 or greater"sv, std::size_t(0) }} }}};

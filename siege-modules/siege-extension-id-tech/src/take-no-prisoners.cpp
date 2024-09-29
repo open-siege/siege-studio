@@ -72,27 +72,33 @@ HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_bind
   return S_FALSE;
 }
 
-HRESULT update_action_intensity_for_process(DWORD process_id, DWORD thread_id, const char* action, float intensity)
-{
-  return S_FALSE;
-}
-
 static void(__cdecl* ConsoleEval)(const char*) = nullptr;
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
-  { "cmdlist"sv, std::size_t(0x2012049c) },
-  { "cl_minfps"sv, std::size_t(0x2011e600) } } } } };
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = {{ 
+        std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
+  { "concmds"sv, std::size_t(0x2012049c) },
+  { "cl_showactors"sv, std::size_t(0x2011e600) } } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{{ 
-    { "-klook"sv, "centerview"sv },
-    { "joy_advancedupdate"sv, "+mlook"sv },
-    { "rejected_violence"sv, "print"sv } 
- }};
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 9> function_name_ranges{ {
+  { "-mAim"sv, "looktoggle"sv },
+  { "-look"sv, "+yawpos"sv },
+  { "-6DOF"sv, "+use"sv },
+  { "suicide"sv, "impulse"sv },
+  { "-lowercamera"sv, "+raisecamera"sv },
+  { "-speed"sv, "+strafeleft"sv },
+  { "A_LoadPosMarkFile"sv, "A_MoveActor"sv },
+  { "goldblum"sv, "juggernaut"sv },
+  { "vp_fov"sv, "vp_enginecmd"sv },
+} };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "joy_yawsensitivity"sv, "in_mouse"sv } } };
-
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 4> variable_name_ranges{ {
+  { "a_acceleration"sv, "a_friction"sv },
+  { "cl_showactors"sv, "cl_TimeStampVel"sv },
+  { "joyStrafe"sv, "in_ForwardSpeed"sv },
+  { "vp_enginetest"sv, "vp_mipdist"sv }
+} };
 inline void set_gog_exports()
 {
   ConsoleEval = (decltype(ConsoleEval))0x200194f0;
@@ -154,9 +160,6 @@ BOOL WINAPI DllMain(
       {
         auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
 
-        std::unordered_set<std::string_view> functions;
-        std::unordered_set<std::string_view> variables;
-
         bool module_is_valid = false;
 
         for (const auto& item : verification_strings)
@@ -176,10 +179,6 @@ BOOL WINAPI DllMain(
           if (module_is_valid)
           {
             export_functions[index]();
-
-            std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 2);
-
-            functions = siege::extension::GetGameFunctionNames(string_section, function_name_ranges);
 
             break;
           }

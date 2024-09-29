@@ -72,26 +72,42 @@ HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_bind
   return S_FALSE;
 }
 
-HRESULT update_action_intensity_for_process(DWORD process_id, DWORD thread_id, const char* action, float intensity)
-{
-  return S_FALSE;
-}
-
-static void(__cdecl* ConsoleEval)(const char*) = nullptr;
+extern void(__cdecl* ConsoleEvalCdecl)(const char*);
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = {{ 
+std::array<std::pair<std::string_view, std::size_t>, 3>{{ 
+  { "exec"sv, std::size_t(0x20120494) },
   { "cmdlist"sv, std::size_t(0x45189c) },
-  { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } } };
+  { "cl_pitchspeed"sv, std::size_t(0x44f724) } 
+  }} 
+}};
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 0> function_name_ranges{};
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 7> function_name_ranges{ {
+  { "help"sv, "+wbutton7"sv },
+  { "-dropweapon"sv, "+quickgren"sv },
+  { "-zoom"sv, "+kick"sv },
+  { "-activate"sv, "centerview"sv },
+  { "condump"sv, "clear"sv },
+  { "stopLimboMode"sv, "startLimboMode"sv },
+  { "messagemode4"sv, "toggleconsole"sv },
+} };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 0> variable_name_ranges{};
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 8> variable_name_ranges{ {
+  { "com_recommendedSet"sv, "com_buildScript"sv },
+  { "sv_running"sv, "sv_paused"sv },
+  { "com_cameraMode"sv, "com_showtrace"sv },
+  { "fixedtime"sv, "dedicated"sv },
+  { "bot_testhidepos"sv, "bot_debug"sv },
+  { "bot_miniplayers"sv, "bot_enable"sv },
+  { "mp_currentTeam"sv, "mp_playerType"sv },
+  { "cg_wolfparticles"sv, "cg_wolfparticles"sv },
+} };
 
 inline void set_gog_exports()
 {
-  ConsoleEval = (decltype(ConsoleEval))0x41db30;
+  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x41db30;
 }
 
 constexpr std::array<void (*)(), 5> export_functions = { {
@@ -150,9 +166,6 @@ BOOL WINAPI DllMain(
       {
         auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
 
-        std::unordered_set<std::string_view> functions;
-        std::unordered_set<std::string_view> variables;
-
         bool module_is_valid = false;
 
         for (const auto& item : verification_strings)
@@ -172,10 +185,6 @@ BOOL WINAPI DllMain(
           if (module_is_valid)
           {
             export_functions[index]();
-
-            std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 2);
-
-            functions = siege::extension::GetGameFunctionNames(string_section, function_name_ranges);
 
             break;
           }

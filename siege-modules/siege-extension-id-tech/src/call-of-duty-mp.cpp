@@ -72,26 +72,11 @@ HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_bind
   return S_FALSE;
 }
 
-HRESULT update_action_intensity_for_process(DWORD process_id, DWORD thread_id, const char* action, float intensity)
-{
-  return S_FALSE;
-}
-
-static void(__cdecl* ConsoleEval)(const char*) = nullptr;
-
 using namespace std::literals;
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 0> function_name_ranges{};
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 0> variable_name_ranges{};
 
-inline void set_gog_exports()
-{
-  ConsoleEval = (decltype(ConsoleEval))0x41db30;
-}
-
-constexpr std::array<void (*)(), 5> export_functions = { {
-  set_gog_exports,
-} };
 
 HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
