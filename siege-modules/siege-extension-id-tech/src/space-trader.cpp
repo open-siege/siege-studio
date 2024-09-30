@@ -77,9 +77,10 @@ static void(__cdecl* ConsoleEval)(const char*) = nullptr;
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
-  { "cmdlist"sv, std::size_t(0x45189c) },
-  { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } } };
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { 
+  { "exec"sv, std::size_t(0x101ff54) },
+  { "cmdlist"sv, std::size_t(0x1022e94) },
+  { "cl_pitchspeed"sv, std::size_t(0x1022738) } } } } };
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 6> function_name_ranges{ {
   { "centerview"sv, "-mlook"sv },
@@ -201,7 +202,7 @@ BOOL WINAPI DllMain(
 
         auto self = win32::window_module_ref(hinstDLL);
         
-        hook = ::SetWindowsHookExW(WH_GETMESSAGE, dispatch_input_to_cdecl_quake_3_console, self, ::GetCurrentThreadId());
+        hook = ::SetWindowsHookExW(WH_GETMESSAGE, dispatch_input_to_stdcall_quake_3_console, self, ::GetCurrentThreadId());
       }
       catch (...)
       {

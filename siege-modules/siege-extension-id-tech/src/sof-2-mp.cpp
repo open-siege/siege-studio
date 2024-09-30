@@ -76,9 +76,10 @@ extern void(__cdecl* ConsoleEvalCdecl)(const char*) ;
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
-  { "cmdlist"sv, std::size_t(0x2012049c) },
-  { "com_maxfps"sv, std::size_t(0x2011e600) } } } } };
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { 
+  { "exec"sv, std::size_t(0x55e8bc) },
+  { "cmdlist"sv, std::size_t(0x55e8c4) },
+  { "com_maxfps"sv, std::size_t(0x55f7a0) } } } } };
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 8> function_name_ranges{ {
   { "-mlook"sv, "+mlook"sv },
@@ -104,7 +105,7 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 8> va
 
 inline void set_gog_exports()
 {
-  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x200194f0;
+  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x445250;
 }
 
 constexpr std::array<void (*)(), 5> export_functions = { {

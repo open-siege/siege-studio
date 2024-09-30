@@ -18,6 +18,7 @@
 extern "C" {
 extern void(__cdecl* ConsoleEvalCdecl)(const char*) = nullptr;
 extern void(__fastcall* ConsoleEvalFastcall)(const char*) = nullptr;
+extern void(__stdcall* ConsoleEvalStdcall)(const char*) = nullptr;
 
 LRESULT CALLBACK dispatch_input_to_game_console(int code, WPARAM wParam, LPARAM lParam, void (*process_movement_keydown)(MSG* message, void (*console_eval)(const char*)), void (*console_eval)(const char*));
 
@@ -57,6 +58,24 @@ LRESULT CALLBACK dispatch_input_to_cdecl_quake_3_console(int code, WPARAM wParam
   if (ConsoleEvalCdecl)
   {
     return dispatch_input_to_game_console(code, wParam, lParam, process_quake_3_movement_keydown, do_console_eval_cdecl_quake_1);
+  }
+
+  return CallNextHookEx(nullptr, code, wParam, lParam);
+}
+
+void do_console_eval_stdcall_quake_3(const char* text)
+{
+  thread_local std::string temp;
+  temp.assign(text);
+  temp.append(1, '\n');
+  ConsoleEvalCdecl(temp.c_str());
+}
+
+LRESULT CALLBACK dispatch_input_to_stdcall_quake_3_console(int code, WPARAM wParam, LPARAM lParam)
+{
+  if (ConsoleEvalCdecl)
+  {
+    return dispatch_input_to_game_console(code, wParam, lParam, process_quake_3_movement_keydown, do_console_eval_stdcall_quake_3);
   }
 
   return CallNextHookEx(nullptr, code, wParam, lParam);
