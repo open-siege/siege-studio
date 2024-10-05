@@ -29,7 +29,28 @@ namespace siege::views
 
     if (resource && path)
     {
-      contents = resource->get_content_listing(vol_stream, platform::listing_query{ .archive_path = *path, .folder_path = *path });
+      auto temp = resource->get_content_listing(vol_stream, platform::listing_query{ .archive_path = *path, .folder_path = *path });
+
+      contents.clear();
+      contents.reserve(temp.size() * 2);
+
+      std::function<void(const decltype(temp)&)> get_full_listing = [&](const auto& items) {
+        for (auto& info : items)
+        {
+          if (auto folder_info = std::get_if<siege::platform::folder_info>(&info); folder_info)
+          {
+            auto children = resource->get_content_listing(vol_stream, platform::listing_query{ .archive_path = *path, .folder_path = folder_info->full_path });
+            get_full_listing(children);
+          }
+
+          if (auto file_info = std::get_if<siege::platform::file_info>(&info); file_info)
+          {
+            contents.emplace_back(*file_info);
+          }
+        }
+      };
+
+      get_full_listing(temp);
 
       storage = std::move(*path);
 

@@ -57,6 +57,7 @@ namespace siege::resource::pak
 
   std::vector<pak_resource_reader::content_info> pak_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
   {
+    platform::istream_pos_resetter resetter(stream);
     endian::little_uint32_t offset;
     endian::little_uint32_t file_count;
     endian::little_uint32_t file_buffer_size;

@@ -67,6 +67,7 @@ namespace siege::resource::vol::trophy_bass
 
   std::vector<std::variant<folder_info, siege::platform::file_info>> rbx_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
   {
+    platform::istream_pos_resetter resetter(stream);
     std::vector<siege::platform::file_info> results;
 
     std::array<std::byte, 4> tag{};
@@ -180,6 +181,7 @@ namespace siege::resource::vol::trophy_bass
 
   std::vector<rbx_resource_reader::content_info> tbv_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
   {
+    platform::istream_pos_resetter resetter(stream);
     std::vector<siege::platform::file_info> results;
 
     std::array<std::byte, 9> tag{};

@@ -535,6 +535,7 @@ namespace siege::resource::iso
 
   std::vector<iso_resource_reader::content_info> iso_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
   {
+    platform::istream_pos_resetter resetter(stream);
     return iso_get_content_listing(query);
   }
 

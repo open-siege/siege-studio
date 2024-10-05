@@ -437,7 +437,9 @@ namespace siege::views
           {
             if (auto* file_info = std::get_if<siege::platform::file_info>(&item); file_info)
             {
-              std::ofstream extracted_file(*path / file_info->filename, std::ios::trunc | std::ios::binary);
+              auto child_path = std::filesystem::relative(file_info->folder_path, file_info->archive_path);
+              std::filesystem::create_directories(*path / child_path);
+              std::ofstream extracted_file(*path / child_path / file_info->filename, std::ios::trunc | std::ios::binary);
               auto raw_data = controller.load_content_data(item);
 
               extracted_file.write(raw_data.data(), raw_data.size());

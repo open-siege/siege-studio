@@ -99,6 +99,7 @@ namespace siege::resource::cln
 
   std::vector<cln_resource_reader::content_info> cln_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
   {
+    platform::istream_pos_resetter resetter(stream);
     thread_local std::unordered_map<std::string, std::vector<file_entry>> cache;
     auto cached_entries = cache.find(query.archive_path.string());
 

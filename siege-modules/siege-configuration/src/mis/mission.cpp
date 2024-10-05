@@ -335,6 +335,7 @@ namespace siege::resource::mis::darkstar
 
   std::vector<mis_resource_reader::content_info> mis_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
   {
+    platform::istream_pos_resetter resetter(stream);
     auto existing_info = cache_data(stream, query.folder_path);
     std::vector<mis_resource_reader::content_info> final_results;
     final_results.reserve(existing_info->second.size());

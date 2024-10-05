@@ -34,6 +34,7 @@ namespace siege::resource::atd
 
   std::vector<atd_resource_reader::content_info> atd_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
   {
+    platform::istream_pos_resetter resetter(stream);
     std::vector<atd_resource_reader::content_info> results;
 
     endian::little_uint32_t file_count;

@@ -404,6 +404,7 @@ namespace siege::resource::vol::darkstar
 
   std::vector<vol_resource_reader::content_info> vol_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
   {
+    platform::istream_pos_resetter resetter(stream);
     std::vector<vol_resource_reader::content_info> results;
 
     auto raw_results = get_file_metadata(stream);

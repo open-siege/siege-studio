@@ -328,6 +328,7 @@ namespace siege::resource::vol::three_space
 
   std::vector<rmf_resource_reader::content_info> rmf_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
   {
+    platform::istream_pos_resetter resetter(stream);
     std::vector<std::variant<siege::platform::folder_info, siege::platform::file_info>> results;
 
     if (query.archive_path == query.folder_path)
@@ -405,6 +406,7 @@ namespace siege::resource::vol::three_space
 
   std::vector<dyn_resource_reader::content_info> dyn_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
   {
+    platform::istream_pos_resetter resetter(stream);
     std::vector<dyn_resource_reader::content_info> results;
 
     auto raw_results = get_dyn_data(stream);

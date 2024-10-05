@@ -48,6 +48,7 @@ namespace siege::resource::clm
 
   std::vector<clm_resource_reader::content_info> clm_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
   {
+    platform::istream_pos_resetter resetter(stream);
     std::array<std::byte, 26> tag{};
 
     auto current_offset = stream.tellg();

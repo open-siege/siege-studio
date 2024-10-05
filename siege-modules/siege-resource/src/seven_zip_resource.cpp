@@ -55,6 +55,7 @@ namespace siege::resource::zip
 
   std::vector<seven_zip_resource_reader::content_info> seven_zip_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
   {
+    platform::istream_pos_resetter resetter(stream);
     return zip_get_content_listing(query);
   }
 

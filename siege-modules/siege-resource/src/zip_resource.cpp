@@ -111,6 +111,7 @@ namespace siege::resource::zip
 
   std::vector<zip_resource_reader::content_info> zip_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
   {
+    platform::istream_pos_resetter resetter(stream);
     static std::list<std::string> name_cache;
     static std::unordered_map<std::string, std::vector<struct zip_stat>> stat_cache;
 
