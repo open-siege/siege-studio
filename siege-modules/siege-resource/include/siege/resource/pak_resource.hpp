@@ -1,5 +1,6 @@
-#ifndef DARKSTARDTSCONVERTER_CAB_VOLUME_HPP
-#define DARKSTARDTSCONVERTER_CAB_VOLUME_HPP
+
+#ifndef DARKSTARDTSCONVERTER_PAK_VOLUME_HPP
+#define DARKSTARDTSCONVERTER_PAK_VOLUME_HPP
 
 #include <array>
 #include <vector>
@@ -10,9 +11,9 @@
 #include <siege/platform/resource.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
 
-namespace siege::resource::cab
+namespace siege::resource::pak
 {
-  struct cab_resource_reader final : siege::platform::resource_reader
+  struct pak_resource_reader final : siege::platform::resource_reader
   {
     static bool is_supported(std::istream& stream);
 
@@ -25,7 +26,7 @@ namespace siege::resource::cab
       std::optional<std::reference_wrapper<platform::batch_storage>> = std::nullopt) const override;
   };
 
-}// namespace siege::resource::cab
+}// namespace siege::resource::pak
 
 
-#endif// DARKSTARDTSCONVERTER_CAB_VOLUME_HPP
+#endif// DARKSTARDTSCONVERTER_SEVEN_PAK_VOLUME_HPP

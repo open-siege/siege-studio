@@ -7,6 +7,7 @@
 #include <siege/resource/cyclone_resource.hpp>
 #include <siege/resource/iso_resource.hpp>
 #include <siege/resource/seven_zip_resource.hpp>
+#include <siege/resource/pak_resource.hpp>
 #include <siege/resource/cab_resource.hpp>
 
 namespace siege::resource
@@ -19,7 +20,8 @@ namespace siege::resource
         vol::three_space::rmf_resource_reader::is_supported(stream) || 
         vol::three_space::vol_resource_reader::is_supported(stream) || 
         vol::trophy_bass::rbx_resource_reader::is_supported(stream) || 
-        vol::trophy_bass::tbv_resource_reader::is_supported(stream); 
+        vol::trophy_bass::tbv_resource_reader::is_supported(stream) ||
+        pak::pak_resource_reader::is_supported(stream); 
         // TODO make the check for cyclone resources stronger
 //        cln::cln_resource_reader::is_supported(stream) || 
     //    atd::atd_resource_reader::is_supported(stream) || 
@@ -49,6 +51,10 @@ namespace siege::resource
     else if (vol::trophy_bass::rbx_resource_reader::is_supported(stream))
     {
       resource.reset(new vol::trophy_bass::rbx_resource_reader());
+    }
+    else if (pak::pak_resource_reader::is_supported(stream))
+    {
+      resource.reset(new pak::pak_resource_reader());
     }
     // TODO make the check for cyclone resources stronger
  //   else if (cln::cln_resource_reader::is_supported(stream))
