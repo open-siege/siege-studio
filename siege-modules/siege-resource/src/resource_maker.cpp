@@ -9,6 +9,7 @@
 #include <siege/resource/seven_zip_resource.hpp>
 #include <siege/resource/pak_resource.hpp>
 #include <siege/resource/cab_resource.hpp>
+#include <siege/resource/clm_resource.hpp>
 
 namespace siege::resource
 {
@@ -21,6 +22,7 @@ namespace siege::resource
         vol::three_space::vol_resource_reader::is_supported(stream) || 
         vol::trophy_bass::rbx_resource_reader::is_supported(stream) || 
         vol::trophy_bass::tbv_resource_reader::is_supported(stream) ||
+        clm::clm_resource_reader::is_supported(stream) ||
         pak::pak_resource_reader::is_supported(stream); 
         // TODO make the check for cyclone resources stronger
 //        cln::cln_resource_reader::is_supported(stream) || 
@@ -51,6 +53,10 @@ namespace siege::resource
     else if (vol::trophy_bass::rbx_resource_reader::is_supported(stream))
     {
       resource.reset(new vol::trophy_bass::rbx_resource_reader());
+    }
+    else if (clm::clm_resource_reader::is_supported(stream))
+    {
+      resource.reset(new clm::clm_resource_reader());
     }
     else if (pak::pak_resource_reader::is_supported(stream))
     {

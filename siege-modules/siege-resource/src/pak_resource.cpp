@@ -17,14 +17,6 @@
 
 namespace fs = std::filesystem;
 
-template<class... Ts>
-struct overloaded : Ts...
-{
-  using Ts::operator()...;
-};
-template<class... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
-
 namespace siege::resource::pak
 {
   namespace endian = siege::platform;
@@ -154,6 +146,10 @@ namespace siege::resource::pak
 
   void pak_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info) const
   {
+    if (std::size_t(stream.tellg()) != info.offset)
+    {
+      stream.seekg(info.offset, std::ios::beg);
+    }
   }
 
   void pak_resource_reader::extract_file_contents(std::istream& stream,
@@ -161,5 +157,10 @@ namespace siege::resource::pak
     std::ostream& output,
     std::optional<std::reference_wrapper<platform::batch_storage>> storage) const
   {
+    set_stream_position(stream, info);
+
+    std::copy_n(std::istreambuf_iterator(stream),
+      info.size,
+      std::ostreambuf_iterator(output));
   }
 }// namespace siege::resource::pak

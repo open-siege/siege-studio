@@ -53,7 +53,7 @@ namespace siege::content::sfx
       }
     }
 
-    if (siege::content::sfx::is_wav(sound_stream))
+    if (siege::platform::wave::is_wav(sound_stream))
     {
       std::vector<std::byte> sound_data;
 

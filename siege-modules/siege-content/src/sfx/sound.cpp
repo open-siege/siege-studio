@@ -1,10 +1,11 @@
 #include <siege/content/sfx/sound.hpp>
+#include <siege/platform/wave.hpp>
 
 namespace siege::content::sfx
 {
-	constexpr file_tag ogg_tag = platform::to_tag<4>({ 'O', 'g', 'g', 'S' });
+	constexpr siege::platform::wave::file_tag ogg_tag = platform::to_tag<4>({ 'O', 'g', 'g', 'S' });
 
-	constexpr file_tag flac_tag = platform::to_tag<4>({ 'f', 'L', 'a', 'C' });
+	constexpr siege::platform::wave::file_tag flac_tag = platform::to_tag<4>({ 'f', 'L', 'a', 'C' });
 
 	bool is_ogg(std::istream& stream)
 	{

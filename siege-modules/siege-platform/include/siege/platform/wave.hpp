@@ -1,11 +1,11 @@
-#ifndef DARKSTARDTSCONVERTER_WAVE_HPP
-#define DARKSTARDTSCONVERTER_WAVE_HPP
+#ifndef SIEGE_PLATFORM_WAVE_HPP
+#define SIEGE_PLATFORM_WAVE_HPP
 
 #include <ostream>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
 
-namespace siege::content::sfx
+namespace siege::platform::wave
 {
   namespace endian = siege::platform;
   using file_tag = std::array<std::byte, 4>;
@@ -32,24 +32,6 @@ namespace siege::content::sfx
     endian::little_int16_t bits_per_sample;
   };
 
-  bool is_ogg(std::istream& raw_data);
-  bool is_flac(std::istream& raw_data);
-
-  inline bool is_sfx(std::istream& stream)
-  {
-    if (is_ogg(stream) || is_flac(stream))
-    {
-        return false;
-    }
-
-    std::array<std::byte, 4> tag{};
-    stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
-
-    stream.seekg(-int(sizeof(tag)), std::ios::cur);
-
-    return tag != riff_tag && tag != voc_tag && tag != empty_tag;
-  }
-
   inline bool is_wav(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
@@ -64,17 +46,22 @@ namespace siege::content::sfx
     return tag == riff_tag && temp == wave_tag;
   }
 
-  inline std::int32_t write_wav_header(std::ostream& raw_data, std::size_t sample_size)
+  struct header_settings
   {
-    format_header format_data{};
-    format_data.type = 1;
-    format_data.num_channels = 1;
-    format_data.sample_rate = 11025;
-    format_data.bits_per_sample = 8;
-    format_data.byte_rate = format_data.sample_rate * format_data.num_channels * format_data.bits_per_sample / 8;
-    format_data.block_alignment = std::int16_t(format_data.num_channels) * format_data.bits_per_sample / 8;
+    std::int16_t num_channels = 1;
+    std::int32_t sample_rate = 11025;
+    std::int16_t bits_per_sample = 8;
+  };
 
-    endian::little_int32_t data_size = static_cast<int32_t>(sample_size * format_data.num_channels * format_data.bits_per_sample / 8);
+  struct raw_wave
+  {
+    format_header header;
+    std::vector<std::byte> samples;
+  };
+
+  inline std::int32_t write_wav_header(std::ostream& raw_data, format_header format_data, std::int32_t data_size)
+  {
+    endian::little_int32_t data_size_le = data_size;
     endian::little_int32_t file_size = static_cast<int32_t>(sizeof(std::array<std::int32_t, 5>) + sizeof(format_header) + data_size);
     endian::little_int32_t format_size = static_cast<int32_t>(sizeof(format_header));
 
@@ -87,16 +74,31 @@ namespace siege::content::sfx
     raw_data.write(reinterpret_cast<const char*>(&format_data), sizeof(format_data));
 
     raw_data.write(reinterpret_cast<const char*>(data_tag.data()), sizeof(data_tag));
-    raw_data.write(reinterpret_cast<const char*>(&data_size), sizeof(data_size));
+    raw_data.write(reinterpret_cast<const char*>(&data_size_le), sizeof(data_size_le));
     return sizeof(riff_tag) + sizeof(file_size) + file_size;
   }
 
-  inline std::int32_t write_wav_data(std::ostream& raw_data, const std::vector<std::byte>& samples)
+  inline std::int32_t write_wav_header(std::ostream& raw_data, header_settings settings, std::size_t sample_size)
   {
-    auto result = write_wav_header(raw_data, samples.size());
+    format_header format_data{};
+    format_data.type = 1;
+    format_data.num_channels = settings.num_channels;
+    format_data.sample_rate = settings.sample_rate;
+    format_data.bits_per_sample = settings.bits_per_sample;
+    format_data.byte_rate = format_data.sample_rate * format_data.num_channels * format_data.bits_per_sample / 8;
+    format_data.block_alignment = std::int16_t(format_data.num_channels) * format_data.bits_per_sample / 8;
+
+    std::int32_t data_size = static_cast<int32_t>(sample_size * format_data.num_channels * format_data.bits_per_sample / 8);
+
+    return write_wav_header(raw_data, format_data, data_size);
+  }
+
+  inline std::int32_t write_wav_data(std::ostream& raw_data, header_settings settings, const std::vector<std::byte>& samples)
+  {
+    auto result = write_wav_header(raw_data, settings, samples.size());
     raw_data.write(reinterpret_cast<const char*>(samples.data()), samples.size());
     return result;
   }
-}
+}// namespace siege::platform::wave
 
-#endif//DARKSTARDTSCONVERTER_WAVE_HPP
+#endif// SIEGE_PLATFORM_WAVE_HPP

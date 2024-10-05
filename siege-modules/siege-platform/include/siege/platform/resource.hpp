@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <memory>
 #include <algorithm>
+#include <any>
 #include <functional>
 #include <siege/platform/shared.hpp>
 
@@ -32,6 +33,7 @@ namespace siege::platform
     siege::platform::compression_type compression_type;
     std::filesystem::path folder_path;
     std::filesystem::path archive_path;
+    std::any metadata;
   };
 
   struct folder_info

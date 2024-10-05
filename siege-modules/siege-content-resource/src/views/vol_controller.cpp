@@ -3,6 +3,7 @@
 #include <siege/platform/stream.hpp>
 #include <fstream>
 #include <spanstream>
+#include <siege/platform/wave.hpp>
 
 #if WIN32
 #include <siege/platform/win/core/file.hpp>
@@ -20,7 +21,7 @@ namespace siege::views
   std::size_t vol_controller::load_volume(std::istream& vol_stream, std::optional<std::filesystem::path> path)
   {
     resource.reset(make_resource_reader(vol_stream).release());
-    
+
     if (!path)
     {
       path = siege::platform::get_stream_path(vol_stream);
@@ -59,6 +60,12 @@ namespace siege::views
     {
       results.assign(file->size, char{});
       std::ospanstream output(results);
+
+      if (file->metadata.type() == typeid(siege::platform::wave::format_header))
+      {
+        auto* header = std::any_cast<siege::platform::wave::format_header>(&file->metadata);
+        siege::platform::wave::write_wav_header(output, *header, file->size);
+      }
 
       if (auto* path = std::get_if<std::filesystem::path>(&storage); path)
       {
