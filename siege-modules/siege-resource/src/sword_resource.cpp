@@ -5,6 +5,7 @@
 #include <string>
 
 #include <siege/resource/sword_resource.hpp>
+#include <siege/platform/stream.hpp>
 
 namespace siege::resource::atd
 {
@@ -12,12 +13,24 @@ namespace siege::resource::atd
 
   bool atd_resource_reader::is_supported(std::istream& stream)
   {
-    endian::little_int32_t file_count;
-    stream.read(reinterpret_cast<char*>(&file_count), sizeof(file_count));
+    auto path = siege::platform::get_stream_path(stream);
 
-    stream.seekg(-int(sizeof(file_count)), std::ios::cur);
+    if (!path)
+    {
+      return false;
+    }
 
-    return file_count <= 6000;
+    if (path->extension() == ".atd" || path->extension() == ".ATD")
+    {
+      endian::little_int32_t file_count;
+      stream.read(reinterpret_cast<char*>(&file_count), sizeof(file_count));
+
+      stream.seekg(-int(sizeof(file_count)), std::ios::cur);
+
+      return file_count <= 6000;
+    }
+
+    return false;
   }
 
   bool atd_resource_reader::stream_is_supported(std::istream& stream) const

@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include <siege/resource/cyclone_resource.hpp>
+#include <siege/platform/stream.hpp>
 
 namespace siege::resource::cln
 {
@@ -13,15 +14,27 @@ namespace siege::resource::cln
 
   bool cln_resource_reader::is_supported(std::istream& stream)
   {
-    endian::little_int32_t file_count;
-    stream.read(reinterpret_cast<char*>(&file_count), sizeof(file_count));
+    auto path = siege::platform::get_stream_path(stream);
 
-    endian::little_int32_t folder_name_length;
-    stream.read(reinterpret_cast<char*>(&folder_name_length), sizeof(folder_name_length));
+    if (!path)
+    {
+      return false;
+    }
 
-    stream.seekg(-int(sizeof(file_count)) * 2, std::ios::cur);
+    if (path->extension() == ".cln" || path->extension() == ".CLN")
+    {
+      endian::little_int32_t file_count;
+      stream.read(reinterpret_cast<char*>(&file_count), sizeof(file_count));
 
-    return file_count <= 6000 == folder_name_length <= 256;
+      endian::little_int32_t folder_name_length;
+      stream.read(reinterpret_cast<char*>(&folder_name_length), sizeof(folder_name_length));
+
+      stream.seekg(-int(sizeof(file_count)) * 2, std::ios::cur);
+
+      return file_count <= 6000 == folder_name_length <= 256;
+    }
+
+    return false;
   }
 
   bool cln_resource_reader::stream_is_supported(std::istream& stream) const
@@ -40,27 +53,27 @@ namespace siege::resource::cln
 
   auto get_file_entries(std::istream& stream)
   {
-      std::vector<file_entry> entries;
+    std::vector<file_entry> entries;
 
-      endian::little_int32_t file_count;
-      stream.read(reinterpret_cast<char*>(&file_count), sizeof(file_count));
+    endian::little_int32_t file_count;
+    stream.read(reinterpret_cast<char*>(&file_count), sizeof(file_count));
 
-      entries.reserve(file_count);
+    entries.reserve(file_count);
 
-      for (auto i = 0; i < file_count; i++)
-      {
-        auto& entry = entries.emplace_back();
-        stream.read(reinterpret_cast<char*>(&entry.string_length), sizeof(entry.string_length));
-        entry.filename.assign(entry.string_length, '\0');
+    for (auto i = 0; i < file_count; i++)
+    {
+      auto& entry = entries.emplace_back();
+      stream.read(reinterpret_cast<char*>(&entry.string_length), sizeof(entry.string_length));
+      entry.filename.assign(entry.string_length, '\0');
 
-        stream.read(reinterpret_cast<char*>(entry.filename.data()), entry.string_length);
+      stream.read(reinterpret_cast<char*>(entry.filename.data()), entry.string_length);
 
-        stream.read(reinterpret_cast<char*>(&entry.file_size), sizeof(entry.file_size));
-        stream.read(reinterpret_cast<char*>(&entry.flags), sizeof(entry.flags));
-        stream.read(reinterpret_cast<char*>(&entry.offset), sizeof(entry.offset));
-      }
+      stream.read(reinterpret_cast<char*>(&entry.file_size), sizeof(entry.file_size));
+      stream.read(reinterpret_cast<char*>(&entry.flags), sizeof(entry.flags));
+      stream.read(reinterpret_cast<char*>(&entry.offset), sizeof(entry.offset));
+    }
 
-      return entries;
+    return entries;
   }
 
   // Thanks https://en.cppreference.com/w/cpp/string/basic_string/replace
@@ -69,7 +82,8 @@ namespace siege::resource::cln
     std::size_t count{};
     for (std::string::size_type pos{};
          inout.npos != (pos = inout.find(what.data(), pos, what.length()));
-         pos += with.length(), ++count) {
+         pos += with.length(), ++count)
+    {
       inout.replace(pos, what.length(), with.data(), with.length());
     }
     return count;
@@ -242,13 +256,13 @@ namespace siege::resource::cln
     else if (info.compressed_size.has_value())
     {
       set_stream_position(stream, info);
-      std::vector<std::byte> temp(info.compressed_size.value(), std::byte{'\0'});
+      std::vector<std::byte> temp(info.compressed_size.value(), std::byte{ '\0' });
 
       stream.read(reinterpret_cast<char*>(temp.data()), info.compressed_size.value());
 
       if (info.compressed_size.value() % 2 != 0)
       {
-        temp.emplace_back(std::byte{'\0'});
+        temp.emplace_back(std::byte{ '\0' });
       }
 
       std::vector<std::byte> buffer;
@@ -261,4 +275,4 @@ namespace siege::resource::cln
       }
     }
   }
-}// namespace siege::resource::vol::three_space
+}// namespace siege::resource::cln

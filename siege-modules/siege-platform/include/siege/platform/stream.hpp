@@ -72,46 +72,51 @@ namespace siege::platform
     }
   };
 
-  inline std::optional<std::filesystem::path> get_stream_path(std::ios& stream)
+  inline std::optional<std::filesystem::path> get_stream_path(const std::ios& stream)
   {
-    if (auto* ofstream = dynamic_cast<ofstream_with_path*>(&stream); ofstream)
+    if (auto* ofstream = dynamic_cast<const ofstream_with_path*>(&stream); ofstream)
     {
       return ofstream->path;
     }
 
-    if (auto* ifstream = dynamic_cast<ifstream_with_path*>(&stream); ifstream)
+    if (auto* ifstream = dynamic_cast<const ifstream_with_path*>(&stream); ifstream)
     {
       return ifstream->path;
     }
 
-    if (auto* fstream = dynamic_cast<fstream_with_path*>(&stream); fstream)
+    if (auto* fstream = dynamic_cast<const fstream_with_path*>(&stream); fstream)
     {
       return fstream->path;
     }
 
 #if WIN32
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    if (auto* ispan = dynamic_cast<std::ispanstream*>(&stream); ispan)
+    if (auto* ispan = dynamic_cast<const std::ispanstream*>(&stream); ispan)
     {
       auto span = ispan->span();
       auto view = win32::file_view((void*)span.data());
 
-      return view.GetMappedFilename();
+      auto result = view.GetMappedFilename();
+      view.release();
+      return result;
     }
 
-    if (auto* ospan = dynamic_cast<std::ospanstream*>(&stream); ospan)
+    if (auto* ospan = dynamic_cast<const std::ospanstream*>(&stream); ospan)
     {
       auto span = ospan->span();
       auto view = win32::file_view((void*)span.data());
 
-      return view.GetMappedFilename();
+      auto result = view.GetMappedFilename();
+      view.release();
+      return result;
     }
 
-    if (auto* span = dynamic_cast<std::spanstream*>(&stream); span)
+    if (auto* span = dynamic_cast<const std::spanstream*>(&stream); span)
     {
       auto view = win32::file_view((void*)span->span().data());
-
-      return view.GetMappedFilename();
+      auto result = view.GetMappedFilename();
+      view.release();
+      return result;
     }
 #endif
 #endif
