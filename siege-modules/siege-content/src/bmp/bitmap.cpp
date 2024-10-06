@@ -31,8 +31,6 @@ namespace siege::content::bmp
 
   constexpr file_tag dba_tag = platform::to_tag<4>({ 0x01, 0x00, 0x28, 0x00 });
 
-  constexpr std::array<std::byte, 2> windows_bmp_tag = { std::byte{ 66 }, std::byte{ 77 } };// BM
-
   constexpr std::array<std::byte, 2> special_reserved_tag = { std::byte{ 0xF7 }, std::byte{ 0xF5 } };// for palettes
 
   bool is_earthsiege_bmp(std::istream& raw_data)
@@ -122,17 +120,6 @@ namespace siege::content::bmp
     return results;
   }
 
-  bool is_microsoft_bmp(std::istream& raw_data)
-  {
-    file_tag header{};
-    platform::read(raw_data, reinterpret_cast<char*>(&header), sizeof(header));
-
-    raw_data.seekg(-int(sizeof(header)), std::ios::cur);
-
-    return header != bmp_alt1_tag && header != bmp_alt2_tag &&
-           header[0] == windows_bmp_tag[0] && header[1] == windows_bmp_tag[1];
-  }
-
   template<typename AlignmentType, typename PixelType>
   [[maybe_unused]] std::size_t read_pixel_data(std::istream& raw_data, std::vector<PixelType>& raw_pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth)
   {
@@ -165,171 +152,6 @@ namespace siege::content::bmp
 
       return raw_data.tellg() - start;
     }
-  }
-
-  windows_bmp_data get_bmp_data(std::istream& raw_data, bool auto_flip)
-  {
-    windows_bmp_header header{};
-    platform::read(raw_data, reinterpret_cast<char*>(&header), sizeof(header));
-
-    if (header.tag != windows_bmp_tag)
-    {
-      throw std::invalid_argument("File data is not BMP based.");
-    }
-
-    windows_bmp_info info{};
-
-    platform::read(raw_data, reinterpret_cast<char*>(&info), sizeof(info));
-
-
-    std::vector<pal::colour> colours;
-
-    const auto num_pixels = info.width.value() * info.height;
-    std::vector<std::int32_t> indexes;
-    if (info.bit_depth <= 8)
-    {
-      indexes.reserve(num_pixels);
-      int num_colours = static_cast<int>(std::pow(float(2), info.bit_depth));
-      colours.reserve(num_colours);
-
-      for (auto i = 0; i < num_colours; ++i)
-      {
-        std::array<std::byte, 4> quad{};
-        platform::read(raw_data, quad.data(), sizeof(quad));
-        colours.emplace_back(pal::colour{ quad[2], quad[1], quad[0], std::byte{ 255 } });
-      }
-
-      std::vector<std::byte> raw_pixels(num_pixels, std::byte{});
-
-      read_pixel_data<std::int32_t>(raw_data, raw_pixels, info.width, info.height, info.bit_depth);
-
-      std::transform(raw_pixels.begin(), raw_pixels.end(), std::back_inserter(indexes), [](auto value) {
-        return static_cast<std::int32_t>(value);
-      });
-    }
-    else if (info.bit_depth == 24)
-    {
-      colours.reserve(num_pixels);
-      std::vector<std::array<std::byte, 3>> image_colours(num_pixels);
-      read_pixel_data<std::int32_t>(raw_data, image_colours, info.width, info.height, info.bit_depth);
-
-      std::transform(image_colours.begin(), image_colours.end(), std::back_inserter(colours), [](auto& colour) {
-        return pal::colour{ colour[2], colour[1], colour[0], std::byte(0xFF) };
-      });
-    }
-
-    if (auto_flip)
-    {
-      if (indexes.empty() && !colours.empty())
-      {
-        vertical_flip(colours, info.width);
-      }
-      else if (!indexes.empty())
-      {
-        vertical_flip(indexes, info.width);
-      }
-    }
-
-    return {
-      header,
-      info,
-      colours,
-      indexes
-    };
-  }
-
-  void write_bmp_data(std::ostream& raw_data, std::vector<pal::colour> colours, std::vector<std::byte> pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth, bool auto_flip)
-  {
-    if (auto_flip)
-    {
-      if (pixels.empty() && !colours.empty())
-      {
-        vertical_flip(colours, width);
-      }
-      else if (!pixels.empty())
-      {
-        vertical_flip(pixels, width);
-      }
-    }
-
-    windows_bmp_header header{};
-    header.tag = windows_bmp_tag;
-    header.reserved1 = 0;
-    header.reserved2 = 0;
-
-    if (bit_depth <= 8)
-    {
-      header.offset = sizeof(header) + sizeof(windows_bmp_info) + int(colours.size()) * sizeof(pal::colour);
-    }
-    else
-    {
-      header.offset = sizeof(header) + sizeof(windows_bmp_info);
-    }
-
-    windows_bmp_info info{ 0 };
-    info.info_size = sizeof(info);
-    info.width = width;
-    info.height = height;
-    info.planes = 1;
-    info.bit_depth = bit_depth;
-    info.compression = 0;
-    info.image_size = width * height;
-
-    using AlignmentType = std::int32_t;
-    const auto x_stride = width * bit_depth / 8;
-    const auto padding = platform::get_padding_size(x_stride, sizeof(AlignmentType));
-
-    const auto num_pixels = info.width.value() * info.height * (info.bit_depth / 8);
-
-
-    if (info.bit_depth <= 8 && pixels.size() != num_pixels)
-    {
-      throw std::invalid_argument("The pixels vector does not have the correct number of pixels.");
-    }
-    else if (info.bit_depth > 8 && colours.size() != (info.width.value() * info.height))
-    {
-      throw std::invalid_argument("The colours vector does not have the correct number of pixels.");
-    }
-
-    header.file_size = header.offset + num_pixels;
-
-    platform::write(raw_data, reinterpret_cast<const char*>(&header), sizeof(header));
-    platform::write(raw_data, reinterpret_cast<const char*>(&info), sizeof(info));
-
-    for (auto& colour : colours)
-    {
-      std::array<std::byte, 4> quad{ colour.blue, colour.green, colour.red, std::byte{ 0 } };
-      platform::write(raw_data, quad.data(), sizeof(quad));
-    }
-
-    if (pixels.empty())
-    {
-      return;
-    }
-
-    if (padding == 0)
-    {
-      platform::write(raw_data, pixels.data(), pixels.size());
-    }
-    else
-    {
-      std::vector<std::byte> padding_bytes(padding, std::byte{0});
-
-      auto pos = 0u;
-
-      for (auto i = 0; i < height; ++i)
-      {
-        if (pos > pixels.size())
-        {
-          break;
-        }
-
-        platform::write(raw_data, pixels.data() + pos, x_stride);
-        platform::write(raw_data, padding_bytes.data(), padding_bytes.size());
-        pos += x_stride;
-      }
-    }
-
   }
 
   bool is_phoenix_bmp(std::istream& raw_data)
@@ -443,7 +265,7 @@ namespace siege::content::bmp
 
     platform::write(raw_data, reinterpret_cast<const char*>(&header), sizeof(header));
 
-    auto pal_bytes = pal::write_pal_data(raw_data, colours);
+    auto pal_bytes = platform::palette::write_pal_data(raw_data, colours);
 
     platform::write(raw_data, data_tag.data(), sizeof(data_tag));
     header_size = std::int32_t(pixels.size());

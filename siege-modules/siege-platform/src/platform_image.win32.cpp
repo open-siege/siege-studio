@@ -1,16 +1,18 @@
-#include <siege/content/bmp/image.hpp>
+#include <siege/platform/image.hpp>
 #include <siege/platform/win/core/com/base.hpp>
 #include <siege/platform/win/core/file.hpp>
 #include <exception>
 #include <spanstream>
 #include <memory>
+
 #undef NDEBUG 
 #include <cassert>
 #include <wincodec.h>
 #include <VersionHelpers.h>
 
-namespace siege::content::bmp
+namespace siege::platform::bitmap
 {
+    using windows_bmp_data = siege::platform::bitmap::windows_bmp_data;
     using wic_bitmap = win32::com::com_ptr<IWICBitmapSource>;
 
     auto& bitmap_factory()
@@ -34,7 +36,7 @@ namespace siege::content::bmp
     {
         if (!bitmap.indexes.empty() && !bitmap.colours.empty())
         {
-            std::vector<pal::colour> colours(bitmap.indexes.size());
+          std::vector<platform::palette::colour> colours(bitmap.indexes.size());
 
             std::transform(bitmap.indexes.begin(), bitmap.indexes.end(), colours.begin(), [&](auto index) {
                 return bitmap.colours.at(index);
@@ -153,6 +155,7 @@ namespace siege::content::bmp
         auto scale_bitmap = [size, pixels](const wic_bitmap& bitmap) {
             win32::com::com_ptr<IWICBitmapScaler> scaler;
             assert(bitmap_factory().CreateBitmapScaler(scaler.put()) == S_OK);
+
             if (IsWindows10OrGreater())
             {
               scaler->Initialize(bitmap.get(), size.first, size.second, WICBitmapInterpolationModeHighQualityCubic);
@@ -195,8 +198,8 @@ namespace siege::content::bmp
                 bitmap.info.width == size.first &&
                 bitmap.info.height == size.second)
             {
-                std::memcpy(pixels.data(), bitmap.colours.data(), sizeof(pal::colour) * bitmap.colours.size());
-                return sizeof(pal::colour) * bitmap.colours.size();
+                std::memcpy(pixels.data(), bitmap.colours.data(), sizeof(platform::palette::colour) * bitmap.colours.size());
+              return sizeof(platform::palette::colour) * bitmap.colours.size();
             }
             else if (bitmap.indexes.empty() && !bitmap.colours.empty())
             {
@@ -207,7 +210,7 @@ namespace siege::content::bmp
                             GUID_WICPixelFormat32bppRGB, 
                             bitmap.info.width * 4,
                             bitmap.info.width * 4 * bitmap.info.height,
-                            reinterpret_cast<BYTE*>(const_cast<pal::colour*>(bitmap.colours.data())),
+                         reinterpret_cast<BYTE*>(const_cast<platform::palette::colour*>(bitmap.colours.data())),
                             wic_bitmap.put()
                     ) == S_OK);
             

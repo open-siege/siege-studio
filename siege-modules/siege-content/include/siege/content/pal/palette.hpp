@@ -7,11 +7,14 @@
 #include <iostream>
 #include <iomanip>
 #include <cmath>
+
+#include <siege/platform/palette.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
 #include <siege/platform/shared.hpp>
 
 namespace siege::content::pal
 {
+  using colour = siege::platform::palette::colour;
   namespace endian = siege::platform;
   using file_tag = std::array<std::byte, 4>;
 
@@ -23,34 +26,11 @@ namespace siege::content::pal
     vga
   };
 
-  struct colour
-  {
-    KEYS_CONSTEXPR static auto keys = platform::make_keys({ "r", "g", "b", "a" });
-
-    std::byte red;
-    std::byte green;
-    std::byte blue;
-    std::byte flags;
-  };
-
   struct old_palette
   {
     palette_type type;
     std::vector<colour> colours;
   };
-
-  inline bool operator==(const colour& left, const colour& right)
-  {
-    return left.red == right.red &&
-    left.green == right.green &&
-    left.blue == right.blue &&
-    left.flags == right.flags;
-  }
-
-  inline bool operator<(const colour& left, const colour& right)
-  {
-    return std::tie(left.red, left.green, left.blue, left.flags) < std::tie(right.red, right.green, right.blue, right.flags);
-  }
 
   // A big thanks to https://stackoverflow.com/questions/5392061/algorithm-to-check-similarity-of-colors and
   // https://www.compuphase.com/cmetric.htm
@@ -73,15 +53,11 @@ namespace siege::content::pal
   bool is_old_pal(std::istream& raw_data);
   std::vector<old_palette> get_old_pal_data(std::istream& raw_data);
 
-  bool is_microsoft_pal(std::istream& raw_data);
-  std::vector<colour> get_pal_data(std::istream& raw_data);
-  std::int32_t write_pal_data(std::ostream& raw_data, const std::vector<colour>& colours);
-
   bool is_phoenix_pal(std::istream& raw_data);
   std::vector<palette> get_ppl_data(std::istream& raw_data);
 
   bool is_earthsiege_pal(std::istream& raw_data);
   std::vector<colour> get_earthsiege_pal(std::istream& raw_data);
-}// namespace darkstar::pal
+}// namespace siege::content::pal
 
-#endif//DARKSTARDTSCONVERTER_PALETTE_HPP
+#endif// DARKSTARDTSCONVERTER_PALETTE_HPP

@@ -5,7 +5,7 @@ namespace siege::views
 {
   bool pal_controller::is_pal(std::istream& image_stream)
   {
-    return siege::content::pal::is_microsoft_pal(image_stream) ||
+    return siege::platform::palette::is_microsoft_pal(image_stream) ||
            siege::content::pal::is_earthsiege_pal(image_stream) ||
            siege::content::pal::is_old_pal(image_stream) ||
            siege::content::pal::is_phoenix_pal(image_stream);
@@ -52,9 +52,9 @@ namespace siege::views
       }
     };
 
-    if (siege::content::pal::is_microsoft_pal(image_stream))
+    if (siege::platform::palette::is_microsoft_pal(image_stream))
     {
-      auto colours = siege::content::pal::get_pal_data(image_stream);
+      auto colours = siege::platform::palette::get_pal_data(image_stream);
       generate_rectangles(colours);
     }
     else if (siege::content::pal::is_earthsiege_pal(image_stream))

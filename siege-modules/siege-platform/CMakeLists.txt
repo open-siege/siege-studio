@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(siege-platform)
 
-add_library(siege-std STATIC src/std.cpp)
+add_library(siege-std STATIC src/std.cpp src/bitmap.cpp src/palette.cpp src/image.cpp)
 set_property(TARGET siege-std PROPERTY CXX_STANDARD 23)
 target_include_directories(siege-std PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
@@ -19,7 +19,8 @@ if (WIN32)
         src/theming-user.cpp 
         src/theming-common.cpp 
         src/theming-masking.cpp
-        src/theming-font.cpp)
+        src/theming-font.cpp
+        src/platform_image.win32.cpp)
     set_property(TARGET siege-win-desktop PROPERTY CXX_STANDARD 23)
     target_compile_definitions(siege-win-desktop PRIVATE WINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP)
     target_include_directories(siege-win-desktop PUBLIC ${PROJECT_SOURCE_DIR}/include)

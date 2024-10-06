@@ -1,9 +1,9 @@
 #include <vector>
-#include <siege/content/bmp/image.hpp>
+#include <siege/platform/image.hpp>
 #include <siege/platform/tagged_data.hpp>
 #include <siege/platform/stream.hpp>
 
-namespace siege::content::bmp
+namespace siege::platform::bitmap
 {
   using file_tag = std::array<std::byte, 4>;
   constexpr file_tag png_tag = platform::to_tag<4>({ 0x89, 'P', 'N', 'G' });

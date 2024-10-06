@@ -1,7 +1,7 @@
 #include "bmp_controller.hpp"
 #include "pal_controller.hpp"
 #include <siege/content/bmp/bitmap.hpp>
-#include <siege/content/bmp/image.hpp>
+#include <siege/platform/image.hpp>
 #include <deque>
 #include <fstream>
 #include <spanstream>
@@ -14,11 +14,11 @@ namespace siege::views
   bool bmp_controller::is_bmp(std::istream& image_stream) noexcept
   {
     return siege::content::bmp::is_earthsiege_bmp(image_stream)
-           || siege::content::bmp::is_microsoft_bmp(image_stream)
+           || siege::platform::bitmap::is_microsoft_bmp(image_stream)
            || siege::content::bmp::is_phoenix_bmp(image_stream)
-           || siege::content::bmp::is_jpg(image_stream)
-           || siege::content::bmp::is_gif(image_stream)
-           || siege::content::bmp::is_png(image_stream);
+           || siege::platform::bitmap::is_jpg(image_stream)
+           || siege::platform::bitmap::is_gif(image_stream)
+           || siege::platform::bitmap::is_png(image_stream);
   }
 
   auto get_default_palette()
@@ -76,9 +76,9 @@ namespace siege::views
 
       auto load_palette = [&](std::filesystem::path&& path, std::istream& temp) -> palette_info {
         std::vector<content::pal::palette> results;
-        if (siege::content::pal::is_microsoft_pal(temp))
+        if (siege::platform::palette::is_microsoft_pal(temp))
         {
-          results.emplace_back().colours = siege::content::pal::get_pal_data(temp);
+          results.emplace_back().colours = siege::platform::palette::get_pal_data(temp);
         }
         else if (siege::content::pal::is_earthsiege_pal(temp))
         {
@@ -129,15 +129,15 @@ namespace siege::views
 
     try
     {
-      if (bmp::is_microsoft_bmp(image_stream))
+      if (platform::bitmap::is_microsoft_bmp(image_stream))
       {
-        original_image.emplace(bmp::get_bmp_data(image_stream));
+        original_image.emplace(platform::bitmap::get_bmp_data(image_stream));
       }
       else if (bmp::is_phoenix_bmp(image_stream))
       {
         auto image = bmp::get_pbmp_data(image_stream);
 
-        bmp::windows_bmp_data dest{};
+        platform::bitmap::windows_bmp_data dest{};
 
         dest.info.bit_depth = 32;
         dest.info.width = image.bmp_header.width;

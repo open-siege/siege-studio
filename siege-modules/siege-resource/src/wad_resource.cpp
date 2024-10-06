@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <utility>
 #include <cstdlib>
+#include <optional>
 #include <sstream>
 #include <algorithm>
 #include <iostream>
@@ -14,6 +15,7 @@
 
 #include <siege/resource/wad_resource.hpp>
 #include <siege/platform/stream.hpp>
+#include <siege/platform/wave.hpp>
 
 namespace fs = std::filesystem;
 
@@ -30,7 +32,8 @@ namespace siege::resource::wad
     endian::little_uint32_t size;
     endian::little_uint32_t string_offset;
     endian::little_uint32_t type;
-    endian::little_uint32_t id2;
+    endian::little_uint16_t id1;
+    endian::little_uint16_t id2;
     std::uint32_t padding;
     std::uint32_t string_start;
     std::uint32_t string_end;
@@ -98,32 +101,55 @@ namespace siege::resource::wad
     std::vector<wad_resource_reader::content_info> results{};
     results.reserve(file_count);
 
+    std::optional<std::string_view> current_group = std::nullopt;
+
     for (auto& entry : entries)
     {
       auto filename = std::string_view(string_table.data() + entry.string_offset - entries_size);
 
-      if (filename == "damage_hit")
+      if (entry.type == 0x32 && entry.size == 0 && filename.starts_with("start"))
       {
-        OutputDebugStringW(L"");
+        current_group = filename.substr(5);
+        continue;
       }
 
-      if (filename == "song01")
+      if (entry.type == 0x32 && entry.size == 0 && filename.starts_with("end"))
       {
-        OutputDebugStringW(L"");
+        current_group = std::nullopt;
+        continue;
       }
 
-      if (filename == "startwalls")
+      if (current_group == "music")
       {
-        OutputDebugStringW(L"");
+        current_group = "mds";
+      }
+
+      if (current_group == "sound")
+      {
+        current_group = "wav";
+      }
+
+      if (current_group == "leveltext" || current_group == "othertext")
+      {
+        current_group = "txt";
       }
 
       results.emplace_back(wad_resource_reader::file_info{
-        .filename = std::string(filename) + "." + std::to_string((std::uint32_t)entry.type),
+        .filename = current_group ? (std::string(filename) + "." + std::string(*current_group)) : std::string(filename),
         .offset = entry.offset,
         .size = entry.size,
         .compression_type = siege::platform::compression_type::none,
         .folder_path = query.folder_path,
         .archive_path = query.archive_path });
+
+      if (current_group == "wav")
+      {
+        std::get<wad_resource_reader::file_info>(results.back()).metadata = siege::platform::wave::header_settings{
+            .num_channels = 1,
+            .sample_rate = 11025,
+            .bits_per_sample = 8
+        };
+      }
     }
 
     return results;

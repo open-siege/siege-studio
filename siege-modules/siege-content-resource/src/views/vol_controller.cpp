@@ -88,6 +88,12 @@ namespace siege::views
         siege::platform::wave::write_wav_header(output, *header, file->size);
       }
 
+      if (file->metadata.type() == typeid(siege::platform::wave::header_settings))
+      {
+        auto* header = std::any_cast<siege::platform::wave::header_settings>(&file->metadata);
+        siege::platform::wave::write_wav_header(output, *header, (file->size * 8) / header->bits_per_sample);
+      }
+
       if (auto* path = std::get_if<std::filesystem::path>(&storage); path)
       {
         std::ifstream fstream{ *path, std::ios_base::binary };

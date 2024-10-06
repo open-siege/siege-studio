@@ -10,7 +10,7 @@
 #include <filesystem>
 #include <deque>
 #include <siege/content/pal/palette.hpp>
-#include <siege/content/bmp/image.hpp>
+#include <siege/platform/image.hpp>
 #include "bmp_shared.hpp"
 
 namespace siege::views
@@ -61,7 +61,7 @@ namespace siege::views
     std::size_t convert(std::size_t frame, std::pair<int, int> size, int bits, std::span<std::byte> destination) const noexcept;
 
   private:
-    std::optional<content::bmp::platform_image> original_image;
+    std::optional<platform::bitmap::platform_image> original_image;
     std::deque<palette_info> palettes;
     std::deque<palette_info>::iterator selected_palette_file;
     std::size_t selected_palette;
