@@ -24,6 +24,15 @@ namespace siege::platform::palette
     std::byte flags;
   };
 
+  struct colour_rgb
+  {
+    KEYS_CONSTEXPR static auto keys = platform::make_keys({ "r", "g", "b" });
+
+    std::byte red;
+    std::byte green;
+    std::byte blue;
+  };
+
   inline bool operator==(const colour& left, const colour& right)
   {
     return left.red == right.red && left.green == right.green && left.blue == right.blue && left.flags == right.flags;

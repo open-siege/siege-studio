@@ -70,6 +70,20 @@ namespace siege::platform::bitmap
 
   windows_bmp_data get_bmp_data(std::istream& raw_data, bool auto_flip = true);
 
+  struct bitmap_settings
+  {
+    std::vector<palette::colour> colours;
+    std::int32_t width;
+    std::int32_t height;
+    std::int32_t bit_depth;
+    bool auto_flip = true;
+  };
+
+  struct bitmap_offset_settings : bitmap_settings
+  {
+    std::size_t offset;
+  };
+
   void write_bmp_data(std::ostream& raw_data, std::vector<palette::colour> colours, std::vector<std::byte> pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth, bool auto_flip = true);
 }// namespace siege::platform::bitmap
 

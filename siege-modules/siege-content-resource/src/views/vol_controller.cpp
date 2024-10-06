@@ -4,6 +4,7 @@
 #include <fstream>
 #include <spanstream>
 #include <siege/platform/wave.hpp>
+#include <siege/platform/bitmap.hpp>
 
 #if WIN32
 #include <siege/platform/win/core/file.hpp>
@@ -92,6 +93,40 @@ namespace siege::views
       {
         auto* header = std::any_cast<siege::platform::wave::header_settings>(&file->metadata);
         siege::platform::wave::write_wav_header(output, *header, (file->size * 8) / header->bits_per_sample);
+      }
+
+      if (file->metadata.type() == typeid(siege::platform::bitmap::bitmap_offset_settings))
+      {
+        auto* settings = std::any_cast<siege::platform::bitmap::bitmap_offset_settings>(&file->metadata);
+
+        std::vector<std::byte> pixels(file->size);
+        std::span<char> pixel_span(reinterpret_cast<char*>(pixels.data()), pixels.size());
+        std::ospanstream temp_output(pixel_span);
+
+        if (auto* path = std::get_if<std::filesystem::path>(&storage); path)
+        {
+          std::ifstream fstream{ *path, std::ios_base::binary };
+          resource->extract_file_contents(fstream, *file, temp_output);
+        }
+        else if (auto* memory = std::get_if<std::stringstream>(&storage); memory)
+        {
+          resource->extract_file_contents(*memory, *file, temp_output);
+        }
+
+        pixels.erase(pixels.begin(), pixels.begin() + settings->offset);
+
+        results.resize(pixels.size() + (settings->colours.size() * 4) + 64, char{});
+        std::ospanstream output(results);
+
+        siege::platform::bitmap::write_bmp_data(output,
+          settings->colours,
+          std::move(pixels),
+          settings->width,
+          settings->height,
+          settings->bit_depth,
+          settings->auto_flip);
+
+        return results;
       }
 
       if (auto* path = std::get_if<std::filesystem::path>(&storage); path)
