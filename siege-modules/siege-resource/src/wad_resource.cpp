@@ -41,12 +41,43 @@ namespace siege::resource::wad
     std::uint32_t string_end;
   };
 
+  struct legacy_wad_header
+  {
+    endian::little_uint16_t file_count;
+    endian::little_uint32_t offset;
+    endian::little_uint16_t file_buffer_size;
+  };
+
+  struct legacy_file_entry
+  {
+    endian::little_uint32_t offset;
+    endian::little_uint32_t size;
+    endian::little_uint32_t string_offset;
+  };
+
   bool wad_resource_reader::is_supported(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
     std::array<std::byte, 8> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
 
+    if (tag != pod_tag)
+    {
+      legacy_wad_header header;
+      std::memcpy(&header, tag.data(), sizeof(header));
+
+      if (header.file_count <= 3000 && header.file_buffer_size <= (3000 * 32))
+      {
+        auto path = siege::platform::get_stream_path(stream);
+
+        if (!path)
+        {
+          return false;
+        }
+
+        return path->extension() == ".dat" || path->extension() == ".DAT" || path->extension() == ".cd" || path->extension() == ".CD" || path->extension() == ".blo" || path->extension() == ".BLO";
+      }
+    }
 
     return tag == pod_tag;
   }
@@ -67,7 +98,60 @@ namespace siege::resource::wad
 
     if (tag != pod_tag)
     {
-      return std::vector<wad_resource_reader::content_info>{};
+      legacy_wad_header header;
+      std::memcpy(&header, tag.data(), sizeof(header));
+
+      if (header.file_count == 0)
+      {
+        return std::vector<wad_resource_reader::content_info>{};
+      }
+      std::vector<legacy_file_entry> legacy_entries;
+      legacy_entries.assign(header.file_count, {});
+
+      auto entries_size = header.file_count * sizeof(legacy_file_entry);
+      stream.seekg(current_offset + header.offset, std::ios::beg);
+      stream.read(reinterpret_cast<char*>(legacy_entries.data()), entries_size);
+
+      auto left_over_space = (std::uint32_t)header.file_buffer_size - entries_size;
+      std::string string_table(left_over_space, '\0');
+      stream.read(string_table.data(), left_over_space);
+
+      std::vector<wad_resource_reader::content_info> results{};
+      results.reserve(header.file_count);
+
+      std::optional<std::string_view> current_group = std::nullopt;
+
+      for (auto& entry : legacy_entries)
+      {
+        if (entry.string_offset == 0)
+        {
+          continue;
+        }
+
+        auto filename = std::string_view(string_table.data() + entry.string_offset - entries_size);
+
+        if (entry.size == 0 && (filename.starts_with("start") || filename.ends_with("start")))
+        {
+          current_group = filename.substr(5);
+          continue;
+        }
+
+        if (entry.size == 0 && (filename.starts_with("end") || filename.ends_with("end")))
+        {
+          current_group = std::nullopt;
+          continue;
+        }
+
+        results.emplace_back(wad_resource_reader::file_info{
+          .filename = filename,
+          .offset = entry.offset,
+          .size = entry.size,
+          .compression_type = siege::platform::compression_type::none,
+          .folder_path = query.folder_path,
+          .archive_path = query.archive_path });
+      }
+
+      return results;
     }
 
     endian::little_uint32_t file_count;
@@ -92,7 +176,6 @@ namespace siege::resource::wad
     auto entries_size = file_count * sizeof(pod_file_entry);
     stream.seekg(current_offset + offset, std::ios::beg);
     stream.read(reinterpret_cast<char*>(entries.data()), entries_size);
-
 
     auto left_over_space = (std::uint32_t)file_buffer_size - entries_size;
     std::string string_table(left_over_space, '\0');
@@ -126,7 +209,7 @@ namespace siege::resource::wad
       }
 
       std::string extension = current_group ? std::string(*current_group) : std::string();
-      
+
       std::any metadata{};
 
       if (entry.type == 0x2)
