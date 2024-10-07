@@ -75,7 +75,7 @@ namespace siege::resource::wad
           return false;
         }
 
-        return path->extension() == ".dat" || path->extension() == ".DAT" || path->extension() == ".cd" || path->extension() == ".CD" || path->extension() == ".blo" || path->extension() == ".BLO";
+        return path->extension() == ".dat" || path->extension() == ".DAT" || path->extension() == ".cd" || path->extension() == ".CD" || path->extension() == ".hd" || path->extension() == ".HD" || path->extension() == ".blo" || path->extension() == ".BLO";
       }
     }
 
@@ -85,6 +85,56 @@ namespace siege::resource::wad
   bool wad_resource_reader::stream_is_supported(std::istream& stream) const
   {
     return is_supported(stream);
+  }
+
+
+  void generate_bitmap_metadata(std::istream& stream, std::int32_t width, std::int32_t height, std::size_t offset, const std::vector<siege::platform::palette::colour_rgb>& current_palette, std::string& extension, std::any& metadata)
+  {
+    extension = "bmp";
+    std::vector<platform::palette::colour> colours;
+    colours.reserve(current_palette.size());
+
+    std::transform(current_palette.begin(), current_palette.end(), std::back_inserter(colours), [](auto value) {
+      return platform::palette::colour{ value.red, value.green, value.blue, std::byte(0xff) };
+    });
+
+    siege::platform::bitmap::bitmap_offset_settings temp{};
+    temp.colours = std::move(colours);
+    temp.width = width;
+    temp.height = height;
+    temp.bit_depth = 8;
+    temp.auto_flip = false;
+    temp.offset = offset;
+
+    metadata = std::move(temp);
+  }
+
+  void generate_bitmap_metadata(std::istream& stream, std::size_t offset, std::size_t size, const std::vector<siege::platform::palette::colour_rgb>& current_palette, std::string& extension, std::any& metadata)
+  {
+    if (!current_palette.empty())
+    {
+      endian::little_uint16_t width;
+      endian::little_uint16_t height;
+      stream.seekg(offset, std::ios::beg);
+      stream.read(reinterpret_cast<char*>(&width), sizeof(width));
+      stream.read(reinterpret_cast<char*>(&height), sizeof(height));
+      std::uint32_t pixel_size = (std::uint32_t)width * height;
+
+      if (size == (pixel_size + 12))
+      {
+        generate_bitmap_metadata(stream, width, height, 12, current_palette, extension, metadata);
+      }
+
+      if (size == (pixel_size + 10))
+      {
+        generate_bitmap_metadata(stream, width, height, 10, current_palette, extension, metadata);
+      }
+
+      if (size == (pixel_size + 8))
+      {
+        generate_bitmap_metadata(stream, width, height, 8, current_palette, extension, metadata);
+      }
+    }
   }
 
   std::vector<wad_resource_reader::content_info> wad_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
@@ -120,6 +170,7 @@ namespace siege::resource::wad
       results.reserve(header.file_count);
 
       std::optional<std::string_view> current_group = std::nullopt;
+      std::vector<siege::platform::palette::colour_rgb> default_palette;
 
       for (auto& entry : legacy_entries)
       {
@@ -130,25 +181,84 @@ namespace siege::resource::wad
 
         auto filename = std::string_view(string_table.data() + entry.string_offset - entries_size);
 
-        if (entry.size == 0 && (filename.starts_with("start") || filename.ends_with("start")))
+        if (filename == "soundeffects" && entry.size == 0 && entry.offset == 0)
+        {
+          constexpr static auto riff_header = std::array<char, 4>{ { 'R', 'I', 'F', 'F' } };
+          auto wav_offset = (std::size_t)current_offset + sizeof(legacy_wad_header) + 2u;
+          auto index = 0u;
+          std::array<char, 4> header;
+
+          do
+          {
+            endian::little_uint32_t wav_size;
+
+            stream.seekg(wav_offset, std::ios::beg);
+            stream.read(header.data(), header.size());
+            stream.read((char*)&wav_size, sizeof(wav_size));
+
+            
+            if (header != riff_header)
+            {
+              break;
+            }
+
+            results.emplace_back(wad_resource_reader::file_info{
+              .filename = std::string(filename) + std::to_string(index) + "." + "wav",
+              .offset = wav_offset,
+              .size = wav_size + 8u,
+              .compression_type = siege::platform::compression_type::none,
+              .folder_path = query.folder_path,
+              .archive_path = query.archive_path });
+            wav_offset += wav_size + 8u;
+            index++;
+          } while (header == riff_header);
+        }
+
+        if (entry.size == 0 && (filename.starts_with("start") || filename.starts_with("START")))
         {
           current_group = filename.substr(5);
           continue;
         }
 
-        if (entry.size == 0 && (filename.starts_with("end") || filename.ends_with("end")))
+        if (entry.size == 0 && (filename.ends_with("start") || filename.ends_with("START")))
+        {
+          current_group = filename.substr(0, filename.size() - 5);
+          continue;
+        }
+
+        if (entry.size == 0 && (filename.starts_with("end") || filename.starts_with("END") || filename.ends_with("end") || filename.ends_with("END")))
         {
           current_group = std::nullopt;
           continue;
         }
 
+        std::string extension = current_group ? std::string(*current_group) : std::string();
+        std::any metadata{};
+
+        if (default_palette.empty() && (filename == "palette" || current_group == "pal"))
+        {
+          stream.seekg(current_offset + entry.offset, std::ios::beg);
+          default_palette.assign(entry.size / sizeof(siege::platform::palette::colour_rgb), {});
+          stream.read(reinterpret_cast<char*>(default_palette.data()), entry.size);
+        }
+
+        if (current_group == "flats" && entry.size == (64 * 64) && !default_palette.empty())
+        {
+          generate_bitmap_metadata(stream, 64, 64, 0, default_palette, extension, metadata);
+        }
+        else if (current_group == std::nullopt && !default_palette.empty())
+        {
+          generate_bitmap_metadata(stream, current_offset + entry.offset, entry.size, default_palette, extension, metadata);
+        }
+
         results.emplace_back(wad_resource_reader::file_info{
-          .filename = filename,
+          .filename = !extension.empty() ? std::string(filename) + "." + extension : std::string(filename),
           .offset = entry.offset,
           .size = entry.size,
           .compression_type = siege::platform::compression_type::none,
           .folder_path = query.folder_path,
-          .archive_path = query.archive_path });
+          .archive_path = query.archive_path,
+          .metadata = std::move(metadata) });
       }
 
       return results;
@@ -251,122 +361,19 @@ namespace siege::resource::wad
       {
         if (!current_palette.empty())
         {
-          extension = "bmp";
-          std::vector<platform::palette::colour> colours;
-          colours.reserve(current_palette.size());
-
-          std::transform(current_palette.begin(), current_palette.end(), std::back_inserter(colours), [](auto value) {
-            return platform::palette::colour{ value.red, value.green, value.blue, std::byte(0xff) };
-          });
-
-          siege::platform::bitmap::bitmap_offset_settings temp{};
-          temp.colours = std::move(colours);
-          temp.width = 640;
-          temp.height = 480;
-          temp.bit_depth = 8;
-          temp.auto_flip = true;
-          temp.offset = 0;
-
-          metadata = std::move(temp);
+          generate_bitmap_metadata(stream, 640, 480, 0, default_palette, extension, metadata);
         }
       }
       else if (entry.type == 0x1 && entry.size == 320 * 200)
       {
         if (!current_palette.empty())
         {
-          extension = "bmp";
-          std::vector<platform::palette::colour> colours;
-          colours.reserve(current_palette.size());
-
-          std::transform(current_palette.begin(), current_palette.end(), std::back_inserter(colours), [](auto value) {
-            return platform::palette::colour{ value.red, value.green, value.blue, std::byte(0xff) };
-          });
-
-          siege::platform::bitmap::bitmap_offset_settings temp{};
-          temp.colours = std::move(colours);
-          temp.width = 320;
-          temp.height = 200;
-          temp.bit_depth = 8;
-          temp.auto_flip = true;
-          temp.offset = 0;
-
-          metadata = std::move(temp);
+          generate_bitmap_metadata(stream, 320, 200, 0, default_palette, extension, metadata);
         }
       }
       else if (entry.type != 0x1)
       {
-        if (!current_palette.empty())
-        {
-          endian::little_uint16_t width;
-          endian::little_uint16_t height;
-          stream.seekg(entry.offset, std::ios::beg);
-          stream.read(reinterpret_cast<char*>(&width), sizeof(width));
-          stream.read(reinterpret_cast<char*>(&height), sizeof(height));
-          std::uint32_t pixel_size = (std::uint32_t)width * height;
-
-          if (entry.size == (pixel_size + 12))
-          {
-            extension = "bmp";
-            std::vector<platform::palette::colour> colours;
-            colours.reserve(current_palette.size());
-
-            std::transform(current_palette.begin(), current_palette.end(), std::back_inserter(colours), [](auto value) {
-              return platform::palette::colour{ value.red, value.green, value.blue, std::byte(0xff) };
-            });
-
-            siege::platform::bitmap::bitmap_offset_settings temp{};
-            temp.colours = std::move(colours);
-            temp.width = width;
-            temp.height = height;
-            temp.bit_depth = 8;
-            temp.auto_flip = false;
-            temp.offset = 12;
-
-            metadata = std::move(temp);
-          }
-
-          if (entry.size == (pixel_size + 10))
-          {
-            extension = "bmp";
-            std::vector<platform::palette::colour> colours;
-            colours.reserve(current_palette.size());
-
-            std::transform(current_palette.begin(), current_palette.end(), std::back_inserter(colours), [](auto value) {
-              return platform::palette::colour{ value.red, value.green, value.blue, std::byte(0xff) };
-            });
-
-            siege::platform::bitmap::bitmap_offset_settings temp{};
-            temp.colours = std::move(colours);
-            temp.width = width;
-            temp.height = height;
-            temp.bit_depth = 8;
-            temp.auto_flip = false;
-            temp.offset = 10;
-
-            metadata = std::move(temp);
-          }
-
-          if (entry.size == (pixel_size + 8))
-          {
-            extension = "bmp";
-            std::vector<platform::palette::colour> colours;
-            colours.reserve(current_palette.size());
-
-            std::transform(current_palette.begin(), current_palette.end(), std::back_inserter(colours), [](auto value) {
-              return platform::palette::colour{ value.red, value.green, value.blue, std::byte(0xff) };
-            });
-
-            siege::platform::bitmap::bitmap_offset_settings temp{};
-            temp.colours = std::move(colours);
-            temp.width = width;
-            temp.height = height;
-            temp.bit_depth = 8;
-            temp.auto_flip = false;
-            temp.offset = 8;
-
-            metadata = std::move(temp);
-          }
-        }
+        generate_bitmap_metadata(stream, current_offset + entry.offset, entry.size, current_palette, extension, metadata);
       }
 
       results.emplace_back(wad_resource_reader::file_info{
