@@ -465,6 +465,7 @@ namespace siege::resource::vol::three_space
 
   std::vector<dyn_resource_reader::content_info> vol_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
   {
+    platform::istream_pos_resetter resetter(stream);
     std::vector<dyn_resource_reader::content_info> results;
 
     if (query.archive_path == query.folder_path)
