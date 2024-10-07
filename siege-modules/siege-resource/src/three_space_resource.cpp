@@ -7,6 +7,7 @@
 
 #include <siege/resource/three_space_resource.hpp>
 #include <siege/platform/stream.hpp>
+#include <siege/platform/wave.hpp>
 
 namespace siege::resource::vol::three_space
 {
@@ -294,6 +295,29 @@ namespace siege::resource::vol::three_space
       platform::read(raw_data, reinterpret_cast<char*>(&file_info), sizeof(file_info));
 
       file.size = file_info[0];
+
+      std::any metadata;
+
+      if (file.filename.extension() == ".SFX")
+      {
+        file.filename.replace_extension(".WAV");
+        metadata = siege::platform::wave::header_settings{
+          .num_channels = 1,
+          .sample_rate = 11025,
+          .bits_per_sample = 8
+        };
+      }
+      else if (file.filename.extension() == ".RAW" && folder_path.string().rfind("SPEECH.VOL") != std::string::npos)
+      {
+        file.filename.replace_extension(".WAV");
+        metadata = siege::platform::wave::header_settings{
+          .num_channels = 1,
+          .sample_rate = 11025,
+          .bits_per_sample = 8
+        };
+      }
+
+      file.metadata = std::move(metadata);
     }
 
     return files;
@@ -302,7 +326,7 @@ namespace siege::resource::vol::three_space
   bool rmf_resource_reader::is_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
-    stream.read(reinterpret_cast<char *>(tag.data()), sizeof(tag));
+    stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
 
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
@@ -384,14 +408,14 @@ namespace siege::resource::vol::three_space
     set_stream_position(real_stream, info);
 
     std::copy_n(std::istreambuf_iterator(real_stream),
-                info.size,
-                std::ostreambuf_iterator(output));
+      info.size,
+      std::ostreambuf_iterator(output));
   }
 
   bool dyn_resource_reader::is_supported(std::istream& stream)
   {
     std::array<std::byte, 20> tag{};
-    stream.read(reinterpret_cast<char *>(tag.data()), sizeof(tag));
+    stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
 
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
@@ -451,7 +475,7 @@ namespace siege::resource::vol::three_space
   bool vol_resource_reader::is_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
-    stream.read(reinterpret_cast<char *>(tag.data()), sizeof(tag));
+    stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
 
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
@@ -495,8 +519,8 @@ namespace siege::resource::vol::three_space
     results.reserve(raw_results.size());
 
     std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(results), [&](auto& value) {
-           value.folder_path = query.folder_path;
-           return value;
+      value.folder_path = query.folder_path;
+      return value;
     });
 
     return results;
