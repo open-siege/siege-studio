@@ -9,4 +9,8 @@ if (WIN32)
     add_library(siege-extension-tribes SHARED src/tribes.cpp src/darkstar.def)
     set_target_properties(siege-extension-tribes PROPERTIES VS_PLATFORM_TOOLSET ClangCL CXX_STANDARD 23)
     target_link_libraries(siege-extension-tribes PRIVATE siege-extension)
+
+    add_library(siege-extension-mask-of-eternity SHARED src/moe.cpp src/darkstar.def)
+    set_target_properties(siege-extension-mask-of-eternity PROPERTIES CXX_STANDARD 23)
+    target_link_libraries(siege-extension-mask-of-eternity PRIVATE siege-extension)
 endif()
