@@ -464,7 +464,7 @@ namespace siege::views
             stream << std::setfill(L'0') << std::setw(2) << std::hex << GetBValue(dialog.rgbResult);
             property_value = stream.str();
 
-            ListView_SetItemText(control_settings, info.iItem, info.iSubItem, property_value.data(), property_value.size());
+            ListView_SetItemText(control_settings, info.iItem, info.iSubItem, property_value.data());
 
             context->value = dialog.rgbResult;
             win32::set_color_for_window(theme_properties.ref(), context->key, dialog.rgbResult);

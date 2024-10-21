@@ -12,7 +12,7 @@
 #include <thread>
 #include <iostream>
 #include <filesystem>
-#undef NDEBUG 
+#undef NDEBUG
 #include <cassert>
 
 #include <siege/platform/win/desktop/shell.hpp>
@@ -44,6 +44,12 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
   info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
   info.hIcon = (HICON)::LoadImageW(hInstance, L"AppIcon", IMAGE_ICON, 0, 0, 0);
   this_module.RegisterClassExW(info);
+
+  win32::window_meta_class<siege::views::default_view> def_info{};
+  def_info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
+  def_info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+  def_info.hIcon = info.hIcon;
+  this_module.RegisterClassExW(def_info);
 
   win32::window_meta_class<siege::views::preferences_view> pref_info{};
   pref_info.hCursor = LoadCursorW(hInstance, IDC_ARROW);

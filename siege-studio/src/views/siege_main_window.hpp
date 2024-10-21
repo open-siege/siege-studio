@@ -12,6 +12,7 @@
 #include <siege/platform/win/desktop/dialog.hpp>
 #include "views/preferences_view.hpp"
 #include "views/about_view.hpp"
+#include "views/default_view.hpp"
 #include <map>
 #include <spanstream>
 
@@ -289,6 +290,8 @@ namespace siege::views
       tab_context_menu.AppendMenuW(MF_OWNERDRAW, 1, L"Close");
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
+
+      AddDefaultTab();
 
       return 0;
     }
@@ -684,6 +687,52 @@ namespace siege::views
       }
     }
 
+    void AddDefaultTab()
+    {
+      auto class_name = win32::type_name<default_view>();
+
+      auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
+
+      SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&tab_rect));
+
+      win32::window_factory factory(ref());
+
+      auto child = factory.CreateWindowExW(::CREATESTRUCTW{
+        .hwndParent = *this,
+        .cy = tab_rect.bottom - tab_rect.top,
+        .cx = tab_rect.right - tab_rect.left,
+        .y = tab_rect.top,
+        .x = tab_rect.left,
+        .style = WS_CHILD,
+        .lpszClass = class_name.c_str(),
+      });
+
+      assert(child);
+
+      auto index = tab_control.GetItemCount();
+
+      std::wstring title = L"Welcome to Siege Studio";
+
+      tab_control.InsertItem(index, TCITEMW{
+                                      .mask = TCIF_TEXT | TCIF_PARAM,
+                                      .pszText = title.data(),
+                                      .lParam = win32::lparam_t(child->get()),
+                                    });
+
+      if (index == 0)
+      {
+        on_size(*this->GetClientSize());
+      }
+
+      wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGING });
+
+      tab_control.SetCurrentSelection(index);
+
+      wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE });
+
+      on_size(*this->GetClientSize());
+    }
+
     bool AddTabFromPath(std::filesystem::path file_path)
     {
       try
@@ -968,8 +1017,8 @@ namespace siege::views
       if (identifier == about_id)
       {
 
-        win32::DialogBoxIndirectParamW<about_view>(::GetModuleHandleW(nullptr), 
-            win32::default_dialog{ { .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 200, .cy = 200 } },
+        win32::DialogBoxIndirectParamW<about_view>(::GetModuleHandleW(nullptr),
+          win32::default_dialog{ { .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 200, .cy = 200 } },
           ref());
       }
 
