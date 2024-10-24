@@ -83,7 +83,7 @@ namespace siege::views
     siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self), tab_control(nullptr)
     {
       std::filesystem::path app_path = std::filesystem::path(win32::module_ref(params.hInstance).GetModuleFileName()).parent_path();
-      loaded_modules = platform::content_module::load_modules(std::filesystem::path(app_path));
+      loaded_modules = platform::content_module::load_modules(app_path);
 
       buffer.resize(64);
 

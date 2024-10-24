@@ -7,6 +7,8 @@
 #include <expected>
 #include <list>
 #include <string>
+#include <execution>
+#include <mutex>
 #include <vector>
 #include <set>
 #include <siege/platform/stream.hpp>
@@ -67,20 +69,29 @@ namespace siege::platform
     {
       std::list<content_module> loaded_modules;
 
+      std::set<std::filesystem::path> dll_paths;
+
       for (auto const& dir_entry : std::filesystem::directory_iterator{ search_path })
       {
-        if (dir_entry.path().extension() == ".dll")
+        if (dir_entry.path().extension() == ".dll" || dir_entry.path().extension() == ".DLL")
         {
-          try
-          {
-            loaded_modules.emplace_back(dir_entry.path());
-          }
-          catch (...)
-          {
-          }
+          dll_paths.insert(dir_entry.path());
         }
       }
 
+      std::mutex path_lock;
+
+      std::for_each(std::execution::par_unseq, dll_paths.begin(), dll_paths.end(), [&](auto path) {
+        try
+        {
+          const std::lock_guard<std::mutex> lock(path_lock);
+          loaded_modules.emplace_back(path);
+        }
+        catch (...)
+        {
+        }
+      });
+      
       return loaded_modules;
     }
 
