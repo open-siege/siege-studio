@@ -40,7 +40,7 @@ namespace siege::views
 
   constexpr static auto engines = std::array<engine_info, 23>{ {
     { L"Unknown engine"sv, L"unknown"sv, std::nullopt },
-    { L"Dyanmix Game Development System"sv, L"dgds"sv, std::nullopt },
+    { L"Dynamix Game Development System"sv, L"dgds"sv, std::nullopt },
     { L"3Space 1.0"sv, L"3space-1.0"sv, std::nullopt },
     { L"3Space 1.5"sv, L"3space-1.5"sv, L"3space-1.0"sv },
     { L"3Space 2.0"sv, L"3space-2.0"sv, L"3space-1.5"sv },
@@ -183,6 +183,7 @@ namespace siege::views
   } };
 
   struct default_view final : win32::window_ref
+    , win32::list_view::notifications
   {
     inline static auto first_time = true;
 
@@ -290,9 +291,10 @@ namespace siege::views
       pending_operation = std::async(std::launch::async, [this]() {
         std::set<std::wstring> search_roots;
 
+        std::error_code errc{};
         for (auto drive = L'C'; drive <= L'Z'; ++drive)
         {
-          if (std::filesystem::exists(std::wstring(1, drive) + L":\\"))
+          if (std::filesystem::exists(std::wstring(1, drive) + L":\\", errc))
           {
             search_roots.emplace(std::wstring(1, drive) + L":");
           }
@@ -381,6 +383,34 @@ namespace siege::views
       });
 
       return 0;
+    }
+
+    std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMITEMACTIVATE& message) override
+    {
+      switch (message.hdr.code)
+      {
+      case NM_DBLCLK: {
+        auto root = this->GetAncestor(GA_ROOT);
+
+        if (root)
+        {
+         /* std::array<wchar_t, 256> temp{};
+
+          auto result = ListView_GetItemText(supported_games_by_engine, message.iItem, 1, temp.data(), 256);
+          if (result)
+          {
+
+            root->SetPropW(L"FilePath", item_info.pszText);
+            root->CopyData(*this, COPYDATASTRUCT{ .cbData = DWORD(data.size()), .lpData = data.data() });
+            root->RemovePropW(L"FilePath");
+          }*/
+        }
+
+        return 0;
+      }
+      default:
+        return std::nullopt;
+      }
     }
 
     auto wm_size(std::size_t type, SIZE client_size)

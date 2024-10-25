@@ -73,7 +73,8 @@ namespace siege::platform
 
       for (auto const& dir_entry : std::filesystem::directory_iterator{ search_path })
       {
-        if (dir_entry.path().extension() == ".dll" || dir_entry.path().extension() == ".DLL")
+        if ((dir_entry.path().extension() == ".dll" || dir_entry.path().extension() == ".DLL") 
+            && dir_entry.path().stem().wstring().find(L"siege-content") != std::wstring::npos)
         {
           dll_paths.insert(dir_entry.path());
         }
