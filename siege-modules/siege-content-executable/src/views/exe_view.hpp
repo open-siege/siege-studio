@@ -346,12 +346,11 @@ namespace siege::views
 
       ListView_SetView(controller_table, LV_VIEW_TILE);
       int id = 1;
-      assert(controller_table.InsertGroup(-1, LVGROUP{
-                                                .pszHeader = const_cast<wchar_t*>(L"D-Pad"),
-                                                .iGroupId = id++,
-                                                .state = LVGS_COLLAPSIBLE,
-                                              })
-             != -1);
+      controller_table.InsertGroup(-1, LVGROUP{
+                                         .pszHeader = const_cast<wchar_t*>(L"D-Pad"),
+                                         .iGroupId = id++,
+                                         .state = LVGS_COLLAPSIBLE,
+                                       });
       controller_table.InsertGroup(-1, LVGROUP{
                                          .pszHeader = const_cast<wchar_t*>(L"Face Buttons"),
                                          .iGroupId = id++,
@@ -463,18 +462,18 @@ namespace siege::views
         win32::list_view_item up(string_for_vkey(mapping.first), images[mapping.first]);
         up.iGroupId = grouping[mapping.first];
         up.lParam = MAKELPARAM(mapping.first, mapping.second);
-        
+
         up.sub_items.emplace_back(category_for_vkey(mapping.second));
         up.sub_items.emplace_back(string_for_vkey(mapping.second));
         controller_table.InsertRow(up);
       }
 
-      LVTILEVIEWINFO tileViewInfo = { 0 };
-
-      tileViewInfo.cbSize = sizeof(tileViewInfo);
-      tileViewInfo.dwMask = LVTVIM_COLUMNS;
-      tileViewInfo.dwFlags = LVTVIF_AUTOSIZE;
-      tileViewInfo.cLines = 2;
+      LVTILEVIEWINFO tileViewInfo{
+        .cbSize = sizeof(tileViewInfo),
+        .dwMask = LVTVIM_COLUMNS,
+        .dwFlags = LVTVIF_AUTOSIZE,
+        .cLines = 2
+      };
 
       ListView_SetTileViewInfo(controller_table, &tileViewInfo);
 
@@ -907,7 +906,7 @@ namespace siege::views
           ListView_SetItem(controller_table, &item);
         }
 
-        
+
         return 0;
       }
 

@@ -711,7 +711,7 @@ namespace siege::views
 
       auto index = tab_control.GetItemCount();
 
-      std::wstring title = L"Welcome to Siege Studio";
+      std::wstring title = L"Supported Games";
 
       tab_control.InsertItem(index, TCITEMW{
                                       .mask = TCIF_TEXT | TCIF_PARAM,
