@@ -80,6 +80,8 @@ namespace siege::views
 
     bool is_dark_mode = false;
 
+    std::filesystem::path initial_working_dir;
+
     siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self), tab_control(nullptr)
     {
       std::filesystem::path app_path = std::filesystem::path(win32::module_ref(params.hInstance).GetModuleFileName()).parent_path();
@@ -242,6 +244,7 @@ namespace siege::views
 
     auto wm_create()
     {
+      initial_working_dir = fs::current_path();
       win32::window_factory factory(ref());
 
       dir_list = *factory.CreateWindowExW<win32::tree_view>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE });
@@ -411,11 +414,17 @@ namespace siege::views
 
     auto wm_copy_data(win32::copy_data_message<std::byte> message)
     {
-      auto filename = GetPropW<wchar_t*>(L"FilePath");
+      auto file_path = GetPropW<wchar_t*>(L"FilePath");
 
-      if (!filename)
+      if (!file_path)
       {
         return FALSE;
+      }
+
+      if (fs::current_path() != initial_working_dir)
+      {
+        initial_working_dir = fs::current_path();
+        repopulate_tree_view(initial_working_dir);
       }
 
       siege::platform::storage_info storage{
@@ -449,11 +458,16 @@ namespace siege::views
           .lpszClass = class_name.c_str(),
         });
 
+        child->SetPropW(L"FilePath", file_path);
+
         if (child->CopyData(*this, COPYDATASTRUCT{ .cbData = DWORD(message.data.size()), .lpData = message.data.data() }))
         {
+          child->RemovePropW(L"FilePath");
           auto index = tab_control.GetItemCount();
 
-          tab_control.InsertItem(index, TCITEMW{ .mask = TCIF_TEXT | TCIF_PARAM, .pszText = filename, .lParam = win32::lparam_t(child->get()) });
+          auto filename = fs::path(file_path).filename().wstring();
+
+          tab_control.InsertItem(index, TCITEMW{ .mask = TCIF_TEXT | TCIF_PARAM, .pszText = filename.data(), .lParam = win32::lparam_t(child->get()) });
 
           SetWindowLongPtrW(*child, GWLP_ID, index + 1);
 

@@ -394,16 +394,27 @@ namespace siege::views
 
         if (root)
         {
-         /* std::array<wchar_t, 256> temp{};
+          std::array<wchar_t, 256> temp{};
 
-          auto result = ListView_GetItemText(supported_games_by_engine, message.iItem, 1, temp.data(), 256);
-          if (result)
+          ListView_GetItemText(supported_games_by_engine, message.iItem, 1, temp.data(), 256);
+          if (temp[0] != L'\0')
           {
+            fs::path file_path = temp.data();
 
-            root->SetPropW(L"FilePath", item_info.pszText);
-            root->CopyData(*this, COPYDATASTRUCT{ .cbData = DWORD(data.size()), .lpData = data.data() });
+            win32::file file_to_read(file_path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
+
+            auto mapping = file_to_read.CreateFileMapping(std::nullopt, PAGE_READONLY, 0, 0, L"");
+
+            std::size_t size = (std::size_t)file_to_read.GetFileSizeEx().value_or(LARGE_INTEGER{}).QuadPart;
+
+            auto view = mapping->MapViewOfFile(FILE_MAP_READ, size);
+
+            fs::current_path(file_path.parent_path());
+
+            root->SetPropW(L"FilePath", temp.data());
+            root->CopyData(*this, COPYDATASTRUCT{ .cbData = DWORD(size), .lpData = view.get() });
             root->RemovePropW(L"FilePath");
-          }*/
+          }
         }
 
         return 0;

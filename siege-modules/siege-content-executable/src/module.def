@@ -4,4 +4,4 @@ EXPORTS
 	get_supported_extensions_for_category
 	is_stream_supported
 	get_window_class_for_stream
-	default_file_icon
+	default_file_icon DATA

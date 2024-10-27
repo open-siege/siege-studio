@@ -18,6 +18,7 @@
 #include <siege/platform/win/desktop/shell.hpp>
 #include <siege/platform/win/desktop/window_impl.hpp>
 #include <siege/platform/win/core/com/client.hpp>
+#include <siege/platform/shared.hpp>
 #include <commctrl.h>
 
 #include "views/siege_main_window.hpp"
@@ -28,6 +29,40 @@
 extern "C" __declspec(dllexport) std::uint32_t DisableSiegeExtensionModule = -1;
 constexpr static std::wstring_view app_title = L"Siege Studio";
 
+BOOL __stdcall extract_embedded_dlls(HMODULE module,
+  LPCWSTR type,
+  LPWSTR name,
+  LONG_PTR lParam)
+{
+  std::vector<std::filesystem::path>* items = (std::vector<std::filesystem::path>*)lParam;
+
+  auto entry = ::FindResourceW(module, name, RT_RCDATA);
+
+  if (!entry)
+  {
+    return TRUE;
+  }
+
+  auto data = ::LoadResource(module, entry);
+
+  if (!data)
+  {
+    return TRUE;
+  }
+  std::filesystem::path path(name);
+
+  if (path.extension() == ".dll" || path.extension() == ".DLL")
+  {
+    auto size = ::SizeofResource(module, entry);
+    auto bytes = ::LockResource(data);
+
+    std::ofstream output(siege::platform::to_lower(path.c_str()), std::ios::trunc | std::ios::binary);
+    output.write((const char*)bytes, size);
+  }
+
+  return TRUE;
+}
+
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 {
   win32::com::init_com();
@@ -35,9 +70,11 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
   INITCOMMONCONTROLSEX settings{
     .dwSize{ sizeof(INITCOMMONCONTROLSEX) }
   };
-  InitCommonControlsEx(&settings);
+  ::InitCommonControlsEx(&settings);
 
   win32::window_module_ref this_module(hInstance);
+
+  ::EnumResourceNamesW(hInstance, RT_RCDATA, extract_embedded_dlls, 0);
 
   win32::window_meta_class<siege::views::siege_main_window> info{};
   info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
@@ -69,15 +106,15 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
     return main_window.error();
   }
 
-  ShowWindow(*main_window, nCmdShow);
-  UpdateWindow(*main_window);
+  ::ShowWindow(*main_window, nCmdShow);
+  ::UpdateWindow(*main_window);
 
   MSG msg;
 
-  while (GetMessageW(&msg, nullptr, 0, 0))
+  while (::GetMessageW(&msg, nullptr, 0, 0))
   {
-    TranslateMessage(&msg);
-    DispatchMessageW(&msg);
+    ::TranslateMessage(&msg);
+    ::DispatchMessageW(&msg);
   }
 
   return (int)msg.wParam;

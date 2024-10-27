@@ -1,11 +1,11 @@
 EXPORTS
+	default_file_icon DATA
 	get_supported_extensions
 	get_supported_format_categories
 	get_supported_extensions_for_category
 	is_stream_supported
 	get_window_class_for_stream
 	std_errc_to_hresult
-	default_file_icon
 	stream_is_resource_reader
 	create_reader_context
 	get_reader_folder_listing
