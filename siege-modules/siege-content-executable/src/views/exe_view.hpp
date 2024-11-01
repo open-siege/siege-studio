@@ -249,8 +249,9 @@ namespace siege::views
     win32::tool_bar exe_actions;
     win32::image_list image_list;
 
-    constexpr static int launch_selected_id = 10;
-    constexpr static int extract_selected_id = 11;
+    constexpr static int add_to_firewall_selected_id = 10;
+    constexpr static int launch_selected_id = 11;
+    constexpr static int extract_selected_id = 12;
 
     std::map<std::wstring_view, std::wstring_view> group_names = {
       { L"#1"sv, L"Hardware Dependent Cursor"sv },
@@ -286,6 +287,7 @@ namespace siege::views
 
       exe_actions = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
 
+      exe_actions.InsertButton(-1, { .iBitmap = 21, .idCommand = add_to_firewall_selected_id, .fsState = TBSTATE_ENABLED, .iString = (INT_PTR)L"Add to Firewall" }, false);
       exe_actions.InsertButton(-1, { .iBitmap = 0, .idCommand = launch_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Launch" }, false);
       exe_actions.InsertButton(-1, { .iBitmap = 1, .idCommand = extract_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" }, false);
       exe_actions.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
@@ -595,6 +597,7 @@ namespace siege::views
         win32::segoe_fluent_icons::bumper_right,
         win32::segoe_fluent_icons::trigger_left,// 19
         win32::segoe_fluent_icons::trigger_right,
+        win32::segoe_fluent_icons::shield,
       };
 
       image_list = win32::create_icon_list(icons, icon_size);
@@ -945,6 +948,35 @@ namespace siege::views
       switch (message.hdr.code)
       {
       case NM_CLICK: {
+
+        if (message.dwItemSpec == add_to_firewall_selected_id)
+        {
+          auto path = this->controller.get_exe_path();
+
+          std::wstring args;
+          args.reserve(256);
+
+          args.append(L"advfirewall firewall add rule dir=out enable=yes name=");
+
+          args.append(1, L'\"');
+          args.append(path.parent_path().stem());
+          args.append(1, L'\"');
+          args.append(L" action=allow program=");
+
+          args.append(1, L'\"');
+          args.append(path);
+          args.append(1, L'\"');
+
+          ::ShellExecuteW(nullptr,
+            L"runas",
+            L"netsh.exe",
+            args.c_str(),
+            nullptr,// default dir
+            SW_SHOWNORMAL);
+
+          return TRUE;
+        }
+
         if (message.dwItemSpec == extract_selected_id)
         {
           return TRUE;
