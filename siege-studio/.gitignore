@@ -1,3 +1,4 @@
 build
 .vs
 CMakeUserPresets.json
+src/extensions.rc

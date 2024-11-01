@@ -17,6 +17,6 @@ add_subdirectory(siege-content-executable)
 # the public parts of siege-launcher
 add_subdirectory(siege-configuration)
 add_subdirectory(siege-extension)
-add_subdirectory(siege-extension-darkstar)
+add_subdirectory(siege-extension-3space)
 add_subdirectory(siege-extension-id-tech)
 add_subdirectory(siege-installation)
