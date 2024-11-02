@@ -47,6 +47,52 @@ namespace siege
     return i == length ? S_OK : S_FALSE;
   }
 
+  HRESULT executable_is_supported(const wchar_t* filename, const auto& verification_strings) noexcept
+  {
+    if (filename == nullptr)
+    {
+      return E_POINTER;
+    }
+
+    if (!std::filesystem::exists(filename))
+    {
+      return E_INVALIDARG;
+    }
+
+    try
+    {
+      win32::file file(std::filesystem::path(filename), GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
+
+      auto file_size = file.GetFileSizeEx();
+      auto mapping = file.CreateFileMapping(std::nullopt, PAGE_READONLY, 0, 0, L"");
+
+      if (mapping && file_size)
+      {
+        auto view = mapping->MapViewOfFile(FILE_MAP_READ, (std::size_t)file_size->QuadPart);
+        std::string_view data((char*)view.get(), (std::size_t)file_size->QuadPart);
+
+        if (data.empty())
+        {
+          return S_FALSE;
+        }
+
+        auto is_executable = data.find("MZ") == 0 && data.find("PE") != std::string_view::npos;
+
+        bool has_all_verification_strings = is_executable && std::all_of(verification_strings.begin(), verification_strings.end(), [&](auto& item) {
+          return data.find(item) != std::string_view::npos;
+        });
+
+        return has_all_verification_strings ? S_OK : S_FALSE;
+      }
+
+      return S_FALSE;
+    }
+    catch (...)
+    {
+      return S_FALSE;
+    }
+  }
+
   HRESULT executable_is_supported(const wchar_t* filename,
     const auto& verification_strings,
     const auto& function_name_ranges,

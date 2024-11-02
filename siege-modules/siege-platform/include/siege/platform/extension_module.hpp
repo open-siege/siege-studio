@@ -120,8 +120,6 @@ namespace siege::platform
 
     game_extension_module(std::filesystem::path module_path) : base(module_path)
     {
-      // In theory, it's optional, because dlls may be injected that don't come from this project.
-      // In practice, all siege extension modules should have this.
       executable_is_supported_proc = GetProcAddress<decltype(executable_is_supported_proc)>("executable_is_supported");
       get_function_name_ranges_proc = GetProcAddress<decltype(get_function_name_ranges_proc)>("get_function_name_ranges");
       get_variable_name_ranges_proc = GetProcAddress<decltype(get_variable_name_ranges_proc)>("get_variable_name_ranges");
@@ -132,7 +130,7 @@ namespace siege::platform
       this->update_action_intensity_for_process = GetProcAddress<decltype(game_extension_module::update_action_intensity_for_process)>("update_action_intensity_for_process");
 #endif
 
-      if (!this->launch_game_with_extension)
+      if (!this->executable_is_supported_proc)
       {
         throw std::runtime_error("Could not find module functions");
       }

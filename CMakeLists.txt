@@ -35,27 +35,31 @@ foreach(CONTENT_TARGET IN ITEMS ${CONTENT_TARGETS})
 endforeach()
 
 if (WIN32)
-        get_property(ID_TECH_TARGETS
-                DIRECTORY siege-modules/siege-extension-id-tech PROPERTY BUILDSYSTEM_TARGETS)
-
-        get_property(DARKSTAR_TARGETS
-                DIRECTORY siege-modules/siege-extension-3space PROPERTY BUILDSYSTEM_TARGETS)
-
-
+        set(EXTENSION_PROJECTS siege-extension-id-tech 
+                               siege-extension-3space 
+                               siege-extension-unreal
+                               siege-extension-cry-engine
+                               siege-extension-isi-motor
+                               siege-extension-krass
+                               siege-extension-other
+                               siege-extension-real-space
+                               siege-extension-serious)
         set(EXT_TARGETS)
-        list(APPEND EXT_TARGETS ${ID_TECH_TARGETS} ${DARKSTAR_TARGETS} 
-        siege-extension-generic
-        siege-extension-input-filter-raw-input)
+
+        foreach(EXT_PROJECT IN ITEMS ${EXTENSION_PROJECTS})
+            get_property(PROJECT_TARGETS DIRECTORY siege-modules/${EXT_PROJECT} PROPERTY BUILDSYSTEM_TARGETS)
+            list(APPEND EXT_TARGETS ${PROJECT_TARGETS}) 
+        endforeach()
+
+        list(APPEND EXT_TARGETS siege-extension-generic siege-extension-input-filter-raw-input)
 
         foreach(EXT_TARGET IN ITEMS ${EXT_TARGETS})
             add_dependencies(siege-studio-dependencies ${EXT_TARGET})
             add_custom_command(TARGET siege-studio-dependencies POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${EXT_TARGET}> $<TARGET_FILE_DIR:siege-studio>)
 
-            if (WIN32)
-                add_custom_command(TARGET siege-studio-dependencies PRE_BUILD
+            add_custom_command(TARGET siege-studio-dependencies PRE_BUILD
                 COMMAND echo "$<TARGET_FILE_NAME:${EXT_TARGET}>" RCDATA "\"$<TARGET_FILE:${EXT_TARGET}>\"" >> "${CMAKE_SOURCE_DIR}/siege-studio/src/extensions.rc")
-            endif()
         endforeach()
 endif()
 

@@ -6,18 +6,18 @@ extern "C" {
 using namespace std::literals;
 
 constexpr static std::array<std::string_view, 11> verification_strings = { {
-  "GAME.DIC"sv,
+  "ui.dic"sv,
   "[FINAL_DRIVE]"sv,
   "[GEAR_RATIOS]"sv,
-  "gtrui.mnu"sv,
-  "specialfx.tec"sv,
-  "GTR_ONLINE_LOBBY"sv,
-  "GTR_ONLINE_LOGIN"sv,
-  "GTR_ONLINE_CDKEY"sv,
-  "GARAGEONLINEPAGE"sv,
-  "STEX.GTR"sv,
-  "Net.dll"sv
-} };
+  "MPLOBBY_MINI_CHAT"sv,
+  "Superleague"sv,
+  "RFACTOR_LOGO.TGA"sv,
+  "rFactor"sv,
+  "PITANIMS.MAS"sv,
+  "MONITORPAGE"sv,
+  "LOADINGSCREENPAGE"sv,
+  "Global\\Superleague_APP_MUTEX_"sv 
+}};
 
 
 HRESULT executable_is_supported(const wchar_t* filename) noexcept
