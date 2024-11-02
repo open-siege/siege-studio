@@ -72,11 +72,8 @@ HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
 
 static auto* TrueOutputDebugStringA = OutputDebugStringA;
 
-static std::ofstream mask_log("mask-detour.log", std::ios::trunc);
-
 void __stdcall WrappedTrueOutputDebugStringA(const char* message)
 {
-  //  mask_log << "Debug: " << message << std::endl;
   return TrueOutputDebugStringA(message);
 }
 

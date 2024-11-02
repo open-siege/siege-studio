@@ -5,7 +5,7 @@
 extern "C" {
 using namespace std::literals;
 
-constexpr std::array<std::string_view, 10> verification_strings = { {
+constexpr static std::array<std::string_view, 10> verification_strings = { {
   "options.dic"sv,
   "[FINAL_DRIVE]"sv,
   "[GEAR_RATIOS]"sv,
@@ -23,4 +23,7 @@ HRESULT executable_is_supported(const wchar_t* filename) noexcept
 {
   return siege::executable_is_supported(filename, verification_strings);
 }
+
+#include "dll-main.hpp"
+
 }

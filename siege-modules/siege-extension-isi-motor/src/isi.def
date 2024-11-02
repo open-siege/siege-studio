@@ -1,2 +1,3 @@
 EXPORTS
 	executable_is_supported
+	launch_game_with_extension

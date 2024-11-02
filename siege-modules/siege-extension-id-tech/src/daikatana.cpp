@@ -112,8 +112,6 @@ HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
 
-static std::ofstream hook_log("hook.log", std::ios::trunc);
-
 BOOL WINAPI DllMain(
   HINSTANCE hinstDLL,
   DWORD fdwReason,

@@ -5,6 +5,12 @@
 extern "C" {
 using namespace std::literals;
 
+// +connect IP:port
+// +connect IP:0	
+// HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers
+// Name == full path
+// value == WINXPSP3 HIGHDPIAWARE
+
 HRESULT executable_is_supported(const wchar_t* filename) noexcept
 {
   if (filename == nullptr)
@@ -27,4 +33,7 @@ HRESULT executable_is_supported(const wchar_t* filename) noexcept
 
   return S_FALSE;
 }
+
+#include "dll-main.hpp"
+
 }

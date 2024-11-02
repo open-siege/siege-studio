@@ -23,4 +23,6 @@ HRESULT executable_is_supported(const wchar_t* filename) noexcept
 {
   return siege::executable_is_supported(filename, verification_strings);
 }
+
+#include "dll-main.hpp"
 }
