@@ -1,0 +1,5 @@
+EXPORTS
+	executable_is_supported
+	launch_game_with_extension
+	apply_prelaunch_settings
+	format_command_line

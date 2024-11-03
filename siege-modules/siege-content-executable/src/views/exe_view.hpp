@@ -1002,9 +1002,13 @@ namespace siege::views
               }
             }
 
+            // TODO make a UI for setting the IP address
             input_injector_args args{
               .exe_path = controller.get_exe_path(),
               .extension_path = controller.get_extension().GetModuleFileName(),
+              .args = siege::platform::game_command_line_args{
+            //    .connect_ip_address{ "127.0.0.1" } 
+                },
               .controller_key_mappings = std::move(input_mapping),
               .extension = &controller.get_extension()
             };
