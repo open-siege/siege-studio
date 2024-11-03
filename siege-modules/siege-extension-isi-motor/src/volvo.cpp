@@ -23,6 +23,10 @@ HRESULT executable_is_supported(const wchar_t* filename) noexcept
 {
   return siege::executable_is_supported(filename, verification_strings);
 }
-#include "dll-main.hpp"
+
+HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, const siege::platform::game_command_line_args* args)
+{
+  return S_OK;
+}
 
 }

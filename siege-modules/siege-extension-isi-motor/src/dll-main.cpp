@@ -1,5 +1,22 @@
-#ifndef ISI_DLL_MAIN
-#define ISI_DLL_MAIN
+#include <siege/platform/win/desktop/window_module.hpp>
+#include <detours.h>
+
+extern "C"
+{
+
+static auto* TrueSetProcessAffinityMask = ::SetProcessAffinityMask;
+
+BOOL WrappedSetProcessAffinityMask(
+  HANDLE hProcess,
+  DWORD_PTR dwProcessAffinityMask)
+{
+  if (dwProcessAffinityMask == 1)
+  {
+    return TRUE;
+  }
+
+  return TrueSetProcessAffinityMask(hProcess, dwProcessAffinityMask);
+}
 
 static std::array<std::pair<void**, void*>, 1> detour_functions{ {
   { &(void*&)TrueSetProcessAffinityMask, WrappedSetProcessAffinityMask },
@@ -65,5 +82,4 @@ BOOL WINAPI DllMain(
 
   return TRUE;
 }
-
-#endif
+}

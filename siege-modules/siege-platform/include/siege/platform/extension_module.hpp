@@ -92,8 +92,7 @@ namespace siege::platform
 #if WIN32
   using bind_virtual_key_to_action_for_process = HRESULT(DWORD process_id, controller_binding* inputs, std::size_t inputs_size);
   using update_action_intensity_for_process = HRESULT(DWORD process_id, DWORD thread_id, const char* action, float intensity);
-  using flatten_game_command_line_args = HRESULT(game_command_line_args*, std::uint32_t argc, const wchar_t** argv, std::uint32_t*) noexcept;
-  using launch_game_with_extension = HRESULT(const wchar_t* exe_path_str, std::uint32_t argc, const wchar_t** argv, PROCESS_INFORMATION*) noexcept;
+  using launch_game_with_extension = HRESULT(const wchar_t* exe_path_str, const game_command_line_args*, PROCESS_INFORMATION*) noexcept;
 #endif
 
   // TODO Port this code to linux using a "platform::module" instead of a "win32::module"

@@ -32,20 +32,10 @@ HRESULT executable_is_supported(const wchar_t* filename) noexcept
   return siege::executable_is_supported(filename, verification_strings);
 }
 
-static auto* TrueSetProcessAffinityMask = ::SetProcessAffinityMask;
-
-BOOL WrappedSetProcessAffinityMask(
-  HANDLE hProcess,
-  DWORD_PTR dwProcessAffinityMask)
+HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, const siege::platform::game_command_line_args* args)
 {
-  if (dwProcessAffinityMask == 1)
-  {
-    return TRUE;
-  }
-
-  return TrueSetProcessAffinityMask(hProcess, dwProcessAffinityMask);
+  return S_OK;
 }
 
-#include "dll-main.hpp"
 
 }

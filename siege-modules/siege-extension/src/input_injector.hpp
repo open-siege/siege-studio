@@ -27,7 +27,7 @@ namespace siege
 
     std::filesystem::path exe_path;
     std::filesystem::path extension_path;
-    std::vector<std::wstring> command_line_args;
+    siege::platform::game_command_line_args args;
     std::wstring script_host;
     mode input_mode = bind_input;
     std::map<WORD, WORD> controller_key_mappings;
@@ -194,12 +194,7 @@ namespace siege
       {
         siege::platform::game_extension_module extension(injector_args.extension_path);
 
-        std::vector<const wchar_t*> args(injector_args.command_line_args.size(), nullptr);
-        std::transform(injector_args.command_line_args.begin(), injector_args.command_line_args.end(), args.begin(), [](auto& arg) {
-          return arg.c_str();
-        });
-
-        if (extension.launch_game_with_extension(injector_args.exe_path.c_str(), args.size(), args.data(), &child_process) == S_OK && child_process.hProcess)
+        if (extension.launch_game_with_extension(injector_args.exe_path.c_str(), &injector_args.args, &child_process) == S_OK && child_process.hProcess)
         {
           auto& state = siege::get_active_input_state();
 

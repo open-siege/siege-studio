@@ -1,17 +1,15 @@
 #include <siege/platform/win/desktop/window_module.hpp>
 #include <detours.h>
+#include <filesystem>
+#include <fstream>
 #include "shared.hpp"
 
 
 extern "C" {
 using namespace std::literals;
-
+namespace fs = std::filesystem;
 // +connect IP:port
-// +connect IP:0	
-//TG2001.DYN
-//HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers
-// Name == full path
-// value == WINXPSP3 HIGHDPIAWARE
+// +connect IP:0
 
 constexpr static std::array<std::string_view, 11> verification_strings = { {
   "GAME.DIC"sv,
@@ -33,5 +31,27 @@ HRESULT executable_is_supported(const wchar_t* filename) noexcept
   return siege::executable_is_supported(filename, verification_strings);
 }
 
-#include "dll-main.hpp"
+HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, const siege::platform::game_command_line_args* args)
+{
+  if (exe_path_str == nullptr)
+  {
+    return E_POINTER;
+  }
+
+  if (args == nullptr)
+  {
+    return E_POINTER;
+  }
+
+  auto exe_path = fs::path(exe_path_str);
+
+  auto parent_path = exe_path.parent_path();
+
+  if (!fs::exists(parent_path / "TG2001.DYN"))
+  {
+    std::ofstream temp(parent_path / "TG2001.DYN", std::ios::trunc);
+  }
+
+  return S_OK;
+}
 }

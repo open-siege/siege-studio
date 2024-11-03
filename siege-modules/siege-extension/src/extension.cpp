@@ -6,10 +6,13 @@
 extern "C" {
 
 extern bool allow_input_filtering = true;
-    
+
 HRESULT executable_is_supported(const wchar_t* filename) noexcept;
 
-HRESULT launch_game_without_extension(const wchar_t* exe_path_str, std::uint32_t argc, const wchar_t** argv, PROCESS_INFORMATION* process_info) noexcept
+using apply_prelaunch_settings = HRESULT(const wchar_t* exe_path_str, const siege::platform::game_command_line_args*);
+using format_command_line = const wchar_t**(const siege::platform::game_command_line_args*, std::uint32_t* new_size);
+
+HRESULT launch_game_with_extension(const wchar_t* exe_path_str, const siege::platform::game_command_line_args* game_args, PROCESS_INFORMATION* process_info) noexcept
 {
   if (!exe_path_str)
   {
@@ -23,7 +26,7 @@ HRESULT launch_game_without_extension(const wchar_t* exe_path_str, std::uint32_t
     return E_INVALIDARG;
   }
 
-  if (argc > 0 && !argv)
+  if (!game_args)
   {
     return E_POINTER;
   }
@@ -32,8 +35,8 @@ HRESULT launch_game_without_extension(const wchar_t* exe_path_str, std::uint32_t
   {
     return E_POINTER;
   }
-
-  std::string extension_path = win32::module_ref::current_module().GetModuleFileName<char>();
+  auto module_ref = win32::module_ref::current_module();
+  std::string extension_path = module_ref.GetModuleFileName<char>();
 
   try
   {
@@ -48,88 +51,27 @@ HRESULT launch_game_without_extension(const wchar_t* exe_path_str, std::uint32_t
   {
   }
 
-  std::wstring args;
-  args.reserve(argc + 3 * sizeof(std::wstring) + 3);
+  auto* apply_prelaunch_settings_func = module_ref.GetProcAddress<std::add_pointer_t<apply_prelaunch_settings>>("apply_prelaunch_settings");
 
-
-  args.append(1, L'"');
-  args.append(exe_path.wstring());
-  args.append(1, L'"');
-
-  if (argv && argc > 0)
+  if (apply_prelaunch_settings_func)
   {
-    args.append(1, L' ');
-    for (auto i = 0u; i < argc; ++i)
+    if (apply_prelaunch_settings_func(exe_path.c_str(), game_args) != S_OK)
     {
-      args.append(argv[i]);
-
-      if (i < (argc - 1))
-      {
-        args.append(1, L' ');
-      }
+      return E_ABORT;
     }
   }
 
-  STARTUPINFOW startup_info{ .cb = sizeof(STARTUPINFOW) };
+  auto* format_command_line_func = module_ref.GetProcAddress<std::add_pointer_t<format_command_line>>("format_command_line");
 
-  if (::CreateProcessW(exe_path.c_str(),
-        args.data(),
-        nullptr,
-        nullptr,
-        FALSE,
-        DETACHED_PROCESS,
-        nullptr,
-        exe_path.parent_path().c_str(),
-        &startup_info,
-        process_info))
+  const wchar_t** argv = nullptr;
+  std::uint32_t argc = 0;
+
+
+  if (format_command_line_func)
   {
-    ::Sleep(1000);
-    ::SetProcessAffinityMask(process_info->hProcess, 1 << 16);
-    return S_OK;
+    argv = format_command_line_func(game_args, &argc);
   }
 
-  auto last_error = ::GetLastError();
-  return HRESULT_FROM_WIN32(last_error);
-}
-
-HRESULT launch_game_with_extension(const wchar_t* exe_path_str, std::uint32_t argc, const wchar_t** argv, PROCESS_INFORMATION* process_info) noexcept
-{
-  if (!exe_path_str)
-  {
-    return E_POINTER;
-  }
-
-  std::filesystem::path exe_path(exe_path_str);
-
-  if (!std::filesystem::exists(exe_path))
-  {
-    return E_INVALIDARG;
-  }
-
-  if (argc > 0 && !argv)
-  {
-    return E_POINTER;
-  }
-
-  if (!process_info)
-  {
-    return E_POINTER;
-  }
-
-  std::string extension_path = win32::module_ref::current_module().GetModuleFileName<char>();
-
-  try
-  {
-    auto exe_is_supported = executable_is_supported(exe_path.c_str());
-
-    if (exe_is_supported != S_OK)
-    {
-      return E_INVALIDARG;
-    }
-  }
-  catch (...)
-  {
-  }
 
   std::wstring args;
   args.reserve(argc + 3 * sizeof(std::wstring) + 3);
@@ -161,7 +103,7 @@ HRESULT launch_game_with_extension(const wchar_t* exe_path_str, std::uint32_t ar
 
   if (allow_input_filtering)
   {
-    dll_paths.emplace_back(hook_path.c_str());  
+    dll_paths.emplace_back(hook_path.c_str());
   }
 
   dll_paths.emplace_back(extension_path.c_str());
