@@ -62,7 +62,9 @@ namespace siege::views
     { L"iW Engine 1.0"sv, L"id_tech-3.0-iw"sv, L"id_tech-3.0"sv },
     { L"iW Engine 2.0"sv, L"iw-2.0"sv, std::nullopt },
     { L"iW Engine 3.0"sv, L"iw-3.0"sv, L"iw-2.0"sv },
-    { L"isiMotor 2"sv, L"isi-2.0"sv },
+    { L"isiMotor 1.0"sv, L"isi-1.0"sv },
+    { L"isiMotor 1.5"sv, L"isi-1.0"sv },
+    { L"isiMotor 2.0"sv, L"isi-2.0"sv }
   } };
 
   struct game_info
@@ -73,7 +75,7 @@ namespace siege::views
     std::array<std::wstring_view, 8> supported_file_formats;
   };
 
-  constexpr static auto games = std::array<game_info, 117>{ {
+  constexpr static auto games = std::array<game_info, 127>{ {
     { L"Red Baron"sv, L"3space"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".rmf"sv } } },
     { L"A-10 Tank Killer 1.5"sv, L"3space-1.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".rmf"sv } } },
     { L"Nova 9: The Return Gir Draxon"sv, L"3space-1.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".rmf"sv } } },
@@ -181,6 +183,16 @@ namespace siege::views
     { L"Dark Salvation"sv, L"id_tech-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3" } } },
     { L"Quake Live"sv, L"id_tech-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3" } } },
     { L"Space Trader: Merchant Marine"sv, L"id_tech-3.0"sv, L"siege-extension-space-trader"sv, std::array<std::wstring_view, 8>{ { L".pk3" } } },
+    { L"Zone Raiders"sv, L"isi-1.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".plr" } } },
+    { L"Sports Car GT"sv, L"isi-1.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".plr" } } },
+    { L"F1 2000"sv, L"isi-1.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".plr" } } },
+    { L"F1 Championship Season 2000"sv, L"isi-1.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".plr" } } },
+    { L"F1 2001"sv, L"isi-1.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".plr" } } },
+    { L"F1 2002"sv, L"isi-1.5"sv, L"siege-extension-f1-2002", std::array<std::wstring_view, 8>{ { L".plr" } } },
+    { L"F1 Career Challenge"sv, L"isi-1.5"sv, L"siege-extension-f1-career-challenge", std::array<std::wstring_view, 8>{ { L".plr" } } },
+    { L"NASCAR Thunder 2003"sv, L"isi-1.5"sv, L"siege-extension-nascar-thunder-2003", std::array<std::wstring_view, 8>{ { L".plr" } } },
+    { L"NASCAR Thunder 2004"sv, L"isi-1.5"sv, L"siege-extension-nascar-thunder-2003", std::array<std::wstring_view, 8>{ { L".plr" } } },
+    { L"NASCAR SimRacing"sv, L"isi-1.5"sv, L"siege-extension-nascar-sim-racing", std::array<std::wstring_view, 8>{ { L".plr" } } },
     { L"GTR - FIA GT Racing Game"sv, L"isi-2.0"sv, L"siege-extension-gtr-fia"sv, std::array<std::wstring_view, 8>{ { L".plr" } } },
     { L"rFactor"sv, L"isi-2.0"sv, L"siege-extension-rfactor"sv, std::array<std::wstring_view, 8>{ { L".plr" } } },
     { L"GT Legends"sv, L"isi-2.0"sv, L"siege-extension-gt-legends"sv, std::array<std::wstring_view, 8>{ { L".plr" } } },
@@ -191,6 +203,9 @@ namespace siege::views
     { L"Lexus ISF Track Time"sv, L"isi-2.0"sv, L"siege-extension-lexus"sv, std::array<std::wstring_view, 8>{ { L".plr" } } },
     { L"Volvo - The Game"sv, L"isi-2.0"sv, L"siege-extension-volvo"sv, std::array<std::wstring_view, 8>{ { L".plr" } } },
     { L"Superleague Formula 2009: The Game"sv, L"isi-2.0"sv, L"siege-extension-superleague"sv, std::array<std::wstring_view, 8>{ { L".plr" } } },
+    { L"Stock Car Extreme"sv, L"isi-2.0"sv, L"siege-extension-stock-car-extreme"sv, std::array<std::wstring_view, 8>{ { L".plr" } } },
+    { L"Copa Petrobras de Marcas"sv, L"isi-2.0"sv, L"siege-extension-marcas"sv, std::array<std::wstring_view, 8>{ { L".plr" } } },
+    { L"Automobilista"sv, L"isi-2.0"sv, L"siege-extension-automobilista"sv, std::array<std::wstring_view, 8>{ { L".plr" } } },
   } };
 
   struct default_view final : win32::window_ref
