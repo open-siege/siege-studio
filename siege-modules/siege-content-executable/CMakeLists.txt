@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.28)
 project(siege-content-executable)
 
 file(GLOB_RECURSE SRC_FILES
@@ -12,7 +12,7 @@ else()
     target_link_libraries(${PROJECT_NAME} PRIVATE siege-platform)
 endif()
 
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23 POSITION_INDEPENDENT_CODE ON)
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23 POSITION_INDEPENDENT_CODE ON CMAKE_CXX_SCAN_FOR_MODULES ON)
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/include)
 
 

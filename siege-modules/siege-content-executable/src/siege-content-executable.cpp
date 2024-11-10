@@ -2,11 +2,17 @@
 #include <filesystem>
 #include <memory>
 #include <system_error>
+#include <algorithm>
 #include <siege/platform/win/desktop/window_impl.hpp>
 #include <siege/platform/win/desktop/window_module.hpp>
 #include <siege/platform/win/core/hresult.hpp>
 #include <siege/platform/stream.hpp>
-#include "views/exe_view.hpp"
+#include <siege/platform/shared.hpp>
+
+export module siege_views;
+
+import :exe_view;
+import :exe_controller;
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;

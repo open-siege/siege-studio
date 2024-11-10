@@ -11,7 +11,7 @@ class LocalConanFile(ConanFile):
     url = "https://github.com/open-siege/open-siege"
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
-    build_requires = "cmake/3.26.4"
+    build_requires = "cmake/3.29.3"
     settings = "os", "compiler", "build_type", "arch"
     # openssl is here to force package resolution issue with cmake on linux
     requires = "glm/cci.20230113", "taocpp-pegtl/3.2.7", "libzip/1.9.2", "catch2/3.5.2"

@@ -1,13 +1,13 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.28)
 project(siege-extension-darkstar)
 
 if (WIN32)
     add_library(siege-extension-starsiege SHARED src/starsiege.cpp src/darkstar.def)
-    set_target_properties(siege-extension-starsiege PROPERTIES VS_PLATFORM_TOOLSET ClangCL CXX_STANDARD 23)
+    set_target_properties(siege-extension-starsiege PROPERTIES VS_PLATFORM_TOOLSET ClangCL CXX_STANDARD 23 CXX_SCAN_FOR_MODULES OFF)
     target_link_libraries(siege-extension-starsiege PRIVATE siege-extension)
 
     add_library(siege-extension-tribes SHARED src/tribes.cpp src/darkstar.def)
-    set_target_properties(siege-extension-tribes PROPERTIES VS_PLATFORM_TOOLSET ClangCL CXX_STANDARD 23)
+    set_target_properties(siege-extension-tribes PROPERTIES VS_PLATFORM_TOOLSET ClangCL CXX_STANDARD 23 CXX_SCAN_FOR_MODULES OFF)
     target_link_libraries(siege-extension-tribes PRIVATE siege-extension)
 
     add_library(siege-extension-mask-of-eternity SHARED src/moe.cpp src/darkstar.def)

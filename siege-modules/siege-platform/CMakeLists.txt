@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.28)
 project(siege-platform)
 
 add_library(siege-std STATIC src/std.cpp src/bitmap.cpp src/palette.cpp src/image.cpp)

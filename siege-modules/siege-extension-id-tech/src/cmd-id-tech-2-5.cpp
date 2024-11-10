@@ -21,7 +21,6 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
   }
 
   static std::vector<std::wstring> string_args;
-  static std::vector<const wchar_t*> raw_args;
   string_args.clear();
 
   auto ip_address_iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [&](auto& arg) {
@@ -31,10 +30,7 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
   if (ip_address_iter != args->string_settings.end())
   {
     string_args.emplace_back(L"+connect");
-    std::wstring temp = ip_address_iter->value;
-    temp.append(1, ':');
-    temp.append(L"0");
-    string_args.emplace_back(std::move(temp));
+    string_args.emplace_back(ip_address_iter->value);
   }
 
   if (string_args.empty())
@@ -42,11 +38,7 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
     return nullptr;
   }
 
-  if (string_args.empty())
-  {
-    return nullptr;
-  }
-
+  static std::vector<const wchar_t*> raw_args;
   raw_args.resize(string_args.size());
   *new_size = (std::uint32_t)string_args.size();
 

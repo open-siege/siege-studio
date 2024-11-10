@@ -39,47 +39,36 @@ namespace siege::platform
 
   struct game_command_line_caps
   {
-    bool supports_ip_connect = false;
-    bool supports_ip_host = false;
-    bool supports_custom_mod_folder = false;
-    bool supports_custom_configurations = false;
-    std::array<const char*, 32> flags;
-    std::array<const char*, 32> int_settings;
-    std::array<const char*, 32> float_settings;
-    std::array<const char*, 32> string_settings;
+    const fs_char* ip_connect_setting = FSL "";
+    const fs_char* player_name_setting = FSL"";
+    std::array<const fs_char*, 32> flags;
+    std::array<const fs_char*, 32> int_settings;
+    std::array<const fs_char*, 32> float_settings;
+    std::array<const fs_char*, 32> string_settings;
   };
 
   struct game_command_line_args
   {
-    struct ip_address
-    {
-      std::array<char, 64> ip_address;
-      std::uint32_t port_number;
-    } connect_ip_address;
-
-    ip_address host_ip_address;
-    std::array<char, 64> mod_folder;
-    std::array<const char*, 8> configurations;
-    std::array<const char*, 32> flags;
+    std::array<const fs_char*, 32> flags;
 
     struct int_setting
     {
-      const char* name;
+      const fs_char* name;
       int value;
     };
     std::array<int_setting, 32> int_settings;
 
     struct float_setting
     {
-      const char* name;
+      const fs_char* name;
       float value;
     };
     std::array<float_setting, 32> float_settings;
 
     struct string_setting
     {
-      const char* name;
-      float value;
+      const fs_char* name;
+      const fs_char* value;
     };
     std::array<string_setting, 32> string_settings;
   };
@@ -102,6 +91,7 @@ namespace siege::platform
     executable_is_supported* executable_is_supported_proc = nullptr;
     get_function_name_ranges* get_function_name_ranges_proc = nullptr;
     get_variable_name_ranges* get_variable_name_ranges_proc = nullptr;
+
     std::span<game_action> game_actions;
     std::span<const wchar_t*> controller_input_backends;
     std::span<const wchar_t*> keyboard_input_backends;
@@ -112,6 +102,7 @@ namespace siege::platform
     std::span<const wchar_t*> profile_configuration_paths;
 
   public:
+    game_command_line_caps* caps = nullptr;
 #if WIN32
     launch_game_with_extension* launch_game_with_extension = nullptr;
     update_action_intensity_for_process* update_action_intensity_for_process = nullptr;
@@ -178,6 +169,8 @@ namespace siege::platform
 
         this->game_actions = std::span(actions, size);
       }
+
+      this->caps = GetProcAddress<game_command_line_caps*>("command_line_caps");
     }
 
     std::vector<std::pair<std::string, std::string>> get_function_name_ranges()
@@ -250,7 +243,7 @@ namespace siege::platform
 
       for (auto const& dir_entry : std::filesystem::directory_iterator{ search_path })
       {
-        if ((dir_entry.path().extension() == ".dll" || dir_entry.path().extension() == ".DLL") 
+        if ((dir_entry.path().extension() == ".dll" || dir_entry.path().extension() == ".DLL")
             && dir_entry.path().stem().wstring().find(L"siege-extension") != std::wstring::npos)
         {
           dll_paths.insert(dir_entry.path());

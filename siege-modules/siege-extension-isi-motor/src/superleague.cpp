@@ -5,6 +5,13 @@
 extern "C" {
 using namespace std::literals;
 
+using game_command_line_caps = siege::platform::game_command_line_caps;
+
+extern auto command_line_caps = game_command_line_caps{
+  .ip_connect_setting = L"+connect",
+  .string_settings = { { L"+connect" } }
+};
+
 // +connect IP:port
 // +connect IP:0
 

@@ -1,9 +1,9 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.28)
 project(siege-extension-isi-motor)
 
 if (WIN32)
     set(ISI_WITH_CMD_FILES src/cmd.cpp src/dll-main.cpp src/isi-with-cmd.def)
-    set(ISI_WITHOUT_CMD_FILES src/cmd.cpp src/dll-main.cpp src/isi-without-cmd.def)
+    set(ISI_WITHOUT_CMD_FILES src/dll-main.cpp src/isi-without-cmd.def)
 
     add_library(siege-extension-gt-legends SHARED src/gt-legends.cpp ${ISI_WITH_CMD_FILES})
     add_library(siege-extension-gtr-fia SHARED src/gtr-fia.cpp ${ISI_WITH_CMD_FILES})

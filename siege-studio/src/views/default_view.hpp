@@ -38,33 +38,33 @@ namespace siege::views
     std::optional<std::wstring_view> variant_of_engine_id;
   };
 
-  constexpr static auto engines = std::array<engine_info, 24>{ {
-    { L"Unknown engine"sv, L"unknown"sv, std::nullopt },
-    { L"Dynamix Game Development System"sv, L"dgds"sv, std::nullopt },
-    { L"3Space 1.0"sv, L"3space-1.0"sv, std::nullopt },
-    { L"3Space 1.5"sv, L"3space-1.5"sv, L"3space-1.0"sv },
-    { L"3Space 2.0"sv, L"3space-2.0"sv, L"3space-1.5"sv },
-    { L"3Space 2.5"sv, L"3space-2.5"sv, L"3space-2.0"sv },
-    { L"3Space 3.0"sv, L"3space-3.0"sv, L"3space-2.5"sv },
-    { L"Darkstar"sv, L"darkstar"sv, L"3space-3.0"sv },
-    { L"Torque"sv, L"torque"sv, L"darkstar"sv },
-    { L"Vampire"sv, L"vampire"sv, std::nullopt },
-    { L"Wolfenstein 3D engine"sv, L"id_tech-0.5"sv, std::nullopt },
-    { L"Shadowcaster engine"sv, L"id_tech-0.5-raven"sv, L"id_tech-0.5"sv },
-    { L"id Tech 1.0"sv, L"id_tech-1.0"sv, L"id_tech-raven"sv },
-    { L"Quake engine"sv, L"id_tech-2.0"sv, std::nullopt },
-    { L"Quake 2 engine"sv, L"id_tech-2.5"sv, L"id_tech-2.0"sv },
-    { L"Quake 2 engine (Raven branch)"sv, L"id_tech-2.5-raven"sv, L"id_tech-2.5"sv },
-    { L"Quake 2 engine (Ritual branch)"sv, L"id_tech-2.5-ritual"sv, L"id_tech-2.5"sv },
-    { L"id Tech 3.0"sv, L"id_tech-3.0"sv, L"id_tech-2.5"sv },
-    { L"id Tech 3.0 (with Ubertools) (Ritual branch)"sv, L"id_tech-3.0-ritual"sv, L"id_tech-3.0"sv },
+  constexpr static auto engines = std::array<engine_info, 26>{ {
     { L"id Tech 3.0 (Raven Branch)"sv, L"id_tech-3.0-raven"sv, L"id_tech-3.0"sv },
-    { L"iW Engine 1.0"sv, L"id_tech-3.0-iw"sv, L"id_tech-3.0"sv },
-    { L"iW Engine 2.0"sv, L"iw-2.0"sv, std::nullopt },
-    { L"iW Engine 3.0"sv, L"iw-3.0"sv, L"iw-2.0"sv },
-    { L"isiMotor 1.0"sv, L"isi-1.0"sv },
+    { L"id Tech 2.5 (Raven branch)"sv, L"id_tech-2.5-raven"sv, L"id_tech-2.5"sv },
+    { L"isiMotor 2.0"sv, L"isi-2.0"sv },
+    { L"Torque"sv, L"torque"sv, L"darkstar"sv },
+    { L"Darkstar"sv, L"darkstar"sv, L"3space-3.0"sv },
+    { L"3Space 3.0"sv, L"3space-3.0"sv, L"3space-2.5"sv },
+    { L"3Space 2.5"sv, L"3space-2.5"sv, L"3space-2.0"sv },
+    { L"3Space 2.0"sv, L"3space-2.0"sv, L"3space-1.5"sv },
+    { L"3Space 1.5"sv, L"3space-1.5"sv, L"3space-1.0"sv },
+    { L"3Space 1.0"sv, L"3space-1.0"sv, std::nullopt },
+    { L"Dynamix Game Development System"sv, L"dgds"sv, std::nullopt },
     { L"isiMotor 1.5"sv, L"isi-1.0"sv },
-    { L"isiMotor 2.0"sv, L"isi-2.0"sv }
+    { L"isiMotor 1.0"sv, L"isi-1.0"sv },
+    { L"iW Engine 3.0"sv, L"iw-3.0"sv, L"iw-2.0"sv },
+    { L"iW Engine 2.0"sv, L"iw-2.0"sv, std::nullopt },
+    { L"iW Engine 1.0"sv, L"id_tech-3.0-iw"sv, L"id_tech-3.0"sv },
+    { L"id Tech 3.0 (with Ubertools) (Ritual branch)"sv, L"id_tech-3.0-ritual"sv, L"id_tech-3.0"sv },
+    { L"id Tech 3.0"sv, L"id_tech-3.0"sv, L"id_tech-2.5"sv },
+    { L"id Tech 2.5 (Ritual branch)"sv, L"id_tech-2.5-ritual"sv, L"id_tech-2.5"sv },
+    { L"id Tech 2.5"sv, L"id_tech-2.5"sv, L"id_tech-2.0"sv },
+    { L"id Tech 2.0"sv, L"id_tech-2.0"sv, std::nullopt },
+    { L"Vampire"sv, L"vampire"sv, std::nullopt },
+    { L"id Tech 1.0"sv, L"id_tech-1.0"sv, L"id_tech-raven"sv },
+    { L"Shadowcaster engine"sv, L"id_tech-0.5-raven"sv, L"id_tech-0.5"sv },
+    { L"Wolfenstein 3D engine"sv, L"id_tech-0.5"sv, std::nullopt },
+    { L"Unknown engine"sv, L"unknown"sv, std::nullopt },
   } };
 
   struct game_info
@@ -75,7 +75,7 @@ namespace siege::views
     std::array<std::wstring_view, 8> supported_file_formats;
   };
 
-  constexpr static auto games = std::array<game_info, 127>{ {
+  constexpr static auto games = std::array<game_info, 130>{ {
     { L"Red Baron"sv, L"3space"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".rmf"sv } } },
     { L"A-10 Tank Killer 1.5"sv, L"3space-1.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".rmf"sv } } },
     { L"Nova 9: The Return Gir Draxon"sv, L"3space-1.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".rmf"sv } } },
@@ -128,7 +128,7 @@ namespace siege::views
     { L"3-D Ultra Lionel Train Town"sv, L"unknown"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".tbv" } } },
     { L"3-D Ultra Pinball: Thrillride"sv, L"unknown"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".tbv" } } },
     { L"3-D Ultra Lionel Train Town Deluxe"sv, L"unknown"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".tbv" } } },
-    { L"Maximum Pool"sv, L"darkstar"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".tbv" } } },
+    { L"Maximum Pool"sv, L"unknown"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".tbv" } } },
     { L"Return of the Incredible Machine: Contraptions"sv, L"unknown"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".tbv" } } },
     { L"The Incredible Machine: Even More Contraptions"sv, L"unknown"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".tbv" } } },
     { L"Minigolf Maniacs"sv, L"unknown"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv } } },
@@ -432,6 +432,11 @@ namespace siege::views
           if (temp[0] != L'\0')
           {
             fs::path file_path = temp.data();
+
+            if (!fs::exists(file_path))
+            {
+              return 0;
+            }
 
             win32::file file_to_read(file_path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
 

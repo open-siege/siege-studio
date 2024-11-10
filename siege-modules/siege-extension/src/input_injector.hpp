@@ -40,7 +40,7 @@ namespace siege
     up
   };
 
-  ::INPUT vk_to_input(WORD key, std::uint32_t device_id, input_state state, std::optional<WORD> intensity = std::nullopt)
+  inline ::INPUT vk_to_input(WORD key, std::uint32_t device_id, input_state state, std::optional<WORD> intensity = std::nullopt)
   {
     ::INPUT result{};
 

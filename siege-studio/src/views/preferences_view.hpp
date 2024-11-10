@@ -412,7 +412,7 @@ namespace siege::views
 
     std::wstring temp_text = std::wstring(255, L'\0');
 
-    virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMITEMACTIVATE& notice)
+    std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMITEMACTIVATE& notice) override
     {
       POINT point;
 

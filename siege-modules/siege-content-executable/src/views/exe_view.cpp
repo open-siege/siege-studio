@@ -1,239 +1,24 @@
-﻿#ifndef PAL_VIEW_HPP
-#define PAL_VIEW_HPP
-
-#include <string_view>
-#include <istream>
-#include <map>
-#include <spanstream>
+﻿#include <spanstream>
 #include <siege/platform/win/desktop/common_controls.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include <siege/platform/win/desktop/theming.hpp>
 #include <siege/platform/win/desktop/dialog.hpp>
-#include "exe_controller.hpp"
 #include "input-filter.hpp"
 #include "input_injector.hpp"
+
+export module siege_views:exe_view;
+
+import :exe_controller;
 
 namespace siege::views
 {
   using namespace std::literals;
 
-  std::wstring category_for_vkey(SHORT vkey)
-  {
-    if (vkey >= VK_LBUTTON && vkey <= VK_XBUTTON2)
-    {
-      return L"Mouse";
-    }
+  std::wstring string_for_vkey(SHORT vkey);
+  std::wstring category_for_vkey(SHORT vkey);
 
-    // not real vkeys
-    if (vkey >= WM_MOUSEMOVE && vkey <= WM_MOUSEMOVE + 4)
-    {
-      return L"Mouse";
-    }
-
-    // not real vkeys
-    if (vkey >= WM_MOUSEWHEEL && vkey <= WM_MOUSEWHEEL + 1)
-    {
-      return L"Mouse";
-    }
-
-    // not real vkeys
-    if (vkey >= WM_MOUSEHWHEEL && vkey <= WM_MOUSEHWHEEL + 1)
-    {
-      return L"Mouse";
-    }
-
-    if (vkey >= VK_GAMEPAD_A && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)
-    {
-      return L"Controller";
-    }
-
-    return L"Keyboard";
-  }
-
-  std::wstring string_for_vkey(SHORT vkey)
-  {
-    constexpr static auto directions = std::array<std::wstring_view, 4>{
-      {
-        std::wstring_view(L"Up"),
-        std::wstring_view(L"Down"),
-        std::wstring_view(L"Left"),
-        std::wstring_view(L"Right"),
-      }
-    };
-
-    // not real vkeys
-    if (vkey >= WM_MOUSEMOVE && vkey <= WM_MOUSEMOVE + 4)
-    {
-      std::wstring result(L"Move ");
-      result.append(directions[vkey - WM_MOUSEMOVE]);
-      return result;
-    }
-
-    // not real vkeys
-    if (vkey >= WM_MOUSEWHEEL && vkey <= WM_MOUSEWHEEL + 1)
-    {
-      std::wstring result(L"Scroll ");
-
-      result.append(directions[vkey - WM_MOUSEWHEEL]);
-      return result;
-    }
-
-    // not real vkeys
-    if (vkey >= WM_MOUSEHWHEEL && vkey <= WM_MOUSEHWHEEL + 1)
-    {
-      std::wstring result(L"Scroll ");
-
-      result.append(directions[vkey - WM_MOUSEHWHEEL + 2]);
-      return result;
-    }
-
-    if (vkey >= VK_NUMPAD0 && vkey <= VK_NUMPAD9)
-    {
-      std::wstring result(L"Numpad ");
-      result.push_back(L'0' + vkey - VK_NUMPAD0);
-      return result;
-    }
-
-    if (vkey >= VK_F1 && vkey <= VK_F9)
-    {
-      std::wstring result(1, 'F');
-      result.push_back(L'1' + vkey - VK_F1);
-      return result;
-    }
-
-    if (vkey >= VK_F10 && vkey <= VK_F19)
-    {
-      std::wstring result(1, 'F');
-      result.push_back(L'1');
-      result.push_back(L'0' + vkey - VK_F10);
-      return result;
-    }
-
-    if (vkey >= VK_F20 && vkey <= VK_F24)
-    {
-      std::wstring result(1, 'F');
-      result.push_back(L'2');
-      result.push_back(L'0' + vkey - VK_F20);
-      return result;
-    }
-
-    switch (vkey)
-    {
-    case VK_LBUTTON:
-      return L"Left Button";
-    case VK_RBUTTON:
-      return L"Right Button";
-    case VK_MBUTTON:
-      return L"Middle Button";
-    case VK_XBUTTON1:
-      return L"Extra Button 1";
-    case VK_XBUTTON2:
-      return L"Extra Button 2";
-    case VK_TAB:
-      return L"Tab";
-    case VK_LCONTROL:
-      return L"Left Control";
-    case VK_RCONTROL:
-      return L"Right Control";
-    case VK_LMENU:
-      return L"Left Alt";
-    case VK_RMENU:
-      return L"Right Alt";
-    case VK_LSHIFT:
-      return L"Left Shift";
-    case VK_RSHIFT:
-      return L"Right Shift";
-    case VK_LWIN:
-      return L"Left Windows Key";
-    case VK_RWIN:
-      return L"Right Windows Key";
-    case VK_RETURN:
-      return L"Enter";
-    case VK_UP:
-      return L"Up Arrow";
-    case VK_DOWN:
-      return L"Down Arrow";
-    case VK_LEFT:
-      return L"Left Arrow";
-    case VK_RIGHT:
-      return L"Right Arrow";
-    case VK_SPACE:
-      return L"Spacebar";
-    case VK_SNAPSHOT:
-      return L"Print Screen";
-    case VK_CAPITAL:
-      return L"Caps Lock";
-    case VK_NUMLOCK:
-      return L"Num Lock";
-    case VK_SCROLL:
-      return L"Scroll Lock";
-    case VK_HOME:
-      return L"Home";
-    case VK_DELETE:
-      return L"Insert";
-    case VK_ESCAPE:
-      return L"Escape";
-    case VK_INSERT:
-      return L"Insert";
-    case VK_PRIOR:
-      return L"Page Down";
-    case VK_NEXT:
-      return L"Page Up";
-    case VK_PAUSE:
-      return L"Pause";
-    case VK_BACK:
-      return L"Backspace";
-    case VK_GAMEPAD_A:
-      return L"A Button";
-    case VK_GAMEPAD_B:
-      return L"B Button";
-    case VK_GAMEPAD_X:
-      return L"X Button";
-    case VK_GAMEPAD_Y:
-      return L"Y Button";
-    case VK_GAMEPAD_LEFT_SHOULDER:
-      return L"Left Bumper";
-    case VK_GAMEPAD_RIGHT_SHOULDER:
-      return L"Right Bumper";
-    case VK_GAMEPAD_LEFT_TRIGGER:
-      return L"Left Trigger";
-    case VK_GAMEPAD_RIGHT_TRIGGER:
-      return L"Right Trigger";
-    case VK_GAMEPAD_DPAD_UP:
-      return L"D-pad Up";
-    case VK_GAMEPAD_DPAD_DOWN:
-      return L"D-pad Down";
-    case VK_GAMEPAD_DPAD_LEFT:
-      return L"D-pad Left";
-    case VK_GAMEPAD_DPAD_RIGHT:
-      return L"D-pad Right";
-    case VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON:
-      return L"Left Stick Button";
-    case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
-      return L"Left Stick Up";
-    case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN:
-      return L"Left Stick Down";
-    case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
-      return L"Left Stick Left";
-    case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT:
-      return L"Left Stick Right";
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON:
-      return L"Right Stick Button";
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
-      return L"Right Stick Up";
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN:
-      return L"Right Stick Down";
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
-      return L"Right Stick Left";
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT:
-      return L"Right Stick Right";
-    default:
-      return std::wstring(1, ::MapVirtualKeyW(vkey, MAPVK_VK_TO_CHAR));
-    }
-  }
-
-  struct exe_view final : win32::window_ref
+  export struct exe_view final : win32::window_ref
     , win32::list_box::notifications
     , win32::list_view::notifications
     , win32::tool_bar::notifications
@@ -314,10 +99,6 @@ namespace siege::views
       launch_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
 
       launch_table.InsertColumn(-1, LVCOLUMNW{
-                                      .pszText = const_cast<wchar_t*>(L"Type"),
-                                    });
-
-      launch_table.InsertColumn(-1, LVCOLUMNW{
                                       .pszText = const_cast<wchar_t*>(L"Name"),
                                     });
 
@@ -326,6 +107,10 @@ namespace siege::views
                                     });
 
       keyboard_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
+
+      keyboard_table.InsertColumn(-1, LVCOLUMNW{
+                                        .pszText = const_cast<wchar_t*>(L""),
+                                      });
 
       controller_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
 
@@ -609,16 +394,12 @@ namespace siege::views
       if (code == LBN_SELCHANGE && hwndFrom == options)
       {
         auto selected = options.GetCurrentSelection();
-        ::ShowWindow(resource_table, SW_HIDE);
-        ::ShowWindow(string_table, SW_HIDE);
-        ::ShowWindow(launch_table, SW_HIDE);
-        ::ShowWindow(controller_table, SW_HIDE);
 
-        std::array tables{ resource_table.ref(), string_table.ref(), launch_table.ref(), keyboard_table.ref(), controller_table.ref() };
+        std::array tables{ launch_table.ref(), keyboard_table.ref(), controller_table.ref(), string_table.ref(), resource_table.ref() };
 
-        if (selected < tables.size())
+        for (auto i = 0; i < tables.size(); ++i)
         {
-          ::ShowWindow(tables[selected], SW_SHOW);
+          ::ShowWindow(tables[i], i == selected ? SW_SHOW : SW_HIDE);
         }
 
         return 0;
@@ -626,6 +407,8 @@ namespace siege::views
 
       return std::nullopt;
     }
+
+    void populate_launch_table(siege::platform::game_command_line_caps& caps);
 
     auto wm_copy_data(win32::copy_data_message<char> message)
     {
@@ -639,10 +422,13 @@ namespace siege::views
 
         if (options.GetCount() < 3 && (path->extension() == ".exe" || path->extension() == ".EXE"))
         {
-          options.InsertString(-1, L"Scripting");
-          options.InsertString(-1, L"Launch Options");
-          options.InsertString(-1, L"Keyboard/Mouse Settings");
-          options.InsertString(-1, L"Controller");
+          options.InsertString(0, L"Launch Options");
+          options.InsertString(1, L"Keyboard/Mouse Settings");
+          options.InsertString(2, L"Controller");
+          options.InsertString(3, L"Scripting");
+
+          ::ShowWindow(launch_table, SW_SHOW);
+          ::ShowWindow(resource_table, SW_HIDE);
 
           siege::init_active_input_state();
         }
@@ -653,6 +439,18 @@ namespace siege::views
       if (count > 0)
       {
         auto values = controller.get_resource_names();
+
+        if (controller.has_extension_module())
+        {
+          auto& extension = controller.get_extension();
+
+          auto* caps = extension.caps;
+
+          if (caps)
+          {
+            populate_launch_table(*caps);
+          }
+        }
 
         std::vector<win32::list_view_group> groups;
 
@@ -760,161 +558,23 @@ namespace siege::views
 
     std::optional<win32::lresult_t> wm_notify(win32::list_view sender, const NMITEMACTIVATE& message) override
     {
-      if (sender == controller_table)
+      if (sender == launch_table)
       {
-        struct handler : win32::window_ref
-        {
-          handler(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self)
-          {
-          }
-
-          auto wm_create()
-          {
-            SetWindowTextW(*this, L"Press a keyboard or mouse button");
-            SetTimer(*this, 1, USER_TIMER_MINIMUM, nullptr);
-            return 0;
-          }
-
-          auto wm_timer(std::size_t id, TIMERPROC)
-          {
-            constexpr static std::array<SHORT, 8> states = { { VK_RETURN, VK_ESCAPE, VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_TAB, VK_SNAPSHOT } };
-
-            for (auto state : states)
-            {
-              if (::GetKeyState(state) & 0x80)
-              {
-                KillTimer(*this, 1);
-                EndDialog(*this, state);
-                break;
-              }
-            }
-
-            return 0;
-          }
-
-          auto wm_mouse_button_down(std::size_t state, POINTS)
-          {
-            if (state & MK_LBUTTON)
-            {
-              KillTimer(*this, 1);
-              EndDialog(*this, VK_LBUTTON);
-            }
-
-            if (state & MK_RBUTTON)
-            {
-              KillTimer(*this, 1);
-              EndDialog(*this, VK_RBUTTON);
-            }
-
-            if (state & MK_MBUTTON)
-            {
-              KillTimer(*this, 1);
-              EndDialog(*this, VK_MBUTTON);
-            }
-
-            if (state & MK_XBUTTON1)
-            {
-              KillTimer(*this, 1);
-              EndDialog(*this, VK_XBUTTON1);
-            }
-
-            if (state & MK_XBUTTON2)
-            {
-              KillTimer(*this, 1);
-              EndDialog(*this, MK_XBUTTON2);
-            }
-
-            return 0;
-          }
-
-          auto wm_sys_key_down(KEYBDINPUT input)
-          {
-            KillTimer(*this, 1);
-
-            if (input.wVk == VK_MENU)
-            {
-              if (::GetKeyState(VK_LMENU) & 0x80)
-              {
-                EndDialog(*this, VK_LMENU);
-              }
-              else if (::GetKeyState(VK_RMENU) & 0x80)
-              {
-                EndDialog(*this, VK_RMENU);
-              }
-            }
-            else
-            {
-              EndDialog(*this, input.wVk);
-            }
-
-            return 0;
-          }
-
-          auto wm_key_down(KEYBDINPUT input)
-          {
-            KillTimer(*this, 1);
-
-            if (input.wVk == VK_SHIFT)
-            {
-              if (::GetKeyState(VK_LSHIFT) & 0x80)
-              {
-                EndDialog(*this, VK_LSHIFT);
-              }
-              else if (::GetKeyState(VK_RSHIFT) & 0x80)
-              {
-                EndDialog(*this, VK_RSHIFT);
-              }
-            }
-            else if (input.wVk == VK_CONTROL)
-            {
-              if (::GetKeyState(VK_LCONTROL) & 0x80)
-              {
-                EndDialog(*this, VK_LCONTROL);
-              }
-              else if (::GetKeyState(VK_RCONTROL) & 0x80)
-              {
-                EndDialog(*this, VK_RCONTROL);
-              }
-            }
-            else
-            {
-              EndDialog(*this, input.wVk);
-            }
-            return 0;
-          }
-        };
-
-        auto result = win32::DialogBoxIndirectParamW<handler>(win32::module_ref::current_application(),
-          win32::default_dialog({ .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 200, .cy = 100 }),
-          ref());
-
-        auto item = controller_table.GetItem(LVITEMW{
-          .mask = LVIF_PARAM,
-          .iItem = message.iItem });
-
-        if (item && item->lParam)
-        {
-          auto game_pad_code = LOWORD(item->lParam);
-
-          std::wstring temp = category_for_vkey(result);
-          ListView_SetItemText(controller_table, message.iItem, 1, temp.data());
-          temp = string_for_vkey(result);
-          ListView_SetItemText(controller_table, message.iItem, 2, temp.data());
-
-          LVITEMW item{
-            .mask = LVIF_PARAM,
-            .iItem = message.iItem,
-            .lParam = MAKELPARAM(game_pad_code, result)
-          };
-          ListView_SetItem(controller_table, &item);
-        }
-
-
+        handle_launch_activate(std::move(sender), message);
+        return 0;
+      }
+      else if (sender == controller_table)
+      {
+        handle_controller_activate(std::move(sender), message);
         return 0;
       }
 
       return std::nullopt;
     }
+
+    void handle_launch_activate(win32::list_view sender, const NMITEMACTIVATE& message);
+
+    void handle_controller_activate(win32::list_view sender, const NMITEMACTIVATE& message);
 
     std::optional<win32::lresult_t> wm_notify(win32::tool_bar, const NMTOOLBARW& message) override
     {
@@ -943,91 +603,9 @@ namespace siege::views
       }
     }
 
-    std::optional<BOOL> wm_notify(win32::tool_bar, const NMMOUSE& message) override
-    {
-      switch (message.hdr.code)
-      {
-      case NM_CLICK: {
+    std::optional<BOOL> wm_notify(win32::tool_bar, const NMMOUSE& message) override;
 
-        if (message.dwItemSpec == add_to_firewall_selected_id)
-        {
-          auto path = this->controller.get_exe_path();
 
-          std::wstring args;
-          args.reserve(256);
-
-          args.append(L"advfirewall firewall add rule dir=out enable=yes name=");
-
-          args.append(1, L'\"');
-          args.append(path.parent_path().stem());
-          args.append(1, L'\"');
-          args.append(L" action=allow program=");
-
-          args.append(1, L'\"');
-          args.append(path);
-          args.append(1, L'\"');
-
-          ::ShellExecuteW(nullptr,
-            L"runas",
-            L"netsh.exe",
-            args.c_str(),
-            nullptr,// default dir
-            SW_SHOWNORMAL);
-
-          return TRUE;
-        }
-
-        if (message.dwItemSpec == extract_selected_id)
-        {
-          return TRUE;
-        }
-
-        if (message.dwItemSpec == launch_selected_id)
-        {
-          if (controller.has_extension_module())
-          {
-            std::map<WORD, WORD> input_mapping{};
-
-            for (auto i = 0; i < controller_table.GetItemCount(); ++i)
-            {
-              auto item = controller_table.GetItem(LVITEMW{
-                .mask = LVIF_PARAM,
-                .iItem = i });
-
-              if (item && item->lParam)
-              {
-                auto controller_key = LOWORD(item->lParam);
-                auto keyboard_key = HIWORD(item->lParam);
-                input_mapping[controller_key] = keyboard_key;
-              }
-            }
-
-            // TODO make a UI for setting the IP address
-            input_injector_args args{
-              .exe_path = controller.get_exe_path(),
-              .extension_path = controller.get_extension().GetModuleFileName(),
-              .args = siege::platform::game_command_line_args{
-            //    .connect_ip_address{ "127.0.0.1" } 
-                },
-              .controller_key_mappings = std::move(input_mapping),
-              .extension = &controller.get_extension()
-            };
-
-            win32::DialogBoxIndirectParamW<siege::input_injector>(win32::module_ref::current_application(),
-              win32::default_dialog({}),
-              ref(),
-              (LPARAM)&args);
-          }
-
-          return TRUE;
-        }
-        return FALSE;
-      }
-      default: {
-        return FALSE;
-      }
-      }
-    }
 
     std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
     {
@@ -1051,6 +629,220 @@ namespace siege::views
       return std::nullopt;
     }
   };
-}// namespace siege::views
 
-#endif
+  std::wstring category_for_vkey(SHORT vkey)
+  {
+    if (vkey >= VK_LBUTTON && vkey <= VK_XBUTTON2)
+    {
+      return L"Mouse";
+    }
+
+    // not real vkeys
+    if (vkey >= WM_MOUSEMOVE && vkey <= WM_MOUSEMOVE + 4)
+    {
+      return L"Mouse";
+    }
+
+    // not real vkeys
+    if (vkey >= WM_MOUSEWHEEL && vkey <= WM_MOUSEWHEEL + 1)
+    {
+      return L"Mouse";
+    }
+
+    // not real vkeys
+    if (vkey >= WM_MOUSEHWHEEL && vkey <= WM_MOUSEHWHEEL + 1)
+    {
+      return L"Mouse";
+    }
+
+    if (vkey >= VK_GAMEPAD_A && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)
+    {
+      return L"Controller";
+    }
+
+    return L"Keyboard";
+  }
+
+  std::wstring string_for_vkey(SHORT vkey)
+  {
+    constexpr static auto directions = std::array<std::wstring_view, 4>{
+      {
+        std::wstring_view(L"Up"),
+        std::wstring_view(L"Down"),
+        std::wstring_view(L"Left"),
+        std::wstring_view(L"Right"),
+      }
+    };
+
+    // not real vkeys
+    if (vkey >= WM_MOUSEMOVE && vkey <= WM_MOUSEMOVE + 4)
+    {
+      std::wstring result(L"Move ");
+      result.append(directions[vkey - WM_MOUSEMOVE]);
+      return result;
+    }
+
+    // not real vkeys
+    if (vkey >= WM_MOUSEWHEEL && vkey <= WM_MOUSEWHEEL + 1)
+    {
+      std::wstring result(L"Scroll ");
+
+      result.append(directions[vkey - WM_MOUSEWHEEL]);
+      return result;
+    }
+
+    // not real vkeys
+    if (vkey >= WM_MOUSEHWHEEL && vkey <= WM_MOUSEHWHEEL + 1)
+    {
+      std::wstring result(L"Scroll ");
+
+      result.append(directions[vkey - WM_MOUSEHWHEEL + 2]);
+      return result;
+    }
+
+    if (vkey >= VK_NUMPAD0 && vkey <= VK_NUMPAD9)
+    {
+      std::wstring result(L"Numpad ");
+      result.push_back(L'0' + vkey - VK_NUMPAD0);
+      return result;
+    }
+
+    if (vkey >= VK_F1 && vkey <= VK_F9)
+    {
+      std::wstring result(1, 'F');
+      result.push_back(L'1' + vkey - VK_F1);
+      return result;
+    }
+
+    if (vkey >= VK_F10 && vkey <= VK_F19)
+    {
+      std::wstring result(1, 'F');
+      result.push_back(L'1');
+      result.push_back(L'0' + vkey - VK_F10);
+      return result;
+    }
+
+    if (vkey >= VK_F20 && vkey <= VK_F24)
+    {
+      std::wstring result(1, 'F');
+      result.push_back(L'2');
+      result.push_back(L'0' + vkey - VK_F20);
+      return result;
+    }
+
+    switch (vkey)
+    {
+    case VK_LBUTTON:
+      return L"Left Button";
+    case VK_RBUTTON:
+      return L"Right Button";
+    case VK_MBUTTON:
+      return L"Middle Button";
+    case VK_XBUTTON1:
+      return L"Extra Button 1";
+    case VK_XBUTTON2:
+      return L"Extra Button 2";
+    case VK_TAB:
+      return L"Tab";
+    case VK_LCONTROL:
+      return L"Left Control";
+    case VK_RCONTROL:
+      return L"Right Control";
+    case VK_LMENU:
+      return L"Left Alt";
+    case VK_RMENU:
+      return L"Right Alt";
+    case VK_LSHIFT:
+      return L"Left Shift";
+    case VK_RSHIFT:
+      return L"Right Shift";
+    case VK_LWIN:
+      return L"Left Windows Key";
+    case VK_RWIN:
+      return L"Right Windows Key";
+    case VK_RETURN:
+      return L"Enter";
+    case VK_UP:
+      return L"Up Arrow";
+    case VK_DOWN:
+      return L"Down Arrow";
+    case VK_LEFT:
+      return L"Left Arrow";
+    case VK_RIGHT:
+      return L"Right Arrow";
+    case VK_SPACE:
+      return L"Spacebar";
+    case VK_SNAPSHOT:
+      return L"Print Screen";
+    case VK_CAPITAL:
+      return L"Caps Lock";
+    case VK_NUMLOCK:
+      return L"Num Lock";
+    case VK_SCROLL:
+      return L"Scroll Lock";
+    case VK_HOME:
+      return L"Home";
+    case VK_DELETE:
+      return L"Insert";
+    case VK_ESCAPE:
+      return L"Escape";
+    case VK_INSERT:
+      return L"Insert";
+    case VK_PRIOR:
+      return L"Page Down";
+    case VK_NEXT:
+      return L"Page Up";
+    case VK_PAUSE:
+      return L"Pause";
+    case VK_BACK:
+      return L"Backspace";
+    case VK_GAMEPAD_A:
+      return L"A Button";
+    case VK_GAMEPAD_B:
+      return L"B Button";
+    case VK_GAMEPAD_X:
+      return L"X Button";
+    case VK_GAMEPAD_Y:
+      return L"Y Button";
+    case VK_GAMEPAD_LEFT_SHOULDER:
+      return L"Left Bumper";
+    case VK_GAMEPAD_RIGHT_SHOULDER:
+      return L"Right Bumper";
+    case VK_GAMEPAD_LEFT_TRIGGER:
+      return L"Left Trigger";
+    case VK_GAMEPAD_RIGHT_TRIGGER:
+      return L"Right Trigger";
+    case VK_GAMEPAD_DPAD_UP:
+      return L"D-pad Up";
+    case VK_GAMEPAD_DPAD_DOWN:
+      return L"D-pad Down";
+    case VK_GAMEPAD_DPAD_LEFT:
+      return L"D-pad Left";
+    case VK_GAMEPAD_DPAD_RIGHT:
+      return L"D-pad Right";
+    case VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON:
+      return L"Left Stick Button";
+    case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
+      return L"Left Stick Up";
+    case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN:
+      return L"Left Stick Down";
+    case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
+      return L"Left Stick Left";
+    case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT:
+      return L"Left Stick Right";
+    case VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON:
+      return L"Right Stick Button";
+    case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
+      return L"Right Stick Up";
+    case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN:
+      return L"Right Stick Down";
+    case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
+      return L"Right Stick Left";
+    case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT:
+      return L"Right Stick Right";
+    default:
+      return std::wstring(1, ::MapVirtualKeyW(vkey, MAPVK_VK_TO_CHAR));
+    }
+  }
+
+}// namespace siege::views

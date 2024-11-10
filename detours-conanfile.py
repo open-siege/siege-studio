@@ -7,7 +7,7 @@ class SiegeLauncherConanFile(ConanFile):
     url = "https://github.com/open-siege/open-siege"
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
-    build_requires = "cmake/3.26.4"
+    build_requires = "cmake/3.29.3"
     requires = "detours/cci.20220630"
     settings = "os", "compiler", "build_type", "arch"
 

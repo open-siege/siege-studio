@@ -21,20 +21,31 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
   }
 
   static std::vector<std::wstring> string_args;
-  static std::vector<const wchar_t*> raw_args;
   string_args.clear();
 
-  auto ip_address_iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [&](auto& arg) {
-    return arg.value != nullptr && std::wstring_view(arg.name) == command_line_caps.ip_connect_setting;
-  });
-
-  if (ip_address_iter != args->string_settings.end())
+  for (auto& setting : args->string_settings)
   {
-    string_args.emplace_back(L"+connect");
-    std::wstring temp = ip_address_iter->value;
-    temp.append(1, ':');
-    temp.append(L"0");
-    string_args.emplace_back(std::move(temp));
+    if (!setting.name)
+    {
+      continue;
+    }
+
+    if (!setting.value)
+    {
+      continue;
+    }
+
+    if (std::wstring_view(setting.name) == command_line_caps.ip_connect_setting)
+    {
+      string_args.emplace_back(L"+connect");
+      string_args.emplace_back(setting.value);
+    }
+    else
+    {
+      string_args.emplace_back(L"+set");
+      string_args.emplace_back(setting.name);
+      string_args.emplace_back(setting.value);
+    }
   }
 
   if (string_args.empty())
@@ -42,11 +53,7 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
     return nullptr;
   }
 
-  if (string_args.empty())
-  {
-    return nullptr;
-  }
-
+  static std::vector<const wchar_t*> raw_args;
   raw_args.resize(string_args.size());
   *new_size = (std::uint32_t)string_args.size();
 

@@ -22,10 +22,7 @@ using controller_binding = siege::platform::controller_binding;
 using game_command_line_caps = siege::platform::game_command_line_caps;
 
 extern auto command_line_caps = game_command_line_caps{
-  .supports_ip_connect = true,
-  .supports_ip_host = true,
-  .supports_custom_mod_folder = true,
-  .supports_custom_configurations = false
+  .ip_connect_setting = L"connect"
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
