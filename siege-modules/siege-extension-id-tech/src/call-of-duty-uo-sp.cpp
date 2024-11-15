@@ -90,7 +90,9 @@ HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
     return E_POINTER;
   }
 
-  if (!std::filesystem::exists(filename))
+  std::error_code last_error;
+
+  if (!std::filesystem::exists(filename, last_error))
   {
     return E_INVALIDARG;
   }
@@ -100,10 +102,10 @@ HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
 
   if (exe_path.stem() == "CoDUOSP" && 
       exe_path.extension() == ".exe" &&
-      std::filesystem::exists(parent_path / "uo_gamex86.dll") &&
-      std::filesystem::exists(parent_path / "uo_cgamex86.dll") &&
-      std::filesystem::exists(parent_path / "uo_uix86.dll") &&
-      std::filesystem::is_directory(parent_path / "uo"))
+      std::filesystem::exists(parent_path / "uo_gamex86.dll", last_error) &&
+      std::filesystem::exists(parent_path / "uo_cgamex86.dll", last_error) &&
+      std::filesystem::exists(parent_path / "uo_uix86.dll", last_error) &&
+      std::filesystem::is_directory(parent_path / "uo", last_error))
   {
     return S_OK;
   }

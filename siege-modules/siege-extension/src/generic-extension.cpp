@@ -10,7 +10,9 @@ HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
     return E_POINTER;
   }
 
-  return (std::filesystem::exists(filename) && 
+  std::error_code last_error;
+
+  return (std::filesystem::exists(filename, last_error) && 
       std::filesystem::path(filename).extension() == ".exe" &&
       std::filesystem::path(filename).extension() == ".EXE") ? S_OK : S_FALSE;
 }

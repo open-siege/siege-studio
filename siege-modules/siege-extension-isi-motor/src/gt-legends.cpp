@@ -50,11 +50,13 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, const siege::platf
     return E_POINTER;
   }
 
+  std::error_code last_error;
+
   auto exe_path = fs::path(exe_path_str);
 
   auto parent_path = exe_path.parent_path();
 
-  if (!fs::exists(parent_path / "TG2001.DYN"))
+  if (!fs::exists(parent_path / "TG2001.DYN", last_error))
   {
     std::ofstream temp(parent_path / "TG2001.DYN", std::ios::trunc);
   }

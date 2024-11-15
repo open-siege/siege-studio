@@ -54,7 +54,9 @@ namespace siege
       return E_POINTER;
     }
 
-    if (!std::filesystem::exists(filename))
+    std::error_code last_error;
+
+    if (!std::filesystem::exists(filename, last_error))
     {
       return E_INVALIDARG;
     }
@@ -103,7 +105,9 @@ namespace siege
       return E_POINTER;
     }
 
-    if (!std::filesystem::exists(filename))
+    std::error_code last_error;
+
+    if (!std::filesystem::exists(filename, last_error))
     {
       return E_INVALIDARG;
     }

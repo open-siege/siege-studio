@@ -22,8 +22,7 @@ using controller_binding = siege::platform::controller_binding;
 
 using game_command_line_caps = siege::platform::game_command_line_caps;
 
-extern auto command_line_caps = game_command_line_caps{
-};
+extern auto command_line_caps = game_command_line_caps{};
 
 extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::analog, "forward", u"Move Forward", u"Movement" },
@@ -90,7 +89,9 @@ HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
     return E_POINTER;
   }
 
-  if (!std::filesystem::exists(filename))
+  std::error_code last_error;
+
+  if (!std::filesystem::exists(filename, last_error))
   {
     return E_INVALIDARG;
   }
@@ -98,12 +99,11 @@ HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
   auto exe_path = std::filesystem::path(filename);
   auto parent_path = exe_path.parent_path();
 
-  if (exe_path.stem() == "CoDSP" && 
-      exe_path.extension() == ".exe" &&
-      std::filesystem::exists(parent_path / "gamex86.dll") &&
-      std::filesystem::exists(parent_path / "cgamex86.dll") &&
-      std::filesystem::exists(parent_path / "uix86.dll") &&
-      std::filesystem::is_directory(parent_path / "main"))
+  if (exe_path.stem() == "CoDSP" && exe_path.extension() == ".exe" && 
+      std::filesystem::exists(parent_path / "gamex86.dll", last_error) && 
+      std::filesystem::exists(parent_path / "cgamex86.dll", last_error) && 
+      std::filesystem::exists(parent_path / "uix86.dll", last_error) && 
+      std::filesystem::is_directory(parent_path / "main", last_error))
   {
     return S_OK;
   }

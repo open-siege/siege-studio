@@ -19,9 +19,11 @@ HRESULT launch_game_with_extension(const wchar_t* exe_path_str, const siege::pla
     return E_POINTER;
   }
 
+  std::error_code last_errorc;
+
   std::filesystem::path exe_path(exe_path_str);
 
-  if (!std::filesystem::exists(exe_path))
+  if (!std::filesystem::exists(exe_path, last_errorc))
   {
     return E_INVALIDARG;
   }
@@ -110,7 +112,7 @@ HRESULT launch_game_with_extension(const wchar_t* exe_path_str, const siege::pla
 
   auto steam_dll_path = (exe_path.parent_path().parent_path().parent_path().parent_path() / "Steam.dll").string();
 
-  if (std::filesystem::exists(steam_dll_path))
+  if (std::filesystem::exists(steam_dll_path, last_errorc))
   {
     dll_paths.push_back(steam_dll_path.c_str());
   }

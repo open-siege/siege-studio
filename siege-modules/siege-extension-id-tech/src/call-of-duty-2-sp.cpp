@@ -88,18 +88,21 @@ HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
     return E_POINTER;
   }
 
-  if (!std::filesystem::exists(filename))
+  std::error_code last_error;
+
+  if (!std::filesystem::exists(filename, last_error))
   {
     return E_INVALIDARG;
   }
 
+  
   auto exe_path = std::filesystem::path(filename);
   auto parent_path = exe_path.parent_path();
 
   if (exe_path.stem() == "CoD2SP_s" && 
       exe_path.extension() == ".exe" &&
-      std::filesystem::exists(parent_path / "gfx_d3d_x86_s.dll") &&
-      std::filesystem::is_directory(parent_path / "main"))
+      std::filesystem::exists(parent_path / "gfx_d3d_x86_s.dll", last_error) &&
+      std::filesystem::is_directory(parent_path / "main", last_error))
   {
     return S_OK;
   }
