@@ -8,11 +8,7 @@
 #include <siege/platform/win/core/hresult.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/shared.hpp>
-
-export module siege_views;
-
-import :exe_view;
-import :exe_controller;
+#include "views/exe_views.hpp"
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;

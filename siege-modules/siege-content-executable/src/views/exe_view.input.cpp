@@ -6,14 +6,11 @@
 #include <siege/platform/win/desktop/dialog.hpp>
 #include "input-filter.hpp"
 #include "input_injector.hpp"
-
-export module siege_views:controller;
-
-import :exe_view;
+#include "exe_views.hpp"
 
 namespace siege::views
 {
-  void exe_view::handle_controller_activate(win32::list_view sender, const NMITEMACTIVATE& message)
+  void exe_view::controller_table_nm_click(win32::list_view sender, const NMITEMACTIVATE& message)
   {
     struct handler : win32::window_ref
     {

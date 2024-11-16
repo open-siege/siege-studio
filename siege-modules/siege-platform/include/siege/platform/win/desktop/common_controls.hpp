@@ -2,11 +2,74 @@
 #define WIN32_COMPOSITE_CONTROLS_HPP
 
 #include <filesystem>
+#include <functional>
+#include <list>
+#include <any>
 #include <siege/platform/win/desktop/user_controls.hpp>
 #include <CommCtrl.h>
 
 namespace win32
 {
+  struct function_context
+  {
+    HWND source;
+    UINT code;
+    std::any callback;
+  };
+
+  inline std::list<function_context>& get_function_cache()
+  {
+    static std::list<function_context> function_cache;
+    return function_cache;
+  }
+
+  template<typename TControl, typename TNotification>
+  [[maybe_unused]] std::any bind_notification(win32::window_ref target, win32::window_ref source, UINT code, std::function<void(TControl, const TNotification&)> callback)
+  {
+    auto& function_cache = get_function_cache();
+
+    struct dispatcher
+    {
+      static LRESULT __stdcall handle_message(
+        HWND hWnd,
+        UINT uMsg,
+        WPARAM wParam,
+        LPARAM lParam,
+        UINT_PTR uIdSubclass,
+        DWORD_PTR dwRefData)
+      {
+        if (uMsg == WM_NOTIFY && lParam && uIdSubclass)
+        {
+          auto* header = (NMHDR*)lParam;
+          auto& callback = *(function_context*)uIdSubclass;
+
+          if (header->hwndFrom == callback.source && header->code == callback.code)
+          {
+            if (auto* temp = std::any_cast<std::function<void(TControl, const TNotification&)>>(&callback.callback); temp)
+            {
+              (*temp)(TControl(header->hwndFrom), *(TNotification*)lParam);
+            }
+          }
+        }
+
+        if (uMsg == WM_NCDESTROY)
+        {
+          auto& callback = *(function_context*)uIdSubclass;
+          callback.~function_context();
+          ::RemoveWindowSubclass(hWnd, dispatcher::handle_message, uIdSubclass);
+        }
+
+        return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+      }
+    };
+
+    function_cache.push_back(function_context{ source.get(), code, std::any(std::move(callback)) });
+
+    ::SetWindowSubclass(target.get(), dispatcher::handle_message, (UINT_PTR)&function_cache.back(), 0);
+
+    return &function_cache.back();
+  }
+
   struct image_list_deleter
   {
     void operator()(HIMAGELIST list)
@@ -375,6 +438,26 @@ namespace win32
       small_icon_view = LV_VIEW_LIST,
       tile_view = LV_VIEW_TILE
     };
+
+    inline std::any bind_nm_click(std::function<void(win32::list_view, const NMITEMACTIVATE&)> callback)
+    {
+      return bind_notification<win32::list_view, NMITEMACTIVATE>(this->GetParent()->ref(), this->ref(), NM_CLICK, std::move(callback));
+    }
+
+    inline std::any bind_nm_dbl_click(std::function<void(win32::list_view, const NMITEMACTIVATE&)> callback)
+    {
+      return bind_notification<win32::list_view, NMITEMACTIVATE>(this->GetParent()->ref(), this->ref(), NM_DBLCLK, std::move(callback));
+    }
+
+    inline std::any bind_nm_dbl_rclick(std::function<void(win32::list_view, const NMITEMACTIVATE&)> callback)
+    {
+      return bind_notification<win32::list_view, NMITEMACTIVATE>(this->GetParent()->ref(), this->ref(), NM_RDBLCLK, std::move(callback));
+    }
+
+    inline std::any bind_nm_rclick(std::function<void(win32::list_view, const NMITEMACTIVATE&)> callback)
+    {
+      return bind_notification<win32::list_view, NMITEMACTIVATE>(this->GetParent()->ref(), this->ref(), NM_RCLICK, std::move(callback));
+    }
 
     inline HIMAGELIST SetImageList(wparam_t wparam, HIMAGELIST image_list)
     {
@@ -1303,6 +1386,7 @@ namespace win32
     using control::control;
     constexpr static auto class_name = WC_COMBOBOXEXW;
   };
+
 }// namespace win32
 
 #endif

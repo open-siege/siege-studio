@@ -698,7 +698,7 @@ namespace win32
       ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::button::class_name, (DWORD_PTR) new sub_class(std::move(color_map)));
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
-    else
+    else if (existing_object)
     {
       ((sub_class*)existing_object)->colors = std::move(color_map);
     }
@@ -760,7 +760,7 @@ namespace win32
       ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::static_control::class_name, (DWORD_PTR) new sub_class(std::move(color_map)));
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
-    else
+    else if (existing_object)
     {
       ((sub_class*)existing_object)->colors = std::move(color_map);
     }
@@ -785,7 +785,7 @@ namespace win32
 
       SIZE wm_measure_item(win32::list_box themed_selection, const MEASUREITEMSTRUCT& item) override
       {
-        return SIZE{ .cy = themed_selection.GetItemHeight(item.itemID) };
+        return SIZE{ .cy = (LONG)themed_selection.GetItemHeight(item.itemID) };
       }
 
       std::optional<win32::lresult_t> wm_draw_item(win32::list_box list, DRAWITEMSTRUCT& item) override
@@ -921,7 +921,7 @@ namespace win32
       ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::list_box::class_name, (DWORD_PTR) new sub_class(std::move(color_map)));
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
-    else
+    else if (existing_object)
     {
       ((sub_class*)existing_object)->colors = std::move(color_map);
     }

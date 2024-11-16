@@ -6,629 +6,556 @@
 #include <siege/platform/win/desktop/dialog.hpp>
 #include "input-filter.hpp"
 #include "input_injector.hpp"
-
-export module siege_views:exe_view;
-
-import :exe_controller;
+#include "views/exe_views.hpp"
 
 namespace siege::views
 {
   using namespace std::literals;
 
-  std::wstring string_for_vkey(SHORT vkey);
-  std::wstring category_for_vkey(SHORT vkey);
 
-  export struct exe_view final : win32::window_ref
-    , win32::list_box::notifications
-    , win32::list_view::notifications
-    , win32::tool_bar::notifications
+  std::optional<win32::lresult_t> exe_view::wm_create()
   {
-    exe_controller controller;
+    auto control_factory = win32::window_factory(ref());
 
-    win32::list_box options;
-    win32::list_view resource_table;
-    win32::list_view string_table;
-    win32::list_view launch_table;
-    win32::list_view keyboard_table;
-    win32::list_view controller_table;
-    win32::tool_bar exe_actions;
-    win32::image_list image_list;
+    options = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
+      .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
-    constexpr static int add_to_firewall_selected_id = 10;
-    constexpr static int launch_selected_id = 11;
-    constexpr static int extract_selected_id = 12;
+    options.InsertString(-1, L"Resources");
+    options.SetCurrentSelection(0);
 
-    std::map<std::wstring_view, std::wstring_view> group_names = {
-      { L"#1"sv, L"Hardware Dependent Cursor"sv },
-      { L"#2"sv, L"Bitmap"sv },
-      { L"#3"sv, L"Hardware Dependent Icon"sv },
-      { L"#4"sv, L"Menu"sv },
-      { L"#5"sv, L"Dialog"sv },
-      { L"#6"sv, L"String Table"sv },
-      { L"#8"sv, L"Font"sv },
-      { L"#9"sv, L"Accelerator"sv },
-      { L"#10"sv, L"Raw Data"sv },
-      { L"#12"sv, L"Hardware Independent Cursor"sv },
-      { L"#14"sv, L"Hardware Independent Icon"sv },
-      { L"#16"sv, L"Version"sv },
-      { L"#22"sv, L"Animated Icon"sv },
-      { L"#23"sv, L"HTML"sv },
-      { L"#24"sv, L"Side-by-Side Assembly Manifest"sv },
-    };
+    exe_actions = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
 
-    exe_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
-    {
-    }
+    exe_actions.InsertButton(-1, { .iBitmap = 21, .idCommand = add_to_firewall_selected_id, .fsState = TBSTATE_ENABLED, .iString = (INT_PTR)L"Add to Firewall" }, false);
+    exe_actions.InsertButton(-1, { .iBitmap = 0, .idCommand = launch_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Launch" }, false);
+    exe_actions.InsertButton(-1, { .iBitmap = 1, .idCommand = extract_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" }, false);
+    exe_actions.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
 
-    auto wm_create()
-    {
-      auto control_factory = win32::window_factory(ref());
+    resource_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
 
-      options = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
-
-      options.InsertString(-1, L"Resources");
-      options.SetCurrentSelection(0);
-
-      exe_actions = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
-
-      exe_actions.InsertButton(-1, { .iBitmap = 21, .idCommand = add_to_firewall_selected_id, .fsState = TBSTATE_ENABLED, .iString = (INT_PTR)L"Add to Firewall" }, false);
-      exe_actions.InsertButton(-1, { .iBitmap = 0, .idCommand = launch_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Launch" }, false);
-      exe_actions.InsertButton(-1, { .iBitmap = 1, .idCommand = extract_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" }, false);
-      exe_actions.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
-
-      resource_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
-
-      resource_table.InsertColumn(-1, LVCOLUMNW{
-                                        .pszText = const_cast<wchar_t*>(L"Name"),
-                                      });
-
-      resource_table.InsertColumn(-1, LVCOLUMNW{
-                                        .pszText = const_cast<wchar_t*>(L"Action"),
-                                      });
-
-      resource_table.EnableGroupView(true);
-
-      string_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
-      string_table.InsertColumn(-1, LVCOLUMNW{
-                                      .pszText = const_cast<wchar_t*>(L"Text"),
-                                    });
-
-      string_table.EnableGroupView(true);
-
-      launch_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
-
-      launch_table.InsertColumn(-1, LVCOLUMNW{
+    resource_table.InsertColumn(-1, LVCOLUMNW{
                                       .pszText = const_cast<wchar_t*>(L"Name"),
                                     });
 
-      launch_table.InsertColumn(-1, LVCOLUMNW{
-                                      .pszText = const_cast<wchar_t*>(L"Value"),
+    resource_table.InsertColumn(-1, LVCOLUMNW{
+                                      .pszText = const_cast<wchar_t*>(L"Action"),
                                     });
 
-      keyboard_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
+    resource_table.EnableGroupView(true);
 
-      keyboard_table.InsertColumn(-1, LVCOLUMNW{
+    string_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
+    string_table.InsertColumn(-1, LVCOLUMNW{
+                                    .pszText = const_cast<wchar_t*>(L"Text"),
+                                  });
+
+    string_table.EnableGroupView(true);
+
+    launch_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
+
+    launch_table.InsertColumn(-1, LVCOLUMNW{
+                                    .pszText = const_cast<wchar_t*>(L"Name"),
+                                  });
+
+    launch_table.InsertColumn(-1, LVCOLUMNW{
+                                    .pszText = const_cast<wchar_t*>(L"Value"),
+                                  });
+
+    keyboard_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
+
+    keyboard_table.InsertColumn(-1, LVCOLUMNW{
+                                      .pszText = const_cast<wchar_t*>(L""),
+                                    });
+
+    controller_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
+
+    controller_table.InsertColumn(-1, LVCOLUMNW{
                                         .pszText = const_cast<wchar_t*>(L""),
                                       });
 
-      controller_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
+    controller_table.InsertColumn(-1, LVCOLUMNW{
+                                        .fmt = LVCFMT_RIGHT,
+                                        .pszText = const_cast<wchar_t*>(L""),
 
-      controller_table.InsertColumn(-1, LVCOLUMNW{
-                                          .pszText = const_cast<wchar_t*>(L""),
-                                        });
+                                      });
 
-      controller_table.InsertColumn(-1, LVCOLUMNW{
-                                          .fmt = LVCFMT_RIGHT,
-                                          .pszText = const_cast<wchar_t*>(L""),
+    controller_table.InsertColumn(-1, LVCOLUMNW{
+                                        .fmt = LVCFMT_RIGHT,
+                                        .pszText = const_cast<wchar_t*>(L""),
+                                      });
 
-                                        });
+    controller_table.EnableGroupView(true);
 
-      controller_table.InsertColumn(-1, LVCOLUMNW{
-                                          .fmt = LVCFMT_RIGHT,
-                                          .pszText = const_cast<wchar_t*>(L""),
-                                        });
+    ListView_SetView(controller_table, LV_VIEW_TILE);
+    int id = 1;
+    controller_table.InsertGroup(-1, LVGROUP{
+                                       .pszHeader = const_cast<wchar_t*>(L"D-Pad"),
+                                       .iGroupId = id++,
+                                       .state = LVGS_COLLAPSIBLE,
+                                     });
+    controller_table.InsertGroup(-1, LVGROUP{
+                                       .pszHeader = const_cast<wchar_t*>(L"Face Buttons"),
+                                       .iGroupId = id++,
+                                       .state = LVGS_COLLAPSIBLE,
+                                     });
 
-      controller_table.EnableGroupView(true);
+    controller_table.InsertGroup(-1, LVGROUP{
+                                       .pszHeader = const_cast<wchar_t*>(L"Bumpers and Triggers"),
+                                       .iGroupId = id++,
+                                       .state = LVGS_COLLAPSIBLE,
+                                     });
+    controller_table.InsertGroup(-1, LVGROUP{
+                                       .pszHeader = const_cast<wchar_t*>(L"Left Stick"),
+                                       .iGroupId = id++,
+                                       .state = LVGS_COLLAPSIBLE,
+                                     });
 
-      ListView_SetView(controller_table, LV_VIEW_TILE);
-      int id = 1;
-      controller_table.InsertGroup(-1, LVGROUP{
-                                         .pszHeader = const_cast<wchar_t*>(L"D-Pad"),
-                                         .iGroupId = id++,
-                                         .state = LVGS_COLLAPSIBLE,
-                                       });
-      controller_table.InsertGroup(-1, LVGROUP{
-                                         .pszHeader = const_cast<wchar_t*>(L"Face Buttons"),
-                                         .iGroupId = id++,
-                                         .state = LVGS_COLLAPSIBLE,
-                                       });
+    controller_table.InsertGroup(-1, LVGROUP{
+                                       .pszHeader = const_cast<wchar_t*>(L"Right Stick"),
+                                       .iGroupId = id++,
+                                       .state = LVGS_COLLAPSIBLE,
+                                     });
 
-      controller_table.InsertGroup(-1, LVGROUP{
-                                         .pszHeader = const_cast<wchar_t*>(L"Bumpers and Triggers"),
-                                         .iGroupId = id++,
-                                         .state = LVGS_COLLAPSIBLE,
-                                       });
-      controller_table.InsertGroup(-1, LVGROUP{
-                                         .pszHeader = const_cast<wchar_t*>(L"Left Stick"),
-                                         .iGroupId = id++,
-                                         .state = LVGS_COLLAPSIBLE,
-                                       });
+    controller_table.InsertGroup(-1, LVGROUP{
+                                       .pszHeader = const_cast<wchar_t*>(L"System Buttons"),
+                                       .iGroupId = id++,
+                                       .state = LVGS_COLLAPSIBLE,
+                                     });
 
-      controller_table.InsertGroup(-1, LVGROUP{
-                                         .pszHeader = const_cast<wchar_t*>(L"Right Stick"),
-                                         .iGroupId = id++,
-                                         .state = LVGS_COLLAPSIBLE,
-                                       });
+    std::map<WORD, WORD> default_mappings = {
+      { VK_GAMEPAD_DPAD_UP, VK_UP },
+      { VK_GAMEPAD_DPAD_DOWN, VK_DOWN },
+      { VK_GAMEPAD_DPAD_LEFT, VK_LEFT },
+      { VK_GAMEPAD_DPAD_RIGHT, VK_RIGHT },
+      { VK_GAMEPAD_A, VK_SPACE },
+      { VK_GAMEPAD_B, VK_LCONTROL },
+      { VK_GAMEPAD_X, 'F' },
+      { VK_GAMEPAD_Y, VK_OEM_4 },
+      { VK_GAMEPAD_LEFT_SHOULDER, 'G' },
+      { VK_GAMEPAD_RIGHT_SHOULDER, 'T' },
+      { VK_GAMEPAD_LEFT_TRIGGER, VK_RBUTTON },
+      { VK_GAMEPAD_RIGHT_TRIGGER, VK_LBUTTON },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, VK_LSHIFT },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_UP, 'W' },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, 'S' },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, 'A' },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, 'D' },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, 'E' },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_UP, WM_MOUSEMOVE },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, WM_MOUSEMOVE + 1 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, WM_MOUSEMOVE + 2 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, WM_MOUSEMOVE + 3 },
+    };
 
-      controller_table.InsertGroup(-1, LVGROUP{
-                                         .pszHeader = const_cast<wchar_t*>(L"System Buttons"),
-                                         .iGroupId = id++,
-                                         .state = LVGS_COLLAPSIBLE,
-                                       });
+    std::map<WORD, int> images = {
+      { VK_GAMEPAD_DPAD_UP, 3 },
+      { VK_GAMEPAD_DPAD_DOWN, 4 },
+      { VK_GAMEPAD_DPAD_LEFT, 5 },
+      { VK_GAMEPAD_DPAD_RIGHT, 6 },
+      { VK_GAMEPAD_A, 13 },
+      { VK_GAMEPAD_B, 14 },
+      { VK_GAMEPAD_X, 15 },
+      { VK_GAMEPAD_Y, 16 },
+      { VK_GAMEPAD_LEFT_SHOULDER, 17 },
+      { VK_GAMEPAD_RIGHT_SHOULDER, 18 },
+      { VK_GAMEPAD_LEFT_TRIGGER, 19 },
+      { VK_GAMEPAD_RIGHT_TRIGGER, 20 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, 7 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, 8 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_UP, 9 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, 10 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, 11 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, 12 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_UP, 9 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, 10 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, 11 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, 12 },
+    };
 
-      std::map<WORD, WORD> default_mappings = {
-        { VK_GAMEPAD_DPAD_UP, VK_UP },
-        { VK_GAMEPAD_DPAD_DOWN, VK_DOWN },
-        { VK_GAMEPAD_DPAD_LEFT, VK_LEFT },
-        { VK_GAMEPAD_DPAD_RIGHT, VK_RIGHT },
-        { VK_GAMEPAD_A, VK_SPACE },
-        { VK_GAMEPAD_B, VK_LCONTROL },
-        { VK_GAMEPAD_X, 'F' },
-        { VK_GAMEPAD_Y, VK_OEM_4 },
-        { VK_GAMEPAD_LEFT_SHOULDER, 'G' },
-        { VK_GAMEPAD_RIGHT_SHOULDER, 'T' },
-        { VK_GAMEPAD_LEFT_TRIGGER, VK_RBUTTON },
-        { VK_GAMEPAD_RIGHT_TRIGGER, VK_LBUTTON },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, VK_LSHIFT },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_UP, 'W' },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, 'S' },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, 'A' },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, 'D' },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, 'E' },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_UP, WM_MOUSEMOVE },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, WM_MOUSEMOVE + 1 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, WM_MOUSEMOVE + 2 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, WM_MOUSEMOVE + 3 },
-      };
+    std::map<WORD, int> grouping = {
+      { VK_GAMEPAD_DPAD_UP, 1 },
+      { VK_GAMEPAD_DPAD_DOWN, 1 },
+      { VK_GAMEPAD_DPAD_LEFT, 1 },
+      { VK_GAMEPAD_DPAD_RIGHT, 1 },
+      { VK_GAMEPAD_A, 2 },
+      { VK_GAMEPAD_B, 2 },
+      { VK_GAMEPAD_X, 2 },
+      { VK_GAMEPAD_Y, 2 },
+      { VK_GAMEPAD_LEFT_SHOULDER, 3 },
+      { VK_GAMEPAD_RIGHT_SHOULDER, 3 },
+      { VK_GAMEPAD_LEFT_TRIGGER, 3 },
+      { VK_GAMEPAD_RIGHT_TRIGGER, 3 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, 4 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, 5 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_UP, 4 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, 4 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, 4 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, 4 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_UP, 5 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, 5 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, 5 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, 5 },
+    };
 
-      std::map<WORD, int> images = {
-        { VK_GAMEPAD_DPAD_UP, 3 },
-        { VK_GAMEPAD_DPAD_DOWN, 4 },
-        { VK_GAMEPAD_DPAD_LEFT, 5 },
-        { VK_GAMEPAD_DPAD_RIGHT, 6 },
-        { VK_GAMEPAD_A, 13 },
-        { VK_GAMEPAD_B, 14 },
-        { VK_GAMEPAD_X, 15 },
-        { VK_GAMEPAD_Y, 16 },
-        { VK_GAMEPAD_LEFT_SHOULDER, 17 },
-        { VK_GAMEPAD_RIGHT_SHOULDER, 18 },
-        { VK_GAMEPAD_LEFT_TRIGGER, 19 },
-        { VK_GAMEPAD_RIGHT_TRIGGER, 20 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, 7 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, 8 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_UP, 9 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, 10 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, 11 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, 12 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_UP, 9 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, 10 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, 11 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, 12 },
-      };
+    auto selected_image = images.begin();
 
-      std::map<WORD, int> grouping = {
-        { VK_GAMEPAD_DPAD_UP, 1 },
-        { VK_GAMEPAD_DPAD_DOWN, 1 },
-        { VK_GAMEPAD_DPAD_LEFT, 1 },
-        { VK_GAMEPAD_DPAD_RIGHT, 1 },
-        { VK_GAMEPAD_A, 2 },
-        { VK_GAMEPAD_B, 2 },
-        { VK_GAMEPAD_X, 2 },
-        { VK_GAMEPAD_Y, 2 },
-        { VK_GAMEPAD_LEFT_SHOULDER, 3 },
-        { VK_GAMEPAD_RIGHT_SHOULDER, 3 },
-        { VK_GAMEPAD_LEFT_TRIGGER, 3 },
-        { VK_GAMEPAD_RIGHT_TRIGGER, 3 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, 4 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, 5 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_UP, 4 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, 4 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, 4 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, 4 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_UP, 5 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, 5 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, 5 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, 5 },
-      };
+    for (auto mapping : default_mappings)
+    {
+      win32::list_view_item up(string_for_vkey(mapping.first), images[mapping.first]);
+      up.iGroupId = grouping[mapping.first];
+      up.lParam = MAKELPARAM(mapping.first, mapping.second);
 
-      auto selected_image = images.begin();
+      up.sub_items.emplace_back(category_for_vkey(mapping.second));
+      up.sub_items.emplace_back(string_for_vkey(mapping.second));
+      controller_table.InsertRow(up);
+    }
 
-      for (auto mapping : default_mappings)
+    LVTILEVIEWINFO tileViewInfo{
+      .cbSize = sizeof(tileViewInfo),
+      .dwMask = LVTVIM_COLUMNS,
+      .dwFlags = LVTVIF_AUTOSIZE,
+      .cLines = 2
+    };
+
+    ListView_SetTileViewInfo(controller_table, &tileViewInfo);
+
+    for (auto i = 0; i < controller_table.GetItemCount(); ++i)
+    {
+      UINT columns[2] = { 1, 2 };
+      int formats[2] = { LVCFMT_LEFT, LVCFMT_RIGHT };
+      LVTILEINFO item_info{ .cbSize = sizeof(LVTILEINFO), .iItem = (int)i, .cColumns = 2, .puColumns = columns, .piColFmt = formats };
+
+      ListView_SetTileInfo(controller_table, &item_info);
+    }
+
+    auto header = launch_table.GetHeader();
+
+    auto style = header.GetWindowStyle();
+
+    header.SetWindowStyle(style | HDS_NOSIZING | HDS_FLAT);
+
+    wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
+    launch_table.bind_nm_click([this](auto c, const auto& n) { launch_table_nm_click(std::move(c), n); });
+    controller_table.bind_nm_click([this](auto c, const auto& n) { controller_table_nm_click(std::move(c), n); });
+
+    return 0;
+  }
+
+  std::optional<win32::lresult_t> exe_view::wm_size(std::size_t type, SIZE client_size)
+  {
+    auto top_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy / 12 };
+
+    auto one_quarter = SIZE{ .cx = client_size.cx / 4, .cy = client_size.cy - top_size.cy };
+    auto three_quarters = SIZE{ .cx = client_size.cx - one_quarter.cx, .cy = client_size.cy - top_size.cy };
+
+    recreate_image_list(exe_actions.GetIdealIconSize(SIZE{ .cx = client_size.cx / exe_actions.ButtonCount(), .cy = top_size.cy }));
+    SendMessageW(exe_actions, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
+
+    exe_actions.SetWindowPos(POINT{}, SWP_DEFERERASE | SWP_NOREDRAW);
+    exe_actions.SetWindowPos(top_size, SWP_DEFERERASE);
+    exe_actions.SetButtonSize(SIZE{ .cx = top_size.cx / exe_actions.ButtonCount(), .cy = top_size.cy });
+
+    resource_table.SetWindowPos(three_quarters);
+    resource_table.SetWindowPos(POINT{ .y = top_size.cy });
+
+    string_table.SetWindowPos(three_quarters);
+    string_table.SetWindowPos(POINT{ .y = top_size.cy });
+
+    launch_table.SetWindowPos(three_quarters);
+    launch_table.SetWindowPos(POINT{ .y = top_size.cy });
+
+    keyboard_table.SetWindowPos(three_quarters);
+    keyboard_table.SetWindowPos(POINT{ .y = top_size.cy });
+
+    controller_table.SetWindowPos(three_quarters);
+    controller_table.SetWindowPos(POINT{ .y = top_size.cy });
+    controller_table.SetImageList(LVSIL_NORMAL, image_list);
+
+    options.SetWindowPos(one_quarter);
+    options.SetWindowPos(POINT{ .x = three_quarters.cx, .y = top_size.cy });
+
+    std::array<std::reference_wrapper<win32::list_view>, 4> tables = { { std::ref(resource_table),
+      std::ref(string_table),
+      std::ref(launch_table),
+      std::ref(controller_table) } };
+
+    for (auto& table : tables)
+    {
+      auto column_count = table.get().GetColumnCount();
+
+      if (!column_count)
       {
-        win32::list_view_item up(string_for_vkey(mapping.first), images[mapping.first]);
-        up.iGroupId = grouping[mapping.first];
-        up.lParam = MAKELPARAM(mapping.first, mapping.second);
-
-        up.sub_items.emplace_back(category_for_vkey(mapping.second));
-        up.sub_items.emplace_back(string_for_vkey(mapping.second));
-        controller_table.InsertRow(up);
+        continue;
       }
 
-      LVTILEVIEWINFO tileViewInfo{
-        .cbSize = sizeof(tileViewInfo),
-        .dwMask = LVTVIM_COLUMNS,
-        .dwFlags = LVTVIF_AUTOSIZE,
-        .cLines = 2
-      };
+      auto column_width = three_quarters.cx / column_count;
 
-      ListView_SetTileViewInfo(controller_table, &tileViewInfo);
-
-      for (auto i = 0; i < controller_table.GetItemCount(); ++i)
+      for (auto i = 0u; i < column_count; ++i)
       {
-        UINT columns[2] = { 1, 2 };
-        int formats[2] = { LVCFMT_LEFT, LVCFMT_RIGHT };
-        LVTILEINFO item_info{ .cbSize = sizeof(LVTILEINFO), .iItem = (int)i, .cColumns = 2, .puColumns = columns, .piColFmt = formats };
-
-        ListView_SetTileInfo(controller_table, &item_info);
+        table.get().SetColumnWidth(i, column_width);
       }
+    }
 
-      auto header = launch_table.GetHeader();
+    return 0;
+  }
 
-      auto style = header.GetWindowStyle();
+  void exe_view::recreate_image_list(std::optional<SIZE> possible_size)
+  {
 
-      header.SetWindowStyle(style | HDS_NOSIZING | HDS_FLAT);
+    SIZE icon_size = possible_size.or_else([this] {
+                                    return image_list.GetIconSize();
+                                  })
+                       .or_else([] {
+                         return std::make_optional(SIZE{
+                           .cx = ::GetSystemMetrics(SM_CXSIZE),
+                           .cy = ::GetSystemMetrics(SM_CYSIZE) });
+                       })
+                       .value();
 
-      wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
+    if (image_list)
+    {
+      image_list.reset();
+    }
+
+    std::vector icons{
+      win32::segoe_fluent_icons::new_window,
+      win32::segoe_fluent_icons::folder_open,
+      win32::segoe_fluent_icons::dpad,// 2
+      win32::segoe_fluent_icons::caret_solid_up,
+      win32::segoe_fluent_icons::caret_solid_down,
+      win32::segoe_fluent_icons::caret_solid_left,
+      win32::segoe_fluent_icons::caret_solid_right,
+      win32::segoe_fluent_icons::left_stick,// 7
+      win32::segoe_fluent_icons::right_stick,
+      win32::segoe_fluent_icons::arrow_up,// 9
+      win32::segoe_fluent_icons::arrow_down,
+      win32::segoe_fluent_icons::arrow_left,
+      win32::segoe_fluent_icons::arrow_right,
+      win32::segoe_fluent_icons::button_a,// 13
+      win32::segoe_fluent_icons::button_b,
+      win32::segoe_fluent_icons::button_x,
+      win32::segoe_fluent_icons::button_y,
+      win32::segoe_fluent_icons::bumper_left,// 17
+      win32::segoe_fluent_icons::bumper_right,
+      win32::segoe_fluent_icons::trigger_left,// 19
+      win32::segoe_fluent_icons::trigger_right,
+      win32::segoe_fluent_icons::shield,
+    };
+
+    image_list = win32::create_icon_list(icons, icon_size);
+  }
+
+  std::optional<win32::lresult_t> exe_view::wm_command(win32::list_box hwndFrom, int code)
+  {
+    if (code == LBN_SELCHANGE && hwndFrom == options)
+    {
+      auto selected = options.GetCurrentSelection();
+
+      std::array tables{ launch_table.ref(), keyboard_table.ref(), controller_table.ref(), string_table.ref(), resource_table.ref() };
+
+      for (auto i = 0; i < tables.size(); ++i)
+      {
+        ::ShowWindow(tables[i], i == selected ? SW_SHOW : SW_HIDE);
+      }
 
       return 0;
     }
 
-    auto wm_size(std::size_t type, SIZE client_size)
+    return std::nullopt;
+  }
+
+  std::optional<win32::lresult_t> exe_view::wm_copy_data(win32::copy_data_message<char> message)
+  {
+    std::spanstream stream(message.data);
+
+    std::optional<std::filesystem::path> path;
+
+    if (wchar_t* filename = this->GetPropW<wchar_t*>(L"FilePath"); filename)
     {
-      auto top_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy / 12 };
+      path = filename;
 
-      auto one_quarter = SIZE{ .cx = client_size.cx / 4, .cy = client_size.cy - top_size.cy };
-      auto three_quarters = SIZE{ .cx = client_size.cx - one_quarter.cx, .cy = client_size.cy - top_size.cy };
-
-      recreate_image_list(exe_actions.GetIdealIconSize(SIZE{ .cx = client_size.cx / exe_actions.ButtonCount(), .cy = top_size.cy }));
-      SendMessageW(exe_actions, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
-
-      exe_actions.SetWindowPos(POINT{}, SWP_DEFERERASE | SWP_NOREDRAW);
-      exe_actions.SetWindowPos(top_size, SWP_DEFERERASE);
-      exe_actions.SetButtonSize(SIZE{ .cx = top_size.cx / exe_actions.ButtonCount(), .cy = top_size.cy });
-
-      resource_table.SetWindowPos(three_quarters);
-      resource_table.SetWindowPos(POINT{ .y = top_size.cy });
-
-      string_table.SetWindowPos(three_quarters);
-      string_table.SetWindowPos(POINT{ .y = top_size.cy });
-
-      launch_table.SetWindowPos(three_quarters);
-      launch_table.SetWindowPos(POINT{ .y = top_size.cy });
-
-      keyboard_table.SetWindowPos(three_quarters);
-      keyboard_table.SetWindowPos(POINT{ .y = top_size.cy });
-
-      controller_table.SetWindowPos(three_quarters);
-      controller_table.SetWindowPos(POINT{ .y = top_size.cy });
-      controller_table.SetImageList(LVSIL_NORMAL, image_list);
-
-      options.SetWindowPos(one_quarter);
-      options.SetWindowPos(POINT{ .x = three_quarters.cx, .y = top_size.cy });
-
-      std::array<std::reference_wrapper<win32::list_view>, 4> tables = { { std::ref(resource_table),
-        std::ref(string_table),
-        std::ref(launch_table),
-        std::ref(controller_table) } };
-
-      for (auto& table : tables)
+      if (options.GetCount() < 3 && (path->extension() == ".exe" || path->extension() == ".EXE"))
       {
-        auto column_count = table.get().GetColumnCount();
+        options.InsertString(0, L"Launch Options");
+        options.InsertString(1, L"Keyboard/Mouse Settings");
+        options.InsertString(2, L"Controller");
+        options.InsertString(3, L"Scripting");
 
-        if (!column_count)
-        {
-          continue;
-        }
+        ::ShowWindow(launch_table, SW_SHOW);
+        ::ShowWindow(resource_table, SW_HIDE);
 
-        auto column_width = three_quarters.cx / column_count;
-
-        for (auto i = 0u; i < column_count; ++i)
-        {
-          table.get().SetColumnWidth(i, column_width);
-        }
+        siege::init_active_input_state();
       }
-
-      return 0;
     }
 
-    void recreate_image_list(std::optional<SIZE> possible_size)
+    auto count = controller.load_executable(stream, std::move(path));
+
+    if (count > 0)
     {
+      auto values = controller.get_resource_names();
 
-      SIZE icon_size = possible_size.or_else([this] {
-                                      return image_list.GetIconSize();
-                                    })
-                         .or_else([] {
-                           return std::make_optional(SIZE{
-                             .cx = ::GetSystemMetrics(SM_CXSIZE),
-                             .cy = ::GetSystemMetrics(SM_CYSIZE) });
-                         })
-                         .value();
-
-      if (image_list)
+      if (controller.has_extension_module())
       {
-        image_list.reset();
-      }
+        auto& extension = controller.get_extension();
 
-      std::vector icons{
-        win32::segoe_fluent_icons::new_window,
-        win32::segoe_fluent_icons::folder_open,
-        win32::segoe_fluent_icons::dpad,// 2
-        win32::segoe_fluent_icons::caret_solid_up,
-        win32::segoe_fluent_icons::caret_solid_down,
-        win32::segoe_fluent_icons::caret_solid_left,
-        win32::segoe_fluent_icons::caret_solid_right,
-        win32::segoe_fluent_icons::left_stick,// 7
-        win32::segoe_fluent_icons::right_stick,
-        win32::segoe_fluent_icons::arrow_up,// 9
-        win32::segoe_fluent_icons::arrow_down,
-        win32::segoe_fluent_icons::arrow_left,
-        win32::segoe_fluent_icons::arrow_right,
-        win32::segoe_fluent_icons::button_a,// 13
-        win32::segoe_fluent_icons::button_b,
-        win32::segoe_fluent_icons::button_x,
-        win32::segoe_fluent_icons::button_y,
-        win32::segoe_fluent_icons::bumper_left,// 17
-        win32::segoe_fluent_icons::bumper_right,
-        win32::segoe_fluent_icons::trigger_left,// 19
-        win32::segoe_fluent_icons::trigger_right,
-        win32::segoe_fluent_icons::shield,
-      };
+        auto* caps = extension.caps;
 
-      image_list = win32::create_icon_list(icons, icon_size);
-    }
-
-
-    std::optional<win32::lresult_t> wm_command(win32::list_box hwndFrom, int code) override
-    {
-      if (code == LBN_SELCHANGE && hwndFrom == options)
-      {
-        auto selected = options.GetCurrentSelection();
-
-        std::array tables{ launch_table.ref(), keyboard_table.ref(), controller_table.ref(), string_table.ref(), resource_table.ref() };
-
-        for (auto i = 0; i < tables.size(); ++i)
+        if (caps)
         {
-          ::ShowWindow(tables[i], i == selected ? SW_SHOW : SW_HIDE);
-        }
-
-        return 0;
-      }
-
-      return std::nullopt;
-    }
-
-    void populate_launch_table(siege::platform::game_command_line_caps& caps);
-
-    auto wm_copy_data(win32::copy_data_message<char> message)
-    {
-      std::spanstream stream(message.data);
-
-      std::optional<std::filesystem::path> path;
-
-      if (wchar_t* filename = this->GetPropW<wchar_t*>(L"FilePath"); filename)
-      {
-        path = filename;
-
-        if (options.GetCount() < 3 && (path->extension() == ".exe" || path->extension() == ".EXE"))
-        {
-          options.InsertString(0, L"Launch Options");
-          options.InsertString(1, L"Keyboard/Mouse Settings");
-          options.InsertString(2, L"Controller");
-          options.InsertString(3, L"Scripting");
-
-          ::ShowWindow(launch_table, SW_SHOW);
-          ::ShowWindow(resource_table, SW_HIDE);
-
-          siege::init_active_input_state();
+          populate_launch_table(*caps);
         }
       }
 
-      auto count = controller.load_executable(stream, std::move(path));
+      std::vector<win32::list_view_group> groups;
 
-      if (count > 0)
+      groups.reserve(values.size());
+
+      for (auto& value : values)
       {
-        auto values = controller.get_resource_names();
-
-        if (controller.has_extension_module())
-        {
-          auto& extension = controller.get_extension();
-
-          auto* caps = extension.caps;
-
-          if (caps)
-          {
-            populate_launch_table(*caps);
-          }
-        }
-
-        std::vector<win32::list_view_group> groups;
-
-        groups.reserve(values.size());
-
-        for (auto& value : values)
-        {
-          std::vector<win32::list_view_item> items;
-          items.reserve(value.second.size());
-
-          for (auto& child : value.second)
-          {
-            win32::list_view_item item(child);
-
-            if (value.first == L"#4")
-            {
-              auto data = controller.get_resource_menu_items(value.first, child);
-
-              std::wstring final_result;
-
-              if (data && !data->menu_items.empty())
-              {
-                final_result.reserve(data->menu_items.size() * data->menu_items.size());
-
-                for (auto& str : data->menu_items)
-                {
-                  final_result.append(std::move(str.text));
-                  final_result.append(L" \n");
-                }
-              }
-
-              item.sub_items.emplace_back(std::move(final_result));
-            }
-            else if (value.first == L"#6")
-            {
-              auto data = controller.get_resource_strings(value.first, child);
-
-              std::wstring final_result;
-
-              if (!data.empty())
-              {
-                final_result.reserve(data.size() * data[0].size());
-
-                for (auto& str : data)
-                {
-                  final_result.append(std::move(str));
-                  final_result.append(L" \n");
-                }
-              }
-
-              item.sub_items.emplace_back(std::move(final_result));
-            }
-
-            items.emplace_back(std::move(item));
-          }
-
-          if (group_names.contains(value.first))
-          {
-            auto& group = groups.emplace_back(std::wstring(group_names[value.first]), std::move(items));
-            group.state = LVGS_COLLAPSIBLE;
-          }
-          else
-          {
-            auto& group = groups.emplace_back(value.first, std::move(items));
-            group.state = LVGS_COLLAPSIBLE;
-          }
-        }
-
-        resource_table.InsertGroups(groups);
-
-        groups.clear();
-        groups.reserve(2);
-
-        auto functions = controller.get_function_names();
         std::vector<win32::list_view_item> items;
-        items.reserve(functions.size());
+        items.reserve(value.second.size());
 
-        for (auto& child : functions)
+        for (auto& child : value.second)
         {
-          items.emplace_back(win32::list_view_item(win32::widen(child)));
+          win32::list_view_item item(child);
+
+          if (value.first == L"#4")
+          {
+            auto data = controller.get_resource_menu_items(value.first, child);
+
+            std::wstring final_result;
+
+            if (data && !data->menu_items.empty())
+            {
+              final_result.reserve(data->menu_items.size() * data->menu_items.size());
+
+              for (auto& str : data->menu_items)
+              {
+                final_result.append(std::move(str.text));
+                final_result.append(L" \n");
+              }
+            }
+
+            item.sub_items.emplace_back(std::move(final_result));
+          }
+          else if (value.first == L"#6")
+          {
+            auto data = controller.get_resource_strings(value.first, child);
+
+            std::wstring final_result;
+
+            if (!data.empty())
+            {
+              final_result.reserve(data.size() * data[0].size());
+
+              for (auto& str : data)
+              {
+                final_result.append(std::move(str));
+                final_result.append(L" \n");
+              }
+            }
+
+            item.sub_items.emplace_back(std::move(final_result));
+          }
+
+          items.emplace_back(std::move(item));
         }
 
-        auto& group1 = groups.emplace_back(L"Script/Console Functions", std::move(items));
-        group1.state = LVGS_COLLAPSIBLE;
-
-        auto variables = controller.get_variable_names();
-        items.clear();
-        items.reserve(variables.size());
-
-        for (auto& child : variables)
+        if (group_names.contains(value.first))
         {
-          items.emplace_back(win32::list_view_item(win32::widen(child)));
+          auto& group = groups.emplace_back(std::wstring(group_names[value.first]), std::move(items));
+          group.state = LVGS_COLLAPSIBLE;
         }
-
-        auto& group2 = groups.emplace_back(L"Script/Console Variables", std::move(items));
-        group2.state = LVGS_COLLAPSIBLE;
-
-        string_table.InsertGroups(groups);
-
-        return TRUE;
+        else
+        {
+          auto& group = groups.emplace_back(value.first, std::move(items));
+          group.state = LVGS_COLLAPSIBLE;
+        }
       }
 
+      resource_table.InsertGroups(groups);
+
+      groups.clear();
+      groups.reserve(2);
+
+      auto functions = controller.get_function_names();
+      std::vector<win32::list_view_item> items;
+      items.reserve(functions.size());
+
+      for (auto& child : functions)
+      {
+        items.emplace_back(win32::list_view_item(win32::widen(child)));
+      }
+
+      auto& group1 = groups.emplace_back(L"Script/Console Functions", std::move(items));
+      group1.state = LVGS_COLLAPSIBLE;
+
+      auto variables = controller.get_variable_names();
+      items.clear();
+      items.reserve(variables.size());
+
+      for (auto& child : variables)
+      {
+        items.emplace_back(win32::list_view_item(win32::widen(child)));
+      }
+
+      auto& group2 = groups.emplace_back(L"Script/Console Variables", std::move(items));
+      group2.state = LVGS_COLLAPSIBLE;
+
+      string_table.InsertGroups(groups);
+
+      return TRUE;
+    }
+
+    return FALSE;
+  }
+
+  std::optional<win32::lresult_t> exe_view::wm_notify(win32::tool_bar, const NMTOOLBARW& message)
+  {
+    switch (message.hdr.code)
+    {
+    case TBN_DROPDOWN: {
+      POINT point{ .x = message.rcButton.left, .y = message.rcButton.top };
+
+      if (ClientToScreen(exe_actions, &point))
+      {
+        /*auto result = table_settings_menu.TrackPopupMenuEx(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, point, ref());
+
+        if (result == 1)
+        {
+          extract_all_files();
+        }*/
+
+        return TBDDRET_DEFAULT;
+      }
+
+      return TBDDRET_NODEFAULT;
+    }
+    default: {
       return FALSE;
     }
+    }
+  }
 
-    std::optional<win32::lresult_t> wm_notify(win32::list_view sender, const NMITEMACTIVATE& message) override
+  std::optional<win32::lresult_t> exe_view::wm_setting_change(win32::setting_change_message message)
+  {
+    if (message.setting == L"ImmersiveColorSet")
     {
-      if (sender == launch_table)
-      {
-        handle_launch_activate(std::move(sender), message);
-        return 0;
-      }
-      else if (sender == controller_table)
-      {
-        handle_controller_activate(std::move(sender), message);
-        return 0;
-      }
+      win32::apply_theme(resource_table);
+      win32::apply_theme(launch_table);
+      win32::apply_theme(string_table);
+      win32::apply_theme(controller_table);
+      win32::apply_theme(options);
+      win32::apply_theme(exe_actions);
+      win32::apply_theme(*this);
 
-      return std::nullopt;
+      recreate_image_list(std::nullopt);
+      SendMessageW(exe_actions, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
+
+
+      return 0;
     }
 
-    void handle_launch_activate(win32::list_view sender, const NMITEMACTIVATE& message);
-
-    void handle_controller_activate(win32::list_view sender, const NMITEMACTIVATE& message);
-
-    std::optional<win32::lresult_t> wm_notify(win32::tool_bar, const NMTOOLBARW& message) override
-    {
-      switch (message.hdr.code)
-      {
-      case TBN_DROPDOWN: {
-        POINT point{ .x = message.rcButton.left, .y = message.rcButton.top };
-
-        if (ClientToScreen(exe_actions, &point))
-        {
-          /*auto result = table_settings_menu.TrackPopupMenuEx(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, point, ref());
-
-          if (result == 1)
-          {
-            extract_all_files();
-          }*/
-
-          return TBDDRET_DEFAULT;
-        }
-
-        return TBDDRET_NODEFAULT;
-      }
-      default: {
-        return FALSE;
-      }
-      }
-    }
-
-    std::optional<BOOL> wm_notify(win32::tool_bar, const NMMOUSE& message) override;
-
-
-
-    std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
-    {
-      if (message.setting == L"ImmersiveColorSet")
-      {
-        win32::apply_theme(resource_table);
-        win32::apply_theme(launch_table);
-        win32::apply_theme(string_table);
-        win32::apply_theme(controller_table);
-        win32::apply_theme(options);
-        win32::apply_theme(exe_actions);
-        win32::apply_theme(*this);
-
-        recreate_image_list(std::nullopt);
-        SendMessageW(exe_actions, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
-
-
-        return 0;
-      }
-
-      return std::nullopt;
-    }
-  };
+    return std::nullopt;
+  }
 
   std::wstring category_for_vkey(SHORT vkey)
   {

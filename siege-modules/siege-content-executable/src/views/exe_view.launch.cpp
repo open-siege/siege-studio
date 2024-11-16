@@ -6,10 +6,7 @@
 #include <siege/platform/win/desktop/dialog.hpp>
 #include "input-filter.hpp"
 #include "input_injector.hpp"
-
-export module siege_views:launch;
-
-import :exe_view;
+#include "exe_views.hpp"
 
 using game_command_line_caps = siege::platform::game_command_line_caps;
 
@@ -67,10 +64,18 @@ namespace siege::views
     }
   }
 
-  // TODO implement field editing
-  void exe_view::handle_launch_activate(win32::list_view sender, const NMITEMACTIVATE& message)
+  void exe_view::launch_table_nm_click(win32::list_view sender, const NMITEMACTIVATE& message)
   {
-
+    POINT point;
+    OutputDebugStringW(L"launch_table_nm_click\n");
+    if (::GetCursorPos(&point) && ::ScreenToClient(launch_table, &point))
+    {
+      LVHITTESTINFO info{};
+      info.pt = point;
+      info.flags = LVHT_ONITEM;
+      ListView_SubItemHitTest(launch_table, &info);
+      OutputDebugStringW(L"Sub item clicked\n");
+    }
   }
 
   std::optional<BOOL> exe_view::wm_notify(win32::tool_bar, const NMMOUSE& message)

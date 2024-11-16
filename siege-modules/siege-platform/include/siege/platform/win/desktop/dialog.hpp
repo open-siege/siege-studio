@@ -1,3 +1,5 @@
+#ifndef PLATFORM_DIALOG_HPP
+#define PLATFORM_DIALOG_HPP
 #include <siege/platform/win/desktop/window.hpp>
 #include <siege/platform/win/desktop/window_impl.hpp>
 #include <functional>
@@ -90,3 +92,4 @@ namespace win32
   }
 
 }// namespace win32
+#endif

@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.28)
 project(siege-frontend)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/generators)
+    set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/build/generators)
+endif()
 
 add_subdirectory(siege-modules)
 add_subdirectory(siege-tools)
