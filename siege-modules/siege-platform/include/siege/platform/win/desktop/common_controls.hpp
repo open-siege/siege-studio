@@ -2,74 +2,11 @@
 #define WIN32_COMPOSITE_CONTROLS_HPP
 
 #include <filesystem>
-#include <functional>
-#include <list>
-#include <any>
 #include <siege/platform/win/desktop/user_controls.hpp>
 #include <CommCtrl.h>
 
 namespace win32
 {
-  struct function_context
-  {
-    HWND source;
-    UINT code;
-    std::any callback;
-  };
-
-  inline std::list<function_context>& get_function_cache()
-  {
-    static std::list<function_context> function_cache;
-    return function_cache;
-  }
-
-  template<typename TControl, typename TNotification>
-  [[maybe_unused]] std::any bind_notification(win32::window_ref target, win32::window_ref source, UINT code, std::function<void(TControl, const TNotification&)> callback)
-  {
-    auto& function_cache = get_function_cache();
-
-    struct dispatcher
-    {
-      static LRESULT __stdcall handle_message(
-        HWND hWnd,
-        UINT uMsg,
-        WPARAM wParam,
-        LPARAM lParam,
-        UINT_PTR uIdSubclass,
-        DWORD_PTR dwRefData)
-      {
-        if (uMsg == WM_NOTIFY && lParam && uIdSubclass)
-        {
-          auto* header = (NMHDR*)lParam;
-          auto& callback = *(function_context*)uIdSubclass;
-
-          if (header->hwndFrom == callback.source && header->code == callback.code)
-          {
-            if (auto* temp = std::any_cast<std::function<void(TControl, const TNotification&)>>(&callback.callback); temp)
-            {
-              (*temp)(TControl(header->hwndFrom), *(TNotification*)lParam);
-            }
-          }
-        }
-
-        if (uMsg == WM_NCDESTROY)
-        {
-          auto& callback = *(function_context*)uIdSubclass;
-          callback.~function_context();
-          ::RemoveWindowSubclass(hWnd, dispatcher::handle_message, uIdSubclass);
-        }
-
-        return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
-      }
-    };
-
-    function_cache.push_back(function_context{ source.get(), code, std::any(std::move(callback)) });
-
-    ::SetWindowSubclass(target.get(), dispatcher::handle_message, (UINT_PTR)&function_cache.back(), 0);
-
-    return &function_cache.back();
-  }
-
   struct image_list_deleter
   {
     void operator()(HIMAGELIST list)
@@ -105,6 +42,27 @@ namespace win32
   struct control : window
   {
     using window::window;
+  };
+
+  struct ip_address_edit : window
+  {
+    using window::window;
+    constexpr static auto class_name = WC_IPADDRESSW;
+
+    [[maybe_unused]] inline std::function<void()> bind_en_change(std::move_only_function<void(ip_address_edit, const NMHDR&)> callback)
+    {
+      return bind_notification<ip_address_edit, NMHDR>(this->GetParent()->ref(), this->ref(), EN_CHANGE, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_en_kill_focus(std::move_only_function<void(ip_address_edit, const NMHDR&)> callback)
+    {
+      return bind_notification<ip_address_edit, NMHDR>(this->GetParent()->ref(), this->ref(), EN_KILLFOCUS, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_en_set_focus(std::move_only_function<void(ip_address_edit, const NMHDR&)> callback)
+    {
+      return bind_notification<ip_address_edit, NMHDR>(this->GetParent()->ref(), this->ref(), EN_SETFOCUS, std::move(callback));
+    }
   };
 
   struct sys_link : window
@@ -182,16 +140,6 @@ namespace win32
         return std::nullopt;
       }
 
-      virtual std::optional<win32::lresult_t> wm_notify(win32::header, NMHDFILTERBTNCLICK&)
-      {
-        return std::nullopt;
-      }
-
-      virtual std::optional<win32::lresult_t> wm_notify(win32::header, NMHEADERW&)
-      {
-        return std::nullopt;
-      }
-
       template<typename TWindow>
       static std::optional<lresult_t> dispatch_message(TWindow* window, std::uint32_t message, wparam_t wParam, lparam_t lParam)
       {
@@ -202,15 +150,6 @@ namespace win32
           if (message == WM_NOTIFY)
           {
             auto& header = *(NMHDR*)lParam;
-            if (header.code == HDN_FILTERBTNCLICK)
-            {
-              return self->wm_notify(win32::header(header.hwndFrom), *(NMHDFILTERBTNCLICK*)lParam);
-            }
-
-            if (header.code == HDN_FILTERCHANGE || header.code == HDN_BEGINFILTEREDIT || header.code == HDN_ENDFILTEREDIT || header.code == HDN_ITEMCLICK || header.code == HDN_ITEMDBLCLICK || header.code == HDN_ITEMKEYDOWN || header.code == HDN_ITEMSTATEICONCLICK || header.code == HDN_OVERFLOWCLICK || header.code == HDN_DIVIDERDBLCLICK)
-            {
-              return self->wm_notify(win32::header(header.hwndFrom), *(NMHEADERW*)lParam);
-            }
 
             if (header.code == NM_CUSTOMDRAW
                 && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == header::class_name)
@@ -269,6 +208,21 @@ namespace win32
     [[maybe_unused]] inline wparam_t SetFilterChangeTimeout(int timeout = 1000)
     {
       return Header_SetFilterChangeTimeout(*this, timeout);
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_hdn_filter_btn_click(std::move_only_function<bool(win32::header, const NMHDFILTERBTNCLICK&)> callback)
+    {
+      return bind_notification<win32::header, NMHDFILTERBTNCLICK, bool>(this->GetParent()->ref(), this->ref(), HDN_FILTERBTNCLICK, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_hdn_filter_change(std::move_only_function<void(win32::header, const NMHEADERW&)> callback)
+    {
+      return bind_notification<win32::header, NMHEADERW>(this->GetParent()->ref(), this->ref(), HDN_FILTERCHANGE, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_hdn_end_filter_edit(std::move_only_function<void(win32::header, const NMHEADERW&)> callback)
+    {
+      return bind_notification<win32::header, NMHEADERW>(this->GetParent()->ref(), this->ref(), HDN_ENDFILTEREDIT, std::move(callback));
     }
   };
 
@@ -333,50 +287,6 @@ namespace win32
         return std::nullopt;
       }
 
-      virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMITEMACTIVATE&)
-      {
-        return std::nullopt;
-      }
-
-      virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMLISTVIEW&)
-      {
-        return std::nullopt;
-      }
-
-      virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMLVODSTATECHANGE&)
-      {
-        return std::nullopt;
-      }
-
-      virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMLVSCROLL&)
-      {
-        return std::nullopt;
-      }
-
-      virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMLVFINDITEMW&)
-      {
-        return std::nullopt;
-      }
-
-      virtual std::optional<lresult_t> wm_notify(win32::list_view, const NMLVLINK&)
-      {
-        return std::nullopt;
-      }
-
-      virtual std::optional<lresult_t> wm_notify(win32::list_view, const NMLVKEYDOWN&)
-      {
-        return std::nullopt;
-      }
-
-      virtual std::optional<win32::lresult_t> wm_notify(list_view, const NMHDR&)
-      {
-        return std::nullopt;
-      }
-
-      virtual std::optional<win32::lresult_t> wm_notify(list_view, const NMLVDISPINFOW&)
-      {
-        return std::nullopt;
-      }
 
       template<typename TWindow>
       static std::optional<lresult_t> dispatch_message(TWindow* window, std::uint32_t message, wparam_t wParam, lparam_t lParam)
@@ -392,36 +302,6 @@ namespace win32
                 && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == list_view::class_name)
             {
               return self->wm_notify(list_view(header.hwndFrom), *(NMLVCUSTOMDRAW*)lParam);
-            }
-
-            if ((header.code == NM_CLICK || header.code == NM_DBLCLK || header.code == NM_RCLICK || header.code == NM_RDBLCLK)
-                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == list_view::class_name)
-            {
-              return self->wm_notify(list_view(header.hwndFrom), *(NMITEMACTIVATE*)lParam);
-            }
-
-            if ((header.code == NM_HOVER || header.code == NM_SETFOCUS)
-                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == list_view::class_name)
-            {
-              return self->wm_notify(list_view(header.hwndFrom), *(NMHDR*)lParam);
-            }
-
-            if ((header.code == LVN_BEGINSCROLL || header.code == LVN_ENDSCROLL)
-                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == list_view::class_name)
-            {
-              return self->wm_notify(list_view(header.hwndFrom), *(NMLVSCROLL*)lParam);
-            }
-
-            if ((header.code == LVN_ITEMCHANGING || header.code == LVN_ITEMCHANGED)
-                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == list_view::class_name)
-            {
-              return self->wm_notify(list_view(header.hwndFrom), *(NMLISTVIEW*)lParam);
-            }
-
-            if ((header.code == LVN_BEGINLABELEDITW || header.code == LVN_ENDLABELEDITW || header.code == LVN_SETDISPINFOW)
-                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == list_view::class_name)
-            {
-              return self->wm_notify(list_view(header.hwndFrom), *(NMLVDISPINFO*)lParam);
             }
           }
         }
@@ -439,24 +319,39 @@ namespace win32
       tile_view = LV_VIEW_TILE
     };
 
-    inline std::any bind_nm_click(std::function<void(win32::list_view, const NMITEMACTIVATE&)> callback)
+    [[maybe_unused]] inline std::function<void()> bind_nm_hover(std::move_only_function<void(win32::list_view, const NMHDR&)> callback)
+    {
+      return bind_notification<win32::list_view, NMHDR>(this->GetParent()->ref(), this->ref(), NM_HOVER, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_nm_click(std::move_only_function<void(win32::list_view, const NMITEMACTIVATE&)> callback)
     {
       return bind_notification<win32::list_view, NMITEMACTIVATE>(this->GetParent()->ref(), this->ref(), NM_CLICK, std::move(callback));
     }
 
-    inline std::any bind_nm_dbl_click(std::function<void(win32::list_view, const NMITEMACTIVATE&)> callback)
+    [[maybe_unused]] inline std::function<void()> bind_nm_dbl_click(std::move_only_function<void(win32::list_view, const NMITEMACTIVATE&)> callback)
     {
       return bind_notification<win32::list_view, NMITEMACTIVATE>(this->GetParent()->ref(), this->ref(), NM_DBLCLK, std::move(callback));
     }
 
-    inline std::any bind_nm_dbl_rclick(std::function<void(win32::list_view, const NMITEMACTIVATE&)> callback)
+    [[maybe_unused]] inline std::function<void()> bind_nm_dbl_rclick(std::move_only_function<void(win32::list_view, const NMITEMACTIVATE&)> callback)
     {
       return bind_notification<win32::list_view, NMITEMACTIVATE>(this->GetParent()->ref(), this->ref(), NM_RDBLCLK, std::move(callback));
     }
 
-    inline std::any bind_nm_rclick(std::function<void(win32::list_view, const NMITEMACTIVATE&)> callback)
+    [[maybe_unused]] inline std::function<void()> bind_nm_rclick(std::move_only_function<void(win32::list_view, const NMITEMACTIVATE&)> callback)
     {
       return bind_notification<win32::list_view, NMITEMACTIVATE>(this->GetParent()->ref(), this->ref(), NM_RCLICK, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_lvn_item_changed(std::move_only_function<void(win32::list_view, const NMLISTVIEW&)> callback)
+    {
+      return bind_notification<win32::list_view, NMLISTVIEW>(this->GetParent()->ref(), this->ref(), LVN_ITEMCHANGED, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_lvn_end_scroll(std::move_only_function<void(win32::list_view, const NMLVSCROLL&)> callback)
+    {
+      return bind_notification<win32::list_view, NMLVSCROLL>(this->GetParent()->ref(), this->ref(), LVN_ENDSCROLL, std::move(callback));
     }
 
     inline HIMAGELIST SetImageList(wparam_t wparam, HIMAGELIST image_list)
@@ -986,21 +881,6 @@ namespace win32
         return std::nullopt;
       }
 
-      virtual std::optional<win32::lresult_t> wm_notify(win32::tool_bar, const NMTOOLBARW&)
-      {
-        return std::nullopt;
-      }
-
-      virtual std::optional<win32::lresult_t> wm_notify(win32::tool_bar, const NMTBHOTITEM&)
-      {
-        return std::nullopt;
-      }
-
-      virtual std::optional<BOOL> wm_notify(win32::tool_bar, const NMMOUSE&)
-      {
-        return std::nullopt;
-      }
-
       template<typename TWindow>
       static std::optional<lresult_t> dispatch_message(TWindow* control,
         std::uint32_t message,
@@ -1014,24 +894,6 @@ namespace win32
           if (message == WM_NOTIFY)
           {
             auto& header = *(NMHDR*)lParam;
-
-            if ((header.code == NM_CLICK || header.code == NM_DBLCLK || header.code == NM_RCLICK || header.code == NM_RDBLCLK)
-                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == tool_bar::class_name)
-            {
-              return self->wm_notify(win32::tool_bar(header.hwndFrom), *(NMMOUSE*)lParam);
-            }
-
-            if ((header.code == TBN_DROPDOWN)
-                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == tool_bar::class_name)
-            {
-              return self->wm_notify(win32::tool_bar(header.hwndFrom), *(NMTOOLBARW*)lParam);
-            }
-
-            if ((header.code == TBN_HOTITEMCHANGE)
-                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == tool_bar::class_name)
-            {
-              return self->wm_notify(win32::tool_bar(header.hwndFrom), *(NMTBHOTITEM*)lParam);
-            }
 
             if (header.code == NM_CUSTOMDRAW
                 && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == tool_bar::class_name)
@@ -1176,6 +1038,36 @@ namespace win32
     inline auto PressButton(wparam_t id, bool is_pressed = true)
     {
       return SendMessageW(*this, TB_PRESSBUTTON, id, MAKELPARAM(is_pressed ? TRUE : FALSE, 0));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_nm_click(std::move_only_function<BOOL(win32::tool_bar, const NMMOUSE&)> callback)
+    {
+      return bind_notification<win32::tool_bar, NMMOUSE, BOOL>(this->GetParent()->ref(), this->ref(), NM_CLICK, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_nm_rclick(std::move_only_function<BOOL(win32::tool_bar, const NMMOUSE&)> callback)
+    {
+      return bind_notification<win32::tool_bar, NMMOUSE, BOOL>(this->GetParent()->ref(), this->ref(), NM_RCLICK, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_nm_dbl_click(std::move_only_function<BOOL(win32::tool_bar, const NMMOUSE&)> callback)
+    {
+      return bind_notification<win32::tool_bar, NMMOUSE, BOOL>(this->GetParent()->ref(), this->ref(), NM_DBLCLK, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_nm_dbl_rclick(std::move_only_function<BOOL(win32::tool_bar, const NMMOUSE&)> callback)
+    {
+      return bind_notification<win32::tool_bar, NMMOUSE, BOOL>(this->GetParent()->ref(), this->ref(), NM_RDBLCLK, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_tbn_dropdown(std::move_only_function<LRESULT(win32::tool_bar, const NMTOOLBARW&)> callback)
+    {
+      return bind_notification<win32::tool_bar, NMTOOLBARW, LRESULT>(this->GetParent()->ref(), this->ref(), TBN_DROPDOWN, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_tbn_hot_item_change(std::move_only_function<LRESULT(win32::tool_bar, const NMTBHOTITEM&)> callback)
+    {
+      return bind_notification<win32::tool_bar, NMTBHOTITEM, LRESULT>(this->GetParent()->ref(), this->ref(), TBN_HOTITEMCHANGE, std::move(callback));
     }
   };
 

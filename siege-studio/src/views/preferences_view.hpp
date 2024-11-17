@@ -10,8 +10,8 @@
 namespace siege::views
 {
   struct preferences_view final : win32::window_ref
-    , win32::list_box::notifications
     , win32::list_view::notifications
+    , win32::list_box::notifications
     , win32::button::notifications
   {
     win32::window_ref theme_properties;
@@ -189,6 +189,10 @@ namespace siege::views
       control_settings = *control_factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
         .style = WS_CHILD | LVS_REPORT });
 
+      control_settings.bind_nm_hover([this](auto v, const auto& n) { control_settings_nm_hover(std::move(v), n); });
+      control_settings.bind_nm_click([this](auto v, const auto& n) { control_settings_nm_click(std::move(v), n); });
+      control_settings.bind_lvn_end_scroll([this](auto v, const auto& n) { control_settings_lvn_end_scroll(std::move(v), n); });
+
       control_settings.SetExtendedListViewStyle(LVS_EX_TRACKSELECT, LVS_EX_TRACKSELECT);
       control_settings.EnableGroupView(true);
 
@@ -359,42 +363,18 @@ namespace siege::views
       return std::nullopt;
     }
 
-    std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMLVSCROLL& notice) override
+    void control_settings_lvn_end_scroll(win32::list_view, const NMLVSCROLL& notice)
     {
-      if (notice.hdr.code == LVN_ENDSCROLL)
+      auto client_size = this->GetClientSize();
+
+      if (client_size)
       {
-        auto client_size = this->GetClientSize();
-
-        if (client_size)
-        {
-          auto min_width = client_size->cx / 12;
-          auto left_size = SIZE{ .cx = min_width * 2, .cy = client_size->cy };
-          auto middle_size = SIZE{ .cx = min_width * 4, .cy = client_size->cy };
-          auto right_size = SIZE{ .cx = client_size->cx - middle_size.cx - left_size.cx, .cy = client_size->cy };
-          resize_controls(left_size, right_size, middle_size);
-        }
+        auto min_width = client_size->cx / 12;
+        auto left_size = SIZE{ .cx = min_width * 2, .cy = client_size->cy };
+        auto middle_size = SIZE{ .cx = min_width * 4, .cy = client_size->cy };
+        auto right_size = SIZE{ .cx = client_size->cx - middle_size.cx - left_size.cx, .cy = client_size->cy };
+        resize_controls(left_size, right_size, middle_size);
       }
-
-      return std::nullopt;
-    }
-
-    std::optional<win32::lresult_t> wm_notify(win32::list_view hwndFrom, const NMLVDISPINFOW& message) override
-    {
-      if (message.hdr.code == LVN_BEGINLABELEDITW && hwndFrom == control_settings)
-      {
-        if (message.item.iSubItem == 0)
-        {
-          return FALSE;
-        }
-        return TRUE;
-      }
-
-      if (message.hdr.code == LVN_ENDLABELEDITW && hwndFrom == control_settings)
-      {
-        return TRUE;
-      }
-
-      return std::nullopt;
     }
 
     static UINT_PTR CALLBACK DialogColorHook(HWND dialog, UINT message, WPARAM wParam, LPARAM lParam)
@@ -412,7 +392,7 @@ namespace siege::views
 
     std::wstring temp_text = std::wstring(255, L'\0');
 
-    std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMITEMACTIVATE& notice) override
+    void control_settings_nm_click(win32::list_view, const NMITEMACTIVATE& notice)
     {
       POINT point;
 
@@ -474,14 +454,12 @@ namespace siege::views
           }
         }
       }
-
-      return std::nullopt;
     }
 
-    std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMHDR& notice) override
+    void control_settings_nm_hover(win32::list_view, const NMHDR& notice)
     {
       POINT point;
-      if ((notice.code == NM_HOVER) && ::GetCursorPos(&point) && ::ScreenToClient(control_settings, &point))
+      if (::GetCursorPos(&point) && ::ScreenToClient(control_settings, &point))
       {
         LVHITTESTINFO info{};
         info.pt = point;
@@ -510,7 +488,6 @@ namespace siege::views
           ListView_SetHotItem(control_settings, info.iItem);
         }
       }
-      return 0;
     }
 
     auto wm_size(std::size_t, SIZE client_size)

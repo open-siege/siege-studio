@@ -37,6 +37,8 @@ namespace siege::views
       selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
+      selection.bind_lbn_sel_change([this](auto v, const auto& n) { selection_lbn_sel_change(std::move(v), n); });
+
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
       return 0;
@@ -69,37 +71,30 @@ namespace siege::views
       return 0;
     }
 
-    std::optional<win32::lresult_t> wm_command(win32::list_box hwndFrom, int code)
+    void selection_lbn_sel_change(win32::list_box, const NMHDR&)
     {
-      if (code == LBN_SELCHANGE && hwndFrom == selection)
+      auto selected = selection.GetCurrentSelection();
+      auto& colours = controller.get_palette(selected);
+
+      brushes.clear();
+      brushes.reserve(colours.size());
+
+      ::COLORREF temp;
+
+      for (auto i = 0u; i < colours.size(); ++i)
       {
-        auto selected = selection.GetCurrentSelection();
-        auto& colours = controller.get_palette(selected);
-
-        brushes.clear();
-        brushes.reserve(colours.size());
-
-        ::COLORREF temp;
-
-        for (auto i = 0u; i < colours.size(); ++i)
-        {
-          auto temp_colour = colours[i].colour;
-          temp_colour.flags = std::byte{};
-          std::memcpy(&temp, &temp_colour, sizeof(temp));
-          brushes.emplace_back(::CreateSolidBrush(temp));
-        }
-
-        auto rect = render_view.GetClientRect();
-
-        if (rect)
-        {
-          ::InvalidateRect(render_view, &*rect, TRUE);
-        }
-
-        return 0;
+        auto temp_colour = colours[i].colour;
+        temp_colour.flags = std::byte{};
+        std::memcpy(&temp, &temp_colour, sizeof(temp));
+        brushes.emplace_back(::CreateSolidBrush(temp));
       }
 
-      return std::nullopt;
+      auto rect = render_view.GetClientRect();
+
+      if (rect)
+      {
+        ::InvalidateRect(render_view, &*rect, TRUE);
+      }
     }
 
 

@@ -19,9 +19,6 @@
 namespace siege::views
 {
   struct vol_view final : win32::window_ref
-    , win32::list_view::notifications
-    , win32::tool_bar::notifications
-    , win32::header::notifications
   {
     vol_controller controller;
 
@@ -103,6 +100,9 @@ namespace siege::views
 
       table_settings = *factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
 
+      table_settings.bind_nm_click([this](auto v, const auto& n){ return table_settings_nm_click(std::move(v), n);});
+      table_settings.bind_tbn_dropdown([this](auto v, const auto& n) { return table_settings_tbn_dropdown(std::move(v), n); });
+
       table_settings.InsertButton(-1, { .iBitmap = 0, .idCommand = LV_VIEW_DETAILS, .fsState = TBSTATE_ENABLED | TBSTATE_CHECKED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Details" }, false);
 
       table_settings.InsertButton(-1, { .iBitmap = 1, .idCommand = LV_VIEW_TILE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Tiles" }, false);
@@ -120,6 +120,10 @@ namespace siege::views
         .hMenu = table_menu,
         .style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
       });
+
+      table.bind_nm_rclick([this](auto v, const auto& n) { table_nm_rclick(std::move(v), n); });
+      table.bind_nm_dbl_click([this](auto v, const auto& n) { table_nm_dbl_click(std::move(v), n); });
+      table.bind_lvn_item_changed([this](auto v, const auto& n) { table_lvn_item_changed(std::move(v), n); });
 
       table.SetExtendedListViewStyle(LVS_EX_DOUBLEBUFFER, LVS_EX_DOUBLEBUFFER);
 
@@ -173,6 +177,9 @@ namespace siege::views
 
       header.SetWindowStyle(style | HDS_NOSIZING | HDS_FILTERBAR | HDS_FLAT);
       header.SetFilterChangeTimeout();
+      header.bind_hdn_filter_btn_click([this](auto c, auto n) { return table_filter_hdn_filter_btn_click(std::move(c), n); });
+      header.bind_hdn_filter_change([this](auto c, auto n) { return table_filter_change(std::move(c), n); });
+      header.bind_hdn_end_filter_edit([this](auto c, auto n) { return table_filter_change(std::move(c), n); });
 
       HIMAGELIST image_list = nullptr;
       auto hresult = SHGetImageList(SHIL_LARGE, IID_IImageList, (void**)&image_list);
@@ -536,250 +543,207 @@ namespace siege::views
       return false;
     }
 
-    std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMITEMACTIVATE& message) override
+    void table_nm_rclick(win32::list_view, const NMITEMACTIVATE& message)
     {
-      switch (message.hdr.code)
+      auto point = message.ptAction;
+
+      if (ClientToScreen(table, &point))
       {
-      case NM_RCLICK: {
-        auto point = message.ptAction;
+        auto result = table_menu.TrackPopupMenuEx(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, point, ref());
 
-        if (ClientToScreen(table, &point))
+        if (result == 1)
         {
-          auto result = table_menu.TrackPopupMenuEx(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, point, ref());
+          auto root = this->GetAncestor(GA_ROOT);
 
-          if (result == 1)
+          if (root)
           {
-            auto root = this->GetAncestor(GA_ROOT);
+            std::wstring temp;
 
-            if (root)
+            for (auto item : selected_table_items)
             {
-              std::wstring temp;
+              temp.assign(255, L'\0');
+              auto item_info = table.GetItem(LVITEMW{
+                .mask = LVIF_TEXT,
+                .iItem = item,
+                .pszText = temp.data(),
+                .cchTextMax = 256 });
 
-              for (auto item : selected_table_items)
+              if (item_info)
               {
-                temp.assign(255, L'\0');
-                auto item_info = table.GetItem(LVITEMW{
-                  .mask = LVIF_TEXT,
-                  .iItem = item,
-                  .pszText = temp.data(),
-                  .cchTextMax = 256 });
-
-                if (item_info)
-                {
-                  open_new_tab_for_item(*item_info, root->ref());
-                }
+                open_new_tab_for_item(*item_info, root->ref());
               }
             }
           }
-          if (result == 2)
-          {
-            extract_selected_files();
-          }
         }
-
-        return 0;
-      }
-      case NM_DBLCLK: {
-        auto root = this->GetAncestor(GA_ROOT);
-
-        if (root)
-        {
-          std::array<wchar_t, 256> temp{};
-
-          auto item_info = table.GetItem(LVITEMW{
-            .mask = LVIF_TEXT,
-            .iItem = message.iItem,
-            .pszText = temp.data(),
-            .cchTextMax = 256 });
-
-          if (item_info)
-          {
-            open_new_tab_for_item(*item_info, root->ref());
-          }
-        }
-        return 0;
-      }
-      default: {
-        return std::nullopt;
-      }
-      }
-    }
-
-    std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMLISTVIEW& message) override
-    {
-      switch (message.hdr.code)
-      {
-      case LVN_ITEMCHANGED: {
-        if (message.uNewState & LVIS_SELECTED)
-        {
-          selected_table_items.emplace(message.iItem);
-        }
-        else if (message.uOldState & LVIS_SELECTED)
-        {
-          selected_table_items.emplace(message.iItem);
-        }
-        return 0;
-      }
-      default: {
-        return FALSE;
-      }
-      }
-    }
-
-    std::optional<win32::lresult_t> wm_notify(win32::tool_bar, const NMTOOLBARW& message) override
-    {
-      switch (message.hdr.code)
-      {
-      case TBN_DROPDOWN: {
-        POINT point{ .x = message.rcButton.left, .y = message.rcButton.top };
-
-        if (ClientToScreen(table, &point))
-        {
-          auto result = table_settings_menu.TrackPopupMenuEx(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, point, ref());
-
-          if (result == 1)
-          {
-            extract_all_files();
-          }
-
-          return TBDDRET_DEFAULT;
-        }
-
-        return TBDDRET_NODEFAULT;
-      }
-      default: {
-        return FALSE;
-      }
-      }
-    }
-
-    std::optional<BOOL> wm_notify(win32::tool_bar, const NMMOUSE& message) override
-    {
-      switch (message.hdr.code)
-      {
-      case NM_CLICK: {
-        if (message.dwItemSpec == extract_selected_id)
+        if (result == 2)
         {
           extract_selected_files();
-          return TRUE;
         }
-
-        table.SetView(win32::list_view::view_type(message.dwItemSpec));
-
-        return TRUE;
-      }
-      default: {
-        return FALSE;
-      }
       }
     }
 
-    std::optional<win32::lresult_t> wm_notify(win32::header, NMHDFILTERBTNCLICK& message) override
+    void table_nm_dbl_click(win32::list_view, const NMITEMACTIVATE& message)
+    {
+      auto root = this->GetAncestor(GA_ROOT);
+
+      if (root)
+      {
+        std::array<wchar_t, 256> temp{};
+
+        auto item_info = table.GetItem(LVITEMW{
+          .mask = LVIF_TEXT,
+          .iItem = message.iItem,
+          .pszText = temp.data(),
+          .cchTextMax = 256 });
+
+        if (item_info)
+        {
+          open_new_tab_for_item(*item_info, root->ref());
+        }
+      }
+    }
+
+    void table_lvn_item_changed(win32::list_view, const NMLISTVIEW& message)
+    {
+      if (message.uNewState & LVIS_SELECTED)
+      {
+        selected_table_items.emplace(message.iItem);
+      }
+      else if (message.uOldState & LVIS_SELECTED)
+      {
+        selected_table_items.emplace(message.iItem);
+      }
+    }
+
+    LRESULT table_settings_tbn_dropdown(win32::tool_bar, const NMTOOLBARW& message)
+    {
+      POINT point{ .x = message.rcButton.left, .y = message.rcButton.top };
+
+      if (ClientToScreen(table, &point))
+      {
+        auto result = table_settings_menu.TrackPopupMenuEx(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, point, ref());
+
+        if (result == 1)
+        {
+          extract_all_files();
+        }
+
+        return TBDDRET_DEFAULT;
+      }
+
+      return TBDDRET_NODEFAULT;
+    }
+
+    BOOL table_settings_nm_click(win32::tool_bar, const NMMOUSE& message)
+    {
+      if (message.dwItemSpec == extract_selected_id)
+      {
+        extract_selected_files();
+        return TRUE;
+      }
+
+      table.SetView(win32::list_view::view_type(message.dwItemSpec));
+
+      return TRUE;
+    }
+
+    BOOL table_filter_hdn_filter_btn_click(win32::header, NMHDFILTERBTNCLICK& message)
     {
       return FALSE;
     }
 
-    std::optional<win32::lresult_t> wm_notify(win32::header, NMHEADERW& message) override
+    // HDN_FILTERCHANGE + HDN_ENDFILTEREDIT
+    void table_filter_change(win32::header, NMHEADERW& message)
     {
-      switch (message.hdr.code)
+      if (message.iItem == 0)
       {
-      case HDN_FILTERCHANGE:
-      case HDN_ENDFILTEREDIT: {
-        if (message.iItem == 0)
+        filter_value.clear();
+        filter_value.resize(255, L'\0');
+        HD_TEXTFILTERW string_filter{
+          .pszText = (wchar_t*)filter_value.data(),
+          .cchTextMax = (int)filter_value.capacity(),
+        };
+
+        auto header_item = table.GetHeader().GetItem(0, { .mask = HDI_FILTER, .type = HDFT_ISSTRING, .pvFilter = &string_filter });
+
+        filter_value.resize(filter_value.find(u'\0'));
+
+        if (header_item)
         {
-          filter_value.clear();
-          filter_value.resize(255, L'\0');
-          HD_TEXTFILTERW string_filter{
-            .pszText = (wchar_t*)filter_value.data(),
-            .cchTextMax = (int)filter_value.capacity(),
-          };
+          for (auto& item : categories_to_groups)
+          {
+            table.SetGroupInfo(item.second, {
+                                              .mask = LVGF_STATE,
+                                              .stateMask = LVGS_HIDDEN | LVGS_NOHEADER | LVGS_COLLAPSED,
+                                              .state = 0,
+                                            });
+          }
 
-          auto header_item = table.GetHeader().GetItem(0, { .mask = HDI_FILTER, .type = HDFT_ISSTRING, .pvFilter = &string_filter });
+          auto category_iter = categories_to_groups.find(filter_value);
 
-          filter_value.resize(filter_value.find(u'\0'));
+          if (category_iter == categories_to_groups.end() && !filter_value.empty())
+          {
+            auto extension_iter = extensions_to_categories.find(std::wstring_view((wchar_t*)filter_value.data(), filter_value.size()));
 
-          if (header_item)
+            if (extension_iter != extensions_to_categories.end())
+            {
+              category_iter = categories_to_groups.find(extension_iter->second);
+            }
+          }
+
+          if (category_iter != categories_to_groups.end())
           {
             for (auto& item : categories_to_groups)
             {
-              table.SetGroupInfo(item.second, {
-                                                .mask = LVGF_STATE,
-                                                .stateMask = LVGS_HIDDEN | LVGS_NOHEADER | LVGS_COLLAPSED,
-                                                .state = 0,
-                                              });
-            }
-
-            auto category_iter = categories_to_groups.find(filter_value);
-
-            if (category_iter == categories_to_groups.end() && !filter_value.empty())
-            {
-              auto extension_iter = extensions_to_categories.find(std::wstring_view((wchar_t*)filter_value.data(), filter_value.size()));
-
-              if (extension_iter != extensions_to_categories.end())
+              if (item.first != category_iter->first)
               {
-                category_iter = categories_to_groups.find(extension_iter->second);
+                table.SetGroupInfo(item.second, {
+                                                  .mask = LVGF_STATE,
+                                                  .stateMask = LVGS_HIDDEN | LVGS_NOHEADER | LVGS_COLLAPSED,
+                                                  .state = LVGS_HIDDEN | LVGS_NOHEADER | LVGS_COLLAPSED,
+                                                });
               }
             }
+          }
 
-            if (category_iter != categories_to_groups.end())
+          auto contents = controller.get_contents();
+
+          for (auto& content : contents)
+          {
+            if (auto* file = std::get_if<siege::platform::file_info>(&content))
             {
-              for (auto& item : categories_to_groups)
+              auto index_iter = file_indices.find(file);
+
+              if (index_iter == file_indices.end())
               {
-                if (item.first != category_iter->first)
-                {
-                  table.SetGroupInfo(item.second, {
-                                                    .mask = LVGF_STATE,
-                                                    .stateMask = LVGS_HIDDEN | LVGS_NOHEADER | LVGS_COLLAPSED,
-                                                    .state = LVGS_HIDDEN | LVGS_NOHEADER | LVGS_COLLAPSED,
-                                                  });
-                }
+                continue;
               }
-            }
 
-            auto contents = controller.get_contents();
-
-            for (auto& content : contents)
-            {
-              if (auto* file = std::get_if<siege::platform::file_info>(&content))
+              if (file->filename.u16string().find(filter_value) == std::u16string_view::npos)
               {
-                auto index_iter = file_indices.find(file);
+                table.SetItem({
+                  .mask = LVIF_GROUPID,
+                  .iItem = int(index_iter->second),
+                  .iGroupId = 1,
+                });
+              }
+              else
+              {
+                auto extension = platform::to_lower(file->filename.extension().wstring());
+                auto category = extensions_to_categories.find(extension);
 
-                if (index_iter == file_indices.end())
-                {
-                  continue;
-                }
-
-                if (file->filename.u16string().find(filter_value) == std::u16string_view::npos)
+                if (category != extensions_to_categories.end())
                 {
                   table.SetItem({
                     .mask = LVIF_GROUPID,
                     .iItem = int(index_iter->second),
-                    .iGroupId = 1,
+                    .iGroupId = int(categories_to_groups[category->second]),
                   });
-                }
-                else
-                {
-                  auto extension = platform::to_lower(file->filename.extension().wstring());
-                  auto category = extensions_to_categories.find(extension);
-
-                  if (category != extensions_to_categories.end())
-                  {
-                    table.SetItem({
-                      .mask = LVIF_GROUPID,
-                      .iItem = int(index_iter->second),
-                      .iGroupId = int(categories_to_groups[category->second]),
-                    });
-                  }
                 }
               }
             }
           }
         }
-        return 0;
-      }
-      default: {
-        return std::nullopt;
-      }
       }
     }
   };

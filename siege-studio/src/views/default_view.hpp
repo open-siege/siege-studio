@@ -11,11 +11,13 @@
 #include <utility>
 #include <future>
 #include <execution>
+#include <fstream>
 
 namespace siege::views
 {
   using namespace std::literals;
   namespace fs = std::filesystem;
+
 
   constexpr static auto default_search_paths = std::array<std::wstring_view, 10>{ {
     L"Games"sv,
@@ -41,6 +43,11 @@ namespace siege::views
   constexpr static auto engines = std::array<engine_info, 26>{ {
     { L"id Tech 3.0 (Raven Branch)"sv, L"id_tech-3.0-raven"sv, L"id_tech-3.0"sv },
     { L"id Tech 2.5 (Raven branch)"sv, L"id_tech-2.5-raven"sv, L"id_tech-2.5"sv },
+    { L"id Tech 3.0 (with Ubertools) (Ritual branch)"sv, L"id_tech-3.0-ritual"sv, L"id_tech-3.0"sv },
+    { L"id Tech 2.5 (Ritual branch)"sv, L"id_tech-2.5-ritual"sv, L"id_tech-2.5"sv },
+    { L"id Tech 3.0"sv, L"id_tech-3.0"sv, L"id_tech-2.5"sv },
+    { L"id Tech 2.5"sv, L"id_tech-2.5"sv, L"id_tech-2.0"sv },
+    { L"id Tech 2.0"sv, L"id_tech-2.0"sv, std::nullopt },
     { L"isiMotor 2.0"sv, L"isi-2.0"sv },
     { L"Torque"sv, L"torque"sv, L"darkstar"sv },
     { L"Darkstar"sv, L"darkstar"sv, L"3space-3.0"sv },
@@ -55,11 +62,6 @@ namespace siege::views
     { L"iW Engine 3.0"sv, L"iw-3.0"sv, L"iw-2.0"sv },
     { L"iW Engine 2.0"sv, L"iw-2.0"sv, std::nullopt },
     { L"iW Engine 1.0"sv, L"id_tech-3.0-iw"sv, L"id_tech-3.0"sv },
-    { L"id Tech 3.0 (with Ubertools) (Ritual branch)"sv, L"id_tech-3.0-ritual"sv, L"id_tech-3.0"sv },
-    { L"id Tech 3.0"sv, L"id_tech-3.0"sv, L"id_tech-2.5"sv },
-    { L"id Tech 2.5 (Ritual branch)"sv, L"id_tech-2.5-ritual"sv, L"id_tech-2.5"sv },
-    { L"id Tech 2.5"sv, L"id_tech-2.5"sv, L"id_tech-2.0"sv },
-    { L"id Tech 2.0"sv, L"id_tech-2.0"sv, std::nullopt },
     { L"Vampire"sv, L"vampire"sv, std::nullopt },
     { L"id Tech 1.0"sv, L"id_tech-1.0"sv, L"id_tech-raven"sv },
     { L"Shadowcaster engine"sv, L"id_tech-0.5-raven"sv, L"id_tech-0.5"sv },
@@ -209,9 +211,9 @@ namespace siege::views
   } };
 
   struct default_view final : win32::window_ref
-    , win32::list_view::notifications
   {
     inline static auto first_time = true;
+    std::wofstream log = std::wofstream("siege-studio-log.txt", std::ios::trunc);
 
     win32::static_control heading;//"Welcome to Siege Studio."
     win32::static_control logo;
@@ -234,6 +236,7 @@ namespace siege::views
 
     auto wm_create()
     {
+      log << L"Creating default view\n";
       win32::window_factory factory(ref());
 
       heading = *factory.CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE });
@@ -245,6 +248,9 @@ namespace siege::views
       ::SendMessageW(logo, STM_SETIMAGE, IMAGE_ICON, (LPARAM)logo_icon.get());
 
       supported_games_by_engine = *factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | LVS_REPORT });
+      supported_games_by_engine.bind_nm_dbl_click([this](auto c, const auto& n) {
+        this->supported_games_nm_dbl_click(std::move(c), n);
+      });
 
       supported_games_by_engine.InsertColumn(-1, LVCOLUMNW{
                                                    .pszText = const_cast<wchar_t*>(L""),
@@ -315,13 +321,16 @@ namespace siege::views
 
 
       pending_operation = std::async(std::launch::async, [this]() {
+        log << L"Detecting games\n";
         std::set<std::wstring> search_roots;
 
         std::error_code errc{};
         for (auto drive = L'C'; drive <= L'Z'; ++drive)
         {
+          log << L"Checking for drive: " << drive << '\n';
           if (std::filesystem::exists(std::wstring(1, drive) + L":\\", errc))
           {
+            log << L"Found drive: " << drive << '\n';
             search_roots.emplace(std::wstring(1, drive) + L":");
           }
         }
@@ -329,14 +338,17 @@ namespace siege::views
         std::wstring program_files_path(256, L'\0');
         std::wstring program_files_x86_path(256, L'\0');
 
+        log << L"Finding program files directories" << '\n';
         if (::SHGetFolderPathW(nullptr, CSIDL_PROGRAM_FILES, nullptr, SHGFP_TYPE_CURRENT, program_files_path.data()) == S_OK)
         {
           program_files_path.resize(program_files_path.find(L'\0'));
+          log << L"Found program files: " << program_files_path << '\n';
           search_roots.emplace(std::move(program_files_path));
         }
 
         if (::SHGetFolderPathW(nullptr, CSIDL_PROGRAM_FILESX86, nullptr, SHGFP_TYPE_CURRENT, program_files_x86_path.data()) == S_OK)
         {
+          log << L"Found secondary program files: " << program_files_path << '\n';
           program_files_x86_path.resize(program_files_x86_path.find(L'\0'));
           search_roots.emplace(std::move(program_files_x86_path));
         }
@@ -348,12 +360,14 @@ namespace siege::views
           for (const auto& search_path : default_search_paths)
           {
             auto real_search_path = std::wstring(root) + std::wstring(1, L'\\') + std::wstring(search_path);
+            log << L"Adding search path " << real_search_path << '\n';
             real_search_paths.insert(std::move(real_search_path));
           }
 
           for (const auto& game : games)
           {
             auto real_search_path = std::wstring(root) + std::wstring(1, L'\\') + std::wstring(game.game_name);
+            log << L"Adding game search path " << real_search_path << '\n';
             real_search_paths.insert(std::move(real_search_path));
           }
         }
@@ -365,17 +379,22 @@ namespace siege::views
 
         std::for_each(std::execution::par_unseq, real_search_paths.begin(), real_search_paths.end(), [&](const auto& real_search_path) {
           std::error_code errc{};
+          log << (L"Checking for " + real_search_path.wstring() + L'\n');
           if (fs::exists(real_search_path, errc))
           {
             try
             {
+              log << (L"Found " + real_search_path.wstring() + L'\n');
+              log << (L"Searching for exes" + '\n');
               for (const fs::directory_entry& dir_entry :
                 fs::recursive_directory_iterator(real_search_path))
               {
                 if (dir_entry.path().extension() == L".exe" || dir_entry.path().extension() == L".EXE")
                 {
+                  log << (L"Checking " + dir_entry.path().wstring() + L'\n');
                   for (auto& extension : extensions)
                   {
+                    log << (L"Checking " + dir_entry.path().wstring() + L" with " + extension.GetModuleFileName() + L'\n');
                     if (extension.executable_is_supported(dir_entry.path().c_str()) == true)
                     {
                       auto extension_name = fs::path(extension.GetModuleFileName()).stem();
@@ -417,47 +436,38 @@ namespace siege::views
       return 0;
     }
 
-    std::optional<win32::lresult_t> wm_notify(win32::list_view, const NMITEMACTIVATE& message) override
+    void supported_games_nm_dbl_click(win32::list_view, const NMITEMACTIVATE& message)
     {
-      switch (message.hdr.code)
+      auto root = this->GetAncestor(GA_ROOT);
+
+      if (root)
       {
-      case NM_DBLCLK: {
-        auto root = this->GetAncestor(GA_ROOT);
+        std::array<wchar_t, 256> temp{};
 
-        if (root)
+        ListView_GetItemText(supported_games_by_engine, message.iItem, 1, temp.data(), 256);
+        if (temp[0] != L'\0')
         {
-          std::array<wchar_t, 256> temp{};
+          fs::path file_path = temp.data();
 
-          ListView_GetItemText(supported_games_by_engine, message.iItem, 1, temp.data(), 256);
-          if (temp[0] != L'\0')
+          if (!fs::exists(file_path))
           {
-            fs::path file_path = temp.data();
-
-            if (!fs::exists(file_path))
-            {
-              return 0;
-            }
-
-            win32::file file_to_read(file_path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
-
-            auto mapping = file_to_read.CreateFileMapping(std::nullopt, PAGE_READONLY, 0, 0, L"");
-
-            std::size_t size = (std::size_t)file_to_read.GetFileSizeEx().value_or(LARGE_INTEGER{}).QuadPart;
-
-            auto view = mapping->MapViewOfFile(FILE_MAP_READ, size);
-
-            fs::current_path(file_path.parent_path());
-
-            root->SetPropW(L"FilePath", temp.data());
-            root->CopyData(*this, COPYDATASTRUCT{ .cbData = DWORD(size), .lpData = view.get() });
-            root->RemovePropW(L"FilePath");
+            return;
           }
-        }
 
-        return 0;
-      }
-      default:
-        return std::nullopt;
+          win32::file file_to_read(file_path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
+
+          auto mapping = file_to_read.CreateFileMapping(std::nullopt, PAGE_READONLY, 0, 0, L"");
+
+          std::size_t size = (std::size_t)file_to_read.GetFileSizeEx().value_or(LARGE_INTEGER{}).QuadPart;
+
+          auto view = mapping->MapViewOfFile(FILE_MAP_READ, size);
+
+          fs::current_path(file_path.parent_path());
+
+          root->SetPropW(L"FilePath", temp.data());
+          root->CopyData(*this, COPYDATASTRUCT{ .cbData = DWORD(size), .lpData = view.get() });
+          root->RemovePropW(L"FilePath");
+        }
       }
     }
 

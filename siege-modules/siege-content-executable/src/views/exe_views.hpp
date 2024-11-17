@@ -79,15 +79,19 @@ namespace siege::views
   std::wstring category_for_vkey(SHORT vkey);
 
   struct exe_view final : win32::window_ref
-    , win32::list_box::notifications
-    , win32::tool_bar::notifications
   {
     exe_controller controller;
 
     win32::list_box options;
+    std::function<void()> options_unbind;
     win32::list_view resource_table;
     win32::list_view string_table;
     win32::list_view launch_table;
+    win32::edit launch_table_edit;
+    win32::ip_address_edit launch_table_ip_address;
+    int ip_address_row_index;
+    std::function<void()> launch_table_edit_unbind;
+
     win32::list_view keyboard_table;
     win32::list_view controller_table;
     win32::tool_bar exe_actions;
@@ -125,8 +129,7 @@ namespace siege::views
 
     void recreate_image_list(std::optional<SIZE> possible_size);
 
-
-    std::optional<win32::lresult_t> wm_command(win32::list_box hwndFrom, int code) override;
+    void options_lbn_sel_change(win32::list_box, const NMHDR&);
 
     void populate_launch_table(siege::platform::game_command_line_caps& caps);
 
@@ -136,10 +139,8 @@ namespace siege::views
 
     void controller_table_nm_click(win32::list_view sender, const NMITEMACTIVATE& message);
 
-    std::optional<win32::lresult_t> wm_notify(win32::tool_bar, const NMTOOLBARW& message) override;
-
-    std::optional<BOOL> wm_notify(win32::tool_bar, const NMMOUSE& message) override;
-
+    LRESULT exe_actions_tbn_dropdown(win32::tool_bar, const NMTOOLBARW& message);
+    BOOL exe_actions_nm_click(win32::tool_bar, const NMMOUSE& message);
 
     std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message);
   };

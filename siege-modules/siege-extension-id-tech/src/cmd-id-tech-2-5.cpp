@@ -7,6 +7,7 @@ extern "C" {
 
 using game_command_line_caps = siege::platform::game_command_line_caps;
 extern game_command_line_caps command_line_caps;
+using namespace std::literals;
 
 const wchar_t** format_command_line(const siege::platform::game_command_line_args* args, std::uint32_t* new_size)
 {
@@ -23,19 +24,44 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
   static std::vector<std::wstring> string_args;
   string_args.clear();
 
-  auto ip_address_iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [&](auto& arg) {
-    return arg.value != nullptr && std::wstring_view(arg.name) == command_line_caps.ip_connect_setting;
-  });
-
-  if (ip_address_iter != args->string_settings.end())
+  for (auto& setting : args->string_settings)
   {
-    string_args.emplace_back(L"+connect");
-    string_args.emplace_back(ip_address_iter->value);
-  }
+    if (!setting.name)
+    {
+      continue;
+    }
 
-  if (string_args.empty())
-  {
-    return nullptr;
+    if (!setting.value)
+    {
+      continue;
+    }
+
+    if (!setting.value[0])
+    {
+      continue;
+    }
+
+    if (std::wstring_view(setting.name) == command_line_caps.ip_connect_setting)
+    {
+      if (setting.value == L"0.0.0.0"sv)
+      {
+        continue;
+      }
+
+      string_args.emplace_back(L"+connect");
+      string_args.emplace_back(setting.value);
+    }
+    else if (std::wstring_view(setting.name) == L"map")
+    {
+      string_args.emplace_back(L"+map");
+      string_args.emplace_back(setting.value);
+    }
+    else
+    {
+      string_args.emplace_back(L"+set");
+      string_args.emplace_back(setting.name);
+      string_args.emplace_back(setting.value);
+    }
   }
 
   static std::vector<const wchar_t*> raw_args;

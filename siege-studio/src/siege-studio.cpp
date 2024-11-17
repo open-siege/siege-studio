@@ -68,7 +68,14 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
   win32::com::init_com();
 
   INITCOMMONCONTROLSEX settings{
-    .dwSize{ sizeof(INITCOMMONCONTROLSEX) }
+    .dwSize{ sizeof(INITCOMMONCONTROLSEX) },
+    .dwICC = ICC_STANDARD_CLASSES | 
+             ICC_INTERNET_CLASSES | 
+             ICC_LISTVIEW_CLASSES | 
+             ICC_TAB_CLASSES | 
+             ICC_TREEVIEW_CLASSES | 
+             ICC_DATE_CLASSES | 
+             ICC_BAR_CLASSES
   };
   ::InitCommonControlsEx(&settings);
 

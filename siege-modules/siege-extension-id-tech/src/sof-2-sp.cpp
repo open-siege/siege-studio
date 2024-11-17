@@ -23,6 +23,8 @@ using controller_binding = siege::platform::controller_binding;
 using game_command_line_caps = siege::platform::game_command_line_caps;
 
 extern auto command_line_caps = game_command_line_caps{
+  .int_settings = { { L"r_customheight", L"r_customheight", L"r_mode" } },
+  .string_settings = { { L"map" } }
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {

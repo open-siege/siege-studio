@@ -51,7 +51,7 @@ namespace siege::views
           L"127.0.0.1"
         };
 
-        launch_table.InsertRow(std::move(column));
+        ip_address_row_index = launch_table.InsertRow(std::move(column));
         continue;
       }
 
@@ -67,132 +67,182 @@ namespace siege::views
   void exe_view::launch_table_nm_click(win32::list_view sender, const NMITEMACTIVATE& message)
   {
     POINT point;
-    OutputDebugStringW(L"launch_table_nm_click\n");
+
     if (::GetCursorPos(&point) && ::ScreenToClient(launch_table, &point))
     {
       LVHITTESTINFO info{};
       info.pt = point;
       info.flags = LVHT_ONITEM;
-      ListView_SubItemHitTest(launch_table, &info);
-      OutputDebugStringW(L"Sub item clicked\n");
+      if (ListView_SubItemHitTest(launch_table, &info) != -1)
+      {
+        if (info.iSubItem == 0)
+        {
+          return;
+        }
+
+        RECT temp;
+
+        if (ListView_GetSubItemRect(launch_table, info.iItem, info.iSubItem, LVIR_BOUNDS, &temp))
+        {
+          auto result = launch_table.MapWindowPoints(*this, temp);
+
+          if (result)
+          {
+            static std::array<wchar_t, 256> text{};
+
+            if (launch_table_edit_unbind)
+            {
+              launch_table_edit_unbind();
+              launch_table_edit_unbind = nullptr;
+            }
+
+            if (info.iItem == ip_address_row_index)
+            {
+              launch_table_ip_address.SetWindowPos(result->second);
+              launch_table_ip_address.SetWindowPos(HWND_TOP);
+              launch_table_ip_address.SetWindowStyle(launch_table_ip_address.GetWindowStyle() | WS_VISIBLE);
+              
+              ListView_GetItemText(launch_table, info.iItem, info.iSubItem, text.data(), text.size());
+
+              ::SetWindowTextW(launch_table_ip_address, text.data());
+
+
+              launch_table_edit_unbind = launch_table_ip_address.bind_en_kill_focus([this, info](auto, const auto&) {
+                launch_table_ip_address.SetWindowStyle(launch_table_ip_address.GetWindowStyle() & ~WS_VISIBLE);
+                ::GetWindowTextW(launch_table_ip_address, text.data(), (int)text.size());
+                ListView_SetItemText(launch_table, info.iItem, info.iSubItem, text.data());
+              });
+            }
+            else
+            {
+              launch_table_edit.SetWindowPos(result->second);
+              launch_table_edit.SetWindowPos(HWND_TOP);
+              launch_table_edit.SetWindowStyle(launch_table_edit.GetWindowStyle() | WS_VISIBLE | WS_BORDER);
+
+
+              ListView_GetItemText(launch_table, info.iItem, info.iSubItem, text.data(), text.size());
+
+              ::SetWindowTextW(launch_table_edit, text.data());
+
+
+              launch_table_edit_unbind = launch_table_edit.bind_en_kill_focus([this, info](auto, const auto&) {
+                launch_table_edit.SetWindowStyle(launch_table_edit.GetWindowStyle() & ~WS_VISIBLE);
+                ::GetWindowTextW(launch_table_edit, text.data(), (int)text.size());
+                ListView_SetItemText(launch_table, info.iItem, info.iSubItem, text.data());
+              });
+            }
+          }
+        }
+      }
     }
   }
 
-  std::optional<BOOL> exe_view::wm_notify(win32::tool_bar, const NMMOUSE& message)
+  BOOL exe_view::exe_actions_nm_click(win32::tool_bar, const NMMOUSE& message)
   {
-    switch (message.hdr.code)
+    if (message.dwItemSpec == add_to_firewall_selected_id)
     {
-    case NM_CLICK: {
+      auto path = this->controller.get_exe_path();
 
-      if (message.dwItemSpec == add_to_firewall_selected_id)
+      std::wstring args;
+      args.reserve(256);
+
+      args.append(L"advfirewall firewall add rule dir=out enable=yes name=");
+
+      args.append(1, L'\"');
+      args.append(path.parent_path().stem());
+      args.append(1, L'\"');
+      args.append(L" action=allow program=");
+
+      args.append(1, L'\"');
+      args.append(path);
+      args.append(1, L'\"');
+
+      ::ShellExecuteW(nullptr,
+        L"runas",
+        L"netsh.exe",
+        args.c_str(),
+        nullptr,// default dir
+        SW_SHOWNORMAL);
+
+      return TRUE;
+    }
+
+    if (message.dwItemSpec == extract_selected_id)
+    {
+      return TRUE;
+    }
+
+    if (message.dwItemSpec == launch_selected_id)
+    {
+      if (controller.has_extension_module())
       {
-        auto path = this->controller.get_exe_path();
+        std::map<WORD, WORD> input_mapping{};
 
-        std::wstring args;
-        args.reserve(256);
-
-        args.append(L"advfirewall firewall add rule dir=out enable=yes name=");
-
-        args.append(1, L'\"');
-        args.append(path.parent_path().stem());
-        args.append(1, L'\"');
-        args.append(L" action=allow program=");
-
-        args.append(1, L'\"');
-        args.append(path);
-        args.append(1, L'\"');
-
-        ::ShellExecuteW(nullptr,
-          L"runas",
-          L"netsh.exe",
-          args.c_str(),
-          nullptr,// default dir
-          SW_SHOWNORMAL);
-
-        return TRUE;
-      }
-
-      if (message.dwItemSpec == extract_selected_id)
-      {
-        return TRUE;
-      }
-
-      if (message.dwItemSpec == launch_selected_id)
-      {
-        if (controller.has_extension_module())
+        for (auto i = 0; i < controller_table.GetItemCount(); ++i)
         {
-          std::map<WORD, WORD> input_mapping{};
+          auto item = controller_table.GetItem(LVITEMW{
+            .mask = LVIF_PARAM,
+            .iItem = i });
 
-          for (auto i = 0; i < controller_table.GetItemCount(); ++i)
+          if (item && item->lParam)
           {
-            auto item = controller_table.GetItem(LVITEMW{
-              .mask = LVIF_PARAM,
-              .iItem = i });
-
-            if (item && item->lParam)
-            {
-              auto controller_key = LOWORD(item->lParam);
-              auto keyboard_key = HIWORD(item->lParam);
-              input_mapping[controller_key] = keyboard_key;
-            }
+            auto controller_key = LOWORD(item->lParam);
+            auto keyboard_key = HIWORD(item->lParam);
+            input_mapping[controller_key] = keyboard_key;
           }
-
-          siege::platform::game_command_line_args game_args{};
-
-          std::vector<std::array<std::wstring, 2>> launch_strings;
-          launch_strings.reserve(launch_table.GetItemCount());
-
-          auto& extension = controller.get_extension();
-          auto* caps = extension.caps;
-
-          for (auto i = 0; i < launch_table.GetItemCount(); ++i)
-          {
-            std::wstring name(255, L'\0');
-            std::wstring value(255, L'\0');
-
-            ListView_GetItemText(launch_table, i, 0, name.data(), name.size());
-            ListView_GetItemText(launch_table, i, 1, value.data(), value.size());
-
-            name.resize(name.find(L'\0'));
-            value.resize(value.find(L'\0'));
-
-
-            if (name == L"Player Name")
-            {
-              name = caps->player_name_setting;
-            }
-            else if (name == L"Server IP Address")
-            {
-              name = caps->ip_connect_setting;
-            }
-
-            launch_strings.emplace_back(std::array<std::wstring, 2>{ { std::move(name), std::move(value) } });
-
-            game_args.string_settings[i].name = launch_strings[i][0].c_str();
-            game_args.string_settings[i].value = launch_strings[i][1].c_str();
-          }
-
-          input_injector_args args{
-            .exe_path = controller.get_exe_path(),
-            .extension_path = controller.get_extension().GetModuleFileName(),
-            .args = std::move(game_args),
-            .controller_key_mappings = std::move(input_mapping),
-            .extension = &controller.get_extension()
-          };
-
-          win32::DialogBoxIndirectParamW<siege::input_injector>(win32::module_ref::current_application(),
-            win32::default_dialog({}),
-            ref(),
-            (LPARAM)&args);
         }
 
-        return TRUE;
+        siege::platform::game_command_line_args game_args{};
+
+        std::vector<std::array<std::wstring, 2>> launch_strings;
+        launch_strings.reserve(launch_table.GetItemCount());
+
+        auto& extension = controller.get_extension();
+        auto* caps = extension.caps;
+
+        for (auto i = 0; i < launch_table.GetItemCount(); ++i)
+        {
+          std::wstring name(255, L'\0');
+          std::wstring value(255, L'\0');
+
+          ListView_GetItemText(launch_table, i, 0, name.data(), name.size());
+          ListView_GetItemText(launch_table, i, 1, value.data(), value.size());
+
+          name.resize(name.find(L'\0'));
+          value.resize(value.find(L'\0'));
+
+
+          if (name == L"Player Name")
+          {
+            name = caps->player_name_setting;
+          }
+          else if (name == L"Server IP Address")
+          {
+            name = caps->ip_connect_setting;
+          }
+
+          launch_strings.emplace_back(std::array<std::wstring, 2>{ { std::move(name), std::move(value) } });
+
+          game_args.string_settings[i].name = launch_strings[i][0].c_str();
+          game_args.string_settings[i].value = launch_strings[i][1].c_str();
+        }
+
+        input_injector_args args{
+          .exe_path = controller.get_exe_path(),
+          .extension_path = controller.get_extension().GetModuleFileName(),
+          .args = std::move(game_args),
+          .controller_key_mappings = std::move(input_mapping),
+          .extension = &controller.get_extension()
+        };
+
+        win32::DialogBoxIndirectParamW<siege::input_injector>(win32::module_ref::current_application(),
+          win32::default_dialog({}),
+          ref(),
+          (LPARAM)&args);
       }
-      return FALSE;
+
+      return TRUE;
     }
-    default: {
-      return FALSE;
-    }
-    }
+    return FALSE;
   }
 }// namespace siege::views

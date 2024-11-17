@@ -25,6 +25,7 @@ using game_command_line_caps = siege::platform::game_command_line_caps;
 extern auto command_line_caps = game_command_line_caps{
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
+  .int_settings = { { L"r_customheight", L"r_customheight", L"r_mode" } },
   .string_settings = { { L"name", L"connect" } }
 };
 
@@ -77,9 +78,9 @@ using namespace std::literals;
 
 constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = {{ 
         std::array<std::pair<std::string_view, std::size_t>, 3>{ { 
-            { "exec"sv, std::size_t(0x20120494) },
-            { "cmdlist"sv, std::size_t(0x45189c) },
-            { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } 
+            { "exec"sv, std::size_t(0x561dfc) },
+            { "cmdlist"sv, std::size_t(0x561e04) },
+            { "cl_pitchspeed"sv, std::size_t(0x563628) } } } 
  }};
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 9> function_name_ranges{ {

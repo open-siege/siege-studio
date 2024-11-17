@@ -20,6 +20,7 @@ namespace siege::views
     options = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
       .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
+    options_unbind = options.bind_lbn_sel_change([this](auto v, const auto& n) { options_lbn_sel_change(std::move(v), n); });
     options.InsertString(-1, L"Resources");
     options.SetCurrentSelection(0);
 
@@ -29,6 +30,8 @@ namespace siege::views
     exe_actions.InsertButton(-1, { .iBitmap = 0, .idCommand = launch_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Launch" }, false);
     exe_actions.InsertButton(-1, { .iBitmap = 1, .idCommand = extract_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" }, false);
     exe_actions.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
+    exe_actions.bind_tbn_dropdown([this](auto v, const auto& n) { return exe_actions_tbn_dropdown(std::move(v), n); });
+    exe_actions.bind_nm_click([this](auto v, const auto& n) { return exe_actions_nm_click(std::move(v), n); });
 
     resource_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
 
@@ -51,6 +54,7 @@ namespace siege::views
 
     launch_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
 
+    launch_table.bind_nm_click([this](auto c, const auto& n) { launch_table_nm_click(std::move(c), n); });
     launch_table.InsertColumn(-1, LVCOLUMNW{
                                     .pszText = const_cast<wchar_t*>(L"Name"),
                                   });
@@ -59,13 +63,17 @@ namespace siege::views
                                     .pszText = const_cast<wchar_t*>(L"Value"),
                                   });
 
+    launch_table_edit = *control_factory.CreateWindowExW<win32::edit>({ .style = WS_CHILD });
+    launch_table_ip_address = *control_factory.CreateWindowExW<win32::ip_address_edit>({ .cy = 100, .cx = 300, .style = WS_CHILD });
+
     keyboard_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
 
     keyboard_table.InsertColumn(-1, LVCOLUMNW{
                                       .pszText = const_cast<wchar_t*>(L""),
                                     });
-
+ 
     controller_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
+    controller_table.bind_nm_click([this](auto c, const auto& n) { controller_table_nm_click(std::move(c), n); });
 
     controller_table.InsertColumn(-1, LVCOLUMNW{
                                         .pszText = const_cast<wchar_t*>(L""),
@@ -233,8 +241,6 @@ namespace siege::views
     header.SetWindowStyle(style | HDS_NOSIZING | HDS_FLAT);
 
     wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
-    launch_table.bind_nm_click([this](auto c, const auto& n) { launch_table_nm_click(std::move(c), n); });
-    controller_table.bind_nm_click([this](auto c, const auto& n) { controller_table_nm_click(std::move(c), n); });
 
     return 0;
   }
@@ -343,23 +349,17 @@ namespace siege::views
     image_list = win32::create_icon_list(icons, icon_size);
   }
 
-  std::optional<win32::lresult_t> exe_view::wm_command(win32::list_box hwndFrom, int code)
+  void exe_view::options_lbn_sel_change(win32::list_box, const NMHDR&)
   {
-    if (code == LBN_SELCHANGE && hwndFrom == options)
+    OutputDebugStringW(L"options_lbn_sel_change\n");
+    auto selected = options.GetCurrentSelection();
+
+    std::array tables{ launch_table.ref(), keyboard_table.ref(), controller_table.ref(), string_table.ref(), resource_table.ref() };
+
+    for (auto i = 0; i < tables.size(); ++i)
     {
-      auto selected = options.GetCurrentSelection();
-
-      std::array tables{ launch_table.ref(), keyboard_table.ref(), controller_table.ref(), string_table.ref(), resource_table.ref() };
-
-      for (auto i = 0; i < tables.size(); ++i)
-      {
-        ::ShowWindow(tables[i], i == selected ? SW_SHOW : SW_HIDE);
-      }
-
-      return 0;
+      ::ShowWindow(tables[i], i == selected ? SW_SHOW : SW_HIDE);
     }
-
-    return std::nullopt;
   }
 
   std::optional<win32::lresult_t> exe_view::wm_copy_data(win32::copy_data_message<char> message)
@@ -508,31 +508,24 @@ namespace siege::views
     return FALSE;
   }
 
-  std::optional<win32::lresult_t> exe_view::wm_notify(win32::tool_bar, const NMTOOLBARW& message)
+
+  LRESULT exe_view::exe_actions_tbn_dropdown(win32::tool_bar, const NMTOOLBARW& message)
   {
-    switch (message.hdr.code)
+    POINT point{ .x = message.rcButton.left, .y = message.rcButton.top };
+
+    if (ClientToScreen(exe_actions, &point))
     {
-    case TBN_DROPDOWN: {
-      POINT point{ .x = message.rcButton.left, .y = message.rcButton.top };
+      /*auto result = table_settings_menu.TrackPopupMenuEx(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, point, ref());
 
-      if (ClientToScreen(exe_actions, &point))
+      if (result == 1)
       {
-        /*auto result = table_settings_menu.TrackPopupMenuEx(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, point, ref());
+        extract_all_files();
+      }*/
 
-        if (result == 1)
-        {
-          extract_all_files();
-        }*/
+      return TBDDRET_DEFAULT;
+    }
 
-        return TBDDRET_DEFAULT;
-      }
-
-      return TBDDRET_NODEFAULT;
-    }
-    default: {
-      return FALSE;
-    }
-    }
+    return TBDDRET_NODEFAULT;
   }
 
   std::optional<win32::lresult_t> exe_view::wm_setting_change(win32::setting_change_message message)
@@ -546,6 +539,8 @@ namespace siege::views
       win32::apply_theme(options);
       win32::apply_theme(exe_actions);
       win32::apply_theme(*this);
+      options_unbind(); 
+      options_unbind = options.bind_lbn_sel_change([this](auto v, const auto& n) { options_lbn_sel_change(std::move(v), n); });
 
       recreate_image_list(std::nullopt);
       SendMessageW(exe_actions, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());

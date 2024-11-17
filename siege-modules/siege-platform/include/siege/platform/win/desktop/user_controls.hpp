@@ -2,12 +2,98 @@
 #define WIN32_SINGULAR_CONTROLS_HPP
 
 #include <expected>
+#include <functional>
 #include <siege/platform/win/desktop/window.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
 #include <CommCtrl.h>
 
 namespace win32
 {
+  template<typename TControl, typename TNotification, typename TReturn = void>
+  [[maybe_unused]] std::function<void()> bind_notification(win32::window_ref target, win32::window_ref source, UINT code, std::move_only_function<TReturn(TControl, const TNotification&)> callback)
+  {
+    struct function_context
+    {
+      HWND source;
+      UINT code;
+      std::move_only_function<TReturn(TControl, const TNotification&)> callback;
+    };
+
+    struct dispatcher
+    {
+      static LRESULT __stdcall handle_message(
+        HWND hWnd,
+        UINT uMsg,
+        WPARAM wParam,
+        LPARAM lParam,
+        UINT_PTR uIdSubclass,
+        DWORD_PTR dwRefData)
+      {
+        if (uMsg == WM_COMMAND && lParam && uIdSubclass)
+        {
+          OutputDebugStringW(L"WM_COMMAND\n");
+          auto& context = *(function_context*)uIdSubclass;
+          auto id = LOWORD(wParam);
+          auto code = HIWORD(wParam);
+          auto child = (HWND)lParam;
+
+          if (context.source == child && context.code == code)
+          {
+            OutputDebugStringW(L"Code and child are valid\n");
+            NMHDR info{ .hwndFrom = child, .idFrom = id, .code = code };
+            TNotification destInfo{};
+            std::memcpy(&destInfo, &info, sizeof(info));
+
+            if constexpr (std::is_void_v<TReturn>)
+            {
+              context.callback(TControl(child), destInfo);
+            }
+            else
+            {
+              return context.callback(TControl(child), destInfo);
+            }
+          }
+        }
+
+        if (uMsg == WM_NOTIFY && lParam && uIdSubclass)
+        {
+          auto* header = (NMHDR*)lParam;
+          auto& context = *(function_context*)uIdSubclass;
+
+          if (header->hwndFrom == context.source && header->code == context.code)
+          {
+            if constexpr (std::is_void_v<TReturn>)
+            {
+              context.callback(TControl(header->hwndFrom), *(TNotification*)lParam);
+            }
+            else
+            {
+              return context.callback(TControl(header->hwndFrom), *(TNotification*)lParam);
+            }
+          }
+        }
+
+        if (uMsg == WM_NCDESTROY)
+        {
+          auto* context = (function_context*)uIdSubclass;
+          delete context;
+          ::RemoveWindowSubclass(hWnd, dispatcher::handle_message, uIdSubclass);
+        }
+
+        return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+      }
+    };
+
+    auto* context = new function_context{ source.get(), code, std::move(callback) };
+
+    ::SetWindowSubclass(target.get(), dispatcher::handle_message, (UINT_PTR)context, 0);
+
+    return [context, target = target.get()] {
+      ::RemoveWindowSubclass(target, dispatcher::handle_message, (UINT_PTR)context);
+      delete context;
+    };
+  }
+
   struct button : window
   {
     using window::window;
@@ -173,10 +259,7 @@ namespace win32
             parent = win32::window_ref((HWND)lParam).GetParent();
           }
 
-          if (message == WM_CTLCOLORSTATIC && 
-              win32::window_ref((HWND)lParam).RealGetWindowClassW() == edit::class_name &&
-              parent &&
-              parent->RealGetWindowClassW() != combo_box::class_name)
+          if (message == WM_CTLCOLORSTATIC && win32::window_ref((HWND)lParam).RealGetWindowClassW() == edit::class_name && parent && parent->RealGetWindowClassW() != combo_box::class_name)
           {
             auto result = self->wm_control_color(edit((hwnd_t)lParam), win32::gdi::drawing_context_ref((HDC)wParam));
 
@@ -186,10 +269,7 @@ namespace win32
             }
           }
 
-          if (message == WM_CTLCOLOREDIT && 
-              win32::window_ref((HWND)lParam).RealGetWindowClassW() == edit::class_name &&
-              parent &&
-              parent->RealGetWindowClassW() != combo_box::class_name)
+          if (message == WM_CTLCOLOREDIT && win32::window_ref((HWND)lParam).RealGetWindowClassW() == edit::class_name && parent && parent->RealGetWindowClassW() != combo_box::class_name)
           {
             auto result = self->wm_control_color(edit((hwnd_t)lParam), win32::gdi::drawing_context_ref((HDC)wParam));
 
@@ -203,6 +283,16 @@ namespace win32
         return std::nullopt;
       }
     };
+
+    [[maybe_unused]] inline std::function<void()> bind_en_change(std::move_only_function<void(edit, const NMHDR&)> callback)
+    {
+      return bind_notification<edit, NMHDR>(this->GetParent()->ref(), this->ref(), EN_CHANGE, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_en_kill_focus(std::move_only_function<void(edit, const NMHDR&)> callback)
+    {
+      return bind_notification<edit, NMHDR>(this->GetParent()->ref(), this->ref(), EN_KILLFOCUS, std::move(callback));
+    }
   };
 
   struct static_control : window
@@ -389,6 +479,11 @@ namespace win32
     [[maybe_unused]] inline wparam_t InsertString(wparam_t index, std::wstring_view text)
     {
       return SendMessageW(*this, LB_INSERTSTRING, index, std::bit_cast<LPARAM>(text.data()));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_lbn_sel_change(std::move_only_function<void(list_box, const NMHDR&)> callback)
+    {
+      return bind_notification<list_box, NMHDR>(this->GetParent()->ref(), this->ref(), LBN_SELCHANGE, std::move(callback));
     }
   };
 

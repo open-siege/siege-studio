@@ -25,7 +25,8 @@ using game_command_line_caps = siege::platform::game_command_line_caps;
 extern auto command_line_caps = game_command_line_caps{
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
-  .string_settings = { { L"name", L"connect" } }
+  .int_settings = {{ L"r_customwidth", L"r_customheight", L"r_mode" }},
+  .string_settings = { { L"name", L"connect", L"map" } }
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
@@ -75,9 +76,10 @@ extern void(__cdecl* ConsoleEvalCdecl)(const char*) ;
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
-  { "cmdlist"sv, std::size_t(0x45189c) },
-  { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } } };
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { 
+  { "exec"sv, std::size_t(0x4fb190) },
+  { "cmdlist"sv, std::size_t(0x4fb198) },
+  { "cl_pitchspeed"sv, std::size_t(0x4f9498) } } } } };
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 5> function_name_ranges{ {
   { "-mlook"sv, "+button0"sv },

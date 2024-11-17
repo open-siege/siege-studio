@@ -14,7 +14,6 @@
 namespace siege::views
 {
   struct sfx_view final : win32::window_ref
-    , win32::tool_bar::notifications
   {
     sfx_controller controller;
 
@@ -38,6 +37,7 @@ namespace siege::views
 
       player_buttons = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS });
 
+      player_buttons.bind_nm_click([this](auto c, const auto& n) { return player_buttons_nm_click(std::move(c), n); });
       player_buttons.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Play" });
 
       player_buttons.InsertButton(-1, { .iBitmap = 1, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Pause" });
@@ -144,131 +144,123 @@ namespace siege::views
       return std::nullopt;
     }
 
-    std::optional<win32::lresult_t> wm_notify(win32::tool_bar, NMTBCUSTOMDRAW& message) override
+    //LRESULT wm_notify(win32::tool_bar, NMTBCUSTOMDRAW& message) override
+    //{
+    //  if (message.nmcd.dwDrawStage == CDDS_PREPAINT)
+    //  {
+    //    return CDRF_NOTIFYITEMDRAW;
+    //  }
+
+    //  if (message.nmcd.dwDrawStage == CDDS_ITEMPREPAINT)
+    //  {
+    //    if (message.nmcd.dwItemSpec == 0)
+    //    {
+    //      RECT rect = message.nmcd.rc;
+    //      SIZE one_third = SIZE{ .cx = (rect.right - rect.left) / 12, .cy = (rect.bottom - rect.top) };
+    //      POINT vertices[] = { { rect.left, rect.top }, { rect.left + ((rect.right - rect.left) / 4), rect.top + ((rect.bottom - rect.top) / 2) }, { rect.left, rect.bottom } };
+
+    //      ::SelectObject(message.nmcd.hdc, ::GetSysColorBrush(COLOR_BTNTEXT));
+    //      ::Polygon(message.nmcd.hdc, vertices, sizeof(vertices) / sizeof(POINT));
+    //    }
+
+    //    if (message.nmcd.dwItemSpec == 1)
+    //    {
+    //      RECT rect = message.nmcd.rc;
+
+    //      SIZE one_third = SIZE{ .cx = (rect.right - rect.left) / 12, .cy = (rect.bottom - rect.top) };
+    //      RECT left = RECT{ .left = rect.left, .top = rect.top, .right = rect.left + one_third.cx, .bottom = rect.bottom };
+    //      RECT middle = RECT{ .left = left.right, .top = rect.top, .right = left.right + one_third.cx, .bottom = rect.bottom };
+    //      RECT right = RECT{ .left = middle.right, .top = rect.top, .right = middle.right + one_third.cx, .bottom = rect.bottom };
+
+    //      ::FillRect(message.nmcd.hdc, &left, ::GetSysColorBrush(COLOR_BTNTEXT));
+
+    //      ::FillRect(message.nmcd.hdc, &right, ::GetSysColorBrush(COLOR_BTNTEXT));
+    //    }
+
+    //    if (message.nmcd.dwItemSpec == 2)
+    //    {
+    //      auto min = std::min<int>(message.nmcd.rc.right - message.nmcd.rc.left, message.nmcd.rc.bottom - message.nmcd.rc.top);
+    //      RECT rect = {
+    //        .left = message.nmcd.rc.left,
+    //        .top = message.nmcd.rc.top,
+    //        .right = message.nmcd.rc.left + min,
+    //        .bottom = message.nmcd.rc.top + min
+    //      };
+
+    //      FillRect(message.nmcd.hdc, &rect, ::GetSysColorBrush(COLOR_BTNTEXT));
+    //    }
+
+    //    if (message.nmcd.dwItemSpec == 3)
+    //    {
+    //      return 0;
+    //    }
+    //    return CDRF_SKIPDEFAULT;
+    //  }
+
+    //  return CDRF_DODEFAULT;
+    //}
+
+    BOOL player_buttons_nm_click(win32::tool_bar, const NMMOUSE& message)
     {
-      if (message.nmcd.dwDrawStage == CDDS_PREPAINT)
+      if (message.hdr.hwndFrom == player_buttons)
       {
-        return CDRF_NOTIFYITEMDRAW;
-      }
+        auto index = message.dwItemSpec;
 
-      if (message.nmcd.dwDrawStage == CDDS_ITEMPREPAINT)
-      {
-        if (message.nmcd.dwItemSpec == 0)
+        if (index == 3)
         {
-          RECT rect = message.nmcd.rc;
-          SIZE one_third = SIZE{ .cx = (rect.right - rect.left) / 12, .cy = (rect.bottom - rect.top) };
-          POINT vertices[] = { { rect.left, rect.top }, { rect.left + ((rect.right - rect.left) / 4), rect.top + ((rect.bottom - rect.top) / 2) }, { rect.left, rect.bottom } };
+          auto state = ::SendMessageW(player_buttons, TB_GETSTATE, 3, 0);
 
-          ::SelectObject(message.nmcd.hdc, ::GetSysColorBrush(COLOR_BTNTEXT));
-          ::Polygon(message.nmcd.hdc, vertices, sizeof(vertices) / sizeof(POINT));
-        }
-
-        if (message.nmcd.dwItemSpec == 1)
-        {
-          RECT rect = message.nmcd.rc;
-
-          SIZE one_third = SIZE{ .cx = (rect.right - rect.left) / 12, .cy = (rect.bottom - rect.top) };
-          RECT left = RECT{ .left = rect.left, .top = rect.top, .right = rect.left + one_third.cx, .bottom = rect.bottom };
-          RECT middle = RECT{ .left = left.right, .top = rect.top, .right = left.right + one_third.cx, .bottom = rect.bottom };
-          RECT right = RECT{ .left = middle.right, .top = rect.top, .right = middle.right + one_third.cx, .bottom = rect.bottom };
-
-          ::FillRect(message.nmcd.hdc, &left, ::GetSysColorBrush(COLOR_BTNTEXT));
-
-          ::FillRect(message.nmcd.hdc, &right, ::GetSysColorBrush(COLOR_BTNTEXT));
-        }
-
-        if (message.nmcd.dwItemSpec == 2)
-        {
-          auto min = std::min<int>(message.nmcd.rc.right - message.nmcd.rc.left, message.nmcd.rc.bottom - message.nmcd.rc.top);
-          RECT rect = {
-            .left = message.nmcd.rc.left,
-            .top = message.nmcd.rc.top,
-            .right = message.nmcd.rc.left + min,
-            .bottom = message.nmcd.rc.top + min
-          };
-
-          FillRect(message.nmcd.hdc, &rect, ::GetSysColorBrush(COLOR_BTNTEXT));
-        }
-
-        if (message.nmcd.dwItemSpec == 3)
-        {
-          return 0;
-        }
-        return CDRF_SKIPDEFAULT;
-      }
-
-      return CDRF_DODEFAULT;
-    }
-
-    std::optional<BOOL> wm_notify(win32::tool_bar, const NMMOUSE& message) override
-    {
-      switch (message.hdr.code)
-      {
-      case NM_CLICK: {
-        if (message.hdr.hwndFrom == player_buttons)
-        {
-          auto index = message.dwItemSpec;
-
-          if (index == 3)
-          {
-            auto state = ::SendMessageW(player_buttons, TB_GETSTATE, 3, 0);
-
-            if (!(state & TBSTATE_CHECKED))
-            {
-              media.StopSound();
-            }
-          }
-
-          if (index == 0)
-          {
-            auto state = ::SendMessageW(player_buttons, TB_GETSTATE, 3, 0);
-
-            bool loop = false;
-            if (state & TBSTATE_CHECKED)
-            {
-              loop = true;
-            }
-            auto path = controller.get_sound_path(0);
-
-            if (path)
-            {
-              media.PlaySound(*path, true, loop);
-            }
-
-            auto data = controller.get_sound_data(0);
-
-            if (data)
-            {
-              media.PlaySound(*data, true, loop);
-            }
-          }
-
-          if (index == 1)
+          if (!(state & TBSTATE_CHECKED))
           {
             media.StopSound();
           }
+        }
 
-          if (index == 2)
+        if (index == 0)
+        {
+          auto state = ::SendMessageW(player_buttons, TB_GETSTATE, 3, 0);
+
+          bool loop = false;
+          if (state & TBSTATE_CHECKED)
           {
-            media.StopSound();
+            loop = true;
+          }
+          auto path = controller.get_sound_path(0);
+
+          if (path)
+          {
+            media.PlaySound(*path, true, loop);
           }
 
-          for (auto i = 0; i < 3; ++i)
+          auto data = controller.get_sound_data(0);
+
+          if (data)
           {
-            if (i == index && i != 2)
-            {
-              continue;
-            }
-            auto state = ::SendMessageW(player_buttons, TB_GETSTATE, i, 0);
-            ::SendMessageW(player_buttons, TB_SETSTATE, i, MAKELPARAM(state & ~TBSTATE_CHECKED, 0));
+            media.PlaySound(*data, true, loop);
           }
         }
-        return TRUE;
+
+        if (index == 1)
+        {
+          media.StopSound();
+        }
+
+        if (index == 2)
+        {
+          media.StopSound();
+        }
+
+        for (auto i = 0; i < 3; ++i)
+        {
+          if (i == index && i != 2)
+          {
+            continue;
+          }
+          auto state = ::SendMessageW(player_buttons, TB_GETSTATE, i, 0);
+          ::SendMessageW(player_buttons, TB_SETSTATE, i, MAKELPARAM(state & ~TBSTATE_CHECKED, 0));
+        }
       }
-      default: {
-        return FALSE;
-      }
-      }
+      return TRUE;
     }
   };
 }// namespace siege::views
