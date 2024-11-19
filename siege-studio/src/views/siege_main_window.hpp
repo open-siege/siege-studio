@@ -38,12 +38,7 @@ namespace siege::views
     return result;
   }
 
-  struct siege_main_window final : win32::window_ref
-    , win32::tree_view::notifications
-    , win32::tab_control::notifications
-    , win32::tool_bar::notifications
-    , win32::button::notifications
-    , win32::menu::notifications
+  struct siege_main_window final : win32::window_ref, win32::menu::notifications
   {
     win32::tree_view dir_list;
     win32::button separator;
@@ -248,6 +243,9 @@ namespace siege::views
       win32::window_factory factory(ref());
 
       dir_list = *factory.CreateWindowExW<win32::tree_view>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE });
+      dir_list.bind_tvn_sel_changed(std::bind_front(&siege_main_window::dir_list_tvn_sel_changed, this));
+      dir_list.bind_tvn_item_expanding(std::bind_front(&siege_main_window::dir_list_tvn_item_expanding, this));
+      dir_list.bind_nm_dbl_click(std::bind_front(&siege_main_window::dir_list_nm_dbl_click, this));
 
       separator = *factory.CreateWindowEx<win32::button>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | BS_FLAT });
 
@@ -269,8 +267,13 @@ namespace siege::views
           .hMenu = tab_context_menu,
           .style = WS_CHILD | WS_VISIBLE | TCS_FIXEDWIDTH | TCS_FORCELABELLEFT,
         });
-      close_button = *factory.CreateWindowExW<win32::button>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"X" });
 
+      tab_control.bind_nm_rclick(std::bind_front(&siege_main_window::tab_control_nm_rclick, this));
+      tab_control.bind_tcn_sel_change(std::bind_front(&siege_main_window::tab_control_tcn_sel_change, this));
+      tab_control.bind_tcn_sel_changing(std::bind_front(&siege_main_window::tab_control_tcn_sel_changing, this));
+      
+      close_button = *factory.CreateWindowExW<win32::button>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"X" });
+      close_button.bind_bn_clicked(std::bind_front(&siege_main_window::close_button_bn_clicked, this));
 
       std::size_t id = 1u;
 
@@ -471,11 +474,11 @@ namespace siege::views
 
           SetWindowLongPtrW(*child, GWLP_ID, index + 1);
 
-          wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGING });
+          tab_control_tcn_sel_changing(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGING });
 
           tab_control.SetCurrentSelection(index);
 
-          wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE });
+          tab_control_tcn_sel_change(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE });
           on_size(*this->GetClientSize());
         }
         else
@@ -624,81 +627,72 @@ namespace siege::views
           index = std::clamp<int>(index, 0, count - 1);
 
           TabCtrl_SetCurSel(tab_control, index);
-          wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE });
+          tab_control_tcn_sel_change(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE });
         }
       }
     }
 
-    std::optional<LRESULT> wm_notify(win32::tab_control sender, const NMHDR& notification) override
+    void tab_control_nm_rclick(win32::tab_control sender, const NMHDR& notification)
     {
-      auto code = notification.code;
-
-      switch (code)
+      POINT mouse_pos;
+      if (GetCursorPos(&mouse_pos) && ScreenToClient(sender, &mouse_pos))
       {
-      case NM_RCLICK: {
-        POINT mouse_pos;
-        if (GetCursorPos(&mouse_pos) && ScreenToClient(sender, &mouse_pos))
+        auto window_rect = sender.GetWindowRect();
+        TCHITTESTINFO hit_test{
+          .pt = mouse_pos,
+          .flags = TCHT_ONITEMLABEL
+        };
+
+        if (auto index = TabCtrl_HitTest(sender, &hit_test); index != -1)
         {
-          auto window_rect = sender.GetWindowRect();
-          TCHITTESTINFO hit_test{
-            .pt = mouse_pos,
-            .flags = TCHT_ONITEMLABEL
-          };
+          auto tab_rect = sender.GetItemRect(index);
+          auto height = tab_rect->bottom - tab_rect->top;
 
-          if (auto index = TabCtrl_HitTest(sender, &hit_test); index != -1)
+          auto action = ::TrackPopupMenu(GetMenu(sender), TPM_CENTERALIGN | TPM_RETURNCMD, window_rect->left + tab_rect->left, window_rect->top + height, 0, *this, nullptr);
+
+          if (action == 1)
           {
-            auto tab_rect = sender.GetItemRect(index);
-            auto height = tab_rect->bottom - tab_rect->top;
-
-            auto action = ::TrackPopupMenu(GetMenu(sender), TPM_CENTERALIGN | TPM_RETURNCMD, window_rect->left + tab_rect->left, window_rect->top + height, 0, *this, nullptr);
-
-            if (action == 1)
-            {
-              remove_tab(index);
-            }
+            remove_tab(index);
           }
         }
-        return 0;
       }
-      case TCN_SELCHANGING: {
-        auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
+    }
 
-        auto tab_item = tab_control.GetItem(current_index);
-        ::ShowWindow(win32::hwnd_t(tab_item->lParam), SW_HIDE);
-        return 0;
+    BOOL tab_control_tcn_sel_changing(win32::tab_control sender, const NMHDR& notification)
+    {
+      auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
+
+      auto tab_item = tab_control.GetItem(current_index);
+      ::ShowWindow(win32::hwnd_t(tab_item->lParam), SW_HIDE);
+      return 0;
+    }
+
+    void tab_control_tcn_sel_change(win32::tab_control sender, const NMHDR& notification)
+    {
+      auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
+
+      if (current_index == -1)
+      {
+        return;
       }
-      case TCN_SELCHANGE: {
-        auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
 
-        if (current_index == -1)
-        {
-          return 0;
-        }
-
-        auto tab_item = tab_control.GetItem(current_index);
+      auto tab_item = tab_control.GetItem(current_index);
 
 
-        if (tab_item->lParam == 0)
-        {
-          return std::nullopt;
-        }
-
-        auto temp_window = win32::window_ref(win32::hwnd_t(tab_item->lParam));
-
-        temp_window.SetWindowPos(HWND_TOP);
-
-        auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
-
-        move_close_button();
-
-        ShowWindow(win32::hwnd_t(tab_item->lParam), SW_SHOW);
-
-        return 0;
+      if (tab_item->lParam == 0)
+      {
+        return;
       }
-      default: {
-        return std::nullopt;
-      }
-      }
+
+      auto temp_window = win32::window_ref(win32::hwnd_t(tab_item->lParam));
+
+      temp_window.SetWindowPos(HWND_TOP);
+
+      auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
+
+      move_close_button();
+
+      ShowWindow(win32::hwnd_t(tab_item->lParam), SW_SHOW);
     }
 
     void AddDefaultTab()
@@ -738,11 +732,11 @@ namespace siege::views
         on_size(*this->GetClientSize());
       }
 
-      wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGING });
+      tab_control_tcn_sel_changing(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGING });
 
       tab_control.SetCurrentSelection(index);
 
-      wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE });
+      tab_control_tcn_sel_change(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE });
 
       on_size(*this->GetClientSize());
     }
@@ -826,11 +820,11 @@ namespace siege::views
               on_size(*this->GetClientSize());
             }
 
-            wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGING });
+            tab_control_tcn_sel_changing(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGING });
 
             tab_control.SetCurrentSelection(index);
 
-            wm_notify(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE });
+            tab_control_tcn_sel_change(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE });
 
             on_size(*this->GetClientSize());
           }
@@ -850,74 +844,51 @@ namespace siege::views
       return false;
     }
 
-    std::optional<LRESULT> wm_notify(win32::tree_view sender, const NMHDR& notification) override
+    BOOL dir_list_nm_dbl_click(win32::tree_view sender, const NMHDR& notification)
     {
-      auto code = notification.code;
-
-      if (code == NM_DBLCLK && sender == dir_list && selected_file != files.end() && AddTabFromPath(*selected_file))
-      {
-        return 0;
-      }
-
-      return std::nullopt;
+      selected_file != files.end() && AddTabFromPath(*selected_file);
+      return FALSE;
     }
 
-    std::optional<LRESULT> wm_notify(win32::tree_view, const NMTREEVIEWW& notification) override
+    void dir_list_tvn_sel_changed(win32::tree_view, const NMTREEVIEWW& notification)
     {
-      auto sender = notification.hdr.hwndFrom;
-      auto code = notification.hdr.code;
+      selected_file = std::find_if(files.begin(), files.end(), [&](const auto& existing) {
+        return existing.c_str() == (wchar_t*)notification.itemNew.lParam;
+      });
 
-      switch (code)
+      auto folder = std::find_if(folders.begin(), folders.end(), [&](const auto& existing) {
+        return existing.c_str() == (wchar_t*)notification.itemNew.lParam;
+      });
+
+      if (folder != folders.end() && notification.itemNew.cChildren == 0)
       {
-      case TVN_SELCHANGED: {
-        selected_file = std::find_if(files.begin(), files.end(), [&](const auto& existing) {
-          return existing.c_str() == (wchar_t*)notification.itemNew.lParam;
-        });
-
-        auto folder = std::find_if(folders.begin(), folders.end(), [&](const auto& existing) {
-          return existing.c_str() == (wchar_t*)notification.itemNew.lParam;
-        });
-
-        if (folder != folders.end() && notification.itemNew.cChildren == 0)
+        for (auto const& dir_entry : std::filesystem::directory_iterator{ *folder })
         {
-          for (auto const& dir_entry : std::filesystem::directory_iterator{ *folder })
+          if (!dir_entry.is_directory())
           {
-            if (!dir_entry.is_directory())
-            {
-              auto& temp = files.emplace_back(dir_entry.path());
-              win32::tree_view_item child(temp, temp.filename());
-              child.hParent = notification.itemNew.hItem;
-              child.hInsertAfter = TVI_LAST;
+            auto& temp = files.emplace_back(dir_entry.path());
+            win32::tree_view_item child(temp, temp.filename());
+            child.hParent = notification.itemNew.hItem;
+            child.hInsertAfter = TVI_LAST;
 
 
-              dir_list.InsertItem(child);
-            }
+            dir_list.InsertItem(child);
           }
         }
-
-        return 0;
-      }
-      case TVN_ITEMEXPANDING: {
-
-        return FALSE;
-      }
-      default: {
-        return std::nullopt;
-      }
       }
     }
 
-    std::optional<LRESULT> wm_command(win32::button sender, int code) override
+    BOOL dir_list_tvn_item_expanding(win32::tree_view, const NMTREEVIEWW& notification)
     {
-      if (sender == close_button && code == BN_CLICKED)
-      {
-        if (tab_control.GetItemCount())
-        {
-          remove_tab(TabCtrl_GetCurSel(tab_control));
-        }
-      }
+      return FALSE;
+    }
 
-      return std::nullopt;
+    void close_button_bn_clicked(win32::button sender, const NMHDR&)
+    {
+      if (tab_control.GetItemCount())
+      {
+        remove_tab(TabCtrl_GetCurSel(tab_control));
+      }
     }
 
     std::optional<LRESULT> wm_command(win32::menu_ref, int identifier) override

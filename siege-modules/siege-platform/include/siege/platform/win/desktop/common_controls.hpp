@@ -42,126 +42,53 @@ namespace win32
   struct control : window
   {
     using window::window;
+
+    template<typename TControl, typename TNotification, typename TReturn = void>
+    [[maybe_unused]] inline std::function<void()> bind_notification(UINT code, std::move_only_function<TReturn(TControl, const TNotification&)> callback)
+    {
+      return win32::bind_notification<TControl, TNotification, TReturn>(this->GetParent()->ref(), this->ref(), code, std::move(callback));
+    }
   };
 
-  struct ip_address_edit : window
+  struct ip_address_edit : control
   {
-    using window::window;
+    using control::control;
+    using control::bind_notification;
     constexpr static auto class_name = WC_IPADDRESSW;
 
     [[maybe_unused]] inline std::function<void()> bind_en_change(std::move_only_function<void(ip_address_edit, const NMHDR&)> callback)
     {
-      return bind_notification<ip_address_edit, NMHDR>(this->GetParent()->ref(), this->ref(), EN_CHANGE, std::move(callback));
+      return bind_notification<ip_address_edit, NMHDR>(EN_CHANGE, std::move(callback));
     }
 
     [[maybe_unused]] inline std::function<void()> bind_en_kill_focus(std::move_only_function<void(ip_address_edit, const NMHDR&)> callback)
     {
-      return bind_notification<ip_address_edit, NMHDR>(this->GetParent()->ref(), this->ref(), EN_KILLFOCUS, std::move(callback));
+      return bind_notification<ip_address_edit, NMHDR>(EN_KILLFOCUS, std::move(callback));
     }
 
     [[maybe_unused]] inline std::function<void()> bind_en_set_focus(std::move_only_function<void(ip_address_edit, const NMHDR&)> callback)
     {
-      return bind_notification<ip_address_edit, NMHDR>(this->GetParent()->ref(), this->ref(), EN_SETFOCUS, std::move(callback));
+      return bind_notification<ip_address_edit, NMHDR>(EN_SETFOCUS, std::move(callback));
     }
   };
 
-  struct sys_link : window
+  struct sys_link : control
   {
-    using window::window;
+    using control::control;
     constexpr static auto class_name = WC_LINK;
-
-    struct notifications
-    {
-      virtual std::optional<lresult_t> wm_notify(win32::sys_link, NMCUSTOMTEXT&)
-      {
-        return std::nullopt;
-      }
-
-      virtual std::optional<lresult_t> wm_notify(win32::sys_link, NMLINK&)
-      {
-        return std::nullopt;
-      }
-
-      template<typename TWindow>
-      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
-      {
-        if constexpr (std::is_base_of_v<notifications, TWindow>)
-        {
-        }
-
-        return std::nullopt;
-      }
-    };
   };
 
-  struct track_bar : window
+  struct track_bar : control
   {
-    using window::window;
+    using control::control;
     constexpr static auto class_name = TRACKBAR_CLASSW;
-
-    struct notifications
-    {
-      virtual std::optional<win32::lresult_t> wm_notify(win32::track_bar, NMCUSTOMDRAW&)
-      {
-        return std::nullopt;
-      }
-
-      template<typename TWindow>
-      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
-      {
-        if constexpr (std::is_base_of_v<notifications, TWindow>)
-        {
-          if (message == WM_NOTIFY)
-          {
-            auto& header = *(NMHDR*)lParam;
-
-            if (header.code == NM_CUSTOMDRAW
-                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == track_bar::class_name)
-            {
-              return self->wm_notify(track_bar(header.hwndFrom), *(NMCUSTOMDRAW*)lParam);
-            }
-          }
-        }
-
-        return std::nullopt;
-      }
-    };
   };
 
   struct header : control
   {
     using control::control;
+    using control::bind_notification;
     constexpr static auto class_name = WC_HEADERW;
-
-    struct notifications
-    {
-      virtual std::optional<win32::lresult_t> wm_notify(win32::header, NMCUSTOMDRAW&)
-      {
-        return std::nullopt;
-      }
-
-      template<typename TWindow>
-      static std::optional<lresult_t> dispatch_message(TWindow* window, std::uint32_t message, wparam_t wParam, lparam_t lParam)
-      {
-        if constexpr (std::is_base_of_v<notifications, TWindow>)
-        {
-          auto* self = static_cast<notifications*>(window);
-
-          if (message == WM_NOTIFY)
-          {
-            auto& header = *(NMHDR*)lParam;
-
-            if (header.code == NM_CUSTOMDRAW
-                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == header::class_name)
-            {
-              return self->wm_notify(win32::header(header.hwndFrom), *(NMCUSTOMDRAW*)lParam);
-            }
-          }
-        }
-
-        return std::nullopt;
-      }
-    };
 
     [[nodiscard]] inline wparam_t GetItemCount()
     {
@@ -210,19 +137,74 @@ namespace win32
       return Header_SetFilterChangeTimeout(*this, timeout);
     }
 
-    [[maybe_unused]] inline std::function<void()> bind_hdn_filter_btn_click(std::move_only_function<bool(win32::header, const NMHDFILTERBTNCLICK&)> callback)
+    [[maybe_unused]] inline std::function<void()> bind_hdn_filter_btn_click(std::move_only_function<BOOL(win32::header, const NMHDFILTERBTNCLICK&)> callback)
     {
-      return bind_notification<win32::header, NMHDFILTERBTNCLICK, bool>(this->GetParent()->ref(), this->ref(), HDN_FILTERBTNCLICK, std::move(callback));
+      return bind_notification<win32::header, NMHDFILTERBTNCLICK, BOOL>(HDN_FILTERBTNCLICK, std::move(callback));
     }
 
     [[maybe_unused]] inline std::function<void()> bind_hdn_filter_change(std::move_only_function<void(win32::header, const NMHEADERW&)> callback)
     {
-      return bind_notification<win32::header, NMHEADERW>(this->GetParent()->ref(), this->ref(), HDN_FILTERCHANGE, std::move(callback));
+      return bind_notification<win32::header, NMHEADERW>(HDN_FILTERCHANGE, std::move(callback));
     }
 
     [[maybe_unused]] inline std::function<void()> bind_hdn_end_filter_edit(std::move_only_function<void(win32::header, const NMHEADERW&)> callback)
     {
-      return bind_notification<win32::header, NMHEADERW>(this->GetParent()->ref(), this->ref(), HDN_ENDFILTEREDIT, std::move(callback));
+      return bind_notification<win32::header, NMHEADERW>(HDN_ENDFILTEREDIT, std::move(callback));
+    }
+
+    struct custom_draw_callbacks
+    {
+      std::move_only_function<win32::lresult_t(win32::header, NMCUSTOMDRAW&)> nm_custom_draw;
+    };
+
+    [[maybe_unused]] std::function<void()> bind_custom_draw(custom_draw_callbacks callbacks)
+    {
+      struct function_context
+      {
+        HWND source;
+        custom_draw_callbacks callbacks;
+      };
+
+      struct dispatcher
+      {
+        static LRESULT __stdcall handle_message(
+          HWND hWnd,
+          UINT uMsg,
+          WPARAM wParam,
+          LPARAM lParam,
+          UINT_PTR uIdSubclass,
+          DWORD_PTR dwRefData)
+        {
+          if (uMsg == WM_NOTIFY && lParam && uIdSubclass)
+          {
+            auto* header = (NMHDR*)lParam;
+            auto& context = *(function_context*)uIdSubclass;
+
+            if (context.callbacks.nm_custom_draw && header->hwndFrom == context.source && header->code == NM_CUSTOMDRAW)
+            {
+              return context.callbacks.nm_custom_draw(win32::header(header->hwndFrom), *(NMCUSTOMDRAW*)header);
+            }
+          }
+
+          if (uMsg == WM_NCDESTROY)
+          {
+            auto* context = (function_context*)uIdSubclass;
+            delete context;
+            ::RemoveWindowSubclass(hWnd, dispatcher::handle_message, uIdSubclass);
+          }
+
+          return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+        }
+      };
+
+      auto* context = new function_context{ this->get(), std::move(callbacks) };
+
+      ::SetWindowSubclass(this->GetParent()->get(), dispatcher::handle_message, (UINT_PTR)context, 0);
+
+      return [context, target = this->GetParent()->get()] {
+        ::RemoveWindowSubclass(target, dispatcher::handle_message, (UINT_PTR)context);
+        delete context;
+      };
     }
   };
 
@@ -280,36 +262,6 @@ namespace win32
 
     using control::control;
 
-    struct notifications
-    {
-      virtual std::optional<win32::lresult_t> wm_notify(win32::list_view, NMLVCUSTOMDRAW&)
-      {
-        return std::nullopt;
-      }
-
-
-      template<typename TWindow>
-      static std::optional<lresult_t> dispatch_message(TWindow* window, std::uint32_t message, wparam_t wParam, lparam_t lParam)
-      {
-        if constexpr (std::is_base_of_v<notifications, TWindow>)
-        {
-          auto* self = static_cast<notifications*>(window);
-
-          if (message == WM_NOTIFY)
-          {
-            auto& header = *(NMHDR*)lParam;
-            if (header.code == NM_CUSTOMDRAW
-                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == list_view::class_name)
-            {
-              return self->wm_notify(list_view(header.hwndFrom), *(NMLVCUSTOMDRAW*)lParam);
-            }
-          }
-        }
-
-        return std::nullopt;
-      }
-    };
-
     enum struct view_type : DWORD
     {
       details_view = LV_VIEW_DETAILS,
@@ -321,37 +273,37 @@ namespace win32
 
     [[maybe_unused]] inline std::function<void()> bind_nm_hover(std::move_only_function<void(win32::list_view, const NMHDR&)> callback)
     {
-      return bind_notification<win32::list_view, NMHDR>(this->GetParent()->ref(), this->ref(), NM_HOVER, std::move(callback));
+      return bind_notification<win32::list_view, NMHDR>(NM_HOVER, std::move(callback));
     }
 
     [[maybe_unused]] inline std::function<void()> bind_nm_click(std::move_only_function<void(win32::list_view, const NMITEMACTIVATE&)> callback)
     {
-      return bind_notification<win32::list_view, NMITEMACTIVATE>(this->GetParent()->ref(), this->ref(), NM_CLICK, std::move(callback));
+      return bind_notification<win32::list_view, NMITEMACTIVATE>(NM_CLICK, std::move(callback));
     }
 
     [[maybe_unused]] inline std::function<void()> bind_nm_dbl_click(std::move_only_function<void(win32::list_view, const NMITEMACTIVATE&)> callback)
     {
-      return bind_notification<win32::list_view, NMITEMACTIVATE>(this->GetParent()->ref(), this->ref(), NM_DBLCLK, std::move(callback));
+      return bind_notification<win32::list_view, NMITEMACTIVATE>(NM_DBLCLK, std::move(callback));
     }
 
     [[maybe_unused]] inline std::function<void()> bind_nm_dbl_rclick(std::move_only_function<void(win32::list_view, const NMITEMACTIVATE&)> callback)
     {
-      return bind_notification<win32::list_view, NMITEMACTIVATE>(this->GetParent()->ref(), this->ref(), NM_RDBLCLK, std::move(callback));
+      return bind_notification<win32::list_view, NMITEMACTIVATE>(NM_RDBLCLK, std::move(callback));
     }
 
     [[maybe_unused]] inline std::function<void()> bind_nm_rclick(std::move_only_function<void(win32::list_view, const NMITEMACTIVATE&)> callback)
     {
-      return bind_notification<win32::list_view, NMITEMACTIVATE>(this->GetParent()->ref(), this->ref(), NM_RCLICK, std::move(callback));
+      return bind_notification<win32::list_view, NMITEMACTIVATE>(NM_RCLICK, std::move(callback));
     }
 
     [[maybe_unused]] inline std::function<void()> bind_lvn_item_changed(std::move_only_function<void(win32::list_view, const NMLISTVIEW&)> callback)
     {
-      return bind_notification<win32::list_view, NMLISTVIEW>(this->GetParent()->ref(), this->ref(), LVN_ITEMCHANGED, std::move(callback));
+      return bind_notification<win32::list_view, NMLISTVIEW>(LVN_ITEMCHANGED, std::move(callback));
     }
 
     [[maybe_unused]] inline std::function<void()> bind_lvn_end_scroll(std::move_only_function<void(win32::list_view, const NMLVSCROLL&)> callback)
     {
-      return bind_notification<win32::list_view, NMLVSCROLL>(this->GetParent()->ref(), this->ref(), LVN_ENDSCROLL, std::move(callback));
+      return bind_notification<win32::list_view, NMLVSCROLL>(LVN_ENDSCROLL, std::move(callback));
     }
 
     inline HIMAGELIST SetImageList(wparam_t wparam, HIMAGELIST image_list)
@@ -710,79 +662,74 @@ namespace win32
         group_id++;
       }
     }
+
+    struct custom_draw_callbacks
+    {
+      std::move_only_function<win32::lresult_t(win32::list_view, NMLVCUSTOMDRAW&)> nm_custom_draw;
+    };
+
+    [[maybe_unused]] std::function<void()> bind_custom_draw(custom_draw_callbacks callbacks)
+    {
+      struct function_context
+      {
+        HWND source;
+        custom_draw_callbacks callbacks;
+      };
+
+      struct dispatcher
+      {
+        static LRESULT __stdcall handle_message(
+          HWND hWnd,
+          UINT uMsg,
+          WPARAM wParam,
+          LPARAM lParam,
+          UINT_PTR uIdSubclass,
+          DWORD_PTR dwRefData)
+        {
+          if (uMsg == WM_NOTIFY && lParam && uIdSubclass)
+          {
+            auto* header = (NMHDR*)lParam;
+            auto& context = *(function_context*)uIdSubclass;
+
+            if (context.callbacks.nm_custom_draw && header->hwndFrom == context.source && header->code == NM_CUSTOMDRAW)
+            {
+              return context.callbacks.nm_custom_draw(win32::list_view(header->hwndFrom), *(NMLVCUSTOMDRAW*)header);
+            }
+          }
+
+          if (uMsg == WM_NCDESTROY)
+          {
+            auto* context = (function_context*)uIdSubclass;
+            delete context;
+            ::RemoveWindowSubclass(hWnd, dispatcher::handle_message, uIdSubclass);
+          }
+
+          return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+        }
+      };
+
+      auto* context = new function_context{ this->get(), std::move(callbacks) };
+
+      ::SetWindowSubclass(this->GetParent()->get(), dispatcher::handle_message, (UINT_PTR)context, 0);
+
+      return [context, target = this->GetParent()->get()] {
+        ::RemoveWindowSubclass(target, dispatcher::handle_message, (UINT_PTR)context);
+        delete context;
+      };
+    }
   };
 
   struct rebar : window
   {
     using window::window;
     constexpr static auto class_Name = REBARCLASSNAMEW;
-
-    struct notifications
-    {
-      virtual std::optional<win32::lresult_t> wm_notify(win32::track_bar, NMCUSTOMDRAW&)
-      {
-        return std::nullopt;
-      }
-
-      template<typename TWindow>
-      static std::optional<lresult_t> dispatch_message(TWindow* self, std::uint32_t message, wparam_t wParam, lparam_t lParam)
-      {
-        if constexpr (std::is_base_of_v<notifications, TWindow>)
-        {
-        }
-
-        return std::nullopt;
-      }
-    };
   };
 
-  struct tab_control : window
+  struct tab_control : control
   {
-    using window::window;
+    using control::control;
+    using control::bind_notification;
 
-    struct notifications
-    {
-      virtual std::optional<win32::lresult_t> wm_draw_item(win32::tab_control, DRAWITEMSTRUCT&)
-      {
-        return std::nullopt;
-      }
-
-      virtual std::optional<win32::lresult_t> wm_notify(win32::tab_control, const NMHDR&)
-      {
-        return std::nullopt;
-      }
-
-      template<typename TWindow>
-      static std::optional<lresult_t> dispatch_message(TWindow* control, std::uint32_t message, wparam_t wParam, lparam_t lParam)
-      {
-        if constexpr (std::is_base_of_v<notifications, TWindow>)
-        {
-          auto* self = static_cast<notifications*>(control);
-          if (message == WM_NOTIFY)
-          {
-            auto& header = *(NMHDR*)lParam;
-
-            if ((header.code == TCN_SELCHANGE || header.code == TCN_SELCHANGING || header.code == TCN_FOCUSCHANGE || header.code == NM_CLICK || header.code == NM_RCLICK || header.code == NM_DBLCLK || header.code == NM_RDBLCLK)
-                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == tab_control::class_name)
-            {
-              return self->wm_notify(win32::tab_control(header.hwndFrom), header);
-            }
-          }
-
-          if (message == WM_DRAWITEM)
-          {
-            auto& context = *(DRAWITEMSTRUCT*)lParam;
-
-            if (context.CtlType == ODT_TAB)
-            {
-              return self->wm_draw_item(tab_control(context.hwndItem), context);
-            }
-          }
-        }
-
-        return std::nullopt;
-      }
-    };
     constexpr static auto class_name = WC_TABCONTROLW;
 
 
@@ -867,47 +814,98 @@ namespace win32
       TabCtrl_AdjustRect(*this, dispay_to_window ? TRUE : FALSE, &rect);
       return rect;
     }
+
+    [[maybe_unused]] inline std::function<void()> bind_nm_click(std::move_only_function<void(win32::tab_control, const NMHDR&)> callback)
+    {
+      return bind_notification<win32::tab_control, NMHDR>(NM_CLICK, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_nm_rclick(std::move_only_function<void(win32::tab_control, const NMHDR&)> callback)
+    {
+      return bind_notification<win32::tab_control, NMHDR>(NM_RCLICK, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_nm_dbl_click(std::move_only_function<void(win32::tab_control, const NMHDR&)> callback)
+    {
+      return bind_notification<win32::tab_control, NMHDR>(NM_DBLCLK, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_nm_dbl_rclick(std::move_only_function<void(win32::tab_control, const NMHDR&)> callback)
+    {
+      return bind_notification<win32::tab_control, NMHDR>(NM_RDBLCLK, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_tcn_sel_changing(std::move_only_function<BOOL(win32::tab_control, const NMHDR&)> callback)
+    {
+      return bind_notification<win32::tab_control, NMHDR, BOOL>(TCN_SELCHANGING, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_tcn_sel_change(std::move_only_function<void(win32::tab_control, const NMHDR&)> callback)
+    {
+      return bind_notification<win32::tab_control, NMHDR>(TCN_SELCHANGE, std::move(callback));
+    }
+
+    struct custom_draw_callbacks
+    {
+      std::move_only_function<win32::lresult_t(win32::tab_control, DRAWITEMSTRUCT&)> wm_draw_item;
+    };
+
+    [[maybe_unused]] std::function<void()> bind_custom_draw(custom_draw_callbacks callbacks)
+    {
+      struct function_context
+      {
+        HWND source;
+        custom_draw_callbacks callbacks;
+      };
+
+      struct dispatcher
+      {
+        static LRESULT __stdcall handle_message(
+          HWND hWnd,
+          UINT uMsg,
+          WPARAM wParam,
+          LPARAM lParam,
+          UINT_PTR uIdSubclass,
+          DWORD_PTR dwRefData)
+        {
+
+          if (uMsg == WM_DRAWITEM && lParam && uIdSubclass)
+          {
+            auto* header = (DRAWITEMSTRUCT*)lParam;
+            auto& context = *(function_context*)uIdSubclass;
+
+            if (context.callbacks.wm_draw_item && header->hwndItem == context.source)
+            {
+              return context.callbacks.wm_draw_item(win32::tab_control(header->hwndItem), *header);
+            }
+          }
+
+          if (uMsg == WM_NCDESTROY)
+          {
+            auto* context = (function_context*)uIdSubclass;
+            delete context;
+            ::RemoveWindowSubclass(hWnd, dispatcher::handle_message, uIdSubclass);
+          }
+
+          return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+        }
+      };
+
+      auto* context = new function_context{ this->get(), std::move(callbacks) };
+
+      ::SetWindowSubclass(this->GetParent()->get(), dispatcher::handle_message, (UINT_PTR)context, 0);
+
+      return [context, target = this->GetParent()->get()] {
+        ::RemoveWindowSubclass(target, dispatcher::handle_message, (UINT_PTR)context);
+        delete context;
+      };
+    }
   };
 
   struct tool_bar : control
   {
     using control::control;
     constexpr static auto class_name = TOOLBARCLASSNAMEW;
-
-    struct notifications
-    {
-      virtual std::optional<win32::lresult_t> wm_notify(win32::tool_bar, NMTBCUSTOMDRAW&)
-      {
-        return std::nullopt;
-      }
-
-      template<typename TWindow>
-      static std::optional<lresult_t> dispatch_message(TWindow* control,
-        std::uint32_t message,
-        wparam_t wParam,
-        lparam_t lParam)
-      {
-        if constexpr (std::is_base_of_v<notifications, TWindow>)
-        {
-          auto* self = static_cast<notifications*>(control);
-
-          if (message == WM_NOTIFY)
-          {
-            auto& header = *(NMHDR*)lParam;
-
-            if (header.code == NM_CUSTOMDRAW
-                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == tool_bar::class_name)
-            {
-              auto& temp = *(NMTBCUSTOMDRAW*)lParam;
-              return self->wm_notify(win32::tool_bar(header.hwndFrom), temp);
-            }
-          }
-        }
-
-        return std::nullopt;
-      }
-    };
-
 
     enum extended_style : DWORD
     {
@@ -1042,32 +1040,88 @@ namespace win32
 
     [[maybe_unused]] inline std::function<void()> bind_nm_click(std::move_only_function<BOOL(win32::tool_bar, const NMMOUSE&)> callback)
     {
-      return bind_notification<win32::tool_bar, NMMOUSE, BOOL>(this->GetParent()->ref(), this->ref(), NM_CLICK, std::move(callback));
+      return bind_notification<win32::tool_bar, NMMOUSE, BOOL>(NM_CLICK, std::move(callback));
     }
 
     [[maybe_unused]] inline std::function<void()> bind_nm_rclick(std::move_only_function<BOOL(win32::tool_bar, const NMMOUSE&)> callback)
     {
-      return bind_notification<win32::tool_bar, NMMOUSE, BOOL>(this->GetParent()->ref(), this->ref(), NM_RCLICK, std::move(callback));
+      return bind_notification<win32::tool_bar, NMMOUSE, BOOL>(NM_RCLICK, std::move(callback));
     }
 
     [[maybe_unused]] inline std::function<void()> bind_nm_dbl_click(std::move_only_function<BOOL(win32::tool_bar, const NMMOUSE&)> callback)
     {
-      return bind_notification<win32::tool_bar, NMMOUSE, BOOL>(this->GetParent()->ref(), this->ref(), NM_DBLCLK, std::move(callback));
+      return bind_notification<win32::tool_bar, NMMOUSE, BOOL>(NM_DBLCLK, std::move(callback));
     }
 
     [[maybe_unused]] inline std::function<void()> bind_nm_dbl_rclick(std::move_only_function<BOOL(win32::tool_bar, const NMMOUSE&)> callback)
     {
-      return bind_notification<win32::tool_bar, NMMOUSE, BOOL>(this->GetParent()->ref(), this->ref(), NM_RDBLCLK, std::move(callback));
+      return bind_notification<win32::tool_bar, NMMOUSE, BOOL>(NM_RDBLCLK, std::move(callback));
     }
 
     [[maybe_unused]] inline std::function<void()> bind_tbn_dropdown(std::move_only_function<LRESULT(win32::tool_bar, const NMTOOLBARW&)> callback)
     {
-      return bind_notification<win32::tool_bar, NMTOOLBARW, LRESULT>(this->GetParent()->ref(), this->ref(), TBN_DROPDOWN, std::move(callback));
+      return bind_notification<win32::tool_bar, NMTOOLBARW, LRESULT>(TBN_DROPDOWN, std::move(callback));
     }
 
     [[maybe_unused]] inline std::function<void()> bind_tbn_hot_item_change(std::move_only_function<LRESULT(win32::tool_bar, const NMTBHOTITEM&)> callback)
     {
-      return bind_notification<win32::tool_bar, NMTBHOTITEM, LRESULT>(this->GetParent()->ref(), this->ref(), TBN_HOTITEMCHANGE, std::move(callback));
+      return bind_notification<win32::tool_bar, NMTBHOTITEM, LRESULT>(TBN_HOTITEMCHANGE, std::move(callback));
+    }
+
+    struct custom_draw_callbacks
+    {
+      std::move_only_function<win32::lresult_t(tool_bar, NMTBCUSTOMDRAW&)> nm_custom_draw;
+    };
+
+    [[maybe_unused]] std::function<void()> bind_custom_draw(custom_draw_callbacks callbacks)
+    {
+      struct function_context
+      {
+        HWND source;
+        custom_draw_callbacks callbacks;
+      };
+
+      struct dispatcher
+      {
+        static LRESULT __stdcall handle_message(
+          HWND hWnd,
+          UINT uMsg,
+          WPARAM wParam,
+          LPARAM lParam,
+          UINT_PTR uIdSubclass,
+          DWORD_PTR dwRefData)
+        {
+
+          if (uMsg == WM_NOTIFY && lParam && uIdSubclass)
+          {
+            auto* header = (NMHDR*)lParam;
+            auto& context = *(function_context*)uIdSubclass;
+
+            if (context.callbacks.nm_custom_draw && header->hwndFrom == context.source && header->code == NM_CUSTOMDRAW)
+            {
+              return context.callbacks.nm_custom_draw(win32::tool_bar(header->hwndFrom), *(NMTBCUSTOMDRAW*)header);
+            }
+          }
+
+          if (uMsg == WM_NCDESTROY)
+          {
+            auto* context = (function_context*)uIdSubclass;
+            delete context;
+            ::RemoveWindowSubclass(hWnd, dispatcher::handle_message, uIdSubclass);
+          }
+
+          return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+        }
+      };
+
+      auto* context = new function_context{ this->get(), std::move(callbacks) };
+
+      ::SetWindowSubclass(this->GetParent()->get(), dispatcher::handle_message, (UINT_PTR)context, 0);
+
+      return [context, target = this->GetParent()->get()] {
+        ::RemoveWindowSubclass(target, dispatcher::handle_message, (UINT_PTR)context);
+        delete context;
+      };
     }
   };
 
@@ -1106,58 +1160,6 @@ namespace win32
   {
     using control::control;
     constexpr static auto class_name = WC_TREEVIEWW;
-
-    struct notifications
-    {
-      virtual std::optional<win32::lresult_t> wm_notify(win32::tree_view, NMTVCUSTOMDRAW&)
-      {
-        return std::nullopt;
-      }
-
-      virtual std::optional<win32::lresult_t> wm_notify(win32::tree_view, const NMTREEVIEWW&)
-      {
-        return std::nullopt;
-      }
-
-      virtual std::optional<win32::lresult_t> wm_notify(win32::tree_view, const NMHDR&)
-      {
-        return std::nullopt;
-      }
-
-      template<typename TWindow>
-      static std::optional<lresult_t> dispatch_message(TWindow* control, std::uint32_t message, wparam_t wParam, lparam_t lParam)
-      {
-        if constexpr (std::is_base_of_v<notifications, TWindow>)
-        {
-          auto* self = static_cast<notifications*>(control);
-          if (message == WM_NOTIFY)
-          {
-            auto& header = *(NMHDR*)lParam;
-            if ((header.code == TVN_ITEMEXPANDINGW || header.code == TVN_ITEMEXPANDEDW
-                  || header.code == TVN_SELCHANGINGW || header.code == TVN_SELCHANGEDW
-                  || header.code == TVN_SINGLEEXPAND || header.code == TVN_BEGINDRAGW || header.code == TVN_DELETEITEMW)
-                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == tree_view::class_name)
-            {
-              return self->wm_notify(tree_view(header.hwndFrom), *(NMTREEVIEWW*)lParam);
-            }
-
-            if ((header.code == NM_DBLCLK)
-                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == tree_view::class_name)
-            {
-              return self->wm_notify(tree_view(header.hwndFrom), *(NMHDR*)lParam);
-            }
-
-            if (header.code == NM_CUSTOMDRAW
-                && win32::window_ref(header.hwndFrom).RealGetWindowClassW() == tree_view::class_name)
-            {
-              return self->wm_notify(tree_view(header.hwndFrom), *(NMTVCUSTOMDRAW*)lParam);
-            }
-          }
-        }
-
-        return std::nullopt;
-      }
-    };
 
     [[maybe_unused]] inline bool Expand(HTREEITEM item, wparam_t action = TVE_EXPAND)
     {
@@ -1263,6 +1265,36 @@ namespace win32
 
         Expand(*result);
       }
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_nm_click(std::move_only_function<BOOL(win32::tree_view, const NMHDR&)> callback)
+    {
+      return bind_notification<win32::tree_view, NMHDR, BOOL>(NM_CLICK, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_nm_dbl_click(std::move_only_function<BOOL(win32::tree_view, const NMHDR&)> callback)
+    {
+      return bind_notification<win32::tree_view, NMHDR, BOOL>(NM_DBLCLK, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_nm_dbl_rclick(std::move_only_function<BOOL(win32::tree_view, const NMHDR&)> callback)
+    {
+      return bind_notification<win32::tree_view, NMHDR, BOOL>(NM_RDBLCLK, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_nm_rclick(std::move_only_function<BOOL(win32::tree_view, const NMHDR&)> callback)
+    {
+      return bind_notification<win32::tree_view, NMHDR, BOOL>(NM_RCLICK, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_tvn_sel_changed(std::move_only_function<void(win32::tree_view, const NMTREEVIEWW&)> callback)
+    {
+      return bind_notification<win32::tree_view, NMTREEVIEWW>(TVN_SELCHANGED, std::move(callback));
+    }
+
+    [[maybe_unused]] inline std::function<void()> bind_tvn_item_expanding(std::move_only_function<BOOL(win32::tree_view, const NMTREEVIEWW&)> callback)
+    {
+      return bind_notification<win32::tree_view, NMTREEVIEWW, BOOL>(TVN_ITEMEXPANDING, std::move(callback));
     }
   };
 

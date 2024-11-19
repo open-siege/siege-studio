@@ -32,7 +32,7 @@ foreach(CONTENT_TARGET IN ITEMS ${CONTENT_TARGETS})
             add_custom_command(TARGET siege-studio-dependencies POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${CONTENT_TARGET}> $<TARGET_FILE_DIR:siege-studio>)
             
-            if (WIN32 AND $<CONFIG:Release>)
+            if (WIN32)
                 add_custom_command(TARGET siege-studio-dependencies PRE_BUILD
                 COMMAND echo "$<TARGET_FILE_NAME:${CONTENT_TARGET}>" RCDATA "\"$<TARGET_FILE:${CONTENT_TARGET}>\"" >> "${CMAKE_SOURCE_DIR}/siege-studio/src/extensions.rc")
             endif()
@@ -62,7 +62,7 @@ if (WIN32)
             add_custom_command(TARGET siege-studio-dependencies POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${EXT_TARGET}> $<TARGET_FILE_DIR:siege-studio>)
 
-            if (WIN32 AND $<CONFIG:Release>)
+            if (WIN32)
                 add_custom_command(TARGET siege-studio-dependencies PRE_BUILD
                     COMMAND echo "$<TARGET_FILE_NAME:${EXT_TARGET}>" RCDATA "\"$<TARGET_FILE:${EXT_TARGET}>\"" >> "${CMAKE_SOURCE_DIR}/siege-studio/src/extensions.rc")
             endif()

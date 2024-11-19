@@ -134,6 +134,7 @@ namespace siege::views
 
   BOOL exe_view::exe_actions_nm_click(win32::tool_bar, const NMMOUSE& message)
   {
+    ::SetFocus(this->exe_actions);
     if (message.dwItemSpec == add_to_firewall_selected_id)
     {
       auto path = this->controller.get_exe_path();

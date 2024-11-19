@@ -9,15 +9,22 @@ namespace win32
 
   void apply_theme(win32::header& control)
   {
-    struct sub_class final : win32::header::notifications
+    struct sub_class
     {
       std::map<std::wstring_view, COLORREF> colors;
+      std::function<void()> bind_remover;
 
-      sub_class(std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
+      sub_class(win32::header& control, std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
       {
+        bind_remover = control.bind_custom_draw({ .nm_custom_draw = std::bind_front(&sub_class::nm_custom_draw, this) });
       }
 
-      virtual std::optional<win32::lresult_t> wm_notify(win32::header header, NMCUSTOMDRAW& custom_draw) override
+      ~sub_class()
+      {
+        bind_remover();
+      }
+
+      win32::lresult_t nm_custom_draw(win32::header header, NMCUSTOMDRAW& custom_draw)
       {
         if (custom_draw.dwDrawStage == CDDS_PREPAINT)
         {
@@ -102,15 +109,10 @@ namespace win32
 
       static LRESULT __stdcall HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
       {
-        auto result = win32::header::notifications::dispatch_message((sub_class*)dwRefData, message, wParam, lParam);
-
-        if (result)
-        {
-          return *result;
-        }
-
         if (message == WM_DESTROY)
         {
+          auto* context = (sub_class*)dwRefData;
+          delete context;
           ::RemoveWindowSubclass(hWnd, sub_class::HandleMessage, uIdSubclass);
         }
 
@@ -135,7 +137,7 @@ namespace win32
     DWORD_PTR existing_object{};
     if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::header::class_name, &existing_object) && existing_object == 0)
     {
-      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::header::class_name, (DWORD_PTR) new sub_class(std::move(color_map)));
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::header::class_name, (DWORD_PTR) new sub_class(control, std::move(color_map)));
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
     else
@@ -146,16 +148,23 @@ namespace win32
 
   void apply_theme(win32::tab_control& control)
   {
-    struct sub_class final : win32::tab_control::notifications
+    struct sub_class
     {
       std::map<std::wstring_view, COLORREF> colors;
       std::optional<SIZE> padding;
+      std::function<void()> bind_remover;
 
-      sub_class(std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
+      sub_class(win32::tab_control& control, std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
       {
+        bind_remover = control.bind_custom_draw({ .wm_draw_item = std::bind_front(&sub_class::wm_draw_item, this) });
       }
 
-      virtual std::optional<win32::lresult_t> wm_draw_item(win32::tab_control tabs, DRAWITEMSTRUCT& item) override
+      ~sub_class()
+      {
+        bind_remover();
+      }
+
+      win32::lresult_t wm_draw_item(win32::tab_control tabs, DRAWITEMSTRUCT& item)
       {
         thread_local std::wstring buffer(256, '\0');
 
@@ -213,20 +222,15 @@ namespace win32
           return TRUE;
         }
 
-        return std::nullopt;
+        return FALSE;
       }
 
       static LRESULT __stdcall HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
       {
-        auto result = win32::tab_control::notifications::dispatch_message((sub_class*)dwRefData, message, wParam, lParam);
-
-        if (result)
-        {
-          return *result;
-        }
-
         if (message == WM_DESTROY)
         {
+          auto* context = (sub_class*)dwRefData;
+          delete context;
           ::RemoveWindowSubclass(hWnd, sub_class::HandleMessage, uIdSubclass);
         }
 
@@ -346,7 +350,7 @@ namespace win32
     DWORD_PTR existing_object{};
     if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::tab_control::class_name, &existing_object) && existing_object == 0)
     {
-      auto data = (DWORD_PTR) new sub_class(std::move(color_map));
+      auto data = (DWORD_PTR) new sub_class(control, std::move(color_map));
       ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::tab_control::class_name, data);
       ::SetWindowSubclass(control, sub_class::HandleChildMessage, (UINT_PTR)win32::tab_control::class_name, data);
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
@@ -393,15 +397,22 @@ namespace win32
       win32::theme_module().SetWindowTheme(control, nullptr, nullptr);
     }
 
-    struct sub_class final : win32::list_view::notifications
+    struct sub_class final
     {
       std::map<std::wstring_view, COLORREF> colors;
+      std::function<void()> bind_remover;
 
-      sub_class(std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
+      sub_class(win32::list_view& control, std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
       {
+        bind_remover = control.bind_custom_draw({ .nm_custom_draw = std::bind_front(&sub_class::nm_custom_draw, this) });
       }
 
-      std::optional<win32::lresult_t> wm_notify(win32::list_view control, NMLVCUSTOMDRAW& custom_draw) override
+      ~sub_class()
+      {
+        bind_remover();
+      }
+
+      win32::lresult_t nm_custom_draw(win32::list_view control, NMLVCUSTOMDRAW& custom_draw)
       {
         if (custom_draw.dwItemType == LVCDI_GROUP && custom_draw.nmcd.dwDrawStage == CDDS_PREPAINT)
         {
@@ -469,15 +480,10 @@ namespace win32
 
       static LRESULT __stdcall HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
       {
-        auto result = win32::list_view::notifications::dispatch_message((sub_class*)dwRefData, message, wParam, lParam);
-
-        if (result)
-        {
-          return *result;
-        }
-
         if (message == WM_DESTROY)
         {
+          auto* context = (sub_class*)dwRefData;
+          delete context;
           ::RemoveWindowSubclass(hWnd, sub_class::HandleMessage, uIdSubclass);
         }
 
@@ -488,7 +494,7 @@ namespace win32
     DWORD_PTR existing_object{};
     if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::list_view::class_name, &existing_object) && existing_object == 0)
     {
-      auto data = (DWORD_PTR) new sub_class(std::move(color_map));
+      auto data = (DWORD_PTR) new sub_class(control, std::move(color_map));
       ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::list_view::class_name, data);
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
@@ -550,15 +556,22 @@ namespace win32
 
     ::SendMessageW(control, TB_SETCOLORSCHEME, 0, (LPARAM)&scheme);
 
-    struct sub_class final : win32::tool_bar::notifications
+    struct sub_class
     {
       std::map<std::wstring_view, COLORREF> colors;
+      std::function<void()> bind_remover;
 
-      sub_class(std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
+      sub_class(win32::tool_bar& control, std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
       {
+        bind_remover = control.bind_custom_draw({ .nm_custom_draw = std::bind_front(&sub_class::nm_custom_draw, this) });
       }
 
-      std::optional<win32::lresult_t> wm_notify(win32::tool_bar buttons, NMTBCUSTOMDRAW& custom_draw) override
+      ~sub_class()
+      {
+        bind_remover();
+      }
+
+      win32::lresult_t nm_custom_draw(win32::tool_bar buttons, NMTBCUSTOMDRAW& custom_draw)
       {
         if (custom_draw.nmcd.dwDrawStage == CDDS_PREPAINT)
         {
@@ -601,15 +614,10 @@ namespace win32
 
       static LRESULT __stdcall HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
       {
-        auto result = win32::tool_bar::notifications::dispatch_message((sub_class*)dwRefData, message, wParam, lParam);
-
-        if (result)
-        {
-          return *result;
-        }
-
         if (message == WM_DESTROY)
         {
+          auto* context = (sub_class*)dwRefData;
+          delete context;
           ::RemoveWindowSubclass(hWnd, sub_class::HandleMessage, uIdSubclass);
         }
 
@@ -628,7 +636,7 @@ namespace win32
     DWORD_PTR existing_object{};
     if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::tool_bar::class_name, &existing_object) && existing_object == 0)
     {
-      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::tool_bar::class_name, (DWORD_PTR) new sub_class(std::move(color_map)));
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::tool_bar::class_name, (DWORD_PTR) new sub_class(control, std::move(color_map)));
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
     else
@@ -640,9 +648,7 @@ namespace win32
 
   void apply_theme(win32::track_bar& control)
   {
-
-
-    struct sub_class final : win32::track_bar::notifications
+    struct sub_class
     {
       std::map<std::wstring_view, COLORREF> colors;
       HPEN pen = CreatePen(PS_SOLID, 10, RGB(255, 255, 0));
@@ -651,7 +657,7 @@ namespace win32
         .lfPitchAndFamily = VARIABLE_PITCH,
         .lfFaceName = L"Segoe MDL2 Assets" });
 
-      std::optional<win32::lresult_t> wm_notify(win32::track_bar track_bar, NMCUSTOMDRAW& custom_draw) override
+      win32::lresult_t wm_notify(win32::track_bar track_bar, NMCUSTOMDRAW& custom_draw)
       {
         if (custom_draw.dwDrawStage == CDDS_PREPAINT)
         {
@@ -714,13 +720,6 @@ namespace win32
 
       static LRESULT __stdcall HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
       {
-        auto result = win32::track_bar::notifications::dispatch_message((sub_class*)dwRefData, message, wParam, lParam);
-
-        if (result)
-        {
-          return *result;
-        }
-
         if (message == WM_DESTROY)
         {
           ::RemoveWindowSubclass(hWnd, sub_class::HandleMessage, uIdSubclass);

@@ -24,7 +24,6 @@ namespace siege::views
   };
 
   struct dts_view final : win32::window_ref
-    , win32::static_control::notifications
   {
     dts_controller controller;
 
@@ -52,6 +51,10 @@ namespace siege::views
       auto control_factory = win32::window_factory(ref());
 
       render_view = *control_factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS | SS_OWNERDRAW });
+      render_view.bind_custom_draw({ 
+          .wm_control_color = std::bind_front(&dts_view::render_view_wm_control_color, this),
+        .wm_draw_item = std::bind_front(&dts_view::render_view_wm_draw_item, this)
+      });
 
       selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS,
@@ -214,7 +217,7 @@ namespace siege::views
       return 0;
     }
 
-    std::optional<HBRUSH> wm_control_color(win32::static_control, win32::gdi::drawing_context_ref) override
+    HBRUSH render_view_wm_control_color(win32::static_control, win32::gdi::drawing_context_ref)
     {
       auto gl_context = get_gl_context();
       glClearColor(0.3f, 0.3f, 0.3f, 0.f);
@@ -222,9 +225,9 @@ namespace siege::views
       return GetStockBrush(DC_BRUSH);
     }
 
-    std::optional<win32::lresult_t> wm_draw_item(win32::static_control, DRAWITEMSTRUCT& item) override
+    win32::lresult_t render_view_wm_draw_item(win32::static_control, DRAWITEMSTRUCT& item)
     {
-      if (item.hwndItem == render_view && item.itemAction == ODA_DRAWENTIRE && renderer)
+      if (item.itemAction == ODA_DRAWENTIRE && renderer)
       {
         auto existing_gl_context = get_gl_context();
 

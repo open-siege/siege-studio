@@ -10,12 +10,10 @@
 namespace siege::views
 {
   struct preferences_view final : win32::window_ref
-    , win32::list_view::notifications
-    , win32::list_box::notifications
-    , win32::button::notifications
   {
     win32::window_ref theme_properties;
     win32::list_box options;
+    std::function<void()> options_unbind;
 
     win32::list_view control_settings;
 
@@ -185,13 +183,15 @@ namespace siege::views
       options.InsertString(-1, L"Theming (Simple)");
       options.InsertString(-1, L"Theming (Advanced)");
       options.SetCurrentSelection(0);
+      options_unbind = options.bind_lbn_sel_change(std::bind_front(&preferences_view::options_lbn_sel_change, this));
+
       ListBox_SetItemHeight(options, 0, options.GetItemHeight(0) * 2);
       control_settings = *control_factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
         .style = WS_CHILD | LVS_REPORT });
 
-      control_settings.bind_nm_hover(std::bind_front(&control_settings_nm_hover, this));
-      control_settings.bind_nm_click(std::bind_front(&control_settings_nm_click, this));
-      control_settings.bind_lvn_end_scroll(std::bind_front(&control_settings_lvn_end_scroll, this));
+      control_settings.bind_nm_hover(std::bind_front(&preferences_view::control_settings_nm_hover, this));
+      control_settings.bind_nm_click(std::bind_front(&preferences_view::control_settings_nm_click, this));
+      control_settings.bind_lvn_end_scroll(std::bind_front(&preferences_view::control_settings_lvn_end_scroll, this));
 
       control_settings.SetExtendedListViewStyle(LVS_EX_TRACKSELECT, LVS_EX_TRACKSELECT);
       control_settings.EnableGroupView(true);
@@ -203,6 +203,9 @@ namespace siege::views
       control_settings.InsertColumn(-1, LVCOLUMNW{
                                           .pszText = const_cast<wchar_t*>(L"Value"),
                                         });
+      control_settings.bind_custom_draw({ 
+          .nm_custom_draw = std::bind_front(&preferences_view::control_settings_nm_custom_draw, this)
+          });
 
       auto header = control_settings.GetHeader();
       auto header_style = header.GetWindowStyle();
@@ -311,13 +314,15 @@ namespace siege::views
       win32::apply_theme(control_settings);
       win32::apply_theme(options);
       win32::apply_theme(*this);
+      options_unbind();
+      options_unbind = options.bind_lbn_sel_change(std::bind_front(&preferences_view::options_lbn_sel_change, this));
 
       return 0;
     }
 
     std::map<std::wstring, COLORREF> hover_colors;
 
-    std::optional<win32::lresult_t> wm_notify(win32::list_view, NMLVCUSTOMDRAW& custom_draw) override
+    win32::lresult_t control_settings_nm_custom_draw(win32::list_view, NMLVCUSTOMDRAW& custom_draw)
     {
       if (custom_draw.nmcd.dwDrawStage == CDDS_PREPAINT)
       {
@@ -353,14 +358,9 @@ namespace siege::views
       return CDRF_DODEFAULT;
     }
 
-    std::optional<win32::lresult_t> wm_command(win32::list_box hwndFrom, int code) override
+    void options_lbn_sel_change(win32::list_box hwndFrom, const NMHDR&)
     {
-      if (code == LBN_SELCHANGE && hwndFrom == options)
-      {
-        ShowWindow(control_settings, options.GetCurrentSelection() == 1 ? SW_SHOW : SW_HIDE);
-      }
-
-      return std::nullopt;
+      ShowWindow(control_settings, options.GetCurrentSelection() == 1 ? SW_SHOW : SW_HIDE);
     }
 
     void control_settings_lvn_end_scroll(win32::list_view, const NMLVSCROLL& notice)

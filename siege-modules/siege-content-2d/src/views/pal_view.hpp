@@ -11,16 +11,15 @@
 namespace siege::views
 {
   struct pal_view final : win32::window_ref
-    , win32::static_control::notifications
-    , win32::list_box::notifications
   {
-    
     pal_controller controller;
 
     std::vector<win32::gdi::brush> brushes;
 
     win32::static_control render_view;
     win32::list_box selection;
+    std::function<void()> selection_unbind;
+
     std::wstring buffer;
 
     pal_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
@@ -33,11 +32,12 @@ namespace siege::views
       auto control_factory = win32::window_factory(ref());
 
       render_view = *control_factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | SS_OWNERDRAW });
+      render_view.bind_custom_draw({ .wm_draw_item = std::bind_front(&pal_view::render_view_wm_draw_item, this) });
 
       selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
-      selection.bind_lbn_sel_change(std::bind_front(&selection_lbn_sel_change, this));
+      selection_unbind = selection.bind_lbn_sel_change(std::bind_front(&pal_view::selection_lbn_sel_change, this));
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
@@ -50,6 +50,8 @@ namespace siege::views
       {
         win32::apply_theme(selection);
         win32::apply_theme(*this);
+        selection_unbind();
+        selection_unbind = selection.bind_lbn_sel_change(std::bind_front(&pal_view::selection_lbn_sel_change, this));
 
         return 0;
       }
@@ -137,9 +139,9 @@ namespace siege::views
       return FALSE;
     }
 
-    std::optional<win32::lresult_t> wm_draw_item(win32::static_control, DRAWITEMSTRUCT& item) override
+    win32::lresult_t render_view_wm_draw_item(win32::static_control, DRAWITEMSTRUCT& item)
     {
-      if (item.hwndItem == render_view && item.itemAction == ODA_DRAWENTIRE)
+      if (item.itemAction == ODA_DRAWENTIRE)
       {
         auto context = win32::gdi::drawing_context_ref(item.hDC);
 
