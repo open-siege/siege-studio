@@ -37,7 +37,7 @@ namespace siege::views
       selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
-      selection.bind_lbn_sel_change([this](auto v, const auto& n) { selection_lbn_sel_change(std::move(v), n); });
+      selection.bind_lbn_sel_change(std::bind_front(&selection_lbn_sel_change, this));
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 

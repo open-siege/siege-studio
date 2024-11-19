@@ -20,7 +20,7 @@ namespace siege::views
     options = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
       .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
-    options_unbind = options.bind_lbn_sel_change([this](auto v, const auto& n) { options_lbn_sel_change(std::move(v), n); });
+    options_unbind = options.bind_lbn_sel_change(std::bind_front(&options_lbn_sel_change, this));
     options.InsertString(-1, L"Resources");
     options.SetCurrentSelection(0);
 
@@ -30,8 +30,8 @@ namespace siege::views
     exe_actions.InsertButton(-1, { .iBitmap = 0, .idCommand = launch_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Launch" }, false);
     exe_actions.InsertButton(-1, { .iBitmap = 1, .idCommand = extract_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" }, false);
     exe_actions.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
-    exe_actions.bind_tbn_dropdown([this](auto v, const auto& n) { return exe_actions_tbn_dropdown(std::move(v), n); });
-    exe_actions.bind_nm_click([this](auto v, const auto& n) { return exe_actions_nm_click(std::move(v), n); });
+    exe_actions.bind_tbn_dropdown(&exe_actions_tbn_dropdown, this);
+    exe_actions.bind_nm_click(&exe_actions_nm_click, this);
 
     resource_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
 
@@ -54,7 +54,7 @@ namespace siege::views
 
     launch_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
 
-    launch_table.bind_nm_click([this](auto c, const auto& n) { launch_table_nm_click(std::move(c), n); });
+    launch_table.bind_nm_click(std::bind_front(&launch_table_nm_click, this));
     launch_table.InsertColumn(-1, LVCOLUMNW{
                                     .pszText = const_cast<wchar_t*>(L"Name"),
                                   });
@@ -73,7 +73,7 @@ namespace siege::views
                                     });
  
     controller_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
-    controller_table.bind_nm_click([this](auto c, const auto& n) { controller_table_nm_click(std::move(c), n); });
+    controller_table.bind_nm_click(std::bind_front(&controller_table_nm_click, this));
 
     controller_table.InsertColumn(-1, LVCOLUMNW{
                                         .pszText = const_cast<wchar_t*>(L""),
@@ -540,7 +540,7 @@ namespace siege::views
       win32::apply_theme(exe_actions);
       win32::apply_theme(*this);
       options_unbind(); 
-      options_unbind = options.bind_lbn_sel_change([this](auto v, const auto& n) { options_lbn_sel_change(std::move(v), n); });
+      options_unbind = options.bind_lbn_sel_change(std::bind_front(&options_lbn_sel_change, this));
 
       recreate_image_list(std::nullopt);
       SendMessageW(exe_actions, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());

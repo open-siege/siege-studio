@@ -37,7 +37,7 @@ namespace siege::views
 
       player_buttons = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS });
 
-      player_buttons.bind_nm_click([this](auto c, const auto& n) { return player_buttons_nm_click(std::move(c), n); });
+      player_buttons.bind_nm_click(std::bind_front(&player_buttons_nm_click, this));
       player_buttons.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Play" });
 
       player_buttons.InsertButton(-1, { .iBitmap = 1, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Pause" });

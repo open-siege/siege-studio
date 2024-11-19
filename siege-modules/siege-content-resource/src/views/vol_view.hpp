@@ -100,8 +100,8 @@ namespace siege::views
 
       table_settings = *factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
 
-      table_settings.bind_nm_click([this](auto v, const auto& n){ return table_settings_nm_click(std::move(v), n);});
-      table_settings.bind_tbn_dropdown([this](auto v, const auto& n) { return table_settings_tbn_dropdown(std::move(v), n); });
+      table_settings.bind_nm_click(std::bind_front(&table_settings_nm_click, this));
+      table_settings.bind_tbn_dropdown(std::bind_front(&table_settings_tbn_dropdown, this));
 
       table_settings.InsertButton(-1, { .iBitmap = 0, .idCommand = LV_VIEW_DETAILS, .fsState = TBSTATE_ENABLED | TBSTATE_CHECKED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Details" }, false);
 
@@ -121,9 +121,9 @@ namespace siege::views
         .style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
       });
 
-      table.bind_nm_rclick([this](auto v, const auto& n) { table_nm_rclick(std::move(v), n); });
-      table.bind_nm_dbl_click([this](auto v, const auto& n) { table_nm_dbl_click(std::move(v), n); });
-      table.bind_lvn_item_changed([this](auto v, const auto& n) { table_lvn_item_changed(std::move(v), n); });
+      table.bind_nm_rclick(std::bind_front(&table_nm_rclick, this));
+      table.bind_nm_dbl_click(std::bind_front(&able_nm_dbl_click, this));
+      table.bind_lvn_item_changed(std::bind_front(&table_lvn_item_changed, this));
 
       table.SetExtendedListViewStyle(LVS_EX_DOUBLEBUFFER, LVS_EX_DOUBLEBUFFER);
 
@@ -177,9 +177,9 @@ namespace siege::views
 
       header.SetWindowStyle(style | HDS_NOSIZING | HDS_FILTERBAR | HDS_FLAT);
       header.SetFilterChangeTimeout();
-      header.bind_hdn_filter_btn_click([this](auto c, auto n) { return table_filter_hdn_filter_btn_click(std::move(c), n); });
-      header.bind_hdn_filter_change([this](auto c, auto n) { return table_filter_change(std::move(c), n); });
-      header.bind_hdn_end_filter_edit([this](auto c, auto n) { return table_filter_change(std::move(c), n); });
+      header.bind_hdn_filter_btn_click(std::bind_front(&table_filter_hdn_filter_btn_click, this));
+      header.bind_hdn_filter_change(std::bind_front(&table_filter_change, this));
+      header.bind_hdn_end_filter_edit(std::bind_front(&table_filter_change, this));
 
       HIMAGELIST image_list = nullptr;
       auto hresult = SHGetImageList(SHIL_LARGE, IID_IImageList, (void**)&image_list);

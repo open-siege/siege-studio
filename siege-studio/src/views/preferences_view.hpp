@@ -189,9 +189,9 @@ namespace siege::views
       control_settings = *control_factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
         .style = WS_CHILD | LVS_REPORT });
 
-      control_settings.bind_nm_hover([this](auto v, const auto& n) { control_settings_nm_hover(std::move(v), n); });
-      control_settings.bind_nm_click([this](auto v, const auto& n) { control_settings_nm_click(std::move(v), n); });
-      control_settings.bind_lvn_end_scroll([this](auto v, const auto& n) { control_settings_lvn_end_scroll(std::move(v), n); });
+      control_settings.bind_nm_hover(std::bind_front(&control_settings_nm_hover, this));
+      control_settings.bind_nm_click(std::bind_front(&control_settings_nm_click, this));
+      control_settings.bind_lvn_end_scroll(std::bind_front(&control_settings_lvn_end_scroll, this));
 
       control_settings.SetExtendedListViewStyle(LVS_EX_TRACKSELECT, LVS_EX_TRACKSELECT);
       control_settings.EnableGroupView(true);
