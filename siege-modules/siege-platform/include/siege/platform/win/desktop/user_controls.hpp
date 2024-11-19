@@ -31,7 +31,6 @@ namespace win32
       {
         if (uMsg == WM_COMMAND && lParam && uIdSubclass)
         {
-          OutputDebugStringW(L"WM_COMMAND\n");
           auto& context = *(function_context*)uIdSubclass;
           auto id = LOWORD(wParam);
           auto code = HIWORD(wParam);
@@ -39,7 +38,6 @@ namespace win32
 
           if (context.source == child && context.code == code)
           {
-            OutputDebugStringW(L"Code and child are valid\n");
             NMHDR info{ .hwndFrom = child, .idFrom = id, .code = code };
             TNotification destInfo{};
             std::memcpy(&destInfo, &info, sizeof(info));

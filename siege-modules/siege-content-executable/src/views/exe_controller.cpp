@@ -7,9 +7,64 @@
 #include <siege/platform/extension_module.hpp>
 #include <siege/platform/shared.hpp>
 #include "views/exe_views.hpp"
+#include <winreg.h>
 
 namespace siege::views
 {
+  bool exe_controller::set_game_settings(const siege::platform::persistent_game_settings& settings)
+  {
+    game_settings = settings;
+
+    HKEY main_key = nullptr;
+    if (::RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\The Siege Hub\\Siege Studio", 0, nullptr, 0, KEY_ALL_ACCESS, nullptr, &main_key, nullptr) == ERROR_SUCCESS)
+    {
+      std::vector<BYTE> raw_bytes;
+      
+      raw_bytes.resize(settings.last_ip_address.size() * sizeof(wchar_t));
+      std::memcpy(raw_bytes.data(), settings.last_ip_address.data(), raw_bytes.size());
+      
+      bool result = false;
+      result = ::RegSetValueExW(main_key, L"LastIPAddress", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
+      
+      raw_bytes.resize(settings.last_player_name.size() * sizeof(wchar_t));
+      std::memcpy(raw_bytes.data(), settings.last_player_name.data(), raw_bytes.size());
+      result = result && ::RegSetValueExW(main_key, L"LastPlayerName", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
+     
+      return result;
+    }
+
+    return false;
+  }
+
+  const siege::platform::persistent_game_settings& exe_controller::get_game_settings()
+  {
+    HKEY main_key = nullptr;
+    DWORD size = 0;
+    if (auto error = ::RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\The Siege Hub\\Siege Studio", 0, nullptr, 0, KEY_ALL_ACCESS, nullptr, &main_key, nullptr); error == ERROR_SUCCESS)
+    {
+      auto type = REG_SZ;
+      size = (DWORD)game_settings.last_ip_address.size();
+      ::RegGetValueW(main_key, nullptr, L"LastIPAddress", RRF_RT_REG_SZ, &type, game_settings.last_ip_address.data(), &size);
+      size = game_settings.last_player_name.size();
+      ::RegGetValueW(main_key, nullptr, L"LastPlayerName", RRF_RT_REG_SZ, &type, game_settings.last_player_name.data(), &size);
+      ::RegCloseKey(main_key);
+    }
+
+    if (!game_settings.last_ip_address[0])
+    {
+      std::memcpy(game_settings.last_ip_address.data(), L"127.0.0.1", 10 * sizeof(wchar_t));
+    }
+
+    if (!game_settings.last_player_name[0])
+    {
+      size = game_settings.last_player_name.size();
+      ::GetUserNameW(game_settings.last_player_name.data(), &size);
+    }
+
+    return game_settings;
+  }
+
+
   bool exe_controller::is_exe(std::istream& stream)
   {
     auto position = stream.tellg();
@@ -65,7 +120,7 @@ namespace siege::views
     {
       auto file = win32::file(loaded_path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, 0);
       auto file_size = file.GetFileSizeEx();
-      auto mapping = file.CreateFileMapping(std::nullopt, PAGE_READONLY, 0, 0, L"");
+      auto mapping = file.CreateFileMapping(std::nullopt, PAGE_READONLY, LARGE_INTEGER{}, L"");
 
       if (mapping && file_size)
       {
@@ -128,7 +183,7 @@ namespace siege::views
                 if (std::distance(first, second) > 4)
                 {
                   final.reserve(std::distance(first, second));
-                  std::transform(first, second, std::back_inserter(final), [](char raw) { return (wchar_t)raw; });
+                  std::copy(first, second, std::back_inserter(final));
 
                   auto first_char = std::find_if(final.begin(), final.end(), [](wchar_t raw) { return !std::isspace(int(raw)); });
                   auto left_begin = std::find_if(final.begin(), first_char, [](wchar_t raw) { return std::isspace(int(raw)); });
@@ -413,7 +468,7 @@ namespace siege::views
           raw_result.erase(0, sub_text.size() + 1);
 
           auto& sub_item = menu_item.sub_items.emplace_back(std::move(sub_text));
-          
+
           if (state == 0 && sub_id == 0)
           {
             sub_item.fType = MF_SEPARATOR;

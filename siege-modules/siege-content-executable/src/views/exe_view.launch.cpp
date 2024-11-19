@@ -14,6 +14,8 @@ namespace siege::views
 {
   void exe_view::populate_launch_table(game_command_line_caps& caps)
   {
+    auto& settings = controller.get_game_settings();
+
     for (auto& value : caps.string_settings)
     {
       if (!value)
@@ -25,16 +27,9 @@ namespace siege::views
 
       if (player_name_setting == value)
       {
-        std::wstring temp(255, L'\0');
-        DWORD size = temp.size();
-        if (::GetUserNameW(temp.data(), &size))
-        {
-        }
-        temp.resize(temp.find(L'\0'));
-
         win32::list_view_item column(L"Player Name");
         column.sub_items = {
-          std::move(temp)
+          settings.last_player_name.data()
         };
 
         launch_table.InsertRow(std::move(column));
@@ -48,7 +43,7 @@ namespace siege::views
       {
         win32::list_view_item column(L"Server IP Address");
         column.sub_items = {
-          L"127.0.0.1"
+          settings.last_ip_address.data()
         };
 
         ip_address_row_index = launch_table.InsertRow(std::move(column));
@@ -200,6 +195,8 @@ namespace siege::views
         auto& extension = controller.get_extension();
         auto* caps = extension.caps;
 
+        siege::platform::persistent_game_settings settings{};
+
         for (auto i = 0; i < launch_table.GetItemCount(); ++i)
         {
           std::wstring name(255, L'\0');
@@ -211,14 +208,17 @@ namespace siege::views
           name.resize(name.find(L'\0'));
           value.resize(value.find(L'\0'));
 
-
           if (name == L"Player Name")
           {
             name = caps->player_name_setting;
+            auto max_size = value.size() > settings.last_player_name.size() ? settings.last_player_name.size() : value.size();
+            std::copy_n(value.data(), max_size, settings.last_player_name.data());
           }
           else if (name == L"Server IP Address")
           {
             name = caps->ip_connect_setting;
+            auto max_size = value.size() > settings.last_ip_address.size() ? settings.last_ip_address.size() : value.size();
+            std::copy_n(value.data(), max_size, settings.last_ip_address.data());
           }
 
           launch_strings.emplace_back(std::array<std::wstring, 2>{ { std::move(name), std::move(value) } });
@@ -226,6 +226,8 @@ namespace siege::views
           game_args.string_settings[i].name = launch_strings[i][0].c_str();
           game_args.string_settings[i].value = launch_strings[i][1].c_str();
         }
+
+        controller.set_game_settings(settings);
 
         input_injector_args args{
           .exe_path = controller.get_exe_path(),

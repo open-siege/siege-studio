@@ -37,6 +37,12 @@ namespace siege::platform
     std::array<char16_t, 64> group_display_name;
   };
 
+  struct persistent_game_settings
+  {
+    std::array<fs_char, 64> last_player_name;
+    std::array<fs_char, 64> last_ip_address;
+  };
+
   struct game_command_line_caps
   {
     const fs_char* ip_connect_setting = FSL "";

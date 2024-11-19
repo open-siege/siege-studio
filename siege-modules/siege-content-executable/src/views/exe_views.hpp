@@ -54,6 +54,10 @@ namespace siege::views
 
     std::set<std::string_view> get_variable_names() const;
 
+    bool set_game_settings(const siege::platform::persistent_game_settings&);
+
+    const siege::platform::persistent_game_settings& get_game_settings();
+
     std::optional<menu_info> get_resource_menu_items(std::wstring type, std::wstring name) const;
 
     std::vector<std::wstring> get_resource_strings(std::wstring type, std::wstring name) const;
@@ -71,6 +75,7 @@ namespace siege::views
     std::filesystem::path loaded_path;
     win32::module loaded_module;
     std::list<siege::platform::game_extension_module>::iterator matching_extension;
+    siege::platform::persistent_game_settings game_settings{};
   };
 
   using namespace std::literals;

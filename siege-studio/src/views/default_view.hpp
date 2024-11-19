@@ -456,7 +456,7 @@ namespace siege::views
 
           win32::file file_to_read(file_path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
 
-          auto mapping = file_to_read.CreateFileMapping(std::nullopt, PAGE_READONLY, 0, 0, L"");
+          auto mapping = file_to_read.CreateFileMapping(std::nullopt, PAGE_READONLY, {}, L"");
 
           std::size_t size = (std::size_t)file_to_read.GetFileSizeEx().value_or(LARGE_INTEGER{}).QuadPart;
 

@@ -107,9 +107,9 @@ namespace win32
     }
 #endif
 
-    std::expected<file_mapping, DWORD> CreateFileMapping(std::optional<SECURITY_ATTRIBUTES> attributes, DWORD protect, DWORD maxSzeHigh, DWORD maxSizeLow, std::wstring name)
+    std::expected<file_mapping, DWORD> CreateFileMapping(std::optional<SECURITY_ATTRIBUTES> attributes, DWORD protect, LARGE_INTEGER maxSize, std::wstring name)
     {
-      auto mapping = ::CreateFileMappingW(get(), attributes.has_value() ? &*attributes : nullptr, protect, maxSzeHigh, maxSizeLow, name.empty() ? nullptr : name.c_str());
+      auto mapping = ::CreateFileMappingW(get(), attributes.has_value() ? &*attributes : nullptr, protect, maxSize.HighPart, maxSize.LowPart, name.empty() ? nullptr : name.c_str());
 
       if (mapping == nullptr)
       {

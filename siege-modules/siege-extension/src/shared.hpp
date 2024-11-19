@@ -66,12 +66,22 @@ namespace siege
       win32::file file(std::filesystem::path(filename), GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
 
       auto file_size = file.GetFileSizeEx();
-      auto mapping = file.CreateFileMapping(std::nullopt, PAGE_READONLY, 0, 0, L"");
+
+      constexpr static std::size_t max_file_size = 10 * 1024 * 1024;
+
+      std::size_t clamped_file_size = 0;
+
+      if (file_size)
+      {
+        clamped_file_size = std::clamp<std::size_t>((std::size_t)file_size->QuadPart, 0, max_file_size);
+      }
+
+      auto mapping = file.CreateFileMapping(std::nullopt, PAGE_READONLY, LARGE_INTEGER{ .QuadPart = clamped_file_size }, L"");
 
       if (mapping && file_size)
       {
-        auto view = mapping->MapViewOfFile(FILE_MAP_READ, (std::size_t)file_size->QuadPart);
-        std::string_view data((char*)view.get(), (std::size_t)file_size->QuadPart);
+        auto view = mapping->MapViewOfFile(FILE_MAP_READ, clamped_file_size);
+        std::string_view data((char*)view.get(), clamped_file_size);
 
         if (data.empty())
         {
@@ -117,12 +127,22 @@ namespace siege
       win32::file file(std::filesystem::path(filename), GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
 
       auto file_size = file.GetFileSizeEx();
-      auto mapping = file.CreateFileMapping(std::nullopt, PAGE_READONLY, 0, 0, L"");
+
+      constexpr static std::size_t max_file_size = 10 * 1024 * 1024;
+
+      std::size_t clamped_file_size = 0;
+
+      if (file_size)
+      {
+        clamped_file_size = std::clamp<std::size_t>((std::size_t)file_size->QuadPart, 0, max_file_size);
+      }
+      
+      auto mapping = file.CreateFileMapping(std::nullopt, PAGE_READONLY, LARGE_INTEGER{ .QuadPart = clamped_file_size }, L"");
 
       if (mapping && file_size)
       {
-        auto view = mapping->MapViewOfFile(FILE_MAP_READ, (std::size_t)file_size->QuadPart);
-        std::string_view data((char*)view.get(), (std::size_t)file_size->QuadPart);
+        auto view = mapping->MapViewOfFile(FILE_MAP_READ, clamped_file_size);
+        std::string_view data((char*)view.get(), clamped_file_size);
 
         if (data.empty())
         {
