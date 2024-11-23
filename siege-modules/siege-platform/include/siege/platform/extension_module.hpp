@@ -45,12 +45,30 @@ namespace siege::platform
 
   struct game_command_line_caps
   {
+    enum type
+    {
+      unknown,
+      string_setting,
+      flag_setting,
+      int_setting,
+      float_setting
+    };
+
     const fs_char* ip_connect_setting = FSL "";
-    const fs_char* player_name_setting = FSL"";
+    const fs_char* player_name_setting = FSL "";
     std::array<const fs_char*, 32> flags;
     std::array<const fs_char*, 32> int_settings;
     std::array<const fs_char*, 32> float_settings;
     std::array<const fs_char*, 32> string_settings;
+  };
+
+  template<typename TValue>
+  struct game_command_line_predefined_setting
+  {
+    const fs_char* label;
+    const fs_char* description;
+    const TValue value;
+    bool is_default = false;
   };
 
   struct game_command_line_args
@@ -83,6 +101,10 @@ namespace siege::platform
   using get_function_name_ranges = HRESULT(std::size_t, std::array<const char*, 2>*, std::size_t*) noexcept;
   using get_variable_name_ranges = HRESULT(std::size_t, std::array<const char*, 2>*, std::size_t*) noexcept;
   using bind_virtual_key_to_action_for_file = HRESULT(const siege::fs_char* filename, controller_binding* inputs, std::size_t inputs_size);
+  using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
+  using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
+  using get_predefined_string_command_line_settings = predefined_string*(const siege::fs_char* name) noexcept;
+  using get_predefined_int_command_line_settings = predefined_int*(const siege::fs_char* name) noexcept;
 
 #if WIN32
   using bind_virtual_key_to_action_for_process = HRESULT(DWORD process_id, controller_binding* inputs, std::size_t inputs_size);
@@ -109,6 +131,9 @@ namespace siege::platform
 
   public:
     game_command_line_caps* caps = nullptr;
+    get_predefined_string_command_line_settings* get_predefined_string_command_line_settings_proc = nullptr;
+    get_predefined_int_command_line_settings* get_predefined_int_command_line_settings_proc = nullptr;
+
 #if WIN32
     launch_game_with_extension* launch_game_with_extension = nullptr;
     update_action_intensity_for_process* update_action_intensity_for_process = nullptr;
@@ -119,6 +144,8 @@ namespace siege::platform
       executable_is_supported_proc = GetProcAddress<decltype(executable_is_supported_proc)>("executable_is_supported");
       get_function_name_ranges_proc = GetProcAddress<decltype(get_function_name_ranges_proc)>("get_function_name_ranges");
       get_variable_name_ranges_proc = GetProcAddress<decltype(get_variable_name_ranges_proc)>("get_variable_name_ranges");
+      get_predefined_string_command_line_settings_proc = GetProcAddress<decltype(get_predefined_string_command_line_settings_proc)>("get_predefined_string_command_line_settings");
+      get_predefined_int_command_line_settings_proc = GetProcAddress<decltype(get_predefined_int_command_line_settings_proc)>("get_predefined_int_command_line_settings");
 
       // These functions are very Windows specific because the games being launched would all be Windows-based.
 #if WIN32

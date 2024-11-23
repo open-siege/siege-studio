@@ -21,8 +21,13 @@ using game_action = siege::platform::game_action;
 using controller_binding = siege::platform::controller_binding;
 
 using game_command_line_caps = siege::platform::game_command_line_caps;
+using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
+using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
 
 extern auto command_line_caps = game_command_line_caps{
+  .player_name_setting = L"name",
+  .int_settings = { { L"r_mode" } },
+  .string_settings = { { L"name", L"map" } },
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
@@ -66,6 +71,50 @@ HRESULT bind_virtual_key_to_action_for_file(const siege::fs_char* filename, cont
 HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_binding* inputs, std::size_t inputs_size)
 {
   return S_FALSE;
+}
+
+predefined_int*
+  get_predefined_int_command_line_settings(const wchar_t* name) noexcept
+{
+  if (name == nullptr)
+  {
+    return nullptr;
+  }
+
+  auto name_str = std::wstring_view(name);
+
+
+  if (name_str == L"r_mode")
+  {
+    static auto modes = std::array<predefined_int, 8>{
+      predefined_int{ .label = L"640x480", .value = 1 },
+      predefined_int{ .label = L"800x600", .value = 1 },
+      predefined_int{ .label = L"960x720", .value = 1 },
+      predefined_int{ .label = L"1024x768", .value = 1 },
+      predefined_int{ .label = L"1152x864", .value = 1 },
+      predefined_int{ .label = L"1280x960", .value = 1 },
+      predefined_int{ .label = L"1600x1200", .value = 1 },
+      predefined_int{},
+    };
+
+    return modes.data();
+  }
+
+  return nullptr;
+}
+
+predefined_string*
+  get_predefined_id_tech_3_map_command_line_settings(const wchar_t* base_dir) noexcept;
+
+predefined_string*
+  get_predefined_string_command_line_settings(const wchar_t* name) noexcept
+{
+  if (name && std::wstring_view(name) == L"map")
+  {
+    return get_predefined_id_tech_3_map_command_line_settings(L"Main");
+  }
+
+  return nullptr;
 }
 
 extern void(__cdecl* ConsoleEvalCdecl)(const char*);

@@ -64,6 +64,9 @@ namespace siege::views
                                   });
 
     launch_table_edit = *control_factory.CreateWindowExW<win32::edit>({ .style = WS_CHILD });
+    launch_table_combo = *control_factory.CreateWindowExW<win32::combo_box_ex>({ .cy = 300, .cx = 300, .style = WS_CHILD | CBS_DROPDOWNLIST });
+    //::SendMessageW(launch_table_combo, CBEM_SETUNICODEFORMAT, 1, 0);
+
     launch_table_ip_address = *control_factory.CreateWindowExW<win32::ip_address_edit>({ .cy = 100, .cx = 300, .style = WS_CHILD });
 
     keyboard_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });

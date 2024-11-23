@@ -1309,6 +1309,11 @@ namespace win32
   {
     using control::control;
     constexpr static auto class_name = WC_COMBOBOXEXW;
+
+    [[maybe_unused]] inline std::function<void()> bind_cbn_sel_change(std::move_only_function<void(combo_box_ex, const NMHDR&)> callback)
+    {
+      return bind_notification<combo_box_ex, NMHDR>(CBN_SELCHANGE, std::move(callback));
+    }
   };
 
 }// namespace win32

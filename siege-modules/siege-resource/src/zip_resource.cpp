@@ -102,6 +102,7 @@ namespace siege::resource::zip
         ZIP_SOURCE_STAT,
         ZIP_SOURCE_ERROR,
         ZIP_SOURCE_SEEK,
+        ZIP_SOURCE_FREE,
         ZIP_SOURCE_TELL,
         ZIP_SOURCE_SUPPORTS);
     default:

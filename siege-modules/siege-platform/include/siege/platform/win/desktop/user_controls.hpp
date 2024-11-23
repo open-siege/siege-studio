@@ -188,6 +188,11 @@ namespace win32
     using window::window;
     constexpr static auto class_name = WC_COMBOBOXW;
     constexpr static std::uint16_t dialog_id = 0x0085;
+
+    [[maybe_unused]] inline std::function<void()> bind_cbn_sel_change(std::move_only_function<void(combo_box, const NMHDR&)> callback)
+    {
+      return bind_notification<combo_box, NMHDR>(this->GetParent()->ref(), this->ref(), CBN_SELCHANGE, std::move(callback));
+    }
   };
 
   struct edit : window

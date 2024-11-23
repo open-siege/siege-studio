@@ -31,6 +31,7 @@ namespace siege::views
         column.sub_items = {
           settings.last_player_name.data()
         };
+        column.lParam = (LPARAM)game_command_line_caps::string_setting;
 
         launch_table.InsertRow(std::move(column));
 
@@ -45,6 +46,7 @@ namespace siege::views
         column.sub_items = {
           settings.last_ip_address.data()
         };
+        column.lParam = (LPARAM)game_command_line_caps::string_setting;
 
         ip_address_row_index = launch_table.InsertRow(std::move(column));
         continue;
@@ -54,6 +56,55 @@ namespace siege::views
       column.sub_items = {
         L""
       };
+      column.lParam = (LPARAM)game_command_line_caps::string_setting;
+
+      launch_table.InsertRow(std::move(column));
+    }
+
+    for (auto& value : caps.int_settings)
+    {
+      if (!value)
+      {
+        break;
+      }
+
+      win32::list_view_item column(value);
+      column.sub_items = {
+        L""
+      };
+      column.lParam = (LPARAM)game_command_line_caps::int_setting;
+
+      launch_table.InsertRow(std::move(column));
+    }
+
+    for (auto& value : caps.float_settings)
+    {
+      if (!value)
+      {
+        break;
+      }
+
+      win32::list_view_item column(value);
+      column.sub_items = {
+        L""
+      };
+      column.lParam = (LPARAM)game_command_line_caps::float_setting;
+
+      launch_table.InsertRow(std::move(column));
+    }
+
+    for (auto& value : caps.flags)
+    {
+      if (!value)
+      {
+        break;
+      }
+
+      win32::list_view_item column(value);
+      column.sub_items = {
+        L""
+      };
+      column.lParam = (LPARAM)game_command_line_caps::flag_setting;
 
       launch_table.InsertRow(std::move(column));
     }
@@ -85,46 +136,156 @@ namespace siege::views
           {
             static std::array<wchar_t, 256> text{};
 
+            ::LVITEMW item{
+              .mask = LVIF_PARAM,
+              .iItem = info.iItem
+            };
+
+            ListView_GetItem(launch_table, &item);
+
+            auto control_type = (game_command_line_caps::type)item.lParam;
+
+            auto& extension = controller.get_extension();
+
+            ListView_GetItemText(launch_table, info.iItem, 0, text.data(), text.size());
+
+            bool uses_combo = false;
+
+            std::wstring temp;
+            if (control_type == game_command_line_caps::string_setting && extension.get_predefined_string_command_line_settings_proc)
+            {
+              if (auto* values = extension.get_predefined_string_command_line_settings_proc(text.data()); values)
+              {
+                ::SendMessageW(launch_table_combo, CB_RESETCONTENT, 0, 0);
+
+                auto* first = values;
+
+                do
+                {
+                  if (!first->label)
+                  {
+                    break;
+                  }
+                  uses_combo = true;
+                  temp = first->label;
+                  ::COMBOBOXEXITEMW new_item{
+                    .mask = CBEIF_LPARAM | CBEIF_TEXT,
+                    .iItem = -1,
+                    .pszText = temp.data(),
+                    .cchTextMax = (int)temp.size(),
+                    .lParam = (LPARAM)first->value
+                  };
+                  ::SendMessageW(launch_table_combo, CBEM_INSERTITEMW, 0, (LPARAM)&new_item);
+
+                  first++;
+                } while (first->label);
+              }
+            }
+            else if (control_type == game_command_line_caps::int_setting && extension.get_predefined_int_command_line_settings_proc)
+            {
+              if (auto* values = extension.get_predefined_int_command_line_settings_proc(text.data()); values)
+              {
+                ::SendMessageW(launch_table_combo, CB_RESETCONTENT, 0, 0);
+
+                auto* first = values;
+
+                do
+                {
+                  if (!first->label)
+                  {
+                    break;
+                  }
+                  uses_combo = true;
+                  temp = first->label;
+                  ::COMBOBOXEXITEMW new_item{
+                    .mask = CBEIF_LPARAM | CBEIF_TEXT,
+                    .iItem = -1,
+                    .pszText = temp.data(),
+                    .cchTextMax = (int)temp.size(),
+                    .lParam = (LPARAM)first->value,
+                  };
+
+                  ::SendMessageW(launch_table_combo, CBEM_INSERTITEMW, 0, (LPARAM)&new_item);
+
+                  first++;
+                } while (first->label);
+              }
+            }
+
             if (launch_table_edit_unbind)
             {
               launch_table_edit_unbind();
               launch_table_edit_unbind = nullptr;
             }
 
-            if (info.iItem == ip_address_row_index)
+            if (uses_combo)
             {
-              launch_table_ip_address.SetWindowPos(result->second);
-              launch_table_ip_address.SetWindowPos(HWND_TOP);
-              launch_table_ip_address.SetWindowStyle(launch_table_ip_address.GetWindowStyle() | WS_VISIBLE);
-              
-              ListView_GetItemText(launch_table, info.iItem, info.iSubItem, text.data(), text.size());
+              launch_table_combo.SetWindowPos(result->second);
+              launch_table_combo.SetWindowPos(HWND_TOP);
+              launch_table_combo.SetWindowStyle(launch_table_combo.GetWindowStyle() | WS_VISIBLE);
+              ::SendMessageW(launch_table_combo, CB_SHOWDROPDOWN, TRUE, 0);
 
-              ::SetWindowTextW(launch_table_ip_address, text.data());
+              launch_table_edit_unbind = launch_table_combo.bind_cbn_sel_change([this, info, control_type](auto, const auto&) {
+                std::fill_n(text.data(), text.size(), L'\0');
+                ::COMBOBOXEXITEMW new_item{
+                  .mask = CBEIF_LPARAM | CBEIF_TEXT,
+                  .iItem = ::SendMessage(launch_table_combo, CB_GETCURSEL, 0, 0),
+                  .pszText = text.data(),
+                  .cchTextMax = (int)text.size(),
+                };
 
-
-              launch_table_edit_unbind = launch_table_ip_address.bind_en_kill_focus([this, info](auto, const auto&) {
-                launch_table_ip_address.SetWindowStyle(launch_table_ip_address.GetWindowStyle() & ~WS_VISIBLE);
-                ::GetWindowTextW(launch_table_ip_address, text.data(), (int)text.size());
-                ListView_SetItemText(launch_table, info.iItem, info.iSubItem, text.data());
+                if (::SendMessageW(launch_table_combo, CBEM_GETITEMW, 0, (LPARAM)&new_item))
+                {
+                  if (control_type == game_command_line_caps::string_setting)
+                  {
+                    ListView_SetItemText(launch_table, info.iItem, info.iSubItem, (wchar_t*)new_item.lParam);
+                  }
+                  else
+                  {
+                    auto item = std::to_wstring(new_item.lParam);
+                    ListView_SetItemText(launch_table, info.iItem, info.iSubItem, item.data());
+                  }
+                }
               });
             }
             else
             {
-              launch_table_edit.SetWindowPos(result->second);
-              launch_table_edit.SetWindowPos(HWND_TOP);
-              launch_table_edit.SetWindowStyle(launch_table_edit.GetWindowStyle() | WS_VISIBLE | WS_BORDER);
+              launch_table_combo.SetWindowStyle(launch_table_combo.GetWindowStyle() & ~WS_VISIBLE);
+              if (info.iItem == ip_address_row_index)
+              {
+                launch_table_ip_address.SetWindowPos(result->second);
+                launch_table_ip_address.SetWindowPos(HWND_TOP);
+                launch_table_ip_address.SetWindowStyle(launch_table_ip_address.GetWindowStyle() | WS_VISIBLE);
+
+                ListView_GetItemText(launch_table, info.iItem, info.iSubItem, text.data(), text.size());
+
+                ::SetWindowTextW(launch_table_ip_address, text.data());
 
 
-              ListView_GetItemText(launch_table, info.iItem, info.iSubItem, text.data(), text.size());
+                launch_table_edit_unbind = launch_table_ip_address.bind_en_kill_focus([this, info](auto, const auto&) {
+                  launch_table_ip_address.SetWindowStyle(launch_table_ip_address.GetWindowStyle() & ~WS_VISIBLE);
+                  ::GetWindowTextW(launch_table_ip_address, text.data(), (int)text.size());
+                  ListView_SetItemText(launch_table, info.iItem, info.iSubItem, text.data());
+                });
+              }
+              else
+              {
+                launch_table_edit.SetWindowPos(result->second);
+                launch_table_edit.SetWindowPos(HWND_TOP);
+                launch_table_edit.SetWindowStyle(launch_table_edit.GetWindowStyle() | WS_VISIBLE | WS_BORDER);
 
-              ::SetWindowTextW(launch_table_edit, text.data());
+
+                ListView_GetItemText(launch_table, info.iItem, info.iSubItem, text.data(), text.size());
+
+                ::SetWindowTextW(launch_table_edit, text.data());
 
 
-              launch_table_edit_unbind = launch_table_edit.bind_en_kill_focus([this, info](auto, const auto&) {
-                launch_table_edit.SetWindowStyle(launch_table_edit.GetWindowStyle() & ~WS_VISIBLE);
-                ::GetWindowTextW(launch_table_edit, text.data(), (int)text.size());
-                ListView_SetItemText(launch_table, info.iItem, info.iSubItem, text.data());
-              });
+                launch_table_edit_unbind = launch_table_edit.bind_en_kill_focus([this, info](auto, const auto&) {
+                  launch_table_edit.SetWindowStyle(launch_table_edit.GetWindowStyle() & ~WS_VISIBLE);
+                  ::GetWindowTextW(launch_table_edit, text.data(), (int)text.size());
+                  ListView_SetItemText(launch_table, info.iItem, info.iSubItem, text.data());
+                });
+              }
             }
           }
         }
@@ -198,6 +359,10 @@ namespace siege::views
 
         siege::platform::persistent_game_settings settings{};
 
+        ::LVITEMW info{
+          .mask = LVIF_PARAM
+        };
+
         for (auto i = 0; i < launch_table.GetItemCount(); ++i)
         {
           std::wstring name(255, L'\0');
@@ -205,6 +370,10 @@ namespace siege::views
 
           ListView_GetItemText(launch_table, i, 0, name.data(), name.size());
           ListView_GetItemText(launch_table, i, 1, value.data(), value.size());
+
+          info.iItem = i;
+
+          ListView_GetItem(launch_table, &info);
 
           name.resize(name.find(L'\0'));
           value.resize(value.find(L'\0'));

@@ -15,4 +15,6 @@ EXPORTS
 	executable_is_supported
 	get_function_name_ranges
 	get_variable_name_ranges
+	get_predefined_string_command_line_settings
+	get_predefined_int_command_line_settings
 	format_command_line

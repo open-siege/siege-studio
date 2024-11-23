@@ -47,6 +47,6 @@ if (WIN32)
 
     foreach(EXT_TARGET IN ITEMS ${ID_TECH_TARGETS})
         set_target_properties(${EXT_TARGET} PROPERTIES CXX_STANDARD 23)
-        target_link_libraries(${EXT_TARGET} PRIVATE siege-extension)
+        target_link_libraries(${EXT_TARGET} PRIVATE siege-extension siege-resource)
     endforeach()
 endif()

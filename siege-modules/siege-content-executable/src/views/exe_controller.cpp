@@ -13,11 +13,18 @@ namespace siege::views
 {
   bool exe_controller::set_game_settings(const siege::platform::persistent_game_settings& settings)
   {
+    OutputDebugStringW(L"set_game_settings\n");
     game_settings = settings;
 
     HKEY main_key = nullptr;
-    if (::RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\The Siege Hub\\Siege Studio", 0, nullptr, 0, KEY_ALL_ACCESS, nullptr, &main_key, nullptr) == ERROR_SUCCESS)
+    HKEY user_key = nullptr;
+
+    auto access = KEY_QUERY_VALUE | KEY_READ | KEY_WRITE;
+
+    if (::RegOpenCurrentUser(access, &user_key) == ERROR_SUCCESS && 
+        ::RegCreateKeyExW(user_key, L"Software\\The Siege Hub\\Siege Studio", 0, nullptr, 0, access, nullptr, &main_key, nullptr) == ERROR_SUCCESS)
     {
+      OutputDebugStringW(L"Failed successfully\n");
       std::vector<BYTE> raw_bytes;
       
       raw_bytes.resize(settings.last_ip_address.size() * sizeof(wchar_t));
@@ -30,24 +37,44 @@ namespace siege::views
       std::memcpy(raw_bytes.data(), settings.last_player_name.data(), raw_bytes.size());
       result = result && ::RegSetValueExW(main_key, L"LastPlayerName", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
      
+      
+      ::RegCloseKey(main_key);
+      ::RegCloseKey(user_key);
+
       return result;
     }
 
+    if (user_key)
+    {
+      OutputDebugStringW(L"User key being closed\n");
+      ::RegCloseKey(user_key);
+    }
+
+    OutputDebugStringW(L"Could not save registry\n");
     return false;
   }
 
   const siege::platform::persistent_game_settings& exe_controller::get_game_settings()
   {
+    HKEY user_key = nullptr;
     HKEY main_key = nullptr;
+    auto access = KEY_QUERY_VALUE | KEY_READ | KEY_WRITE;
+
     DWORD size = 0;
-    if (auto error = ::RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\The Siege Hub\\Siege Studio", 0, nullptr, 0, KEY_ALL_ACCESS, nullptr, &main_key, nullptr); error == ERROR_SUCCESS)
+    if (::RegOpenCurrentUser(access, &user_key) == ERROR_SUCCESS && 
+        ::RegCreateKeyExW(user_key, L"Software\\The Siege Hub\\Siege Studio", 0, nullptr, 0, access, nullptr, &main_key, nullptr) == ERROR_SUCCESS)
     {
       auto type = REG_SZ;
-      size = (DWORD)game_settings.last_ip_address.size();
+      size = (DWORD)game_settings.last_ip_address.size() * 2;
       ::RegGetValueW(main_key, nullptr, L"LastIPAddress", RRF_RT_REG_SZ, &type, game_settings.last_ip_address.data(), &size);
-      size = game_settings.last_player_name.size();
+      size = game_settings.last_player_name.size() * 2;
       ::RegGetValueW(main_key, nullptr, L"LastPlayerName", RRF_RT_REG_SZ, &type, game_settings.last_player_name.data(), &size);
       ::RegCloseKey(main_key);
+    }
+
+    if (user_key)
+    {
+      ::RegCloseKey(user_key);
     }
 
     if (!game_settings.last_ip_address[0])

@@ -20,9 +20,14 @@ extern "C" {
 using game_action = siege::platform::game_action;
 using controller_binding = siege::platform::controller_binding;
 using game_command_line_caps = siege::platform::game_command_line_caps;
+using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
+using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
 
 extern auto command_line_caps = game_command_line_caps{
-  .ip_connect_setting = L"connect"
+  .ip_connect_setting = L"connect",
+  .player_name_setting = L"name",
+  .int_settings = { { L"r_customwidth", L"r_customheight", L"r_mode" } },
+  .string_settings = { { L"name", L"connect", L"map" } },
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
@@ -111,6 +116,51 @@ HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>*
 HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
 {
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
+}
+
+predefined_int*
+  get_predefined_int_command_line_settings(const wchar_t* name) noexcept
+{
+  if (name == nullptr)
+  {
+    return nullptr;
+  }
+
+  auto name_str = std::wstring_view(name);
+
+
+  if (name_str == L"r_mode")
+  {
+    static auto modes = std::array<predefined_int, 9>{
+      predefined_int{ .label = L"640x480", .value = 1 },
+      predefined_int{ .label = L"800x600", .value = 1 },
+      predefined_int{ .label = L"960x720", .value = 1 },
+      predefined_int{ .label = L"1024x768", .value = 1 },
+      predefined_int{ .label = L"1152x864", .value = 1 },
+      predefined_int{ .label = L"1280x960", .value = 1 },
+      predefined_int{ .label = L"1600x1200", .value = 1 },
+      predefined_int{ .label = L"Custom", .value = -1 },
+      predefined_int{},
+    };
+
+    return modes.data();
+  }
+
+  return nullptr;
+}
+
+predefined_string*
+  get_predefined_id_tech_3_map_command_line_settings(const wchar_t* base_dir) noexcept;
+
+predefined_string*
+  get_predefined_string_command_line_settings(const wchar_t* name) noexcept
+{
+  if (name && std::wstring_view(name) == L"map")
+  {
+    return get_predefined_id_tech_3_map_command_line_settings(L"main");
+  }
+
+  return nullptr;
 }
 
 BOOL WINAPI DllMain(

@@ -24,12 +24,22 @@ namespace siege::resource::pak
 
   constexpr auto vampire_tag = platform::to_tag<4>({ 0x1a, 'V', 'P', 'K' });
   constexpr auto quake_tag = platform::to_tag<4>({ 'P', 'A', 'C', 'K' });
+  constexpr auto anox_tag = platform::to_tag<4>({ 'A', 'D', 'A', 'T' });
 
   struct pak_file_entry
   {
     std::array<char, 56> path;
     endian::little_uint32_t offset;
     endian::little_uint32_t size;
+  };
+
+  struct dat_file_entry
+  {
+    std::array<char, 128> path;
+    endian::little_uint32_t offset;
+    endian::little_uint32_t uncompressed_size;
+    endian::little_uint32_t compressed_size;
+    endian::little_uint32_t checksum;
   };
 
   bool pak_resource_reader::is_supported(std::istream& stream)

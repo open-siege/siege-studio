@@ -93,6 +93,7 @@ namespace siege::views
     win32::list_view string_table;
     win32::list_view launch_table;
     win32::edit launch_table_edit;
+    win32::combo_box_ex launch_table_combo;
     win32::ip_address_edit launch_table_ip_address;
     int ip_address_row_index;
     std::function<void()> launch_table_edit_unbind;
