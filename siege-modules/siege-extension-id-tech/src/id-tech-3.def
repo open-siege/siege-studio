@@ -18,3 +18,4 @@ EXPORTS
 	get_predefined_string_command_line_settings
 	get_predefined_int_command_line_settings
 	format_command_line
+	apply_prelaunch_settings PRIVATE

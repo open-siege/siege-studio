@@ -11,20 +11,49 @@ namespace fs = std::filesystem;
 using namespace std::literals;
 extern game_command_line_caps command_line_caps;
 
+HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, const siege::platform::game_command_line_args* args)
+{
+  if (exe_path_str == nullptr)
+  {
+    return E_POINTER;
+  }
+
+  if (args == nullptr)
+  {
+    return E_POINTER;
+  }
+
+  std::error_code last_error;
+
+  auto exe_path = fs::path(exe_path_str);
+
+  HKEY current_user = nullptr;
+  if (::RegOpenCurrentUser(KEY_WRITE, &current_user) == 0)
+  {
+    std::wstring compat = L"~ HIGHDPIAWARE";
+    HKEY compat_key = nullptr;
+    if (::RegOpenKeyExW(current_user, L"Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers", 0, KEY_WRITE, &compat_key) == 0)
+    {
+      ::RegSetValueExW(compat_key, exe_path_str, 0, REG_SZ, (BYTE*)compat.data(), compat.size() * 2);
+      ::RegCloseKey(compat_key);
+    }
+
+    ::RegCloseKey(current_user);
+  }
+
+  return S_OK;
+}
+
 
 const wchar_t** format_command_line(const siege::platform::game_command_line_args* args, std::uint32_t* new_size)
 {
-  OutputDebugStringW(L"format_command_line");
-
   if (!args)
   {
-    OutputDebugStringW(L"!args true");
     return nullptr;
   }
 
   if (!new_size)
   {
-    OutputDebugStringW(L"!new_size");
     return nullptr;
   }
 
@@ -35,19 +64,16 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
   {
     if (!setting.name)
     {
-      OutputDebugStringW(L"!setting.name");
       continue;
     }
 
     if (!setting.value)
     {
-      OutputDebugStringW(L"!setting.value");
       continue;
     }
 
     if (!setting.value[0])
     {
-      OutputDebugStringW(L"!setting.value[0]");
       continue;
     }
 
@@ -74,15 +100,8 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
     }
   }
 
-  for (auto& value : string_args)
-  {
-    OutputDebugStringW(value.c_str());
-    OutputDebugStringW(L"\n");
-  }
-
   if (string_args.empty())
   {
-    OutputDebugStringW(L"No string args found");
     return nullptr;
   }
 

@@ -2,5 +2,5 @@ EXPORTS
 	command_line_caps DATA
 	executable_is_supported
 	launch_game_with_extension
-	apply_prelaunch_settings
+	apply_prelaunch_settings PRIVATE
 	format_command_line
