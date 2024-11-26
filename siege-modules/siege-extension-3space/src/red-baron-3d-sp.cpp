@@ -6,8 +6,12 @@
 extern "C" {
 using namespace std::literals;
 
-constexpr static std::array<std::string_view, 11> verification_strings = { {
-  "GAME.DIC"sv,
+constexpr static std::array<std::string_view, 5> verification_strings = { {
+  "RedBaronClass"sv,
+  "baron.exe"sv,
+  "baron.dml"sv,
+  "Debrief.dat"sv,
+  "SQUADRON.dat"sv,
 } };
 
 

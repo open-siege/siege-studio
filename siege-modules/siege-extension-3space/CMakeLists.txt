@@ -13,4 +13,13 @@ if (WIN32)
     add_library(siege-extension-mask-of-eternity SHARED src/moe.cpp src/darkstar.def)
     set_target_properties(siege-extension-mask-of-eternity PROPERTIES CXX_STANDARD 23)
     target_link_libraries(siege-extension-mask-of-eternity PRIVATE siege-extension)
+
+    add_library(siege-extension-red-baron-3d-sp SHARED src/red-baron-3d-sp.cpp src/3space.def)
+    set_target_properties(siege-extension-red-baron-3d-sp PROPERTIES CXX_STANDARD 23)
+    target_link_libraries(siege-extension-red-baron-3d-sp PRIVATE siege-extension)
+
+    add_library(siege-extension-red-baron-3d-mp SHARED src/red-baron-3d-mp.cpp src/3space.def)
+    set_target_properties(siege-extension-red-baron-3d-mp PROPERTIES CXX_STANDARD 23)
+    target_link_libraries(siege-extension-red-baron-3d-mp PRIVATE siege-extension)
+
 endif()

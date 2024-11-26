@@ -18,8 +18,6 @@
 
 extern "C" {
 using game_action = siege::platform::game_action;
-using controller_binding = siege::platform::controller_binding;
-
 using game_command_line_caps = siege::platform::game_command_line_caps;
 using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
@@ -63,16 +61,6 @@ extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" 
 extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"uo/pak0.pak/default.cfg", L"uo/default.cfg" } };
 extern auto autoexec_configuration_paths = std::array<const wchar_t*, 4>{ { L"uo/autoexec.cfg" } };
 extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{ { L"uo/config.cfg" } };
-
-HRESULT bind_virtual_key_to_action_for_file(const siege::fs_char* filename, controller_binding* inputs, std::size_t inputs_size)
-{
-  return S_FALSE;
-}
-
-HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_binding* inputs, std::size_t inputs_size)
-{
-  return S_FALSE;
-}
 
 using namespace std::literals;
 

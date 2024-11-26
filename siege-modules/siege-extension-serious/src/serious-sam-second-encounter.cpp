@@ -10,18 +10,37 @@ using game_command_line_caps = siege::platform::game_command_line_caps;
 
 extern auto command_line_caps = game_command_line_caps{
   .ip_connect_setting = L"+connect",
-  .player_name_setting = L"player_name",
-  .string_settings = { { L"+connect", L"player_name" } }
+  .string_settings = { { L"+connect" } }
 };
 
-constexpr static std::array<std::string_view, 11> verification_strings = { {
-  "GAME.DIC"sv,
-} };
+constexpr static std::array<std::string_view, 7> verification_strings = { {
+  "SeriousSam"sv,
+  "serioussam"sv,
+  "Data\\SeriousSam.gms"sv,
+  "ETRSERIOUS"sv,
+  "ETRSerious"sv,
+  "Bin\\EntitiesMP.dll",
+  "Bin\\Entities.dll",
+}};
 
 
 HRESULT executable_is_supported(const wchar_t* filename) noexcept
 {
-  return siege::executable_is_supported(filename, verification_strings);
+  std::error_code error{};
+  if (siege::executable_is_supported(filename, verification_strings) == S_OK)
+  {
+    auto path = std::filesystem::path(filename);
+    auto parent = path.parent_path();
+    if (std::filesystem::exists(parent / "GameMP.dll", error) && 
+        std::filesystem::exists(parent / "GameGUIMP.dll", error) && 
+        std::filesystem::exists(parent / "EntitiesMP.dll", error) &&
+        std::filesystem::exists(parent / "eview3d.dll", error))
+    {
+      return S_OK;
+    }
+  }
+
+  return S_FALSE;
 }
 
 }

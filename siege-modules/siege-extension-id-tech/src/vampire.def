@@ -7,8 +7,6 @@ EXPORTS
 	configuration_extensions DATA
 	template_configuration_paths DATA
 	profile_configuration_paths DATA
-	bind_virtual_key_to_action_for_file
-	bind_virtual_key_to_action_for_process
 	launch_game_with_extension
 	executable_is_supported
 	get_function_name_ranges

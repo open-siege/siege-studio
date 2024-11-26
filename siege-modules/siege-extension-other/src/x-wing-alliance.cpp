@@ -8,14 +8,15 @@ using namespace std::literals;
 
 using game_command_line_caps = siege::platform::game_command_line_caps;
 
-extern auto command_line_caps = game_command_line_caps{
-  .ip_connect_setting = L"+connect",
-  .player_name_setting = L"player_name",
-  .string_settings = { { L"+connect", L"player_name" } }
-};
+extern auto command_line_caps = game_command_line_caps{};
 
-constexpr static std::array<std::string_view, 11> verification_strings = { {
-  "GAME.DIC"sv,
+constexpr static std::array<std::string_view, 6> verification_strings = { {
+  "X-Wing Alliance"sv,
+  "use_3d_hardware1"sv,
+  "use_3d_hardware2"sv,
+  "lastpilot"sv,
+  "Last Pilot"sv,
+  "Install Path"sv,
 } };
 
 

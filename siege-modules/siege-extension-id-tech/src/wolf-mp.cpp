@@ -18,7 +18,6 @@
 
 extern "C" {
 using game_action = siege::platform::game_action;
-using controller_binding = siege::platform::controller_binding;
 
 using game_command_line_caps = siege::platform::game_command_line_caps;
 using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
@@ -28,7 +27,7 @@ extern auto command_line_caps = game_command_line_caps{
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
   .int_settings = { { L"r_mode" } },
-  .string_settings = { { L"name", L"connect", L"map" } },
+  .string_settings = { { L"name", L"connect", L"map", L"r_glDriver" } },
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
@@ -63,16 +62,6 @@ extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" 
 extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"base/assets0.pk3/default.cfg", L"base/default.cfg" } };
 extern auto autoexec_configuration_paths = std::array<const wchar_t*, 4>{ { L"base/autoexec.cfg" } };
 extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{ { L"base/jk2config.cfg" } };
-
-HRESULT bind_virtual_key_to_action_for_file(const siege::fs_char* filename, controller_binding* inputs, std::size_t inputs_size)
-{
-  return S_FALSE;
-}
-
-HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_binding* inputs, std::size_t inputs_size)
-{
-  return S_FALSE;
-}
 
 extern void(__cdecl* ConsoleEvalCdecl)(const char*);
 

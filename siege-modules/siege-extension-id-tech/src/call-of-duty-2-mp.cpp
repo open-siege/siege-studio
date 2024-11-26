@@ -18,8 +18,6 @@
 
 extern "C" {
 using game_action = siege::platform::game_action;
-using controller_binding = siege::platform::controller_binding;
-
 using game_command_line_caps = siege::platform::game_command_line_caps;
 
 extern auto command_line_caps = game_command_line_caps{
@@ -58,16 +56,6 @@ extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } 
 extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
 extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"main/iw_00.iwd/default_mp.cfg", L"main/default_mp.cfg" } };
 extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{ { L"main/players/*/config.cfg" } };
-
-HRESULT bind_virtual_key_to_action_for_file(const siege::fs_char* filename, controller_binding* inputs, std::size_t inputs_size)
-{
-  return S_FALSE;
-}
-
-HRESULT update_action_intensity_for_process(DWORD process_id, DWORD thread_id, const char* action, float intensity)
-{
-  return S_FALSE;
-}
 
 using namespace std::literals;
 

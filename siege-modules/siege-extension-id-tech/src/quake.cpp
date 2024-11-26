@@ -18,7 +18,6 @@
 
 extern "C" {
 using game_action = siege::platform::game_action;
-using controller_binding = siege::platform::controller_binding;
 
 using game_command_line_caps = siege::platform::game_command_line_caps;
 
@@ -57,16 +56,6 @@ extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" 
 extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"Id1/PAK0.PAK/default.cfg", L"Id1/default.cfg" } };
 extern auto autoexec_configuration_paths = std::array<const wchar_t*, 4>{ { L"Id1/autoexec.cfg", L"hipnotic/autoexec.cfg", L"rogue/autoexec.cfg" } };
 extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{ { L"Id1/config.cfg", L"hipnotic/config.cfg", L"rogue/config.cfg" } };
-
-HRESULT bind_virtual_key_to_action_for_file(const siege::fs_char* filename, controller_binding* inputs, std::size_t inputs_size)
-{
-  return S_FALSE;
-}
-
-HRESULT bind_virtual_key_to_action_for_process(DWORD process_id, controller_binding* inputs, std::size_t inputs_size)
-{
-  return S_FALSE;
-}
 
 extern void(__cdecl* ConsoleEvalCdecl)(const char*);
 

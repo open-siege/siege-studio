@@ -14,9 +14,13 @@ extern auto command_line_caps = game_command_line_caps{
   .string_settings = { { L"+connect", L"player_name" } }
 };
 
-constexpr static std::array<std::string_view, 11> verification_strings = { {
-  "GAME.DIC"sv,
-} };
+static std::array<std::string_view, 5> verification_strings = {{
+  "Bin32\\FarCryConfigurator.exe"sv,
+  "/Caller=FarCry",
+  "FarCry.pdb", 
+  "CryENGINE",
+  std::string_view((const char*)u"Crytek", 8 * sizeof(char16_t)),  
+}};
 
 
 HRESULT executable_is_supported(const wchar_t* filename) noexcept

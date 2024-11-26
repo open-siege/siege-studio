@@ -9,13 +9,18 @@ using namespace std::literals;
 using game_command_line_caps = siege::platform::game_command_line_caps;
 
 extern auto command_line_caps = game_command_line_caps{
-  .ip_connect_setting = L"+connect",
-  .player_name_setting = L"player_name",
-  .string_settings = { { L"+connect", L"player_name" } }
+  .ip_connect_setting = L"-connect",
+  .player_name_setting = L"-name",
+  .string_settings = { { L"-connect", L"-name" } }
 };
 
-constexpr static std::array<std::string_view, 11> verification_strings = { {
-  "GAME.DIC"sv,
+constexpr static std::array<std::string_view, 6> verification_strings = { {
+  "SITO_AQUA_RENDERER"sv,
+  "nod_directory"sv,
+  "Aqua_Simulation"sv,
+  "succubus2"sv,
+  "Succubus2"sv,
+  "MASSIVEFILE"sv,
 } };
 
 

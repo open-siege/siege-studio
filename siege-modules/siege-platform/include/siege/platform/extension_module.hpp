@@ -17,6 +17,8 @@ namespace siege::platform
     struct action_binding
     {
       int virtual_key;
+      int input_type;
+      int input_index;
       std::array<char, 32> action_name;
     };
 
@@ -95,12 +97,13 @@ namespace siege::platform
       const fs_char* value;
     };
     std::array<string_setting, 32> string_settings;
+
+    std::array<controller_binding, 32> input_bindings;
   };
   // TODO replace HRESULT with std::errc for the cross-platform functions
   using executable_is_supported = HRESULT(const siege::fs_char* filename) noexcept;
   using get_function_name_ranges = HRESULT(std::size_t, std::array<const char*, 2>*, std::size_t*) noexcept;
   using get_variable_name_ranges = HRESULT(std::size_t, std::array<const char*, 2>*, std::size_t*) noexcept;
-  using bind_virtual_key_to_action_for_file = HRESULT(const siege::fs_char* filename, controller_binding* inputs, std::size_t inputs_size);
   using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
   using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
   using get_predefined_string_command_line_settings = predefined_string*(const siege::fs_char* name) noexcept;

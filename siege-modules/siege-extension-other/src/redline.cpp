@@ -10,12 +10,24 @@ using game_command_line_caps = siege::platform::game_command_line_caps;
 
 extern auto command_line_caps = game_command_line_caps{
   .ip_connect_setting = L"+connect",
-  .player_name_setting = L"player_name",
-  .string_settings = { { L"+connect", L"player_name" } }
+  .player_name_setting = L"+name",
+  .string_settings = { { L"+connect", L"name" } }
 };
 
-constexpr static std::array<std::string_view, 11> verification_strings = { {
-  "GAME.DIC"sv,
+constexpr static std::array<std::string_view, 13> verification_strings = { {
+  "connect"sv,
+  "name"sv,
+  "team"sv,
+  "skin"sv,
+  "game"sv,
+  "host"sv,
+  "maxplayers"sv,
+  "hostname"sv,
+  "console"sv,
+  "lobby"sv,
+  "redline.cfg"sv,
+  "RED6"sv,
+  "Redline"sv,
 } };
 
 

@@ -10,18 +10,16 @@ using game_command_line_caps = siege::platform::game_command_line_caps;
 
 extern auto command_line_caps = game_command_line_caps{};
 
-constexpr static std::array<std::string_view, 11> verification_strings = { {
-  "patch.tre"sv,
-  "movies.tre"sv,
-  "language.tre"sv,
-  "speech.tre"sv,
-  "audio.tre"sv,
-  "special.tre"sv,
-  "data.tre"sv,
-  "wingcam"sv,
-  "prophecy"sv,
-  "WC: Prophecy Mutex"sv,
-  "Prophecy AddRequest"sv,
+constexpr static std::array<std::string_view, 9> verification_strings = { {
+  "DOSBox"sv,
+  "dosbox"sv,
+  "cdrom"sv,
+  "mount"sv,
+  "special"sv,
+  "help"sv,
+  "connect"sv,
+  "startserver"sv,
+  "localhost"sv,
 } };
 
 

@@ -6,15 +6,12 @@
 extern "C" {
 using namespace std::literals;
 
-using game_command_line_caps = siege::platform::game_command_line_caps;
-
-extern auto command_line_caps = game_command_line_caps{};
-
-constexpr static std::array<std::string_view, 11> verification_strings = { {
-  "WING COMMANDER"sv,
-  "wingldr.tim"sv,
-  "WINGCMDR.CFG"sv,
-  "gamedat"sv,
+constexpr static std::array<std::string_view, 5> verification_strings = { {
+  "RedBaronClass"sv,
+  "Multiplayer"sv,
+  "Baronmp.exe"sv,
+  "baron.dml"sv,
+  "MPString2.dat"sv,
 } };
 
 

@@ -8,14 +8,20 @@ using namespace std::literals;
 
 using game_command_line_caps = siege::platform::game_command_line_caps;
 
-extern auto command_line_caps = game_command_line_caps{
-  .ip_connect_setting = L"+connect",
-  .player_name_setting = L"player_name",
-  .string_settings = { { L"+connect", L"player_name" } }
-};
+extern auto command_line_caps = game_command_line_caps{};
 
 constexpr static std::array<std::string_view, 11> verification_strings = { {
-  "GAME.DIC"sv,
+  "JEDIPATH"sv,
+  "IMUSE"sv,
+  "DARK.GOB"sv,
+  "jedi.cfg"sv,
+  "jedi.lvl"sv,
+  "jedisfx.lfd"sv,
+  "SECTOR"sv,
+  "OBJECT_MASK"sv,
+  "BAD DEFAULT.3DO"sv,
+  "default.fme"sv,
+  "default.wax"sv,
 } };
 
 

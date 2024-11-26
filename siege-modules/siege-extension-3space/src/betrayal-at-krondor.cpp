@@ -6,8 +6,14 @@
 extern "C" {
 using namespace std::literals;
 
-constexpr static std::array<std::string_view, 11> verification_strings = { {
+constexpr static std::array<std::string_view, 7> verification_strings = { {
   "KRONDOR.CFG"sv,
+  "krondor.rmf"sv,
+  "krondor.exe"sv,
+  "BMP:INF:"sv,
+  "BMP:BIN:"sv,
+  "BMP:VGA:"sv,
+  "BMP:AMG:"sv,
 } };
 
 

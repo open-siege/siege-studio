@@ -14,8 +14,20 @@ extern auto command_line_caps = game_command_line_caps{
   .string_settings = { { L"+connect", L"player_name" } }
 };
 
-constexpr static std::array<std::string_view, 11> verification_strings = { {
-  "GAME.DIC"sv,
+constexpr static std::array<std::string_view, 13> verification_strings = { {
+  "-path"sv,
+  "-devMode"sv,
+  "-dispStats"sv,
+  "-windowGUI"sv,
+  "-displayConfig"sv,
+  "-debug"sv,
+  "-verbose"sv,
+  "-noHUD"sv,
+  "+twinkle"sv,
+  "+ssparks_saber"sv,
+  "+ssparks_blood"sv,
+  "+ssparks_wall"sv,
+  "GAME_UBERJEDI"sv,
 } };
 
 
