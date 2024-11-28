@@ -135,7 +135,7 @@ namespace siege::platform
     get_predefined_int_command_line_settings* get_predefined_int_command_line_settings_proc = nullptr;
 
 #if WIN32
-    launch_game_with_extension* launch_game_with_extension = nullptr;
+    launch_game_with_extension* launch_game_with_extension_proc = nullptr;
     update_action_intensity_for_process* update_action_intensity_for_process = nullptr;
 #endif
 
@@ -149,7 +149,7 @@ namespace siege::platform
 
       // These functions are very Windows specific because the games being launched would all be Windows-based.
 #if WIN32
-      this->launch_game_with_extension = GetProcAddress<decltype(game_extension_module::launch_game_with_extension)>("launch_game_with_extension");
+      this->launch_game_with_extension_proc = GetProcAddress<decltype(game_extension_module::launch_game_with_extension)>("launch_game_with_extension");
       this->update_action_intensity_for_process = GetProcAddress<decltype(game_extension_module::update_action_intensity_for_process)>("update_action_intensity_for_process");
 #endif
 
@@ -266,6 +266,100 @@ namespace siege::platform
       }
 
       return std::nullopt;
+    }
+
+    HRESULT launch_game_with_extension(const wchar_t* exe_path_str, const game_command_line_args* args, PROCESS_INFORMATION* info) noexcept
+    {
+      if (launch_game_with_extension_proc)
+      {
+        return launch_game_with_extension_proc(exe_path_str, args, info);
+      }
+
+      if (!exe_path_str)
+      {
+        return E_POINTER;
+      }
+
+      std::error_code last_errorc;
+
+      std::filesystem::path exe_path(exe_path_str);
+
+      if (!std::filesystem::exists(exe_path, last_errorc))
+      {
+        return E_INVALIDARG;
+      }
+
+      if (!game_args)
+      {
+        return E_POINTER;
+      }
+
+      if (!process_info)
+      {
+        return E_POINTER;
+      }
+
+      std::string extension_path = this->GetModuleFileName<char>();
+
+      auto* apply_prelaunch_settings_func = this->GetProcAddress<std::add_pointer_t<apply_prelaunch_settings>>("apply_prelaunch_settings");
+
+      if (apply_prelaunch_settings_func)
+      {
+        if (apply_prelaunch_settings_func(exe_path.c_str(), game_args) != S_OK)
+        {
+          return E_ABORT;
+        }
+      }
+
+      auto* format_command_line_func = module_ref.GetProcAddress<std::add_pointer_t<format_command_line>>("format_command_line");
+
+      const wchar_t** argv = nullptr;
+      std::uint32_t argc = 0;
+
+
+      if (format_command_line_func)
+      {
+        argv = format_command_line_func(game_args, &argc);
+      }
+
+
+      std::wstring args;
+      args.reserve(argc + 3 * sizeof(std::wstring) + 3);
+      args.append(1, L'"');
+      args.append(exe_path.wstring());
+      args.append(1, L'"');
+
+      if (argv && argc > 0)
+      {
+        args.append(1, L' ');
+        for (auto i = 0u; i < argc; ++i)
+        {
+          args.append(argv[i]);
+
+          if (i < (argc - 1))
+          {
+            args.append(1, L' ');
+          }
+        }
+      }
+
+      STARTUPINFOW startup_info{ .cb = sizeof(STARTUPINFOW) };
+      if (::CreateProcessW(exe_path.c_str(),
+            args.data(),
+            nullptr,
+            nullptr,
+            FALSE,
+            DETACHED_PROCESS,
+            nullptr,
+            exe_path.parent_path().c_str(),
+            &startup_info,
+            process_info))
+      {
+        return S_OK;
+      }
+
+      auto last_error = ::GetLastError();
+      return HRESULT_FROM_WIN32(last_error);
     }
 
     static std::list<game_extension_module> load_modules(std::filesystem::path search_path)
