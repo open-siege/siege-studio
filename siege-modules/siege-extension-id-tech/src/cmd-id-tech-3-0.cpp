@@ -11,6 +11,9 @@ namespace fs = std::filesystem;
 using namespace std::literals;
 extern game_command_line_caps command_line_caps;
 
+// TODO
+// Generate cfg file for controller settings
+// Copy glide files to the game folder - use to-be-implemented shared list of detected items
 HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, const siege::platform::game_command_line_args* args)
 {
   if (exe_path_str == nullptr)
@@ -44,7 +47,8 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, const siege::platf
   return S_OK;
 }
 
-
+// TODO
+// Specify controller cfg in the command line
 const wchar_t** format_command_line(const siege::platform::game_command_line_args* args, std::uint32_t* new_size)
 {
   if (!args)

@@ -6,7 +6,6 @@ EXPORTS
 	configuration_extensions DATA
 	template_configuration_paths DATA
 	profile_configuration_paths DATA
-	update_action_intensity_for_process
 	launch_game_with_extension
 	executable_is_supported
 	get_function_name_ranges

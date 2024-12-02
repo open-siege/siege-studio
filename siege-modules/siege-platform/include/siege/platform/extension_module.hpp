@@ -111,7 +111,6 @@ namespace siege::platform
 
 #if WIN32
   using bind_virtual_key_to_action_for_process = HRESULT(DWORD process_id, controller_binding* inputs, std::size_t inputs_size);
-  using update_action_intensity_for_process = HRESULT(DWORD process_id, DWORD thread_id, const char* action, float intensity);
   using launch_game_with_extension = HRESULT(const wchar_t* exe_path_str, const game_command_line_args*, PROCESS_INFORMATION*) noexcept;
 #endif
 
@@ -123,46 +122,26 @@ namespace siege::platform
     get_function_name_ranges* get_function_name_ranges_proc = nullptr;
     get_variable_name_ranges* get_variable_name_ranges_proc = nullptr;
 
-    std::span<game_action> game_actions;
-    std::span<const wchar_t*> controller_input_backends;
-    std::span<const wchar_t*> keyboard_input_backends;
-    std::span<const wchar_t*> mouse_input_backends;
-    std::span<const wchar_t*> configuration_extensions;
-    std::span<const wchar_t*> template_configuration_paths;
-    std::span<const wchar_t*> autoexec_configuration_paths;
-    std::span<const wchar_t*> profile_configuration_paths;
-
   public:
-    game_command_line_caps* caps = nullptr;
     get_predefined_string_command_line_settings* get_predefined_string_command_line_settings_proc = nullptr;
     get_predefined_int_command_line_settings* get_predefined_int_command_line_settings_proc = nullptr;
 
 #if WIN32
     launch_game_with_extension* launch_game_with_extension_proc = nullptr;
-    update_action_intensity_for_process* update_action_intensity_for_process = nullptr;
 #endif
 
-    game_extension_module(std::filesystem::path module_path) : base(module_path)
-    {
-      executable_is_supported_proc = GetProcAddress<decltype(executable_is_supported_proc)>("executable_is_supported");
-      get_function_name_ranges_proc = GetProcAddress<decltype(get_function_name_ranges_proc)>("get_function_name_ranges");
-      get_variable_name_ranges_proc = GetProcAddress<decltype(get_variable_name_ranges_proc)>("get_variable_name_ranges");
-      get_predefined_string_command_line_settings_proc = GetProcAddress<decltype(get_predefined_string_command_line_settings_proc)>("get_predefined_string_command_line_settings");
-      get_predefined_int_command_line_settings_proc = GetProcAddress<decltype(get_predefined_int_command_line_settings_proc)>("get_predefined_int_command_line_settings");
+    const std::span<game_action> game_actions;
+    const std::span<const wchar_t*> controller_input_backends;
+    const std::span<const wchar_t*> keyboard_input_backends;
+    const std::span<const wchar_t*> mouse_input_backends;
+    const std::span<const wchar_t*> configuration_extensions;
+    const std::span<const wchar_t*> template_configuration_paths;
+    const std::span<const wchar_t*> autoexec_configuration_paths;
+    const std::span<const wchar_t*> profile_configuration_paths;
+    const game_command_line_caps* caps = nullptr;
 
-      // These functions are very Windows specific because the games being launched would all be Windows-based.
-#if WIN32
-      this->launch_game_with_extension_proc = GetProcAddress<decltype(game_extension_module::launch_game_with_extension)>("launch_game_with_extension");
-      this->update_action_intensity_for_process = GetProcAddress<decltype(game_extension_module::update_action_intensity_for_process)>("update_action_intensity_for_process");
-#endif
-
-      if (!this->executable_is_supported_proc)
-      {
-        throw std::runtime_error("Could not find module functions");
-      }
-
-      auto update_span = [this](auto* key, auto& span) {
-        auto* storage = GetProcAddress<const wchar_t**>(key);
+    inline std::span<const wchar_t*> update_span(const char* key) {
+        auto* storage = this->GetProcAddress<const wchar_t**>(key);
 
         if (storage)
         {
@@ -177,36 +156,56 @@ namespace siege::platform
             }
           }
 
-          span = std::span(storage, end);
+          return std::span<const wchar_t*>(storage, end);
         }
+        return std::span<const wchar_t*>();
       };
 
-      update_span("controller_input_backends", controller_input_backends);
-      update_span("keyboard_input_backends", keyboard_input_backends);
-      update_span("mouse_input_backends", mouse_input_backends);
-      update_span("configuration_extensions", configuration_extensions);
-      update_span("template_configuration_paths", template_configuration_paths);
-      update_span("autoexec_configuration_paths", autoexec_configuration_paths);
-      update_span("profile_configuration_paths", profile_configuration_paths);
+    game_extension_module(std::filesystem::path module_path) : base(module_path),
+        game_actions([this] {
+          auto* actions = GetProcAddress<game_action*>("game_actions");
 
-      auto* actions = GetProcAddress<game_action*>("game_actions");
-
-      if (actions)
-      {
-        auto size = 0;
-        for (auto i = 0; i < 64; ++i)
-        {
-          if (actions[i].type == game_action::unknown)
+          if (!actions)
           {
-            size = i;
-            break;
+            return std::span<game_action>();
           }
-        }
 
-        this->game_actions = std::span(actions, size);
-      }
+          auto size = 0;
+          for (auto i = 0; i < 64; ++i)
+          {
+            if (actions[i].type == game_action::unknown)
+            {
+              size = i;
+              break;
+            }
+          }
 
-      this->caps = GetProcAddress<game_command_line_caps*>("command_line_caps");
+          return std::span(actions, size);
+        }()),
+        controller_input_backends(update_span("controller_input_backends")),
+        keyboard_input_backends(update_span("keyboard_input_backends")),
+        mouse_input_backends(update_span("mouse_input_backends")),
+        configuration_extensions(update_span("configuration_extensions")),
+        template_configuration_paths(update_span("template_configuration_paths")),
+        autoexec_configuration_paths(update_span("autoexec_configuration_paths")),
+        profile_configuration_paths(update_span("profile_configuration_paths")),
+        caps(GetProcAddress<game_command_line_caps*>("command_line_caps"))
+    {
+      executable_is_supported_proc = GetProcAddress<decltype(executable_is_supported_proc)>("executable_is_supported");
+      get_function_name_ranges_proc = GetProcAddress<decltype(get_function_name_ranges_proc)>("get_function_name_ranges");
+      get_variable_name_ranges_proc = GetProcAddress<decltype(get_variable_name_ranges_proc)>("get_variable_name_ranges");
+      get_predefined_string_command_line_settings_proc = GetProcAddress<decltype(get_predefined_string_command_line_settings_proc)>("get_predefined_string_command_line_settings");
+      get_predefined_int_command_line_settings_proc = GetProcAddress<decltype(get_predefined_int_command_line_settings_proc)>("get_predefined_int_command_line_settings");
+
+      // These functions are very Windows specific because the games being launched would all be Windows-based.
+#if WIN32
+      this->launch_game_with_extension_proc = GetProcAddress<decltype(launch_game_with_extension_proc)>("launch_game_with_extension");
+#endif
+
+      if (!this->executable_is_supported_proc)
+      {
+        throw std::runtime_error("Could not find module functions");
+      }  
     }
 
     std::vector<std::pair<std::string, std::string>> get_function_name_ranges()
@@ -271,11 +270,11 @@ namespace siege::platform
       return std::nullopt;
     }
 
-    HRESULT launch_game_with_extension(const wchar_t* exe_path_str, const game_command_line_args* args, PROCESS_INFORMATION* info) noexcept
+    HRESULT launch_game_with_extension(const wchar_t* exe_path_str, const game_command_line_args* game_args, PROCESS_INFORMATION* process_info) noexcept
     {
       if (launch_game_with_extension_proc)
       {
-        return launch_game_with_extension_proc(exe_path_str, args, info);
+        return launch_game_with_extension_proc(exe_path_str, game_args, process_info);
       }
 
       if (!exe_path_str)
@@ -304,6 +303,7 @@ namespace siege::platform
 
       std::string extension_path = this->GetModuleFileName<char>();
 
+      using apply_prelaunch_settings = HRESULT(const wchar_t* exe_path_str, const siege::platform::game_command_line_args* args);
       auto* apply_prelaunch_settings_func = this->GetProcAddress<std::add_pointer_t<apply_prelaunch_settings>>("apply_prelaunch_settings");
 
       if (apply_prelaunch_settings_func)
@@ -314,7 +314,9 @@ namespace siege::platform
         }
       }
 
-      auto* format_command_line_func = module_ref.GetProcAddress<std::add_pointer_t<format_command_line>>("format_command_line");
+      using format_command_line = const wchar_t**(const siege::platform::game_command_line_args*, std::uint32_t*);
+
+      auto* format_command_line_func = this->GetProcAddress<std::add_pointer_t<format_command_line>>("format_command_line");
 
       const wchar_t** argv = nullptr;
       std::uint32_t argc = 0;

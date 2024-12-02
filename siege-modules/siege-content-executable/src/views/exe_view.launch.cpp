@@ -12,7 +12,7 @@ using game_command_line_caps = siege::platform::game_command_line_caps;
 
 namespace siege::views
 {
-  void exe_view::populate_launch_table(game_command_line_caps& caps)
+  void exe_view::populate_launch_table(const game_command_line_caps& caps)
   {
     auto& settings = controller.get_game_settings();
 
