@@ -138,6 +138,7 @@ namespace siege::views
     void options_lbn_sel_change(win32::list_box, const NMHDR&);
 
     void populate_launch_table(const siege::platform::game_command_line_caps& caps);
+    void populate_controller_table(std::span<siege::platform::game_action> actions, std::span<const wchar_t*> controller_input_backends);
 
     std::optional<win32::lresult_t> wm_copy_data(win32::copy_data_message<char> message);
 
