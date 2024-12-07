@@ -7,17 +7,96 @@
 #include <thread>
 #include <string_view>
 #include <fstream>
+#include <sstream>
 #include <siege/platform/win/core/file.hpp>
 #include <siege/platform/win/desktop/window_module.hpp>
 #include <siege/platform/win/desktop/window_impl.hpp>
+#include <siege/resource/pak_resource.hpp>
+#include <siege/configuration/id_tech.hpp>
 #include <detours.h>
 #include "shared.hpp"
 #include "GetGameFunctionNames.hpp"
 #include "id-tech-shared.hpp"
 
 
+const std::map<std::string_view, WORD>& get_key_to_vkey_mapping()
+{
+  const static std::map<std::string_view, WORD> mapping = {
+    { "f1", VK_F1 },
+    { "f2", VK_F2 },
+    { "f3", VK_F3 },
+    { "f4", VK_F4 },
+    { "f5", VK_F5 },
+    { "f6", VK_F6 },
+    { "f7", VK_F7 },
+    { "f8", VK_F8 },
+    { "f9", VK_F9 },
+    { "f10", VK_F10 },
+    { "f11", VK_F11 },
+    { "f12", VK_F12 },
+    { "tab", VK_TAB },
+    { "lctrl", VK_LCONTROL },
+    { "rctrl", VK_RCONTROL },
+    { "lshift", VK_LSHIFT },
+    { "rshift", VK_RSHIFT },
+    { "lalt", VK_LMENU },
+    { "ralt", VK_LMENU },
+    { "uparrow", VK_LEFT },
+    { "downarrow", VK_DOWN },
+    { "leftarrow", VK_LEFT },
+    { "rightarrow", VK_RIGHT },
+    { "enter", VK_RETURN },
+    { "home", VK_HOME },
+    { "ins", VK_INSERT },
+    { "pause", VK_PAUSE },
+    { "kp_ins", VK_INSERT },
+    { "kp_pgdn", VK_PAUSE },
+    { "pgdn", VK_NEXT },
+    { "pgup", VK_PRIOR },
+    { "caps", VK_CAPITAL },
+    { "del", VK_DELETE },
+    { "end", VK_END },
+    { "kp_del", MAKEWORD(VK_PACKET, VK_DELETE) },
+    { "kp_enter", MAKEWORD(VK_PACKET, VK_RETURN) },
+    { "kp_downarrow", VK_NUMPAD2 },
+    { "kp_end", VK_PAUSE },
+    { "semicolon", ';' },
+    { "backspace", VK_BACK },
+    { "space", VK_SPACE },
+    { "mouse1", VK_LBUTTON },
+    { "mouse2", VK_RBUTTON },
+    { "mouse3", VK_MBUTTON },
+  };
+
+  return mapping;
+}
+
+inline std::optional<WORD> key_to_vkey(std::string_view value)
+{
+  auto lower = siege::platform::to_lower(value);
+  auto& mapping = get_key_to_vkey_mapping();
+
+  auto iter = mapping.find(lower);
+
+  if (iter != mapping.end())
+  {
+    return iter->second;
+  }
+
+  if (value.size() == 1 && (std::isalpha(value[0]) || std::isdigit(value[0]) || std::ispunct(value[0])))
+  {
+    return value[0];
+  }
+
+  return std::nullopt;
+}
+
 extern "C" {
 using game_action = siege::platform::game_action;
+using keyboard_binding = siege::platform::keyboard_binding;
+using mouse_binding = siege::platform::mouse_binding;
+using controller_binding = siege::platform::controller_binding;
+namespace fs = std::filesystem;
 
 using game_command_line_caps = siege::platform::game_command_line_caps;
 using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
@@ -68,19 +147,13 @@ extern void(__cdecl* ConsoleEvalCdecl)(const char*);
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = {{ 
-        std::array<std::pair<std::string_view, std::size_t>, 3>{{ 
-            { "exec"sv, std::size_t(0x20120494) },
-            { "cmdlist"sv, std::size_t(0x2012049c) },
-            { "cl_minfps"sv, std::size_t(0x2011e600) }
-         }}
-    }};
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
+  { "cmdlist"sv, std::size_t(0x2012049c) },
+  { "cl_minfps"sv, std::size_t(0x2011e600) } } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{{ 
-    { "-klook"sv, "centerview"sv },
-    { "joy_advancedupdate"sv, "+mlook"sv },
-    { "rejected_violence"sv, "print"sv } 
- }};
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> function_name_ranges{ { { "-klook"sv, "centerview"sv },
+  { "joy_advancedupdate"sv, "+mlook"sv },
+  { "rejected_violence"sv, "print"sv } } };
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "joy_yawsensitivity"sv, "in_mouse"sv } } };
 
@@ -106,6 +179,61 @@ HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>*
 HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
 {
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
+}
+
+HRESULT init_keyboard_inputs(keyboard_binding* binding)
+{
+  if (binding == nullptr)
+  {
+    return E_POINTER;
+  }
+
+  std::error_code last_error;
+
+  if (fs::exists("base\\configs\\DEFAULT_KEYS.cfg", last_error))
+  {
+    std::ifstream stream("base\\configs\\DEFAULT_KEYS.cfg", std::ios::binary);
+    auto size = fs::file_size("base\\configs\\DEFAULT_KEYS.cfg", last_error);
+    auto config = siege::configuration::id_tech::id_tech_2::load_config(stream, size);
+
+    if (config)
+    {
+      std::string temp;
+      int index = 0;
+      for (auto& item : config->keys())
+      {
+        if (item.at(0) == "bind")
+        {
+          auto vkey = key_to_vkey(item.at(1));
+
+          if (!vkey)
+          {
+            continue;
+          }
+
+          auto entry = config->find(item);
+          if (entry.at(0).empty())
+          {
+            continue;
+          }
+          temp = entry.at(0);
+          std::memcpy(binding->inputs[index].action_name.data(), temp.data(), temp.size());
+          binding->inputs[index].virtual_key = *vkey;
+          binding->inputs[index].input_type = keyboard_binding::action_binding::button;
+        }
+      }
+    }
+  }
+  else if (fs::exists("base\\pak0.pak", last_error))
+  {
+    siege::resource::pak::pak_resource_reader reader;
+
+    std::ifstream stream("base//pak0.pak", std::ios::binary);
+    auto contents = reader.get_content_listing(stream, { .archive_path = "base//pak0.pak", .folder_path = "base//pak0.pak" });
+  }
+
+
+  return S_OK;
 }
 
 predefined_int*

@@ -17,7 +17,7 @@ if (WIN32)
     # with multiplayer
     add_library(siege-extension-jedi-outcast-mp SHARED src/id-tech-shared.cpp src/jedi-outcast-mp.cpp src/cmd-id-tech-3-0.cpp src/id-tech-3.def)
     add_library(siege-extension-jedi-academy-mp SHARED src/id-tech-shared.cpp src/jedi-academy-mp.cpp src/cmd-id-tech-3-0.cpp src/id-tech-3.def)
-    add_library(siege-extension-soldier-of-fortune SHARED src/id-tech-shared.cpp src/sof.cpp src/cmd-id-tech-2-5.cpp src/id-tech-2.5.def)
+    add_library(siege-extension-soldier-of-fortune SHARED src/id-tech-shared.cpp src/sof.cpp src/cmd-id-tech-2-5.cpp src/id-tech-2.5-sof.def)
     add_library(siege-extension-soldier-of-fortune-2-mp SHARED src/id-tech-shared.cpp src/sof-2-mp.cpp src/cmd-id-tech-3-0.cpp src/id-tech-3.def)
     add_library(siege-extension-sin SHARED src/id-tech-shared.cpp src/sin.cpp src/cmd-id-tech-2-5.cpp src/id-tech-2.5.def)
 
@@ -47,6 +47,6 @@ if (WIN32)
 
     foreach(EXT_TARGET IN ITEMS ${ID_TECH_TARGETS})
         set_target_properties(${EXT_TARGET} PROPERTIES CXX_STANDARD 23)
-        target_link_libraries(${EXT_TARGET} PRIVATE siege-extension siege-resource)
+        target_link_libraries(${EXT_TARGET} PRIVATE siege-extension siege-configuration siege-resource)
     endforeach()
 endif()
