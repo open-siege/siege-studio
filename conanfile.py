@@ -16,10 +16,6 @@ class SiegeLauncherConanFile(ConanFile):
     generators = "CMakeToolchain", "CMakeDeps"
 
     def requirements(self):
-        if os.path.isdir("siege-launcher"):
-               # TODO - The Windows version of Siege Launcher will eventually use platform APIs directly, so these will only be relevant for Linux.  
-               self.requires("sdl/2.28.5")
-
         if self.settings.os == "Windows":
             self.run(f"conan install detours-conanfile.py -s build_type=Release -s compiler.runtime=static -s arch={self.settings.arch} --build=missing -of siege-modules/siege-extension/detours")
         
@@ -33,11 +29,6 @@ class SiegeLauncherConanFile(ConanFile):
         self.options["libzip"].shared = False
         self.options["cpr"].shared = False
         self.options["libcurl"].shared = False
-        self.options["sdl"].shared = False
-        self.options["sdl"].opengl = False
-        self.options["sdl"].opengles = False
-        self.options["sdl"].vulkan = False
-        self.options["sdl"].sdl2main = False
 
         if self.settings.os == "Linux":
             self.options["sdl"].wayland = False

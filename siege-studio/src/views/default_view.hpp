@@ -13,6 +13,9 @@
 #include <execution>
 #include <fstream>
 
+// TODO show GOG icon for game or game exe icon
+// TODO add filters for game name and game file format support
+// TODO add support for more than one copy of the game being shown in the list
 namespace siege::views
 {
   using namespace std::literals;

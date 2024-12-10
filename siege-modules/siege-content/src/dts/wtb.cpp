@@ -1,0 +1,1 @@
+// TODO convert from mw2-wtb-converter python code

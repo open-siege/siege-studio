@@ -18,6 +18,7 @@
 
 namespace siege::views
 {
+  // TODO Put BIN, DAT + RAW into a generic group
   struct vol_view final : win32::window_ref
   {
     vol_controller controller;

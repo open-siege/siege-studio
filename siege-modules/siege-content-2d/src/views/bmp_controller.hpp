@@ -24,6 +24,7 @@ namespace siege::views
   class bmp_controller
   {
   public:
+  // TODO add DDS, ICO and TIFF support
     constexpr static auto formats = std::array<siege::fs_string_view, 16>{ { FSL".jpg",
       FSL".jpeg",
       FSL".gif",

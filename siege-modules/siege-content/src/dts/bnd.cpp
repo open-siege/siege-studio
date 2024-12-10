@@ -1,0 +1,1 @@
+// TODO convert from colony-wars-bnd-converter python code

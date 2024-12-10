@@ -1,7 +1,7 @@
 from conan import ConanFile
 from conan.tools.files import copy
 
-class SiegeLauncherConanFile(ConanFile):
+class DetoursConanFile(ConanFile):
     name = "open-siege"
     version = "0.6.3"
     url = "https://github.com/open-siege/open-siege"
