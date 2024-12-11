@@ -1,3 +1,57 @@
+//  constexpr auto rsc_v1_tag = platform::to_tag<4>({ 0xf6, 0x01, 0x00, 0x00 });
+//  constexpr auto rsc_v2_tag = platform::to_tag<4>({ 0x2e, 0x02, 0x00, 0x00 });
+//  constexpr auto rsc_v3_tag = platform::to_tag<4>({ 0xf8, 0x5e, 0x00, 0x00 });
+
+namespace siege::resource::rsc
+{
+  struct rsc_v1_file_entry
+  {
+    std::array<char, 16> path;
+    endian::little_uint32_t offset;
+    std::array<char, 12> path;
+  };
+
+  struct rsc_v2_file_entry
+  {
+    std::array<char, 16> path;
+    endian::little_uint32_t offset;
+  };
+
+  struct rsc_v3_group_entry
+  {
+    endian::little_uint32_t file_name_entry_offset;
+    endian::little_uint32_t num_files;
+  };
+
+  struct rsc_v3_name_entry
+  {
+    std::array<char, 16> path;
+    endian::little_uint16_t size_entry_index;
+    std::byte padding;
+    std::uint8_t group_entry_index;
+  };
+
+  struct rsc_v3_size_entry
+  {
+    endian::little_uint32_t file_data_offset;
+    endian::little_uint32_t group_entry_index;
+  };
+
+  bool rsc_resource_reader::is_supported(std::istream& stream)
+  {
+    platform::istream_pos_resetter resetter(stream);
+    std::array<std::byte, 4> tag{};
+    stream.read(reinterpret_cast<char *>(tag.data()), sizeof(tag));
+
+    return tag == rsc_v1_tag || tag == rsc_v2_tag || tag == rsc_v3_tag;
+  }
+
+  bool rsc_resource_reader::stream_is_supported(std::istream& stream) const
+  {
+    return is_supported(stream);
+  }
+}
+//    
 
 // import sys
 // import struct
