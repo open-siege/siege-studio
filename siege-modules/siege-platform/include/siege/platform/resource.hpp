@@ -21,7 +21,9 @@ namespace siege::platform
     none,
     rle,
     lz,
-    lzh
+    lzh,
+    lza,
+    lzw
   };
 
   struct file_info
