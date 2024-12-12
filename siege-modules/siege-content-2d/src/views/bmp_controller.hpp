@@ -24,13 +24,15 @@ namespace siege::views
   class bmp_controller
   {
   public:
-  // TODO add DDS, ICO and TIFF support
     constexpr static auto formats = std::array<siege::fs_string_view, 16>{ { FSL".jpg",
       FSL".jpeg",
       FSL".gif",
       FSL".png",
       FSL".tag",
       FSL".bmp",
+      FSL".dds",
+      FSL".ico",
+      FSL".tiff",
       FSL".dib",
       FSL".pba",
       FSL".dmb",
@@ -40,7 +42,8 @@ namespace siege::views
       FSL".hba",
       FSL".hb0",
       FSL".hb1",
-      FSL".hb2" } };
+      FSL".hb2" 
+      } };
 
     static bool is_bmp(std::istream& image_stream) noexcept;
 
