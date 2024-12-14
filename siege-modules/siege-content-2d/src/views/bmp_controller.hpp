@@ -24,7 +24,7 @@ namespace siege::views
   class bmp_controller
   {
   public:
-    constexpr static auto formats = std::array<siege::fs_string_view, 16>{ { FSL".jpg",
+    constexpr static auto formats = std::array<siege::fs_string_view, 19>{ { FSL".jpg",
       FSL".jpeg",
       FSL".gif",
       FSL".png",

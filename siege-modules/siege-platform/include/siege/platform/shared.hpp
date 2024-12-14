@@ -22,10 +22,25 @@ namespace siege
   using fs_char = std::filesystem::path::value_type;
   using fs_string = std::filesystem::path::string_type;
   using fs_string_view = std::basic_string_view<fs_char>;
-}
+}// namespace siege
 
 namespace siege::platform
 {
+  struct istream_pos_resetter
+  {
+    std::istream& stream;
+    std::istream::pos_type position;
+
+    istream_pos_resetter(std::istream& stream) : stream(stream), position(stream.tellg())
+    {
+    }
+
+    ~istream_pos_resetter()
+    {
+      stream.seekg(position, std::ios::beg);
+    }
+  };
+
   namespace fs = ::std::filesystem;
 
   // A big thanks to https://stackoverflow.com/questions/56246573/how-to-copy-an-element-of-stdvariant-to-a-variable-of-another-variant-type
@@ -93,7 +108,7 @@ namespace siege::platform
   std::vector<To> transform_variants(const std::vector<From>& items)
   {
     std::vector<To> new_items;
-    new_items.reserve(std::count_if(new_items.first(), new_items.last(), [](auto& item) { return siege::platform::can_variant_cast<To>(item);}));
+    new_items.reserve(std::count_if(new_items.first(), new_items.last(), [](auto& item) { return siege::platform::can_variant_cast<To>(item); }));
 
     for (auto& item : items)
     {
@@ -113,7 +128,7 @@ namespace siege::platform
 #if _MSC_VER >= 1928
 #define KEYS_CONSTEXPR inline
   template<std::size_t Size>
-  std::array<const char*, Size> make_keys(const char*(&&keys)[Size])
+  std::array<const char*, Size> make_keys(const char* (&&keys)[Size])
   {
     std::array<const char*, Size> result;
     for (auto i = 0; i < Size; i++)
@@ -125,7 +140,7 @@ namespace siege::platform
 #else
 #define KEYS_CONSTEXPR constexpr
   template<std::size_t Size>
-  constexpr std::array<std::string_view, Size> make_keys(const char*(&&keys)[Size])
+  constexpr std::array<std::string_view, Size> make_keys(const char* (&&keys)[Size])
   {
     std::array<std::string_view, Size> result;
     for (auto i = 0; i < Size; i++)
@@ -294,6 +309,6 @@ namespace siege::platform
 
     return files;
   }
-}// namespace siege::shared
+}// namespace siege::platform
 
-#endif//DARKSTARDTSCONVERTER_SHARED_HPP
+#endif// DARKSTARDTSCONVERTER_SHARED_HPP

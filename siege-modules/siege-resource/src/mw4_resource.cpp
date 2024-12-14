@@ -3,8 +3,13 @@
 
 // uses lzw compression
 
+#include <memory>
+#include <siege/platform/endian_arithmetic.hpp>
+
 namespace siege::resource::mw4
 {
+    namespace endian = siege::platform;
+
     struct mw4_file_entry
     {
         std::byte compression_type;

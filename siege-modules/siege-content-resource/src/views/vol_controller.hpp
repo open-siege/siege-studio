@@ -14,7 +14,7 @@ namespace siege::views
   class vol_controller
   {
   public:
-    constexpr static auto formats = std::array<siege::fs_string_view, 27>{ { FSL".vol",
+    constexpr static auto formats = std::array<siege::fs_string_view, 30>{ { FSL".vol",
       FSL".rmf",
       FSL".mis",
       FSL".map",

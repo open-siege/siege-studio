@@ -1,14 +1,24 @@
-//  constexpr auto rsc_v1_tag = platform::to_tag<4>({ 0xf6, 0x01, 0x00, 0x00 });
-//  constexpr auto rsc_v2_tag = platform::to_tag<4>({ 0x2e, 0x02, 0x00, 0x00 });
-//  constexpr auto rsc_v3_tag = platform::to_tag<4>({ 0xf8, 0x5e, 0x00, 0x00 });
+#include <array>
+#include <siege/platform/shared.hpp>
+#include <siege/platform/endian_arithmetic.hpp>
 
 namespace siege::resource::rsc
 {
+  namespace endian = siege::platform;
+
+  class rsc_resource_reader
+  {
+    constexpr static auto rsc_v1_tag = platform::to_tag<4>({ 0xf6, 0x01, 0x00, 0x00 });
+    constexpr static auto rsc_v2_tag = platform::to_tag<4>({ 0x2e, 0x02, 0x00, 0x00 });
+    constexpr static auto rsc_v3_tag = platform::to_tag<4>({ 0xf8, 0x5e, 0x00, 0x00 });
+    static bool is_supported(std::istream& stream);
+    bool stream_is_supported(std::istream& stream) const;
+  };
+
   struct rsc_v1_file_entry
   {
     std::array<char, 16> path;
     endian::little_uint32_t offset;
-    std::array<char, 12> path;
   };
 
   struct rsc_v2_file_entry
@@ -41,7 +51,7 @@ namespace siege::resource::rsc
   {
     platform::istream_pos_resetter resetter(stream);
     std::array<std::byte, 4> tag{};
-    stream.read(reinterpret_cast<char *>(tag.data()), sizeof(tag));
+    stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
 
     return tag == rsc_v1_tag || tag == rsc_v2_tag || tag == rsc_v3_tag;
   }
@@ -50,8 +60,8 @@ namespace siege::resource::rsc
   {
     return is_supported(stream);
   }
-}
-//    
+}// namespace siege::resource::rsc
+//
 
 // import sys
 // import struct

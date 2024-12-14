@@ -57,23 +57,6 @@ namespace siege::platform
     std::unordered_map<std::string_view, std::variant<void*, std::shared_ptr<void>>> temp;
   };
 
-  struct istream_pos_resetter
-  {
-    std::istream& stream;
-    std::istream::pos_type position;
-
-    istream_pos_resetter(std::istream& stream) : stream(stream), position(stream.tellg())
-    {
-
-    }
-
-    ~istream_pos_resetter()
-    {
-      stream.seekg(position, std::ios::beg);
-    }
-
-  };
-
   struct resource_writer
   {
     using folder_info = siege::platform::folder_info;
