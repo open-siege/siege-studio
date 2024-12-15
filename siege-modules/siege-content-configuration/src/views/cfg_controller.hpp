@@ -13,7 +13,7 @@ namespace siege::views
   class cfg_controller
   {
   public:
-    constexpr static auto formats = std::array<siege::fs_string_view, 4>{{ FSL".cfg", FSL".ini", FSL"txt", FSL".cs" }};
+    constexpr static auto formats = std::array<siege::fs_string_view, 5>{{ FSL".cfg", FSL".ini", FSL".inf", FSL"txt", FSL".cs" }};
     static bool is_cfg(std::istream& image_stream);
 
     std::size_t load_config(std::istream& image_stream) noexcept;

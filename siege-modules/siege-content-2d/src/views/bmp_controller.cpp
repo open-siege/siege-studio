@@ -1,6 +1,7 @@
 #include "bmp_controller.hpp"
 #include "pal_controller.hpp"
 #include <siege/content/bmp/bitmap.hpp>
+#include <siege/content/bmp/tim.hpp>
 #include <siege/platform/image.hpp>
 #include <deque>
 #include <fstream>
@@ -15,6 +16,7 @@ namespace siege::views
   {
     return siege::content::bmp::is_earthsiege_bmp(image_stream)
            || siege::platform::bitmap::is_microsoft_bmp(image_stream)
+           || siege::content::tim::is_tim(image_stream)
            || siege::content::bmp::is_phoenix_bmp(image_stream)
            || siege::platform::bitmap::is_jpg(image_stream)
            || siege::platform::bitmap::is_gif(image_stream)
@@ -179,6 +181,10 @@ namespace siege::views
         });
 
         original_image.emplace(std::move(dest));
+      }
+      else if (tim::is_tim(image_stream))
+      {
+        original_image.emplace(tim::get_tim_data_as_bitmap(image_stream));
       }
       else if (bmp::is_earthsiege_bmp(image_stream))
       {
