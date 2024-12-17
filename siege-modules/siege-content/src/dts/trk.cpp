@@ -3,15 +3,19 @@
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
 
-namespace siege::content::bnd
+namespace siege::content::trk
 {
   namespace endian = siege::platform;
 
   // actually the number of files in the file
-  constexpr static auto body_tag = platform::to_tag<4>("BODY");
-  constexpr static auto rsc_v2_tag = platform::to_tag<4>("TMDS");
-  constexpr static auto rsc_v3_tag = platform::to_tag<4>("VRAM");
+  constexpr static auto body_tag = platform::to_tag<4>("TREK");
+  constexpr static auto rsc_v2_tag = platform::to_tag<4>("MODL");
+  constexpr static auto rsc_v3_tag = platform::to_tag<4>("LODC");
+  constexpr static auto rsc_v3_tag = platform::to_tag<4>("COLL");
+  constexpr static auto rsc_v3_tag = platform::to_tag<4>("TEXS");
+  constexpr static auto rsc_v3_tag = platform::to_tag<4>("ENGI");
   constexpr static auto rsc_v3_tag = platform::to_tag<4>("TIMS");
+  constexpr static auto rsc_v3_tag = platform::to_tag<4>("FINI");
 }
 
   // import sys
