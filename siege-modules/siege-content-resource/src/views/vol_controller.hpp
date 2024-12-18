@@ -14,7 +14,7 @@ namespace siege::views
   class vol_controller
   {
   public:
-    constexpr static auto formats = std::array<siege::fs_string_view, 30>{ { FSL".vol",
+    constexpr static auto formats = std::array<siege::fs_string_view, 31>{ { FSL".vol",
       FSL".rmf",
       FSL".mis",
       FSL".map",
@@ -43,6 +43,7 @@ namespace siege::views
       FSL".prj",
       FSL".mw4",
       FSL".rsc",
+      FSL".res",
       FSL".atd", } };
     static bool is_vol(std::istream&) noexcept;
     std::size_t load_volume(std::istream&, std::optional<std::filesystem::path>);

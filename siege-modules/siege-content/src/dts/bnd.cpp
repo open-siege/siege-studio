@@ -9,9 +9,9 @@ namespace siege::content::bnd
 
   // actually the number of files in the file
   constexpr static auto body_tag = platform::to_tag<4>("BODY");
-  constexpr static auto rsc_v2_tag = platform::to_tag<4>("TMDS");
-  constexpr static auto rsc_v3_tag = platform::to_tag<4>("VRAM");
-  constexpr static auto rsc_v3_tag = platform::to_tag<4>("TIMS");
+  constexpr static auto tmds_v2_tag = platform::to_tag<4>("TMDS");
+  constexpr static auto vram_tag = platform::to_tag<4>("VRAM");
+  constexpr static auto tims_tag = platform::to_tag<4>("TIMS");
 }
 
   // import sys

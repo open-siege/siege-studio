@@ -51,6 +51,8 @@ namespace siege::views
 
     constexpr static int extract_selected_id = 10;
 
+    constexpr static std::u16string_view generic_category = u"All Generic Data Files";
+
     vol_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
     }
@@ -63,6 +65,7 @@ namespace siege::views
       for (const auto& module : modules)
       {
         auto categories = module.get_supported_format_categories();
+        categories.insert(std::u16string(generic_category));
 
         for (auto& category : categories)
         {
@@ -76,6 +79,13 @@ namespace siege::views
           }
 
           auto extensions = module.get_supported_extensions_for_category(stored_category);
+
+          if (category == generic_category)
+          {
+            extensions.insert(L".bin");
+            extensions.insert(L".dat");
+            extensions.insert(L".raw");
+          }
 
           auto existing = category_extensions.find(stored_category);
 

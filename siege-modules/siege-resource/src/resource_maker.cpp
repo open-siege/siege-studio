@@ -12,6 +12,7 @@
 #include <siege/resource/clm_resource.hpp>
 #include <siege/resource/wad_resource.hpp>
 #include <siege/resource/rsc_resource.hpp>
+#include <siege/resource/res_resource.hpp>
 
 namespace siege::resource
 {
@@ -30,6 +31,7 @@ namespace siege::resource
         atd::atd_resource_reader::is_supported(stream) ||
         wad::wad_resource_reader::is_supported(stream) ||
         rsc::rsc_resource_reader::is_supported(stream) ||
+        res::res_resource_reader::is_supported(stream) ||
         zip::zip_resource_reader::is_supported(stream);
             
     // TODO make the check for cyclone resources stronger
@@ -76,6 +78,10 @@ namespace siege::resource
     else if (rsc::rsc_resource_reader::is_supported(stream))
     {
       resource.reset(new rsc::rsc_resource_reader());
+    }
+    else if (res::res_resource_reader::is_supported(stream))
+    {
+      resource.reset(new res::res_resource_reader());
     }
     else if (cln::cln_resource_reader::is_supported(stream))
     {
