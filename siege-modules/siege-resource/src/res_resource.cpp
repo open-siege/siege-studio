@@ -4,25 +4,26 @@
 // RIFF CDXA fmt data (first 40 bytes)
 
 // SLUS_009.24
-// Start 25096 FILMS\CREDITS.STR 
+// Start 25096 FILMS\CREDITS.STR
 // FILMS\OUTRO3.STR
-// End 34292 TRK\KJ_FA.TRK       
+// End 34292 TRK\KJ_FA.TRK
 
 // 2352
 // File start FF FF FF FF (FF FF FF 00) + 12 bytes
 // DSM - 01 00 00 0f 00 04 00 00
 // TRK - TREK
 // STR - 60 01 01 80 - 2048 sectors
-// FRONTEND.OVL - 74 66 07 80 74 66 07 80 74 66 07 80 
+// FRONTEND.OVL - 74 66 07 80 74 66 07 80 74 66 07 80
 // GAME.OVL - CARD FR 00 TYC0 CK 00 VALK 2 00 00 00
 // 262 144
 // TIM
-//constexpr file_tag four_bit_image = platform::to_tag<8>({ 0x10, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00 });
-//constexpr file_tag eight_bit_image = platform::to_tag<8>({ 0x10, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00 });
-//constexpr file_tag sixteen_bit_image = platform::to_tag<8>({ 0x10, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00 });
+// constexpr file_tag four_bit_image = platform::to_tag<8>({ 0x10, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00 });
+// constexpr file_tag eight_bit_image = platform::to_tag<8>({ 0x10, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00 });
+// constexpr file_tag sixteen_bit_image = platform::to_tag<8>({ 0x10, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00 });
 
 
 #include <array>
+#include <bitset>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
@@ -38,6 +39,7 @@ namespace siege::resource::res
   constexpr static auto cdxa_tag = platform::to_tag<4>("CDXA");
   constexpr static auto fmt_tag = platform::to_tag<4>({ 'f', 'm', 't', 0x20 });
   constexpr static auto data_tag = platform::to_tag<4>("data");
+  constexpr static auto total_sector_size = 2352u;
 
   struct res_header
   {
@@ -49,6 +51,29 @@ namespace siege::resource::res
     std::array<std::byte, 16> format_data;
     std::array<std::byte, 4> data_header;
     endian::little_uint32_t data_size;
+  };
+
+  struct xa_sector_header
+  {
+    std::array<std::byte, 12> sync_pattern;
+    std::array<std::uint8_t, 3> address;
+    std::uint8_t mode;
+
+    struct sub_header
+    {
+      std::uint8_t file_number;
+      std::uint8_t channel;
+      std::uint8_t sub_mode;
+      std::uint8_t audio_info;
+    };
+
+    std::array<sub_header, 2> sub_headers;
+  };
+
+  struct file_index
+  {
+    endian::little_uint32_t sector_number;
+    endian::little_uint32_t size;
   };
 
 
@@ -89,26 +114,52 @@ namespace siege::resource::res
     res_header header{};
     stream.read((char*)&header, sizeof(res_header));
 
-    /*
-        std::filesystem::path filename;
-    std::size_t offset;
-    std::size_t size;
-    std::optional<std::size_t> compressed_size;
-    siege::platform::compression_type compression_type;
-    std::filesystem::path folder_path;
-    std::filesystem::path archive_path;
-    std::any metadata;
-
-    */
     if (header.riff_header == riff_tag && header.type == cdxa_tag && header.format_header == fmt_tag && header.data_header == data_tag)
     {
-      results.emplace_back(res_resource_reader::file_info{
-        .filename = std::filesystem::path(query.archive_path.filename()).replace_extension(".bin"),
-        .offset = std::size_t(stream.tellg()),
-        .size = std::size_t(header.data_size),
-        .folder_path = query.folder_path,
-        .archive_path = query.archive_path,
-      });
+      auto main_index = stream.tellg();
+
+      std::vector<file_index> files;
+
+      std::vector<std::byte> file_index_storage;
+      file_index_storage.reserve(2324 * 2);
+
+      for (auto i = 0; i < 2; ++i)
+      {
+        xa_sector_header sector;
+
+        stream.read((char*)&sector, sizeof(sector));
+        auto sector_size = std::bitset<8>(sector.sub_headers[0].sub_mode)[5] ? 2048 : 2324;
+
+        auto index = file_index_storage.size();
+        file_index_storage.resize(file_index_storage.size() + sector_size);
+        stream.read((char*)file_index_storage.data() + index, sector_size);
+
+        if (sector_size == 2048)
+        {
+          stream.seekg(2324 - 2048, std::ios::cur);
+        }
+      }
+
+      files.resize(file_index_storage.size() / sizeof(file_index));
+
+      std::memcpy(files.data(), file_index_storage.data(), file_index_storage.size());
+
+      for (auto& file : files)
+      {
+        if (file.size == 0)
+        {
+          break;
+        }
+
+        // TODO get file names from exe file
+        results.emplace_back(res_resource_reader::file_info{
+          //.filename = std::filesystem::path(query.archive_path.filename()).replace_extension(".bin"),
+          .offset = (std::size_t)main_index + (file.sector_number * total_sector_size),
+          .size = file.size,
+          .folder_path = query.folder_path,
+          .archive_path = query.archive_path,
+        });
+      }
     }
 
     return results;
@@ -127,6 +178,8 @@ namespace siege::resource::res
     std::ostream& output,
     std::optional<std::reference_wrapper<platform::batch_storage>>) const
   {
+
+    // TODO get the correct sector size per file
     std::vector<char> data;
     data.resize(2048);
     for (auto i = 0; i < info.size; i += 2352)
