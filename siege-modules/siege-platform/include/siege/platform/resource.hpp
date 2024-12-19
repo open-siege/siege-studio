@@ -23,7 +23,11 @@ namespace siege::platform
     lz,
     lzh,
     lza,
-    lzw
+    lzw,
+    lzss,
+    lz77,
+    lz79,
+    cdxa
   };
 
   struct file_info

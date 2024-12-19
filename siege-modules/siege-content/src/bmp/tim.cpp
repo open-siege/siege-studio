@@ -112,27 +112,29 @@ namespace siege::content::tim
   siege::platform::palette::colour to_rgba(std::uint16_t raw_colour)
   {
     siege::platform::palette::colour colour;
+
+    // A1B5G5R5
     std::bitset<16> bits(raw_colour);
     std::bitset<5> b;
     std::bitset<5> g;
     std::bitset<5> r;
-    colour.flags = bits[0] ? std::byte(0xff) : std::byte{};
+    colour.flags = bits[15] ? std::byte(0xff) : std::byte{};
 
-    b[0] = bits[1];
-    b[1] = bits[2];
-    b[2] = bits[3];
-    b[3] = bits[4];
-    b[4] = bits[5];
-    g[0] = bits[6];
-    g[1] = bits[7];
-    g[2] = bits[8];
-    g[3] = bits[9];
-    g[4] = bits[10];
-    r[0] = bits[11];
-    r[1] = bits[12];
-    r[2] = bits[13];
-    r[3] = bits[14];
-    r[4] = bits[15];
+    r[4] = bits[14];
+    r[3] = bits[13];
+    r[2] = bits[12];
+    r[1] = bits[11];
+    r[0] = bits[10];
+    g[4] = bits[9];
+    g[3] = bits[8];
+    g[2] = bits[7];
+    g[1] = bits[6];
+    g[0] = bits[5];
+    b[4] = bits[4];
+    b[3] = bits[3];
+    b[2] = bits[2];
+    b[1] = bits[1];
+    b[0] = bits[0];
 
     colour.red = std::byte(r.to_ulong());
     colour.green = std::byte(g.to_ulong());
@@ -197,6 +199,9 @@ namespace siege::content::tim
     }
     else
     {
+      result.info.bit_depth = 32;
+      result.info.width = temp.header.width;
+      result.info.height = temp.header.height;
       result.colours.reserve(temp.pixels.size());
 
       for (auto value : temp.pixels)

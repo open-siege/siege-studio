@@ -1,3 +1,19 @@
+#include <array>
+#include <siege/platform/shared.hpp>
+#include <siege/platform/stream.hpp>
+#include <siege/platform/endian_arithmetic.hpp>
+
+namespace siege::content::erf
+{
+  namespace endian = siege::platform;
+
+  bool is_erf(std::istream& stream)
+  {
+    return false;
+  }
+
+}// namespace siege::content::erf
+
 // import struct
 
 // def readArray(offset, rawData, fmt, numItems):

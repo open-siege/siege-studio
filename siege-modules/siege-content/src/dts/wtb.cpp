@@ -1,3 +1,18 @@
+#include <array>
+#include <siege/platform/shared.hpp>
+#include <siege/platform/stream.hpp>
+#include <siege/platform/endian_arithmetic.hpp>
+
+namespace siege::content::wtb
+{
+  namespace endian = siege::platform;
+
+  bool is_wtb(std::istream& stream)
+  {
+    return false;
+  }
+}// namespace siege::content::wtb
+
 // from collections import namedtuple
 // import struct
 

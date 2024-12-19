@@ -7,9 +7,11 @@
 // uses lzw compression
 
 #include <array>
+#include <siege/platform/resource.hpp>
+#include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
 
-namespace siege::resource::mw4
+namespace siege::resource::prj
 {
   namespace endian = siege::platform;
   struct dir_entry
@@ -27,4 +29,46 @@ namespace siege::resource::mw4
     endian::little_uint32_t offset;
     endian::little_uint32_t size;
   };
-}// namespace siege::resource::mw4
+
+  struct prj_resource_reader final : siege::platform::resource_reader
+  {
+    static bool is_supported(std::istream& stream);
+
+    bool stream_is_supported(std::istream& stream) const override;
+    std::vector<content_info> get_content_listing(std::istream& stream, const platform::listing_query& query) const override;
+    void set_stream_position(std::istream& stream, const siege::platform::file_info& info) const override;
+    void extract_file_contents(std::istream& stream,
+      const siege::platform::file_info& info,
+      std::ostream& output,
+      std::optional<std::reference_wrapper<platform::batch_storage>> = std::nullopt) const override;
+  };
+
+  bool prj_resource_reader::is_supported(std::istream& stream)
+  {
+    return false;
+  }
+
+  bool prj_resource_reader::stream_is_supported(std::istream& stream) const
+  {
+    return is_supported(stream);
+  }
+
+  std::vector<prj_resource_reader::content_info> prj_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
+  {
+    platform::istream_pos_resetter resetter(stream);
+    std::vector<prj_resource_reader::content_info> results;
+
+    return results;
+  }
+
+  void prj_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info) const
+  {
+  }
+
+  void prj_resource_reader::extract_file_contents(std::istream& stream,
+    const siege::platform::file_info& info,
+    std::ostream& output,
+    std::optional<std::reference_wrapper<platform::batch_storage>>) const
+  {
+  }
+}// namespace siege::resource::prj

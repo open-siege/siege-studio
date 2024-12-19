@@ -1,29 +1,6 @@
-// STARTREK.RES + SLUS_009.24
-
-// would only be able to list files and potentially identify file headers
-// RIFF CDXA fmt data (first 40 bytes)
-
-// SLUS_009.24
-// Start 25096 FILMS\CREDITS.STR
-// FILMS\OUTRO3.STR
-// End 34292 TRK\KJ_FA.TRK
-
-// 2352
-// File start FF FF FF FF (FF FF FF 00) + 12 bytes
-// DSM - 01 00 00 0f 00 04 00 00
-// TRK - TREK
-// STR - 60 01 01 80 - 2048 sectors
-// FRONTEND.OVL - 74 66 07 80 74 66 07 80 74 66 07 80
-// GAME.OVL - CARD FR 00 TYC0 CK 00 VALK 2 00 00 00
-// 262 144
-// TIM
-// constexpr file_tag four_bit_image = platform::to_tag<8>({ 0x10, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00 });
-// constexpr file_tag eight_bit_image = platform::to_tag<8>({ 0x10, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00 });
-// constexpr file_tag sixteen_bit_image = platform::to_tag<8>({ 0x10, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00 });
-
-
 #include <array>
 #include <bitset>
+#include <filesystem>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
@@ -40,6 +17,25 @@ namespace siege::resource::res
   constexpr static auto fmt_tag = platform::to_tag<4>({ 'f', 'm', 't', 0x20 });
   constexpr static auto data_tag = platform::to_tag<4>("data");
   constexpr static auto total_sector_size = 2352u;
+  constexpr static auto form_1_data_size = 2048u;
+  constexpr static auto form_2_data_size = 2324u;
+
+  // STARTREK.RES + SLUS_009.24
+
+  // would only be able to list files and potentially identify file headers
+  // RIFF CDXA fmt data (first 40 bytes)
+
+  // DSM - 01 00 00 0f 00 04 00 00
+
+  // TRK - TREK
+  // STR - 60 01 01 80 - 2048 sectors
+  // FRONTEND.OVL - 74 66 07 80 74 66 07 80 74 66 07 80
+  // GAME.OVL - CARD FR 00 TYC0 CK 00 VALK 2 00 00 00
+  // 262 144
+  // TIM
+  // constexpr file_tag four_bit_image = platform::to_tag<8>({ 0x10, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00 });
+  // constexpr file_tag eight_bit_image = platform::to_tag<8>({ 0x10, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00 });
+  // constexpr file_tag sixteen_bit_image = platform::to_tag<8>({ 0x10, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00 });
 
   struct res_header
   {
@@ -107,6 +103,8 @@ namespace siege::resource::res
 
   std::vector<res_resource_reader::content_info> res_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
   {
+    // SLUS_009.24
+
     platform::istream_pos_resetter resetter(stream);
     std::vector<res_resource_reader::content_info> results;
 
@@ -128,21 +126,62 @@ namespace siege::resource::res
         xa_sector_header sector;
 
         stream.read((char*)&sector, sizeof(sector));
-        auto sector_size = std::bitset<8>(sector.sub_headers[0].sub_mode)[5] ? 2048 : 2324;
+
+        auto sector_size = std::bitset<8>(sector.sub_headers[0].sub_mode)[8 - 5] ? form_1_data_size : form_2_data_size;
 
         auto index = file_index_storage.size();
         file_index_storage.resize(file_index_storage.size() + sector_size);
         stream.read((char*)file_index_storage.data() + index, sector_size);
-
-        if (sector_size == 2048)
-        {
-          stream.seekg(2324 - 2048, std::ios::cur);
-        }
+        stream.seekg(form_2_data_size - sector_size + 4, std::ios::cur);
       }
 
       files.resize(file_index_storage.size() / sizeof(file_index));
 
       std::memcpy(files.data(), file_index_storage.data(), file_index_storage.size());
+
+      auto exe_path = query.archive_path.parent_path() / "SLUS_009.24";
+
+      std::vector<std::string> file_names;
+      file_names.reserve(files.size());
+
+      std::error_code code;
+
+      if (std::filesystem::exists(exe_path, code))
+      {
+        std::ifstream exe_data(exe_path, std::ios::binary);
+
+        exe_data.seekg(25096, std::ios::beg);
+        std::string temp_str;
+        temp_str.reserve(32);
+
+        for (auto i = 0; i < 10000; i++)
+        {
+          auto temp = exe_data.get();
+
+          if (temp > 0 && temp <= 127)
+          {
+            temp_str.push_back((char)temp);
+          }
+          else if (!temp_str.empty())
+          {
+            file_names.emplace_back(std::move(temp_str));
+            temp_str = std::string();
+          }
+
+          if (!file_names.empty() && file_names.back() == "TRK\\KJ_FA.TRK")
+          {
+            break;
+          }
+        }
+
+        // Start 25096 FILMS\CREDITS.STR
+        //  FILMS\OUTRO3.STR
+        //  End 34292 TRK\KJ_FA.TRK
+      }
+      else
+      {
+        file_names.resize(files.size());
+      }
 
       for (auto& file : files)
       {
@@ -151,11 +190,27 @@ namespace siege::resource::res
           break;
         }
 
+        if (file_names.empty())
+        {
+          break;
+        }
+
+        auto last_string = std::move(file_names.back());
+
+        auto sector_size = (file.size / total_sector_size) * total_sector_size;
+
+        if ((file.size % total_sector_size) != 0)
+        {
+          sector_size += total_sector_size;
+        }
+
+        file_names.pop_back();
         // TODO get file names from exe file
         results.emplace_back(res_resource_reader::file_info{
-          //.filename = std::filesystem::path(query.archive_path.filename()).replace_extension(".bin"),
+          .filename = std::move(last_string),
           .offset = (std::size_t)main_index + (file.sector_number * total_sector_size),
           .size = file.size,
+          .compressed_size = sector_size,
           .folder_path = query.folder_path,
           .archive_path = query.archive_path,
         });
@@ -178,17 +233,29 @@ namespace siege::resource::res
     std::ostream& output,
     std::optional<std::reference_wrapper<platform::batch_storage>>) const
   {
-
-    // TODO get the correct sector size per file
-    std::vector<char> data;
-    data.resize(2048);
-    for (auto i = 0; i < info.size; i += 2352)
+    if (!info.compressed_size)
     {
-      stream.seekg(info.offset + i, std::ios::beg);
-      stream.seekg(24, std::ios::cur);
-      stream.read(data.data(), data.size());
-      output.write(data.data(), data.size());
-      stream.seekg(4 + 276, std::ios::cur);
+      return;
+    }
+
+    set_stream_position(stream, info);
+
+    std::vector<char> sector_data;
+    sector_data.reserve(*info.compressed_size);
+
+    for (auto i = 0u; i < *info.compressed_size; i += total_sector_size)
+    {
+      xa_sector_header sector;
+
+      stream.read((char*)&sector, sizeof(sector));
+      auto sector_size = std::bitset<8>(sector.sub_headers[0].sub_mode)[8 - 5] ? form_1_data_size : form_2_data_size;
+
+      sector_data.clear();
+      sector_data.resize(sector_size);
+      stream.read(sector_data.data(), sector_size);
+      output.write(sector_data.data(), sector_size);
+
+      stream.seekg(form_2_data_size - sector_size + 4, std::ios::cur);
     }
   }
 }// namespace siege::resource::res

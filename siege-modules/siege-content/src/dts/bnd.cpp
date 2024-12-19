@@ -7,14 +7,25 @@ namespace siege::content::bnd
 {
   namespace endian = siege::platform;
 
-  // actually the number of files in the file
   constexpr static auto body_tag = platform::to_tag<4>("BODY");
-  constexpr static auto tmds_v2_tag = platform::to_tag<4>("TMDS");
+  constexpr static auto tmds_tag = platform::to_tag<4>("TMDS");
   constexpr static auto vram_tag = platform::to_tag<4>("VRAM");
   constexpr static auto tims_tag = platform::to_tag<4>("TIMS");
-}
 
-  // import sys
+  bool is_bnd(std::istream& stream)
+  {
+    platform::istream_pos_resetter resetter(stream);
+    std::array<std::byte, 4> tag{};
+    std::array<std::byte, 4> second_tag{};
+
+    stream.read((char*)&tag, sizeof(tag));
+    stream.seekg(sizeof(tag));
+    stream.read((char*)&second_tag, sizeof(second_tag));
+    return tag == body_tag && second_tag == tmds_tag;
+  }
+}// namespace siege::content::bnd
+
+// import sys
 // import json
 // import struct
 // import glob

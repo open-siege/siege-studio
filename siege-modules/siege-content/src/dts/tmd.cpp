@@ -1,4 +1,77 @@
+#include <array>
+#include <siege/platform/shared.hpp>
+#include <siege/platform/stream.hpp>
+#include <siege/platform/endian_arithmetic.hpp>
 
+namespace siege::content::tmd
+{
+  namespace endian = siege::platform;
+
+  struct tmd_header
+  {
+    endian::little_uint32_t magic_number;
+    endian::little_uint32_t padding;
+    endian::little_uint32_t object_count;
+  };
+
+  struct tmd_object_header
+  {
+    endian::little_uint32_t vertex_offset;
+    endian::little_uint32_t vertex_count;
+    endian::little_uint32_t normal_offset;
+    endian::little_uint32_t normal_count;
+    endian::little_uint32_t primitive_offset;
+    endian::little_uint32_t primitive_count;
+    endian::little_uint32_t padding;
+  };
+
+  struct tmd_vertex
+  {
+    endian::little_uint16_t x;
+    endian::little_uint16_t y;
+    endian::little_uint16_t z;
+    endian::little_uint16_t padding;
+  };
+
+  struct tmd_primitive_header
+  {
+    std::byte padding;
+    std::uint8_t size;
+    std::byte padding2;
+    enum primitive_type : std::uint8_t
+    {
+      single_colour_triangle = 0x20,
+      single_colour_triangle_alt = 0x22,
+      gouraud_triangle = 0x24,
+      single_colour_quad = 0x28,
+      flat_triangle = 0x30,
+      textured_triangle = 0x34,
+      flat_quad = 0x38,
+    } type;
+  };
+
+
+  bool is_tmd(std::istream& stream)
+  {
+    platform::istream_pos_resetter resetter(stream);
+    tmd_header main_header{};
+    stream.read((char*)&main_header, sizeof(main_header));
+
+    if (main_header.magic_number == 65 && main_header.object_count > 0)
+    {
+      tmd_object_header object_header{};
+      stream.read((char*)&object_header, sizeof(object_header));
+
+      auto computed_normal_offset = object_header.vertex_offset + (sizeof(tmd_vertex) * object_header.vertex_count);
+      auto computed_primitive_offset = computed_normal_offset + (sizeof(tmd_vertex) * object_header.normal_count);
+
+      return object_header.normal_offset == computed_normal_offset && object_header.primitive_offset == computed_primitive_offset;
+    }
+
+    return false;
+  }
+
+}// namespace siege::content::tmd
 // import sys
 // import json
 // import struct

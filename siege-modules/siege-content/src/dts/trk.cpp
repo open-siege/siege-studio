@@ -16,4 +16,13 @@ namespace siege::content::trk
   constexpr static auto engine_tag = platform::to_tag<4>("ENGI");
   constexpr static auto tims_tag = platform::to_tag<4>("TIMS");
   constexpr static auto finish_tag = platform::to_tag<4>("FINI");
+
+  bool is_trk(std::istream& stream)
+  {
+    platform::istream_pos_resetter resetter(stream);
+    std::array<std::byte, 4> tag{};
+
+    stream.read((char*)&tag, sizeof(tag));
+    return tag == header_tag;
+  }
 }
