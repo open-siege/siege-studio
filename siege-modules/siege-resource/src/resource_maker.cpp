@@ -14,6 +14,7 @@
 #include <siege/resource/rsc_resource.hpp>
 #include <siege/resource/res_resource.hpp>
 #include <siege/resource/mw4_resource.hpp>
+#include <siege/resource/prj_resource.hpp>
 
 namespace siege::resource
 {
@@ -34,6 +35,7 @@ namespace siege::resource
         rsc::rsc_resource_reader::is_supported(stream) ||
         res::res_resource_reader::is_supported(stream) ||
         mw4::mw4_resource_reader::is_supported(stream) ||
+        prj::prj_resource_reader::is_supported(stream) ||
         zip::zip_resource_reader::is_supported(stream);
          
     //    cab::cab_resource_reader::is_supported(stream) || 
@@ -77,6 +79,10 @@ namespace siege::resource
     else if (rsc::rsc_resource_reader::is_supported(stream))
     {
       resource.reset(new rsc::rsc_resource_reader());
+    }
+    else if (prj::prj_resource_reader::is_supported(stream))
+    {
+      resource.reset(new prj::prj_resource_reader());
     }
     else if (mw4::mw4_resource_reader::is_supported(stream))
     {
