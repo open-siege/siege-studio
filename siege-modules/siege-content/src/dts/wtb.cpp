@@ -7,6 +7,27 @@ namespace siege::content::wtb
 {
   namespace endian = siege::platform;
 
+  constexpr auto header_tag = platform::to_tag<4>({ 'W', 'T', 'B', 'O' });
+
+  // each tag must represent a type of shading or texturing
+  constexpr auto polygon_tag = platform::to_tag<2>({ 0x00, 0x78 });
+  constexpr auto polygon_tag_2 = platform::to_tag<2>({ 0xf0, 0x4c });
+  constexpr auto polygon_tag_3 = platform::to_tag<2>({ 0x22, 0x54 });
+  constexpr auto polygon_tag_4 = platform::to_tag<2>({ 0x1f, 0x74 });
+  constexpr auto polygon_tag_5 = platform::to_tag<2>({ 0xf0, 0x44 });
+
+  struct surface_header
+  {
+    std::array<std::byte, 2> tag;
+    endian::little_uint16_t number_of_points;
+  };
+
+  struct surface
+  {
+    surface_header header;
+    std::vector<endian::little_uint16_t> vertices;
+  };
+
   bool is_wtb(std::istream& stream)
   {
     return false;
