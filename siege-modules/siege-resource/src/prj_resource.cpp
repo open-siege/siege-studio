@@ -125,16 +125,45 @@ namespace siege::resource::prj
     temp.read((char*)&folder_count, sizeof(folder_count));
 
     std::vector<dir_entry> dir_entries;
-    dir_entries.reserve(folder_count);
-
-    for (auto i = 0u; i < folder_count; ++i)
-    {
-      auto& entry = dir_entries.emplace_back();
-      temp.read((char*)&entry, sizeof(entry));
-    }
+    dir_entries.resize(folder_count);
+    temp.read((char*)dir_entries.data(), sizeof(dir_entry) * dir_entries.size());
 
     std::vector<prj_resource_reader::content_info> results;
     results.reserve(folder_count);
+
+    if (query.folder_path != query.archive_path)
+    {
+      auto folder_name = query.folder_path.stem().string();
+
+      for (auto& entry : dir_entries)
+      {
+        if (folder_name == std::string_view((char*)entry.tag.data(), entry.tag[3] == std::byte{} ? 3 : 4))
+        {
+          continue;
+        }
+        entry.symbol_offset = 0;
+        entry.index_offset = 0;
+      }
+    }
+    else
+    {
+      for (auto& entry : dir_entries)
+      {
+        if (entry.index_offset == 0 || entry.symbol_offset == 0)
+        {
+          continue;
+        }
+
+        auto name = std::string((char*)entry.tag.data(), entry.tag[3] == std::byte{} ? 3 : 4);
+
+        results.emplace_back(prj_resource_reader::folder_info{
+          .name = name,
+          .full_path = query.archive_path / name,
+          .archive_path = query.archive_path });
+      }
+
+      return results;
+    }
 
     for (auto& entry : dir_entries)
     {
@@ -241,11 +270,6 @@ namespace siege::resource::prj
           if (std::string_view(final_entry.symbol_name.data()) != file_info.filename)
           {
             break;
-          }
-
-          if (file_info.filename == "AA4_TAIL")
-          {
-            OutputDebugStringW(L"Found file AA4_TAIL");
           }
 
           file_info.offset = stream.tellg();
