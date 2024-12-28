@@ -1,5 +1,6 @@
 #include <array>
 #include <bitset>
+#include <map>
 #include <filesystem>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
@@ -10,8 +11,8 @@
 namespace siege::resource::res
 {
   namespace endian = siege::platform;
+  namespace fs = std::filesystem;
 
-  // actually the number of files in the file
   constexpr static auto riff_tag = platform::to_tag<4>("RIFF");
   constexpr static auto cdxa_tag = platform::to_tag<4>("CDXA");
   constexpr static auto fmt_tag = platform::to_tag<4>({ 'f', 'm', 't', 0x20 });
@@ -19,23 +20,6 @@ namespace siege::resource::res
   constexpr static auto total_sector_size = 2352u;
   constexpr static auto form_1_data_size = 2048u;
   constexpr static auto form_2_data_size = 2324u;
-
-  // STARTREK.RES + SLUS_009.24
-
-  // would only be able to list files and potentially identify file headers
-  // RIFF CDXA fmt data (first 40 bytes)
-
-  // DSM - 01 00 00 0f 00 04 00 00
-
-  // TRK - TREK
-  // STR - 60 01 01 80 - 2048 sectors
-  // FRONTEND.OVL - 74 66 07 80 74 66 07 80 74 66 07 80
-  // GAME.OVL - CARD FR 00 TYC0 CK 00 VALK 2 00 00 00
-  // 262 144
-  // TIM
-  // constexpr file_tag four_bit_image = platform::to_tag<8>({ 0x10, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00 });
-  // constexpr file_tag eight_bit_image = platform::to_tag<8>({ 0x10, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00 });
-  // constexpr file_tag sixteen_bit_image = platform::to_tag<8>({ 0x10, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00 });
 
   struct res_header
   {
@@ -103,8 +87,6 @@ namespace siege::resource::res
 
   std::vector<res_resource_reader::content_info> res_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
   {
-    // SLUS_009.24
-
     platform::istream_pos_resetter resetter(stream);
     std::vector<res_resource_reader::content_info> results;
 
@@ -183,6 +165,39 @@ namespace siege::resource::res
         file_names.resize(files.size());
       }
 
+      std::map<fs::path, std::vector<std::string>> folders;
+
+      auto get_parent_path = [&](auto& entry) {
+        auto parent_path = fs::path(entry.data()).make_preferred().parent_path();
+        return parent_path == fs::path() ? query.archive_path : query.archive_path / parent_path;
+      };
+
+      for (auto& entry : file_names)
+      {
+        auto parent_path = get_parent_path(entry);
+
+        auto iter = folders.find(parent_path);
+
+        if (iter == folders.end())
+        {
+          iter = folders.emplace(parent_path, std::vector<std::string>{}).first;
+        }
+
+        iter->second.emplace_back(fs::path(entry).make_preferred().filename().string());
+      }
+
+      for (auto& folder : folders)
+      {
+        if (folder.first.parent_path() == query.folder_path)
+        {
+          results.emplace_back(res_resource_reader::folder_info{
+            .name = folder.first.filename().string(),
+            .file_count = folder.second.size(),
+            .full_path = folder.first,
+            .archive_path = query.archive_path });
+        }
+      }
+
       for (auto& file : files)
       {
         if (file.size == 0)
@@ -205,15 +220,20 @@ namespace siege::resource::res
         }
 
         file_names.pop_back();
-        // TODO get file names from exe file
-        results.emplace_back(res_resource_reader::file_info{
-          .filename = std::move(last_string),
-          .offset = (std::size_t)main_index + (file.sector_number * total_sector_size),
-          .size = file.size,
-          .compressed_size = sector_size,
-          .folder_path = query.folder_path,
-          .archive_path = query.archive_path,
-        });
+
+        auto parent_path = get_parent_path(last_string);
+
+        if (parent_path == query.folder_path)
+        {
+          results.emplace_back(res_resource_reader::file_info{
+            .filename = fs::path(last_string).make_preferred().filename().string(),
+            .offset = (std::size_t)main_index + (file.sector_number * total_sector_size),
+            .size = file.size,
+            .compressed_size = sector_size,
+            .folder_path = query.folder_path,
+            .archive_path = query.archive_path,
+          });
+        }
       }
     }
 

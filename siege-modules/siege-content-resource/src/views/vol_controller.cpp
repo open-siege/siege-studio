@@ -3,6 +3,7 @@
 #include <siege/platform/stream.hpp>
 #include <fstream>
 #include <spanstream>
+#include <mutex>
 #include <siege/platform/wave.hpp>
 #include <siege/platform/bitmap.hpp>
 
@@ -63,6 +64,8 @@ namespace siege::views
     }
     return 0;
   }
+
+  static std::mutex stream_mutex;
 
   std::vector<char> vol_controller::load_content_data(const siege::platform::resource_reader::content_info& content)
   {
@@ -136,6 +139,7 @@ namespace siege::views
       }
       else if (auto* memory = std::get_if<std::stringstream>(&storage); memory)
       {
+        std::lock_guard<std::mutex> guard(stream_mutex);
         resource->extract_file_contents(*memory, *file, output);
       }
     }

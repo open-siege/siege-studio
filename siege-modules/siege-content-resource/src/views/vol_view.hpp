@@ -451,18 +451,20 @@ namespace siege::views
         std::launch::async, [path = std::move(path), this](auto items) {
           has_saved = false;
 
-          for (auto& item : items)
-          {
+
+          std::for_each(std::execution::unseq, items.begin(), items.end(), [this, path](auto& item) {
             if (auto* file_info = std::get_if<siege::platform::file_info>(&item); file_info)
             {
               auto child_path = std::filesystem::relative(file_info->folder_path, file_info->archive_path);
-              std::filesystem::create_directories(*path / child_path);
+
+              std::error_code code;
+              std::filesystem::create_directories(*path / child_path, code);
               std::ofstream extracted_file(*path / child_path / file_info->filename, std::ios::trunc | std::ios::binary);
               auto raw_data = controller.load_content_data(item);
 
               extracted_file.write(raw_data.data(), raw_data.size());
             }
-          }
+          });
 
           launch_shell_process(*path);
           has_saved = true;
