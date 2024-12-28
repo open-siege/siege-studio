@@ -135,7 +135,6 @@ namespace siege::resource::rsc
           entry.offset = next.offset;
         }
 
-//        previous.size = next.offset - previous.offset - 2;
         previous.size = next.offset - previous.offset;
       }
     }
@@ -163,18 +162,88 @@ namespace siege::resource::rsc
     }
     else if (version == 3)
     {
-      endian::little_uint32_t header_size;
-      std::memcpy(&header_size, tag.data(), sizeof(header_size));
+      endian::little_uint32_t size_entry_offset;
+      std::memcpy(&size_entry_offset, tag.data(), sizeof(size_entry_offset));
+
       std::array<rsc_v3_group_entry, 16> groups;
       stream.read((char*)groups.data(), sizeof(rsc_v3_group_entry) * groups.size());
 
-      header_size = header_size - sizeof(header_size) - sizeof(rsc_v3_group_entry) * groups.size();
+      auto start_offset = (std::size_t)resetter.position;
 
-      auto file_count = header_size / sizeof(rsc_v3_name_entry);
+      stream.seekg(start_offset + size_entry_offset);
 
-      std::vector<rsc_v3_name_entry> entries;
-      entries.resize(file_count);
-      stream.read((char*)entries.data(), sizeof(rsc_v3_name_entry) * entries.size());
+      endian::little_uint32_t size_entry_count;
+      stream.read((char*)&size_entry_count, sizeof(size_entry_count));
+
+      std::vector<rsc_v3_size_entry> size_entries;
+      size_entries.resize(size_entry_count);
+      stream.read((char*)size_entries.data(), sizeof(rsc_v3_size_entry) * size_entries.size());
+
+      for (auto& group : groups)
+      {
+        std::vector<rsc_v3_name_entry> entries;
+        entries.resize(group.num_files);
+        stream.seekg(start_offset + group.file_name_entry_offset);
+        stream.read((char*)entries.data(), sizeof(rsc_v3_name_entry) * entries.size());
+
+        for (auto& name : entries)
+        {
+          try
+          {
+
+            auto& entry = std::get<rsc_resource_reader::file_info>(results.emplace_back(rsc_resource_reader::file_info{}));
+            entry.archive_path = query.archive_path;
+            entry.folder_path = query.archive_path;
+
+            auto temp = std::string_view(name.path.data());
+
+            constexpr static std::array<const char*, 4> extensions = { { "_TIM", "_OVL", "_CNF", "_INF" } };
+
+            for (auto ext : extensions)
+            {
+              auto index = temp.find(ext);
+
+              if (index != std::string_view::npos)
+              {
+                name.path[index] = '.';
+                break;
+              }
+            }
+
+            entry.filename = temp;
+
+            if (temp == "CREDITS_PAL" || temp == "CREDITS_USA")
+            {
+              entry.filename.replace_extension(".txt");
+            }
+
+            entry.offset = size_entries.at(name.size_entry_index).file_data_offset + start_offset;
+
+            if (size_entries.size() > name.size_entry_index)
+            {
+              auto main_offset = size_entries.at(name.size_entry_index).file_data_offset;
+              auto next_iter = std::find_if(size_entries.begin() + name.size_entry_index, size_entries.end(), [&](auto& other) { return other.file_data_offset > main_offset; });
+
+              if (next_iter != size_entries.end())
+              {
+                entry.size = next_iter->file_data_offset + start_offset - entry.offset;
+              }
+              else
+              {
+                next_iter = std::find_if(size_entries.begin(), size_entries.end(), [&](auto& other) { return other.file_data_offset > main_offset; });
+
+                if (next_iter != size_entries.end())
+                {
+                  entry.size = next_iter->file_data_offset + start_offset - entry.offset;
+                }
+              }
+            }
+          }
+          catch (...)
+          {
+          }
+        }
+      }
     }
 
     return results;

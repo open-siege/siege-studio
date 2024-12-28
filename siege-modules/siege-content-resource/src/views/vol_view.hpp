@@ -85,6 +85,7 @@ namespace siege::views
             extensions.insert(L".bin");
             extensions.insert(L".dat");
             extensions.insert(L".raw");
+            extensions.insert(L"");
           }
 
           auto existing = category_extensions.find(stored_category);
