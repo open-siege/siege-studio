@@ -1,3 +1,5 @@
+// WTB - MechWarrior 2 - individual mesh shape
+
 #include <array>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>

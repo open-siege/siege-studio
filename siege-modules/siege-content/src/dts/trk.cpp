@@ -1,3 +1,5 @@
+// TRK - Star Trek Invasion model files
+
 #include <array>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>

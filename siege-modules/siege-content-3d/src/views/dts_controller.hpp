@@ -14,7 +14,9 @@ namespace siege::views
   class dts_controller
   {
   public:
-    constexpr static auto formats = std::array<siege::fs_string_view, 1>{{ FSL".dts" }};
+    constexpr static auto formats = std::array<siege::fs_string_view, 12>{{ 
+            FSL".dts", FSL".tmd", FSL".bnd", FSL".cwg", FSL".trk", FSL"bwd", FSL".wtb", FSL".erf", FSL".mdl", FSL".md2", FSL".mdx", FSL".dkm" 
+        }};
     static bool is_shape(std::istream& image_stream);
 
     std::size_t load_shape(std::istream& image_stream);

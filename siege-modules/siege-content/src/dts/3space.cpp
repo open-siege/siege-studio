@@ -1,3 +1,5 @@
+// DTS - Dynamix ThreeSpace Shape v1 for 3Space v2 (Earthsiege, Earthsiege 2, Battledrome, Aces of the Deep)
+
 #include <array>
 #include <utility>
 #include <vector>

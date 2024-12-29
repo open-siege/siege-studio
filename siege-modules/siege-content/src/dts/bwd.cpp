@@ -1,3 +1,6 @@
+// BWD - MechWarrior 2 complete 3D model data (referencing individual WTB meshes)
+// Uses file IDs from the PRJ file instead of file names.
+
 #include <array>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>

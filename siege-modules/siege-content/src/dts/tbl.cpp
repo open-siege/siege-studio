@@ -1,3 +1,5 @@
+// TBL - 3Space model data
+
 #include <array>
 #include <siege/platform/endian_arithmetic.hpp>
 #include <siege/platform/shared.hpp>

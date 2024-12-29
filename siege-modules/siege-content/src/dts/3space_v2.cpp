@@ -1,3 +1,5 @@
+// DTS - Dynamix ThreeSpace Shape v2 for 3Space v2.5 (A-10 Tank Killer 2, Red Baron 2, Pro Pilot)
+
 #include <array>
 #include <utility>
 #include <vector>

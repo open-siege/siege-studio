@@ -1,3 +1,6 @@
+// BND - Colony Wars 3D shape data from Colony Wars and Colony Wars Vengeance
+// Contains embedded TMD shape data and TIM texture data.
+
 #include <array>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>

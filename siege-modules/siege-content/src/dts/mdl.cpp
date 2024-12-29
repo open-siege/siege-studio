@@ -1,3 +1,8 @@
+// MDL - Quake 1 model data
+// MD2 - Quake 2 model data
+// MDX - Kingpin model data
+// DKM - Daikatana model data
+
 #include <array>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
