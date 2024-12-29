@@ -71,6 +71,11 @@ namespace siege::content::tmd
     return false;
   }
 
+  void load_tmd(std::istream& stream)
+  {
+
+  }
+
 }// namespace siege::content::tmd
 // import sys
 // import json
