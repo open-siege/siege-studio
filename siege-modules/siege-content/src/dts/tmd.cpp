@@ -1,6 +1,9 @@
 // TMD - PlayStation standard model format. Embedded inside of BND files from Colony Wars
 
 #include <array>
+#include <variant>
+#include <any>
+#include <siege/content/dts/tmd.hpp>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
@@ -8,6 +11,8 @@
 namespace siege::content::tmd
 {
   namespace endian = siege::platform;
+
+  constexpr static std::uint8_t magic_number = 65;
 
   struct tmd_header
   {
@@ -27,14 +32,6 @@ namespace siege::content::tmd
     endian::little_uint32_t padding;
   };
 
-  struct tmd_vertex
-  {
-    endian::little_uint16_t x;
-    endian::little_uint16_t y;
-    endian::little_uint16_t z;
-    endian::little_uint16_t padding;
-  };
-
   struct tmd_primitive_header
   {
     std::byte padding;
@@ -52,6 +49,41 @@ namespace siege::content::tmd
     } type;
   };
 
+  struct tmd_single_colour_quad_primitive
+  {
+    tmd_primitive_header header;
+    endian::little_uint32_t first_value;
+    endian::little_uint32_t second_value;
+    endian::little_uint32_t third_value;
+    endian::little_uint32_t fourth_value;
+  };
+
+  struct tmd_textured_triangle_primitive
+  {
+    tmd_primitive_header header;
+    struct
+    {
+      endian::little_uint16_t padding;
+      std::uint8_t v_coord;
+      std::uint8_t u_coord;
+    } texture_coordinates[3];
+
+    struct
+    {
+      endian::little_uint16_t padding;
+      endian::little_uint16_t v_coord;
+      endian::little_uint16_t u_coord;
+    } vertex_indices[3];
+  };
+
+  using tmd_primitive = std::variant<tmd_single_colour_quad_primitive>;
+
+  struct tmd_shape
+  {
+    std::vector<tmd_vertex> vertices;
+    std::vector<tmd_vertex> normals;
+    std::vector<tmd_primitive> primitives;
+  };
 
   bool is_tmd(std::istream& stream)
   {
@@ -59,7 +91,7 @@ namespace siege::content::tmd
     tmd_header main_header{};
     stream.read((char*)&main_header, sizeof(main_header));
 
-    if (main_header.magic_number == 65 && main_header.object_count > 0)
+    if (main_header.magic_number == magic_number && main_header.object_count > 0)
     {
       tmd_object_header object_header{};
       stream.read((char*)&object_header, sizeof(object_header));
@@ -73,96 +105,72 @@ namespace siege::content::tmd
     return false;
   }
 
-  void load_tmd(std::istream& stream)
+  std::vector<std::any> load_tmd(std::istream& stream)
   {
+    std::vector<std::any> results;
+    platform::istream_pos_resetter resetter(stream);
 
+    tmd_header main_header{};
+    stream.read((char*)&main_header, sizeof(main_header));
+
+    if (main_header.magic_number == magic_number && main_header.object_count > 0)
+    {
+      auto start_offset = (std::size_t)stream.tellg();
+      
+      results.reserve(main_header.object_count);
+
+      for (auto i = 0u; i < main_header.object_count; ++i)
+      {
+        tmd_object_header object_header{};
+        stream.read((char*)&object_header, sizeof(object_header));
+
+        tmd_shape shape;
+
+        shape.vertices.resize(object_header.vertex_count);
+        shape.normals.resize(object_header.normal_count);
+        shape.primitives.reserve(object_header.primitive_count);
+
+        stream.seekg(start_offset + object_header.vertex_offset, std::ios::beg);
+        stream.read((char*)shape.vertices.data(), sizeof(tmd_vertex) * shape.vertices.size());
+
+        stream.seekg(start_offset + object_header.normal_offset, std::ios::beg);
+        stream.read((char*)shape.normals.data(), sizeof(tmd_vertex) * shape.normals.size());
+
+        stream.seekg(start_offset + object_header.primitive_offset, std::ios::beg);
+
+        for (auto i = 0u; i < object_header.primitive_count; ++i)
+        {
+          tmd_primitive_header header{};
+
+          stream.read((char*)&header, sizeof(header));
+
+          if (header.type != tmd_primitive_header::single_colour_quad)
+          {
+            break;
+          }
+
+          tmd_single_colour_quad_primitive quad;
+          quad.header = header;
+
+          auto quad_size = sizeof(quad) - sizeof(header);
+
+          if (header.size * 4 > quad_size)
+          {
+            stream.read((char*)&quad.first_value, quad_size);
+            stream.seekg(header.size * 4 - quad_size, std::ios::cur);
+          }
+          else
+          {
+            stream.read((char*)&quad.first_value, header.size * 4);
+          }
+
+          shape.primitives.emplace_back(std::move(quad));
+        }
+
+        results.emplace_back(std::move(shape));
+      }
+    }
+
+    return results;
   }
-
-}// namespace siege::content::tmd
-// import sys
-// import json
-// import struct
-// import glob
-
-// from collections import namedtuple
-
-// importFilenames = sys.argv[1:]
-
-// with open('tmdStructures.json') as f:
-//     structures = json.load(f)
-
-// for importFilename in importFilenames:
-//     exportFilename = importFilename.replace(".tmd", ".obj").replace(".TMD", ".obj")
-//     print "reading " + importFilename
-//     try:
-//         with open(importFilename, "rb") as input_fd:
-//             rawData = input_fd.read()
-
-//         offset = 0
-//         headerFmt = "<3L"
-//         objectFmt = "<6Ll"
-//         primitiveFmt = "<4B"
-//         vertexFmt = "<4h"
-//         normalFmt = "<4h"
-//         (header, flags, numObjects) = struct.unpack_from(headerFmt, rawData, offset)
-
-//         objects = []
-//         for i in range(numObjects):
-//             verts = []
-//             normals = []
-//             primitives = []
-//             offset += struct.calcsize(headerFmt)
-//             (topVert, numVerts, topNormal, numNormals, topPrimitive, numPrimitives, scale) = struct.unpack_from(objectFmt, rawData, offset)
-//             originalOffset = offset
-//             offset += struct.calcsize(objectFmt)
-//             print (numVerts, numNormals, numPrimitives)
-//             for x in range(numVerts):
-//                 vert = struct.unpack_from(vertexFmt, rawData, offset)
-//                 offset += struct.calcsize(vertexFmt)
-//                 print vert
-//                 verts.append(vert)
-
-//             for x in range(numNormals):
-//                 normal = struct.unpack_from(normalFmt, rawData, offset)
-//                 offset += struct.calcsize(normalFmt)
-//                 #print normal
-//                 normals.append(normal)
-
-//             for x in range(numPrimitives):
-//                 primitive = struct.unpack_from(primitiveFmt, rawData, offset)
-//                 offset += struct.calcsize(primitiveFmt)
-//                 bodyFmt = structures[str(primitive[0])][str(primitive[1])]
-//                 body = struct.unpack_from(bodyFmt, rawData, offset)
-//                 offset += struct.calcsize(bodyFmt)
-//                 primitives.append((primitive, body))
-//                 print (primitive, body)
-//             objects.append((verts, normals, primitives))
-
-//         with open(exportFilename,"w") as shapeFile:
-//             faceIndex = 0
-//             for index, object in enumerate(objects):
-//                 shapeFile.write("o " + str(index))
-//                 shapeFile.write("\n")
-//                 verts, normals, faces = object
-//                 for vertex in verts:
-//                     shapeFile.write("\tv ")
-//                     shapeFile.write(str(float(vertex[0])) + " ")
-//                     shapeFile.write(str(float(vertex[1])) + " ")
-//                     shapeFile.write(str(float(vertex[2])) + " ")
-//                     shapeFile.write("\n")
-
-//                 for header, polygon in faces:
-//                     shapeFile.write("\tf ")
-//                     shapeFile.write(str(polygon[5] + 1 + faceIndex) + " ")
-//                     shapeFile.write(str(polygon[6] + 1 + faceIndex) + " ")
-//                     shapeFile.write(str(polygon[7] + 1 + faceIndex) + " ")
-//                     shapeFile.write("\n")
-//                     shapeFile.write("\tf ")
-//                     shapeFile.write(str(polygon[6] + 1 + faceIndex) + " ")
-//                     shapeFile.write(str(polygon[7] + 1 + faceIndex) + " ")
-//                     shapeFile.write(str(polygon[8] + 1 + faceIndex) + " ")
-//                     shapeFile.write("\n")
-//                 faceIndex += len(verts)
-
-//     except Exception as e:
-//         print e
+}
