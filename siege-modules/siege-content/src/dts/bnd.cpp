@@ -3,6 +3,7 @@
 
 #include <array>
 #include <any>
+#include <spanstream>
 #include <siege/content/dts/tmd.hpp>
 #include <siege/content/bmp/tim.hpp>
 #include <siege/platform/shared.hpp>
@@ -16,6 +17,7 @@ namespace siege::content::bnd
   constexpr static auto body_tag = platform::to_tag<4>("BODY");
   constexpr static auto data_tag = platform::to_tag<4>("DATA");
   constexpr static auto tmds_tag = platform::to_tag<4>("TMDS");
+  constexpr static auto coll_tag = platform::to_tag<4>("COLL");
   constexpr static auto vram_tag = platform::to_tag<4>("VRAM");
   constexpr static auto tims_tag = platform::to_tag<4>("TIMS");
 
@@ -28,12 +30,12 @@ namespace siege::content::bnd
   struct data_section
   {
     iff_tag info;
-    endian::little_uint32_t object_count;
+    endian::little_uint16_t object_count;
+    endian::little_uint16_t padding;
   };
 
   struct tmd_section
   {
-    iff_tag info;
     endian::little_uint32_t vertex_offset;
     endian::little_uint32_t vertex_count;
     endian::little_uint32_t normal_offset;
@@ -67,9 +69,16 @@ namespace siege::content::bnd
     std::vector<bnd_textured_triangle_primitive> primitives;
   };
 
+  struct bnd_collision
+  {
+    std::vector<char> bytes;
+    bnd_shape shape;
+  };
+
   struct bnd_data
   {
     std::vector<bnd_shape> shapes;
+    std::vector<bnd_collision> collision_data;
     std::vector<platform::bitmap::windows_bmp_data> textures;
   };
 
@@ -97,51 +106,116 @@ namespace siege::content::bnd
 
     if (body.tag == body_tag)
     {
-      data_section data;
-
-      stream.read((char*)&data, sizeof(data));
-
       bnd_data result;
+      std::vector<char> buffer;
 
-      if (data.info.tag == data_tag)
+      for (auto i = 0u; i < 2; ++i)
       {
-        auto data_start = (std::size_t)stream.tellg();
-        auto tmd_start = data_start + sizeof(iff_tag);
+        data_section data;
 
-        result.shapes.reserve(data.object_count);
+        stream.read((char*)&data, sizeof(data));
 
-        for (auto i = 0; i < data.object_count; ++i)
+        if (data.info.tag == data_tag)
         {
-          tmd_section tmd_section;
-          stream.read((char*)&tmd_section, sizeof(tmd_section));
+          result.shapes.reserve(data.object_count);
 
-          if (tmd_section.info.tag != tmds_tag)
+          std::size_t object_count = data.object_count;
+
+          for (auto i = 0u; i < object_count; ++i)
           {
-            break;
+            iff_tag next_item;
+            stream.read((char*)&next_item, sizeof(next_item));
+
+            if (!(next_item.tag == tmds_tag || next_item.tag == coll_tag))
+            {
+              break;
+            }
+
+            buffer.resize(next_item.size);
+            stream.read(buffer.data(), buffer.size());
+
+            auto read_tmd = [](auto& tmd_stream, auto& shape) {
+              tmd_section tmd_section;
+              tmd_stream.read((char*)&tmd_section, sizeof(tmd_section));
+
+              shape.vertices.resize(tmd_section.vertex_count);
+              shape.normals.resize(tmd_section.normal_count);
+
+              tmd_stream.seekg(tmd_section.vertex_offset, std::ios::beg);
+              tmd_stream.read((char*)shape.vertices.data(), sizeof(tmd::tmd_vertex) * shape.vertices.size());
+
+              tmd_stream.seekg(tmd_section.normal_offset, std::ios::beg);
+              tmd_stream.read((char*)shape.normals.data(), sizeof(tmd::tmd_vertex) * shape.normals.size());
+
+              auto primitive_count = std::find_if(tmd_section.primitive_sizes.begin(), tmd_section.primitive_sizes.end(), [](auto value) { return value > 0; });
+
+              if (primitive_count != tmd_section.primitive_sizes.end())
+              {
+                shape.primitives.resize(*primitive_count);
+                tmd_stream.seekg(tmd_section.primitive_offsets[0], std::ios::beg);
+                tmd_stream.read((char*)shape.primitives.data(), sizeof(bnd_textured_triangle_primitive) * shape.primitives.size());
+              }
+            };
+
+            if (next_item.tag == tmds_tag)
+            {
+              std::ispanstream tmd_stream(buffer);
+
+              auto& shape = result.shapes.emplace_back();
+              read_tmd(tmd_stream, shape);
+            }
+            else if (next_item.tag == coll_tag)
+            {
+              buffer.resize(next_item.size);
+              stream.read(buffer.data(), buffer.size());
+              auto& collision = result.collision_data.emplace_back();
+
+              collision.bytes = std::move(buffer);
+              buffer = std::vector<char>();
+
+              stream.read((char*)&next_item, sizeof(next_item));
+
+              if (next_item.tag != tmds_tag)
+              {
+                stream.seekg(-sizeof(next_item), std::ios::cur);
+                continue;
+              }
+              buffer.resize(next_item.size);
+              stream.read(buffer.data(), buffer.size());
+
+              std::ispanstream tmd_stream(buffer);
+              read_tmd(tmd_stream, collision.shape);
+            }
+
+            auto current_pos = stream.tellg();
+            stream.read((char*)&next_item, sizeof(next_item));
+
+            if (next_item.tag == coll_tag)
+            {
+              object_count++;
+            }
+            stream.seekg(current_pos, std::ios::beg);
           }
+        }
+        else if (data.info.tag == vram_tag)
+        {
+          stream.seekg(data.info.size - sizeof(std::uint32_t), std::ios::cur);
 
-          result.shapes.emplace_back(bnd_shape{});
-          auto& shape = result.shapes.back();
-
-          shape.vertices.resize(tmd_section.vertex_count);
-          shape.normals.resize(tmd_section.normal_count);
-
-          stream.seekg(tmd_start + tmd_section.vertex_offset, std::ios::beg);
-          stream.read((char*)shape.vertices.data(), sizeof(tmd::tmd_vertex) * shape.vertices.size());
-
-          stream.seekg(tmd_start + tmd_section.normal_offset, std::ios::beg);
-          stream.read((char*)shape.normals.data(), sizeof(tmd::tmd_vertex) * shape.normals.size());
-
-          auto primitive_count = std::find_if(tmd_section.primitive_sizes.begin(), tmd_section.primitive_sizes.end(), [](auto value) { return value > 0; });
-
-          if (primitive_count != tmd_section.primitive_sizes.end())
+          for (auto i = 0u; i < data.object_count; ++i)
           {
-            shape.primitives.resize(*primitive_count);
-            stream.seekg(tmd_start + tmd_section.primitive_offsets[0], std::ios::beg);
-            stream.read((char*)shape.primitives.data(), sizeof(bnd_textured_triangle_primitive) * shape.primitives.size());
+            iff_tag next_item;
+            stream.read((char*)&next_item, sizeof(next_item));
+            
+            if (next_item.tag != tims_tag)
+            {
+              break;
+            }
+            
+            buffer.resize(next_item.size);
+            stream.read(buffer.data(), buffer.size());
+            std::ispanstream tim_stream(buffer);
+            result.textures.emplace_back(tim::get_tim_data_as_bitmap(tim_stream));
           }
-
-          result.shapes.emplace_back(std::move(shape));
         }
       }
 
