@@ -1,4 +1,5 @@
 #include <array>
+#include <map>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
@@ -165,6 +166,8 @@ namespace siege::resource::rsc
       endian::little_uint32_t size_entry_offset;
       std::memcpy(&size_entry_offset, tag.data(), sizeof(size_entry_offset));
 
+      constexpr static std::array<const char*, 16> grouped_extensions = { { "STB", "GRP", "BIN", "BND", "CWG", "BMP", "CW", "VRB", "FNT", "MAP", "TGA", "ENV", "TLS", "MSG", "BRF", "CWA" } };
+
       std::array<rsc_v3_group_entry, 16> groups;
       stream.read((char*)groups.data(), sizeof(rsc_v3_group_entry) * groups.size());
 
@@ -178,6 +181,13 @@ namespace siege::resource::rsc
       std::vector<rsc_v3_size_entry> size_entries;
       size_entries.resize(size_entry_count);
       stream.read((char*)size_entries.data(), sizeof(rsc_v3_size_entry) * size_entries.size());
+
+      std::map<std::uint32_t, rsc_v3_size_entry*> sorted_sizes;
+
+      for (auto& entry : size_entries)
+      {
+        sorted_sizes.emplace(entry.file_data_offset, &entry);
+      }
 
       for (auto& group : groups)
       {
@@ -197,7 +207,7 @@ namespace siege::resource::rsc
 
             auto temp = std::string_view(name.path.data());
 
-            constexpr static std::array<const char*, 4> extensions = { { "_TIM", "_OVL", "_CNF", "_INF" } };
+            constexpr static std::array<const char*, 8> extensions = { { "_TIM", "_OVL", "_CNF", "_INF", "_WAD", "_BRF", "_TXT", "_WLK" } };
 
             for (auto ext : extensions)
             {
@@ -214,28 +224,27 @@ namespace siege::resource::rsc
 
             if (temp == "CREDITS_PAL" || temp == "CREDITS_USA")
             {
-              entry.filename.replace_extension(".txt");
+              entry.filename.replace_extension(".TXT");
             }
 
-            entry.offset = size_entries.at(name.size_entry_index).file_data_offset + start_offset;
-
-            if (size_entries.size() > name.size_entry_index)
+            if (name.group_entry_index < grouped_extensions.size() && !entry.filename.has_extension())
             {
-              auto main_offset = size_entries.at(name.size_entry_index).file_data_offset;
-              auto next_iter = std::find_if(size_entries.begin() + name.size_entry_index, size_entries.end(), [&](auto& other) { return other.file_data_offset > main_offset; });
+              entry.filename.replace_extension(grouped_extensions[name.group_entry_index]);
+            }
 
-              if (next_iter != size_entries.end())
-              {
-                entry.size = next_iter->file_data_offset + start_offset - entry.offset;
-              }
-              else
-              {
-                next_iter = std::find_if(size_entries.begin(), size_entries.end(), [&](auto& other) { return other.file_data_offset > main_offset; });
+            std::uint32_t current_offset = size_entries.at(name.size_entry_index).file_data_offset;
+            entry.offset = current_offset + start_offset;
 
-                if (next_iter != size_entries.end())
-                {
-                  entry.size = next_iter->file_data_offset + start_offset - entry.offset;
-                }
+
+            auto next_iter = sorted_sizes.find(current_offset);
+
+            if (next_iter != sorted_sizes.end())
+            {
+              std::advance(next_iter, 1);
+
+              if (next_iter != sorted_sizes.end())
+              {
+                entry.size = next_iter->second->file_data_offset - current_offset + start_offset;
               }
             }
           }
