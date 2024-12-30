@@ -339,16 +339,6 @@ namespace siege::content::mdl
     std::vector<mdx_sub_object_grouping> sub_object_groupings;
   };
 
-  struct dkm_header
-  {
-    std::array<std::byte, 4> tag;
-    endian::little_uint32_t version;
-    std::array<endian::little_uint32_t, 11> size_data;
-    endian::little_uint32_t texture_filename_offset;
-    std::array<endian::little_uint32_t, 7> offset_data;
-    endian::little_uint32_t end_of_file_offset;
-  };
-
   bool is_mdx(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
@@ -435,5 +425,39 @@ namespace siege::content::mdl
 
     return shape;
   }
+
+
+  struct dkm_face
+  {
+    endian::little_uint32_t padding;
+    std::array<endian::little_uint16_t, 3> vertex_indices;
+    std::array<endian::little_uint16_t, 3> uv_indices;
+  };
+
+  struct dkm_header
+  {
+    std::array<std::byte, 4> tag;
+    endian::little_uint32_t version;
+    endian::little_uint32_t texture_width;
+    endian::little_uint32_t texture_height;
+    endian::little_uint32_t unknown;
+    endian::little_uint32_t frame_byte_count;
+    endian::little_uint32_t texture_count;
+    endian::little_uint32_t vertex_per_frame_count;
+    endian::little_uint32_t uv_count;
+    endian::little_uint32_t face_count;
+    endian::little_uint32_t unknown_count;
+    endian::little_uint32_t frame_count;
+    endian::little_uint32_t unknown_count2;
+    endian::little_uint32_t texture_offset;
+    endian::little_uint32_t uv_offset;
+    endian::little_uint32_t face_offset;
+    endian::little_uint32_t frame_offset;
+    endian::little_uint32_t unknown_offset;
+    endian::little_uint32_t eof_offset;
+    endian::little_uint32_t unknown_count3;
+    endian::little_uint32_t unknown_offset3;
+  };
+
 
 }// namespace siege::content::mdl
