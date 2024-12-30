@@ -168,6 +168,7 @@ namespace siege::resource::pak
     {
       auto entry_path = std::visit([](auto& value) { return value.path.data(); }, entry);
       auto parent_path = fs::path(entry_path).make_preferred().parent_path();
+      
       parent_path = parent_path == fs::path() ? query.archive_path : query.archive_path / parent_path;
 
       auto iter = folders.find(parent_path);
@@ -178,6 +179,17 @@ namespace siege::resource::pak
       }
 
       iter->second.emplace_back(&entry);
+
+      if (parent_path.parent_path() != query.archive_path)
+      {
+        auto iter = folders.find(parent_path.parent_path());
+
+        if (iter == folders.end())
+        {
+          iter = folders.emplace(parent_path.parent_path(), std::vector<file_entry*>{}).first;
+        }
+      }
+
     }
 
     std::vector<pak_resource_reader::content_info> results;
