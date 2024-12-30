@@ -17,6 +17,15 @@ namespace siege::content::bnd
   std::vector<std::any> load_bnd(std::istream& stream);
 }// namespace siege::content::bnd
 
+namespace siege::content::mdl
+{
+  bool is_md2(std::istream& stream);
+  std::any load_md2(std::istream& stream);
+
+  bool is_mdx(std::istream& stream);
+  std::any load_mdx(std::istream& stream);
+}// namespace siege::content::mdl
+
 namespace siege::views
 {
   bool dts_controller::is_shape(std::istream& stream)
@@ -24,7 +33,9 @@ namespace siege::views
     return siege::content::dts::darkstar::is_darkstar_dts(stream)
            || siege::content::dts::three_space::v1::is_3space_dts(stream)
            || siege::content::tmd::is_tmd(stream)
-           || siege::content::bnd::is_bnd(stream);
+           || siege::content::bnd::is_bnd(stream)
+           || siege::content::mdl::is_md2(stream)
+           || siege::content::mdl::is_mdx(stream);
   }
 
   std::size_t dts_controller::load_shape(std::istream& stream)
@@ -37,6 +48,16 @@ namespace siege::views
     if (siege::content::bnd::is_bnd(stream))
     {
       siege::content::bnd::load_bnd(stream);
+    }
+
+    if (siege::content::mdl::is_md2(stream))
+    {
+      siege::content::mdl::load_md2(stream);
+    }
+
+    if (siege::content::mdl::is_mdx(stream))
+    {
+      siege::content::mdl::load_mdx(stream);
     }
 
     auto shape = content::dts::make_shape(stream);
