@@ -19,6 +19,9 @@ namespace siege::content::bnd
 
 namespace siege::content::mdl
 {
+  bool is_mdl(std::istream& stream);
+  std::any load_mdl(std::istream& stream);
+
   bool is_md2(std::istream& stream);
   std::any load_md2(std::istream& stream);
 
@@ -34,6 +37,7 @@ namespace siege::views
            || siege::content::dts::three_space::v1::is_3space_dts(stream)
            || siege::content::tmd::is_tmd(stream)
            || siege::content::bnd::is_bnd(stream)
+           || siege::content::mdl::is_mdl(stream)
            || siege::content::mdl::is_md2(stream)
            || siege::content::mdl::is_mdx(stream);
   }
@@ -48,6 +52,11 @@ namespace siege::views
     if (siege::content::bnd::is_bnd(stream))
     {
       siege::content::bnd::load_bnd(stream);
+    }
+
+    if (siege::content::mdl::is_mdl(stream))
+    {
+      siege::content::mdl::load_mdl(stream);
     }
 
     if (siege::content::mdl::is_md2(stream))

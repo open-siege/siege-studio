@@ -25,7 +25,149 @@ namespace siege::content::mdl
     std::array<float, 3> scale;
     std::array<float, 3> translation;
     float other;
+    std::array<endian::little_uint32_t, 3> padding;
+    endian::little_uint32_t texture_count;
+    endian::little_uint32_t texture_width;
+    endian::little_uint32_t texture_height;
+    endian::little_uint32_t vertex_and_uv_count;
+    endian::little_uint32_t face_count;
+    endian::little_uint32_t frame_count;
+    endian::little_uint32_t padding2;
+    endian::little_uint32_t padding3;
+    float other2;
   };
+
+  struct mdl_uv_coordinate
+  {
+    endian::little_uint32_t on_seam;
+    endian::little_uint32_t u;
+    endian::little_uint32_t v;
+  };
+
+  struct mdl_face
+  {
+    endian::little_uint32_t is_front_face;
+    std::array<endian::little_uint32_t, 3> vertex_indices;
+  };
+
+  struct mdl_vertex
+  {
+    std::uint8_t x;
+    std::uint8_t y;
+    std::uint8_t z;
+    std::uint8_t normal;
+  };
+
+  struct mdl_frame
+  {
+    mdl_vertex bounding_min;
+    mdl_vertex bounding_max;
+    std::array<char, 16> name;
+    std::vector<mdl_vertex> vertices;
+  };
+
+  struct animated_texture
+  {
+    float frame_duration;
+    std::vector<std::vector<std::byte>> frame_data;
+  };
+
+  using texture_data = std::variant<std::vector<std::byte>, animated_texture>;
+
+  struct mdl_shape
+  {
+    endian::little_uint32_t texture_width;
+    endian::little_uint32_t texture_height;
+    std::vector<texture_data> textures;
+    std::vector<mdl_uv_coordinate> uv_coordinates;
+    std::vector<mdl_face> faces;
+    std::vector<mdl_frame> frames;
+  };
+
+
+  bool is_mdl(std::istream& stream)
+  {
+    platform::istream_pos_resetter resetter(stream);
+    std::array<std::byte, 4> tag;
+    stream.read((char*)&tag, sizeof(tag));
+    return tag == mdl_tag;
+  }
+
+  std::any load_mdl(std::istream& stream)
+  {
+    mdl_shape shape;
+    platform::istream_pos_resetter resetter(stream);
+    mdl_header header;
+    stream.read((char*)&header, sizeof(header));
+
+    if (header.tag != mdl_tag && header.version != 6)
+    {
+      return std::any{};
+    }
+
+    shape.textures.reserve(header.texture_count);
+    shape.frames.reserve(header.frame_count);
+    shape.uv_coordinates.resize(header.vertex_and_uv_count);
+    shape.faces.resize(header.face_count);
+
+    for (auto i = 0u; i < header.texture_count; ++i)
+    {
+      endian::little_uint32_t type{};
+      stream.read((char*)&type, sizeof(type));
+
+      if (type == 0)
+      {
+        std::vector<std::byte> image_data(header.texture_width * (std::uint32_t)header.texture_height, std::byte{});
+        stream.read((char*)image_data.data(), image_data.size());
+        shape.textures.emplace_back(std::move(image_data));
+      }
+      else
+      {
+        endian::little_uint32_t count{};
+        stream.read((char*)&count, sizeof(count));
+        float duration{};
+        stream.read((char*)&duration, sizeof(duration));
+
+        animated_texture temp;
+        temp.frame_duration = duration;
+        temp.frame_data.reserve(count);
+
+        for (auto i = 0; i < count; ++i)
+        {
+          auto& data = temp.frame_data.emplace_back();
+          data.resize(header.texture_width * (std::uint32_t)header.texture_height);
+          stream.read((char*)data.data(), data.size());
+        }
+
+        shape.textures.emplace_back(std::move(temp));
+      }
+    }
+
+    stream.read((char*)shape.uv_coordinates.data(), shape.uv_coordinates.size() * sizeof(mdl_uv_coordinate));
+    stream.read((char*)shape.faces.data(), shape.faces.size() * sizeof(mdl_face));
+
+    for (auto i = 0u; i < header.frame_count; ++i)
+    {
+      endian::little_uint32_t type{};
+      stream.read((char*)&type, sizeof(type));
+
+      if (type == 0)
+      {
+        auto& frame = shape.frames.emplace_back();
+
+        stream.read((char*)&frame, sizeof(frame) - sizeof(frame.vertices));
+
+        frame.vertices.resize(header.vertex_and_uv_count);
+        stream.read((char*)frame.vertices.data(), frame.vertices.size() * sizeof(mdl_vertex));
+      }
+      else
+      {
+        DebugBreak();
+      }
+    }
+
+    return shape;
+  }
 
   struct md2_header
   {
@@ -48,31 +190,6 @@ namespace siege::content::mdl
     endian::little_uint32_t eof_offset;
   };
 
-  struct mdx_header
-  {
-    std::array<std::byte, 4> tag;
-    endian::little_uint32_t version;
-    endian::little_uint32_t texture_width;
-    endian::little_uint32_t texture_height;
-    endian::little_uint32_t frame_byte_count;
-    endian::little_uint32_t texture_count;
-    endian::little_uint32_t vertex_per_frame_count;
-    endian::little_uint32_t face_count;
-    endian::little_uint32_t unknown_count;
-    endian::little_uint32_t frame_count;
-    endian::little_uint32_t padding;
-    endian::little_uint32_t padding2;
-    endian::little_uint32_t sub_object_count;
-    endian::little_uint32_t texture_offset;
-    endian::little_uint32_t face_offset;
-    endian::little_uint32_t frame_offset;
-    endian::little_uint32_t unknown_offset;
-    endian::little_uint32_t vertex_group_offset;
-    endian::little_uint32_t padding3;
-    endian::little_uint32_t padding4;
-    endian::little_uint32_t frame_bounding_box_offset;
-  };
-
   struct md2_uv_coordinate
   {
     endian::little_uint16_t u;
@@ -85,25 +202,12 @@ namespace siege::content::mdl
     std::array<endian::little_uint16_t, 3> uv_indices;
   };
 
-  struct md2_vertex
-  {
-    std::uint8_t x;
-    std::uint8_t y;
-    std::uint8_t z;
-    std::uint8_t normal;
-  };
-
   struct md2_frame
   {
     std::array<float, 3> scale;
     std::array<float, 3> translation;
     std::array<char, 16> name;
-    std::vector<md2_vertex> vertices;
-  };
-
-  struct mdx_frame : md2_frame
-  {
-    std::array<float, 6> bounding_box;
+    std::vector<mdl_vertex> vertices;
   };
 
   struct md2_shape
@@ -116,45 +220,6 @@ namespace siege::content::mdl
     std::vector<md2_frame> frames;
   };
 
-  struct mdx_sub_object_grouping
-  {
-    std::vector<endian::little_uint32_t> vertex_groupings;
-  };
-
-  struct mdx_shape
-  {
-    endian::little_uint32_t texture_width;
-    endian::little_uint32_t texture_height;
-    std::vector<std::string> texture_filenames;
-    std::vector<md2_face> faces;
-    std::vector<mdx_frame> frames;
-    std::vector<mdx_sub_object_grouping> sub_object_groupings;
-  };
-
-  struct dkm_header
-  {
-    std::array<std::byte, 4> tag;
-    endian::little_uint32_t version;
-    std::array<endian::little_uint32_t, 11> size_data;
-    endian::little_uint32_t texture_filename_offset;
-    std::array<endian::little_uint32_t, 7> offset_data;
-    endian::little_uint32_t end_of_file_offset;
-  };
-
-  bool is_mdl(std::istream& stream)
-  {
-    platform::istream_pos_resetter resetter(stream);
-    std::array<std::byte, 4> tag;
-    stream.read((char*)&tag, sizeof(tag));
-    return tag == mdl_tag;
-  }
-
-  void load_mdl(std::istream& stream)
-  {
-    platform::istream_pos_resetter resetter(stream);
-    std::array<std::byte, 4> tag;
-    stream.read((char*)&tag, sizeof(tag));
-  }
 
   bool is_md2(std::istream& stream)
   {
@@ -184,9 +249,9 @@ namespace siege::content::mdl
     shape.texture_height = header.texture_height;
 
     auto frame_size = header.frame_byte_count;
-    auto extra_data_size = frame_size + sizeof(std::vector<md2_vertex>) - sizeof(md2_frame);
+    auto extra_data_size = frame_size + sizeof(std::vector<mdl_vertex>) - sizeof(md2_frame);
 
-    if (header.vertex_per_frame_count * sizeof(md2_vertex) != extra_data_size)
+    if (header.vertex_per_frame_count * sizeof(mdl_vertex) != extra_data_size)
     {
       return std::any{};
     }
@@ -216,7 +281,7 @@ namespace siege::content::mdl
     for (auto i = 0u; i < header.frame_count; ++i)
     {
       auto& frame = shape.frames.emplace_back();
-      stream.read((char*)&frame, sizeof(frame) - sizeof(std::vector<md2_vertex>));
+      stream.read((char*)&frame, sizeof(frame) - sizeof(std::vector<mdl_vertex>));
 
       frame.vertices.reserve(header.vertex_per_frame_count);
       for (auto v = 0u; v < header.vertex_per_frame_count; ++v)
@@ -228,6 +293,61 @@ namespace siege::content::mdl
 
     return shape;
   }
+
+  struct mdx_header
+  {
+    std::array<std::byte, 4> tag;
+    endian::little_uint32_t version;
+    endian::little_uint32_t texture_width;
+    endian::little_uint32_t texture_height;
+    endian::little_uint32_t frame_byte_count;
+    endian::little_uint32_t texture_count;
+    endian::little_uint32_t vertex_per_frame_count;
+    endian::little_uint32_t face_count;
+    endian::little_uint32_t unknown_count;
+    endian::little_uint32_t frame_count;
+    endian::little_uint32_t padding;
+    endian::little_uint32_t padding2;
+    endian::little_uint32_t sub_object_count;
+    endian::little_uint32_t texture_offset;
+    endian::little_uint32_t face_offset;
+    endian::little_uint32_t frame_offset;
+    endian::little_uint32_t unknown_offset;
+    endian::little_uint32_t vertex_group_offset;
+    endian::little_uint32_t padding3;
+    endian::little_uint32_t padding4;
+    endian::little_uint32_t frame_bounding_box_offset;
+  };
+
+  struct mdx_frame : md2_frame
+  {
+    std::array<float, 6> bounding_box;
+  };
+
+  struct mdx_sub_object_grouping
+  {
+    std::vector<endian::little_uint32_t> vertex_groupings;
+  };
+
+  struct mdx_shape
+  {
+    endian::little_uint32_t texture_width;
+    endian::little_uint32_t texture_height;
+    std::vector<std::string> texture_filenames;
+    std::vector<md2_face> faces;
+    std::vector<mdx_frame> frames;
+    std::vector<mdx_sub_object_grouping> sub_object_groupings;
+  };
+
+  struct dkm_header
+  {
+    std::array<std::byte, 4> tag;
+    endian::little_uint32_t version;
+    std::array<endian::little_uint32_t, 11> size_data;
+    endian::little_uint32_t texture_filename_offset;
+    std::array<endian::little_uint32_t, 7> offset_data;
+    endian::little_uint32_t end_of_file_offset;
+  };
 
   bool is_mdx(std::istream& stream)
   {
@@ -257,9 +377,9 @@ namespace siege::content::mdl
     shape.texture_height = header.texture_height;
 
     auto frame_size = header.frame_byte_count;
-    auto extra_data_size = frame_size + sizeof(std::vector<md2_vertex>) - sizeof(md2_frame);
+    auto extra_data_size = frame_size + sizeof(std::vector<mdl_vertex>) - sizeof(md2_frame);
 
-    if (header.vertex_per_frame_count * sizeof(md2_vertex) != extra_data_size)
+    if (header.vertex_per_frame_count * sizeof(mdl_vertex) != extra_data_size)
     {
       return std::any{};
     }
@@ -317,4 +437,3 @@ namespace siege::content::mdl
   }
 
 }// namespace siege::content::mdl
-// TODO complete MDL + MD2 parsers
