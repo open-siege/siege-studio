@@ -1,5 +1,6 @@
 // MDL - Quake 1 model data
-// MD2 - Quake 2 model data
+// MD2 version 8 - Quake 2 model data
+// MD2 version 15 - Anachronox model data
 // MDX - Kingpin model data
 // DKM - Daikatana model data
 
@@ -16,7 +17,7 @@ namespace siege::content::mdl
   constexpr auto mdl_tag = platform::to_tag<4>({ 'I', 'D', 'P', 'O' });
   constexpr auto md2_tag = platform::to_tag<4>({ 'I', 'D', 'P', '2' });
   constexpr auto mdx_tag = platform::to_tag<4>({ 'I', 'D', 'P', 'X' });
-  constexpr auto dkm_tag = platform::to_tag<4>({ 'I', 'D', 'P', 'X' });
+  constexpr auto dkm_tag = platform::to_tag<4>({ 'D', 'K', 'M', 'D' });
 
   struct mdl_header
   {

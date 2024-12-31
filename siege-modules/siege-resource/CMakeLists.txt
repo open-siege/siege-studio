@@ -5,6 +5,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 find_package(Catch2 REQUIRED)
 find_package(libzip REQUIRED)
+find_package(zlib REQUIRED)
 
 file(GLOB_RECURSE TEST_SRC_FILES src/*.test.cpp)
 file(GLOB LIB_SRC_FILES src/*.cpp src/**/*.cpp)
@@ -21,7 +22,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23 POSITION_INDEPE
 target_include_directories(${PROJECT_NAME}-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(${PROJECT_NAME}-tests PRIVATE Catch2::Catch2WithMain 
                         siege-platform
-                        libzip::zip)
+                        libzip::zip
+                        ZLIB::ZLIB)
 include(CTest)
 include(Catch)
 catch_discover_tests(${PROJECT_NAME}-tests)

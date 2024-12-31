@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <iostream>
 #include <map>
+#include <zlib.h>
 
 #include <siege/resource/pak_resource.hpp>
 #include <siege/platform/stream.hpp>
@@ -262,7 +263,7 @@ namespace siege::resource::pak
   {
     set_stream_position(stream, info);
 
-    if (info.compressed_size)
+    if (info.compressed_size && info.compression_type != platform::compression_type::none)
     {
       if (info.compression_type == platform::compression_type::code_rle)
       {
@@ -341,9 +342,28 @@ namespace siege::resource::pak
       }
       else
       {
-        std::copy_n(std::istreambuf_iterator(stream),
-          *info.compressed_size,
-          std::ostreambuf_iterator(output));
+        std::vector<char> compressed_buffer(*info.compressed_size);
+        stream.read(compressed_buffer.data(), compressed_buffer.size());
+
+        std::vector<char> output_buffer(info.size);
+
+        z_stream temp{
+          .next_in = (Bytef*)compressed_buffer.data(),
+          .avail_in = compressed_buffer.size(),
+          .next_out = (Bytef*)output_buffer.data(),
+          .avail_out = output_buffer.size()
+        };
+
+        if (inflateInit_(&temp, ZLIB_VERSION, (int)sizeof(z_stream)) == Z_OK)
+        {
+          auto result = inflate(&temp, Z_FINISH);
+
+          if (result == Z_OK || result == Z_STREAM_END)
+          {
+            output.write(output_buffer.data(), output_buffer.size());
+          }
+          inflateEnd(&temp);
+        }
       }
     }
     else
