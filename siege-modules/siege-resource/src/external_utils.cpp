@@ -474,7 +474,7 @@ namespace siege::resource
           file.filename = name.filename();
           file.archive_path = query.archive_path;
           file.folder_path = (query.archive_path / name.make_preferred()).parent_path();
-          file.compression_type = platform::compression_type::lzh;
+          file.compression_type = platform::compression_type::lz77_huffman;
 
           try
           {
@@ -551,7 +551,7 @@ namespace siege::resource
         add_folders(file, query.archive_path, folders, [&](platform::folder_info&& folder) {
           results.emplace_back(folder);
         });
-        file.compression_type = platform::compression_type::lzh;
+        file.compression_type = platform::compression_type::lz77_huffman;
 
         try
         {
@@ -643,7 +643,7 @@ namespace siege::resource
           file.filename = name.filename();
           file.archive_path = query.archive_path;
           file.folder_path = (query.archive_path / name.make_preferred()).parent_path();
-          file.compression_type = platform::compression_type::lzh;
+          file.compression_type = platform::compression_type::lz77_huffman;
 
           add_folders(file, query.archive_path, folders, [&](platform::folder_info&& folder) {
             results.emplace_back(folder);
@@ -783,7 +783,7 @@ namespace siege::resource
           file.filename = name;
           file.archive_path = query.archive_path;
           file.folder_path = current_path;
-          file.compression_type = platform::compression_type::lzh;
+          file.compression_type = platform::compression_type::cdxa;
 
           results.emplace_back(file);
         }

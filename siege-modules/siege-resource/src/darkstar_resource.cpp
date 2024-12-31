@@ -416,7 +416,24 @@ namespace siege::resource::vol::darkstar
       info.filename = value.filename;
       info.offset = value.offset;
       info.size = value.size;
-      info.compression_type = siege::platform::compression_type(value.compression_type);
+
+      if (value.compression_type == darkstar::compression_type::none)
+      {
+        info.compression_type = siege::platform::compression_type::none;
+      }
+      else if (value.compression_type == darkstar::compression_type::rle)
+      {
+        info.compression_type = siege::platform::compression_type::code_rle;
+      }
+      else if (value.compression_type == darkstar::compression_type::lz)
+      {
+        info.compression_type = siege::platform::compression_type::lz77;
+      }
+      else if (value.compression_type == darkstar::compression_type::lzh)
+      {
+        info.compression_type = siege::platform::compression_type::lzss_huffman;
+      }
+
       info.folder_path = query.folder_path;
       return info;
     });

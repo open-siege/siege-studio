@@ -289,7 +289,7 @@ namespace siege::resource::vol::three_space
         throw std::invalid_argument("VOL file has corrupted data.");
       }
 
-      file.compression_type = entry == std::byte{ 0x02 } ? platform::compression_type::none : platform::compression_type::lz;
+      file.compression_type = entry == std::byte{ 0x02 } ? platform::compression_type::none : platform::compression_type::lzss_huffman;
 
       std::array<endian::little_uint32_t, 2> file_info{};
       platform::read(raw_data, reinterpret_cast<char*>(&file_info), sizeof(file_info));

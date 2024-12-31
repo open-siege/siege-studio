@@ -455,7 +455,7 @@ namespace siege::resource::iso
 
         platform::file_info music_track{};
         music_track.offset = std::size_t(track.offset);
-        music_track.compression_type = track.sub_channel == mds_sub_channel_mode::interleaved ? platform::compression_type::rle : platform::compression_type::none;
+        music_track.compression_type = track.sub_channel == mds_sub_channel_mode::interleaved ? platform::compression_type::cdxa : platform::compression_type::none;
         music_track.archive_path = query.archive_path;
         music_track.folder_path = query.archive_path / query.archive_path.filename().replace_extension(".mdf");
         music_track.filename = "track-" + std::to_string(tracks.size() + 1) + ".cdda";

@@ -207,7 +207,7 @@ namespace siege::resource::cln
             temp.compressed_size = entry.flags;
             temp.filename = full_path.filename();
             temp.folder_path = full_path.parent_path();
-            temp.compression_type = platform::compression_type::rle;
+            temp.compression_type = platform::compression_type::size_rle;
 
             results.emplace_back(temp);
           }

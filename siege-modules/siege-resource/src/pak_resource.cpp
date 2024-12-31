@@ -168,7 +168,7 @@ namespace siege::resource::pak
     {
       auto entry_path = std::visit([](auto& value) { return value.path.data(); }, entry);
       auto parent_path = fs::path(entry_path).make_preferred().parent_path();
-      
+
       parent_path = parent_path == fs::path() ? query.archive_path : query.archive_path / parent_path;
 
       auto iter = folders.find(parent_path);
@@ -189,7 +189,6 @@ namespace siege::resource::pak
           iter = folders.emplace(parent_path.parent_path(), std::vector<file_entry*>{}).first;
         }
       }
-
     }
 
     std::vector<pak_resource_reader::content_info> results;
@@ -223,11 +222,11 @@ namespace siege::resource::pak
             }
             else
             {
-              auto compression_type = entry.uncompressed_size == entry.compressed_size ? siege::platform::compression_type::none : siege::platform::compression_type::rle;
+              auto compression_type = entry.uncompressed_size == entry.compressed_size ? siege::platform::compression_type::none : siege::platform::compression_type::code_rle;
 
               if (tag == anox_tag)
               {
-                compression_type = siege::platform::compression_type::lzss;
+                compression_type = siege::platform::compression_type::lz77_huffman;
               }
 
               results.emplace_back(pak_resource_reader::file_info{
@@ -265,13 +264,90 @@ namespace siege::resource::pak
 
     if (info.compressed_size)
     {
-      std::copy_n(std::istreambuf_iterator(stream),
-        *info.compressed_size,
-        std::ostreambuf_iterator(output));
+      if (info.compression_type == platform::compression_type::code_rle)
+      {
+        std::vector<std::uint8_t> compressed_bytes(*info.compressed_size);
+
+        stream.read((char*)compressed_bytes.data(), compressed_bytes.size());
+
+        std::span<std::uint8_t> bytes(compressed_bytes);
+
+        std::vector<char> output_buffer;
+        output_buffer.reserve(info.size);
+
+        // Thanks to https://gist.github.com/DanielGibson/8bde6241c93e5efe8b75e5e00d0b9858 for helping understand
+        // the offset command as this would have taken much longer to figure out.
+        while (!bytes.empty())
+        {
+          auto op_code = bytes.front();
+
+          if (op_code == 255)
+          {
+          end_of_stream:
+            break;
+          }
+
+          if (op_code >= 0 && op_code <= 63)
+          {
+            if (op_code + 1 > bytes.size())
+            {
+              break;
+            }
+          copy_multiple:
+            auto data = bytes.subspan(1, op_code + 1);
+            output_buffer.insert(output_buffer.end(), data.begin(), data.end());
+            bytes = bytes.subspan(op_code + 2);
+          }
+
+          else if (op_code >= 64 && op_code <= 127)
+          {
+          repeat_zero:
+            constexpr static auto distance = (127 / 2) - 1;
+            output_buffer.insert(output_buffer.end(), op_code - distance, '\0');
+            bytes = bytes.subspan(1);
+          }
+
+          else if (op_code >= 128 && op_code <= 191)
+          {
+          repeat_value:
+            constexpr static auto distance = 127 - 1;
+            output_buffer.insert(output_buffer.end(), op_code - distance, bytes[1]);
+            bytes = bytes.subspan(2);
+          }
+          else if (op_code >= 192 && op_code <= 254)
+          {
+          copy_existing:
+            constexpr static auto distance = (127 + 1) / 2 * 3;
+
+            auto size = op_code - distance + 2;
+            auto offset = bytes[1] + 2;
+
+            if (size > output_buffer.size() || size > offset)
+            {
+              break;
+            }
+
+            if (offset > output_buffer.size())
+            {
+              break;
+            }
+
+            auto data = std::span(output_buffer).subspan(output_buffer.size() - offset, size);
+            output_buffer.insert(output_buffer.end(), data.begin(), data.end());
+            bytes = bytes.subspan(2);
+          }
+        }
+        output.write(output_buffer.data(), output_buffer.size());
+      }
+      else
+      {
+        std::copy_n(std::istreambuf_iterator(stream),
+          *info.compressed_size,
+          std::ostreambuf_iterator(output));
+      }
     }
     else
     {
-
       std::copy_n(std::istreambuf_iterator(stream),
         info.size,
         std::ostreambuf_iterator(output));

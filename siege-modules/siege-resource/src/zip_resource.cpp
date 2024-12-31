@@ -198,7 +198,7 @@ namespace siege::resource::zip
       temp.filename = name.filename();
       temp.folder_path = query.folder_path;
       temp.archive_path = query.archive_path;
-      temp.compression_type = platform::compression_type::lz;
+      temp.compression_type = platform::compression_type::lz77_huffman;
 
       results.emplace_back(std::move(temp));
     }

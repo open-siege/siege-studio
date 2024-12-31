@@ -19,14 +19,15 @@ namespace siege::platform
   enum class compression_type
   {
     none,
-    rle,
-    lz,
-    lzh,
-    lza,
-    lzw,
-    lzss,
+    size_rle,
+    code_rle,
     lz77,
-    lz79,
+    lz78,
+    lzss,
+    lzw,
+    lz77_huffman,
+    lz78_huffman,
+    lzss_huffman,
     cdxa
   };
 
