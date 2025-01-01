@@ -1,6 +1,8 @@
 #include <array>
 #include <vector>
 #include <sstream>
+#include <spanstream>
+#include <map>
 #include <siege/platform/resource.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
@@ -93,8 +95,21 @@ namespace siege::resource::prj
     return is_supported(stream);
   }
 
-  std::vector<prj_resource_reader::content_info> prj_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const
+  struct prj_cache
   {
+    std::map<std::filesystem::path, prj_resource_reader::file_info> files;
+  };
+
+  std::vector<prj_resource_reader::content_info> prj_resource_reader::get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query) const
+  {
+    prj_cache storage;
+    prj_cache& file_cache = storage;
+
+    if (cache.has_value() && cache.type() == typeid(prj_cache))
+    {
+      file_cache = *std::any_cast<prj_cache>(&cache);
+    }
+
     platform::istream_pos_resetter resetter(stream);
 
     std::array<std::byte, 4> first_tag;
@@ -251,7 +266,7 @@ namespace siege::resource::prj
           file_info.filename = name_entry.filename.data();
           file_info.archive_path = query.archive_path;
           file_info.folder_path = query.folder_path;
-          file_info.metadata = name_entry.entry_index;
+          file_info.metadata = (std::uint16_t)name_entry.entry_index;
 
           stream.seekg(file_info.offset, std::ios::beg);
           std::array<std::byte, 4> file_tag_value;
@@ -277,6 +292,13 @@ namespace siege::resource::prj
           file_info.size = index_size;
           file_info.size -= (sizeof(final_entry) + sizeof(index_size));
           file_info.filename = final_entry.filename.data();
+
+          auto iter = file_cache.files.find(file_info.folder_path / file_info.filename);
+
+          if (iter == file_cache.files.end())
+          {
+            file_cache.files.emplace(file_info.folder_path / file_info.filename, file_info);
+          }
         }
         catch (...)
         {
@@ -285,10 +307,16 @@ namespace siege::resource::prj
       }
 
       results.reserve(results.capacity() + file_results.size());
+
       for (auto& file_result : file_results)
       {
         results.emplace_back(std::move(file_result));
       }
+    }
+
+    if (&file_cache == &storage)
+    {
+      cache = std::move(file_cache);
     }
 
     return results;
@@ -302,12 +330,204 @@ namespace siege::resource::prj
     }
   }
 
-  void prj_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const
+  struct iff_tag
+  {
+    std::array<std::byte, 4> tag;
+    endian::little_uint32_t size;
+  };
+
+  struct iff_data
+  {
+    iff_tag tag;
+    std::vector<char> data;
+  };
+
+  void prj_resource_reader::extract_file_contents(std::any& cache, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const
   {
     set_stream_position(stream, info);
 
-    std::copy_n(std::istreambuf_iterator(stream),
-      info.size,
-      std::ostreambuf_iterator(output));
+    if (info.filename.extension() == ".BWD" || info.filename.extension() == ".bwd" && cache.has_value() && cache.type() == typeid(prj_cache))
+    {
+      constexpr auto bwd_entry_tag = platform::to_tag<4>({ 'B', 'W', 'D', '\0' });
+      constexpr auto obj_entry_tag = platform::to_tag<4>({ 'O', 'B', 'J', '\0' });
+      constexpr auto anim_entry_tag = platform::to_tag<4>({ 'A', 'N', 'I', 'M' });
+      constexpr auto vptf_entry_tag = platform::to_tag<4>({ 'V', 'P', 'T', 'F' });
+      constexpr auto pitf_entry_tag = platform::to_tag<4>({ 'P', 'I', 'T', 'F' });
+      constexpr auto cptf_entry_tag = platform::to_tag<4>({ 'C', 'P', 'T', 'F' });
+      constexpr auto mgdf_entry_tag = platform::to_tag<4>({ 'M', 'G', 'D', 'F' });
+      constexpr auto asnd_entry_tag = platform::to_tag<4>({ 'A', 'S', 'N', 'D' });
+
+      std::map<std::uint16_t, prj_resource_reader::file_info*> wtb_files_by_index;// obj
+      std::map<std::uint16_t, prj_resource_reader::file_info*> tdi_files_by_index;// anim
+      std::map<std::uint16_t, prj_resource_reader::file_info*> cpi_files_by_index;// cptf
+      std::map<std::uint16_t, prj_resource_reader::file_info*> hdi_files_by_index;// hudf
+      std::map<std::uint16_t, prj_resource_reader::file_info*> bwd_files_by_index;// pitf
+      std::map<std::uint16_t, prj_resource_reader::file_info*> sfl_files_by_index;// asnd
+
+      auto& file_cache = *std::any_cast<prj_cache>(&cache);
+
+      for (auto& file : file_cache.files)
+      {
+        if (file.second.metadata.has_value() && file.second.metadata.type() == typeid(std::uint16_t))
+        {
+          if (file.second.filename.extension() == ".WTB" || file.second.filename.extension() == ".wtb")
+          {
+            auto index = std::any_cast<std::uint16_t>(file.second.metadata);
+            wtb_files_by_index[index] = &file.second;
+          }
+          else if (file.second.filename.extension() == ".3DI" || file.second.filename.extension() == ".3di")
+          {
+            auto index = std::any_cast<std::uint16_t>(file.second.metadata);
+            tdi_files_by_index[index] = &file.second;
+          }
+          else if (file.second.filename.extension() == ".CPI" || file.second.filename.extension() == ".cpi")
+          {
+            auto index = std::any_cast<std::uint16_t>(file.second.metadata);
+            cpi_files_by_index[index] = &file.second;
+          }
+          else if (file.second.filename.extension() == ".HDI" || file.second.filename.extension() == ".hdi")
+          {
+            auto index = std::any_cast<std::uint16_t>(file.second.metadata);
+            hdi_files_by_index[index] = &file.second;
+          }
+          else if (file.second.filename.extension() == ".BWD" || file.second.filename.extension() == ".bwd")
+          {
+            auto index = std::any_cast<std::uint16_t>(file.second.metadata);
+            bwd_files_by_index[index] = &file.second;
+          }
+          else if (file.second.filename.extension() == ".SFL" || file.second.filename.extension() == ".sfl")
+          {
+            auto index = std::any_cast<std::uint16_t>(file.second.metadata);
+            sfl_files_by_index[index] = &file.second;
+          }
+        }
+      }
+
+      iff_data bwd_root;
+
+      stream.read((char*)&bwd_root.tag, sizeof(bwd_root.tag));
+
+      if (bwd_root.tag.tag != bwd_entry_tag)
+      {
+        stream.seekg(-sizeof(bwd_root.tag), std::ios::cur);
+        std::copy_n(std::istreambuf_iterator(stream),
+          info.size,
+          std::ostreambuf_iterator(output));
+        return;
+      }
+
+      bwd_root.data.resize(bwd_root.tag.size - sizeof(bwd_root.tag));
+      stream.read(bwd_root.data.data(), bwd_root.data.size());
+
+      std::ispanstream bwd_stream(bwd_root.data);
+      bwd_stream.seekg(sizeof(std::uint32_t), std::ios::beg);
+
+      std::vector<iff_data> results;
+      results.reserve(16);
+
+      while (!(bwd_stream.eof() || bwd_stream.fail()))
+      {
+        iff_data& temp = results.emplace_back();
+
+        bwd_stream.read((char*)&temp.tag, sizeof(temp.tag));
+
+        if (bwd_stream.eof() || bwd_stream.fail())
+        {
+          break;
+        }
+
+        temp.data.resize(temp.tag.size - sizeof(temp.tag));
+        bwd_stream.read(temp.data.data(), temp.data.size());
+
+        if (temp.tag.tag == obj_entry_tag)
+        {
+          endian::little_uint16_t file_index;
+          auto real_size = temp.tag.size - sizeof(temp.tag);
+          std::memcpy(&file_index, temp.data.data() + real_size - 4, sizeof(file_index));
+
+          auto file_iter = wtb_files_by_index.find(file_index);
+
+          if (file_iter != wtb_files_by_index.end())
+          {
+            OutputDebugStringW(L"Found file for BWD OBJ: ");
+            OutputDebugStringW(file_iter->second->filename.c_str());
+            OutputDebugStringW(L"\n");
+          }
+        }
+        else if (temp.tag.tag == anim_entry_tag)
+        {
+          endian::little_uint16_t file_index;
+          std::memcpy(&file_index, temp.data.data(), sizeof(file_index));
+
+          auto file_iter = tdi_files_by_index.find(file_index);
+
+          if (file_iter != tdi_files_by_index.end())
+          {
+            OutputDebugStringW(L"Found file for BWD ANIM: ");
+            OutputDebugStringW(file_iter->second->filename.c_str());
+            OutputDebugStringW(L"\n");
+          }
+        }
+        else if (temp.tag.tag == vptf_entry_tag)
+        {
+          endian::little_uint16_t file_index;
+          std::memcpy(&file_index, temp.data.data(), sizeof(file_index));
+        }
+        else if (temp.tag.tag == cptf_entry_tag)
+        {
+          endian::little_uint16_t file_index;
+          std::memcpy(&file_index, temp.data.data(), sizeof(file_index));
+
+          auto file_iter = cpi_files_by_index.find(file_index);
+
+          if (file_iter != cpi_files_by_index.end())
+          {
+            OutputDebugStringW(L"Found file for BWD CPTF: ");
+            OutputDebugStringW(file_iter->second->filename.c_str());
+            OutputDebugStringW(L"\n");
+          }
+        }
+        else if (temp.tag.tag == pitf_entry_tag)
+        {
+          endian::little_uint16_t file_index;
+          std::memcpy(&file_index, temp.data.data(), sizeof(file_index));
+
+          auto file_iter = bwd_files_by_index.find(file_index);
+
+          if (file_iter != bwd_files_by_index.end())
+          {
+            OutputDebugStringW(L"Found file for BWD PITF: ");
+            OutputDebugStringW(file_iter->second->filename.c_str());
+            OutputDebugStringW(L"\n");
+          }
+        }
+        else if (temp.tag.tag == mgdf_entry_tag)
+        {
+          endian::little_uint16_t file_index;
+          std::memcpy(&file_index, temp.data.data(), sizeof(file_index));
+        }
+        else if (temp.tag.tag == asnd_entry_tag)
+        {
+          endian::little_uint16_t file_index;
+          std::memcpy(&file_index, temp.data.data(), sizeof(file_index));
+
+          auto file_iter = sfl_files_by_index.find(file_index);
+
+          if (file_iter != sfl_files_by_index.end())
+          {
+            OutputDebugStringW(L"Found file for BWD ASND: ");
+            OutputDebugStringW(file_iter->second->filename.c_str());
+            OutputDebugStringW(L"\n");
+          }
+        }
+
+      }
+    }
+    else
+    {
+      std::copy_n(std::istreambuf_iterator(stream),
+        info.size,
+        std::ostreambuf_iterator(output));
+    }
   }
 }// namespace siege::resource::prj
