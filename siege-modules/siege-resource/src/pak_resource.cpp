@@ -10,7 +10,7 @@
 #include <sstream>
 #include <algorithm>
 #include <iostream>
-#include <map>
+#include <unordered_map>
 #include <zlib.h>
 
 #include <siege/resource/pak_resource.hpp>
@@ -77,94 +77,105 @@ namespace siege::resource::pak
     return is_supported(stream);
   }
 
-  std::vector<pak_resource_reader::content_info> pak_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const
+  std::vector<pak_resource_reader::content_info> pak_resource_reader::get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query) const
   {
-    platform::istream_pos_resetter resetter(stream);
-    endian::little_uint32_t offset;
-    endian::little_uint32_t file_count;
-    endian::little_uint32_t file_buffer_size;
-    bool is_vampire_pak = false;
-    std::array<std::byte, 4> tag{};
+    std::vector<file_entry> storage;
+    std::vector<file_entry>& entries = storage;
+    std::unordered_map<fs::path, std::vector<file_entry*>> folders;
 
-    auto current_offset = stream.tellg();
-
-    stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
-
-    if (!(tag == quake_tag || tag == anox_tag))
+    if (cache.has_value() && cache.type() == typeid(storage))
     {
-      stream.seekg(30, std::ios::cur);
-      stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
-      is_vampire_pak = tag == vampire_tag;
+      entries = *std::any_cast<decltype(storage)>(&cache);
+      goto process_file_entries;
+    }
+    else
+    {
+      platform::istream_pos_resetter resetter(stream);
+      endian::little_uint32_t offset;
+      endian::little_uint32_t file_count;
+      endian::little_uint32_t file_buffer_size;
+      bool is_vampire_pak = false;
+      std::array<std::byte, 4> tag{};
 
-      if (!is_vampire_pak)
+      auto current_offset = stream.tellg();
+
+      stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
+
+      if (!(tag == quake_tag || tag == anox_tag))
+      {
+        stream.seekg(30, std::ios::cur);
+        stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
+        is_vampire_pak = tag == vampire_tag;
+
+        if (!is_vampire_pak)
+        {
+          return std::vector<pak_resource_reader::content_info>{};
+        }
+        stream.seekg(2, std::ios::cur);
+      }
+
+      stream.read(reinterpret_cast<char*>(&offset), sizeof(offset));
+      stream.read(reinterpret_cast<char*>(&file_buffer_size), sizeof(file_buffer_size));
+
+      auto entry_type = typeid(pak_file_entry).hash_code();
+
+      if (tag == anox_tag)
+      {
+        entry_type = typeid(dat_file_entry).hash_code();
+        file_count = file_buffer_size / sizeof(dat_file_entry);
+      }
+      else if ((file_buffer_size % sizeof(pak_file_entry)) == 0)
+      {
+        file_count = file_buffer_size / sizeof(pak_file_entry);
+      }
+      else if ((file_buffer_size % sizeof(daikatana_pak_file_entry)) == 0)
+      {
+        entry_type = typeid(daikatana_pak_file_entry).hash_code();
+        file_count = file_buffer_size / sizeof(daikatana_pak_file_entry);
+      }
+
+      if (file_count == 0)
       {
         return std::vector<pak_resource_reader::content_info>{};
       }
-      stream.seekg(2, std::ios::cur);
-    }
 
-    std::vector<file_entry> entries;
+      entries.reserve(file_count);
 
-    stream.read(reinterpret_cast<char*>(&offset), sizeof(offset));
-    stream.read(reinterpret_cast<char*>(&file_buffer_size), sizeof(file_buffer_size));
-
-    auto entry_type = typeid(pak_file_entry).hash_code();
-
-    if (tag == anox_tag)
-    {
-      entry_type = typeid(dat_file_entry).hash_code();
-      file_count = file_buffer_size / sizeof(dat_file_entry);
-    }
-    else if ((file_buffer_size % sizeof(pak_file_entry)) == 0)
-    {
-      file_count = file_buffer_size / sizeof(pak_file_entry);
-    }
-    else if ((file_buffer_size % sizeof(daikatana_pak_file_entry)) == 0)
-    {
-      entry_type = typeid(daikatana_pak_file_entry).hash_code();
-      file_count = file_buffer_size / sizeof(daikatana_pak_file_entry);
-    }
-
-    if (file_count == 0)
-    {
-      return std::vector<pak_resource_reader::content_info>{};
-    }
-
-    entries.reserve(file_count);
-
-    stream.seekg(current_offset + offset, std::ios::beg);
+      stream.seekg(current_offset + offset, std::ios::beg);
 
 
-    if (entry_type == typeid(pak_file_entry).hash_code())
-    {
-      for (auto i = 0; i < file_count; ++i)
+      if (entry_type == typeid(pak_file_entry).hash_code())
       {
-        pak_file_entry temp;
-        stream.read((char*)&temp, sizeof(temp));
-        entries.emplace_back(std::move(temp));
+        for (auto i = 0; i < file_count; ++i)
+        {
+          pak_file_entry temp;
+          stream.read((char*)&temp, sizeof(temp));
+          entries.emplace_back(std::move(temp));
+        }
       }
-    }
-    else if (entry_type == typeid(daikatana_pak_file_entry).hash_code())
-    {
-      for (auto i = 0; i < file_count; ++i)
+      else if (entry_type == typeid(daikatana_pak_file_entry).hash_code())
       {
-        daikatana_pak_file_entry temp;
-        stream.read((char*)&temp, sizeof(temp));
-        entries.emplace_back(std::move(temp));
+        for (auto i = 0; i < file_count; ++i)
+        {
+          daikatana_pak_file_entry temp;
+          stream.read((char*)&temp, sizeof(temp));
+          entries.emplace_back(std::move(temp));
+        }
       }
-    }
-    else if (entry_type == typeid(dat_file_entry).hash_code())
-    {
-      for (auto i = 0; i < file_count; ++i)
+      else if (entry_type == typeid(dat_file_entry).hash_code())
       {
-        dat_file_entry temp;
-        stream.read((char*)&temp, sizeof(temp));
-        entries.emplace_back(std::move(temp));
+        for (auto i = 0; i < file_count; ++i)
+        {
+          dat_file_entry temp;
+          stream.read((char*)&temp, sizeof(temp));
+          entries.emplace_back(std::move(temp));
+        }
       }
+
+      cache = entries;
     }
 
-    std::map<fs::path, std::vector<file_entry*>> folders;
-
+  process_file_entries:
     for (auto& entry : entries)
     {
       auto entry_path = std::visit([](auto& value) { return value.path.data(); }, entry);
@@ -193,7 +204,7 @@ namespace siege::resource::pak
     }
 
     std::vector<pak_resource_reader::content_info> results;
-    results.reserve(file_count / folders.size());
+    results.reserve(entries.size() / folders.size());
 
     for (auto& folder : folders)
     {
@@ -225,7 +236,7 @@ namespace siege::resource::pak
             {
               auto compression_type = entry.uncompressed_size == entry.compressed_size ? siege::platform::compression_type::none : siege::platform::compression_type::code_rle;
 
-              if (tag == anox_tag)
+              if constexpr (sizeof(entry) == sizeof(dat_file_entry))
               {
                 compression_type = siege::platform::compression_type::lz77_huffman;
               }
