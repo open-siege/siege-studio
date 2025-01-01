@@ -152,6 +152,7 @@ predefined_string*
       std::mutex storage_lock;
 
       std::for_each(std::execution::par_unseq, pak_files.begin(), pak_files.end(), [&storage_lock](auto& dir_entry) {
+        std::any cache;
         std::ifstream stream(dir_entry, std::ios::binary);
 
         siege::resource::zip::zip_resource_reader reader;
@@ -161,13 +162,13 @@ predefined_string*
           return;
         }
 
-        auto contents = reader.get_content_listing(stream, { .archive_path = dir_entry, .folder_path = dir_entry / "maps" });
+        auto contents = reader.get_content_listing(cache, stream, { .archive_path = dir_entry, .folder_path = dir_entry / "maps" });
 
         for (auto& content : contents)
         {
           if (auto* folder_info = std::get_if<siege::platform::resource_reader::folder_info>(&content); folder_info)
           {
-            contents.append_range(reader.get_content_listing(stream, { .archive_path = dir_entry, .folder_path = folder_info->full_path }));
+            contents.append_range(reader.get_content_listing(cache, stream, { .archive_path = dir_entry, .folder_path = folder_info->full_path }));
           }
         }
 

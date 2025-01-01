@@ -1,7 +1,7 @@
 #include <fstream>
 #include <sstream>
 #include <functional>
-//#include <siege/resource/darkstar_volume.hpp>
+// #include <siege/resource/darkstar_volume.hpp>
 #include <siege/configuration/mis/mission.hpp>
 #include <siege/platform/stream.hpp>
 
@@ -189,15 +189,15 @@ namespace siege::mis::darkstar
     static sim_item_reader_map readers = {
       { sim_group_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_group(file, header, readers); } } },
       { sim_set_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_set(file, header, readers); } } },
-      //TODO come back to these at another time.
-      // Some of the tags (interior shape being the most common) have issues when parsing
-//      { sim_vol_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_volume(file, header, readers); } } },
-//      { sim_terrain_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_terrain(file, header, readers); } } },
-//      { es_palette_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_palette(file, header, readers); } } },
-//      { interior_shape_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_interior_shape(file, header, readers); } } },
-//      { drop_point_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_marker(file, header, readers); } } },
-//      { sim_marker_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_marker(file, header, readers); } } },
-//      { nav_marker_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_nav_marker(file, header, readers); } } },
+      // TODO come back to these at another time.
+      //  Some of the tags (interior shape being the most common) have issues when parsing
+      //      { sim_vol_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_volume(file, header, readers); } } },
+      //      { sim_terrain_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_terrain(file, header, readers); } } },
+      //      { es_palette_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_palette(file, header, readers); } } },
+      //      { interior_shape_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_interior_shape(file, header, readers); } } },
+      //      { drop_point_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_marker(file, header, readers); } } },
+      //      { sim_marker_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_sim_marker(file, header, readers); } } },
+      //      { nav_marker_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_nav_marker(file, header, readers); } } },
       { herc_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_vehicle(file, header, readers); } } },
       { tank_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_vehicle(file, header, readers); } } },
       { flyer_tag, { [](auto& file, auto& header, auto& readers) -> sim_item { return read_vehicle(file, header, readers); } } }
@@ -333,7 +333,7 @@ namespace siege::resource::mis::darkstar
     return existing_info;
   }
 
-  std::vector<mis_resource_reader::content_info> mis_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
+  std::vector<mis_resource_reader::content_info> mis_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const
   {
     platform::istream_pos_resetter resetter(stream);
     auto existing_info = cache_data(stream, query.folder_path);
@@ -372,10 +372,7 @@ namespace siege::resource::mis::darkstar
     stream.seekg(info.offset, std::ios::beg);
   }
 
-  void mis_resource_reader::extract_file_contents(std::istream& stream,
-    const siege::platform::file_info& info,
-    std::ostream& output,
-    std::optional<std::reference_wrapper<platform::batch_storage>>) const
+  void mis_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const
   {
     set_stream_position(stream, info);
     auto existing_info = cache_data(stream, info.folder_path);

@@ -226,10 +226,11 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
   }
   else if (fs::exists("base\\pak0.pak", last_error))
   {
+    std::any cache;
     siege::resource::pak::pak_resource_reader reader;
 
     std::ifstream stream("base//pak0.pak", std::ios::binary);
-    auto contents = reader.get_content_listing(stream, { .archive_path = "base//pak0.pak", .folder_path = "base//pak0.pak" });
+    auto contents = reader.get_content_listing(cache, stream, { .archive_path = "base//pak0.pak", .folder_path = "base//pak0.pak" });
   }
 
 

@@ -70,11 +70,10 @@ int main(int, const char** argv)
     return EXIT_FAILURE;
   }
 
-  auto files = archive->get_content_listing(volume_stream, { volume_file, volume_file });
+  std::any cache;
+  auto files = archive->get_content_listing(cache, volume_stream, { volume_file, volume_file });
 
   std::string output_folder = replace_extension(volume_file);
-
-  siege::platform::batch_storage storage;
 
   std::function<void(decltype(files)&)> extract_files = [&](const auto& files){
     for (const auto& some_file : files)
@@ -88,14 +87,14 @@ int main(int, const char** argv)
           std::filesystem::create_directories(final_folder);
           auto filename = final_folder / info.filename;
           auto new_stream = std::ofstream{ filename, std::ios::binary };
-          archive->extract_file_contents(volume_stream, info, new_stream, storage);
+          archive->extract_file_contents(cache, volume_stream, info, new_stream);
         }
 
         if constexpr (std::is_same_v<info_type, siege::platform::folder_info>)
         {
           // TODO think about whether get_content_listing should preserve the original position of the stream or not.
           std::ifstream temp_stream{ volume_file, std::ios::binary };
-          auto files = archive->get_content_listing(temp_stream, { volume_file, info.full_path });
+          auto files = archive->get_content_listing(cache, temp_stream, { volume_file, info.full_path });
           extract_files(files);
         }
       }, some_file);

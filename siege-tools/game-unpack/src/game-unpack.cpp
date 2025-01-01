@@ -338,7 +338,7 @@ int main(int argc, char** argv)
 
           fs::path path_to_query;
 
-          siege::platform::batch_storage storage;
+          std::any storage;
 
           for (auto& info : all_files)
           {
@@ -351,7 +351,7 @@ int main(int argc, char** argv)
 
               std::ofstream new_file{ path_to_query, std::ios::binary };
 
-              archive_type.value().get().extract_file_contents(archive, info, new_file, std::ref(storage));
+              archive_type.value().get().extract_file_contents(storage, archive, info, new_file);
             }
           }
 
@@ -643,7 +643,7 @@ int main(int argc, char** argv)
       }
 
       fs::create_directories(destination_path);
-      siege::platform::batch_storage storage;
+      std::any storage;
 
       for (const auto& [src, dst] : found_files)
       {
@@ -684,7 +684,7 @@ int main(int argc, char** argv)
               while (file_iter != archive_files.end())
               {
                 std::ofstream output { new_path / file_iter->filename, std::ios::binary };
-                archive_input_plugin.value().get().extract_file_contents(input, *file_iter, output, std::ref(storage));
+                archive_input_plugin.value().get().extract_file_contents(storage, input, *file_iter, output);
                 std::advance(file_iter, 1);
                 file_iter = std::find_if(file_iter, archive_files.end(), matches_folder);
               }
@@ -698,7 +698,7 @@ int main(int argc, char** argv)
               if (file_iter != archive_files.end())
               {
                 std::ofstream output { new_path, std::ios::binary };
-                archive_input_plugin.value().get().extract_file_contents(input, *file_iter, output, std::ref(storage));
+                archive_input_plugin.value().get().extract_file_contents(storage, input, *file_iter, output);
               }
               else
               {
@@ -779,7 +779,7 @@ int main(int argc, char** argv)
                        std::ifstream archive{ src_path, std::ios::binary };
                        auto all_files = siege::platform::get_all_content_of_type<siege::platform::file_info>(src_path, archive, archive_type.value().get());
 
-                       siege::platform::batch_storage storage;
+                       std::any storage;
 
                        for (auto& file : all_files)
                        {
@@ -788,7 +788,7 @@ int main(int argc, char** argv)
 
                          std::ofstream output { new_path / file.filename, std::ios::binary };
 
-                        archive_type.value().get().extract_file_contents(archive, file, output, std::ref(storage));
+                        archive_type.value().get().extract_file_contents(storage, archive, file, output);
                        }
                      }
                    },

@@ -31,7 +31,7 @@ namespace siege::views
 
     if (resource && path)
     {
-      auto temp = resource->get_content_listing(vol_stream, platform::listing_query{ .archive_path = *path, .folder_path = *path });
+      auto temp = resource->get_content_listing(cache, vol_stream, platform::listing_query{ .archive_path = *path, .folder_path = *path });
 
       contents.clear();
       contents.reserve(temp.size() * 2);
@@ -41,7 +41,7 @@ namespace siege::views
         {
           if (auto folder_info = std::get_if<siege::platform::folder_info>(&info); folder_info)
           {
-            auto children = resource->get_content_listing(vol_stream, platform::listing_query{ .archive_path = *path, .folder_path = folder_info->full_path });
+            auto children = resource->get_content_listing(cache, vol_stream, platform::listing_query{ .archive_path = *path, .folder_path = folder_info->full_path });
             get_full_listing(children);
           }
 
@@ -109,11 +109,11 @@ namespace siege::views
         if (auto* path = std::get_if<std::filesystem::path>(&storage); path)
         {
           std::ifstream fstream{ *path, std::ios_base::binary };
-          resource->extract_file_contents(fstream, *file, temp_output);
+          resource->extract_file_contents(cache, fstream, *file, temp_output);
         }
         else if (auto* memory = std::get_if<std::stringstream>(&storage); memory)
         {
-          resource->extract_file_contents(*memory, *file, temp_output);
+          resource->extract_file_contents(cache, *memory, *file, temp_output);
         }
 
         pixels.erase(pixels.begin(), pixels.begin() + settings->offset);
@@ -135,12 +135,12 @@ namespace siege::views
       if (auto* path = std::get_if<std::filesystem::path>(&storage); path)
       {
         std::ifstream fstream{ *path, std::ios_base::binary };
-        resource->extract_file_contents(fstream, *file, output);
+        resource->extract_file_contents(cache, fstream, *file, output);
       }
       else if (auto* memory = std::get_if<std::stringstream>(&storage); memory)
       {
         std::lock_guard<std::mutex> guard(stream_mutex);
-        resource->extract_file_contents(*memory, *file, output);
+        resource->extract_file_contents(cache, *memory, *file, output);
       }
     }
 

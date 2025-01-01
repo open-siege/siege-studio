@@ -27,8 +27,7 @@ namespace siege::mis::darkstar
   struct nav_marker;
   struct vehicle;
 
-  using sim_item = std::variant<sim_set, sim_group, sim_volume,
-    sim_terrain, sim_palette, interior_shape, sim_structure, sim_marker, nav_marker, vehicle, raw_item>;
+  using sim_item = std::variant<sim_set, sim_group, sim_volume, sim_terrain, sim_palette, interior_shape, sim_structure, sim_marker, nav_marker, vehicle, raw_item>;
 
   using sim_items = std::vector<sim_item>;
 
@@ -160,7 +159,7 @@ namespace siege::resource::mis::darkstar
 {
   struct mis_resource_reader : siege::platform::resource_reader
   {
-    inline static std::array<std::string_view, 1> supported_extensions = std::array<std::string_view, 1>{ std::string_view{".veh"} };
+    inline static std::array<std::string_view, 1> supported_extensions = std::array<std::string_view, 1>{ std::string_view{ ".veh" } };
     using ref_vector = std::vector<std::pair<std::reference_wrapper<::siege::mis::darkstar::sim_item>, content_info>>;
     mutable std::map<std::filesystem::path, ::siege::mis::darkstar::sim_items> contents;
     mutable std::map<std::filesystem::path, ref_vector> content_list_info;
@@ -170,13 +169,10 @@ namespace siege::resource::mis::darkstar
     static bool is_supported(std::istream& stream);
 
     bool stream_is_supported(std::istream& stream) const override;
-    std::vector<content_info> get_content_listing(std::istream& stream, const platform::listing_query& query) const override;
+    std::vector<content_info> get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const override;
     void set_stream_position(std::istream& stream, const siege::platform::file_info& info) const override;
-    void extract_file_contents(std::istream& stream,
-      const siege::platform::file_info& info,
-      std::ostream& output,
-      std::optional<std::reference_wrapper<platform::batch_storage>> = std::nullopt) const override;
+    void extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const override;
   };
 }// namespace siege::resource::mis::darkstar
 
-#endif//INC_3SPACESTUDIO_MISSION_HPP
+#endif// INC_3SPACESTUDIO_MISSION_HPP

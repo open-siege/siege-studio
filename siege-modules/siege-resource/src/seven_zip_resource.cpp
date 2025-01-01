@@ -53,7 +53,7 @@ namespace siege::resource::zip
     return is_supported(stream);
   }
 
-  std::vector<seven_zip_resource_reader::content_info> seven_zip_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
+  std::vector<seven_zip_resource_reader::content_info> seven_zip_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const
   {
     platform::istream_pos_resetter resetter(stream);
     return zip_get_content_listing(query);
@@ -64,11 +64,10 @@ namespace siege::resource::zip
 
   }
 
-  void seven_zip_resource_reader::extract_file_contents(std::istream& stream,
+  void seven_zip_resource_reader::extract_file_contents(std::any& storage, std::istream& stream,
     const siege::platform::file_info& info,
-    std::ostream& output,
-    std::optional<std::reference_wrapper<platform::batch_storage>> storage) const
+    std::ostream& output) const
   {
-    seven_extract_file_contents(info, output, storage);
+    seven_extract_file_contents(storage, info, output);
   }
 }// namespace darkstar::vol

@@ -69,7 +69,7 @@ namespace siege::resource::rsc
     return is_supported(stream);
   }
 
-  std::vector<rsc_resource_reader::content_info> rsc_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
+  std::vector<rsc_resource_reader::content_info> rsc_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const
   {
     platform::istream_pos_resetter resetter(stream);
     std::vector<rsc_resource_reader::content_info> results;
@@ -266,10 +266,7 @@ namespace siege::resource::rsc
     }
   }
 
-  void rsc_resource_reader::extract_file_contents(std::istream& stream,
-    const siege::platform::file_info& info,
-    std::ostream& output,
-    std::optional<std::reference_wrapper<platform::batch_storage>>) const
+  void rsc_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const
   {
     set_stream_position(stream, info);
 

@@ -88,14 +88,13 @@ namespace siege::platform
 
     virtual bool stream_is_supported(std::istream&) const = 0;
 
-    virtual std::vector<content_info> get_content_listing(std::istream&, const platform::listing_query& query) const = 0;
+    virtual std::vector<content_info> get_content_listing(std::any&, std::istream&, const platform::listing_query& query) const = 0;
 
     virtual void set_stream_position(std::istream&, const file_info&) const = 0;
 
-    virtual void extract_file_contents(std::istream&,
+    virtual void extract_file_contents(std::any&, std::istream&,
       const file_info&,
-      std::ostream&,
-      std::optional<std::reference_wrapper<platform::batch_storage>> = std::nullopt) const = 0;
+      std::ostream&) const = 0;
 
     virtual ~resource_reader() = default;
     resource_reader() = default;
@@ -110,7 +109,8 @@ namespace siege::platform
 
   inline std::vector<resource_reader::content_info> get_all_content(const std::filesystem::path& src_path, std::istream& archive, const resource_reader& plugin)
   {
-    auto content_listing = plugin.get_content_listing(archive, { src_path, src_path });
+    std::any cache;
+    auto content_listing = plugin.get_content_listing(cache, archive, { src_path, src_path });
 
     auto all_content = content_listing;
     all_content.reserve(all_content.capacity() * 4);
@@ -120,7 +120,7 @@ namespace siege::platform
       {
         std::visit(overloaded {
                      [&](const siege::platform::folder_info& arg) {
-                       auto child_listing = plugin.get_content_listing(archive, { src_path, arg.full_path });
+                       auto child_listing = plugin.get_content_listing(cache, archive, { src_path, arg.full_path });
 
                        if (all_content.size() + child_listing.size() + 1 > all_content.capacity())
                        {

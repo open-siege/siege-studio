@@ -54,7 +54,7 @@ namespace siege::resource::mw4
     return is_supported(stream);
   }
 
-  std::vector<mw4_resource_reader::content_info> mw4_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
+  std::vector<mw4_resource_reader::content_info> mw4_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const
   {
     platform::istream_pos_resetter resetter(stream);
 
@@ -111,10 +111,7 @@ namespace siege::resource::mw4
     }
   }
 
-  void mw4_resource_reader::extract_file_contents(std::istream& stream,
-    const siege::platform::file_info& info,
-    std::ostream& output,
-    std::optional<std::reference_wrapper<platform::batch_storage>>) const
+  void mw4_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const
   {
     if (!info.compressed_size)
     {

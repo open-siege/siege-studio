@@ -44,7 +44,7 @@ namespace siege::resource::cab
     return is_supported(stream);
   }
 
-  std::vector<cab_resource_reader::content_info> cab_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
+  std::vector<cab_resource_reader::content_info> cab_resource_reader::get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query) const
   {
     platform::istream_pos_resetter resetter(stream);
     return cab_get_content_listing(query);
@@ -55,11 +55,10 @@ namespace siege::resource::cab
 
   }
 
-  void cab_resource_reader::extract_file_contents(std::istream& stream,
+  void cab_resource_reader::extract_file_contents(std::any& cache, std::istream& stream,
     const siege::platform::file_info& info,
-    std::ostream& output,
-    std::optional<std::reference_wrapper<platform::batch_storage>> storage) const
+    std::ostream& output) const
   {
-    cab_extract_file_contents(info, output, storage);
+    cab_extract_file_contents(cache, info, output);
   }
 }// namespace darkstar::vol

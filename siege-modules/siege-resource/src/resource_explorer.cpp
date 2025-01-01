@@ -169,6 +169,7 @@ namespace siege::resource
 
   file_stream resource_explorer::load_file(const siege::platform::file_info& info) const
   {
+    std::any cache;
     if (info.compression_type == siege::platform::compression_type::none)
     {
       if (std::filesystem::is_directory(info.folder_path))
@@ -201,7 +202,7 @@ namespace siege::resource
 
       if (archive.has_value())
       {
-        archive->get().extract_file_contents(file_stream, info, *memory_stream);
+        archive->get().extract_file_contents(cache, file_stream, info, *memory_stream);
       }
 
       return std::make_pair(info, std::move(memory_stream));
@@ -287,6 +288,7 @@ namespace siege::resource
     const siege::platform::file_info& info,
     std::optional<std::reference_wrapper<platform::batch_storage>> storage) const
   {
+    std::any cache;
     auto archive_path = get_archive_path(info.folder_path);
 
     if (destination.filename() != info.filename)
@@ -307,19 +309,20 @@ namespace siege::resource
 
     if (type.has_value())
     {
-      type->get().extract_file_contents(archive_file, info, new_file, storage);
+      type->get().extract_file_contents(cache, archive_file, info, new_file);
     }
   }
 
   std::vector<std::variant<siege::platform::folder_info, siege::platform::file_info>> resource_explorer::get_content_listing(const std::filesystem::path& folder_path) const
   {
+    std::any cache;
     std::vector<std::variant<siege::platform::folder_info, siege::platform::file_info>> files;
 
     if (auto archive_type = get_archive_type(get_archive_path(folder_path)); archive_type.has_value())
     {
       auto file_stream = std::ifstream{ get_archive_path(folder_path), std::ios::binary };
 
-      return archive_type.value().get().get_content_listing(file_stream, { get_archive_path(folder_path), folder_path });
+      return archive_type.value().get().get_content_listing(cache, file_stream, { get_archive_path(folder_path), folder_path });
     }
 
     if (!std::filesystem::is_directory(folder_path))

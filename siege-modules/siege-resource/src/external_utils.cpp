@@ -8,6 +8,7 @@
 #include <functional>
 #include <variant>
 #include <list>
+#include <map>
 #include <unordered_set>
 #include <siege/resource/external_utils.hpp>
 
@@ -247,8 +248,7 @@ namespace siege::resource
 
     bool already_mounted = lines[0].find("already mounted") != std::string::npos;
 
-    if (lines[0].find("successfully") == std::string::npos &&
-        lines[0].find("already mounted") == std::string::npos)
+    if (lines[0].find("successfully") == std::string::npos && lines[0].find("already mounted") == std::string::npos)
     {
       return std::nullopt;
     }
@@ -819,11 +819,7 @@ namespace siege::resource
     return winiso_get_content_listing(query);
   }
 
-  [[maybe_unused]] bool extract_file_contents_using_external_app(const siege::platform::file_info& info,
-    std::ostream& output,
-    std::optional<std::reference_wrapper<platform::batch_storage>> storage,
-    std::string (*extract_one_command)(const siege::platform::file_info&, const fs::path&, const fs::path&),
-    std::string (*extract_all_command)(const siege::platform::file_info&, const fs::path&, const fs::path&))
+  [[maybe_unused]] bool extract_file_contents_using_external_app(std::any& cache, const siege::platform::file_info& info, std::ostream& output, std::string (*extract_one_command)(const siege::platform::file_info&, const fs::path&, const fs::path&), std::string (*extract_all_command)(const siege::platform::file_info&, const fs::path&, const fs::path&))
   {
     auto delete_path = platform::make_auto_remove_path();
 
@@ -834,7 +830,7 @@ namespace siege::resource
     fs::create_directories(temp_path);
     static std::unordered_set<std::string> already_ran_commands;
 
-    if (!storage.has_value())
+    if (!cache.has_value())
     {
       delete_path.reset(new fs::path(temp_path / internal_file_path));
 
@@ -850,7 +846,15 @@ namespace siege::resource
       std::cout.flush();
       std::system(extract_all_command(info, temp_path, internal_file_path).c_str());
       auto [command_iter, added] = already_ran_commands.emplace(info.archive_path.string());
-      storage.value().get().temp.emplace(*command_iter, std::move(delete_path));
+
+      if (!cache.has_value() || cache.type() != typeid(std::map<std::string_view, decltype(delete_path)>))
+      {
+        cache.emplace<std::map<std::string_view, decltype(delete_path)>()>();
+      }
+
+      auto* path_map = std::any_cast<std::map<std::string_view, decltype(delete_path)>>(&cache);
+
+      path_map->emplace(*command_iter, std::move(delete_path));
     }
 
     fs::current_path(current_working_path);
@@ -869,28 +873,28 @@ namespace siege::resource
     return true;
   }
 
-  bool seven_extract_file_contents(const siege::platform::file_info& info,
-    std::ostream& output,
-    std::optional<std::reference_wrapper<platform::batch_storage>> storage)
+  bool seven_extract_file_contents(std::any& storage, const siege::platform::file_info& info, std::ostream& output)
   {
     return extract_file_contents_using_external_app(
-      info, output, storage, [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
+      storage,
+      info,
+      output,
+      [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
         std::stringstream command;
         command << '\"' << seven_zip_executable() << " x -y -o" << temp_path
                 << ' ' <<  info.archive_path << " \"" << internal_file_path.string() << "\""
                 << '\"';
-        return command.str(); }, [](const auto& info, const auto& temp_path, const auto&) {
+        return command.str(); },
+      [](const auto& info, const auto& temp_path, const auto&) {
         std::stringstream command;
         command << '\"' << seven_zip_executable() << " x -y -o" << temp_path << ' ' <<  info.archive_path << '\"';
         return command.str(); });
   }
 
-  void iso_extract_file_contents(const siege::platform::file_info& info,
-    std::ostream& output,
-    std::optional<std::reference_wrapper<platform::batch_storage>> storage)
+  void iso_extract_file_contents(std::any& storage, const siege::platform::file_info& info, std::ostream& output)
   {
     auto extracted = extract_file_contents_using_external_app(
-      info, output, storage, [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
+      storage, info, output, [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
         std::stringstream command;
         command << '\"' << power_iso_executable() << " extract " << info.archive_path << " / -y -od " << temp_path << '\"';
         return command.str(); }, [](const auto& info, const auto& temp_path, const auto&) {
@@ -903,7 +907,7 @@ namespace siege::resource
       return;
     }
 
-    extracted = seven_extract_file_contents(info, output, storage);
+    extracted = seven_extract_file_contents(storage, info, output);
 
     if (extracted)
     {
@@ -929,32 +933,20 @@ namespace siege::resource
       info.size,
       std::ostreambuf_iterator(output));
 
-    if (storage.has_value())
+    if (!storage.has_value())
     {
-      auto unmount_iter = storage.value().get().temp.find("unmounter");
-
-      if (unmount_iter == storage.value().get().temp.end())
-      {
-        std::shared_ptr<platform::file_info> unmounter(const_cast<platform::file_info*>(&info), [archive_path = info.archive_path](platform::file_info*) {
-          wincdemu_unmount_iso(archive_path);
-          winiso_unmount_iso(archive_path);
-        });
-        storage.value().get().temp.emplace("unmounter", std::static_pointer_cast<void>(unmounter));
-      }
-    }
-    else
-    {
-      wincdemu_unmount_iso(info.archive_path);
-      winiso_unmount_iso(info.archive_path);
+      std::shared_ptr<platform::file_info> unmounter(const_cast<platform::file_info*>(&info), [archive_path = info.archive_path](platform::file_info*) {
+        wincdemu_unmount_iso(archive_path);
+        winiso_unmount_iso(archive_path);
+      });
+      storage = unmounter;
     }
   }
 
-  void cab_extract_file_contents(const siege::platform::file_info& info,
-    std::ostream& output,
-    std::optional<std::reference_wrapper<platform::batch_storage>> storage)
+  void cab_extract_file_contents(std::any& storage, const siege::platform::file_info& info, std::ostream& output)
   {
     auto extracted = extract_file_contents_using_external_app(
-      info, output, storage, [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
+      storage, info, output, [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
         fs::current_path(temp_path);
         std::stringstream command;
         command << '\"' << cab2_executable() << " x "
@@ -969,7 +961,7 @@ namespace siege::resource
     if (!extracted)
     {
       extracted = extract_file_contents_using_external_app(
-        info, output, storage, [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
+        storage, info, output, [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
           fs::current_path(temp_path);
           std::stringstream command;
           command << '\"' << cab5_executable() << " x "
@@ -988,7 +980,7 @@ namespace siege::resource
     }
 
     extracted = extract_file_contents_using_external_app(
-      info, output, storage, [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
+      storage, info, output, [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
         fs::current_path(temp_path);
         std::stringstream command;
         command << '\"' << cab6_executable() << " x "
@@ -1005,6 +997,6 @@ namespace siege::resource
       return;
     }
 
-    seven_extract_file_contents(info, output, storage);
+    seven_extract_file_contents(storage, info, output);
   }
 }// namespace siege::resource

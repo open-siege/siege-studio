@@ -77,7 +77,7 @@ namespace siege::resource::pak
     return is_supported(stream);
   }
 
-  std::vector<pak_resource_reader::content_info> pak_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
+  std::vector<pak_resource_reader::content_info> pak_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const
   {
     platform::istream_pos_resetter resetter(stream);
     endian::little_uint32_t offset;
@@ -256,10 +256,7 @@ namespace siege::resource::pak
     }
   }
 
-  void pak_resource_reader::extract_file_contents(std::istream& stream,
-    const siege::platform::file_info& info,
-    std::ostream& output,
-    std::optional<std::reference_wrapper<platform::batch_storage>> storage) const
+  void pak_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const
   {
     set_stream_position(stream, info);
 

@@ -11,17 +11,11 @@ namespace siege::resource
   std::vector<content_info> iso_get_content_listing(const platform::listing_query& query);
   std::vector<content_info> cab_get_content_listing(const platform::listing_query& query);
 
-  [[maybe_unused]] bool seven_extract_file_contents(const siege::platform::file_info& info,
-    std::ostream& output,
-    std::optional<std::reference_wrapper<platform::batch_storage>> storage);
+  [[maybe_unused]] bool seven_extract_file_contents(std::any&, const siege::platform::file_info& info, std::ostream& output);
 
-  void iso_extract_file_contents(const siege::platform::file_info& info,
-    std::ostream& output,
-    std::optional<std::reference_wrapper<platform::batch_storage>> storage);
+  void iso_extract_file_contents(std::any&, const siege::platform::file_info& info, std::ostream& output);
 
-  void cab_extract_file_contents(const siege::platform::file_info& info,
-    std::ostream& output,
-    std::optional<std::reference_wrapper<platform::batch_storage>> storage);
+  void cab_extract_file_contents(std::any&, const siege::platform::file_info& info, std::ostream& output);
 
   [[nodiscard]] inline std::string rtrim(std::string str)
   {
@@ -42,6 +36,6 @@ namespace siege::resource
 
     return raw_contents;
   }
-}
+}// namespace siege::resource
 
 #endif// OPEN_SIEGE_EXTERNAL_UTILS_HPP

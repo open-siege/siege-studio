@@ -111,7 +111,7 @@ namespace siege::resource::cln
     return input.rfind(value_to_find, 0) == 0;
   }
 
-  std::vector<cln_resource_reader::content_info> cln_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
+  std::vector<cln_resource_reader::content_info> cln_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const
   {
     platform::istream_pos_resetter resetter(stream);
     thread_local std::unordered_map<std::string, std::vector<file_entry>> cache;
@@ -232,10 +232,7 @@ namespace siege::resource::cln
     }
   }
 
-  void cln_resource_reader::extract_file_contents(std::istream& stream,
-    const siege::platform::file_info& info,
-    std::ostream& output,
-    std::optional<std::reference_wrapper<platform::batch_storage>>) const
+  void cln_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const
   {
     if (info.compression_type == platform::compression_type::none)
     {

@@ -45,7 +45,7 @@ namespace siege::resource::atd
     std::array<char, 80> filename;
   };
 
-  std::vector<atd_resource_reader::content_info> atd_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
+  std::vector<atd_resource_reader::content_info> atd_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const
   {
     platform::istream_pos_resetter resetter(stream);
     std::vector<atd_resource_reader::content_info> results;
@@ -54,7 +54,7 @@ namespace siege::resource::atd
     stream.read(reinterpret_cast<char*>(&file_count), sizeof(file_count));
 
     results.reserve(file_count);
-    std::array<char, 81> temp_filename{'\0'};
+    std::array<char, 81> temp_filename{ '\0' };
 
     for (auto i = 0u; i < file_count; i++)
     {
@@ -86,10 +86,7 @@ namespace siege::resource::atd
     }
   }
 
-  void atd_resource_reader::extract_file_contents(std::istream& stream,
-    const siege::platform::file_info& info,
-    std::ostream& output,
-    std::optional<std::reference_wrapper<platform::batch_storage>>) const
+  void atd_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const
   {
     set_stream_position(stream, info);
     std::copy_n(std::istreambuf_iterator(stream),
@@ -98,4 +95,4 @@ namespace siege::resource::atd
 
     stream.seekg(2, std::ios::cur);
   }
-}// namespace siege::resource::vol::three_space
+}// namespace siege::resource::atd

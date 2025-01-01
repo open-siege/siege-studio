@@ -150,13 +150,13 @@ namespace siege::resource::vol::darkstar
       platform::write(output, &tag, 1);
 
       std::copy_n(std::istreambuf_iterator(*file.stream),
-                  narrowed_size.value(),
-                  std::ostreambuf_iterator(output));
+        narrowed_size.value(),
+        std::ostreambuf_iterator(output));
 
       auto size_for_padding = int(output.tellp());
       while (size_for_padding % 4 != 0)
       {
-        std::byte padding{0x00};
+        std::byte padding{ 0x00 };
         platform::write(output, &padding, 1);
         size_for_padding++;
       }
@@ -188,7 +188,7 @@ namespace siege::resource::vol::darkstar
     auto size_for_padding = string_size;
     while (size_for_padding % 2 != 0)
     {
-      std::byte padding{0x00};
+      std::byte padding{ 0x00 };
       platform::write(output, &padding, 1);
       size_for_padding++;
     }
@@ -402,7 +402,7 @@ namespace siege::resource::vol::darkstar
     return is_supported(stream);
   }
 
-  std::vector<vol_resource_reader::content_info> vol_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
+  std::vector<vol_resource_reader::content_info> vol_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const
   {
     platform::istream_pos_resetter resetter(stream);
     std::vector<vol_resource_reader::content_info> results;
@@ -453,18 +453,15 @@ namespace siege::resource::vol::darkstar
     }
   }
 
-  void vol_resource_reader::extract_file_contents(std::istream& stream,
-    const siege::platform::file_info& info,
-    std::ostream& output,
-    std::optional<std::reference_wrapper<platform::batch_storage>>) const
+  void vol_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const
   {
     if (info.compression_type == siege::platform::compression_type::none)
     {
 
       set_stream_position(stream, info);
       std::copy_n(std::istreambuf_iterator(stream),
-                  info.size,
-                  std::ostreambuf_iterator(output));
+        info.size,
+        std::ostreambuf_iterator(output));
     }
     else
     {
@@ -531,8 +528,7 @@ namespace siege::resource::vol::darkstar
             break;
           }
           parent_path = parent_path.parent_path();
-        }
-        while(parent_path != root_path);
+        } while (parent_path != root_path);
       }
 
       auto extract_path_str = extract_path.string();
@@ -567,4 +563,4 @@ namespace siege::resource::vol::darkstar
       }
     }
   }
-}// namespace darkstar::vol
+}// namespace siege::resource::vol::darkstar

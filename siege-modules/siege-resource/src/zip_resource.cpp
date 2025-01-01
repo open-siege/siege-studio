@@ -110,7 +110,7 @@ namespace siege::resource::zip
     }
   };
 
-  std::vector<zip_resource_reader::content_info> zip_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
+  std::vector<zip_resource_reader::content_info> zip_resource_reader::get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query) const
   {
     platform::istream_pos_resetter resetter(stream);
     static std::list<std::string> name_cache;
@@ -211,10 +211,9 @@ namespace siege::resource::zip
 
   }
 
-  void zip_resource_reader::extract_file_contents(std::istream& stream,
+  void zip_resource_reader::extract_file_contents(std::any& cache, std::istream& stream,
     const siege::platform::file_info& info,
-    std::ostream& output,
-    std::optional<std::reference_wrapper<platform::batch_storage>> storage) const
+    std::ostream& output) const
   {
     std::shared_ptr<zip_t> archive;
 
@@ -226,21 +225,14 @@ namespace siege::resource::zip
       return std::shared_ptr<zip_t>(zip_open_from_source(source, 0, &err), zip_close);
     };
 
-    if (storage.has_value())
+    if (cache.has_value() && cache.type() == typeid(std::shared_ptr<zip_t>))
     {
-      auto zip_iter = storage.value().get().temp.find("zip_instance");
-
-      if (zip_iter == storage.value().get().temp.end())
-      {
-        archive = create_archive();
-        zip_iter = storage.value().get().temp.emplace("zip_instance", std::static_pointer_cast<void>(archive)).first;
-      }
-
-      archive = std::static_pointer_cast<zip_t>(std::get<std::shared_ptr<void>>(zip_iter->second));
+      archive = std::any_cast<std::shared_ptr<zip_t>>(cache);
     }
     else
     {
       archive = create_archive();
+      cache = archive;
     }
 
     using file_ptr = std::unique_ptr<zip_file, void(*)(zip_file*)>;

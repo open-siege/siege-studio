@@ -46,7 +46,7 @@ namespace siege::resource::clm
     return is_supported(stream);
   }
 
-  std::vector<clm_resource_reader::content_info> clm_resource_reader::get_content_listing(std::istream& stream, const platform::listing_query& query) const
+  std::vector<clm_resource_reader::content_info> clm_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const
   {
     platform::istream_pos_resetter resetter(stream);
     std::array<std::byte, 26> tag{};
@@ -78,7 +78,7 @@ namespace siege::resource::clm
 
       for (auto& entry : entries)
       {
-        std::string name = *entry.name.rbegin() == '\0' ? std::string(entry.name.data()) : std::string(entry.name.data(), entry.name.size()); 
+        std::string name = *entry.name.rbegin() == '\0' ? std::string(entry.name.data()) : std::string(entry.name.data(), entry.name.size());
 
         results.emplace_back(clm_resource_reader::file_info{
           .filename = name + ".wav",
@@ -102,10 +102,7 @@ namespace siege::resource::clm
     }
   }
 
-  void clm_resource_reader::extract_file_contents(std::istream& stream,
-    const siege::platform::file_info& info,
-    std::ostream& output,
-    std::optional<std::reference_wrapper<platform::batch_storage>> storage) const
+  void clm_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const
   {
     set_stream_position(stream, info);
 
