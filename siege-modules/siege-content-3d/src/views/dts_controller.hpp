@@ -15,7 +15,7 @@ namespace siege::views
   {
   public:
     constexpr static auto formats = std::array<siege::fs_string_view, 12>{{ 
-            FSL".dts", FSL".tmd", FSL".bnd", FSL".cwg", FSL".trk", FSL"bwd", FSL".wtb", FSL".erf", FSL".mdl", FSL".md2", FSL".mdx", FSL".dkm" 
+            FSL".dts", FSL".tmd", FSL".bnd", FSL".cwg", FSL".trk", FSL".bwd", FSL".wtb", FSL".erf", FSL".mdl", FSL".md2", FSL".mdx", FSL".dkm" 
         }};
     static bool is_shape(std::istream& image_stream);
 

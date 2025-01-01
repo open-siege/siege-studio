@@ -66,9 +66,9 @@ namespace siege::resource::prj
       endian::little_uint16_t year;
       endian::little_uint16_t padding;
     } time_stamp;
+    endian::little_uint16_t entry_index;
     endian::little_uint16_t unknown1;
     endian::little_uint16_t unknown2;
-    endian::little_uint16_t unknown3;
     std::array<char, 16> symbol_name;
     std::array<char, 16> filename;
   };
@@ -251,6 +251,7 @@ namespace siege::resource::prj
           file_info.filename = name_entry.filename.data();
           file_info.archive_path = query.archive_path;
           file_info.folder_path = query.folder_path;
+          file_info.metadata = name_entry.entry_index;
 
           stream.seekg(file_info.offset, std::ios::beg);
           std::array<std::byte, 4> file_tag_value;
