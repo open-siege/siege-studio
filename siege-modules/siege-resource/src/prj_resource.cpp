@@ -293,6 +293,13 @@ namespace siege::resource::prj
           file_info.size -= (sizeof(final_entry) + sizeof(index_size));
           file_info.filename = final_entry.filename.data();
 
+
+          if (file_info.filename.extension() == ".BWD" || file_info.filename.extension() == ".bwd")
+          {
+            // TODO calculate a better size
+            file_info.size *= 16;
+          }
+
           auto iter = file_cache.files.find(file_info.folder_path / file_info.filename);
 
           if (iter == file_cache.files.end())
@@ -416,6 +423,10 @@ namespace siege::resource::prj
         return;
       }
 
+      auto start_pos = output.tellp();
+      // TODO write the updated size at the end
+      output.write((char*)&bwd_root.tag, sizeof(bwd_root.tag));
+
       bwd_root.data.resize(bwd_root.tag.size - sizeof(bwd_root.tag));
       stream.read(bwd_root.data.data(), bwd_root.data.size());
 
@@ -433,6 +444,7 @@ namespace siege::resource::prj
 
         if (bwd_stream.eof() || bwd_stream.fail())
         {
+          results.pop_back();
           break;
         }
 
@@ -449,9 +461,13 @@ namespace siege::resource::prj
 
           if (file_iter != wtb_files_by_index.end())
           {
-            OutputDebugStringW(L"Found file for BWD OBJ: ");
-            OutputDebugStringW(file_iter->second->filename.c_str());
-            OutputDebugStringW(L"\n");
+            set_stream_position(stream, *file_iter->second);
+            temp.tag.size = temp.tag.size + file_iter->second->size;
+            output.write((char*)&temp.tag, sizeof(temp.tag));
+            output.write(temp.data.data(), temp.data.size());
+            std::copy_n(std::istreambuf_iterator(stream),
+              file_iter->second->size,
+              std::ostreambuf_iterator(output));
           }
         }
         else if (temp.tag.tag == anim_entry_tag)
@@ -463,9 +479,17 @@ namespace siege::resource::prj
 
           if (file_iter != tdi_files_by_index.end())
           {
-            OutputDebugStringW(L"Found file for BWD ANIM: ");
-            OutputDebugStringW(file_iter->second->filename.c_str());
-            OutputDebugStringW(L"\n");
+            set_stream_position(stream, *file_iter->second);
+            temp.tag.size = temp.tag.size + file_iter->second->size;
+            output.write((char*)&temp.tag, sizeof(temp.tag));
+            output.write(temp.data.data(), temp.data.size());
+            std::copy_n(std::istreambuf_iterator(stream),
+              file_iter->second->size,
+              std::ostreambuf_iterator(output));
+          }
+          else
+          {
+            goto default_output;
           }
         }
         else if (temp.tag.tag == vptf_entry_tag)
@@ -482,9 +506,17 @@ namespace siege::resource::prj
 
           if (file_iter != cpi_files_by_index.end())
           {
-            OutputDebugStringW(L"Found file for BWD CPTF: ");
-            OutputDebugStringW(file_iter->second->filename.c_str());
-            OutputDebugStringW(L"\n");
+            set_stream_position(stream, *file_iter->second);
+            temp.tag.size = temp.tag.size + file_iter->second->size;
+            output.write((char*)&temp.tag, sizeof(temp.tag));
+            output.write(temp.data.data(), temp.data.size());
+            std::copy_n(std::istreambuf_iterator(stream),
+              file_iter->second->size,
+              std::ostreambuf_iterator(output));
+          }
+          else
+          {
+            goto default_output;
           }
         }
         else if (temp.tag.tag == pitf_entry_tag)
@@ -496,9 +528,17 @@ namespace siege::resource::prj
 
           if (file_iter != bwd_files_by_index.end())
           {
-            OutputDebugStringW(L"Found file for BWD PITF: ");
-            OutputDebugStringW(file_iter->second->filename.c_str());
-            OutputDebugStringW(L"\n");
+            set_stream_position(stream, *file_iter->second);
+            temp.tag.size = temp.tag.size + file_iter->second->size;
+            output.write((char*)&temp.tag, sizeof(temp.tag));
+            output.write(temp.data.data(), temp.data.size());
+            std::copy_n(std::istreambuf_iterator(stream),
+              file_iter->second->size,
+              std::ostreambuf_iterator(output));
+          }
+          else
+          {
+            goto default_output;
           }
         }
         else if (temp.tag.tag == mgdf_entry_tag)
@@ -515,12 +555,25 @@ namespace siege::resource::prj
 
           if (file_iter != sfl_files_by_index.end())
           {
-            OutputDebugStringW(L"Found file for BWD ASND: ");
-            OutputDebugStringW(file_iter->second->filename.c_str());
-            OutputDebugStringW(L"\n");
+            set_stream_position(stream, *file_iter->second);
+            temp.tag.size = temp.tag.size + file_iter->second->size;
+            output.write((char*)&temp.tag, sizeof(temp.tag));
+            output.write(temp.data.data(), temp.data.size());
+            std::copy_n(std::istreambuf_iterator(stream),
+              file_iter->second->size,
+              std::ostreambuf_iterator(output));
+          }
+          else
+          {
+            goto default_output;
           }
         }
-
+        else
+        {
+        default_output:
+          output.write((char*)&temp.tag, sizeof(temp.tag));
+          output.write(temp.data.data(), temp.data.size());
+        }
       }
     }
     else
