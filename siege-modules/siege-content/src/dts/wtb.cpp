@@ -18,16 +18,49 @@ namespace siege::content::wtb
   constexpr auto polygon_tag_4 = platform::to_tag<2>({ 0x1f, 0x74 });
   constexpr auto polygon_tag_5 = platform::to_tag<2>({ 0xf0, 0x44 });
 
+  struct wtb_header
+  {
+    std::array<std::byte, 4> tag;
+    endian::little_uint16_t unknown1;
+    endian::little_uint16_t unknown2;
+    float scale;
+    float translation;
+    endian::little_uint32_t padding1;
+    endian::little_uint32_t padding2;
+    endian::little_uint16_t vertex_count;
+    endian::little_uint16_t surface_count;
+    endian::little_uint32_t unknown3;
+  };
+
   struct surface_header
   {
     std::array<std::byte, 2> tag;
     endian::little_uint16_t number_of_points;
   };
 
+  struct face_3v
+  {
+    std::array<endian::little_uint16_t, 3> values;
+    endian::little_uint16_t padding;
+  };
+
+  struct face_4v
+  {
+    std::array<endian::little_uint16_t, 4> values;
+  };
+
+  struct face_5v
+  {
+    std::array<endian::little_uint16_t, 5> values;
+    std::array<endian::little_uint16_t, 2> padding;
+  };
+
+  using face_value = std::variant<face_3v, face_4v, face_5v>;
+
   struct surface
   {
     surface_header header;
-    std::vector<endian::little_uint16_t> vertices;
+    std::vector<face_value> vertices;
   };
 
   bool is_wtb(std::istream& stream)
