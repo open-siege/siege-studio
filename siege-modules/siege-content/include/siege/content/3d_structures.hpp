@@ -24,6 +24,15 @@ namespace siege::content
     float z;
   };
 
+  struct vector4f
+  {
+    KEYS_CONSTEXPR static auto keys = platform::make_keys({ "x", "y", "z", "w" });
+    float x;
+    float y;
+    float z;
+    float w;
+  };
+
   inline vector3f operator+(const vector3f& left, const vector3f& right)
   {
     return { left.x + right.x, left.y + right.y, left.z + right.z };

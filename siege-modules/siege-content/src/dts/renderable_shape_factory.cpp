@@ -1,7 +1,9 @@
 #include <siege/content/dts/darkstar.hpp>
 #include <siege/content/dts/3space.hpp>
+#include <siege/content/dts/wtb.hpp>
 #include <siege/content/dts/dts_renderable_shape.hpp>
 #include <siege/content/dts/3space_renderable_shape.hpp>
+#include "wtb_renderable_shape.hpp"
 #include <siege/content/dts/null_renderable_shape.hpp>
 
 namespace siege::content::dts
@@ -25,6 +27,11 @@ namespace siege::content::dts
       return std::make_unique<three_space::dts_renderable_shape>(shapes.front());
     }
 
+    if (content::wtb::is_wtb(shape_stream))
+    {
+      return std::make_unique<wtb::wtb_renderable_shape>(content::wtb::load_wtb(shape_stream));
+    }
+
     return std::make_unique<null_renderable_shape>();
   }
-}
+}// namespace siege::content::dts

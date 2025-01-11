@@ -66,41 +66,19 @@ namespace siege::content::wtb
       auto& surface = result.faces.emplace_back();
       surface.header = face_header;
 
-      if (face_header.number_of_points == 1)
-      {
-        face_1v face;
-        stream.read((char*)&face, sizeof(face));
-        surface.face = face;
-      }
-      else if (face_header.number_of_points == 3)
-      {
-        face_3v face;
-        stream.read((char*)&face, sizeof(face));
-        surface.face = face;
-      }
-      else if (face_header.number_of_points == 4)
+      if (face_header.number_of_points <= 4)
       {
         face_4v face;
         stream.read((char*)&face, sizeof(face));
-        surface.face = face;
+        surface.values.resize(face_header.number_of_points);
+        std::memcpy(surface.values.data(), face.data(), sizeof(face[0]) * surface.values.size());
       }
-      else if (face_header.number_of_points == 5)
-      {
-        face_5v face;
-        stream.read((char*)&face, sizeof(face));
-        surface.face = face;
-      }
-      else if (face_header.number_of_points == 6)
-      {
-        face_6v face;
-        stream.read((char*)&face, sizeof(face));
-        surface.face = face;
-      }
-      else if (face_header.number_of_points == 7)
+      else if (face_header.number_of_points <= 7)
       {
         face_7v face;
         stream.read((char*)&face, sizeof(face));
-        surface.face = face;
+        surface.values.resize(face_header.number_of_points);
+        std::memcpy(surface.values.data(), face.data(), sizeof(face[0]) * surface.values.size());
       }
       else
       {

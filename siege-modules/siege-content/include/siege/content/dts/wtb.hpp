@@ -48,46 +48,13 @@ namespace siege::content::wtb
     endian::little_uint16_t number_of_points;
   };
 
-  struct face_1v
-  {
-    endian::little_uint16_t value;
-    std::array<endian::little_uint16_t, 3> padding;
-  };
-
-  struct face_3v
-  {
-    std::array<endian::little_uint16_t, 3> values;
-    endian::little_uint16_t padding;
-  };
-
-  struct face_4v
-  {
-    std::array<endian::little_uint16_t, 4> values;
-  };
-
-  struct face_5v
-  {
-    std::array<endian::little_uint16_t, 5> values;
-    std::array<endian::little_uint16_t, 2> padding;
-  };
-
-  struct face_6v
-  {
-    std::array<endian::little_uint16_t, 6> values;
-    endian::little_uint16_t padding;
-  };
-
-  struct face_7v
-  {
-    std::array<endian::little_uint16_t, 7> values;
-  };
-
-  using face_value = std::variant<face_1v, face_3v, face_4v, face_5v, face_6v, face_7v>;
+  using face_4v = std::array<endian::little_uint16_t, 4>;
+  using face_7v = std::array<endian::little_uint16_t, 7>;
 
   struct surface
   {
     surface_header header;
-    face_value face;
+    std::vector<endian::little_uint16_t> values;
   };
 
   struct wtb_shape

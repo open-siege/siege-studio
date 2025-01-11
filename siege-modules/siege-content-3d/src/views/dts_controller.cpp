@@ -3,6 +3,7 @@
 #include <siege/content/dts/3space.hpp>
 #include <siege/content/dts/renderable_shape_factory.hpp>
 #include <siege/content/dts/null_renderable_shape.hpp>
+#include <siege/content/dts/wtb.hpp>
 #include "dts_controller.hpp"
 
 namespace siege::content::tmd
@@ -46,7 +47,8 @@ namespace siege::views
            || siege::content::mdl::is_mdl(stream)
            || siege::content::mdl::is_md2(stream)
            || siege::content::mdl::is_mdx(stream)
-           || siege::content::bwd::is_bwd(stream);
+           || siege::content::bwd::is_bwd(stream)
+           || siege::content::wtb::is_wtb(stream);
   }
 
   std::size_t dts_controller::load_shape(std::istream& stream)
