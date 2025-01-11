@@ -28,7 +28,8 @@ namespace siege::platform
     lz77_huffman,
     lz78_huffman,
     lzss_huffman,
-    cdxa
+    cdxa,
+    custom
   };
 
   struct file_info

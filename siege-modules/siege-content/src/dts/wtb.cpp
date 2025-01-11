@@ -4,19 +4,13 @@
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
+#include <siege/content/dts/wtb.hpp>
 
 namespace siege::content::wtb
 {
   namespace endian = siege::platform;
 
   constexpr auto header_tag = platform::to_tag<4>({ 'W', 'T', 'B', 'O' });
-
-  // each tag must represent a type of shading or texturing
-  constexpr auto polygon_tag = platform::to_tag<2>({ 0x00, 0x78 });
-  constexpr auto polygon_tag_2 = platform::to_tag<2>({ 0xf0, 0x4c });
-  constexpr auto polygon_tag_3 = platform::to_tag<2>({ 0x22, 0x54 });
-  constexpr auto polygon_tag_4 = platform::to_tag<2>({ 0x1f, 0x74 });
-  constexpr auto polygon_tag_5 = platform::to_tag<2>({ 0xf0, 0x44 });
 
   struct wtb_header
   {
@@ -32,40 +26,89 @@ namespace siege::content::wtb
     endian::little_uint32_t unknown3;
   };
 
-  struct surface_header
-  {
-    std::array<std::byte, 2> tag;
-    endian::little_uint16_t number_of_points;
-  };
-
-  struct face_3v
-  {
-    std::array<endian::little_uint16_t, 3> values;
-    endian::little_uint16_t padding;
-  };
-
-  struct face_4v
-  {
-    std::array<endian::little_uint16_t, 4> values;
-  };
-
-  struct face_5v
-  {
-    std::array<endian::little_uint16_t, 5> values;
-    std::array<endian::little_uint16_t, 2> padding;
-  };
-
-  using face_value = std::variant<face_3v, face_4v, face_5v>;
-
-  struct surface
-  {
-    surface_header header;
-    std::vector<face_value> vertices;
-  };
-
   bool is_wtb(std::istream& stream)
   {
-    return false;
+    platform::istream_pos_resetter resetter(stream);
+    std::array<std::byte, 4> tag;
+    stream.read((char*)&tag, sizeof(tag));
+    return tag == header_tag;
+  }
+
+  wtb_shape load_wtb(std::istream& stream)
+  {
+    wtb_shape result;
+
+    wtb_header header;
+    stream.read((char*)&header, sizeof(header));
+
+    if (header.tag != header_tag)
+    {
+      return result;
+    }
+
+    result.scale = header.scale;
+    result.translation = header.translation;
+    result.vertices.resize(header.vertex_count);
+    stream.read((char*)result.vertices.data(), result.vertices.size() * sizeof(packed_vertex));
+
+    result.faces.reserve(header.surface_count);
+
+    surface_header face_header;
+    for (auto i = 0u; i < header.surface_count; ++i)
+    {
+      stream.read((char*)&face_header, sizeof(face_header));
+
+      if (face_header.number_of_points < 1 || face_header.number_of_points > 7)
+      {
+        break;
+      }
+
+      auto& surface = result.faces.emplace_back();
+      surface.header = face_header;
+
+      if (face_header.number_of_points == 1)
+      {
+        face_1v face;
+        stream.read((char*)&face, sizeof(face));
+        surface.face = face;
+      }
+      else if (face_header.number_of_points == 3)
+      {
+        face_3v face;
+        stream.read((char*)&face, sizeof(face));
+        surface.face = face;
+      }
+      else if (face_header.number_of_points == 4)
+      {
+        face_4v face;
+        stream.read((char*)&face, sizeof(face));
+        surface.face = face;
+      }
+      else if (face_header.number_of_points == 5)
+      {
+        face_5v face;
+        stream.read((char*)&face, sizeof(face));
+        surface.face = face;
+      }
+      else if (face_header.number_of_points == 6)
+      {
+        face_6v face;
+        stream.read((char*)&face, sizeof(face));
+        surface.face = face;
+      }
+      else if (face_header.number_of_points == 7)
+      {
+        face_7v face;
+        stream.read((char*)&face, sizeof(face));
+        surface.face = face;
+      }
+      else
+      {
+        break;
+      }
+    }
+
+    return result;
   }
 }// namespace siege::content::wtb
 

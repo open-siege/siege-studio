@@ -11,6 +11,7 @@
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
+#include <siege/content/dts/wtb.hpp>
 
 namespace siege::content::bwd
 {
@@ -72,6 +73,11 @@ namespace siege::content::bwd
     endian::little_int16_t padding;
   };
 
+  struct dtb_object_with_shape : dtb_object
+  {
+    std::optional<wtb::wtb_shape> shape;
+  };
+
   struct file_info
   {
     endian::little_int16_t prj_file_index;
@@ -81,8 +87,8 @@ namespace siege::content::bwd
   struct bwd_model
   {
     std::array<char, 4> version;
-    std::vector<dtb_object> objects;
-    std::map<int, std::vector<dtb_object>> lod_objects;
+    std::vector<dtb_object_with_shape> objects;
+    std::map<int, std::vector<dtb_object_with_shape>> lod_objects;
     file_info animation_file;
     file_info vpt_file;
     file_info cockpit_file;
@@ -136,17 +142,47 @@ namespace siege::content::bwd
         {
           bwd_stream.read(result.version.data(), sizeof(result.version));
         }
-        else if (child_tag.tag == object_tag && child_tag.size == 60)
+        else if (child_tag.tag == object_tag)
         {
+          bool has_wtb = false;
+          if (child_tag.size == 60)
+          {
+            goto read_dtb_object;
+          }
+          else
+          {
+            auto current_pos = bwd_stream.tellg();
+            bwd_stream.seekg(60 - sizeof(child_tag), std::ios::cur);
+            has_wtb = wtb::is_wtb(bwd_stream);
+
+            bwd_stream.seekg(current_pos, std::ios::beg);
+            if (!has_wtb)
+            {
+              bwd_stream.seekg(child_tag.size - sizeof(child_tag), std::ios::cur);
+              continue;
+            }
+          }
+
+        read_dtb_object:
           if (!lod_index)
           {
             auto& object = result.objects.emplace_back();
-            bwd_stream.read((char*)&object, sizeof(object));
+            bwd_stream.read((char*)&object, sizeof(dtb_object));
+
+            if (has_wtb)
+            {
+              object.shape = wtb::load_wtb(bwd_stream);
+            }
           }
           else
           {
             auto& object = result.lod_objects[*lod_index].emplace_back();
-            bwd_stream.read((char*)&object, sizeof(object));
+            bwd_stream.read((char*)&object, sizeof(dtb_object));
+
+            if (has_wtb)
+            {
+              object.shape = wtb::load_wtb(bwd_stream);
+            }
           }
         }
         else if (child_tag.tag == repr_tag && child_tag.size == 8)
@@ -160,7 +196,7 @@ namespace siege::content::bwd
             lod_index = *lod_index + 1;
           }
 
-          result.lod_objects[*lod_index] = std::vector<dtb_object>{};
+          result.lod_objects[*lod_index] = std::vector<dtb_object_with_shape>{};
         }
         else if (child_tag.tag == anim_tag && child_tag.size == 20)
         {

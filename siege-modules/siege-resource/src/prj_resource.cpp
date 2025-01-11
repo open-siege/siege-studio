@@ -296,8 +296,10 @@ namespace siege::resource::prj
 
           if (file_info.filename.extension() == ".BWD" || file_info.filename.extension() == ".bwd")
           {
-            // TODO calculate a better size
-            file_info.size *= 16;
+            file_info.compression_type = siege::platform::compression_type::custom;
+            file_info.compressed_size = file_info.size;
+
+            file_info.size = file_info.size * 64;
           }
 
           auto iter = file_cache.files.find(file_info.folder_path / file_info.filename);
@@ -424,14 +426,17 @@ namespace siege::resource::prj
       }
 
       auto start_pos = output.tellp();
-      // TODO write the updated size at the end
+      auto bwd_size = bwd_root.tag.size;
       output.write((char*)&bwd_root.tag, sizeof(bwd_root.tag));
+      std::array<char, 4> temp;
 
-      bwd_root.data.resize(bwd_root.tag.size - sizeof(bwd_root.tag));
+      stream.read(temp.data(), temp.size());
+      output.write(temp.data(), temp.size());
+
+      bwd_root.data.resize(bwd_root.tag.size - sizeof(temp) - sizeof(bwd_root.tag));
       stream.read(bwd_root.data.data(), bwd_root.data.size());
 
       std::ispanstream bwd_stream(bwd_root.data);
-      bwd_stream.seekg(sizeof(std::uint32_t), std::ios::beg);
 
       std::vector<iff_data> results;
       results.reserve(16);
@@ -463,6 +468,7 @@ namespace siege::resource::prj
           {
             set_stream_position(stream, *file_iter->second);
             temp.tag.size = temp.tag.size + file_iter->second->size;
+            bwd_size = bwd_size + file_iter->second->size;
             output.write((char*)&temp.tag, sizeof(temp.tag));
             output.write(temp.data.data(), temp.data.size());
             std::copy_n(std::istreambuf_iterator(stream),
@@ -481,6 +487,7 @@ namespace siege::resource::prj
           {
             set_stream_position(stream, *file_iter->second);
             temp.tag.size = temp.tag.size + file_iter->second->size;
+            bwd_size = bwd_size + file_iter->second->size;
             output.write((char*)&temp.tag, sizeof(temp.tag));
             output.write(temp.data.data(), temp.data.size());
             std::copy_n(std::istreambuf_iterator(stream),
@@ -508,6 +515,7 @@ namespace siege::resource::prj
           {
             set_stream_position(stream, *file_iter->second);
             temp.tag.size = temp.tag.size + file_iter->second->size;
+            bwd_size = bwd_size + file_iter->second->size;
             output.write((char*)&temp.tag, sizeof(temp.tag));
             output.write(temp.data.data(), temp.data.size());
             std::copy_n(std::istreambuf_iterator(stream),
@@ -530,6 +538,7 @@ namespace siege::resource::prj
           {
             set_stream_position(stream, *file_iter->second);
             temp.tag.size = temp.tag.size + file_iter->second->size;
+            bwd_size = bwd_size + file_iter->second->size;
             output.write((char*)&temp.tag, sizeof(temp.tag));
             output.write(temp.data.data(), temp.data.size());
             std::copy_n(std::istreambuf_iterator(stream),
@@ -557,6 +566,7 @@ namespace siege::resource::prj
           {
             set_stream_position(stream, *file_iter->second);
             temp.tag.size = temp.tag.size + file_iter->second->size;
+            bwd_size = bwd_size + file_iter->second->size;
             output.write((char*)&temp.tag, sizeof(temp.tag));
             output.write(temp.data.data(), temp.data.size());
             std::copy_n(std::istreambuf_iterator(stream),
@@ -575,6 +585,9 @@ namespace siege::resource::prj
           output.write(temp.data.data(), temp.data.size());
         }
       }
+
+      output.seekp((std::size_t)start_pos + sizeof(bwd_root.tag.tag), std::ios::beg);
+      output.write((char*)&bwd_size, sizeof(bwd_size));
     }
     else
     {
