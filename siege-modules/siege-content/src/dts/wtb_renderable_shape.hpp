@@ -8,10 +8,11 @@
 #include <map>
 #include <unordered_map>
 #include <set>
-#include <memory_resource>
+#include <variant>
 
 #include <siege/content/renderable_shape.hpp>
 #include <siege/content/dts/wtb.hpp>
+#include <siege/content/dts/bwd.hpp>
 
 namespace siege::content::wtb
 {
@@ -23,6 +24,11 @@ namespace siege::content::wtb
     {
     }
 
+    wtb_renderable_shape(bwd::bwd_model shape)
+      : shape(std::move(shape))
+    {
+    }
+
     std::vector<sequence_info> get_sequences(const std::vector<std::size_t>& detail_level_indexes) const override;
     std::vector<std::string> get_detail_levels() const override;
     std::vector<material> get_materials() const override;
@@ -30,7 +36,7 @@ namespace siege::content::wtb
     void render_shape(shape_renderer& renderer, const std::vector<std::size_t>& detail_level_indexes, const std::vector<sequence_info>& sequences) const override;
 
   private:
-    wtb_shape shape;
+    std::variant<wtb_shape, bwd::bwd_model> shape;
   };
 }// namespace siege::content::wtb
 

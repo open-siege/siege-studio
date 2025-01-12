@@ -58,8 +58,17 @@ namespace siege::views
       }
     }
 
-    void new_face(std::size_t) override
+    void new_face(std::size_t size) override
     {
+      if (size == 3)
+      {
+        glBegin(GL_TRIANGLES);
+      }
+      else
+      {
+        glBegin(GL_TRIANGLE_FAN);
+      }
+
       if (current_object_visible)
       {
         const auto [red, green, blue] = max_colour;
@@ -70,6 +79,7 @@ namespace siege::views
 
     void end_face() override
     {
+      glEnd();
     }
 
     void emit_vertex(const content::vector3f& vertex) override
@@ -98,4 +108,4 @@ namespace siege::views
   }
 }// namespace siege::views
 
-#endif//DARKSTARDTSCONVERTER_GL_RENDERER_HPP
+#endif// DARKSTARDTSCONVERTER_GL_RENDERER_HPP

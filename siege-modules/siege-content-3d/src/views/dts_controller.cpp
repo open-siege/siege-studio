@@ -78,11 +78,6 @@ namespace siege::views
       siege::content::mdl::load_mdx(stream);
     }
 
-    if (siege::content::bwd::is_bwd(stream))
-    {
-      siege::content::bwd::load_bwd(stream);
-    }
-
     auto shape = content::dts::make_shape(stream);
 
     if (dynamic_cast<content::dts::null_renderable_shape*>(shape.get()) != nullptr)

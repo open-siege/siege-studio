@@ -10,6 +10,7 @@
 #include <siege/platform/win/desktop/theming.hpp>
 #include "dts_controller.hpp"
 #include "gl_renderer.hpp"
+#include <siege/content/obj_renderer.hpp>
 #include <glm/ext/vector_float3.hpp>
 
 
@@ -39,8 +40,8 @@ namespace siege::views
     win32::tool_bar shape_actions;
     win32::image_list image_list;
 
-    glm::vec3 translation = { 0, 0, -20 };
-    content::vector3f rotation = { 115, 180, -35 };
+    glm::vec3 translation = { 0, 0, -1200 };
+    content::vector3f rotation = { 45, 90, -35 };
 
     dts_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
@@ -240,9 +241,7 @@ namespace siege::views
         glRotatef(rotation.y, 0.f, 1.f, 0.f);
         glRotatef(rotation.z, 0.f, 0.f, 1.f);
 
-        glBegin(GL_TRIANGLES);
         controller.render_shape(0, *renderer);
-        glEnd();
         glFlush();
       }
 
