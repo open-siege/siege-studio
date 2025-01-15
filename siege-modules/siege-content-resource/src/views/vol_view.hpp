@@ -10,6 +10,7 @@
 #include <siege/platform/shared.hpp>
 #include <spanstream>
 #include <map>
+#include <unordered_map>
 #include <set>
 #include <algorithm>
 #include <future>
@@ -31,8 +32,8 @@ namespace siege::views
     std::set<std::u16string> all_categories;
     std::map<std::u16string, std::set<std::wstring>> category_extensions;
     std::map<std::u16string, win32::wparam_t> categories_to_groups;
-    std::map<std::wstring_view, std::u16string> extensions_to_categories;
-    std::map<siege::platform::file_info*, win32::wparam_t> file_indices;
+    std::unordered_map<std::wstring_view, std::u16string> extensions_to_categories;
+    std::unordered_map<siege::platform::file_info*, win32::wparam_t> file_indices;
     std::u16string filter_value;
 
     win32::popup_menu table_menu;
@@ -720,40 +721,33 @@ namespace siege::views
             }
           }
 
-          auto contents = controller.get_contents();
-
-          for (auto& content : contents)
+          for (auto& file_index : file_indices)
           {
-            if (auto* file = std::get_if<siege::platform::file_info>(&content))
+            if (!file_index.first)
             {
-              auto index_iter = file_indices.find(file);
+              continue;
+            }
 
-              if (index_iter == file_indices.end())
-              {
-                continue;
-              }
+            if (file_index.first->filename.u16string().find(filter_value) == std::u16string_view::npos)
+            {
+              table.SetItem({
+                .mask = LVIF_GROUPID,
+                .iItem = int(file_index.second),
+                .iGroupId = 1,
+              });
+            }
+            else
+            {
+              auto extension = platform::to_lower(file_index.first->filename.extension().wstring());
+              auto category = extensions_to_categories.find(extension);
 
-              if (file->filename.u16string().find(filter_value) == std::u16string_view::npos)
+              if (category != extensions_to_categories.end())
               {
                 table.SetItem({
                   .mask = LVIF_GROUPID,
-                  .iItem = int(index_iter->second),
-                  .iGroupId = 1,
+                  .iItem = int(file_index.second),
+                  .iGroupId = int(categories_to_groups[category->second]),
                 });
-              }
-              else
-              {
-                auto extension = platform::to_lower(file->filename.extension().wstring());
-                auto category = extensions_to_categories.find(extension);
-
-                if (category != extensions_to_categories.end())
-                {
-                  table.SetItem({
-                    .mask = LVIF_GROUPID,
-                    .iItem = int(index_iter->second),
-                    .iGroupId = int(categories_to_groups[category->second]),
-                  });
-                }
               }
             }
           }
