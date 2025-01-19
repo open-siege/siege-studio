@@ -38,9 +38,11 @@ namespace siege::views
     return result;
   }
 
-  struct siege_main_window final : win32::window_ref, win32::menu::notifications
+  struct siege_main_window final : win32::window_ref
+    , win32::menu::notifications
   {
     win32::tree_view dir_list;
+    win32::popup_menu dir_list_menu;
     win32::button separator;
     win32::tab_control tab_control;
     win32::button close_button;
@@ -242,10 +244,12 @@ namespace siege::views
       initial_working_dir = fs::current_path();
       win32::window_factory factory(ref());
 
-      dir_list = *factory.CreateWindowExW<win32::tree_view>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE });
+      dir_list = *factory.CreateWindowExW<win32::tree_view>(CREATESTRUCTW{ .hMenu = dir_list_menu.get(), .style = WS_CHILD | WS_VISIBLE });
       dir_list.bind_tvn_sel_changed(std::bind_front(&siege_main_window::dir_list_tvn_sel_changed, this));
       dir_list.bind_tvn_item_expanding(std::bind_front(&siege_main_window::dir_list_tvn_item_expanding, this));
       dir_list.bind_nm_dbl_click(std::bind_front(&siege_main_window::dir_list_nm_dbl_click, this));
+      dir_list.bind_nm_rclick(std::bind_front(&siege_main_window::dir_list_nm_rclick, this));
+      dir_list_menu.AppendMenuW(MF_OWNERDRAW, 1, L"Open in File Explorer");
 
       separator = *factory.CreateWindowEx<win32::button>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | BS_FLAT });
 
@@ -271,7 +275,7 @@ namespace siege::views
       tab_control.bind_nm_rclick(std::bind_front(&siege_main_window::tab_control_nm_rclick, this));
       tab_control.bind_tcn_sel_change(std::bind_front(&siege_main_window::tab_control_tcn_sel_change, this));
       tab_control.bind_tcn_sel_changing(std::bind_front(&siege_main_window::tab_control_tcn_sel_changing, this));
-      
+
       close_button = *factory.CreateWindowExW<win32::button>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"X" });
       close_button.bind_bn_clicked(std::bind_front(&siege_main_window::close_button_bn_clicked, this));
 
@@ -850,6 +854,72 @@ namespace siege::views
       return FALSE;
     }
 
+    fs::path get_path_from_item(win32::tree_view& sender, HTREEITEM item)
+    {
+      fs::path result;
+
+      SHSTOCKICONINFO icon{ .cbSize = sizeof(SHSTOCKICONINFO) };
+
+      if (SHGetStockIconInfo(SIID_FOLDER, SHGSI_SYSICONINDEX, &icon) == S_OK)
+      {
+        std::array<wchar_t, 255> text;
+        TVITEMW info{ .mask = TVIF_TEXT | TVIF_IMAGE, .hItem = item, .pszText = text.data(), .cchTextMax = text.size() };
+
+        if (TreeView_GetItem(sender, &info) && icon.iSysImageIndex == info.iImage)
+        {
+          result = fs::path(text.data()) / result;
+        }
+
+        do {
+          auto parent = TreeView_GetParent(sender, item);
+
+          if (parent == nullptr)
+          {
+            break;
+          }
+          item = parent;
+          info.hItem = item;
+
+          if (TreeView_GetItem(sender, &info) && icon.iSysImageIndex == info.iImage)
+          {
+            result = fs::path(text.data()) / result;
+          }
+
+
+        } while (item != nullptr);
+      }
+
+
+      return result;
+    }
+
+    BOOL dir_list_nm_rclick(win32::tree_view sender, const NMHDR& notification)
+    {
+      POINT point{};
+
+      if (::GetCursorPos(&point) && ::ScreenToClient(sender, &point))
+      {
+        TVHITTESTINFO info{
+          .pt = point,
+          .flags = TVHT_ONITEM
+        };
+        auto item = TreeView_HitTest(sender, &info);
+
+        if (item && ::ClientToScreen(sender, &point))
+        {
+          auto action = ::TrackPopupMenu(GetMenu(sender), TPM_CENTERALIGN | TPM_RETURNCMD, point.x, point.y, 0, *this, nullptr);
+
+          if (action == 1)
+          {
+            auto current_path = get_path_from_item(sender, item);
+            ::ShellExecuteW(NULL, L"open", current_path.c_str(), nullptr, nullptr, SW_SHOWDEFAULT);
+          }
+        }
+      }
+
+      return FALSE;
+    }
+
     void dir_list_tvn_sel_changed(win32::tree_view, const NMTREEVIEWW& notification)
     {
       selected_file = std::find_if(files.begin(), files.end(), [&](const auto& existing) {
@@ -979,7 +1049,58 @@ namespace siege::views
           }
 
           std::vector<COMDLG_FILTERSPEC> filetypes(temp.begin(), temp.end());
+
+
+          win32::com::com_ptr<IShellItem> folder_info;
+
+          int file_count = 0;
+          std::map<std::wstring, int> extension_counts;
+          if (dialog.value()->GetFolder(folder_info.put()) == S_OK)
+          {
+            win32::com::com_string temp;
+            if (folder_info->GetDisplayName(SIGDN_FILESYSPATH, temp.put()) == S_OK)
+            {
+              for (auto entry = fs::recursive_directory_iterator(std::wstring_view(temp));
+                   entry != fs::recursive_directory_iterator();
+                   ++entry)
+              {
+                if (file_count > 3000)
+                {
+                  break;
+                }
+
+                if (entry.depth() == 3)
+                {
+                  entry.disable_recursion_pending();
+                }
+
+                if (entry->is_regular_file())
+                {
+                  auto known_extension = extensions.find(entry->path().extension());
+
+                  if (known_extension != extensions.end())
+                  {
+                    auto extension = entry->path().extension().wstring();
+
+                    if (!extension_counts.contains(extension))
+                    {
+                      // helps place files in deeper folders lower down in the list
+                      extension_counts[extension] = 1000 - entry.depth() * 100;
+                    }
+                    extension_counts[extension]++;
+                  }
+                }
+                file_count++;
+              }
+            }
+          }
+
+          std::sort(filetypes.begin(), filetypes.end(), [&](const auto& a, const auto& b) {
+            return extension_counts[a.pszName] > extension_counts[b.pszName];
+          });
+
           dialog.value()->SetFileTypes(filetypes.size(), filetypes.data());
+
           auto result = dialog.value()->Show(nullptr);
 
           if (result == S_OK)
