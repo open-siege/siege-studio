@@ -11,7 +11,8 @@ namespace win32
   {
     void operator()(HIMAGELIST list)
     {
-      assert(::ImageList_Destroy(list) == TRUE);
+      auto result = ::ImageList_Destroy(list);
+      assert(result == TRUE);
     }
   };
 
@@ -19,6 +20,35 @@ namespace win32
   {
     using base = win32::auto_handle<HIMAGELIST, image_list_deleter>;
     using base::base;
+
+    image_list() : base()
+    {
+    }
+
+    struct params
+    {
+      int width;
+      int height;
+      std::uint32_t flags = ILC_COLOR32;
+      int capacity = 0;
+      int size_limit = 0;
+    };
+
+    image_list(int width, int height, std::uint32_t flags = ILC_COLOR32, int capacity = 0, int size_limit = 0)
+    {
+      auto result = ImageList_Create(width, height, flags, capacity, size_limit);
+
+      if (result == nullptr)
+      {
+        throw std::runtime_error("Could not create image list");
+      }
+
+      reset(result);
+    }
+
+    image_list(params params) : image_list(params.width, params.height, params.flags, params.capacity, params.size_limit)
+    {
+    }
 
     std::optional<SIZE> GetIconSize()
     {
@@ -36,6 +66,13 @@ namespace win32
       }
 
       return std::nullopt;
+    }
+
+    void** put_void()
+    {
+      static_assert(sizeof(base) == sizeof(void*));
+      static_assert(std::is_standard_layout_v<image_list>);
+      return reinterpret_cast<void**>(this);
     }
   };
 

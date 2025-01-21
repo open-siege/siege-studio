@@ -73,7 +73,7 @@ namespace siege::views
     std::array<win32::popup_menu, 3> popup_menus;
     win32::popup_menu tab_context_menu;
 
-    HIMAGELIST shell_images = nullptr;
+    win32::image_list shell_images;
 
     bool is_dark_mode = false;
 
@@ -119,7 +119,7 @@ namespace siege::views
 
       if (!shell_images)
       {
-        hresult = SHGetImageList(SHIL_SMALL, IID_IImageList, (void**)&shell_images);
+        hresult = SHGetImageList(SHIL_SMALL, IID_IImageList, shell_images.put_void());
       }
 
       SHSTOCKICONINFO info{ .cbSize = sizeof(SHSTOCKICONINFO) };

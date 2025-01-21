@@ -213,13 +213,20 @@ namespace siege::views
     { L"Automobilista"sv, L"isi-2.0"sv, L"siege-extension-automobilista"sv, std::array<std::wstring_view, 8>{ { L".plr" } } },
   } };
 
+
+  // TODO remove embedding of dlls from debug builds
+  // TODO in siege-studio.cpp, add threaded extraction of embedded dlls
+  // TODO add icons for each game. Check for goggame-*.ico, then an ico with the same name as the exe, then the first embedded icon inside of the exe
+  // TODO scale icons by system scale settings
   struct default_view final : win32::window_ref
   {
     inline static auto first_time = true;
-    std::wofstream log = std::wofstream("siege-studio-log.txt", std::ios::trunc);
 
     win32::static_control heading;//"Welcome to Siege Studio."
     win32::static_control logo;
+
+    win32::image_list normal_icons = win32::image_list({ .width = ::GetSystemMetrics(SM_CXICON), .height = ::GetSystemMetrics(SM_CYICON), .capacity = (int)games.size() });
+    win32::image_list small_icons = win32::image_list({ .width = ::GetSystemMetrics(SM_CXSMICON), .height = ::GetSystemMetrics(SM_CYSMICON), .capacity = (int)games.size() });
 
     win32::list_view supported_games_by_engine;
 
@@ -239,7 +246,6 @@ namespace siege::views
 
     auto wm_create()
     {
-      log << L"Creating default view\n";
       win32::window_factory factory(ref());
 
       heading = *factory.CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE });
@@ -250,7 +256,7 @@ namespace siege::views
 
       ::SendMessageW(logo, STM_SETIMAGE, IMAGE_ICON, (LPARAM)logo_icon.get());
 
-      supported_games_by_engine = *factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | LVS_REPORT });
+      supported_games_by_engine = *factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_SHAREIMAGELISTS });
       supported_games_by_engine.bind_nm_dbl_click([this](auto c, const auto& n) {
         this->supported_games_nm_dbl_click(std::move(c), n);
       });
@@ -263,6 +269,8 @@ namespace siege::views
                                                    .pszText = const_cast<wchar_t*>(L"Detected Path"),
                                                  });
 
+      ListView_SetImageList(supported_games_by_engine, normal_icons, LVSIL_NORMAL);
+      ListView_SetImageList(supported_games_by_engine, small_icons, LVSIL_SMALL);
       ListView_SetView(supported_games_by_engine, LV_VIEW_TILE);
 
       supported_games_by_engine.EnableGroupView(true);
@@ -324,16 +332,13 @@ namespace siege::views
 
 
       pending_operation = std::async(std::launch::async, [this]() {
-        log << L"Detecting games\n";
         std::set<std::wstring> search_roots;
 
         std::error_code errc{};
         for (auto drive = L'C'; drive <= L'Z'; ++drive)
         {
-          log << L"Checking for drive: " << drive << '\n';
           if (std::filesystem::exists(std::wstring(1, drive) + L":\\", errc))
           {
-            log << L"Found drive: " << drive << '\n';
             search_roots.emplace(std::wstring(1, drive) + L":");
           }
         }
@@ -341,17 +346,14 @@ namespace siege::views
         std::wstring program_files_path(256, L'\0');
         std::wstring program_files_x86_path(256, L'\0');
 
-        log << L"Finding program files directories" << '\n';
         if (::SHGetFolderPathW(nullptr, CSIDL_PROGRAM_FILES, nullptr, SHGFP_TYPE_CURRENT, program_files_path.data()) == S_OK)
         {
           program_files_path.resize(program_files_path.find(L'\0'));
-          log << L"Found program files: " << program_files_path << '\n';
           search_roots.emplace(std::move(program_files_path));
         }
 
         if (::SHGetFolderPathW(nullptr, CSIDL_PROGRAM_FILESX86, nullptr, SHGFP_TYPE_CURRENT, program_files_x86_path.data()) == S_OK)
         {
-          log << L"Found secondary program files: " << program_files_path << '\n';
           program_files_x86_path.resize(program_files_x86_path.find(L'\0'));
           search_roots.emplace(std::move(program_files_x86_path));
         }
@@ -363,14 +365,12 @@ namespace siege::views
           for (const auto& search_path : default_search_paths)
           {
             auto real_search_path = std::wstring(root) + std::wstring(1, L'\\') + std::wstring(search_path);
-            log << L"Adding search path " << real_search_path << '\n';
             real_search_paths.insert(std::move(real_search_path));
           }
 
           for (const auto& game : games)
           {
             auto real_search_path = std::wstring(root) + std::wstring(1, L'\\') + std::wstring(game.game_name);
-            log << L"Adding game search path " << real_search_path << '\n';
             real_search_paths.insert(std::move(real_search_path));
           }
         }
@@ -382,22 +382,17 @@ namespace siege::views
 
         std::for_each(std::execution::par_unseq, real_search_paths.begin(), real_search_paths.end(), [&](const auto& real_search_path) {
           std::error_code errc{};
-          log << (L"Checking for " + real_search_path.wstring() + L'\n');
           if (fs::exists(real_search_path, errc))
           {
             try
             {
-              log << (L"Found " + real_search_path.wstring() + L'\n');
-              log << (L"Searching for exes" + '\n');
               for (const fs::directory_entry& dir_entry :
                 fs::recursive_directory_iterator(real_search_path))
               {
                 if (dir_entry.path().extension() == L".exe" || dir_entry.path().extension() == L".EXE")
                 {
-                  log << (L"Checking " + dir_entry.path().wstring() + L'\n');
                   for (auto& extension : extensions)
                   {
-                    log << (L"Checking " + dir_entry.path().wstring() + L" with " + extension.GetModuleFileName() + L'\n');
                     if (extension.executable_is_supported(dir_entry.path().c_str()) == true)
                     {
                       auto extension_name = fs::path(extension.GetModuleFileName()).stem();
@@ -423,6 +418,60 @@ namespace siege::views
                         const std::lock_guard<std::mutex> lock(game_lock);
                         std::wstring final_data = dir_entry.path().wstring();
                         ListView_SetItemText(this->supported_games_by_engine, item, 1, final_data.data());
+
+                        auto normal_size = normal_icons.GetIconSize();
+                        auto small_size = small_icons.GetIconSize();
+
+                        if (normal_size && small_size)
+                        {
+                          int normal_index = -1;
+                          int small_index = -1;
+                          for (auto entry = std::filesystem::directory_iterator(dir_entry.path().parent_path());
+                               entry != std::filesystem::directory_iterator();
+                               ++entry)
+                          {
+                            auto load_icons = [&] {
+                              auto normal_icon = (HICON)::LoadImageW(nullptr, entry->path().c_str(), IMAGE_ICON, normal_size->cx, normal_size->cy, LR_LOADFROMFILE);
+
+                              if (normal_icon)
+                              {
+                                normal_index = ImageList_AddIcon(normal_icons, normal_icon);
+                                ::DestroyIcon(normal_icon);
+                              }
+
+                              auto small_icon = (HICON)::LoadImageW(nullptr, entry->path().c_str(), IMAGE_ICON, small_size->cx, small_size->cy, LR_LOADFROMFILE);
+
+                              if (small_icon)
+                              {
+                                small_index = ImageList_AddIcon(small_icons, small_icon);
+                                ::DestroyIcon(small_icon);
+                              }
+                            };
+
+                            if (entry->path().extension() == ".ico" && entry->path().filename().wstring().find(L"goggame-") == 0)
+                            {
+                              load_icons();
+                              break;
+                            }
+
+                            if (entry->path().extension() == ".ico" && siege::platform::to_lower(entry->path().stem().wstring()) == siege::platform::to_lower(dir_entry.path().stem().wstring()))
+                            {
+                              load_icons();
+                              break;
+                            }
+                          }
+
+                          if (normal_index != -1)
+                          {
+                            LVITEMW item_icon{
+                              .mask = LVIF_IMAGE,
+                              .iItem = item,
+                              .iImage = normal_index
+                            };
+
+                            ListView_SetItem(supported_games_by_engine, &item_icon);
+                          }
+                        }
                       }
                     }
                   }
