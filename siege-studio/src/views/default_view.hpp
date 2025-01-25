@@ -256,6 +256,9 @@ namespace siege::views
 
       ::SendMessageW(logo, STM_SETIMAGE, IMAGE_ICON, (LPARAM)logo_icon.get());
 
+      ImageList_AddIcon(normal_icons, logo_icon);
+      ImageList_AddIcon(small_icons, logo_icon);
+
       supported_games_by_engine = *factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_SHAREIMAGELISTS });
       supported_games_by_engine.bind_nm_dbl_click([this](auto c, const auto& n) {
         this->supported_games_nm_dbl_click(std::move(c), n);
@@ -358,6 +361,10 @@ namespace siege::views
           search_roots.emplace(std::move(program_files_x86_path));
         }
 
+        win32::module shell32("shell32.dll", true);
+
+        auto extract_icon_ex = shell32.GetProcAddress<std::add_pointer_t<decltype(ExtractIconExW)>>("ExtractIconExW");
+
         std::set<fs::path> real_search_paths;
 
         for (const auto& root : search_roots)
@@ -459,7 +466,25 @@ namespace siege::views
                               load_icons();
                               break;
                             }
+
+                            HICON large_icon;
+                            HICON small_icon;
+                            if ((normal_index == -1 || small_index == -1) && extract_icon_ex && extract_icon_ex(dir_entry.path().c_str(), 0, &large_icon, &small_icon, 1) != -1)
+                            {
+                              if (large_icon)
+                              {
+                                normal_index = ImageList_AddIcon(normal_icons, large_icon);
+                                ::DestroyIcon(large_icon);
+                              }
+
+                              if (small_icon)
+                              {
+                                small_index = ImageList_AddIcon(small_icons, small_icon);
+                                ::DestroyIcon(small_icon);
+                              }
+                            }
                           }
+
 
                           if (normal_index != -1)
                           {
