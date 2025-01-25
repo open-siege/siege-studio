@@ -232,6 +232,7 @@ namespace siege::views
 
     // TODO finish implementing this
     win32::list_view supported_games_by_file_type;
+    win32::popup_menu item_menu;
 
     win32::gdi::icon logo_icon;
 
@@ -259,10 +260,11 @@ namespace siege::views
       ImageList_AddIcon(normal_icons, logo_icon);
       ImageList_AddIcon(small_icons, logo_icon);
 
-      supported_games_by_engine = *factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_SHAREIMAGELISTS });
-      supported_games_by_engine.bind_nm_dbl_click([this](auto c, const auto& n) {
-        this->supported_games_nm_dbl_click(std::move(c), n);
-      });
+      item_menu.AppendMenuW(MF_OWNERDRAW, 1, L"Open in File Explorer");
+
+      supported_games_by_engine = *factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{ .hMenu = item_menu.get(), .style = WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_SHAREIMAGELISTS });
+      supported_games_by_engine.bind_nm_rclick(std::bind_front(&default_view::supported_games_nm_rclick, this));
+      supported_games_by_engine.bind_nm_dbl_click(std::bind_front(&default_view::supported_games_nm_dbl_click, this));
 
       supported_games_by_engine.InsertColumn(-1, LVCOLUMNW{
                                                    .pszText = const_cast<wchar_t*>(L""),
@@ -511,6 +513,32 @@ namespace siege::views
       });
 
       return 0;
+    }
+
+    void supported_games_nm_rclick(win32::list_view sender, const NMITEMACTIVATE& message)
+    {
+      POINT mouse_pos;
+      if (::GetCursorPos(&mouse_pos))
+      {
+        auto action = ::TrackPopupMenu(::GetMenu(sender), TPM_CENTERALIGN | TPM_RETURNCMD, mouse_pos.x, mouse_pos.y, 0, *this, nullptr);
+
+        if (action == 1)
+        {
+          std::array<wchar_t, 256> temp{};
+          ListView_GetItemText(supported_games_by_engine, message.iItem, 1, temp.data(), 256);
+          if (temp[0] != L'\0')
+          {
+            fs::path file_path = temp.data();
+
+            if (!fs::exists(file_path))
+            {
+              return;
+            }
+            ::ShellExecuteW(NULL, L"open", file_path.parent_path().c_str(), nullptr, nullptr, SW_SHOWDEFAULT);
+          }
+        }
+      }
+
     }
 
     void supported_games_nm_dbl_click(win32::list_view, const NMITEMACTIVATE& message)
