@@ -12,6 +12,7 @@
 
 namespace siege::views
 {
+  // TODO implement saving of configurations for supported games
   struct cfg_view final : win32::window_ref
   {
     cfg_controller controller;

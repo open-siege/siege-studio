@@ -20,6 +20,8 @@
 
 namespace siege::views
 {
+  // TODO add zoom and pan functionality
+  // TODO complete palette selection feature
   struct bmp_view : win32::window_ref
   {
     win32::static_control static_image;

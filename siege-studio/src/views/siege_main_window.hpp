@@ -38,6 +38,10 @@ namespace siege::views
     return result;
   }
 
+  // TODO update tree view to support multiple levels of navigation
+  // TODO fix issue with resize button appearing black on first load
+  // TODO add filename filter for directory listing
+  // TODO add category and extension filter for directory listing
   struct siege_main_window final : win32::window_ref
     , win32::menu::notifications
   {

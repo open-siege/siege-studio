@@ -24,6 +24,7 @@ namespace siege::views
     }
   };
 
+  // TODO add zoom and pan functionality
   struct dts_view final : win32::window_ref
   {
     dts_controller controller;
