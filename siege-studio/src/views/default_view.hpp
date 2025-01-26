@@ -215,8 +215,6 @@ namespace siege::views
 
 
   // TODO remove embedding of dlls from debug builds
-  // TODO in siege-studio.cpp, add threaded extraction of embedded dlls
-  // TODO add icons for each game. Check for goggame-*.ico, then an ico with the same name as the exe, then the first embedded icon inside of the exe
   // TODO scale icons by system scale settings
   struct default_view final : win32::window_ref
   {
@@ -262,9 +260,7 @@ namespace siege::views
       win32::image_list small_shell_images;
 
       SHSTOCKICONINFO info{ .cbSize = sizeof(SHSTOCKICONINFO) };
-      if (::SHGetImageList(SHIL_SMALL, IID_IImageList, small_shell_images.put_void()) == S_OK &&
-          ::SHGetImageList(SHIL_LARGE, IID_IImageList, large_shell_images.put_void()) == S_OK &&
-          ::SHGetStockIconInfo(SIID_APPLICATION, SHGSI_SYSICONINDEX, &info) == S_OK)
+      if (::SHGetImageList(SHIL_SMALL, IID_IImageList, small_shell_images.put_void()) == S_OK && ::SHGetImageList(SHIL_LARGE, IID_IImageList, large_shell_images.put_void()) == S_OK && ::SHGetStockIconInfo(SIID_APPLICATION, SHGSI_SYSICONINDEX, &info) == S_OK)
       {
         ImageList_AddIcon(normal_icons, ImageList_GetIcon(large_shell_images, info.iSysImageIndex, 0));
         ImageList_AddIcon(small_icons, ImageList_GetIcon(small_shell_images, info.iSysImageIndex, 0));
@@ -275,7 +271,8 @@ namespace siege::views
         ImageList_AddIcon(small_icons, logo_icon);
       }
 
-      item_menu.AppendMenuW(MF_OWNERDRAW, 1, L"Open in File Explorer");
+      item_menu.AppendMenuW(MF_OWNERDRAW, 1, L"Open in New Tab");
+      item_menu.AppendMenuW(MF_OWNERDRAW, 2, L"Open in File Explorer");
 
       supported_games_by_engine = *factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{ .hMenu = item_menu.get(), .style = WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_SHAREIMAGELISTS });
       supported_games_by_engine.bind_nm_rclick(std::bind_front(&default_view::supported_games_nm_rclick, this));
@@ -524,8 +521,8 @@ namespace siege::views
                             break;
                           }
 
-                          HICON large_icon;
-                          HICON small_icon;
+                          HICON large_icon{};
+                          HICON small_icon{};
                           if ((normal_index == -1 || small_index == -1) && extract_icon_ex && extract_icon_ex(dir_entry.path().c_str(), 0, &large_icon, &small_icon, 1) != -1)
                           {
                             if (large_icon)
@@ -571,12 +568,40 @@ namespace siege::views
 
     void supported_games_nm_rclick(win32::list_view sender, const NMITEMACTIVATE& message)
     {
+      auto info = supported_games_by_engine.GetItem(LVITEMW{
+        .mask = LVIF_PARAM,
+        .iItem = message.iItem,
+      });
+
+      if (!(info && info->lParam))
+      {
+        return;
+      }
+
+      auto existing = std::find_if(games.begin(), games.end(), [&](auto& game) {
+        if (game.preferered_extension)
+        {
+          return info->lParam == (LPARAM)game.preferered_extension->data();
+        }
+
+        return false;
+      });
+
+      if (existing != games.end())
+      {
+        return;
+      }
+
       POINT mouse_pos;
       if (::GetCursorPos(&mouse_pos))
       {
         auto action = ::TrackPopupMenu(::GetMenu(sender), TPM_CENTERALIGN | TPM_RETURNCMD, mouse_pos.x, mouse_pos.y, 0, *this, nullptr);
 
         if (action == 1)
+        {
+          open_item_in_new_tab(message);
+        }
+        if (action == 2)
         {
           std::array<wchar_t, 256> temp{};
           ListView_GetItemText(supported_games_by_engine, message.iItem, 1, temp.data(), 256);
@@ -595,6 +620,11 @@ namespace siege::views
     }
 
     void supported_games_nm_dbl_click(win32::list_view, const NMITEMACTIVATE& message)
+    {
+      open_item_in_new_tab(message);
+    }
+
+    void open_item_in_new_tab(const NMITEMACTIVATE& message)
     {
       auto root = this->GetAncestor(GA_ROOT);
 

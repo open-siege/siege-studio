@@ -175,9 +175,10 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
 
     darkstar::create_vol_file(mem_buffer, files);
 
+    std::any cache;
     darkstar::vol_resource_reader archive;
 
-    auto parsed_files = archive.get_content_listing(mem_buffer, { std::filesystem::path(), std::filesystem::path() });
+    auto parsed_files = archive.get_content_listing(cache, mem_buffer, { std::filesystem::path(), std::filesystem::path() });
     REQUIRE(parsed_files.size() == 3);
 
     std::visit([&](auto& info) {
@@ -199,7 +200,7 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
         REQUIRE(info.size == 13);
         REQUIRE(info.offset == 48);
         REQUIRE(info.filename == "test.txt");
-        REQUIRE(info.compression_type == siege::platform::compression_type::lzh);
+        REQUIRE(info.compression_type == siege::platform::compression_type::lzss_huffman);
       }
     },
       parsed_files.at(1));

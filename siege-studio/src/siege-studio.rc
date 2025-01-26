@@ -1,2 +1,4 @@
+#ifndef _DEBUG
 #include "extensions.rc"
+#endif
 AppIcon ICON "logo.ico"

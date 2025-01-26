@@ -29,12 +29,18 @@
 extern "C" __declspec(dllexport) std::uint32_t DisableSiegeExtensionModule = -1;
 constexpr static std::wstring_view app_title = L"Siege Studio";
 
+struct embedded_dll
+{
+  std::filesystem::path filename;
+  HGLOBAL handle;
+};
+
 BOOL __stdcall extract_embedded_dlls(HMODULE module,
   LPCWSTR type,
   LPWSTR name,
   LONG_PTR lParam)
 {
-  std::vector<std::filesystem::path>* items = (std::vector<std::filesystem::path>*)lParam;
+  std::vector<embedded_dll>* items = (std::vector<embedded_dll>*)lParam;
 
   auto entry = ::FindResourceW(module, name, RT_RCDATA);
 
@@ -53,11 +59,7 @@ BOOL __stdcall extract_embedded_dlls(HMODULE module,
 
   if (path.extension() == ".dll" || path.extension() == ".DLL")
   {
-    auto size = ::SizeofResource(module, entry);
-    auto bytes = ::LockResource(data);
-
-    std::ofstream output(siege::platform::to_lower(path.c_str()), std::ios::trunc | std::ios::binary);
-    output.write((const char*)bytes, size);
+    items->emplace_back(embedded_dll{ std::move(path), data });
   }
 
   return TRUE;
@@ -81,7 +83,25 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 
   win32::window_module_ref this_module(hInstance);
 
-  ::EnumResourceNamesW(hInstance, RT_RCDATA, extract_embedded_dlls, 0);
+  std::vector<embedded_dll> embedded_dlls;
+  embedded_dlls.reserve(32);
+
+  ::EnumResourceNamesW(hInstance, RT_RCDATA, extract_embedded_dlls, (LONG_PTR)&embedded_dlls);
+
+  std::for_each(std::execution::par_unseq, embedded_dlls.begin(), embedded_dlls.end(), [=](embedded_dll& dll) {
+    auto entry = ::FindResourceW(hInstance, dll.filename.c_str(), RT_RCDATA);
+
+    if (!entry)
+    {
+      return;
+    }
+
+    auto size = ::SizeofResource(hInstance, entry);
+    auto bytes = ::LockResource(dll.handle);
+
+    std::ofstream output(siege::platform::to_lower(dll.filename.c_str()), std::ios::trunc | std::ios::binary);
+    output.write((const char*)bytes, size);
+  });
 
   win32::window_meta_class<siege::views::siege_main_window> info{};
   info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
