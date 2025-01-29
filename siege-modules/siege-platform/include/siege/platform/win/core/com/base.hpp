@@ -5,10 +5,39 @@
 #include <optional>
 #include <algorithm>
 #include <string_view>
+#include <stdexcept>
 #include <combaseapi.h>
 
 namespace win32::com
 {
+  struct hresult_throw_on_error
+  {
+    HRESULT result;
+    hresult_throw_on_error(HRESULT result)
+    {
+      if (result != S_OK)
+      {
+        std::string err_msg_a(255, '\0');
+
+        err_msg_a.resize(FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+          nullptr,
+          result,
+          MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+          err_msg_a.data(),
+          err_msg_a.size(),
+          nullptr));
+        
+        throw std::runtime_error(err_msg_a);
+      }
+      this->result = result;
+    }
+
+    operator HRESULT() const
+    {
+      return result;
+    }
+  };
+
   template<typename TUnknown>
   struct com_deleter
   {
@@ -71,7 +100,10 @@ namespace win32::com
     }
 
     com_ptr(const com_ptr& other) : base([&]() -> base {
-                                      other->AddRef();
+                                      if (other)
+                                      {
+                                        other->AddRef();
+                                      }
                                       return base(other.get());
                                     }())
     {
