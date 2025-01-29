@@ -1,5 +1,6 @@
 #include <siege/platform/win/desktop/theming.hpp>
 #include <siege/platform/win/core/com/base.hpp>
+#include <siege/platform/win/desktop/wic.hpp>
 #include <wincodec.h>
 #include <VersionHelpers.h>
 
@@ -7,26 +8,51 @@ namespace win32
 {
   gdi::brush_ref get_solid_brush(COLORREF color);
 
-  auto& bitmap_factory()
-  {
-    thread_local win32::com::com_ptr factory = [] {
-      win32::com::com_ptr<IWICImagingFactory> temp;
-
-      if (CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory), temp.put_void()) != S_OK)
-      {
-        throw std::exception("Could not create imaging factory");
-      }
-
-      return temp;
-    }();
-
-    return *factory;
-  }
-
   struct cache_info
   {
-    HBITMAP bitmap = nullptr;
+    win32::file_mapping mapping;
     std::span<RGBQUAD> pixels;
+    win32::gdi::bitmap gdi_bitmap;
+    win32::wic::bitmap wic_bitmap;
+
+
+    cache_info(::SIZE size) : mapping(::CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_EXECUTE_READWRITE, 0, size.cx * size.cy * sizeof(std::uint32_t), nullptr)),
+                              pixels{},
+                              gdi_bitmap([&] {
+                                BITMAPINFO info{
+                                  .bmiHeader{
+                                    .biSize = sizeof(BITMAPINFOHEADER),
+                                    .biWidth = LONG(size.cx),
+                                    .biHeight = LONG(size.cy),
+                                    .biPlanes = 1,
+                                    .biBitCount = 32,
+                                    .biCompression = BI_RGB }
+                                };
+                                void* pixels = nullptr;
+                                auto result = ::CreateDIBSection(nullptr, &info, DIB_RGB_COLORS, &pixels, mapping.get(), 0);
+
+                                this->pixels = std::span<RGBQUAD>((RGBQUAD*)pixels, size.cx * size.cy);
+                                return result;
+                              }()),
+                              wic_bitmap(win32::wic::bitmap::from_section_ex{
+                                .width = (std::uint32_t)size.cx,
+                                .height = (std::uint32_t)size.cy,
+                                .format = win32::wic::pixel_format::bgra_32bpp,
+                                .section = mapping.get(),
+                                .stride = (std::uint32_t)size.cx * sizeof(std::uint32_t),
+                                .access_level = win32::wic::section_access_level::WICSectionAccessLevelReadWrite
+                              })
+    {
+    }
+
+    cache_info(cache_info&& other) :
+        mapping(std::move(other.mapping)), 
+        gdi_bitmap(std::move(other.gdi_bitmap)),
+        wic_bitmap(std::move(other.wic_bitmap)),
+        pixels(std::move(other.pixels))
+    {
+
+    }
   };
 
   struct image_cache
@@ -72,23 +98,12 @@ namespace win32
 
     if (existing != cache.layer_masks.end())
     {
-      return gdi::bitmap_ref(existing->second.bitmap);
+      return gdi::bitmap_ref(existing->second.gdi_bitmap.get());
     }
 
-    BITMAPINFO info{
-      .bmiHeader{
-        .biSize = sizeof(BITMAPINFOHEADER),
-        .biWidth = LONG(font_size.cx),
-        .biHeight = LONG(font_size.cy),
-        .biPlanes = 1,
-        .biBitCount = 32,
-        .biCompression = BI_RGB }
-    };
-    void* pixels = nullptr;
-    auto temp_bitmap = ::CreateDIBSection(nullptr, &info, DIB_RGB_COLORS, &pixels, nullptr, 0);
-    assert(temp_bitmap);
+    cache_info temp_bitmap{ font_size };
 
-    auto old_bitmap = (HBITMAP)SelectObject(temp_dc, temp_bitmap);
+    auto old_bitmap = (HBITMAP)SelectObject(temp_dc, temp_bitmap.gdi_bitmap.get());
 
     RECT text_rect{
       .right = font_size.cx,
@@ -109,49 +124,26 @@ namespace win32
     ::DrawTextW(temp_dc, text.data(), text.size(), &text_rect, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
     SelectObject(temp_dc, old_bitmap);
 
-    std::span<RGBQUAD> colors((RGBQUAD*)pixels, font_size.cx * font_size.cy);
-
-    for (auto& color : colors)
+    for (auto& color : temp_bitmap.pixels)
     {
       color.rgbReserved = color.rgbRed;
     }
 
-    win32::com::com_ptr<IWICBitmap> downscaled_mask;
-
-    assert(bitmap_factory().CreateBitmapFromHBITMAP(temp_bitmap, nullptr, WICBitmapAlphaChannelOption::WICBitmapUseAlpha, downscaled_mask.put()) == S_OK);
-
-    win32::com::com_ptr<IWICBitmapScaler> scaler;
-    assert(bitmap_factory().CreateBitmapScaler(scaler.put()) == S_OK);
-
     auto resampling_mode = IsWindows10OrGreater() ? WICBitmapInterpolationModeHighQualityCubic : WICBitmapInterpolationModeFant;
-    scaler->Initialize(downscaled_mask.get(), size.cx, size.cy, resampling_mode);
 
-    BITMAPINFO final_info{
-      .bmiHeader{
-        .biSize = sizeof(BITMAPINFOHEADER),
-        .biWidth = LONG(size.cx),
-        .biHeight = LONG(size.cy),
-        .biPlanes = 1,
-        .biBitCount = 32,
-        .biCompression = BI_RGB }
-    };
-    void* final_pixels = nullptr;
-    cache_info mask_cache{};
+    cache_info mask_cache{size};
 
-    mask_cache.bitmap = ::CreateDIBSection(nullptr, &final_info, DIB_RGB_COLORS, &final_pixels, nullptr, 0);
 
     auto stride = size.cx * sizeof(std::int32_t);
 
-    assert(scaler->CopyPixels(nullptr, stride, size.cy * stride * sizeof(std::int32_t), reinterpret_cast<BYTE*>(final_pixels)) == S_OK);
-    mask_cache.pixels = std::span<RGBQUAD>((RGBQUAD*)final_pixels, size.cx * size.cy);
+    temp_bitmap.wic_bitmap.scale(size.cx, size.cy, resampling_mode)
+      .copy_pixels(stride, std::span<std::byte>((std::byte*)mask_cache.pixels.data(), size.cy * stride * sizeof(std::int32_t)));
+    
+    auto handle = mask_cache.gdi_bitmap.get();
+    cache.mask_pixels.emplace(handle, mask_cache.pixels);
+    cache.layer_masks.emplace(key, std::move(mask_cache));
 
-
-    cache.layer_masks.emplace(key, mask_cache);
-    cache.mask_pixels.emplace(mask_cache.bitmap, mask_cache.pixels);
-
-    DeleteObject(temp_bitmap);
-
-    return gdi::bitmap_ref(mask_cache.bitmap);
+    return gdi::bitmap_ref(handle);
   }
 
   gdi::bitmap_ref create_layer_mask(SIZE size, int scale, std::move_only_function<void(gdi::drawing_context_ref, int)> painter)
@@ -186,24 +178,14 @@ namespace win32
 
     if (existing != cache.layer_masks.end())
     {
-      return gdi::bitmap_ref(existing->second.bitmap);
+      return gdi::bitmap_ref(existing->second.gdi_bitmap.get());
     }
 
-    BITMAPINFO info{
-      .bmiHeader{
-        .biSize = sizeof(BITMAPINFOHEADER),
-        .biWidth = LONG(size.cx * scale),
-        .biHeight = LONG(size.cy * scale),
-        .biPlanes = 1,
-        .biBitCount = 32,
-        .biCompression = BI_RGB }
-    };
-    void* pixels = nullptr;
-    auto temp_bitmap = ::CreateDIBSection(nullptr, &info, DIB_RGB_COLORS, &pixels, nullptr, 0);
+    cache_info temp_bitmap{ SIZE{ size.cx * scale, size.cy * scale }};
 
     gdi::memory_drawing_context temp_dc(gdi::drawing_context_ref(screen_dc.get()));
 
-    auto old_bitmap = (HBITMAP)SelectObject(temp_dc, temp_bitmap);
+    auto old_bitmap = (HBITMAP)SelectObject(temp_dc, temp_bitmap.gdi_bitmap.get());
     RECT temp_rect{ .left = 0, .top = 0, .right = size.cx * scale, .bottom = size.cy * scale };
     COLORREF temp_color = RGB(0, 0, 0);
     FillRect(temp_dc, &temp_rect, get_solid_brush(temp_color));
@@ -216,50 +198,29 @@ namespace win32
 
     // TODO see how we can use the path for caching
     FillPath(temp_dc);
+    SelectObject(temp_dc, old_bitmap);
     temp_dc.reset();
 
-    std::span<RGBQUAD> colors((RGBQUAD*)pixels, size.cx * scale * size.cy * scale);
-    for (auto& color : colors)
+    for (auto& color : temp_bitmap.pixels)
     {
       color.rgbReserved = color.rgbRed;
     }
 
-    win32::com::com_ptr<IWICBitmap> downscaled_mask;
-
-    assert(bitmap_factory().CreateBitmapFromHBITMAP(temp_bitmap, nullptr, WICBitmapAlphaChannelOption::WICBitmapUseAlpha, downscaled_mask.put()) == S_OK);
-
-    win32::com::com_ptr<IWICBitmapScaler> scaler;
-    assert(bitmap_factory().CreateBitmapScaler(scaler.put()) == S_OK);
-
     auto resampling_mode = IsWindows10OrGreater() ? WICBitmapInterpolationModeHighQualityCubic : WICBitmapInterpolationModeFant;
-    scaler->Initialize(downscaled_mask.get(), size.cx, size.cy, resampling_mode);
 
-    BITMAPINFO final_info{
-      .bmiHeader{
-        .biSize = sizeof(BITMAPINFOHEADER),
-        .biWidth = LONG(size.cx),
-        .biHeight = LONG(size.cy),
-        .biPlanes = 1,
-        .biBitCount = 32,
-        .biCompression = BI_RGB }
-    };
-    void* final_pixels = nullptr;
-    cache_info mask_cache{};
-
-    mask_cache.bitmap = ::CreateDIBSection(nullptr, &final_info, DIB_RGB_COLORS, &final_pixels, nullptr, 0);
+    cache_info mask_cache{size};
 
     auto stride = size.cx * sizeof(std::int32_t);
 
-    assert(scaler->CopyPixels(nullptr, stride, size.cy * stride * sizeof(std::int32_t), reinterpret_cast<BYTE*>(final_pixels)) == S_OK);
-    mask_cache.pixels = std::span<RGBQUAD>((RGBQUAD*)final_pixels, size.cx * size.cy);
+    temp_bitmap.wic_bitmap
+        .scale(size.cx, size.cy, resampling_mode)
+        .copy_pixels(stride, std::span<std::byte>((std::byte*)mask_cache.pixels.data(), size.cy * stride * sizeof(std::int32_t)));
 
-    cache.layer_masks.emplace(key, mask_cache);
-    cache.mask_pixels.emplace(mask_cache.bitmap, mask_cache.pixels);
+    auto handle = mask_cache.gdi_bitmap.get();
+    cache.mask_pixels.emplace(handle, mask_cache.pixels);
+    cache.layer_masks.emplace(key, std::move(mask_cache));
 
-    // TODO find out if the bitmap is copied or if a reference is kept to it
-    DeleteObject(temp_bitmap);
-
-    return gdi::bitmap_ref(mask_cache.bitmap);
+    return gdi::bitmap_ref(handle);
   }
 
   win32::gdi::drawing_context_ref apply_layer_mask(win32::gdi::drawing_context_ref source, gdi::bitmap_ref bitmap)

@@ -278,29 +278,40 @@ namespace win32::wic
       hresult_throw_on_error(bitmap_factory::instance().CreateBitmapFromHBITMAP(bitmap, nullptr, options, (IWICBitmap**)instance.put()));
     }
 
+    bitmap(gdi::bitmap_ref bitmap, alpha_channel_option options)
+    {
+      hresult_throw_on_error(bitmap_factory::instance().CreateBitmapFromHBITMAP(bitmap, nullptr, options, (IWICBitmap**)instance.put()));
+    }
+
     struct from_section
     {
       std::uint32_t width;
       std::uint32_t height;
       pixel_format format;
-      win32::file_mapping section;
+      HANDLE section;
       std::uint32_t stride;
       std::uint32_t offset;
     };
 
     bitmap(from_section options)
     {
-      hresult_throw_on_error(WICCreateBitmapFromSection(options.width, options.height, options.format, options.section.get(), options.stride, options.offset, (IWICBitmap**)instance.put()));
+      hresult_throw_on_error(WICCreateBitmapFromSection(options.width, options.height, options.format, options.section, options.stride, options.offset, (IWICBitmap**)instance.put()));
     }
 
-    struct from_section_ex : from_section
+    struct from_section_ex
     {
+      std::uint32_t width;
+      std::uint32_t height;
+      pixel_format format;
+      HANDLE section;
+      std::uint32_t stride;
+      std::uint32_t offset;
       section_access_level access_level;
     };
 
     bitmap(from_section_ex options)
     {
-      hresult_throw_on_error(WICCreateBitmapFromSectionEx(options.width, options.height, options.format, options.section.get(), options.stride, options.offset, options.access_level, (IWICBitmap**)instance.put()));
+      hresult_throw_on_error(WICCreateBitmapFromSectionEx(options.width, options.height, options.format, options.section, options.stride, options.offset, options.access_level, (IWICBitmap**)instance.put()));
     }
   };
 }// namespace win32::wic
