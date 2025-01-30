@@ -160,7 +160,7 @@ namespace siege::views
       sample.toolbar.InsertButton(-1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR) const_cast<wchar_t*>(L"Sample") });
 
       sample.list_box = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS });
+        .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS | LBS_OWNERDRAWFIXED });
 
       sample.list_box.InsertString(-1, L"Sample");
       sample.list_box.InsertString(-1, L"List");

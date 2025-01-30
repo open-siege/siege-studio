@@ -59,7 +59,7 @@ namespace siege::views
       });
 
       selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS,
+        .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS | LBS_OWNERDRAWFIXED,
       });
 
       selection.InsertString(-1, L"Detail Level 1");

@@ -35,7 +35,7 @@ namespace siege::views
       render_view.bind_custom_draw({ .wm_draw_item = std::bind_front(&pal_view::render_view_wm_draw_item, this) });
 
       selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
+        .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS | LBS_OWNERDRAWFIXED });
 
       selection_unbind = selection.bind_lbn_sel_change(std::bind_front(&pal_view::selection_lbn_sel_change, this));
 

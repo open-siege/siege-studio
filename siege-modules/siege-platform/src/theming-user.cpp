@@ -658,7 +658,6 @@ namespace win32
 
       ~sub_class()
       {
-        bind_remover();
       }
 
       HBRUSH wm_control_color(win32::list_box list_box, win32::gdi::drawing_context_ref context)
@@ -707,66 +706,17 @@ namespace win32
         return TRUE;
       }
 
-      HWND current = nullptr;
-
-      operator HWND()
-      {
-        return current;
-      }
-
       static LRESULT __stdcall HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
       {
-        if (message == WM_DESTROY)
+        if (message == WM_NCDESTROY)
         {
+          OutputDebugStringW(L"listbox apply_theme RemoveWindowSubclass");
           ::RemoveWindowSubclass(hWnd, sub_class::HandleMessage, uIdSubclass);
           delete (sub_class*)dwRefData;
         }
 
         return DefSubclassProc(hWnd, message, wParam, lParam);
       }
-    };
-
-    auto copy_control = [&](LONG style) {
-      auto size = control.GetClientRect();
-      auto parent = control.GetParent();
-      if (auto real_size = control.MapWindowPoints(*parent, *size); real_size)
-      {
-        size = real_size->second;
-      }
-
-      auto copy = win32::window_module_ref::current_module().CreateWindowExW<win32::list_box>(CREATESTRUCTW{
-        .hwndParent = *parent,
-        .cy = size->bottom - size->top,
-        .cx = size->right - size->left,
-        .y = size->top,
-        .x = size->left,
-        .style = style,
-      });
-
-      gdi::font_ref font = win32::load_font(LOGFONTW{
-        .lfPitchAndFamily = VARIABLE_PITCH,
-        .lfFaceName = L"Segoe UI" });
-
-      SendMessageW(*copy, WM_SETFONT, (WPARAM)font.get(), FALSE);
-
-      std::wstring temp(256, '\0');
-
-      auto count = control.GetCount();
-
-      auto item_height = control.GetItemHeight(0);
-      ListBox_SetItemHeight(*copy, 0, item_height);
-
-      for (auto i = 0; i < count; ++i)
-      {
-        control.GetText(i, temp.data());
-        copy->AddString(temp.data());
-
-        item_height = control.GetItemHeight(i);
-        ListBox_SetItemHeight(*copy, i, item_height);
-      }
-
-      ::DestroyWindow(control);
-      control.reset(copy->release());
     };
 
     gdi::font_ref font = win32::load_font(LOGFONTW{
@@ -783,7 +733,6 @@ namespace win32
     }
 
     auto style = control.GetWindowStyle();
-    copy_control(style | LBS_OWNERDRAWFIXED);
 
     std::map<std::wstring_view, COLORREF> color_map{
       { win32::properties::list_box::bk_color, win32::get_color_for_window(control.ref(), win32::properties::list_box::bk_color) },
@@ -793,9 +742,9 @@ namespace win32
     };
 
     DWORD_PTR existing_object{};
-    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::list_box::class_name, &existing_object) && existing_object == 0)
+    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), &existing_object) && existing_object == 0)
     {
-      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::list_box::class_name, (DWORD_PTR) new sub_class(control, std::move(color_map)));
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR) new sub_class(control, std::move(color_map)));
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
     else if (existing_object)

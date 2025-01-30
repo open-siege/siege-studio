@@ -18,7 +18,7 @@ namespace siege::views
     auto control_factory = win32::window_factory(ref());
 
     options = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-      .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
+      .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS | LBS_OWNERDRAWFIXED });
 
     options_unbind = options.bind_lbn_sel_change(std::bind_front(&exe_view::options_lbn_sel_change, this));
     options.InsertString(-1, L"Resources");
