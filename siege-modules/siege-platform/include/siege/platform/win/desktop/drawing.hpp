@@ -3,7 +3,7 @@
 
 #include <siege/platform/win/desktop/window.hpp>
 #include <siege/platform/win/auto_handle.hpp>
-#undef NDEBUG 
+#undef NDEBUG
 #include <cassert>
 
 namespace win32
@@ -91,14 +91,91 @@ namespace win32::gdi
     }
   };
 
-  using bitmap = win32::auto_handle<HBITMAP, gdi_deleter>;
+
+  template<typename TDeleter>
+  struct bitmap_base : win32::auto_handle<HBITMAP, TDeleter>
+  {
+    using base = win32::auto_handle<HBITMAP, TDeleter>;
+    using base::base;
+
+    SIZE get_size() const
+    {
+      BITMAP bitmap;
+      if (::GetObjectW(*this, sizeof(BITMAP), &bitmap) > 0)
+      {
+        return SIZE{ .cx = bitmap.bmWidth, .cy = bitmap.bmHeight };
+      }
+
+      return {};
+    }
+
+    std::span<RGBQUAD> get_pixels() const
+    {
+      BITMAP bitmap;
+      if (::GetObjectW(*this, sizeof(BITMAP), &bitmap) > 0 && bitmap.bmBitsPixel == 32)
+      {
+        return std::span<RGBQUAD>((RGBQUAD*)bitmap.bmBits, bitmap.bmWidth * bitmap.bmHeight);
+      }
+
+      return {};
+    }
+  };
+
+
+  struct bitmap_ref : bitmap_base<gdi_no_deleter>
+  {
+    using base = bitmap_base<gdi_no_deleter>;
+    using base::base;
+  };
+
+  struct bitmap : bitmap_base<gdi_deleter>
+  {
+    using base = bitmap_base<gdi_deleter>;
+    using base::base;
+
+    enum shared_handle : bool
+    {
+      skip_shared_handle,
+      create_shared_handle
+    };
+
+    bitmap_ref ref()
+    {
+      return bitmap_ref(get());
+    }
+
+    bitmap(SIZE size, shared_handle should_create = create_shared_handle) : base([&] {
+                                                                              HANDLE shared_memory = nullptr;
+
+                                                                              if (should_create)
+                                                                              {
+                                                                                shared_memory = ::CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_EXECUTE_READWRITE, 0, size.cx * size.cy * sizeof(std::uint32_t), nullptr);
+                                                                              }
+
+                                                                              BITMAPINFO info{
+                                                                                .bmiHeader{
+                                                                                  .biSize = sizeof(BITMAPINFOHEADER),
+                                                                                  .biWidth = LONG(size.cx),
+                                                                                  .biHeight = LONG(size.cy),
+                                                                                  .biPlanes = 1,
+                                                                                  .biBitCount = 32,
+                                                                                  .biCompression = BI_RGB }
+                                                                              };
+                                                                              void* pixels = nullptr;
+                                                                              return ::CreateDIBSection(nullptr, &info, DIB_RGB_COLORS, &pixels, shared_memory, 0);
+                                                                            }())
+    {
+    }
+  };
+
+  
+
   using icon = win32::auto_handle<HICON, icon_deleter>;
   using brush = win32::auto_handle<HBRUSH, gdi_deleter>;
   using palette = win32::auto_handle<HPALETTE, gdi_deleter>;
   using pen = win32::auto_handle<HPEN, gdi_deleter>;
   using font = win32::auto_handle<HFONT, gdi_deleter>;
 
-  using bitmap_ref = win32::auto_handle<HBITMAP, gdi_no_deleter>;
   using icon_ref = win32::auto_handle<HICON, gdi_no_deleter>;
   using brush_ref = win32::auto_handle<HBRUSH, gdi_no_deleter>;
   using pen_ref = win32::auto_handle<HPEN, gdi_no_deleter>;
@@ -120,7 +197,7 @@ namespace win32::gdi
   struct memory_drawing_context : win32::auto_handle<HDC, hdc_deleter>
   {
     using base = win32::auto_handle<HDC, hdc_deleter>;
-    
+
     memory_drawing_context(bool auto_restore = true) : base(nullptr, hdc_deleter(auto_restore ? 1 : 0))
     {
       auto screen_dc = ::GetDC(nullptr);
@@ -135,8 +212,8 @@ namespace win32::gdi
       }
     }
 
-    memory_drawing_context(drawing_context_ref other, 
-            bool auto_restore = true) : base(::CreateCompatibleDC(other), hdc_deleter(auto_restore ? 1 : 0))
+    memory_drawing_context(drawing_context_ref other,
+      bool auto_restore = true) : base(::CreateCompatibleDC(other), hdc_deleter(auto_restore ? 1 : 0))
     {
       if (auto_restore)
       {

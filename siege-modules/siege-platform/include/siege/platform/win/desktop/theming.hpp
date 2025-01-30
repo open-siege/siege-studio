@@ -10,10 +10,9 @@
 
 namespace win32
 {
-  gdi::bitmap_ref create_layer_mask(::SIZE size, gdi::font_ref font, std::wstring text);
-  gdi::bitmap_ref create_layer_mask(::SIZE size, int scale, std::move_only_function<void(gdi::drawing_context_ref, int)> painter);
+  gdi::bitmap create_layer_mask(::SIZE size, gdi::font_ref font, std::wstring text);
+  gdi::bitmap create_layer_mask(::SIZE size, int scale, std::move_only_function<void(gdi::drawing_context_ref, int)> painter);
   gdi::icon create_icon(::SIZE size, ::RGBQUAD solid_color, gdi::bitmap_ref mask);
-  gdi::drawing_context_ref apply_layer_mask(gdi::drawing_context_ref source, gdi::bitmap_ref bitmap);
   gdi::font_ref load_font(::LOGFONTW font_info);
   gdi::brush_ref get_solid_brush(COLORREF color);
 

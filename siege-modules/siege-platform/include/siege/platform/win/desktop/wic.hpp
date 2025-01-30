@@ -284,16 +284,31 @@ namespace win32::wic
       hresult_throw_on_error(bitmap_factory::instance().CreateBitmapFromHICON(icom, (IWICBitmap**)instance.put()));
     }
 
-    bitmap(const gdi::bitmap& bitmap, alpha_channel_option options)
+    bitmap(const gdi::bitmap& bitmap, alpha_channel_option options) : bitmap((HBITMAP)bitmap, options)
     {
-      hresult_throw_on_error(bitmap_factory::instance().CreateBitmapFromHBITMAP(bitmap, nullptr, options, (IWICBitmap**)instance.put()));
     }
 
-    bitmap(gdi::bitmap_ref bitmap, alpha_channel_option options)
+    bitmap(gdi::bitmap_ref bitmap, alpha_channel_option options) : bitmap((HBITMAP)bitmap, options)
     {
-      hresult_throw_on_error(bitmap_factory::instance().CreateBitmapFromHBITMAP(bitmap, nullptr, options, (IWICBitmap**)instance.put()));
     }
 
+
+  private:
+    bitmap(HBITMAP bitmap, alpha_channel_option options)
+    {
+      DIBSECTION section{};
+      if (::GetObjectW(bitmap, sizeof(section), &section) > 0 && section.dshSection && (section.dsBm.bmBitsPixel == 32 || section.dsBm.bmBitsPixel == 24))
+      {
+        auto format = section.dsBm.bmBitsPixel == 32 ? pixel_format::bgra_32bpp : pixel_format::bgr_24bpp;
+        hresult_throw_on_error(WICCreateBitmapFromSectionEx((UINT)section.dsBm.bmWidth, (UINT)section.dsBm.bmHeight, format, section.dshSection, section.dsBm.bmWidthBytes, section.dsOffset, WICSectionAccessLevelReadWrite, (IWICBitmap**)instance.put()));
+      }
+      else
+      {
+        hresult_throw_on_error(bitmap_factory::instance().CreateBitmapFromHBITMAP(bitmap, nullptr, options, (IWICBitmap**)instance.put()));
+      }
+    }
+
+  public:
     struct from_section
     {
       std::uint32_t width;
