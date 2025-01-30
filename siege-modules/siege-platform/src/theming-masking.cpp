@@ -45,7 +45,7 @@ namespace win32
     {
     }
 
-    cache_info(cache_info&& other) :
+    cache_info(cache_info&& other) noexcept :
         mapping(std::move(other.mapping)), 
         gdi_bitmap(std::move(other.gdi_bitmap)),
         wic_bitmap(std::move(other.wic_bitmap)),

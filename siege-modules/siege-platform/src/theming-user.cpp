@@ -462,23 +462,14 @@ namespace win32
         .lfPitchAndFamily = VARIABLE_PITCH,
         .lfFaceName = L"Segoe UI" });
 
-      struct theme_context
-      {
-        SIZE size{};
-        HRGN region = nullptr;
-        HBITMAP mask_bitmap = nullptr;
-        bool is_vertical = true;
-      };
 
       std::wstring test = std::wstring(255, '\0');
 
       std::map<std::wstring_view, COLORREF> colors;
-      std::map<win32::window_ref, theme_context> theme_info;
 
       sub_class(win32::button& button, std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
       {
-        bind_remover = button.bind_custom_draw({ 
-            .nm_custom_draw = std::bind_front(&sub_class::nm_custom_draw, this),
+        bind_remover = button.bind_custom_draw({ .nm_custom_draw = std::bind_front(&sub_class::nm_custom_draw, this),
           .wm_control_color = std::bind_front(&sub_class::wm_control_color, this) });
       }
 
@@ -489,59 +480,11 @@ namespace win32
 
       win32::lresult_t nm_custom_draw(win32::button button, NMCUSTOMDRAW& custom_draw)
       {
-        auto& context = theme_info[button.ref()];
         if (custom_draw.dwDrawStage == CDDS_PREPAINT)
         {
           auto rect = custom_draw.rc;
           auto new_size = SIZE(rect.right - rect.left, rect.bottom - rect.top);
 
-          if (new_size.cx != context.size.cx || new_size.cy != context.size.cy)
-          {
-            context.size = new_size;
-            context.is_vertical = context.size.cy > context.size.cx;
-
-            if (IsWindows8OrGreater())
-            {
-              auto scale = 16;
-
-              // auto font_icon = win32::load_font(LOGFONTW{
-              //   .lfHeight = -1024,
-              //   .lfClipPrecision = CLIP_DEFAULT_PRECIS,
-              //   .lfQuality = NONANTIALIASED_QUALITY,
-              //   .lfFaceName = L"Segoe MDL2 Assets"
-              //     });
-              // std::wstring icon_text;
-              // icon_text.push_back(0xE701);
-              // mask_bitmap = win32::create_layer_mask(size, std::move(font_icon), icon_text);
-
-              if (context.is_vertical)
-              {
-                context.mask_bitmap = win32::create_layer_mask(context.size, scale, [size = context.size](auto dc, auto scale) {
-                  Rectangle(dc, 0, 0, size.cx * scale, size.cy * scale);
-                });
-              }
-              else
-              {
-                context.mask_bitmap = win32::create_layer_mask(context.size, scale, [size = context.size](auto dc, auto scale) {
-                  RoundRect(dc, 0, 0, size.cx * scale, size.cy * scale, (size.cy * scale) / 2, size.cy * scale);
-                });
-              }
-            }
-            else
-            {
-              if (context.region)
-              {
-                SetWindowRgn(button, nullptr, FALSE);
-                DeleteObject(context.region);
-              }
-
-              if (!context.is_vertical)
-              {
-                context.region = CreateRoundRectRgn(0, 0, context.size.cx, context.size.cy, 25, 25);
-                SetWindowRgn(button, context.region, FALSE);
-              }
-            }
-          }
 
           auto text_color = colors[properties::button::text_color];
           auto bk_color = colors[properties::button::bk_color];
@@ -583,33 +526,6 @@ namespace win32
         {
           Button_GetText(button, test.data(), test.size());
           ::DrawTextExW(custom_draw.hdc, test.data(), -1, &custom_draw.rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOCLIP, nullptr);
-
-          if (IsWindows8OrGreater())
-          {
-            auto width = custom_draw.rc.right - custom_draw.rc.left;
-            auto height = custom_draw.rc.bottom - custom_draw.rc.top;
-
-            auto new_dc = win32::apply_layer_mask(win32::gdi::drawing_context_ref(custom_draw.hdc), win32::gdi::bitmap_ref(context.mask_bitmap));
-
-            BLENDFUNCTION function{
-              .BlendOp = AC_SRC_OVER,
-              .SourceConstantAlpha = 255,
-              .AlphaFormat = AC_SRC_ALPHA
-            };
-
-            auto screen_rect = std::make_optional(button.MapWindowPoints(*button.GetParent(), *button.GetClientRect())->second);
-            POINT pos{ .x = screen_rect->left, .y = screen_rect->top };
-            POINT dc_pos{};
-
-            UpdateLayeredWindow(button, nullptr, &pos, &context.size, new_dc, &dc_pos, 0, &function, ULW_ALPHA);
-          }
-          else
-          {
-            if (context.region)
-            {
-              SetWindowRgn(button, context.region, TRUE);
-            }
-          }
         }
 
         return CDRF_DODEFAULT;
@@ -644,37 +560,9 @@ namespace win32
           return ::DefSubclassProc(hWnd, message, wParam, lParam);
         }
 
-        auto lresult = ::DefSubclassProc(hWnd, message, wParam, lParam);
-
-        if (message == WM_SIZE || message == WM_MOVE)
-        {
-          for (HWND button = FindWindowExW(hWnd, nullptr, win32::button::class_name, nullptr);
-               button != nullptr;
-               button = FindWindowExW(hWnd, button, win32::button::class_name, nullptr))
-          {
-            if (button && GetWindowLongPtrW(button, GWL_EXSTYLE) & WS_EX_LAYERED)
-            {
-              InvalidateRect(button, nullptr, TRUE);
-            }
-          }
-        }
-
-        return lresult;
+        return ::DefSubclassProc(hWnd, message, wParam, lParam);
       }
     };
-
-    if (IsWindows8OrGreater())
-    {
-      SetWindowLongPtrW(control,
-        GWL_EXSTYLE,
-        GetWindowLongPtrW(control, GWL_EXSTYLE) | WS_EX_LAYERED);
-    }
-    else
-    {
-      SetWindowLongPtrW(control,
-        GWL_STYLE,
-        GetWindowLongPtrW(control, GWL_STYLE) | WS_CLIPSIBLINGS);
-    }
 
     std::map<std::wstring_view, COLORREF> color_map{
       { win32::properties::button::bk_color, win32::get_color_for_window(control.ref(), win32::properties::button::bk_color) },

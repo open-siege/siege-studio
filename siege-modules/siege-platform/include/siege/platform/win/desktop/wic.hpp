@@ -243,6 +243,17 @@ namespace win32::wic
   class bitmap : public bitmap_source
   {
   public:
+    bitmap(bitmap&& other) noexcept
+    {
+      this->instance.reset(other.instance.release());
+    }
+
+    bitmap& operator=(bitmap&& other) noexcept
+    {
+      this->instance.reset(other.instance.release());
+      return *this;
+    }
+
     bitmap(bitmap_source source, cache_create_option options = cache_create_option::WICBitmapCacheOnLoad)
     {
       auto handle = source.handle();
