@@ -5,10 +5,11 @@
 #include <siege/platform/win/desktop/window_factory.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
 #include <siege/platform/win/desktop/shell.hpp>
+#include <siege/platform/win/desktop/wic.hpp>
 #include <siege/platform/win/core/file.hpp>
 #include <siege/platform/win/desktop/theming.hpp>
 #include <siege/platform/storage_module.hpp>
-#undef NDEBUG 
+#undef NDEBUG
 #include <cassert>
 #include <sstream>
 #include <vector>
@@ -20,18 +21,27 @@
 
 namespace siege::views
 {
-  // TODO add zoom and pan functionality
   // TODO complete palette selection feature
+  // TODO complete frame selection feature
+  // TODO complete icon loading
   struct bmp_view : win32::window_ref
   {
-    win32::static_control static_image;
     win32::list_view palettes_list;
     win32::tool_bar bitmap_actions;
+    win32::image_list bitmap_actions_icons;
 
     bmp_controller controller;
-    win32::gdi::bitmap current_bitmap;
+    win32::gdi::bitmap preview_bitmap;
+    win32::gdi::bitmap current_frame;
+    WICRect viewport;
+    std::size_t current_frame_index = 0;
+    float scale = NAN;
+    bool is_panning = false;
+    std::optional<POINTS> last_mouse_position = std::nullopt;
+    win32::static_control static_image;
+
     std::list<platform::storage_module> loaded_modules;
-    win32::image_list image_list;
+
 
     bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
@@ -60,7 +70,7 @@ namespace siege::views
       bitmap_actions.InsertButton(-1, { .iBitmap = 4, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Save" });
 
       bitmap_actions.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
-
+      bitmap_actions.bind_nm_click(std::bind_front(&bmp_view::bitmap_actions_nm_click, this));
 
       std::wstring temp = L"menu.pal";
 
@@ -90,18 +100,48 @@ namespace siege::views
 
       static_image = *factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
         .hwndParent = *this,
-        .style = WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_REALSIZECONTROL });
+        .style = WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_REALSIZEIMAGE | SS_CENTERIMAGE });
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
       return 0;
     }
 
+    BOOL bitmap_actions_nm_click(win32::tool_bar, const NMMOUSE& message)
+    {
+      if (message.dwItemSpec == 0)
+      {
+        // this->viewport.X += 10;
+        // this->viewport.Y += 10;
+        this->viewport.Width -= 10;
+        this->viewport.Height -= 10;
+
+        resize_preview(true);
+        return TRUE;
+      }
+      else if (message.dwItemSpec == 1)
+      {
+        // this->viewport.X += 10;
+        // this->viewport.Y += 10;
+        this->viewport.Width += 10;
+        this->viewport.Height += 10;
+
+        resize_preview(true);
+        return TRUE;
+      }
+      else if (message.dwItemSpec == 2)
+      {
+        is_panning = !is_panning;
+        return TRUE;
+      }
+      return FALSE;
+    }
+
     void recreate_image_list(std::optional<SIZE> possible_size)
     {
 
       SIZE icon_size = possible_size.or_else([this] {
-                                      return image_list.GetIconSize();
+                                      return bitmap_actions_icons.GetIconSize();
                                     })
                          .or_else([] {
                            return std::make_optional(SIZE{
@@ -110,9 +150,9 @@ namespace siege::views
                          })
                          .value();
 
-      if (image_list)
+      if (bitmap_actions_icons)
       {
-        image_list.reset();
+        bitmap_actions_icons.reset();
       }
 
       std::vector icons{
@@ -123,7 +163,47 @@ namespace siege::views
         win32::segoe_fluent_icons::save,
       };
 
-      image_list = win32::create_icon_list(icons, icon_size);
+      bitmap_actions_icons = win32::create_icon_list(icons, icon_size);
+    }
+
+    auto wm_mouse_move(std::size_t wparam, POINTS mouse_position)
+    {
+      if (is_panning)
+      {
+          if (wparam & MK_RBUTTON)
+          {
+            is_panning = false;
+            return 0;
+        }
+
+        if (last_mouse_position && mouse_position.x > last_mouse_position->x)
+        {
+          viewport.X -= mouse_position.x - last_mouse_position->x;
+        }
+        else if (last_mouse_position && mouse_position.x < last_mouse_position->x)
+        {
+          viewport.X += last_mouse_position->x - mouse_position.x;
+        }
+
+        if (last_mouse_position && mouse_position.y > last_mouse_position->y)
+        {
+          viewport.Y -= mouse_position.y - last_mouse_position->y;
+        }
+        else if (last_mouse_position && mouse_position.y < last_mouse_position->y)
+        {
+          viewport.Y += last_mouse_position->y - mouse_position.y;
+        }
+
+        if (last_mouse_position)
+        {
+          resize_preview(true);
+        }
+
+
+
+        last_mouse_position = mouse_position;
+      }
+      return 0;
     }
 
     std::optional<win32::lresult_t> wm_size(std::size_t type, SIZE client_size)
@@ -135,12 +215,12 @@ namespace siege::views
 
       auto top_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy / 12 };
 
-      recreate_image_list(bitmap_actions.GetIdealIconSize(SIZE{ .cx = client_size.cx / bitmap_actions.ButtonCount(), .cy = top_size.cy }));
-      SendMessageW(bitmap_actions, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
+      recreate_image_list(bitmap_actions.GetIdealIconSize(SIZE{ .cx = client_size.cx / (LONG)bitmap_actions.ButtonCount(), .cy = top_size.cy }));
+      SendMessageW(bitmap_actions, TB_SETIMAGELIST, 0, (LPARAM)bitmap_actions_icons.get());
 
       bitmap_actions.SetWindowPos(POINT{}, SWP_DEFERERASE | SWP_NOREDRAW);
       bitmap_actions.SetWindowPos(top_size, SWP_DEFERERASE);
-      bitmap_actions.SetButtonSize(SIZE{ .cx = top_size.cx / bitmap_actions.ButtonCount(), .cy = top_size.cy });
+      bitmap_actions.SetButtonSize(SIZE{ .cx = top_size.cx / (LONG)bitmap_actions.ButtonCount(), .cy = top_size.cy });
 
       auto left_size = SIZE{ .cx = (client_size.cx / 3) * 2, .cy = client_size.cy };
       auto right_size = SIZE{ .cx = client_size.cx - left_size.cx, .cy = client_size.cy - top_size.cy };
@@ -154,7 +234,89 @@ namespace siege::views
       palettes_list.SetWindowPos(right_size);
       palettes_list.SetColumnWidth(0, right_size.cx);
 
+      resize_preview();
+
       return 0;
+    }
+
+    void resize_preview(bool force = false)
+    {
+      if (scale != NAN && current_frame)
+      {
+        auto frame_size = controller.get_size(current_frame_index);
+
+        if (this->viewport.Width > frame_size.width)
+        {
+          this->viewport.Width = frame_size.width;
+        }
+
+        if (this->viewport.Height > frame_size.height)
+        {
+          this->viewport.Height = frame_size.height;
+        }
+
+        if (this->viewport.Height <= 0)
+        {
+          this->viewport.Height += 10;
+        }
+
+        if (this->viewport.Width <= 0)
+        {
+          this->viewport.Width += 10;
+        }
+
+        if (this->viewport.Height <= 0)
+        {
+          this->viewport.Height += 10;
+        }
+
+        if (this->viewport.X < 0)
+        {
+          this->viewport.X = 0;
+        }
+
+        if (this->viewport.Y < 0)
+        {
+          this->viewport.Y = 0;
+        }
+
+        if (this->viewport.X > frame_size.width - viewport.Width)
+        {
+          this->viewport.X = frame_size.width - viewport.Width;
+        }
+
+        if (this->viewport.Y > frame_size.height - viewport.Height)
+        {
+          this->viewport.Y = frame_size.height - viewport.Height;
+        }
+
+        if (viewport.X + viewport.Width > frame_size.width)
+        {
+          viewport.Width = frame_size.width - viewport.X;
+        }
+
+        if (viewport.Y + viewport.Y > frame_size.height)
+        {
+          viewport.Height = frame_size.height - viewport.Y;
+        }
+
+        SIZE preview_size = { .cx = (LONG)(frame_size.width * scale), .cy = (LONG)(frame_size.height * scale) };
+
+        auto existing_size = preview_bitmap.get_size();
+
+
+        if (!(existing_size.cx == preview_size.cx && existing_size.cy == preview_size.cy) || force)
+        {
+          preview_bitmap = win32::gdi::bitmap(preview_size, win32::gdi::bitmap::skip_shared_handle);
+
+          win32::wic::bitmap(current_frame, win32::wic::alpha_channel_option::WICBitmapUseAlpha)
+            .clip(viewport)
+            .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
+            .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
+
+          static_image.SetImage(preview_bitmap.get());
+        }
+      }
     }
 
     std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
@@ -166,7 +328,7 @@ namespace siege::views
         win32::apply_theme(*this);
 
         recreate_image_list(std::nullopt);
-        SendMessageW(bitmap_actions, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
+        SendMessageW(bitmap_actions, TB_SETIMAGELIST, 0, (LPARAM)bitmap_actions_icons.get());
 
 
         return 0;
@@ -257,22 +419,18 @@ namespace siege::views
         if (count > 0)
         {
           auto size = static_image.GetClientSize();
-          BITMAPINFO info{
-            .bmiHeader{
-              .biSize = sizeof(BITMAPINFOHEADER),
-              .biWidth = LONG(size->cx),
-              .biHeight = LONG(size->cy),
-              .biPlanes = 1,
-              .biBitCount = 32,
-              .biCompression = BI_RGB }
-          };
+          auto frame_size = controller.get_size(current_frame_index);
+          current_frame = win32::gdi::bitmap(SIZE{ .cx = frame_size.width, .cy = frame_size.height });
+          controller.convert(0, frame_size, 32, current_frame.get_pixels_as_bytes());
+          viewport = WICRect();
+          viewport.Width = (INT)frame_size.width;
+          viewport.Height = (INT)frame_size.height;
 
-          void* pixels = nullptr;
-          current_bitmap.reset(::CreateDIBSection(nullptr, &info, DIB_RGB_COLORS, &pixels, nullptr, 0));
+          scale = size->cx > size->cy ? size->cx / (float)frame_size.width : size->cy / (float)frame_size.height;
 
-          controller.convert(0, std::make_pair(size->cx, size->cy), 32, std::span(reinterpret_cast<std::byte*>(pixels), size->cx * size->cy * 4));
+          SIZE preview_size = { .cx = (LONG)(frame_size.width * scale), .cy = (LONG)(frame_size.height * scale) };
 
-          static_image.SetImage(current_bitmap.get());
+          resize_preview();
 
           auto& palettes = task.get();
           auto selection = controller.get_selected_palette();

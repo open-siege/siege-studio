@@ -24,27 +24,26 @@ namespace siege::views
   class bmp_controller
   {
   public:
-    constexpr static auto formats = std::array<siege::fs_string_view, 20>{ { FSL".jpg",
-      FSL".jpeg",
-      FSL".gif",
-      FSL".png",
-      FSL".tag",
-      FSL".bmp",
-      FSL".dds",
-      FSL".ico",
-      FSL".tiff",
-      FSL".dib",
-      FSL".tim",
-      FSL".pba",
-      FSL".dmb",
-      FSL".db0",
-      FSL".db1",
-      FSL".db2",
-      FSL".hba",
-      FSL".hb0",
-      FSL".hb1",
-      FSL".hb2" 
-      } };
+    constexpr static auto formats = std::array<siege::fs_string_view, 20>{ { FSL ".jpg",
+      FSL ".jpeg",
+      FSL ".gif",
+      FSL ".png",
+      FSL ".tag",
+      FSL ".bmp",
+      FSL ".dds",
+      FSL ".ico",
+      FSL ".tiff",
+      FSL ".dib",
+      FSL ".tim",
+      FSL ".pba",
+      FSL ".dmb",
+      FSL ".db0",
+      FSL ".db1",
+      FSL ".db2",
+      FSL ".hba",
+      FSL ".hb0",
+      FSL ".hb1",
+      FSL ".hb2" } };
 
     static bool is_bmp(std::istream& image_stream) noexcept;
 
@@ -63,7 +62,11 @@ namespace siege::views
       remap_unique
     };
 
-    std::size_t convert(std::size_t frame, std::pair<int, int> size, int bits, std::span<std::byte> destination) const noexcept;
+    using size = siege::platform::bitmap::size;
+
+    size get_size(std::size_t frame) const noexcept;
+
+    std::size_t convert(std::size_t frame, size size, int bits, std::span<std::byte> destination) const noexcept;
 
   private:
     std::optional<platform::bitmap::platform_image> original_image;

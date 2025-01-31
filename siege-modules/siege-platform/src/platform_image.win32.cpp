@@ -87,12 +87,40 @@ namespace siege::platform::bitmap
     }
   }
 
-  std::size_t platform_image::frame_count() const
+  size platform_image::get_size(std::size_t frame) const noexcept
+  {
+    if (frames.empty())
+    {
+      return {};
+    }
+
+    if (frames.size() < frame)
+    {
+      return {};
+    }
+
+    const auto& item = frames[frame];
+    if (item.type().hash_code() == typeid(win32::wic::bitmap).hash_code())
+    {
+      auto temp = std::any_cast<const win32::wic::bitmap&>(item).get_size();
+      return size((int)temp.cx, (int)temp.cy);
+    }
+    else if (item.type().hash_code() == typeid(windows_bmp_data).hash_code())
+    {
+      const auto& bitmap = std::any_cast<const windows_bmp_data&>(item);
+
+      return size((int)bitmap.info.width, (int)bitmap.info.height);
+    }
+
+    return {};
+  }
+
+  std::size_t platform_image::frame_count() const noexcept
   {
     return frames.size();
   }
 
-  std::size_t platform_image::convert(std::size_t frame, std::pair<int, int> size, int bits, std::span<std::byte> pixels) const noexcept
+  std::size_t platform_image::convert(std::size_t frame, size size, int bits, std::span<std::byte> pixels) const noexcept
   {
     if (frames.empty())
     {
@@ -109,7 +137,7 @@ namespace siege::platform::bitmap
       return 0;
     }
 
-    auto final_result = size.first * size.second * bits / 8;
+    auto final_result = size.width * size.height * bits / 8;
 
     if (pixels.size() < final_result)
     {
@@ -126,7 +154,7 @@ namespace siege::platform::bitmap
         mode = WICBitmapInterpolationModeHighQualityCubic;
       }
 
-      auto source = bitmap.scale(size.first, size.second, mode)
+      auto source = bitmap.scale((std::uint32_t)size.width, (std::uint32_t)size.height, mode)
                       .convert(win32::wic::bitmap::to_format{
                         .format = GUID_WICPixelFormat32bppBGR });
 
@@ -144,7 +172,7 @@ namespace siege::platform::bitmap
     {
       const auto& bitmap = std::any_cast<const windows_bmp_data&>(item);
 
-      if (bitmap.indexes.empty() && !bitmap.colours.empty() && bitmap.info.bit_depth == bits && bitmap.info.width == size.first && bitmap.info.height == size.second)
+      if (bitmap.indexes.empty() && !bitmap.colours.empty() && bitmap.info.bit_depth == bits && bitmap.info.width == size.width && bitmap.info.height == size.height)
       {
         std::memcpy(pixels.data(), bitmap.colours.data(), sizeof(platform::palette::colour) * bitmap.colours.size());
         return sizeof(platform::palette::colour) * bitmap.colours.size();

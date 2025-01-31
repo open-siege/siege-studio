@@ -101,7 +101,7 @@ namespace win32::gdi
     SIZE get_size() const
     {
       BITMAP bitmap;
-      if (::GetObjectW(*this, sizeof(BITMAP), &bitmap) > 0)
+      if (this->get() && ::GetObjectW(*this, sizeof(BITMAP), &bitmap) > 0)
       {
         return SIZE{ .cx = bitmap.bmWidth, .cy = bitmap.bmHeight };
       }
@@ -112,9 +112,20 @@ namespace win32::gdi
     std::span<RGBQUAD> get_pixels() const
     {
       BITMAP bitmap;
-      if (::GetObjectW(*this, sizeof(BITMAP), &bitmap) > 0 && bitmap.bmBits && bitmap.bmBitsPixel == 32)
+      if (this->get() && ::GetObjectW(*this, sizeof(BITMAP), &bitmap) > 0 && bitmap.bmBits && bitmap.bmBitsPixel == 32)
       {
         return std::span<RGBQUAD>((RGBQUAD*)bitmap.bmBits, bitmap.bmWidth * bitmap.bmHeight);
+      }
+
+      return {};
+    }
+
+    std::span<std::byte> get_pixels_as_bytes() const
+    {
+      BITMAP bitmap;
+      if (this->get() && ::GetObjectW(*this, sizeof(BITMAP), &bitmap) > 0 && bitmap.bmBits && bitmap.bmBitsPixel == 32)
+      {
+        return std::span<std::byte>((std::byte*)bitmap.bmBits, bitmap.bmWidthBytes * bitmap.bmHeight);
       }
 
       return {};

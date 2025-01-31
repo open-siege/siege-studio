@@ -187,12 +187,12 @@ namespace siege::views
       auto left_size = SIZE{ .cx = (client_size.cx / 3) * 2, .cy = client_size.cy - top_size.cy };
       auto right_size = SIZE{ .cx = client_size.cx - left_size.cx, .cy = client_size.cy - top_size.cy };
 
-      recreate_image_list(shape_actions.GetIdealIconSize(SIZE{ .cx = client_size.cx / shape_actions.ButtonCount(), .cy = top_size.cy }));
+      recreate_image_list(shape_actions.GetIdealIconSize(SIZE{ .cx = client_size.cx / (LONG)shape_actions.ButtonCount(), .cy = top_size.cy }));
 
       SendMessageW(shape_actions, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
       shape_actions.SetWindowPos(POINT{}, SWP_DEFERERASE | SWP_NOREDRAW);
       shape_actions.SetWindowPos(top_size, SWP_DEFERERASE);
-      shape_actions.SetButtonSize(SIZE{ .cx = top_size.cx / shape_actions.ButtonCount(), .cy = top_size.cy });
+      shape_actions.SetButtonSize(SIZE{ .cx = top_size.cx / (LONG)shape_actions.ButtonCount(), .cy = top_size.cy });
 
 
       render_view.SetWindowPos(left_size);

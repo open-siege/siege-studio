@@ -357,9 +357,9 @@ namespace siege::resource::pak
 
         z_stream temp{
           .next_in = (Bytef*)compressed_buffer.data(),
-          .avail_in = compressed_buffer.size(),
+          .avail_in = (uInt)compressed_buffer.size(),
           .next_out = (Bytef*)output_buffer.data(),
-          .avail_out = output_buffer.size()
+          .avail_out = (uInt)output_buffer.size()
         };
 
         if (inflateInit_(&temp, ZLIB_VERSION, (int)sizeof(z_stream)) == Z_OK)
