@@ -135,9 +135,9 @@ namespace win32
 
     win32::theme_module().SetWindowTheme(control, L"", L"");
     DWORD_PTR existing_object{};
-    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::header::class_name, &existing_object) && existing_object == 0)
+    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), &existing_object) && existing_object == 0)
     {
-      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::header::class_name, (DWORD_PTR) new sub_class(control, std::move(color_map)));
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR) new sub_class(control, std::move(color_map)));
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
     else
@@ -248,7 +248,7 @@ namespace win32
         if (message == WM_PAINT)
         {
           PAINTSTRUCT ps;
-          HDC hdc = BeginPaint(hWnd, &ps);
+          HDC hdc = wParam != 0 ? (HDC)wParam : BeginPaint(hWnd, &ps);
           auto tabs = win32::tab_control(hWnd);
           auto parent_context = win32::gdi::drawing_context_ref(hdc);
           auto rect = tabs.GetClientRect();
@@ -302,7 +302,11 @@ namespace win32
           SelectObject(hdc, old_pen);
           DeleteObject(pen);
 
-          EndPaint(hWnd, &ps);
+          if (wParam == 0)
+          {
+            EndPaint(hWnd, &ps);
+
+          }
 
           auto up_down = win32::window_ref(::FindWindowExW(hWnd, nullptr, UPDOWN_CLASSW, nullptr));
 
@@ -323,7 +327,7 @@ namespace win32
 
         if (message == WM_DESTROY)
         {
-          ::RemoveWindowSubclass(hWnd, sub_class::HandleMessage, uIdSubclass);
+          ::RemoveWindowSubclass(hWnd, sub_class::HandleChildMessage, uIdSubclass);
         }
 
         return DefSubclassProc(hWnd, message, wParam, lParam);
@@ -348,10 +352,10 @@ namespace win32
     };
 
     DWORD_PTR existing_object{};
-    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::tab_control::class_name, &existing_object) && existing_object == 0)
+    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), &existing_object) && existing_object == 0)
     {
       auto data = (DWORD_PTR) new sub_class(control, std::move(color_map));
-      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::tab_control::class_name, data);
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), data);
       ::SetWindowSubclass(control, sub_class::HandleChildMessage, (UINT_PTR)win32::tab_control::class_name, data);
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
@@ -492,10 +496,10 @@ namespace win32
     };
 
     DWORD_PTR existing_object{};
-    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::list_view::class_name, &existing_object) && existing_object == 0)
+    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), &existing_object) && existing_object == 0)
     {
       auto data = (DWORD_PTR) new sub_class(control, std::move(color_map));
-      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::list_view::class_name, data);
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), data);
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
     else
@@ -634,9 +638,9 @@ namespace win32
     };
 
     DWORD_PTR existing_object{};
-    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::tool_bar::class_name, &existing_object) && existing_object == 0)
+    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), &existing_object) && existing_object == 0)
     {
-      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::tool_bar::class_name, (DWORD_PTR) new sub_class(control, std::move(color_map)));
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR) new sub_class(control, std::move(color_map)));
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
     else
@@ -736,9 +740,9 @@ namespace win32
     };
 
     DWORD_PTR existing_object{};
-    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::track_bar::class_name, &existing_object) && existing_object == 0)
+    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), &existing_object) && existing_object == 0)
     {
-      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::track_bar::class_name, (DWORD_PTR) new sub_class(std::move(color_map)));
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR) new sub_class(std::move(color_map)));
     }
     else
     {

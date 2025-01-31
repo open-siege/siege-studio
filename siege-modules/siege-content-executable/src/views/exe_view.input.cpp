@@ -76,28 +76,28 @@ namespace siege::views
       };
 
       std::map<WORD, int> images = {
-        { VK_GAMEPAD_DPAD_UP, 3 },
-        { VK_GAMEPAD_DPAD_DOWN, 4 },
-        { VK_GAMEPAD_DPAD_LEFT, 5 },
-        { VK_GAMEPAD_DPAD_RIGHT, 6 },
-        { VK_GAMEPAD_A, 13 },
-        { VK_GAMEPAD_B, 14 },
-        { VK_GAMEPAD_X, 15 },
-        { VK_GAMEPAD_Y, 16 },
-        { VK_GAMEPAD_LEFT_SHOULDER, 17 },
-        { VK_GAMEPAD_RIGHT_SHOULDER, 18 },
-        { VK_GAMEPAD_LEFT_TRIGGER, 19 },
-        { VK_GAMEPAD_RIGHT_TRIGGER, 20 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, 7 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, 8 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_UP, 9 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, 10 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, 11 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, 12 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_UP, 9 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, 10 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, 11 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, 12 },
+        { VK_GAMEPAD_A, 0 },
+        { VK_GAMEPAD_B, 1 },
+        { VK_GAMEPAD_X, 2 },
+        { VK_GAMEPAD_Y, 3 },
+        { VK_GAMEPAD_LEFT_SHOULDER, 4 },
+        { VK_GAMEPAD_RIGHT_SHOULDER, 5 },
+        { VK_GAMEPAD_LEFT_TRIGGER, 6 },
+        { VK_GAMEPAD_RIGHT_TRIGGER, 7 },
+        { VK_GAMEPAD_DPAD_UP, 9 },
+        { VK_GAMEPAD_DPAD_DOWN, 10 },
+        { VK_GAMEPAD_DPAD_LEFT, 11 },
+        { VK_GAMEPAD_DPAD_RIGHT, 12 },
+        { VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, 13 },
+        { VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, 14 },
+        { VK_GAMEPAD_LEFT_THUMBSTICK_UP, 15 },
+        { VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, 16 },
+        { VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, 17 },
+        { VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, 18 },
+        { VK_GAMEPAD_RIGHT_THUMBSTICK_UP, 15 },
+        { VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, 16 },
+        { VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, 17 },
+        { VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, 18 },
       };
 
       std::map<WORD, int> grouping = {
@@ -169,9 +169,9 @@ namespace siege::views
         win32::list_view_item up((wchar_t*)action.action_display_name.data());
         auto iter = grouping.find(action.group_display_name.data());
         up.iGroupId = std::distance(grouping.begin(), iter) + 1;
-      //  up.lParam = MAKELPARAM(mapping.first, mapping.second);
+        //  up.lParam = MAKELPARAM(mapping.first, mapping.second);
 
-//        up.sub_items.emplace_back(category_for_vkey(mapping.second));
+        //        up.sub_items.emplace_back(category_for_vkey(mapping.second));
         up.sub_items.emplace_back((wchar_t*)action.group_display_name.data());
         controller_table.InsertRow(up);
       }

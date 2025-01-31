@@ -19,27 +19,8 @@
 
 namespace siege::views
 {
-  struct cursor_deleter
-  {
-    void operator()(HCURSOR cursor)
-    {
-      //      assert(::DestroyCursor(cursor) == TRUE);
-    }
-  };
-
-  win32::com::com_ptr<IAccPropServices> get_acc_props()
-  {
-    win32::com::com_ptr<IAccPropServices> result;
-    if (CoCreateInstance(CLSID_CAccPropServices, nullptr, CLSCTX_SERVER, IID_IAccPropServices, result.put_void()) != S_OK)
-    {
-      throw std::runtime_error("Could not create accessible service");
-    }
-
-    return result;
-  }
 
   // TODO update tree view to support multiple levels of navigation
-  // TODO fix issue with resize button appearing black on first load
   // TODO add filename filter for directory listing
   // TODO add category and extension filter for directory listing
   struct siege_main_window final : win32::window_ref
@@ -67,7 +48,7 @@ namespace siege::views
     std::uint32_t about_id = RegisterWindowMessageW(L"COMMAND_ABOUT");
 
     bool is_resizing = false;
-    win32::auto_handle<HCURSOR, cursor_deleter> resize_cursor;
+    win32::gdi::cursor_ref resize_cursor;
     HCURSOR previous_cursor = nullptr;
     SIZE tree_size{};
 
@@ -596,6 +577,7 @@ namespace siege::views
             win32::apply_theme(dir_list);
             win32::apply_theme(tab_control);
             win32::apply_theme(separator);
+            win32::apply_theme(close_button);
             win32::apply_theme(*this);
 
             for (auto i = 0; i < tab_control.GetItemCount(); ++i)

@@ -26,9 +26,9 @@ namespace siege::views
 
     exe_actions = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
 
-    exe_actions.InsertButton(-1, { .iBitmap = 21, .idCommand = add_to_firewall_selected_id, .fsState = TBSTATE_ENABLED, .iString = (INT_PTR)L"Add to Firewall" }, false);
-    exe_actions.InsertButton(-1, { .iBitmap = 0, .idCommand = launch_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Launch" }, false);
-    exe_actions.InsertButton(-1, { .iBitmap = 1, .idCommand = extract_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" }, false);
+    exe_actions.InsertButton(-1, { .iBitmap = 0, .idCommand = add_to_firewall_selected_id, .fsState = TBSTATE_ENABLED, .iString = (INT_PTR)L"Add to Firewall" }, false);
+    exe_actions.InsertButton(-1, { .iBitmap = 1, .idCommand = launch_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Launch" }, false);
+    exe_actions.InsertButton(-1, { .iBitmap = 2, .idCommand = extract_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" }, false);
     exe_actions.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
     exe_actions.bind_tbn_dropdown(std::bind_front(&exe_view::exe_actions_tbn_dropdown, this));
     exe_actions.bind_nm_click(std::bind_front(&exe_view::exe_actions_nm_click, this));
@@ -133,8 +133,8 @@ namespace siege::views
     auto one_quarter = SIZE{ .cx = client_size.cx / 4, .cy = client_size.cy - top_size.cy };
     auto three_quarters = SIZE{ .cx = client_size.cx - one_quarter.cx, .cy = client_size.cy - top_size.cy };
 
-    recreate_image_list(exe_actions.GetIdealIconSize(SIZE{ .cx = client_size.cx / exe_actions.ButtonCount(), .cy = top_size.cy }));
-    SendMessageW(exe_actions, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
+    recreate_image_lists(exe_actions.GetIdealIconSize(SIZE{ .cx = client_size.cx / exe_actions.ButtonCount(), .cy = top_size.cy }));
+    SendMessageW(exe_actions, TB_SETIMAGELIST, 0, (LPARAM)exe_actions_icons.get());
 
     exe_actions.SetWindowPos(POINT{}, SWP_DEFERERASE | SWP_NOREDRAW);
     exe_actions.SetWindowPos(top_size, SWP_DEFERERASE);
@@ -154,7 +154,7 @@ namespace siege::views
 
     controller_table.SetWindowPos(three_quarters);
     controller_table.SetWindowPos(POINT{ .y = top_size.cy });
-    controller_table.SetImageList(LVSIL_NORMAL, image_list);
+    controller_table.SetImageList(LVSIL_NORMAL, controller_table_icons);
 
     options.SetWindowPos(one_quarter);
     options.SetWindowPos(POINT{ .x = three_quarters.cx, .y = top_size.cy });
@@ -184,11 +184,11 @@ namespace siege::views
     return 0;
   }
 
-  void exe_view::recreate_image_list(std::optional<SIZE> possible_size)
+  void exe_view::recreate_image_lists(std::optional<SIZE> possible_size)
   {
 
     SIZE icon_size = possible_size.or_else([this] {
-                                    return image_list.GetIconSize();
+                                    return exe_actions_icons.GetIconSize();
                                   })
                        .or_else([] {
                          return std::make_optional(SIZE{
@@ -197,37 +197,47 @@ namespace siege::views
                        })
                        .value();
 
-    if (image_list)
+    if (exe_actions_icons)
     {
-      image_list.reset();
+      exe_actions_icons.reset();
     }
 
-    std::vector icons{
+    if (controller_table_icons)
+    {
+      controller_table_icons.reset();
+    }
+
+
+    std::array exe_icons{
+      win32::segoe_fluent_icons::shield,
       win32::segoe_fluent_icons::new_window,
       win32::segoe_fluent_icons::folder_open,
-      win32::segoe_fluent_icons::dpad,// 2
+    };
+
+    exe_actions_icons = win32::create_icon_list(exe_icons, icon_size);
+
+    std::array controller_icons{
+      win32::segoe_fluent_icons::button_a,
+      win32::segoe_fluent_icons::button_b,
+      win32::segoe_fluent_icons::button_x,
+      win32::segoe_fluent_icons::button_y,
+      win32::segoe_fluent_icons::bumper_left,
+      win32::segoe_fluent_icons::bumper_right,
+      win32::segoe_fluent_icons::trigger_left,
+      win32::segoe_fluent_icons::trigger_right,
+      win32::segoe_fluent_icons::dpad,
+      win32::segoe_fluent_icons::arrow_up,
+      win32::segoe_fluent_icons::arrow_down,
+      win32::segoe_fluent_icons::arrow_left,
+      win32::segoe_fluent_icons::arrow_right,
+      win32::segoe_fluent_icons::left_stick,
+      win32::segoe_fluent_icons::right_stick,
       win32::segoe_fluent_icons::caret_solid_up,
       win32::segoe_fluent_icons::caret_solid_down,
       win32::segoe_fluent_icons::caret_solid_left,
       win32::segoe_fluent_icons::caret_solid_right,
-      win32::segoe_fluent_icons::left_stick,// 7
-      win32::segoe_fluent_icons::right_stick,
-      win32::segoe_fluent_icons::arrow_up,// 9
-      win32::segoe_fluent_icons::arrow_down,
-      win32::segoe_fluent_icons::arrow_left,
-      win32::segoe_fluent_icons::arrow_right,
-      win32::segoe_fluent_icons::button_a,// 13
-      win32::segoe_fluent_icons::button_b,
-      win32::segoe_fluent_icons::button_x,
-      win32::segoe_fluent_icons::button_y,
-      win32::segoe_fluent_icons::bumper_left,// 17
-      win32::segoe_fluent_icons::bumper_right,
-      win32::segoe_fluent_icons::trigger_left,// 19
-      win32::segoe_fluent_icons::trigger_right,
-      win32::segoe_fluent_icons::shield,
     };
-
-    image_list = win32::create_icon_list(icons, icon_size);
+    controller_table_icons = win32::create_icon_list(controller_icons, icon_size);
   }
 
   void exe_view::options_lbn_sel_change(win32::list_box, const NMHDR&)
@@ -283,6 +293,12 @@ namespace siege::views
         {
           populate_launch_table(*caps);
           populate_controller_table(extension.game_actions, extension.controller_input_backends);
+        }
+        else
+        {
+          std::array<siege::platform::game_action, 0> actions{};
+          std::array<const wchar_t*, 0> backends{};
+          populate_controller_table(actions, backends);
         }
       }
 
@@ -424,8 +440,8 @@ namespace siege::views
       options_unbind(); 
       options_unbind = options.bind_lbn_sel_change(std::bind_front(&exe_view::options_lbn_sel_change, this));
 
-      recreate_image_list(std::nullopt);
-      SendMessageW(exe_actions, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
+      recreate_image_lists(std::nullopt);
+      SendMessageW(exe_actions, TB_SETIMAGELIST, 0, (LPARAM)exe_actions_icons.get());
 
 
       return 0;

@@ -112,7 +112,7 @@ namespace win32::gdi
     std::span<RGBQUAD> get_pixels() const
     {
       BITMAP bitmap;
-      if (::GetObjectW(*this, sizeof(BITMAP), &bitmap) > 0 && bitmap.bmBitsPixel == 32)
+      if (::GetObjectW(*this, sizeof(BITMAP), &bitmap) > 0 && bitmap.bmBits && bitmap.bmBitsPixel == 32)
       {
         return std::span<RGBQUAD>((RGBQUAD*)bitmap.bmBits, bitmap.bmWidth * bitmap.bmHeight);
       }
@@ -172,11 +172,13 @@ namespace win32::gdi
 
   using icon = win32::auto_handle<HICON, icon_deleter>;
   using brush = win32::auto_handle<HBRUSH, gdi_deleter>;
+  using cursor = win32::auto_handle<HCURSOR, gdi_deleter>;
   using palette = win32::auto_handle<HPALETTE, gdi_deleter>;
   using pen = win32::auto_handle<HPEN, gdi_deleter>;
   using font = win32::auto_handle<HFONT, gdi_deleter>;
 
   using icon_ref = win32::auto_handle<HICON, gdi_no_deleter>;
+  using cursor_ref = win32::auto_handle<HCURSOR, gdi_no_deleter>;
   using brush_ref = win32::auto_handle<HBRUSH, gdi_no_deleter>;
   using pen_ref = win32::auto_handle<HPEN, gdi_no_deleter>;
   using palette_ref = win32::auto_handle<HPALETTE, gdi_no_deleter>;

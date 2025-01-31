@@ -445,9 +445,9 @@ namespace win32
 
     DWORD_PTR existing_object{};
 
-    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::button::class_name, &existing_object) && existing_object == 0)
+    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), &existing_object) && existing_object == 0)
     {
-      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::button::class_name, (DWORD_PTR) new sub_class());
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR) new sub_class());
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
   }
@@ -574,9 +574,9 @@ namespace win32
     };
 
     DWORD_PTR existing_object{};
-    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::button::class_name, &existing_object) && existing_object == 0)
+    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), &existing_object) && existing_object == 0)
     {
-      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::button::class_name, (DWORD_PTR) new sub_class(control, std::move(color_map)));
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR) new sub_class(control, std::move(color_map)));
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
     else if (existing_object)
@@ -629,9 +629,9 @@ namespace win32
     };
 
     DWORD_PTR existing_object{};
-    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::static_control::class_name, &existing_object) && existing_object == 0)
+    if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), &existing_object) && existing_object == 0)
     {
-      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)win32::static_control::class_name, (DWORD_PTR) new sub_class(std::move(color_map)));
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR) new sub_class(std::move(color_map)));
 
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
@@ -658,6 +658,7 @@ namespace win32
 
       ~sub_class()
       {
+        bind_remover();
       }
 
       HBRUSH wm_control_color(win32::list_box list_box, win32::gdi::drawing_context_ref context)
@@ -710,7 +711,6 @@ namespace win32
       {
         if (message == WM_NCDESTROY)
         {
-          OutputDebugStringW(L"listbox apply_theme RemoveWindowSubclass");
           ::RemoveWindowSubclass(hWnd, sub_class::HandleMessage, uIdSubclass);
           delete (sub_class*)dwRefData;
         }

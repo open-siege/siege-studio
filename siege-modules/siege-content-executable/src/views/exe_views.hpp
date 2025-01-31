@@ -100,8 +100,9 @@ namespace siege::views
 
     win32::list_view keyboard_table;
     win32::list_view controller_table;
+    win32::image_list controller_table_icons;
     win32::tool_bar exe_actions;
-    win32::image_list image_list;
+    win32::image_list exe_actions_icons;
 
     constexpr static int add_to_firewall_selected_id = 10;
     constexpr static int launch_selected_id = 11;
@@ -133,7 +134,7 @@ namespace siege::views
 
     std::optional<win32::lresult_t> wm_size(std::size_t type, SIZE client_size);
 
-    void recreate_image_list(std::optional<SIZE> possible_size);
+    void recreate_image_lists(std::optional<SIZE> possible_size);
 
     void options_lbn_sel_change(win32::list_box, const NMHDR&);
 

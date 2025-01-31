@@ -20,10 +20,10 @@ namespace win32
     SIZE font_size{};
     ::GetTextExtentPoint32W(temp_dc, text.data(), text.size(), &font_size);
 
-    
+
     win32::gdi::bitmap temp_bitmap{ font_size };
 
-    auto old_bitmap = (HBITMAP)SelectObject(temp_dc, temp_bitmap.get());
+    SelectObject(temp_dc, temp_bitmap.get());
 
     RECT text_rect{
       .right = font_size.cx,
@@ -42,7 +42,6 @@ namespace win32
     SetDCPenColor(temp_dc, background_color);
 
     ::DrawTextW(temp_dc, text.data(), text.size(), &text_rect, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
-    SelectObject(temp_dc, old_bitmap);
 
     auto pixels = temp_bitmap.get_pixels();
     for (auto& color : pixels)
@@ -60,6 +59,7 @@ namespace win32
 
     win32::wic::bitmap(temp_bitmap, win32::wic::alpha_channel_option::WICBitmapUseAlpha)
       .scale(size.cx, size.cy, resampling_mode)
+      .flip(wic::transform_options::WICBitmapTransformFlipVertical)
       .copy_pixels(stride, std::span<std::byte>((std::byte*)mask_cache_pixels.data(), size.cy * stride * sizeof(std::int32_t)));
 
     return mask_cache;
@@ -105,6 +105,7 @@ namespace win32
 
     wic::bitmap(mask_cache, wic::alpha_channel_option::WICBitmapUseAlpha)
       .scale(size.cx, size.cy, resampling_mode)
+      .flip(wic::transform_options::WICBitmapTransformFlipVertical)
       .copy_pixels(stride, std::span<std::byte>((std::byte*)mask_cache_pixels.data(), size.cy * stride * sizeof(std::int32_t)));
 
     return mask_cache;
@@ -113,13 +114,13 @@ namespace win32
   gdi::icon create_icon(::SIZE size, ::RGBQUAD solid_color, gdi::bitmap_ref mask)
   {
     std::vector<RGBQUAD> pixels;
-    pixels.resize(size.cx * size.cy);
+    pixels.resize(size.cx * size.cy, solid_color);
 
     auto mask_pixels = mask.get_pixels();
 
     std::size_t index = 0;
-    std::transform(pixels.begin(), pixels.end(), pixels.begin(), [solid_color, &mask, &index, &mask_pixels](RGBQUAD temp) {
-      std::memcpy(&temp, &solid_color, sizeof(solid_color));
+
+    std::transform(pixels.begin(), pixels.end(), pixels.begin(), [&index, &mask_pixels](RGBQUAD temp) {
       temp.rgbReserved = 255 - mask_pixels[index++].rgbReserved;
       return temp;
     });
@@ -161,11 +162,22 @@ namespace win32
         .rgbRed = GetRValue(theme_color) };
     }
 
-    std::for_each(std::execution::par_unseq, icons.begin(), icons.end(), [&](auto icon) {
-      auto mask = win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, (wchar_t)icon));
-      auto play_icon = win32::create_icon(icon_size, color, mask.ref());
-      ImageList_ReplaceIcon(image_list.get(), -1, play_icon);
+    std::vector<std::pair<int, segoe_fluent_icons>> icon_indices;
+    icon_indices.reserve(icons.size());
+    std::transform(icons.begin(), icons.end(), std::back_inserter(icon_indices), [i = 0](auto icon) mutable {
+      return std::make_pair(i++, icon);
+    });
 
+    std::vector<win32::gdi::icon> final_icons;
+    final_icons.resize(icons.size());
+
+    std::for_each(std::execution::par_unseq, icon_indices.begin(), icon_indices.end(), [&](auto& icon) {
+      auto mask = win32::create_layer_mask(icon_size, win32::gdi::font_ref(font_icon.get()), std::wstring(1, (wchar_t)icon.second));
+      final_icons[icon.first] = win32::create_icon(icon_size, color, mask.ref());
+    });
+
+    std::for_each(final_icons.begin(), final_icons.end(), [&](auto& icon) {
+      ImageList_ReplaceIcon(image_list.get(), -1, icon);
     });
 
     return image_list;
