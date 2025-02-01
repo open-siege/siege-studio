@@ -224,6 +224,11 @@ namespace win32
       return HBITMAP(SendMessageW(*this, STM_SETIMAGE, IMAGE_BITMAP, lparam_t(image)));
     }
 
+    HBITMAP GetBitmap()
+    {
+      return HBITMAP(SendMessageW(*this, STM_GETIMAGE, IMAGE_BITMAP, 0));
+    }
+
     struct custom_draw_callbacks
     {
       std::move_only_function<HBRUSH(static_control, win32::gdi::drawing_context_ref)> wm_control_color;

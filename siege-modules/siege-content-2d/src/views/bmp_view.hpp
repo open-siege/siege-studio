@@ -27,7 +27,7 @@ namespace siege::views
   struct bmp_view : win32::window_ref
   {
     bmp_controller controller;
-    
+
     win32::list_view palettes_list;
     win32::tool_bar bitmap_actions;
     win32::image_list bitmap_actions_icons;
@@ -46,7 +46,7 @@ namespace siege::views
 
     win32::static_control static_image;
     std::list<platform::storage_module> loaded_modules;
-    
+
 
     bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
@@ -59,7 +59,7 @@ namespace siege::views
 
       auto factory = win32::window_factory(ref());
 
-      bitmap_actions = *factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
+      bitmap_actions = *factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP | WS_CLIPSIBLINGS });
 
       bitmap_actions.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Zoom In" });
 
@@ -138,7 +138,7 @@ namespace siege::views
 
       if (is_panning && !pan_timer)
       {
-        pan_timer = SetTimer(*this, (UINT_PTR)this, 150, timer_callback);
+        pan_timer = SetTimer(*this, (UINT_PTR)this, 50, timer_callback);
       }
       else if (pan_timer)
       {
@@ -236,11 +236,11 @@ namespace siege::views
 
         if (last_mouse_position && mouse_position.x > last_mouse_position->x)
         {
-          viewport.X -= mouse_position.x - last_mouse_position->x;
+          viewport.X += mouse_position.x - last_mouse_position->x;
         }
         else if (last_mouse_position && mouse_position.x < last_mouse_position->x)
         {
-          viewport.X += last_mouse_position->x - mouse_position.x;
+          viewport.X -= last_mouse_position->x - mouse_position.x;
         }
 
         if (last_mouse_position && mouse_position.y > last_mouse_position->y)
@@ -362,7 +362,21 @@ namespace siege::views
             .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
             .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
 
-          static_image.SetImage(preview_bitmap.get());
+
+          auto pixels = preview_bitmap.get_pixels();
+
+          // prevents bitmaps from being copied
+          for (auto& pixel : pixels)
+          {
+            pixel.rgbReserved = 0;
+          }
+
+          auto old_bitmap = static_image.SetImage(preview_bitmap.get());
+
+          if (old_bitmap != preview_bitmap.get())
+          {
+            ::DeleteObject(old_bitmap);
+          }
         }
         else if (force && std::memcmp(&viewport, &previous_viewport, sizeof(viewport)) != 0)
         {
@@ -371,7 +385,27 @@ namespace siege::views
             .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
             .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
 
-          static_image.SetImage(preview_bitmap.get());
+          auto pixels = preview_bitmap.get_pixels();
+
+          // prevents bitmaps from being copied
+          for (auto& pixel : pixels)
+          {
+            pixel.rgbReserved = 0;
+          }
+
+          if (static_image.GetBitmap() == preview_bitmap.get())
+          {
+            RedrawWindow(static_image, nullptr, nullptr, RDW_NOERASE | RDW_NOFRAME | RDW_INVALIDATE);
+          }
+          else
+          {
+            auto old_bitmap = static_image.SetImage(preview_bitmap.get());
+
+            if (old_bitmap != preview_bitmap.get())
+            {
+              ::DeleteObject(old_bitmap);
+            }
+          }
         }
         previous_viewport = viewport;
       }
