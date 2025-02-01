@@ -34,12 +34,13 @@ namespace siege::views
     win32::gdi::bitmap preview_bitmap;
     win32::gdi::bitmap current_frame;
     WICRect viewport;
+    WICRect previous_viewport;
     std::size_t current_frame_index = 0;
     float scale = NAN;
     bool is_panning = false;
     std::optional<POINTS> last_mouse_position = std::nullopt;
     win32::static_control static_image;
-
+    UINT_PTR pan_timer = 0;
     std::list<platform::storage_module> loaded_modules;
 
 
@@ -76,7 +77,7 @@ namespace siege::views
 
       palettes_list = [&] {
         auto palettes_list = *factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
-          .style = WS_VISIBLE | WS_CHILD | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER,
+          .style = WS_VISIBLE | WS_CHILD | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | WS_CLIPSIBLINGS,
           .lpszName = L"Palettes" });
 
         palettes_list.SetView(win32::list_view::view_type::details_view);
@@ -87,7 +88,7 @@ namespace siege::views
         }));
 
         palettes_list.SetExtendedListViewStyle(0,
-          LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_AUTOSIZECOLUMNS);
+          LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_AUTOSIZECOLUMNS | LVS_EX_DOUBLEBUFFER);
 
         palettes_list.win32::list_view::InsertColumn(-1, LVCOLUMNW{ .pszText = const_cast<wchar_t*>(L"Available Palettes") });
 
@@ -100,19 +101,51 @@ namespace siege::views
 
       static_image = *factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
         .hwndParent = *this,
-        .style = WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_REALSIZEIMAGE | SS_CENTERIMAGE });
+        .style = WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS | SS_BITMAP | SS_REALSIZEIMAGE | SS_CENTERIMAGE });
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
       return 0;
     }
 
+
+    static VOID CALLBACK timer_callback(
+      HWND hwnd,
+      UINT message,
+      UINT_PTR idTimer,
+      DWORD dwTime)
+    {
+      auto* self = (bmp_view*)idTimer;
+      self->resize_preview(true);
+    }
+
+
+    void set_is_panning(bool is_panning)
+    {
+      this->is_panning = is_panning;
+
+      auto state = SendMessageW(bitmap_actions, TB_GETSTATE, 2, 0);
+
+      if (state != -1)
+      {
+        SendMessageW(bitmap_actions, TB_SETSTATE, 2, is_panning ? MAKEWORD(state | TBSTATE_CHECKED, 0) : MAKEWORD(state & ~TBSTATE_CHECKED, 0));
+      }
+
+      if (is_panning && !pan_timer)
+      {
+        pan_timer = SetTimer(*this, (UINT_PTR)this, 150, timer_callback);
+      }
+      else if (pan_timer)
+      {
+        KillTimer(*this, (UINT_PTR)this);
+        pan_timer = 0;
+      }
+    }
+
     BOOL bitmap_actions_nm_click(win32::tool_bar, const NMMOUSE& message)
     {
       if (message.dwItemSpec == 0)
       {
-        // this->viewport.X += 10;
-        // this->viewport.Y += 10;
         this->viewport.Width -= 10;
         this->viewport.Height -= 10;
 
@@ -121,8 +154,6 @@ namespace siege::views
       }
       else if (message.dwItemSpec == 1)
       {
-        // this->viewport.X += 10;
-        // this->viewport.Y += 10;
         this->viewport.Width += 10;
         this->viewport.Height += 10;
 
@@ -131,7 +162,7 @@ namespace siege::views
       }
       else if (message.dwItemSpec == 2)
       {
-        is_panning = !is_panning;
+        set_is_panning(!is_panning);
         return TRUE;
       }
       return FALSE;
@@ -166,14 +197,24 @@ namespace siege::views
       bitmap_actions_icons = win32::create_icon_list(icons, icon_size);
     }
 
+    auto wm_mouse_button_down(std::size_t wparam, POINTS mouse_position)
+    {
+      if (wparam & MK_RBUTTON)
+      {
+        set_is_panning(!is_panning);
+      }
+
+      return 0;
+    }
+
     auto wm_mouse_move(std::size_t wparam, POINTS mouse_position)
     {
       if (is_panning)
       {
-          if (wparam & MK_RBUTTON)
-          {
-            is_panning = false;
-            return 0;
+        if (wparam & MK_RBUTTON)
+        {
+          set_is_panning(false);
+          return 0;
         }
 
         if (last_mouse_position && mouse_position.x > last_mouse_position->x)
@@ -193,14 +234,6 @@ namespace siege::views
         {
           viewport.Y += last_mouse_position->y - mouse_position.y;
         }
-
-        if (last_mouse_position)
-        {
-          resize_preview(true);
-        }
-
-
-
         last_mouse_position = mouse_position;
       }
       return 0;
@@ -299,13 +332,11 @@ namespace siege::views
         {
           viewport.Height = frame_size.height - viewport.Y;
         }
-
         SIZE preview_size = { .cx = (LONG)(frame_size.width * scale), .cy = (LONG)(frame_size.height * scale) };
 
         auto existing_size = preview_bitmap.get_size();
 
-
-        if (!(existing_size.cx == preview_size.cx && existing_size.cy == preview_size.cy) || force)
+        if (!(existing_size.cx == preview_size.cx && existing_size.cy == preview_size.cy))
         {
           preview_bitmap = win32::gdi::bitmap(preview_size, win32::gdi::bitmap::skip_shared_handle);
 
@@ -316,6 +347,16 @@ namespace siege::views
 
           static_image.SetImage(preview_bitmap.get());
         }
+        else if (force && std::memcmp(&viewport, &previous_viewport, sizeof(viewport)) != 0)
+        {
+          win32::wic::bitmap(current_frame, win32::wic::alpha_channel_option::WICBitmapUseAlpha)
+            .clip(viewport)
+            .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
+            .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
+
+          static_image.SetImage(preview_bitmap.get());
+        }
+        previous_viewport = viewport;
       }
     }
 
@@ -325,6 +366,7 @@ namespace siege::views
       {
         win32::apply_theme(palettes_list);
         win32::apply_theme(bitmap_actions);
+        win32::apply_theme(static_image);
         win32::apply_theme(*this);
 
         recreate_image_list(std::nullopt);

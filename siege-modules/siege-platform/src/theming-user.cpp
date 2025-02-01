@@ -590,9 +590,16 @@ namespace win32
     struct sub_class
     {
       std::map<std::wstring_view, COLORREF> colors;
+      std::function<void()> bind_remover;
 
-      sub_class(std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
+      sub_class(win32::static_control& control, std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
       {
+        bind_remover = control.bind_custom_draw({ .wm_control_color = std::bind_front(&sub_class::wm_control_color, this) });
+      }
+
+      ~sub_class()
+      {
+        bind_remover();
       }
 
       HBRUSH wm_control_color(win32::static_control static_control, win32::gdi::drawing_context_ref context)
@@ -631,7 +638,7 @@ namespace win32
     DWORD_PTR existing_object{};
     if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), &existing_object) && existing_object == 0)
     {
-      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR) new sub_class(std::move(color_map)));
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR) new sub_class(control, std::move(color_map)));
 
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
