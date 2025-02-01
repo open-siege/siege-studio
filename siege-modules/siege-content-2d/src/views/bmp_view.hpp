@@ -26,23 +26,27 @@ namespace siege::views
   // TODO complete icon loading
   struct bmp_view : win32::window_ref
   {
+    bmp_controller controller;
+    
     win32::list_view palettes_list;
     win32::tool_bar bitmap_actions;
     win32::image_list bitmap_actions_icons;
 
-    bmp_controller controller;
-    win32::gdi::bitmap preview_bitmap;
+    std::size_t current_frame_index = 0;
     win32::gdi::bitmap current_frame;
+    win32::popup_menu frame_selection_menu;
+
+    win32::gdi::bitmap preview_bitmap;
     WICRect viewport;
     WICRect previous_viewport;
-    std::size_t current_frame_index = 0;
     float scale = NAN;
     bool is_panning = false;
     std::optional<POINTS> last_mouse_position = std::nullopt;
-    win32::static_control static_image;
     UINT_PTR pan_timer = 0;
-    std::list<platform::storage_module> loaded_modules;
 
+    win32::static_control static_image;
+    std::list<platform::storage_module> loaded_modules;
+    
 
     bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
@@ -72,6 +76,7 @@ namespace siege::views
 
       bitmap_actions.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
       bitmap_actions.bind_nm_click(std::bind_front(&bmp_view::bitmap_actions_nm_click, this));
+      bitmap_actions.bind_tbn_dropdown(std::bind_front(&bmp_view::bitmap_actions_tbn_dropdown, this));
 
       std::wstring temp = L"menu.pal";
 
@@ -142,8 +147,20 @@ namespace siege::views
       }
     }
 
+    LRESULT bitmap_actions_tbn_dropdown(win32::tool_bar, const NMTOOLBAR& message)
+    {
+      POINT mouse_pos;
+      if (message.iItem == 4 && ::GetCursorPos(&mouse_pos))
+      {
+        auto selection = ::TrackPopupMenu(frame_selection_menu, TPM_CENTERALIGN | TPM_RETURNCMD, mouse_pos.x, mouse_pos.y, 0, *this, nullptr);
+      }
+
+      return TBDDRET_NODEFAULT;
+    }
+
     BOOL bitmap_actions_nm_click(win32::tool_bar, const NMMOUSE& message)
     {
+
       if (message.dwItemSpec == 0)
       {
         this->viewport.Width -= 10;
@@ -457,6 +474,17 @@ namespace siege::views
           });
 
         auto count = controller.load_bitmap(stream, task);
+
+        frame_selection_menu = win32::popup_menu();
+
+        std::wstring temp;
+        temp.reserve(10);
+
+        for (auto i = 0u; i < count; ++i)
+        {
+          temp.assign(L"Frame " + std::to_wstring(i));
+          frame_selection_menu.AppendMenuW(MF_OWNERDRAW, i, temp.c_str());
+        }
 
         if (count > 0)
         {
