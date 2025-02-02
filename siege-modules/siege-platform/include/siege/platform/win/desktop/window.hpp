@@ -411,6 +411,49 @@ namespace win32
     using base = window_base<window_deleter, window_ref>;
     using base::base;
   };
+
+  inline std::function<bool()> SetTimer(win32::window_ref window, std::uint32_t delay, std::move_only_function<void(win32::window_ref, std::uint32_t, std::function<bool()>, std::uint32_t)> callback)
+  {
+    auto* callback_ptr = new decltype(callback)(std::move(callback));
+
+    struct callback_struct
+    {
+      static VOID CALLBACK timer_callback(
+        HWND hwnd,
+        UINT message,
+        UINT_PTR idTimer,
+        DWORD dwTime)
+      {
+        auto* raw_callback = (std::add_pointer_t<decltype(callback)>)idTimer;
+
+        if (raw_callback)
+        {
+          (*raw_callback)(
+            win32::window_ref(hwnd), message, [idTimer, hwnd, raw_callback] {
+              if (::KillTimer(hwnd, idTimer))
+              {
+                delete raw_callback;
+              }
+
+              return false;
+            },
+            dwTime);
+        }
+      }
+    };
+
+    auto result = ::SetTimer(window, (UINT_PTR)callback_ptr, delay, callback_struct::timer_callback);
+
+    return [result, window = window.get(), callback_ptr] {
+      if (::KillTimer(window, result))
+      {
+        delete callback_ptr;
+      }
+
+      return false;
+    };
+  }
+
 }// namespace win32
 
 

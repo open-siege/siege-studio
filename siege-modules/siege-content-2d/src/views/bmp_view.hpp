@@ -42,7 +42,7 @@ namespace siege::views
     float scale = NAN;
     bool is_panning = false;
     std::optional<POINTS> last_mouse_position = std::nullopt;
-    UINT_PTR pan_timer = 0;
+    std::function<bool()> pan_timer;
 
     win32::static_control static_image;
     std::list<platform::storage_module> loaded_modules;
@@ -113,18 +113,6 @@ namespace siege::views
       return 0;
     }
 
-
-    static VOID CALLBACK timer_callback(
-      HWND hwnd,
-      UINT message,
-      UINT_PTR idTimer,
-      DWORD dwTime)
-    {
-      auto* self = (bmp_view*)idTimer;
-      self->resize_preview(true);
-    }
-
-
     void set_is_panning(bool is_panning)
     {
       this->is_panning = is_panning;
@@ -138,12 +126,14 @@ namespace siege::views
 
       if (is_panning && !pan_timer)
       {
-        pan_timer = SetTimer(*this, (UINT_PTR)this, 50, timer_callback);
+        pan_timer = win32::SetTimer(this->ref(), 50, [this](auto, auto, auto, auto) {
+          resize_preview(true);
+        });
       }
       else if (pan_timer)
       {
-        KillTimer(*this, (UINT_PTR)this);
-        pan_timer = 0;
+        pan_timer();
+        pan_timer = nullptr;
       }
     }
 
