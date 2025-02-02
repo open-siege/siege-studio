@@ -701,7 +701,7 @@ namespace siege::views
         .cx = tab_rect.right - tab_rect.left,
         .y = tab_rect.top,
         .x = tab_rect.left,
-        .style = WS_CHILD,
+        .style = WS_CHILD | WS_CLIPCHILDREN,
         .lpszClass = class_name.c_str(),
       });
 

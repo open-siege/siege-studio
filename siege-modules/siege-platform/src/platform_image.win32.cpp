@@ -53,8 +53,6 @@ namespace siege::platform::bitmap
       }
     }
 
-
-
     return frames;
   }
 

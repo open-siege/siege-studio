@@ -3,6 +3,7 @@
 #include <siege/content/bmp/bitmap.hpp>
 #include <siege/content/bmp/tim.hpp>
 #include <siege/platform/image.hpp>
+#include <siege/platform/stream.hpp>
 #include <deque>
 #include <fstream>
 #include <spanstream>
@@ -14,6 +15,13 @@ namespace siege::views
 {
   bool bmp_controller::is_bmp(std::istream& image_stream) noexcept
   {
+    auto path = siege::platform::get_stream_path(image_stream);
+
+    if (path && path->extension() == ".ico" || path->extension() == ".ICO")
+    {
+      return true;
+    }
+
     return siege::content::bmp::is_earthsiege_bmp(image_stream)
            || siege::platform::bitmap::is_microsoft_bmp(image_stream)
            || siege::content::tim::is_tim(image_stream)

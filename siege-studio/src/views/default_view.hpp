@@ -289,6 +289,8 @@ namespace siege::views
       ListView_SetImageList(supported_games_by_engine, normal_icons, LVSIL_NORMAL);
       ListView_SetImageList(supported_games_by_engine, small_icons, LVSIL_SMALL);
       ListView_SetView(supported_games_by_engine, LV_VIEW_TILE);
+      supported_games_by_engine.SetExtendedListViewStyle(0, LVS_EX_DOUBLEBUFFER);
+
 
       supported_games_by_engine.EnableGroupView(true);
 
