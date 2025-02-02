@@ -38,10 +38,22 @@ namespace siege::platform::bitmap
     std::vector<std::any> frames;
     frames.reserve(count);
 
-    for (auto i = 0u; i < count; ++i)
+    if (filename.extension() == ".gif" || filename.extension() == ".GIF")
     {
-      frames.emplace_back(decoder.frame(i));
+      for (auto i = 0u; i < count; ++i)
+      {
+        frames.emplace_back(decoder.frame(i).flip(win32::wic::transform_options::WICBitmapTransformFlipVertical));
+      }
     }
+    else
+    {
+      for (auto i = 0u; i < count; ++i)
+      {
+        frames.emplace_back(decoder.frame(i));
+      }
+    }
+
+
 
     return frames;
   }
@@ -105,6 +117,11 @@ namespace siege::platform::bitmap
       auto temp = std::any_cast<const win32::wic::bitmap&>(item).get_size();
       return size((int)temp.cx, (int)temp.cy);
     }
+    else if (item.type().hash_code() == typeid(win32::wic::bitmap_source).hash_code())
+    {
+      auto temp = std::any_cast<const win32::wic::bitmap_source&>(item).get_size();
+      return size((int)temp.cx, (int)temp.cy);
+    }
     else if (item.type().hash_code() == typeid(windows_bmp_data).hash_code())
     {
       const auto& bitmap = std::any_cast<const windows_bmp_data&>(item);
@@ -146,7 +163,7 @@ namespace siege::platform::bitmap
 
     const auto& item = frames[frame];
 
-    auto scale_bitmap = [size, pixels](const win32::wic::bitmap& bitmap) {
+    auto scale_bitmap = [size, pixels](const win32::wic::bitmap_source& bitmap) {
       auto mode = WICBitmapInterpolationModeFant;
 
       if (IsWindows10OrGreater())
@@ -156,7 +173,7 @@ namespace siege::platform::bitmap
 
       auto source = bitmap.scale((std::uint32_t)size.width, (std::uint32_t)size.height, mode)
                       .convert(win32::wic::bitmap::to_format{
-                        .format = GUID_WICPixelFormat32bppBGR });
+                      .format = GUID_WICPixelFormat32bppBGR });
 
       auto size = source.get_size();
       source.copy_pixels(size.cx * sizeof(std::int32_t), pixels);
@@ -167,6 +184,10 @@ namespace siege::platform::bitmap
     if (item.type().hash_code() == typeid(win32::wic::bitmap).hash_code())
     {
       return scale_bitmap(std::any_cast<const win32::wic::bitmap&>(item));
+    }
+    else if (item.type().hash_code() == typeid(win32::wic::bitmap_source).hash_code())
+    {
+      return scale_bitmap(std::any_cast<const win32::wic::bitmap_source&>(item));
     }
     else if (item.type().hash_code() == typeid(windows_bmp_data).hash_code())
     {

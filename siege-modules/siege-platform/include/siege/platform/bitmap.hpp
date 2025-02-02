@@ -68,7 +68,7 @@ namespace siege::platform::bitmap
 
   bool is_microsoft_bmp(std::istream& raw_data);
 
-  windows_bmp_data get_bmp_data(std::istream& raw_data, bool auto_flip = true);
+  windows_bmp_data get_bmp_data(std::istream& raw_data, bool auto_flip = false);
 
   struct bitmap_settings
   {

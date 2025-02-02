@@ -200,7 +200,7 @@ namespace win32
       if (flags & MF_OWNERDRAW && !data.empty())
       {
         static std::map<std::wstring_view, std::unique_ptr<menu_string_info, co_task_deleter>> menu_items;
-
+        
         auto iter = menu_items.find(data);
 
         if (iter == menu_items.end())
@@ -208,7 +208,7 @@ namespace win32
           auto* storage = ::CoTaskMemAlloc(sizeof(menu_string_info));
           auto* acc_info = new (storage) menu_string_info(data);
 
-          iter = menu_items.emplace(data, std::unique_ptr<menu_string_info, co_task_deleter>(acc_info)).first;
+          iter = menu_items.emplace(acc_info->pszWText, std::unique_ptr<menu_string_info, co_task_deleter>(acc_info)).first;
         }
 
         MENUITEMINFOW info{

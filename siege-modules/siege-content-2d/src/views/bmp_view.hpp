@@ -153,6 +153,16 @@ namespace siege::views
       if (message.iItem == 4 && ::GetCursorPos(&mouse_pos))
       {
         auto selection = ::TrackPopupMenu(frame_selection_menu, TPM_CENTERALIGN | TPM_RETURNCMD, mouse_pos.x, mouse_pos.y, 0, *this, nullptr);
+
+        if (selection)
+        {
+          previous_viewport = WICRect{};
+          current_frame_index = selection - 1;
+          auto frame_size = controller.get_size(current_frame_index);
+          current_frame = win32::gdi::bitmap(SIZE{ .cx = frame_size.width, .cy = frame_size.height });
+          controller.convert(current_frame_index, frame_size, 32, current_frame.get_pixels_as_bytes());
+          resize_preview(true);
+        }
       }
 
       return TBDDRET_NODEFAULT;
@@ -216,7 +226,7 @@ namespace siege::views
 
     auto wm_mouse_button_down(std::size_t wparam, POINTS mouse_position)
     {
-      if (wparam & MK_RBUTTON)
+      if (wparam & MK_MBUTTON || (is_panning && wparam & MK_LBUTTON) || (is_panning && wparam & MK_RBUTTON))
       {
         set_is_panning(!is_panning);
       }
@@ -228,7 +238,7 @@ namespace siege::views
     {
       if (is_panning)
       {
-        if (wparam & MK_RBUTTON)
+        if (wparam & MK_LBUTTON || wparam & MK_MBUTTON || wparam & MK_RBUTTON)
         {
           set_is_panning(false);
           return 0;
@@ -516,8 +526,9 @@ namespace siege::views
 
         for (auto i = 0u; i < count; ++i)
         {
-          temp.assign(L"Frame " + std::to_wstring(i));
-          frame_selection_menu.AppendMenuW(MF_OWNERDRAW, i, temp.c_str());
+          temp.assign(L"Frame ");
+          temp.append(std::to_wstring(i + 1));
+          frame_selection_menu.AppendMenuW(MF_OWNERDRAW, i + 1, temp.c_str());
         }
 
         if (count > 0)
@@ -525,7 +536,7 @@ namespace siege::views
           auto size = static_image.GetClientSize();
           auto frame_size = controller.get_size(current_frame_index);
           current_frame = win32::gdi::bitmap(SIZE{ .cx = frame_size.width, .cy = frame_size.height });
-          controller.convert(0, frame_size, 32, current_frame.get_pixels_as_bytes());
+          controller.convert(current_frame_index, frame_size, 32, current_frame.get_pixels_as_bytes());
           viewport = WICRect();
           viewport.Width = (INT)frame_size.width;
           viewport.Height = (INT)frame_size.height;

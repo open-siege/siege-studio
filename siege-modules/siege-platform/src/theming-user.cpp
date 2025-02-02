@@ -591,6 +591,7 @@ namespace win32
     {
       std::map<std::wstring_view, COLORREF> colors;
       std::function<void()> bind_remover;
+      SIZE previous_size{};
 
       sub_class(win32::static_control& control, std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
       {
@@ -604,13 +605,26 @@ namespace win32
 
       HBRUSH wm_control_color(win32::static_control static_control, win32::gdi::drawing_context_ref context)
       {
-        auto text_color = colors[properties::static_control::text_color];
+        auto current_size = static_control.GetClientSize().value_or(SIZE{});
+        HBRUSH result = nullptr;
 
-        ::SetTextColor(context, text_color);
+        if (std::memcmp(&current_size, &previous_size, sizeof(current_size)) == 0)
+        {
+          result = (HBRUSH)GetStockObject(NULL_BRUSH);
+        }
+        else
+        {
+          auto text_color = colors[properties::static_control::text_color];
 
-        auto bk_color = colors[properties::static_control::bk_color];
-        ::SetBkColor(context, bk_color);
-        return get_solid_brush(bk_color).get();
+          ::SetTextColor(context, text_color);
+
+          auto bk_color = colors[properties::static_control::bk_color];
+          ::SetBkColor(context, bk_color);
+          result = get_solid_brush(bk_color).get();
+        }
+        previous_size = current_size;
+
+        return result;
       }
 
       static LRESULT __stdcall HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
