@@ -66,6 +66,15 @@ namespace siege::views
 
     size get_size(std::size_t frame) const noexcept;
 
+    std::size_t get_frame_count() const noexcept
+    {
+      if (original_image)
+      {
+        return original_image->frame_count();
+      }
+      return 0;
+    }
+
     std::size_t convert(std::size_t frame, size size, int bits, std::span<std::byte> destination) const noexcept;
 
   private:

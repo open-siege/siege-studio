@@ -43,6 +43,7 @@ namespace siege::views
     bool is_panning = false;
     std::optional<POINTS> last_mouse_position = std::nullopt;
     std::function<bool()> pan_timer;
+    std::function<bool()> animation_timer;
 
     win32::static_control static_image;
     std::list<platform::storage_module> loaded_modules;
@@ -50,6 +51,19 @@ namespace siege::views
 
     bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
+    }
+
+    ~bmp_view()
+    {
+      if (pan_timer)
+      {
+        pan_timer();
+      }
+
+      if (animation_timer)
+      {
+        animation_timer();
+      }
     }
 
     auto wm_create()
@@ -146,12 +160,42 @@ namespace siege::views
 
         if (selection)
         {
-          previous_viewport = WICRect{};
-          current_frame_index = selection - 1;
-          auto frame_size = controller.get_size(current_frame_index);
-          current_frame = win32::gdi::bitmap(SIZE{ .cx = frame_size.width, .cy = frame_size.height });
-          controller.convert(current_frame_index, frame_size, 32, current_frame.get_pixels_as_bytes());
-          resize_preview(true);
+          auto frame_count = controller.get_frame_count();
+          if (selection - 1 == frame_count)
+          {
+            if (animation_timer)
+            {
+              ::CheckMenuItem(frame_selection_menu, selection, MF_BYCOMMAND | MF_UNCHECKED);
+              animation_timer();
+              animation_timer = nullptr;
+            }
+            else
+            {
+              ::CheckMenuItem(frame_selection_menu, selection, MF_BYCOMMAND | MF_CHECKED);
+              animation_timer = win32::SetTimer(ref(), 100, [this, frame_count](auto, auto, auto, auto) {
+                current_frame_index++;
+
+                if (current_frame_index >= frame_count)
+                {
+                  current_frame_index = 0;
+                }
+
+                previous_viewport = WICRect{};
+                auto frame_size = controller.get_size(current_frame_index);
+                controller.convert(current_frame_index, frame_size, 32, current_frame.get_pixels_as_bytes());
+                resize_preview(true);
+              });
+            }
+          }
+          else
+          {
+            previous_viewport = WICRect{};
+            current_frame_index = selection - 1;
+            auto frame_size = controller.get_size(current_frame_index);
+            current_frame = win32::gdi::bitmap(SIZE{ .cx = frame_size.width, .cy = frame_size.height });
+            controller.convert(current_frame_index, frame_size, 32, current_frame.get_pixels_as_bytes());
+            resize_preview(true);
+          }
         }
       }
 
@@ -513,6 +557,24 @@ namespace siege::views
 
         std::wstring temp;
         temp.reserve(10);
+
+        std::vector<siege::platform::bitmap::size> frame_sizes;
+
+        if (count > 1)
+        {
+          frame_sizes.reserve(count);
+          for (auto i = 0u; i < count; ++i)
+          {
+            frame_sizes.emplace_back(controller.get_size(i));
+          }
+
+          if (std::all_of(frame_sizes.begin(), frame_sizes.end(), [first = frame_sizes[0]](auto& size) {
+                return size == first;
+              }))
+          {
+            frame_selection_menu.AppendMenuW(MF_OWNERDRAW, frame_sizes.size() + 1, L"Animate");
+          }
+        }
 
         for (auto i = 0u; i < count; ++i)
         {

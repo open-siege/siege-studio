@@ -37,6 +37,11 @@ namespace siege::platform::bitmap
     size(std::pair<int, int> pair) : width(pair.first), height(pair.second)
     {
     }
+
+    bool operator==(const size& b) const
+    {
+      return this->width == b.width && this->height == b.height;
+    }
   };
 
   class platform_image
