@@ -2,6 +2,7 @@
 #include <siege/platform/win/desktop/theming.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
 #include <siege/platform/win/desktop/wic.hpp>
+#include <siege/platform/win/desktop/direct_2d.hpp>
 #include <siege/platform/stream.hpp>
 
 namespace win32
