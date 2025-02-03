@@ -14,7 +14,7 @@ namespace win32::direct2d
 {
   using namespace win32::com;
 
-  auto& get_factory()
+  inline auto& get_factory()
   {
     thread_local com_ptr factory = [] {
       com_ptr<ID2D1Factory> temp;
@@ -31,6 +31,104 @@ namespace win32::direct2d
   }
 
   class dc_render_target;
+
+  class geometry
+  {
+  public:
+    friend class dc_render_target;
+
+    ID2D1Geometry& object()
+    {
+      return *instance;
+    }
+
+  protected:
+    template<typename T>
+    geometry(com_ptr<T> other) : instance(other.release())
+    {
+    }
+    com_ptr<ID2D1Geometry> instance;
+  };
+
+  class rounded_rectangle_geometry : public geometry
+  {
+  public:
+    rounded_rectangle_geometry(D2D1_ROUNDED_RECT rect) : geometry([rect] {
+                                                           com_ptr<ID2D1RoundedRectangleGeometry> instance;
+                                                           hresult_throw_on_error(get_factory().CreateRoundedRectangleGeometry(rect, instance.put()));
+                                                           return instance;
+                                                         }())
+    {
+    }
+  };
+
+  class rectangle_geometry : public geometry
+  {
+  public:
+    rectangle_geometry(D2D1_RECT_F rect) : geometry([rect] {
+                                             com_ptr<ID2D1RectangleGeometry> instance;
+                                             hresult_throw_on_error(get_factory().CreateRectangleGeometry(rect, instance.put()));
+                                             return instance;
+                                           }())
+    {
+    }
+  };
+
+  class ellipse_geometry : public geometry
+  {
+  public:
+    ellipse_geometry(D2D1_ELLIPSE ellipse) : geometry([ellipse] {
+                                               com_ptr<ID2D1EllipseGeometry> instance;
+                                               hresult_throw_on_error(get_factory().CreateEllipseGeometry(ellipse, instance.put()));
+                                               return instance;
+                                             }())
+    {
+    }
+  };
+
+  class path_geometry : public geometry
+  {
+  public:
+    path_geometry() : geometry([] {
+                        com_ptr<ID2D1PathGeometry> instance;
+                        hresult_throw_on_error(get_factory().CreatePathGeometry(instance.put()));
+                        return instance;
+                      }())
+    {
+    }
+  };
+
+  class geometry_group : public geometry
+  {
+  public:
+    geometry_group(D2D1_FILL_MODE mode, std::span<geometry> geometries) : geometry([=] {
+                                                                            com_ptr<ID2D1GeometryGroup> instance;
+
+                                                                            std::vector<ID2D1Geometry*> raw;
+                                                                            raw.resize(geometries.size());
+
+                                                                            std::transform(geometries.begin(), geometries.end(), raw.begin(), [](auto& value) {
+                                                                              return &value.object();
+                                                                            });
+
+                                                                            hresult_throw_on_error(get_factory().CreateGeometryGroup(mode, raw.data(), (UINT32)raw.size(), instance.put()));
+                                                                            return instance;
+                                                                          }())
+    {
+    }
+  };
+
+  class transformed_geometry : public geometry
+  {
+    transformed_geometry(geometry& other, D2D1_MATRIX_3X2_F transform) : geometry([&] {
+                                                                           com_ptr<ID2D1TransformedGeometry> instance;
+                                                                           hresult_throw_on_error(get_factory().CreateTransformedGeometry(&other.object(), transform, instance.put()));
+                                                                           return instance;
+                                                                         }())
+    {
+    }
+  };
+
   class gdi_interop_render_target
   {
   public:
@@ -97,6 +195,19 @@ namespace win32::direct2d
     std::variant<com_ptr<ID2D1DeviceContext>, com_ptr<ID2D1DeviceContext2>, com_ptr<ID2D1DeviceContext5>> instance;
   };
 
+  class layer
+  {
+    friend class dc_render_target;
+  private:
+    layer(com_ptr<ID2D1DCRenderTarget>& target)
+    {
+      hresult_throw_on_error(target->CreateLayer(instance.put()));
+    }
+
+    com_ptr<ID2D1Layer> instance;
+  };
+
+
   class dc_render_target
   {
   public:
@@ -148,8 +259,16 @@ namespace win32::direct2d
 
       if (result == D2DERR_RECREATE_TARGET)
       {
-        D2D1_RENDER_TARGET_PROPERTIES props;
-        hresult_throw_on_error(instance->IsSupported(&props));
+        D2D1_RENDER_TARGET_PROPERTIES props{};
+        if (!instance->IsSupported(&props))
+        {
+          props.dpiX = 0;
+          props.dpiY = 0;
+          props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
+          props.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
+          props.usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
+          props.pixelFormat = D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE);
+        }
 
         instance.reset();
 
@@ -171,9 +290,24 @@ namespace win32::direct2d
       return *instance;
     }
 
+    layer create_layer()
+    {
+      return layer(instance);
+    }
+
+    void push_layer(D2D1_LAYER_PARAMETERS params, layer& layer)
+    {
+      instance->PushLayer(params, layer.instance.get());
+    }
+
+    void pop_layer()
+    {
+      instance->PopLayer();
+    }
+
     void bind_dc(win32::gdi::drawing_context_ref dc, RECT dimensions)
     {
-     hresult_throw_on_error(instance->BindDC(dc.get(), &dimensions));
+      hresult_throw_on_error(instance->BindDC(dc.get(), &dimensions));
     }
 
   private:

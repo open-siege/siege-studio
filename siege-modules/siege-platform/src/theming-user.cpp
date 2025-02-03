@@ -2,6 +2,7 @@
 #include <siege/platform/win/desktop/window_module.hpp>
 #include <siege/platform/win/desktop/theming.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
+#include <siege/platform/win/desktop/direct_2d.hpp>
 #include <siege/platform/stream.hpp>
 #include <VersionHelpers.h>
 #include <dwmapi.h>
@@ -467,6 +468,8 @@ namespace win32
 
       std::map<std::wstring_view, COLORREF> colors;
 
+      std::optional<win32::direct2d::dc_render_target> render_target;
+
       sub_class(win32::button& button, std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
       {
         bind_remover = button.bind_custom_draw({ .nm_custom_draw = std::bind_front(&sub_class::nm_custom_draw, this),
@@ -484,7 +487,6 @@ namespace win32
         {
           auto rect = custom_draw.rc;
           auto new_size = SIZE(rect.right - rect.left, rect.bottom - rect.top);
-
 
           auto text_color = colors[properties::button::text_color];
           auto bk_color = colors[properties::button::bk_color];
@@ -525,6 +527,7 @@ namespace win32
         if (custom_draw.dwDrawStage == CDDS_POSTPAINT)
         {
           Button_GetText(button, test.data(), test.size());
+
           ::DrawTextExW(custom_draw.hdc, test.data(), -1, &custom_draw.rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOCLIP, nullptr);
         }
 
@@ -562,6 +565,97 @@ namespace win32
 
         return ::DefSubclassProc(hWnd, message, wParam, lParam);
       }
+
+      static LRESULT __stdcall HandleChildMessage(HWND button, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      {
+        auto* self = (sub_class*)dwRefData;
+
+
+        if (message == WM_SIZE)
+        {
+          UINT width = LOWORD(lParam);
+          UINT height = HIWORD(lParam);
+          if (!self->render_target && width > height)
+          {
+            self->render_target.emplace(D2D1_RENDER_TARGET_PROPERTIES{
+              .type = D2D1_RENDER_TARGET_TYPE_SOFTWARE,
+              .pixelFormat = D2D1::PixelFormat(
+                DXGI_FORMAT_B8G8R8A8_UNORM,
+                D2D1_ALPHA_MODE_IGNORE),
+              .dpiX = 0,
+              .dpiY = 0,
+              .usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE,
+              .minLevel = D2D1_FEATURE_LEVEL_DEFAULT });
+          }
+        }
+
+        if ((message == WM_PAINT || message == WM_PRINTCLIENT) && self->render_target)
+        {
+          PAINTSTRUCT info{};
+
+          if (wParam)
+          {
+            info.hdc = (HDC)wParam;
+            GetClientRect(button, &info.rcPaint);
+          }
+          else if (message == WM_PAINT)
+          {
+            BeginPaint(button, &info);
+          }
+
+          LRESULT result = 0;
+          if (info.hdc)
+          {
+            auto& render_target = self->render_target;
+            render_target->bind_dc(win32::gdi::drawing_context_ref(info.hdc), info.rcPaint);
+
+            render_target->begin_draw();
+
+            auto layer = render_target->create_layer();
+            auto rounded_rectangle = win32::direct2d::rounded_rectangle_geometry(D2D1_ROUNDED_RECT{
+              .rect = {
+                .right = (float)info.rcPaint.right,
+                .bottom = (float)info.rcPaint.bottom,
+              },
+              .radiusX = 50,
+              .radiusY = 50,
+            });
+
+            auto interop_target = render_target->get_interop_render_target();
+
+            auto target_hdc = interop_target.get_dc(D2D1_DC_INITIALIZE_MODE_CLEAR);
+
+            auto parent = ::GetParent(button);
+
+            SendMessageW(parent, WM_ERASEBKGND, (WPARAM)target_hdc.get(), 0);
+
+            interop_target.release_dc();
+
+            render_target->push_layer(D2D1::LayerParameters(D2D1::InfiniteRect(), &rounded_rectangle.object()), layer);
+            target_hdc = interop_target.get_dc(D2D1_DC_INITIALIZE_MODE_COPY);
+
+            result = ::DefSubclassProc(button, message, (WPARAM)target_hdc.get(), lParam);
+
+            interop_target.release_dc();
+            render_target->pop_layer();
+            render_target->end_draw();
+          }
+
+          if (message == WM_PAINT)
+          {
+            EndPaint(button, &info);
+          }
+          return result;
+        }
+
+        if (message == WM_DESTROY)
+        {
+          ::RemoveWindowSubclass(button, sub_class::HandleChildMessage, uIdSubclass);
+          return ::DefSubclassProc(button, message, wParam, lParam);
+        }
+
+        return ::DefSubclassProc(button, message, wParam, lParam);
+      }
     };
 
     std::map<std::wstring_view, COLORREF> color_map{
@@ -576,7 +670,9 @@ namespace win32
     DWORD_PTR existing_object{};
     if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), &existing_object) && existing_object == 0)
     {
-      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), (DWORD_PTR) new sub_class(control, std::move(color_map)));
+      auto object = (DWORD_PTR) new sub_class(control, std::move(color_map));
+      ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), object);
+      ::SetWindowSubclass(control, sub_class::HandleChildMessage, (UINT_PTR)control.get(), object);
       ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
     }
     else if (existing_object)
