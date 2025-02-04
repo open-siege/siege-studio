@@ -247,14 +247,17 @@ namespace win32
 
         if (message == WM_PAINT)
         {
-          PAINTSTRUCT ps;
+          PAINTSTRUCT ps{};
           HDC hdc = wParam != 0 ? (HDC)wParam : BeginPaint(hWnd, &ps);
           auto tabs = win32::tab_control(hWnd);
           auto parent_context = win32::gdi::drawing_context_ref(hdc);
           auto rect = tabs.GetClientRect();
           auto bk_color = self->colors[win32::properties::tab_control::bk_color];
 
-          parent_context.FillRect(*rect, get_solid_brush(bk_color));
+          if (ps.fErase)
+          {
+            parent_context.FillRect(*rect, get_solid_brush(bk_color));
+          }
 
           auto result = DefSubclassProc(hWnd, message, (WPARAM)hdc, lParam);
 
@@ -289,8 +292,11 @@ namespace win32
             rect->bottom = tab_rect->bottom;
           }
 
-          parent_context.FillRect(*rect, get_solid_brush(bk_color));
-          parent_context.FillRect(*client_area, get_solid_brush(bk_color));
+          if (ps.fErase)
+          {
+            parent_context.FillRect(*rect, get_solid_brush(bk_color));
+            parent_context.FillRect(*client_area, get_solid_brush(bk_color));
+          }
 
           RECT item_rect;
           for (auto i = 0; i < TabCtrl_GetItemCount(hWnd); ++i)
