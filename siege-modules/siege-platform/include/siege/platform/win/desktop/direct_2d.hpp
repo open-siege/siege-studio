@@ -331,6 +331,11 @@ namespace win32::direct2d
       instance->PopLayer();
     }
 
+    void clear(D2D1_COLOR_F color)
+    {
+      instance->Clear(color);
+    }
+
   protected:
     template<typename TRenderTarget>
     render_target(com_ptr<TRenderTarget> instance) : instance(instance.release())
@@ -342,6 +347,7 @@ namespace win32::direct2d
 
   class wic_bitmap_render_target : public render_target
   {
+  public:
     wic_bitmap_render_target(win32::wic::bitmap& bitmap, D2D1_RENDER_TARGET_PROPERTIES props) : render_target([&] {
                                                                       com_ptr<ID2D1RenderTarget> temp;
                                                                       auto& factory = get_factory();
