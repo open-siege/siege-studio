@@ -813,7 +813,6 @@ namespace win32
 
         if (item.itemState & ODS_SELECTED)
         {
-          // TODO cache brushes
           auto selected_brush = render_target.create_solid_color_brush(D2D1::ColorF(colors[properties::list_box::text_highlight_color], 1.0));
           render_target.fill_rectangle(bounds, selected_brush);
         }

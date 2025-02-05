@@ -8,6 +8,7 @@
 #include <siege/platform/win/core/file.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
 #include <siege/platform/win/desktop/direct_write.hpp>
+#include <siege/platform/win/desktop/wic.hpp>
 #include <d2d1.h>
 #include <d2d1_3.h>
 
@@ -133,7 +134,7 @@ namespace win32::direct2d
   class brush
   {
   public:
-    friend class dc_render_target;
+    friend class render_target;
 
     ID2D1Brush& object()
     {
@@ -152,19 +153,19 @@ namespace win32::direct2d
   {
 
   public:
-    solid_color_brush(com_ptr<ID2D1DCRenderTarget>& target, D2D1_COLOR_F color, D2D1_BRUSH_PROPERTIES props) : brush([&] {
-                                                                                                                 com_ptr<ID2D1SolidColorBrush> instance;
-                                                                                                                 hresult_throw_on_error(target->CreateSolidColorBrush(color, props, instance.put()));
-                                                                                                                 return instance;
-                                                                                                               }())
+    solid_color_brush(com_ptr<ID2D1RenderTarget>& target, D2D1_COLOR_F color, D2D1_BRUSH_PROPERTIES props) : brush([&] {
+                                                                                                               com_ptr<ID2D1SolidColorBrush> instance;
+                                                                                                               hresult_throw_on_error(target->CreateSolidColorBrush(color, props, instance.put()));
+                                                                                                               return instance;
+                                                                                                             }())
     {
     }
 
-    solid_color_brush(com_ptr<ID2D1DCRenderTarget>& target, D2D1_COLOR_F color) : brush([&] {
-                                                                                    com_ptr<ID2D1SolidColorBrush> instance;
-                                                                                    hresult_throw_on_error(target->CreateSolidColorBrush(color, instance.put()));
-                                                                                    return instance;
-                                                                                  }())
+    solid_color_brush(com_ptr<ID2D1RenderTarget>& target, D2D1_COLOR_F color) : brush([&] {
+                                                                                  com_ptr<ID2D1SolidColorBrush> instance;
+                                                                                  hresult_throw_on_error(target->CreateSolidColorBrush(color, instance.put()));
+                                                                                  return instance;
+                                                                                }())
     {
     }
   };
@@ -172,7 +173,7 @@ namespace win32::direct2d
   class gdi_interop_render_target
   {
   public:
-    friend class dc_render_target;
+    friend class render_target;
 
     win32::gdi::drawing_context_ref get_dc(D2D1_DC_INITIALIZE_MODE mode)
     {
@@ -196,7 +197,7 @@ namespace win32::direct2d
     }
 
   private:
-    gdi_interop_render_target(com_ptr<ID2D1DCRenderTarget>& target)
+    gdi_interop_render_target(com_ptr<ID2D1RenderTarget>& target)
     {
       target->QueryInterface<ID2D1GdiInteropRenderTarget>(instance.put());
 
@@ -218,7 +219,7 @@ namespace win32::direct2d
     }
 
   private:
-    friend class dc_render_target;
+    friend class render_target;
 
     device_context(com_ptr<ID2D1DeviceContext> context) : instance(std::move(context))
     {
@@ -237,10 +238,10 @@ namespace win32::direct2d
 
   class layer
   {
-    friend class dc_render_target;
+    friend class render_target;
 
   private:
-    layer(com_ptr<ID2D1DCRenderTarget>& target)
+    layer(com_ptr<ID2D1RenderTarget>& target)
     {
       hresult_throw_on_error(target->CreateLayer(instance.put()));
     }
@@ -249,32 +250,15 @@ namespace win32::direct2d
   };
 
 
-  class dc_render_target
+  class render_target
   {
   public:
-    dc_render_target(D2D1_RENDER_TARGET_PROPERTIES props)
+    void begin_draw()
     {
-      auto& factory = get_factory();
-      hresult_throw_on_error(factory.CreateDCRenderTarget(&props, instance.put()));
+      instance->BeginDraw();
     }
 
-    inline static dc_render_target& for_thread(D2D1_RENDER_TARGET_PROPERTIES props)
-    {
-      thread_local std::map<std::string, dc_render_target> cache;
-
-      std::string key;
-      key.resize(sizeof(props));
-      std::memcpy(key.data(), &props, sizeof(props));
-
-      auto result = cache.find(key);
-
-      if (result == cache.end())
-      {
-        result = cache.emplace(std::move(key), props).first;
-      }
-
-      return result->second;
-    }
+    virtual bool end_draw() = 0;
 
     gdi_interop_render_target get_interop_render_target()
     {
@@ -305,48 +289,6 @@ namespace win32::direct2d
       }
 
       return std::nullopt;
-    }
-
-    void begin_draw()
-    {
-      instance->BeginDraw();
-    }
-
-    bool end_draw()
-    {
-      auto result = instance->EndDraw();
-
-      if (result == D2DERR_RECREATE_TARGET)
-      {
-        D2D1_RENDER_TARGET_PROPERTIES props{};
-        if (!instance->IsSupported(&props))
-        {
-          props.dpiX = 0;
-          props.dpiY = 0;
-          props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
-          props.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
-          props.usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
-          props.pixelFormat = D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE);
-        }
-
-        instance.reset();
-
-        auto& factory = get_factory();
-        hresult_throw_on_error(factory.CreateDCRenderTarget(&props, instance.put()));
-
-
-        return false;
-      }
-
-      hresult_throw_on_error temp(result);
-
-      return temp.result == S_OK;
-    }
-
-
-    ID2D1DCRenderTarget& object()
-    {
-      return *instance;
     }
 
     solid_color_brush create_solid_color_brush(D2D1_COLOR_F color, D2D1_BRUSH_PROPERTIES props)
@@ -389,13 +331,106 @@ namespace win32::direct2d
       instance->PopLayer();
     }
 
-    void bind_dc(win32::gdi::drawing_context_ref dc, RECT dimensions)
+  protected:
+    template<typename TRenderTarget>
+    render_target(com_ptr<TRenderTarget> instance) : instance(instance.release())
     {
-      hresult_throw_on_error(instance->BindDC(dc.get(), &dimensions));
     }
 
-  private:
-    win32::com::com_ptr<ID2D1DCRenderTarget> instance;
+    com_ptr<ID2D1RenderTarget> instance;
+  };
+
+  class wic_bitmap_render_target : public render_target
+  {
+    wic_bitmap_render_target(win32::wic::bitmap& bitmap, D2D1_RENDER_TARGET_PROPERTIES props) : render_target([&] {
+                                                                      com_ptr<ID2D1RenderTarget> temp;
+                                                                      auto& factory = get_factory();
+                                                                      auto bitmap_handle = bitmap.handle<IWICBitmap>();
+                                                                      hresult_throw_on_error(factory.CreateWicBitmapRenderTarget(bitmap_handle.get(), &props, temp.put()));
+                                                                      return temp;
+                                                                    }())
+    {
+    }
+
+    bool end_draw() override
+    {
+      auto result = instance->EndDraw();
+      return false;
+    }
+  };
+
+  class dc_render_target : public render_target
+  {
+  public:
+    dc_render_target(D2D1_RENDER_TARGET_PROPERTIES props) : render_target([&] {
+                                                              com_ptr<ID2D1DCRenderTarget> temp;
+                                                              auto& factory = get_factory();
+                                                              hresult_throw_on_error(factory.CreateDCRenderTarget(&props, temp.put()));
+                                                              return temp;
+                                                            }())
+    {
+    }
+
+    inline static dc_render_target& for_thread(D2D1_RENDER_TARGET_PROPERTIES props)
+    {
+      thread_local std::map<std::string, dc_render_target> cache;
+
+      std::string key;
+      key.resize(sizeof(props));
+      std::memcpy(key.data(), &props, sizeof(props));
+
+      auto result = cache.find(key);
+
+      if (result == cache.end())
+      {
+        result = cache.emplace(std::move(key), props).first;
+      }
+
+      return result->second;
+    }
+
+    bool end_draw() override
+    {
+      auto result = instance->EndDraw();
+
+      if (result == D2DERR_RECREATE_TARGET)
+      {
+        D2D1_RENDER_TARGET_PROPERTIES props{};
+        if (!instance->IsSupported(&props))
+        {
+          props.dpiX = 0;
+          props.dpiY = 0;
+          props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
+          props.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
+          props.usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
+          props.pixelFormat = D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE);
+        }
+
+        instance.reset();
+
+        auto& factory = get_factory();
+        com_ptr<ID2D1DCRenderTarget> temp;
+        hresult_throw_on_error(factory.CreateDCRenderTarget(&props, temp.put()));
+        instance.reset(temp.release());
+
+        return false;
+      }
+
+      hresult_throw_on_error temp(result);
+
+      return temp.result == S_OK;
+    }
+
+
+    ID2D1DCRenderTarget& object()
+    {
+      return (ID2D1DCRenderTarget&)*instance;
+    }
+
+    void bind_dc(win32::gdi::drawing_context_ref dc, RECT dimensions)
+    {
+      hresult_throw_on_error(object().BindDC(dc.get(), &dimensions));
+    }
   };
 
 }// namespace win32::direct2d

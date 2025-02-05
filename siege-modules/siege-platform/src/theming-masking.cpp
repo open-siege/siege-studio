@@ -65,52 +65,6 @@ namespace win32
     return mask_cache;
   }
 
-  gdi::bitmap create_layer_mask(SIZE size, int scale, std::move_only_function<void(gdi::drawing_context_ref, int)> painter)
-  {
-    auto screen_dc = gdi::drawing_context::from_screen();
-    gdi::memory_drawing_context path_dc(gdi::drawing_context_ref(screen_dc.get()));
-
-    gdi::bitmap temp_bitmap{ SIZE{ size.cx * scale, size.cy * scale } };
-
-    gdi::memory_drawing_context temp_dc(gdi::drawing_context_ref(screen_dc.get()));
-
-    auto old_bitmap = (HBITMAP)SelectObject(temp_dc, temp_bitmap.get());
-    RECT temp_rect{ .left = 0, .top = 0, .right = size.cx * scale, .bottom = size.cy * scale };
-    COLORREF temp_color = RGB(0, 0, 0);
-    FillRect(temp_dc, &temp_rect, get_solid_brush(temp_color));
-
-    SelectObject(temp_dc, get_solid_brush(RGB(255, 255, 255)));
-
-    BeginPath(temp_dc);
-    painter(win32::gdi::drawing_context_ref(temp_dc), scale);
-    EndPath(temp_dc);
-
-    FillPath(temp_dc);
-    SelectObject(temp_dc, old_bitmap);
-    temp_dc.reset();
-
-    auto pixels = temp_bitmap.get_pixels();
-
-    for (auto& color : pixels)
-    {
-      color.rgbReserved = color.rgbRed;
-    }
-
-    auto resampling_mode = IsWindows10OrGreater() ? WICBitmapInterpolationModeHighQualityCubic : WICBitmapInterpolationModeFant;
-
-    gdi::bitmap mask_cache{ size };
-    auto mask_cache_pixels = mask_cache.get_pixels();
-
-    auto stride = size.cx * sizeof(std::int32_t);
-
-    wic::bitmap(mask_cache, wic::alpha_channel_option::WICBitmapUseAlpha)
-      .scale(size.cx, size.cy, resampling_mode)
-      .flip(wic::transform_options::WICBitmapTransformFlipVertical)
-      .copy_pixels(stride, std::span<std::byte>((std::byte*)mask_cache_pixels.data(), size.cy * stride * sizeof(std::int32_t)));
-
-    return mask_cache;
-  }
-
   gdi::icon create_icon(::SIZE size, ::RGBQUAD solid_color, gdi::bitmap_ref mask)
   {
     std::vector<RGBQUAD> pixels;
