@@ -258,6 +258,24 @@ namespace win32::direct2d
       hresult_throw_on_error(factory.CreateDCRenderTarget(&props, instance.put()));
     }
 
+    inline static dc_render_target& for_thread(D2D1_RENDER_TARGET_PROPERTIES props)
+    {
+      thread_local std::map<std::string, dc_render_target> cache;
+
+      std::string key;
+      key.resize(sizeof(props));
+      std::memcpy(key.data(), &props, sizeof(props));
+
+      auto result = cache.find(key);
+
+      if (result == cache.end())
+      {
+        result = cache.emplace(std::move(key), props).first;
+      }
+
+      return result->second;
+    }
+
     gdi_interop_render_target get_interop_render_target()
     {
       return gdi_interop_render_target(instance);

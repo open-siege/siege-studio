@@ -14,8 +14,6 @@ namespace siege::views
   {
     pal_controller controller;
 
-    std::vector<win32::gdi::brush> brushes;
-
     win32::static_control render_view;
     win32::list_box selection;
     std::function<void()> selection_unbind;
@@ -78,19 +76,6 @@ namespace siege::views
       auto selected = selection.GetCurrentSelection();
       auto& colours = controller.get_palette(selected);
 
-      brushes.clear();
-      brushes.reserve(colours.size());
-
-      ::COLORREF temp;
-
-      for (auto i = 0u; i < colours.size(); ++i)
-      {
-        auto temp_colour = colours[i].colour;
-        temp_colour.flags = std::byte{};
-        std::memcpy(&temp, &temp_colour, sizeof(temp));
-        brushes.emplace_back(::CreateSolidBrush(temp));
-      }
-
       auto rect = render_view.GetClientRect();
 
       if (rect)
@@ -111,18 +96,6 @@ namespace siege::views
         if (size > 0)
         {
           auto& colours = controller.get_palette(0);
-
-          brushes.reserve(colours.size());
-
-          ::COLORREF temp;
-
-          for (auto i = 0u; i < colours.size(); ++i)
-          {
-            auto temp_colour = colours[i].colour;
-            temp_colour.flags = std::byte{};
-            std::memcpy(&temp, &temp_colour, sizeof(temp));
-            brushes.emplace_back(::CreateSolidBrush(temp));
-          }
 
           for (auto i = 1u; i <= size; ++i)
           {
@@ -145,18 +118,32 @@ namespace siege::views
       {
         auto context = win32::gdi::drawing_context_ref(item.hDC);
 
+        auto selected = selection.GetCurrentSelection();
+        auto& colours = controller.get_palette(selected);
+
         auto total_width = item.rcItem.right - item.rcItem.left;
         auto total_height = item.rcItem.bottom - item.rcItem.top;
         auto total_area = total_width * total_height;
-        auto best_size = (int)std::sqrt(double(total_area) / brushes.size());
+        auto best_size = (int)std::sqrt(double(total_area) / colours.size());
 
         win32::rect pos{};
         pos.right = best_size;
         pos.bottom = best_size;
 
-        for (auto i = 0; i < brushes.size(); ++i)
+        COLORREF temp;
+
+        auto old_brush = ::SelectObject(context, ::GetStockObject(DC_BRUSH));
+        auto old_pen = ::SelectObject(context, ::GetStockObject(NULL_PEN));
+
+        for (auto i = 0; i < colours.size(); ++i)
         {
-          context.FillRect(pos, brushes[i]);
+          auto temp_colour = colours[i].colour;
+          temp_colour.flags = std::byte{};
+          std::memcpy(&temp, &temp_colour, sizeof(temp));
+
+          ::SetDCBrushColor(context, temp);
+
+          ::Rectangle(context, pos.left, pos.top, pos.right, pos.bottom);
           pos.Offset(best_size, 0);
 
           if (pos.right > total_width)
@@ -166,6 +153,9 @@ namespace siege::views
             pos.Offset(0, best_size);
           }
         }
+
+        ::SelectObject(context, old_brush);
+        ::SelectObject(context, old_pen);
       }
 
       return TRUE;
