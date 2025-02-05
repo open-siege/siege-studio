@@ -178,7 +178,7 @@ namespace siege::views
       sample.tab_control.InsertItem(-1, TCITEMW{ .mask = TCIF_TEXT, .pszText = const_cast<wchar_t*>(L"Sample") });
 
       options = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
+        .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS | LBS_OWNERDRAWFIXED });
 
       options.InsertString(-1, L"Theming (Simple)");
       options.InsertString(-1, L"Theming (Advanced)");

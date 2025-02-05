@@ -765,6 +765,7 @@ namespace win32
     {
       std::map<std::wstring_view, COLORREF> colors;
       std::function<void()> bind_remover;
+      std::optional<win32::direct2d::dc_render_target> render_target;
 
       sub_class(win32::list_box& control, std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
       {
@@ -786,6 +787,19 @@ namespace win32
 
       SIZE wm_measure_item(win32::list_box themed_selection, const MEASUREITEMSTRUCT& item)
       {
+        if (!render_target)
+        {
+          render_target.emplace(D2D1_RENDER_TARGET_PROPERTIES{
+            .type = D2D1_RENDER_TARGET_TYPE_SOFTWARE,
+            .pixelFormat = D2D1::PixelFormat(
+              DXGI_FORMAT_B8G8R8A8_UNORM,
+              D2D1_ALPHA_MODE_IGNORE),
+            .dpiX = 0,
+            .dpiY = 0,
+            .usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE,
+            .minLevel = D2D1_FEATURE_LEVEL_DEFAULT });
+        }
+
         return SIZE{ .cy = (LONG)themed_selection.GetItemHeight(item.itemID) };
       }
 
@@ -793,33 +807,55 @@ namespace win32
       {
         ;
         thread_local std::wstring buffer;
-        auto context = win32::gdi::drawing_context_ref(item.hDC);
 
-        HFONT font = win32::load_font(LOGFONTW{
-          .lfPitchAndFamily = VARIABLE_PITCH,
-          .lfFaceName = L"Segoe UI" });
+        if (!render_target)
+        {
+          render_target.emplace(D2D1_RENDER_TARGET_PROPERTIES{
+            .type = D2D1_RENDER_TARGET_TYPE_SOFTWARE,
+            .pixelFormat = D2D1::PixelFormat(
+              DXGI_FORMAT_B8G8R8A8_UNORM,
+              D2D1_ALPHA_MODE_IGNORE),
+            .dpiX = 0,
+            .dpiY = 0,
+            .usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE,
+            .minLevel = D2D1_FEATURE_LEVEL_DEFAULT });
+        }
 
-        SelectFont(context, font);
+        render_target->bind_dc(win32::gdi::drawing_context_ref(item.hDC), item.rcItem);
 
-        auto text_bk_color = colors[properties::list_box::text_bk_color];
+        render_target->begin_draw();
 
-        auto text_highlight_color = colors[properties::list_box::text_highlight_color];
+        auto bounds = D2D1::RectF(0, 0, (float)item.rcItem.right - item.rcItem.left, (float)item.rcItem.bottom - item.rcItem.top);
 
-        auto normal_brush = get_solid_brush(text_bk_color);
-        auto selected_brush = get_solid_brush(text_highlight_color);
+        render_target->object().Clear(D2D1::ColorF(colors[properties::list_box::bk_color], 1.0));
 
-        context.FillRect(item.rcItem, item.itemState & ODS_SELECTED ? selected_brush : normal_brush);
+        if (item.itemState & ODS_SELECTED)
+        {
+          // TODO cache brushes
+          auto selected_brush = render_target->create_solid_color_brush(D2D1::ColorF(colors[properties::list_box::text_highlight_color], 1.0));
+          render_target->fill_rectangle(bounds, selected_brush);
+        }
+        else
+        {
+          auto normal_brush = render_target->create_solid_color_brush(D2D1::ColorF(colors[properties::list_box::text_bk_color], 1.0));
+          render_target->fill_rectangle(bounds, normal_brush);
+        }
 
-        auto text_color = colors[properties::list_box::text_color];
-
-        ::SetTextColor(context, text_color);
-        ::SetBkMode(context, TRANSPARENT);
 
         buffer.resize(list.GetTextLength(item.itemID), '\0');
 
         list.GetText(item.itemID, buffer.data());
 
-        ::DrawTextW(context, buffer.c_str(), buffer.size(), &item.rcItem, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+        // TODO cache format
+        win32::directwrite::text_format format({ .family_name = L"Segoe UI", .size = 18.0f });
+
+        format.object().SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+
+        auto text_brush = render_target->create_solid_color_brush(D2D1::ColorF(colors[properties::list_box::text_color], 1.0));
+
+        render_target->draw_text(buffer, format, bounds, text_brush);
+
+        render_target->end_draw();
 
         return TRUE;
       }

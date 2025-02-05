@@ -7,6 +7,7 @@
 #include <siege/platform/win/core/com/base.hpp>
 #include <siege/platform/win/core/file.hpp>
 #include <siege/platform/win/desktop/drawing.hpp>
+#include <siege/platform/win/desktop/direct_write.hpp>
 #include <d2d1.h>
 #include <d2d1_3.h>
 
@@ -129,6 +130,45 @@ namespace win32::direct2d
     }
   };
 
+  class brush
+  {
+  public:
+    friend class dc_render_target;
+
+    ID2D1Brush& object()
+    {
+      return *instance;
+    }
+
+  protected:
+    template<typename T>
+    brush(com_ptr<T> other) : instance(other.release())
+    {
+    }
+    com_ptr<ID2D1Brush> instance;
+  };
+
+  class solid_color_brush : public brush
+  {
+
+  public:
+    solid_color_brush(com_ptr<ID2D1DCRenderTarget>& target, D2D1_COLOR_F color, D2D1_BRUSH_PROPERTIES props) : brush([&] {
+                                                                                                                 com_ptr<ID2D1SolidColorBrush> instance;
+                                                                                                                 hresult_throw_on_error(target->CreateSolidColorBrush(color, props, instance.put()));
+                                                                                                                 return instance;
+                                                                                                               }())
+    {
+    }
+
+    solid_color_brush(com_ptr<ID2D1DCRenderTarget>& target, D2D1_COLOR_F color) : brush([&] {
+                                                                                    com_ptr<ID2D1SolidColorBrush> instance;
+                                                                                    hresult_throw_on_error(target->CreateSolidColorBrush(color, instance.put()));
+                                                                                    return instance;
+                                                                                  }())
+    {
+    }
+  };
+
   class gdi_interop_render_target
   {
   public:
@@ -198,6 +238,7 @@ namespace win32::direct2d
   class layer
   {
     friend class dc_render_target;
+
   private:
     layer(com_ptr<ID2D1DCRenderTarget>& target)
     {
@@ -288,6 +329,31 @@ namespace win32::direct2d
     ID2D1DCRenderTarget& object()
     {
       return *instance;
+    }
+
+    solid_color_brush create_solid_color_brush(D2D1_COLOR_F color, D2D1_BRUSH_PROPERTIES props)
+    {
+      return solid_color_brush(instance, color, props);
+    }
+
+    solid_color_brush create_solid_color_brush(D2D1_COLOR_F color)
+    {
+      return solid_color_brush(instance, color);
+    }
+
+    void draw_rectangle(D2D1_RECT_F rect, brush& brush)
+    {
+      instance->DrawRectangle(rect, brush.instance.get());
+    }
+
+    void fill_rectangle(D2D1_RECT_F rect, brush& brush)
+    {
+      instance->FillRectangle(rect, brush.instance.get());
+    }
+
+    void draw_text(std::wstring_view text, directwrite::text_format& format, D2D1_RECT_F rect, brush& fill_brush, D2D1_DRAW_TEXT_OPTIONS options = D2D1_DRAW_TEXT_OPTIONS_NONE, DWRITE_MEASURING_MODE mode = DWRITE_MEASURING_MODE_NATURAL)
+    {
+      instance->DrawTextW(text.data(), (UINT32)text.size(), &format.object(), rect, fill_brush.instance.get(), options, mode);
     }
 
     layer create_layer()

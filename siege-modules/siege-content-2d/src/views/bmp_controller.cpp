@@ -17,7 +17,7 @@ namespace siege::views
   {
     auto path = siege::platform::get_stream_path(image_stream);
 
-    if (path && path->extension() == ".ico" || path->extension() == ".ICO")
+    if (path && (path->extension() == ".ico" || path->extension() == ".ICO"))
     {
       return true;
     }
