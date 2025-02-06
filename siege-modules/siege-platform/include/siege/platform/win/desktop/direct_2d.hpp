@@ -349,12 +349,12 @@ namespace win32::direct2d
   {
   public:
     wic_bitmap_render_target(win32::wic::bitmap& bitmap, D2D1_RENDER_TARGET_PROPERTIES props) : render_target([&] {
-                                                                      com_ptr<ID2D1RenderTarget> temp;
-                                                                      auto& factory = get_factory();
-                                                                      auto bitmap_handle = bitmap.handle<IWICBitmap>();
-                                                                      hresult_throw_on_error(factory.CreateWicBitmapRenderTarget(bitmap_handle.get(), &props, temp.put()));
-                                                                      return temp;
-                                                                    }())
+                                                                                                  com_ptr<ID2D1RenderTarget> temp;
+                                                                                                  auto& factory = get_factory();
+                                                                                                  auto bitmap_handle = bitmap.handle<IWICBitmap>();
+                                                                                                  hresult_throw_on_error(factory.CreateWicBitmapRenderTarget(bitmap_handle.get(), &props, temp.put()));
+                                                                                                  return temp;
+                                                                                                }())
     {
     }
 

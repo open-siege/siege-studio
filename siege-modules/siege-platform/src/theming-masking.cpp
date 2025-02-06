@@ -22,8 +22,6 @@ namespace win32
       .pixelFormat = D2D1::PixelFormat(
         DXGI_FORMAT_B8G8R8A8_UNORM,
         D2D1_ALPHA_MODE_PREMULTIPLIED),
-      .dpiX = 0,
-      .dpiY = 0,
       .usage = D2D1_RENDER_TARGET_USAGE_NONE,
       .minLevel = D2D1_FEATURE_LEVEL_DEFAULT });
 

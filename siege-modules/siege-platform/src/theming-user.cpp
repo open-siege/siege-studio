@@ -601,8 +601,6 @@ namespace win32
               .pixelFormat = D2D1::PixelFormat(
                 DXGI_FORMAT_B8G8R8A8_UNORM,
                 D2D1_ALPHA_MODE_IGNORE),
-              .dpiX = 0,
-              .dpiY = 0,
               .usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE,
               .minLevel = D2D1_FEATURE_LEVEL_DEFAULT });
             ;
@@ -669,6 +667,7 @@ namespace win32
     DWORD_PTR existing_object{};
     if (!::GetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), &existing_object) && existing_object == 0)
     {
+      ::SendMessageW(control, CCM_DPISCALE, TRUE, 0);
       auto object = (DWORD_PTR) new sub_class(control, std::move(color_map));
       ::SetWindowSubclass(*control.GetParent(), sub_class::HandleMessage, (UINT_PTR)control.get(), object);
       ::SetWindowSubclass(control, sub_class::HandleChildMessage, (UINT_PTR)control.get(), object);
@@ -798,8 +797,6 @@ namespace win32
           .pixelFormat = D2D1::PixelFormat(
             DXGI_FORMAT_B8G8R8A8_UNORM,
             D2D1_ALPHA_MODE_IGNORE),
-          .dpiX = 0,
-          .dpiY = 0,
           .usage = D2D1_RENDER_TARGET_USAGE_NONE,
           .minLevel = D2D1_FEATURE_LEVEL_DEFAULT });
  

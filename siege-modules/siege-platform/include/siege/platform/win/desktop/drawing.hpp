@@ -3,6 +3,8 @@
 
 #include <siege/platform/win/desktop/window.hpp>
 #include <siege/platform/win/auto_handle.hpp>
+#include <siege/platform/win/core/module.hpp>
+#include <shellscalingapi.h>
 #undef NDEBUG
 #include <cassert>
 
@@ -15,6 +17,101 @@ namespace win32
       return ::OffsetRect(this, dx, dy) == TRUE;
     }
   };
+
+  // TODO query text scale factor
+  // HKEY_CURRENT_USER\Software\Microsoft\Accessibility\TextScaleFactor
+
+  inline UINT get_dpi_awareness_for_process(HANDLE process = ::GetCurrentProcess())
+  {
+    HMODULE user32 = nullptr;
+    ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, L"user32.dll", &user32);
+    auto get_dpi_for_process = (std::add_pointer_t<decltype(GetSystemDpiForProcess)>)::GetProcAddress(user32, "GetSystemDpiForProcess");
+
+    if (get_dpi_for_process)
+    {
+      return get_dpi_for_process(process);
+    }
+
+    auto screen_dc = ::GetDC(nullptr);
+
+    auto result = ::GetDeviceCaps(screen_dc, LOGPIXELSX);
+    ReleaseDC(nullptr, screen_dc);
+
+    return result;
+  }
+
+  inline UINT get_dpi_awareness_for_window(HWND window)
+  {
+    HMODULE user32 = nullptr;
+
+    ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, L"user32.dll", &user32);
+    auto get_dpi_for_window = (std::add_pointer_t<decltype(GetDpiForWindow)>)::GetProcAddress(user32, "GetDpiForWindow");
+
+    if (get_dpi_for_window)
+    {
+      return get_dpi_for_window(window);
+    }
+
+    win32::module shcore(L"shcore.dll", true);
+
+    auto monitor = ::MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST);
+
+    auto get_dpi_for_monitor = (std::add_pointer_t<decltype(GetDpiForMonitor)>)::GetProcAddress(shcore, "GetDpiForMonitor");
+
+    if (monitor && get_dpi_for_monitor)
+    {
+      UINT x;
+      UINT y;
+      if (get_dpi_for_monitor(monitor, MDT_EFFECTIVE_DPI, &x, &y) == S_OK)
+      {
+        ::FreeLibrary(shcore);
+        return x;
+      }
+    }
+
+    auto screen_dc = ::GetDC(nullptr);
+
+    auto result = ::GetDeviceCaps(screen_dc, LOGPIXELSX);
+    ReleaseDC(nullptr, screen_dc);
+
+    return result;
+  }
+
+  inline auto get_current_dpi()
+  {
+    auto active_window = ::GetActiveWindow();
+
+    if (!active_window)
+    {
+      return get_dpi_awareness_for_process();
+    }
+
+    return get_dpi_awareness_for_window(active_window);
+  }
+
+  inline auto get_system_metrics(int index, bool for_dpi = true)
+  {
+    if (!for_dpi)
+    {
+      return ::GetSystemMetrics(index);
+    }
+
+    HMODULE user32 = nullptr;
+
+    ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, L"user32.dll", &user32);
+
+    auto get_system_metrics_for_dpi = (std::add_pointer_t<decltype(GetSystemMetricsForDpi)>)::GetProcAddress(user32, "GetSystemMetricsForDpi");
+
+    
+    if (get_system_metrics_for_dpi)
+    {
+      return get_system_metrics_for_dpi(index, get_current_dpi());
+    }
+
+    return ::GetSystemMetrics(index);
+  }
+
+
 }// namespace win32
 
 namespace win32::gdi
@@ -167,7 +264,7 @@ namespace win32::gdi
                                                                                 .bmiHeader{
                                                                                   .biSize = sizeof(BITMAPINFOHEADER),
                                                                                   .biWidth = LONG(size.cx),
-                                                                                  .biHeight = LONG(size.cy),
+                                                                                  .biHeight = -LONG(size.cy),
                                                                                   .biPlanes = 1,
                                                                                   .biBitCount = 32,
                                                                                   .biCompression = BI_RGB }
@@ -179,7 +276,6 @@ namespace win32::gdi
     }
   };
 
-  
 
   using icon = win32::auto_handle<HICON, icon_deleter>;
   using brush = win32::auto_handle<HBRUSH, gdi_deleter>;
