@@ -454,6 +454,26 @@ namespace win32
     };
   }
 
+  class local_atom
+  {
+  public:
+    local_atom(std::wstring_view string) : value(::AddAtomW(string.data()))
+    {
+
+    }
+
+    ~local_atom()
+    {
+      ::DeleteAtom(value);
+    }
+
+    operator ATOM()
+    {
+      return value;
+    }
+  private:
+    ATOM value;
+  };
 }// namespace win32
 
 

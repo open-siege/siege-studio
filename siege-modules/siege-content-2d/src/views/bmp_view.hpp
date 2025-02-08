@@ -49,8 +49,26 @@ namespace siege::views
     win32::static_control static_image;
     std::list<platform::storage_module> loaded_modules;
 
+    win32::local_atom pbmp_id = win32::local_atom(L".pbmp");
+    win32::local_atom bmp_id = win32::local_atom(L".bmp");
+    win32::local_atom jpg_id = win32::local_atom(L".jpg");
+    win32::local_atom png_id = win32::local_atom(L".png");
+    win32::local_atom gif_id = win32::local_atom(L".gif");
+    win32::local_atom tiff_id = win32::local_atom(L".tif");
+    win32::local_atom dds_id = win32::local_atom(L".dds");
 
-    bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
+    win32::local_atom single_pba_id = win32::local_atom(L"single.pba");
+    win32::local_atom single_gif_id = win32::local_atom(L"single.gif");
+    win32::local_atom single_tiff_id = win32::local_atom(L"single.tif");
+    win32::local_atom multiple_pbmp_id = win32::local_atom(L"multiple.pbmp");
+    win32::local_atom multiple_gif_id = win32::local_atom(L"multiple.pba");
+    win32::local_atom multiple_tiff_id = win32::local_atom(L"multiple.tiff");
+    win32::local_atom multiple_bmp_id = win32::local_atom(L"multiple.bmp");
+    win32::local_atom multiple_png_id = win32::local_atom(L"multiple.png");
+    win32::local_atom multiple_dds_id = win32::local_atom(L"multiple.dds");
+
+    bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : 
+        win32::window_ref(self)
     {
     }
 
@@ -127,22 +145,23 @@ namespace siege::views
       image_export_menu.AppendMenuW(MF_OWNERDRAW | MF_POPUP, (UINT_PTR)export_single_menu.get(), L"Export Current Frame");
       image_export_menu.AppendMenuW(MF_OWNERDRAW | MF_POPUP | MF_DISABLED, (UINT_PTR)export_multiple_menu.get(), L"Export All Frames");
 
-      export_single_menu.AppendMenuW(MF_OWNERDRAW, 10, L"Export As Microsoft BMP");
-      export_single_menu.AppendMenuW(MF_OWNERDRAW, 11, L"Export As Phoenix BMP");
-      export_single_menu.AppendMenuW(MF_OWNERDRAW, 12, L"Export As PNG");
-      export_single_menu.AppendMenuW(MF_OWNERDRAW, 13, L"Export As JPG");
-      export_single_menu.AppendMenuW(MF_OWNERDRAW, 14, L"Export As GIF");
-      export_single_menu.AppendMenuW(MF_OWNERDRAW, 15, L"Export As TIFF");
-      export_single_menu.AppendMenuW(MF_OWNERDRAW, 16, L"Export As DDS");
+      export_single_menu.AppendMenuW(MF_OWNERDRAW, pbmp_id, L"Export As Phoenix BMP");
+      export_single_menu.AppendMenuW(MF_OWNERDRAW, bmp_id, L"Export As Microsoft BMP");
+      export_single_menu.AppendMenuW(MF_OWNERDRAW, png_id, L"Export As PNG");
+      export_single_menu.AppendMenuW(MF_OWNERDRAW, jpg_id, L"Export As JPG");
+      export_single_menu.AppendMenuW(MF_OWNERDRAW, gif_id, L"Export As GIF");
+      export_single_menu.AppendMenuW(MF_OWNERDRAW, tiff_id, L"Export As TIFF");
+      export_single_menu.AppendMenuW(MF_OWNERDRAW, dds_id, L"Export As DDS");
 
-      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 20, L"Export As Single GIF");
-      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 21, L"Export As Multiple GIFs");
-      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 22, L"Export As Multiple Microsoft BMPs");
-      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 23, L"Export As Multiple Phoenix BMPs");
-      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 24, L"Export As PNG");
-      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 25, L"Export As JPG");
-      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 26, L"Export As TIFF");
-      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 27, L"Export As DDS");
+      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, single_pba_id, L"Export As Single Phoenix BMP Array (PBA)");
+      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, single_gif_id, L"Export As Single GIF");
+      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, single_tiff_id, L"Export As Single TIFF");
+      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_pbmp_id, L"Export As Multiple Phoenix BMPs");
+      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_gif_id, L"Export As Multiple GIFs");
+      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_tiff_id, L"Export As Multiple TIFFs");
+      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_bmp_id, L"Export As Multiple Microsoft BMPs");
+      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_png_id, L"Export As Multiple PNGs");
+      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_dds_id, L"Export As Multiple DDSs");
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 

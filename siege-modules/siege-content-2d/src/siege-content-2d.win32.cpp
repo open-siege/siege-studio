@@ -4,7 +4,6 @@
 #include <siege/platform/win/hresult.hpp>
 #include "views/bmp_view.hpp"
 #include "views/pal_view.hpp"
-#include "views/pal_mapping_view.hpp"
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;
@@ -82,13 +81,11 @@ BOOL WINAPI DllMain(
     {
       this_module.RegisterClassExW(win32::window_meta_class<bmp_view>());
       this_module.RegisterClassExW(win32::window_meta_class<pal_view>());
-      this_module.RegisterClassExW(win32::window_meta_class<pal_mapping_view>());
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
       this_module.UnregisterClassW<bmp_view>();
       this_module.UnregisterClassW<pal_view>();
-      this_module.UnregisterClassW<pal_mapping_view>();
     }
   }
 
