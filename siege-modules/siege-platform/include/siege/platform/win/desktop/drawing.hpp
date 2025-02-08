@@ -206,6 +206,17 @@ namespace win32::gdi
       return {};
     }
 
+    std::uint32_t get_stride() const
+    {
+      BITMAP bitmap;
+      if (this->get() && ::GetObjectW(*this, sizeof(BITMAP), &bitmap) > 0)
+      {
+        return (std::uint32_t)bitmap.bmWidthBytes;
+      }
+
+      return {};
+    }
+
     std::span<RGBQUAD> get_pixels() const
     {
       BITMAP bitmap;

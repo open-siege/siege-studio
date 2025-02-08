@@ -127,22 +127,22 @@ namespace siege::views
       image_export_menu.AppendMenuW(MF_OWNERDRAW | MF_POPUP, (UINT_PTR)export_single_menu.get(), L"Export Current Frame");
       image_export_menu.AppendMenuW(MF_OWNERDRAW | MF_POPUP | MF_DISABLED, (UINT_PTR)export_multiple_menu.get(), L"Export All Frames");
 
-      export_single_menu.AppendMenuW(MF_OWNERDRAW, 2, L"Export As Microsoft BMP");
-      export_single_menu.AppendMenuW(MF_OWNERDRAW, 2, L"Export As Phoenix BMP");
-      export_single_menu.AppendMenuW(MF_OWNERDRAW, 2, L"Export As PNG");
-      export_single_menu.AppendMenuW(MF_OWNERDRAW, 2, L"Export As JPG");
-      export_single_menu.AppendMenuW(MF_OWNERDRAW, 2, L"Export As GIF");
-      export_single_menu.AppendMenuW(MF_OWNERDRAW, 2, L"Export As TIFF");
-      export_single_menu.AppendMenuW(MF_OWNERDRAW, 2, L"Export As DDS");
+      export_single_menu.AppendMenuW(MF_OWNERDRAW, 10, L"Export As Microsoft BMP");
+      export_single_menu.AppendMenuW(MF_OWNERDRAW, 11, L"Export As Phoenix BMP");
+      export_single_menu.AppendMenuW(MF_OWNERDRAW, 12, L"Export As PNG");
+      export_single_menu.AppendMenuW(MF_OWNERDRAW, 13, L"Export As JPG");
+      export_single_menu.AppendMenuW(MF_OWNERDRAW, 14, L"Export As GIF");
+      export_single_menu.AppendMenuW(MF_OWNERDRAW, 15, L"Export As TIFF");
+      export_single_menu.AppendMenuW(MF_OWNERDRAW, 16, L"Export As DDS");
 
-      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 2, L"Export As Single GIF");
-      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 2, L"Export As Multiple GIFs");
-      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 2, L"Export As Multiple Microsoft BMPs");
-      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 2, L"Export As Multiple Phoenix BMPs");
-      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 2, L"Export As PNG");
-      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 2, L"Export As JPG");
-      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 2, L"Export As TIFF");
-      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 2, L"Export As DDS");
+      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 20, L"Export As Single GIF");
+      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 21, L"Export As Multiple GIFs");
+      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 22, L"Export As Multiple Microsoft BMPs");
+      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 23, L"Export As Multiple Phoenix BMPs");
+      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 24, L"Export As PNG");
+      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 25, L"Export As JPG");
+      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 26, L"Export As TIFF");
+      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, 27, L"Export As DDS");
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
@@ -223,6 +223,19 @@ namespace siege::views
       else if (message.iItem == 6 && ::GetCursorPos(&mouse_pos))
       {
         auto selection = ::TrackPopupMenu(image_export_menu, TPM_CENTERALIGN | TPM_RETURNCMD, mouse_pos.x, mouse_pos.y, 0, *this, nullptr);
+
+        // TODO implement proper export and file selection
+        if (selection == 12) // 12 is a nice good number - but we should map the constants to the format they belong to
+        {
+          std::ofstream temp("test.png", std::ios::trunc);
+          win32::wic::png_bitmap_encoder encoder;
+          encoder.initialise(std::filesystem::path("test.png"));
+          auto frame = encoder.create_new_frame();
+          win32::wic::bitmap source(current_frame, win32::wic::alpha_channel_option::WICBitmapUseAlpha);
+          frame.write_source(source);
+          frame.commit();
+          encoder.commit();
+        }
       }
 
       return TBDDRET_NODEFAULT;

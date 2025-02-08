@@ -181,6 +181,152 @@ namespace win32::wic
     win32::com::com_ptr<IWICBitmapSource> instance;
   };
 
+  class bitmap_encoder;
+
+  class bitmap_frame_encode
+  {
+  public:
+    friend class bitmap_encoder;
+
+    void write_source(bitmap_source& source, std::optional<WICRect> rect = std::nullopt)
+    {
+      auto handle = source.handle();
+      hresult_throw_on_error(instance->WriteSource(handle.get(), rect ? &*rect : nullptr));
+    }
+
+    void write_pixels(std::uint32_t line_count, std::uint32_t stride, std::span<std::byte> buffer)
+    {
+      hresult_throw_on_error(instance->WritePixels(line_count, stride, (UINT)buffer.size(), (BYTE*)buffer.data()));
+    }
+
+    void commit()
+    {
+      hresult_throw_on_error(instance->Commit());
+    }
+  private:
+    bitmap_frame_encode(IWICBitmapEncoder& encoder) : instance([&] {
+                                                        com_ptr<IWICBitmapFrameEncode> temp;
+                                                        hresult_throw_on_error(encoder.CreateNewFrame(temp.put(), nullptr));
+                                                        hresult_throw_on_error(temp->Initialize(nullptr));
+                                                        return temp;
+                                                      }())
+    {
+    }
+    win32::com::com_ptr<IWICBitmapFrameEncode> instance;
+  };
+
+  class bitmap_encoder
+  {
+  public:
+    virtual bool supports_multiple_frames() const
+    {
+      return false;
+    }
+
+    void initialise(std::filesystem::path file)
+    {
+      com_ptr<IWICStream> stream;
+      hresult_throw_on_error(bitmap_factory::instance().CreateStream(stream.put()));
+      hresult_throw_on_error(stream->InitializeFromFilename(file.c_str(), GENERIC_WRITE));
+      hresult_throw_on_error(instance->Initialize(stream.release(), WICBitmapEncoderNoCache));
+    }
+
+    std::function<void(std::move_only_function<void(std::span<std::byte>)>)> initialise()
+    {
+      com_ptr<IStream> stream;
+      hresult_throw_on_error(CreateStreamOnHGlobal(nullptr, TRUE, stream.put()));
+      instance->Initialize(stream.release(), WICBitmapEncoderNoCache);
+
+      return [stream](auto func) {
+        HGLOBAL global;
+        hresult_throw_on_error(GetHGlobalFromStream(stream.get(), &global));
+        auto span = std::span<std::byte>((std::byte*)GlobalLock(global), GlobalSize(global));
+        func(span);
+        GlobalUnlock(global);
+      };
+    }
+
+    void initialise(std::span<std::byte> buffer)
+    {
+      com_ptr<IWICStream> stream;
+      hresult_throw_on_error(bitmap_factory::instance().CreateStream(stream.put()));
+      hresult_throw_on_error(stream->InitializeFromMemory((BYTE*)buffer.data(), (DWORD)buffer.size()));
+    }
+
+    bitmap_frame_encode create_new_frame()
+    {
+      return bitmap_frame_encode(*instance);
+    }
+
+    void commit()
+    {
+      hresult_throw_on_error(instance->Commit());
+    }
+
+  protected:
+    bitmap_encoder(GUID format)
+    {
+      auto& factory = bitmap_factory::instance();
+      hresult_throw_on_error(factory.CreateEncoder(format, nullptr, instance.put()));
+    }
+
+    win32::com::com_ptr<IWICBitmapEncoder> instance;
+  };
+
+  class multi_frame_encoder : public bitmap_encoder
+  {
+  public:
+    bool supports_multiple_frames() const override
+    {
+      return true;
+    }
+
+    using bitmap_encoder::bitmap_encoder;
+  };
+
+  struct bmp_bitmap_encoder : bitmap_encoder
+  {
+    bmp_bitmap_encoder() : bitmap_encoder(GUID_ContainerFormatBmp)
+    {
+    }
+  };
+
+  struct png_bitmap_encoder : bitmap_encoder
+  {
+    png_bitmap_encoder() : bitmap_encoder(GUID_ContainerFormatPng)
+    {
+    }
+  };
+
+  struct jpg_bitmap_encoder : bitmap_encoder
+  {
+    jpg_bitmap_encoder() : bitmap_encoder(GUID_ContainerFormatJpeg)
+    {
+    }
+  };
+
+  struct ico_bitmap_encoder : multi_frame_encoder
+  {
+    ico_bitmap_encoder() : multi_frame_encoder(GUID_ContainerFormatIco)
+    {
+    }
+  };
+
+  struct gif_bitmap_encoder : multi_frame_encoder
+  {
+    gif_bitmap_encoder() : multi_frame_encoder(GUID_ContainerFormatGif)
+    {
+    }
+  };
+
+  struct tiff_bitmap_encoder : multi_frame_encoder
+  {
+    tiff_bitmap_encoder() : multi_frame_encoder(GUID_ContainerFormatTiff)
+    {
+    }
+  };
+
+
   class bitmap_decoder
   {
   public:
@@ -194,7 +340,7 @@ namespace win32::wic
       hresult_throw_on_error(bitmap_factory::instance().CreateDecoderFromFilename(path.c_str(), nullptr, GENERIC_READ, options, instance.put()));
     }
 
-    bitmap_decoder(std::span<std::byte> data, decode_options options = decode_options::WICDecodeMetadataCacheOnDemand)
+    bitmap_decoder(std::span<std::byte> data, bool deep_copy = false, decode_options options = decode_options::WICDecodeMetadataCacheOnDemand)
     {
       auto view = win32::file_view(data.data());
 
@@ -205,13 +351,20 @@ namespace win32::wic
       {
         hresult_throw_on_error(bitmap_factory::instance().CreateDecoderFromFilename(filename->c_str(), nullptr, GENERIC_READ, options, instance.put()));
       }
-      else
+      else if (deep_copy)
       {
         com::com_ptr<IStream> mem_stream;
         hresult_throw_on_error(::CreateStreamOnHGlobal(::GlobalAlloc(GMEM_MOVEABLE, data.size()), TRUE, mem_stream.put()));
         hresult_throw_on_error(mem_stream->Write(data.data(), data.size(), nullptr));
         hresult_throw_on_error(mem_stream->Seek(LARGE_INTEGER{}, STREAM_SEEK_SET, nullptr));
-        bitmap_factory::instance().CreateDecoderFromStream(mem_stream.get(), nullptr, options, instance.put());
+        hresult_throw_on_error(bitmap_factory::instance().CreateDecoderFromStream(mem_stream.get(), nullptr, options, instance.put()));
+      }
+      else
+      {
+        com::com_ptr<IWICStream> mem_stream;
+        hresult_throw_on_error(bitmap_factory::instance().CreateStream(mem_stream.put()));
+        hresult_throw_on_error(mem_stream->InitializeFromMemory((BYTE*)data.data(), (DWORD)data.size()));
+        hresult_throw_on_error(bitmap_factory::instance().CreateDecoderFromStream(mem_stream.get(), nullptr, options, instance.put()));
       }
     }
 
@@ -299,7 +452,7 @@ namespace win32::wic
       DIBSECTION section{};
       if (::GetObjectW(bitmap, sizeof(section), &section) > 0 && section.dshSection && (section.dsBm.bmBitsPixel == 32 || section.dsBm.bmBitsPixel == 24))
       {
-        auto format = section.dsBm.bmBitsPixel == 32 ? options == alpha_channel_option::WICBitmapUsePremultipliedAlpha ? pixel_format::pbgra_32bpp : pixel_format::bgra_32bpp : pixel_format::bgr_24bpp;
+        auto format = section.dsBm.bmBitsPixel == 32 ? options & alpha_channel_option::WICBitmapUsePremultipliedAlpha ? pixel_format::pbgra_32bpp : pixel_format::bgra_32bpp : pixel_format::bgr_24bpp;
         hresult_throw_on_error(WICCreateBitmapFromSectionEx((UINT)section.dsBm.bmWidth, (UINT)section.dsBm.bmHeight, format, section.dshSection, section.dsBm.bmWidthBytes, section.dsOffset, WICSectionAccessLevelReadWrite, (IWICBitmap**)instance.put()));
       }
       else
