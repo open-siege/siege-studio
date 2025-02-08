@@ -1,7 +1,7 @@
-#include <siege/platform/win/desktop/theming.hpp>
-#include <siege/platform/win/core/com/base.hpp>
-#include <siege/platform/win/desktop/wic.hpp>
-#include <siege/platform/win/desktop/direct_2d.hpp>
+#include <siege/platform/win/theming.hpp>
+#include <siege/platform/win/com.hpp>
+#include <siege/platform/win/wic.hpp>
+#include <siege/platform/win/direct_2d.hpp>
 #include <execution>
 #include <algorithm>
 #include <wincodec.h>

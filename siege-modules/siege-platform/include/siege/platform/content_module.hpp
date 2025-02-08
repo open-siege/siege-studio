@@ -16,7 +16,7 @@
 
 // This is not yet cross platform code. But the plan is to make it so.
 #if WIN32
-#include <siege/platform/win/desktop/window_module.hpp>
+#include <siege/platform/win/window_module.hpp>
 #endif
 
 namespace siege::platform

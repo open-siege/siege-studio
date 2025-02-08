@@ -1,8 +1,8 @@
 #include <set>
-#include <siege/platform/win/desktop/window_module.hpp>
-#include <siege/platform/win/desktop/theming.hpp>
-#include <siege/platform/win/desktop/drawing.hpp>
-#include <siege/platform/win/desktop/direct_2d.hpp>
+#include <siege/platform/win/window_module.hpp>
+#include <siege/platform/win/theming.hpp>
+#include <siege/platform/win/drawing.hpp>
+#include <siege/platform/win/direct_2d.hpp>
 #include <siege/platform/stream.hpp>
 #include <VersionHelpers.h>
 #include <dwmapi.h>

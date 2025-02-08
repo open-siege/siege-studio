@@ -3,9 +3,9 @@
 #include <memory>
 #include <system_error>
 #include <algorithm>
-#include <siege/platform/win/desktop/window_impl.hpp>
-#include <siege/platform/win/desktop/window_module.hpp>
-#include <siege/platform/win/core/hresult.hpp>
+#include <siege/platform/win/window_impl.hpp>
+#include <siege/platform/win/window_module.hpp>
+#include <siege/platform/win/hresult.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/shared.hpp>
 #include "views/exe_views.hpp"

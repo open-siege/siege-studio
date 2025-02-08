@@ -4,11 +4,11 @@
 #include <vector>
 #include <cstdint>
 #include <span>
-#include <siege/platform/win/core/com/base.hpp>
-#include <siege/platform/win/core/file.hpp>
-#include <siege/platform/win/desktop/drawing.hpp>
-#include <siege/platform/win/desktop/direct_write.hpp>
-#include <siege/platform/win/desktop/wic.hpp>
+#include <siege/platform/win/com.hpp>
+#include <siege/platform/win/file.hpp>
+#include <siege/platform/win/drawing.hpp>
+#include <siege/platform/win/direct_write.hpp>
+#include <siege/platform/win/wic.hpp>
 #include <d2d1.h>
 #include <d2d1_3.h>
 

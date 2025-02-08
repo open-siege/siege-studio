@@ -4,10 +4,10 @@
 #include <string_view>
 #include <istream>
 #include <spanstream>
-#include <siege/platform/win/desktop/common_controls.hpp>
-#include <siege/platform/win/desktop/drawing.hpp>
-#include <siege/platform/win/desktop/window_factory.hpp>
-#include <siege/platform/win/desktop/theming.hpp>
+#include <siege/platform/win/common_controls.hpp>
+#include <siege/platform/win/drawing.hpp>
+#include <siege/platform/win/window_factory.hpp>
+#include <siege/platform/win/theming.hpp>
 #include "dts_controller.hpp"
 #include "gl_renderer.hpp"
 #include <siege/content/obj_renderer.hpp>

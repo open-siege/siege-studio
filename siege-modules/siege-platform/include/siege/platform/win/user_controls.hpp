@@ -3,8 +3,8 @@
 
 #include <expected>
 #include <functional>
-#include <siege/platform/win/desktop/window.hpp>
-#include <siege/platform/win/desktop/drawing.hpp>
+#include <siege/platform/win/window.hpp>
+#include <siege/platform/win/drawing.hpp>
 #include <CommCtrl.h>
 
 namespace win32

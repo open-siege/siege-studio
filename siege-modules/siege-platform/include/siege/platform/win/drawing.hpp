@@ -1,9 +1,9 @@
 #ifndef WIN32_DRAWING_HPP
 #define WIN32_DRAWING_HPP
 
-#include <siege/platform/win/desktop/window.hpp>
+#include <siege/platform/win/window.hpp>
 #include <siege/platform/win/auto_handle.hpp>
-#include <siege/platform/win/core/module.hpp>
+#include <siege/platform/win/module.hpp>
 #include <shellscalingapi.h>
 #undef NDEBUG
 #include <cassert>

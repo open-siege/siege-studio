@@ -4,8 +4,8 @@
 #include <string_view>
 #include <istream>
 #include <spanstream>
-#include <siege/platform/win/desktop/common_controls.hpp>
-#include <siege/platform/win/desktop/drawing.hpp>
+#include <siege/platform/win/common_controls.hpp>
+#include <siege/platform/win/drawing.hpp>
 #include "pal_controller.hpp"
 
 namespace siege::views

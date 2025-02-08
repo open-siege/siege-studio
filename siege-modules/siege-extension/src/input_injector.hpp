@@ -1,8 +1,8 @@
 #ifndef SIEGE_LAUNCHER_INPUT_INJECTOR_HPP
 #define SIEGE_LAUNCHER_INPUT_INJECTOR_HPP
 
-#include <siege/platform/win/desktop/window.hpp>
-#include <siege/platform/win/core/com/client.hpp>
+#include <siege/platform/win/window.hpp>
+#include <siege/platform/win/com/client.hpp>
 #include <siege/platform/extension_module.hpp>
 #include <optional>
 #include <array>

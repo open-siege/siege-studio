@@ -1,9 +1,9 @@
 #ifndef THEME_VIEW_HPP
 #define THEME_VIEW_HPP
 
-#include <siege/platform/win/desktop/window_factory.hpp>
-#include <siege/platform/win/desktop/common_controls.hpp>
-#include <siege/platform/win/desktop/theming.hpp>
+#include <siege/platform/win/window_factory.hpp>
+#include <siege/platform/win/common_controls.hpp>
+#include <siege/platform/win/theming.hpp>
 #include <set>
 #include <type_traits>
 

@@ -2,14 +2,14 @@
 #define EXE_VIEWS_HPP
 
 #include <siege/platform/stream.hpp>
-#include <siege/platform/win/core/module.hpp>
+#include <siege/platform/win/module.hpp>
 #include <siege/platform/extension_module.hpp>
 #include <siege/platform/shared.hpp>
-#include <siege/platform/win/desktop/common_controls.hpp>
-#include <siege/platform/win/desktop/drawing.hpp>
-#include <siege/platform/win/desktop/window_factory.hpp>
-#include <siege/platform/win/desktop/theming.hpp>
-#include <siege/platform/win/desktop/dialog.hpp>
+#include <siege/platform/win/common_controls.hpp>
+#include <siege/platform/win/drawing.hpp>
+#include <siege/platform/win/window_factory.hpp>
+#include <siege/platform/win/theming.hpp>
+#include <siege/platform/win/dialog.hpp>
 
 namespace siege::views
 {

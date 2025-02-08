@@ -1,12 +1,12 @@
 #ifndef SIEGE_DEFAULT_VIEW_HPP
 #define SIEGE_DEFAULT_VIEW_HPP
 
-#include <siege/platform/win/desktop/common_controls.hpp>
-#include <siege/platform/win/desktop/theming.hpp>
-#include <siege/platform/win/desktop/common_controls.hpp>
-#include <siege/platform/win/desktop/window_factory.hpp>
-#include <siege/platform/win/desktop/theming.hpp>
-#include <siege/platform/win/desktop/shell.hpp>
+#include <siege/platform/win/common_controls.hpp>
+#include <siege/platform/win/theming.hpp>
+#include <siege/platform/win/common_controls.hpp>
+#include <siege/platform/win/window_factory.hpp>
+#include <siege/platform/win/theming.hpp>
+#include <siege/platform/win/shell.hpp>
 #include <siege/platform/extension_module.hpp>
 #include <utility>
 #include <future>

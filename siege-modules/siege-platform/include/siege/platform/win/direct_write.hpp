@@ -1,9 +1,9 @@
 #ifndef WIN_DESKTOP_DIRECT_WRITE_HPP
 #define WIN_DESKTOP_DIRECT_WRITE_HPP
 
-#include <siege/platform/win/core/com/base.hpp>
-#include <siege/platform/win/core/file.hpp>
-#include <siege/platform/win/desktop/drawing.hpp>
+#include <siege/platform/win/com.hpp>
+#include <siege/platform/win/file.hpp>
+#include <siege/platform/win/drawing.hpp>
 #include <string_view>
 #include <dwrite.h>
 

@@ -2,9 +2,9 @@
 #define SIEGE_ABOUT_VIEW_HPP
 
 #include <utility>
-#include <siege/platform/win/desktop/common_controls.hpp>
-#include <siege/platform/win/desktop/window_factory.hpp>
-#include <siege/platform/win/desktop/theming.hpp>
+#include <siege/platform/win/common_controls.hpp>
+#include <siege/platform/win/window_factory.hpp>
+#include <siege/platform/win/theming.hpp>
 
 namespace siege::views
 {

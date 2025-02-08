@@ -4,9 +4,9 @@
 #include <vector>
 #include <cstdint>
 #include <span>
-#include <siege/platform/win/core/com/base.hpp>
-#include <siege/platform/win/core/file.hpp>
-#include <siege/platform/win/desktop/drawing.hpp>
+#include <siege/platform/win/com.hpp>
+#include <siege/platform/win/file.hpp>
+#include <siege/platform/win/drawing.hpp>
 #include <wincodec.h>
 
 namespace win32::wic

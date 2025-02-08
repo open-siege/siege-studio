@@ -15,9 +15,9 @@
 #undef NDEBUG
 #include <cassert>
 
-#include <siege/platform/win/desktop/shell.hpp>
-#include <siege/platform/win/desktop/window_impl.hpp>
-#include <siege/platform/win/core/com/client.hpp>
+#include <siege/platform/win/shell.hpp>
+#include <siege/platform/win/window_impl.hpp>
+#include <siege/platform/win/com/client.hpp>
 #include <siege/platform/shared.hpp>
 #include <commctrl.h>
 

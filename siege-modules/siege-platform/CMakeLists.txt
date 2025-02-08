@@ -27,26 +27,6 @@ if (WIN32)
     target_link_libraries(siege-win-desktop PUBLIC siege-win-core user32 comctl32 dwmapi)
 
     install(TARGETS siege-std siege-win-core siege-win-desktop CONFIGURATIONS Debug Release RUNTIME DESTINATION bin)
-
-    # Tests
-    find_package(Catch2 REQUIRED)
-    add_executable(com-tests src/com-base-tests.cpp)
-    set_property(TARGET com-tests PROPERTY CXX_STANDARD 23)
-    target_include_directories(com-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-    target_link_libraries(com-tests PRIVATE Catch2::Catch2WithMain siege-win-core)
-
-    include(CTest)
-    include(Catch)
-    catch_discover_tests(com-tests)
-
-    add_custom_command(
-         TARGET com-tests
-         COMMENT "Running com-tests"
-         POST_BUILD 
-         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-         COMMAND ${CMAKE_CTEST_COMMAND} -C $<CONFIGURATION> --output-on-failures
-    )
-
 else()
     # TODO make GTK or SDL the other platform
     add_library(siege-platform ALIAS siege-std)

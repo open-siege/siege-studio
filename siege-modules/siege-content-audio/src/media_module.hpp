@@ -1,7 +1,7 @@
 #ifndef OPEN_SIEGE_MEDIA_MODULE_HPP
 #define OPEN_SIEGE_MEDIA_MODULE_HPP
 
-#include <siege/platform/win/core/module.hpp>
+#include <siege/platform/win/module.hpp>
 #include <filesystem>
 #include <span>
 #include <mmsystem.h>

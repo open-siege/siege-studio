@@ -5,7 +5,7 @@
 #include <span>
 #include <utility>
 #include <string_view>
-#include <siege/platform/win/core/file.hpp>
+#include <siege/platform/win/file.hpp>
 #include <siege/platform/extension_module.hpp>
 
 namespace siege

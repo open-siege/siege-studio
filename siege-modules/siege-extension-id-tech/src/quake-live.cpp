@@ -7,9 +7,9 @@
 #include <thread>
 #include <string_view>
 #include <fstream>
-#include <siege/platform/win/core/file.hpp>
-#include <siege/platform/win/desktop/window_module.hpp>
-#include <siege/platform/win/desktop/window_impl.hpp>
+#include <siege/platform/win/file.hpp>
+#include <siege/platform/win/window_module.hpp>
+#include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include "shared.hpp"
 #include "GetGameFunctionNames.hpp"

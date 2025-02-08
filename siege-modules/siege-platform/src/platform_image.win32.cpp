@@ -1,13 +1,14 @@
 #include <siege/platform/image.hpp>
-#include <siege/platform/win/core/com/base.hpp>
-#include <siege/platform/win/core/file.hpp>
+#include <siege/platform/stream.hpp>
+#include <siege/platform/win/com.hpp>
+#include <siege/platform/win/file.hpp>
 #include <exception>
 #include <spanstream>
 #include <memory>
 
 #undef NDEBUG
 #include <cassert>
-#include <siege/platform/win/desktop/wic.hpp>
+#include <siege/platform/win/wic.hpp>
 #include <VersionHelpers.h>
 
 namespace siege::platform::bitmap
@@ -29,31 +30,31 @@ namespace siege::platform::bitmap
     }
   }
 
-  std::vector<std::any> load(std::filesystem::path filename)
+  std::vector<std::any> load(win32::wic::bitmap_decoder& decoder)
   {
-    win32::wic::bitmap_decoder decoder(filename);
-
     auto count = decoder.frame_count();
 
     std::vector<std::any> frames;
     frames.reserve(count);
 
-    if (filename.extension() == ".gif" || filename.extension() == ".GIF")
+    for (auto i = 0u; i < count; ++i)
     {
-      for (auto i = 0u; i < count; ++i)
-      {
-        frames.emplace_back(decoder.frame(i).flip(win32::wic::transform_options::WICBitmapTransformFlipVertical));
-      }
-    }
-    else
-    {
-      for (auto i = 0u; i < count; ++i)
-      {
-        frames.emplace_back(decoder.frame(i));
-      }
+      frames.emplace_back(decoder.frame(i));
     }
 
     return frames;
+  }
+
+  std::vector<std::any> load(std::span<std::byte> bytes)
+  {
+    win32::wic::bitmap_decoder decoder(bytes);
+    return load(decoder);
+  }
+
+  std::vector<std::any> load(std::filesystem::path filename)
+  {
+    win32::wic::bitmap_decoder decoder(filename);
+    return load(decoder);
   }
 
   platform_image::platform_image(std::span<windows_bmp_data> bitmaps)
@@ -83,18 +84,28 @@ namespace siege::platform::bitmap
     if (std::spanstream* span_stream = dynamic_cast<std::spanstream*>(&image_stream); span_stream != nullptr)
     {
       auto span = span_stream->rdbuf()->span();
-      auto view = win32::file_view(span.data());
 
-      auto filename = view.GetMappedFilename();
-      view.release();
-
-      if (!filename)
-      {
-        throw std::invalid_argument("stream");
-      }
-
-      frames = load(std::move(*filename));
+      frames = load(std::span<std::byte>((std::byte*)span.data(), span.size()));
+      return;
     }
+
+    auto filename = siege::platform::get_stream_path(image_stream);
+
+    if (filename)
+    {
+      frames = load(std::move(*filename));
+      return;
+    }
+
+    auto size = siege::platform::get_stream_size(image_stream);
+
+    std::vector<std::byte> data(size);
+
+    auto pos = image_stream.tellg();
+    image_stream.read((char*)data.data(), size);
+    image_stream.seekg(pos, std::ios::beg);
+
+    frames = load(data);
   }
 
   size platform_image::get_size(std::size_t frame) const noexcept
@@ -171,7 +182,7 @@ namespace siege::platform::bitmap
 
       auto source = bitmap.scale((std::uint32_t)size.width, (std::uint32_t)size.height, mode)
                       .convert(win32::wic::bitmap::to_format{
-                      .format = GUID_WICPixelFormat32bppBGR });
+                        .format = GUID_WICPixelFormat32bppBGR });
 
       auto size = source.get_size();
       source.copy_pixels(size.cx * sizeof(std::int32_t), pixels);

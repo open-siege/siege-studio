@@ -1,7 +1,7 @@
 #ifndef ID_TECH_SHARED_HPP
 #define ID_TECH_SHARED_HPP
 
-#include <siege/platform/win/desktop/window_module.hpp>
+#include <siege/platform/win/window_module.hpp>
 
 extern "C" {
 LRESULT CALLBACK dispatch_input_to_cdecl_quake_2_console(int code, WPARAM wParam, LPARAM lParam);

@@ -8,9 +8,9 @@
 #include <string_view>
 #include <fstream>
 #include <sstream>
-#include <siege/platform/win/core/file.hpp>
-#include <siege/platform/win/desktop/window_module.hpp>
-#include <siege/platform/win/desktop/window_impl.hpp>
+#include <siege/platform/win/file.hpp>
+#include <siege/platform/win/window_module.hpp>
+#include <siege/platform/win/window_impl.hpp>
 #include <siege/resource/pak_resource.hpp>
 #include <siege/configuration/id_tech.hpp>
 #include <detours.h>

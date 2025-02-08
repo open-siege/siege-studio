@@ -1,5 +1,5 @@
 #include <siege/platform/extension_module.hpp>
-#include <siege/platform/win/core/com/client.hpp>
+#include <siege/platform/win/com/client.hpp>
 #include <siege/platform/shared.hpp>
 #include <detours.h>
 

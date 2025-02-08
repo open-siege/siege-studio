@@ -2,8 +2,8 @@
 #define WINDOW_MODULE_HPP
 
 #include <expected>
-#include <siege/platform/win/core/module.hpp>
-#include <siege/platform/win/desktop/window.hpp>
+#include <siege/platform/win/module.hpp>
+#include <siege/platform/win/window.hpp>
 #include <WinUser.h>
 
 namespace win32

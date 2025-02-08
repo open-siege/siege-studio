@@ -7,7 +7,7 @@
 #include <span>
 #include <mutex>
 #include <execution>
-#include <siege/platform/win/core/module.hpp>
+#include <siege/platform/win/module.hpp>
 #include <siege/platform/shared.hpp>
 
 namespace siege::platform

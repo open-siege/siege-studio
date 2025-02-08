@@ -3,7 +3,7 @@
 #include <string>
 #include <map>
 #include <siege/platform/stream.hpp>
-#include <siege/platform/win/core/module.hpp>
+#include <siege/platform/win/module.hpp>
 #include <siege/platform/extension_module.hpp>
 #include <siege/platform/shared.hpp>
 #include "views/exe_views.hpp"

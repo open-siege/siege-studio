@@ -1,9 +1,9 @@
 #ifndef WIN32_CLASS_HPP
 #define WIN32_CLASS_HPP
 
-#include <siege/platform/win/desktop/user_controls.hpp>
-#include <siege/platform/win/desktop/common_controls.hpp>
-#include <siege/platform/win/desktop/drawing.hpp>
+#include <siege/platform/win/user_controls.hpp>
+#include <siege/platform/win/common_controls.hpp>
+#include <siege/platform/win/drawing.hpp>
 #include "window.hpp"
 #include <windowsx.h>
 #include <any>

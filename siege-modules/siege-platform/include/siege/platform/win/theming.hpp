@@ -1,8 +1,8 @@
 #ifndef OPEN_SIEGE_THEMING_HPP
 #define OPEN_SIEGE_THEMING_HPP
 
-#include <siege/platform/win/core/module.hpp>
-#include <siege/platform/win/desktop/common_controls.hpp>
+#include <siege/platform/win/module.hpp>
+#include <siege/platform/win/common_controls.hpp>
 #include <map>
 #include <string>
 #include <optional>

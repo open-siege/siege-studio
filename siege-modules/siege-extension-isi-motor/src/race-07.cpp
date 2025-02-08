@@ -1,4 +1,4 @@
-#include <siege/platform/win/desktop/window_module.hpp>
+#include <siege/platform/win/window_module.hpp>
 #include "shared.hpp"
 
 

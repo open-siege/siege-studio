@@ -7,7 +7,7 @@
 #include <ShlObj.h>
 #include <shlwapi.h>
 #include <commoncontrols.h>
-#include <siege/platform/win/core/com/base.hpp>
+#include <siege/platform/win/com.hpp>
 
 namespace win32::com
 {

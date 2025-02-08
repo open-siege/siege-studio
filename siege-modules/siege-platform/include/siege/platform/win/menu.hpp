@@ -1,7 +1,7 @@
 #ifndef WIN32_MENU_HPP
 #define WIN32_MENU_HPP
 
-#include <siege/platform/win/desktop/messages.hpp>
+#include <siege/platform/win/messages.hpp>
 #include <map>
 #include <set>
 #include <initguid.h>

@@ -13,7 +13,7 @@
 #include <system_error>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/resource.hpp>
-#include <siege/platform/win/desktop/window_module.hpp>
+#include <siege/platform/win/window_module.hpp>
 
 namespace siege::platform
 {

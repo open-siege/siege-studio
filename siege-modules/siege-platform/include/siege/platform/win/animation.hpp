@@ -1,9 +1,9 @@
 #ifndef WIN_ANIMATION_HPP
 #define WIN_ANIMATION_HPP
 
-#include <siege/platform/win/core/com/base.hpp>
-#include <siege/platform/win/core/file.hpp>
-#include <siege/platform/win/desktop/drawing.hpp>
+#include <siege/platform/win/com.hpp>
+#include <siege/platform/win/file.hpp>
+#include <siege/platform/win/drawing.hpp>
 #include <uianimation.h>
 
 namespace win32::animation

@@ -1,7 +1,7 @@
 #ifndef DML_VIEW_HPP
 #define DML_VIEW_HPP
 
-#include <siege/platform/win/desktop/window_factory.hpp>
+#include <siege/platform/win/window_factory.hpp>
 #include "dml_controller.hpp"
 
 namespace siege::views

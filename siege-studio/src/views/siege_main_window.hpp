@@ -2,14 +2,14 @@
 #define SIEGE_MAIN_WINDOW_HPP
 
 #include <dwmapi.h>
-#include <siege/platform/win/desktop/common_controls.hpp>
-#include <siege/platform/win/desktop/shell.hpp>
-#include <siege/platform/win/desktop/window_factory.hpp>
-#include <siege/platform/win/core/file.hpp>
+#include <siege/platform/win/common_controls.hpp>
+#include <siege/platform/win/shell.hpp>
+#include <siege/platform/win/window_factory.hpp>
+#include <siege/platform/win/file.hpp>
 #include <siege/platform/content_module.hpp>
-#include <siege/platform/win/desktop/drawing.hpp>
-#include <siege/platform/win/desktop/theming.hpp>
-#include <siege/platform/win/desktop/dialog.hpp>
+#include <siege/platform/win/drawing.hpp>
+#include <siege/platform/win/theming.hpp>
+#include <siege/platform/win/dialog.hpp>
 #include "views/preferences_view.hpp"
 #include "views/about_view.hpp"
 #include "views/default_view.hpp"

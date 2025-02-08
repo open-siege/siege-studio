@@ -1,9 +1,9 @@
 #ifndef WIN32_WINDOW_HPP
 #define WIN32_WINDOW_HPP
 
-#include <siege/platform/win/desktop/messages.hpp>
+#include <siege/platform/win/messages.hpp>
 #include <siege/platform/win/auto_handle.hpp>
-#include <siege/platform/win/desktop/menu.hpp>
+#include <siege/platform/win/menu.hpp>
 #include <expected>
 
 #undef GetFirstSibling

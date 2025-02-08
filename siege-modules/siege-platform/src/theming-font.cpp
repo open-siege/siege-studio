@@ -1,5 +1,5 @@
-#include <siege/platform/win/desktop/theming.hpp>
-#include <siege/platform/win/desktop/drawing.hpp>
+#include <siege/platform/win/theming.hpp>
+#include <siege/platform/win/drawing.hpp>
 #include <map>
 #include <string>
 

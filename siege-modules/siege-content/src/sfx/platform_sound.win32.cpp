@@ -1,7 +1,7 @@
 #include <spanstream>
 #include <siege/content/sfx/sound.hpp>
-#include <siege/platform/win/core/com/base.hpp>
-#include <siege/platform/win/core/file.hpp>
+#include <siege/platform/win/com.hpp>
+#include <siege/platform/win/file.hpp>
 #include <siege/platform/stream.hpp>
 #include <mfapi.h>
 #include <mfidl.h>

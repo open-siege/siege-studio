@@ -136,44 +136,6 @@ namespace win32::com
     }
   };
 
-  struct ComObject : IUnknown
-  {
-    std::atomic_uint refCount = 1;
-
-    static bool IsHeapAllocated(void* object, std::size_t);
-    static void* operator new(std::size_t count);
-    static void operator delete(void* ptr, std::size_t sz);
-
-    [[maybe_unused]] ULONG __stdcall AddRef() noexcept override;
-    [[maybe_unused]] ULONG __stdcall Release() noexcept override;
-  };
-
-  template<typename TBase, typename TInterface, typename TObject>
-  std::optional<HRESULT> ComQuery(TObject& self, const GUID& riid, void** ppvObj)
-  {
-    if (IsEqualGUID(riid, __uuidof(TBase)))
-    {
-      self.AddRef();
-      *ppvObj = static_cast<TInterface*>(&self);
-      return S_OK;
-    }
-
-    return std::nullopt;
-  }
-
-  template<typename TInterface, typename TObject>
-  std::optional<HRESULT> ComQuery(TObject& self, const GUID& riid, void** ppvObj)
-  {
-    if (IsEqualGUID(riid, __uuidof(TInterface)))
-    {
-      self.AddRef();
-      *ppvObj = static_cast<TInterface*>(&self);
-      return S_OK;
-    }
-
-    return std::nullopt;
-  }
-
   HRESULT init_com(COINIT apartment_model = COINIT_MULTITHREADED);
 }// namespace win32::com
 

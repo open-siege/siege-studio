@@ -10,7 +10,7 @@
 #include <spanstream>
 
 #if WIN32
-#include <siege/platform/win/core/file.hpp>
+#include <siege/platform/win/file.hpp>
 #endif
 
 namespace siege::platform
