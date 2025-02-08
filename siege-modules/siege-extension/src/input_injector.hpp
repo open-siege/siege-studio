@@ -2,7 +2,6 @@
 #define SIEGE_LAUNCHER_INPUT_INJECTOR_HPP
 
 #include <siege/platform/win/window.hpp>
-#include <siege/platform/win/com/client.hpp>
 #include <siege/platform/extension_module.hpp>
 #include <optional>
 #include <array>
@@ -531,9 +530,6 @@ namespace siege
 
         auto [newRx, newRy] = calculate_deadzone(std::make_pair(temp.Gamepad.sThumbRX, temp.Gamepad.sThumbRY), XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
         auto [oldRx, oldRy] = calculate_deadzone(std::make_pair(state.second.Gamepad.sThumbRX, state.second.Gamepad.sThumbRY), XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
-
-        DISPPARAMS params{};
-        win32::com::Variant invoke_result;
 
         mapping = mappings.find(VK_GAMEPAD_RIGHT_THUMBSTICK_UP);
         mapping_alt = mappings.find(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN);

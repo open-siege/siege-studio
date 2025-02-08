@@ -17,7 +17,6 @@
 
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/win/window_impl.hpp>
-#include <siege/platform/win/com/client.hpp>
 #include <siege/platform/shared.hpp>
 #include <commctrl.h>
 

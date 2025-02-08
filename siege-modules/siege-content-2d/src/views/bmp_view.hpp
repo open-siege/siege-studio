@@ -21,6 +21,7 @@
 
 namespace siege::views
 {
+  using namespace win32::wic;
   // TODO complete palette selection feature
   struct bmp_view : win32::window_ref
   {
@@ -67,9 +68,29 @@ namespace siege::views
     win32::local_atom multiple_png_id = win32::local_atom(L"multiple.png");
     win32::local_atom multiple_dds_id = win32::local_atom(L"multiple.dds");
 
-    bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : 
-        win32::window_ref(self)
+    std::map<ATOM, std::move_only_function<std::unique_ptr<bitmap_encoder>(std::filesystem::path)>> encoder_creators;
+
+    bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
+      encoder_creators.emplace(bmp_id, [](auto path) {
+        return std::unique_ptr<bitmap_encoder>(new bmp_bitmap_encoder(path));
+      });
+
+      encoder_creators.emplace(jpg_id, [](auto path) {
+        return std::unique_ptr<bitmap_encoder>(new jpg_bitmap_encoder(path));
+      });
+
+      encoder_creators.emplace(png_id, [](auto path) {
+        return std::unique_ptr<bitmap_encoder>(new png_bitmap_encoder(path));
+      });
+
+      encoder_creators.emplace(gif_id, [](auto path) {
+        return std::unique_ptr<bitmap_encoder>(new gif_bitmap_encoder(path));
+      });
+
+      encoder_creators.emplace(dds_id, [](auto path) {
+        return std::unique_ptr<bitmap_encoder>(new dds_bitmap_encoder(path));
+      });
     }
 
     ~bmp_view()
@@ -243,18 +264,26 @@ namespace siege::views
       {
         auto selection = ::TrackPopupMenu(image_export_menu, TPM_CENTERALIGN | TPM_RETURNCMD, mouse_pos.x, mouse_pos.y, 0, *this, nullptr);
 
-        // TODO implement proper export and file selection
-        if (selection == 12) // 12 is a nice good number - but we should map the constants to the format they belong to
+        auto creator = encoder_creators.find(selection);
+
+        if (creator != encoder_creators.end())
         {
-          std::ofstream temp("test.png", std::ios::trunc);
-          win32::wic::png_bitmap_encoder encoder;
-          encoder.initialise(std::filesystem::path("test.png"));
-          auto frame = encoder.create_new_frame();
+          // TODO ask for name of file
+          std::wstring temp(20, '\0');
+          temp.resize(GetAtomNameW(creator->first, temp.data(), temp.size()));
+
+          std::filesystem::path filename(temp);
+          auto extension = filename.has_extension() ? filename.extension() : filename.filename();
+          filename.replace_filename("test").replace_extension(extension);
+          std::ofstream stream(filename, std::ios::trunc);
+          auto encoder = creator->second(filename);
+          auto frame = encoder->create_new_frame();
           win32::wic::bitmap source(current_frame, win32::wic::alpha_channel_option::WICBitmapUseAlpha);
           frame.write_source(source);
           frame.commit();
-          encoder.commit();
+          encoder->commit();
         }
+
       }
 
       return TBDDRET_NODEFAULT;

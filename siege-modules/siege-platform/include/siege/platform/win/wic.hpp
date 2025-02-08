@@ -223,36 +223,6 @@ namespace win32::wic
       return false;
     }
 
-    void initialise(std::filesystem::path file)
-    {
-      com_ptr<IWICStream> stream;
-      hresult_throw_on_error(bitmap_factory::instance().CreateStream(stream.put()));
-      hresult_throw_on_error(stream->InitializeFromFilename(file.c_str(), GENERIC_WRITE));
-      hresult_throw_on_error(instance->Initialize(stream.release(), WICBitmapEncoderNoCache));
-    }
-
-    std::function<void(std::move_only_function<void(std::span<std::byte>)>)> initialise()
-    {
-      com_ptr<IStream> stream;
-      hresult_throw_on_error(CreateStreamOnHGlobal(nullptr, TRUE, stream.put()));
-      instance->Initialize(stream.release(), WICBitmapEncoderNoCache);
-
-      return [stream](auto func) {
-        HGLOBAL global;
-        hresult_throw_on_error(GetHGlobalFromStream(stream.get(), &global));
-        auto span = std::span<std::byte>((std::byte*)GlobalLock(global), GlobalSize(global));
-        func(span);
-        GlobalUnlock(global);
-      };
-    }
-
-    void initialise(std::span<std::byte> buffer)
-    {
-      com_ptr<IWICStream> stream;
-      hresult_throw_on_error(bitmap_factory::instance().CreateStream(stream.put()));
-      hresult_throw_on_error(stream->InitializeFromMemory((BYTE*)buffer.data(), (DWORD)buffer.size()));
-    }
-
     bitmap_frame_encode create_new_frame()
     {
       return bitmap_frame_encode(*instance);
@@ -264,10 +234,24 @@ namespace win32::wic
     }
 
   protected:
-    bitmap_encoder(GUID format)
+    bitmap_encoder(GUID format, std::filesystem::path file)
     {
       auto& factory = bitmap_factory::instance();
       hresult_throw_on_error(factory.CreateEncoder(format, nullptr, instance.put()));
+      com_ptr<IWICStream> stream;
+      hresult_throw_on_error(bitmap_factory::instance().CreateStream(stream.put()));
+      hresult_throw_on_error(stream->InitializeFromFilename(file.c_str(), GENERIC_WRITE));
+      hresult_throw_on_error(instance->Initialize(stream.release(), WICBitmapEncoderNoCache));
+    }
+
+    bitmap_encoder(GUID format, std::span<std::byte> buffer)
+    {
+      auto& factory = bitmap_factory::instance();
+      hresult_throw_on_error(factory.CreateEncoder(format, nullptr, instance.put()));
+      com_ptr<IWICStream> stream;
+      hresult_throw_on_error(bitmap_factory::instance().CreateStream(stream.put()));
+      hresult_throw_on_error(stream->InitializeFromMemory((BYTE*)buffer.data(), (DWORD)buffer.size()));
+      hresult_throw_on_error(instance->Initialize(stream.release(), WICBitmapEncoderNoCache));
     }
 
     win32::com::com_ptr<IWICBitmapEncoder> instance;
@@ -286,42 +270,66 @@ namespace win32::wic
 
   struct bmp_bitmap_encoder : bitmap_encoder
   {
-    bmp_bitmap_encoder() : bitmap_encoder(GUID_ContainerFormatBmp)
+    bmp_bitmap_encoder(std::filesystem::path file) : bitmap_encoder(GUID_ContainerFormatBmp, std::move(file))
+    {
+    }
+
+    bmp_bitmap_encoder(std::span<std::byte> buffer) : bitmap_encoder(GUID_ContainerFormatBmp, buffer)
     {
     }
   };
 
   struct png_bitmap_encoder : bitmap_encoder
   {
-    png_bitmap_encoder() : bitmap_encoder(GUID_ContainerFormatPng)
+    png_bitmap_encoder(std::filesystem::path file) : bitmap_encoder(GUID_ContainerFormatPng, std::move(file))
+    {
+    }
+
+    png_bitmap_encoder(std::span<std::byte> buffer) : bitmap_encoder(GUID_ContainerFormatPng, buffer)
     {
     }
   };
 
   struct jpg_bitmap_encoder : bitmap_encoder
   {
-    jpg_bitmap_encoder() : bitmap_encoder(GUID_ContainerFormatJpeg)
+    jpg_bitmap_encoder(std::filesystem::path file) : bitmap_encoder(GUID_ContainerFormatJpeg, std::move(file))
     {
     }
-  };
 
-  struct ico_bitmap_encoder : multi_frame_encoder
-  {
-    ico_bitmap_encoder() : multi_frame_encoder(GUID_ContainerFormatIco)
+    jpg_bitmap_encoder(std::span<std::byte> buffer) : bitmap_encoder(GUID_ContainerFormatJpeg, buffer)
     {
     }
   };
 
   struct gif_bitmap_encoder : multi_frame_encoder
   {
-    gif_bitmap_encoder() : multi_frame_encoder(GUID_ContainerFormatGif)
+    gif_bitmap_encoder(std::filesystem::path file) : multi_frame_encoder(GUID_ContainerFormatGif, std::move(file))
+    {
+    }
+
+    gif_bitmap_encoder(std::span<std::byte> buffer) : multi_frame_encoder(GUID_ContainerFormatGif, buffer)
     {
     }
   };
 
   struct tiff_bitmap_encoder : multi_frame_encoder
   {
-    tiff_bitmap_encoder() : multi_frame_encoder(GUID_ContainerFormatTiff)
+    tiff_bitmap_encoder(std::filesystem::path file) : multi_frame_encoder(GUID_ContainerFormatTiff, std::move(file))
+    {
+    }
+
+    tiff_bitmap_encoder(std::span<std::byte> buffer) : multi_frame_encoder(GUID_ContainerFormatTiff, buffer)
+    {
+    }
+  };
+
+  struct dds_bitmap_encoder : multi_frame_encoder
+  {
+    dds_bitmap_encoder(std::filesystem::path file) : multi_frame_encoder(GUID_ContainerFormatDds, std::move(file))
+    {
+    }
+
+    dds_bitmap_encoder(std::span<std::byte> buffer) : multi_frame_encoder(GUID_ContainerFormatDds, buffer)
     {
     }
   };
