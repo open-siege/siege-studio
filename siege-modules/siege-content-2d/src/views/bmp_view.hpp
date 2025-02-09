@@ -50,7 +50,7 @@ namespace siege::views
     win32::static_control static_image;
     std::list<platform::storage_module> loaded_modules;
 
-    win32::local_atom pbmp_id = win32::local_atom(L".pbmp");
+    win32::local_atom pbmp_id = win32::local_atom(L".pbm");
     win32::local_atom bmp_id = win32::local_atom(L".bmp");
     win32::local_atom jpg_id = win32::local_atom(L".jpg");
     win32::local_atom png_id = win32::local_atom(L".png");
@@ -61,36 +61,55 @@ namespace siege::views
     win32::local_atom single_pba_id = win32::local_atom(L"single.pba");
     win32::local_atom single_gif_id = win32::local_atom(L"single.gif");
     win32::local_atom single_tiff_id = win32::local_atom(L"single.tif");
-    win32::local_atom multiple_pbmp_id = win32::local_atom(L"multiple.pbmp");
+    win32::local_atom multiple_pbmp_id = win32::local_atom(L"multiple.pbm");
     win32::local_atom multiple_gif_id = win32::local_atom(L"multiple.pba");
-    win32::local_atom multiple_tiff_id = win32::local_atom(L"multiple.tiff");
+    win32::local_atom multiple_tiff_id = win32::local_atom(L"multiple.tif");
+    win32::local_atom multiple_jpg_id = win32::local_atom(L"multiple.jpg");
     win32::local_atom multiple_bmp_id = win32::local_atom(L"multiple.bmp");
     win32::local_atom multiple_png_id = win32::local_atom(L"multiple.png");
     win32::local_atom multiple_dds_id = win32::local_atom(L"multiple.dds");
 
-    std::map<ATOM, std::move_only_function<std::unique_ptr<bitmap_encoder>(std::filesystem::path)>> encoder_creators;
+    std::map<ATOM, std::function<std::unique_ptr<bitmap_encoder>(std::filesystem::path)>> encoder_creators;
 
     bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
-      encoder_creators.emplace(bmp_id, [](auto path) {
+      auto bmp_creator = [](auto path) {
         return std::unique_ptr<bitmap_encoder>(new bmp_bitmap_encoder(path));
-      });
+      };
+      encoder_creators.emplace(bmp_id, bmp_creator);
+      encoder_creators.emplace(multiple_bmp_id, bmp_creator);
 
-      encoder_creators.emplace(jpg_id, [](auto path) {
+      auto jpg_creator = [](auto path) {
         return std::unique_ptr<bitmap_encoder>(new jpg_bitmap_encoder(path));
-      });
+      };
+      encoder_creators.emplace(jpg_id, jpg_creator);
+      encoder_creators.emplace(multiple_jpg_id, jpg_creator);
 
-      encoder_creators.emplace(png_id, [](auto path) {
+      auto png_creator = [](auto path) {
         return std::unique_ptr<bitmap_encoder>(new png_bitmap_encoder(path));
-      });
+      };
+      encoder_creators.emplace(png_id, png_creator);
+      encoder_creators.emplace(multiple_png_id, png_creator);
 
-      encoder_creators.emplace(gif_id, [](auto path) {
+      auto tiff_creator = [](auto path) {
+        return std::unique_ptr<bitmap_encoder>(new tiff_bitmap_encoder(path));
+      };
+      encoder_creators.emplace(tiff_id, tiff_creator);
+      encoder_creators.emplace(single_tiff_id, tiff_creator);
+      encoder_creators.emplace(multiple_tiff_id, tiff_creator);
+
+      auto gif_creator = [](auto path) {
         return std::unique_ptr<bitmap_encoder>(new gif_bitmap_encoder(path));
-      });
+      };
+      encoder_creators.emplace(gif_id, gif_creator);
+      encoder_creators.emplace(single_gif_id, gif_creator);
+      encoder_creators.emplace(multiple_gif_id, gif_creator);
 
-      encoder_creators.emplace(dds_id, [](auto path) {
+      auto dds_creator = [](auto path) {
         return std::unique_ptr<bitmap_encoder>(new dds_bitmap_encoder(path));
-      });
+      };
+      encoder_creators.emplace(dds_id, dds_creator);
+      encoder_creators.emplace(multiple_dds_id, dds_creator);
     }
 
     ~bmp_view()
@@ -166,7 +185,7 @@ namespace siege::views
       image_export_menu.AppendMenuW(MF_OWNERDRAW | MF_POPUP, (UINT_PTR)export_single_menu.get(), L"Export Current Frame");
       image_export_menu.AppendMenuW(MF_OWNERDRAW | MF_POPUP | MF_DISABLED, (UINT_PTR)export_multiple_menu.get(), L"Export All Frames");
 
-      export_single_menu.AppendMenuW(MF_OWNERDRAW, pbmp_id, L"Export As Phoenix BMP");
+      export_single_menu.AppendMenuW(MF_OWNERDRAW, pbmp_id, L"Export As Phoenix BMP/PBM");
       export_single_menu.AppendMenuW(MF_OWNERDRAW, bmp_id, L"Export As Microsoft BMP");
       export_single_menu.AppendMenuW(MF_OWNERDRAW, png_id, L"Export As PNG");
       export_single_menu.AppendMenuW(MF_OWNERDRAW, jpg_id, L"Export As JPG");
@@ -268,22 +287,96 @@ namespace siege::views
 
         if (creator != encoder_creators.end())
         {
-          // TODO ask for name of file
-          std::wstring temp(20, '\0');
-          temp.resize(GetAtomNameW(creator->first, temp.data(), temp.size()));
+          auto dialog = win32::com::CreateFileSaveDialog();
 
-          std::filesystem::path filename(temp);
-          auto extension = filename.has_extension() ? filename.extension() : filename.filename();
-          filename.replace_filename("test").replace_extension(extension);
-          std::ofstream stream(filename, std::ios::trunc);
-          auto encoder = creator->second(filename);
-          auto frame = encoder->create_new_frame();
-          win32::wic::bitmap source(current_frame, win32::wic::alpha_channel_option::WICBitmapUseAlpha);
-          frame.write_source(source);
-          frame.commit();
-          encoder->commit();
+          if (dialog)
+          {
+            auto save_dialog = *dialog;
+
+            std::wstring temp(20, '\0');
+            temp.resize(GetAtomNameW(creator->first, temp.data(), temp.size()));
+
+            std::filesystem::path filename(temp);
+            auto extension = filename.has_extension() ? filename.extension() : filename.filename();
+
+            auto extension_str = extension.wstring().substr(1);
+
+            // TODO set list of available extensions
+            // TODO default extension is not applied. Perhaps because there is no list of extensions
+            save_dialog->SetDefaultExtension(extension_str.c_str());
+
+            auto result = save_dialog->Show(nullptr);
+
+            if (result == S_OK)
+            {
+              auto selection = save_dialog.GetResult();
+
+              if (selection)
+              {
+                auto path = selection->GetFileSysPath();
+
+                if (path)
+                {
+                  if (filename.stem() == "single")
+                  {
+                    filename = path->replace_extension(extension);
+                    std::ofstream stream(filename, std::ios::trunc);
+                    auto encoder = creator->second(filename);
+
+                    for (auto i = 0u; i < controller.get_frame_count(); ++i)
+                    {
+                      auto frame_size = controller.get_size(i);
+                      auto temp = win32::gdi::bitmap(SIZE{ .cx = frame_size.width, .cy = frame_size.height });
+                      controller.convert(i, frame_size, 32, temp.get_pixels_as_bytes());
+
+                      auto frame = encoder->create_new_frame();
+                      win32::wic::bitmap source(temp, win32::wic::alpha_channel_option::WICBitmapUseAlpha);
+                      frame.write_source(source);
+                      frame.commit();
+                    }
+
+                    encoder->commit();
+                  }
+                  else if (filename.stem() == "multiple")
+                  {
+                    filename = path->replace_extension(extension);
+                    
+                    auto stem = filename.stem().wstring();
+                    for (auto i = 0u; i < controller.get_frame_count(); ++i)
+                    {
+                      filename.replace_filename(stem + std::to_wstring(i + 1)).replace_extension(extension);
+                      std::ofstream stream(filename, std::ios::trunc);
+                      auto encoder = creator->second(filename);
+
+                      auto frame_size = controller.get_size(i);
+                      auto temp = win32::gdi::bitmap(SIZE{ .cx = frame_size.width, .cy = frame_size.height });
+                      controller.convert(i, frame_size, 32, temp.get_pixels_as_bytes());
+
+                      auto frame = encoder->create_new_frame();
+                      win32::wic::bitmap source(temp, win32::wic::alpha_channel_option::WICBitmapUseAlpha);
+                      frame.write_source(source);
+                      frame.commit();
+                      encoder->commit();
+                    }
+                  }
+                  else
+                  {
+                    filename = path->replace_extension(extension);
+                    std::ofstream stream(filename, std::ios::trunc);
+                    auto encoder = creator->second(filename);
+                    auto frame = encoder->create_new_frame();
+                    win32::wic::bitmap source(current_frame, win32::wic::alpha_channel_option::WICBitmapUseAlpha);
+                    frame.write_source(source);
+                    frame.commit();
+                    encoder->commit();
+                  }
+
+                  win32::launch_shell_process(filename.parent_path());
+                }
+              }
+            }
+          }
         }
-
       }
 
       return TBDDRET_NODEFAULT;

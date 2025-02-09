@@ -24,14 +24,16 @@ namespace siege::views
   class bmp_controller
   {
   public:
-    constexpr static auto formats = std::array<siege::fs_string_view, 20>{ { FSL ".jpg",
+    constexpr static auto formats = std::array<siege::fs_string_view, 22>{ { FSL ".jpg",
       FSL ".jpeg",
       FSL ".gif",
       FSL ".png",
       FSL ".tag",
       FSL ".bmp",
+      FSL ".pbm",
       FSL ".dds",
       FSL ".ico",
+      FSL ".tif",
       FSL ".tiff",
       FSL ".dib",
       FSL ".tim",

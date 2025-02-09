@@ -22,6 +22,16 @@ namespace siege::views
       return true;
     }
 
+    if (path && (path->extension() == ".tiff" || path->extension() == ".TIFF"))
+    {
+      return true;
+    }
+
+    if (path && (path->extension() == ".tif" || path->extension() == ".TIF"))
+    {
+      return true;
+    }
+
     return siege::content::bmp::is_earthsiege_bmp(image_stream)
            || siege::platform::bitmap::is_microsoft_bmp(image_stream)
            || siege::content::tim::is_tim(image_stream)

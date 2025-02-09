@@ -9,74 +9,122 @@
 #include <commoncontrols.h>
 #include <siege/platform/win/com.hpp>
 
-namespace win32::com
+namespace win32
 {
-	struct ShellItemEx : com_ptr<::IShellItem>
-	{
-		using com_ptr<::IShellItem>::com_ptr;
+  void launch_shell_process(const std::filesystem::path& path)
+  {
+    auto desktop = ::GetDesktopWindow();
 
-		std::expected<std::filesystem::path, HRESULT> GetFileSysPath()
-		{
-			wchar_t* pszFilePath;
-		    auto hr = get()->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+    auto filename = path.filename();
 
-			if (hr != S_OK)
-			{
-				return std::unexpected(hr);
-			}
+    auto shell_window = ::FindWindowExW(desktop, nullptr, nullptr, filename.c_str());
 
-			std::filesystem::path temp(pszFilePath);
-			CoTaskMemFree(pszFilePath);				
-			return temp;
-		}
-	};
+    if (shell_window)
+    {
+      ::ShowWindow(shell_window, SW_SHOW);
+    }
+    else if (!shell_window)
+    {
+      SHELLEXECUTEINFOW info{
+        .cbSize = sizeof(SHELLEXECUTEINFOW),
+        .fMask = SEE_MASK_DEFAULT | SEE_MASK_NOCLOSEPROCESS,
+        .lpVerb = L"explore",
+        .lpFile = path.c_str(),
+        .nShow = SW_NORMAL,
+      };
 
-	struct FileOpenDialogEx : com_ptr<::IFileOpenDialog>
-	{
-		using com_ptr<::IFileOpenDialog>::com_ptr;
-
-		std::expected<ShellItemEx, HRESULT> GetResult()
-		{
-			ShellItemEx result(nullptr);
-
-			auto hr = get()->GetResult(result.put());
-
-			if (hr != S_OK)
-			{
-				return std::unexpected(hr);
-			}
-
-			return result;
-		}
-	};
-
-	std::expected<FileOpenDialogEx, HRESULT> CreateFileOpenDialog()
-	{
-		FileOpenDialogEx pFileOpen(nullptr);
-					
-		auto hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, __uuidof(::IFileOpenDialog), pFileOpen.put_void());
-
-		if (hr != S_OK)
-		{
-			return std::unexpected(hr);
-		}
-
-		return pFileOpen;
-	}
-
-	std::expected<com_ptr<IFileSaveDialog>, HRESULT> CreateFileSaveDialog()
-	{
-		com_ptr<IFileSaveDialog> pFileOpen;
-					
-		auto hr = CoCreateInstance(CLSID_FileSaveDialog, nullptr, CLSCTX_ALL, __uuidof(::IFileSaveDialog), pFileOpen.put_void());
-
-		if (hr != S_OK)
-		{
-			return std::unexpected(hr);
-		}
-
-		return pFileOpen;
-	}
+      ::ShellExecuteExW(&info);
+    }
+  }
 }
 
-#endif // !WIN32_DIALOGS_HPP
+namespace win32::com
+{
+  struct ShellItemEx : com_ptr<::IShellItem>
+  {
+    using com_ptr<::IShellItem>::com_ptr;
+
+    std::expected<std::filesystem::path, HRESULT> GetFileSysPath()
+    {
+      wchar_t* pszFilePath;
+      auto hr = get()->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+
+      if (hr != S_OK)
+      {
+        return std::unexpected(hr);
+      }
+
+      std::filesystem::path temp(pszFilePath);
+      CoTaskMemFree(pszFilePath);
+      return temp;
+    }
+  };
+
+  struct FileOpenDialogEx : com_ptr<::IFileOpenDialog>
+  {
+    using com_ptr<::IFileOpenDialog>::com_ptr;
+
+    std::expected<ShellItemEx, HRESULT> GetResult()
+    {
+      ShellItemEx result(nullptr);
+
+      auto hr = get()->GetResult(result.put());
+
+      if (hr != S_OK)
+      {
+        return std::unexpected(hr);
+      }
+
+      return result;
+    }
+  };
+
+  struct FileSaveDialogEx : com_ptr<::IFileSaveDialog>
+  {
+    using com_ptr<::IFileSaveDialog>::com_ptr;
+
+    std::expected<ShellItemEx, HRESULT> GetResult()
+    {
+      ShellItemEx result(nullptr);
+
+      auto hr = get()->GetResult(result.put());
+
+      if (hr != S_OK)
+      {
+        return std::unexpected(hr);
+      }
+
+      return result;
+    }
+  };
+
+  std::expected<FileOpenDialogEx, HRESULT> CreateFileOpenDialog()
+  {
+    FileOpenDialogEx pFileOpen;
+
+    auto hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, __uuidof(::IFileOpenDialog), pFileOpen.put_void());
+
+    if (hr != S_OK)
+    {
+      return std::unexpected(hr);
+    }
+
+    return pFileOpen;
+  }
+
+  std::expected<FileSaveDialogEx, HRESULT> CreateFileSaveDialog()
+  {
+    FileSaveDialogEx pFileOpen;
+
+    auto hr = CoCreateInstance(CLSID_FileSaveDialog, nullptr, CLSCTX_ALL, __uuidof(::IFileSaveDialog), pFileOpen.put_void());
+
+    if (hr != S_OK)
+    {
+      return std::unexpected(hr);
+    }
+
+    return pFileOpen;
+  }
+}// namespace win32::com
+
+#endif// !WIN32_DIALOGS_HPP
