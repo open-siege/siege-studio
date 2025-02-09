@@ -15,26 +15,11 @@ namespace siege::platform::bitmap
 {
   using windows_bmp_data = siege::platform::bitmap::windows_bmp_data;
 
-  void apply_palette(windows_bmp_data& bitmap)
-  {
-    if (!bitmap.indexes.empty() && !bitmap.colours.empty())
-    {
-      std::vector<platform::palette::colour> colours(bitmap.indexes.size());
-
-      std::transform(bitmap.indexes.begin(), bitmap.indexes.end(), colours.begin(), [&](auto index) {
-        return bitmap.colours.at(index);
-      });
-
-      bitmap.colours = colours;
-      bitmap.indexes.clear();
-    }
-  }
-
-  std::vector<std::any> load(win32::wic::bitmap_decoder& decoder)
+  std::vector<win32::wic::bitmap_source> load(win32::wic::bitmap_decoder& decoder)
   {
     auto count = decoder.frame_count();
 
-    std::vector<std::any> frames;
+    std::vector<win32::wic::bitmap_source> frames;
     frames.reserve(count);
 
     for (auto i = 0u; i < count; ++i)
@@ -45,33 +30,74 @@ namespace siege::platform::bitmap
     return frames;
   }
 
-  std::vector<std::any> load(std::span<std::byte> bytes)
+  std::vector<win32::wic::bitmap_source> load(std::span<std::byte> bytes)
   {
     win32::wic::bitmap_decoder decoder(bytes);
     return load(decoder);
   }
 
-  std::vector<std::any> load(std::filesystem::path filename)
+  std::vector<win32::wic::bitmap_source> load(std::filesystem::path filename)
   {
     win32::wic::bitmap_decoder decoder(filename);
     return load(decoder);
+  }
+
+  win32::wic::bitmap_source convert(const windows_bmp_data& bitmap)
+  {
+    if (!bitmap.indexes.empty() && !bitmap.colours.empty())
+    {
+      std::vector<win32::color> colors;
+      colors.resize(bitmap.colours.size());
+
+      std::transform(bitmap.colours.begin(), bitmap.colours.end(), colors.begin(), [](auto color) {
+        return RGBQUAD{ .rgbBlue = (BYTE)color.blue, .rgbGreen = (BYTE)color.green, .rgbRed = (BYTE)color.red, .rgbReserved = (BYTE)color.flags };
+      });
+
+      win32::wic::palette palette(colors);
+
+      std::vector<std::byte> indexes;
+      indexes.resize(bitmap.indexes.size());
+
+      std::transform(bitmap.indexes.begin(), bitmap.indexes.end(), indexes.begin(), [](auto index) {
+        return static_cast<std::byte>(static_cast<std::uint8_t>(index));
+      });
+      win32::wic::bitmap result(win32::wic::bitmap::from_memory{
+        .width = bitmap.info.width,
+        .height = bitmap.info.height,
+        .format = win32::wic::pixel_format::indexed_8bpp,
+        .stride = bitmap.info.width,
+        .buffer = indexes });
+      result.set_palette(palette);
+
+      return result;
+    }
+    else if (!bitmap.colours.empty() && bitmap.info.bit_depth == 32)
+    {
+      win32::wic::bitmap result(win32::wic::bitmap::from_memory{
+        .width = bitmap.info.width,
+        .height = bitmap.info.height,
+        .format = win32::wic::pixel_format::bgra_32bpp,
+        .stride = bitmap.info.width * sizeof(std::uint32_t),
+        .buffer = std::span<std::byte>((std::byte*)bitmap.colours.data(), bitmap.info.width * sizeof(std::uint32_t) * bitmap.info.height) });
+      return result;
+    }
+
+    throw std::invalid_argument("Bad bitmap format provided");
   }
 
   platform_image::platform_image(std::span<windows_bmp_data> bitmaps)
   {
     frames.reserve(bitmaps.size());
 
-    std::transform(bitmaps.begin(), bitmaps.end(), std::back_inserter(frames), [&](auto& value) {
-      apply_palette(value);
-      return std::move(value);
-    });
+    for (auto& bitmap : bitmaps)
+    {
+      frames.emplace_back(convert(bitmap));
+    }
   }
 
   platform_image::platform_image(windows_bmp_data bitmap)
   {
-    apply_palette(bitmap);
-
-    frames.emplace_back(std::move(bitmap));
+    frames.emplace_back(convert(bitmap));
   }
 
   platform_image::platform_image(std::filesystem::path filename)
@@ -121,104 +147,12 @@ namespace siege::platform::bitmap
     }
 
     const auto& item = frames[frame];
-    if (item.type().hash_code() == typeid(win32::wic::bitmap).hash_code())
-    {
-      auto temp = std::any_cast<const win32::wic::bitmap&>(item).get_size();
-      return size((int)temp.cx, (int)temp.cy);
-    }
-    else if (item.type().hash_code() == typeid(win32::wic::bitmap_source).hash_code())
-    {
-      auto temp = std::any_cast<const win32::wic::bitmap_source&>(item).get_size();
-      return size((int)temp.cx, (int)temp.cy);
-    }
-    else if (item.type().hash_code() == typeid(windows_bmp_data).hash_code())
-    {
-      const auto& bitmap = std::any_cast<const windows_bmp_data&>(item);
-
-      return size((int)bitmap.info.width, (int)bitmap.info.height);
-    }
-
-    return {};
+    auto temp = item.get_size();
+    return size((int)temp.cx, (int)temp.cy);
   }
 
   std::size_t platform_image::frame_count() const noexcept
   {
     return frames.size();
   }
-
-  std::size_t platform_image::convert(std::size_t frame, size size, int bits, std::span<std::byte> pixels) const noexcept
-  {
-    if (frames.empty())
-    {
-      return 0;
-    }
-
-    if (frames.size() < frame)
-    {
-      return 0;
-    }
-
-    if (bits != 32)
-    {
-      return 0;
-    }
-
-    auto final_result = size.width * size.height * bits / 8;
-
-    if (pixels.size() < final_result)
-    {
-      return 0;
-    }
-
-    const auto& item = frames[frame];
-
-    auto scale_bitmap = [size, pixels](const win32::wic::bitmap_source& bitmap) {
-      auto mode = WICBitmapInterpolationModeFant;
-
-      if (IsWindows10OrGreater())
-      {
-        mode = WICBitmapInterpolationModeHighQualityCubic;
-      }
-
-      auto source = bitmap.scale((std::uint32_t)size.width, (std::uint32_t)size.height, mode)
-                      .convert(win32::wic::bitmap::to_format{
-                        .format = GUID_WICPixelFormat32bppBGR });
-
-      auto size = source.get_size();
-      source.copy_pixels(size.cx * sizeof(std::int32_t), pixels);
-
-      return size.cx * size.cy * sizeof(int32_t);
-    };
-
-    if (item.type().hash_code() == typeid(win32::wic::bitmap).hash_code())
-    {
-      return scale_bitmap(std::any_cast<const win32::wic::bitmap&>(item));
-    }
-    else if (item.type().hash_code() == typeid(win32::wic::bitmap_source).hash_code())
-    {
-      return scale_bitmap(std::any_cast<const win32::wic::bitmap_source&>(item));
-    }
-    else if (item.type().hash_code() == typeid(windows_bmp_data).hash_code())
-    {
-      const auto& bitmap = std::any_cast<const windows_bmp_data&>(item);
-
-      if (bitmap.indexes.empty() && !bitmap.colours.empty() && bitmap.info.bit_depth == bits && bitmap.info.width == size.width && bitmap.info.height == size.height)
-      {
-        std::memcpy(pixels.data(), bitmap.colours.data(), sizeof(platform::palette::colour) * bitmap.colours.size());
-        return sizeof(platform::palette::colour) * bitmap.colours.size();
-      }
-      else if (bitmap.indexes.empty() && !bitmap.colours.empty())
-      {
-        return scale_bitmap(win32::wic::bitmap(win32::wic::bitmap::from_memory{
-          .width = bitmap.info.width,
-          .height = bitmap.info.height,
-          .format = GUID_WICPixelFormat32bppRGB,
-          .stride = (std::uint32_t)bitmap.info.width * 4,
-          .buffer = std::span<std::byte>(reinterpret_cast<std::byte*>(const_cast<platform::palette::colour*>(bitmap.colours.data())), bitmap.info.width * 4 * bitmap.info.height) }));
-      }
-    }
-
-    return 0;
-  }
-
 }// namespace siege::platform::bitmap

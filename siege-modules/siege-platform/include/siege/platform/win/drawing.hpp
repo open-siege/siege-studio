@@ -10,6 +10,66 @@
 
 namespace win32
 {
+  struct color : RGBQUAD
+  {
+    color() : RGBQUAD{}
+    {
+    }
+
+    color(RGBQUAD quad) : RGBQUAD{ .rgbBlue = quad.rgbBlue, .rgbGreen = quad.rgbGreen, .rgbRed = quad.rgbRed, .rgbReserved = quad.rgbReserved }
+    {
+    }
+
+    color(RGBTRIPLE triple, BYTE alpha = 255) : RGBQUAD{ .rgbBlue = triple.rgbtBlue, .rgbGreen = triple.rgbtGreen, .rgbRed = triple.rgbtRed, .rgbReserved = alpha }
+    {
+    }
+
+    color(const color& other) : RGBQUAD{ .rgbBlue = other.rgbBlue, .rgbGreen = other.rgbGreen, .rgbRed = other.rgbRed, .rgbReserved = other.rgbReserved }
+    {
+    }
+
+    color& operator=(const color& other)
+    {
+      std::memcpy(this, &other, sizeof(color));
+      return *this;
+    }
+
+    operator RGBQUAD()
+    {
+      return *this;
+    }
+
+    operator RGBTRIPLE()
+    {
+      return { .rgbtBlue = rgbBlue, .rgbtGreen = rgbGreen, .rgbtRed = rgbRed };
+    }
+
+    inline static color from_color_ref(COLORREF color)
+    {
+      return RGBTRIPLE{ .rgbtBlue = GetBValue(color), .rgbtGreen = GetGValue(color), .rgbtRed = GetRValue(color) };
+    }
+
+    inline static color from_wic_color(std::uint32_t color)
+    {
+      return RGBQUAD{ .rgbBlue = GetRValue(color), .rgbGreen = GetGValue(color), .rgbRed = GetBValue(color), .rgbReserved = LOBYTE((color) >> 24) };
+    }
+
+    std::uint32_t to_color_ref()
+    {
+      return RGB(rgbRed, rgbGreen, rgbBlue);
+    }
+
+    std::uint32_t to_wic_color()
+    {
+      auto temp = RGB(rgbBlue, rgbGreen, rgbRed);
+      std::uint32_t alpha = rgbReserved;
+      alpha = alpha << 24;
+      return temp | alpha;
+    }
+  };
+
+  static_assert(std::is_standard_layout_v<color>);
+
   struct rect : ::RECT
   {
     auto Offset(int dx, int dy)
@@ -102,7 +162,7 @@ namespace win32
 
     auto get_system_metrics_for_dpi = (std::add_pointer_t<decltype(GetSystemMetricsForDpi)>)::GetProcAddress(user32, "GetSystemMetricsForDpi");
 
-    
+
     if (get_system_metrics_for_dpi)
     {
       return get_system_metrics_for_dpi(index, get_current_dpi());

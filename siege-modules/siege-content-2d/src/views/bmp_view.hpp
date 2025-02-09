@@ -32,7 +32,8 @@ namespace siege::views
     win32::image_list bitmap_actions_icons;
 
     std::size_t current_frame_index = 0;
-    win32::gdi::bitmap current_frame;
+    win32::wic::bitmap empty{1, 1, win32::wic::pixel_format::bgr_32bpp};
+    win32::wic::bitmap_source* current_frame = &empty;
     win32::popup_menu frame_selection_menu;
     win32::popup_menu image_export_menu;
     win32::popup_menu export_single_menu;
@@ -41,7 +42,7 @@ namespace siege::views
     win32::gdi::bitmap preview_bitmap;
     WICRect viewport;
     WICRect previous_viewport;
-    float scale = NAN;
+    float scale = 0;
     bool is_panning = false;
     std::optional<POINTS> last_mouse_position = std::nullopt;
     std::function<bool()> pan_timer;
@@ -262,8 +263,7 @@ namespace siege::views
                 }
 
                 previous_viewport = WICRect{};
-                auto frame_size = controller.get_size(current_frame_index);
-                controller.convert(current_frame_index, frame_size, 32, current_frame.get_pixels_as_bytes());
+                current_frame = &controller.get_frame(current_frame_index);
                 resize_preview(true);
               });
             }
@@ -273,8 +273,7 @@ namespace siege::views
             previous_viewport = WICRect{};
             current_frame_index = selection - 1;
             auto frame_size = controller.get_size(current_frame_index);
-            current_frame = win32::gdi::bitmap(SIZE{ .cx = frame_size.width, .cy = frame_size.height });
-            controller.convert(current_frame_index, frame_size, 32, current_frame.get_pixels_as_bytes());
+            current_frame = &controller.get_frame(current_frame_index);
             resize_preview(true);
           }
         }
@@ -326,12 +325,9 @@ namespace siege::views
                     for (auto i = 0u; i < controller.get_frame_count(); ++i)
                     {
                       auto frame_size = controller.get_size(i);
-                      auto temp = win32::gdi::bitmap(SIZE{ .cx = frame_size.width, .cy = frame_size.height });
-                      controller.convert(i, frame_size, 32, temp.get_pixels_as_bytes());
-
+                      auto ref = controller.get_frame(i);
                       auto frame = encoder->create_new_frame();
-                      win32::wic::bitmap source(temp, win32::wic::alpha_channel_option::WICBitmapUseAlpha);
-                      frame.write_source(source);
+                      frame.write_source(ref);
                       frame.commit();
                     }
 
@@ -348,13 +344,11 @@ namespace siege::views
                       std::ofstream stream(filename, std::ios::trunc);
                       auto encoder = creator->second(filename);
 
-                      auto frame_size = controller.get_size(i);
-                      auto temp = win32::gdi::bitmap(SIZE{ .cx = frame_size.width, .cy = frame_size.height });
-                      controller.convert(i, frame_size, 32, temp.get_pixels_as_bytes());
-
+                      
                       auto frame = encoder->create_new_frame();
-                      win32::wic::bitmap source(temp, win32::wic::alpha_channel_option::WICBitmapUseAlpha);
-                      frame.write_source(source);
+                      
+                      auto ref = controller.get_frame(i);
+                      frame.write_source(ref);
                       frame.commit();
                       encoder->commit();
                     }
@@ -365,8 +359,7 @@ namespace siege::views
                     std::ofstream stream(filename, std::ios::trunc);
                     auto encoder = creator->second(filename);
                     auto frame = encoder->create_new_frame();
-                    win32::wic::bitmap source(current_frame, win32::wic::alpha_channel_option::WICBitmapUseAlpha);
-                    frame.write_source(source);
+                    frame.write_source(*current_frame);
                     frame.commit();
                     encoder->commit();
                   }
@@ -515,7 +508,7 @@ namespace siege::views
 
     void resize_preview(bool force = false)
     {
-      if (scale != NAN && current_frame)
+      if (scale != 0 && current_frame)
       {
         auto frame_size = controller.get_size(current_frame_index);
 
@@ -581,8 +574,8 @@ namespace siege::views
         {
           preview_bitmap = win32::gdi::bitmap(preview_size, win32::gdi::bitmap::skip_shared_handle);
 
-          win32::wic::bitmap(current_frame, win32::wic::alpha_channel_option::WICBitmapUseAlpha)
-            .clip(viewport)
+          current_frame
+             ->clip(viewport)
             .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
             .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
 
@@ -604,8 +597,8 @@ namespace siege::views
         }
         else if (force && std::memcmp(&viewport, &previous_viewport, sizeof(viewport)) != 0)
         {
-          win32::wic::bitmap(current_frame, win32::wic::alpha_channel_option::WICBitmapUseAlpha)
-            .clip(viewport)
+          current_frame
+            ->clip(viewport)
             .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
             .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
 
@@ -767,8 +760,7 @@ namespace siege::views
         {
           auto size = static_image.GetClientSize();
           auto frame_size = controller.get_size(current_frame_index);
-          current_frame = win32::gdi::bitmap(SIZE{ .cx = frame_size.width, .cy = frame_size.height });
-          controller.convert(current_frame_index, frame_size, 32, current_frame.get_pixels_as_bytes());
+          current_frame = &controller.get_frame(current_frame_index);
           viewport = WICRect();
           viewport.Width = (INT)frame_size.width;
           viewport.Height = (INT)frame_size.height;

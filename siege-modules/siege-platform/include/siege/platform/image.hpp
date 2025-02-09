@@ -8,6 +8,10 @@
 #include <span>
 #include <siege/platform/bitmap.hpp>
 
+#if WIN32
+#include <siege/platform/win/wic.hpp>
+#endif
+
 namespace siege::platform::bitmap
 {
   bool is_png(std::istream& raw_data);
@@ -31,7 +35,6 @@ namespace siege::platform::bitmap
 
     size(int width, int height) : width(width), height(height)
     {
-
     }
 
     size(std::pair<int, int> pair) : width(pair.first), height(pair.second)
@@ -54,9 +57,16 @@ namespace siege::platform::bitmap
 
     std::size_t frame_count() const noexcept;
     size get_size(std::size_t frame) const noexcept;
-    std::size_t convert(std::size_t frame, size size, int bits, std::span<std::byte> destination) const noexcept;
+
+#if WIN32
+    inline win32::wic::bitmap_source& at(std::size_t frame)
+    {
+      return frames.at(frame);
+    }
+
   private:
-    std::vector<std::any> frames;
+    std::vector<win32::wic::bitmap_source> frames;
+#endif
   };
 }// namespace siege::platform::bitmap
 

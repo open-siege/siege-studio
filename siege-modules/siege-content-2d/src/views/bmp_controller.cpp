@@ -235,14 +235,4 @@ namespace siege::views
 
     return {};
   }
-
-  std::size_t bmp_controller::convert(std::size_t frame, size size, int bits, std::span<std::byte> destination) const noexcept
-  {
-    if (original_image)
-    {
-      return original_image->convert(frame, size, bits, destination);
-    }
-
-    return 0;
-  }
 }// namespace siege::views

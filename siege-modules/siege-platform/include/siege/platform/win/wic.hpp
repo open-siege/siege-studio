@@ -71,15 +71,101 @@ namespace win32::wic
     }
   };
 
+  class bitmap_source;
+
   class palette
   {
   public:
+    static palette null()
+    {
+      return palette();
+    }
+
+    palette(bitmap_source& source, std::uint32_t colour_count = 256, bool add_transparent_color = false);
+
+    palette(std::span<color> colors)
+    {
+      hresult_throw_on_error(bitmap_factory::instance().CreatePalette(instance.put()));
+
+      std::vector<WICColor> temp;
+      temp.resize(colors.size());
+
+      std::transform(colors.begin(), colors.end(), temp.begin(), [](auto value) { return value.to_wic_color(); });
+      hresult_throw_on_error(instance->InitializeCustom(temp.data(), (UINT)colors.size()));
+    }
+
+    palette(WICBitmapPaletteType type, bool add_transparent_color = false)
+    {
+      hresult_throw_on_error(bitmap_factory::instance().CreatePalette(instance.put()));
+      hresult_throw_on_error(instance->InitializePredefined(type, add_transparent_color ? TRUE : FALSE));
+    }
+
+    palette(const palette& other)
+    {
+      hresult_throw_on_error(bitmap_factory::instance().CreatePalette(instance.put()));
+      
+      if (other.instance)
+      {
+        hresult_throw_on_error(instance->InitializeFromPalette(other.instance.get()));
+      }
+    }
+
+    bool has_alpha()
+    {
+      BOOL result;
+      hresult_throw_on_error(instance->HasAlpha(&result));
+      return result == TRUE;
+    }
+
+    bool is_black_white()
+    {
+      BOOL result;
+      hresult_throw_on_error(instance->IsBlackWhite(&result));
+      return result == TRUE;
+    }
+
+    bool is_grayscale()
+    {
+      BOOL result;
+      hresult_throw_on_error(instance->IsGrayscale(&result));
+      return result == TRUE;
+    }
+
+    WICBitmapPaletteType get_type()
+    {
+      WICBitmapPaletteType result;
+      hresult_throw_on_error(instance->GetType(&result));
+      return result;
+    }
+
+    std::uint32_t get_color_count()
+    {
+      std::uint32_t count;
+      hresult_throw_on_error(instance->GetColorCount(&count));
+      return count;
+    }
+
+    std::vector<color> get_colors()
+    {
+      std::vector<WICColor> wic_colors;
+      wic_colors.resize(get_color_count());
+      hresult_throw_on_error(instance->GetColors((UINT)wic_colors.size(), wic_colors.data(), nullptr));
+
+      std::vector<color> colors;
+      colors.resize(wic_colors.size());
+      std::transform(wic_colors.begin(), wic_colors.end(), colors.begin(), [](WICColor value) { return color::from_wic_color(value); });
+      return colors;
+    }
+
     win32::com::com_ptr<IWICPalette> handle()
     {
       return instance.as<IWICPalette>();
     }
 
   private:
+    palette()
+    {
+    }
     win32::com::com_ptr<IWICPalette> instance;
   };
 
@@ -89,7 +175,9 @@ namespace win32::wic
   public:
     bitmap_source(bitmap_source&&) = default;
     bitmap_source(const bitmap_source&) = default;
-
+    bitmap_source& operator=(const bitmap_source&) = default;
+    bitmap_source& operator=(bitmap_source&&) = default;
+    
     bitmap_source(com::com_ptr<IWICBitmapSource> instance) : instance(std::move(instance))
     {
     }
@@ -98,7 +186,7 @@ namespace win32::wic
     {
       pixel_format format;
       dither_type dither_type = dither_type::WICBitmapDitherTypeNone;
-      palette palette;
+      palette palette = palette::null();
       double alpha_threshold_percent;
       palette_type palette_type = palette_type::WICBitmapPaletteTypeCustom;
     };
@@ -157,7 +245,6 @@ namespace win32::wic
     {
       if (source)
       {
-
         hresult_throw_on_error(instance->CopyPixels(&*source, stride, (UINT)buffer.size(), (BYTE*)buffer.data()));
       }
       else
@@ -181,6 +268,13 @@ namespace win32::wic
     win32::com::com_ptr<IWICBitmapSource> instance;
   };
 
+  inline palette::palette(bitmap_source& source, std::uint32_t colour_count, bool add_transparent_color)
+  {
+    hresult_throw_on_error(bitmap_factory::instance().CreatePalette(instance.put()));
+    auto handle = source.handle();
+    hresult_throw_on_error(instance->InitializeFromBitmap(handle.get(), colour_count, add_transparent_color ? TRUE : FALSE));
+  }
+
   class bitmap_encoder;
 
   class bitmap_frame_encode
@@ -203,6 +297,7 @@ namespace win32::wic
     {
       hresult_throw_on_error(instance->Commit());
     }
+
   private:
     bitmap_frame_encode(IWICBitmapEncoder& encoder) : instance([&] {
                                                         com_ptr<IWICBitmapFrameEncode> temp;
@@ -404,16 +499,18 @@ namespace win32::wic
   class bitmap : public bitmap_source
   {
   public:
-    bitmap(bitmap&& other) noexcept
-    {
-      this->instance.reset(other.instance.release());
-    }
+     using bitmap_source::bitmap_source;
 
-    bitmap& operator=(bitmap&& other) noexcept
-    {
-      this->instance.reset(other.instance.release());
-      return *this;
-    }
+    //bitmap(bitmap&& other) noexcept
+    //{
+    //  this->instance.reset(other.instance.release());
+    //}
+
+    //bitmap& operator=(bitmap&& other) noexcept
+    //{
+    //  this->instance.reset(other.instance.release());
+    //  return *this;
+    //}
 
     bitmap(bitmap_source source, cache_create_option options = cache_create_option::WICBitmapCacheOnLoad)
     {
@@ -453,7 +550,11 @@ namespace win32::wic
     {
     }
 
-
+    void set_palette(palette& palette)
+    {
+      auto handle = palette.handle();
+      hresult_throw_on_error(((IWICBitmap*)instance.get())->SetPalette(handle.get()));
+    }
   private:
     bitmap(HBITMAP bitmap, alpha_channel_option options)
     {

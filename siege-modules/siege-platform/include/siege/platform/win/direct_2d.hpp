@@ -16,6 +16,41 @@ namespace win32::direct2d
 {
   using namespace win32::com;
 
+  struct d2d_color : D2D1_COLOR_F
+  {
+    d2d_color(D2D1_COLOR_F other) : D2D1_COLOR_F{
+                                  .r = other.r,
+                                  .g = other.g,
+                                  .b = other.b,
+                                  .a = other.a
+                                }
+    {
+    }
+
+    d2d_color(RGBQUAD quad) : d2d_color(D2D1::ColorF((float)quad.rgbRed / 255.0f, (float)quad.rgbGreen / 255.0f, (float)quad.rgbBlue / 255.0f, (float)quad.rgbReserved / 255.0f))
+    {
+    }
+
+    d2d_color(RGBTRIPLE triple) : d2d_color(D2D1::ColorF((float)triple.rgbtRed / 255.0f, (float)triple.rgbtGreen / 255.0f, (float)triple.rgbtBlue / 255.0f))
+    {
+    }
+
+    operator D2D1_COLOR_F()
+    {
+      return *this;
+    }
+
+    operator RGBQUAD()
+    {
+      return { .rgbBlue = (BYTE)(b * 255), .rgbGreen = (BYTE)(g * 255), .rgbRed = (BYTE)(r * 255), .rgbReserved = (BYTE)(a * 255) };
+    }
+
+    operator RGBTRIPLE()
+    {
+      return { .rgbtBlue = (BYTE)(b * 255), .rgbtGreen = (BYTE)(g * 255), .rgbtRed = (BYTE)(r * 255) };
+    }
+  };
+
   inline auto& get_factory()
   {
     thread_local com_ptr factory = [] {

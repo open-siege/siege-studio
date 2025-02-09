@@ -77,8 +77,12 @@ namespace siege::views
       return 0;
     }
 
-    std::size_t convert(std::size_t frame, size size, int bits, std::span<std::byte> destination) const noexcept;
-
+    #if WIN32
+    inline win32::wic::bitmap_source& get_frame(std::size_t frame)
+    {
+      return original_image->at(frame);
+    }
+    #endif
   private:
     std::optional<platform::bitmap::platform_image> original_image;
     std::deque<palette_info> palettes;
