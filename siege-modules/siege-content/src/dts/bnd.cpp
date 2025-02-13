@@ -134,7 +134,7 @@ namespace siege::content::bnd
             buffer.resize(next_item.size);
             stream.read(buffer.data(), buffer.size());
 
-            auto read_tmd = [](auto& tmd_stream, auto& shape) {
+            auto read_tmd = [](std::istream& tmd_stream, bnd_shape& shape) {
               tmd_section tmd_section;
               tmd_stream.read((char*)&tmd_section, sizeof(tmd_section));
 
@@ -159,7 +159,7 @@ namespace siege::content::bnd
 
             if (next_item.tag == tmds_tag)
             {
-              std::ispanstream tmd_stream(buffer);
+              std::ispanstream tmd_stream{ std::span<char>(buffer) };
 
               auto& shape = result.shapes.emplace_back();
               read_tmd(tmd_stream, shape);
@@ -183,7 +183,7 @@ namespace siege::content::bnd
               buffer.resize(next_item.size);
               stream.read(buffer.data(), buffer.size());
 
-              std::ispanstream tmd_stream(buffer);
+              std::ispanstream tmd_stream{ std::span<char>(buffer) };
               read_tmd(tmd_stream, collision.shape);
             }
 
@@ -213,7 +213,7 @@ namespace siege::content::bnd
             
             buffer.resize(next_item.size);
             stream.read(buffer.data(), buffer.size());
-            std::ispanstream tim_stream(buffer);
+            std::ispanstream tim_stream{ std::span<char>(buffer) };
             result.textures.emplace_back(tim::get_tim_data_as_bitmap(tim_stream));
           }
         }

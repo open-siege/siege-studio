@@ -80,7 +80,7 @@ namespace siege::content::bwd
       std::vector<char> bwd_data(tag.size - sizeof(tag) - sizeof(std::uint32_t));
       stream.read(bwd_data.data(), bwd_data.size());
 
-      std::ispanstream bwd_stream(bwd_data);
+      std::ispanstream bwd_stream{ std::span<char>(bwd_data) };
 
       std::optional<int> lod_index = std::nullopt;
 

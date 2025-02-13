@@ -436,7 +436,7 @@ namespace siege::resource::prj
       bwd_root.data.resize(bwd_root.tag.size - sizeof(temp) - sizeof(bwd_root.tag));
       stream.read(bwd_root.data.data(), bwd_root.data.size());
 
-      std::ispanstream bwd_stream(bwd_root.data);
+      std::ispanstream bwd_stream{ std::span<char>(bwd_root.data) };
 
       std::vector<iff_data> results;
       results.reserve(16);
