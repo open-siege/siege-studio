@@ -307,11 +307,9 @@ namespace siege::views
       win32::apply_theme(sample.list_box);
       win32::apply_theme(sample.edit);
       win32::apply_theme(sample.tree_view);
-      win32::apply_theme(sample.list_view);
       win32::apply_theme(sample.toolbar);
       win32::apply_theme(sample.static_control);
       win32::apply_theme(sample.tab_control);
-      win32::apply_theme(control_settings);
       win32::apply_theme(options);
       win32::apply_theme(*this);
       options_unbind();

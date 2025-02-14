@@ -632,7 +632,6 @@ namespace siege::views
     {
       if (message.setting == L"ImmersiveColorSet")
       {
-        win32::apply_theme(palettes_list);
         win32::apply_theme(bitmap_actions);
         win32::apply_theme(static_image);
         win32::apply_theme(*this);

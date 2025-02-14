@@ -430,10 +430,6 @@ namespace siege::views
   {
     if (message.setting == L"ImmersiveColorSet")
     {
-      win32::apply_theme(resource_table);
-      win32::apply_theme(launch_table);
-      win32::apply_theme(string_table);
-      win32::apply_theme(controller_table);
       win32::apply_theme(options);
       win32::apply_theme(exe_actions);
       win32::apply_theme(*this);

@@ -89,6 +89,7 @@ namespace siege::views
       win32::set_is_dark_theme(is_dark_mode);
 
       resize_cursor.reset((HCURSOR)LoadImageW(nullptr, IDC_SIZEWE, IMAGE_CURSOR, LR_DEFAULTSIZE, LR_DEFAULTSIZE, LR_SHARED));
+      win32::apply_list_view_theme();
     }
 
     void repopulate_tree_view(std::filesystem::path path)

@@ -676,7 +676,6 @@ namespace siege::views
     {
       if (message.setting == L"ImmersiveColorSet")
       {
-        win32::apply_theme(supported_games_by_engine);
         win32::apply_theme(*this);
 
         return 0;

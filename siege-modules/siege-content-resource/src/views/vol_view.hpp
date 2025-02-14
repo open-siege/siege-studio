@@ -282,11 +282,6 @@ namespace siege::views
 
         recreate_image_list(std::nullopt);
         SendMessageW(table_settings, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
-
-        win32::apply_theme(table);
-        auto header = table.GetHeader();
-        win32::apply_theme(header);
-
         win32::apply_theme(*this);
 
         return 0;

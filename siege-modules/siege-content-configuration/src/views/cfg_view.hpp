@@ -94,17 +94,6 @@ namespace siege::views
 
       return FALSE;
     }
-
-    std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
-    {
-      if (message.setting == L"ImmersiveColorSet")
-      {
-        win32::apply_theme(table);
-        return 0;
-      }
-
-      return std::nullopt;
-    }
   };
 }// namespace siege::views
 
