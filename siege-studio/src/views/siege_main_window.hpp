@@ -90,6 +90,13 @@ namespace siege::views
 
       resize_cursor.reset((HCURSOR)LoadImageW(nullptr, IDC_SIZEWE, IMAGE_CURSOR, LR_DEFAULTSIZE, LR_DEFAULTSIZE, LR_SHARED));
       win32::apply_list_view_theme();
+      win32::apply_header_theme();
+      win32::apply_tree_view_theme();
+      win32::apply_button_theme();
+      win32::apply_list_box_theme();
+      win32::apply_static_control_theme();
+      win32::apply_tab_control_theme();
+      win32::apply_tool_bar_theme();
     }
 
     void repopulate_tree_view(std::filesystem::path path)
@@ -285,10 +292,9 @@ namespace siege::views
 
       tab_context_menu.AppendMenuW(MF_OWNERDRAW, 1, L"Close");
 
-      wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
-
       AddDefaultTab();
 
+      SendMessageW(*this, WM_SETTINGCHANGE, 0, (LPARAM)L"ImmersiveColorSet");
       return 0;
     }
 
@@ -575,11 +581,7 @@ namespace siege::views
             win32::set_color_for_window(this->ref(), win32::properties::static_control::bk_color, bk_color);
             win32::set_color_for_window(this->ref(), win32::properties::static_control::text_color, text_color);
 
-            win32::apply_theme(dir_list);
-            win32::apply_theme(tab_control);
-            win32::apply_theme(separator);
-            win32::apply_theme(close_button);
-            win32::apply_theme(*this);
+            win32::apply_window_theme(*this);
 
             for (auto i = 0; i < tab_control.GetItemCount(); ++i)
             {
@@ -706,6 +708,8 @@ namespace siege::views
         .lpszClass = class_name.c_str(),
       });
 
+      auto ref = child->ref();
+      win32::apply_window_theme(ref);
       assert(child);
 
       auto index = tab_control.GetItemCount();
@@ -786,6 +790,9 @@ namespace siege::views
 
 
           assert(child);
+
+          auto ref = child->ref();
+          win32::apply_window_theme(ref);
 
           COPYDATASTRUCT data{
             .cbData = DWORD(size),
@@ -1048,8 +1055,8 @@ namespace siege::views
             if (folder_info->GetDisplayName(SIGDN_FILESYSPATH, temp.put()) == S_OK)
             {
               for (auto entry = fs::recursive_directory_iterator(std::wstring_view(temp));
-                   entry != fs::recursive_directory_iterator();
-                   ++entry)
+                entry != fs::recursive_directory_iterator();
+                ++entry)
               {
                 if (file_count > 3000)
                 {

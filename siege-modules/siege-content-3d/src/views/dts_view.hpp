@@ -59,7 +59,7 @@ namespace siege::views
       });
 
       selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS | LBS_OWNERDRAWFIXED,
+        .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS,
       });
 
       selection.InsertString(-1, L"Detail Level 1");
@@ -98,8 +98,6 @@ namespace siege::views
       opengl_context.reset(::wglCreateContext(gdi_context));
       assert(opengl_context.get() != nullptr);
 
-      wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
-
       return 0;
     }
 
@@ -129,19 +127,7 @@ namespace siege::views
       };
 
       image_list = win32::create_icon_list(icons, icon_size);
-    }
-
-    std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
-    {
-      if (message.setting == L"ImmersiveColorSet")
-      {
-        win32::apply_theme(selection);
-        win32::apply_theme(shape_actions);
-        win32::apply_theme(*this);
-        return 0;
-      }
-
-      return std::nullopt;
+      SendMessageW(shape_actions, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
     }
 
     auto wm_destroy()

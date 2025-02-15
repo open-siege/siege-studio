@@ -347,9 +347,6 @@ namespace siege::views
         ListView_SetTileInfo(supported_games_by_engine, &item_info);
       }
 
-      wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
-
-
       pending_operation = std::async(std::launch::async, [this]() {
         std::set<std::wstring> search_roots;
 
@@ -670,18 +667,6 @@ namespace siege::views
       }
 
       return 0;
-    }
-
-    std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
-    {
-      if (message.setting == L"ImmersiveColorSet")
-      {
-        win32::apply_theme(*this);
-
-        return 0;
-      }
-
-      return std::nullopt;
     }
 
     auto wm_command()

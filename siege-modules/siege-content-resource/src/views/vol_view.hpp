@@ -278,11 +278,8 @@ namespace siege::views
     {
       if (message.setting == L"ImmersiveColorSet")
       {
-        win32::apply_theme(table_settings);
-
         recreate_image_list(std::nullopt);
         SendMessageW(table_settings, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
-        win32::apply_theme(*this);
 
         return 0;
       }

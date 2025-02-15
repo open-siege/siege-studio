@@ -632,10 +632,6 @@ namespace siege::views
     {
       if (message.setting == L"ImmersiveColorSet")
       {
-        win32::apply_theme(bitmap_actions);
-        win32::apply_theme(static_image);
-        win32::apply_theme(*this);
-
         recreate_image_list(std::nullopt);
         SendMessageW(bitmap_actions, TB_SETIMAGELIST, 0, (LPARAM)bitmap_actions_icons.get());
 

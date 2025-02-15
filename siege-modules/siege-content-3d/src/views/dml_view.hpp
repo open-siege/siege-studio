@@ -20,10 +20,8 @@ namespace siege::views
       auto control_factory = win32::window_factory(ref());
 
       ref_names = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS | LBS_OWNERDRAWFIXED,
+        .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS,
       });
-
-      wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
       return 0;
     }
@@ -34,19 +32,6 @@ namespace siege::views
       ref_names.SetWindowPos(POINT{});
 
       return 0;
-    }
-
-    std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
-    {
-      if (message.setting == L"ImmersiveColorSet")
-      {
-        win32::apply_theme(ref_names);
-        win32::apply_theme(*this);
-
-        return 0;
-      }
-
-      return std::nullopt;
     }
 
     auto wm_copy_data(win32::copy_data_message<char> message)

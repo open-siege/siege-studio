@@ -305,19 +305,17 @@ namespace win32
   };
 
   // user controls
-  void apply_theme(win32::window_ref& control);
-  void apply_theme(win32::button& control);
-  void apply_theme(win32::edit& control);
-  void apply_theme(win32::static_control& control);
-  void apply_theme(win32::list_box& control);
+  void apply_window_theme(win32::window_ref& control);
+  void apply_button_theme(bool remove = false);
+  void apply_static_control_theme(bool remove = false);
+  void apply_list_box_theme(bool remove = false);
 
   // common controls
-  void apply_theme(win32::tree_view& control);
-  void apply_theme(win32::list_view& control);
-  void apply_theme(win32::tab_control& control);
-  void apply_theme(win32::header& control);
-  void apply_theme(win32::tool_bar& control);
-  void apply_theme(win32::track_bar& control);
+  void apply_tree_view_theme(bool remove = false);
+  void apply_list_view_theme(bool remove = false);
+  void apply_tab_control_theme(bool remove = false);
+  void apply_header_theme(bool remove = false);
+  void apply_tool_bar_theme(bool remove = false);
 }// namespace win32
 
 #endif

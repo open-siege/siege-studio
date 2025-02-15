@@ -31,8 +31,6 @@ namespace siege::views
 
       ::SendMessageW(logo, STM_SETIMAGE, IMAGE_ICON, (LPARAM)logo_icon.get());
 
-      wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
-
       return 0;
     }
 
@@ -51,20 +49,6 @@ namespace siege::views
       }
 
       return 0;
-    }
-
-    std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
-    {
-      if (message.setting == L"ImmersiveColorSet")
-      {
-        win32::apply_theme(heading);
-        win32::apply_theme(logo);
-        win32::apply_theme(*this);
-
-        return 0;
-      }
-
-      return std::nullopt;
     }
 
     std::optional<LRESULT> wm_close()

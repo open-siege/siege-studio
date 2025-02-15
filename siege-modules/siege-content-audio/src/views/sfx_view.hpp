@@ -48,7 +48,7 @@ namespace siege::views
       player_buttons.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS);
 
       selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS | LBS_OWNERDRAWFIXED });
+        .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS });
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
@@ -132,11 +132,8 @@ namespace siege::views
     {
       if (message.setting == L"ImmersiveColorSet")
       {
-        win32::apply_theme(selection);
         recreate_image_list(std::nullopt);
         SendMessageW(player_buttons, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
-        win32::apply_theme(player_buttons);
-        win32::apply_theme(*this);
 
         return 0;
       }

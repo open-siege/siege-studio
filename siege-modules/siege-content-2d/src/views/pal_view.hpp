@@ -33,28 +33,11 @@ namespace siege::views
       render_view.bind_custom_draw({ .wm_draw_item = std::bind_front(&pal_view::render_view_wm_draw_item, this) });
 
       selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS | LBS_OWNERDRAWFIXED });
+        .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
       selection_unbind = selection.bind_lbn_sel_change(std::bind_front(&pal_view::selection_lbn_sel_change, this));
 
-      wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
-
       return 0;
-    }
-
-    std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
-    {
-      if (message.setting == L"ImmersiveColorSet")
-      {
-        win32::apply_theme(selection);
-        win32::apply_theme(*this);
-        selection_unbind();
-        selection_unbind = selection.bind_lbn_sel_change(std::bind_front(&pal_view::selection_lbn_sel_change, this));
-
-        return 0;
-      }
-
-      return std::nullopt;
     }
 
     auto wm_size(std::size_t type, SIZE client_size)

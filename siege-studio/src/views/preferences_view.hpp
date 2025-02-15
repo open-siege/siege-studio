@@ -160,7 +160,7 @@ namespace siege::views
       sample.toolbar.InsertButton(-1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR) const_cast<wchar_t*>(L"Sample") });
 
       sample.list_box = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS | LBS_OWNERDRAWFIXED });
+        .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS });
 
       sample.list_box.InsertString(-1, L"Sample");
       sample.list_box.InsertString(-1, L"List");
@@ -178,7 +178,7 @@ namespace siege::views
       sample.tab_control.InsertItem(-1, TCITEMW{ .mask = TCIF_TEXT, .pszText = const_cast<wchar_t*>(L"Sample") });
 
       options = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS | LBS_OWNERDRAWFIXED });
+        .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
       options.InsertString(-1, L"Theming (Simple)");
       options.InsertString(-1, L"Theming (Advanced)");
@@ -302,16 +302,6 @@ namespace siege::views
       auto copy_count = unique_colors.size() > colors.size() ? colors.size() : unique_colors.size();
       std::copy_n(unique_colors.begin(), copy_count, colors.begin());
 
-      win32::apply_theme(sample.button);
-      win32::apply_theme(sample.header);
-      win32::apply_theme(sample.list_box);
-      win32::apply_theme(sample.edit);
-      win32::apply_theme(sample.tree_view);
-      win32::apply_theme(sample.toolbar);
-      win32::apply_theme(sample.static_control);
-      win32::apply_theme(sample.tab_control);
-      win32::apply_theme(options);
-      win32::apply_theme(*this);
       options_unbind();
       options_unbind = options.bind_lbn_sel_change(std::bind_front(&preferences_view::options_lbn_sel_change, this));
 
@@ -446,9 +436,6 @@ namespace siege::views
 
             context->value = dialog.rgbResult;
             win32::set_color_for_window(theme_properties.ref(), context->key, dialog.rgbResult);
-            win32::apply_theme(sample.button);
-            win32::apply_theme(sample.header);
-            win32::apply_theme(sample.list_box);
           }
         }
       }

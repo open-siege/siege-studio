@@ -18,7 +18,7 @@ namespace siege::views
     auto control_factory = win32::window_factory(ref());
 
     options = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-      .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS | LBS_OWNERDRAWFIXED });
+      .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
     options_unbind = options.bind_lbn_sel_change(std::bind_front(&exe_view::options_lbn_sel_change, this));
     options.InsertString(-1, L"Resources");
@@ -430,15 +430,8 @@ namespace siege::views
   {
     if (message.setting == L"ImmersiveColorSet")
     {
-      win32::apply_theme(options);
-      win32::apply_theme(exe_actions);
-      win32::apply_theme(*this);
-      options_unbind(); 
-      options_unbind = options.bind_lbn_sel_change(std::bind_front(&exe_view::options_lbn_sel_change, this));
-
       recreate_image_lists(std::nullopt);
       SendMessageW(exe_actions, TB_SETIMAGELIST, 0, (LPARAM)exe_actions_icons.get());
-
 
       return 0;
     }
