@@ -82,21 +82,4 @@ add_dependencies(siege-studio siege-studio-dependencies)
 
 if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/siege-launcher)
     add_subdirectory(siege-launcher)
-    add_custom_target(siege-launcher-dependencies ALL COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:siege-launcher>)
-    add_dependencies(siege-launcher-dependencies siege-studio-dependencies siege-configuration)
-    add_dependencies(siege-launcher siege-launcher-dependencies)
-
-    add_custom_command(TARGET siege-launcher-dependencies POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-content-2d> $<TARGET_FILE_DIR:siege-launcher>
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-content-3d> $<TARGET_FILE_DIR:siege-launcher>
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-content-resource> $<TARGET_FILE_DIR:siege-launcher>
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-content-audio> $<TARGET_FILE_DIR:siege-launcher>)
-
-    if (WIN32)
-        foreach(EXT_TARGET IN ITEMS ${EXT_TARGETS})
-            add_dependencies(siege-launcher-dependencies ${EXT_TARGET})
-            add_custom_command(TARGET siege-launcher-dependencies POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${EXT_TARGET}> $<TARGET_FILE_DIR:siege-launcher>)
-        endforeach()
-    endif()
 endif()
