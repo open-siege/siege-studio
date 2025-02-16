@@ -198,12 +198,22 @@ namespace win32
 
         if (EnumThreadWindows(GetCurrentThreadId(), callback::do_callback, (LPARAM)&menu_bar_info) == FALSE && menu_bar_info.hMenu)
         {
-          MENUITEMINFOW item_info{ .cbSize = sizeof(MENUITEMINFO), .fMask = MIIM_FTYPE };
+          MENUITEMINFOW item_info{ .cbSize = sizeof(MENUITEMINFO), .fMask = MIIM_FTYPE | MIIM_BITMAP };
 
           for (auto i = 0; i < GetMenuItemCount(menu_bar_info.hMenu); ++i)
           {
             if (GetMenuItemInfoW(menu_bar_info.hMenu, i, TRUE, &item_info))
             {
+              if (item_info.fType & MFT_BITMAP && item_info.hbmpItem)
+              {
+                ::BITMAP bitmap_info{};
+                if (::GetObject(item_info.hbmpItem, sizeof(bitmap_info), &bitmap_info) > 0)
+                {
+                  char_size.cy = bitmap_info.bmHeight;
+                  break;
+                }
+              }
+
               if (item_info.fType & MFT_MENUBARBREAK)
               {
                 char_size.cy += GetSystemMetrics(SM_CYMENU);
@@ -323,77 +333,6 @@ namespace win32
         if (result)
         {
           return *result;
-        }
-
-        if (message == WM_NCHITTEST)
-        {
-          MENUBARINFO menu_bar_info{ .cbSize = sizeof(MENUBARINFO) };
-
-          if (GetMenuBarInfo(hWnd, OBJID_MENU, 0, &menu_bar_info) && menu_bar_info.hMenu)
-          {
-            auto x = GET_X_LPARAM(lParam);
-            auto y = GET_Y_LPARAM(lParam);
-
-            if (::PtInRect(&menu_bar_info.rcBar, POINT{ .x = x, .y = y }))
-            {
-              auto menu_height = GetSystemMetrics(SM_CYMENU);
-
-              auto item = MenuItemFromPoint(hWnd, menu_bar_info.hMenu, POINT{ .x = x, .y = menu_bar_info.rcBar.top });
-
-              for (auto i = 0; i < GetMenuItemCount(menu_bar_info.hMenu); ++i)
-              {
-                HiliteMenuItem(hWnd, menu_bar_info.hMenu, i, MF_BYPOSITION | MF_UNHILITE);
-              }
-
-              if (item != -1)
-              {
-                HiliteMenuItem(hWnd, menu_bar_info.hMenu, item, MF_BYPOSITION | MF_HILITE);
-              }
-
-              return HTMENU;
-            }
-          }
-        }
-
-        if ((message == WM_NCLBUTTONDOWN || message == WM_NCLBUTTONUP) && wParam == HTMENU && lParam)
-        {
-          MENUBARINFO menu_bar_info{ .cbSize = sizeof(MENUBARINFO) };
-
-          if (GetMenuBarInfo(hWnd, OBJID_MENU, 0, &menu_bar_info) && menu_bar_info.hMenu)
-          {
-            auto x = GET_X_LPARAM(lParam);
-            auto y = GET_Y_LPARAM(lParam);
-
-            if (::PtInRect(&menu_bar_info.rcBar, POINT{ .x = x, .y = y }))
-            {
-              auto menu_height = GetSystemMetrics(SM_CYMENU);
-
-              auto item = MenuItemFromPoint(hWnd, menu_bar_info.hMenu, POINT{ .x = x, .y = y });
-
-              if (item == -1 || item == GetMenuItemCount(menu_bar_info.hMenu) - 1)
-              {
-                item = MenuItemFromPoint(hWnd, menu_bar_info.hMenu, POINT{ .x = x, .y = menu_bar_info.rcBar.top });
-
-                if (item != -1)
-                {
-                  auto mouse_flag = message == WM_NCLBUTTONDOWN ? (DWORD)MOUSEEVENTF_LEFTDOWN : (DWORD)MOUSEEVENTF_LEFTUP;
-
-                  auto target_rect = menu_bar_info.rcBar;
-                  target_rect.bottom = target_rect.top + (menu_bar_info.rcBar.bottom - menu_bar_info.rcBar.top) / 2;
-
-                  auto new_y = target_rect.bottom - y - 1;
-
-                  INPUT simulated_input{
-                    .type = INPUT_MOUSE, .mi{ .dx = 0, .dy = new_y, .dwFlags = MOUSEEVENTF_MOVE | mouse_flag }
-                  };
-
-                  SendInput(1, &simulated_input, sizeof(INPUT));
-                }
-
-                return 0;
-              }
-            }
-          }
         }
 
         if (message == WM_NCPAINT || message == WM_NCACTIVATE)

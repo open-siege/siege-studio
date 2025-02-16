@@ -63,6 +63,10 @@ namespace siege::views
     bool is_dark_mode = false;
 
     std::filesystem::path initial_working_dir;
+    win32::gdi::bitmap menu_sizer = [] {
+      win32::gdi::bitmap result(SIZE{ 1, ::GetSystemMetrics(SM_CYSIZE) * 2 }, win32::gdi::bitmap::skip_shared_handle);
+      return result;
+    }();
 
     siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self), tab_control(nullptr)
     {
@@ -288,7 +292,7 @@ namespace siege::views
       main_menu.AppendMenuW(MF_POPUP | MF_OWNERDRAW, (UINT_PTR)popup_menus[0].get(), L"File");
       main_menu.AppendMenuW(MF_POPUP | MF_OWNERDRAW, (UINT_PTR)popup_menus[1].get(), L"Edit");
       main_menu.AppendMenuW(MF_POPUP | MF_OWNERDRAW, (UINT_PTR)popup_menus[2].get(), L"Help");
-      main_menu.AppendMenuW(MF_MENUBARBREAK | MF_OWNERDRAW, id++);
+      main_menu.AppendMenuW(MF_BITMAP, id++, std::wstring_view((wchar_t*)menu_sizer.get(), sizeof(void*)));
 
       tab_context_menu.AppendMenuW(MF_OWNERDRAW, 1, L"Close");
 
@@ -580,6 +584,13 @@ namespace siege::views
             win32::set_color_for_window(this->ref(), win32::properties::menu::text_highlight_color, text_highlight_color);
             win32::set_color_for_window(this->ref(), win32::properties::static_control::bk_color, bk_color);
             win32::set_color_for_window(this->ref(), win32::properties::static_control::text_color, text_color);
+
+            for (auto& pixel : menu_sizer.get_pixels())
+            {
+              pixel.rgbRed = GetRValue(bk_color);
+              pixel.rgbBlue = GetBValue(bk_color);
+              pixel.rgbGreen = GetGValue(bk_color);
+            }
 
             win32::apply_window_theme(*this);
 
