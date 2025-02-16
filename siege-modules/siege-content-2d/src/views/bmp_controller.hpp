@@ -52,10 +52,10 @@ namespace siege::views
     using get_embedded_pal_filenames = std::set<std::filesystem::path>(std::filesystem::path);
     using resolve_embedded_pal = std::vector<char>(std::filesystem::path);
 
-    std::future<const std::deque<palette_info>&>
+    std::shared_future<const std::deque<palette_info>&>
       load_palettes_async(std::optional<std::filesystem::path> folder_hint, std::move_only_function<get_embedded_pal_filenames>, std::move_only_function<resolve_embedded_pal>);
 
-    std::size_t load_bitmap(std::istream& image_stream, const std::future<const std::deque<palette_info>&>&) noexcept;
+    std::size_t load_bitmap(std::istream& image_stream, std::shared_future<const std::deque<palette_info>&>) noexcept;
 
     enum class colour_strategy : int
     {

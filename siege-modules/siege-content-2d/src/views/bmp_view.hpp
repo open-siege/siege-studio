@@ -32,7 +32,7 @@ namespace siege::views
     win32::image_list bitmap_actions_icons;
 
     std::size_t current_frame_index = 0;
-    win32::wic::bitmap empty{1, 1, win32::wic::pixel_format::bgr_32bpp};
+    win32::wic::bitmap empty{ 1, 1, win32::wic::pixel_format::bgr_32bpp };
     win32::wic::bitmap_source* current_frame = &empty;
     win32::popup_menu frame_selection_menu;
     win32::popup_menu image_export_menu;
@@ -50,6 +50,8 @@ namespace siege::views
 
     win32::static_control static_image;
     std::list<platform::storage_module> loaded_modules;
+
+    std::future<void> pending_ui_update;
 
     win32::local_atom pbmp_id = win32::local_atom(L".pbm");
     win32::local_atom bmp_id = win32::local_atom(L".bmp");
@@ -177,6 +179,8 @@ namespace siege::views
         header.SetWindowStyle(style | HDS_FLAT | HDS_NOSIZING | HDS_FILTERBAR);
         return palettes_list;
       }();
+
+      palettes_list.bind_lvn_item_changed(std::bind_front(&bmp_view::palette_list_item_changed, this));
 
       static_image = *factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
         .hwndParent = *this,
@@ -336,7 +340,7 @@ namespace siege::views
                   else if (filename.stem() == "multiple")
                   {
                     filename = path->replace_extension(extension);
-                    
+
                     auto stem = filename.stem().wstring();
                     for (auto i = 0u; i < controller.get_frame_count(); ++i)
                     {
@@ -344,9 +348,9 @@ namespace siege::views
                       std::ofstream stream(filename, std::ios::trunc);
                       auto encoder = creator->second(filename);
 
-                      
+
                       auto frame = encoder->create_new_frame();
-                      
+
                       auto ref = controller.get_frame(i);
                       frame.write_source(ref);
                       frame.commit();
@@ -429,6 +433,19 @@ namespace siege::views
       };
 
       bitmap_actions_icons = win32::create_icon_list(icons, icon_size);
+    }
+
+    void palette_list_item_changed(win32::list_view sender, const NMLISTVIEW& info)
+    {
+      // Taken from ListView_GetCheckState
+      BOOL is_checked = (BOOL)(UINT)(info.uNewState >> 12) - 1;
+      if (is_checked)
+      {
+        // TODO update the palette of the currently selected image
+      }
+      else
+      {
+      }
     }
 
     auto wm_mouse_button_down(std::size_t wparam, POINTS mouse_position)
@@ -575,7 +592,7 @@ namespace siege::views
           preview_bitmap = win32::gdi::bitmap(preview_size, win32::gdi::bitmap::skip_shared_handle);
 
           current_frame
-             ->clip(viewport)
+            ->clip(viewport)
             .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
             .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
 
@@ -648,9 +665,9 @@ namespace siege::views
 
       if (bmp_controller::is_bmp(stream))
       {
-        std::unordered_map<std::filesystem::path, siege::platform::storage_module::context_ptr> loaded_contexts;
+        static std::unordered_map<std::filesystem::path, siege::platform::storage_module::context_ptr> loaded_contexts;
 
-        auto task = controller.load_palettes_async(
+        auto pending_load = controller.load_palettes_async(
           std::nullopt, [&](auto path) {
           
           siege::platform::storage_info info{
@@ -689,13 +706,13 @@ namespace siege::views
 
             if (is_pal)
             {
-              results.emplace(std::move(file));
+              results.emplace(file);
             }
           }
 
           if (!results.empty())
           {
-            loaded_contexts.emplace(std::move(path), std::move(context.value()));
+            loaded_contexts.emplace(path, std::move(context.value()));
           }
 
           return results; },
@@ -719,7 +736,7 @@ namespace siege::views
             return std::vector<char>{};
           });
 
-        auto count = controller.load_bitmap(stream, task);
+        auto count = controller.load_bitmap(stream, pending_load);
 
         frame_selection_menu = win32::popup_menu();
 
@@ -766,41 +783,43 @@ namespace siege::views
 
           resize_preview();
 
-          auto& palettes = task.get();
-          auto selection = controller.get_selected_palette();
-          auto p = 1u;
-          std::vector<win32::list_view_group> groups;
+          pending_ui_update = std::async(std::launch::async, [this](auto pending_load) {
+                auto& palettes = pending_load.get();
+                loaded_contexts.clear();
+                auto selection = controller.get_selected_palette();
+                auto p = 1u;
+                std::vector<win32::list_view_group> groups;
 
-          auto index = 0;
-          auto selected_index = 0;
+                auto index = 0;
+                auto selected_index = 0;
 
-          for (auto& pal : palettes)
-          {
-            std::vector<win32::list_view_item> items;
-            items.reserve(pal.children.size());
+                for (auto& pal : palettes)
+                {
+                  std::vector<win32::list_view_item> items;
+                  items.reserve(pal.children.size());
 
-            auto c = 1u;
+                  auto c = 1u;
 
-            for (auto& child : pal.children)
-            {
-              auto& child_item = items.emplace_back(win32::list_view_item(L"Palette " + std::to_wstring(c++)));
+                  for (auto& child : pal.children)
+                  {
+                    auto& child_item = items.emplace_back(win32::list_view_item(L"Palette " + std::to_wstring(c++)));
 
-              if (selection.first->path == pal.path && selection.second == (c - 2))
-              {
-                selected_index = index;
-              }
+                    if (selection.first->path == pal.path && selection.second == (c - 2))
+                    {
+                      selected_index = index;
+                    }
 
-              index++;
-            }
+                    index++;
+                  }
 
-            auto& new_group = groups.emplace_back(pal.path.filename().wstring(), std::move(items));
-            new_group.state = LVGS_COLLAPSIBLE;
-          }
+                  auto& new_group = groups.emplace_back(pal.path.filename().wstring(), std::move(items));
+                  new_group.state = LVGS_COLLAPSIBLE;
+                }
 
-          palettes_list.InsertGroups(groups);
+                palettes_list.InsertGroups(groups);
 
-          ListView_SetCheckState(palettes_list, selected_index, TRUE);
-          ListView_SetItemState(palettes_list, selected_index, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+                ListView_SetCheckState(palettes_list, selected_index, TRUE);
+                ListView_SetItemState(palettes_list, selected_index, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED); }, pending_load);
 
           return TRUE;
         }

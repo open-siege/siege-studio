@@ -55,7 +55,7 @@ namespace siege::views
     return temp;
   }
 
-  std::future<const std::deque<palette_info>&> bmp_controller::load_palettes_async(std::optional<std::filesystem::path> folder_hint,
+  std::shared_future<const std::deque<palette_info>&> bmp_controller::load_palettes_async(std::optional<std::filesystem::path> folder_hint,
     std::move_only_function<get_embedded_pal_filenames> get_palettes,
     std::move_only_function<resolve_embedded_pal> resolve_data)
   {
@@ -140,10 +140,10 @@ namespace siege::views
         selected_palette = 0;
 
         return palettes;
-      });
+      }).share();
   }
 
-  std::size_t bmp_controller::load_bitmap(std::istream& image_stream, const std::future<const std::deque<palette_info>&>& pending_load) noexcept
+  std::size_t bmp_controller::load_bitmap(std::istream& image_stream, std::shared_future<const std::deque<palette_info>&> pending_load) noexcept
   {
     using namespace siege::content;
 
