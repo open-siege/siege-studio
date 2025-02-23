@@ -441,6 +441,24 @@ namespace siege::views
       BOOL is_checked = (BOOL)(UINT)(info.uNewState >> 12) - 1;
       if (is_checked)
       {
+        auto* palette = (content::pal::palette*)info.lParam;
+
+        if (palette)
+        {
+          std::vector<win32::color> colors;
+
+          colors.reserve(palette->colours.size());
+
+          for (auto& color : palette->colours)
+          {
+            colors.emplace_back(RGBTRIPLE{ .rgbtBlue = (BYTE)color.blue, .rgbtGreen = (BYTE)color.green, .rgbtRed = (BYTE)color.red });
+          }
+
+          auto wic_palette = win32::wic::palette(colors);
+          previous_viewport = WICRect{};
+          resize_preview(true, wic_palette);
+
+        }
         // TODO update the palette of the currently selected image
       }
       else
@@ -523,7 +541,7 @@ namespace siege::views
       return 0;
     }
 
-    void resize_preview(bool force = false)
+    void resize_preview(bool force = false, std::optional<win32::wic::palette> palette = std::nullopt)
     {
       if (scale != 0 && current_frame)
       {
@@ -591,10 +609,27 @@ namespace siege::views
         {
           preview_bitmap = win32::gdi::bitmap(preview_size, win32::gdi::bitmap::skip_shared_handle);
 
-          current_frame
-            ->clip(viewport)
-            .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
-            .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
+          if (palette)
+          {
+            current_frame
+              ->clip(viewport)
+                .convert(win32::wic::bitmap_source::to_format{
+                .format = win32::wic::pixel_format::indexed_8bpp,
+                .dither_type = dither_type::WICBitmapDitherTypeSolid,
+                .palette = *palette,
+                .palette_type = palette_type::WICBitmapPaletteTypeCustom
+                  })
+              .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
+              .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
+
+          }
+          else
+          {
+            current_frame
+              ->clip(viewport)
+              .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
+              .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
+          }
 
 
           auto pixels = preview_bitmap.get_pixels();
@@ -614,10 +649,25 @@ namespace siege::views
         }
         else if (force && std::memcmp(&viewport, &previous_viewport, sizeof(viewport)) != 0)
         {
-          current_frame
-            ->clip(viewport)
-            .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
-            .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
+          if (palette)
+          {
+            current_frame
+              ->clip(viewport)
+              .convert(win32::wic::bitmap_source::to_format{
+                .format = win32::wic::pixel_format::indexed_8bpp,
+                .dither_type = dither_type::WICBitmapDitherTypeSolid,
+                .palette = *palette,
+                .palette_type = palette_type::WICBitmapPaletteTypeCustom })
+              .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
+              .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
+          }
+          else
+          {
+            current_frame
+              ->clip(viewport)
+              .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
+              .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
+          }
 
           auto pixels = preview_bitmap.get_pixels();
 
@@ -803,6 +853,9 @@ namespace siege::views
                   for (auto& child : pal.children)
                   {
                     auto& child_item = items.emplace_back(win32::list_view_item(L"Palette " + std::to_wstring(c++)));
+
+                    child_item.lParam = (LPARAM)&child;
+                    child_item.mask = LVIF_TEXT | LVIF_PARAM;
 
                     if (selection.first->path == pal.path && selection.second == (c - 2))
                     {

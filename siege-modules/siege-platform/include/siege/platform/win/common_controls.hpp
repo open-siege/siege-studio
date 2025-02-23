@@ -258,17 +258,20 @@ namespace win32
     list_view_item(std::wstring text) : ::LVITEMW{}, text(std::move(text)), sub_items{}
     {
       this->pszText = this->text.data();
+      this->mask = LVIF_TEXT;
     }
 
     list_view_item(std::wstring text, int image_index) : ::LVITEMW{ .iImage = image_index }, text(std::move(text)), sub_items{}
     {
       this->pszText = this->text.data();
+      this->mask = LVIF_TEXT | LVIF_IMAGE;
     }
 
     list_view_item(const list_view_item& item) : ::LVITEMW(item), text(item.text), sub_items(item.sub_items)
     {
       this->pszText = text.data();
     }
+
   };
 
   struct list_view_group : ::LVGROUP
@@ -594,53 +597,6 @@ namespace win32
 
     inline wparam_t InsertItem(wparam_t index, LVITEMW item)
     {
-      bool mask_not_set = item.mask == 0;
-
-      if (mask_not_set && item.piColFmt)
-      {
-        item.mask |= LVIF_COLFMT;
-      }
-
-      if (mask_not_set && item.cColumns)
-      {
-        item.mask |= LVIF_COLUMNS;
-      }
-
-      if (mask_not_set && item.iGroupId)
-      {
-        item.mask |= LVIF_GROUPID;
-      }
-
-      if (mask_not_set && item.iImage)
-      {
-        item.mask |= LVIF_IMAGE;
-      }
-
-      if (mask_not_set && item.iIndent)
-      {
-        item.mask |= LVIF_INDENT;
-      }
-
-      if (mask_not_set && item.pszText == LPSTR_TEXTCALLBACKW)
-      {
-        item.mask |= LVIF_NORECOMPUTE;
-      }
-
-      if (mask_not_set && item.lParam)
-      {
-        item.mask |= LVIF_PARAM;
-      }
-
-      if (mask_not_set && item.state)
-      {
-        item.mask |= LVIF_STATE;
-      }
-
-      if (mask_not_set && item.pszText)
-      {
-        item.mask |= LVIF_TEXT;
-      }
-
       if (index == -1)
       {
         index = GetItemCount();
@@ -693,6 +649,7 @@ namespace win32
         for (auto& item : items)
         {
           item.iGroupId = group_id;
+          item.mask = item.mask | LVIF_GROUPID;
           InsertRow(item);
         }
 

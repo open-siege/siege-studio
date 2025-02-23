@@ -337,6 +337,8 @@ namespace siege::views
           game_item.lParam = (LPARAM)game.preferered_extension->data();
         }
 
+        game_item.mask = game_item.mask | LVIF_GROUPID | LVIF_PARAM;
+
         game_item.sub_items.emplace_back(L"Not detected");
         auto new_item = supported_games_by_engine.InsertRow(game_item);
 

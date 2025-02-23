@@ -330,6 +330,8 @@ namespace siege::views
                   std::to_wstring(file->size)
                 };
 
+                item.mask = item.mask | LVIF_GROUPID | LVIF_IMAGE;
+
                 auto index = table.InsertRow(item);
                 file_indices.emplace(file, index);
 
