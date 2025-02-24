@@ -22,7 +22,11 @@
 namespace siege::views
 {
   using namespace win32::wic;
-  // TODO complete palette selection feature
+  
+  // TODO add right click menu for setting a palette as the default entry
+  // TODO add a right click menu to open the palette in a new tab
+  // TODO update icons of list view to be radio buttons instead of checkboxes
+  // TODO remap bitmap pixels to match new palette
   struct bmp_view : win32::window_ref
   {
     bmp_controller controller;
@@ -457,9 +461,18 @@ namespace siege::views
           auto wic_palette = win32::wic::palette(colors);
           previous_viewport = WICRect{};
           resize_preview(true, wic_palette);
-
         }
-        // TODO update the palette of the currently selected image
+
+
+        for (auto i = 0; i < ListView_GetItemCount(sender); ++i)
+        {
+          if (i == info.iItem)
+          {
+            continue;
+          }
+
+          ListView_SetCheckState(sender, i, FALSE);
+        }
       }
       else
       {
@@ -611,17 +624,27 @@ namespace siege::views
 
           if (palette)
           {
-            current_frame
-              ->clip(viewport)
-                .convert(win32::wic::bitmap_source::to_format{
+            auto bitmap = current_frame->handle().as<IWICBitmap>();
+
+            if (auto raw_palette = palette->handle(); bitmap)
+            {
+              bitmap->SetPalette(raw_palette.get());
+            }
+            /*
+            * else convert image
+            .convert(win32::wic::bitmap_source::to_format{
                 .format = win32::wic::pixel_format::indexed_8bpp,
                 .dither_type = dither_type::WICBitmapDitherTypeSolid,
                 .palette = *palette,
                 .palette_type = palette_type::WICBitmapPaletteTypeCustom
                   })
+            
+            */
+
+            current_frame
+              ->clip(viewport)
               .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
               .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
-
           }
           else
           {
@@ -651,13 +674,15 @@ namespace siege::views
         {
           if (palette)
           {
+            auto bitmap = current_frame->handle().as<IWICBitmap>();
+
+            if (auto raw_palette = palette->handle(); bitmap)
+            {
+              bitmap->SetPalette(raw_palette.get());
+            }
+
             current_frame
               ->clip(viewport)
-              .convert(win32::wic::bitmap_source::to_format{
-                .format = win32::wic::pixel_format::indexed_8bpp,
-                .dither_type = dither_type::WICBitmapDitherTypeSolid,
-                .palette = *palette,
-                .palette_type = palette_type::WICBitmapPaletteTypeCustom })
               .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
               .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
           }

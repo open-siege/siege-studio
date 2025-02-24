@@ -26,21 +26,21 @@ namespace win32
 
     thread_local std::wstring key;
     key.reserve(sizeof(font_info));
-    key.assign(key.size(), '\0');
+    key.clear();
 
     if (font_info.lfFaceName)
     {
       key.append(font_info.lfFaceName);
     }
 
-    key.append(1, font_info.lfWidth);
-    key.append(1, font_info.lfHeight);
-    key.append(1, font_info.lfOrientation);
-    key.append(1, font_info.lfWeight);
-    key.append(1, font_info.lfCharSet);
-    key.append(1, font_info.lfOutPrecision);
-    key.append(1, font_info.lfQuality);
-    key.append(1, font_info.lfPitchAndFamily);
+    key.append(1, (wchar_t)font_info.lfWidth);
+    key.append(1, (wchar_t)font_info.lfHeight);
+    key.append(1, (wchar_t)font_info.lfOrientation);
+    key.append(1, (wchar_t)font_info.lfWeight);
+    key.append(1, (wchar_t)font_info.lfCharSet);
+    key.append(1, (wchar_t)font_info.lfOutPrecision);
+    key.append(1, (wchar_t)font_info.lfQuality);
+    key.append(1, (wchar_t)font_info.lfPitchAndFamily);
 
     auto existing_font = loaded_fonts.find(key);
 
