@@ -70,7 +70,7 @@ namespace win32
     get_thread_theme() = new_value;
   }
 
-  HWND get_theme_cache()
+  win32::window_ref get_theme_cache()
   {
     HWND temp = ::FindWindowExW(HWND_MESSAGE, nullptr, L"SiegeAppThemeColorCache", nullptr);
 
@@ -91,45 +91,7 @@ namespace win32
       temp = ::CreateWindowExW(0, info.lpszClassName, L"ThemeColorCache", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, nullptr, nullptr);
     }
 
-    return temp;
-  }
-
-  std::optional<COLORREF> get_color_from_handle(HANDLE handle)
-  {
-    if (handle)
-    {
-      auto type = GetObjectType(handle);
-
-      if (type == OBJ_BRUSH)
-      {
-        static LOGBRUSH brush;
-
-        if (::GetObjectW(handle, sizeof(brush), &brush))
-        {
-          return brush.lbColor;
-        }
-      }
-      else if (type == OBJ_PEN)
-      {
-        static LOGPEN pen;
-
-        if (::GetObjectW(handle, sizeof(pen), &pen))
-        {
-          return pen.lopnColor;
-        }
-      }
-      else if (type == OBJ_EXTPEN)
-      {
-        static EXTLOGPEN pen;
-
-        if (::GetObjectW(handle, sizeof(pen), &pen))
-        {
-          return pen.elpColor;
-        }
-      }
-    }
-
-    return std::nullopt;
+    return win32::window_ref(temp);
   }
 
   COLORREF get_color_for_window(win32::window_ref window, std::wstring_view prop)
@@ -144,12 +106,10 @@ namespace win32
 
     if (child)
     {
-      cache = child;
+      cache = win32::window_ref(child);
     }
 
-    auto handle = ::GetPropW(cache, prop.data());
-
-    auto color = get_color_from_handle(handle);
+    auto color = cache.GetPropW<COLORREF>(prop);
 
     if (color)
     {
@@ -168,16 +128,15 @@ namespace win32
   {
     auto cache = get_theme_cache();
 
-    auto existing = ::GetPropW(cache, prop.data());
-
     if (!color)
     {
-      auto handle = ::RemovePropW(cache, prop.data());
-      return get_color_from_handle(handle);
+      return cache.RemovePropW<COLORREF>(prop);
     }
 
-    SetPropW(cache, prop.data(), get_solid_brush(*color).get());
+    auto existing = cache.GetPropW<COLORREF>(prop);
+    
+    cache.SetPropW(prop, *color);
 
-    return get_color_from_handle(existing);
+    return existing;
   }
 }// namespace win32
