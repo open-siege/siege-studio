@@ -70,52 +70,90 @@ namespace win32
     get_thread_theme() = new_value;
   }
 
-  std::map<std::pair<win32::window_ref, std::wstring_view>, COLORREF>& get_theme_map()
+  HWND get_theme_cache()
   {
-    static std::pair<win32::file_mapping, win32::file_view> mapping = [] {
-      auto existing = ::OpenFileMappingW(FILE_MAP_WRITE, FALSE, L"SiegeAppThemeColorCache");
+    HWND temp = ::FindWindowExW(HWND_MESSAGE, nullptr, L"SiegeAppThemeColorCache", nullptr);
 
-      if (existing == nullptr)
+    if (temp == nullptr)
+    {
+      WNDCLASSEXW info{
+        .cbSize = sizeof(WNDCLASSEXW),
+        .lpfnWndProc = DefWindowProcW,
+        .hInstance = ::GetModuleHandleW(nullptr),
+        .lpszClassName = L"SiegeAppThemeColorCache"
+      };
+    
+      if (!GetClassInfoExW(info.hInstance, info.lpszClassName, &info))
       {
-        auto mapping = win32::file_mapping(::CreateFileMappingW(
-          INVALID_HANDLE_VALUE,// use paging file
-          nullptr,// default security attributes
-          PAGE_READWRITE,// read/write access
-          0,// size: high 32-bits
-          sizeof(std::map<std::pair<win32::window_ref, std::wstring_view>, COLORREF>),// size: low 32-bits
-          L"SiegeAppThemeColorCache"));
-
-        auto result = mapping.MapViewOfFile(FILE_MAP_WRITE, sizeof(sizeof(std::map<std::pair<win32::window_ref, std::wstring_view>, COLORREF>)));
-        new (result.get()) std::map<std::pair<win32::window_ref, std::wstring_view>, COLORREF>();
-        return std::make_pair(std::move(mapping), std::move(result));
+        ::RegisterClassExW(&info);
       }
 
-      auto mapping = win32::file_mapping(existing);
-      auto result = mapping.MapViewOfFile(FILE_MAP_WRITE, sizeof(sizeof(std::map<std::pair<win32::window_ref, std::wstring_view>, COLORREF>)));
-      return std::make_pair(std::move(mapping), std::move(result));
-    }();
+      temp = ::CreateWindowExW(0, info.lpszClassName, L"ThemeColorCache", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, nullptr, nullptr);
+    }
 
-    return *(std::map<std::pair<win32::window_ref, std::wstring_view>, COLORREF>*)mapping.second.get();
+    return temp;
+  }
+
+  std::optional<COLORREF> get_color_from_handle(HANDLE handle)
+  {
+    if (handle)
+    {
+      auto type = GetObjectType(handle);
+
+      if (type == OBJ_BRUSH)
+      {
+        static LOGBRUSH brush;
+
+        if (::GetObjectW(handle, sizeof(brush), &brush))
+        {
+          return brush.lbColor;
+        }
+      }
+      else if (type == OBJ_PEN)
+      {
+        static LOGPEN pen;
+
+        if (::GetObjectW(handle, sizeof(pen), &pen))
+        {
+          return pen.lopnColor;
+        }
+      }
+      else if (type == OBJ_EXTPEN)
+      {
+        static EXTLOGPEN pen;
+
+        if (::GetObjectW(handle, sizeof(pen), &pen))
+        {
+          return pen.elpColor;
+        }
+      }
+    }
+
+    return std::nullopt;
   }
 
   COLORREF get_color_for_window(win32::window_ref window, std::wstring_view prop)
   {
-    auto key = std::make_pair(window.ref(), prop);
-    auto& cache = get_theme_map();
+    auto cache = get_theme_cache();
 
-    auto existing = cache.find(key);
+    static std::array<wchar_t, 255> temp;
 
-    if (existing != cache.end())
+    ::RealGetWindowClassW(window, temp.data(), temp.size());
+
+    auto child = ::FindWindowExW(cache, nullptr, nullptr, temp.data());
+
+    if (child)
     {
-      return existing->second;
+      cache = child;
     }
 
-    for (auto& other : cache)
+    auto handle = ::GetPropW(cache, prop.data());
+
+    auto color = get_color_from_handle(handle);
+
+    if (color)
     {
-      if (other.first.second == prop)
-      {
-        return other.second;
-      }
+      return *color;
     }
 
     if (is_dark_theme())
@@ -126,32 +164,20 @@ namespace win32
     return prop.find(L"BkColor") == std::wstring_view::npos ? RGB(255, 255, 255) : RGB(0, 0, 0);
   }
 
-  std::optional<COLORREF> set_color_for_window(win32::window_ref window, std::wstring_view prop, std::optional<COLORREF> color)
+  std::optional<COLORREF> set_color_for_window(std::wstring_view prop, std::optional<COLORREF> color)
   {
-    auto& cache = get_theme_map();
+    auto cache = get_theme_cache();
 
-    auto key = std::make_pair(window.ref(), prop);
-    auto existing = cache.find(key);
-    std::optional<COLORREF> old = std::nullopt;
+    auto existing = ::GetPropW(cache, prop.data());
 
-    if (existing != cache.end())
+    if (!color)
     {
-      old = existing->second;
+      auto handle = ::RemovePropW(cache, prop.data());
+      return get_color_from_handle(handle);
     }
 
-    if (color == std::nullopt && existing != cache.end())
-    {
-      cache.erase(existing);
-    }
-    else if (color != std::nullopt && existing != cache.end())
-    {
-      existing->second = *color;
-    }
-    else if (color != std::nullopt && existing == cache.end())
-    {
-      cache.emplace(std::move(key), *color);
-    }
+    SetPropW(cache, prop.data(), get_solid_brush(*color).get());
 
-    return old;
+    return get_color_from_handle(existing);
   }
 }// namespace win32

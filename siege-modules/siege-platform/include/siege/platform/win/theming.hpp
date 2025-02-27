@@ -16,7 +16,7 @@ namespace win32
   bool is_dark_theme();
   void set_is_dark_theme(bool);
   COLORREF get_color_for_window(win32::window_ref, std::wstring_view);
-  std::optional<COLORREF> set_color_for_window(win32::window_ref, std::wstring_view, std::optional<COLORREF> color);
+  std::optional<COLORREF> set_color_for_window(std::wstring_view, std::optional<COLORREF> color);
   std::optional<SIZE> get_font_size_for_string(gdi::font_ref, std::wstring_view);
 
   enum struct segoe_fluent_icons : wchar_t
