@@ -74,7 +74,7 @@ namespace siege::views
     keyboard_table.InsertColumn(-1, LVCOLUMNW{
                                       .pszText = const_cast<wchar_t*>(L""),
                                     });
- 
+
     controller_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
     controller_table.bind_nm_click(std::bind_front(&exe_view::controller_table_nm_click, this));
 
@@ -96,7 +96,7 @@ namespace siege::views
     controller_table.EnableGroupView(true);
 
     ListView_SetView(controller_table, LV_VIEW_TILE);
- 
+
     LVTILEVIEWINFO tileViewInfo{
       .cbSize = sizeof(tileViewInfo),
       .dwMask = LVTVIM_COLUMNS,
@@ -257,24 +257,19 @@ namespace siege::views
   {
     std::spanstream stream(message.data);
 
-    std::optional<std::filesystem::path> path;
+    std::optional<std::filesystem::path> path = win32::get_path_from_handle((HANDLE)message.data_type);
 
-    if (wchar_t* filename = this->GetPropW<wchar_t*>(L"FilePath"); filename)
+    if (path && options.GetCount() < 3 && (path->extension() == ".exe" || path->extension() == ".EXE"))
     {
-      path = filename;
+      options.InsertString(0, L"Launch Options");
+      options.InsertString(1, L"Keyboard/Mouse Settings");
+      options.InsertString(2, L"Controller");
+      options.InsertString(3, L"Scripting");
 
-      if (options.GetCount() < 3 && (path->extension() == ".exe" || path->extension() == ".EXE"))
-      {
-        options.InsertString(0, L"Launch Options");
-        options.InsertString(1, L"Keyboard/Mouse Settings");
-        options.InsertString(2, L"Controller");
-        options.InsertString(3, L"Scripting");
+      ::ShowWindow(launch_table, SW_SHOW);
+      ::ShowWindow(resource_table, SW_HIDE);
 
-        ::ShowWindow(launch_table, SW_SHOW);
-        ::ShowWindow(resource_table, SW_HIDE);
-
-        siege::init_active_input_state();
-      }
+      siege::init_active_input_state();
     }
 
     auto count = controller.load_executable(stream, std::move(path));

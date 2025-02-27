@@ -653,9 +653,7 @@ namespace siege::views
 
           fs::current_path(file_path.parent_path());
 
-          root->SetPropW(L"FilePath", temp.data());
-          root->CopyData(*this, COPYDATASTRUCT{ .cbData = DWORD(size), .lpData = view.get() });
-          root->RemovePropW(L"FilePath");
+          root->CopyData(*this, COPYDATASTRUCT{ .dwData = (ULONG_PTR)mapping->get(), .cbData = DWORD(size), .lpData = view.get() });
         }
       }
     }

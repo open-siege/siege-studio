@@ -88,11 +88,10 @@ namespace win32
   {
     struct sub_class : win32::menu::notifications
     {
-      std::map<std::wstring_view, COLORREF> colors;
       std::optional<win32::gdi::memory_drawing_context> memory_dc;
       SIZE main_menu_size{};
 
-      sub_class(std::map<std::wstring_view, COLORREF> colors) : colors(std::move(colors))
+      sub_class()
       {
       }
 
@@ -109,7 +108,8 @@ namespace win32
       std::optional<win32::lresult_t> wm_init_menu_popup(win32::popup_menu_ref sub_menu, int, bool) override
       {
         MENUINFO mi = { .cbSize = sizeof(MENUINFO), .fMask = MIM_BACKGROUND };
-        auto bk_color = colors[win32::properties::menu::bk_color];
+        auto bk_color = win32::get_color_for_class(L"#32768", win32::properties::menu::bk_color);
+        
         mi.hbrBack = win32::get_solid_brush(bk_color);
         SetMenuInfo(sub_menu, &mi);
         return 0;
@@ -234,11 +234,11 @@ namespace win32
 
         SelectFont(item.hDC, font);
 
-        auto bk_color = colors[win32::properties::menu::bk_color];
-        auto text_highlight_color = colors[win32::properties::menu::text_highlight_color];
+        auto bk_color = win32::get_color_for_class(L"#32768", win32::properties::menu::bk_color);
+        auto text_highlight_color = win32::get_color_for_class(L"#32768", win32::properties::menu::text_highlight_color);
         auto black_brush = win32::get_solid_brush(bk_color);
-        auto grey_brush = win32::get_solid_brush(colors[win32::properties::menu::text_highlight_color]);
-        auto text_color = colors[win32::properties::menu::text_color];
+        auto grey_brush = win32::get_solid_brush(text_highlight_color);
+        auto text_color = win32::get_color_for_class(L"#32768", win32::properties::menu::text_color);
 
         auto context = win32::gdi::drawing_context_ref(item.hDC);
 
@@ -284,11 +284,11 @@ namespace win32
 
         SelectFont(item.hDC, font);
 
-        auto bk_color = colors[win32::properties::menu::bk_color];
-        auto text_highlight_color = colors[win32::properties::menu::text_highlight_color];
+        auto bk_color = win32::get_color_for_class(L"#32768", win32::properties::menu::bk_color);
+        auto text_highlight_color = win32::get_color_for_class(L"#32768", win32::properties::menu::text_highlight_color);
         auto black_brush = win32::get_solid_brush(bk_color);
-        auto grey_brush = win32::get_solid_brush(colors[win32::properties::menu::text_highlight_color]);
-        auto text_color = colors[win32::properties::menu::text_color];
+        auto grey_brush = win32::get_solid_brush(win32::get_color_for_class(L"#32768", win32::properties::menu::text_highlight_color));
+        auto text_color = win32::get_color_for_class(L"#32768", win32::properties::menu::text_color);
 
         auto context = win32::gdi::drawing_context_ref(item.hDC);
 
@@ -350,7 +350,7 @@ namespace win32
             line_rect.bottom = line_rect.top + GetSystemMetrics(SM_CYBORDER) + 1;
             OffsetRect(&line_rect, -window_rect.left, -window_rect.top);
 
-            auto bk_color = ((sub_class*)dwRefData)->colors[win32::properties::window::bk_color];
+            auto bk_color = win32::get_color_for_class(L"", win32::properties::window::bk_color);
             HDC hdc = GetWindowDC(hWnd);
             FillRect(hdc, &line_rect, win32::get_solid_brush(bk_color));
             ReleaseDC(hWnd, hdc);
@@ -364,7 +364,7 @@ namespace win32
           auto context = win32::gdi::drawing_context_ref((HDC)wParam);
 
           auto self = win32::window_ref(hWnd);
-          auto bk_color = ((sub_class*)dwRefData)->colors[win32::properties::window::bk_color];
+          auto bk_color = win32::get_color_for_class(L"", win32::properties::window::bk_color);
 
           auto rect = self.GetClientRect();
           context.FillRect(*rect, get_solid_brush(bk_color));
@@ -386,24 +386,13 @@ namespace win32
 
     SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), FALSE);
 
-    std::map<std::wstring_view, COLORREF> color_map{
-      { win32::properties::window::bk_color, win32::get_color_for_window(control.ref(), win32::properties::window::bk_color) },
-      { win32::properties::menu::bk_color, win32::get_color_for_window(control.ref(), win32::properties::menu::bk_color) },
-      { win32::properties::menu::text_color, win32::get_color_for_window(control.ref(), win32::properties::menu::text_color) },
-      { win32::properties::menu::text_highlight_color, win32::get_color_for_window(control.ref(), win32::properties::menu::text_highlight_color) },
-    };
-
     DWORD_PTR existing_object{};
 
     constexpr static auto* subclass_id = L"Window";
 
     if (!::GetWindowSubclass(control, sub_class::HandleMessage, (UINT_PTR)subclass_id, &existing_object) && existing_object == 0)
     {
-      ::SetWindowSubclass(control, sub_class::HandleMessage, (UINT_PTR)subclass_id, (DWORD_PTR) new sub_class(std::move(color_map)));
-    }
-    else
-    {
-      ((sub_class*)existing_object)->colors = std::move(color_map);
+      ::SetWindowSubclass(control, sub_class::HandleMessage, (UINT_PTR)subclass_id, (DWORD_PTR)new sub_class());
     }
 
     if (control.GetWindowStyle() & ~WS_CHILD)

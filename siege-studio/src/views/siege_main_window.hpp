@@ -415,15 +415,8 @@ namespace siege::views
       return 0;
     }
 
-    auto wm_copy_data(win32::copy_data_message<std::byte> message)
+    BOOL wm_copy_data(win32::copy_data_message<std::byte> message)
     {
-      auto file_path = GetPropW<wchar_t*>(L"FilePath");
-
-      if (!file_path)
-      {
-        return FALSE;
-      }
-
       if (fs::current_path() != initial_working_dir)
       {
         initial_working_dir = fs::current_path();
@@ -464,14 +457,13 @@ namespace siege::views
         auto ref = child->ref();
         win32::apply_window_theme(ref);
 
-        child->SetPropW(L"FilePath", file_path);
+        auto file_path = win32::get_path_from_handle((HANDLE)message.data_type);
 
-        if (child->CopyData(*this, COPYDATASTRUCT{ .cbData = DWORD(message.data.size()), .lpData = message.data.data() }))
+        if (file_path && child->CopyData(*this, COPYDATASTRUCT{ .dwData = (ULONG_PTR)message.data_type, .cbData = DWORD(message.data.size()), .lpData = message.data.data() }))
         {
-          child->RemovePropW(L"FilePath");
           auto index = tab_control.GetItemCount();
 
-          auto filename = fs::path(file_path).filename().wstring();
+          auto filename = fs::path(*file_path).filename().wstring();
 
           tab_control.InsertItem(index, TCITEMW{ .mask = TCIF_TEXT | TCIF_PARAM, .pszText = filename.data(), .lParam = win32::lparam_t(child->get()) });
 
@@ -541,52 +533,56 @@ namespace siege::views
               hot_bk_color = RGB(0xfb, 0xf6, 0xf6);
             }
 
-            win32::set_color_for_window(win32::properties::button::bk_color, button_bk_color);
-            win32::set_color_for_window(win32::properties::button::hot_bk_color, hot_bk_color);
-            win32::set_color_for_window(win32::properties::button::focus_bk_color, focus_bk_color);
-            win32::set_color_for_window(win32::properties::button::pushed_bk_color, pushed_bk_color);
-            win32::set_color_for_window(win32::properties::button::bk_color, bk_color);
-            win32::set_color_for_window(win32::properties::button::text_color, text_color);
-            win32::set_color_for_window(win32::properties::button::line_color, text_color);
+            using namespace win32;
 
-            win32::set_color_for_window(win32::properties::tree_view::bk_color, bk_color);
-            win32::set_color_for_window(win32::properties::tree_view::text_color, text_color);
-            win32::set_color_for_window(win32::properties::tree_view::line_color, 0x00383838);
-            win32::set_color_for_window(win32::properties::list_view::bk_color, bk_color);
-            win32::set_color_for_window(win32::properties::list_view::text_color, text_color);
-            win32::set_color_for_window(win32::properties::list_view::text_bk_color, text_bk_color);
-            win32::set_color_for_window(win32::properties::list_view::outline_color, 0x00AAAAAA);
+            set_color_for_class(button::class_name, properties::button::bk_color, button_bk_color);
+            set_color_for_class(button::class_name, properties::button::hot_bk_color, hot_bk_color);
+            set_color_for_class(button::class_name, properties::button::focus_bk_color, focus_bk_color);
+            set_color_for_class(button::class_name, properties::button::pushed_bk_color, pushed_bk_color);
+            set_color_for_class(button::class_name, properties::button::bk_color, bk_color);
+            set_color_for_class(button::class_name, properties::button::text_color, text_color);
+            set_color_for_class(button::class_name, properties::button::line_color, text_color);
 
-            win32::set_color_for_window(win32::properties::list_box::bk_color, bk_color);
-            win32::set_color_for_window(win32::properties::list_box::text_color, text_color);
-            win32::set_color_for_window(win32::properties::list_box::text_bk_color, text_bk_color);
-            win32::set_color_for_window(win32::properties::list_box::text_highlight_color, text_highlight_color);
+            set_color_for_class(tree_view::class_name, properties::tree_view::bk_color, bk_color);
+            set_color_for_class(tree_view::class_name, properties::tree_view::text_color, text_color);
+            set_color_for_class(tree_view::class_name, properties::tree_view::line_color, 0x00383838);
 
-            win32::set_color_for_window(win32::properties::track_bar::bk_color, bk_color);
-            win32::set_color_for_window(win32::properties::track_bar::text_color, text_color);
-            win32::set_color_for_window(win32::properties::track_bar::text_bk_color, text_bk_color);
+            set_color_for_class(list_view::class_name, properties::list_view::bk_color, bk_color);
+            set_color_for_class(list_view::class_name, properties::list_view::text_color, text_color);
+            set_color_for_class(list_view::class_name, properties::list_view::text_bk_color, text_bk_color);
+            set_color_for_class(list_view::class_name, properties::list_view::outline_color, 0x00AAAAAA);
 
-            win32::set_color_for_window(win32::properties::header::bk_color, bk_color);
-            win32::set_color_for_window(win32::properties::header::text_color, text_color);
-            win32::set_color_for_window(win32::properties::header::text_bk_color, text_bk_color);
-            win32::set_color_for_window(win32::properties::header::text_highlight_color, text_highlight_color);
+            set_color_for_class(list_box::class_name, properties::list_box::bk_color, bk_color);
+            set_color_for_class(list_box::class_name, properties::list_box::text_color, text_color);
+            set_color_for_class(list_box::class_name, properties::list_box::text_bk_color, text_bk_color);
+            set_color_for_class(list_box::class_name, properties::list_box::text_highlight_color, text_highlight_color);
 
-            win32::set_color_for_window(win32::properties::tab_control::bk_color, bk_color);
-            win32::set_color_for_window(win32::properties::tab_control::text_color, text_color);
-            win32::set_color_for_window(win32::properties::tab_control::text_bk_color, text_bk_color);
-            win32::set_color_for_window(win32::properties::tab_control::text_highlight_color, text_highlight_color);
+            set_color_for_class(track_bar::class_name, properties::track_bar::bk_color, bk_color);
+            set_color_for_class(track_bar::class_name, properties::track_bar::text_color, text_color);
+            set_color_for_class(track_bar::class_name, properties::track_bar::text_bk_color, text_bk_color);
 
-            win32::set_color_for_window(win32::properties::tool_bar::bk_color, bk_color);
-            win32::set_color_for_window(win32::properties::tool_bar::text_color, text_color);
-            win32::set_color_for_window(win32::properties::tool_bar::btn_face_color, text_bk_color);
-            win32::set_color_for_window(win32::properties::tool_bar::btn_highlight_color, text_highlight_color);
-            win32::set_color_for_window(win32::properties::tool_bar::btn_shadow_color, btn_shadow_color);
-            win32::set_color_for_window(win32::properties::window::bk_color, bk_color);
-            win32::set_color_for_window(win32::properties::menu::bk_color, bk_color);
-            win32::set_color_for_window(win32::properties::menu::text_color, text_color);
-            win32::set_color_for_window(win32::properties::menu::text_highlight_color, text_highlight_color);
-            win32::set_color_for_window(win32::properties::static_control::bk_color, bk_color);
-            win32::set_color_for_window(win32::properties::static_control::text_color, text_color);
+            set_color_for_class(header::class_name, properties::header::bk_color, bk_color);
+            set_color_for_class(header::class_name, properties::header::text_color, text_color);
+            set_color_for_class(header::class_name, properties::header::text_bk_color, text_bk_color);
+            set_color_for_class(header::class_name, properties::header::text_highlight_color, text_highlight_color);
+
+            set_color_for_class(tab_control::class_name, properties::tab_control::bk_color, bk_color);
+            set_color_for_class(tab_control::class_name, properties::tab_control::text_color, text_color);
+            set_color_for_class(tab_control::class_name, properties::tab_control::text_bk_color, text_bk_color);
+            set_color_for_class(tab_control::class_name, properties::tab_control::text_highlight_color, text_highlight_color);
+
+            set_color_for_class(tool_bar::class_name, properties::tool_bar::bk_color, bk_color);
+            set_color_for_class(tool_bar::class_name, properties::tool_bar::text_color, text_color);
+            set_color_for_class(tool_bar::class_name, properties::tool_bar::btn_face_color, text_bk_color);
+            set_color_for_class(tool_bar::class_name, properties::tool_bar::text_highlight_color, text_highlight_color);
+            set_color_for_class(tool_bar::class_name, properties::tool_bar::btn_shadow_color, btn_shadow_color);
+
+            set_color_for_class(L"", properties::window::bk_color, bk_color);
+            set_color_for_class(L"#32768", properties::menu::bk_color, bk_color);
+            set_color_for_class(L"#32768", properties::menu::text_color, text_color);
+            set_color_for_class(L"#32768", properties::menu::text_highlight_color, text_highlight_color);
+            set_color_for_class(static_control::class_name, properties::static_control::bk_color, bk_color);
+            set_color_for_class(static_control::class_name, properties::static_control::text_color, text_color);
 
             for (auto& pixel : menu_sizer.get_pixels())
             {
@@ -809,16 +805,13 @@ namespace siege::views
           win32::apply_window_theme(ref);
 
           COPYDATASTRUCT data{
+            .dwData = (ULONG_PTR)mapping->get(),
             .cbData = DWORD(size),
             .lpData = view.get()
           };
 
-          child->SetPropW(L"FilePath", path_ref);
-
           if (child->CopyData(*this, data))
           {
-            child->RemovePropW(L"FilePath");
-
             auto index = tab_control.GetItemCount();
 
             tab_control.InsertItem(index, TCITEMW{
@@ -842,7 +835,6 @@ namespace siege::views
           }
           else
           {
-            child->RemovePropW(L"FilePath");
             ::DestroyWindow(*child);
           }
 

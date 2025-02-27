@@ -72,7 +72,7 @@ namespace win32
 
   win32::window_ref get_theme_cache()
   {
-    HWND temp = ::FindWindowExW(HWND_MESSAGE, nullptr, L"SiegeAppThemeColorCache", nullptr);
+    HWND temp = ::FindWindowExW(HWND_MESSAGE, nullptr, L"SiegeAppThemeColorCache", L"ThemeColorCache");
 
     if (temp == nullptr)
     {
@@ -82,7 +82,7 @@ namespace win32
         .hInstance = ::GetModuleHandleW(nullptr),
         .lpszClassName = L"SiegeAppThemeColorCache"
       };
-    
+
       if (!GetClassInfoExW(info.hInstance, info.lpszClassName, &info))
       {
         ::RegisterClassExW(&info);
@@ -94,15 +94,11 @@ namespace win32
     return win32::window_ref(temp);
   }
 
-  COLORREF get_color_for_window(win32::window_ref window, std::wstring_view prop)
+  COLORREF get_color_for_class(std::wstring_view class_name, std::wstring_view prop)
   {
     auto cache = get_theme_cache();
 
-    static std::array<wchar_t, 255> temp;
-
-    ::RealGetWindowClassW(window, temp.data(), temp.size());
-
-    auto child = ::FindWindowExW(cache, nullptr, nullptr, temp.data());
+    auto child = ::FindWindowExW(HWND_MESSAGE, nullptr, L"SiegeAppThemeColorCache", class_name.data());
 
     if (child)
     {
@@ -124,18 +120,36 @@ namespace win32
     return prop.find(L"BkColor") == std::wstring_view::npos ? RGB(255, 255, 255) : RGB(0, 0, 0);
   }
 
-  std::optional<COLORREF> set_color_for_window(std::wstring_view prop, std::optional<COLORREF> color)
+  COLORREF get_color_for_window(win32::window_ref window, std::wstring_view prop)
   {
     auto cache = get_theme_cache();
 
-    if (!color)
+    static std::array<wchar_t, 255> temp;
+
+    ::RealGetWindowClassW(window, temp.data(), temp.size());
+
+    return get_color_for_class(temp.data(), prop);
+  }
+
+  std::optional<COLORREF> set_color_for_class(std::wstring_view class_name, std::wstring_view prop, std::optional<COLORREF> color)
+  {
+    auto cache = get_theme_cache();
+
+    auto child = class_name.empty() ? cache.ref() : win32::window_ref(::FindWindowExW(HWND_MESSAGE, nullptr, L"SiegeAppThemeColorCache", class_name.data()));
+
+    if (!child)
     {
-      return cache.RemovePropW<COLORREF>(prop);
+      child = win32::window_ref(::CreateWindowExW(0, L"SiegeAppThemeColorCache", class_name.data(), 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, nullptr, nullptr));
     }
 
-    auto existing = cache.GetPropW<COLORREF>(prop);
-    
-    cache.SetPropW(prop, *color);
+    if (!color)
+    {
+      return child.RemovePropW<COLORREF>(prop);
+    }
+
+    auto existing = child.GetPropW<COLORREF>(prop);
+
+    child.SetPropW(prop, *color);
 
     return existing;
   }

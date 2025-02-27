@@ -293,12 +293,7 @@ namespace siege::views
 
       if (vol_controller::is_vol(stream))
       {
-        std::optional<std::filesystem::path> path;
-
-        if (wchar_t* filename = this->GetPropW<wchar_t*>(L"FilePath"); filename)
-        {
-          path = filename;
-        }
+        std::optional<std::filesystem::path> path = win32::get_path_from_handle((HANDLE)message.data_type);
 
         auto count = controller.load_volume(stream, path);
 
@@ -515,10 +510,8 @@ namespace siege::views
       {
         auto data = controller.load_content_data(*item);
 
-        root.SetPropW(L"FilePath", item_info.pszText);
-        root.CopyData(*this, COPYDATASTRUCT{ .cbData = DWORD(data.size()), .lpData = data.data() });
+        root.CopyData(*this, COPYDATASTRUCT{ .dwData = ::AddAtomW(item_info.pszText), .cbData = DWORD(data.size()), .lpData = data.data() });
 
-        root.RemovePropW(L"FilePath");
         return true;
       }
 

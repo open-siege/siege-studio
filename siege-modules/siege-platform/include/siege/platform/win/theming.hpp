@@ -16,7 +16,8 @@ namespace win32
   bool is_dark_theme();
   void set_is_dark_theme(bool);
   COLORREF get_color_for_window(win32::window_ref, std::wstring_view);
-  std::optional<COLORREF> set_color_for_window(std::wstring_view, std::optional<COLORREF> color);
+  COLORREF get_color_for_class(std::wstring_view class_name, std::wstring_view prop);
+  std::optional<COLORREF> set_color_for_class(std::wstring_view, std::wstring_view, std::optional<COLORREF> color);
   std::optional<SIZE> get_font_size_for_string(gdi::font_ref, std::wstring_view);
 
   enum struct segoe_fluent_icons : wchar_t
@@ -106,14 +107,36 @@ namespace win32
 
   struct properties
   {
+    struct window
+    {
+      constexpr static auto bk_color = std::wstring_view(L"BkColor");
+
+      inline static auto props = std::array<std::wstring_view, 1>{
+        bk_color
+      };
+    };
+
+    struct menu
+    {
+      constexpr static auto bk_color = std::wstring_view(L"BkColor");
+      constexpr static auto text_color = std::wstring_view(L"TextColor");
+      constexpr static auto text_highlight_color = std::wstring_view(L"TextHighlightColor");
+
+      inline static auto props = std::array<std::wstring_view, 3>{
+        bk_color,
+        text_color,
+        text_highlight_color
+      };
+    };
+
     struct button
     {
-      inline static auto bk_color = std::wstring(win32::button::class_name) + L"." + L"BkColor";
-      inline static auto hot_bk_color = std::wstring(win32::button::class_name) + L"." + L"HotBkColor";
-      inline static auto focus_bk_color = std::wstring(win32::button::class_name) + L"." + L"FocusBkColor";
-      inline static auto pushed_bk_color = std::wstring(win32::button::class_name) + L"." + L"PushedBkColor";
-      inline static auto text_color = std::wstring(win32::button::class_name) + L"." + L"TextColor";
-      inline static auto line_color = std::wstring(win32::button::class_name) + L"." + L"LineColor";
+      inline static auto bk_color = L"BkColor";
+      inline static auto hot_bk_color = L"HotBkColor";
+      inline static auto focus_bk_color = L"FocusBkColor";
+      inline static auto pushed_bk_color = L"PushedBkColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto line_color = L"LineColor";
 
       inline static auto props = std::array<std::wstring_view, 3>{
         bk_color,
@@ -124,9 +147,9 @@ namespace win32
 
     struct edit
     {
-      inline static auto bk_color = std::wstring(win32::edit::class_name) + L"." + L"BkColor";
-      inline static auto text_color = std::wstring(win32::edit::class_name) + L"." + L"TextColor";
-      inline static auto line_color = std::wstring(win32::edit::class_name) + L"." + L"LineColor";
+      inline static auto bk_color = L"BkColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto line_color = L"LineColor";
 
       inline static auto props = std::array<std::wstring_view, 3>{
         bk_color,
@@ -137,9 +160,9 @@ namespace win32
 
     struct track_bar
     {
-      inline static auto bk_color = std::wstring(win32::header::class_name) + L"." + L"BkColor";
-      inline static auto text_color = std::wstring(win32::header::class_name) + L"." + L"TextColor";
-      inline static auto text_bk_color = std::wstring(win32::header::class_name) + L"." + L"TextBkColor";
+      inline static auto bk_color = L"BkColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto text_bk_color = L"TextBkColor";
 
       inline static auto props = std::array<std::wstring_view, 3>{
         bk_color,
@@ -150,9 +173,9 @@ namespace win32
 
     struct combo_box
     {
-      inline static auto bk_color = std::wstring(win32::combo_box::class_name) + L"." + L"BkColor";
-      inline static auto text_color = std::wstring(win32::combo_box::class_name) + L"." + L"TextColor";
-      inline static auto line_color = std::wstring(win32::combo_box::class_name) + L"." + L"LineColor";
+      inline static auto bk_color = L"BkColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto line_color = L"LineColor";
 
       inline static auto props = std::array<std::wstring_view, 3>{
         bk_color,
@@ -163,9 +186,9 @@ namespace win32
 
     struct combo_box_ex
     {
-      inline static auto bk_color = std::wstring(win32::combo_box_ex::class_name) + L"." + L"BkColor";
-      inline static auto text_color = std::wstring(win32::combo_box_ex::class_name) + L"." + L"TextColor";
-      inline static auto line_color = std::wstring(win32::combo_box_ex::class_name) + L"." + L"LineColor";
+      inline static auto bk_color = L"BkColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto line_color = L"LineColor";
 
       inline static auto props = std::array<std::wstring_view, 3>{
         bk_color,
@@ -177,10 +200,10 @@ namespace win32
 
     struct header
     {
-      inline static auto bk_color = std::wstring(win32::header::class_name) + L"." + L"BkColor";
-      inline static auto text_color = std::wstring(win32::header::class_name) + L"." + L"TextColor";
-      inline static auto text_bk_color = std::wstring(win32::header::class_name) + L"." + L"TextBkColor";
-      inline static auto text_highlight_color = std::wstring(win32::header::class_name) + L"." + L"TextHighlightColor";
+      inline static auto bk_color = L"BkColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto text_bk_color = L"TextBkColor";
+      inline static auto text_highlight_color = L"TextHighlightColor";
 
       inline static auto props = std::array<std::wstring_view, 4>{
         bk_color,
@@ -192,9 +215,9 @@ namespace win32
 
     struct tree_view
     {
-      inline static auto bk_color = std::wstring(win32::tree_view::class_name) + L"." + L"BkColor";
-      inline static auto text_color = std::wstring(win32::tree_view::class_name) + L"." + L"TextColor";
-      inline static auto line_color = std::wstring(win32::tree_view::class_name) + L"." + L"LineColor";
+      inline static auto bk_color = L"BkColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto line_color = L"LineColor";
 
       inline static auto props = std::array<std::wstring_view, 3>{
         bk_color,
@@ -205,10 +228,10 @@ namespace win32
 
     struct list_view
     {
-      inline static auto bk_color = std::wstring(win32::list_view::class_name) + L"." + L"BkColor";
-      inline static auto text_color = std::wstring(win32::list_view::class_name) + L"." + L"TextColor";
-      inline static auto text_bk_color = std::wstring(win32::list_view::class_name) + L"." + L"TextBkColor";
-      inline static auto outline_color = std::wstring(win32::list_view::class_name) + L"." + L"OutlineColor";
+      inline static auto bk_color = L"BkColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto text_bk_color = L"TextBkColor";
+      inline static auto outline_color = L"OutlineColor";
 
       inline static auto props = std::array<std::wstring_view, 4>{
         bk_color,
@@ -220,13 +243,13 @@ namespace win32
 
     struct tool_bar
     {
-      inline static auto bk_color = std::wstring(win32::tool_bar::class_name) + L"." + L"BkColor";
-      inline static auto btn_highlight_color = std::wstring(win32::tool_bar::class_name) + L"." + L"BtnHighlightColor";
-      inline static auto btn_shadow_color = std::wstring(win32::tool_bar::class_name) + L"." + L"BtnShadowColor";
-      inline static auto btn_face_color = std::wstring(win32::tool_bar::class_name) + L"." + L"BtnFaceColor";
-      inline static auto text_color = std::wstring(win32::tool_bar::class_name) + L"." + L"TextColor";
-      inline static auto text_highlight_color = std::wstring(win32::tool_bar::class_name) + L"." + L"TextHighlightColor";
-      inline static auto mark_color = std::wstring(win32::tool_bar::class_name) + L"." + L"MarkColor";
+      inline static auto bk_color = L"BkColor";
+      inline static auto btn_highlight_color = L"BtnHighlightColor";
+      inline static auto btn_shadow_color = L"BtnShadowColor";
+      inline static auto btn_face_color = L"BtnFaceColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto text_highlight_color = L"TextHighlightColor";
+      inline static auto mark_color = L"MarkColor";
 
       inline static auto props = std::array<std::wstring_view, 7>{
         bk_color,
@@ -241,10 +264,10 @@ namespace win32
 
     struct list_box
     {
-      inline static auto bk_color = std::wstring(win32::list_box::class_name) + L"." + L"BkColor";
-      inline static auto text_color = std::wstring(win32::list_box::class_name) + L"." + L"TextColor";
-      inline static auto text_bk_color = std::wstring(win32::list_box::class_name) + L"." + L"TextBkColor";
-      inline static auto text_highlight_color = std::wstring(win32::list_box::class_name) + L"." + L"TextHighlightColor";
+      inline static auto bk_color = L"BkColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto text_bk_color = L"TextBkColor";
+      inline static auto text_highlight_color = L"TextHighlightColor";
 
       inline static auto props = std::array<std::wstring_view, 4>{
         bk_color,
@@ -257,10 +280,10 @@ namespace win32
 
     struct tab_control
     {
-      inline static auto bk_color = std::wstring(win32::tab_control::class_name) + L"." + L"BkColor";
-      inline static auto text_color = std::wstring(win32::tab_control::class_name) + L"." + L"TextColor";
-      inline static auto text_bk_color = std::wstring(win32::tab_control::class_name) + L"." + L"TextBkColor";
-      inline static auto text_highlight_color = std::wstring(win32::tab_control::class_name) + L"." + L"TextHighlightColor";
+      inline static auto bk_color = L"BkColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto text_bk_color = L"TextBkColor";
+      inline static auto text_highlight_color = L"TextHighlightColor";
 
       inline static auto props = std::array<std::wstring_view, 4>{
         bk_color,
@@ -272,34 +295,12 @@ namespace win32
 
     struct static_control
     {
-      inline static auto bk_color = std::wstring(win32::static_control::class_name) + L"." + L"BkColor";
-      inline static auto text_color = std::wstring(win32::static_control::class_name) + L"." + L"TextColor";
+      inline static auto bk_color = L"BkColor";
+      inline static auto text_color = L"TextColor";
 
       inline static auto props = std::array<std::wstring_view, 2>{
         bk_color,
         text_color
-      };
-    };
-
-    struct menu
-    {
-      constexpr static auto bk_color = std::wstring_view(L"Menu.BkColor");
-      constexpr static auto text_color = std::wstring_view(L"Menu.TextColor");
-      constexpr static auto text_highlight_color = std::wstring_view(L"Menu.TextHighlightColor");
-
-      inline static auto props = std::array<std::wstring_view, 3>{
-        bk_color,
-        text_color,
-        text_highlight_color
-      };
-    };
-
-    struct window
-    {
-      constexpr static auto bk_color = std::wstring_view(L"Window.BkColor");
-
-      inline static auto props = std::array<std::wstring_view, 1>{
-        bk_color
       };
     };
   };

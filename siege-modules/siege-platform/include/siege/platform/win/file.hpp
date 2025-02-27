@@ -6,6 +6,7 @@
 #include <exception>
 #include <expected>
 #include <string>
+#include <array>
 #include <wtypes.h>
 #include <WinDef.h>
 #include <WinBase.h>
@@ -131,6 +132,66 @@ namespace win32
       return std::unexpected(::GetLastError());
     }
   };
+
+  inline std::optional<std::filesystem::path> get_path_from_handle(HANDLE handle)
+  {
+    static std::array<wchar_t, 256> filename;
+
+    auto file_type = ::GetFileType(handle);
+
+    if (file_type != FILE_TYPE_UNKNOWN || (file_type == FILE_TYPE_UNKNOWN && ::GetLastError() == 0))
+    {
+      if (::GetFinalPathNameByHandleW(handle, filename.data(), (DWORD)filename.size(), FILE_NAME_NORMALIZED) > 0)
+      {
+        return filename.data();
+      }
+    }
+
+    auto data = ::MapViewOfFile(handle, FILE_MAP_READ, 0, 0, 1);
+
+    if (data != nullptr)
+    {
+      auto size = ::GetFinalPathNameByHandleW(handle, filename.data(), (DWORD)filename.size(), FILE_NAME_NORMALIZED);
+
+      if (size == 0)
+      {
+        win32::file_view temp(data);
+
+        auto string = temp.GetMappedFilename();
+
+        if (string)
+        {
+          return *string;
+        }
+      }
+      else
+      {
+        ::UnmapViewOfFile(data);
+        return filename.data();
+      }
+    }
+
+    ATOM handle_as_atom = (ATOM)handle;
+
+    if (handle_as_atom >= MAXINTATOM)
+    {
+      auto atom_size = ::GetAtomNameW(handle_as_atom, filename.data(), (int)filename.size());
+
+      if (atom_size > 0)
+      {
+        return filename.data();
+      }
+
+      atom_size = ::GlobalGetAtomNameW(handle_as_atom, filename.data(), (int)filename.size());
+
+      if (atom_size > 0)
+      {
+        return filename.data();
+      }
+    }
+
+    return std::nullopt;
+  }
 }// namespace win32
 
 #endif

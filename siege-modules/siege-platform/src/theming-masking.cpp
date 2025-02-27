@@ -36,7 +36,7 @@ namespace win32
     }
     else
     {
-      auto theme_color = win32::get_color_for_window(nullptr, win32::properties::button::text_color);
+      auto theme_color = win32::get_color_for_class(L"Button", win32::properties::button::text_color);
       // RGB produces a BGR int, so swapping B and R gets us an RGB int
       text_color = D2D1::ColorF(RGB(GetBValue(theme_color), GetGValue(theme_color), GetRValue(theme_color)));
     }

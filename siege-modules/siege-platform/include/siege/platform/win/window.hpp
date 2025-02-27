@@ -202,7 +202,7 @@ namespace win32
     [[maybe_unused]] inline std::optional<TValue> RemovePropW(std::wstring_view name)
     {
       ::SetLastError(0);
-      auto value = ::RemovePropW(*this, name.data()));
+      auto value = ::RemovePropW(*this, name.data());
 
       if (::GetLastError() != 0)
       {
