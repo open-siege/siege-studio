@@ -14,6 +14,8 @@ namespace siege::views
     win32::list_box options;
     std::function<void()> options_unbind;
 
+    win32::list_box advanced_options;
+
     struct item_context
     {
       std::size_t item_index;
@@ -91,85 +93,6 @@ namespace siege::views
       this->SetWindowStyle(style | WS_CLIPCHILDREN);
       auto control_factory = win32::window_factory(ref());
 
-      sample.button = *control_factory.CreateWindowExW<win32::button>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-        .lpszName = L"Sample button" });
-
-      sample.combo_box = *control_factory.CreateWindowExW<win32::combo_box>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | CBS_DROPDOWN,
-        .lpszName = L"Sample combo box" });
-
-      sample.combo_box_ex = *control_factory.CreateWindowExW<win32::combo_box_ex>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | CBS_DROPDOWN,
-        .lpszName = L"Sample combo box ex" });
-
-      sample.edit = *control_factory.CreateWindowExW<win32::edit>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD });
-
-      sample.header = *control_factory.CreateWindowExW<win32::header>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD });
-
-      sample.header.InsertItem(-1, HDITEMW{ .mask = HDI_TEXT | HDI_WIDTH, .cxy = 30, .pszText = const_cast<wchar_t*>(L"Sample") });
-      sample.header.InsertItem(-1, HDITEMW{ .mask = HDI_TEXT | HDI_WIDTH, .cxy = 30, .pszText = const_cast<wchar_t*>(L"Header"), .cchTextMax = 5 });
-      sample.header.InsertItem(-1, HDITEMW{ .mask = HDI_TEXT | HDI_WIDTH, .cxy = 30, .pszText = const_cast<wchar_t*>(L"Test"), .cchTextMax = 5 });
-
-      sample.tree_view = *control_factory.CreateWindowExW<win32::tree_view>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD });
-
-      sample.tree_view.InsertItem(TVINSERTSTRUCTW{
-        .hInsertAfter = TVI_ROOT,
-        .item = TVITEMW{
-          .mask = TVIF_TEXT,
-          .pszText = const_cast<wchar_t*>(L"Tree") } });
-
-      sample.tree_view.InsertItem(TVINSERTSTRUCTW{
-        .hInsertAfter = TVI_ROOT,
-        .item = TVITEMW{
-          .mask = TVIF_TEXT,
-          .pszText = const_cast<wchar_t*>(L"View") } });
-
-      sample.tree_view.InsertItem(TVINSERTSTRUCTW{
-        .hInsertAfter = TVI_ROOT,
-        .item = TVITEMW{
-          .mask = TVIF_TEXT,
-          .pszText = const_cast<wchar_t*>(L"Sample") } });
-
-      sample.list_view = *control_factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD });
-
-      sample.list_view.InsertItem(-1, LVITEMW{ .mask = LVIF_TEXT, .pszText = const_cast<wchar_t*>(L"List") });
-
-      sample.list_view.InsertItem(-1, LVITEMW{ .mask = LVIF_TEXT, .pszText = const_cast<wchar_t*>(L"View") });
-
-      sample.list_view.InsertItem(-1, LVITEMW{ .mask = LVIF_TEXT, .pszText = const_cast<wchar_t*>(L"Sample") });
-
-      sample.toolbar = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | CCS_NOPARENTALIGN | CCS_NODIVIDER });
-
-      sample.toolbar.InsertButton(-1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR) const_cast<wchar_t*>(L"Tool") });
-
-      sample.toolbar.InsertButton(-1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR) const_cast<wchar_t*>(L"Bar") });
-
-      sample.toolbar.InsertButton(-1, TBBUTTON{ .iBitmap = I_IMAGENONE, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR) const_cast<wchar_t*>(L"Sample") });
-
-      sample.list_box = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS });
-
-      sample.list_box.InsertString(-1, L"Sample");
-      sample.list_box.InsertString(-1, L"List");
-      sample.list_box.InsertString(-1, L"Test");
-
-      sample.static_control = *control_factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD,
-        .lpszName = L"Static Control Example" });
-
-      sample.tab_control = *control_factory.CreateWindowExW<win32::tab_control>(::CREATESTRUCTW{
-        .style = WS_VISIBLE | WS_CHILD });
-
-      sample.tab_control.InsertItem(-1, TCITEMW{ .mask = TCIF_TEXT, .pszText = const_cast<wchar_t*>(L"Tab") });
-      sample.tab_control.InsertItem(-1, TCITEMW{ .mask = TCIF_TEXT, .pszText = const_cast<wchar_t*>(L"Control") });
-      sample.tab_control.InsertItem(-1, TCITEMW{ .mask = TCIF_TEXT, .pszText = const_cast<wchar_t*>(L"Sample") });
-
       options = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
@@ -177,6 +100,54 @@ namespace siege::views
       options.InsertString(-1, L"Theming (Advanced)");
       options.SetCurrentSelection(0);
       options_unbind = options.bind_lbn_sel_change(std::bind_front(&preferences_view::options_lbn_sel_change, this));
+
+      advanced_options = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
+        .style = WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
+
+      advanced_options.InsertString(-1, L"Button"); // Button + SysLink
+      advanced_options.InsertString(-1, L"Text Input"); // Edit + IP Address + Up Down Control
+      advanced_options.InsertString(-1, L"Text Output"); // Static + Tooltip
+      advanced_options.InsertString(-1, L"Combo Box"); // Combo Box + Combo Box Ex
+      advanced_options.InsertString(-1, L"List Box");
+      advanced_options.InsertString(-1, L"Header");
+      advanced_options.InsertString(-1, L"Toolbar");
+      advanced_options.InsertString(-1, L"Tree View");
+      advanced_options.InsertString(-1, L"List View");
+      advanced_options.InsertString(-1, L"Tab Control");
+      
+      // Push Button + Primary Push Button
+      // Flat Push Button + Flat Primary Push Button
+      // Split Button + Primary Primary Split Button
+      // Flat Split Button + Flat Primary Primary Split Button
+      // Command Link + Primary Command Link
+      // Sys Link + Push Box
+      // Two State Checkbox + Three State Checkbox
+      // Group Box + Radio Button + Radio Button
+      // Push Like + Flat Push Like
+      // Bitmap Button + Icon Button
+
+      // Edit + Edit Password
+      // IP Address
+      // Up-Down Control 
+
+      // Combo box simple
+      // Combo box dropdown + combo box dropdown list
+      // Combo box ex
+
+      // List Box
+
+      // Header
+      // Header with checkboxes
+
+      // Toolbar
+
+      // Tree View
+      // Tree View Checkboxes
+
+      // List View
+      
+      // Tab Control 
+
       ListBox_SetItemHeight(options, 0, options.GetItemHeight(0) * 2);
 
       return 0;
@@ -222,6 +193,14 @@ namespace siege::views
 
     void options_lbn_sel_change(win32::list_box hwndFrom, const NMHDR&)
     {
+      if (options.GetCurrentSelection() == 1)
+      {
+        ShowWindow(advanced_options, SW_SHOW);
+      }
+      else
+      {
+        ShowWindow(advanced_options, SW_HIDE);
+      }
     }
 
     void control_settings_lvn_end_scroll(win32::list_view, const NMLVSCROLL& notice)
@@ -261,6 +240,9 @@ namespace siege::views
 
       options.SetWindowPos(POINT{});
       options.SetWindowPos(left_size);
+
+      advanced_options.SetWindowPos(POINT{.x = left_size.cx });
+      advanced_options.SetWindowPos(left_size);
 
       return 0;
     }
