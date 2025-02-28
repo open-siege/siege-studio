@@ -169,22 +169,15 @@ namespace win32
     }
 
     template<typename TValue>
-    inline std::optional<TValue> GetPropW(std::wstring_view name) const
+    inline TValue GetPropW(std::wstring_view name) const
     {
       if constexpr (std::is_integral_v<TValue> || std::is_enum_v<TValue> || std::is_pointer_v<TValue>)
       {
-        ::SetLastError(0);
         auto raw = std::size_t(::GetPropW(*this, name.data()));
-
-        if (::GetLastError() != 0)
-        {
-          return std::nullopt;
-        }
-
         return TValue(raw);
       }
 
-      return std::nullopt;
+      return TValue();
     }
 
     template<typename TValue>
@@ -199,15 +192,9 @@ namespace win32
     }
 
     template<typename TValue = HANDLE>
-    [[maybe_unused]] inline std::optional<TValue> RemovePropW(std::wstring_view name)
+    [[maybe_unused]] inline TValue RemovePropW(std::wstring_view name)
     {
-      ::SetLastError(0);
-      auto value = ::RemovePropW(*this, name.data());
-
-      if (::GetLastError() != 0)
-      {
-          return std::nullopt;
-      }
+      auto value = std::size_t(::RemovePropW(*this, name.data()));
 
       return TValue(value);
     }

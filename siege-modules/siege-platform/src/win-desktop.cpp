@@ -94,6 +94,28 @@ namespace win32
     return win32::window_ref(temp);
   }
 
+  std::uint32_t to_storage(COLORREF color)
+  {
+    std::uint32_t raw_color{};
+    RGBQUAD quad{ .rgbBlue = GetBValue(color), .rgbGreen = GetGValue(color), .rgbRed = GetRValue(color), .rgbReserved = 0xff };
+    std::memcpy(&raw_color, &quad, sizeof(raw_color));
+    return raw_color;
+  }
+
+  std::optional<COLORREF> from_storage(std::uint32_t raw_color)
+  {
+    RGBQUAD quad{};
+    std::memcpy(&quad, &raw_color, sizeof(quad));
+
+    if (!quad.rgbReserved)
+    {
+      return std::nullopt;
+    }
+
+    return RGB(quad.rgbRed, quad.rgbGreen, quad.rgbBlue);
+  }
+
+
   COLORREF get_color_for_class(std::wstring_view class_name, std::wstring_view prop)
   {
     auto cache = get_theme_cache();
@@ -105,7 +127,7 @@ namespace win32
       cache = win32::window_ref(child);
     }
 
-    auto color = cache.GetPropW<COLORREF>(prop);
+    auto color = from_storage(cache.GetPropW<std::uint32_t>(prop));
 
     if (color)
     {
@@ -122,6 +144,13 @@ namespace win32
 
   COLORREF get_color_for_window(win32::window_ref window, std::wstring_view prop)
   {
+    auto color = from_storage(window.GetPropW<std::uint32_t>(prop));
+
+    if (color)
+    {
+      return *color;
+    }
+
     auto cache = get_theme_cache();
 
     static std::array<wchar_t, 255> temp;
@@ -144,13 +173,13 @@ namespace win32
 
     if (!color)
     {
-      return child.RemovePropW<COLORREF>(prop);
+      return from_storage(child.RemovePropW<std::uint32_t>(prop));
     }
 
-    auto existing = child.GetPropW<COLORREF>(prop);
+    auto existing = child.GetPropW<std::uint32_t>(prop);
 
-    child.SetPropW(prop, *color);
+    child.SetPropW(prop, to_storage(*color));
 
-    return existing;
+    return from_storage(existing);
   }
 }// namespace win32
