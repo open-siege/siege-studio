@@ -203,6 +203,13 @@ namespace win32::wic
       return bitmap_source(converter.as<IWICBitmapSource>());
     }
 
+    pixel_format get_pixel_format() const
+    {
+      GUID format;
+      hresult_throw_on_error(instance->GetPixelFormat(&format));
+      return pixel_format(format);
+    }
+
     bitmap_source scale(std::uint32_t width, std::uint32_t height, interpolation_mode mode) const
     {
       win32::com::com_ptr<IWICBitmapScaler> scaler;

@@ -22,16 +22,14 @@
 namespace siege::views
 {
   using namespace win32::wic;
-  
-  // TODO add right click menu for setting a palette as the default entry
+
   // TODO add a right click menu to open the palette in a new tab
   // TODO update icons of list view to be radio buttons instead of checkboxes
-  // TODO remap bitmap pixels to match new palette
   struct bmp_view : win32::window_ref
   {
     bmp_controller controller;
 
-    win32::list_view palettes_list;
+    win32::list_view palette_list;
     win32::tool_bar bitmap_actions;
     win32::image_list bitmap_actions_icons;
 
@@ -42,12 +40,15 @@ namespace siege::views
     win32::popup_menu image_export_menu;
     win32::popup_menu export_single_menu;
     win32::popup_menu export_multiple_menu;
+    win32::popup_menu remap_menu;
+    win32::popup_menu remap_dither_type_menu;
 
     win32::gdi::bitmap preview_bitmap;
     WICRect viewport;
     WICRect previous_viewport;
     float scale = 0;
     bool is_panning = false;
+    std::optional<WICBitmapDitherType> dither_type = WICBitmapDitherType::WICBitmapDitherTypeSolid;
     std::optional<POINTS> last_mouse_position = std::nullopt;
     std::function<bool()> pan_timer;
     std::function<bool()> animation_timer;
@@ -160,31 +161,32 @@ namespace siege::views
 
       std::wstring temp = L"menu.pal";
 
-      palettes_list = [&] {
-        auto palettes_list = *factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
+      palette_list = [&] {
+        auto palette_list = *factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
           .style = WS_VISIBLE | WS_CHILD | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | WS_CLIPSIBLINGS,
           .lpszName = L"Palettes" });
 
-        palettes_list.SetView(win32::list_view::view_type::details_view);
-        assert(palettes_list.EnableGroupView(true));
-        assert(palettes_list.SetTileViewInfo(LVTILEVIEWINFO{
+        palette_list.SetView(win32::list_view::view_type::details_view);
+        assert(palette_list.EnableGroupView(true));
+        assert(palette_list.SetTileViewInfo(LVTILEVIEWINFO{
           .dwFlags = LVTVIF_FIXEDWIDTH,
           .sizeTile = SIZE{ .cx = this->GetClientSize()->cx, .cy = 50 },
         }));
 
-        palettes_list.SetExtendedListViewStyle(0,
+        palette_list.SetExtendedListViewStyle(0,
           LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_AUTOSIZECOLUMNS | LVS_EX_DOUBLEBUFFER);
 
-        palettes_list.win32::list_view::InsertColumn(-1, LVCOLUMNW{ .pszText = const_cast<wchar_t*>(L"Available Palettes") });
+        palette_list.win32::list_view::InsertColumn(-1, LVCOLUMNW{ .pszText = const_cast<wchar_t*>(L"Available Palettes") });
 
-        auto header = palettes_list.GetHeader();
+        auto header = palette_list.GetHeader();
 
         auto style = header.GetWindowStyle();
         header.SetWindowStyle(style | HDS_FLAT | HDS_NOSIZING | HDS_FILTERBAR);
-        return palettes_list;
+        return palette_list;
       }();
 
-      palettes_list.bind_lvn_item_changed(std::bind_front(&bmp_view::palette_list_item_changed, this));
+      palette_list.bind_lvn_item_changed(std::bind_front(&bmp_view::palette_list_item_changed, this));
+      palette_list.bind_nm_rclick(std::bind_front(&bmp_view::palette_list_nm_rclick, this));
 
       static_image = *factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
         .hwndParent = *this,
@@ -211,6 +213,13 @@ namespace siege::views
       export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_bmp_id, L"Export As Multiple Microsoft BMPs");
       export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_png_id, L"Export As Multiple PNGs");
       export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_dds_id, L"Export As Multiple DDSs");
+
+
+      remap_menu.AppendMenuW(MF_OWNERDRAW | MF_POPUP, (UINT_PTR)remap_dither_type_menu.get(), L"Color Remapping");
+      remap_menu.AppendMenuW(MF_OWNERDRAW, 1, L"No Color Remapping");
+
+      remap_dither_type_menu.AppendMenuW(MF_OWNERDRAW, 2 + WICBitmapDitherTypeErrorDiffusion, L"With Dithering");
+      remap_dither_type_menu.AppendMenuW(MF_OWNERDRAW, 2 + WICBitmapDitherTypeSolid, L"Without Dithering");
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
@@ -439,6 +448,26 @@ namespace siege::views
       bitmap_actions_icons = win32::create_icon_list(icons, icon_size);
     }
 
+    void palette_list_nm_rclick(win32::list_view sender, const NMITEMACTIVATE& info)
+    {
+      auto point = info.ptAction;
+
+      if (ClientToScreen(palette_list, &point))
+      {
+        auto result = remap_menu.TrackPopupMenuEx(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, point, ref());
+
+        if (result == 1)
+        {
+          dither_type = std::nullopt;
+        }
+        else
+        {
+          dither_type = (WICBitmapDitherType)(result - 2);
+        }
+        ListView_SetCheckState(sender, info.iItem, TRUE);
+      }
+    }
+
     void palette_list_item_changed(win32::list_view sender, const NMLISTVIEW& info)
     {
       // Taken from ListView_GetCheckState
@@ -545,9 +574,9 @@ namespace siege::views
       static_image.SetWindowPos(POINT{ .y = top_size.cy });
       static_image.SetWindowPos(SIZE{ .cx = left_size.cx, .cy = left_size.cy - top_size.cy });
 
-      palettes_list.SetWindowPos(POINT{ .x = left_size.cx, .y = top_size.cy });
-      palettes_list.SetWindowPos(right_size);
-      palettes_list.SetColumnWidth(0, right_size.cx);
+      palette_list.SetWindowPos(POINT{ .x = left_size.cx, .y = top_size.cy });
+      palette_list.SetWindowPos(right_size);
+      palette_list.SetColumnWidth(0, right_size.cx);
 
       resize_preview();
 
@@ -618,73 +647,34 @@ namespace siege::views
 
         auto existing_size = preview_bitmap.get_size();
 
-        if (!(existing_size.cx == preview_size.cx && existing_size.cy == preview_size.cy))
-        {
-          preview_bitmap = win32::gdi::bitmap(preview_size, win32::gdi::bitmap::skip_shared_handle);
-
+        auto update_bitmap = [&] {
           if (palette)
           {
             auto bitmap = current_frame->handle().as<IWICBitmap>();
 
-            if (auto raw_palette = palette->handle(); bitmap)
+            if (auto raw_palette = palette->handle(); bitmap && !dither_type)
             {
               bitmap->SetPalette(raw_palette.get());
+              current_frame
+                ->clip(viewport)
+                .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
+                .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
             }
-            /*
-            * else convert image
-            .convert(win32::wic::bitmap_source::to_format{
-                .format = win32::wic::pixel_format::indexed_8bpp,
-                .dither_type = dither_type::WICBitmapDitherTypeSolid,
-                .palette = *palette,
-                .palette_type = palette_type::WICBitmapPaletteTypeCustom
-                  })
-            
-            */
-
-            current_frame
-              ->clip(viewport)
-              .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
-              .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
-          }
-          else
-          {
-            current_frame
-              ->clip(viewport)
-              .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
-              .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
-          }
-
-
-          auto pixels = preview_bitmap.get_pixels();
-
-          // prevents bitmaps from being copied
-          for (auto& pixel : pixels)
-          {
-            pixel.rgbReserved = 0;
-          }
-
-          auto old_bitmap = static_image.SetImage(preview_bitmap.get());
-
-          if (old_bitmap != preview_bitmap.get())
-          {
-            ::DeleteObject(old_bitmap);
-          }
-        }
-        else if (force && std::memcmp(&viewport, &previous_viewport, sizeof(viewport)) != 0)
-        {
-          if (palette)
-          {
-            auto bitmap = current_frame->handle().as<IWICBitmap>();
-
-            if (auto raw_palette = palette->handle(); bitmap)
+            else if (dither_type)
             {
-              bitmap->SetPalette(raw_palette.get());
+              current_frame
+                ->clip(viewport)
+                .convert(win32::wic::bitmap_source::to_format{
+                  .format = win32::wic::pixel_format::bgr_32bpp,
+                  .palette_type = palette_type::WICBitmapPaletteTypeCustom })
+                .convert(win32::wic::bitmap_source::to_format{
+                  .format = win32::wic::pixel_format::indexed_8bpp,
+                  .dither_type = *dither_type,
+                  .palette = *palette,
+                  .palette_type = palette_type::WICBitmapPaletteTypeCustom })
+                .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
+                .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
             }
-
-            current_frame
-              ->clip(viewport)
-              .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
-              .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
           }
           else
           {
@@ -715,6 +705,17 @@ namespace siege::views
               ::DeleteObject(old_bitmap);
             }
           }
+        };
+
+        if (!(existing_size.cx == preview_size.cx && existing_size.cy == preview_size.cy))
+        {
+          preview_bitmap = win32::gdi::bitmap(preview_size, win32::gdi::bitmap::skip_shared_handle);
+
+          update_bitmap();
+        }
+        else if (force && std::memcmp(&viewport, &previous_viewport, sizeof(viewport)) != 0)
+        {
+          update_bitmap();
         }
         previous_viewport = viewport;
       }
@@ -848,6 +849,16 @@ namespace siege::views
           auto size = static_image.GetClientSize();
           auto frame_size = controller.get_size(current_frame_index);
           current_frame = &controller.get_frame(current_frame_index);
+
+          if (!(current_frame->get_pixel_format() == pixel_format::indexed_1bpp ||
+              current_frame->get_pixel_format() == pixel_format::indexed_2bpp || 
+              current_frame->get_pixel_format() != pixel_format::indexed_4bpp ||
+              current_frame->get_pixel_format() != pixel_format::indexed_8bpp
+              ))
+          {
+            dither_type = WICBitmapDitherType::WICBitmapDitherTypeErrorDiffusion;
+          }
+
           viewport = WICRect();
           viewport.Width = (INT)frame_size.width;
           viewport.Height = (INT)frame_size.height;
@@ -894,10 +905,10 @@ namespace siege::views
                   new_group.state = LVGS_COLLAPSIBLE;
                 }
 
-                palettes_list.InsertGroups(groups);
+                palette_list.InsertGroups(groups);
 
-                ListView_SetCheckState(palettes_list, selected_index, TRUE);
-                ListView_SetItemState(palettes_list, selected_index, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED); }, pending_load);
+                ListView_SetCheckState(palette_list, selected_index, TRUE);
+                ListView_SetItemState(palette_list, selected_index, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED); }, pending_load);
 
           return TRUE;
         }
