@@ -19,7 +19,6 @@
 
 namespace siege::views
 {
-
   // TODO update tree view to support multiple levels of navigation
   // TODO add filename filter for directory listing
   // TODO add category and extension filter for directory listing
@@ -974,6 +973,8 @@ namespace siege::views
           .lpszName = L"Preferences",
           .lpszClass = win32::type_name<preferences_view>().c_str() });
 
+        auto ref = win32::window_ref(theme_window);
+        win32::apply_window_theme(ref);
         ShowWindow(theme_window, SW_NORMAL);
       }
 
@@ -1122,7 +1123,6 @@ namespace siege::views
 
       if (identifier == about_id)
       {
-
         win32::DialogBoxIndirectParamW<about_view>(::GetModuleHandleW(nullptr),
           win32::default_dialog{ { .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 200, .cy = 200 } },
           ref());

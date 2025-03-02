@@ -42,7 +42,7 @@ namespace win32
   {                                                                                           \
     if (message == message_id)                                                                \
     {                                                                                         \
-      return self->event_name((wparam_type)wParam, *(lparam_type)lParam);                    \
+      return self->event_name((wparam_type)wParam, *(lparam_type)lParam);                     \
     }                                                                                         \
   }
 
@@ -202,7 +202,14 @@ namespace win32
 
             auto* pCreate = std::bit_cast<CREATESTRUCTW*>(lParam);
 
-            self = new (raw_data) TWindow(hWnd, *pCreate);
+            try
+            {
+              self = new (raw_data) TWindow(hWnd, *pCreate);
+            }
+            catch (...)
+            {
+              return FALSE;
+            }
 
             SetWindowLongPtrW(hWnd, 0, std::bit_cast<LONG_PTR>(heap));
             SetWindowLongPtrW(hWnd, sizeof(LONG_PTR), size);
@@ -219,7 +226,14 @@ namespace win32
 
           if (self)
           {
-            result = dispatch_message(self, message, wParam, lParam);
+            try
+            {
+              result = dispatch_message(self, message, wParam, lParam);
+            }
+            catch (...)
+            {
+
+            }
 
             if (message == WM_NCDESTROY)
             {

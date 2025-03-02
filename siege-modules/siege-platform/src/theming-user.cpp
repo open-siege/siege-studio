@@ -109,7 +109,7 @@ namespace win32
       {
         MENUINFO mi = { .cbSize = sizeof(MENUINFO), .fMask = MIM_BACKGROUND };
         auto bk_color = win32::get_color_for_class(L"#32768", win32::properties::menu::bk_color);
-        
+
         mi.hbrBack = win32::get_solid_brush(bk_color);
         SetMenuInfo(sub_menu, &mi);
         return 0;
@@ -392,7 +392,7 @@ namespace win32
 
     if (!::GetWindowSubclass(control, sub_class::HandleMessage, (UINT_PTR)subclass_id, &existing_object) && existing_object == 0)
     {
-      ::SetWindowSubclass(control, sub_class::HandleMessage, (UINT_PTR)subclass_id, (DWORD_PTR)new sub_class());
+      ::SetWindowSubclass(control, sub_class::HandleMessage, (UINT_PTR)subclass_id, (DWORD_PTR) new sub_class());
     }
 
     if (control.GetWindowStyle() & ~WS_CHILD)
@@ -691,7 +691,17 @@ namespace win32
             return superclass.control_proc(self, message, wParam, lParam);
           }
 
-          if (create_params->style & SS_OWNERDRAW)
+          if (create_params->style == (WS_CHILD | WS_VISIBLE | SS_OWNERDRAW))
+          {
+            return superclass.control_proc(self, message, wParam, lParam);
+          }
+
+          if (create_params->style == (WS_CHILD | WS_VISIBLE | SS_BITMAP | SS_OWNERDRAW))
+          {
+            return superclass.control_proc(self, message, wParam, lParam);
+          }
+
+          if (create_params->style == (WS_CHILD | WS_VISIBLE | SS_ICON | SS_OWNERDRAW))
           {
             return superclass.control_proc(self, message, wParam, lParam);
           }
@@ -709,13 +719,19 @@ namespace win32
           {
             ::SetWindowSubclass(parent, handle_parent_message, 0, 0);
           }
+          
           controls.emplace(self);
+          
           return superclass.control_proc(self, message, wParam, lParam);
         }
+
+        static std::map<HBITMAP, HBITMAP> bitmap_cache;
 
         if (message == WM_CREATE && controls.contains(self))
         {
           auto result = superclass.control_proc(self, message, wParam, lParam);
+
+          auto child = ::FindWindowExW(self, nullptr, nullptr, nullptr);
           HFONT font = win32::load_font(LOGFONTW{
             .lfPitchAndFamily = VARIABLE_PITCH,
             .lfFaceName = L"Segoe UI" });

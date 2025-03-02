@@ -103,7 +103,7 @@ namespace win32::wic
     palette(const palette& other)
     {
       hresult_throw_on_error(bitmap_factory::instance().CreatePalette(instance.put()));
-      
+
       if (other.instance)
       {
         hresult_throw_on_error(instance->InitializeFromPalette(other.instance.get()));
@@ -177,7 +177,7 @@ namespace win32::wic
     bitmap_source(const bitmap_source&) = default;
     bitmap_source& operator=(const bitmap_source&) = default;
     bitmap_source& operator=(bitmap_source&&) = default;
-    
+
     bitmap_source(com::com_ptr<IWICBitmapSource> instance) : instance(std::move(instance))
     {
     }
@@ -506,18 +506,7 @@ namespace win32::wic
   class bitmap : public bitmap_source
   {
   public:
-     using bitmap_source::bitmap_source;
-
-    //bitmap(bitmap&& other) noexcept
-    //{
-    //  this->instance.reset(other.instance.release());
-    //}
-
-    //bitmap& operator=(bitmap&& other) noexcept
-    //{
-    //  this->instance.reset(other.instance.release());
-    //  return *this;
-    //}
+    using bitmap_source::bitmap_source;
 
     bitmap(bitmap_source source, cache_create_option options = cache_create_option::WICBitmapCacheOnLoad)
     {
@@ -544,9 +533,14 @@ namespace win32::wic
       hresult_throw_on_error(bitmap_factory::instance().CreateBitmapFromMemory(options.width, options.height, options.format, options.stride, options.buffer.size(), (BYTE*)options.buffer.data(), (IWICBitmap**)instance.put()));
     }
 
-    bitmap(const gdi::icon& icom)
+    bitmap(const gdi::icon& icon)
     {
-      hresult_throw_on_error(bitmap_factory::instance().CreateBitmapFromHICON(icom, (IWICBitmap**)instance.put()));
+      hresult_throw_on_error(bitmap_factory::instance().CreateBitmapFromHICON(icon, (IWICBitmap**)instance.put()));
+    }
+
+    bitmap(gdi::icon_ref icon)
+    {
+      hresult_throw_on_error(bitmap_factory::instance().CreateBitmapFromHICON(icon.get(), (IWICBitmap**)instance.put()));
     }
 
     bitmap(const gdi::bitmap& bitmap, alpha_channel_option options) : bitmap((HBITMAP)bitmap, options)
@@ -562,6 +556,7 @@ namespace win32::wic
       auto handle = palette.handle();
       hresult_throw_on_error(((IWICBitmap*)instance.get())->SetPalette(handle.get()));
     }
+
   private:
     bitmap(HBITMAP bitmap, alpha_channel_option options)
     {

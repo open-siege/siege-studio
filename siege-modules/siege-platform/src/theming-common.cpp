@@ -281,7 +281,7 @@ namespace win32
           }
 
           create_params->style = create_params->style | TCS_OWNERDRAWFIXED;
-          
+
           auto root = ::GetAncestor(create_params->hwndParent, GA_ROOT);
           auto parent = create_params->hwndParent;
           DWORD_PTR existing_object{};
@@ -322,7 +322,8 @@ namespace win32
         if ((message == WM_PAINT || message == WM_PRINTCLIENT) && controls.contains(self))
         {
           PAINTSTRUCT ps{};
-          HDC hdc = wParam != 0 ? (HDC)wParam : message == WM_PAINT ? BeginPaint(self, &ps) : nullptr;
+          HDC hdc = wParam != 0 ? (HDC)wParam : message == WM_PAINT ? BeginPaint(self, &ps)
+                                                                    : nullptr;
 
           if (wParam)
           {
@@ -431,7 +432,7 @@ namespace win32
         if (message == WM_DRAWITEM && controls.contains(((DRAWITEMSTRUCT*)lParam)->hwndItem))
         {
           auto& item = *((DRAWITEMSTRUCT*)lParam);
-          
+
           thread_local std::wstring buffer(256, '\0');
 
           if (item.itemAction == ODA_DRAWENTIRE || item.itemAction == ODA_SELECT)
@@ -440,7 +441,7 @@ namespace win32
             win32::tab_control control(item.hwndItem);
 
             SetBkColor(context, get_color_for_window(control.ref(), win32::properties::tab_control::bk_color));
-            
+
             auto item_rect = item.rcItem;
 
             auto text_highlight_color = get_color_for_window(control.ref(), win32::properties::tab_control::text_highlight_color);
@@ -557,7 +558,7 @@ namespace win32
           return superclass.control_proc(self, message, wParam, lParam);
         }
 
-        if (message == WM_CREATE)
+        if (message == WM_CREATE && controls.contains(self))
         {
           auto result = superclass.control_proc(self, message, wParam, lParam);
 
@@ -590,6 +591,25 @@ namespace win32
           ListView_SetTextColor(self, win32::get_color_for_window(win32::window_ref(self), properties::list_view::text_color));
           ListView_SetTextBkColor(self, win32::get_color_for_window(win32::window_ref(self), properties::list_view::text_bk_color));
           ListView_SetOutlineColor(self, win32::get_color_for_window(win32::window_ref(self), properties::list_view::outline_color));
+        }
+
+        if (message == WM_WINDOWPOSCHANGING && controls.contains(self))
+        {
+          SCROLLINFO scroll{
+            .cbSize = sizeof(SCROLLINFO),
+            .fMask = SIF_ALL
+          };
+          GetScrollInfo(self, SB_VERT, &scroll);
+
+          WINDOWPOS* rect = (WINDOWPOS*)lParam;
+          auto width = rect->cx;
+
+          if (scroll.nMax > 0)
+          {
+            auto scroll_width = win32::get_system_metrics(SM_CXEDGE) + win32::get_system_metrics(SM_CXEDGE) + win32::get_system_metrics(SM_CXVSCROLL);
+            width = width > scroll_width ? width - scroll_width : width;
+            rect->cx = width;
+          }
         }
 
         return superclass.control_proc(self, message, wParam, lParam);
