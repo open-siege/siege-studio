@@ -480,11 +480,10 @@ namespace win32
 
         if (message == WM_SIZE)
         {
-          UINT width = LOWORD(lParam);
-          UINT height = HIWORD(lParam);
-          ::SetPropW(self, L"UseDirect2d", (HANDLE)(width > height ? TRUE : FALSE));
-        }
+          auto shape = (int)::GetPropW(self, L"Shape");
 
+          ::SetPropW(self, L"UseDirect2d", (HANDLE)(shape == EMR_ROUNDRECT ? TRUE : FALSE));
+        }
 
         if ((message == WM_PAINT || message == WM_PRINTCLIENT) && ::GetPropW(self, L"UseDirect2d") && controls.contains(self))
         {
@@ -556,6 +555,7 @@ namespace win32
         if (message == WM_NCDESTROY && controls.contains(self))
         {
           ::RemovePropW(self, L"UseDirect2d");
+          ::RemovePropW(self, L"Shape");
           controls.erase(self);
         }
 
@@ -719,9 +719,9 @@ namespace win32
           {
             ::SetWindowSubclass(parent, handle_parent_message, 0, 0);
           }
-          
+
           controls.emplace(self);
-          
+
           return superclass.control_proc(self, message, wParam, lParam);
         }
 
