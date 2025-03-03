@@ -940,4 +940,87 @@ namespace win32
       superclass.dispose(controls, (LONG_PTR)handlers::handle_control_message);
     }
   }
+
+  void apply_tooltip_theme(bool remove)
+  {
+    static superclass_handle superclass;
+    static std::unordered_set<HWND> controls;
+
+    struct handlers
+    {
+      static LRESULT __stdcall handle_control_message(HWND self, UINT message, WPARAM wParam, LPARAM lParam)
+      {
+        if (message == WM_NCCREATE)
+        {
+          CREATESTRUCTW* create_params = (CREATESTRUCTW*)lParam;
+
+          if (!create_params)
+          {
+            return FALSE;
+          }
+
+          if (!create_params->hwndParent)
+          {
+            return superclass.control_proc(self, message, wParam, lParam);
+          }
+
+          auto root = ::GetAncestor(create_params->hwndParent, GA_ROOT);
+          auto parent = create_params->hwndParent;
+          DWORD_PTR existing_object{};
+
+          if (!::GetWindowSubclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, &existing_object))
+          {
+            ::SetWindowSubclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, (DWORD_PTR)&controls);
+          }
+
+          controls.emplace(self);
+          return superclass.control_proc(self, message, wParam, lParam);
+        }
+
+        if (message == WM_CREATE && controls.contains(self))
+        {
+          win32::theme_module().SetWindowTheme(self, L"", L"");
+          auto result = superclass.control_proc(self, message, wParam, lParam);
+          HFONT font = win32::load_font(LOGFONTW{
+            .lfPitchAndFamily = VARIABLE_PITCH,
+            .lfFaceName = L"Segoe UI" });
+
+          ::SendMessageW(self, CCM_DPISCALE, TRUE, 0);
+          ::SendMessageW(self, WM_SETFONT, (WPARAM)font, FALSE);
+          ::SendMessageW(self, WM_SETTINGCHANGE, 0, 0);
+
+          return result;
+        }
+
+        if (message == WM_SETTINGCHANGE && controls.contains(self))
+        {
+          if (win32::is_dark_theme())
+          {
+            win32::theme_module().SetWindowTheme(self, L"DarkMode_Explorer", nullptr);
+          }
+          else
+          {
+            win32::theme_module().SetWindowTheme(self, L"Explorer", nullptr);
+          }
+        }
+
+        if (message == WM_NCDESTROY && controls.contains(self))
+        {
+          controls.erase(self);
+        }
+
+        return superclass.control_proc(self, message, wParam, lParam);
+      }
+    };
+
+    if (!superclass.dummy)
+    {
+      superclass.init(TOOLTIPS_CLASSW, (LONG_PTR)handlers::handle_control_message);
+    }
+
+    if (superclass.dummy && remove)
+    {
+      superclass.dispose(controls, (LONG_PTR)handlers::handle_control_message);
+    }
+  }
 }// namespace win32

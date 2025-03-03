@@ -312,6 +312,7 @@ namespace win32
   void apply_list_box_theme(bool remove = false);
 
   // common controls
+  void apply_tooltip_theme(bool remove = false);
   void apply_tree_view_theme(bool remove = false);
   void apply_list_view_theme(bool remove = false);
   void apply_tab_control_theme(bool remove = false);
