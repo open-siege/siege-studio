@@ -16,12 +16,13 @@
 #include <map>
 #include <spanstream>
 
-
 namespace siege::views
 {
   // TODO update tree view to support multiple levels of navigation
   // TODO add filename filter for directory listing
   // TODO add category and extension filter for directory listing
+  // TODO Support WM_DROPFILES. Instead of using the templated window handler, it makes sense to 
+  // move the dispatching into this class to support more bespoke messages.
   struct siege_main_window final : win32::window_ref
     , win32::menu::notifications
   {
@@ -271,7 +272,7 @@ namespace siege::views
       tab_control.bind_nm_rclick(std::bind_front(&siege_main_window::tab_control_nm_rclick, this));
       tab_control.bind_tcn_sel_change(std::bind_front(&siege_main_window::tab_control_tcn_sel_change, this));
       tab_control.bind_tcn_sel_changing(std::bind_front(&siege_main_window::tab_control_tcn_sel_changing, this));
-
+      // TODO move close button logic and placement into a sub-class which can be registered after tab control creation
       close_button = *factory.CreateWindowExW<win32::button>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"X" });
       close_button.bind_bn_clicked(std::bind_front(&siege_main_window::close_button_bn_clicked, this));
 
