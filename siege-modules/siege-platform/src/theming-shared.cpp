@@ -1,7 +1,36 @@
+#include <siege/platform/win/window.hpp>
+
 namespace win32
 {
-    // TODO in WM_NCCREATE/WM_CREATE for each control, a check should made if the parent comes from
-    // a system dll and to block it. This can 
-    //bool is_parent_from_system(HWND window)
-    // check comdlg32, comctl32, shell32, shlwapi
-}
+  bool is_parent_from_system(HWND window)
+  {
+    if (!window)
+    {
+      return false;
+    }
+
+    if (window == HWND_MESSAGE)
+    {
+      return true;
+    }
+
+    auto module = (HMODULE)::GetClassLongPtrW(window, GCLP_HMODULE);
+
+    if (!module)
+    {
+      return false;
+    }
+
+    if (module == ::GetModuleHandleW(L"comdlg32") ||
+        module == ::GetModuleHandleW(L"comctl32") || 
+        module == ::GetModuleHandleW(L"shell32") ||
+        module == ::GetModuleHandleW(L"user32") ||
+        module == ::GetModuleHandleW(L"ExplorerFrame") ||
+        module == ::GetModuleHandleW(L"shlwapi"))
+    {
+        return true;
+    }
+
+    return false;
+  }
+}// namespace win32

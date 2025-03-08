@@ -9,6 +9,7 @@
 #include <siege/platform/content_module.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/theming.hpp>
+#include <siege/platform/win/layout.hpp>
 #include <siege/platform/win/dialog.hpp>
 #include "views/preferences_view.hpp"
 #include "views/about_view.hpp"
@@ -30,7 +31,6 @@ namespace siege::views
     win32::popup_menu dir_list_menu;
     win32::button separator;
     win32::tab_control tab_control;
-    win32::button close_button;
     win32::window theme_window;
 
     std::list<platform::content_module> loaded_modules;
@@ -273,12 +273,9 @@ namespace siege::views
       tab_control.bind_nm_rclick(std::bind_front(&siege_main_window::tab_control_nm_rclick, this));
       tab_control.bind_tcn_sel_change(std::bind_front(&siege_main_window::tab_control_tcn_sel_change, this));
       tab_control.bind_tcn_sel_changing(std::bind_front(&siege_main_window::tab_control_tcn_sel_changing, this));
-      // TODO move close button logic and placement into a sub-class which can be registered after tab control creation
-      close_button = *factory.CreateWindowExW<win32::button>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"X" });
-      close_button.bind_bn_clicked(std::bind_front(&siege_main_window::close_button_bn_clicked, this));
+      win32::enable_closeable_tabs(tab_control);
 
       std::size_t id = 1u;
-
 
       popup_menus[0].AppendMenuW(MF_OWNERDRAW, open_id, L"Open...");
       popup_menus[0].AppendMenuW(MF_OWNERDRAW, open_new_tab_id, L"Open in New Tab...");
@@ -307,19 +304,6 @@ namespace siege::views
     {
       PostQuitMessage(0);
       return 0;
-    }
-
-    void move_close_button()
-    {
-      if (auto count = tab_control.GetItemCount(); count > 1)
-      {
-        auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
-        auto rect = tab_control.GetItemRect(tab_control.GetCurrentSelection());
-        auto height = rect->bottom - rect->top;
-        close_button.SetWindowPos(POINT{ .x = tab_rect.left + rect->right - height, .y = tab_rect.top + rect->top });
-        close_button.SetWindowPos(SIZE{ .cx = height, .cy = height });
-        close_button.SetWindowPos(HWND_TOP);
-      }
     }
 
     void on_size(SIZE total_size)
@@ -359,7 +343,6 @@ namespace siege::views
       {
         count = 1;
       }
-
 
       auto fallback = 150;
       auto total_width = right_size.cx;
@@ -402,8 +385,6 @@ namespace siege::views
         child.SetWindowPos(POINT{ .x = right_size.cx - child_width - (child_width / 4), .y = 0 });
         child.SetWindowPos(SIZE{ .cx = child_width, .cy = child_height });
       }
-
-      move_close_button();
     }
 
     auto wm_size(std::size_t type, SIZE client_size)
@@ -694,8 +675,6 @@ namespace siege::views
 
       auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
 
-      move_close_button();
-
       ShowWindow(win32::hwnd_t(tab_item->lParam), SW_SHOW);
     }
 
@@ -718,6 +697,7 @@ namespace siege::views
         .style = WS_CHILD | WS_CLIPCHILDREN,
         .lpszClass = class_name.c_str(),
       });
+      child->SetPropW(L"TabIndestructible", TRUE);
 
       auto ref = child->ref();
       win32::apply_window_theme(ref);
@@ -952,14 +932,6 @@ namespace siege::views
     BOOL dir_list_tvn_item_expanding(win32::tree_view, const NMTREEVIEWW& notification)
     {
       return FALSE;
-    }
-
-    void close_button_bn_clicked(win32::button sender, const NMHDR&)
-    {
-      if (tab_control.GetItemCount())
-      {
-        remove_tab(TabCtrl_GetCurSel(tab_control));
-      }
     }
 
     std::optional<LRESULT> wm_command(win32::menu_ref, int identifier) override

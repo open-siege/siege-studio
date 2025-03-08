@@ -7,6 +7,7 @@
 namespace win32
 {
   gdi::brush_ref get_solid_brush(COLORREF color);
+  bool is_parent_from_system(HWND parent);
 
   struct superclass_handle
   {
@@ -97,7 +98,7 @@ namespace win32
             return FALSE;
           }
 
-          if (!create_params->hwndParent)
+          if (!create_params->hwndParent || is_parent_from_system(create_params->hwndParent))
           {
             return superclass.control_proc(self, message, wParam, lParam);
           }
@@ -270,7 +271,7 @@ namespace win32
             return FALSE;
           }
 
-          if (!create_params->hwndParent)
+          if (!create_params->hwndParent || is_parent_from_system(create_params->hwndParent))
           {
             return superclass.control_proc(self, message, wParam, lParam);
           }
@@ -532,7 +533,7 @@ namespace win32
             return FALSE;
           }
 
-          if (!create_params->hwndParent)
+          if (!create_params->hwndParent || is_parent_from_system(create_params->hwndParent))
           {
             return superclass.control_proc(self, message, wParam, lParam);
           }
@@ -723,7 +724,7 @@ namespace win32
             return FALSE;
           }
 
-          if (!create_params->hwndParent)
+          if (!create_params->hwndParent || is_parent_from_system(create_params->hwndParent))
           {
             return superclass.control_proc(self, message, wParam, lParam);
           }
@@ -813,7 +814,7 @@ namespace win32
             return FALSE;
           }
 
-          if (!create_params->hwndParent)
+          if (!create_params->hwndParent || is_parent_from_system(create_params->hwndParent))
           {
             return superclass.control_proc(self, message, wParam, lParam);
           }
@@ -959,7 +960,7 @@ namespace win32
             return FALSE;
           }
 
-          if (!create_params->hwndParent)
+          if (!create_params->hwndParent || is_parent_from_system(create_params->hwndParent))
           {
             return superclass.control_proc(self, message, wParam, lParam);
           }

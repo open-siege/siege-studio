@@ -10,6 +10,7 @@
 
 namespace win32
 {
+  bool is_parent_from_system(HWND parent);
   gdi::brush_ref get_solid_brush(COLORREF color);
 
   // TODO put the shared code into a private header
@@ -438,7 +439,7 @@ namespace win32
             return FALSE;
           }
 
-          if (!create_params->hwndParent)
+          if (!create_params->hwndParent || is_parent_from_system(create_params->hwndParent))
           {
             return superclass.control_proc(self, message, wParam, lParam);
           }
@@ -686,7 +687,7 @@ namespace win32
             return FALSE;
           }
 
-          if (!create_params->hwndParent)
+          if (!create_params->hwndParent || is_parent_from_system(create_params->hwndParent))
           {
             return superclass.control_proc(self, message, wParam, lParam);
           }
@@ -828,7 +829,7 @@ namespace win32
             return FALSE;
           }
 
-          if (!create_params->hwndParent)
+          if (!create_params->hwndParent || is_parent_from_system(create_params->hwndParent))
           {
             return superclass.control_proc(self, message, wParam, lParam);
           }

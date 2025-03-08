@@ -24,6 +24,7 @@
 #include "views/preferences_view.hpp"
 #include "views/about_view.hpp"
 #include "views/default_view.hpp"
+#include "views/stack_layout.hpp"
 
 extern "C" __declspec(dllexport) std::uint32_t DisableSiegeExtensionModule = -1;
 constexpr static std::wstring_view app_title = L"Siege Studio";
