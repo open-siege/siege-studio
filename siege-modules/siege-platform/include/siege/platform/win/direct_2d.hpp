@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <cstdint>
+#include <variant>
 #include <span>
 #include <siege/platform/win/com.hpp>
 #include <siege/platform/win/file.hpp>
@@ -19,11 +20,11 @@ namespace win32::direct2d
   struct d2d_color : D2D1_COLOR_F
   {
     d2d_color(D2D1_COLOR_F other) : D2D1_COLOR_F{
-                                  .r = other.r,
-                                  .g = other.g,
-                                  .b = other.b,
-                                  .a = other.a
-                                }
+                                      .r = other.r,
+                                      .g = other.g,
+                                      .b = other.b,
+                                      .a = other.a
+                                    }
     {
     }
 
@@ -251,6 +252,14 @@ namespace win32::direct2d
     bool supports_svg_rendering()
     {
       return std::holds_alternative<com_ptr<ID2D1DeviceContext5>>(instance);
+    }
+
+    ID2D1DeviceContext& object()
+    {
+      return std::visit([&](auto& value) -> ID2D1DeviceContext& {
+        auto temp = value.get();
+        return static_cast<ID2D1DeviceContext&>(*temp);
+      }, instance);
     }
 
   private:
