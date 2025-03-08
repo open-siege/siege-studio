@@ -1,4 +1,4 @@
-#include <siege/platform/win/layout.hpp>
+﻿#include <siege/platform/win/layout.hpp>
 
 namespace win32
 {
@@ -42,7 +42,9 @@ namespace win32
           {
             auto height = size.bottom - size.top;
             auto width = win32::get_system_metrics(SM_CXSIZE);
-            button = ::CreateWindowExW(0, L"Button", L"X", WS_CHILD | BS_PUSHBUTTON | WS_VISIBLE, size.right - width, size.top, width, height, window, (HMENU)result, nullptr, nullptr);
+            std::wstring close_text;
+            close_text.append(1, 0x2715); // ✕
+            button = ::CreateWindowExW(0, L"Button", close_text.c_str(), WS_CHILD | BS_PUSHBUTTON | WS_VISIBLE, size.right - width, size.top, width, height, window, (HMENU)result, nullptr, nullptr);
 
             HWND child = get_window_from_item(result);
 
@@ -64,7 +66,7 @@ namespace win32
           }
         }
 
-        if (message == WM_SIZE || message == TCM_SETITEMSIZE)
+        if (message == WM_SIZE || message == TCM_SETITEMSIZE || (message == WM_NOTIFY && ((NMHDR*)lparam)->code == UDN_DELTAPOS))
         {
           auto result = ::DefSubclassProc(window, message, wparam, lparam);
 
