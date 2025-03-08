@@ -103,6 +103,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
     output.write((const char*)bytes, size);
   });
 
+  siege::views::stack_layout::register_class(this_module);
+
   win32::window_meta_class<siege::views::siege_main_window> info{};
   info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
   info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);

@@ -10,6 +10,20 @@ namespace siege::views
   {
     std::vector<HWND> children;
 
+    inline static auto register_class(HINSTANCE module)
+    {
+      WNDCLASSEXW info{
+        .cbSize = sizeof(info),
+        .style = CS_HREDRAW | CS_VREDRAW,
+        .lpfnWndProc = basic_window::window_proc,
+        .cbWndExtra = sizeof(void*),
+        .hInstance = module,
+        .lpszClassName = L"StackLayout",
+
+      };
+      return ::RegisterClassExW(&info);
+    }
+
     stack_layout(HWND handle, CREATESTRUCTW& params) : basic_window(handle, params)
     {
       if (params.style & WS_CHILD)
@@ -46,8 +60,10 @@ namespace siege::views
       }
       case WM_SIZE: {
         auto preference = (ORIENTATION_PREFERENCE)(int)::GetPropW(handle, L"Orientation");
+        auto default_height = (int)::GetPropW(handle, L"DefaultHeight");
+        auto default_width = (int)::GetPropW(handle, L"DefaultWidth");
 
-        if (preference == ORIENTATION_PREFERENCE_PORTRAIT)
+        if (preference & ORIENTATION_PREFERENCE_PORTRAIT)
         {
           auto defer = ::BeginDeferWindowPos((int)children.size());
 
@@ -61,13 +77,14 @@ namespace siege::views
           {
             ::GetClientRect(child, &client_rect);
             auto height = client_rect.bottom - client_rect.top;
+            height = height ? height : default_height;
             ::DeferWindowPos(defer, child, nullptr, 0, y, width, height, SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOZORDER);
             y += height;
           }
 
           ::EndDeferWindowPos(defer);
         }
-        else if (preference == ORIENTATION_PREFERENCE_LANDSCAPE)
+        else if (preference & ORIENTATION_PREFERENCE_LANDSCAPE)
         {
           auto defer = ::BeginDeferWindowPos((int)children.size());
 
@@ -81,7 +98,7 @@ namespace siege::views
           {
             ::GetClientRect(child, &client_rect);
             auto width = client_rect.right - client_rect.left;
-            ::DeferWindowPos(defer, child, nullptr, x, 0, width, height, SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOZORDER);
+            ::DeferWindowPos(defer, child, nullptr, x, 0, width ? width : default_width, height, SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOZORDER);
             x += width;
           }
 

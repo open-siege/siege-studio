@@ -563,8 +563,10 @@ namespace win32::wic
       DIBSECTION section{};
       if (::GetObjectW(bitmap, sizeof(section), &section) > 0 && section.dshSection && (section.dsBm.bmBitsPixel == 32 || section.dsBm.bmBitsPixel == 24))
       {
+        auto module = ::GetModuleHandleW(L"WindowsCodecs.dll");
+        auto* create_bitmap = (std::add_pointer_t<decltype(::WICCreateBitmapFromSectionEx)>)::GetProcAddress(module, "WICCreateBitmapFromSectionEx");
         auto format = section.dsBm.bmBitsPixel == 32 ? options & alpha_channel_option::WICBitmapUsePremultipliedAlpha ? pixel_format::pbgra_32bpp : pixel_format::bgra_32bpp : pixel_format::bgr_24bpp;
-        hresult_throw_on_error(WICCreateBitmapFromSectionEx((UINT)section.dsBm.bmWidth, (UINT)section.dsBm.bmHeight, format, section.dshSection, section.dsBm.bmWidthBytes, section.dsOffset, WICSectionAccessLevelReadWrite, (IWICBitmap**)instance.put()));
+        hresult_throw_on_error(create_bitmap((UINT)section.dsBm.bmWidth, (UINT)section.dsBm.bmHeight, format, section.dshSection, section.dsBm.bmWidthBytes, section.dsOffset, WICSectionAccessLevelReadWrite, (IWICBitmap**)instance.put()));
       }
       else
       {

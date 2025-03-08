@@ -10,6 +10,7 @@
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/direct_write.hpp>
 #include <siege/platform/win/wic.hpp>
+#include <siege/platform/win/capabilities.hpp>
 #include <d2d1.h>
 #include <d2d1_3.h>
 
@@ -54,12 +55,18 @@ namespace win32::direct2d
 
   inline auto& get_factory()
   {
+    using create_d2d_factory = HRESULT __stdcall (D2D1_FACTORY_TYPE factoryType, REFIID riid, D2D1_FACTORY_OPTIONS*, void** factory);
+
+    static auto module = ::LoadLibraryExW(L"d2d1.dll", nullptr, ::IsWindowsVistaOrGreater() ? LOAD_LIBRARY_SEARCH_SYSTEM32 : 0);
+
     thread_local com_ptr factory = [] {
       com_ptr<ID2D1Factory> temp;
 
-      if (::D2D1CreateFactory<ID2D1Factory>(D2D1_FACTORY_TYPE_SINGLE_THREADED, temp.put()) != S_OK)
+      std::add_pointer_t<create_d2d_factory> creator = (std::add_pointer_t<create_d2d_factory>)::GetProcAddress(module, "D2D1CreateFactory");
+
+      if (creator(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory), nullptr, temp.put_void()) != S_OK)
       {
-        throw std::exception("Could not create imaging factory");
+        throw std::exception("Could not create D2D factory");
       }
 
       return temp;

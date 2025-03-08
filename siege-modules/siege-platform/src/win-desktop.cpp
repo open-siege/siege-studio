@@ -5,6 +5,7 @@
 #include <siege/platform/win/direct_2d.hpp>
 #include <siege/platform/win/animation.hpp>
 #include <siege/platform/stream.hpp>
+#include <siege/platform/win/capabilities.hpp>
 
 namespace win32
 {

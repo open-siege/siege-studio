@@ -46,7 +46,7 @@ namespace siege::views
       {
         try
         {
-          default_window* temp = new TWindow(handle, *(CREATESTRUCTW*)lparam);
+          default_window* temp = new TWindow(self, *(CREATESTRUCTW*)lparam);
           ::SetWindowLongPtrW(self, 0, (LONG_PTR)temp);
 
           return temp->default_proc(message, wparam, lparam);

@@ -5,6 +5,7 @@
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <string_view>
+#include <siege/platform/win/capabilities.hpp>
 #include <dwrite.h>
 
 namespace win32::directwrite
@@ -12,10 +13,13 @@ namespace win32::directwrite
   using namespace win32::com;
   inline auto& get_factory()
   {
+    static auto module = ::LoadLibraryExW(L"dwrite.dll", nullptr, ::IsWindowsVistaOrGreater() ? LOAD_LIBRARY_SEARCH_SYSTEM32 : 0);
+
     thread_local com_ptr factory = [] {
       com_ptr<IDWriteFactory> temp;
+      auto* creator = (std::add_pointer_t<decltype(::DWriteCreateFactory)>)::GetProcAddress(module, "DWriteCreateFactory");
 
-      if (::DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)temp.put()) != S_OK)
+      if (creator(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)temp.put()) != S_OK)
       {
         throw std::exception("Could not create DirectWrite factory");
       }

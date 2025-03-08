@@ -1098,7 +1098,7 @@ namespace siege::views
       if (identifier == about_id)
       {
         win32::DialogBoxIndirectParamW<about_view>(::GetModuleHandleW(nullptr),
-          win32::default_dialog{ { .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 200, .cy = 200 } },
+          win32::default_dialog{ { .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 300, .cy = 400 } },
           ref());
       }
 
