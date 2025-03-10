@@ -3,6 +3,7 @@
 
 #include <siege/platform/win/window.hpp>
 #include <siege/platform/extension_module.hpp>
+#include <siege/platform/win/capabilities.hpp>
 #include <optional>
 #include <array>
 #include <set>
@@ -15,6 +16,8 @@
 
 namespace siege
 {
+
+  // TODO conditionally load xinput
   struct input_injector_args
   {
     enum mode
@@ -150,11 +153,22 @@ namespace siege
     std::map<int, XINPUT_STATE> controller_state;
     std::map<std::string_view, bool> action_states;
 
+    win32::module xinput_module;
+    std::add_pointer_t<decltype(::XInputGetState)> xinput_get_state;
+
     input_injector(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self), child_process{}, controller_state{}
     {
       simulated_inputs.reserve(64);
       injector_args = std::move(*(input_injector_args*)params.lpCreateParams);
       siege::init_active_input_state();
+
+      auto version_and_name = win32::get_xinput_version();
+
+      if (version_and_name)
+      {
+        xinput_module.reset(::LoadLibraryExW(version_and_name->second.data(), nullptr, ::IsWindowsVistaOrGreater() ? LOAD_LIBRARY_SEARCH_SYSTEM32 : 0));
+        xinput_get_state = xinput_module.GetProcAddress<decltype(xinput_get_state)>("XInputGetState");
+      }
     }
 
     auto wm_create()
@@ -381,7 +395,7 @@ namespace siege
         return 0;
       }
 
-      if (controller_state.empty())
+      if (controller_state.empty() || !xinput_get_state)
       {
         return 0;
       }
@@ -392,7 +406,7 @@ namespace siege
 
       for (auto& state : controller_state)
       {
-        auto result = XInputGetState(state.first, &temp);
+        auto result = xinput_get_state(state.first, &temp);
 
         if (result != S_OK || state.second.dwPacketNumber == temp.dwPacketNumber)
         {
@@ -731,7 +745,7 @@ namespace siege
 
         for (auto i = 0; i < XUSER_MAX_COUNT; ++i)
         {
-          if (XInputGetState(i, &temp) == S_OK)
+          if (xinput_get_state && xinput_get_state(i, &temp) == S_OK)
           {
             controller_state.emplace(i, temp);
           }
@@ -750,7 +764,7 @@ namespace siege
 
         for (auto& kv : controller_state)
         {
-          if (XInputGetState(kv.first, &kv.second) == ERROR_DEVICE_NOT_CONNECTED)
+          if (xinput_get_state && xinput_get_state(kv.first, &kv.second) == ERROR_DEVICE_NOT_CONNECTED)
           {
             controllers_to_remove.insert(kv.first);
           }

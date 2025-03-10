@@ -21,8 +21,80 @@ namespace win32
     std::uint8_t revision;
   };
 
+  inline std::optional<std::pair<version, std::wstring_view>> get_xinput_version()
+  {
+    static std::optional<std::pair<version, std::wstring_view>> result = [] {
+      std::optional<std::pair<version, std::wstring_view>> result = std::nullopt;
+
+      auto module = ::LoadLibraryExW(L"xinput1_4.dll", nullptr, ::IsWindowsVistaOrGreater() ? LOAD_LIBRARY_SEARCH_SYSTEM32 : 0);
+
+      if (module)
+      {
+        result = std::make_pair(version{
+                                  .major = 1,
+                                  .minor = 4 },
+          L"xinput1_4.dll");
+        ::FreeLibrary(module);
+        return result;
+      }
+
+      module = ::LoadLibraryExW(L"xinput1_3.dll", nullptr, ::IsWindowsVistaOrGreater() ? LOAD_LIBRARY_SEARCH_SYSTEM32 : 0);
+
+      if (module)
+      {
+        result = std::make_pair(version{
+                                  .major = 1,
+                                  .minor = 3 },
+          L"xinput1_3.dll");
+
+        ::FreeLibrary(module);
+        return result;
+      }
+
+      module = ::LoadLibraryExW(L"xinput1_2.dll", nullptr, ::IsWindowsVistaOrGreater() ? LOAD_LIBRARY_SEARCH_SYSTEM32 : 0);
+
+      if (module)
+      {
+        result = std::make_pair(version{
+                                  .major = 1,
+                                  .minor = 2 },
+          L"xinput1_4.dll");
+        ::FreeLibrary(module);
+        return result;
+      }
+
+      module = ::LoadLibraryExW(L"xinput1_1.dll", nullptr, ::IsWindowsVistaOrGreater() ? LOAD_LIBRARY_SEARCH_SYSTEM32 : 0);
+
+      if (module)
+      {
+        result = std::make_pair(version{
+                                  .major = 1,
+                                  .minor = 1 },
+          L"xinput1_1.dll");
+        ::FreeLibrary(module);
+        return result;
+      }
+
+      module = ::LoadLibraryExW(L"xinput9_1_0.dll", nullptr, ::IsWindowsVistaOrGreater() ? LOAD_LIBRARY_SEARCH_SYSTEM32 : 0);
+
+      if (module)
+      {
+        result = std::make_pair(version{
+                                  .major = 1,
+                                  .minor = 0 },
+          L"xinput9_1_0.dll");
+        ::FreeLibrary(module);
+        return result;
+      }
+
+      return result;
+    }();
+
+    return result;
+  }
+
   inline std::optional<version> get_gdi_plus_version()
-  { 
+  {
     static std::optional<version> result = [] {
       std::optional<version> result = std::nullopt;
       auto module = ::LoadLibraryExW(L"gdiplus.dll", nullptr, ::IsWindowsVistaOrGreater() ? LOAD_LIBRARY_SEARCH_SYSTEM32 : 0);
@@ -105,7 +177,7 @@ namespace win32
         std::add_pointer_t<create_d2d_factory> creator = (std::add_pointer_t<create_d2d_factory>)::GetProcAddress(module, "D2D1CreateFactory");
 
         std::optional<version> result(std::nullopt);
-        
+
         if (creator)
         {
           result = version{
