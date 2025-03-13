@@ -9,7 +9,6 @@
 #include <bit>
 #include <variant>
 #include <functional>
-#include <thread>
 #include <iostream>
 #include <filesystem>
 #undef NDEBUG
@@ -88,7 +87,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 
   ::EnumResourceNamesW(hInstance, RT_RCDATA, extract_embedded_dlls, (LONG_PTR)&embedded_dlls);
 
-  std::for_each(std::execution::par_unseq, embedded_dlls.begin(), embedded_dlls.end(), [=](embedded_dll& dll) {
+  std::for_each(embedded_dlls.begin(), embedded_dlls.end(), [=](embedded_dll& dll) {
     auto entry = ::FindResourceW(hInstance, dll.filename.c_str(), RT_RCDATA);
 
     if (!entry)

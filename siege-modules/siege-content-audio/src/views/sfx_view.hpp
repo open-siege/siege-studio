@@ -6,7 +6,6 @@
 #include <spanstream>
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/drawing.hpp>
-#include <siege/platform/win/window_factory.hpp>
 #include <siege/platform/win/theming.hpp>
 #include "sfx_controller.hpp"
 #include "media_module.hpp"
@@ -33,9 +32,10 @@ namespace siege::views
 
     auto wm_create()
     {
-      auto control_factory = win32::window_factory(ref());
-
-      player_buttons = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS });
+      player_buttons = *win32::CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{
+        .hwndParent = *this,
+        .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS 
+          });
 
       player_buttons.bind_nm_click(std::bind_front(&sfx_view::player_buttons_nm_click, this));
       player_buttons.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Play" });
@@ -47,7 +47,8 @@ namespace siege::views
       player_buttons.InsertButton(-1, { .iBitmap = 3, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Loop" });
       player_buttons.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS);
 
-      selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
+      selection = *win32::CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
+        .hwndParent = *this, 
         .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS });
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
@@ -141,12 +142,12 @@ namespace siege::views
       return std::nullopt;
     }
 
-    //LRESULT wm_notify(win32::tool_bar, NMTBCUSTOMDRAW& message) override
+    // LRESULT wm_notify(win32::tool_bar, NMTBCUSTOMDRAW& message) override
     //{
-    //  if (message.nmcd.dwDrawStage == CDDS_PREPAINT)
-    //  {
-    //    return CDRF_NOTIFYITEMDRAW;
-    //  }
+    //   if (message.nmcd.dwDrawStage == CDDS_PREPAINT)
+    //   {
+    //     return CDRF_NOTIFYITEMDRAW;
+    //   }
 
     //  if (message.nmcd.dwDrawStage == CDDS_ITEMPREPAINT)
     //  {

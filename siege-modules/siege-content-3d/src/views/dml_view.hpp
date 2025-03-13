@@ -1,7 +1,7 @@
 #ifndef DML_VIEW_HPP
 #define DML_VIEW_HPP
 
-#include <siege/platform/win/window_factory.hpp>
+#include <siege/platform/win/window_module.hpp>
 #include "dml_controller.hpp"
 
 namespace siege::views
@@ -17,9 +17,8 @@ namespace siege::views
 
     auto wm_create()
     {
-      auto control_factory = win32::window_factory(ref());
-
-      ref_names = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
+      ref_names = *win32::CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
+        .hwndParent = *this, 
         .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS,
       });
 

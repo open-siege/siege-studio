@@ -1,7 +1,7 @@
 ﻿#include <spanstream>
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/drawing.hpp>
-#include <siege/platform/win/window_factory.hpp>
+#include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/dialog.hpp>
 #include "input-filter.hpp"
@@ -15,16 +15,19 @@ namespace siege::views
 
   std::optional<win32::lresult_t> exe_view::wm_create()
   {
-    auto control_factory = win32::window_factory(ref());
-
-    options = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-      .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
+    options = *win32::CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
+      .hwndParent = *this,
+      .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS 
+        });
 
     options_unbind = options.bind_lbn_sel_change(std::bind_front(&exe_view::options_lbn_sel_change, this));
     options.InsertString(-1, L"Resources");
     options.SetCurrentSelection(0);
 
-    exe_actions = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
+    exe_actions = *win32::CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{
+      .hwndParent = *this,
+      .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP 
+        });
 
     exe_actions.InsertButton(-1, { .iBitmap = 0, .idCommand = add_to_firewall_selected_id, .fsState = TBSTATE_ENABLED, .iString = (INT_PTR)L"Add to Firewall" }, false);
     exe_actions.InsertButton(-1, { .iBitmap = 1, .idCommand = launch_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Launch" }, false);
@@ -33,7 +36,10 @@ namespace siege::views
     exe_actions.bind_tbn_dropdown(std::bind_front(&exe_view::exe_actions_tbn_dropdown, this));
     exe_actions.bind_nm_click(std::bind_front(&exe_view::exe_actions_nm_click, this));
 
-    resource_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
+    resource_table = *win32::CreateWindowExW<win32::list_view>({ 
+        .hwndParent = *this, 
+        .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER 
+        });
 
     resource_table.InsertColumn(-1, LVCOLUMNW{
                                       .pszText = const_cast<wchar_t*>(L"Name"),
@@ -45,14 +51,20 @@ namespace siege::views
 
     resource_table.EnableGroupView(true);
 
-    string_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
+    string_table = *win32::CreateWindowExW<win32::list_view>({ 
+        .hwndParent = *this,
+        .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER 
+        });
     string_table.InsertColumn(-1, LVCOLUMNW{
                                     .pszText = const_cast<wchar_t*>(L"Text"),
                                   });
 
     string_table.EnableGroupView(true);
 
-    launch_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
+    launch_table = *win32::CreateWindowExW<win32::list_view>({ 
+        .hwndParent = *this,
+        .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER 
+        });
 
     launch_table.bind_nm_click(std::bind_front(&exe_view::launch_table_nm_click, this));
     launch_table.InsertColumn(-1, LVCOLUMNW{
@@ -63,19 +75,19 @@ namespace siege::views
                                     .pszText = const_cast<wchar_t*>(L"Value"),
                                   });
 
-    launch_table_edit = *control_factory.CreateWindowExW<win32::edit>({ .style = WS_CHILD });
-    launch_table_combo = *control_factory.CreateWindowExW<win32::combo_box_ex>({ .cy = 300, .cx = 300, .style = WS_CHILD | CBS_DROPDOWNLIST });
+    launch_table_edit = *win32::CreateWindowExW<win32::edit>({ .hwndParent = *this, .style = WS_CHILD });
+    launch_table_combo = *win32::CreateWindowExW<win32::combo_box_ex>({ .hwndParent = *this, .cy = 300, .cx = 300, .style = WS_CHILD | CBS_DROPDOWNLIST });
     //::SendMessageW(launch_table_combo, CBEM_SETUNICODEFORMAT, 1, 0);
 
-    launch_table_ip_address = *control_factory.CreateWindowExW<win32::ip_address_edit>({ .cy = 100, .cx = 300, .style = WS_CHILD });
+    launch_table_ip_address = *win32::CreateWindowExW<win32::ip_address_edit>({ .hwndParent = *this, .cy = 100, .cx = 300, .style = WS_CHILD });
 
-    keyboard_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
+    keyboard_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this, .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
 
     keyboard_table.InsertColumn(-1, LVCOLUMNW{
                                       .pszText = const_cast<wchar_t*>(L""),
                                     });
 
-    controller_table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
+    controller_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this, .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
     controller_table.bind_nm_click(std::bind_front(&exe_view::controller_table_nm_click, this));
 
     controller_table.InsertColumn(-1, LVCOLUMNW{

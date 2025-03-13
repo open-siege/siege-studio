@@ -37,12 +37,39 @@ namespace win32
     using base = std::unique_ptr<void, file_view_deleter>;
     using base::base;
 
+    static WORD get_mapped_file_name(HANDLE process, LPVOID address, LPWSTR filename, DWORD size)
+    {
+      using proc = std::add_pointer_t<decltype(::K32GetMappedFileNameW)>;
+      static auto kernel32 = ::GetModuleHandleW(L"kernel32");
+
+      if (!kernel32)
+      {
+        return 0;
+      }
+      static auto kernel_get_mapped_filename = (proc)::GetProcAddress(kernel32, "K32GetMappedFileNameW");
+
+      if (kernel_get_mapped_filename)
+      {
+        return kernel_get_mapped_filename(process, address, filename, size);
+      }
+
+      static HMODULE psapi = ::LoadLibraryW(L"psapi.dll");
+
+      static auto psapi_get_mapped_filename = (proc)::GetProcAddress(psapi, "GetMappedFileNameW");
+
+      if (psapi_get_mapped_filename)
+      {
+        return psapi_get_mapped_filename(process, address, filename, size);
+      }
+
+      return 0;
+    }
+
     std::optional<std::wstring> GetMappedFilename()
     {
       std::wstring filename(255, L'\0');
-      // If this code ever has to run on Xbox with the GAMING family, we'll need a way to get the correct path
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-      auto size = ::GetMappedFileNameW(::GetCurrentProcess(), get(), filename.data(), filename.size());
+
+      auto size = get_mapped_file_name(::GetCurrentProcess(), get(), filename.data(), filename.size());
 
       if (size == 0)
       {
@@ -73,7 +100,6 @@ namespace win32
           }
         }
       }
-#endif
 
       filename.erase(filename.find(L'\0'));
 
@@ -97,7 +123,6 @@ namespace win32
     using base = std::unique_ptr<void, handle_deleter>;
     using base::base;
 
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     file(std::filesystem::path path, DWORD access, DWORD share_mode, std::optional<SECURITY_ATTRIBUTES> attributes, DWORD creation_disposition, DWORD flags)
       : base(::CreateFileW(path.c_str(), access, share_mode, attributes.has_value() ? &*attributes : nullptr, creation_disposition, flags, nullptr))
     {
@@ -106,7 +131,6 @@ namespace win32
         throw std::system_error(std::error_code(GetLastError(), std::system_category()));
       }
     }
-#endif
 
     std::expected<file_mapping, DWORD> CreateFileMapping(std::optional<SECURITY_ATTRIBUTES> attributes, DWORD protect, LARGE_INTEGER maxSize, std::wstring name)
     {

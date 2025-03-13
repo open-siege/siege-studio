@@ -149,9 +149,7 @@ predefined_string*
         }
       }
 
-      std::mutex storage_lock;
-
-      std::for_each(std::execution::par_unseq, pak_files.begin(), pak_files.end(), [&storage_lock](auto& dir_entry) {
+      std::for_each(pak_files.begin(), pak_files.end(), [](auto& dir_entry) {
         std::any cache;
         std::ifstream stream(dir_entry, std::ios::binary);
 
@@ -176,8 +174,6 @@ predefined_string*
         {
           storage.reserve(contents.size());
         }
-
-        const std::lock_guard<std::mutex> lock(storage_lock);
 
         for (auto& content : contents)
         {

@@ -3,7 +3,6 @@
 
 #include <utility>
 #include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/window_factory.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/wic.hpp>
 #include <siege/platform/win/capabilities.hpp>
@@ -28,49 +27,70 @@ namespace siege::views
 
     auto wm_create()
     {
-      win32::window_factory factory(ref());
-
       ::SetWindowTextW(*this, L"About Siege Studio");
 
-      heading = *factory.CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"Siege Studio is an open-source reverse engeering tool to preview, convert or extract files from various games made by Dynamix and using their tecnologies." });
-      logo = *factory.CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | SS_BITMAP | SS_CENTERIMAGE | SS_REALSIZEIMAGE });
+      heading = *win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = *this, .style = WS_CHILD | WS_VISIBLE, .lpszName = L"Siege Studio is an open-source reverse engeering tool to preview, convert or extract files from various games made by Dynamix and using their tecnologies." });
+      logo = *win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = *this, .style = WS_CHILD | WS_VISIBLE | SS_BITMAP | SS_CENTERIMAGE | SS_REALSIZEIMAGE });
       text_stack = win32::window(CreateWindowExW(0, L"StackLayout", nullptr, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, *this, nullptr, nullptr, nullptr));
    
       text_stack.SetPropW(L"Orientation", ORIENTATION_PREFERENCE::ORIENTATION_PREFERENCE_PORTRAIT);
       text_stack.SetPropW(L"DefaultHeight", win32::get_system_metrics(SM_CYSIZE) * 2);
 
-      win32::window_factory stack_factory(text_stack.ref());
-
-
+      
       auto gdi_version = win32::get_gdi_plus_version();
 
       if (gdi_version)
       {
-        stack_factory.CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"GDI+ Version: " + std::to_wstring(gdi_version->major) + L"." + std::to_wstring(gdi_version->minor)).c_str() });
+        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"GDI+ Version: " + std::to_wstring(gdi_version->major) + L"." + std::to_wstring(gdi_version->minor)).c_str() });
       }
       else
       {
-        stack_factory.CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"GDI+ not available" });
+        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = L"GDI+ not available" });
       }
 
       auto wic_version = win32::get_wic_version();
 
       if (wic_version)
       {
-        stack_factory.CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"Windows Imaging Component Version: " + std::to_wstring(wic_version->major) + L"." + std::to_wstring(wic_version->minor)).c_str() });
+        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"Windows Imaging Component Version: " + std::to_wstring(wic_version->major) + L"." + std::to_wstring(wic_version->minor)).c_str() });
       }
       else
       {
-        stack_factory.CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"Windows Imaging Component not available" });
+        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = L"Windows Imaging Component not available" });
       }
 
       auto wam_version = win32::get_scenic_animation_version();
+
+      if (wam_version)
+      {
+        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"Windows Animation Manager Version: " + std::to_wstring(wam_version->major) + L"." + std::to_wstring(wam_version->minor)).c_str() });
+      }
+      else
+      {
+        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = L"Windows Animation Manager not available" });
+      }
+
       auto direct2d_version = win32::get_direct2d_version();
+
+      if (direct2d_version)
+      {
+        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"Direct2D Version: " + std::to_wstring(direct2d_version->major) + L"." + std::to_wstring(direct2d_version->minor)).c_str() });
+      }
+      else
+      {
+        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = L"Direct2D not available" });
+      }
+
       auto directwrite_version = win32::get_direct_write_version();
 
-      stack_factory.CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"Windows Animation Manager Version: " });
-      stack_factory.CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"Direct2D Version: " });
-      stack_factory.CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE, .lpszName = L"DirectWrite Version: " });
+      if (directwrite_version)
+      {
+        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"DirectWrite Version: " + std::to_wstring(directwrite_version->major) + L"." + std::to_wstring(direct2d_version->minor)).c_str() });
+      }
+      else
+      {
+        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = L"DirectWrite not available" });
+      }
 
       return 0;
     }

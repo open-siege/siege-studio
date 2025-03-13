@@ -4,13 +4,11 @@
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/window_factory.hpp>
 #include <siege/platform/win/theming.hpp>
+#include <siege/platform/win/threading.hpp>
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/extension_module.hpp>
 #include <utility>
-#include <future>
-#include <execution>
 #include <fstream>
 
 // TODO show GOG icon for game or game exe icon
@@ -234,7 +232,6 @@ namespace siege::views
 
     win32::gdi::icon logo_icon;
 
-    std::future<void> pending_operation;
     std::set<std::wstring> detected_paths;
     //      std::string url = "https://github.com/open-siege/open-siege/wiki/" + extension;
     //"This particular file is not yet supported by Siege Studio.\nThough, you can still read about it on our wiki.\nClick the link below to find out more."
@@ -245,13 +242,11 @@ namespace siege::views
 
     auto wm_create()
     {
-      win32::window_factory factory(ref());
-
-      heading = *factory.CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE });
+      heading = *win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = *this, .style = WS_CHILD | WS_VISIBLE });
 
       ::SetWindowTextW(heading, L"Welcome to Siege Studio");
 
-      logo = *factory.CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | SS_ICON | SS_REALSIZECONTROL });
+      logo = *win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = *this, .style = WS_CHILD | WS_VISIBLE | SS_ICON | SS_REALSIZECONTROL });
 
       ::SendMessageW(logo, STM_SETIMAGE, IMAGE_ICON, (LPARAM)logo_icon.get());
 
@@ -274,7 +269,7 @@ namespace siege::views
       item_menu.AppendMenuW(MF_OWNERDRAW, 1, L"Open in New Tab");
       item_menu.AppendMenuW(MF_OWNERDRAW, 2, L"Open in File Explorer");
 
-      supported_games_by_engine = *factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{ .hMenu = item_menu.get(), .style = WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_SHAREIMAGELISTS });
+      supported_games_by_engine = *win32::CreateWindowExW<win32::list_view>(CREATESTRUCTW{ .hMenu = item_menu.get(), .hwndParent = *this, .style = WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_SHAREIMAGELISTS });
       supported_games_by_engine.bind_nm_rclick(std::bind_front(&default_view::supported_games_nm_rclick, this));
       supported_games_by_engine.bind_nm_dbl_click(std::bind_front(&default_view::supported_games_nm_dbl_click, this));
 
@@ -314,7 +309,6 @@ namespace siege::views
 
       ListView_SetTileViewInfo(supported_games_by_engine, &tileViewInfo);
 
-
       for (const auto& game : games)
       {
         win32::list_view_item game_item(std::wstring(game.game_name));
@@ -349,7 +343,7 @@ namespace siege::views
         ListView_SetTileInfo(supported_games_by_engine, &item_info);
       }
 
-      pending_operation = std::async(std::launch::async, [this]() {
+      win32::queue_user_work_item([this]() {
         std::set<std::wstring> search_roots;
 
         std::error_code errc{};
@@ -400,9 +394,7 @@ namespace siege::views
         std::filesystem::path app_path = std::filesystem::path(win32::module_ref::current_application().GetModuleFileName()).parent_path();
         auto extensions = siege::platform::game_extension_module::load_modules(app_path);
 
-        std::mutex game_lock;
-
-        std::for_each(std::execution::par_unseq, real_search_paths.begin(), real_search_paths.end(), [&](const auto& real_search_path) {
+        std::for_each(real_search_paths.begin(), real_search_paths.end(), [&](const auto& real_search_path) {
           std::error_code errc{};
           if (fs::exists(real_search_path, errc))
           {
@@ -416,12 +408,7 @@ namespace siege::views
                   continue;
                 }
 
-                if (dir_entry.path().stem() == "siege-studio" ||
-                    dir_entry.path().stem() == "siege studio" ||
-                    dir_entry.path().stem() == "Siege Studio" ||
-                    dir_entry.path().stem() == "siege-launcher" ||
-                    dir_entry.path().stem() == "siege launcher" ||
-                    dir_entry.path().stem() == "Siege Launcher")
+                if (dir_entry.path().stem() == "siege-studio" || dir_entry.path().stem() == "siege studio" || dir_entry.path().stem() == "Siege Studio" || dir_entry.path().stem() == "siege-launcher" || dir_entry.path().stem() == "siege launcher" || dir_entry.path().stem() == "Siege Launcher")
                 {
                   continue;
                 }
@@ -447,8 +434,6 @@ namespace siege::views
                       .flags = LVFI_PARAM,
                       .lParam = (LPARAM)game_iter->preferered_extension->data()
                     };
-
-                    const std::lock_guard<std::mutex> lock(game_lock);
 
                     auto item = ListView_FindItem(this->supported_games_by_engine, -1, &find_info);
 

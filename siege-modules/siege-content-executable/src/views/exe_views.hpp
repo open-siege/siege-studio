@@ -7,7 +7,6 @@
 #include <siege/platform/shared.hpp>
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/drawing.hpp>
-#include <siege/platform/win/window_factory.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/dialog.hpp>
 

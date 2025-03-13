@@ -4,7 +4,6 @@
 #include <dwmapi.h>
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/shell.hpp>
-#include <siege/platform/win/window_factory.hpp>
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/content_module.hpp>
 #include <siege/platform/win/drawing.hpp>
@@ -22,7 +21,7 @@ namespace siege::views
   // TODO update tree view to support multiple levels of navigation
   // TODO add filename filter for directory listing
   // TODO add category and extension filter for directory listing
-  // TODO Support WM_DROPFILES. Instead of using the templated window handler, it makes sense to 
+  // TODO Support WM_DROPFILES. Instead of using the templated window handler, it makes sense to
   // move the dispatching into this class to support more bespoke messages.
   struct siege_main_window final : win32::window_ref
     , win32::menu::notifications
@@ -89,10 +88,10 @@ namespace siege::views
       }
 
       selected_file = files.end();
-
       win32::set_is_dark_theme(is_dark_mode);
 
       resize_cursor.reset((HCURSOR)LoadImageW(nullptr, IDC_SIZEWE, IMAGE_CURSOR, LR_DEFAULTSIZE, LR_DEFAULTSIZE, LR_SHARED));
+
       win32::apply_list_view_theme();
       win32::apply_header_theme();
       win32::apply_tree_view_theme();
@@ -240,16 +239,15 @@ namespace siege::views
     auto wm_create()
     {
       initial_working_dir = fs::current_path();
-      win32::window_factory factory(ref());
 
-      dir_list = *factory.CreateWindowExW<win32::tree_view>(CREATESTRUCTW{ .hMenu = dir_list_menu.get(), .style = WS_CHILD | WS_VISIBLE });
+      dir_list = *win32::CreateWindowExW<win32::tree_view>(CREATESTRUCTW{ .hMenu = dir_list_menu.get(), .hwndParent = *this, .style = WS_CHILD | WS_VISIBLE });
       dir_list.bind_tvn_sel_changed(std::bind_front(&siege_main_window::dir_list_tvn_sel_changed, this));
       dir_list.bind_tvn_item_expanding(std::bind_front(&siege_main_window::dir_list_tvn_item_expanding, this));
       dir_list.bind_nm_dbl_click(std::bind_front(&siege_main_window::dir_list_nm_dbl_click, this));
       dir_list.bind_nm_rclick(std::bind_front(&siege_main_window::dir_list_nm_rclick, this));
       dir_list_menu.AppendMenuW(MF_OWNERDRAW, 1, L"Open in File Explorer");
 
-      separator = *factory.CreateWindowEx<win32::button>(CREATESTRUCTW{ .style = WS_CHILD | WS_VISIBLE | BS_FLAT });
+      separator = *win32::CreateWindowEx<win32::button>(CREATESTRUCTW{ .hwndParent = *this, .style = WS_CHILD | WS_VISIBLE | BS_FLAT });
 
       if (::SetWindowSubclass(separator, button_sub_class, (UINT_PTR)this, (DWORD_PTR)this))
       {
@@ -263,12 +261,13 @@ namespace siege::views
       }
 
       repopulate_tree_view(std::filesystem::current_path());
-
-      tab_control = *factory.CreateWindowExW<win32::tab_control>(
+      tab_control = *win32::CreateWindowExW<win32::tab_control>(
         CREATESTRUCTW{
           .hMenu = tab_context_menu,
-          .style = WS_CHILD | WS_VISIBLE | TCS_FIXEDWIDTH | TCS_FORCELABELLEFT,
+          .hwndParent = *this,
+          .style = WS_CHILD | WS_VISIBLE,
         });
+
 
       tab_control.bind_nm_rclick(std::bind_front(&siege_main_window::tab_control_nm_rclick, this));
       tab_control.bind_tcn_sel_change(std::bind_front(&siege_main_window::tab_control_tcn_sel_change, this));
@@ -686,9 +685,7 @@ namespace siege::views
 
       SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&tab_rect));
 
-      win32::window_factory factory(ref());
-
-      auto child = factory.CreateWindowExW(::CREATESTRUCTW{
+      auto child = win32::CreateWindowExW(::CREATESTRUCTW{
         .hwndParent = *this,
         .cy = tab_rect.bottom - tab_rect.top,
         .cx = tab_rect.right - tab_rect.left,

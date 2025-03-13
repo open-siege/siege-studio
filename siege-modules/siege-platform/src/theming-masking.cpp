@@ -2,6 +2,7 @@
 #include <siege/platform/win/com.hpp>
 #include <siege/platform/win/wic.hpp>
 #include <siege/platform/win/direct_2d.hpp>
+#include <siege/platform/win/capabilities.hpp>
 #include <execution>
 #include <algorithm>
 #include <wincodec.h>
@@ -13,6 +14,19 @@ namespace win32
 
   win32::image_list create_icon_list(std::span<segoe_fluent_icons> icons, SIZE icon_size, std::optional<::RGBQUAD> optional_color)
   {
+    auto d2d_version = win32::get_direct2d_version();
+
+    if (!d2d_version)
+    {
+      win32::gdi::bitmap target(icon_size);
+      win32::image_list image_list(ImageList_Create(icon_size.cx, icon_size.cy, ILC_COLOR32, icons.size(), icons.size()));
+      for (auto icon : icons)
+      {
+        ImageList_Add(image_list, target, nullptr);
+      }
+      return image_list;
+    }
+
     win32::gdi::bitmap target(icon_size);
 
     win32::wic::bitmap temp(target, win32::wic::alpha_channel_option::WICBitmapUsePremultipliedAlpha);
@@ -53,7 +67,6 @@ namespace win32
       render_target.clear(D2D1::ColorF(0, 0, 0, 0));
       render_target.draw_text(icon_text, format, D2D1::RectF(0, 0, (float)icon_size.cx, (float)icon_size.cy), brush);
       render_target.end_draw();
-      // TODO turn into a d2d transform
       ImageList_Add(image_list, target, nullptr);
     }
 

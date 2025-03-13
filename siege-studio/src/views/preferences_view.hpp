@@ -1,7 +1,6 @@
 #ifndef THEME_VIEW_HPP
 #define THEME_VIEW_HPP
 
-#include <siege/platform/win/window_factory.hpp>
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <set>
@@ -91,9 +90,9 @@ namespace siege::views
     {
       auto style = this->GetWindowStyle();
       this->SetWindowStyle(style | WS_CLIPCHILDREN);
-      auto control_factory = win32::window_factory(ref());
 
-      options = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
+      options = *win32::CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
+        .hwndParent = *this, 
         .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
       options.InsertString(-1, L"Theming (Simple)");
@@ -101,7 +100,8 @@ namespace siege::views
       options.SetCurrentSelection(0);
       options_unbind = options.bind_lbn_sel_change(std::bind_front(&preferences_view::options_lbn_sel_change, this));
 
-      advanced_options = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
+      advanced_options = *win32::CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
+        .hwndParent = *this, 
         .style = WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
       advanced_options.InsertString(-1, L"Button"); // Button + SysLink

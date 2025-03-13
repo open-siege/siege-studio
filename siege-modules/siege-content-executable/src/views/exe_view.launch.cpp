@@ -1,17 +1,110 @@
 ﻿
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/drawing.hpp>
-#include <siege/platform/win/window_factory.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/dialog.hpp>
 #include "input-filter.hpp"
 #include "input_injector.hpp"
 #include "exe_views.hpp"
+#include <detours.h>
+#include <imagehlp.h>
 
 using game_command_line_caps = siege::platform::game_command_line_caps;
 
 namespace siege::views
 {
+  // void add_modify_import()
+  // {
+  //   struct context
+  //   {
+  //     bool is_user32 = false;
+  //   };
+  //   struct handler
+  //   {
+  //     static BOOL CALLBACK byway_callback(PVOID pContext, PCSTR pszFile, LPCSTR* ppszOutFile)
+  //     {
+  //       return TRUE;
+  //     }
+
+  //     static BOOL CALLBACK file_callback(PVOID pContext, LPCSTR pszOrigFile, LPCSTR file, LPCSTR* ppszOutFile)
+  //     {
+  //       if (file && std::string_view(file) == "USER32.dll")
+  //       {
+  //         ((context*)pContext)->is_user32 = true;
+  //         *ppszOutFile = "user32-xp.dll";
+  //       }
+  //       else
+  //       {
+  //         *ppszOutFile = file;
+  //         ((context*)pContext)->is_user32 = false;
+  //       }
+
+  //       return TRUE;
+  //     }
+
+  //     static BOOL CALLBACK symbol_callback(PVOID pContext, ULONG nOrigOrdinal, ULONG nOrdinal, ULONG* pnOutOrdinal, 
+  //               LPCSTR original_symbol, LPCSTR pszSymbol, LPCSTR* ppszOutSymbol)
+  //     {
+  //       if (original_symbol && std::string_view(original_symbol) == "MessageBoxW" && ((context*)pContext)->is_user32)
+  //       {
+  //         *ppszOutSymbol = "MyMessageBoxW";
+  //       }
+  //       else
+  //       {
+  //         *ppszOutSymbol = pszSymbol;
+  //       }
+
+  //       return TRUE;
+  //     }
+
+  //     static BOOL CALLBACK commit_callback(PVOID pContext)
+  //     {
+  //       return TRUE;
+  //     }
+  //   };
+
+
+  //   LOADED_IMAGE image{};
+  //   if (::MapAndLoad("ConsoleApplication1.exe",
+  //       "C:\\open-siege\\ConsoleApplication1\\Release\\", &image, FALSE, FALSE))
+  //   {
+  //     image.FileHeader->OptionalHeader.MajorOperatingSystemVersion = 4;
+  //     image.FileHeader->OptionalHeader.MinorOperatingSystemVersion = 0;
+  //     image.FileHeader->OptionalHeader.MajorSubsystemVersion = 4;
+  //     image.FileHeader->OptionalHeader.MinorSubsystemVersion = 0;
+  //     ::UnMapAndLoad(&image);
+  //   }
+
+
+  //   // TODO Set correct flags
+  //   HANDLE exe_file = ::CreateFileW(L"C:\\open-siege\\ConsoleApplication1\\Release\\ConsoleApplication1.exe",  GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+
+  //   if (!exe_file)
+  //   {
+  //     return;
+  //   }
+
+  //   auto hbinary = ::DetourBinaryOpen(exe_file);
+
+  //   if (hbinary)
+  //   {
+  //     context edit_context{};
+  //     if (::DetourBinaryEditImports(hbinary, &edit_context, nullptr, handler::file_callback, handler::symbol_callback, nullptr))
+  //     {
+  //       OutputDebugStringW(L"Updated imports of exe\n");
+  //     }
+
+  //     if (::DetourBinaryWrite(hbinary, exe_file))
+  //     {
+  //       OutputDebugStringW(L"Wrote data to file\n");
+  //     }
+
+  //     ::DetourBinaryClose(hbinary);
+  //   }
+
+  //   ::CloseHandle(exe_file);
+  // }
+
   void exe_view::populate_launch_table(const game_command_line_caps& caps)
   {
     auto& settings = controller.get_game_settings();

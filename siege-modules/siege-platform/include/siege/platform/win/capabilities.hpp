@@ -3,6 +3,7 @@
 #include <siege/platform/win/com.hpp>
 #include <versionhelpers.h>
 #include <optional>
+#include <map>
 #include <cstdint>
 #include <d2d1.h>
 #include <d2d1_3.h>
@@ -266,6 +267,95 @@ namespace win32
   }
 
 
+  inline bool has_font(std::wstring_view text)
+  {
+    static std::map<std::wstring_view, HFONT> fonts;
+
+    auto font_iter = fonts.find(text);
+
+    if (font_iter == fonts.end())
+    {
+      LOGFONTW info{
+        .lfFaceName = L"Segoe UI"
+      };
+
+      auto result = ::CreateFontW(info.lfHeight,
+        info.lfWidth,
+        info.lfEscapement,
+        info.lfOrientation,
+        info.lfWeight,
+        info.lfItalic,
+        info.lfUnderline,
+        info.lfStrikeOut,
+        info.lfCharSet,
+        info.lfOutPrecision,
+        info.lfClipPrecision,
+        info.lfQuality,
+        info.lfPitchAndFamily,
+        info.lfFaceName);
+
+      font_iter = fonts.emplace(text, result).first;
+    }
+
+    return font_iter->second != nullptr;
+  }
+
+  inline bool has_segoe_emoji()
+  {
+    return false;
+  }
+
+  inline std::optional<std::wstring_view> get_best_system_font()
+  {
+    std::wstring_view temp = L"Segoe UI";
+
+    if (has_font(temp))
+    {
+      return temp;
+    }
+
+    temp = L"Tahoma";
+
+    if (has_font(temp))
+    {
+      return temp;
+    }
+
+    temp = L"Ubuntu";
+
+    if (has_font(temp))
+    {
+      return temp;
+    }
+
+    temp = L"MS Sans Serif";
+
+    if (has_font(temp))
+    {
+      return temp;
+    }
+
+    temp = L"Courier New";
+
+    if (has_font(temp))
+    {
+      return temp;
+    }
+
+    temp = L"Arial";
+
+    if (has_font(temp))
+    {
+      return temp;
+    }
+
+    return std::nullopt;
+  }
+
+  inline std::optional<std::wstring_view> get_segoe_symbol_name()
+  {
+    return std::nullopt;
+  }
 }// namespace win32
 
 #endif

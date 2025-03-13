@@ -2,10 +2,10 @@
 #define BITMAPWINDOW_HPP
 
 #include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/window_factory.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/win/wic.hpp>
+#include <siege/platform/win/threading.hpp>
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/storage_module.hpp>
@@ -55,8 +55,6 @@ namespace siege::views
 
     win32::static_control static_image;
     std::list<platform::storage_module> loaded_modules;
-
-    std::future<void> pending_ui_update;
 
     win32::local_atom pbmp_id = win32::local_atom(L".pbm");
     win32::local_atom bmp_id = win32::local_atom(L".bmp");
@@ -138,9 +136,10 @@ namespace siege::views
       std::filesystem::path app_path = std::filesystem::path(win32::module_ref::current_application().GetModuleFileName()).parent_path();
       loaded_modules = platform::storage_module::load_modules(std::filesystem::path(app_path));
 
-      auto factory = win32::window_factory(ref());
-
-      bitmap_actions = *factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP | WS_CLIPSIBLINGS });
+      bitmap_actions = *win32::CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ 
+          .hwndParent = *this, 
+          .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP | WS_CLIPSIBLINGS 
+          });
 
       bitmap_actions.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Zoom In" });
 
@@ -162,7 +161,8 @@ namespace siege::views
       std::wstring temp = L"menu.pal";
 
       palette_list = [&] {
-        auto palette_list = *factory.CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
+        auto palette_list = *win32::CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
+          .hwndParent = *this, 
           .style = WS_VISIBLE | WS_CHILD | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | WS_CLIPSIBLINGS,
           .lpszName = L"Palettes" });
 
@@ -188,8 +188,8 @@ namespace siege::views
       palette_list.bind_lvn_item_changed(std::bind_front(&bmp_view::palette_list_item_changed, this));
       palette_list.bind_nm_rclick(std::bind_front(&bmp_view::palette_list_nm_rclick, this));
 
-      static_image = *factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
-        .hwndParent = *this,
+      static_image = *win32::CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
+        .hwndParent = *this, 
         .style = WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS | SS_BITMAP | SS_REALSIZEIMAGE | SS_CENTERIMAGE });
 
       image_export_menu.AppendMenuW(MF_OWNERDRAW, 1, L"Save As");
@@ -869,7 +869,7 @@ namespace siege::views
 
           resize_preview();
 
-          pending_ui_update = std::async(std::launch::async, [this](auto pending_load) {
+          win32::queue_user_work_item([this, pending_load]() {
                 auto& palettes = pending_load.get();
                 loaded_contexts.clear();
                 auto selection = controller.get_selected_palette();
@@ -908,7 +908,7 @@ namespace siege::views
                 palette_list.InsertGroups(groups);
 
                 ListView_SetCheckState(palette_list, selected_index, TRUE);
-                ListView_SetItemState(palette_list, selected_index, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED); }, pending_load);
+                ListView_SetItemState(palette_list, selected_index, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED); });
 
           return TRUE;
         }

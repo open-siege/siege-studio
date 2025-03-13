@@ -6,7 +6,6 @@
 #include <spanstream>
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/drawing.hpp>
-#include <siege/platform/win/window_factory.hpp>
 #include <siege/platform/win/theming.hpp>
 #include "dts_controller.hpp"
 #include "gl_renderer.hpp"
@@ -50,15 +49,17 @@ namespace siege::views
 
     auto wm_create()
     {
-      auto control_factory = win32::window_factory(ref());
-
-      render_view = *control_factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS | SS_OWNERDRAW });
+      render_view = *win32::CreateWindowExW<win32::static_control>(::CREATESTRUCTW{ 
+          .hwndParent = *this,
+          .style = WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS | SS_OWNERDRAW 
+       });
       render_view.bind_custom_draw({ 
           .wm_control_color = std::bind_front(&dts_view::render_view_wm_control_color, this),
         .wm_draw_item = std::bind_front(&dts_view::render_view_wm_draw_item, this)
       });
 
-      selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
+      selection = *win32::CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
+        .hwndParent = *this, 
         .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS,
       });
 
@@ -66,7 +67,10 @@ namespace siege::views
       selection.InsertString(-1, L"Detail Level 2");
       selection.InsertString(-1, L"Detail Level 3");
 
-      shape_actions = *control_factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
+      shape_actions = *win32::CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ 
+          .hwndParent = *this, 
+          .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP 
+          });
 
       shape_actions.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Zoom In" });
       shape_actions.InsertButton(-1, { .iBitmap = 1, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Zoom Out" });

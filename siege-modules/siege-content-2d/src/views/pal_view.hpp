@@ -27,12 +27,11 @@ namespace siege::views
 
     auto wm_create()
     {
-      auto control_factory = win32::window_factory(ref());
-
-      render_view = *control_factory.CreateWindowExW<win32::static_control>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | SS_OWNERDRAW });
+      render_view = *win32::CreateWindowExW<win32::static_control>(::CREATESTRUCTW{ .hwndParent = *this, .style = WS_VISIBLE | WS_CHILD | SS_OWNERDRAW });
       render_view.bind_custom_draw({ .wm_draw_item = std::bind_front(&pal_view::render_view_wm_draw_item, this) });
 
-      selection = *control_factory.CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
+      selection = *win32::CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
+        .hwndParent = *this,
         .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
       selection_unbind = selection.bind_lbn_sel_change(std::bind_front(&pal_view::selection_lbn_sel_change, this));

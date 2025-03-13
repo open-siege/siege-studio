@@ -111,6 +111,39 @@ namespace win32
     }
   };
 
+  template<typename TControl = window>
+  std::expected<TControl, DWORD> CreateWindowExW(CREATESTRUCTW params)
+  {
+    std::wstring class_name;
+
+    if (!params.lpszClass || params.lpszClass[0] == L'\0')
+    {
+      class_name = window_class_name<TControl>();
+      params.lpszClass = class_name.c_str();
+    }
+
+    auto result = ::CreateWindowExW(
+      params.dwExStyle,
+      params.lpszClass,
+      params.lpszName,
+      params.style,
+      params.x,
+      params.y,
+      params.cx,
+      params.cy,
+      params.hwndParent,
+      params.hMenu,
+      params.hInstance,
+      params.lpCreateParams);
+
+    if (!result)
+    {
+      return std::unexpected(GetLastError());
+    }
+
+    return TControl(result);
+  }
+
   using window_module = window_module_base<module>;
 
   struct window_module_ref : window_module_base<module_ref>

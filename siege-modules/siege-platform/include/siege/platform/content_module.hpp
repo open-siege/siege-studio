@@ -7,8 +7,6 @@
 #include <expected>
 #include <list>
 #include <string>
-#include <execution>
-#include <mutex>
 #include <vector>
 #include <set>
 #include <siege/platform/stream.hpp>
@@ -80,12 +78,9 @@ namespace siege::platform
         }
       }
 
-      std::mutex path_lock;
-
-      std::for_each(std::execution::par_unseq, dll_paths.begin(), dll_paths.end(), [&](auto path) {
+      std::for_each(dll_paths.begin(), dll_paths.end(), [&](auto path) {
         try
         {
-          const std::lock_guard<std::mutex> lock(path_lock);
           loaded_modules.emplace_back(path);
         }
         catch (...)

@@ -1,6 +1,7 @@
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/drawing.hpp>
+#include <siege/platform/win/capabilities.hpp>
 #include <siege/platform/stream.hpp>
 #include <unordered_set>
 
@@ -123,12 +124,18 @@ namespace win32
         if (message == WM_CREATE && controls.contains(self))
         {
           auto result = superclass.control_proc(self, message, wParam, lParam);
-          HFONT font = win32::load_font(LOGFONTW{
-            .lfPitchAndFamily = VARIABLE_PITCH,
-            .lfFaceName = L"Segoe UI" });
+
+          auto best_font = get_best_system_font();
+
+          if (best_font)
+          {
+            auto font = win32::load_font(LOGFONTW{
+                                           .lfPitchAndFamily = VARIABLE_PITCH },
+              *best_font);
+            SendMessageW(self, WM_SETFONT, (WPARAM)font.get(), FALSE);
+          }
 
           ::SendMessageW(self, CCM_DPISCALE, TRUE, 0);
-          SendMessageW(self, WM_SETFONT, (WPARAM)font, FALSE);
           win32::theme_module().SetWindowTheme(self, L"", L"");
           return result;
         }
@@ -150,10 +157,6 @@ namespace win32
           auto& custom_draw = *(NMCUSTOMDRAW*)lParam;
           if (custom_draw.dwDrawStage == CDDS_PREPAINT)
           {
-            auto font = win32::load_font(LOGFONTW{
-              .lfPitchAndFamily = VARIABLE_PITCH,
-              .lfFaceName = L"Segoe UI" });
-
             auto text_bk_color = get_color_for_window(window_ref(custom_draw.hdr.hwndFrom), properties::header::text_bk_color);
             FillRect(custom_draw.hdc, &custom_draw.rc, get_solid_brush(text_bk_color));
 
@@ -306,11 +309,15 @@ namespace win32
           create_params->style = create_params->style | TCS_OWNERDRAWFIXED;
           auto result = superclass.control_proc(self, message, wParam, lParam);
 
-          HFONT font = win32::load_font(LOGFONTW{
-            .lfPitchAndFamily = VARIABLE_PITCH,
-            .lfFaceName = L"Segoe UI" });
+          auto best_font = get_best_system_font();
 
-          SendMessageW(self, WM_SETFONT, (WPARAM)font, FALSE);
+          if (best_font)
+          {
+            auto font = win32::load_font(LOGFONTW{
+                                           .lfPitchAndFamily = VARIABLE_PITCH },
+              *best_font);
+            SendMessageW(self, WM_SETFONT, (WPARAM)font.get(), FALSE);
+          }
           return result;
         }
 
@@ -563,11 +570,16 @@ namespace win32
         {
           auto result = superclass.control_proc(self, message, wParam, lParam);
 
-          auto font = win32::load_font(LOGFONTW{
-            .lfPitchAndFamily = VARIABLE_PITCH,
-            .lfFaceName = L"Segoe UI" });
+          auto best_font = get_best_system_font();
 
-          SendMessageW(self, WM_SETFONT, (WPARAM)font.get(), FALSE);
+          if (best_font)
+          {
+            auto font = win32::load_font(LOGFONTW{
+                                           .lfPitchAndFamily = VARIABLE_PITCH },
+              *best_font);
+            SendMessageW(self, WM_SETFONT, (WPARAM)font.get(), FALSE);
+          }
+
           SendMessageW(self, WM_SETTINGCHANGE, 0, 0);
           return result;
         }
@@ -672,12 +684,15 @@ namespace win32
                 DrawTextExW(custom_draw.nmcd.hdc, icon.data(), -1, &rect, DT_SINGLELINE | DT_RIGHT | DT_VCENTER, nullptr);
               }
 
-              font = win32::load_font(LOGFONTW{
-                .lfPitchAndFamily = VARIABLE_PITCH,
-                .lfFaceName = L"Segoe UI" });
+              auto best_font = get_best_system_font();
 
-              SelectFont(custom_draw.nmcd.hdc, font);
-
+              if (best_font)
+              {
+                auto font = win32::load_font(LOGFONTW{
+                                               .lfPitchAndFamily = VARIABLE_PITCH },
+                  *best_font);
+                SelectFont(custom_draw.nmcd.hdc, font);
+              }
 
               DrawTextExW(custom_draw.nmcd.hdc, group_name.data(), -1, &header_rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER, nullptr);
             }
@@ -745,11 +760,17 @@ namespace win32
         if (message == WM_CREATE && controls.contains(self))
         {
           auto result = superclass.control_proc(self, message, wParam, lParam);
-          HFONT font = win32::load_font(LOGFONTW{
-            .lfPitchAndFamily = VARIABLE_PITCH,
-            .lfFaceName = L"Segoe UI" });
 
-          SendMessageW(self, WM_SETFONT, (WPARAM)font, FALSE);
+          auto best_font = get_best_system_font();
+
+          if (best_font)
+          {
+            auto font = win32::load_font(LOGFONTW{
+                                           .lfPitchAndFamily = VARIABLE_PITCH },
+              *best_font);
+            SendMessageW(self, WM_SETFONT, (WPARAM)font.get(), FALSE);
+          }
+
           SendMessageW(self, WM_SETTINGCHANGE, 0, 0);
           return result;
         }
@@ -840,12 +861,17 @@ namespace win32
         {
           win32::theme_module().SetWindowTheme(self, L"", L"");
           auto result = superclass.control_proc(self, message, wParam, lParam);
-          HFONT font = win32::load_font(LOGFONTW{
-            .lfPitchAndFamily = VARIABLE_PITCH,
-            .lfFaceName = L"Segoe UI" });
 
+          auto best_font = get_best_system_font();
+
+          if (best_font)
+          {
+            auto font = win32::load_font(LOGFONTW{
+                                           .lfPitchAndFamily = VARIABLE_PITCH },
+              *best_font);
+            SendMessageW(self, WM_SETFONT, (WPARAM)font.get(), FALSE);
+          }
           ::SendMessageW(self, CCM_DPISCALE, TRUE, 0);
-          ::SendMessageW(self, WM_SETFONT, (WPARAM)font, FALSE);
           ::SendMessageW(self, WM_SETTINGCHANGE, 0, 0);
 
           return result;
@@ -885,11 +911,16 @@ namespace win32
 
           if (custom_draw.nmcd.dwDrawStage == CDDS_PREPAINT)
           {
-            auto font = win32::load_font(LOGFONTW{
-              .lfPitchAndFamily = VARIABLE_PITCH,
-              .lfFaceName = L"Segoe UI" });
+            auto best_font = get_best_system_font();
 
-            SelectFont(custom_draw.nmcd.hdc, font);
+            if (best_font)
+            {
+              auto font = win32::load_font(LOGFONTW{
+                                             .lfPitchAndFamily = VARIABLE_PITCH },
+                *best_font);
+              SelectFont(custom_draw.nmcd.hdc, font);
+            }
+
             return CDRF_NOTIFYITEMDRAW | CDRF_NOTIFYPOSTPAINT;
           }
 
@@ -982,12 +1013,18 @@ namespace win32
         {
           win32::theme_module().SetWindowTheme(self, L"", L"");
           auto result = superclass.control_proc(self, message, wParam, lParam);
-          HFONT font = win32::load_font(LOGFONTW{
-            .lfPitchAndFamily = VARIABLE_PITCH,
-            .lfFaceName = L"Segoe UI" });
+
+          auto best_font = get_best_system_font();
+
+          if (best_font)
+          {
+            auto font = win32::load_font(LOGFONTW{
+                                           .lfPitchAndFamily = VARIABLE_PITCH },
+              *best_font);
+            ::SendMessageW(self, WM_SETFONT, (WPARAM)font.get(), FALSE);
+          }
 
           ::SendMessageW(self, CCM_DPISCALE, TRUE, 0);
-          ::SendMessageW(self, WM_SETFONT, (WPARAM)font, FALSE);
           ::SendMessageW(self, WM_SETTINGCHANGE, 0, 0);
 
           return result;

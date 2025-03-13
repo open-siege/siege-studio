@@ -10,7 +10,7 @@
 
 namespace win32
 {
-  gdi::font_ref load_font(::LOGFONTW font_info);
+  gdi::font_ref load_font(::LOGFONTW font_info, std::wstring_view font_name = L"");
   gdi::brush_ref get_solid_brush(COLORREF color);
 
   bool is_dark_theme();

@@ -36,6 +36,8 @@ class SiegeLauncherConanFile(ConanFile):
         if self.settings.os == "Windows":
             self.options["libcurl"].with_ssl = "schannel"
             self.options["cpr"].with_ssl = "winssl"
+            # Disabled encryption to reduce the API surface for XP support
+            self.options["libzip"].crypto = False
 
     def build(self):
         cmake = CMake(self)

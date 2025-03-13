@@ -6,7 +6,6 @@
 #include <spanstream>
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/drawing.hpp>
-#include <siege/platform/win/window_factory.hpp>
 #include <siege/platform/win/theming.hpp>
 #include "cfg_controller.hpp"
 
@@ -25,9 +24,9 @@ namespace siege::views
 
     auto wm_create()
     {
-      auto control_factory = win32::window_factory(ref());
-
-      table = *control_factory.CreateWindowExW<win32::list_view>({ .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
+      table = *win32::CreateWindowExW<win32::list_view>({ 
+          .hwndParent = *this, 
+          .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
 
       table.InsertColumn(-1, LVCOLUMNW{
                                .pszText = const_cast<wchar_t*>(L"Key"),

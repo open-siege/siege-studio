@@ -1,0 +1,18 @@
+EXPORTS
+	InitializeCriticalSectionEx=SiegeInitializeCriticalSectionEx
+	GetFileInformationByHandleEx=SiegeGetFileInformationByHandleEx
+	HeapAlloc=kernel32.HeapAlloc
+	DecodePointer=kernel32.DecodePointer
+	UnhandledExceptionFilter=kernel32.UnhandledExceptionFilter
+	SetUnhandledExceptionFilter=kernel32.SetUnhandledExceptionFilter
+	GetCurrentProcess=kernel32.GetCurrentProcess
+	TerminateProcess=kernel32.TerminateProcess
+	IsProcessorFeaturePresent=kernel32.IsProcessorFeaturePresent
+	GetCurrentProcessId=kernel32.GetCurrentProcessId
+	GetCurrentThreadId=kernel32.GetCurrentThreadId
+	GetSystemTimeAsFileTime=kernel32.GetSystemTimeAsFileTime
+	InitializeSListHead=kernel32.InitializeSListHead
+	IsDebuggerPresent=kernel32.IsDebuggerPresent
+	GetStartupInfoW=kernel32.GetStartupInfoW
+	GetModuleHandleW=kernel32.GetModuleHandleW
+	RtlUnwind=kernel32.RtlUnwind

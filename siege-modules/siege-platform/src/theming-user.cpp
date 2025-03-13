@@ -2,8 +2,8 @@
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/drawing.hpp>
-#include <siege/platform/win/direct_2d.hpp>
 #include <siege/platform/stream.hpp>
+#include <siege/platform/win/capabilities.hpp>
 #include <VersionHelpers.h>
 #include <dwmapi.h>
 #include <unordered_set>
@@ -135,11 +135,17 @@ namespace win32
 
       SIZE wm_measure_item(win32::popup_menu_ref window_menu, const MEASUREITEMSTRUCT& item) override
       {
-        auto font = win32::load_font(LOGFONTW{
-          .lfPitchAndFamily = VARIABLE_PITCH,
-          .lfFaceName = L"Segoe UI" });
+        auto best_font = get_best_system_font();
 
-        SelectFont(get_memory_dc(), font);
+        if (best_font)
+        {
+          auto font = win32::load_font(LOGFONTW{
+                                         .lfPitchAndFamily = VARIABLE_PITCH },
+            *best_font);
+
+          SelectFont(get_memory_dc(), font);
+        }
+
 
         std::wstring text;
 
@@ -162,11 +168,16 @@ namespace win32
 
       SIZE wm_measure_item(win32::menu_ref window_menu, const MEASUREITEMSTRUCT& item) override
       {
-        auto font = win32::load_font(LOGFONTW{
-          .lfPitchAndFamily = VARIABLE_PITCH,
-          .lfFaceName = L"Segoe UI" });
+        auto best_font = get_best_system_font();
 
-        SelectFont(get_memory_dc(), font);
+        if (best_font)
+        {
+          auto font = win32::load_font(LOGFONTW{
+                                         .lfPitchAndFamily = VARIABLE_PITCH },
+            *best_font);
+
+          SelectFont(get_memory_dc(), font);
+        }
 
         std::wstring text;
 
@@ -229,11 +240,16 @@ namespace win32
 
       std::optional<win32::lresult_t> wm_draw_item(win32::popup_menu_ref menu, DRAWITEMSTRUCT& item) override
       {
-        auto font = win32::load_font(LOGFONTW{
-          .lfPitchAndFamily = VARIABLE_PITCH,
-          .lfFaceName = L"Segoe UI" });
+        auto best_font = get_best_system_font();
 
-        SelectFont(item.hDC, font);
+        if (best_font)
+        {
+          auto font = win32::load_font(LOGFONTW{
+                                         .lfPitchAndFamily = VARIABLE_PITCH },
+            *best_font);
+
+          SelectFont(item.hDC, font);
+        }
 
         auto bk_color = win32::get_color_for_class(L"#32768", win32::properties::menu::bk_color);
         auto text_highlight_color = win32::get_color_for_class(L"#32768", win32::properties::menu::text_highlight_color);
@@ -399,7 +415,12 @@ namespace win32
     if (control.GetWindowStyle() & ~WS_CHILD)
     {
       BOOL value = win32::is_dark_theme() ? TRUE : FALSE;
-      if (::DwmSetWindowAttribute(control, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value)) == S_OK)
+
+      static auto dwmapi = ::LoadLibraryW(L"dwmapi");
+
+      static auto dwm_set_attribute = (std::add_pointer_t<decltype(::DwmSetWindowAttribute)>)::GetProcAddress(dwmapi, "DwmSetWindowAttribute");
+
+      if (dwm_set_attribute && dwm_set_attribute(control, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value)) == S_OK)
       {
         ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
       }
@@ -474,89 +495,13 @@ namespace win32
             .lfFaceName = L"Segoe UI" });
 
           ::SendMessageW(self, CCM_DPISCALE, TRUE, 0);
-          SendMessageW(self, WM_SETFONT, (WPARAM)font.get(), FALSE);
+          SendMessageW(self, WM_SETFONT, (WPARAM)font.release(), FALSE);
           SendMessageW(self, WM_SETTINGCHANGE, 0, 0);
           return result;
         }
 
-        if (message == WM_SIZE)
-        {
-          auto shape = (int)::GetPropW(self, L"Shape");
-
-          ::SetPropW(self, L"UseDirect2d", (HANDLE)(shape == EMR_ROUNDRECT ? TRUE : FALSE));
-        }
-
-        if ((message == WM_PAINT || message == WM_PRINTCLIENT) && ::GetPropW(self, L"UseDirect2d") && controls.contains(self))
-        {
-          PAINTSTRUCT info{};
-
-          if (wParam)
-          {
-            info.hdc = (HDC)wParam;
-            GetClientRect(self, &info.rcPaint);
-          }
-          else if (message == WM_PAINT)
-          {
-            BeginPaint(self, &info);
-          }
-
-          LRESULT result = 0;
-          if (info.hdc)
-          {
-            auto& render_target = win32::direct2d::dc_render_target::for_thread(D2D1_RENDER_TARGET_PROPERTIES{
-              .type = D2D1_RENDER_TARGET_TYPE_SOFTWARE,
-              .pixelFormat = D2D1::PixelFormat(
-                DXGI_FORMAT_B8G8R8A8_UNORM,
-                D2D1_ALPHA_MODE_IGNORE),
-              .usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE,
-              .minLevel = D2D1_FEATURE_LEVEL_DEFAULT });
-            ;
-            render_target.bind_dc(win32::gdi::drawing_context_ref(info.hdc), info.rcPaint);
-
-            render_target.begin_draw();
-
-            auto layer = render_target.create_layer();
-            auto rounded_rectangle = win32::direct2d::rounded_rectangle_geometry(D2D1_ROUNDED_RECT{
-              .rect = {
-                .right = (float)info.rcPaint.right,
-                .bottom = (float)info.rcPaint.bottom,
-              },
-              .radiusX = 50,
-              .radiusY = 50,
-            });
-
-            auto interop_target = render_target.get_interop_render_target();
-
-            auto target_hdc = interop_target.get_dc(D2D1_DC_INITIALIZE_MODE_CLEAR);
-
-            auto parent = ::GetParent(self);
-
-            SendMessageW(parent, WM_ERASEBKGND, (WPARAM)target_hdc.get(), 0);
-
-            interop_target.release_dc();
-
-            render_target.push_layer(D2D1::LayerParameters(D2D1::InfiniteRect(), &rounded_rectangle.object()), layer);
-            target_hdc = interop_target.get_dc(D2D1_DC_INITIALIZE_MODE_COPY);
-
-            result = superclass.control_proc(self, message, (WPARAM)target_hdc.get(), lParam);
-
-            interop_target.release_dc();
-            render_target.pop_layer();
-            render_target.end_draw();
-          }
-
-          if (message == WM_PAINT && !wParam)
-          {
-            EndPaint(self, &info);
-          }
-          return result;
-        }
-
-
         if (message == WM_NCDESTROY && controls.contains(self))
         {
-          ::RemovePropW(self, L"UseDirect2d");
-          ::RemovePropW(self, L"Shape");
           controls.erase(self);
         }
 
@@ -884,7 +829,7 @@ namespace win32
             .lfPitchAndFamily = VARIABLE_PITCH,
             .lfFaceName = L"Segoe UI" });
 
-          SendMessageW(self, WM_SETFONT, (WPARAM)font.get(), FALSE);
+          SendMessageW(self, WM_SETFONT, (WPARAM)font.release(), FALSE);
 
           auto size = get_font_size_for_string(std::move(font), L"A");
 
@@ -925,54 +870,32 @@ namespace win32
 
           thread_local std::wstring buffer;
 
-          auto& render_target = win32::direct2d::dc_render_target::for_thread(D2D1_RENDER_TARGET_PROPERTIES{
-            .type = D2D1_RENDER_TARGET_TYPE_SOFTWARE,
-            .pixelFormat = D2D1::PixelFormat(
-              DXGI_FORMAT_B8G8R8A8_UNORM,
-              D2D1_ALPHA_MODE_IGNORE),
-            .usage = D2D1_RENDER_TARGET_USAGE_NONE,
-            .minLevel = D2D1_FEATURE_LEVEL_DEFAULT });
-
-          render_target.bind_dc(win32::gdi::drawing_context_ref(context.hDC), context.rcItem);
-
-          render_target.begin_draw();
-
-          auto bounds = D2D1::RectF(0, 0, (float)context.rcItem.right - context.rcItem.left, (float)context.rcItem.bottom - context.rcItem.top);
-
           auto list = win32::list_box(context.hwndItem);
           auto bk_color = win32::get_color_for_window(list.ref(), win32::properties::list_box::bk_color);
           auto text_highlight_color = win32::get_color_for_window(list.ref(), win32::properties::list_box::text_highlight_color);
           auto text_bk_color = win32::get_color_for_window(list.ref(), win32::properties::list_box::text_bk_color);
           auto text_color = win32::get_color_for_window(list.ref(), win32::properties::list_box::text_color);
 
-          render_target.object().Clear(D2D1::ColorF(bk_color, 1.0));
-
           if (context.itemState & ODS_SELECTED)
           {
-            auto selected_brush = render_target.create_solid_color_brush(D2D1::ColorF(text_highlight_color, 1.0));
-            render_target.fill_rectangle(bounds, selected_brush);
+            ::SetDCBrushColor(context.hDC, text_highlight_color);
           }
           else
           {
-            auto normal_brush = render_target.create_solid_color_brush(D2D1::ColorF(text_bk_color, 1.0));
-            render_target.fill_rectangle(bounds, normal_brush);
+            ::SetDCBrushColor(context.hDC, text_bk_color);
           }
+
+          ::FillRect(context.hDC, &context.rcItem, GetStockBrush(DC_BRUSH));
 
 
           buffer.resize(list.GetTextLength(context.itemID), '\0');
 
           list.GetText(context.itemID, buffer.data());
 
-          // TODO cache format
-          win32::directwrite::text_format format({ .family_name = L"Segoe UI", .size = 18.0f });
+          ::SetTextColor(context.hDC, text_color);
+          ::SetBkColor(context.hDC, text_bk_color);
 
-          format.object().SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
-
-          auto text_brush = render_target.create_solid_color_brush(D2D1::ColorF(text_color, 1.0));
-
-          render_target.draw_text(buffer, format, bounds, text_brush);
-
-          render_target.end_draw();
+          ::DrawTextW(context.hDC, buffer.c_str(), -1, &context.rcItem, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
 
           return TRUE;
         }

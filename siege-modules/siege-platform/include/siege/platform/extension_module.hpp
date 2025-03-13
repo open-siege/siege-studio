@@ -5,8 +5,6 @@
 #include <filesystem>
 #include <list>
 #include <span>
-#include <mutex>
-#include <execution>
 #include <siege/platform/win/module.hpp>
 #include <siege/platform/shared.hpp>
 
@@ -150,56 +148,57 @@ namespace siege::platform
     const std::span<const wchar_t*> profile_configuration_paths;
     const game_command_line_caps* caps = nullptr;
 
-    inline std::span<const wchar_t*> update_span(const char* key) {
-        auto* storage = this->GetProcAddress<const wchar_t**>(key);
+    inline std::span<const wchar_t*> update_span(const char* key)
+    {
+      auto* storage = this->GetProcAddress<const wchar_t**>(key);
 
-        if (storage)
+      if (storage)
+      {
+        int end = 0;
+
+        for (auto i = 0; i < 64; ++i)
         {
-          int end = 0;
-
-          for (auto i = 0; i < 64; ++i)
+          if (storage[i] == nullptr)
           {
-            if (storage[i] == nullptr)
-            {
-              end = i;
-              break;
-            }
+            end = i;
+            break;
           }
-
-          return std::span<const wchar_t*>(storage, end);
         }
-        return std::span<const wchar_t*>();
-      };
+
+        return std::span<const wchar_t*>(storage, end);
+      }
+      return std::span<const wchar_t*>();
+    };
 
     game_extension_module(std::filesystem::path module_path) : base(module_path),
-        game_actions([this] {
-          auto* actions = GetProcAddress<game_action*>("game_actions");
+                                                               game_actions([this] {
+                                                                 auto* actions = GetProcAddress<game_action*>("game_actions");
 
-          if (!actions)
-          {
-            return std::span<game_action>();
-          }
+                                                                 if (!actions)
+                                                                 {
+                                                                   return std::span<game_action>();
+                                                                 }
 
-          auto size = 0;
-          for (auto i = 0; i < 64; ++i)
-          {
-            if (actions[i].type == game_action::unknown)
-            {
-              size = i;
-              break;
-            }
-          }
+                                                                 auto size = 0;
+                                                                 for (auto i = 0; i < 64; ++i)
+                                                                 {
+                                                                   if (actions[i].type == game_action::unknown)
+                                                                   {
+                                                                     size = i;
+                                                                     break;
+                                                                   }
+                                                                 }
 
-          return std::span(actions, size);
-        }()),
-        controller_input_backends(update_span("controller_input_backends")),
-        keyboard_input_backends(update_span("keyboard_input_backends")),
-        mouse_input_backends(update_span("mouse_input_backends")),
-        configuration_extensions(update_span("configuration_extensions")),
-        template_configuration_paths(update_span("template_configuration_paths")),
-        autoexec_configuration_paths(update_span("autoexec_configuration_paths")),
-        profile_configuration_paths(update_span("profile_configuration_paths")),
-        caps(GetProcAddress<game_command_line_caps*>("command_line_caps"))
+                                                                 return std::span(actions, size);
+                                                               }()),
+                                                               controller_input_backends(update_span("controller_input_backends")),
+                                                               keyboard_input_backends(update_span("keyboard_input_backends")),
+                                                               mouse_input_backends(update_span("mouse_input_backends")),
+                                                               configuration_extensions(update_span("configuration_extensions")),
+                                                               template_configuration_paths(update_span("template_configuration_paths")),
+                                                               autoexec_configuration_paths(update_span("autoexec_configuration_paths")),
+                                                               profile_configuration_paths(update_span("profile_configuration_paths")),
+                                                               caps(GetProcAddress<game_command_line_caps*>("command_line_caps"))
     {
       executable_is_supported_proc = GetProcAddress<decltype(executable_is_supported_proc)>("executable_is_supported");
       get_function_name_ranges_proc = GetProcAddress<decltype(get_function_name_ranges_proc)>("get_function_name_ranges");
@@ -215,7 +214,7 @@ namespace siege::platform
       if (!this->executable_is_supported_proc)
       {
         throw std::runtime_error("Could not find module functions");
-      }  
+      }
     }
 
     std::vector<std::pair<std::string, std::string>> get_function_name_ranges()
@@ -392,12 +391,9 @@ namespace siege::platform
         }
       }
 
-      std::mutex path_lock;
-
-      std::for_each(std::execution::par_unseq, dll_paths.begin(), dll_paths.end(), [&](auto path) {
+      std::for_each(dll_paths.begin(), dll_paths.end(), [&](auto path) {
         try
         {
-          const std::lock_guard<std::mutex> lock(path_lock);
           loaded_modules.emplace_back(path);
         }
         catch (...)

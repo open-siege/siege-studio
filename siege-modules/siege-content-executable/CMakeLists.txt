@@ -6,7 +6,7 @@ file(GLOB_RECURSE SRC_FILES
 
 if (WIN32)
     add_library(${PROJECT_NAME} SHARED ${SRC_FILES} src/module.def)
-    target_link_libraries(${PROJECT_NAME} PRIVATE siege-win-desktop siege-extension winmm)
+    target_link_libraries(${PROJECT_NAME} PRIVATE siege-win-desktop siege-extension winmm Imagehlp)
 else()
     add_library(${PROJECT_NAME} SHARED src/empty.cpp)
     target_link_libraries(${PROJECT_NAME} PRIVATE siege-platform)

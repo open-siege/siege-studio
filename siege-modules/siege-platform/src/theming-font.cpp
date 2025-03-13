@@ -5,7 +5,7 @@
 
 namespace win32
 {
-  gdi::font_ref load_font(LOGFONTW font_info)
+  gdi::font_ref load_font(LOGFONTW font_info, std::wstring_view font_name)
   {
     thread_local std::map<std::wstring, gdi::font> loaded_fonts;
 
@@ -22,6 +22,11 @@ namespace win32
     if (!font_info.lfOutPrecision && font_info.lfQuality == CLEARTYPE_QUALITY)
     {
       font_info.lfOutPrecision = OUT_OUTLINE_PRECIS;
+    }
+
+    if (!font_name.empty() && font_name.size() < 32)
+    {
+      std::memcpy(font_info.lfFaceName, font_name.data(), font_name.size() * sizeof(wchar_t));
     }
 
     thread_local std::wstring key;

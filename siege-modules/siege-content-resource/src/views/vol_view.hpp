@@ -2,9 +2,9 @@
 #define VOL_VIEW_HPP
 
 #include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/window_factory.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/menu.hpp>
+#include <siege/platform/win/threading.hpp>
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/content_module.hpp>
 #include <siege/platform/shared.hpp>
@@ -13,13 +13,11 @@
 #include <unordered_map>
 #include <set>
 #include <algorithm>
-#include <future>
 #include <siege/platform/win/theming.hpp>
 #include "vol_controller.hpp"
 
 namespace siege::views
 {
-  // TODO Put BIN, DAT + RAW into a generic group
   struct vol_view final : win32::window_ref
   {
     vol_controller controller;
@@ -46,7 +44,6 @@ namespace siege::views
 
     bool has_console = GetConsoleWindow() != nullptr;
 
-    std::future<void> pending_save;
     std::optional<bool> has_saved = std::nullopt;
     win32::image_list image_list;
 
@@ -109,9 +106,8 @@ namespace siege::views
         }
       }
 
-      auto factory = win32::window_factory(ref());
-
-      table_settings = *factory.CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
+      
+      table_settings = *win32::CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .hwndParent = *this, .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
 
       table_settings.bind_nm_click(std::bind_front(&vol_view::table_settings_nm_click, this));
       table_settings.bind_tbn_dropdown(std::bind_front(&vol_view::table_settings_tbn_dropdown, this));
@@ -129,8 +125,9 @@ namespace siege::views
       table_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 2, L"Extract");
       table_settings_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 1, L"Extract All");
 
-      table = *factory.CreateWindowExW<win32::list_view>(CREATESTRUCTW{
+      table = *win32::CreateWindowExW<win32::list_view>(CREATESTRUCTW{
         .hMenu = table_menu,
+        .hwndParent = *this, 
         .style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
       });
 
@@ -411,29 +408,26 @@ namespace siege::views
         return;
       }
 
-      pending_save = std::async(
-        std::launch::async, [path = std::move(path), this](auto items) {
-          has_saved = false;
+      win32::queue_user_work_item([path = std::move(path), this, items]() {
+        has_saved = false;
 
+        std::for_each(items.begin(), items.end(), [this, path](auto& item) {
+          if (auto* file_info = std::get_if<siege::platform::file_info>(&item); file_info)
+          {
+            auto child_path = std::filesystem::relative(file_info->folder_path, file_info->archive_path);
 
-          std::for_each(std::execution::unseq, items.begin(), items.end(), [this, path](auto& item) {
-            if (auto* file_info = std::get_if<siege::platform::file_info>(&item); file_info)
-            {
-              auto child_path = std::filesystem::relative(file_info->folder_path, file_info->archive_path);
+            std::error_code code;
+            std::filesystem::create_directories(*path / child_path, code);
+            std::ofstream extracted_file(*path / child_path / file_info->filename, std::ios::trunc | std::ios::binary);
+            auto raw_data = controller.load_content_data(item);
 
-              std::error_code code;
-              std::filesystem::create_directories(*path / child_path, code);
-              std::ofstream extracted_file(*path / child_path / file_info->filename, std::ios::trunc | std::ios::binary);
-              auto raw_data = controller.load_content_data(item);
+            extracted_file.write(raw_data.data(), raw_data.size());
+          }
+        });
 
-              extracted_file.write(raw_data.data(), raw_data.size());
-            }
-          });
-
-          win32::launch_shell_process(*path);
-          has_saved = true;
-        },
-        items);
+        win32::launch_shell_process(*path);
+        has_saved = true;
+      });
     }
 
     void extract_selected_files()
