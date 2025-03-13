@@ -40,7 +40,7 @@ namespace siege::views
     win32::tool_bar shape_actions;
     win32::image_list image_list;
 
-    glm::vec3 translation = { 0, 0, -1200 };
+    glm::vec3 translation = { 0, 0, -20 };
     content::vector3f rotation = { 45, 90, -35 };
 
     dts_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)

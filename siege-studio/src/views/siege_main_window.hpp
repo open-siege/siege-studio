@@ -265,7 +265,7 @@ namespace siege::views
         CREATESTRUCTW{
           .hMenu = tab_context_menu,
           .hwndParent = *this,
-          .style = WS_CHILD | WS_VISIBLE,
+          .style = WS_CHILD | WS_VISIBLE | TCS_FIXEDWIDTH | TCS_FORCELABELLEFT,
         });
 
 

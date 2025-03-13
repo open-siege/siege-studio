@@ -24,42 +24,6 @@ namespace siege::views
 
     std::vector<item_context> color_items;
 
-    struct
-    {
-      win32::button button;
-      win32::combo_box combo_box;
-      win32::combo_box_ex combo_box_ex;
-      win32::edit edit;
-      win32::header header;
-      win32::tree_view tree_view;
-      win32::list_view list_view;
-      win32::tool_bar toolbar;
-      win32::list_box list_box;
-      win32::menu menu;
-      win32::window window;
-      win32::static_control static_control;
-      win32::tab_control tab_control;
-      win32::scroll_bar scroll_bar;
-    } sample;
-
-    std::map<std::wstring_view, std::wstring_view> control_labels = {
-      { win32::button::class_name, L"Button" },
-      { win32::combo_box::class_name, L"Combo Box" },
-      { win32::combo_box_ex::class_name, L"Combo Box Ex" },
-      { win32::edit::class_name, L"Edit" },
-      { win32::list_box::class_name, L"List Box" },
-      { win32::scroll_bar::class_name, L"Scroll Bar" },
-      { win32::static_control::class_name, L"Static Control" },
-      { win32::header::class_name, L"Header" },
-      { win32::list_view::class_name, L"List View" },
-      { win32::tab_control::class_name, L"Tab Control" },
-      { win32::tree_view::class_name, L"Tree View" },
-
-      { win32::tool_bar::class_name, L"Toolbar" },
-      { L"Menu", L"Menu" },
-      { L"Window", L"Window" }
-    };
-
     std::map<std::wstring_view, std::wstring_view> property_labels = {
       { L"BkColor", L"Background Color" },
       { L"TextColor", L"Text Color" },
@@ -72,6 +36,22 @@ namespace siege::views
       { L"TextHighlightColor", L"Text Highlight Color" },
       { L"MarkColor", L"Mark Color" },
     };
+
+    win32::button dark_mode_selection;
+    win32::button by_system;
+    win32::button forced_dark;
+    win32::button forced_light;
+
+    win32::window buttons;
+    win32::window text_inputs;
+    win32::window text_outputs;
+    win32::window combo_boxes;
+    win32::window list_box;
+    win32::window header;
+    win32::window toolbars;
+    win32::window tree_view;
+    win32::window list_views;
+    win32::window tab_controls;
 
     std::array<COLORREF, 16> colors{};
 
@@ -92,7 +72,7 @@ namespace siege::views
       this->SetWindowStyle(style | WS_CLIPCHILDREN);
 
       options = *win32::CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .hwndParent = *this, 
+        .hwndParent = *this,
         .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
       options.InsertString(-1, L"Theming (Simple)");
@@ -100,35 +80,242 @@ namespace siege::views
       options.SetCurrentSelection(0);
       options_unbind = options.bind_lbn_sel_change(std::bind_front(&preferences_view::options_lbn_sel_change, this));
 
+      dark_mode_selection = *win32::CreateWindowExW<win32::button>(::CREATESTRUCTW{
+        .hwndParent = *this,
+        .style = WS_CHILD | BS_GROUPBOX,
+        .lpszName = L"Application Theme Mode" });
+
+      by_system = *win32::CreateWindowExW<win32::button>(::CREATESTRUCTW{
+        .hMenu = (HMENU)10,
+        .hwndParent = *this,
+        .style = WS_CHILD | BS_AUTORADIOBUTTON,
+        .lpszName = L"Follow System" });
+
+      forced_dark = *win32::CreateWindowExW<win32::button>(::CREATESTRUCTW{
+        .hMenu = (HMENU)10,
+        .hwndParent = *this,
+        .style = WS_CHILD | BS_AUTORADIOBUTTON,
+        .lpszName = L"Prefer Light" });
+
+      forced_light = *win32::CreateWindowExW<win32::button>(::CREATESTRUCTW{
+        .hMenu = (HMENU)10,
+        .hwndParent = *this,
+        .style = WS_CHILD | BS_AUTORADIOBUTTON,
+        .lpszName = L"Prefer Dark" });
+
+
       advanced_options = *win32::CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .hwndParent = *this, 
+        .hwndParent = *this,
         .style = WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
-      advanced_options.InsertString(-1, L"Button"); // Button + SysLink
-      advanced_options.InsertString(-1, L"Text Input"); // Edit + IP Address + Up Down Control
-      advanced_options.InsertString(-1, L"Text Output"); // Static + Tooltip
-      advanced_options.InsertString(-1, L"Combo Box"); // Combo Box + Combo Box Ex
+      advanced_options.InsertString(-1, L"Button");// Button + SysLink
+      advanced_options.InsertString(-1, L"Text Input");// Edit + IP Address + Up Down Control
+      advanced_options.InsertString(-1, L"Text Output");// Static + Tooltip
+      advanced_options.InsertString(-1, L"Combo Box");// Combo Box + Combo Box Ex
       advanced_options.InsertString(-1, L"List Box");
       advanced_options.InsertString(-1, L"Header");
       advanced_options.InsertString(-1, L"Toolbar");
       advanced_options.InsertString(-1, L"Tree View");
       advanced_options.InsertString(-1, L"List View");
       advanced_options.InsertString(-1, L"Tab Control");
-      
-      // Push Button + Primary Push Button
-      // Flat Push Button + Flat Primary Push Button
-      // Split Button + Primary Primary Split Button
-      // Flat Split Button + Flat Primary Primary Split Button
-      // Command Link + Primary Command Link
-      // Sys Link + Push Box
-      // Two State Checkbox + Three State Checkbox
-      // Group Box + Radio Button + Radio Button
-      // Push Like + Flat Push Like
-      // Bitmap Button + Icon Button
+      advanced_options.bind_lbn_sel_change(std::bind_front(&preferences_view::advanced_options_lbn_sel_change, this));
 
-      // Edit + Edit Password
-      // IP Address
-      // Up-Down Control 
+      buttons = *win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+        .hwndParent = *this,
+        .style = WS_CHILD,
+        .lpszClass = L"StackLayout" });
+
+      buttons.SetPropW(L"Orientation", ORIENTATION_PREFERENCE::ORIENTATION_PREFERENCE_PORTRAIT);
+      buttons.SetPropW(L"DefaultHeight", win32::get_system_metrics(SM_CYSIZE) * 2);
+
+      {
+        auto temp = *win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = buttons,
+          .style = WS_CHILD | WS_VISIBLE,
+          .lpszClass = L"StackLayout" });
+
+        temp.SetPropW(L"Orientation", ORIENTATION_PREFERENCE::ORIENTATION_PREFERENCE_LANDSCAPE);
+
+        win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = temp,
+          .style = WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+          .lpszName = L"Push Button",
+          .lpszClass = L"Button" });
+
+        win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = temp,
+          .style = WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+          .lpszName = L"Primary Push Button",
+          .lpszClass = L"Button" });
+
+        temp = *win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = buttons,
+          .style = WS_CHILD | WS_VISIBLE,
+          .lpszClass = L"StackLayout" });
+
+        temp.SetPropW(L"Orientation", ORIENTATION_PREFERENCE::ORIENTATION_PREFERENCE_LANDSCAPE);
+        win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = temp,
+          .style = WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | BS_FLAT,
+          .lpszName = L"Flat Push Button",
+          .lpszClass = L"Button" });
+
+        win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = temp,
+          .style = WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON | BS_FLAT,
+          .lpszName = L"Flat Primary Push Button",
+          .lpszClass = L"Button" });
+
+        temp = *win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = buttons,
+          .style = WS_CHILD | WS_VISIBLE,
+          .lpszClass = L"StackLayout" });
+
+        temp.SetPropW(L"Orientation", ORIENTATION_PREFERENCE::ORIENTATION_PREFERENCE_LANDSCAPE);
+
+        win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = temp,
+          .style = WS_CHILD | WS_VISIBLE | BS_SPLITBUTTON,
+          .lpszName = L"Split Button",
+          .lpszClass = L"Button" });
+
+        win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = temp,
+          .style = WS_CHILD | WS_VISIBLE | BS_DEFSPLITBUTTON,
+          .lpszName = L"Primary Split Button",
+          .lpszClass = L"Button" });
+
+        temp = *win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = buttons,
+          .style = WS_CHILD | WS_VISIBLE,
+          .lpszClass = L"StackLayout" });
+
+        temp.SetPropW(L"Orientation", ORIENTATION_PREFERENCE::ORIENTATION_PREFERENCE_LANDSCAPE);
+
+        win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = temp,
+          .style = WS_CHILD | WS_VISIBLE | BS_SPLITBUTTON | BS_FLAT,
+          .lpszName = L"Flat Split Button",
+          .lpszClass = L"Button" });
+
+        win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = temp,
+          .style = WS_CHILD | WS_VISIBLE | BS_DEFSPLITBUTTON | BS_FLAT,
+          .lpszName = L"Flat Primary Split Button",
+          .lpszClass = L"Button" });
+
+        temp = *win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = buttons,
+          .style = WS_CHILD | WS_VISIBLE,
+          .lpszClass = L"StackLayout" });
+
+        temp.SetPropW(L"Orientation", ORIENTATION_PREFERENCE::ORIENTATION_PREFERENCE_LANDSCAPE);
+
+        win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = temp,
+          .style = WS_CHILD | WS_VISIBLE | BS_COMMANDLINK,
+          .lpszName = L"Command Link",
+          .lpszClass = L"Button" });
+
+        win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = temp,
+          .style = WS_CHILD | WS_VISIBLE | BS_DEFCOMMANDLINK,
+          .lpszName = L"Primary Command Link",
+          .lpszClass = L"Button" });
+
+        temp = *win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = buttons,
+          .style = WS_CHILD | WS_VISIBLE,
+          .lpszClass = L"StackLayout" });
+
+        temp.SetPropW(L"Orientation", ORIENTATION_PREFERENCE::ORIENTATION_PREFERENCE_LANDSCAPE);
+
+        win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = temp,
+          .style = WS_CHILD | WS_VISIBLE,
+          .lpszName = L"https://store.steampowered.com/app/3193420/Siege_Studio/",
+          .lpszClass = WC_LINK });
+
+        win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = temp,
+          .style = WS_CHILD | WS_VISIBLE | BS_PUSHBOX,
+          .lpszName = L"Push Box",
+          .lpszClass = L"Button" });
+
+        temp = *win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = buttons,
+          .style = WS_CHILD | WS_VISIBLE,
+          .lpszClass = L"StackLayout" });
+        temp.SetPropW(L"Orientation", ORIENTATION_PREFERENCE::ORIENTATION_PREFERENCE_LANDSCAPE);
+
+        win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = temp,
+          .style = WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+          .lpszName = L"Two State Checkbox",
+          .lpszClass = L"Button" });
+
+        win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = temp,
+          .style = WS_CHILD | WS_VISIBLE | BS_AUTO3STATE,
+          .lpszName = L"Three State Checkbox",
+          .lpszClass = L"Button" });
+
+
+        temp = *win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = buttons,
+          .style = WS_CHILD | WS_VISIBLE,
+          .lpszClass = L"StackLayout" });
+        temp.SetPropW(L"Orientation", ORIENTATION_PREFERENCE::ORIENTATION_PREFERENCE_LANDSCAPE);
+
+        win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = temp,
+          .style = WS_CHILD | WS_VISIBLE | BS_PUSHLIKE,
+          .lpszName = L"Push-like",
+          .lpszClass = L"Button" });
+
+        win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = temp,
+          .style = WS_CHILD | WS_VISIBLE | BS_PUSHLIKE | BS_FLAT,
+          .lpszName = L"Flat Push-like",
+          .lpszClass = L"Button" });
+      }
+
+
+      {
+        text_inputs = *win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = *this,
+          .style = WS_CHILD,
+          .lpszClass = L"StackLayout" });
+
+        text_inputs.SetPropW(L"Orientation", ORIENTATION_PREFERENCE::ORIENTATION_PREFERENCE_PORTRAIT);
+        text_inputs.SetPropW(L"DefaultHeight", win32::get_system_metrics(SM_CYSIZE) * 2);
+
+        auto text = win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = text_inputs,
+          .style = WS_CHILD | WS_VISIBLE,
+          .lpszClass = L"Edit" });
+
+        Edit_SetCueBannerText(*text, L"Edit Control");
+
+        win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = text_inputs,
+          .style = WS_CHILD | WS_VISIBLE | ES_PASSWORD,
+          .lpszClass = L"Edit" });
+
+        Edit_SetCueBannerText(*text, L"Password Edit Control");
+
+        win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = text_inputs,
+          .cy = 100,
+          .cx = 300,
+          .style = WS_CHILD | WS_VISIBLE,
+          .lpszClass = WC_IPADDRESSW });
+
+        win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+          .hwndParent = text_inputs,
+          .style = WS_CHILD | WS_VISIBLE,
+          .lpszClass = UPDOWN_CLASSW });
+      }
 
       // Combo box simple
       // Combo box dropdown + combo box dropdown list
@@ -145,8 +332,8 @@ namespace siege::views
       // Tree View Checkboxes
 
       // List View
-      
-      // Tab Control 
+
+      // Tab Control
 
       ListBox_SetItemHeight(options, 0, options.GetItemHeight(0) * 2);
 
@@ -193,13 +380,88 @@ namespace siege::views
 
     void options_lbn_sel_change(win32::list_box hwndFrom, const NMHDR&)
     {
-      if (options.GetCurrentSelection() == 1)
+      ShowWindow(advanced_options, SW_HIDE);
+      ShowWindow(dark_mode_selection, SW_HIDE);
+      ShowWindow(by_system, SW_HIDE);
+      ShowWindow(forced_dark, SW_HIDE);
+      ShowWindow(forced_light, SW_HIDE);
+
+      if (options.GetCurrentSelection() == 0)
+      {
+        ShowWindow(dark_mode_selection, SW_SHOW);
+        ShowWindow(by_system, SW_SHOW);
+        ShowWindow(forced_dark, SW_SHOW);
+        ShowWindow(forced_light, SW_SHOW);
+
+        ShowWindow(buttons, SW_HIDE);
+        ShowWindow(text_inputs, SW_HIDE);
+        ShowWindow(text_outputs, SW_HIDE);
+        ShowWindow(combo_boxes, SW_HIDE);
+        ShowWindow(list_box, SW_HIDE);
+        ShowWindow(header, SW_HIDE);
+        ShowWindow(toolbars, SW_HIDE);
+        ShowWindow(tree_view, SW_HIDE);
+        ShowWindow(list_views, SW_HIDE);
+        ShowWindow(tab_controls, SW_HIDE);
+      }
+      else if (options.GetCurrentSelection() == 1)
       {
         ShowWindow(advanced_options, SW_SHOW);
       }
-      else
+    }
+
+    void advanced_options_lbn_sel_change(win32::list_box hwndFrom, const NMHDR&)
+    {
+      ShowWindow(buttons, SW_HIDE);
+      ShowWindow(text_inputs, SW_HIDE);
+      ShowWindow(text_outputs, SW_HIDE);
+      ShowWindow(combo_boxes, SW_HIDE);
+      ShowWindow(list_box, SW_HIDE);
+      ShowWindow(header, SW_HIDE);
+      ShowWindow(toolbars, SW_HIDE);
+      ShowWindow(tree_view, SW_HIDE);
+      ShowWindow(list_views, SW_HIDE);
+      ShowWindow(tab_controls, SW_HIDE);
+
+      if (advanced_options.GetCurrentSelection() == 0)
       {
-        ShowWindow(advanced_options, SW_HIDE);
+        ShowWindow(buttons, SW_SHOW);
+      }
+      else if (advanced_options.GetCurrentSelection() == 1)
+      {
+        ShowWindow(text_inputs, SW_SHOW);
+      }
+      else if (advanced_options.GetCurrentSelection() == 2)
+      {
+        ShowWindow(text_outputs, SW_SHOW);
+      }
+      else if (advanced_options.GetCurrentSelection() == 3)
+      {
+        ShowWindow(combo_boxes, SW_SHOW);
+      }
+      else if (advanced_options.GetCurrentSelection() == 4)
+      {
+        ShowWindow(list_box, SW_SHOW);
+      }
+      else if (advanced_options.GetCurrentSelection() == 5)
+      {
+        ShowWindow(header, SW_SHOW);
+      }
+      else if (advanced_options.GetCurrentSelection() == 6)
+      {
+        ShowWindow(toolbars, SW_SHOW);
+      }
+      else if (advanced_options.GetCurrentSelection() == 7)
+      {
+        ShowWindow(tree_view, SW_SHOW);
+      }
+      else if (advanced_options.GetCurrentSelection() == 8)
+      {
+        ShowWindow(list_views, SW_SHOW);
+      }
+      else if (advanced_options.GetCurrentSelection() == 9)
+      {
+        ShowWindow(tab_controls, SW_SHOW);
       }
     }
 
@@ -241,8 +503,35 @@ namespace siege::views
       options.SetWindowPos(POINT{});
       options.SetWindowPos(left_size);
 
-      advanced_options.SetWindowPos(POINT{.x = left_size.cx });
-      advanced_options.SetWindowPos(left_size);
+      advanced_options.SetWindowPos(POINT{ .x = left_size.cx });
+      advanced_options.SetWindowPos(middle_size);
+
+      buttons.SetWindowPos(POINT{ .x = left_size.cx + middle_size.cx });
+      buttons.SetWindowPos(right_size);
+
+      text_inputs.SetWindowPos(POINT{ .x = left_size.cx + middle_size.cx });
+      text_inputs.SetWindowPos(right_size);
+
+      text_outputs.SetWindowPos(POINT{ .x = left_size.cx + middle_size.cx });
+      text_outputs.SetWindowPos(right_size);
+
+      dark_mode_selection.SetWindowPos(POINT{ .x = left_size.cx });
+      dark_mode_selection.SetWindowPos(right_size);
+
+      auto width = middle_size.cx / 3;
+      width -= 15;
+
+      auto height = middle_size.cy / 3;
+      height -= 15;
+
+      by_system.SetWindowPos(POINT{ .x = left_size.cx + 15, .y = 15  });
+      by_system.SetWindowPos(SIZE{ .cx = width, .cy = height });
+
+      forced_dark.SetWindowPos(POINT{ .x = left_size.cx + width + 15, .y = 15 });
+      forced_dark.SetWindowPos(SIZE{ .cx = width, .cy = height });
+
+      forced_light.SetWindowPos(POINT{ .x = left_size.cx + width + width + 15, .y = 15 });
+      forced_light.SetWindowPos(SIZE{ .cx = width, .cy = height });
 
       return 0;
     }

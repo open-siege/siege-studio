@@ -17,6 +17,7 @@
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/win/window_impl.hpp>
 #include <siege/platform/shared.hpp>
+#include <siege/platform/win/capabilities.hpp>
 #include <commctrl.h>
 
 #include "views/siege_main_window.hpp"
@@ -79,6 +80,13 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
              ICC_BAR_CLASSES
   };
   ::InitCommonControlsEx(&settings);
+
+  auto wic_version = win32::get_wic_version();
+
+  if (!wic_version)
+  {
+    ::MessageBoxW(nullptr, L"Windows Imaging Component has not been detected. Siege Studio will not function correctly without it. If you are using an older version of Windows, make sure to either install the latest updates or the Windows Imaging Component redistributable.", L"Windows Imaging Component is missing", MB_OK | MB_ICONERROR);
+  }
 
   win32::window_module_ref this_module(hInstance);
 

@@ -60,8 +60,23 @@ namespace siege::views
       }
       case WM_SIZE: {
         auto preference = (ORIENTATION_PREFERENCE)(int)::GetPropW(handle, L"Orientation");
+
+        RECT rect{};
+
+        ::GetClientRect(handle, &rect);
+
         auto default_height = (int)::GetPropW(handle, L"DefaultHeight");
         auto default_width = (int)::GetPropW(handle, L"DefaultWidth");
+
+        if (!default_height && !children.empty())
+        {
+          default_height = rect.bottom / children.size();
+        }
+
+        if (!default_width && !children.empty())
+        {
+          default_width = rect.right / children.size();
+        }
 
         if (preference & ORIENTATION_PREFERENCE_PORTRAIT)
         {
@@ -69,7 +84,7 @@ namespace siege::views
 
           RECT client_rect{};
 
-          UINT width = LOWORD(lparam);
+          UINT width = rect.right;
 
           auto y = 0;
 
@@ -90,7 +105,7 @@ namespace siege::views
 
           RECT client_rect{};
 
-          UINT height = LOWORD(lparam);
+          UINT height = rect.bottom;
 
           auto x = 0;
 
@@ -98,13 +113,14 @@ namespace siege::views
           {
             ::GetClientRect(child, &client_rect);
             auto width = client_rect.right - client_rect.left;
-            ::DeferWindowPos(defer, child, nullptr, x, 0, width ? width : default_width, height, SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOZORDER);
+            width = width ? width : default_width;
+            ::DeferWindowPos(defer, child, nullptr, x, 0, width, height, SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOZORDER);
             x += width;
           }
 
           ::EndDeferWindowPos(defer);
-          return 0;
         }
+        return 0;
       }
       default:
         return std::nullopt;

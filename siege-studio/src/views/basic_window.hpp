@@ -64,7 +64,7 @@ namespace siege::views
         return ::DefWindowProcW(self, message, wparam, lparam);
       }
 
-      if (message == WM_NCDESTROY)
+      if (message == WM_NCDESTROY && window->handle == self)
       {
         auto result = window->default_proc(message, wparam, lparam);
         delete window;
@@ -72,11 +72,14 @@ namespace siege::views
         return result;
       }
 
-      auto result = window->window_proc(message, wparam, lparam);
-
-      if (result)
+      if (window->handle == self)
       {
-        return *result;
+        auto result = window->window_proc(message, wparam, lparam);
+
+        if (result)
+        {
+          return *result;
+        }
       }
 
       return window->default_proc(message, wparam, lparam);
