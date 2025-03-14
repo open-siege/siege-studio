@@ -22,7 +22,6 @@ namespace win32
     }
 
     if (module == ::GetModuleHandleW(L"comdlg32") ||
-        module == ::GetModuleHandleW(L"comctl32") || 
         module == ::GetModuleHandleW(L"shell32") ||
         module == ::GetModuleHandleW(L"user32") ||
         module == ::GetModuleHandleW(L"ExplorerFrame") ||
