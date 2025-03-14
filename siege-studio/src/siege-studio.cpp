@@ -111,23 +111,17 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
   });
 
   siege::views::stack_layout::register_class(this_module);
-
-  win32::window_meta_class<siege::views::siege_main_window> info{};
-  info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
-  info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-  info.hIcon = (HICON)::LoadImageW(hInstance, L"AppIcon", IMAGE_ICON, 0, 0, 0);
-  this_module.RegisterClassExW(info);
-
+  auto main_atom = siege::views::siege_main_window::register_class(this_module);
   win32::window_meta_class<siege::views::default_view> def_info{};
   def_info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
   def_info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-  def_info.hIcon = info.hIcon;
+  def_info.hIcon = (HICON)::LoadImageW(this_module, L"AppIcon", IMAGE_ICON, 0, 0, 0);
   this_module.RegisterClassExW(def_info);
 
   win32::window_meta_class<siege::views::preferences_view> pref_info{};
   pref_info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
   pref_info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-  pref_info.hIcon = info.hIcon;
+  pref_info.hIcon = (HICON)::LoadImageW(this_module, L"AppIcon", IMAGE_ICON, 0, 0, 0);
   this_module.RegisterClassExW(pref_info);
 
   auto main_window = this_module.CreateWindowExW(CREATESTRUCTW{
@@ -135,7 +129,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
     .x = CW_USEDEFAULT,
     .style = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
     .lpszName = app_title.data(),
-    .lpszClass = win32::type_name<siege::views::siege_main_window>().c_str() });
+    .lpszClass = (LPCWSTR)main_atom
+  });
 
   if (!main_window)
   {

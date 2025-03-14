@@ -3,8 +3,6 @@
 
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/theming.hpp>
-#include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/threading.hpp>
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/extension_module.hpp>

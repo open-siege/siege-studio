@@ -5,7 +5,6 @@
 
 namespace siege::views
 {
-
   struct stack_layout final : basic_window<stack_layout>
   {
     std::vector<HWND> children;
@@ -59,14 +58,14 @@ namespace siege::views
         [[fallthrough]];
       }
       case WM_SIZE: {
-        auto preference = (ORIENTATION_PREFERENCE)(int)::GetPropW(handle, L"Orientation");
+        auto preference = (ORIENTATION_PREFERENCE)(int)::GetPropW(*this, L"Orientation");
 
         RECT rect{};
 
-        ::GetClientRect(handle, &rect);
+        ::GetClientRect(*this, &rect);
 
-        auto default_height = (int)::GetPropW(handle, L"DefaultHeight");
-        auto default_width = (int)::GetPropW(handle, L"DefaultWidth");
+        auto default_height = (int)::GetPropW(*this, L"DefaultHeight");
+        auto default_width = (int)::GetPropW(*this, L"DefaultWidth");
 
         if (!default_height && !children.empty())
         {

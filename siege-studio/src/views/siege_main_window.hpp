@@ -13,6 +13,7 @@
 #include "views/preferences_view.hpp"
 #include "views/about_view.hpp"
 #include "views/default_view.hpp"
+#include "views/basic_window.hpp"
 #include <map>
 #include <spanstream>
 
@@ -23,7 +24,7 @@ namespace siege::views
   // TODO add category and extension filter for directory listing
   // TODO Support WM_DROPFILES. Instead of using the templated window handler, it makes sense to
   // move the dispatching into this class to support more bespoke messages.
-  struct siege_main_window final : win32::window_ref
+  struct siege_main_window final : basic_window<siege_main_window>
     , win32::menu::notifications
   {
     win32::tree_view dir_list;
@@ -67,8 +68,12 @@ namespace siege::views
       return result;
     }();
 
-    siege_main_window(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self), tab_control(nullptr)
+    siege_main_window(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params), tab_control(nullptr)
     {
+      params.dwExStyle = params.dwExStyle | WS_EX_ACCEPTFILES; 
+
+      ::SetWindowLongPtrW(self, GWL_EXSTYLE, params.dwExStyle);
+
       std::filesystem::path app_path = std::filesystem::path(win32::module_ref(params.hInstance).GetModuleFileName()).parent_path();
       loaded_modules = platform::content_module::load_modules(app_path);
 
@@ -826,6 +831,26 @@ namespace siege::views
       return false;
     }
 
+    LRESULT wm_drop_files(HDROP files)
+    {
+      auto count = ::DragQueryFileW(files, UINT_MAX, nullptr, 0);
+      std::wstring buffer;
+      buffer.reserve(1024);
+
+      for (auto i = 0u; i < count; ++i)
+      {
+        buffer.resize(::DragQueryFileW(files, i, nullptr, 0) + 1);
+        if (::DragQueryFileW(files, i, buffer.data(), buffer.size()))
+        {
+          AddTabFromPath(buffer);
+        }
+      }
+
+      ::DragFinish(files);
+
+      return 0;
+    }
+
     BOOL dir_list_nm_dbl_click(win32::tree_view sender, const NMHDR& notification)
     {
       selected_file != files.end() && AddTabFromPath(*selected_file);
@@ -936,7 +961,6 @@ namespace siege::views
       if (identifier == edit_theme_id)
       {
         theme_window = *win32::window_module_ref::current_module().CreateWindowExW(CREATESTRUCTW{
-          .lpCreateParams = (HWND)this->get(),
           .hwndParent = *this,
           .cx = CW_USEDEFAULT,
           .x = CW_USEDEFAULT,
@@ -1100,6 +1124,50 @@ namespace siege::views
       }
 
       return std::nullopt;
+    }
+
+    inline static auto register_class(HINSTANCE module)
+    {
+      WNDCLASSEXW info{
+        .cbSize = sizeof(info),
+        .style = CS_HREDRAW | CS_VREDRAW,
+        .lpfnWndProc = basic_window::window_proc,
+        .cbWndExtra = sizeof(void*),
+        .hInstance = module,
+        .hIcon = (HICON)::LoadImageW(module, L"AppIcon", IMAGE_ICON, 0, 0, 0),
+        .hCursor = LoadCursorW(module, IDC_ARROW),
+        .hbrBackground = (HBRUSH)(COLOR_WINDOW + 1),
+        .lpszClassName = win32::type_name<siege::views::siege_main_window>().c_str(),
+      };
+      return ::RegisterClassExW(&info);
+    }
+
+    std::optional<LRESULT> window_proc(UINT message, WPARAM wparam, LPARAM lparam) override
+    {
+      switch (message)
+      {
+      case WM_CREATE:
+        return wm_create();
+      case WM_DESTROY:
+        return wm_destroy();
+      case WM_SETTINGCHANGE:
+        return wm_setting_change(win32::setting_change_message(wparam, lparam));
+      case WM_SIZE:
+        return (LRESULT)wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
+      case WM_COPYDATA:
+        return (LRESULT)wm_copy_data(win32::copy_data_message<std::byte>(wparam, lparam));
+      case WM_DROPFILES:
+        return wm_drop_files((HDROP)wparam);
+      case WM_COMMAND: {
+        if (HIWORD(wparam) == 0)
+        {
+          return wm_command(win32::menu_ref(::GetMenu(*this)), LOWORD(wparam));
+        }
+        [[fallthrough]];
+      }
+      default:
+        return std::nullopt;
+      }
     }
   };
 }// namespace siege::views

@@ -4,17 +4,15 @@
 
 namespace siege::views
 {
-  struct default_window
+  struct default_window : win32::window_ref
   {
-    HWND handle;
-
-    default_window(HWND handle, CREATESTRUCTW& params) : handle(handle)
+    default_window(HWND handle, CREATESTRUCTW& params) : win32::window_ref(handle)
     {
     }
 
     virtual LRESULT default_proc(UINT message, WPARAM wparam, LPARAM lparam)
     {
-      return DefWindowProcW(handle, message, wparam, lparam);
+      return DefWindowProcW(*this, message, wparam, lparam);
     }
 
     virtual std::optional<LRESULT> window_proc(UINT message, WPARAM wparam, LPARAM lparam)
@@ -31,7 +29,7 @@ namespace siege::views
 
     LRESULT default_proc(UINT message, WPARAM wparam, LPARAM lparam) override
     {
-      return DefDlgProcW(handle, message, wparam, lparam);
+      return DefDlgProcW(*this, message, wparam, lparam);
     }
   };
 
@@ -64,7 +62,7 @@ namespace siege::views
         return ::DefWindowProcW(self, message, wparam, lparam);
       }
 
-      if (message == WM_NCDESTROY && window->handle == self)
+      if (message == WM_NCDESTROY && *window == self)
       {
         auto result = window->default_proc(message, wparam, lparam);
         delete window;
@@ -72,7 +70,7 @@ namespace siege::views
         return result;
       }
 
-      if (window->handle == self)
+      if (*window == self)
       {
         auto result = window->window_proc(message, wparam, lparam);
 
