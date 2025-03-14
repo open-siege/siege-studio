@@ -32,13 +32,40 @@ namespace siege::views
       return true;
     }
 
-    return siege::content::bmp::is_earthsiege_bmp(image_stream)
-           || siege::platform::bitmap::is_microsoft_bmp(image_stream)
-           || siege::content::tim::is_tim(image_stream)
-           || siege::content::bmp::is_phoenix_bmp(image_stream)
-           || siege::platform::bitmap::is_jpg(image_stream)
-           || siege::platform::bitmap::is_gif(image_stream)
-           || siege::platform::bitmap::is_png(image_stream);
+    auto result = siege::content::bmp::is_earthsiege_bmp(image_stream)
+                  || siege::platform::bitmap::is_microsoft_bmp(image_stream)
+                  || siege::content::tim::is_tim(image_stream)
+                  || siege::content::bmp::is_phoenix_bmp(image_stream)
+                  || siege::platform::bitmap::is_jpg(image_stream)
+                  || siege::platform::bitmap::is_gif(image_stream)
+                  || siege::platform::bitmap::is_png(image_stream);
+
+#if WIN32
+    if (!result && !path)
+    {
+      platform::istream_pos_resetter resetter(image_stream);
+      auto file = std::filesystem::temp_directory_path() / L"siege-temp.ico";
+      {
+        std::ofstream temp(file, std::ios::trunc | std::ios::binary);
+
+        auto size = siege::platform::get_stream_size(image_stream);
+
+        std::vector<std::byte> data(size, std::byte{});
+
+        image_stream.read((char*)data.data(), size);
+        temp.write((char*)data.data(), size);
+      }
+
+      auto icon = ::LoadImageW(nullptr, file.c_str(), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADFROMFILE);
+
+      if (icon)
+      {
+        ::DestroyIcon((HICON)icon);
+        return true;
+      }
+    }
+#endif
+    return result;
   }
 
   auto get_default_palette()
@@ -67,8 +94,8 @@ namespace siege::views
         std::deque<fs::path> embedded_pal_paths;
 
         for (auto entry = fs::recursive_directory_iterator(fs::current_path());
-             entry != fs::recursive_directory_iterator();
-             ++entry)
+          entry != fs::recursive_directory_iterator();
+          ++entry)
         {
           if (entry.depth() > 3)
           {
@@ -140,7 +167,8 @@ namespace siege::views
         selected_palette = 0;
 
         return palettes;
-      }).share();
+      })
+      .share();
   }
 
   std::size_t bmp_controller::load_bitmap(std::istream& image_stream, std::shared_future<const std::deque<palette_info>&> pending_load) noexcept
@@ -209,7 +237,33 @@ namespace siege::views
       }
       else
       {
-        original_image.emplace(image_stream);
+#if WIN32
+        auto file = std::filesystem::temp_directory_path() / L"siege-temp.ico";
+        {
+          platform::istream_pos_resetter resetter(image_stream);
+
+          std::ofstream temp(file, std::ios::trunc | std::ios::binary);
+
+          auto size = siege::platform::get_stream_size(image_stream);
+
+          std::vector<std::byte> data(size, std::byte{});
+
+          image_stream.read((char*)data.data(), size);
+          temp.write((char*)data.data(), size);
+        }
+
+        auto icon = ::LoadImageW(nullptr, file.c_str(), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADFROMFILE);
+
+        if (icon)
+        {
+          ::DestroyIcon((HICON)icon);
+          original_image.emplace(file);
+        }
+        else
+#endif
+        {
+          original_image.emplace(image_stream);
+        }
       }
     }
     catch (...)

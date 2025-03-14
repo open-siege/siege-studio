@@ -21,23 +21,21 @@ namespace siege::views
 
     auto access = KEY_QUERY_VALUE | KEY_READ | KEY_WRITE;
 
-    if (::RegOpenCurrentUser(access, &user_key) == ERROR_SUCCESS && 
-        ::RegCreateKeyExW(user_key, L"Software\\The Siege Hub\\Siege Studio", 0, nullptr, 0, access, nullptr, &main_key, nullptr) == ERROR_SUCCESS)
+    if (::RegOpenCurrentUser(access, &user_key) == ERROR_SUCCESS && ::RegCreateKeyExW(user_key, L"Software\\The Siege Hub\\Siege Studio", 0, nullptr, 0, access, nullptr, &main_key, nullptr) == ERROR_SUCCESS)
     {
-      OutputDebugStringW(L"Failed successfully\n");
       std::vector<BYTE> raw_bytes;
-      
+
       raw_bytes.resize(settings.last_ip_address.size() * sizeof(wchar_t));
       std::memcpy(raw_bytes.data(), settings.last_ip_address.data(), raw_bytes.size());
-      
+
       bool result = false;
       result = ::RegSetValueExW(main_key, L"LastIPAddress", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
-      
+
       raw_bytes.resize(settings.last_player_name.size() * sizeof(wchar_t));
       std::memcpy(raw_bytes.data(), settings.last_player_name.data(), raw_bytes.size());
       result = result && ::RegSetValueExW(main_key, L"LastPlayerName", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
-     
-      
+
+
       ::RegCloseKey(main_key);
       ::RegCloseKey(user_key);
 
@@ -46,11 +44,9 @@ namespace siege::views
 
     if (user_key)
     {
-      OutputDebugStringW(L"User key being closed\n");
       ::RegCloseKey(user_key);
     }
 
-    OutputDebugStringW(L"Could not save registry\n");
     return false;
   }
 
@@ -61,8 +57,7 @@ namespace siege::views
     auto access = KEY_QUERY_VALUE | KEY_READ | KEY_WRITE;
 
     DWORD size = 0;
-    if (::RegOpenCurrentUser(access, &user_key) == ERROR_SUCCESS && 
-        ::RegCreateKeyExW(user_key, L"Software\\The Siege Hub\\Siege Studio", 0, nullptr, 0, access, nullptr, &main_key, nullptr) == ERROR_SUCCESS)
+    if (::RegOpenCurrentUser(access, &user_key) == ERROR_SUCCESS && ::RegCreateKeyExW(user_key, L"Software\\The Siege Hub\\Siege Studio", 0, nullptr, 0, access, nullptr, &main_key, nullptr) == ERROR_SUCCESS)
     {
       auto type = REG_SZ;
       size = (DWORD)game_settings.last_ip_address.size() * 2;
@@ -272,8 +267,8 @@ namespace siege::views
       std::map<std::size_t, std::size_t> range_sizes;
 
       for (auto first_iter = std::find(strings.begin(), strings.end(), first);
-           first_iter != strings.end();
-           first_iter = std::find(++first_iter, strings.end(), first))
+        first_iter != strings.end();
+        first_iter = std::find(++first_iter, strings.end(), first))
       {
         first_indexes.emplace(std::distance(strings.begin(), first_iter));
       }
@@ -558,5 +553,161 @@ namespace siege::views
     }
 
     return results;
+  }
+
+  // TODO use endian-specific members
+  struct NEWHEADER
+  {
+    WORD Reserved;
+    WORD ResType;
+    WORD ResCount;
+  };
+
+  struct CURSORDIR
+  {
+    WORD Width;
+    WORD Height;
+  };
+
+  struct ICONRESDIR
+  {
+    BYTE Width;
+    BYTE Height;
+    BYTE ColorCount;
+    BYTE reserved;
+  };
+
+  struct RESDIR
+  {
+    union
+    {
+      ICONRESDIR Icon;
+      CURSORDIR Cursor;
+    };
+    WORD Planes;
+    WORD BitCount;
+    DWORD BytesInRes;
+    WORD IconCursorId;
+  };
+
+  std::vector<std::byte> exe_controller::get_resource_data(std::wstring type, std::wstring name, bool raw) const
+  {
+    std::optional<NEWHEADER> main_header;
+    std::optional<RESDIR> icon_header;
+
+    if (type == L"#3" && !raw)
+    {
+      auto groups = this->get_resource_names();
+
+      auto icon_groups = groups.find(L"#14");
+
+      if (icon_groups != groups.end())
+      {
+        for (auto& group : icon_groups->second)
+        {
+          if (main_header || icon_header)
+          {
+            break;
+          }
+          auto data = get_resource_data(L"#14", group, true);
+
+          if (data.size() >= sizeof(NEWHEADER))
+          {
+            NEWHEADER header{};
+            std::memcpy(&header, data.data(), sizeof(header));
+
+            constexpr static auto real_size = sizeof(RESDIR) - sizeof(WORD);
+
+            if (data.size() - sizeof(NEWHEADER) >= header.ResCount * real_size)
+            {
+              auto start = data.data() + sizeof(NEWHEADER);
+              for (auto i = 0; i < header.ResCount; ++i)
+              {
+                RESDIR entry{};
+                std::memcpy(&entry, start + (i * real_size), real_size);
+
+                if (L"#" + std::to_wstring(entry.IconCursorId) == name)
+                {
+                  entry.IconCursorId = sizeof(header) + sizeof(entry);
+                  main_header = header;
+                  icon_header = entry;
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+
+    auto resource = ::FindResourceW(loaded_module, name.c_str(), type.c_str());
+
+    if (!resource)
+    {
+      return {};
+    }
+
+    std::vector<std::byte> raw_result;
+
+    if (main_header && icon_header)
+    {
+      raw_result.resize(icon_header->IconCursorId + ::SizeofResource(loaded_module, resource));
+    }
+    else
+    {
+      raw_result.resize(::SizeofResource(loaded_module, resource));
+    }
+
+    if (raw_result.size() == 0)
+    {
+      return {};
+    }
+
+    auto loaded_resource = ::LoadResource(loaded_module, resource);
+
+    if (!loaded_resource)
+    {
+      return {};
+    }
+
+    auto raw_resource = ::LockResource(loaded_resource);
+
+    if (main_header && icon_header)
+    {
+      std::memcpy(raw_result.data(), &*main_header, sizeof(*main_header));
+      std::memcpy(raw_result.data() + sizeof(*main_header), &*icon_header, sizeof(*icon_header));
+      std::memcpy(raw_result.data() + icon_header->IconCursorId, raw_resource, ::SizeofResource(loaded_module, resource));
+    }
+    else
+    {
+      std::memcpy(raw_result.data(), raw_resource, raw_result.size());
+    }
+
+    return raw_result;
+  }
+
+  std::optional<std::wstring> exe_controller::get_extension_for_name(std::wstring type, std::wstring name) const
+  {
+    static std::map<std::wstring_view, std::wstring_view> group_extensions = {
+      { L"#1"sv, L".cur"sv },
+      { L"#2"sv, L".bmp"sv },
+      { L"#3"sv, L".ico"sv },
+      { L"#10"sv, L".bin"sv },
+      { L"#12"sv, L".cur"sv },
+      { L"#14"sv, L".ico"sv },
+      { L"#22"sv, L".ico"sv },
+      { L"#23"sv, L".html"sv },
+      { L"#24"sv, L".manifest"sv },
+    };
+
+    auto iter = group_extensions.find(type);
+
+    if (iter != group_extensions.end())
+    {
+      return std::wstring(iter->second);
+    }
+
+    return std::nullopt;
   }
 }// namespace siege::views

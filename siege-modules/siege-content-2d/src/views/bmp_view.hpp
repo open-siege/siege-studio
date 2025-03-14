@@ -737,7 +737,7 @@ namespace siege::views
 
     auto wm_copy_data(win32::copy_data_message<char> message)
     {
-      std::spanstream stream(message.data);
+      std::ispanstream stream(message.data);
 
       if (bmp_controller::is_bmp(stream))
       {

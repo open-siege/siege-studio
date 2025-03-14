@@ -12,30 +12,27 @@ namespace siege::platform::bitmap
 
   bool is_jpg(std::istream& raw_data)
   {
+    platform::istream_pos_resetter resetter(raw_data);
     std::array<std::byte, 2> header{};
     raw_data.read(reinterpret_cast<char *>(header.data()), sizeof(header));
-
-    raw_data.seekg(-int(sizeof(header)), std::ios::cur);
 
     return header == jpg_tag;
   }
 
   bool is_png(std::istream& raw_data)
   {
+    platform::istream_pos_resetter resetter(raw_data);
     file_tag header{};
     raw_data.read(reinterpret_cast<char *>(header.data()), sizeof(header));
-
-    raw_data.seekg(-int(sizeof(header)), std::ios::cur);
 
     return header == png_tag;
   }
 
   bool is_gif(std::istream& raw_data)
   {
+    platform::istream_pos_resetter resetter(raw_data);
     std::array<std::byte, 3> header{};
     raw_data.read(reinterpret_cast<char *>(header.data()), sizeof(header));
-
-    raw_data.seekg(-int(sizeof(header)), std::ios::cur);
 
     return header == gif_tag;
   }

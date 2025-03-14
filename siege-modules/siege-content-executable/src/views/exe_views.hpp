@@ -61,6 +61,9 @@ namespace siege::views
 
     std::vector<std::wstring> get_resource_strings(std::wstring type, std::wstring name) const;
 
+    std::vector<std::byte> get_resource_data(std::wstring type, std::wstring name, bool raw = false) const;
+    std::optional<std::wstring> get_extension_for_name(std::wstring type, std::wstring name) const;
+
     std::size_t load_executable(std::istream& image_stream, std::optional<std::filesystem::path>) noexcept;
 
     inline std::filesystem::path get_exe_path() { return loaded_path; }
@@ -89,6 +92,9 @@ namespace siege::views
     win32::list_box options;
     std::function<void()> options_unbind;
     win32::list_view resource_table;
+    win32::popup_menu extract_menu;
+    std::set<std::pair<std::wstring, std::wstring>> selected_resource_items;
+
     win32::list_view string_table;
     win32::list_view launch_table;
     win32::edit launch_table_edit;
@@ -144,7 +150,12 @@ namespace siege::views
 
     void launch_table_nm_click(win32::list_view sender, const NMITEMACTIVATE& message);
 
+    void resource_table_nm_rclick(win32::list_view, const NMITEMACTIVATE& message);
+    void resource_table_lvn_item_changed(win32::list_view, const NMLISTVIEW& message);
+
     void controller_table_nm_click(win32::list_view sender, const NMITEMACTIVATE& message);
+
+    void extract_selected_files();
 
     LRESULT exe_actions_tbn_dropdown(win32::tool_bar, const NMTOOLBARW& message);
     BOOL exe_actions_nm_click(win32::tool_bar, const NMMOUSE& message);

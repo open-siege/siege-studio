@@ -35,10 +35,9 @@ namespace siege::content::bmp
 
   bool is_earthsiege_bmp(std::istream& raw_data)
   {
+    platform::istream_pos_resetter resetter(raw_data);
     std::array<std::byte, 4> header{};
     platform::read(raw_data, header.data(), sizeof(header));
-
-    raw_data.seekg(-int(sizeof(header)), std::ios::cur);
 
     return header == dbm_tag;
   }
@@ -156,10 +155,9 @@ namespace siege::content::bmp
 
   bool is_phoenix_bmp(std::istream& raw_data)
   {
+    platform::istream_pos_resetter resetter(raw_data);
     std::array<std::byte, 4> header{};
     platform::read(raw_data, header.data(), sizeof(header));
-
-    raw_data.seekg(-int(sizeof(header)), std::ios::cur);
 
     return header == pbmp_tag;
   }

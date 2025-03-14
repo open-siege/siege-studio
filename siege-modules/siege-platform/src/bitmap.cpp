@@ -17,10 +17,9 @@ namespace siege::platform::bitmap
 
   bool is_microsoft_bmp(std::istream& raw_data)
   {
+    platform::istream_pos_resetter resetter(raw_data);
     file_tag header{};
     platform::read(raw_data, reinterpret_cast<char*>(&header), sizeof(header));
-
-    raw_data.seekg(-int(sizeof(header)), std::ios::cur);
 
     return header != bmp_alt1_tag && header != bmp_alt2_tag && header[0] == windows_bmp_tag[0] && header[1] == windows_bmp_tag[1];
   }

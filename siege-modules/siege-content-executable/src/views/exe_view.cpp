@@ -17,8 +17,10 @@ namespace siege::views
   {
     options = *win32::CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
       .hwndParent = *this,
-      .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS 
-        });
+      .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
+
+    extract_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 1, L"Open in New Tab");
+    extract_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 2, L"Extract");
 
     options_unbind = options.bind_lbn_sel_change(std::bind_front(&exe_view::options_lbn_sel_change, this));
     options.InsertString(-1, L"Resources");
@@ -26,8 +28,7 @@ namespace siege::views
 
     exe_actions = *win32::CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{
       .hwndParent = *this,
-      .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP 
-        });
+      .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
 
     exe_actions.InsertButton(-1, { .iBitmap = 0, .idCommand = add_to_firewall_selected_id, .fsState = TBSTATE_ENABLED, .iString = (INT_PTR)L"Add to Firewall" }, false);
     exe_actions.InsertButton(-1, { .iBitmap = 1, .idCommand = launch_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Launch" }, false);
@@ -36,10 +37,8 @@ namespace siege::views
     exe_actions.bind_tbn_dropdown(std::bind_front(&exe_view::exe_actions_tbn_dropdown, this));
     exe_actions.bind_nm_click(std::bind_front(&exe_view::exe_actions_nm_click, this));
 
-    resource_table = *win32::CreateWindowExW<win32::list_view>({ 
-        .hwndParent = *this, 
-        .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER 
-        });
+    resource_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this,
+      .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
 
     resource_table.InsertColumn(-1, LVCOLUMNW{
                                       .pszText = const_cast<wchar_t*>(L"Name"),
@@ -51,20 +50,20 @@ namespace siege::views
 
     resource_table.EnableGroupView(true);
 
-    string_table = *win32::CreateWindowExW<win32::list_view>({ 
-        .hwndParent = *this,
-        .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER 
-        });
+    resource_table.bind_nm_rclick(std::bind_front(&exe_view::resource_table_nm_rclick, this));
+    resource_table.bind_lvn_item_changed(std::bind_front(&exe_view::resource_table_lvn_item_changed, this));
+    resource_table.SetExtendedListViewStyle(LVS_EX_HEADERINALLVIEWS | LVS_EX_FULLROWSELECT, LVS_EX_HEADERINALLVIEWS | LVS_EX_FULLROWSELECT);
+
+    string_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this,
+      .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
     string_table.InsertColumn(-1, LVCOLUMNW{
                                     .pszText = const_cast<wchar_t*>(L"Text"),
                                   });
 
     string_table.EnableGroupView(true);
 
-    launch_table = *win32::CreateWindowExW<win32::list_view>({ 
-        .hwndParent = *this,
-        .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER 
-        });
+    launch_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this,
+      .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
 
     launch_table.bind_nm_click(std::bind_front(&exe_view::launch_table_nm_click, this));
     launch_table.InsertColumn(-1, LVCOLUMNW{
@@ -196,6 +195,72 @@ namespace siege::views
     return 0;
   }
 
+  void exe_view::extract_selected_files()
+  {
+  }
+
+  void exe_view::resource_table_lvn_item_changed(win32::list_view, const NMLISTVIEW& message)
+  {
+    std::wstring temp(255, '\0');
+
+    if (message.lParam)
+    {
+      temp.resize(::GetAtomNameW((ATOM)message.lParam, temp.data(), temp.size()));
+
+      if (temp.size() == 0)
+      {
+        return;
+      }
+
+      auto group_id = temp.substr(0, temp.find(':'));
+      auto item_id = temp.substr(temp.find(':') + 1);
+
+      if (message.uNewState & LVIS_SELECTED)
+      {
+        selected_resource_items.emplace(std::make_pair(group_id, item_id));
+      }
+      else if (message.uOldState & LVIS_SELECTED)
+      {
+        selected_resource_items.erase(std::make_pair(group_id, item_id));
+      }
+    }
+  }
+
+  void exe_view::resource_table_nm_rclick(win32::list_view, const NMITEMACTIVATE& message)
+  {
+    auto point = message.ptAction;
+
+    if (ClientToScreen(resource_table, &point))
+    {
+      auto result = extract_menu.TrackPopupMenuEx(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, point, ref());
+
+      if (result == 1)
+      {
+        auto root = this->GetAncestor(GA_ROOT);
+
+        if (root)
+        {
+          for (auto& item : selected_resource_items)
+          {
+            auto extension = controller.get_extension_for_name(item.first, item.second);
+
+            if (extension)
+            {
+              auto raw_data = controller.get_resource_data(item.first, item.second);
+              auto filename = item.second + *extension;
+              root->CopyData(*this, COPYDATASTRUCT{ .dwData = ::AddAtomW(filename.data()), .cbData = DWORD(raw_data.size()), .lpData = raw_data.data() });
+            }
+
+          }
+        }
+      }
+      else if (result == 2)
+      {
+        extract_selected_files();
+      }
+    }
+  }
+
   void exe_view::recreate_image_lists(std::optional<SIZE> possible_size)
   {
 
@@ -254,7 +319,6 @@ namespace siege::views
 
   void exe_view::options_lbn_sel_change(win32::list_box, const NMHDR&)
   {
-    OutputDebugStringW(L"options_lbn_sel_change\n");
     auto selected = options.GetCurrentSelection();
 
     std::array tables{ launch_table.ref(), keyboard_table.ref(), controller_table.ref(), string_table.ref(), resource_table.ref() };
@@ -321,6 +385,9 @@ namespace siege::views
         for (auto& child : value.second)
         {
           win32::list_view_item item(child);
+          auto temp = value.first + L":" + child;
+          item.mask = item.mask | LVIF_PARAM;
+          item.lParam = ::AddAtomW(temp.c_str());
 
           if (value.first == L"#4")
           {
