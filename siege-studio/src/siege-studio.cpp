@@ -79,7 +79,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
              ICC_DATE_CLASSES | 
              ICC_BAR_CLASSES
   };
-  ::InitCommonControlsEx(&settings);
+  win32::init_common_controls_ex(&settings);
 
   auto wic_version = win32::get_wic_version();
 

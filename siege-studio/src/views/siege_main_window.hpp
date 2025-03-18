@@ -235,10 +235,10 @@ namespace siege::views
           .hwndTrack = hWnd
         };
         ::TrackMouseEvent(&event);
-        RemoveWindowSubclass(hWnd, button_sub_class, uIdSubclass);
+        win32::remove_window_subclass(hWnd, button_sub_class, uIdSubclass);
       }
 
-      return DefSubclassProc(hWnd, msg, wParam, lParam);
+      return win32::def_subclass_proc(hWnd, msg, wParam, lParam);
     }
 
     auto wm_create()
@@ -254,7 +254,7 @@ namespace siege::views
 
       separator = *win32::CreateWindowEx<win32::button>(CREATESTRUCTW{ .hwndParent = *this, .style = WS_CHILD | WS_VISIBLE | BS_FLAT });
 
-      if (::SetWindowSubclass(separator, button_sub_class, (UINT_PTR)this, (DWORD_PTR)this))
+      if (win32::set_window_subclass(separator, button_sub_class, (UINT_PTR)this, (DWORD_PTR)this))
       {
         TRACKMOUSEEVENT event{
           .cbSize = sizeof(TRACKMOUSEEVENT),

@@ -9,6 +9,11 @@
 
 namespace win32
 {
+  inline BOOL set_window_subclass(HWND hWnd, SUBCLASSPROC pfnSubclass, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
+  inline BOOL remove_window_subclass(HWND hWnd, SUBCLASSPROC pfnSubclass, UINT_PTR uIdSubclass);
+  inline LRESULT def_subclass_proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+  inline LRESULT get_window_subclass(HWND hWnd, SUBCLASSPROC pfnSubclass, UINT_PTR uIdSubclass, DWORD_PTR* pdwRefData);
+
   template<typename TControl, typename TNotification, typename TReturn = void>
   [[maybe_unused]] std::function<void()> bind_notification(win32::window_ref target, win32::window_ref source, UINT code, std::move_only_function<TReturn(TControl, const TNotification&)> callback)
   {
@@ -75,19 +80,19 @@ namespace win32
         {
           auto* context = (function_context*)uIdSubclass;
           delete context;
-          ::RemoveWindowSubclass(hWnd, dispatcher::handle_message, uIdSubclass);
+          remove_window_subclass(hWnd, dispatcher::handle_message, uIdSubclass);
         }
 
-        return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+        return def_subclass_proc(hWnd, uMsg, wParam, lParam);
       }
     };
 
     auto* context = new function_context{ source.get(), code, std::move(callback) };
 
-    ::SetWindowSubclass(target.get(), dispatcher::handle_message, (UINT_PTR)context, 0);
+    set_window_subclass(target.get(), dispatcher::handle_message, (UINT_PTR)context, 0);
 
     return [context, target = target.get()] {
-      ::RemoveWindowSubclass(target, dispatcher::handle_message, (UINT_PTR)context);
+      remove_window_subclass(target, dispatcher::handle_message, (UINT_PTR)context);
       delete context;
     };
   }
@@ -165,19 +170,19 @@ namespace win32
           {
             auto* context = (function_context*)uIdSubclass;
             delete context;
-            ::RemoveWindowSubclass(hWnd, dispatcher::handle_message, uIdSubclass);
+            remove_window_subclass(hWnd, dispatcher::handle_message, uIdSubclass);
           }
 
-          return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+          return def_subclass_proc(hWnd, uMsg, wParam, lParam);
         }
       };
 
       auto* context = new function_context{ this->get(), std::move(callbacks) };
 
-      ::SetWindowSubclass(this->GetParent()->get(), dispatcher::handle_message, (UINT_PTR)context, 0);
+      set_window_subclass(this->GetParent()->get(), dispatcher::handle_message, (UINT_PTR)context, 0);
 
       return [context, target = this->GetParent()->get()] {
-        ::RemoveWindowSubclass(target, dispatcher::handle_message, (UINT_PTR)context);
+        remove_window_subclass(target, dispatcher::handle_message, (UINT_PTR)context);
         delete context;
       };
     }
@@ -279,19 +284,19 @@ namespace win32
           {
             auto* context = (function_context*)uIdSubclass;
             delete context;
-            ::RemoveWindowSubclass(hWnd, dispatcher::handle_message, uIdSubclass);
+            remove_window_subclass(hWnd, dispatcher::handle_message, uIdSubclass);
           }
 
-          return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+          return def_subclass_proc(hWnd, uMsg, wParam, lParam);
         }
       };
 
       auto* context = new function_context{ this->get(), std::move(callbacks) };
 
-      ::SetWindowSubclass(this->GetParent()->get(), dispatcher::handle_message, (UINT_PTR)context, 0);
+      set_window_subclass(this->GetParent()->get(), dispatcher::handle_message, (UINT_PTR)context, 0);
 
       return [context, target = this->GetParent()->get()] {
-        ::RemoveWindowSubclass(target, dispatcher::handle_message, (UINT_PTR)context);
+        remove_window_subclass(target, dispatcher::handle_message, (UINT_PTR)context);
         delete context;
       };
     }
@@ -479,19 +484,19 @@ namespace win32
           {
             auto* context = (function_context*)uIdSubclass;
             delete context;
-            ::RemoveWindowSubclass(hWnd, dispatcher::handle_message, uIdSubclass);
+            remove_window_subclass(hWnd, dispatcher::handle_message, uIdSubclass);
           }
 
-          return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+          return def_subclass_proc(hWnd, uMsg, wParam, lParam);
         }
       };
 
       auto* context = new function_context{ this->get(), std::move(callbacks) };
 
-      ::SetWindowSubclass(this->GetParent()->get(), dispatcher::handle_message, (UINT_PTR)context, 0);
+      set_window_subclass(this->GetParent()->get(), dispatcher::handle_message, (UINT_PTR)context, 0);
 
       return [context, target = this->GetParent()->get()] {
-        ::RemoveWindowSubclass(target, dispatcher::handle_message, (UINT_PTR)context);
+        remove_window_subclass(target, dispatcher::handle_message, (UINT_PTR)context);
         delete context;
       };
     }

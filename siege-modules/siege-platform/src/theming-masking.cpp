@@ -19,7 +19,7 @@ namespace win32
     if (!d2d_version)
     {
       win32::gdi::bitmap target(icon_size);
-      win32::image_list image_list(ImageList_Create(icon_size.cx, icon_size.cy, ILC_COLOR32, icons.size(), icons.size()));
+      win32::image_list image_list(image_list_create(icon_size.cx, icon_size.cy, ILC_COLOR32, icons.size(), icons.size()));
       for (auto icon : icons)
       {
         ImageList_Add(image_list, target, nullptr);
@@ -58,7 +58,7 @@ namespace win32
     auto brush = render_target.create_solid_color_brush(text_color);
     std::wstring icon_text;
 
-    win32::image_list image_list(ImageList_Create(icon_size.cx, icon_size.cy, ILC_COLOR32, icons.size(), icons.size()));
+    win32::image_list image_list(image_list_create(icon_size.cx, icon_size.cy, ILC_COLOR32, icons.size(), icons.size()));
 
     for (auto icon : icons)
     {

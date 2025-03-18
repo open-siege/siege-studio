@@ -7,6 +7,161 @@
 
 namespace win32
 {
+
+  inline BOOL init_common_controls_ex(const INITCOMMONCONTROLSEX* picce)
+  {
+    static auto module = ::GetModuleHandleW(L"comctl32.dll");
+
+    using init_common_controls_ex = std::add_pointer_t<decltype(::InitCommonControlsEx)>;
+    static auto proc = (init_common_controls_ex)::GetProcAddress(module, "InitCommonControlsEx");
+
+    if (proc)
+    {
+      return proc(picce);
+    }
+
+    using init_common_controls = std::add_pointer_t<decltype(::InitCommonControls)>;
+    static auto proc2 = (init_common_controls)::GetProcAddress(module, "InitCommonControls");
+
+    if (proc2)
+    {
+      proc2();
+      return TRUE;
+    }
+
+    throw new std::runtime_error("comctl32 InitCommonControlsEx is not available");
+  }
+
+  inline HIMAGELIST image_list_create(
+    int cx,
+    int cy,
+    UINT flags,
+    int cInitial,
+    int cGrow)
+  {
+    static auto module = ::GetModuleHandleW(L"comctl32.dll");
+
+    using get_icon_size_func = std::add_pointer_t<decltype(::ImageList_Create)>;
+    static auto proc = (get_icon_size_func)::GetProcAddress(module, "ImageList_Create");
+
+    if (proc)
+    {
+      return proc(cx, cy, flags, cInitial, cGrow);
+    }
+
+    throw new std::runtime_error("comctl32 ImageList_Create is not available");
+  }
+
+  inline BOOL image_list_get_icon_size(HIMAGELIST himl, int* cx, int* cy)
+  {
+    static auto module = ::GetModuleHandleW(L"comctl32.dll");
+
+    using get_icon_size_func = std::add_pointer_t<decltype(::ImageList_GetIconSize)>;
+    static auto proc = (get_icon_size_func)::GetProcAddress(module, "ImageList_GetIconSize");
+
+    if (proc)
+    {
+      return proc(himl, cx, cy);
+    }
+
+    throw new std::runtime_error("comctl32 ImageList_GetIconSize is not available");
+  }
+
+  inline BOOL set_window_subclass(HWND hWnd, SUBCLASSPROC pfnSubclass, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+  {
+    static auto module = ::GetModuleHandleW(L"comctl32.dll");
+
+    using set_window_func = std::add_pointer_t<decltype(::SetWindowSubclass)>;
+    static auto proc = (set_window_func)::GetProcAddress(module, "SetWindowSubclass");
+
+    if (proc)
+    {
+      return proc(hWnd, pfnSubclass, uIdSubclass, dwRefData);
+    }
+
+    proc = (set_window_func)::GetProcAddress(module, MAKEINTRESOURCEA(410));
+
+    if (proc)
+    {
+      return proc(hWnd, pfnSubclass, uIdSubclass, dwRefData);
+    }
+
+    throw new std::runtime_error("comctl32 SetWindowSubclass is not available");
+  }
+
+  BOOL remove_window_subclass(HWND hWnd, SUBCLASSPROC pfnSubclass, UINT_PTR uIdSubclass)
+  {
+    static auto module = ::GetModuleHandleW(L"comctl32.dll");
+
+    using remove_window_func = std::add_pointer_t<decltype(::RemoveWindowSubclass)>;
+
+
+    static auto proc = (remove_window_func)::GetProcAddress(module, "RemoveWindowSubclass");
+
+    if (proc)
+    {
+      return proc(hWnd, pfnSubclass, uIdSubclass);
+    }
+
+    proc = (remove_window_func)::GetProcAddress(module, MAKEINTRESOURCEA(412));
+
+    if (proc)
+    {
+      return proc(hWnd, pfnSubclass, uIdSubclass);
+    }
+
+    throw new std::runtime_error("comctl32 RemoveWindowSubclass is not available");
+  }
+
+  inline LRESULT def_subclass_proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+  {
+    static auto module = ::GetModuleHandleW(L"comctl32.dll");
+
+    using remove_window_func = std::add_pointer_t<decltype(::DefSubclassProc)>;
+
+
+    static auto proc = (remove_window_func)::GetProcAddress(module, "DefSubclassProc");
+
+    if (proc)
+    {
+      return proc(hWnd, uMsg, wParam, lParam);
+    }
+
+    proc = (remove_window_func)::GetProcAddress(module, MAKEINTRESOURCEA(413));
+
+    if (proc)
+    {
+      return proc(hWnd, uMsg, wParam, lParam);
+    }
+
+    throw new std::runtime_error("comctl32 DefSubclassProc is not available");
+  }
+
+  inline LRESULT get_window_subclass(HWND hWnd, SUBCLASSPROC pfnSubclass, UINT_PTR uIdSubclass, DWORD_PTR* pdwRefData)
+  {
+    static auto module = ::GetModuleHandleW(L"comctl32.dll");
+
+    using get_window_func = std::add_pointer_t<decltype(::GetWindowSubclass)>;
+
+
+    static auto proc = (get_window_func)::GetProcAddress(module, "GetWindowSubclass");
+
+    if (proc)
+    {
+      return proc(hWnd, pfnSubclass, uIdSubclass, pdwRefData);
+    }
+
+    proc = (get_window_func)::GetProcAddress(module, MAKEINTRESOURCEA(411));
+
+    if (proc)
+    {
+      return proc(hWnd, pfnSubclass, uIdSubclass, pdwRefData);
+    }
+
+    throw new std::runtime_error("comctl32 GetWindowSubclass is not available");
+  }
+
+
   struct image_list_deleter
   {
     void operator()(HIMAGELIST list)
@@ -36,7 +191,7 @@ namespace win32
 
     image_list(int width, int height, std::uint32_t flags = ILC_COLOR32, int capacity = 0, int size_limit = 0)
     {
-      auto result = ImageList_Create(width, height, flags, capacity, size_limit);
+      auto result = image_list_create(width, height, flags, capacity, size_limit);
 
       if (result == nullptr)
       {
@@ -60,7 +215,7 @@ namespace win32
       int width;
       int height;
 
-      if (ImageList_GetIconSize(get(), &width, &height))
+      if (image_list_get_icon_size(get(), &width, &height))
       {
         return SIZE{ .cx = width, .cy = height };
       }
@@ -227,19 +382,19 @@ namespace win32
           {
             auto* context = (function_context*)uIdSubclass;
             delete context;
-            ::RemoveWindowSubclass(hWnd, dispatcher::handle_message, uIdSubclass);
+            remove_window_subclass(hWnd, dispatcher::handle_message, uIdSubclass);
           }
 
-          return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+          return def_subclass_proc(hWnd, uMsg, wParam, lParam);
         }
       };
 
       auto* context = new function_context{ this->get(), std::move(callbacks) };
 
-      ::SetWindowSubclass(this->GetParent()->get(), dispatcher::handle_message, (UINT_PTR)context, 0);
+      set_window_subclass(this->GetParent()->get(), dispatcher::handle_message, (UINT_PTR)context, 0);
 
       return [context, target = this->GetParent()->get()] {
-        ::RemoveWindowSubclass(target, dispatcher::handle_message, (UINT_PTR)context);
+        remove_window_subclass(target, dispatcher::handle_message, (UINT_PTR)context);
         delete context;
       };
     }
@@ -271,7 +426,6 @@ namespace win32
     {
       this->pszText = text.data();
     }
-
   };
 
   struct list_view_group : ::LVGROUP
@@ -695,19 +849,19 @@ namespace win32
           {
             auto* context = (function_context*)uIdSubclass;
             delete context;
-            ::RemoveWindowSubclass(hWnd, dispatcher::handle_message, uIdSubclass);
+            remove_window_subclass(hWnd, dispatcher::handle_message, uIdSubclass);
           }
 
-          return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+          return def_subclass_proc(hWnd, uMsg, wParam, lParam);
         }
       };
 
       auto* context = new function_context{ this->get(), std::move(callbacks) };
 
-      ::SetWindowSubclass(this->GetParent()->get(), dispatcher::handle_message, (UINT_PTR)context, 0);
+      set_window_subclass(this->GetParent()->get(), dispatcher::handle_message, (UINT_PTR)context, 0);
 
       return [context, target = this->GetParent()->get()] {
-        ::RemoveWindowSubclass(target, dispatcher::handle_message, (UINT_PTR)context);
+        remove_window_subclass(target, dispatcher::handle_message, (UINT_PTR)context);
         delete context;
       };
     }
@@ -878,19 +1032,19 @@ namespace win32
           {
             auto* context = (function_context*)uIdSubclass;
             delete context;
-            ::RemoveWindowSubclass(hWnd, dispatcher::handle_message, uIdSubclass);
+            remove_window_subclass(hWnd, dispatcher::handle_message, uIdSubclass);
           }
 
-          return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+          return def_subclass_proc(hWnd, uMsg, wParam, lParam);
         }
       };
 
       auto* context = new function_context{ this->get(), std::move(callbacks) };
 
-      ::SetWindowSubclass(this->GetParent()->get(), dispatcher::handle_message, (UINT_PTR)context, 0);
+      set_window_subclass(this->GetParent()->get(), dispatcher::handle_message, (UINT_PTR)context, 0);
 
       return [context, target = this->GetParent()->get()] {
-        ::RemoveWindowSubclass(target, dispatcher::handle_message, (UINT_PTR)context);
+        remove_window_subclass(target, dispatcher::handle_message, (UINT_PTR)context);
         delete context;
       };
     }
@@ -1101,19 +1255,19 @@ namespace win32
           {
             auto* context = (function_context*)uIdSubclass;
             delete context;
-            ::RemoveWindowSubclass(hWnd, dispatcher::handle_message, uIdSubclass);
+            remove_window_subclass(hWnd, dispatcher::handle_message, uIdSubclass);
           }
 
-          return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+          return def_subclass_proc(hWnd, uMsg, wParam, lParam);
         }
       };
 
       auto* context = new function_context{ this->get(), std::move(callbacks) };
 
-      ::SetWindowSubclass(this->GetParent()->get(), dispatcher::handle_message, (UINT_PTR)context, 0);
+      set_window_subclass(this->GetParent()->get(), dispatcher::handle_message, (UINT_PTR)context, 0);
 
       return [context, target = this->GetParent()->get()] {
-        ::RemoveWindowSubclass(target, dispatcher::handle_message, (UINT_PTR)context);
+        remove_window_subclass(target, dispatcher::handle_message, (UINT_PTR)context);
         delete context;
       };
     }

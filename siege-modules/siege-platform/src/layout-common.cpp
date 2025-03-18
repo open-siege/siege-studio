@@ -26,7 +26,7 @@ namespace win32
 
         if (message == TCM_INSERTITEM)
         {
-          auto result = ::DefSubclassProc(window, message, wparam, lparam);
+          auto result = def_subclass_proc(window, message, wparam, lparam);
 
           if (result == -1)
           {
@@ -68,7 +68,7 @@ namespace win32
 
         if (message == WM_SIZE || message == TCM_SETITEMSIZE || (message == WM_NOTIFY && ((NMHDR*)lparam)->code == UDN_DELTAPOS))
         {
-          auto result = ::DefSubclassProc(window, message, wparam, lparam);
+          auto result = def_subclass_proc(window, message, wparam, lparam);
 
           auto button = ::FindWindowExW(window, nullptr, L"Button", nullptr);
 
@@ -90,7 +90,7 @@ namespace win32
 
         if (message == TCM_SETCURSEL || message == WM_LBUTTONDOWN || message == WM_KEYDOWN)
         {
-          auto result = ::DefSubclassProc(window, message, wparam, lparam);
+          auto result = def_subclass_proc(window, message, wparam, lparam);
 
           auto current = TabCtrl_GetCurSel(window);
           auto button = ::FindWindowExW(window, nullptr, L"Button", nullptr);
@@ -102,7 +102,7 @@ namespace win32
             ::SetWindowLongPtrW(button, GWLP_ID, (LONG_PTR)current);
 
             RECT size{};
-            ::DefSubclassProc(window, TCM_GETITEMRECT, current, (LPARAM)&size);
+            def_subclass_proc(window, TCM_GETITEMRECT, current, (LPARAM)&size);
             auto height = size.bottom - size.top;
             auto width = win32::get_system_metrics(SM_CXSIZE);
 
@@ -131,7 +131,7 @@ namespace win32
             return FALSE;
           }
 
-          auto deleted = ::DefSubclassProc(window, message, wparam, lparam);
+          auto deleted = def_subclass_proc(window, message, wparam, lparam);
 
           if (deleted)
           {
@@ -181,7 +181,7 @@ namespace win32
 
         if (message == WM_NCDESTROY)
         {
-          ::RemoveWindowSubclass(window, handler::on_message, 0);
+          remove_window_subclass(window, handler::on_message, 0);
 
           auto button = ::FindWindowExW(window, nullptr, L"Button", nullptr);
 
@@ -191,11 +191,11 @@ namespace win32
           }
         }
 
-        return ::DefSubclassProc(window, message, wparam, lparam);
+        return def_subclass_proc(window, message, wparam, lparam);
       }
     };
 
-    ::SetWindowSubclass(tab_control, handler::on_message, 0, 0);
+    set_window_subclass(tab_control, handler::on_message, 0, 0);
   }
   // Add check for property to prevent tab from being closed
   //

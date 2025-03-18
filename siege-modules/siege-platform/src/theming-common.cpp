@@ -60,7 +60,7 @@ namespace win32
     {
       if (dwRefData && message == WM_SETTINGCHANGE && lParam && std::wstring_view((wchar_t*)lParam) == L"ImmersiveColorSet")
       {
-        auto result = DefSubclassProc(root, message, wParam, lParam);
+        auto result = def_subclass_proc(root, message, wParam, lParam);
         auto& controls = *(std::unordered_set<HWND>*)dwRefData;
 
         for (auto& control : controls)
@@ -74,10 +74,10 @@ namespace win32
 
       if (message == WM_NCDESTROY)
       {
-        ::RemoveWindowSubclass(root, handle_root_message, 0);
+        remove_window_subclass(root, handle_root_message, 0);
       }
 
-      return DefSubclassProc(root, message, wParam, lParam);
+      return def_subclass_proc(root, message, wParam, lParam);
     }
   };
 
@@ -108,14 +108,14 @@ namespace win32
           auto parent = create_params->hwndParent;
           DWORD_PTR existing_object{};
 
-          if (!::GetWindowSubclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, &existing_object))
+          if (!get_window_subclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, &existing_object))
           {
-            ::SetWindowSubclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, (DWORD_PTR)&controls);
+            set_window_subclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, (DWORD_PTR)&controls);
           }
 
-          if (!::GetWindowSubclass(parent, handle_parent_message, 0, &existing_object))
+          if (!get_window_subclass(parent, handle_parent_message, 0, &existing_object))
           {
-            ::SetWindowSubclass(parent, handle_parent_message, 0, 0);
+            set_window_subclass(parent, handle_parent_message, 0, 0);
           }
           controls.emplace(self);
           return superclass.control_proc(self, message, wParam, lParam);
@@ -238,10 +238,10 @@ namespace win32
 
         if (message == WM_NCDESTROY)
         {
-          ::RemoveWindowSubclass(parent, handle_parent_message, 0);
+          remove_window_subclass(parent, handle_parent_message, 0);
         }
 
-        return DefSubclassProc(parent, message, wParam, lParam);
+        return def_subclass_proc(parent, message, wParam, lParam);
       }
     };
 
@@ -290,14 +290,14 @@ namespace win32
           auto parent = create_params->hwndParent;
           DWORD_PTR existing_object{};
 
-          if (!::GetWindowSubclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, &existing_object))
+          if (!get_window_subclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, &existing_object))
           {
-            ::SetWindowSubclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, (DWORD_PTR)&controls);
+            set_window_subclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, (DWORD_PTR)&controls);
           }
 
-          if (!::GetWindowSubclass(parent, handle_parent_message, 0, &existing_object))
+          if (!get_window_subclass(parent, handle_parent_message, 0, &existing_object))
           {
-            ::SetWindowSubclass(parent, handle_parent_message, 0, 0);
+            set_window_subclass(parent, handle_parent_message, 0, 0);
           }
           controls.emplace(self);
           return superclass.control_proc(self, message, wParam, lParam);
@@ -504,10 +504,10 @@ namespace win32
 
         if (message == WM_NCDESTROY)
         {
-          ::RemoveWindowSubclass(parent, handle_parent_message, 0);
+          remove_window_subclass(parent, handle_parent_message, 0);
         }
 
-        return DefSubclassProc(parent, message, wParam, lParam);
+        return def_subclass_proc(parent, message, wParam, lParam);
       }
     };
 
@@ -553,14 +553,14 @@ namespace win32
           auto root = ::GetAncestor(create_params->hwndParent, GA_ROOT);
           auto parent = create_params->hwndParent;
           DWORD_PTR existing_object{};
-          if (!::GetWindowSubclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, &existing_object))
+          if (!get_window_subclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, &existing_object))
           {
-            ::SetWindowSubclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, (DWORD_PTR)&controls);
+            set_window_subclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, (DWORD_PTR)&controls);
           }
 
-          if (!::GetWindowSubclass(parent, handle_parent_message, 0, &existing_object))
+          if (!get_window_subclass(parent, handle_parent_message, 0, &existing_object))
           {
-            ::SetWindowSubclass(parent, handle_parent_message, 0, 0);
+            set_window_subclass(parent, handle_parent_message, 0, 0);
           }
           controls.emplace(self);
           return superclass.control_proc(self, message, wParam, lParam);
@@ -703,10 +703,10 @@ namespace win32
 
         if (message == WM_NCDESTROY)
         {
-          ::RemoveWindowSubclass(parent, handle_parent_message, 0);
+          remove_window_subclass(parent, handle_parent_message, 0);
         }
 
-        return DefSubclassProc(parent, message, wParam, lParam);
+        return def_subclass_proc(parent, message, wParam, lParam);
       }
     };
 
@@ -748,9 +748,9 @@ namespace win32
           auto parent = create_params->hwndParent;
           DWORD_PTR existing_object{};
 
-          if (!::GetWindowSubclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, &existing_object))
+          if (!get_window_subclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, &existing_object))
           {
-            ::SetWindowSubclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, (DWORD_PTR)&controls);
+            set_window_subclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, (DWORD_PTR)&controls);
           }
 
           controls.emplace(self);
@@ -844,14 +844,14 @@ namespace win32
           auto parent = create_params->hwndParent;
           DWORD_PTR existing_object{};
 
-          if (!::GetWindowSubclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, &existing_object))
+          if (!get_window_subclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, &existing_object))
           {
-            ::SetWindowSubclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, (DWORD_PTR)&controls);
+            set_window_subclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, (DWORD_PTR)&controls);
           }
 
-          if (!::GetWindowSubclass(parent, handle_parent_message, 0, &existing_object))
+          if (!get_window_subclass(parent, handle_parent_message, 0, &existing_object))
           {
-            ::SetWindowSubclass(parent, handle_parent_message, 0, 0);
+            set_window_subclass(parent, handle_parent_message, 0, 0);
           }
           controls.emplace(self);
           return superclass.control_proc(self, message, wParam, lParam);
@@ -955,10 +955,10 @@ namespace win32
 
         if (message == WM_NCDESTROY)
         {
-          ::RemoveWindowSubclass(parent, handle_parent_message, 0);
+          remove_window_subclass(parent, handle_parent_message, 0);
         }
 
-        return DefSubclassProc(parent, message, wParam, lParam);
+        return def_subclass_proc(parent, message, wParam, lParam);
       }
     };
 
@@ -1000,9 +1000,9 @@ namespace win32
           auto parent = create_params->hwndParent;
           DWORD_PTR existing_object{};
 
-          if (!::GetWindowSubclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, &existing_object))
+          if (!get_window_subclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, &existing_object))
           {
-            ::SetWindowSubclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, (DWORD_PTR)&controls);
+            set_window_subclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, (DWORD_PTR)&controls);
           }
 
           controls.emplace(self);

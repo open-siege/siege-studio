@@ -167,11 +167,11 @@ namespace siege::views
           .lpszName = L"Palettes" });
 
         palette_list.SetView(win32::list_view::view_type::details_view);
-        assert(palette_list.EnableGroupView(true));
-        assert(palette_list.SetTileViewInfo(LVTILEVIEWINFO{
+        palette_list.EnableGroupView(true);
+        palette_list.SetTileViewInfo(LVTILEVIEWINFO{
           .dwFlags = LVTVIF_FIXEDWIDTH,
           .sizeTile = SIZE{ .cx = this->GetClientSize()->cx, .cy = 50 },
-        }));
+        });
 
         palette_list.SetExtendedListViewStyle(0,
           LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_AUTOSIZECOLUMNS | LVS_EX_DOUBLEBUFFER);
