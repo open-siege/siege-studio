@@ -129,6 +129,7 @@ namespace siege::views
         win32::list_view_item up(string_for_vkey(mapping.first), images[mapping.first]);
         up.iGroupId = grouping[mapping.first];
         up.lParam = MAKELPARAM(mapping.first, mapping.second);
+        up.mask = up.mask | LVIF_PARAM;
 
         up.sub_items.emplace_back(category_for_vkey(mapping.second));
         up.sub_items.emplace_back(string_for_vkey(mapping.second));
@@ -168,7 +169,7 @@ namespace siege::views
         win32::list_view_item up((wchar_t*)action.action_display_name.data());
         auto iter = grouping.find(action.group_display_name.data());
         up.iGroupId = std::distance(grouping.begin(), iter) + 1;
-        //  up.lParam = MAKELPARAM(mapping.first, mapping.second);
+        //up.lParam = MAKELPARAM(mapping.first, mapping.second);
 
         //        up.sub_items.emplace_back(category_for_vkey(mapping.second));
         up.sub_items.emplace_back((wchar_t*)action.group_display_name.data());

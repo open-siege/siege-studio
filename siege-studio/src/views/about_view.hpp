@@ -19,6 +19,10 @@ namespace siege::views
 
     win32::window text_stack;
 
+    // https://github.com/open-siege/siege-studio/
+
+    // https://store.steampowered.com/app/3193420/Siege_Studio/
+
     about_view(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self)
     {
       logo_icon.reset((HICON)::LoadImageW(params.hInstance, L"AppIcon", IMAGE_ICON, 0, 0, 0));

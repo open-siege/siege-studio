@@ -121,6 +121,7 @@ namespace siege::views
       if (player_name_setting == value)
       {
         win32::list_view_item column(L"Player Name");
+        column.mask = column.mask | LVIF_PARAM;
         column.sub_items = {
           settings.last_player_name.data()
         };
@@ -136,6 +137,7 @@ namespace siege::views
       if (ip_connect_setting == value)
       {
         win32::list_view_item column(L"Server IP Address");
+        column.mask = column.mask | LVIF_PARAM;
         column.sub_items = {
           settings.last_ip_address.data()
         };
@@ -146,6 +148,7 @@ namespace siege::views
       }
 
       win32::list_view_item column(value);
+      column.mask = column.mask | LVIF_PARAM;
       column.sub_items = {
         L""
       };
@@ -162,6 +165,7 @@ namespace siege::views
       }
 
       win32::list_view_item column(value);
+      column.mask = column.mask | LVIF_PARAM;
       column.sub_items = {
         L""
       };
@@ -178,6 +182,7 @@ namespace siege::views
       }
 
       win32::list_view_item column(value);
+      column.mask = column.mask | LVIF_PARAM;
       column.sub_items = {
         L""
       };
@@ -194,6 +199,7 @@ namespace siege::views
       }
 
       win32::list_view_item column(value);
+      column.mask = column.mask | LVIF_PARAM;
       column.sub_items = {
         L""
       };

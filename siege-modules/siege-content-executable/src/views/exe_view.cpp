@@ -250,7 +250,6 @@ namespace siege::views
               auto filename = item.second + *extension;
               root->CopyData(*this, COPYDATASTRUCT{ .dwData = ::AddAtomW(filename.data()), .cbData = DWORD(raw_data.size()), .lpData = raw_data.data() });
             }
-
           }
         }
       }
@@ -326,6 +325,13 @@ namespace siege::views
     for (auto i = 0; i < tables.size(); ++i)
     {
       ::ShowWindow(tables[i], i == selected ? SW_SHOW : SW_HIDE);
+    }
+
+    if (selected != 0)
+    {
+      ::ShowWindow(launch_table_edit, SW_HIDE);
+      ::ShowWindow(launch_table_combo, SW_HIDE);
+      ::ShowWindow(launch_table_ip_address, SW_HIDE);
     }
   }
 

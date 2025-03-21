@@ -594,12 +594,16 @@ namespace siege::views
   {
     std::optional<NEWHEADER> main_header;
     std::optional<RESDIR> icon_header;
+    std::vector<std::byte> icon_data;
 
-    if (type == L"#3" && !raw)
+    constexpr static auto icon_type = L"#3";
+    constexpr static auto icon_group_type = L"#14";
+
+    if (type == icon_type && !raw)
     {
       auto groups = this->get_resource_names();
 
-      auto icon_groups = groups.find(L"#14");
+      auto icon_groups = groups.find(icon_group_type);
 
       if (icon_groups != groups.end())
       {
@@ -609,7 +613,7 @@ namespace siege::views
           {
             break;
           }
-          auto data = get_resource_data(L"#14", group, true);
+          auto data = get_resource_data(icon_group_type, group, true);
 
           if (data.size() >= sizeof(NEWHEADER))
           {
@@ -640,6 +644,35 @@ namespace siege::views
       }
     }
 
+    if (type == icon_group_type && !raw)
+    {
+      auto data = get_resource_data(icon_group_type, name, true);
+
+      if (data.size() >= sizeof(NEWHEADER))
+      {
+        NEWHEADER header{};
+        std::memcpy(&header, data.data(), sizeof(header));
+
+        constexpr static auto real_size = sizeof(RESDIR) - sizeof(WORD);
+
+        if (data.size() - sizeof(NEWHEADER) >= header.ResCount * real_size)
+        {
+          auto start = data.data() + sizeof(NEWHEADER);
+          for (auto i = 0; i < header.ResCount; ++i)
+          {
+            RESDIR entry{};
+            std::memcpy(&entry, start + (i * real_size), real_size);
+
+            icon_data = get_resource_data(icon_type, L"#" + std::to_wstring(entry.IconCursorId), true);
+
+            entry.IconCursorId = sizeof(header) + sizeof(entry);
+            main_header = header;
+            icon_header = entry;
+            break;
+          }
+        }
+      }
+    }
 
     auto resource = ::FindResourceW(loaded_module, name.c_str(), type.c_str());
 
@@ -652,7 +685,14 @@ namespace siege::views
 
     if (main_header && icon_header)
     {
-      raw_result.resize(icon_header->IconCursorId + ::SizeofResource(loaded_module, resource));
+      if (icon_data.empty())
+      {
+        raw_result.resize(icon_header->IconCursorId + ::SizeofResource(loaded_module, resource));
+      }
+      else
+      {
+        raw_result.resize(icon_header->IconCursorId + icon_data.size());
+      }
     }
     else
     {
@@ -677,7 +717,14 @@ namespace siege::views
     {
       std::memcpy(raw_result.data(), &*main_header, sizeof(*main_header));
       std::memcpy(raw_result.data() + sizeof(*main_header), &*icon_header, sizeof(*icon_header));
-      std::memcpy(raw_result.data() + icon_header->IconCursorId, raw_resource, ::SizeofResource(loaded_module, resource));
+      if (icon_data.empty())
+      {
+        std::memcpy(raw_result.data() + icon_header->IconCursorId, raw_resource, ::SizeofResource(loaded_module, resource));
+      }
+      else
+      {
+        std::memcpy(raw_result.data() + icon_header->IconCursorId, icon_data.data(), icon_data.size());
+      }
     }
     else
     {
