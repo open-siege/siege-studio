@@ -85,8 +85,15 @@ namespace siege::views
     keyboard_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this, .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
 
     keyboard_table.InsertColumn(-1, LVCOLUMNW{
-                                      .pszText = const_cast<wchar_t*>(L""),
+                                      .pszText = const_cast<wchar_t*>(L"Action"),
                                     });
+
+    keyboard_table.InsertColumn(-1, LVCOLUMNW{
+                                      .pszText = const_cast<wchar_t*>(L"Key"),
+                                    });
+
+    keyboard_table.EnableGroupView(true);
+
 
     controller_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this, .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
     controller_table.bind_nm_click(std::bind_front(&exe_view::controller_table_nm_click, this));
@@ -172,8 +179,9 @@ namespace siege::views
     options.SetWindowPos(one_quarter);
     options.SetWindowPos(POINT{ .x = three_quarters.cx, .y = top_size.cy });
 
-    std::array<std::reference_wrapper<win32::list_view>, 4> tables = { { std::ref(resource_table),
+    std::array<std::reference_wrapper<win32::list_view>, 5> tables = { { std::ref(resource_table),
       std::ref(string_table),
+      std::ref(keyboard_table),
       std::ref(launch_table),
       std::ref(controller_table) } };
 
@@ -465,12 +473,14 @@ namespace siege::views
         {
           populate_launch_table(*caps);
           populate_controller_table(extension.game_actions, extension.controller_input_backends);
+          populate_keyboard_table(extension.game_actions, extension.controller_input_backends);
         }
         else
         {
           std::array<siege::platform::game_action, 0> actions{};
           std::array<const wchar_t*, 0> backends{};
           populate_controller_table(actions, backends);
+          populate_keyboard_table(extension.game_actions, extension.controller_input_backends);
         }
       }
 

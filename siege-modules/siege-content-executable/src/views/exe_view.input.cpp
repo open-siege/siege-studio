@@ -151,30 +151,75 @@ namespace siege::views
       */
 
       std::set<std::u16string_view> grouping = {};
+      std::map<std::u16string_view, int> ids_for_grouping = {};
 
       int id = 1;
       for (auto& action : actions)
       {
-        grouping.emplace(action.group_display_name.data());
+        auto iter = grouping.emplace(action.group_display_name.data());
 
-        controller_table.InsertGroup(-1, LVGROUP{
-                                           .pszHeader = (wchar_t*)(action.group_display_name.data()),
-                                           .iGroupId = id++,
-                                           .state = LVGS_COLLAPSIBLE,
-                                         });
+        if (iter.second)
+        {
+          ids_for_grouping[action.group_display_name.data()] = id;
+          controller_table.InsertGroup(-1, LVGROUP{
+                                             .pszHeader = (wchar_t*)(action.group_display_name.data()),
+                                             .iGroupId = id++,
+                                             .state = LVGS_COLLAPSIBLE,
+                                           });
+        }
       }
 
       for (auto& action : actions)
       {
         win32::list_view_item up((wchar_t*)action.action_display_name.data());
-        auto iter = grouping.find(action.group_display_name.data());
-        up.iGroupId = std::distance(grouping.begin(), iter) + 1;
-        //up.lParam = MAKELPARAM(mapping.first, mapping.second);
+        up.mask = up.mask | LVIF_GROUPID;
+        up.iGroupId = ids_for_grouping[action.group_display_name.data()];
+        // up.lParam = MAKELPARAM(mapping.first, mapping.second);
 
         //        up.sub_items.emplace_back(category_for_vkey(mapping.second));
         up.sub_items.emplace_back((wchar_t*)action.group_display_name.data());
         controller_table.InsertRow(up);
       }
+    }
+  }
+
+  void exe_view::populate_keyboard_table(std::span<siege::platform::game_action> actions, std::span<const wchar_t*> controller_input_backends)
+  {
+    if (actions.empty())
+    {
+      return;
+    }
+
+    std::set<std::u16string_view> grouping = {};
+    std::map<std::u16string_view, int> ids_for_grouping = {};
+
+    int id = 1;
+
+    for (auto& action : actions)
+    {
+      auto iter = grouping.emplace(action.group_display_name.data());
+
+      if (iter.second)
+      {
+        ids_for_grouping[action.group_display_name.data()] = id;
+        keyboard_table.InsertGroup(-1, LVGROUP{
+                                         .pszHeader = (wchar_t*)(action.group_display_name.data()),
+                                         .iGroupId = id++,
+                                         .state = LVGS_COLLAPSIBLE,
+                                       });
+      }
+    }
+
+    for (auto& action : actions)
+    {
+      win32::list_view_item up((wchar_t*)action.action_display_name.data());
+      up.mask = up.mask | LVIF_GROUPID;
+      up.iGroupId = ids_for_grouping[action.group_display_name.data()];
+      // up.lParam = MAKELPARAM(mapping.first, mapping.second);
+
+      //        up.sub_items.emplace_back(category_for_vkey(mapping.second));
+      up.sub_items.emplace_back(L"A");
+      keyboard_table.InsertRow(up);
     }
   }
 
