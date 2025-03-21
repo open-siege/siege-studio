@@ -106,7 +106,6 @@ namespace siege::views
         }
       }
 
-      
       table_settings = *win32::CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ .hwndParent = *this, .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
 
       table_settings.bind_nm_click(std::bind_front(&vol_view::table_settings_nm_click, this));

@@ -100,7 +100,7 @@ namespace siege::views
     win32::edit launch_table_edit;
     win32::combo_box_ex launch_table_combo;
     win32::ip_address_edit launch_table_ip_address;
-    int ip_address_row_index;
+    int ip_address_row_index = 0;
     std::function<void()> launch_table_edit_unbind;
 
     win32::list_view keyboard_table;
@@ -108,6 +108,8 @@ namespace siege::views
     win32::image_list controller_table_icons;
     win32::tool_bar exe_actions;
     win32::image_list exe_actions_icons;
+
+    std::optional<bool> has_saved = std::nullopt;
 
     constexpr static int add_to_firewall_selected_id = 10;
     constexpr static int launch_selected_id = 11;

@@ -4,6 +4,8 @@
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/dialog.hpp>
+#include <siege/platform/win/shell.hpp>
+#include <siege/platform/win/threading.hpp>
 #include "input-filter.hpp"
 #include "input_injector.hpp"
 #include "views/exe_views.hpp"
@@ -38,7 +40,7 @@ namespace siege::views
     exe_actions.bind_nm_click(std::bind_front(&exe_view::exe_actions_nm_click, this));
 
     resource_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this,
-      .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
+      .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
 
     resource_table.InsertColumn(-1, LVCOLUMNW{
                                       .pszText = const_cast<wchar_t*>(L"Name"),
@@ -195,8 +197,72 @@ namespace siege::views
     return 0;
   }
 
+  std::optional<std::filesystem::path> get_destination_directory()
+  {
+    auto dialog = win32::com::CreateFileOpenDialog();
+
+    if (dialog)
+    {
+      auto open_dialog = *dialog;
+      open_dialog->SetOptions(FOS_PICKFOLDERS);
+      auto result = open_dialog->Show(nullptr);
+
+      if (result == S_OK)
+      {
+        auto selection = open_dialog.GetResult();
+
+        if (selection)
+        {
+          auto path = selection.value().GetFileSysPath();
+
+          if (path)
+          {
+            return *path;
+          }
+        }
+      }
+    }
+
+    return std::nullopt;
+  }
+
   void exe_view::extract_selected_files()
   {
+    if (has_saved == false)
+    {
+      return;
+    }
+
+    auto path = get_destination_directory();
+
+    if (!path)
+    {
+      return;
+    }
+
+    auto items = selected_resource_items;
+
+    win32::queue_user_work_item([path = std::move(path), this, items]() {
+      has_saved = false;
+
+      std::for_each(items.begin(), items.end(), [this, path](auto& item) {
+
+          auto extension = controller.get_extension_for_name(item.first, item.second);
+
+          if (extension)
+          {
+            auto raw_data = controller.get_resource_data(item.first, item.second);
+            auto filename = item.second + *extension;
+
+            std::ofstream extracted_file(*path / filename, std::ios::trunc | std::ios::binary);
+
+            extracted_file.write((char*)raw_data.data(), raw_data.size());
+          }
+      });
+
+      win32::launch_shell_process(*path);
+      has_saved = true;
+    });
   }
 
   void exe_view::resource_table_lvn_item_changed(win32::list_view, const NMLISTVIEW& message)
