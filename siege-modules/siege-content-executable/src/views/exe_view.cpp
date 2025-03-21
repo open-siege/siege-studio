@@ -32,9 +32,9 @@ namespace siege::views
       .hwndParent = *this,
       .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
 
-    exe_actions.InsertButton(-1, { .iBitmap = 0, .idCommand = add_to_firewall_selected_id, .fsState = TBSTATE_ENABLED, .iString = (INT_PTR)L"Add to Firewall" }, false);
-    exe_actions.InsertButton(-1, { .iBitmap = 1, .idCommand = launch_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Launch" }, false);
-    exe_actions.InsertButton(-1, { .iBitmap = 2, .idCommand = extract_selected_id, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" }, false);
+    exe_actions.InsertButton(-1, { .iBitmap = 0, .idCommand = add_to_firewall_selected_id, .iString = (INT_PTR)L"Add to Firewall" }, false);
+    exe_actions.InsertButton(-1, { .iBitmap = 1, .idCommand = launch_selected_id, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Launch" }, false);
+    exe_actions.InsertButton(-1, { .iBitmap = 2, .idCommand = extract_selected_id, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" }, false);
     exe_actions.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
     exe_actions.bind_tbn_dropdown(std::bind_front(&exe_view::exe_actions_tbn_dropdown, this));
     exe_actions.bind_nm_click(std::bind_front(&exe_view::exe_actions_nm_click, this));
@@ -246,18 +246,17 @@ namespace siege::views
       has_saved = false;
 
       std::for_each(items.begin(), items.end(), [this, path](auto& item) {
+        auto extension = controller.get_extension_for_name(item.first, item.second);
 
-          auto extension = controller.get_extension_for_name(item.first, item.second);
+        if (extension)
+        {
+          auto raw_data = controller.get_resource_data(item.first, item.second);
+          auto filename = item.second + *extension;
 
-          if (extension)
-          {
-            auto raw_data = controller.get_resource_data(item.first, item.second);
-            auto filename = item.second + *extension;
+          std::ofstream extracted_file(*path / filename, std::ios::trunc | std::ios::binary);
 
-            std::ofstream extracted_file(*path / filename, std::ios::trunc | std::ios::binary);
-
-            extracted_file.write((char*)raw_data.data(), raw_data.size());
-          }
+          extracted_file.write((char*)raw_data.data(), raw_data.size());
+        }
       });
 
       win32::launch_shell_process(*path);
@@ -289,6 +288,14 @@ namespace siege::views
       {
         selected_resource_items.erase(std::make_pair(group_id, item_id));
       }
+
+      TBBUTTONINFOW button_info{
+        .cbSize = sizeof(TBBUTTONINFOW),
+        .dwMask = TBIF_STATE,
+        .fsState = selected_resource_items.empty() ? BYTE(0x00) : BYTE(TBSTATE_ENABLED),
+      };
+
+      ::SendMessageW(exe_actions, TB_SETBUTTONINFO, extract_selected_id, (LPARAM)&button_info);
     }
   }
 
@@ -399,6 +406,19 @@ namespace siege::views
       ::ShowWindow(launch_table_combo, SW_HIDE);
       ::ShowWindow(launch_table_ip_address, SW_HIDE);
     }
+
+    if (selected != tables.size() - 1)
+    {
+      selected_resource_items.clear();
+
+      TBBUTTONINFOW button_info{
+        .cbSize = sizeof(TBBUTTONINFOW),
+        .dwMask = TBIF_STATE,
+        .fsState = 0,
+      };
+
+      ::SendMessageW(exe_actions, TB_SETBUTTONINFO, extract_selected_id, (LPARAM)&button_info);
+    }
   }
 
   std::optional<win32::lresult_t> exe_view::wm_copy_data(win32::copy_data_message<char> message)
@@ -418,6 +438,15 @@ namespace siege::views
       ::ShowWindow(resource_table, SW_HIDE);
 
       siege::init_active_input_state();
+
+      TBBUTTONINFOW button_info{
+        .cbSize = sizeof(TBBUTTONINFOW),
+        .dwMask = TBIF_STATE,
+        .fsState = TBSTATE_ENABLED,
+      };
+
+      ::SendMessageW(exe_actions, TB_SETBUTTONINFO, launch_selected_id, (LPARAM)&button_info);
+      ::SendMessageW(exe_actions, TB_SETBUTTONINFO, add_to_firewall_selected_id, (LPARAM)&button_info);
     }
 
     auto count = controller.load_executable(stream, std::move(path));

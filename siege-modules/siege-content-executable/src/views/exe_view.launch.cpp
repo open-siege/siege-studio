@@ -425,6 +425,7 @@ namespace siege::views
 
     if (message.dwItemSpec == extract_selected_id)
     {
+      extract_selected_files();
       return TRUE;
     }
 
