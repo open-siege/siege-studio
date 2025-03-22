@@ -18,7 +18,7 @@ namespace win32
 
     if (!d2d_version)
     {
-      win32::gdi::bitmap target(icon_size);
+      win32::gdi::bitmap target(icon_size, win32::gdi::bitmap::skip_shared_handle);
       win32::image_list image_list(image_list_create(icon_size.cx, icon_size.cy, ILC_COLOR32, icons.size(), icons.size()));
       for (auto icon : icons)
       {

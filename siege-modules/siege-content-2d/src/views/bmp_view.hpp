@@ -32,6 +32,7 @@ namespace siege::views
     win32::list_view palette_list;
     win32::tool_bar bitmap_actions;
     win32::image_list bitmap_actions_icons;
+    win32::image_list ratio_button_icons;
 
     std::size_t current_frame_index = 0;
     win32::wic::bitmap empty{ 1, 1, win32::wic::pixel_format::bgr_32bpp };
@@ -136,10 +137,9 @@ namespace siege::views
       std::filesystem::path app_path = std::filesystem::path(win32::module_ref::current_application().GetModuleFileName()).parent_path();
       loaded_modules = platform::storage_module::load_modules(std::filesystem::path(app_path));
 
-      bitmap_actions = *win32::CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{ 
-          .hwndParent = *this, 
-          .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP | WS_CLIPSIBLINGS 
-          });
+      bitmap_actions = *win32::CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{
+        .hwndParent = *this,
+        .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP | WS_CLIPSIBLINGS });
 
       bitmap_actions.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Zoom In" });
 
@@ -162,7 +162,7 @@ namespace siege::views
 
       palette_list = [&] {
         auto palette_list = *win32::CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
-          .hwndParent = *this, 
+          .hwndParent = *this,
           .style = WS_VISIBLE | WS_CHILD | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | WS_CLIPSIBLINGS,
           .lpszName = L"Palettes" });
 
@@ -189,7 +189,7 @@ namespace siege::views
       palette_list.bind_nm_rclick(std::bind_front(&bmp_view::palette_list_nm_rclick, this));
 
       static_image = *win32::CreateWindowExW<win32::static_control>(::CREATESTRUCTW{
-        .hwndParent = *this, 
+        .hwndParent = *this,
         .style = WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS | SS_BITMAP | SS_REALSIZEIMAGE | SS_CENTERIMAGE });
 
       image_export_menu.AppendMenuW(MF_OWNERDRAW, 1, L"Save As");
@@ -427,8 +427,8 @@ namespace siege::views
                                     })
                          .or_else([] {
                            return std::make_optional(SIZE{
-                             .cx = ::GetSystemMetrics(SM_CXSIZE),
-                             .cy = ::GetSystemMetrics(SM_CYSIZE) });
+                             .cx = win32::get_system_metrics(SM_CXSIZE),
+                             .cy = win32::get_system_metrics(SM_CYSIZE) });
                          })
                          .value();
 
@@ -446,6 +446,13 @@ namespace siege::views
       };
 
       bitmap_actions_icons = win32::create_icon_list(icons, icon_size);
+
+      std::vector radio_icons{
+        win32::segoe_fluent_icons::radio_btn_off,
+        win32::segoe_fluent_icons::radio_btn_on
+      };
+
+      ratio_button_icons = win32::create_icon_list(radio_icons, icon_size);
     }
 
     void palette_list_nm_rclick(win32::list_view sender, const NMITEMACTIVATE& info)
@@ -561,6 +568,7 @@ namespace siege::views
 
       recreate_image_list(bitmap_actions.GetIdealIconSize(SIZE{ .cx = client_size.cx / (LONG)bitmap_actions.ButtonCount(), .cy = top_size.cy }));
       SendMessageW(bitmap_actions, TB_SETIMAGELIST, 0, (LPARAM)bitmap_actions_icons.get());
+      ListView_SetImageList(palette_list, ratio_button_icons, LVSIL_STATE);
 
       bitmap_actions.SetWindowPos(POINT{}, SWP_DEFERERASE | SWP_NOREDRAW);
       bitmap_actions.SetWindowPos(top_size, SWP_DEFERERASE);
@@ -727,7 +735,7 @@ namespace siege::views
       {
         recreate_image_list(std::nullopt);
         SendMessageW(bitmap_actions, TB_SETIMAGELIST, 0, (LPARAM)bitmap_actions_icons.get());
-
+        ListView_SetImageList(palette_list, ratio_button_icons, LVSIL_STATE);
 
         return 0;
       }
@@ -850,11 +858,7 @@ namespace siege::views
           auto frame_size = controller.get_size(current_frame_index);
           current_frame = &controller.get_frame(current_frame_index);
 
-          if (!(current_frame->get_pixel_format() == pixel_format::indexed_1bpp ||
-              current_frame->get_pixel_format() == pixel_format::indexed_2bpp || 
-              current_frame->get_pixel_format() != pixel_format::indexed_4bpp ||
-              current_frame->get_pixel_format() != pixel_format::indexed_8bpp
-              ))
+          if (!(current_frame->get_pixel_format() == pixel_format::indexed_1bpp || current_frame->get_pixel_format() == pixel_format::indexed_2bpp || current_frame->get_pixel_format() != pixel_format::indexed_4bpp || current_frame->get_pixel_format() != pixel_format::indexed_8bpp))
           {
             dither_type = WICBitmapDitherType::WICBitmapDitherTypeErrorDiffusion;
           }
