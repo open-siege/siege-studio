@@ -77,9 +77,8 @@ namespace siege::views
       shape_actions.InsertButton(-1, { .iBitmap = 2, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECK, .iString = (INT_PTR)L"Pan" });
       shape_actions.InsertButton(-1, { .fsStyle = BTNS_SEP });
       shape_actions.InsertButton(-1, { .iBitmap = 3, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Export" });
-
+      shape_actions.bind_nm_click(std::bind_front(&dts_view::shape_actions_nm_click, this));
       shape_actions.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
-
 
       gdi_context = win32::gdi::drawing_context(render_view.ref());
 
@@ -207,6 +206,24 @@ namespace siege::views
       selection.SetWindowPos(POINT{ .x = left_size.cx, .y = top_size.cy });
 
       return 0;
+    }
+
+    BOOL shape_actions_nm_click(win32::tool_bar, const NMMOUSE& message)
+    {
+      if (message.dwItemSpec == 0)
+      {
+        translation.z += 5;
+        InvalidateRect(render_view, nullptr, TRUE);
+        return TRUE;
+      }
+      else if (message.dwItemSpec == 1)
+      {
+        translation.z -= 5;
+        InvalidateRect(render_view, nullptr, TRUE);
+        return TRUE;
+      }
+
+      return FALSE;
     }
 
     HBRUSH render_view_wm_control_color(win32::static_control, win32::gdi::drawing_context_ref)

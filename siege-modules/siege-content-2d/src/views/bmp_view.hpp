@@ -394,7 +394,6 @@ namespace siege::views
 
     BOOL bitmap_actions_nm_click(win32::tool_bar, const NMMOUSE& message)
     {
-
       if (message.dwItemSpec == 0)
       {
         this->viewport.Width -= 10;
