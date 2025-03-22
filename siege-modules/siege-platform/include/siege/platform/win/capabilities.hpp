@@ -305,6 +305,25 @@ namespace win32
     return false;
   }
 
+  inline std::optional<std::wstring_view> get_best_system_icon_font()
+  {
+    std::wstring_view temp = L"Segoe MDL2 Assets";
+
+    if (has_font(temp))
+    {
+      return temp;
+    }
+
+    temp = L"Segoe UI Symbol";
+
+    if (has_font(temp))
+    {
+      return temp;
+    }
+
+    return std::nullopt;
+  }
+
   inline std::optional<std::wstring_view> get_best_system_font()
   {
     std::wstring_view temp = L"Segoe UI";

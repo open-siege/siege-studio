@@ -240,17 +240,6 @@ namespace win32
 
       std::optional<win32::lresult_t> wm_draw_item(win32::popup_menu_ref menu, DRAWITEMSTRUCT& item) override
       {
-        auto best_font = get_best_system_font();
-
-        if (best_font)
-        {
-          auto font = win32::load_font(LOGFONTW{
-                                         .lfPitchAndFamily = VARIABLE_PITCH },
-            *best_font);
-
-          SelectFont(item.hDC, font);
-        }
-
         auto bk_color = win32::get_color_for_class(L"#32768", win32::properties::menu::bk_color);
         auto text_highlight_color = win32::get_color_for_class(L"#32768", win32::properties::menu::text_highlight_color);
         auto black_brush = win32::get_solid_brush(bk_color);
@@ -283,9 +272,37 @@ namespace win32
 
           ::SetTextColor(context, text_color);
 
+          auto& menu_item_info = *(MSAAMENUINFO*)item.itemData;
+
+          if (item.itemState & ODS_CHECKED)
+          {
+            auto icon_font = get_best_system_icon_font();
+
+            if (icon_font)
+            {
+              auto font = win32::load_font(LOGFONTW{
+                                             .lfPitchAndFamily = VARIABLE_PITCH },
+                *icon_font);
+
+              SelectFont(item.hDC, font);
+              std::wstring temp;
+              temp.append(1, (wchar_t)win32::segoe_fluent_icons::check_mark);
+              ::DrawTextW(context, temp.c_str(), -1, &rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+            }
+          }
+
           rect.left += (rect.right - rect.left) / 10;
 
-          auto& menu_item_info = *(MSAAMENUINFO*)item.itemData;
+          auto best_font = get_best_system_font();
+
+          if (best_font)
+          {
+            auto font = win32::load_font(LOGFONTW{
+                                           .lfPitchAndFamily = VARIABLE_PITCH },
+              *best_font);
+
+            SelectFont(item.hDC, font);
+          }
           ::DrawTextW(context, menu_item_info.pszWText, -1, &rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
         }
 
