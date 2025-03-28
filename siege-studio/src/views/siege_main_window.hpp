@@ -70,7 +70,7 @@ namespace siege::views
 
     siege_main_window(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params), tab_control(nullptr)
     {
-      params.dwExStyle = params.dwExStyle | WS_EX_ACCEPTFILES; 
+      params.dwExStyle = params.dwExStyle | WS_EX_ACCEPTFILES;
 
       ::SetWindowLongPtrW(self, GWL_EXSTYLE, params.dwExStyle);
 

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <any>
+#include <span>
 #include <siege/platform/shared.hpp>
 #include <siege/content/renderable_shape.hpp>
 
@@ -19,7 +20,11 @@ namespace siege::views
         }};
     static bool is_shape(std::istream& image_stream);
 
-    std::size_t load_shape(std::istream& image_stream);
+    std::vector<std::string> load_shape(std::istream& image_stream);
+
+    std::vector<std::size_t> get_selected_detail_levels(std::size_t) const;
+
+    void set_selected_detail_levels(std::size_t, std::span<std::size_t> span);
 
     void render_shape(std::size_t index, content::shape_renderer& renderer);
   private:

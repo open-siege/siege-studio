@@ -34,7 +34,7 @@ namespace siege::content::bwd
 {
   bool is_bwd(std::istream& stream);
   std::any load_bwd(std::istream& stream);
-}
+}// namespace siege::content::bwd
 
 namespace siege::views
 {
@@ -51,7 +51,7 @@ namespace siege::views
            || siege::content::wtb::is_wtb(stream);
   }
 
-  std::size_t dts_controller::load_shape(std::istream& stream)
+  std::vector<std::string> dts_controller::load_shape(std::istream& stream)
   {
     if (siege::content::tmd::is_tmd(stream))
     {
@@ -82,7 +82,7 @@ namespace siege::views
 
     if (dynamic_cast<content::dts::null_renderable_shape*>(shape.get()) != nullptr)
     {
-      return 0;
+      return {};
     }
 
     auto detail_levels = shape->get_detail_levels();
@@ -98,14 +98,32 @@ namespace siege::views
 
     shapes.push_back(shape_context{
       .shape = std::move(shape),
-      .detail_levels = std::move(detail_levels),
+      .detail_levels = detail_levels,
       .materials = std::move(materials),
       .selected_detail_levels = std::move(selected_detail_levels),
       .sequences = std::move(sequences) });
 
-    return 1;
+    if (detail_levels.empty())
+    {
+      detail_levels.emplace_back("Default Detail Level");
+    }
+
+    return detail_levels;
   }
 
+  std::vector<std::size_t> dts_controller::get_selected_detail_levels(std::size_t index) const
+  {
+    auto& shape = shapes.at(index);
+
+    return shape.selected_detail_levels;
+  }
+
+  void dts_controller::set_selected_detail_levels(std::size_t index, std::span<std::size_t> span)
+  {
+    auto& shape = shapes.at(index);
+    shape.selected_detail_levels.resize(span.size());
+    std::copy(span.begin(), span.end(), shape.selected_detail_levels.begin());
+  }
 
   void dts_controller::render_shape(std::size_t index, content::shape_renderer& renderer)
   {

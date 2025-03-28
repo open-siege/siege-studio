@@ -243,7 +243,7 @@ namespace siege::views
           resize_preview(true);
         });
       }
-      else if (pan_timer)
+      else if (!is_panning && pan_timer)
       {
         pan_timer();
         pan_timer = nullptr;

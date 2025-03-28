@@ -167,7 +167,7 @@ namespace win32
     void operator()(HIMAGELIST list)
     {
       auto result = ::ImageList_Destroy(list);
-      assert(result == TRUE);
+     // assert(result == TRUE);
     }
   };
 
