@@ -1,0 +1,15 @@
+EXPORTS
+	setsockopt=siege_setsockopt_v20
+	ioctlsocket=siege_ioctlsocket
+	sendto=siege_sendto
+	recvfrom=siege_recvfrom
+	socket=siege_socket
+	WSAStartup=siege_WSAStartup
+	select=siege_select
+	gethostbyname=siege_gethostbyname
+	closesocket=siege_closesocket
+	bind=siege_bind
+	inet_addr=ws2_32.inet_addr
+	htons=ws2_32.htons
+	ntohs=ws2_32.ntohs
+	WSAGetLastError=ws2_32.WSAGetLastError

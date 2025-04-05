@@ -1,0 +1,26 @@
+EXPORTS
+	siege_bind @2
+	siege_closesocket @3
+	siege_connect @4
+	siege_getsockname @6
+	htonl @8=wsock32.#8
+	htons @9=wsock32.#9
+	inet_addr @10=wsock32.#10
+	inet_ntoa @11=wsock32.#11
+	siege_ioctlsocket @12
+	ntohl @14=wsock32.#14
+	ntohs @15=wsock32.#15
+	siege_recv @16
+	siege_recvfrom @17
+	siege_select @18
+	siege_send @19
+	siege_sendto @20
+	siege_setsockopt_v11 @21
+	siege_shutdown @22
+	siege_socket @23
+	siege_gethostbyname @52
+	gethostname @57=wsock32.#57
+	WSAGetLastError @111=wsock32.#111
+	siege_WSAStartup @115
+	siege_WSACleanup @116
+	__WSAFDIsSet @151=wsock32.#151
