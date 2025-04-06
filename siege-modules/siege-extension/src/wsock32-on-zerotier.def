@@ -15,7 +15,7 @@ EXPORTS
 	siege_select @18
 	siege_send @19
 	siege_sendto @20
-	siege_setsockopt_v11 @21
+	siege_setsockopt @21
 	siege_shutdown @22
 	siege_socket @23
 	siege_gethostbyname @52
@@ -23,4 +23,4 @@ EXPORTS
 	WSAGetLastError @111=wsock32.#111
 	siege_WSAStartup @115
 	siege_WSACleanup @116
-	__WSAFDIsSet @151=wsock32.#151
+	siege___WSAFDIsSet @151
