@@ -55,11 +55,16 @@ namespace win32::direct2d
 
   inline auto& get_factory()
   {
-    using create_d2d_factory = HRESULT __stdcall (D2D1_FACTORY_TYPE factoryType, REFIID riid, D2D1_FACTORY_OPTIONS*, void** factory);
+    using create_d2d_factory = HRESULT __stdcall(D2D1_FACTORY_TYPE factoryType, REFIID riid, D2D1_FACTORY_OPTIONS*, void** factory);
 
-    static auto module = ::LoadLibraryExW(L"d2d1.dll", nullptr, ::IsWindowsVistaOrGreater() ? LOAD_LIBRARY_SEARCH_SYSTEM32 : 0);
+    static auto module = [] {
+      auto result = ::LoadLibraryExW(L"d2d1.dll", nullptr, ::IsWindowsVistaOrGreater() ? LOAD_LIBRARY_SEARCH_SYSTEM32 : 0);
+      ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN, L"d2d1.dll", &result);
 
-    thread_local com_ptr factory = [] {
+      return result;
+    }();
+
+    static com_ptr factory = [] {
       com_ptr<ID2D1Factory> temp;
 
       std::add_pointer_t<create_d2d_factory> creator = (std::add_pointer_t<create_d2d_factory>)::GetProcAddress(module, "D2D1CreateFactory");
@@ -69,8 +74,11 @@ namespace win32::direct2d
         throw std::exception("Could not create D2D factory");
       }
 
+      // Not sure why it is needed, but it keeps the app from crashing
+      temp->AddRef();
       return temp;
     }();
+
 
     return *factory;
   }
@@ -266,7 +274,8 @@ namespace win32::direct2d
       return std::visit([&](auto& value) -> ID2D1DeviceContext& {
         auto temp = value.get();
         return static_cast<ID2D1DeviceContext&>(*temp);
-      }, instance);
+      },
+        instance);
     }
 
   private:

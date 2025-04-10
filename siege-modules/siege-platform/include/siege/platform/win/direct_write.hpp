@@ -15,7 +15,7 @@ namespace win32::directwrite
   {
     static auto module = ::LoadLibraryExW(L"dwrite.dll", nullptr, ::IsWindowsVistaOrGreater() ? LOAD_LIBRARY_SEARCH_SYSTEM32 : 0);
 
-    thread_local com_ptr factory = [] {
+    static com_ptr factory = [] {
       com_ptr<IDWriteFactory> temp;
       auto* creator = (std::add_pointer_t<decltype(::DWriteCreateFactory)>)::GetProcAddress(module, "DWriteCreateFactory");
 
