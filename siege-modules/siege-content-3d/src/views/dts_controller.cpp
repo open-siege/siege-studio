@@ -51,7 +51,7 @@ namespace siege::views
            || siege::content::wtb::is_wtb(stream);
   }
 
-  std::vector<std::string> dts_controller::load_shape(std::istream& stream)
+  std::size_t dts_controller::load_shape(std::istream& stream)
   {
     if (siege::content::tmd::is_tmd(stream))
     {
@@ -103,6 +103,13 @@ namespace siege::views
       .selected_detail_levels = std::move(selected_detail_levels),
       .sequences = std::move(sequences) });
 
+    return shapes.size();
+  }
+
+  std::vector<std::string> dts_controller::get_detail_levels_for_shape(std::size_t index) const
+  {
+    auto detail_levels = shapes.at(index).detail_levels;
+
     if (detail_levels.empty())
     {
       detail_levels.emplace_back("Default Detail Level");
@@ -111,11 +118,27 @@ namespace siege::views
     return detail_levels;
   }
 
-  std::vector<std::size_t> dts_controller::get_selected_detail_levels(std::size_t index) const
+  std::vector<content::sequence_info> dts_controller::get_sequence_info_for_shape(std::size_t index) const
+  {
+    return shapes.at(index).sequences;
+  }
+
+  std::vector<std::int32_t> dts_controller::get_sequence_ids_for_shape(std::size_t index) const
   {
     auto& shape = shapes.at(index);
+    std::vector<std::int32_t> results;
+    results.reserve(shape.sequences.size());
 
-    return shape.selected_detail_levels;
+    std::transform(shape.sequences.begin(), shape.sequences.end(), std::back_inserter(results), [](const auto& seq) {
+      return seq.index;
+    });
+
+    return results;
+  }
+
+  std::vector<std::size_t> dts_controller::get_selected_detail_levels(std::size_t index) const
+  {
+    return shapes.at(index).selected_detail_levels;
   }
 
   void dts_controller::set_selected_detail_levels(std::size_t index, std::span<std::size_t> span)
@@ -123,6 +146,70 @@ namespace siege::views
     auto& shape = shapes.at(index);
     shape.selected_detail_levels.resize(span.size());
     std::copy(span.begin(), span.end(), shape.selected_detail_levels.begin());
+  }
+
+  bool dts_controller::is_sequence_enabled(std::size_t shape_index, std::int32_t index) const
+  {
+    auto& shape = shapes.at(shape_index);
+
+    for (auto& sequence : shape.sequences)
+    {
+      if (sequence.index == index)
+      {
+        return sequence.enabled;
+      }
+    }
+    return false;
+  }
+
+  void dts_controller::enable_sequence(std::size_t shape_index, std::int32_t index)
+  {
+    auto& shape = shapes.at(shape_index);
+
+    for (auto& sequence : shape.sequences)
+    {
+      sequence.enabled = sequence.index == index;
+
+      for (auto& sub : sequence.sub_sequences)
+      {
+        sub.enabled = sequence.enabled;
+      }
+    }
+  }
+
+  void dts_controller::disable_sequence(std::size_t shape_index, std::int32_t index)
+  {
+    auto& shape = shapes.at(shape_index);
+
+    for (auto& sequence : shape.sequences)
+    {
+      if (sequence.index != index)
+      {
+        continue;
+      }
+      sequence.enabled = false;
+
+      for (auto& sub : sequence.sub_sequences)
+      {
+        sub.enabled = sequence.enabled;
+      }
+    }
+  }
+
+  void dts_controller::advance_sequence(std::size_t shape_index, std::int32_t index)
+  {
+    auto& shape = shapes.at(shape_index);
+
+    auto& sequence = shape.sequences.at(index);
+
+    for (auto& sub : sequence.sub_sequences)
+    {
+      sub.frame_index++;
+      if (sub.frame_index >= sub.num_key_frames)
+      {
+        sub.frame_index = 0;
+      }
+    }
   }
 
   void dts_controller::render_shape(std::size_t index, content::shape_renderer& renderer)

@@ -43,7 +43,9 @@ namespace siege::views
 
     bool is_panning = false;
     bool is_rotating = false;
+    bool is_animating = false;
     std::function<bool()> pan_timer;
+    std::function<bool()> animation_timer;
     std::optional<POINTS> last_mouse_position = std::nullopt;
 
     glm::vec3 translation = { 0, 0, -20 };
@@ -51,6 +53,19 @@ namespace siege::views
 
     dts_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
     {
+    }
+
+    ~dts_view()
+    {
+      if (pan_timer)
+      {
+        pan_timer();
+      }
+
+      if (animation_timer)
+      {
+        animation_timer();
+      }
     }
 
     auto wm_create()
@@ -82,14 +97,15 @@ namespace siege::views
         .hwndParent = *this,
         .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
 
-      shape_actions.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Zoom In" });
-      shape_actions.InsertButton(-1, { .iBitmap = 1, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Zoom Out" });
+      shape_actions.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR)L"Zoom In" });
+      shape_actions.InsertButton(-1, { .iBitmap = 1, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR)L"Zoom Out" });
       shape_actions.InsertButton(-1, { .iBitmap = 2, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECK, .iString = (INT_PTR)L"Pan" });
       shape_actions.InsertButton(-1, { .iBitmap = 3, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECK, .iString = (INT_PTR)L"Rotate" });
       shape_actions.InsertButton(-1, { .iBitmap = 4, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN | BTNS_WHOLEDROPDOWN, .iString = (INT_PTR)L"Sequence" });
       shape_actions.InsertButton(-1, { .fsStyle = BTNS_SEP });
       shape_actions.InsertButton(-1, { .iBitmap = 5, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Export" });
       shape_actions.bind_nm_click(std::bind_front(&dts_view::shape_actions_nm_click, this));
+      shape_actions.bind_nm_rclick(std::bind_front(&dts_view::shape_actions_nm_rclick, this));
       shape_actions.bind_tbn_dropdown(std::bind_front(&dts_view::shape_actions_tbn_dropdown, this));
 
       shape_actions.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
@@ -198,18 +214,46 @@ namespace siege::views
 
       if (controller.is_shape(stream))
       {
-        auto detail_levels = controller.load_shape(stream);
+        auto shape_count = controller.load_shape(stream);
 
-        if (!detail_levels.empty())
+        if (shape_count > 0)
         {
           renderer.emplace(visible_nodes, visible_objects);
 
           std::wstring temp;
+
+          auto detail_levels = controller.get_detail_levels_for_shape(0);
+
           for (auto& detail_level : detail_levels)
           {
             temp.resize(detail_level.size());
             std::transform(detail_level.begin(), detail_level.end(), temp.begin(), [](auto value) { return (wchar_t)value; });
             detail_level_list.InsertString(-1, temp.c_str());
+          }
+
+          auto sequences = controller.get_sequence_info_for_shape(0);
+
+          for (auto i = 0; i < GetMenuItemCount(sequence_menu); ++i)
+          {
+            RemoveMenu(sequence_menu, i, MF_BYPOSITION);
+          }
+
+          sequence_menu.AppendMenuW(MF_OWNERDRAW, -1, L"Animate");
+
+          for (auto& sequence : sequences)
+          {
+            temp.resize(sequence.name.size());
+            temp.resize(MultiByteToWideChar(CP_UTF8, 0, sequence.name.data(), (int)sequence.name.size(), temp.data(), (int)temp.size()));
+
+            if (temp.empty())
+            {
+              continue;
+            }
+            sequence_menu.AppendMenuW(MF_OWNERDRAW, sequence.index, temp.data());
+            if (sequence.enabled)
+            {
+              ::CheckMenuItem(sequence_menu, sequence.index, MF_BYCOMMAND | MF_CHECKED);
+            }
           }
 
           ::InvalidateRect(render_view, nullptr, TRUE);
@@ -247,20 +291,20 @@ namespace siege::views
 
         if (last_mouse_position && mouse_position.x > last_mouse_position->x)
         {
-          translation.x += mouse_position.x - last_mouse_position->x;
+          translation.x += (mouse_position.x - last_mouse_position->x) / 2;
         }
         else if (last_mouse_position && mouse_position.x < last_mouse_position->x)
         {
-          translation.x -= last_mouse_position->x - mouse_position.x;
+          translation.x -= (last_mouse_position->x - mouse_position.x) / 2;
         }
 
         if (last_mouse_position && mouse_position.y > last_mouse_position->y)
         {
-          translation.y -= mouse_position.y - last_mouse_position->y;
+          translation.y -= (mouse_position.y - last_mouse_position->y) / 2;
         }
         else if (last_mouse_position && mouse_position.y < last_mouse_position->y)
         {
-          translation.y += last_mouse_position->y - mouse_position.y;
+          translation.y += (last_mouse_position->y - mouse_position.y) / 2;
         }
         last_mouse_position = mouse_position;
       }
@@ -350,37 +394,113 @@ namespace siege::views
       return TBDDRET_NODEFAULT;
     }
 
+    BOOL shape_actions_nm_rclick(win32::tool_bar, const NMMOUSE& message)
+    {
+      if (message.dwItemSpec == 2)// pan
+      {
+        translation.x = 0;
+        translation.y = 0;
+        InvalidateRect(render_view, nullptr, TRUE);
+        return TRUE;
+      }
+      return FALSE;
+    }
+
     BOOL shape_actions_nm_click(win32::tool_bar, const NMMOUSE& message)
     {
-      if (message.dwItemSpec == 0)
+      if (message.dwItemSpec == 0)// zoom in
       {
         translation.z += 5;
         InvalidateRect(render_view, nullptr, TRUE);
         return TRUE;
       }
-      else if (message.dwItemSpec == 1)
+      else if (message.dwItemSpec == 1)// zoom out
       {
         translation.z -= 5;
         InvalidateRect(render_view, nullptr, TRUE);
         return TRUE;
       }
-      else if (message.dwItemSpec == 2)
+      else if (message.dwItemSpec == 2)// pan
       {
         set_is_panning(!is_panning);
         return TRUE;
       }
-      else if (message.dwItemSpec == 3)
+      else if (message.dwItemSpec == 3)// rotate
       {
         set_is_rotating(!is_rotating);
         return TRUE;
       }
-      else if (message.dwItemSpec == 4)
+      else if (message.dwItemSpec == 4)// animate
       {
         POINT mouse_pos;
 
         if (::GetCursorPos(&mouse_pos))
         {
           auto selection = ::TrackPopupMenu(sequence_menu, TPM_CENTERALIGN | TPM_RETURNCMD, mouse_pos.x, mouse_pos.y, 0, *this, nullptr);
+
+          auto start_animation = [this](auto selection) {
+            if (is_animating)
+            {
+              if (animation_timer)
+              {
+                animation_timer();
+              }
+              animation_timer = win32::SetTimer(ref(), 100, [this, selection](auto, auto, auto, auto) {
+                controller.advance_sequence(0, selection);
+                ::InvalidateRect(render_view, nullptr, TRUE);
+              });
+            }
+            else
+            {
+              ::InvalidateRect(render_view, nullptr, TRUE);
+            }
+          };
+
+          if (selection == -1)
+          {
+            is_animating = !is_animating;
+
+            if (!is_animating && animation_timer)
+            {
+              animation_timer();
+              animation_timer = nullptr;
+            }
+            ::CheckMenuItem(sequence_menu, 0, is_animating ? MF_BYPOSITION | MF_CHECKED : MF_BYPOSITION | MF_UNCHECKED);
+
+            for (auto id : controller.get_sequence_ids_for_shape(0))
+            {
+              if (is_animating && controller.is_sequence_enabled(0, id))
+              {
+                start_animation(id);
+                break;
+              }
+            }
+            return TRUE;
+          }
+
+          if (!is_animating && animation_timer)
+          {
+            animation_timer();
+            animation_timer = nullptr;
+          }
+
+          if (controller.is_sequence_enabled(0, selection))
+          {
+            controller.disable_sequence(0, selection);
+            ::CheckMenuItem(sequence_menu, selection, MF_BYCOMMAND | MF_UNCHECKED);
+          }
+          else
+          {
+            controller.enable_sequence(0, selection);
+
+            for (auto i = 1; i < GetMenuItemCount(sequence_menu); ++i)
+            {
+              ::CheckMenuItem(sequence_menu, i, MF_BYPOSITION | MF_UNCHECKED);
+            }
+
+            ::CheckMenuItem(sequence_menu, selection, MF_BYCOMMAND | MF_CHECKED);
+            start_animation(selection);
+          }
         }
 
 

@@ -15,20 +15,32 @@ namespace siege::views
   class dts_controller
   {
   public:
-    constexpr static auto formats = std::array<siege::fs_string_view, 12>{{ 
-            FSL".dts", FSL".tmd", FSL".bnd", FSL".cwg", FSL".trk", FSL".bwd", FSL".wtb", FSL".erf", FSL".mdl", FSL".md2", FSL".mdx", FSL".dkm" 
-        }};
+    constexpr static auto formats = std::array<siege::fs_string_view, 12>{ { FSL ".dts", FSL ".tmd", FSL ".bnd", FSL ".cwg", FSL ".trk", FSL ".bwd", FSL ".wtb", FSL ".erf", FSL ".mdl", FSL ".md2", FSL ".mdx", FSL ".dkm" } };
     static bool is_shape(std::istream& image_stream);
 
-    std::vector<std::string> load_shape(std::istream& image_stream);
+    std::size_t load_shape(std::istream& image_stream);
+
+    std::vector<std::string> get_detail_levels_for_shape(std::size_t) const;
+
+    std::vector<content::sequence_info> get_sequence_info_for_shape(std::size_t) const;
+
+    std::vector<std::int32_t> get_sequence_ids_for_shape(std::size_t) const;
 
     std::vector<std::size_t> get_selected_detail_levels(std::size_t) const;
 
     void set_selected_detail_levels(std::size_t, std::span<std::size_t> span);
 
     void render_shape(std::size_t index, content::shape_renderer& renderer);
+
+    void enable_sequence(std::size_t shape, std::int32_t index);
+
+    void disable_sequence(std::size_t shape, std::int32_t index);
+
+    void advance_sequence(std::size_t shape, std::int32_t index);
+
+    bool is_sequence_enabled(std::size_t shape, std::int32_t index) const;
   private:
-      std::vector<shape_context> shapes;
+    std::vector<shape_context> shapes;
   };
 
   struct shape_context
@@ -42,4 +54,4 @@ namespace siege::views
 
 }// namespace siege::views
 
-#endif//DARKSTARDTSCONVERTER_PAL_VIEW_HPP
+#endif// DARKSTARDTSCONVERTER_PAL_VIEW_HPP
