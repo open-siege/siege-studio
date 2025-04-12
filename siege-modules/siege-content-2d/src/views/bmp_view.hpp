@@ -141,9 +141,9 @@ namespace siege::views
         .hwndParent = *this,
         .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP | WS_CLIPSIBLINGS });
 
-      bitmap_actions.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Zoom In" });
+      bitmap_actions.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR)L"Zoom In" });
 
-      bitmap_actions.InsertButton(-1, { .iBitmap = 1, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Zoom Out" });
+      bitmap_actions.InsertButton(-1, { .iBitmap = 1, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR)L"Zoom Out" });
 
       bitmap_actions.InsertButton(-1, { .iBitmap = 2, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECK, .iString = (INT_PTR)L"Pan" });
 
@@ -592,139 +592,145 @@ namespace siege::views
 
     void resize_preview(bool force = false, std::optional<win32::wic::palette> palette = std::nullopt)
     {
-      if (scale != 0 && current_frame)
+      try
       {
-        auto frame_size = controller.get_size(current_frame_index);
-
-        if (this->viewport.Width > frame_size.width)
+        if (scale != 0 && current_frame)
         {
-          this->viewport.Width = frame_size.width;
-        }
+          auto frame_size = controller.get_size(current_frame_index);
 
-        if (this->viewport.Height > frame_size.height)
-        {
-          this->viewport.Height = frame_size.height;
-        }
-
-        if (this->viewport.Height <= 0)
-        {
-          this->viewport.Height += 10;
-        }
-
-        if (this->viewport.Width <= 0)
-        {
-          this->viewport.Width += 10;
-        }
-
-        if (this->viewport.Height <= 0)
-        {
-          this->viewport.Height += 10;
-        }
-
-        if (this->viewport.X < 0)
-        {
-          this->viewport.X = 0;
-        }
-
-        if (this->viewport.Y < 0)
-        {
-          this->viewport.Y = 0;
-        }
-
-        if (this->viewport.X > frame_size.width - viewport.Width)
-        {
-          this->viewport.X = frame_size.width - viewport.Width;
-        }
-
-        if (this->viewport.Y > frame_size.height - viewport.Height)
-        {
-          this->viewport.Y = frame_size.height - viewport.Height;
-        }
-
-        if (viewport.X + viewport.Width > frame_size.width)
-        {
-          viewport.Width = frame_size.width - viewport.X;
-        }
-
-        if (viewport.Y + viewport.Y > frame_size.height)
-        {
-          viewport.Height = frame_size.height - viewport.Y;
-        }
-        SIZE preview_size = { .cx = (LONG)(frame_size.width * scale), .cy = (LONG)(frame_size.height * scale) };
-
-        auto existing_size = preview_bitmap.get_size();
-
-        auto update_bitmap = [&] {
-          if (palette)
+          if (this->viewport.Width > frame_size.width)
           {
-            auto bitmap = current_frame->handle().as<IWICBitmap>();
+            this->viewport.Width = frame_size.width;
+          }
 
-            if (auto raw_palette = palette->handle(); bitmap && !dither_type)
+          if (this->viewport.Height > frame_size.height)
+          {
+            this->viewport.Height = frame_size.height;
+          }
+
+          if (this->viewport.Height <= 0)
+          {
+            this->viewport.Height += 10;
+          }
+
+          if (this->viewport.Width <= 0)
+          {
+            this->viewport.Width += 10;
+          }
+
+          if (this->viewport.Height <= 0)
+          {
+            this->viewport.Height += 10;
+          }
+
+          if (this->viewport.X < 0)
+          {
+            this->viewport.X = 0;
+          }
+
+          if (this->viewport.Y < 0)
+          {
+            this->viewport.Y = 0;
+          }
+
+          if (this->viewport.X > frame_size.width - viewport.Width)
+          {
+            this->viewport.X = frame_size.width - viewport.Width;
+          }
+
+          if (this->viewport.Y > frame_size.height - viewport.Height)
+          {
+            this->viewport.Y = frame_size.height - viewport.Height;
+          }
+
+          if (viewport.X + viewport.Width > frame_size.width)
+          {
+            viewport.Width = frame_size.width - viewport.X;
+          }
+
+          if (viewport.Y + viewport.Y > frame_size.height)
+          {
+            viewport.Height = frame_size.height - viewport.Y;
+          }
+          SIZE preview_size = { .cx = (LONG)(frame_size.width * scale), .cy = (LONG)(frame_size.height * scale) };
+
+          auto existing_size = preview_bitmap.get_size();
+
+          auto update_bitmap = [&] {
+            if (palette)
             {
-              bitmap->SetPalette(raw_palette.get());
+              auto bitmap = current_frame->handle().as<IWICBitmap>();
+
+              if (auto raw_palette = palette->handle(); bitmap && !dither_type)
+              {
+                bitmap->SetPalette(raw_palette.get());
+                current_frame
+                  ->clip(viewport)
+                  .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
+                  .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
+              }
+              else if (dither_type)
+              {
+                current_frame
+                  ->clip(viewport)
+                  .convert(win32::wic::bitmap_source::to_format{
+                    .format = win32::wic::pixel_format::bgr_32bpp,
+                    .palette_type = palette_type::WICBitmapPaletteTypeCustom })
+                  .convert(win32::wic::bitmap_source::to_format{
+                    .format = win32::wic::pixel_format::indexed_8bpp,
+                    .dither_type = *dither_type,
+                    .palette = *palette,
+                    .palette_type = palette_type::WICBitmapPaletteTypeCustom })
+                  .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
+                  .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
+              }
+            }
+            else
+            {
               current_frame
                 ->clip(viewport)
                 .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
                 .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
             }
-            else if (dither_type)
+
+            auto pixels = preview_bitmap.get_pixels();
+
+            // prevents bitmaps from being copied
+            for (auto& pixel : pixels)
             {
-              current_frame
-                ->clip(viewport)
-                .convert(win32::wic::bitmap_source::to_format{
-                  .format = win32::wic::pixel_format::bgr_32bpp,
-                  .palette_type = palette_type::WICBitmapPaletteTypeCustom })
-                .convert(win32::wic::bitmap_source::to_format{
-                  .format = win32::wic::pixel_format::indexed_8bpp,
-                  .dither_type = *dither_type,
-                  .palette = *palette,
-                  .palette_type = palette_type::WICBitmapPaletteTypeCustom })
-                .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
-                .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
+              pixel.rgbReserved = 0;
             }
-          }
-          else
-          {
-            current_frame
-              ->clip(viewport)
-              .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
-              .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
-          }
 
-          auto pixels = preview_bitmap.get_pixels();
-
-          // prevents bitmaps from being copied
-          for (auto& pixel : pixels)
-          {
-            pixel.rgbReserved = 0;
-          }
-
-          if (static_image.GetBitmap() == preview_bitmap.get())
-          {
-            RedrawWindow(static_image, nullptr, nullptr, RDW_NOERASE | RDW_NOFRAME | RDW_INVALIDATE);
-          }
-          else
-          {
-            auto old_bitmap = static_image.SetImage(preview_bitmap.get());
-
-            if (old_bitmap != preview_bitmap.get())
+            if (static_image.GetBitmap() == preview_bitmap.get())
             {
-              ::DeleteObject(old_bitmap);
+              RedrawWindow(static_image, nullptr, nullptr, RDW_NOERASE | RDW_NOFRAME | RDW_INVALIDATE);
             }
+            else
+            {
+              auto old_bitmap = static_image.SetImage(preview_bitmap.get());
+
+              if (old_bitmap != preview_bitmap.get())
+              {
+                ::DeleteObject(old_bitmap);
+              }
+            }
+          };
+
+          if (!(existing_size.cx == preview_size.cx && existing_size.cy == preview_size.cy))
+          {
+            preview_bitmap = win32::gdi::bitmap(preview_size, win32::gdi::bitmap::skip_shared_handle);
+
+            update_bitmap();
           }
-        };
-
-        if (!(existing_size.cx == preview_size.cx && existing_size.cy == preview_size.cy))
-        {
-          preview_bitmap = win32::gdi::bitmap(preview_size, win32::gdi::bitmap::skip_shared_handle);
-
-          update_bitmap();
+          else if (force && std::memcmp(&viewport, &previous_viewport, sizeof(viewport)) != 0)
+          {
+            update_bitmap();
+          }
+          previous_viewport = viewport;
         }
-        else if (force && std::memcmp(&viewport, &previous_viewport, sizeof(viewport)) != 0)
-        {
-          update_bitmap();
-        }
-        previous_viewport = viewport;
+      }
+      catch (...)
+      {
       }
     }
 

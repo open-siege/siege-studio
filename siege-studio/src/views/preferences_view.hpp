@@ -76,7 +76,7 @@ namespace siege::views
         .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
       options.InsertString(-1, L"Theming (Simple)");
-      options.InsertString(-1, L"Theming (Advanced)");
+      options.InsertString(-1, L"Theming (Advanced - Incomplete)");
       options.SetCurrentSelection(0);
       options_unbind = options.bind_lbn_sel_change(std::bind_front(&preferences_view::options_lbn_sel_change, this));
 

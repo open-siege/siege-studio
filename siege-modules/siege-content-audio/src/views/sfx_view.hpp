@@ -30,17 +30,18 @@ namespace siege::views
     {
     }
 
+    constexpr static auto play_id = 0;
+    constexpr static auto stop_id = 1;
+    constexpr static auto loop_id = 2;
+
     auto wm_create()
     {
       player_buttons = *win32::CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{
         .hwndParent = *this,
-        .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS 
-          });
+        .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS });
 
       player_buttons.bind_nm_click(std::bind_front(&sfx_view::player_buttons_nm_click, this));
       player_buttons.InsertButton(-1, { .iBitmap = 0, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Play" });
-
-      player_buttons.InsertButton(-1, { .iBitmap = 1, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Pause" });
 
       player_buttons.InsertButton(-1, { .iBitmap = 2, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON | BTNS_CHECK, .iString = (INT_PTR)L"Stop" });
 
@@ -48,7 +49,7 @@ namespace siege::views
       player_buttons.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS);
 
       selection = *win32::CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
-        .hwndParent = *this, 
+        .hwndParent = *this,
         .style = WS_VISIBLE | WS_CHILD | LBS_HASSTRINGS });
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
@@ -204,9 +205,9 @@ namespace siege::views
       {
         auto index = message.dwItemSpec;
 
-        if (index == 3)
+        if (index == loop_id)
         {
-          auto state = ::SendMessageW(player_buttons, TB_GETSTATE, 3, 0);
+          auto state = ::SendMessageW(player_buttons, TB_GETSTATE, loop_id, 0);
 
           if (!(state & TBSTATE_CHECKED))
           {
@@ -214,9 +215,9 @@ namespace siege::views
           }
         }
 
-        if (index == 0)
+        if (index == play_id)
         {
-          auto state = ::SendMessageW(player_buttons, TB_GETSTATE, 3, 0);
+          auto state = ::SendMessageW(player_buttons, TB_GETSTATE, loop_id, 0);
 
           bool loop = false;
           if (state & TBSTATE_CHECKED)
@@ -238,19 +239,14 @@ namespace siege::views
           }
         }
 
-        if (index == 1)
+        if (index == stop_id)
         {
           media.StopSound();
         }
 
-        if (index == 2)
+        for (auto i = 0; i < 2; ++i)
         {
-          media.StopSound();
-        }
-
-        for (auto i = 0; i < 3; ++i)
-        {
-          if (i == index && i != 2)
+          if (i == index && i != stop_id)
           {
             continue;
           }

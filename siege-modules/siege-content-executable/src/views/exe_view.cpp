@@ -32,8 +32,8 @@ namespace siege::views
       .hwndParent = *this,
       .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
 
-    exe_actions.InsertButton(-1, { .iBitmap = 0, .idCommand = add_to_firewall_selected_id, .iString = (INT_PTR)L"Add to Firewall" }, false);
-    exe_actions.InsertButton(-1, { .iBitmap = 1, .idCommand = launch_selected_id, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Launch" }, false);
+    exe_actions.InsertButton(-1, { .iBitmap = 0, .idCommand = add_to_firewall_selected_id, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR)L"Add to Firewall" }, false);
+    exe_actions.InsertButton(-1, { .iBitmap = 1, .idCommand = launch_selected_id, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR)L"Launch" }, false);
     exe_actions.InsertButton(-1, { .iBitmap = 2, .idCommand = extract_selected_id, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" }, false);
     exe_actions.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
     exe_actions.bind_tbn_dropdown(std::bind_front(&exe_view::exe_actions_tbn_dropdown, this));

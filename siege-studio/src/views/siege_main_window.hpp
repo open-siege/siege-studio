@@ -42,7 +42,6 @@ namespace siege::views
     std::list<std::filesystem::path>::iterator selected_file;
 
     std::uint32_t open_id = RegisterWindowMessageW(L"COMMAND_OPEN");
-    std::uint32_t open_new_tab_id = RegisterWindowMessageW(L"COMMAND_OPEN_NEW_TAB");
     std::uint32_t open_workspace_id = RegisterWindowMessageW(L"COMMAND_OPEN_WORKSPACE");
     std::uint32_t edit_theme_id = RegisterWindowMessageW(L"COMMAND_EDIT_THEME");
     std::uint32_t about_id = RegisterWindowMessageW(L"COMMAND_ABOUT");
@@ -282,7 +281,6 @@ namespace siege::views
       std::size_t id = 1u;
 
       popup_menus[0].AppendMenuW(MF_OWNERDRAW, open_id, L"Open...");
-      popup_menus[0].AppendMenuW(MF_OWNERDRAW, open_new_tab_id, L"Open in New Tab...");
       popup_menus[0].AppendMenuW(MF_OWNERDRAW, open_workspace_id, L"Open Folder as Workspace");
       popup_menus[0].AppendMenuW(MF_SEPARATOR | MF_OWNERDRAW, id++);
       popup_menus[0].AppendMenuW(MF_OWNERDRAW, RegisterWindowMessageW(L"COMMAND_EXIT"), L"Quit");

@@ -103,7 +103,7 @@ namespace siege::views
       shape_actions.InsertButton(-1, { .iBitmap = 3, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECK, .iString = (INT_PTR)L"Rotate" });
       shape_actions.InsertButton(-1, { .iBitmap = 4, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN | BTNS_WHOLEDROPDOWN, .iString = (INT_PTR)L"Sequence" });
       shape_actions.InsertButton(-1, { .fsStyle = BTNS_SEP });
-      shape_actions.InsertButton(-1, { .iBitmap = 5, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Export" });
+      shape_actions.InsertButton(-1, { .iBitmap = 5, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR)L"Export" });
       shape_actions.bind_nm_click(std::bind_front(&dts_view::shape_actions_nm_click, this));
       shape_actions.bind_nm_rclick(std::bind_front(&dts_view::shape_actions_nm_rclick, this));
       shape_actions.bind_tbn_dropdown(std::bind_front(&dts_view::shape_actions_tbn_dropdown, this));
