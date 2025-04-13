@@ -470,7 +470,11 @@ namespace siege::views
         {
           dither_type = (WICBitmapDitherType)(result - 2);
         }
-        ListView_SetCheckState(sender, info.iItem, TRUE);
+
+        if (result != 0)
+        {
+          ListView_SetCheckState(sender, info.iItem, TRUE);
+        }
       }
     }
 
@@ -478,7 +482,7 @@ namespace siege::views
     {
       // Taken from ListView_GetCheckState
       BOOL is_checked = (BOOL)(UINT)(info.uNewState >> 12) - 1;
-      if (is_checked)
+      if (is_checked > 0)
       {
         auto* palette = (content::pal::palette*)info.lParam;
 
