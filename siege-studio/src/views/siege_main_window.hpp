@@ -297,6 +297,26 @@ namespace siege::views
 
       AddDefaultTab();
 
+      HKEY user_key = nullptr;
+      HKEY main_key = nullptr;
+      auto access = KEY_QUERY_VALUE | KEY_READ;
+
+      if (::RegOpenCurrentUser(access, &user_key) == ERROR_SUCCESS && 
+          ::RegCreateKeyExW(user_key, L"Software\\The Siege Hub\\Siege Studio", 0, nullptr, 0, access, nullptr, &main_key, nullptr) == ERROR_SUCCESS)
+      {
+        DWORD preference = 0;
+        DWORD size = sizeof(DWORD);
+        DWORD type = REG_DWORD;
+        
+        if (::RegGetValueW(main_key, nullptr, L"UserThemePreference", RRF_RT_DWORD, &type, (BYTE*)&preference, &size) == ERROR_SUCCESS && (preference == 1 || preference == 2))
+        {
+          this->SetPropW(L"UserThemePreference", preference);
+        }
+
+        ::RegCloseKey(main_key);
+        ::RegCloseKey(user_key);
+      }
+
       SendMessageW(*this, WM_SETTINGCHANGE, 0, (LPARAM)L"ImmersiveColorSet");
       return 0;
     }
@@ -485,105 +505,111 @@ namespace siege::views
           DWORD size = sizeof(DWORD);
 
           DWORD type = REG_DWORD;
-          if (RegQueryValueExW(key, L"AppsUseLightTheme", nullptr, &type, (LPBYTE)&value, &size) == ERROR_SUCCESS)
+          auto user_preference = this->GetPropW<int>(L"UserThemePreference");
+
+          if (user_preference == 0 && RegQueryValueExW(key, L"AppsUseLightTheme", nullptr, &type, (LPBYTE)&value, &size) == ERROR_SUCCESS)
           {
-            is_dark_mode = value == 0;
+            is_dark_mode = value == 0; 
+          }
+          else if (user_preference != 0)
+          {
+            is_dark_mode = user_preference == 2;
+          }
 
-            win32::set_is_dark_theme(is_dark_mode);
+          win32::set_is_dark_theme(is_dark_mode);
 
-            COLORREF bk_color = RGB(0x20, 0x20, 0x20);
-            COLORREF text_color = 0x00FFFFFF;
-            COLORREF text_bk_color = RGB(0x2b, 0x2b, 0x2b);
-            COLORREF text_highlight_color = RGB(0x2d, 0x2d, 0x2d);
-            COLORREF btn_shadow_color = 0x00AAAAAA;
+          COLORREF bk_color = RGB(0x20, 0x20, 0x20);
+          COLORREF text_color = 0x00FFFFFF;
+          COLORREF text_bk_color = RGB(0x2b, 0x2b, 0x2b);
+          COLORREF text_highlight_color = RGB(0x2d, 0x2d, 0x2d);
+          COLORREF btn_shadow_color = 0x00AAAAAA;
 
-            COLORREF button_bk_color = RGB(0x2d, 0x2d, 0x2d);
-            COLORREF pushed_bk_color = RGB(0x27, 0x27, 0x27);
-            COLORREF focus_bk_color = RGB(0x32, 0x32, 0x32);
-            COLORREF hot_bk_color = RGB(0x32, 0x32, 0x32);
+          COLORREF button_bk_color = RGB(0x2d, 0x2d, 0x2d);
+          COLORREF pushed_bk_color = RGB(0x27, 0x27, 0x27);
+          COLORREF focus_bk_color = RGB(0x32, 0x32, 0x32);
+          COLORREF hot_bk_color = RGB(0x32, 0x32, 0x32);
 
-            if (!is_dark_mode)
+          if (!is_dark_mode)
+          {
+            bk_color = RGB(0xfb, 0xfb, 0xfb);
+            text_color = RGB(0x1a, 0x1a, 0x1a);
+            text_bk_color = RGB(0xf3, 0xf3, 0xf3);
+            text_highlight_color = RGB(0xea, 0xea, 0xea);
+            btn_shadow_color = RGB(1, 1, 1);
+
+            button_bk_color = RGB(0xfb, 0xfb, 0xfb);
+            pushed_bk_color = RGB(0xf5, 0xf5, 0xf5);
+            focus_bk_color = RGB(0xfb, 0xf6, 0xf6);
+            hot_bk_color = RGB(0xfb, 0xf6, 0xf6);
+          }
+
+          using namespace win32;
+
+          set_color_for_class(button::class_name, properties::button::bk_color, button_bk_color);
+          set_color_for_class(button::class_name, properties::button::hot_bk_color, hot_bk_color);
+          set_color_for_class(button::class_name, properties::button::focus_bk_color, focus_bk_color);
+          set_color_for_class(button::class_name, properties::button::pushed_bk_color, pushed_bk_color);
+          set_color_for_class(button::class_name, properties::button::bk_color, bk_color);
+          set_color_for_class(button::class_name, properties::button::text_color, text_color);
+          set_color_for_class(button::class_name, properties::button::line_color, text_color);
+
+          set_color_for_class(tree_view::class_name, properties::tree_view::bk_color, bk_color);
+          set_color_for_class(tree_view::class_name, properties::tree_view::text_color, text_color);
+          set_color_for_class(tree_view::class_name, properties::tree_view::line_color, 0x00383838);
+
+          set_color_for_class(list_view::class_name, properties::list_view::bk_color, bk_color);
+          set_color_for_class(list_view::class_name, properties::list_view::text_color, text_color);
+          set_color_for_class(list_view::class_name, properties::list_view::text_bk_color, text_bk_color);
+          set_color_for_class(list_view::class_name, properties::list_view::outline_color, 0x00AAAAAA);
+
+          set_color_for_class(list_box::class_name, properties::list_box::bk_color, bk_color);
+          set_color_for_class(list_box::class_name, properties::list_box::text_color, text_color);
+          set_color_for_class(list_box::class_name, properties::list_box::text_bk_color, text_bk_color);
+          set_color_for_class(list_box::class_name, properties::list_box::text_highlight_color, text_highlight_color);
+
+          set_color_for_class(track_bar::class_name, properties::track_bar::bk_color, bk_color);
+          set_color_for_class(track_bar::class_name, properties::track_bar::text_color, text_color);
+          set_color_for_class(track_bar::class_name, properties::track_bar::text_bk_color, text_bk_color);
+
+          set_color_for_class(header::class_name, properties::header::bk_color, bk_color);
+          set_color_for_class(header::class_name, properties::header::text_color, text_color);
+          set_color_for_class(header::class_name, properties::header::text_bk_color, text_bk_color);
+          set_color_for_class(header::class_name, properties::header::text_highlight_color, text_highlight_color);
+
+          set_color_for_class(tab_control::class_name, properties::tab_control::bk_color, bk_color);
+          set_color_for_class(tab_control::class_name, properties::tab_control::text_color, text_color);
+          set_color_for_class(tab_control::class_name, properties::tab_control::text_bk_color, text_bk_color);
+          set_color_for_class(tab_control::class_name, properties::tab_control::text_highlight_color, text_highlight_color);
+
+          set_color_for_class(tool_bar::class_name, properties::tool_bar::bk_color, bk_color);
+          set_color_for_class(tool_bar::class_name, properties::tool_bar::text_color, text_color);
+          set_color_for_class(tool_bar::class_name, properties::tool_bar::btn_face_color, text_bk_color);
+          set_color_for_class(tool_bar::class_name, properties::tool_bar::text_highlight_color, text_highlight_color);
+          set_color_for_class(tool_bar::class_name, properties::tool_bar::btn_shadow_color, btn_shadow_color);
+
+          set_color_for_class(L"", properties::window::bk_color, bk_color);
+          set_color_for_class(L"#32768", properties::menu::bk_color, bk_color);
+          set_color_for_class(L"#32768", properties::menu::text_color, text_color);
+          set_color_for_class(L"#32768", properties::menu::text_highlight_color, text_highlight_color);
+          set_color_for_class(static_control::class_name, properties::static_control::bk_color, bk_color);
+          set_color_for_class(static_control::class_name, properties::static_control::text_color, text_color);
+
+          for (auto& pixel : menu_sizer.get_pixels())
+          {
+            pixel.rgbRed = GetRValue(bk_color);
+            pixel.rgbBlue = GetBValue(bk_color);
+            pixel.rgbGreen = GetGValue(bk_color);
+          }
+
+          win32::apply_window_theme(*this);
+
+          for (auto i = 0; i < tab_control.GetItemCount(); ++i)
+          {
+            auto tab_item = tab_control.GetItem(i);
+
+            if (tab_item->lParam)
             {
-              bk_color = RGB(0xfb, 0xfb, 0xfb);
-              text_color = RGB(0x1a, 0x1a, 0x1a);
-              text_bk_color = RGB(0xf3, 0xf3, 0xf3);
-              text_highlight_color = RGB(0xea, 0xea, 0xea);
-              btn_shadow_color = RGB(1, 1, 1);
-
-              button_bk_color = RGB(0xfb, 0xfb, 0xfb);
-              pushed_bk_color = RGB(0xf5, 0xf5, 0xf5);
-              focus_bk_color = RGB(0xfb, 0xf6, 0xf6);
-              hot_bk_color = RGB(0xfb, 0xf6, 0xf6);
-            }
-
-            using namespace win32;
-
-            set_color_for_class(button::class_name, properties::button::bk_color, button_bk_color);
-            set_color_for_class(button::class_name, properties::button::hot_bk_color, hot_bk_color);
-            set_color_for_class(button::class_name, properties::button::focus_bk_color, focus_bk_color);
-            set_color_for_class(button::class_name, properties::button::pushed_bk_color, pushed_bk_color);
-            set_color_for_class(button::class_name, properties::button::bk_color, bk_color);
-            set_color_for_class(button::class_name, properties::button::text_color, text_color);
-            set_color_for_class(button::class_name, properties::button::line_color, text_color);
-
-            set_color_for_class(tree_view::class_name, properties::tree_view::bk_color, bk_color);
-            set_color_for_class(tree_view::class_name, properties::tree_view::text_color, text_color);
-            set_color_for_class(tree_view::class_name, properties::tree_view::line_color, 0x00383838);
-
-            set_color_for_class(list_view::class_name, properties::list_view::bk_color, bk_color);
-            set_color_for_class(list_view::class_name, properties::list_view::text_color, text_color);
-            set_color_for_class(list_view::class_name, properties::list_view::text_bk_color, text_bk_color);
-            set_color_for_class(list_view::class_name, properties::list_view::outline_color, 0x00AAAAAA);
-
-            set_color_for_class(list_box::class_name, properties::list_box::bk_color, bk_color);
-            set_color_for_class(list_box::class_name, properties::list_box::text_color, text_color);
-            set_color_for_class(list_box::class_name, properties::list_box::text_bk_color, text_bk_color);
-            set_color_for_class(list_box::class_name, properties::list_box::text_highlight_color, text_highlight_color);
-
-            set_color_for_class(track_bar::class_name, properties::track_bar::bk_color, bk_color);
-            set_color_for_class(track_bar::class_name, properties::track_bar::text_color, text_color);
-            set_color_for_class(track_bar::class_name, properties::track_bar::text_bk_color, text_bk_color);
-
-            set_color_for_class(header::class_name, properties::header::bk_color, bk_color);
-            set_color_for_class(header::class_name, properties::header::text_color, text_color);
-            set_color_for_class(header::class_name, properties::header::text_bk_color, text_bk_color);
-            set_color_for_class(header::class_name, properties::header::text_highlight_color, text_highlight_color);
-
-            set_color_for_class(tab_control::class_name, properties::tab_control::bk_color, bk_color);
-            set_color_for_class(tab_control::class_name, properties::tab_control::text_color, text_color);
-            set_color_for_class(tab_control::class_name, properties::tab_control::text_bk_color, text_bk_color);
-            set_color_for_class(tab_control::class_name, properties::tab_control::text_highlight_color, text_highlight_color);
-
-            set_color_for_class(tool_bar::class_name, properties::tool_bar::bk_color, bk_color);
-            set_color_for_class(tool_bar::class_name, properties::tool_bar::text_color, text_color);
-            set_color_for_class(tool_bar::class_name, properties::tool_bar::btn_face_color, text_bk_color);
-            set_color_for_class(tool_bar::class_name, properties::tool_bar::text_highlight_color, text_highlight_color);
-            set_color_for_class(tool_bar::class_name, properties::tool_bar::btn_shadow_color, btn_shadow_color);
-
-            set_color_for_class(L"", properties::window::bk_color, bk_color);
-            set_color_for_class(L"#32768", properties::menu::bk_color, bk_color);
-            set_color_for_class(L"#32768", properties::menu::text_color, text_color);
-            set_color_for_class(L"#32768", properties::menu::text_highlight_color, text_highlight_color);
-            set_color_for_class(static_control::class_name, properties::static_control::bk_color, bk_color);
-            set_color_for_class(static_control::class_name, properties::static_control::text_color, text_color);
-
-            for (auto& pixel : menu_sizer.get_pixels())
-            {
-              pixel.rgbRed = GetRValue(bk_color);
-              pixel.rgbBlue = GetBValue(bk_color);
-              pixel.rgbGreen = GetGValue(bk_color);
-            }
-
-            win32::apply_window_theme(*this);
-
-            for (auto i = 0; i < tab_control.GetItemCount(); ++i)
-            {
-              auto tab_item = tab_control.GetItem(i);
-
-              if (tab_item->lParam)
-              {
-                ::SendMessageW((HWND)tab_item->lParam, WM_SETTINGCHANGE, 0, (LPARAM)L"ImmersiveColorSet");
-              }
+              ::SendMessageW((HWND)tab_item->lParam, WM_SETTINGCHANGE, 0, (LPARAM)L"ImmersiveColorSet");
             }
           }
 
@@ -957,11 +983,15 @@ namespace siege::views
     {
       if (identifier == edit_theme_id)
       {
+        auto size = this->GetClientSize();
+        auto pos = this->GetWindowRect();
         theme_window = *win32::window_module_ref::current_module().CreateWindowExW(CREATESTRUCTW{
           .hwndParent = *this,
-          .cx = CW_USEDEFAULT,
-          .x = CW_USEDEFAULT,
-          .style = WS_OVERLAPPEDWINDOW,
+          .cy = size->cy,
+          .cx = size->cx,
+          .y = pos->top,
+          .x = pos->left,
+          .style = (LONG)(WS_POPUPWINDOW | WS_CAPTION | WS_MINIMIZEBOX | WS_MAXIMIZEBOX),
           .lpszName = L"Preferences",
           .lpszClass = win32::type_name<preferences_view>().c_str() });
 

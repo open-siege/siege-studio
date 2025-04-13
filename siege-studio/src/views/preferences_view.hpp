@@ -82,27 +82,95 @@ namespace siege::views
 
       dark_mode_selection = *win32::CreateWindowExW<win32::button>(::CREATESTRUCTW{
         .hwndParent = *this,
-        .style = WS_CHILD | BS_GROUPBOX,
+        .style = WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
         .lpszName = L"Application Theme Mode" });
+
+      auto owner = ::GetAncestor(*this, GA_ROOTOWNER);
+      auto preference = (int)::GetPropW(owner, L"UserThemePreference");
+
+
+      auto invalidate = [this]() {
+        ::InvalidateRect(dark_mode_selection, nullptr, TRUE);
+        ::InvalidateRect(by_system, nullptr, TRUE);
+        ::InvalidateRect(forced_light, nullptr, TRUE);
+        ::InvalidateRect(forced_dark, nullptr, TRUE);
+        ::InvalidateRect(options, nullptr, TRUE);
+        ::InvalidateRect(*this, nullptr, TRUE);
+      };
+
+      auto update_registry = [](DWORD preference) {
+        HKEY user_key = nullptr;
+        HKEY main_key = nullptr;
+        auto access = KEY_QUERY_VALUE | KEY_READ | KEY_WRITE;
+
+        if (::RegOpenCurrentUser(access, &user_key) == ERROR_SUCCESS && ::RegCreateKeyExW(user_key, L"Software\\The Siege Hub\\Siege Studio", 0, nullptr, 0, access, nullptr, &main_key, nullptr) == ERROR_SUCCESS)
+        {
+          ::RegSetValueExW(main_key, L"UserThemePreference", 0, REG_DWORD, (BYTE*)&preference, sizeof(preference));
+          ::RegCloseKey(main_key);
+          ::RegCloseKey(user_key);
+        }
+      };
 
       by_system = *win32::CreateWindowExW<win32::button>(::CREATESTRUCTW{
         .hMenu = (HMENU)10,
         .hwndParent = *this,
-        .style = WS_CHILD | BS_AUTORADIOBUTTON,
+        .style = WS_CHILD | WS_VISIBLE | BS_AUTORADIOBUTTON,
         .lpszName = L"Follow System" });
 
-      forced_dark = *win32::CreateWindowExW<win32::button>(::CREATESTRUCTW{
-        .hMenu = (HMENU)10,
-        .hwndParent = *this,
-        .style = WS_CHILD | BS_AUTORADIOBUTTON,
-        .lpszName = L"Prefer Light" });
+
+      by_system.bind_bn_clicked([this, invalidate, update_registry](auto, auto&) {
+        auto owner = ::GetAncestor(*this, GA_ROOTOWNER);
+        ::RemovePropW(owner, L"UserThemePreference");
+        update_registry(0);
+        ::SendMessageW(owner, WM_SETTINGCHANGE, 0, (LPARAM)L"ImmersiveColorSet");
+        win32::apply_window_theme(*this);
+        invalidate();
+      });
+
+      if (preference == 0)
+      {
+        Button_SetCheck(by_system, BST_CHECKED);
+      }
 
       forced_light = *win32::CreateWindowExW<win32::button>(::CREATESTRUCTW{
         .hMenu = (HMENU)10,
         .hwndParent = *this,
-        .style = WS_CHILD | BS_AUTORADIOBUTTON,
+        .style = WS_CHILD | WS_VISIBLE | BS_AUTORADIOBUTTON,
+        .lpszName = L"Prefer Light" });
+
+      forced_light.bind_bn_clicked([this, invalidate, update_registry](auto, auto&) {
+        auto owner = ::GetAncestor(*this, GA_ROOTOWNER);
+        update_registry(1);
+        ::SetPropW(owner, L"UserThemePreference", (HANDLE)1);
+        ::SendMessageW(owner, WM_SETTINGCHANGE, 0, (LPARAM)L"ImmersiveColorSet");
+        win32::apply_window_theme(*this);
+        invalidate();
+      });
+
+      if (preference == 1)
+      {
+        Button_SetCheck(forced_light, BST_CHECKED);
+      }
+
+      forced_dark = *win32::CreateWindowExW<win32::button>(::CREATESTRUCTW{
+        .hMenu = (HMENU)10,
+        .hwndParent = *this,
+        .style = WS_CHILD | WS_VISIBLE | BS_AUTORADIOBUTTON,
         .lpszName = L"Prefer Dark" });
 
+      forced_dark.bind_bn_clicked([this, invalidate, update_registry](auto, auto&) {
+        auto owner = ::GetAncestor(*this, GA_ROOTOWNER);
+        update_registry(2);
+        ::SetPropW(owner, L"UserThemePreference", (HANDLE)2);
+        ::SendMessageW(owner, WM_SETTINGCHANGE, 0, (LPARAM)L"ImmersiveColorSet");
+        win32::apply_window_theme(*this);
+        invalidate();
+      });
+
+      if (preference == 2)
+      {
+        Button_SetCheck(forced_dark, BST_CHECKED);
+      }
 
       advanced_options = *win32::CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
         .hwndParent = *this,
@@ -524,7 +592,7 @@ namespace siege::views
       auto height = middle_size.cy / 3;
       height -= 15;
 
-      by_system.SetWindowPos(POINT{ .x = left_size.cx + 15, .y = 15  });
+      by_system.SetWindowPos(POINT{ .x = left_size.cx + 15, .y = 15 });
       by_system.SetWindowPos(SIZE{ .cx = width, .cy = height });
 
       forced_dark.SetWindowPos(POINT{ .x = left_size.cx + width + 15, .y = 15 });
