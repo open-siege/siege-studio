@@ -22,8 +22,6 @@ namespace siege::views
   // TODO update tree view to support multiple levels of navigation
   // TODO add filename filter for directory listing
   // TODO add category and extension filter for directory listing
-  // TODO Support WM_DROPFILES. Instead of using the templated window handler, it makes sense to
-  // move the dispatching into this class to support more bespoke messages.
   struct siege_main_window final : basic_window<siege_main_window>
     , win32::menu::notifications
   {
@@ -982,21 +980,7 @@ namespace siege::views
           auto open_dialog = *dialog;
           open_dialog->SetOptions(FOS_PICKFOLDERS);
 
-          auto current_path = std::filesystem::current_path();
-
-          ITEMIDLIST* path_id;
-          if (SHParseDisplayName(current_path.c_str(), nullptr, &path_id, SFGAO_FOLDER, nullptr) == S_OK)
-          {
-            win32::com::com_ptr<IShellItem> shell_item;
-
-            if (SHCreateItemFromIDList(path_id, IID_IShellItem, shell_item.put_void()) == S_OK)
-            {
-              open_dialog->SetFolder(shell_item.get());
-            }
-
-            ::CoTaskMemFree(path_id);
-          }
-
+          open_dialog.SetFolder(std::filesystem::current_path());
 
           auto result = open_dialog->Show(nullptr);
 

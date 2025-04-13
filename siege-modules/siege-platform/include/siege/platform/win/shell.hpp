@@ -77,6 +77,24 @@ namespace win32::com
 
       return result;
     }
+
+    HRESULT SetFolder(std::filesystem::path path)
+    {
+      HRESULT result = S_OK;
+      ITEMIDLIST* path_id;
+      if (SHParseDisplayName(path.c_str(), nullptr, &path_id, SFGAO_FOLDER, nullptr) == S_OK)
+      {
+        win32::com::com_ptr<IShellItem> shell_item;
+
+        if (SHCreateItemFromIDList(path_id, IID_IShellItem, shell_item.put_void()) == S_OK)
+        {
+          result = get()->SetFolder(shell_item.get());
+        }
+
+        ::CoTaskMemFree(path_id);
+      }
+      return result;
+    }
   };
 
   struct FileSaveDialogEx : com_ptr<::IFileSaveDialog>

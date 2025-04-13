@@ -47,6 +47,7 @@ namespace siege::views
     std::function<bool()> pan_timer;
     std::function<bool()> animation_timer;
     std::optional<POINTS> last_mouse_position = std::nullopt;
+    std::wstring filename = L"";
 
     glm::vec3 translation = { 0, 0, -20 };
     content::vector3f rotation = { 45, 90, -35 };
@@ -214,6 +215,22 @@ namespace siege::views
 
       if (controller.is_shape(stream))
       {
+        auto path = platform::get_stream_path(stream);
+
+        if (!path)
+        {
+          path = win32::get_path_from_handle((HANDLE)message.data_type);
+        }
+
+        if (path)
+        {
+          filename = path->filename();
+        }
+        else
+        {
+          filename = L"3d-model";
+        }
+
         auto shape_count = controller.load_shape(stream);
 
         if (shape_count > 0)
@@ -508,10 +525,34 @@ namespace siege::views
       }
       else if (message.dwItemSpec == 6)
       {
-        auto dialog = win32::com::CreateFileSaveDialog();
+        auto dialog = win32::com::CreateFileOpenDialog();
 
         if (dialog)
         {
+          auto open_dialog = *dialog;
+          open_dialog->SetOptions(FOS_PICKFOLDERS);
+
+          open_dialog.SetFolder(std::filesystem::current_path());
+          auto result = open_dialog->Show(nullptr);
+
+          if (result == S_OK)
+          {
+            auto selection = open_dialog.GetResult();
+
+            if (selection)
+            {
+              auto path = selection.value().GetFileSysPath();
+
+              if (path)
+              {
+                auto new_filename = std::filesystem::path(filename).replace_extension(".obj");
+                std::ofstream output(*path / new_filename, std::ios::binary | std::ios::trunc);
+                siege::content::obj_renderer renderer(output);
+                controller.render_shape(0, renderer);
+                win32::launch_shell_process(*path);
+              }
+            }
+          }
         }
         return TRUE;
       }
