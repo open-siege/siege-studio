@@ -137,10 +137,10 @@ namespace win32
 
     if (is_dark_theme())
     {
-      return prop.find(L"BkColor") == std::wstring_view::npos ? RGB(0, 0, 0) : RGB(255, 255, 255);
+      return prop.find(L"BkColor") == std::wstring_view::npos ? RGB(255, 255, 255) : RGB(0, 0, 0);
     }
 
-    return prop.find(L"BkColor") == std::wstring_view::npos ? RGB(255, 255, 255) : RGB(0, 0, 0);
+    return prop.find(L"BkColor") == std::wstring_view::npos ? RGB(0, 0, 0) : RGB(255, 255, 255);
   }
 
   COLORREF get_color_for_window(win32::window_ref window, std::wstring_view prop)

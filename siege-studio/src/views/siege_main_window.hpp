@@ -588,6 +588,7 @@ namespace siege::views
           set_color_for_class(tool_bar::class_name, properties::tool_bar::btn_shadow_color, btn_shadow_color);
 
           set_color_for_class(L"", properties::window::bk_color, bk_color);
+          set_color_for_class(L"#32770", properties::window::bk_color, bk_color);
           set_color_for_class(L"#32768", properties::menu::bk_color, bk_color);
           set_color_for_class(L"#32768", properties::menu::text_color, text_color);
           set_color_for_class(L"#32768", properties::menu::text_highlight_color, text_highlight_color);
@@ -1132,7 +1133,7 @@ namespace siege::views
       if (identifier == about_id)
       {
         win32::DialogBoxIndirectParamW<about_view>(::GetModuleHandleW(nullptr),
-          win32::default_dialog{ { .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 300, .cy = 400 } },
+          win32::default_dialog{ { .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 350, .cy = 400 } },
           ref());
       }
 

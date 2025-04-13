@@ -33,14 +33,30 @@ namespace siege::views
     {
       ::SetWindowTextW(*this, L"About Siege Studio");
 
-      heading = *win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = *this, .style = WS_CHILD | WS_VISIBLE, .lpszName = L"Siege Studio is an open-source reverse engeering tool to preview, convert or extract files from various games made by Dynamix and using their tecnologies." });
-      logo = *win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = *this, .style = WS_CHILD | WS_VISIBLE | SS_BITMAP | SS_CENTERIMAGE | SS_REALSIZEIMAGE });
+      
       text_stack = win32::window(CreateWindowExW(0, L"StackLayout", nullptr, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, *this, nullptr, nullptr, nullptr));
    
+      heading = *win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = L"Siege Studio is an open-source reverse engeering tool to preview, convert or extract files from various games, like Starsiege, Quake and many more." });
+
+      logo = *win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE | SS_BITMAP | SS_CENTERIMAGE | SS_REALSIZEIMAGE });
+
+      auto steam_link = *win32::CreateWindowExW<win32::button>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE | BS_COMMANDLINK, .lpszName = L"https://github.com/open-siege/siege-studio/" });
+      steam_link.bind_bn_clicked([](auto sender, auto&) {
+        std::array<wchar_t, 255> temp{};
+        ::GetWindowTextW(sender, temp.data(), temp.size());
+        ::ShellExecuteW(NULL, L"open", temp.data(), nullptr, nullptr, SW_SHOWNORMAL);
+      });
+
+      auto github_link = *win32::CreateWindowExW<win32::button>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE | BS_COMMANDLINK, .lpszName = L"https://store.steampowered.com/app/3193420/Siege_Studio/" });
+      github_link.bind_bn_clicked([](auto sender, auto&) {
+        std::array<wchar_t, 255> temp{};
+        ::GetWindowTextW(sender, temp.data(), temp.size());
+        ::ShellExecuteW(NULL, L"open", temp.data(), nullptr, nullptr, SW_SHOWNORMAL);
+      });
+
       text_stack.SetPropW(L"Orientation", ORIENTATION_PREFERENCE::ORIENTATION_PREFERENCE_PORTRAIT);
       text_stack.SetPropW(L"DefaultHeight", win32::get_system_metrics(SM_CYSIZE) * 2);
 
-      
       auto gdi_version = win32::get_gdi_plus_version();
 
       if (gdi_version)
@@ -109,9 +125,9 @@ namespace siege::views
     {
       if (type == SIZE_MAXIMIZED || type == SIZE_RESTORED)
       {
-        auto top_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy / 8 };
-        auto middle_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy / 4 };
-        auto bottom_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy - middle_size.cy - top_size.cy };
+        auto top_size = SIZE{ .cx = client_size.cx - 10, .cy = client_size.cy / 8 };
+        auto middle_size = SIZE{ .cx = client_size.cx - 10, .cy = client_size.cy / 2 };
+        auto bottom_size = SIZE{ .cx = client_size.cx - 10, .cy = client_size.cy };
 
         heading.SetWindowPos(POINT{});
         heading.SetWindowPos(top_size);
@@ -119,10 +135,10 @@ namespace siege::views
         logo.SetWindowPos(POINT{ .x = 0, .y = top_size.cy });
         logo.SetWindowPos(middle_size);
 
-        text_stack.SetWindowPos(POINT{ .x = 0, .y = middle_size.cy + top_size.cy });
+        text_stack.SetWindowPos(POINT{ .x = 5, .y = 5});
         text_stack.SetWindowPos(bottom_size);
 
-        auto min = std::min(bottom_size.cx, bottom_size.cy);
+        auto min = std::min(middle_size.cx, middle_size.cy);
         auto image_size = SIZE{ .cx = min, .cy = min };
 
         win32::gdi::bitmap target(image_size, win32::gdi::bitmap::skip_shared_handle);
