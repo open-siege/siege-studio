@@ -190,32 +190,35 @@ namespace siege::platform
     return result;
   }
 
-  inline std::string to_lower(std::string_view some_string, const std::locale& locale)
+  template<typename CharType>
+  inline std::basic_string<CharType> to_lower(std::basic_string_view<CharType> some_string, const std::locale& locale)
   {
-    std::string result(some_string);
+    std::basic_string<CharType> result(some_string);
     std::transform(result.begin(), result.end(), result.begin(), [&](auto c) { return std::tolower(c, locale); });
     return result;
   }
 
-  inline std::string to_lower(std::string_view some_string)
+  template<typename CharType>
+  inline std::basic_string<CharType> to_lower(std::basic_string_view<CharType> some_string)
   {
-    std::string result(some_string);
+    std::basic_string<CharType> result(some_string);
     std::transform(result.begin(), result.end(), result.begin(), [&](auto c) { return std::tolower(c, std::locale()); });
-    return result;
-  }
-
-  inline std::wstring to_lower(std::wstring_view some_string, const std::locale& locale)
-  {
-    std::wstring result(some_string);
-    std::transform(result.begin(), result.end(), result.begin(), [&](auto c) { return std::tolower(c, locale); });
     return result;
   }
 
   inline std::wstring to_lower(std::wstring_view some_string)
   {
-    std::wstring result(some_string);
-    std::transform(result.begin(), result.end(), result.begin(), [&](auto c) { return std::tolower(c, std::locale()); });
-    return result;
+    return to_lower<wchar_t>(some_string);
+  }
+
+  inline std::u16string to_lower(std::u16string_view some_string)
+  {
+    return to_lower<char16_t>(some_string);
+  }
+
+  inline std::string to_lower(std::string_view some_string)
+  {
+    return to_lower<char>(some_string);
   }
 
   inline bool ends_with(std::string_view value, std::string_view ending)

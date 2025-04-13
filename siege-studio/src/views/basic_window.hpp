@@ -10,27 +10,12 @@ namespace siege::views
     {
     }
 
-    virtual LRESULT default_proc(UINT message, WPARAM wparam, LPARAM lparam)
-    {
-      return DefWindowProcW(*this, message, wparam, lparam);
-    }
-
     virtual std::optional<LRESULT> window_proc(UINT message, WPARAM wparam, LPARAM lparam)
     {
       return std::nullopt;
     }
 
     virtual ~default_window() = default;
-  };
-
-  struct default_dialog : default_window
-  {
-    using default_window::default_window;
-
-    LRESULT default_proc(UINT message, WPARAM wparam, LPARAM lparam) override
-    {
-      return DefDlgProcW(*this, message, wparam, lparam);
-    }
   };
 
   template<typename TWindow>
@@ -47,7 +32,7 @@ namespace siege::views
           default_window* temp = new TWindow(self, *(CREATESTRUCTW*)lparam);
           ::SetWindowLongPtrW(self, 0, (LONG_PTR)temp);
 
-          return temp->default_proc(message, wparam, lparam);
+          return ::DefWindowProcW(self, message, wparam, lparam);
         }
         catch (...)
         {
@@ -64,7 +49,7 @@ namespace siege::views
 
       if (message == WM_NCDESTROY && *window == self)
       {
-        auto result = window->default_proc(message, wparam, lparam);
+        auto result = ::DefWindowProcW(self, message, wparam, lparam);
         delete window;
         ::SetWindowLongPtrW(self, 0, 0);
         return result;
@@ -80,7 +65,7 @@ namespace siege::views
         }
       }
 
-      return window->default_proc(message, wparam, lparam);
+      return ::DefWindowProcW(self, message, wparam, lparam);
     }
   };
 

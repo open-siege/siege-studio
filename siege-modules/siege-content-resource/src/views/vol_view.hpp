@@ -681,7 +681,7 @@ namespace siege::views
               continue;
             }
 
-            if (file_index.first->filename.u16string().find(filter_value) == std::u16string_view::npos)
+            if (siege::platform::to_lower(file_index.first->filename.u16string()).find(siege::platform::to_lower(filter_value)) == std::u16string_view::npos)
             {
               table.SetItem({
                 .mask = LVIF_GROUPID,

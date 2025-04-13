@@ -45,6 +45,7 @@ namespace siege::views
     std::uint32_t open_workspace_id = RegisterWindowMessageW(L"COMMAND_OPEN_WORKSPACE");
     std::uint32_t edit_theme_id = RegisterWindowMessageW(L"COMMAND_EDIT_THEME");
     std::uint32_t about_id = RegisterWindowMessageW(L"COMMAND_ABOUT");
+    std::uint32_t exit_id = RegisterWindowMessageW(L"COMMAND_EXIT");
 
     bool is_resizing = false;
     win32::gdi::cursor_ref resize_cursor;
@@ -283,7 +284,7 @@ namespace siege::views
       popup_menus[0].AppendMenuW(MF_OWNERDRAW, open_id, L"Open...");
       popup_menus[0].AppendMenuW(MF_OWNERDRAW, open_workspace_id, L"Open Folder as Workspace");
       popup_menus[0].AppendMenuW(MF_SEPARATOR | MF_OWNERDRAW, id++);
-      popup_menus[0].AppendMenuW(MF_OWNERDRAW, RegisterWindowMessageW(L"COMMAND_EXIT"), L"Quit");
+      popup_menus[0].AppendMenuW(MF_OWNERDRAW, exit_id, L"Quit");
       popup_menus[1].AppendMenuW(MF_OWNERDRAW, edit_theme_id, L"Preferences");
       popup_menus[2].AppendMenuW(MF_OWNERDRAW, about_id, L"About");
 
@@ -1119,6 +1120,11 @@ namespace siege::views
         win32::DialogBoxIndirectParamW<about_view>(::GetModuleHandleW(nullptr),
           win32::default_dialog{ { .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 300, .cy = 400 } },
           ref());
+      }
+
+      if (identifier == exit_id)
+      {
+        ::DestroyWindow(*this);
       }
 
       return std::nullopt;
