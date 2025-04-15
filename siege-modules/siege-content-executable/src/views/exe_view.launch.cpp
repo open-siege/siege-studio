@@ -25,12 +25,12 @@ namespace siege::views
       static BOOL CALLBACK file_callback(PVOID pContext, LPCSTR pszOrigFile, LPCSTR file, LPCSTR* ppszOutFile)
       {
         std::ofstream log("log.txt", std::ios::app);
-        
+
         if (file)
         {
           log << "Import: " << file << '\n';
         }
-        
+
         if (file && std::string_view(file) == "WSOCK32.dll")
         {
           *ppszOutFile = "wsock32-on-zerotier.dll";
@@ -43,8 +43,7 @@ namespace siege::views
         return TRUE;
       }
 
-      static BOOL CALLBACK symbol_callback(PVOID pContext, ULONG nOrigOrdinal, ULONG nOrdinal, ULONG* pnOutOrdinal, 
-                LPCSTR original_symbol, LPCSTR pszSymbol, LPCSTR* ppszOutSymbol)
+      static BOOL CALLBACK symbol_callback(PVOID pContext, ULONG nOrigOrdinal, ULONG nOrdinal, ULONG* pnOutOrdinal, LPCSTR original_symbol, LPCSTR pszSymbol, LPCSTR* ppszOutSymbol)
       {
         *ppszOutSymbol = pszSymbol;
         return TRUE;
@@ -70,7 +69,7 @@ namespace siege::views
 
 
     // TODO Set correct flags
-    HANDLE exe_file = ::CreateFileW(L"C:\\GOG Games\\Soldier of Fortune\\SoF.exe",  GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    HANDLE exe_file = ::CreateFileW(L"C:\\GOG Games\\Soldier of Fortune\\SoF.exe", GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 
     if (!exe_file)
     {
@@ -427,21 +426,91 @@ namespace siege::views
       {
         std::map<WORD, WORD> input_mapping{};
 
-        for (auto i = 0; i < controller_table.GetItemCount(); ++i)
+        auto backends = controller.get_extension().controller_input_backends;
+        auto actions = controller.get_extension().game_actions;
+        std::size_t binding_index = 0;
+        auto game_args = std::make_unique<siege::platform::game_command_line_args>();
+
+        if (backends.empty())
         {
-          auto item = controller_table.GetItem(LVITEMW{
+          for (auto i = 0; i < controller_table.GetItemCount(); ++i)
+          {
+            auto item = controller_table.GetItem(LVITEMW{
+              .mask = LVIF_PARAM,
+              .iItem = i });
+
+            if (item && item->lParam)
+            {
+              auto controller_key = LOWORD(item->lParam);
+              auto keyboard_key = HIWORD(item->lParam);
+              input_mapping[controller_key] = keyboard_key;
+            }
+          }
+        }
+        else
+        {
+          std::array<RAWINPUTDEVICELIST, 64> controllers{};
+
+          UINT size = controllers.size();
+          ::GetRawInputDeviceList(controllers.data(), &size, sizeof(RAWINPUTDEVICELIST));
+
+
+          for (auto i = 0; i < controller_table.GetItemCount(); ++i)
+          {
+            auto item = controller_table.GetItem(LVITEMW{
+              .mask = LVIF_PARAM,
+              .iItem = i });
+
+            if (item && item->lParam)
+            {
+              auto virtual_key = LOWORD(item->lParam);
+              auto action_index = HIWORD(item->lParam);
+
+              if (action_index)
+              {
+                auto& action = actions[action_index - 1];
+
+                game_args->action_bindings[binding_index++].vkey = virtual_key;
+                game_args->action_bindings[binding_index++].action_name = action.action_name;
+                game_args->action_bindings[binding_index++].hardware_index = hardware_index_for_controller_vkey(std::span<RAWINPUTDEVICELIST>(controllers.data(), size), 0, virtual_key);
+              }
+            }
+          }
+        }
+
+        binding_index = 0;
+
+        for (auto i = 0; i < keyboard_table.GetItemCount(); ++i)
+        {
+          auto item = keyboard_table.GetItem(LVITEMW{
             .mask = LVIF_PARAM,
             .iItem = i });
 
           if (item && item->lParam)
           {
-            auto controller_key = LOWORD(item->lParam);
-            auto keyboard_key = HIWORD(item->lParam);
-            input_mapping[controller_key] = keyboard_key;
+            auto virtual_key = LOWORD(item->lParam);
+            auto action_index = HIWORD(item->lParam);
+
+            auto category = category_for_vkey(virtual_key);
+
+            if (action_index)
+            {
+              auto& action = actions[action_index - 1];
+
+              if (category == L"Mouse")
+              {
+                game_args->action_bindings[binding_index].vkey = virtual_key;
+                game_args->action_bindings[binding_index++].action_name = action.action_name;
+              }
+              else
+              {
+                game_args->action_bindings[binding_index].vkey = virtual_key;
+                game_args->action_bindings[binding_index].action_name = action.action_name;
+                game_args->action_bindings[binding_index++].hardware_index = MapVirtualKeyW(virtual_key, MAPVK_VK_TO_VSC);
+              }
+            }
           }
         }
-
-        siege::platform::game_command_line_args game_args{};
 
         std::vector<std::array<std::wstring, 2>> launch_strings;
         launch_strings.reserve(launch_table.GetItemCount());
@@ -485,8 +554,8 @@ namespace siege::views
 
           launch_strings.emplace_back(std::array<std::wstring, 2>{ { std::move(name), std::move(value) } });
 
-          game_args.string_settings[i].name = launch_strings[i][0].c_str();
-          game_args.string_settings[i].value = launch_strings[i][1].c_str();
+          game_args->string_settings[i].name = launch_strings[i][0].c_str();
+          game_args->string_settings[i].value = launch_strings[i][1].c_str();
         }
 
         controller.set_game_settings(settings);

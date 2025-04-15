@@ -17,7 +17,7 @@ namespace win32
     alignas(WORD) WORD title_id = 0;
   };
 
-  template <typename TWindow>
+  template<typename TWindow>
   struct dialog_message_handler
   {
     static INT_PTR __stdcall on_message(HWND self, UINT message, WPARAM wparam, LPARAM lparam)
@@ -89,6 +89,54 @@ namespace win32
   auto CreateDialogBoxIndirectParamW(HINSTANCE instance, default_dialog dialog, win32::window_ref parent, LPARAM extra_data = 0)
   {
     return ::CreateDialogIndirectParamW(instance, &dialog, parent, dialog_message_handler<TWindow>::on_message, extra_data);
+  }
+
+  inline auto DialogBoxIndirectParamW(HINSTANCE instance, default_dialog dialog, win32::window_ref parent, std::move_only_function<std::optional<LRESULT>(win32::window_ref, UINT, WPARAM, LPARAM)> dialog_proc)
+  {
+    struct handler
+    {
+      static INT_PTR __stdcall on_message(HWND self, UINT message, WPARAM wparam, LPARAM lparam)
+      {
+        if (message == WM_INITDIALOG)
+        {
+          auto proc = (std::add_pointer_t<decltype(dialog_proc)>)lparam;
+          auto result = (*proc)(win32::window_ref(self), message, wparam, lparam);
+          ::SetWindowLongPtrW(self, DWLP_USER, (LONG_PTR)proc);
+
+          if (result)
+          {
+            return (INT_PTR)*result;
+          }
+
+          return TRUE;
+        }
+
+        auto proc = (std::add_pointer_t<decltype(dialog_proc)>)::GetWindowLongPtrW(self, DWLP_USER);
+
+        if (!proc)
+        {
+          return FALSE;
+        }
+
+        auto result = (*proc)(win32::window_ref(self), message, wparam, lparam);
+
+        if (result)
+        {
+          SetWindowLongPtrW(self, DWLP_MSGRESULT, *result);
+        }
+        
+        if (message == WM_NCDESTROY)
+        {
+          delete proc;
+          ::SetWindowLongPtrW(self, DWLP_USER, 0);
+        }
+
+        return result ? TRUE : FALSE;
+      }
+    };
+
+    auto* temp = new decltype(dialog_proc)(std::move(dialog_proc));
+    return ::DialogBoxIndirectParamW(instance, &dialog, parent, handler::on_message, (LPARAM)temp);
   }
 
 }// namespace win32

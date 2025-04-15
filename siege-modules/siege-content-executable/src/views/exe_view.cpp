@@ -92,7 +92,9 @@ namespace siege::views
                                       .pszText = const_cast<wchar_t*>(L"Key"),
                                     });
 
+    keyboard_table.SetExtendedListViewStyle(0, LVS_EX_FULLROWSELECT);
     keyboard_table.EnableGroupView(true);
+    keyboard_table.bind_nm_click(std::bind_front(&exe_view::keyboard_table_nm_click, this));
 
 
     controller_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this, .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
@@ -655,6 +657,144 @@ namespace siege::views
     }
 
     return L"Keyboard";
+  }
+
+  std::uint16_t hardware_index_for_controller_vkey(std::span<RAWINPUTDEVICELIST> controllers, std::uint32_t index, SHORT vkey)
+  {
+    std::wstring device_name(255, 0);
+
+    std::uint32_t current_index = 0;
+    std::set<std::uint32_t> xinput_devices{};
+    bool found_controller = false;
+    for (auto i = 0; i < controllers.size(); ++i)
+    {
+      if (controllers[i].dwType != RIM_TYPEHID)
+      {
+        continue;
+      }
+      RID_DEVICE_INFO info{};
+      UINT info_size = sizeof(info);
+
+      if (::GetRawInputDeviceInfoW(controllers[i].hDevice, RIDI_DEVICEINFO, &info, &info_size) != info_size)
+      {
+        continue;
+      }
+      if (!(info.hid.usUsage == HID_USAGE_GENERIC_GAMEPAD || info.hid.usUsage == HID_USAGE_GENERIC_JOYSTICK))
+      {
+        continue;
+      }
+
+      info_size = device_name.size();
+      if (::GetRawInputDeviceInfoW(controllers[i].hDevice, RIDI_DEVICENAME, device_name.data(), &info_size) != info_size)
+      {
+        continue;
+      }
+
+      device_name.resize(info_size);
+
+
+      if (device_name.rfind(L"IG_") != std::wstring_view::npos)
+      {
+        xinput_devices.insert(current_index);
+      }
+
+      if (current_index == index)
+      {
+        found_controller = true;
+        break;
+      }
+
+      current_index++;
+    }
+
+    if (found_controller && xinput_devices.contains(current_index))
+    {
+        switch (vkey)
+        {
+        case VK_GAMEPAD_A:
+          return 0;
+        case VK_GAMEPAD_B:
+          return 1;
+        case VK_GAMEPAD_X:
+          return 2;
+        case VK_GAMEPAD_Y:
+          return 3;
+        case VK_GAMEPAD_LEFT_SHOULDER:
+          return 4;
+        case VK_GAMEPAD_RIGHT_SHOULDER:
+          return 5;
+        case VK_GAMEPAD_VIEW:
+          return 6;
+        case VK_GAMEPAD_MENU:
+          return 7;
+        case VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON:
+          return 8;
+        case VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON:
+          return 9;
+        case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
+        case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT:
+          return 0;
+        case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
+        case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN:
+          return 1;
+        case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
+        case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT:
+          return 2;
+        case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
+        case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN:
+          return 3;
+        case VK_GAMEPAD_LEFT_TRIGGER:
+        case VK_GAMEPAD_RIGHT_TRIGGER:
+          return 4;
+        default:
+          return 0;
+      }
+    }
+    else if (found_controller)
+    {
+      switch (vkey)
+      {
+      case VK_GAMEPAD_X: // ps3/ps4 square
+        return 0;
+      case VK_GAMEPAD_A: // ps3/ps4 cross
+        return 1;
+      case VK_GAMEPAD_B: // ps3/ps4 circle
+        return 2;
+      case VK_GAMEPAD_Y: // ps3/ps4 triangle
+        return 3;
+      case VK_GAMEPAD_LEFT_SHOULDER:
+        return 4;
+      case VK_GAMEPAD_RIGHT_SHOULDER:
+        return 5;
+      case VK_GAMEPAD_LEFT_TRIGGER:
+        return 6;
+      case VK_GAMEPAD_RIGHT_TRIGGER:
+        return 7;
+      case VK_GAMEPAD_VIEW:
+        return 8;
+      case VK_GAMEPAD_MENU:
+        return 9;
+      case VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON:
+        return 10;
+      case VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON:
+        return 11;
+      case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
+      case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT:
+        return 0;
+      case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
+      case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN:
+        return 1;
+      case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
+      case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT:
+        return 2;
+      case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
+      case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN:
+        return 3;
+      default:
+        return 0;
+      }
+    }
+    return 0;
   }
 
   std::wstring string_for_vkey(SHORT vkey)

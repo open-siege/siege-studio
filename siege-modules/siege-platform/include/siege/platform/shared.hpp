@@ -206,6 +206,22 @@ namespace siege::platform
     return result;
   }
 
+  template<typename CharType>
+  inline std::basic_string<CharType> to_upper(std::basic_string_view<CharType> some_string, const std::locale& locale)
+  {
+    std::basic_string<CharType> result(some_string);
+    std::transform(result.begin(), result.end(), result.begin(), [&](auto c) { return std::toupper(c, locale); });
+    return result;
+  }
+
+  template<typename CharType>
+  inline std::basic_string<CharType> to_upper(std::basic_string_view<CharType> some_string)
+  {
+    std::basic_string<CharType> result(some_string);
+    std::transform(result.begin(), result.end(), result.begin(), [&](auto c) { return std::toupper(c, std::locale()); });
+    return result;
+  }
+
   inline std::wstring to_lower(std::wstring_view some_string)
   {
     return to_lower<wchar_t>(some_string);
@@ -219,6 +235,21 @@ namespace siege::platform
   inline std::string to_lower(std::string_view some_string)
   {
     return to_lower<char>(some_string);
+  }
+
+  inline std::wstring to_upper(std::wstring_view some_string)
+  {
+    return to_upper<wchar_t>(some_string);
+  }
+
+  inline std::u16string to_upper(std::u16string_view some_string)
+  {
+    return to_upper<char16_t>(some_string);
+  }
+
+  inline std::string to_upper(std::string_view some_string)
+  {
+    return to_upper<char>(some_string);
   }
 
   inline bool ends_with(std::string_view value, std::string_view ending)

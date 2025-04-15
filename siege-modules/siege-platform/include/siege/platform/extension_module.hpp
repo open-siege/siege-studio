@@ -15,20 +15,20 @@ namespace siege::platform
   {
     struct action_binding
     {
-      int virtual_key;
+      int virtual_key{};
       enum
       {
         unknown,
         button,
         axis
       } input_type;
-      int input_index;
-      std::array<char, 32> action_name;
+      int input_index{};
+      std::array<char, 32> action_name{};
     };
 
-    int controller_index;
+    int controller_index{};
     const char16_t* controller_backend = nullptr;
-    std::array<action_binding, InputSize> inputs;
+    std::array<action_binding, InputSize> inputs{};
   };
 
   using controller_binding = input_binding<32>;
@@ -105,10 +105,17 @@ namespace siege::platform
       const fs_char* name;
       const fs_char* value;
     };
+
     std::array<string_setting, 32> string_settings;
-    std::array<controller_binding, 32> controller_input_bindings;
-    std::array<controller_binding, 8> keyboard_input_bindings;
-    std::array<controller_binding, 8> mouse_input_bindings;
+
+    struct input_mapping
+    {
+      std::uint16_t vkey;
+      std::uint16_t hardware_index;
+      std::array<char, 32> action_name;
+    };
+
+    std::array<input_mapping, 256> action_bindings;
   };
   // TODO replace HRESULT with std::errc for the cross-platform functions
   using executable_is_supported = HRESULT(const siege::fs_char* filename) noexcept;
@@ -120,6 +127,8 @@ namespace siege::platform
   using get_predefined_int_command_line_settings = predefined_int*(const siege::fs_char* name) noexcept;
   using launch_game_with_extension = HRESULT(const wchar_t* exe_path_str, const game_command_line_args*, PROCESS_INFORMATION*) noexcept;
   using init_keyboard_inputs = HRESULT(keyboard_binding* binding) noexcept;
+  using init_mouse_inputs = HRESULT(mouse_binding* binding) noexcept;
+  using init_controller_inputs = HRESULT(controller_binding* binding) noexcept;
 
   // TODO Port this code to linux using a "platform::module" instead of a "win32::module"
   class game_extension_module : public win32::module
@@ -129,6 +138,8 @@ namespace siege::platform
     get_function_name_ranges* get_function_name_ranges_proc = nullptr;
     get_variable_name_ranges* get_variable_name_ranges_proc = nullptr;
     init_keyboard_inputs* init_keyboard_inputs_proc = nullptr;
+    init_mouse_inputs* init_mouse_inputs_proc = nullptr;
+    init_controller_inputs* init_controller_inputs_proc = nullptr;
 
   public:
     get_predefined_string_command_line_settings* get_predefined_string_command_line_settings_proc = nullptr;
@@ -206,6 +217,7 @@ namespace siege::platform
       get_predefined_string_command_line_settings_proc = GetProcAddress<decltype(get_predefined_string_command_line_settings_proc)>("get_predefined_string_command_line_settings");
       get_predefined_int_command_line_settings_proc = GetProcAddress<decltype(get_predefined_int_command_line_settings_proc)>("get_predefined_int_command_line_settings");
       init_keyboard_inputs_proc = GetProcAddress<decltype(init_keyboard_inputs_proc)>("init_keyboard_inputs");
+      init_mouse_inputs_proc = GetProcAddress<decltype(init_mouse_inputs_proc)>("init_mouse_inputs");
       // These functions are very Windows specific because the games being launched would all be Windows-based.
 #if WIN32
       this->launch_game_with_extension_proc = GetProcAddress<decltype(launch_game_with_extension_proc)>("launch_game_with_extension");
@@ -286,6 +298,23 @@ namespace siege::platform
       return binding;
     }
 
+    std::optional<std::unique_ptr<siege::platform::mouse_binding>> init_mouse_inputs()
+    {
+      if (!init_mouse_inputs_proc)
+      {
+        return std::nullopt;
+      }
+
+      auto binding = std::make_unique<siege::platform::mouse_binding>();
+
+      if (init_mouse_inputs_proc(binding.get()) != S_OK)
+      {
+        return std::nullopt;
+      }
+
+      return binding;
+    }
+
     std::optional<bool> executable_is_supported(std::filesystem::path exe_path)
     {
       if (executable_is_supported_proc)
@@ -296,7 +325,7 @@ namespace siege::platform
       return std::nullopt;
     }
 
-    HRESULT launch_game_with_extension(const wchar_t* exe_path_str, const game_command_line_args* game_args, PROCESS_INFORMATION* process_info) noexcept
+    HRESULT launch_game_with_extension(const wchar_t* exe_path_str, game_command_line_args* game_args, PROCESS_INFORMATION* process_info) noexcept
     {
       if (launch_game_with_extension_proc)
       {
@@ -329,7 +358,7 @@ namespace siege::platform
 
       std::string extension_path = this->GetModuleFileName<char>();
 
-      using apply_prelaunch_settings = HRESULT(const wchar_t* exe_path_str, const siege::platform::game_command_line_args* args);
+      using apply_prelaunch_settings = HRESULT(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args);
       auto* apply_prelaunch_settings_func = this->GetProcAddress<std::add_pointer_t<apply_prelaunch_settings>>("apply_prelaunch_settings");
 
       if (apply_prelaunch_settings_func)

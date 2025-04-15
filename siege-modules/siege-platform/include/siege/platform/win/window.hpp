@@ -461,7 +461,10 @@ namespace win32
   public:
     local_atom(std::wstring_view string) : value(::AddAtomW(string.data()))
     {
+    }
 
+    local_atom(std::string_view string) : value(::AddAtomA(string.data()))
+    {
     }
 
     ~local_atom()
@@ -473,6 +476,7 @@ namespace win32
     {
       return value;
     }
+
   private:
     ATOM value;
   };

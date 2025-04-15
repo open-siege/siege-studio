@@ -29,7 +29,7 @@ namespace siege
 
     std::filesystem::path exe_path;
     std::filesystem::path extension_path;
-    siege::platform::game_command_line_args args;
+    std::unique_ptr<siege::platform::game_command_line_args> args;
     std::wstring script_host;
     mode input_mode = bind_input;
     std::map<WORD, WORD> controller_key_mappings;
@@ -207,7 +207,7 @@ namespace siege
       {
         siege::platform::game_extension_module extension(injector_args.extension_path);
 
-        if (extension.launch_game_with_extension(injector_args.exe_path.c_str(), &injector_args.args, &child_process) == S_OK && child_process.hProcess)
+        if (extension.launch_game_with_extension(injector_args.exe_path.c_str(), injector_args.args.get(), &child_process) == S_OK && child_process.hProcess)
         {
           auto& state = siege::get_active_input_state();
 

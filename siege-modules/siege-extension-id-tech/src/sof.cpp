@@ -91,6 +91,67 @@ inline std::optional<WORD> key_to_vkey(std::string_view value)
   return std::nullopt;
 }
 
+inline std::optional<std::string> vkey_to_key(WORD vkey)
+{
+  auto& mapping = get_key_to_vkey_mapping();
+
+  for (auto& kv : mapping)
+  {
+    if (kv.second == vkey)
+    {
+      return siege::platform::to_upper(kv.first);
+    }
+  }
+
+  if (std::isalpha(vkey))
+  {
+    return std::string(1, (char)vkey);
+  }
+
+  return std::nullopt;
+}
+
+inline std::optional<std::string_view> vkey_to_joystick_setting(WORD vkey)
+{
+  switch (vkey)
+  {
+  case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
+  case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT: {
+    return "joy_advaxisx";
+  }
+
+  case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
+  case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN: {
+    return "joy_advaxisy";
+  }
+  case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
+  case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT: {
+    return "joy_advaxisz";
+  }
+  case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
+  case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN: {
+    return "joy_advaxisr";
+  }
+  default:
+    return std::nullopt;
+  }
+}
+
+inline bool is_vkey_for_controller(WORD vkey)
+{
+  return vkey >= VK_GAMEPAD_A && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT;
+}
+
+inline bool is_vkey_for_mouse(WORD vkey)
+{
+  return vkey == VK_LBUTTON || vkey == VK_RBUTTON || vkey == VK_MBUTTON || vkey == VK_XBUTTON1 || vkey == VK_XBUTTON2;
+}
+
+inline bool is_vkey_for_keyboard(WORD vkey)
+{
+  return !is_vkey_for_mouse(vkey) && !is_vkey_for_controller(vkey);
+}
+
 extern "C" {
 using game_action = siege::platform::game_action;
 using keyboard_binding = siege::platform::keyboard_binding;
@@ -126,34 +187,43 @@ extern auto command_line_caps = game_command_line_caps{
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
-  game_action{ game_action::analog, "forward", u"Move Forward", u"Movement" },
-  game_action{ game_action::analog, "back", u"Move Backward", u"Movement" },
-  game_action{ game_action::analog, "moveleft", u"Strafe Left", u"Movement" },
-  game_action{ game_action::analog, "moveright", u"Strafe Right", u"Movement" },
-  game_action{ game_action::analog, "moveup", u"Jump", u"Movement" },
-  game_action{ game_action::analog, "movedown", u"Crouch", u"Movement" },
-  game_action{ game_action::digital, "speed", u"Run", u"Movement" },
-  game_action{ game_action::analog, "left", u"Turn Left", u"Aiming" },
-  game_action{ game_action::analog, "right", u"Turn Right", u"Aiming" },
-  game_action{ game_action::analog, "lookup", u"Look Up", u"Aiming" },
-  game_action{ game_action::analog, "lookdown", u"Look Down", u"Aiming" },
-  game_action{ game_action::digital, "attack", u"Attack", u"Combat" },
-  game_action{ game_action::digital, "altattack", u"Alt Attack", u"Combat" },
-  game_action{ game_action::digital, "melee-attack", u"Melee Attack", u"Combat" },
-  game_action{ game_action::digital, "use-plus-speciau", u"Special Action", u"Combat" },
+  game_action{ game_action::analog, "+forward", u"Move Forward", u"Movement" },
+  game_action{ game_action::analog, "+back", u"Move Backward", u"Movement" },
+  game_action{ game_action::analog, "+moveleft", u"Strafe Left", u"Movement" },
+  game_action{ game_action::analog, "+moveright", u"Strafe Right", u"Movement" },
+  game_action{ game_action::analog, "+moveup", u"Jump", u"Movement" },
+  game_action{ game_action::analog, "+movedown", u"Crouch", u"Movement" },
+  game_action{ game_action::digital, "+speed", u"Run", u"Movement" },
+  game_action{ game_action::analog, "+left", u"Turn Left", u"Aiming" },
+  game_action{ game_action::analog, "+right", u"Turn Right", u"Aiming" },
+  game_action{ game_action::analog, "+lookup", u"Look Up", u"Aiming" },
+  game_action{ game_action::analog, "+lookdown", u"Look Down", u"Aiming" },
+  game_action{ game_action::digital, "+attack", u"Attack", u"Combat" },
+  game_action{ game_action::digital, "+altattack", u"Alt Attack", u"Combat" },
+  game_action{ game_action::digital, "+melee-attack", u"Melee Attack", u"Combat" },
+  game_action{ game_action::digital, "+use-plus-special", u"Special Action", u"Combat" },
   game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
   game_action{ game_action::digital, "weaprev", u"Previous Weapon", u"Combat" },
   game_action{ game_action::digital, "itemnext", u"Next Item", u"Combat" },
   game_action{ game_action::digital, "itemuse", u"Use Item", u"Combat" },
   game_action{ game_action::digital, "score", u"Score", u"Interface" },
-  game_action{ game_action::digital, "menu-objectives", u"Objectives", u"Interface" },
-  game_action{ game_action::digital, "klook", u"Keyboard Look", u"Misc" },
-  game_action{ game_action::digital, "mlook", u"Mouse Look", u"Misc" },
+  game_action{ game_action::digital, "menu objectives", u"Objectives", u"Interface" },
+  game_action{ game_action::digital, "+klook", u"Keyboard Look", u"Misc" },
+  game_action{ game_action::digital, "+mlook", u"Mouse Look", u"Misc" },
 } };
 
+constexpr static auto sof_aliases = std::array<std::array<std::string_view, 2>, 8>{ { { "+melee-attack", "weaponselect 1; +attack" },
+  { "-melee-attack", "weaponbestsafe; -attack" },
+  { "+use-plus-special1", "+weaponextra1; +use" },
+  { "-use-plus-special1", "-weaponextra1; -use; alias +use-plus-special +use-plus-special2; alias -use-plus-special -use-plus-special2" },
+  { "+use-plus-special2", "+weaponextra2; +use" },
+  { "-use-plus-special2", "-weaponextra2; -use; alias +use-plus-special +use-plus-special1; alias -use-plus-special -use-plus-special1" },
+  { "+use-plus-special", "+use-plus-special1" },
+  { "-use-plus-special", "-use-plus-special1" } } };
+
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
-extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
+extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"dinput" } };
+extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"dinput" } };
 extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
 extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"base/pak0.pak/default.cfg", L"base/default.cfg" } };
 extern auto autoexec_configuration_paths = std::array<const wchar_t*, 2>{ { L"base/user/autoexec.cfg" } };
@@ -197,6 +267,169 @@ HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
 
+HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
+{
+  if (exe_path_str == nullptr)
+  {
+    return E_POINTER;
+  }
+
+  if (args == nullptr)
+  {
+    return E_POINTER;
+  }
+
+  std::ofstream custom_bindings("user/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
+
+  siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
+
+  for (auto& alias : sof_aliases)
+  {
+    config.emplace(siege::configuration::key_type({ "alias", alias[0] }), siege::configuration::key_type(alias[1]));
+  }
+
+  std::set<std::string> storage;
+
+  for (auto& binding : args->action_bindings)
+  {
+    if (is_vkey_for_controller(binding.vkey))
+    {
+      auto setting = vkey_to_joystick_setting(binding.vkey);
+
+      if (setting)
+      {
+        auto iter = storage.emplace(std::to_string(binding.hardware_index));
+
+        config.emplace(siege::configuration::key_type({ "set", *setting }), siege::configuration::key_type(*iter.first));
+      }
+    }
+    else
+    {
+      auto game_key = vkey_to_key(binding.vkey);
+
+      if (game_key)
+      {
+        auto iter = storage.emplace(*game_key);
+
+        *binding.action_name.rbegin() = '\0';
+
+        auto iter2 = storage.emplace(binding.action_name.data());
+
+        config.emplace(siege::configuration::key_type({ "bind", *iter.first }), siege::configuration::key_type(*iter2.first));
+      }
+    }
+  }
+  config.save(custom_bindings);
+
+  auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
+
+  if (iter != args->string_settings.end())
+  {
+    iter->name = L"exec";
+    iter->value = L"siege_studio_inputs.cfg";
+  }
+
+  std::advance(iter, 1);
+  iter->name = L"console";
+  iter->value = L"1";
+
+  return S_OK;
+}
+
+HRESULT init_mouse_inputs(mouse_binding* binding)
+{
+  if (binding == nullptr)
+  {
+    return E_POINTER;
+  }
+
+  std::error_code last_error;
+
+  if (fs::exists("base\\configs\\DEFAULT_KEYS.cfg", last_error))
+  {
+    std::ifstream stream("base\\configs\\DEFAULT_KEYS.cfg", std::ios::binary);
+    auto size = fs::file_size("base\\configs\\DEFAULT_KEYS.cfg", last_error);
+    auto config = siege::configuration::id_tech::id_tech_2::load_config(stream, size);
+
+    if (config)
+    {
+      std::string temp;
+      int index = 0;
+      for (auto& item : config->keys())
+      {
+        if (item.at(0) == "bind")
+        {
+          auto vkey = key_to_vkey(item.at(1));
+
+          if (!vkey)
+          {
+            continue;
+          }
+
+          if (!(item.at(1).starts_with("mouse") || item.at(1).starts_with("MOUSE")))
+          {
+            continue;
+          }
+
+          auto entry = config->find(item);
+          if (entry.at(0).empty())
+          {
+            continue;
+          }
+          temp = entry.at(0);
+
+          if (temp.size() - 1 > binding->inputs[index].action_name.size())
+          {
+            temp.resize(binding->inputs[index].action_name.size() - 1);
+          }
+
+          temp = siege::platform::to_lower(temp);
+
+          std::memcpy(binding->inputs[index].action_name.data(), temp.data(), temp.size());
+          binding->inputs[index].virtual_key = *vkey;
+          binding->inputs[index].input_type = mouse_binding::action_binding::button;
+          index++;
+
+          if (index > binding->inputs.size())
+          {
+            break;
+          }
+        }
+      }
+
+      auto first_available = std::find_if(binding->inputs.begin(), binding->inputs.end(), [](auto& input) { return input.action_name[0] == '\0'; });
+
+      if (first_available != binding->inputs.end())
+      {
+        // TODO make this safer
+        // TODO make this also update existing values
+        auto action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+altattack"; });
+        std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
+        first_available->input_type = mouse_binding::action_binding::button;
+        first_available->virtual_key = VK_RBUTTON;
+
+        std::advance(first_available, 1);
+
+        action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+use-plus-special"; });
+        std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
+        first_available->input_type = mouse_binding::action_binding::button;
+        first_available->virtual_key = VK_MBUTTON;
+      }
+    }
+  }
+  else if (fs::exists("base\\pak0.pak", last_error))
+  {
+    std::any cache;
+    siege::resource::pak::pak_resource_reader reader;
+
+    std::ifstream stream("base//pak0.pak", std::ios::binary);
+    auto contents = reader.get_content_listing(cache, stream, { .archive_path = "base//pak0.pak", .folder_path = "base//pak0.pak" });
+  }
+
+
+  return S_OK;
+}
+
 HRESULT init_keyboard_inputs(keyboard_binding* binding)
 {
   if (binding == nullptr)
@@ -227,17 +460,17 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
             continue;
           }
 
+          if (item.at(1).starts_with("mouse") || item.at(1).starts_with("MOUSE"))
+          {
+            continue;
+          }
+
           auto entry = config->find(item);
           if (entry.at(0).empty())
           {
             continue;
           }
           temp = entry.at(0);
-
-          if (!temp.empty() && temp[0] == '+')
-          {
-            temp.erase(temp.begin());
-          }
 
           if (temp.size() - 1 > binding->inputs[index].action_name.size())
           {
@@ -254,6 +487,42 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
             break;
           }
         }
+      }
+
+      auto first_available = std::find_if(binding->inputs.begin(), binding->inputs.end(), [](auto& input) { return input.action_name[0] == '\0'; });
+
+      if (first_available != binding->inputs.end())
+      {
+        // TODO make this safer
+        // TODO make this also update existing values
+        auto action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+melee-attack"; });
+        std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
+        first_available->input_type = keyboard_binding::action_binding::button;
+        first_available->virtual_key = 'F';
+
+        std::advance(first_available, 1);
+        action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+use-plus-special"; });
+        std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
+        first_available->input_type = keyboard_binding::action_binding::button;
+        first_available->virtual_key = VK_RETURN;
+
+        std::advance(first_available, 1);
+        action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "itemuse"; });
+        std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
+        first_available->input_type = keyboard_binding::action_binding::button;
+        first_available->virtual_key = 'G';
+
+        std::advance(first_available, 1);
+        action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+moveup"; });
+        std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
+        first_available->input_type = keyboard_binding::action_binding::button;
+        first_available->virtual_key = VK_SPACE;
+
+        std::advance(first_available, 1);
+        action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+movedown"; });
+        std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
+        first_available->input_type = keyboard_binding::action_binding::button;
+        first_available->virtual_key = VK_LCONTROL;
       }
     }
   }

@@ -17,3 +17,5 @@ EXPORTS
 	get_predefined_int_command_line_settings
 	format_command_line
 	init_keyboard_inputs
+	init_mouse_inputs
+	apply_prelaunch_settings PRIVATE
