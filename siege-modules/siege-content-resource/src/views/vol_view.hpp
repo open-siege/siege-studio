@@ -317,7 +317,7 @@ namespace siege::views
 
                 item.iGroupId = categories_to_groups[category->second];
                 item.sub_items = {
-                  std::filesystem::relative(file->archive_path, file->folder_path).wstring(),
+                  std::filesystem::relative(file->folder_path, file->archive_path).wstring(),
                   std::to_wstring(file->size)
                 };
 

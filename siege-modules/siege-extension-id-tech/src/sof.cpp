@@ -106,7 +106,23 @@ extern auto command_line_caps = game_command_line_caps{
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
   .int_settings = { { L"gl_mode" } },
+  // fov
   .string_settings = { { L"name", L"connect", L"map", L"gl_driver" } }
+  // skin
+  // teamname
+  // bestweap
+  // welcome_mess
+  // joy_name
+  // set adr0 "" to adr19
+  //
+  //
+  // bool settings
+  // s_musicenabled
+  // s_nosound
+
+  // float settings
+  // s_musicvolume
+  // s_volume
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
@@ -217,9 +233,26 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
             continue;
           }
           temp = entry.at(0);
+
+          if (!temp.empty() && temp[0] == '+')
+          {
+            temp.erase(temp.begin());
+          }
+
+          if (temp.size() - 1 > binding->inputs[index].action_name.size())
+          {
+            temp.resize(binding->inputs[index].action_name.size() - 1);
+          }
+
           std::memcpy(binding->inputs[index].action_name.data(), temp.data(), temp.size());
           binding->inputs[index].virtual_key = *vkey;
           binding->inputs[index].input_type = keyboard_binding::action_binding::button;
+          index++;
+
+          if (index > binding->inputs.size())
+          {
+            break;
+          }
         }
       }
     }

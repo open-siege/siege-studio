@@ -269,6 +269,23 @@ namespace siege::platform
       return results;
     }
 
+    std::optional<std::unique_ptr<siege::platform::keyboard_binding>> init_keyboard_inputs()
+    {
+      if (!init_keyboard_inputs_proc)
+      {
+        return std::nullopt;
+      }
+
+      auto binding = std::make_unique<siege::platform::keyboard_binding>();
+
+      if (init_keyboard_inputs_proc(binding.get()) != S_OK)
+      {
+        return std::nullopt;
+      }
+
+      return binding;
+    }
+
     std::optional<bool> executable_is_supported(std::filesystem::path exe_path)
     {
       if (executable_is_supported_proc)

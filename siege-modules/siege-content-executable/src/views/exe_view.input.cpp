@@ -190,6 +190,8 @@ namespace siege::views
       return;
     }
 
+    auto bindings = controller.get_extension().init_keyboard_inputs();
+
     std::set<std::u16string_view> grouping = {};
     std::map<std::u16string_view, int> ids_for_grouping = {};
 
@@ -210,15 +212,39 @@ namespace siege::views
       }
     }
 
-    for (auto& action : actions)
+    struct context
     {
-      win32::list_view_item up((wchar_t*)action.action_display_name.data());
+      siege::platform::keyboard_binding::action_binding binding;
+      siege::platform::game_action action;
+    };
+
+    std::vector<context> action_settings;
+    action_settings.reserve((*bindings)->inputs.size());
+
+    for (auto& binding : (*bindings)->inputs)
+    {
+      if (binding.input_type == binding.unknown)
+      {
+        break;
+      }
+      auto action_iter = std::find_if(actions.begin(), actions.end(), [&](auto& action) { return action.action_name == binding.action_name; });
+
+      if (action_iter != actions.end())
+      {
+        action_settings.emplace_back(context{ binding, *action_iter });
+      }
+    }
+
+    for (auto& context : action_settings)
+    {
+      win32::list_view_item up((wchar_t*)context.action.action_display_name.data());
       up.mask = up.mask | LVIF_GROUPID;
-      up.iGroupId = ids_for_grouping[action.group_display_name.data()];
+      up.iGroupId = ids_for_grouping[context.action.group_display_name.data()];
       // up.lParam = MAKELPARAM(mapping.first, mapping.second);
 
       //        up.sub_items.emplace_back(category_for_vkey(mapping.second));
-      up.sub_items.emplace_back(L"A");
+
+      up.sub_items.emplace_back(string_for_vkey(context.binding.virtual_key));
       keyboard_table.InsertRow(up);
     }
   }
