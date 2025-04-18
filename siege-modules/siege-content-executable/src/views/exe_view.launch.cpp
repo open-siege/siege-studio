@@ -470,15 +470,14 @@ namespace siege::views
               {
                 auto& action = actions[action_index - 1];
 
-                game_args->action_bindings[binding_index++].vkey = virtual_key;
-                game_args->action_bindings[binding_index++].action_name = action.action_name;
+                game_args->action_bindings[binding_index].vkey = virtual_key;
+                game_args->action_bindings[binding_index].action_name = action.action_name;
+                game_args->action_bindings[binding_index].context = game_args->action_bindings[binding_index].controller;
                 game_args->action_bindings[binding_index++].hardware_index = hardware_index_for_controller_vkey(std::span<RAWINPUTDEVICELIST>(controllers.data(), size), 0, virtual_key);
               }
             }
           }
         }
-
-        binding_index = 0;
 
         for (auto i = 0; i < keyboard_table.GetItemCount(); ++i)
         {
@@ -491,6 +490,7 @@ namespace siege::views
             auto virtual_key = LOWORD(item->lParam);
             auto action_index = HIWORD(item->lParam);
 
+            // TODO store the context in LPARAM
             auto category = category_for_vkey(virtual_key);
 
             if (action_index)
@@ -500,13 +500,20 @@ namespace siege::views
               if (category == L"Mouse")
               {
                 game_args->action_bindings[binding_index].vkey = virtual_key;
-                game_args->action_bindings[binding_index++].action_name = action.action_name;
+                game_args->action_bindings[binding_index].action_name = action.action_name;
+                game_args->action_bindings[binding_index++].context = game_args->action_bindings[binding_index].mouse;
+
+                // TODO add logic for the mouse and mouse wheel context as they will make use of VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT for input mapping
               }
               else
               {
                 game_args->action_bindings[binding_index].vkey = virtual_key;
                 game_args->action_bindings[binding_index].action_name = action.action_name;
-                game_args->action_bindings[binding_index++].hardware_index = MapVirtualKeyW(virtual_key, MAPVK_VK_TO_VSC);
+
+                // TODO add logic for the keypad context, specifically for VK_RETURN and other keys in that space
+                // especially because it affects the hardware index or how a game extension maps the virtual key to its own virtual key mechanism
+                game_args->action_bindings[binding_index].hardware_index = MapVirtualKeyW(virtual_key, MAPVK_VK_TO_VSC);
+                game_args->action_bindings[binding_index++].context = game_args->action_bindings[binding_index].keyboard;
               }
             }
           }

@@ -10,19 +10,20 @@
 
 namespace siege::platform
 {
-  template<size_t InputSize>
+  template<size_t InputSize, typename Context>
   struct input_binding
   {
     struct action_binding
     {
-      int virtual_key{};
+      std::uint16_t virtual_key{};
       enum
       {
         unknown,
         button,
         axis
       } input_type;
-      int input_index{};
+      std::uint16_t input_index{};
+      Context context;
       std::array<char, 32> action_name{};
     };
 
@@ -31,9 +32,30 @@ namespace siege::platform
     std::array<action_binding, InputSize> inputs{};
   };
 
-  using controller_binding = input_binding<32>;
-  using mouse_binding = input_binding<16>;
-  using keyboard_binding = input_binding<128>;
+
+  enum struct keyboard_context : std::uint16_t
+  {
+    keyboard = 1,
+    keypad
+  };
+  using keyboard_binding = input_binding<128, keyboard_context>;
+
+  enum struct mouse_context : std::uint16_t
+  {
+    mouse = 3,
+    mouse_wheel
+  };
+
+  using mouse_binding = input_binding<16, mouse_context>;
+
+  enum struct controller_context : std::uint16_t
+  {
+    controller = 4,
+    joystick,
+    throttle
+  };
+  using controller_binding = input_binding<32, controller_context>;
+
 
   struct game_action
   {
@@ -112,6 +134,17 @@ namespace siege::platform
     {
       std::uint16_t vkey;
       std::uint16_t hardware_index;
+      enum hardware_context : std::uint16_t
+      {
+        global,
+        keyboard = static_cast<std::uint16_t>(keyboard_context::keyboard),
+        keypad,
+        mouse = static_cast<std::uint16_t>(mouse_context::mouse),
+        mouse_wheel,
+        controller = static_cast<std::uint16_t>(controller_context::controller),
+        joystick,
+        throttle
+      } context = global;
       std::array<char, 32> action_name;
     };
 
@@ -218,6 +251,7 @@ namespace siege::platform
       get_predefined_int_command_line_settings_proc = GetProcAddress<decltype(get_predefined_int_command_line_settings_proc)>("get_predefined_int_command_line_settings");
       init_keyboard_inputs_proc = GetProcAddress<decltype(init_keyboard_inputs_proc)>("init_keyboard_inputs");
       init_mouse_inputs_proc = GetProcAddress<decltype(init_mouse_inputs_proc)>("init_mouse_inputs");
+      init_controller_inputs_proc = GetProcAddress<decltype(init_controller_inputs_proc)>("init_controller_inputs");
       // These functions are very Windows specific because the games being launched would all be Windows-based.
 #if WIN32
       this->launch_game_with_extension_proc = GetProcAddress<decltype(launch_game_with_extension_proc)>("launch_game_with_extension");
@@ -279,6 +313,23 @@ namespace siege::platform
         }
       }
       return results;
+    }
+
+    std::optional<std::unique_ptr<siege::platform::controller_binding>> init_controller_inputs()
+    {
+      if (!init_controller_inputs_proc)
+      {
+        return std::nullopt;
+      }
+
+      auto binding = std::make_unique<siege::platform::controller_binding>();
+
+      if (init_controller_inputs_proc(binding.get()) != S_OK)
+      {
+        return std::nullopt;
+      }
+
+      return binding;
     }
 
     std::optional<std::unique_ptr<siege::platform::keyboard_binding>> init_keyboard_inputs()

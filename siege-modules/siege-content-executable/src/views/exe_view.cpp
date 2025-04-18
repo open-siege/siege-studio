@@ -395,6 +395,8 @@ namespace siege::views
       win32::segoe_fluent_icons::caret_solid_down,
       win32::segoe_fluent_icons::caret_solid_left,
       win32::segoe_fluent_icons::caret_solid_right,
+      win32::segoe_fluent_icons::button_view,
+      win32::segoe_fluent_icons::button_menu
     };
     controller_table_icons = win32::create_icon_list(controller_icons, icon_size);
   }
@@ -661,7 +663,7 @@ namespace siege::views
 
   std::uint16_t hardware_index_for_controller_vkey(std::span<RAWINPUTDEVICELIST> controllers, std::uint32_t index, SHORT vkey)
   {
-    std::wstring device_name(255, 0);
+    std::wstring device_name(1024, 0);
 
     std::uint32_t current_index = 0;
     std::set<std::uint32_t> xinput_devices{};
@@ -685,13 +687,14 @@ namespace siege::views
       }
 
       info_size = device_name.size();
-      if (::GetRawInputDeviceInfoW(controllers[i].hDevice, RIDI_DEVICENAME, device_name.data(), &info_size) != info_size)
+      if (auto real_size = ::GetRawInputDeviceInfoW(controllers[i].hDevice, RIDI_DEVICENAME, device_name.data(), &info_size); real_size <= 0)
       {
         continue;
       }
-
-      device_name.resize(info_size);
-
+      else
+      {
+        device_name.resize(real_size);
+      }
 
       if (device_name.rfind(L"IG_") != std::wstring_view::npos)
       {

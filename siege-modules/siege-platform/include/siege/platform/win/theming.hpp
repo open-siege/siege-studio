@@ -80,7 +80,9 @@ namespace win32
     bumper_left = 0xF10C,
     bumper_right = 0xF10D,
     shield = 0xEA18,
-    check_mark = 0xe73e
+    check_mark = 0xe73e,
+    button_menu = 0xede3,
+    button_view = 0xeeca
   };
 
   win32::image_list create_icon_list(std::span<segoe_fluent_icons> icons, SIZE icon_size, std::optional<::RGBQUAD> optional_color = std::nullopt);

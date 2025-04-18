@@ -11,6 +11,34 @@ namespace siege::views
 {
   void exe_view::populate_controller_table(std::span<siege::platform::game_action> actions, std::span<const wchar_t*> controller_input_backends)
   {
+    std::map<WORD, int> images = {
+      { VK_GAMEPAD_A, 0 },
+      { VK_GAMEPAD_B, 1 },
+      { VK_GAMEPAD_X, 2 },
+      { VK_GAMEPAD_Y, 3 },
+      { VK_GAMEPAD_LEFT_SHOULDER, 4 },
+      { VK_GAMEPAD_RIGHT_SHOULDER, 5 },
+      { VK_GAMEPAD_LEFT_TRIGGER, 6 },
+      { VK_GAMEPAD_RIGHT_TRIGGER, 7 },
+      { VK_GAMEPAD_DPAD_UP, 9 },
+      { VK_GAMEPAD_DPAD_DOWN, 10 },
+      { VK_GAMEPAD_DPAD_LEFT, 11 },
+      { VK_GAMEPAD_DPAD_RIGHT, 12 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, 13 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, 14 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_UP, 15 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, 16 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, 17 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, 18 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_UP, 15 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, 16 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, 17 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, 18 },
+      { VK_GAMEPAD_VIEW, 19 },
+      { VK_GAMEPAD_MENU, 20 },
+    };
+
+
     if (controller_input_backends.empty())
     {
       int id = 1;
@@ -74,31 +102,6 @@ namespace siege::views
         { VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, WM_MOUSEMOVE + 3 },
       };
 
-      std::map<WORD, int> images = {
-        { VK_GAMEPAD_A, 0 },
-        { VK_GAMEPAD_B, 1 },
-        { VK_GAMEPAD_X, 2 },
-        { VK_GAMEPAD_Y, 3 },
-        { VK_GAMEPAD_LEFT_SHOULDER, 4 },
-        { VK_GAMEPAD_RIGHT_SHOULDER, 5 },
-        { VK_GAMEPAD_LEFT_TRIGGER, 6 },
-        { VK_GAMEPAD_RIGHT_TRIGGER, 7 },
-        { VK_GAMEPAD_DPAD_UP, 9 },
-        { VK_GAMEPAD_DPAD_DOWN, 10 },
-        { VK_GAMEPAD_DPAD_LEFT, 11 },
-        { VK_GAMEPAD_DPAD_RIGHT, 12 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, 13 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, 14 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_UP, 15 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, 16 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, 17 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, 18 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_UP, 15 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, 16 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, 17 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, 18 },
-      };
-
       std::map<WORD, int> grouping = {
         { VK_GAMEPAD_DPAD_UP, 1 },
         { VK_GAMEPAD_DPAD_DOWN, 1 },
@@ -141,6 +144,8 @@ namespace siege::views
       std::set<std::u16string_view> grouping = {};
       std::map<std::u16string_view, int> ids_for_grouping = {};
 
+      auto bindings = controller.get_extension().init_controller_inputs();
+
       int id = 1;
       for (auto& action : actions)
       {
@@ -157,15 +162,37 @@ namespace siege::views
         }
       }
 
-      for (auto& action : actions)
+      struct context
       {
-        win32::list_view_item up((wchar_t*)action.action_display_name.data());
-        up.mask = up.mask | LVIF_GROUPID;
-        up.iGroupId = ids_for_grouping[action.group_display_name.data()];
-        // up.lParam = MAKELPARAM(mapping.first, mapping.second);
+        siege::platform::controller_binding::action_binding binding;
+        siege::platform::game_action action;
+        WORD action_index;
+      };
 
-        //        up.sub_items.emplace_back(category_for_vkey(mapping.second));
-        up.sub_items.emplace_back((wchar_t*)action.group_display_name.data());
+      std::vector<context> action_settings;
+      action_settings.reserve((*bindings)->inputs.size());
+
+      for (auto& binding : (*bindings)->inputs)
+      {
+        if (binding.input_type == binding.unknown)
+        {
+          break;
+        }
+        auto action_iter = std::find_if(actions.begin(), actions.end(), [&](auto& action) { return action.action_name == binding.action_name; });
+
+        if (action_iter != actions.end())
+        {
+          action_settings.emplace_back(context{ binding, *action_iter, (WORD)(std::distance(actions.begin(), action_iter) + 1) });
+        }
+      }
+
+      for (auto& context : action_settings)
+      {
+        win32::list_view_item up((wchar_t*)context.action.action_display_name.data(), images[context.binding.virtual_key]);
+        up.mask = up.mask | LVIF_GROUPID | LVIF_PARAM;
+        up.iGroupId = ids_for_grouping[context.action.group_display_name.data()];
+        up.lParam = MAKELPARAM(context.binding.virtual_key, context.action_index);
+        up.sub_items.emplace_back((wchar_t*)context.action.group_display_name.data());
         controller_table.InsertRow(up);
       }
     }
