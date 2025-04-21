@@ -30,9 +30,9 @@ namespace siege::platform::bitmap
     return frames;
   }
 
-  std::vector<win32::wic::bitmap_source> load(std::span<std::byte> bytes)
+  std::vector<win32::wic::bitmap_source> load(std::span<std::byte> bytes, bool deep_copy)
   {
-    win32::wic::bitmap_decoder decoder(bytes);
+    win32::wic::bitmap_decoder decoder(bytes, deep_copy);
     return load(decoder);
   }
 
@@ -105,13 +105,13 @@ namespace siege::platform::bitmap
     frames = load(std::move(filename));
   }
 
-  platform_image::platform_image(std::istream& image_stream)
+  platform_image::platform_image(std::istream& image_stream, bool deep_copy)
   {
     if (std::spanstream* span_stream = dynamic_cast<std::spanstream*>(&image_stream); span_stream != nullptr)
     {
       auto span = span_stream->rdbuf()->span();
 
-      frames = load(std::span<std::byte>((std::byte*)span.data(), span.size()));
+      frames = load(std::span<std::byte>((std::byte*)span.data(), span.size()), deep_copy);
       return;
     }
 
@@ -131,7 +131,7 @@ namespace siege::platform::bitmap
     image_stream.read((char*)data.data(), size);
     image_stream.seekg(pos, std::ios::beg);
 
-    frames = load(data);
+    frames = load(data, deep_copy);
   }
 
   size platform_image::get_size(std::size_t frame) const noexcept

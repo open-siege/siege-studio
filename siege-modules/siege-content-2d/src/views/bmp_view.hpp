@@ -57,7 +57,7 @@ namespace siege::views
     win32::static_control static_image;
     std::list<platform::storage_module> loaded_modules;
 
-    win32::local_atom pbmp_id = win32::local_atom(L".pbm");
+//    win32::local_atom pbmp_id = win32::local_atom(L".pbm");
     win32::local_atom bmp_id = win32::local_atom(L".bmp");
     win32::local_atom jpg_id = win32::local_atom(L".jpg");
     win32::local_atom png_id = win32::local_atom(L".png");
@@ -65,10 +65,10 @@ namespace siege::views
     win32::local_atom tiff_id = win32::local_atom(L".tif");
     win32::local_atom dds_id = win32::local_atom(L".dds");
 
-    win32::local_atom single_pba_id = win32::local_atom(L"single.pba");
+//    win32::local_atom single_pba_id = win32::local_atom(L"single.pba");
     win32::local_atom single_gif_id = win32::local_atom(L"single.gif");
     win32::local_atom single_tiff_id = win32::local_atom(L"single.tif");
-    win32::local_atom multiple_pbmp_id = win32::local_atom(L"multiple.pbm");
+//    win32::local_atom multiple_pbmp_id = win32::local_atom(L"multiple.pbm");
     win32::local_atom multiple_gif_id = win32::local_atom(L"multiple.pba");
     win32::local_atom multiple_tiff_id = win32::local_atom(L"multiple.tif");
     win32::local_atom multiple_jpg_id = win32::local_atom(L"multiple.jpg");
@@ -196,7 +196,7 @@ namespace siege::views
       image_export_menu.AppendMenuW(MF_OWNERDRAW | MF_POPUP, (UINT_PTR)export_single_menu.get(), L"Export Current Frame");
       image_export_menu.AppendMenuW(MF_OWNERDRAW | MF_POPUP | MF_DISABLED, (UINT_PTR)export_multiple_menu.get(), L"Export All Frames");
 
-      export_single_menu.AppendMenuW(MF_OWNERDRAW, pbmp_id, L"Export As Phoenix BMP/PBM");
+//      export_single_menu.AppendMenuW(MF_OWNERDRAW, pbmp_id, L"Export As Phoenix BMP/PBM");
       export_single_menu.AppendMenuW(MF_OWNERDRAW, bmp_id, L"Export As Microsoft BMP");
       export_single_menu.AppendMenuW(MF_OWNERDRAW, png_id, L"Export As PNG");
       export_single_menu.AppendMenuW(MF_OWNERDRAW, jpg_id, L"Export As JPG");
@@ -204,10 +204,10 @@ namespace siege::views
       export_single_menu.AppendMenuW(MF_OWNERDRAW, tiff_id, L"Export As TIFF");
       export_single_menu.AppendMenuW(MF_OWNERDRAW, dds_id, L"Export As DDS");
 
-      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, single_pba_id, L"Export As Single Phoenix BMP Array (PBA)");
+//      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, single_pba_id, L"Export As Single Phoenix BMP Array (PBA)");
       export_multiple_menu.AppendMenuW(MF_OWNERDRAW, single_gif_id, L"Export As Single GIF");
       export_multiple_menu.AppendMenuW(MF_OWNERDRAW, single_tiff_id, L"Export As Single TIFF");
-      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_pbmp_id, L"Export As Multiple Phoenix BMPs");
+//      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_pbmp_id, L"Export As Multiple Phoenix BMPs");
       export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_gif_id, L"Export As Multiple GIFs");
       export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_tiff_id, L"Export As Multiple TIFFs");
       export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_bmp_id, L"Export As Multiple Microsoft BMPs");
@@ -693,6 +693,8 @@ namespace siege::views
             {
               current_frame
                 ->clip(viewport)
+                .convert(win32::wic::bitmap_source::to_format{
+                  .format = win32::wic::pixel_format::bgr_32bpp })
                 .scale((std::uint32_t)preview_size.cx, (std::uint32_t)preview_size.cy, WICBitmapInterpolationModeFant)
                 .copy_pixels(preview_size.cx * sizeof(std::uint32_t), preview_bitmap.get_pixels_as_bytes());
             }

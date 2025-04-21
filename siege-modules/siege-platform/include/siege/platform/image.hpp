@@ -53,7 +53,7 @@ namespace siege::platform::bitmap
     explicit platform_image(std::span<platform::bitmap::windows_bmp_data>);
     explicit platform_image(platform::bitmap::windows_bmp_data);
     explicit platform_image(std::filesystem::path);
-    explicit platform_image(std::istream&);
+    explicit platform_image(std::istream&, bool deep_copy = false);
 
     std::size_t frame_count() const noexcept;
     size get_size(std::size_t frame) const noexcept;

@@ -146,6 +146,11 @@ namespace siege::views
 
       auto bindings = controller.get_extension().init_controller_inputs();
 
+      if (!bindings)
+      {
+        return;
+      }
+
       int id = 1;
       for (auto& action : actions)
       {
@@ -235,36 +240,49 @@ namespace siege::views
       WORD action_index;
     };
 
+    if (!(kb_bindings || ms_bindings))
+    {
+      return;
+    }
+
     std::vector<context> action_settings;
-    action_settings.reserve((*kb_bindings)->inputs.size());
 
-    for (auto& binding : (*kb_bindings)->inputs)
+    if (kb_bindings)
     {
-      if (binding.input_type == binding.unknown)
-      {
-        break;
-      }
-      auto action_iter = std::find_if(actions.begin(), actions.end(), [&](auto& action) { return action.action_name == binding.action_name; });
+      action_settings.reserve((*kb_bindings)->inputs.size());
 
-      if (action_iter != actions.end())
+      for (auto& binding : (*kb_bindings)->inputs)
       {
-        action_settings.emplace_back(context{ binding, *action_iter, (WORD)(std::distance(actions.begin(), action_iter) + 1) });
+        if (binding.input_type == binding.unknown)
+        {
+          break;
+        }
+        auto action_iter = std::find_if(actions.begin(), actions.end(), [&](auto& action) { return action.action_name == binding.action_name; });
+
+        if (action_iter != actions.end())
+        {
+          action_settings.emplace_back(context{ binding, *action_iter, (WORD)(std::distance(actions.begin(), action_iter) + 1) });
+        }
       }
     }
 
-    for (auto& binding : (*ms_bindings)->inputs)
+    if (ms_bindings)
     {
-      if (binding.input_type == binding.unknown)
+      for (auto& binding : (*ms_bindings)->inputs)
       {
-        break;
-      }
-      auto action_iter = std::find_if(actions.begin(), actions.end(), [&](auto& action) { return action.action_name == binding.action_name; });
+        if (binding.input_type == binding.unknown)
+        {
+          break;
+        }
+        auto action_iter = std::find_if(actions.begin(), actions.end(), [&](auto& action) { return action.action_name == binding.action_name; });
 
-      if (action_iter != actions.end())
-      {
-        action_settings.emplace_back(context{ binding, *action_iter, (WORD)(std::distance(actions.begin(), action_iter) + 1) });
+        if (action_iter != actions.end())
+        {
+          action_settings.emplace_back(context{ binding, *action_iter, (WORD)(std::distance(actions.begin(), action_iter) + 1) });
+        }
       }
     }
+
 
     for (auto& context : action_settings)
     {

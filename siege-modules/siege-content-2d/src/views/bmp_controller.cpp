@@ -262,7 +262,7 @@ namespace siege::views
         else
 #endif
         {
-          original_image.emplace(image_stream);
+          original_image.emplace(image_stream, true);
         }
       }
     }
