@@ -54,6 +54,27 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "mlook", u"Mouse Look", u"Misc" },
 } };
 
+constexpr static auto kingpin_aliases = std::array<std::array<std::string_view, 2>, 2> {{
+  {"+melee-attack", "use pipe; +attack"},
+  {"-melee-attack", "weapprev; -attack"}
+}};
+
+/*
+constexpr static auto kingpin_dual_stick_defaults = std::array<std::array<std::string_view, 2>, 10> {{
+            {playstation::l2, "holster" },
+            {playstation::l1, "invnext" },
+            {playstation::r1, "invuse"},
+            {playstation::square, "+activate"},
+            {playstation::start, "cmd help"},
+            {playstation::select, "inven"},
+            {playstation::d_pad_up, "flashlight"},
+            {playstation::d_pad_down, "key2"},
+            {playstation::d_pad_left, "key1"},
+            {playstation::d_pad_right, "key3"}
+        }};
+
+*/
+
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
 extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };

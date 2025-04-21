@@ -56,6 +56,23 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "klook", u"Keyboard Look", u"Misc" },
   game_action{ game_action::digital, "mlook", u"Mouse Look", u"Misc" },
 } };
+/*
+        constexpr static auto sin_dual_stick_defaults = std::array<std::array<std::string_view, 2>, 6> {{
+            {playstation::l2, "weaponuse" },
+            {playstation::l1, "invnext" },
+            {playstation::r1, "invuse"},
+            {playstation::square, "+use"},
+            {playstation::start, "showinfo"},
+            {playstation::select, "toggleviewmode"} 
+        }};
+
+*/
+
+constexpr static auto sin_aliases = std::array<std::array<std::string_view, 2>, 2> {{
+  {"+melee-attack", "use Fists; +attack"},
+  {"-melee-attack", "weapprev; -attack"}
+}};
+
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };

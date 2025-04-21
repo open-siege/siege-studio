@@ -424,8 +424,6 @@ namespace siege::views
     {
       if (controller.has_extension_module())
       {
-        std::map<WORD, WORD> input_mapping{};
-
         auto backends = controller.get_extension().controller_input_backends;
         auto actions = controller.get_extension().game_actions;
         std::size_t binding_index = 0;
@@ -443,7 +441,7 @@ namespace siege::views
             {
               auto controller_key = LOWORD(item->lParam);
               auto keyboard_key = HIWORD(item->lParam);
-              input_mapping[controller_key] = keyboard_key;
+          //    input_mapping[controller_key] = keyboard_key;
             }
           }
         }
@@ -472,7 +470,7 @@ namespace siege::views
 
                 game_args->action_bindings[binding_index].vkey = virtual_key;
                 game_args->action_bindings[binding_index].action_name = action.action_name;
-                game_args->action_bindings[binding_index].context = game_args->action_bindings[binding_index].controller;
+                game_args->action_bindings[binding_index].context = siege::platform::hardware_context::controller;
                 game_args->action_bindings[binding_index++].hardware_index = hardware_index_for_controller_vkey(std::span<RAWINPUTDEVICELIST>(controllers.data(), size), 0, virtual_key);
               }
             }
@@ -501,7 +499,7 @@ namespace siege::views
               {
                 game_args->action_bindings[binding_index].vkey = virtual_key;
                 game_args->action_bindings[binding_index].action_name = action.action_name;
-                game_args->action_bindings[binding_index++].context = game_args->action_bindings[binding_index].mouse;
+                game_args->action_bindings[binding_index++].context = siege::platform::hardware_context::mouse;
 
                 // TODO add logic for the mouse and mouse wheel context as they will make use of VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT for input mapping
               }
@@ -513,7 +511,7 @@ namespace siege::views
                 // TODO add logic for the keypad context, specifically for VK_RETURN and other keys in that space
                 // especially because it affects the hardware index or how a game extension maps the virtual key to its own virtual key mechanism
                 game_args->action_bindings[binding_index].hardware_index = MapVirtualKeyW(virtual_key, MAPVK_VK_TO_VSC);
-                game_args->action_bindings[binding_index++].context = game_args->action_bindings[binding_index].keyboard;
+                game_args->action_bindings[binding_index++].context = siege::platform::hardware_context::keyboard;
               }
             }
           }
@@ -571,7 +569,6 @@ namespace siege::views
           .exe_path = controller.get_exe_path(),
           .extension_path = controller.get_extension().GetModuleFileName(),
           .args = std::move(game_args),
-          .controller_key_mappings = std::move(input_mapping),
           .extension = &controller.get_extension()
         };
 

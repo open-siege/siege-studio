@@ -53,6 +53,80 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "mlook", u"Mouse Look", u"Misc" },
 } };
 
+constexpr static auto quake2_aliases = std::array<std::array<std::string_view, 2>, 2> {{
+  {"+throw-grenade", "use grenades; +attack"},
+  {"-throw-grenade", "-weapprev; -attack"}
+}};
+
+/*
+        constexpr static auto quake2_dual_stick_defaults = std::array<std::array<std::string_view, 2>, 6> {{
+            {playstation::l2, "invuse" },
+            {playstation::l1, "invnext" },
+            {playstation::r1, "+throw-grenade"},
+            {playstation::square, "inven"},
+            {playstation::start, "cmd help"},
+            {playstation::select, "score"} 
+        }};
+
+         button add_quake_3_button_metadata(button result)
+    {
+        constexpr static auto button_names = std::array<std::string_view, 15> {{
+            "JOY1",
+            "JOY2",
+            "JOY3",
+            "JOY4",
+            "JOY5",
+            "JOY6",
+            "JOY7",
+            "JOY8",
+            "JOY9",
+            "JOY10",
+            "JOY11",
+            "JOY12",
+            "JOY13",
+            "JOY14",
+            "JOY15"
+        }};
+
+        if (result.index < button_names.size())
+        {
+            result.meta_name.emplace(button_names[result.index]);
+        }
+
+        return result;
+    }
+
+    axis add_quake_3_axis_metadata(axis result)
+    {
+        if (result.index == 0)
+        {
+            result.meta_name_positive = "UPARROW";
+            result.meta_name_negative = "DOWNARROW";
+        }
+
+        if (result.index == 1)
+        {
+            result.meta_name_positive = "RIGHTARROW";
+            result.meta_name_negative = "LEFTARROW";
+        }
+
+        if (result.index == 2)
+        {
+            result.meta_name_positive = "JOY18";
+            result.meta_name_negative = "JOY19";
+        }
+
+        if (result.index == 3)
+        {
+            result.meta_name_positive = "JOY17";
+            result.meta_name_negative = "JOY16";
+        }
+
+        return result;
+    }
+
+*/
+
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
 extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };

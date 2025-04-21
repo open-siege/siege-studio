@@ -50,12 +50,23 @@ namespace siege::platform
 
   enum struct controller_context : std::uint16_t
   {
-    controller = 4,
+    controller = 5,
     joystick,
     throttle
   };
   using controller_binding = input_binding<32, controller_context>;
 
+  enum struct hardware_context : std::uint16_t
+  {
+    global,
+    keyboard = static_cast<std::uint16_t>(keyboard_context::keyboard),
+    keypad,
+    mouse = static_cast<std::uint16_t>(mouse_context::mouse),
+    mouse_wheel,
+    controller = static_cast<std::uint16_t>(controller_context::controller),
+    joystick,
+    throttle
+  };
 
   struct game_action
   {
@@ -134,21 +145,21 @@ namespace siege::platform
     {
       std::uint16_t vkey;
       std::uint16_t hardware_index;
-      enum hardware_context : std::uint16_t
-      {
-        global,
-        keyboard = static_cast<std::uint16_t>(keyboard_context::keyboard),
-        keypad,
-        mouse = static_cast<std::uint16_t>(mouse_context::mouse),
-        mouse_wheel,
-        controller = static_cast<std::uint16_t>(controller_context::controller),
-        joystick,
-        throttle
-      } context = global;
+      hardware_context context = {};
       std::array<char, 32> action_name;
     };
 
     std::array<input_mapping, 256> action_bindings;
+
+    struct controller_to_send_input_mapping
+    {
+      std::uint16_t from_vkey;
+      hardware_context from_context = {};
+      std::uint16_t to_vkey;
+      hardware_context to_context = {};
+    };
+
+    std::array<controller_to_send_input_mapping, 256> controller_to_send_input_mappings;
   };
   // TODO replace HRESULT with std::errc for the cross-platform functions
   using executable_is_supported = HRESULT(const siege::fs_char* filename) noexcept;

@@ -54,6 +54,37 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "mlook", u"Mouse Look", u"Misc" },
 } };
 
+constexpr static auto quake3_aliases = std::array<std::array<std::string_view, 2>, 2> {{
+  {"+melee-attack", "weapon 1; +attack"},
+  {"-melee-attack", "weapnext; -attack"}
+}};
+
+/*
+        constexpr static auto quake3_dual_stick_defaults = std::array<std::array<std::string_view, 2>, 7> {{
+            {playstation::l2, "+zoom" },
+            {playstation::l1, "weapprev" },
+            {playstation::r1, "weapnext" },
+            {playstation::triangle, "vote yes" },
+            {playstation::square, "vote no"},
+            {playstation::start, "pause"},
+            {playstation::select, "+scores"},
+        }};
+
+        hat add_quake_3_hat_metadata(hat result)
+    {
+        if (result.index == 0)
+        {
+            result.meta_name_up = "JOY24";
+            result.meta_name_down = "JOY25";
+            result.meta_name_right = "JOY26";
+            result.meta_name_left = "JOY27";
+        }
+
+        return result;
+    }
+
+*/
+
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
 extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };

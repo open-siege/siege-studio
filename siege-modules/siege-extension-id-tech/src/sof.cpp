@@ -111,27 +111,26 @@ inline std::optional<std::string> vkey_to_key(WORD vkey)
   return std::nullopt;
 }
 
-inline std::optional<std::string_view> vkey_to_joystick_setting(WORD vkey)
+inline std::optional<std::string_view> hardware_index_to_joystick_setting(WORD vkey, WORD index)
 {
-  switch (vkey)
+  if (vkey < VK_GAMEPAD_LEFT_THUMBSTICK_UP)
   {
-  case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
-  case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT: {
+    return std::nullopt;
+  }
+  switch (index)
+  {
+  case 0:
     return "joy_advaxisx";
-  }
-
-  case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
-  case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN: {
+  case 1:
     return "joy_advaxisy";
-  }
-  case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
-  case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT: {
+  case 2:
     return "joy_advaxisz";
-  }
-  case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
-  case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN: {
+  case 3:
     return "joy_advaxisr";
-  }
+  case 4:
+    return "joy_advaxisu";
+  case 5:
+    return "joy_advaxisv";
   default:
     return std::nullopt;
   }
@@ -297,13 +296,62 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
     if (is_vkey_for_controller(binding.vkey))
     {
       enable_controller = true;
-      auto setting = vkey_to_joystick_setting(binding.vkey);
+      auto setting = hardware_index_to_joystick_setting(binding.vkey, binding.hardware_index);
 
       if (setting)
       {
-        auto iter = storage.emplace(std::to_string(binding.hardware_index + 1));
+        const static auto controller_button_mapping = std::map<std::string_view, std::string_view>{
+          { "+forward", "1" },
+          { "+back", "1" },
+          { "+lookup", "2" },
+          { "+lookdown", "2" },
+          { "+moveleft", "3" },
+          { "+moveright", "3" },
+          { "+left", "4" },
+          { "+right", "4" },
+          { "+moveup", "5" },
+          { "+movedown", "5" }
+        };
 
-        config.emplace(siege::configuration::key_type({ "set", *setting }), siege::configuration::key_type(*iter.first));
+        try
+        {
+          auto action_name = std::string_view(binding.action_name.data());
+          auto index = controller_button_mapping.at(action_name);
+
+          auto free_mapping = std::find_if(args->controller_to_send_input_mappings.begin(), args->controller_to_send_input_mappings.end(), [](auto& mapping) {
+            return mapping.from_vkey == 0;
+          });
+
+          if (free_mapping != args->controller_to_send_input_mappings.end())
+          {
+            constexpr static std::string_view mlook = "+mlook";
+            auto keyboard = std::find_if(args->action_bindings.begin(), args->action_bindings.end(), [&](auto& existing) {
+              return existing.action_name.data() == mlook && (existing.context == siege::platform::hardware_context::global || existing.context == siege::platform::hardware_context::keyboard);
+            });
+
+            // TODO fix extended code support for SendInput
+            /*if (action_name == "+lookup" && keyboard != args->action_bindings.end())
+            {
+              free_mapping->from_vkey = binding.vkey;
+              free_mapping->from_context = siege::platform::hardware_context::controller;
+              free_mapping->to_vkey = keyboard->vkey;
+              free_mapping->to_context = keyboard->context;
+            }
+            else if (action_name == "+lookdown" && keyboard != args->action_bindings.end())
+            {
+              free_mapping->from_vkey = binding.vkey;
+              free_mapping->from_context = siege::platform::hardware_context::controller;
+              free_mapping->to_vkey = keyboard->vkey;
+              free_mapping->to_context = keyboard->context;
+            }*/
+          }
+
+          config.emplace(siege::configuration::key_type({ "set", *setting }), siege::configuration::key_type(index));
+        }
+        catch (...)
+        {
+          // TODO handle unknown actions
+        }
       }
       else
       {
@@ -339,6 +387,35 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
         {
           config.emplace(siege::configuration::key_type({ "bind", "AUX30" }), siege::configuration::key_type(binding.action_name.data()));
         }
+        else if (binding.vkey == VK_GAMEPAD_LEFT_TRIGGER || binding.vkey == VK_GAMEPAD_RIGHT_TRIGGER)
+        {
+          // TODO add a context check for "xbox" controllers
+          auto action_name = std::string_view(binding.action_name.data());
+          auto mouse = std::find_if(args->action_bindings.begin(), args->action_bindings.end(), [&](auto& existing) {
+            return existing.action_name.data() == action_name && (existing.context == siege::platform::hardware_context::mouse);
+          });
+
+          if (mouse == args->action_bindings.end())
+          {
+            mouse = std::find_if(args->action_bindings.begin(), args->action_bindings.end(), [&](auto& existing) {
+              return existing.action_name.data() == action_name && (existing.context == siege::platform::hardware_context::global);
+            });
+          }
+
+          if (mouse != args->action_bindings.end())
+          {
+            auto free_mapping = std::find_if(args->controller_to_send_input_mappings.begin(), args->controller_to_send_input_mappings.end(), [](auto& mapping) {
+              return mapping.from_vkey == 0;
+            });
+
+            free_mapping->from_vkey = binding.vkey;
+            free_mapping->from_context = siege::platform::hardware_context::controller;
+            free_mapping->to_vkey = mouse->vkey;
+            free_mapping->to_context = mouse->context;
+          }
+
+          config.emplace(siege::configuration::key_type({ "bind", button_names[binding.hardware_index] }), siege::configuration::key_type(binding.action_name.data()));
+        }
         else
         {
           config.emplace(siege::configuration::key_type({ "bind", button_names[binding.hardware_index] }), siege::configuration::key_type(binding.action_name.data()));
@@ -361,7 +438,7 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   }
 
   if (enable_controller)
-  { 
+  {
     // engine bug - mouse needs to be enabled for the right analog stick to work
     config.emplace(siege::configuration::key_type({ "set", "in_mouse" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "set", "in_joystick" }), siege::configuration::key_type("1"));
@@ -771,3 +848,20 @@ BOOL WINAPI DllMain(
   return TRUE;
 }
 }
+
+/*
+      constexpr static auto heretic2_dual_stick_defaults = std::array<std::array<std::string_view, 2>, 10> {{
+        {playstation::l2, "+defend" },
+        {playstation::l1, "defprev" },
+        {playstation::r1, "defnext"},
+        {playstation::circle, "+creep"},
+        {playstation::square, "+action"},
+        {playstation::start, "menu_objectives"},
+        {playstation::select, "menu_city_map"}
+    }};
+
+    constexpr static auto heretic2_aliases = std::array<std::array<std::string_view, 2>, 2> {{
+            {"+melee-attack", "use staff; +attack"},
+            {"-melee-attack", "weapprev; -attack"}
+    }};
+*/

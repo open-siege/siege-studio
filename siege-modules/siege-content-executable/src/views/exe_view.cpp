@@ -742,13 +742,13 @@ namespace siege::views
           return 1;
         case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
         case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT:
-          return 2;
+          return 4;
         case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
         case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN:
           return 3;
         case VK_GAMEPAD_LEFT_TRIGGER:
         case VK_GAMEPAD_RIGHT_TRIGGER:
-          return 4;
+          return 2;
         default:
           return 0;
       }
