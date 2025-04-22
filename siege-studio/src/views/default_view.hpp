@@ -140,8 +140,8 @@ namespace siege::views
     { L"CyClones"sv, L"idtech-0.5-raven"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".dat"sv } } },
     { L"In Pursuit of Greed"sv, L"idtech-0.5-raven"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".dat"sv } } },
     { L"World of Aden: Thunderscape"sv, L"idtech-0.5-raven"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".dat"sv } } },
-    { L"Necrodome"sv, L"idtech-0.5-raven"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pod"sv } } },
-    { L"Take No Prisoners"sv, L"vampire"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vpk"sv } } },
+    { L"Necrodome"sv, L"idtech-0.5-raven"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pod"sv, L".bmp", L".wav" } } },
+    { L"Take No Prisoners"sv, L"vampire"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vpk"sv, L".cfg", L".wav" } } },
     { L"MageSlayer"sv, L"vampire"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vpk"sv } } },
     { L"Quake"sv, L"id_tech-2.0"sv, L"siege-extension-quake", std::array<std::wstring_view, 8>{ { L".pak" } } },
     { L"Hexen 2"sv, L"id_tech-2.0"sv, L"siege-extension-hexen-2", std::array<std::wstring_view, 8>{ { L".pak" } } },
@@ -153,38 +153,38 @@ namespace siege::views
     { L"Kingpin: Life of Crime"sv, L"id_tech-2.5"sv, L"siege-extension-kingpin", std::array<std::wstring_view, 8>{ { L".pak" } } },
     { L"Soldier of Fortune"sv, L"id_tech-2.5-raven"sv, L"siege-extension-soldier-of-fortune", std::array<std::wstring_view, 8>{ { L".pak" } } },
     { L"Daikatana"sv, L"id_tech-2.5"sv, L"siege-extension-daikatana", std::array<std::wstring_view, 8>{ { L".pak" } } },
-    { L"Anachronox"sv, L"id_tech-2.5"sv, L"siege-extension-daikatana", std::array<std::wstring_view, 8>{ { L".pak" } } },
-    { L"Quake 3 Arena"sv, L"id_tech-3.0"sv, L"siege-extension-quake-3", std::array<std::wstring_view, 8>{ { L".pk3" } } },
-    { L"Heavy Metal: F.A.K.K 2"sv, L"id_tech-3.0-ritual"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3" } } },
-    { L"Star Trek: Voyager - Elite Force"sv, L"id_tech-3.0-raven"sv, L"siege-extension-elite-force-sp", std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".tga", L".cfg" } } },
-    { L"Star Trek: Voyager - Elite Force - Holomatch"sv, L"id_tech-3.0-raven"sv, L"siege-extension-elite-force-mp", std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".tga", L".cfg" } } },
-    { L"American McGee's Alice"sv, L"id_tech-3.0-ritual"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3", L".cfg" } } },
-    { L"Return to Castle Wolfenstein"sv, L"id_tech-3.0"sv, L"siege-extension-return-to-castle-wolf-sp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg" } } },
-    { L"Return to Castle Wolfenstein (Multiplayer)"sv, L"id_tech-3.0"sv, L"siege-extension-return-to-castle-wolf-mp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".cfg" } } },
-    { L"Medal of Honor: Allied Assault"sv, L"id_tech-3.0-ritual"sv, L"siege-extension-allied-assault"sv, std::array<std::wstring_view, 8>{ { L".pk3" } } },
-    { L"Medal of Honor: Allied Assault - Spearhead"sv, L"id_tech-3.0-ritual"sv, L"siege-extension-allied-assault-spearhead"sv, std::array<std::wstring_view, 8>{ { L".pk3" } } },
-    { L"Medal of Honor: Allied Assault - Breakthrough"sv, L"id_tech-3.0-ritual"sv, L"siege-extension-allied-assault-breakthrough"sv, std::array<std::wstring_view, 8>{ { L".pk3" } } },
-    { L"Medal of Honor: Pacific Assault"sv, L"id_tech-3.0-ritual"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3" } } },
-    { L"Star Wars Jedi Knight 2: Jedi Outcast"sv, L"id_tech-3.0-raven"sv, L"siege-extension-jedi-outcast-sp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".tga" } } },
-    { L"Star Wars Jedi Knight 2: Jedi Outcast (Multiplayer)"sv, L"id_tech-3.0-raven"sv, L"siege-extension-jedi-outcast-mp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".tga" } } },
-    { L"Star Wars Jedi Knight: Jedi Academy"sv, L"id_tech-3.0-raven"sv, L"siege-extension-jedi-academy-sp"sv, std::array<std::wstring_view, 8>{ { L".pk3" } } },
-    { L"Star Wars Jedi Knight: Jedi Academy (Multiplayer)"sv, L"id_tech-3.0-raven"sv, L"siege-extension-jedi-academy-mp"sv, std::array<std::wstring_view, 8>{ { L".pk3" } } },
-    { L"Soldier of Fortune 2: Double Helix"sv, L"id_tech-3.0-raven"sv, L"siege-extension-soldier-of-fortune-2-sp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".png" } } },
-    { L"Soldier of Fortune 2: Double Helix (Multiplayer)"sv, L"id_tech-3.0-raven"sv, L"siege-extension-soldier-of-fortune-2-mp"sv, std::array<std::wstring_view, 8>{ { L".pk3" } } },
-    { L"Wolfenstein: Enemy Territory"sv, L"id_tech-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3" } } },
-    { L"Call of Duty"sv, L"id_tech-3.0-iw"sv, L"siege-extension-call-of-duty-sp"sv, std::array<std::wstring_view, 8>{ { L".pk3" } } },
-    { L"Call of Duty (Multiplayer)"sv, L"id_tech-3.0-iw"sv, L"siege-extension-call-of-duty-mp"sv, std::array<std::wstring_view, 8>{ { L".pk3" } } },
-    { L"Call of Duty: United Offensive"sv, L"id_tech-3.0-iw"sv, L"siege-extension-call-of-duty-uo-sp"sv, std::array<std::wstring_view, 8>{ { L".pk3" } } },
-    { L"Call of Duty: United Offensive (Multiplayer)"sv, L"id_tech-3.0-iw"sv, L"siege-extension-call-of-duty-uo-mp"sv, std::array<std::wstring_view, 8>{ { L".pk3" } } },
+    { L"Anachronox"sv, L"id_tech-2.5"sv, L"siege-extension-daikatana", std::array<std::wstring_view, 8>{ { L".pak", L".bmp", L".wav" } } },
+    { L"Quake 3 Arena"sv, L"id_tech-3.0"sv, L"siege-extension-quake-3", std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Heavy Metal: F.A.K.K 2"sv, L"id_tech-3.0-ritual"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Star Trek: Voyager - Elite Force"sv, L"id_tech-3.0-raven"sv, L"siege-extension-elite-force-sp", std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Star Trek: Voyager - Elite Force - Holomatch"sv, L"id_tech-3.0-raven"sv, L"siege-extension-elite-force-mp", std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"American McGee's Alice"sv, L"id_tech-3.0-ritual"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3", L".cfg", L".wav" } } },
+    { L"Return to Castle Wolfenstein"sv, L"id_tech-3.0"sv, L"siege-extension-return-to-castle-wolf-sp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Return to Castle Wolfenstein (Multiplayer)"sv, L"id_tech-3.0"sv, L"siege-extension-return-to-castle-wolf-mp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".cfg", L".wav" } } },
+    { L"Medal of Honor: Allied Assault"sv, L"id_tech-3.0-ritual"sv, L"siege-extension-allied-assault"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Medal of Honor: Allied Assault - Spearhead"sv, L"id_tech-3.0-ritual"sv, L"siege-extension-allied-assault-spearhead"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Medal of Honor: Allied Assault - Breakthrough"sv, L"id_tech-3.0-ritual"sv, L"siege-extension-allied-assault-breakthrough"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Medal of Honor: Pacific Assault"sv, L"id_tech-3.0-ritual"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Star Wars Jedi Knight 2: Jedi Outcast"sv, L"id_tech-3.0-raven"sv, L"siege-extension-jedi-outcast-sp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Star Wars Jedi Knight 2: Jedi Outcast (Multiplayer)"sv, L"id_tech-3.0-raven"sv, L"siege-extension-jedi-outcast-mp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Star Wars Jedi Knight: Jedi Academy"sv, L"id_tech-3.0-raven"sv, L"siege-extension-jedi-academy-sp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Star Wars Jedi Knight: Jedi Academy (Multiplayer)"sv, L"id_tech-3.0-raven"sv, L"siege-extension-jedi-academy-mp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Soldier of Fortune 2: Double Helix"sv, L"id_tech-3.0-raven"sv, L"siege-extension-soldier-of-fortune-2-sp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".png", L".cfg", L".wav" } } },
+    { L"Soldier of Fortune 2: Double Helix (Multiplayer)"sv, L"id_tech-3.0-raven"sv, L"siege-extension-soldier-of-fortune-2-mp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".png", L".cfg", L".wav" } } },
+    { L"Wolfenstein: Enemy Territory"sv, L"id_tech-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Call of Duty"sv, L"id_tech-3.0-iw"sv, L"siege-extension-call-of-duty-sp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Call of Duty (Multiplayer)"sv, L"id_tech-3.0-iw"sv, L"siege-extension-call-of-duty-mp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Call of Duty: United Offensive"sv, L"id_tech-3.0-iw"sv, L"siege-extension-call-of-duty-uo-sp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Call of Duty: United Offensive (Multiplayer)"sv, L"id_tech-3.0-iw"sv, L"siege-extension-call-of-duty-uo-mp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Call of Duty 2"sv, L"iw-2.0"sv, L"siege-extension-call-of-duty-2-sp"sv, std::array<std::wstring_view, 8>{ { L".iwd", L".cfg" } } },
     { L"Call of Duty 2 (Multiplayer)"sv, L"iw-2.0"sv, L"siege-extension-call-of-duty-2-mp"sv, std::array<std::wstring_view, 8>{ { L".iwd", L".cfg" } } },
     { L"Call of Duty 4"sv, L"iw-3.0"sv, L"siege-extension-call-of-duty-4-sp"sv, std::array<std::wstring_view, 8>{ { L".iwd", L".cfg" } } },
     { L"Call of Duty 4 (Multiplayer)"sv, L"iw-3.0"sv, L"siege-extension-call-of-duty-4-mp"sv, std::array<std::wstring_view, 8>{ { L".iwd", L".cfg" } } },
-    { L"Iron Grip: Warlord"sv, L"id_tech-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3" } } },
-    { L"Dark Salvation"sv, L"id_tech-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3" } } },
-    { L"Quake Live"sv, L"id_tech-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3" } } },
-    { L"Space Trader: Merchant Marine"sv, L"id_tech-3.0"sv, L"siege-extension-space-trader"sv, std::array<std::wstring_view, 8>{ { L".pk3" } } },
-    { L"Zone Raiders"sv, L"isi-1.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".plr" } } },
+    { L"Iron Grip: Warlord"sv, L"id_tech-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Dark Salvation"sv, L"id_tech-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Quake Live"sv, L"id_tech-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Space Trader: Merchant Marine"sv, L"id_tech-3.0"sv, L"siege-extension-space-trader"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    /*{ L"Zone Raiders"sv, L"isi-1.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".plr" } } },
     { L"Sports Car GT"sv, L"isi-1.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".plr" } } },
     { L"F1 2000"sv, L"isi-1.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".plr" } } },
     { L"F1 Championship Season 2000"sv, L"isi-1.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".plr" } } },
@@ -206,7 +206,7 @@ namespace siege::views
     { L"Superleague Formula 2009: The Game"sv, L"isi-2.0"sv, L"siege-extension-superleague"sv, std::array<std::wstring_view, 8>{ { L".plr" } } },
     { L"Stock Car Extreme"sv, L"isi-2.0"sv, L"siege-extension-stock-car-extreme"sv, std::array<std::wstring_view, 8>{ { L".plr" } } },
     { L"Copa Petrobras de Marcas"sv, L"isi-2.0"sv, L"siege-extension-marcas"sv, std::array<std::wstring_view, 8>{ { L".plr" } } },
-    { L"Automobilista"sv, L"isi-2.0"sv, L"siege-extension-automobilista"sv, std::array<std::wstring_view, 8>{ { L".plr" } } },
+    { L"Automobilista"sv, L"isi-2.0"sv, L"siege-extension-automobilista"sv, std::array<std::wstring_view, 8>{ { L".plr" } } },*/
   } };
 
 
@@ -231,6 +231,7 @@ namespace siege::views
     win32::gdi::icon logo_icon;
 
     std::set<std::wstring> detected_paths;
+    std::map<win32::wparam_t, int> item_groups;
     //      std::string url = "https://github.com/open-siege/open-siege/wiki/" + extension;
     //"This particular file is not yet supported by Siege Studio.\nThough, you can still read about it on our wiki.\nClick the link below to find out more."
     default_view(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self)
@@ -291,9 +292,114 @@ namespace siege::views
 
       auto header = supported_games_by_engine.GetHeader();
       auto style = header.GetWindowStyle();
-      header.SetWindowStyle(style | HDS_NOSIZING | HDS_FLAT);
+      header.SetWindowStyle(style | HDS_NOSIZING | HDS_FILTERBAR | HDS_FLAT);
 
-      int id = 1;
+      header.bind_hdn_filter_btn_click([](auto, auto&) {
+        return FALSE;
+      });
+
+      header.bind_hdn_filter_change([filter_value = std::wstring{}, this](win32::header header, const NMHEADERW& message) mutable {
+        filter_value.clear();
+        filter_value.resize(255, L'\0');
+        HD_TEXTFILTERW string_filter{
+          .pszText = (wchar_t*)filter_value.data(),
+          .cchTextMax = (int)filter_value.capacity(),
+        };
+
+        auto header_item = header.GetItem(message.iItem, { .mask = HDI_FILTER, .type = HDFT_ISSTRING, .pvFilter = &string_filter });
+
+        filter_value.resize(filter_value.find(L'\0'));
+
+        if (header_item)
+        {
+          std::set<int> found_items;
+
+          if (message.iItem == 0)
+          {
+            LVFINDINFOW find_info{
+              .flags = LVFI_PARTIAL,
+              .psz = (LPCWSTR)filter_value.data()
+            };
+
+            int item = -1;
+            do {
+
+              item = ListView_FindItem(supported_games_by_engine, item, &find_info);
+
+              if (item != -1)
+              {
+                found_items.emplace(item);
+              }
+            } while (item != -1);
+
+
+            if (found_items.empty())
+            {
+              goto fallback;
+            }
+
+            for (auto i = 0; i < supported_games_by_engine.GetItemCount(); i++)
+            {
+              if (found_items.contains(i) && item_groups.contains(i))
+              {
+                supported_games_by_engine.SetItem({
+                  .mask = LVIF_GROUPID,
+                  .iItem = i,
+                  .iGroupId = item_groups.at(i),
+                });
+              }
+              else
+              {
+                supported_games_by_engine.SetItem({
+                  .mask = LVIF_GROUPID,
+                  .iItem = i,
+                  .iGroupId = 1,
+                });
+              }
+            }
+          }
+          else
+          {
+          fallback:
+            std::wstring temp(255, L'\0');
+            for (auto i = 0; i < supported_games_by_engine.GetItemCount(); i++)
+            {
+              temp.resize(255, L'\0');
+              ListView_GetItemText(supported_games_by_engine, i, message.iItem, temp.data(), temp.size());
+
+              if (auto size = temp.find(L'\0'); size != -1)
+              {
+                temp.resize(size);
+              }
+
+              if (siege::platform::to_lower(temp).find(siege::platform::to_lower(filter_value)) == std::wstring_view::npos)
+              {
+                supported_games_by_engine.SetItem({
+                  .mask = LVIF_GROUPID,
+                  .iItem = i,
+                  .iGroupId = 1,
+                });
+              }
+              else if (item_groups.contains(i))
+              {
+                supported_games_by_engine.SetItem({
+                  .mask = LVIF_GROUPID,
+                  .iItem = i,
+                  .iGroupId = item_groups.at(i),
+                });
+              }
+            }
+          }
+        }
+      });
+
+      supported_games_by_engine.InsertGroup(-1, LVGROUP{
+                                                  .pszHeader = const_cast<wchar_t*>(L"Hidden"),
+                                                  .iGroupId = 1,
+                                                  .state = LVGS_HIDDEN | LVGS_NOHEADER | LVGS_COLLAPSED,
+                                                });
+
+      int id = 2;
 
       for (const auto& engine : engines)
       {
@@ -328,8 +434,12 @@ namespace siege::views
           continue;
         }
 
-        auto engine_group_id = std::distance(engines.begin(), engine_iter) + 1;
+        auto engine_group_id = std::distance(engines.begin(), engine_iter) + 2;
 
+        if (engine_group_id == 1)
+        {
+          OutputDebugStringW(L"Found wrong ID\n");
+        }
         game_item.iGroupId = engine_group_id;
 
         if (game.preferered_extension)
@@ -364,12 +474,15 @@ namespace siege::views
 
         auto new_item = supported_games_by_engine.InsertRow(game_item);
 
+        item_groups[new_item] = engine_group_id;
         UINT columns[2] = { 1, 2 };
         int formats[2] = { LVCFMT_LEFT, LVCFMT_LEFT };
         LVTILEINFO item_info{ .cbSize = sizeof(LVTILEINFO), .iItem = (int)new_item, .cColumns = 2, .puColumns = columns, .piColFmt = formats };
 
         ListView_SetTileInfo(supported_games_by_engine, &item_info);
       }
+
+      ListView_Scroll(supported_games_by_engine, 0, -50);
 
       win32::queue_user_work_item([this]() {
         std::set<std::wstring> search_roots;
@@ -691,7 +804,7 @@ namespace siege::views
         supported_games_by_engine.SetWindowPos(SIZE{ .cx = client_size.cx, .cy = client_size.cy });
 
         auto column_count = supported_games_by_engine.GetColumnCount();
-        auto column_width = (client_size.cx / column_count);
+        auto column_width = (supported_games_by_engine.GetClientSize()->cx / column_count);
 
         for (auto i = 0u; i < column_count; ++i)
         {
@@ -700,16 +813,11 @@ namespace siege::views
 
         auto header_size = supported_games_by_engine.GetHeader().GetClientSize();
 
-        auto top_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy / 12 };
+        auto top_size = SIZE{ .cx = supported_games_by_engine.GetClientSize()->cx, .cy = supported_games_by_engine.GetClientSize()->cy / 12 };
         supported_games_by_engine.GetHeader().SetWindowPos(SIZE{ .cx = top_size.cx, .cy = header_size->cy });
       }
 
       return 0;
-    }
-
-    auto wm_command()
-    {
-      // wxLaunchDefaultBrowser(url);
     }
   };
 }// namespace siege::views
