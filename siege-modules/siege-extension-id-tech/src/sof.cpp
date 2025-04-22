@@ -330,7 +330,7 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
             });
 
             // TODO fix extended code support for SendInput
-            /*if (action_name == "+lookup" && keyboard != args->action_bindings.end())
+            if (action_name == "+lookup" && keyboard != args->action_bindings.end())
             {
               free_mapping->from_vkey = binding.vkey;
               free_mapping->from_context = siege::platform::hardware_context::controller;
@@ -343,7 +343,7 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
               free_mapping->from_context = siege::platform::hardware_context::controller;
               free_mapping->to_vkey = keyboard->vkey;
               free_mapping->to_context = keyboard->context;
-            }*/
+            }
           }
 
           config.emplace(siege::configuration::key_type({ "set", *setting }), siege::configuration::key_type(index));
@@ -514,6 +514,7 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
           std::memcpy(binding->inputs[index].action_name.data(), temp.data(), temp.size());
           binding->inputs[index].virtual_key = *vkey;
           binding->inputs[index].input_type = mouse_binding::action_binding::button;
+          binding->inputs[index].context = siege::platform::mouse_context::mouse;
           index++;
 
           if (index > binding->inputs.size())
@@ -606,6 +607,13 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
           std::memcpy(binding->inputs[index].action_name.data(), temp.data(), temp.size());
           binding->inputs[index].virtual_key = *vkey;
           binding->inputs[index].input_type = keyboard_binding::action_binding::button;
+          binding->inputs[index].context = siege::platform::keyboard_context::keyboard;
+
+          if (item.at(1).starts_with("kp_") || item.at(1).starts_with("KP_"))
+          {
+            binding->inputs[index].context = siege::platform::keyboard_context::keypad;
+          }
+
           index++;
 
           if (index > binding->inputs.size())

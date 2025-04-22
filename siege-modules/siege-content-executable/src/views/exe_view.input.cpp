@@ -169,7 +169,8 @@ namespace siege::views
 
       struct context
       {
-        siege::platform::controller_binding::action_binding binding;
+        WORD vkey;
+        siege::platform::hardware_context context;
         siege::platform::game_action action;
         WORD action_index;
       };
@@ -187,16 +188,20 @@ namespace siege::views
 
         if (action_iter != actions.end())
         {
-          action_settings.emplace_back(context{ binding, *action_iter, (WORD)(std::distance(actions.begin(), action_iter) + 1) });
+          action_settings.emplace_back(context{ binding.virtual_key, (siege::platform::hardware_context)binding.context, *action_iter, (WORD)(std::distance(actions.begin(), action_iter)) });
         }
       }
 
       for (auto& context : action_settings)
       {
-        win32::list_view_item up((wchar_t*)context.action.action_display_name.data(), images[context.binding.virtual_key]);
+        win32::list_view_item up((wchar_t*)context.action.action_display_name.data(), images[context.vkey]);
         up.mask = up.mask | LVIF_GROUPID | LVIF_PARAM;
         up.iGroupId = ids_for_grouping[context.action.group_display_name.data()];
-        up.lParam = MAKELPARAM(context.binding.virtual_key, context.action_index);
+        up.lParam = (LPARAM)bound_actions.size();
+        bound_actions.emplace_back(input_action_binding{
+          .vkey = context.vkey,
+          .context = context.context,
+          .action_index = context.action_index });
         up.sub_items.emplace_back((wchar_t*)context.action.group_display_name.data());
         controller_table.InsertRow(up);
       }
@@ -233,9 +238,10 @@ namespace siege::views
       }
     }
 
-    struct context
+    struct ui_context
     {
-      std::variant<siege::platform::keyboard_binding::action_binding, siege::platform::mouse_binding::action_binding> binding;
+      WORD vkey;
+      siege::platform::hardware_context context;
       siege::platform::game_action action;
       WORD action_index;
     };
@@ -245,7 +251,7 @@ namespace siege::views
       return;
     }
 
-    std::vector<context> action_settings;
+    std::vector<ui_context> action_settings;
 
     if (kb_bindings)
     {
@@ -261,13 +267,14 @@ namespace siege::views
 
         if (action_iter != actions.end())
         {
-          action_settings.emplace_back(context{ binding, *action_iter, (WORD)(std::distance(actions.begin(), action_iter) + 1) });
+          action_settings.emplace_back(ui_context{ binding.virtual_key, (siege::platform::hardware_context)binding.context, *action_iter, (WORD)(std::distance(actions.begin(), action_iter)) });
         }
       }
     }
 
     if (ms_bindings)
     {
+      action_settings.reserve((*ms_bindings)->inputs.size());
       for (auto& binding : (*ms_bindings)->inputs)
       {
         if (binding.input_type == binding.unknown)
@@ -278,20 +285,25 @@ namespace siege::views
 
         if (action_iter != actions.end())
         {
-          action_settings.emplace_back(context{ binding, *action_iter, (WORD)(std::distance(actions.begin(), action_iter) + 1) });
+          action_settings.emplace_back(ui_context{ binding.virtual_key, (siege::platform::hardware_context)binding.context, *action_iter, (WORD)(std::distance(actions.begin(), action_iter)) });
         }
       }
     }
 
+    bound_actions.reserve(action_settings.size());
 
     for (auto& context : action_settings)
     {
       win32::list_view_item up((wchar_t*)context.action.action_display_name.data());
       up.mask = up.mask | LVIF_GROUPID | LVIF_PARAM;
       up.iGroupId = ids_for_grouping[context.action.group_display_name.data()];
-      auto vkey = std::visit([](auto& binding) { return binding.virtual_key; }, context.binding);
-      up.lParam = MAKELPARAM(vkey, context.action_index);
-      up.sub_items.emplace_back(string_for_vkey(std::visit([](auto& binding) { return binding.virtual_key; }, context.binding)));
+      auto vkey = context.vkey;
+      up.lParam = (LPARAM)bound_actions.size();
+      bound_actions.emplace_back(input_action_binding{
+        .vkey = vkey,
+        .context = context.context,
+        .action_index = context.action_index });
+      up.sub_items.emplace_back(string_for_vkey(vkey));
       keyboard_table.InsertRow(up);
     }
   }

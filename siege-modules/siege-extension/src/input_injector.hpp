@@ -40,7 +40,7 @@ namespace siege
     up
   };
 
-  inline ::INPUT vk_to_input(WORD vkey, std::uint32_t device_id, input_state state, std::optional<WORD> intensity = std::nullopt)
+  inline ::INPUT vk_to_input(WORD vkey, siege::platform::hardware_context context, std::uint32_t device_id, input_state state, std::optional<WORD> intensity = std::nullopt)
   {
     ::INPUT result{};
 
@@ -107,6 +107,16 @@ namespace siege
     result.ki.wScan = ::MapVirtualKeyW(vkey, MAPVK_VK_TO_VSC);
     result.ki.dwFlags = state == input_state::up ? KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP : KEYEVENTF_SCANCODE;
     result.ki.dwExtraInfo = device_id;
+
+    if (context == siege::platform::hardware_context::keyboard && (vkey == VK_HOME || vkey == VK_INSERT || vkey == VK_DELETE || vkey == VK_END || vkey == VK_NEXT || vkey == VK_PRIOR))
+    {
+      result.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
+    }
+
+    if (context == siege::platform::hardware_context::keypad && (vkey == VK_RETURN))
+    {
+      result.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
+    }
 
     return result;
   }
@@ -457,20 +467,18 @@ namespace siege
             continue;
           }
 
-          if (!(mapping.to_context == siege::platform::hardware_context::global || 
-              mapping.to_context == siege::platform::hardware_context::keyboard || 
-              mapping.to_context == siege::platform::hardware_context::mouse))
+          if (!(mapping.to_context == siege::platform::hardware_context::global || mapping.to_context == siege::platform::hardware_context::keyboard || mapping.to_context == siege::platform::hardware_context::mouse))
           {
-              continue;
+            continue;
           }
 
           if (stroke.Flags & XINPUT_KEYSTROKE_KEYUP)
           {
-            simulated_inputs.emplace_back(vk_to_input(mapping.to_vkey, *device_id, input_state::up));
+            simulated_inputs.emplace_back(vk_to_input(mapping.to_vkey, mapping.to_context, *device_id, input_state::up));
           }
           else if (stroke.Flags & XINPUT_KEYSTROKE_KEYDOWN)
           {
-            simulated_inputs.emplace_back(vk_to_input(mapping.to_vkey, *device_id, input_state::down));
+            simulated_inputs.emplace_back(vk_to_input(mapping.to_vkey, mapping.to_context, *device_id, input_state::down));
           }
         }
 

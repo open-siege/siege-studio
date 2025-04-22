@@ -104,6 +104,15 @@ namespace siege::views
     int ip_address_row_index = 0;
     std::function<void()> launch_table_edit_unbind;
 
+    struct input_action_binding
+    {
+      std::uint16_t vkey;
+      siege::platform::hardware_context context;
+      std::uint16_t action_index;
+    };
+
+    std::vector<input_action_binding> bound_actions = { {} };
+
     win32::list_view keyboard_table;
     win32::list_view controller_table;
     win32::image_list controller_table_icons;
