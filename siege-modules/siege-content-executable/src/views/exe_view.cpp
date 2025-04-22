@@ -36,7 +36,6 @@ namespace siege::views
     exe_actions.InsertButton(-1, { .iBitmap = 1, .idCommand = launch_selected_id, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR)L"Launch" }, false);
     exe_actions.InsertButton(-1, { .iBitmap = 2, .idCommand = extract_selected_id, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" }, false);
     exe_actions.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
-    exe_actions.bind_tbn_dropdown(std::bind_front(&exe_view::exe_actions_tbn_dropdown, this));
     exe_actions.bind_nm_click(std::bind_front(&exe_view::exe_actions_nm_click, this));
 
     resource_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this,
@@ -595,26 +594,6 @@ namespace siege::views
     return FALSE;
   }
 
-
-  LRESULT exe_view::exe_actions_tbn_dropdown(win32::tool_bar, const NMTOOLBARW& message)
-  {
-    POINT point{ .x = message.rcButton.left, .y = message.rcButton.top };
-
-    if (ClientToScreen(exe_actions, &point))
-    {
-      /*auto result = table_settings_menu.TrackPopupMenuEx(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, point, ref());
-
-      if (result == 1)
-      {
-        extract_all_files();
-      }*/
-
-      return TBDDRET_DEFAULT;
-    }
-
-    return TBDDRET_NODEFAULT;
-  }
-
   std::optional<win32::lresult_t> exe_view::wm_setting_change(win32::setting_change_message message)
   {
     if (message.setting == L"ImmersiveColorSet")
@@ -631,24 +610,6 @@ namespace siege::views
   std::wstring category_for_vkey(SHORT vkey)
   {
     if (vkey >= VK_LBUTTON && vkey <= VK_XBUTTON2)
-    {
-      return L"Mouse";
-    }
-
-    // not real vkeys
-    if (vkey >= WM_MOUSEMOVE && vkey <= WM_MOUSEMOVE + 4)
-    {
-      return L"Mouse";
-    }
-
-    // not real vkeys
-    if (vkey >= WM_MOUSEWHEEL && vkey <= WM_MOUSEWHEEL + 1)
-    {
-      return L"Mouse";
-    }
-
-    // not real vkeys
-    if (vkey >= WM_MOUSEHWHEEL && vkey <= WM_MOUSEHWHEEL + 1)
     {
       return L"Mouse";
     }

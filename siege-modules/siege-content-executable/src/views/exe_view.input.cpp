@@ -432,6 +432,11 @@ namespace siege::views
 
   void exe_view::controller_table_nm_click(win32::list_view sender, const NMITEMACTIVATE& message)
   {
+    if (controller.has_extension_module() && !controller.get_extension().controller_input_backends.empty())
+    {
+      return;
+    }
+
     auto result = win32::DialogBoxIndirectParamW(win32::module_ref::current_application(),
       win32::default_dialog({ .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 200, .cy = 100 }),
       ref(),

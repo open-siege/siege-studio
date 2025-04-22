@@ -172,7 +172,6 @@ namespace siege::views
 
     void extract_selected_files();
 
-    LRESULT exe_actions_tbn_dropdown(win32::tool_bar, const NMTOOLBARW& message);
     BOOL exe_actions_nm_click(win32::tool_bar, const NMMOUSE& message);
 
     std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message);
