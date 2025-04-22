@@ -424,10 +424,34 @@ namespace siege::views
 
   void exe_view::keyboard_table_nm_click(win32::list_view sender, const NMITEMACTIVATE& message)
   {
+    if (!controller.has_extension_module())
+    {
+      return;
+    }
+
+    if (controller.get_extension().game_actions.empty())
+    {
+      return;
+    }
+
     auto result = win32::DialogBoxIndirectParamW(win32::module_ref::current_application(),
       win32::default_dialog({ .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 200, .cy = 100 }),
       ref(),
       std::bind_front(&exe_view::handle_keyboard_mouse_press, this));
+
+    auto item = keyboard_table.GetItem(LVITEMW{
+      .mask = LVIF_PARAM,
+      .iItem = message.iItem });
+
+    if (item && item->lParam)
+    {
+      auto& context = bound_actions[item->lParam];
+
+      context.vkey = (WORD)result;
+
+      auto temp = string_for_vkey(result);
+      ListView_SetItemText(keyboard_table, message.iItem, 1, temp.data());
+    }
   }
 
   void exe_view::controller_table_nm_click(win32::list_view sender, const NMITEMACTIVATE& message)
