@@ -83,28 +83,28 @@ namespace siege::views
     { L"Aces of the Pacific"sv, L"3space-1.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".dyn"sv } } },
     { L"Aces Over Europe"sv, L"3space-1.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".dyn"sv } } },
     { L"Betrayal at Krondor"sv, L"3space-1.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".rmf"sv } } },
-    { L"Aces of the Deep"sv, L"3space-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dyn"sv, L".dts"sv } } },
-    { L"Metaltech: Battledrome"sv, L"3space-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv } } },
-    { L"Metaltech: Earthsiege"sv, L"3space-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv } } },
-    { L"Command: Aces of the Deep"sv, L"3space-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dyn"sv, L".dts"sv } } },
-    { L"Earthsiege 2"sv, L"3space-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv } } },
-    { L"Silent Thunder: A-10 Tank Killer 2"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dt2"sv, L".dml"sv, L".pal"sv, L".ppl" } } },
-    { L"Red Baron 2"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".dml"sv, L".cs"sv } } },
-    { L"Pro Pilot '98"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".dml"sv } } },
-    { L"Red Baron 3D"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".dml"sv } } },
-    { L"Pro Pilot '99"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".dml"sv } } },
-    { L"Kid Pilot"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".dml"sv } } },
-    { L"Curse You! Red Baron"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".dml"sv, L".cs"sv } } },
-    { L"Front Page Sports: Ski Racing"sv, L"darkstar"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".tbv"sv, L".dts"sv, L".dml"sv, L".pal"sv, L".ppl"sv, L".bmp"sv, L".pba"sv } } },
-    { L"King's Quest: Mask of Eternity"sv, L"darkstar"sv, L"siege-extension-mask-of-eternity"sv, std::array<std::wstring_view, 8>{ { L".dml"sv, L".dml"sv, L".pal"sv, L".ppl", L".bmp", L".pba" } } },
-    { L"Driver's Education '98"sv, L"3space-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".dml"sv, L".pal"sv, L".ppl", L".bmp", L".pba" } } },
-    { L"Starsiege"sv, L"darkstar"sv, L"siege-extension-starsiege"sv, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".dml"sv, L".pal"sv, L".ppl", L".bmp", L".pba", L".cs" } } },
-    { L"Starsiege: Tribes"sv, L"darkstar"sv, L"siege-extension-tribes"sv, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".dml"sv, L".pal"sv, L".ppl", L".bmp", L".pba", L".cs" } } },
-    { L"Field & Stream: Trophy Bass 3D"sv, L"3space-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".dml"sv, L".cs"sv } } },
-    { L"Field & Stream: Trophy Bass 4"sv, L"3space-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".dml"sv, L".cs"sv } } },
-    { L"Driver's Education '99"sv, L"3space-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".dml"sv, L".cs"sv } } },
-    { L"Rise of the Dragon"sv, L"dgds"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".dml"sv, L".cs"sv } } },
-    { L"Heart of China"sv, L"dgds"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".dml"sv, L".cs"sv } } },
+    { L"Aces of the Deep"sv, L"3space-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dyn"sv } } },
+    { L"Metaltech: Battledrome"sv, L"3space-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv } } },
+    { L"Metaltech: Earthsiege"sv, L"3space-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".sfx" } } },
+    { L"Command: Aces of the Deep"sv, L"3space-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dyn"sv} } },
+    { L"Earthsiege 2"sv, L"3space-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".wav"sv } } },
+    { L"Silent Thunder: A-10 Tank Killer 2"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".pal"sv, L".ppl" } } },
+    { L"Red Baron 2"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv} } },
+    { L"Pro Pilot '98"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv } } },
+    { L"Red Baron 3D"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv } } },
+    { L"Pro Pilot '99"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv } } },
+    { L"Kid Pilot"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv } } },
+    { L"Curse You! Red Baron"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv } } },
+    { L"Front Page Sports: Ski Racing"sv, L"darkstar"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".tbv"sv, L".dts"sv, L".pal"sv, L".ppl"sv, L".bmp"sv, L".pba"sv } } },
+    { L"King's Quest: Mask of Eternity"sv, L"darkstar"sv, L"siege-extension-mask-of-eternity"sv, std::array<std::wstring_view, 8>{ { L".pal"sv, L".ppl", L".bmp", L".pba" } } },
+    { L"Driver's Education '98"sv, L"3space-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".pal"sv, L".ppl", L".bmp", L".pba" } } },
+    { L"Starsiege"sv, L"darkstar"sv, L"siege-extension-starsiege"sv, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".pal"sv, L".ppl", L".bmp", L".pba", L".cs" } } },
+    { L"Starsiege: Tribes"sv, L"darkstar"sv, L"siege-extension-tribes"sv, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".pal"sv, L".ppl", L".bmp", L".pba", L".cs" } } },
+    { L"Field & Stream: Trophy Bass 3D"sv, L"3space-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".cs"sv } } },
+    { L"Field & Stream: Trophy Bass 4"sv, L"3space-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".cs"sv } } },
+    { L"Driver's Education '99"sv, L"3space-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".cs"sv } } },
+    { L"Rise of the Dragon"sv, L"dgds"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".cs"sv } } },
+    { L"Heart of China"sv, L"dgds"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".cs"sv } } },
     { L"The Adventures of Willy Beamish"sv, L"dgds"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".rmf" } } },
     { L"Quarky & Quaysoo's Turbo Science"sv, L"dgds"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".rmf" } } },
     { L"The Incredible Machine"sv, L"dgds"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".rmf" } } },
@@ -124,7 +124,7 @@ namespace siege::views
     { L"3-D Ultra NASCAR Pinball"sv, L"unknown"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".tbv" } } },
     { L"Cyberstorm 2: Corporate Wars"sv, L"unknown"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".tbv" } } },
     { L"3-D Ultra MiniGolf Deluxe"sv, L"unknown"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".rbx"sv } } },
-    { L"3-D Ultra Radio Control Racers"sv, L"unknown"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".dml"sv, L".cs"sv } } },
+    { L"3-D Ultra Radio Control Racers"sv, L"unknown"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".tbv"sv } } },
     { L"3-D Ultra Cool Pool"sv, L"unknown"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".tbv" } } },
     { L"3-D Ultra Lionel Train Town"sv, L"unknown"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".tbv" } } },
     { L"3-D Ultra Pinball: Thrillride"sv, L"unknown"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".tbv" } } },
@@ -142,18 +142,18 @@ namespace siege::views
     { L"World of Aden: Thunderscape"sv, L"idtech-0.5-raven"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".dat"sv } } },
     { L"Necrodome"sv, L"idtech-0.5-raven"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pod"sv, L".bmp", L".wav" } } },
     { L"Take No Prisoners"sv, L"vampire"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vpk"sv, L".cfg", L".wav" } } },
-    { L"MageSlayer"sv, L"vampire"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vpk"sv } } },
-    { L"Quake"sv, L"id_tech-2.0"sv, L"siege-extension-quake", std::array<std::wstring_view, 8>{ { L".pak" } } },
-    { L"Hexen 2"sv, L"id_tech-2.0"sv, L"siege-extension-hexen-2", std::array<std::wstring_view, 8>{ { L".pak" } } },
-    { L"Laser Arena"sv, L"id_tech-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pak" } } },
-    { L"CIA Operative: Solo Missions"sv, L"id_tech-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pak" } } },
-    { L"Quake 2"sv, L"id_tech-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pak" } } },
-    { L"Heretic 2"sv, L"id_tech-2.5-raven"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pak" } } },
-    { L"SiN"sv, L"id_tech-2.5-ritual"sv, L"siege-extension-sin", std::array<std::wstring_view, 8>{ { L".pak" } } },
-    { L"Kingpin: Life of Crime"sv, L"id_tech-2.5"sv, L"siege-extension-kingpin", std::array<std::wstring_view, 8>{ { L".pak" } } },
-    { L"Soldier of Fortune"sv, L"id_tech-2.5-raven"sv, L"siege-extension-soldier-of-fortune", std::array<std::wstring_view, 8>{ { L".pak" } } },
-    { L"Daikatana"sv, L"id_tech-2.5"sv, L"siege-extension-daikatana", std::array<std::wstring_view, 8>{ { L".pak" } } },
-    { L"Anachronox"sv, L"id_tech-2.5"sv, L"siege-extension-daikatana", std::array<std::wstring_view, 8>{ { L".pak", L".bmp", L".wav" } } },
+    { L"MageSlayer"sv, L"vampire"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vpk"sv, L".cfg", L".wav" } } },
+    { L"Quake"sv, L"id_tech-2.0"sv, L"siege-extension-quake", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
+    { L"Hexen 2"sv, L"id_tech-2.0"sv, L"siege-extension-hexen-2", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
+    { L"Laser Arena"sv, L"id_tech-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
+    { L"CIA Operative: Solo Missions"sv, L"id_tech-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
+    { L"Quake 2"sv, L"id_tech-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
+    { L"Heretic 2"sv, L"id_tech-2.5-raven"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
+    { L"SiN"sv, L"id_tech-2.5-ritual"sv, L"siege-extension-sin", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
+    { L"Kingpin: Life of Crime"sv, L"id_tech-2.5"sv, L"siege-extension-kingpin", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
+    { L"Soldier of Fortune"sv, L"id_tech-2.5-raven"sv, L"siege-extension-soldier-of-fortune", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
+    { L"Daikatana"sv, L"id_tech-2.5"sv, L"siege-extension-daikatana", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
+    { L"Anachronox"sv, L"id_tech-2.5"sv, L"siege-extension-daikatana", std::array<std::wstring_view, 8>{ { L".pak", L".bmp", L".cfg", L".wav" } } },
     { L"Quake 3 Arena"sv, L"id_tech-3.0"sv, L"siege-extension-quake-3", std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Heavy Metal: F.A.K.K 2"sv, L"id_tech-3.0-ritual"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Star Trek: Voyager - Elite Force"sv, L"id_tech-3.0-raven"sv, L"siege-extension-elite-force-sp", std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
@@ -482,7 +482,16 @@ namespace siege::views
         ListView_SetTileInfo(supported_games_by_engine, &item_info);
       }
 
-      ListView_Scroll(supported_games_by_engine, 0, -50);
+      win32::SetTimer(ref(), 0, [this](auto, auto, auto cancel, auto) {
+        for (auto i = 0; i < 100; ++i)
+        {
+          if (!ListView_Scroll(supported_games_by_engine, 0, -i))
+          {
+            break;
+          }
+        }
+        cancel();
+      });
 
       win32::queue_user_work_item([this]() {
         std::set<std::wstring> search_roots;
