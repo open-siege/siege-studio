@@ -77,29 +77,30 @@ namespace siege::views
                                        });
 
 
-      std::map<WORD, WORD> default_mappings = {
-        { VK_GAMEPAD_DPAD_UP, VK_UP },
-        { VK_GAMEPAD_DPAD_DOWN, VK_DOWN },
-        { VK_GAMEPAD_DPAD_LEFT, VK_LEFT },
-        { VK_GAMEPAD_DPAD_RIGHT, VK_RIGHT },
-        { VK_GAMEPAD_A, VK_SPACE },
-        { VK_GAMEPAD_B, VK_LCONTROL },
-        { VK_GAMEPAD_X, 'F' },
-        { VK_GAMEPAD_Y, VK_OEM_4 },
-        { VK_GAMEPAD_LEFT_SHOULDER, 'G' },
-        { VK_GAMEPAD_RIGHT_SHOULDER, 'T' },
-        { VK_GAMEPAD_LEFT_TRIGGER, VK_RBUTTON },
-        { VK_GAMEPAD_RIGHT_TRIGGER, VK_LBUTTON },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, VK_LSHIFT },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_UP, 'W' },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, 'S' },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, 'A' },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, 'D' },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, 'E' },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_UP, WM_MOUSEMOVE },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, WM_MOUSEMOVE + 1 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, WM_MOUSEMOVE + 2 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, WM_MOUSEMOVE + 3 },
+      using namespace siege::platform;
+      std::map<WORD, std::pair<WORD, hardware_context>> default_mappings = {
+        { VK_GAMEPAD_DPAD_UP, std::make_pair(VK_UP, hardware_context::keyboard) },
+        { VK_GAMEPAD_DPAD_DOWN, std::make_pair(VK_DOWN, hardware_context::keyboard) },
+        { VK_GAMEPAD_DPAD_LEFT, std::make_pair(VK_LEFT, hardware_context::keyboard) },
+        { VK_GAMEPAD_DPAD_RIGHT, std::make_pair(VK_RIGHT, hardware_context::keyboard) },
+        { VK_GAMEPAD_A, std::make_pair(VK_SPACE, hardware_context::keyboard) },
+        { VK_GAMEPAD_B, std::make_pair(VK_LCONTROL, hardware_context::keyboard) },
+        { VK_GAMEPAD_X, std::make_pair('F', hardware_context::keyboard) },
+        { VK_GAMEPAD_Y, std::make_pair(VK_OEM_4, hardware_context::keyboard) },
+        { VK_GAMEPAD_LEFT_SHOULDER, std::make_pair('G', hardware_context::keyboard) },
+        { VK_GAMEPAD_RIGHT_SHOULDER, std::make_pair('T', hardware_context::keyboard) },
+        { VK_GAMEPAD_LEFT_TRIGGER, std::make_pair(VK_RBUTTON, hardware_context::keyboard) },
+        { VK_GAMEPAD_RIGHT_TRIGGER, std::make_pair(VK_LBUTTON, hardware_context::keyboard) },
+        { VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, std::make_pair(VK_LSHIFT, hardware_context::keyboard) },
+        { VK_GAMEPAD_LEFT_THUMBSTICK_UP, std::make_pair('W', hardware_context::keyboard) },
+        { VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, std::make_pair('S', hardware_context::keyboard) },
+        { VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, std::make_pair('A', hardware_context::keyboard) },
+        { VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, std::make_pair('D', hardware_context::keyboard) },
+        { VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, std::make_pair('E', hardware_context::keyboard) },
+        { VK_GAMEPAD_RIGHT_THUMBSTICK_UP, std::make_pair(VK_UP, hardware_context::mouse) },
+        { VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, std::make_pair(VK_DOWN, hardware_context::mouse) },
+        { VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, std::make_pair(VK_LEFT, hardware_context::mouse) },
+        { VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, std::make_pair(VK_RIGHT, hardware_context::mouse) },
       };
 
       std::map<WORD, int> grouping = {
@@ -129,13 +130,20 @@ namespace siege::views
 
       for (auto mapping : default_mappings)
       {
-        win32::list_view_item up(string_for_vkey(mapping.first), images[mapping.first]);
+        win32::list_view_item up(string_for_vkey(mapping.first, siege::platform::hardware_context::controller), images[mapping.first]);
         up.iGroupId = grouping[mapping.first];
-        up.lParam = MAKELPARAM(mapping.first, mapping.second);
+
+        up.lParam = bound_inputs.size();
+        auto& input = bound_inputs.emplace_back();
+
+        input.from_vkey = mapping.first;
+        input.from_context = siege::platform::hardware_context::controller;
+        input.to_vkey = mapping.second.first;
+        input.to_context = mapping.second.second;
         up.mask = up.mask | LVIF_PARAM;
 
-        up.sub_items.emplace_back(category_for_vkey(mapping.second));
-        up.sub_items.emplace_back(string_for_vkey(mapping.second));
+        up.sub_items.emplace_back(category_for_vkey(mapping.second.first, mapping.second.second));
+        up.sub_items.emplace_back(string_for_vkey(mapping.second.first, mapping.second.second));
         controller_table.InsertRow(up);
       }
     }
@@ -303,13 +311,15 @@ namespace siege::views
         .vkey = vkey,
         .context = context.context,
         .action_index = context.action_index });
-      up.sub_items.emplace_back(string_for_vkey(vkey));
+      up.sub_items.emplace_back(string_for_vkey(vkey, context.context));
       keyboard_table.InsertRow(up);
     }
   }
 
   std::optional<LRESULT> exe_view::handle_keyboard_mouse_press(win32::window_ref dialog, INT message, WPARAM wparam, LPARAM lparam)
   {
+    using namespace siege::platform;
+    static std::wstring temp;
     switch (message)
     {
     case WM_INITDIALOG: {
@@ -325,7 +335,21 @@ namespace siege::views
         if (::GetKeyState(state) & 0x80)
         {
           KillTimer(dialog, 1);
-          EndDialog(dialog, state);
+
+          if (state == VK_RETURN)
+          {
+            auto context = hardware_context::keyboard;
+            temp.resize(255);
+
+            temp.resize(::GetKeyNameTextW(lparam, temp.data(), temp.size() + 1));
+
+            context = temp == L"Numpad Enter" ? hardware_context::keypad : hardware_context::keyboard;
+            EndDialog(dialog, MAKELRESULT(state, context));
+          }
+          else
+          {
+            EndDialog(dialog, MAKELRESULT(state, hardware_context::keyboard));
+          }
           break;
         }
       }
@@ -337,31 +361,31 @@ namespace siege::views
       if (wparam & MK_LBUTTON)
       {
         KillTimer(dialog, 1);
-        EndDialog(dialog, VK_LBUTTON);
+        EndDialog(dialog, MAKELRESULT(VK_LBUTTON, hardware_context::mouse));
       }
 
       if (wparam & MK_RBUTTON)
       {
         KillTimer(dialog, 1);
-        EndDialog(dialog, VK_RBUTTON);
+        EndDialog(dialog, MAKELRESULT(VK_RBUTTON, hardware_context::mouse));
       }
 
       if (wparam & MK_MBUTTON)
       {
         KillTimer(dialog, 1);
-        EndDialog(dialog, VK_MBUTTON);
+        EndDialog(dialog, MAKELRESULT(VK_MBUTTON, hardware_context::mouse));
       }
 
       if (wparam & MK_XBUTTON1)
       {
         KillTimer(dialog, 1);
-        EndDialog(dialog, VK_XBUTTON1);
+        EndDialog(dialog, MAKELRESULT(VK_XBUTTON1, hardware_context::mouse));
       }
 
       if (wparam & MK_XBUTTON2)
       {
         KillTimer(dialog, 1);
-        EndDialog(dialog, MK_XBUTTON2);
+        EndDialog(dialog, MAKELRESULT(VK_XBUTTON2, hardware_context::mouse));
       }
 
       return 0;
@@ -373,16 +397,16 @@ namespace siege::views
       {
         if (::GetKeyState(VK_LMENU) & 0x80)
         {
-          EndDialog(dialog, VK_LMENU);
+          EndDialog(dialog, MAKELRESULT(VK_LMENU, hardware_context::keyboard));
         }
         else if (::GetKeyState(VK_RMENU) & 0x80)
         {
-          EndDialog(dialog, VK_RMENU);
+          EndDialog(dialog, MAKELRESULT(VK_RMENU, hardware_context::keyboard));
         }
       }
       else
       {
-        EndDialog(dialog, wparam);
+        EndDialog(dialog, MAKELRESULT(wparam, hardware_context::keyboard));
       }
 
       return 0;
@@ -393,27 +417,27 @@ namespace siege::views
       {
         if (::GetKeyState(VK_LSHIFT) & 0x80)
         {
-          EndDialog(dialog, VK_LSHIFT);
+          EndDialog(dialog, MAKELRESULT(VK_LSHIFT, hardware_context::keyboard));
         }
         else if (::GetKeyState(VK_RSHIFT) & 0x80)
         {
-          EndDialog(dialog, VK_RSHIFT);
+          EndDialog(dialog, MAKELRESULT(VK_RSHIFT, hardware_context::keyboard));
         }
       }
       else if (wparam == VK_CONTROL)
       {
         if (::GetKeyState(VK_LCONTROL) & 0x80)
         {
-          EndDialog(dialog, VK_LCONTROL);
+          EndDialog(dialog, MAKELRESULT(VK_LCONTROL, hardware_context::keyboard));
         }
         else if (::GetKeyState(VK_RCONTROL) & 0x80)
         {
-          EndDialog(dialog, VK_RCONTROL);
+          EndDialog(dialog, MAKELRESULT(VK_RCONTROL, hardware_context::keyboard));
         }
       }
       else
       {
-        EndDialog(dialog, wparam);
+        EndDialog(dialog, MAKELRESULT(wparam, hardware_context::keyboard));
       }
       return 0;
     }
@@ -447,9 +471,10 @@ namespace siege::views
     {
       auto& context = bound_actions[item->lParam];
 
-      context.vkey = (WORD)result;
+      context.vkey = LOWORD(result);
+      context.context = static_cast<decltype(context.context)>(HIWORD(result));
 
-      auto temp = string_for_vkey(result);
+      auto temp = string_for_vkey(result, context.context);
       ListView_SetItemText(keyboard_table, message.iItem, 1, temp.data());
     }
   }
@@ -472,19 +497,17 @@ namespace siege::views
 
     if (item && item->lParam)
     {
-      auto game_pad_code = LOWORD(item->lParam);
+      auto& binding = bound_inputs.at(item->lParam);
 
-      std::wstring temp = category_for_vkey(result);
+      auto context = static_cast<siege::platform::hardware_context>(HIWORD(result));
+      auto vkey = LOWORD(result);
+      std::wstring temp = category_for_vkey(vkey, context);
       ListView_SetItemText(controller_table, message.iItem, 1, temp.data());
-      temp = string_for_vkey(result);
-      ListView_SetItemText(controller_table, message.iItem, 2, temp.data());
 
-      LVITEMW item{
-        .mask = LVIF_PARAM,
-        .iItem = message.iItem,
-        .lParam = MAKELPARAM(game_pad_code, result)
-      };
-      ListView_SetItem(controller_table, &item);
+      temp = string_for_vkey(vkey, context);
+      ListView_SetItemText(controller_table, message.iItem, 2, temp.data());
+      binding.to_context = context;
+      binding.to_vkey = vkey;
     }
   }
 

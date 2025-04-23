@@ -82,8 +82,8 @@ namespace siege::views
 
   using namespace std::literals;
 
-  std::wstring string_for_vkey(SHORT vkey);
-  std::wstring category_for_vkey(SHORT vkey);
+  std::wstring string_for_vkey(SHORT vkey, siege::platform::hardware_context context);
+  std::wstring category_for_vkey(SHORT vkey, siege::platform::hardware_context context);
   std::uint16_t hardware_index_for_controller_vkey(std::span<RAWINPUTDEVICELIST> devices, std::uint32_t index, SHORT vkey);
 
   struct exe_view final : win32::window_ref
@@ -112,6 +112,16 @@ namespace siege::views
     };
 
     std::vector<input_action_binding> bound_actions = { {} };
+
+    struct controller_send_input_binding
+    {
+      std::uint16_t from_vkey;
+      siege::platform::hardware_context from_context;
+      std::uint16_t to_vkey;
+      siege::platform::hardware_context to_context;      
+    };
+
+    std::vector<controller_send_input_binding> bound_inputs{ {} };
 
     win32::list_view keyboard_table;
     win32::list_view controller_table;

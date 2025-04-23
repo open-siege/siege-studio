@@ -607,14 +607,25 @@ namespace siege::views
     return std::nullopt;
   }
 
-  std::wstring category_for_vkey(SHORT vkey)
+  std::wstring category_for_vkey(SHORT vkey, siege::platform::hardware_context context)
   {
+    using namespace siege::platform;
     if (vkey >= VK_LBUTTON && vkey <= VK_XBUTTON2)
     {
       return L"Mouse";
     }
 
+    if (context == hardware_context::mouse || context == hardware_context::mouse_wheel)
+    {
+      return L"Mouse";
+    }
+
     if (vkey >= VK_GAMEPAD_A && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)
+    {
+      return L"Controller";
+    }
+
+    if (context == hardware_context::controller || context == hardware_context::joystick || context == hardware_context::throttle)
     {
       return L"Controller";
     }
@@ -673,58 +684,58 @@ namespace siege::views
 
     if (found_controller && xinput_devices.contains(current_index))
     {
-        switch (vkey)
-        {
-        case VK_GAMEPAD_A:
-          return 0;
-        case VK_GAMEPAD_B:
-          return 1;
-        case VK_GAMEPAD_X:
-          return 2;
-        case VK_GAMEPAD_Y:
-          return 3;
-        case VK_GAMEPAD_LEFT_SHOULDER:
-          return 4;
-        case VK_GAMEPAD_RIGHT_SHOULDER:
-          return 5;
-        case VK_GAMEPAD_VIEW:
-          return 6;
-        case VK_GAMEPAD_MENU:
-          return 7;
-        case VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON:
-          return 8;
-        case VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON:
-          return 9;
-        case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
-        case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT:
-          return 0;
-        case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
-        case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN:
-          return 1;
-        case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
-        case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT:
-          return 4;
-        case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
-        case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN:
-          return 3;
-        case VK_GAMEPAD_LEFT_TRIGGER:
-        case VK_GAMEPAD_RIGHT_TRIGGER:
-          return 2;
-        default:
-          return 0;
+      switch (vkey)
+      {
+      case VK_GAMEPAD_A:
+        return 0;
+      case VK_GAMEPAD_B:
+        return 1;
+      case VK_GAMEPAD_X:
+        return 2;
+      case VK_GAMEPAD_Y:
+        return 3;
+      case VK_GAMEPAD_LEFT_SHOULDER:
+        return 4;
+      case VK_GAMEPAD_RIGHT_SHOULDER:
+        return 5;
+      case VK_GAMEPAD_VIEW:
+        return 6;
+      case VK_GAMEPAD_MENU:
+        return 7;
+      case VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON:
+        return 8;
+      case VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON:
+        return 9;
+      case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
+      case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT:
+        return 0;
+      case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
+      case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN:
+        return 1;
+      case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
+      case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT:
+        return 4;
+      case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
+      case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN:
+        return 3;
+      case VK_GAMEPAD_LEFT_TRIGGER:
+      case VK_GAMEPAD_RIGHT_TRIGGER:
+        return 2;
+      default:
+        return 0;
       }
     }
     else if (found_controller)
     {
       switch (vkey)
       {
-      case VK_GAMEPAD_X: // ps3/ps4 square
+      case VK_GAMEPAD_X:// ps3/ps4 square
         return 0;
-      case VK_GAMEPAD_A: // ps3/ps4 cross
+      case VK_GAMEPAD_A:// ps3/ps4 cross
         return 1;
-      case VK_GAMEPAD_B: // ps3/ps4 circle
+      case VK_GAMEPAD_B:// ps3/ps4 circle
         return 2;
-      case VK_GAMEPAD_Y: // ps3/ps4 triangle
+      case VK_GAMEPAD_Y:// ps3/ps4 triangle
         return 3;
       case VK_GAMEPAD_LEFT_SHOULDER:
         return 4;
@@ -761,41 +772,35 @@ namespace siege::views
     return 0;
   }
 
-  std::wstring string_for_vkey(SHORT vkey)
+  std::wstring string_for_vkey(SHORT vkey, siege::platform::hardware_context context)
   {
     constexpr static auto directions = std::array<std::wstring_view, 4>{
       {
-        std::wstring_view(L"Up"),
-        std::wstring_view(L"Down"),
         std::wstring_view(L"Left"),
+        std::wstring_view(L"Up"),
         std::wstring_view(L"Right"),
+        std::wstring_view(L"Down"),
       }
     };
 
-    // not real vkeys
-    if (vkey >= WM_MOUSEMOVE && vkey <= WM_MOUSEMOVE + 4)
+    if (context == siege::platform::hardware_context::mouse)
     {
-      std::wstring result(L"Move ");
-      result.append(directions[vkey - WM_MOUSEMOVE]);
-      return result;
+      if (vkey >= VK_LEFT && vkey <= VK_DOWN)
+      {
+        std::wstring result(L"Move ");
+        result.append(directions[vkey - VK_LEFT]);
+        return result;
+      }
     }
 
-    // not real vkeys
-    if (vkey >= WM_MOUSEWHEEL && vkey <= WM_MOUSEWHEEL + 1)
+    if (context == siege::platform::hardware_context::mouse_wheel)
     {
-      std::wstring result(L"Scroll ");
-
-      result.append(directions[vkey - WM_MOUSEWHEEL]);
-      return result;
-    }
-
-    // not real vkeys
-    if (vkey >= WM_MOUSEHWHEEL && vkey <= WM_MOUSEHWHEEL + 1)
-    {
-      std::wstring result(L"Scroll ");
-
-      result.append(directions[vkey - WM_MOUSEHWHEEL + 2]);
-      return result;
+      if (vkey >= VK_LEFT && vkey <= VK_DOWN)
+      {
+        std::wstring result(L"Scroll ");
+        result.append(directions[vkey - VK_LEFT]);
+        return result;
+      }
     }
 
     if (vkey >= VK_NUMPAD0 && vkey <= VK_NUMPAD9)

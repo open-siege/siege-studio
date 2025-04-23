@@ -482,7 +482,7 @@ namespace siege::views
         ListView_SetTileInfo(supported_games_by_engine, &item_info);
       }
 
-      win32::SetTimer(ref(), 0, [this](auto, auto, auto cancel, auto) {
+      win32::SetTimer(ref(), USER_TIMER_MINIMUM, [this](auto, auto, auto cancel, auto) {
         for (auto i = 0; i < 100; ++i)
         {
           if (!ListView_Scroll(supported_games_by_engine, 0, -i))

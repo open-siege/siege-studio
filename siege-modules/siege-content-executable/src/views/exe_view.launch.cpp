@@ -439,9 +439,17 @@ namespace siege::views
 
             if (item && item->lParam)
             {
-              auto controller_key = LOWORD(item->lParam);
-              auto keyboard_key = HIWORD(item->lParam);
-              //    input_mapping[controller_key] = keyboard_key;
+              auto iter = std::find_if(game_args->controller_to_send_input_mappings.begin(), game_args->controller_to_send_input_mappings.end(), [](auto& item) {
+                return item.from_vkey == 0;
+              });
+
+              if (iter != game_args->controller_to_send_input_mappings.end())
+              {
+                iter->from_context = bound_inputs.at(item->lParam).from_context;
+                iter->from_vkey = bound_inputs.at(item->lParam).from_vkey;
+                iter->to_context = bound_inputs.at(item->lParam).to_context;
+                iter->to_vkey = bound_inputs.at(item->lParam).to_vkey;
+              }
             }
           }
         }
