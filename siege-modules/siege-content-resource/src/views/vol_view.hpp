@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <set>
 #include <algorithm>
+#include <versionhelpers.h>
 #include <siege/platform/win/theming.hpp>
 #include "vol_controller.hpp"
 
@@ -399,6 +400,7 @@ namespace siege::views
     void extract_all_files()
     {
       alloc_console();
+
       auto items = controller.get_contents();
 
       if (has_saved == false)
@@ -410,6 +412,15 @@ namespace siege::views
 
       if (!path)
       {
+        return;
+      }
+
+      // TODO fix crash when extracting lots of files with our internal zip code
+      if (auto archive_path = controller.get_original_path(); IsWindows10OrGreater() && archive_path && (archive_path->extension().string() == ".pk3" || archive_path->extension().string() == ".PK3" || archive_path->extension().string() == ".zip" || archive_path->extension().string() == ".ZIP"))
+      {
+        std::stringstream command;
+        command << "cd " << *path << " && tar -xf " << *archive_path << " && explorer ."; 
+        std::system(command.str().c_str());
         return;
       }
 

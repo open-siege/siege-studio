@@ -53,6 +53,16 @@ namespace siege::views
     std::vector<siege::platform::resource_reader::content_info> get_contents();
     std::vector<char> load_content_data(const siege::platform::resource_reader::content_info&);
     void stop_loading() { should_continue = false; }
+
+    std::optional<std::filesystem::path> get_original_path()
+    {
+      if (auto* path = std::get_if<std::filesystem::path>(&storage); path)
+      {
+        return *path;
+      }
+
+      return std::nullopt;
+    };
   private:
     std::atomic_bool should_continue = false;
     std::future<void> pending_load;
