@@ -55,6 +55,11 @@ namespace siege::views
     {
     }
 
+    ~vol_view()
+    {
+      controller.stop_loading();
+    }
+
     auto wm_create()
     {
       auto app_path = std::filesystem::path(win32::module_ref().current_application().GetModuleFileName());
@@ -126,7 +131,7 @@ namespace siege::views
 
       table = *win32::CreateWindowExW<win32::list_view>(CREATESTRUCTW{
         .hMenu = table_menu,
-        .hwndParent = *this, 
+        .hwndParent = *this,
         .style = WS_VISIBLE | WS_CHILD | LVS_REPORT,
       });
 
@@ -291,50 +296,51 @@ namespace siege::views
       {
         std::optional<std::filesystem::path> path = win32::get_path_from_handle((HANDLE)message.data_type);
 
-        auto count = controller.load_volume(stream, path);
+        auto count = controller.load_volume(stream, path, [&, table = table.get()](siege::platform::resource_reader::content_info& content) mutable {
+          if (!::IsWindow(table))
+          {
+            controller.stop_loading();
+            return;
+          }
+
+          if (auto* file = std::get_if<siege::platform::file_info>(&content))
+          {
+            win32::list_view_item item{ file->filename };
+
+            auto extension = platform::to_lower(file->filename.extension().wstring());
+            auto category = extensions_to_categories.find(extension);
+
+            if (category != extensions_to_categories.end())
+            {
+              item.iImage = default_icon.iSysImageIndex;
+
+              if (auto icon = category_icons.find(category->second); icon != category_icons.end())
+              {
+                item.iImage = icon->second.iSysImageIndex;
+              }
+
+              item.iGroupId = categories_to_groups[category->second];
+              item.sub_items = {
+                std::filesystem::relative(file->folder_path, file->archive_path).wstring(),
+                std::to_wstring(file->size)
+              };
+
+              item.mask = item.mask | LVIF_GROUPID | LVIF_IMAGE;
+
+              auto index = win32::list_view(table).InsertRow(item);
+              file_indices.emplace(file, index);
+
+              UINT columns[2] = { 2, 3 };
+              int formats[2] = { LVCFMT_LEFT, LVCFMT_LEFT };
+              LVTILEINFO item_info{ .cbSize = sizeof(LVTILEINFO), .iItem = (int)index, .cColumns = 2, .puColumns = columns, .piColFmt = formats };
+
+              ListView_SetTileInfo(table, &item_info);
+            }
+          }
+        });
 
         if (count > 0)
         {
-          auto contents = controller.get_contents();
-
-          for (auto& content : contents)
-          {
-            if (auto* file = std::get_if<siege::platform::file_info>(&content))
-            {
-              win32::list_view_item item{ file->filename };
-
-              auto extension = platform::to_lower(file->filename.extension().wstring());
-              auto category = extensions_to_categories.find(extension);
-
-              if (category != extensions_to_categories.end())
-              {
-                item.iImage = default_icon.iSysImageIndex;
-
-                if (auto icon = category_icons.find(category->second); icon != category_icons.end())
-                {
-                  item.iImage = icon->second.iSysImageIndex;
-                }
-
-                item.iGroupId = categories_to_groups[category->second];
-                item.sub_items = {
-                  std::filesystem::relative(file->folder_path, file->archive_path).wstring(),
-                  std::to_wstring(file->size)
-                };
-
-                item.mask = item.mask | LVIF_GROUPID | LVIF_IMAGE;
-
-                auto index = table.InsertRow(item);
-                file_indices.emplace(file, index);
-
-                UINT columns[2] = { 2, 3 };
-                int formats[2] = { LVCFMT_LEFT, LVCFMT_LEFT };
-                LVTILEINFO item_info{ .cbSize = sizeof(LVTILEINFO), .iItem = (int)index, .cColumns = 2, .puColumns = columns, .piColFmt = formats };
-
-                ListView_SetTileInfo(table, &item_info);
-              }
-            }
-          }
-
           auto client_size = this->GetClientSize();
           wm_size(SIZE_RESTORED, *client_size);
 

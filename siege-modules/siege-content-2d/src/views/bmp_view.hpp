@@ -56,6 +56,7 @@ namespace siege::views
 
     win32::static_control static_image;
     std::list<platform::storage_module> loaded_modules;
+    std::future<void> pending_palette_load;
 
 //    win32::local_atom pbmp_id = win32::local_atom(L".pbm");
     win32::local_atom bmp_id = win32::local_atom(L".bmp");
@@ -884,7 +885,7 @@ namespace siege::views
 
           resize_preview();
 
-          win32::queue_user_work_item([this, pending_load]() {
+          pending_palette_load = std::async(std::launch::async, [this, pending_load]() {
                 auto& palettes = pending_load.get();
                 loaded_contexts.clear();
                 auto selection = controller.get_selected_palette();

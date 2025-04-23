@@ -14,13 +14,20 @@
 namespace siege::views
 {
   using namespace siege::resource;
+  using namespace siege::platform;
 
   bool vol_controller::is_vol(std::istream& vol_stream) noexcept
   {
     return is_resource_reader(vol_stream);
   }
 
-  std::size_t vol_controller::load_volume(std::istream& vol_stream, std::optional<std::filesystem::path> path)
+  auto& get_lock()
+  {
+    static std::mutex lock{};
+    return lock;
+  }
+
+  std::size_t vol_controller::load_volume(std::istream& vol_stream, std::optional<std::filesystem::path> path, std::function<void(resource_reader::content_info&)> on_new_item)
   {
     resource.reset(make_resource_reader(vol_stream).release());
 
@@ -36,27 +43,37 @@ namespace siege::views
       contents.clear();
       contents.reserve(temp.size() * 2);
 
-      std::function<void(const decltype(temp)&)> get_full_listing = [&](const auto& items) {
-        for (auto& info : items)
-        {
-          if (auto folder_info = std::get_if<siege::platform::folder_info>(&info); folder_info)
-          {
-            auto children = resource->get_content_listing(cache, vol_stream, platform::listing_query{ .archive_path = *path, .folder_path = folder_info->full_path });
-            get_full_listing(children);
-          }
+      should_continue = true;
+      pending_load = std::async(std::launch::async, [this, path = path, temp = std::move(temp), on_new_item = std::move(on_new_item)]() mutable {
+        auto vol_stream = std::make_unique<std::ifstream>(*path, std::ios::binary);
 
-          if (auto file_info = std::get_if<siege::platform::file_info>(&info); file_info)
+        std::function<void(decltype(temp)&)> get_full_listing = [&](std::vector<resource_reader::content_info>& items) mutable {
+          for (resource_reader::content_info& info : items)
           {
-            contents.emplace_back(*file_info);
-          }
-        }
-      };
+            if (!should_continue)
+            {
+              break;
+            }
+            if (auto folder_info = std::get_if<siege::platform::folder_info>(&info); folder_info)
+            {
+              std::vector<resource_reader::content_info> children = resource->get_content_listing(cache, *vol_stream, platform::listing_query{ .archive_path = *path, .folder_path = folder_info->full_path });
+              get_full_listing(children);
+            }
 
-      get_full_listing(temp);
+            if (auto file_info = std::get_if<siege::platform::file_info>(&info); file_info)
+            {
+              std::lock_guard guard(get_lock());
+              on_new_item(info);
+              contents.emplace_back(info);
+            }
+          }
+        };
+        get_full_listing(temp);
+      });
 
       storage = std::move(*path);
 
-      return contents.size();
+      return contents.capacity();
     }
     else if (resource)
     {
@@ -147,8 +164,9 @@ namespace siege::views
     return results;
   }
 
-  std::span<siege::platform::resource_reader::content_info> vol_controller::get_contents()
+  std::vector<siege::platform::resource_reader::content_info> vol_controller::get_contents()
   {
+    std::lock_guard guard(get_lock());
     return contents;
   }
 }// namespace siege::views

@@ -1,11 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 project(siege-frontend)
 
-# To reduce the number of API calls for XP support
-if (MSVC)
-    add_compile_options(/Zc:threadSafeInit-)
-endif()
-
 if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/generators)
     set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/build/generators)
 endif()
