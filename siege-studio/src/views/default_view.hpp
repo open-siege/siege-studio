@@ -495,13 +495,15 @@ namespace siege::views
 
       win32::queue_user_work_item([this]() {
         std::set<std::wstring> search_roots;
+        std::set<std::wstring> drive_roots;
 
         std::error_code errc{};
         for (auto drive = L'C'; drive <= L'Z'; ++drive)
         {
           if (std::filesystem::exists(std::wstring(1, drive) + L":\\", errc))
           {
-            search_roots.emplace(std::wstring(1, drive) + L":");
+            auto result = search_roots.emplace(std::wstring(1, drive) + L":");
+            drive_roots.emplace(*result.first + std::wstring(1, L'\\'));
           }
         }
 
@@ -550,17 +552,16 @@ namespace siege::views
           {
             try
             {
-              for (const fs::directory_entry& dir_entry :
-                fs::recursive_directory_iterator(real_search_path))
+              auto process_path = [&](const auto& dir_entry)
               {
                 if (!(dir_entry.path().extension() == L".exe" || dir_entry.path().extension() == L".EXE"))
                 {
-                  continue;
+                  return;
                 }
 
                 if (dir_entry.path().stem() == "siege-studio" || dir_entry.path().stem() == "siege studio" || dir_entry.path().stem() == "Siege Studio" || dir_entry.path().stem() == "siege-launcher" || dir_entry.path().stem() == "siege launcher" || dir_entry.path().stem() == "Siege Launcher")
                 {
-                  continue;
+                  return;
                 }
 
                 for (auto& extension : extensions)
@@ -702,7 +703,27 @@ namespace siege::views
                     }
                   }
                 }
+              };
+
+              if (drive_roots.contains(real_search_path.wstring()) ||
+                  real_search_path.wstring() == program_files_path + L"\\" || 
+                  real_search_path.wstring() == program_files_x86_path + L"\\")
+              {
+                for (const fs::directory_entry& dir_entry :
+                  fs::directory_iterator(real_search_path))
+                {
+                  process_path(dir_entry);
+                }
               }
+              else
+              {
+                for (const fs::directory_entry& dir_entry :
+                  fs::recursive_directory_iterator(real_search_path))
+                {
+                  process_path(dir_entry);
+                }
+              }
+              
             }
             catch (...)
             {
