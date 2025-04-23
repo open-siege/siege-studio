@@ -46,13 +46,7 @@ endforeach()
 if (WIN32)
         set(EXTENSION_PROJECTS siege-extension-id-tech 
                                siege-extension-3space 
-                               siege-extension-unreal
-                               siege-extension-cry-engine
-                               siege-extension-isi-motor
-                               siege-extension-krass
-                               siege-extension-other
-                               siege-extension-real-space
-                               siege-extension-serious)
+                               siege-extension-other)
         set(EXT_TARGETS)
 
         foreach(EXT_PROJECT IN ITEMS ${EXTENSION_PROJECTS})
