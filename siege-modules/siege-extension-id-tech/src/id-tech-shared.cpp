@@ -10,10 +10,171 @@
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/window_impl.hpp>
+#include <siege/resource/pak_resource.hpp>
 #include <detours.h>
 #include "shared.hpp"
 #include "GetGameFunctionNames.hpp"
 #include "id-tech-shared.hpp"
+
+namespace fs = std::filesystem;
+
+
+const std::map<std::string_view, std::pair<WORD, hardware_context>>& get_key_to_vkey_mapping()
+{
+  const static std::map<std::string_view, std::pair<WORD, hardware_context>> mapping = {
+    { "f1", std::make_pair(VK_F1, hardware_context::keyboard) },
+    { "f2", std::make_pair(VK_F2, hardware_context::keyboard) },
+    { "f3", std::make_pair(VK_F3, hardware_context::keyboard) },
+    { "f4", std::make_pair(VK_F4, hardware_context::keyboard) },
+    { "f5", std::make_pair(VK_F5, hardware_context::keyboard) },
+    { "f6", std::make_pair(VK_F6, hardware_context::keyboard) },
+    { "f7", std::make_pair(VK_F7, hardware_context::keyboard) },
+    { "f8", std::make_pair(VK_F8, hardware_context::keyboard) },
+    { "f9", std::make_pair(VK_F9, hardware_context::keyboard) },
+    { "f10", std::make_pair(VK_F10, hardware_context::keyboard) },
+    { "f11", std::make_pair(VK_F11, hardware_context::keyboard) },
+    { "f12", std::make_pair(VK_F12, hardware_context::keyboard) },
+    { "tab", std::make_pair(VK_TAB, hardware_context::keyboard) },
+    { "lctrl", std::make_pair(VK_LCONTROL, hardware_context::keyboard) },
+    { "rctrl", std::make_pair(VK_RCONTROL, hardware_context::keyboard) },
+    { "lshift", std::make_pair(VK_LSHIFT, hardware_context::keyboard) },
+    { "rshift", std::make_pair(VK_RSHIFT, hardware_context::keyboard) },
+    { "lalt", std::make_pair(VK_LMENU, hardware_context::keyboard) },
+    { "ralt", std::make_pair(VK_LMENU, hardware_context::keyboard) },
+    { "uparrow", std::make_pair(VK_LEFT, hardware_context::keyboard) },
+    { "downarrow", std::make_pair(VK_DOWN, hardware_context::keyboard) },
+    { "leftarrow", std::make_pair(VK_LEFT, hardware_context::keyboard) },
+    { "rightarrow", std::make_pair(VK_RIGHT, hardware_context::keyboard) },
+    { "enter", std::make_pair(VK_RETURN, hardware_context::keyboard) },
+    { "home", std::make_pair(VK_HOME, hardware_context::keyboard) },
+    { "ins", std::make_pair(VK_INSERT, hardware_context::keyboard) },
+    { "pause", std::make_pair(VK_PAUSE, hardware_context::keyboard) },
+    { "pgdn", std::make_pair(VK_NEXT, hardware_context::keyboard) },
+    { "pgup", std::make_pair(VK_PRIOR, hardware_context::keyboard) },
+    { "caps", std::make_pair(VK_CAPITAL, hardware_context::keyboard) },
+    { "del", std::make_pair(VK_DELETE, hardware_context::keyboard) },
+    { "end", std::make_pair(VK_END, hardware_context::keyboard) },
+    { "kp_ins", std::make_pair(VK_INSERT, hardware_context::keypad) },
+    { "kp_pgdn", std::make_pair(VK_PAUSE, hardware_context::keypad) },
+    { "kp_del", std::make_pair(VK_DELETE, hardware_context::keyboard) },
+    { "kp_enter", std::make_pair(VK_RETURN, hardware_context::keypad) },
+    { "kp_downarrow", std::make_pair(VK_NUMPAD2, hardware_context::keypad) },
+    { "kp_end", std::make_pair(VK_END, hardware_context::keypad) },
+    { "semicolon", std::make_pair(';', hardware_context::keyboard) },
+    { "backspace", std::make_pair(VK_BACK, hardware_context::keyboard) },
+    { "space", std::make_pair(VK_SPACE, hardware_context::keyboard) },
+    { "mouse1", std::make_pair(VK_LBUTTON, hardware_context::keyboard) },
+    { "mouse2", std::make_pair(VK_RBUTTON, hardware_context::keyboard) },
+    { "mouse3", std::make_pair(VK_MBUTTON, hardware_context::keyboard) },
+  };
+
+  return mapping;
+}
+
+std::optional<std::pair<WORD, hardware_context>> key_to_vkey(std::string_view value)
+{
+  auto lower = siege::platform::to_lower(value);
+  auto& mapping = get_key_to_vkey_mapping();
+
+  auto iter = mapping.find(lower);
+
+  if (iter != mapping.end())
+  {
+    return iter->second;
+  }
+
+  if (value.size() == 1 && (std::isalpha(value[0]) || std::isdigit(value[0]) || std::ispunct(value[0])))
+  {
+    return std::make_pair((WORD)value[0], hardware_context::keyboard);
+  }
+
+  return std::nullopt;
+}
+
+std::optional<std::string> vkey_to_key(WORD vkey, hardware_context context)
+{
+  auto& mapping = get_key_to_vkey_mapping();
+
+  for (auto& kv : mapping)
+  {
+    if (kv.second.first == vkey && kv.second.second == context)
+    {
+      return siege::platform::to_upper(kv.first);
+    }
+  }
+
+  if (std::isalpha(vkey))
+  {
+    return std::string(1, (char)vkey);
+  }
+
+  return std::nullopt;
+}
+
+std::optional<std::string_view> hardware_index_to_joystick_setting(WORD vkey, WORD index)
+{
+  if (vkey < VK_GAMEPAD_LEFT_THUMBSTICK_UP)
+  {
+    return std::nullopt;
+  }
+  switch (index)
+  {
+  case 0:
+    return "joy_advaxisx";
+  case 1:
+    return "joy_advaxisy";
+  case 2:
+    return "joy_advaxisz";
+  case 3:
+    return "joy_advaxisr";
+  case 4:
+    return "joy_advaxisu";
+  case 5:
+    return "joy_advaxisv";
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<siege::configuration::text_game_config> load_config_from_pak(fs::path real_file_path, std::wstring pak_path, std::wstring pak_folder_path)
+{
+  std::error_code last_error;
+  if (fs::exists(real_file_path, last_error))
+  {
+    std::ifstream stream(real_file_path, std::ios::binary);
+    auto size = fs::file_size(real_file_path, last_error);
+    return siege::configuration::id_tech::id_tech_2::load_config(stream, size);
+  }
+  else if (fs::exists(pak_path, last_error))
+  {
+    std::any cache;
+    siege::resource::pak::pak_resource_reader reader;
+
+    std::ifstream stream(pak_path, std::ios::binary);
+    auto contents = reader.get_content_listing(cache, stream, { .archive_path = pak_path, .folder_path = pak_folder_path });
+
+    auto default_keys = std::find_if(contents.begin(), contents.end(), [&](auto& info) {
+      if (auto* file_info = std::get_if<siege::platform::resource_reader::file_info>(&info))
+      {
+        return file_info->filename.wstring() == real_file_path.filename();
+      }
+
+      return false;
+    });
+
+    if (default_keys != contents.end())
+    {
+      std::stringstream temp;
+      reader.extract_file_contents(cache, stream, std::get<siege::platform::resource_reader::file_info>(*default_keys), temp);
+      auto size = (std::size_t)temp.tellp();
+      temp.seekg(0);
+      return siege::configuration::id_tech::id_tech_2::load_config(temp, size);
+    }
+  }
+
+  return std::nullopt;
+}
+
 
 extern "C" {
 extern void(__cdecl* ConsoleEvalCdecl)(const char*) = nullptr;

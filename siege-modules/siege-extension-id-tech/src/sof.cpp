@@ -11,7 +11,6 @@
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/window_impl.hpp>
-#include <siege/resource/pak_resource.hpp>
 #include <siege/configuration/id_tech.hpp>
 #include <detours.h>
 #include "shared.hpp"
@@ -19,183 +18,6 @@
 #include "id-tech-shared.hpp"
 
 using hardware_context = siege::platform::hardware_context;
-namespace fs = std::filesystem;
-
-const std::map<std::string_view, std::pair<WORD, hardware_context>>& get_key_to_vkey_mapping()
-{
-  const static std::map<std::string_view, std::pair<WORD, hardware_context>> mapping = {
-    { "f1", std::make_pair(VK_F1, hardware_context::keyboard) },
-    { "f2", std::make_pair(VK_F2, hardware_context::keyboard) },
-    { "f3", std::make_pair(VK_F3, hardware_context::keyboard) },
-    { "f4", std::make_pair(VK_F4, hardware_context::keyboard) },
-    { "f5", std::make_pair(VK_F5, hardware_context::keyboard) },
-    { "f6", std::make_pair(VK_F6, hardware_context::keyboard) },
-    { "f7", std::make_pair(VK_F7, hardware_context::keyboard) },
-    { "f8", std::make_pair(VK_F8, hardware_context::keyboard) },
-    { "f9", std::make_pair(VK_F9, hardware_context::keyboard) },
-    { "f10", std::make_pair(VK_F10, hardware_context::keyboard) },
-    { "f11", std::make_pair(VK_F11, hardware_context::keyboard) },
-    { "f12", std::make_pair(VK_F12, hardware_context::keyboard) },
-    { "tab", std::make_pair(VK_TAB, hardware_context::keyboard) },
-    { "lctrl", std::make_pair(VK_LCONTROL, hardware_context::keyboard) },
-    { "rctrl", std::make_pair(VK_RCONTROL, hardware_context::keyboard) },
-    { "lshift", std::make_pair(VK_LSHIFT, hardware_context::keyboard) },
-    { "rshift", std::make_pair(VK_RSHIFT, hardware_context::keyboard) },
-    { "lalt", std::make_pair(VK_LMENU, hardware_context::keyboard) },
-    { "ralt", std::make_pair(VK_LMENU, hardware_context::keyboard) },
-    { "uparrow", std::make_pair(VK_LEFT, hardware_context::keyboard) },
-    { "downarrow", std::make_pair(VK_DOWN, hardware_context::keyboard) },
-    { "leftarrow", std::make_pair(VK_LEFT, hardware_context::keyboard) },
-    { "rightarrow", std::make_pair(VK_RIGHT, hardware_context::keyboard) },
-    { "enter", std::make_pair(VK_RETURN, hardware_context::keyboard) },
-    { "home", std::make_pair(VK_HOME, hardware_context::keyboard) },
-    { "ins", std::make_pair(VK_INSERT, hardware_context::keyboard) },
-    { "pause", std::make_pair(VK_PAUSE, hardware_context::keyboard) },
-    { "pgdn", std::make_pair(VK_NEXT, hardware_context::keyboard) },
-    { "pgup", std::make_pair(VK_PRIOR, hardware_context::keyboard) },
-    { "caps", std::make_pair(VK_CAPITAL, hardware_context::keyboard) },
-    { "del", std::make_pair(VK_DELETE, hardware_context::keyboard) },
-    { "end", std::make_pair(VK_END, hardware_context::keyboard) },
-    { "kp_ins", std::make_pair(VK_INSERT, hardware_context::keypad) },
-    { "kp_pgdn", std::make_pair(VK_PAUSE, hardware_context::keypad) },
-    { "kp_del", std::make_pair(VK_DELETE, hardware_context::keyboard) },
-    { "kp_enter", std::make_pair(VK_RETURN, hardware_context::keypad) },
-    { "kp_downarrow", std::make_pair(VK_NUMPAD2, hardware_context::keypad) },
-    { "kp_end", std::make_pair(VK_END, hardware_context::keypad) },
-    { "semicolon", std::make_pair(';', hardware_context::keyboard) },
-    { "backspace", std::make_pair(VK_BACK, hardware_context::keyboard) },
-    { "space", std::make_pair(VK_SPACE, hardware_context::keyboard) },
-    { "mouse1", std::make_pair(VK_LBUTTON, hardware_context::keyboard) },
-    { "mouse2", std::make_pair(VK_RBUTTON, hardware_context::keyboard) },
-    { "mouse3", std::make_pair(VK_MBUTTON, hardware_context::keyboard) },
-  };
-
-  return mapping;
-}
-
-inline std::optional<std::pair<WORD, hardware_context>> key_to_vkey(std::string_view value)
-{
-  auto lower = siege::platform::to_lower(value);
-  auto& mapping = get_key_to_vkey_mapping();
-
-  auto iter = mapping.find(lower);
-
-  if (iter != mapping.end())
-  {
-    return iter->second;
-  }
-
-  if (value.size() == 1 && (std::isalpha(value[0]) || std::isdigit(value[0]) || std::ispunct(value[0])))
-  {
-    return std::make_pair((WORD)value[0], hardware_context::keyboard);
-  }
-
-  return std::nullopt;
-}
-
-inline std::optional<std::string> vkey_to_key(WORD vkey, hardware_context context)
-{
-  auto& mapping = get_key_to_vkey_mapping();
-
-  for (auto& kv : mapping)
-  {
-    if (kv.second.first == vkey && kv.second.second == context)
-    {
-      return siege::platform::to_upper(kv.first);
-    }
-  }
-
-  if (std::isalpha(vkey))
-  {
-    return std::string(1, (char)vkey);
-  }
-
-  return std::nullopt;
-}
-
-inline std::optional<std::string_view> hardware_index_to_joystick_setting(WORD vkey, WORD index)
-{
-  if (vkey < VK_GAMEPAD_LEFT_THUMBSTICK_UP)
-  {
-    return std::nullopt;
-  }
-  switch (index)
-  {
-  case 0:
-    return "joy_advaxisx";
-  case 1:
-    return "joy_advaxisy";
-  case 2:
-    return "joy_advaxisz";
-  case 3:
-    return "joy_advaxisr";
-  case 4:
-    return "joy_advaxisu";
-  case 5:
-    return "joy_advaxisv";
-  default:
-    return std::nullopt;
-  }
-}
-
-inline bool is_vkey_for_controller(WORD vkey)
-{
-  return vkey >= VK_GAMEPAD_A && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT;
-}
-
-inline bool is_vkey_for_mouse(WORD vkey)
-{
-  return vkey == VK_LBUTTON || vkey == VK_RBUTTON || vkey == VK_MBUTTON || vkey == VK_XBUTTON1 || vkey == VK_XBUTTON2;
-}
-
-inline bool is_vkey_for_keyboard(WORD vkey)
-{
-  return !is_vkey_for_mouse(vkey) && !is_vkey_for_controller(vkey);
-}
-
-inline auto load_default_keys()
-{
-  std::error_code last_error;
-  if (fs::exists("base\\configs\\DEFAULT_KEYS.cfg", last_error))
-  {
-    std::ifstream stream("base\\configs\\DEFAULT_KEYS.cfg", std::ios::binary);
-    auto size = fs::file_size("base\\configs\\DEFAULT_KEYS.cfg", last_error);
-    return siege::configuration::id_tech::id_tech_2::load_config(stream, size);
-  }
-  else if (fs::exists("base\\pak0.pak", last_error))
-  {
-    std::any cache;
-    siege::resource::pak::pak_resource_reader reader;
-
-    std::ifstream stream("base//pak0.pak", std::ios::binary);
-    auto contents = reader.get_content_listing(cache, stream, { .archive_path = "base/pak0.pak", .folder_path = "base/pak0.pak/configs" });
-
-    auto default_keys = std::find_if(contents.begin(), contents.end(), [](auto& info) {
-      if (auto* file_info = std::get_if<siege::platform::resource_reader::file_info>(&info))
-      {
-        std::wstring filename = file_info->filename.wstring();
-
-        return filename == L"DEFAULT_KEYS.cfg" || filename == L"DEFAULT_KEYS.CFG" || filename == L"default_keys.cfg";
-      }
-
-      return false;
-    });
-
-    if (default_keys != contents.end())
-    {
-      std::stringstream temp;
-      reader.extract_file_contents(cache, stream, std::get<siege::platform::resource_reader::file_info>(*default_keys), temp);
-      auto size = (std::size_t)temp.tellp();
-      temp.seekg(0);
-      return siege::configuration::id_tech::id_tech_2::load_config(temp, size);
-    }
-  }
-
-  std::stringstream temp;
-  return siege::configuration::id_tech::id_tech_2::load_config(temp, 0);
-}
-
-extern "C" {
 using game_action = siege::platform::game_action;
 using keyboard_binding = siege::platform::keyboard_binding;
 using mouse_binding = siege::platform::mouse_binding;
@@ -204,7 +26,9 @@ using controller_binding = siege::platform::controller_binding;
 using game_command_line_caps = siege::platform::game_command_line_caps;
 using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
+namespace fs = std::filesystem;
 
+extern "C" {
 extern auto command_line_caps = game_command_line_caps{
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
@@ -445,12 +269,11 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
             });
           }
 
-          if (mouse != args->action_bindings.end())
+          if (auto free_mapping = std::find_if(args->controller_to_send_input_mappings.begin(), args->controller_to_send_input_mappings.end(), [](auto& mapping) {
+                return mapping.from_vkey == 0;
+              });
+            free_mapping != args->controller_to_send_input_mappings.end() && mouse != args->action_bindings.end())
           {
-            auto free_mapping = std::find_if(args->controller_to_send_input_mappings.begin(), args->controller_to_send_input_mappings.end(), [](auto& mapping) {
-              return mapping.from_vkey == 0;
-            });
-
             free_mapping->from_vkey = binding.vkey;
             free_mapping->from_context = siege::platform::hardware_context::controller;
             free_mapping->to_vkey = mouse->vkey;
@@ -511,7 +334,7 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
   {
     return E_POINTER;
   }
-  auto config = load_default_keys();
+  auto config = load_config_from_pak(L"base\\configs\\DEFAULT_KEYS.cfg", L"base/pak0.pak", L"base/pak0.pak/configs");
 
   if (config)
   {
@@ -560,23 +383,28 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
       }
     }
 
-    auto first_available = std::find_if(binding->inputs.begin(), binding->inputs.end(), [](auto& input) { return input.action_name[0] == '\0'; });
+    std::array<std::pair<WORD, std::string_view>, 2> actions{
+      { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+altattack"),
+        std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use-plus-special") }
+    };
 
-    if (first_available != binding->inputs.end())
+    for (auto action_str : actions)
     {
-      // TODO make this safer
+      auto first_available = std::find_if(binding->inputs.begin(), binding->inputs.end(), [](auto& input) { return input.action_name[0] == '\0'; });
+
+      if (first_available == binding->inputs.end())
+      {
+        break;
+      }
       // TODO make this also update existing values
-      auto action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+altattack"; });
+      auto action = std::find_if(game_actions.begin(), game_actions.end(), [&](auto& action) { return std::string_view(action.action_name.data()) == action_str.second; });
+      if (action == game_actions.end())
+      {
+        continue;
+      }
       std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
       first_available->input_type = mouse_binding::action_binding::button;
-      first_available->virtual_key = VK_RBUTTON;
-
-      std::advance(first_available, 1);
-
-      action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+use-plus-special"; });
-      std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
-      first_available->input_type = mouse_binding::action_binding::button;
-      first_available->virtual_key = VK_MBUTTON;
+      first_available->virtual_key = action_str.first;
     }
   }
 
@@ -590,7 +418,7 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
     return E_POINTER;
   }
 
-  auto config = load_default_keys();
+  auto config = load_config_from_pak(L"base\\configs\\DEFAULT_KEYS.cfg", L"base/pak0.pak", L"base/pak0.pak/configs");
 
   if (config)
   {
@@ -643,40 +471,35 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
       }
     }
 
-    auto first_available = std::find_if(binding->inputs.begin(), binding->inputs.end(), [](auto& input) { return input.action_name[0] == '\0'; });
+    std::array<std::pair<WORD, std::string_view>, 5> actions{
+      {
+        std::make_pair<WORD, std::string_view>('F', "+melee-attack"),
+        std::make_pair<WORD, std::string_view>(VK_RETURN, "+use-plus-special"),
+        std::make_pair<WORD, std::string_view>('G', "itemuse"),
+        std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
+        std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
+      }
+    };
 
-    if (first_available != binding->inputs.end())
+    for (auto action_str : actions)
     {
-      // TODO make this safer
-      // TODO make this also update existing values
-      auto action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+melee-attack"; });
-      std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
-      first_available->input_type = keyboard_binding::action_binding::button;
-      first_available->virtual_key = 'F';
+      auto first_available = std::find_if(binding->inputs.begin(), binding->inputs.end(), [](auto& input) { return input.action_name[0] == '\0'; });
 
-      std::advance(first_available, 1);
-      action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+use-plus-special"; });
-      std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
-      first_available->input_type = keyboard_binding::action_binding::button;
-      first_available->virtual_key = VK_RETURN;
+      if (first_available == binding->inputs.end())
+      {
+        break;
+      }
 
-      std::advance(first_available, 1);
-      action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "itemuse"; });
-      std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
-      first_available->input_type = keyboard_binding::action_binding::button;
-      first_available->virtual_key = 'G';
+      auto action = std::find_if(game_actions.begin(), game_actions.end(), [&](auto& action) { return std::string_view(action.action_name.data()) == action_str.second; });
 
-      std::advance(first_available, 1);
-      action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+moveup"; });
-      std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
-      first_available->input_type = keyboard_binding::action_binding::button;
-      first_available->virtual_key = VK_SPACE;
+      if (action == game_actions.end())
+      {
+        continue;
+      }
 
-      std::advance(first_available, 1);
-      action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+movedown"; });
       std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
       first_available->input_type = keyboard_binding::action_binding::button;
-      first_available->virtual_key = VK_LCONTROL;
+      first_available->virtual_key = action_str.first;
     }
   }
   return S_OK;
@@ -689,45 +512,50 @@ HRESULT init_controller_inputs(controller_binding* binding)
     return E_POINTER;
   }
 
-  auto first_available = std::find_if(binding->inputs.begin(), binding->inputs.end(), [](auto& input) { return input.action_name[0] == '\0'; });
+  const static std::map<std::string_view, WORD> controller_defaults = {
+    { "+attack", VK_GAMEPAD_RIGHT_TRIGGER },
+    { "+altattack", VK_GAMEPAD_LEFT_TRIGGER },
+    { "+moveup", VK_GAMEPAD_A },
+    { "+movedown", VK_GAMEPAD_B },
+    { "+speed", VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON },
+    { "+forward", VK_GAMEPAD_LEFT_THUMBSTICK_UP },
+    { "+back", VK_GAMEPAD_LEFT_THUMBSTICK_DOWN },
+    { "+moveleft", VK_GAMEPAD_LEFT_THUMBSTICK_LEFT },
+    { "+moveright", VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT },
+    { "+left", VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT },
+    { "+right", VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT },
+    { "+lookup", VK_GAMEPAD_RIGHT_THUMBSTICK_UP },
+    { "+lookdown", VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN },
+    { "+melee-attack", VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON },
+    { "+use-plus-special", VK_GAMEPAD_X },
+    { "weapnext", VK_GAMEPAD_Y },
+    { "itemnext", VK_GAMEPAD_LEFT_SHOULDER },
+    { "itemuse", VK_GAMEPAD_RIGHT_SHOULDER },
+    { "weapondrop", VK_GAMEPAD_DPAD_DOWN },
+    { "weapprev", VK_GAMEPAD_DPAD_LEFT },
+    { "weapnext", VK_GAMEPAD_DPAD_RIGHT },
+    { "score", VK_GAMEPAD_VIEW },
+    { "menu objectives", VK_GAMEPAD_MENU },
+  };
 
-  if (first_available != binding->inputs.end())
+  for (auto& controller_default : controller_defaults)
   {
-    const static std::map<std::string_view, WORD> controller_defaults = {
-      { "+attack", VK_GAMEPAD_RIGHT_TRIGGER },
-      { "+altattack", VK_GAMEPAD_LEFT_TRIGGER },
-      { "+moveup", VK_GAMEPAD_A },
-      { "+movedown", VK_GAMEPAD_B },
-      { "+speed", VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON },
-      { "+forward", VK_GAMEPAD_LEFT_THUMBSTICK_UP },
-      { "+back", VK_GAMEPAD_LEFT_THUMBSTICK_DOWN },
-      { "+moveleft", VK_GAMEPAD_LEFT_THUMBSTICK_LEFT },
-      { "+moveright", VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT },
-      { "+left", VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT },
-      { "+right", VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT },
-      { "+lookup", VK_GAMEPAD_RIGHT_THUMBSTICK_UP },
-      { "+lookdown", VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN },
-      { "+melee-attack", VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON },
-      { "+use-plus-special", VK_GAMEPAD_X },
-      { "weapnext", VK_GAMEPAD_Y },
-      { "itemnext", VK_GAMEPAD_LEFT_SHOULDER },
-      { "itemuse", VK_GAMEPAD_RIGHT_SHOULDER },
-      { "weapondrop", VK_GAMEPAD_DPAD_DOWN },
-      { "weapprev", VK_GAMEPAD_DPAD_LEFT },
-      { "weapnext", VK_GAMEPAD_DPAD_RIGHT },
-      { "score", VK_GAMEPAD_VIEW },
-      { "menu objectives", VK_GAMEPAD_MENU },
-    };
+    auto first_available = std::find_if(binding->inputs.begin(), binding->inputs.end(), [](auto& input) { return input.action_name[0] == '\0'; });
 
-    for (auto& controller_default : controller_defaults)
+    if (first_available == binding->inputs.end())
     {
-      auto action = std::find_if(game_actions.begin(), game_actions.end(), [&](auto& action) { return std::string_view(action.action_name.data()) == controller_default.first; });
-      std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
-
-      first_available->input_type = action->type == action->analog ? controller_binding::action_binding::axis : controller_binding::action_binding::button;
-      first_available->virtual_key = controller_default.second;
-      std::advance(first_available, 1);
+      break;
     }
+    auto action = std::find_if(game_actions.begin(), game_actions.end(), [&](auto& action) { return std::string_view(action.action_name.data()) == controller_default.first; });
+
+    if (action == game_actions.end())
+    {
+      continue;
+    }
+    std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
+
+    first_available->input_type = action->type == action->analog ? controller_binding::action_binding::axis : controller_binding::action_binding::button;
+    first_available->virtual_key = controller_default.second;
   }
 
 
