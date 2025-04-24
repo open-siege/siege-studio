@@ -428,14 +428,14 @@ namespace siege::views
         has_saved = false;
 
         std::for_each(items.begin(), items.end(), [this, path](auto& item) {
-          if (auto* file_info = std::get_if<siege::platform::file_info>(&item); file_info)
+          if (auto* file_info = std::get_if<siege::platform::file_info>(&item.get()); file_info)
           {
             auto child_path = std::filesystem::relative(file_info->folder_path, file_info->archive_path);
 
             std::error_code code;
             std::filesystem::create_directories(*path / child_path, code);
             std::ofstream extracted_file(*path / child_path / file_info->filename, std::ios::trunc | std::ios::binary);
-            auto raw_data = controller.load_content_data(item);
+            auto raw_data = controller.load_content_data(item.get());
 
             extracted_file.write(raw_data.data(), raw_data.size());
           }
@@ -480,7 +480,7 @@ namespace siege::views
         temp.resize(temp.find(L'\0'));
 
         auto item = std::find_if(items.begin(), items.end(), [&](auto& info) {
-          siege::platform::file_info* file = std::get_if<siege::platform::file_info>(&info);
+          siege::platform::file_info* file = std::get_if<siege::platform::file_info>(&info.get());
 
           return file && file->filename.wstring() == temp;
         });
@@ -508,7 +508,7 @@ namespace siege::views
       auto items = controller.get_contents();
 
       auto item = std::find_if(items.begin(), items.end(), [&](auto& content) {
-        if (auto* file = std::get_if<siege::platform::file_info>(&content))
+        if (auto* file = std::get_if<siege::platform::file_info>(&content.get()))
         {
           return std::wstring_view(file->filename.c_str()) == item_info.pszText;
         }

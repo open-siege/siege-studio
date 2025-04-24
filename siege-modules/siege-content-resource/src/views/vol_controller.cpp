@@ -3,7 +3,7 @@
 #include <siege/platform/stream.hpp>
 #include <fstream>
 #include <spanstream>
-#include <mutex>
+#include <shared_mutex>
 #include <siege/platform/wave.hpp>
 #include <siege/platform/bitmap.hpp>
 
@@ -23,7 +23,7 @@ namespace siege::views
 
   auto& get_lock()
   {
-    static std::mutex lock{};
+    static std::shared_mutex lock{};
     return lock;
   }
 
@@ -41,7 +41,6 @@ namespace siege::views
       auto temp = resource->get_content_listing(cache, vol_stream, platform::listing_query{ .archive_path = *path, .folder_path = *path });
 
       contents.clear();
-      contents.reserve(temp.size() * 2);
 
       should_continue = true;
       pending_load = std::async(std::launch::async, [this, path = path, temp = std::move(temp), on_new_item = std::move(on_new_item)]() mutable {
@@ -56,13 +55,17 @@ namespace siege::views
             }
             if (auto folder_info = std::get_if<siege::platform::folder_info>(&info); folder_info)
             {
-              std::vector<resource_reader::content_info> children = resource->get_content_listing(cache, *vol_stream, platform::listing_query{ .archive_path = *path, .folder_path = folder_info->full_path });
+              std::vector<resource_reader::content_info> children;
+              {
+                std::shared_lock guard(get_lock());
+                children = resource->get_content_listing(cache, *vol_stream, platform::listing_query{ .archive_path = *path, .folder_path = folder_info->full_path });
+              }
               get_full_listing(children);
             }
 
             if (auto file_info = std::get_if<siege::platform::file_info>(&info); file_info)
             {
-              std::lock_guard guard(get_lock());
+              std::unique_lock guard(get_lock());
               on_new_item(info);
               contents.emplace_back(info);
             }
@@ -73,7 +76,7 @@ namespace siege::views
 
       storage = std::move(*path);
 
-      return contents.capacity();
+      return 1;
     }
     else if (resource)
     {
@@ -100,6 +103,7 @@ namespace siege::views
 
     if (auto* file = std::get_if<siege::platform::file_info>(&content))
     {
+      std::shared_lock guard(get_lock());
       results.assign(file->size, char{});
       std::ospanstream output(results);
 
@@ -164,9 +168,19 @@ namespace siege::views
     return results;
   }
 
-  std::vector<siege::platform::resource_reader::content_info> vol_controller::get_contents()
+  std::vector<std::reference_wrapper<siege::platform::resource_reader::content_info>> vol_controller::get_contents()
   {
-    std::lock_guard guard(get_lock());
-    return contents;
+    std::shared_lock guard(get_lock());
+    std::vector<std::reference_wrapper<siege::platform::resource_reader::content_info>> results;
+    results.reserve(contents.size());
+
+    auto end = contents.end();
+
+    for (auto begin = contents.begin(); begin != end; std::advance(begin, 1))
+    {
+      results.emplace_back(std::ref(*begin));
+    }
+
+    return results;
   }
 }// namespace siege::views

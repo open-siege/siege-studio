@@ -50,7 +50,7 @@ namespace siege::views
     } };
     static bool is_vol(std::istream&) noexcept;
     std::size_t load_volume(std::istream&, std::optional<std::filesystem::path>, std::function<void(siege::platform::resource_reader::content_info&)> on_new_item);
-    std::vector<siege::platform::resource_reader::content_info> get_contents();
+    std::vector<std::reference_wrapper<siege::platform::resource_reader::content_info>> get_contents();
     std::vector<char> load_content_data(const siege::platform::resource_reader::content_info&);
     void stop_loading() { should_continue = false; }
 
@@ -68,7 +68,7 @@ namespace siege::views
     std::future<void> pending_load;
     std::any cache;
     std::unique_ptr<siege::platform::resource_reader> resource;
-    std::vector<siege::platform::resource_reader::content_info> contents;
+    std::list<siege::platform::resource_reader::content_info> contents;
     std::variant<std::monostate, std::filesystem::path, std::stringstream> storage;
   };
 }// namespace siege::views
