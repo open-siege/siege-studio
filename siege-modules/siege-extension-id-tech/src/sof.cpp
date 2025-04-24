@@ -18,60 +18,62 @@
 #include "GetGameFunctionNames.hpp"
 #include "id-tech-shared.hpp"
 
+using hardware_context = siege::platform::hardware_context;
+namespace fs = std::filesystem;
 
-const std::map<std::string_view, WORD>& get_key_to_vkey_mapping()
+const std::map<std::string_view, std::pair<WORD, hardware_context>>& get_key_to_vkey_mapping()
 {
-  const static std::map<std::string_view, WORD> mapping = {
-    { "f1", VK_F1 },
-    { "f2", VK_F2 },
-    { "f3", VK_F3 },
-    { "f4", VK_F4 },
-    { "f5", VK_F5 },
-    { "f6", VK_F6 },
-    { "f7", VK_F7 },
-    { "f8", VK_F8 },
-    { "f9", VK_F9 },
-    { "f10", VK_F10 },
-    { "f11", VK_F11 },
-    { "f12", VK_F12 },
-    { "tab", VK_TAB },
-    { "lctrl", VK_LCONTROL },
-    { "rctrl", VK_RCONTROL },
-    { "lshift", VK_LSHIFT },
-    { "rshift", VK_RSHIFT },
-    { "lalt", VK_LMENU },
-    { "ralt", VK_LMENU },
-    { "uparrow", VK_LEFT },
-    { "downarrow", VK_DOWN },
-    { "leftarrow", VK_LEFT },
-    { "rightarrow", VK_RIGHT },
-    { "enter", VK_RETURN },
-    { "home", VK_HOME },
-    { "ins", VK_INSERT },
-    { "pause", VK_PAUSE },
-    { "kp_ins", VK_INSERT },
-    { "kp_pgdn", VK_PAUSE },
-    { "pgdn", VK_NEXT },
-    { "pgup", VK_PRIOR },
-    { "caps", VK_CAPITAL },
-    { "del", VK_DELETE },
-    { "end", VK_END },
-    { "kp_del", MAKEWORD(VK_PACKET, VK_DELETE) },
-    { "kp_enter", MAKEWORD(VK_PACKET, VK_RETURN) },
-    { "kp_downarrow", VK_NUMPAD2 },
-    { "kp_end", VK_PAUSE },
-    { "semicolon", ';' },
-    { "backspace", VK_BACK },
-    { "space", VK_SPACE },
-    { "mouse1", VK_LBUTTON },
-    { "mouse2", VK_RBUTTON },
-    { "mouse3", VK_MBUTTON },
+  const static std::map<std::string_view, std::pair<WORD, hardware_context>> mapping = {
+    { "f1", std::make_pair(VK_F1, hardware_context::keyboard) },
+    { "f2", std::make_pair(VK_F2, hardware_context::keyboard) },
+    { "f3", std::make_pair(VK_F3, hardware_context::keyboard) },
+    { "f4", std::make_pair(VK_F4, hardware_context::keyboard) },
+    { "f5", std::make_pair(VK_F5, hardware_context::keyboard) },
+    { "f6", std::make_pair(VK_F6, hardware_context::keyboard) },
+    { "f7", std::make_pair(VK_F7, hardware_context::keyboard) },
+    { "f8", std::make_pair(VK_F8, hardware_context::keyboard) },
+    { "f9", std::make_pair(VK_F9, hardware_context::keyboard) },
+    { "f10", std::make_pair(VK_F10, hardware_context::keyboard) },
+    { "f11", std::make_pair(VK_F11, hardware_context::keyboard) },
+    { "f12", std::make_pair(VK_F12, hardware_context::keyboard) },
+    { "tab", std::make_pair(VK_TAB, hardware_context::keyboard) },
+    { "lctrl", std::make_pair(VK_LCONTROL, hardware_context::keyboard) },
+    { "rctrl", std::make_pair(VK_RCONTROL, hardware_context::keyboard) },
+    { "lshift", std::make_pair(VK_LSHIFT, hardware_context::keyboard) },
+    { "rshift", std::make_pair(VK_RSHIFT, hardware_context::keyboard) },
+    { "lalt", std::make_pair(VK_LMENU, hardware_context::keyboard) },
+    { "ralt", std::make_pair(VK_LMENU, hardware_context::keyboard) },
+    { "uparrow", std::make_pair(VK_LEFT, hardware_context::keyboard) },
+    { "downarrow", std::make_pair(VK_DOWN, hardware_context::keyboard) },
+    { "leftarrow", std::make_pair(VK_LEFT, hardware_context::keyboard) },
+    { "rightarrow", std::make_pair(VK_RIGHT, hardware_context::keyboard) },
+    { "enter", std::make_pair(VK_RETURN, hardware_context::keyboard) },
+    { "home", std::make_pair(VK_HOME, hardware_context::keyboard) },
+    { "ins", std::make_pair(VK_INSERT, hardware_context::keyboard) },
+    { "pause", std::make_pair(VK_PAUSE, hardware_context::keyboard) },
+    { "pgdn", std::make_pair(VK_NEXT, hardware_context::keyboard) },
+    { "pgup", std::make_pair(VK_PRIOR, hardware_context::keyboard) },
+    { "caps", std::make_pair(VK_CAPITAL, hardware_context::keyboard) },
+    { "del", std::make_pair(VK_DELETE, hardware_context::keyboard) },
+    { "end", std::make_pair(VK_END, hardware_context::keyboard) },
+    { "kp_ins", std::make_pair(VK_INSERT, hardware_context::keypad) },
+    { "kp_pgdn", std::make_pair(VK_PAUSE, hardware_context::keypad) },
+    { "kp_del", std::make_pair(VK_DELETE, hardware_context::keyboard) },
+    { "kp_enter", std::make_pair(VK_RETURN, hardware_context::keypad) },
+    { "kp_downarrow", std::make_pair(VK_NUMPAD2, hardware_context::keypad) },
+    { "kp_end", std::make_pair(VK_END, hardware_context::keypad) },
+    { "semicolon", std::make_pair(';', hardware_context::keyboard) },
+    { "backspace", std::make_pair(VK_BACK, hardware_context::keyboard) },
+    { "space", std::make_pair(VK_SPACE, hardware_context::keyboard) },
+    { "mouse1", std::make_pair(VK_LBUTTON, hardware_context::keyboard) },
+    { "mouse2", std::make_pair(VK_RBUTTON, hardware_context::keyboard) },
+    { "mouse3", std::make_pair(VK_MBUTTON, hardware_context::keyboard) },
   };
 
   return mapping;
 }
 
-inline std::optional<WORD> key_to_vkey(std::string_view value)
+inline std::optional<std::pair<WORD, hardware_context>> key_to_vkey(std::string_view value)
 {
   auto lower = siege::platform::to_lower(value);
   auto& mapping = get_key_to_vkey_mapping();
@@ -85,19 +87,19 @@ inline std::optional<WORD> key_to_vkey(std::string_view value)
 
   if (value.size() == 1 && (std::isalpha(value[0]) || std::isdigit(value[0]) || std::ispunct(value[0])))
   {
-    return value[0];
+    return std::make_pair((WORD)value[0], hardware_context::keyboard);
   }
 
   return std::nullopt;
 }
 
-inline std::optional<std::string> vkey_to_key(WORD vkey)
+inline std::optional<std::string> vkey_to_key(WORD vkey, hardware_context context)
 {
   auto& mapping = get_key_to_vkey_mapping();
 
   for (auto& kv : mapping)
   {
-    if (kv.second == vkey)
+    if (kv.second.first == vkey && kv.second.second == context)
     {
       return siege::platform::to_upper(kv.first);
     }
@@ -151,12 +153,53 @@ inline bool is_vkey_for_keyboard(WORD vkey)
   return !is_vkey_for_mouse(vkey) && !is_vkey_for_controller(vkey);
 }
 
+inline auto load_default_keys()
+{
+  std::error_code last_error;
+  if (fs::exists("base\\configs\\DEFAULT_KEYS.cfg", last_error))
+  {
+    std::ifstream stream("base\\configs\\DEFAULT_KEYS.cfg", std::ios::binary);
+    auto size = fs::file_size("base\\configs\\DEFAULT_KEYS.cfg", last_error);
+    return siege::configuration::id_tech::id_tech_2::load_config(stream, size);
+  }
+  else if (fs::exists("base\\pak0.pak", last_error))
+  {
+    std::any cache;
+    siege::resource::pak::pak_resource_reader reader;
+
+    std::ifstream stream("base//pak0.pak", std::ios::binary);
+    auto contents = reader.get_content_listing(cache, stream, { .archive_path = "base/pak0.pak", .folder_path = "base/pak0.pak/configs" });
+
+    auto default_keys = std::find_if(contents.begin(), contents.end(), [](auto& info) {
+      if (auto* file_info = std::get_if<siege::platform::resource_reader::file_info>(&info))
+      {
+        std::wstring filename = file_info->filename.wstring();
+
+        return filename == L"DEFAULT_KEYS.cfg" || filename == L"DEFAULT_KEYS.CFG" || filename == L"default_keys.cfg";
+      }
+
+      return false;
+    });
+
+    if (default_keys != contents.end())
+    {
+      std::stringstream temp;
+      reader.extract_file_contents(cache, stream, std::get<siege::platform::resource_reader::file_info>(*default_keys), temp);
+      auto size = (std::size_t)temp.tellp();
+      temp.seekg(0);
+      return siege::configuration::id_tech::id_tech_2::load_config(temp, size);
+    }
+  }
+
+  std::stringstream temp;
+  return siege::configuration::id_tech::id_tech_2::load_config(temp, 0);
+}
+
 extern "C" {
 using game_action = siege::platform::game_action;
 using keyboard_binding = siege::platform::keyboard_binding;
 using mouse_binding = siege::platform::mouse_binding;
 using controller_binding = siege::platform::controller_binding;
-namespace fs = std::filesystem;
 
 using game_command_line_caps = siege::platform::game_command_line_caps;
 using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
@@ -424,7 +467,7 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
     }
     else
     {
-      auto game_key = vkey_to_key(binding.vkey);
+      auto game_key = vkey_to_key(binding.vkey, binding.context);
 
       if (game_key)
       {
@@ -468,91 +511,74 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
   {
     return E_POINTER;
   }
+  auto config = load_default_keys();
 
-  std::error_code last_error;
-
-  if (fs::exists("base\\configs\\DEFAULT_KEYS.cfg", last_error))
+  if (config)
   {
-    std::ifstream stream("base\\configs\\DEFAULT_KEYS.cfg", std::ios::binary);
-    auto size = fs::file_size("base\\configs\\DEFAULT_KEYS.cfg", last_error);
-    auto config = siege::configuration::id_tech::id_tech_2::load_config(stream, size);
-
-    if (config)
+    std::string temp;
+    int index = 0;
+    for (auto& item : config->keys())
     {
-      std::string temp;
-      int index = 0;
-      for (auto& item : config->keys())
+      if (item.at(0) == "bind")
       {
-        if (item.at(0) == "bind")
+        auto vkey = key_to_vkey(item.at(1));
+
+        if (!vkey)
         {
-          auto vkey = key_to_vkey(item.at(1));
+          continue;
+        }
 
-          if (!vkey)
-          {
-            continue;
-          }
+        if (!(item.at(1).starts_with("mouse") || item.at(1).starts_with("MOUSE")))
+        {
+          continue;
+        }
 
-          if (!(item.at(1).starts_with("mouse") || item.at(1).starts_with("MOUSE")))
-          {
-            continue;
-          }
+        auto entry = config->find(item);
+        if (entry.at(0).empty())
+        {
+          continue;
+        }
+        temp = entry.at(0);
 
-          auto entry = config->find(item);
-          if (entry.at(0).empty())
-          {
-            continue;
-          }
-          temp = entry.at(0);
+        if (temp.size() - 1 > binding->inputs[index].action_name.size())
+        {
+          temp.resize(binding->inputs[index].action_name.size() - 1);
+        }
 
-          if (temp.size() - 1 > binding->inputs[index].action_name.size())
-          {
-            temp.resize(binding->inputs[index].action_name.size() - 1);
-          }
+        temp = siege::platform::to_lower(temp);
 
-          temp = siege::platform::to_lower(temp);
+        std::memcpy(binding->inputs[index].action_name.data(), temp.data(), temp.size());
+        binding->inputs[index].virtual_key = vkey->first;
+        binding->inputs[index].input_type = mouse_binding::action_binding::button;
+        binding->inputs[index].context = siege::platform::mouse_context::mouse;
+        index++;
 
-          std::memcpy(binding->inputs[index].action_name.data(), temp.data(), temp.size());
-          binding->inputs[index].virtual_key = *vkey;
-          binding->inputs[index].input_type = mouse_binding::action_binding::button;
-          binding->inputs[index].context = siege::platform::mouse_context::mouse;
-          index++;
-
-          if (index > binding->inputs.size())
-          {
-            break;
-          }
+        if (index > binding->inputs.size())
+        {
+          break;
         }
       }
+    }
 
-      auto first_available = std::find_if(binding->inputs.begin(), binding->inputs.end(), [](auto& input) { return input.action_name[0] == '\0'; });
+    auto first_available = std::find_if(binding->inputs.begin(), binding->inputs.end(), [](auto& input) { return input.action_name[0] == '\0'; });
 
-      if (first_available != binding->inputs.end())
-      {
-        // TODO make this safer
-        // TODO make this also update existing values
-        auto action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+altattack"; });
-        std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
-        first_available->input_type = mouse_binding::action_binding::button;
-        first_available->virtual_key = VK_RBUTTON;
+    if (first_available != binding->inputs.end())
+    {
+      // TODO make this safer
+      // TODO make this also update existing values
+      auto action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+altattack"; });
+      std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
+      first_available->input_type = mouse_binding::action_binding::button;
+      first_available->virtual_key = VK_RBUTTON;
 
-        std::advance(first_available, 1);
+      std::advance(first_available, 1);
 
-        action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+use-plus-special"; });
-        std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
-        first_available->input_type = mouse_binding::action_binding::button;
-        first_available->virtual_key = VK_MBUTTON;
-      }
+      action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+use-plus-special"; });
+      std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
+      first_available->input_type = mouse_binding::action_binding::button;
+      first_available->virtual_key = VK_MBUTTON;
     }
   }
-  else if (fs::exists("base\\pak0.pak", last_error))
-  {
-    std::any cache;
-    siege::resource::pak::pak_resource_reader reader;
-
-    std::ifstream stream("base//pak0.pak", std::ios::binary);
-    auto contents = reader.get_content_listing(cache, stream, { .archive_path = "base//pak0.pak", .folder_path = "base//pak0.pak" });
-  }
-
 
   return S_OK;
 }
@@ -564,112 +590,95 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
     return E_POINTER;
   }
 
-  std::error_code last_error;
+  auto config = load_default_keys();
 
-  if (fs::exists("base\\configs\\DEFAULT_KEYS.cfg", last_error))
+  if (config)
   {
-    std::ifstream stream("base\\configs\\DEFAULT_KEYS.cfg", std::ios::binary);
-    auto size = fs::file_size("base\\configs\\DEFAULT_KEYS.cfg", last_error);
-    auto config = siege::configuration::id_tech::id_tech_2::load_config(stream, size);
-
-    if (config)
+    std::string temp;
+    int index = 0;
+    for (auto& item : config->keys())
     {
-      std::string temp;
-      int index = 0;
-      for (auto& item : config->keys())
+      if (item.at(0) == "bind")
       {
-        if (item.at(0) == "bind")
+        auto vkey = key_to_vkey(item.at(1));
+
+        if (!vkey)
         {
-          auto vkey = key_to_vkey(item.at(1));
+          continue;
+        }
 
-          if (!vkey)
-          {
-            continue;
-          }
+        if (item.at(1).starts_with("mouse") || item.at(1).starts_with("MOUSE"))
+        {
+          continue;
+        }
 
-          if (item.at(1).starts_with("mouse") || item.at(1).starts_with("MOUSE"))
-          {
-            continue;
-          }
+        auto entry = config->find(item);
+        if (entry.at(0).empty())
+        {
+          continue;
+        }
+        temp = entry.at(0);
 
-          auto entry = config->find(item);
-          if (entry.at(0).empty())
-          {
-            continue;
-          }
-          temp = entry.at(0);
+        if (temp.size() - 1 > binding->inputs[index].action_name.size())
+        {
+          temp.resize(binding->inputs[index].action_name.size() - 1);
+        }
 
-          if (temp.size() - 1 > binding->inputs[index].action_name.size())
-          {
-            temp.resize(binding->inputs[index].action_name.size() - 1);
-          }
+        std::memcpy(binding->inputs[index].action_name.data(), temp.data(), temp.size());
+        binding->inputs[index].virtual_key = vkey->first;
+        binding->inputs[index].input_type = keyboard_binding::action_binding::button;
+        binding->inputs[index].context = siege::platform::keyboard_context::keyboard;
 
-          std::memcpy(binding->inputs[index].action_name.data(), temp.data(), temp.size());
-          binding->inputs[index].virtual_key = *vkey;
-          binding->inputs[index].input_type = keyboard_binding::action_binding::button;
-          binding->inputs[index].context = siege::platform::keyboard_context::keyboard;
+        if (item.at(1).starts_with("kp_") || item.at(1).starts_with("KP_"))
+        {
+          binding->inputs[index].context = siege::platform::keyboard_context::keypad;
+        }
 
-          if (item.at(1).starts_with("kp_") || item.at(1).starts_with("KP_"))
-          {
-            binding->inputs[index].context = siege::platform::keyboard_context::keypad;
-          }
+        index++;
 
-          index++;
-
-          if (index > binding->inputs.size())
-          {
-            break;
-          }
+        if (index > binding->inputs.size())
+        {
+          break;
         }
       }
+    }
 
-      auto first_available = std::find_if(binding->inputs.begin(), binding->inputs.end(), [](auto& input) { return input.action_name[0] == '\0'; });
+    auto first_available = std::find_if(binding->inputs.begin(), binding->inputs.end(), [](auto& input) { return input.action_name[0] == '\0'; });
 
-      if (first_available != binding->inputs.end())
-      {
-        // TODO make this safer
-        // TODO make this also update existing values
-        auto action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+melee-attack"; });
-        std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
-        first_available->input_type = keyboard_binding::action_binding::button;
-        first_available->virtual_key = 'F';
+    if (first_available != binding->inputs.end())
+    {
+      // TODO make this safer
+      // TODO make this also update existing values
+      auto action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+melee-attack"; });
+      std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
+      first_available->input_type = keyboard_binding::action_binding::button;
+      first_available->virtual_key = 'F';
 
-        std::advance(first_available, 1);
-        action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+use-plus-special"; });
-        std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
-        first_available->input_type = keyboard_binding::action_binding::button;
-        first_available->virtual_key = VK_RETURN;
+      std::advance(first_available, 1);
+      action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+use-plus-special"; });
+      std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
+      first_available->input_type = keyboard_binding::action_binding::button;
+      first_available->virtual_key = VK_RETURN;
 
-        std::advance(first_available, 1);
-        action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "itemuse"; });
-        std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
-        first_available->input_type = keyboard_binding::action_binding::button;
-        first_available->virtual_key = 'G';
+      std::advance(first_available, 1);
+      action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "itemuse"; });
+      std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
+      first_available->input_type = keyboard_binding::action_binding::button;
+      first_available->virtual_key = 'G';
 
-        std::advance(first_available, 1);
-        action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+moveup"; });
-        std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
-        first_available->input_type = keyboard_binding::action_binding::button;
-        first_available->virtual_key = VK_SPACE;
+      std::advance(first_available, 1);
+      action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+moveup"; });
+      std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
+      first_available->input_type = keyboard_binding::action_binding::button;
+      first_available->virtual_key = VK_SPACE;
 
-        std::advance(first_available, 1);
-        action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+movedown"; });
-        std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
-        first_available->input_type = keyboard_binding::action_binding::button;
-        first_available->virtual_key = VK_LCONTROL;
-      }
+      std::advance(first_available, 1);
+      action = std::find_if(game_actions.begin(), game_actions.end(), [](auto& action) { return std::string_view(action.action_name.data()) == "+movedown"; });
+      std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
+      first_available->input_type = keyboard_binding::action_binding::button;
+      first_available->virtual_key = VK_LCONTROL;
     }
   }
-  else if (fs::exists("base\\pak0.pak", last_error))
-  {
-    std::any cache;
-    siege::resource::pak::pak_resource_reader reader;
-
-    std::ifstream stream("base//pak0.pak", std::ios::binary);
-    auto contents = reader.get_content_listing(cache, stream, { .archive_path = "base//pak0.pak", .folder_path = "base//pak0.pak" });
-  }
-
-
   return S_OK;
 }
 
