@@ -165,7 +165,7 @@ predefined_string*
           {
             auto temp = fs::relative(file_info.folder_path, file_info.archive_path);
 
-            if (temp.string().starts_with("maps/") || temp.string().starts_with("maps\\"))
+            if (temp.string() == "maps" || temp.string().starts_with("maps/") || temp.string().starts_with("maps\\"))
             {
               temp = temp.string().replace(0, 5, "");
             }

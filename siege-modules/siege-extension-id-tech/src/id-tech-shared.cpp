@@ -66,6 +66,9 @@ const std::map<std::string_view, std::pair<WORD, hardware_context>>& get_key_to_
     { "mouse1", std::make_pair(VK_LBUTTON, hardware_context::keyboard) },
     { "mouse2", std::make_pair(VK_RBUTTON, hardware_context::keyboard) },
     { "mouse3", std::make_pair(VK_MBUTTON, hardware_context::keyboard) },
+    { "\\", std::make_pair(VK_OEM_5, hardware_context::keyboard) },
+    { "/", std::make_pair(VK_OEM_2, hardware_context::keyboard) },
+    { "`", std::make_pair(VK_OEM_3, hardware_context::keyboard) },
   };
 
   return mapping;
@@ -428,7 +431,10 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
           if (mouse == args.action_bindings.end())
           {
             mouse = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& existing) {
-              return existing.action_name.data() == action_name && (existing.context == siege::platform::hardware_context::global);
+              return existing.action_name.data() == action_name && 
+                  (existing.context == siege::platform::hardware_context::keyboard ||
+                      existing.context == siege::platform::hardware_context::keypad ||
+                  existing.context == siege::platform::hardware_context::global);
             });
           }
 

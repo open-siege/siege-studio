@@ -83,6 +83,64 @@ constexpr static auto quake3_aliases = std::array<std::array<std::string_view, 2
         return result;
     }
 
+    axis add_quake_3_axis_metadata(axis result)
+    {
+        if (result.index == 0)
+        {
+            result.meta_name_positive = "UPARROW";
+            result.meta_name_negative = "DOWNARROW";
+        }
+
+        if (result.index == 1)
+        {
+            result.meta_name_positive = "RIGHTARROW";
+            result.meta_name_negative = "LEFTARROW";
+        }
+
+        if (result.index == 2)
+        {
+            result.meta_name_positive = "JOY18";
+            result.meta_name_negative = "JOY19";
+        }
+
+        if (result.index == 3)
+        {
+            result.meta_name_positive = "JOY17";
+            result.meta_name_negative = "JOY16";
+        }
+
+        return result;
+    }
+
+
+    button add_quake_3_button_metadata(button result)
+    {
+        constexpr static auto button_names = std::array<std::string_view, 15> {{
+            "JOY1",
+            "JOY2",
+            "JOY3",
+            "JOY4",
+            "JOY5",
+            "JOY6",
+            "JOY7",
+            "JOY8",
+            "JOY9",
+            "JOY10",
+            "JOY11",
+            "JOY12",
+            "JOY13",
+            "JOY14",
+            "JOY15"
+        }};
+
+        if (result.index < button_names.size())
+        {
+            result.meta_name.emplace(button_names[result.index]);
+        }
+
+        return result;
+    }
+
 */
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };

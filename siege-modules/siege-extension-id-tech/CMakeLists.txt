@@ -17,9 +17,9 @@ if (WIN32)
     # with multiplayer
     add_library(siege-extension-jedi-outcast-mp SHARED src/id-tech-shared.cpp src/jedi-outcast-mp.cpp src/cmd-id-tech-3-0.cpp src/id-tech-3.def)
     add_library(siege-extension-jedi-academy-mp SHARED src/id-tech-shared.cpp src/jedi-academy-mp.cpp src/cmd-id-tech-3-0.cpp src/id-tech-3.def)
-    add_library(siege-extension-soldier-of-fortune SHARED src/id-tech-shared.cpp src/sof.cpp src/cmd-id-tech-2-5.cpp src/id-tech-2.5-sof.def)
+    add_library(siege-extension-soldier-of-fortune SHARED src/id-tech-shared.cpp src/sof.cpp src/cmd-id-tech-2-5.cpp src/id-tech-2.5.def)
     add_library(siege-extension-soldier-of-fortune-2-mp SHARED src/id-tech-shared.cpp src/sof-2-mp.cpp src/cmd-id-tech-3-0.cpp src/id-tech-3.def)
-    add_library(siege-extension-sin SHARED src/id-tech-shared.cpp src/sin.cpp src/cmd-id-tech-2-5.cpp src/id-tech-2.5-sof.def)
+    add_library(siege-extension-sin SHARED src/id-tech-shared.cpp src/sin.cpp src/cmd-id-tech-2-5.cpp src/id-tech-2.5.def)
 
     add_library(siege-extension-quake SHARED src/id-tech-shared.cpp src/quake.cpp src/id-tech-2.def)
     add_library(siege-extension-hexen-2 SHARED src/id-tech-shared.cpp src/hexen-2.cpp src/id-tech-2.def)

@@ -63,7 +63,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
 } };
 
 constexpr static auto sin_aliases = std::array<std::array<std::string_view, 2>, 2>{ { { "+melee-attack", "use Fists; +attack" },
-  { "-melee-attack", "-attack;weapprev;" } } };
+  { "-melee-attack", "-attack;weapprev" } } };
 
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
@@ -140,8 +140,8 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
 
   config.save(custom_bindings);
 
-  bind_axis_to_send_input(*args, "+lookup", "+lookup");
-  bind_axis_to_send_input(*args, "+lookdown", "+lookdown");
+  bind_axis_to_send_input(*args, "+lookup", "+mlook");
+  bind_axis_to_send_input(*args, "+lookdown", "+mlook");
 
   auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
 
