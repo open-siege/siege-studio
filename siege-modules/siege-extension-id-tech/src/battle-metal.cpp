@@ -17,8 +17,15 @@
 
 
 extern "C" {
+using hardware_context = siege::platform::hardware_context;
+using game_action = siege::platform::game_action;
+using keyboard_binding = siege::platform::keyboard_binding;
+using mouse_binding = siege::platform::mouse_binding;
+using controller_binding = siege::platform::controller_binding;
 using game_action = siege::platform::game_action;
 using game_command_line_caps = siege::platform::game_command_line_caps;
+using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
+using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
 
 extern auto command_line_caps = game_command_line_caps{
   .ip_connect_setting = L"connect"
@@ -105,5 +112,192 @@ HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>*
 HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
 {
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
+}
+
+HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
+{
+  if (exe_path_str == nullptr)
+  {
+    return E_POINTER;
+  }
+
+  if (args == nullptr)
+  {
+    return E_POINTER;
+  }
+
+  std::ofstream custom_bindings("baseq2/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
+
+  siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
+
+  bool enable_controller = save_bindings_to_config(*args, config);
+
+  if (enable_controller)
+  {
+    // engine bug - mouse needs to be enabled for the right analog stick to work
+    config.emplace(siege::configuration::key_type({ "set", "in_mouse" }), siege::configuration::key_type("1"));
+    config.emplace(siege::configuration::key_type({ "set", "in_joystick" }), siege::configuration::key_type("1"));
+    config.emplace(siege::configuration::key_type({ "set", "joy_advanced" }), siege::configuration::key_type("1"));
+  }
+
+  config.save(custom_bindings);
+
+  bind_axis_to_send_input(*args, "+lookup", "+mlook");
+  bind_axis_to_send_input(*args, "+lookdown", "+mlook");
+
+  auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
+
+  if (iter != args->string_settings.end())
+  {
+    iter->name = L"exec";
+    iter->value = L"siege_studio_inputs.cfg";
+  }
+
+  std::advance(iter, 1);
+  iter->name = L"console";
+  iter->value = L"1";
+
+  std::advance(iter, 1);
+  iter->name = L"map";
+  iter->value = L"trdm01a";
+
+
+  return S_OK;
+}
+
+HRESULT init_mouse_inputs(mouse_binding* binding)
+{
+  if (binding == nullptr)
+  {
+    return E_POINTER;
+  }
+  auto config = load_config_from_pak(L"baseq2\\default.cfg", L"baseq2/pak0.pak", L"baseq2/pak0.pak");
+
+  if (config)
+  {
+    load_mouse_bindings(*config, *binding);
+  }
+
+  std::array<std::pair<WORD, std::string_view>, 2> actions{
+    { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+altattack"),
+      std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use") }
+  };
+
+  append_mouse_defaults(game_actions, actions, *binding);
+
+
+  return S_OK;
+}
+
+HRESULT init_keyboard_inputs(keyboard_binding* binding)
+{
+  if (binding == nullptr)
+  {
+    return E_POINTER;
+  }
+
+  auto config = load_config_from_pak(L"baseq2\\default.cfg", L"baseq2/pak0.pak", L"baseq2/pak0.pak");
+
+  if (config)
+  {
+    load_keyboard_bindings(*config, *binding);
+  }
+
+  std::array<std::pair<WORD, std::string_view>, 5> actions{
+    {
+      std::make_pair<WORD, std::string_view>('G', "+throw-grenade"),
+      std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
+      std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
+      std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
+    }
+  };
+
+  append_keyboard_defaults(game_actions, actions, *binding);
+
+  return S_OK;
+}
+
+HRESULT init_controller_inputs(controller_binding* binding)
+{
+  if (binding == nullptr)
+  {
+    return E_POINTER;
+  }
+  std::array<std::pair<WORD, std::string_view>, 23> actions{
+    {
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attack"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "invuse"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_A, "+moveup"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_B, "+movedown"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "+speed"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_UP, "+forward"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, "+back"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, "+moveleft"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, "+moveright"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, "+left"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, "+right"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "+melee-attack"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "inven"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "weapnext"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "invnext"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "+throw-grenade"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "weapondrop"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "weapprev"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_RIGHT, "weapnext"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "score"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_MENU, "cmd help"),
+    }
+  };
+
+  append_controller_defaults(game_actions, actions, *binding);
+
+
+  return S_OK;
+}
+
+predefined_int*
+  get_predefined_int_command_line_settings(const wchar_t* name) noexcept
+{
+  if (name == nullptr)
+  {
+    return nullptr;
+  }
+
+  auto name_str = std::wstring_view(name);
+
+
+  if (name_str == L"r_mode")
+  {
+    static auto modes = std::array<predefined_int, 8>{
+      predefined_int{ .label = L"640x480", .value = 1 },
+      predefined_int{ .label = L"800x600", .value = 1 },
+      predefined_int{ .label = L"960x720", .value = 1 },
+      predefined_int{ .label = L"1024x768", .value = 1 },
+      predefined_int{ .label = L"1152x864", .value = 1 },
+      predefined_int{ .label = L"1280x960", .value = 1 },
+      predefined_int{ .label = L"1600x1200", .value = 1 },
+      predefined_int{},
+    };
+
+    return modes.data();
+  }
+
+  return nullptr;
+}
+
+predefined_string*
+  get_predefined_id_tech_2_map_command_line_settings(const wchar_t* base_dir, bool include_zip) noexcept;
+
+predefined_string*
+  get_predefined_string_command_line_settings(const wchar_t* name) noexcept
+{
+  if (name && std::wstring_view(name) == L"map")
+  {
+    return get_predefined_id_tech_2_map_command_line_settings(L"baseq2", false);
+  }
+
+  return nullptr;
 }
 }

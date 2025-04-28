@@ -8,7 +8,14 @@ EXPORTS
 	template_configuration_paths DATA
 	autoexec_configuration_paths DATA
 	profile_configuration_paths DATA
-	launch_game_with_extension
+	command_line_caps DATA
+	launch_game_with_extension PRIVATE
 	executable_is_supported
-	get_function_name_ranges
-	get_variable_name_ranges
+	get_function_name_ranges PRIVATE
+	get_variable_name_ranges PRIVATE
+	get_predefined_string_command_line_settings PRIVATE
+	get_predefined_int_command_line_settings PRIVATE
+	init_keyboard_inputs PRIVATE
+	init_mouse_inputs PRIVATE
+	init_controller_inputs PRIVATE
+	apply_prelaunch_settings PRIVATE

@@ -142,6 +142,7 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
     config.emplace(siege::configuration::key_type({ "set", "in_joystick" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "set", "joy_advanced" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "set", "in_mouse" }), siege::configuration::key_type("1"));
+    config.emplace(siege::configuration::key_type({ "joy_advancedupdate" }), siege::configuration::key_type(""));
   }
 
   config.save(custom_bindings);
@@ -314,92 +315,5 @@ predefined_string*
   }
 
   return nullptr;
-}
-
-BOOL WINAPI DllMain(
-  HINSTANCE hinstDLL,
-  DWORD fdwReason,
-  LPVOID lpvReserved) noexcept
-{
-  if constexpr (sizeof(void*) != sizeof(std::uint32_t))
-  {
-    return TRUE;
-  }
-
-  if (DetourIsHelperProcess())
-  {
-    return TRUE;
-  }
-
-  if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
-  {
-    auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
-
-    auto value = app_module.GetProcAddress<std::uint32_t*>("DisableSiegeExtensionModule");
-
-    if (value && *value == -1)
-    {
-      return TRUE;
-    }
-  }
-
-  if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
-  {
-    thread_local HHOOK hook;
-
-    if (fdwReason == DLL_PROCESS_ATTACH)
-    {
-      int index = 0;
-      try
-      {
-        auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
-
-        bool module_is_valid = false;
-
-        for (const auto& item : verification_strings)
-        {
-          win32::module_ref temp((void*)item[0].second);
-
-          if (temp != app_module)
-          {
-            continue;
-          }
-
-          module_is_valid = std::all_of(item.begin(), item.end(), [](const auto& str) {
-            return std::memcmp(str.first.data(), (void*)str.second, str.first.size()) == 0;
-          });
-
-
-          if (module_is_valid)
-          {
-            export_functions[index]();
-
-            break;
-          }
-          index++;
-        }
-
-        if (!module_is_valid)
-        {
-          return FALSE;
-        }
-
-        DetourRestoreAfterWith();
-
-        auto self = win32::window_module_ref(hinstDLL);
-        hook = ::SetWindowsHookExW(WH_GETMESSAGE, dispatch_input_to_cdecl_quake_2_console, self, ::GetCurrentThreadId());
-      }
-      catch (...)
-      {
-        return FALSE;
-      }
-    }
-    else if (fdwReason == DLL_PROCESS_DETACH)
-    {
-      UnhookWindowsHookEx(hook);
-    }
-  }
-
-  return TRUE;
 }
 }

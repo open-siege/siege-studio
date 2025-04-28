@@ -9,7 +9,7 @@ EXPORTS
 	autoexec_configuration_paths DATA
 	profile_configuration_paths DATA
 	command_line_caps DATA
-	launch_game_with_extension
+	launch_game_with_extension PRIVATE
 	executable_is_supported
 	get_function_name_ranges PRIVATE
 	get_variable_name_ranges PRIVATE

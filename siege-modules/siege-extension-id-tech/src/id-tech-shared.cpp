@@ -60,15 +60,18 @@ const std::map<std::string_view, std::pair<WORD, hardware_context>>& get_key_to_
     { "kp_enter", std::make_pair(VK_RETURN, hardware_context::keypad) },
     { "kp_downarrow", std::make_pair(VK_NUMPAD2, hardware_context::keypad) },
     { "kp_end", std::make_pair(VK_END, hardware_context::keypad) },
-    { "semicolon", std::make_pair(';', hardware_context::keyboard) },
     { "backspace", std::make_pair(VK_BACK, hardware_context::keyboard) },
     { "space", std::make_pair(VK_SPACE, hardware_context::keyboard) },
     { "mouse1", std::make_pair(VK_LBUTTON, hardware_context::keyboard) },
     { "mouse2", std::make_pair(VK_RBUTTON, hardware_context::keyboard) },
     { "mouse3", std::make_pair(VK_MBUTTON, hardware_context::keyboard) },
-    { "\\", std::make_pair(VK_OEM_5, hardware_context::keyboard) },
+    { "semicolon", std::make_pair(VK_OEM_1, hardware_context::keyboard) },
     { "/", std::make_pair(VK_OEM_2, hardware_context::keyboard) },
     { "`", std::make_pair(VK_OEM_3, hardware_context::keyboard) },
+    { "[", std::make_pair(VK_OEM_4, hardware_context::keyboard) },
+    { "\\", std::make_pair(VK_OEM_5, hardware_context::keyboard) },
+    { "]", std::make_pair(VK_OEM_6, hardware_context::keyboard) },
+    { "'", std::make_pair(VK_OEM_6, hardware_context::keyboard) },
   };
 
   return mapping;
@@ -114,7 +117,7 @@ std::optional<std::string> vkey_to_key(WORD vkey, hardware_context context)
   return std::nullopt;
 }
 
-std::optional<std::string_view> hardware_index_to_joystick_axis(WORD vkey, WORD index)
+std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_2_5(WORD vkey, WORD index)
 {
   if (vkey < VK_GAMEPAD_LEFT_THUMBSTICK_UP)
   {
@@ -134,6 +137,31 @@ std::optional<std::string_view> hardware_index_to_joystick_axis(WORD vkey, WORD 
     return "joy_advaxisu";
   case 5:
     return "joy_advaxisv";
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_2_0(WORD vkey, WORD index)
+{
+  if (vkey < VK_GAMEPAD_LEFT_THUMBSTICK_UP)
+  {
+    return std::nullopt;
+  }
+  switch (index)
+  {
+  case 0:
+    return "joyadvaxisx";
+  case 1:
+    return "joyadvaxisy";
+  case 2:
+    return "joyadvaxisz";
+  case 3:
+    return "joyadvaxisr";
+  case 4:
+    return "joyadvaxisu";
+  case 5:
+    return "joyadvaxisv";
   default:
     return std::nullopt;
   }
@@ -348,7 +376,7 @@ void append_controller_defaults(const std::span<siege::platform::game_action> ga
   }
 }
 
-bool save_bindings_to_config(siege::platform::game_command_line_args& args, siege::configuration::text_game_config& config)
+bool save_bindings_to_config(siege::platform::game_command_line_args& args, siege::configuration::text_game_config& config, mapping_context context)
 {
   static std::set<std::string> storage;
   bool enable_controller = false;
@@ -357,7 +385,7 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
     if (is_vkey_for_controller(binding.vkey))
     {
       enable_controller = true;
-      auto setting = hardware_index_to_joystick_axis(binding.vkey, binding.hardware_index);
+      auto setting = context.index_to_axis(binding.vkey, binding.hardware_index);
 
       if (setting)
       {
@@ -379,7 +407,14 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
           auto action_name = std::string_view(binding.action_name.data());
           auto index = controller_button_mapping.at(action_name);
 
-          config.emplace(siege::configuration::key_type({ "set", *setting }), siege::configuration::key_type(index));
+          if (context.use_set)
+          {
+            config.emplace(siege::configuration::key_type({ "set", *setting }), siege::configuration::key_type(index));
+          }
+          else
+          {
+            config.emplace(siege::configuration::key_type({ *setting }), siege::configuration::key_type(index));
+          }
         }
         catch (...)
         {
@@ -483,7 +518,7 @@ void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std:
     {
       continue;
     }
-    auto axis = hardware_index_to_joystick_axis(binding.vkey, binding.hardware_index);
+    auto axis = hardware_index_to_joystick_axis_id_tech_2_5(binding.vkey, binding.hardware_index);
 
     if (!axis)
     {
