@@ -107,31 +107,50 @@ HRESULT launch_game_with_extension(const wchar_t* exe_path_str, const siege::pla
     dll_paths.emplace_back(hook_path.c_str());
   }
 
-  dll_paths.emplace_back(extension_path.c_str());
+  auto* input_backends = module_ref.GetProcAddress<std::add_pointer_t<wchar_t*>>("controller_input_backends");
+
+  if (input_backends && input_backends[0] && std::wstring_view(input_backends[0]) == module_ref.GetModuleFileName<wchar_t>())
+  {
+    dll_paths.emplace_back(extension_path.c_str());
+  }
 
   auto steam_dll_path = (exe_path.parent_path().parent_path().parent_path().parent_path() / "Steam.dll").string();
 
-  if (std::filesystem::exists(steam_dll_path, last_errorc))
+  if (!dll_paths.empty() && std::filesystem::exists(steam_dll_path, last_errorc))
   {
     dll_paths.push_back(steam_dll_path.c_str());
   }
 
-  if (::DetourCreateProcessWithDllsW(exe_path.c_str(),
-        args.data(),
-        nullptr,
-        nullptr,
-        FALSE,
-        DETACHED_PROCESS,
-        nullptr,
-        exe_path.parent_path().c_str(),
-        &startup_info,
-        process_info,
-        dll_paths.size(),
-        dll_paths.data(),
-        nullptr))
+  if (dll_paths.empty() && ::CreateProcessW(exe_path.c_str(), 
+      args.data(), 
+      nullptr, 
+      nullptr, 
+      FALSE, 
+      DETACHED_PROCESS, 
+      nullptr, 
+      exe_path.parent_path().c_str(), 
+      &startup_info, 
+      process_info))
   {
     return S_OK;
   }
+  else if (::DetourCreateProcessWithDllsW(exe_path.c_str(),
+             args.data(),
+             nullptr,
+             nullptr,
+             FALSE,
+             DETACHED_PROCESS,
+             nullptr,
+             exe_path.parent_path().c_str(),
+             &startup_info,
+             process_info,
+             dll_paths.size(),
+             dll_paths.data(),
+             nullptr))
+  {
+    return S_OK;
+  }
+
 
   auto last_error = ::GetLastError();
   return HRESULT_FROM_WIN32(last_error);

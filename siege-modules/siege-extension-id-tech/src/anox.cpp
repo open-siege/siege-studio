@@ -61,7 +61,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "+mlook", u"Mouse Look", u"Misc" },
 } };
 
-extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"siege-extension-anox" } };
+extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"siege-extension-anachronox" } };
 extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
 extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
 extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };

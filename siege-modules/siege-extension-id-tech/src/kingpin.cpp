@@ -65,7 +65,7 @@ constexpr static auto kingpin_aliases = std::array<std::array<std::string_view, 
   { "-melee-attack", "weapprev; -attack" } } };
 
 
-extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
+extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"siege-extension-kingpin" } };
 extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
 extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
 extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
