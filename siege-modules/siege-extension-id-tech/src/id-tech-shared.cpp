@@ -11,6 +11,7 @@
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/window_impl.hpp>
 #include <siege/resource/pak_resource.hpp>
+#include <siege/resource/zip_resource.hpp>
 #include <detours.h>
 #include "shared.hpp"
 #include "GetGameFunctionNames.hpp"
@@ -35,13 +36,16 @@ const std::map<std::string_view, std::pair<WORD, hardware_context>>& get_key_to_
     { "f11", std::make_pair(VK_F11, hardware_context::keyboard) },
     { "f12", std::make_pair(VK_F12, hardware_context::keyboard) },
     { "tab", std::make_pair(VK_TAB, hardware_context::keyboard) },
+    { "ctrl", std::make_pair(VK_CONTROL, hardware_context::keyboard) },
+    { "alt", std::make_pair(VK_MENU, hardware_context::keyboard) },
     { "lctrl", std::make_pair(VK_LCONTROL, hardware_context::keyboard) },
     { "rctrl", std::make_pair(VK_RCONTROL, hardware_context::keyboard) },
+    { "shift", std::make_pair(VK_SHIFT, hardware_context::keyboard) },
     { "lshift", std::make_pair(VK_LSHIFT, hardware_context::keyboard) },
     { "rshift", std::make_pair(VK_RSHIFT, hardware_context::keyboard) },
     { "lalt", std::make_pair(VK_LMENU, hardware_context::keyboard) },
-    { "ralt", std::make_pair(VK_LMENU, hardware_context::keyboard) },
-    { "uparrow", std::make_pair(VK_LEFT, hardware_context::keyboard) },
+    { "ralt", std::make_pair(VK_RMENU, hardware_context::keyboard) },
+    { "uparrow", std::make_pair(VK_UP, hardware_context::keyboard) },
     { "downarrow", std::make_pair(VK_DOWN, hardware_context::keyboard) },
     { "leftarrow", std::make_pair(VK_LEFT, hardware_context::keyboard) },
     { "rightarrow", std::make_pair(VK_RIGHT, hardware_context::keyboard) },
@@ -60,18 +64,37 @@ const std::map<std::string_view, std::pair<WORD, hardware_context>>& get_key_to_
     { "kp_enter", std::make_pair(VK_RETURN, hardware_context::keypad) },
     { "kp_downarrow", std::make_pair(VK_NUMPAD2, hardware_context::keypad) },
     { "kp_end", std::make_pair(VK_END, hardware_context::keypad) },
+    { "kp_numlock", std::make_pair(VK_NUMLOCK, hardware_context::keypad) },
     { "backspace", std::make_pair(VK_BACK, hardware_context::keyboard) },
     { "space", std::make_pair(VK_SPACE, hardware_context::keyboard) },
-    { "mouse1", std::make_pair(VK_LBUTTON, hardware_context::keyboard) },
-    { "mouse2", std::make_pair(VK_RBUTTON, hardware_context::keyboard) },
-    { "mouse3", std::make_pair(VK_MBUTTON, hardware_context::keyboard) },
+    { "mouse1", std::make_pair(VK_LBUTTON, hardware_context::mouse) },
+    { "mouse2", std::make_pair(VK_RBUTTON, hardware_context::mouse) },
+    { "mouse3", std::make_pair(VK_MBUTTON, hardware_context::mouse) },
+    { "mwheelup", std::make_pair(VK_UP, hardware_context::mouse_wheel) },
+    { "mwheeldown", std::make_pair(VK_DOWN, hardware_context::mouse_wheel) },
     { "semicolon", std::make_pair(VK_OEM_1, hardware_context::keyboard) },
+    { ";", std::make_pair(VK_OEM_1, hardware_context::keyboard) },
     { "/", std::make_pair(VK_OEM_2, hardware_context::keyboard) },
     { "`", std::make_pair(VK_OEM_3, hardware_context::keyboard) },
     { "[", std::make_pair(VK_OEM_4, hardware_context::keyboard) },
     { "\\", std::make_pair(VK_OEM_5, hardware_context::keyboard) },
     { "]", std::make_pair(VK_OEM_6, hardware_context::keyboard) },
     { "'", std::make_pair(VK_OEM_6, hardware_context::keyboard) },
+    { "-", std::make_pair(VK_OEM_MINUS, hardware_context::keyboard) },
+    { "=", std::make_pair(VK_OEM_PLUS, hardware_context::keyboard) },
+    { ",", std::make_pair(VK_OEM_COMMA, hardware_context::keyboard) },
+    { ".", std::make_pair(VK_OEM_PERIOD, hardware_context::keyboard) },
+    { ":", std::make_pair(VK_OEM_1, hardware_context::keyboard_shifted) },
+    { "?", std::make_pair(VK_OEM_2, hardware_context::keyboard_shifted) },
+    { "~", std::make_pair(VK_OEM_3, hardware_context::keyboard_shifted) },
+    { "{", std::make_pair(VK_OEM_4, hardware_context::keyboard_shifted) },
+    { "|", std::make_pair(VK_OEM_5, hardware_context::keyboard_shifted) },
+    { "}", std::make_pair(VK_OEM_6, hardware_context::keyboard_shifted) },
+    { "\"", std::make_pair(VK_OEM_6, hardware_context::keyboard_shifted) },
+    { "_", std::make_pair(VK_OEM_MINUS, hardware_context::keyboard_shifted) },
+    { "+", std::make_pair(VK_OEM_PLUS, hardware_context::keyboard_shifted) },
+    { "<", std::make_pair(VK_OEM_COMMA, hardware_context::keyboard_shifted) },
+    { "<", std::make_pair(VK_OEM_PERIOD, hardware_context::keyboard_shifted) },
   };
 
   return mapping;
@@ -89,9 +112,9 @@ std::optional<std::pair<WORD, hardware_context>> key_to_vkey(std::string_view va
     return iter->second;
   }
 
-  if (value.size() == 1 && (std::isalpha(value[0]) || std::isdigit(value[0]) || std::ispunct(value[0])))
+  if (value.size() == 1 && (std::isalpha(value[0]) || std::isdigit(value[0])))
   {
-    return std::make_pair((WORD)value[0], hardware_context::keyboard);
+    return std::make_pair((WORD)std::toupper(value[0]), hardware_context::keyboard);
   }
 
   return std::nullopt;
@@ -115,6 +138,116 @@ std::optional<std::string> vkey_to_key(WORD vkey, hardware_context context)
   }
 
   return std::nullopt;
+}
+
+std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_3_0(WORD vkey, WORD index)
+{
+  if (vkey < VK_GAMEPAD_LEFT_THUMBSTICK_UP)
+  {
+    return std::nullopt;
+  }
+
+  bool is_positive = vkey == VK_GAMEPAD_LEFT_THUMBSTICK_UP || vkey == VK_GAMEPAD_RIGHT_THUMBSTICK_UP || vkey == VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT || vkey == VK_GAMEPAD_RIGHT_TRIGGER;
+  switch (index)
+  {
+  case 0: {
+    return is_positive ? "UPARROW" : "DOWNARROW";
+  }
+  case 1: {
+    return is_positive ? "RIGHTARROW" : "LEFTARROW";
+  }
+  case 2: {
+    return is_positive ? "JOY17" : "JOY16";
+  }
+  case 3: {
+    return is_positive ? "JOY18" : "JOY19";
+  }
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<std::string_view> hardware_index_to_button_name_id_tech_2_0(WORD index)
+{
+  constexpr static auto button_names = std::array<std::string_view, 15>{ { "JOY1",
+    "JOY2",
+    "JOY3",
+    "JOY4",
+    "AUX5",
+    "AUX6",
+    "AUX7",
+    "AUX8",
+    "AUX9",
+    "AUX10",
+    "AUX11",
+    "AUX12",
+    "AUX13",
+    "AUX14",
+    "AUX15" } };
+
+  if (index > button_names.size())
+  {
+    return std::nullopt;
+  }
+  return button_names[index];
+}
+
+std::optional<std::string_view> hardware_index_to_button_name_id_tech_3_0(WORD index)
+{
+  constexpr static auto button_names = std::array<std::string_view, 15>{ { "JOY1",
+    "JOY2",
+    "JOY3",
+    "JOY4",
+    "JOY5",
+    "JOY6",
+    "JOY7",
+    "JOY8",
+    "JOY9",
+    "JOY10",
+    "JOY11",
+    "JOY12",
+    "JOY13",
+    "JOY14",
+    "JOY15" } };
+
+  if (index > button_names.size())
+  {
+    return std::nullopt;
+  }
+  return button_names[index];
+}
+
+std::optional<std::string_view> dpad_name_id_tech_2_0(WORD vkey)
+{
+  switch (vkey)
+  {
+  case VK_GAMEPAD_DPAD_UP:
+    return "AUX29";
+  case VK_GAMEPAD_DPAD_DOWN:
+    return "AUX29";
+  case VK_GAMEPAD_DPAD_LEFT:
+    return "AUX29";
+  case VK_GAMEPAD_DPAD_RIGHT:
+    return "AUX29";
+  default:
+    return std::nullopt;
+  }
+}
+std::optional<std::string_view> dpad_name_id_tech_3_0(WORD vkey)
+{
+  switch (vkey)
+  {
+  case VK_GAMEPAD_DPAD_UP:
+    return "JOY24";
+  case VK_GAMEPAD_DPAD_DOWN:
+    return "JOY25";
+  case VK_GAMEPAD_DPAD_LEFT:
+    return "JOY27";
+  case VK_GAMEPAD_DPAD_RIGHT:
+    return "JOY26";
+  default:
+    return std::nullopt;
+  }
 }
 
 std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_2_5(WORD vkey, WORD index)
@@ -180,6 +313,45 @@ std::optional<siege::configuration::text_game_config> load_config_from_pak(fs::p
   {
     std::any cache;
     siege::resource::pak::pak_resource_reader reader;
+
+    std::ifstream stream(pak_path, std::ios::binary);
+    auto contents = reader.get_content_listing(cache, stream, { .archive_path = pak_path, .folder_path = pak_folder_path });
+
+    auto default_keys = std::find_if(contents.begin(), contents.end(), [&](auto& info) {
+      if (auto* file_info = std::get_if<siege::platform::resource_reader::file_info>(&info))
+      {
+        return file_info->filename.wstring() == real_file_path.filename();
+      }
+
+      return false;
+    });
+
+    if (default_keys != contents.end())
+    {
+      std::stringstream temp;
+      reader.extract_file_contents(cache, stream, std::get<siege::platform::resource_reader::file_info>(*default_keys), temp);
+      auto size = (std::size_t)temp.tellp();
+      temp.seekg(0);
+      return siege::configuration::id_tech::id_tech_2::load_config(temp, size);
+    }
+  }
+
+  return std::nullopt;
+}
+
+std::optional<siege::configuration::text_game_config> load_config_from_pk3(fs::path real_file_path, std::wstring pak_path, std::wstring pak_folder_path)
+{
+  std::error_code last_error;
+  if (fs::exists(real_file_path, last_error))
+  {
+    std::ifstream stream(real_file_path, std::ios::binary);
+    auto size = fs::file_size(real_file_path, last_error);
+    return siege::configuration::id_tech::id_tech_2::load_config(stream, size);
+  }
+  else if (fs::exists(pak_path, last_error))
+  {
+    std::any cache;
+    siege::resource::zip::zip_resource_reader reader;
 
     std::ifstream stream(pak_path, std::ios::binary);
     auto contents = reader.get_content_listing(cache, stream, { .archive_path = pak_path, .folder_path = pak_folder_path });
@@ -290,12 +462,7 @@ void load_keyboard_bindings(siege::configuration::text_game_config& config, sieg
       std::memcpy(binding.inputs[index].action_name.data(), temp.data(), temp.size());
       binding.inputs[index].virtual_key = vkey->first;
       binding.inputs[index].input_type = siege::platform::keyboard_binding::action_binding::button;
-      binding.inputs[index].context = siege::platform::keyboard_context::keyboard;
-
-      if (item.at(1).starts_with("kp_") || item.at(1).starts_with("KP_"))
-      {
-        binding.inputs[index].context = siege::platform::keyboard_context::keypad;
-      }
+      binding.inputs[index].context = (siege::platform::keyboard_context)vkey->second;
 
       index++;
 
@@ -307,42 +474,66 @@ void load_keyboard_bindings(siege::configuration::text_game_config& config, sieg
   }
 }
 
-void append_mouse_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, 
-    siege::platform::mouse_binding & binding)
+void upsert_mouse_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::mouse_binding& binding)
 {
   for (auto action_str : actions)
   {
-    auto first_available = std::find_if(binding.inputs.begin(), binding.inputs.end(), [](auto& input) { return input.action_name[0] == '\0'; });
-
-    if (first_available == binding.inputs.end())
-    {
-      break;
-    }
     auto action = std::find_if(game_actions.begin(), game_actions.end(), [&](auto& action) { return std::string_view(action.action_name.data()) == action_str.second; });
     if (action == game_actions.end())
     {
       continue;
     }
+
+    auto existing = std::find_if(binding.inputs.begin(), binding.inputs.end(), [&](auto& input) { return input.virtual_key == action_str.first; });
+
+    if (existing != binding.inputs.end())
+    {
+
+      std::memcpy(existing->action_name.data(), action->action_name.data(), action->action_name.size());
+      existing->input_type = siege::platform::mouse_binding::action_binding::button;
+      existing->virtual_key = action_str.first;
+      continue;
+    }
+
+    auto first_available = std::find_if(binding.inputs.begin(), binding.inputs.end(), [](auto& input) { return input.action_name[0] == '\0'; });
+
+    if (first_available == binding.inputs.end())
+    {
+      continue;
+    }
+
     std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
     first_available->input_type = siege::platform::mouse_binding::action_binding::button;
     first_available->virtual_key = action_str.first;
   }
 }
 
-void append_keyboard_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::keyboard_binding& binding)
+void upsert_keyboard_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::keyboard_binding& binding)
 {
   for (auto action_str : actions)
   {
-    auto first_available = std::find_if(binding.inputs.begin(), binding.inputs.end(), [](auto& input) { return input.action_name[0] == '\0'; });
-
-    if (first_available == binding.inputs.end())
-    {
-      break;
-    }
-
     auto action = std::find_if(game_actions.begin(), game_actions.end(), [&](auto& action) { return std::string_view(action.action_name.data()) == action_str.second; });
 
     if (action == game_actions.end())
+    {
+      continue;
+    }
+
+    auto existing = std::find_if(binding.inputs.begin(), binding.inputs.end(), [&](auto& input) { return input.virtual_key == action_str.first; });
+
+    if (existing != binding.inputs.end())
+    {
+
+      std::memcpy(existing->action_name.data(), action->action_name.data(), action->action_name.size());
+      existing->input_type = siege::platform::keyboard_binding::action_binding::button;
+      existing->virtual_key = action_str.first;
+      continue;
+    }
+
+
+    auto first_available = std::find_if(binding.inputs.begin(), binding.inputs.end(), [](auto& input) { return input.action_name[0] == '\0'; });
+
+    if (first_available == binding.inputs.end())
     {
       continue;
     }
@@ -407,9 +598,13 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
           auto action_name = std::string_view(binding.action_name.data());
           auto index = controller_button_mapping.at(action_name);
 
-          if (context.use_set)
+          if (context.axis_set_prefix == "bind")
           {
-            config.emplace(siege::configuration::key_type({ "set", *setting }), siege::configuration::key_type(index));
+            config.emplace(siege::configuration::key_type({ context.axis_set_prefix, *setting }), siege::configuration::key_type(action_name));
+          }
+          else if (!context.axis_set_prefix.empty())
+          {
+            config.emplace(siege::configuration::key_type({ context.axis_set_prefix, *setting }), siege::configuration::key_type(index));
           }
           else
           {
@@ -423,72 +618,74 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
       }
       else
       {
-        constexpr static auto button_names = std::array<std::string_view, 15>{ { "JOY1",
-          "JOY2",
-          "JOY3",
-          "JOY4",
-          "AUX5",
-          "AUX6",
-          "AUX7",
-          "AUX8",
-          "AUX9",
-          "AUX10",
-          "AUX11",
-          "AUX12",
-          "AUX13",
-          "AUX14",
-          "AUX15" } };
-
-        if (binding.vkey == VK_GAMEPAD_DPAD_UP)
+        auto dpad_name = context.dpad_name(binding.vkey);
+        if (binding.vkey == VK_GAMEPAD_DPAD_UP && dpad_name)
         {
-          config.emplace(siege::configuration::key_type({ "bind", "AUX29" }), siege::configuration::key_type(binding.action_name.data()));
+          config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(binding.action_name.data()));
         }
-        else if (binding.vkey == VK_GAMEPAD_DPAD_DOWN)
+        else if (binding.vkey == VK_GAMEPAD_DPAD_DOWN && dpad_name)
         {
-          config.emplace(siege::configuration::key_type({ "bind", "AUX31" }), siege::configuration::key_type(binding.action_name.data()));
+          config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(binding.action_name.data()));
         }
-        else if (binding.vkey == VK_GAMEPAD_DPAD_LEFT)
+        else if (binding.vkey == VK_GAMEPAD_DPAD_LEFT && dpad_name)
         {
-          config.emplace(siege::configuration::key_type({ "bind", "AUX32" }), siege::configuration::key_type(binding.action_name.data()));
+          config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(binding.action_name.data()));
         }
-        else if (binding.vkey == VK_GAMEPAD_DPAD_RIGHT)
+        else if (binding.vkey == VK_GAMEPAD_DPAD_RIGHT && dpad_name)
         {
-          config.emplace(siege::configuration::key_type({ "bind", "AUX30" }), siege::configuration::key_type(binding.action_name.data()));
+          config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(binding.action_name.data()));
         }
         else if (binding.vkey == VK_GAMEPAD_LEFT_TRIGGER || binding.vkey == VK_GAMEPAD_RIGHT_TRIGGER)
         {
-          // TODO add a context check for "xbox" controllers
-          auto action_name = std::string_view(binding.action_name.data());
-          auto mouse = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& existing) {
-            return existing.action_name.data() == action_name && (existing.context == siege::platform::hardware_context::mouse);
-          });
-
-          if (mouse == args.action_bindings.end())
+          if (binding.context == hardware_context::controller_xbox && !context.supported_triggers_as_buttons)
           {
-            mouse = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& existing) {
-              return existing.action_name.data() == action_name && 
-                  (existing.context == siege::platform::hardware_context::keyboard ||
-                      existing.context == siege::platform::hardware_context::keypad ||
-                  existing.context == siege::platform::hardware_context::global);
+            auto action_name = std::string_view(binding.action_name.data());
+            auto mouse = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& existing) {
+              return existing.action_name.data() == action_name && (existing.context == siege::platform::hardware_context::mouse);
             });
-          }
 
-          if (auto free_mapping = std::find_if(args.controller_to_send_input_mappings.begin(), args.controller_to_send_input_mappings.end(), [](auto& mapping) {
-                return mapping.from_vkey == 0;
+            if (mouse == args.action_bindings.end())
+            {
+              mouse = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& existing) {
+                return existing.action_name.data() == action_name && (existing.context == siege::platform::hardware_context::keyboard || existing.context == siege::platform::hardware_context::keypad || existing.context == siege::platform::hardware_context::global);
               });
-            free_mapping != args.controller_to_send_input_mappings.end() && mouse != args.action_bindings.end())
-          {
-            free_mapping->from_vkey = binding.vkey;
-            free_mapping->from_context = siege::platform::hardware_context::controller;
-            free_mapping->to_vkey = mouse->vkey;
-            free_mapping->to_context = mouse->context;
-          }
+            }
 
-          config.emplace(siege::configuration::key_type({ "bind", button_names[binding.hardware_index] }), siege::configuration::key_type(binding.action_name.data()));
+            if (auto free_mapping = std::find_if(args.controller_to_send_input_mappings.begin(), args.controller_to_send_input_mappings.end(), [](auto& mapping) {
+                  return mapping.from_vkey == 0;
+                });
+              free_mapping != args.controller_to_send_input_mappings.end() && mouse != args.action_bindings.end())
+            {
+              free_mapping->from_vkey = binding.vkey;
+              free_mapping->from_context = binding.context;
+              free_mapping->to_vkey = mouse->vkey;
+              free_mapping->to_context = mouse->context;
+            }
+          }
+          else if (binding.context == hardware_context::controller_xbox && context.supported_triggers_as_buttons)
+          {
+            auto axis = context.index_to_axis(binding.vkey, binding.hardware_index);
+            if (axis)
+            {
+              config.emplace(siege::configuration::key_type({ "bind", *axis }), siege::configuration::key_type(binding.action_name.data()));
+            }
+          }
+          else if (binding.context != hardware_context::controller_xbox)
+          {
+            auto button = context.index_to_button(binding.hardware_index);
+            if (button)
+            {
+              config.emplace(siege::configuration::key_type({ "bind", *button }), siege::configuration::key_type(binding.action_name.data()));
+            }
+          }
         }
         else
         {
-          config.emplace(siege::configuration::key_type({ "bind", button_names[binding.hardware_index] }), siege::configuration::key_type(binding.action_name.data()));
+          auto button = context.index_to_button(binding.hardware_index);
+          if (button)
+          {
+            config.emplace(siege::configuration::key_type({ "bind", *button }), siege::configuration::key_type(binding.action_name.data()));
+          }
         }
       }
     }
@@ -506,7 +703,7 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
       }
     }
   }
-  
+
   return enable_controller;
 }
 
@@ -518,6 +715,14 @@ void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std:
     {
       continue;
     }
+
+    auto action_name = std::string_view(binding.action_name.data());
+
+    if (action_name != source)
+    {
+      continue;
+    }
+
     auto axis = hardware_index_to_joystick_axis_id_tech_2_5(binding.vkey, binding.hardware_index);
 
     if (!axis)
@@ -534,16 +739,15 @@ void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std:
       continue;
     }
 
-    auto action_name = std::string_view(binding.action_name.data());
 
     auto keyboard = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& existing) {
       return existing.action_name.data() == target && (existing.context == siege::platform::hardware_context::global || existing.context == siege::platform::hardware_context::keyboard);
     });
 
-    if (action_name == source && keyboard != args.action_bindings.end())
+    if (keyboard != args.action_bindings.end())
     {
       free_mapping->from_vkey = binding.vkey;
-      free_mapping->from_context = siege::platform::hardware_context::controller;
+      free_mapping->from_context = binding.context;
       free_mapping->to_vkey = keyboard->vkey;
       free_mapping->to_context = keyboard->context;
       break;

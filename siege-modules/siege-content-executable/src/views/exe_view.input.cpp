@@ -130,14 +130,14 @@ namespace siege::views
 
       for (auto mapping : default_mappings)
       {
-        win32::list_view_item up(string_for_vkey(mapping.first, siege::platform::hardware_context::controller), images[mapping.first]);
+        win32::list_view_item up(string_for_vkey(mapping.first, siege::platform::hardware_context::controller_xbox), images[mapping.first]);
         up.iGroupId = grouping[mapping.first];
 
         up.lParam = bound_inputs.size();
         auto& input = bound_inputs.emplace_back();
 
         input.from_vkey = mapping.first;
-        input.from_context = siege::platform::hardware_context::controller;
+        input.from_context = siege::platform::hardware_context::controller_xbox;
         input.to_vkey = mapping.second.first;
         input.to_context = mapping.second.second;
         up.mask = up.mask | LVIF_PARAM;

@@ -625,7 +625,7 @@ namespace siege::views
       return L"Controller";
     }
 
-    if (context == hardware_context::controller || context == hardware_context::joystick || context == hardware_context::throttle)
+    if (context == hardware_context::controller_xbox || context == hardware_context::joystick || context == hardware_context::throttle)
     {
       return L"Controller";
     }
@@ -633,9 +633,9 @@ namespace siege::views
     return L"Keyboard";
   }
 
-  std::uint16_t hardware_index_for_controller_vkey(std::span<RAWINPUTDEVICELIST> controllers, std::uint32_t index, SHORT vkey)
+  std::pair<siege::platform::hardware_context, std::uint16_t> hardware_index_for_controller_vkey(std::span<RAWINPUTDEVICELIST> controllers, std::uint32_t index, SHORT vkey)
   {
-    std::wstring device_name(1024, 0);
+    std::wstring device_name(2048, 0);
 
     std::uint32_t current_index = 0;
     std::set<std::uint32_t> xinput_devices{};
@@ -659,11 +659,12 @@ namespace siege::views
       }
 
       info_size = device_name.size();
+      
       if (auto real_size = ::GetRawInputDeviceInfoW(controllers[i].hDevice, RIDI_DEVICENAME, device_name.data(), &info_size); real_size <= 0)
       {
         continue;
       }
-      else
+      else if (real_size < 2048)
       {
         device_name.resize(real_size);
       }
@@ -673,56 +674,59 @@ namespace siege::views
         xinput_devices.insert(current_index);
       }
 
+      device_name.clear();
+      device_name.resize(info_size);
+
       if (current_index == index)
       {
         found_controller = true;
-        break;
       }
 
       current_index++;
     }
+    using namespace siege::platform;
 
-    if (found_controller && xinput_devices.contains(current_index))
+    if (found_controller && xinput_devices.size() > index)
     {
       switch (vkey)
       {
       case VK_GAMEPAD_A:
-        return 0;
+        return std::make_pair(hardware_context::controller_xbox, 0);
       case VK_GAMEPAD_B:
-        return 1;
+        return std::make_pair(hardware_context::controller_xbox, 1);
       case VK_GAMEPAD_X:
-        return 2;
+        return std::make_pair(hardware_context::controller_xbox, 2);
       case VK_GAMEPAD_Y:
-        return 3;
+        return std::make_pair(hardware_context::controller_xbox, 3);
       case VK_GAMEPAD_LEFT_SHOULDER:
-        return 4;
+        return std::make_pair(hardware_context::controller_xbox, 4);
       case VK_GAMEPAD_RIGHT_SHOULDER:
-        return 5;
+        return std::make_pair(hardware_context::controller_xbox, 5);
       case VK_GAMEPAD_VIEW:
-        return 6;
+        return std::make_pair(hardware_context::controller_xbox, 6);
       case VK_GAMEPAD_MENU:
-        return 7;
+        return std::make_pair(hardware_context::controller_xbox, 7);
       case VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON:
-        return 8;
+        return std::make_pair(hardware_context::controller_xbox, 8);
       case VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON:
-        return 9;
+        return std::make_pair(hardware_context::controller_xbox, 9);
       case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
       case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT:
-        return 0;
+        return std::make_pair(hardware_context::controller_xbox, 0);
       case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
       case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN:
-        return 1;
+        return std::make_pair(hardware_context::controller_xbox, 1);
       case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
       case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT:
-        return 4;
+        return std::make_pair(hardware_context::controller_xbox, 4);
       case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
       case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN:
-        return 3;
+        return std::make_pair(hardware_context::controller_xbox, 3);
       case VK_GAMEPAD_LEFT_TRIGGER:
       case VK_GAMEPAD_RIGHT_TRIGGER:
-        return 2;
+        return std::make_pair(hardware_context::controller_xbox, 2);
       default:
-        return 0;
+        return std::make_pair(hardware_context::controller_xbox, 0);
       }
     }
     else if (found_controller)
@@ -730,46 +734,46 @@ namespace siege::views
       switch (vkey)
       {
       case VK_GAMEPAD_X:// ps3/ps4 square
-        return 0;
+        return std::make_pair(hardware_context::controller_playstation_3, 0);
       case VK_GAMEPAD_A:// ps3/ps4 cross
-        return 1;
+        return std::make_pair(hardware_context::controller_playstation_3, 1);
       case VK_GAMEPAD_B:// ps3/ps4 circle
-        return 2;
+        return std::make_pair(hardware_context::controller_playstation_3, 2);
       case VK_GAMEPAD_Y:// ps3/ps4 triangle
-        return 3;
+        return std::make_pair(hardware_context::controller_playstation_3, 3);
       case VK_GAMEPAD_LEFT_SHOULDER:
-        return 4;
+        return std::make_pair(hardware_context::controller_playstation_3, 4);
       case VK_GAMEPAD_RIGHT_SHOULDER:
-        return 5;
+        return std::make_pair(hardware_context::controller_playstation_3, 5);
       case VK_GAMEPAD_LEFT_TRIGGER:
-        return 6;
+        return std::make_pair(hardware_context::controller_playstation_3, 6);
       case VK_GAMEPAD_RIGHT_TRIGGER:
-        return 7;
+        return std::make_pair(hardware_context::controller_playstation_3, 7);
       case VK_GAMEPAD_VIEW:
-        return 8;
+        return std::make_pair(hardware_context::controller_playstation_3, 8);
       case VK_GAMEPAD_MENU:
-        return 9;
+        return std::make_pair(hardware_context::controller_playstation_3, 9);
       case VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON:
-        return 10;
+        return std::make_pair(hardware_context::controller_playstation_3, 10);
       case VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON:
-        return 11;
+        return std::make_pair(hardware_context::controller_playstation_3, 11);
       case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
       case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT:
-        return 0;
+        return std::make_pair(hardware_context::controller_playstation_3, 0);
       case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
       case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN:
-        return 1;
+        return std::make_pair(hardware_context::controller_playstation_3, 1);
       case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
       case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT:
-        return 2;
+        return std::make_pair(hardware_context::controller_playstation_3, 2);
       case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
       case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN:
-        return 3;
+        return std::make_pair(hardware_context::controller_playstation_3, 3);
       default:
-        return 0;
+        return std::make_pair(hardware_context::controller_playstation_3, 0);
       }
     }
-    return 0;
+    return std::make_pair(hardware_context::global, 0);
   }
 
   std::wstring string_for_vkey(SHORT vkey, siege::platform::hardware_context context)

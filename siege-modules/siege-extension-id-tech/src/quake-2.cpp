@@ -186,7 +186,7 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use") }
   };
 
-  append_mouse_defaults(game_actions, actions, *binding);
+  upsert_mouse_defaults(game_actions, actions, *binding);
 
 
   return S_OK;
@@ -215,7 +215,7 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
     }
   };
 
-  append_keyboard_defaults(game_actions, actions, *binding);
+  upsert_keyboard_defaults(game_actions, actions, *binding);
 
   return S_OK;
 }
@@ -255,7 +255,6 @@ HRESULT init_controller_inputs(controller_binding* binding)
   };
 
   append_controller_defaults(game_actions, actions, *binding);
-
 
   return S_OK;
 }

@@ -36,13 +36,14 @@ namespace siege::platform
   enum struct keyboard_context : std::uint16_t
   {
     keyboard = 1,
+    keyboard_shifted,
     keypad
   };
   using keyboard_binding = input_binding<128, keyboard_context>;
 
   enum struct mouse_context : std::uint16_t
   {
-    mouse = 3,
+    mouse = 4,
     mouse_wheel
   };
 
@@ -50,7 +51,10 @@ namespace siege::platform
 
   enum struct controller_context : std::uint16_t
   {
-    controller = 5,
+    controller_xbox = 6,
+    controller_playstation_3,
+    controller_playstation_4,
+    controller_nintendo,
     joystick,
     throttle
   };
@@ -60,10 +64,14 @@ namespace siege::platform
   {
     global,
     keyboard = static_cast<std::uint16_t>(keyboard_context::keyboard),
+    keyboard_shifted,
     keypad,
     mouse = static_cast<std::uint16_t>(mouse_context::mouse),
     mouse_wheel,
-    controller = static_cast<std::uint16_t>(controller_context::controller),
+    controller_xbox = static_cast<std::uint16_t>(controller_context::controller_xbox),
+    controller_playstation_3,
+    controller_playstation_4,
+    controller_nintendo,
     joystick,
     throttle
   };

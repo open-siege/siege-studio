@@ -17,8 +17,12 @@
 
 
 extern "C" {
+using hardware_context = siege::platform::hardware_context;
 using game_action = siege::platform::game_action;
-
+using keyboard_binding = siege::platform::keyboard_binding;
+using mouse_binding = siege::platform::mouse_binding;
+using controller_binding = siege::platform::controller_binding;
+using game_action = siege::platform::game_action;
 using game_command_line_caps = siege::platform::game_command_line_caps;
 using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
@@ -31,28 +35,28 @@ extern auto command_line_caps = game_command_line_caps{
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
-  game_action{ game_action::analog, "forward", u"Move Forward", u"Movement" },
-  game_action{ game_action::analog, "back", u"Move Backward", u"Movement" },
-  game_action{ game_action::analog, "moveleft", u"Strafe Left", u"Movement" },
-  game_action{ game_action::analog, "moveright", u"Strafe Right", u"Movement" },
-  game_action{ game_action::analog, "moveup", u"Jump", u"Movement" },
-  game_action{ game_action::analog, "movedown", u"Crouch", u"Movement" },
-  game_action{ game_action::digital, "speed", u"Run", u"Movement" },
-  game_action{ game_action::analog, "left", u"Turn Left", u"Aiming" },
-  game_action{ game_action::analog, "right", u"Turn Right", u"Aiming" },
-  game_action{ game_action::analog, "lookup", u"Look Up", u"Aiming" },
-  game_action{ game_action::analog, "lookdown", u"Look Down", u"Aiming" },
-  game_action{ game_action::digital, "attack", u"Attack", u"Combat" },
-  game_action{ game_action::digital, "altattack", u"Alt Attack", u"Combat" },
-  game_action{ game_action::digital, "melee-attack", u"Melee Attack", u"Combat" },
+  game_action{ game_action::analog, "+forward", u"Move Forward", u"Movement" },
+  game_action{ game_action::analog, "+back", u"Move Backward", u"Movement" },
+  game_action{ game_action::analog, "+moveleft", u"Strafe Left", u"Movement" },
+  game_action{ game_action::analog, "+moveright", u"Strafe Right", u"Movement" },
+  game_action{ game_action::analog, "+moveup", u"Jump", u"Movement" },
+  game_action{ game_action::analog, "+movedown", u"Crouch", u"Movement" },
+  game_action{ game_action::digital, "+speed", u"Run", u"Movement" },
+  game_action{ game_action::analog, "+left", u"Turn Left", u"Aiming" },
+  game_action{ game_action::analog, "+right", u"Turn Right", u"Aiming" },
+  game_action{ game_action::analog, "+lookup", u"Look Up", u"Aiming" },
+  game_action{ game_action::analog, "+lookdown", u"Look Down", u"Aiming" },
+  game_action{ game_action::digital, "+attack", u"Attack", u"Combat" },
+  game_action{ game_action::digital, "+altattack", u"Alt Attack", u"Combat" },
+  game_action{ game_action::digital, "+melee-attack", u"Melee Attack", u"Combat" },
   game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
   game_action{ game_action::digital, "weaprev", u"Previous Weapon", u"Combat" },
   game_action{ game_action::digital, "itemnext", u"Next Item", u"Combat" },
   game_action{ game_action::digital, "itemuse", u"Use Item", u"Combat" },
   game_action{ game_action::digital, "score", u"Score", u"Interface" },
   game_action{ game_action::digital, "menu-objectives", u"Objectives", u"Interface" },
-  game_action{ game_action::digital, "klook", u"Keyboard Look", u"Misc" },
-  game_action{ game_action::digital, "mlook", u"Mouse Look", u"Misc" },
+  game_action{ game_action::digital, "+klook", u"Keyboard Look", u"Misc" },
+  game_action{ game_action::digital, "+mlook", u"Mouse Look", u"Misc" },
 } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
@@ -118,6 +122,141 @@ HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
 
+HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
+{
+  if (auto result = apply_dpi_awareness(exe_path_str); result != S_OK)
+  {
+    return result;
+  }
+
+  if (!args)
+  {
+    return E_POINTER;
+  }
+
+  std::ofstream custom_bindings("base/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
+
+  siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
+
+  bool enable_controller = save_bindings_to_config(*args, config, mapping_context{
+      .index_to_axis = hardware_index_to_joystick_axis_id_tech_3_0,
+      .axis_set_prefix = "bind"
+      });
+
+  if (enable_controller)
+  {
+    config.emplace(siege::configuration::key_type({ "seta", "in_joystick" }), siege::configuration::key_type("1"));
+  }
+
+  config.save(custom_bindings);
+
+  auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
+
+  if (iter != args->string_settings.end())
+  {
+    iter->name = L"exec";
+    iter->value = L"siege_studio_inputs.cfg";
+  }
+
+  std::advance(iter, 1);
+  iter->name = L"console";
+  iter->value = L"1";
+
+
+  return S_OK;
+}
+
+HRESULT init_mouse_inputs(mouse_binding* binding)
+{
+  if (binding == nullptr)
+  {
+    return E_POINTER;
+  }
+  auto config = load_config_from_pk3(L"base\\sof2mp_default.cfg", L"base/mp.pk3", L"base/mp.pk3");
+
+  if (config)
+  {
+    load_mouse_bindings(*config, *binding);
+  }
+
+  std::array<std::pair<WORD, std::string_view>, 2> actions{
+    { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+altattack"),
+      std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use") }
+  };
+
+  upsert_mouse_defaults(game_actions, actions, *binding);
+
+
+  return S_OK;
+}
+
+HRESULT init_keyboard_inputs(keyboard_binding* binding)
+{
+  if (binding == nullptr)
+  {
+    return E_POINTER;
+  }
+
+  auto config = load_config_from_pk3(L"base\\sof2mp_default.cfg", L"base/mp.pk3", L"base/mp.pk3");
+
+  if (config)
+  {
+    load_keyboard_bindings(*config, *binding);
+  }
+
+  std::array<std::pair<WORD, std::string_view>, 5> actions{
+    {
+      std::make_pair<WORD, std::string_view>('G', "+throw-grenade"),
+      std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
+      std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
+      std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
+    }
+  };
+
+  upsert_keyboard_defaults(game_actions, actions, *binding);
+
+  return S_OK;
+}
+
+HRESULT init_controller_inputs(controller_binding* binding)
+{
+  if (binding == nullptr)
+  {
+    return E_POINTER;
+  }
+  std::array<std::pair<WORD, std::string_view>, 23> actions{
+    {
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attack"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "invuse"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_A, "+moveup"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_B, "+movedown"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "+speed"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_UP, "+forward"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, "+back"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, "+moveleft"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, "+moveright"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, "+left"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, "+right"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "+melee-attack"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "inven"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "weapnext"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "invnext"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "+throw-grenade"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "weapondrop"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "weapprev"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_RIGHT, "weapnext"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "score"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_MENU, "cmd help"),
+    }
+  };
+
+  append_controller_defaults(game_actions, actions, *binding);
+
+  return S_OK;
+}
+
 predefined_int*
   get_predefined_int_command_line_settings(const wchar_t* name) noexcept
 {
@@ -161,91 +300,5 @@ predefined_string*
   }
 
   return nullptr;
-}
-
-BOOL WINAPI DllMain(
-  HINSTANCE hinstDLL,
-  DWORD fdwReason,
-  LPVOID lpvReserved) noexcept
-{
-  if constexpr (sizeof(void*) != sizeof(std::uint32_t))
-  {
-    return TRUE;
-  }
-
-  if (DetourIsHelperProcess())
-  {
-    return TRUE;
-  }
-
-  if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
-  {
-    auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
-
-    auto value = app_module.GetProcAddress<std::uint32_t*>("DisableSiegeExtensionModule");
-
-    if (value && *value == -1)
-    {
-      return TRUE;
-    }
-  }
-
-  if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
-  {
-    thread_local HHOOK hook;
-    if (fdwReason == DLL_PROCESS_ATTACH)
-    {
-      int index = 0;
-      try
-      {
-        auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
-
-        bool module_is_valid = false;
-
-        for (const auto& item : verification_strings)
-        {
-          win32::module_ref temp((void*)item[0].second);
-
-          if (temp != app_module)
-          {
-            continue;
-          }
-
-          module_is_valid = std::all_of(item.begin(), item.end(), [](const auto& str) {
-            return std::memcmp(str.first.data(), (void*)str.second, str.first.size()) == 0;
-          });
-
-
-          if (module_is_valid)
-          {
-            export_functions[index]();
-
-            break;
-          }
-          index++;
-        }
-
-        if (!module_is_valid)
-        {
-          return FALSE;
-        }
-
-        DetourRestoreAfterWith();
-
-        auto self = win32::window_module_ref(hinstDLL);
-        hook = ::SetWindowsHookExW(WH_GETMESSAGE, dispatch_input_to_cdecl_quake_3_console, self, ::GetCurrentThreadId());
-      }
-      catch (...)
-      {
-        return FALSE;
-      }
-    }
-    else if (fdwReason == DLL_PROCESS_DETACH)
-    {
-      UnhookWindowsHookEx(hook);
-    }
-  }
-
-  return TRUE;
 }
 }

@@ -84,7 +84,7 @@ namespace siege::views
 
   std::wstring string_for_vkey(SHORT vkey, siege::platform::hardware_context context);
   std::wstring category_for_vkey(SHORT vkey, siege::platform::hardware_context context);
-  std::uint16_t hardware_index_for_controller_vkey(std::span<RAWINPUTDEVICELIST> devices, std::uint32_t index, SHORT vkey);
+  std::pair<siege::platform::hardware_context, std::uint16_t> hardware_index_for_controller_vkey(std::span<RAWINPUTDEVICELIST> devices, std::uint32_t index, SHORT vkey);
 
   struct exe_view final : win32::window_ref
   {

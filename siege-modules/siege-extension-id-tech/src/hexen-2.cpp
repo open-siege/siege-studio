@@ -141,10 +141,8 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   std::ofstream custom_bindings("data1/Autoexec.cfg", std::ios::binary | std::ios::trunc);
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
-  mapping_context context;
-  context.index_to_axis = hardware_index_to_joystick_axis_id_tech_2_0;
-  context.use_set = false;
-  bool enable_controller = save_bindings_to_config(*args, config, context);
+
+  bool enable_controller = save_bindings_to_config(*args, config, mapping_context{ .index_to_axis = hardware_index_to_joystick_axis_id_tech_2_0, .axis_set_prefix = "" });
 
   if (enable_controller)
   {
@@ -186,7 +184,7 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
     { std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use") }
   };
 
-  append_mouse_defaults(game_actions, actions, *binding);
+  upsert_mouse_defaults(game_actions, actions, *binding);
 
 
   return S_OK;
@@ -214,7 +212,7 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
     }
   };
 
-  append_keyboard_defaults(game_actions, actions, *binding);
+  upsert_keyboard_defaults(game_actions, actions, *binding);
 
   return S_OK;
 }

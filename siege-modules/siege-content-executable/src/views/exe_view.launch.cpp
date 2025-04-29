@@ -475,10 +475,11 @@ namespace siege::views
 
               auto& action = actions[action_index];
 
+              auto hardware_index = hardware_index_for_controller_vkey(std::span<RAWINPUTDEVICELIST>(controllers.data(), size), 0, virtual_key);
               game_args->action_bindings[binding_index].vkey = virtual_key;
               game_args->action_bindings[binding_index].action_name = action.action_name;
-              game_args->action_bindings[binding_index].context = context;
-              game_args->action_bindings[binding_index++].hardware_index = hardware_index_for_controller_vkey(std::span<RAWINPUTDEVICELIST>(controllers.data(), size), 0, virtual_key);
+              game_args->action_bindings[binding_index].context = hardware_index.first;
+              game_args->action_bindings[binding_index++].hardware_index = hardware_index.second;
             }
           }
         }

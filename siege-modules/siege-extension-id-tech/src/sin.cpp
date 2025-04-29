@@ -198,7 +198,7 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
     }
   };
 
-  append_keyboard_defaults(game_actions, actions, *binding);
+  upsert_keyboard_defaults(game_actions, actions, *binding);
 
   return S_OK;
 }

@@ -7,26 +7,47 @@
 #include <filesystem>
 
 std::optional<siege::configuration::text_game_config> load_config_from_pak(std::filesystem::path real_file_path, std::wstring pak_path, std::wstring pak_folder_path);
+std::optional<siege::configuration::text_game_config> load_config_from_pk3(std::filesystem::path real_file_path, std::wstring pak_path, std::wstring pak_folder_path);
 
 using hardware_context = siege::platform::hardware_context;
 
 std::optional<std::pair<WORD, hardware_context>> key_to_vkey(std::string_view value);
 std::optional<std::string> vkey_to_key(WORD vkey, hardware_context context);
+std::optional<std::string_view> hardware_index_to_button_name_id_tech_2_0(WORD index);
+std::optional<std::string_view> hardware_index_to_button_name_id_tech_3_0(WORD index);
+std::optional<std::string_view> dpad_name_id_tech_2_0(WORD index);
+std::optional<std::string_view> dpad_name_id_tech_3_0(WORD index);
+std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_3_0(WORD vkey, WORD index);
 std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_2_5(WORD vkey, WORD index);
 std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_2_0(WORD vkey, WORD index);
 
-
 void load_mouse_bindings(siege::configuration::text_game_config& config, siege::platform::mouse_binding& binding);
 void load_keyboard_bindings(siege::configuration::text_game_config& config, siege::platform::keyboard_binding& binding);
-void append_mouse_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::mouse_binding& binding);
-void append_keyboard_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::keyboard_binding& binding);
+void upsert_mouse_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::mouse_binding& binding);
+void upsert_keyboard_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::keyboard_binding& binding);
 void append_controller_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::controller_binding& binding);
 
 struct mapping_context
 {
   std::optional<std::string_view> (*index_to_axis)(WORD vkey, WORD index) = hardware_index_to_joystick_axis_id_tech_2_5;
-  bool use_set = true;
+  std::optional<std::string_view> (*index_to_button)(WORD index) = hardware_index_to_button_name_id_tech_2_0;
+  std::optional<std::string_view> (*dpad_name)(WORD index) = dpad_name_id_tech_2_0;
+  std::string_view axis_set_prefix = "set";
+  bool supported_triggers_as_buttons = false;
 };
+
+struct q3_mapping_context : mapping_context
+{
+  q3_mapping_context()
+  {
+    index_to_axis = hardware_index_to_joystick_axis_id_tech_3_0;
+    index_to_button = hardware_index_to_button_name_id_tech_3_0;
+    dpad_name = dpad_name_id_tech_3_0;
+    axis_set_prefix = "bind";
+    supported_triggers_as_buttons = true;
+  };
+};
+
 
 bool save_bindings_to_config(siege::platform::game_command_line_args& args, siege::configuration::text_game_config& config, mapping_context context = {});
 void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std::string_view source, std::string_view target);
@@ -47,6 +68,7 @@ inline bool is_vkey_for_keyboard(WORD vkey)
 }
 
 extern "C" {
+HRESULT apply_dpi_awareness(const wchar_t* exe_path_str);
 LRESULT CALLBACK dispatch_input_to_cdecl_quake_2_console(int code, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK dispatch_input_to_fastcall_quake_2_console(int code, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK dispatch_input_to_cdecl_quake_1_console(int code, WPARAM wParam, LPARAM lParam);

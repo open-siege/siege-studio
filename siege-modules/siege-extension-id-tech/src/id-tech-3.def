@@ -13,7 +13,10 @@ EXPORTS
 	executable_is_supported
 	get_function_name_ranges
 	get_variable_name_ranges
-	get_predefined_string_command_line_settings
-	get_predefined_int_command_line_settings
-	format_command_line
+	get_predefined_string_command_line_settings PRIVATE
+	get_predefined_int_command_line_settings PRIVATE
+	format_command_line PRIVATE
+	init_keyboard_inputs PRIVATE
+	init_mouse_inputs PRIVATE
+	init_controller_inputs PRIVATE
 	apply_prelaunch_settings PRIVATE
