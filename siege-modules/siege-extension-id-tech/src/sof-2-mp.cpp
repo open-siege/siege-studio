@@ -48,7 +48,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::analog, "+lookdown", u"Look Down", u"Aiming" },
   game_action{ game_action::digital, "+attack", u"Attack", u"Combat" },
   game_action{ game_action::digital, "+altattack", u"Alt Attack", u"Combat" },
-  game_action{ game_action::digital, "+melee-attack", u"Melee Attack", u"Combat" },
+  game_action{ game_action::digital, "vstr melee-attack", u"Melee Attack", u"Combat" },
   game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
   game_action{ game_action::digital, "weaprev", u"Previous Weapon", u"Combat" },
   game_action{ game_action::digital, "itemnext", u"Next Item", u"Combat" },
@@ -98,14 +98,10 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 8> va
   { "r_noserverghoul2"sv, "r_noserverghoul2"sv },
 } };
 
-inline void set_gog_exports()
-{
-  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x445250;
-}
+constexpr static auto sof_aliases = std::array<std::array<std::string_view, 2>, 3>{ { { "melee-attack", "vstr melee-attack-start" },
+  { "melee-attack-start", "weapon 1;wait 5; +attack; set melee-attack vstr melee-attack-stop" },
+  { "melee-attack-stop", "weaplast; -attack; set melee-attack vstr melee-attack-start" } } };
 
-constexpr std::array<void (*)(), 5> export_functions = { {
-  set_gog_exports,
-} };
 
 HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
@@ -138,10 +134,13 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
 
-  bool enable_controller = save_bindings_to_config(*args, config, mapping_context{
-      .index_to_axis = hardware_index_to_joystick_axis_id_tech_3_0,
-      .axis_set_prefix = "bind"
-      });
+  
+  for (auto& alias : sof_aliases)
+  {
+    config.emplace(siege::configuration::key_type({ "set", alias[0] }), siege::configuration::key_type(alias[1]));
+  }
+
+  bool enable_controller = save_bindings_to_config(*args, config, q3_mapping_context{});
 
   if (enable_controller)
   {
@@ -210,6 +209,7 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
+      std::make_pair<WORD, std::string_view>('F', "vstr melee-attack"),
     }
   };
 
@@ -239,7 +239,7 @@ HRESULT init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, "+right"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "+melee-attack"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "vstr melee-attack"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "inven"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "weapnext"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "invnext"),
@@ -247,8 +247,8 @@ HRESULT init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "weapondrop"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "weapprev"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_RIGHT, "weapnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "score"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_MENU, "cmd help"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "rmg_automap"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_MENU, "menu objective"),
     }
   };
 
