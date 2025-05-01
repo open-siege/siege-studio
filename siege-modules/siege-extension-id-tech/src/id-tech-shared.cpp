@@ -140,33 +140,6 @@ std::optional<std::string> vkey_to_key(WORD vkey, hardware_context context)
   return std::nullopt;
 }
 
-std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_3_0(WORD vkey, WORD index)
-{
-  if (vkey < VK_GAMEPAD_LEFT_THUMBSTICK_UP)
-  {
-    return std::nullopt;
-  }
-
-  bool is_positive = vkey == VK_GAMEPAD_LEFT_THUMBSTICK_UP || vkey == VK_GAMEPAD_RIGHT_THUMBSTICK_UP || vkey == VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT || vkey == VK_GAMEPAD_RIGHT_TRIGGER;
-  switch (index)
-  {
-  case 0: {
-    return is_positive ? "UPARROW" : "DOWNARROW";
-  }
-  case 1: {
-    return is_positive ? "RIGHTARROW" : "LEFTARROW";
-  }
-  case 2: {
-    return is_positive ? "JOY17" : "JOY16";
-  }
-  case 3: {
-    return is_positive ? "JOY18" : "JOY19";
-  }
-  default:
-    return std::nullopt;
-  }
-}
-
 std::optional<std::string_view> hardware_index_to_button_name_id_tech_2_0(WORD index)
 {
   constexpr static auto button_names = std::array<std::string_view, 15>{ { "JOY1",
@@ -245,6 +218,39 @@ std::optional<std::string_view> dpad_name_id_tech_3_0(WORD vkey)
     return "JOY27";
   case VK_GAMEPAD_DPAD_RIGHT:
     return "JOY26";
+  default:
+    return std::nullopt;
+  }
+}
+
+
+std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_3_0(WORD vkey, WORD index)
+{
+  if (vkey >= VK_GAMEPAD_A && vkey <= VK_GAMEPAD_LEFT_SHOULDER)
+  {
+    return std::nullopt;
+  }
+
+  if (vkey >= VK_GAMEPAD_DPAD_UP && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON)
+  {
+    return std::nullopt;
+  }
+
+  bool is_positive = vkey == VK_GAMEPAD_LEFT_THUMBSTICK_UP || vkey == VK_GAMEPAD_RIGHT_THUMBSTICK_UP || vkey == VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT || vkey == VK_GAMEPAD_LEFT_TRIGGER;
+  switch (index)
+  {
+  case 0: {
+    return is_positive ? "UPARROW" : "DOWNARROW";
+  }
+  case 1: {
+    return is_positive ? "RIGHTARROW" : "LEFTARROW";
+  }
+  case 2: {
+    return is_positive ? "JOY17" : "JOY16";
+  }
+  case 3: {
+    return is_positive ? "JOY18" : "JOY19";
+  }
   default:
     return std::nullopt;
   }
@@ -580,6 +586,10 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
 
       if (setting)
       {
+        if (binding.vkey == VK_GAMEPAD_LEFT_TRIGGER || binding.vkey == VK_GAMEPAD_RIGHT_TRIGGER && context.supports_triggers_as_buttons)
+        {
+          goto button_section;
+        }
         const static auto controller_button_mapping = std::map<std::string_view, std::string_view>{
           { "+forward", "1" },
           { "+back", "1" },
@@ -618,6 +628,7 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
       }
       else
       {
+      button_section:
         auto dpad_name = context.dpad_name(binding.vkey);
         if (binding.vkey == VK_GAMEPAD_DPAD_UP && dpad_name)
         {
@@ -637,7 +648,7 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
         }
         else if (binding.vkey == VK_GAMEPAD_LEFT_TRIGGER || binding.vkey == VK_GAMEPAD_RIGHT_TRIGGER)
         {
-          if (binding.context == hardware_context::controller_xbox && !context.supported_triggers_as_buttons)
+          if (binding.context == hardware_context::controller_xbox && !context.supports_triggers_as_buttons)
           {
             auto action_name = std::string_view(binding.action_name.data());
             auto mouse = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& existing) {
@@ -662,7 +673,7 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
               free_mapping->to_context = mouse->context;
             }
           }
-          else if (binding.context == hardware_context::controller_xbox && context.supported_triggers_as_buttons)
+          else if (binding.context == hardware_context::controller_xbox && context.supports_triggers_as_buttons)
           {
             auto axis = context.index_to_axis(binding.vkey, binding.hardware_index);
             if (axis)

@@ -130,18 +130,15 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
     return E_POINTER;
   }
 
-  std::ofstream custom_bindings("baseq2/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
+  std::ofstream custom_bindings("main/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
 
-  bool enable_controller = save_bindings_to_config(*args, config);
+  bool enable_controller = save_bindings_to_config(*args, config, q3_mapping_context{});
 
   if (enable_controller)
   {
-    // engine bug - mouse needs to be enabled for the right analog stick to work
-    config.emplace(siege::configuration::key_type({ "set", "in_mouse" }), siege::configuration::key_type("1"));
-    config.emplace(siege::configuration::key_type({ "set", "in_joystick" }), siege::configuration::key_type("1"));
-    config.emplace(siege::configuration::key_type({ "set", "joy_advanced" }), siege::configuration::key_type("1"));
+    config.emplace(siege::configuration::key_type({ "seta", "in_joystick" }), siege::configuration::key_type("1"));
   }
 
   config.save(custom_bindings);
@@ -175,7 +172,7 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
   {
     return E_POINTER;
   }
-  auto config = load_config_from_pak(L"baseq2\\default.cfg", L"baseq2/pak0.pak", L"baseq2/pak0.pak");
+  auto config = load_config_from_pak(L"main\\default.cfg", L"main/pak0.pk3", L"main/pak0.pk3");
 
   if (config)
   {
@@ -200,7 +197,7 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
     return E_POINTER;
   }
 
-  auto config = load_config_from_pak(L"baseq2\\default.cfg", L"baseq2/pak0.pak", L"baseq2/pak0.pak");
+  auto config = load_config_from_pak(L"main\\default.cfg", L"main/pak0.pk3", L"main/pak0.pk3");
 
   if (config)
   {

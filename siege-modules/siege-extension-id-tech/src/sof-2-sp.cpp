@@ -58,12 +58,6 @@ extern auto game_actions = std::array<game_action, 32>{ {
 } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
-extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
-extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"base/pak0.pak/default.cfg", L"base/default.cfg" } };
-extern auto autoexec_configuration_paths = std::array<const wchar_t*, 4>{ { L"base/autoexec.cfg" } };
-extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{ { L"base/config.cfg" } };
 
 extern void(__cdecl* ConsoleEvalCdecl)(const char*);
 
@@ -225,7 +219,7 @@ HRESULT init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, "+right"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "vstr melee-attack"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "+vstr melee-start melee-stop"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "inven"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "weapnext"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "invnext"),

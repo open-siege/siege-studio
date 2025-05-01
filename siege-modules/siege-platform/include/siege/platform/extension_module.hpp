@@ -203,12 +203,6 @@ namespace siege::platform
 
     const std::span<game_action> game_actions;
     const std::span<const wchar_t*> controller_input_backends;
-    const std::span<const wchar_t*> keyboard_input_backends;
-    const std::span<const wchar_t*> mouse_input_backends;
-    const std::span<const wchar_t*> configuration_extensions;
-    const std::span<const wchar_t*> template_configuration_paths;
-    const std::span<const wchar_t*> autoexec_configuration_paths;
-    const std::span<const wchar_t*> profile_configuration_paths;
     const game_command_line_caps* caps = nullptr;
 
     inline std::span<const wchar_t*> update_span(const char* key)
@@ -255,12 +249,6 @@ namespace siege::platform
                                                                  return std::span(actions, size);
                                                                }()),
                                                                controller_input_backends(update_span("controller_input_backends")),
-                                                               keyboard_input_backends(update_span("keyboard_input_backends")),
-                                                               mouse_input_backends(update_span("mouse_input_backends")),
-                                                               configuration_extensions(update_span("configuration_extensions")),
-                                                               template_configuration_paths(update_span("template_configuration_paths")),
-                                                               autoexec_configuration_paths(update_span("autoexec_configuration_paths")),
-                                                               profile_configuration_paths(update_span("profile_configuration_paths")),
                                                                caps(GetProcAddress<game_command_line_caps*>("command_line_caps"))
     {
       executable_is_supported_proc = GetProcAddress<decltype(executable_is_supported_proc)>("executable_is_supported");

@@ -1,14 +1,8 @@
 EXPORTS
 	DetourFinishHelperProcess @1
-	game_actions DATA
-	controller_input_backends DATA
-	keyboard_input_backends DATA
-	mouse_input_backends DATA
-	configuration_extensions DATA
-	template_configuration_paths DATA
-	autoexec_configuration_paths DATA
-	profile_configuration_paths DATA
-	command_line_caps DATA
+	game_actions DATA PRIVATE
+	controller_input_backends DATA PRIVATE
+	command_line_caps DATA PRIVATE
 	launch_game_with_extension PRIVATE
 	executable_is_supported
 	get_function_name_ranges PRIVATE

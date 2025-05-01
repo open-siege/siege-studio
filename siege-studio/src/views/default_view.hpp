@@ -40,14 +40,6 @@ namespace siege::views
   };
 
   constexpr static auto engines = std::array<engine_info, 26>{ {
-    { L"id Tech 3.0 (Raven Branch)"sv, L"id_tech-3.0-raven"sv, L"id_tech-3.0"sv },
-    { L"id Tech 2.5 (Raven branch)"sv, L"id_tech-2.5-raven"sv, L"id_tech-2.5"sv },
-    { L"id Tech 3.0 (with Ubertools) (Ritual branch)"sv, L"id_tech-3.0-ritual"sv, L"id_tech-3.0"sv },
-    { L"id Tech 2.5 (Ritual branch)"sv, L"id_tech-2.5-ritual"sv, L"id_tech-2.5"sv },
-    { L"id Tech 3.0"sv, L"id_tech-3.0"sv, L"id_tech-2.5"sv },
-    { L"id Tech 2.5"sv, L"id_tech-2.5"sv, L"id_tech-2.0"sv },
-    { L"id Tech 2.0"sv, L"id_tech-2.0"sv, std::nullopt },
-    { L"isiMotor 2.0"sv, L"isi-2.0"sv },
     { L"Torque"sv, L"torque"sv, L"darkstar"sv },
     { L"Darkstar"sv, L"darkstar"sv, L"3space-3.0"sv },
     { L"3Space 3.0"sv, L"3space-3.0"sv, L"3space-2.5"sv },
@@ -56,15 +48,23 @@ namespace siege::views
     { L"3Space 1.5"sv, L"3space-1.5"sv, L"3space-1.0"sv },
     { L"3Space 1.0"sv, L"3space-1.0"sv, std::nullopt },
     { L"Dynamix Game Development System"sv, L"dgds"sv, std::nullopt },
-    { L"isiMotor 1.5"sv, L"isi-1.0"sv },
-    { L"isiMotor 1.0"sv, L"isi-1.0"sv },
+    { L"id Tech 3.0 (Raven Branch)"sv, L"id_tech-3.0-raven"sv, L"id_tech-3.0"sv },
+    { L"id Tech 3.0 (with Ubertools) (Ritual branch)"sv, L"id_tech-3.0-ritual"sv, L"id_tech-3.0"sv },
+    { L"id Tech 3.0 (iW Engine 1.0)"sv, L"id_tech-3.0-iw"sv, L"id_tech-3.0"sv },
+    { L"id Tech 2.5 (Raven branch)"sv, L"id_tech-2.5-raven"sv, L"id_tech-2.5"sv },
+    { L"id Tech 2.5 (Ritual branch)"sv, L"id_tech-2.5-ritual"sv, L"id_tech-2.5"sv },
+    { L"id Tech 3.0"sv, L"id_tech-3.0"sv, L"id_tech-2.5"sv },
+    { L"id Tech 2.5"sv, L"id_tech-2.5"sv, L"id_tech-2.0"sv },
+    { L"id Tech 2.0"sv, L"id_tech-2.0"sv, std::nullopt },
+    { L"id Tech 1.0"sv, L"id_tech-1.0"sv, L"id_tech-raven"sv },
     { L"iW Engine 3.0"sv, L"iw-3.0"sv, L"iw-2.0"sv },
     { L"iW Engine 2.0"sv, L"iw-2.0"sv, std::nullopt },
-    { L"iW Engine 1.0"sv, L"id_tech-3.0-iw"sv, L"id_tech-3.0"sv },
     { L"Vampire"sv, L"vampire"sv, std::nullopt },
-    { L"id Tech 1.0"sv, L"id_tech-1.0"sv, L"id_tech-raven"sv },
     { L"Shadowcaster engine"sv, L"id_tech-0.5-raven"sv, L"id_tech-0.5"sv },
     { L"Wolfenstein 3D engine"sv, L"id_tech-0.5"sv, std::nullopt },
+    { L"isiMotor 2.0"sv, L"isi-2.0"sv },
+    { L"isiMotor 1.5"sv, L"isi-1.0"sv },
+    { L"isiMotor 1.0"sv, L"isi-1.0"sv },
     { L"Unknown engine"sv, L"unknown"sv, std::nullopt },
   } };
 
@@ -86,10 +86,10 @@ namespace siege::views
     { L"Aces of the Deep"sv, L"3space-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dyn"sv } } },
     { L"Metaltech: Battledrome"sv, L"3space-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv } } },
     { L"Metaltech: Earthsiege"sv, L"3space-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".sfx" } } },
-    { L"Command: Aces of the Deep"sv, L"3space-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dyn"sv} } },
+    { L"Command: Aces of the Deep"sv, L"3space-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dyn"sv } } },
     { L"Earthsiege 2"sv, L"3space-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".wav"sv } } },
     { L"Silent Thunder: A-10 Tank Killer 2"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".pal"sv, L".ppl" } } },
-    { L"Red Baron 2"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv} } },
+    { L"Red Baron 2"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv } } },
     { L"Pro Pilot '98"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv } } },
     { L"Red Baron 3D"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv } } },
     { L"Pro Pilot '99"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv } } },
@@ -158,6 +158,7 @@ namespace siege::views
     { L"Heavy Metal: F.A.K.K 2"sv, L"id_tech-3.0-ritual"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Star Trek: Voyager - Elite Force"sv, L"id_tech-3.0-raven"sv, L"siege-extension-elite-force-sp", std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Star Trek: Voyager - Elite Force - Holomatch"sv, L"id_tech-3.0-raven"sv, L"siege-extension-elite-force-mp", std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Star Trek: Elite Force 2"sv, L"id_tech-3.0-ritual"sv, L"siege-extension-elite-force-2", std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"American McGee's Alice"sv, L"id_tech-3.0-ritual"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3", L".cfg", L".wav" } } },
     { L"Return to Castle Wolfenstein"sv, L"id_tech-3.0"sv, L"siege-extension-return-to-castle-wolf-sp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Return to Castle Wolfenstein (Multiplayer)"sv, L"id_tech-3.0"sv, L"siege-extension-return-to-castle-wolf-mp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".cfg", L".wav" } } },
@@ -552,8 +553,7 @@ namespace siege::views
           {
             try
             {
-              auto process_path = [&](const auto& dir_entry)
-              {
+              auto process_path = [&](const auto& dir_entry) {
                 if (!(dir_entry.path().extension() == L".exe" || dir_entry.path().extension() == L".EXE"))
                 {
                   return;
@@ -705,9 +705,7 @@ namespace siege::views
                 }
               };
 
-              if (drive_roots.contains(real_search_path.wstring()) ||
-                  real_search_path.wstring() == program_files_path + L"\\" || 
-                  real_search_path.wstring() == program_files_x86_path + L"\\")
+              if (drive_roots.contains(real_search_path.wstring()) || real_search_path.wstring() == program_files_path + L"\\" || real_search_path.wstring() == program_files_x86_path + L"\\")
               {
                 for (const fs::directory_entry& dir_entry :
                   fs::directory_iterator(real_search_path))
@@ -723,7 +721,6 @@ namespace siege::views
                   process_path(dir_entry);
                 }
               }
-              
             }
             catch (...)
             {

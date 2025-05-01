@@ -33,7 +33,7 @@ struct mapping_context
   std::optional<std::string_view> (*index_to_button)(WORD index) = hardware_index_to_button_name_id_tech_2_0;
   std::optional<std::string_view> (*dpad_name)(WORD index) = dpad_name_id_tech_2_0;
   std::string_view axis_set_prefix = "set";
-  bool supported_triggers_as_buttons = false;
+  bool supports_triggers_as_buttons = false;
 };
 
 struct q3_mapping_context : mapping_context
@@ -44,7 +44,7 @@ struct q3_mapping_context : mapping_context
     index_to_button = hardware_index_to_button_name_id_tech_3_0;
     dpad_name = dpad_name_id_tech_3_0;
     axis_set_prefix = "bind";
-    supported_triggers_as_buttons = true;
+    supports_triggers_as_buttons = true;
   };
 };
 

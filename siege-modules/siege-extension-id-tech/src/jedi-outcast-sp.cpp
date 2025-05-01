@@ -46,25 +46,18 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::analog, "+lookdown", u"Look Down", u"Aiming" },
   game_action{ game_action::digital, "+attack", u"Attack", u"Combat" },
   game_action{ game_action::digital, "+altattack", u"Alt Attack", u"Combat" },
-  game_action{ game_action::digital, "+melee-attack", u"Melee Attack", u"Combat" },
+  game_action{ game_action::digital, "weapon 1", u"Melee Attack", u"Combat" },
   game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
   game_action{ game_action::digital, "weaprev", u"Previous Weapon", u"Combat" },
-  game_action{ game_action::digital, "itemnext", u"Next Item", u"Combat" },
-  game_action{ game_action::digital, "itemuse", u"Use Item", u"Combat" },
+  game_action{ game_action::digital, "forcenext", u"Next Item", u"Combat" },
+  game_action{ game_action::digital, "+useforce", u"Use Item", u"Combat" },
   game_action{ game_action::digital, "score", u"Score", u"Interface" },
-  game_action{ game_action::digital, "menu-objectives", u"Objectives", u"Interface" },
+  game_action{ game_action::digital, "datapad", u"Objectives", u"Interface" },
   game_action{ game_action::digital, "+klook", u"Keyboard Look", u"Misc" },
   game_action{ game_action::digital, "+mlook", u"Mouse Look", u"Misc" },
 } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
-extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
-extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"base/assets0.pk3/default.cfg", L"base/default.cfg" } };
-extern auto autoexec_configuration_paths = std::array<const wchar_t*, 4>{ { L"base/autoexec.cfg"} };
-extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{{ L"base/jk2config.cfg" }};
-
 extern void(__cdecl* ConsoleEvalCdecl)(const char*) ;
 
 using namespace std::literals;
@@ -87,15 +80,6 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> va
   { "helpUsObi"sv, "helpUsObi"sv },
   { "sp_leet"sv, "sp_language"sv },
 }};
-
-inline void set_gog_sp_exports()
-{
-  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x414520;
-}
-
-constexpr std::array<void (*)(), 1> export_functions = { {
-  set_gog_sp_exports,
-} };
 
 HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
@@ -124,24 +108,19 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
     return E_POINTER;
   }
 
-  std::ofstream custom_bindings("baseq2/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
+  std::ofstream custom_bindings("base/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
 
-  bool enable_controller = save_bindings_to_config(*args, config);
+  bool enable_controller = save_bindings_to_config(*args, config, q3_mapping_context{});
 
   if (enable_controller)
   {
-    // engine bug - mouse needs to be enabled for the right analog stick to work
-    config.emplace(siege::configuration::key_type({ "set", "in_mouse" }), siege::configuration::key_type("1"));
-    config.emplace(siege::configuration::key_type({ "set", "in_joystick" }), siege::configuration::key_type("1"));
-    config.emplace(siege::configuration::key_type({ "set", "joy_advanced" }), siege::configuration::key_type("1"));
+    config.emplace(siege::configuration::key_type({ "seta", "in_joystick" }), siege::configuration::key_type("1"));
+    config.emplace(siege::configuration::key_type({ "seta", "joy_xbutton" }), siege::configuration::key_type("1"));
   }
 
   config.save(custom_bindings);
-
-  bind_axis_to_send_input(*args, "+lookup", "+mlook");
-  bind_axis_to_send_input(*args, "+lookdown", "+mlook");
 
   auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
 
@@ -155,11 +134,6 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   iter->name = L"console";
   iter->value = L"1";
 
-  std::advance(iter, 1);
-  iter->name = L"map";
-  iter->value = L"trdm01a";
-
-
   return S_OK;
 }
 
@@ -169,7 +143,7 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
   {
     return E_POINTER;
   }
-  auto config = load_config_from_pak(L"baseq2\\default.cfg", L"baseq2/pak0.pak", L"baseq2/pak0.pak");
+  auto config = load_config_from_pk3(L"base\\default.cfg", L"base/assets0.pk3", L"base/assets0.pk3");
 
   if (config)
   {
@@ -194,19 +168,21 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
     return E_POINTER;
   }
 
-  auto config = load_config_from_pak(L"baseq2\\default.cfg", L"baseq2/pak0.pak", L"baseq2/pak0.pak");
+  auto config = load_config_from_pk3(L"base\\default.cfg", L"base/assets0.pk3", L"base/assets0.pk3");
 
   if (config)
   {
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 5> actions{
+  std::array<std::pair<WORD, std::string_view>, 6> actions{
     {
       std::make_pair<WORD, std::string_view>('G', "+throw-grenade"),
       std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
+      std::make_pair<WORD, std::string_view>(VK_LEFT, "+moveleft"),
+      std::make_pair<WORD, std::string_view>(VK_RIGHT, "+moveright"),
     }
   };
 
@@ -236,7 +212,7 @@ HRESULT init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, "+right"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "+melee-attack"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "weapon 1"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "inven"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "weapnext"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "invnext"),
