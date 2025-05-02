@@ -1,7 +1,6 @@
 #include <siege/platform/win/window_module.hpp>
 namespace fs = std::filesystem;
 
-
 extern "C" HRESULT executable_is_supported(const wchar_t* filename) noexcept
 {
   if (filename == nullptr)
@@ -19,7 +18,7 @@ extern "C" HRESULT executable_is_supported(const wchar_t* filename) noexcept
   fs::path exe_path = filename;
   fs::path parent_path = exe_path.parent_path();
 
-  if (exe_path.stem() == "HOC" && exe_path.extension() == ".EXE" && fs::exists(parent_path / "TANK.TBL", last_error) && fs::exists(parent_path / "VOLUME.RMF", last_error) && fs::exists(parent_path / "RESOURCE.CFG", last_error))
+  if (exe_path.stem() == "TIMWIN" && exe_path.extension() == ".EXE" && fs::exists(parent_path / "SOSLIBS2.DLL", last_error) && fs::exists(parent_path / "SOS32S02.DLL", last_error) && fs::exists(parent_path / "SOS9502.DLL", last_error))
   {
     return S_OK;
   }

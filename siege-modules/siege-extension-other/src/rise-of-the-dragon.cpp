@@ -27,6 +27,15 @@ constexpr static std::array<std::string_view, 11> verification_strings = { {
 
 HRESULT executable_is_supported(const wchar_t* filename) noexcept
 {
+  /*
+   // Rise of the Dragon
+  if (exe_path.stem() == "DRAGON" && exe_path.extension() == ".EXE" && 
+      fs::exists(parent_path / "VOLUME.VGA", last_error) && 
+      fs::exists(parent_path / "VOLUME.001", last_error) && 
+      fs::exists(parent_path / "RESOURCE.CFG", last_error))
+  {
+    return S_OK;
+  }*/
   return siege::executable_is_supported(filename, verification_strings);
 }
 

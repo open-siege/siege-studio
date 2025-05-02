@@ -13,10 +13,6 @@ if (WIN32)
     set_target_properties(siege-extension-input-filter-raw-input PROPERTIES CXX_STANDARD 23)
     target_link_libraries(siege-extension-input-filter-raw-input PRIVATE siege-win-desktop detours)
 
-    add_library(siege-extension-generic SHARED src/generic-extension.cpp src/generic-extension.def)
-    set_target_properties(siege-extension-generic PROPERTIES CXX_STANDARD 23)
-    target_link_libraries(siege-extension-generic PRIVATE siege-extension)
-
     if (HAS_ZERO_TIER)
         add_library(wsock32-on-zerotier SHARED src/wsock32-on-zerotier.cpp src/wsock32-on-zerotier.def)
         target_include_directories(wsock32-on-zerotier PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)

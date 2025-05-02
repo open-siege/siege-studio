@@ -84,14 +84,6 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 4> va
   { "joyStrafe"sv, "in_ForwardSpeed"sv },
   { "vp_enginetest"sv, "vp_mipdist"sv }
 } };
-inline void set_gog_exports()
-{
-  ConsoleEval = (decltype(ConsoleEval))0x200194f0;
-}
-
-constexpr std::array<void (*)(), 5> export_functions = { {
-  set_gog_exports,
-} };
 
 HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {

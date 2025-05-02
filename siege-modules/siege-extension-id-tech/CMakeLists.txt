@@ -40,8 +40,6 @@ if (WIN32)
     add_library(siege-extension-space-trader SHARED src/id-tech-shared.cpp src/space-trader.cpp src/cmd-id-tech-3-0.cpp src/id-tech-3.def)
     add_library(siege-extension-take-no-prisoners SHARED src/id-tech-shared.cpp src/take-no-prisoners.cpp src/vampire.def)
 
-
-
     get_property(ID_TECH_TARGETS
                 DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
 

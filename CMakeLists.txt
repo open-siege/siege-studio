@@ -49,7 +49,7 @@ if (WIN32)
             list(APPEND EXT_TARGETS ${PROJECT_TARGETS}) 
         endforeach()
 
-        list(APPEND EXT_TARGETS siege-extension-generic siege-extension-input-filter-raw-input)
+        list(APPEND EXT_TARGETS siege-extension-input-filter-raw-input)
 
         foreach(EXT_TARGET IN ITEMS ${EXT_TARGETS})
             add_dependencies(siege-studio-dependencies ${EXT_TARGET})

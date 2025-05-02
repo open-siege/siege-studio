@@ -1,27 +1,27 @@
 #include <siege/platform/win/window_module.hpp>
-#include <detours.h>
-#include "shared.hpp"
+namespace fs = std::filesystem;
 
-
-extern "C" {
-using namespace std::literals;
-
-using game_command_line_caps = siege::platform::game_command_line_caps;
-
-extern auto command_line_caps = game_command_line_caps{
-  .ip_connect_setting = L"+connect",
-  .player_name_setting = L"player_name",
-  .string_settings = { { L"+connect", L"player_name" } }
-};
-
-constexpr static std::array<std::string_view, 11> verification_strings = { {
-  "GAME.DIC"sv,
-} };
-
-
-HRESULT executable_is_supported(const wchar_t* filename) noexcept
+extern "C" HRESULT executable_is_supported(const wchar_t* filename) noexcept
 {
-  return siege::executable_is_supported(filename, verification_strings);
-}
+  if (filename == nullptr)
+  {
+    return E_POINTER;
+  }
 
+  std::error_code last_error;
+
+  if (!fs::exists(filename, last_error))
+  {
+    return E_INVALIDARG;
+  }
+
+    fs::path exe_path = filename;
+  fs::path parent_path = exe_path.parent_path();
+
+  if (exe_path.stem() == "Outpost2" && exe_path.extension() == ".exe" && fs::exists(parent_path / "OP2Shell.dll", last_error) && fs::exists(parent_path / "op2shres.dll", last_error) && fs::exists(parent_path / "out2res.dll", last_error))
+  {
+    return S_OK;
+  }
+
+  return S_FALSE;
 }

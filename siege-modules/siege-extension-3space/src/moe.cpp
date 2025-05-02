@@ -47,7 +47,6 @@ static std::int32_t(__fastcall* CopyDir)(const char*, const char*, BOOL) = nullp
 
 inline void set_gog_exports()
 {
-
   CopyDir = (decltype(CopyDir))0x499520;
 }
 
@@ -76,53 +75,6 @@ void __stdcall WrappedTrueOutputDebugStringA(const char* message)
 {
   return TrueOutputDebugStringA(message);
 }
-
-
-LRESULT CALLBACK hook_proc(int code, WPARAM wParam, LPARAM lParam)
-{
-  if (code == HC_ACTION)
-  {
-
-    CopyDir(".\\data\\Barren\\8bit.vol", ".\\Barren\\8bit\\", TRUE);
-    CopyDir(".\\data\\Barren\\8gui.vol", ".\\Barren\\8gui\\", TRUE);
-    CopyDir(".\\data\\Barren\\kq.vol", ".\\Barren\\kq\\", TRUE);
-    CopyDir(".\\data\\Barren\\resource.vol", ".\\Barren\\resource\\", TRUE);
-
-    CopyDir(".\\data\\daventry\\8bit.vol", ".\\daventry\\8bit\\", TRUE);
-    CopyDir(".\\data\\daventry\\8gui.vol", ".\\daventry\\8gui\\", TRUE);
-    CopyDir(".\\data\\daventry\\kq.vol", ".\\daventry\\kq\\", TRUE);
-    CopyDir(".\\data\\daventry\\resource.vol", ".\\daventry\\resource\\", TRUE);
-
-    CopyDir(".\\data\\deadcity\\8bit.vol", ".\\deadcity\\8bit\\", TRUE);
-    CopyDir(".\\data\\deadcity\\8gui.vol", ".\\deadcity\\8gui\\", TRUE);
-    CopyDir(".\\data\\deadcity\\kq.vol", ".\\deadcity\\kq\\", TRUE);
-    CopyDir(".\\data\\deadcity\\resource.vol", ".\\deadcity\\resource\\", TRUE);
-
-    CopyDir(".\\data\\iceworld\\8bit.vol", ".\\iceworld\\8bit\\", TRUE);
-    CopyDir(".\\data\\iceworld\\8gui.vol", ".\\iceworld\\8gui\\", TRUE);
-    CopyDir(".\\data\\iceworld\\kq.vol", ".\\iceworld\\kq\\", TRUE);
-    CopyDir(".\\data\\iceworld\\resource.vol", ".\\iceworld\\resource\\", TRUE);
-
-    CopyDir(".\\data\\temple1\\8bit.vol", ".\\temple1\\8bit\\", TRUE);
-    CopyDir(".\\data\\temple1\\8gui.vol", ".\\temple1\\8gui\\", TRUE);
-    CopyDir(".\\data\\temple1\\kq.vol", ".\\temple1\\kq\\", TRUE);
-    CopyDir(".\\data\\temple1\\resource.vol", ".\\temple1\\resource\\", TRUE);
-
-    CopyDir(".\\data\\temple2\\8bit.vol", ".\\temple2\\8bit\\", TRUE);
-    CopyDir(".\\data\\temple2\\8gui.vol", ".\\temple2\\8gui\\", TRUE);
-    CopyDir(".\\data\\temple2\\kq.vol", ".\\temple2\\kq\\", TRUE);
-    CopyDir(".\\data\\temple2\\resource.vol", ".\\temple2\\resource\\", TRUE);
-
-    CopyDir(".\\data\\temple3\\8bit.vol", ".\\temple3\\8bit\\", TRUE);
-    CopyDir(".\\data\\temple3\\8gui.vol", ".\\temple3\\8gui\\", TRUE);
-    CopyDir(".\\data\\temple3\\kq.vol", ".\\temple3\\kq\\", TRUE);
-    CopyDir(".\\data\\temple3\\resource.vol", ".\\temple3\\resource\\", TRUE);
-    ExitProcess(0);
-  }
-
-  return CallNextHookEx(nullptr, code, wParam, lParam);
-}
-
 
 static std::array<std::pair<void**, void*>, 1> detour_functions{ { { &(void*&)TrueOutputDebugStringA, WrappedTrueOutputDebugStringA } } };
 
@@ -194,9 +146,6 @@ BOOL WINAPI DllMain(
         std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourAttach(func.first, func.second); });
 
         DetourTransactionCommit();
-
-
-        SetWindowsHookExA(WH_GETMESSAGE, hook_proc, hinstDLL, ::GetCurrentThreadId());
       }
       catch (...)
       {
