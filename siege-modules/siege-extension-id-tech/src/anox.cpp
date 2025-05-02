@@ -62,12 +62,6 @@ extern auto game_actions = std::array<game_action, 32>{ {
 } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"siege-extension-anachronox" } };
-extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
-extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"anoxdata/CONFIGS/Default.cfg" } };
-extern auto autoexec_configuration_paths = std::array<const wchar_t*, 4>{ { L"anoxdata/CONFIGS/autoexec.cfg", L"anoxdata/config/autoexec.cfg", L"config/autoexec.cfg" } };
-extern auto profile_configuration_paths = std::array<const wchar_t*, 3>{ { L"anoxdata/SAVE/GLOBAL/settings.cfg", L"anoxdata/SAVE/*/settings.cfg" } };
 
 extern void(__cdecl* ConsoleEvalCdecl)(const char*);
 
@@ -264,7 +258,12 @@ predefined_string*
 
 HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
 {
-  return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
+  if (filename && std::filesystem::path(filename).wstring().contains(L"anox"))
+  {
+    return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
+  }
+
+  return S_FALSE;
 }
 
 BOOL WINAPI DllMain(

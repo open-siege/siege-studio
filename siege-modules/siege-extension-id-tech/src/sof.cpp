@@ -89,15 +89,6 @@ constexpr static auto sof_aliases = std::array<std::array<std::string_view, 2>, 
   { "-use-plus-special", "-use-plus-special1" } } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
-extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"dinput" } };
-extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"dinput" } };
-extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
-extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"base/pak0.pak/default.cfg", L"base/default.cfg" } };
-extern auto autoexec_configuration_paths = std::array<const wchar_t*, 2>{ { L"base/user/autoexec.cfg" } };
-extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{ { L"base/user/configs/CURRENT.cfg", L"base/user/configs/*.cfg", L"base/user/config.cfg" } };
-
-extern void(__cdecl* ConsoleEvalCdecl)(const char*);
-
 using namespace std::literals;
 
 constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
@@ -109,15 +100,6 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> fu
   { "rejected_violence"sv, "print"sv } } };
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "joy_yawsensitivity"sv, "in_mouse"sv } } };
-
-inline void set_gog_exports()
-{
-  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x200194f0;
-}
-
-constexpr std::array<void (*)(), 5> export_functions = { {
-  set_gog_exports,
-} };
 
 HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {

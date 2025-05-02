@@ -60,14 +60,6 @@ extern auto game_actions = std::array<game_action, 32>{ {
 } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
-extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
-extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"base/assets0.pk3/default.cfg", L"base/default.cfg" } };
-extern auto autoexec_configuration_paths = std::array<const wchar_t*, 4>{ { L"base/autoexec.cfg" } };
-extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{ { L"base/jk2config.cfg" } };
-
-extern void(__cdecl* ConsoleEvalCdecl)(const char*);
 
 using namespace std::literals;
 
@@ -98,15 +90,6 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 8> va
   { "bot_miniplayers"sv, "bot_enable"sv },
   { "mp_currentTeam"sv, "mp_playerType"sv },
   { "cg_wolfparticles"sv, "cg_wolfparticles"sv },
-} };
-
-inline void set_gog_exports()
-{
-  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x41db30;
-}
-
-constexpr std::array<void (*)(), 5> export_functions = { {
-  set_gog_exports,
 } };
 
 HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept

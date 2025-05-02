@@ -51,14 +51,6 @@ extern auto game_actions = std::array<game_action, 32>{ {
 } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
-extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
-extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"userdef.cfg" } };
-extern auto profile_configuration_paths = std::array<const wchar_t*, 2>{ { L"tnp.cfg" } };
-
-static void(__cdecl* ConsoleEval)(const char*) = nullptr;
-
 using namespace std::literals;
 
 constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = {{ 

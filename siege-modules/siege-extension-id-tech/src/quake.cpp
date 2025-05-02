@@ -76,13 +76,6 @@ extern auto game_actions = std::array<game_action, 32>{ {
 } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
-extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
-extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"Id1/PAK0.PAK/default.cfg", L"Id1/default.cfg" } };
-extern auto autoexec_configuration_paths = std::array<const wchar_t*, 4>{ { L"Id1/autoexec.cfg", L"hipnotic/autoexec.cfg", L"rogue/autoexec.cfg" } };
-extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{ { L"Id1/config.cfg", L"hipnotic/config.cfg", L"rogue/config.cfg" } };
-
 extern void(__cdecl* ConsoleEvalCdecl)(const char*);
 
 using namespace std::literals;

@@ -61,15 +61,6 @@ constexpr static auto quake2_aliases = std::array<std::array<std::string_view, 2
   { "-throw-grenade", "-attack;weapprev" } } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
-extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
-extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"baseq2/pak0.pak/default.cfg", L"baseq2/default.cfg" } };
-extern auto autoexec_configuration_paths = std::array<const wchar_t*, 4>{ { L"baseq2/autoexec.cfg", L"xatrix/autoexec.cfg", L"rogue/autoexec.cfg" } };
-extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{ { L"baseq2/config.cfg", L"xatrix/config.cfg", L"rogue/config.cfg" } };
-
-extern void(__cdecl* ConsoleEvalCdecl)(const char*);
-
 using namespace std::literals;
 
 constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x44ec2c) },
@@ -88,15 +79,6 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 6> fu
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "in_joystick"sv, "in_mouse"sv } } };
 
-inline void set_gog_exports()
-{
-  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x415a10;
-}
-
-constexpr std::array<void (*)(), 1> export_functions = { {
-  set_gog_exports,
-} };
-
 HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
   return siege::get_name_ranges(function_name_ranges, length, data, saved);
@@ -109,7 +91,12 @@ HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>*
 
 HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
 {
-  return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
+  if (filename && std::filesystem::path(filename).wstring().contains(L"quake2"))
+  {
+    return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
+  }
+
+  return S_FALSE;
 }
 
 HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
@@ -160,11 +147,6 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   iter->name = L"console";
   iter->value = L"1";
 
-  std::advance(iter, 1);
-  iter->name = L"map";
-  iter->value = L"trdm01a";
-
-
   return S_OK;
 }
 
@@ -187,7 +169,6 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
   };
 
   upsert_mouse_defaults(game_actions, actions, *binding);
-
 
   return S_OK;
 }
