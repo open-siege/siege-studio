@@ -762,7 +762,89 @@ namespace siege::views
 
   using apply_prelaunch_settings = HRESULT(const wchar_t* exe_path_str, const siege::platform::game_command_line_args*);
   using format_command_line = const wchar_t**(const siege::platform::game_command_line_args*, std::uint32_t* new_size);
-  bool allow_input_filtering = true;
+  bool allow_input_filtering = false;// TODO There are still some issues with id Tech 3 games that should be fixed.
+
+  std::optional<std::filesystem::path> link_to_wsock_zero_tier(std::filesystem::path exe_path, std::filesystem::path wsock_path)
+  {
+    struct handler
+    {
+      std::string wsock_path;
+
+      static BOOL CALLBACK byway_callback(PVOID pContext, PCSTR pszFile, LPCSTR* ppszOutFile)
+      {
+        return TRUE;
+      }
+
+      static BOOL CALLBACK file_callback(PVOID context, LPCSTR pszOrigFile, LPCSTR file, LPCSTR* ppszOutFile)
+      {
+        handler* self = (handler*)context;
+
+        if (file && (std::string_view(file) == "WSOCK32.dll" || std::string_view(file) == "WSOCK32.DLL" || std::string_view(file) == "wsock32.dll"))
+        {
+          *ppszOutFile = self->wsock_path.c_str();
+        }
+        else
+        {
+          *ppszOutFile = file;
+        }
+
+        return TRUE;
+      }
+
+      static BOOL CALLBACK symbol_callback(PVOID pContext, ULONG nOrigOrdinal, ULONG nOrdinal, ULONG* pnOutOrdinal, LPCSTR original_symbol, LPCSTR pszSymbol, LPCSTR* ppszOutSymbol)
+      {
+        *ppszOutSymbol = pszSymbol;
+        return TRUE;
+      }
+
+      static BOOL CALLBACK commit_callback(PVOID pContext)
+      {
+        return TRUE;
+      }
+    };
+
+    static std::map<std::filesystem::path, std::shared_ptr<void>> deferred_deletes;
+
+    auto new_path = exe_path;
+    new_path.replace_filename(exe_path.stem().wstring() + L"-zero-tier" + exe_path.extension().wstring());
+
+    if (!::CopyFileW(exe_path.c_str(), new_path.c_str(), FALSE))
+    {
+      return std::nullopt;
+    }
+
+    deferred_deletes.emplace(new_path, std::shared_ptr<void>(nullptr, [new_path](...) { ::DeleteFileW(new_path.c_str()); }));
+
+    try
+    {
+      handler handler{ .wsock_path = wsock_path.filename().string() };
+      auto exe_file = win32::file{ new_path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL };
+
+      auto handle = exe_file.get();
+      auto hbinary = ::DetourBinaryOpen(handle);
+
+      if (hbinary)
+      {
+        if (::DetourBinaryEditImports(hbinary, &handler, nullptr, handler::file_callback, handler::symbol_callback, nullptr))
+        {
+          OutputDebugStringW(L"Updated imports of exe\n");
+        }
+
+        if (::DetourBinaryWrite(hbinary, handle))
+        {
+          OutputDebugStringW(L"Wrote data to file\n");
+        }
+
+        ::DetourBinaryClose(hbinary);
+      }
+      return new_path;
+    }
+    catch (...)
+    {
+    }
+    return std::nullopt;
+  }
+
 
   HRESULT exe_controller::launch_game_with_extension(const siege::platform::game_command_line_args* game_args, PROCESS_INFORMATION* process_info) noexcept
   {
@@ -782,6 +864,7 @@ namespace siege::views
     {
       return E_POINTER;
     }
+
 
     std::string extension_path = get_extension().GetModuleFileName<char>();
 
@@ -806,29 +889,6 @@ namespace siege::views
       argv = format_command_line_func(game_args, &argc);
     }
 
-
-    std::wstring args;
-    args.reserve(argc + 3 * sizeof(std::wstring) + 3);
-
-
-    args.append(1, L'"');
-    args.append(loaded_path.wstring());
-    args.append(1, L'"');
-
-    if (argv && argc > 0)
-    {
-      args.append(1, L' ');
-      for (auto i = 0u; i < argc; ++i)
-      {
-        args.append(argv[i]);
-
-        if (i < (argc - 1))
-        {
-          args.append(1, L' ');
-        }
-      }
-    }
-
     STARTUPINFOW startup_info{ .cb = sizeof(STARTUPINFOW) };
 
     auto hook_path = (std::filesystem::path(extension_path).parent_path() / "siege-extension-input-filter-raw-input.dll").string();
@@ -847,18 +907,88 @@ namespace siege::views
       dll_paths.emplace_back(extension_path.c_str());
     }
 
-    auto steam_dll_path = (loaded_path.parent_path().parent_path().parent_path().parent_path() / "Steam.dll").string();
+    auto get_env = [](auto key) {
+      auto size = ::GetEnvironmentVariableW(key, nullptr, 0);
 
-    if (!dll_paths.empty() && std::filesystem::exists(steam_dll_path, last_errorc))
+      if (size == 0)
+      {
+        return std::wstring{};
+      }
+
+      std::wstring temp(size + 1, L'\0');
+
+      temp.resize(::GetEnvironmentVariableW(key, temp.data(), temp.size()));
+      return temp;
+    };
+
+    std::wstring current_path = get_env(L"Path");
+
+    std::array<std::filesystem::path, 3> search_paths{ {
+      get_env(L"SystemDrive") + L"//",
+      get_env(L"ProgramFiles"),
+      get_env(L"ProgramFiles(X86)"),
+    } };
+
+    for (auto& search_path : search_paths)
     {
-      dll_paths.push_back(steam_dll_path.c_str());
+      if (search_path.empty())
+      {
+        continue;
+      }
+
+      auto steam_path = (search_path / L"Steam").wstring();
+      if (std::filesystem::exists(steam_path, last_errorc) && !current_path.contains(steam_path))
+      {
+        current_path = steam_path + L";" + current_path;
+        break;
+      }
     }
 
-    if (dll_paths.empty() && ::CreateProcessW(loaded_path.c_str(), args.data(), nullptr, nullptr, FALSE, DETACHED_PROCESS, nullptr, loaded_path.parent_path().c_str(), &startup_info, process_info))
+    auto wsock_path = std::filesystem::path(extension_path).parent_path() / "wsock32-on-zerotier.dll";
+
+    auto real_path = loaded_path;
+    if (std::filesystem::exists(wsock_path, last_errorc))
+    {
+      real_path = link_to_wsock_zero_tier(loaded_path, wsock_path).value_or(loaded_path);
+
+      auto search_path = std::filesystem::path(extension_path).parent_path().wstring();
+
+      if (!current_path.contains(search_path))
+      {
+        current_path = search_path + L";" + current_path;
+      }
+    }
+
+    ::SetEnvironmentVariableW(L"Path", current_path.c_str());
+
+    std::wstring args;
+    args.reserve(argc + 3 * sizeof(std::wstring) + 3);
+
+
+    args.append(1, L'"');
+    args.append(real_path.wstring());
+    args.append(1, L'"');
+
+    if (argv && argc > 0)
+    {
+      args.append(1, L' ');
+      for (auto i = 0u; i < argc; ++i)
+      {
+        args.append(argv[i]);
+
+        if (i < (argc - 1))
+        {
+          args.append(1, L' ');
+        }
+      }
+    }
+
+
+    if (dll_paths.empty() && ::CreateProcessW(real_path.c_str(), args.data(), nullptr, nullptr, FALSE, DETACHED_PROCESS, nullptr, loaded_path.parent_path().c_str(), &startup_info, process_info))
     {
       return S_OK;
     }
-    else if (::DetourCreateProcessWithDllsW(loaded_path.c_str(),
+    else if (::DetourCreateProcessWithDllsW(real_path.c_str(),
                args.data(),
                nullptr,
                nullptr,
