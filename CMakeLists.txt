@@ -39,6 +39,12 @@ foreach(CONTENT_TARGET IN ITEMS ${CONTENT_TARGETS})
 endforeach()
 
 if (WIN32)
+    if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/libzt)
+        set(HAS_ZERO_TIER TRUE)
+        set(BUILD_HOST_SELFTEST FALSE)
+        add_subdirectory(libzt)
+    endif()
+
         set(EXTENSION_PROJECTS siege-extension-id-tech 
                                siege-extension-3space 
                                siege-extension-other)
@@ -49,7 +55,7 @@ if (WIN32)
             list(APPEND EXT_TARGETS ${PROJECT_TARGETS}) 
         endforeach()
 
-        list(APPEND EXT_TARGETS siege-extension-input-filter-raw-input)
+        list(APPEND EXT_TARGETS siege-extension-input-filter-raw-input wsock32-on-zerotier zt-shared)
 
         foreach(EXT_TARGET IN ITEMS ${EXT_TARGETS})
             add_dependencies(siege-studio-dependencies ${EXT_TARGET})
