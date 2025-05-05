@@ -99,6 +99,8 @@ namespace win32
             break;
           }
         }
+        buffer.clear();
+        buffer.resize(32);
       }
 
       filename.erase(filename.find(L'\0'));

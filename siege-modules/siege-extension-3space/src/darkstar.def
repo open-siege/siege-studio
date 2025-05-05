@@ -1,6 +1,5 @@
 EXPORTS
 	DetourFinishHelperProcess @1
-	launch_game_with_extension
 	executable_is_supported
 	get_function_name_ranges
 	get_variable_name_ranges

@@ -1,7 +1,6 @@
 EXPORTS
 	DetourFinishHelperProcess @1
 	game_actions DATA PRIVATE
-	launch_game_with_extension PRIVATE
 	executable_is_supported
 	get_function_name_ranges PRIVATE
 	get_variable_name_ranges PRIVATE

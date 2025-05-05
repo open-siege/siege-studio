@@ -26,12 +26,10 @@ namespace siege
       bind_action
     };
 
-    std::filesystem::path exe_path;
-    std::filesystem::path extension_path;
     std::unique_ptr<siege::platform::game_command_line_args> args;
     std::wstring script_host;
     mode input_mode = bind_input;
-    siege::platform::game_extension_module* extension;
+    std::function<HRESULT(const siege::platform::game_command_line_args* game_args, PROCESS_INFORMATION* process_info)> launch_game_with_extension;
   };
 
   enum class input_state
@@ -188,9 +186,7 @@ namespace siege
 
       try
       {
-        siege::platform::game_extension_module extension(injector_args.extension_path);
-
-        if (extension.launch_game_with_extension(injector_args.exe_path.c_str(), injector_args.args.get(), &child_process) == S_OK && child_process.hProcess)
+        if (injector_args.launch_game_with_extension(injector_args.args.get(), &child_process) == S_OK && child_process.hProcess)
         {
           auto& state = siege::get_active_input_state();
 

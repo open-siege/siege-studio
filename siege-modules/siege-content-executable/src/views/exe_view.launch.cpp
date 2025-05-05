@@ -511,7 +511,6 @@ namespace siege::views
               game_args->action_bindings[binding_index].vkey = virtual_key;
               game_args->action_bindings[binding_index].action_name = action.action_name;
               game_args->action_bindings[binding_index++].context = context;
-
             }
           }
         }
@@ -565,10 +564,10 @@ namespace siege::views
         controller.set_game_settings(settings);
 
         input_injector_args args{
-          .exe_path = controller.get_exe_path(),
-          .extension_path = controller.get_extension().GetModuleFileName(),
           .args = std::move(game_args),
-          .extension = &controller.get_extension()
+          .launch_game_with_extension = [this](const auto* args, auto* process_info) -> HRESULT {
+            return controller.launch_game_with_extension(args, process_info);
+          }
         };
 
         win32::DialogBoxIndirectParamW<siege::input_injector>(win32::module_ref::current_application(),

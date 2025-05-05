@@ -3,7 +3,6 @@ EXPORTS
 	game_actions DATA PRIVATE
 	controller_input_backends DATA PRIVATE
 	command_line_caps DATA PRIVATE
-	launch_game_with_extension PRIVATE
 	executable_is_supported
 	get_function_name_ranges PRIVATE
 	get_variable_name_ranges PRIVATE

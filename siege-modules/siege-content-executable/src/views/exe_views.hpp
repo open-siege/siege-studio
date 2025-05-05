@@ -72,6 +72,8 @@ namespace siege::views
 
     inline siege::platform::game_extension_module& get_extension() { return *matching_extension; }
 
+    HRESULT launch_game_with_extension(const siege::platform::game_command_line_args* game_args, PROCESS_INFORMATION* process_info) noexcept;
+
   private:
     std::list<siege::platform::game_extension_module> extensions;
     std::filesystem::path loaded_path;
