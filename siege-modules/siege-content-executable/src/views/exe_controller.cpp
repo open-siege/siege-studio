@@ -972,6 +972,19 @@ namespace siege::views
       {
         current_path = search_path + L";" + current_path;
       }
+
+      if (auto* caps = get_extension().caps; caps && caps->ip_connect_setting)
+      {
+        auto connect_str = std::wstring_view(caps->ip_connect_setting);
+
+        auto setting = std::find_if(game_args->string_settings.begin(), game_args->string_settings.end(), [&](auto& item) {
+          return item.name != nullptr && item.name == connect_str && item.value != nullptr && item.value[0] != '\0' && std::wstring_view(item.value) != L"0.0.0.0";
+        });
+        
+        if (setting != game_args->string_settings.end()) {
+          ::SetEnvironmentVariableW(L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4", setting->value);
+        }
+      }
     }
 
     for (auto i = 0; i < game_args->environment_settings.size(); ++i)
