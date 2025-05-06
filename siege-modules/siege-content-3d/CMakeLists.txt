@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.30)
 project(siege-content-3d)
 
 file(GLOB_RECURSE LIB_SRC_FILES src/*.cpp)

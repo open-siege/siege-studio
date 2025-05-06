@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.30)
 project(siege-frontend)
 
 if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/generators)
@@ -58,6 +58,10 @@ if (WIN32)
         list(APPEND EXT_TARGETS siege-extension-input-filter-raw-input wsock32-on-zerotier zt-shared)
 
         foreach(EXT_TARGET IN ITEMS ${EXT_TARGETS})
+            get_target_property(TARGET_TYPE ${EXT_TARGET} TYPE)
+            if (${TARGET_TYPE} STREQUAL "STATIC_LIBRARY")
+                continue()
+            endif()
             add_dependencies(siege-studio-dependencies ${EXT_TARGET})
             add_custom_command(TARGET siege-studio-dependencies POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${EXT_TARGET}> $<TARGET_FILE_DIR:siege-studio>)
