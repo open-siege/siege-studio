@@ -18,6 +18,20 @@ namespace siege::views
   {
     auto& settings = controller.get_game_settings();
 
+    bool has_ip = caps.ip_connect_setting != nullptr;
+
+    if (has_ip && controller.has_zero_tier_extension())
+    {
+      win32::list_view_item column(L"ZERO_TIER_NETWORK_ID");
+      column.mask = column.mask | LVIF_PARAM;
+      column.sub_items = {
+        L""
+      };
+      column.lParam = (LPARAM)game_command_line_caps::env_setting;
+
+      launch_table.InsertRow(std::move(column));
+    }
+
     for (auto& value : caps.string_settings)
     {
       if (!value)
@@ -445,6 +459,8 @@ namespace siege::views
           .mask = LVIF_PARAM
         };
 
+        auto string_index = 0;
+        auto env_index = 0;
         for (auto i = 0; i < launch_table.GetItemCount(); ++i)
         {
           std::wstring name(255, L'\0');
@@ -475,8 +491,18 @@ namespace siege::views
 
           launch_strings.emplace_back(std::array<std::wstring, 2>{ { std::move(name), std::move(value) } });
 
-          game_args->string_settings[i].name = launch_strings[i][0].c_str();
-          game_args->string_settings[i].value = launch_strings[i][1].c_str();
+          // TODO handle other command input types
+          if (info.lParam == (LPARAM)game_command_line_caps::env_setting)
+          {
+            game_args->environment_settings[env_index].name = launch_strings[i][0].c_str();
+            game_args->environment_settings[env_index++].value = launch_strings[i][1].c_str();
+          }
+          else
+          {
+            game_args->string_settings[string_index].name = launch_strings[i][0].c_str();
+            game_args->string_settings[string_index++].value = launch_strings[i][1].c_str();
+
+          }
         }
 
         controller.set_game_settings(settings);

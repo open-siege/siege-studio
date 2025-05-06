@@ -760,6 +760,19 @@ namespace siege::views
   }
 
 
+  bool exe_controller::has_zero_tier_extension()
+  {
+    if (!has_extension_module())
+    {
+      return false;
+    }
+    std::string extension_path = get_extension().GetModuleFileName<char>();
+    auto wsock_path = std::filesystem::path(extension_path).parent_path() / "wsock32-on-zerotier.dll";
+    auto zt_path = std::filesystem::path(extension_path).parent_path() / "zt-shared.dll";
+    std::error_code last_errorc;
+    return std::filesystem::exists(wsock_path, last_errorc) && std::filesystem::exists(zt_path, last_errorc);
+  }
+
   using apply_prelaunch_settings = HRESULT(const wchar_t* exe_path_str, const siege::platform::game_command_line_args*);
   using format_command_line = const wchar_t**(const siege::platform::game_command_line_args*, std::uint32_t* new_size);
   bool allow_input_filtering = false;// TODO There are still some issues with id Tech 3 games that should be fixed.
@@ -944,11 +957,12 @@ namespace siege::views
       }
     }
 
-    auto wsock_path = std::filesystem::path(extension_path).parent_path() / "wsock32-on-zerotier.dll";
 
     auto real_path = loaded_path;
-    if (std::filesystem::exists(wsock_path, last_errorc))
+    if (has_zero_tier_extension())
     {
+      auto wsock_path = std::filesystem::path(extension_path).parent_path() / "wsock32-on-zerotier.dll";
+
       real_path = link_to_wsock_zero_tier(loaded_path, wsock_path).value_or(loaded_path);
 
       auto search_path = std::filesystem::path(extension_path).parent_path().wstring();
@@ -959,6 +973,15 @@ namespace siege::views
       }
     }
 
+    for (auto i = 0; i < game_args->environment_settings.size(); ++i)
+    {
+      if (!game_args->environment_settings[i].name)
+      {
+        break;
+      }
+      ::SetEnvironmentVariableW(game_args->environment_settings[i].name, game_args->environment_settings[i].value);
+
+    }
     ::SetEnvironmentVariableW(L"Path", current_path.c_str());
 
     std::wstring args;

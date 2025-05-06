@@ -69,6 +69,7 @@ namespace siege::views
     inline std::filesystem::path get_exe_path() { return loaded_path; }
 
     inline bool has_extension_module() { return matching_extension != extensions.end(); }
+    bool has_zero_tier_extension();
 
     inline siege::platform::game_extension_module& get_extension() { return *matching_extension; }
 

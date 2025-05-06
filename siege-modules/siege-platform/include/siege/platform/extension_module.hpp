@@ -103,7 +103,8 @@ namespace siege::platform
       string_setting,
       flag_setting,
       int_setting,
-      float_setting
+      float_setting,
+      env_setting
     };
 
     const fs_char* ip_connect_setting = FSL "";
@@ -148,6 +149,7 @@ namespace siege::platform
     };
 
     std::array<string_setting, 32> string_settings;
+    std::array<string_setting, 32> environment_settings;
 
     struct input_mapping
     {
@@ -254,7 +256,7 @@ namespace siege::platform
       init_keyboard_inputs_proc = GetProcAddress<decltype(init_keyboard_inputs_proc)>("init_keyboard_inputs");
       init_mouse_inputs_proc = GetProcAddress<decltype(init_mouse_inputs_proc)>("init_mouse_inputs");
       init_controller_inputs_proc = GetProcAddress<decltype(init_controller_inputs_proc)>("init_controller_inputs");
-      
+
       if (!this->executable_is_supported_proc)
       {
         throw std::runtime_error("Could not find module functions");
