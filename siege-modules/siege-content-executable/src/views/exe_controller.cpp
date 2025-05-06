@@ -953,13 +953,14 @@ namespace siege::views
       if (std::filesystem::exists(steam_path, last_errorc) && !current_path.contains(steam_path))
       {
         current_path = steam_path + L";" + current_path;
-        break;
       }
     }
 
 
     auto real_path = loaded_path;
-    if (has_zero_tier_extension())
+    if (has_zero_tier_extension() && std::any_of(game_args->environment_settings.begin(), game_args->environment_settings.end(), [](auto& item) {
+          return item.name != nullptr && std::wstring_view(item.name) == L"ZERO_TIER_NETWORK_ID" && item.value != nullptr && item.value[0] != '\0';
+        }))
     {
       auto wsock_path = std::filesystem::path(extension_path).parent_path() / "wsock32-on-zerotier.dll";
 
@@ -980,7 +981,6 @@ namespace siege::views
         break;
       }
       ::SetEnvironmentVariableW(game_args->environment_settings[i].name, game_args->environment_settings[i].value);
-
     }
     ::SetEnvironmentVariableW(L"Path", current_path.c_str());
 
