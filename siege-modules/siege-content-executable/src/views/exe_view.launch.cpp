@@ -25,7 +25,7 @@ namespace siege::views
       win32::list_view_item column(L"ZERO_TIER_NETWORK_ID");
       column.mask = column.mask | LVIF_PARAM;
       column.sub_items = {
-        L""
+        settings.last_zero_tier_network_id.data()
       };
       column.lParam = (LPARAM)game_command_line_caps::env_setting;
 
@@ -487,6 +487,11 @@ namespace siege::views
             name = caps->ip_connect_setting;
             auto max_size = value.size() > settings.last_ip_address.size() ? settings.last_ip_address.size() : value.size();
             std::copy_n(value.data(), max_size, settings.last_ip_address.data());
+          }
+          else if (name == L"ZERO_TIER_NETWORK_ID")
+          {
+            auto max_size = value.size() > settings.last_zero_tier_network_id.size() ? settings.last_zero_tier_network_id.size() : value.size();
+            std::copy_n(value.data(), max_size, settings.last_zero_tier_network_id.data());
           }
 
           launch_strings.emplace_back(std::array<std::wstring, 2>{ { std::move(name), std::move(value) } });

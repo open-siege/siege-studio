@@ -93,6 +93,8 @@ namespace siege::platform
   {
     std::array<fs_char, 64> last_player_name;
     std::array<fs_char, 64> last_ip_address;
+    std::array<fs_char, 64> last_zero_tier_network_id;
+    std::array<fs_char, 320> last_zero_tier_node_id_and_private_key;
   };
 
   struct game_command_line_caps

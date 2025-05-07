@@ -12,9 +12,10 @@
 
 namespace siege::views
 {
+  constexpr static std::size_t char_size = sizeof(siege::fs_char);
+
   bool exe_controller::set_game_settings(const siege::platform::persistent_game_settings& settings)
   {
-    OutputDebugStringW(L"set_game_settings\n");
     game_settings = settings;
 
     HKEY main_key = nullptr;
@@ -26,16 +27,19 @@ namespace siege::views
     {
       std::vector<BYTE> raw_bytes;
 
-      raw_bytes.resize(settings.last_ip_address.size() * sizeof(wchar_t));
+      raw_bytes.resize(settings.last_ip_address.size() * char_size);
       std::memcpy(raw_bytes.data(), settings.last_ip_address.data(), raw_bytes.size());
 
       bool result = false;
       result = ::RegSetValueExW(main_key, L"LastIPAddress", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
 
-      raw_bytes.resize(settings.last_player_name.size() * sizeof(wchar_t));
-      std::memcpy(raw_bytes.data(), settings.last_player_name.data(), raw_bytes.size());
-      result = result && ::RegSetValueExW(main_key, L"LastPlayerName", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
+      raw_bytes.resize(settings.last_zero_tier_network_id.size() * char_size);
+      std::memcpy(raw_bytes.data(), settings.last_zero_tier_network_id.data(), raw_bytes.size());
+      result = result && ::RegSetValueExW(main_key, L"LastZeroTierNetworkId", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
 
+      raw_bytes.resize(settings.last_zero_tier_node_id_and_private_key.size() * char_size);
+      std::memcpy(raw_bytes.data(), settings.last_zero_tier_node_id_and_private_key.data(), raw_bytes.size());
+      result = result && ::RegSetValueExW(main_key, L"LastZeroTierNodeIdAndPrivateKey", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
 
       ::RegCloseKey(main_key);
       ::RegCloseKey(user_key);
@@ -61,10 +65,17 @@ namespace siege::views
     if (::RegOpenCurrentUser(access, &user_key) == ERROR_SUCCESS && ::RegCreateKeyExW(user_key, L"Software\\The Siege Hub\\Siege Studio", 0, nullptr, 0, access, nullptr, &main_key, nullptr) == ERROR_SUCCESS)
     {
       auto type = REG_SZ;
-      size = (DWORD)game_settings.last_ip_address.size() * 2;
+      size = (DWORD)game_settings.last_ip_address.size() * char_size;
       ::RegGetValueW(main_key, nullptr, L"LastIPAddress", RRF_RT_REG_SZ, &type, game_settings.last_ip_address.data(), &size);
-      size = game_settings.last_player_name.size() * 2;
+      size = game_settings.last_player_name.size() * char_size;
       ::RegGetValueW(main_key, nullptr, L"LastPlayerName", RRF_RT_REG_SZ, &type, game_settings.last_player_name.data(), &size);
+
+      size = game_settings.last_zero_tier_network_id.size() * char_size;
+      ::RegGetValueW(main_key, nullptr, L"LastZeroTierNetworkId", RRF_RT_REG_SZ, &type, game_settings.last_zero_tier_network_id.data(), &size);
+
+      size = game_settings.last_zero_tier_node_id_and_private_key.size() * char_size;
+      ::RegGetValueW(main_key, nullptr, L"LastZeroTierNodeIdAndPrivateKey", RRF_RT_REG_SZ, &type, game_settings.last_zero_tier_node_id_and_private_key.data(), &size);
+
       ::RegCloseKey(main_key);
     }
 
@@ -75,7 +86,7 @@ namespace siege::views
 
     if (!game_settings.last_ip_address[0])
     {
-      std::memcpy(game_settings.last_ip_address.data(), L"127.0.0.1", 10 * sizeof(wchar_t));
+      std::memcpy(game_settings.last_ip_address.data(), L"0.0.0.0", 8 * char_size);
     }
 
     if (!game_settings.last_player_name[0])
@@ -955,7 +966,6 @@ namespace siege::views
         current_path = steam_path + L";" + current_path;
       }
     }
-
 
     auto real_path = loaded_path;
     if (has_zero_tier_extension() && std::any_of(game_args->environment_settings.begin(), game_args->environment_settings.end(), [](auto& item) {
