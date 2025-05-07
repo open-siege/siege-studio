@@ -13,7 +13,7 @@ using game_command_line_caps = siege::platform::game_command_line_caps;
 
 namespace siege::views
 {
-  
+
   void exe_view::populate_launch_table(const game_command_line_caps& caps)
   {
     auto& settings = controller.get_game_settings();
@@ -30,6 +30,22 @@ namespace siege::views
       column.lParam = (LPARAM)game_command_line_caps::env_setting;
 
       launch_table.InsertRow(std::move(column));
+
+      std::string_view zt_node_id = settings.last_zero_tier_node_id_and_private_key.data();
+
+      if (zt_node_id.contains(':'))
+      {
+        zt_node_id = zt_node_id.substr(0, zt_node_id.find(':'));
+
+        win32::list_view_item column(L"ZERO_TIER_PEER_ID");
+        column.mask = column.mask | LVIF_PARAM;
+        column.sub_items = {
+          std::wstring(zt_node_id.begin(), zt_node_id.end())
+        };
+        column.lParam = (LPARAM)game_command_line_caps::computed_setting;
+
+        launch_table.InsertRow(std::move(column));
+      }
     }
 
     for (auto& value : caps.string_settings)
@@ -270,7 +286,7 @@ namespace siege::views
                 }
               });
             }
-            else
+            else if (control_type != game_command_line_caps::computed_setting)
             {
               launch_table_combo.SetWindowStyle(launch_table_combo.GetWindowStyle() & ~WS_VISIBLE);
               if (info.iItem == ip_address_row_index)
@@ -506,7 +522,6 @@ namespace siege::views
           {
             game_args->string_settings[string_index].name = launch_strings[i][0].c_str();
             game_args->string_settings[string_index++].value = launch_strings[i][1].c_str();
-
           }
         }
 

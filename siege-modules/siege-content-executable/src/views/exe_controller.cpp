@@ -14,9 +14,39 @@ namespace siege::views
 {
   constexpr static std::size_t char_size = sizeof(siege::fs_char);
 
+  std::array<char, 384> generate_zero_tier_node_id(std::filesystem::path zt_path)
+  {
+    std::error_code last_errorc;
+    if (std::filesystem::exists(zt_path, last_errorc) && std::filesystem::exists(zt_path, last_errorc))
+    {
+      try
+      {
+        auto module = win32::module(zt_path);
+
+        using id_new = int __cdecl(char* key, std::uint32_t* key_buf_len);
+
+        auto* new_func = module.GetProcAddress<std::add_pointer_t<id_new>>("zts_id_new");
+
+        if (new_func)
+        {
+          std::array<char, 384> node_id_and_private_key{};
+          std::uint32_t size = node_id_and_private_key.size();
+          new_func(node_id_and_private_key.data(), &size);
+          return node_id_and_private_key;
+        }
+      }
+      catch (...)
+      {
+      }
+    }
+    return {};
+  }
+
   bool exe_controller::set_game_settings(const siege::platform::persistent_game_settings& settings)
   {
+    auto node_id_and_private_key = game_settings.last_zero_tier_node_id_and_private_key;
     game_settings = settings;
+    game_settings.last_zero_tier_node_id_and_private_key = node_id_and_private_key;
 
     HKEY main_key = nullptr;
     HKEY user_key = nullptr;
@@ -37,9 +67,8 @@ namespace siege::views
       std::memcpy(raw_bytes.data(), settings.last_zero_tier_network_id.data(), raw_bytes.size());
       result = result && ::RegSetValueExW(main_key, L"LastZeroTierNetworkId", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
 
-      raw_bytes.resize(settings.last_zero_tier_node_id_and_private_key.size() * char_size);
-      std::memcpy(raw_bytes.data(), settings.last_zero_tier_node_id_and_private_key.data(), raw_bytes.size());
-      result = result && ::RegSetValueExW(main_key, L"LastZeroTierNodeIdAndPrivateKey", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
+      std::string_view key_str = node_id_and_private_key.data();
+      result = result && ::RegSetValueExA(main_key, "LastZeroTierNodeIdAndPrivateKey", 0, REG_SZ, (BYTE*)key_str.data(), key_str.size()) == ERROR_SUCCESS;
 
       ::RegCloseKey(main_key);
       ::RegCloseKey(user_key);
@@ -73,8 +102,8 @@ namespace siege::views
       size = game_settings.last_zero_tier_network_id.size() * char_size;
       ::RegGetValueW(main_key, nullptr, L"LastZeroTierNetworkId", RRF_RT_REG_SZ, &type, game_settings.last_zero_tier_network_id.data(), &size);
 
-      size = game_settings.last_zero_tier_node_id_and_private_key.size() * char_size;
-      ::RegGetValueW(main_key, nullptr, L"LastZeroTierNodeIdAndPrivateKey", RRF_RT_REG_SZ, &type, game_settings.last_zero_tier_node_id_and_private_key.data(), &size);
+      size = game_settings.last_zero_tier_node_id_and_private_key.size();
+      ::RegGetValueA(main_key, nullptr, "LastZeroTierNodeIdAndPrivateKey", RRF_RT_REG_SZ, &type, game_settings.last_zero_tier_node_id_and_private_key.data(), &size);
 
       ::RegCloseKey(main_key);
     }
@@ -93,6 +122,20 @@ namespace siege::views
     {
       size = game_settings.last_player_name.size();
       ::GetUserNameW(game_settings.last_player_name.data(), &size);
+    }
+
+    auto has_node_id = !std::all_of(game_settings.last_zero_tier_node_id_and_private_key.begin(), game_settings.last_zero_tier_node_id_and_private_key.end(), [](auto item) { return item == 0; });
+
+    if (has_node_id)
+    {
+      ::SetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", game_settings.last_zero_tier_node_id_and_private_key.data());
+    }
+    else
+    {
+      std::string extension_path = get_extension().GetModuleFileName<char>();
+      auto zt_path = std::filesystem::path(extension_path).parent_path() / "zt-shared.dll";
+      game_settings.last_zero_tier_node_id_and_private_key = generate_zero_tier_node_id(zt_path);
+      ::SetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", game_settings.last_zero_tier_node_id_and_private_key.data());
     }
 
     return game_settings;
@@ -837,7 +880,10 @@ namespace siege::views
       return std::nullopt;
     }
 
-    deferred_deletes.emplace(new_path, std::shared_ptr<void>(nullptr, [new_path](...) { ::DeleteFileW(new_path.c_str()); }));
+    if (!deferred_deletes.contains(new_path))
+    {
+      deferred_deletes.emplace(new_path, std::shared_ptr<void>(nullptr, [new_path](...) { ::DeleteFileW(new_path.c_str()); }));
+    }
 
     try
     {
@@ -990,8 +1036,9 @@ namespace siege::views
         auto setting = std::find_if(game_args->string_settings.begin(), game_args->string_settings.end(), [&](auto& item) {
           return item.name != nullptr && item.name == connect_str && item.value != nullptr && item.value[0] != '\0' && std::wstring_view(item.value) != L"0.0.0.0";
         });
-        
-        if (setting != game_args->string_settings.end()) {
+
+        if (setting != game_args->string_settings.end())
+        {
           ::SetEnvironmentVariableW(L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4", setting->value);
         }
       }
