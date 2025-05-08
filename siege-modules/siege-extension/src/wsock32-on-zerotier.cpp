@@ -412,6 +412,11 @@ bool& get_node_online_status()
   return node_is_online;
 }
 
+bool use_zero_tier()
+{
+  return get_zero_tier_network_id() && get_ztlib();
+}
+
 extern "C" {
 int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 {
@@ -420,6 +425,11 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 
   if (auto network_id = get_zero_tier_network_id(); network_id && get_ztlib())
   {
+    if (result == 0)
+    {
+      WSACleanup();
+    }
+
     get_log() << "Zero Tier library available and network is set\n";
     static auto* init_from_memory = (std::add_pointer_t<decltype(zts_init_from_memory)>)::GetProcAddress(get_ztlib(), "zts_init_from_memory");
     static auto* init_from_storage = (std::add_pointer_t<decltype(zts_init_from_storage)>)::GetProcAddress(get_ztlib(), "zts_init_from_storage");
@@ -431,13 +441,6 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
     static auto* net_join = (std::add_pointer_t<decltype(zts_net_join)>)::GetProcAddress(get_ztlib(), "zts_net_join");
     static auto* net_transport_is_ready = (std::add_pointer_t<decltype(zts_net_transport_is_ready)>)::GetProcAddress(get_ztlib(), "zts_net_transport_is_ready");
 
-    static CRITICAL_SECTION section = [] {
-      CRITICAL_SECTION temp{};
-      InitializeCriticalSection(&temp);
-      return temp;
-    }();
-
-    EnterCriticalSection(&section);
     if (!get_node_online_status())
     {
       if (auto node_id_and_key = get_zero_tier_peer_id_and_public_key(); node_id_and_key)
@@ -462,7 +465,7 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
       bool is_online = false;
       bool is_connected = false;
 
-      for (auto i = 0; i < 100; ++i)
+      for (auto i = 0; i < 500; ++i)
       {
         if (node_is_online())
         {
@@ -479,7 +482,7 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
       net_join(*network_id);
 
       get_log() << "Joining network\n";
-      for (auto i = 0; i < 100; ++i)
+      for (auto i = 0; i < 500; ++i)
       {
         if (net_transport_is_ready(*network_id))
         {
@@ -497,13 +500,16 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
         get_log() << "Node is online but could not join network. Stopping node.\n";
         static auto* node_stop = (std::add_pointer_t<decltype(zts_node_stop)>)::GetProcAddress(get_ztlib(), "zts_node_stop");
         node_stop();
+        ::PostQuitMessage(-1);
       }
       else if (!is_online && !is_connected)
       {
         get_log() << "Node could not be started and could not join network.\n";
+        ::PostQuitMessage(-1);
       }
     }
-    LeaveCriticalSection(&section);
+
+    return 0;
   }
 
   get_log().flush();
@@ -514,12 +520,17 @@ int __stdcall siege_WSACleanup()
 {
   get_log() << "siege_WSACleanup" << std::endl;
 
-  if (get_ztlib() && get_node_online_status())
+  if (use_zero_tier())
   {
-    get_log() << "Stopping Zero Tier node\n";
-    static auto* node_stop = (std::add_pointer_t<decltype(zts_node_stop)>)::GetProcAddress(get_ztlib(), "zts_node_stop");
-    node_stop();
-    get_node_online_status() = false;
+    if (get_node_online_status())
+    {
+      get_log() << "Stopping Zero Tier node\n";
+      static auto* node_stop = (std::add_pointer_t<decltype(zts_node_stop)>)::GetProcAddress(get_ztlib(), "zts_node_stop");
+      auto zt_result = node_stop();
+      get_node_online_status() = false;
+      return zt_to_winsock_result(zt_result);
+    }
+    return 0;
   }
 
   return WSACleanup();
@@ -539,50 +550,57 @@ static_assert(AF_INET == ZTS_AF_INET);
 SOCKET __stdcall siege_socket(int af, int type, int protocol)
 {
   get_log() << "siege_socket af: " << af << ", type: " << type << ", protocol: " << protocol << ", thread: " << GetCurrentThreadId() << std::endl;
-  if ((af == AF_UNSPEC || af == AF_INET) && (type == SOCK_STREAM || type == SOCK_DGRAM) && get_zero_tier_network_id() && get_ztlib() && get_node_online_status())
+
+  if (use_zero_tier())
   {
-    get_log() << "Creating zero tier socket\n";
-    static auto* zt_socket = (std::add_pointer_t<decltype(zts_bsd_socket)>)::GetProcAddress(get_ztlib(), "zts_bsd_socket");
-    static auto* zt_setsockopt = (std::add_pointer_t<decltype(zts_bsd_setsockopt)>)::GetProcAddress(get_ztlib(), "zts_bsd_setsockopt");
-    auto socket = zt_socket(af, type, protocol);
-
-    if (!(protocol == ZTS_IPPROTO_IP
-          || protocol == ZTS_IPPROTO_ICMP
-          || protocol == ZTS_IPPROTO_TCP
-          || protocol == ZTS_IPPROTO_UDP
-          || protocol == ZTS_IPPROTO_RAW))
+    if ((af == AF_UNSPEC || af == AF_INET) && (type == SOCK_STREAM || type == SOCK_DGRAM))
     {
-      get_log() << "Unsupported protocol for zero tier: " << protocol << std::endl;
-    }
+      get_log() << "Creating zero tier socket\n";
+      static auto* zt_socket = (std::add_pointer_t<decltype(zts_bsd_socket)>)::GetProcAddress(get_ztlib(), "zts_bsd_socket");
+      static auto* zt_setsockopt = (std::add_pointer_t<decltype(zts_bsd_setsockopt)>)::GetProcAddress(get_ztlib(), "zts_bsd_setsockopt");
+      auto socket = zt_socket(af, type, protocol);
 
-    if (socket == ZTS_ERR_SERVICE || socket == ZTS_ERR_ARG)
-    {
-      get_log() << "Could not create zero tier socket with error code: " << get_zts_errno() << '\0';
-
-      if (socket == ZTS_ERR_ARG)
+      if (!(protocol == ZTS_IPPROTO_IP
+            || protocol == ZTS_IPPROTO_ICMP
+            || protocol == ZTS_IPPROTO_TCP
+            || protocol == ZTS_IPPROTO_UDP
+            || protocol == ZTS_IPPROTO_RAW))
       {
-        ::WSASetLastError(zt_to_winsock_error(get_zts_errno()));
-      }
-      else if (socket == ZTS_ERR_SERVICE)
-      {
-        ::WSASetLastError(WSANOTINITIALISED);
+        get_log() << "Unsupported protocol for zero tier: " << protocol << std::endl;
       }
 
-      return INVALID_SOCKET;
+      if (socket == ZTS_ERR_SOCKET || socket == ZTS_ERR_SERVICE || socket == ZTS_ERR_ARG)
+      {
+        get_log() << "Could not create zero tier socket with error code: " << get_zts_errno() << '\0';
+
+        if (socket == ZTS_ERR_ARG)
+        {
+          ::WSASetLastError(zt_to_winsock_error(get_zts_errno()));
+        }
+        else if (socket == ZTS_ERR_SERVICE)
+        {
+          ::WSASetLastError(WSANOTINITIALISED);
+        }
+
+        return INVALID_SOCKET;
+      }
+
+      get_log() << "Created zero tier socket successfully (" << socket << ")" << std::endl;
+      get_zero_tier_handles().emplace(socket);
+
+
+      int value = 65536;
+      zts_socklen_t size = sizeof(value);
+
+      zt_setsockopt(socket, ZTS_SOL_SOCKET, ZTS_SO_RCVBUF, &value, size);
+
+
+      return (SOCKET)socket;
     }
 
-    get_log() << "Created zero tier socket successfully (" << socket << ")" << std::endl;
-    get_zero_tier_handles().emplace(socket);
-
-    
-    int value = 65536;
-    zts_socklen_t size = sizeof(value);
-
-    zt_setsockopt(socket, ZTS_SOL_SOCKET, ZTS_SO_RCVBUF, &value, size);
-
-
-    return (SOCKET)socket;
+    return INVALID_SOCKET;
   }
+
 
   auto result = socket(af, type, protocol);
   get_log() << "Created winsock socket successfully (" << (int)result << ")" << std::endl;
@@ -623,7 +641,7 @@ static_assert(SOL_SOCKET != ZTS_SOL_SOCKET);
 int __stdcall siege_setsockopt(SOCKET s, int level, int optname, const char* optval, int optlen)
 {
   get_log() << "siege_setsockopt" << (int)s << std::endl;
-  if (get_zero_tier_handles().contains((int)s) && get_ztlib())
+  if (use_zero_tier())
   {
     get_log() << "zts_bsd_setsockopt, level: " << level << " optname: " << optname << '\n';
 
@@ -655,7 +673,7 @@ int __stdcall siege_setsockopt(SOCKET s, int level, int optname, const char* opt
 
     return zt_to_winsock_result(zt_result);
   }
-  
+
   return setsockopt(s, level, optname, optval, optlen);
 }
 
@@ -663,7 +681,7 @@ int __stdcall siege_recvfrom(SOCKET s, char* buf, int len, int flags, sockaddr* 
 {
   get_log() << "siege_recvfrom " << (int)s << '\n';
 
-  if (get_zero_tier_handles().contains((int)s) && get_ztlib() && get_zero_tier_network_id())
+  if (use_zero_tier())
   {
     get_log() << "zts_bsd_recvfrom\n";
     static auto* zt_recvfrom = (std::add_pointer_t<decltype(zts_bsd_recvfrom)>)::GetProcAddress(get_ztlib(), "zts_bsd_recvfrom");
@@ -743,7 +761,7 @@ int __stdcall siege_recvfrom(SOCKET s, char* buf, int len, int flags, sockaddr* 
 int __stdcall siege_getsockname(SOCKET s, sockaddr* name, int* length)
 {
   get_log() << "siege_getsockname\n";
-  if (get_zero_tier_handles().contains((int)s) && get_ztlib())
+  if (use_zero_tier())
   {
     static auto* zt_getsockname = (std::add_pointer_t<decltype(zts_bsd_getsockname)>)::GetProcAddress(get_ztlib(), "zts_bsd_getsockname");
 
@@ -788,7 +806,7 @@ static_assert(IOC_INOUT == ZTS_IOC_INOUT);
 int __stdcall siege_ioctlsocket(SOCKET s, long cmd, u_long* argp)
 {
   get_log() << "siege_ioctlsocket, cmd: " << cmd << std::endl;
-  if (get_zero_tier_handles().contains((int)s) && get_ztlib())
+  if (use_zero_tier())
   {
     get_log() << "zts_bsd_ioctl\n";
     static auto* zt_ioctl = (std::add_pointer_t<decltype(zts_bsd_ioctl)>)::GetProcAddress(get_ztlib(), "zts_bsd_ioctl");
@@ -816,7 +834,7 @@ int __stdcall siege_connect(SOCKET s, const sockaddr* name, int namelen)
     get_log() << "siege_connect " << (int)s << std::endl;
   }
 
-  if (get_zero_tier_handles().contains((int)s) && get_ztlib())
+  if (use_zero_tier())
   {
     get_log() << "zts_bsd_connect\n";
     static auto* zt_connect = (std::add_pointer_t<decltype(zts_bsd_connect)>)::GetProcAddress(get_ztlib(), "zts_bsd_connect");
@@ -855,7 +873,7 @@ int __stdcall siege_bind(SOCKET s, const sockaddr* addr, int namelen)
     get_log() << "siege_bind " << (int)s << std::endl;
   }
 
-  if (get_zero_tier_handles().contains((int)s) && get_ztlib())
+  if (use_zero_tier())
   {
     get_log() << "zts_bsd_bind\n";
     static auto* zt_bind = (std::add_pointer_t<decltype(zts_bsd_bind)>)::GetProcAddress(get_ztlib(), "zts_bsd_bind");
@@ -897,7 +915,7 @@ int __stdcall siege_bind(SOCKET s, const sockaddr* addr, int namelen)
 int __stdcall siege_send(SOCKET s, const char* buf, int len, int flags)
 {
   get_log() << "siege_send\n";
-  if (get_zero_tier_handles().contains((int)s) && get_ztlib())
+  if (use_zero_tier())
   {
     get_log() << "zts_bsd_send\n";
     static auto* zt_send = (std::add_pointer_t<decltype(zts_bsd_send)>)::GetProcAddress(get_ztlib(), "zts_bsd_send");
@@ -925,7 +943,7 @@ int __stdcall siege_sendto(SOCKET s, const char* buf, int len, int flags, const 
     get_log() << "siege_sendto " << (int)s << std::endl;
   }
 
-  if (get_zero_tier_handles().contains((int)s) && get_ztlib())
+  if (use_zero_tier())
   {
     get_log() << "zts_bsd_sendto\n";
     static auto* zt_sendto = (std::add_pointer_t<decltype(zts_bsd_sendto)>)::GetProcAddress(get_ztlib(), "zts_bsd_sendto");
@@ -1009,7 +1027,7 @@ static_assert(SD_BOTH == ZTS_SHUT_RDWR);
 int __stdcall siege_shutdown(SOCKET s, int how)
 {
   get_log() << "siege_shutdown\n";
-  if (get_zero_tier_handles().contains((int)s) && get_ztlib())
+  if (use_zero_tier())
   {
     get_log() << "zts_bsd_shutdown\n";
     static auto* zt_shutdown = (std::add_pointer_t<decltype(zts_bsd_shutdown)>)::GetProcAddress(get_ztlib(), "zts_bsd_shutdown");
@@ -1024,7 +1042,7 @@ int __stdcall siege_shutdown(SOCKET s, int how)
 int __stdcall siege_closesocket(SOCKET s)
 {
   get_log() << "siege_closesocket\n";
-  if (get_zero_tier_handles().contains((int)s) && get_ztlib())
+  if (use_zero_tier())
   {
     get_log() << "zts_bsd_close\n";
     static auto* zt_close = (std::add_pointer_t<decltype(zts_bsd_close)>)::GetProcAddress(get_ztlib(), "zts_bsd_close");
@@ -1038,7 +1056,7 @@ int __stdcall siege_closesocket(SOCKET s)
 int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout)
 {
   get_log() << "siege_select\n";
-  if (get_zero_tier_network_id() && get_ztlib())
+  if (use_zero_tier())
   {
     get_log() << "zts_bsd_select\n";
     static auto* zt_select = (std::add_pointer_t<decltype(zts_bsd_select)>)::GetProcAddress(get_ztlib(), "zts_bsd_select");
@@ -1111,7 +1129,7 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
 int __stdcall siege___WSAFDIsSet(SOCKET s, fd_set* set)
 {
   get_log() << "siege___WSAFDIsSet\n";
-  if (get_zero_tier_handles().contains((int)s) && get_ztlib())
+  if (use_zero_tier())
   {
     if (set)
     {
