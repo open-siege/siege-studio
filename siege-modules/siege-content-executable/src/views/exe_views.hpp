@@ -89,6 +89,17 @@ namespace siege::views
   std::wstring category_for_vkey(SHORT vkey, siege::platform::hardware_context context);
   std::pair<siege::platform::hardware_context, std::uint16_t> hardware_index_for_controller_vkey(std::span<RAWINPUTDEVICELIST> devices, std::uint32_t index, SHORT vkey);
 
+  struct game_setting
+  {
+    std::wstring setting_name;
+    siege::platform::game_command_line_caps::type type;
+    std::variant<std::wstring, int, float, bool> value;
+    std::wstring display_name;
+    int group_id = 0;
+    std::function<std::span<siege::platform::predefined_string>(std::wstring_view name)> get_predefined_string;
+    std::function<std::span<siege::platform::predefined_int>(std::wstring_view name)> get_predefined_int;
+  };
+
   struct exe_view final : win32::window_ref
   {
     exe_controller controller;
@@ -100,11 +111,14 @@ namespace siege::views
     std::set<std::pair<std::wstring, std::wstring>> selected_resource_items;
 
     win32::list_view string_table;
+
+    std::optional<siege::platform::game_command_line_caps::type> dedicated_setting_type{};
+    std::optional<siege::platform::game_command_line_caps::type> listen_setting_type{};
+    std::vector<game_setting> launch_settings = { {} };
     win32::list_view launch_table;
     win32::edit launch_table_edit;
     win32::combo_box_ex launch_table_combo;
     win32::ip_address_edit launch_table_ip_address;
-    int ip_address_row_index = 0;
     std::function<void()> launch_table_edit_unbind;
 
     struct input_action_binding

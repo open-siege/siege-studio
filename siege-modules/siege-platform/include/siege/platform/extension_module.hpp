@@ -114,6 +114,8 @@ namespace siege::platform
 
     const fs_char* ip_connect_setting = FSL "";
     const fs_char* player_name_setting = FSL "";
+    const fs_char* listen_setting = FSL "";
+    const fs_char* dedicated_setting = FSL "";
     std::array<const fs_char*, 32> flags;
     std::array<const fs_char*, 32> int_settings;
     std::array<const fs_char*, 32> float_settings;

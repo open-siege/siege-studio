@@ -50,11 +50,6 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
 
     if (std::wstring_view(setting.name) == command_line_caps.ip_connect_setting)
     {
-      if (setting.value == L"0.0.0.0"sv)
-      {
-        continue;
-      }
-
       string_args.emplace_back(L"+connect");
       string_args.emplace_back(setting.value);
     }

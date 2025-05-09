@@ -13,24 +13,78 @@ using game_command_line_caps = siege::platform::game_command_line_caps;
 
 namespace siege::views
 {
+  constexpr auto pref_name = L"MULTIPLAYER_HOSTING_PREFERENCE";
+  constexpr static auto pref_options = std::array<std::wstring_view, 4>{ { L"Offline/Singleplayer", L"Client/Connect to Server", L"Listen/Host & Connect", L"Dedicated Server" } };
 
   void exe_view::populate_launch_table(const game_command_line_caps& caps)
   {
     auto& settings = controller.get_game_settings();
 
-    bool has_ip = caps.ip_connect_setting == nullptr || !std::wstring_view(caps.ip_connect_setting).empty();
+    bool has_ip = (caps.ip_connect_setting == nullptr || !std::wstring_view(caps.ip_connect_setting).empty());
+    bool has_listen = (caps.listen_setting == nullptr || !std::wstring_view(caps.listen_setting).empty());
+    bool has_dedicated = (caps.dedicated_setting == nullptr || !std::wstring_view(caps.dedicated_setting).empty());
 
-    if (has_ip && controller.has_zero_tier_extension())
+
+    std::vector<std::wstring_view> real_options;
+    real_options.reserve(4);
+    for (auto i = 0; i < pref_options.size(); ++i)
     {
-      win32::list_view_item column(L"ZERO_TIER_NETWORK_ID");
-      column.mask = column.mask | LVIF_PARAM | LVIF_GROUPID;
-      column.sub_items = {
-        settings.last_zero_tier_network_id.data()
-      };
-      column.iGroupId = 1;
-      column.lParam = (LPARAM)game_command_line_caps::env_setting;
+      if (i == 1 && !has_listen)
+      {
+        continue;
+      }
 
-      launch_table.InsertRow(std::move(column));
+      if (i == 2 && !has_listen)
+      {
+        continue;
+      }
+      if (i == 3 && !has_dedicated)
+      {
+        continue;
+      }
+      real_options.emplace_back(pref_options[i]);
+    }
+
+
+    auto has_networking = has_ip || has_listen || has_dedicated;
+
+    if (has_networking)
+    {
+      launch_settings.emplace_back(game_setting{
+        .setting_name = pref_name,
+        .type = game_command_line_caps::env_setting,
+        .value = std::wstring{ pref_options[1] },
+        .display_name = L"Hosting",
+        .group_id = 1,
+        .get_predefined_string = [real_options = std::move(real_options), results = std::vector<siege::platform::predefined_string>{}](auto name) mutable -> std::span<siege::platform::predefined_string> {
+          if (name == pref_name)
+          {
+            if (!results.empty())
+            {
+              return results;
+            }
+            for (auto& string : real_options)
+            {
+              results.emplace_back(siege::platform::predefined_string{
+                .label = string.data(),
+                .value = string.data() });
+            }
+            return results;
+          }
+
+          return std::span<siege::platform::predefined_string>{};
+        } });
+    }
+
+    if (has_networking && controller.has_zero_tier_extension())
+    {
+      launch_settings.emplace_back(game_setting{
+        .setting_name = L"ZERO_TIER_NETWORK_ID",
+        .type = game_command_line_caps::env_setting,
+        .value = std::wstring{ settings.last_zero_tier_network_id.data() },
+        .display_name = L"Zero Tier Network ID",
+        .group_id = 1,
+      });
 
       std::string_view zt_node_id = settings.last_zero_tier_node_id_and_private_key.data();
 
@@ -38,119 +92,240 @@ namespace siege::views
       {
         zt_node_id = zt_node_id.substr(0, zt_node_id.find(':'));
 
-        win32::list_view_item column(L"ZERO_TIER_PEER_ID");
-        column.mask = column.mask | LVIF_PARAM | LVIF_GROUPID;
-        column.sub_items = {
-          std::wstring(zt_node_id.begin(), zt_node_id.end())
-        };
-        column.iGroupId = 1;
-        column.lParam = (LPARAM)game_command_line_caps::computed_setting;
-
-        launch_table.InsertRow(std::move(column));
+        launch_settings.emplace_back(game_setting{
+          .setting_name = L"ZERO_TIER_PEER_ID",
+          .type = game_command_line_caps::computed_setting,
+          .value = std::wstring(zt_node_id.begin(), zt_node_id.end()),
+          .display_name = L"Zero Tier Node ID",
+          .group_id = 1 });
       }
     }
 
-    for (auto& value : caps.string_settings)
+    std::wstring_view dedicated_setting = caps.dedicated_setting ? caps.dedicated_setting : L"";
+    std::wstring_view listen_setting = caps.listen_setting ? caps.listen_setting : L"";
+
+    for (auto& setting : caps.string_settings)
     {
-      if (!value)
+      if (!setting)
       {
         break;
       }
 
       std::wstring_view player_name_setting = caps.player_name_setting ? caps.player_name_setting : L"";
 
-      if (player_name_setting == value)
+      if (!player_name_setting.empty() && setting == player_name_setting)
       {
-        win32::list_view_item column(L"Player Name");
-        column.mask = column.mask | LVIF_PARAM | LVIF_GROUPID;
-        column.sub_items = {
-          settings.last_player_name.data()
-        };
-        column.lParam = (LPARAM)game_command_line_caps::string_setting;
-        column.iGroupId = has_ip ? 1 : 2;
-
-        launch_table.InsertRow(std::move(column));
-
+        launch_settings.emplace_back(game_setting{
+          .setting_name = std::wstring(player_name_setting),
+          .type = game_command_line_caps::string_setting,
+          .value = settings.last_player_name.data(),
+          .display_name = L"Player Name",
+          .group_id = has_ip ? 1 : 2 });
         continue;
       }
 
       std::wstring_view ip_connect_setting = caps.ip_connect_setting ? caps.ip_connect_setting : L"";
 
-      if (ip_connect_setting == value)
+      if (!ip_connect_setting.empty() && setting == ip_connect_setting)
       {
-        win32::list_view_item column(L"Server IP Address");
-        column.mask = column.mask | LVIF_PARAM | LVIF_GROUPID;
-        column.sub_items = {
-          settings.last_ip_address.data()
-        };
-        column.lParam = (LPARAM)game_command_line_caps::string_setting;
-        column.iGroupId = 1;
-
-        ip_address_row_index = launch_table.InsertRow(std::move(column));
+        launch_settings.emplace_back(game_setting{
+          .setting_name = std::wstring(ip_connect_setting),
+          .type = game_command_line_caps::string_setting,
+          .value = settings.last_ip_address.data(),
+          .display_name = L"Server IP Address",
+          .group_id = 1 });
         continue;
       }
 
-      win32::list_view_item column(value);
-      column.mask = column.mask | LVIF_PARAM | LVIF_GROUPID;
-      column.sub_items = {
-        L""
-      };
-      column.iGroupId = 2;
-      column.lParam = (LPARAM)game_command_line_caps::string_setting;
+      // has to be checked after in case one of the predefined settings are the same as these two.
+      if (!dedicated_setting.empty() && setting == dedicated_setting)
+      {
+        dedicated_setting_type = game_command_line_caps::string_setting;
+        continue;
+      }
 
-      launch_table.InsertRow(std::move(column));
+      if (!listen_setting.empty() && setting == listen_setting)
+      {
+        listen_setting_type = game_command_line_caps::string_setting;
+        continue;
+      }
+
+      auto proc = controller.get_extension().get_predefined_string_command_line_settings_proc;
+
+      launch_settings.emplace_back(game_setting{
+        .setting_name = setting,
+        .type = game_command_line_caps::string_setting,
+        .value = L"",
+        .display_name = setting,
+        .group_id = 2 });
+
+      if (proc)
+      {
+        launch_settings.back().get_predefined_string = [proc](std::wstring_view name) {
+          auto result = proc(name.data());
+
+          auto size = 0;
+
+          auto* first = result;
+
+          do
+          {
+            if (!first)
+            {
+              break;
+            }
+            if (!first->label)
+            {
+              break;
+            }
+            size++;
+            first++;
+          } while (first->label);
+
+          return std::span(result, size);
+        };
+      }
     }
 
-    for (auto& value : caps.int_settings)
+
+    auto is_valid = [&](auto& setting, game_command_line_caps::type type) {
+      if (!dedicated_setting.empty() && setting == dedicated_setting)
+      {
+        dedicated_setting_type = type;
+        return false;
+      }
+
+      if (!listen_setting.empty() && setting == listen_setting)
+      {
+        listen_setting_type = type;
+        return false;
+      }
+
+      return true;
+    };
+
+    for (auto& setting : caps.int_settings)
     {
-      if (!value)
+      if (!setting)
       {
         break;
       }
 
-      win32::list_view_item column(value);
-      column.mask = column.mask | LVIF_PARAM | LVIF_GROUPID;
-      column.sub_items = {
-        L""
-      };
-      column.iGroupId = 2;
-      column.lParam = (LPARAM)game_command_line_caps::int_setting;
+      if (!is_valid(setting, game_command_line_caps::int_setting))
+      {
+        continue;
+      }
 
-      launch_table.InsertRow(std::move(column));
+      launch_settings.emplace_back(game_setting{
+        .setting_name = setting,
+        .type = game_command_line_caps::int_setting,
+        .value = L"",
+        .display_name = setting,
+        .group_id = 2 });
+
+      auto proc = controller.get_extension().get_predefined_int_command_line_settings_proc;
+
+      if (proc)
+      {
+        launch_settings.back().get_predefined_int = [proc](std::wstring_view name) {
+          auto result = proc(name.data());
+
+          auto size = 0;
+
+          auto* first = result;
+
+          do
+          {
+            if (!first->label)
+            {
+              break;
+            }
+            size++;
+            first++;
+          } while (first->label);
+
+          return std::span(result, size);
+        };
+      }
     }
 
-    for (auto& value : caps.float_settings)
+    for (auto& setting : caps.float_settings)
     {
-      if (!value)
+      if (!setting)
       {
         break;
       }
 
-      win32::list_view_item column(value);
-      column.mask = column.mask | LVIF_PARAM | LVIF_GROUPID;
-      column.sub_items = {
-        L""
-      };
-      column.iGroupId = 2;
-      column.lParam = (LPARAM)game_command_line_caps::float_setting;
+      if (!is_valid(setting, game_command_line_caps::float_setting))
+      {
+        continue;
+      }
 
-      launch_table.InsertRow(std::move(column));
+      launch_settings.emplace_back(game_setting{
+        .setting_name = setting,
+        .type = game_command_line_caps::float_setting,
+        .value = L"",
+        .display_name = setting,
+        .group_id = 2 });
     }
 
-    for (auto& value : caps.flags)
+    for (auto& setting : caps.flags)
     {
-      if (!value)
+      if (!setting)
       {
         break;
       }
 
-      win32::list_view_item column(value);
+      if (!is_valid(setting, game_command_line_caps::flag_setting))
+      {
+        continue;
+      }
+
+      launch_settings.emplace_back(game_setting{
+        .setting_name = setting,
+        .type = game_command_line_caps::flag_setting,
+        .value = L"",
+        .display_name = setting,
+        .group_id = 2 });
+    }
+
+    int setting_index = 0;
+    for (auto& setting : launch_settings)
+    {
+      std::shared_ptr<void> deferred(nullptr, [&](...) { setting_index++; });
+      if (setting.display_name.empty())
+      {
+        continue;
+      }
+
+      win32::list_view_item column(setting.display_name);
       column.mask = column.mask | LVIF_PARAM | LVIF_GROUPID;
-      column.sub_items = {
-        L""
-      };
-      column.iGroupId = 2;
-      column.lParam = (LPARAM)game_command_line_caps::flag_setting;
+      column.sub_items = { std::visit([](auto& item) -> std::wstring {
+        if constexpr (std::is_same_v<std::decay_t<decltype(item)>, std::wstring>)
+        {
+          return item;
+        }
+
+        if constexpr (std::is_same_v<std::decay_t<decltype(item)>, bool>)
+        {
+          return item ? L"Yes" : L"No";
+        }
+
+        if constexpr (std::is_same_v<std::decay_t<decltype(item)>, int>)
+        {
+          return std::to_wstring(item);
+        }
+
+        if constexpr (std::is_same_v<std::decay_t<decltype(item)>, float>)
+        {
+          return std::to_wstring(item);
+        }
+
+        return L"";
+      },
+        setting.value) };
+      column.lParam = (LPARAM)setting_index;
+      column.iGroupId = setting.group_id;
 
       launch_table.InsertRow(std::move(column));
     }
@@ -189,7 +364,7 @@ namespace siege::views
 
             ListView_GetItem(launch_table, &item);
 
-            auto control_type = (game_command_line_caps::type)item.lParam;
+            auto& setting = launch_settings.at((std::size_t)item.lParam);
 
             auto& extension = controller.get_extension();
 
@@ -198,63 +373,46 @@ namespace siege::views
             bool uses_combo = false;
 
             std::wstring temp;
-            if (control_type == game_command_line_caps::string_setting && extension.get_predefined_string_command_line_settings_proc)
+            if ((setting.type == game_command_line_caps::string_setting || setting.type == game_command_line_caps::env_setting) && setting.get_predefined_string)
             {
-              if (auto* values = extension.get_predefined_string_command_line_settings_proc(text.data()); values)
+              if (auto values = setting.get_predefined_string(setting.setting_name); !values.empty())
               {
                 ::SendMessageW(launch_table_combo, CB_RESETCONTENT, 0, 0);
 
-                auto* first = values;
-
-                do
+                for (auto& item : values)
                 {
-                  if (!first->label)
-                  {
-                    break;
-                  }
                   uses_combo = true;
-                  temp = first->label;
+                  temp = item.label;
                   ::COMBOBOXEXITEMW new_item{
                     .mask = CBEIF_LPARAM | CBEIF_TEXT,
                     .iItem = -1,
                     .pszText = temp.data(),
                     .cchTextMax = (int)temp.size(),
-                    .lParam = (LPARAM)first->value
+                    .lParam = (LPARAM)item.value
                   };
                   ::SendMessageW(launch_table_combo, CBEM_INSERTITEMW, 0, (LPARAM)&new_item);
-
-                  first++;
-                } while (first->label);
+                }
               }
             }
-            else if (control_type == game_command_line_caps::int_setting && extension.get_predefined_int_command_line_settings_proc)
+            else if (setting.type == game_command_line_caps::int_setting && setting.get_predefined_int)
             {
-              if (auto* values = extension.get_predefined_int_command_line_settings_proc(text.data()); values)
+              if (auto values = setting.get_predefined_int(text.data()); !values.empty())
               {
                 ::SendMessageW(launch_table_combo, CB_RESETCONTENT, 0, 0);
 
-                auto* first = values;
-
-                do
+                for (auto& item : values)
                 {
-                  if (!first->label)
-                  {
-                    break;
-                  }
                   uses_combo = true;
-                  temp = first->label;
+                  temp = item.label;
                   ::COMBOBOXEXITEMW new_item{
                     .mask = CBEIF_LPARAM | CBEIF_TEXT,
                     .iItem = -1,
                     .pszText = temp.data(),
                     .cchTextMax = (int)temp.size(),
-                    .lParam = (LPARAM)first->value,
+                    .lParam = (LPARAM)item.value
                   };
-
                   ::SendMessageW(launch_table_combo, CBEM_INSERTITEMW, 0, (LPARAM)&new_item);
-
-                  first++;
-                } while (first->label);
+                }
               }
             }
 
@@ -271,7 +429,7 @@ namespace siege::views
               launch_table_combo.SetWindowStyle(launch_table_combo.GetWindowStyle() | WS_VISIBLE);
               ::SendMessageW(launch_table_combo, CB_SHOWDROPDOWN, TRUE, 0);
 
-              launch_table_edit_unbind = launch_table_combo.bind_cbn_sel_change([this, info, control_type](auto, const auto&) {
+              launch_table_edit_unbind = launch_table_combo.bind_cbn_sel_change([this, info, control_type = setting.type](auto, const auto&) {
                 std::fill_n(text.data(), text.size(), L'\0');
                 ::COMBOBOXEXITEMW new_item{
                   .mask = CBEIF_LPARAM | CBEIF_TEXT,
@@ -282,7 +440,7 @@ namespace siege::views
 
                 if (::SendMessageW(launch_table_combo, CBEM_GETITEMW, 0, (LPARAM)&new_item))
                 {
-                  if (control_type == game_command_line_caps::string_setting)
+                  if (control_type == game_command_line_caps::string_setting || control_type == game_command_line_caps::env_setting)
                   {
                     ListView_SetItemText(launch_table, info.iItem, info.iSubItem, (wchar_t*)new_item.lParam);
                   }
@@ -294,10 +452,13 @@ namespace siege::views
                 }
               });
             }
-            else if (control_type != game_command_line_caps::computed_setting)
+            else if (setting.type != game_command_line_caps::computed_setting)
             {
               launch_table_combo.SetWindowStyle(launch_table_combo.GetWindowStyle() & ~WS_VISIBLE);
-              if (info.iItem == ip_address_row_index)
+
+              // TODO I need to start moving these hard-coded strings
+              // into a central location for my sanity
+              if (setting.display_name == L"Server IP Address")
               {
                 launch_table_ip_address.SetWindowPos(result->second);
                 launch_table_ip_address.SetWindowPos(HWND_TOP);
@@ -491,48 +652,84 @@ namespace siege::views
 
         auto string_index = 0;
         auto env_index = 0;
+
+        bool should_connect = false;
+
         for (auto i = 0; i < launch_table.GetItemCount(); ++i)
         {
+          info.iItem = i;
+          ListView_GetItem(launch_table, &info);
+
+          if (!info.lParam)
+          {
+            launch_strings.emplace_back(std::array<std::wstring, 2>{ { L"", L"" } });
+            continue;
+          }
+
           std::wstring name(255, L'\0');
           std::wstring value(255, L'\0');
 
           ListView_GetItemText(launch_table, i, 0, name.data(), name.size());
           ListView_GetItemText(launch_table, i, 1, value.data(), value.size());
 
-          info.iItem = i;
-
-          ListView_GetItem(launch_table, &info);
+          auto& setting = launch_settings.at(info.lParam);
 
           name.resize(name.find(L'\0'));
           value.resize(value.find(L'\0'));
 
-          if (name == L"Player Name")
+          // TODO simplify this lookup and share the constants
+          if (setting.display_name == L"Player Name")
           {
             name = caps->player_name_setting;
             auto max_size = value.size() > settings.last_player_name.size() ? settings.last_player_name.size() : value.size();
             std::copy_n(value.data(), max_size, settings.last_player_name.data());
           }
-          else if (name == L"Server IP Address")
+          else if (setting.display_name == L"Server IP Address")
           {
             name = caps->ip_connect_setting;
             auto max_size = value.size() > settings.last_ip_address.size() ? settings.last_ip_address.size() : value.size();
             std::copy_n(value.data(), max_size, settings.last_ip_address.data());
           }
-          else if (name == L"ZERO_TIER_NETWORK_ID")
+          else if (setting.setting_name == L"ZERO_TIER_NETWORK_ID")
           {
             auto max_size = value.size() > settings.last_zero_tier_network_id.size() ? settings.last_zero_tier_network_id.size() : value.size();
             std::copy_n(value.data(), max_size, settings.last_zero_tier_network_id.data());
           }
 
-          launch_strings.emplace_back(std::array<std::wstring, 2>{ { std::move(name), std::move(value) } });
+          launch_strings.emplace_back(std::array<std::wstring, 2>{ { setting.setting_name, std::move(value) } });
 
-          // TODO handle other command input types
-          if (info.lParam == (LPARAM)game_command_line_caps::env_setting)
+          if (setting.setting_name == pref_name)
+          {
+            // constexpr static auto options = std::array<std::wstring_view, 4>{ { L"Offline/Singleplayer", L"Client/Connect to Server", L"Listen/Host & Connect", L"Dedicated Server" } };
+            should_connect = value == pref_options[1];// connect to server
+
+            // TODO there is a lot more computation needed here
+            if (value == pref_options[2])// listen
+            {
+              game_args->string_settings[string_index].name = caps->listen_setting;
+              game_args->string_settings[string_index++].value = L"0.0.0.0";
+            }
+            else if (value == pref_options[3])// dedicated
+            {
+              game_args->string_settings[string_index].name = caps->dedicated_setting;
+              game_args->string_settings[string_index++].value = L"1";
+            }
+            continue;
+          }
+
+          if (setting.display_name == L"Server IP Address" && !should_connect)
+          {
+            continue;
+          }
+
+          // TODO store the UI values inside of the setting and then populate the
+          // args with the setting and cover all the possible cases
+          if (setting.type == game_command_line_caps::env_setting)
           {
             game_args->environment_settings[env_index].name = launch_strings[i][0].c_str();
             game_args->environment_settings[env_index++].value = launch_strings[i][1].c_str();
           }
-          else
+          else if (setting.type != game_command_line_caps::computed_setting)
           {
             game_args->string_settings[string_index].name = launch_strings[i][0].c_str();
             game_args->string_settings[string_index++].value = launch_strings[i][1].c_str();

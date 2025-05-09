@@ -32,6 +32,9 @@ extern "C" {
 extern auto command_line_caps = game_command_line_caps{
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
+  .listen_setting = L"connect",
+  .dedicated_setting = L"dedicated",
+  .flags = { { L"dedicated" } },
   .int_settings = { { L"gl_mode" } },
   // fov
   .string_settings = { { L"name", L"connect", L"map", L"gl_driver" } }
@@ -138,7 +141,7 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   }
 
   bool enable_controller = save_bindings_to_config(*args, config);
-  
+
   if (enable_controller)
   {
     // engine bug - mouse needs to be enabled for the right analog stick to work
