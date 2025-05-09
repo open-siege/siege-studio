@@ -18,15 +18,16 @@ namespace siege::views
   {
     auto& settings = controller.get_game_settings();
 
-    bool has_ip = caps.ip_connect_setting != nullptr;
+    bool has_ip = caps.ip_connect_setting == nullptr || !std::wstring_view(caps.ip_connect_setting).empty();
 
     if (has_ip && controller.has_zero_tier_extension())
     {
       win32::list_view_item column(L"ZERO_TIER_NETWORK_ID");
-      column.mask = column.mask | LVIF_PARAM;
+      column.mask = column.mask | LVIF_PARAM | LVIF_GROUPID;
       column.sub_items = {
         settings.last_zero_tier_network_id.data()
       };
+      column.iGroupId = 1;
       column.lParam = (LPARAM)game_command_line_caps::env_setting;
 
       launch_table.InsertRow(std::move(column));
@@ -38,10 +39,11 @@ namespace siege::views
         zt_node_id = zt_node_id.substr(0, zt_node_id.find(':'));
 
         win32::list_view_item column(L"ZERO_TIER_PEER_ID");
-        column.mask = column.mask | LVIF_PARAM;
+        column.mask = column.mask | LVIF_PARAM | LVIF_GROUPID;
         column.sub_items = {
           std::wstring(zt_node_id.begin(), zt_node_id.end())
         };
+        column.iGroupId = 1;
         column.lParam = (LPARAM)game_command_line_caps::computed_setting;
 
         launch_table.InsertRow(std::move(column));
@@ -60,11 +62,12 @@ namespace siege::views
       if (player_name_setting == value)
       {
         win32::list_view_item column(L"Player Name");
-        column.mask = column.mask | LVIF_PARAM;
+        column.mask = column.mask | LVIF_PARAM | LVIF_GROUPID;
         column.sub_items = {
           settings.last_player_name.data()
         };
         column.lParam = (LPARAM)game_command_line_caps::string_setting;
+        column.iGroupId = has_ip ? 1 : 2;
 
         launch_table.InsertRow(std::move(column));
 
@@ -76,21 +79,23 @@ namespace siege::views
       if (ip_connect_setting == value)
       {
         win32::list_view_item column(L"Server IP Address");
-        column.mask = column.mask | LVIF_PARAM;
+        column.mask = column.mask | LVIF_PARAM | LVIF_GROUPID;
         column.sub_items = {
           settings.last_ip_address.data()
         };
         column.lParam = (LPARAM)game_command_line_caps::string_setting;
+        column.iGroupId = 1;
 
         ip_address_row_index = launch_table.InsertRow(std::move(column));
         continue;
       }
 
       win32::list_view_item column(value);
-      column.mask = column.mask | LVIF_PARAM;
+      column.mask = column.mask | LVIF_PARAM | LVIF_GROUPID;
       column.sub_items = {
         L""
       };
+      column.iGroupId = 2;
       column.lParam = (LPARAM)game_command_line_caps::string_setting;
 
       launch_table.InsertRow(std::move(column));
@@ -104,10 +109,11 @@ namespace siege::views
       }
 
       win32::list_view_item column(value);
-      column.mask = column.mask | LVIF_PARAM;
+      column.mask = column.mask | LVIF_PARAM | LVIF_GROUPID;
       column.sub_items = {
         L""
       };
+      column.iGroupId = 2;
       column.lParam = (LPARAM)game_command_line_caps::int_setting;
 
       launch_table.InsertRow(std::move(column));
@@ -121,10 +127,11 @@ namespace siege::views
       }
 
       win32::list_view_item column(value);
-      column.mask = column.mask | LVIF_PARAM;
+      column.mask = column.mask | LVIF_PARAM | LVIF_GROUPID;
       column.sub_items = {
         L""
       };
+      column.iGroupId = 2;
       column.lParam = (LPARAM)game_command_line_caps::float_setting;
 
       launch_table.InsertRow(std::move(column));
@@ -138,10 +145,11 @@ namespace siege::views
       }
 
       win32::list_view_item column(value);
-      column.mask = column.mask | LVIF_PARAM;
+      column.mask = column.mask | LVIF_PARAM | LVIF_GROUPID;
       column.sub_items = {
         L""
       };
+      column.iGroupId = 2;
       column.lParam = (LPARAM)game_command_line_caps::flag_setting;
 
       launch_table.InsertRow(std::move(column));

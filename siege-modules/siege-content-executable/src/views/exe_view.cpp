@@ -75,9 +75,21 @@ namespace siege::views
                                     .pszText = const_cast<wchar_t*>(L"Value"),
                                   });
 
+    launch_table.EnableGroupView(true);
+
+    launch_table.InsertGroup(-1, LVGROUP{
+                                   .pszHeader = const_cast<wchar_t*>(L"Multiplayer Options"),
+                                   .iGroupId = 1,
+                                   .state = LVGS_COLLAPSIBLE,
+                                 });
+    launch_table.InsertGroup(-1, LVGROUP{
+                                   .pszHeader = const_cast<wchar_t*>(L"Other Options"),
+                                   .iGroupId = 2,
+                                   .state = LVGS_COLLAPSIBLE,
+                                 });
+
     launch_table_edit = *win32::CreateWindowExW<win32::edit>({ .hwndParent = *this, .style = WS_CHILD });
     launch_table_combo = *win32::CreateWindowExW<win32::combo_box_ex>({ .hwndParent = *this, .cy = 300, .cx = 300, .style = WS_CHILD | CBS_DROPDOWNLIST });
-    //::SendMessageW(launch_table_combo, CBEM_SETUNICODEFORMAT, 1, 0);
 
     launch_table_ip_address = *win32::CreateWindowExW<win32::ip_address_edit>({ .hwndParent = *this, .cy = 100, .cx = 300, .style = WS_CHILD });
 
@@ -659,7 +671,7 @@ namespace siege::views
       }
 
       info_size = device_name.size();
-      
+
       if (auto real_size = ::GetRawInputDeviceInfoW(controllers[i].hDevice, RIDI_DEVICENAME, device_name.data(), &info_size); real_size <= 0)
       {
         continue;
