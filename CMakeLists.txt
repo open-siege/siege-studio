@@ -55,7 +55,7 @@ if (WIN32)
             list(APPEND EXT_TARGETS ${PROJECT_TARGETS}) 
         endforeach()
 
-        list(APPEND EXT_TARGETS siege-extension-input-filter-raw-input wsock32-on-zerotier zt-shared)
+        list(APPEND EXT_TARGETS siege-extension-input-filter-raw-input wsock32-on-zero-tier zt-shared)
 
         foreach(EXT_TARGET IN ITEMS ${EXT_TARGETS})
             get_target_property(TARGET_TYPE ${EXT_TARGET} TYPE)

@@ -821,7 +821,7 @@ namespace siege::views
       return false;
     }
     std::string extension_path = get_extension().GetModuleFileName<char>();
-    auto wsock_path = std::filesystem::path(extension_path).parent_path() / "wsock32-on-zerotier.dll";
+    auto wsock_path = std::filesystem::path(extension_path).parent_path() / "wsock32-on-zero-tier.dll";
     auto zt_path = std::filesystem::path(extension_path).parent_path() / "zt-shared.dll";
     std::error_code last_errorc;
     return std::filesystem::exists(wsock_path, last_errorc) && std::filesystem::exists(zt_path, last_errorc);
@@ -1018,7 +1018,7 @@ namespace siege::views
           return item.name != nullptr && std::wstring_view(item.name) == L"ZERO_TIER_NETWORK_ID" && item.value != nullptr && item.value[0] != '\0';
         }))
     {
-      auto wsock_path = std::filesystem::path(extension_path).parent_path() / "wsock32-on-zerotier.dll";
+      auto wsock_path = std::filesystem::path(extension_path).parent_path() / "wsock32-on-zero-tier.dll";
 
       real_path = link_to_wsock_zero_tier(loaded_path, wsock_path).value_or(loaded_path);
 
