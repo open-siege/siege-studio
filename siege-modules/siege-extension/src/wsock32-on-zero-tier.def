@@ -23,4 +23,7 @@ EXPORTS
 	WSAGetLastError @111=wsock32.#111
 	siege_WSAStartup @115
 	siege_WSACleanup @116
+	WSASetBlockingHook @109=wsock32.#109
+	WSAUnhookBlockingHook @110=wsock32.#110
+	WSACancelBlockingCall @113=wsock32.#113
 	siege___WSAFDIsSet @151
