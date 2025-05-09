@@ -872,12 +872,32 @@ namespace siege::views
 
     static std::map<std::filesystem::path, std::shared_ptr<void>> deferred_deletes;
 
-    auto new_path = exe_path;
-    new_path.replace_filename(exe_path.stem().wstring() + L"-zero-tier" + exe_path.extension().wstring());
-
-    if (!::CopyFileW(exe_path.c_str(), new_path.c_str(), FALSE))
+    bool skip_copy = false;
+    if (exe_path.stem().wstring().ends_with(L"-zero-tier"))
     {
-      return std::nullopt;
+      auto temp = exe_path;
+      auto stem = temp.stem().wstring();
+      temp.replace_filename(stem.erase(stem.rfind(L"-zero-tier")) + exe_path.extension().wstring());
+      std::error_code last_errorc;
+      if (std::filesystem::exists(temp, last_errorc))
+      {
+        skip_copy = true;
+      }
+    }
+    else
+    {
+    }
+
+    auto new_path = exe_path;
+
+    if (!skip_copy)
+    {
+      new_path.replace_filename(exe_path.stem().wstring() + L"-zero-tier" + exe_path.extension().wstring());
+
+      if (!::CopyFileW(exe_path.c_str(), new_path.c_str(), FALSE))
+      {
+        return std::nullopt;
+      }
     }
 
     if (!deferred_deletes.contains(new_path))
