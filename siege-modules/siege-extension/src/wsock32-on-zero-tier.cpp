@@ -7,7 +7,12 @@
 #include <set>
 #include <array>
 #include <vector>
+
+#ifdef _DEBUG
 #include <fstream>
+#else
+#include <sstream>
+#endif
 
 std::set<int>& get_zero_tier_handles()
 {
@@ -31,10 +36,14 @@ HMODULE get_ztlib()
   return ztlib;
 }
 
-std::ofstream& get_log()
+std::ostream& get_log()
 {
+#ifdef _DEBUG
   static std::ofstream file_log("networking.log", std::ios::trunc);
-
+#else
+  static std::stringstream file_log;
+  file_log.str("");
+#endif
   return file_log;
 }
 
@@ -118,7 +127,7 @@ std::optional<in_addr> get_zero_tier_fallback_broadcast_ip_v4()
       return result;
     }
 
-    get_log() << "No zero tier network ID\n";
+    get_log() << "No zero tier fallback broadcast IP\n";
     return std::nullopt;
   }();
 

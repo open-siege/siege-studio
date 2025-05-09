@@ -417,17 +417,23 @@ namespace siege::views
 
             if (item && item->lParam)
             {
-              auto virtual_key = bound_actions[item->lParam].vkey;
-              auto context = bound_actions[item->lParam].context;
-              auto action_index = bound_actions[item->lParam].action_index;
+              try
+              {
+                auto virtual_key = bound_actions.at(item->lParam).vkey;
+                auto context = bound_actions[item->lParam].context;
+                auto action_index = bound_actions[item->lParam].action_index;
 
-              auto& action = actions[action_index];
+                auto& action = actions[action_index];
 
-              auto hardware_index = hardware_index_for_controller_vkey(std::span<RAWINPUTDEVICELIST>(controllers.data(), size), 0, virtual_key);
-              game_args->action_bindings[binding_index].vkey = virtual_key;
-              game_args->action_bindings[binding_index].action_name = action.action_name;
-              game_args->action_bindings[binding_index].context = hardware_index.first;
-              game_args->action_bindings[binding_index++].hardware_index = hardware_index.second;
+                auto hardware_index = hardware_index_for_controller_vkey(std::span<RAWINPUTDEVICELIST>(controllers.data(), size), 0, virtual_key);
+                game_args->action_bindings[binding_index].vkey = virtual_key;
+                game_args->action_bindings[binding_index].action_name = action.action_name;
+                game_args->action_bindings[binding_index].context = hardware_index.first;
+                game_args->action_bindings[binding_index++].hardware_index = hardware_index.second;
+              }
+              catch (...)
+              {
+              }
             }
           }
         }

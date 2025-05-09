@@ -831,12 +831,10 @@ namespace siege::views
   using format_command_line = const wchar_t**(const siege::platform::game_command_line_args*, std::uint32_t* new_size);
   bool allow_input_filtering = false;// TODO There are still some issues with id Tech 3 games that should be fixed.
 
-  std::optional<std::filesystem::path> link_to_wsock_zero_tier(std::filesystem::path exe_path, std::filesystem::path wsock_path)
+  std::optional<std::filesystem::path> link_to_wsock_zero_tier(std::filesystem::path exe_path)
   {
     struct handler
     {
-      std::string wsock_path;
-
       static BOOL CALLBACK byway_callback(PVOID pContext, PCSTR pszFile, LPCSTR* ppszOutFile)
       {
         return TRUE;
@@ -844,11 +842,13 @@ namespace siege::views
 
       static BOOL CALLBACK file_callback(PVOID context, LPCSTR pszOrigFile, LPCSTR file, LPCSTR* ppszOutFile)
       {
-        handler* self = (handler*)context;
-
         if (file && (std::string_view(file) == "WSOCK32.dll" || std::string_view(file) == "WSOCK32.DLL" || std::string_view(file) == "wsock32.dll"))
         {
-          *ppszOutFile = self->wsock_path.c_str();
+          *ppszOutFile = "wsock32-on-zero-tier.dll";
+        }
+        else if (file && (std::string_view(file) == "WS2_32.dll" || std::string_view(file) == "WS2_32.DLL" || std::string_view(file) == "ws2_32.dll"))
+        {
+          *ppszOutFile = "ws2_32-on-zero-tier.dll";
         }
         else
         {
@@ -887,7 +887,7 @@ namespace siege::views
 
     try
     {
-      handler handler{ .wsock_path = wsock_path.filename().string() };
+      handler handler{};
       auto exe_file = win32::file{ new_path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL };
 
       auto handle = exe_file.get();
@@ -1018,9 +1018,7 @@ namespace siege::views
           return item.name != nullptr && std::wstring_view(item.name) == L"ZERO_TIER_NETWORK_ID" && item.value != nullptr && item.value[0] != '\0';
         }))
     {
-      auto wsock_path = std::filesystem::path(extension_path).parent_path() / "wsock32-on-zero-tier.dll";
-
-      real_path = link_to_wsock_zero_tier(loaded_path, wsock_path).value_or(loaded_path);
+      real_path = link_to_wsock_zero_tier(loaded_path).value_or(loaded_path);
 
       auto search_path = std::filesystem::path(extension_path).parent_path().wstring();
 
