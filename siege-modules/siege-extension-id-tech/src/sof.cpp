@@ -34,8 +34,7 @@ extern auto command_line_caps = game_command_line_caps{
   .player_name_setting = L"name",
   .listen_setting = L"connect",
   .dedicated_setting = L"dedicated",
-  .flags = { { L"dedicated" } },
-  .int_settings = { { L"gl_mode" } },
+  .int_settings = { { L"dedicated", L"gl_mode" } },
   // fov
   .string_settings = { { L"name", L"connect", L"map", L"gl_driver" } }
   // skin

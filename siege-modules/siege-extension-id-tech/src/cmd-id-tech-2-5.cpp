@@ -31,9 +31,25 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
   static std::vector<std::wstring> string_args;
   string_args.clear();
 
+  // Should always be first or else hosting won't work
+  auto connect_iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) {
+    return setting.name && setting.value && setting.value[0] != '\0' && std::wstring_view(setting.name) == command_line_caps.ip_connect_setting;
+  });
+
+  if (connect_iter != args->string_settings.end())
+  {
+    string_args.emplace_back(L"+connect");
+    string_args.emplace_back(connect_iter->value);
+  }
+
   for (auto& setting : args->string_settings)
   {
     if (!setting.name)
+    {
+      continue;
+    }
+
+    if (std::wstring_view(setting.name) == command_line_caps.ip_connect_setting)
     {
       continue;
     }
@@ -48,12 +64,7 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
       continue;
     }
 
-    if (std::wstring_view(setting.name) == command_line_caps.ip_connect_setting)
-    {
-      string_args.emplace_back(L"+connect");
-      string_args.emplace_back(setting.value);
-    }
-    else if (std::wstring_view(setting.name) == L"map")
+    if (std::wstring_view(setting.name) == L"map")
     {
       string_args.emplace_back(L"+map");
       string_args.emplace_back(setting.value);
@@ -68,6 +79,24 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
       string_args.emplace_back(L"+set");
       string_args.emplace_back(setting.name);
       string_args.emplace_back(setting.value);
+    }
+  }
+
+  for (auto& setting : args->int_settings)
+  {
+    if (!setting.name)
+    {
+      continue;
+    }
+
+    try
+    {
+      string_args.emplace_back(L"+set");
+      string_args.emplace_back(setting.name);
+      string_args.emplace_back(std::to_wstring(setting.value));
+    }
+    catch (...)
+    {
     }
   }
 

@@ -13,8 +13,90 @@ using game_command_line_caps = siege::platform::game_command_line_caps;
 
 namespace siege::views
 {
-  constexpr auto pref_name = L"MULTIPLAYER_HOSTING_PREFERENCE";
+  constexpr auto hosting_pref_name = L"MULTIPLAYER_HOSTING_PREFERENCE";
   constexpr static auto pref_options = std::array<std::wstring_view, 4>{ { L"Offline/Singleplayer", L"Client/Connect to Server", L"Listen/Host & Connect", L"Dedicated Server" } };
+
+  auto convert_to_string = [](auto& item) -> std::wstring {
+    if constexpr (std::is_same_v<std::decay_t<decltype(item)>, bool>)
+    {
+      return item ? L"Yes" : L"No";
+    }
+
+    if constexpr (std::is_same_v<std::decay_t<decltype(item)>, int>)
+    {
+      return std::to_wstring(item);
+    }
+
+    if constexpr (std::is_same_v<std::decay_t<decltype(item)>, float>)
+    {
+      return std::to_wstring(item);
+    }
+
+    if constexpr (std::is_same_v<std::decay_t<decltype(item)>, std::wstring>)
+    {
+      return item;
+    }
+
+    return L"";
+  };
+
+  auto enable_setting = [](game_setting& setting) {
+    switch (setting.type)
+    {
+    case game_command_line_caps::env_setting:
+      [[fallthrough]];
+    case game_command_line_caps::string_setting: {
+      setting.value = L"0.0.0.0";
+      break;
+    }
+    case game_command_line_caps::int_setting: {
+      setting.value = 1;
+      break;
+    }
+    case game_command_line_caps::float_setting: {
+      setting.value = 1.0f;
+      break;
+    }
+    case game_command_line_caps::flag_setting: {
+      setting.value = true;
+      break;
+    }
+    case game_command_line_caps::computed_setting:
+      [[fallthrough]];
+    case game_command_line_caps::unknown: {
+      break;
+    }
+    }
+  };
+
+  auto disable_setting = [](game_setting& setting) {
+    switch (setting.type)
+    {
+    case game_command_line_caps::env_setting:
+      [[fallthrough]];
+    case game_command_line_caps::string_setting: {
+      setting.value = L"";
+      break;
+    }
+    case game_command_line_caps::int_setting: {
+      setting.value = 0;
+      break;
+    }
+    case game_command_line_caps::float_setting: {
+      setting.value = 0.0f;
+      break;
+    }
+    case game_command_line_caps::flag_setting: {
+      setting.value = false;
+      break;
+    }
+    case game_command_line_caps::computed_setting:
+      [[fallthrough]];
+    case game_command_line_caps::unknown: {
+      break;
+    }
+    }
+  };
 
   void exe_view::populate_launch_table(const game_command_line_caps& caps)
   {
@@ -51,13 +133,13 @@ namespace siege::views
     if (has_networking)
     {
       launch_settings.emplace_back(game_setting{
-        .setting_name = pref_name,
+        .setting_name = hosting_pref_name,
         .type = game_command_line_caps::env_setting,
         .value = std::wstring{ pref_options[1] },
         .display_name = L"Hosting",
         .group_id = 1,
         .get_predefined_string = [real_options = std::move(real_options), results = std::vector<siege::platform::predefined_string>{}](auto name) mutable -> std::span<siege::platform::predefined_string> {
-          if (name == pref_name)
+          if (name == hosting_pref_name)
           {
             if (!results.empty())
             {
@@ -134,6 +216,11 @@ namespace siege::views
           .value = settings.last_ip_address.data(),
           .display_name = L"Server IP Address",
           .group_id = 1 });
+
+        if (!listen_setting.empty() && setting == listen_setting)
+        {
+          listen_setting_type = game_command_line_caps::string_setting;
+        }
         continue;
       }
 
@@ -300,30 +387,7 @@ namespace siege::views
 
       win32::list_view_item column(setting.display_name);
       column.mask = column.mask | LVIF_PARAM | LVIF_GROUPID;
-      column.sub_items = { std::visit([](auto& item) -> std::wstring {
-        if constexpr (std::is_same_v<std::decay_t<decltype(item)>, std::wstring>)
-        {
-          return item;
-        }
-
-        if constexpr (std::is_same_v<std::decay_t<decltype(item)>, bool>)
-        {
-          return item ? L"Yes" : L"No";
-        }
-
-        if constexpr (std::is_same_v<std::decay_t<decltype(item)>, int>)
-        {
-          return std::to_wstring(item);
-        }
-
-        if constexpr (std::is_same_v<std::decay_t<decltype(item)>, float>)
-        {
-          return std::to_wstring(item);
-        }
-
-        return L"";
-      },
-        setting.value) };
+      column.sub_items = { std::visit(convert_to_string, setting.value) };
       column.lParam = (LPARAM)setting_index;
       column.iGroupId = setting.group_id;
 
@@ -638,105 +702,238 @@ namespace siege::views
           }
         }
 
-        std::vector<std::array<std::wstring, 2>> launch_strings;
-        launch_strings.reserve(launch_table.GetItemCount());
 
         auto& extension = controller.get_extension();
         auto* caps = extension.caps;
-
-        siege::platform::persistent_game_settings settings{};
 
         ::LVITEMW info{
           .mask = LVIF_PARAM
         };
 
-        auto string_index = 0;
-        auto env_index = 0;
-
-        bool should_connect = false;
+        auto final_launch_settings = launch_settings;
 
         for (auto i = 0; i < launch_table.GetItemCount(); ++i)
         {
-          info.iItem = i;
-          ListView_GetItem(launch_table, &info);
-
-          if (!info.lParam)
+          try
           {
-            launch_strings.emplace_back(std::array<std::wstring, 2>{ { L"", L"" } });
-            continue;
-          }
+            info.iItem = i;
+            ListView_GetItem(launch_table, &info);
 
-          std::wstring name(255, L'\0');
-          std::wstring value(255, L'\0');
 
-          ListView_GetItemText(launch_table, i, 0, name.data(), name.size());
-          ListView_GetItemText(launch_table, i, 1, value.data(), value.size());
-
-          auto& setting = launch_settings.at(info.lParam);
-
-          name.resize(name.find(L'\0'));
-          value.resize(value.find(L'\0'));
-
-          // TODO simplify this lookup and share the constants
-          if (setting.display_name == L"Player Name")
-          {
-            name = caps->player_name_setting;
-            auto max_size = value.size() > settings.last_player_name.size() ? settings.last_player_name.size() : value.size();
-            std::copy_n(value.data(), max_size, settings.last_player_name.data());
-          }
-          else if (setting.display_name == L"Server IP Address")
-          {
-            name = caps->ip_connect_setting;
-            auto max_size = value.size() > settings.last_ip_address.size() ? settings.last_ip_address.size() : value.size();
-            std::copy_n(value.data(), max_size, settings.last_ip_address.data());
-          }
-          else if (setting.setting_name == L"ZERO_TIER_NETWORK_ID")
-          {
-            auto max_size = value.size() > settings.last_zero_tier_network_id.size() ? settings.last_zero_tier_network_id.size() : value.size();
-            std::copy_n(value.data(), max_size, settings.last_zero_tier_network_id.data());
-          }
-
-          launch_strings.emplace_back(std::array<std::wstring, 2>{ { setting.setting_name, std::move(value) } });
-
-          if (setting.setting_name == pref_name)
-          {
-            // constexpr static auto options = std::array<std::wstring_view, 4>{ { L"Offline/Singleplayer", L"Client/Connect to Server", L"Listen/Host & Connect", L"Dedicated Server" } };
-            should_connect = value == pref_options[1];// connect to server
-
-            // TODO there is a lot more computation needed here
-            if (value == pref_options[2])// listen
+            if (!info.lParam)
             {
-              game_args->string_settings[string_index].name = caps->listen_setting;
-              game_args->string_settings[string_index++].value = L"0.0.0.0";
+              continue;
             }
-            else if (value == pref_options[3])// dedicated
+
+            std::wstring value(255, L'\0');
+            ListView_GetItemText(launch_table, i, 1, value.data(), value.size());
+            value.resize(value.find(L'\0'));
+
+            auto& setting = final_launch_settings.at(info.lParam);
+
+            switch (setting.type)
             {
-              game_args->string_settings[string_index].name = caps->dedicated_setting;
-              game_args->string_settings[string_index++].value = L"1";
+            case game_command_line_caps::env_setting: {
+              setting.value = value;
+              break;
             }
-            continue;
+            case game_command_line_caps::string_setting: {
+              setting.value = value;
+              break;
+            }
+            case game_command_line_caps::int_setting: {
+              setting.value = std::stoi(value);
+              break;
+            }
+            case game_command_line_caps::float_setting: {
+              setting.value = std::stof(value);
+              break;
+            }
+            case game_command_line_caps::flag_setting: {
+              setting.value = value == L"Enabled";
+              break;
+            }
+            case game_command_line_caps::computed_setting:
+              [[fallthrough]];
+            case game_command_line_caps::unknown: {
+              break;
+            }
+            }
           }
-
-          if (setting.display_name == L"Server IP Address" && !should_connect)
+          catch (...)
           {
-            continue;
-          }
-
-          // TODO store the UI values inside of the setting and then populate the
-          // args with the setting and cover all the possible cases
-          if (setting.type == game_command_line_caps::env_setting)
-          {
-            game_args->environment_settings[env_index].name = launch_strings[i][0].c_str();
-            game_args->environment_settings[env_index++].value = launch_strings[i][1].c_str();
-          }
-          else if (setting.type != game_command_line_caps::computed_setting)
-          {
-            game_args->string_settings[string_index].name = launch_strings[i][0].c_str();
-            game_args->string_settings[string_index++].value = launch_strings[i][1].c_str();
           }
         }
 
+        final_launch_settings.erase(final_launch_settings.begin());
+
+        siege::platform::persistent_game_settings settings{};
+
+        std::wstring_view player_name_setting = caps->player_name_setting ? caps->player_name_setting : L"";
+        std::wstring_view ip_setting = caps->ip_connect_setting ? caps->ip_connect_setting : L"";
+        constexpr static std::wstring_view zt_network_id = L"ZERO_TIER_NETWORK_ID";
+
+        auto copy_to_array = [](auto& raw_value, auto& array) {
+          auto value = std::visit(convert_to_string, raw_value);
+          auto max_size = value.size() > array.size() ? array.size() : value.size();
+          std::copy_n(value.data(), max_size, array.data());
+        };
+
+        if (auto setting_iter = std::find_if(final_launch_settings.begin(), final_launch_settings.end(), [&](game_setting& setting) {
+              return !player_name_setting.empty() && setting.setting_name == player_name_setting;
+            });
+          setting_iter != final_launch_settings.end())
+        {
+          copy_to_array(setting_iter->value, settings.last_player_name);
+        }
+
+        if (auto setting_iter = std::find_if(final_launch_settings.begin(), final_launch_settings.end(), [&](game_setting& setting) {
+              return !ip_setting.empty() && setting.setting_name == ip_setting;
+            });
+          setting_iter != final_launch_settings.end())
+        {
+          copy_to_array(setting_iter->value, settings.last_ip_address);
+        }
+
+        if (auto setting_iter = std::find_if(final_launch_settings.begin(), final_launch_settings.end(), [&](game_setting& setting) {
+              return setting.setting_name == zt_network_id;
+            });
+          setting_iter != final_launch_settings.end())
+        {
+          copy_to_array(setting_iter->value, settings.last_zero_tier_network_id);
+        }
         controller.set_game_settings(settings);
+
+
+        if (auto setting_iter = std::find_if(final_launch_settings.begin(), final_launch_settings.end(), [&](game_setting& setting) {
+              return setting.setting_name == hosting_pref_name;
+            });
+          setting_iter != final_launch_settings.end())
+        {
+          auto value = std::visit(convert_to_string, setting_iter->value);
+
+          if (caps->ip_connect_setting)
+          {
+            auto connect_setting = std::find_if(final_launch_settings.begin(), final_launch_settings.end(), [&](game_setting& setting) {
+              return setting.type == game_command_line_caps::string_setting && setting.setting_name == caps->ip_connect_setting;
+            });
+
+            auto should_connect = value == pref_options[1];// connect to server
+
+            if (connect_setting != final_launch_settings.end() && !should_connect)
+            {
+              final_launch_settings.erase(connect_setting);
+            }
+          }
+
+          if (listen_setting_type && caps->listen_setting)
+          {
+            auto listen_setting = std::find_if(final_launch_settings.begin(), final_launch_settings.end(), [&](game_setting& setting) {
+              return setting.setting_name == caps->listen_setting;
+            });
+
+            bool enabled = value == pref_options[2];
+
+            if (listen_setting != final_launch_settings.end())
+            {
+              if (enabled)
+              {
+                enable_setting(*listen_setting);
+              }
+            }
+            else
+            {
+              auto& back = final_launch_settings.emplace_back();
+              back.setting_name = caps->listen_setting;
+              back.type = *listen_setting_type;
+              enabled ? enable_setting(back) : disable_setting(back);
+            }
+          }
+
+          if (dedicated_setting_type && caps->dedicated_setting)// dedicated
+          {
+            auto dedicated_setting = std::find_if(final_launch_settings.begin(), final_launch_settings.end(), [&](game_setting& setting) {
+              return setting.setting_name == caps->dedicated_setting;
+            });
+
+            auto enabled = value == pref_options[3];
+
+            if (dedicated_setting != final_launch_settings.end())
+            {
+              enabled ? enable_setting(*dedicated_setting) : disable_setting(*dedicated_setting);
+            }
+            else
+            {
+              auto& back = final_launch_settings.emplace_back();
+              back.setting_name = caps->dedicated_setting;
+              back.type = *dedicated_setting_type;
+              enabled ? enable_setting(back) : disable_setting(back);
+            }
+          }
+        }
+
+        auto string_index = 0;
+        auto env_index = 0;
+        auto int_index = 0;
+        auto float_index = 0;
+        auto flag_index = 0;
+
+        for (auto& setting : final_launch_settings)
+        {
+          try
+          {
+            switch (setting.type)
+            {
+            case game_command_line_caps::env_setting: {
+              if (auto* value = std::get_if<std::wstring>(&setting.value); value)
+              {
+                game_args->environment_settings.at(env_index).name = setting.setting_name.c_str();
+                game_args->environment_settings[env_index++].value = value->c_str();
+              }
+              break;
+            }
+            case game_command_line_caps::string_setting: {
+              if (auto* value = std::get_if<std::wstring>(&setting.value); value)
+              {
+                game_args->string_settings.at(string_index).name = setting.setting_name.c_str();
+                game_args->string_settings[string_index++].value = value->c_str();
+              }
+              break;
+            }
+            case game_command_line_caps::int_setting: {
+              if (auto* value = std::get_if<int>(&setting.value); value)
+              {
+                game_args->int_settings.at(int_index).name = setting.setting_name.c_str();
+                game_args->int_settings[int_index++].value = *value;
+              }
+              break;
+            }
+            case game_command_line_caps::float_setting: {
+              if (auto* value = std::get_if<float>(&setting.value); value)
+              {
+                game_args->float_settings.at(float_index).name = setting.setting_name.c_str();
+                game_args->float_settings[float_index++].value = *value;
+              }
+              break;
+            }
+            case game_command_line_caps::flag_setting: {
+              if (auto* value = std::get_if<bool>(&setting.value); value && *value)
+              {
+                game_args->flags.at(flag_index++) = setting.setting_name.c_str();
+              }
+              break;
+            }
+            case game_command_line_caps::computed_setting:
+              [[fallthrough]];
+            case game_command_line_caps::unknown: {
+              break;
+            }
+            }
+          }
+          catch (...)
+          {
+          }
+        }
 
         input_injector_args args{
           .args = std::move(game_args),
