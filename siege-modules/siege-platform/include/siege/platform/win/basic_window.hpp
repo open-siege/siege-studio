@@ -2,7 +2,7 @@
 #define BASIC_WINDOW_HPP
 #include <siege/platform/win/window.hpp>
 
-namespace siege::views
+namespace win32
 {
   struct default_window : win32::window_ref
   {

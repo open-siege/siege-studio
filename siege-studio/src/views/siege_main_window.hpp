@@ -10,10 +10,10 @@
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/layout.hpp>
 #include <siege/platform/win/dialog.hpp>
+#include <siege/platform/win/basic_window.hpp>
 #include "views/preferences_view.hpp"
 #include "views/about_view.hpp"
 #include "views/default_view.hpp"
-#include "views/basic_window.hpp"
 #include <map>
 #include <spanstream>
 
@@ -22,7 +22,7 @@ namespace siege::views
   // TODO update tree view to support multiple levels of navigation
   // TODO add filename filter for directory listing
   // TODO add category and extension filter for directory listing
-  struct siege_main_window final : basic_window<siege_main_window>
+  struct siege_main_window final : win32::basic_window<siege_main_window>
     , win32::menu::notifications
   {
     win32::tree_view dir_list;

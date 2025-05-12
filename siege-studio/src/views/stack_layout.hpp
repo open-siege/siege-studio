@@ -1,11 +1,11 @@
 #ifndef STACK_LAYOUT_HPP
 #define STACK_LAYOUT_HPP
 
-#include "basic_window.hpp"
+#include <siege/platform/win/basic_window.hpp>
 
 namespace siege::views
 {
-  struct stack_layout final : basic_window<stack_layout>
+  struct stack_layout final : win32::basic_window<stack_layout>
   {
     std::vector<HWND> children;
 
