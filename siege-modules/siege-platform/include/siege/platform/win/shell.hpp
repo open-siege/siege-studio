@@ -11,7 +11,7 @@
 
 namespace win32
 {
-  void launch_shell_process(const std::filesystem::path& path)
+  inline void launch_shell_process(const std::filesystem::path& path)
   {
     auto desktop = ::GetDesktopWindow();
 
@@ -36,7 +36,7 @@ namespace win32
       ::ShellExecuteExW(&info);
     }
   }
-}
+}// namespace win32
 
 namespace win32::com
 {
@@ -116,7 +116,7 @@ namespace win32::com
     }
   };
 
-  std::expected<FileOpenDialogEx, HRESULT> CreateFileOpenDialog()
+  inline std::expected<FileOpenDialogEx, HRESULT> CreateFileOpenDialog()
   {
     FileOpenDialogEx pFileOpen;
 
@@ -130,7 +130,7 @@ namespace win32::com
     return pFileOpen;
   }
 
-  std::expected<FileSaveDialogEx, HRESULT> CreateFileSaveDialog()
+  inline std::expected<FileSaveDialogEx, HRESULT> CreateFileSaveDialog()
   {
     FileSaveDialogEx pFileOpen;
 

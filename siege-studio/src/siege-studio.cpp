@@ -9,22 +9,19 @@
 #include <bit>
 #include <variant>
 #include <functional>
-#include <iostream>
+#include <fstream>
 #include <filesystem>
 #undef NDEBUG
 #include <cassert>
 
+
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/win/window_impl.hpp>
 #include <siege/platform/shared.hpp>
+#include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/capabilities.hpp>
 #include <commctrl.h>
 
-#include "views/siege_main_window.hpp"
-#include "views/preferences_view.hpp"
-#include "views/about_view.hpp"
-#include "views/default_view.hpp"
-#include "views/stack_layout.hpp"
 
 extern "C" __declspec(dllexport) std::uint32_t DisableSiegeExtensionModule = -1;
 constexpr static std::wstring_view app_title = L"Siege Studio";
@@ -64,6 +61,8 @@ BOOL __stdcall extract_embedded_dlls(HMODULE module,
 
   return TRUE;
 }
+
+ATOM register_windows(win32::window_module_ref this_module);
 
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 {
@@ -110,19 +109,10 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
     output.write((const char*)bytes, size);
   });
 
-  siege::views::stack_layout::register_class(this_module);
-  auto main_atom = siege::views::siege_main_window::register_class(this_module);
-  win32::window_meta_class<siege::views::default_view> def_info{};
-  def_info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
-  def_info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-  def_info.hIcon = (HICON)::LoadImageW(this_module, L"AppIcon", IMAGE_ICON, 0, 0, 0);
-  this_module.RegisterClassExW(def_info);
-
-  win32::window_meta_class<siege::views::preferences_view> pref_info{};
-  pref_info.hCursor = LoadCursorW(hInstance, IDC_ARROW);
-  pref_info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-  pref_info.hIcon = (HICON)::LoadImageW(this_module, L"AppIcon", IMAGE_ICON, 0, 0, 0);
-  this_module.RegisterClassExW(pref_info);
+  auto main_atom = register_windows(win32::window_module_ref(hInstance));
+  if (!main_atom) {
+    return -1;
+  }
 
   auto main_window = this_module.CreateWindowExW(CREATESTRUCTW{
     .cx = CW_USEDEFAULT,
