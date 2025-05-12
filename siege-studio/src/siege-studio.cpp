@@ -14,7 +14,6 @@
 #undef NDEBUG
 #include <cassert>
 
-
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/win/window_impl.hpp>
 #include <siege/platform/shared.hpp>
@@ -62,7 +61,8 @@ BOOL __stdcall extract_embedded_dlls(HMODULE module,
   return TRUE;
 }
 
-ATOM register_windows(win32::window_module_ref this_module);
+extern "C" ATOM register_windows(HMODULE this_module);
+extern "C" BOOL deregister_windows(HMODULE this_module);
 
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 {
@@ -70,13 +70,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 
   INITCOMMONCONTROLSEX settings{
     .dwSize{ sizeof(INITCOMMONCONTROLSEX) },
-    .dwICC = ICC_STANDARD_CLASSES | 
-             ICC_INTERNET_CLASSES | 
-             ICC_LISTVIEW_CLASSES | 
-             ICC_TAB_CLASSES | 
-             ICC_TREEVIEW_CLASSES | 
-             ICC_DATE_CLASSES | 
-             ICC_BAR_CLASSES
+    .dwICC = ICC_STANDARD_CLASSES | ICC_INTERNET_CLASSES | ICC_LISTVIEW_CLASSES | ICC_TAB_CLASSES | ICC_TREEVIEW_CLASSES | ICC_DATE_CLASSES | ICC_BAR_CLASSES
   };
   win32::init_common_controls_ex(&settings);
 
@@ -109,8 +103,35 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
     output.write((const char*)bytes, size);
   });
 
-  auto main_atom = register_windows(win32::window_module_ref(hInstance));
-  if (!main_atom) {
+  auto* register_windows_ptr = &register_windows;
+  auto* deregister_windows_ptr = &deregister_windows;
+
+  try
+  {
+    auto exe_path = this_module.GetModuleFileName();
+
+    auto dll_path = std::filesystem::path(exe_path).parent_path() / "siege-studio-core.dll";
+
+    if (std::filesystem::exists(dll_path)) {
+      static win32::window_module core_module{ dll_path };
+
+      auto* register_ptr = core_module.GetProcAddress<decltype(register_windows_ptr)>("register_windows");
+      auto* deregister_ptr = core_module.GetProcAddress<decltype(deregister_windows_ptr)>("deregister_windows");
+
+      if (register_ptr && deregister_ptr) {
+        register_windows_ptr = register_ptr;
+        deregister_ptr = deregister_windows_ptr;
+      }
+    }
+  }
+  catch (...)
+  {
+
+  }
+
+  auto main_atom = register_windows_ptr(hInstance);
+  if (!main_atom)
+  {
     return -1;
   }
 
@@ -119,8 +140,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
     .x = CW_USEDEFAULT,
     .style = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
     .lpszName = app_title.data(),
-    .lpszClass = (LPCWSTR)main_atom
-  });
+    .lpszClass = (LPCWSTR)main_atom });
 
   if (!main_window)
   {
@@ -137,6 +157,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
     ::TranslateMessage(&msg);
     ::DispatchMessageW(&msg);
   }
+
+  deregister_windows_ptr(hInstance);
 
   return (int)msg.wParam;
 }

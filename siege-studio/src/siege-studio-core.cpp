@@ -1,16 +1,6 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include <SDKDDKVer.h>
-#include <array>
-#include <optional>
-#include <algorithm>
-#include <vector>
-#include <set>
-#include <bit>
-#include <variant>
-#include <functional>
-#include <iostream>
-#include <filesystem>
 #undef NDEBUG
 #include <cassert>
 
@@ -25,9 +15,10 @@
 #include "views/default_view.hpp"
 #include "views/stack_layout.hpp"
 
-
-ATOM register_windows(win32::window_module_ref this_module)
+extern "C" {
+ATOM register_windows(HMODULE module)
 {
+  win32::window_module_ref this_module(module);
   siege::views::stack_layout::register_class(this_module);
   auto main_atom = siege::views::siege_main_window::register_class(this_module);
   win32::window_meta_class<siege::views::default_view> def_info{};
@@ -44,8 +35,9 @@ ATOM register_windows(win32::window_module_ref this_module)
   return main_atom;
 }
 
-BOOL deregister_windows(win32::window_module_ref this_module)
+BOOL deregister_windows(HMODULE this_module)
 {
   // TODO implement deregistration
   return TRUE;
+}
 }
