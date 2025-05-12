@@ -3,6 +3,9 @@ project(siege-studio)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
+string(TIMESTAMP SIEGE_MAJOR_VERSION "%y")
+string(TIMESTAMP SIEGE_MINOR_VERSION "%V")
+
 if (WIN32)
 	add_library(siege-studio-core SHARED src/siege-studio-core.cpp src/siege-studio-core.def)
 	target_compile_definitions(siege-studio-core PRIVATE UNICODE)
@@ -13,8 +16,8 @@ if (WIN32)
 	target_link_libraries(siege-studio-core-static PUBLIC siege-win-desktop)
 
 	add_executable(siege-studio WIN32 src/siege-studio.cpp src/siege-studio.manifest src/siege-studio.rc)
-	target_compile_definitions(siege-studio PRIVATE UNICODE)
-	target_link_libraries(siege-studio PRIVATE siege-studio-core-static)
+	target_compile_definitions(siege-studio PRIVATE UNICODE SIEGE_MAJOR_VERSION=${SIEGE_MAJOR_VERSION} SIEGE_MINOR_VERSION=${SIEGE_MINOR_VERSION})
+	target_link_libraries(siege-studio PRIVATE siege-studio-core-static Imagehlp)
 else()
 	add_executable(siege-studio src/linux.cpp)	
 	target_link_libraries(siege-studio PRIVATE siege-platform)

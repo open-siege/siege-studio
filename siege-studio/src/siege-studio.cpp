@@ -20,6 +20,7 @@
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/capabilities.hpp>
 #include <commctrl.h>
+#include <imagehlp.h>
 
 
 extern "C" __declspec(dllexport) std::uint32_t DisableSiegeExtensionModule = -1;
@@ -99,8 +100,18 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
     auto size = ::SizeofResource(hInstance, entry);
     auto bytes = ::LockResource(dll.handle);
 
-    std::ofstream output(siege::platform::to_lower(dll.filename.c_str()), std::ios::trunc | std::ios::binary);
-    output.write((const char*)bytes, size);
+    {
+      std::ofstream output(siege::platform::to_lower(dll.filename.wstring()), std::ios::trunc | std::ios::binary);
+      output.write((const char*)bytes, size);
+    }
+
+    LOADED_IMAGE image{};
+    if (::MapAndLoad(siege::platform::to_lower(dll.filename.string()).c_str(), nullptr, &image, TRUE, FALSE))
+    {
+      image.FileHeader->OptionalHeader.MajorImageVersion = SIEGE_MAJOR_VERSION;
+      image.FileHeader->OptionalHeader.MinorImageVersion = SIEGE_MINOR_VERSION;
+      ::UnMapAndLoad(&image);
+    }
   });
 
   auto* register_windows_ptr = &register_windows;
