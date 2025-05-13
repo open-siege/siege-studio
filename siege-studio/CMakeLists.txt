@@ -15,7 +15,7 @@ if (WIN32)
 	target_compile_definitions(siege-studio-core-static PRIVATE UNICODE)
 	target_link_libraries(siege-studio-core-static PUBLIC siege-win-desktop)
 
-	add_executable(siege-studio WIN32 src/siege-studio.cpp src/siege-studio.manifest src/siege-studio.rc)
+	add_executable(siege-studio WIN32 src/siege-studio.cpp src/app-update.cpp src/siege-studio.manifest src/siege-studio.rc)
 	target_compile_definitions(siege-studio PRIVATE UNICODE SIEGE_MAJOR_VERSION=${SIEGE_MAJOR_VERSION} SIEGE_MINOR_VERSION=${SIEGE_MINOR_VERSION})
 	target_link_libraries(siege-studio PRIVATE siege-studio-core-static Imagehlp)
 else()

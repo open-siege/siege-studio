@@ -43,8 +43,11 @@ namespace siege::views
     std::uint32_t open_workspace_id = RegisterWindowMessageW(L"COMMAND_OPEN_WORKSPACE");
     std::uint32_t edit_theme_id = RegisterWindowMessageW(L"COMMAND_EDIT_THEME");
     std::uint32_t about_id = RegisterWindowMessageW(L"COMMAND_ABOUT");
+    std::uint32_t update_stable_id = RegisterWindowMessageW(L"COMMAND_UPDATE_STABLE");
+    std::uint32_t update_development_id = RegisterWindowMessageW(L"COMMAND_UPDATE_DEVELOPMENT");
     std::uint32_t exit_id = RegisterWindowMessageW(L"COMMAND_EXIT");
 
+    bool is_updating = false;
     bool is_resizing = false;
     win32::gdi::cursor_ref resize_cursor;
     HCURSOR previous_cursor = nullptr;
@@ -286,6 +289,14 @@ namespace siege::views
       popup_menus[1].AppendMenuW(MF_OWNERDRAW, edit_theme_id, L"Preferences");
       popup_menus[2].AppendMenuW(MF_OWNERDRAW, about_id, L"About");
 
+      auto can_update = win32::module_ref::current_application().GetProcAddress<BOOL (*)()>("can_update");
+
+      if (can_update && can_update())
+      {
+        popup_menus[2].AppendMenuW(MF_OWNERDRAW, update_stable_id, L"Update (Stable)");
+        popup_menus[2].AppendMenuW(MF_OWNERDRAW, update_development_id, L"Update (Development)");
+      }
+
       SetMenu(*this, main_menu.get());
 
       main_menu.AppendMenuW(MF_POPUP | MF_OWNERDRAW, (UINT_PTR)popup_menus[0].get(), L"File");
@@ -301,13 +312,12 @@ namespace siege::views
       HKEY main_key = nullptr;
       auto access = KEY_QUERY_VALUE | KEY_READ;
 
-      if (::RegOpenCurrentUser(access, &user_key) == ERROR_SUCCESS && 
-          ::RegCreateKeyExW(user_key, L"Software\\The Siege Hub\\Siege Studio", 0, nullptr, 0, access, nullptr, &main_key, nullptr) == ERROR_SUCCESS)
+      if (::RegOpenCurrentUser(access, &user_key) == ERROR_SUCCESS && ::RegCreateKeyExW(user_key, L"Software\\The Siege Hub\\Siege Studio", 0, nullptr, 0, access, nullptr, &main_key, nullptr) == ERROR_SUCCESS)
       {
         DWORD preference = 0;
         DWORD size = sizeof(DWORD);
         DWORD type = REG_DWORD;
-        
+
         if (::RegGetValueW(main_key, nullptr, L"UserThemePreference", RRF_RT_DWORD, &type, (BYTE*)&preference, &size) == ERROR_SUCCESS && (preference == 1 || preference == 2))
         {
           this->SetPropW(L"UserThemePreference", preference);
@@ -323,8 +333,47 @@ namespace siege::views
 
     std::optional<LRESULT> wm_destroy()
     {
-      PostQuitMessage(0);
+      if (!is_updating)
+      {
+        PostQuitMessage(0);
+      }
+
       return 0;
+    }
+
+    void trigger_update(std::uint32_t update_type)
+    {
+      if (is_updating)
+      {
+        return;
+      }
+
+      is_updating = true;
+
+      win32::queue_user_work_item([update_type, this] {
+        auto has_update = win32::module_ref::current_application().GetProcAddress<BOOL (*)()>("has_update");
+        auto get_update_version = win32::module_ref::current_application().GetProcAddress<std::pair<std::uint32_t, std::uint32_t> (*)()>("get_update_version");
+        auto is_updating = win32::module_ref::current_application().GetProcAddress<BOOL (*)()>("is_updating");
+        auto detect_update = win32::module_ref::current_application().GetProcAddress<void (*)(std::uint32_t)>("detect_update");
+        auto apply_update = win32::module_ref::current_application().GetProcAddress<void (*)(std::uint32_t)>("apply_update");
+
+        if (has_update && get_update_version && is_updating && detect_update && apply_update)
+        {
+          detect_update(update_type);
+
+          ::Sleep(5000);
+
+          if (!has_update())
+          {
+            this->is_updating = false;
+            ::MessageBoxW(nullptr, L"Could not find an update for the selected channel", L"Could Not Update", 0);
+            return;
+          }
+
+          // TODO show message box to confirm update
+          apply_update(update_type);
+        }
+      });
     }
 
     void on_size(SIZE total_size)
@@ -382,7 +431,7 @@ namespace siege::views
         total_width = total_width - child_width;
       }
 
-      auto width = std::clamp<int>(total_width / count, fallback, right_size.cx - 25); // TODO figure out the correct sizing for the tab control
+      auto width = std::clamp<int>(total_width / count, fallback, right_size.cx - 25);// TODO figure out the correct sizing for the tab control
 
       TabCtrl_SetPadding(tab_control, 10, 0);
       auto old_height = HIWORD(TabCtrl_SetItemSize(tab_control, width, 40));
@@ -509,7 +558,7 @@ namespace siege::views
 
           if (user_preference == 0 && RegQueryValueExW(key, L"AppsUseLightTheme", nullptr, &type, (LPBYTE)&value, &size) == ERROR_SUCCESS)
           {
-            is_dark_mode = value == 0; 
+            is_dark_mode = value == 0;
           }
           else if (user_preference != 0)
           {
@@ -1135,6 +1184,11 @@ namespace siege::views
         win32::DialogBoxIndirectParamW<about_view>(::GetModuleHandleW(nullptr),
           win32::default_dialog{ { .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 350, .cy = 400 } },
           ref());
+      }
+
+      if (identifier == update_stable_id || identifier == update_development_id)
+      {
+        trigger_update(identifier);
       }
 
       if (identifier == exit_id)

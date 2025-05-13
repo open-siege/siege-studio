@@ -16,28 +16,39 @@
 #include "views/stack_layout.hpp"
 
 extern "C" {
+static std::set<ATOM> atoms_to_unregister{};
+
 ATOM register_windows(HMODULE module)
 {
   win32::window_module_ref this_module(module);
-  siege::views::stack_layout::register_class(this_module);
+  atoms_to_unregister.emplace(siege::views::stack_layout::register_class(this_module));
   auto main_atom = siege::views::siege_main_window::register_class(this_module);
+  atoms_to_unregister.emplace(main_atom);
   win32::window_meta_class<siege::views::default_view> def_info{};
   def_info.hCursor = LoadCursorW(this_module, IDC_ARROW);
   def_info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
   def_info.hIcon = (HICON)::LoadImageW(this_module, L"AppIcon", IMAGE_ICON, 0, 0, 0);
-  this_module.RegisterClassExW(def_info);
+  atoms_to_unregister.emplace(this_module.RegisterClassExW(def_info));
 
   win32::window_meta_class<siege::views::preferences_view> pref_info{};
   pref_info.hCursor = LoadCursorW(this_module, IDC_ARROW);
   pref_info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
   pref_info.hIcon = (HICON)::LoadImageW(this_module, L"AppIcon", IMAGE_ICON, 0, 0, 0);
-  this_module.RegisterClassExW(pref_info);
+  atoms_to_unregister.emplace(this_module.RegisterClassExW(pref_info));
   return main_atom;
 }
 
-BOOL deregister_windows(HMODULE this_module)
+BOOL deregister_windows(HMODULE module)
 {
-  // TODO implement deregistration
+  auto temp = atoms_to_unregister;
+  for (auto atom : temp)
+  {
+    if (::UnregisterClassW((wchar_t*)atom, module))
+    {
+      atoms_to_unregister.erase(atom);
+    }
+  }
+
   return TRUE;
 }
 }

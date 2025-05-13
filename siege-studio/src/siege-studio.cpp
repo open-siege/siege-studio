@@ -10,7 +10,6 @@
 #include <variant>
 #include <functional>
 #include <fstream>
-#include <filesystem>
 #undef NDEBUG
 #include <cassert>
 
@@ -18,11 +17,12 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/win/window_module.hpp>
+#include <siege/platform/win/threading.hpp>
 #include <siege/platform/win/capabilities.hpp>
 #include <commctrl.h>
 #include <imagehlp.h>
 
-
+namespace fs = std::filesystem;
 extern "C" __declspec(dllexport) std::uint32_t DisableSiegeExtensionModule = -1;
 constexpr static std::wstring_view app_title = L"Siege Studio";
 
@@ -65,8 +65,134 @@ BOOL __stdcall extract_embedded_dlls(HMODULE module,
 extern "C" ATOM register_windows(HMODULE this_module);
 extern "C" BOOL deregister_windows(HMODULE this_module);
 
+static std::optional<win32::window_module> core_module;
+static std::optional<win32::window> main_window;
+static auto* register_windows_ptr = &register_windows;
+static auto* deregister_windows_ptr = &deregister_windows;
+static DWORD main_thread_id = 0;
+static ATOM main_atom = 0;
+
+void load_core_module()
+{
+  if (!core_module)
+  {
+    try
+    {
+      auto exe_path = win32::module_ref::current_application().GetModuleFileName();
+      auto dll_path = std::filesystem::path(exe_path).parent_path() / "siege-studio-core.dll";
+
+      if (std::filesystem::exists(dll_path))
+      {
+        core_module.emplace(dll_path);
+
+        auto* register_ptr = core_module->GetProcAddress<decltype(register_windows_ptr)>("register_windows");
+        auto* deregister_ptr = core_module->GetProcAddress<decltype(deregister_windows_ptr)>("deregister_windows");
+
+        if (register_ptr && deregister_ptr)
+        {
+          register_windows_ptr = register_ptr;
+          deregister_windows_ptr = deregister_ptr;
+        }
+      }
+    }
+    catch (...)
+    {
+    }
+  }
+}
+
+void unload_core_module()
+{
+  if (core_module)
+  {
+    auto handle = main_window->get();
+
+    ::SendMessageW(handle, WM_CLOSE, 0, 0);
+
+    main_window.reset();
+
+    while (::IsWindow(handle))
+    {
+      ::Sleep(10);
+    }
+
+    deregister_windows_ptr(win32::module_ref::current_application());
+    register_windows_ptr = &register_windows;
+    deregister_windows_ptr = &deregister_windows;
+
+
+    core_module->reset();
+  }
+}
+
+int register_and_create_main_window(int nCmdShow)
+{
+  auto this_module = win32::module_ref::current_application();
+  main_atom = register_windows_ptr(this_module);
+  if (!main_atom)
+  {
+    return -1;
+  }
+
+  if (::GetCurrentThreadId() != main_thread_id)
+  {
+    static HHOOK handle = nullptr;
+    static auto window_message = ::RegisterWindowMessageW(L"CREATE_MAIN_WINDOW");
+    struct handler
+    {
+      static LRESULT CALLBACK GetMsgProc(int code, WPARAM wParam, LPARAM lParam)
+      {
+        if (code == HC_ACTION && wParam == PM_REMOVE && lParam)
+        {
+          auto msg = (MSG*)lParam;
+
+          if (msg->message == window_message && !msg->hwnd)
+          {
+            std::shared_ptr<void> deferred = { nullptr,
+              [](...) { ::UnhookWindowsHookEx(handle); } };
+
+            auto this_module = win32::module_ref::current_application();
+            auto temp_window = win32::window_module_ref(this_module.get()).CreateWindowExW(CREATESTRUCTW{ .cx = CW_USEDEFAULT, .x = CW_USEDEFAULT, .style = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, .lpszName = app_title.data(), .lpszClass = (LPCWSTR)main_atom });
+
+            if (!temp_window)
+            {
+              return CallNextHookEx(nullptr, code, wParam, lParam);
+            }
+
+            main_window.emplace(std::move(*temp_window));
+
+            ::ShowWindow(*main_window, msg->wParam);
+            ::UpdateWindow(*main_window);
+          }
+        }
+
+        return CallNextHookEx(nullptr, code, wParam, lParam);
+      }
+    };
+    handle = ::SetWindowsHookExA(WH_GETMESSAGE, handler::GetMsgProc, 0, main_thread_id);
+    ::PostThreadMessageW(main_thread_id, window_message, nCmdShow, 0);
+  }
+  else
+  {
+    auto temp_window = win32::window_module_ref(this_module.get()).CreateWindowExW(CREATESTRUCTW{ .cx = CW_USEDEFAULT, .x = CW_USEDEFAULT, .style = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, .lpszName = app_title.data(), .lpszClass = (LPCWSTR)main_atom });
+
+    if (!temp_window)
+    {
+      return temp_window.error();
+    }
+
+    main_window.emplace(std::move(*temp_window));
+
+    ::ShowWindow(*main_window, nCmdShow);
+    ::UpdateWindow(*main_window);
+  }
+  return 0;
+}
+
+
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 {
+  main_thread_id = ::GetCurrentThreadId();
   win32::com::init_com();
 
   INITCOMMONCONTROLSEX settings{
@@ -85,7 +211,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
   win32::window_module_ref this_module(hInstance);
 
   std::vector<embedded_dll> embedded_dlls;
-  embedded_dlls.reserve(32);
+  embedded_dlls.reserve(128);
 
   ::EnumResourceNamesW(hInstance, RT_RCDATA, extract_embedded_dlls, (LONG_PTR)&embedded_dlls);
 
@@ -97,8 +223,15 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
       return;
     }
 
+    std::error_code code;
+    if (fs::exists(siege::platform::to_lower(dll.filename.wstring()), code))
+    {
+      return;
+    }
+
     auto size = ::SizeofResource(hInstance, entry);
     auto bytes = ::LockResource(dll.handle);
+
 
     {
       std::ofstream output(siege::platform::to_lower(dll.filename.wstring()), std::ios::trunc | std::ios::binary);
@@ -114,52 +247,12 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
     }
   });
 
-  auto* register_windows_ptr = &register_windows;
-  auto* deregister_windows_ptr = &deregister_windows;
+  load_core_module();
 
-  try
+  if (auto result = register_and_create_main_window(nCmdShow); result != 0)
   {
-    auto exe_path = this_module.GetModuleFileName();
-
-    auto dll_path = std::filesystem::path(exe_path).parent_path() / "siege-studio-core.dll";
-
-    if (std::filesystem::exists(dll_path)) {
-      static win32::window_module core_module{ dll_path };
-
-      auto* register_ptr = core_module.GetProcAddress<decltype(register_windows_ptr)>("register_windows");
-      auto* deregister_ptr = core_module.GetProcAddress<decltype(deregister_windows_ptr)>("deregister_windows");
-
-      if (register_ptr && deregister_ptr) {
-        register_windows_ptr = register_ptr;
-        deregister_ptr = deregister_windows_ptr;
-      }
-    }
+    return result;
   }
-  catch (...)
-  {
-
-  }
-
-  auto main_atom = register_windows_ptr(hInstance);
-  if (!main_atom)
-  {
-    return -1;
-  }
-
-  auto main_window = this_module.CreateWindowExW(CREATESTRUCTW{
-    .cx = CW_USEDEFAULT,
-    .x = CW_USEDEFAULT,
-    .style = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-    .lpszName = app_title.data(),
-    .lpszClass = (LPCWSTR)main_atom });
-
-  if (!main_window)
-  {
-    return main_window.error();
-  }
-
-  ::ShowWindow(*main_window, nCmdShow);
-  ::UpdateWindow(*main_window);
 
   MSG msg;
 
