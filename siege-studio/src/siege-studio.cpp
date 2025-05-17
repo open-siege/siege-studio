@@ -66,10 +66,8 @@ extern "C" ATOM register_windows(HMODULE this_module);
 extern "C" BOOL deregister_windows(HMODULE this_module);
 
 static std::optional<win32::window_module> core_module;
-static std::optional<win32::window> main_window;
 static auto* register_windows_ptr = &register_windows;
 static auto* deregister_windows_ptr = &deregister_windows;
-static DWORD main_thread_id = 0;
 static ATOM main_atom = 0;
 
 void load_core_module()
@@ -101,17 +99,13 @@ void load_core_module()
   }
 }
 
-void unload_core_module()
+void unload_core_module(HWND window)
 {
   if (core_module)
   {
-    auto handle = main_window->get();
+    ::SendMessageW(window, WM_CLOSE, 0, 0);
 
-    ::SendMessageW(handle, WM_CLOSE, 0, 0);
-
-    main_window.reset();
-
-    while (::IsWindow(handle))
+    while (::IsWindow(window))
     {
       ::Sleep(10);
     }
@@ -125,7 +119,7 @@ void unload_core_module()
   }
 }
 
-int register_and_create_main_window(int nCmdShow)
+int register_and_create_main_window(DWORD window_thread_id, int nCmdShow)
 {
   auto this_module = win32::module_ref::current_application();
   main_atom = register_windows_ptr(this_module);
@@ -134,7 +128,7 @@ int register_and_create_main_window(int nCmdShow)
     return -1;
   }
 
-  if (::GetCurrentThreadId() != main_thread_id)
+  if (::GetCurrentThreadId() != window_thread_id)
   {
     static HHOOK handle = nullptr;
     static auto window_message = ::RegisterWindowMessageW(L"CREATE_MAIN_WINDOW");
@@ -159,18 +153,16 @@ int register_and_create_main_window(int nCmdShow)
               return CallNextHookEx(nullptr, code, wParam, lParam);
             }
 
-            main_window.emplace(std::move(*temp_window));
-
-            ::ShowWindow(*main_window, msg->wParam);
-            ::UpdateWindow(*main_window);
+            ::ShowWindow(*temp_window, msg->wParam);
+            ::UpdateWindow(temp_window->release());
           }
         }
 
         return CallNextHookEx(nullptr, code, wParam, lParam);
       }
     };
-    handle = ::SetWindowsHookExA(WH_GETMESSAGE, handler::GetMsgProc, 0, main_thread_id);
-    ::PostThreadMessageW(main_thread_id, window_message, nCmdShow, 0);
+    handle = ::SetWindowsHookExA(WH_GETMESSAGE, handler::GetMsgProc, 0, window_thread_id);
+    ::PostThreadMessageW(window_thread_id, window_message, nCmdShow, 0);
   }
   else
   {
@@ -181,10 +173,8 @@ int register_and_create_main_window(int nCmdShow)
       return temp_window.error();
     }
 
-    main_window.emplace(std::move(*temp_window));
-
-    ::ShowWindow(*main_window, nCmdShow);
-    ::UpdateWindow(*main_window);
+    ::ShowWindow(*temp_window, nCmdShow);
+    ::UpdateWindow(temp_window->release());
   }
   return 0;
 }
@@ -192,7 +182,6 @@ int register_and_create_main_window(int nCmdShow)
 
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 {
-  main_thread_id = ::GetCurrentThreadId();
   win32::com::init_com();
 
   INITCOMMONCONTROLSEX settings{
@@ -249,7 +238,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 
   load_core_module();
 
-  if (auto result = register_and_create_main_window(nCmdShow); result != 0)
+  if (auto result = register_and_create_main_window(::GetCurrentThreadId(), nCmdShow); result != 0)
   {
     return result;
   }

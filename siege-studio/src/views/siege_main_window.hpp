@@ -355,7 +355,7 @@ namespace siege::views
         auto get_update_version = win32::module_ref::current_application().GetProcAddress<std::pair<std::uint32_t, std::uint32_t> (*)()>("get_update_version");
         auto is_updating = win32::module_ref::current_application().GetProcAddress<BOOL (*)()>("is_updating");
         auto detect_update = win32::module_ref::current_application().GetProcAddress<void (*)(std::uint32_t)>("detect_update");
-        auto apply_update = win32::module_ref::current_application().GetProcAddress<void (*)(std::uint32_t)>("apply_update");
+        auto apply_update = win32::module_ref::current_application().GetProcAddress<void (*)(std::uint32_t, HWND)>("apply_update");
 
         if (has_update && get_update_version && is_updating && detect_update && apply_update)
         {
@@ -371,7 +371,7 @@ namespace siege::views
           }
 
           // TODO show message box to confirm update
-          apply_update(update_type);
+          apply_update(update_type, *this);
         }
       });
     }

@@ -14,9 +14,9 @@ BOOL __stdcall extract_embedded_dlls(HMODULE module,
   LPWSTR name,
   LONG_PTR lParam);
 
-void unload_core_module();
+void unload_core_module(HWND window);
 void load_core_module();
-int register_and_create_main_window(int nCmdShow);
+int register_and_create_main_window(DWORD thread_id, int nCmdShow);
 
 namespace fs = std::filesystem;
 
@@ -35,6 +35,19 @@ struct update_context
   std::uint32_t update_development_id = RegisterWindowMessageW(L"COMMAND_UPDATE_DEVELOPMENT");
 } context;
 
+std::string resolve_url()
+{
+  std::string buffer(255, '\0');
+  if (auto size = ::GetEnvironmentVariableA("SIEGE_STUDIO_UPDATE_SERVER", buffer.data(), buffer.size() + 1); size != 0 && buffer.starts_with("https:://"))
+  {
+    buffer.resize(size);
+
+    return buffer;
+  }
+
+  return "https://updates.thesiegehub.com";
+}
+
 extern "C" {
 __declspec(dllexport) void detect_update(std::uint32_t update_type)
 {
@@ -46,7 +59,7 @@ __declspec(dllexport) void detect_update(std::uint32_t update_type)
   win32::queue_user_work_item([update_type]() {
     auto temp_file = fs::temp_directory_path() / "latest-siege-studio-version.txt";
     auto channel = update_type == context.update_development_id ? "development" : "stable";
-    std::string server = "http://127.0.0.1:8080/" + std::string(channel) + "/latest.txt";
+    std::string server = resolve_url() + "/" + channel + "/latest.txt";
 
     std::error_code last_error;
     fs::remove(temp_file, last_error);
@@ -100,7 +113,7 @@ __declspec(dllexport) BOOL is_updating()
   return context.update_in_progress;
 }
 
-__declspec(dllexport) void apply_update(std::uint32_t update_type)
+__declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
 {
   if (!(update_type == context.update_development_id || update_type == context.update_stable_id))
   {
@@ -112,10 +125,11 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type)
     return;
   }
   context.update_in_progress = TRUE;
-  win32::queue_user_work_item([]() mutable {
+  win32::queue_user_work_item([update_type, window]() mutable {
     std::shared_ptr<void> deferred{ nullptr, [&](...) { context.update_in_progress = FALSE; } };
     std::stringstream final_url;
-    final_url << "http://127.0.0.1:8080/development/" << context.available_version.first << "." << context.available_version.second << "/" << "siege-studio.exe";
+    auto channel = update_type == context.update_development_id ? "development" : "stable";
+    final_url << resolve_url() << "/" << channel << "/" << context.available_version.first << "." << context.available_version.second << "/" << "siege-studio.exe";
     std::error_code last_error;
 
     auto value = std::to_string(context.available_version.first) + "." + std::to_string(context.available_version.second);
@@ -145,9 +159,11 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type)
 
     ::EnumResourceNamesW(module, RT_RCDATA, extract_embedded_dlls, (LONG_PTR)&embedded_dlls);
 
+    auto window_thread_id = ::GetWindowThreadProcessId(window, nullptr);
+
     if (!embedded_dlls.empty())
     {
-      unload_core_module();
+      unload_core_module(window);
     }
 
     std::for_each(embedded_dlls.begin(), embedded_dlls.end(), [&](embedded_dll& dll) {
@@ -201,7 +217,7 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type)
     ::FreeLibrary(module);
 
     load_core_module();
-    register_and_create_main_window(SW_SHOWNORMAL);
+    register_and_create_main_window(window_thread_id, SW_SHOWNORMAL);
   });
 }
 }
