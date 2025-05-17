@@ -61,6 +61,8 @@ namespace siege::views
 
     win32::image_list shell_images;
 
+    inline static bool destroy_dialog = false;
+
     bool is_dark_mode = false;
 
     std::filesystem::path initial_working_dir;
@@ -333,6 +335,7 @@ namespace siege::views
 
     std::optional<LRESULT> wm_destroy()
     {
+      destroy_dialog = true;
       if (!is_updating)
       {
         PostQuitMessage(0);
@@ -385,29 +388,35 @@ namespace siege::views
           {
             struct handler
             {
-              static HRESULT CALLBACK Pftaskdialogcallback(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, LONG_PTR lpRefData)
+              static HRESULT CALLBACK DialogCallback(HWND dialog, UINT msg, WPARAM wParam, LPARAM lParam, LONG_PTR lpRefData)
               {
+                if (destroy_dialog && msg != TDN_DESTROYED)
+                {
+                  ::DestroyWindow(dialog);
+                  return S_OK;
+                }
+
                 if (msg == TDN_CREATED)
                 {
-                  win32::window_ref ref(hwnd);
+                  win32::window_ref ref(dialog);
                   win32::apply_window_theme(ref);
-                  ::SendMessageW(hwnd, TDM_SET_MARQUEE_PROGRESS_BAR, lpRefData == 0 ? TRUE : FALSE, 0);
-                  ::SendMessageW(hwnd, TDM_SET_PROGRESS_BAR_MARQUEE, lpRefData == 0 ? TRUE : FALSE, 0);
-                  ::SendMessageW(hwnd, TDM_SET_PROGRESS_BAR_RANGE, 0, MAKELPARAM(0, 100));
+                  ::SendMessageW(dialog, TDM_SET_MARQUEE_PROGRESS_BAR, lpRefData == 0 ? TRUE : FALSE, 0);
+                  ::SendMessageW(dialog, TDM_SET_PROGRESS_BAR_MARQUEE, lpRefData == 0 ? TRUE : FALSE, 0);
+                  ::SendMessageW(dialog, TDM_SET_PROGRESS_BAR_RANGE, 0, MAKELPARAM(0, 100));
                 }
 
                 const auto max_timeout = lpRefData > 0 ? 2 * 60 * 1000 : 3 * 60 * 1000;
 
                 if (msg == TDN_TIMER && wParam > max_timeout)
                 {
-                  ::DestroyWindow(hwnd);
+                  ::DestroyWindow(dialog);
                   return S_OK;
                 }
 
                 if (msg == TDN_TIMER && (wParam > 600 && wParam <= 800))
                 {
-                  ::SendMessageW(hwnd, TDM_SET_PROGRESS_BAR_MARQUEE, TRUE, 0);
-                  ::SendMessageW(hwnd, TDM_SET_MARQUEE_PROGRESS_BAR, TRUE, 0);
+                  ::SendMessageW(dialog, TDM_SET_PROGRESS_BAR_MARQUEE, TRUE, 0);
+                  ::SendMessageW(dialog, TDM_SET_MARQUEE_PROGRESS_BAR, TRUE, 0);
                   return S_OK;
                 }
 
@@ -417,7 +426,7 @@ namespace siege::views
                   auto curr = (float)get_current_update_size();
                   auto result = (curr / max) * 100;
 
-                  ::SendMessageW(hwnd, TDM_SET_PROGRESS_BAR_POS, (WPARAM)result, 0);
+                  ::SendMessageW(dialog, TDM_SET_PROGRESS_BAR_POS, (WPARAM)result, 0);
 
                   if (result >= 100)
                   {
@@ -431,12 +440,13 @@ namespace siege::views
                 return S_FALSE;
               }
             };
+            destroy_dialog = false;
             apply_update(update_type, *this);
             TASKDIALOGCONFIG config{
               .cbSize = sizeof(config),
               .dwFlags = get_max_update_size && get_current_update_size ? TDF_SHOW_PROGRESS_BAR | TDF_CALLBACK_TIMER : TDF_SHOW_PROGRESS_BAR,
-              .pszWindowTitle = L"Downlading and Applying Update",
-              .pfCallback = handler::Pftaskdialogcallback,
+              .pszWindowTitle = L"Downloading and Applying Update",
+              .pfCallback = handler::DialogCallback,
               .lpCallbackData = get_max_update_size && get_current_update_size ? (LONG_PTR)get_max_update_size() : 0,
 
             };

@@ -70,6 +70,42 @@ static auto* register_windows_ptr = &register_windows;
 static auto* deregister_windows_ptr = &deregister_windows;
 static ATOM main_atom = 0;
 
+void exec_on_thread(DWORD window_thread_id, std::move_only_function<void(MSG&)> callback)
+{
+  struct context
+  {
+    HHOOK handle = nullptr;
+    std::move_only_function<void(MSG&)> callback;
+  };
+  static auto window_message = ::RegisterWindowMessageW(L"CUSTOM_EXEC");
+  struct handler
+  {
+    static LRESULT CALLBACK GetMsgProc(int code, WPARAM wParam, LPARAM lParam)
+    {
+      if (code == HC_ACTION && wParam == PM_REMOVE && lParam)
+      {
+        auto msg = (MSG*)lParam;
+
+        if (msg->message == window_message && !msg->hwnd && msg->lParam)
+        {
+          std::unique_ptr<context> callback_context{ (context*)msg->lParam };
+          std::shared_ptr<void> deferred = { nullptr,
+            [handle = callback_context->handle](...) { ::UnhookWindowsHookEx(handle); } };
+
+          callback_context->callback(*msg);
+        }
+      }
+
+      return CallNextHookEx(nullptr, code, wParam, lParam);
+    }
+  };
+
+  auto* callback_context = new context{};
+  callback_context->handle = ::SetWindowsHookExA(WH_GETMESSAGE, handler::GetMsgProc, 0, window_thread_id);
+  callback_context->callback = std::move(callback);
+  ::PostThreadMessageW(window_thread_id, window_message, 0, (LPARAM)callback_context);
+}
+
 void load_core_module()
 {
   if (!core_module)
@@ -103,7 +139,19 @@ void unload_core_module(HWND window)
 {
   if (core_module)
   {
-    ::SendMessageW(window, WM_CLOSE, 0, 0);
+    auto window_thread_id = ::GetWindowThreadProcessId(window, nullptr);
+
+    if (::GetCurrentThreadId() != window_thread_id)
+    {
+      exec_on_thread(window_thread_id, [window](auto&) {
+        ::DestroyWindow(window);
+      });
+    }
+    else
+    {
+      ::DestroyWindow(window);
+    }
+
 
     while (::IsWindow(window))
     {
@@ -130,39 +178,16 @@ int register_and_create_main_window(DWORD window_thread_id, int nCmdShow)
 
   if (::GetCurrentThreadId() != window_thread_id)
   {
-    static HHOOK handle = nullptr;
-    static auto window_message = ::RegisterWindowMessageW(L"CREATE_MAIN_WINDOW");
-    struct handler
-    {
-      static LRESULT CALLBACK GetMsgProc(int code, WPARAM wParam, LPARAM lParam)
+    exec_on_thread(window_thread_id, [nCmdShow](auto& msg) {
+      auto this_module = win32::module_ref::current_application();
+      auto temp_window = win32::window_module_ref(this_module.get()).CreateWindowExW(CREATESTRUCTW{ .cx = CW_USEDEFAULT, .x = CW_USEDEFAULT, .style = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, .lpszName = app_title.data(), .lpszClass = (LPCWSTR)main_atom });
+
+      if (temp_window)
       {
-        if (code == HC_ACTION && wParam == PM_REMOVE && lParam)
-        {
-          auto msg = (MSG*)lParam;
-
-          if (msg->message == window_message && !msg->hwnd)
-          {
-            std::shared_ptr<void> deferred = { nullptr,
-              [](...) { ::UnhookWindowsHookEx(handle); } };
-
-            auto this_module = win32::module_ref::current_application();
-            auto temp_window = win32::window_module_ref(this_module.get()).CreateWindowExW(CREATESTRUCTW{ .cx = CW_USEDEFAULT, .x = CW_USEDEFAULT, .style = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, .lpszName = app_title.data(), .lpszClass = (LPCWSTR)main_atom });
-
-            if (!temp_window)
-            {
-              return CallNextHookEx(nullptr, code, wParam, lParam);
-            }
-
-            ::ShowWindow(*temp_window, msg->wParam);
-            ::UpdateWindow(temp_window->release());
-          }
-        }
-
-        return CallNextHookEx(nullptr, code, wParam, lParam);
+        ::ShowWindow(*temp_window, nCmdShow);
+        ::UpdateWindow(temp_window->release());
       }
-    };
-    handle = ::SetWindowsHookExA(WH_GETMESSAGE, handler::GetMsgProc, 0, window_thread_id);
-    ::PostThreadMessageW(window_thread_id, window_message, nCmdShow, 0);
+    });
   }
   else
   {
