@@ -6,6 +6,7 @@
 #include <fstream>
 #include <filesystem>
 #include <regex>
+#include <future>
 #include <imagehlp.h>
 
 
@@ -28,17 +29,20 @@ struct embedded_dll
 
 struct update_context
 {
-  BOOL new_version_is_available = FALSE;
+  std::atomic_bool new_version_is_available = false;
   BOOL update_in_progress = false;
-  std::pair<std::uint32_t, std::uint32_t> available_version = {};
-  std::uint32_t update_stable_id = RegisterWindowMessageW(L"COMMAND_UPDATE_STABLE");
-  std::uint32_t update_development_id = RegisterWindowMessageW(L"COMMAND_UPDATE_DEVELOPMENT");
+  SIZE available_version = {};
+  std::uint32_t update_stable_id = ::RegisterWindowMessageW(L"COMMAND_UPDATE_STABLE");
+  std::uint32_t update_development_id = ::RegisterWindowMessageW(L"COMMAND_UPDATE_DEVELOPMENT");
+  bool has_console = false;
+  std::atomic_size_t max_size = 0;
+  std::atomic_size_t current_size = 0;
 } context;
 
 std::string resolve_url()
 {
   std::string buffer(255, '\0');
-  if (auto size = ::GetEnvironmentVariableA("SIEGE_STUDIO_UPDATE_SERVER", buffer.data(), buffer.size() + 1); size != 0 && buffer.starts_with("https:://"))
+  if (auto size = ::GetEnvironmentVariableA("SIEGE_STUDIO_UPDATE_SERVER_URL", buffer.data(), buffer.size() + 1); size != 0 && buffer.starts_with("https:://"))
   {
     buffer.resize(size);
 
@@ -46,6 +50,18 @@ std::string resolve_url()
   }
 
   return "https://updates.thesiegehub.com";
+}
+
+void alloc_console()
+{
+  if (!context.has_console)
+  {
+    if (::AllocConsole())
+    {
+      context.has_console = true;
+      ::ShowWindow(::GetConsoleWindow(), SW_HIDE);
+    }
+  }
 }
 
 extern "C" {
@@ -57,14 +73,27 @@ __declspec(dllexport) void detect_update(std::uint32_t update_type)
   }
 
   win32::queue_user_work_item([update_type]() {
+    if (!context.has_console)
+    {
+      context.has_console = ::GetConsoleWindow() != nullptr;
+    }
+    alloc_console();
+
     auto temp_file = fs::temp_directory_path() / "latest-siege-studio-version.txt";
     auto channel = update_type == context.update_development_id ? "development" : "stable";
     std::string server = resolve_url() + "/" + channel + "/latest.txt";
 
     std::error_code last_error;
+
+    context.max_size = fs::file_size(win32::module_ref::current_application().GetModuleFileName(), last_error);
+
+#if _DEBUG
+    context.max_size = context.max_size * 10;
+#endif
+
     fs::remove(temp_file, last_error);
 
-    std::string command = "powershell -Command wget " + server + " -OutFile " + temp_file.string();
+    std::string command = "powershell -WindowStyle hidden -Command wget " + server + " -OutFile " + temp_file.string();
     std::system(command.c_str());
 
     if (fs::exists(temp_file, last_error))
@@ -83,9 +112,9 @@ __declspec(dllexport) void detect_update(std::uint32_t update_type)
         // TODO use siege-studio-core so that the version can be dynamically updated
         if (major >= SIEGE_MAJOR_VERSION && minor > SIEGE_MINOR_VERSION)
         {
-          context.new_version_is_available = TRUE;
-          context.available_version.first = major;
-          context.available_version.second = minor;
+          context.new_version_is_available = true;
+          context.available_version.cx = major;
+          context.available_version.cy = minor;
         }
       }
     }
@@ -97,15 +126,24 @@ __declspec(dllexport) BOOL can_update()
   return TRUE;
 }
 
-
 __declspec(dllexport) BOOL has_update()
 {
-  return context.new_version_is_available;
+  return context.new_version_is_available == true ? TRUE : FALSE;
 }
 
-__declspec(dllexport) std::pair<std::uint32_t, std::uint32_t> get_update_version()
+__declspec(dllexport) SIZE get_update_version()
 {
   return context.available_version;
+}
+
+__declspec(dllexport) std::size_t get_max_update_size()
+{
+  return context.max_size;
+}
+
+__declspec(dllexport) std::size_t get_current_update_size()
+{
+  return context.current_size;
 }
 
 __declspec(dllexport) BOOL is_updating()
@@ -125,21 +163,52 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
     return;
   }
   context.update_in_progress = TRUE;
+  ::EnableWindow(window, FALSE);
   win32::queue_user_work_item([update_type, window]() mutable {
-    std::shared_ptr<void> deferred{ nullptr, [&](...) { context.update_in_progress = FALSE; } };
+    std::shared_ptr<void> deferred{ nullptr, [&](...) {
+                                     context.update_in_progress = FALSE;
+                                     ::EnableWindow(window, TRUE);
+                                   } };
     std::stringstream final_url;
     auto channel = update_type == context.update_development_id ? "development" : "stable";
-    final_url << resolve_url() << "/" << channel << "/" << context.available_version.first << "." << context.available_version.second << "/" << "siege-studio.exe";
+    final_url << resolve_url() << "/" << channel << "/" << context.available_version.cx << "." << context.available_version.cy << "/" << "siege-studio.exe";
     std::error_code last_error;
 
-    auto value = std::to_string(context.available_version.first) + "." + std::to_string(context.available_version.second);
+    auto value = std::to_string(context.available_version.cx) + "." + std::to_string(context.available_version.cy);
 
     auto temp_folder = fs::temp_directory_path() / L"siege-studio" / value;
 
     fs::create_directories(temp_folder, last_error);
     auto temp_file = temp_folder / "siege-studio.exe";
     fs::remove(temp_file, last_error);
-    std::string command = "powershell -Command wget " + final_url.str() + " -OutFile " + temp_file.string();
+
+    auto task = std::async(std::launch::async, [temp_file]() {
+      using namespace std::chrono_literals;
+
+      std::error_code last_error;
+      while (true)
+      {
+        std::shared_ptr<void> deferred{ nullptr, [](...) { std::this_thread::sleep_for(500ms); } };
+
+        if (!fs::exists(temp_file, last_error))
+        {
+          continue;
+        }
+
+        context.current_size = fs::file_size(temp_file, last_error);
+
+        if (last_error)
+        {
+          break;
+        }
+
+        if (context.current_size >= context.max_size)
+        {
+          break;
+        }
+      }
+    });
+    std::string command = "powershell -WindowStyle hidden -Command wget " + final_url.str() + " -OutFile " + temp_file.string();
     std::system(command.c_str());
 
     if (!fs::exists(temp_file, last_error))
@@ -163,6 +232,7 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
 
     if (!embedded_dlls.empty())
     {
+      ::EnableWindow(window, TRUE);
       unload_core_module(window);
     }
 
@@ -189,8 +259,8 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
         LOADED_IMAGE image{};
         if (::MapAndLoad(siege::platform::to_lower(dll.filename.string()).c_str(), nullptr, &image, TRUE, FALSE))
         {
-          image.FileHeader->OptionalHeader.MajorImageVersion = context.available_version.first;
-          image.FileHeader->OptionalHeader.MinorImageVersion = context.available_version.second;
+          image.FileHeader->OptionalHeader.MajorImageVersion = context.available_version.cx;
+          image.FileHeader->OptionalHeader.MinorImageVersion = context.available_version.cy;
           ::UnMapAndLoad(&image);
         }
       };
@@ -208,7 +278,7 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
         auto existing_minor_version = image.FileHeader->OptionalHeader.MajorImageVersion;
         ::UnMapAndLoad(&image);
 
-        if (context.available_version.first >= existing_major_version && context.available_version.second > existing_minor_version)
+        if (context.available_version.cx >= existing_major_version && context.available_version.cy > existing_minor_version)
         {
           copy_and_patch();
         }

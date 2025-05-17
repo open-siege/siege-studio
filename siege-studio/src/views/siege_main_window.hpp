@@ -352,26 +352,96 @@ namespace siege::views
 
       win32::queue_user_work_item([update_type, this] {
         auto has_update = win32::module_ref::current_application().GetProcAddress<BOOL (*)()>("has_update");
-        auto get_update_version = win32::module_ref::current_application().GetProcAddress<std::pair<std::uint32_t, std::uint32_t> (*)()>("get_update_version");
+        auto get_update_version = win32::module_ref::current_application().GetProcAddress<SIZE (*)()>("get_update_version");
         auto is_updating = win32::module_ref::current_application().GetProcAddress<BOOL (*)()>("is_updating");
         auto detect_update = win32::module_ref::current_application().GetProcAddress<void (*)(std::uint32_t)>("detect_update");
         auto apply_update = win32::module_ref::current_application().GetProcAddress<void (*)(std::uint32_t, HWND)>("apply_update");
+
+        static auto get_max_update_size = win32::module_ref::current_application().GetProcAddress<std::size_t (*)()>("get_max_update_size");
+        static auto get_current_update_size = win32::module_ref::current_application().GetProcAddress<std::size_t (*)()>("get_current_update_size");
 
         if (has_update && get_update_version && is_updating && detect_update && apply_update)
         {
           detect_update(update_type);
 
-          ::Sleep(5000);
+          for (auto i = 0; i < 10; ++i)
+          {
+            if (!has_update())
+            {
+              ::Sleep(200);
+            }
+          }
 
           if (!has_update())
           {
             this->is_updating = false;
-            ::MessageBoxW(nullptr, L"Could not find an update for the selected channel", L"Could Not Update", 0);
+            ::MessageBoxW(nullptr, L"Could not find an update for the selected channel", L"Could Not Update", MB_TASKMODAL | MB_ICONWARNING);
             return;
           }
 
-          // TODO show message box to confirm update
-          apply_update(update_type, *this);
+          auto selection = ::MessageBoxW(nullptr, L"An update was detected, would you like to update?", L"Update Available", MB_TASKMODAL | MB_ICONINFORMATION | MB_YESNO);
+
+          if (selection == IDYES)
+          {
+            struct handler
+            {
+              static HRESULT CALLBACK Pftaskdialogcallback(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, LONG_PTR lpRefData)
+              {
+                if (msg == TDN_CREATED)
+                {
+                  win32::window_ref ref(hwnd);
+                  win32::apply_window_theme(ref);
+                  ::SendMessageW(hwnd, TDM_SET_MARQUEE_PROGRESS_BAR, lpRefData == 0 ? TRUE : FALSE, 0);
+                  ::SendMessageW(hwnd, TDM_SET_PROGRESS_BAR_MARQUEE, lpRefData == 0 ? TRUE : FALSE, 0);
+                  ::SendMessageW(hwnd, TDM_SET_PROGRESS_BAR_RANGE, 0, MAKELPARAM(0, 100));
+                }
+
+                const auto max_timeout = lpRefData > 0 ? 2 * 60 * 1000 : 3 * 60 * 1000;
+
+                if (msg == TDN_TIMER && wParam > max_timeout)
+                {
+                  ::DestroyWindow(hwnd);
+                  return S_OK;
+                }
+
+                if (msg == TDN_TIMER && (wParam > 600 && wParam <= 800))
+                {
+                  ::SendMessageW(hwnd, TDM_SET_PROGRESS_BAR_MARQUEE, TRUE, 0);
+                  ::SendMessageW(hwnd, TDM_SET_MARQUEE_PROGRESS_BAR, TRUE, 0);
+                  return S_OK;
+                }
+
+                if (msg == TDN_TIMER && lpRefData > 0 && get_current_update_size)
+                {
+                  auto max = (float)lpRefData;
+                  auto curr = (float)get_current_update_size();
+                  auto result = (curr / max) * 100;
+
+                  ::SendMessageW(hwnd, TDM_SET_PROGRESS_BAR_POS, (WPARAM)result, 0);
+
+                  if (result >= 100)
+                  {
+                    return S_OK;
+                  }
+                }
+                else if (msg == TDN_TIMER)
+                {
+                  return S_OK;
+                }
+                return S_FALSE;
+              }
+            };
+            apply_update(update_type, *this);
+            TASKDIALOGCONFIG config{
+              .cbSize = sizeof(config),
+              .dwFlags = get_max_update_size && get_current_update_size ? TDF_SHOW_PROGRESS_BAR | TDF_CALLBACK_TIMER : TDF_SHOW_PROGRESS_BAR,
+              .pszWindowTitle = L"Downlading and Applying Update",
+              .pfCallback = handler::Pftaskdialogcallback,
+              .lpCallbackData = get_max_update_size && get_current_update_size ? (LONG_PTR)get_max_update_size() : 0,
+
+            };
+            ::TaskDialogIndirect(&config, nullptr, nullptr, nullptr);
+          }
         }
       });
     }

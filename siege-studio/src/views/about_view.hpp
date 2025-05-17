@@ -21,7 +21,7 @@ namespace siege::views
 
     // https://github.com/open-siege/siege-studio/
 
-    // https://store.steampowered.com/app/3193420/Siege_Studio/
+    // https://thesiegehub.itch.io/siege-studio
 
     about_view(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self)
     {
