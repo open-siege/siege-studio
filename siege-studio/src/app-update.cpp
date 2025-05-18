@@ -29,14 +29,23 @@ struct embedded_dll
 
 struct update_context
 {
-  std::atomic_bool new_version_is_available = false;
+
+  struct version_info
+  {
+    SIZE available_version = {};
+    std::atomic_bool new_version_is_available = false;
+    std::atomic_size_t max_size = 0;
+    std::atomic_size_t current_size = 0;
+  };
+
+  version_info stable_info{};
+  version_info development_info{};
+
   BOOL update_in_progress = false;
-  SIZE available_version = {};
   std::uint32_t update_stable_id = ::RegisterWindowMessageW(L"COMMAND_UPDATE_STABLE");
   std::uint32_t update_development_id = ::RegisterWindowMessageW(L"COMMAND_UPDATE_DEVELOPMENT");
   bool has_console = false;
-  std::atomic_size_t max_size = 0;
-  std::atomic_size_t current_size = 0;
+
 } context;
 
 std::string resolve_url()
@@ -64,6 +73,34 @@ void alloc_console()
   }
 }
 
+std::optional<SIZE> get_core_version()
+{
+  auto parent_path = fs::path(win32::module_ref::current_application().GetModuleFileName()).parent_path();
+  auto dll_path = parent_path / "siege-studio-core.dll";
+  std::error_code last_error;
+
+  if (fs::exists(dll_path, last_error))
+  {
+    LOADED_IMAGE image{};
+    auto dll_string = dll_path.filename().string();
+    auto dll_path_string = dll_path.parent_path().string();
+    if (::MapAndLoad(dll_string.c_str(), dll_path_string.c_str(), &image, TRUE, TRUE))
+    {
+      SIZE result{};
+      result.cx = image.FileHeader->OptionalHeader.MajorImageVersion;
+      result.cy = image.FileHeader->OptionalHeader.MinorImageVersion;
+      ::UnMapAndLoad(&image);
+
+      if (result.cx && result.cy)
+      {
+        return result;
+      }
+    }
+  }
+
+  return std::nullopt;
+}
+
 extern "C" {
 __declspec(dllexport) void detect_update(std::uint32_t update_type)
 {
@@ -72,11 +109,16 @@ __declspec(dllexport) void detect_update(std::uint32_t update_type)
     return;
   }
 
+  auto& info = update_type == context.update_development_id ? context.development_info : context.stable_info;
+  info.new_version_is_available = false;
+
   win32::queue_user_work_item([update_type]() {
     if (!context.has_console)
     {
       context.has_console = ::GetConsoleWindow() != nullptr;
     }
+
+    auto& info = update_type == context.update_development_id ? context.development_info : context.stable_info;
     alloc_console();
 
     auto temp_file = fs::temp_directory_path() / "latest-siege-studio-version.txt";
@@ -85,10 +127,10 @@ __declspec(dllexport) void detect_update(std::uint32_t update_type)
 
     std::error_code last_error;
 
-    context.max_size = fs::file_size(win32::module_ref::current_application().GetModuleFileName(), last_error);
+    info.max_size = fs::file_size(win32::module_ref::current_application().GetModuleFileName(), last_error);
 
 #if _DEBUG
-    context.max_size = context.max_size * 10;
+    info.max_size = info.max_size * 10;
 #endif
 
     fs::remove(temp_file, last_error);
@@ -109,12 +151,13 @@ __declspec(dllexport) void detect_update(std::uint32_t update_type)
         auto major = std::stoi(value.substr(0, value.find(".")));
         auto minor = std::stoi(value.substr(value.find(".") + 1));
 
-        // TODO use siege-studio-core so that the version can be dynamically updated
-        if (major >= SIEGE_MAJOR_VERSION && minor > SIEGE_MINOR_VERSION)
+        auto version_to_check = get_core_version().value_or(SIZE{ SIEGE_MAJOR_VERSION, SIEGE_MINOR_VERSION });
+
+        if (major >= version_to_check.cx && minor > version_to_check.cy)
         {
-          context.new_version_is_available = true;
-          context.available_version.cx = major;
-          context.available_version.cy = minor;
+          info.new_version_is_available = true;
+          info.available_version.cx = major;
+          info.available_version.cy = minor;
         }
       }
     }
@@ -126,24 +169,28 @@ __declspec(dllexport) BOOL can_update()
   return TRUE;
 }
 
-__declspec(dllexport) BOOL has_update()
+__declspec(dllexport) BOOL has_update(std::uint32_t update_type)
 {
-  return context.new_version_is_available == true ? TRUE : FALSE;
+  auto& info = update_type == context.update_development_id ? context.development_info : context.stable_info;
+  return info.new_version_is_available;
 }
 
-__declspec(dllexport) SIZE get_update_version()
+__declspec(dllexport) SIZE get_update_version(std::uint32_t update_type)
 {
-  return context.available_version;
+  auto& info = update_type == context.update_development_id ? context.development_info : context.stable_info;
+  return info.available_version;
 }
 
-__declspec(dllexport) std::size_t get_max_update_size()
+__declspec(dllexport) std::size_t get_max_update_size(std::uint32_t update_type)
 {
-  return context.max_size;
+  auto& info = update_type == context.update_development_id ? context.development_info : context.stable_info;
+  return info.max_size;
 }
 
-__declspec(dllexport) std::size_t get_current_update_size()
+__declspec(dllexport) std::size_t get_current_update_size(std::uint32_t update_type)
 {
-  return context.current_size;
+  auto& info = update_type == context.update_development_id ? context.development_info : context.stable_info;
+  return info.current_size;
 }
 
 __declspec(dllexport) BOOL is_updating()
@@ -157,8 +204,9 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
   {
     return;
   }
+  auto& info = update_type == context.update_development_id ? context.development_info : context.stable_info;
 
-  if (!context.new_version_is_available)
+  if (!info.new_version_is_available)
   {
     return;
   }
@@ -169,12 +217,13 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
                                      context.update_in_progress = FALSE;
                                      ::EnableWindow(window, TRUE);
                                    } };
+    auto& info = update_type == context.update_development_id ? context.development_info : context.stable_info;
     std::stringstream final_url;
     auto channel = update_type == context.update_development_id ? "development" : "stable";
-    final_url << resolve_url() << "/" << channel << "/" << context.available_version.cx << "." << context.available_version.cy << "/" << "siege-studio.exe";
+    final_url << resolve_url() << "/" << channel << "/" << info.available_version.cx << "." << info.available_version.cy << "/" << "siege-studio.exe";
     std::error_code last_error;
 
-    auto value = std::to_string(context.available_version.cx) + "." + std::to_string(context.available_version.cy);
+    auto value = std::to_string(info.available_version.cx) + "." + std::to_string(info.available_version.cy);
 
     auto temp_folder = fs::temp_directory_path() / L"siege-studio" / value;
 
@@ -182,7 +231,7 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
     auto temp_file = temp_folder / "siege-studio.exe";
     fs::remove(temp_file, last_error);
 
-    auto task = std::async(std::launch::async, [temp_file]() {
+    auto task = std::async(std::launch::async, [temp_file, &info]() {
       using namespace std::chrono_literals;
 
       std::error_code last_error;
@@ -195,14 +244,14 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
           continue;
         }
 
-        context.current_size = fs::file_size(temp_file, last_error);
+        info.current_size = fs::file_size(temp_file, last_error);
 
         if (last_error)
         {
           break;
         }
 
-        if (context.current_size >= context.max_size)
+        if (info.current_size >= info.max_size)
         {
           break;
         }
@@ -259,8 +308,8 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
         LOADED_IMAGE image{};
         if (::MapAndLoad(siege::platform::to_lower(dll.filename.string()).c_str(), nullptr, &image, TRUE, FALSE))
         {
-          image.FileHeader->OptionalHeader.MajorImageVersion = context.available_version.cx;
-          image.FileHeader->OptionalHeader.MinorImageVersion = context.available_version.cy;
+          image.FileHeader->OptionalHeader.MajorImageVersion = info.available_version.cx;
+          image.FileHeader->OptionalHeader.MinorImageVersion = info.available_version.cy;
           ::UnMapAndLoad(&image);
         }
       };
@@ -278,7 +327,7 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
         auto existing_minor_version = image.FileHeader->OptionalHeader.MajorImageVersion;
         ::UnMapAndLoad(&image);
 
-        if (context.available_version.cx >= existing_major_version && context.available_version.cy > existing_minor_version)
+        if (info.available_version.cx >= existing_major_version && info.available_version.cy > existing_minor_version)
         {
           copy_and_patch();
         }

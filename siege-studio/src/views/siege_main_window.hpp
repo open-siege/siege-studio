@@ -47,7 +47,7 @@ namespace siege::views
     std::uint32_t update_development_id = RegisterWindowMessageW(L"COMMAND_UPDATE_DEVELOPMENT");
     std::uint32_t exit_id = RegisterWindowMessageW(L"COMMAND_EXIT");
 
-    bool is_updating = false;
+    bool updated_in_progress = false;
     bool is_resizing = false;
     win32::gdi::cursor_ref resize_cursor;
     HCURSOR previous_cursor = nullptr;
@@ -336,7 +336,7 @@ namespace siege::views
     std::optional<LRESULT> wm_destroy()
     {
       destroy_dialog = true;
-      if (!is_updating)
+      if (!updated_in_progress)
       {
         PostQuitMessage(0);
       }
@@ -346,49 +346,54 @@ namespace siege::views
 
     void trigger_update(std::uint32_t update_type)
     {
-      if (is_updating)
+      if (updated_in_progress)
       {
         return;
       }
 
-      is_updating = true;
+      updated_in_progress = true;
 
       win32::queue_user_work_item([update_type, this] {
-        auto has_update = win32::module_ref::current_application().GetProcAddress<BOOL (*)()>("has_update");
-        auto get_update_version = win32::module_ref::current_application().GetProcAddress<SIZE (*)()>("get_update_version");
+        auto has_update = win32::module_ref::current_application().GetProcAddress<BOOL (*)(std::uint32_t update_type)>("has_update");
+        auto get_update_version = win32::module_ref::current_application().GetProcAddress<SIZE (*)(std::uint32_t update_type)>("get_update_version");
         auto is_updating = win32::module_ref::current_application().GetProcAddress<BOOL (*)()>("is_updating");
         auto detect_update = win32::module_ref::current_application().GetProcAddress<void (*)(std::uint32_t)>("detect_update");
         auto apply_update = win32::module_ref::current_application().GetProcAddress<void (*)(std::uint32_t, HWND)>("apply_update");
 
-        static auto get_max_update_size = win32::module_ref::current_application().GetProcAddress<std::size_t (*)()>("get_max_update_size");
-        static auto get_current_update_size = win32::module_ref::current_application().GetProcAddress<std::size_t (*)()>("get_current_update_size");
+        static auto get_max_update_size = win32::module_ref::current_application().GetProcAddress<std::size_t (*)(std::uint32_t update_type)>("get_max_update_size");
+        static auto get_current_update_size = win32::module_ref::current_application().GetProcAddress<std::size_t (*)(std::uint32_t update_type)>("get_current_update_size");
 
         if (has_update && get_update_version && is_updating && detect_update && apply_update)
         {
           detect_update(update_type);
 
-          for (auto i = 0; i < 10; ++i)
+          for (auto i = 0; i < 60; ++i)
           {
-            if (!has_update())
+            if (!has_update(update_type))
             {
               ::Sleep(200);
             }
           }
 
-          if (!has_update())
+          if (!has_update(update_type))
           {
-            this->is_updating = false;
+            updated_in_progress = false;
             ::MessageBoxW(nullptr, L"Could not find an update for the selected channel", L"Could Not Update", MB_TASKMODAL | MB_ICONWARNING);
             return;
           }
 
           auto selection = ::MessageBoxW(nullptr, L"An update was detected, would you like to update?", L"Update Available", MB_TASKMODAL | MB_ICONINFORMATION | MB_YESNO);
 
+          if (selection != IDYES)
+          {
+            updated_in_progress = false;
+          }
+
           if (selection == IDYES)
           {
             struct handler
             {
-              static HRESULT CALLBACK DialogCallback(HWND dialog, UINT msg, WPARAM wParam, LPARAM lParam, LONG_PTR lpRefData)
+              static HRESULT CALLBACK DialogCallback(HWND dialog, UINT msg, WPARAM wParam, LPARAM lParam, LONG_PTR update_type)
               {
                 if (destroy_dialog && msg != TDN_DESTROYED)
                 {
@@ -400,17 +405,9 @@ namespace siege::views
                 {
                   win32::window_ref ref(dialog);
                   win32::apply_window_theme(ref);
-                  ::SendMessageW(dialog, TDM_SET_MARQUEE_PROGRESS_BAR, lpRefData == 0 ? TRUE : FALSE, 0);
-                  ::SendMessageW(dialog, TDM_SET_PROGRESS_BAR_MARQUEE, lpRefData == 0 ? TRUE : FALSE, 0);
+                  ::SendMessageW(dialog, TDM_SET_MARQUEE_PROGRESS_BAR, get_max_update_size((std::uint32_t)update_type) == 0 ? TRUE : FALSE, 0);
+                  ::SendMessageW(dialog, TDM_SET_PROGRESS_BAR_MARQUEE, get_max_update_size((std::uint32_t)update_type) == 0 ? TRUE : FALSE, 0);
                   ::SendMessageW(dialog, TDM_SET_PROGRESS_BAR_RANGE, 0, MAKELPARAM(0, 100));
-                }
-
-                const auto max_timeout = lpRefData > 0 ? 2 * 60 * 1000 : 3 * 60 * 1000;
-
-                if (msg == TDN_TIMER && wParam > max_timeout)
-                {
-                  ::DestroyWindow(dialog);
-                  return S_OK;
                 }
 
                 if (msg == TDN_TIMER && (wParam > 600 && wParam <= 800))
@@ -420,10 +417,10 @@ namespace siege::views
                   return S_OK;
                 }
 
-                if (msg == TDN_TIMER && lpRefData > 0 && get_current_update_size)
+                if (msg == TDN_TIMER && get_max_update_size((std::uint32_t)update_type) > 0 && get_current_update_size)
                 {
-                  auto max = (float)lpRefData;
-                  auto curr = (float)get_current_update_size();
+                  auto max = (float)get_max_update_size((std::uint32_t)update_type);
+                  auto curr = (float)get_current_update_size((std::uint32_t)update_type);
                   auto result = (curr / max) * 100;
 
                   ::SendMessageW(dialog, TDM_SET_PROGRESS_BAR_POS, (WPARAM)result, 0);
@@ -442,12 +439,13 @@ namespace siege::views
             };
             destroy_dialog = false;
             apply_update(update_type, *this);
+
             TASKDIALOGCONFIG config{
               .cbSize = sizeof(config),
               .dwFlags = get_max_update_size && get_current_update_size ? TDF_SHOW_PROGRESS_BAR | TDF_CALLBACK_TIMER : TDF_SHOW_PROGRESS_BAR,
               .pszWindowTitle = L"Downloading and Applying Update",
               .pfCallback = handler::DialogCallback,
-              .lpCallbackData = get_max_update_size && get_current_update_size ? (LONG_PTR)get_max_update_size() : 0,
+              .lpCallbackData = (LONG_PTR)update_type,
 
             };
             ::TaskDialogIndirect(&config, nullptr, nullptr, nullptr);
