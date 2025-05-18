@@ -1,28 +1,45 @@
 EXPORTS
-	bind @2=siege_bind
-	closesocket @3=siege_closesocket
-	connect @4=siege_connect
-	getsockname @6=siege_getsockname
+	siege_bind @2
+	bind=siege_bind
+	siege_closesocket @3
+	closesocket=siege_closesocket
+	siege_connect @4
+	connect=siege_connect
+	siege_getsockname @6
+	getsockname=siege_getsockname
 	htonl @8=wsock32.htonl
 	htons @9=wsock32.htons
 	inet_addr @10=wsock32.inet_addr
 	inet_ntoa @11=wsock32.inet_ntoa
-	ioctlsocket @12=siege_ioctlsocket
+	siege_ioctlsocket @12
+	ioctlsocket=siege_ioctlsocket
 	ntohl @14=wsock32.ntohl
 	ntohs @15=wsock32.ntohs
-	recv @16=siege_recv
-	recvfrom @17=siege_recvfrom
-	select @18=siege_select
-	send @19=siege_send
-	sendto @20=siege_sendto
-	setsockopt @21=siege_setsockopt
-	shutdown @22=shutdown
-	socket @23=socket
-	gethostbyname @52=siege_gethostbyname
+	siege_recv @16
+	recv=siege_recv
+	siege_recvfrom @17
+	recvfrom=siege_recvfrom
+	siege_select @18
+	select=siege_select
+	siege_send @19
+	send=siege_send
+	siege_sendto @20
+	sendto=siege_sendto
+	siege_setsockopt @21
+	setsockopt=siege_setsockopt
+	siege_shutdown @22
+	shutdown=siege_shutdown
+	siege_socket @23
+	socket=siege_socket
+	siege_gethostbyname @52
+	gethostbyname=siege_gethostbyname
 	gethostname @57=wsock32.gethostname
 	WSAGetLastError @111=wsock32.WSAGetLastError
-	WSAStartup @115=siege_WSAStartup
-	WSACleanup @116=siege_WSACleanup
+	siege_WSAStartup @115
+	WSAStartup=siege_WSAStartup
+	siege_WSACleanup @116
+	WSACleanup=siege_WSACleanup
+	__WSAFDIsSet @151=siege___WSAFDIsSet
 	__WSAFDIsSet @151=siege___WSAFDIsSet
 	WSASetBlockingHook @109=wsock32.#109
 	WSAUnhookBlockingHook @110=wsock32.#110
