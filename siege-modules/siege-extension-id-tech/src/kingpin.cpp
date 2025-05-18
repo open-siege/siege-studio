@@ -32,7 +32,9 @@ using predefined_string = siege::platform::game_command_line_predefined_setting<
 extern auto command_line_caps = game_command_line_caps{
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
-  .int_settings = { { L"gl_mode" } },
+  .listen_setting = L"connect",
+  .dedicated_setting = L"dedicated",
+  .int_settings = { { L"dedicated", L"gl_mode" } },
   .string_settings = { { L"name", L"connect", L"map", L"gl_driver" } },
 };
 
@@ -56,7 +58,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "itemnext", u"Next Item", u"Combat" },
   game_action{ game_action::digital, "itemuse", u"Use Item", u"Combat" },
   game_action{ game_action::digital, "scoreboard", u"Score", u"Interface" },
-  game_action{ game_action::digital, "menu-objectives", u"Objectives", u"Interface" },
+  game_action{ game_action::digital, "cmd help", u"Help Menu", u"Interface" },
   game_action{ game_action::digital, "+klook", u"Keyboard Look", u"Misc" },
   game_action{ game_action::digital, "+mlook", u"Mouse Look", u"Misc" },
 } };
@@ -202,10 +204,11 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 5> actions{
+  std::array<std::pair<WORD, std::string_view>, 6> actions{
     {
       std::make_pair<WORD, std::string_view>('F', "+melee-attack"),
       std::make_pair<WORD, std::string_view>(VK_RETURN, "+activate"),
+      std::make_pair<WORD, std::string_view>('E', "+activate"),
       std::make_pair<WORD, std::string_view>('G', "invuse"),
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),

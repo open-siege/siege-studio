@@ -323,6 +323,10 @@ namespace siege::views
 
           do
           {
+            if (!first)
+            {
+              break;
+            }
             if (!first->label)
             {
               break;

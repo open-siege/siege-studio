@@ -30,7 +30,9 @@ using predefined_string = siege::platform::game_command_line_predefined_setting<
 extern auto command_line_caps = game_command_line_caps{
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
-  .int_settings = { { L"r_customwidth", L"r_customheight", L"r_mode" } },
+  .listen_setting = L"connect",
+  .dedicated_setting = L"dedicated",
+  .int_settings = { { L"dedicated", L"r_customwidth", L"r_customheight", L"r_mode" } },
   .string_settings = { { L"name", L"connect", L"map", L"r_glDriver" } },
 };
 
@@ -255,9 +257,9 @@ predefined_int*
   auto name_str = std::wstring_view(name);
 
 
-  if (name_str == L"r_mode")
+    if (name_str == L"r_mode")
   {
-    static auto modes = std::array<predefined_int, 8>{
+    static auto modes = std::array<predefined_int, 9>{
       predefined_int{ .label = L"640x480", .value = 1 },
       predefined_int{ .label = L"800x600", .value = 1 },
       predefined_int{ .label = L"960x720", .value = 1 },
