@@ -324,7 +324,7 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
       if (::MapAndLoad(siege::platform::to_lower(dll.filename.string()).c_str(), nullptr, &image, TRUE, TRUE))
       {
         auto existing_major_version = image.FileHeader->OptionalHeader.MajorImageVersion;
-        auto existing_minor_version = image.FileHeader->OptionalHeader.MajorImageVersion;
+        auto existing_minor_version = image.FileHeader->OptionalHeader.MinorImageVersion;
         ::UnMapAndLoad(&image);
 
         if (info.available_version.cx >= existing_major_version && info.available_version.cy > existing_minor_version)
