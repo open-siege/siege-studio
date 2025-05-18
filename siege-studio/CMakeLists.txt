@@ -8,12 +8,12 @@ string(TIMESTAMP SIEGE_MINOR_VERSION "%V")
 
 if (WIN32)
 	add_library(siege-studio-core SHARED src/siege-studio-core.cpp src/siege-studio-core.def)
-	target_compile_definitions(siege-studio-core PRIVATE UNICODE)
-	target_link_libraries(siege-studio-core PUBLIC siege-win-desktop)
+	target_compile_definitions(siege-studio-core PRIVATE UNICODE SIEGE_MAJOR_VERSION=${SIEGE_MAJOR_VERSION} SIEGE_MINOR_VERSION=${SIEGE_MINOR_VERSION})
+	target_link_libraries(siege-studio-core PUBLIC siege-win-desktop Imagehlp)
 
 	add_library(siege-studio-core-static STATIC src/siege-studio-core.cpp)	
-	target_compile_definitions(siege-studio-core-static PRIVATE UNICODE)
-	target_link_libraries(siege-studio-core-static PUBLIC siege-win-desktop)
+	target_compile_definitions(siege-studio-core-static PRIVATE UNICODE SIEGE_MAJOR_VERSION=${SIEGE_MAJOR_VERSION} SIEGE_MINOR_VERSION=${SIEGE_MINOR_VERSION})
+	target_link_libraries(siege-studio-core-static PUBLIC siege-win-desktop Imagehlp)
 
 	add_executable(siege-studio WIN32 src/siege-studio.cpp src/app-update.cpp src/siege-studio.manifest src/siege-studio.rc)
 	target_compile_definitions(siege-studio PRIVATE UNICODE SIEGE_MAJOR_VERSION=${SIEGE_MAJOR_VERSION} SIEGE_MINOR_VERSION=${SIEGE_MINOR_VERSION})

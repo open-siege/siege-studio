@@ -6,6 +6,36 @@
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/wic.hpp>
 #include <siege/platform/win/capabilities.hpp>
+#include <imagehlp.h>
+
+namespace fs = std::filesystem;
+
+std::optional<SIZE> get_module_version()
+{
+  auto dll_path = fs::path(win32::module_ref::current_module().GetModuleFileName());
+  std::error_code last_error;
+
+  if (fs::exists(dll_path, last_error))
+  {
+    LOADED_IMAGE image{};
+    auto dll_string = dll_path.filename().string();
+    auto dll_path_string = dll_path.parent_path().string();
+    if (::MapAndLoad(dll_string.c_str(), dll_path_string.c_str(), &image, dll_path.extension().string() == ".dll" ? TRUE : FALSE, TRUE))
+    {
+      SIZE result{};
+      result.cx = image.FileHeader->OptionalHeader.MajorImageVersion;
+      result.cy = image.FileHeader->OptionalHeader.MinorImageVersion;
+      ::UnMapAndLoad(&image);
+
+      if (result.cx && result.cy)
+      {
+        return result;
+      }
+    }
+  }
+
+  return std::nullopt;
+}
 
 namespace siege::views
 {
@@ -33,22 +63,22 @@ namespace siege::views
     {
       ::SetWindowTextW(*this, L"About Siege Studio");
 
-      
+
       text_stack = win32::window(CreateWindowExW(0, L"StackLayout", nullptr, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, *this, nullptr, nullptr, nullptr));
-   
+
       heading = *win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = L"Siege Studio is an open-source reverse engeering tool to preview, convert or extract files from various games, like Starsiege, Quake and many more." });
 
       logo = *win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE | SS_BITMAP | SS_CENTERIMAGE | SS_REALSIZEIMAGE });
 
-      auto steam_link = *win32::CreateWindowExW<win32::button>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE | BS_COMMANDLINK, .lpszName = L"https://github.com/open-siege/siege-studio/" });
-      steam_link.bind_bn_clicked([](auto sender, auto&) {
+      auto github_link = *win32::CreateWindowExW<win32::button>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE | BS_COMMANDLINK, .lpszName = L"https://github.com/open-siege/siege-studio/" });
+      github_link.bind_bn_clicked([](auto sender, auto&) {
         std::array<wchar_t, 255> temp{};
         ::GetWindowTextW(sender, temp.data(), temp.size());
         ::ShellExecuteW(NULL, L"open", temp.data(), nullptr, nullptr, SW_SHOWNORMAL);
       });
 
-      auto github_link = *win32::CreateWindowExW<win32::button>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE | BS_COMMANDLINK, .lpszName = L"https://store.steampowered.com/app/3193420/Siege_Studio/" });
-      github_link.bind_bn_clicked([](auto sender, auto&) {
+      auto itch_link = *win32::CreateWindowExW<win32::button>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE | BS_COMMANDLINK, .lpszName = L"https://thesiegehub.itch.io/siege-studio/" });
+      itch_link.bind_bn_clicked([](auto sender, auto&) {
         std::array<wchar_t, 255> temp{};
         ::GetWindowTextW(sender, temp.data(), temp.size());
         ::ShellExecuteW(NULL, L"open", temp.data(), nullptr, nullptr, SW_SHOWNORMAL);
@@ -57,11 +87,15 @@ namespace siege::views
       text_stack.SetPropW(L"Orientation", ORIENTATION_PREFERENCE::ORIENTATION_PREFERENCE_PORTRAIT);
       text_stack.SetPropW(L"DefaultHeight", win32::get_system_metrics(SM_CYSIZE) * 2);
 
+      auto version_to_check = get_module_version().value_or(SIZE{ SIEGE_MAJOR_VERSION, SIEGE_MINOR_VERSION });
+
+      win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"Siege Studio version: " + std::to_wstring(version_to_check.cx) + L"." + std::to_wstring(version_to_check.cy)).c_str() });
+
       auto gdi_version = win32::get_gdi_plus_version();
 
       if (gdi_version)
       {
-        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"GDI+ Version: " + std::to_wstring(gdi_version->major) + L"." + std::to_wstring(gdi_version->minor)).c_str() });
+        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"GDI+ version: " + std::to_wstring(gdi_version->major) + L"." + std::to_wstring(gdi_version->minor)).c_str() });
       }
       else
       {
@@ -72,7 +106,7 @@ namespace siege::views
 
       if (wic_version)
       {
-        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"Windows Imaging Component Version: " + std::to_wstring(wic_version->major) + L"." + std::to_wstring(wic_version->minor)).c_str() });
+        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"Windows Imaging Component version: " + std::to_wstring(wic_version->major) + L"." + std::to_wstring(wic_version->minor)).c_str() });
       }
       else
       {
@@ -83,7 +117,7 @@ namespace siege::views
 
       if (wam_version)
       {
-        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"Windows Animation Manager Version: " + std::to_wstring(wam_version->major) + L"." + std::to_wstring(wam_version->minor)).c_str() });
+        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"Windows Animation Manager version: " + std::to_wstring(wam_version->major) + L"." + std::to_wstring(wam_version->minor)).c_str() });
       }
       else
       {
@@ -94,7 +128,7 @@ namespace siege::views
 
       if (direct2d_version)
       {
-        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"Direct2D Version: " + std::to_wstring(direct2d_version->major) + L"." + std::to_wstring(direct2d_version->minor)).c_str() });
+        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"Direct2D version: " + std::to_wstring(direct2d_version->major) + L"." + std::to_wstring(direct2d_version->minor)).c_str() });
       }
       else
       {
@@ -105,7 +139,7 @@ namespace siege::views
 
       if (directwrite_version)
       {
-        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"DirectWrite Version: " + std::to_wstring(directwrite_version->major) + L"." + std::to_wstring(direct2d_version->minor)).c_str() });
+        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"DirectWrite version: " + std::to_wstring(directwrite_version->major) + L"." + std::to_wstring(direct2d_version->minor)).c_str() });
       }
       else
       {
@@ -125,7 +159,7 @@ namespace siege::views
     {
       if (type == SIZE_MAXIMIZED || type == SIZE_RESTORED)
       {
-        auto top_size = SIZE{ .cx = client_size.cx - 10, .cy = client_size.cy / 8 };
+        auto top_size = SIZE{ .cx = client_size.cx - 10, .cy = client_size.cy / 16 };
         auto middle_size = SIZE{ .cx = client_size.cx - 10, .cy = client_size.cy / 2 };
         auto bottom_size = SIZE{ .cx = client_size.cx - 10, .cy = client_size.cy };
 
@@ -135,7 +169,7 @@ namespace siege::views
         logo.SetWindowPos(POINT{ .x = 0, .y = top_size.cy });
         logo.SetWindowPos(middle_size);
 
-        text_stack.SetWindowPos(POINT{ .x = 5, .y = 5});
+        text_stack.SetWindowPos(POINT{ .x = 5, .y = 5 });
         text_stack.SetWindowPos(bottom_size);
 
         auto min = std::min(middle_size.cx, middle_size.cy);
