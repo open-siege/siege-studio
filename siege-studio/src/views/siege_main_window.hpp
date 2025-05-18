@@ -397,7 +397,7 @@ namespace siege::views
               {
                 if (destroy_dialog && msg != TDN_DESTROYED)
                 {
-                  ::DestroyWindow(dialog);
+                  ::EndDialog(dialog, 0);
                   return S_OK;
                 }
 
