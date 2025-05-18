@@ -69,7 +69,7 @@ extern auto game_actions = std::array<game_action, 33>{ {
   game_action{ game_action::digital, "+attack", u"Attack", u"Combat" },
   game_action{ game_action::digital, "+altattack", u"Alt Attack", u"Combat" },
   game_action{ game_action::digital, "+melee-attack", u"Melee Attack", u"Combat" },
-  game_action{ game_action::digital, "+use-plus-special", u"Special Action", u"Combat" },
+  game_action{ game_action::digital, "+use", u"Interact", u"Combat" },
   game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
   game_action{ game_action::digital, "weapprev", u"Previous Weapon", u"Combat" },
   game_action{ game_action::digital, "itemnext", u"Next Item", u"Combat" },
@@ -79,16 +79,17 @@ extern auto game_actions = std::array<game_action, 33>{ {
   game_action{ game_action::digital, "menu objectives", u"Objectives", u"Interface" },
   game_action{ game_action::digital, "+klook", u"Keyboard Look", u"Misc" },
   game_action{ game_action::digital, "+mlook", u"Mouse Look", u"Misc" },
+  game_action{ game_action::digital, "+weapon-extra", u"Weapon Fiddle", u"Misc" },
 } };
 
 constexpr static auto sof_aliases = std::array<std::array<std::string_view, 2>, 8>{ { { "+melee-attack", "weaponselect 1; +attack" },
   { "-melee-attack", "weaponbestsafe; -attack" },
-  { "+use-plus-special1", "+weaponextra1; +use" },
-  { "-use-plus-special1", "-weaponextra1; -use; alias +use-plus-special +use-plus-special2; alias -use-plus-special -use-plus-special2" },
-  { "+use-plus-special2", "+weaponextra2; +use" },
-  { "-use-plus-special2", "-weaponextra2; -use; alias +use-plus-special +use-plus-special1; alias -use-plus-special -use-plus-special1" },
-  { "+use-plus-special", "+use-plus-special1" },
-  { "-use-plus-special", "-use-plus-special1" } } };
+  { "+weapon-extra1", "+weaponextra1;" },
+  { "-weapon-extra1", "-weaponextra1;alias +weapon-extra +weapon-extra2; alias -weapon-extra -weapon-extra2" },
+  { "+weapon-extra2", "+weaponextra2;" },
+  { "-weapon-extra2", "-weaponextra2;alias +weapon-extra +weapon-extra1; alias -weapon-extra -weapon-extra1" },
+  { "+weapon-extra", "+weapon-extra1" },
+  { "-weapon-extra", "-weapon-extra1" } } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 using namespace std::literals;
@@ -184,7 +185,7 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
 
   std::array<std::pair<WORD, std::string_view>, 2> actions{
     { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+altattack"),
-      std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use-plus-special") }
+      std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+weapon-extra") }
   };
 
   upsert_mouse_defaults(game_actions, actions, *binding);
@@ -207,11 +208,15 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 5> actions{
+  std::array<std::pair<WORD, std::string_view>, 9> actions{
     {
       std::make_pair<WORD, std::string_view>('F', "+melee-attack"),
-      std::make_pair<WORD, std::string_view>(VK_RETURN, "+use-plus-special"),
+      std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
+      std::make_pair<WORD, std::string_view>('E', "+use"),
       std::make_pair<WORD, std::string_view>('G', "itemuse"),
+      std::make_pair<WORD, std::string_view>('H', "itemnext"),
+      std::make_pair<WORD, std::string_view>('Q', "+weapon-extra"),
+      std::make_pair<WORD, std::string_view>(VK_TAB, "score"),
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
     }
@@ -245,7 +250,7 @@ HRESULT init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "+melee-attack"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "+use-plus-special"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "+use"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "weapnext"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "itemnext"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "itemuse"),

@@ -328,29 +328,30 @@ namespace siege
 
       if (header.dwType == RIM_TYPEKEYBOARD)
       {
-        RAWINPUT input{};
-        UINT size = sizeof(input);
+          // TODO only send keyboard/mouse input if input filtering is enabled
+        //RAWINPUT input{};
+        //UINT size = sizeof(input);
 
-        if (::GetRawInputData(message.handle, RID_INPUT, &input, &size, sizeof(RAWINPUTHEADER)) > 0)
-        {
-          INPUT temp{ .type = INPUT_KEYBOARD };
-          temp.ki.dwExtraInfo = *device_id;
-          //    temp.ki.wVk = input.data.keyboard.VKey;
-          temp.ki.wScan = input.data.keyboard.MakeCode;
-          temp.ki.dwFlags = KEYEVENTF_SCANCODE;
+        //if (::GetRawInputData(message.handle, RID_INPUT, &input, &size, sizeof(RAWINPUTHEADER)) > 0)
+        //{
+        //  INPUT temp{ .type = INPUT_KEYBOARD };
+        //  temp.ki.dwExtraInfo = *device_id;
+        //  //    temp.ki.wVk = input.data.keyboard.VKey;
+        //  temp.ki.wScan = input.data.keyboard.MakeCode;
+        //  temp.ki.dwFlags = KEYEVENTF_SCANCODE;
 
-          if (input.data.keyboard.Flags & RI_KEY_BREAK)
-          {
-            temp.ki.dwFlags |= KEYEVENTF_KEYUP;
-          }
+        //  if (input.data.keyboard.Flags & RI_KEY_BREAK)
+        //  {
+        //    temp.ki.dwFlags |= KEYEVENTF_KEYUP;
+        //  }
 
-          if (input.data.keyboard.Flags & RI_KEY_E0)
-          {
-            temp.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
-          }
+        //  if (input.data.keyboard.Flags & RI_KEY_E0)
+        //  {
+        //    temp.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
+        //  }
 
-          ::SendInput(1, &temp, sizeof(temp));
-        }
+        //  ::SendInput(1, &temp, sizeof(temp));
+        // }
 
         return 0;
       }
