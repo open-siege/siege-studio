@@ -831,111 +831,6 @@ namespace siege::views
   using format_command_line = const wchar_t**(const siege::platform::game_command_line_args*, std::uint32_t* new_size);
   bool allow_input_filtering = false;// TODO There are still some issues with id Tech 3 games that should be fixed.
 
-  std::optional<std::filesystem::path> link_to_wsock_zero_tier(std::filesystem::path exe_path)
-  {
-    struct handler
-    {
-      static BOOL CALLBACK byway_callback(PVOID pContext, PCSTR pszFile, LPCSTR* ppszOutFile)
-      {
-        return TRUE;
-      }
-
-      static BOOL CALLBACK file_callback(PVOID context, LPCSTR pszOrigFile, LPCSTR file, LPCSTR* ppszOutFile)
-      {
-        if (file && (std::string_view(file) == "WSOCK32.dll" || std::string_view(file) == "WSOCK32.DLL" || std::string_view(file) == "wsock32.dll"))
-        {
-          *ppszOutFile = "wsock32-on-zero-tier.dll";
-        }
-        else if (file && (std::string_view(file) == "WS2_32.dll" || std::string_view(file) == "WS2_32.DLL" || std::string_view(file) == "ws2_32.dll"))
-        {
-          *ppszOutFile = "ws2_32-on-zero-tier.dll";
-        }
-        else
-        {
-          *ppszOutFile = file;
-        }
-
-        return TRUE;
-      }
-
-      static BOOL CALLBACK symbol_callback(PVOID pContext, ULONG nOrigOrdinal, ULONG nOrdinal, ULONG* pnOutOrdinal, LPCSTR original_symbol, LPCSTR pszSymbol, LPCSTR* ppszOutSymbol)
-      {
-        *ppszOutSymbol = pszSymbol;
-        return TRUE;
-      }
-
-      static BOOL CALLBACK commit_callback(PVOID pContext)
-      {
-        return TRUE;
-      }
-    };
-
-    static std::map<std::filesystem::path, std::shared_ptr<void>> deferred_deletes;
-
-    bool skip_copy = false;
-    if (exe_path.stem().wstring().ends_with(L"-zero-tier"))
-    {
-      auto temp = exe_path;
-      auto stem = temp.stem().wstring();
-      temp.replace_filename(stem.erase(stem.rfind(L"-zero-tier")) + exe_path.extension().wstring());
-      std::error_code last_errorc;
-      if (std::filesystem::exists(temp, last_errorc))
-      {
-        skip_copy = true;
-      }
-    }
-    else
-    {
-    }
-
-    auto new_path = exe_path;
-
-    if (!skip_copy)
-    {
-      new_path.replace_filename(exe_path.stem().wstring() + L"-zero-tier" + exe_path.extension().wstring());
-
-      if (!::CopyFileW(exe_path.c_str(), new_path.c_str(), FALSE))
-      {
-        return std::nullopt;
-      }
-    }
-
-    if (!deferred_deletes.contains(new_path))
-    {
-      deferred_deletes.emplace(new_path, std::shared_ptr<void>(nullptr, [new_path](...) { ::DeleteFileW(new_path.c_str()); }));
-    }
-
-    try
-    {
-      handler handler{};
-      auto exe_file = win32::file{ new_path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL };
-
-      auto handle = exe_file.get();
-      auto hbinary = ::DetourBinaryOpen(handle);
-
-      if (hbinary)
-      {
-        if (::DetourBinaryEditImports(hbinary, &handler, nullptr, handler::file_callback, handler::symbol_callback, nullptr))
-        {
-          OutputDebugStringW(L"Updated imports of exe\n");
-        }
-
-        if (::DetourBinaryWrite(hbinary, handle))
-        {
-          OutputDebugStringW(L"Wrote data to file\n");
-        }
-
-        ::DetourBinaryClose(hbinary);
-      }
-      return new_path;
-    }
-    catch (...)
-    {
-    }
-    return std::nullopt;
-  }
-
-
   HRESULT exe_controller::launch_game_with_extension(const siege::platform::game_command_line_args* game_args, PROCESS_INFORMATION* process_info) noexcept
   {
     std::error_code last_errorc;
@@ -1038,14 +933,23 @@ namespace siege::views
           return item.name != nullptr && std::wstring_view(item.name) == L"ZERO_TIER_NETWORK_ID" && item.value != nullptr && item.value[0] != '\0';
         }))
     {
-      real_path = link_to_wsock_zero_tier(loaded_path).value_or(loaded_path);
+      namespace fs = std::filesystem;
 
-      auto search_path = std::filesystem::path(extension_path).parent_path().wstring();
+      auto ext_path = fs::path(win32::module_ref::current_application().GetModuleFileName()).parent_path() / "runtime-extensions";
 
-      if (!current_path.contains(search_path))
-      {
-        current_path = search_path + L";" + current_path;
-      }
+      fs::remove_all(ext_path, last_errorc);
+      fs::create_directories(ext_path, last_errorc);
+
+      auto wsock_path = fs::path(extension_path).parent_path() / "wsock32-on-zero-tier.dll";
+      auto ws32_path = fs::path(extension_path).parent_path() / "ws2_32-on-zero-tier.dll";
+      auto zt_path = fs::path(extension_path).parent_path() / "zt-shared.dll";
+
+      fs::copy_file(wsock_path, ext_path / "wsock32.dll", fs::copy_options::overwrite_existing, last_errorc);
+      fs::copy_file(ws32_path, ext_path / "ws2_32.dll", fs::copy_options::overwrite_existing, last_errorc);
+      fs::copy_file(zt_path, ext_path / "zt-shared.dll", fs::copy_options::overwrite_existing, last_errorc);
+
+      ::SetDllDirectoryW(ext_path.c_str());
+
 
       if (auto* caps = get_extension().caps; caps && caps->ip_connect_setting)
       {
@@ -1118,6 +1022,9 @@ namespace siege::views
 
 
     auto last_error = ::GetLastError();
+    
+    ::SetDllDirectoryW(nullptr);
+
     return HRESULT_FROM_WIN32(last_error);
   }
 }// namespace siege::views
