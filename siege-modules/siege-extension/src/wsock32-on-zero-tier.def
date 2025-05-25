@@ -7,14 +7,20 @@ EXPORTS
 	connect=siege_connect
 	siege_getsockname @6
 	getsockname=siege_getsockname
-	htonl @8=wsock32.htonl
-	htons @9=wsock32.htons
-	inet_addr @10=wsock32.inet_addr
-	inet_ntoa @11=wsock32.inet_ntoa
+	siege_htonl @8
+	htonl=siege_htonl
+	siege_htons @9	
+	htons=siege_htons
+	siege_inet_addr @10
+	inet_addr=siege_inet_addr
+	siege_inet_ntoa @11
+	inet_ntoa=siege_inet_ntoa
 	siege_ioctlsocket @12
 	ioctlsocket=siege_ioctlsocket
-	ntohl @14=wsock32.ntohl
-	ntohs @15=wsock32.ntohs
+	siege_ntohl @14
+	ntohl=siege_ntohl
+	siege_ntohs @15
+	ntohs=siege_ntohs
 	siege_recv @16
 	recv=siege_recv
 	siege_recvfrom @17
@@ -33,14 +39,18 @@ EXPORTS
 	socket=siege_socket
 	siege_gethostbyname @52
 	gethostbyname=siege_gethostbyname
-	gethostname @57=wsock32.gethostname
-	WSAGetLastError @111=wsock32.WSAGetLastError
+	siege_gethostname @57
+	gethostname=siege_gethostname
+	siege_WSAGetLastError @111
+	WSAGetLastError=siege_WSAGetLastError
 	siege_WSAStartup @115
 	WSAStartup=siege_WSAStartup
 	siege_WSACleanup @116
 	WSACleanup=siege_WSACleanup
 	__WSAFDIsSet @151=siege___WSAFDIsSet
-	__WSAFDIsSet @151=siege___WSAFDIsSet
-	WSASetBlockingHook @109=wsock32.#109
-	WSAUnhookBlockingHook @110=wsock32.#110
-	WSACancelBlockingCall @113=wsock32.#113
+	siege_WSASetBlockingHook @109
+	WSASetBlockingHook=siege_WSASetBlockingHook
+	siege_WSAUnhookBlockingHook @110
+	WSAUnhookBlockingHook=siege_WSAUnhookBlockingHook
+	siege_WSACancelBlockingCall @113
+	WSACancelBlockingCall=siege_WSACancelBlockingCall
