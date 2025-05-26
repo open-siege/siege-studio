@@ -148,8 +148,7 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   iter->name = L"console";
   iter->value = L"1";
 
-  auto connect_iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { 
-      return setting.name != nullptr && (std::wstring_view(setting.name) == L"dedicated" || std::wstring_view(setting.name) == L"connect" || std::wstring_view(setting.name) == L"map"); });
+  auto connect_iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name != nullptr && (std::wstring_view(setting.name) == L"dedicated" || std::wstring_view(setting.name) == L"connect" || std::wstring_view(setting.name) == L"map"); });
 
   if (connect_iter != args->string_settings.end())
   {
@@ -160,6 +159,16 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
     std::advance(iter, 1);
     iter->name = L"introCommand";
     iter->value = L"wait";
+  }
+
+  auto mode_iter = std::find_if(args->int_settings.begin(), args->int_settings.end(), [](auto& setting) { return setting.name != nullptr && std::wstring_view(setting.name) == L"r_mode"; });
+
+  if (mode_iter != args->int_settings.end())
+  {
+    auto value = mode_iter->value;
+    std::advance(mode_iter, 1);
+    mode_iter->name = L"ui_newvidmode";
+    mode_iter->value = value;
   }
 
   return S_OK;
