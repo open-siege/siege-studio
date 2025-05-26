@@ -18,7 +18,7 @@ extern "C" HRESULT executable_is_supported(const wchar_t* filename) noexcept
   auto exe_path = fs::path(filename);
   auto parent_path = exe_path.parent_path();
 
-  if (exe_path.stem() == "Uprising 2" && exe_path.extension() == ".exe" && fs::exists(parent_path / "uprising.cln", last_error) && fs::exists(parent_path / "ramlockC.VXD", last_error))
+  if (exe_path.stem() == "WINDIE" && exe_path.extension() == ".EXE" && fs::exists(parent_path / "RLAPI.DLL", last_error) && fs::exists(parent_path / "SIMFORCE.DLL", last_error))
   {
     return S_OK;
   }

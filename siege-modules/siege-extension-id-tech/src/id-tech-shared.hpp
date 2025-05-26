@@ -24,7 +24,7 @@ std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_2_0(WORD
 void load_mouse_bindings(siege::configuration::text_game_config& config, siege::platform::mouse_binding& binding);
 void load_keyboard_bindings(siege::configuration::text_game_config& config, siege::platform::keyboard_binding& binding);
 void upsert_mouse_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::mouse_binding& binding);
-void upsert_keyboard_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::keyboard_binding& binding);
+void upsert_keyboard_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::keyboard_binding& binding, bool ignore_case = false);
 void append_controller_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::controller_binding& binding);
 
 struct mapping_context

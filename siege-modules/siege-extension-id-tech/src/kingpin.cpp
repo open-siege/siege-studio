@@ -204,18 +204,22 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 6> actions{
+  std::array<std::pair<WORD, std::string_view>, 10> actions{
     {
-      std::make_pair<WORD, std::string_view>('F', "+melee-attack"),
+      std::make_pair<WORD, std::string_view>('f', "+melee-attack"),
+      std::make_pair<WORD, std::string_view>('w', "+forward"),
+      std::make_pair<WORD, std::string_view>('a', "+moveleft"),
+      std::make_pair<WORD, std::string_view>('s', "+back"),
+      std::make_pair<WORD, std::string_view>('d', "+moveright"),
+      std::make_pair<WORD, std::string_view>('e', "+activate"),
+      std::make_pair<WORD, std::string_view>('g', "invuse"),
       std::make_pair<WORD, std::string_view>(VK_RETURN, "+activate"),
-      std::make_pair<WORD, std::string_view>('E', "+activate"),
-      std::make_pair<WORD, std::string_view>('G', "invuse"),
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
     }
   };
 
-  upsert_keyboard_defaults(game_actions, actions, *binding);
+  upsert_keyboard_defaults(game_actions, actions, *binding, true);
 
   return S_OK;
 }

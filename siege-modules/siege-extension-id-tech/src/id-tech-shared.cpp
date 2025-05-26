@@ -514,7 +514,7 @@ void upsert_mouse_defaults(const std::span<siege::platform::game_action> game_ac
   }
 }
 
-void upsert_keyboard_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::keyboard_binding& binding)
+void upsert_keyboard_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::keyboard_binding& binding, bool ignore_case)
 {
   for (auto action_str : actions)
   {
@@ -526,6 +526,11 @@ void upsert_keyboard_defaults(const std::span<siege::platform::game_action> game
     }
 
     auto existing = std::find_if(binding.inputs.begin(), binding.inputs.end(), [&](auto& input) { return input.virtual_key == action_str.first; });
+
+    if (!ignore_case && existing == binding.inputs.end() && std::isalpha(action_str.first))
+    {
+      existing = std::find_if(binding.inputs.begin(), binding.inputs.end(), [&](auto& input) { return input.virtual_key == (std::uint16_t)std::tolower(action_str.first); });
+    }
 
     if (existing != binding.inputs.end())
     {

@@ -160,6 +160,12 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
     iter->name = L"introCommand";
     iter->value = L"wait";
   }
+  else
+  {
+    std::advance(iter, 1);
+    iter->name = L"introCommand";
+    iter->value = L"";
+  }
 
   auto mode_iter = std::find_if(args->int_settings.begin(), args->int_settings.end(), [](auto& setting) { return setting.name != nullptr && std::wstring_view(setting.name) == L"r_mode"; });
 
@@ -279,13 +285,14 @@ predefined_int*
   if (name_str == L"r_mode")
   {
     static auto modes = std::array<predefined_int, 9>{
-      predefined_int{ .label = L"640x480", .value = 1 },
-      predefined_int{ .label = L"800x600", .value = 1 },
-      predefined_int{ .label = L"960x720", .value = 1 },
-      predefined_int{ .label = L"1024x768", .value = 1 },
-      predefined_int{ .label = L"1152x864", .value = 1 },
-      predefined_int{ .label = L"1280x960", .value = 1 },
-      predefined_int{ .label = L"1600x1200", .value = 1 },
+      predefined_int{ .label = L"640x480", .value = 3 },
+      predefined_int{ .label = L"800x600", .value = 4 },
+      predefined_int{ .label = L"960x720", .value = 5 },
+      predefined_int{ .label = L"1024x768", .value = 6 },
+      predefined_int{ .label = L"1152x864", .value = 7 },
+      predefined_int{ .label = L"1280x1024", .value = 8 },
+      predefined_int{ .label = L"1600x1200", .value = 9 },
+      predefined_int{ .label = L"Custom", .value = -1 },
       predefined_int{},
     };
 
