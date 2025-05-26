@@ -144,7 +144,7 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
     config.emplace(siege::configuration::key_type({ "set", "in_joystick" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "set", "joy_advanced" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "set", "in_mouse" }), siege::configuration::key_type("1"));
-    config.emplace(siege::configuration::key_type({ "joy_advancedupdate" }), siege::configuration::key_type(""));
+    config.emplace(siege::configuration::key_type({ "joy_advancedupdate" }), siege::configuration::key_type{});
   }
 
   config.save(custom_bindings);

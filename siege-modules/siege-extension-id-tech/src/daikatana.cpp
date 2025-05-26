@@ -32,7 +32,9 @@ using predefined_string = siege::platform::game_command_line_predefined_setting<
 extern auto command_line_caps = game_command_line_caps{
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
-  .int_settings = { { L"gl_mode" } },
+  .listen_setting = L"connect",
+  .dedicated_setting = L"dedicated",
+  .int_settings = { { L"dedicated", L"gl_mode" } },
   .string_settings = { { L"name", L"connect", L"map", L"gl_driver" } },
 };
 

@@ -173,9 +173,16 @@ namespace siege::configuration::id_tech
         result.push_back(' ');
       }
 
-      result.push_back('\"');
-      result.append(line.value.at(0));
-      result.push_back('\"');
+      if (!line.value.empty())
+      {
+        result.push_back('\"');
+        result.append(line.value.at(0));
+        result.push_back('\"');
+      }
+      else if (result.back() == ' ')
+      {
+        result.pop_back();
+      }
 
       return result;
     }

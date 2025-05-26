@@ -34,7 +34,7 @@ extern auto command_line_caps = game_command_line_caps{
   .player_name_setting = L"name",
   .listen_setting = L"connect",
   .dedicated_setting = L"dedicated",
-  .int_settings = { { L"dedicated", L"gl_mode" } },
+  .int_settings = { { L"dedicated", L"gl_mode", L"numbots" } },
   // fov
   .string_settings = { { L"name", L"connect", L"map", L"gl_driver" } }
   // skin
@@ -166,6 +166,34 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   std::advance(iter, 1);
   iter->name = L"console";
   iter->value = L"1";
+
+  auto int_iter = std::find_if(args->int_settings.begin(), args->int_settings.end(), [](auto& setting) { return setting.name != nullptr && setting.name == std::wstring_view(L"numbots"); });
+
+  if (int_iter != args->int_settings.end())
+  {
+    std::ofstream custom_bindings("user/add_bots.cfg", std::ios::binary | std::ios::trunc);
+
+    siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
+
+    static std::string command;
+    command.clear();
+
+    for (auto i = 0; i < int_iter->value; ++i)
+    {
+      if (!command.empty())
+      {
+        command.push_back(';');
+      }
+      command.append("bot_add");
+    }
+    config.emplace(siege::configuration::key_type({ command.c_str() }), siege::configuration::key_type{});
+
+    config.save(custom_bindings);
+
+    std::advance(iter, 1);
+    iter->name = L"exec";
+    iter->value = L"add_bots.cfg";
+  }
 
   return S_OK;
 }
