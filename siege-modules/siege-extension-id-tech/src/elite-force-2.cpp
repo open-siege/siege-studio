@@ -66,12 +66,9 @@ extern void(__cdecl* ConsoleEvalCdecl)(const char*);
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = {{ 
-        std::array<std::pair<std::string_view, std::size_t>, 3>{ { 
-            { "exec"sv, std::size_t(0xfb38d8) },
-            { "cmdlist"sv, std::size_t(0xfb38d0) },
-            { "cl_pitchspeed"sv, std::size_t(0xfb1a68) } } } 
-}};
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0xfb38d8) },
+  { "cmdlist"sv, std::size_t(0xfb38d0) },
+  { "cl_pitchspeed"sv, std::size_t(0xfb1a68) } } } } };
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 6> function_name_ranges{ {
   { "centerview"sv, "-attackleft"sv },
@@ -82,13 +79,13 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 6> fu
   { "ui_disableinventory"sv, "ui_displayserverinformation"sv },
 } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 5> variable_name_ranges{{ 
-    { "mp_map_instantkill"sv, "mp_map_specialties"sv },
-    { "temp_sv_maxspeed"sv, "temp_mp_gametype"sv },
-    { "temp_password"sv, "temp_dedicated"sv },
-    { "temp_sv_pure"sv, "temp_mp_modifier_Specialties"sv },
-    { "botenable"sv, "sv_strafeJumpingAllowed"sv },
-}};
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 5> variable_name_ranges{ {
+  { "mp_map_instantkill"sv, "mp_map_specialties"sv },
+  { "temp_sv_maxspeed"sv, "temp_mp_gametype"sv },
+  { "temp_password"sv, "temp_dedicated"sv },
+  { "temp_sv_pure"sv, "temp_mp_modifier_Specialties"sv },
+  { "botenable"sv, "sv_strafeJumpingAllowed"sv },
+} };
 
 inline void set_gog_exports()
 {
@@ -151,6 +148,19 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   iter->name = L"console";
   iter->value = L"1";
 
+  auto connect_iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { 
+      return setting.name != nullptr && (std::wstring_view(setting.name) == L"dedicated" || std::wstring_view(setting.name) == L"connect" || std::wstring_view(setting.name) == L"map"); });
+
+  if (connect_iter != args->string_settings.end())
+  {
+    std::advance(iter, 1);
+    iter->name = L"com_introplayed";
+    iter->value = L"1";
+
+    std::advance(iter, 1);
+    iter->name = L"introCommand";
+    iter->value = L"wait";
+  }
 
   return S_OK;
 }
@@ -257,7 +267,7 @@ predefined_int*
   auto name_str = std::wstring_view(name);
 
 
-    if (name_str == L"r_mode")
+  if (name_str == L"r_mode")
   {
     static auto modes = std::array<predefined_int, 9>{
       predefined_int{ .label = L"640x480", .value = 1 },
