@@ -1,4 +1,6 @@
 EXPORTS
+	siege_accept @1
+	accept=siege_accept
 	siege_bind @2
 	bind=siege_bind
 	siege_closesocket @3
@@ -47,7 +49,8 @@ EXPORTS
 	WSAStartup=siege_WSAStartup
 	siege_WSACleanup @116
 	WSACleanup=siege_WSACleanup
-	__WSAFDIsSet @151=siege___WSAFDIsSet
+	siege___WSAFDIsSet @151
+	__WSAFDIsSet=siege___WSAFDIsSet
 	siege_WSASetBlockingHook @109
 	WSASetBlockingHook=siege_WSASetBlockingHook
 	siege_WSAUnhookBlockingHook @110
