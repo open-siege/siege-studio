@@ -1125,7 +1125,7 @@ int __stdcall siege_sendto(SOCKET s, const char* buf, int len, int flags, const 
         }
         else
         {
-          wsock_WSASetLastError(WSAETIMEDOUT);
+          wsock_WSASetLastError(WSAEALREADY);
           return SOCKET_ERROR;
         }
       }
