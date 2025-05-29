@@ -68,10 +68,13 @@ namespace siege::views
 
     inline std::filesystem::path get_exe_path() { return loaded_path; }
 
-    inline bool has_extension_module() { return matching_extension != extensions.end(); }
-    bool has_zero_tier_extension();
+    inline bool has_extension_module() const { return matching_extension != extensions.end(); }
+    bool can_support_zero_tier() const;
+    bool has_zero_tier_extension() const;
+    std::optional<std::filesystem::path> get_zero_tier_extension_folder_path() const;
 
     inline siege::platform::game_extension_module& get_extension() { return *matching_extension; }
+    inline siege::platform::game_extension_module& get_extension() const { return *matching_extension; }
 
     HRESULT launch_game_with_extension(const siege::platform::game_command_line_args* game_args, PROCESS_INFORMATION* process_info) noexcept;
 

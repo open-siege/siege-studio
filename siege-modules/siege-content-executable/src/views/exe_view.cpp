@@ -498,6 +498,14 @@ namespace siege::views
           populate_keyboard_table(extension.game_actions, extension.controller_input_backends);
         }
       }
+      else // generically support controller to keyboard/mouse mapping and zero tier networking
+      {
+        siege::platform::game_command_line_caps empty_caps{};
+        populate_launch_table(empty_caps);
+        std::array<siege::platform::game_action, 0> actions{};
+        std::array<const wchar_t*, 0> backends{};
+        populate_controller_table(actions, backends);
+      }
 
       std::vector<win32::list_view_group> groups;
 
