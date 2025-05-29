@@ -11,6 +11,13 @@ namespace siege::views
 {
   void exe_view::populate_controller_table(std::span<siege::platform::game_action> actions, std::span<const wchar_t*> controller_input_backends)
   {
+    auto set_tile_info = [this](auto index) {
+      UINT columns[2] = { 1, 2 };
+      int formats[2] = { LVCFMT_LEFT, LVCFMT_RIGHT };
+      LVTILEINFO item_info{ .cbSize = sizeof(LVTILEINFO), .iItem = (int)index, .cColumns = 2, .puColumns = columns, .piColFmt = formats };
+
+      ListView_SetTileInfo(controller_table, &item_info);
+    };
     std::map<WORD, int> images = {
       { VK_GAMEPAD_A, 0 },
       { VK_GAMEPAD_B, 1 },
@@ -140,11 +147,11 @@ namespace siege::views
         input.from_context = siege::platform::hardware_context::controller_xbox;
         input.to_vkey = mapping.second.first;
         input.to_context = mapping.second.second;
-        up.mask = up.mask | LVIF_PARAM;
+        up.mask = up.mask | LVIF_GROUPID | LVIF_PARAM;
 
         up.sub_items.emplace_back(category_for_vkey(mapping.second.first, mapping.second.second));
         up.sub_items.emplace_back(string_for_vkey(mapping.second.first, mapping.second.second));
-        controller_table.InsertRow(up);
+        set_tile_info(controller_table.InsertRow(up));
       }
     }
     else
@@ -210,8 +217,7 @@ namespace siege::views
           .vkey = context.vkey,
           .context = context.context,
           .action_index = context.action_index });
-        up.sub_items.emplace_back((wchar_t*)context.action.group_display_name.data());
-        controller_table.InsertRow(up);
+        set_tile_info(controller_table.InsertRow(up));
       }
     }
   }
