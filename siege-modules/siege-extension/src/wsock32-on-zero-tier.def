@@ -9,6 +9,8 @@ EXPORTS
 	connect=siege_connect
 	siege_getsockname @6
 	getsockname=siege_getsockname
+	siege_getsockopt @7
+	getsockopt=siege_getsockopt
 	siege_htonl @8
 	htonl=siege_htonl
 	siege_htons @9	
@@ -19,6 +21,8 @@ EXPORTS
 	inet_ntoa=siege_inet_ntoa
 	siege_ioctlsocket @12
 	ioctlsocket=siege_ioctlsocket
+	siege_listen @13
+	listen=siege_listen
 	siege_ntohl @14
 	ntohl=siege_ntohl
 	siege_ntohs @15
