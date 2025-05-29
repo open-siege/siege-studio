@@ -928,8 +928,14 @@ namespace siege::views
       }
     }
 
+    auto zt_is_enabled = [](auto& item) {
+      return item.name != nullptr && std::wstring_view(item.name) == L"ZERO_TIER_ENABLED" && item.value != nullptr && item.value[0] == '1';
+    };
+
     auto real_path = loaded_path;
-    if (has_zero_tier_extension() && std::any_of(game_args->environment_settings.begin(), game_args->environment_settings.end(), [](auto& item) {
+    if (has_zero_tier_extension() && 
+        std::any_of(game_args->environment_settings.begin(), game_args->environment_settings.end(), zt_is_enabled) && 
+        std::any_of(game_args->environment_settings.begin(), game_args->environment_settings.end(), [](auto& item) {
           return item.name != nullptr && std::wstring_view(item.name) == L"ZERO_TIER_NETWORK_ID" && item.value != nullptr && item.value[0] != '\0';
         }))
     {
@@ -963,8 +969,13 @@ namespace siege::views
         {
           ::SetEnvironmentVariableW(L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4", setting->value);
         }
+        else
+        {
+          ::SetEnvironmentVariableW(L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4", nullptr);
+        }
       }
     }
+
 
     for (auto i = 0; i < game_args->environment_settings.size(); ++i)
     {
@@ -974,6 +985,14 @@ namespace siege::views
       }
       ::SetEnvironmentVariableW(game_args->environment_settings[i].name, game_args->environment_settings[i].value);
     }
+
+    if (!std::any_of(game_args->environment_settings.begin(), game_args->environment_settings.end(), zt_is_enabled))
+    {
+      ::SetEnvironmentVariableW(L"ZERO_TIER_ENABLED", nullptr);
+      ::SetEnvironmentVariableW(L"ZERO_TIER_NETWORK_ID", nullptr);
+      ::SetEnvironmentVariableW(L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4", nullptr);
+    }
+
     ::SetEnvironmentVariableW(L"Path", current_path.c_str());
 
     std::wstring args;
@@ -1022,7 +1041,7 @@ namespace siege::views
 
 
     auto last_error = ::GetLastError();
-    
+
     ::SetDllDirectoryW(nullptr);
 
     return HRESULT_FROM_WIN32(last_error);

@@ -161,6 +161,31 @@ namespace siege::views
     if (has_networking && controller.has_zero_tier_extension())
     {
       launch_settings.emplace_back(game_setting{
+        .setting_name = L"ZERO_TIER_ENABLED",
+        .type = game_command_line_caps::env_setting,
+        .value = !settings.last_zero_tier_network_id.empty(),
+        .display_name = L"Enable Zero Tier",
+        .group_id = 1,
+        .get_predefined_int = [results = std::vector<siege::platform::predefined_int>{}](auto name) mutable -> std::span<siege::platform::predefined_int> {
+          if (name == L"ZERO_TIER_ENABLED")
+          {
+            if (!results.empty())
+            {
+              return results;
+            }
+
+            results.emplace_back(siege::platform::predefined_int{
+              .label = L"Yes",
+              .value = 1 });
+
+            results.emplace_back(siege::platform::predefined_int{
+              .label = L"No",
+              .value = 0 });
+          }
+          return std::span<siege::platform::predefined_int>{};
+        } });
+
+      launch_settings.emplace_back(game_setting{
         .setting_name = L"ZERO_TIER_NETWORK_ID",
         .type = game_command_line_caps::env_setting,
         .value = std::wstring{ settings.last_zero_tier_network_id.data() },
@@ -462,9 +487,9 @@ namespace siege::views
                 }
               }
             }
-            else if (setting.type == game_command_line_caps::int_setting && setting.get_predefined_int)
+            else if ((setting.type == game_command_line_caps::int_setting || setting.type == game_command_line_caps::env_setting) && setting.get_predefined_int)
             {
-              if (auto values = setting.get_predefined_int(text.data()); !values.empty())
+              if (auto values = setting.get_predefined_int(setting.setting_name); !values.empty())
               {
                 ::SendMessageW(launch_table_combo, CB_RESETCONTENT, 0, 0);
 
@@ -497,7 +522,7 @@ namespace siege::views
               launch_table_combo.SetWindowStyle(launch_table_combo.GetWindowStyle() | WS_VISIBLE);
               ::SendMessageW(launch_table_combo, CB_SHOWDROPDOWN, TRUE, 0);
 
-              launch_table_edit_unbind = launch_table_combo.bind_cbn_sel_change([this, info, control_type = setting.type](auto, const auto&) {
+              launch_table_edit_unbind = launch_table_combo.bind_cbn_sel_change([this, info, setting](auto, const auto&) {
                 std::fill_n(text.data(), text.size(), L'\0');
                 ::COMBOBOXEXITEMW new_item{
                   .mask = CBEIF_LPARAM | CBEIF_TEXT,
@@ -508,7 +533,7 @@ namespace siege::views
 
                 if (::SendMessageW(launch_table_combo, CBEM_GETITEMW, 0, (LPARAM)&new_item))
                 {
-                  if (control_type == game_command_line_caps::string_setting || control_type == game_command_line_caps::env_setting)
+                  if (setting.get_predefined_string)
                   {
                     ListView_SetItemText(launch_table, info.iItem, info.iSubItem, (wchar_t*)new_item.lParam);
                   }
