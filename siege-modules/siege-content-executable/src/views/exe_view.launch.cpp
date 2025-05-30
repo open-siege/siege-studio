@@ -164,7 +164,7 @@ namespace siege::views
       launch_settings.emplace_back(game_setting{
         .setting_name = L"ZERO_TIER_ENABLED",
         .type = game_command_line_caps::env_setting,
-        .value = !settings.last_zero_tier_network_id.empty(),
+        .value = !settings.last_zero_tier_network_id.empty() ? 1 : 0,
         .display_name = L"Enable Zero Tier",
         .group_id = 1,
         .get_predefined_int = [results = std::vector<siege::platform::predefined_int>{}](auto name) mutable -> std::span<siege::platform::predefined_int> {
