@@ -112,7 +112,7 @@ namespace siege::views
     real_options.reserve(4);
     for (auto i = 0; i < pref_options.size(); ++i)
     {
-      if (i == 1 && !has_listen)
+      if (i == 1 && !has_ip)
       {
         continue;
       }

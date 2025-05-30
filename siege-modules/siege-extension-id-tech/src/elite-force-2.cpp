@@ -30,9 +30,12 @@ using predefined_string = siege::platform::game_command_line_predefined_setting<
 extern auto command_line_caps = game_command_line_caps{
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
-  .listen_setting = L"connect",
-  .dedicated_setting = L"dedicated",
-  .int_settings = { { L"dedicated", L"r_customwidth", L"r_customheight", L"r_mode" } },
+  // TODO figure out how to get hosting to work correctly
+  // Apparently a special variable has to be set to not contact the auth server, but this needs more investigation
+  //  .listen_setting = L"connect",
+  //  .dedicated_setting = L"dedicated",
+  //   .int_settings = { { L"dedicated", L"r_customwidth", L"r_customheight", L"r_mode" } },
+  .int_settings = { { L"r_customwidth", L"r_customheight", L"r_mode" } },
   .string_settings = { { L"name", L"connect", L"map", L"r_glDriver" } },
 };
 
