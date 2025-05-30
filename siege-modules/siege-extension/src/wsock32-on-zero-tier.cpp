@@ -53,7 +53,7 @@ HMODULE get_ztlib()
     auto zt_path = fs::path(module_path).parent_path() / "zt-shared.dll";
 
 
-    get_log() << "Loading zero tier library: " << zt_path << std::endl;
+    get_log() << "Loading zero tier library: " << zt_path << '\n';
 
     auto result = LoadLibraryExW(zt_path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
 
@@ -445,9 +445,8 @@ decltype(::WSASetLastError)* wsock_WSASetLastError = nullptr;
 
 int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 {
-  constexpr auto value = FIOASYNC;
   load_system_wsock();
-  get_log() << "siege_WSAStartup " << (int)LOBYTE(version) << " " << (int)HIBYTE(version) << std::endl;
+  get_log() << "siege_WSAStartup " << (int)LOBYTE(version) << " " << (int)HIBYTE(version) << '\n';
   auto result = wsock_WSAStartup(version, data);
 
   if (auto network_id = get_zero_tier_network_id(); network_id && get_ztlib())
@@ -546,7 +545,7 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 int __stdcall siege_WSACleanup()
 {
   load_system_wsock();
-  get_log() << "siege_WSACleanup" << std::endl;
+  get_log() << "siege_WSACleanup" << '\n';
 
   if (use_zero_tier())
   {
@@ -578,7 +577,7 @@ static_assert(AF_INET == ZTS_AF_INET);
 SOCKET __stdcall siege_socket(int af, int type, int protocol)
 {
   load_system_wsock();
-  get_log() << "siege_socket af: " << af << ", type: " << type << ", protocol: " << protocol << ", thread: " << GetCurrentThreadId() << std::endl;
+  get_log() << "siege_socket af: " << af << ", type: " << type << ", protocol: " << protocol << ", thread: " << GetCurrentThreadId() << '\n';
 
   if (use_zero_tier())
   {
@@ -595,7 +594,7 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
             || protocol == ZTS_IPPROTO_UDP
             || protocol == ZTS_IPPROTO_RAW))
       {
-        get_log() << "Unsupported protocol for zero tier: " << protocol << std::endl;
+        get_log() << "Unsupported protocol for zero tier: " << protocol << '\n';
       }
 
       if (socket == ZTS_ERR_SOCKET || socket == ZTS_ERR_SERVICE || socket == ZTS_ERR_ARG)
@@ -614,7 +613,7 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
         return INVALID_SOCKET;
       }
 
-      get_log() << "Created zero tier socket successfully (" << socket << ")" << std::endl;
+      get_log() << "Created zero tier socket successfully (" << socket << ")" << '\n';
       get_zero_tier_handles().emplace(socket);
 
 
@@ -633,17 +632,14 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
 
 
   auto result = wsock_socket(af, type, protocol);
-  get_log() << "Created winsock socket successfully (" << (int)result << ")" << std::endl;
+  get_log() << "Created winsock socket successfully (" << (int)result << ")" << '\n';
   return result;
 }
 
 int __stdcall siege_recv(SOCKET s, char* buf, int len, int flags)
 {
-  get_log() << "siege_recv " << (int)s << std::endl;
   if (get_zero_tier_handles().contains((int)s) && get_ztlib())
   {
-    get_log() << "zts_bsd_recv\n";
-
     static auto* zt_recv = (std::add_pointer_t<decltype(zts_bsd_recv)>)::GetProcAddress(get_ztlib(), "zts_bsd_recv");
 
     auto zt_result = (int)zt_recv((int)s, buf, (std::size_t)len, to_zt_msg_flags(flags));
@@ -670,7 +666,7 @@ static_assert(SO_ACCEPTCONN == ZTS_SO_ACCEPTCONN);
 static_assert(SOL_SOCKET != ZTS_SOL_SOCKET);
 int __stdcall siege_setsockopt(SOCKET s, int level, int optname, const char* optval, int optlen)
 {
-  get_log() << "siege_setsockopt" << (int)s << " " << optname << std::endl;
+  get_log() << "siege_setsockopt" << (int)s << " " << optname << '\n';
   if (use_zero_tier())
   {
     get_log() << "zts_bsd_setsockopt, level: " << level << " optname: " << optname << '\n';
@@ -716,7 +712,7 @@ int __stdcall siege_setsockopt(SOCKET s, int level, int optname, const char* opt
 
 int __stdcall siege_getsockopt(SOCKET s, int level, int optname, char* optval, int* optlen)
 {
-  get_log() << "siege_getsockopt" << (int)s << " " << optname << std::endl;
+  get_log() << "siege_getsockopt" << (int)s << " " << optname << '\n';
   if (use_zero_tier())
   {
     get_log() << "zts_bsd_setsockopt, level: " << level << " optname: " << optname << '\n';
@@ -769,7 +765,6 @@ int __stdcall siege_getsockopt(SOCKET s, int level, int optname, char* optval, i
 
 int __stdcall siege_recvfrom(SOCKET s, char* buf, int len, int flags, sockaddr* from, int* fromLen)
 {
-  get_log() << "siege_recvfrom " << (int)s << std::endl;
   if (use_zero_tier())
   {
     static auto* zt_recvfrom = (std::add_pointer_t<decltype(zts_bsd_recvfrom)>)::GetProcAddress(get_ztlib(), "zts_bsd_recvfrom");
@@ -855,7 +850,7 @@ int __stdcall siege_getsockname(SOCKET s, sockaddr* name, int* length)
 
       if (buffer)
       {
-        get_log() << "zts_bsd_getsockname address is " << buffer << std::endl;
+        get_log() << "zts_bsd_getsockname address is " << buffer << '\n';
       }
 
       return zt_to_winsock_result(zt_result);
@@ -876,7 +871,7 @@ static_assert(IOC_IN == ZTS_IOC_IN);
 static_assert(IOC_INOUT == ZTS_IOC_INOUT);
 int __stdcall siege_ioctlsocket(SOCKET s, long cmd, u_long* argp)
 {
-  get_log() << "siege_ioctlsocket, cmd: " << cmd << " " << (std::size_t)wsock_ioctlsocket << std::endl;
+  get_log() << "siege_ioctlsocket, cmd: " << cmd << " " << (std::size_t)wsock_ioctlsocket << '\n';
   if (use_zero_tier())
   {
     get_log() << "zts_bsd_ioctl\n";
@@ -888,7 +883,7 @@ int __stdcall siege_ioctlsocket(SOCKET s, long cmd, u_long* argp)
   }
   auto result = wsock_ioctlsocket(s, cmd, argp);
 
-  get_log() << "siege_ioctlsocket finished" << std::endl;
+  get_log() << "siege_ioctlsocket finished" << '\n';
 
   return result;
 }
@@ -941,19 +936,19 @@ SOCKET __stdcall siege_accept(SOCKET s, sockaddr* name, int* namelen)
 
 int __stdcall siege_connect(SOCKET s, const sockaddr* name, int namelen)
 {
-  get_log() << "siege_connect " << (int)s << std::endl;
+  get_log() << "siege_connect " << (int)s << '\n';
   if (name)
   {
     char* buffer = wsock_inet_ntoa(((sockaddr_in*)name)->sin_addr);
 
     if (buffer)
     {
-      get_log() << "siege_connect " << (int)s << " " << buffer << std::endl;
+      get_log() << "siege_connect " << (int)s << " " << buffer << '\n';
     }
   }
   else
   {
-    get_log() << "siege_connect " << (int)s << std::endl;
+    get_log() << "siege_connect " << (int)s << '\n';
   }
 
   if (use_zero_tier())
@@ -981,19 +976,19 @@ int __stdcall siege_connect(SOCKET s, const sockaddr* name, int namelen)
 
 int __stdcall siege_bind(SOCKET s, const sockaddr* addr, int namelen)
 {
-  get_log() << "siege_bind " << (int)s << std::endl;
+  get_log() << "siege_bind " << (int)s << '\n';
   if (addr)
   {
     char* buffer = wsock_inet_ntoa(((sockaddr_in*)addr)->sin_addr);
 
     if (buffer)
     {
-      get_log() << "siege_bind " << (int)s << " " << buffer << std::endl;
+      get_log() << "siege_bind " << (int)s << " " << buffer << '\n';
     }
   }
   else
   {
-    get_log() << "siege_bind " << (int)s << std::endl;
+    get_log() << "siege_bind " << (int)s << '\n';
   }
 
   if (use_zero_tier())
@@ -1037,7 +1032,6 @@ int __stdcall siege_bind(SOCKET s, const sockaddr* addr, int namelen)
 
 int __stdcall siege_send(SOCKET s, const char* buf, int len, int flags)
 {
-  get_log() << "siege_send\n";
   if (use_zero_tier())
   {
     get_log() << "zts_bsd_send\n";
@@ -1052,21 +1046,6 @@ int __stdcall siege_send(SOCKET s, const char* buf, int len, int flags)
 
 int __stdcall siege_sendto(SOCKET s, const char* buf, int len, int flags, const sockaddr* to, int tolen)
 {
-  get_log() << "siege_sendto " << (int)s << std::endl;
-  if (to)
-  {
-    char* buffer = wsock_inet_ntoa(((sockaddr_in*)to)->sin_addr);
-
-    if (buffer)
-    {
-      get_log() << "siege_sendto " << (int)s << " " << buffer << std::endl;
-    }
-  }
-  else
-  {
-    get_log() << "siege_sendto " << (int)s << std::endl;
-  }
-
   if (use_zero_tier())
   {
     get_log() << "zts_bsd_sendto\n";
@@ -1181,7 +1160,6 @@ int __stdcall siege_closesocket(SOCKET s)
 
 int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout)
 {
-  get_log() << "siege_select " << std::endl;
   if (use_zero_tier())
   {
     static auto* zt_select = (std::add_pointer_t<decltype(zts_bsd_select)>)::GetProcAddress(get_ztlib(), "zts_bsd_select");
@@ -1198,7 +1176,7 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
         }
         else
         {
-          get_log() << "Non Zero Tier handle detected " << (int)source.fd_array[i] << std::endl;
+          get_log() << "Non Zero Tier handle detected " << (int)source.fd_array[i] << '\n';
         }
       }
     };
@@ -1253,7 +1231,6 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
 
 int __stdcall siege___WSAFDIsSet(SOCKET s, fd_set* set)
 {
-  get_log() << "siege___WSAFDIsSet " << std::endl;
   if (use_zero_tier())
   {
     if (set)
@@ -1340,84 +1317,75 @@ hostent* __stdcall siege_gethostbyname(const char* name)
 auto __stdcall siege_gethostname(char* name, int namelen)
 {
   load_system_wsock();
-  get_log() << "siege_gethostname " << std::endl;
   return wsock_gethostname(name, namelen);
 }
 
 auto __stdcall siege_WSAGetLastError()
 {
   load_system_wsock();
-  get_log() << "siege_WSAGetLastError " << std::endl;
   return wsock_WSAGetLastError();
 }
 
 auto __stdcall siege_htonl(u_long value)
 {
   load_system_wsock();
-  get_log() << "siege_htonl " << std::endl;
   return wsock_htonl(value);
 }
 
 auto __stdcall siege_htons(u_short value)
 {
   load_system_wsock();
-  get_log() << "siege_htons " << std::endl;
   return wsock_htons(value);
 }
 
 auto __stdcall siege_ntohl(u_long value)
 {
   load_system_wsock();
-  get_log() << "siege_ntohl " << std::endl;
   return wsock_ntohl(value);
 }
 
 auto __stdcall siege_ntohs(u_short value)
 {
   load_system_wsock();
-  get_log() << "siege_ntohs " << std::endl;
   return wsock_ntohs(value);
 }
 
 auto __stdcall siege_inet_addr(const char* addr)
 {
   load_system_wsock();
-  get_log() << "siege_inet_addr " << std::endl;
   return wsock_inet_addr(addr);
 }
 
 auto __stdcall siege_inet_ntoa(in_addr in)
 {
   load_system_wsock();
-  get_log() << "siege_inet_ntoa " << std::endl;
   return wsock_inet_ntoa(in);
 }
 
 auto __stdcall siege_WSASetLastError(int error)
 {
   load_system_wsock();
-  get_log() << "wsock_WSASetLastError " << std::endl;
   return wsock_WSASetLastError(error);
 }
 
 auto __stdcall siege_WSASetBlockingHook(FARPROC proc)
 {
   load_system_wsock();
-  get_log() << "siege_WSASetBlockingHook " << std::endl;
+  get_log() << "siege_WSASetBlockingHook " << '\n';
   return wsock_WSASetBlockingHook(proc);
 }
 
 auto __stdcall siege_WSAUnhookBlockingHook()
 {
   load_system_wsock();
-  get_log() << "siege_WSAUnhookBlockingHook " << std::endl;
+  get_log() << "siege_WSAUnhookBlockingHook " << '\n';
   return wsock_WSAUnhookBlockingHook();
 }
 
 auto __stdcall siege_WSACancelBlockingCall()
 {
   load_system_wsock();
-  get_log() << "siege_WSACancelBlockingCall " << std::endl;
+  get_log() << "siege_WSACancelBlockingCall " << '\n';
   return wsock_WSACancelBlockingCall();
 }
 }
@@ -1429,12 +1397,12 @@ void load_system_wsock()
     return;
   }
 
-  get_log() << "load_system_wsock " << std::endl;
+  get_log() << "load_system_wsock " << '\n';
   auto module_path = win32::module_ref::current_module().GetModuleFileName();
 
   auto dll_name = fs::path(module_path).filename().wstring();
 
-  get_log() << "current module name: " << fs::path(module_path).filename().string() << std::endl;
+  get_log() << "current module name: " << fs::path(module_path).filename().string() << '\n';
 
   if (dll_name.contains(L"-"))
   {
@@ -1458,7 +1426,7 @@ void load_system_wsock()
     final_path.replace_extension(".dll");
   }
 
-  get_log() << "final dll path: " << final_path << std::endl;
+  get_log() << "final dll path: " << final_path << '\n';
 
   wsock_module = LoadLibraryExW(final_path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
 
@@ -1467,7 +1435,7 @@ void load_system_wsock()
     return;
   }
 
-  get_log() << "System module loaded. Getting proc addresses" << std::endl;
+  get_log() << "System module loaded. Getting proc addresses" << '\n';
 
   wsock_WSAStartup = (decltype(wsock_WSAStartup))::GetProcAddress(wsock_module, "WSAStartup");
   wsock_WSACleanup = (decltype(wsock_WSACleanup))::GetProcAddress(wsock_module, "WSACleanup");
