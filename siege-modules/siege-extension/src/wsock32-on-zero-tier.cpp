@@ -639,7 +639,7 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
 
 int __stdcall siege_recv(SOCKET s, char* buf, int len, int flags)
 {
-  if (get_zero_tier_handles().contains((int)s) && get_ztlib())
+  if (use_zero_tier())
   {
     static auto* zt_recv = (std::add_pointer_t<decltype(zts_bsd_recv)>)::GetProcAddress(get_ztlib(), "zts_bsd_recv");
 
