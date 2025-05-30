@@ -34,7 +34,7 @@ extern auto command_line_caps = game_command_line_caps{
   .player_name_setting = L"name",
   .listen_setting = L"connect",
   .dedicated_setting = L"dedicated",
-  .int_settings = { { L"dedicated", L"gl_mode", L"numbots" } },
+  .int_settings = { { L"dedicated", L"gl_mode", L"numbots", L"in_joystick" } },
   // fov
   .string_settings = { { L"name", L"connect", L"map", L"gl_driver" } }
   // skin
@@ -146,7 +146,6 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   {
     // engine bug - mouse needs to be enabled for the right analog stick to work
     config.emplace(siege::configuration::key_type({ "set", "in_mouse" }), siege::configuration::key_type("1"));
-    config.emplace(siege::configuration::key_type({ "set", "in_joystick" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "set", "joy_advanced" }), siege::configuration::key_type("1"));
   }
 
