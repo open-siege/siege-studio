@@ -1337,69 +1337,86 @@ hostent* __stdcall siege_gethostbyname(const char* name)
   return wsock_gethostbyname(name);
 }
 
-int __stdcall siege_gethostname(char* name, int namelen)
+auto __stdcall siege_gethostname(char* name, int namelen)
 {
   load_system_wsock();
   get_log() << "siege_gethostname " << std::endl;
   return wsock_gethostname(name, namelen);
 }
 
-int __stdcall siege_WSAGetLastError()
+auto __stdcall siege_WSAGetLastError()
 {
+  load_system_wsock();
   get_log() << "siege_WSAGetLastError " << std::endl;
   return wsock_WSAGetLastError();
 }
 
-u_long __stdcall siege_htonl(u_long value)
+auto __stdcall siege_htonl(u_long value)
 {
+  load_system_wsock();
   get_log() << "siege_htonl " << std::endl;
   return wsock_htonl(value);
 }
 
-u_short __stdcall siege_htons(u_short value)
+auto __stdcall siege_htons(u_short value)
 {
+  load_system_wsock();
   get_log() << "siege_htons " << std::endl;
   return wsock_htons(value);
 }
 
-u_long __stdcall siege_ntohl(u_long value)
+auto __stdcall siege_ntohl(u_long value)
 {
+  load_system_wsock();
   get_log() << "siege_ntohl " << std::endl;
   return wsock_ntohl(value);
 }
 
-u_short __stdcall siege_ntohs(u_short value)
+auto __stdcall siege_ntohs(u_short value)
 {
+  load_system_wsock();
   get_log() << "siege_ntohs " << std::endl;
   return wsock_ntohs(value);
 }
 
-unsigned long __stdcall siege_inet_addr(const char* addr)
+auto __stdcall siege_inet_addr(const char* addr)
 {
+  load_system_wsock();
   get_log() << "siege_inet_addr " << std::endl;
   return wsock_inet_addr(addr);
 }
 
-char* __stdcall siege_inet_ntoa(in_addr in)
+auto __stdcall siege_inet_ntoa(in_addr in)
 {
+  load_system_wsock();
   get_log() << "siege_inet_ntoa " << std::endl;
   return wsock_inet_ntoa(in);
 }
 
+auto __stdcall siege_WSASetLastError(int error)
+{
+  load_system_wsock();
+  get_log() << "wsock_WSASetLastError " << std::endl;
+  return wsock_WSASetLastError(error);
+}
+
 auto __stdcall siege_WSASetBlockingHook(FARPROC proc)
 {
+  load_system_wsock();
   get_log() << "siege_WSASetBlockingHook " << std::endl;
   return wsock_WSASetBlockingHook(proc);
 }
 
 auto __stdcall siege_WSAUnhookBlockingHook()
 {
+  load_system_wsock();
   get_log() << "siege_WSAUnhookBlockingHook " << std::endl;
   return wsock_WSAUnhookBlockingHook();
 }
 
 auto __stdcall siege_WSACancelBlockingCall()
 {
+  load_system_wsock();
   get_log() << "siege_WSACancelBlockingCall " << std::endl;
   return wsock_WSACancelBlockingCall();
 }

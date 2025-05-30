@@ -17,11 +17,13 @@ EXPORTS
 	send=siege_send
 	sendto=siege_sendto
 	setsockopt=siege_setsockopt
+	getsockopt=siege_getsockopt
 	shutdown=siege_shutdown
 	socket=siege_socket
 	gethostbyname=siege_gethostbyname
 	gethostname=siege_gethostname
 	WSAGetLastError=siege_WSAGetLastError
+	WSASetLastError=siege_WSASetLastError
 	WSAStartup=siege_WSAStartup
 	WSACleanup=siege_WSACleanup
 	__WSAFDIsSet=siege___WSAFDIsSet

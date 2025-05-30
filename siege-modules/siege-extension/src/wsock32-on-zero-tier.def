@@ -49,6 +49,8 @@ EXPORTS
 	gethostname=siege_gethostname
 	siege_WSAGetLastError @111
 	WSAGetLastError=siege_WSAGetLastError
+	siege_WSASetLastError @112
+	WSASetLastError=siege_WSASetLastError
 	siege_WSAStartup @115
 	WSAStartup=siege_WSAStartup
 	siege_WSACleanup @116
