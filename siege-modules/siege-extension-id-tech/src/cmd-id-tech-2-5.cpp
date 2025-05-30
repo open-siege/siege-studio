@@ -14,7 +14,6 @@ extern game_command_line_caps command_line_caps;
 using namespace std::literals;
 
 // TODO
-// Generate cfg file for controller settings
 // Copy glide files to the game folder - use to-be-implemented shared list of detected items
 const wchar_t** format_command_line(const siege::platform::game_command_line_args* args, std::uint32_t* new_size)
 {

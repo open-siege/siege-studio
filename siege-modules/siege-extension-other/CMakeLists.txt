@@ -6,7 +6,11 @@ if (WIN32)
     
     foreach(CPP_SRC IN ITEMS ${LIB_SRC_FILES})
        get_filename_component(MODULE_NAME ${CPP_SRC} NAME_WLE)
-       add_library(siege-extension-${MODULE_NAME} SHARED ${CPP_SRC} src/other.def)
+       if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/${MODULE_NAME}.def)
+              add_library(siege-extension-${MODULE_NAME} SHARED ${CPP_SRC} src/${MODULE_NAME}.def)
+       else()
+              add_library(siege-extension-${MODULE_NAME} SHARED ${CPP_SRC} src/other.def)
+       endif()
     endforeach()
     
     get_property(OTHER_TARGETS

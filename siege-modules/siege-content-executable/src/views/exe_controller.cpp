@@ -826,7 +826,8 @@ namespace siege::views
         "ws2_32",
         "dplayx",
         "sdl2_net",
-        "sdl_net"
+        "sdl_net",
+        "dplay"
       };
 
       win32::file file(loaded_path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
