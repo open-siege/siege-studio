@@ -260,11 +260,6 @@ namespace siege::views
       WORD action_index;
     };
 
-    if (!(kb_bindings || ms_bindings))
-    {
-      return;
-    }
-
     std::vector<ui_context> action_settings;
 
     if (kb_bindings)
@@ -301,6 +296,17 @@ namespace siege::views
         {
           action_settings.emplace_back(ui_context{ binding.virtual_key, (siege::platform::hardware_context)binding.context, *action_iter, (WORD)(std::distance(actions.begin(), action_iter)) });
         }
+      }
+    }
+
+    WORD action_index = 0;
+    for (auto& action : actions)
+    {
+      auto action_iter = std::find_if(action_settings.begin(), action_settings.end(), [&](auto& context) { return context.action.action_name == action.action_name; });
+
+      if (action_iter == action_settings.end())
+      {
+        action_settings.emplace_back(ui_context{ 0, siege::platform::hardware_context::global, action, action_index++ });
       }
     }
 

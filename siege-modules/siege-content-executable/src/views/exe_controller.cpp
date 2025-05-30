@@ -991,7 +991,6 @@ namespace siege::views
         return item.name != nullptr && std::wstring_view(item.name) == L"ZERO_TIER_ENABLED" && item.value != nullptr && item.value[0] == '1';
       };
 
-      auto real_path = loaded_path;
       if (has_zero_tier_extension() && std::any_of(game_args->environment_settings.begin(), game_args->environment_settings.end(), zt_is_enabled) && std::any_of(game_args->environment_settings.begin(), game_args->environment_settings.end(), [](auto& item) {
             return item.name != nullptr && std::wstring_view(item.name) == L"ZERO_TIER_NETWORK_ID" && item.value != nullptr && item.value[0] != '\0';
           }))
@@ -1053,6 +1052,8 @@ namespace siege::views
       }
 
       ::SetEnvironmentVariableW(L"Path", current_path.c_str());
+
+      return std::shared_ptr<void>(nullptr, [](...) { ::SetDllDirectoryW(nullptr); });
     };
 
     if (has_extension_module())
@@ -1120,11 +1121,10 @@ namespace siege::views
         }
       }
 
-      configure_environment();
+      auto deferred = configure_environment();
 
       if (dll_paths.empty() && ::CreateProcessW(loaded_path.c_str(), args.data(), nullptr, nullptr, FALSE, DETACHED_PROCESS, nullptr, loaded_path.parent_path().c_str(), &startup_info, process_info))
       {
-        ::SetDllDirectoryW(nullptr);
         return S_OK;
       }
       else if (::DetourCreateProcessWithDllsW(loaded_path.c_str(),
@@ -1141,11 +1141,9 @@ namespace siege::views
                  dll_paths.data(),
                  nullptr))
       {
-        ::SetDllDirectoryW(nullptr);
         return S_OK;
       }
 
-      ::SetDllDirectoryW(nullptr);
       auto last_error = ::GetLastError();
 
       return HRESULT_FROM_WIN32(last_error);
@@ -1160,16 +1158,14 @@ namespace siege::views
       args.append(loaded_path.wstring());
       args.append(1, L'"');
 
-      configure_environment();
+      auto deferred = configure_environment();
 
       if (::CreateProcessW(loaded_path.c_str(), args.data(), nullptr, nullptr, FALSE, DETACHED_PROCESS, nullptr, loaded_path.parent_path().c_str(), &startup_info, process_info))
       {
-        ::SetDllDirectoryW(nullptr);
         return S_OK;
       }
 
       auto last_error = ::GetLastError();
-      ::SetDllDirectoryW(nullptr);
       return HRESULT_FROM_WIN32(last_error);
     }
   }
