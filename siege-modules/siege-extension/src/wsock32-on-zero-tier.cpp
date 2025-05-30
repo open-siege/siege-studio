@@ -415,6 +415,7 @@ decltype(::socket)* wsock_socket = nullptr;
 decltype(::setsockopt)* wsock_setsockopt = nullptr;
 decltype(::getsockopt)* wsock_getsockopt = nullptr;
 decltype(::getsockname)* wsock_getsockname = nullptr;
+decltype(::getpeername)* wsock_getpeername = nullptr;
 decltype(::gethostbyaddr)* wsock_gethostbyaddr = nullptr;
 decltype(::gethostname)* wsock_gethostname = nullptr;
 decltype(::gethostbyname)* wsock_gethostbyname = nullptr;
@@ -860,6 +861,44 @@ int __stdcall siege_getsockname(SOCKET s, sockaddr* name, int* length)
     return zt_to_winsock_result(zt_result);
   }
   return wsock_getsockname(s, name, length);
+}
+
+int __stdcall siege_getpeername(SOCKET s, sockaddr* name, int* length)
+{
+  get_log() << "siege_getpeername\n";
+  if (use_zero_tier())
+  {
+    static auto* zt_getpeername = (std::add_pointer_t<decltype(zts_bsd_getpeername)>)::GetProcAddress(get_ztlib(), "zts_bsd_getpeername");
+
+    if (name && length)
+    {
+      get_log() << "zts_bsd_getpeername\n";
+      zts_sockaddr_in zt_addr{
+        .sin_len = sizeof(zts_sockaddr_in)
+      };
+
+      zts_socklen_t zt_size = sizeof(zt_addr);
+
+      auto zt_result = zt_getpeername((int)s, (zts_sockaddr*)&zt_addr, &zt_size);
+
+      sockaddr_in from_in = from_zts(zt_addr);
+      std::memcpy(name, &from_in, length && *length > 0 ? *length : sizeof(from_in));
+      *length = sizeof(from_in);
+
+      char* buffer = wsock_inet_ntoa(from_in.sin_addr);
+
+      if (buffer)
+      {
+        get_log() << "zts_bsd_getpeername address is " << buffer << '\n';
+      }
+
+      return zt_to_winsock_result(zt_result);
+    }
+
+    auto zt_result = zt_getpeername((int)s, nullptr, nullptr);
+    return zt_to_winsock_result(zt_result);
+  }
+  return wsock_getpeername(s, name, length);
 }
 
 static_assert(FIONREAD == ZTS_FIONREAD);
@@ -1442,6 +1481,7 @@ void load_system_wsock()
   wsock_socket = (decltype(wsock_socket))::GetProcAddress(wsock_module, "socket");
   wsock_setsockopt = (decltype(wsock_setsockopt))::GetProcAddress(wsock_module, "setsockopt");
   wsock_getsockname = (decltype(wsock_getsockname))::GetProcAddress(wsock_module, "getsockname");
+  wsock_getpeername = (decltype(wsock_getpeername))::GetProcAddress(wsock_module, "getpeername");
   wsock_getsockopt = (decltype(wsock_getsockopt))::GetProcAddress(wsock_module, "getsockopt");
   wsock_gethostbyaddr = (decltype(wsock_gethostbyaddr))::GetProcAddress(wsock_module, "gethostbyaddr");
   wsock_gethostname = (decltype(wsock_gethostname))::GetProcAddress(wsock_module, "gethostname");

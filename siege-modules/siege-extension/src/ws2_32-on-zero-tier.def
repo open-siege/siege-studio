@@ -4,6 +4,7 @@ EXPORTS
 	closesocket=siege_closesocket
 	connect=siege_connect
 	getsockname=siege_getsockname
+	getpeername=siege_getpeername
 	htonl=siege_htonl
 	htons=siege_htons
 	inet_addr=siege_inet_addr

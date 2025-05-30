@@ -7,6 +7,8 @@ EXPORTS
 	closesocket=siege_closesocket
 	siege_connect @4
 	connect=siege_connect
+	siege_getpeername @5
+	getpeername=siege_getpeername
 	siege_getsockname @6
 	getsockname=siege_getsockname
 	siege_getsockopt @7
