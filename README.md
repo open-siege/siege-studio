@@ -8,7 +8,7 @@ Classic Games, Modern Technology.
 
 Siege Studio is a tool for previewing, converting and (eventually) editing reverse engineered files for games such as Earthsiege, Starsiege and other related games from the 1990s and early 2000s.
 
-The core modules of the project are meant to be used for a future open-source reimplementation of the 3Space game engine, used by several games such as the Earthsiege/Starsiege series, the Red Baron/Great War Planes series and several others.
+In addition, several extension modules are available to fix compatibility issues with selected games, as well as configure controller support and assist with networking.
 
 The project contains the following components:
 * Siege Studio (in this repo)
@@ -16,25 +16,40 @@ The project contains the following components:
   * Allows for conversion to and from supported formats.
   * Supports extraction of game archive files.
 * Siege Modules (also in this repo)
-  * The core of the file format support in the project. 
-  * It contains all the logic to parse game archive and asset files as well as configuration files.
-  * The modules are grouped as such:
+  * Various static libraries which contain the main logic for parsing files and/or modifying them:
       * Siege Platform: a connection of static libraries, especially to handle platform specific features and make each platform easier to use.
       * Siege Content: a static library used to read, write and parse file formats such as Phoenix Bitmap (pba), Dynamix 3Space Shape (dts) and many more.
       * Siege Resource: a static library used to read, write and parse compound file formats, such as VOL or ZIP, which can contain many files within.
-      * Siege 2D Content, Siege 3D Content, Siege Audio Content, Siege Resource Content: dynamic libraries containing UI and other logic to be loaded by a host program dynamically.
-      * Siege Extension
-        * A static library and a set of dynamic libraries for assisting with game discovery, improving playability and fixing compatibility issues for various games. 
-* Siege Launcher (a commercial product to be available on Steam in the future, but not in this repo)
-  * A configuration tool for detecting controllers and games and creating matching configurations for them.
-  * It supports editing game configuration files to match the physical layout of the controller, and modern control schemes for the genre.
-  * It takes care of the differences between DirectInput and XInput controllers and makes sure the game works with both.
-  * It can configure multiple device setups such as joystick + throttle or joystick + joystick, plus a few others.
-  * Can run in headless mode or with a UI with system tray support.
-  * Allows for installation of a game from a phyiscal disc or compressed/disc archive.
-  * Can work with multiple levels of archives (ISO file inside of a zip file).
-  * Support for adding the game to a launcher such as GOG or Steam.
-  * Support for adding a game to an existing entry in GOG or Steam, especially for sequels or related games (for example adding Fury3 to Terminal Velocity).
+  * Content Modules, which are dynamic libraries describing the UI for interacting with various supported file types, to be loaded by a host program dynamically.
+      * Archive Modules are Content Modules which also expose an API for interacting with archive files for use in other Content Modules.
+      * Siege 2D Content, Siege 3D Content, Siege Audio Content, Siege Resource Content are some of the available content modules.
+  * Extension Modules, which can contain compatibility fixes or custom logic to improve networking or controller support.
+      * Current publicly available families of extensions are:
+        * id Tech (for games built using id Tech or related engines).
+        * 3Space (for games built using 3Space or Torque).
+        * Other (for games or tools which aren't logically organised).
+      * There are also two additonal dynamic libraries meant for supporting advanced features available to every game:
+        * Input Filter - which allows for keyboard and mouse input to be restricted to specific devices.
+        * WinSock Over Zero Tier - provides a wsock32/ws2_32 compatible API for playing games over Zero Tier.
+      * Orchestration of all of these modules is done by Siege Executable Module.
+  * Installation Modules, which contain logic for unpacking game data and installing them onto a system.
+      * Current publicly available families of installation modules are:
+        * Dynamix (for games made by Dyanmix which aren't available on digital storefronts).
+        * Raven (for games made by Raven Software which aren't available on digital storefronts).
+        * Other (for games which can't be organised logically yet).
+* Siege Launcher (a commercial product, but not in this repo)
+  * The commercial version of Siege Studio but with a greater emphasis on playing games versus viewing their data.
+  * It has the same architecture as Siege Studio and reuses all the same modules, with the exception that more modules are offered in the commercial release.
+    * Examples of private Extension Modules included:
+      * Cry Engine (for some Cry Engine 1 and 2 titles).
+      * isiMotor (for most isiMotor 1 and 2 titiles).
+      * Unreal (for most Unreal Engine 1 and 2 titles).
+      * And more...
+    * Examples of private Installation Modules included:
+      * EA (for older Need for Speed and FIFA titles).
+      * Microsoft (for the various Madness titles).
+      * And more...
+
 
 ### Setup and Build Instructions
 If you don't already have Conan on your system, find instructions here: https://conan.io/downloads.html
