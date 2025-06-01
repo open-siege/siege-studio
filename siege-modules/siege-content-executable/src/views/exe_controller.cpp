@@ -1050,6 +1050,7 @@ namespace siege::views
         ::SetEnvironmentVariableW(L"ZERO_TIER_ENABLED", nullptr);
         ::SetEnvironmentVariableW(L"ZERO_TIER_NETWORK_ID", nullptr);
         ::SetEnvironmentVariableW(L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4", nullptr);
+        ::SetEnvironmentVariableW(L"ZERO_TIER_PEER_ID_AND_KEY", nullptr);
       }
 
       ::SetEnvironmentVariableW(L"Path", current_path.c_str());
