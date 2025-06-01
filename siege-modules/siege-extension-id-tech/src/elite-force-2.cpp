@@ -151,9 +151,24 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   iter->name = L"console";
   iter->value = L"1";
 
-  auto connect_iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name != nullptr && (std::wstring_view(setting.name) == L"dedicated" || std::wstring_view(setting.name) == L"connect" || std::wstring_view(setting.name) == L"map"); });
+  auto connect_iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name != nullptr && setting.value != nullptr && setting.value[0] != '\0' && std::wstring_view(setting.name) == L"connect"; });
 
   if (connect_iter != args->string_settings.end())
+  {
+    // TODO do this at the top level
+    static std::wstring address_port{};
+    address_port = connect_iter->value;
+    address_port += L":29254";
+    connect_iter->value = address_port.c_str();
+  }
+
+  auto server_iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return 
+      setting.name != nullptr && 
+      setting.value != nullptr && 
+      setting.value[0] != '\0' && 
+      (std::wstring_view(setting.name) == L"dedicated" || std::wstring_view(setting.name) == L"connect" || std::wstring_view(setting.name) == L"map"); });
+
+  if (server_iter != args->string_settings.end())
   {
     std::advance(iter, 1);
     iter->name = L"com_introplayed";
