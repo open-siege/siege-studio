@@ -34,7 +34,7 @@ extern auto command_line_caps = game_command_line_caps{
   .player_name_setting = L"name",
   .listen_setting = L"connect",
   .dedicated_setting = L"dedicated",
-  .int_settings = { { L"dedicated", L"gl_mode", L"numbots", L"in_joystick" } },
+  .int_settings = { { L"dedicated", L"deathmatch", L"timelimit", L"fraglimit", L"maxclients", L"numbots", L"gl_mode", L"in_joystick" } },
   // fov
   .string_settings = { { L"name", L"connect", L"map", L"gl_driver" } }
   // skin
@@ -185,7 +185,6 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
       }
       command.append("bot_add");
     }
-    config.emplace(siege::configuration::key_type({ command.c_str() }), siege::configuration::key_type{});
 
     config.save(custom_bindings);
 
@@ -317,6 +316,22 @@ predefined_int*
       predefined_int{ .label = L"1152x864", .value = 7 },
       predefined_int{ .label = L"1280x960", .value = 8 },
       predefined_int{ .label = L"1600x1200", .value = 9 },
+      predefined_int{},
+    };
+
+    return modes.data();
+  }
+
+  if (name_str == L"deathmatch")
+  {
+    static auto modes = std::array<predefined_int, 8>{
+      predefined_int{ .label = L"Deathmatch", .value = 1 },
+      predefined_int{ .label = L"Assassin", .value = 2 },
+      predefined_int{ .label = L"Arsenal (aka Gun Game)", .value = 3 },
+      predefined_int{ .label = L"Capture the Flag", .value = 4 },
+      predefined_int{ .label = L"Realistic", .value = 5 },
+      predefined_int{ .label = L"Control", .value = 6 },
+      predefined_int{ .label = L"Conquer the Bunker", .value = 7 },
       predefined_int{},
     };
 
