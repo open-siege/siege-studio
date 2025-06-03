@@ -19,7 +19,6 @@
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/threading.hpp>
 #include <siege/platform/win/capabilities.hpp>
-#include <commctrl.h>
 #include <imagehlp.h>
 
 namespace fs = std::filesystem;

@@ -10,7 +10,16 @@ namespace win32
 
   inline BOOL init_common_controls_ex(const INITCOMMONCONTROLSEX* picce)
   {
-    static auto module = ::GetModuleHandleW(L"comctl32.dll");
+    static auto module = [] {
+      auto result = ::GetModuleHandleW(L"comctl32.dll");
+
+      if (!result)
+      {
+        result = ::LoadLibraryExW(L"comctl32.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+      }
+
+      return result;
+    }();
 
     using init_common_controls_ex = std::add_pointer_t<decltype(::InitCommonControlsEx)>;
     static auto proc = (init_common_controls_ex)::GetProcAddress(module, "InitCommonControlsEx");
@@ -167,7 +176,7 @@ namespace win32
     void operator()(HIMAGELIST list)
     {
       auto result = ::ImageList_Destroy(list);
-     // assert(result == TRUE);
+      // assert(result == TRUE);
     }
   };
 
