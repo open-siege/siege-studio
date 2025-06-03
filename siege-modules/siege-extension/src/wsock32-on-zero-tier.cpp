@@ -1,6 +1,6 @@
 #include <ZeroTierSockets.h>
 
-#if USE_WINSOCK2
+#ifdef USE_WINSOCK2
 #include <WinSock2.h>
 #else
 #include <WinSock.h>
@@ -31,381 +31,20 @@ std::set<int>& get_zero_tier_handles()
 
 
 void load_system_wsock();
-
-
-std::ostream& get_log()
-{
-#ifdef _DEBUG
-  static std::ofstream file_log("networking.log", std::ios::trunc);
-#else
-  static std::stringstream file_log;
-  file_log.str("");
-#endif
-  return file_log;
-}
-
-
-HMODULE get_ztlib()
-{
-  static HMODULE ztlib = [] {
-    auto module_path = win32::module_ref::current_module().GetModuleFileName();
-
-    auto zt_path = fs::path(module_path).parent_path() / "zt-shared.dll";
-
-
-    get_log() << "Loading zero tier library: " << zt_path << '\n';
-
-    auto result = LoadLibraryExW(zt_path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
-
-    return result;
-  }();
-
-  return ztlib;
-}
-
-std::optional<std::uint64_t> get_zero_tier_network_id()
-{
-  static std::optional<std::uint64_t> result = []() -> std::optional<std::uint64_t> {
-    try
-    {
-      get_log() << "get_zero_tier_network_id\n";
-
-
-      if (auto env_size = ::GetEnvironmentVariableA("ZERO_TIER_NETWORK_ID", nullptr, 0); env_size >= 1)
-      {
-        std::string network_id(env_size - 1, '\0');
-        ::GetEnvironmentVariableA("ZERO_TIER_NETWORK_ID", network_id.data(), network_id.size() + 1);
-
-        get_log() << "Zero Tier Network ID is " << network_id << '\n';
-        return std::strtoull(network_id.data(), 0, 16);
-      }
-
-      get_log() << "No zero tier network ID\n";
-      return std::nullopt;
-    }
-    catch (...)
-    {
-      return std::nullopt;
-    }
-  }();
-
-  return result;
-}
-
-std::optional<std::string> get_zero_tier_peer_id_and_public_key()
-{
-  static std::optional<std::string> result = []() -> std::optional<std::string> {
-    get_log() << "get_zero_tier_network_id\n";
-
-    if (auto env_size = ::GetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", nullptr, 0); env_size >= 1)
-    {
-      std::string peer_id(env_size - 1, '\0');
-
-      ::GetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", peer_id.data(), peer_id.size() + 1);
-
-      static auto* id_pair_is_valid = (std::add_pointer_t<decltype(zts_id_pair_is_valid)>)::GetProcAddress(get_ztlib(), "zts_id_pair_is_valid");
-
-      peer_id.resize(ZTS_ID_STR_BUF_LEN);
-
-      if (id_pair_is_valid(peer_id.data(), (unsigned int)peer_id.size()))
-      {
-        get_log() << "Zero Tier peer id and public key retrieved\n";
-        return peer_id;
-      }
-      else
-      {
-        get_log() << "Zero Tier peer id and public key retrieved, but invalid\n";
-        return std::nullopt;
-      }
-    }
-
-    get_log() << "No zero tier peer ID and public key\n";
-    return std::nullopt;
-  }();
-
-  return result;
-}
-
-std::optional<in_addr> get_zero_tier_fallback_broadcast_ip_v4();
-
-int to_zt_msg_flags(int flags)
-{
-  auto zt_flags = 0;
-
-  if (flags & MSG_PEEK)
-  {
-    zt_flags |= ZTS_MSG_PEEK;
-  }
-
-  if (flags & MSG_OOB)
-  {
-    zt_flags |= ZTS_MSG_OOB;
-  }
-
-  return flags;
-}
-
-int get_zts_errno()
-{
-  return *(int*)::GetProcAddress(get_ztlib(), "zts_errno");
-}
-
-int zt_to_winsock_error(int error)
-{
-  switch (error)
-  {
-  case ZTS_EPERM: {
-    get_log() << "Received ZTS_EPERM\n";
-    return WSAEACCES;
-  }
-  case ZTS_ENOENT: {
-    get_log() << "Received ZTS_ENOENT\n";
-#ifdef WSA_INVALID_HANDLE
-    return WSA_INVALID_HANDLE;
-#else
-    return WSAEBADF;
-#endif
-  }
-  case ZTS_ESRCH: {
-    get_log() << "Received ZTS_ESRCH\n";
-#ifdef WSA_INVALID_HANDLE
-    return WSA_INVALID_HANDLE;
-#else
-    return WSAEBADF;
-#endif
-  }
-  case ZTS_EINTR: {
-    get_log() << "Received ZTS_EINTR\n";
-    return WSAEINTR;
-  }
-  case ZTS_EIO: {
-    get_log() << "Received ZTS_EIO\n";
-#if WSA_IO_INCOMPLETE
-    return WSA_IO_INCOMPLETE;
-#else
-    return WSAEINPROGRESS;
-#endif
-  }
-  case ZTS_ENXIO: {
-    get_log() << "Received ZTS_ENXIO\n";
-    return WSAEFAULT;
-  }
-  case ZTS_EBADF: {
-    get_log() << "Received ZTS_EBADF\n";
-    return WSAEBADF;
-  }
-  case ZTS_EWOULDBLOCK: {
-    get_log() << "Received ZTS_EWOULDBLOCK\n";
-    return WSAEWOULDBLOCK;
-  }
-  case ZTS_ENOMEM: {
-    get_log() << "Received ZTS_ENOMEM\n";
-#ifdef WSA_NOT_ENOUGH_MEMORY
-    return WSA_NOT_ENOUGH_MEMORY
-#else
-    return WSA_QOS_TRAFFIC_CTRL_ERROR;
-#endif
-  }
-  case ZTS_EACCES: {
-    get_log() << "Received ZTS_EACCES\n";
-    return WSAEACCES;
-  }
-  case ZTS_EFAULT: {
-    get_log() << "Received ZTS_EFAULT\n";
-    return WSAEFAULT;
-  }
-  case ZTS_EBUSY: {
-    get_log() << "Received ZTS_EBUSY\n";
-    return WSAEACCES;
-  }
-  case ZTS_EEXIST: {
-    get_log() << "Received ZTS_EEXIST\n";
-    return WSAEACCES;
-  }
-  case ZTS_ENODEV: {
-    get_log() << "Received ZTS_ENODEV\n";
-    return WSAEACCES;
-  }
-  case ZTS_EINVAL: {
-    get_log() << "Received ZTS_EINVAL\n";
-    return WSAEINVAL;
-  }
-  case ZTS_ENFILE: {
-    get_log() << "Received ZTS_ENFILE\n";
-    return WSAEMFILE;
-  }
-  case ZTS_EMFILE: {
-    get_log() << "Received ZTS_EMFILE\n";
-    return WSAEMFILE;
-  }
-  case ZTS_ENOSYS: {
-    get_log() << "Received ZTS_ENOSYS\n";
-    return WSAEACCES;
-  }
-  case ZTS_ENOTSOCK: {
-    get_log() << "Received ZTS_EDESTADDRREQ\n";
-    return WSAENOTSOCK;
-  }
-  case ZTS_EDESTADDRREQ: {
-    get_log() << "Received ZTS_EDESTADDRREQ\n";
-    return WSAEDESTADDRREQ;
-  }
-  case ZTS_EMSGSIZE: {
-    get_log() << "Received ZTS_EMSGSIZE\n";
-    return WSAEMSGSIZE;
-  }
-  case ZTS_EPROTOTYPE: {
-    get_log() << "Received ZTS_EPROTOTYPE\n";
-    return WSAEPROTOTYPE;
-  }
-  case ZTS_ENOPROTOOPT: {
-    get_log() << "Received ZTS_ENOPROTOOPT\n";
-    return WSAENOPROTOOPT;
-  }
-  case ZTS_EPROTONOSUPPORT: {
-    get_log() << "Received ZTS_EPROTONOSUPPORT\n";
-    return WSAEPROTONOSUPPORT;
-  }
-  case ZTS_ESOCKTNOSUPPORT: {
-    get_log() << "Received ZTS_ESOCKTNOSUPPORT\n";
-    return WSAESOCKTNOSUPPORT;
-  }
-  case ZTS_EOPNOTSUPP: {
-    get_log() << "Received ZTS_EOPNOTSUPP\n";
-    return WSAEOPNOTSUPP;
-  }
-  case ZTS_EPFNOSUPPORT: {
-    get_log() << "Received ZTS_EPFNOSUPPORT\n";
-    return WSAEPFNOSUPPORT;
-  }
-  case ZTS_EAFNOSUPPORT: {
-    get_log() << "Received ZTS_EAFNOSUPPORT\n";
-    return WSAEAFNOSUPPORT;
-  }
-  case ZTS_EADDRINUSE: {
-    get_log() << "Received ZTS_EADDRINUSE\n";
-    return WSAEADDRINUSE;
-  }
-  case ZTS_EADDRNOTAVAIL: {
-    get_log() << "Received ZTS_EADDRNOTAVAIL\n";
-    return WSAEADDRNOTAVAIL;
-  }
-  case ZTS_ENETDOWN: {
-    get_log() << "Received ZTS_ENETDOWN\n";
-    return WSAENETDOWN;
-  }
-  case ZTS_ENETUNREACH: {
-    get_log() << "Received ZTS_ENETUNREACH\n";
-    return WSAENETUNREACH;
-  }
-  case ZTS_ECONNABORTED: {
-    get_log() << "Received ZTS_ECONNABORTED\n";
-    return WSAECONNABORTED;
-  }
-  case ZTS_ECONNRESET: {
-    get_log() << "Received ZTS_ECONNRESET\n";
-    return WSAECONNRESET;
-  }
-  case ZTS_ENOBUFS: {
-    get_log() << "Received ZTS_ENOBUFS\n";
-    return WSAENOBUFS;
-  }
-  case ZTS_EISCONN: {
-    get_log() << "Received ZTS_EISCONN\n";
-    return WSAEISCONN;
-  }
-  case ZTS_ENOTCONN: {
-    get_log() << "Received ZTS_ENOTCONN\n";
-    return WSAENOTCONN;
-  }
-  case ZTS_ETIMEDOUT: {
-    get_log() << "Received ZTS_ETIMEDOUT\n";
-    return WSAETIMEDOUT;
-  }
-  case ZTS_ECONNREFUSED: {
-    get_log() << "Received ZTS_ECONNREFUSED\n";
-    return WSAECONNREFUSED;
-  }
-  case ZTS_EHOSTUNREACH: {
-
-    get_log() << "Received ZTS_EHOSTUNREACH\n";
-    return WSAEHOSTUNREACH;
-  }
-  case ZTS_EALREADY: {
-    get_log() << "Received ZTS_EALREADY\n";
-    return WSAEALREADY;
-  }
-  case ZTS_EINPROGRESS: {
-
-    return WSAEINPROGRESS;
-  }
-  case 140: {
-    get_log() << "Received error 140 " << "\n";
-    return WSAEWOULDBLOCK;
-  }
-  default: {
-    get_log() << "Received unknown error: " << error << "\n";
-#ifdef WSA_INVALID_PARAMETER
-    return WSA_INVALID_PARAMETER;
-#else
-    return WSAEINVAL;
-#endif
-  }
-  }
-  get_log() << "Received unknown error: " << error << "\n";
-  return error;
-}
-
+std::ostream& get_log();
+HMODULE get_ztlib();
+std::optional<std::uint64_t> get_zero_tier_network_id();
+std::optional<std::string> get_zero_tier_peer_id_and_public_key();
+int zt_to_winsock_error(int);
 int zt_to_winsock_result(int code);
-
-zts_sockaddr_in to_zts(sockaddr_in addr)
-{
-  zts_sockaddr_in zt_addr{
-    .sin_len = sizeof(zts_sockaddr_in),
-    .sin_family = ZTS_AF_INET,
-    .sin_port = addr.sin_port
-  };
-
-  std::memcpy(&zt_addr.sin_addr, &addr.sin_addr, sizeof(zt_addr.sin_addr));
-  std::memcpy(&zt_addr.sin_zero, &addr.sin_zero, sizeof(zt_addr.sin_zero));
-  return zt_addr;
-}
-
-static_assert(sizeof(sockaddr) >= sizeof(sockaddr_in));
-sockaddr_in from_zts(zts_sockaddr_in zt_addr)
-{
-  sockaddr_in addr{
-    .sin_family = ZTS_AF_INET,
-    .sin_port = zt_addr.sin_port
-  };
-
-  std::memcpy(&addr.sin_addr, &zt_addr.sin_addr, sizeof(addr.sin_addr));
-  std::memcpy(&addr.sin_zero, &zt_addr.sin_zero, sizeof(addr.sin_zero));
-  return addr;
-}
-
-hostent from_zts(zts_hostent zt_host)
-{
-  hostent temp{
-    .h_name = zt_host.h_name,
-    .h_aliases = zt_host.h_aliases,
-    .h_addrtype = (short)zt_host.h_addrtype,
-    .h_length = (short)zt_host.h_length,
-    .h_addr_list = zt_host.h_addr_list
-  };
-  return temp;
-}
-
-bool& get_node_online_status()
-{
-  static bool node_is_online = false;
-  return node_is_online;
-}
-
-bool use_zero_tier()
-{
-  return get_zero_tier_network_id() && get_ztlib();
-}
+std::optional<in_addr> get_zero_tier_fallback_broadcast_ip_v4();
+bool use_zero_tier();
+int to_zt_msg_flags(int flags);
+zts_sockaddr_in to_zts(sockaddr_in addr);
+int get_zts_errno();
+bool& get_node_online_status();
+sockaddr_in from_zts(zts_sockaddr_in zt_addr);
+hostent from_zts(zts_hostent zt_host);
 
 extern "C" {
 HMODULE wsock_module = nullptr;
@@ -443,6 +82,21 @@ decltype(::WSAUnhookBlockingHook)* wsock_WSAUnhookBlockingHook = nullptr;
 decltype(::WSACancelBlockingCall)* wsock_WSACancelBlockingCall = nullptr;
 decltype(::WSAGetLastError)* wsock_WSAGetLastError = nullptr;
 decltype(::WSASetLastError)* wsock_WSASetLastError = nullptr;
+decltype(::WSAAsyncGetHostByName)* wsock_WSAAsyncGetHostByName = nullptr;
+decltype(::WSACancelAsyncRequest)* wsock_WSACancelAsyncRequest = nullptr;
+decltype(::WSAAsyncSelect)* wsock_WSAAsyncSelect = nullptr;
+
+#ifdef USE_WINSOCK2
+decltype(::WSAStringToAddressA)* wsock_WSAStringToAddressA = nullptr;
+decltype(::WSAGetOverlappedResult)* wsock_WSAGetOverlappedResult = nullptr;
+decltype(::WSACreateEvent)* wsock_WSACreateEvent = nullptr;
+decltype(::WSAResetEvent)* wsock_WSAResetEvent = nullptr;
+decltype(::WSACloseEvent)* wsock_WSACloseEvent = nullptr;
+decltype(::WSAWaitForMultipleEvents)* wsock_WSAWaitForMultipleEvents = nullptr;
+decltype(::WSASendTo)* wsock_WSASendTo = nullptr;
+decltype(::WSARecvFrom)* wsock_WSARecvFrom = nullptr;
+#endif
+
 
 int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 {
@@ -1201,6 +855,7 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
 {
   if (use_zero_tier())
   {
+    get_log() << "siege_select\n";
     static auto* zt_select = (std::add_pointer_t<decltype(zts_bsd_select)>)::GetProcAddress(get_ztlib(), "zts_bsd_select");
     zts_fd_set zt_read{};
     zts_fd_set* final_read = nullptr;
@@ -1303,7 +958,7 @@ hostent* __stdcall siege_gethostbyname(const char* name)
     get_log() << "siege_gethostbyname with no name \n";
   }
 
-  if (get_zero_tier_network_id() && get_ztlib() && name && get_node_online_status())
+  if (name && use_zero_tier() && get_node_online_status())
   {
     get_log() << "Calling zts_bsd_gethostbyname\n";
     static auto* zt_host = (std::add_pointer_t<decltype(zts_bsd_gethostbyname)>)::GetProcAddress(get_ztlib(), "zts_bsd_gethostbyname");
@@ -1353,6 +1008,186 @@ hostent* __stdcall siege_gethostbyname(const char* name)
   return wsock_gethostbyname(name);
 }
 
+auto __stdcall siege_WSAAsyncGetHostByName(HWND window, u_int message, const char* name, char* buffer, int buffer_length)
+{
+  if (use_zero_tier())
+  {
+    get_log() << "siege_WSAAsyncGetHostByName.\n";
+    ::ExitProcess(-1);
+  }
+
+  return wsock_WSAAsyncGetHostByName(window, message, name, buffer, buffer_length);
+}
+
+auto __stdcall siege_WSACancelAsyncRequest(HANDLE request)
+{
+  if (use_zero_tier())
+  {
+    get_log() << "siege_WSACancelAsyncRequest.\n";
+    ::ExitProcess(-1);
+  }
+
+  return wsock_WSACancelAsyncRequest(request);
+}
+
+auto __stdcall siege_WSAAsyncSelect(SOCKET socket, HWND window, u_int message, long flags)
+{
+  if (use_zero_tier())
+  {
+    bool notify_read = flags & FD_READ;
+    bool notify_write = flags & FD_WRITE;
+    bool notify_oob = flags & FD_OOB;
+
+    if (flags & FD_ACCEPT)
+    {
+      get_log() << "FD_ACCEPT not supported for siege_WSAAsyncSelect.\n";
+    }
+
+    if (flags & FD_CONNECT)
+    {
+      get_log() << "FD_CONNECT not supported for siege_WSAAsyncSelect.\n";
+    }
+
+    if (flags & FD_CLOSE)
+    {
+      get_log() << "FD_CLOSE not supported for siege_WSAAsyncSelect.\n";
+    }
+
+#ifdef USE_WINSOCK2
+    if (flags & FD_QOS)
+    {
+      get_log() << "FD_QOS not supported for siege_WSAAsyncSelect.\n";
+    }
+
+    if (flags & FD_ROUTING_INTERFACE_CHANGE)
+    {
+      get_log() << "FD_ROUTING_INTERFACE_CHANGE not supported for siege_WSAAsyncSelect.\n";
+    }
+
+    if (flags & FD_ADDRESS_LIST_CHANGE)
+    {
+      get_log() << "FD_ADDRESS_LIST_CHANGE not supported for siege_WSAAsyncSelect.\n";
+    }
+#endif
+
+    ::ExitProcess(-1);
+  }
+
+  return wsock_WSAAsyncSelect(socket, window, message, flags);
+}
+
+#ifdef USE_WINSOCK2
+
+auto __stdcall siege_WSAGetOverlappedResult(SOCKET socket, OVERLAPPED* overlapped, DWORD* transfer, BOOL wait, DWORD* flags)
+{
+  if (use_zero_tier())
+  {
+    get_log() << "siege_WSAGetOverlappedResult called. quitting.\n";
+    ::ExitProcess(-1);
+    // cancel get host by name task
+  }
+  return wsock_WSAGetOverlappedResult(socket, overlapped, transfer, wait, flags);
+}
+
+auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_received, DWORD* flags, sockaddr* from, INT* from_len, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler)
+{
+  if (use_zero_tier())
+  {
+    get_log() << "siege_WSARecvFrom called.\n";
+    if (overlapped || completion_handler)
+    {
+      get_log() << "siege_WSARecvFrom is overlapped.\n";
+
+      if (overlapped)
+      {
+        get_log() << "overlapped structure is available";
+      }
+      else
+      {
+        get_log() << "overlapped structure is not available";
+      }
+
+      if (completion_handler)
+      {
+        get_log() << "completion handler is available";
+      }
+      else
+      {
+        get_log() << "completion handler is not available";
+      }
+      // async version
+    }
+    else
+    {
+      get_log() << "siege_WSARecvFrom is blocking.\n";
+      // blocking version
+    }
+    ::ExitProcess(-1);
+  }
+
+  return wsock_WSARecvFrom(socket, buffers, buffer_count, bytes_received, flags, from, from_len, overlapped, completion_handler);
+}
+
+auto __stdcall siege_WSASendTo(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_received, DWORD flags, const sockaddr* to, int len, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler)
+{
+  if (use_zero_tier())
+  {
+    if (overlapped || completion_handler)
+    {
+      get_log() << "siege_WSASendTo is overlapped.\n";
+
+      if (overlapped)
+      {
+        get_log() << "overlapped structure is available";
+      }
+      else
+      {
+        get_log() << "overlapped structure is not available";
+      }
+
+      if (completion_handler)
+      {
+        get_log() << "completion handler is available";
+      }
+      else
+      {
+        get_log() << "completion handler is not available";
+      }
+      // async version
+    }
+    else
+    {
+      get_log() << "siege_WSASendTo is blocking.\n";
+      // blocking version
+    }
+
+    ::ExitProcess(-1);
+  }
+  return wsock_WSASendTo(socket, buffers, buffer_count, bytes_received, flags, to, len, overlapped, completion_handler);
+}
+
+auto __stdcall siege_WSACreateEvent()
+{
+  load_system_wsock();
+  return wsock_WSACreateEvent();
+}
+
+auto __stdcall siege_WSAResetEvent(HANDLE event)
+{
+  return wsock_WSAResetEvent(event);
+}
+
+auto __stdcall siege_WSACloseEvent(HANDLE event)
+{
+  return wsock_WSACloseEvent(event);
+}
+
+auto __stdcall siege_WSAWaitForMultipleEvents(DWORD event_count, const HANDLE* events, BOOL wait_all, DWORD timeout, BOOL alertable)
+{
+  return wsock_WSAWaitForMultipleEvents(event_count, events, wait_all, timeout, alertable);
+}
+#endif
+
 auto __stdcall siege_gethostname(char* name, int namelen)
 {
   load_system_wsock();
@@ -1400,6 +1235,14 @@ auto __stdcall siege_inet_ntoa(in_addr in)
   load_system_wsock();
   return wsock_inet_ntoa(in);
 }
+
+#ifdef USE_WINSOCK2
+auto __stdcall siege_WSAStringToAddressA(LPSTR address_str, INT family, LPWSAPROTOCOL_INFOA info, LPSOCKADDR out_address, LPINT out_len)
+{
+  load_system_wsock();
+  return wsock_WSAStringToAddressA(address_str, family, info, out_address, out_len);
+}
+#endif
 
 auto __stdcall siege_WSASetLastError(int error)
 {
@@ -1507,6 +1350,20 @@ void load_system_wsock()
   wsock_WSAGetLastError = (decltype(wsock_WSAGetLastError))::GetProcAddress(wsock_module, "WSAGetLastError");
   wsock_WSASetLastError = (decltype(wsock_WSASetLastError))::GetProcAddress(wsock_module, "WSASetLastError");
   wsock___WSAFDIsSet = (decltype(wsock___WSAFDIsSet))::GetProcAddress(wsock_module, "__WSAFDIsSet");
+  wsock_WSAAsyncGetHostByName = (decltype(wsock_WSAAsyncGetHostByName))::GetProcAddress(wsock_module, "WSAAsyncGetHostByName");
+  wsock_WSACancelAsyncRequest = (decltype(wsock_WSACancelAsyncRequest))::GetProcAddress(wsock_module, "WSACancelAsyncRequest");
+  wsock_WSAAsyncSelect = (decltype(wsock_WSAAsyncSelect))::GetProcAddress(wsock_module, "WSAAsyncSelect");
+
+#ifdef USE_WINSOCK2
+  wsock_WSAStringToAddressA = (decltype(wsock_WSAStringToAddressA))::GetProcAddress(wsock_module, "WSAStringToAddressA");
+  wsock_WSAGetOverlappedResult = (decltype(wsock_WSAGetOverlappedResult))::GetProcAddress(wsock_module, "WSAGetOverlappedResult");
+  wsock_WSACreateEvent = (decltype(wsock_WSACreateEvent))::GetProcAddress(wsock_module, "WSACreateEvent");
+  wsock_WSAResetEvent = (decltype(wsock_WSAResetEvent))::GetProcAddress(wsock_module, "WSAResetEvent");
+  wsock_WSACloseEvent = (decltype(wsock_WSACloseEvent))::GetProcAddress(wsock_module, "WSACloseEvent");
+  wsock_WSAWaitForMultipleEvents = (decltype(wsock_WSAWaitForMultipleEvents))::GetProcAddress(wsock_module, "WSAWaitForMultipleEvents");
+  wsock_WSASendTo = (decltype(wsock_WSASendTo))::GetProcAddress(wsock_module, "WSASendTo");
+  wsock_WSARecvFrom = (decltype(wsock_WSARecvFrom))::GetProcAddress(wsock_module, "WSARecvFrom");
+#endif
 }
 
 int zt_to_winsock_result(int code)
@@ -1566,4 +1423,376 @@ std::optional<in_addr> get_zero_tier_fallback_broadcast_ip_v4()
   }();
 
   return result;
+}
+
+
+std::ostream& get_log()
+{
+#ifdef _DEBUG
+  static std::ofstream file_log("networking.log", std::ios::trunc);
+#else
+  static std::stringstream file_log;
+  file_log.str("");
+#endif
+  return file_log;
+}
+
+
+HMODULE get_ztlib()
+{
+  static HMODULE ztlib = [] {
+    auto module_path = win32::module_ref::current_module().GetModuleFileName();
+
+    auto zt_path = fs::path(module_path).parent_path() / "zt-shared.dll";
+
+
+    get_log() << "Loading zero tier library: " << zt_path << '\n';
+
+    auto result = LoadLibraryExW(zt_path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+
+    return result;
+  }();
+
+  return ztlib;
+}
+
+std::optional<std::uint64_t> get_zero_tier_network_id()
+{
+  static std::optional<std::uint64_t> result = []() -> std::optional<std::uint64_t> {
+    try
+    {
+      get_log() << "get_zero_tier_network_id\n";
+
+
+      if (auto env_size = ::GetEnvironmentVariableA("ZERO_TIER_NETWORK_ID", nullptr, 0); env_size >= 1)
+      {
+        std::string network_id(env_size - 1, '\0');
+        ::GetEnvironmentVariableA("ZERO_TIER_NETWORK_ID", network_id.data(), network_id.size() + 1);
+
+        get_log() << "Zero Tier Network ID is " << network_id << '\n';
+        return std::strtoull(network_id.data(), 0, 16);
+      }
+
+      get_log() << "No zero tier network ID\n";
+      return std::nullopt;
+    }
+    catch (...)
+    {
+      return std::nullopt;
+    }
+  }();
+
+  return result;
+}
+
+std::optional<std::string> get_zero_tier_peer_id_and_public_key()
+{
+  static std::optional<std::string> result = []() -> std::optional<std::string> {
+    get_log() << "get_zero_tier_network_id\n";
+
+    if (auto env_size = ::GetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", nullptr, 0); env_size >= 1)
+    {
+      std::string peer_id(env_size - 1, '\0');
+
+      ::GetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", peer_id.data(), peer_id.size() + 1);
+
+      static auto* id_pair_is_valid = (std::add_pointer_t<decltype(zts_id_pair_is_valid)>)::GetProcAddress(get_ztlib(), "zts_id_pair_is_valid");
+
+      peer_id.resize(ZTS_ID_STR_BUF_LEN);
+
+      if (id_pair_is_valid(peer_id.data(), (unsigned int)peer_id.size()))
+      {
+        get_log() << "Zero Tier peer id and public key retrieved\n";
+        return peer_id;
+      }
+      else
+      {
+        get_log() << "Zero Tier peer id and public key retrieved, but invalid\n";
+        return std::nullopt;
+      }
+    }
+
+    get_log() << "No zero tier peer ID and public key\n";
+    return std::nullopt;
+  }();
+
+  return result;
+}
+
+int to_zt_msg_flags(int flags)
+{
+  auto zt_flags = 0;
+
+  if (flags & MSG_PEEK)
+  {
+    zt_flags |= ZTS_MSG_PEEK;
+  }
+
+  if (flags & MSG_OOB)
+  {
+    zt_flags |= ZTS_MSG_OOB;
+  }
+
+  return flags;
+}
+
+int get_zts_errno()
+{
+  return *(int*)::GetProcAddress(get_ztlib(), "zts_errno");
+}
+
+int zt_to_winsock_error(int error)
+{
+  switch (error)
+  {
+  case ZTS_EPERM: {
+    get_log() << "Received ZTS_EPERM\n";
+    return WSAEACCES;
+  }
+  case ZTS_ENOENT: {
+    get_log() << "Received ZTS_ENOENT\n";
+#ifdef WSA_INVALID_HANDLE
+    return WSA_INVALID_HANDLE;
+#else
+    return WSAEBADF;
+#endif
+  }
+  case ZTS_ESRCH: {
+    get_log() << "Received ZTS_ESRCH\n";
+#ifdef WSA_INVALID_HANDLE
+    return WSA_INVALID_HANDLE;
+#else
+    return WSAEBADF;
+#endif
+  }
+  case ZTS_EINTR: {
+    get_log() << "Received ZTS_EINTR\n";
+    return WSAEINTR;
+  }
+  case ZTS_EIO: {
+    get_log() << "Received ZTS_EIO\n";
+#if WSA_IO_INCOMPLETE
+    return WSA_IO_INCOMPLETE;
+#else
+    return WSAEINPROGRESS;
+#endif
+  }
+  case ZTS_ENXIO: {
+    get_log() << "Received ZTS_ENXIO\n";
+    return WSAEFAULT;
+  }
+  case ZTS_EBADF: {
+    get_log() << "Received ZTS_EBADF\n";
+    return WSAEBADF;
+  }
+  case ZTS_EWOULDBLOCK: {
+    get_log() << "Received ZTS_EWOULDBLOCK\n";
+    return WSAEWOULDBLOCK;
+  }
+  case ZTS_ENOMEM: {
+    get_log() << "Received ZTS_ENOMEM\n";
+#ifdef WSA_NOT_ENOUGH_MEMORY
+    return WSA_NOT_ENOUGH_MEMORY;
+#else
+    return WSA_QOS_TRAFFIC_CTRL_ERROR;
+#endif
+  }
+  case ZTS_EACCES: {
+    get_log() << "Received ZTS_EACCES\n";
+    return WSAEACCES;
+  }
+  case ZTS_EFAULT: {
+    get_log() << "Received ZTS_EFAULT\n";
+    return WSAEFAULT;
+  }
+  case ZTS_EBUSY: {
+    get_log() << "Received ZTS_EBUSY\n";
+    return WSAEACCES;
+  }
+  case ZTS_EEXIST: {
+    get_log() << "Received ZTS_EEXIST\n";
+    return WSAEACCES;
+  }
+  case ZTS_ENODEV: {
+    get_log() << "Received ZTS_ENODEV\n";
+    return WSAEACCES;
+  }
+  case ZTS_EINVAL: {
+    get_log() << "Received ZTS_EINVAL\n";
+    return WSAEINVAL;
+  }
+  case ZTS_ENFILE: {
+    get_log() << "Received ZTS_ENFILE\n";
+    return WSAEMFILE;
+  }
+  case ZTS_EMFILE: {
+    get_log() << "Received ZTS_EMFILE\n";
+    return WSAEMFILE;
+  }
+  case ZTS_ENOSYS: {
+    get_log() << "Received ZTS_ENOSYS\n";
+    return WSAEACCES;
+  }
+  case ZTS_ENOTSOCK: {
+    get_log() << "Received ZTS_EDESTADDRREQ\n";
+    return WSAENOTSOCK;
+  }
+  case ZTS_EDESTADDRREQ: {
+    get_log() << "Received ZTS_EDESTADDRREQ\n";
+    return WSAEDESTADDRREQ;
+  }
+  case ZTS_EMSGSIZE: {
+    get_log() << "Received ZTS_EMSGSIZE\n";
+    return WSAEMSGSIZE;
+  }
+  case ZTS_EPROTOTYPE: {
+    get_log() << "Received ZTS_EPROTOTYPE\n";
+    return WSAEPROTOTYPE;
+  }
+  case ZTS_ENOPROTOOPT: {
+    get_log() << "Received ZTS_ENOPROTOOPT\n";
+    return WSAENOPROTOOPT;
+  }
+  case ZTS_EPROTONOSUPPORT: {
+    get_log() << "Received ZTS_EPROTONOSUPPORT\n";
+    return WSAEPROTONOSUPPORT;
+  }
+  case ZTS_ESOCKTNOSUPPORT: {
+    get_log() << "Received ZTS_ESOCKTNOSUPPORT\n";
+    return WSAESOCKTNOSUPPORT;
+  }
+  case ZTS_EOPNOTSUPP: {
+    get_log() << "Received ZTS_EOPNOTSUPP\n";
+    return WSAEOPNOTSUPP;
+  }
+  case ZTS_EPFNOSUPPORT: {
+    get_log() << "Received ZTS_EPFNOSUPPORT\n";
+    return WSAEPFNOSUPPORT;
+  }
+  case ZTS_EAFNOSUPPORT: {
+    get_log() << "Received ZTS_EAFNOSUPPORT\n";
+    return WSAEAFNOSUPPORT;
+  }
+  case ZTS_EADDRINUSE: {
+    get_log() << "Received ZTS_EADDRINUSE\n";
+    return WSAEADDRINUSE;
+  }
+  case ZTS_EADDRNOTAVAIL: {
+    get_log() << "Received ZTS_EADDRNOTAVAIL\n";
+    return WSAEADDRNOTAVAIL;
+  }
+  case ZTS_ENETDOWN: {
+    get_log() << "Received ZTS_ENETDOWN\n";
+    return WSAENETDOWN;
+  }
+  case ZTS_ENETUNREACH: {
+    get_log() << "Received ZTS_ENETUNREACH\n";
+    return WSAENETUNREACH;
+  }
+  case ZTS_ECONNABORTED: {
+    get_log() << "Received ZTS_ECONNABORTED\n";
+    return WSAECONNABORTED;
+  }
+  case ZTS_ECONNRESET: {
+    get_log() << "Received ZTS_ECONNRESET\n";
+    return WSAECONNRESET;
+  }
+  case ZTS_ENOBUFS: {
+    get_log() << "Received ZTS_ENOBUFS\n";
+    return WSAENOBUFS;
+  }
+  case ZTS_EISCONN: {
+    get_log() << "Received ZTS_EISCONN\n";
+    return WSAEISCONN;
+  }
+  case ZTS_ENOTCONN: {
+    get_log() << "Received ZTS_ENOTCONN\n";
+    return WSAENOTCONN;
+  }
+  case ZTS_ETIMEDOUT: {
+    get_log() << "Received ZTS_ETIMEDOUT\n";
+    return WSAETIMEDOUT;
+  }
+  case ZTS_ECONNREFUSED: {
+    get_log() << "Received ZTS_ECONNREFUSED\n";
+    return WSAECONNREFUSED;
+  }
+  case ZTS_EHOSTUNREACH: {
+
+    get_log() << "Received ZTS_EHOSTUNREACH\n";
+    return WSAEHOSTUNREACH;
+  }
+  case ZTS_EALREADY: {
+    get_log() << "Received ZTS_EALREADY\n";
+    return WSAEALREADY;
+  }
+  case ZTS_EINPROGRESS: {
+
+    return WSAEINPROGRESS;
+  }
+  case 140: {
+    get_log() << "Received error 140 " << "\n";
+    return WSAEWOULDBLOCK;
+  }
+  default: {
+    get_log() << "Received unknown error: " << error << "\n";
+#ifdef WSA_INVALID_PARAMETER
+    return WSA_INVALID_PARAMETER;
+#else
+    return WSAEINVAL;
+#endif
+  }
+  }
+  get_log() << "Received unknown error: " << error << "\n";
+  return error;
+}
+
+
+zts_sockaddr_in to_zts(sockaddr_in addr)
+{
+  zts_sockaddr_in zt_addr{
+    .sin_len = sizeof(zts_sockaddr_in),
+    .sin_family = ZTS_AF_INET,
+    .sin_port = addr.sin_port
+  };
+
+  std::memcpy(&zt_addr.sin_addr, &addr.sin_addr, sizeof(zt_addr.sin_addr));
+  std::memcpy(&zt_addr.sin_zero, &addr.sin_zero, sizeof(zt_addr.sin_zero));
+  return zt_addr;
+}
+
+static_assert(sizeof(sockaddr) >= sizeof(sockaddr_in));
+sockaddr_in from_zts(zts_sockaddr_in zt_addr)
+{
+  sockaddr_in addr{
+    .sin_family = ZTS_AF_INET,
+    .sin_port = zt_addr.sin_port
+  };
+
+  std::memcpy(&addr.sin_addr, &zt_addr.sin_addr, sizeof(addr.sin_addr));
+  std::memcpy(&addr.sin_zero, &zt_addr.sin_zero, sizeof(addr.sin_zero));
+  return addr;
+}
+
+hostent from_zts(zts_hostent zt_host)
+{
+  hostent temp{
+    .h_name = zt_host.h_name,
+    .h_aliases = zt_host.h_aliases,
+    .h_addrtype = (short)zt_host.h_addrtype,
+    .h_length = (short)zt_host.h_length,
+    .h_addr_list = zt_host.h_addr_list
+  };
+  return temp;
+}
+
+bool& get_node_online_status()
+{
+  static bool node_is_online = false;
+  return node_is_online;
+}
+
+bool use_zero_tier()
+{
+  return get_zero_tier_network_id() && get_ztlib();
 }

@@ -49,6 +49,12 @@ EXPORTS
 	gethostbyname=siege_gethostbyname
 	siege_gethostname @57
 	gethostname=siege_gethostname
+	siege_WSAAsyncSelect @101
+	WSAAsyncSelect=siege_WSAAsyncSelect
+	siege_WSAAsyncGetHostByName @103
+	WSAAsyncGetHostByName=siege_WSAAsyncGetHostByName
+	siege_WSACancelAsyncRequest @108
+	WSACancelAsyncRequest=siege_WSACancelAsyncRequest
 	siege_WSAGetLastError @111
 	WSAGetLastError=siege_WSAGetLastError
 	siege_WSASetLastError @112

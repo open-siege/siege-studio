@@ -31,3 +31,14 @@ EXPORTS
 	WSASetBlockingHook=siege_WSASetBlockingHook
 	WSAUnhookBlockingHook=siege_WSAUnhookBlockingHook
 	WSACancelBlockingCall=siege_WSACancelBlockingCall
+	WSAAsyncGetHostByName=siege_WSAAsyncGetHostByName
+	WSACancelAsyncRequest=siege_WSACancelAsyncRequest
+	WSAAsyncSelect=siege_WSAAsyncSelect
+	WSAStringToAddressA=siege_WSAStringToAddressA
+	WSAGetOverlappedResult=siege_WSAGetOverlappedResult
+	WSACreateEvent=siege_WSACreateEvent
+	WSAResetEvent=siege_WSAResetEvent
+	WSACloseEvent=siege_WSACloseEvent
+	WSAWaitForMultipleEvents=siege_WSAWaitForMultipleEvents
+	WSASendTo=siege_WSASendTo
+	WSARecvFrom=siege_WSARecvFrom
