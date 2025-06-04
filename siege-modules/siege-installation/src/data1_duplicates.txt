@@ -1,8 +1,0 @@
-Uninstall.ico
-refresh.dll
-SSReg.URL
-DTS.URL
-ereg3201.dll
-ereg.dll
-REGISTER.ico
-Remap.ico

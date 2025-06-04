@@ -1,0 +1,5 @@
+EXPORTS
+	name_variations DATA PRIVATE
+    storage_properties DATA PRIVATE
+    associated_extensions DATA PRIVATE
+    directory_mappings DATA PRIVATE

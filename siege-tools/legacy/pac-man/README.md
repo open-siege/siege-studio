@@ -1,1 +1,0 @@
-# starsiege-package-manager

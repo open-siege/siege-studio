@@ -1,1 +1,0 @@
-sspm install starsiege-retail@1.0.0-3.fr starsiege-config-default-1080p starsiege-compat-dxwnd ssr-keymaps ssr-master starsiege-server-crash-fix --dest-dir="Starsiege 1.0.0.3 fr"

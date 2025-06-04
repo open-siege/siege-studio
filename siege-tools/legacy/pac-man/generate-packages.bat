@@ -1,5 +1,0 @@
-python pkg-gen.py new package-specs.json --version="1.0.0-0.en" --dest-dir="packages\\1.0.0-0.en" --base-dir="Starsiege 1.0.0.0"
-python pkg-gen.py new package-specs.json --version="1.0.0-2.en" --dest-dir="packages\\1.0.0-2.en" --base-dir="Starsiege 1.0.0.2"
-python pkg-gen.py new package-specs.json --version="1.0.0-3.en" --dest-dir="packages\\1.0.0-3.en" --base-dir="Starsiege 1.0.0.3"
-python pkg-gen.py new package-specs.json --version="1.0.0-4.en" --dest-dir="packages\\1.0.0-4.en" --base-dir="Starsiege 1.0.0.4"
-python pkg-gen.py new package-specs.json --version="1.0.0-3.fr" --dest-dir="packages\\1.0.0-3.fr" --base-dir="Starsiege 1.0.0.3 french"

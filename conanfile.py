@@ -13,7 +13,7 @@ class SiegeLauncherConanFile(ConanFile):
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
     build_requires = "cmake/3.31.6"
-    requires = "glm/cci.20230113", "taocpp-pegtl/3.2.7", "libzip/1.9.2", "catch2/3.5.4", "nlohmann_json/3.9.1", "cpr/1.10.5", "zlib/1.3.1"
+    requires = "glm/cci.20230113", "taocpp-pegtl/3.2.7", "libzip/1.9.2", "catch2/3.8.1", "nlohmann_json/3.9.1", "zlib/1.3.1"
     settings = "os", "compiler", "build_type", "arch"
     generators = "CMakeToolchain", "CMakeDeps"
 
@@ -36,16 +36,8 @@ class SiegeLauncherConanFile(ConanFile):
     def configure(self):
         self.options["catch2"].shared = False
         self.options["libzip"].shared = False
-        self.options["cpr"].shared = False
-        self.options["libcurl"].shared = False
-
-        if self.settings.os == "Linux":
-            self.options["sdl"].wayland = False
 
         if self.settings.os == "Windows":
-            self.options["libcurl"].with_ssl = "schannel"
-            self.options["cpr"].with_ssl = "winssl"
-            # Disabled encryption to reduce the API surface for XP support
             self.options["libzip"].crypto = False
 
     def build(self):
