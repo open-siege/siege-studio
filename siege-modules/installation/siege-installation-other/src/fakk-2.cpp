@@ -31,7 +31,7 @@ extern std::array<path_pair, 32> directory_mappings = { {
   { FSL"install/fakk/<languageFolder>", FSL"fakk" }
 } };
 
-extern std::array<installation_variable, 2> variables = {{
+extern std::array<installation_variable, 2> installation_variables = { {
   { .name = FSL"languageFolder", .label = FSL"Language" }
 }};
 

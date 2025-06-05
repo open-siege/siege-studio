@@ -3,5 +3,5 @@ EXPORTS
     storage_properties DATA PRIVATE
     associated_extensions DATA PRIVATE
     directory_mappings DATA PRIVATE
-    variables DATA PRIVATE
+    installation_variables DATA PRIVATE
     get_options_for_variable PRIVATE

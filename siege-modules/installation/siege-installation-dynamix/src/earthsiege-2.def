@@ -1,7 +1,8 @@
 EXPORTS
-	name_variations DATA PRIVATE
-    storage_properties DATA PRIVATE
+	storage_properties DATA
+    directory_mappings DATA
+    name_variations DATA PRIVATE
     associated_extensions DATA PRIVATE
-    directory_mappings DATA PRIVATE
-    variables DATA PRIVATE
+    installation_variables DATA PRIVATE
     get_options_for_variable PRIVATE
+    apply_post_install_steps PRIVATE

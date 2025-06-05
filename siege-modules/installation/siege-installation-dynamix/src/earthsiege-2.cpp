@@ -8,21 +8,10 @@ using installation_variable = platform::installation_variable;
 using installation_option = platform::installation_option;
 
 extern "C" {
-extern std::array<const fs_char*, 5> name_variations = {
-  FSL"earthsiege2",
-  FSL"Earthsiege2",
-  FSL"earthsiege 2"
-  FSL"Earthsiege 2"
-};
-
 extern game_storage_properties storage_properties = {
   .number_of_discs = 1,
   .disc_names = { FSL "EARTHSIEGE2" },
   .default_install_path = FSL "<systemDrive>/Dynamix/Dynamix/EarthSiege 2"
-};
-
-extern std::array<const fs_char*, 2> associated_extensions = {
-  FSL"siege-extension-earthsiege-2"
 };
 
 extern std::array<path_pair, 32> directory_mappings = {{ 
@@ -45,8 +34,18 @@ extern std::array<path_pair, 32> directory_mappings = {{
   { FSL"*.WIN", FSL"=" },
   { FSL"*.STR", FSL"=" } } };
 
+extern std::array<const fs_char*, 2> associated_extensions = {
+  FSL"siege-extension-earthsiege-2"
+};
 
-extern std::array<installation_variable, 2> variables = {{
+extern std::array<const fs_char*, 5> name_variations = {
+  FSL"earthsiege2",
+  FSL"Earthsiege2",
+  FSL"earthsiege 2", 
+  FSL"Earthsiege 2"
+};
+
+extern std::array<installation_variable, 2> installation_variables = { {
   { .name = FSL"languageFolder", .label = FSL"Language" }
 }};
 

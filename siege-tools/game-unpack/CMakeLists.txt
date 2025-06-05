@@ -3,7 +3,12 @@ project(game-unpack)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-add_executable(${PROJECT_NAME} src/game-unpack.cpp)
+if (WIN32)
+    add_executable(${PROJECT_NAME} src/game-unpack.win32.cpp)
+else()
+    # TODO make extension and installation modules work in a cross platform way
+    add_executable(${PROJECT_NAME} src/game-unpack.cpp)
+endif()
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)
 target_link_libraries(${PROJECT_NAME} PRIVATE siege-resource)
 target_include_directories(${PROJECT_NAME} PRIVATE src)
