@@ -5,7 +5,7 @@
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/win/file.hpp>
-#include <siege/platform/content_module.hpp>
+#include <siege/platform/presentation_module.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/layout.hpp>
@@ -31,7 +31,7 @@ namespace siege::views
     win32::tab_control tab_control;
     win32::window theme_window;
 
-    std::list<platform::content_module> loaded_modules;
+    std::list<platform::presentation_module> loaded_modules;
     std::map<std::wstring, std::int32_t> extensions;
     std::set<std::u16string> categories;
 
@@ -78,7 +78,7 @@ namespace siege::views
       ::SetWindowLongPtrW(self, GWL_EXSTYLE, params.dwExStyle);
 
       std::filesystem::path app_path = std::filesystem::path(win32::module_ref(params.hInstance).GetModuleFileName()).parent_path();
-      loaded_modules = platform::content_module::load_modules(app_path);
+      loaded_modules = platform::presentation_module::load_modules(app_path);
 
       buffer.resize(64);
 

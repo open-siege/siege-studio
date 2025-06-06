@@ -13,21 +13,21 @@ endif()
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}-dependencies)
 
 add_dependencies(${PROJECT_NAME}-dependencies 
-    siege-content-2d 
-    siege-content-3d 
-    siege-content-resource 
-    siege-content-audio 
+    siege-presentation-2d 
+    siege-presentation-3d 
+    siege-presentation-resource 
+    siege-presentation-audio 
     dts-to-json
     dts-to-obj
     game-unpack
     unvol)
 
-set(CONTENT_TARGETS siege-content-2d 
-					siege-content-3d 
-					siege-content-resource 
-					siege-content-audio 
-					siege-content-configuration
-					siege-content-executable
+set(CONTENT_TARGETS siege-presentation-2d 
+					siege-presentation-3d 
+					siege-presentation-resource 
+					siege-presentation-audio 
+					siege-presentation-configuration
+					siege-presentation-executable
 					${PROJECT_NAME}-core)
 
 add_custom_command(TARGET ${PROJECT_NAME}-dependencies PRE_BUILD
@@ -50,11 +50,11 @@ set(EXTENSION_PROJECTS siege-extension-id-tech
 set(EXT_TARGETS)
 
 foreach(EXT_PROJECT IN ITEMS ${EXTENSION_PROJECTS})
-    get_property(PROJECT_TARGETS DIRECTORY ${CMAKE_SOURCE_DIR}/siege-modules/${EXT_PROJECT} PROPERTY BUILDSYSTEM_TARGETS)
+    get_property(PROJECT_TARGETS DIRECTORY ${CMAKE_SOURCE_DIR}/siege-modules/extension/${EXT_PROJECT} PROPERTY BUILDSYSTEM_TARGETS)
     list(APPEND EXT_TARGETS ${PROJECT_TARGETS}) 
 endforeach()
 
-list(APPEND EXT_TARGETS siege-extension-input-filter-raw-input ws2_32-on-zero-tier wsock32-on-zero-tier)
+list(APPEND EXT_TARGETS siege-input-filtration ws2_32-on-zero-tier wsock32-on-zero-tier)
 
 if(TARGET zt-shared)
     list(APPEND EXT_TARGETSzt-shared)

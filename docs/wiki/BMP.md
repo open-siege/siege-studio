@@ -30,5 +30,5 @@ While there may be a shared extension, there are various internal representation
 
 #### Source Code
 * BMP
-    * [siege-modules/siege-content/include/siege/content/bitmap.hpp](/siege-modules/siege-content/include/siege/content/bmp/bitmap.hpp)
-    * [siege-modules/siege-content/src/bmp/bitmap.cpp](/siege-modules/siege-content/src/bmp/bitmap.cpp)
+    * [siege-modules/foundation/siege-content/include/siege/content/bitmap.hpp](/siege-modules/foundation/siege-content/include/siege/content/bmp/bitmap.hpp)
+    * [siege-modules/foundation/siege-content/src/bmp/bitmap.cpp](/siege-modules/foundation/siege-content/src/bmp/bitmap.cpp)

@@ -1,0 +1,15 @@
+cmake_minimum_required(VERSION 3.30)
+project(siege-extension)
+
+if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
+    add_library(wsock32-on-zero-tier SHARED src/wsock32-on-zero-tier.cpp src/wsock32-on-zero-tier.def)
+    target_include_directories(wsock32-on-zero-tier PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/libzt/include)
+    set_target_properties(wsock32-on-zero-tier PROPERTIES CXX_STANDARD 23)
+    target_link_libraries(wsock32-on-zero-tier PRIVATE siege-win-core)
+
+    add_library(ws2_32-on-zero-tier SHARED src/wsock32-on-zero-tier.cpp src/ws2_32-on-zero-tier.def)
+    target_compile_definitions(ws2_32-on-zero-tier PRIVATE USE_WINSOCK2=TRUE)
+    target_include_directories(ws2_32-on-zero-tier PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/libzt/include)
+    set_target_properties(ws2_32-on-zero-tier PROPERTIES CXX_STANDARD 23)
+    target_link_libraries(ws2_32-on-zero-tier PRIVATE siege-win-core)
+endif()

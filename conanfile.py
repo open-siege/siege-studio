@@ -21,7 +21,7 @@ class SiegeLauncherConanFile(ConanFile):
         if self.settings.os == "Windows":
             if not os.path.isdir("libzt"):
                 self.run("git clone https://github.com/open-siege/libzt.git --branch 1.8.10 --recurse-submodules --depth=1")
-            self.run(f"conan install detours-conanfile.py -s build_type=Release -s compiler.runtime=static -s arch={self.settings.arch} --build=missing -of siege-modules/siege-extension/detours")
+            self.run(f"conan install detours-conanfile.py -s build_type=Release -s compiler.runtime=static -s arch={self.settings.arch} --build=missing -of siege-modules/foundation/siege-extension/detours")
         
         self.requires("xz_utils/5.4.4", override=True)
 

@@ -52,5 +52,5 @@ Here are some of the most common palette formats present across Dynamix's games:
 
 #### Source Code
 * PAL/IPL/PPL (Windows and Phoenix; Partial DPL support)
-    * [siege-modules/siege-content/include/siege/content/pal/palette.hpp](/siege-modules/siege-content/include/siege/content/pal/palette.hpp)
-    * [siege-modules/siege-content/src/pal/palette.cpp](/siege-modules/siege-content/src/pal/palette.cpp)
+    * [siege-modules/foundation/siege-content/include/siege/content/pal/palette.hpp](/siege-modules/foundation/siege-content/include/siege/content/pal/palette.hpp)
+    * [siege-modules/foundation/siege-content/src/pal/palette.cpp](/siege-modules/foundation/siege-content/src/pal/palette.cpp)

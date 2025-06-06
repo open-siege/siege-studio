@@ -8,7 +8,7 @@ Classic Games, Modern Technology.
 
 Siege Studio is a tool for previewing, converting and (eventually) editing reverse engineered files for games such as Earthsiege, Starsiege and other related games from the 1990s and early 2000s.
 
-In addition, several extension modules are available to fix compatibility issues with selected games, as well as configure controller support and assist with networking.
+In addition, several extension modules are available to fix compatibility issues with selected games, as well as configure controller support and assistance with networking.
 
 The project contains the following components:
 * Siege Studio (in this repo)
@@ -20,18 +20,18 @@ The project contains the following components:
       * Siege Platform: a connection of static libraries, especially to handle platform specific features and make each platform easier to use.
       * Siege Content: a static library used to read, write and parse file formats such as Phoenix Bitmap (pba), Dynamix 3Space Shape (dts) and many more.
       * Siege Resource: a static library used to read, write and parse compound file formats, such as VOL or ZIP, which can contain many files within.
-  * Content Modules, which are dynamic libraries describing the UI for interacting with various supported file types, to be loaded by a host program dynamically.
-      * Archive Modules are Content Modules which also expose an API for interacting with archive files for use in other Content Modules.
-      * Siege 2D Content, Siege 3D Content, Siege Audio Content, Siege Resource Content are some of the available content modules.
+  * Presentation Modules, which are dynamic libraries describing the UI for interacting with various supported file types, to be loaded by a host program dynamically.
+      * Archive Modules are Presentation Modules which also expose an API for interacting with archive files for use in other Presentation Modules.
+      * Siege Presentation 2D, Siege Presentation 3D, Siege Presentation Audio, Siege Presentation Resource are some of the available presentation modules.
   * Extension Modules, which can contain compatibility fixes or custom logic to improve networking or controller support.
       * Current publicly available families of extensions are:
         * id Tech (for games built using id Tech or related engines).
         * 3Space (for games built using 3Space or Torque).
         * Other (for games or tools which aren't logically organised).
       * There are also two additonal dynamic libraries meant for supporting advanced features available to every game:
-        * Input Filter - which allows for keyboard and mouse input to be restricted to specific devices.
+        * Input Filtration - which allows for keyboard and mouse input to be restricted to specific devices.
         * WinSock Over Zero Tier - provides a wsock32/ws2_32 compatible API for playing games over Zero Tier.
-      * Orchestration of all of these modules is done by Siege Executable Module.
+      * Orchestration of all of these modules is done by Siege Presentation Executable module.
   * Installation Modules, which contain logic for unpacking game data and installing them onto a system.
       * Current publicly available families of installation modules are:
         * Dynamix (for games made by Dyanmix which aren't available on digital storefronts).
@@ -42,7 +42,7 @@ The project contains the following components:
   * It has the same architecture as Siege Studio and reuses all the same modules, with the exception that more modules are offered in the commercial release.
     * Examples of private Extension Modules included:
       * Cry Engine (for some Cry Engine 1 and 2 titles).
-      * isiMotor (for most isiMotor 1 and 2 titiles).
+      * isiMotor (for most isiMotor 1 and 2 titles).
       * Unreal (for most Unreal Engine 1 and 2 titles).
       * And more...
     * Examples of private Installation Modules included:
