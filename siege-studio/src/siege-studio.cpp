@@ -194,11 +194,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 {
   win32::com::init_com();
 
-  INITCOMMONCONTROLSEX settings{
-    .dwSize{ sizeof(INITCOMMONCONTROLSEX) },
-    .dwICC = ICC_STANDARD_CLASSES | ICC_INTERNET_CLASSES | ICC_LISTVIEW_CLASSES | ICC_TAB_CLASSES | ICC_TREEVIEW_CLASSES | ICC_DATE_CLASSES | ICC_BAR_CLASSES
-  };
-  win32::init_common_controls_ex(&settings);
+  win32::init_common_controls_ex({ .dwSize{ sizeof(INITCOMMONCONTROLSEX) },
+    .dwICC = ICC_STANDARD_CLASSES | ICC_INTERNET_CLASSES | ICC_LISTVIEW_CLASSES | ICC_TAB_CLASSES | ICC_TREEVIEW_CLASSES | ICC_DATE_CLASSES | ICC_BAR_CLASSES });
 
   auto wic_version = win32::get_wic_version();
 

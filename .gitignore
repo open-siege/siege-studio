@@ -24,7 +24,6 @@ obj/
 *.obj
 *.dts
 *.DTS
-*.cmake
 
 CMakeCache.txt
 conaninfo.txt

@@ -7,8 +7,7 @@
 
 namespace win32
 {
-
-  inline BOOL init_common_controls_ex(const INITCOMMONCONTROLSEX* picce)
+  inline BOOL init_common_controls_ex(INITCOMMONCONTROLSEX info)
   {
     static auto module = [] {
       auto result = ::GetModuleHandleW(L"comctl32.dll");
@@ -26,7 +25,7 @@ namespace win32
 
     if (proc)
     {
-      return proc(picce);
+      return proc(&info);
     }
 
     using init_common_controls = std::add_pointer_t<decltype(::InitCommonControls)>;
@@ -239,6 +238,98 @@ namespace win32
       return reinterpret_cast<void**>(this);
     }
   };
+
+  struct task_dialog_result
+  {
+    std::vector<int> buttons;
+    std::vector<int> radio_buttons;
+    BOOL verfication_flag_checked = FALSE;
+  };
+
+  inline std::expected<task_dialog_result, HRESULT> task_dialog_indirect(TASKDIALOGCONFIG config, std::move_only_function<HRESULT(HWND, UINT, WPARAM, LPARAM)> callback)
+  {
+    static auto module = ::GetModuleHandleW(L"comctl32.dll");
+
+    using task_dialog_indirect_func = std::add_pointer_t<decltype(::TaskDialogIndirect)>;
+
+
+    static auto proc = (task_dialog_indirect_func)::GetProcAddress(module, "TaskDialogIndirect");
+
+    if (proc)
+    {
+      task_dialog_result result;
+
+      result.buttons.resize(config.cButtons);
+      result.radio_buttons.resize(config.cRadioButtons);
+
+
+      struct handler
+      {
+        static HRESULT __stdcall dialog_callback(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, LONG_PTR lpRefData)
+        {
+          if (lpRefData)
+          {
+            auto* callback = (std::move_only_function<HRESULT(HWND, UINT, WPARAM, LPARAM)>*)lpRefData;
+
+            auto result = callback->operator()(hwnd, msg, wParam, lParam);
+
+            if (msg == TDN_DIALOG_CONSTRUCTED)
+            {
+              struct sub_class
+              {
+                static HRESULT __stdcall sub_class_callback(HWND window, UINT message, WPARAM wparam, LPARAM lparam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+                {
+                  if (message == TDM_NAVIGATE_PAGE && lparam)
+                  {
+                    auto* config = (TASKDIALOGCONFIG*)lparam;
+                    if (!config->pfCallback)
+                    {
+                      config->pfCallback = handler::dialog_callback;
+                      config->lpCallbackData = (LONG_PTR)uIdSubclass;
+                    }
+                  }
+
+                  if (message == WM_DESTROY)
+                  {
+                    remove_window_subclass(window, sub_class::sub_class_callback, uIdSubclass);
+                  }
+
+                  return def_subclass_proc(window, message, wparam, lparam);
+                }
+              };
+              set_window_subclass(hwnd, sub_class::sub_class_callback, (UINT_PTR)lpRefData, 0);
+            }
+
+            if (msg == TDN_DESTROYED)
+            {
+              delete callback;
+            }
+            return result;
+          }
+
+          return S_FALSE;
+        }
+      };
+
+      config.pfCallback = handler::dialog_callback;
+      config.lpCallbackData = (LONG_PTR) new std::move_only_function<HRESULT(HWND, UINT, WPARAM, LPARAM)>(std::move(callback));
+
+      auto hresult = proc(&config,
+        result.buttons.empty() ? nullptr : result.buttons.data(),
+        result.radio_buttons.empty() ? nullptr : result.radio_buttons.data(),
+        &result.verfication_flag_checked);
+
+      if (hresult != S_OK)
+      {
+        return std::unexpected(hresult);
+      }
+
+      return result;
+    }
+
+
+    throw new std::runtime_error("comctl32 TaskDialogIndirect is not available");
+  }
 
   struct control : window
   {

@@ -13,8 +13,9 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)
 target_link_libraries(${PROJECT_NAME} PRIVATE siege-resource)
 target_include_directories(${PROJECT_NAME} PRIVATE src)
 
+include(copy_deps.cmake)
+
 ## Install/Packaging Section
 install(TARGETS ${PROJECT_NAME}
         CONFIGURATIONS Debug Release
         RUNTIME DESTINATION bin)
-

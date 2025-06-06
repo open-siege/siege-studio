@@ -26,4 +26,6 @@ endif()
 set_property(TARGET siege-studio PROPERTY CXX_STANDARD 23)
 target_include_directories(siege-studio PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
 	
+include(copy_deps.cmake)
+
 install(TARGETS siege-studio CONFIGURATIONS Debug Release RUNTIME DESTINATION bin)
