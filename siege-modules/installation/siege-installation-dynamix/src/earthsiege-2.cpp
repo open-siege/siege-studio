@@ -3,7 +3,7 @@
 
 using namespace siege;
 using game_storage_properties = platform::game_storage_properties;
-using path_pair = platform::path_pair;
+using path_rule = platform::path_rule;
 using installation_variable = platform::installation_variable;
 using installation_option = platform::installation_option;
 
@@ -14,7 +14,7 @@ extern game_storage_properties storage_properties = {
   .default_install_path = FSL "<systemDrive>/Dynamix/Dynamix/EarthSiege 2"
 };
 
-extern std::array<path_pair, 32> directory_mappings = {{ 
+extern std::array<path_rule, 32> directory_mappings = {{ 
   { FSL"TAPES", FSL"=" },
   { FSL"DATA", FSL"=" },
   { FSL"SAV", FSL"=" },

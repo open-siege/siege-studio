@@ -19,10 +19,16 @@ namespace siege::platform
     std::array<fs_char, 1024> default_install_path{};
   };
 
-  struct path_pair
+  struct path_rule
   {
     const fs_char* source;
     const fs_char* destination;
+    enum path_enforcement : std::uint32_t
+    {
+      optional = 0,
+      required = 1
+    };
+    path_enforcement enforcement = required;
   };
 
   struct installation_variable
@@ -43,7 +49,7 @@ namespace siege::platform
   {
     using base = win32::module;
     get_options_for_variable* get_options_for_variable_proc = nullptr;
-  
+
     std::vector<siege::fs_string_view> get_string_vector(auto name)
     {
       auto values = GetProcAddress<siege::fs_char**>(name);
@@ -69,7 +75,7 @@ namespace siege::platform
 
   public:
     const game_storage_properties* storage_properties = nullptr;
-    const std::span<path_pair> directory_mappings;
+    const std::span<path_rule> directory_mappings;
     const std::vector<siege::fs_string_view> name_variations;
     const std::vector<siege::fs_string_view> associated_extensions;
     const std::span<installation_variable> installation_variables;
@@ -79,10 +85,10 @@ namespace siege::platform
     installation_module(std::filesystem::path module_path) : base(module_path),
                                                              storage_properties(GetProcAddress<game_storage_properties*>("storage_properties")),
                                                              directory_mappings([this] {
-                                                               auto mappings = GetProcAddress<path_pair*>("directory_mappings");
+                                                               auto mappings = GetProcAddress<path_rule*>("directory_mappings");
                                                                if (!mappings)
                                                                {
-                                                                 return std::span<path_pair>();
+                                                                 return std::span<path_rule>();
                                                                }
 
                                                                auto size = 0;

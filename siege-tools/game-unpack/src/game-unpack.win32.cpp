@@ -11,7 +11,10 @@
 #include <string_view>
 #include <array>
 #include <ranges>
+#include <map>
+#include <set>
 #include <fstream>
+#include <regex>
 #include <filesystem>
 
 #pragma comment(linker, \
@@ -297,11 +300,18 @@ int main(int argc, const char* argv[])
                       {
                         auto mappings = module.directory_mappings;
 
-
                         std::set<fs::path> verification_mappings;
+                        std::multimap<fs::path, fs::path> child_verification_mappings;
+
+                        bool requires_cab_tooling = false;
 
                         for (auto& mapping : mappings)
                         {
+                          if (mapping.enforcement == mapping.optional)
+                          {
+                            continue;
+                          }
+
                           fs::path temp(mapping.source);
 
                           auto full_path = temp.wstring();
@@ -312,18 +322,32 @@ int main(int argc, const char* argv[])
                             continue;
                           }
 
-                          if (full_path.contains(L"*"))
+                          if (temp.parent_path().has_extension() || stem.contains(L"*"))
                           {
+                            verification_mappings.emplace(temp.parent_path());
+
+                            if (stem != L"*")
+                            {
+                              child_verification_mappings.emplace(temp.parent_path(), temp);
+                            }
+                            if (!requires_cab_tooling && (temp.parent_path().extension() == ".cab" || temp.parent_path().extension() == ".CAB"))
+                            {
+                              requires_cab_tooling = true;
+                            }
+
                             continue;
                           }
 
                           verification_mappings.emplace(temp);
                         }
 
+                        // TODO ask user to download cab tooling
+
                         auto reader = siege::resource::make_resource_reader(game_backup);
 
-                        std::list<resource_reader::file_info> install_files;
+                        std::list<resource_reader::file_info> backup_files;
                         std::any cache{};
+                        std::any cab_cache{};
 
                         auto top_level_items = reader->get_content_listing(cache, game_backup, listing_query{ .archive_path = backup_path, .folder_path = backup_path });
 
@@ -345,28 +369,24 @@ int main(int argc, const char* argv[])
 
                             if (auto leaf_info = std::get_if<file_info>(&info); leaf_info)
                             {
-                              install_files.emplace_back(*leaf_info);
+                              backup_files.emplace_back(*leaf_info);
                             }
                           }
                         };
 
                         get_full_listing(top_level_items);
 
+                        // first level verification
                         if (stl::all_of(verification_mappings, [&](auto& mapping) {
-                              return stl::any_of(install_files, [&](auto& item) {
+                              return stl::any_of(backup_files, [&](auto& item) {
                                 return mapping == item.relative_path() || mapping == item.relative_path() / item.filename;
                               });
                             }))
                         {
                           std::list<resource_reader::file_info> exe_files;
-                          std::list<resource_reader::file_info> cab_files;
-                          stl::copy_if(install_files, std::back_inserter(exe_files), [](auto& item) {
-                            return item.filename.extension() == ".exe" || item.filename.extension() == ".EXE";
-                          });
 
-                          stl::copy_if(install_files, std::back_inserter(cab_files), [&](auto& item) {
-                            return (item.filename.extension() == ".cab" || item.filename.extension() == ".CAB")
-                                   && stl::any_of(verification_mappings, [&](auto& mapping) { return mapping == (item.relative_path() / item.filename); });
+                          stl::copy_if(backup_files, std::back_inserter(exe_files), [](auto& item) {
+                            return item.filename.extension() == ".exe" || item.filename.extension() == ".EXE";
                           });
 
                           if (!module.associated_extensions.empty() && !exe_files.empty())
@@ -374,47 +394,22 @@ int main(int argc, const char* argv[])
                             // TODO exe verification
                           }
 
-                          bool can_extract_cab_files = true;
+                          // TODO ask user for install path
+                          // auto install_path = std::wstring(module.storage_properties->default_install_path.data());
+                          // install_path = std::regex_replace(install_path, std::wregex(L"<systemDrive>"), L"C:");
 
-                          if (!cab_files.empty())
+                          auto staging_path = fs::temp_directory_path() / L"game-unpack" / fs::path(module.GetModuleFileName<wchar_t>()).stem();
+
+                          fs::create_directories(staging_path);
+
+                          for (auto& backup_file : backup_files)
                           {
-                            for (auto& cab_file : cab_files)
+                            if (backup_file.filename.extension() == ".cab" || backup_file.filename.extension() == ".CAB")
                             {
-                              std::stringstream buffer;
-
-                              reader->extract_file_contents(cache, game_backup, cab_file, buffer);
-
-                              if (siege::resource::is_resource_reader(buffer))
-                              {
-                                fs::path temp_dir = fs::temp_directory_path() / "game-unpack" / std::to_string(std::hash<fs::path>{}(backup_path));
-
-                                fs::create_directories(temp_dir / cab_file.relative_path());
-
-                                auto cab_path = temp_dir / cab_file.relative_path() / cab_file.filename;
-                                std::ofstream temp_buffer(cab_path, std::ios::binary | std::ios::out | std::ios::trunc);
-
-                                temp_buffer << buffer.rdbuf();
-                                temp_buffer.flush();
-                                temp_buffer.close();
-
-                                auto cab_header = stl::find_if(install_files, [&](auto& existing) { return existing.relative_path() == cab_file.relative_path() && existing.filename.stem() == cab_file.filename.stem() && (existing.filename.extension() == ".hdr" || existing.filename.extension() == ".HDR"); });
-
-
-                                if (cab_header != install_files.end())
-                                {
-                                  auto header_path = temp_dir / cab_header->relative_path() / cab_header->filename;
-                                  std::ofstream temp_buffer(header_path, std::ios::binary | std::ios::out | std::ios::trunc);
-                                  reader->extract_file_contents(cache, game_backup, *cab_header, temp_buffer);
-                                }
-
-                                std::ifstream cab_buffer(cab_path, std::ios::binary | std::ios::in);
-                                auto cab_reader = siege::resource::make_resource_reader(cab_buffer);
-                                std::any cache{};
-                                auto cab_top_level_items = cab_reader->get_content_listing(cache, cab_buffer, listing_query{ .archive_path = cab_path, .folder_path = cab_path });
-
-                                can_extract_cab_files = !cab_top_level_items.empty();
-                                break;
-                              }
+                              fs::create_directories(staging_path / backup_file.relative_path());
+                              auto final_path = staging_path / backup_file.relative_path() / backup_file.filename;
+                              std::ofstream temp_buffer(final_path, std::ios::binary | std::ios::trunc);
+                              reader->extract_file_contents(cache, game_backup, backup_file, temp_buffer);
                             }
                           }
                         }

@@ -3,7 +3,7 @@
 
 using namespace siege;
 using game_storage_properties = platform::game_storage_properties;
-using path_pair = platform::path_pair;
+using path_rule = platform::path_rule;
 using installation_variable = platform::installation_variable;
 using installation_option = platform::installation_option;
 
@@ -23,9 +23,17 @@ extern std::array<const fs_char*, 2> associated_extensions = {
   FSL"siege-extension-fakk-2"
 };
 
-extern std::array<path_pair, 32> directory_mappings = { {
-  { FSL"install/data1.cab", FSL"." },
-  { FSL"install/data2.cab", FSL"." },
+extern std::array<path_rule, 32> directory_mappings = { {
+  { FSL"install/data1.cab/gamex86.dll", FSL"." },
+  { FSL"install/data1.cab/cgamex86.dll", FSL"." },
+  { FSL"install/data1.cab/Readme.rtf", FSL".", path_rule::optional },
+  { FSL"install/data1.cab/Readme.txt", FSL".", path_rule::optional },
+  { FSL"install/data1.cab/license.txt", FSL".", path_rule::optional },
+  { FSL"install/data1.cab/Mss32.dll", FSL"." },
+  { FSL"install/data1.cab/*.m3d", FSL"." },
+  { FSL"install/data1.cab/*.flt", FSL"." },
+  { FSL"install/data1.cab/autoexec.cfg", FSL"fakk" },
+  { FSL"install/data1.cab/default.cfg", FSL"fakk" },
   { FSL"install/fakk2.exe", FSL"." },
   { FSL"install/fakk", FSL"fakk" },
   { FSL"install/fakk/<languageFolder>", FSL"fakk" }
