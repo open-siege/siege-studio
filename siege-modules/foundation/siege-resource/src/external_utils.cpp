@@ -29,7 +29,7 @@ namespace siege::resource
       std::system(command_str.str().c_str());
       std::string temp;
       if (std::ifstream output(*output_path, std::ios::binary);
-          output && std::getline(output, temp) && fs::exists(rtrim(temp)))
+        output && std::getline(output, temp) && fs::exists(rtrim(temp)))
       {
         return "\"" + rtrim(temp) + "\"";
       }
@@ -188,19 +188,38 @@ namespace siege::resource
     std::system(command.str().c_str());
   }
 
-  std::vector<content_info> cached_get_content_listing(const platform::listing_query& query, const std::function<std::vector<content_info>(const fs::path& listing_filename)>& get_listing)
+  std::vector<content_info> cached_get_content_listing(std::any& cache, const platform::listing_query& query, const std::function<std::vector<content_info>(const fs::path& listing_filename)>& get_listing)
   {
-    static std::list<std::string> name_cache;
-    static std::unordered_map<std::string, std::vector<content_info>> stat_cache;
+    struct content_cache
+    {
+      std::list<std::string> name_cache;
+      std::unordered_map<std::string, std::vector<content_info>> stat_cache;
+    };
+
+    content_cache temp{};
+
+    if (cache.has_value() && cache.type() == typeid(content_cache))
+    {
+      temp = std::any_cast<content_cache>(cache);
+    }
 
     auto cache_key = fs::exists(query.archive_path) ? query.archive_path.string() + std::to_string(fs::file_size(query.archive_path)) : query.archive_path.string();
 
-    auto cache_entry = stat_cache.find(cache_key);
+    auto cache_entry = temp.stat_cache.find(cache_key);
 
-    if (cache_entry == stat_cache.end())
+    if (cache_entry == temp.stat_cache.end())
     {
       auto listing_filename = platform::make_auto_remove_path(fs::temp_directory_path() / (query.archive_path.stem().string() + "-listing.txt"));
-      cache_entry = stat_cache.emplace(cache_key, std::move(get_listing(*listing_filename))).first;
+
+      auto results = get_listing(*listing_filename);
+
+      if (results.empty())
+      {
+        return {};
+      }
+
+      cache_entry = temp.stat_cache.emplace(cache_key, std::move(results)).first;
+      cache = temp;
     }
 
     return filter_results_for_query(query, cache_entry);
@@ -285,9 +304,9 @@ namespace siege::resource
   }
 
 
-  std::vector<content_info> wincdemu_get_content_listing(const platform::listing_query& query)
+  std::vector<content_info> wincdemu_get_content_listing(std::any& cache, const platform::listing_query& query)
   {
-    return cached_get_content_listing(query, [&](const auto& listing_filename) -> std::vector<content_info> {
+    return cached_get_content_listing(cache, query, [&](const auto& listing_filename) -> std::vector<content_info> {
       auto drive_letter = wincdemu_mount_iso(query.archive_path, listing_filename);
 
       if (!drive_letter.has_value())
@@ -366,9 +385,9 @@ namespace siege::resource
     });
   }
 
-  std::vector<content_info> winiso_get_content_listing(const platform::listing_query& query)
+  std::vector<content_info> winiso_get_content_listing(std::any& cache, const platform::listing_query& query)
   {
-    return cached_get_content_listing(query, [&](const auto& listing_filename) -> std::vector<content_info> {
+    return cached_get_content_listing(cache, query, [&](const auto& listing_filename) -> std::vector<content_info> {
       auto drive_letter = winiso_mount_iso(query.archive_path, listing_filename);
       if (!drive_letter.has_value())
       {
@@ -407,9 +426,9 @@ namespace siege::resource
     });
   }
 
-  std::vector<content_info> zip_get_content_listing(const platform::listing_query& query)
+  std::vector<content_info> zip_get_content_listing(std::any& cache, const platform::listing_query& query)
   {
-    return cached_get_content_listing(query, [&](const auto& listing_filename) -> std::vector<content_info> {
+    return cached_get_content_listing(cache, query, [&](const auto& listing_filename) -> std::vector<content_info> {
       auto raw_contents = execute_command(listing_filename, [&](auto& command) {
         command << '\"' << seven_zip_executable() << " l " << query.archive_path << " > " << listing_filename << '\"';
       });
@@ -481,7 +500,7 @@ namespace siege::resource
             auto size = current->substr(size_indices.first, size_indices.second - size_indices.first);
 
             if (auto iter = std::find_if(size.begin(), size.end(), [](auto val) { return std::isdigit(val); });
-                iter != size.end())
+              iter != size.end())
             {
               file.size = std::stoi(size);
             }
@@ -523,11 +542,11 @@ namespace siege::resource
     }
   }
 
-  std::vector<content_info> cab5_get_content_listing(const std::string_view exe_path, const platform::listing_query& query)
+  std::vector<content_info> cab6_get_content_listing(std::any& cache, const std::string_view exe_path, const platform::listing_query& query)
   {
-    return cached_get_content_listing(query, [&](const auto& listing_filename) -> std::vector<content_info> {
+    return cached_get_content_listing(cache, query, [&](const auto& listing_filename) -> std::vector<content_info> {
       auto raw_contents = execute_command(listing_filename, [&](auto& command) {
-        command << '\"' << exe_path << " l " << query.archive_path << " > " << listing_filename << '\"';
+        command << '\"' << exe_path << " l -o " << query.archive_path << " > " << listing_filename << '\"';
       });
       std::vector<content_info> results;
       results.reserve(raw_contents.size());
@@ -536,10 +555,25 @@ namespace siege::resource
 
       constexpr static auto size_index = 17;
       constexpr static auto size_count = 9;
-      constexpr static auto name_index = 47;
+      constexpr static auto name_index = 50;
 
       for (auto& current : raw_contents)
       {
+        if (std::any_of(current.begin(), current.end(), [](char item) { return (int)item < 0 || (int)item > 127; }))
+        {
+          continue;
+        }
+
+        if (std::all_of(current.begin(), current.end(), [](char item) { return item == '=' || item == ' '; }))
+        {
+          continue;
+        }
+
+        if (current.empty())
+        {
+          continue;
+        }
+
         platform::file_info file{};
 
         auto name = fs::path(current.substr(name_index));
@@ -558,7 +592,7 @@ namespace siege::resource
           auto size = current.substr(size_index, size_count);
 
           if (auto iter = std::find_if(size.begin(), size.end(), [](auto val) { return std::isdigit(val); });
-              iter != size.end())
+            iter != size.end())
           {
             file.size = std::stoi(size);
           }
@@ -574,9 +608,76 @@ namespace siege::resource
     });
   }
 
-  std::vector<content_info> cab2_get_content_listing(const platform::listing_query& query)
+
+  std::vector<content_info> cab5_get_content_listing(std::any& cache, const std::string_view exe_path, const platform::listing_query& query)
   {
-    return cached_get_content_listing(query, [&](const auto& listing_filename) -> std::vector<content_info> {
+    return cached_get_content_listing(cache, query, [&](const auto& listing_filename) -> std::vector<content_info> {
+      auto raw_contents = execute_command(listing_filename, [&](auto& command) {
+        command << '\"' << exe_path << " l -o " << query.archive_path << " > " << listing_filename << '\"';
+      });
+      std::vector<content_info> results;
+      results.reserve(raw_contents.size());
+
+      std::unordered_set<std::string> folders;
+
+      constexpr static auto size_index = 17;
+      constexpr static auto size_count = 9;
+      constexpr static auto name_index = 47;
+
+      for (auto& current : raw_contents)
+      {
+        if (std::any_of(current.begin(), current.end(), [](char item) { return (int)item < 0 || (int)item > 127; }))
+        {
+          continue;
+        }
+
+        if (std::all_of(current.begin(), current.end(), [](char item) { return item == '=' || item == ' '; }))
+        {
+          continue;
+        }
+
+        if (current.empty())
+        {
+          continue;
+        }
+
+        platform::file_info file{};
+
+        auto name = fs::path(current.substr(name_index));
+
+        file.filename = name.filename();
+        file.archive_path = query.archive_path;
+        file.folder_path = (query.archive_path / name.make_preferred()).parent_path();
+
+        add_folders(file, query.archive_path, folders, [&](platform::folder_info&& folder) {
+          results.emplace_back(folder);
+        });
+        file.compression_type = platform::compression_type::lz77_huffman;
+
+        try
+        {
+          auto size = current.substr(size_index, size_count);
+
+          if (auto iter = std::find_if(size.begin(), size.end(), [](auto val) { return std::isdigit(val); });
+            iter != size.end())
+          {
+            file.size = std::stoi(size);
+          }
+        }
+        catch (...)
+        {
+        }
+
+        results.emplace_back(std::move(file));
+      }
+
+      return results;
+    });
+  }
+
+  std::vector<content_info> cab2_get_content_listing(std::any& cache, const platform::listing_query& query)
+  {
+    return cached_get_content_listing(cache, query, [&](const auto& listing_filename) -> std::vector<content_info> {
       auto raw_contents = execute_command(listing_filename, [&](auto& command) {
         command << '\"' << cab2_executable() << " l " << query.archive_path << " > " << listing_filename << '\"';
       });
@@ -654,7 +755,7 @@ namespace siege::resource
             auto size = current->substr(size_indices.first, size_indices.second - size_indices.first);
 
             if (auto iter = std::find_if(size.begin(), size.end(), [](auto val) { return std::isdigit(val); });
-                iter != size.end())
+              iter != size.end())
             {
               file.size = std::stoi(size);
             }
@@ -672,35 +773,35 @@ namespace siege::resource
   }
 
 
-  std::vector<content_info> cab_get_content_listing(const platform::listing_query& query)
+  std::vector<content_info> cab_get_content_listing(std::any& cache, const platform::listing_query& query)
   {
-    auto cab2_listing = cab2_get_content_listing(query);
+    auto cab2_listing = cab2_get_content_listing(cache, query);
 
     if (!cab2_listing.empty())
     {
       return cab2_listing;
     }
 
-    auto cab5_listing = cab5_get_content_listing(cab5_executable(), query);
+    auto cab5_listing = cab5_get_content_listing(cache, cab5_executable(), query);
 
     if (!cab5_listing.empty())
     {
       return cab5_listing;
     }
 
-    auto cab6_listing = cab5_get_content_listing(cab6_executable(), query);
+    auto cab6_listing = cab6_get_content_listing(cache, cab6_executable(), query);
 
     if (!cab6_listing.empty())
     {
       return cab6_listing;
     }
 
-    return zip_get_content_listing(query);
+    return zip_get_content_listing(cache, query);
   }
 
-  std::vector<content_info> power_iso_get_content_listing(const platform::listing_query& query)
+  std::vector<content_info> power_iso_get_content_listing(std::any& cache, const platform::listing_query& query)
   {
-    return cached_get_content_listing(query, [&](const auto& listing_filename) -> std::vector<content_info> {
+    return cached_get_content_listing(cache, query, [&](const auto& listing_filename) -> std::vector<content_info> {
       auto raw_contents = execute_command(listing_filename, [&](auto& command) {
         command << '\"' << power_iso_executable() << " list " << query.archive_path << " / -r"
                 << " > " << listing_filename << '\"';
@@ -793,30 +894,30 @@ namespace siege::resource
     });
   }
 
-  std::vector<content_info> iso_get_content_listing(const platform::listing_query& query)
+  std::vector<content_info> iso_get_content_listing(std::any& cache, const platform::listing_query& query)
   {
-    auto listing = power_iso_get_content_listing(query);
+    auto listing = power_iso_get_content_listing(cache, query);
 
     if (!listing.empty())
     {
       return listing;
     }
 
-    listing = zip_get_content_listing(query);
+    listing = zip_get_content_listing(cache, query);
 
     if (!listing.empty())
     {
       return listing;
     }
 
-    listing = wincdemu_get_content_listing(query);
+    listing = wincdemu_get_content_listing(cache, query);
 
     if (!listing.empty())
     {
       return listing;
     }
 
-    return winiso_get_content_listing(query);
+    return winiso_get_content_listing(cache, query);
   }
 
   [[maybe_unused]] bool extract_file_contents_using_external_app(std::any& cache, const siege::platform::file_info& info, std::ostream& output, std::string (*extract_one_command)(const siege::platform::file_info&, const fs::path&, const fs::path&), std::string (*extract_all_command)(const siege::platform::file_info&, const fs::path&, const fs::path&))

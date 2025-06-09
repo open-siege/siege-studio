@@ -53,10 +53,10 @@ namespace siege::resource::zip
     return is_supported(stream);
   }
 
-  std::vector<seven_zip_resource_reader::content_info> seven_zip_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const
+  std::vector<seven_zip_resource_reader::content_info> seven_zip_resource_reader::get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query) const
   {
     platform::istream_pos_resetter resetter(stream);
-    return zip_get_content_listing(query);
+    return zip_get_content_listing(cache, query);
   }
 
   void seven_zip_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info) const

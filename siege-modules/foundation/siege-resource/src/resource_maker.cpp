@@ -36,10 +36,9 @@ namespace siege::resource
         res::res_resource_reader::is_supported(stream) ||
         mw4::mw4_resource_reader::is_supported(stream) ||
         prj::prj_resource_reader::is_supported(stream) ||
-        zip::zip_resource_reader::is_supported(stream);
-         
-    //    cab::cab_resource_reader::is_supported(stream) || 
-    //    iso::iso_resource_reader::is_supported(stream);
+        zip::zip_resource_reader::is_supported(stream) ||
+        cab::cab_resource_reader::is_supported(stream) || 
+        iso::iso_resource_reader::is_supported(stream);
   }
   std::unique_ptr<siege::platform::resource_reader> make_resource_reader(std::istream& stream)
   {

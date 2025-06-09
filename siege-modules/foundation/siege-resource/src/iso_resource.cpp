@@ -173,7 +173,7 @@ namespace siege::resource::iso
   //  test_track-1.cdda
   //  test_track-2.cdda
   //  test_track-3.cdda
-  std::vector<iso_resource_reader::content_info> cue_get_content_listing(std::istream& input, const platform::listing_query& query)
+  std::vector<iso_resource_reader::content_info> cue_get_content_listing(std::any& cache, std::istream& input, const platform::listing_query& query)
   {
     if (query.archive_path == query.folder_path)
     {
@@ -262,7 +262,7 @@ namespace siege::resource::iso
           }
           else
           {
-            auto iso_contents = iso_get_content_listing(platform::listing_query{
+            auto iso_contents = iso_get_content_listing(cache, platform::listing_query{
               query.archive_path.parent_path() / file_name,
               query.archive_path.parent_path() / file_name });
 
@@ -316,7 +316,7 @@ namespace siege::resource::iso
       return {};
     }
 
-    auto listing = iso_get_content_listing(platform::listing_query {
+    auto listing = iso_get_content_listing(cache, platform::listing_query {
       bin_path,
       bin_path / relative_path
     });
@@ -357,7 +357,7 @@ namespace siege::resource::iso
 
     const auto temp_archive_path = fs::temp_directory_path() / bin_path.filename();
 
-    auto temp_results = iso_get_content_listing(platform::listing_query {
+    auto temp_results = iso_get_content_listing(cache, platform::listing_query {
       temp_archive_path,
       temp_archive_path / relative_path  });
 
@@ -533,10 +533,10 @@ namespace siege::resource::iso
     return is_supported(stream);
   }
 
-  std::vector<iso_resource_reader::content_info> iso_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const
+  std::vector<iso_resource_reader::content_info> iso_resource_reader::get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query) const
   {
     platform::istream_pos_resetter resetter(stream);
-    return iso_get_content_listing(query);
+    return iso_get_content_listing(cache, query);
   }
 
   void iso_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info) const

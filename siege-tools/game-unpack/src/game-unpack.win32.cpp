@@ -20,6 +20,7 @@ name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
 processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 namespace fs = std::filesystem;
+namespace stl = std::ranges;
 
 bool is_standalone_console()
 {
@@ -260,14 +261,14 @@ int main(int argc, const char* argv[])
                 state.refresh_page(window);
 
                 auto ui_handle = ::GetCurrentThread();
-                win32::queue_user_work_item([ui_handle, window, path = *path, &state] {
-                  std::ifstream file(path, std::ios::binary);
+                win32::queue_user_work_item([ui_handle, window, backup_path = *path, &state] {
+                  std::ifstream game_backup(backup_path, std::ios::binary);
 
-                  if (siege::resource::is_resource_reader(file))
+                  if (siege::resource::is_resource_reader(game_backup))
                   {
                     auto installation_modules = siege::platform::installation_module::load_modules(fs::current_path());
 
-                    auto stem = path.stem().wstring();
+                    auto stem = backup_path.stem().wstring();
 
                     for (auto& module : installation_modules)
                     {
@@ -289,8 +290,8 @@ int main(int argc, const char* argv[])
                       {
                         names_to_check.emplace(name);
                       }
-                      
-                      if (std::ranges::any_of(names_to_check, [&](auto& item) {
+
+                      if (stl::any_of(names_to_check, [&](auto& item) {
                             return item == stem;
                           }))
                       {
@@ -298,7 +299,7 @@ int main(int argc, const char* argv[])
 
 
                         std::set<fs::path> verification_mappings;
-                        
+
                         for (auto& mapping : mappings)
                         {
                           fs::path temp(mapping.source);
@@ -319,12 +320,12 @@ int main(int argc, const char* argv[])
                           verification_mappings.emplace(temp);
                         }
 
-                        auto reader = siege::resource::make_resource_reader(file);
+                        auto reader = siege::resource::make_resource_reader(game_backup);
 
-                        std::list<resource_reader::content_info> contents;
+                        std::list<resource_reader::file_info> install_files;
                         std::any cache{};
 
-                        auto top_level_items = reader->get_content_listing(cache, file, listing_query{ .archive_path = path, .folder_path = path });
+                        auto top_level_items = reader->get_content_listing(cache, game_backup, listing_query{ .archive_path = backup_path, .folder_path = backup_path });
 
                         bool should_continue = true;
 
@@ -338,22 +339,84 @@ int main(int argc, const char* argv[])
                             if (auto parent_info = std::get_if<folder_info>(&info); parent_info)
                             {
                               std::vector<resource_reader::content_info> children;
-                              children = reader->get_content_listing(cache, file, listing_query{ .archive_path = path, .folder_path = parent_info->full_path });
+                              children = reader->get_content_listing(cache, game_backup, listing_query{ .archive_path = backup_path, .folder_path = parent_info->full_path });
                               get_full_listing(children);
                             }
 
                             if (auto leaf_info = std::get_if<file_info>(&info); leaf_info)
                             {
-                              contents.emplace_back(info);
+                              install_files.emplace_back(*leaf_info);
                             }
                           }
                         };
 
                         get_full_listing(top_level_items);
 
-                        for (auto& item : contents)
+                        if (stl::all_of(verification_mappings, [&](auto& mapping) {
+                              return stl::any_of(install_files, [&](auto& item) {
+                                return mapping == item.relative_path() || mapping == item.relative_path() / item.filename;
+                              });
+                            }))
                         {
+                          std::list<resource_reader::file_info> exe_files;
+                          std::list<resource_reader::file_info> cab_files;
+                          stl::copy_if(install_files, std::back_inserter(exe_files), [](auto& item) {
+                            return item.filename.extension() == ".exe" || item.filename.extension() == ".EXE";
+                          });
 
+                          stl::copy_if(install_files, std::back_inserter(cab_files), [&](auto& item) {
+                            return (item.filename.extension() == ".cab" || item.filename.extension() == ".CAB")
+                                   && stl::any_of(verification_mappings, [&](auto& mapping) { return mapping == (item.relative_path() / item.filename); });
+                          });
+
+                          if (!module.associated_extensions.empty() && !exe_files.empty())
+                          {
+                            // TODO exe verification
+                          }
+
+                          bool can_extract_cab_files = true;
+
+                          if (!cab_files.empty())
+                          {
+                            for (auto& cab_file : cab_files)
+                            {
+                              std::stringstream buffer;
+
+                              reader->extract_file_contents(cache, game_backup, cab_file, buffer);
+
+                              if (siege::resource::is_resource_reader(buffer))
+                              {
+                                fs::path temp_dir = fs::temp_directory_path() / "game-unpack" / std::to_string(std::hash<fs::path>{}(backup_path));
+
+                                fs::create_directories(temp_dir / cab_file.relative_path());
+
+                                auto cab_path = temp_dir / cab_file.relative_path() / cab_file.filename;
+                                std::ofstream temp_buffer(cab_path, std::ios::binary | std::ios::out | std::ios::trunc);
+
+                                temp_buffer << buffer.rdbuf();
+                                temp_buffer.flush();
+                                temp_buffer.close();
+
+                                auto cab_header = stl::find_if(install_files, [&](auto& existing) { return existing.relative_path() == cab_file.relative_path() && existing.filename.stem() == cab_file.filename.stem() && (existing.filename.extension() == ".hdr" || existing.filename.extension() == ".HDR"); });
+
+
+                                if (cab_header != install_files.end())
+                                {
+                                  auto header_path = temp_dir / cab_header->relative_path() / cab_header->filename;
+                                  std::ofstream temp_buffer(header_path, std::ios::binary | std::ios::out | std::ios::trunc);
+                                  reader->extract_file_contents(cache, game_backup, *cab_header, temp_buffer);
+                                }
+
+                                std::ifstream cab_buffer(cab_path, std::ios::binary | std::ios::in);
+                                auto cab_reader = siege::resource::make_resource_reader(cab_buffer);
+                                std::any cache{};
+                                auto cab_top_level_items = cab_reader->get_content_listing(cache, cab_buffer, listing_query{ .archive_path = cab_path, .folder_path = cab_path });
+
+                                can_extract_cab_files = !cab_top_level_items.empty();
+                                break;
+                              }
+                            }
+                          }
                         }
                       }
                     }
@@ -363,7 +426,7 @@ int main(int argc, const char* argv[])
                   exec_on_thread(ui_handle, [window, &state]() {
                     state.enable_page();
                     state.end_progress();
-                    //state.navigate_page(window);
+                    // state.navigate_page(window);
                   });
                 });
 

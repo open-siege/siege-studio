@@ -42,6 +42,15 @@ namespace siege::platform
     std::filesystem::path folder_path;
     std::filesystem::path archive_path;
     std::any metadata;
+
+    inline std::filesystem::path relative_path() const
+    {
+      if (folder_path == archive_path)
+      {
+        return std::filesystem::path{}; 
+      }
+      return std::filesystem::relative(folder_path, archive_path);
+    }
   };
 
   struct folder_info
@@ -93,9 +102,7 @@ namespace siege::platform
 
     virtual void set_stream_position(std::istream&, const file_info&) const = 0;
 
-    virtual void extract_file_contents(std::any&, std::istream&,
-      const file_info&,
-      std::ostream&) const = 0;
+    virtual void extract_file_contents(std::any&, std::istream&, const file_info&, std::ostream&) const = 0;
 
     virtual ~resource_reader() = default;
     resource_reader() = default;
@@ -105,8 +112,13 @@ namespace siege::platform
 
   struct resource_reader_context;
 
-  template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
-  template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+  template<class... Ts>
+  struct overloaded : Ts...
+  {
+    using Ts::operator()...;
+  };
+  template<class... Ts>
+  overloaded(Ts...) -> overloaded<Ts...>;
 
   inline std::vector<resource_reader::content_info> get_all_content(const std::filesystem::path& src_path, std::istream& archive, const resource_reader& plugin)
   {
@@ -119,7 +131,7 @@ namespace siege::platform
     std::function<void(const decltype(content_listing)&)> visit_listing = [&](const auto& content_listing) {
       for (auto& entry : content_listing)
       {
-        std::visit(overloaded {
+        std::visit(overloaded{
                      [&](const siege::platform::folder_info& arg) {
                        auto child_listing = plugin.get_content_listing(cache, archive, { src_path, arg.full_path });
 
@@ -133,8 +145,8 @@ namespace siege::platform
                        visit_listing(child_listing);
                      },
                      [](const siege::platform::file_info& arg) {
-                     }
-                   }, entry);
+                     } },
+          entry);
       }
     };
 
@@ -147,10 +159,9 @@ namespace siege::platform
   inline std::vector<resource_reader::file_info> unwrap_content_of_type(const std::vector<resource_reader::content_info>& all_content)
   {
     std::vector<ContentType> files;
-    files.reserve(std::count_if(all_content.begin(), all_content.end(),
-      [&](auto& value) {
-        return std::holds_alternative<ContentType>(value);
-      }));
+    files.reserve(std::count_if(all_content.begin(), all_content.end(), [&](auto& value) {
+      return std::holds_alternative<ContentType>(value);
+    }));
 
     for (auto& content : all_content)
     {
@@ -173,10 +184,11 @@ namespace siege::platform
   {
     auto value = some_path.string().empty() ? nullptr : new std::filesystem::path(std::move(some_path));
 
-    return std::unique_ptr<std::filesystem::path, void(*)(std::filesystem::path*)> {
+    return std::unique_ptr<std::filesystem::path, void (*)(std::filesystem::path*)>{
       value,
       [](std::filesystem::path* value) {
-        if (value) {
+        if (value)
+        {
           std::error_code unused;
           std::filesystem::remove_all(*value, unused);
           delete value;
@@ -184,6 +196,6 @@ namespace siege::platform
       }
     };
   }
-}
+}// namespace siege::platform
 
 #endif
