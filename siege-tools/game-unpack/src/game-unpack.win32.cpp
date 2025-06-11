@@ -276,6 +276,23 @@ int main(int argc, const char* argv[])
 
                     for (auto& module : installation_modules)
                     {
+                      // TODO resolve from environment
+                      auto resolved_variables = std::map<std::wstring, std::wstring>{
+                        { L"systemDrive", L"C:" }
+                      };
+
+                      for (auto& variable : module.installation_variables)
+                      {
+                        // TODO ask the user to select the option
+                        // Though the first option should be the most likely by default.
+                        auto options = module.get_options_for_variable(variable.name);
+
+                        if (!options.empty())
+                        {
+                          resolved_variables.emplace(variable.name, options[0].name);
+                        }
+                      }
+
                       std::set<std::wstring> names_to_check;
 
                       if (module.storage_properties)
@@ -313,15 +330,15 @@ int main(int argc, const char* argv[])
                             continue;
                           }
 
-                          fs::path temp(mapping.source);
-
-                          auto full_path = temp.wstring();
-                          auto stem = temp.stem().wstring();
+                          auto full_path = std::wstring(mapping.source);
+                          auto stem = fs::path(mapping.source).stem().wstring();
 
                           if (stem.starts_with(L"<") && stem.ends_with(L">"))
                           {
                             continue;
                           }
+
+                          auto temp = fs::path(full_path);
 
                           if (temp.parent_path().has_extension() || stem.contains(L"*"))
                           {
@@ -395,9 +412,6 @@ int main(int argc, const char* argv[])
                             // TODO exe verification
                           }
 
-                          // TODO ask user for install path
-                          // auto install_path = std::wstring(module.storage_properties->default_install_path.data());
-                          // install_path = std::regex_replace(install_path, std::wregex(L"<systemDrive>"), L"C:");
 
                           auto staging_path = fs::temp_directory_path() / L"game-unpack" / fs::path(module.GetModuleFileName<wchar_t>()).stem();
 
@@ -463,6 +477,52 @@ int main(int argc, const char* argv[])
                           {
                             // TODO ask user if they want to do a generic extract
                             continue;
+                          }
+
+                          // TODO ask user for install path
+                          auto install_path = std::wstring(module.storage_properties->default_install_path.data());
+                          install_path = std::regex_replace(install_path, std::wregex(L"<systemDrive>"), resolved_variables.at(L"systemDrive"));
+
+                          fs::create_directories(install_path);
+
+                          for (auto& mapping : mappings)
+                          {
+                            std::wstring temp(mapping.source);
+
+                            if (temp.contains(L"<") && temp.contains(L">"))
+                            {
+                              for (auto& item : resolved_variables)
+                              {
+                                temp = std::regex_replace(temp, std::wregex(L"<" + item.first + L">"), item.second);
+                              }
+                            }
+
+                            if (fs::path(temp).parent_path().has_extension() || fs::path(temp).stem().wstring().contains(L"*"))
+                            {
+                            }
+                            else
+                            {
+                              auto item_iter = backup_files.begin();
+
+                              do
+                              {
+                                item_iter = stl::find_if(item_iter, backup_files.end(), [temp = fs::path(temp)](file_info& item) {
+                                  return temp == item.relative_path() || temp == (item.relative_path() / item.filename);
+                                });
+
+                                if (item_iter != backup_files.end())
+                                {
+                                  fs::create_directories(fs::path(install_path) / mapping.destination);
+                                  auto final_path = fs::path(install_path) / mapping.destination / item_iter->filename;
+                                  std::ofstream temp_out_buffer(final_path, std::ios::binary | std::ios::trunc);
+                                  reader->extract_file_contents(cache, game_backup, *item_iter, temp_out_buffer);
+                                  auto to_erase = item_iter;
+                                  std::advance(item_iter, 1);
+                                  backup_files.erase(to_erase);
+                                }
+
+                              } while (item_iter != backup_files.end());
+                            }
                           }
                         }
                       }
