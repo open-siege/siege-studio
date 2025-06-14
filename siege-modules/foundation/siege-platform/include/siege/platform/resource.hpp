@@ -184,7 +184,7 @@ namespace siege::platform
   {
     auto value = some_path.string().empty() ? nullptr : new std::filesystem::path(std::move(some_path));
 
-    return std::unique_ptr<std::filesystem::path, void (*)(std::filesystem::path*)>{
+    return std::shared_ptr<std::filesystem::path>{
       value,
       [](std::filesystem::path* value) {
         if (value)

@@ -26,6 +26,11 @@ processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 namespace fs = std::filesystem;
 namespace stl = std::ranges;
 
+struct installable_file : siege::platform::file_info
+{
+  std::function<void(fs::path, siege::fs_string_view)> install_to;
+};
+
 bool is_standalone_console()
 {
   std::array<DWORD, 4> ids{};
@@ -361,9 +366,9 @@ int main(int argc, const char* argv[])
 
                         // TODO ask user to download cab tooling
 
-                        auto reader = siege::resource::make_resource_reader(game_backup);
+                        auto reader = std::shared_ptr(siege::resource::make_resource_reader(game_backup));
 
-                        std::list<resource_reader::file_info> backup_files;
+                        std::list<installable_file> backup_files;
                         std::any cache{};
                         std::any cab_cache{};
 
@@ -387,7 +392,14 @@ int main(int argc, const char* argv[])
 
                             if (auto leaf_info = std::get_if<file_info>(&info); leaf_info)
                             {
-                              backup_files.emplace_back(*leaf_info);
+                              auto& new_item = backup_files.emplace_back(*leaf_info);
+                              new_item.install_to = [new_item = &new_item, reader, cache, backup_path](auto install_path, auto install_segment) mutable {
+                                std::ifstream game_backup(backup_path, std::ios::binary);
+                                fs::create_directories(install_path / install_segment);
+                                auto final_path = install_path / install_segment / new_item->filename;
+                                std::ofstream temp_out_buffer(final_path, std::ios::binary | std::ios::trunc);
+                                reader->extract_file_contents(cache, game_backup, *new_item, temp_out_buffer);
+                              };
                             }
                           }
                         };
@@ -456,7 +468,7 @@ int main(int argc, const char* argv[])
                                 continue;
                               }
 
-                              auto inner_reader = siege::resource::make_resource_reader(temp_in_buffer);
+                              auto inner_reader = std::shared_ptr(siege::resource::make_resource_reader(temp_in_buffer));
                               std::any inner_cache{};
                               // TODO more than the top level
                               auto top_level_children = inner_reader->get_content_listing(inner_cache, temp_in_buffer, listing_query{ .archive_path = final_path, .folder_path = final_path })
@@ -470,6 +482,18 @@ int main(int argc, const char* argv[])
                                                                                                       }); });
 
                               is_verified = is_verified || all_valid;
+
+                              for (auto& file : top_level_children)
+                              {
+                                auto& new_item = backup_files.emplace_back(file);
+                                new_item.install_to = [new_item = &new_item, inner_reader, inner_cache, archive_path = final_path](auto install_path, auto install_segment) mutable {
+                                  std::ifstream game_backup(archive_path, std::ios::binary);
+                                  fs::create_directories(install_path / install_segment);
+                                  auto final_path = install_path / install_segment / new_item->filename;
+                                  std::ofstream temp_out_buffer(final_path, std::ios::binary | std::ios::trunc);
+                                  inner_reader->extract_file_contents(inner_cache, game_backup, *new_item, temp_out_buffer);
+                                };
+                              }
                             }
                           }
 
@@ -487,41 +511,52 @@ int main(int argc, const char* argv[])
 
                           for (auto& mapping : mappings)
                           {
-                            std::wstring temp(mapping.source);
+                            std::wstring source(mapping.source);
 
-                            if (temp.contains(L"<") && temp.contains(L">"))
+                            if (source.contains(L"<") && source.contains(L">"))
                             {
                               for (auto& item : resolved_variables)
                               {
-                                temp = std::regex_replace(temp, std::wregex(L"<" + item.first + L">"), item.second);
+                                source = std::regex_replace(source, std::wregex(L"<" + item.first + L">"), item.second);
                               }
                             }
 
-                            if (fs::path(temp).parent_path().has_extension() || fs::path(temp).stem().wstring().contains(L"*"))
-                            {
-                            }
-                            else
-                            {
-                              auto item_iter = backup_files.begin();
+                            std::function<bool(file_info&)> is_supported = [source = fs::path(source)](file_info& item) { return source == item.relative_path() || source == (item.relative_path() / item.filename); };
 
-                              do
-                              {
-                                item_iter = stl::find_if(item_iter, backup_files.end(), [temp = fs::path(temp)](file_info& item) {
-                                  return temp == item.relative_path() || temp == (item.relative_path() / item.filename);
-                                });
+                            // || fs::path(source).stem().wstring().contains(L"*")
+                            if (fs::path(source).parent_path().has_extension())
+                            {
+                              is_supported = [source = fs::path(source)](file_info& item) {
+                                auto full_path = item.folder_path / item.filename;
 
-                                if (item_iter != backup_files.end())
+                                auto first = source.begin();
+                                auto last = source.begin();
+
+                                auto segment_count = std::distance(first, source.end());
+                                std::advance(last, segment_count - 1);
+
+                                auto found_first = stl::find(full_path, *first);
+                                auto found_last = stl::find(full_path, *last);
+
+                                if (found_first == full_path.end() || found_last == full_path.end())
                                 {
-                                  fs::create_directories(fs::path(install_path) / mapping.destination);
-                                  auto final_path = fs::path(install_path) / mapping.destination / item_iter->filename;
-                                  std::ofstream temp_out_buffer(final_path, std::ios::binary | std::ios::trunc);
-                                  reader->extract_file_contents(cache, game_backup, *item_iter, temp_out_buffer);
-                                  auto to_erase = item_iter;
-                                  std::advance(item_iter, 1);
-                                  backup_files.erase(to_erase);
+                                  return false;
                                 }
 
-                              } while (item_iter != backup_files.end());
+                                if (found_last != full_path.end())
+                                {
+                                  std::advance(found_last, 1);
+                                }
+
+                                return std::distance(found_first, found_last) == segment_count;
+                              };
+                            }
+
+                            auto files_to_copy = backup_files | std::views::filter(is_supported);
+
+                            for (auto& item : files_to_copy)
+                            {
+                              item.install_to(fs::path(install_path), mapping.destination);
                             }
                           }
                         }

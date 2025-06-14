@@ -12,6 +12,10 @@
 #include <unordered_set>
 #include <siege/resource/external_utils.hpp>
 
+#ifdef WIN32
+#include <siege/platform/win/module.hpp>
+#endif
+
 namespace fs = std::filesystem;
 namespace platform = siege::platform;
 
@@ -66,8 +70,15 @@ namespace siege::resource
 #ifdef WIN32
     try
     {
+      auto app_dir = fs::path(win32::module_ref::current_application().GetModuleFileName<wchar_t>()).parent_path();
+
       for (auto& search_name : search_names)
       {
+        if (fs::exists(app_dir / search_name))
+        {
+          return "\"" + (app_dir / search_name).string() + "\"";
+        }
+
         if (fs::exists(search_name))
         {
           return "\"" + (fs::current_path() / search_name).string() + "\"";
@@ -948,13 +959,12 @@ namespace siege::resource
       std::system(extract_all_command(info, temp_path, internal_file_path).c_str());
       auto [command_iter, added] = already_ran_commands.emplace(info.archive_path.string());
 
-      if (!cache.has_value() || cache.type() != typeid(std::map<std::string_view, decltype(delete_path)>))
+      if (!cache.has_value() || cache.type() != typeid(std::map<std::string, decltype(delete_path)>))
       {
-        cache.emplace<std::map<std::string_view, decltype(delete_path)>()>();
+        cache.emplace<std::map<std::string, decltype(delete_path)>>();
       }
 
-      auto* path_map = std::any_cast<std::map<std::string_view, decltype(delete_path)>>(&cache);
-
+      auto* path_map = std::any_cast<std::map<std::string, decltype(delete_path)>>(&cache);
       path_map->emplace(*command_iter, std::move(delete_path));
     }
 
