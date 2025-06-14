@@ -521,34 +521,39 @@ int main(int argc, const char* argv[])
                               }
                             }
 
-                            std::function<bool(file_info&)> is_supported = [source = fs::path(source)](file_info& item) { return source == item.relative_path() || source == (item.relative_path() / item.filename); };
+                            std::function<bool(file_info&)> is_supported = [source = fs::path(source)](file_info& item) {
+                              auto source_filename_str = std::wstring_view(source.filename().c_str());
+                              if (source_filename_str.contains(L"*"))
+                              {
+                                if (source.has_extension())
+                                {
+                                  return item.relative_path() == source.parent_path() && item.filename.extension() == source.extension();
+                                }
+                                return item.relative_path() == source.parent_path();
+                              }
 
-                            // || fs::path(source).stem().wstring().contains(L"*")
+                              return source == item.relative_path() || source == (item.relative_path() / item.filename);
+                            };
+
                             if (fs::path(source).parent_path().has_extension())
                             {
-                              is_supported = [source = fs::path(source)](file_info& item) {
-                                auto full_path = item.folder_path / item.filename;
+                              is_supported = [source = fs::path(source).make_preferred()](file_info& item) {
+                                auto full_path = item.folder_path.make_preferred() / item.filename.make_preferred();
 
-                                auto first = source.begin();
-                                auto last = source.begin();
+                                auto full_path_str = std::wstring_view(full_path.c_str());
+                                auto source_str = std::wstring_view(source.c_str());
 
-                                auto segment_count = std::distance(first, source.end());
-                                std::advance(last, segment_count - 1);
-
-                                auto found_first = stl::find(full_path, *first);
-                                auto found_last = stl::find(full_path, *last);
-
-                                if (found_first == full_path.end() || found_last == full_path.end())
+                                if (source_str.contains(L"*"))
                                 {
-                                  return false;
-                                }
+                                  auto start_str = source_str.substr(0, source_str.find(L"*"));
+                                  auto end_str = source_str.substr(start_str.size() + 1);
 
-                                if (found_last != full_path.end())
+                                  return full_path_str.contains(start_str) && full_path_str.ends_with(end_str);
+                                }
+                                else
                                 {
-                                  std::advance(found_last, 1);
+                                  return full_path_str.ends_with(source_str);
                                 }
-
-                                return std::distance(found_first, found_last) == segment_count;
                               };
                             }
 
