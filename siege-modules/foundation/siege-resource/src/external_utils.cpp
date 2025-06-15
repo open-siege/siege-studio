@@ -199,20 +199,30 @@ namespace siege::resource
     std::system(command.str().c_str());
   }
 
-  std::vector<content_info> cached_get_content_listing(std::any& cache, const platform::listing_query& query, const std::function<std::vector<content_info>(const fs::path& listing_filename)>& get_listing)
+  struct content_cache
   {
-    struct content_cache
-    {
-      std::list<std::string> name_cache;
-      std::unordered_map<std::string, std::vector<content_info>> stat_cache;
-    };
+    std::unordered_map<std::string, std::vector<content_info>> stat_cache;
+    std::map<std::string, std::shared_ptr<fs::path>> auto_delete_files;
+    std::unordered_set<std::string> already_ran_commands;
+  };
 
-    content_cache temp{};
-
+  content_cache& cache_as_content_cache(std::any& cache)
+  {
     if (cache.has_value() && cache.type() == typeid(content_cache))
     {
-      temp = std::any_cast<content_cache>(cache);
+      return std::any_cast<content_cache&>(cache);
     }
+    else
+    {
+      content_cache temp{};
+      cache = temp;
+      return std::any_cast<content_cache&>(cache);
+    }
+  }
+
+  std::vector<content_info> cached_get_content_listing(std::any& cache, const platform::listing_query& query, const std::function<std::vector<content_info>(const fs::path& listing_filename)>& get_listing)
+  {
+    content_cache& temp = cache_as_content_cache(cache);
 
     auto cache_key = fs::exists(query.archive_path) ? query.archive_path.string() + std::to_string(fs::file_size(query.archive_path)) : query.archive_path.string();
 
@@ -230,7 +240,6 @@ namespace siege::resource
       }
 
       cache_entry = temp.stat_cache.emplace(cache_key, std::move(results)).first;
-      cache = temp;
     }
 
     return filter_results_for_query(query, cache_entry);
@@ -313,7 +322,6 @@ namespace siege::resource
 
     return drive_letter;
   }
-
 
   std::vector<content_info> wincdemu_get_content_listing(std::any& cache, const platform::listing_query& query)
   {
@@ -933,6 +941,8 @@ namespace siege::resource
 
   [[maybe_unused]] bool extract_file_contents_using_external_app(std::any& cache, const siege::platform::file_info& info, std::ostream& output, std::string (*extract_one_command)(const siege::platform::file_info&, const fs::path&, const fs::path&), std::string (*extract_all_command)(const siege::platform::file_info&, const fs::path&, const fs::path&))
   {
+    content_cache& temp_cache = cache_as_content_cache(cache);
+
     auto delete_path = platform::make_auto_remove_path();
 
     auto temp_path = fs::temp_directory_path() / (info.archive_path.stem().string() + "temp");
@@ -940,9 +950,8 @@ namespace siege::resource
 
     auto current_working_path = fs::current_path();
     fs::create_directories(temp_path);
-    static std::unordered_set<std::string> already_ran_commands;
 
-    if (!cache.has_value())
+    if (temp_cache.stat_cache.empty())
     {
       delete_path.reset(new fs::path(temp_path / internal_file_path));
 
@@ -950,22 +959,16 @@ namespace siege::resource
       std::cout.flush();
       std::system(extract_one_command(info, temp_path, internal_file_path).c_str());
     }
-    else if (already_ran_commands.count(info.archive_path.string()) == 0)
+    else if (!temp_cache.already_ran_commands.contains(info.archive_path.string()))
     {
       delete_path.reset(new fs::path(temp_path));
 
       std::cout << extract_all_command(info, temp_path, internal_file_path) << '\n';
       std::cout.flush();
       std::system(extract_all_command(info, temp_path, internal_file_path).c_str());
-      auto [command_iter, added] = already_ran_commands.emplace(info.archive_path.string());
+      auto [command_iter, added] = temp_cache.already_ran_commands.emplace(info.archive_path.string());
 
-      if (!cache.has_value() || cache.type() != typeid(std::map<std::string, decltype(delete_path)>))
-      {
-        cache.emplace<std::map<std::string, decltype(delete_path)>>();
-      }
-
-      auto* path_map = std::any_cast<std::map<std::string, decltype(delete_path)>>(&cache);
-      path_map->emplace(*command_iter, std::move(delete_path));
+      temp_cache.auto_delete_files.emplace(*command_iter, std::move(delete_path));
     }
 
     fs::current_path(current_working_path);
