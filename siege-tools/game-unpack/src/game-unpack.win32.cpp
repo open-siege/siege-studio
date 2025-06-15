@@ -349,10 +349,7 @@ int main(int argc, const char* argv[])
                           {
                             verification_mappings.emplace(temp.parent_path());
 
-                            if (stem != L"*")
-                            {
-                              child_verification_mappings.emplace(temp.parent_path(), temp);
-                            }
+                            child_verification_mappings.emplace(temp.parent_path(), temp);
                             if (!requires_cab_tooling && (temp.parent_path().extension() == ".cab" || temp.parent_path().extension() == ".CAB"))
                             {
                               requires_cab_tooling = true;
@@ -478,6 +475,10 @@ int main(int argc, const char* argv[])
                               auto [first, end] = child_verification_mappings.equal_range(backup_path);
 
                               auto all_valid = std::all_of(first, end, [&](auto& verification_name) { return stl::any_of(top_level_children, [&](file_info& child) {
+                                                                                                        if (std::wstring_view(verification_name.second.c_str()).contains(L"*"))
+                                                                                                        {
+                                                                                                          return verification_name.first == fs::relative(child.folder_path, staging_path);
+                                                                                                        }
                                                                                                         return verification_name.second == (fs::relative(child.folder_path, staging_path) / child.filename);
                                                                                                       }); });
 

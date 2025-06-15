@@ -959,14 +959,14 @@ namespace siege::resource
       std::cout.flush();
       std::system(extract_one_command(info, temp_path, internal_file_path).c_str());
     }
-    else if (!temp_cache.already_ran_commands.contains(info.archive_path.string()))
+    else if (!temp_cache.already_ran_commands.contains(extract_all_command(info, temp_path, info.archive_path)))
     {
       delete_path.reset(new fs::path(temp_path));
 
-      std::cout << extract_all_command(info, temp_path, internal_file_path) << '\n';
+      std::cout << extract_all_command(info, temp_path, info.archive_path) << '\n';
       std::cout.flush();
-      std::system(extract_all_command(info, temp_path, internal_file_path).c_str());
-      auto [command_iter, added] = temp_cache.already_ran_commands.emplace(info.archive_path.string());
+      std::system(extract_all_command(info, temp_path, info.archive_path).c_str());
+      auto [command_iter, added] = temp_cache.already_ran_commands.emplace(extract_all_command(info, temp_path, info.archive_path));
 
       temp_cache.auto_delete_files.emplace(*command_iter, std::move(delete_path));
     }
