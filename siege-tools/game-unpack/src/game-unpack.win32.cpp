@@ -371,15 +371,9 @@ int main(int argc, const char* argv[])
 
                         auto top_level_items = reader->get_content_listing(cache, game_backup, listing_query{ .archive_path = backup_path, .folder_path = backup_path });
 
-                        bool should_continue = true;
-
                         std::function<void(decltype(top_level_items)&)> get_full_listing = [&](std::vector<resource_reader::content_info>& items) mutable {
                           for (resource_reader::content_info& info : items)
                           {
-                            if (!should_continue)
-                            {
-                              break;
-                            }
                             if (auto parent_info = std::get_if<folder_info>(&info); parent_info)
                             {
                               std::vector<resource_reader::content_info> children;
