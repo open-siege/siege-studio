@@ -41,7 +41,6 @@ namespace siege::resource::cab
 
   std::vector<cab_resource_reader::content_info> get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query)
   {
-    platform::istream_pos_resetter resetter(stream);
     return cab_get_content_listing(cache, query);
   }
 

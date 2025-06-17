@@ -369,33 +369,17 @@ int main(int argc, const char* argv[])
                         std::any cache{};
                         std::any cab_cache{};
 
-                        auto top_level_items = reader.get_content_listing(cache, game_backup, listing_query{ .archive_path = backup_path, .folder_path = backup_path });
-
-                        std::function<void(decltype(top_level_items)&)> get_full_listing = [&](std::vector<resource_reader::content_info>& items) mutable {
-                          for (resource_reader::content_info& info : items)
-                          {
-                            if (auto parent_info = std::get_if<folder_info>(&info); parent_info)
-                            {
-                              std::vector<resource_reader::content_info> children;
-                              children = reader.get_content_listing(cache, game_backup, listing_query{ .archive_path = backup_path, .folder_path = parent_info->full_path });
-                              get_full_listing(children);
-                            }
-
-                            if (auto leaf_info = std::get_if<file_info>(&info); leaf_info)
-                            {
-                              auto& new_item = backup_files.emplace_back(*leaf_info);
-                              new_item.install_to = [new_item = &new_item, reader, cache, backup_path](auto install_path, auto install_segment) mutable {
-                                std::ifstream game_backup(backup_path, std::ios::binary);
-                                fs::create_directories(install_path / install_segment);
-                                auto final_path = install_path / install_segment / new_item->filename;
-                                std::ofstream temp_out_buffer(final_path, std::ios::binary | std::ios::trunc);
-                                reader.extract_file_contents(cache, game_backup, *new_item, temp_out_buffer);
-                              };
-                            }
-                          }
-                        };
-
-                        get_full_listing(top_level_items);
+                        for (auto& file : reader.get_all_files_for_query(cache, game_backup, listing_query{ .archive_path = backup_path, .folder_path = backup_path }))
+                        {
+                          auto& new_item = backup_files.emplace_back(file);
+                          new_item.install_to = [new_item = &new_item, reader, cache, backup_path](auto install_path, auto install_segment) mutable {
+                            std::ifstream game_backup(backup_path, std::ios::binary);
+                            fs::create_directories(install_path / install_segment);
+                            auto final_path = install_path / install_segment / new_item->filename;
+                            std::ofstream temp_out_buffer(final_path, std::ios::binary | std::ios::trunc);
+                            reader.extract_file_contents(cache, game_backup, *new_item, temp_out_buffer);
+                          };
+                        }
 
                         // first level verification
                         if (stl::all_of(verification_mappings, [&](auto& mapping) {
@@ -422,6 +406,8 @@ int main(int argc, const char* argv[])
 
                           bool is_verified = child_verification_mappings.empty();
 
+                          std::list<installable_file> inner_backup_files;
+
                           if (!is_verified)
                           {
                             for (auto& backup_file : backup_files)
@@ -440,6 +426,8 @@ int main(int argc, const char* argv[])
                               std::ofstream temp_out_buffer(final_path, std::ios::binary | std::ios::trunc);
                               reader.extract_file_contents(cache, game_backup, backup_file, temp_out_buffer);
                             }
+
+                            
 
                             for (auto& backup_file : backup_files)
                             {
@@ -461,14 +449,12 @@ int main(int argc, const char* argv[])
 
                               auto inner_reader = siege::resource::make_resource_reader(temp_in_buffer);
                               std::any inner_cache{};
-                              // TODO more than the top level
-                              auto top_level_children = inner_reader.get_content_listing(inner_cache, temp_in_buffer, listing_query{ .archive_path = final_path, .folder_path = final_path })
-                                                        | std::views::filter([](auto& info) { return std::get_if<file_info>(&info) != nullptr; })
-                                                        | std::views::transform([](auto& info) -> file_info& { return std::get<file_info>(info); });
+
+                              auto inner_files = inner_reader.get_all_files_for_query(inner_cache, temp_in_buffer, listing_query{ .archive_path = final_path, .folder_path = final_path });
 
                               auto [first, end] = child_verification_mappings.equal_range(backup_path);
 
-                              auto all_valid = std::all_of(first, end, [&](auto& verification_name) { return stl::any_of(top_level_children, [&](file_info& child) {
+                              auto all_valid = std::all_of(first, end, [&](auto& verification_name) { return stl::any_of(inner_files, [&](file_info& child) {
                                                                                                         if (std::wstring_view(verification_name.second.c_str()).contains(L"*"))
                                                                                                         {
                                                                                                           return verification_name.first == fs::relative(child.folder_path, staging_path);
@@ -478,17 +464,20 @@ int main(int argc, const char* argv[])
 
                               is_verified = is_verified || all_valid;
 
-                              for (auto& file : top_level_children)
+                              if (is_verified)
                               {
-                                auto& new_item = backup_files.emplace_back(file);
-                                new_item.install_to = [new_item = &new_item, inner_reader, inner_cache, archive_path = final_path](auto install_path, auto install_segment) mutable {
-                                  std::ifstream game_backup(archive_path, std::ios::binary);
-                                  fs::create_directories(install_path / install_segment);
-                                  auto final_path = install_path / install_segment / new_item->filename;
-                                  std::ofstream temp_out_buffer(final_path, std::ios::binary | std::ios::trunc);
-                                  inner_reader.extract_file_contents(inner_cache, game_backup, *new_item, temp_out_buffer);
-                                };
-                              }
+                                for (auto& file : inner_files)
+                                {
+                                  auto& new_item = inner_backup_files.emplace_back(file);
+                                  new_item.install_to = [new_item = &new_item, inner_reader, inner_cache, archive_path = final_path](auto install_path, auto install_segment) mutable {
+                                    std::ifstream game_backup(archive_path, std::ios::binary);
+                                    fs::create_directories(install_path / install_segment / new_item->relative_path());
+                                    auto final_path = install_path / install_segment / new_item->relative_path() / new_item->filename;
+                                    std::ofstream temp_out_buffer(final_path, std::ios::binary | std::ios::trunc);
+                                    inner_reader.extract_file_contents(inner_cache, game_backup, *new_item, temp_out_buffer);
+                                  };
+                                }
+                              } 
                             }
                           }
 
@@ -497,6 +486,8 @@ int main(int argc, const char* argv[])
                             // TODO ask user if they want to do a generic extract
                             continue;
                           }
+
+                          backup_files.splice(backup_files.end(), std::move(inner_backup_files));
 
                           // TODO ask user for install path
                           auto install_path = std::wstring(module.storage_properties->default_install_path.data());

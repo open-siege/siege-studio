@@ -47,7 +47,7 @@ namespace siege::platform
     {
       if (folder_path == archive_path)
       {
-        return std::filesystem::path{}; 
+        return std::filesystem::path{};
       }
       return std::filesystem::relative(folder_path, archive_path);
     }
@@ -105,6 +105,8 @@ namespace siege::platform
     void (*set_stream_position)(std::istream&, const file_info&) = nullptr;
 
     void (&extract_file_contents)(std::any&, std::istream&, const file_info&, std::ostream&);
+
+    std::list<platform::file_info> get_all_files_for_query(std::any& cache, std::istream&, const platform::listing_query& query) const;
   };
 
   struct resource_reader_context;
@@ -116,66 +118,6 @@ namespace siege::platform
   };
   template<class... Ts>
   overloaded(Ts...) -> overloaded<Ts...>;
-
-  //inline std::vector<resource_reader::content_info> get_all_content(const std::filesystem::path& src_path, std::istream& archive, const resource_reader& plugin)
-  //{
-  //  std::any cache;
-  //  auto content_listing = plugin.get_content_listing(cache, archive, { src_path, src_path });
-
-  //  auto all_content = content_listing;
-  //  all_content.reserve(all_content.capacity() * 4);
-
-  //  std::function<void(const decltype(content_listing)&)> visit_listing = [&](const auto& content_listing) {
-  //    for (auto& entry : content_listing)
-  //    {
-  //      std::visit(overloaded{
-  //                   [&](const siege::platform::folder_info& arg) {
-  //                     auto child_listing = plugin.get_content_listing(cache, archive, { src_path, arg.full_path });
-
-  //                     if (all_content.size() + child_listing.size() + 1 > all_content.capacity())
-  //                     {
-  //                       all_content.reserve(all_content.capacity() + all_content.size() + child_listing.size() + 1);
-  //                     }
-
-  //                     all_content.emplace_back(arg);
-  //                     std::copy(child_listing.begin(), child_listing.end(), std::back_inserter(all_content));
-  //                     visit_listing(child_listing);
-  //                   },
-  //                   [](const siege::platform::file_info& arg) {
-  //                   } },
-  //        entry);
-  //    }
-  //  };
-
-  //  visit_listing(content_listing);
-
-  //  return all_content;
-  //}
-
-  //template<typename ContentType>
-  //inline std::vector<resource_reader::file_info> unwrap_content_of_type(const std::vector<resource_reader::content_info>& all_content)
-  //{
-  //  std::vector<ContentType> files;
-  //  files.reserve(std::count_if(all_content.begin(), all_content.end(), [&](auto& value) {
-  //    return std::holds_alternative<ContentType>(value);
-  //  }));
-
-  //  for (auto& content : all_content)
-  //  {
-  //    if (std::holds_alternative<ContentType>(content))
-  //    {
-  //      files.emplace_back(std::get<ContentType>(content));
-  //    }
-  //  }
-
-  //  return files;
-  //}
-
-  //template<typename ContentType>
-  //inline std::vector<resource_reader::file_info> get_all_content_of_type(const std::filesystem::path& src_path, std::istream& archive, const resource_reader& plugin)
-  //{
-  //  return unwrap_content_of_type<ContentType>(get_all_content(src_path, archive, plugin));
-  //}
 
   inline auto make_auto_remove_path(std::filesystem::path some_path = "")
   {

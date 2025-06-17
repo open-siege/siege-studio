@@ -553,6 +553,12 @@ namespace siege::resource
       {
         platform::folder_info folder{};
         new_path = new_path / segment;
+
+        if (new_path != file.folder_path && folders.contains(new_path.string())) {
+          continue;
+        }
+
+        folders.emplace(new_path.string());
         folder.full_path = new_path;
         folder.archive_path = archive_path;
         folder.name = folder.full_path.filename().string();

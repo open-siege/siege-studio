@@ -24,6 +24,6 @@ extern std::array<const fs_char*, 2> associated_extensions = {
 extern std::array<path_rule, 32> directory_mappings = {{ 
   { FSL"setup/data1.cab/*", FSL"." },
   { FSL"setup/Base/VIDEO/*.smk", FSL"Base/VIDEO" },
-  { FSL"setup/Toolkit/data1.cab/*", FSL"Toolit" },
+  { FSL"setup/Toolkit/data1.cab/*", FSL"Toolkit" },
 }};
 }
