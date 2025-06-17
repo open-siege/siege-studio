@@ -75,7 +75,11 @@ namespace siege::resource::prj
     std::array<char, 16> filename;
   };
 
-  bool prj_resource_reader::is_supported(std::istream& stream)
+  prj_resource_reader::prj_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
+  {
+  }
+
+  bool prj_resource_reader::stream_is_supported(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
 
@@ -90,17 +94,12 @@ namespace siege::resource::prj
     return first_tag == header_tag && second_tag == folder_index_tag;
   }
 
-  bool prj_resource_reader::stream_is_supported(std::istream& stream) const
-  {
-    return is_supported(stream);
-  }
-
   struct prj_cache
   {
     std::map<std::filesystem::path, prj_resource_reader::file_info> files;
   };
 
-  std::vector<prj_resource_reader::content_info> prj_resource_reader::get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query) const
+  std::vector<prj_resource_reader::content_info> prj_resource_reader::get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query)
   {
     prj_cache storage;
     prj_cache& file_cache = storage;
@@ -331,7 +330,7 @@ namespace siege::resource::prj
     return results;
   }
 
-  void prj_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info) const
+  void prj_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) != info.offset)
     {
@@ -351,7 +350,7 @@ namespace siege::resource::prj
     std::vector<char> data;
   };
 
-  void prj_resource_reader::extract_file_contents(std::any& cache, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const
+  void prj_resource_reader::extract_file_contents(std::any& cache, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     set_stream_position(stream, info);
 

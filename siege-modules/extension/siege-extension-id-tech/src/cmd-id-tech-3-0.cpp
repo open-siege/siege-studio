@@ -147,7 +147,7 @@ predefined_string*
 
         siege::resource::zip::zip_resource_reader reader;
 
-        if (!reader.is_supported(stream))
+        if (!reader.stream_is_supported(stream))
         {
           return;
         }

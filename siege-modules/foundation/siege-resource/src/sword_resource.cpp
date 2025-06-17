@@ -11,7 +11,7 @@ namespace siege::resource::atd
 {
   namespace endian = siege::platform;
 
-  bool atd_resource_reader::is_supported(std::istream& stream)
+  bool atd_resource_reader::stream_is_supported(std::istream& stream)
   {
     auto path = siege::platform::get_stream_path(stream);
 
@@ -33,11 +33,6 @@ namespace siege::resource::atd
     return false;
   }
 
-  bool atd_resource_reader::stream_is_supported(std::istream& stream) const
-  {
-    return is_supported(stream);
-  }
-
   struct file_entry
   {
     endian::little_uint32_t offset;
@@ -45,7 +40,11 @@ namespace siege::resource::atd
     std::array<char, 80> filename;
   };
 
-  std::vector<atd_resource_reader::content_info> atd_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const
+  atd_resource_reader::atd_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
+  {
+  }
+
+  std::vector<atd_resource_reader::content_info> atd_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     std::vector<atd_resource_reader::content_info> results;
@@ -78,7 +77,7 @@ namespace siege::resource::atd
     return results;
   }
 
-  void atd_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info) const
+  void atd_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) != info.offset)
     {
@@ -86,7 +85,7 @@ namespace siege::resource::atd
     }
   }
 
-  void atd_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const
+  void atd_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     set_stream_position(stream, info);
     std::copy_n(std::istreambuf_iterator(stream),

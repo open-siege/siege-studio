@@ -363,13 +363,13 @@ int main(int argc, const char* argv[])
 
                         // TODO ask user to download cab tooling
 
-                        auto reader = std::shared_ptr(siege::resource::make_resource_reader(game_backup));
+                        auto reader = siege::resource::make_resource_reader(game_backup);
 
                         std::list<installable_file> backup_files;
                         std::any cache{};
                         std::any cab_cache{};
 
-                        auto top_level_items = reader->get_content_listing(cache, game_backup, listing_query{ .archive_path = backup_path, .folder_path = backup_path });
+                        auto top_level_items = reader.get_content_listing(cache, game_backup, listing_query{ .archive_path = backup_path, .folder_path = backup_path });
 
                         std::function<void(decltype(top_level_items)&)> get_full_listing = [&](std::vector<resource_reader::content_info>& items) mutable {
                           for (resource_reader::content_info& info : items)
@@ -377,7 +377,7 @@ int main(int argc, const char* argv[])
                             if (auto parent_info = std::get_if<folder_info>(&info); parent_info)
                             {
                               std::vector<resource_reader::content_info> children;
-                              children = reader->get_content_listing(cache, game_backup, listing_query{ .archive_path = backup_path, .folder_path = parent_info->full_path });
+                              children = reader.get_content_listing(cache, game_backup, listing_query{ .archive_path = backup_path, .folder_path = parent_info->full_path });
                               get_full_listing(children);
                             }
 
@@ -389,7 +389,7 @@ int main(int argc, const char* argv[])
                                 fs::create_directories(install_path / install_segment);
                                 auto final_path = install_path / install_segment / new_item->filename;
                                 std::ofstream temp_out_buffer(final_path, std::ios::binary | std::ios::trunc);
-                                reader->extract_file_contents(cache, game_backup, *new_item, temp_out_buffer);
+                                reader.extract_file_contents(cache, game_backup, *new_item, temp_out_buffer);
                               };
                             }
                           }
@@ -438,7 +438,7 @@ int main(int argc, const char* argv[])
                               fs::create_directories(staging_path / backup_file.relative_path());
                               auto final_path = staging_path / backup_path;
                               std::ofstream temp_out_buffer(final_path, std::ios::binary | std::ios::trunc);
-                              reader->extract_file_contents(cache, game_backup, backup_file, temp_out_buffer);
+                              reader.extract_file_contents(cache, game_backup, backup_file, temp_out_buffer);
                             }
 
                             for (auto& backup_file : backup_files)
@@ -459,10 +459,10 @@ int main(int argc, const char* argv[])
                                 continue;
                               }
 
-                              auto inner_reader = std::shared_ptr(siege::resource::make_resource_reader(temp_in_buffer));
+                              auto inner_reader = siege::resource::make_resource_reader(temp_in_buffer);
                               std::any inner_cache{};
                               // TODO more than the top level
-                              auto top_level_children = inner_reader->get_content_listing(inner_cache, temp_in_buffer, listing_query{ .archive_path = final_path, .folder_path = final_path })
+                              auto top_level_children = inner_reader.get_content_listing(inner_cache, temp_in_buffer, listing_query{ .archive_path = final_path, .folder_path = final_path })
                                                         | std::views::filter([](auto& info) { return std::get_if<file_info>(&info) != nullptr; })
                                                         | std::views::transform([](auto& info) -> file_info& { return std::get<file_info>(info); });
 
@@ -486,7 +486,7 @@ int main(int argc, const char* argv[])
                                   fs::create_directories(install_path / install_segment);
                                   auto final_path = install_path / install_segment / new_item->filename;
                                   std::ofstream temp_out_buffer(final_path, std::ios::binary | std::ios::trunc);
-                                  inner_reader->extract_file_contents(inner_cache, game_backup, *new_item, temp_out_buffer);
+                                  inner_reader.extract_file_contents(inner_cache, game_backup, *new_item, temp_out_buffer);
                                 };
                               }
                             }

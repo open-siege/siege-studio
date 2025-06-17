@@ -54,7 +54,7 @@ namespace siege::resource::pak
 
   using file_entry = std::variant<pak_file_entry, daikatana_pak_file_entry, dat_file_entry>;
 
-  bool pak_resource_reader::is_supported(std::istream& stream)
+  bool stream_is_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -72,12 +72,7 @@ namespace siege::resource::pak
     return true;
   }
 
-  bool pak_resource_reader::stream_is_supported(std::istream& stream) const
-  {
-    return is_supported(stream);
-  }
-
-  std::vector<pak_resource_reader::content_info> pak_resource_reader::get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query) const
+  std::vector<platform::content_info> get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query)
   {
     std::vector<file_entry> storage;
     std::vector<file_entry>& entries = storage;
@@ -109,7 +104,7 @@ namespace siege::resource::pak
 
         if (!is_vampire_pak)
         {
-          return std::vector<pak_resource_reader::content_info>{};
+          return std::vector<platform::content_info>{};
         }
         stream.seekg(2, std::ios::cur);
       }
@@ -136,7 +131,7 @@ namespace siege::resource::pak
 
       if (file_count == 0)
       {
-        return std::vector<pak_resource_reader::content_info>{};
+        return std::vector<platform::content_info>{};
       }
 
       entries.reserve(file_count);
@@ -203,14 +198,14 @@ namespace siege::resource::pak
       }
     }
 
-    std::vector<pak_resource_reader::content_info> results;
+    std::vector<platform::content_info> results;
     results.reserve(entries.size() / folders.size());
 
     for (auto& folder : folders)
     {
       if (folder.first.parent_path() == query.folder_path)
       {
-        results.emplace_back(pak_resource_reader::folder_info{
+        results.emplace_back(platform::folder_info{
           .name = folder.first.filename().string(),
           .file_count = folder.second.size(),
           .full_path = folder.first,
@@ -224,7 +219,7 @@ namespace siege::resource::pak
           std::visit([&](auto& entry) {
             if constexpr (std::is_same_v<std::decay_t<decltype(entry)>, pak_file_entry>)
             {
-              results.emplace_back(pak_resource_reader::file_info{
+              results.emplace_back(platform::file_info{
                 .filename = fs::path(entry.path.data()).make_preferred().filename(),
                 .offset = entry.offset,
                 .size = entry.uncompressed_size,
@@ -241,7 +236,7 @@ namespace siege::resource::pak
                 compression_type = siege::platform::compression_type::lz77_huffman;
               }
 
-              results.emplace_back(pak_resource_reader::file_info{
+              results.emplace_back(platform::file_info{
                 .filename = fs::path(entry.path.data()).make_preferred().filename(),
                 .offset = entry.offset,
                 .size = entry.uncompressed_size,
@@ -259,7 +254,7 @@ namespace siege::resource::pak
     return results;
   }
 
-  void pak_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info) const
+  void set_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) != info.offset)
     {
@@ -267,7 +262,7 @@ namespace siege::resource::pak
     }
   }
 
-  void pak_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const
+  void extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     set_stream_position(stream, info);
 

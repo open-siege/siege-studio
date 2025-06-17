@@ -57,7 +57,11 @@ namespace siege::resource::res
   };
 
 
-  bool res_resource_reader::is_supported(std::istream& stream)
+  res_resource_reader::res_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
+  {
+  }
+
+  bool res_resource_reader::stream_is_supported(std::istream& stream)
   {
     auto path = siege::platform::get_stream_path(stream);
 
@@ -80,12 +84,7 @@ namespace siege::resource::res
     return false;
   }
 
-  bool res_resource_reader::stream_is_supported(std::istream& stream) const
-  {
-    return is_supported(stream);
-  }
-
-  std::vector<res_resource_reader::content_info> res_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const
+  std::vector<res_resource_reader::content_info> res_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     std::vector<res_resource_reader::content_info> results;
@@ -240,7 +239,7 @@ namespace siege::resource::res
     return results;
   }
 
-  void res_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info) const
+  void res_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) != info.offset)
     {
@@ -248,7 +247,7 @@ namespace siege::resource::res
     }
   }
 
-  void res_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const
+  void res_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     if (!info.compressed_size)
     {

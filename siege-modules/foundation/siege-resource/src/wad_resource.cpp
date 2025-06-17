@@ -55,7 +55,11 @@ namespace siege::resource::wad
     endian::little_uint32_t string_offset;
   };
 
-  bool wad_resource_reader::is_supported(std::istream& stream)
+  wad_resource_reader::wad_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
+  {
+  }
+
+  bool wad_resource_reader::stream_is_supported(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
     std::array<std::byte, 8> tag{};
@@ -81,12 +85,6 @@ namespace siege::resource::wad
 
     return tag == pod_tag;
   }
-
-  bool wad_resource_reader::stream_is_supported(std::istream& stream) const
-  {
-    return is_supported(stream);
-  }
-
 
   void generate_bitmap_metadata(std::istream& stream, std::int32_t width, std::int32_t height, std::size_t offset, const std::vector<siege::platform::palette::colour_rgb>& current_palette, std::string& extension, std::any& metadata)
   {
@@ -137,7 +135,7 @@ namespace siege::resource::wad
     }
   }
 
-  std::vector<wad_resource_reader::content_info> wad_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const
+  std::vector<wad_resource_reader::content_info> wad_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     std::array<std::byte, 8> tag{};
@@ -389,7 +387,7 @@ namespace siege::resource::wad
     return results;
   }
 
-  void wad_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info) const
+  void wad_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) != info.offset)
     {
@@ -399,7 +397,7 @@ namespace siege::resource::wad
 
   void wad_resource_reader::extract_file_contents(std::any&, std::istream& stream,
     const siege::platform::file_info& info,
-    std::ostream& output) const
+    std::ostream& output)
   {
     set_stream_position(stream, info);
 

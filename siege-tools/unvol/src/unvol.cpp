@@ -31,21 +31,21 @@ namespace dio
 
 
 template <typename ArchiveType>
-auto create_archive()
+siege::platform::resource_reader create_archive()
 {
-  return std::unique_ptr<siege::platform::resource_reader>(new ArchiveType());
+  return ArchiveType();
 }
 
-using CheckerType = decltype(&dio::vol::darkstar::vol_resource_reader::is_supported);
+using CheckerType = decltype(&dio::vol::darkstar::vol_resource_reader::stream_is_supported);
 using CreatorType = decltype(&create_archive<dio::vol::darkstar::vol_resource_reader>);
 
 constexpr static auto vol_checkers = std::array<std::pair<CheckerType, CreatorType>, 7> {{
-    { dio::vol::darkstar::vol_resource_reader::is_supported, create_archive<dio::vol::darkstar::vol_resource_reader> },
-    { dio::vol::three_space::vol_resource_reader::is_supported, create_archive<dio::vol::three_space::vol_resource_reader> },
-    { dio::vol::three_space::rmf_resource_reader::is_supported, create_archive<dio::vol::three_space::rmf_resource_reader> },
-    { dio::vol::three_space::dyn_resource_reader::is_supported, create_archive<dio::vol::three_space::dyn_resource_reader> },
-    { dio::vol::trophy_bass::rbx_resource_reader::is_supported, create_archive<dio::vol::trophy_bass::rbx_resource_reader> },
-    { dio::vol::trophy_bass::tbv_resource_reader::is_supported, create_archive<dio::vol::trophy_bass::tbv_resource_reader> }
+    { dio::vol::darkstar::vol_resource_reader::stream_is_supported, create_archive<dio::vol::darkstar::vol_resource_reader> },
+    { dio::vol::three_space::vol_resource_reader::stream_is_supported, create_archive<dio::vol::three_space::vol_resource_reader> },
+    { dio::vol::three_space::rmf_resource_reader::stream_is_supported, create_archive<dio::vol::three_space::rmf_resource_reader> },
+    { dio::vol::three_space::dyn_resource_reader::stream_is_supported, create_archive<dio::vol::three_space::dyn_resource_reader> },
+    { dio::vol::trophy_bass::rbx_resource_reader::stream_is_supported, create_archive<dio::vol::trophy_bass::rbx_resource_reader> },
+    { dio::vol::trophy_bass::tbv_resource_reader::stream_is_supported, create_archive<dio::vol::trophy_bass::tbv_resource_reader> }
 }};
 
 int main(int, const char** argv)
@@ -53,13 +53,13 @@ int main(int, const char** argv)
   std::string volume_file(argv[1]);
   auto volume_stream = std::ifstream{ volume_file, std::ios::binary };
 
-  std::unique_ptr<siege::platform::resource_reader> archive;
+  std::optional<siege::platform::resource_reader> archive;
 
   for (const auto [checker, creator] : vol_checkers)
   {
     if (checker(volume_stream))
     {
-      archive = creator();
+      archive.emplace(creator());
       break;
     }
   }

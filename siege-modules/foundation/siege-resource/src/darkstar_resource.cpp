@@ -387,7 +387,11 @@ namespace siege::resource::vol::darkstar
 
   using folder_info = siege::platform::folder_info;
 
-  bool vol_resource_reader::is_supported(std::istream& stream)
+  vol_resource_reader::vol_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
+  {
+  }
+
+  bool vol_resource_reader::stream_is_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
     platform::read(stream, tag.data(), sizeof(tag));
@@ -397,12 +401,7 @@ namespace siege::resource::vol::darkstar
     return tag == vol_file_tag || tag == alt_vol_file_tag || tag == old_vol_file_tag;
   }
 
-  bool vol_resource_reader::stream_is_supported(std::istream& stream) const
-  {
-    return is_supported(stream);
-  }
-
-  std::vector<vol_resource_reader::content_info> vol_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const
+  std::vector<vol_resource_reader::content_info> vol_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     std::vector<vol_resource_reader::content_info> results;
@@ -441,7 +440,7 @@ namespace siege::resource::vol::darkstar
     return results;
   }
 
-  void vol_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info) const
+  void vol_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) == info.offset)
     {
@@ -453,7 +452,7 @@ namespace siege::resource::vol::darkstar
     }
   }
 
-  void vol_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const
+  void vol_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     if (info.compression_type == siege::platform::compression_type::none)
     {

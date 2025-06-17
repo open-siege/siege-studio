@@ -211,12 +211,7 @@ namespace siege::resource::mis::darkstar
 {
   using namespace siege::mis::darkstar;
 
-  bool mis_resource_reader::is_supported(std::istream& stream)
-  {
-    return is_mission_data(stream);
-  }
-
-  bool mis_resource_reader::stream_is_supported(std::istream& stream) const
+  bool mis_resource_reader::stream_is_supported(std::istream& stream)
   {
     return is_mission_data(stream);
   }
@@ -239,25 +234,44 @@ namespace siege::resource::mis::darkstar
     return archive_path;
   }
 
-  decltype(mis_resource_reader::content_list_info)::iterator mis_resource_reader::cache_data(std::istream& stream,
-    const std::filesystem::path& archive_or_folder_path) const
+  struct mis_cache_data
   {
+    using ref_vector = std::vector<std::pair<std::reference_wrapper<::siege::mis::darkstar::sim_item>, platform::resource_reader::content_info>>;
+    mutable std::map<std::filesystem::path, ::siege::mis::darkstar::sim_items> contents;
+    mutable std::map<std::filesystem::path, ref_vector> content_list_info;
+  };
+
+  mis_cache_data& get_cache_data(std::any& cache)
+  {
+    if (cache.type() != typeid(mis_cache_data))
+    {
+      mis_cache_data temp{};
+      cache = temp;
+    }
+
+    return std::any_cast<mis_cache_data&>(cache);
+  }
+
+  decltype(mis_cache_data::content_list_info)::iterator cache_data(std::any& cache, std::istream& stream,
+    const std::filesystem::path& archive_or_folder_path)
+  {
+    auto& real_cache = get_cache_data(cache);
     auto archive_path = get_archive_path(archive_or_folder_path);
-    auto existing_items = contents.find(archive_path);
+    auto existing_items = real_cache.contents.find(archive_path);
 
     std::size_t position = 0;
 
-    if (existing_items == contents.end())
+    if (existing_items == real_cache.contents.end())
     {
       position = stream.tellg();
-      existing_items = contents.emplace(std::make_pair(archive_path, read_mission_data(stream))).first;
+      existing_items = real_cache.contents.emplace(std::make_pair(archive_path, read_mission_data(stream))).first;
     }
 
-    auto existing_info = content_list_info.find(archive_path);
+    auto existing_info = real_cache.content_list_info.find(archive_path);
 
-    if (existing_info == content_list_info.end())
+    if (existing_info == real_cache.content_list_info.end())
     {
-      existing_info = content_list_info.emplace(std::make_pair(archive_path, ref_vector())).first;
+      existing_info = real_cache.content_list_info.emplace(std::make_pair(archive_path, mis_cache_data::ref_vector())).first;
       existing_info->second.reserve(20);
 
       using item_and_name = std::pair<std::filesystem::path, std::reference_wrapper<sim_item>>;
@@ -333,10 +347,10 @@ namespace siege::resource::mis::darkstar
     return existing_info;
   }
 
-  std::vector<mis_resource_reader::content_info> mis_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const
+  std::vector<mis_resource_reader::content_info> mis_resource_reader::get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
-    auto existing_info = cache_data(stream, query.folder_path);
+    auto existing_info = cache_data(cache, stream, query.folder_path);
     std::vector<mis_resource_reader::content_info> final_results;
     final_results.reserve(existing_info->second.size());
 
@@ -367,15 +381,19 @@ namespace siege::resource::mis::darkstar
     return final_results;
   }
 
-  void mis_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info) const
+  mis_resource_reader::mis_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
+  {
+  }
+
+  void mis_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     stream.seekg(info.offset, std::ios::beg);
   }
 
-  void mis_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const
+  void mis_resource_reader::extract_file_contents(std::any& cache, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     set_stream_position(stream, info);
-    auto existing_info = cache_data(stream, info.folder_path);
+    auto existing_info = cache_data(cache, stream, info.folder_path);
 
     for (auto& ref : existing_info->second)
     {

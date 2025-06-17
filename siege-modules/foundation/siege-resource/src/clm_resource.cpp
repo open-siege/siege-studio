@@ -31,7 +31,11 @@ namespace siege::resource::clm
     endian::little_uint32_t size;
   };
 
-  bool clm_resource_reader::is_supported(std::istream& stream)
+  clm_resource_reader::clm_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
+  {
+  }
+
+  bool clm_resource_reader::stream_is_supported(std::istream& stream)
   {
     std::array<std::byte, 26> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -41,12 +45,7 @@ namespace siege::resource::clm
     return tag == clm_tag;
   }
 
-  bool clm_resource_reader::stream_is_supported(std::istream& stream) const
-  {
-    return is_supported(stream);
-  }
-
-  std::vector<clm_resource_reader::content_info> clm_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const
+  std::vector<clm_resource_reader::content_info> clm_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     std::array<std::byte, 26> tag{};
@@ -94,7 +93,7 @@ namespace siege::resource::clm
     return results;
   }
 
-  void clm_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info) const
+  void clm_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) != info.offset)
     {
@@ -102,7 +101,7 @@ namespace siege::resource::clm
     }
   }
 
-  void clm_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const
+  void clm_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     set_stream_position(stream, info);
 

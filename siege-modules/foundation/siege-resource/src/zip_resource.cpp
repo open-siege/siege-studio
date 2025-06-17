@@ -19,7 +19,7 @@ namespace siege::resource::zip
   constexpr auto folder_record_tag = platform::to_tag<4>({ 'P', 'K', 0x01, 0x02 });
   constexpr auto end_record_tag = platform::to_tag<4>({ 'P', 'K', 0x05, 0x06 });
 
-  bool zip_resource_reader::is_supported(std::istream& stream)
+  bool stream_is_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -27,11 +27,6 @@ namespace siege::resource::zip
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
     return tag == file_record_tag || tag == folder_record_tag || tag == end_record_tag;
-  }
-
-  bool zip_resource_reader::stream_is_supported(std::istream& stream) const
-  {
-    return is_supported(stream);
   }
 
   static auto process_zip_stream = [](void* userdata, void* data, zip_uint64_t len, zip_source_cmd_t cmd) -> zip_int64_t {
@@ -128,7 +123,7 @@ namespace siege::resource::zip
     return std::any_cast<zip_cache&>(cache);
   }
 
-  std::vector<zip_resource_reader::content_info> zip_resource_reader::get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query) const
+  std::vector<zip_resource_reader::content_info> get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     auto& zip_cache = cache_as_zip_cache(cache);
@@ -214,7 +209,7 @@ namespace siege::resource::zip
         continue;
       }
 
-      file_info temp{};
+      platform::file_info temp{};
 
       temp.size = entry.size;
       temp.filename = name.filename();
@@ -228,11 +223,7 @@ namespace siege::resource::zip
     return results;
   }
 
-  void zip_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info) const
-  {
-  }
-
-  void zip_resource_reader::extract_file_contents(std::any& cache, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const
+  void extract_file_contents(std::any& cache, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     auto& zip_cache = cache_as_zip_cache(cache);
 

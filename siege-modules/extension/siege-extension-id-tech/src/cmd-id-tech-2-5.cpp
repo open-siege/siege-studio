@@ -146,15 +146,15 @@ predefined_string*
         std::any cache;
         std::ifstream stream(dir_entry, std::ios::binary);
 
-        std::unique_ptr<siege::platform::resource_reader> reader;
+        std::optional<siege::platform::resource_reader> reader;
 
-        if (siege::resource::pak::pak_resource_reader::is_supported(stream))
+        if (siege::resource::pak::stream_is_supported(stream))
         {
-          reader = std::make_unique<siege::resource::pak::pak_resource_reader>();
+          reader.emplace(siege::resource::pak::pak_resource_reader());
         }
-        else if (siege::resource::zip::zip_resource_reader::is_supported(stream))
+        else if (siege::resource::zip::stream_is_supported(stream))
         {
-          reader = std::make_unique<siege::resource::zip::zip_resource_reader>();
+          reader.emplace(siege::resource::zip::zip_resource_reader());
         }
         else
         {

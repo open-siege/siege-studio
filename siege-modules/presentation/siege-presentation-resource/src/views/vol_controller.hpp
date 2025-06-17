@@ -67,7 +67,7 @@ namespace siege::views
     std::atomic_bool should_continue = false;
     std::future<void> pending_load;
     std::any cache;
-    std::unique_ptr<siege::platform::resource_reader> resource;
+    std::optional<siege::platform::resource_reader> resource;
     std::list<siege::platform::resource_reader::content_info> contents;
     std::variant<std::monostate, std::filesystem::path, std::stringstream> storage;
   };

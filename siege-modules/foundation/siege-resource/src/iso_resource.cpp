@@ -508,7 +508,7 @@ namespace siege::resource::iso
     return results;
   }
 
-  bool iso_resource_reader::is_supported(std::istream& stream)
+  bool stream_is_supported(std::istream& stream)
   {
     std::vector<std::byte> tag(16);
     stream.read(reinterpret_cast<char*>(tag.data()), std::streamsize(tag.size()));
@@ -528,24 +528,15 @@ namespace siege::resource::iso
     return to_array<iso_file_record_tag.size()>(tag) == iso_file_record_tag;
   }
 
-  bool iso_resource_reader::stream_is_supported(std::istream& stream) const
-  {
-    return is_supported(stream);
-  }
-
-  std::vector<iso_resource_reader::content_info> iso_resource_reader::get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query) const
+  std::vector<iso_resource_reader::content_info> get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     return iso_get_content_listing(cache, query);
   }
 
-  void iso_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info) const
-  {
-  }
-
-  void iso_resource_reader::extract_file_contents(std::any& cache, std::istream& stream,
+  void extract_file_contents(std::any& cache, std::istream& stream,
     const siege::platform::file_info& info,
-    std::ostream& output) const
+    std::ostream& output)
   {
     iso_extract_file_contents(cache, info, output);
   }

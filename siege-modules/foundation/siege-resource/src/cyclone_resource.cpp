@@ -12,7 +12,11 @@ namespace siege::resource::cln
 {
   namespace endian = siege::platform;
 
-  bool cln_resource_reader::is_supported(std::istream& stream)
+  cln_resource_reader::cln_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
+  {
+  }
+
+  bool cln_resource_reader::stream_is_supported(std::istream& stream)
   {
     auto path = siege::platform::get_stream_path(stream);
 
@@ -35,11 +39,6 @@ namespace siege::resource::cln
     }
 
     return false;
-  }
-
-  bool cln_resource_reader::stream_is_supported(std::istream& stream) const
-  {
-    return is_supported(stream);
   }
 
   struct file_entry
@@ -111,7 +110,7 @@ namespace siege::resource::cln
     return input.rfind(value_to_find, 0) == 0;
   }
 
-  std::vector<cln_resource_reader::content_info> cln_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query) const
+  std::vector<cln_resource_reader::content_info> cln_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     thread_local std::unordered_map<std::string, std::vector<file_entry>> cache;
@@ -220,7 +219,7 @@ namespace siege::resource::cln
 
   constexpr auto file_data_header = std::string_view("MAGIC_NUMBER");
 
-  void cln_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info) const
+  void cln_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) == info.offset)
     {
@@ -232,7 +231,7 @@ namespace siege::resource::cln
     }
   }
 
-  void cln_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const
+  void cln_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     if (info.compression_type == platform::compression_type::none)
     {

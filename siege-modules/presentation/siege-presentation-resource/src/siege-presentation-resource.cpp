@@ -147,7 +147,7 @@ struct siege::platform::resource_reader_context
 {
   std::streampos start_pos;
   std::any cache;
-  std::unique_ptr<siege::platform::resource_reader> reader;
+  siege::platform::resource_reader reader;
   std::unique_ptr<std::istream> stream;
 
   std::unordered_set<fs::path> path_storage;
@@ -198,7 +198,7 @@ std::errc get_reader_folder_listing(siege::platform::resource_reader_context* co
     auto new_path = context->path_storage.emplace(parent_path);
 
     context->stream->seekg(context->start_pos);
-    auto contents = context->reader->get_content_listing(context->cache, *context->stream, siege::platform::listing_query{ .archive_path = siege::platform::get_stream_path(*context->stream).value_or(std::filesystem::path{}), .folder_path = parent_path });
+    auto contents = context->reader.get_content_listing(context->cache, *context->stream, siege::platform::listing_query{ .archive_path = siege::platform::get_stream_path(*context->stream).value_or(std::filesystem::path{}), .folder_path = parent_path });
     context->index.emplace(new_path.first->c_str(), std::move(contents));
   }
 
@@ -251,7 +251,7 @@ std::errc get_reader_file_listing(siege::platform::resource_reader_context* cont
     auto new_path = context->path_storage.emplace(parent_path);
 
     context->stream->seekg(context->start_pos);
-    auto contents = context->reader->get_content_listing(context->cache, *context->stream, siege::platform::listing_query{ .archive_path = siege::platform::get_stream_path(*context->stream).value_or(std::filesystem::path{}), .folder_path = parent_path });
+    auto contents = context->reader.get_content_listing(context->cache, *context->stream, siege::platform::listing_query{ .archive_path = siege::platform::get_stream_path(*context->stream).value_or(std::filesystem::path{}), .folder_path = parent_path });
     context->index.emplace(new_path.first->c_str(), std::move(contents));
   }
 
@@ -308,7 +308,7 @@ std::errc extract_file_contents(siege::platform::resource_reader_context* contex
     auto new_path = context->path_storage.emplace(parent_path);
 
     context->stream->seekg(context->start_pos);
-    auto contents = context->reader->get_content_listing(context->cache, *context->stream, siege::platform::listing_query{ .archive_path = siege::platform::get_stream_path(*context->stream).value_or(std::filesystem::path{}), .folder_path = parent_path });
+    auto contents = context->reader.get_content_listing(context->cache, *context->stream, siege::platform::listing_query{ .archive_path = siege::platform::get_stream_path(*context->stream).value_or(std::filesystem::path{}), .folder_path = parent_path });
     context->index.emplace(new_path.first->c_str(), std::move(contents));
   }
 
@@ -338,7 +338,7 @@ std::errc extract_file_contents(siege::platform::resource_reader_context* contex
 
   std::span<char> temp((char*)buffer, size);
   std::ospanstream output(temp, std::ios::binary);
-  context->reader->extract_file_contents(context->cache, *context->stream, real_info, output);
+  context->reader.extract_file_contents(context->cache, *context->stream, real_info, output);
 
   if (written)
   {

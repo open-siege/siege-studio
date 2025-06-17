@@ -29,7 +29,7 @@ namespace siege::views
 
   std::size_t vol_controller::load_volume(std::istream& vol_stream, std::optional<std::filesystem::path> path, std::function<void(resource_reader::content_info&)> on_new_item)
   {
-    resource.reset(make_resource_reader(vol_stream).release());
+    resource.emplace(make_resource_reader(vol_stream));
 
     if (!path)
     {

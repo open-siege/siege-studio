@@ -6,43 +6,42 @@
 
 namespace siege::resource::vol::three_space
 {
-  struct rmf_resource_reader final : siege::platform::resource_reader
+  struct rmf_resource_reader : siege::platform::resource_reader
   {
-    static bool is_supported(std::istream& stream);
+    rmf_resource_reader();
+    static bool stream_is_supported(std::istream& stream);
 
-    bool stream_is_supported(std::istream& stream) const override;
+    static std::vector<std::variant<siege::platform::folder_info, siege::platform::file_info>> get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query);
 
-    std::vector<std::variant<siege::platform::folder_info, siege::platform::file_info>> get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query) const override;
+    static void set_stream_position(std::istream& stream, const siege::platform::file_info& info);
 
-    void set_stream_position(std::istream& stream, const siege::platform::file_info& info) const override;
-
-    void extract_file_contents(std::any& cache, std::istream& stream, const siege::platform::file_info& info, std::ostream& outpu) const override;
+    static void extract_file_contents(std::any& cache, std::istream& stream, const siege::platform::file_info& info, std::ostream& outpu);
   };
 
-  struct dyn_resource_reader final : siege::platform::resource_reader
+  struct dyn_resource_reader : siege::platform::resource_reader
   {
-    static bool is_supported(std::istream& stream);
+    dyn_resource_reader();
+    
+    static bool stream_is_supported(std::istream& stream);
 
-    bool stream_is_supported(std::istream& stream) const override;
+    static std::vector<std::variant<siege::platform::folder_info, siege::platform::file_info>> get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query);
 
-    std::vector<std::variant<siege::platform::folder_info, siege::platform::file_info>> get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query) const override;
+    static void set_stream_position(std::istream& stream, const siege::platform::file_info& info);
 
-    void set_stream_position(std::istream& stream, const siege::platform::file_info& info) const override;
-
-    void extract_file_contents(std::any& cache, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const override;
+    static void extract_file_contents(std::any& cache, std::istream& stream, const siege::platform::file_info& info, std::ostream& output);
   };
 
-  struct vol_resource_reader final : siege::platform::resource_reader
+  struct vol_resource_reader : siege::platform::resource_reader
   {
-    static bool is_supported(std::istream& stream);
+    vol_resource_reader();
 
-    bool stream_is_supported(std::istream& stream) const override;
+    static bool stream_is_supported(std::istream& stream);
 
-    std::vector<std::variant<siege::platform::folder_info, siege::platform::file_info>> get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query) const override;
+    static std::vector<std::variant<siege::platform::folder_info, siege::platform::file_info>> get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query);
 
-    void set_stream_position(std::istream& stream, const siege::platform::file_info& info) const override;
+    static void set_stream_position(std::istream& stream, const siege::platform::file_info& info);
 
-    void extract_file_contents(std::any& cache, std::istream& stream, const siege::platform::file_info& info, std::ostream& output) const override;
+    static void extract_file_contents(std::any& cache, std::istream& stream, const siege::platform::file_info& info, std::ostream& output);
   };
 }// namespace siege::resource::vol::three_space
 

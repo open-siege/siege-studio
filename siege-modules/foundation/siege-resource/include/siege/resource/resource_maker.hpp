@@ -8,7 +8,7 @@
 namespace siege::resource
 {
   bool is_resource_reader(std::istream&);
-  std::unique_ptr<siege::platform::resource_reader> make_resource_reader(std::istream&);
+  siege::platform::resource_reader make_resource_reader(std::istream&);
 }
 
 

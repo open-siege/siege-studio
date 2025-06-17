@@ -20,102 +20,100 @@ namespace siege::resource
 {
   bool is_resource_reader(std::istream& stream)
   {
-    return vol::darkstar::vol_resource_reader::is_supported(stream) || 
-        vol::three_space::vol_resource_reader::is_supported(stream) || 
-        vol::three_space::dyn_resource_reader::is_supported(stream) || 
-        vol::three_space::rmf_resource_reader::is_supported(stream) || 
-        vol::three_space::vol_resource_reader::is_supported(stream) || 
-        vol::trophy_bass::rbx_resource_reader::is_supported(stream) || 
-        vol::trophy_bass::tbv_resource_reader::is_supported(stream) ||
-        pak::pak_resource_reader::is_supported(stream) ||
-        clm::clm_resource_reader::is_supported(stream) ||
-        cln::cln_resource_reader::is_supported(stream) ||
-        atd::atd_resource_reader::is_supported(stream) ||
-        wad::wad_resource_reader::is_supported(stream) ||
-        rsc::rsc_resource_reader::is_supported(stream) ||
-        res::res_resource_reader::is_supported(stream) ||
-        mw4::mw4_resource_reader::is_supported(stream) ||
-        prj::prj_resource_reader::is_supported(stream) ||
-        zip::zip_resource_reader::is_supported(stream) ||
-        cab::cab_resource_reader::is_supported(stream) || 
-        iso::iso_resource_reader::is_supported(stream);
+    return vol::darkstar::vol_resource_reader::stream_is_supported(stream) || 
+        vol::three_space::vol_resource_reader::stream_is_supported(stream) || 
+        vol::three_space::dyn_resource_reader::stream_is_supported(stream) || 
+        vol::three_space::rmf_resource_reader::stream_is_supported(stream) || 
+        vol::three_space::vol_resource_reader::stream_is_supported(stream) || 
+        vol::trophy_bass::rbx_resource_reader::stream_is_supported(stream) || 
+        vol::trophy_bass::tbv_resource_reader::stream_is_supported(stream) ||
+        pak::stream_is_supported(stream) ||
+        clm::clm_resource_reader::stream_is_supported(stream) ||
+        cln::cln_resource_reader::stream_is_supported(stream) ||
+        atd::atd_resource_reader::stream_is_supported(stream) ||
+        wad::wad_resource_reader::stream_is_supported(stream) ||
+        rsc::rsc_resource_reader::stream_is_supported(stream) ||
+        res::res_resource_reader::stream_is_supported(stream) ||
+        mw4::mw4_resource_reader::stream_is_supported(stream) ||
+        prj::prj_resource_reader::stream_is_supported(stream) ||
+        zip::stream_is_supported(stream) ||
+        cab::stream_is_supported(stream) || 
+        iso::stream_is_supported(stream);
   }
-  std::unique_ptr<siege::platform::resource_reader> make_resource_reader(std::istream& stream)
+
+  siege::platform::resource_reader make_resource_reader(std::istream& stream)
   {
-    std::unique_ptr<siege::platform::resource_reader> resource;
-    if (vol::darkstar::vol_resource_reader::is_supported(stream))
+    if (vol::darkstar::vol_resource_reader::stream_is_supported(stream))
     {
-      resource.reset(new vol::darkstar::vol_resource_reader());
+      return vol::darkstar::vol_resource_reader();
     }
-    else if (vol::three_space::vol_resource_reader::is_supported(stream))
+    else if (vol::three_space::vol_resource_reader::stream_is_supported(stream))
     {
-      resource.reset(new vol::three_space::vol_resource_reader());
+      return vol::three_space::vol_resource_reader();
     }
-    else if (vol::three_space::dyn_resource_reader::is_supported(stream))
+    else if (vol::three_space::dyn_resource_reader::stream_is_supported(stream))
     {
-      resource.reset(new vol::three_space::dyn_resource_reader());
+      return vol::three_space::dyn_resource_reader();
     }
-    else if (vol::three_space::rmf_resource_reader::is_supported(stream))
+    else if (vol::three_space::rmf_resource_reader::stream_is_supported(stream))
     {
-      resource.reset(new vol::three_space::rmf_resource_reader());
+      return vol::three_space::rmf_resource_reader();
     }
-    else if (vol::trophy_bass::rbx_resource_reader::is_supported(stream))
+    else if (vol::trophy_bass::rbx_resource_reader::stream_is_supported(stream))
     {
-      resource.reset(new vol::trophy_bass::rbx_resource_reader());
+      return vol::trophy_bass::rbx_resource_reader();
     }
-    else if (clm::clm_resource_reader::is_supported(stream))
+    else if (clm::clm_resource_reader::stream_is_supported(stream))
     {
-      resource.reset(new clm::clm_resource_reader());
+      return clm::clm_resource_reader();
     }
-    else if (pak::pak_resource_reader::is_supported(stream))
+    else if (pak::stream_is_supported(stream))
     {
-      resource.reset(new pak::pak_resource_reader());
+      return pak::pak_resource_reader();
     }
-    else if (wad::wad_resource_reader::is_supported(stream))
+    else if (wad::wad_resource_reader::stream_is_supported(stream))
     {
-      resource.reset(new wad::wad_resource_reader());
+      return wad::wad_resource_reader();
     }
-    else if (rsc::rsc_resource_reader::is_supported(stream))
+    else if (rsc::rsc_resource_reader::stream_is_supported(stream))
     {
-      resource.reset(new rsc::rsc_resource_reader());
+      return rsc::rsc_resource_reader();
     }
-    else if (prj::prj_resource_reader::is_supported(stream))
+    else if (prj::prj_resource_reader::stream_is_supported(stream))
     {
-      resource.reset(new prj::prj_resource_reader());
+      return prj::prj_resource_reader();
     }
-    else if (mw4::mw4_resource_reader::is_supported(stream))
+    else if (mw4::mw4_resource_reader::stream_is_supported(stream))
     {
-      resource.reset(new mw4::mw4_resource_reader());
+      return mw4::mw4_resource_reader();
     }
-    else if (res::res_resource_reader::is_supported(stream))
+    else if (res::res_resource_reader::stream_is_supported(stream))
     {
-      resource.reset(new res::res_resource_reader());
+      return res::res_resource_reader();
     }
-    else if (cln::cln_resource_reader::is_supported(stream))
+    else if (cln::cln_resource_reader::stream_is_supported(stream))
     {
-      resource.reset(new cln::cln_resource_reader());
+      return cln::cln_resource_reader();
     }
-    else if (atd::atd_resource_reader::is_supported(stream))
+    else if (atd::atd_resource_reader::stream_is_supported(stream))
     {
-      resource.reset(new atd::atd_resource_reader());
+      return atd::atd_resource_reader();
     }
-    else if (zip::zip_resource_reader::is_supported(stream))
+    else if (zip::stream_is_supported(stream))
     {
-      resource.reset(new zip::zip_resource_reader());
+      return zip::zip_resource_reader();
     }
-    else if (cab::cab_resource_reader::is_supported(stream))
+    else if (cab::stream_is_supported(stream))
     {
-      resource.reset(new cab::cab_resource_reader());
+      return cab::cab_resource_reader();
     }
-    else if (iso::iso_resource_reader::is_supported(stream))
+    else if (iso::stream_is_supported(stream))
     {
-      resource.reset(new iso::iso_resource_reader());
+      return iso::iso_resource_reader();
     }
     else
     {
       throw std::invalid_argument("Stream provided is not supported");
     }
-
-    return resource;
   }
 }// namespace siege::resource

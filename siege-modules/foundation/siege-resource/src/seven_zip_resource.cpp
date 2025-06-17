@@ -35,7 +35,11 @@ namespace siege::resource::zip
     return str;
   }
 
-  bool seven_zip_resource_reader::is_supported(std::istream& stream)
+  seven_zip_resource_reader::seven_zip_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, nullptr, extract_file_contents }
+  {
+  }
+
+  bool seven_zip_resource_reader::stream_is_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(reinterpret_cast<char *>(tag.data()), sizeof(tag));
@@ -48,25 +52,15 @@ namespace siege::resource::zip
            tag == common_exe_tag;
   }
 
-  bool seven_zip_resource_reader::stream_is_supported(std::istream& stream) const
-  {
-    return is_supported(stream);
-  }
-
-  std::vector<seven_zip_resource_reader::content_info> seven_zip_resource_reader::get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query) const
+  std::vector<seven_zip_resource_reader::content_info> seven_zip_resource_reader::get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     return zip_get_content_listing(cache, query);
   }
 
-  void seven_zip_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info) const
-  {
-
-  }
-
   void seven_zip_resource_reader::extract_file_contents(std::any& storage, std::istream& stream,
     const siege::platform::file_info& info,
-    std::ostream& output) const
+    std::ostream& output)
   {
     seven_extract_file_contents(storage, info, output);
   }

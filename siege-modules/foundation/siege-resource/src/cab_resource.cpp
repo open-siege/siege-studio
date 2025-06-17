@@ -27,7 +27,7 @@ namespace siege::resource::cab
   constexpr auto is2_cab_tag = platform::to_tag<4>({ 0x13, 0x5d, 0x65, 0x8c });
   constexpr auto ms_cab_tag = platform::to_tag<4>({ 'M', 'S', 'C', 'F' });
 
-  bool cab_resource_reader::is_supported(std::istream& stream)
+  bool stream_is_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(reinterpret_cast<char *>(tag.data()), sizeof(tag));
@@ -39,25 +39,15 @@ namespace siege::resource::cab
            tag == ms_cab_tag;
   }
 
-  bool cab_resource_reader::stream_is_supported(std::istream& stream) const
-  {
-    return is_supported(stream);
-  }
-
-  std::vector<cab_resource_reader::content_info> cab_resource_reader::get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query) const
+  std::vector<cab_resource_reader::content_info> get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     return cab_get_content_listing(cache, query);
   }
 
-  void cab_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info) const
-  {
-
-  }
-
-  void cab_resource_reader::extract_file_contents(std::any& cache, std::istream& stream,
+  void extract_file_contents(std::any& cache, std::istream& stream,
     const siege::platform::file_info& info,
-    std::ostream& output) const
+    std::ostream& output)
   {
     cab_extract_file_contents(cache, info, output);
   }
