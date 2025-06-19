@@ -18,7 +18,7 @@
 namespace siege::platform
 {
   using fs_char = std::filesystem::path::value_type;
-  using stream_is_resource_reader = std::errc(storage_info* data);
+  using stream_is_resource_readable = std::errc(storage_info* data);
   using create_reader_context = std::errc(storage_info* data, resource_reader_context** storage);
   using get_reader_folder_listing = std::errc(resource_reader_context* context, const fs_char* parent_path, std::size_t count, const fs_char** folders, std::size_t*);
   using get_reader_file_listing = std::errc(resource_reader_context* context, const fs_char* parent_path, std::size_t, const fs_char** folders, std::size_t*);
@@ -29,7 +29,7 @@ namespace siege::platform
   {
     using base = win32::module;
 
-    stream_is_resource_reader* stream_is_resource_reader_proc = nullptr;
+    stream_is_resource_readable* stream_is_resource_readable_proc = nullptr;
     create_reader_context* create_reader_context_proc = nullptr;
     get_reader_folder_listing* get_reader_folder_listing_proc = nullptr;
     get_reader_file_listing* get_reader_file_listing_proc = nullptr;
@@ -39,7 +39,7 @@ namespace siege::platform
   public:
     storage_module(std::filesystem::path module_path) : base(module_path)
     {
-      stream_is_resource_reader_proc = GetProcAddress<decltype(stream_is_resource_reader_proc)>("stream_is_resource_reader");
+      stream_is_resource_readable_proc = GetProcAddress<decltype(stream_is_resource_readable_proc)>("stream_is_resource_readable");
       create_reader_context_proc = GetProcAddress<decltype(create_reader_context_proc)>("create_reader_context");
       get_reader_folder_listing_proc = GetProcAddress<decltype(get_reader_folder_listing_proc)>("get_reader_folder_listing");
       get_reader_file_listing_proc = GetProcAddress<decltype(get_reader_file_listing_proc)>("get_reader_file_listing");
@@ -73,9 +73,9 @@ namespace siege::platform
       return loaded_modules;
     }
 
-    bool stream_is_resource_reader(storage_info data) const noexcept
+    bool stream_is_resource_readable(storage_info data) const noexcept
     {
-      return stream_is_resource_reader_proc(&data) == std::errc(0);
+      return stream_is_resource_readable_proc(&data) == std::errc(0);
     }
 
     using context_ptr = std::unique_ptr<resource_reader_context,

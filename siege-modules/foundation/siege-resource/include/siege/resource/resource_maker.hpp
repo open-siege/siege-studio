@@ -7,7 +7,7 @@
 
 namespace siege::resource
 {
-  bool is_resource_reader(std::istream&);
+  bool is_resource_readable(std::istream&);
   siege::platform::resource_reader make_resource_reader(std::istream&);
 }
 

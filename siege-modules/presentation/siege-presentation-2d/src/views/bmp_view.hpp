@@ -772,7 +772,7 @@ namespace siege::views
           info.info.path = path.c_str();
 
           auto resource_module = std::find_if(loaded_modules.begin(), loaded_modules.end(), [&](auto& module) {
-            return module.stream_is_resource_reader(info);
+            return module.stream_is_resource_readable(info);
           });
 
           if (resource_module == loaded_modules.end())

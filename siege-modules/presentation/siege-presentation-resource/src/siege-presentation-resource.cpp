@@ -123,7 +123,7 @@ std::errc is_stream_supported(storage_info* data) noexcept
   return std::errc::not_supported;
 }
 
-std::errc stream_is_resource_reader(storage_info* data) noexcept
+std::errc stream_is_resource_readable(storage_info* data) noexcept
 {
   if (!data)
   {
@@ -132,7 +132,7 @@ std::errc stream_is_resource_reader(storage_info* data) noexcept
 
   auto stream = siege::platform::create_istream(*data);
 
-  if (siege::resource::is_resource_reader(*stream))
+  if (siege::resource::is_resource_readable(*stream))
   {
     return std::errc(0);
   }
@@ -170,7 +170,7 @@ std::errc create_reader_context(storage_info* data, siege::platform::resource_re
 
   auto stream = siege::platform::create_istream(*data);
 
-  if (siege::resource::is_resource_reader(*stream))
+  if (siege::resource::is_resource_readable(*stream))
   {
     *storage = new siege::platform::resource_reader_context{
       .start_pos = stream->tellg(),

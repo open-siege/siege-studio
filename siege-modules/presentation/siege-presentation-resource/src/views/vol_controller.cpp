@@ -18,7 +18,7 @@ namespace siege::views
 
   bool vol_controller::is_vol(std::istream& vol_stream) noexcept
   {
-    return is_resource_reader(vol_stream);
+    return is_resource_readable(vol_stream);
   }
 
   auto& get_lock()

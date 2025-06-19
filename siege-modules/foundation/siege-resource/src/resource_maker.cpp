@@ -18,7 +18,7 @@
 
 namespace siege::resource
 {
-  bool is_resource_reader(std::istream& stream)
+  bool is_resource_readable(std::istream& stream)
   {
     return vol::darkstar::vol_resource_reader::stream_is_supported(stream) || 
         vol::three_space::vol_resource_reader::stream_is_supported(stream) || 

@@ -6,7 +6,7 @@ EXPORTS
 	is_stream_supported
 	get_window_class_for_stream
 	std_errc_to_hresult
-	stream_is_resource_reader
+	stream_is_resource_readable
 	create_reader_context
 	get_reader_folder_listing
 	get_reader_file_listing
