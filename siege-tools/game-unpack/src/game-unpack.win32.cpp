@@ -31,6 +31,17 @@ struct installable_file : siege::platform::file_info
   std::function<void(fs::path, siege::fs_string_view)> install_to;
 };
 
+struct transformed_path_rule : siege::platform::path_rule
+{
+  std::wstring resolved_source;
+};
+
+struct discovery_context
+{
+  siege::platform::installation_module module;
+  std::vector<transformed_path_rule> transformed_rules;
+};
+
 bool is_standalone_console()
 {
   std::array<DWORD, 4> ids{};
@@ -337,10 +348,10 @@ void do_unpacking(user_interaction ui, fs::path backup_path)
   using listing_query = siege::platform::listing_query;
   using resource_reader = siege::platform::resource_reader;
 
-  auto game_backup = std::make_shared<std::ifstream>(backup_path, std::ios::binary);
+  std::ifstream temp(backup_path, std::ios::binary);
 
   // TODO also check for folders instead
-  if (!siege::resource::is_resource_readable(*game_backup))
+  if (!siege::resource::is_resource_readable(temp))
   {
     return;
   }
@@ -351,7 +362,7 @@ void do_unpacking(user_interaction ui, fs::path backup_path)
 
   std::list<installable_file> backup_files;
   std::map<std::wstring, std::wstring> resolved_variables;
-  std::optional<siege::platform::installation_module> discovered_module;
+  std::optional<discovery_context> discovered_info;
 
   for (auto& module : installation_modules)
   {
@@ -375,6 +386,10 @@ void do_unpacking(user_interaction ui, fs::path backup_path)
 
     std::set<std::wstring> names_to_check;
 
+    bool check_name_variations = true;
+
+    int disk_count = 0;
+
     if (module.storage_properties)
     {
       for (auto* name : module.storage_properties->disc_names)
@@ -383,65 +398,160 @@ void do_unpacking(user_interaction ui, fs::path backup_path)
         {
           break;
         }
+
+        disk_count++;
+        names_to_check.emplace(name);
+      }
+
+      check_name_variations = disk_count == 0 || disk_count == 1;
+    }
+
+    if (check_name_variations)
+    {
+      for (auto name : module.name_variations)
+      {
         names_to_check.emplace(name);
       }
     }
 
-    for (auto name : module.name_variations)
-    {
-      names_to_check.emplace(name);
-    }
 
-    if (stl::any_of(names_to_check, [&](auto& item) {
+    if (!stl::any_of(names_to_check, [&](auto& item) {
           return item == stem;
         }))
     {
-      auto mappings = module.directory_mappings;
+      continue;
+    }
 
-      std::set<fs::path> verification_mappings;
-      std::multimap<fs::path, fs::path> child_verification_mappings;
+    std::vector<transformed_path_rule> transformed_rules;
+    transformed_rules.reserve(module.directory_mappings.size());
 
-      bool requires_cab_tooling = false;
+    for (auto& mapping : module.directory_mappings)
+    {
+      auto& new_rule = transformed_rules.emplace_back(mapping);
+      new_rule.resolved_source = new_rule.source;
+    }
 
-      for (auto& mapping : mappings)
+    std::vector<fs::path> backup_paths = { backup_path };
+
+    if (disk_count > 1)
+    {
+      std::set<std::wstring_view> disc_names;
+
+      for (auto* name : module.storage_properties->disc_names)
       {
-        if (mapping.enforcement == mapping.optional)
+        if (!name)
         {
-          continue;
+          break;
         }
-
-        auto full_path = std::wstring(mapping.source);
-        auto stem = fs::path(mapping.source).stem().wstring();
-
-        if (stem.starts_with(L"<") && stem.ends_with(L">"))
-        {
-          continue;
-        }
-
-        auto temp = fs::path(full_path);
-
-        if (temp.parent_path().has_extension() || stem.contains(L"*"))
-        {
-          verification_mappings.emplace(temp.parent_path());
-
-          child_verification_mappings.emplace(temp.parent_path(), temp);
-          if (!requires_cab_tooling && (temp.parent_path().extension() == ".cab" || temp.parent_path().extension() == ".CAB"))
-          {
-            requires_cab_tooling = true;
-          }
-
-          continue;
-        }
-
-        verification_mappings.emplace(temp);
+        disc_names.emplace(name);
       }
 
-      // TODO ask user to download cab tooling
+      auto parent_folder = backup_path.parent_path();
+
+      std::multimap<std::wstring, fs::path> additional_paths;
+
+      for (auto& other : std::filesystem::directory_iterator{ parent_folder })
+      {
+        if (other.path().stem().wstring() == stem)
+        {
+          continue;
+        }
+
+        if (other.is_regular_file() && disc_names.contains(other.path().stem().wstring()))
+        {
+          std::ifstream temp(other.path(), std::ios::binary);
+
+          if (!siege::resource::is_resource_readable(temp))
+          {
+            continue;
+          }
+          additional_paths.emplace(other.path().stem().wstring(), other.path());
+        }
+      }
+
+      if (additional_paths.empty())
+      {
+        continue;
+      }
+
+      for (auto& name : disc_names)
+      {
+        if (name == stem)
+        {
+          auto matching_rules = std::views::filter(transformed_rules, [&](transformed_path_rule& rule) {
+            return rule.resolved_source.starts_with(name);
+          });
+
+          for (auto& rule : matching_rules)
+          {
+            rule.resolved_source = std::regex_replace(rule.resolved_source, std::wregex(std::wstring(name)), backup_path.filename().wstring());
+          }
+          continue;
+        }
+        auto found_items = additional_paths.equal_range(std::wstring(name));
+
+        // TODO try the first file with the same extension, then try other extensions
+        auto first_alt = found_items.first;
+
+        auto matching_rules = std::views::filter(transformed_rules, [&](transformed_path_rule& rule) {
+          return rule.resolved_source.starts_with(name);
+        });
+
+        backup_paths.emplace_back(first_alt->second);
+        for (auto& rule : matching_rules)
+        {
+          rule.resolved_source = std::regex_replace(rule.resolved_source, std::wregex(std::wstring(name)), first_alt->second.filename().wstring());
+        }
+      }
+    }
+
+    std::set<fs::path> verification_mappings;
+    std::multimap<fs::path, fs::path> child_verification_mappings;
+
+    bool requires_cab_tooling = false;
+
+    for (auto& rule : transformed_rules)
+    {
+      if (rule.enforcement == rule.optional)
+      {
+        continue;
+      }
+
+      auto full_path = rule.resolved_source;
+      auto stem = fs::path(rule.resolved_source).stem().wstring();
+
+      if (stem.starts_with(L"<") && stem.ends_with(L">"))
+      {
+        continue;
+      }
+
+      auto temp = fs::path(full_path);
+
+      if (temp.parent_path().has_extension() || stem.contains(L"*"))
+      {
+        verification_mappings.emplace(temp.parent_path());
+
+        child_verification_mappings.emplace(temp.parent_path(), temp);
+        if (!requires_cab_tooling && (temp.parent_path().extension() == ".cab" || temp.parent_path().extension() == ".CAB"))
+        {
+          requires_cab_tooling = true;
+        }
+
+        continue;
+      }
+
+      verification_mappings.emplace(temp);
+    }
+
+    // TODO ask user to download cab tooling
+    std::any cab_cache{};
+
+    for (auto& backup_path : backup_paths)
+    {
+      auto game_backup = std::make_shared<std::ifstream>(backup_path, std::ios::binary);
 
       auto reader = siege::resource::make_resource_reader(*game_backup);
-
       std::any cache{};
-      std::any cab_cache{};
 
       for (auto& file : reader.get_all_files_for_query(cache, *game_backup, listing_query{ .archive_path = backup_path, .folder_path = backup_path }))
       {
@@ -453,133 +563,134 @@ void do_unpacking(user_interaction ui, fs::path backup_path)
           reader.extract_file_contents(cache, *game_backup, *new_item, temp_out_buffer);
         };
       }
+    }
 
-      // first level verification
-      if (stl::all_of(verification_mappings, [&](auto& mapping) {
-            return stl::any_of(backup_files, [&](auto& item) {
-              return mapping == item.relative_path() || mapping == item.relative_path() / item.filename;
-            });
-          }))
+
+    // first level verification
+    if (stl::all_of(verification_mappings, [&](auto& mapping) {
+          return stl::any_of(backup_files, [&](auto& item) {
+            if (mapping.wstring().starts_with(item.archive_path.filename().wstring()))
+            {
+              auto relative_path = item.archive_path.filename() / item.relative_path();
+              return mapping == relative_path || mapping == relative_path / item.filename;
+            }
+
+            return mapping == item.relative_path() || mapping == item.relative_path() / item.filename;
+          });
+        }))
+    {
+      std::list<resource_reader::file_info> exe_files;
+
+      stl::copy_if(backup_files, std::back_inserter(exe_files), [](auto& item) {
+        return item.filename.extension() == ".exe" || item.filename.extension() == ".EXE";
+      });
+
+      if (!module.associated_extensions.empty() && !exe_files.empty())
       {
-        std::list<resource_reader::file_info> exe_files;
+        // TODO exe verification
+      }
 
-        stl::copy_if(backup_files, std::back_inserter(exe_files), [](auto& item) {
-          return item.filename.extension() == ".exe" || item.filename.extension() == ".EXE";
-        });
+      auto staging_path = fs::temp_directory_path() / L"game-unpack" / fs::path(module.GetModuleFileName<wchar_t>()).stem();
 
-        if (!module.associated_extensions.empty() && !exe_files.empty())
+      fs::create_directories(staging_path);
+
+      bool is_verified = child_verification_mappings.empty();
+
+      std::list<installable_file> inner_backup_files;
+
+      if (!is_verified)
+      {
+        for (auto& backup_file : backup_files)
         {
-          // TODO exe verification
-        }
+          auto should_extract = verification_mappings.contains(backup_path) || backup_file.filename.extension() == ".cab" || backup_file.filename.extension() == ".CAB" || backup_file.filename.extension() == ".hdr" || backup_file.filename.extension() == ".HDR";
 
-        auto staging_path = fs::temp_directory_path() / L"game-unpack" / fs::path(module.GetModuleFileName<wchar_t>()).stem();
-
-        fs::create_directories(staging_path);
-
-        bool is_verified = child_verification_mappings.empty();
-
-        std::list<installable_file> inner_backup_files;
-
-        if (!is_verified)
-        {
-          for (auto& backup_file : backup_files)
+          if (!should_extract)
           {
-            auto backup_path = backup_file.relative_path() / backup_file.filename;
-
-            auto should_extract = verification_mappings.contains(backup_path) || 
-                backup_file.filename.extension() == ".cab" || backup_file.filename.extension() == ".CAB" ||
-                backup_file.filename.extension() == ".hdr" || backup_file.filename.extension() == ".HDR";
-
-            if (!should_extract)
-            {
-              continue;
-            }
-
-            fs::create_directories(staging_path / backup_file.relative_path());
-            auto final_path = staging_path / backup_path;
-            std::ofstream temp_out_buffer(final_path, std::ios::binary | std::ios::trunc);
-            reader.extract_file_contents(cache, *game_backup, backup_file, temp_out_buffer);
+            continue;
           }
 
-          for (auto& backup_file : backup_files)
+          backup_file.install_to(staging_path, backup_file.relative_path().c_str());
+        }
+
+        for (auto& backup_file : backup_files)
+        {
+          auto backup_path = backup_file.relative_path() / backup_file.filename;
+          auto backup_path_with_archive = backup_file.archive_path.filename() / backup_file.relative_path() / backup_file.filename;
+
+          if (!(verification_mappings.contains(backup_path) || verification_mappings.contains(backup_path_with_archive)))
           {
-            auto backup_path = backup_file.relative_path() / backup_file.filename;
+            continue;
+          }
 
-            if (!verification_mappings.contains(backup_path))
+          auto final_path = staging_path / backup_path;
+
+          auto inner_backup = std::make_shared<std::ifstream>(final_path, std::ios::binary);
+
+          if (!siege::resource::is_resource_readable(*inner_backup))
+          {
+            continue;
+          }
+
+          auto inner_reader = siege::resource::make_resource_reader(*inner_backup);
+          std::any inner_cache{};
+
+          auto inner_files = inner_reader.get_all_files_for_query(inner_cache, *inner_backup, listing_query{ .archive_path = final_path, .folder_path = final_path });
+
+          auto [first, end] = child_verification_mappings.equal_range(backup_path);
+
+          auto all_valid = std::all_of(first, end, [&](auto& verification_name) { return stl::any_of(inner_files, [&](file_info& child) {
+                                                                                    if (std::wstring_view(verification_name.second.c_str()).contains(L"*"))
+                                                                                    {
+                                                                                      return verification_name.first == fs::relative(child.folder_path, staging_path);
+                                                                                    }
+                                                                                    return verification_name.second == (fs::relative(child.folder_path, staging_path) / child.filename);
+                                                                                  }); });
+
+          is_verified = is_verified || all_valid;
+
+          if (is_verified)
+          {
+            for (auto& file : inner_files)
             {
-              continue;
-            }
-
-            auto final_path = staging_path / backup_path;
-
-            auto inner_backup = std::make_shared<std::ifstream>(final_path, std::ios::binary);
-            
-            if (!siege::resource::is_resource_readable(*inner_backup))
-            {
-              continue;
-            }
-
-            auto inner_reader = siege::resource::make_resource_reader(*inner_backup);
-            std::any inner_cache{};
-
-            auto inner_files = inner_reader.get_all_files_for_query(inner_cache, *inner_backup, listing_query{ .archive_path = final_path, .folder_path = final_path });
-
-            auto [first, end] = child_verification_mappings.equal_range(backup_path);
-
-            auto all_valid = std::all_of(first, end, [&](auto& verification_name) { return stl::any_of(inner_files, [&](file_info& child) {
-                                                                                      if (std::wstring_view(verification_name.second.c_str()).contains(L"*"))
-                                                                                      {
-                                                                                        return verification_name.first == fs::relative(child.folder_path, staging_path);
-                                                                                      }
-                                                                                      return verification_name.second == (fs::relative(child.folder_path, staging_path) / child.filename);
-                                                                                    }); });
-
-            is_verified = is_verified || all_valid;
-
-            if (is_verified)
-            {
-              for (auto& file : inner_files)
-              {
-                auto& new_item = inner_backup_files.emplace_back(file);
-                new_item.install_to = [new_item = &new_item, inner_reader, inner_cache, inner_backup](auto install_path, auto install_segment) mutable {
-                  fs::create_directories(install_path / install_segment / new_item->relative_path());
-                  auto final_path = install_path / install_segment / new_item->relative_path() / new_item->filename;
-                  std::ofstream temp_out_buffer(final_path, std::ios::binary | std::ios::trunc);
-                  inner_reader.extract_file_contents(inner_cache, *inner_backup, *new_item, temp_out_buffer);
-                };
-              }
+              auto& new_item = inner_backup_files.emplace_back(file);
+              new_item.install_to = [new_item = &new_item, inner_reader, inner_cache, inner_backup](auto install_path, auto install_segment) mutable {
+                fs::create_directories(install_path / install_segment / new_item->relative_path());
+                auto final_path = install_path / install_segment / new_item->relative_path() / new_item->filename;
+                std::ofstream temp_out_buffer(final_path, std::ios::binary | std::ios::trunc);
+                inner_reader.extract_file_contents(inner_cache, *inner_backup, *new_item, temp_out_buffer);
+              };
             }
           }
         }
+      }
 
-        backup_files.splice(backup_files.end(), std::move(inner_backup_files));
+      backup_files.splice(backup_files.end(), std::move(inner_backup_files));
 
-        if (!backup_files.empty())
-        {
-          discovered_module.emplace(std::move(module));
-          break;
-        }
+      if (!backup_files.empty())
+      {
+        discovered_info.emplace(std::move(module), std::move(transformed_rules));
+        break;
       }
     }
   }
 
-  if (!discovered_module)
+  if (!discovered_info)
   {
     // TODO ask user if they want to do a generic extract
     return;
   }
 
   // TODO ask user for install path
-  auto install_path = std::wstring(discovered_module->storage_properties->default_install_path.data());
+  auto install_path = std::wstring(discovered_info->module.storage_properties->default_install_path.data());
   install_path = std::regex_replace(install_path, std::wregex(L"<systemDrive>"), resolved_variables.at(L"systemDrive"));
 
   fs::create_directories(install_path);
 
-  auto mappings = discovered_module->directory_mappings;
+  //  auto mappings = discovered_module->directory_mappings;
 
-  for (auto& mapping : mappings)
+  for (auto& mapping : discovered_info->transformed_rules)
   {
-    std::wstring source(mapping.source);
+    std::wstring source(mapping.resolved_source);
 
     if (source.contains(L"<") && source.contains(L">"))
     {
@@ -609,7 +720,13 @@ void do_unpacking(user_interaction ui, fs::path backup_path)
         auto full_path = item.folder_path.make_preferred() / item.filename.make_preferred();
 
         auto full_path_str = std::wstring_view(full_path.c_str());
+
         auto source_str = std::wstring_view(source.c_str());
+
+        if (source.begin()->has_extension() && !full_path_str.starts_with(source.begin()->filename().wstring()))
+        {
+          source_str = source_str.substr(source.begin()->filename().wstring().size());
+        }
 
         if (source_str.contains(L"*"))
         {
