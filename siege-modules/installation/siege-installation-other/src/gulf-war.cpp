@@ -6,8 +6,7 @@ using game_storage_properties = platform::game_storage_properties;
 using path_rule = platform::path_rule;
 
 extern "C" {
-extern std::array<const fs_char*, 3> name_variations = {
-  FSL"Gulf War",
+extern std::array<const fs_char*, 2> name_variations = {
   FSL"Gulf War"
 };
 
@@ -22,7 +21,7 @@ extern std::array<const fs_char*, 2> associated_extensions = {
 };
 
 extern std::array<path_rule, 32> directory_mappings = { { 
-  { FSL"install/data1.cab/*", FSL"." },
-  { FSL"_setup/ramlockC.VXD", FSL "." },
-  { FSL"_setup/SMACKW32.DLL", FSL "." } } };
+  { FSL"_setup/data1.cab/*", FSL"." },
+  { FSL"_setup/DLLs/ramlockC.VXD", FSL "." },
+  { FSL"_setup/DLLs/SMACKW32.DLL", FSL "." } } };
 }
