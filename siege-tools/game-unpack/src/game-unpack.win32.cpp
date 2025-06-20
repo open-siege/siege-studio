@@ -787,10 +787,27 @@ unpacking_status do_unpacking(user_interaction ui, fs::path backup_path)
   if (discovered_info->module.storage_properties && discovered_info->module.storage_properties->default_install_path[0] != '\0')
   {
     auto install_path = std::wstring(discovered_info->module.storage_properties->default_install_path.data());
-    // TODO get a list of all non-readonly drives and generate a bigger list.
-    install_path = std::regex_replace(install_path, std::wregex(L"<systemDrive>"), resolved_variables.at(L"systemDrive"));
 
-    install_path_hints.emplace_back(std::move(install_path));
+    install_path_hints.emplace_back(std::regex_replace(install_path, std::wregex(L"<systemDrive>"), resolved_variables.at(L"systemDrive")));
+
+    for (auto i = 'A'; i <= 'Z'; ++i)
+    {
+      if (resolved_variables.at(L"systemDrive").at(0) == (wchar_t)i)
+      {
+        continue;
+      }
+
+      std::wstring drive;
+      drive.append(1, (wchar_t)i);
+      drive.append(1, L':');
+      drive.append(1, L'\\');
+
+      if (auto type = ::GetDriveTypeW(drive.c_str()); type == DRIVE_REMOVABLE || type == DRIVE_FIXED)
+      {
+        drive.pop_back();
+        install_path_hints.emplace_back(std::regex_replace(install_path, std::wregex(L"<systemDrive>"), drive));
+      }
+    }
   }
 
   auto install_path = ui.ask_for_install_path(install_path_hints);
