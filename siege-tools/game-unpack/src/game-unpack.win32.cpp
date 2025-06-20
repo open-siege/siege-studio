@@ -15,6 +15,7 @@
 #include <set>
 #include <fstream>
 #include <regex>
+#include <future>
 #include <filesystem>
 #include <ranges>
 
@@ -49,7 +50,7 @@ bool is_standalone_console()
   return GetConsoleProcessList(ids.data(), (DWORD)ids.size()) == 1;
 }
 
-void exec_on_thread(HANDLE thread_handle, std::move_only_function<void()> callback)
+void exec_on_thread(DWORD thread_id, std::move_only_function<void()> callback)
 {
   struct handler
   {
@@ -61,7 +62,15 @@ void exec_on_thread(HANDLE thread_handle, std::move_only_function<void()> callba
     }
   };
 
-  auto result = ::QueueUserAPC(handler::user_apc, thread_handle, (ULONG_PTR) new std::move_only_function<void()>{ std::move(callback) });
+  auto handle = ::OpenThread(THREAD_SET_CONTEXT, FALSE, thread_id);
+
+  assert(handle != nullptr);
+  if (!handle)
+  {
+    return;
+  }
+
+  auto result = ::QueueUserAPC(handler::user_apc, handle, (ULONG_PTR) new std::move_only_function<void()>{ std::move(callback) });
   assert(result != 0);
 }
 
@@ -71,11 +80,19 @@ struct user_interaction
 {
   // TODO implement these correctly
   std::function<installation_variable(std::span<installation_variable>)> ask_for_variable;
+  std::function<std::optional<fs::path>(std::vector<fs::path>)> ask_for_install_path;
+
   std::function<bool()> ask_to_download_cab_tooling;
   std::function<bool()> ask_to_do_generic_extract;
 };
 
-void do_unpacking(user_interaction ui, fs::path backup_path);
+enum struct unpacking_status
+{
+    failed,
+    suceeded
+};
+
+unpacking_status do_unpacking(user_interaction ui, fs::path backup_path);
 
 int main(int argc, const char* argv[])
 {
@@ -90,6 +107,13 @@ int main(int argc, const char* argv[])
     }
     win32::init_common_controls_ex({ .dwSize{ sizeof(INITCOMMONCONTROLSEX) }, .dwICC = ICC_STANDARD_CLASSES | ICC_BAR_CLASSES });
 
+
+    struct page
+    {
+      std::wstring main_instruction = L"";
+      std::vector<TASKDIALOG_BUTTON> buttons;
+      std::move_only_function<HRESULT(int)> on_button_clicked;
+    };
 
     class installation_state
     {
@@ -109,35 +133,17 @@ int main(int argc, const char* argv[])
       TASKDIALOG_COMMON_BUTTON_FLAGS get_common_buttons() const
       {
         TASKDIALOG_COMMON_BUTTON_FLAGS result = TDCBF_YES_BUTTON;
-
-        if (!current_page)
-        {
-          result |= TDCBF_CANCEL_BUTTON;
-        }
-
         return result;
       }
 
       std::span<const TASKDIALOG_BUTTON> get_buttons() const
       {
-        if (!current_page)
-        {
-          return {};
-        }
-
-        return current_page->buttons;
+        return current_page.buttons;
       }
 
-      void navigate_page(HWND window, std::optional<int> page = std::nullopt)
+      void navigate_page(HWND window, page new_page)
       {
-        if (page)
-        {
-          current_page = &pages[*page];
-        }
-        else
-        {
-          current_page++;
-        }
+        current_page = std::move(new_page);
 
         refresh_page(window);
       };
@@ -149,6 +155,7 @@ int main(int argc, const char* argv[])
           .dwFlags = get_flags(),
           .dwCommonButtons = get_common_buttons(),
           .pszWindowTitle = title.c_str(),
+          .pszMainInstruction = current_page.main_instruction.c_str(),
           .cButtons = (UINT)get_buttons().size(),
           .pButtons = get_buttons().data()
         };
@@ -191,7 +198,7 @@ int main(int argc, const char* argv[])
 
       void disable_page()
       {
-        for (auto& button : current_page->buttons)
+        for (auto& button : current_page.buttons)
         {
           disabled_buttons.emplace(button.nButtonID);
         }
@@ -206,7 +213,7 @@ int main(int argc, const char* argv[])
       {
         std::vector<int> results;
 
-        for (auto& button : current_page->buttons)
+        for (auto& button : current_page.buttons)
         {
           if (!disabled_buttons.contains(button.nButtonID))
           {
@@ -222,7 +229,7 @@ int main(int argc, const char* argv[])
         std::vector<int> results;
         results.reserve(disabled_buttons.size());
 
-        for (auto& button : current_page->buttons)
+        for (auto& button : current_page.buttons)
         {
           if (disabled_buttons.contains(button.nButtonID))
           {
@@ -233,26 +240,30 @@ int main(int argc, const char* argv[])
         return results;
       }
 
+      bool has_on_clicked_callback() const
+      {
+        return current_page.on_button_clicked != nullptr;
+      }
+
+      HRESULT do_on_button_clicked(int id)
+      {
+        if (current_page.on_button_clicked)
+        {
+          return current_page.on_button_clicked(id);
+        }
+
+        return S_FALSE;
+      }
+
       std::wstring title = L"Siege Game Unpacker";
 
     private:
       bool search_in_progress = false;
       std::set<int> disabled_buttons;
-
-      struct page
-      {
-        std::wstring content = L"";
-        std::vector<TASKDIALOG_BUTTON> buttons;
-      } default_page;
-
-      std::vector<page> pages = {
-        { .content = L"To install a game from a back, select an option below: ",
-          .buttons = {
-            TASKDIALOG_BUTTON{ .nButtonID = 10, .pszButtonText = L"Install Game From File" },
-            TASKDIALOG_BUTTON{ .nButtonID = 11, .pszButtonText = L"Detect Game From Storage" } } }
-      };
-
-      page* current_page = &pages.front();
+      page current_page = { .main_instruction = L"To install a game from a back-up, select an option below: ",
+        .buttons = {
+          TASKDIALOG_BUTTON{ .nButtonID = 10, .pszButtonText = L"Install Game From File" },
+          TASKDIALOG_BUTTON{ .nButtonID = 11, .pszButtonText = L"Detect Game From Storage" } } };
 
       TASKDIALOG_FLAGS last_flags;
     } state;
@@ -268,6 +279,11 @@ int main(int argc, const char* argv[])
 
                                               },
       [&](auto window, auto message, auto wparam, auto lparam) -> LRESULT {
+        if (message == TDN_BUTTON_CLICKED && state.has_on_clicked_callback())
+        {
+          return state.do_on_button_clicked((int)wparam);
+        }
+
         if (message == TDN_BUTTON_CLICKED && wparam == 10)
         {
           auto dialog = win32::com::CreateFileOpenDialog();
@@ -292,16 +308,76 @@ int main(int argc, const char* argv[])
                 state.disable_page();
                 state.refresh_page(window);
 
-                auto ui_handle = ::GetCurrentThread();
-                win32::queue_user_work_item([ui_handle, window, backup_path = *path, &state] {
-                  user_interaction ui{};
-                  do_unpacking(ui, backup_path);
-                  ::Sleep(10000);
-                  exec_on_thread(ui_handle, [window, &state]() {
-                    state.enable_page();
-                    state.end_progress();
-                    // state.navigate_page(window);
-                  });
+                auto ui_thread_id = ::GetCurrentThreadId();
+                win32::queue_user_work_item([ui_thread_id, window, backup_path = *path, &state] {
+                  user_interaction ui{
+                    .ask_for_install_path = [ui_thread_id, window, &state](auto hints) {
+                      std::promise<std::optional<fs::path>> result{};
+                      exec_on_thread(ui_thread_id, [window, &state, hints, &result]() {
+                        state.enable_page();
+                        state.end_progress();
+
+                        page new_page = {
+                          .main_instruction = L"Select your preferred install path below: ",
+                          .on_button_clicked = [hints, window, &state, &result](int button_id) -> HRESULT {
+                            if (button_id == 20)
+                            {
+                              // TODO show a folder dialog to get the file info
+                            }
+
+                            if (button_id > 20)
+                            {
+                              try
+                              {
+                                result.set_value(hints.at(button_id - 20 - 1));
+                                state.navigate_page(window, page{ .main_instruction = L"Installing game files to path"
+                                                            });
+                                state.start_progress();
+                                state.disable_page();
+                              }
+                              catch (...)
+                              {
+                                result.set_value(std::nullopt);
+                              }
+                            }
+
+                            return S_FALSE;
+                          }
+                        };
+
+                        int index = 21;
+                        for (auto& hint : hints)
+                        {
+                          new_page.buttons.emplace_back(TASKDIALOG_BUTTON{ .nButtonID = index++, .pszButtonText = hint.c_str() });
+                        }
+
+                        new_page.buttons.emplace_back(TASKDIALOG_BUTTON{ .nButtonID = 20, .pszButtonText = L"Select a custom directory..." });
+
+                        state.navigate_page(window, std::move(new_page));
+                      });
+
+                      //                      ::SleepEx(INFINITE, TRUE);
+                      return result.get_future().get();
+                    }
+                  };
+                  auto result = do_unpacking(ui, backup_path);
+                  if (result == unpacking_status::suceeded)
+                  {
+                    exec_on_thread(ui_thread_id, [window, &state]() {
+                      state.enable_page();
+                      state.end_progress();
+                      state.navigate_page(window, page{ .main_instruction = L"Installed game succesfully" });
+                    });
+                  }
+                  else
+                  {
+                    exec_on_thread(ui_thread_id, [window, &state]() {
+                      state.enable_page();
+                      state.end_progress();
+                      state.navigate_page(window, page{ .main_instruction = L"Could not install game." });
+                    });
+                  }
+
                 });
 
                 // state.navigate_page(window);
@@ -313,7 +389,7 @@ int main(int argc, const char* argv[])
 
         if (message == TDN_TIMER)
         {
-          //          ::SleepEx(0, TRUE);
+          ::SleepEx(0, TRUE);
           if (state.should_refresh())
           {
             state.refresh_page(window);
@@ -342,7 +418,7 @@ int main(int argc, const char* argv[])
   return 0;
 }
 
-void do_unpacking(user_interaction ui, fs::path backup_path)
+unpacking_status do_unpacking(user_interaction ui, fs::path backup_path)
 {
   using file_info = siege::platform::file_info;
   using listing_query = siege::platform::listing_query;
@@ -353,7 +429,7 @@ void do_unpacking(user_interaction ui, fs::path backup_path)
   // TODO also check for folders instead
   if (!siege::resource::is_resource_readable(temp))
   {
-    return;
+    return unpacking_status::failed;
   }
 
   auto installation_modules = siege::platform::installation_module::load_modules(fs::current_path());
@@ -364,12 +440,15 @@ void do_unpacking(user_interaction ui, fs::path backup_path)
   std::map<std::wstring, std::wstring> resolved_variables;
   std::optional<discovery_context> discovered_info;
 
+  std::array<wchar_t, 32> system_drive{ L"C:" };
+  ::GetEnvironmentVariableW(L"SYSTEMDRIVE", system_drive.data(), (DWORD)system_drive.size());
+
   for (auto& module : installation_modules)
   {
     backup_files.clear();
-    // TODO resolve from environment
+
     resolved_variables = std::map<std::wstring, std::wstring>{
-      { L"systemDrive", L"C:" }
+      { L"systemDrive", system_drive.data() }
     };
 
     for (auto& variable : module.installation_variables)
@@ -677,16 +756,28 @@ void do_unpacking(user_interaction ui, fs::path backup_path)
   if (!discovered_info)
   {
     // TODO ask user if they want to do a generic extract
-    return;
+    return unpacking_status::failed;
   }
 
-  // TODO ask user for install path
-  auto install_path = std::wstring(discovered_info->module.storage_properties->default_install_path.data());
-  install_path = std::regex_replace(install_path, std::wregex(L"<systemDrive>"), resolved_variables.at(L"systemDrive"));
+  std::vector<fs::path> install_path_hints{};
 
-  fs::create_directories(install_path);
+  if (discovered_info->module.storage_properties && discovered_info->module.storage_properties->default_install_path[0] != '\0')
+  {
+    auto install_path = std::wstring(discovered_info->module.storage_properties->default_install_path.data());
+    // TODO get a list of all non-readonly drives and generate a bigger list.
+    install_path = std::regex_replace(install_path, std::wregex(L"<systemDrive>"), resolved_variables.at(L"systemDrive"));
 
-  //  auto mappings = discovered_module->directory_mappings;
+    install_path_hints.emplace_back(std::move(install_path));
+  }
+
+  auto install_path = ui.ask_for_install_path(install_path_hints);
+
+  if (!install_path)
+  {
+    return unpacking_status::failed;
+  }
+
+  fs::create_directories(*install_path);
 
   for (auto& mapping : discovered_info->transformed_rules)
   {
@@ -746,7 +837,8 @@ void do_unpacking(user_interaction ui, fs::path backup_path)
 
     for (auto& item : files_to_copy)
     {
-      item.install_to(fs::path(install_path), mapping.destination);
+      item.install_to(*install_path, mapping.destination);
     }
   }
+  return unpacking_status::suceeded;
 }
