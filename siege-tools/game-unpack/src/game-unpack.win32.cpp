@@ -75,21 +75,22 @@ void exec_on_thread(DWORD thread_id, std::move_only_function<void()> callback)
 }
 
 using installation_variable = siege::platform::installation_variable;
+using installation_option = siege::platform::installation_option;
 
 struct user_interaction
 {
-  // TODO implement these correctly
-  std::function<installation_variable(std::span<installation_variable>)> ask_for_variable;
+  std::function<installation_option(installation_variable, std::span<installation_option>)> ask_for_variable;
   std::function<std::optional<fs::path>(std::vector<fs::path>)> ask_for_install_path;
 
+  // TODO implement these correctly
   std::function<bool()> ask_to_download_cab_tooling;
   std::function<bool()> ask_to_do_generic_extract;
 };
 
 enum struct unpacking_status
 {
-    failed,
-    suceeded
+  failed,
+  suceeded
 };
 
 unpacking_status do_unpacking(user_interaction ui, fs::path backup_path);
@@ -311,6 +312,44 @@ int main(int argc, const char* argv[])
                 auto ui_thread_id = ::GetCurrentThreadId();
                 win32::queue_user_work_item([ui_thread_id, window, backup_path = *path, &state] {
                   user_interaction ui{
+                    .ask_for_variable = [ui_thread_id, window, &state](auto variable, auto options) {
+                          std::promise<installation_option> result{};
+                          exec_on_thread(ui_thread_id, [window, &state, variable, options, &result]() {
+                            state.enable_page();
+                            state.end_progress();
+
+                            page new_page = {
+                              .main_instruction = L"Select an option for " + std::wstring(variable.label) + L":",
+                              .on_button_clicked = [options, window, &state, &result](int button_id) -> HRESULT {
+                                if (button_id > 30)
+                                {
+                                  try
+                                  {
+                                    result.set_value(options[button_id - 30 - 1]);
+                                    state.navigate_page(window, page{ .main_instruction = L"Continuing with installation" });
+                                    state.start_progress();
+                                    state.disable_page();
+                                  }
+                                  catch (...)
+                                  {
+                                    result.set_value(options[0]);
+                                  }
+                                }
+
+                                return S_FALSE;
+                              }
+                            };
+
+                            int index = 31;
+                            for (auto& option : options)
+                            {
+                              new_page.buttons.emplace_back(TASKDIALOG_BUTTON{ .nButtonID = index++, .pszButtonText = option.label });
+                            }
+
+                            state.navigate_page(window, std::move(new_page));
+                          });
+
+                          return result.get_future().get(); },
                     .ask_for_install_path = [ui_thread_id, window, &state](auto hints) {
                       std::promise<std::optional<fs::path>> result{};
                       exec_on_thread(ui_thread_id, [window, &state, hints, &result]() {
@@ -330,8 +369,7 @@ int main(int argc, const char* argv[])
                               try
                               {
                                 result.set_value(hints.at(button_id - 20 - 1));
-                                state.navigate_page(window, page{ .main_instruction = L"Installing game files to path"
-                                                            });
+                                state.navigate_page(window, page{ .main_instruction = L"Installing game files to path" });
                                 state.start_progress();
                                 state.disable_page();
                               }
@@ -356,9 +394,7 @@ int main(int argc, const char* argv[])
                         state.navigate_page(window, std::move(new_page));
                       });
 
-                      //                      ::SleepEx(INFINITE, TRUE);
-                      return result.get_future().get();
-                    }
+                      return result.get_future().get(); }
                   };
                   auto result = do_unpacking(ui, backup_path);
                   if (result == unpacking_status::suceeded)
@@ -377,7 +413,6 @@ int main(int argc, const char* argv[])
                       state.navigate_page(window, page{ .main_instruction = L"Could not install game." });
                     });
                   }
-
                 });
 
                 // state.navigate_page(window);
@@ -450,18 +485,6 @@ unpacking_status do_unpacking(user_interaction ui, fs::path backup_path)
     resolved_variables = std::map<std::wstring, std::wstring>{
       { L"systemDrive", system_drive.data() }
     };
-
-    for (auto& variable : module.installation_variables)
-    {
-      // TODO ask the user to select the option
-      // Though the first option should be the most likely by default.
-      auto options = module.get_options_for_variable(variable.name);
-
-      if (!options.empty())
-      {
-        resolved_variables.emplace(variable.name, options[0].name);
-      }
-    }
 
     std::set<std::wstring> names_to_check;
 
@@ -778,6 +801,20 @@ unpacking_status do_unpacking(user_interaction ui, fs::path backup_path)
   }
 
   fs::create_directories(*install_path);
+
+  for (auto& variable : discovered_info->module.installation_variables)
+  {
+    // TODO ask the user to select the option
+    // Though the first option should be the most likely by default.
+    auto options = discovered_info->module.get_options_for_variable(variable.name);
+
+    if (!options.empty())
+    {
+      auto selected_option = ui.ask_for_variable(variable, options);
+      resolved_variables.emplace(variable.name, selected_option.name);
+    }
+  }
+
 
   for (auto& mapping : discovered_info->transformed_rules)
   {
