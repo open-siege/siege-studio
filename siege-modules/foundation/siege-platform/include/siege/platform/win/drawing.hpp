@@ -78,6 +78,55 @@ namespace win32
     }
   };
 
+  inline BOOL set_process_dpi_awareness(DPI_AWARENESS_CONTEXT context)
+  {
+    HMODULE user32 = nullptr;
+    ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, L"user32.dll", &user32);
+    auto set_process_context = (std::add_pointer_t<decltype(SetProcessDpiAwarenessContext)>)::GetProcAddress(user32, "SetProcessDpiAwarenessContext");
+
+    if (set_process_context)
+    {
+      return set_process_context(context);
+    }
+
+    auto set_dpi_awareness = (std::add_pointer_t<decltype(SetProcessDpiAwareness)>)::GetProcAddress(user32, "SetProcessDpiAwareness");
+
+    if (set_dpi_awareness)
+    {
+      PROCESS_DPI_AWARENESS awareness = PROCESS_DPI_UNAWARE;
+
+      if (context == DPI_AWARENESS_CONTEXT_SYSTEM_AWARE)
+      {
+        awareness = PROCESS_SYSTEM_DPI_AWARE;
+      }
+      else if (context == DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 || context == DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE)
+      {
+        awareness = PROCESS_PER_MONITOR_DPI_AWARE;
+      }
+      auto hresult = set_dpi_awareness(awareness);
+
+      if (hresult == E_INVALIDARG)
+      {
+        ::SetLastError(ERROR_INVALID_PARAMETER);
+      }
+      else if (hresult == E_ACCESSDENIED)
+      {
+        ::SetLastError(ERROR_ACCESS_DENIED);
+      }
+
+      return hresult == S_OK ? TRUE : FALSE;
+    }
+
+    auto set_process_dpi = (std::add_pointer_t<decltype(SetProcessDPIAware)>)::GetProcAddress(user32, "SetProcessDPIAware");
+
+    if (set_process_dpi)
+    {
+      return set_process_dpi();
+    }
+
+    return FALSE;
+  }
+
   // TODO query text scale factor
   // HKEY_CURRENT_USER\Software\Microsoft\Accessibility\TextScaleFactor
 

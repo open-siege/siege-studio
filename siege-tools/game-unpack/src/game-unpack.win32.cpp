@@ -97,6 +97,7 @@ unpacking_status do_unpacking(user_interaction ui, fs::path backup_path);
 
 int main(int argc, const char* argv[])
 {
+  win32::set_process_dpi_awareness(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
   auto args = std::span(argv, argc) | std::views::transform([](char const* v) { return std::string_view(v); });
 
   if (args.size() == 1)
