@@ -14,6 +14,7 @@
 #include <map>
 #include <set>
 #include <fstream>
+#include <iostream>
 #include <regex>
 #include <future>
 #include <filesystem>
@@ -100,15 +101,34 @@ int main(int argc, const char* argv[])
   win32::set_process_dpi_awareness(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
   auto args = std::span(argv, argc) | std::views::transform([](char const* v) { return std::string_view(v); });
 
-  if (args.size() == 1)
+  auto app_arg = fs::path(win32::module_ref().GetModuleFileName<wchar_t>());
+  std::optional<fs::path> file_arg;
+
+  if (!args.empty())
+  {
+    auto temp = fs::path(args[0]);
+
+    auto next_arg = 0;
+
+    if (temp.has_extension() && (temp.extension() == ".exe" || temp.extension() == ".EXE"))
+    {
+      app_arg = temp;
+      next_arg = 1;
+    }
+
+    // in the very rare case you launch a process with the first argument not being the exe path
+    // next_arg will be 0
+    if (next_arg + 1 <= argc && fs::is_regular_file(args[next_arg]))
+    {
+      file_arg = args[next_arg];
+    }
+  }
+
+  if (args.size() <= 2 && is_standalone_console())
   {
     win32::com::init_com();
-    if (is_standalone_console())
-    {
-      ::ShowWindow(::GetConsoleWindow(), SWP_HIDEWINDOW);
-    }
     win32::init_common_controls_ex({ .dwSize{ sizeof(INITCOMMONCONTROLSEX) }, .dwICC = ICC_STANDARD_CLASSES | ICC_BAR_CLASSES });
-
+    ::FreeConsole();
 
     struct page
     {
@@ -449,7 +469,41 @@ int main(int argc, const char* argv[])
         return S_FALSE;
       });
   }
+  else if (file_arg)
+  {
+    user_interaction console_ui{
+      .ask_for_variable = [](auto variable, auto options) { 
+        std::wcout << L"Setting " << variable.label << L" to " << options[0].label << std::endl;
+            
+        return options[0]; 
+      },
+      .ask_for_install_path = [](auto hints) -> std::optional<fs::path> {
+        if (!hints.empty())
+        {
+          std::cout << "Installing to " << hints[0] << std::endl;
+          return hints[0];
+        }
+        return std::nullopt;
+      },
 
+    };
+
+    std::cout << "Detecting game for " << *file_arg << std::endl;
+    auto status = do_unpacking(console_ui, *file_arg);
+
+    if (status == unpacking_status::suceeded)
+    {
+      std::cout << "Unpacked game successfully" << std::endl;
+    }
+    else
+    {
+      std::cout << "Could not unpack game" << std::endl;
+    }
+  }
+  else if (!is_standalone_console())
+  {
+    std::cout << "Please specify at least one argument for the file or folder which contains a game backup." << std::endl;
+  }
 
   return 0;
 }
