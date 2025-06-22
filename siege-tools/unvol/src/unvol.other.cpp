@@ -3,19 +3,23 @@
 #include <span>
 #include <optional>
 #include <string_view>
+#include <ranges>
 
 namespace fs = std::filesystem;
+namespace stl = std::ranges;
 
 struct command_line_args
 {
   fs::path app_path;
   std::optional<fs::path> vol_path;
+  std::optional<fs::path> output_path;
 };
 
 command_line_args parse_command_line(std::span<std::string_view> args)
 {
   fs::path app_path;
   std::optional<fs::path> vol_path;
+  std::optional<fs::path> output_path;
 
   if (!args.empty())
   {
@@ -25,7 +29,29 @@ command_line_args parse_command_line(std::span<std::string_view> args)
     {
       vol_path = args[1];
     }
+
+    auto output = stl::find_if(args, [](auto& arg) {
+      return arg.starts_with("--output") || arg.starts_with("-o");
+    });
+
+    if (output != args.end())
+    {
+      if (output->contains("="))
+      {
+        output_path = output->substr(output->find("=") + 1);
+      }
+      else
+      {
+        auto next = output;
+        std::advance(next, 1);
+
+        if (next != args.end())
+        {
+          output_path = *next;
+        }
+      }
+    }
   }
 
-  return { app_path, vol_path };
+  return { app_path, vol_path, output_path };
 }
