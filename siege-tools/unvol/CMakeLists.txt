@@ -3,7 +3,13 @@ cmake_minimum_required(VERSION 3.30)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-add_executable(unvol src/unvol.cpp)
+if (WIN32)
+    add_executable(unvol src/unvol.cpp src/unvol.win32.cpp)
+else()
+    add_executable(unvol src/unvol.cpp src/unvol.other.cpp)
+endif()
+
+
 set_property(TARGET unvol PROPERTY CXX_STANDARD 23)
 target_link_libraries(unvol siege-resource)
 

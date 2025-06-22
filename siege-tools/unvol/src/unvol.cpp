@@ -5,77 +5,57 @@
 #include <functional>
 #include <utility>
 #include <iostream>
-#include <siege/resource/darkstar_resource.hpp>
-#include <siege/resource/three_space_resource.hpp>
-#include <siege/resource/trophy_bass_resource.hpp>
+#include <span>
+#include <siege/resource/resource_maker.hpp>
 
-auto replace_extension(std::string output_folder)
+namespace fs = std::filesystem;
+
+auto replace_extension(fs::path output_folder)
 {
-  if (auto index = output_folder.find(".vol"); index != std::string::npos)
+  if (output_folder.has_extension())
   {
-    output_folder.replace(index, 4, "");
-  }
-
-  if (auto index = output_folder.find(".VOL"); index != std::string::npos)
-  {
-    output_folder.replace(index, 4, "");
+    output_folder.replace_extension("");
   }
 
   return output_folder;
 }
 
-namespace dio
+
+struct command_line_args
 {
-  namespace vol = siege::resource::vol;
-}
+  fs::path app_path;
+  std::optional<fs::path> vol_path;
+};
 
+command_line_args parse_command_line(std::span<std::string_view> args);
 
-template <typename ArchiveType>
-siege::platform::resource_reader create_archive()
+int main(int argc, const char** argv)
 {
-  return ArchiveType();
-}
+  std::vector<std::string_view> raw_args(argv, argv + argc);
+  command_line_args args = parse_command_line(raw_args);
 
-using CheckerType = decltype(&dio::vol::darkstar::vol_resource_reader::stream_is_supported);
-using CreatorType = decltype(&create_archive<dio::vol::darkstar::vol_resource_reader>);
-
-constexpr static auto vol_checkers = std::array<std::pair<CheckerType, CreatorType>, 7> {{
-    { dio::vol::darkstar::vol_resource_reader::stream_is_supported, create_archive<dio::vol::darkstar::vol_resource_reader> },
-    { dio::vol::three_space::vol_resource_reader::stream_is_supported, create_archive<dio::vol::three_space::vol_resource_reader> },
-    { dio::vol::three_space::rmf_resource_reader::stream_is_supported, create_archive<dio::vol::three_space::rmf_resource_reader> },
-    { dio::vol::three_space::dyn_resource_reader::stream_is_supported, create_archive<dio::vol::three_space::dyn_resource_reader> },
-    { dio::vol::trophy_bass::rbx_resource_reader::stream_is_supported, create_archive<dio::vol::trophy_bass::rbx_resource_reader> },
-    { dio::vol::trophy_bass::tbv_resource_reader::stream_is_supported, create_archive<dio::vol::trophy_bass::tbv_resource_reader> }
-}};
-
-int main(int, const char** argv)
-{
-  std::string volume_file(argv[1]);
-  auto volume_stream = std::ifstream{ volume_file, std::ios::binary };
-
-  std::optional<siege::platform::resource_reader> archive;
-
-  for (const auto [checker, creator] : vol_checkers)
+  if (!args.vol_path)
   {
-    if (checker(volume_stream))
-    {
-      archive.emplace(creator());
-      break;
-    }
-  }
-
-  if (!archive)
-  {
-    std::cerr << "Could not extract " << volume_file << '\n';
+    std::cerr << "No file specified. Please specify a file to extract as the first argument." << '\n';
     return EXIT_FAILURE;
   }
 
+  auto volume_stream = std::ifstream{ *args.vol_path, std::ios::binary };
+
+  if (!siege::resource::is_resource_readable(volume_stream))
+  {
+    std::cerr << "Could not extract " << *args.vol_path << '\n';
+    return EXIT_FAILURE;
+  }
+
+  siege::platform::resource_reader reader = siege::resource::make_resource_reader(volume_stream);
+
   std::any cache;
-  auto files = archive->get_content_listing(cache, volume_stream, { volume_file, volume_file });
+  auto files = reader.get_content_listing(cache, volume_stream, { *args.vol_path, *args.vol_path });
 
-  std::string output_folder = replace_extension(volume_file);
+  fs::path output_folder = replace_extension(*args.vol_path);
 
-  std::function<void(decltype(files)&)> extract_files = [&](const auto& files){
+  std::function<void(decltype(files)&)> extract_files = [&](const auto& files) {
     for (const auto& some_file : files)
     {
       std::visit([&](const auto& info) {
@@ -83,21 +63,21 @@ int main(int, const char** argv)
 
         if constexpr (std::is_same_v<info_type, siege::platform::file_info>)
         {
-          auto final_folder = output_folder / std::filesystem::relative(replace_extension(info.folder_path.string()), output_folder);
+          auto final_folder = output_folder / info.relative_path();
+
           std::filesystem::create_directories(final_folder);
           auto filename = final_folder / info.filename;
           auto new_stream = std::ofstream{ filename, std::ios::binary };
-          archive->extract_file_contents(cache, volume_stream, info, new_stream);
+          reader.extract_file_contents(cache, volume_stream, info, new_stream);
         }
 
         if constexpr (std::is_same_v<info_type, siege::platform::folder_info>)
         {
-          // TODO think about whether get_content_listing should preserve the original position of the stream or not.
-          std::ifstream temp_stream{ volume_file, std::ios::binary };
-          auto files = archive->get_content_listing(cache, temp_stream, { volume_file, info.full_path });
+          auto files = reader.get_content_listing(cache, volume_stream, { *args.vol_path, info.full_path });
           extract_files(files);
         }
-      }, some_file);
+      },
+        some_file);
     }
   };
 
