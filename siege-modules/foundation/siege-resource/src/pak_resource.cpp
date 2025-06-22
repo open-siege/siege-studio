@@ -203,7 +203,7 @@ namespace siege::resource::pak
 
     for (auto& folder : folders)
     {
-      if (folder.first.parent_path() == query.folder_path)
+      if (folder.first.parent_path() == query.folder_path && folder.first != query.folder_path)
       {
         results.emplace_back(platform::folder_info{
           .name = folder.first.filename().string(),

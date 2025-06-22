@@ -55,3 +55,33 @@ command_line_args parse_command_line(std::span<std::string_view> args)
 
   return { app_path, vol_path, output_path };
 }
+
+bool has_embedded_file()
+{
+  return false;
+}
+
+std::unique_ptr<std::istream> create_stream_for_embedded_file()
+{
+  return nullptr;
+}
+
+bool has_embedded_output_path()
+{
+  return false;
+}
+
+fs::path get_embedded_output_path()
+{
+  return {};
+}
+
+bool has_embedded_post_extract_commands()
+{
+  return false;
+}
+
+std::vector<std::string> get_embedded_post_extract_commands()
+{
+  return {};
+}
