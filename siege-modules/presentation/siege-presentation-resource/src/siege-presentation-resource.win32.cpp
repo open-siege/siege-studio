@@ -1,7 +1,7 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <siege/platform/win/hresult.hpp>
 #include <siege/platform/presentation_module.hpp>
-#include "views/vol_controller.hpp"
+#include "views/vol_shared.hpp"
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;
@@ -37,7 +37,7 @@ HRESULT get_window_class_for_stream(storage_info* data, wchar_t** class_name) no
   {
     static auto this_module = win32::window_module_ref::current_module();
 
-    if (siege::views::vol_controller::is_vol(*stream))
+    if (siege::views::is_vol(*stream))
     {
       // TODO overhaul the presentation layer to use ATOMs for class names exclusively
       if (storage.empty())

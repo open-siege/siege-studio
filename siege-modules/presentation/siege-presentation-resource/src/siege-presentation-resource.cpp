@@ -9,7 +9,7 @@
 #include <system_error>
 #include <siege/platform/stream.hpp>
 #include <siege/resource/resource_maker.hpp>
-#include "views/vol_controller.hpp"
+#include "views/vol_shared.hpp"
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;
@@ -23,9 +23,11 @@ std::errc get_supported_extensions(std::size_t count, const siege::fs_char** str
     return std::errc::invalid_argument;
   }
 
-  count = std::clamp<std::size_t>(count, 0u, vol_controller::formats.size());
+  auto formats = get_volume_formats();
 
-  std::transform(vol_controller::formats.begin(), vol_controller::formats.begin() + count, strings, [](const auto value) {
+  count = std::clamp<std::size_t>(count, 0u, formats.size());
+
+  std::transform(formats.begin(), formats.begin() + count, strings, [](const auto value) {
     return value.data();
   });
 
@@ -76,9 +78,10 @@ std::errc get_supported_extensions_for_category(const char16_t* category, std::s
 
   if (category_str == u"All Archives")
   {
-    count = std::clamp<std::size_t>(count, 0u, vol_controller::formats.size());
+    auto formats = get_volume_formats();
+    count = std::clamp<std::size_t>(count, 0u, formats.size());
 
-    std::transform(vol_controller::formats.begin(), vol_controller::formats.begin() + count, strings, [](const auto value) {
+    std::transform(formats.begin(), formats.begin() + count, strings, [](const auto value) {
       return value.data();
     });
   }
@@ -104,8 +107,9 @@ std::errc is_stream_supported(storage_info* data) noexcept
 
   if (data->type == storage_info::file && data->info.path)
   {
+    auto formats = get_volume_formats();
     auto extension = std::filesystem::path(data->info.path).extension().native();
-    if (!std::any_of(vol_controller::formats.begin(), vol_controller::formats.end(), [&](const auto value) {
+    if (!std::any_of(formats.begin(), formats.end(), [&](const auto value) {
         return value == extension;
         }))
     {
@@ -115,7 +119,7 @@ std::errc is_stream_supported(storage_info* data) noexcept
 
   auto stream = siege::platform::create_istream(*data);
 
-  if (siege::views::vol_controller::is_vol(*stream))
+  if (siege::views::is_vol(*stream))
   {
     return std::errc(0);
   }

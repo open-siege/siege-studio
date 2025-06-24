@@ -4,6 +4,7 @@
 #include <siege/platform/win/threading.hpp>
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/presentation_module.hpp>
+#include <siege/platform/resource.hpp>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/win/window_impl.hpp>
 #include <spanstream>
@@ -13,13 +14,13 @@
 #include <algorithm>
 #include <versionhelpers.h>
 #include <siege/platform/win/theming.hpp>
-#include "vol_controller.hpp"
+#include "vol_shared.hpp"
 
 namespace siege::views
 {
   struct vol_view final : win32::window_ref
   {
-    vol_controller controller;
+    std::any shared_state;
 
     win32::tool_bar table_settings;
     win32::list_view table;
@@ -56,7 +57,7 @@ namespace siege::views
 
     ~vol_view()
     {
-      controller.stop_loading();
+      stop_loading(shared_state);
     }
 
     auto wm_create()
@@ -291,14 +292,14 @@ namespace siege::views
     {
       std::spanstream stream(message.data);
 
-      if (vol_controller::is_vol(stream))
+      if (is_vol(stream))
       {
         std::optional<std::filesystem::path> path = win32::get_path_from_handle((HANDLE)message.data_type);
 
-        auto count = controller.load_volume(stream, path, [&, table = table.get()](siege::platform::resource_reader::content_info& content) mutable {
+        auto count = load_volume(shared_state, stream, path, [&, table = table.get()](siege::platform::resource_reader::content_info& content) mutable {
           if (!::IsWindow(table))
           {
-            controller.stop_loading();
+            stop_loading(shared_state);
             return;
           }
 
@@ -399,7 +400,7 @@ namespace siege::views
     {
       alloc_console();
 
-      auto items = controller.get_contents();
+      auto items = get_contents(shared_state);
 
       if (has_saved == false)
       {
@@ -414,7 +415,7 @@ namespace siege::views
       }
 
       // TODO fix crash when extracting lots of files with our internal zip code
-      if (auto archive_path = controller.get_original_path(); IsWindows10OrGreater() && archive_path && (archive_path->extension().string() == ".pk3" || archive_path->extension().string() == ".PK3" || archive_path->extension().string() == ".zip" || archive_path->extension().string() == ".ZIP"))
+      if (auto archive_path = get_original_path(shared_state); IsWindows10OrGreater() && archive_path && (archive_path->extension().string() == ".pk3" || archive_path->extension().string() == ".PK3" || archive_path->extension().string() == ".zip" || archive_path->extension().string() == ".ZIP"))
       {
         std::stringstream command;
         command << "cd " << *path << " && tar -xf " << *archive_path << " && explorer .";
@@ -433,7 +434,7 @@ namespace siege::views
             std::error_code code;
             std::filesystem::create_directories(*path / child_path, code);
             std::ofstream extracted_file(*path / child_path / file_info->filename, std::ios::trunc | std::ios::binary);
-            auto raw_data = controller.load_content_data(item.get());
+            auto raw_data = load_content_data(shared_state, item.get());
 
             extracted_file.write(raw_data.data(), raw_data.size());
           }
@@ -455,7 +456,7 @@ namespace siege::views
         return;
       }
 
-      auto items = controller.get_contents();
+      auto items = get_contents(shared_state);
 
       std::vector<siege::platform::resource_reader::content_info> files_to_extract;
       files_to_extract.reserve(selected_table_items.size());
@@ -493,7 +494,7 @@ namespace siege::views
       {
         auto& file_info = std::get<siege::platform::file_info>(item);
         std::ofstream extracted_file(*path / file_info.filename, std::ios::trunc | std::ios::binary);
-        auto raw_data = controller.load_content_data(item);
+        auto raw_data = load_content_data(shared_state, item);
 
         extracted_file.write(raw_data.data(), raw_data.size());
       }
@@ -503,7 +504,7 @@ namespace siege::views
 
     [[maybe_unused]] bool open_new_tab_for_item(LVITEMW item_info, win32::window_ref root)
     {
-      auto items = controller.get_contents();
+      auto items = get_contents(shared_state);
 
       auto item = std::find_if(items.begin(), items.end(), [&](auto& content) {
         if (auto* file = std::get_if<siege::platform::file_info>(&content.get()))
@@ -516,7 +517,7 @@ namespace siege::views
 
       if (item != items.end())
       {
-        auto data = controller.load_content_data(*item);
+        auto data = load_content_data(shared_state, *item);
 
         root.CopyData(*this, COPYDATASTRUCT{ .dwData = ::AddAtomW(item_info.pszText), .cbData = DWORD(data.size()), .lpData = data.data() });
 
