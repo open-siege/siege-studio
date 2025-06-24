@@ -1,9 +1,17 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <siege/platform/win/hresult.hpp>
-#include "views/vol_view.hpp"
+#include <siege/platform/presentation_module.hpp>
+#include "views/vol_controller.hpp"
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;
+
+static ATOM vol_view_atom;
+
+namespace siege::views
+{
+  ATOM register_vol_view(win32::window_module_ref module);
+}
 
 extern "C" {
 extern const std::uint32_t default_file_icon = SIID_ZIPFILE;
@@ -20,8 +28,8 @@ HRESULT get_window_class_for_stream(storage_info* data, wchar_t** class_name) no
     return E_INVALIDARG;
   }
 
-  static std::wstring empty;
-  *class_name = empty.data();
+  static std::wstring storage;
+  *class_name = storage.data();
 
   auto stream = siege::platform::create_istream(*data);
 
@@ -31,13 +39,24 @@ HRESULT get_window_class_for_stream(storage_info* data, wchar_t** class_name) no
 
     if (siege::views::vol_controller::is_vol(*stream))
     {
-      static auto window_type_name = win32::type_name<siege::views::vol_view>();
-
-      if (this_module.GetClassInfoExW(window_type_name))
+      // TODO overhaul the presentation layer to use ATOMs for class names exclusively
+      if (storage.empty())
       {
-        *class_name = window_type_name.data();
-        return S_OK;
+        auto window = this_module.CreateWindowExW(CREATESTRUCTW{
+          .hwndParent = HWND_MESSAGE,
+          .lpszClass = MAKEINTATOM(vol_view_atom) });
+
+        if (window)
+        {
+          storage.resize(255);
+          storage.resize(::GetClassNameW(*window, storage.data(), (int)storage.size()));
+          ::DestroyWindow(*window);
+          window->release();
+        }
       }
+
+      *class_name = storage.data();
+      return S_OK;
     }
 
     return S_FALSE;
@@ -68,14 +87,13 @@ BOOL WINAPI DllMain(
 
     std::filesystem::path module_path(module_file_name.data());
 
-    win32::window_module_ref this_module(hinstDLL);
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
-      this_module.RegisterClassExW(win32::window_meta_class<siege::views::vol_view>());
+      vol_view_atom = register_vol_view(win32::window_module_ref(hinstDLL));
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
-      this_module.UnregisterClassW<siege::views::vol_view>();
+      ::UnregisterClassW(MAKEINTATOM(vol_view_atom), hinstDLL);
     }
   }
 

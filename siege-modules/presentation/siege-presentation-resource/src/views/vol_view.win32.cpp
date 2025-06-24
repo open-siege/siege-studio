@@ -1,6 +1,3 @@
-#ifndef VOL_VIEW_HPP
-#define VOL_VIEW_HPP
-
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/menu.hpp>
@@ -8,6 +5,7 @@
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/presentation_module.hpp>
 #include <siege/platform/shared.hpp>
+#include <siege/platform/win/window_impl.hpp>
 #include <spanstream>
 #include <map>
 #include <unordered_map>
@@ -419,7 +417,7 @@ namespace siege::views
       if (auto archive_path = controller.get_original_path(); IsWindows10OrGreater() && archive_path && (archive_path->extension().string() == ".pk3" || archive_path->extension().string() == ".PK3" || archive_path->extension().string() == ".zip" || archive_path->extension().string() == ".ZIP"))
       {
         std::stringstream command;
-        command << "cd " << *path << " && tar -xf " << *archive_path << " && explorer ."; 
+        command << "cd " << *path << " && tar -xf " << *archive_path << " && explorer .";
         std::system(command.str().c_str());
         return;
       }
@@ -726,6 +724,8 @@ namespace siege::views
     }
   };
 
+  ATOM register_vol_view(win32::window_module_ref module)
+  {
+    return module.RegisterClassExW(win32::window_meta_class<vol_view>());
+  }
 }// namespace siege::views
-
-#endif
