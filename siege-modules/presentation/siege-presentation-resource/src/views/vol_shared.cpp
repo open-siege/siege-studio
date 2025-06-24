@@ -87,6 +87,28 @@ namespace siege::views
     return *std::any_cast<std::shared_ptr<controller_state>>(self).get();
   }
 
+  std::vector<char> get_raw_resource_data(std::any& self)
+  {
+    std::vector<char> results;
+
+    if (auto* path = std::get_if<fs::path>(&ref(self).storage); path)
+    {
+      results.resize(fs::file_size(*path));
+      std::ifstream temp(*path, std::ios::binary);
+
+      temp.read(results.data(), results.size());
+    }
+
+    if (auto* stream = std::get_if<std::stringstream>(&ref(self).storage); stream)
+    {
+      results.resize(siege::platform::get_stream_size(*stream));
+     
+      stream->read(results.data(), results.size());
+    }
+
+    return results;
+  }
+
   void stop_loading(std::any& self) { ref(self).should_continue = false; }
 
   std::optional<std::filesystem::path> get_original_path(std::any& self)

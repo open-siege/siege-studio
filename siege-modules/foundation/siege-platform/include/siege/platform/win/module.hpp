@@ -13,119 +13,132 @@
 
 namespace win32
 {
-	template<typename TDeleter>
-	struct module_base : win32::auto_handle<HMODULE, TDeleter>
-	{
-		using base = win32::auto_handle<HMODULE, TDeleter>;
-		using base::base;
+  template<typename TDeleter>
+  struct module_base : win32::auto_handle<HMODULE, TDeleter>
+  {
+    using base = win32::auto_handle<HMODULE, TDeleter>;
+    using base::base;
 
-		template<typename TPointer = void*>
-		auto GetProcAddress(std::string name)
-		{
-			static_assert(std::is_pointer_v<TPointer>);
-			return reinterpret_cast<TPointer>(::GetProcAddress(*this, name.c_str()));
-		}
+    template<typename TPointer = void*>
+    auto GetProcAddress(std::string name)
+    {
+      static_assert(std::is_pointer_v<TPointer>);
+      return reinterpret_cast<TPointer>(::GetProcAddress(*this, name.c_str()));
+    }
 
-		template<typename TChar = wchar_t>
-		std::basic_string<TChar> GetModuleFileName() const
-		{
-			if constexpr (sizeof(TChar) == sizeof(char16_t))
-			{
-				std::basic_string<TChar> result(256, '\0');
-                ::GetModuleFileNameW(this->get(), reinterpret_cast<wchar_t*>(result.data()), result.size());
-                
-				result.erase(result.find(TChar('\0')));
-				return result;
-			}
-			else if constexpr (sizeof(TChar) == sizeof(char8_t))
-			{
-                std::basic_string<TChar> result(256, '\0');
-                ::GetModuleFileNameA(this->get(), reinterpret_cast<char*>(result.data()), result.size());
+    template<typename TChar = wchar_t>
+    std::basic_string<TChar> GetModuleFileName() const
+    {
+      if constexpr (sizeof(TChar) == sizeof(char16_t))
+      {
+        std::basic_string<TChar> result(256, '\0');
+        ::GetModuleFileNameW(this->get(), reinterpret_cast<wchar_t*>(result.data()), result.size());
 
-				result.erase(result.find(TChar('\0')));
-                return result;
-			}
+        result.erase(result.find(TChar('\0')));
+        return result;
+      }
+      else if constexpr (sizeof(TChar) == sizeof(char8_t))
+      {
+        std::basic_string<TChar> result(256, '\0');
+        ::GetModuleFileNameA(this->get(), reinterpret_cast<char*>(result.data()), result.size());
 
-			return std::basic_string<TChar>{};
-		}
-	};
+        result.erase(result.find(TChar('\0')));
+        return result;
+      }
 
-	struct module_no_deleter
-	{
-		void operator()(HMODULE lib)
-		{
-		}
-	};
+      return std::basic_string<TChar>{};
+    }
+  };
 
-	struct module_ref : module_base<module_no_deleter>
-	{
-		using base = module_base<module_no_deleter>;
-		using base::base;
+  struct module_no_deleter
+  {
+    void operator()(HMODULE lib)
+    {
+    }
+  };
 
-		explicit module_ref(void* func) : base([=]() {
-				HMODULE temp = nullptr;
+  struct module_ref : module_base<module_no_deleter>
+  {
+    using base = module_base<module_no_deleter>;
+    using base::base;
 
-				::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-               GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-               (LPCWSTR)func, &temp);
+    explicit module_ref(void* func) : base([=]() {
+                                        HMODULE temp = nullptr;
 
-				if (!temp)
-				{
-					throw std::system_error(std::error_code(GetLastError(),  std::system_category()));
-				}
+                                        ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                                          (LPCWSTR)func,
+                                          &temp);
 
-				return temp;
-			}())
-		{
-		}
+                                        if (!temp)
+                                        {
+                                          throw std::system_error(std::error_code(GetLastError(), std::system_category()));
+                                        }
 
-		inline static module_ref current_module()
-		{
-			return module_ref((void*)&current_module); 
-		}
+                                        return temp;
+                                      }())
+    {
+    }
 
-		inline static module_ref current_application()
-		{
-			return module_ref(::GetModuleHandleW(nullptr));
-		}
-	};
+    inline static module_ref current_module()
+    {
+      return module_ref((void*)&current_module);
+    }
 
-	struct module_deleter
-	{
-		void operator()(HMODULE lib)
-		{
-			FreeLibrary(lib);
-		}
-	};
+    inline static module_ref current_application()
+    {
+      return module_ref(::GetModuleHandleW(nullptr));
+    }
+  };
 
-	struct module : module_base<module_deleter>
-	{
-		using base = module_base<module_deleter>;
-		using base::base;
+  struct module_deleter
+  {
+    void operator()(HMODULE lib)
+    {
+      FreeLibrary(lib);
+    }
+  };
 
-		explicit module(std::filesystem::path path, bool is_system = false) : base([=]() {
-				if (!is_system && !std::filesystem::exists(path))
-				{
-					throw std::invalid_argument("path");
-				}
+  struct module : module_base<module_deleter>
+  {
+    using base = module_base<module_deleter>;
+    using base::base;
 
-				HMODULE temp = ::LoadLibraryW(path.c_str());
+    explicit module(std::filesystem::path path, bool is_system = false) : base([=]() {
+                                                                            if (!is_system && !std::filesystem::exists(path))
+                                                                            {
+                                                                              throw std::invalid_argument("path");
+                                                                            }
 
-				if (!temp)
-				{
-					throw std::system_error(std::error_code(GetLastError(),  std::system_category()));
-				}
+                                                                            HMODULE temp = ::LoadLibraryW(path.c_str());
 
-				return temp;
-			}())
-		{
-		}
+                                                                            if (!temp)
+                                                                            {
+                                                                              throw std::system_error(std::error_code(GetLastError(), std::system_category()));
+                                                                            }
 
-		auto ref()
-		{
-			return module_ref(get());
-		}
-	};
-}
+                                                                            return temp;
+                                                                          }())
+    {
+    }
 
-#endif // !WIN_CORE_MODULE_HPP
+    auto ref()
+    {
+      return module_ref(get());
+    }
+  };
+
+  struct search_context
+  {
+    std::filesystem::path module_name;
+    bool search_user_dll_paths = true;
+    bool search_app_path = true;
+    bool search_dll_search_path = true;
+    bool search_current_path = true;
+    bool search_env_paths = false;
+    bool search_temp_path = false;
+  };
+
+  std::optional<std::filesystem::path> find_binary_module(search_context context);
+}// namespace win32
+
+#endif// !WIN_CORE_MODULE_HPP

@@ -70,7 +70,12 @@ command_line_args parse_command_line(std::span<std::string_view> args)
 
 bool has_embedded_file()
 {
-  return ::FindResourceW(nullptr, L"embedded", RT_RCDATA) != nullptr;
+  if (auto resource = ::FindResourceW(nullptr, L"embedded", RT_RCDATA); resource != nullptr)
+  {
+    return ::SizeofResource(nullptr, resource) > 0;
+  }
+
+  return false;
 }
 
 std::unique_ptr<std::istream> create_stream_for_embedded_file()
@@ -99,7 +104,12 @@ std::unique_ptr<std::istream> create_stream_for_embedded_file()
 
 bool has_embedded_output_path()
 {
-  return ::FindResourceW(nullptr, L"output_path", RT_RCDATA) != nullptr;
+  if (auto resource = ::FindResourceW(nullptr, L"output_path", RT_RCDATA); resource != nullptr)
+  {
+    return ::SizeofResource(nullptr, resource) > 0;
+  }
+
+  return false;
 }
 
 fs::path get_embedded_output_path()
@@ -126,7 +136,12 @@ fs::path get_embedded_output_path()
 
 bool has_embedded_post_extract_commands()
 {
-  return ::FindResourceW(nullptr, L"post_extract", RT_RCDATA) != nullptr;
+  if (auto resource = ::FindResourceW(nullptr, L"post_extract", RT_RCDATA); resource != nullptr)
+  {
+    return ::SizeofResource(nullptr, resource) > 0;
+  }
+
+  return false;
 }
 
 std::vector<std::string> get_embedded_post_extract_commands()

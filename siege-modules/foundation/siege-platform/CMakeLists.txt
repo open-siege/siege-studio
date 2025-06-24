@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.30)
 project(siege-platform)
 
-add_library(siege-std STATIC src/std.cpp src/bitmap.cpp src/palette.cpp src/image.cpp src/resource.cpp)
+add_library(siege-std STATIC src/std.cpp src/bitmap.cpp src/palette.cpp src/image.cpp src/module.cpp src/resource.cpp)
 set_property(TARGET siege-std PROPERTY CXX_STANDARD 23)
 target_include_directories(siege-std PUBLIC ${PROJECT_SOURCE_DIR}/include)
 

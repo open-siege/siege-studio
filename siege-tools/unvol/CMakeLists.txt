@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.30)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 if (WIN32)
-    add_executable(unvol src/unvol.cpp src/unvol.win32.cpp)
+    add_executable(unvol src/unvol.cpp src/unvol.win32.cpp src/unvol.rc)
 else()
     add_executable(unvol src/unvol.cpp src/unvol.other.cpp)
 endif()

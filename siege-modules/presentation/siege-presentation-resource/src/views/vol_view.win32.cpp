@@ -18,6 +18,12 @@
 
 namespace siege::views
 {
+  namespace fs = std::filesystem;
+  std::optional<fs::path> create_self_extracting_resource(std::any& self,
+    fs::path unvol_exe_path,
+    std::optional<fs::path> output_path,
+    std::optional<std::vector<std::string>> post_extract_commands);
+
   struct vol_view final : win32::window_ref
   {
     std::any shared_state;
@@ -128,6 +134,8 @@ namespace siege::views
       table_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 1, L"Open in New Tab");
       table_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 2, L"Extract");
       table_settings_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 1, L"Extract All");
+      table_settings_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 2, L"Create Self-Extracting EXE");
+      table_settings_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 3, L"Create Self-Extracting EXE with custom commands");
 
       table = *win32::CreateWindowExW<win32::list_view>(CREATESTRUCTW{
         .hMenu = table_menu,
@@ -396,6 +404,55 @@ namespace siege::views
       return std::nullopt;
     }
 
+    void create_self_extracting_exe(bool ask_for_options)
+    {
+      auto unvol_path = win32::find_binary_module({ "unvol.exe" });
+
+      if (!unvol_path)
+      {
+        return;
+      }
+
+      decltype(unvol_path) new_unvol_path;
+
+      auto dialog = win32::com::CreateFileSaveDialog();
+
+      if (dialog)
+      {
+        dialog->get()->SetDefaultExtension(L".exe");
+
+        auto result = dialog->get()->Show(nullptr);
+
+        new_unvol_path = dialog->GetResult().value().GetFileSysPath().value();
+      }
+
+      if (!new_unvol_path)
+      {
+        return;
+      }
+
+      fs::copy_file(*unvol_path, *new_unvol_path);
+
+      // TODO get output path
+      decltype(unvol_path) output_path;
+
+      std::vector<std::string> commands;
+
+      if (ask_for_options)
+      {
+        // TODO create a dialog to ask for a list of commands
+      }
+
+      auto final_path = create_self_extracting_resource(shared_state, *new_unvol_path, output_path, std::move(commands));
+
+      if (final_path)
+      {
+      }
+      else
+      {
+      }
+    }
+
     void extract_all_files()
     {
       alloc_console();
@@ -610,6 +667,14 @@ namespace siege::views
         if (result == 1)
         {
           extract_all_files();
+        }
+        else if (result == 2)
+        {
+          create_self_extracting_exe(false);
+        }
+        else if (result == 3)
+        {
+          create_self_extracting_exe(true);
         }
 
         return TBDDRET_DEFAULT;
