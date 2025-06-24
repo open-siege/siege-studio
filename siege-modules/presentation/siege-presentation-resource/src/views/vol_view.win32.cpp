@@ -135,7 +135,6 @@ namespace siege::views
       table_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 2, L"Extract");
       table_settings_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 1, L"Extract All");
       table_settings_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 2, L"Create Self-Extracting EXE");
-      table_settings_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 3, L"Create Self-Extracting EXE with custom commands");
 
       table = *win32::CreateWindowExW<win32::list_view>(CREATESTRUCTW{
         .hMenu = table_menu,
@@ -404,7 +403,7 @@ namespace siege::views
       return std::nullopt;
     }
 
-    void create_self_extracting_exe(bool ask_for_options)
+    void create_self_extracting_exe()
     {
       auto unvol_path = win32::find_binary_module({ "unvol.exe" });
 
@@ -417,13 +416,138 @@ namespace siege::views
 
       auto dialog = win32::com::CreateFileSaveDialog();
 
+      decltype(unvol_path) output_path;
+      std::vector<std::string> commands;
+
       if (dialog)
       {
+        win32::com::com_ptr<IFileDialogCustomize> customize = nullptr;
+
+        if (dialog->get()->QueryInterface(customize.put()) == S_OK)
+        {
+          customize->StartVisualGroup(10, L"Enter the default output path:");
+
+          if (auto vol_path = get_original_path(shared_state); vol_path)
+          {
+            auto new_path = L"C:\\Games\\" + vol_path->stem().wstring();
+            customize->AddEditBox(11, new_path.c_str());
+          }
+          else
+          {
+            customize->AddEditBox(11, L"C:\\Games\\");
+          }
+
+          customize->EndVisualGroup();
+
+          customize->StartVisualGroup(20, L"Specify commands to run:");
+          customize->AddEditBox(21, L"");
+          customize->AddEditBox(22, L"");
+          customize->AddEditBox(23, L"");
+          customize->AddEditBox(24, L"");
+          customize->AddEditBox(25, L"");
+          customize->AddEditBox(26, L"");
+          customize->EndVisualGroup();
+        }
+
         dialog->get()->SetDefaultExtension(L".exe");
 
-        auto result = dialog->get()->Show(nullptr);
+        struct events : IFileDialogEvents
+        {
+          HRESULT __stdcall QueryInterface(const IID& riid, void** ppvObject) override
+          {
+            if (riid == IID_IFileDialogEvents || riid == IID_IUnknown)
+            {
+              *ppvObject = this;
+              return S_OK;
+            }
+            return E_NOINTERFACE;
+          }
 
-        new_unvol_path = dialog->GetResult().value().GetFileSysPath().value();
+          ULONG __stdcall AddRef(void) override
+          {
+            return 1;
+          }
+
+          ULONG __stdcall Release(void) override
+          {
+            return 1;
+          }
+
+          std::function<void()> callback;
+
+          HRESULT __stdcall OnFileOk(IFileDialog* pfd) override
+          {
+            callback();
+            return S_OK;
+          }
+
+          HRESULT __stdcall OnFolderChanging(IFileDialog* pfd, IShellItem* psiFolder) override
+          {
+            return E_NOTIMPL;
+          }
+
+          HRESULT __stdcall OnFolderChange(IFileDialog* pfd) override
+          {
+            return E_NOTIMPL;
+          }
+
+          HRESULT __stdcall OnSelectionChange(IFileDialog* pfd)
+          {
+            return E_NOTIMPL;
+          }
+
+          HRESULT __stdcall OnShareViolation(IFileDialog* pfd, IShellItem* psi, FDE_SHAREVIOLATION_RESPONSE* pResponse) override
+          {
+            return E_NOTIMPL;
+          }
+
+          HRESULT __stdcall OnTypeChange(IFileDialog* pfd)
+          {
+            return E_NOTIMPL;
+          }
+
+          HRESULT __stdcall OnOverwrite(IFileDialog* pfd, IShellItem* psi, FDE_OVERWRITE_RESPONSE* pResponse) override
+          {
+            return E_NOTIMPL;
+          }
+        } callbacks;
+
+        callbacks.callback = [&]() {
+          win32::com::com_string edit_text;
+
+          if (customize && customize->GetEditBoxText(11, edit_text.put()) == S_OK && !std::wstring_view(edit_text).empty())
+          {
+            output_path = edit_text;
+          }
+
+          if (customize)
+          {
+            std::string ascii;
+            for (auto i = 21; i < 26; ++i)
+            {
+              win32::com::com_string temp;
+
+              if (customize->GetEditBoxText(i, temp.put()) == S_OK && !std::wstring_view(temp).empty())
+              {
+                auto temp_str = std::wstring_view(temp);
+                ascii.resize(temp_str.size());
+
+                std::transform(temp_str.begin(), temp_str.end(), ascii.begin(), [](auto c) { return (char)c; });
+                commands.emplace_back(ascii);
+              }
+            }
+          }
+        };
+
+        DWORD token = 0;
+        dialog->get()->Advise(&callbacks, &token);
+        auto result = dialog->get()->Show(nullptr);
+        dialog->get()->Unadvise(token);
+
+        if (result == S_OK)
+        {
+          new_unvol_path = dialog->GetResult().value().GetFileSysPath().value();
+        }
       }
 
       if (!new_unvol_path)
@@ -432,16 +556,6 @@ namespace siege::views
       }
 
       fs::copy_file(*unvol_path, *new_unvol_path);
-
-      // TODO get output path
-      decltype(unvol_path) output_path;
-
-      std::vector<std::string> commands;
-
-      if (ask_for_options)
-      {
-        // TODO create a dialog to ask for a list of commands
-      }
 
       auto final_path = create_self_extracting_resource(shared_state, *new_unvol_path, output_path, std::move(commands));
 
@@ -670,11 +784,7 @@ namespace siege::views
         }
         else if (result == 2)
         {
-          create_self_extracting_exe(false);
-        }
-        else if (result == 3)
-        {
-          create_self_extracting_exe(true);
+          create_self_extracting_exe();
         }
 
         return TBDDRET_DEFAULT;
