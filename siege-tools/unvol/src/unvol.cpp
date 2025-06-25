@@ -6,6 +6,7 @@
 #include <utility>
 #include <iostream>
 #include <span>
+#include <future>
 #include <siege/resource/resource_maker.hpp>
 
 namespace fs = std::filesystem;
@@ -15,6 +16,7 @@ struct command_line_args
   fs::path app_path;
   std::optional<fs::path> vol_path;
   std::optional<fs::path> output_path;
+  bool should_use_ui;
 };
 
 command_line_args parse_command_line(std::span<std::string_view> args);
@@ -28,6 +30,8 @@ fs::path get_embedded_output_path();
 bool has_embedded_post_extract_commands();
 std::vector<std::string> get_embedded_post_extract_commands();
 
+int start_ui_modal(command_line_args args, std::function<void(command_line_args)> action);
+
 int main(int argc, const char** argv)
 {
   std::vector<std::string_view> raw_args(argv, argv + argc);
@@ -40,93 +44,99 @@ int main(int argc, const char** argv)
   }
 
 
-  if (has_embedded_file() && !(has_embedded_output_path() || args.output_path.has_value()))
+  if (has_embedded_file() && !args.should_use_ui && !args.output_path)
   {
     std::cerr << "No output directory specified. Please specify a path with --output then the path to the directory to extract to." << '\n';
     return EXIT_FAILURE;
   }
 
-  std::unique_ptr<std::istream> volume_stream;
+  auto do_extraction = [&](command_line_args args) {
+    std::unique_ptr<std::istream> volume_stream;
 
-  if (has_embedded_file())
-  {
-    volume_stream = create_stream_for_embedded_file();
-    args.vol_path = fs::path();
-
-    if (!args.output_path)
+    if (has_embedded_file())
     {
-      args.output_path = get_embedded_output_path();
+      volume_stream = create_stream_for_embedded_file();
+      args.vol_path = fs::path();
     }
-  }
-  else
-  {
-    volume_stream = std::unique_ptr<std::istream>(new std::ifstream{ *args.vol_path, std::ios::binary });
-  }
-
-  if (!siege::resource::is_resource_readable(*volume_stream))
-  {
-    std::cerr << "Could not extract " << *args.vol_path << '\n';
-    return EXIT_FAILURE;
-  }
-
-  siege::platform::resource_reader reader = siege::resource::make_resource_reader(*volume_stream);
-
-  std::any cache;
-  auto files = reader.get_content_listing(cache, *volume_stream, { *args.vol_path, *args.vol_path });
-
-  fs::path output_folder = [&] {
-    if (args.output_path)
+    else
     {
-      return *args.output_path;
+      volume_stream = std::unique_ptr<std::istream>(new std::ifstream{ *args.vol_path, std::ios::binary });
     }
 
-    auto temp = *args.vol_path;
-
-    if (temp.has_extension())
+    if (!siege::resource::is_resource_readable(*volume_stream))
     {
-      temp.replace_extension("");
+      std::cerr << "Could not extract " << *args.vol_path << '\n';
+      return EXIT_FAILURE;
     }
 
-    return temp;
-  }();
+    siege::platform::resource_reader reader = siege::resource::make_resource_reader(*volume_stream);
+
+    std::any cache;
+    auto files = reader.get_content_listing(cache, *volume_stream, { *args.vol_path, *args.vol_path });
+
+    fs::path output_folder = [&] {
+      if (args.output_path)
+      {
+        return *args.output_path;
+      }
+
+      auto temp = *args.vol_path;
+
+      if (temp.has_extension())
+      {
+        temp.replace_extension("");
+      }
+
+      return temp;
+    }();
 
 
-  std::function<void(decltype(files)&)> extract_files = [&](const auto& files) {
-    for (const auto& some_file : files)
+    std::function<void(decltype(files)&)> extract_files = [&](const auto& files) {
+      for (const auto& some_file : files)
+      {
+        std::visit([&](const auto& info) {
+          using info_type = std::decay_t<decltype(info)>;
+
+          if constexpr (std::is_same_v<info_type, siege::platform::file_info>)
+          {
+            auto final_folder = output_folder / info.relative_path();
+
+            std::filesystem::create_directories(final_folder);
+            auto filename = final_folder / info.filename;
+            auto new_stream = std::ofstream{ filename, std::ios::binary };
+            reader.extract_file_contents(cache, *volume_stream, info, new_stream);
+          }
+
+          if constexpr (std::is_same_v<info_type, siege::platform::folder_info>)
+          {
+            auto files = reader.get_content_listing(cache, *volume_stream, { *args.vol_path, info.full_path });
+            extract_files(files);
+          }
+        },
+          some_file);
+      }
+    };
+
+    extract_files(files);
+
+    if (args.output_path && has_embedded_post_extract_commands())
     {
-      std::visit([&](const auto& info) {
-        using info_type = std::decay_t<decltype(info)>;
+      auto commands = get_embedded_post_extract_commands();
+      fs::current_path(*args.output_path);
 
-        if constexpr (std::is_same_v<info_type, siege::platform::file_info>)
-        {
-          auto final_folder = output_folder / info.relative_path();
-
-          std::filesystem::create_directories(final_folder);
-          auto filename = final_folder / info.filename;
-          auto new_stream = std::ofstream{ filename, std::ios::binary };
-          reader.extract_file_contents(cache, *volume_stream, info, new_stream);
-        }
-
-        if constexpr (std::is_same_v<info_type, siege::platform::folder_info>)
-        {
-          auto files = reader.get_content_listing(cache, *volume_stream, { *args.vol_path, info.full_path });
-          extract_files(files);
-        }
-      },
-        some_file);
+      for (auto& command : commands)
+      {
+        std::system(command.c_str());
+      }
     }
   };
 
-  extract_files(files);
-
-  if (args.output_path && has_embedded_post_extract_commands())
+  if (args.should_use_ui)
   {
-    auto commands = get_embedded_post_extract_commands();
-    fs::current_path(*args.output_path);
-
-    for (auto& command : commands)
-    {
-      std::system(command.c_str());
-    }
+    return start_ui_modal(args, do_extraction);
+  }
+  else
+  {
+    do_extraction(args);
   }
 }

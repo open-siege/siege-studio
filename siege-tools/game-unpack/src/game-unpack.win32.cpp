@@ -128,7 +128,7 @@ int main(int argc, const char* argv[])
   {
     win32::com::init_com();
     win32::init_common_controls_ex({ .dwSize{ sizeof(INITCOMMONCONTROLSEX) }, .dwICC = ICC_STANDARD_CLASSES | ICC_BAR_CLASSES });
-    ::FreeConsole();
+    ::ShowWindow(::GetConsoleWindow(), SW_HIDE);
 
     struct page
     {
