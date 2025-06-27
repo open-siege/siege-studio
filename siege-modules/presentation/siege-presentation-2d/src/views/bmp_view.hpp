@@ -135,7 +135,7 @@ namespace siege::views
 
     auto wm_create()
     {
-      std::filesystem::path app_path = std::filesystem::path(win32::module_ref::current_application().GetModuleFileName()).parent_path();
+      std::filesystem::path app_path = std::filesystem::path(win32::module_ref::current_module().GetModuleFileName()).parent_path();
       loaded_modules = platform::storage_module::load_modules(std::filesystem::path(app_path));
 
       bitmap_actions = *win32::CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{

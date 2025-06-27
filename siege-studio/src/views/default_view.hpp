@@ -524,7 +524,7 @@ namespace siege::views
           }
         }
 
-        std::filesystem::path app_path = std::filesystem::path(win32::module_ref::current_application().GetModuleFileName()).parent_path();
+        std::filesystem::path app_path = std::filesystem::path(win32::module_ref::current_module().GetModuleFileName()).parent_path();
         auto extensions = siege::platform::game_extension_module::load_modules(app_path);
 
         std::for_each(real_search_paths.begin(), real_search_paths.end(), [&](const auto& real_search_path) {

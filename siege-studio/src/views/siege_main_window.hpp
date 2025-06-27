@@ -77,8 +77,8 @@ namespace siege::views
 
       ::SetWindowLongPtrW(self, GWL_EXSTYLE, params.dwExStyle);
 
-      std::filesystem::path app_path = std::filesystem::path(win32::module_ref(params.hInstance).GetModuleFileName()).parent_path();
-      loaded_modules = platform::presentation_module::load_modules(app_path);
+      std::filesystem::path module_path = std::filesystem::path(win32::module_ref::current_module().GetModuleFileName()).parent_path();
+      loaded_modules = platform::presentation_module::load_modules(module_path);
 
       buffer.resize(64);
 

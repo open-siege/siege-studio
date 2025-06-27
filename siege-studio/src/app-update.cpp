@@ -10,16 +10,18 @@
 #include <imagehlp.h>
 
 
-BOOL __stdcall extract_embedded_dlls(HMODULE module,
+namespace fs = std::filesystem;
+
+BOOL __stdcall enumerate_embedded_dlls(HMODULE module,
   LPCWSTR type,
   LPWSTR name,
   LONG_PTR lParam);
 
 void unload_core_module(HWND window);
-void load_core_module();
+void load_core_module(fs::path);
 int register_and_create_main_window(DWORD thread_id, int nCmdShow);
+fs::path resolve_install_path(int major_version, int minor_version);
 
-namespace fs = std::filesystem;
 
 struct embedded_dll
 {
@@ -75,26 +77,21 @@ void alloc_console()
 
 std::optional<SIZE> get_core_version()
 {
-  auto parent_path = fs::path(win32::module_ref::current_application().GetModuleFileName()).parent_path();
-  auto dll_path = parent_path / "siege-studio-core.dll";
-  std::error_code last_error;
+  auto parent_path = fs::path(win32::module_ref::current_module().GetModuleFileName()).parent_path();
 
-  if (fs::exists(dll_path, last_error))
+  auto stem = parent_path.stem().string();
+
+  if (stem.contains("."))
   {
-    LOADED_IMAGE image{};
-    auto dll_string = dll_path.filename().string();
-    auto dll_path_string = dll_path.parent_path().string();
-    if (::MapAndLoad(dll_string.c_str(), dll_path_string.c_str(), &image, TRUE, TRUE))
+    try
     {
-      SIZE result{};
-      result.cx = image.FileHeader->OptionalHeader.MajorImageVersion;
-      result.cy = image.FileHeader->OptionalHeader.MinorImageVersion;
-      ::UnMapAndLoad(&image);
+      auto major = stem.substr(0, stem.find('.'));
+      auto minor = stem.substr(major.size() + 1);
 
-      if (result.cx && result.cy)
-      {
-        return result;
-      }
+      return SIZE{ .cx = std::stoi(major), .cy = std::stoi(minor) };
+    }
+    catch (...)
+    {
     }
   }
 
@@ -275,7 +272,7 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
     std::vector<embedded_dll> embedded_dlls;
     embedded_dlls.reserve(128);
 
-    ::EnumResourceNamesW(module, RT_RCDATA, extract_embedded_dlls, (LONG_PTR)&embedded_dlls);
+    ::EnumResourceNamesW(module, RT_RCDATA, enumerate_embedded_dlls, (LONG_PTR)&embedded_dlls);
 
     auto window_thread_id = ::GetWindowThreadProcessId(window, nullptr);
 
@@ -284,6 +281,8 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
       ::EnableWindow(window, TRUE);
       unload_core_module(window);
     }
+
+    auto install_path = resolve_install_path(info.available_version.cx, info.available_version.cy);
 
     std::for_each(embedded_dlls.begin(), embedded_dlls.end(), [&](embedded_dll& dll) {
       auto entry = ::FindResourceW(module, dll.filename.c_str(), RT_RCDATA);
@@ -302,40 +301,11 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
         output.write((const char*)bytes, size);
       }
 
-      auto copy_and_patch = [&]() {
-        fs::copy_file(temp_folder / filename_lower, filename_lower, fs::copy_options::update_existing, last_error);
-
-        LOADED_IMAGE image{};
-        if (::MapAndLoad(siege::platform::to_lower(dll.filename.string()).c_str(), nullptr, &image, TRUE, FALSE))
-        {
-          image.FileHeader->OptionalHeader.MajorImageVersion = info.available_version.cx;
-          image.FileHeader->OptionalHeader.MinorImageVersion = info.available_version.cy;
-          ::UnMapAndLoad(&image);
-        }
-      };
-
-      if (!fs::exists(filename_lower, last_error))
-      {
-        copy_and_patch();
-        return;
-      }
-
-      LOADED_IMAGE image{};
-      if (::MapAndLoad(siege::platform::to_lower(dll.filename.string()).c_str(), nullptr, &image, TRUE, TRUE))
-      {
-        auto existing_major_version = image.FileHeader->OptionalHeader.MajorImageVersion;
-        auto existing_minor_version = image.FileHeader->OptionalHeader.MinorImageVersion;
-        ::UnMapAndLoad(&image);
-
-        if (info.available_version.cx >= existing_major_version && info.available_version.cy > existing_minor_version)
-        {
-          copy_and_patch();
-        }
-      }
+      fs::copy_file(temp_folder / filename_lower, install_path / filename_lower, fs::copy_options::update_existing, last_error);
     });
     ::FreeLibrary(module);
 
-    load_core_module();
+    load_core_module(install_path);
     register_and_create_main_window(window_thread_id, SW_SHOWNORMAL);
   });
 }

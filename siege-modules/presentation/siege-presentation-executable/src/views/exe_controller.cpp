@@ -46,7 +46,7 @@ namespace siege::views
       {
         if (extensions.empty())
         {
-          std::filesystem::path app_path = std::filesystem::path(win32::module_ref::current_application().GetModuleFileName()).parent_path();
+          std::filesystem::path app_path = std::filesystem::path(win32::module_ref::current_module().GetModuleFileName()).parent_path();
           extensions = platform::game_extension_module::load_modules(app_path);
 
           matching_extension = std::find_if(extensions.begin(), extensions.end(), [&](platform::game_extension_module& ext) {

@@ -29,9 +29,10 @@ struct embedded_dll
 {
   std::filesystem::path filename;
   HGLOBAL handle;
+  WORD lang_id;
 };
 
-BOOL __stdcall extract_embedded_dlls(HMODULE module,
+BOOL __stdcall enumerate_embedded_dlls(HMODULE module,
   LPCWSTR type,
   LPWSTR name,
   LONG_PTR lParam)
@@ -51,13 +52,26 @@ BOOL __stdcall extract_embedded_dlls(HMODULE module,
   {
     return TRUE;
   }
-  std::filesystem::path path(name);
+
+  fs::path path(name);
 
   if (path.extension() == ".dll" || path.extension() == ".DLL")
   {
     items->emplace_back(embedded_dll{ std::move(path), data });
   }
 
+  return TRUE;
+}
+
+BOOL __stdcall enumerate_dll_languages(HMODULE hModule, const wchar_t* lpszType, const wchar_t* lpszName, WORD lang_id, LONG_PTR lParam)
+{
+  embedded_dll* dll = (embedded_dll*)lParam;
+
+  if (!dll->lang_id)
+  {
+    dll->lang_id = lang_id;
+    return FALSE;
+  }
   return TRUE;
 }
 
@@ -91,16 +105,15 @@ void exec_on_thread(DWORD window_thread_id, std::move_only_function<void()> call
   assert(result != 0);
 }
 
-void load_core_module()
+void load_core_module(fs::path load_path)
 {
   if (!core_module)
   {
     try
     {
-      auto exe_path = win32::module_ref::current_application().GetModuleFileName();
-      auto dll_path = std::filesystem::path(exe_path).parent_path() / "siege-studio-core.dll";
+      auto dll_path = load_path / "siege-studio-core.dll";
 
-      if (std::filesystem::exists(dll_path))
+      if (fs::exists(dll_path))
       {
         core_module.emplace(dll_path);
 
@@ -189,6 +202,50 @@ int register_and_create_main_window(DWORD window_thread_id, int nCmdShow)
   return 0;
 }
 
+fs::path resolve_install_path(int major_version, int minor_version)
+{
+  fs::path install_path = fs::current_path();
+
+  std::error_code last_error;
+  win32::com::com_string known_folder;
+  std::vector<fs::path> paths_to_try;
+
+  if (auto hresult = ::SHGetKnownFolderPath(FOLDERID_UserProgramFiles, 0, nullptr, known_folder.put()); hresult == S_OK)
+  {
+    paths_to_try.emplace_back(fs::path(known_folder));
+  }
+  paths_to_try.emplace_back(fs::temp_directory_path());
+
+  std::string version = [=] {
+    std::string result;
+    std::ostringstream version;
+    version << std::setw(2) << std::setfill('0') << major_version;
+
+    result = version.str();
+    version.str("");
+
+    version << minor_version;
+
+    return result + "." + version.str();
+  }();
+
+
+  for (auto& path : paths_to_try)
+  {
+    auto temp = path / "The Siege Hub" / "Siege Studio" / version;
+
+    fs::create_directories(temp, last_error);
+
+    if (!last_error)
+    {
+      install_path = temp;
+      break;
+    }
+  }
+
+  return install_path;
+}
+
 
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 {
@@ -209,41 +266,81 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
   std::vector<embedded_dll> embedded_dlls;
   embedded_dlls.reserve(128);
 
-  ::EnumResourceNamesW(hInstance, RT_RCDATA, extract_embedded_dlls, (LONG_PTR)&embedded_dlls);
+  auto app_path = fs::path(win32::module_ref::current_application().GetModuleFileName());
+  auto install_path = app_path.parent_path();
 
-  std::for_each(embedded_dlls.begin(), embedded_dlls.end(), [=](embedded_dll& dll) {
-    auto entry = ::FindResourceW(hInstance, dll.filename.c_str(), RT_RCDATA);
+  ::EnumResourceNamesW(hInstance, RT_RCDATA, enumerate_embedded_dlls, (LONG_PTR)&embedded_dlls);
 
-    if (!entry)
-    {
-      return;
-    }
+  for (auto& dll : embedded_dlls)
+  {
+    ::EnumResourceLanguagesW(hInstance, RT_RCDATA, dll.filename.c_str(), enumerate_dll_languages, (LONG_PTR)&dll);
+  }
 
-    std::error_code code;
-    if (fs::exists(siege::platform::to_lower(dll.filename.wstring()), code))
-    {
-      return;
-    }
+  if (!embedded_dlls.empty())
+  {
+    install_path = resolve_install_path(SIEGE_MAJOR_VERSION, SIEGE_MINOR_VERSION);
+    std::for_each(embedded_dlls.begin(), embedded_dlls.end(), [=](embedded_dll& dll) {
+      auto entry = ::FindResourceW(hInstance, dll.filename.c_str(), RT_RCDATA);
 
-    auto size = ::SizeofResource(hInstance, entry);
-    auto bytes = ::LockResource(dll.handle);
+      if (!entry)
+      {
+        return;
+      }
 
+      std::error_code code;
+      if (fs::exists(install_path / siege::platform::to_lower(dll.filename.wstring()), code))
+      {
+        return;
+      }
 
-    {
-      std::ofstream output(siege::platform::to_lower(dll.filename.wstring()), std::ios::trunc | std::ios::binary);
+      auto size = ::SizeofResource(hInstance, entry);
+      auto bytes = ::LockResource(dll.handle);
+
+      std::ofstream output(install_path / siege::platform::to_lower(dll.filename.wstring()), std::ios::trunc | std::ios::binary);
       output.write((const char*)bytes, size);
-    }
+    });
 
-    LOADED_IMAGE image{};
-    if (::MapAndLoad(siege::platform::to_lower(dll.filename.string()).c_str(), nullptr, &image, TRUE, FALSE))
+    if (install_path != app_path.parent_path())
     {
-      image.FileHeader->OptionalHeader.MajorImageVersion = SIEGE_MAJOR_VERSION;
-      image.FileHeader->OptionalHeader.MinorImageVersion = SIEGE_MINOR_VERSION;
-      ::UnMapAndLoad(&image);
-    }
-  });
+      auto new_path = install_path / app_path.filename();
 
-  load_core_module();
+      std::error_code last_error;
+
+      if (fs::exists(new_path, last_error))
+      {
+        goto launch_app;
+      }
+
+      fs::copy_file(app_path, new_path, last_error);
+
+      if (last_error)
+      {
+        goto launch_app;
+      }
+
+      if (auto handle = ::BeginUpdateResourceW(new_path.c_str(), FALSE); handle)
+      {
+        for (auto& dll : embedded_dlls)
+        {
+          ::UpdateResourceW(handle, RT_RCDATA, dll.filename.c_str(), dll.lang_id, nullptr, 0);
+        }
+
+        ::EndUpdateResourceW(handle, FALSE);
+      }
+    launch_app:
+      auto new_path_str = new_path.wstring();
+      STARTUPINFO startup{};
+      PROCESS_INFORMATION process{};
+
+      if (::CreateProcessW(new_path.c_str(), new_path_str.data(), nullptr, nullptr, TRUE, CREATE_NEW_PROCESS_GROUP, nullptr, nullptr, &startup, &process))
+      {
+        ::ExitProcess(0);
+        return 0;
+      }
+    }
+  }
+
+  load_core_module(install_path);
 
   if (auto result = register_and_create_main_window(::GetCurrentThreadId(), nCmdShow); result != 0)
   {
