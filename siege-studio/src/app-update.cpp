@@ -8,7 +8,7 @@
 #include <regex>
 #include <future>
 #include <imagehlp.h>
-
+#include <winhttp.h>
 
 namespace fs = std::filesystem;
 
@@ -22,11 +22,13 @@ void load_core_module(fs::path);
 int register_and_create_main_window(DWORD thread_id, int nCmdShow);
 fs::path resolve_install_path(int major_version, int minor_version);
 
+DWORD download_http_data(std::wstring domain, std::wstring path, std::ostream& output, std::function<void(DWORD)>);
 
 struct embedded_dll
 {
   std::filesystem::path filename;
   HGLOBAL handle;
+  WORD lang_id;
 };
 
 struct update_context
@@ -50,17 +52,17 @@ struct update_context
 
 } context;
 
-std::string resolve_url()
+std::wstring resolve_domain()
 {
-  std::string buffer(255, '\0');
-  if (auto size = ::GetEnvironmentVariableA("SIEGE_STUDIO_UPDATE_SERVER_URL", buffer.data(), buffer.size() + 1); size != 0 && buffer.starts_with("https:://"))
+  std::wstring buffer(255, '\0');
+  if (auto size = ::GetEnvironmentVariableW(L"SIEGE_STUDIO_UPDATE_SERVER_DOMAIN", buffer.data(), buffer.size() + 1); size != 0)
   {
     buffer.resize(size);
 
     return buffer;
   }
 
-  return "https://updates.thesiegehub.com";
+  return L"updates.thesiegehub.com";
 }
 
 void alloc_console()
@@ -119,8 +121,9 @@ __declspec(dllexport) void detect_update(std::uint32_t update_type)
     alloc_console();
 
     auto temp_file = fs::temp_directory_path() / "latest-siege-studio-version.txt";
-    auto channel = update_type == context.update_development_id ? "development" : "stable";
-    std::string server = resolve_url() + "/" + channel + "/latest.txt";
+    auto channel = update_type == context.update_development_id ? L"development" : L"stable";
+    auto domain = resolve_domain();
+    std::wstring remote_path = std::wstring(L"/") + channel + L"/latest.txt";
 
     std::error_code last_error;
 
@@ -132,30 +135,28 @@ __declspec(dllexport) void detect_update(std::uint32_t update_type)
 
     fs::remove(temp_file, last_error);
 
-    std::string command = "powershell -WindowStyle hidden -Command wget " + server + " -OutFile " + temp_file.string();
-    std::system(command.c_str());
+    std::ostringstream sstr;
+    DWORD transmitted = download_http_data(domain, remote_path, sstr, nullptr);
 
-    if (fs::exists(temp_file, last_error))
+    if (transmitted == 0)
     {
-      std::ostringstream sstr;
-      std::ifstream file(temp_file);
-      sstr << file.rdbuf();
+      return;
+    }
 
-      auto value = std::regex_replace(sstr.str(), std::regex("^ +| +$|( ) +"), "$1");
+    auto value = std::regex_replace(sstr.str(), std::regex("^ +| +$|( ) +"), "$1");
 
-      if (value.contains("."))
+    if (value.contains("."))
+    {
+      auto major = std::stoi(value.substr(0, value.find(".")));
+      auto minor = std::stoi(value.substr(value.find(".") + 1));
+
+      auto version_to_check = get_core_version().value_or(SIZE{ SIEGE_MAJOR_VERSION, SIEGE_MINOR_VERSION });
+
+      if (major >= version_to_check.cx && minor > version_to_check.cy)
       {
-        auto major = std::stoi(value.substr(0, value.find(".")));
-        auto minor = std::stoi(value.substr(value.find(".") + 1));
-
-        auto version_to_check = get_core_version().value_or(SIZE{ SIEGE_MAJOR_VERSION, SIEGE_MINOR_VERSION });
-
-        if (major >= version_to_check.cx && minor > version_to_check.cy)
-        {
-          info.new_version_is_available = true;
-          info.available_version.cx = major;
-          info.available_version.cy = minor;
-        }
+        info.new_version_is_available = true;
+        info.available_version.cx = major;
+        info.available_version.cy = minor;
       }
     }
   });
@@ -215,9 +216,9 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
                                      ::EnableWindow(window, TRUE);
                                    } };
     auto& info = update_type == context.update_development_id ? context.development_info : context.stable_info;
-    std::stringstream final_url;
+    std::wstringstream final_path;
     auto channel = update_type == context.update_development_id ? "development" : "stable";
-    final_url << resolve_url() << "/" << channel << "/" << info.available_version.cx << "." << info.available_version.cy << "/" << "siege-studio.exe";
+    final_path << channel << L"/" << info.available_version.cx << L"." << info.available_version.cy << L"/" << L"siege-studio.exe";
     std::error_code last_error;
 
     auto value = std::to_string(info.available_version.cx) + "." + std::to_string(info.available_version.cy);
@@ -228,39 +229,19 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
     auto temp_file = temp_folder / "siege-studio.exe";
     fs::remove(temp_file, last_error);
 
-    auto task = std::async(std::launch::async, [temp_file, &info]() {
-      using namespace std::chrono_literals;
+    std::ofstream downloaded_file(temp_file, std::ios::binary | std::ios::trunc);
 
-      std::error_code last_error;
-      while (true)
-      {
-        std::shared_ptr<void> deferred{ nullptr, [](...) { std::this_thread::sleep_for(500ms); } };
-
-        if (!fs::exists(temp_file, last_error))
-        {
-          continue;
-        }
-
-        info.current_size = fs::file_size(temp_file, last_error);
-
-        if (last_error)
-        {
-          break;
-        }
-
-        if (info.current_size >= info.max_size)
-        {
-          break;
-        }
-      }
+    DWORD transmitted = download_http_data(resolve_domain(), final_path.str(), downloaded_file, [&info](auto value) {
+      info.current_size = value;
     });
-    std::string command = "powershell -WindowStyle hidden -Command wget " + final_url.str() + " -OutFile " + temp_file.string();
-    std::system(command.c_str());
 
-    if (!fs::exists(temp_file, last_error))
+    info.current_size = transmitted;
+    if (transmitted == 0)
     {
       return;
     }
+
+    downloaded_file.close();
 
     auto module = ::LoadLibraryExW(temp_file.c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE);
 
@@ -283,6 +264,8 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
     }
 
     auto install_path = resolve_install_path(info.available_version.cx, info.available_version.cy);
+
+    fs::copy_file(temp_file, install_path / temp_file.filename(), fs::copy_options::update_existing, last_error);
 
     std::for_each(embedded_dlls.begin(), embedded_dlls.end(), [&](embedded_dll& dll) {
       auto entry = ::FindResourceW(module, dll.filename.c_str(), RT_RCDATA);
@@ -309,4 +292,61 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
     register_and_create_main_window(window_thread_id, SW_SHOWNORMAL);
   });
 }
+}
+
+DWORD download_http_data(std::wstring domain, std::wstring remote_path, std::ostream& output, std::function<void(DWORD)> on_transmitted)
+{
+  auto session = ::WinHttpOpen(nullptr, WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+
+  auto connect = ::WinHttpConnect(session, domain.c_str(), INTERNET_DEFAULT_HTTPS_PORT, 0);
+
+  auto request = ::WinHttpOpenRequest(connect, L"GET", remote_path.c_str(), NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
+
+  auto sent = ::WinHttpSendRequest(request,
+    WINHTTP_NO_ADDITIONAL_HEADERS,
+    0,
+    WINHTTP_NO_REQUEST_DATA,
+    0,
+    0,
+    0);
+
+  sent = ::WinHttpReceiveResponse(request, nullptr);
+
+  thread_local std::vector<char> buffer;
+  DWORD transmitted = 0;
+  DWORD total_transmitted = 0;
+
+  if (sent)
+  {
+    DWORD size;
+    do {
+
+      size = 0;
+      if (!::WinHttpQueryDataAvailable(request, &size))
+      {
+        break;
+      }
+
+      buffer.resize(size);
+
+      if (!::WinHttpReadData(request, buffer.data(), size, &transmitted))
+      {
+        break;
+      }
+
+      total_transmitted += transmitted;
+
+      if (on_transmitted)
+      {
+        on_transmitted(total_transmitted);
+      }
+
+      output.write(buffer.data(), buffer.size());
+    } while (size > 0);
+  }
+
+  ::WinHttpCloseHandle(request);
+  ::WinHttpCloseHandle(connect);
+  ::WinHttpCloseHandle(session);
+  return total_transmitted;
 }

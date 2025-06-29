@@ -162,6 +162,7 @@ void unload_core_module(HWND window)
 
 
     core_module->reset();
+    core_module = std::nullopt;
   }
 }
 
