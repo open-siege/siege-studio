@@ -21,67 +21,21 @@ namespace platform = siege::platform;
 
 namespace siege::resource
 {
-  template<std::size_t Size>
-  [[nodiscard]] inline std::optional<std::string> find_system_app(const std::array<std::string_view, Size>& commands)
-  {
-    auto output_path = platform::make_auto_remove_path(fs::temp_directory_path() / "output.txt");
-
-    for (auto command : commands)
-    {
-      std::stringstream command_str;
-      command_str << command << " > " << *output_path;
-      std::system(command_str.str().c_str());
-      std::string temp;
-      if (std::ifstream output(*output_path, std::ios::binary);
-        output && std::getline(output, temp) && fs::exists(rtrim(temp)))
-      {
-        return "\"" + rtrim(temp) + "\"";
-      }
-    }
-
-    return std::nullopt;
-  }
-
-  template<std::size_t Size>
-  [[nodiscard]] std::string find_system_app(std::string_view app_name, const std::array<std::string_view, Size>& commands)
-  {
-#ifdef WIN32
-    try
-    {
-      auto name_with_extension = fs::path(app_name).replace_extension(".exe");
-
-      if (fs::exists(name_with_extension))
-      {
-        return name_with_extension.string();
-      }
-
-      return find_system_app(commands).value_or(std::string(app_name));
-    }
-    catch (...)
-    {
-    }
-#endif
-
-    return std::string(app_name);
-  }
-
   [[nodiscard]] std::string find_cab_executable(std::string_view app_name, std::array<std::string_view, 2> search_names)
   {
 #ifdef WIN32
     try
     {
-      auto app_dir = fs::path(win32::module_ref::current_application().GetModuleFileName<wchar_t>()).parent_path();
 
       for (auto& search_name : search_names)
       {
-        if (fs::exists(app_dir / search_name))
-        {
-          return "\"" + (app_dir / search_name).string() + "\"";
-        }
+        auto path = win32::find_binary_module({
+          .module_name = search_name,
+        });
 
-        if (fs::exists(search_name))
+        if (path)
         {
-          return "\"" + (fs::current_path() / search_name).string() + "\"";
+          return path->string();
         }
       }
     }
@@ -119,29 +73,84 @@ namespace siege::resource
 
   [[nodiscard]] std::string seven_zip_executable()
   {
-    constexpr static std::array<std::string_view, 3> commands = { { "where 7z",
-      "echo %PROGRAMFILES%\\7-Zip\\7z.exe",
-      "echo %PROGRAMFILES(x86)%\\7-Zip\\7z.exe" } };
+#ifdef WIN32
+    for (auto name : { L"7zr", L"7z" })
+    {
+      auto path = win32::find_binary_module({ .module_name = name,
+        .search_env_paths = true });
 
-    return find_system_app("7z", commands);
+      if (path)
+      {
+        return path->string();
+      }
+    }
+#endif
+    std::error_code last_error;
+    for (auto var : { "PROGRAMFILES", "PROGRAMFILES(x86)" })
+    {
+      auto env = ::getenv(var);
+
+      if (!env)
+      {
+        continue;
+      }
+
+      auto path = fs::path(env) / "7-Zip" / "7z.exe";
+
+      if (fs::exists(path, last_error))
+      {
+        return path.string();
+      }
+    }
+
+    return "7z";
   }
 
   [[nodiscard]] std::string wincdemu_executable()
   {
-    constexpr static std::array<std::string_view, 3> commands = { { "where batchmnt",
-      "echo %PROGRAMFILES%\\WinCDEmu\\batchmnt.exe",
-      "echo %PROGRAMFILES(x86)%\\WinCDEmu\\batchmnt.exe" } };
+    std::error_code last_error;
+    for (auto var : { "PROGRAMFILES", "PROGRAMFILES(x86)" })
+    {
+      auto env = ::getenv(var);
 
-    return find_system_app("batchmnt", commands);
+      if (!env)
+      {
+        continue;
+      }
+
+      auto path = fs::path(env) / "WinCDEmu" / "batchmnt.exe";
+
+      if (fs::exists(path, last_error))
+      {
+        return path.string();
+      }
+    }
+
+    return "batchmnt";
   }
 
   [[nodiscard]] std::string power_iso_executable()
   {
-    constexpr static std::array<std::string_view, 3> commands = { { "where piso",
-      "echo %PROGRAMFILES%\\PowerISO\\piso.exe",
-      "echo %PROGRAMFILES(x86)%\\PowerISO\\piso.exe" } };
+    std::error_code last_error;
+    
+    for (auto var : { "PROGRAMFILES", "PROGRAMFILES(x86)" })
+    {
+      auto env = ::getenv(var);
 
-    return find_system_app("piso", commands);
+      if (!env)
+      {
+        continue;
+      }
+
+      auto path = fs::path(env) / "PowerISO" / "piso.exe";
+
+      if (fs::exists(path, last_error))
+      {
+        return path.string();
+      }
+    }
+
+    return "piso";
   }
 
   using content_map = std::unordered_map<std::string, std::vector<content_info>>;
@@ -204,6 +213,7 @@ namespace siege::resource
     std::unordered_map<std::string, std::vector<content_info>> stat_cache;
     std::map<std::string, std::shared_ptr<fs::path>> auto_delete_files;
     std::unordered_set<std::string> already_ran_commands;
+    std::map<std::string_view, bool> additional_flags;
   };
 
   content_cache& cache_as_content_cache(std::any& cache)
@@ -554,7 +564,8 @@ namespace siege::resource
         platform::folder_info folder{};
         new_path = new_path / segment;
 
-        if (new_path != file.folder_path && folders.contains(new_path.string())) {
+        if (new_path != file.folder_path && folders.contains(new_path.string()))
+        {
           continue;
         }
 
@@ -800,10 +811,13 @@ namespace siege::resource
 
   std::vector<content_info> cab_get_content_listing(std::any& cache, const platform::listing_query& query)
   {
+    content_cache& temp = cache_as_content_cache(cache);
+
     auto cab2_listing = cab2_get_content_listing(cache, query);
 
     if (!cab2_listing.empty())
     {
+      temp.additional_flags["cab2"] = true;
       return cab2_listing;
     }
 
@@ -811,6 +825,7 @@ namespace siege::resource
 
     if (!cab5_listing.empty())
     {
+      temp.additional_flags["cab5"] = true;
       return cab5_listing;
     }
 
@@ -818,6 +833,7 @@ namespace siege::resource
 
     if (!cab6_listing.empty())
     {
+      temp.additional_flags["cab6"] = true;
       return cab6_listing;
     }
 
@@ -1065,8 +1081,11 @@ namespace siege::resource
 
   void cab_extract_file_contents(std::any& storage, const siege::platform::file_info& info, std::ostream& output)
   {
-    auto extracted = extract_file_contents_using_external_app(
-      storage, info, output, [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
+    content_cache& temp = cache_as_content_cache(storage);
+
+    auto extract_cab_2 = [&] {
+      return extract_file_contents_using_external_app(
+        storage, info, output, [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
         fs::current_path(temp_path);
         std::stringstream command;
         command << '\"' << cab2_executable() << " x "
@@ -1077,10 +1096,11 @@ namespace siege::resource
         std::stringstream command;
         command << '\"' << cab2_executable() << " x " <<  info.archive_path << '\"';
         return command.str(); });
+    };
 
-    if (!extracted)
-    {
-      extracted = extract_file_contents_using_external_app(
+
+    auto extract_cab_5 = [&] {
+      return extract_file_contents_using_external_app(
         storage, info, output, [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
           fs::current_path(temp_path);
           std::stringstream command;
@@ -1092,15 +1112,11 @@ namespace siege::resource
           std::stringstream command;
           command << '\"' << cab5_executable() << " x " <<  info.archive_path << '\"';
           return command.str(); });
-    }
+    };
 
-    if (extracted)
-    {
-      return;
-    }
-
-    extracted = extract_file_contents_using_external_app(
-      storage, info, output, [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
+    auto extract_cab_6 = [&] {
+      return extract_file_contents_using_external_app(
+        storage, info, output, [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
         fs::current_path(temp_path);
         std::stringstream command;
         command << '\"' << cab6_executable() << " x "
@@ -1111,6 +1127,43 @@ namespace siege::resource
         std::stringstream command;
         command << '\"' << cab6_executable() << " x " <<  info.archive_path << '\"';
         return command.str(); });
+    };
+
+    auto type = temp.additional_flags.find("cab_type");
+
+    if (temp.additional_flags["cab2"])
+    {
+      extract_cab_2();
+      return;
+    }
+
+    if (temp.additional_flags["cab5"])
+    {
+      extract_cab_5();
+      return;
+    }
+
+    if (temp.additional_flags["cab6"])
+    {
+      extract_cab_6();
+      return;
+    }
+
+    auto extracted = extract_cab_2();
+
+    if (extracted)
+    {
+      return;
+    }
+
+    extracted = extract_cab_5();
+
+    if (extracted)
+    {
+      return;
+    }
+
+    extracted = extract_cab_6();
 
     if (extracted)
     {

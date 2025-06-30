@@ -838,9 +838,9 @@ unpacking_status do_unpacking(user_interaction ui, fs::path backup_path)
           }
 
           auto inner_reader = siege::resource::make_resource_reader(*inner_backup);
-          std::any inner_cache{};
+          auto inner_cache = std::make_shared<std::any>();
 
-          auto inner_files = inner_reader.get_all_files_for_query(inner_cache, *inner_backup, listing_query{ .archive_path = final_path, .folder_path = final_path });
+          auto inner_files = inner_reader.get_all_files_for_query(*inner_cache, *inner_backup, listing_query{ .archive_path = final_path, .folder_path = final_path });
 
           auto [first, end] = child_verification_mappings.equal_range(backup_path);
 
@@ -863,7 +863,7 @@ unpacking_status do_unpacking(user_interaction ui, fs::path backup_path)
                 fs::create_directories(install_path / install_segment / new_item->relative_path());
                 auto final_path = install_path / install_segment / new_item->relative_path() / new_item->filename;
                 std::ofstream temp_out_buffer(final_path, std::ios::binary | std::ios::trunc);
-                inner_reader.extract_file_contents(inner_cache, *inner_backup, *new_item, temp_out_buffer);
+                inner_reader.extract_file_contents(*inner_cache, *inner_backup, *new_item, temp_out_buffer);
               };
             }
           }
