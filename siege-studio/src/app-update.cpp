@@ -3,6 +3,7 @@
 #include <siege/platform/win/threading.hpp>
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/shared.hpp>
+#include <siege/platform/http.hpp>
 #include <fstream>
 #include <filesystem>
 #include <regex>
@@ -21,8 +22,6 @@ void unload_core_module(HWND window);
 void load_core_module(fs::path);
 int register_and_create_main_window(DWORD thread_id, int nCmdShow);
 fs::path resolve_install_path(int major_version, int minor_version);
-
-DWORD download_http_data(std::wstring domain, std::wstring path, std::ostream& output, std::function<void(DWORD)>);
 
 struct embedded_dll
 {
@@ -136,7 +135,8 @@ __declspec(dllexport) void detect_update(std::uint32_t update_type)
     fs::remove(temp_file, last_error);
 
     std::ostringstream sstr;
-    DWORD transmitted = download_http_data(domain, remote_path, sstr, nullptr);
+    siege::platform::http_client_context context;
+    DWORD transmitted = siege::platform::download_http_data(context, domain, remote_path, sstr);
 
     if (transmitted == 0)
     {
@@ -231,9 +231,10 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
 
     std::ofstream downloaded_file(temp_file, std::ios::binary | std::ios::trunc);
 
-    DWORD transmitted = download_http_data(resolve_domain(), final_path.str(), downloaded_file, [&info](auto value) {
+    siege::platform::http_client_context context;
+    std::size_t transmitted = download_http_data(context, resolve_domain(), final_path.str(), downloaded_file, siege::platform::http_callbacks{ [&info](auto value) {
       info.current_size = value;
-    });
+    } });
 
     info.current_size = transmitted;
     if (transmitted == 0)
@@ -292,61 +293,4 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
     register_and_create_main_window(window_thread_id, SW_SHOWNORMAL);
   });
 }
-}
-
-DWORD download_http_data(std::wstring domain, std::wstring remote_path, std::ostream& output, std::function<void(DWORD)> on_transmitted)
-{
-  auto session = ::WinHttpOpen(nullptr, WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-
-  auto connect = ::WinHttpConnect(session, domain.c_str(), INTERNET_DEFAULT_HTTPS_PORT, 0);
-
-  auto request = ::WinHttpOpenRequest(connect, L"GET", remote_path.c_str(), NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
-
-  auto sent = ::WinHttpSendRequest(request,
-    WINHTTP_NO_ADDITIONAL_HEADERS,
-    0,
-    WINHTTP_NO_REQUEST_DATA,
-    0,
-    0,
-    0);
-
-  sent = ::WinHttpReceiveResponse(request, nullptr);
-
-  thread_local std::vector<char> buffer;
-  DWORD transmitted = 0;
-  DWORD total_transmitted = 0;
-
-  if (sent)
-  {
-    DWORD size;
-    do {
-
-      size = 0;
-      if (!::WinHttpQueryDataAvailable(request, &size))
-      {
-        break;
-      }
-
-      buffer.resize(size);
-
-      if (!::WinHttpReadData(request, buffer.data(), size, &transmitted))
-      {
-        break;
-      }
-
-      total_transmitted += transmitted;
-
-      if (on_transmitted)
-      {
-        on_transmitted(total_transmitted);
-      }
-
-      output.write(buffer.data(), buffer.size());
-    } while (size > 0);
-  }
-
-  ::WinHttpCloseHandle(request);
-  ::WinHttpCloseHandle(connect);
-  ::WinHttpCloseHandle(session);
-  return total_transmitted;
 }

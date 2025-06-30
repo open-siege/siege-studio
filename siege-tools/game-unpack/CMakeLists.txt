@@ -5,6 +5,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 if (WIN32)
     add_executable(${PROJECT_NAME} src/game-unpack.win32.cpp)
+    target_link_libraries(${PROJECT_NAME} PRIVATE siege-win-desktop)
 else()
     # TODO make extension and installation modules work in a cross platform way
     add_executable(${PROJECT_NAME} src/game-unpack.cpp)

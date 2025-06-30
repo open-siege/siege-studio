@@ -127,6 +127,38 @@ namespace win32
     }
   };
 
+  inline DLL_DIRECTORY_COOKIE add_dll_directory(const wchar_t* path)
+  {
+    static auto module = ::GetModuleHandleW(L"kernel32.dll");
+
+    using add_dll_proc = std::add_pointer_t<decltype(::AddDllDirectory)>;
+    static auto proc = (add_dll_proc)::GetProcAddress(module, "AddDllDirectory");
+
+    if (proc)
+    {
+      return proc(path);
+    }
+
+    // TODO add the path to the PATH environment variable as a fallback
+    return 0;
+  }
+
+  inline BOOL remove_dll_directory(DLL_DIRECTORY_COOKIE token)
+  {
+    static auto module = ::GetModuleHandleW(L"kernel32.dll");
+
+    using add_dll_proc = std::add_pointer_t<decltype(::RemoveDllDirectory)>;
+    static auto proc = (add_dll_proc)::GetProcAddress(module, "RemoveDllDirectory");
+
+    if (proc)
+    {
+      return proc(token);
+    }
+
+    // TODO add the path to the PATH environment variable as a fallback
+    return FALSE;
+  }
+
   struct search_context
   {
     std::filesystem::path module_name;

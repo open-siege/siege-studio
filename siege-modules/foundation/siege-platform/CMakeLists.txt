@@ -22,7 +22,8 @@ if (WIN32)
         src/theming-masking.cpp
         src/theming-font.cpp
         src/layout-common.cpp
-        src/platform_image.win32.cpp)
+        src/platform_image.win32.cpp
+        src/http.win32.cpp)
     set_property(TARGET siege-win-desktop PROPERTY CXX_STANDARD 23)
     target_compile_definitions(siege-win-desktop PRIVATE WINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP)
     target_include_directories(siege-win-desktop PUBLIC ${PROJECT_SOURCE_DIR}/include)

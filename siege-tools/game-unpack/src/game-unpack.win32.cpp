@@ -7,6 +7,7 @@
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/threading.hpp>
 #include <siege/resource/resource_maker.hpp>
+#include <siege/platform/http.hpp>
 #include <span>
 #include <string_view>
 #include <array>
@@ -332,8 +333,8 @@ int main(int argc, const char* argv[])
 
                 auto ui_thread_id = ::GetCurrentThreadId();
                 win32::queue_user_work_item([ui_thread_id, window, backup_path = *path, &state] {
-                  user_interaction ui{
-                    .ask_for_variable = [ui_thread_id, window, &state](auto variable, auto options) {
+                user_interaction ui{
+                  .ask_for_variable = [ui_thread_id, window, &state](auto variable, auto options) {
                           std::promise<installation_option> result{};
                           exec_on_thread(ui_thread_id, [window, &state, variable, options, &result]() {
                             state.enable_page();
@@ -371,7 +372,7 @@ int main(int argc, const char* argv[])
                           });
 
                           return result.get_future().get(); },
-                    .ask_for_install_path = [ui_thread_id, window, &state](auto hints) {
+                  .ask_for_install_path = [ui_thread_id, window, &state](auto hints) {
                       std::promise<std::optional<fs::path>> result{};
                       exec_on_thread(ui_thread_id, [window, &state, hints, &result]() {
                         state.enable_page();
@@ -415,7 +416,8 @@ int main(int argc, const char* argv[])
                         state.navigate_page(window, std::move(new_page));
                       });
 
-                      return result.get_future().get(); }
+                      return result.get_future().get(); },
+                  .ask_to_download_cab_tooling = [](){ return true; }
                   };
                   auto result = do_unpacking(ui, backup_path);
                   if (result == unpacking_status::suceeded)
@@ -475,8 +477,7 @@ int main(int argc, const char* argv[])
       .ask_for_variable = [](auto variable, auto options) { 
         std::wcout << L"Setting " << variable.label << L" to " << options[0].label << std::endl;
             
-        return options[0]; 
-      },
+        return options[0]; },
       .ask_for_install_path = [](auto hints) -> std::optional<fs::path> {
         if (!hints.empty())
         {
@@ -485,7 +486,7 @@ int main(int argc, const char* argv[])
         }
         return std::nullopt;
       },
-
+      .ask_to_download_cab_tooling = []() { return true; }
     };
 
     std::cout << "Detecting game for " << *file_arg << std::endl;
@@ -700,7 +701,55 @@ unpacking_status do_unpacking(user_interaction ui, fs::path backup_path)
       verification_mappings.emplace(temp);
     }
 
-    // TODO ask user to download cab tooling
+    auto external_path = fs::path(win32::module_ref::current_application().GetModuleFileName()).parent_path();
+    std::error_code last_error;
+
+    if (fs::is_directory(external_path.parent_path() / "external"))
+    {
+      external_path = external_path.parent_path() / "external";
+      win32::add_dll_directory(external_path.c_str());
+    }
+
+    auto has_cab_extractors = 
+        fs::exists(external_path / "I5comp.exe", last_error) && 
+        fs::exists(external_path / "i6comp.exe") && 
+        fs::exists(external_path / "7zr.exe");
+
+    if (!has_cab_extractors && requires_cab_tooling && ui.ask_to_download_cab_tooling())
+    {
+      for (auto domain : { L"updates.thesiegehub.com" })
+      {
+        siege::platform::http_client_context context;
+
+        for (auto path : { L"external/i5comp21.zip", L"external/i6cmp13b.zip", L"external/7zr.zip" })
+        {
+          std::stringstream content;
+          auto downloaded = siege::platform::download_http_data(context, domain, path, content);
+
+          if (!downloaded)
+          {
+            continue;
+          }
+
+          if (!siege::resource::is_resource_readable(content))
+          {
+            continue;
+          }
+
+          std::any cache;
+          auto reader = siege::resource::make_resource_reader(content);
+
+          auto files = reader.get_all_files_for_query(cache, content, {});
+
+          for (const auto& file : files)
+          {
+            std::ofstream output(external_path / file.filename, std::ios::binary);
+            reader.extract_file_contents(cache, content, file, output);
+          }
+        }
+      }
+    }
+
     std::any cab_cache{};
 
     for (auto& backup_path : backup_paths)
