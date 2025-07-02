@@ -24,6 +24,19 @@
 namespace fs = std::filesystem;
 extern "C" __declspec(dllexport) std::uint32_t DisableSiegeExtensionModule = -1;
 constexpr static std::wstring_view app_title = L"Siege Studio";
+void load_core_module(fs::path load_path);
+int register_and_create_main_window(DWORD window_thread_id, int nCmdShow);
+
+struct discovery_info
+{
+  fs::path current_app_exe_path;
+  fs::path launch_exe_path;
+  std::optional<fs::path> matching_installed_exe_path;
+  std::optional<fs::path> latest_installed_exe_path;
+  std::optional<fs::path> extraction_target_path;
+};
+
+discovery_info discover_installation_info(int major_version, int minor_version, std::wstring channel);
 
 struct embedded_dll
 {
@@ -83,6 +96,124 @@ static auto* register_windows_ptr = &register_windows;
 static auto* deregister_windows_ptr = &deregister_windows;
 static ATOM main_atom = 0;
 
+int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
+{
+  win32::com::init_com();
+
+  win32::init_common_controls_ex({ .dwSize{ sizeof(INITCOMMONCONTROLSEX) },
+    .dwICC = ICC_STANDARD_CLASSES | ICC_INTERNET_CLASSES | ICC_LISTVIEW_CLASSES | ICC_TAB_CLASSES | ICC_TREEVIEW_CLASSES | ICC_DATE_CLASSES | ICC_BAR_CLASSES });
+
+  auto wic_version = win32::get_wic_version();
+
+  if (!wic_version)
+  {
+    ::MessageBoxW(nullptr, L"Windows Imaging Component has not been detected. Siege Studio will not function correctly without it. If you are using an older version of Windows, make sure to either install the latest updates or the Windows Imaging Component redistributable.", L"Windows Imaging Component is missing", MB_OK | MB_ICONERROR);
+  }
+
+  win32::window_module_ref this_module(hInstance);
+
+  std::vector<embedded_dll> embedded_dlls;
+  embedded_dlls.reserve(128);
+
+  ::EnumResourceNamesW(hInstance, RT_RCDATA, enumerate_embedded_dlls, (LONG_PTR)&embedded_dlls);
+
+  for (auto& dll : embedded_dlls)
+  {
+    ::EnumResourceLanguagesW(hInstance, RT_RCDATA, dll.filename.c_str(), enumerate_dll_languages, (LONG_PTR)&dll);
+  }
+
+  // TODO get the preferred channel from the registry
+  auto preferred_channel = L"any";
+
+  auto install_info = discover_installation_info(SIEGE_MAJOR_VERSION, SIEGE_MINOR_VERSION, preferred_channel);
+
+  std::error_code last_error;
+
+  if (!embedded_dlls.empty() && install_info.extraction_target_path)
+  {
+    auto install_path = *install_info.extraction_target_path;
+    std::for_each(embedded_dlls.begin(), embedded_dlls.end(), [=](embedded_dll& dll) {
+      auto entry = ::FindResourceW(hInstance, dll.filename.c_str(), RT_RCDATA);
+
+      if (!entry)
+      {
+        return;
+      }
+
+      std::error_code code;
+      if (fs::exists(install_path / siege::platform::to_lower(dll.filename.wstring()), code))
+      {
+        return;
+      }
+
+      auto size = ::SizeofResource(hInstance, entry);
+      auto bytes = ::LockResource(dll.handle);
+
+      std::ofstream output(install_path / siege::platform::to_lower(dll.filename.wstring()), std::ios::trunc | std::ios::binary);
+      output.write((const char*)bytes, size);
+    });
+
+    auto new_path = *install_info.extraction_target_path / install_info.current_app_exe_path.filename();
+    fs::copy_file(install_info.current_app_exe_path, new_path, last_error);
+
+    if (!last_error)
+    {
+      if (auto handle = ::BeginUpdateResourceW(new_path.c_str(), FALSE); handle)
+      {
+        for (auto& dll : embedded_dlls)
+        {
+          ::UpdateResourceW(handle, RT_RCDATA, dll.filename.c_str(), dll.lang_id, nullptr, 0);
+        }
+
+        ::EndUpdateResourceW(handle, FALSE);
+      }
+
+      auto new_path_str = new_path.wstring();
+      STARTUPINFO startup{};
+      PROCESS_INFORMATION process{};
+
+      if (::CreateProcessW(new_path.c_str(), new_path_str.data(), nullptr, nullptr, TRUE, CREATE_NEW_PROCESS_GROUP, nullptr, nullptr, &startup, &process))
+      {
+        ::ExitProcess(0);
+        return 0;
+      }
+    }
+  }
+
+  load_core_module(install_info.launch_exe_path.parent_path());
+
+  if (auto result = register_and_create_main_window(::GetCurrentThreadId(), nCmdShow); result != 0)
+  {
+    return result;
+  }
+
+  auto deferred = std::shared_ptr<void>(nullptr, [hInstance](...) { deregister_windows_ptr(hInstance); });
+
+  MSG msg;
+
+  while (true)
+  {
+    DWORD wait_result = ::MsgWaitForMultipleObjectsEx(0, NULL, INFINITE, QS_ALLINPUT, MWMO_ALERTABLE | MWMO_INPUTAVAILABLE);
+
+    if (wait_result == WAIT_FAILED)
+    {
+      return -1;
+    }
+
+    while (::PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+    {
+      if (msg.message == WM_QUIT)
+      {
+        return (int)msg.wParam;
+      }
+
+      ::TranslateMessage(&msg);
+      ::DispatchMessageW(&msg);
+    }
+  }
+
+  return (int)msg.wParam;
+}
 void exec_on_thread(DWORD window_thread_id, std::move_only_function<void()> callback)
 {
   struct handler
@@ -203,21 +334,24 @@ int register_and_create_main_window(DWORD window_thread_id, int nCmdShow)
   return 0;
 }
 
-fs::path resolve_install_path(int major_version, int minor_version)
+discovery_info discover_installation_info(int major_version, int minor_version, std::wstring channel)
 {
-  fs::path install_path = fs::current_path();
+  discovery_info info{};
 
-  std::error_code last_error;
-  win32::com::com_string known_folder;
-  std::vector<fs::path> paths_to_try;
 
-  if (auto hresult = ::SHGetKnownFolderPath(FOLDERID_UserProgramFiles, 0, nullptr, known_folder.put()); hresult == S_OK)
+  std::vector<std::wstring> channels = {};
+
+  if (channel.empty() || siege::platform::to_lower(channel) == L"any")
   {
-    paths_to_try.emplace_back(fs::path(known_folder));
+    channels.emplace_back(L"stable");
+    channels.emplace_back(L"development");
   }
-  paths_to_try.emplace_back(fs::temp_directory_path());
+  else
+  {
+    channels.emplace_back(channel);
+  }
 
-  std::string version = [=] {
+  std::string current_version = [=] {
     std::string result;
     std::ostringstream version;
     version << std::setw(2) << std::setfill('0') << major_version;
@@ -230,148 +364,99 @@ fs::path resolve_install_path(int major_version, int minor_version)
     return result + "." + version.str();
   }();
 
+  info.current_app_exe_path = fs::path(win32::module_ref::current_application().GetModuleFileName());
 
-  for (auto& path : paths_to_try)
+  win32::com::com_string known_folder;
+  std::error_code last_error;
+
+  if (auto hresult = ::SHGetKnownFolderPath(FOLDERID_UserProgramFiles, 0, nullptr, known_folder.put()); hresult == S_OK)
   {
-    auto temp = path / "The Siege Hub" / "Siege Studio" / version;
+    auto root = fs::path(known_folder) / "The Siege Hub" / "Siege Studio";
 
-    fs::create_directories(temp, last_error);
+    fs::create_directories(root, last_error);
 
-    if (!last_error)
+    if (last_error)
     {
-      install_path = temp;
-      break;
+      goto discover_temp;
     }
-  }
 
-  return install_path;
-}
-
-
-int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
-{
-  win32::com::init_com();
-
-  win32::init_common_controls_ex({ .dwSize{ sizeof(INITCOMMONCONTROLSEX) },
-    .dwICC = ICC_STANDARD_CLASSES | ICC_INTERNET_CLASSES | ICC_LISTVIEW_CLASSES | ICC_TAB_CLASSES | ICC_TREEVIEW_CLASSES | ICC_DATE_CLASSES | ICC_BAR_CLASSES });
-
-  auto wic_version = win32::get_wic_version();
-
-  if (!wic_version)
-  {
-    ::MessageBoxW(nullptr, L"Windows Imaging Component has not been detected. Siege Studio will not function correctly without it. If you are using an older version of Windows, make sure to either install the latest updates or the Windows Imaging Component redistributable.", L"Windows Imaging Component is missing", MB_OK | MB_ICONERROR);
-  }
-
-  win32::window_module_ref this_module(hInstance);
-
-  std::vector<embedded_dll> embedded_dlls;
-  embedded_dlls.reserve(128);
-
-  auto app_path = fs::path(win32::module_ref::current_application().GetModuleFileName());
-  auto install_path = app_path.parent_path();
-
-  ::EnumResourceNamesW(hInstance, RT_RCDATA, enumerate_embedded_dlls, (LONG_PTR)&embedded_dlls);
-
-  for (auto& dll : embedded_dlls)
-  {
-    ::EnumResourceLanguagesW(hInstance, RT_RCDATA, dll.filename.c_str(), enumerate_dll_languages, (LONG_PTR)&dll);
-  }
-
-  if (!embedded_dlls.empty())
-  {
-    install_path = resolve_install_path(SIEGE_MAJOR_VERSION, SIEGE_MINOR_VERSION);
-    std::for_each(embedded_dlls.begin(), embedded_dlls.end(), [=](embedded_dll& dll) {
-      auto entry = ::FindResourceW(hInstance, dll.filename.c_str(), RT_RCDATA);
-
-      if (!entry)
-      {
-        return;
-      }
-
-      std::error_code code;
-      if (fs::exists(install_path / siege::platform::to_lower(dll.filename.wstring()), code))
-      {
-        return;
-      }
-
-      auto size = ::SizeofResource(hInstance, entry);
-      auto bytes = ::LockResource(dll.handle);
-
-      std::ofstream output(install_path / siege::platform::to_lower(dll.filename.wstring()), std::ios::trunc | std::ios::binary);
-      output.write((const char*)bytes, size);
-    });
-
-    if (install_path != app_path.parent_path())
+    for (auto& channel : channels)
     {
-      auto new_path = install_path / app_path.filename();
+      auto temp = root / channel / current_version;
 
-      std::error_code last_error;
-
-      if (fs::exists(new_path, last_error))
+      if (!fs::is_directory(temp, last_error))
       {
-        goto launch_app;
+        continue;
       }
 
-      fs::copy_file(app_path, new_path, last_error);
-
-      if (last_error)
+      std::optional<fs::path> app_path;
+      int dll_count = 0;
+      for (auto const& dir_entry : fs::directory_iterator{ temp })
       {
-        goto launch_app;
-      }
-
-      if (auto handle = ::BeginUpdateResourceW(new_path.c_str(), FALSE); handle)
-      {
-        for (auto& dll : embedded_dlls)
+        if (dir_entry.path().filename() == info.current_app_exe_path.filename())
         {
-          ::UpdateResourceW(handle, RT_RCDATA, dll.filename.c_str(), dll.lang_id, nullptr, 0);
+          app_path = dir_entry.path();
         }
 
-        ::EndUpdateResourceW(handle, FALSE);
-      }
-    launch_app:
-      auto new_path_str = new_path.wstring();
-      STARTUPINFO startup{};
-      PROCESS_INFORMATION process{};
+        if (dir_entry.path().extension() == ".dll" || dir_entry.path().extension() == ".DLL")
+        {
+          dll_count++;
+        }
 
-      if (::CreateProcessW(new_path.c_str(), new_path_str.data(), nullptr, nullptr, TRUE, CREATE_NEW_PROCESS_GROUP, nullptr, nullptr, &startup, &process))
+        if (app_path && dll_count >= 2)
+        {
+          info.matching_installed_exe_path = *app_path;
+          break;
+        }
+      }
+
+      if (info.matching_installed_exe_path)
       {
-        ::ExitProcess(0);
-        return 0;
+        break;
       }
     }
-  }
 
-  load_core_module(install_path);
 
-  if (auto result = register_and_create_main_window(::GetCurrentThreadId(), nCmdShow); result != 0)
-  {
-    return result;
-  }
+    std::set<fs::path, std::greater<fs::path>> other_paths;
 
-  auto deferred = std::shared_ptr<void>(nullptr, [hInstance](...) { deregister_windows_ptr(hInstance); });
-
-  MSG msg;
-
-  while (true)
-  {
-    DWORD wait_result = ::MsgWaitForMultipleObjectsEx(0, NULL, INFINITE, QS_ALLINPUT, MWMO_ALERTABLE | MWMO_INPUTAVAILABLE);
-
-    if (wait_result == WAIT_FAILED)
+    for (auto const& dir_entry : fs::recursive_directory_iterator{ root })
     {
-      return -1;
-    }
-
-    while (::PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
-    {
-      if (msg.message == WM_QUIT)
+      if (dir_entry.is_directory() && dir_entry.path().filename() != current_version && fs::exists(dir_entry.path() / info.current_app_exe_path.filename()) && dir_entry.path().filename().wstring().contains(L".") && dir_entry.path().filename().string() > current_version)
       {
-        return (int)msg.wParam;
+        other_paths.emplace(dir_entry.path() / info.current_app_exe_path.filename());
       }
+    }
 
-      ::TranslateMessage(&msg);
-      ::DispatchMessageW(&msg);
+    if (!other_paths.empty())
+    {
+      info.latest_installed_exe_path = *other_paths.begin();
+    }
+
+    if (!info.matching_installed_exe_path && !info.latest_installed_exe_path)
+    {
+      auto temp = root / SIEGE_CHANNEL_TYPE / current_version;
+      fs::create_directories(temp, last_error);
+
+      if (!last_error)
+      {
+        info.extraction_target_path = temp;
+      }
     }
   }
+discover_temp:
 
-  return (int)msg.wParam;
+  if (info.latest_installed_exe_path)
+  {
+    info.launch_exe_path = *info.latest_installed_exe_path;
+  }
+  else if (info.matching_installed_exe_path)
+  {
+    info.launch_exe_path = *info.matching_installed_exe_path;
+  }
+  else
+  {
+    info.launch_exe_path = info.current_app_exe_path;
+  }
+
+  return info;
 }

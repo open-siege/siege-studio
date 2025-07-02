@@ -21,7 +21,17 @@ BOOL __stdcall enumerate_embedded_dlls(HMODULE module,
 void unload_core_module(HWND window);
 void load_core_module(fs::path);
 int register_and_create_main_window(DWORD thread_id, int nCmdShow);
-fs::path resolve_install_path(int major_version, int minor_version);
+
+struct discovery_info
+{
+  fs::path current_app_exe_path;
+  fs::path launch_exe_path;
+  std::optional<fs::path> matching_installed_exe_path;
+  std::optional<fs::path> latest_installed_exe_path;
+  std::optional<fs::path> extraction_target_path;
+};
+
+discovery_info discover_installation_info(int major_version, int minor_version, std::wstring channel);
 
 struct embedded_dll
 {
@@ -217,7 +227,7 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
                                    } };
     auto& info = update_type == context.update_development_id ? context.development_info : context.stable_info;
     std::wstringstream final_path;
-    auto channel = update_type == context.update_development_id ? "development" : "stable";
+    auto channel = update_type == context.update_development_id ? L"development" : L"stable";
     final_path << channel << L"/" << info.available_version.cx << L"." << info.available_version.cy << L"/" << L"siege-studio.exe";
     std::error_code last_error;
 
@@ -231,8 +241,8 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
 
     std::ofstream downloaded_file(temp_file, std::ios::binary | std::ios::trunc);
 
-    siege::platform::http_client_context context;
-    std::size_t transmitted = download_http_data(context, resolve_domain(), final_path.str(), downloaded_file, siege::platform::http_callbacks{ [&info](auto value) {
+    siege::platform::http_client_context http_context;
+    std::size_t transmitted = download_http_data(http_context, resolve_domain(), final_path.str(), downloaded_file, siege::platform::http_callbacks{ [&info](auto value) {
       info.current_size = value;
     } });
 
@@ -263,34 +273,39 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
       ::EnableWindow(window, TRUE);
       unload_core_module(window);
     }
+    auto install_info = discover_installation_info(info.available_version.cx, info.available_version.cy, channel);
 
-    auto install_path = resolve_install_path(info.available_version.cx, info.available_version.cy);
+    if (install_info.extraction_target_path)
+    {
+      fs::copy_file(temp_file, *install_info.extraction_target_path / temp_file.filename(), fs::copy_options::update_existing, last_error);
 
-    fs::copy_file(temp_file, install_path / temp_file.filename(), fs::copy_options::update_existing, last_error);
+      std::for_each(embedded_dlls.begin(), embedded_dlls.end(), [&](embedded_dll& dll) {
+        auto entry = ::FindResourceW(module, dll.filename.c_str(), RT_RCDATA);
 
-    std::for_each(embedded_dlls.begin(), embedded_dlls.end(), [&](embedded_dll& dll) {
-      auto entry = ::FindResourceW(module, dll.filename.c_str(), RT_RCDATA);
+        if (!entry)
+        {
+          return;
+        }
 
-      if (!entry)
-      {
-        return;
-      }
+        auto size = ::SizeofResource(module, entry);
+        auto bytes = ::LockResource(dll.handle);
+        auto filename_lower = siege::platform::to_lower(dll.filename.wstring());
 
-      auto size = ::SizeofResource(module, entry);
-      auto bytes = ::LockResource(dll.handle);
-      auto filename_lower = siege::platform::to_lower(dll.filename.wstring());
+        {
+          std::ofstream output(temp_folder / filename_lower, std::ios::trunc | std::ios::binary);
+          output.write((const char*)bytes, size);
+        }
 
-      {
-        std::ofstream output(temp_folder / filename_lower, std::ios::trunc | std::ios::binary);
-        output.write((const char*)bytes, size);
-      }
-
-      fs::copy_file(temp_folder / filename_lower, install_path / filename_lower, fs::copy_options::update_existing, last_error);
-    });
-    ::FreeLibrary(module);
-
-    load_core_module(install_path);
-    register_and_create_main_window(window_thread_id, SW_SHOWNORMAL);
+        fs::copy_file(temp_folder / filename_lower, *install_info.extraction_target_path / filename_lower, fs::copy_options::update_existing, last_error);
+      });
+      ::FreeLibrary(module);
+      load_core_module(*install_info.extraction_target_path);
+      register_and_create_main_window(window_thread_id, SW_SHOWNORMAL);
+    }
+    else
+    {
+      ::FreeLibrary(module);
+    }
   });
 }
 }
