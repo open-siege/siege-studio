@@ -38,19 +38,19 @@ struct discovery_info
 
 discovery_info discover_installation_info(int major_version, int minor_version, std::wstring channel);
 
-struct embedded_dll
+struct embedded_module
 {
   std::filesystem::path filename;
   HGLOBAL handle;
   WORD lang_id;
 };
 
-BOOL __stdcall enumerate_embedded_dlls(HMODULE module,
+BOOL __stdcall enumerate_embedded_modules(HMODULE module,
   LPCWSTR type,
   LPWSTR name,
   LONG_PTR lParam)
 {
-  std::vector<embedded_dll>* items = (std::vector<embedded_dll>*)lParam;
+  std::vector<embedded_module>* items = (std::vector<embedded_module>*)lParam;
 
   auto entry = ::FindResourceW(module, name, RT_RCDATA);
 
@@ -68,9 +68,10 @@ BOOL __stdcall enumerate_embedded_dlls(HMODULE module,
 
   fs::path path(name);
 
-  if (path.extension() == ".dll" || path.extension() == ".DLL")
+  if (path.extension() == ".dll" || path.extension() == ".DLL" ||
+      path.extension() == ".exe" || path.extension() == ".EXE")
   {
-    items->emplace_back(embedded_dll{ std::move(path), data });
+    items->emplace_back(embedded_module{ std::move(path), data });
   }
 
   return TRUE;
@@ -78,7 +79,7 @@ BOOL __stdcall enumerate_embedded_dlls(HMODULE module,
 
 BOOL __stdcall enumerate_dll_languages(HMODULE hModule, const wchar_t* lpszType, const wchar_t* lpszName, WORD lang_id, LONG_PTR lParam)
 {
-  embedded_dll* dll = (embedded_dll*)lParam;
+  embedded_module* dll = (embedded_module*)lParam;
 
   if (!dll->lang_id)
   {
@@ -112,12 +113,12 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 
   win32::window_module_ref this_module(hInstance);
 
-  std::vector<embedded_dll> embedded_dlls;
-  embedded_dlls.reserve(128);
+  std::vector<embedded_module> embedded_modules;
+  embedded_modules.reserve(128);
 
-  ::EnumResourceNamesW(hInstance, RT_RCDATA, enumerate_embedded_dlls, (LONG_PTR)&embedded_dlls);
+  ::EnumResourceNamesW(hInstance, RT_RCDATA, enumerate_embedded_modules, (LONG_PTR)&embedded_modules);
 
-  for (auto& dll : embedded_dlls)
+  for (auto& dll : embedded_modules)
   {
     ::EnumResourceLanguagesW(hInstance, RT_RCDATA, dll.filename.c_str(), enumerate_dll_languages, (LONG_PTR)&dll);
   }
@@ -129,10 +130,10 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 
   std::error_code last_error;
 
-  if (!embedded_dlls.empty() && install_info.extraction_target_path)
+  if (!embedded_modules.empty() && install_info.extraction_target_path)
   {
     auto install_path = *install_info.extraction_target_path;
-    std::for_each(embedded_dlls.begin(), embedded_dlls.end(), [=](embedded_dll& dll) {
+    std::for_each(embedded_modules.begin(), embedded_modules.end(), [=](embedded_module& dll) {
       auto entry = ::FindResourceW(hInstance, dll.filename.c_str(), RT_RCDATA);
 
       if (!entry)
@@ -160,7 +161,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
     {
       if (auto handle = ::BeginUpdateResourceW(new_path.c_str(), FALSE); handle)
       {
-        for (auto& dll : embedded_dlls)
+        for (auto& dll : embedded_modules)
         {
           ::UpdateResourceW(handle, RT_RCDATA, dll.filename.c_str(), dll.lang_id, nullptr, 0);
         }
@@ -337,7 +338,6 @@ int register_and_create_main_window(DWORD window_thread_id, int nCmdShow)
 discovery_info discover_installation_info(int major_version, int minor_version, std::wstring channel)
 {
   discovery_info info{};
-
 
   std::vector<std::wstring> channels = {};
 

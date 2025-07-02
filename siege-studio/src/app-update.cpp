@@ -13,7 +13,7 @@
 
 namespace fs = std::filesystem;
 
-BOOL __stdcall enumerate_embedded_dlls(HMODULE module,
+BOOL __stdcall enumerate_embedded_modules(HMODULE module,
   LPCWSTR type,
   LPWSTR name,
   LONG_PTR lParam);
@@ -33,7 +33,7 @@ struct discovery_info
 
 discovery_info discover_installation_info(int major_version, int minor_version, std::wstring channel);
 
-struct embedded_dll
+struct embedded_module
 {
   std::filesystem::path filename;
   HGLOBAL handle;
@@ -261,14 +261,14 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
       return;
     }
 
-    std::vector<embedded_dll> embedded_dlls;
-    embedded_dlls.reserve(128);
+    std::vector<embedded_module> embedded_modules;
+    embedded_modules.reserve(128);
 
-    ::EnumResourceNamesW(module, RT_RCDATA, enumerate_embedded_dlls, (LONG_PTR)&embedded_dlls);
+    ::EnumResourceNamesW(module, RT_RCDATA, enumerate_embedded_modules, (LONG_PTR)&embedded_modules);
 
     auto window_thread_id = ::GetWindowThreadProcessId(window, nullptr);
 
-    if (!embedded_dlls.empty())
+    if (!embedded_modules.empty())
     {
       ::EnableWindow(window, TRUE);
       unload_core_module(window);
@@ -279,7 +279,7 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
     {
       fs::copy_file(temp_file, *install_info.extraction_target_path / temp_file.filename(), fs::copy_options::update_existing, last_error);
 
-      std::for_each(embedded_dlls.begin(), embedded_dlls.end(), [&](embedded_dll& dll) {
+      std::for_each(embedded_modules.begin(), embedded_modules.end(), [&](embedded_module& dll) {
         auto entry = ::FindResourceW(module, dll.filename.c_str(), RT_RCDATA);
 
         if (!entry)
