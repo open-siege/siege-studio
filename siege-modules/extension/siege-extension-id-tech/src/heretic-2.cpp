@@ -263,8 +263,6 @@ predefined_string*
   return nullptr;
 }
 
-static std::ofstream game_log("heretic-2.log");
-
 static std::string VirtualDriveLetter;
 constexpr static std::string_view Heretic2Disc = "HERETIC_II";
 static auto* TrueGetLogicalDrives = GetLogicalDrives;
@@ -274,7 +272,6 @@ static auto* TrueCreateFileA = CreateFileA;
 
 DWORD WINAPI WrappedGetLogicalDrives()
 {
-  game_log << "WrappedGetLogicalDrives\n";
   auto result = TrueGetLogicalDrives();
   std::bitset<sizeof(DWORD) * 8> bits(result);
 
@@ -290,7 +287,6 @@ DWORD WINAPI WrappedGetLogicalDrives()
       if (VirtualDriveLetter.empty())
       {
         VirtualDriveLetter = static_cast<char>(driveLetter) + std::string(":\\");
-        game_log << "VirtualDriveLetter: " << VirtualDriveLetter << std::endl;
       }
       break;
     }
@@ -302,13 +298,10 @@ DWORD WINAPI WrappedGetLogicalDrives()
 
 UINT WINAPI WrappedGetDriveTypeA(LPCSTR lpRootPathName)
 {
-  game_log << "WrappedGetDriveTypeA\n";
-
   // the game doesn't call GetLogicalDrives, so we should call it ourselves
   static auto drive_types = WrappedGetLogicalDrives();
   if (lpRootPathName && VirtualDriveLetter[0] == lpRootPathName[0])
   {
-    game_log << "VirtualDriveLetter: " << VirtualDriveLetter << std::endl;
     return DRIVE_CDROM;
   }
 
@@ -325,19 +318,11 @@ BOOL WINAPI WrappedGetVolumeInformationA(
   LPSTR lpFileSystemNameBuffer,
   DWORD nFileSystemNameSize)
 {
-  game_log << "WrappedGetVolumeInformationA\n";
-
-  if (lpRootPathName)
-  {
-    game_log << "Drive letter: " << lpRootPathName << std::endl;
-  }
-
   if (lpRootPathName && lpRootPathName[0] == VirtualDriveLetter[0])
   {
     std::vector<char> data(nVolumeNameSize, '\0');
     std::copy(Heretic2Disc.begin(), Heretic2Disc.end(), data.begin());
     std::copy(data.begin(), data.end(), lpVolumeNameBuffer);
-    game_log << "Name is" << Heretic2Disc << std::endl;
     return TRUE;
   }
 
@@ -359,10 +344,8 @@ HANDLE __stdcall WrappedCreateFileA(LPCSTR lpFileName,
   DWORD dwFlagsAndAttributes,
   HANDLE hTemplateFile)
 {
-  game_log << "WrappedCreateFileA\n";
   if (lpFileName)
   {
-    game_log << lpFileName << std::endl;
     auto filename = std::string_view(lpFileName);
 
     if (filename.starts_with(VirtualDriveLetter))
@@ -371,7 +354,6 @@ HANDLE __stdcall WrappedCreateFileA(LPCSTR lpFileName,
       std::string new_filename = std::string(filename);
       new_filename.replace(0, VirtualDriveLetter.size(), "");
       auto item = mappings.emplace(filename, std::move(new_filename));
-      game_log << "new filename is " << item.first->second << std::endl;
       return TrueCreateFileA(item.first->second.c_str(), dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
     }
   }
@@ -401,7 +383,6 @@ BOOL WINAPI DllMain(
 
   if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
   {
-    game_log << "Attaching to process\n";
     auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
 
     auto value = app_module.GetProcAddress<std::uint32_t*>("DisableSiegeExtensionModule");
@@ -420,12 +401,9 @@ BOOL WINAPI DllMain(
       {
         auto handle_a = ::GetModuleHandleW(L"quake2.dll");
         auto handle_b = ::GetModuleHandleW(L"H2Common.dll");
-        game_log << "Checking for module handles\n";
 
         if (!(handle_a && handle_b))
         {
-          game_log << "Closing extensions\n";
-
           return FALSE;
         }
 
