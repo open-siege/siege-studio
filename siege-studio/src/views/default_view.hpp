@@ -151,7 +151,7 @@ namespace siege::views
     { L"Laser Arena"sv, L"id_tech-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
     { L"CIA Operative: Solo Missions"sv, L"id_tech-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
     { L"Quake 2"sv, L"id_tech-2.5"sv, L"siege-extension-quake-2", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
-    { L"Heretic 2"sv, L"id_tech-2.5-raven"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
+    { L"Heretic 2"sv, L"id_tech-2.5-raven"sv, L"siege-extension-heretic-2", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
     { L"SiN"sv, L"id_tech-2.5-ritual"sv, L"siege-extension-sin", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
     { L"Kingpin: Life of Crime"sv, L"id_tech-2.5"sv, L"siege-extension-kingpin", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
     { L"Soldier of Fortune"sv, L"id_tech-2.5-raven"sv, L"siege-extension-soldier-of-fortune", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },

@@ -20,7 +20,7 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
 
     darkstar::create_vol_file(mem_buffer, files);
 
-    REQUIRE(siege::resource::vol::darkstar::vol_resource_reader::is_supported(mem_buffer) == true);
+    REQUIRE(siege::resource::vol::darkstar::vol_resource_reader::stream_is_supported(mem_buffer) == true);
 
     mem_buffer.seekg(4, std::ios::beg);
 
@@ -90,7 +90,7 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
 
     darkstar::create_vol_file(mem_buffer, files);
 
-    REQUIRE(siege::resource::vol::darkstar::vol_resource_reader::is_supported(mem_buffer) == true);
+    REQUIRE(siege::resource::vol::darkstar::vol_resource_reader::stream_is_supported(mem_buffer) == true);
 
     mem_buffer.seekg(4, std::ios::beg);
 

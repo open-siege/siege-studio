@@ -25,5 +25,6 @@ extern std::array<path_rule, 32> directory_mappings = {{
   { FSL"setup/data1.cab/*", FSL"." },
   { FSL"setup/Base/VIDEO/*.smk", FSL"Base/VIDEO" },
   { FSL"setup/Toolkit/data1.cab/*", FSL"Toolkit" },
+  { FSL"setup/setup.bmp", FSL"=", path_rule::optional },
 }};
 }

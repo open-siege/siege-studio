@@ -1095,7 +1095,15 @@ namespace siege::views
 
       auto* input_backends = get_extension().GetProcAddress<std::add_pointer_t<wchar_t*>>("controller_input_backends");
 
-      if (input_backends && input_backends[0] && std::wstring_view(input_backends[0]) == get_extension().GetModuleFileName<wchar_t>())
+      if (input_backends && input_backends[0] && 
+          std::wstring_view(input_backends[0]) == get_extension().GetModuleFileName<wchar_t>())
+      {
+        dll_paths.emplace_back(extension_path.c_str());
+      }
+
+      auto* detour_ordinal = get_extension().GetProcAddress(1);
+
+      if (detour_ordinal)
       {
         dll_paths.emplace_back(extension_path.c_str());
       }

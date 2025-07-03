@@ -47,7 +47,7 @@ namespace siege
     return i == length ? S_OK : S_FALSE;
   }
 
-  HRESULT executable_is_supported(const wchar_t* filename, const auto& verification_strings) noexcept
+  inline HRESULT executable_is_supported(const wchar_t* filename, const auto& verification_strings) noexcept
   {
     if (filename == nullptr)
     {
@@ -105,7 +105,7 @@ namespace siege
     }
   }
 
-  HRESULT executable_is_supported(const wchar_t* filename,
+  inline HRESULT executable_is_supported(const wchar_t* filename,
     const auto& verification_strings,
     const auto& function_name_ranges,
     const auto& variable_name_ranges) noexcept

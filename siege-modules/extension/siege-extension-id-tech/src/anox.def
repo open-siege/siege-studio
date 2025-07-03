@@ -1,4 +1,5 @@
 EXPORTS
+	DetourFinishHelperProcess @1
 	game_actions DATA PRIVATE
 	controller_input_backends DATA PRIVATE
 	command_line_caps DATA PRIVATE
