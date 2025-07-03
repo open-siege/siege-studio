@@ -158,7 +158,7 @@ namespace siege::views
     { L"Daikatana"sv, L"id_tech-2.5"sv, L"siege-extension-daikatana", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
     { L"Anachronox"sv, L"id_tech-2.5"sv, L"siege-extension-anachronox", std::array<std::wstring_view, 8>{ { L".pak", L".bmp", L".cfg", L".wav" } } },
     { L"Quake 3 Arena"sv, L"id_tech-3.0"sv, L"siege-extension-quake-3", std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
-    { L"Heavy Metal: F.A.K.K 2"sv, L"id_tech-3.0-ritual"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Heavy Metal: F.A.K.K 2"sv, L"id_tech-3.0-ritual"sv, L"siege-extension-fakk-2", std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Star Trek: Voyager - Elite Force"sv, L"id_tech-3.0-raven"sv, L"siege-extension-elite-force-sp", std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Star Trek: Voyager - Elite Force - Holomatch"sv, L"id_tech-3.0-raven"sv, L"siege-extension-elite-force-mp", std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Star Trek: Elite Force 2"sv, L"id_tech-3.0-ritual"sv, L"siege-extension-elite-force-2", std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
