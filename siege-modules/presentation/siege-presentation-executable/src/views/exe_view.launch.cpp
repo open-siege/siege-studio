@@ -804,7 +804,7 @@ namespace siege::views
       siege::platform::persistent_game_settings settings{};
 
       siege::platform::game_command_line_caps default_caps;
-      auto* caps = controller.has_extension_module() ? controller.get_extension().caps : &default_caps;
+      auto* caps = controller.has_extension_module() && controller.get_extension().caps ? controller.get_extension().caps : &default_caps;
 
       std::wstring_view player_name_setting = caps->player_name_setting ? caps->player_name_setting : L"";
       std::wstring_view ip_setting = caps->ip_connect_setting ? caps->ip_connect_setting : L"";

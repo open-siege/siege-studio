@@ -19,11 +19,6 @@
 extern "C" {
 using game_action = siege::platform::game_action;
 
-using game_command_line_caps = siege::platform::game_command_line_caps;
-
-extern auto command_line_caps = game_command_line_caps{
-};
-
 extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::analog, "forward", u"Move Forward", u"Movement" },
   game_action{ game_action::analog, "back", u"Move Backward", u"Movement" },

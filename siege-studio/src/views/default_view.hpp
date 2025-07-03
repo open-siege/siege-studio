@@ -145,7 +145,7 @@ namespace siege::views
     { L"World of Aden: Thunderscape"sv, L"idtech-0.5-raven"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".dat"sv } } },
     { L"Necrodome"sv, L"idtech-0.5-raven"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pod"sv, L".bmp", L".wav" } } },
     { L"Take No Prisoners"sv, L"vampire"sv, L"siege-extension-take-no-prisoners", std::array<std::wstring_view, 8>{ { L".vpk"sv, L".cfg", L".wav" } } },
-    { L"MageSlayer"sv, L"vampire"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vpk"sv, L".cfg", L".wav" } } },
+    { L"MageSlayer"sv, L"vampire"sv, L"siege-extension-mageslayer", std::array<std::wstring_view, 8>{ { L".vpk"sv, L".cfg", L".wav" } } },
     { L"Quake"sv, L"id_tech-2.0"sv, L"siege-extension-quake", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
     { L"Hexen 2"sv, L"id_tech-2.0"sv, L"siege-extension-hexen-2", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
     { L"Laser Arena"sv, L"id_tech-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },

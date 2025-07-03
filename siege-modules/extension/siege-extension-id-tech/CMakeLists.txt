@@ -54,6 +54,7 @@ if (WIN32)
     add_library(siege-extension-allied-assault-spearhead SHARED src/allied-assault-spearhead.cpp src/id-tech-3.def)
     add_library(siege-extension-space-trader SHARED src/space-trader.cpp src/id-tech-3.def)
     add_library(siege-extension-take-no-prisoners SHARED src/take-no-prisoners.cpp src/vampire.def)
+    add_library(siege-extension-mageslayer SHARED src/mageslayer.cpp src/mageslayer.def)
 
     get_property(ID_TECH_TARGETS
                 DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
