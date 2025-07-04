@@ -102,7 +102,7 @@ namespace siege::views
     if (auto* stream = std::get_if<std::stringstream>(&ref(self).storage); stream)
     {
       results.resize(siege::platform::get_stream_size(*stream));
-     
+
       stream->read(results.data(), results.size());
     }
 
@@ -161,9 +161,11 @@ namespace siege::views
 
             if (auto file_info = std::get_if<siege::platform::file_info>(&info); file_info)
             {
-              std::unique_lock guard(state.lock);
+              {
+                std::unique_lock guard(state.lock);
+                state.contents.emplace_back(info);
+              }
               on_new_item(info);
-              state.contents.emplace_back(info);
             }
           }
         };
