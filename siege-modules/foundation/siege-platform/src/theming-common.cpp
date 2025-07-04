@@ -620,8 +620,25 @@ namespace win32
           if (scroll.nMax > 0)
           {
             auto scroll_width = win32::get_system_metrics(SM_CXEDGE) + win32::get_system_metrics(SM_CXEDGE) + win32::get_system_metrics(SM_CXVSCROLL);
-            width = width > scroll_width ? width - scroll_width : width;
-            rect->cx = width;
+
+            auto parent = win32::window_ref(self).GetAncestor(GA_ROOT);
+
+            if (parent)
+            {
+              auto parent_rect = parent->GetWindowRect();
+              auto this_rect = win32::window_ref(self).GetWindowRect();
+
+              if (parent_rect && this_rect)
+              {
+                auto full_size = this_rect->left + width + scroll_width;
+
+                if (full_size > parent_rect->right)
+                {
+                  width = width > scroll_width ? width - scroll_width : width;
+                  rect->cx = width;
+                }
+              }
+            }
           }
         }
 
