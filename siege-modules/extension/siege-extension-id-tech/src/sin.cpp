@@ -44,12 +44,12 @@ namespace siege
 extern "C" {
 
 extern auto command_line_caps = game_command_line_caps{
+  .int_settings = { {  L"dedicated", L"gl_mode" } },
+  .string_settings = { { L"name", L"connect", L"map", L"gl_driver" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
   .listen_setting = L"connect",
   .dedicated_setting = L"dedicated",
-  .int_settings = { {  L"dedicated", L"gl_mode" } },
-  .string_settings = { { L"name", L"connect", L"map", L"gl_driver" } },
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {

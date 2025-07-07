@@ -112,14 +112,18 @@ namespace siege::platform
       computed_setting,
     };
 
-    const fs_char* ip_connect_setting = FSL "";
-    const fs_char* player_name_setting = FSL "";
-    const fs_char* listen_setting = FSL "";
-    const fs_char* dedicated_setting = FSL "";
+    std::size_t caps_size = sizeof(game_command_line_caps);
     std::array<const fs_char*, 32> flags;
     std::array<const fs_char*, 32> int_settings;
     std::array<const fs_char*, 32> float_settings;
     std::array<const fs_char*, 32> string_settings;
+    const fs_char* ip_connect_setting = FSL"";
+    const fs_char* port_connect_setting = FSL"";
+    const fs_char* player_name_setting = FSL"";
+    const fs_char* listen_setting = FSL"";
+    const fs_char* dedicated_setting = FSL"";
+    const fs_char* render_backend_setting = FSL "";
+    const fs_char* selected_game_setting = FSL "";
   };
 
   template<typename TValue>

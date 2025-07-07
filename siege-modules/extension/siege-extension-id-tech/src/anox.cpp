@@ -32,9 +32,9 @@ using predefined_string = siege::platform::game_command_line_predefined_setting<
 namespace fs = std::filesystem;
 
 extern auto command_line_caps = game_command_line_caps{
-  .player_name_setting = L"name",
   .int_settings = { { L"gl_mode" } },
   .string_settings = { { L"name", L"map", L"gl_driver" } },
+  .player_name_setting = L"name",
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
