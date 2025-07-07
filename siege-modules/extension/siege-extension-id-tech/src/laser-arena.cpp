@@ -28,8 +28,8 @@ using predefined_int = siege::platform::game_command_line_predefined_setting<int
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
 
 extern auto command_line_caps = game_command_line_caps{
-  .int_settings = { { L"width", L"height" } }, // GL Quake only
-  .string_settings = { { L"name", L"connect", L"map", L"game" } },
+  .int_settings = { { L"gl_mode" } },
+  .string_settings = { { L"name", L"connect", L"map", L"gl_driver" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
 };
@@ -49,7 +49,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "+attack", u"Attack", u"Combat" },
   game_action{ game_action::digital, "+altattack", u"Alt Attack", u"Combat" },
   game_action{ game_action::digital, "+melee-attack", u"Melee Attack", u"Combat" },
-  game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
+  game_action{ game_action::digital, "+weapnext", u"Next Weapon", u"Combat" },
   game_action{ game_action::digital, "weaprev", u"Previous Weapon", u"Combat" },
   game_action{ game_action::digital, "itemnext", u"Next Item", u"Combat" },
   game_action{ game_action::digital, "itemuse", u"Use Item", u"Combat" },
@@ -63,50 +63,31 @@ extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 4>, 4> verification_strings = { {
-  // win quake
-  std::array<std::pair<std::string_view, std::size_t>, 4>{ { { "WinQuake"sv, std::size_t(0x468e40) },
-    { "exec"sv, std::size_t(0x470e84) },
-    { "cmd"sv, std::size_t(0x470e9c) },
-    { "cl_pitchspeed"sv, std::size_t(0x475af8) } } },
-  // gl quake
-  std::array<std::pair<std::string_view, std::size_t>, 4>{ { { "WinQuake"sv, std::size_t(0x44f89c) },
-    { "exec"sv, std::size_t(0x449594) },
-    { "cmd"sv, std::size_t(0x449580) },
-    { "cl_pitchspeed"sv, std::size_t(0x448704) } } },
-
-  // quake world
-  std::array<std::pair<std::string_view, std::size_t>, 4>{ { { "WinQuake"sv, std::size_t(0x485530) },
-    { "exec"sv, std::size_t(0x47c6c8) },
-    { "cmd"sv, std::size_t(0x47c6ac) },
-    { "cl_pitchspeed"sv, std::size_t(0x47a348) } } },
-
-  // gl quake world
-  std::array<std::pair<std::string_view, std::size_t>, 4>{ { { "WinQuake"sv, std::size_t(0x45573c) },
-    { "exec"sv, std::size_t(0x44eae4) },
-    { "cmd"sv, std::size_t(0x44eb04) },
-    { "cl_pitchspeed"sv, std::size_t(0x44c990) } } },
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 4>, 2> verification_strings = { {
+  // win laser arena
+  std::array<std::pair<std::string_view, std::size_t>, 4>{ { 
+    { "laserarena"sv, std::size_t(0x4d295c) },
+    { "exec"sv, std::size_t(0x491de4) },
+    { "cmd"sv, std::size_t(0x491dfc) },
+    { "cl_pitchspeed"sv, std::size_t(0x48ef60) } } },
+  // gl laser arena
+  std::array<std::pair<std::string_view, std::size_t>, 4>{ { 
+    { "laserarena"sv, std::size_t(0x49bd54) },
+    { "exec"sv, std::size_t(0x465774) },
+    { "cmd"sv, std::size_t(0x46578c) },
+    { "cl_pitchspeed"sv, std::size_t(0x466190) } } },
 } };
 
-// the order changes between regular quake and glquake, so each value has to be checked by itself
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 6> function_name_ranges{ {
-  { "timerefresh"sv, "timerefresh"sv },
-  { "pointfile"sv, "pointfile"sv },
-  { "joyadvancedupdate"sv, "joyadvancedupdate"sv },
-  { "force_centerview"sv, "force_centerview"sv },
-  { "stuffcmds"sv, "stuffcmds"sv },
-  { "wait"sv, "wait"sv },
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 4> function_name_ranges{ {
+  { "togglemenu"sv, "menu_quit"sv },
+  { "slist"sv, "port"sv },
+  { "entities"sv, "timedemo"sv },
+  { "name"sv, "mcache"sv },
 } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 7> variable_name_ranges{ {
-  { "joyadvanced"sv, "joyadvanced"sv },
-  { "joyadvaxisx"sv, "joyadvaxisx"sv },
-  { "joyadvaxisy"sv, "joyadvaxisy"sv },
-  { "joyadvaxisz"sv, "joyadvaxisz"sv },
-  { "joyadvaxisr"sv, "joyadvaxisr"sv },
-  { "joyadvaxisu"sv, "joyadvaxisu"sv },
-  { "joyadvaxisv"sv, "joyadvaxisv"sv },
-} };
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 2> variable_name_ranges{ { 
+  { "joyname"sv, "joyadvaxisv"sv },
+  { "sv_idealpitchscale"sv, "sv_accelerate"sv } } };
 
 HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
@@ -118,21 +99,11 @@ HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>*
   return siege::get_name_ranges(variable_name_ranges, length, data, saved);
 }
 
-HRESULT executable_is_supported(const wchar_t* filename) noexcept
+HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
 {
-  if (filename)
-  {
-    auto lower = siege::platform::to_lower(filename);
-
-    auto is_valid = lower.contains(L"winquake.exe") || lower.contains(L"glquake.exe") || lower.contains(L"qwcl.exe") || lower.contains(L"glqwcl.exe");
-
-    if (!is_valid)
-    {
-      return S_FALSE;
-    }
-  }
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
+
 HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
 {
   if (auto result = apply_dpi_awareness(exe_path_str); result != S_OK)
@@ -145,7 +116,7 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
     return E_POINTER;
   }
 
-  std::ofstream custom_bindings("Id1/autoexec.cfg", std::ios::binary | std::ios::trunc);
+  std::ofstream custom_bindings("main/autoexec.cfg", std::ios::binary | std::ios::trunc);
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
 
@@ -171,6 +142,9 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   iter->name = L"console";
   iter->value = L"1";
 
+  auto free_iter = std::find_if(args->flags.begin(), args->flags.end(), [](auto& setting) { return setting == nullptr; });
+  *free_iter = L"-cdok";
+
   return S_OK;
 }
 
@@ -180,7 +154,7 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
   {
     return E_POINTER;
   }
-  auto config = load_config_from_pak(L"Id1\\default.cfg", L"Id1/PAK0.PAK", L"Id1/PAK0.PAK");
+  auto config = load_config_from_pak(L"main\\default.cfg", L"main/pak0.pak", L"main/pak0.pak");
 
   if (config)
   {
@@ -204,7 +178,7 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
     return E_POINTER;
   }
 
-  auto config = load_config_from_pak(L"Id1\\default.cfg", L"Id1/PAK0.PAK", L"Id1/PAK0.PAK");
+  auto config = load_config_from_pak(L"main\\default.cfg", L"main/pak0.pak", L"main/pak0.pak");
 
   if (config)
   {
@@ -283,7 +257,7 @@ predefined_string*
 {
   if (name && std::wstring_view(name) == L"map")
   {
-    return get_predefined_id_tech_2_map_command_line_settings(L"Id1", false);
+    return get_predefined_id_tech_2_map_command_line_settings(L"main", false);
   }
 
   return nullptr;

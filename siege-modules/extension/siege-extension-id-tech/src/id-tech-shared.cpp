@@ -776,6 +776,34 @@ extern void(__cdecl* ConsoleEvalCdecl)(const char*) = nullptr;
 extern void(__fastcall* ConsoleEvalFastcall)(const char*) = nullptr;
 extern void(__stdcall* ConsoleEvalStdcall)(const char*) = nullptr;
 
+HRESULT apply_dpi_awareness(const wchar_t* exe_path_str)
+{
+  if (exe_path_str == nullptr)
+  {
+    return E_POINTER;
+  }
+
+  std::error_code last_error;
+
+  auto exe_path = fs::path(exe_path_str);
+
+  HKEY current_user = nullptr;
+  if (::RegOpenCurrentUser(KEY_WRITE, &current_user) == 0)
+  {
+    std::wstring compat = L"~ HIGHDPIAWARE";
+    HKEY compat_key = nullptr;
+    if (::RegOpenKeyExW(current_user, L"Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers", 0, KEY_WRITE, &compat_key) == 0)
+    {
+      ::RegSetValueExW(compat_key, exe_path_str, 0, REG_SZ, (BYTE*)compat.data(), compat.size() * 2);
+      ::RegCloseKey(compat_key);
+    }
+
+    ::RegCloseKey(current_user);
+  }
+
+  return S_OK;
+}
+
 LRESULT CALLBACK dispatch_input_to_game_console(int code, WPARAM wParam, LPARAM lParam, void (*process_movement_keydown)(MSG* message, void (*console_eval)(const char*)), void (*console_eval)(const char*));
 
 void process_quake_movement_keydown(MSG* message, void (*console_eval)(const char*));

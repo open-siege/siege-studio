@@ -801,7 +801,7 @@ namespace siege::views
     {
       ::SetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", game_settings.last_zero_tier_node_id_and_private_key.data());
     }
-    else
+    else if (has_extension_module())
     {
       std::string extension_path = get_extension().GetModuleFileName<char>();
       auto zt_path = std::filesystem::path(extension_path).parent_path() / "zt-shared.dll";

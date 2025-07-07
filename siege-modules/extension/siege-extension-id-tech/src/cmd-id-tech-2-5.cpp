@@ -90,13 +90,36 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
 
     try
     {
-      string_args.emplace_back(L"+set");
-      string_args.emplace_back(setting.name);
-      string_args.emplace_back(std::to_wstring(setting.value));
+      auto name_str = std::wstring_view(setting.name);
+
+      if (name_str == L"width" || name_str == L"height")
+      {
+        // TODO only for quake 1 games. If there are more special cases,
+        // then it is worth having a dedicated format cmd function for those games.
+        auto& back = string_args.emplace_back(name_str);
+        back.insert(back.begin(), L'-');
+        string_args.emplace_back(std::to_wstring(setting.value));
+      }
+      else
+      {
+        string_args.emplace_back(L"+set");
+        string_args.emplace_back(name_str);
+        string_args.emplace_back(std::to_wstring(setting.value));
+      }
     }
     catch (...)
     {
     }
+  }
+
+  for (auto& flag : args->flags)
+  {
+    if (!flag)
+    {
+      break;
+    }
+
+    string_args.emplace_back(flag);
   }
 
   static std::vector<const wchar_t*> raw_args;

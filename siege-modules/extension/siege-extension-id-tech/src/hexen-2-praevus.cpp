@@ -28,8 +28,8 @@ using predefined_int = siege::platform::game_command_line_predefined_setting<int
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
 
 extern auto command_line_caps = game_command_line_caps{
-  .int_settings = { { L"width", L"height" } }, // GL Quake only
-  .string_settings = { { L"name", L"connect", L"map", L"game" } },
+  .int_settings = { { L"width", L"height" } },// GL Hexen only
+  .string_settings = { { L"name", L"connect", L"map" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
 };
@@ -49,7 +49,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "+attack", u"Attack", u"Combat" },
   game_action{ game_action::digital, "+altattack", u"Alt Attack", u"Combat" },
   game_action{ game_action::digital, "+melee-attack", u"Melee Attack", u"Combat" },
-  game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
+  game_action{ game_action::digital, "+weapnext", u"Next Weapon", u"Combat" },
   game_action{ game_action::digital, "weaprev", u"Previous Weapon", u"Combat" },
   game_action{ game_action::digital, "itemnext", u"Next Item", u"Combat" },
   game_action{ game_action::digital, "itemuse", u"Use Item", u"Combat" },
@@ -63,50 +63,34 @@ extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 4>, 4> verification_strings = { {
-  // win quake
-  std::array<std::pair<std::string_view, std::size_t>, 4>{ { { "WinQuake"sv, std::size_t(0x468e40) },
-    { "exec"sv, std::size_t(0x470e84) },
-    { "cmd"sv, std::size_t(0x470e9c) },
-    { "cl_pitchspeed"sv, std::size_t(0x475af8) } } },
-  // gl quake
-  std::array<std::pair<std::string_view, std::size_t>, 4>{ { { "WinQuake"sv, std::size_t(0x44f89c) },
-    { "exec"sv, std::size_t(0x449594) },
-    { "cmd"sv, std::size_t(0x449580) },
-    { "cl_pitchspeed"sv, std::size_t(0x448704) } } },
-
-  // quake world
-  std::array<std::pair<std::string_view, std::size_t>, 4>{ { { "WinQuake"sv, std::size_t(0x485530) },
-    { "exec"sv, std::size_t(0x47c6c8) },
-    { "cmd"sv, std::size_t(0x47c6ac) },
-    { "cl_pitchspeed"sv, std::size_t(0x47a348) } } },
-
-  // gl quake world
-  std::array<std::pair<std::string_view, std::size_t>, 4>{ { { "WinQuake"sv, std::size_t(0x45573c) },
-    { "exec"sv, std::size_t(0x44eae4) },
-    { "cmd"sv, std::size_t(0x44eb04) },
-    { "cl_pitchspeed"sv, std::size_t(0x44c990) } } },
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 4>, 2> verification_strings = { {
+  // win hexen 2
+  std::array<std::pair<std::string_view, std::size_t>, 4>{ { 
+    { "HexenII"sv, std::size_t(0x4b0524) },
+    { "exec"sv, std::size_t(0x491de4) },
+    { "cmd"sv, std::size_t(0x491dfc) },
+    { "cl_pitchspeed"sv, std::size_t(0x48ef60) } } },
+  // gl hexen 2
+  std::array<std::pair<std::string_view, std::size_t>, 4>{ { 
+    { "HexenII"sv, std::size_t(0x482a38) },
+    { "exec"sv, std::size_t(0x465774) },
+    { "cmd"sv, std::size_t(0x46578c) },
+    { "cl_pitchspeed"sv, std::size_t(0x466190) } } },
 } };
 
-// the order changes between regular quake and glquake, so each value has to be checked by itself
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 6> function_name_ranges{ {
-  { "timerefresh"sv, "timerefresh"sv },
-  { "pointfile"sv, "pointfile"sv },
-  { "joyadvancedupdate"sv, "joyadvancedupdate"sv },
-  { "force_centerview"sv, "force_centerview"sv },
-  { "stuffcmds"sv, "stuffcmds"sv },
-  { "wait"sv, "wait"sv },
+  { "midi_volume"sv, "midi_play"sv },
+  { "menu_class"sv, "togglemenu"sv },
+  { "toggle_dm"sv, "+showinfo"sv },
+  { "port"sv, "slist"sv },
+  { "sensitivity_save"sv, "entities"sv },
+  { "mcache"sv, "playerclass"sv },
 } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 7> variable_name_ranges{ {
-  { "joyadvanced"sv, "joyadvanced"sv },
-  { "joyadvaxisx"sv, "joyadvaxisx"sv },
-  { "joyadvaxisy"sv, "joyadvaxisy"sv },
-  { "joyadvaxisz"sv, "joyadvaxisz"sv },
-  { "joyadvaxisr"sv, "joyadvaxisr"sv },
-  { "joyadvaxisu"sv, "joyadvaxisu"sv },
-  { "joyadvaxisv"sv, "joyadvaxisv"sv },
-} };
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 2> variable_name_ranges{ { 
+  { "joyadvaxisv"sv, "joyname"sv },
+  { "sv_accelerate"sv, "sv_idealpitchscale"sv } 
+  }};
 
 HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
@@ -118,21 +102,11 @@ HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>*
   return siege::get_name_ranges(variable_name_ranges, length, data, saved);
 }
 
-HRESULT executable_is_supported(const wchar_t* filename) noexcept
+HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
 {
-  if (filename)
-  {
-    auto lower = siege::platform::to_lower(filename);
-
-    auto is_valid = lower.contains(L"winquake.exe") || lower.contains(L"glquake.exe") || lower.contains(L"qwcl.exe") || lower.contains(L"glqwcl.exe");
-
-    if (!is_valid)
-    {
-      return S_FALSE;
-    }
-  }
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
+
 HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
 {
   if (auto result = apply_dpi_awareness(exe_path_str); result != S_OK)
@@ -145,7 +119,7 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
     return E_POINTER;
   }
 
-  std::ofstream custom_bindings("Id1/autoexec.cfg", std::ios::binary | std::ios::trunc);
+  std::ofstream custom_bindings("portals/autoexec.cfg", std::ios::binary | std::ios::trunc);
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
 
@@ -180,7 +154,7 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
   {
     return E_POINTER;
   }
-  auto config = load_config_from_pak(L"Id1\\default.cfg", L"Id1/PAK0.PAK", L"Id1/PAK0.PAK");
+  auto config = load_config_from_pak(L"portals\\default.cfg", L"portals/pak3.pak", L"portals/pak3.pak");
 
   if (config)
   {
@@ -204,7 +178,7 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
     return E_POINTER;
   }
 
-  auto config = load_config_from_pak(L"Id1\\default.cfg", L"Id1/PAK0.PAK", L"Id1/PAK0.PAK");
+  auto config = load_config_from_pak(L"portals\\default.cfg", L"portals/pak3.pak", L"portals/pak3.pak");
 
   if (config)
   {
@@ -283,9 +257,207 @@ predefined_string*
 {
   if (name && std::wstring_view(name) == L"map")
   {
-    return get_predefined_id_tech_2_map_command_line_settings(L"Id1", false);
+    return get_predefined_id_tech_2_map_command_line_settings(L"portals", false);
   }
 
   return nullptr;
+}
+
+static std::string VirtualDriveLetter;
+constexpr static std::string_view MissionPackDisc = "H2MP";
+static auto* TrueGetLogicalDrives = GetLogicalDrives;
+static auto* TrueGetLogicalDriveStringsA = GetLogicalDriveStringsA;
+static auto* TrueGetDriveTypeA = GetDriveTypeA;
+static auto* TrueGetVolumeInformationA = GetVolumeInformationA;
+static auto* TrueCreateFileA = CreateFileA;
+static auto* TrueRegQueryValueExA = RegQueryValueExA;
+
+DWORD WINAPI WrappedGetLogicalDrives()
+{
+  auto result = TrueGetLogicalDrives();
+  std::bitset<sizeof(DWORD) * 8> bits(result);
+
+  int driveLetter = static_cast<int>('A');
+
+  for (auto i = 2; i < bits.size(); ++i)
+  {
+    if (bits[i] == false)
+    {
+      driveLetter += i;
+      bits[i] = true;
+
+      if (VirtualDriveLetter.empty())
+      {
+        VirtualDriveLetter = static_cast<char>(driveLetter) + std::string(":\\");
+
+      }
+      break;
+    }
+  }
+
+
+  return bits.to_ulong();
+}
+
+UINT WINAPI WrappedGetDriveTypeA(LPCSTR lpRootPathName)
+{
+  // the game doesn't call GetLogicalDrives, so we should call it ourselves
+  static auto drive_types = WrappedGetLogicalDrives();
+  if (lpRootPathName && VirtualDriveLetter[0] == lpRootPathName[0])
+  {
+    return DRIVE_CDROM;
+  }
+
+  return TrueGetDriveTypeA(lpRootPathName);
+}
+
+DWORD WINAPI WrappedGetLogicalDriveStringsA(DWORD nBufferLength, LPSTR lpBuffer)
+{
+  // the game doesn't call GetLogicalDrives, so we should call it ourselves
+  static auto drive_types = WrappedGetLogicalDrives();
+
+  if (!VirtualDriveLetter.empty())
+  {
+    std::string drives;
+    drives.resize(TrueGetLogicalDriveStringsA(0, drives.data()));
+    TrueGetLogicalDriveStringsA((DWORD)drives.size(), drives.data());
+
+    drives.push_back('\0');
+    drives.append(VirtualDriveLetter);
+
+    DWORD size = drives.size() < nBufferLength ? (DWORD)drives.size() : nBufferLength;
+    std::memcpy(lpBuffer, drives.data(), size);
+    return size;
+  }
+
+  return TrueGetLogicalDriveStringsA(nBufferLength, lpBuffer);
+}
+
+BOOL WINAPI WrappedGetVolumeInformationA(
+  LPCSTR lpRootPathName,
+  LPSTR lpVolumeNameBuffer,
+  DWORD nVolumeNameSize,
+  LPDWORD lpVolumeSerialNumber,
+  LPDWORD lpMaximumComponentLength,
+  LPDWORD lpFileSystemFlags,
+  LPSTR lpFileSystemNameBuffer,
+  DWORD nFileSystemNameSize)
+{
+  if (lpRootPathName && lpRootPathName[0] == VirtualDriveLetter[0])
+  {
+    std::vector<char> data(nVolumeNameSize, '\0');
+    std::copy(MissionPackDisc.begin(), MissionPackDisc.end(), data.begin());
+    std::copy(data.begin(), data.end(), lpVolumeNameBuffer);
+    return TRUE;
+  }
+
+  return TrueGetVolumeInformationA(lpRootPathName,
+    lpVolumeNameBuffer,
+    nVolumeNameSize,
+    lpVolumeSerialNumber,
+    lpMaximumComponentLength,
+    lpFileSystemFlags,
+    lpFileSystemNameBuffer,
+    nFileSystemNameSize);
+}
+
+HANDLE __stdcall WrappedCreateFileA(LPCSTR lpFileName,
+  DWORD dwDesiredAccess,
+  DWORD dwShareMode,
+  LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+  DWORD dwCreationDisposition,
+  DWORD dwFlagsAndAttributes,
+  HANDLE hTemplateFile)
+{
+  if (lpFileName)
+  {
+    auto filename = std::string_view(lpFileName);
+
+    if (filename.starts_with(VirtualDriveLetter))
+    {
+      static std::map<std::string, std::string> mappings;
+      std::string new_filename = std::string(filename);
+      new_filename.replace(0, VirtualDriveLetter.size(), "");
+      auto item = mappings.emplace(filename, std::move(new_filename));
+      return TrueCreateFileA(item.first->second.c_str(), dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+    }
+  }
+
+  return TrueCreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+}
+
+LSTATUS __stdcall WrappedRegQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
+{
+  if (lpValueName && std::string_view(lpValueName) == "RAID2" && lpType && lpData && lpcbData)
+  {
+    *lpType = REG_SZ;
+    std::memcpy(lpData, "Santa needs a new sled!", 24);
+    *lpcbData = 24;
+    return ERROR_SUCCESS;
+  }
+
+  return TrueRegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
+}
+
+static std::array<std::pair<void**, void*>, 6> detour_functions{ { 
+  { &(void*&)TrueGetLogicalDrives, WrappedGetLogicalDrives },
+  { &(void*&)TrueGetLogicalDriveStringsA, WrappedGetLogicalDriveStringsA },
+  { &(void*&)TrueRegQueryValueExA, WrappedRegQueryValueExA },
+  { &(void*&)TrueGetDriveTypeA, WrappedGetDriveTypeA },
+  { &(void*&)TrueGetVolumeInformationA, WrappedGetVolumeInformationA },
+  { &(void*&)TrueCreateFileA, WrappedCreateFileA } } };
+
+BOOL WINAPI DllMain(
+  HINSTANCE hinstDLL,
+  DWORD fdwReason,
+  LPVOID lpvReserved) noexcept
+{
+  if constexpr (sizeof(void*) != sizeof(std::uint32_t))
+  {
+    return TRUE;
+  }
+
+  if (DetourIsHelperProcess())
+  {
+    return TRUE;
+  }
+
+  if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
+  {
+    auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
+
+    auto value = app_module.GetProcAddress<std::uint32_t*>("DisableSiegeExtensionModule");
+
+    if (value && *value == -1)
+    {
+      return TRUE;
+    }
+  }
+
+  if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
+  {
+    if (fdwReason == DLL_PROCESS_ATTACH)
+    {
+      try
+      {
+        DetourRestoreAfterWith();
+        DetourTransactionBegin();
+        DetourUpdateThread(GetCurrentThread());
+
+        std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourAttach(func.first, func.second); });
+
+        DetourTransactionCommit();
+      }
+      catch (...)
+      {
+        return FALSE;
+      }
+    }
+    else if (fdwReason == DLL_PROCESS_DETACH)
+    {
+    }
+  }
+
+  return TRUE;
 }
 }

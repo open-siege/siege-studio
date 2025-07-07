@@ -28,26 +28,10 @@ using predefined_int = siege::platform::game_command_line_predefined_setting<int
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
 
 extern auto command_line_caps = game_command_line_caps{
-  .int_settings = { { L"gl_mode" } },
-  // fov
-  .string_settings = { { L"name", L"connect", L"map", L"gl_driver" } },
+  .int_settings = { { L"width", L"height" } },// GL Hexen only
+  .string_settings = { { L"name", L"connect", L"map" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
-  // skin
-  // teamname
-  // bestweap
-  // welcome_mess
-  // joy_name
-  // set adr0 "" to adr19
-  //
-  //
-  // bool settings
-  // s_musicenabled
-  // s_nosound
-
-  // float settings
-  // s_musicvolume
-  // s_volume
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
@@ -76,25 +60,20 @@ extern auto game_actions = std::array<game_action, 32>{ {
 } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
-extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
-extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"data1/pak0.pak/default.cfg", L"data1/default.cfg" } };
-extern auto autoexec_configuration_paths = std::array<const wchar_t*, 2>{ { L"data1/Autoexec.cfg" } };
-extern auto profile_configuration_paths = std::array<const wchar_t*, 2>{ { L"data1/Config.cfg" } };
-
-extern void(__cdecl* ConsoleEvalCdecl)(const char*);
 
 using namespace std::literals;
 
-
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 2> verification_strings = { {
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 4>, 2> verification_strings = { {
   // win hexen 2
-  std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x491de4) },
+  std::array<std::pair<std::string_view, std::size_t>, 4>{ { 
+    { "HexenII"sv, std::size_t(0x488e44) },
+    { "exec"sv, std::size_t(0x491de4) },
     { "cmd"sv, std::size_t(0x491dfc) },
     { "cl_pitchspeed"sv, std::size_t(0x48ef60) } } },
   // gl hexen 2
-  std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x465774) },
+  std::array<std::pair<std::string_view, std::size_t>, 4>{ { 
+    { "HexenII"sv, std::size_t(0x46ab6c) },
+    { "exec"sv, std::size_t(0x465774) },
     { "cmd"sv, std::size_t(0x46578c) },
     { "cl_pitchspeed"sv, std::size_t(0x466190) } } },
 } };
@@ -128,9 +107,9 @@ HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
 
 HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
 {
-  if (exe_path_str == nullptr)
+  if (auto result = apply_dpi_awareness(exe_path_str); result != S_OK)
   {
-    return E_POINTER;
+    return result;
   }
 
   if (args == nullptr)

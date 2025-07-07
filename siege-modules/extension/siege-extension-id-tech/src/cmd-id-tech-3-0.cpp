@@ -11,34 +11,6 @@ namespace fs = std::filesystem;
 using namespace std::literals;
 extern game_command_line_caps command_line_caps;
 
-HRESULT apply_dpi_awareness(const wchar_t* exe_path_str)
-{
-  if (exe_path_str == nullptr)
-  {
-    return E_POINTER;
-  }
-
-  std::error_code last_error;
-
-  auto exe_path = fs::path(exe_path_str);
-
-  HKEY current_user = nullptr;
-  if (::RegOpenCurrentUser(KEY_WRITE, &current_user) == 0)
-  {
-    std::wstring compat = L"~ HIGHDPIAWARE";
-    HKEY compat_key = nullptr;
-    if (::RegOpenKeyExW(current_user, L"Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers", 0, KEY_WRITE, &compat_key) == 0)
-    {
-      ::RegSetValueExW(compat_key, exe_path_str, 0, REG_SZ, (BYTE*)compat.data(), compat.size() * 2);
-      ::RegCloseKey(compat_key);
-    }
-
-    ::RegCloseKey(current_user);
-  }
-
-  return S_OK;
-}
-
 // TODO
 // Specify controller cfg in the command line
 const wchar_t** format_command_line(const siege::platform::game_command_line_args* args, std::uint32_t* new_size)
@@ -94,6 +66,16 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
       string_args.emplace_back(setting.name);
       string_args.emplace_back(setting.value);
     }
+  }
+
+  for (auto& flag : args->flags)
+  {
+    if (!flag)
+    {
+      break;
+    }
+
+    string_args.emplace_back(flag);
   }
 
   if (string_args.empty())

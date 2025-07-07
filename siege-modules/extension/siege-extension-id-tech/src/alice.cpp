@@ -151,14 +151,13 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   std::advance(iter, 1);
   iter->name = L"console";
   iter->value = L"1";
-
-  std::advance(iter, 1);
-  iter->name = L"-RunningFromAlice2";
-  iter->value = L"";
     
   std::advance(iter, 1);
   iter->name = L"s_Alice2URL";
   iter->value = L".";
+
+  auto free_iter = std::find_if(args->flags.begin(), args->flags.end(), [](auto& setting) { return setting == nullptr; });
+  *free_iter = L"-RunningFromAlice2";
 
   return S_OK;
 }
