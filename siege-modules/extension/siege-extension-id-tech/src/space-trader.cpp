@@ -139,11 +139,6 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   iter->name = L"console";
   iter->value = L"1";
 
-  std::advance(iter, 1);
-  iter->name = L"map";
-  iter->value = L"trdm01a";
-
-
   return S_OK;
 }
 
@@ -153,7 +148,7 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
   {
     return E_POINTER;
   }
-  auto config = load_config_from_pak(L"main\\default.cfg", L"main/pak0.pk3", L"main/pak0.pk3");
+  auto config = load_config_from_pak(L"st\\default.cfg", L"st/pak0.pk3", L"st/pak0.pk3");
 
   if (config)
   {
@@ -178,7 +173,7 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
     return E_POINTER;
   }
 
-  auto config = load_config_from_pak(L"main\\default.cfg", L"main/pak0.pk3", L"main/pak0.pk3");
+  auto config = load_config_from_pak(L"st\\default.cfg", L"st/pak0.pk3", L"st/pak0.pk3");
 
   if (config)
   {
