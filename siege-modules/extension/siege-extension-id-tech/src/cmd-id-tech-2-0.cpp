@@ -78,12 +78,6 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
       string_args.emplace_back(L"+exec");
       string_args.emplace_back(setting.value);
     }
-    else
-    {
-      string_args.emplace_back(L"+set");
-      string_args.emplace_back(setting.name);
-      string_args.emplace_back(setting.value);
-    }
   }
 
   for (auto& setting : args->int_settings)
@@ -97,9 +91,12 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
     {
       auto name_str = std::wstring_view(setting.name);
 
-      string_args.emplace_back(L"+set");
-      string_args.emplace_back(name_str);
-      string_args.emplace_back(std::to_wstring(setting.value));
+      if (name_str == L"width" || name_str == L"height")
+      {
+        auto& back = string_args.emplace_back(name_str);
+        back.insert(back.begin(), L'-');
+        string_args.emplace_back(std::to_wstring(setting.value));
+      }
     }
     catch (...)
     {
@@ -113,7 +110,8 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
       break;
     }
 
-    string_args.emplace_back(flag);
+    auto& back = string_args.emplace_back(flag);
+    back.insert(back.begin(), L'-');
   }
 
   static std::vector<const wchar_t*> raw_args;

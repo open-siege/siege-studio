@@ -28,10 +28,13 @@ using predefined_int = siege::platform::game_command_line_predefined_setting<int
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
 
 extern auto command_line_caps = game_command_line_caps{
-  .int_settings = { { L"width", L"height" } }, // GL Quake only
+  .flags = { { L"listen", L"dedicated" } },
+  .int_settings = { { L"width", L"height", L"vid_mode" } },// width + height are GL Quake only
   .string_settings = { { L"name", L"connect", L"map", L"game", L"preferred_exe" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
+  .listen_setting = L"listen",
+  .dedicated_setting = L"dedicated",
   .preferred_exe_setting = L"preferred_exe"
 };
 
@@ -146,16 +149,24 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
     return E_POINTER;
   }
 
-  std::ofstream custom_bindings("Id1/autoexec.cfg", std::ios::binary | std::ios::trunc);
+  std::ofstream custom_bindings("Id1/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
+
+  auto vid_mode = std::find_if(args->int_settings.begin(), args->int_settings.end(), [](auto& setting) { return setting.name == L"vid_mode"sv; });
+
+  if (vid_mode != args->int_settings.end())
+  {
+    static std::set<std::string> numbers;
+    auto mode = numbers.emplace(std::to_string(vid_mode->value));
+    config.emplace(siege::configuration::key_type("vid_mode"), siege::configuration::key_type(*mode.first));
+  }
 
   bool enable_controller = save_bindings_to_config(*args, config, mapping_context{ .index_to_axis = hardware_index_to_joystick_axis_id_tech_2_0, .axis_set_prefix = "" });
 
   if (enable_controller)
   {
     // engine bug - mouse needs to be enabled for the right analog stick to work
-    config.emplace(siege::configuration::key_type({ "mouse" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "joystick" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "joyadvanced" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "joyadvancedupdate" }), siege::configuration::key_type(""));
@@ -171,6 +182,10 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   std::advance(iter, 1);
   iter->name = L"console";
   iter->value = L"1";
+
+  std::advance(iter, 1);
+  iter->name = L"exec";
+  iter->value = L"siege_studio_inputs.cfg";
 
   return S_OK;
 }
@@ -271,6 +286,19 @@ predefined_int*
   if (name == nullptr)
   {
     return nullptr;
+  }
+
+  if (std::wstring_view(name) == L"vid_mode")
+  {
+    static auto modes = std::array<predefined_int, 8>{
+      predefined_int{ .label = L"640x480", .value = 8 },
+      predefined_int{ .label = L"800x600", .value = 9 },
+      predefined_int{ .label = L"1024x768", .value = 10 },
+      predefined_int{ .label = L"1280x1024", .value = 11 },
+      predefined_int{},
+    };
+
+    return modes.data();
   }
 
   return nullptr;

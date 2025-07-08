@@ -28,9 +28,9 @@ using predefined_int = siege::platform::game_command_line_predefined_setting<int
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
 
 extern auto command_line_caps = game_command_line_caps{
-  .int_settings = { { L"width", L"height" } },
-  .string_settings = { { L"name", L"map"} },
-  .player_name_setting = L"name"
+  .int_settings = { { L"width", L"height", L"vid_mode" } },
+  .string_settings = { { L"name", L"map" } },
+  .player_name_setting = L"name",
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
@@ -100,15 +100,23 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
     return E_POINTER;
   }
 
-  std::ofstream custom_bindings("main/autoexec.cfg", std::ios::binary | std::ios::trunc);
+  std::ofstream custom_bindings("main/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
+
+  auto vid_mode = std::find_if(args->int_settings.begin(), args->int_settings.end(), [](auto& setting) { return setting.name == L"vid_mode"sv; });
+
+  if (vid_mode != args->int_settings.end())
+  {
+    static std::set<std::string> numbers;
+    auto mode = numbers.emplace(std::to_string(vid_mode->value));
+    config.emplace(siege::configuration::key_type("vid_mode"), siege::configuration::key_type(*mode.first));
+  }
 
   bool enable_controller = save_bindings_to_config(*args, config, mapping_context{ .index_to_axis = hardware_index_to_joystick_axis_id_tech_2_0, .axis_set_prefix = "" });
 
   if (enable_controller)
   {
-    config.emplace(siege::configuration::key_type({ "mouse" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "joystick" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "joyadvanced" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "joyadvancedupdate" }), siege::configuration::key_type(""));
@@ -125,8 +133,12 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   iter->name = L"console";
   iter->value = L"1";
 
+  std::advance(iter, 1);
+  iter->name = L"exec";
+  iter->value = L"siege_studio_inputs.cfg";
+
   auto free_iter = std::find_if(args->flags.begin(), args->flags.end(), [](auto& setting) { return setting == nullptr; });
-  *free_iter = L"-notwarezed";
+  *free_iter = L"notwarezed";
 
   return S_OK;
 }
@@ -221,6 +233,19 @@ predefined_int*
   if (name == nullptr)
   {
     return nullptr;
+  }
+
+  if (std::wstring_view(name) == L"vid_mode")
+  {
+    static auto modes = std::array<predefined_int, 8>{
+      predefined_int{ .label = L"640x480", .value = 8 },
+      predefined_int{ .label = L"800x600", .value = 9 },
+      predefined_int{ .label = L"1024x768", .value = 10 },
+      predefined_int{ .label = L"1280x1024", .value = 11 },
+      predefined_int{},
+    };
+
+    return modes.data();
   }
 
   return nullptr;

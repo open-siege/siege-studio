@@ -28,10 +28,13 @@ using predefined_int = siege::platform::game_command_line_predefined_setting<int
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
 
 extern auto command_line_caps = game_command_line_caps{
-  .int_settings = { { L"width", L"height" } },// GL Hexen only
+  .flags = { { L"listen", L"dedicated" } },
+  .int_settings = { { L"width", L"height", L"vid_mode" } },// GL Hexen only
   .string_settings = { { L"name", L"connect", L"map", L"preferred_exe" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
+  .listen_setting = L"listen",
+  .dedicated_setting = L"dedicated",
   .preferred_exe_setting = L"preferred_exe"
 };
 
@@ -66,14 +69,12 @@ using namespace std::literals;
 
 constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 4>, 2> verification_strings = { {
   // win hexen 2
-  std::array<std::pair<std::string_view, std::size_t>, 4>{ { 
-    { "HexenII"sv, std::size_t(0x4b0524) },
+  std::array<std::pair<std::string_view, std::size_t>, 4>{ { { "HexenII"sv, std::size_t(0x4b0524) },
     { "exec"sv, std::size_t(0x491de4) },
     { "cmd"sv, std::size_t(0x491dfc) },
     { "cl_pitchspeed"sv, std::size_t(0x48ef60) } } },
   // gl hexen 2
-  std::array<std::pair<std::string_view, std::size_t>, 4>{ { 
-    { "HexenII"sv, std::size_t(0x482a38) },
+  std::array<std::pair<std::string_view, std::size_t>, 4>{ { { "HexenII"sv, std::size_t(0x482a38) },
     { "exec"sv, std::size_t(0x465774) },
     { "cmd"sv, std::size_t(0x46578c) },
     { "cl_pitchspeed"sv, std::size_t(0x466190) } } },
@@ -88,10 +89,8 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 6> fu
   { "mcache"sv, "playerclass"sv },
 } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 2> variable_name_ranges{ { 
-  { "joyadvaxisv"sv, "joyname"sv },
-  { "sv_accelerate"sv, "sv_idealpitchscale"sv } 
-  }};
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 2> variable_name_ranges{ { { "joyadvaxisv"sv, "joyname"sv },
+  { "sv_accelerate"sv, "sv_idealpitchscale"sv } } };
 
 HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
@@ -103,7 +102,7 @@ HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>*
   return siege::get_name_ranges(variable_name_ranges, length, data, saved);
 }
 
-HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
+HRESULT executable_is_supported(const wchar_t* filename) noexcept
 {
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
@@ -120,16 +119,24 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
     return E_POINTER;
   }
 
-  std::ofstream custom_bindings("portals/autoexec.cfg", std::ios::binary | std::ios::trunc);
+  std::ofstream custom_bindings("portals/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
+
+  auto vid_mode = std::find_if(args->int_settings.begin(), args->int_settings.end(), [](auto& setting) { return setting.name == L"vid_mode"sv; });
+
+  if (vid_mode != args->int_settings.end())
+  {
+    static std::set<std::string> numbers;
+    auto mode = numbers.emplace(std::to_string(vid_mode->value));
+    config.emplace(siege::configuration::key_type("vid_mode"), siege::configuration::key_type(*mode.first));
+  }
 
   bool enable_controller = save_bindings_to_config(*args, config, mapping_context{ .index_to_axis = hardware_index_to_joystick_axis_id_tech_2_0, .axis_set_prefix = "" });
 
   if (enable_controller)
   {
     // engine bug - mouse needs to be enabled for the right analog stick to work
-    config.emplace(siege::configuration::key_type({ "mouse" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "joystick" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "joyadvanced" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "joyadvancedupdate" }), siege::configuration::key_type(""));
@@ -145,6 +152,10 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   std::advance(iter, 1);
   iter->name = L"console";
   iter->value = L"1";
+
+  std::advance(iter, 1);
+  iter->name = L"exec";
+  iter->value = L"siege_studio_inputs.cfg";
 
   return S_OK;
 }
@@ -247,6 +258,19 @@ predefined_int*
     return nullptr;
   }
 
+  if (std::wstring_view(name) == L"vid_mode")
+  {
+    static auto modes = std::array<predefined_int, 8>{
+      predefined_int{ .label = L"640x480", .value = 8 },
+      predefined_int{ .label = L"800x600", .value = 9 },
+      predefined_int{ .label = L"1024x768", .value = 10 },
+      predefined_int{ .label = L"1280x1024", .value = 11 },
+      predefined_int{},
+    };
+
+    return modes.data();
+  }
+
   return nullptr;
 }
 
@@ -301,7 +325,6 @@ DWORD WINAPI WrappedGetLogicalDrives()
       if (VirtualDriveLetter.empty())
       {
         VirtualDriveLetter = static_cast<char>(driveLetter) + std::string(":\\");
-
       }
       break;
     }
@@ -411,8 +434,7 @@ LSTATUS __stdcall WrappedRegQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD
   return TrueRegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
 }
 
-static std::array<std::pair<void**, void*>, 6> detour_functions{ { 
-  { &(void*&)TrueGetLogicalDrives, WrappedGetLogicalDrives },
+static std::array<std::pair<void**, void*>, 6> detour_functions{ { { &(void*&)TrueGetLogicalDrives, WrappedGetLogicalDrives },
   { &(void*&)TrueGetLogicalDriveStringsA, WrappedGetLogicalDriveStringsA },
   { &(void*&)TrueRegQueryValueExA, WrappedRegQueryValueExA },
   { &(void*&)TrueGetDriveTypeA, WrappedGetDriveTypeA },

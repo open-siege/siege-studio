@@ -2,31 +2,59 @@ cmake_minimum_required(VERSION 3.30)
 project(siege-extension-id-tech)
 
 if (WIN32)
-    add_library(siege-extension-id-tech-2-0 STATIC src/id-tech-shared.cpp src/cmd-id-tech-2-5.cpp)
-    add_library(siege-extension-anachronox SHARED src/anox.cpp src/anox.def)
+    add_library(siege-extension-id-tech-2-0 STATIC src/id-tech-shared.cpp src/cmd-id-tech-2-0.cpp)
+    
+    add_library(siege-extension-take-no-prisoners SHARED src/take-no-prisoners.cpp src/vampire.def)
+    add_library(siege-extension-mageslayer SHARED src/mageslayer.cpp src/mageslayer.def)
+
+    set(VAMPIRE_TARGETS siege-extension-take-no-prisoners 
+                        siege-extension-mageslayer) 
+
+    foreach(EXT_TARGET IN ITEMS ${ID_TECH_2_0_TARGETS})
+        target_link_libraries(${EXT_TARGET} PRIVATE siege-extension-id-tech-2-0)
+    endforeach()
+
+    
     add_library(siege-extension-quake SHARED src/quake.cpp src/id-tech-2.def)
     add_library(siege-extension-hexen-2 SHARED src/hexen-2.cpp src/id-tech-2.def)
     add_library(siege-extension-hexen-2-praevus SHARED src/hexen-2-praevus.cpp src/hexen-2-praevus.def)
     add_library(siege-extension-cia-operative SHARED src/cia-operative.cpp src/id-tech-2.def)
     add_library(siege-extension-laser-arena SHARED src/laser-arena.cpp src/id-tech-2.def)
     add_library(siege-extension-battle-metal SHARED src/battle-metal.cpp src/id-tech-2.def)
+    
+    set(ID_TECH_2_0_TARGETS siege-extension-quake 
+                            siege-extension-hexen-2 
+                            siege-extension-hexen-2-praevus 
+                            siege-extension-cia-operative
+                            siege-extension-laser-arena
+                            siege-extension-battle-metal) 
+
+    foreach(EXT_TARGET IN ITEMS ${ID_TECH_2_0_TARGETS})
+        target_link_libraries(${EXT_TARGET} PRIVATE siege-extension-id-tech-2-0)
+    endforeach()
+
+    add_library(siege-extension-id-tech-2-5 STATIC src/id-tech-shared.cpp src/cmd-id-tech-2-5.cpp)
+
+    add_library(siege-extension-anachronox SHARED src/anox.cpp src/anox.def)
     add_library(siege-extension-quake-2 SHARED src/quake-2.cpp src/id-tech-2.5.def)
     add_library(siege-extension-heretic-2 SHARED src/heretic-2.cpp src/heretic-2.def)
     add_library(siege-extension-daikatana SHARED src/daikatana.cpp src/id-tech-2.5.def)
     add_library(siege-extension-kingpin SHARED src/kingpin.cpp src/id-tech-2.5.def)
     add_library(siege-extension-sin SHARED src/sin.cpp src/id-tech-2.5.def)
     add_library(siege-extension-soldier-of-fortune SHARED src/sof.cpp src/id-tech-2.5.def)
-    
-    get_property(ID_TECH_2_TARGETS
-                DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
-    
-    foreach(EXT_TARGET IN ITEMS ${ID_TECH_2_TARGETS})
-        get_target_property(TARGET_TYPE ${EXT_TARGET} TYPE)
 
-	    if (${TARGET_TYPE} STREQUAL "STATIC_LIBRARY")
-            continue()
-        endif()
-        target_link_libraries(${EXT_TARGET} PRIVATE siege-extension-id-tech-2-0)
+    set(ID_TECH_2_5_TARGETS siege-extension-anachronox 
+                            siege-extension-quake-2
+                            siege-extension-heretic-2
+                            siege-extension-daikatana
+                            siege-extension-kingpin
+                            siege-extension-sin
+                            siege-extension-soldier-of-fortune
+    ) 
+    
+    
+    foreach(EXT_TARGET IN ITEMS ${ID_TECH_2_5_TARGETS})
+        target_link_libraries(${EXT_TARGET} PRIVATE siege-extension-id-tech-2-5)
     endforeach()
 
     add_library(siege-extension-id-tech-3-0 STATIC src/id-tech-shared.cpp src/cmd-id-tech-3-0.cpp)
@@ -56,16 +84,14 @@ if (WIN32)
     add_library(siege-extension-allied-assault-breakthrough SHARED src/allied-assault-breakthrough.cpp src/id-tech-3.def)
     add_library(siege-extension-allied-assault-spearhead SHARED src/allied-assault-spearhead.cpp src/id-tech-3.def)
     add_library(siege-extension-space-trader SHARED src/space-trader.cpp src/id-tech-3.def)
-    add_library(siege-extension-take-no-prisoners SHARED src/take-no-prisoners.cpp src/vampire.def)
-    add_library(siege-extension-mageslayer SHARED src/mageslayer.cpp src/mageslayer.def)
-
+    
     get_property(ID_TECH_TARGETS
                 DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
 
     foreach(EXT_TARGET IN ITEMS ${ID_TECH_TARGETS})
         get_target_property(TARGET_TYPE ${EXT_TARGET} TYPE)
 
-        if (${TARGET_TYPE} STREQUAL "STATIC_LIBRARY" OR EXT_TARGET IN_LIST ID_TECH_2_TARGETS)
+        if (${TARGET_TYPE} STREQUAL "STATIC_LIBRARY" OR EXT_TARGET IN_LIST ID_TECH_2_0_TARGETS OR EXT_TARGET IN_LIST ID_TECH_2_5_TARGETS)
             continue()
         endif()
         target_link_libraries(${EXT_TARGET} PRIVATE siege-extension-id-tech-3-0)

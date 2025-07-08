@@ -305,7 +305,6 @@ predefined_int*
 
   auto name_str = std::wstring_view(name);
 
-
   if (name_str == L"gl_mode")
   {
     static auto modes = std::array<predefined_int, 8>{
