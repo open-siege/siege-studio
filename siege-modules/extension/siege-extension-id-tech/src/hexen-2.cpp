@@ -29,9 +29,10 @@ using predefined_string = siege::platform::game_command_line_predefined_setting<
 
 extern auto command_line_caps = game_command_line_caps{
   .int_settings = { { L"width", L"height" } },// GL Hexen only
-  .string_settings = { { L"name", L"connect", L"map" } },
+  .string_settings = { { L"name", L"connect", L"map", L"preferred_exe" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
+  .preferred_exe_setting = L"preferred_exe"
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
@@ -244,25 +245,6 @@ predefined_int*
     return nullptr;
   }
 
-  // auto name_str = std::wstring_view(name);
-
-
-  // if (name_str == L"r_mode")
-  //{
-  //   static auto modes = std::array<predefined_int, 8>{
-  //     predefined_int{ .label = L"640x480", .value = 1 },
-  //     predefined_int{ .label = L"800x600", .value = 1 },
-  //     predefined_int{ .label = L"960x720", .value = 1 },
-  //     predefined_int{ .label = L"1024x768", .value = 1 },
-  //     predefined_int{ .label = L"1152x864", .value = 1 },
-  //     predefined_int{ .label = L"1280x960", .value = 1 },
-  //     predefined_int{ .label = L"1600x1200", .value = 1 },
-  //     predefined_int{},
-  //   };
-
-  //  return modes.data();
-  //}
-
   return nullptr;
 }
 
@@ -275,6 +257,17 @@ predefined_string*
   if (name && std::wstring_view(name) == L"map")
   {
     return get_predefined_id_tech_2_map_command_line_settings(L"data1", false);
+  }
+
+  if (name && std::wstring_view(name) == L"preferred_exe")
+  {
+    static auto modes = std::array<predefined_string, 3>{
+      predefined_string{ .label = L"Hexen 2 (software rendered)", .value = L"h2.exe" },
+      predefined_string{ .label = L"GLHexen 2", .value = L"glh2.exe" },
+      predefined_string{},
+    };
+
+    return modes.data();
   }
 
   return nullptr;

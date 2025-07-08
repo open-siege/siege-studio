@@ -29,9 +29,10 @@ using predefined_string = siege::platform::game_command_line_predefined_setting<
 
 extern auto command_line_caps = game_command_line_caps{
   .int_settings = { { L"width", L"height" } },// GL Hexen only
-  .string_settings = { { L"name", L"connect", L"map" } },
+  .string_settings = { { L"name", L"connect", L"map", L"preferred_exe" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
+  .preferred_exe_setting = L"preferred_exe"
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
@@ -258,6 +259,17 @@ predefined_string*
   if (name && std::wstring_view(name) == L"map")
   {
     return get_predefined_id_tech_2_map_command_line_settings(L"portals", false);
+  }
+
+  if (name && std::wstring_view(name) == L"preferred_exe")
+  {
+    static auto modes = std::array<predefined_string, 3>{
+      predefined_string{ .label = L"Hexen 2 - Portal of Praevus (software rendered)", .value = L"H2MP.EXE" },
+      predefined_string{ .label = L"GLHexen 2 - Portal of Praevus", .value = L"GLH2MP.EXE" },
+      predefined_string{},
+    };
+
+    return modes.data();
   }
 
   return nullptr;

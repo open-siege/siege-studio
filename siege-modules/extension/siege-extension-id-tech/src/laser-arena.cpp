@@ -28,10 +28,11 @@ using predefined_int = siege::platform::game_command_line_predefined_setting<int
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
 
 extern auto command_line_caps = game_command_line_caps{
-  .int_settings = { { L"gl_mode" } },
-  .string_settings = { { L"name", L"connect", L"map", L"gl_driver" } },
+  .int_settings = { { L"width", L"height" } },
+  .string_settings = { { L"name", L"connect", L"map", L"preferred_exe" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
+  .preferred_exe_setting = L"preferred_exe"
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
@@ -258,6 +259,17 @@ predefined_string*
   if (name && std::wstring_view(name) == L"map")
   {
     return get_predefined_id_tech_2_map_command_line_settings(L"main", false);
+  }
+
+  if (name && std::wstring_view(name) == L"preferred_exe")
+  {
+    static auto modes = std::array<predefined_string, 3>{
+      predefined_string{ .label = L"Laser Arena (software rendered)", .value = L"LA.exe" },
+      predefined_string{ .label = L"Laser Arena (OpenGL)", .value = L"LA_GL.exe" },
+      predefined_string{},
+    };
+
+    return modes.data();
   }
 
   return nullptr;

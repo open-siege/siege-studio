@@ -124,6 +124,7 @@ namespace siege::platform
     const fs_char* dedicated_setting = FSL"";
     const fs_char* render_backend_setting = FSL "";
     const fs_char* selected_game_setting = FSL "";
+    const fs_char* preferred_exe_setting = FSL"";
   };
 
   template<typename TValue>

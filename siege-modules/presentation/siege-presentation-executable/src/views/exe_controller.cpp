@@ -1112,8 +1112,28 @@ namespace siege::views
       args.reserve(argc + 3 * sizeof(std::wstring) + 3);
 
 
+      auto exe_path = loaded_path;
+
+      if (auto* caps = get_extension().caps; game_args && caps && caps->preferred_exe_setting && caps->preferred_exe_setting[0] != '\0')
+      {
+        auto preferred_game_exe = std::find_if(game_args->string_settings.begin(), game_args->string_settings.end(), [=](auto& item) {
+          return item.name && item.value && item.value[0] != '\0' && item.name == std::wstring_view(caps->preferred_exe_setting);
+        });
+
+        if (preferred_game_exe != game_args->string_settings.end())
+        {
+          auto temp_path = exe_path;
+          temp_path.replace_filename(preferred_game_exe->value);
+
+          if (std::filesystem::exists(temp_path, last_errorc))
+          {
+            exe_path = temp_path;
+          }
+        }
+      }
+
       args.append(1, L'"');
-      args.append(loaded_path.wstring());
+      args.append(exe_path.wstring());
       args.append(1, L'"');
 
       if (argv && argc > 0)
@@ -1132,11 +1152,11 @@ namespace siege::views
 
       auto deferred = configure_environment();
 
-      if (dll_paths.empty() && ::CreateProcessW(loaded_path.c_str(), args.data(), nullptr, nullptr, FALSE, DETACHED_PROCESS, nullptr, loaded_path.parent_path().c_str(), &startup_info, process_info))
+      if (dll_paths.empty() && ::CreateProcessW(exe_path.c_str(), args.data(), nullptr, nullptr, FALSE, DETACHED_PROCESS, nullptr, loaded_path.parent_path().c_str(), &startup_info, process_info))
       {
         return S_OK;
       }
-      else if (::DetourCreateProcessWithDllsW(loaded_path.c_str(),
+      else if (::DetourCreateProcessWithDllsW(exe_path.c_str(),
                  args.data(),
                  nullptr,
                  nullptr,

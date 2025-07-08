@@ -53,6 +53,11 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
       continue;
     }
 
+    if (std::wstring_view(setting.name) == command_line_caps.preferred_exe_setting)
+    {
+      continue;
+    }
+
     if (!setting.value)
     {
       continue;

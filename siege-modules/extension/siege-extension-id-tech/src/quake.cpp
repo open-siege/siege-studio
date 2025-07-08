@@ -29,9 +29,10 @@ using predefined_string = siege::platform::game_command_line_predefined_setting<
 
 extern auto command_line_caps = game_command_line_caps{
   .int_settings = { { L"width", L"height" } }, // GL Quake only
-  .string_settings = { { L"name", L"connect", L"map", L"game" } },
+  .string_settings = { { L"name", L"connect", L"map", L"game", L"preferred_exe" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
+  .preferred_exe_setting = L"preferred_exe"
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
@@ -284,6 +285,19 @@ predefined_string*
   if (name && std::wstring_view(name) == L"map")
   {
     return get_predefined_id_tech_2_map_command_line_settings(L"Id1", false);
+  }
+
+  if (name && std::wstring_view(name) == L"preferred_exe")
+  {
+    static auto modes = std::array<predefined_string, 5>{
+      predefined_string{ .label = L"WinQuake", .value = L"Winquake.exe" },
+      predefined_string{ .label = L"GLQuake", .value = L"Glquake.exe" },
+      predefined_string{ .label = L"QuakeWorld", .value = L"qwcl.exe" },
+      predefined_string{ .label = L"GLQuakeWorld", .value = L"glqwcl.exe" },
+      predefined_string{},
+    };
+
+    return modes.data();
   }
 
   return nullptr;
