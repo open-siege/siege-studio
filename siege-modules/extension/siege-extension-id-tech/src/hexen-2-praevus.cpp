@@ -43,7 +43,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::analog, "+back", u"Move Backward", u"Movement" },
   game_action{ game_action::analog, "+moveleft", u"Strafe Left", u"Movement" },
   game_action{ game_action::analog, "+moveright", u"Strafe Right", u"Movement" },
-  game_action{ game_action::analog, "+moveup", u"Jump", u"Movement" },
+  game_action{ game_action::analog, "+jump", u"Jump", u"Movement" },
   game_action{ game_action::analog, "+movedown", u"Crouch", u"Movement" },
   game_action{ game_action::digital, "+speed", u"Run", u"Movement" },
   game_action{ game_action::analog, "+left", u"Turn Left", u"Aiming" },
@@ -123,15 +123,6 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
 
-  auto vid_mode = std::find_if(args->int_settings.begin(), args->int_settings.end(), [](auto& setting) { return setting.name == L"vid_mode"sv; });
-
-  if (vid_mode != args->int_settings.end())
-  {
-    static std::set<std::string> numbers;
-    auto mode = numbers.emplace(std::to_string(vid_mode->value));
-    config.emplace(siege::configuration::key_type("vid_mode"), siege::configuration::key_type(*mode.first));
-  }
-
   bool enable_controller = save_bindings_to_config(*args, config, mapping_context{ .index_to_axis = hardware_index_to_joystick_axis_id_tech_2_0, .axis_set_prefix = "" });
 
   if (enable_controller)
@@ -197,8 +188,13 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 3> actions{
+  std::array<std::pair<WORD, std::string_view>, 8> actions{
     {
+      std::make_pair<WORD, std::string_view>('w', "+forward"),
+      std::make_pair<WORD, std::string_view>('a', "+moveleft"),
+      std::make_pair<WORD, std::string_view>('s', "+back"),
+      std::make_pair<WORD, std::string_view>('d', "+moveright"),
+      std::make_pair<WORD, std::string_view>('f', "+melee-attack"),
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
       std::make_pair<WORD, std::string_view>(VK_OEM_5, "+mlook"),
@@ -220,7 +216,7 @@ HRESULT init_controller_inputs(controller_binding* binding)
     {
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attack"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "invuse"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_A, "+moveup"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_A, "+jump"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_B, "+movedown"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "+speed"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_UP, "+forward"),

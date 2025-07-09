@@ -78,6 +78,12 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
       string_args.emplace_back(L"+exec");
       string_args.emplace_back(setting.value);
     }
+    else
+    {
+      auto& back = string_args.emplace_back(setting.name);
+      back.insert(back.begin(), L'+');
+      string_args.emplace_back(setting.value);
+    }
   }
 
   for (auto& setting : args->int_settings)
@@ -95,6 +101,12 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
       {
         auto& back = string_args.emplace_back(name_str);
         back.insert(back.begin(), L'-');
+        string_args.emplace_back(std::to_wstring(setting.value));
+      }
+      else
+      {
+        auto& back = string_args.emplace_back(setting.name);
+        back.insert(back.begin(), L'+');
         string_args.emplace_back(std::to_wstring(setting.value));
       }
     }

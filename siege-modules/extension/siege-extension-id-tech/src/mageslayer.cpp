@@ -82,11 +82,6 @@ HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>*
 
 HRESULT executable_is_supported(const wchar_t* filename) noexcept
 {
-  if (filename && std::wstring_view(filename).contains(L"MAGESLAY"))
-  {
-    OutputDebugStringW(L"I am here\n");
-  }
-
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
 

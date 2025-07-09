@@ -28,7 +28,7 @@ using predefined_int = siege::platform::game_command_line_predefined_setting<int
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
 
 extern auto command_line_caps = game_command_line_caps{
-  .int_settings = { { L"width", L"height", L"vid_mode" } },
+  .int_settings = { { L"width", L"height" } },
   .string_settings = { { L"name", L"map" } },
   .player_name_setting = L"name",
 };
@@ -104,15 +104,6 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
 
-  auto vid_mode = std::find_if(args->int_settings.begin(), args->int_settings.end(), [](auto& setting) { return setting.name == L"vid_mode"sv; });
-
-  if (vid_mode != args->int_settings.end())
-  {
-    static std::set<std::string> numbers;
-    auto mode = numbers.emplace(std::to_string(vid_mode->value));
-    config.emplace(siege::configuration::key_type("vid_mode"), siege::configuration::key_type(*mode.first));
-  }
-
   bool enable_controller = save_bindings_to_config(*args, config, mapping_context{ .index_to_axis = hardware_index_to_joystick_axis_id_tech_2_0, .axis_set_prefix = "" });
 
   if (enable_controller)
@@ -130,15 +121,14 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
 
   std::advance(iter, 1);
-  iter->name = L"console";
-  iter->value = L"1";
-
-  std::advance(iter, 1);
   iter->name = L"exec";
   iter->value = L"siege_studio_inputs.cfg";
 
   auto free_iter = std::find_if(args->flags.begin(), args->flags.end(), [](auto& setting) { return setting == nullptr; });
   *free_iter = L"notwarezed";
+
+  std::advance(free_iter, 1);
+  *free_iter = L"console";
 
   return S_OK;
 }
@@ -156,9 +146,8 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
     load_mouse_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 1> actions{
-    { std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use") }
-  };
+  std::array<std::pair<WORD, std::string_view>, 2> actions{ { std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use"),
+    std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+zoom") } };
 
   upsert_mouse_defaults(game_actions, actions, *binding);
 
@@ -180,11 +169,15 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 3> actions{
+  std::array<std::pair<WORD, std::string_view>, 7> actions{
     {
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
       std::make_pair<WORD, std::string_view>(VK_OEM_5, "+mlook"),
+      std::make_pair<WORD, std::string_view>(VK_LSHIFT, "+speed"),
+      std::make_pair<WORD, std::string_view>('f', "+use"),
+      std::make_pair<WORD, std::string_view>('e', "+use"),
+      std::make_pair<WORD, std::string_view>('r', "reload"),
     }
   };
 
@@ -233,19 +226,6 @@ predefined_int*
   if (name == nullptr)
   {
     return nullptr;
-  }
-
-  if (std::wstring_view(name) == L"vid_mode")
-  {
-    static auto modes = std::array<predefined_int, 8>{
-      predefined_int{ .label = L"640x480", .value = 8 },
-      predefined_int{ .label = L"800x600", .value = 9 },
-      predefined_int{ .label = L"1024x768", .value = 10 },
-      predefined_int{ .label = L"1280x1024", .value = 11 },
-      predefined_int{},
-    };
-
-    return modes.data();
   }
 
   return nullptr;

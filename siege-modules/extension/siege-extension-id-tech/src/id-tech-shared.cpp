@@ -804,8 +804,6 @@ HRESULT apply_dpi_awareness(const wchar_t* exe_path_str)
   return S_OK;
 }
 
-// TODO
-// Specify controller cfg in the command line
 predefined_string*
   get_predefined_id_tech_2_map_command_line_settings(const wchar_t* base_dir, bool include_zip) noexcept
 {
@@ -826,11 +824,39 @@ predefined_string*
       std::vector<fs::path> pak_files;
       pak_files.reserve(16);
 
+      auto maps_dir = fs::path(base_dir) / "maps";
+
       for (auto const& dir_entry : std::filesystem::directory_iterator{ base_dir })
       {
         if ((include_zip && dir_entry.path().extension() == L".zip" || include_zip && dir_entry.path().extension() == L".ZIP") || (dir_entry.path().extension() == L".dat" || dir_entry.path().extension() == L".DAT") || dir_entry.path().extension() == L".pak" || dir_entry.path().extension() == L".PAK")
         {
           pak_files.emplace_back(dir_entry.path());
+        }
+      }
+
+      if (fs::is_directory(maps_dir, errc))
+      {
+        for (auto const& file_iter : std::filesystem::directory_iterator{ maps_dir })
+        {
+          if (!file_iter.is_directory() && (file_iter.path().extension() == ".bsp" || file_iter.path().extension() == ".BSP"))
+          {
+            if (file_iter.path().parent_path() == maps_dir)
+            {
+              storage.emplace_back(file_iter.path().stem());
+            }
+            else
+            {
+              auto parent = fs::relative(file_iter.path().parent_path(), maps_dir);
+              std::wstring final_name = (parent / file_iter.path().stem()).wstring();
+
+              while (final_name.contains(fs::path::preferred_separator))
+              {
+                final_name = final_name.replace(final_name.find(fs::path::preferred_separator), 1, std::wstring(L"/"));
+              }
+
+              storage.emplace_back(std::move(final_name));
+            }
+          }
         }
       }
 
