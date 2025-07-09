@@ -77,10 +77,6 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "+mlook", u"Mouse Look", u"Misc" },
 } };
 
-constexpr static auto sin_aliases = std::array<std::array<std::string_view, 2>, 2>{ { { "+melee-attack", "use Fists; +attack" },
-  { "-melee-attack", "-attack;weapprev" } } };
-
-
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 extern void(__fastcall* ConsoleEvalFastcall)(const char*);
 
@@ -110,7 +106,7 @@ HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>*
   return siege::get_name_ranges(game_export.variable_name_ranges, length, data, saved);
 }
 
-HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
+HRESULT executable_is_supported(const wchar_t* filename) noexcept
 {
   return siege::executable_is_supported(filename, game_export.verification_strings, game_export.function_name_ranges, game_export.variable_name_ranges);
 }
@@ -130,11 +126,6 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   std::ofstream custom_bindings("base/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
-
-  for (auto& alias : sin_aliases)
-  {
-    config.emplace(siege::configuration::key_type({ "alias", alias[0] }), siege::configuration::key_type(alias[1]));
-  }
 
   bool enable_controller = save_bindings_to_config(*args, config);
 
@@ -262,16 +253,16 @@ predefined_int*
   auto name_str = std::wstring_view(name);
 
 
-  if (name_str == L"r_mode")
+  if (name_str == L"gl_mode")
   {
     static auto modes = std::array<predefined_int, 8>{
-      predefined_int{ .label = L"640x480", .value = 1 },
-      predefined_int{ .label = L"800x600", .value = 1 },
-      predefined_int{ .label = L"960x720", .value = 1 },
-      predefined_int{ .label = L"1024x768", .value = 1 },
-      predefined_int{ .label = L"1152x864", .value = 1 },
-      predefined_int{ .label = L"1280x960", .value = 1 },
-      predefined_int{ .label = L"1600x1200", .value = 1 },
+      predefined_int{ .label = L"640x480", .value = 3 },
+      predefined_int{ .label = L"800x600", .value = 4 },
+      predefined_int{ .label = L"960x720", .value = 5 },
+      predefined_int{ .label = L"1024x768", .value = 6 },
+      predefined_int{ .label = L"1152x864", .value = 7 },
+      predefined_int{ .label = L"1280x960", .value = 8 },
+      predefined_int{ .label = L"1600x1200", .value = 9 },
       predefined_int{},
     };
 

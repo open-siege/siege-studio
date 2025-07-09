@@ -94,7 +94,7 @@ HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>*
   return siege::get_name_ranges(variable_name_ranges, length, data, saved);
 }
 
-HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
+HRESULT executable_is_supported(const wchar_t* filename) noexcept
 {
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }

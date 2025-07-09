@@ -68,7 +68,7 @@ using namespace std::literals;
 constexpr std::array<std::string_view, 2> verification_strings = std::array<std::string_view, 2>{ { "Quake2Main"sv,
   "quake2.dll"sv } };
 
-HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
+HRESULT executable_is_supported(const wchar_t* filename) noexcept
 {
   if (filename && std::filesystem::path(filename).wstring().contains(L"Heretic2"))
   {

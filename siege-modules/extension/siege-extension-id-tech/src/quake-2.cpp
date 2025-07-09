@@ -89,7 +89,7 @@ HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>*
   return siege::get_name_ranges(variable_name_ranges, length, data, saved);
 }
 
-HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
+HRESULT executable_is_supported(const wchar_t* filename) noexcept
 {
   if (filename && std::filesystem::path(filename).wstring().contains(L"quake2"))
   {
@@ -101,9 +101,9 @@ HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
 
 HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
 {
-  if (exe_path_str == nullptr)
+  if (auto result = apply_dpi_awareness(exe_path_str); result != S_OK)
   {
-    return E_POINTER;
+    return result;
   }
 
   if (args == nullptr)
@@ -251,16 +251,16 @@ predefined_int*
   auto name_str = std::wstring_view(name);
 
 
-  if (name_str == L"r_mode")
+  if (name_str == L"gl_mode")
   {
     static auto modes = std::array<predefined_int, 8>{
-      predefined_int{ .label = L"640x480", .value = 1 },
-      predefined_int{ .label = L"800x600", .value = 1 },
-      predefined_int{ .label = L"960x720", .value = 1 },
-      predefined_int{ .label = L"1024x768", .value = 1 },
-      predefined_int{ .label = L"1152x864", .value = 1 },
-      predefined_int{ .label = L"1280x960", .value = 1 },
-      predefined_int{ .label = L"1600x1200", .value = 1 },
+      predefined_int{ .label = L"640x480", .value = 3 },
+      predefined_int{ .label = L"800x600", .value = 4 },
+      predefined_int{ .label = L"960x720", .value = 5 },
+      predefined_int{ .label = L"1024x768", .value = 6 },
+      predefined_int{ .label = L"1152x864", .value = 7 },
+      predefined_int{ .label = L"1280x960", .value = 8 },
+      predefined_int{ .label = L"1600x1200", .value = 9 },
       predefined_int{},
     };
 

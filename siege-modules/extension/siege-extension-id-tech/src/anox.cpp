@@ -256,7 +256,7 @@ predefined_string*
   return nullptr;
 }
 
-HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
+HRESULT executable_is_supported(const wchar_t* filename) noexcept
 {
   if (filename && std::filesystem::path(filename).wstring().contains(L"anox"))
   {

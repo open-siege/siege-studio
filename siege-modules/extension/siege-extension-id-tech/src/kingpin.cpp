@@ -51,20 +51,22 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::analog, "+lookup", u"Look Up", u"Aiming" },
   game_action{ game_action::analog, "+lookdown", u"Look Down", u"Aiming" },
   game_action{ game_action::digital, "+attack", u"Attack", u"Combat" },
-  game_action{ game_action::digital, "+altattack", u"Alt Attack", u"Combat" },
+  game_action{ game_action::digital, "holster", u"Holster Weapon", u"Combat" },
+  game_action{ game_action::digital, "flashlight", u"Flashlight", u"Combat" },
   game_action{ game_action::digital, "+melee-attack", u"Melee Attack", u"Combat" },
   game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
   game_action{ game_action::digital, "weaprev", u"Previous Weapon", u"Combat" },
-  game_action{ game_action::digital, "itemnext", u"Next Item", u"Combat" },
-  game_action{ game_action::digital, "itemuse", u"Use Item", u"Combat" },
-  game_action{ game_action::digital, "scoreboard", u"Score", u"Interface" },
+  game_action{ game_action::digital, "invnext", u"Next Item", u"Combat" },
+  game_action{ game_action::digital, "invprev", u"Use Item", u"Combat" },
+  game_action{ game_action::digital, "inven_drop", u"Drop Item", u"Combat" },
+  game_action{ game_action::digital, "inven", u"Inventory Menu", u"Interface" },
   game_action{ game_action::digital, "cmd help", u"Help Menu", u"Interface" },
   game_action{ game_action::digital, "+klook", u"Keyboard Look", u"Misc" },
   game_action{ game_action::digital, "+mlook", u"Mouse Look", u"Misc" },
 } };
 
-constexpr static auto kingpin_aliases = std::array<std::array<std::string_view, 2>, 2>{ { { "+melee-attack", "use pipe; +attack" },
-  { "-melee-attack", "weapprev; -attack" } } };
+constexpr static auto kingpin_aliases = std::array<std::array<std::string_view, 2>, 2>{ { { "+melee-attack", "use pipe;+attack" },
+  { "-melee-attack", "weapprev;-attack" } } };
 
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"siege-extension-kingpin" } };
@@ -109,7 +111,7 @@ HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>*
   return siege::get_name_ranges(variable_name_ranges, length, data, saved);
 }
 
-HRESULT executable_is_supported(_In_ const wchar_t* filename) noexcept
+HRESULT executable_is_supported(const wchar_t* filename) noexcept
 {
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
@@ -181,8 +183,8 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
   }
 
   std::array<std::pair<WORD, std::string_view>, 2> actions{
-    { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+altattack"),
-      std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use") }
+    { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "holster"),
+      std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+activate") }
   };
 
   upsert_mouse_defaults(game_actions, actions, *binding);
@@ -213,7 +215,7 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
       std::make_pair<WORD, std::string_view>('d', "+moveright"),
       std::make_pair<WORD, std::string_view>('e', "+activate"),
       std::make_pair<WORD, std::string_view>('g', "invuse"),
-      std::make_pair<WORD, std::string_view>(VK_RETURN, "+activate"),
+      std::make_pair<WORD, std::string_view>(VK_RETURN, "+s"),
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
     }
@@ -231,26 +233,10 @@ HRESULT init_controller_inputs(controller_binding* binding)
     return E_POINTER;
   }
 
-  /*
-constexpr static auto kingpin_dual_stick_defaults = std::array<std::array<std::string_view, 2>, 10> {{
-            {playstation::l2, "holster" },
-            {playstation::l1, "invnext" },
-            {playstation::r1, "invuse"},
-            {playstation::square, "+activate"},
-            {playstation::start, "cmd help"},
-            {playstation::select, "inven"},
-            {playstation::d_pad_up, "flashlight"},
-            {playstation::d_pad_down, "key2"},
-            {playstation::d_pad_left, "key1"},
-            {playstation::d_pad_right, "key3"}
-        }};
-
-*/
-
-  std::array<std::pair<WORD, std::string_view>, 23> actions{
+  std::array<std::pair<WORD, std::string_view>, 24> actions{
     {
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attack"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "+altattack"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "holster"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_A, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_B, "+movedown"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "+speed"),
@@ -263,15 +249,22 @@ constexpr static auto kingpin_dual_stick_defaults = std::array<std::array<std::s
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "+melee-attack"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "+use"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "+activate"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "weapnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "itemnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "itemuse"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "weapondrop"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "invnext"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "invuse"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_UP, "flashlight"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "inven_drop"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "weapprev"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_RIGHT, "weapnext"),
+      /*
+      * TODO figure out how to make use of these
+         {playstation::d_pad_down, "key2"},
+         {playstation::d_pad_left, "key1"},
+         {playstation::d_pad_right, "key3"}
+      */
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "score"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_MENU, "menu objectives"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_MENU, "inven"),
     }
   };
 
@@ -291,16 +284,16 @@ predefined_int*
   auto name_str = std::wstring_view(name);
 
 
-  if (name_str == L"r_mode")
+  if (name_str == L"gl_mode")
   {
     static auto modes = std::array<predefined_int, 8>{
-      predefined_int{ .label = L"640x480", .value = 1 },
-      predefined_int{ .label = L"800x600", .value = 1 },
-      predefined_int{ .label = L"960x720", .value = 1 },
-      predefined_int{ .label = L"1024x768", .value = 1 },
-      predefined_int{ .label = L"1152x864", .value = 1 },
-      predefined_int{ .label = L"1280x960", .value = 1 },
-      predefined_int{ .label = L"1600x1200", .value = 1 },
+      predefined_int{ .label = L"640x480", .value = 3 },
+      predefined_int{ .label = L"800x600", .value = 4 },
+      predefined_int{ .label = L"960x720", .value = 5 },
+      predefined_int{ .label = L"1024x768", .value = 6 },
+      predefined_int{ .label = L"1152x864", .value = 7 },
+      predefined_int{ .label = L"1280x960", .value = 8 },
+      predefined_int{ .label = L"1600x1200", .value = 9 },
       predefined_int{},
     };
 
