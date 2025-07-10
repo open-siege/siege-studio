@@ -86,7 +86,7 @@ std::vector<std::string> get_embedded_post_extract_commands()
   return {};
 }
 
-int start_ui_modal(command_line_args args, std::function<void(command_line_args)> action)
+int start_ui_modal(command_line_args, std::function<void(command_line_args)>, std::atomic_bool&)
 {   
     return 0;
 }

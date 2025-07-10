@@ -30,25 +30,26 @@ fs::path get_embedded_output_path();
 bool has_embedded_post_extract_commands();
 std::vector<std::string> get_embedded_post_extract_commands();
 
-int start_ui_modal(command_line_args args, std::function<void(command_line_args)> action);
+int start_ui_modal(command_line_args args, std::function<void(command_line_args)> action, std::atomic_bool& should_cancel);
 
 int main(int argc, const char** argv)
 {
   std::vector<std::string_view> raw_args(argv, argv + argc);
   command_line_args args = parse_command_line(raw_args);
 
-  if (!args.vol_path && !has_embedded_file())
+  if (!args.should_use_ui && !has_embedded_file() && !args.vol_path)
   {
     std::cerr << "No file specified. Please specify a file to extract as the first argument." << '\n';
     return EXIT_FAILURE;
   }
 
-
-  if (has_embedded_file() && !args.should_use_ui && !args.output_path)
+  if (!args.should_use_ui && has_embedded_file() && !args.output_path)
   {
     std::cerr << "No output directory specified. Please specify a path with --output then the path to the directory to extract to." << '\n';
     return EXIT_FAILURE;
   }
+
+  std::atomic_bool should_cancel = false;
 
   auto do_extraction = [&](command_line_args args) {
     std::unique_ptr<std::istream> volume_stream;
@@ -94,7 +95,15 @@ int main(int argc, const char** argv)
     std::function<void(decltype(files)&)> extract_files = [&](const auto& files) {
       for (const auto& some_file : files)
       {
+        if (should_cancel)
+        {
+          return;
+        }
         std::visit([&](const auto& info) {
+          if (should_cancel)
+          {
+            return;
+          }
           using info_type = std::decay_t<decltype(info)>;
 
           if constexpr (std::is_same_v<info_type, siege::platform::file_info>)
@@ -119,7 +128,7 @@ int main(int argc, const char** argv)
 
     extract_files(files);
 
-    if (args.output_path && has_embedded_post_extract_commands())
+    if (!should_cancel && args.output_path && has_embedded_post_extract_commands())
     {
       auto commands = get_embedded_post_extract_commands();
       fs::current_path(*args.output_path);
@@ -133,7 +142,7 @@ int main(int argc, const char** argv)
 
   if (args.should_use_ui)
   {
-    return start_ui_modal(args, do_extraction);
+    return start_ui_modal(args, do_extraction, should_cancel);
   }
   else
   {
