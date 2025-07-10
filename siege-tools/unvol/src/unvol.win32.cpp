@@ -11,6 +11,7 @@
 #include <spanstream>
 #include <siege/platform/win/module.hpp>
 #include <siege/platform/win/shell.hpp>
+#include <siege/platform/shared.hpp>
 #include <siege/platform/win/threading.hpp>
 #include <siege/platform/win/common_controls.hpp>
 
@@ -363,6 +364,72 @@ std::vector<std::string> get_embedded_post_extract_commands()
 
     temp = next == std::string_view::npos ? std::string_view() : temp.substr(next + 2);
   } while (!temp.empty());
+
+  using namespace std::literals;
+
+  constexpr static std::array<std::string_view, 16> disallowed_commands = { { "cscript",
+    "wscript",
+    "powershell",
+    "python",
+    "python3",
+    "php",
+    "npx",
+    "npm",
+    "node",
+    "pip",
+    "pip3",
+    "choco",
+    "winget",
+    "diskpart",
+    "bcdedit",
+    "regedit" } };
+
+  std::set<std::string> disallowed_starts_with;
+  std::set<std::string> disallowed_contains;
+
+  for (auto command : disallowed_commands)
+  {
+    disallowed_starts_with.emplace(std::string(command) + " ");
+    disallowed_starts_with.emplace(std::string(command) + "&");
+    disallowed_starts_with.emplace(std::string(command) + " &");
+    disallowed_starts_with.emplace(std::string(command) + ">");
+    disallowed_starts_with.emplace(std::string(command) + " >");
+  }
+
+  for (auto command : disallowed_commands)
+  {
+    disallowed_contains.emplace("&" + std::string(command));
+    disallowed_contains.emplace("& " + std::string(command));
+    disallowed_contains.emplace(" &" + std::string(command));
+    disallowed_contains.emplace(">" + std::string(command));
+    disallowed_contains.emplace("> " + std::string(command));
+    disallowed_contains.emplace(" >" + std::string(command));
+  }
+
+  auto erase_commands = [&](auto rules, auto condition) {
+    auto count = std::count_if(results.begin(), results.end(), [&](auto& value) {
+      return std::any_of(rules.begin(), rules.end(), [&](auto& rule) {
+        auto temp = siege::platform::to_lower(value);
+        return condition(rule, temp);
+      });
+    });
+
+    for (auto i = 0; i < count; ++i)
+    {
+      auto item = std::find_if(results.begin(), results.end(), [&](auto& value) {
+        return std::any_of(rules.begin(), rules.end(), [&](auto& rule) {
+          auto temp = siege::platform::to_lower(value);
+          return condition(rule, temp);
+        });
+      });
+
+      results.erase(item);
+    }
+  };
+
+  erase_commands(disallowed_starts_with, [](auto& rule, auto& value) { return value.starts_with(rule); });
+  erase_commands(disallowed_contains, [](auto& rule, auto& value) { return value.contains(rule); });
+  erase_commands(disallowed_commands, [](auto& rule, auto& value) { return value == rule; });
 
   return results;
 }
