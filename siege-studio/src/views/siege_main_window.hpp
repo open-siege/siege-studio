@@ -23,7 +23,6 @@ namespace siege::views
   // TODO add filename filter for directory listing
   // TODO add category and extension filter for directory listing
   struct siege_main_window final : win32::basic_window<siege_main_window>
-    , win32::menu::notifications
   {
     win32::tree_view dir_list;
     win32::popup_menu dir_list_menu;
@@ -38,14 +37,6 @@ namespace siege::views
     std::list<std::filesystem::path> folders;
     std::list<std::filesystem::path> files;
     std::list<std::filesystem::path>::iterator selected_file;
-
-    std::uint32_t open_id = RegisterWindowMessageW(L"COMMAND_OPEN");
-    std::uint32_t open_workspace_id = RegisterWindowMessageW(L"COMMAND_OPEN_WORKSPACE");
-    std::uint32_t edit_theme_id = RegisterWindowMessageW(L"COMMAND_EDIT_THEME");
-    std::uint32_t about_id = RegisterWindowMessageW(L"COMMAND_ABOUT");
-    std::uint32_t update_stable_id = RegisterWindowMessageW(L"COMMAND_UPDATE_STABLE");
-    std::uint32_t update_development_id = RegisterWindowMessageW(L"COMMAND_UPDATE_DEVELOPMENT");
-    std::uint32_t exit_id = RegisterWindowMessageW(L"COMMAND_EXIT");
 
     bool updated_in_progress = false;
     bool is_resizing = false;
@@ -284,19 +275,203 @@ namespace siege::views
 
       std::size_t id = 1u;
 
-      popup_menus[0].AppendMenuW(MF_OWNERDRAW, open_id, L"Open...");
-      popup_menus[0].AppendMenuW(MF_OWNERDRAW, open_workspace_id, L"Open Folder as Workspace");
-      popup_menus[0].AppendMenuW(MF_SEPARATOR | MF_OWNERDRAW, id++);
-      popup_menus[0].AppendMenuW(MF_OWNERDRAW, exit_id, L"Quit");
-      popup_menus[1].AppendMenuW(MF_OWNERDRAW, edit_theme_id, L"Preferences");
-      popup_menus[2].AppendMenuW(MF_OWNERDRAW, about_id, L"About");
+      popup_menus[0].AppendMenuW(MF_OWNERDRAW, id, L"Open...");
+      win32::set_window_command_subclass(*this, id++, [this](auto, auto, auto) -> std::optional<LRESULT> {
+        auto dialog = win32::com::CreateFileOpenDialog();
 
+        if (dialog)
+        {
+          struct filter : COMDLG_FILTERSPEC
+          {
+            std::wstring name;
+            std::wstring spec;
+
+            filter(std::wstring name, std::wstring spec) noexcept : name(std::move(name)), spec(std::move(spec))
+            {
+              this->pszName = this->name.c_str();
+              this->pszSpec = this->spec.c_str();
+            }
+          };
+
+          std::vector<filter> temp;
+
+          temp.reserve(extensions.size());
+
+          for (auto& extension : extensions)
+          {
+            temp.emplace_back(extension.first, L"*" + extension.first);
+          }
+
+          std::vector<COMDLG_FILTERSPEC> filetypes(temp.begin(), temp.end());
+
+
+          win32::com::com_ptr<IShellItem> folder_info;
+
+          int file_count = 0;
+          std::map<std::wstring, int> extension_counts;
+          if (dialog.value()->GetFolder(folder_info.put()) == S_OK)
+          {
+            win32::com::com_string temp;
+            if (folder_info->GetDisplayName(SIGDN_FILESYSPATH, temp.put()) == S_OK)
+            {
+              for (auto entry = fs::recursive_directory_iterator(std::wstring_view(temp));
+                entry != fs::recursive_directory_iterator();
+                ++entry)
+              {
+                if (file_count > 3000)
+                {
+                  break;
+                }
+
+                if (entry.depth() == 3)
+                {
+                  entry.disable_recursion_pending();
+                }
+
+                if (entry->is_regular_file())
+                {
+                  auto known_extension = extensions.find(entry->path().extension());
+
+                  if (known_extension != extensions.end())
+                  {
+                    auto extension = entry->path().extension().wstring();
+
+                    if (!extension_counts.contains(extension))
+                    {
+                      // helps place files in deeper folders lower down in the list
+                      extension_counts[extension] = 1000 - entry.depth() * 100;
+                    }
+                    extension_counts[extension]++;
+                  }
+                }
+                file_count++;
+              }
+            }
+          }
+
+          std::sort(filetypes.begin(), filetypes.end(), [&](const auto& a, const auto& b) {
+            return extension_counts[a.pszName] > extension_counts[b.pszName];
+          });
+
+          dialog.value()->SetFileTypes(filetypes.size(), filetypes.data());
+
+          auto result = dialog.value()->Show(nullptr);
+
+          if (result == S_OK)
+          {
+            auto item = dialog.value().GetResult();
+
+            if (item)
+            {
+              auto path = item.value().GetFileSysPath();
+
+              if (path && AddTabFromPath(*path))
+              {
+                return 0;
+              }
+            }
+          }
+        }
+        return std::nullopt;
+      });
+
+      popup_menus[0].AppendMenuW(MF_OWNERDRAW, id, L"Open Folder as Workspace");
+      win32::set_window_command_subclass(*this, id++, [this](auto, auto, auto) -> std::optional<LRESULT> {
+        auto prop = win32::get_color_for_window(ref(), win32::properties::button::bk_color);
+        auto dialog = win32::com::CreateFileOpenDialog();
+
+        if (dialog)
+        {
+          auto open_dialog = *dialog;
+          open_dialog->SetOptions(FOS_PICKFOLDERS);
+
+          open_dialog.SetFolder(std::filesystem::current_path());
+
+          auto result = open_dialog->Show(nullptr);
+
+          if (result == S_OK)
+          {
+            auto selection = open_dialog.GetResult();
+
+            if (selection)
+            {
+              auto path = selection.value().GetFileSysPath();
+              std::filesystem::current_path(*path);
+
+              repopulate_tree_view(std::move(*path));
+              return 0;
+            }
+          }
+        }
+        return std::nullopt;
+      });
+
+      
+      auto unpack_path = win32::find_binary_module(win32::search_context{
+        .module_name = L"game-unpack.exe" });
+
+      if (unpack_path)
+      {
+        popup_menus[0].AppendMenuW(MF_OWNERDRAW, id, L"Unpack Game Backup...");
+        win32::set_window_command_subclass(*this, id++, [this, unpack_path = *unpack_path](auto, auto, auto) -> std::optional<LRESULT> {
+          std::string command = "start /b " + unpack_path.string();
+          std::system(command.c_str());
+          return std::nullopt;
+        });
+      }
+
+      popup_menus[0].AppendMenuW(MF_SEPARATOR | MF_OWNERDRAW, id++);
+
+      popup_menus[0].AppendMenuW(MF_OWNERDRAW, id, L"Quit");
+      win32::set_window_command_subclass(*this, id++, [this](auto, auto, auto) -> std::optional<LRESULT> {
+        ::DestroyWindow(*this);
+        return std::nullopt;
+      });
+
+      popup_menus[1].AppendMenuW(MF_OWNERDRAW, id, L"Preferences");
+      win32::set_window_command_subclass(*this, id++, [this](auto, auto, auto) -> std::optional<LRESULT> {
+        auto size = this->GetClientSize();
+        auto pos = this->GetWindowRect();
+        theme_window = *win32::window_module_ref::current_module().CreateWindowExW(CREATESTRUCTW{
+          .hwndParent = *this,
+          .cy = size->cy,
+          .cx = size->cx,
+          .y = pos->top,
+          .x = pos->left,
+          .style = (LONG)(WS_POPUPWINDOW | WS_CAPTION | WS_MINIMIZEBOX | WS_MAXIMIZEBOX),
+          .lpszName = L"Preferences",
+          .lpszClass = win32::type_name<preferences_view>().c_str() });
+
+        auto ref = win32::window_ref(theme_window);
+        win32::apply_window_theme(ref);
+        ShowWindow(theme_window, SW_NORMAL);
+        return std::nullopt;
+      });
+
+      popup_menus[2].AppendMenuW(MF_OWNERDRAW, id, L"About");
+      win32::set_window_command_subclass(*this, id++, [this](auto, auto, auto) -> std::optional<LRESULT> {
+        win32::DialogBoxIndirectParamW<about_view>(::GetModuleHandleW(nullptr),
+          win32::default_dialog{ { .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 350, .cy = 400 } },
+          ref());
+        return std::nullopt;
+      });
       auto can_update = win32::module_ref::current_application().GetProcAddress<BOOL (*)()>("can_update");
 
       if (can_update && can_update())
       {
+        static auto update_stable_id = (std::uint16_t)RegisterWindowMessageW(L"COMMAND_UPDATE_STABLE");
+        static auto update_development_id = (std::uint16_t)RegisterWindowMessageW(L"COMMAND_UPDATE_DEVELOPMENT");
+
         popup_menus[2].AppendMenuW(MF_OWNERDRAW, update_stable_id, L"Update (Stable)");
+        win32::set_window_command_subclass(*this, update_stable_id, [this](auto, auto, auto) -> std::optional<LRESULT> {
+          trigger_update(update_stable_id);
+          return std::nullopt;
+        });
         popup_menus[2].AppendMenuW(MF_OWNERDRAW, update_development_id, L"Update (Development)");
+        win32::set_window_command_subclass(*this, update_development_id, [this](auto, auto, auto) -> std::optional<LRESULT> {
+          trigger_update(update_development_id);
+          return std::nullopt;
+        });
       }
 
       SetMenu(*this, main_menu.get());
@@ -1107,176 +1282,6 @@ namespace siege::views
       return FALSE;
     }
 
-    std::optional<LRESULT> wm_command(win32::menu_ref, int identifier) override
-    {
-      if (identifier == edit_theme_id)
-      {
-        auto size = this->GetClientSize();
-        auto pos = this->GetWindowRect();
-        theme_window = *win32::window_module_ref::current_module().CreateWindowExW(CREATESTRUCTW{
-          .hwndParent = *this,
-          .cy = size->cy,
-          .cx = size->cx,
-          .y = pos->top,
-          .x = pos->left,
-          .style = (LONG)(WS_POPUPWINDOW | WS_CAPTION | WS_MINIMIZEBOX | WS_MAXIMIZEBOX),
-          .lpszName = L"Preferences",
-          .lpszClass = win32::type_name<preferences_view>().c_str() });
-
-        auto ref = win32::window_ref(theme_window);
-        win32::apply_window_theme(ref);
-        ShowWindow(theme_window, SW_NORMAL);
-      }
-
-      if (identifier == open_workspace_id)
-      {
-        auto prop = win32::get_color_for_window(ref(), win32::properties::button::bk_color);
-        auto dialog = win32::com::CreateFileOpenDialog();
-
-        if (dialog)
-        {
-          auto open_dialog = *dialog;
-          open_dialog->SetOptions(FOS_PICKFOLDERS);
-
-          open_dialog.SetFolder(std::filesystem::current_path());
-
-          auto result = open_dialog->Show(nullptr);
-
-          if (result == S_OK)
-          {
-            auto selection = open_dialog.GetResult();
-
-            if (selection)
-            {
-              auto path = selection.value().GetFileSysPath();
-              std::filesystem::current_path(*path);
-
-              repopulate_tree_view(std::move(*path));
-              return 0;
-            }
-          }
-        }
-      }
-
-      if (identifier == open_id)
-      {
-        auto dialog = win32::com::CreateFileOpenDialog();
-
-        if (dialog)
-        {
-          struct filter : COMDLG_FILTERSPEC
-          {
-            std::wstring name;
-            std::wstring spec;
-
-            filter(std::wstring name, std::wstring spec) noexcept : name(std::move(name)), spec(std::move(spec))
-            {
-              this->pszName = this->name.c_str();
-              this->pszSpec = this->spec.c_str();
-            }
-          };
-
-          std::vector<filter> temp;
-
-          temp.reserve(extensions.size());
-
-          for (auto& extension : extensions)
-          {
-            temp.emplace_back(extension.first, L"*" + extension.first);
-          }
-
-          std::vector<COMDLG_FILTERSPEC> filetypes(temp.begin(), temp.end());
-
-
-          win32::com::com_ptr<IShellItem> folder_info;
-
-          int file_count = 0;
-          std::map<std::wstring, int> extension_counts;
-          if (dialog.value()->GetFolder(folder_info.put()) == S_OK)
-          {
-            win32::com::com_string temp;
-            if (folder_info->GetDisplayName(SIGDN_FILESYSPATH, temp.put()) == S_OK)
-            {
-              for (auto entry = fs::recursive_directory_iterator(std::wstring_view(temp));
-                entry != fs::recursive_directory_iterator();
-                ++entry)
-              {
-                if (file_count > 3000)
-                {
-                  break;
-                }
-
-                if (entry.depth() == 3)
-                {
-                  entry.disable_recursion_pending();
-                }
-
-                if (entry->is_regular_file())
-                {
-                  auto known_extension = extensions.find(entry->path().extension());
-
-                  if (known_extension != extensions.end())
-                  {
-                    auto extension = entry->path().extension().wstring();
-
-                    if (!extension_counts.contains(extension))
-                    {
-                      // helps place files in deeper folders lower down in the list
-                      extension_counts[extension] = 1000 - entry.depth() * 100;
-                    }
-                    extension_counts[extension]++;
-                  }
-                }
-                file_count++;
-              }
-            }
-          }
-
-          std::sort(filetypes.begin(), filetypes.end(), [&](const auto& a, const auto& b) {
-            return extension_counts[a.pszName] > extension_counts[b.pszName];
-          });
-
-          dialog.value()->SetFileTypes(filetypes.size(), filetypes.data());
-
-          auto result = dialog.value()->Show(nullptr);
-
-          if (result == S_OK)
-          {
-            auto item = dialog.value().GetResult();
-
-            if (item)
-            {
-              auto path = item.value().GetFileSysPath();
-
-              if (path && AddTabFromPath(*path))
-              {
-                return 0;
-              }
-            }
-          }
-        }
-      }
-
-      if (identifier == about_id)
-      {
-        win32::DialogBoxIndirectParamW<about_view>(::GetModuleHandleW(nullptr),
-          win32::default_dialog{ { .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 350, .cy = 400 } },
-          ref());
-      }
-
-      if (identifier == update_stable_id || identifier == update_development_id)
-      {
-        trigger_update(identifier);
-      }
-
-      if (identifier == exit_id)
-      {
-        ::DestroyWindow(*this);
-      }
-
-      return std::nullopt;
-    }
-
     inline static auto register_class(HINSTANCE module)
     {
       WNDCLASSEXW info{
@@ -1309,13 +1314,6 @@ namespace siege::views
         return (LRESULT)wm_copy_data(win32::copy_data_message<std::byte>(wparam, lparam));
       case WM_DROPFILES:
         return wm_drop_files((HDROP)wparam);
-      case WM_COMMAND: {
-        if (HIWORD(wparam) == 0)
-        {
-          return wm_command(win32::menu_ref(::GetMenu(*this)), LOWORD(wparam));
-        }
-        [[fallthrough]];
-      }
       default:
         return std::nullopt;
       }

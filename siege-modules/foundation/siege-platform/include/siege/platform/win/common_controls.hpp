@@ -97,7 +97,59 @@ namespace win32
     throw new std::runtime_error("comctl32 SetWindowSubclass is not available");
   }
 
-  BOOL remove_window_subclass(HWND hWnd, SUBCLASSPROC pfnSubclass, UINT_PTR uIdSubclass)
+  inline BOOL set_window_command_subclass(HWND window, WORD source_id, std::move_only_function<std::optional<LRESULT>(win32::window_ref window, WPARAM wparam, LPARAM lparam)> callback)
+  {
+    if (!callback)
+    {
+      return FALSE;
+    }
+
+    struct function_context
+    {
+      WORD source_id;
+      std::move_only_function<std::optional<LRESULT>(win32::window_ref window, WPARAM wparam, LPARAM lparam)> callback;
+    };
+
+    struct handler
+    {
+      static LRESULT __stdcall sub_class_proc(
+        HWND hwnd,
+        UINT message,
+        WPARAM wparam,
+        LPARAM lparam,
+        UINT_PTR id,
+        DWORD_PTR data)
+      {
+        if (id && message == WM_COMMAND)
+        {
+          auto* context = (function_context*)id;
+
+          if (context->source_id == LOWORD(wparam))
+          {
+            auto result = context->callback(win32::window_ref(hwnd), wparam, lparam);
+
+            if (result)
+            {
+              return *result;
+            }
+          }
+        }
+
+        if (message == WM_NCDESTROY)
+        {
+          auto* context = (function_context*)id;
+          delete context;
+          remove_window_subclass(hwnd, sub_class_proc, id);
+        }
+
+        return def_subclass_proc(hwnd, message, wparam, lparam);
+      }
+    };
+
+    return set_window_subclass(window, handler::sub_class_proc, (UINT_PTR) new function_context{ source_id,  std::move(callback) }, 0);
+  }
+
+  inline BOOL remove_window_subclass(HWND hWnd, SUBCLASSPROC pfnSubclass, UINT_PTR uIdSubclass)
   {
     static auto module = ::GetModuleHandleW(L"comctl32.dll");
 
