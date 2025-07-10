@@ -26,6 +26,7 @@ namespace siege::resource::pak
   constexpr auto vampire_tag = platform::to_tag<4>({ 0x1a, 'V', 'P', 'K' });
   constexpr auto quake_tag = platform::to_tag<4>({ 'P', 'A', 'C', 'K' });
   constexpr auto anox_tag = platform::to_tag<4>({ 'A', 'D', 'A', 'T' });
+  constexpr auto sin_tag = platform::to_tag<4>({ 'S', 'P', 'A', 'K' });
 
   struct pak_file_entry
   {
@@ -52,7 +53,14 @@ namespace siege::resource::pak
     endian::little_uint32_t checksum;
   };
 
-  using file_entry = std::variant<pak_file_entry, daikatana_pak_file_entry, dat_file_entry>;
+  struct sin_file_entry
+  {
+    std::array<char, 120> path;
+    endian::little_uint32_t offset;
+    endian::little_uint32_t uncompressed_size;
+  };
+
+  using file_entry = std::variant<pak_file_entry, daikatana_pak_file_entry, dat_file_entry, sin_file_entry>;
 
   bool stream_is_supported(std::istream& stream)
   {
@@ -61,7 +69,7 @@ namespace siege::resource::pak
 
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
-    if (!(tag == quake_tag || tag == anox_tag))
+    if (!(tag == quake_tag || tag == anox_tag || tag == sin_tag))
     {
       stream.seekg(34, std::ios::cur);
       stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -96,7 +104,7 @@ namespace siege::resource::pak
 
       stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
 
-      if (!(tag == quake_tag || tag == anox_tag))
+      if (!(tag == quake_tag || tag == anox_tag || tag == sin_tag))
       {
         stream.seekg(30, std::ios::cur);
         stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -118,6 +126,11 @@ namespace siege::resource::pak
       {
         entry_type = typeid(dat_file_entry).hash_code();
         file_count = file_buffer_size / sizeof(dat_file_entry);
+      }
+      else if (tag == sin_tag)
+      {
+        entry_type = typeid(sin_file_entry).hash_code();
+        file_count = file_buffer_size / sizeof(sin_file_entry);
       }
       else if ((file_buffer_size % sizeof(pak_file_entry)) == 0)
       {
@@ -162,6 +175,15 @@ namespace siege::resource::pak
         for (auto i = 0; i < file_count; ++i)
         {
           dat_file_entry temp;
+          stream.read((char*)&temp, sizeof(temp));
+          entries.emplace_back(std::move(temp));
+        }
+      }
+      else if (entry_type == typeid(sin_file_entry).hash_code())
+      {
+        for (auto i = 0; i < file_count; ++i)
+        {
+          sin_file_entry temp;
           stream.read((char*)&temp, sizeof(temp));
           entries.emplace_back(std::move(temp));
         }
@@ -217,7 +239,8 @@ namespace siege::resource::pak
         for (auto* file : folder.second)
         {
           std::visit([&](auto& entry) {
-            if constexpr (std::is_same_v<std::decay_t<decltype(entry)>, pak_file_entry>)
+            if constexpr (std::is_same_v<std::decay_t<decltype(entry)>, pak_file_entry> || 
+                std::is_same_v<std::decay_t<decltype(entry)>, sin_file_entry>)
             {
               results.emplace_back(platform::file_info{
                 .filename = fs::path(entry.path.data()).make_preferred().filename(),

@@ -828,7 +828,10 @@ predefined_string*
 
       for (auto const& dir_entry : std::filesystem::directory_iterator{ base_dir })
       {
-        if ((include_zip && dir_entry.path().extension() == L".zip" || include_zip && dir_entry.path().extension() == L".ZIP") || (dir_entry.path().extension() == L".dat" || dir_entry.path().extension() == L".DAT") || dir_entry.path().extension() == L".pak" || dir_entry.path().extension() == L".PAK")
+        if ((include_zip && dir_entry.path().extension() == L".zip" || include_zip && dir_entry.path().extension() == L".ZIP") || 
+            (dir_entry.path().extension() == L".dat" || dir_entry.path().extension() == L".DAT") || 
+            dir_entry.path().extension() == L".sin" || dir_entry.path().extension() == L".SIN" ||
+            dir_entry.path().extension() == L".pak" || dir_entry.path().extension() == L".PAK")
         {
           pak_files.emplace_back(dir_entry.path());
         }

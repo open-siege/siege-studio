@@ -24,7 +24,7 @@ namespace siege::views
 
   std::span<const siege::fs_string_view> get_volume_formats() noexcept
   {
-    constexpr static auto formats = std::array<siege::fs_string_view, 31>{ {
+    constexpr static auto formats = std::array<siege::fs_string_view, 32>{ {
       FSL ".vol",
       FSL ".rmf",
       FSL ".mis",
@@ -45,6 +45,7 @@ namespace siege::views
       FSL ".z",
       FSL ".cln",
       FSL ".pak",
+      FSL ".sin",
       FSL ".vpk",
       FSL ".pod",
       FSL ".clm",
