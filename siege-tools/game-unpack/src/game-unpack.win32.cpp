@@ -153,29 +153,19 @@ int main(int argc, const char* argv[])
 
         if (message == TDN_BUTTON_CLICKED && wparam == 10)
         {
-          auto dialog = win32::com::CreateFileOpenDialog();
+          auto new_path = win32::get_path_via_file_dialog({});
 
-          if (dialog)
+          if (!new_path)
           {
-            auto open_dialog = *dialog;
+            return S_FALSE;
+          }
 
-            open_dialog.SetFolder(std::filesystem::current_path());
+          using namespace siege::platform;
 
-            auto result = open_dialog->Show(nullptr);
-
-            if (result == S_OK)
-            {
-              auto selection = open_dialog.GetResult();
-
-              if (selection)
-              {
-                using namespace siege::platform;
-                auto path = selection.value().GetFileSysPath();
-
-                auto ui_thread_id = ::GetCurrentThreadId();
-                win32::queue_user_work_item([ui_thread_id, window, backup_path = *path, &button_callback, &args] {
-                  user_interaction ui{
-                    .ask_for_variable = [ui_thread_id, window, &button_callback](auto variable, auto options) {
+          auto ui_thread_id = ::GetCurrentThreadId();
+          win32::queue_user_work_item([ui_thread_id, window, backup_path = *new_path, &button_callback, &args] {
+            user_interaction ui{
+              .ask_for_variable = [ui_thread_id, window, &button_callback](auto variable, auto options) {
                     std::promise<installation_option> result{};
                           exec_on_thread(ui_thread_id, [window, variable, options, &result, &button_callback]() {
                       std::vector<TASKDIALOG_BUTTON> new_buttons;
@@ -226,7 +216,7 @@ int main(int argc, const char* argv[])
                           });
 
                     return result.get_future().get(); },
-                    .ask_for_install_path = [ui_thread_id, window, &button_callback](auto hints) {
+              .ask_for_install_path = [ui_thread_id, window, &button_callback](auto hints) {
                       std::promise<std::optional<fs::path>> result{};
                       exec_on_thread(ui_thread_id, [window, hints, &result, &button_callback]() {
                         std::vector<TASKDIALOG_BUTTON> new_buttons;
@@ -249,10 +239,19 @@ int main(int argc, const char* argv[])
                         };
                         ::SendMessageW(window, TDM_NAVIGATE_PAGE, 0, (LPARAM)&config);
 
-                        button_callback = [hints, window, &result, &button_callback](int button_id) -> HRESULT {
+                        button_callback = [hints, window, &result, &button_callback](int button_id) mutable -> HRESULT {
                           if (button_id == 20)
                           {
-                            // TODO show a folder dialog to get the file info
+                            auto new_path = win32::get_path_via_file_dialog({
+                              .Flags = FOS_PICKFOLDERS,
+                            });
+
+                            if (new_path)
+                            {
+                              hints.emplace_back(std::move(*new_path));
+                              button_id = 20 + hints.size();
+                              // fallthrough to the next if statement
+                            }
                           }
 
                           if (button_id > 20)
@@ -281,51 +280,48 @@ int main(int argc, const char* argv[])
                       });
 
                       return result.get_future().get(); },
-                    .ask_to_download_cab_tooling = []() { return true; }
-                  };
-                  std::shared_ptr<void> deferred{ nullptr, [](...) { is_done = true; } };
-                  is_done = false;
-                  auto result = do_unpacking(ui, backup_path, should_cancel);
-                  if (result == unpacking_status::succeeded)
-                  {
-                    ::SendNotifyMessageW(args.hwnd_to_contact, unpack_done_id, 0, 0);
-                    exec_on_thread(ui_thread_id, [window]() {
-                      TASKDIALOGCONFIG config{
-                        .cbSize = sizeof(TASKDIALOGCONFIG),
-                        .dwFlags = TDF_ALLOW_DIALOG_CANCELLATION,
-                        .dwCommonButtons = TDCBF_CLOSE_BUTTON,
-                        .pszWindowTitle = window_title,
-                        .pszMainInstruction = L"Installed game succesfully"
-                      };
-                      ::SendMessageW(window, TDM_NAVIGATE_PAGE, 0, (LPARAM)&config);
-                    });
-                  }
-                  else
-                  {
-                    exec_on_thread(ui_thread_id, [window]() {
-                      TASKDIALOGCONFIG config{
-                        .cbSize = sizeof(TASKDIALOGCONFIG),
-                        .dwFlags = TDF_ALLOW_DIALOG_CANCELLATION,
-                        .dwCommonButtons = TDCBF_CLOSE_BUTTON,
-                        .pszWindowTitle = window_title,
-                        .pszMainInstruction = L"Could not install game."
-                      };
-                      ::SendMessageW(window, TDM_NAVIGATE_PAGE, 0, (LPARAM)&config);
-                    });
-                  }
-                });
-
+              .ask_to_download_cab_tooling = []() { return true; }
+            };
+            std::shared_ptr<void> deferred{ nullptr, [](...) { is_done = true; } };
+            is_done = false;
+            auto result = do_unpacking(ui, backup_path, should_cancel);
+            if (result == unpacking_status::succeeded)
+            {
+              ::SendNotifyMessageW(args.hwnd_to_contact, unpack_done_id, 0, 0);
+              exec_on_thread(ui_thread_id, [window]() {
                 TASKDIALOGCONFIG config{
                   .cbSize = sizeof(TASKDIALOGCONFIG),
-                  .dwFlags = TDF_ALLOW_DIALOG_CANCELLATION | TDF_SHOW_MARQUEE_PROGRESS_BAR | TDF_CALLBACK_TIMER,
+                  .dwFlags = TDF_ALLOW_DIALOG_CANCELLATION,
                   .dwCommonButtons = TDCBF_CLOSE_BUTTON,
                   .pszWindowTitle = window_title,
-                  .pszMainInstruction = L"Installing game, please wait"
+                  .pszMainInstruction = L"Installed game succesfully"
                 };
                 ::SendMessageW(window, TDM_NAVIGATE_PAGE, 0, (LPARAM)&config);
-              }
+              });
             }
-          }
+            else
+            {
+              exec_on_thread(ui_thread_id, [window]() {
+                TASKDIALOGCONFIG config{
+                  .cbSize = sizeof(TASKDIALOGCONFIG),
+                  .dwFlags = TDF_ALLOW_DIALOG_CANCELLATION,
+                  .dwCommonButtons = TDCBF_CLOSE_BUTTON,
+                  .pszWindowTitle = window_title,
+                  .pszMainInstruction = L"Could not install game."
+                };
+                ::SendMessageW(window, TDM_NAVIGATE_PAGE, 0, (LPARAM)&config);
+              });
+            }
+          });
+
+          TASKDIALOGCONFIG config{
+            .cbSize = sizeof(TASKDIALOGCONFIG),
+            .dwFlags = TDF_ALLOW_DIALOG_CANCELLATION | TDF_SHOW_MARQUEE_PROGRESS_BAR | TDF_CALLBACK_TIMER,
+            .dwCommonButtons = TDCBF_CLOSE_BUTTON,
+            .pszWindowTitle = window_title,
+            .pszMainInstruction = L"Installing game, please wait"
+          };
+          ::SendMessageW(window, TDM_NAVIGATE_PAGE, 0, (LPARAM)&config);
         }
 
         if (message == TDN_TIMER)
@@ -976,8 +972,8 @@ command_line_args parse_command_line(std::span<std::string_view> args)
 
     parse_arg([](auto& arg) {
       return arg.starts_with("--output") || arg.starts_with("-o");
-    }, output_path);
-
+    },
+      output_path);
 
 
     parse_arg([](auto& arg) {
@@ -999,7 +995,6 @@ command_line_args parse_command_line(std::span<std::string_view> args)
   }
   catch (...)
   {
-
   }
 
   return { app_arg, file_arg, output_path, use_ui, real_window };

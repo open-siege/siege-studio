@@ -145,4 +145,9 @@ namespace win32::com
   }
 }// namespace win32::com
 
+namespace win32
+{
+  std::expected<std::filesystem::path, HRESULT> get_path_via_file_dialog(OPENFILENAMEW);
+}
+
 #endif// !WIN32_DIALOGS_HPP

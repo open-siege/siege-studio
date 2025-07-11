@@ -6,6 +6,7 @@
 #include <siege/platform/win/animation.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/win/capabilities.hpp>
+#include <siege/platform/win/shell.hpp>
 
 namespace win32
 {
@@ -182,5 +183,39 @@ namespace win32
     child.SetPropW(prop, to_storage(*color));
 
     return from_storage(existing);
+  }
+
+  std::expected<std::filesystem::path, HRESULT> get_path_via_file_dialog(OPENFILENAMEW info)
+  {
+    auto dialog = win32::com::CreateFileOpenDialog();
+
+    if (!dialog)
+    {
+      return std::unexpected(dialog.error());
+    }
+
+    auto open_dialog = *dialog;
+    open_dialog->SetOptions(info.Flags);
+
+    if (info.lpstrInitialDir)
+    {
+      open_dialog.SetFolder(info.lpstrInitialDir);
+    }
+
+    auto result = open_dialog->Show(nullptr);
+
+    if (result != S_OK)
+    {
+      return std::unexpected(result);
+    }
+
+    auto selection = open_dialog.GetResult();
+
+    if (!selection)
+    {
+      return std::unexpected(result);
+    }
+
+    return selection.value().GetFileSysPath();
   }
 }// namespace win32

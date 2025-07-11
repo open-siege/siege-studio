@@ -380,33 +380,25 @@ namespace siege::views
         auto prop = win32::get_color_for_window(ref(), win32::properties::button::bk_color);
         auto dialog = win32::com::CreateFileOpenDialog();
 
-        if (dialog)
+        auto current_path = std::filesystem::current_path();
+
+        auto new_path = win32::get_path_via_file_dialog({
+          .lpstrInitialDir = current_path.c_str(),
+          .Flags = FOS_PICKFOLDERS,
+        });
+
+        if (new_path)
         {
-          auto open_dialog = *dialog;
-          open_dialog->SetOptions(FOS_PICKFOLDERS);
+          std::filesystem::current_path(*new_path);
 
-          open_dialog.SetFolder(std::filesystem::current_path());
-
-          auto result = open_dialog->Show(nullptr);
-
-          if (result == S_OK)
-          {
-            auto selection = open_dialog.GetResult();
-
-            if (selection)
-            {
-              auto path = selection.value().GetFileSysPath();
-              std::filesystem::current_path(*path);
-
-              repopulate_tree_view(std::move(*path));
-              return 0;
-            }
-          }
+          repopulate_tree_view(std::move(*new_path));
+          return 0;
         }
+
         return std::nullopt;
       });
 
-      
+
       auto unpack_path = win32::find_binary_module(win32::search_context{
         .module_name = L"game-unpack.exe" });
 
@@ -414,8 +406,7 @@ namespace siege::views
       {
         popup_menus[0].AppendMenuW(MF_OWNERDRAW, id, L"Unpack Game Backup...");
         win32::set_window_command_subclass(*this, id++, [this, unpack_path = *unpack_path](auto, auto, auto) -> std::optional<LRESULT> {
-          std::string command = "start /b " + unpack_path.string();
-          std::system(command.c_str());
+          ::ShellExecuteW(NULL, L"open", unpack_path.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
           return std::nullopt;
         });
       }

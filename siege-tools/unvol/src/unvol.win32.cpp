@@ -56,7 +56,7 @@ int start_ui_modal(command_line_args args, std::function<void(command_line_args)
     if (auto type = ::GetDriveTypeW(drive.c_str()); type == DRIVE_REMOVABLE || type == DRIVE_FIXED)
     {
       auto new_path = drive / args.output_path->relative_path();
-      auto new_string = string_table.emplace(20 + buttons.size(), new_path.wstring());
+      auto new_string = string_table.emplace(21 + buttons.size(), new_path.wstring());
       auto& new_button = buttons.emplace_back();
       new_button.pszButtonText = new_string.first->second.c_str();
       new_button.nButtonID = new_string.first->first;
@@ -65,6 +65,9 @@ int start_ui_modal(command_line_args args, std::function<void(command_line_args)
 
   auto& new_button = buttons.emplace_back();
   new_button.pszButtonText = L"Custom path...";
+
+  constexpr static auto custom_path_id = 20;
+  new_button.nButtonID = custom_path_id;
 
   const static auto instruction = has_embedded_file() ? L"Pick a destination to extract the files in this self-extracting archive"
                                                       : L"Pick a destination to extract the files in the selected archive";
@@ -86,6 +89,19 @@ int start_ui_modal(command_line_args args, std::function<void(command_line_args)
       {
         should_cancel = true;
         return S_OK;
+      }
+
+      if (message == TDN_BUTTON_CLICKED && wparam == custom_path_id)
+      {
+        auto new_path = win32::get_path_via_file_dialog({
+          .Flags = FOS_PICKFOLDERS,
+        });
+
+        if (new_path)
+        {
+          string_table[custom_path_id] = new_path->wstring();
+          // fallthrough to the next if statement
+        }
       }
 
       if (message == TDN_BUTTON_CLICKED && string_table.contains(wparam))
