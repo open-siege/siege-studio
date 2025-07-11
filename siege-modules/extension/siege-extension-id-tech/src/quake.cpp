@@ -35,7 +35,8 @@ extern auto command_line_caps = game_command_line_caps{
   .player_name_setting = L"name",
   .listen_setting = L"listen",
   .dedicated_setting = L"dedicated",
-  .preferred_exe_setting = L"preferred_exe"
+  .selected_game_setting = L"game",
+  .preferred_exe_setting = L"preferred_exe",
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {

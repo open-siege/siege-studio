@@ -45,11 +45,12 @@ extern "C" {
 
 extern auto command_line_caps = game_command_line_caps{
   .int_settings = { {  L"dedicated", L"gl_mode" } },
-  .string_settings = { { L"name", L"connect", L"map", L"gl_driver" } },
+  .string_settings = { { L"name", L"connect", L"map", L"gl_driver", L"game" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
   .listen_setting = L"connect",
   .dedicated_setting = L"dedicated",
+  .selected_game_setting = L"game"
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
