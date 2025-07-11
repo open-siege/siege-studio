@@ -74,18 +74,6 @@ std::wstring resolve_domain()
   return L"updates.thesiegehub.com";
 }
 
-void alloc_console()
-{
-  if (!context.has_console)
-  {
-    if (::AllocConsole())
-    {
-      context.has_console = true;
-      ::ShowWindow(::GetConsoleWindow(), SW_HIDE);
-    }
-  }
-}
-
 std::optional<SIZE> get_core_version()
 {
   auto parent_path = fs::path(win32::module_ref::current_module().GetModuleFileName()).parent_path();
@@ -127,22 +115,19 @@ __declspec(dllexport) void detect_update(std::uint32_t update_type)
     }
 
     auto& info = update_type == context.update_development_id ? context.development_info : context.stable_info;
-    alloc_console();
 
-    auto temp_file = fs::temp_directory_path() / "latest-siege-studio-version.txt";
     auto channel = update_type == context.update_development_id ? L"development" : L"stable";
     auto domain = resolve_domain();
     std::wstring remote_path = std::wstring(L"/") + channel + L"/latest.txt";
 
     std::error_code last_error;
 
+    // TODO get the real size of the exe by doing a HEAD request
     info.max_size = fs::file_size(win32::module_ref::current_application().GetModuleFileName(), last_error);
 
 #if _DEBUG
     info.max_size = info.max_size * 10;
 #endif
-
-    fs::remove(temp_file, last_error);
 
     std::ostringstream sstr;
     siege::platform::http_client_context context;
