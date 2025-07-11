@@ -1034,6 +1034,15 @@ unpacking_status do_unpacking(user_interaction ui, std::vector<fs::path> backup_
       }
     }
   }
+
+  if (discovered_info->module.apply_post_install_steps_proc)
+  {
+    fs::current_path(*install_path);
+
+    // TODO report the correct status. Partially installed or failed depending on the severity
+    discovered_info->module.apply_post_install_steps_proc();
+  }
+
   return unpacking_status::succeeded;
 }
 

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.30)
 project(siege-installation-raven)
 
-add_library(siege-installation-heretic-2 SHARED src/heretic-2.cpp src/raven.def)
+add_library(siege-installation-heretic-2 SHARED src/heretic-2.cpp src/heretic-2.def)
 
 get_property(INSTALL_TARGETS
                 DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)

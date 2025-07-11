@@ -17,6 +17,7 @@
 #include "GetGameFunctionNames.hpp"
 #include "id-tech-shared.hpp"
 
+namespace fs = std::filesystem;
 extern "C" {
 using hardware_context = siege::platform::hardware_context;
 using game_action = siege::platform::game_action;
@@ -29,10 +30,12 @@ using predefined_int = siege::platform::game_command_line_predefined_setting<int
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
 
 extern auto command_line_caps = game_command_line_caps{
-  .int_settings = { { L"gl_mode" } },
-  .string_settings = { { L"name", L"connect", L"map", L"gl_driver", L"game" } },
+  .int_settings = { { L"dedicated", L"vid_mode" } },
+  .string_settings = { { L"name", L"vid_ref", L"connect", L"map", L"game" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
+  .listen_setting = L"connect",
+  .dedicated_setting = L"dedicated",
   .selected_game_setting = L"game"
 };
 
@@ -49,19 +52,16 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::analog, "+lookup", u"Look Up", u"Aiming" },
   game_action{ game_action::analog, "+lookdown", u"Look Down", u"Aiming" },
   game_action{ game_action::digital, "+attack", u"Attack", u"Combat" },
-  game_action{ game_action::digital, "+throw-grenade", u"Throw Grenade", u"Combat" },
+  game_action{ game_action::digital, "+defend", u"Activate Defensive Spell", u"Combat" },
   game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
   game_action{ game_action::digital, "weaprev", u"Previous Weapon", u"Combat" },
-  game_action{ game_action::digital, "invnext", u"Next Item", u"Combat" },
-  game_action{ game_action::digital, "inven", u"Use Item", u"Combat" },
+  game_action{ game_action::digital, "defnext", u"Next Defensive Spell", u"Combat" },
+  game_action{ game_action::digital, "defprev", u"Previous Defensive Spell", u"Combat" },
   game_action{ game_action::digital, "score", u"Score", u"Interface" },
-  game_action{ game_action::digital, "cmd help", u"Objectives", u"Interface" },
+  game_action{ game_action::digital, "menu_objectives", u"Objectives", u"Interface" },
   game_action{ game_action::digital, "+klook", u"Keyboard Look", u"Misc" },
   game_action{ game_action::digital, "+mlook", u"Mouse Look", u"Misc" },
 } };
-
-constexpr static auto quake2_aliases = std::array<std::array<std::string_view, 2>, 2>{ { { "+throw-grenade", "use grenades; +attack" },
-  { "-throw-grenade", "-attack;weapprev" } } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 using namespace std::literals;
@@ -90,15 +90,12 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   {
     return E_POINTER;
   }
+  std::error_code last_error;
+  fs::create_directory("user", last_error);
 
   std::ofstream custom_bindings("user/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
-
-  for (auto& alias : quake2_aliases)
-  {
-    config.emplace(siege::configuration::key_type({ "alias", alias[0] }), siege::configuration::key_type(alias[1]));
-  }
 
   bool enable_controller = save_bindings_to_config(*args, config);
 
@@ -109,6 +106,16 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
     config.emplace(siege::configuration::key_type({ "set", "in_joystick" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "set", "joy_advanced" }), siege::configuration::key_type("1"));
   }
+
+  // TODO fix binding system for this game. It doesn't like the configs for some reason.
+  // must be casing
+  config.emplace(siege::configuration::key_type({ "bind", "MWHEELUP" }), siege::configuration::key_type("weapnext"));
+  config.emplace(siege::configuration::key_type({ "bind", "MWHEELDOWN" }), siege::configuration::key_type("weapprev"));
+  config.emplace(siege::configuration::key_type({ "bind", "MOUSE3" }), siege::configuration::key_type("defnext"));
+  config.emplace(siege::configuration::key_type({ "bind", "MOUSE2" }), siege::configuration::key_type("+defend"));
+
+  config.emplace(siege::configuration::key_type({ "bind", "Space" }), siege::configuration::key_type("+moveup"));
+  config.emplace(siege::configuration::key_type({ "bind", "Ctrl" }), siege::configuration::key_type("+movedown"));
 
   config.save(custom_bindings);
 
@@ -143,9 +150,12 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
     load_mouse_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 2> actions{
-    { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+altattack"),
-      std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use") }
+  std::array<std::pair<WORD, std::string_view>, 3> actions{
+    {
+      std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+defend"),
+      std::make_pair<WORD, std::string_view>(VK_UP, "weapprev"),
+      std::make_pair<WORD, std::string_view>(VK_DOWN, "weapnext"),
+    }
   };
 
   upsert_mouse_defaults(game_actions, actions, *binding);
@@ -167,12 +177,19 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 5> actions{
+  std::array<std::pair<WORD, std::string_view>, 11> actions{
     {
-      std::make_pair<WORD, std::string_view>('G', "+throw-grenade"),
-      std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
+      std::make_pair<WORD, std::string_view>('w', "+forward"),
+      std::make_pair<WORD, std::string_view>('a', "+moveleft"),
+      std::make_pair<WORD, std::string_view>('s', "+back"),
+      std::make_pair<WORD, std::string_view>('d', "+moveright"),
+      std::make_pair<WORD, std::string_view>('f', "+defend"),
+      std::make_pair<WORD, std::string_view>('z', "defprev"),
+      std::make_pair<WORD, std::string_view>('x', "defnext"),
+      std::make_pair<WORD, std::string_view>(VK_RETURN, "+defend"),
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
+      std::make_pair<WORD, std::string_view>('c', "+creep"),
     }
   };
 
@@ -190,7 +207,7 @@ HRESULT init_controller_inputs(controller_binding* binding)
   std::array<std::pair<WORD, std::string_view>, 23> actions{
     {
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attack"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "invuse"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "+defend"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_A, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_B, "+movedown"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "+speed"),
@@ -202,16 +219,13 @@ HRESULT init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, "+right"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "+melee-attack"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "inven"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "weapnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "invnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "+throw-grenade"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "weapondrop"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "defnext"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "weapprev"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_RIGHT, "weapnext"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "score"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_MENU, "cmd help"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_MENU, "menu_objectives"),
     }
   };
 
@@ -230,17 +244,16 @@ predefined_int*
 
   auto name_str = std::wstring_view(name);
 
-
-  if (name_str == L"r_mode")
+  if (name_str == L"vid_mode")
   {
     static auto modes = std::array<predefined_int, 8>{
-      predefined_int{ .label = L"640x480", .value = 1 },
-      predefined_int{ .label = L"800x600", .value = 1 },
-      predefined_int{ .label = L"960x720", .value = 1 },
-      predefined_int{ .label = L"1024x768", .value = 1 },
-      predefined_int{ .label = L"1152x864", .value = 1 },
-      predefined_int{ .label = L"1280x960", .value = 1 },
-      predefined_int{ .label = L"1600x1200", .value = 1 },
+      predefined_int{ .label = L"640x480", .value = 3 },
+      predefined_int{ .label = L"800x600", .value = 4 },
+      predefined_int{ .label = L"960x720", .value = 5 },
+      predefined_int{ .label = L"1024x768", .value = 6 },
+      predefined_int{ .label = L"1152x864", .value = 7 },
+      predefined_int{ .label = L"1280x960", .value = 8 },
+      predefined_int{ .label = L"1600x1200", .value = 9 },
       predefined_int{},
     };
 
@@ -259,6 +272,17 @@ predefined_string*
   if (name && std::wstring_view(name) == L"map")
   {
     return get_predefined_id_tech_2_map_command_line_settings(L"base", false);
+  }
+
+  if (name && std::wstring_view(name) == L"vid_ref")
+  {
+    static auto modes = std::array<predefined_string, 3>{
+      predefined_string{ .label = L"OpenGL", .value = L"gl" },
+      predefined_string{ .label = L"Software", .value = L"soft" },
+      predefined_string{},
+    };
+
+    return modes.data();
   }
 
   return nullptr;
