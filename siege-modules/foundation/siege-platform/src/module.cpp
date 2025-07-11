@@ -8,11 +8,16 @@ namespace win32
   {
     if (context.search_user_dll_paths)
     {
-      auto module = win32::module(::LoadLibraryExW(context.module_name.c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_SEARCH_USER_DIRS));
+      auto module = win32::module(::LoadLibraryExW(context.module_name.c_str(), nullptr, LOAD_LIBRARY_SEARCH_USER_DIRS));
 
       if (module)
       {
-        return module.GetModuleFileName();
+        auto result = module.GetModuleFileName();
+
+        if (!result.empty())
+        {
+          return result;
+        }
       }
     }
 

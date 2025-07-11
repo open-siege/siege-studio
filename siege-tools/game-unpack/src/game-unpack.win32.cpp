@@ -1016,14 +1016,22 @@ unpacking_status do_unpacking(user_interaction ui, std::vector<fs::path> backup_
     }
 
     auto files_to_copy = backup_files | std::views::filter(is_supported);
-
+    using namespace std::literals;
     for (auto& item : files_to_copy)
     {
       if (should_cancel)
       {
         return unpacking_status::cancelled;
       }
-      item.install_to(*install_path, mapping.destination);
+
+      if (mapping.destination == L"="sv)
+      {
+        item.install_to(*install_path, item.relative_path().wstring());
+      }
+      else
+      {
+        item.install_to(*install_path, mapping.destination);
+      }
     }
   }
   return unpacking_status::succeeded;

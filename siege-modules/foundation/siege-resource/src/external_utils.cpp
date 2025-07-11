@@ -132,7 +132,7 @@ namespace siege::resource
   [[nodiscard]] std::string power_iso_executable()
   {
     std::error_code last_error;
-    
+
     for (auto var : { "PROGRAMFILES", "PROGRAMFILES(x86)" })
     {
       auto env = ::getenv(var);
@@ -213,7 +213,7 @@ namespace siege::resource
     std::unordered_map<std::string, std::vector<content_info>> stat_cache;
     std::map<std::string, std::shared_ptr<fs::path>> auto_delete_files;
     std::unordered_set<std::string> already_ran_commands;
-    std::map<std::string_view, bool> additional_flags;
+    std::map<std::string_view, std::set<fs::path>> additional_flags;
   };
 
   content_cache& cache_as_content_cache(std::any& cache)
@@ -813,11 +813,18 @@ namespace siege::resource
   {
     content_cache& temp = cache_as_content_cache(cache);
 
+    bool is_cab2 = temp.additional_flags["cab2"].contains(query.archive_path);
+    bool is_cab5 = temp.additional_flags["cab5"].contains(query.archive_path);
+    bool is_cab6 = temp.additional_flags["cab6"].contains(query.archive_path);
+
     auto cab2_listing = cab2_get_content_listing(cache, query);
 
     if (!cab2_listing.empty())
     {
-      temp.additional_flags["cab2"] = true;
+      if (!is_cab5 && !is_cab6)
+      {
+        temp.additional_flags["cab2"].emplace(query.archive_path);
+      }
       return cab2_listing;
     }
 
@@ -825,7 +832,10 @@ namespace siege::resource
 
     if (!cab5_listing.empty())
     {
-      temp.additional_flags["cab5"] = true;
+      if (!is_cab2 && !is_cab6)
+      {
+        temp.additional_flags["cab5"].emplace(query.archive_path);
+      }
       return cab5_listing;
     }
 
@@ -833,7 +843,11 @@ namespace siege::resource
 
     if (!cab6_listing.empty())
     {
-      temp.additional_flags["cab6"] = true;
+      if (!is_cab2 && !is_cab5)
+      {
+        temp.additional_flags["cab6"].emplace(query.archive_path);
+      }
+
       return cab6_listing;
     }
 
@@ -1131,19 +1145,19 @@ namespace siege::resource
 
     auto type = temp.additional_flags.find("cab_type");
 
-    if (temp.additional_flags["cab2"])
+    if (temp.additional_flags["cab2"].contains(info.archive_path))
     {
       extract_cab_2();
       return;
     }
 
-    if (temp.additional_flags["cab5"])
+    if (temp.additional_flags["cab5"].contains(info.archive_path))
     {
       extract_cab_5();
       return;
     }
 
-    if (temp.additional_flags["cab6"])
+    if (temp.additional_flags["cab6"].contains(info.archive_path))
     {
       extract_cab_6();
       return;
