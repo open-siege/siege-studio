@@ -1015,7 +1015,7 @@ namespace siege::views
 
         if (has_extension_module())
         {
-          if (auto* caps = get_extension().caps; caps && caps->ip_connect_setting)
+          if (auto& caps = get_extension().caps; caps && caps->ip_connect_setting)
           {
             auto connect_str = std::wstring_view(caps->ip_connect_setting);
 
@@ -1114,7 +1114,7 @@ namespace siege::views
 
       auto exe_path = loaded_path;
 
-      if (auto* caps = get_extension().caps; game_args && caps && caps->preferred_exe_setting && caps->preferred_exe_setting[0] != '\0')
+      if (auto& caps = get_extension().caps; game_args && caps && caps->preferred_exe_setting && caps->preferred_exe_setting[0] != '\0')
       {
         auto preferred_game_exe = std::find_if(game_args->string_settings.begin(), game_args->string_settings.end(), [=](auto& item) {
           return item.name && item.value && item.value[0] != '\0' && item.name == std::wstring_view(caps->preferred_exe_setting);

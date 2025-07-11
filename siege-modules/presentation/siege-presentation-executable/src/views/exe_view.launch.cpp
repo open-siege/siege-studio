@@ -804,10 +804,10 @@ namespace siege::views
       siege::platform::persistent_game_settings settings{};
 
       siege::platform::game_command_line_caps default_caps;
-      auto* caps = controller.has_extension_module() && controller.get_extension().caps ? controller.get_extension().caps : &default_caps;
+      auto& caps = controller.has_extension_module() && controller.get_extension().caps ? *controller.get_extension().caps : default_caps;
 
-      std::wstring_view player_name_setting = caps->player_name_setting ? caps->player_name_setting : L"";
-      std::wstring_view ip_setting = caps->ip_connect_setting ? caps->ip_connect_setting : L"";
+      std::wstring_view player_name_setting = caps.player_name_setting ? caps.player_name_setting : L"";
+      std::wstring_view ip_setting = caps.ip_connect_setting ? caps.ip_connect_setting : L"";
       constexpr static std::wstring_view zt_network_id = L"ZERO_TIER_NETWORK_ID";
 
       auto copy_to_array = [](auto& raw_value, auto& array) {
@@ -849,10 +849,10 @@ namespace siege::views
       {
         auto value = std::visit(convert_to_string, setting_iter->value);
 
-        if (caps->ip_connect_setting)
+        if (caps.ip_connect_setting)
         {
           auto connect_setting = std::find_if(final_launch_settings.begin(), final_launch_settings.end(), [&](game_setting& setting) {
-            return setting.type == game_command_line_caps::string_setting && setting.setting_name == caps->ip_connect_setting;
+            return setting.type == game_command_line_caps::string_setting && setting.setting_name == caps.ip_connect_setting;
           });
 
           auto should_connect = value == pref_options[1];// connect to server
@@ -863,10 +863,10 @@ namespace siege::views
           }
         }
 
-        if (listen_setting_type && caps->listen_setting)
+        if (listen_setting_type && caps.listen_setting)
         {
           auto listen_setting = std::find_if(final_launch_settings.begin(), final_launch_settings.end(), [&](game_setting& setting) {
-            return setting.setting_name == caps->listen_setting;
+            return setting.setting_name == caps.listen_setting;
           });
 
           bool enabled = value == pref_options[2];
@@ -881,16 +881,16 @@ namespace siege::views
           else
           {
             auto& back = final_launch_settings.emplace_back();
-            back.setting_name = caps->listen_setting;
+            back.setting_name = caps.listen_setting;
             back.type = *listen_setting_type;
             enabled ? enable_setting(back) : disable_setting(back);
           }
         }
 
-        if (dedicated_setting_type && caps->dedicated_setting)// dedicated
+        if (dedicated_setting_type && caps.dedicated_setting)// dedicated
         {
           auto dedicated_setting = std::find_if(final_launch_settings.begin(), final_launch_settings.end(), [&](game_setting& setting) {
-            return setting.setting_name == caps->dedicated_setting;
+            return setting.setting_name == caps.dedicated_setting;
           });
 
           auto enabled = value == pref_options[3];
@@ -902,7 +902,7 @@ namespace siege::views
           else
           {
             auto& back = final_launch_settings.emplace_back();
-            back.setting_name = caps->dedicated_setting;
+            back.setting_name = caps.dedicated_setting;
             back.type = *dedicated_setting_type;
             enabled ? enable_setting(back) : disable_setting(back);
           }

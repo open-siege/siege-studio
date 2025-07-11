@@ -482,11 +482,9 @@ namespace siege::views
       {
         auto& extension = controller.get_extension();
 
-        auto* caps = extension.caps;
-
-        if (caps)
+        if (extension.caps)
         {
-          populate_launch_table(*caps);
+          populate_launch_table(*extension.caps);
           populate_controller_table(extension.game_actions, extension.controller_input_backends);
           populate_keyboard_table(extension.game_actions, extension.controller_input_backends);
         }

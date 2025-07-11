@@ -117,14 +117,14 @@ namespace siege::platform
     std::array<const fs_char*, 32> int_settings;
     std::array<const fs_char*, 32> float_settings;
     std::array<const fs_char*, 32> string_settings;
-    const fs_char* ip_connect_setting = FSL"";
-    const fs_char* port_connect_setting = FSL"";
-    const fs_char* player_name_setting = FSL"";
-    const fs_char* listen_setting = FSL"";
-    const fs_char* dedicated_setting = FSL"";
+    const fs_char* ip_connect_setting = FSL "";
+    const fs_char* port_connect_setting = FSL "";
+    const fs_char* player_name_setting = FSL "";
+    const fs_char* listen_setting = FSL "";
+    const fs_char* dedicated_setting = FSL "";
     const fs_char* render_backend_setting = FSL "";
     const fs_char* selected_game_setting = FSL "";
-    const fs_char* preferred_exe_setting = FSL"";
+    const fs_char* preferred_exe_setting = FSL "";
   };
 
   template<typename TValue>
@@ -212,7 +212,8 @@ namespace siege::platform
 
     const std::span<game_action> game_actions;
     const std::span<const wchar_t*> controller_input_backends;
-    const game_command_line_caps* caps = nullptr;
+
+    const std::optional<game_command_line_caps> caps = std::nullopt;
 
     inline std::span<const wchar_t*> update_span(const char* key)
     {
@@ -258,7 +259,20 @@ namespace siege::platform
                                                                  return std::span(actions, size);
                                                                }()),
                                                                controller_input_backends(update_span("controller_input_backends")),
-                                                               caps(GetProcAddress<game_command_line_caps*>("command_line_caps"))
+                                                               caps([this]() -> std::optional<game_command_line_caps> {
+                                                                 auto raw_caps = GetProcAddress<game_command_line_caps*>("command_line_caps");
+
+                                                                 if (raw_caps)
+                                                                 {
+                                                                   game_command_line_caps results{};
+                                                                   auto size = raw_caps->caps_size < results.caps_size ? raw_caps->caps_size : results.caps_size;
+                                                                   std::memcpy(&results, raw_caps, size);
+                                                                   results.caps_size = size;
+                                                                   return results;
+                                                                 }
+
+                                                                 return std::nullopt;
+                                                               }())
     {
       executable_is_supported_proc = GetProcAddress<decltype(executable_is_supported_proc)>("executable_is_supported");
       get_function_name_ranges_proc = GetProcAddress<decltype(get_function_name_ranges_proc)>("get_function_name_ranges");
