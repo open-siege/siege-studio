@@ -1300,6 +1300,22 @@ namespace siege::views
 
     std::optional<LRESULT> window_proc(UINT message, WPARAM wparam, LPARAM lparam) override
     {
+      static auto unpack_done_id = ::RegisterWindowMessageW(L"SIEGE_UNPACK_DONE");
+
+      if (message == unpack_done_id)
+      {
+        struct handler
+        {
+          static BOOL CALLBACK EnumChildProc(HWND hwnd, LPARAM lparam)
+          {
+            ::SendMessageW(hwnd, (UINT)lparam, 0, 0);
+            return TRUE;
+          }
+        };
+        ::EnumChildWindows(*this, handler::EnumChildProc, unpack_done_id);
+        return std::nullopt;
+      }
+
       switch (message)
       {
       case WM_CREATE:

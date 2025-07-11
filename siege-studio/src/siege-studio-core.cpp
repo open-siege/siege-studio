@@ -24,12 +24,7 @@ ATOM register_windows(HMODULE module)
   atoms_to_unregister.emplace(siege::views::stack_layout::register_class(this_module));
   auto main_atom = siege::views::siege_main_window::register_class(this_module);
   atoms_to_unregister.emplace(main_atom);
-  win32::window_meta_class<siege::views::default_view> def_info{};
-  def_info.hCursor = LoadCursorW(this_module, IDC_ARROW);
-  def_info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-  def_info.hIcon = (HICON)::LoadImageW(this_module, L"AppIcon", IMAGE_ICON, 0, 0, 0);
-  atoms_to_unregister.emplace(this_module.RegisterClassExW(def_info));
-
+  atoms_to_unregister.emplace(siege::views::default_view::register_class(this_module));
   win32::window_meta_class<siege::views::preferences_view> pref_info{};
   pref_info.hCursor = LoadCursorW(this_module, IDC_ARROW);
   pref_info.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);

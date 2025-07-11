@@ -14,7 +14,7 @@ namespace win32
   }
 
   template<typename TType>
-  auto type_name()
+  auto& type_name()
   {
     static auto name = widen(typeid(TType).name());
     return name;

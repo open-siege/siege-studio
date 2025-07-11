@@ -51,6 +51,7 @@ struct command_line_args
   std::optional<fs::path> backup_path;
   std::optional<fs::path> output_path;
   bool should_use_ui;
+  HWND hwnd_to_contact = HWND_BROADCAST;
 };
 
 command_line_args parse_command_line(std::span<std::string_view> args);
@@ -103,6 +104,8 @@ unpacking_status do_unpacking(user_interaction ui, fs::path backup_path, std::at
 
 int main(int argc, const char* argv[])
 {
+  static auto unpack_done_id = ::RegisterWindowMessageW(L"SIEGE_UNPACK_DONE");
+
   auto args = [=] {
     std::vector<std::string_view> temp(argv, argv + argc);
     return parse_command_line(temp);
@@ -170,7 +173,7 @@ int main(int argc, const char* argv[])
                 auto path = selection.value().GetFileSysPath();
 
                 auto ui_thread_id = ::GetCurrentThreadId();
-                win32::queue_user_work_item([ui_thread_id, window, backup_path = *path, &button_callback] {
+                win32::queue_user_work_item([ui_thread_id, window, backup_path = *path, &button_callback, &args] {
                   user_interaction ui{
                     .ask_for_variable = [ui_thread_id, window, &button_callback](auto variable, auto options) {
                     std::promise<installation_option> result{};
@@ -285,6 +288,7 @@ int main(int argc, const char* argv[])
                   auto result = do_unpacking(ui, backup_path, should_cancel);
                   if (result == unpacking_status::succeeded)
                   {
+                    ::SendNotifyMessageW(args.hwnd_to_contact, unpack_done_id, 0, 0);
                     exec_on_thread(ui_thread_id, [window]() {
                       TASKDIALOGCONFIG config{
                         .cbSize = sizeof(TASKDIALOGCONFIG),
@@ -369,6 +373,7 @@ int main(int argc, const char* argv[])
 
     if (status == unpacking_status::succeeded)
     {
+      ::SendNotifyMessageW(args.hwnd_to_contact, unpack_done_id, 0, 0);
       std::cout << "Unpacked game successfully" << std::endl;
     }
     else
@@ -917,6 +922,7 @@ command_line_args parse_command_line(std::span<std::string_view> args)
   auto app_arg = fs::path(win32::module_ref().GetModuleFileName<wchar_t>());
   std::optional<fs::path> file_arg;
   std::optional<fs::path> output_path;
+  std::string window;
 
   std::array<DWORD, 4> ids{};
 
@@ -946,27 +952,38 @@ command_line_args parse_command_line(std::span<std::string_view> args)
       file_arg = args[next_arg];
     }
 
-    auto output = stl::find_if(args, [](auto& arg) {
-      return arg.starts_with("--output") || arg.starts_with("-o");
-    });
-
-    if (output != args.end())
-    {
-      if (output->contains("="))
+    auto parse_arg = [args](auto condition, auto& value) -> std::optional<std::string_view> {
+      auto output = stl::find_if(args, condition);
+      if (output != args.end())
       {
-        output_path = output->substr(output->find("=") + 1);
-      }
-      else
-      {
-        auto next = output;
-        std::advance(next, 1);
-
-        if (next != args.end())
+        if (output->contains("="))
         {
-          output_path = *next;
+          value = output->substr(output->find("=") + 1);
+        }
+        else
+        {
+          auto next = output;
+          std::advance(next, 1);
+
+          if (next != args.end())
+          {
+            value = *next;
+          }
         }
       }
-    }
+      return std::nullopt;
+    };
+
+    parse_arg([](auto& arg) {
+      return arg.starts_with("--output") || arg.starts_with("-o");
+    }, output_path);
+
+
+
+    parse_arg([](auto& arg) {
+      return arg.starts_with("--broadcast-hwnd");
+    },
+      window);
   }
 
   if (!output_path && file_arg)
@@ -974,5 +991,16 @@ command_line_args parse_command_line(std::span<std::string_view> args)
     output_path = file_arg->parent_path() / file_arg->stem();
   }
 
-  return { app_arg, file_arg, output_path, use_ui };
+  HWND real_window = HWND_BROADCAST;
+
+  try
+  {
+    real_window = (HWND)std::stoul(window);
+  }
+  catch (...)
+  {
+
+  }
+
+  return { app_arg, file_arg, output_path, use_ui, real_window };
 }
