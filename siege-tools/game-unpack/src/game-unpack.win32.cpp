@@ -661,17 +661,31 @@ unpacking_status do_unpacking(user_interaction ui, std::vector<fs::path> backup_
       verification_mappings.emplace(temp);
     }
 
-    auto external_path = fs::path(win32::module_ref::current_application().GetModuleFileName()).parent_path();
+    auto external_path = fs::path(win32::module_ref::current_application().GetModuleFileName()).parent_path() / "external";
     std::error_code last_error;
 
-    if (fs::is_directory(external_path.parent_path() / "external"))
+    struct external_app
     {
-      external_path = external_path.parent_path() / "external";
-      win32::add_dll_directory(external_path.c_str());
-    }
+      const wchar_t* exe_name;
+      const wchar_t* remote_name;
+    };
+    std::array<external_app, 3> external_apps{ { { L"I5comp.exe", L"external/i5comp21.zip" },
+      { L"i6comp.exe", L"external/i6cmp13b.zip" },
+      { L"7zr.exe", L"external/7zr.zip" } } };
 
     auto has_cab_extractors =
-      fs::exists(external_path / "I5comp.exe", last_error) && fs::exists(external_path / "i6comp.exe") && fs::exists(external_path / "7zr.exe");
+      stl::all_of(external_apps, [&](auto& app) {
+        return fs::exists(external_path / fs::path(app.remote_name).stem() / app.exe_name, last_error);
+      });
+
+    if (has_cab_extractors)
+    {
+      for (auto& app : external_apps)
+      {
+        auto temp = external_path / fs::path(app.remote_name).stem();
+        win32::add_dll_directory(temp.c_str());
+      }
+    }
 
     if (!has_cab_extractors && requires_cab_tooling && ui.ask_to_download_cab_tooling())
     {
@@ -679,10 +693,10 @@ unpacking_status do_unpacking(user_interaction ui, std::vector<fs::path> backup_
       {
         siege::platform::http_client_context context;
 
-        for (auto path : { L"external/i5comp21.zip", L"external/i6cmp13b.zip", L"external/7zr.zip" })
+        for (auto& app : external_apps)
         {
           std::stringstream content;
-          auto downloaded = siege::platform::download_http_data(context, domain, path, content);
+          auto downloaded = siege::platform::download_http_data(context, domain, app.remote_name, content);
 
           if (!downloaded)
           {
@@ -699,9 +713,11 @@ unpacking_status do_unpacking(user_interaction ui, std::vector<fs::path> backup_
 
           auto files = reader.get_all_files_for_query(cache, content, {});
 
+          auto new_path = external_path / fs::path(app.remote_name).stem();
+          fs::create_directories(new_path, last_error);
           for (const auto& file : files)
           {
-            std::ofstream output(external_path / file.filename, std::ios::binary);
+            std::ofstream output(new_path / file.filename, std::ios::binary);
             reader.extract_file_contents(cache, content, file, output);
           }
         }
