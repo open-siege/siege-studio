@@ -100,7 +100,7 @@ enum struct unpacking_status
   succeeded
 };
 
-unpacking_status do_unpacking(user_interaction ui, fs::path backup_path, std::atomic_bool&);
+unpacking_status do_unpacking(user_interaction ui, std::vector<fs::path> backup_paths, std::atomic_bool&);
 
 int main(int argc, const char* argv[])
 {
@@ -121,9 +121,27 @@ int main(int argc, const char* argv[])
     ::ShowWindow(::GetConsoleWindow(), SW_HIDE);
 
     std::vector<TASKDIALOG_BUTTON> default_buttons = {
-      TASKDIALOG_BUTTON{ .nButtonID = 10, .pszButtonText = L"Install Game From File" },
-      TASKDIALOG_BUTTON{ .nButtonID = 11, .pszButtonText = L"Detect Game From Storage" }
+      TASKDIALOG_BUTTON{ .nButtonID = 10, .pszButtonText = L"Install Game From File" }
     };
+
+    std::vector<fs::path> roots;
+    std::wstring drive = L"A://";
+    for (auto i = L'A'; i <= L'Z'; ++i)
+    {
+      drive[0] = i;
+
+      if (auto type = ::GetDriveTypeW(drive.c_str()); type == DRIVE_REMOVABLE || type == DRIVE_CDROM)
+      {
+        roots.emplace_back(drive);
+      }
+    }
+
+    if (!roots.empty())
+    {
+      default_buttons.emplace_back(TASKDIALOG_BUTTON{ .nButtonID = 11, .pszButtonText = L"Detect Game From Storage" });
+    }
+
+    std::vector<fs::path> backup_paths = roots;
 
     constexpr static auto window_title = L"Siege Game Unpacker";
     std::function<HRESULT(int)> button_callback;
@@ -151,6 +169,11 @@ int main(int argc, const char* argv[])
           return button_callback((int)wparam);
         }
 
+        if (message == TDN_BUTTON_CLICKED && wparam == 11)
+        {
+          backup_paths = roots;
+        }
+
         if (message == TDN_BUTTON_CLICKED && wparam == 10)
         {
           auto new_path = win32::get_path_via_file_dialog({});
@@ -160,10 +183,16 @@ int main(int argc, const char* argv[])
             return S_FALSE;
           }
 
+          backup_paths.clear();
+          backup_paths.emplace_back(std::move(*new_path));
+        }
+
+        if (message == TDN_BUTTON_CLICKED && (wparam == 10 || wparam == 11))
+        {
           using namespace siege::platform;
 
           auto ui_thread_id = ::GetCurrentThreadId();
-          win32::queue_user_work_item([ui_thread_id, window, backup_path = *new_path, &button_callback, &args] {
+          win32::queue_user_work_item([ui_thread_id, window, backup_paths, &button_callback, &args] {
             user_interaction ui{
               .ask_for_variable = [ui_thread_id, window, &button_callback](auto variable, auto options) {
                     std::promise<installation_option> result{};
@@ -284,7 +313,7 @@ int main(int argc, const char* argv[])
             };
             std::shared_ptr<void> deferred{ nullptr, [](...) { is_done = true; } };
             is_done = false;
-            auto result = do_unpacking(ui, backup_path, should_cancel);
+            auto result = do_unpacking(ui, backup_paths, should_cancel);
             if (result == unpacking_status::succeeded)
             {
               ::SendNotifyMessageW(args.hwnd_to_contact, unpack_done_id, 0, 0);
@@ -319,7 +348,7 @@ int main(int argc, const char* argv[])
             .dwFlags = TDF_ALLOW_DIALOG_CANCELLATION | TDF_SHOW_MARQUEE_PROGRESS_BAR | TDF_CALLBACK_TIMER,
             .dwCommonButtons = TDCBF_CLOSE_BUTTON,
             .pszWindowTitle = window_title,
-            .pszMainInstruction = L"Installing game, please wait"
+            .pszMainInstruction = L"Detecting game to install, please wait"
           };
           ::SendMessageW(window, TDM_NAVIGATE_PAGE, 0, (LPARAM)&config);
         }
@@ -365,7 +394,7 @@ int main(int argc, const char* argv[])
     };
 
     std::cout << "Detecting game for " << *args.backup_path << std::endl;
-    auto status = do_unpacking(console_ui, *args.backup_path, should_cancel);
+    auto status = do_unpacking(console_ui, { *args.backup_path }, should_cancel);
 
     if (status == unpacking_status::succeeded)
     {
@@ -385,23 +414,20 @@ int main(int argc, const char* argv[])
   return 0;
 }
 
-unpacking_status do_unpacking(user_interaction ui, fs::path backup_path, std::atomic_bool& should_cancel)
+unpacking_status do_unpacking(user_interaction ui, std::vector<fs::path> backup_paths, std::atomic_bool& should_cancel)
 {
   using file_info = siege::platform::file_info;
   using listing_query = siege::platform::listing_query;
   using resource_reader = siege::platform::resource_reader;
 
-  std::ifstream temp(backup_path, std::ios::binary);
-
-  // TODO also check for folders instead
-  if (!siege::resource::is_resource_readable(temp))
+  if (stl::all_of(backup_paths, [](auto& item) { return !fs::is_directory(item); }) && !stl::all_of(backup_paths, [](auto& item) { 
+          std::ifstream temp(item, std::ios::binary);
+          return siege::resource::is_resource_readable(temp); }))
   {
     return unpacking_status::failed;
   }
 
   auto installation_modules = siege::platform::installation_module::load_modules(fs::current_path());
-
-  auto stem = backup_path.stem().wstring();
 
   std::list<installable_file> backup_files;
   std::map<std::wstring, std::wstring> resolved_variables;
@@ -452,10 +478,33 @@ unpacking_status do_unpacking(user_interaction ui, fs::path backup_path, std::at
       }
     }
 
+    auto has_valid_names = stl::all_of(backup_paths, [&names_to_check](fs::path& path) {
+      if (path.root_path() == path)
+      {
+        std::array<wchar_t, 256> volume_name{};
+        if (::GetVolumeInformationW(path.c_str(),
+              volume_name.data(),
+              (DWORD)volume_name.size(),
+              nullptr,
+              nullptr,
+              nullptr,
+              nullptr,
+              0))
+        {
+          return stl::any_of(names_to_check, [&](auto& item) {
+            return item == volume_name.data() || siege::platform::to_lower(item) == siege::platform::to_lower(volume_name.data());
+          });
+        }
+        return false;
+      }
 
-    if (!stl::any_of(names_to_check, [&](auto& item) {
-          return item == stem;
-        }))
+      auto stem = siege::platform::to_lower(path.stem().wstring());
+      return stl::any_of(names_to_check, [&](auto& item) {
+        return siege::platform::to_lower(item) == stem;
+      });
+    });
+
+    if (!has_valid_names)
     {
       continue;
     }
@@ -469,9 +518,7 @@ unpacking_status do_unpacking(user_interaction ui, fs::path backup_path, std::at
       new_rule.resolved_source = new_rule.source;
     }
 
-    std::vector<fs::path> backup_paths = { backup_path };
-
-    if (disk_count > 1)
+    if (disk_count > 1 && backup_paths.size() == 1)
     {
       std::set<std::wstring_view> disc_names;
 
@@ -484,7 +531,8 @@ unpacking_status do_unpacking(user_interaction ui, fs::path backup_path, std::at
         disc_names.emplace(name);
       }
 
-      auto parent_folder = backup_path.parent_path();
+      auto parent_folder = backup_paths.front().parent_path();
+      auto stem = backup_paths.front().stem();
 
       std::multimap<std::wstring, fs::path> additional_paths;
 
@@ -522,7 +570,7 @@ unpacking_status do_unpacking(user_interaction ui, fs::path backup_path, std::at
 
           for (auto& rule : matching_rules)
           {
-            rule.resolved_source = std::regex_replace(rule.resolved_source, std::wregex(std::wstring(name)), backup_path.filename().wstring());
+            rule.resolved_source = std::regex_replace(rule.resolved_source, std::wregex(std::wstring(name)), backup_paths.front().filename().wstring());
           }
           continue;
         }
@@ -539,6 +587,33 @@ unpacking_status do_unpacking(user_interaction ui, fs::path backup_path, std::at
         for (auto& rule : matching_rules)
         {
           rule.resolved_source = std::regex_replace(rule.resolved_source, std::wregex(std::wstring(name)), first_alt->second.filename().wstring());
+        }
+      }
+    }
+    else if (disk_count > 1 && backup_paths.size() > 1)
+    {
+      for (auto& path : backup_paths)
+      {
+        std::array<wchar_t, 256> volume_name{};
+        if (::GetVolumeInformationW(path.c_str(),
+              volume_name.data(),
+              (DWORD)volume_name.size(),
+              nullptr,
+              nullptr,
+              nullptr,
+              nullptr,
+              0))
+        {
+          // TODO rework the logic to make name checking uniform.
+          // At the moment it's lower case for filenames, upper case for volume names
+          // and exact case for multi volume checks with multiple files.
+          auto matching_rules = std::views::filter(transformed_rules, [&](transformed_path_rule& rule) {
+            return rule.resolved_source.starts_with(siege::platform::to_upper(volume_name.data()));
+          });
+          for (auto& rule : matching_rules)
+          {
+            rule.resolved_source = std::regex_replace(rule.resolved_source, std::wregex(siege::platform::to_upper(volume_name.data())), path.c_str());
+          }
         }
       }
     }
@@ -641,28 +716,53 @@ unpacking_status do_unpacking(user_interaction ui, fs::path backup_path, std::at
       {
         return unpacking_status::cancelled;
       }
-      auto game_backup = std::make_shared<std::ifstream>(backup_path, std::ios::binary);
 
-      auto reader = siege::resource::make_resource_reader(*game_backup);
-      std::any cache{};
-
-      for (auto& file : reader.get_all_files_for_query(cache, *game_backup, listing_query{ .archive_path = backup_path, .folder_path = backup_path }))
+      if (fs::is_directory(backup_path))
       {
-        auto& new_item = backup_files.emplace_back(file);
-        new_item.install_to = [new_item = &new_item, reader, cache, game_backup](auto install_path, auto install_segment) mutable {
-          fs::create_directories(install_path / install_segment);
-          auto final_path = install_path / install_segment / new_item->filename;
-          std::ofstream temp_out_buffer(final_path, std::ios::binary | std::ios::trunc);
-          reader.extract_file_contents(cache, *game_backup, *new_item, temp_out_buffer);
-        };
+        for (const fs::directory_entry& dir_entry :
+          fs::recursive_directory_iterator(backup_path))
+        {
+          if (dir_entry.is_directory())
+          {
+            continue;
+          }
+          auto& new_item = backup_files.emplace_back();
+          new_item.filename = dir_entry.path().filename();
+          new_item.folder_path = dir_entry.path().parent_path();
+          new_item.archive_path = backup_path;
+          new_item.compression_type = siege::platform::compression_type::none;
+          new_item.size = dir_entry.file_size();
+          new_item.install_to = [new_item = &new_item](auto install_path, auto install_segment) mutable {
+            fs::create_directories(install_path / install_segment);
+            auto final_path = install_path / install_segment / new_item->filename;
+            fs::copy(new_item->folder_path / new_item->filename, final_path, fs::copy_options::overwrite_existing);
+          };
+        }
+      }
+      else
+      {
+        auto game_backup = std::make_shared<std::ifstream>(backup_path, std::ios::binary);
+
+        auto reader = siege::resource::make_resource_reader(*game_backup);
+        std::any cache{};
+
+        for (auto& file : reader.get_all_files_for_query(cache, *game_backup, listing_query{ .archive_path = backup_path, .folder_path = backup_path }))
+        {
+          auto& new_item = backup_files.emplace_back(file);
+          new_item.install_to = [new_item = &new_item, reader, cache, game_backup](auto install_path, auto install_segment) mutable {
+            fs::create_directories(install_path / install_segment);
+            auto final_path = install_path / install_segment / new_item->filename;
+            std::ofstream temp_out_buffer(final_path, std::ios::binary | std::ios::trunc);
+            reader.extract_file_contents(cache, *game_backup, *new_item, temp_out_buffer);
+          };
+        }
       }
     }
-
 
     // first level verification
     if (stl::all_of(verification_mappings, [&](auto& mapping) {
           return stl::any_of(backup_files, [&](auto& item) {
-            if (mapping.wstring().starts_with(item.archive_path.filename().wstring()))
+            if (item.archive_path.has_filename() && mapping.wstring().starts_with(item.archive_path.filename().wstring()))
             {
               auto relative_path = item.archive_path.filename() / item.relative_path();
               return mapping == relative_path || mapping == relative_path / item.filename;
@@ -699,7 +799,7 @@ unpacking_status do_unpacking(user_interaction ui, fs::path backup_path, std::at
           {
             return unpacking_status::cancelled;
           }
-          auto should_extract = verification_mappings.contains(backup_path) || backup_file.filename.extension() == ".cab" || backup_file.filename.extension() == ".CAB" || backup_file.filename.extension() == ".hdr" || backup_file.filename.extension() == ".HDR";
+          auto should_extract = stl::all_of(backup_paths, [&](auto& path) { return verification_mappings.contains(path); }) || backup_file.filename.extension() == ".cab" || backup_file.filename.extension() == ".CAB" || backup_file.filename.extension() == ".hdr" || backup_file.filename.extension() == ".HDR";
 
           if (!should_extract)
           {

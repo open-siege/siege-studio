@@ -49,7 +49,23 @@ namespace siege::platform
       {
         return std::filesystem::path{};
       }
-      return std::filesystem::relative(folder_path, archive_path);
+      std::error_code last_error;
+      auto result = std::filesystem::relative(folder_path, archive_path, last_error);
+
+      if (last_error)
+      {
+        auto new_path = folder_path.u8string();
+        new_path.replace(0, archive_path.u8string().size(), u8"");
+
+        if (!new_path.empty() && new_path.front() == '\\')
+        {
+          new_path.erase(0, 1);
+        }
+
+        return std::filesystem::path(new_path);
+      }
+
+      return result;
     }
   };
 
