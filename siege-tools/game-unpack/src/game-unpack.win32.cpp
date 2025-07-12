@@ -678,21 +678,12 @@ unpacking_status do_unpacking(user_interaction ui, std::vector<fs::path> backup_
         return fs::exists(external_path / fs::path(app.remote_name).stem() / app.exe_name, last_error);
       });
 
-    if (has_cab_extractors)
-    {
-      for (auto& app : external_apps)
-      {
-        auto temp = external_path / fs::path(app.remote_name).stem();
-        win32::add_dll_directory(temp.c_str());
-      }
-    }
-
     if (!has_cab_extractors && requires_cab_tooling && ui.ask_to_download_cab_tooling())
     {
       for (auto domain : { L"updates.thesiegehub.com" })
       {
         siege::platform::http_client_context context;
-
+        int success_count = 0;
         for (auto& app : external_apps)
         {
           std::stringstream content;
@@ -720,7 +711,23 @@ unpacking_status do_unpacking(user_interaction ui, std::vector<fs::path> backup_
             std::ofstream output(new_path / file.filename, std::ios::binary);
             reader.extract_file_contents(cache, content, file, output);
           }
+          success_count++;
         }
+
+        if (success_count == external_apps.size())
+        {
+          has_cab_extractors = true;
+          break;
+        }
+      }
+    }
+
+    if (has_cab_extractors)
+    {
+      for (auto& app : external_apps)
+      {
+        auto temp = external_path / fs::path(app.remote_name).stem();
+        win32::add_dll_directory(temp.c_str());
       }
     }
 
