@@ -187,6 +187,13 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
   }
 
   win32::add_dll_directory(install_info.launch_exe_path.parent_path().c_str());
+
+  if (fs::is_directory(install_info.launch_exe_path.parent_path() / "external", last_error))
+  {
+    auto external = install_info.launch_exe_path.parent_path() / "external";
+    win32::add_dll_directory(external.c_str());
+  }
+
   load_core_module(install_info.launch_exe_path.parent_path());
 
   if (auto result = register_and_create_main_window(::GetCurrentThreadId(), nCmdShow); result != 0)
