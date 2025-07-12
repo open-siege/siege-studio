@@ -21,10 +21,6 @@ add_dependencies(${PROJECT_NAME}-dependencies
     dts-to-obj
     unvol)
 
-if(TARGET game-unpack)
-    add_dependencies(${PROJECT_NAME}-dependencies game-unpack)
-endif()
-
 set(CONTENT_TARGETS siege-presentation-2d 
 					siege-presentation-3d 
 					siege-presentation-resource 
