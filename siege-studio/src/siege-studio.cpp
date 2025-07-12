@@ -177,7 +177,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
       STARTUPINFO startup{};
       PROCESS_INFORMATION process{};
 
-      if (::CreateProcessW(new_path.c_str(), new_path_str.data(), nullptr, nullptr, TRUE, CREATE_NEW_PROCESS_GROUP, nullptr, nullptr, &startup, &process))
+      auto result = (INT_PTR)::ShellExecuteW(NULL, L"open", new_path.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+      if (result > SE_ERR_DLLNOTFOUND)
       {
         ::ExitProcess(0);
         return 0;
@@ -185,6 +186,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
     }
   }
 
+  win32::add_dll_directory(install_info.launch_exe_path.parent_path().c_str());
   load_core_module(install_info.launch_exe_path.parent_path());
 
   if (auto result = register_and_create_main_window(::GetCurrentThreadId(), nCmdShow); result != 0)
