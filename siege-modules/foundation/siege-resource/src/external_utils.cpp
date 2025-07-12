@@ -35,7 +35,14 @@ namespace siege::resource
 
         if (path)
         {
-          return path->string();
+          auto result = path->string();
+
+          if (result.contains(" "))
+          {
+            result.insert(0, 1, '\"');
+            result.push_back('\"');
+          }
+          return result;
         }
       }
     }
