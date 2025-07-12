@@ -427,7 +427,8 @@ unpacking_status do_unpacking(user_interaction ui, std::vector<fs::path> backup_
     return unpacking_status::failed;
   }
 
-  auto installation_modules = siege::platform::installation_module::load_modules(fs::current_path());
+  auto app_path = fs::path(win32::module_ref::current_application().GetModuleFileName());
+  auto installation_modules = siege::platform::installation_module::load_modules(app_path.parent_path());
 
   std::list<installable_file> backup_files;
   std::map<std::wstring, std::wstring> resolved_variables;
