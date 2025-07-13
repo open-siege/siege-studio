@@ -68,7 +68,7 @@ namespace siege::views
 
     auto wm_create()
     {
-      auto app_path = std::filesystem::path(win32::module_ref().current_application().GetModuleFileName());
+      auto app_path = std::filesystem::path(win32::module_ref().current_module().GetModuleFileName());
       modules = platform::presentation_module::load_modules(app_path.parent_path());
 
       for (const auto& module : modules)
