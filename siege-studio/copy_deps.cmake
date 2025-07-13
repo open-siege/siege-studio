@@ -64,7 +64,7 @@ endforeach()
 list(APPEND EXT_TARGETS siege-input-filtration ws2_32-on-zero-tier wsock32-on-zero-tier)
 
 if(TARGET zt-shared)
-    list(APPEND EXT_TARGETSzt-shared)
+    list(APPEND EXT_TARGETS zt-shared)
 endif()
 
 foreach(EXT_TARGET IN ITEMS ${EXT_TARGETS})
