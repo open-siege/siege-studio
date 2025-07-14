@@ -27,10 +27,12 @@ using predefined_int = siege::platform::game_command_line_predefined_setting<int
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
 
 extern auto command_line_caps = game_command_line_caps{
-  .int_settings = { { L"gl_mode" } },
+  .int_settings = { { L"gl_mode", L"dedicated" } },
   .string_settings = { { L"name", L"connect", L"map", L"gl_driver", L"game" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
+  .listen_setting = L"connect",
+  .dedicated_setting = L"dedicated",
   .selected_game_setting = L"game",
 };
 
