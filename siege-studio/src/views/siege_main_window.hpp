@@ -34,9 +34,11 @@ namespace siege::views
     std::map<std::wstring, std::int32_t> extensions;
     std::set<std::u16string> categories;
 
-    std::list<std::filesystem::path> folders;
-    std::list<std::filesystem::path> files;
-    std::list<std::filesystem::path>::iterator selected_file;
+    std::list<fs::path> folders;
+    std::list<fs::path> files;
+    std::list<fs::path>::iterator selected_file;
+    std::map<win32::lparam_t, fs::path> tab_working_directory_mapping;
+    std::map<win32::lparam_t, fs::path>::iterator default_tab_mapping = tab_working_directory_mapping.end();
 
     bool updated_in_progress = false;
     bool is_resizing = false;
@@ -56,7 +58,6 @@ namespace siege::views
 
     bool is_dark_mode = false;
 
-    std::filesystem::path initial_working_dir;
     win32::gdi::bitmap menu_sizer = [] {
       win32::gdi::bitmap result(SIZE{ 1, ::GetSystemMetrics(SM_CYSIZE) * 2 }, win32::gdi::bitmap::skip_shared_handle);
       return result;
@@ -68,7 +69,7 @@ namespace siege::views
 
       ::SetWindowLongPtrW(self, GWL_EXSTYLE, params.dwExStyle);
 
-      std::filesystem::path module_path = std::filesystem::path(win32::module_ref::current_module().GetModuleFileName()).parent_path();
+      fs::path module_path = fs::path(win32::module_ref::current_module().GetModuleFileName()).parent_path();
       loaded_modules = platform::presentation_module::load_modules(module_path);
 
       buffer.resize(64);
@@ -102,7 +103,7 @@ namespace siege::views
       win32::apply_tooltip_theme();
     }
 
-    void repopulate_tree_view(std::filesystem::path path)
+    void repopulate_tree_view(fs::path path)
     {
       dir_list.DeleteItem(nullptr);
       folders.clear();
@@ -131,7 +132,7 @@ namespace siege::views
         }
       }
 
-      for (auto const& dir_entry : std::filesystem::directory_iterator{ current_path })
+      for (auto const& dir_entry : fs::directory_iterator{ current_path })
       {
         if (dir_entry.is_directory())
         {
@@ -237,8 +238,6 @@ namespace siege::views
 
     auto wm_create()
     {
-      initial_working_dir = fs::current_path();
-
       dir_list = *win32::CreateWindowExW<win32::tree_view>(CREATESTRUCTW{ .hMenu = dir_list_menu.get(), .hwndParent = *this, .style = WS_CHILD | WS_VISIBLE });
       dir_list.bind_tvn_sel_changed(std::bind_front(&siege_main_window::dir_list_tvn_sel_changed, this));
       dir_list.bind_tvn_item_expanding(std::bind_front(&siege_main_window::dir_list_tvn_item_expanding, this));
@@ -259,7 +258,7 @@ namespace siege::views
         assert(::TrackMouseEvent(&event) == TRUE);
       }
 
-      repopulate_tree_view(std::filesystem::current_path());
+      repopulate_tree_view(fs::current_path());
       tab_control = *win32::CreateWindowExW<win32::tab_control>(
         CREATESTRUCTW{
           .hMenu = tab_context_menu,
@@ -380,18 +379,25 @@ namespace siege::views
         auto prop = win32::get_color_for_window(ref(), win32::properties::button::bk_color);
         auto dialog = win32::com::CreateFileOpenDialog();
 
-        auto current_path = std::filesystem::current_path();
+        if (default_tab_mapping == tab_working_directory_mapping.end())
+        {
+          return std::nullopt;
+        }
 
         auto new_path = win32::get_path_via_file_dialog({
-          .lpstrInitialDir = current_path.c_str(),
+          .lpstrInitialDir = default_tab_mapping->second.c_str(),
           .Flags = FOS_PICKFOLDERS,
         });
 
         if (new_path)
         {
-          std::filesystem::current_path(*new_path);
+          default_tab_mapping->second = *new_path;
 
-          repopulate_tree_view(std::move(*new_path));
+          if (tab_control.GetCurrentSelection() == 0)
+          {
+            repopulate_tree_view(std::move(*new_path));
+          }
+
           return 0;
         }
 
@@ -713,12 +719,6 @@ namespace siege::views
 
     BOOL wm_copy_data(win32::copy_data_message<std::byte> message)
     {
-      if (fs::current_path() != initial_working_dir)
-      {
-        initial_working_dir = fs::current_path();
-        repopulate_tree_view(initial_working_dir);
-      }
-
       siege::platform::storage_info storage{
         .type = siege::platform::storage_info::buffer
       };
@@ -760,6 +760,8 @@ namespace siege::views
           auto index = tab_control.GetItemCount();
 
           auto filename = fs::path(*file_path).filename().wstring();
+
+          tab_working_directory_mapping[win32::lparam_t(child->get())] = get_working_directory_for_path(*file_path);
 
           tab_control.InsertItem(index, TCITEMW{ .mask = TCIF_TEXT | TCIF_PARAM, .pszText = filename.data(), .lParam = win32::lparam_t(child->get()) });
 
@@ -973,6 +975,79 @@ namespace siege::views
       return 0;
     }
 
+    fs::path get_working_directory_for_path(const fs::path& file_path)
+    {
+      std::error_code last_error;
+      if (fs::is_directory(file_path, last_error))
+      {
+        return file_path;
+      }
+
+      auto relative = fs::relative(file_path, last_error);
+
+      if (relative != fs::path{} && (relative.begin() != relative.end() && *relative.begin() != ".."))
+      {
+        return fs::current_path();
+      }
+
+
+      // FFS! Comparing extensions is broken after a Visual Studio update.
+      // if (file_path.has_extension() && (file_path.extension() == L".exe" || file_path.extension() == L".EXE"))
+      // So I have to do this instead:
+
+      if (std::wstring_view(file_path.c_str()).ends_with(L".exe"))
+      {
+        return file_path.parent_path();
+      }
+
+      if (std::wstring_view(file_path.c_str()).ends_with(L".EXE"))
+      {
+        return file_path.parent_path();
+      }
+
+      auto parent_path = file_path.parent_path();
+
+      constexpr static auto common_exe_paths = std::array<const char*, 3>{ { "bin",
+        "bin32",
+        "system" } };
+
+      do
+      {
+        for (auto& entry : fs::directory_iterator{ parent_path })
+        {
+          if (!entry.is_directory() && entry.path().has_extension() && (entry.path().extension() == ".exe" || entry.path().extension() == ".EXE"))
+          {
+            return parent_path;
+          }
+
+          for (auto* common_path : common_exe_paths)
+          {
+            if (!fs::is_directory(parent_path / common_path, last_error))
+            {
+              continue;
+            }
+
+            for (auto& entry : fs::directory_iterator{ parent_path / common_path })
+            {
+              if (!entry.is_directory() && entry.path().has_extension() && (entry.path().extension() == ".exe" || entry.path().extension() == ".EXE"))
+              {
+                return parent_path;
+              }
+            }
+          }
+        }
+
+        if (!parent_path.has_parent_path())
+        {
+          break;
+        }
+
+        parent_path = parent_path.parent_path();
+      } while (parent_path != file_path.root_path());
+
+      return file_path.parent_path();
+    }
+
     void tab_control_tcn_sel_change(win32::tab_control sender, const NMHDR& notification)
     {
       auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
@@ -988,6 +1063,14 @@ namespace siege::views
       if (tab_item->lParam == 0)
       {
         return;
+      }
+
+      auto alt_path_iter = tab_working_directory_mapping.find(tab_item->lParam);
+
+      if (alt_path_iter != tab_working_directory_mapping.end() && fs::current_path() != alt_path_iter->second)
+      {
+        fs::current_path(alt_path_iter->second);
+        repopulate_tree_view(fs::current_path());
       }
 
       auto temp_window = win32::window_ref(win32::hwnd_t(tab_item->lParam));
@@ -1026,6 +1109,8 @@ namespace siege::views
 
       std::wstring title = L"Supported Games";
 
+      default_tab_mapping = tab_working_directory_mapping.emplace(win32::lparam_t(child->get()), fs::current_path()).first;
+
       tab_control.InsertItem(index, TCITEMW{
                                       .mask = TCIF_TEXT | TCIF_PARAM,
                                       .pszText = title.data(),
@@ -1046,7 +1131,7 @@ namespace siege::views
       on_size(*this->GetClientSize());
     }
 
-    bool AddTabFromPath(std::filesystem::path file_path)
+    bool AddTabFromPath(fs::path file_path)
     {
       try
       {
@@ -1113,6 +1198,8 @@ namespace siege::views
           if (child->CopyData(*this, data))
           {
             auto index = tab_control.GetItemCount();
+
+            tab_working_directory_mapping[win32::lparam_t(child->get())] = get_working_directory_for_path(file_path);
 
             tab_control.InsertItem(index, TCITEMW{
                                             .mask = TCIF_TEXT | TCIF_PARAM,
@@ -1252,7 +1339,7 @@ namespace siege::views
 
       if (folder != folders.end() && notification.itemNew.cChildren == 0)
       {
-        for (auto const& dir_entry : std::filesystem::directory_iterator{ *folder })
+        for (auto const& dir_entry : fs::directory_iterator{ *folder })
         {
           if (!dir_entry.is_directory())
           {

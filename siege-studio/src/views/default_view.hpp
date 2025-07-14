@@ -850,8 +850,6 @@ namespace siege::views
 
           auto view = mapping->MapViewOfFile(FILE_MAP_READ, size);
 
-          fs::current_path(file_path.parent_path());
-
           root->CopyData(*this, COPYDATASTRUCT{ .dwData = (ULONG_PTR)mapping->get(), .cbData = DWORD(size), .lpData = view.get() });
         }
       }
