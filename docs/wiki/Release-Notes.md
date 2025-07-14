@@ -1,9 +1,19 @@
-# Siege Studio 0.7.0 Release
+# Siege Studio 25.28 Development Release
 * 3Space Studio renamed to Siege Studio.
+* Officially released on itch.io: https://thesiegehub.itch.io/siege-studio
+* New versioning format in using year and week number.
 * Siege Studio is fully rewritten to use the Windows API directly on Windows instead of WxWidgets and ImGui.
     * The downside of this is that there is no UI available for Linux. 
 * Support for light and dark mode UI styling based on system-wide settings.
 * Support for opening DLL and EXE files and previewing several embedded resource formats.
+* New game extension plugin system to support compatibilty fixes and enhanced configuration of games when launching them.
+    * Online networking support for some games is available through a new WinSocks over Zero Tier wrapper which allows networking over Zero Tier in user mode, without needing a full Zero Tier install or system level network adapters.  
+* New game installation plugin system to support installing games from back-up archives or disc images.
+* New tool called game-unpack which uses the installation plugin system to install game back-ups. The tool can run as a command line app or in GUI mode.
+* The unvol tool has been updated to run as a GUI app or a command line app on Windows. 
+    * It also supports self-extraction which can be configured via Siege Studio when an archive file is open in it.
+* Support games are detected and shown on start-up using the game extension system (though there is currently an issue on second-launch where games are not detected again).
+* Many new file formats are support for multiple games. Documentation pending. 
 
 # Open Siege 0.6.3 Release
 Features planned to be worked on for this release:
