@@ -429,7 +429,7 @@ namespace siege::views
       win32::set_window_command_subclass(*this, id++, [this](auto, auto, auto) -> std::optional<LRESULT> {
         auto size = this->GetClientSize();
         auto pos = this->GetWindowRect();
-        theme_window = *win32::window_module_ref::current_module().CreateWindowExW(CREATESTRUCTW{
+        theme_window = *win32::window_module_ref(win32::module_ref::current_application()).CreateWindowExW(CREATESTRUCTW{
           .hwndParent = *this,
           .cy = size->cy,
           .cx = size->cx,
