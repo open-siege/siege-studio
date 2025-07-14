@@ -16,11 +16,11 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 
 ### Planned file support:
 
-* [PAL](wiki/PAL.md)
-* [SCR](wiki/SCR.md)
-* [BMP](wiki/BMP.md)
-* [FNT](wiki/FNT.md)
-* [TBL](wiki/TBL.md)
+* [PAL](/siege-modules/foundation/siege-content/src/pal/PAL.md)
+* [SCR](/siege-modules/foundation/siege-content/src/bmp/SCR.md)
+* [BMP](/siege-modules/foundation/siege-content/src/bmp/BMP.md)
+* [FNT](/siege-modules/foundation/siege-content/src/fn/FNT.md)
+* [TBL](/siege-modules/foundation/siege-content/src/dts/TBL.md)
 
 ## Games
 
@@ -72,12 +72,12 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 
 ## Planned file support:
 
-* [RMF](wiki/RMF.md)
-* [DYN](wiki/DYN.md)
-* [TBL](wiki/TBL.md)
-* [PAL](wiki/PAL.md)
-* [SCR](wiki/SCR.md)
-* [TTM](wiki/TTM.md)
+* [RMF](/siege-modules/foundation/siege-resource/src/RMF.md)
+* [DYN](/siege-modules/foundation/siege-resource/src/DYN.md)
+* [TBL](/siege-modules/foundation/siege-content/src/dts/TBL.md)
+* [PAL](/siege-modules/foundation/siege-content/src/pal/PAL.md)
+* [SCR](/siege-modules/foundation/siege-content/src/bmp/SCR.md)
+* [TTM](/siege-modules/foundation/siege-content/src/bmp/TTM.md)
 
 ## Games
 
@@ -85,7 +85,7 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		<div class="col-6">
 		<h3>Red Baron - 1990</h3>
         <ul>
-            <li><a href="wiki/RMF.md">RMF</a></li>
+            <li><a href="/siege-modules/foundation/siege-resource/src/RMF.md">RMF</a></li>
         </ul>
 		</div>
 		<div class="col-6">
@@ -98,13 +98,13 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		<div class="col-6">
 		<h3>A-10 Tank Killer 1.5 - 1991</h3>
         <ul>
-            <li><a href="wiki/RMF.md">RMF</a></li>
+            <li><a href="/siege-modules/foundation/siege-resource/src/RMF.md">RMF</a></li>
         </ul>
 		</div>
 		<div class="col-6">
 		<h3>Nova 9: The Return of Gir Draxon - 1991</h3>
 		<ul>
-            <li><a href="wiki/RMF.md">RMF</a></li>
+            <li><a href="/siege-modules/foundation/siege-resource/src/RMF.md">RMF</a></li>
         </ul> 
 		</div>
 </div>
@@ -113,13 +113,13 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		<div class="col-6">
 		<h3>Aces of the Pacific - 1992</h3>
         <ul>
-            <li><a href="wiki/DYN.md">DYN</a></li>
+            <li><a href="/siege-modules/foundation/siege-resource/src/DYN.md">DYN</a></li>
         </ul>
 		</div>
 		<div class="col-6">
 		<h3>Aces Over Europe - 1993</h3>
 		<ul>
-            <li><a href="wiki/DYN.md">DYN</a></li>
+            <li><a href="/siege-modules/foundation/siege-resource/src/DYN.md">DYN</a></li>
         </ul> 
 		</div>
 </div>
@@ -128,7 +128,7 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		<div class="col-6">
 		<h3>Betrayal at Krondor - 1993</h3>
         <ul>
-            <li><a href="wiki/RMF.md">RMF</a></li>
+            <li><a href="/siege-modules/foundation/siege-resource/src/RMF.md">RMF</a></li>
         </ul>
 		</div>
 </div>
@@ -137,17 +137,17 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 
 ## Planned file support:
 
-* [VOL](wiki/VOL.md)
-* [DYN](wiki/DYN.md)
-* [PAL](wiki/PAL.md)
-* [DPL](wiki/DPL.md)
-* [BMP](wiki/BMP.md)
-* [SCR](wiki/SCR.md)
-* [DBM](wiki/DBM.md)
-* [DBA](wiki/DBA.md)
-* [DTS](wiki/DTS.md)
-* [CAR](wiki/CAR.md)
-* [MEC](wiki/MEC.md)
+* [VOL](/siege-modules/foundation/siege-resource/src/VOL.md)
+* [DYN](/siege-modules/foundation/siege-resource/src/DYN.md)
+* [PAL](/siege-modules/foundation/siege-content/src/pal/PAL.md)
+* [DPL](/siege-modules/foundation/siege-content/src/pal/DPL.md)
+* [BMP](/siege-modules/foundation/siege-content/src/bmp/BMP.md)
+* [SCR](/siege-modules/foundation/siege-content/src/bmp/SCR.md)
+* [DBM](/siege-modules/foundation/siege-content/src/bmp/DBM.md)
+* [DBA](/siege-modules/foundation/siege-content/src/bmp/DBA.md)
+* [DTS](/siege-modules/foundation/siege-content/src/dts/DTS.md)
+* CAR
+* MEC
 
 ## Games
 
@@ -155,16 +155,16 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		<div class="col-6">
 		<h3>Aces of the Deep - 1994</h3>
         <ul>
-          <li><a href="wiki/VOL.md">VOL</a></li>
-          <li><a href="wiki/DYN.md">DYN</a></li>
-          <li><a href="wiki/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/VOL.md">VOL</a></li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/DYN.md">DYN</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
         </ul>
 		</div>
 		<div class="col-6">
 		<h3>Metaltech: Battledrome - 1994</h3>
         <ul>
-          <li><a href="wiki/VOL.md">VOL</a></li>
-          <li><a href="wiki/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/VOL.md">VOL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
         </ul>
 		</div>
 </div>
@@ -173,16 +173,16 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		<div class="col-6">
 		<h3>Metaltech: Earthsiege - 1994</h3>
         <ul>
-          <li><a href="wiki/VOL.md">VOL</a></li>
-          <li><a href="wiki/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/VOL.md">VOL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
         </ul>
 		</div>
 		<div class="col-6">
 		<h3>Command: Aces of the Deep - 1995</h3>
         <ul>
-          <li><a href="wiki/VOL.md">VOL</a></li>
-          <li><a href="wiki/DYN.md">DYN</a></li>
-          <li><a href="wiki/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/VOL.md">VOL</a></li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/DYN.md">DYN</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
         </ul>
 		</div>
 </div>
@@ -191,8 +191,8 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		<div class="col-6">
 		<h3>Earthsiege 2 - 1996</h3>
         <ul>
-          <li><a href="wiki/VOL.md">VOL</a></li>
-          <li><a href="wiki/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/VOL.md">VOL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
         </ul>
 		</div>
 </div>
@@ -201,16 +201,16 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 
 ## Planned file support:
 
-* [VOL](wiki/VOL.md)
-* [DTS](wiki/DTS.md)
-* [DT2](wiki/DT2.md)
-* [DML](wiki/DML.md)
-* [BMP](wiki/BMP.md)
-* [PBM](wiki/PBM.md)
-* [PBA](wiki/PBA.md)
-* [PAL](wiki/PAL.md)
-* [IPL](wiki/IPL.md)
-* [PPL](wiki/PPL.md)
+* [VOL](/siege-modules/foundation/siege-resource/src/VOL.md)
+* [DTS](/siege-modules/foundation/siege-content/src/dts/DTS.md)
+* [DT2](/siege-modules/foundation/siege-content/src/dts/DT2.md)
+* [DML](/siege-modules/foundation/siege-content/src/dts/DML.md)
+* [BMP](/siege-modules/foundation/siege-content/src/bmp/BMP.md)
+* [PBM](/siege-modules/foundation/siege-content/src/bmp/PBM.md)
+* [PBA](/siege-modules/foundation/siege-content/src/bmp/PBA.md)
+* [PAL](/siege-modules/foundation/siege-content/src/pal/PAL.md)
+* [IPL](/siege-modules/foundation/siege-content/src/pal/IPL.md)
+* [PPL](/siege-modules/foundation/siege-content/src/pal/PPL.md)
 
 ## Games
 
@@ -218,19 +218,19 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		<div class="col-6">
 		<h3>Silent Thunder: A-10 Tank Killer 2 - 1996</h3>
         <ul>
-          <li><a href="wiki/VOL.md">VOL</a></li>
-          <li><a href="wiki/DT2.md">DT2</a> support in progress (feature/earthsiege-files)</li>
-          <li><a href="wiki/DML.md">DML</a> support in progress (feature/earthsiege-files)</li>
-          <li><a href="wiki/PAL.md">PAL</a></li>
-          <li><a href="wiki/PPL.md">PPL</a></li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/VOL.md">VOL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DT2.md">DT2</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DML.md">DML</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="/siege-modules/foundation/siege-content/src/pal/PAL.md">PAL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/pal/PPL.md">PPL</a></li>
         </ul>
 		</div>
 		<div class="col-6">
 		<h3>Red Baron 2 - 1997</h3>
         <ul>
-          <li><a href="wiki/VOL.md">VOL</a> (partial support. Needs more investigation to support compression)</li>
-          <li><a href="wiki/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
-          <li><a href="wiki/DML.md">DML</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/VOL.md">VOL</a> (partial support. Needs more investigation to support compression)</li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DML.md">DML</a> support in progress (feature/earthsiege-files)</li>
         </ul>
 		</div>
 </div>
@@ -239,17 +239,17 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		<div class="col-6">
 		<h3>Pro Pilot '98 - 1997</h3>
     <ul>
-      <li><a href="wiki/VOL.md">VOL</a> (partial support. Needs more investigation to support compression)</li>
-      <li><a href="wiki/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
-      <li><a href="wiki/DML.md">DML</a> support in progress (feature/earthsiege-files)</li>
+      <li><a href="/siege-modules/foundation/siege-resource/src/VOL.md">VOL</a> (partial support. Needs more investigation to support compression)</li>
+      <li><a href="/siege-modules/foundation/siege-content/src/dts/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
+      <li><a href="/siege-modules/foundation/siege-content/src/dts/DML.md">DML</a> support in progress (feature/earthsiege-files)</li>
     </ul>
 		</div>
 		<div class="col-6">
 		<h3>Red Baron 3D - 1998</h3>
     <ul>
-      <li><a href="wiki/VOL.md">VOL</a> (partial support. Needs more investigation to support compression)</li>
-      <li><a href="wiki/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
-      <li><a href="wiki/DML.md">DML</a> support in progress (feature/earthsiege-files)</li>
+      <li><a href="/siege-modules/foundation/siege-resource/src/VOL.md">VOL</a> (partial support. Needs more investigation to support compression)</li>
+      <li><a href="/siege-modules/foundation/siege-content/src/dts/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
+      <li><a href="/siege-modules/foundation/siege-content/src/dts/DML.md">DML</a> support in progress (feature/earthsiege-files)</li>
     </ul>
 		</div>
 </div>
@@ -258,17 +258,17 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		<div class="col-6">
 		<h3>Pro Pilot '99 - 1998</h3>
         <ul>
-          <li><a href="wiki/VOL.md">VOL</a> (partial support. Needs more investigation to support compression)</li>
-          <li><a href="wiki/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
-          <li><a href="wiki/DML.md">DML</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/VOL.md">VOL</a> (partial support. Needs more investigation to support compression)</li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DML.md">DML</a> support in progress (feature/earthsiege-files)</li>
         </ul>
 		</div>
 		<div class="col-6">
 		<h3>Kid Pilot - 1998</h3>
         <ul>
-          <li><a href="wiki/VOL.md">VOL</a> (partial support. Needs more investigation to support compression)</li>
-          <li><a href="wiki/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
-          <li><a href="wiki/DML.md">DML</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/VOL.md">VOL</a> (partial support. Needs more investigation to support compression)</li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DML.md">DML</a> support in progress (feature/earthsiege-files)</li>
         </ul>
 		</div>
 </div>
@@ -277,9 +277,9 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		<div class="col-6">
 		<h3>Curse You! Red Baron - 1999</h3>
         <ul>
-          <li><a href="wiki/VOL.md">VOL</a> (partial support. Needs more investigation to support compression)</li>
-          <li><a href="wiki/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
-          <li><a href="wiki/DML.md">DML</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/VOL.md">VOL</a> (partial support. Needs more investigation to support compression)</li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DTS.md">DTS</a> support in progress (feature/earthsiege-files)</li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DML.md">DML</a> support in progress (feature/earthsiege-files)</li>
         </ul>
 		</div>
 </div>
@@ -288,18 +288,18 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 
 ## Planned file support:
 
-* [VOL](wiki/VOL.md)
-* [DTS](wiki/DTS.md)
-* [DML](wiki/DML.md)
-* [KQS](wiki/KQS.md)
-* [BMP](wiki/BMP.md)
-* [PBM](wiki/PBM.md)
-* [PBA](wiki/PBA.md)
-* [PFT](wiki/PFT.md)
-* [PAL](wiki/PAL.md)
-* [IPL](wiki/IPL.md)
-* [PPL](wiki/PPL.md)
-* [CS](wiki/CS.md)
+* [VOL](/siege-modules/foundation/siege-resource/src/VOL.md)
+* [DTS](/siege-modules/foundation/siege-content/src/dts/DTS.md)
+* [DML](/siege-modules/foundation/siege-content/src/dts/DML.md)
+* [KQS](/siege-modules/foundation/siege-content/src/dts/DTS.md)
+* [BMP](/siege-modules/foundation/siege-content/src/bmp/BMP.md)
+* [PBM](/siege-modules/foundation/siege-content/src/bmp/PBM.md)
+* [PBA](/siege-modules/foundation/siege-content/src/bmp/PBA.md)
+* [PFT](/siege-modules/foundation/siege-content/src/font/PFT.md)
+* [PAL](/siege-modules/foundation/siege-content/src/pal/PAL.md)
+* [IPL](/siege-modules/foundation/siege-content/src/pal/IPL.md)
+* [PPL](/siege-modules/foundation/siege-content/src/pal/PPL.md)
+* [CS](/siege-modules/foundation/siege-configuration/src/cscript/CS.md)
 
 ## Games
 
@@ -307,24 +307,24 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		<div class="col-6">
 		<h3>Front Page Sports: Ski Racing - 1997</h3>
         <ul>
-                  <li><a href="wiki/VOL.md">VOL</a></li>
-                  <li><a href="wiki/TBV.md">TBV</a></li>
-                  <li><a href="wiki/DML.md">DML</a></li>
-                  <li><a href="wiki/PAL">PAL</a></li>
-                  <li><a href="wiki/PPL">PPL</a></li>
-                  <li><a href="wiki/BMP">BMP</a></li>
-                  <li><a href="wiki/PBA">PBA</a></li>
+                  <li><a href="/siege-modules/foundation/siege-resource/src/VOL.md">VOL</a></li>
+                  <li><a href="/siege-modules/foundation/siege-resource/src/TBV.md">TBV</a></li>
+                  <li><a href="/siege-modules/foundation/siege-content/src/dts/DML.md">DML</a></li>
+                  <li><a href="/siege-modules/foundation/siege-content/src/pal/PAL">PAL</a></li>
+                  <li><a href="/siege-modules/foundation/siege-content/src/pal/PPL.md">PPL</a></li>
+                  <li><a href="/siege-modules/foundation/siege-content/src/bmp/BMP.md">BMP</a></li>
+                  <li><a href="/siege-modules/foundation/siege-content/src/bmp/PBA.md">PBA</a></li>
         </ul>
 		</div>
 		<div class="col-6">
 		<h3>King's Quest: Mask of Eternity - 1998</h3>
         <ul>
-                  <li><a href="wiki/VOL.md">VOL</a></li>
-                  <li><a href="wiki/DML.md">DML</a></li>
-                  <li><a href="wiki/PAL.md">PAL</a></li>
-                  <li><a href="wiki/PPL.md">PPL</a></li>
-                  <li><a href="wiki/BMP.md">BMP</a></li>
-                  <li><a href="wiki/PBA.md">PBA</a></li>
+                  <li><a href="/siege-modules/foundation/siege-resource/src/VOL.md">VOL</a></li>
+                  <li><a href="/siege-modules/foundation/siege-content/src/dts/DML.md">DML</a></li>
+                  <li><a href="/siege-modules/foundation/siege-content/src/pal/PAL.md">PAL</a></li>
+                  <li><a href="/siege-modules/foundation/siege-content/src/pal/PPL.md">PPL</a></li>
+                  <li><a href="/siege-modules/foundation/siege-content/src/bmp/BMP.md">BMP</a></li>
+                  <li><a href="/siege-modules/foundation/siege-content/src/bmp/PBA.md">PBA</a></li>
         </ul>
 		</div>
 </div>
@@ -333,26 +333,26 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		<div class="col-6">
 		<h3>Driver's Education '98 - 1998</h3>
         <ul>
-          <li><a href="wiki/VOL.md">VOL</a></li>
-          <li><a href="wiki/DTS.md">DTS</a></li>
-          <li><a href="wiki/DML.md">DML</a></li>
-          <li><a href="wiki/PAL.md">PAL</a></li>
-          <li><a href="wiki/PPL.md">PPL</a></li>
-          <li><a href="wiki/BMP.md">BMP</a></li>
-          <li><a href="wiki/PBA.md">PBA</a></li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/VOL.md">VOL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DTS.md">DTS</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DML.md">DML</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/pal/PAL.md">PAL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/pal/PPL.md">PPL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/bmp/BMP.md">BMP</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/bmp/PBA.md">PBA</a></li>
         </ul>
 		</div>
 		<div class="col-6">
 		<h3>Starsiege - 1999</h3>
         <ul>
-          <li><a href="wiki/VOL.md">VOL</a></li>
-          <li><a href="wiki/DTS.md">DTS</a></li>
-          <li><a href="wiki/DML.md">DML</a></li>
-          <li><a href="wiki/PAL.md">PAL</a></li>
-          <li><a href="wiki/PPL.md">PPL</a></li>
-          <li><a href="wiki/BMP.md">BMP</a></li>
-          <li><a href="wiki/PBA.md">PBA</a></li>
-          <li><a href="wiki/CS.md">CS</a> (partial grammar implemented)</li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/VOL.md">VOL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DTS.md">DTS</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DML.md">DML</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/pal/PAL.md">PAL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/pal/PPL.md">PPL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/bmp/BMP.md">BMP</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/bmp/PBA.md">PBA</a></li>
+          <li><a href="/siege-modules/foundation/siege-configuration/src/cscript/CS.md">CS</a> (partial grammar implemented)</li>
         </ul>
 		</div>
 </div>
@@ -361,14 +361,14 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		<div class="col-6">
 		<h3>Starsiege: Tribes - 1999</h3>
         <ul>
-          <li><a href="wiki/VOL.md">VOL</a></li>
-          <li><a href="wiki/DTS.md">DTS</a></li>
-          <li><a href="wiki/DML.md">DML</a></li>
-          <li><a href="wiki/PAL.md">PAL</a></li>
-          <li><a href="wiki/PPL.md">PPL</a></li>
-          <li><a href="wiki/BMP.md">BMP</a></li>
-          <li><a href="wiki/PBA.md">PBA</a></li>
-          <li><a href="wiki/CS.md">CS</a> (partial grammar implemented)</li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/VOL.md">VOL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DTS.md">DTS</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DML.md">DML</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/pal/PAL.md">PAL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/pal/PPL.md">PPL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/bmp/BMP.md">BMP</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/bmp/PBA.md">PBA</a></li>
+          <li><a href="/siege-modules/foundation/siege-configuration/src/cscript/CS.md">CS</a> (partial grammar implemented)</li>
         </ul>
 		</div>
 		<div class="col-6">
@@ -381,25 +381,25 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		<div class="col-6">
 		<h3>Driver's Education '99 - 1999</h3>
         <ul>
-          <li><a href="wiki/VOL.md">VOL</a></li>
-          <li><a href="wiki/DTS.md">DTS</a></li>
-          <li><a href="wiki/DML.md">DML</a></li>
-          <li><a href="wiki/PAL.md">PAL</a></li>
-          <li><a href="wiki/PPL.md">PPL</a></li>
-          <li><a href="wiki/BMP.md">BMP</a></li>
-          <li><a href="wiki/PBA.md">PBA</a></li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/VOL.md">VOL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DTS.md">DTS</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DML.md">DML</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/pal/PAL.md">PAL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/pal/PPL.md">PPL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/bmp/BMP.md">BMP</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/bmp/PBA.md">PBA</a></li>
         </ul>
 		</div>
 		<div class="col-6">
 		<h3>Field & Stream: Trophy Bass 3D - 1999</h3>
         <ul>
-          <li><a href="wiki/VOL.md">VOL</a></li>
-          <li><a href="wiki/DTS.md">DTS</a></li>
-          <li><a href="wiki/DML.md">DML</a></li>
-          <li><a href="wiki/PAL.md">PAL</a></li>
-          <li><a href="wiki/PPL.md">PPL</a></li>
-          <li><a href="wiki/BMP.md">BMP</a></li>
-          <li><a href="wiki/PBA.md">PBA</a></li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/VOL.md">VOL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DTS.md">DTS</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DML.md">DML</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/pal/PAL.md">PAL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/pal/PPL.md">PPL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/bmp/BMP.md">BMP</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/bmp/PBA.md">PBA</a></li>
         </ul>
 		</div>
 </div>
@@ -408,13 +408,13 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		<div class="col-6">
 		<h3>Field & Stream: Trophy Bass 4 - 2000</h3>
         <ul>
-          <li><a href="wiki/VOL.md">VOL</a></li>
-          <li><a href="wiki/DTS.md">DTS</a></li>
-          <li><a href="wiki/DML.md">DML</a></li>
-          <li><a href="wiki/PAL.md">PAL</a></li>
-          <li><a href="wiki/PPL.md">PPL</a></li>
-          <li><a href="wiki/BMP.md">BMP</a></li>
-          <li><a href="wiki/PBA.md">PBA</a></li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/VOL.md">VOL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DTS.md">DTS</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/dts/DML.md">DML</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/pal/PAL.md">PAL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/pal/PPL.md">PPL</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/bmp/BMP.md">BMP</a></li>
+          <li><a href="/siege-modules/foundation/siege-content/src/bmp/PBA.md">PBA</a></li>
         </ul>
 		</div>
 </div>
@@ -423,12 +423,12 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 
 ## Planned file support:
 
-* [VL2](wiki/VL2.md)
-* [VOL](wiki/VOL.md)
-* [DTS](wiki/DTS.md)
-* [DSQ](wiki/DSQ.md)
-* [CS](wiki/CS.md)
-* [DSO](wiki/DSO.md)
+* VL2
+* [VOL](/siege-modules/foundation/siege-resource/src/VOL.md)
+* [DTS](/siege-modules/foundation/siege-content/src/dts/DTS.md)
+* [DSQ](/siege-modules/foundation/siege-content/src/dts/DSQ.md)
+* [CS](/siege-modules/foundation/siege-configuration/src/cscript/CS.md)
+* [DSO](/siege-modules/foundation/siege-configuration/src/DSO.md)
 
 ## Games
 
@@ -454,12 +454,12 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 
 ## Planned file support:
 
-* [RMF](wiki/RMF.md)
-* [TBL](wiki/TBL.md)
-* [PAL](wiki/PAL.md)
-* [SCR](wiki/SCR.md)
-* [BMP](wiki/BMP.md)
-* [TTM](wiki/TTM.md)
+* [RMF](/siege-modules/foundation/siege-resource/src/RMF.md)
+* [TBL](/siege-modules/foundation/siege-content/src/dts/TBL.md)
+* [PAL](/siege-modules/foundation/siege-content/src/pal/PAL.md)
+* [SCR](/siege-modules/foundation/siege-content/src/bmp/SCR.md)
+* [BMP](/siege-modules/foundation/siege-content/src/bmp/BMP.md)
+* [TTM](/siege-modules/foundation/siege-content/src/bmp/TTM.md)
 
 ## Games
 
@@ -467,13 +467,13 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		<div class="col-6">
 		<h3>Rise of the Dragon - 1990</h3>
         <ul>
-          <li><a href="wiki/RMF.md">RMF</a></li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/RMF.md">RMF</a></li>
         </ul>
 		</div>
 		<div class="col-6">
 		<h3>Heart of China - 1991</h3>
         <ul>
-          <li><a href="wiki/RMF.md">RMF</a></li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/RMF.md">RMF</a></li>
         </ul>
 		</div>
 </div>
@@ -482,13 +482,13 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 		<div class="col-6">
 		<h3>The Adventures of Willy Beamish - 1991</h3>
         <ul>
-          <li><a href="wiki/RMF.md">RMF</a></li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/RMF.md">RMF</a></li>
         </ul>
 		</div>
 		<div class="col-6">
 		<h3>Quarky & Quaysoo's Turbo Science - 1992</h3>
         <ul>
-          <li><a href="wiki/RMF">RMF.md</a></li>
+          <li><a href="/siege-modules/foundation/siege-resource/src/RMF.md">RMF.md</a></li>
         </ul>
 		</div>
 </div>
@@ -497,133 +497,133 @@ Because the 3Space engine has a long history, and has morphed into engines with 
 
 ## Planned file support:
 
-* [RMF](wiki/RMF.md)
-* [RBX](wiki/RBX.md)
-* [TBV](wiki/TBV.md)
-* [VOL](wiki/VOL.md)
-* [TBL](wiki/TBL.md)
-* [PAL](wiki/PAL.md)
-* [SCR](wiki/SCR.md)
-* [BMP](wiki/BMP.md)
-* [TBB](wiki/TBB.md)
-* [PFT](wiki/PFT.md)
-* [PBA](wiki/PBA.md)
+* [RMF](/siege-modules/foundation/siege-resource/src/RMF.md)
+* RBX
+* [TBV](/siege-modules/foundation/siege-resource/src/TBV.md)
+* [VOL](/siege-modules/foundation/siege-resource/src/VOL.md)
+* [TBL](/siege-modules/foundation/siege-content/src/dts/TBL.md)
+* [PAL](/siege-modules/foundation/siege-content/src/pal/PAL.md)
+* [SCR](/siege-modules/foundation/siege-content/src/bmp/SCR.md)
+* [BMP](/siege-modules/foundation/siege-content/src/bmp/BMP.md)
+* TBB
+* [PFT](/siege-modules/foundation/siege-content/src/font/PFT.md)
+* [PBA](/siege-modules/foundation/siege-content/src/bmp/PBA.md)
 * [TBA](wiki/TBA.md)
 
 ## Games
 
 ### The Incredible Machine - 1993
 
-* [RMF](wiki/RMF.md)
+* [RMF](/siege-modules/foundation/siege-resource/src/RMF.md)
 
 ### The Even More Incredible Machine - 1993
 
-* [RMF](wiki/RMF.md)
+* [RMF](/siege-modules/foundation/siege-resource/src/RMF.md)
 
 ### Sid & Al's Incredible Toons - 1993
 
-* [RMF](wiki/RMF.md)
+* [RMF](/siege-modules/foundation/siege-resource/src/RMF.md)
 
 ### The Incredible Machine 2 - 1994
 
-* [RMF](wiki/RMF.md)
+* [RMF](/siege-modules/foundation/siege-resource/src/RMF.md)
 
 ### The Incredible Machine 3 - 1995
 
-* [RMF](wiki/RMF.md)
+* [RMF](/siege-modules/foundation/siege-resource/src/RMF.md)
 
 ### 3-D Ultra Pinball - 1995
 
-* [RMF](wiki/RMF.md)
+* [RMF](/siege-modules/foundation/siege-resource/src/RMF.md)
 
 ### Trophy Bass - 1995
 
-* [RMF](wiki/RMF.md)
-* [PAL](wiki/PAL.md)
+* [RMF](/siege-modules/foundation/siege-resource/src/RMF.md)
+* [PAL](/siege-modules/foundation/siege-content/src/pal/PAL.md)
 
 ### 3-D Ultra Pinball: Creep Night - 1996
 
-* [RMF](wiki/RMF.md)
+* [RMF](/siege-modules/foundation/siege-resource/src/RMF.md)
 
 ### Hunter Hunted - 1996
 
-* [RMF](wiki/RMF.md)
-* [PAL](wiki/PAL.md)
+* [RMF](/siege-modules/foundation/siege-resource/src/RMF.md)
+* [PAL](/siege-modules/foundation/siege-content/src/pal/PAL.md)
 
 ### Front Page Sports: Trophy Bass 2 - 1996
 
-* [RMF](wiki/RMF.md)
-* [PAL](wiki/PAL.md)
+* [RMF](/siege-modules/foundation/siege-resource/src/RMF.md)
+* [PAL](/siege-modules/foundation/siege-content/src/pal/PAL.md)
 
 ### MissionForce: CyberStorm - 1997
 
-* [RBX](wiki/RBX.md)
+* RBX
 
 ### Front Page Sports: Trophy Rivers - 1997
 
-* [TBV](wiki/TBV.md)
+* [TBV](/siege-modules/foundation/siege-resource/src/TBV.md)
 
 ### Outpost 2: Divided Destiny - 1997
 
-* [VOL](wiki/VOL.md)
+* [VOL](/siege-modules/foundation/siege-resource/src/VOL.md)
 
 ### 3-D Ultra Minigolf - 1997
 
-* [RBX](wiki/RBX.md)
+* RBX
 
 ### 3-D Ultra Pinball: The Lost Continent - 1997
 
-* [RMF](wiki/RMF.md)
-* [PAL](wiki/PAL.md)
+* [RMF](/siege-modules/foundation/siege-resource/src/RMF.md)
+* [PAL](/siege-modules/foundation/siege-content/src/pal/PAL.md)
 
 ### 3-D Ultra NASCAR Pinball - 1998
 
-* [TBV](wiki/TBV.md)
-* [PAL](wiki/PAL.md)
+* [TBV](/siege-modules/foundation/siege-resource/src/TBV.md)
+* [PAL](/siege-modules/foundation/siege-content/src/pal/PAL.md)
 
 ### Cyberstorm 2: Corporate Wars
 
-* [RBX](wiki/RBX.md)
+* RBX
 
 ### 3-D Ultra MiniGolf Deluxe - 1999
 
-* [TBV](wiki/TBV.md)
-* [RBX](wiki/RBX.md)
-* [PAL](wiki/PAL.md)
+* [TBV](/siege-modules/foundation/siege-resource/src/TBV.md)
+* RBX
+* [PAL](/siege-modules/foundation/siege-content/src/pal/PAL.md)
 
 ### 3-D Ultra Radio Control Racers - 1999
 
-* [TBV](wiki/TBV.md)
-* [RBX](wiki/RBX.md)
-* [PAL](wiki/PAL.md)
+* [TBV](/siege-modules/foundation/siege-resource/src/TBV.md)
+* RBX
+* [PAL](/siege-modules/foundation/siege-content/src/pal/PAL.md)
 
 ### 3-D Ultra Cool Pool - 1999
 
-* [TBV](wiki/TBV.md)
+* [TBV](/siege-modules/foundation/siege-resource/src/TBV.md)
 
 ### 3-D Ultra Lionel Train Town - 1999
 
-* [TBV](wiki/TBV.md)
+* [TBV](/siege-modules/foundation/siege-resource/src/TBV.md)
 
 ### 3-D Ultra Pinball: Thrillride - 2000
 
-* [TBV](wiki/TBV.md)
+* [TBV](/siege-modules/foundation/siege-resource/src/TBV.md)
 
 ### 3-D Ultra Lionel Train Town Deluxe - 2000
 
-* [TBV](wiki/TBV.md)
+* [TBV](/siege-modules/foundation/siege-resource/src/TBV.md)
 
 ### Maximum Pool - 2000
 
-* [TBV](wiki/TBV.md)
+* [TBV](/siege-modules/foundation/siege-resource/src/TBV.md)
 
 ### Return of the Incredible Machine: Contraptions - 2000
 
-* [TBV](wiki/TBV.md)
+* [TBV](/siege-modules/foundation/siege-resource/src/TBV.md)
 
 ### The Incredible Machine: Even More Contraptions - 2001
 
-* [TBV](wiki/TBV.md)
+* [TBV](/siege-modules/foundation/siege-resource/src/TBV.md)
 
 ### Minigolf Maniacs - 2001
 

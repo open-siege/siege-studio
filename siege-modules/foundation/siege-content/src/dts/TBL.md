@@ -30,4 +30,4 @@ Here are the variations and which games contain them:
   * Stellar 7: Draxon's Revenge (3DO)
   * Betrayal at Krondor
 
-Future games made use of newer 3Space technology and switched to the [DTS](DTS.md) format.
+Future games made use of newer 3Space technology and switched to the [DTS](/siege-modules/foundation/siege-content/src/dts/DTS.md) format.

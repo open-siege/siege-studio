@@ -1,1 +1,0 @@
-### PNG File Format

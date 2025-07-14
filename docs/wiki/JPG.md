@@ -1,1 +1,0 @@
-### JPG File Format

@@ -1,1 +1,0 @@
-### DLG File Format

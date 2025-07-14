@@ -11,4 +11,4 @@ Forms part of a trio of formats which describe interior shapes, also including:
 DIS files are typically embedded into [VOL files](VOL).
 
 The core game engine:
-* [Darkstar Game Engine](darkstar.md)
+* [Darkstar Game Engine](/siege-modules/extension/siege-extension-3space/src/darkstar.md)

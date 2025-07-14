@@ -34,10 +34,10 @@
     * Curse You! Red Baron
     * Pro Pilot '99
 * 3Space 3.0 aka Darkstar
-    * See [Darkstar Game Engine](darkstar.md)
+    * See [Darkstar Game Engine](/siege-modules/extension/siege-extension-3space/src/darkstar.md)
     
 
 ### See Also
 * [Dynamix Game Development System](dgds.md)
-* [Darkstar Game Engine](darkstar.md)
-* [Torque Game Engine](torque.md)
+* [Darkstar Game Engine](/siege-modules/extension/siege-extension-3space/src/darkstar.md)
+* [Torque Game Engine](/siege-modules/extension/siege-extension-3space/src/torque.md)

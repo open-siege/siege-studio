@@ -32,10 +32,10 @@ The file contains the following information inside of it:
 ### See Also
 Other files which contain LZ-Huffman compressed data:
 * [DIL files](DIL.md)
-* [VOL files](VOL.md)
+* [VOL files](/siege-modules/foundation/siege-resource/src/VOL.md)
 * [DTB files](DTB.md)
-* [VEH files](VEH.md)
+* [VEH files](/siege-modules/foundation/siege-configuration/src/VEH.md)
 
 The core game engine:
-* [Darkstar Game Engine](darkstar.md)
+* [Darkstar Game Engine](/siege-modules/extension/siege-extension-3space/src/darkstar.md)
 

@@ -9,8 +9,8 @@ Forms part of a trio of formats which describe interior shapes, also including:
 
 ### See Also
 
-DIG files are typically embedded into [VOL files](VOL.md).
+DIG files are typically embedded into [VOL files](/siege-modules/foundation/siege-resource/src/VOL.md).
 
 The core game engine:
 
-* [Darkstar Game Engine](darkstar.md)
+* [Darkstar Game Engine](/siege-modules/extension/siege-extension-3space/src/darkstar.md)

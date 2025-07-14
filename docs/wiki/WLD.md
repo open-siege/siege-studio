@@ -1,1 +1,0 @@
-### WLD File Format

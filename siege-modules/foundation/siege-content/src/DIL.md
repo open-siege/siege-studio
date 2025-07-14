@@ -11,13 +11,13 @@ Forms part of a trio of formats which describe interior shapes, also including:
 
 ### See Also
 
-DIL files are typically embedded into [VOL files](VOL).
+DIL files are typically embedded into [VOL files](/siege-modules/foundation/siege-resource/src/VOL.md).
 
 Other files which contain LZ-Huffman compressed data:
-* [Save games](Starsiege%20save%20games.md)
-* [VOL files](VOL.md)
+* [Save games](/siege-modules/foundation/siege-configuration/src/Starsiege%20save%20games.md)
+* [VOL files](/siege-modules/foundation/siege-resource/src/VOL.md)
 * [DTB files](DTB.md)
-* [VEH files](VEH.md)
+* [VEH files](/siege-modules/foundation/siege-configuration/src/VEH.md)
 
 The core game engine:
-* [Darkstar Game Engine](darkstar.md)
+* [Darkstar Game Engine](/siege-modules/extension/siege-extension-3space/src/darkstar.md)
