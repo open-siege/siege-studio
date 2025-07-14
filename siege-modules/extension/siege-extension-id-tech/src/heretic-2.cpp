@@ -30,8 +30,8 @@ using predefined_int = siege::platform::game_command_line_predefined_setting<int
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
 
 extern auto command_line_caps = game_command_line_caps{
-  .int_settings = { { L"dedicated", L"vid_mode" } },
-  .string_settings = { { L"name", L"vid_ref", L"connect", L"map", L"game" } },
+  .int_settings = { { L"dedicated", L"vid_mode", L"in_joystick", L"autoweapon", L"win_noalttab", L"blood_level", L"s_khz" } },
+  .string_settings = { { L"name", L"connect", L"map", L"game" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
   .listen_setting = L"connect",
@@ -103,7 +103,6 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   {
     // engine bug - mouse needs to be enabled for the right analog stick to work
     config.emplace(siege::configuration::key_type({ "set", "in_mouse" }), siege::configuration::key_type("1"));
-    config.emplace(siege::configuration::key_type({ "set", "in_joystick" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "set", "joy_advanced" }), siege::configuration::key_type("1"));
   }
 
@@ -116,6 +115,7 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
 
   config.emplace(siege::configuration::key_type({ "bind", "Space" }), siege::configuration::key_type("+moveup"));
   config.emplace(siege::configuration::key_type({ "bind", "Ctrl" }), siege::configuration::key_type("+movedown"));
+  config.emplace(siege::configuration::key_type({ "bind", "Tab" }), siege::configuration::key_type("score"));
 
   config.save(custom_bindings);
 
