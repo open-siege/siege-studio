@@ -1013,6 +1013,7 @@ auto __stdcall siege_WSAAsyncGetHostByName(HWND window, u_int message, const cha
   if (use_zero_tier())
   {
     get_log() << "siege_WSAAsyncGetHostByName.\n";
+    ::MessageBoxW(nullptr, L"The game tried to use WSAAsyncGetHostByName, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
     ::ExitProcess(-1);
   }
 
@@ -1024,6 +1025,7 @@ auto __stdcall siege_WSACancelAsyncRequest(HANDLE request)
   if (use_zero_tier())
   {
     get_log() << "siege_WSACancelAsyncRequest.\n";
+    ::MessageBoxW(nullptr, L"The game tried to use WSACancelAsyncRequest, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
     ::ExitProcess(-1);
   }
 
@@ -1069,6 +1071,8 @@ auto __stdcall siege_WSAAsyncSelect(SOCKET socket, HWND window, u_int message, l
       get_log() << "FD_ADDRESS_LIST_CHANGE not supported for siege_WSAAsyncSelect.\n";
     }
 #endif
+
+    ::MessageBoxW(nullptr, L"The game tried to use WSAAsyncSelect, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
 
     ::ExitProcess(-1);
   }
@@ -1122,6 +1126,8 @@ auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_co
       get_log() << "siege_WSARecvFrom is blocking.\n";
       // blocking version
     }
+
+    ::MessageBoxW(nullptr, L"The game tried to use WSARecvFrom, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
     ::ExitProcess(-1);
   }
 
@@ -1160,7 +1166,7 @@ auto __stdcall siege_WSASendTo(SOCKET socket, WSABUF* buffers, DWORD buffer_coun
       get_log() << "siege_WSASendTo is blocking.\n";
       // blocking version
     }
-
+    ::MessageBoxW(nullptr, L"The game tried to use WSASendTo, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
     ::ExitProcess(-1);
   }
   return wsock_WSASendTo(socket, buffers, buffer_count, bytes_received, flags, to, len, overlapped, completion_handler);
