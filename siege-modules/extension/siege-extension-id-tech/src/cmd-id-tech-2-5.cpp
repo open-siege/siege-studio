@@ -35,6 +35,21 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
     return setting.name && setting.value && setting.value[0] != '\0' && std::wstring_view(setting.name) == command_line_caps.ip_connect_setting;
   });
 
+  auto deathmatch_iter = std::find_if(args->int_settings.begin(), args->int_settings.end(), [](auto& setting) {
+    return setting.name && setting.value && setting.name == L"deathmatch"sv;
+  });
+
+  auto map_iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) {
+    return setting.name && setting.value && setting.name == L"map"sv;
+  });
+
+  if (connect_iter != args->string_settings.end() && map_iter != args->string_settings.end() && deathmatch_iter == args->int_settings.end())
+  {
+    string_args.emplace_back(L"+set");
+    string_args.emplace_back(L"deathmatch");
+    string_args.emplace_back(L"1");
+  }
+
   if (connect_iter != args->string_settings.end())
   {
     string_args.emplace_back(L"+connect");
