@@ -29,7 +29,6 @@ std::set<int>& get_zero_tier_handles()
   return handles;
 }
 
-
 void load_system_wsock();
 std::ostream& get_log();
 HMODULE get_ztlib();
@@ -45,6 +44,9 @@ int get_zts_errno();
 bool& get_node_online_status();
 sockaddr_in from_zts(zts_sockaddr_in zt_addr);
 hostent from_zts(zts_hostent zt_host);
+
+SOCKET from_zts(int);
+int to_zts(SOCKET);
 
 extern "C" {
 HMODULE wsock_module = nullptr;
@@ -277,8 +279,7 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
 
       zt_setsockopt(socket, ZTS_SOL_SOCKET, ZTS_SO_RCVBUF, &value, size);
 
-
-      return (SOCKET)socket;
+      return from_zts(socket);
     }
 
     wsock_WSASetLastError(WSAESOCKTNOSUPPORT);
@@ -291,17 +292,17 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
   return result;
 }
 
-int __stdcall siege_recv(SOCKET s, char* buf, int len, int flags)
+int __stdcall siege_recv(SOCKET ws, char* buf, int len, int flags)
 {
   if (use_zero_tier())
   {
     static auto* zt_recv = (std::add_pointer_t<decltype(zts_bsd_recv)>)::GetProcAddress(get_ztlib(), "zts_bsd_recv");
 
-    auto zt_result = (int)zt_recv((int)s, buf, (std::size_t)len, to_zt_msg_flags(flags));
+    auto zt_result = (int)zt_recv(to_zts(ws), buf, (std::size_t)len, to_zt_msg_flags(flags));
 
     return zt_to_winsock_result(zt_result);
   }
-  return wsock_recv(s, buf, len, flags);
+  return wsock_recv(ws, buf, len, flags);
 }
 
 static_assert(SO_DEBUG == ZTS_SO_DEBUG);
@@ -319,9 +320,9 @@ static_assert(SO_ERROR == ZTS_SO_ERROR);
 static_assert(SO_LINGER == ZTS_SO_LINGER);
 static_assert(SO_ACCEPTCONN == ZTS_SO_ACCEPTCONN);
 static_assert(SOL_SOCKET != ZTS_SOL_SOCKET);
-int __stdcall siege_setsockopt(SOCKET s, int level, int optname, const char* optval, int optlen)
+int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* optval, int optlen)
 {
-  get_log() << "siege_setsockopt" << (int)s << " " << optname << '\n';
+  get_log() << "siege_setsockopt" << to_zts(ws) << " " << optname << '\n';
   if (use_zero_tier())
   {
     get_log() << "zts_bsd_setsockopt, level: " << level << " optname: " << optname << '\n';
@@ -350,12 +351,12 @@ int __stdcall siege_setsockopt(SOCKET s, int level, int optname, const char* opt
     }
 
     static auto* zt_setsockopt = (std::add_pointer_t<decltype(zts_bsd_setsockopt)>)::GetProcAddress(get_ztlib(), "zts_bsd_setsockopt");
-    auto zt_result = zt_setsockopt((int)s, level, optname, optval, optlen);
+    auto zt_result = zt_setsockopt(to_zts(ws), level, optname, optval, optlen);
 
     return zt_to_winsock_result(zt_result);
   }
 
-  auto result = wsock_setsockopt(s, level, optname, optval, optlen);
+  auto result = wsock_setsockopt(to_zts(ws), level, optname, optval, optlen);
 
   if (result != 0)
   {
@@ -365,9 +366,9 @@ int __stdcall siege_setsockopt(SOCKET s, int level, int optname, const char* opt
   return result;
 }
 
-int __stdcall siege_getsockopt(SOCKET s, int level, int optname, char* optval, int* optlen)
+int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, int* optlen)
 {
-  get_log() << "siege_getsockopt" << (int)s << " " << optname << '\n';
+  get_log() << "siege_getsockopt" << to_zts(ws) << " " << optname << '\n';
   if (use_zero_tier())
   {
     get_log() << "zts_bsd_setsockopt, level: " << level << " optname: " << optname << '\n';
@@ -398,17 +399,17 @@ int __stdcall siege_getsockopt(SOCKET s, int level, int optname, char* optval, i
     }
 
     static auto* zt_getsockopt = (std::add_pointer_t<decltype(zts_bsd_getsockopt)>)::GetProcAddress(get_ztlib(), "zts_bsd_getsockopt");
-    auto zt_result = zt_getsockopt((int)s, level, optname, optval, &size);
+    auto zt_result = zt_getsockopt(to_zts(ws), level, optname, optval, &size);
 
     if (optlen)
     {
-      *optlen = (int)size;
+      *optlen = size;
     }
 
     return zt_to_winsock_result(zt_result);
   }
 
-  auto result = wsock_getsockopt(s, level, optname, optval, optlen);
+  auto result = wsock_getsockopt(ws, level, optname, optval, optlen);
 
   if (result != 0)
   {
@@ -418,7 +419,7 @@ int __stdcall siege_getsockopt(SOCKET s, int level, int optname, char* optval, i
   return result;
 }
 
-int __stdcall siege_recvfrom(SOCKET s, char* buf, int len, int flags, sockaddr* from, int* fromLen)
+int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr* from, int* fromLen)
 {
   if (use_zero_tier())
   {
@@ -444,7 +445,7 @@ int __stdcall siege_recvfrom(SOCKET s, char* buf, int len, int flags, sockaddr* 
       zt_from_len_final = &zt_size;
     }
 
-    auto zt_result = (int)zt_recvfrom((int)s, buf, len, to_zt_msg_flags(flags), zt_from_final, zt_from_len_final);
+    auto zt_result = (int)zt_recvfrom(to_zts(ws), buf, len, to_zt_msg_flags(flags), zt_from_final, zt_from_len_final);
 
     if (zt_result == ZTS_ERR_SOCKET || zt_result == ZTS_ERR_SERVICE || zt_result == ZTS_ERR_ARG)
     {
@@ -469,7 +470,7 @@ int __stdcall siege_recvfrom(SOCKET s, char* buf, int len, int flags, sockaddr* 
   }
 
 
-  auto result = wsock_recvfrom(s, buf, len, flags, from, fromLen);
+  auto result = wsock_recvfrom(ws, buf, len, flags, from, fromLen);
 
   if (result < 0)
   {
@@ -479,7 +480,7 @@ int __stdcall siege_recvfrom(SOCKET s, char* buf, int len, int flags, sockaddr* 
   return result;
 }
 
-int __stdcall siege_getsockname(SOCKET s, sockaddr* name, int* length)
+int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
 {
   get_log() << "siege_getsockname\n";
   if (use_zero_tier())
@@ -495,7 +496,7 @@ int __stdcall siege_getsockname(SOCKET s, sockaddr* name, int* length)
 
       zts_socklen_t zt_size = sizeof(zt_addr);
 
-      auto zt_result = zt_getsockname((int)s, (zts_sockaddr*)&zt_addr, &zt_size);
+      auto zt_result = zt_getsockname(to_zts(ws), (zts_sockaddr*)&zt_addr, &zt_size);
 
       sockaddr_in from_in = from_zts(zt_addr);
       std::memcpy(name, &from_in, length && *length > 0 ? *length : sizeof(from_in));
@@ -511,13 +512,13 @@ int __stdcall siege_getsockname(SOCKET s, sockaddr* name, int* length)
       return zt_to_winsock_result(zt_result);
     }
 
-    auto zt_result = zt_getsockname((int)s, nullptr, nullptr);
+    auto zt_result = zt_getsockname(to_zts(ws), nullptr, nullptr);
     return zt_to_winsock_result(zt_result);
   }
-  return wsock_getsockname(s, name, length);
+  return wsock_getsockname(ws, name, length);
 }
 
-int __stdcall siege_getpeername(SOCKET s, sockaddr* name, int* length)
+int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
 {
   get_log() << "siege_getpeername\n";
   if (use_zero_tier())
@@ -533,7 +534,7 @@ int __stdcall siege_getpeername(SOCKET s, sockaddr* name, int* length)
 
       zts_socklen_t zt_size = sizeof(zt_addr);
 
-      auto zt_result = zt_getpeername((int)s, (zts_sockaddr*)&zt_addr, &zt_size);
+      auto zt_result = zt_getpeername(to_zts(ws), (zts_sockaddr*)&zt_addr, &zt_size);
 
       sockaddr_in from_in = from_zts(zt_addr);
       std::memcpy(name, &from_in, length && *length > 0 ? *length : sizeof(from_in));
@@ -549,10 +550,10 @@ int __stdcall siege_getpeername(SOCKET s, sockaddr* name, int* length)
       return zt_to_winsock_result(zt_result);
     }
 
-    auto zt_result = zt_getpeername((int)s, nullptr, nullptr);
+    auto zt_result = zt_getpeername(to_zts(ws), nullptr, nullptr);
     return zt_to_winsock_result(zt_result);
   }
-  return wsock_getpeername(s, name, length);
+  return wsock_getpeername(ws, name, length);
 }
 
 static_assert(FIONREAD == ZTS_FIONREAD);
@@ -562,7 +563,7 @@ static_assert(IOC_VOID == ZTS_IOC_VOID);
 static_assert(IOC_OUT == ZTS_IOC_OUT);
 static_assert(IOC_IN == ZTS_IOC_IN);
 static_assert(IOC_INOUT == ZTS_IOC_INOUT);
-int __stdcall siege_ioctlsocket(SOCKET s, long cmd, u_long* argp)
+int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
 {
   get_log() << "siege_ioctlsocket, cmd: " << cmd << " " << (std::size_t)wsock_ioctlsocket << '\n';
   if (use_zero_tier())
@@ -570,31 +571,31 @@ int __stdcall siege_ioctlsocket(SOCKET s, long cmd, u_long* argp)
     get_log() << "zts_bsd_ioctl\n";
     static auto* zt_ioctl = (std::add_pointer_t<decltype(zts_bsd_ioctl)>)::GetProcAddress(get_ztlib(), "zts_bsd_ioctl");
 
-    auto zt_result = zt_ioctl((int)s, cmd, argp);
+    auto zt_result = zt_ioctl(to_zts(ws), cmd, argp);
 
     return zt_to_winsock_result(zt_result);
   }
-  auto result = wsock_ioctlsocket(s, cmd, argp);
+  auto result = wsock_ioctlsocket(ws, cmd, argp);
 
   get_log() << "siege_ioctlsocket finished" << '\n';
 
   return result;
 }
 
-int __stdcall siege_listen(SOCKET s, int backlog)
+int __stdcall siege_listen(SOCKET ws, int backlog)
 {
   get_log() << "siege_listen\n";
   if (use_zero_tier())
   {
     static auto* zt_listen = (std::add_pointer_t<decltype(zts_bsd_listen)>)::GetProcAddress(get_ztlib(), "zts_bsd_listen");
 
-    auto zt_result = zt_listen((int)s, backlog);
+    auto zt_result = zt_listen(to_zts(ws), backlog);
     return zt_to_winsock_result(zt_result);
   }
-  return wsock_listen(s, backlog);
+  return wsock_listen(ws, backlog);
 }
 
-SOCKET __stdcall siege_accept(SOCKET s, sockaddr* name, int* namelen)
+SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
 {
   get_log() << "siege_accept\n";
   if (use_zero_tier())
@@ -608,7 +609,7 @@ SOCKET __stdcall siege_accept(SOCKET s, sockaddr* name, int* namelen)
 
       zts_socklen_t zt_size = sizeof(zt_addr);
 
-      auto zt_result = zt_accept((int)s, (zts_sockaddr*)&zt_addr, &zt_size);
+      auto zt_result = zt_accept(to_zts(ws), (zts_sockaddr*)&zt_addr, &zt_size);
 
       if (zt_result >= 0)
       {
@@ -620,28 +621,28 @@ SOCKET __stdcall siege_accept(SOCKET s, sockaddr* name, int* namelen)
       return zt_to_winsock_result(zt_result);
     }
 
-    auto zt_result = zt_accept((int)s, nullptr, nullptr);
+    auto zt_result = zt_accept(to_zts(ws), nullptr, nullptr);
 
     return zt_to_winsock_result(zt_result);
   }
-  return wsock_accept(s, name, namelen);
+  return wsock_accept(ws, name, namelen);
 }
 
-int __stdcall siege_connect(SOCKET s, const sockaddr* name, int namelen)
+int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 {
-  get_log() << "siege_connect " << (int)s << '\n';
+  get_log() << "siege_connect " << to_zts(ws) << '\n';
   if (name)
   {
     char* buffer = wsock_inet_ntoa(((sockaddr_in*)name)->sin_addr);
 
     if (buffer)
     {
-      get_log() << "siege_connect " << (int)s << " " << buffer << '\n';
+      get_log() << "siege_connect " << to_zts(ws) << " " << buffer << '\n';
     }
   }
   else
   {
-    get_log() << "siege_connect " << (int)s << '\n';
+    get_log() << "siege_connect " << to_zts(ws) << '\n';
   }
 
   if (use_zero_tier())
@@ -655,33 +656,33 @@ int __stdcall siege_connect(SOCKET s, const sockaddr* name, int namelen)
 
       zts_socklen_t zt_size = sizeof(zt_addr);
 
-      auto zt_result = zt_connect((int)s, (zts_sockaddr*)&zt_addr, zt_size);
+      auto zt_result = zt_connect(to_zts(ws), (zts_sockaddr*)&zt_addr, zt_size);
 
       return zt_to_winsock_result(zt_result);
     }
 
-    auto zt_result = zt_connect((int)s, nullptr, namelen);
+    auto zt_result = zt_connect(to_zts(ws), nullptr, namelen);
 
     return zt_to_winsock_result(zt_result);
   }
-  return wsock_connect(s, name, namelen);
+  return wsock_connect(ws, name, namelen);
 }
 
-int __stdcall siege_bind(SOCKET s, const sockaddr* addr, int namelen)
+int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
 {
-  get_log() << "siege_bind " << (int)s << '\n';
+  get_log() << "siege_bind " << to_zts(ws) << '\n';
   if (addr)
   {
     char* buffer = wsock_inet_ntoa(((sockaddr_in*)addr)->sin_addr);
 
     if (buffer)
     {
-      get_log() << "siege_bind " << (int)s << " " << buffer << '\n';
+      get_log() << "siege_bind " << to_zts(ws) << " " << buffer << '\n';
     }
   }
   else
   {
-    get_log() << "siege_bind " << (int)s << '\n';
+    get_log() << "siege_bind " << to_zts(ws) << '\n';
   }
 
   if (use_zero_tier())
@@ -694,7 +695,7 @@ int __stdcall siege_bind(SOCKET s, const sockaddr* addr, int namelen)
       zts_sockaddr_in zt_addr = to_zts(*(sockaddr_in*)addr);
       zts_socklen_t zt_size = sizeof(zt_addr);
 
-      auto zt_result = zt_bind((int)s, (zts_sockaddr*)&zt_addr, zt_size);
+      auto zt_result = zt_bind(to_zts(ws), (zts_sockaddr*)&zt_addr, zt_size);
 
       in_addr temp{};
       std::memcpy(&temp, &((sockaddr_in*)addr)->sin_addr, sizeof(int));
@@ -712,32 +713,32 @@ int __stdcall siege_bind(SOCKET s, const sockaddr* addr, int namelen)
       return zt_to_winsock_result(zt_result);
     }
 
-    auto zt_result = zt_bind((int)s, nullptr, namelen);
+    auto zt_result = zt_bind(to_zts(ws), nullptr, namelen);
 
     return zt_to_winsock_result(zt_result);
   }
-  auto result = wsock_bind(s, addr, namelen);
+  auto result = wsock_bind(ws, addr, namelen);
 
   get_log() << "Bind call has error " << wsock_WSAGetLastError() << "\n";
 
   return result;
 }
 
-int __stdcall siege_send(SOCKET s, const char* buf, int len, int flags)
+int __stdcall siege_send(SOCKET ws, const char* buf, int len, int flags)
 {
   if (use_zero_tier())
   {
     get_log() << "zts_bsd_send\n";
     static auto* zt_send = (std::add_pointer_t<decltype(zts_bsd_send)>)::GetProcAddress(get_ztlib(), "zts_bsd_send");
 
-    auto zt_result = zt_send((int)s, buf, (std::size_t)len, to_zt_msg_flags(flags));
+    auto zt_result = zt_send(to_zts(ws), buf, (std::size_t)len, to_zt_msg_flags(flags));
 
     return zt_to_winsock_result(zt_result);
   }
-  return wsock_send(s, buf, len, flags);
+  return wsock_send(ws, buf, len, flags);
 }
 
-int __stdcall siege_sendto(SOCKET s, const char* buf, int len, int flags, const sockaddr* to, int tolen)
+int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen)
 {
   if (use_zero_tier())
   {
@@ -759,8 +760,8 @@ int __stdcall siege_sendto(SOCKET s, const char* buf, int len, int flags, const 
         int socket_type = 0;
         zts_socklen_t size = sizeof(int);
 
-        zt_getsockopt((int)s, ZTS_SOL_SOCKET, ZTS_SO_BROADCAST, &socket_can_broadcast, &size);
-        zt_getsockopt((int)s, ZTS_SOL_SOCKET, ZTS_SO_TYPE, &socket_type, &size);
+        zt_getsockopt(to_zts(ws), ZTS_SOL_SOCKET, ZTS_SO_BROADCAST, &socket_can_broadcast, &size);
+        zt_getsockopt(to_zts(ws), ZTS_SOL_SOCKET, ZTS_SO_TYPE, &socket_type, &size);
 
         if (zt_net_get_broadcast(*get_zero_tier_network_id()) && socket_type == ZTS_SOCK_DGRAM)
         {
@@ -769,16 +770,16 @@ int __stdcall siege_sendto(SOCKET s, const char* buf, int len, int flags, const 
           {
             get_log() << "Socket cannot broadcast. Setting broadcast flag.\n";
             socket_can_broadcast = 1;
-            zt_setsockopt((int)s, ZTS_SOL_SOCKET, ZTS_SO_BROADCAST, &socket_can_broadcast, size);
+            zt_setsockopt(to_zts(ws), ZTS_SOL_SOCKET, ZTS_SO_BROADCAST, &socket_can_broadcast, size);
           }
 
-          auto zt_result = zt_sendto((int)s, buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&zt_addr, zt_size);
+          auto zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&zt_addr, zt_size);
 
           if (auto ip = get_zero_tier_fallback_broadcast_ip_v4(); ip && zt_result < 0)
           {
             get_log() << "Could not broadcast. Trying direct IP.\n";
             zt_addr.sin_addr.S_addr = ip->S_un.S_addr;
-            zt_result = zt_sendto((int)s, buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&zt_addr, zt_size);
+            zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&zt_addr, zt_size);
           }
 
           if (zt_result < 0)
@@ -791,30 +792,30 @@ int __stdcall siege_sendto(SOCKET s, const char* buf, int len, int flags, const 
         else if (auto ip = get_zero_tier_fallback_broadcast_ip_v4(); ip)
         {
           zt_addr.sin_addr.S_addr = ip->S_un.S_addr;
-          auto zt_result = zt_sendto((int)s, buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&zt_addr, zt_size);
+          auto zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&zt_addr, zt_size);
 
           return zt_to_winsock_result(zt_result);
         }
         else
         {
-          wsock_WSASetLastError(WSAEALREADY);
+          wsock_WSASetLastError(WSAEADDRNOTAVAIL);
           return SOCKET_ERROR;
         }
       }
 
 
       get_log() << "Doing a regular sendto\n";
-      auto zt_result = zt_sendto((int)s, buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&zt_addr, zt_size);
+      auto zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&zt_addr, zt_size);
 
       return zt_to_winsock_result(zt_result);
     }
 
     get_log() << "Somehow doing a bad send to\n";
-    auto zt_result = zt_sendto((int)s, buf, len, to_zt_msg_flags(flags), nullptr, 0);
+    auto zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), nullptr, 0);
 
     return zt_to_winsock_result(zt_result);
   }
-  return wsock_sendto(s, buf, len, flags, to, tolen);
+  return wsock_sendto(ws, buf, len, flags, to, tolen);
 }
 
 #ifdef SD_RECEIVE
@@ -822,7 +823,7 @@ static_assert(SD_RECEIVE == ZTS_SHUT_RD);
 static_assert(SD_SEND == ZTS_SHUT_WR);
 static_assert(SD_BOTH == ZTS_SHUT_RDWR);
 #endif
-int __stdcall siege_shutdown(SOCKET s, int how)
+int __stdcall siege_shutdown(SOCKET ws, int how)
 {
   get_log() << "siege_shutdown\n";
   if (use_zero_tier())
@@ -830,25 +831,25 @@ int __stdcall siege_shutdown(SOCKET s, int how)
     get_log() << "zts_bsd_shutdown\n";
     static auto* zt_shutdown = (std::add_pointer_t<decltype(zts_bsd_shutdown)>)::GetProcAddress(get_ztlib(), "zts_bsd_shutdown");
 
-    auto zt_result = zt_shutdown((int)s, how);
+    auto zt_result = zt_shutdown(to_zts(ws), how);
 
     return zt_to_winsock_result(zt_result);
   }
-  return wsock_shutdown(s, how);
+  return wsock_shutdown(ws, how);
 }
 
-int __stdcall siege_closesocket(SOCKET s)
+int __stdcall siege_closesocket(SOCKET ws)
 {
   get_log() << "siege_closesocket\n";
   if (use_zero_tier())
   {
     get_log() << "zts_bsd_close\n";
     static auto* zt_close = (std::add_pointer_t<decltype(zts_bsd_close)>)::GetProcAddress(get_ztlib(), "zts_bsd_close");
-    auto zt_result = zt_close((int)s);
+    auto zt_result = zt_close(to_zts(ws));
 
     return zt_to_winsock_result(zt_result);
   }
-  return wsock_closesocket(s);
+  return wsock_closesocket(ws);
 }
 
 int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout)
@@ -864,13 +865,14 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
       ZTS_FD_ZERO(&dest);
       for (auto i = 0; i < source.fd_count; ++i)
       {
-        if (get_zero_tier_handles().contains((int)source.fd_array[i]))
+        auto zts = to_zts(source.fd_array[i]);
+        if (get_zero_tier_handles().contains(zts))
         {
-          ZTS_FD_SET((int)source.fd_array[i], &dest);
+          ZTS_FD_SET(zts, &dest);
         }
         else
         {
-          get_log() << "Non Zero Tier handle detected " << (int)source.fd_array[i] << '\n';
+          get_log() << "Non Zero Tier handle detected " << source.fd_array[i] << '\n';
         }
       }
     };
@@ -923,7 +925,7 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
   return wsock_select(value, read, write, except, timeout);
 }
 
-int __stdcall siege___WSAFDIsSet(SOCKET s, fd_set* set)
+int __stdcall siege___WSAFDIsSet(SOCKET ws, fd_set* set)
 {
   if (use_zero_tier())
   {
@@ -933,17 +935,18 @@ int __stdcall siege___WSAFDIsSet(SOCKET s, fd_set* set)
       ZTS_FD_ZERO(&zt_set);
       for (auto i = 0; i < set->fd_count; ++i)
       {
-        if (get_zero_tier_handles().contains((int)set->fd_array[i]))
+        auto zts = to_zts(set->fd_array[i]);
+        if (get_zero_tier_handles().contains(zts))
         {
-          ZTS_FD_SET((int)set->fd_array[i], &zt_set);
+          ZTS_FD_SET(zts, &zt_set);
         }
       }
-      return ZTS_FD_ISSET(s, &zt_set);
+      return ZTS_FD_ISSET(to_zts(ws), &zt_set);
     }
     return 0;
   }
 
-  return wsock___WSAFDIsSet(s, set);
+  return wsock___WSAFDIsSet(ws, set);
 }
 
 hostent* __stdcall siege_gethostbyname(const char* name)
@@ -1753,6 +1756,15 @@ int zt_to_winsock_error(int error)
   return error;
 }
 
+SOCKET from_zts(int socket)
+{
+  return socket + 1000;
+}
+
+int to_zts(SOCKET socket)
+{
+  return (int)socket - 1000;
+}
 
 zts_sockaddr_in to_zts(sockaddr_in addr)
 {
