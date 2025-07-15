@@ -45,6 +45,8 @@ EXPORTS
 	shutdown=siege_shutdown
 	siege_socket @23
 	socket=siege_socket
+	siege_gethostbyaddr @51
+	gethostbyaddr=siege_gethostbyaddr
 	siege_gethostbyname @52
 	gethostbyname=siege_gethostbyname
 	siege_gethostname @57

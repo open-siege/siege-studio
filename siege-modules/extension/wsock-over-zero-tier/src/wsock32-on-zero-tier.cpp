@@ -949,6 +949,16 @@ int __stdcall siege___WSAFDIsSet(SOCKET ws, fd_set* set)
   return wsock___WSAFDIsSet(ws, set);
 }
 
+
+hostent* __stdcall siege_gethostbyaddr(const char* addr, int len, int type)
+{
+  load_system_wsock();
+
+  get_log() << "siege_gethostbyaddr\n";
+
+  return wsock_gethostbyaddr(addr, len, type);
+}
+
 hostent* __stdcall siege_gethostbyname(const char* name)
 {
   load_system_wsock();
@@ -1361,6 +1371,9 @@ void load_system_wsock()
   wsock___WSAFDIsSet = (decltype(wsock___WSAFDIsSet))::GetProcAddress(wsock_module, "__WSAFDIsSet");
   wsock_WSAAsyncGetHostByName = (decltype(wsock_WSAAsyncGetHostByName))::GetProcAddress(wsock_module, "WSAAsyncGetHostByName");
   wsock_WSACancelAsyncRequest = (decltype(wsock_WSACancelAsyncRequest))::GetProcAddress(wsock_module, "WSACancelAsyncRequest");
+  wsock_WSASetBlockingHook = (decltype(wsock_WSASetBlockingHook))::GetProcAddress(wsock_module, "WSASetBlockingHook");
+  wsock_WSAUnhookBlockingHook = (decltype(wsock_WSAUnhookBlockingHook))::GetProcAddress(wsock_module, "WSAUnhookBlockingHook");
+  wsock_WSACancelBlockingCall = (decltype(wsock_WSACancelBlockingCall))::GetProcAddress(wsock_module, "WSACancelBlockingCall");
   wsock_WSAAsyncSelect = (decltype(wsock_WSAAsyncSelect))::GetProcAddress(wsock_module, "WSAAsyncSelect");
 
 #ifdef USE_WINSOCK2
