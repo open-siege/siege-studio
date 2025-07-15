@@ -44,6 +44,10 @@ int get_zts_errno();
 bool& get_node_online_status();
 sockaddr_in from_zts(zts_sockaddr_in zt_addr);
 hostent from_zts(zts_hostent zt_host);
+std::string protocol_to_string(int protocol);
+std::string type_to_string(int type);
+std::string af_to_string(int af);
+std::string ioctl_cmd_to_string(long cmd);
 
 SOCKET from_zts(int);
 int to_zts(SOCKET);
@@ -234,7 +238,7 @@ static_assert(AF_INET == ZTS_AF_INET);
 SOCKET __stdcall siege_socket(int af, int type, int protocol)
 {
   load_system_wsock();
-  get_log() << "siege_socket af: " << af << ", type: " << type << ", protocol: " << protocol << ", thread: " << GetCurrentThreadId() << '\n';
+  get_log() << "siege_socket af: " << af_to_string(af) << ", type: " << type_to_string(type) << ", protocol: " << protocol_to_string(protocol) << ", thread: " << GetCurrentThreadId() << '\n';
 
   if (use_zero_tier())
   {
@@ -256,7 +260,7 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
 
       if (socket == ZTS_ERR_SOCKET || socket == ZTS_ERR_SERVICE || socket == ZTS_ERR_ARG)
       {
-        get_log() << "Could not create zero tier socket with error code: " << get_zts_errno() << '\0';
+        get_log() << "Could not create zero tier socket with error code: " << get_zts_errno() << '\n';
 
         if (socket == ZTS_ERR_ARG)
         {
@@ -565,7 +569,7 @@ static_assert(IOC_IN == ZTS_IOC_IN);
 static_assert(IOC_INOUT == ZTS_IOC_INOUT);
 int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
 {
-  get_log() << "siege_ioctlsocket, cmd: " << cmd << " " << (std::size_t)wsock_ioctlsocket << '\n';
+  get_log() << "siege_ioctlsocket, cmd: " << ioctl_cmd_to_string(cmd) << " " << (std::size_t)wsock_ioctlsocket << '\n';
   if (use_zero_tier())
   {
     get_log() << "zts_bsd_ioctl\n";
@@ -677,7 +681,7 @@ int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
 
     if (buffer)
     {
-      get_log() << "siege_bind " << to_zts(ws) << " " << buffer << '\n';
+      get_log() << "siege_bind " << to_zts(ws) << " " << buffer << ':' << wsock_ntohs((((sockaddr_in*)addr)->sin_port)) << '\n';
     }
   }
   else
@@ -693,6 +697,7 @@ int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
     if (addr)
     {
       zts_sockaddr_in zt_addr = to_zts(*(sockaddr_in*)addr);
+      zt_addr.sin_addr.S_addr = ZTS_IPADDR_ANY;
       zts_socklen_t zt_size = sizeof(zt_addr);
 
       auto zt_result = zt_bind(to_zts(ws), (zts_sockaddr*)&zt_addr, zt_size);
@@ -791,6 +796,7 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
         }
         else if (auto ip = get_zero_tier_fallback_broadcast_ip_v4(); ip)
         {
+          get_log() << "Doing fallback send instead of broadcast.\n";
           zt_addr.sin_addr.S_addr = ip->S_un.S_addr;
           auto zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&zt_addr, zt_size);
 
@@ -798,6 +804,7 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
         }
         else
         {
+          get_log() << "Did not broadcast at all.\n";
           wsock_WSASetLastError(WSAEADDRNOTAVAIL);
           return SOCKET_ERROR;
         }
@@ -1826,4 +1833,81 @@ bool& get_node_online_status()
 bool use_zero_tier()
 {
   return get_zero_tier_network_id() && get_ztlib();
+}
+
+std::string af_to_string(int af)
+{
+  switch (af)
+  {
+  case AF_UNSPEC:
+    return "AF_UNSPEC";
+  case AF_INET:
+    return "AF_INET";
+  case AF_IPX:
+    return "AF_IPX";
+  default:
+    return std::to_string(af);
+  }
+}
+
+std::string type_to_string(int type)
+{
+  switch (type)
+  {
+  case SOCK_STREAM:
+    return "SOCK_STREAM";
+  case SOCK_DGRAM:
+    return "SOCK_DGRAM";
+  case SOCK_RAW:
+    return "SOCK_RAW";
+  case SOCK_SEQPACKET:
+    return "SOCK_SEQPACKET";
+  default:
+    return std::to_string(type);
+  }
+}
+
+std::string protocol_to_string(int protocol)
+{
+  switch (protocol)
+  {
+  case IPPROTO_IP:
+    return "IPPROTO_IP";
+  case IPPROTO_TCP:
+    return "IPPROTO_TCP";
+  case IPPROTO_UDP:
+    return "IPPROTO_UDP";
+  case IPPROTO_ICMP:
+    return "IPPROTO_ICMP";
+  case IPPROTO_RAW:
+    return "IPPROTO_RAW";
+  default: {
+    if (protocol >= 1000 && protocol <= 1255)
+    {
+      return "NSPROTO_IPX";
+    }
+
+    if (protocol == 1256)
+    {
+      return "NSPROTO_SPX";
+    }
+
+    return std::to_string(protocol);
+  }
+  }
+}
+
+std::string ioctl_cmd_to_string(long cmd)
+{
+  switch (cmd)
+  {
+  case FIONREAD:
+    return "FIONREAD";
+  case FIONBIO:
+    return "FIONBIO";
+  case SIOCATMARK:
+    return "SIOCATMARK";
+  default:
+    return std::to_string(cmd);
+  }
 }
