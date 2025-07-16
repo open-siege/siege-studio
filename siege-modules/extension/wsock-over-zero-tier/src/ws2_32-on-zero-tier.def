@@ -1,6 +1,7 @@
 EXPORTS
 	accept=siege_accept
 	bind=siege_bind
+	siege_closesocket @3
 	closesocket=siege_closesocket
 	connect=siege_connect
 	getsockname=siege_getsockname
