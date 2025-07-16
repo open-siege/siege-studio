@@ -620,6 +620,7 @@ SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
         zt_size = *namelen <= zt_size ? *namelen : zt_size;
         std::memcpy(name, &zt_addr, zt_size);
         *namelen = zt_size;
+        return from_zts(zt_result);
       }
 
       return zt_to_winsock_result(zt_result);
@@ -697,7 +698,6 @@ int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
     if (addr)
     {
       zts_sockaddr_in zt_addr = to_zts(*(sockaddr_in*)addr);
-      zt_addr.sin_addr.S_addr = ZTS_IPADDR_ANY;
       zts_socklen_t zt_size = sizeof(zt_addr);
 
       auto zt_result = zt_bind(to_zts(ws), (zts_sockaddr*)&zt_addr, zt_size);
@@ -879,7 +879,7 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
         }
         else
         {
-          get_log() << "Non Zero Tier handle detected " << source.fd_array[i] << '\n';
+          get_log() << "Non Zero Tier handle detected " << zts << '\n';
         }
       }
     };
