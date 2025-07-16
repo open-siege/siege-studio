@@ -506,13 +506,6 @@ int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
       std::memcpy(name, &from_in, length && *length > 0 ? *length : sizeof(from_in));
       *length = sizeof(from_in);
 
-      char* buffer = wsock_inet_ntoa(from_in.sin_addr);
-
-      if (buffer)
-      {
-        get_log() << "zts_bsd_getsockname address is " << buffer << '\n';
-      }
-
       return zt_to_winsock_result(zt_result);
     }
 
@@ -544,13 +537,6 @@ int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
       std::memcpy(name, &from_in, length && *length > 0 ? *length : sizeof(from_in));
       *length = sizeof(from_in);
 
-      char* buffer = wsock_inet_ntoa(from_in.sin_addr);
-
-      if (buffer)
-      {
-        get_log() << "zts_bsd_getpeername address is " << buffer << '\n';
-      }
-
       return zt_to_winsock_result(zt_result);
     }
 
@@ -569,7 +555,7 @@ static_assert(IOC_IN == ZTS_IOC_IN);
 static_assert(IOC_INOUT == ZTS_IOC_INOUT);
 int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
 {
-  get_log() << "siege_ioctlsocket, cmd: " << ioctl_cmd_to_string(cmd) << " " << (std::size_t)wsock_ioctlsocket << '\n';
+  get_log() << "siege_ioctlsocket, cmd: " << ioctl_cmd_to_string(cmd) << '\n';
   if (use_zero_tier())
   {
     get_log() << "zts_bsd_ioctl\n";
@@ -636,19 +622,6 @@ SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
 int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 {
   get_log() << "siege_connect " << to_zts(ws) << '\n';
-  if (name)
-  {
-    char* buffer = wsock_inet_ntoa(((sockaddr_in*)name)->sin_addr);
-
-    if (buffer)
-    {
-      get_log() << "siege_connect " << to_zts(ws) << " " << buffer << '\n';
-    }
-  }
-  else
-  {
-    get_log() << "siege_connect " << to_zts(ws) << '\n';
-  }
 
   if (use_zero_tier())
   {
@@ -676,20 +649,7 @@ int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
 {
   get_log() << "siege_bind " << to_zts(ws) << '\n';
-  if (addr)
-  {
-    char* buffer = wsock_inet_ntoa(((sockaddr_in*)addr)->sin_addr);
-
-    if (buffer)
-    {
-      get_log() << "siege_bind " << to_zts(ws) << " " << buffer << ':' << wsock_ntohs((((sockaddr_in*)addr)->sin_port)) << '\n';
-    }
-  }
-  else
-  {
-    get_log() << "siege_bind " << to_zts(ws) << '\n';
-  }
-
+  
   if (use_zero_tier())
   {
     get_log() << "zts_bsd_bind\n";
@@ -701,19 +661,6 @@ int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
       zts_socklen_t zt_size = sizeof(zt_addr);
 
       auto zt_result = zt_bind(to_zts(ws), (zts_sockaddr*)&zt_addr, zt_size);
-
-      in_addr temp{};
-      std::memcpy(&temp, &((sockaddr_in*)addr)->sin_addr, sizeof(int));
-      char* buffer = wsock_inet_ntoa(temp);
-
-      if (buffer)
-      {
-        get_log() << "zts_bsd_bind to " << buffer << " with result " << zt_result << '\n';
-      }
-      else
-      {
-        get_log() << "zts_bsd_bind result " << zt_result << '\n';
-      }
 
       return zt_to_winsock_result(zt_result);
     }
