@@ -14,6 +14,7 @@ EXPORTS
 	ntohs=siege_ntohs
 	recv=siege_recv
 	recvfrom=siege_recvfrom
+	listen=siege_listen
 	select=siege_select
 	send=siege_send
 	sendto=siege_sendto
@@ -41,4 +42,7 @@ EXPORTS
 	WSACloseEvent=siege_WSACloseEvent
 	WSAWaitForMultipleEvents=siege_WSAWaitForMultipleEvents
 	WSASendTo=siege_WSASendTo
+	WSASend=siege_WSASend
+	WSAEventSelect=siege_WSAEventSelect
+	WSAEnumNetworkEvents=siege_WSAEnumNetworkEvents
 	WSARecvFrom=siege_WSARecvFrom

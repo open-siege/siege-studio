@@ -102,7 +102,10 @@ decltype(::WSAResetEvent)* wsock_WSAResetEvent = nullptr;
 decltype(::WSACloseEvent)* wsock_WSACloseEvent = nullptr;
 decltype(::WSAWaitForMultipleEvents)* wsock_WSAWaitForMultipleEvents = nullptr;
 decltype(::WSASendTo)* wsock_WSASendTo = nullptr;
+decltype(::WSASend)* wsock_WSASend = nullptr;
 decltype(::WSARecvFrom)* wsock_WSARecvFrom = nullptr;
+decltype(::WSAEventSelect)* wsock_WSAEventSelect = nullptr;
+decltype(::WSAEnumNetworkEvents)* wsock_WSAEnumNetworkEvents = nullptr;
 #endif
 
 
@@ -700,7 +703,7 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
         if (zt_net_get_broadcast(*get_zero_tier_network_id()) && socket_type == ZTS_SOCK_DGRAM && socket_can_broadcast)
         {
           get_log() << "Network can broadcast and socket is datagram and can broadcast\n";
- 
+
           auto zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
 
           if (auto ip = get_zero_tier_fallback_broadcast_ip_v4(); ip && zt_result < 0)
@@ -1077,6 +1080,17 @@ auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_co
   return wsock_WSARecvFrom(socket, buffers, buffer_count, bytes_received, flags, from, from_len, overlapped, completion_handler);
 }
 
+auto __stdcall siege_WSASend(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_received, DWORD flags, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler)
+{
+  if (use_zero_tier())
+  {
+    ::MessageBoxW(nullptr, L"The game tried to use WSASend, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
+    ::ExitProcess(-1);
+  }
+
+  return wsock_WSASend(socket, buffers, buffer_count, bytes_received, flags, overlapped, completion_handler);
+}
+
 auto __stdcall siege_WSASendTo(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_received, DWORD flags, const sockaddr* to, int len, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler)
 {
   if (use_zero_tier())
@@ -1113,6 +1127,27 @@ auto __stdcall siege_WSASendTo(SOCKET socket, WSABUF* buffers, DWORD buffer_coun
     ::ExitProcess(-1);
   }
   return wsock_WSASendTo(socket, buffers, buffer_count, bytes_received, flags, to, len, overlapped, completion_handler);
+}
+
+auto __stdcall siege_WSAEventSelect(SOCKET s, WSAEVENT hEventObject, long lNetworkEvents)
+{
+  if (use_zero_tier())
+  {
+    ::MessageBoxW(nullptr, L"The game tried to use WSAEventSelect, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
+    ::ExitProcess(-1);
+  }
+
+  return wsock_WSAEventSelect(s, hEventObject, lNetworkEvents);
+}
+
+auto __stdcall siege_WSAEnumNetworkEvents(SOCKET s, WSAEVENT hEventObject, LPWSANETWORKEVENTS lpNetworkEvents)
+{
+  if (use_zero_tier())
+  {
+    ::MessageBoxW(nullptr, L"The game tried to use WSAEnumNetworkEvents, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
+    ::ExitProcess(-1);
+  }
+  return wsock_WSAEnumNetworkEvents(s, hEventObject, lpNetworkEvents);
 }
 
 auto __stdcall siege_WSACreateEvent()
@@ -1314,7 +1349,10 @@ void load_system_wsock()
   wsock_WSACloseEvent = (decltype(wsock_WSACloseEvent))::GetProcAddress(wsock_module, "WSACloseEvent");
   wsock_WSAWaitForMultipleEvents = (decltype(wsock_WSAWaitForMultipleEvents))::GetProcAddress(wsock_module, "WSAWaitForMultipleEvents");
   wsock_WSASendTo = (decltype(wsock_WSASendTo))::GetProcAddress(wsock_module, "WSASendTo");
+  wsock_WSASend = (decltype(wsock_WSASend))::GetProcAddress(wsock_module, "WSASend");
   wsock_WSARecvFrom = (decltype(wsock_WSARecvFrom))::GetProcAddress(wsock_module, "WSARecvFrom");
+  wsock_WSAEventSelect = (decltype(wsock_WSAEventSelect))::GetProcAddress(wsock_module, "WSAEventSelect");
+  wsock_WSAEnumNetworkEvents = (decltype(wsock_WSAEnumNetworkEvents))::GetProcAddress(wsock_module, "WSAEnumNetworkEvents");
 #endif
 }
 
@@ -1762,12 +1800,11 @@ std::pair<zts_sockaddr_in, zts_socklen_t> copy_address(const sockaddr* name, int
     return {};
   }
 
-  zts_sockaddr_in result{};
+  sockaddr_in temp{};
+  zts_socklen_t size = length > sizeof(temp) ? sizeof(temp) : length;
 
-  zts_socklen_t size = length > sizeof(result) ? sizeof(result) : length;
-
-  std::memcpy(&result, name, size);
-  return std::make_pair(result, size);
+  std::memcpy(&temp, name, size);
+  return std::make_pair(to_zts(temp), sizeof(zts_sockaddr_in));
 }
 
 
