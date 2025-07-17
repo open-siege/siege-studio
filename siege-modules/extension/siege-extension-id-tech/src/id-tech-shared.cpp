@@ -480,7 +480,7 @@ void load_keyboard_bindings(siege::configuration::text_game_config& config, sieg
   }
 }
 
-void upsert_mouse_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::mouse_binding& binding)
+void upsert_mouse_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::mouse_binding& binding, mouse_context default_context)
 {
   for (auto action_str : actions)
   {
@@ -511,10 +511,11 @@ void upsert_mouse_defaults(const std::span<siege::platform::game_action> game_ac
     std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
     first_available->input_type = siege::platform::mouse_binding::action_binding::button;
     first_available->virtual_key = action_str.first;
+    first_available->context = default_context;
   }
 }
 
-void upsert_keyboard_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::keyboard_binding& binding, bool ignore_case)
+void upsert_keyboard_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::keyboard_binding& binding, bool ignore_case, keyboard_context default_context)
 {
   for (auto action_str : actions)
   {
@@ -552,6 +553,7 @@ void upsert_keyboard_defaults(const std::span<siege::platform::game_action> game
     std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
     first_available->input_type = siege::platform::keyboard_binding::action_binding::button;
     first_available->virtual_key = action_str.first;
+    first_available->context = default_context;
   }
 }
 
