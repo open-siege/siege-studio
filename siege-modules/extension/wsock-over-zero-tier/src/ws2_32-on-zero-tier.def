@@ -1,34 +1,57 @@
 EXPORTS
 	accept=siege_accept
+	siege_bind @2
 	bind=siege_bind
 	siege_closesocket @3
 	closesocket=siege_closesocket
+	siege_connect @4
 	connect=siege_connect
+	siege_getsockname @6
 	getsockname=siege_getsockname
+	siege_getpeername @5
 	getpeername=siege_getpeername
+	siege_htonl @8
 	htonl=siege_htonl
+	siege_htons @9
 	htons=siege_htons
+	siege_inet_addr @10
 	inet_addr=siege_inet_addr
+	siege_inet_ntoa @11
 	inet_ntoa=siege_inet_ntoa
 	ioctlsocket=siege_ioctlsocket
+	siege_ntohl @14
 	ntohl=siege_ntohl
+	siege_ntohs @15
 	ntohs=siege_ntohs
+	siege_recv @16
 	recv=siege_recv
+	siege_recvfrom @17
 	recvfrom=siege_recvfrom
 	listen=siege_listen
+	siege_select @18
 	select=siege_select
 	send=siege_send
+	siege_sendto @20
 	sendto=siege_sendto
+	siege_setsockopt @21
 	setsockopt=siege_setsockopt
+	siege_getsockopt @7
 	getsockopt=siege_getsockopt
 	shutdown=siege_shutdown
+	siege_socket @23
 	socket=siege_socket
+	siege_gethostbyname @52
 	gethostbyname=siege_gethostbyname
+	siege_gethostname @57
 	gethostname=siege_gethostname
+	siege_WSAGetLastError @111
 	WSAGetLastError=siege_WSAGetLastError
 	WSASetLastError=siege_WSASetLastError
+	siege_WSAStartup @115
 	WSAStartup=siege_WSAStartup
+	siege_WSACleanup @116
 	WSACleanup=siege_WSACleanup
+	siege___WSAFDIsSet @151
 	__WSAFDIsSet=siege___WSAFDIsSet
 	WSASetBlockingHook=siege_WSASetBlockingHook
 	WSAUnhookBlockingHook=siege_WSAUnhookBlockingHook
