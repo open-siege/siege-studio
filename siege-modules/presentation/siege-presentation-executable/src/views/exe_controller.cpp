@@ -823,11 +823,8 @@ namespace siege::views
     {
       static std::vector<std::string> names{
         "wsock32",
-        "ws2_32",
-        "dplayx",
         "sdl2_net",
         "sdl_net",
-        "dplay"
       };
 
       win32::file file(loaded_path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
@@ -1004,11 +1001,9 @@ namespace siege::views
         fs::create_directories(ext_path, last_errorc);
 
         auto wsock_path = *get_zero_tier_extension_folder_path() / "wsock32-on-zero-tier.dll";
-        auto ws32_path = *get_zero_tier_extension_folder_path() / "ws2_32-on-zero-tier.dll";
         auto zt_path = *get_zero_tier_extension_folder_path() / "zt-shared.dll";
 
         fs::copy_file(wsock_path, ext_path / "wsock32.dll", fs::copy_options::overwrite_existing, last_errorc);
-        fs::copy_file(ws32_path, ext_path / "ws2_32.dll", fs::copy_options::overwrite_existing, last_errorc);
         fs::copy_file(zt_path, ext_path / "zt-shared.dll", fs::copy_options::overwrite_existing, last_errorc);
 
         ::SetDllDirectoryW(ext_path.c_str());
