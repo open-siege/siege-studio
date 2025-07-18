@@ -24,8 +24,8 @@ extern std::array<const fs_char*, 2> associated_extensions = {
 };
 
 extern std::array<path_rule, 32> directory_mappings = { {
-  { FSL"install/data1.cab/gamex86.dll", FSL"." },
-  { FSL"install/data1.cab/cgamex86.dll", FSL"." },
+  { FSL"install/data1.cab/gamex86.dll", FSL"fakk" },
+  { FSL"install/data1.cab/cgamex86.dll", FSL"fakk" },
   { FSL"install/data1.cab/Readme.rtf", FSL".", path_rule::optional },
   { FSL"install/data1.cab/Readme.txt", FSL".", path_rule::optional },
   { FSL"install/data1.cab/license.txt", FSL".", path_rule::optional },
