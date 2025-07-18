@@ -75,8 +75,7 @@ constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 1>, 1>
   { "Software\\Ritual\\FAKK2"sv, std::size_t(0x4f011c) },
 } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 4> function_name_ranges{ {
-  { "ctrlbindlist"sv, "unbind"sv },
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 4> function_name_ranges{ { { "ctrlbindlist"sv, "unbind"sv },
   { "cl_dumpallclasses"sv, "cl_eventlist"sv },
   { "-cameralook"sv, "+moveup"sv },
   { "ui_checkrestart"sv, "pushmenu"sv } } };
@@ -122,6 +121,9 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   }
 
   config.save(custom_bindings);
+
+  bind_axis_to_send_input(*args, "+left", "+left");
+  bind_axis_to_send_input(*args, "+right", "+right");
 
   auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
 
@@ -329,10 +331,11 @@ UINT WINAPI WrappedGetDriveTypeA(LPCSTR lpRootPathName)
   return TrueGetDriveTypeA(lpRootPathName);
 }
 
-static std::array<std::pair<void**, void*>, 3> detour_functions{ { { &(void*&)TrueRegOpenKeyA, WrappedRegOpenKeyA },
+static std::array<std::pair<void**, void*>, 3> detour_functions{ {
+  { &(void*&)TrueRegOpenKeyA, WrappedRegOpenKeyA },
   { &(void*&)TrueRegQueryValueExA, WrappedRegQueryValueExA },
   { &(void*&)TrueGetDriveTypeA, WrappedGetDriveTypeA },
- } };
+} };
 
 BOOL WINAPI DllMain(
   HINSTANCE hinstDLL,

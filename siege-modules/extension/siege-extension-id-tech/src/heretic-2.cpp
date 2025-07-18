@@ -104,6 +104,9 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
     // engine bug - mouse needs to be enabled for the right analog stick to work
     config.emplace(siege::configuration::key_type({ "set", "in_mouse" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "set", "joy_advanced" }), siege::configuration::key_type("1"));
+    config.emplace(siege::configuration::key_type({ "set", "joy_sidesensitivity" }), siege::configuration::key_type("1"));
+    config.emplace(siege::configuration::key_type({ "set", "joy_pitchsensitivity" }), siege::configuration::key_type("1"));
+    config.emplace(siege::configuration::key_type({ "joy_advancedupdate" }), siege::configuration::key_type{});   
   }
 
   // TODO fix binding system for this game. It doesn't like the configs for some reason.

@@ -131,6 +131,8 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
     // engine bug - mouse needs to be enabled for the right analog stick to work
     config.emplace(siege::configuration::key_type({ "joystick" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "joyadvanced" }), siege::configuration::key_type("1"));
+    config.emplace(siege::configuration::key_type({ "joysidesensitivity" }), siege::configuration::key_type("1"));
+    config.emplace(siege::configuration::key_type({ "joypitchsensitivity" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "joyadvancedupdate" }), siege::configuration::key_type(""));
   }
 
