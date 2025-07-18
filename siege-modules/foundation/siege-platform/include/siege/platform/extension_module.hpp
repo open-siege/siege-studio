@@ -94,6 +94,7 @@ namespace siege::platform
     std::array<fs_char, 64> last_player_name;
     std::array<fs_char, 64> last_ip_address;
     std::array<fs_char, 64> last_zero_tier_network_id;
+    std::array<fs_char, 64> last_hosting_preference;
 
     // has to be 384 for zero tier to work
     std::array<char, 384> last_zero_tier_node_id_and_private_key;

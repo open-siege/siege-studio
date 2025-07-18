@@ -724,6 +724,7 @@ namespace siege::views
 
     auto access = KEY_QUERY_VALUE | KEY_READ | KEY_WRITE;
 
+    // TODO resolve the app name dynamically
     if (::RegOpenCurrentUser(access, &user_key) == ERROR_SUCCESS && ::RegCreateKeyExW(user_key, L"Software\\The Siege Hub\\Siege Studio", 0, nullptr, 0, access, nullptr, &main_key, nullptr) == ERROR_SUCCESS)
     {
       std::vector<BYTE> raw_bytes;
@@ -740,6 +741,10 @@ namespace siege::views
 
       std::string_view key_str = node_id_and_private_key.data();
       result = result && ::RegSetValueExA(main_key, "LastZeroTierNodeIdAndPrivateKey", 0, REG_SZ, (BYTE*)key_str.data(), key_str.size()) == ERROR_SUCCESS;
+
+      raw_bytes.resize(settings.last_hosting_preference.size() * char_size);
+      std::memcpy(raw_bytes.data(), settings.last_hosting_preference.data(), raw_bytes.size());
+      result = result && ::RegSetValueExW(main_key, L"LastHostingPreference", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
 
       ::RegCloseKey(main_key);
       ::RegCloseKey(user_key);
@@ -775,6 +780,9 @@ namespace siege::views
 
       size = game_settings.last_zero_tier_node_id_and_private_key.size();
       ::RegGetValueA(main_key, nullptr, "LastZeroTierNodeIdAndPrivateKey", RRF_RT_REG_SZ, &type, game_settings.last_zero_tier_node_id_and_private_key.data(), &size);
+
+      size = game_settings.last_hosting_preference.size() * char_size;
+      ::RegGetValueW(main_key, nullptr, L"LastHostingPreference", RRF_RT_REG_SZ, &type, game_settings.last_hosting_preference.data(), &size);
 
       ::RegCloseKey(main_key);
     }
@@ -1090,8 +1098,7 @@ namespace siege::views
 
       auto* input_backends = get_extension().GetProcAddress<std::add_pointer_t<wchar_t*>>("controller_input_backends");
 
-      if (input_backends && input_backends[0] && 
-          std::wstring_view(input_backends[0]) == get_extension().GetModuleFileName<wchar_t>())
+      if (input_backends && input_backends[0] && std::wstring_view(input_backends[0]) == get_extension().GetModuleFileName<wchar_t>())
       {
         dll_paths.emplace_back(extension_path.c_str());
       }

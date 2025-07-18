@@ -16,6 +16,7 @@ namespace siege::views
   constexpr auto hosting_pref_name = L"MULTIPLAYER_HOSTING_PREFERENCE";
   constexpr auto zt_fallback_ip = L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4";
   constexpr static auto pref_options = std::array<std::wstring_view, 4>{ { L"Use Game UI", L"Client/Connect to Server", L"Listen/Host & Connect", L"Dedicated Server" } };
+  constexpr static auto pref_options_keys = std::array<std::wstring_view, 4>{ { L"nothing", L"connect", L"listen", L"dedicated" } };
 
   auto convert_to_string = [](auto& item) -> std::wstring {
     if constexpr (std::is_same_v<std::decay_t<decltype(item)>, bool>)
@@ -133,10 +134,19 @@ namespace siege::views
 
     if (has_networking)
     {
+      auto index = 0;
+
+      auto key = std::find(pref_options_keys.begin(), pref_options_keys.end(), std::wstring_view(settings.last_hosting_preference.data()));
+
+      if (key != pref_options_keys.end())
+      {
+        index = std::distance(pref_options_keys.begin(), key);
+      }
+
       launch_settings.emplace_back(game_setting{
         .setting_name = hosting_pref_name,
         .type = game_command_line_caps::env_setting,
-        .value = std::wstring{ pref_options[1] },
+        .value = std::wstring{ pref_options[index] },
         .display_name = L"Hosting",
         .group_id = 1,
         .get_predefined_string = [real_options = std::move(real_options), results = std::vector<siege::platform::predefined_string>{}](auto name) mutable -> std::span<siege::platform::predefined_string> {
@@ -164,7 +174,7 @@ namespace siege::views
       launch_settings.emplace_back(game_setting{
         .setting_name = L"ZERO_TIER_ENABLED",
         .type = game_command_line_caps::env_setting,
-        .value = !settings.last_zero_tier_network_id.empty() ? 1 : 0,
+        .value = std::all_of(settings.last_zero_tier_network_id.begin(), settings.last_zero_tier_network_id.end(), [](auto value) { return value != '\0'; }) ? 0 : 1,
         .display_name = L"Enable Zero Tier",
         .group_id = 1,
         .get_predefined_int = [results = std::vector<siege::platform::predefined_int>{}](auto name) mutable -> std::span<siege::platform::predefined_int> {
@@ -844,15 +854,22 @@ namespace siege::views
       {
         copy_to_array(setting_iter->value, settings.last_zero_tier_network_id);
       }
-      controller.set_game_settings(settings);
-
-
+      
       if (auto setting_iter = std::find_if(final_launch_settings.begin(), final_launch_settings.end(), [&](game_setting& setting) {
             return setting.setting_name == hosting_pref_name;
           });
         setting_iter != final_launch_settings.end())
       {
         auto value = std::visit(convert_to_string, setting_iter->value);
+
+        auto key = std::find(pref_options.begin(), pref_options.end(), value);
+
+        if (key != pref_options.end())
+        {
+          auto index = std::distance(pref_options.begin(), key);
+          decltype(setting_iter->value) temp = std::wstring(pref_options_keys[index]);
+          copy_to_array(temp, settings.last_hosting_preference);
+        }
 
         if (caps.ip_connect_setting)
         {
@@ -913,6 +930,8 @@ namespace siege::views
           }
         }
       }
+
+      controller.set_game_settings(settings);
 
       auto string_index = 0;
       auto env_index = 0;
