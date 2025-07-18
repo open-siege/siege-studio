@@ -1,3 +1,22 @@
+# Siege Studio + Siege Launcher 25.29 Development Release
+* Siege Launcher, the commercial version of Siege Studio, is officially released on itch.io: https://thesiegehub.itch.io/siege-launcher
+* Fixed issue with the preferences view not showing correctly.
+* Fixed issue with games not detecting after a second launch.
+* The working directory now changes when switching tabs or when opening files.
+    * Before the working directory would only change when selecting a game from the intial view or when clicking on "Open Folder as Workspace".
+    * Now, each tab has a working directory associated with it and the "Open Folder as Workspace" command only changes the working directory of the initial tab.
+    * When opening an executable it always gets a new working directory.
+    * When opening any other file, it only gets a new working directory if it isn't inside of the folder hierarchy.
+        * If it does get a new working directory, it will be relative to the nearest executable.
+* Fixed various issues and crashes with wsock32-over-zero-tier.
+* Fixed various controller configuration issues for supported id Tech games.
+* Added notes for various Extension modules featured in Siege Launcher.
+    * There are several, but the most notable ones are for:
+        * [Quake](/siege-modules/extension/siege-extension-id-tech/src/quake.md) 
+        * [Quake 2](/siege-modules/extension/siege-extension-id-tech/src/quake-2.md) 
+        * [Quake 3](/siege-modules/extension/siege-extension-id-tech/src/quake-3.md) 
+        * See [Games Supported by Siege Launcher](/docs/launcher-game-support.md) for a full list.
+
 # Siege Studio 25.28 Development Release
 * 3Space Studio renamed to Siege Studio.
 * Officially released on itch.io: https://thesiegehub.itch.io/siege-studio
