@@ -825,6 +825,11 @@ namespace siege::views
       }
 
       if (auto setting_iter = std::find_if(final_launch_settings.begin(), final_launch_settings.end(), [&](game_setting& setting) {
+            if (ip_setting.empty())
+            {
+              return setting.setting_name == zt_fallback_ip;
+            }
+
             return !ip_setting.empty() && setting.setting_name == ip_setting;
           });
         setting_iter != final_launch_settings.end())
