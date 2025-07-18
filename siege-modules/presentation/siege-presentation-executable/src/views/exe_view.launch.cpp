@@ -15,7 +15,7 @@ namespace siege::views
 {
   constexpr auto hosting_pref_name = L"MULTIPLAYER_HOSTING_PREFERENCE";
   constexpr auto zt_fallback_ip = L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4";
-  constexpr static auto pref_options = std::array<std::wstring_view, 4>{ { L"Offline/Singleplayer", L"Client/Connect to Server", L"Listen/Host & Connect", L"Dedicated Server" } };
+  constexpr static auto pref_options = std::array<std::wstring_view, 4>{ { L"Use Game UI", L"Client/Connect to Server", L"Listen/Host & Connect", L"Dedicated Server" } };
 
   auto convert_to_string = [](auto& item) -> std::wstring {
     if constexpr (std::is_same_v<std::decay_t<decltype(item)>, bool>)
