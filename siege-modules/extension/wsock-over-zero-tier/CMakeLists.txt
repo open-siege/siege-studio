@@ -12,4 +12,15 @@ if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
     target_include_directories(ws2_32-on-zero-tier PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/libzt/include)
     set_target_properties(ws2_32-on-zero-tier PROPERTIES CXX_STANDARD 23)
     target_link_libraries(ws2_32-on-zero-tier PRIVATE siege-win-core)
+
+    add_library(ws2-rpc-client SHARED src/ws2-rpc-client.cpp src/ws2_32-on-zero-tier.def)
+    target_include_directories(ws2-rpc-client PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    set_target_properties(ws2-rpc-client PROPERTIES CXX_STANDARD 23)
+    target_link_libraries(ws2-rpc-client PRIVATE siege-win-core)
+
+    add_executable(ws2-rpc-server WIN32 src/ws2-rpc-server.cpp)
+    target_include_directories(ws2-rpc-server PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    set_target_properties(ws2-rpc-server PROPERTIES CXX_STANDARD 23)
+    target_link_libraries(ws2-rpc-server PRIVATE siege-win-core)
+
 endif()
