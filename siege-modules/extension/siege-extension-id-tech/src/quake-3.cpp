@@ -147,8 +147,8 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
 
   config.save(custom_bindings);
 
-  bind_axis_to_send_input(*args, "+left", "+left");
-  bind_axis_to_send_input(*args, "+right", "+right");
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, VK_LEFT);
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, VK_RIGHT);
 
   auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
 
@@ -172,7 +172,7 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
   {
     return E_POINTER;
   }
-  auto config = load_config_from_pak(L"baseq3\\default.cfg", L"baseq3/pak0.pak", L"baseq3/pak0.pak");
+  auto config = load_config_from_pk3(L"baseq3\\default.cfg", L"baseq3/pak0.pk3", L"baseq3/pak0.pk3");
 
   if (config)
   {
@@ -195,19 +195,17 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
     return E_POINTER;
   }
 
-  auto config = load_config_from_pak(L"baseq3\\default.cfg", L"baseq3/pak0.pak", L"baseq3/pak0.pak");
+  auto config = load_config_from_pk3(L"baseq3\\default.cfg", L"baseq3/pak0.pk3", L"baseq3/pak0.pk3");
 
   if (config)
   {
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 6> actions{
+  std::array<std::pair<WORD, std::string_view>, 4> actions{
     {
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
-      std::make_pair<WORD, std::string_view>(VK_LEFT, "+moveleft"),
-      std::make_pair<WORD, std::string_view>(VK_RIGHT, "+moveright"),
       std::make_pair<WORD, std::string_view>(VK_OEM_COMMA, "+left"),
       std::make_pair<WORD, std::string_view>(VK_OEM_PERIOD, "+right"),
     }

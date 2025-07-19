@@ -51,8 +51,6 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::analog, "+lookdown", u"Look Down", u"Aiming" },
   game_action{ game_action::digital, "+attackprimary", u"Attack", u"Combat" },
   game_action{ game_action::digital, "+attacksecondary", u"Alt Attack", u"Combat" },
-  game_action{ game_action::digital, "vstr swap-pistol", u"Swap to Pistol", u"Combat" },
-  game_action{ game_action::digital, "vstr swap-grenade", u"Swap to Grenade", u"Combat" },
   game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
   game_action{ game_action::digital, "weapprev", u"Previous Weapon", u"Combat" },
   game_action{ game_action::digital, "invnext", u"Next Item", u"Combat" },
@@ -126,8 +124,8 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
 
   config.save(custom_bindings);
 
-  bind_axis_to_send_input(*args, "+left", "+left");
-  bind_axis_to_send_input(*args, "+right", "+right");
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, VK_LEFT);
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, VK_RIGHT);
 
   auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
 
@@ -150,7 +148,7 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
   {
     return E_POINTER;
   }
-  auto config = load_config_from_pak(L"fakk\\default.cfg", L"fakk/pak0.pk3", L"fakk/pak0.pk3");
+  auto config = load_config_from_pk3(L"fakk\\default.cfg", L"fakk/pak0.pk3", L"fakk/pak0.pk3");
 
   if (config)
   {
@@ -175,17 +173,15 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
     return E_POINTER;
   }
 
-  auto config = load_config_from_pak(L"fakk\\default.cfg", L"fakk/pak0.pk3", L"fakk/pak0.pk3");
+  auto config = load_config_from_pk3(L"fakk\\default.cfg", L"fakk/pak0.pk3", L"fakk/pak0.pk3");
 
   if (config)
   {
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 5> actions{
+  std::array<std::pair<WORD, std::string_view>, 3> actions{
     {
-      std::make_pair<WORD, std::string_view>('G', "vstr swap-grenade"),
-      std::make_pair<WORD, std::string_view>('F', "vstr melee-attack"),
       std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),

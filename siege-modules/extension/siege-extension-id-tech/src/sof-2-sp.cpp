@@ -86,10 +86,9 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 7> va
   { "r_noserverghoul2"sv, "r_noserverghoul2"sv },
 } };
 
-constexpr static auto sof_aliases = std::array<std::array<std::string_view, 2>, 3>{ { 
-    { "melee-attack", "vstr melee-attack-start" },
-    { "melee-attack-start", "inventory1; +attack; set melee-attack vstr melee-attack-stop" },
-    { "melee-attack-stop", "weapprev; -attack; set melee-attack vstr melee-attack-start" } } };
+constexpr static auto sof_aliases = std::array<std::array<std::string_view, 2>, 3>{ { { "melee-attack", "vstr melee-attack-start" },
+  { "melee-attack-start", "inventory1; +attack; set melee-attack vstr melee-attack-stop" },
+  { "melee-attack-stop", "weapprev; -attack; set melee-attack vstr melee-attack-start" } } };
 
 
 HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
@@ -137,6 +136,9 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   }
 
   config.save(custom_bindings);
+
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, VK_LEFT);
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, VK_RIGHT);
 
   auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
 

@@ -236,14 +236,14 @@ std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_3_0(WORD
     return std::nullopt;
   }
 
-  bool is_positive = vkey == VK_GAMEPAD_LEFT_THUMBSTICK_UP || vkey == VK_GAMEPAD_RIGHT_THUMBSTICK_UP || vkey == VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT || vkey == VK_GAMEPAD_LEFT_TRIGGER;
+  bool is_positive = vkey == VK_GAMEPAD_LEFT_THUMBSTICK_UP || vkey == VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT || vkey == VK_GAMEPAD_RIGHT_THUMBSTICK_UP || vkey == VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT || vkey == VK_GAMEPAD_LEFT_TRIGGER;
   switch (index)
   {
   case 0: {
-    return is_positive ? "UPARROW" : "DOWNARROW";
+    return is_positive ? "RIGHTARROW" : "LEFTARROW";
   }
   case 1: {
-    return is_positive ? "RIGHTARROW" : "LEFTARROW";
+    return is_positive ? "UPARROW" : "DOWNARROW";
   }
   case 2: {
     return is_positive ? "JOY17" : "JOY16";
@@ -593,7 +593,7 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
 
       if (setting)
       {
-        if (binding.vkey == VK_GAMEPAD_LEFT_TRIGGER || binding.vkey == VK_GAMEPAD_RIGHT_TRIGGER && context.supports_triggers_as_buttons)
+        if ((binding.vkey == VK_GAMEPAD_LEFT_TRIGGER || binding.vkey == VK_GAMEPAD_RIGHT_TRIGGER) && context.supports_triggers_as_buttons)
         {
           goto button_section;
         }
@@ -725,7 +725,7 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
   return enable_controller;
 }
 
-void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std::string_view source, std::string_view target)
+void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std::string_view source, std::string_view target, std::optional<WORD> not_target_vkey)
 {
   for (auto& binding : args.action_bindings)
   {
@@ -759,7 +759,14 @@ void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std:
 
 
     auto keyboard = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& existing) {
-      return existing.action_name.data() == target && (existing.context == siege::platform::hardware_context::global || existing.context == siege::platform::hardware_context::keyboard);
+      auto result = existing.action_name.data() == target && (existing.context == siege::platform::hardware_context::global || existing.context == siege::platform::hardware_context::keyboard);
+
+      if (not_target_vkey)
+      {
+        result = result && existing.vkey != *not_target_vkey;
+      }
+
+      return result;
     });
 
     if (keyboard != args.action_bindings.end())
@@ -769,6 +776,29 @@ void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std:
       free_mapping->to_vkey = keyboard->vkey;
       free_mapping->to_context = keyboard->context;
       break;
+    }
+  }
+}
+
+void bind_controller_send_input_fallback(siege::platform::game_command_line_args& args,
+  hardware_context expected_context,
+  WORD expected_vkey,
+  WORD not_target_vkey)
+{
+  auto right_stick_left = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [=](auto& binding) {
+    return binding.context == expected_context && binding.vkey == expected_vkey;
+  });
+
+
+  if (right_stick_left != args.action_bindings.end())
+  {
+    auto fallback = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& binding) {
+      return (binding.context == hardware_context::global || binding.context == hardware_context::keyboard) && binding.vkey != not_target_vkey && binding.action_name == right_stick_left->action_name;
+    });
+
+    if (fallback != args.action_bindings.end())
+    {
+      bind_axis_to_send_input(args, right_stick_left->action_name.data(), fallback->action_name.data(), not_target_vkey);
     }
   }
 }
@@ -830,10 +860,7 @@ predefined_string*
 
       for (auto const& dir_entry : std::filesystem::directory_iterator{ base_dir })
       {
-        if ((include_zip && dir_entry.path().extension() == L".zip" || include_zip && dir_entry.path().extension() == L".ZIP") || 
-            (dir_entry.path().extension() == L".dat" || dir_entry.path().extension() == L".DAT") || 
-            dir_entry.path().extension() == L".sin" || dir_entry.path().extension() == L".SIN" ||
-            dir_entry.path().extension() == L".pak" || dir_entry.path().extension() == L".PAK")
+        if ((include_zip && dir_entry.path().extension() == L".zip" || include_zip && dir_entry.path().extension() == L".ZIP") || (dir_entry.path().extension() == L".dat" || dir_entry.path().extension() == L".DAT") || dir_entry.path().extension() == L".sin" || dir_entry.path().extension() == L".SIN" || dir_entry.path().extension() == L".pak" || dir_entry.path().extension() == L".PAK")
         {
           pak_files.emplace_back(dir_entry.path());
         }

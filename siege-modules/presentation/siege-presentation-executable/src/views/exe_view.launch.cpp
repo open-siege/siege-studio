@@ -655,6 +655,44 @@ namespace siege::views
       auto game_args = std::make_unique<siege::platform::game_command_line_args>();
 
 
+      if (!actions.empty())
+      {
+        for (auto i = 0; i < keyboard_table.GetItemCount(); ++i)
+        {
+          auto item = keyboard_table.GetItem(LVITEMW{
+            .mask = LVIF_PARAM,
+            .iItem = i });
+
+          if (item && item->lParam)
+          {
+            auto virtual_key = bound_actions[item->lParam].vkey;
+            auto context = bound_actions[item->lParam].context;
+            auto action_index = bound_actions[item->lParam].action_index;
+
+            auto& action = actions[action_index];
+
+            if (context == siege::platform::hardware_context::keyboard || context == siege::platform::hardware_context::keypad)
+            {
+              game_args->action_bindings[binding_index].vkey = virtual_key;
+              game_args->action_bindings[binding_index].action_name = action.action_name;
+
+              game_args->action_bindings[binding_index].hardware_index = MapVirtualKeyW(virtual_key, MAPVK_VK_TO_VSC);
+              game_args->action_bindings[binding_index++].context = context;
+            }
+            else
+            {
+              game_args->action_bindings[binding_index].vkey = virtual_key;
+              game_args->action_bindings[binding_index].action_name = action.action_name;
+              game_args->action_bindings[binding_index++].context = context;
+            }
+          }
+        }
+      }
+
+      // Storing controller actions after keyboard/mouse actions is a workaround
+      // to make Quake 3 based games work. The left analog stick is bound
+      // to the same names as the arrow keys, so we want the controller settings to have higher priority.
+      // Maybe this is not a bad idea in general, but it's better to have something more explicit for the user to control.
       if (backends.empty())
       {
         for (auto i = 0; i < controller_table.GetItemCount(); ++i)
@@ -704,6 +742,9 @@ namespace siege::views
               auto& action = actions[action_index];
 
               auto hardware_index = hardware_index_for_controller_vkey(std::span<RAWINPUTDEVICELIST>(controllers.data(), size), 0, virtual_key);
+
+              auto key_name = string_for_vkey(virtual_key, hardware_index.first);
+
               game_args->action_bindings[binding_index].vkey = virtual_key;
               game_args->action_bindings[binding_index].action_name = action.action_name;
               game_args->action_bindings[binding_index].context = hardware_index.first;
@@ -715,41 +756,6 @@ namespace siege::views
           }
         }
       }
-
-      if (!actions.empty())
-      {
-        for (auto i = 0; i < keyboard_table.GetItemCount(); ++i)
-        {
-          auto item = keyboard_table.GetItem(LVITEMW{
-            .mask = LVIF_PARAM,
-            .iItem = i });
-
-          if (item && item->lParam)
-          {
-            auto virtual_key = bound_actions[item->lParam].vkey;
-            auto context = bound_actions[item->lParam].context;
-            auto action_index = bound_actions[item->lParam].action_index;
-
-            auto& action = actions[action_index];
-
-            if (context == siege::platform::hardware_context::keyboard || context == siege::platform::hardware_context::keypad)
-            {
-              game_args->action_bindings[binding_index].vkey = virtual_key;
-              game_args->action_bindings[binding_index].action_name = action.action_name;
-
-              game_args->action_bindings[binding_index].hardware_index = MapVirtualKeyW(virtual_key, MAPVK_VK_TO_VSC);
-              game_args->action_bindings[binding_index++].context = context;
-            }
-            else
-            {
-              game_args->action_bindings[binding_index].vkey = virtual_key;
-              game_args->action_bindings[binding_index].action_name = action.action_name;
-              game_args->action_bindings[binding_index++].context = context;
-            }
-          }
-        }
-      }
-
       ::LVITEMW info{
         .mask = LVIF_PARAM
       };

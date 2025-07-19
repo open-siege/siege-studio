@@ -52,7 +52,8 @@ struct q3_mapping_context : mapping_context
 
 
 bool save_bindings_to_config(siege::platform::game_command_line_args& args, siege::configuration::text_game_config& config, mapping_context context = {});
-void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std::string_view source, std::string_view target);
+void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std::string_view source, std::string_view target, std::optional<WORD> not_target_vkey = std::nullopt);
+void bind_controller_send_input_fallback(siege::platform::game_command_line_args& args, hardware_context expected_context, WORD expected_vkey, WORD not_target_vkey);
 
 inline bool is_vkey_for_controller(WORD vkey)
 {

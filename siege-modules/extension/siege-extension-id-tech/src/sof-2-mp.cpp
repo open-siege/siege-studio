@@ -69,12 +69,11 @@ extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"ba
 extern auto autoexec_configuration_paths = std::array<const wchar_t*, 4>{ { L"base/autoexec.cfg" } };
 extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{ { L"base/config.cfg" } };
 
-extern void(__cdecl* ConsoleEvalCdecl)(const char*) ;
+extern void(__cdecl* ConsoleEvalCdecl)(const char*);
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { 
-  { "exec"sv, std::size_t(0x55e8bc) },
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x55e8bc) },
   { "cmdlist"sv, std::size_t(0x55e8c4) },
   { "com_maxfps"sv, std::size_t(0x55f7a0) } } } } };
 
@@ -87,7 +86,7 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 8> fu
   { "bindlist"sv, "bind"sv },
   { "killserver"sv, "banclient"sv },
   { "vminfo"sv, "vmprofile"sv },
-} };    
+} };
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 8> variable_name_ranges{ {
   { "com_speeds"sv, "com_maxfps"sv },
@@ -136,7 +135,7 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
 
-  
+
   for (auto& alias : sof_aliases)
   {
     config.emplace(siege::configuration::key_type({ "set", alias[0] }), siege::configuration::key_type(alias[1]));
@@ -150,6 +149,9 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   }
 
   config.save(custom_bindings);
+
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, VK_LEFT);
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, VK_RIGHT);
 
   auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
 
