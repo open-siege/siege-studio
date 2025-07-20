@@ -1007,6 +1007,11 @@ namespace siege::views
 
       auto parent_path = file_path.parent_path();
 
+      if (std::wstring(parent_path.c_str()).empty())
+      {
+        return fs::current_path();
+      }
+
       constexpr static auto common_exe_paths = std::array<const char*, 3>{ { "bin",
         "bin32",
         "system" } };
