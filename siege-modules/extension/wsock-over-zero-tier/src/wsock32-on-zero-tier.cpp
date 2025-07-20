@@ -692,17 +692,14 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
 
       if (address_and_size.first.sin_addr.S_addr == ZTS_IPADDR_BROADCAST)
       {
-        get_log() << "Trying to broadcast\n";
-        int socket_can_broadcast = 0;
         int socket_type = 0;
         zts_socklen_t size = sizeof(int);
 
-        zt_getsockopt(to_zts(ws), ZTS_SOL_SOCKET, ZTS_SO_BROADCAST, &socket_can_broadcast, &size);
         zt_getsockopt(to_zts(ws), ZTS_SOL_SOCKET, ZTS_SO_TYPE, &socket_type, &size);
 
-        if (zt_net_get_broadcast(*get_zero_tier_network_id()) && socket_type == ZTS_SOCK_DGRAM && socket_can_broadcast)
+        if (socket_type == ZTS_SOCK_DGRAM)
         {
-          get_log() << "Network can broadcast and socket is datagram and can broadcast\n";
+          get_log() << "Trying to broadcast\n";
 
           auto zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
 

@@ -734,7 +734,7 @@ namespace siege::views
 
       bool result = false;
       result = ::RegSetValueExW(main_key, L"LastIPAddress", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
-      
+
       raw_bytes.resize(settings.last_player_name.size() * char_size);
       std::memcpy(raw_bytes.data(), settings.last_player_name.data(), raw_bytes.size());
       result = result && ::RegSetValueExW(main_key, L"LastPlayerName", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
@@ -1036,9 +1036,13 @@ namespace siege::views
             }
             else
             {
-              ::SetEnvironmentVariableW(L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4", nullptr);
+              ::SetEnvironmentVariableW(L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4", game_settings.last_ip_address.data());
             }
           }
+        }
+        else
+        {
+          ::SetEnvironmentVariableW(L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4", game_settings.last_ip_address.data());
         }
       }
 

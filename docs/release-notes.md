@@ -1,3 +1,6 @@
+# Siege Studio + Siege Launcher 25.30 Development Release
+* Fixed issue with Zero Tier broadcasts not working.
+
 # Siege Studio + Siege Launcher 25.29 Development Release
 * Siege Launcher, the commercial version of Siege Studio, is officially released on itch.io: https://thesiegehub.itch.io/siege-launcher
 * Fixed issue with the preferences view not showing correctly.
