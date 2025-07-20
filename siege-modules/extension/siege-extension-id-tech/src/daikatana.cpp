@@ -179,8 +179,8 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
   std::array<std::pair<WORD, std::string_view>, 6> actions{
     {
       std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
-      std::make_pair<WORD, std::string_view>('e', "+use"),
-      std::make_pair<WORD, std::string_view>('g', "inv_use"),
+      std::make_pair<WORD, std::string_view>('E', "+use"),
+      std::make_pair<WORD, std::string_view>('G', "inv_use"),
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
     }
@@ -225,7 +225,6 @@ HRESULT init_controller_inputs(controller_binding* binding)
   };
 
   append_controller_defaults(game_actions, actions, *binding);
-
 
   return S_OK;
 }

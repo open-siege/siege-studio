@@ -46,6 +46,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::analog, "+moveright", u"Strafe Right", u"Movement" },
   game_action{ game_action::analog, "+moveup", u"Jump", u"Movement" },
   game_action{ game_action::analog, "+movedown", u"Crouch", u"Movement" },
+  game_action{ game_action::analog, "+creep", u"Creep", u"Movement" },
   game_action{ game_action::digital, "+speed", u"Run", u"Movement" },
   game_action{ game_action::analog, "+left", u"Turn Left", u"Aiming" },
   game_action{ game_action::analog, "+right", u"Turn Right", u"Aiming" },
@@ -61,6 +62,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "menu_objectives", u"Objectives", u"Interface" },
   game_action{ game_action::digital, "+klook", u"Keyboard Look", u"Misc" },
   game_action{ game_action::digital, "+mlook", u"Mouse Look", u"Misc" },
+  game_action{ game_action::digital, "+lookaround", u"Lock Camera", u"Misc" },
 } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
@@ -106,19 +108,8 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
     config.emplace(siege::configuration::key_type({ "set", "joy_advanced" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "set", "joy_sidesensitivity" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "set", "joy_pitchsensitivity" }), siege::configuration::key_type("1"));
-    config.emplace(siege::configuration::key_type({ "joy_advancedupdate" }), siege::configuration::key_type{});   
+    config.emplace(siege::configuration::key_type({ "joy_advancedupdate" }), siege::configuration::key_type{});
   }
-
-  // TODO fix binding system for this game. It doesn't like the configs for some reason.
-  // must be casing
-  config.emplace(siege::configuration::key_type({ "bind", "MWHEELUP" }), siege::configuration::key_type("weapnext"));
-  config.emplace(siege::configuration::key_type({ "bind", "MWHEELDOWN" }), siege::configuration::key_type("weapprev"));
-  config.emplace(siege::configuration::key_type({ "bind", "MOUSE3" }), siege::configuration::key_type("defnext"));
-  config.emplace(siege::configuration::key_type({ "bind", "MOUSE2" }), siege::configuration::key_type("+defend"));
-
-  config.emplace(siege::configuration::key_type({ "bind", "Space" }), siege::configuration::key_type("+moveup"));
-  config.emplace(siege::configuration::key_type({ "bind", "Ctrl" }), siege::configuration::key_type("+movedown"));
-  config.emplace(siege::configuration::key_type({ "bind", "Tab" }), siege::configuration::key_type("score"));
 
   config.save(custom_bindings);
 
@@ -153,15 +144,19 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
     load_mouse_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 3> actions{
-    {
-      std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+defend"),
-      std::make_pair<WORD, std::string_view>(VK_UP, "weapprev"),
-      std::make_pair<WORD, std::string_view>(VK_DOWN, "weapnext"),
-    }
+  std::array<std::pair<WORD, std::string_view>, 2> actions{
+    { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+defend"),
+      std::make_pair<WORD, std::string_view>(VK_MBUTTON, "defnext") }
   };
 
   upsert_mouse_defaults(game_actions, actions, *binding);
+
+  std::array<std::pair<WORD, std::string_view>, 2> mouse_wheel_actions{
+    { std::make_pair<WORD, std::string_view>(VK_UP, "weapnext"),
+      std::make_pair<WORD, std::string_view>(VK_DOWN, "weaprev") }
+  };
+
+  upsert_mouse_defaults(game_actions, mouse_wheel_actions, *binding, mouse_context::mouse_wheel);
 
   return S_OK;
 }
@@ -180,23 +175,24 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 11> actions{
+  std::array<std::pair<WORD, std::string_view>, 12> actions{
     {
-      std::make_pair<WORD, std::string_view>('w', "+forward"),
-      std::make_pair<WORD, std::string_view>('a', "+moveleft"),
-      std::make_pair<WORD, std::string_view>('s', "+back"),
-      std::make_pair<WORD, std::string_view>('d', "+moveright"),
-      std::make_pair<WORD, std::string_view>('f', "+defend"),
-      std::make_pair<WORD, std::string_view>('z', "defprev"),
-      std::make_pair<WORD, std::string_view>('x', "defnext"),
+      std::make_pair<WORD, std::string_view>('W', "+forward"),
+      std::make_pair<WORD, std::string_view>('A', "+moveleft"),
+      std::make_pair<WORD, std::string_view>('S', "+back"),
+      std::make_pair<WORD, std::string_view>('D', "+moveright"),
+      std::make_pair<WORD, std::string_view>('F', "+defend"),
+      std::make_pair<WORD, std::string_view>('Z', "defprev"),
+      std::make_pair<WORD, std::string_view>('X', "defnext"),
       std::make_pair<WORD, std::string_view>(VK_RETURN, "+defend"),
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
-      std::make_pair<WORD, std::string_view>('c', "+creep"),
+      std::make_pair<WORD, std::string_view>(VK_TAB, "score"),
+      std::make_pair<WORD, std::string_view>('C', "+creep"),
     }
   };
 
-  upsert_keyboard_defaults(game_actions, actions, *binding);
+  upsert_keyboard_defaults(game_actions, actions, *binding, true);
 
   return S_OK;
 }
@@ -222,6 +218,7 @@ HRESULT init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, "+right"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "+lookaround"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "inven"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "weapnext"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "defnext"),

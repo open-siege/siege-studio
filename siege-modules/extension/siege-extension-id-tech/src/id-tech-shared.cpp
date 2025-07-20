@@ -258,10 +258,11 @@ std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_3_0(WORD
 
 std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_2_5(WORD vkey, WORD index)
 {
-  if (vkey < VK_GAMEPAD_LEFT_THUMBSTICK_UP)
+  if (!(vkey == VK_GAMEPAD_LEFT_TRIGGER || vkey == VK_GAMEPAD_RIGHT_TRIGGER || (vkey >= VK_GAMEPAD_LEFT_THUMBSTICK_UP && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)))
   {
     return std::nullopt;
   }
+
   switch (index)
   {
   case 0:
@@ -283,10 +284,12 @@ std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_2_5(WORD
 
 std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_2_0(WORD vkey, WORD index)
 {
-  if (vkey < VK_GAMEPAD_LEFT_THUMBSTICK_UP)
+  if (!(vkey == VK_GAMEPAD_LEFT_TRIGGER || vkey == VK_GAMEPAD_RIGHT_TRIGGER || 
+      (vkey >= VK_GAMEPAD_LEFT_THUMBSTICK_UP && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)))
   {
     return std::nullopt;
   }
+
   switch (index)
   {
   case 0:
@@ -390,45 +393,47 @@ void load_mouse_bindings(siege::configuration::text_game_config& config, siege::
   int index = 0;
   for (auto& item : config.keys())
   {
-    if (item.at(0) == "bind")
+    if (item.at(0) != "bind")
     {
-      auto vkey = key_to_vkey(item.at(1));
+      continue;
+    }
 
-      if (!vkey)
-      {
-        continue;
-      }
+    auto vkey = key_to_vkey(item.at(1));
 
-      if (!(item.at(1).starts_with("mouse") || item.at(1).starts_with("MOUSE")))
-      {
-        continue;
-      }
+    if (!vkey)
+    {
+      continue;
+    }
 
-      auto entry = config.find(item);
-      if (entry.at(0).empty())
-      {
-        continue;
-      }
-      temp = entry.at(0);
+    if (!(item.at(1).starts_with("mouse") || item.at(1).starts_with("MOUSE") || item.at(1).starts_with("Mouse")))
+    {
+      continue;
+    }
 
-      if (temp.size() - 1 > binding.inputs[index].action_name.size())
-      {
-        temp.resize(binding.inputs[index].action_name.size() - 1);
-      }
+    auto entry = config.find(item);
+    if (entry.at(0).empty())
+    {
+      continue;
+    }
+    temp = entry.at(0);
 
-      temp = siege::platform::to_lower(temp);
+    if (temp.size() - 1 > binding.inputs[index].action_name.size())
+    {
+      temp.resize(binding.inputs[index].action_name.size() - 1);
+    }
 
-      // TODO handle mouse wheel too
-      std::memcpy(binding.inputs[index].action_name.data(), temp.data(), temp.size());
-      binding.inputs[index].virtual_key = vkey->first;
-      binding.inputs[index].input_type = siege::platform::mouse_binding::action_binding::button;
-      binding.inputs[index].context = siege::platform::mouse_context::mouse;
-      index++;
+    temp = siege::platform::to_lower(temp);
 
-      if (index > binding.inputs.size())
-      {
-        break;
-      }
+    // TODO handle mouse wheel too
+    std::memcpy(binding.inputs[index].action_name.data(), temp.data(), temp.size());
+    binding.inputs[index].virtual_key = vkey->first;
+    binding.inputs[index].input_type = siege::platform::mouse_binding::action_binding::button;
+    binding.inputs[index].context = siege::platform::mouse_context::mouse;
+    index++;
+
+    if (index > binding.inputs.size())
+    {
+      break;
     }
   }
 }
@@ -439,43 +444,45 @@ void load_keyboard_bindings(siege::configuration::text_game_config& config, sieg
   int index = 0;
   for (auto& item : config.keys())
   {
-    if (item.at(0) == "bind")
+    if (item.at(0) != "bind")
     {
-      auto vkey = key_to_vkey(item.at(1));
+      continue;
+    }
 
-      if (!vkey)
-      {
-        continue;
-      }
+    auto vkey = key_to_vkey(item.at(1));
 
-      if (item.at(1).starts_with("mouse") || item.at(1).starts_with("MOUSE"))
-      {
-        continue;
-      }
+    if (!vkey)
+    {
+      continue;
+    }
 
-      auto entry = config.find(item);
-      if (entry.at(0).empty())
-      {
-        continue;
-      }
-      temp = entry.at(0);
+    if (item.at(1).starts_with("mouse") || item.at(1).starts_with("MOUSE") || item.at(1).starts_with("Mouse"))
+    {
+      continue;
+    }
 
-      if (temp.size() - 1 > binding.inputs[index].action_name.size())
-      {
-        temp.resize(binding.inputs[index].action_name.size() - 1);
-      }
+    auto entry = config.find(item);
+    if (entry.at(0).empty())
+    {
+      continue;
+    }
+    temp = entry.at(0);
 
-      std::memcpy(binding.inputs[index].action_name.data(), temp.data(), temp.size());
-      binding.inputs[index].virtual_key = vkey->first;
-      binding.inputs[index].input_type = siege::platform::keyboard_binding::action_binding::button;
-      binding.inputs[index].context = (siege::platform::keyboard_context)vkey->second;
+    if (temp.size() - 1 > binding.inputs[index].action_name.size())
+    {
+      temp.resize(binding.inputs[index].action_name.size() - 1);
+    }
 
-      index++;
+    std::memcpy(binding.inputs[index].action_name.data(), temp.data(), temp.size());
+    binding.inputs[index].virtual_key = vkey->first;
+    binding.inputs[index].input_type = siege::platform::keyboard_binding::action_binding::button;
+    binding.inputs[index].context = (siege::platform::keyboard_context)vkey->second;
 
-      if (index > binding.inputs.size())
-      {
-        break;
-      }
+    index++;
+
+    if (index > binding.inputs.size())
+    {
+      break;
     }
   }
 }
@@ -586,128 +593,7 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
   bool enable_controller = false;
   for (auto& binding : args.action_bindings)
   {
-    if (is_vkey_for_controller(binding.vkey))
-    {
-      enable_controller = true;
-      auto setting = context.index_to_axis(binding.vkey, binding.hardware_index);
-
-      if (setting)
-      {
-        if ((binding.vkey == VK_GAMEPAD_LEFT_TRIGGER || binding.vkey == VK_GAMEPAD_RIGHT_TRIGGER) && context.supports_triggers_as_buttons)
-        {
-          goto button_section;
-        }
-        const static auto controller_button_mapping = std::map<std::string_view, std::string_view>{
-          { "+forward", "1" },
-          { "+back", "1" },
-          { "+lookup", "2" },
-          { "+lookdown", "2" },
-          { "+moveleft", "3" },
-          { "+moveright", "3" },
-          { "+left", "4" },
-          { "+right", "4" },
-          { "+moveup", "5" },
-          { "+movedown", "5" }
-        };
-
-        try
-        {
-          auto action_name = std::string_view(binding.action_name.data());
-          auto index = controller_button_mapping.at(action_name);
-
-          if (context.axis_set_prefix == "bind")
-          {
-            config.emplace(siege::configuration::key_type({ context.axis_set_prefix, *setting }), siege::configuration::key_type(action_name));
-          }
-          else if (!context.axis_set_prefix.empty())
-          {
-            config.emplace(siege::configuration::key_type({ context.axis_set_prefix, *setting }), siege::configuration::key_type(index));
-          }
-          else
-          {
-            config.emplace(siege::configuration::key_type({ *setting }), siege::configuration::key_type(index));
-          }
-        }
-        catch (...)
-        {
-          // TODO handle unknown actions
-        }
-      }
-      else
-      {
-      button_section:
-        auto dpad_name = context.dpad_name(binding.vkey);
-        if (binding.vkey == VK_GAMEPAD_DPAD_UP && dpad_name)
-        {
-          config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(binding.action_name.data()));
-        }
-        else if (binding.vkey == VK_GAMEPAD_DPAD_DOWN && dpad_name)
-        {
-          config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(binding.action_name.data()));
-        }
-        else if (binding.vkey == VK_GAMEPAD_DPAD_LEFT && dpad_name)
-        {
-          config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(binding.action_name.data()));
-        }
-        else if (binding.vkey == VK_GAMEPAD_DPAD_RIGHT && dpad_name)
-        {
-          config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(binding.action_name.data()));
-        }
-        else if (binding.vkey == VK_GAMEPAD_LEFT_TRIGGER || binding.vkey == VK_GAMEPAD_RIGHT_TRIGGER)
-        {
-          if (binding.context == hardware_context::controller_xbox && !context.supports_triggers_as_buttons)
-          {
-            auto action_name = std::string_view(binding.action_name.data());
-            auto mouse = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& existing) {
-              return existing.action_name.data() == action_name && (existing.context == siege::platform::hardware_context::mouse);
-            });
-
-            if (mouse == args.action_bindings.end())
-            {
-              mouse = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& existing) {
-                return existing.action_name.data() == action_name && (existing.context == siege::platform::hardware_context::keyboard || existing.context == siege::platform::hardware_context::keypad || existing.context == siege::platform::hardware_context::global);
-              });
-            }
-
-            if (auto free_mapping = std::find_if(args.controller_to_send_input_mappings.begin(), args.controller_to_send_input_mappings.end(), [](auto& mapping) {
-                  return mapping.from_vkey == 0;
-                });
-              free_mapping != args.controller_to_send_input_mappings.end() && mouse != args.action_bindings.end())
-            {
-              free_mapping->from_vkey = binding.vkey;
-              free_mapping->from_context = binding.context;
-              free_mapping->to_vkey = mouse->vkey;
-              free_mapping->to_context = mouse->context;
-            }
-          }
-          else if (binding.context == hardware_context::controller_xbox && context.supports_triggers_as_buttons)
-          {
-            auto axis = context.index_to_axis(binding.vkey, binding.hardware_index);
-            if (axis)
-            {
-              config.emplace(siege::configuration::key_type({ "bind", *axis }), siege::configuration::key_type(binding.action_name.data()));
-            }
-          }
-          else if (binding.context != hardware_context::controller_xbox)
-          {
-            auto button = context.index_to_button(binding.hardware_index);
-            if (button)
-            {
-              config.emplace(siege::configuration::key_type({ "bind", *button }), siege::configuration::key_type(binding.action_name.data()));
-            }
-          }
-        }
-        else
-        {
-          auto button = context.index_to_button(binding.hardware_index);
-          if (button)
-          {
-            config.emplace(siege::configuration::key_type({ "bind", *button }), siege::configuration::key_type(binding.action_name.data()));
-          }
-        }
-      }
-    }
-    else
+    if (!is_vkey_for_controller(binding.vkey))
     {
       auto game_key = vkey_to_key(binding.vkey, binding.context);
 
@@ -718,6 +604,126 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
         *binding.action_name.rbegin() = '\0';
 
         config.emplace(siege::configuration::key_type({ "bind", *iter.first }), siege::configuration::key_type(binding.action_name.data()));
+      }
+      continue;
+    }
+
+    enable_controller = true;
+    auto setting = context.index_to_axis(binding.vkey, binding.hardware_index);
+
+    if (setting)
+    {
+      if ((binding.vkey == VK_GAMEPAD_LEFT_TRIGGER || binding.vkey == VK_GAMEPAD_RIGHT_TRIGGER) && context.supports_triggers_as_buttons)
+      {
+        goto button_section;
+      }
+      const static auto controller_button_mapping = std::map<std::string_view, std::string_view>{
+        { "+forward", "1" },
+        { "+back", "1" },
+        { "+lookup", "2" },
+        { "+lookdown", "2" },
+        { "+moveleft", "3" },
+        { "+moveright", "3" },
+        { "+left", "4" },
+        { "+right", "4" },
+        { "+moveup", "5" },
+        { "+movedown", "5" }
+      };
+
+      auto action_name = std::string_view(binding.action_name.data());
+      auto index = std::string_view("0");
+
+      if (auto iter = controller_button_mapping.find(action_name); iter != controller_button_mapping.end())
+      {
+        index = iter->second;
+      }
+
+      if (context.axis_set_prefix == "bind")
+      {
+        config.emplace(siege::configuration::key_type({ context.axis_set_prefix, *setting }), siege::configuration::key_type(action_name));
+      }
+      else if (!context.axis_set_prefix.empty())
+      {
+        config.emplace(siege::configuration::key_type({ context.axis_set_prefix, *setting }), siege::configuration::key_type(index));
+      }
+      else
+      {
+        config.emplace(siege::configuration::key_type({ *setting }), siege::configuration::key_type(index));
+      }
+
+      if ((binding.vkey == VK_GAMEPAD_LEFT_TRIGGER || binding.vkey == VK_GAMEPAD_RIGHT_TRIGGER) &&
+          binding.context == hardware_context::controller_xbox && !context.supports_triggers_as_buttons)
+      {
+        auto action_name = std::string_view(binding.action_name.data());
+        auto mouse = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& existing) {
+          return existing.action_name.data() == action_name && (existing.context == siege::platform::hardware_context::mouse);
+        });
+
+        if (mouse == args.action_bindings.end())
+        {
+          mouse = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& existing) {
+            return existing.action_name.data() == action_name && (existing.context == siege::platform::hardware_context::keyboard || existing.context == siege::platform::hardware_context::keypad || existing.context == siege::platform::hardware_context::global);
+          });
+        }
+
+        if (auto free_mapping = std::find_if(args.controller_to_send_input_mappings.begin(), args.controller_to_send_input_mappings.end(), [](auto& mapping) {
+              return mapping.from_vkey == 0;
+            });
+          free_mapping != args.controller_to_send_input_mappings.end() && mouse != args.action_bindings.end())
+        {
+          free_mapping->from_vkey = binding.vkey;
+          free_mapping->from_context = binding.context;
+          free_mapping->to_vkey = mouse->vkey;
+          free_mapping->to_context = mouse->context;
+        }
+      }
+    }
+    else
+    {
+    button_section:
+      auto dpad_name = context.dpad_name(binding.vkey);
+      if (binding.vkey == VK_GAMEPAD_DPAD_UP && dpad_name)
+      {
+        config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(binding.action_name.data()));
+      }
+      else if (binding.vkey == VK_GAMEPAD_DPAD_DOWN && dpad_name)
+      {
+        config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(binding.action_name.data()));
+      }
+      else if (binding.vkey == VK_GAMEPAD_DPAD_LEFT && dpad_name)
+      {
+        config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(binding.action_name.data()));
+      }
+      else if (binding.vkey == VK_GAMEPAD_DPAD_RIGHT && dpad_name)
+      {
+        config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(binding.action_name.data()));
+      }
+      else if (binding.vkey == VK_GAMEPAD_LEFT_TRIGGER || binding.vkey == VK_GAMEPAD_RIGHT_TRIGGER)
+      {
+        if (binding.context == hardware_context::controller_xbox && context.supports_triggers_as_buttons)
+        {
+          auto axis = context.index_to_axis(binding.vkey, binding.hardware_index);
+          if (axis)
+          {
+            config.emplace(siege::configuration::key_type({ "bind", *axis }), siege::configuration::key_type(binding.action_name.data()));
+          }
+        }
+        else if (binding.context != hardware_context::controller_xbox)
+        {
+          auto button = context.index_to_button(binding.hardware_index);
+          if (button)
+          {
+            config.emplace(siege::configuration::key_type({ "bind", *button }), siege::configuration::key_type(binding.action_name.data()));
+          }
+        }
+      }
+      else
+      {
+        auto button = context.index_to_button(binding.hardware_index);
+        if (button)
+        {
+          config.emplace(siege::configuration::key_type({ "bind", *button }), siege::configuration::key_type(binding.action_name.data()));
+        }
       }
     }
   }

@@ -181,7 +181,7 @@ namespace siege::configuration
       int count = 0;
       bool result = std::all_of(std::istreambuf_iterator<char>{ raw_data }, std::istreambuf_iterator<char>{}, [&](char raw) {
         auto value = static_cast<unsigned char>(raw);
-        return count++ != 4096 && std::isalpha(value) || std::isdigit(value) || std::isspace(value) || std::ispunct(value);
+        return count++ != 8192 && std::isalpha(value) || std::isdigit(value) || std::isspace(value) || std::ispunct(value);
       });
       raw_data.seekg(current_pos, std::ios::beg);
       return result;

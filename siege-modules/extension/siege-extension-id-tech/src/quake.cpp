@@ -228,7 +228,7 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
       std::make_pair<WORD, std::string_view>('s', "+back"),
       std::make_pair<WORD, std::string_view>('d', "+moveright"),
       std::make_pair<WORD, std::string_view>('f', "+melee-attack"),
-      std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
+      std::make_pair<WORD, std::string_view>(VK_SPACE, "+jump"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
       std::make_pair<WORD, std::string_view>(VK_OEM_5, "+mlook"),
     }
@@ -248,7 +248,7 @@ HRESULT init_controller_inputs(controller_binding* binding)
   std::array<std::pair<WORD, std::string_view>, 18> actions{
     {
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attack"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_A, "+moveup"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_A, "+jump"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_B, "+movedown"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "+speed"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_UP, "+forward"),

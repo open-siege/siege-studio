@@ -49,14 +49,16 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::analog, "+right", u"Turn Right", u"Aiming" },
   game_action{ game_action::analog, "+lookup", u"Look Up", u"Aiming" },
   game_action{ game_action::analog, "+lookdown", u"Look Down", u"Aiming" },
-  game_action{ game_action::digital, "+attackprimary", u"Attack", u"Combat" },
-  game_action{ game_action::digital, "+attacksecondary", u"Alt Attack", u"Combat" },
-  game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
-  game_action{ game_action::digital, "weapprev", u"Previous Weapon", u"Combat" },
+  game_action{ game_action::digital, "+attackleft", u"Attack Left", u"Combat" },
+  game_action{ game_action::digital, "+attackright", u"Attack Right", u"Combat" },
+  game_action{ game_action::digital, "nextinv", u"Next Weapon", u"Combat" },
+  game_action{ game_action::digital, "previnv", u"Previous Weapon", u"Combat" },
+  game_action{ game_action::digital, "holster", u"Holster", u"Combat" },
   game_action{ game_action::digital, "invnext", u"Next Item", u"Combat" },
   game_action{ game_action::digital, "toggleitem", u"Use Item", u"Combat" },
   game_action{ game_action::digital, "+scores", u"Score", u"Interface" },
   game_action{ game_action::digital, "togglemenu", u"Objectives", u"Interface" },
+  game_action{ game_action::digital, "inventory", u"Inventory", u"Interface" },
   game_action{ game_action::digital, "klook", u"Keyboard Look", u"Misc" },
   game_action{ game_action::digital, "mlook", u"Mouse Look", u"Misc" },
 } };
@@ -155,14 +157,6 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
     load_mouse_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 2> actions{
-    { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+altattack"),
-      std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use") }
-  };
-
-  upsert_mouse_defaults(game_actions, actions, *binding);
-
-
   return S_OK;
 }
 
@@ -180,10 +174,9 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 3> actions{
+  std::array<std::pair<WORD, std::string_view>, 2> actions{
     {
       std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
-      std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
     }
   };
@@ -201,8 +194,8 @@ HRESULT init_controller_inputs(controller_binding* binding)
   }
   std::array<std::pair<WORD, std::string_view>, 23> actions{
     {
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attackprimary"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "+attacksecondary"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attackright"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "+attackleft"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_A, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_B, "+movedown"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "+speed"),
@@ -214,15 +207,13 @@ HRESULT init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, "+right"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "vstr swap-pistol"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "inven"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "weapnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "invnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "toggleitem"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "weapondrop"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "weapprev"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_RIGHT, "weapnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "+scores"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "+use"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "nextinv"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "holster"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "holster"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "previnv"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_RIGHT, "nextinv"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "inventory"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_MENU, "togglemenu"),
     }
   };
