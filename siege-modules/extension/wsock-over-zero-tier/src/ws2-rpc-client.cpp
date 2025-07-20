@@ -22,6 +22,10 @@ void load_system_wsock();
 std::ostream& get_log();
 std::optional<std::uint64_t> get_zero_tier_network_id();
 bool use_zero_tier();
+std::string ioctl_cmd_to_string(long cmd);
+std::string protocol_to_string(int protocol);
+std::string type_to_string(int type);
+std::string af_to_string(int af);
 
 static HWND server = nullptr;
 
@@ -222,8 +226,8 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
   if (use_zero_tier())
   {
     // TODO this is just conceptual code
-    recvfrom_params params{.flags = flags};
-    
+    recvfrom_params params{ .flags = flags };
+
     if (buf && len)
     {
       params.buffer = ::GlobalAlloc(GMEM_MOVEABLE, len);
@@ -256,7 +260,7 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
 
       if (from && fromLen)
       {
-        std::memcpy(from, params.from_address, *fromLen);
+        std::memcpy(from, &params.from_address, *fromLen);
       }
     }
 
