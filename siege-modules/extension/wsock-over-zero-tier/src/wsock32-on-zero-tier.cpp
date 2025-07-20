@@ -331,7 +331,7 @@ static_assert(SO_ACCEPTCONN == ZTS_SO_ACCEPTCONN);
 static_assert(SOL_SOCKET != ZTS_SOL_SOCKET);
 int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* optval, int optlen)
 {
-  get_log() << "siege_setsockopt" << to_zts(ws) << " " << optname << '\n';
+  get_log() << "siege_setsockopt" << ws << " " << optname << '\n';
   if (use_zero_tier())
   {
     get_log() << "zts_bsd_setsockopt, level: " << level << " optname: " << optname << '\n';
@@ -365,7 +365,7 @@ int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* op
     return zt_to_winsock_result(zt_result);
   }
 
-  auto result = wsock_setsockopt(to_zts(ws), level, optname, optval, optlen);
+  auto result = wsock_setsockopt(ws, level, optname, optval, optlen);
 
   if (result != 0)
   {
