@@ -734,6 +734,10 @@ namespace siege::views
 
       bool result = false;
       result = ::RegSetValueExW(main_key, L"LastIPAddress", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
+      
+      raw_bytes.resize(settings.last_player_name.size() * char_size);
+      std::memcpy(raw_bytes.data(), settings.last_player_name.data(), raw_bytes.size());
+      result = result && ::RegSetValueExW(main_key, L"LastPlayerName", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
 
       raw_bytes.resize(settings.last_zero_tier_network_id.size() * char_size);
       std::memcpy(raw_bytes.data(), settings.last_zero_tier_network_id.data(), raw_bytes.size());
