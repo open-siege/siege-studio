@@ -1,4 +1,4 @@
-#include "ws2-rpc.hpp"
+#include "ws2_32-rpc.hpp"
 
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 {
