@@ -4,7 +4,6 @@ project(siege-configuration)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 find_package(nlohmann_json REQUIRED)
-find_package(pegtl REQUIRED)
 find_package(Catch2 REQUIRED)
 
 file(GLOB_RECURSE TEST_SRC_FILES src/*.test.cpp)
@@ -15,12 +14,12 @@ file(GLOB TESTABLE_SRC_FILES src/*.cpp src/**/*.cpp)
 add_library(${PROJECT_NAME} STATIC ${LIB_SRC_FILES})
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23 POSITION_INDEPENDENT_CODE ON)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(${PROJECT_NAME} PUBLIC siege-platform nlohmann_json::nlohmann_json taocpp::pegtl)
+target_link_libraries(${PROJECT_NAME} PUBLIC siege-platform nlohmann_json::nlohmann_json)
 
 add_executable(${PROJECT_NAME}-tests ${TESTABLE_SRC_FILES} ${TEST_SRC_FILES})
 set_property(TARGET ${PROJECT_NAME}-tests PROPERTY CXX_STANDARD 23)
 target_include_directories(${PROJECT_NAME}-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(${PROJECT_NAME}-tests PRIVATE Catch2::Catch2WithMain siege-platform taocpp::pegtl nlohmann_json::nlohmann_json)
+target_link_libraries(${PROJECT_NAME}-tests PRIVATE Catch2::Catch2WithMain siege-platform nlohmann_json::nlohmann_json)
 
 include(CTest)
 include(Catch)
@@ -36,10 +35,10 @@ install(TARGETS ${PROJECT_NAME}
         RUNTIME DESTINATION lib)
 
 
-add_custom_command(
-     TARGET ${PROJECT_NAME}-tests
-     COMMENT "Running ${PROJECT_NAME}-tests"
-     POST_BUILD 
-     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-     COMMAND ${CMAKE_CTEST_COMMAND} -C $<CONFIGURATION> --output-on-failure
-)
+#add_custom_command(
+#     TARGET ${PROJECT_NAME}-tests
+#     COMMENT "Running ${PROJECT_NAME}-tests"
+#     POST_BUILD 
+#     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+#     COMMAND ${CMAKE_CTEST_COMMAND} -C $<CONFIGURATION> --output-on-failure
+#)

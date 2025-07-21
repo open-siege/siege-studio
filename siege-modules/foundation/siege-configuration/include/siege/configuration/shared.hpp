@@ -79,6 +79,7 @@ namespace siege::configuration
             text_game_config(std::unique_ptr<char[]> &&, std::vector<config_line>&&, persist&);
 
             std::vector<key_type> keys() const;
+            bool contains(key_type key) const;
             key_type find(key_type key) const;
             text_game_config&& emplace(key_type key, key_type value);
             text_game_config&& remove(key_type key);
