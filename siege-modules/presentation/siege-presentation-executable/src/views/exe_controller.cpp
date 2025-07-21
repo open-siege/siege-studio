@@ -909,7 +909,7 @@ namespace siege::views
     }
 
 
-    std::string extension_path = win32::module_ref::current_application().GetModuleFileName<char>();
+    std::string extension_path = win32::module_ref::current_module().GetModuleFileName<char>();
     auto wsock_path = std::filesystem::path(extension_path).parent_path() / "wsock32-on-zero-tier.dll";
     auto zt_path = std::filesystem::path(extension_path).parent_path() / "zt-shared.dll";
     std::error_code last_errorc;
