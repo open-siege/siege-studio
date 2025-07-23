@@ -1007,7 +1007,7 @@ namespace siege::views
       {
         namespace fs = std::filesystem;
 
-        auto ext_path = fs::path(win32::module_ref::current_application().GetModuleFileName()).parent_path() / "runtime-extensions";
+        auto ext_path = fs::path(win32::module_ref::current_module().GetModuleFileName()).parent_path() / "runtime-extensions";
 
         fs::remove_all(ext_path, last_errorc);
         fs::create_directories(ext_path, last_errorc);
