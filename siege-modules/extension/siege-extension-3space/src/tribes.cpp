@@ -13,12 +13,15 @@
 #include <detours.h>
 #include <siege/extension/shared.hpp>
 
-extern "C" {
-#define DARKCALL __attribute__((regparm(3)))
-
-static DARKCALL char* (*ConsoleEval)(void*, std::int32_t, std::int32_t, const char**) = nullptr;
-
+using game_command_line_caps = siege::platform::game_command_line_caps;
 using namespace std::literals;
+
+extern "C" {
+
+extern auto command_line_caps = game_command_line_caps{
+  .string_settings = { { L"connect" } },
+  .ip_connect_setting = L"connect",
+};
 
 constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 4>, 4> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 4>{ {
                                                                                                               { "cls"sv, std::size_t(0x6fb741) },
@@ -86,39 +89,53 @@ HRESULT executable_is_supported(const wchar_t* filename) noexcept
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
 
-inline void set_18_exports()
+const wchar_t** format_command_line(const siege::platform::game_command_line_args* args, std::uint32_t* new_size)
 {
-  ConsoleEval = (decltype(ConsoleEval))0x5f26f0;
+  if (!args)
+  {
+    return nullptr;
+  }
+
+  if (!new_size)
+  {
+    return nullptr;
+  }
+
+  static std::vector<std::wstring> string_args;
+  string_args.clear();
+
+  for (auto& setting : args->string_settings)
+  {
+    if (!setting.name)
+    {
+      continue;
+    }
+
+    if (!setting.value)
+    {
+      continue;
+    }
+
+    if (!setting.value[0])
+    {
+      continue;
+    }
+
+    auto& back = string_args.emplace_back(setting.name);
+    back.insert(0, 1, L'+');
+    string_args.emplace_back(setting.value);
+  }
+
+  static std::vector<const wchar_t*> raw_args;
+  raw_args.resize(string_args.size());
+  *new_size = (std::uint32_t)string_args.size();
+
+  std::transform(string_args.begin(), string_args.end(), raw_args.begin(), [](const std::wstring& value) {
+    return value.c_str();
+  });
+
+  return raw_args.data();
 }
-
-inline void set_19_exports()
-{
-  ConsoleEval = (decltype(ConsoleEval))0x5f28f4;
-}
-
-inline void set_110_exports()
-{
-  ConsoleEval = (decltype(ConsoleEval))0x5f33a8;
-}
-
-inline void set_1105_exports()
-{
-  ConsoleEval = (decltype(ConsoleEval))0x5f33bc;
-}
-
-inline void set_111_exports()
-{
-  ConsoleEval = (decltype(ConsoleEval))0x5f3700;
-}
-
-constexpr std::array<void (*)(), 5> export_functions = { {
-  set_18_exports,
-  set_19_exports,
-  set_110_exports,
-  set_1105_exports,
-  set_111_exports,
-} };
-
 
 static auto* TrueSetWindowsHookExA = SetWindowsHookExA;
 static auto* TrueAllocConsole = AllocConsole;
@@ -170,77 +187,6 @@ BOOL WINAPI DllMain(
       int index = 0;
       try
       {
-        auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
-
-        std::unordered_set<std::string_view> functions;
-        std::unordered_set<std::string_view> variables;
-
-        bool module_is_valid = false;
-
-        for (const auto& item : verification_strings)
-        {
-          win32::module_ref temp((void*)item[0].second);
-
-          if (temp != app_module)
-          {
-            continue;
-          }
-
-          module_is_valid = std::all_of(item.begin(), item.end(), [](const auto& str) {
-            return std::memcmp(str.first.data(), (void*)str.second, str.first.size()) == 0;
-          });
-
-
-          if (module_is_valid)
-          {
-            export_functions[index]();
-
-            std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 2);
-
-
-            for (auto& pair : function_name_ranges)
-            {
-              auto first_index = string_section.find(pair.first.data(), 0, pair.first.size() + 1);
-
-              if (first_index != std::string_view::npos)
-              {
-                auto second_index = string_section.find(pair.second.data(), first_index, pair.second.size() + 1);
-
-                if (second_index != std::string_view::npos)
-                {
-                  auto second_ptr = string_section.data() + second_index;
-                  auto end = second_ptr + std::strlen(second_ptr) + 1;
-
-                  for (auto start = string_section.data() + first_index; start != end; start += std::strlen(start) + 1)
-                  {
-                    std::string_view temp(start);
-
-                    if (temp.size() == 1)
-                    {
-                      continue;
-                    }
-
-                    if (!std::all_of(temp.begin(), temp.end(), [](auto c) { return std::isalnum(c) != 0; }))
-                    {
-                      break;
-                    }
-
-                    functions.emplace(temp);
-                  }
-                }
-              }
-            }
-
-            break;
-          }
-          index++;
-        }
-
-        if (!module_is_valid)
-        {
-          return FALSE;
-        }
-
         DetourRestoreAfterWith();
 
         DetourTransactionBegin();

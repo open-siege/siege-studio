@@ -13,13 +13,19 @@
 #include <detours.h>
 #include <siege/extension/shared.hpp>
 
-extern "C" 
-{
-#define DARKCALL __attribute__((regparm(3)))
+using game_command_line_caps = siege::platform::game_command_line_caps;
+using namespace std::literals;
 
+extern "C" {
+// TODO there are other ways of controlling the game. Do we still need to hook directly into the game?
+#define DARKCALL __attribute__((regparm(3)))
 static DARKCALL char* (*ConsoleEval)(void*, std::int32_t, std::int32_t, const char**) = nullptr;
 
-using namespace std::literals;
+
+extern auto command_line_caps = game_command_line_caps{
+  .string_settings = { { L"connect" } },
+  .ip_connect_setting = L"connect",
+};
 
 constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 4>, 4> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 4>{ {
                                                                                                               { "cls"sv, std::size_t(0x6fb741) },
@@ -50,26 +56,26 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 22> f
   { "dataStore"sv, "dataRelease"sv },
   { "defaultWeapons"sv, "allowWeapon"sv },
   { "goto"sv, "violate"sv },
-  { "initializeServer"sv, "checkDiskFreeSpace"sv }, // //isEqualIP added in 1.0.0.3
+  { "initializeServer"sv, "checkDiskFreeSpace"sv },// //isEqualIP added in 1.0.0.3
   { "say"sv, "flushChannel"sv },
   { "dynDataWriteObject"sv, "FlushPilots"sv },
-//  { "ME::Create"sv, "ME::RebuildCommandMap"sv }, // added in 1.0.0.3
+  //  { "ME::Create"sv, "ME::RebuildCommandMap"sv }, // added in 1.0.0.3
   { "loadObject"sv, "getNextObject"sv },
   { "HTMLOpen"sv, "HTMLOpenAndGoWin"sv },
   { "swapSurfaces"sv, "isGfxDriver"sv },
   { "newMovPlay"sv, "pauseMovie"sv },
   { "netStats"sv, "net::kick"sv },
   { "newRedbook"sv, "rbSetPlayMode"sv },
-  { "newInputManager"sv, "unbind"sv }, //defineKey added in 1.0.0.3
+  { "newInputManager"sv, "unbind"sv },// defineKey added in 1.0.0.3
   { "simTreeCreate"sv, "simTreeRegScript"sv },
   { "newSfx"sv, "sfxGetMaxBuffers"sv },
   { "newToolWindow"sv, "saveFileAs"sv },
-  { "newTerrain"sv, "lightTerrain"sv }, //reCalcCRC added in 1.0.0.3
+  { "newTerrain"sv, "lightTerrain"sv },// reCalcCRC added in 1.0.0.3
   { "GuiEditMode"sv, "windowsKeyboardDisable"sv },
-    //"LSCreate" "LSEditor" available in previous versions
- // { "LS::Create"sv, "LS::parseCommands"sv }, added in 1.0.0.3
+  //"LSCreate" "LSEditor" available in previous versions
+  // { "LS::Create"sv, "LS::parseCommands"sv }, added in 1.0.0.3
   { "ircConnect"sv, "ircEcho"sv },
-//  { "globeLines"sv, "loadSky"sv }, added in 1.0.0.3
+  //  { "globeLines"sv, "loadSky"sv }, added in 1.0.0.3
   { "MissionRegType"sv, "missionUndoMoveRotate"sv },
   { "cls"sv, "trace"sv } } };
 
@@ -77,7 +83,7 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 13> v
   //{ "suspended"sv, "SimGui::firstPreRender"sv }, // added in 1.0.0.3
   { "suspended"sv, "ESBasePlugin::postProduction"sv },
   { "Console::ForeRGB"sv, "Console::LastLineTimeout"sv },
-  { "$pref::mipcap"sv, "$OpenGL::HSL"sv }, //$OpenGL::AFK added in 1.0.0.2
+  { "$pref::mipcap"sv, "$OpenGL::HSL"sv },//$OpenGL::AFK added in 1.0.0.2
   { "GFXMetrics::EmittedPolys"sv, "useLowRes3D"sv },
   { "pref::sfx2DVolume"sv, "pref::sfx3DVolume"sv },
   { "dynDataWriteObject"sv, "FlushPilots"sv },
@@ -104,31 +110,53 @@ HRESULT executable_is_supported(const wchar_t* filename) noexcept
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
 
-inline void set_1000_exports()
+const wchar_t** format_command_line(const siege::platform::game_command_line_args* args, std::uint32_t* new_size)
 {
-  ConsoleEval = (decltype(ConsoleEval))0x5d3d00;
+  if (!args)
+  {
+    return nullptr;
+  }
+
+  if (!new_size)
+  {
+    return nullptr;
+  }
+
+  static std::vector<std::wstring> string_args;
+  string_args.clear();
+
+  for (auto& setting : args->string_settings)
+  {
+    if (!setting.name)
+    {
+      continue;
+    }
+
+    if (!setting.value)
+    {
+      continue;
+    }
+
+    if (!setting.value[0])
+    {
+      continue;
+    }
+
+    auto& back = string_args.emplace_back(setting.name);
+    back.insert(0, 1, L'+');
+    string_args.emplace_back(setting.value);
+  }
+
+  static std::vector<const wchar_t*> raw_args;
+  raw_args.resize(string_args.size());
+  *new_size = (std::uint32_t)string_args.size();
+
+  std::transform(string_args.begin(), string_args.end(), raw_args.begin(), [](const std::wstring& value) {
+    return value.c_str();
+  });
+
+  return raw_args.data();
 }
-
-inline void set_1002_exports()
-{
-  ConsoleEval = (decltype(ConsoleEval))0x5d4dd8;
-}
-
-inline void set_1003_exports()
-{
-  ConsoleEval = (decltype(ConsoleEval))0x5e2bbc;
-}
-
-inline void set_1004_exports()
-{
-  ConsoleEval = (decltype(ConsoleEval))0x5e6460;
-}
-
-constexpr std::array<void (*)(), 4> export_functions = { { set_1000_exports,
-  set_1002_exports,
-  set_1003_exports,
-  set_1004_exports } };
-
 
 static auto* TrueSetWindowsHookExA = SetWindowsHookExA;
 static auto* TrueAllocConsole = AllocConsole;
@@ -204,6 +232,7 @@ BOOL WINAPI WrappedGetVolumeInformationA(
 {
   if (lpRootPathName && lpRootPathName == VirtualDriveLetter)
   {
+    // TODO put current disc into environment variable
     // To be referenced when disc swapping can be implemented
     UNREFERENCED_PARAMETER(StarsiegeDisc1);
     UNREFERENCED_PARAMETER(StarsiegeBetaDisc);
@@ -263,77 +292,6 @@ BOOL WINAPI DllMain(
       int index = 0;
       try
       {
-        auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
-
-        std::unordered_set<std::string_view> functions;
-        std::unordered_set<std::string_view> variables;
-
-        bool module_is_valid = false;
-
-        for (const auto& item : verification_strings)
-        {
-          win32::module_ref temp((void*)item[0].second);
-
-          if (temp != app_module)
-          {
-            continue;
-          }
-
-          module_is_valid = std::all_of(item.begin(), item.end(), [](const auto& str) {
-            return std::memcmp(str.first.data(), (void*)str.second, str.first.size()) == 0;
-          });
-
-
-          if (module_is_valid)
-          {
-            export_functions[index]();
-
-            std::string_view string_section((const char*)ConsoleEval, 1024 * 1024 * 2);
-
-
-            for (auto& pair : function_name_ranges)
-            {
-              auto first_index = string_section.find(pair.first.data(), 0, pair.first.size() + 1);
-
-              if (first_index != std::string_view::npos)
-              {
-                auto second_index = string_section.find(pair.second.data(), first_index, pair.second.size() + 1);
-
-                if (second_index != std::string_view::npos)
-                {
-                  auto second_ptr = string_section.data() + second_index;
-                  auto end = second_ptr + std::strlen(second_ptr) + 1;
-
-                  for (auto start = string_section.data() + first_index; start != end; start += std::strlen(start) + 1)
-                  {
-                    std::string_view temp(start);
-
-                    if (temp.size() == 1)
-                    {
-                      continue;
-                    }
-
-                    if (!std::all_of(temp.begin(), temp.end(), [](auto c) { return std::isalnum(c) != 0; }))
-                    {
-                      break;
-                    }
-
-                    functions.emplace(temp);
-                  }
-                }
-              }
-            }
-
-            break;
-          }
-          index++;
-        }
-
-        if (!module_is_valid)
-        {
-          return FALSE;
-        }
-
         DetourRestoreAfterWith();
 
         DetourTransactionBegin();
@@ -342,22 +300,6 @@ BOOL WINAPI DllMain(
         std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourAttach(func.first, func.second); });
 
         DetourTransactionCommit();
-
-        //auto host = std::make_unique<siege::extension::DarkstarScriptDispatch>(std::move(functions), std::move(variables), [](std::string_view eval_string) -> std::string_view {
-        //  std::array<const char*, 2> args{ "eval", eval_string.data() };
-
-        //  // Luckily this function is static and doesn't need the console instance object nor
-        //  // an ID to identify the callback. It doesn't even check for "eval" and skips straight to the second argument.
-        //  auto result = ConsoleEval(nullptr, 0, 2, args.data());
-
-        //  if (result == nullptr)
-        //  {
-        //    return "";
-        //  }
-
-
-        //  return result;
-        //});
       }
       catch (...)
       {
