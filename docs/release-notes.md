@@ -1,3 +1,6 @@
+# Siege Studio + Siege Launcher 25.31 Development Release
+* Fixed issue with unsupported games not working with Zero Tier correctly on second launch.
+
 # Siege Studio + Siege Launcher 25.30 Development Release
 * Fixed issue with Zero Tier broadcasts not working.
 * Fixed issue with Zero Tier networking not showing for unsupported games on second launch.
