@@ -1,5 +1,7 @@
 # Siege Studio + Siege Launcher 25.31 Development Release
 * Fixed issue with unsupported games not working with Zero Tier correctly on second launch.
+* Improved Soldier of Fortune 2 extension with more settings and better input mappings.
+* Fixed issue with integer values for Quake 3 based games not being processed during launch.
 
 # Siege Studio + Siege Launcher 25.30 Development Release
 * Fixed issue with Zero Tier broadcasts not working.

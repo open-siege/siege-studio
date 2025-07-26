@@ -67,6 +67,26 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
     }
   }
 
+  for (auto& setting : args->int_settings)
+  {
+    if (!setting.name)
+    {
+      continue;
+    }
+
+    try
+    {
+      auto name_str = std::wstring_view(setting.name);
+
+      string_args.emplace_back(L"+set");
+      string_args.emplace_back(name_str);
+      string_args.emplace_back(std::to_wstring(setting.value));
+    }
+    catch (...)
+    {
+    }
+  }
+
   for (auto& flag : args->flags)
   {
     if (!flag)
