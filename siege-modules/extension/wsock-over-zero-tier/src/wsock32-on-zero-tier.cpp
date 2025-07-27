@@ -36,7 +36,8 @@ std::optional<std::uint64_t> get_zero_tier_network_id();
 std::optional<std::string> get_zero_tier_peer_id_and_public_key();
 int zt_to_winsock_error(int);
 int zt_to_winsock_result(int code);
-std::optional<in_addr> get_zero_tier_fallback_broadcast_ip_v4();
+std::set<std::uint32_t>& get_fallback_broadcast_addresses();
+
 bool use_zero_tier();
 int to_zt_msg_flags(int flags);
 zts_sockaddr_in to_zts(sockaddr_in addr);
@@ -463,6 +464,11 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
       return zt_to_winsock_result(zt_result);
     }
 
+    if (from && fromLen && zt_addr.sin_addr.S_addr)
+    {
+      get_fallback_broadcast_addresses().emplace(zt_addr.sin_addr.S_addr);
+    }
+
     copy_address(zt_addr, from, fromLen);
 
     return (int)zt_result;
@@ -703,11 +709,16 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
 
           auto zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
 
-          if (auto ip = get_zero_tier_fallback_broadcast_ip_v4(); ip && zt_result < 0)
+          if (auto& ips = get_fallback_broadcast_addresses(); !ips.empty() && zt_result < 0)
           {
-            get_log() << "Could not broadcast. Trying direct IP.\n";
-            address_and_size.first.sin_addr.S_addr = ip->S_un.S_addr;
-            zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
+            auto index = 0;
+
+            for (auto ip : ips)
+            {
+              get_log() << "Could not broadcast. Trying direct IP " << index++ << ".\n";
+              address_and_size.first.sin_addr.S_addr = ip;
+              zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
+            }
           }
 
           if (zt_result < 0)
@@ -717,13 +728,18 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
 
           return zt_to_winsock_result(zt_result);
         }
-        else if (auto ip = get_zero_tier_fallback_broadcast_ip_v4(); ip)
+        else if (auto& ips = get_fallback_broadcast_addresses(); !ips.empty())
         {
           get_log() << "Doing fallback send instead of broadcast.\n";
-          address_and_size.first.sin_addr.S_addr = ip->S_un.S_addr;
-          auto zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
+          ssize_t last_result{};
 
-          return zt_to_winsock_result(zt_result);
+          for (auto ip : ips)
+          {
+            address_and_size.first.sin_addr.S_addr = ip;
+            last_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
+          }
+
+          return zt_to_winsock_result(last_result);
         }
         else
         {
@@ -1412,6 +1428,23 @@ std::optional<in_addr> get_zero_tier_fallback_broadcast_ip_v4()
   return result;
 }
 
+std::set<std::uint32_t>& get_fallback_broadcast_addresses()
+{
+  static std::set<std::uint32_t> addresses = [] {
+    std::set<std::uint32_t> initial;
+
+    auto env_addr = get_zero_tier_fallback_broadcast_ip_v4();
+
+    if (env_addr)
+    {
+      initial.emplace(env_addr->S_un.S_addr);
+    }
+
+    return initial;
+  }();
+
+  return addresses;
+}
 
 std::ostream& get_log()
 {
