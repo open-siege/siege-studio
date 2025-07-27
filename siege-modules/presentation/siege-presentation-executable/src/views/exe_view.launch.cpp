@@ -174,7 +174,7 @@ namespace siege::views
       launch_settings.emplace_back(game_setting{
         .setting_name = L"ZERO_TIER_ENABLED",
         .type = game_command_line_caps::env_setting,
-        .value = std::all_of(settings.last_zero_tier_network_id.begin(), settings.last_zero_tier_network_id.end(), [](auto value) { return value != '\0'; }) ? 0 : 1,
+        .value = (int)settings.zero_tier_enabled,
         .display_name = L"Enable Zero Tier",
         .group_id = 1,
         .get_predefined_int = [results = std::vector<siege::platform::predefined_int>{}](auto name) mutable -> std::span<siege::platform::predefined_int> {
@@ -860,7 +860,7 @@ namespace siege::views
       {
         copy_to_array(setting_iter->value, settings.last_zero_tier_network_id);
       }
-      
+
       if (auto setting_iter = std::find_if(final_launch_settings.begin(), final_launch_settings.end(), [&](game_setting& setting) {
             return setting.setting_name == hosting_pref_name;
           });
@@ -937,8 +937,6 @@ namespace siege::views
         }
       }
 
-      controller.set_game_settings(settings);
-
       auto string_index = 0;
       auto env_index = 0;
       auto int_index = 0;
@@ -1001,6 +999,14 @@ namespace siege::views
         {
         }
       }
+
+      settings.zero_tier_enabled = std::any_of(game_args->environment_settings.begin(), game_args->environment_settings.end(), [](auto& item) {
+        return item.name != nullptr && std::wstring_view(item.name) == L"ZERO_TIER_ENABLED" && item.value != nullptr && item.value[0] == '1';
+      })
+                                     ? 1
+                                     : 0;
+
+      controller.set_game_settings(settings);
 
       input_injector_args args{
         .args = std::move(game_args),

@@ -750,6 +750,10 @@ namespace siege::views
       std::memcpy(raw_bytes.data(), settings.last_hosting_preference.data(), raw_bytes.size());
       result = result && ::RegSetValueExW(main_key, L"LastHostingPreference", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
 
+      raw_bytes.resize(sizeof(settings.zero_tier_enabled));
+      std::memcpy(raw_bytes.data(), &settings.zero_tier_enabled, raw_bytes.size());
+      result = result && ::RegSetValueExW(main_key, L"ZeroTierEnabled", 0, REG_DWORD, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
+
       ::RegCloseKey(main_key);
       ::RegCloseKey(user_key);
 
@@ -787,6 +791,10 @@ namespace siege::views
 
       size = game_settings.last_hosting_preference.size() * char_size;
       ::RegGetValueW(main_key, nullptr, L"LastHostingPreference", RRF_RT_REG_SZ, &type, game_settings.last_hosting_preference.data(), &size);
+
+      size = sizeof(game_settings.zero_tier_enabled);
+      type = REG_DWORD;
+      ::RegGetValueW(main_key, nullptr, L"ZeroTierEnabled", RRF_RT_DWORD, &type, &game_settings.zero_tier_enabled, &size);
 
       ::RegCloseKey(main_key);
     }
