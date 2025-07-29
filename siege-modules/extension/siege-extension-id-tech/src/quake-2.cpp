@@ -61,7 +61,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
 } };
 
 constexpr static auto quake2_aliases = std::array<std::array<std::string_view, 2>, 2>{ { { "+throw-grenade", "use grenades; +attack" },
-  { "-throw-grenade", "-attack;weapprev" } } };
+  { "-throw-grenade", "-attack;weaplast" } } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 using namespace std::literals;

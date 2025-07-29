@@ -26,6 +26,7 @@ using game_action = siege::platform::game_action;
 using game_command_line_caps = siege::platform::game_command_line_caps;
 using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
+using key_type = siege::configuration::key_type;
 
 extern auto command_line_caps = game_command_line_caps{
   .int_settings = { { L"dedicated", L"r_mode" } },
@@ -49,17 +50,29 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::analog, "+lookup", u"Look Up", u"Aiming" },
   game_action{ game_action::analog, "+lookdown", u"Look Down", u"Aiming" },
   game_action{ game_action::digital, "+attack", u"Attack", u"Combat" },
-  game_action{ game_action::digital, "+altattack", u"Alt Attack", u"Combat" },
-  game_action{ game_action::digital, "+melee-attack", u"Melee Attack", u"Combat" },
+  game_action{ game_action::digital, "weapalt", u"Alt Attack", u"Combat" },
+  game_action{ game_action::digital, "vstr melee-toggle", u"Toggle Melee", u"Combat" },
+  game_action{ game_action::digital, "vstr grenade-toggle", u"Toggle Grenade", u"Combat" },
+  game_action{ game_action::digital, "vstr pistol-toggle", u"Toggle Pistol", u"Combat" },
   game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
   game_action{ game_action::digital, "weaprev", u"Previous Weapon", u"Combat" },
-  game_action{ game_action::digital, "itemnext", u"Next Item", u"Combat" },
-  game_action{ game_action::digital, "itemuse", u"Use Item", u"Combat" },
-  game_action{ game_action::digital, "score", u"Score", u"Interface" },
+  game_action{ game_action::digital, "+scores", u"Score", u"Interface" },
   game_action{ game_action::digital, "menu-objectives", u"Objectives", u"Interface" },
   game_action{ game_action::digital, "+klook", u"Keyboard Look", u"Misc" },
   game_action{ game_action::digital, "+mlook", u"Mouse Look", u"Misc" },
 } };
+
+constexpr static auto wolf_aliases = std::array<std::array<std::string_view, 3>, 9>{
+  { { "melee-toggle", "vstr melee-toggle-start" },
+    { "melee-toggle-start", "weaponbank 1;set melee-toggle vstr melee-toggle-stop;" },
+    { "melee-toggle-stop", "weaplastused;set melee-toggle vstr melee-toggle-start" },
+    { "grenade-toggle", "vstr grenade-toggle-start" },
+    { "grenade-toggle-start", "weaponbank 4;set grenade-toggle vstr grenade-toggle-stop" },
+    { "grenade-toggle-stop", "weaplastused;set grenade-toggle vstr grenade-toggle-start" },
+    { "pistol-toggle", "vstr pistol-toggle-start" },
+    { "pistol-toggle-start", "weaponbank 2;set pistol-toggle vstr pistol-toggle-stop" },
+    { "pistol-toggle-stop", "weaplastused;set pistol-toggle vstr pistol-toggle-start" } }
+};
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 
@@ -125,6 +138,11 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
 
+  for (auto& alias : wolf_aliases)
+  {
+    config.emplace(key_type({ "seta", alias[0] }), (alias[1]));
+  }
+
   bool enable_controller = save_bindings_to_config(*args, config, q3_mapping_context{});
 
   if (enable_controller)
@@ -134,8 +152,8 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
 
   config.save(custom_bindings);
 
-  bind_axis_to_send_input(*args, "+lookup", "+mlook");
-  bind_axis_to_send_input(*args, "+lookdown", "+mlook");
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, VK_LEFT);
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, VK_RIGHT);
 
   auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
 
@@ -148,11 +166,6 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   std::advance(iter, 1);
   iter->name = L"console";
   iter->value = L"1";
-
-  std::advance(iter, 1);
-  iter->name = L"map";
-  iter->value = L"trdm01a";
-
 
   return S_OK;
 }
@@ -170,9 +183,8 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
     load_mouse_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 2> actions{
-    { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+altattack"),
-      std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use") }
+  std::array<std::pair<WORD, std::string_view>, 1> actions{
+    { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "weapalt") }
   };
 
   upsert_mouse_defaults(game_actions, actions, *binding);
@@ -197,7 +209,8 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
 
   std::array<std::pair<WORD, std::string_view>, 5> actions{
     {
-      std::make_pair<WORD, std::string_view>('G', "+throw-grenade"),
+      std::make_pair<WORD, std::string_view>('g', "vstr grenade-toggle"),
+      std::make_pair<WORD, std::string_view>('f', "vstr melee-toggle"),
       std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),

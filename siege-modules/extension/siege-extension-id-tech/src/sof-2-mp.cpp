@@ -139,7 +139,7 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
 
   for (auto& alias : sof_aliases)
   {
-    config.emplace(key_type({ "set", alias[0] }), (alias[1]));
+    config.emplace(key_type({ "seta", alias[0] }), (alias[1]));
   }
 
   config.emplace(key_type({ "set", "cg_weaponMenuFast" }), key_type("1"));

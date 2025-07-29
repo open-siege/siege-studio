@@ -66,7 +66,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
 } };
 
 constexpr static auto kingpin_aliases = std::array<std::array<std::string_view, 2>, 2>{ { { "+melee-attack", "use pipe;+attack" },
-  { "-melee-attack", "weapprev;-attack" } } };
+  { "-melee-attack", "weaplast;-attack" } } };
 
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"siege-extension-kingpin" } };

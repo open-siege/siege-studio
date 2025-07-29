@@ -117,6 +117,9 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
 
   config.save(custom_bindings);
 
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, VK_LEFT);
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, VK_RIGHT);
+
   auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
 
   if (iter != args->string_settings.end())
@@ -151,7 +154,6 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
   };
 
   upsert_mouse_defaults(game_actions, actions, *binding);
-
 
   return S_OK;
 }

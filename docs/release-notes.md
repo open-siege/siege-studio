@@ -1,3 +1,7 @@
+# Siege Studio + Siege Launcher 25.32 Development Release
+* Addresses received via "recvfrom" are now cached for future broadcasts. This fixes server discovery in unsupported games like Street Racing Syndicate.
+* Fixed custom aliases in Quake 2 and Kingpin - Life of Crime. Instead of using weaprev, weaplast is used instead.
+
 # Siege Studio + Siege Launcher 25.31 Development Release
 * Fixed issue with unsupported games not working with Zero Tier correctly on second launch.
 * Improved Soldier of Fortune 2 multiplayer extension with more settings and better input mappings.
