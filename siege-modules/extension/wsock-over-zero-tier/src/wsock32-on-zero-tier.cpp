@@ -293,7 +293,7 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
       zt_setsockopt(socket, ZTS_SOL_SOCKET, ZTS_SO_RCVBUF, &value, size);
 
       zts_timeval timeout{
-          .tv_sec = 1
+        .tv_sec = 60
       };
 
       zt_setsockopt(socket, ZTS_SOL_SOCKET, ZTS_SO_SNDTIMEO, &timeout, sizeof(timeout));
@@ -499,7 +499,7 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
   catch (...)
   {
     get_log() << "Exception occurred in siege_recvfrom" << std::endl;
-    wsock_WSASetLastError(WSAENETDOWN); 
+    wsock_WSASetLastError(WSAENETDOWN);
     return SOCKET_ERROR;
   }
 }
@@ -660,7 +660,7 @@ int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 
 int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
 {
-  get_log() << "siege_bind " << to_zts(ws) << '\n';
+  get_log() << "siege_bind " << ws << '\n';
 
   if (use_zero_tier())
   {
@@ -676,7 +676,7 @@ int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
       return zt_to_winsock_result(zt_result);
     }
 
-    auto zt_result = zt_bind(to_zts(ws), nullptr, namelen);
+    auto zt_result = zt_bind(to_zts(ws), nullptr, 0);
 
     return zt_to_winsock_result(zt_result);
   }
@@ -703,93 +703,77 @@ int __stdcall siege_send(SOCKET ws, const char* buf, int len, int flags)
 
 int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen) noexcept
 {
-    try
+  try
+  {
+    if (use_zero_tier())
     {
-      if (use_zero_tier())
+      get_log() << "zts_bsd_sendto\n";
+      static auto* zt_sendto = (std::add_pointer_t<decltype(zts_bsd_sendto)>)::GetProcAddress(get_ztlib(), "zts_bsd_sendto");
+      static auto* zt_setsockopt = (std::add_pointer_t<decltype(zts_bsd_setsockopt)>)::GetProcAddress(get_ztlib(), "zts_bsd_setsockopt");
+      static auto* zt_net_get_broadcast = (std::add_pointer_t<decltype(zts_net_get_broadcast)>)::GetProcAddress(get_ztlib(), "zts_net_get_broadcast");
+      static auto* zt_getsockopt = (std::add_pointer_t<decltype(zts_bsd_getsockopt)>)::GetProcAddress(get_ztlib(), "zts_bsd_getsockopt");
+
+      if (to)
       {
-        get_log() << "zts_bsd_sendto\n";
-        static auto* zt_sendto = (std::add_pointer_t<decltype(zts_bsd_sendto)>)::GetProcAddress(get_ztlib(), "zts_bsd_sendto");
-        static auto* zt_setsockopt = (std::add_pointer_t<decltype(zts_bsd_setsockopt)>)::GetProcAddress(get_ztlib(), "zts_bsd_setsockopt");
-        static auto* zt_net_get_broadcast = (std::add_pointer_t<decltype(zts_net_get_broadcast)>)::GetProcAddress(get_ztlib(), "zts_net_get_broadcast");
-        static auto* zt_getsockopt = (std::add_pointer_t<decltype(zts_bsd_getsockopt)>)::GetProcAddress(get_ztlib(), "zts_bsd_getsockopt");
+        auto address_and_size = copy_address(to, tolen);
 
-        if (to)
+        auto is_broadcast_address = [&]() {
+          in_addr addr{};
+          addr.S_un.S_addr = address_and_size.first.sin_addr.S_addr;
+          
+          return addr.S_un.S_un_b.s_b1 == 255 || addr.S_un.S_un_b.s_b2 == 255 || addr.S_un.S_un_b.s_b3 == 255 || addr.S_un.S_un_b.s_b4 == 255;
+        };
+
+        if (address_and_size.first.sin_addr.S_addr == ZTS_IPADDR_BROADCAST || is_broadcast_address())
         {
-          auto address_and_size = copy_address(to, tolen);
+          int socket_type = 0;
+          zts_socklen_t size = sizeof(int);
 
-          if (address_and_size.first.sin_addr.S_addr == ZTS_IPADDR_BROADCAST)
+          zt_getsockopt(to_zts(ws), ZTS_SOL_SOCKET, ZTS_SO_TYPE, &socket_type, &size);
+
+          get_log() << "Trying to broadcast\n";
+
+          auto zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
+
+          if (auto& ips = get_fallback_broadcast_addresses(); !ips.empty() && zt_result < 0)
           {
-            int socket_type = 0;
-            zts_socklen_t size = sizeof(int);
+            auto index = 0;
 
-            zt_getsockopt(to_zts(ws), ZTS_SOL_SOCKET, ZTS_SO_TYPE, &socket_type, &size);
-
-            if (socket_type == ZTS_SOCK_DGRAM)
+            for (auto ip : ips)
             {
-              get_log() << "Trying to broadcast\n";
-
-              auto zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
-
-              if (auto& ips = get_fallback_broadcast_addresses(); !ips.empty() && zt_result < 0)
-              {
-                auto index = 0;
-
-                for (auto ip : ips)
-                {
-                  get_log() << "Could not broadcast. Trying direct IP " << index++ << ".\n";
-                  address_and_size.first.sin_addr.S_addr = ip;
-                  zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
-                }
-              }
-
-              if (zt_result < 0)
-              {
-                get_log() << "Still could not broadcast.\n";
-              }
-
-              return zt_to_winsock_result(zt_result);
-            }
-            else if (auto& ips = get_fallback_broadcast_addresses(); !ips.empty())
-            {
-              get_log() << "Doing fallback send instead of broadcast.\n";
-              ssize_t last_result{};
-
-              for (auto ip : ips)
-              {
-                address_and_size.first.sin_addr.S_addr = ip;
-                last_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
-              }
-
-              return zt_to_winsock_result(last_result);
-            }
-            else
-            {
-              get_log() << "Did not broadcast at all.\n";
-              wsock_WSASetLastError(WSAEADDRNOTAVAIL);
-              return SOCKET_ERROR;
+              get_log() << "Could not broadcast. Trying direct IP " << index++ << ".\n";
+              address_and_size.first.sin_addr.S_addr = ip;
+              zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
             }
           }
 
-
-          get_log() << "Doing a regular sendto\n";
-          auto zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
+          if (zt_result < 0)
+          {
+            get_log() << "Still could not broadcast.\n";
+          }
 
           return zt_to_winsock_result(zt_result);
         }
 
-        get_log() << "Somehow doing a bad send to\n";
-        auto zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), nullptr, 0);
+        get_log() << "Doing a regular sendto\n";
+        auto zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
 
         return zt_to_winsock_result(zt_result);
       }
-      return wsock_sendto(ws, buf, len, flags, to, tolen);
+
+      get_log() << "Somehow doing a bad send to\n";
+      auto zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), nullptr, 0);
+
+      return zt_to_winsock_result(zt_result);
     }
-    catch (...)
-    {
-      get_log() << "Exception occurred in siege_sendto" << std::endl;
-      wsock_WSASetLastError(WSAENETDOWN);
-      return SOCKET_ERROR;
-    }
+    return wsock_sendto(ws, buf, len, flags, to, tolen);
+  }
+  catch (...)
+  {
+    get_log() << "Exception occurred in siege_sendto" << std::endl;
+    wsock_WSASetLastError(WSAENETDOWN);
+    return SOCKET_ERROR;
+  }
 }
 
 #ifdef SD_RECEIVE
