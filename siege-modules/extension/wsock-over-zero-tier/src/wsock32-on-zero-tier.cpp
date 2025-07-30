@@ -5,6 +5,7 @@
 #else
 #include <WinSock.h>
 #endif
+#include <wsnwlink.h>
 #include <optional>
 #include <string>
 #include <map>
@@ -46,6 +47,8 @@ bool& get_node_online_status();
 sockaddr_in from_zts(zts_sockaddr_in zt_addr);
 hostent from_zts(zts_hostent zt_host);
 std::string protocol_to_string(int protocol);
+std::string level_to_string(int level);
+std::string option_to_string(int option);
 std::string type_to_string(int type);
 std::string af_to_string(int af);
 std::string ioctl_cmd_to_string(long cmd);
@@ -289,6 +292,13 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
 
       zt_setsockopt(socket, ZTS_SOL_SOCKET, ZTS_SO_RCVBUF, &value, size);
 
+      zts_timeval timeout{
+          .tv_sec = 1
+      };
+
+      zt_setsockopt(socket, ZTS_SOL_SOCKET, ZTS_SO_SNDTIMEO, &timeout, sizeof(timeout));
+      zt_setsockopt(socket, ZTS_SOL_SOCKET, ZTS_SO_RCVTIMEO, &timeout, sizeof(timeout));
+
       return from_zts(socket);
     }
 
@@ -332,10 +342,10 @@ static_assert(SO_ACCEPTCONN == ZTS_SO_ACCEPTCONN);
 static_assert(SOL_SOCKET != ZTS_SOL_SOCKET);
 int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* optval, int optlen)
 {
-  get_log() << "siege_setsockopt" << ws << " " << optname << '\n';
+  get_log() << "siege_setsockopt: " << ws << " " << optname << '\n';
   if (use_zero_tier())
   {
-    get_log() << "zts_bsd_setsockopt, level: " << level << " optname: " << optname << '\n';
+    get_log() << "zts_bsd_setsockopt, socket: " << to_zts(ws) << " level: " << level_to_string(level) << " optname: " << option_to_string(optname) << '\n';
 
     if (level != SOL_SOCKET)
     {
@@ -1877,6 +1887,54 @@ bool& get_node_online_status()
 bool use_zero_tier()
 {
   return get_zero_tier_network_id() && get_ztlib();
+}
+
+std::string level_to_string(int level)
+{
+  switch (level)
+  {
+  case SOL_SOCKET:
+    return "SOL_SOCKET";
+  case IPPROTO_TCP:
+    return "IPPROTO_TCP";
+  case IPPROTO_UDP:
+    return "IPPROTO_UDP";
+  default:
+    return std::to_string(level);
+  }
+}
+
+std::string option_to_string(int option)
+{
+  switch (option)
+  {
+  case SO_BROADCAST:
+    return "SO_BROADCAST";
+  case SO_DEBUG:
+    return "SO_DEBUG";
+  case SO_DONTLINGER:
+    return "SO_DONTLINGER";
+  case SO_DONTROUTE:
+    return "SO_DONTROUTE";
+  case SO_KEEPALIVE:
+    return "SO_KEEPALIVE";
+  case SO_LINGER:
+    return "SO_LINGER";
+  case SO_OOBINLINE:
+    return "SO_OOBINLINE";
+  case SO_RCVBUF:
+    return "SO_RCVBUF";
+  case SO_REUSEADDR:
+    return "SO_REUSEADDR";
+  case SO_RCVTIMEO:
+    return "SO_RCVTIMEO";
+  case SO_SNDBUF:
+    return "SO_SNDBUF";
+  case SO_SNDTIMEO:
+    return "SO_SNDTIMEO";
+  default:
+    return std::to_string(option);
+  }
 }
 
 std::string af_to_string(int af)
