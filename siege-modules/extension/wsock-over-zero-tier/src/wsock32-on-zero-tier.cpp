@@ -316,6 +316,13 @@ int __stdcall siege_recv(SOCKET ws, char* buf, int len, int flags)
 {
   if (use_zero_tier())
   {
+    if (!get_zero_tier_handles().contains(to_zts(ws)))
+    {
+      get_log() << "Non zero tier socket passed in" << std::endl;
+      wsock_WSASetLastError(WSAENOTSOCK);
+      return SOCKET_ERROR;
+    }
+
     static auto* zt_recv = (std::add_pointer_t<decltype(zts_bsd_recv)>)::GetProcAddress(get_ztlib(), "zts_bsd_recv");
 
     auto zt_result = (int)zt_recv(to_zts(ws), buf, (std::size_t)len, to_zt_msg_flags(flags));
@@ -345,6 +352,13 @@ int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* op
   get_log() << "siege_setsockopt: " << ws << " " << optname << '\n';
   if (use_zero_tier())
   {
+    if (!get_zero_tier_handles().contains(to_zts(ws)))
+    {
+      get_log() << "Non zero tier socket passed in" << std::endl;
+      wsock_WSASetLastError(WSAENOTSOCK);
+      return SOCKET_ERROR;
+    }
+
     get_log() << "zts_bsd_setsockopt, socket: " << to_zts(ws) << " level: " << level_to_string(level) << " optname: " << option_to_string(optname) << '\n';
 
     if (level != SOL_SOCKET)
@@ -391,6 +405,13 @@ int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, 
   get_log() << "siege_getsockopt" << to_zts(ws) << " " << optname << '\n';
   if (use_zero_tier())
   {
+    if (!get_zero_tier_handles().contains(to_zts(ws)))
+    {
+      get_log() << "Non zero tier socket passed in" << std::endl;
+      wsock_WSASetLastError(WSAENOTSOCK);
+      return SOCKET_ERROR;
+    }
+
     get_log() << "zts_bsd_setsockopt, level: " << level << " optname: " << optname << '\n';
 
     if (level != SOL_SOCKET)
@@ -445,6 +466,13 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
   {
     if (use_zero_tier())
     {
+      if (!get_zero_tier_handles().contains(to_zts(ws)))
+      {
+        get_log() << "Non zero tier socket passed in" << std::endl;
+        wsock_WSASetLastError(WSAENOTSOCK);
+        return SOCKET_ERROR;
+      }
+
       static auto* zt_recvfrom = (std::add_pointer_t<decltype(zts_bsd_recvfrom)>)::GetProcAddress(get_ztlib(), "zts_bsd_recvfrom");
       static auto* zt_addr_get_str = (std::add_pointer_t<decltype(zts_addr_get_str)>)::GetProcAddress(get_ztlib(), "zts_addr_get_str");
 
@@ -509,6 +537,13 @@ int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
   get_log() << "siege_getsockname\n";
   if (use_zero_tier())
   {
+    if (!get_zero_tier_handles().contains(to_zts(ws)))
+    {
+      get_log() << "Non zero tier socket passed in" << std::endl;
+      wsock_WSASetLastError(WSAENOTSOCK);
+      return SOCKET_ERROR;
+    }
+
     static auto* zt_getsockname = (std::add_pointer_t<decltype(zts_bsd_getsockname)>)::GetProcAddress(get_ztlib(), "zts_bsd_getsockname");
 
     if (name && length)
@@ -538,6 +573,13 @@ int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
   get_log() << "siege_getpeername\n";
   if (use_zero_tier())
   {
+    if (!get_zero_tier_handles().contains(to_zts(ws)))
+    {
+      get_log() << "Non zero tier socket passed in" << std::endl;
+      wsock_WSASetLastError(WSAENOTSOCK);
+      return SOCKET_ERROR;
+    }
+
     static auto* zt_getpeername = (std::add_pointer_t<decltype(zts_bsd_getpeername)>)::GetProcAddress(get_ztlib(), "zts_bsd_getpeername");
 
     if (name && length)
@@ -574,6 +616,13 @@ int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
   get_log() << "siege_ioctlsocket, cmd: " << ioctl_cmd_to_string(cmd) << '\n';
   if (use_zero_tier())
   {
+    if (!get_zero_tier_handles().contains(to_zts(ws)))
+    {
+      get_log() << "Non zero tier socket passed in" << std::endl;
+      wsock_WSASetLastError(WSAENOTSOCK);
+      return SOCKET_ERROR;
+    }
+
     get_log() << "zts_bsd_ioctl\n";
     static auto* zt_ioctl = (std::add_pointer_t<decltype(zts_bsd_ioctl)>)::GetProcAddress(get_ztlib(), "zts_bsd_ioctl");
 
@@ -593,6 +642,13 @@ int __stdcall siege_listen(SOCKET ws, int backlog)
   get_log() << "siege_listen\n";
   if (use_zero_tier())
   {
+    if (!get_zero_tier_handles().contains(to_zts(ws)))
+    {
+      get_log() << "Non zero tier socket passed in" << std::endl;
+      wsock_WSASetLastError(WSAENOTSOCK);
+      return SOCKET_ERROR;
+    }
+
     static auto* zt_listen = (std::add_pointer_t<decltype(zts_bsd_listen)>)::GetProcAddress(get_ztlib(), "zts_bsd_listen");
 
     auto zt_result = zt_listen(to_zts(ws), backlog);
@@ -606,6 +662,13 @@ SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
   get_log() << "siege_accept\n";
   if (use_zero_tier())
   {
+    if (!get_zero_tier_handles().contains(to_zts(ws)))
+    {
+      get_log() << "Non zero tier socket passed in" << std::endl;
+      wsock_WSASetLastError(WSAENOTSOCK);
+      return SOCKET_ERROR;
+    }
+
     get_log() << "zts_bsd_accept\n";
     static auto* zt_accept = (std::add_pointer_t<decltype(zts_bsd_accept)>)::GetProcAddress(get_ztlib(), "zts_bsd_accept");
 
@@ -640,6 +703,13 @@ int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 
   if (use_zero_tier())
   {
+    if (!get_zero_tier_handles().contains(to_zts(ws)))
+    {
+      get_log() << "Non zero tier socket passed in" << std::endl;
+      wsock_WSASetLastError(WSAENOTSOCK);
+      return SOCKET_ERROR;
+    }
+
     get_log() << "zts_bsd_connect\n";
     static auto* zt_connect = (std::add_pointer_t<decltype(zts_bsd_connect)>)::GetProcAddress(get_ztlib(), "zts_bsd_connect");
 
@@ -660,10 +730,17 @@ int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 
 int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
 {
-  get_log() << "siege_bind " << ws << '\n';
+  get_log() << "siege_bind " << ws << std::endl;
 
   if (use_zero_tier())
   {
+    if (!get_zero_tier_handles().contains(to_zts(ws)))
+    {
+      get_log() << "Non zero tier socket passed in" << std::endl;
+      wsock_WSASetLastError(WSAENOTSOCK);
+      return SOCKET_ERROR;
+    }
+
     get_log() << "zts_bsd_bind\n";
     static auto* zt_bind = (std::add_pointer_t<decltype(zts_bsd_bind)>)::GetProcAddress(get_ztlib(), "zts_bsd_bind");
 
@@ -691,6 +768,13 @@ int __stdcall siege_send(SOCKET ws, const char* buf, int len, int flags)
 {
   if (use_zero_tier())
   {
+    if (!get_zero_tier_handles().contains(to_zts(ws)))
+    {
+      get_log() << "Non zero tier socket passed in" << std::endl;
+      wsock_WSASetLastError(WSAENOTSOCK);
+      return SOCKET_ERROR;
+    }
+
     get_log() << "zts_bsd_send\n";
     static auto* zt_send = (std::add_pointer_t<decltype(zts_bsd_send)>)::GetProcAddress(get_ztlib(), "zts_bsd_send");
 
@@ -707,6 +791,13 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
   {
     if (use_zero_tier())
     {
+      if (!get_zero_tier_handles().contains(to_zts(ws)))
+      {
+        get_log() << "Non zero tier socket passed in" << std::endl;
+        wsock_WSASetLastError(WSAENOTSOCK);
+        return SOCKET_ERROR;
+      }
+
       get_log() << "zts_bsd_sendto\n";
       static auto* zt_sendto = (std::add_pointer_t<decltype(zts_bsd_sendto)>)::GetProcAddress(get_ztlib(), "zts_bsd_sendto");
       static auto* zt_setsockopt = (std::add_pointer_t<decltype(zts_bsd_setsockopt)>)::GetProcAddress(get_ztlib(), "zts_bsd_setsockopt");
@@ -720,7 +811,7 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
         auto is_broadcast_address = [&]() {
           in_addr addr{};
           addr.S_un.S_addr = address_and_size.first.sin_addr.S_addr;
-          
+
           return addr.S_un.S_un_b.s_b1 == 255 || addr.S_un.S_un_b.s_b2 == 255 || addr.S_un.S_un_b.s_b3 == 255 || addr.S_un.S_un_b.s_b4 == 255;
         };
 
@@ -786,6 +877,13 @@ int __stdcall siege_shutdown(SOCKET ws, int how)
   get_log() << "siege_shutdown\n";
   if (use_zero_tier())
   {
+    if (!get_zero_tier_handles().contains(to_zts(ws)))
+    {
+      get_log() << "Non zero tier socket passed in" << std::endl;
+      wsock_WSASetLastError(WSAENOTSOCK);
+      return SOCKET_ERROR;
+    }
+
     get_log() << "zts_bsd_shutdown\n";
     static auto* zt_shutdown = (std::add_pointer_t<decltype(zts_bsd_shutdown)>)::GetProcAddress(get_ztlib(), "zts_bsd_shutdown");
 
@@ -801,6 +899,13 @@ int __stdcall siege_closesocket(SOCKET ws)
   get_log() << "siege_closesocket\n";
   if (use_zero_tier())
   {
+    if (!get_zero_tier_handles().contains(to_zts(ws)))
+    {
+      get_log() << "Non zero tier socket passed in" << std::endl;
+      wsock_WSASetLastError(WSAENOTSOCK);
+      return SOCKET_ERROR;
+    }
+
     get_log() << "zts_bsd_close\n";
     static auto* zt_close = (std::add_pointer_t<decltype(zts_bsd_close)>)::GetProcAddress(get_ztlib(), "zts_bsd_close");
     auto zt_result = zt_close(to_zts(ws));
@@ -887,6 +992,13 @@ int __stdcall siege___WSAFDIsSet(SOCKET ws, fd_set* set)
 {
   if (use_zero_tier())
   {
+    if (!get_zero_tier_handles().contains(to_zts(ws)))
+    {
+      get_log() << "Non zero tier socket passed in" << std::endl;
+      wsock_WSASetLastError(WSAENOTSOCK);
+      return SOCKET_ERROR;
+    }
+
     if (set)
     {
       zts_fd_set zt_set{};
