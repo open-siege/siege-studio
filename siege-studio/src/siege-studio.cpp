@@ -68,8 +68,7 @@ BOOL __stdcall enumerate_embedded_modules(HMODULE module,
 
   fs::path path(name);
 
-  if (path.extension() == ".dll" || path.extension() == ".DLL" ||
-      path.extension() == ".exe" || path.extension() == ".EXE")
+  if (path.extension() == ".dll" || path.extension() == ".DLL" || path.extension() == ".exe" || path.extension() == ".EXE")
   {
     items->emplace_back(embedded_module{ std::move(path), data });
   }
@@ -378,6 +377,11 @@ discovery_info discover_installation_info(int major_version, int minor_version, 
   }();
 
   info.current_app_exe_path = fs::path(win32::module_ref::current_application().GetModuleFileName());
+
+#if _DEBUG
+  info.launch_exe_path = info.current_app_exe_path;
+  return info;
+#endif
 
   win32::com::com_string known_folder;
   std::error_code last_error;
