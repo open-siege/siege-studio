@@ -213,7 +213,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
       return -1;
     }
 
-    while (::PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+    while (::PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE))
     {
       if (msg.message == WM_QUIT)
       {
