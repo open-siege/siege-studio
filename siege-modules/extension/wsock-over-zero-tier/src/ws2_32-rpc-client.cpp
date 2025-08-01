@@ -8,6 +8,7 @@
 #include <array>
 #include <vector>
 #include <filesystem>
+#include <functional>
 
 #ifdef _DEBUG
 #include <fstream>
@@ -15,6 +16,7 @@
 #include <sstream>
 #endif
 #include <siege/platform/win/module.hpp>
+#include <siege/platform/win/process.hpp>
 
 namespace fs = std::filesystem;
 
@@ -27,9 +29,11 @@ std::string protocol_to_string(int protocol);
 std::string type_to_string(int type);
 std::string af_to_string(int af);
 
-static HWND server = nullptr;
+static struct rpc_process_info : ::PROCESS_INFORMATION
+{
+  HWND server = nullptr;
+} server_info{};
 
-extern "C" {
 HMODULE wsock_module = nullptr;
 decltype(::WSAStartup)* wsock_WSAStartup = nullptr;
 decltype(::WSACleanup)* wsock_WSACleanup = nullptr;
@@ -80,6 +84,118 @@ decltype(::WSARecvFrom)* wsock_WSARecvFrom = nullptr;
 decltype(::WSAEventSelect)* wsock_WSAEventSelect = nullptr;
 decltype(::WSAEnumNetworkEvents)* wsock_WSAEnumNetworkEvents = nullptr;
 
+std::shared_ptr<void> get_global_memory(std::size_t size)
+{
+  static std::map<std::size_t, HGLOBAL> cache;
+  static std::map<std::size_t, HGLOBAL> used_globals;
+  static std::shared_ptr<void> deferred = { nullptr, [](...) {
+                                             for (auto& item : cache)
+                                             {
+                                               ::GlobalFree(item.second);
+                                             }
+                                             cache.clear();
+
+                                             for (auto& item : used_globals)
+                                             {
+                                               ::GlobalFree(item.second);
+                                             }
+                                             used_globals.clear();
+                                           } };
+
+  auto iter = cache.find(size);
+
+  if (iter == cache.end())
+  {
+    iter = std::find_if(cache.begin(), cache.end(), [&](auto& item) {
+      return item.first > size;
+    });
+  }
+
+  if (iter == cache.end())
+  {
+    auto out_handle = ::GlobalAlloc(GMEM_MOVEABLE, size);
+
+    if (!out_handle)
+    {
+      throw std::bad_alloc();
+    }
+    iter = cache.emplace(size, out_handle).first;
+  }
+
+  used_globals.emplace(*iter);
+  auto global = iter->second;
+  auto real_size = iter->first;
+  cache.erase(iter);
+
+  return std::shared_ptr<void>(global, [real_size](void* global) {
+    auto existing = std::find_if(used_globals.begin(), used_globals.end(), [&](auto& item) {
+      return item.second == global;
+    });
+
+    if (existing != used_globals.end())
+    {
+      cache.emplace(*existing);
+      used_globals.erase(existing);
+    }
+  });
+}
+
+struct hglobal_unlocker
+{
+  HGLOBAL global;
+
+  void operator()(void* value)
+  {
+    ::GlobalUnlock(global);
+  }
+};
+
+template<typename TParam = void>
+std::unique_ptr<TParam, hglobal_unlocker> global_lock(HGLOBAL global_memory)
+{
+  auto* raw = ::GlobalLock(global_memory);
+  return std::unique_ptr<TParam, hglobal_unlocker>{ (TParam*)raw, hglobal_unlocker{ global_memory } };
+}
+
+template<typename TParam, int MessageId>
+int send_message_to_server(SOCKET socket, std::function<TParam*(void*)> init, std::function<void(TParam*)> on_finish = nullptr)
+{
+  auto out_handle = get_global_memory(sizeof(TParam));
+  auto data = global_lock(out_handle.get());
+  auto* params = init(data.get());
+  data.reset();
+  DWORD_PTR return_value = 0;
+  auto result = ::SendMessageTimeoutW(server_info.server, MessageId, (WPARAM)socket, (LPARAM)out_handle.get(), SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &return_value);
+
+  if (!result)
+  {
+    wsock_WSASetLastError(WSAESOCKTNOSUPPORT);
+    return SOCKET_ERROR;
+  }
+
+  if (return_value == SOCKET_ERROR)
+  {
+    int last_error = WSAESOCKTNOSUPPORT;
+    if (auto server_last_error = (int)::GetPropW(server_info.server, L"LastError"); server_last_error)
+    {
+      last_error = server_last_error;
+    }
+    wsock_WSASetLastError(last_error);
+    return SOCKET_ERROR;
+  }
+
+  if (on_finish)
+  {
+    auto data = global_lock(out_handle.get());
+    params = (TParam*)data.get();
+    on_finish(params);
+  }
+
+  return (int)return_value;
+}
+
+
+extern "C" {
 int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 {
   load_system_wsock();
@@ -93,9 +209,39 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
       wsock_WSACleanup();
     }
 
-    // TODO start helper process
-    // TODO get handle to window
-    // TODO preallocate storage
+    // preallocate some memory
+    try
+    {
+      auto temp1 = get_global_memory(1024);
+      auto temp2 = get_global_memory(1024);
+    }
+    catch (...)
+    {
+      return WSASYSNOTREADY;
+    }
+
+    auto process_info = win32::CreateProcessW({
+        .application_name = L"ws2_32-rpc-server.exe",
+    });
+
+    if (!process_info)
+    {
+      return WSASYSNOTREADY;
+    }
+
+    auto server_window = ::FindWindowExW(HWND_MESSAGE, nullptr, L"ws2_32-rpc-server", nullptr);
+
+    if (!server_window)
+    {
+      ::PostThreadMessageW(process_info->dwThreadId, WM_QUIT, 0, 0);
+      ::WaitForSingleObject(process_info->hProcess, 1000);
+      ::CloseHandle(process_info->hProcess);
+      ::CloseHandle(process_info->hThread);
+      return WSASYSNOTREADY;
+    }
+
+    std::memcpy(&server_info, &process_info, sizeof(process_info));
+    server_info.server = server_window;    
   }
 
   get_log().flush();
@@ -122,24 +268,29 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
 
   if (use_zero_tier())
   {
-    // TODO this is just conceptual code
     socket_params params{ .address_family = af, .type = type, .protocol = protocol };
 
-    auto out_handle = ::GlobalAlloc(GMEM_MOVEABLE, sizeof(params));
-
-    void* data = ::GlobalLock(out_handle);
-    std::memcpy(data, &params, sizeof(params));
-    ::GlobalUnlock(out_handle);
+    auto out_handle = get_global_memory(sizeof(params));
+    auto data = global_lock(out_handle.get());
+    std::memcpy(data.get(), &params, sizeof(params));
+    data.reset();
     DWORD_PTR new_socket = 0;
-    ::SendMessageTimeoutW(server, socket_params::message_id, 0, (LPARAM)out_handle, SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &new_socket);
+    auto result = ::SendMessageTimeoutW(server_info.server, socket_params::message_id, 0, (LPARAM)out_handle.get(), SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &new_socket);
 
-    ::GlobalFree(out_handle);
+    if (!result)
+    {
+      wsock_WSASetLastError(WSAESOCKTNOSUPPORT);
+      return INVALID_SOCKET;
+    }
 
     if ((SOCKET)new_socket == INVALID_SOCKET)
     {
-      DWORD_PTR last_error = WSAESOCKTNOSUPPORT;
-      ::SendMessageTimeoutW(server, general_params::get_last_error_message_id, 0, 0, SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &last_error);
-      wsock_WSASetLastError((int)last_error);
+      int last_error = WSAESOCKTNOSUPPORT;
+      if (auto server_last_error = (int)::GetPropW(server_info.server, L"LastError"); server_last_error)
+      {
+        last_error = server_last_error;
+      }
+      wsock_WSASetLastError(last_error);
       return INVALID_SOCKET;
     }
 
@@ -156,22 +307,43 @@ int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* op
 {
   if (use_zero_tier())
   {
+    return send_message_to_server<sockopt_params, sockopt_params::set_message_id>(ws, [=](void* raw) {
+      auto* params = new (raw) sockopt_params{ .level = level, .optname = optname };
+
+      if (optval && optlen)
+      {
+        auto len = std::clamp<int>(optlen, 0, params->option_data.size());
+        std::memcpy(params->option_data.data(), optval, len);
+        params->option_length = len;
+      }
+
+      return params;
+    });
   }
 
-  auto result = wsock_setsockopt(ws, level, optname, optval, optlen);
-
-  if (result != 0)
-  {
-    get_log() << "setsockopt WSAGetLastError " << wsock_WSAGetLastError() << '\n';
-  }
-
-  return result;
+  return wsock_setsockopt(ws, level, optname, optval, optlen);
 }
 
 int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, int* optlen)
 {
   if (use_zero_tier())
   {
+    return send_message_to_server<sockopt_params, sockopt_params::get_message_id>(ws, [=](void* raw) {
+      auto* params = new (raw) sockopt_params{ .level = level, .optname = optname };
+
+      if (optval && optlen)
+      {
+        auto len = std::clamp<int>(*optlen, 0, params->option_data.size());
+        params->option_length = len;
+      }
+      return params; }, [=](sockopt_params* params) {
+
+          if (optval && optlen)
+          {
+            auto len = std::clamp<int>(params->option_length, 0, *optlen);
+            *optlen = len;
+            std::memcpy(optval, params->option_data.data(), len);
+          } });
   }
 
   auto result = wsock_getsockopt(ws, level, optname, optval, optlen);
@@ -191,6 +363,17 @@ int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
 
   if (use_zero_tier())
   {
+    return send_message_to_server<bind_params, bind_params::message_id>(ws, [=](void* raw) {
+      auto* params = new (raw) bind_params{};
+
+      if (addr && namelen)
+      {
+        auto len = std::clamp<int>(namelen, 0, sizeof(params->address));
+        params->address_size = len;
+        std::memcpy(&params->address, addr, len);
+      }
+      return params;
+    });
   }
   auto result = wsock_bind(ws, addr, namelen);
 
@@ -202,9 +385,22 @@ int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
 int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
 {
   get_log() << "siege_ioctlsocket, cmd: " << ioctl_cmd_to_string(cmd) << '\n';
+
   if (use_zero_tier())
   {
+    return send_message_to_server<ioctl_params, bind_params::message_id>(ws, [=](void* raw) {
+      auto* params = new (raw) ioctl_params{ .command = cmd };
+
+      if (argp)
+      {
+        params->argument = *argp;
+      } 
+      return params; }, [=](ioctl_params* params) { if (argp)
+      {
+        *argp = params->argument;
+        } });
   }
+
   auto result = wsock_ioctlsocket(ws, cmd, argp);
 
   get_log() << "siege_ioctlsocket finished" << '\n';
@@ -225,56 +421,34 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
 {
   if (use_zero_tier())
   {
-    // TODO this is just conceptual code
-    recvfrom_params params{ .flags = flags };
-
-    if (buf && len)
-    {
-      params.buffer = ::GlobalAlloc(GMEM_MOVEABLE, len);
-      params.buffer_length = len;
-      void* data = ::GlobalLock(params.buffer);
-      std::memcpy(data, &params, sizeof(params));
-      ::GlobalUnlock(params.buffer);
-    }
-
-    auto out_handle = ::GlobalAlloc(GMEM_MOVEABLE, sizeof(params));
-
-    void* data = ::GlobalLock(out_handle);
-    std::memcpy(data, &params, sizeof(params));
-    ::GlobalUnlock(out_handle);
-    DWORD_PTR received = SOCKET_ERROR;
-    ::SendMessageTimeoutW(server, recvfrom_params::message_id, (WPARAM)ws, (LPARAM)out_handle, SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &received);
-
-    if (received != SOCKET_ERROR)
-    {
-      void* data = ::GlobalLock(out_handle);
-      std::memcpy(&params, data, sizeof(params));
-      ::GlobalUnlock(out_handle);
+    return send_message_to_server<recvfrom_params, recvfrom_params::message_id>(ws, [=](void* raw) {
+      auto* params = new (raw) recvfrom_params{ .flags = flags };
 
       if (buf && len)
       {
-        auto* result = ::GlobalLock(params.buffer);
-        std::memcpy(buf, result, len);
-        ::GlobalUnlock(params.buffer);
+        params->buffer_length = len;
+        params->buffer = get_global_memory(params->buffer_length).get();
       }
 
       if (from && fromLen)
       {
-        std::memcpy(from, &params.from_address, *fromLen);
+        params->from_address_size = std::clamp<int>(*fromLen, 0, (int)sizeof(params->from_address));
+        std::memcpy(&params->from_address, from, params->from_address_size);
       }
-    }
 
-    ::GlobalFree(out_handle);
+      return params; }, [=](recvfrom_params* params) {
+      if (buf && len)
+      {
+        auto data = global_lock(params->buffer);
+        std::memcpy(buf, data.get(), params->buffer_length);
+      }
 
-    if (received == SOCKET_ERROR)
-    {
-      DWORD_PTR last_error = WSAECONNRESET;
-      ::SendMessageTimeoutW(server, general_params::get_last_error_message_id, 0, 0, SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &last_error);
-      wsock_WSASetLastError((int)last_error);
-      return SOCKET_ERROR;
-    }
-
-    return (int)received;
+      if (from && fromLen)
+      {
+        auto len = std::clamp<int>(params->from_address_size, 0, *fromLen);
+        *fromLen = len;
+        std::memcpy(from, &params->from_address, len);
+      } });
   }
 
   return wsock_recvfrom(ws, buf, len, flags, from, fromLen);
@@ -285,7 +459,24 @@ int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
   get_log() << "siege_getsockname\n";
   if (use_zero_tier())
   {
+    return send_message_to_server<sockname_params, sockname_params::sock_name_message_id>(ws, [=](void* raw) {
+      auto* params = new (raw) sockname_params{};
+
+      if (name && length)
+      {
+        params->address_size = std::clamp<int>(*length, 0, sizeof(params->address));
+      }
+
+      return params; }, [=](sockname_params* params) {
+          
+      if (name && length)
+      {
+        auto len = std::clamp<int>(params->address_size, 0, *length);
+        *length = len;
+        std::memcpy(name, &params->address, len);
+      } });
   }
+
   return wsock_getsockname(ws, name, length);
 }
 
@@ -294,7 +485,24 @@ int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
   get_log() << "siege_getpeername\n";
   if (use_zero_tier())
   {
+    return send_message_to_server<sockname_params, sockname_params::sock_name_message_id>(ws, [=](void* raw) {
+      auto* params = new (raw) sockname_params{};
+
+      if (name && length)
+      {
+        params->address_size = std::clamp<int>(*length, 0, sizeof(params->address));
+      }
+
+      return params; }, [=](sockname_params* params) {
+          
+      if (name && length)
+      {
+        auto len = std::clamp<int>(params->address_size, 0, *length);
+        *length = len;
+        std::memcpy(name, &params->address, len);
+      } });
   }
+
   return wsock_getpeername(ws, name, length);
 }
 
@@ -339,7 +547,28 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
 {
   if (use_zero_tier())
   {
+    return send_message_to_server<sendto_params, sendto_params::message_id>(ws, [=](void* raw) {
+      auto* params = new (raw) sendto_params{ .flags = flags };
+
+      if (buf && len)
+      {
+        params->buffer_length = len;
+        params->buffer = get_global_memory(params->buffer_length).get();
+
+        auto data = global_lock(params->buffer);
+
+        std::memcpy(data.get(), buf, len);
+      }
+
+      if (to && tolen)
+      {
+        params->to_address_size = std::clamp<int>(tolen, 0, (int)sizeof(params->to_address));
+        std::memcpy(&params->to_address, to, params->to_address_size);
+      }
+
+      return params; });
   }
+
   return wsock_sendto(ws, buf, len, flags, to, tolen);
 }
 
@@ -348,6 +577,27 @@ int __stdcall siege_shutdown(SOCKET ws, int how)
   get_log() << "siege_shutdown\n";
   if (use_zero_tier())
   {
+    DWORD_PTR return_value{};
+    auto result = ::SendMessageTimeoutW(server_info.server, general_params::shutdown_message_id, (WPARAM)ws, (LPARAM)how, SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &return_value);
+
+    if (!result)
+    {
+      wsock_WSASetLastError(WSAESOCKTNOSUPPORT);
+      return SOCKET_ERROR;
+    }
+
+    if (return_value == SOCKET_ERROR)
+    {
+      int last_error = WSAESOCKTNOSUPPORT;
+      if (auto server_last_error = (int)::GetPropW(server_info.server, L"LastError"); server_last_error)
+      {
+        last_error = server_last_error;
+      }
+      wsock_WSASetLastError(last_error);
+      return SOCKET_ERROR;
+    }
+
+    return (int)return_value;
   }
   return wsock_shutdown(ws, how);
 }
@@ -357,6 +607,27 @@ int __stdcall siege_closesocket(SOCKET ws)
   get_log() << "siege_closesocket\n";
   if (use_zero_tier())
   {
+    DWORD_PTR return_value{};
+    auto result = ::SendMessageTimeoutW(server_info.server, general_params::close_message_id, (WPARAM)ws, 0, SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &return_value);
+
+    if (!result)
+    {
+      wsock_WSASetLastError(WSAESOCKTNOSUPPORT);
+      return SOCKET_ERROR;
+    }
+
+    if (return_value == SOCKET_ERROR)
+    {
+      int last_error = WSAESOCKTNOSUPPORT;
+      if (auto server_last_error = (int)::GetPropW(server_info.server, L"LastError"); server_last_error)
+      {
+        last_error = server_last_error;
+      }
+      wsock_WSASetLastError(last_error);
+      return SOCKET_ERROR;
+    }
+
+    return (int)return_value;
   }
   return wsock_closesocket(ws);
 }
@@ -365,6 +636,46 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
 {
   if (use_zero_tier())
   {
+    return send_message_to_server<select_params, select_params::message_id>(0, [=](void* raw) {
+      select_params* params = new (raw) select_params{};
+
+      params->fd_set_count = value;
+
+      if (read)
+      {
+        params->read_set = *read;
+      }
+
+      if (write)
+      {
+        params->write_set = *write;
+      }
+
+      if (except)
+      {
+        params->except_set = *except;
+      }
+
+      if (timeout)
+      {
+        params->timeout = *timeout;
+      } 
+          return params; }, [=](select_params* params) {
+      
+      if (read)
+      {
+        *read = params->read_set;
+      }
+
+      if (write)
+      {
+        *write = params->write_set;
+      }
+
+      if (except)
+      {
+        *except = params->except_set;
+      } });
   }
   return wsock_select(value, read, write, except, timeout);
 }
@@ -373,6 +684,15 @@ int __stdcall siege___WSAFDIsSet(SOCKET ws, fd_set* set)
 {
   if (use_zero_tier())
   {
+    return send_message_to_server<isset_params, isset_params::message_id>(ws, [=](void* raw) {
+      auto* params = new (raw) isset_params{};
+      if (set)
+      {
+        params->set_to_check = *set;
+      }
+
+      return params;
+    });
   }
 
   return wsock___WSAFDIsSet(ws, set);
@@ -391,13 +711,12 @@ hostent* __stdcall siege_gethostbyaddr(const char* addr, int len, int type)
 hostent* __stdcall siege_gethostbyname(const char* name)
 {
   load_system_wsock();
-  if (name)
+
+  if (use_zero_tier())
   {
-    get_log() << "siege_gethostbyname: " << name << "\n";
-  }
-  else
-  {
-    get_log() << "siege_gethostbyname with no name \n";
+    get_log() << "siege_WSAAsyncGetHostByName.\n";
+    ::MessageBoxW(nullptr, L"The game tried to use WSAAsyncGetHostByName, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
+    ::ExitProcess(-1);
   }
 
   return wsock_gethostbyname(name);
@@ -708,7 +1027,6 @@ std::optional<in_addr> get_zero_tier_fallback_broadcast_ip_v4()
   static std::optional<in_addr> result = []() -> std::optional<in_addr> {
     get_log() << "get_zero_tier_fallback_broadcast_ip_v4\n";
 
-
     if (auto env_size = ::GetEnvironmentVariableA("ZERO_TIER_FALLBACK_BROADCAST_IP_V4", nullptr, 0); env_size >= 1)
     {
       std::string network_ip(env_size - 1, '\0');
@@ -731,7 +1049,7 @@ std::optional<in_addr> get_zero_tier_fallback_broadcast_ip_v4()
 std::ostream& get_log()
 {
 #ifdef _DEBUG
-  static std::ofstream file_log("networking.log", std::ios::trunc);
+  static std::ofstream file_log("rpc-client.log", std::ios::trunc);
 #else
   static std::stringstream file_log;
   file_log.str("");
