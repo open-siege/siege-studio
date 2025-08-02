@@ -3,6 +3,7 @@
 .vscode
 venv/
 build/
+release/
 package/
 cmake-build-debug/
 cmake-build-release/
