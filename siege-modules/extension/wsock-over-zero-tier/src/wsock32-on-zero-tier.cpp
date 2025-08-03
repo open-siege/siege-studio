@@ -291,14 +291,6 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
       zts_socklen_t size = sizeof(value);
 
       zt_setsockopt(socket, ZTS_SOL_SOCKET, ZTS_SO_RCVBUF, &value, size);
-
-      zts_timeval timeout{
-        .tv_sec = 60
-      };
-
-      zt_setsockopt(socket, ZTS_SOL_SOCKET, ZTS_SO_SNDTIMEO, &timeout, sizeof(timeout));
-      zt_setsockopt(socket, ZTS_SOL_SOCKET, ZTS_SO_RCVTIMEO, &timeout, sizeof(timeout));
-
       return from_zts(socket);
     }
 
@@ -1934,6 +1926,11 @@ void copy_address(zts_sockaddr_in addr, sockaddr* name, int* length)
     return;
   }
 
+  if (!length || (length && *length <= 0))
+  {
+    return;
+  }
+
   auto temp = from_zts(addr);
 
   auto size = sizeof(temp);
@@ -1950,6 +1947,11 @@ void copy_address(zts_sockaddr_in addr, sockaddr* name, int* length)
 std::pair<zts_sockaddr_in, zts_socklen_t> copy_address(const sockaddr* name, int length)
 {
   if (!name)
+  {
+    return {};
+  }
+
+  if (length <= 0)
   {
     return {};
   }
