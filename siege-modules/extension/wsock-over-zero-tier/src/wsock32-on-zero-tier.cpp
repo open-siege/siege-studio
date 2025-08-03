@@ -1534,6 +1534,12 @@ std::optional<in_addr> get_zero_tier_fallback_broadcast_ip_v4()
       get_log() << "Zero Tier fallback broadcast IP is " << network_ip << '\n';
       in_addr result{};
       result.S_un.S_addr = wsock_inet_addr(network_ip.c_str());
+
+      if (!result.S_un.S_addr)
+      {
+        return std::nullopt;
+      }
+
       return result;
     }
 
