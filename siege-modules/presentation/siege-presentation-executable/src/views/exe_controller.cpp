@@ -828,6 +828,13 @@ namespace siege::views
       game_settings.last_zero_tier_node_id_and_private_key = generate_zero_tier_node_id(zt_path);
       ::SetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", game_settings.last_zero_tier_node_id_and_private_key.data());
     }
+    else
+    {
+      std::string extension_path = win32::module_ref::current_module().GetModuleFileName<char>();
+      auto zt_path = std::filesystem::path(extension_path).parent_path() / "zt-shared.dll";
+      game_settings.last_zero_tier_node_id_and_private_key = generate_zero_tier_node_id(zt_path);
+      ::SetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", game_settings.last_zero_tier_node_id_and_private_key.data());
+    }
 
     return game_settings;
   }
