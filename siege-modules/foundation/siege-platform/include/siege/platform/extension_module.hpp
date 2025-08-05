@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <list>
 #include <span>
+#include <map>
 #include <siege/platform/win/module.hpp>
 #include <siege/platform/shared.hpp>
 
@@ -94,6 +95,8 @@ namespace siege::platform
     std::array<fs_char, 64> last_player_name;
     std::array<fs_char, 64> last_ip_address;
     std::array<fs_char, 64> last_zero_tier_network_id;
+    std::map<siege::fs_string, siege::fs_string> last_zero_tier_ip_addresses;
+
     std::array<fs_char, 64> last_hosting_preference;
     std::uint32_t zero_tier_enabled;
 

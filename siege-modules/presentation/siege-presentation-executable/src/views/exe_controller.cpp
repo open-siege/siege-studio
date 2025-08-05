@@ -9,6 +9,9 @@
 #include "views/exe_views.hpp"
 #include <winreg.h>
 #include <detours.h>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 namespace siege::views
 {
@@ -743,6 +746,11 @@ namespace siege::views
       std::memcpy(raw_bytes.data(), settings.last_zero_tier_network_id.data(), raw_bytes.size());
       result = result && ::RegSetValueExW(main_key, L"LastZeroTierNetworkId", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
 
+      auto data = json(settings.last_zero_tier_ip_addresses).dump();
+      raw_bytes.resize(data.size());
+      std::memcpy(raw_bytes.data(), data.data(), raw_bytes.size());
+      result = result && ::RegSetValueExA(main_key, "LastZeroTierIpAddressesForNetwork", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
+
       std::string_view key_str = node_id_and_private_key.data();
       result = result && ::RegSetValueExA(main_key, "LastZeroTierNodeIdAndPrivateKey", 0, REG_SZ, (BYTE*)key_str.data(), key_str.size()) == ERROR_SUCCESS;
 
@@ -792,9 +800,22 @@ namespace siege::views
       size = game_settings.last_hosting_preference.size() * char_size;
       ::RegGetValueW(main_key, nullptr, L"LastHostingPreference", RRF_RT_REG_SZ, &type, game_settings.last_hosting_preference.data(), &size);
 
+      std::wstring buffer(4096, L'\0');
+      size = buffer.size();
+      ::RegGetValueW(main_key, nullptr, L"LastZeroTierIpAddressesForNetwork", RRF_RT_REG_SZ, &type, buffer.data(), &size);
+
+      try
+      {
+        game_settings.last_zero_tier_ip_addresses = json::parse(buffer).template get<std::map<std::wstring, std::wstring>>();
+      }
+      catch (...)
+      {
+      }
+
       size = sizeof(game_settings.zero_tier_enabled);
       type = REG_DWORD;
       ::RegGetValueW(main_key, nullptr, L"ZeroTierEnabled", RRF_RT_DWORD, &type, &game_settings.zero_tier_enabled, &size);
+
 
       ::RegCloseKey(main_key);
     }
@@ -837,6 +858,20 @@ namespace siege::views
     }
 
     return game_settings;
+  }
+
+  void exe_controller::set_ip_for_current_network(std::string ip_address)
+  {
+    std::wstring_view network_id = game_settings.last_zero_tier_network_id.data();
+
+    if (!network_id.empty() && !ip_address.empty())
+    {
+      std::wstring temp;
+      temp.reserve(ip_address.size());
+      std::transform(ip_address.begin(), ip_address.end(), std::back_inserter(temp), [](auto value) { return (wchar_t)value; });
+
+      game_settings.last_zero_tier_ip_addresses[std::wstring(network_id)] = temp;
+    }
   }
 
   bool exe_controller::can_support_zero_tier() const

@@ -54,6 +54,8 @@ namespace siege::views
 
     std::set<std::string_view> get_variable_names() const;
 
+    void set_ip_for_current_network(std::string ip_address);
+
     bool set_game_settings(const siege::platform::persistent_game_settings&);
 
     const siege::platform::persistent_game_settings& get_game_settings();

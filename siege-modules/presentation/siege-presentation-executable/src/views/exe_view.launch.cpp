@@ -1061,6 +1061,11 @@ namespace siege::views
                     ip_address.resize(end);
                   }
 
+                  if (ip_address.contains("."))
+                  {
+                    controller.set_ip_for_current_network(ip_address);
+                  }
+
                   ::UnmapViewOfFile(data);
                 }
                 ::CloseHandle(global);
