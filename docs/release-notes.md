@@ -1,6 +1,7 @@
 # Siege Studio + Siege Launcher 25.32 Development Release
 * Fixed issue with Zero Tier Node ID not being generated for unsupported games if it wasn't generated before.
 * Launching a game no longer shows an empty window and blocks input.
+    * The launch button is disabled until the game is closed.   
 * Fixed issue with network broadcasts not working for custom broadcast addresses (eg 192.168.0.255). 
   * This enables Zero Tier networking to work with unsupported games like Ghost Recon Advanced Warfighter.
 * Addresses received via "recvfrom" are now cached for future broadcasts. 

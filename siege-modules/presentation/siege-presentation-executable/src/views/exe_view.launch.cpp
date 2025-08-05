@@ -1008,9 +1008,16 @@ namespace siege::views
 
       controller.set_game_settings(settings);
 
-      injector.emplace(*this, input_injector_args{ .args = std::move(game_args), 
-          .launch_game_with_extension = [this](const auto* args, auto* process_info) -> HRESULT { return controller.launch_game_with_extension(args, process_info); }, 
-          .on_process_closed = [this] { injector.reset(); }
+      auto existing_state = ::SendMessageW(exe_actions, TB_GETSTATE, launch_selected_id, 0);
+
+      existing_state &= ~TBSTATE_ENABLED;
+      ::SendMessageW(exe_actions, TB_SETSTATE, launch_selected_id, MAKEWORD(existing_state, 0));
+
+      injector.emplace(*this, input_injector_args{ .args = std::move(game_args), .launch_game_with_extension = [this](const auto* args, auto* process_info) -> HRESULT { return controller.launch_game_with_extension(args, process_info); }, .on_process_closed = [this, existing_state] mutable { 
+              
+              existing_state |= TBSTATE_ENABLED;
+              ::SendMessageW(exe_actions, TB_SETSTATE, launch_selected_id, MAKEWORD(existing_state, 0));
+              injector.reset(); }
 
                               });
 
