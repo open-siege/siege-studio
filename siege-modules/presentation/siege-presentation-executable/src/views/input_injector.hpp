@@ -30,6 +30,7 @@ namespace siege
     std::wstring script_host;
     mode input_mode = bind_input;
     std::function<HRESULT(const siege::platform::game_command_line_args* game_args, PROCESS_INFORMATION* process_info)> launch_game_with_extension;
+    std::function<void()> on_process_closed;
   };
 
   enum class input_state
@@ -119,8 +120,9 @@ namespace siege
     return result;
   }
 
-  struct input_injector : win32::window_ref
+  struct input_injector
   {
+    win32::hwnd_t target_window;
     input_injector_args injector_args;
     PROCESS_INFORMATION child_process;
     std::vector<INPUT> simulated_inputs;
@@ -136,10 +138,37 @@ namespace siege
     std::add_pointer_t<decltype(::XInputGetState)> xinput_get_state = nullptr;
     std::add_pointer_t<decltype(::XInputGetKeystroke)> xinput_get_key_stroke = nullptr;
 
-    input_injector(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self), child_process{}, controller_state{}
+    static LRESULT __stdcall sub_class_callback(
+      HWND hwnd,
+      UINT message,
+      WPARAM wparam,
+      LPARAM lparam,
+      UINT_PTR uIdSubclass,
+      DWORD_PTR dwRefData)
+    {
+      if (message == WM_INPUT && uIdSubclass)
+      {
+        auto* self = (input_injector*)uIdSubclass;
+        return self->wm_input(win32::input_message(wparam, lparam));
+      }
+
+      if (message == WM_INPUT_DEVICE_CHANGE && uIdSubclass)
+      {
+        auto* self = (input_injector*)uIdSubclass;
+        return self->wm_input_device_change(win32::input_device_change_message(wparam, lparam));
+      }
+
+      if (message == WM_NCDESTROY)
+      {
+        win32::remove_window_subclass(hwnd, sub_class_callback, uIdSubclass);
+      }
+
+      return win32::def_subclass_proc(hwnd, message, wparam, lparam);
+    }
+
+    input_injector(win32::hwnd_t target_window, input_injector_args args) : target_window(target_window), injector_args(std::move(args))
     {
       simulated_inputs.reserve(64);
-      injector_args = std::move(*(input_injector_args*)params.lpCreateParams);
       siege::init_active_input_state();
 
       auto version_and_name = win32::get_xinput_version();
@@ -150,32 +179,31 @@ namespace siege
         xinput_get_state = xinput_module.GetProcAddress<decltype(xinput_get_state)>("XInputGetState");
         xinput_get_key_stroke = xinput_module.GetProcAddress<decltype(xinput_get_key_stroke)>("XInputGetKeystroke");
       }
-    }
 
-    auto wm_create()
-    {
+      win32::set_window_subclass(target_window, sub_class_callback, (UINT_PTR)this, (DWORD_PTR)this);
+
       std::array<RAWINPUTDEVICE, 4> descriptors{};
 
       auto flags = RIDEV_INPUTSINK | RIDEV_DEVNOTIFY;
       descriptors[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
       descriptors[0].usUsage = HID_USAGE_GENERIC_GAMEPAD;
       descriptors[0].dwFlags = flags;
-      descriptors[0].hwndTarget = *this;
+      descriptors[0].hwndTarget = target_window;
 
       descriptors[1].usUsagePage = HID_USAGE_PAGE_GENERIC;
       descriptors[1].usUsage = HID_USAGE_GENERIC_JOYSTICK;
       descriptors[1].dwFlags = flags;
-      descriptors[1].hwndTarget = *this;
+      descriptors[1].hwndTarget = target_window;
 
       descriptors[2].usUsagePage = HID_USAGE_PAGE_GENERIC;
       descriptors[2].usUsage = HID_USAGE_GENERIC_MOUSE;
       descriptors[2].dwFlags = flags | RIDEV_NOLEGACY;
-      descriptors[2].hwndTarget = *this;
+      descriptors[2].hwndTarget = target_window;
 
       descriptors[3].usUsagePage = HID_USAGE_PAGE_GENERIC;
       descriptors[3].usUsage = HID_USAGE_GENERIC_KEYBOARD;
       descriptors[3].dwFlags = flags | RIDEV_NOLEGACY;
-      descriptors[3].hwndTarget = *this;
+      descriptors[3].hwndTarget = target_window;
 
       if (::RegisterRawInputDevices(descriptors.data(), descriptors.size(), sizeof(RAWINPUTDEVICE)) == FALSE)
       {
@@ -186,7 +214,7 @@ namespace siege
 
       try
       {
-        if (injector_args.launch_game_with_extension(injector_args.args.get(), &child_process) == S_OK && child_process.hProcess)
+        if (this->injector_args.launch_game_with_extension(this->injector_args.args.get(), &child_process) == S_OK && child_process.hProcess)
         {
           auto& state = siege::get_active_input_state();
 
@@ -200,12 +228,11 @@ namespace siege
       catch (...)
       {
       }
-
-      return 0;
     }
 
-    auto wm_destroy()
+    ~input_injector()
     {
+      win32::remove_window_subclass(target_window, sub_class_callback, (UINT_PTR)this);
       std::array<RAWINPUTDEVICE, 4> descriptors{};
 
       auto flags = RIDEV_REMOVE;
@@ -231,8 +258,6 @@ namespace siege
         DebugBreak();
         // registration failed. Call GetLastError for the cause of the error.
       }
-
-      return 0;
     }
 
     std::uint16_t normalise(std::int16_t value)
@@ -300,13 +325,14 @@ namespace siege
       }
     }
 
-    auto wm_input(win32::input_message message)
+    LRESULT wm_input(win32::input_message message)
     {
       DWORD exit_code = 0;
       if (::GetExitCodeProcess(child_process.hProcess, &exit_code) && exit_code != STILL_ACTIVE)
       {
-        if (::EndDialog(*this, 0) || ::DestroyWindow(*this))
+        if (injector_args.on_process_closed)
         {
+          injector_args.on_process_closed();
         }
         return 0;
       }
@@ -328,17 +354,17 @@ namespace siege
 
       if (header.dwType == RIM_TYPEKEYBOARD)
       {
-          // TODO only send keyboard/mouse input if input filtering is enabled
-        //RAWINPUT input{};
-        //UINT size = sizeof(input);
+        // TODO only send keyboard/mouse input if input filtering is enabled
+        // RAWINPUT input{};
+        // UINT size = sizeof(input);
 
-        //if (::GetRawInputData(message.handle, RID_INPUT, &input, &size, sizeof(RAWINPUTHEADER)) > 0)
+        // if (::GetRawInputData(message.handle, RID_INPUT, &input, &size, sizeof(RAWINPUTHEADER)) > 0)
         //{
-        //  INPUT temp{ .type = INPUT_KEYBOARD };
-        //  temp.ki.dwExtraInfo = *device_id;
-        //  //    temp.ki.wVk = input.data.keyboard.VKey;
-        //  temp.ki.wScan = input.data.keyboard.MakeCode;
-        //  temp.ki.dwFlags = KEYEVENTF_SCANCODE;
+        //   INPUT temp{ .type = INPUT_KEYBOARD };
+        //   temp.ki.dwExtraInfo = *device_id;
+        //   //    temp.ki.wVk = input.data.keyboard.VKey;
+        //   temp.ki.wScan = input.data.keyboard.MakeCode;
+        //   temp.ki.dwFlags = KEYEVENTF_SCANCODE;
 
         //  if (input.data.keyboard.Flags & RI_KEY_BREAK)
         //  {
@@ -490,13 +516,14 @@ namespace siege
       return 0;
     }
 
-    auto wm_input_device_change(win32::input_device_change_message message)
+    LRESULT wm_input_device_change(win32::input_device_change_message message)
     {
       DWORD exit_code = 0;
       if (::GetExitCodeProcess(child_process.hProcess, &exit_code) && exit_code != STILL_ACTIVE)
       {
-        if (::EndDialog(*this, 0) || ::DestroyWindow(*this))
+        if (injector_args.on_process_closed)
         {
+          injector_args.on_process_closed();
         }
         return 0;
       }

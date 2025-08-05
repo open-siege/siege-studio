@@ -9,6 +9,7 @@
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/dialog.hpp>
+#include "input_injector.hpp"
 
 namespace siege::views
 {
@@ -106,7 +107,7 @@ namespace siege::views
   struct exe_view final : win32::window_ref
   {
     exe_controller controller;
-
+    std::optional<input_injector> injector;
     win32::list_box options;
     std::function<void()> options_unbind;
     win32::list_view resource_table;

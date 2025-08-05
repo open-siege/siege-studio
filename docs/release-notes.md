@@ -1,7 +1,11 @@
 # Siege Studio + Siege Launcher 25.32 Development Release
 * Fixed issue with Zero Tier Node ID not being generated for unsupported games if it wasn't generated before.
-* Addresses received via "recvfrom" are now cached for future broadcasts. This fixes server discovery in unsupported games like Street Racing Syndicate.
-* Fixed custom aliases in Quake 2 and Kingpin - Life of Crime. Instead of using weaprev, weaplast is used instead.
+* Launching a game no longer shows an empty window and blocks input.
+* Fixed issue with network broadcasts not working for custom broadcast addresses (eg 192.168.0.255). 
+  * This enables Zero Tier networking to work with unsupported games like Ghost Recon Advanced Warfighter.
+* Addresses received via "recvfrom" are now cached for future broadcasts. 
+  * This fixes server discovery in unsupported games like Street Racing Syndicate.
+* Fixed custom aliases in Kingpin - Life of Crime. Instead of using weaprev, weaplast is used instead.
 
 # Siege Studio + Siege Launcher 25.31 Development Release
 * Fixed issue with unsupported games not working with Zero Tier correctly on second launch.

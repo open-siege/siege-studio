@@ -1008,17 +1008,12 @@ namespace siege::views
 
       controller.set_game_settings(settings);
 
-      input_injector_args args{
-        .args = std::move(game_args),
-        .launch_game_with_extension = [this](const auto* args, auto* process_info) -> HRESULT {
-          return controller.launch_game_with_extension(args, process_info);
-        }
-      };
+      injector.emplace(*this, input_injector_args{ .args = std::move(game_args), 
+          .launch_game_with_extension = [this](const auto* args, auto* process_info) -> HRESULT { return controller.launch_game_with_extension(args, process_info); }, 
+          .on_process_closed = [this] { injector.reset(); }
 
-      win32::DialogBoxIndirectParamW<siege::input_injector>(win32::module_ref::current_application(),
-        win32::default_dialog({}),
-        ref(),
-        (LPARAM)&args);
+                              });
+
 
       return TRUE;
     }
