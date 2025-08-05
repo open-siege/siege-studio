@@ -1013,11 +1013,51 @@ namespace siege::views
       existing_state &= ~TBSTATE_ENABLED;
       ::SendMessageW(exe_actions, TB_SETSTATE, launch_selected_id, MAKEWORD(existing_state, 0));
 
-      injector.emplace(*this, input_injector_args{ .args = std::move(game_args), .launch_game_with_extension = [this](const auto* args, auto* process_info) -> HRESULT { return controller.launch_game_with_extension(args, process_info); }, .on_process_closed = [this, existing_state] mutable { 
+      auto global = ::CreateFileMappingW(
+        INVALID_HANDLE_VALUE,// use paging file
+        NULL,// default security
+        PAGE_READWRITE,// read/write access
+        0,// maximum object size (high-order DWORD)
+        256,// maximum object size (low-order DWORD)
+        L"ZeroTierCurrentIpGlobalHandle");
+
+      if (global)
+      {
+        ::SetEnvironmentVariableW(L"ZERO_TIER_CURRENT_IP_GLOBAL_HANDLE", L"ZeroTierCurrentIpGlobalHandle");
+      }
+
+      injector.emplace(*this, input_injector_args{ .args = std::move(game_args), 
+          .launch_game_with_extension = [this](const auto* args, auto* process_info) -> HRESULT { return controller.launch_game_with_extension(args, process_info); }, 
+          .on_process_closed = [this, existing_state, global] mutable { 
               
               existing_state |= TBSTATE_ENABLED;
               ::SendMessageW(exe_actions, TB_SETSTATE, launch_selected_id, MAKEWORD(existing_state, 0));
-              injector.reset(); }
+              injector.reset(); 
+          
+              if (global)
+              {
+                auto data = ::MapViewOfFile(global, FILE_MAP_READ, 0, 0, 256);
+
+                if (data)
+                {
+                  std::string ip_address;
+                  ip_address.resize(256);
+                  std::memcpy(ip_address.data(), data, 256);
+
+                  auto end = ip_address.find('\0');
+
+                  if (end != std::string::npos)
+                  {
+                    ip_address.resize(end);
+                  }
+
+                  ::UnmapViewOfFile(data);
+                }
+                ::CloseHandle(global);
+                ::SetEnvironmentVariableW(L"ZERO_TIER_CURRENT_IP_GLOBAL_HANDLE", nullptr);
+            }
+          
+          }
 
                               });
 

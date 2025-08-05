@@ -124,6 +124,8 @@ namespace siege
   {
     win32::hwnd_t target_window;
     input_injector_args injector_args;
+    HANDLE process_handle;
+    HANDLE thread_handle;
     PROCESS_INFORMATION child_process;
     std::vector<INPUT> simulated_inputs;
 
@@ -223,6 +225,9 @@ namespace siege
             group.process_id = child_process.dwProcessId;
             group.thread_id = child_process.dwThreadId;
           }
+
+          process_handle = child_process.hProcess;
+          thread_handle = child_process.hThread;
         }
       }
       catch (...)
@@ -258,6 +263,9 @@ namespace siege
         DebugBreak();
         // registration failed. Call GetLastError for the cause of the error.
       }
+
+      ::CloseHandle(process_handle);
+      ::CloseHandle(thread_handle);
     }
 
     std::uint16_t normalise(std::int16_t value)

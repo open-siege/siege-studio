@@ -35,6 +35,7 @@ std::ostream& get_log();
 HMODULE get_ztlib();
 std::optional<std::uint64_t> get_zero_tier_network_id();
 std::optional<std::string> get_zero_tier_peer_id_and_public_key();
+std::shared_ptr<char> get_shared_current_ip_address_storage();
 int zt_to_winsock_error(int);
 int zt_to_winsock_result(int code);
 std::set<std::uint32_t>& get_fallback_broadcast_addresses();
@@ -202,6 +203,14 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
       {
         get_log() << "Node could not be started and could not join network.\n";
         ::ExitProcess(-1);
+      }
+
+
+      static auto* zt_addr_get_str = (std::add_pointer_t<decltype(zts_addr_get_str)>)::GetProcAddress(get_ztlib(), "zts_addr_get_str");
+
+      if (auto storage = get_shared_current_ip_address_storage(); storage)
+      {
+        zt_addr_get_str(*get_zero_tier_network_id(), ZTS_AF_INET, storage.get(), ZTS_IP_MAX_STR_LEN);
       }
     }
 
@@ -1518,6 +1527,51 @@ int zt_to_winsock_result(int code)
   }
 
   return 0;
+}
+
+std::shared_ptr<char> get_shared_current_ip_address_storage()
+{
+  try
+  {
+    if (auto env_size = ::GetEnvironmentVariableW(L"ZERO_TIER_CURRENT_IP_GLOBAL_HANDLE", nullptr, 0); env_size >= 1)
+    {
+      std::wstring raw_handle(env_size - 1, '\0');
+      ::GetEnvironmentVariableW(L"ZERO_TIER_CURRENT_IP_GLOBAL_HANDLE", raw_handle.data(), raw_handle.size() + 1);
+
+      get_log() << "Getting ZERO_TIER_CURRENT_IP_GLOBAL_HANDLE\n";
+
+      if (raw_handle.empty())
+      {
+        return nullptr;
+      }
+
+      HANDLE global = ::OpenFileMappingW(FILE_MAP_ALL_ACCESS, FALSE, raw_handle.data());
+
+      if (!global)
+      {
+        return nullptr;
+      }
+      get_log() << "HANDLE is " << (std::size_t)global << '\n';
+
+      
+      auto result = ::MapViewOfFile(global, FILE_MAP_ALL_ACCESS, 0, 0, ZTS_IP_MAX_STR_LEN);
+
+      if (!result)
+      {
+        get_log() << "Could not map file handle" << '\n';
+        return nullptr;
+      }
+
+      return std::shared_ptr<char>((char*)result, [global](char* data) {
+        ::UnmapViewOfFile(data);
+        ::CloseHandle(global);
+      });
+    }
+  }
+  catch (...)
+  {
+    return nullptr;
+  }
 }
 
 std::optional<in_addr> get_zero_tier_fallback_broadcast_ip_v4()
