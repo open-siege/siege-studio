@@ -91,32 +91,32 @@ constexpr static auto sof_aliases = std::array<std::array<std::string_view, 2>, 
   { "melee-attack-stop", "weapprev; -attack; set melee-attack vstr melee-attack-start" } } };
 
 
-HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
+std::errc get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
   return siege::get_name_ranges(function_name_ranges, length, data, saved);
 }
 
-HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
+std::errc get_variable_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
   return siege::get_name_ranges(variable_name_ranges, length, data, saved);
 }
 
-HRESULT executable_is_supported(const wchar_t* filename) noexcept
+std::errc executable_is_supported(const wchar_t* filename) noexcept
 {
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
 
 
-HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
+std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
 {
-  if (auto result = apply_dpi_awareness(exe_path_str); result != S_OK)
+  if (auto result = apply_dpi_awareness(exe_path_str); result != std::errc{})
   {
     return result;
   }
 
   if (!args)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
 
   std::ofstream custom_bindings("base/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
@@ -152,14 +152,14 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   iter->name = L"console";
   iter->value = L"1";
 
-  return S_OK;
+  return std::errc{};
 }
 
-HRESULT init_mouse_inputs(mouse_binding* binding)
+std::errc init_mouse_inputs(mouse_binding* binding)
 {
   if (binding == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
   auto config = load_config_from_pk3(L"base\\default.cfg", L"base/therest.pk3", L"base/therest.pk3");
 
@@ -168,14 +168,14 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
     load_mouse_bindings(*config, *binding);
   }
 
-  return S_OK;
+  return std::errc{};
 }
 
-HRESULT init_keyboard_inputs(keyboard_binding* binding)
+std::errc init_keyboard_inputs(keyboard_binding* binding)
 {
   if (binding == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
 
   auto config = load_config_from_pk3(L"base\\default.cfg", L"base/therest.pk3", L"base/therest.pk3");
@@ -197,14 +197,14 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
 
   upsert_keyboard_defaults(game_actions, actions, *binding);
 
-  return S_OK;
+  return std::errc{};
 }
 
-HRESULT init_controller_inputs(controller_binding* binding)
+std::errc init_controller_inputs(controller_binding* binding)
 {
   if (binding == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
   std::array<std::pair<WORD, std::string_view>, 23> actions{
     {
@@ -236,7 +236,7 @@ HRESULT init_controller_inputs(controller_binding* binding)
 
   append_controller_defaults(game_actions, actions, *binding);
 
-  return S_OK;
+  return std::errc{};
 }
 
 predefined_int*

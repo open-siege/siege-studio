@@ -186,16 +186,16 @@ namespace siege::platform
     std::array<controller_to_send_input_mapping, 256> controller_to_send_input_mappings;
   };
   // TODO replace HRESULT with std::errc for the cross-platform functions
-  using executable_is_supported = HRESULT(const siege::fs_char* filename) noexcept;
-  using get_function_name_ranges = HRESULT(std::size_t, std::array<const char*, 2>*, std::size_t*) noexcept;
-  using get_variable_name_ranges = HRESULT(std::size_t, std::array<const char*, 2>*, std::size_t*) noexcept;
+  using executable_is_supported = std::errc(const siege::fs_char* filename) noexcept;
+  using get_function_name_ranges = std::errc(std::size_t, std::array<const char*, 2>*, std::size_t*) noexcept;
+  using get_variable_name_ranges = std::errc(std::size_t, std::array<const char*, 2>*, std::size_t*) noexcept;
   using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
   using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
   using get_predefined_string_command_line_settings = predefined_string*(const siege::fs_char* name) noexcept;
   using get_predefined_int_command_line_settings = predefined_int*(const siege::fs_char* name) noexcept;
-  using init_keyboard_inputs = HRESULT(keyboard_binding* binding) noexcept;
-  using init_mouse_inputs = HRESULT(mouse_binding* binding) noexcept;
-  using init_controller_inputs = HRESULT(controller_binding* binding) noexcept;
+  using init_keyboard_inputs = std::errc(keyboard_binding* binding) noexcept;
+  using init_mouse_inputs = std::errc(mouse_binding* binding) noexcept;
+  using init_controller_inputs = std::errc(controller_binding* binding) noexcept;
 
   // TODO Port this code to linux using a "platform::module" instead of a "win32::module"
   class game_extension_module : public win32::module
@@ -299,12 +299,12 @@ namespace siege::platform
       {
         std::size_t count;
 
-        if (auto hresult = get_function_name_ranges_proc(0, nullptr, &count); hresult == S_OK)
+        if (auto hresult = get_function_name_ranges_proc(0, nullptr, &count); hresult == std::errc{})
         {
           std::vector<std::array<const char*, 2>> raw;
           raw.resize(count);
 
-          if (hresult = get_function_name_ranges_proc(raw.size(), raw.data(), &count); hresult == S_OK)
+          if (hresult = get_function_name_ranges_proc(raw.size(), raw.data(), &count); hresult == std::errc{})
           {
             results.reserve(raw.size());
 
@@ -325,12 +325,12 @@ namespace siege::platform
       {
         std::size_t count;
 
-        if (auto hresult = get_variable_name_ranges_proc(0, nullptr, &count); hresult == S_OK)
+        if (auto hresult = get_variable_name_ranges_proc(0, nullptr, &count); hresult == std::errc{})
         {
           std::vector<std::array<const char*, 2>> raw;
           raw.resize(count);
 
-          if (hresult = get_variable_name_ranges_proc(raw.size(), raw.data(), &count); hresult == S_OK)
+          if (hresult = get_variable_name_ranges_proc(raw.size(), raw.data(), &count); hresult == std::errc{})
           {
             results.reserve(raw.size());
 
@@ -352,7 +352,7 @@ namespace siege::platform
 
       auto binding = std::make_unique<siege::platform::controller_binding>();
 
-      if (init_controller_inputs_proc(binding.get()) != S_OK)
+      if (init_controller_inputs_proc(binding.get()) != std::errc{})
       {
         return std::nullopt;
       }
@@ -369,7 +369,7 @@ namespace siege::platform
 
       auto binding = std::make_unique<siege::platform::keyboard_binding>();
 
-      if (init_keyboard_inputs_proc(binding.get()) != S_OK)
+      if (init_keyboard_inputs_proc(binding.get()) != std::errc{})
       {
         return std::nullopt;
       }
@@ -386,7 +386,7 @@ namespace siege::platform
 
       auto binding = std::make_unique<siege::platform::mouse_binding>();
 
-      if (init_mouse_inputs_proc(binding.get()) != S_OK)
+      if (init_mouse_inputs_proc(binding.get()) != std::errc{})
       {
         return std::nullopt;
       }
@@ -398,7 +398,7 @@ namespace siege::platform
     {
       if (executable_is_supported_proc)
       {
-        return executable_is_supported_proc(exe_path.c_str()) == S_OK;
+        return executable_is_supported_proc(exe_path.c_str()) == std::errc{};
       }
 
       return std::nullopt;

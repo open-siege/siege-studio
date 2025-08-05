@@ -71,7 +71,7 @@ inline bool is_vkey_for_keyboard(WORD vkey)
 }
 
 extern "C" {
-HRESULT apply_dpi_awareness(const wchar_t* exe_path_str);
+std::errc apply_dpi_awareness(const wchar_t* exe_path_str);
 LRESULT CALLBACK dispatch_input_to_cdecl_quake_2_console(int code, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK dispatch_input_to_fastcall_quake_2_console(int code, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK dispatch_input_to_cdecl_quake_1_console(int code, WPARAM wParam, LPARAM lParam);

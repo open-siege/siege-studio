@@ -11,7 +11,7 @@
 namespace siege
 {
   template<std::size_t PairCount>
-  HRESULT get_name_ranges(
+  std::errc get_name_ranges(
     const std::array<std::pair<std::string_view, std::string_view>, PairCount>& ranges,
     std::size_t length,
     std::array<const char*, 2>* data,
@@ -20,12 +20,12 @@ namespace siege
     if ((length == 0 || data == nullptr) && saved)
     {
       *saved = ranges.size();
-      return S_OK;
+      return std::errc{};
     }
 
     if (!data)
     {
-      return E_POINTER;
+      return std::errc::bad_address;
     }
 
     auto i = 0u;
@@ -44,21 +44,21 @@ namespace siege
       *saved = i;
     }
 
-    return i == length ? S_OK : S_FALSE;
+    return i == length ? std::errc{} : std::errc::not_supported;
   }
 
-  inline HRESULT executable_is_supported(const wchar_t* filename, const auto& verification_strings) noexcept
+  inline std::errc executable_is_supported(const wchar_t* filename, const auto& verification_strings) noexcept
   {
     if (filename == nullptr)
     {
-      return E_POINTER;
+      return std::errc::bad_address;
     }
 
     std::error_code last_error;
 
     if (!std::filesystem::exists(filename, last_error))
     {
-      return E_INVALIDARG;
+      return std::errc::invalid_argument;
     }
 
     try
@@ -85,7 +85,7 @@ namespace siege
 
         if (data.empty())
         {
-          return S_FALSE;
+          return std::errc::not_supported;
         }
 
         auto is_executable = data.find("MZ") == 0 && data.find("PE") != std::string_view::npos;
@@ -94,32 +94,32 @@ namespace siege
           return data.find(item) != std::string_view::npos;
         });
 
-        return has_all_verification_strings ? S_OK : S_FALSE;
+        return has_all_verification_strings ? std::errc{} : std::errc::not_supported;
       }
 
-      return S_FALSE;
+      return std::errc::not_supported;
     }
     catch (...)
     {
-      return S_FALSE;
+      return std::errc::not_supported;
     }
   }
 
-  inline HRESULT executable_is_supported(const wchar_t* filename,
+  inline std::errc executable_is_supported(const wchar_t* filename,
     const auto& verification_strings,
     const auto& function_name_ranges,
     const auto& variable_name_ranges) noexcept
   {
     if (filename == nullptr)
     {
-      return E_POINTER;
+      return std::errc::bad_address;
     }
 
     std::error_code last_error;
 
     if (!std::filesystem::exists(filename, last_error))
     {
-      return E_INVALIDARG;
+      return std::errc::invalid_argument;
     }
 
     try
@@ -146,7 +146,7 @@ namespace siege
 
         if (data.empty())
         {
-          return S_FALSE;
+          return std::errc::not_supported;
         }
 
         auto is_executable = data.find("MZ") == 0 && data.find("PE") != std::string_view::npos;
@@ -175,14 +175,14 @@ namespace siege
           return false;
         });
 
-        return has_all_variables ? S_OK : S_FALSE;
+        return has_all_variables ? std::errc{} : std::errc::not_supported;
       }
 
-      return S_FALSE;
+      return std::errc::not_supported;
     }
     catch (...)
     {
-      return S_FALSE;
+      return std::errc::not_supported;
     }
   }
 

@@ -814,11 +814,11 @@ extern void(__cdecl* ConsoleEvalCdecl)(const char*) = nullptr;
 extern void(__fastcall* ConsoleEvalFastcall)(const char*) = nullptr;
 extern void(__stdcall* ConsoleEvalStdcall)(const char*) = nullptr;
 
-HRESULT apply_dpi_awareness(const wchar_t* exe_path_str)
+std::errc apply_dpi_awareness(const wchar_t* exe_path_str)
 {
   if (exe_path_str == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
 
   std::error_code last_error;
@@ -839,7 +839,7 @@ HRESULT apply_dpi_awareness(const wchar_t* exe_path_str)
     ::RegCloseKey(current_user);
   }
 
-  return S_OK;
+  return std::errc{};
 }
 
 predefined_string*

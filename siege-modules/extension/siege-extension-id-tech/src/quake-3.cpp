@@ -102,31 +102,31 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 8> va
   { "fs_basegame"sv, "fs_debug"sv },
 } };
 
-HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
+std::errc get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
   return siege::get_name_ranges(function_name_ranges, length, data, saved);
 }
 
-HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
+std::errc get_variable_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
   return siege::get_name_ranges(variable_name_ranges, length, data, saved);
 }
 
-HRESULT executable_is_supported(const wchar_t* filename) noexcept
+std::errc executable_is_supported(const wchar_t* filename) noexcept
 {
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
 
-HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
+std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
 {
   if (exe_path_str == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
 
   if (args == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
 
   std::ofstream custom_bindings("baseq3/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
@@ -163,14 +163,14 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   iter->value = L"1";
 
 
-  return S_OK;
+  return std::errc{};
 }
 
-HRESULT init_mouse_inputs(mouse_binding* binding)
+std::errc init_mouse_inputs(mouse_binding* binding)
 {
   if (binding == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
   auto config = load_config_from_pk3(L"baseq3\\default.cfg", L"baseq3/pak0.pk3", L"baseq3/pak0.pk3");
 
@@ -185,14 +185,14 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
 
   upsert_mouse_defaults(game_actions, actions, *binding);
 
-  return S_OK;
+  return std::errc{};
 }
 
-HRESULT init_keyboard_inputs(keyboard_binding* binding)
+std::errc init_keyboard_inputs(keyboard_binding* binding)
 {
   if (binding == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
 
   auto config = load_config_from_pk3(L"baseq3\\default.cfg", L"baseq3/pak0.pk3", L"baseq3/pak0.pk3");
@@ -213,14 +213,14 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
 
   upsert_keyboard_defaults(game_actions, actions, *binding);
 
-  return S_OK;
+  return std::errc{};
 }
 
-HRESULT init_controller_inputs(controller_binding* binding)
+std::errc init_controller_inputs(controller_binding* binding)
 {
   if (binding == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
   std::array<std::pair<WORD, std::string_view>, 23> actions{
     {
@@ -248,7 +248,7 @@ HRESULT init_controller_inputs(controller_binding* binding)
 
   append_controller_defaults(game_actions, actions, *binding);
 
-  return S_OK;
+  return std::errc{};
 }
 
 predefined_int*

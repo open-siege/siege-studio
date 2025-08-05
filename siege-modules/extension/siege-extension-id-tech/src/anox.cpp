@@ -87,27 +87,27 @@ constexpr std::array<void (*)(), 1> export_functions = { {
   set_gog_exports,
 } };
 
-HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
+std::errc get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
   return siege::get_name_ranges(function_name_ranges, length, data, saved);
 }
 
-HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
+std::errc get_variable_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
   return siege::get_name_ranges(variable_name_ranges, length, data, saved);
 }
 
 
-HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
+std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
 {
   if (exe_path_str == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
 
   if (args == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
 
   std::ofstream custom_bindings("anoxdata/CONFIGS/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
@@ -134,14 +134,14 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   iter->name = L"console";
   iter->value = L"1";
 
-  return S_OK;
+  return std::errc{};
 }
 
-HRESULT init_mouse_inputs(mouse_binding* binding)
+std::errc init_mouse_inputs(mouse_binding* binding)
 {
   if (binding == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
   auto config = load_config_from_pak(L"anoxdata\\CONFIGS\\Default.cfg", L"anoxdata/SCRIPTS.dat", L"anoxdata/SCRIPTS.dat");
 
@@ -151,14 +151,14 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
   }
 
 
-  return S_OK;
+  return std::errc{};
 }
 
-HRESULT init_keyboard_inputs(keyboard_binding* binding)
+std::errc init_keyboard_inputs(keyboard_binding* binding)
 {
   if (binding == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
 
   auto config = load_config_from_pak(L"anoxdata\\CONFIGS\\Default.cfg", L"anoxdata/SCRIPTS.dat", L"anoxdata/SCRIPTS.dat");
@@ -169,14 +169,14 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
   }
 
 
-  return S_OK;
+  return std::errc{};
 }
 
-HRESULT init_controller_inputs(controller_binding* binding)
+std::errc init_controller_inputs(controller_binding* binding)
 {
   if (binding == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
 
   std::array<std::pair<WORD, std::string_view>, 23> actions{
@@ -209,7 +209,7 @@ HRESULT init_controller_inputs(controller_binding* binding)
 
   append_controller_defaults(game_actions, actions, *binding);
 
-  return S_OK;
+  return std::errc{};
 }
 
 predefined_int*
@@ -256,14 +256,14 @@ predefined_string*
   return nullptr;
 }
 
-HRESULT executable_is_supported(const wchar_t* filename) noexcept
+std::errc executable_is_supported(const wchar_t* filename) noexcept
 {
   if (filename && std::filesystem::path(filename).wstring().contains(L"anox"))
   {
     return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
   }
 
-  return S_FALSE;
+  return std::errc::not_supported;
 }
 
 BOOL WINAPI DllMain(

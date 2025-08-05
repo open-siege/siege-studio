@@ -71,26 +71,26 @@ using namespace std::literals;
 constexpr std::array<std::string_view, 2> verification_strings = std::array<std::string_view, 2>{ { "Quake2Main"sv,
   "quake2.dll"sv } };
 
-HRESULT executable_is_supported(const wchar_t* filename) noexcept
+std::errc executable_is_supported(const wchar_t* filename) noexcept
 {
   if (filename && std::filesystem::path(filename).wstring().contains(L"Heretic2"))
   {
     return siege::executable_is_supported(filename, verification_strings);
   }
 
-  return S_FALSE;
+  return std::errc::not_supported;
 }
 
-HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
+std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
 {
   if (exe_path_str == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
 
   if (args == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
   std::error_code last_error;
   fs::create_directory("user", last_error);
@@ -128,14 +128,14 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   iter->name = L"console";
   iter->value = L"1";
 
-  return S_OK;
+  return std::errc{};
 }
 
-HRESULT init_mouse_inputs(mouse_binding* binding)
+std::errc init_mouse_inputs(mouse_binding* binding)
 {
   if (binding == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
   auto config = load_config_from_pak(L"base\\Default.cfg", L"base/Htic2-0.pak", L"base/Htic2-0.pak");
 
@@ -158,14 +158,14 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
 
   upsert_mouse_defaults(game_actions, mouse_wheel_actions, *binding, mouse_context::mouse_wheel);
 
-  return S_OK;
+  return std::errc{};
 }
 
-HRESULT init_keyboard_inputs(keyboard_binding* binding)
+std::errc init_keyboard_inputs(keyboard_binding* binding)
 {
   if (binding == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
 
   auto config = load_config_from_pak(L"base\\Default.cfg", L"base/Htic2-0.pak", L"base/Htic2-0.pak");
@@ -194,14 +194,14 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
 
   upsert_keyboard_defaults(game_actions, actions, *binding, true);
 
-  return S_OK;
+  return std::errc{};
 }
 
-HRESULT init_controller_inputs(controller_binding* binding)
+std::errc init_controller_inputs(controller_binding* binding)
 {
   if (binding == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
   std::array<std::pair<WORD, std::string_view>, 23> actions{
     {
@@ -231,7 +231,7 @@ HRESULT init_controller_inputs(controller_binding* binding)
 
   append_controller_defaults(game_actions, actions, *binding);
 
-  return S_OK;
+  return std::errc{};
 }
 
 predefined_int*

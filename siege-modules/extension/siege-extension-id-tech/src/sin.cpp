@@ -97,31 +97,31 @@ constexpr static auto game_export = siege::game_export<>{
   .console_eval = 0x4774b0
 };
 
-HRESULT get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
+std::errc get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
   return siege::get_name_ranges(game_export.function_name_ranges, length, data, saved);
 }
 
-HRESULT get_variable_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
+std::errc get_variable_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
   return siege::get_name_ranges(game_export.variable_name_ranges, length, data, saved);
 }
 
-HRESULT executable_is_supported(const wchar_t* filename) noexcept
+std::errc executable_is_supported(const wchar_t* filename) noexcept
 {
   return siege::executable_is_supported(filename, game_export.verification_strings, game_export.function_name_ranges, game_export.variable_name_ranges);
 }
 
-HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
+std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
 {
   if (exe_path_str == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
 
   if (args == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
 
   std::ofstream custom_bindings("base/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
@@ -157,14 +157,14 @@ HRESULT apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::g
   iter->name = L"console";
   iter->value = L"1";
 
-  return S_OK;
+  return std::errc{};
 }
 
-HRESULT init_mouse_inputs(mouse_binding* binding)
+std::errc init_mouse_inputs(mouse_binding* binding)
 {
   if (binding == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
   auto config = load_config_from_pak(L"base\\default.cfg", L"base/pak0.sin", L"base/pak0.sin/default.cfg");
 
@@ -173,14 +173,14 @@ HRESULT init_mouse_inputs(mouse_binding* binding)
     load_mouse_bindings(*config, *binding);
   }
 
-  return S_OK;
+  return std::errc{};
 }
 
-HRESULT init_keyboard_inputs(keyboard_binding* binding)
+std::errc init_keyboard_inputs(keyboard_binding* binding)
 {
   if (binding == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
 
   auto config = load_config_from_pak(L"base\\default.cfg", L"base/pak0.sin", L"base/pak0.sin/default.cfg");
@@ -202,14 +202,14 @@ HRESULT init_keyboard_inputs(keyboard_binding* binding)
 
   upsert_keyboard_defaults(game_actions, actions, *binding);
 
-  return S_OK;
+  return std::errc{};
 }
 
-HRESULT init_controller_inputs(controller_binding* binding)
+std::errc init_controller_inputs(controller_binding* binding)
 {
   if (binding == nullptr)
   {
-    return E_POINTER;
+    return std::errc::bad_address;
   }
 
   std::array<std::pair<WORD, std::string_view>, 23> actions{
@@ -241,7 +241,7 @@ HRESULT init_controller_inputs(controller_binding* binding)
   };
 
   append_controller_defaults(game_actions, actions, *binding);
-  return S_OK;
+  return std::errc{};
 }
 
 
