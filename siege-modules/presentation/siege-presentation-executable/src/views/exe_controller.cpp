@@ -1212,6 +1212,15 @@ namespace siege::views
       args.append(loaded_path.wstring());
       args.append(1, L'"');
 
+      auto cmd_args = std::find_if(game_args->string_settings.begin(), game_args->string_settings.end(), [=](auto& item) {
+        return item.name && item.value && item.value[0] != '\0' && item.name == std::wstring_view(L"CMD_ARGS");
+      });
+
+      if (cmd_args != game_args->string_settings.end())
+      {
+        args.append(cmd_args->value);
+      }
+
       auto deferred = configure_environment();
 
       if (::CreateProcessW(loaded_path.c_str(), args.data(), nullptr, nullptr, FALSE, DETACHED_PROCESS, nullptr, loaded_path.parent_path().c_str(), &startup_info, process_info))

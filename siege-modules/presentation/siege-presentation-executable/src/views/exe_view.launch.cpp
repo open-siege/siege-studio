@@ -169,6 +169,16 @@ namespace siege::views
         } });
     }
 
+    if (!controller.has_extension_module())
+    {
+      launch_settings.emplace_back(game_setting{
+        .setting_name = L"CMD_ARGS",
+        .type = game_command_line_caps::string_setting,
+        .value = std::wstring{},
+        .display_name = L"Command Line Arguments",
+        .group_id = 2 });
+    }
+
     if (controller.can_support_zero_tier() && controller.has_zero_tier_extension())
     {
       launch_settings.emplace_back(game_setting{

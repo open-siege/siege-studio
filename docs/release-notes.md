@@ -7,6 +7,7 @@
 * Addresses received via "recvfrom" are now cached for future broadcasts. 
   * This fixes server discovery in unsupported games like Street Racing Syndicate.
 * Fixed custom aliases in Kingpin - Life of Crime. Instead of using weaprev, weaplast is used instead.
+* Command Line Arguments can be entered for unsupported games. 
 
 # Siege Studio + Siege Launcher 25.31 Development Release
 * Fixed issue with unsupported games not working with Zero Tier correctly on second launch.
