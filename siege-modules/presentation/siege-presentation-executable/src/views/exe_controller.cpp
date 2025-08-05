@@ -921,6 +921,17 @@ namespace siege::views
             return true;
           }
 
+          name[0] = (char)std::toupper(name[0]);
+          if (data.find(name + ".DLL") != std::string_view::npos)
+          {
+            return true;
+          }
+
+          if (data.find(name + ".dll") != std::string_view::npos)
+          {
+            return true;
+          }
+
           if (data.find(siege::platform::to_upper(name) + ".dll") != std::string_view::npos)
           {
             return true;
