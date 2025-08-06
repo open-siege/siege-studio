@@ -1064,6 +1064,7 @@ namespace siege::views
                   if (ip_address.contains("."))
                   {
                     controller.set_ip_for_current_network(ip_address);
+                    controller.save_game_settings();
                   }
 
                   ::UnmapViewOfFile(data);

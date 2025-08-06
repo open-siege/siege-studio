@@ -2,6 +2,8 @@
 #include <istream>
 #include <string>
 #include <map>
+#include <codecvt>
+#include <locale>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/win/module.hpp>
 #include <siege/platform/extension_module.hpp>
@@ -722,6 +724,24 @@ namespace siege::views
     game_settings = settings;
     game_settings.last_zero_tier_node_id_and_private_key = node_id_and_private_key;
 
+    save_game_settings();
+    return false;
+  }
+
+  std::string wstring_to_utf8(const std::wstring& wstr)
+  {
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+    return converter.to_bytes(wstr);
+  }
+
+  std::wstring utf8_to_wstring(const std::string& str)
+  {
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+    return converter.from_bytes(str);
+  }
+
+  bool exe_controller::save_game_settings()
+  {
     HKEY main_key = nullptr;
     HKEY user_key = nullptr;
 
@@ -732,6 +752,7 @@ namespace siege::views
     {
       std::vector<BYTE> raw_bytes;
 
+      auto& settings = game_settings;
       raw_bytes.resize(settings.last_ip_address.size() * char_size);
       std::memcpy(raw_bytes.data(), settings.last_ip_address.data(), raw_bytes.size());
 
@@ -746,12 +767,18 @@ namespace siege::views
       std::memcpy(raw_bytes.data(), settings.last_zero_tier_network_id.data(), raw_bytes.size());
       result = result && ::RegSetValueExW(main_key, L"LastZeroTierNetworkId", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
 
-      auto data = json(settings.last_zero_tier_ip_addresses).dump();
+      auto map = json::object();
+      for (auto& item : settings.last_zero_tier_ip_addresses)
+      {
+        map.emplace(wstring_to_utf8(item.first), wstring_to_utf8(item.second));
+      }
+
+      auto data = map.dump();
       raw_bytes.resize(data.size());
       std::memcpy(raw_bytes.data(), data.data(), raw_bytes.size());
       result = result && ::RegSetValueExA(main_key, "LastZeroTierIpAddressesForNetwork", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
 
-      std::string_view key_str = node_id_and_private_key.data();
+      std::string_view key_str = settings.last_zero_tier_node_id_and_private_key.data();
       result = result && ::RegSetValueExA(main_key, "LastZeroTierNodeIdAndPrivateKey", 0, REG_SZ, (BYTE*)key_str.data(), key_str.size()) == ERROR_SUCCESS;
 
       raw_bytes.resize(settings.last_hosting_preference.size() * char_size);
@@ -775,6 +802,7 @@ namespace siege::views
 
     return false;
   }
+
 
   const siege::platform::persistent_game_settings& exe_controller::get_game_settings()
   {
@@ -800,13 +828,19 @@ namespace siege::views
       size = game_settings.last_hosting_preference.size() * char_size;
       ::RegGetValueW(main_key, nullptr, L"LastHostingPreference", RRF_RT_REG_SZ, &type, game_settings.last_hosting_preference.data(), &size);
 
-      std::wstring buffer(4096, L'\0');
+      std::string buffer(4096, L'\0');
       size = buffer.size();
-      ::RegGetValueW(main_key, nullptr, L"LastZeroTierIpAddressesForNetwork", RRF_RT_REG_SZ, &type, buffer.data(), &size);
+      ::RegGetValueA(main_key, nullptr, "LastZeroTierIpAddressesForNetwork", RRF_RT_REG_SZ, &type, buffer.data(), &size);
 
       try
       {
-        game_settings.last_zero_tier_ip_addresses = json::parse(buffer).template get<std::map<std::wstring, std::wstring>>();
+        auto map = json::parse(buffer).template get<std::map<std::string, std::string>>();
+
+        for (auto& item : map)
+        {
+          game_settings.last_zero_tier_ip_addresses.emplace(utf8_to_wstring(item.first), utf8_to_wstring(item.second));
+        }
+
       }
       catch (...)
       {
