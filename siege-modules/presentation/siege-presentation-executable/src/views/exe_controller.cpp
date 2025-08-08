@@ -905,7 +905,7 @@ namespace siege::views
       std::transform(ip_address.begin(), ip_address.end(), std::back_inserter(temp), [](auto value) { return (wchar_t)value; });
 
       game_settings.last_zero_tier_ip_addresses[std::wstring(network_id)] = temp;
-    }
+    }    
   }
 
   bool exe_controller::can_support_zero_tier() const

@@ -9,6 +9,7 @@
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/dialog.hpp>
+#include <string>
 #include "input_injector.hpp"
 
 namespace siege::views
@@ -98,13 +99,96 @@ namespace siege::views
 
   struct game_setting
   {
+    using game_command_line_caps = siege::platform::game_command_line_caps;
     std::wstring setting_name;
     siege::platform::game_command_line_caps::type type;
     std::variant<std::wstring, int, float, bool> value;
     std::wstring display_name;
+    std::wstring display_value;
     int group_id = 0;
     std::function<std::span<siege::platform::predefined_string>(std::wstring_view name)> get_predefined_string;
     std::function<std::span<siege::platform::predefined_int>(std::wstring_view name)> get_predefined_int;
+    std::function<void()> update_interface;
+
+    inline void update_value(int new_value, std::wstring_view new_display_value = L"")
+    {
+      display_value = new_display_value;
+      switch (type)
+      {
+      case game_command_line_caps::env_setting: {
+        value = std::to_wstring(new_value);
+        break;
+      }
+      case game_command_line_caps::string_setting: {
+        value = std::to_wstring(new_value);
+        break;
+      }
+      case game_command_line_caps::int_setting: {
+        value = new_value;
+        break;
+      }
+      case game_command_line_caps::float_setting: {
+        value = (float)new_value;
+        break;
+      }
+      case game_command_line_caps::flag_setting: {
+        value = new_value ? true : false;
+        break;
+      }
+      case game_command_line_caps::computed_setting: {
+        value = new_value;
+        break;
+      }
+      case game_command_line_caps::unknown: {
+        break;
+      }
+      }
+
+      if (update_interface)
+      {
+        update_interface();
+      }
+    }
+
+    inline void update_value(std::wstring_view new_value, std::wstring_view new_display_value = L"")
+    {
+      display_value = new_display_value;
+
+      switch (type)
+      {
+      case game_command_line_caps::env_setting: {
+        value = std::wstring(new_value);
+        break;
+      }
+      case game_command_line_caps::string_setting: {
+        value = std::wstring(new_value);
+        break;
+      }
+      case game_command_line_caps::int_setting: {
+        value = std::stoi(std::wstring(new_value));
+        break;
+      }
+      case game_command_line_caps::float_setting: {
+        value = std::stof(std::wstring(new_value));
+        break;
+      }
+      case game_command_line_caps::flag_setting: {
+        value = new_value == L"Enabled";
+        break;
+      }
+      case game_command_line_caps::computed_setting: {
+        value = std::wstring(new_value);
+        break;
+      }
+      case game_command_line_caps::unknown: {
+        break;
+      }
+      }
+      if (update_interface)
+      {
+        update_interface();
+      }
+    }
   };
 
   struct exe_view final : win32::window_ref
@@ -142,7 +226,7 @@ namespace siege::views
       std::uint16_t from_vkey;
       siege::platform::hardware_context from_context;
       std::uint16_t to_vkey;
-      siege::platform::hardware_context to_context;      
+      siege::platform::hardware_context to_context;
     };
 
     std::vector<controller_send_input_binding> bound_inputs{ {} };

@@ -206,11 +206,21 @@ namespace siege::views
           return std::span<siege::platform::predefined_int>{};
         } });
 
+      auto network_id = std::wstring{ settings.last_zero_tier_network_id.data() };
+
       launch_settings.emplace_back(game_setting{
         .setting_name = L"ZERO_TIER_NETWORK_ID",
         .type = game_command_line_caps::env_setting,
-        .value = std::wstring{ settings.last_zero_tier_network_id.data() },
+        .value = network_id,
         .display_name = L"Zero Tier Network ID",
+        .group_id = 1,
+      });
+
+      launch_settings.emplace_back(game_setting{
+        .setting_name = L"ZERO_TIER_LAST_NETWORK_IP_ADDRESS",
+        .type = game_command_line_caps::computed_setting,
+        .value = settings.last_zero_tier_ip_addresses.contains(network_id) ? settings.last_zero_tier_ip_addresses.at(network_id) : std::wstring(),
+        .display_name = L"Zero Tier Last Network IP Address",
         .group_id = 1,
       });
 
@@ -447,9 +457,41 @@ namespace siege::views
 
       win32::list_view_item column(setting.display_name);
       column.mask = column.mask | LVIF_PARAM | LVIF_GROUPID;
-      column.sub_items = { std::visit(convert_to_string, setting.value) };
+
+      if (!setting.display_value.empty())
+      {
+        column.sub_items = { setting.display_value };
+      }
+      else
+      {
+        column.sub_items = { std::visit(convert_to_string, setting.value) };
+      }
+
       column.lParam = (LPARAM)setting_index;
       column.iGroupId = setting.group_id;
+
+      setting.update_interface = [setting_index, launch_table = launch_table.get(), &setting]() {
+        auto find_info = LVFINDINFOW{
+          .flags = LVFI_PARAM,
+          .lParam = (LPARAM)setting_index
+        };
+
+        auto item = ListView_FindItem(launch_table, -1, &find_info);
+
+        if (item == -1)
+        {
+          return;
+        }
+
+        if (!setting.display_value.empty())
+        {
+          ListView_SetItemText(launch_table, item, 1, setting.display_value.data());
+          return;
+        }
+
+        auto value = std::visit(convert_to_string, setting.value);
+        ListView_SetItemText(launch_table, item, 1, value.data());
+      };
 
       launch_table.InsertRow(std::move(column));
     }
@@ -551,7 +593,7 @@ namespace siege::views
               launch_table_combo.SetWindowStyle(launch_table_combo.GetWindowStyle() | WS_VISIBLE);
               ::SendMessageW(launch_table_combo, CB_SHOWDROPDOWN, TRUE, 0);
 
-              launch_table_edit_unbind = launch_table_combo.bind_cbn_sel_change([this, info, setting](auto, const auto&) {
+              launch_table_edit_unbind = launch_table_combo.bind_cbn_sel_change([this, info, &setting](auto, const auto&) {
                 std::fill_n(text.data(), text.size(), L'\0');
                 ::COMBOBOXEXITEMW new_item{
                   .mask = CBEIF_LPARAM | CBEIF_TEXT,
@@ -564,12 +606,11 @@ namespace siege::views
                 {
                   if (setting.get_predefined_string)
                   {
-                    ListView_SetItemText(launch_table, info.iItem, info.iSubItem, (wchar_t*)new_item.lParam);
+                    setting.update_value(new_item.lParam ? (wchar_t*)new_item.lParam : L"", text.data());
                   }
                   else
                   {
-                    auto item = std::to_wstring(new_item.lParam);
-                    ListView_SetItemText(launch_table, info.iItem, info.iSubItem, item.data());
+                    setting.update_value((int)new_item.lParam, text.data());
                   }
                 }
               });
@@ -588,11 +629,10 @@ namespace siege::views
 
                 ::SetWindowTextW(launch_table_ip_address, text.data());
 
-
-                launch_table_edit_unbind = launch_table_ip_address.bind_en_kill_focus([this, info](auto, const auto&) {
+                launch_table_edit_unbind = launch_table_ip_address.bind_en_kill_focus([this, info, &setting](auto, const auto&) {
                   launch_table_ip_address.SetWindowStyle(launch_table_ip_address.GetWindowStyle() & ~WS_VISIBLE);
                   ::GetWindowTextW(launch_table_ip_address, text.data(), (int)text.size());
-                  ListView_SetItemText(launch_table, info.iItem, info.iSubItem, text.data());
+                  setting.update_value(text.data());
                 });
               }
               else
@@ -607,10 +647,11 @@ namespace siege::views
                 ::SetWindowTextW(launch_table_edit, text.data());
 
 
-                launch_table_edit_unbind = launch_table_edit.bind_en_kill_focus([this, info](auto, const auto&) {
+                launch_table_edit_unbind = launch_table_edit.bind_en_kill_focus([this, info, &setting](auto, const auto&) {
                   launch_table_edit.SetWindowStyle(launch_table_edit.GetWindowStyle() & ~WS_VISIBLE);
                   ::GetWindowTextW(launch_table_edit, text.data(), (int)text.size());
-                  ListView_SetItemText(launch_table, info.iItem, info.iSubItem, text.data());
+
+                  setting.update_value(text.data());
                 });
               }
             }
@@ -771,60 +812,6 @@ namespace siege::views
       };
 
       auto final_launch_settings = launch_settings;
-
-      for (auto i = 0; i < launch_table.GetItemCount(); ++i)
-      {
-        try
-        {
-          info.iItem = i;
-          ListView_GetItem(launch_table, &info);
-
-
-          if (!info.lParam)
-          {
-            continue;
-          }
-
-          std::wstring value(255, L'\0');
-          ListView_GetItemText(launch_table, i, 1, value.data(), value.size());
-          value.resize(value.find(L'\0'));
-
-          auto& setting = final_launch_settings.at(info.lParam);
-
-          switch (setting.type)
-          {
-          case game_command_line_caps::env_setting: {
-            setting.value = value;
-            break;
-          }
-          case game_command_line_caps::string_setting: {
-            setting.value = value;
-            break;
-          }
-          case game_command_line_caps::int_setting: {
-            setting.value = std::stoi(value);
-            break;
-          }
-          case game_command_line_caps::float_setting: {
-            setting.value = std::stof(value);
-            break;
-          }
-          case game_command_line_caps::flag_setting: {
-            setting.value = value == L"Enabled";
-            break;
-          }
-          case game_command_line_caps::computed_setting:
-            [[fallthrough]];
-          case game_command_line_caps::unknown: {
-            break;
-          }
-          }
-        }
-        catch (...)
-        {
-        }
-      }
-
       final_launch_settings.erase(final_launch_settings.begin());
 
       siege::platform::persistent_game_settings settings{};
@@ -1036,44 +1023,57 @@ namespace siege::views
         ::SetEnvironmentVariableW(L"ZERO_TIER_CURRENT_IP_GLOBAL_HANDLE", L"ZeroTierCurrentIpGlobalHandle");
       }
 
-      injector.emplace(*this, input_injector_args{ .args = std::move(game_args), 
-          .launch_game_with_extension = [this](const auto* args, auto* process_info) -> HRESULT { return controller.launch_game_with_extension(args, process_info); }, 
-          .on_process_closed = [this, existing_state, global] mutable { 
-              
-              existing_state |= TBSTATE_ENABLED;
-              ::SendMessageW(exe_actions, TB_SETSTATE, launch_selected_id, MAKEWORD(existing_state, 0));
-              injector.reset(); 
-          
-              if (global)
-              {
-                auto data = ::MapViewOfFile(global, FILE_MAP_READ, 0, 0, 256);
+      injector.emplace(*this, input_injector_args{ .args = std::move(game_args), .launch_game_with_extension = [this](const auto* args, auto* process_info) -> HRESULT { return controller.launch_game_with_extension(args, process_info); }, .on_process_closed = [this, existing_state, global] mutable {
+                                                    existing_state |= TBSTATE_ENABLED;
+                                                    ::SendMessageW(exe_actions, TB_SETSTATE, launch_selected_id, MAKEWORD(existing_state, 0));
+                                                    injector.reset();
 
-                if (data)
-                {
-                  std::string ip_address;
-                  ip_address.resize(256);
-                  std::memcpy(ip_address.data(), data, 256);
+                                                    if (global)
+                                                    {
+                                                      auto data = ::MapViewOfFile(global, FILE_MAP_READ, 0, 0, 256);
 
-                  auto end = ip_address.find('\0');
+                                                      if (data)
+                                                      {
+                                                        std::string ip_address;
+                                                        ip_address.resize(256);
+                                                        std::memcpy(ip_address.data(), data, 256);
 
-                  if (end != std::string::npos)
-                  {
-                    ip_address.resize(end);
-                  }
+                                                        auto end = ip_address.find('\0');
 
-                  if (ip_address.contains("."))
-                  {
-                    controller.set_ip_for_current_network(ip_address);
-                    controller.save_game_settings();
-                  }
+                                                        if (end != std::string::npos)
+                                                        {
+                                                          ip_address.resize(end);
+                                                        }
 
-                  ::UnmapViewOfFile(data);
-                }
-                ::CloseHandle(global);
-                ::SetEnvironmentVariableW(L"ZERO_TIER_CURRENT_IP_GLOBAL_HANDLE", nullptr);
-            }
-          
-          }
+                                                        if (ip_address.contains("."))
+                                                        {
+                                                          controller.set_ip_for_current_network(ip_address);
+                                                          controller.save_game_settings();
+
+                                                          // TODO the split state doesn't make sense.
+                                                          // Better to unify the state and separate things from the UI a bit better
+                                                         auto setting_iter = std::find_if(launch_settings.begin(), launch_settings.end(), [](auto& item) {
+                                                            return item.setting_name == L"ZERO_TIER_LAST_NETWORK_IP_ADDRESS";
+                                                          });
+
+                                                            if (setting_iter != launch_settings.end())
+                                                            {
+                                                              std::wstring temp;
+                                                              temp.resize(ip_address.size());
+
+                                                              std::transform(ip_address.begin(), ip_address.end(), temp.begin(), [](char value) {
+                                                                return (wchar_t)value;
+                                                              });
+
+                                                              setting_iter->update_value(temp);
+                                                            }
+                                                        }
+
+                                                        ::UnmapViewOfFile(data);
+                                                      }
+                                                      ::CloseHandle(global);
+                                                      ::SetEnvironmentVariableW(L"ZERO_TIER_CURRENT_IP_GLOBAL_HANDLE", nullptr);
+                                                    } }
 
                               });
 

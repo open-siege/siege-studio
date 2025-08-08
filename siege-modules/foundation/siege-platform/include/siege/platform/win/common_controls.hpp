@@ -146,7 +146,7 @@ namespace win32
       }
     };
 
-    return set_window_subclass(window, handler::sub_class_proc, (UINT_PTR) new function_context{ source_id,  std::move(callback) }, 0);
+    return set_window_subclass(window, handler::sub_class_proc, (UINT_PTR) new function_context{ source_id, std::move(callback) }, 0);
   }
 
   inline BOOL remove_window_subclass(HWND hWnd, SUBCLASSPROC pfnSubclass, UINT_PTR uIdSubclass)

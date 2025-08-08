@@ -90,6 +90,9 @@ namespace siege::platform
     std::array<char16_t, 64> group_display_name;
   };
 
+  // TODO move this away from here.
+  // This is belongs to presentation-executable and should rather go there.
+  // If it has to be shared, it can get it's own dedicated header
   struct persistent_game_settings
   {
     std::array<fs_char, 64> last_player_name;
@@ -106,6 +109,9 @@ namespace siege::platform
 
   struct game_command_line_caps
   {
+    // TODO Same as peristent game settings. The type is a UI construct
+    // but mixes storage (env) with the data type (int/string). These should be separated
+    // to properly support new storage types (like the registry for example).
     enum type
     {
       unknown,

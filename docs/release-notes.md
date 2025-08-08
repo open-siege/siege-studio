@@ -8,6 +8,7 @@
   * This fixes server discovery in unsupported games like Street Racing Syndicate.
 * Fixed custom aliases in Kingpin - Life of Crime. Instead of using weaprev, weaplast is used instead.
 * Command Line Arguments can be entered for unsupported games. 
+* The last IP address detected for a Zero Tier network is now shown after launching a game or if it has already been saved after a previous launch.
 
 # Siege Studio + Siege Launcher 25.31 Development Release
 * Fixed issue with unsupported games not working with Zero Tier correctly on second launch.

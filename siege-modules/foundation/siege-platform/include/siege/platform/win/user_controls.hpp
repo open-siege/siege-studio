@@ -34,53 +34,60 @@ namespace win32
         UINT_PTR uIdSubclass,
         DWORD_PTR dwRefData)
       {
-        if (uMsg == WM_COMMAND && lParam && uIdSubclass)
+        try
         {
-          auto& context = *(function_context*)uIdSubclass;
-          auto id = LOWORD(wParam);
-          auto code = HIWORD(wParam);
-          auto child = (HWND)lParam;
-
-          if (context.source == child && context.code == code)
+          if (uMsg == WM_COMMAND && lParam && uIdSubclass)
           {
-            NMHDR info{ .hwndFrom = child, .idFrom = id, .code = code };
-            TNotification destInfo{};
-            std::memcpy(&destInfo, &info, sizeof(info));
+            auto& context = *(function_context*)uIdSubclass;
+            auto id = LOWORD(wParam);
+            auto code = HIWORD(wParam);
+            auto child = (HWND)lParam;
 
-            if constexpr (std::is_void_v<TReturn>)
+            if (context.source == child && context.code == code)
             {
-              context.callback(TControl(child), destInfo);
-            }
-            else
-            {
-              return context.callback(TControl(child), destInfo);
+              NMHDR info{ .hwndFrom = child, .idFrom = id, .code = code };
+              TNotification destInfo{};
+              std::memcpy(&destInfo, &info, sizeof(info));
+
+              if constexpr (std::is_void_v<TReturn>)
+              {
+                context.callback(TControl(child), destInfo);
+              }
+              else
+              {
+                return context.callback(TControl(child), destInfo);
+              }
             }
           }
-        }
 
-        if (uMsg == WM_NOTIFY && lParam && uIdSubclass)
-        {
-          auto* header = (NMHDR*)lParam;
-          auto& context = *(function_context*)uIdSubclass;
-
-          if (header->hwndFrom == context.source && header->code == context.code)
+          if (uMsg == WM_NOTIFY && lParam && uIdSubclass)
           {
-            if constexpr (std::is_void_v<TReturn>)
+            auto* header = (NMHDR*)lParam;
+            auto& context = *(function_context*)uIdSubclass;
+
+            if (header->hwndFrom == context.source && header->code == context.code)
             {
-              context.callback(TControl(header->hwndFrom), *(TNotification*)lParam);
-            }
-            else
-            {
-              return context.callback(TControl(header->hwndFrom), *(TNotification*)lParam);
+              if constexpr (std::is_void_v<TReturn>)
+              {
+                context.callback(TControl(header->hwndFrom), *(TNotification*)lParam);
+              }
+              else
+              {
+                return context.callback(TControl(header->hwndFrom), *(TNotification*)lParam);
+              }
             }
           }
-        }
 
-        if (uMsg == WM_NCDESTROY)
+          if (uMsg == WM_NCDESTROY)
+          {
+            auto* context = (function_context*)uIdSubclass;
+            delete context;
+            remove_window_subclass(hWnd, dispatcher::handle_message, uIdSubclass);
+          }
+        }
+        catch (...)
         {
-          auto* context = (function_context*)uIdSubclass;
-          delete context;
-          remove_window_subclass(hWnd, dispatcher::handle_message, uIdSubclass);
+          assert(true);
         }
 
         return def_subclass_proc(hWnd, uMsg, wParam, lParam);
@@ -400,7 +407,7 @@ namespace win32
           {
             return self->wm_command(list_box((HWND)lParam), HIWORD(wParam));
           }
-    
+
     */
 
     struct custom_draw_callbacks
