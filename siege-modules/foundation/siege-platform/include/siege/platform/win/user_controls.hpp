@@ -87,7 +87,7 @@ namespace win32
         }
         catch (...)
         {
-          assert(true);
+          assert(false);
         }
 
         return def_subclass_proc(hWnd, uMsg, wParam, lParam);

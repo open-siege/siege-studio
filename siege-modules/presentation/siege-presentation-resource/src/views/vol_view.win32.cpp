@@ -559,11 +559,9 @@ namespace siege::views
 
       auto final_path = create_self_extracting_resource(shared_state, *new_unvol_path, output_path, std::move(commands));
 
-      if (final_path)
+      if (!final_path)
       {
-      }
-      else
-      {
+        ::MessageBoxW(*this, L"An error occurred creating the self-extracting archive", L"Could Not Create Self-Extracting Archive", MB_ICONERROR);
       }
     }
 

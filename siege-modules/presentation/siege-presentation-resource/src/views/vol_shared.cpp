@@ -88,26 +88,24 @@ namespace siege::views
     return *std::any_cast<std::shared_ptr<controller_state>>(self).get();
   }
 
-  std::vector<char> get_raw_resource_data(std::any& self)
+  win32::file_view get_raw_resource_data(std::any& self)
   {
-    std::vector<char> results;
-
     if (auto* path = std::get_if<fs::path>(&ref(self).storage); path)
     {
-      results.resize(fs::file_size(*path));
-      std::ifstream temp(*path, std::ios::binary);
+      auto file = win32::file(*path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
 
-      temp.read(results.data(), results.size());
+      auto mapping = file.CreateFileMapping(std::nullopt, PAGE_READONLY, {}, L"");
+
+      if (!mapping)
+      {
+        return {};
+      }
+
+      return mapping->MapViewOfFile(FILE_MAP_READ, 0);
     }
 
-    if (auto* stream = std::get_if<std::stringstream>(&ref(self).storage); stream)
-    {
-      results.resize(siege::platform::get_stream_size(*stream));
-
-      stream->read(results.data(), results.size());
-    }
-
-    return results;
+    // For now, not supporting in memory files
+    return {};
   }
 
   void stop_loading(std::any& self) { ref(self).should_continue = false; }

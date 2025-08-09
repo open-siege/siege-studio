@@ -7,6 +7,7 @@
 #include <expected>
 #include <string>
 #include <array>
+#include <span>
 #include <wtypes.h>
 #include <WinDef.h>
 #include <WinBase.h>
@@ -106,6 +107,24 @@ namespace win32
       filename.erase(filename.find(L'\0'));
 
       return filename;
+    }
+
+    operator std::span<char>()
+    {
+      auto data = this->get();
+      if (!data)
+      {
+        return std::span<char>();
+      }
+      MEMORY_BASIC_INFORMATION info{};
+      auto size = ::VirtualQuery(data, &info, sizeof(info));
+
+      if (!size)
+      {
+        return std::span<char>();
+      }
+
+      return std::span<char>((char*)data, info.RegionSize);
     }
   };
 

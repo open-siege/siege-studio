@@ -9,11 +9,15 @@ namespace siege::views
 {
   std::optional<fs::path> create_self_extracting_resource(std::any& self, fs::path unvol_exe_path, std::optional<fs::path> output_path, std::optional<std::vector<std::string>> post_extract_commands)
   {
+    auto data = get_raw_resource_data(self);
+
+    if (!data)
+    {
+      return {};
+    }
+
     if (auto handle = ::BeginUpdateResourceW(unvol_exe_path.c_str(), FALSE); handle)
     {
-      auto data = get_raw_resource_data(self);
-      bool embedded_saved = ::UpdateResourceW(handle, RT_RCDATA, L"embedded", LANG_SYSTEM_DEFAULT, data.data(), (DWORD)data.size());
-
       bool path_saved = true;
 
       if (output_path)
@@ -47,8 +51,16 @@ namespace siege::views
         post_extract_saved = ::UpdateResourceW(handle, RT_RCDATA, L"post_extract", LANG_SYSTEM_DEFAULT, combined_commands.data(), (DWORD)combined_commands.size());
       }
 
+      std::span<char> raw_data = data;
+      bool embedded_saved = ::UpdateResourceW(handle, RT_RCDATA, L"embedded", LANG_SYSTEM_DEFAULT, raw_data.data(), raw_data.size());
+
       auto should_undo = embedded_saved && path_saved && post_extract_saved ? FALSE : TRUE;
       ::EndUpdateResourceW(handle, should_undo);
+
+      if (!should_undo)
+      {
+        return unvol_exe_path;
+      }
     }
 
     return std::nullopt;
