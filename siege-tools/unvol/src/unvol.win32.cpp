@@ -7,6 +7,7 @@
 #include <ranges>
 #include <set>
 #include <string>
+#include <fstream>
 #include <functional>
 #include <spanstream>
 #include <siege/platform/win/module.hpp>
@@ -270,6 +271,11 @@ command_line_args parse_command_line(std::span<std::string_view> args)
 
 bool has_embedded_file()
 {
+  if (auto resource = ::FindResourceW(nullptr, L"embedded_offset", RT_RCDATA); resource != nullptr)
+  {
+    return ::SizeofResource(nullptr, resource) > 0;
+  }
+
   if (auto resource = ::FindResourceW(nullptr, L"embedded", RT_RCDATA); resource != nullptr)
   {
     return ::SizeofResource(nullptr, resource) > 0;
@@ -280,6 +286,34 @@ bool has_embedded_file()
 
 std::unique_ptr<std::istream> create_stream_for_embedded_file()
 {
+  auto offset_res = ::FindResourceW(nullptr, L"embedded_offset", RT_RCDATA);
+
+  if (offset_res)
+  {
+    auto offset_handle = ::LoadResource(nullptr, offset_res);
+
+    if (!offset_handle)
+    {
+      return nullptr;
+    }
+
+    auto ptr = ::LockResource(offset_handle);
+    auto size = ::SizeofResource(nullptr, offset_res);
+
+    if (ptr == nullptr || size != sizeof(std::uint32_t))
+    {
+      return nullptr;
+    }
+
+    std::uint32_t offset{};
+    std::memcpy(&offset, ptr, size);
+
+    auto path = win32::module_ref::current_application().GetModuleFileName();
+    auto result = std::unique_ptr<std::istream>(new std::ifstream(path, std::ios::binary));
+    result->seekg(offset);
+    return result;
+  }
+
   auto resource = ::FindResourceW(nullptr, L"embedded", RT_RCDATA);
 
   if (!resource)

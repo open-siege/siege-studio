@@ -90,7 +90,7 @@ namespace siege::views
 
   // TODO this was meant to be cross platform code. 
   // Oops. I'll have to move this to the win32 section later.
-  win32::file_view get_raw_resource_data(std::any& self)
+  std::pair<win32::file_view, std::size_t> get_raw_resource_data(std::any& self)
   {
     if (auto* path = std::get_if<fs::path>(&ref(self).storage); path)
     {
@@ -103,7 +103,7 @@ namespace siege::views
         return {};
       }
 
-      return mapping->MapViewOfFile(FILE_MAP_READ, 0);
+      return std::make_pair(mapping->MapViewOfFile(FILE_MAP_READ, 0), fs::file_size(*path));
     }
 
     // For now, not supporting in memory files

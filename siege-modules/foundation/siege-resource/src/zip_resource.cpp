@@ -8,6 +8,7 @@
 #include <zip.h>
 
 #include "siege/resource/zip_resource.hpp"
+#include <siege/platform/stream.hpp>
 
 namespace fs = std::filesystem;
 
@@ -29,19 +30,27 @@ namespace siege::resource::zip
     return tag == file_record_tag || tag == folder_record_tag || tag == end_record_tag;
   }
 
+
+  struct stream_info
+  {
+    std::istream& stream;
+    std::size_t start_offset;
+    std::size_t stream_size;
+  };
+
   static auto process_zip_stream = [](void* userdata, void* data, zip_uint64_t len, zip_source_cmd_t cmd) -> zip_int64_t {
-    auto* og_stream = reinterpret_cast<std::istream*>(userdata);
+    auto* og_stream = reinterpret_cast<stream_info*>(userdata);
     switch (cmd)
     {
     case ZIP_SOURCE_OPEN:
       return 0;
     case ZIP_SOURCE_READ: {
-      if (og_stream->eof())
+      if (og_stream->stream.eof())
       {
         return 0;
       }
 
-      og_stream->read(reinterpret_cast<char*>(data), len);
+      og_stream->stream.read(reinterpret_cast<char*>(data), len);
 
       return len;
     }
@@ -50,17 +59,12 @@ namespace siege::resource::zip
     case ZIP_SOURCE_STAT: {
       zip_stat_t* st = reinterpret_cast<zip_stat_t*>(data);
       zip_stat_init(st);
-      auto current_pos = og_stream->tellg();
 
-      og_stream->seekg(0, std::ios::end);
-
-      st->comp_size = std::size_t(og_stream->tellg());
+      st->comp_size = og_stream->stream_size;
       st->size = st->comp_size;
       st->comp_method = ZIP_CM_DEFAULT;
       st->encryption_method = ZIP_EM_NONE;
       st->valid = ZIP_STAT_MTIME | ZIP_STAT_SIZE | ZIP_STAT_COMP_SIZE | ZIP_STAT_COMP_METHOD | ZIP_STAT_ENCRYPTION_METHOD;
-
-      og_stream->seekg(current_pos, std::ios::beg);
 
       return sizeof(zip_stat_t);
     }
@@ -72,20 +76,29 @@ namespace siege::resource::zip
 
       if (seek_data->whence == SEEK_SET)
       {
-        og_stream->seekg(seek_data->offset, std::ios_base::beg);
+        og_stream->stream.seekg(og_stream->start_offset + seek_data->offset, std::ios_base::beg);
       }
       else if (seek_data->whence == SEEK_CUR)
       {
-        og_stream->seekg(seek_data->offset, std::ios_base::cur);
+        og_stream->stream.seekg(seek_data->offset, std::ios_base::cur);
       }
       else if (seek_data->whence == SEEK_END)
       {
-        og_stream->seekg(seek_data->offset, std::ios_base::end);
+        og_stream->stream.seekg(seek_data->offset, std::ios_base::end);
       }
       return 0;
     }
-    case ZIP_SOURCE_TELL:
-      return og_stream->tellg();
+    case ZIP_SOURCE_TELL: {
+      auto curr = std::size_t(og_stream->stream.tellg());
+
+      if (curr < og_stream->start_offset)
+      {
+        curr = og_stream->start_offset;
+        og_stream->stream.seekg(og_stream->start_offset);
+      }
+
+      return curr - og_stream->start_offset;
+    }
     case ZIP_SOURCE_SUPPORTS:
       return zip_source_make_command_bitmap(ZIP_SOURCE_OPEN,
         ZIP_SOURCE_READ,
@@ -106,9 +119,17 @@ namespace siege::resource::zip
     std::shared_ptr<std::string> name_storage;
   };
 
+
+  struct stream_cache
+  {
+    std::size_t start_offset;
+    std::size_t stream_size;
+    std::vector<cached_zip_stat> stat_cache;
+  };
+
   struct zip_cache
   {
-    std::unordered_map<std::string, std::vector<cached_zip_stat>> stat_cache;
+    std::unordered_map<std::string, stream_cache> stream_cache;
     std::unordered_map<fs::path, std::shared_ptr<zip_t>> archives;
   };
 
@@ -130,12 +151,28 @@ namespace siege::resource::zip
 
     auto cache_key = fs::exists(query.archive_path) ? fs::path(query.archive_path).make_preferred().string() + std::to_string(fs::file_size(query.archive_path)) : fs::path(query.archive_path).make_preferred().string();
 
-    auto cache_entry = zip_cache.stat_cache.find(cache_key);
+    if (cache_key.empty())
+    {
+      auto path = siege::platform::get_stream_path(stream);
+      if (path)
+      {
+        cache_key = path->string();
+      }
+    }
 
-    if (cache_entry == zip_cache.stat_cache.end())
+    auto cache_entry = zip_cache.stream_cache.find(cache_key);
+
+    if (cache_entry == zip_cache.stream_cache.end())
     {
       zip_error_t src_error;
-      auto* source = zip_source_function_create(process_zip_stream, &stream, &src_error);
+
+      stream_info info{
+        .stream = stream,
+        .start_offset = (std::size_t)stream.tellg(),
+        .stream_size = siege::platform::get_stream_size(stream) - (std::size_t)stream.tellg()
+      };
+
+      auto* source = zip_source_function_create(process_zip_stream, &info, &src_error);
 
       std::vector<cached_zip_stat> entries;
       zip_t* zip_file;
@@ -173,13 +210,15 @@ namespace siege::resource::zip
         }
       }
 
-      cache_entry = zip_cache.stat_cache.emplace(cache_key, std::move(entries)).first;
+      cache_entry = zip_cache.stream_cache.emplace(cache_key,
+                                            stream_cache{ .start_offset = info.start_offset, .stream_size = info.stream_size, .stat_cache = std::move(entries) })
+                      .first;
 
       zip_close(zip_file);
     }
 
     std::vector<zip_resource_reader::content_info> results;
-    for (auto& entry : cache_entry->second)
+    for (auto& entry : cache_entry->second.stat_cache)
     {
       fs::path name(entry.name);
       name.make_preferred();
@@ -229,10 +268,39 @@ namespace siege::resource::zip
 
     auto create_archive = [&]() {
       zip_error_t src_error;
-      auto* source = zip_source_function_create(process_zip_stream, &stream, &src_error);
+
+      auto cache_key = fs::exists(info.archive_path) ? fs::path(info.archive_path).make_preferred().string() + std::to_string(fs::file_size(info.archive_path)) : fs::path(info.archive_path).make_preferred().string();
+
+      if (cache_key.empty())
+      {
+        auto path = siege::platform::get_stream_path(stream);
+        if (path)
+        {
+          cache_key = path->string();
+        }
+      }
+
+      auto* info = new stream_info{
+        .stream = stream,
+        .start_offset = (std::size_t)stream.tellg(),
+        .stream_size = siege::platform::get_stream_size(stream) - (std::size_t)stream.tellg()
+      };
+
+      auto cached_info = zip_cache.stream_cache.find(cache_key);
+
+      if (cached_info != zip_cache.stream_cache.end())
+      {
+        info->start_offset = cached_info->second.start_offset;
+        info->stream_size = cached_info->second.stream_size;
+      }
+
+      auto* source = zip_source_function_create(process_zip_stream, info, &src_error);
 
       zip_error_t err;
-      return std::shared_ptr<zip_t>(zip_open_from_source(source, 0, &err), zip_close);
+      return std::shared_ptr<zip_t>(zip_open_from_source(source, 0, &err), [info](auto* handle) {
+        zip_close(handle);
+        delete info;
+      });
     };
 
     if (!zip_cache.archives.contains(info.archive_path))

@@ -12,7 +12,7 @@ namespace siege::views
   {
     auto data = get_raw_resource_data(self);
 
-    if (!data)
+    if (!data.first)
     {
       return {};
     }
@@ -55,13 +55,13 @@ namespace siege::views
         post_extract_saved = ::UpdateResourceW(handle, RT_RCDATA, L"post_extract", LANG_SYSTEM_DEFAULT, combined_commands.data(), (DWORD)combined_commands.size());
       }
 
-      std::span<char> raw_data = data;
+      std::span<char> raw_data = data.first;
 
       bool embedded_saved = false;
 
       if (!should_append)
       {
-        embedded_saved = ::UpdateResourceW(handle, RT_RCDATA, L"embedded", LANG_SYSTEM_DEFAULT, raw_data.data(), raw_data.size());
+        embedded_saved = ::UpdateResourceW(handle, RT_RCDATA, L"embedded", LANG_SYSTEM_DEFAULT, raw_data.data(), data.second);
       }
       
       auto should_undo = (embedded_saved || should_append) && path_saved && post_extract_saved ? FALSE : TRUE;
@@ -78,7 +78,7 @@ namespace siege::views
 
         std::ofstream exe_stream(unvol_exe_path, std::ios::binary | std::ios::app);
 
-        exe_stream.write(raw_data.data(), raw_data.size());
+        exe_stream.write(raw_data.data(), data.second);
         embedded_saved = !exe_stream.bad();
       }
 

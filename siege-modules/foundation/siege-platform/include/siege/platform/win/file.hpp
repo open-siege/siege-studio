@@ -137,6 +137,11 @@ namespace win32
     {
       return file_view(::MapViewOfFile(get(), desired_access, 0, 0, size));
     }
+
+    file_view MapViewOfFile(DWORD desired_access, LARGE_INTEGER offset, std::size_t size)
+    {
+      return file_view(::MapViewOfFile(get(), desired_access, offset.HighPart, offset.LowPart, size));
+    }
   };
 
   struct file : std::unique_ptr<void, handle_deleter>

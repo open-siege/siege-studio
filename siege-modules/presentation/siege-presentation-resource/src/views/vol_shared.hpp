@@ -16,7 +16,7 @@ namespace siege::views
   std::vector<std::reference_wrapper<siege::platform::resource_reader::content_info>> get_contents(std::any&);
   std::vector<char> load_content_data(std::any&, const siege::platform::resource_reader::content_info&);
 
-  win32::file_view get_raw_resource_data(std::any&);
+  std::pair<win32::file_view, std::size_t> get_raw_resource_data(std::any&);
 
   void stop_loading(std::any&);
   std::optional<std::filesystem::path> get_original_path(std::any&);

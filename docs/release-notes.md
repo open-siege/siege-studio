@@ -9,7 +9,8 @@
 * Fixed custom aliases in Kingpin - Life of Crime. Instead of using weaprev, weaplast is used instead.
 * Command Line Arguments can be entered for unsupported games. 
 * The last IP address detected for a Zero Tier network is now shown after launching a game or if it has already been saved after a previous launch.
-* Fixed crash when large self-extracted files are being created. Now, an error is shown instead when it can't be created. 
+* Fixed crash when creating self-extracted files are being created. Now, an error is shown instead when it can't be created. 
+* Fixed issue with creating large self-extracting exe files. Most larger zip (or other archive) files should work (except if they are larger than 2GB).
 
 # Siege Studio + Siege Launcher 25.31 Development Release
 * Fixed issue with unsupported games not working with Zero Tier correctly on second launch.
