@@ -39,6 +39,7 @@ std::shared_ptr<char> get_shared_current_ip_address_storage();
 int zt_to_winsock_error(int);
 int zt_to_winsock_result(int code);
 std::set<std::uint32_t>& get_fallback_broadcast_addresses();
+int exception_to_error_code();
 
 bool use_zero_tier();
 int to_zt_msg_flags(int flags);
@@ -315,22 +316,31 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
 
 int __stdcall siege_recv(SOCKET ws, char* buf, int len, int flags)
 {
-  if (use_zero_tier())
+  try
   {
-    if (!get_zero_tier_handles().contains(to_zts(ws)))
+    if (use_zero_tier())
     {
-      get_log() << "Non zero tier socket passed in" << std::endl;
-      wsock_WSASetLastError(WSAENOTSOCK);
-      return SOCKET_ERROR;
+      if (!get_zero_tier_handles().contains(to_zts(ws)))
+      {
+        get_log() << "Non zero tier socket passed in" << std::endl;
+        wsock_WSASetLastError(WSAENOTSOCK);
+        return SOCKET_ERROR;
+      }
+
+      static auto* zt_recv = (std::add_pointer_t<decltype(zts_bsd_recv)>)::GetProcAddress(get_ztlib(), "zts_bsd_recv");
+
+      auto zt_result = (int)zt_recv(to_zts(ws), buf, (std::size_t)len, to_zt_msg_flags(flags));
+
+      return zt_to_winsock_result(zt_result);
     }
-
-    static auto* zt_recv = (std::add_pointer_t<decltype(zts_bsd_recv)>)::GetProcAddress(get_ztlib(), "zts_bsd_recv");
-
-    auto zt_result = (int)zt_recv(to_zts(ws), buf, (std::size_t)len, to_zt_msg_flags(flags));
-
-    return zt_to_winsock_result(zt_result);
+    return wsock_recv(ws, buf, len, flags);
   }
-  return wsock_recv(ws, buf, len, flags);
+  catch (...)
+  {
+    get_log() << "Exception occurred in siege_recv" << std::endl;
+    wsock_WSASetLastError(exception_to_error_code());
+    return SOCKET_ERROR;
+  }
 }
 
 static_assert(SO_DEBUG == ZTS_SO_DEBUG);
@@ -528,7 +538,7 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
   catch (...)
   {
     get_log() << "Exception occurred in siege_recvfrom" << std::endl;
-    wsock_WSASetLastError(WSAENETDOWN);
+    wsock_WSASetLastError(exception_to_error_code());
     return SOCKET_ERROR;
   }
 }
@@ -765,25 +775,34 @@ int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
   return result;
 }
 
-int __stdcall siege_send(SOCKET ws, const char* buf, int len, int flags)
+int __stdcall siege_send(SOCKET ws, const char* buf, int len, int flags) noexcept
 {
-  if (use_zero_tier())
+  try
   {
-    if (!get_zero_tier_handles().contains(to_zts(ws)))
+    if (use_zero_tier())
     {
-      get_log() << "Non zero tier socket passed in" << std::endl;
-      wsock_WSASetLastError(WSAENOTSOCK);
-      return SOCKET_ERROR;
+      if (!get_zero_tier_handles().contains(to_zts(ws)))
+      {
+        get_log() << "Non zero tier socket passed in" << std::endl;
+        wsock_WSASetLastError(WSAENOTSOCK);
+        return SOCKET_ERROR;
+      }
+
+      get_log() << "zts_bsd_send\n";
+      static auto* zt_send = (std::add_pointer_t<decltype(zts_bsd_send)>)::GetProcAddress(get_ztlib(), "zts_bsd_send");
+
+      auto zt_result = zt_send(to_zts(ws), buf, (std::size_t)len, to_zt_msg_flags(flags));
+
+      return zt_to_winsock_result(zt_result);
     }
-
-    get_log() << "zts_bsd_send\n";
-    static auto* zt_send = (std::add_pointer_t<decltype(zts_bsd_send)>)::GetProcAddress(get_ztlib(), "zts_bsd_send");
-
-    auto zt_result = zt_send(to_zts(ws), buf, (std::size_t)len, to_zt_msg_flags(flags));
-
-    return zt_to_winsock_result(zt_result);
+    return wsock_send(ws, buf, len, flags);
   }
-  return wsock_send(ws, buf, len, flags);
+  catch (...)
+  {
+    get_log() << "Exception occurred in siege_send" << std::endl;
+    wsock_WSASetLastError(exception_to_error_code());
+    return SOCKET_ERROR;
+  }
 }
 
 int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen) noexcept
@@ -863,7 +882,7 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
   catch (...)
   {
     get_log() << "Exception occurred in siege_sendto" << std::endl;
-    wsock_WSASetLastError(WSAENETDOWN);
+    wsock_WSASetLastError(exception_to_error_code());
     return SOCKET_ERROR;
   }
 }
@@ -918,75 +937,84 @@ int __stdcall siege_closesocket(SOCKET ws)
 
 int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout)
 {
-  if (use_zero_tier())
+  try
   {
-    get_log() << "siege_select\n";
-    static auto* zt_select = (std::add_pointer_t<decltype(zts_bsd_select)>)::GetProcAddress(get_ztlib(), "zts_bsd_select");
-    zts_fd_set zt_read{};
-    zts_fd_set* final_read = nullptr;
+    if (use_zero_tier())
+    {
+      get_log() << "siege_select\n";
+      static auto* zt_select = (std::add_pointer_t<decltype(zts_bsd_select)>)::GetProcAddress(get_ztlib(), "zts_bsd_select");
+      zts_fd_set zt_read{};
+      zts_fd_set* final_read = nullptr;
 
-    auto transfer_set = [](auto& source, auto& dest) {
-      ZTS_FD_ZERO(&dest);
-      for (auto i = 0; i < source.fd_count; ++i)
+      auto transfer_set = [](auto& source, auto& dest) {
+        ZTS_FD_ZERO(&dest);
+        for (auto i = 0; i < source.fd_count; ++i)
+        {
+          auto zts = to_zts(source.fd_array[i]);
+          if (get_zero_tier_handles().contains(zts))
+          {
+            ZTS_FD_SET(zts, &dest);
+          }
+          else
+          {
+            get_log() << "Non Zero Tier handle detected " << zts << '\n';
+          }
+        }
+      };
+
+      if (read && read->fd_count)
       {
-        auto zts = to_zts(source.fd_array[i]);
-        if (get_zero_tier_handles().contains(zts))
-        {
-          ZTS_FD_SET(zts, &dest);
-        }
-        else
-        {
-          get_log() << "Non Zero Tier handle detected " << zts << '\n';
-        }
+        transfer_set(*read, zt_read);
+        final_read = &zt_read;
       }
-    };
 
-    if (read && read->fd_count)
-    {
-      transfer_set(*read, zt_read);
-      final_read = &zt_read;
+      zts_fd_set zt_write{};
+      zts_fd_set* final_write = nullptr;
+
+      if (write && write->fd_count)
+      {
+        transfer_set(*write, zt_write);
+        final_write = &zt_write;
+      }
+
+      zts_fd_set zt_except{};
+      zts_fd_set* final_except = nullptr;
+
+      if (except && except->fd_count)
+      {
+        transfer_set(*except, zt_except);
+        final_except = &zt_except;
+      }
+
+      zts_timeval timeval{};
+
+      zts_timeval* final_timeval = nullptr;
+
+      if (timeout)
+      {
+        timeval.tv_sec = timeout->tv_sec;
+        timeval.tv_usec = timeout->tv_usec;
+
+        final_timeval = &timeval;
+      }
+
+      auto count = zt_select(ZTS_FD_SETSIZE, final_read, final_write, final_except, final_timeval);
+
+      if (count == ZTS_ERR_SOCKET || count == ZTS_ERR_SERVICE)
+      {
+        return zt_to_winsock_result(count);
+      }
+
+      return count;
     }
-
-    zts_fd_set zt_write{};
-    zts_fd_set* final_write = nullptr;
-
-    if (write && write->fd_count)
-    {
-      transfer_set(*write, zt_write);
-      final_write = &zt_write;
-    }
-
-    zts_fd_set zt_except{};
-    zts_fd_set* final_except = nullptr;
-
-    if (except && except->fd_count)
-    {
-      transfer_set(*except, zt_except);
-      final_except = &zt_except;
-    }
-
-    zts_timeval timeval{};
-
-    zts_timeval* final_timeval = nullptr;
-
-    if (timeout)
-    {
-      timeval.tv_sec = timeout->tv_sec;
-      timeval.tv_usec = timeout->tv_usec;
-
-      final_timeval = &timeval;
-    }
-
-    auto count = zt_select(ZTS_FD_SETSIZE, final_read, final_write, final_except, final_timeval);
-
-    if (count == ZTS_ERR_SOCKET || count == ZTS_ERR_SERVICE)
-    {
-      return zt_to_winsock_result(count);
-    }
-
-    return count;
+    return wsock_select(value, read, write, except, timeout);
   }
-  return wsock_select(value, read, write, except, timeout);
+  catch (...)
+  {
+    get_log() << "Exception occurred in siege_select" << std::endl;
+    wsock_WSASetLastError(exception_to_error_code());
+    return SOCKET_ERROR;
+  }
 }
 
 int __stdcall siege___WSAFDIsSet(SOCKET ws, fd_set* set)
@@ -1553,7 +1581,7 @@ std::shared_ptr<char> get_shared_current_ip_address_storage()
       }
       get_log() << "HANDLE is " << (std::size_t)global << '\n';
 
-      
+
       auto result = ::MapViewOfFile(global, FILE_MAP_ALL_ACCESS, 0, 0, ZTS_IP_MAX_STR_LEN);
 
       if (!result)
@@ -2169,5 +2197,41 @@ std::string ioctl_cmd_to_string(long cmd)
     return "SIOCATMARK";
   default:
     return std::to_string(cmd);
+  }
+}
+
+int exception_to_error_code() noexcept
+{
+  try
+  {
+    throw;
+  }
+  catch (const std::bad_alloc&)
+  {
+#ifdef USE_WINSOCK2
+    return WSA_NOT_ENOUGH_MEMORY;
+#else
+    return WSAENOBUFS;
+#endif
+  }
+  catch (const std::invalid_argument&)
+  {
+    return WSAEINVAL;
+  }
+  catch (const std::out_of_range&)
+  {
+    return WSAEFAULT;
+  }
+  catch (const std::length_error&)
+  {
+    return WSAEFAULT;
+  }
+  catch (const std::logic_error&)
+  {
+    return WSAEINVAL;
+  }
+  catch (...)
+  {
+    return WSAENETDOWN;
   }
 }
