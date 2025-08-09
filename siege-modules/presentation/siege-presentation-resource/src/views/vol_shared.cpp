@@ -88,6 +88,8 @@ namespace siege::views
     return *std::any_cast<std::shared_ptr<controller_state>>(self).get();
   }
 
+  // TODO this was meant to be cross platform code. 
+  // Oops. I'll have to move this to the win32 section later.
   win32::file_view get_raw_resource_data(std::any& self)
   {
     if (auto* path = std::get_if<fs::path>(&ref(self).storage); path)

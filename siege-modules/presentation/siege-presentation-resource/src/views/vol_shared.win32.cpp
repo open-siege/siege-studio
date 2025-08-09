@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <optional>
+#include <fstream>
 #include <siege/platform/win/file.hpp>
 #include "vol_shared.hpp"
 
@@ -16,6 +17,9 @@ namespace siege::views
       return {};
     }
 
+    bool should_append = false;
+
+    start:
     if (auto handle = ::BeginUpdateResourceW(unvol_exe_path.c_str(), FALSE); handle)
     {
       bool path_saved = true;
@@ -52,12 +56,39 @@ namespace siege::views
       }
 
       std::span<char> raw_data = data;
-      bool embedded_saved = ::UpdateResourceW(handle, RT_RCDATA, L"embedded", LANG_SYSTEM_DEFAULT, raw_data.data(), raw_data.size());
 
-      auto should_undo = embedded_saved && path_saved && post_extract_saved ? FALSE : TRUE;
+      bool embedded_saved = false;
+
+      if (!should_append)
+      {
+        embedded_saved = ::UpdateResourceW(handle, RT_RCDATA, L"embedded", LANG_SYSTEM_DEFAULT, raw_data.data(), raw_data.size());
+      }
+      
+      auto should_undo = (embedded_saved || should_append) && path_saved && post_extract_saved ? FALSE : TRUE;
       ::EndUpdateResourceW(handle, should_undo);
 
-      if (!should_undo)
+
+      if (should_append)
+      {
+        auto offset = (std::uint32_t)fs::file_size(unvol_exe_path);
+
+        auto handle = ::BeginUpdateResourceW(unvol_exe_path.c_str(), FALSE);
+        post_extract_saved = ::UpdateResourceW(handle, RT_RCDATA, L"embedded_offset", LANG_SYSTEM_DEFAULT, &offset, (DWORD)sizeof(offset));
+        ::EndUpdateResourceW(handle, FALSE);
+
+        std::ofstream exe_stream(unvol_exe_path, std::ios::binary | std::ios::app);
+
+        exe_stream.write(raw_data.data(), raw_data.size());
+        embedded_saved = !exe_stream.bad();
+      }
+
+      if (!embedded_saved && !should_append)
+      {
+        should_append = true;
+        goto start;
+      }
+
+      if (embedded_saved)
       {
         return unvol_exe_path;
       }
