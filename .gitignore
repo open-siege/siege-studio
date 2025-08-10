@@ -3,7 +3,7 @@
 .vscode
 venv/
 build/
-release/
+release/build
 package/
 cmake-build-debug/
 cmake-build-release/
@@ -14,7 +14,6 @@ dist/
 __pycache__/
 CMakeFiles/
 Debug/
-Release/
 Package/
 final build/
 
