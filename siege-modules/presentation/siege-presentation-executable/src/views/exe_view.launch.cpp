@@ -700,6 +700,7 @@ namespace siege::views
 
     if (message.dwItemSpec == launch_selected_id)
     {
+      std::set<std::wstring> converted_strings;
       auto backends = controller.has_extension_module() ? controller.get_extension().controller_input_backends : std::span<const wchar_t*>{};
       auto actions = controller.has_extension_module() ? controller.get_extension().game_actions : std::span<siege::platform::game_action>{};
       std::size_t binding_index = 0;
@@ -940,6 +941,8 @@ namespace siege::views
       auto float_index = 0;
       auto flag_index = 0;
 
+      // TODO more relocation needed. All the settings code should be unified 
+      // And have centralised logic for updating dependent values.
       for (auto& setting : final_launch_settings)
       {
         try
@@ -951,6 +954,12 @@ namespace siege::views
             {
               game_args->environment_settings.at(env_index).name = setting.setting_name.c_str();
               game_args->environment_settings[env_index++].value = value->c_str();
+            }
+            else
+            {
+              game_args->environment_settings.at(env_index).name = setting.setting_name.c_str();
+              auto iter = converted_strings.emplace(std::visit(convert_to_string, setting.value));
+              game_args->environment_settings[env_index++].value = iter.first->c_str();
             }
             break;
           }
