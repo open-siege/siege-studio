@@ -4,6 +4,8 @@
 #include <siege/platform/win/messages.hpp>
 #include <map>
 #include <set>
+#include <optional>
+#include <string_view>
 #include <initguid.h>
 #include <oleacc.h>
 

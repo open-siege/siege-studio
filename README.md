@@ -55,10 +55,10 @@ The project contains the following components:
 If you don't already have Conan on your system, find instructions here: https://conan.io/downloads.html
 
 To configure and build a debug build, use:
-```conan build . -s build_type=Debug -s compiler.runtime=static -s arch=x86 --build=missing```
+```conan build . -s build_type=Debug -s compiler.runtime=static -s arch=x86 -s compiler.cppstd=23 --build=missing```
 
 To configure and build a release build, use:
-```conan build . -s build_type=Release -s compiler.runtime=static -s arch=x86 --build=missing -of release```
+```conan build . -s build_type=Release -s compiler.runtime=static -s arch=x86 -s compiler.cppstd=23 --build=missing -of release```
 
 TODO add instructions for 64 bit builds and merging binaries into one package
 
