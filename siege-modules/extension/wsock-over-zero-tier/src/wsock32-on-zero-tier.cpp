@@ -39,7 +39,7 @@ std::shared_ptr<char> get_shared_current_ip_address_storage();
 int zt_to_winsock_error(int);
 int zt_to_winsock_result(int code);
 std::set<std::uint32_t>& get_fallback_broadcast_addresses();
-int exception_to_error_code();
+int exception_to_error_code() noexcept;
 
 bool use_zero_tier();
 int to_zt_msg_flags(int flags);
@@ -1595,6 +1595,7 @@ std::shared_ptr<char> get_shared_current_ip_address_storage()
         ::CloseHandle(global);
       });
     }
+    return nullptr;
   }
   catch (...)
   {
