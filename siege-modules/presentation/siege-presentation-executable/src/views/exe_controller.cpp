@@ -6,6 +6,7 @@
 #include <locale>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/win/module.hpp>
+#include <siege/platform/win/registry.hpp>
 #include <siege/platform/extension_module.hpp>
 #include <siege/platform/shared.hpp>
 #include "views/exe_views.hpp"
@@ -828,19 +829,22 @@ namespace siege::views
       size = game_settings.last_hosting_preference.size() * char_size;
       ::RegGetValueW(main_key, nullptr, L"LastHostingPreference", RRF_RT_REG_SZ, &type, game_settings.last_hosting_preference.data(), &size);
 
-      std::string buffer(4096, L'\0');
-      size = buffer.size();
-      ::RegGetValueA(main_key, nullptr, "LastZeroTierIpAddressesForNetwork", RRF_RT_REG_SZ, &type, buffer.data(), &size);
-
       try
       {
-        auto map = json::parse(buffer).template get<std::map<std::string, std::string>>();
+        std::string buffer;
 
-        for (auto& item : map)
+        buffer.resize(win32::reg_query_value_ex(main_key, "LastZeroTierIpAddressesForNetwork").value_or({}).first);
+
+        if (auto data = win32::reg_query_value_ex(main_key, "LastZeroTierIpAddressesForNetwork", buffer); data)
         {
-          game_settings.last_zero_tier_ip_addresses.emplace(utf8_to_wstring(item.first), utf8_to_wstring(item.second));
-        }
 
+          auto map = json::parse(buffer).template get<std::map<std::string, std::string>>();
+
+          for (auto& item : map)
+          {
+            game_settings.last_zero_tier_ip_addresses.emplace(utf8_to_wstring(item.first), utf8_to_wstring(item.second));
+          }
+        }
       }
       catch (...)
       {
@@ -905,7 +909,7 @@ namespace siege::views
       std::transform(ip_address.begin(), ip_address.end(), std::back_inserter(temp), [](auto value) { return (wchar_t)value; });
 
       game_settings.last_zero_tier_ip_addresses[std::wstring(network_id)] = temp;
-    }    
+    }
   }
 
   bool exe_controller::can_support_zero_tier() const

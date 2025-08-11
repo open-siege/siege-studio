@@ -22,6 +22,7 @@ if (WIN32)
         src/theming-masking.cpp
         src/theming-font.cpp
         src/layout-common.cpp
+        src/registry.cpp
         src/platform_image.win32.cpp
         src/http.win32.cpp)
     set_property(TARGET siege-win-desktop PROPERTY CXX_STANDARD 23)
