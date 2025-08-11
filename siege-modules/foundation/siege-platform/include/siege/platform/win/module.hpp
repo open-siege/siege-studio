@@ -5,6 +5,7 @@
 #include <system_error>
 #include <optional>
 #include <filesystem>
+#include <expected>
 #include <siege/platform/win/auto_handle.hpp>
 #include <wtypes.h>
 #include <WinDef.h>
@@ -178,6 +179,8 @@ namespace win32
   };
 
   std::optional<std::filesystem::path> find_binary_module(search_context context);
+
+  std::expected<std::filesystem::path, DWORD> get_dll_directory();
 }// namespace win32
 
 #endif// !WIN_CORE_MODULE_HPP

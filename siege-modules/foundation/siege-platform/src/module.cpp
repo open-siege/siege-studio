@@ -87,4 +87,18 @@ namespace win32
 
     return std::nullopt;
   }
+
+  std::expected<std::filesystem::path, DWORD> get_dll_directory()
+  {
+    std::wstring temp;
+    temp.resize(1024);
+    temp.resize(::GetDllDirectoryW((DWORD)temp.size(), temp.data()));
+
+    if (temp.size() == 0)
+    {
+      return std::unexpected(::GetLastError());
+    }
+
+    return temp;
+  }
 }

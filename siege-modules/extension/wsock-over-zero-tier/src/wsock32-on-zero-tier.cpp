@@ -155,7 +155,15 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
       }
       else
       {
-        init_from_storage(".");
+        if (auto dll_path = win32::get_dll_directory(); dll_path)
+        {
+          auto dll_path_str = dll_path->string();
+          init_from_storage(dll_path_str.data());
+        }
+        else
+        {
+          init_from_storage(".");
+        }
       }
 
       get_log() << "Starting node\n";
