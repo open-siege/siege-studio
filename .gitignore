@@ -52,3 +52,6 @@ CMakeUserPresets.json
 _site
 api
 libzt
+/release/7z.dll
+/release/butler.exe
+/release/c7zip.dll
