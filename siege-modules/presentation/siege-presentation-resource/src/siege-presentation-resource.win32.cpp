@@ -80,13 +80,6 @@ BOOL WINAPI DllMain(
       return TRUE;// do not do cleanup if process termination scenario
     }
 
-    static win32::hwnd_t info_instance = nullptr;
-
-    static std::wstring module_file_name(255, '\0');
-    GetModuleFileNameW(hinstDLL, module_file_name.data(), module_file_name.size());
-
-    std::filesystem::path module_path(module_file_name.data());
-
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
       vol_view_atom = register_vol_view(win32::window_module_ref(hinstDLL));

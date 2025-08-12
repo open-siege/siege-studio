@@ -8,7 +8,7 @@
 #include <siege/platform/win/threading.hpp>
 #include <siege/extension/input_filter.hpp>
 #include "input_injector.hpp"
-#include "views/exe_views.hpp"
+#include "views/exe_view.hpp"
 
 namespace siege::views
 {
@@ -267,11 +267,11 @@ namespace siege::views
       has_saved = false;
 
       std::for_each(items.begin(), items.end(), [this, path](auto& item) {
-        auto extension = controller.get_extension_for_name(item.first, item.second);
+        auto extension = get_extension_for_name(state, item.first, item.second);
 
         if (extension)
         {
-          auto raw_data = controller.get_resource_data(item.first, item.second);
+          auto raw_data = get_resource_data(state, item.first, item.second);
           auto filename = item.second + *extension;
 
           std::ofstream extracted_file(*path / filename, std::ios::trunc | std::ios::binary);
@@ -336,11 +336,11 @@ namespace siege::views
         {
           for (auto& item : selected_resource_items)
           {
-            auto extension = controller.get_extension_for_name(item.first, item.second);
+            auto extension = get_extension_for_name(state, item.first, item.second);
 
             if (extension)
             {
-              auto raw_data = controller.get_resource_data(item.first, item.second);
+              auto raw_data = get_resource_data(state, item.first, item.second);
               auto filename = item.second + *extension;
               root->CopyData(*this, COPYDATASTRUCT{ .dwData = ::AddAtomW(filename.data()), .cbData = DWORD(raw_data.size()), .lpData = raw_data.data() });
             }
@@ -472,19 +472,63 @@ namespace siege::views
       ::SendMessageW(exe_actions, TB_SETBUTTONINFO, add_to_firewall_selected_id, (LPARAM)&button_info);
     }
 
-    auto count = controller.load_executable(stream, std::move(path));
+    auto count = load_executable(state, stream, std::move(path));
 
     if (count > 0)
     {
-      auto values = controller.get_resource_names();
+      auto values = get_resource_names(state);
 
-      if (controller.has_extension_module())
+      auto populate_launch_table = [this]() {
+        int setting_index = 1;
+
+        auto launch_settings = init_launch_settings(state);
+
+        for (auto& setting : launch_settings)
+        {
+          std::shared_ptr<void> deferred(nullptr, [&](...) { setting_index++; });
+
+          if (!setting.visible)
+          {
+            continue;
+          }
+          win32::list_view_item column(setting.display_name);
+          column.mask = column.mask | LVIF_PARAM | LVIF_GROUPID;
+          column.sub_items = { setting.get_computed_display_value() };
+          column.lParam = (LPARAM)setting_index;
+          column.iGroupId = setting.group_id;
+
+          setting.persist = [setting_index, launch_table = launch_table.get(), &setting, persist = std::move(setting.persist)]() {
+            if (persist)
+            {
+              persist();
+            }
+
+            auto find_info = LVFINDINFOW{
+              .flags = LVFI_PARAM,
+              .lParam = (LPARAM)setting_index
+            };
+
+            auto item = ListView_FindItem(launch_table, -1, &find_info);
+
+            if (item == -1)
+            {
+              return;
+            }
+
+            auto value = setting.get_computed_display_value();
+            ListView_SetItemText(launch_table, item, 1, value.data());
+          };
+          launch_table.InsertRow(std::move(column));
+        }
+      };
+
+      if (has_extension_module(state))
       {
-        auto& extension = controller.get_extension();
+        auto& extension = get_extension(state);
 
         if (extension.caps)
         {
-          populate_launch_table(*extension.caps);
+          populate_launch_table();
           populate_controller_table(extension.game_actions, extension.controller_input_backends);
           populate_keyboard_table(extension.game_actions, extension.controller_input_backends);
         }
@@ -496,10 +540,10 @@ namespace siege::views
           populate_keyboard_table(extension.game_actions, extension.controller_input_backends);
         }
       }
-      else // generically support controller to keyboard/mouse mapping and zero tier networking
+      else// generically support controller to keyboard/mouse mapping and zero tier networking
       {
         siege::platform::game_command_line_caps empty_caps{};
-        populate_launch_table(empty_caps);
+        populate_launch_table();
         std::array<siege::platform::game_action, 0> actions{};
         std::array<const wchar_t*, 0> backends{};
         populate_controller_table(actions, backends);
@@ -523,7 +567,7 @@ namespace siege::views
 
           if (value.first == L"#4")
           {
-            auto data = controller.get_resource_menu_items(value.first, child);
+            auto data = get_resource_menu_items(state, value.first, child);
 
             std::wstring final_result;
 
@@ -542,7 +586,7 @@ namespace siege::views
           }
           else if (value.first == L"#6")
           {
-            auto data = controller.get_resource_strings(value.first, child);
+            auto data = get_resource_strings(state, value.first, child);
 
             std::wstring final_result;
 
@@ -580,7 +624,7 @@ namespace siege::views
       groups.clear();
       groups.reserve(2);
 
-      auto functions = controller.get_function_names();
+      auto functions = get_function_names(state);
       std::vector<win32::list_view_item> items;
       items.reserve(functions.size());
 
@@ -592,7 +636,7 @@ namespace siege::views
       auto& group1 = groups.emplace_back(L"Script/Console Functions", std::move(items));
       group1.state = LVGS_COLLAPSIBLE;
 
-      auto variables = controller.get_variable_names();
+      auto variables = get_variable_names(state);
       items.clear();
       items.reserve(variables.size());
 
@@ -968,6 +1012,11 @@ namespace siege::views
     default:
       return std::wstring(1, ::MapVirtualKeyW(vkey, MAPVK_VK_TO_CHAR));
     }
+  }
+
+  ATOM register_exe_view(win32::window_module_ref module)
+  {
+    return module.RegisterClassExW(win32::window_meta_class<exe_view>());
   }
 
 }// namespace siege::views

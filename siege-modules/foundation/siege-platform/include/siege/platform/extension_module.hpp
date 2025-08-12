@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <list>
 #include <span>
+#include <functional>
 #include <map>
 #include <siege/platform/win/module.hpp>
 #include <siege/platform/shared.hpp>
@@ -90,39 +91,8 @@ namespace siege::platform
     std::array<char16_t, 64> group_display_name;
   };
 
-  // TODO move this away from here.
-  // This is belongs to presentation-executable and should rather go there.
-  // If it has to be shared, it can get it's own dedicated header
-  struct persistent_game_settings
-  {
-    std::array<fs_char, 64> last_player_name;
-    std::array<fs_char, 64> last_ip_address;
-    std::array<fs_char, 64> last_zero_tier_network_id;
-    std::map<siege::fs_string, siege::fs_string> last_zero_tier_ip_addresses;
-
-    std::array<fs_char, 64> last_hosting_preference;
-    std::uint32_t zero_tier_enabled;
-
-    // has to be 384 for zero tier to work
-    std::array<char, 384> last_zero_tier_node_id_and_private_key;
-  };
-
   struct game_command_line_caps
   {
-    // TODO Same as peristent game settings. The type is a UI construct
-    // but mixes storage (env) with the data type (int/string). These should be separated
-    // to properly support new storage types (like the registry for example).
-    enum type
-    {
-      unknown,
-      string_setting,
-      flag_setting,
-      int_setting,
-      float_setting,
-      env_setting,
-      computed_setting,
-    };
-
     std::size_t caps_size = sizeof(game_command_line_caps);
     std::array<const fs_char*, 32> flags;
     std::array<const fs_char*, 32> int_settings;
@@ -248,6 +218,8 @@ namespace siege::platform
       return std::span<const wchar_t*>();
     };
 
+    using base::base;
+
     game_extension_module(std::filesystem::path module_path) : base(module_path),
                                                                game_actions([this] {
                                                                  auto* actions = GetProcAddress<game_action*>("game_actions");
@@ -300,7 +272,7 @@ namespace siege::platform
       }
     }
 
-    std::vector<std::pair<std::string, std::string>> get_function_name_ranges()
+    std::vector<std::pair<std::string, std::string>> get_function_name_ranges() const
     {
       std::vector<std::pair<std::string, std::string>> results;
 
@@ -326,7 +298,7 @@ namespace siege::platform
       return results;
     }
 
-    std::vector<std::pair<std::string, std::string>> get_variable_name_ranges()
+    std::vector<std::pair<std::string, std::string>> get_variable_name_ranges() const
     {
       std::vector<std::pair<std::string, std::string>> results;
 
@@ -403,7 +375,7 @@ namespace siege::platform
       return binding;
     }
 
-    std::optional<bool> executable_is_supported(std::filesystem::path exe_path)
+    std::optional<bool> executable_is_supported(std::filesystem::path exe_path) const
     {
       if (executable_is_supported_proc)
       {
@@ -413,7 +385,7 @@ namespace siege::platform
       return std::nullopt;
     }
 
-    static std::list<game_extension_module> load_modules(std::filesystem::path search_path)
+    static std::list<game_extension_module> load_modules(std::filesystem::path search_path, std::move_only_function<bool(const game_extension_module&)> condition = nullptr)
     {
       std::list<game_extension_module> loaded_modules;
 
@@ -428,10 +400,16 @@ namespace siege::platform
         }
       }
 
-      std::for_each(dll_paths.begin(), dll_paths.end(), [&](auto path) {
+      std::for_each(dll_paths.begin(), dll_paths.end(), [&loaded_modules, condition = std::move(condition)](auto path) mutable {
         try
         {
-          loaded_modules.emplace_back(path);
+          game_extension_module temp{ path };
+          if (condition && !condition(temp))
+          {
+            return;
+          }
+
+          loaded_modules.emplace_back(std::move(temp));
         }
         catch (...)
         {

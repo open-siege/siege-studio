@@ -5,7 +5,7 @@
 #include <siege/platform/win/dialog.hpp>
 #include <siege/extension/input_filter.hpp>
 #include "input_injector.hpp"
-#include "exe_views.hpp"
+#include "exe_view.hpp"
 
 namespace siege::views
 {
@@ -159,7 +159,7 @@ namespace siege::views
       std::set<std::u16string_view> grouping = {};
       std::map<std::u16string_view, int> ids_for_grouping = {};
 
-      auto bindings = controller.get_extension().init_controller_inputs();
+      auto bindings = get_extension(state).init_controller_inputs();
 
       if (!bindings)
       {
@@ -229,8 +229,8 @@ namespace siege::views
       return;
     }
 
-    auto kb_bindings = controller.get_extension().init_keyboard_inputs();
-    auto ms_bindings = controller.get_extension().init_mouse_inputs();
+    auto kb_bindings = get_extension(state).init_keyboard_inputs();
+    auto ms_bindings = get_extension(state).init_mouse_inputs();
 
     std::set<std::u16string_view> grouping = {};
     std::map<std::u16string_view, int> ids_for_grouping = {};
@@ -460,12 +460,12 @@ namespace siege::views
 
   void exe_view::keyboard_table_nm_click(win32::list_view sender, const NMITEMACTIVATE& message)
   {
-    if (!controller.has_extension_module())
+    if (!has_extension_module(state))
     {
       return;
     }
 
-    if (controller.get_extension().game_actions.empty())
+    if (get_extension(state).game_actions.empty())
     {
       return;
     }
@@ -493,7 +493,7 @@ namespace siege::views
 
   void exe_view::controller_table_nm_click(win32::list_view sender, const NMITEMACTIVATE& message)
   {
-    if (controller.has_extension_module() && !controller.get_extension().controller_input_backends.empty())
+    if (has_extension_module(state) && !get_extension(state).controller_input_backends.empty())
     {
       return;
     }

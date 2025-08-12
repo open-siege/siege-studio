@@ -8,10 +8,17 @@
 #include <siege/platform/win/hresult.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/shared.hpp>
-#include "views/exe_views.hpp"
+#include "views/exe_view.hpp"
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;
+
+static ATOM exe_view_atom;
+
+namespace siege::views
+{
+  ATOM register_exe_view(win32::window_module_ref module);
+}
 
 extern "C" {
 extern const std::uint32_t default_file_icon = SIID_APPLICATION;
@@ -26,9 +33,11 @@ std::errc get_supported_extensions(std::size_t count, const siege::fs_char** str
   static std::vector<std::wstring_view> supported_extensions = [] {
     std::vector<std::wstring_view> extensions;
     extensions.reserve(16);
+    auto exe_formats = get_executable_formats();
+    auto lib_formats = get_library_formats();
 
-    std::copy(exe_controller::exe_formats.begin(), exe_controller::exe_formats.end(), std::back_inserter(extensions));
-    std::copy(exe_controller::lib_formats.begin(), exe_controller::lib_formats.end(), std::back_inserter(extensions));
+    std::copy(exe_formats.begin(), exe_formats.end(), std::back_inserter(extensions));
+    std::copy(lib_formats.begin(), lib_formats.end(), std::back_inserter(extensions));
     return extensions;
   }();
 
@@ -89,17 +98,21 @@ std::errc get_supported_extensions_for_category(const char16_t* category, std::s
 
   if (category_str == u"All Executables")
   {
-    count = std::clamp<std::size_t>(count, 0u, exe_controller::exe_formats.size());
+    auto exe_formats = get_executable_formats();
 
-    std::transform(exe_controller::exe_formats.begin(), exe_controller::exe_formats.begin() + count, strings, [](const auto value) {
+    count = std::clamp<std::size_t>(count, 0u, exe_formats.size());
+
+    std::transform(exe_formats.begin(), exe_formats.begin() + count, strings, [](const auto value) {
       return value.data();
     });
   }
   else if (category_str == u"All Libraries")
   {
-    count = std::clamp<std::size_t>(count, 0u, exe_controller::lib_formats.size());
+    auto lib_formats = get_library_formats();
 
-    std::transform(exe_controller::lib_formats.begin(), exe_controller::lib_formats.begin() + count, strings, [](const auto value) {
+    count = std::clamp<std::size_t>(count, 0u, lib_formats.size());
+
+    std::transform(lib_formats.begin(), lib_formats.begin() + count, strings, [](const auto value) {
       return value.data();
     });
   }
@@ -116,7 +129,7 @@ std::errc get_supported_extensions_for_category(const char16_t* category, std::s
   return count == 0 ? std::errc::not_supported : std::errc(0);
 }
 
-std::errc is_stream_supported(_In_ storage_info* data) noexcept
+std::errc is_stream_supported(storage_info* data) noexcept
 {
   if (!data)
   {
@@ -125,7 +138,7 @@ std::errc is_stream_supported(_In_ storage_info* data) noexcept
 
   auto stream = siege::platform::create_istream(*data);
 
-  if (exe_controller::is_exe(*stream))
+  if (is_exe_or_lib(*stream))
   {
     return std::errc(0);
   }
@@ -154,7 +167,7 @@ HRESULT get_window_class_for_stream(storage_info* data, wchar_t** class_name) no
   {
     static auto this_module = win32::window_module_ref::current_module();
 
-    if (exe_controller::is_exe(*stream))
+    if (is_exe_or_lib(*stream))
     {
       static auto window_type_name = win32::type_name<exe_view>();
 
@@ -186,15 +199,13 @@ BOOL WINAPI DllMain(
       return TRUE;// do not do cleanup if process termination scenario
     }
 
-    win32::window_module_ref this_module(hinstDLL);
-
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
-      this_module.RegisterClassExW(win32::window_meta_class<exe_view>());
+      exe_view_atom = register_exe_view(win32::window_module_ref(hinstDLL));
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
-      this_module.UnregisterClassW<exe_view>();
+      ::UnregisterClassW(MAKEINTATOM(exe_view_atom), hinstDLL);
     }
   }
 

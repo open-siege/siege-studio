@@ -26,7 +26,7 @@ namespace siege
       bind_action
     };
 
-    std::unique_ptr<siege::platform::game_command_line_args> args;
+    siege::platform::game_command_line_args& args;
     std::wstring script_host;
     mode input_mode = bind_input;
     std::function<HRESULT(const siege::platform::game_command_line_args* game_args, PROCESS_INFORMATION* process_info)> launch_game_with_extension;
@@ -216,7 +216,7 @@ namespace siege
 
       try
       {
-        if (this->injector_args.launch_game_with_extension(this->injector_args.args.get(), &child_process) == S_OK && child_process.hProcess)
+        if (this->injector_args.launch_game_with_extension(&this->injector_args.args, &child_process) == S_OK && child_process.hProcess)
         {
           auto& state = siege::get_active_input_state();
 
@@ -453,7 +453,7 @@ namespace siege
 
       XINPUT_STATE temp{};
 
-      auto& mappings = injector_args.args->controller_to_send_input_mappings;
+      auto& mappings = injector_args.args.controller_to_send_input_mappings;
 
       for (auto& state : controller_state)
       {
