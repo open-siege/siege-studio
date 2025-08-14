@@ -199,7 +199,7 @@ namespace siege
 
       descriptors[2].usUsagePage = HID_USAGE_PAGE_GENERIC;
       descriptors[2].usUsage = HID_USAGE_GENERIC_MOUSE;
-      descriptors[2].dwFlags = flags | RIDEV_NOLEGACY;
+      descriptors[2].dwFlags = flags;
       descriptors[2].hwndTarget = target_window;
 
       descriptors[3].usUsagePage = HID_USAGE_PAGE_GENERIC;
