@@ -296,9 +296,17 @@ namespace siege::views
 
           temp.reserve(extensions.size());
 
+          int index = 1;
+          int selected_index = 1;
           for (auto& extension : extensions)
           {
             temp.emplace_back(extension.first, L"*" + extension.first);
+
+            if (extension.first == L".exe")
+            {
+              selected_index = index;
+            }
+            index++;
           }
 
           std::vector<COMDLG_FILTERSPEC> filetypes(temp.begin(), temp.end());
@@ -353,6 +361,8 @@ namespace siege::views
           });
 
           dialog.value()->SetFileTypes(filetypes.size(), filetypes.data());
+          dialog.value()->SetFileTypeIndex(selected_index);
+
 
           auto result = dialog.value()->Show(nullptr);
 
