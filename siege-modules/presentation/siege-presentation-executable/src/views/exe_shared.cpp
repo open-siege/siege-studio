@@ -919,7 +919,7 @@ namespace siege::views
               else
               {
                 auto flag_iter = std::find_if(self.final_args->flags.begin(), self.final_args->flags.end(), [&setting](auto& item) {
-                  return item == setting.setting_name;
+                  return item && item == setting.setting_name;
                 });
 
                 if (flag_iter == self.final_args->flags.end())
@@ -967,18 +967,86 @@ namespace siege::views
     return std::nullopt;
   }
 
+  struct networking_support
+  {
+    bool wsock_32;
+    bool ws2_32;
+    bool dplayx;
+  };
+
+  networking_support get_supported_networking_libraries(std::span<char> data);
+
   bool is_exe_or_lib(std::istream& stream)
   {
-    auto position = stream.tellg();
-
+    platform::istream_pos_resetter resetter(stream);
     thread_local std::string data(1024, '\0');
 
     stream.read(data.data(), data.size());
-    stream.seekg(position, std::ios::beg);
 
-    if (data[0] == 'M' && data[1] == 'Z')
+    if (auto filename = siege::platform::get_stream_path(stream); data[0] == 'M' && data[1] == 'Z' && data.find("PE") != std::string::npos && filename)
     {
-      return data.find("PE") != std::string::npos;
+      auto module = ::LoadLibraryExW(filename->c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE);
+
+      if (!module)
+      {
+        return false;
+      }
+
+      std::shared_ptr<void> deferred = { nullptr,
+        [=](...) { ::FreeLibrary(module); } };
+
+      bool has_resource_data = false;
+
+      struct handler
+      {
+        static BOOL __stdcall enum_types(HMODULE module, LPWSTR type, LONG_PTR lParam)
+        {
+          bool* has_data = (bool*)lParam;
+
+          *has_data = true;
+          return FALSE;
+        }
+      };
+
+      ::EnumResourceTypesW(module, handler::enum_types, (LONG_PTR)&has_resource_data);
+
+
+      if (!has_resource_data)
+      {
+        deferred.reset();
+
+        win32::file file_to_read(*filename, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
+
+        auto mapping = file_to_read.CreateFileMapping(std::nullopt, PAGE_READONLY, {}, L"");
+
+        auto size = file_to_read.GetFileSizeEx();
+
+        if (!size)
+        {
+          return false;
+        }
+
+        if (size->QuadPart <= 1024)
+        {
+          return false;
+        }
+
+        size->QuadPart -= 1024;
+
+        if (size->QuadPart >= 64 * 1024 * 1024)
+        {
+          return false;
+        }
+
+        auto view = mapping->MapViewOfFile(FILE_MAP_READ, LARGE_INTEGER{ .QuadPart = 1024 }, (std::size_t)size->QuadPart);
+
+        auto results = get_supported_networking_libraries(view);
+
+        return results.wsock_32 && !results.ws2_32 && !results.dplayx;
+      }
+
+
+      return has_resource_data;
     }
 
     return false;
@@ -1898,6 +1966,61 @@ namespace siege::views
     }
   }
 
+  networking_support get_supported_networking_libraries(std::span<char> data)
+  {
+    networking_support result{};
+    auto supports_name = [data = std::string_view(data)](std::string name) {
+      if (data.find(name + ".DLL") != std::string_view::npos)
+      {
+        return true;
+      }
+
+      if (data.find(name + ".dll") != std::string_view::npos)
+      {
+        return true;
+      }
+
+      name[0] = (char)std::toupper(name[0]);
+      if (data.find(name + ".DLL") != std::string_view::npos)
+      {
+        return true;
+      }
+
+      if (data.find(name + ".dll") != std::string_view::npos)
+      {
+        return true;
+      }
+
+      if (data.find(siege::platform::to_upper(name) + ".dll") != std::string_view::npos)
+      {
+        return true;
+      }
+
+      if (data.find(siege::platform::to_upper(name) + ".DLL") != std::string_view::npos)
+      {
+        return true;
+      }
+
+      if (data.find(name) != std::string_view::npos)
+      {
+        return true;
+      }
+
+      if (data.find(siege::platform::to_upper(name)) != std::string_view::npos)
+      {
+        return true;
+      }
+
+      return false;
+    };
+
+    result.wsock_32 = supports_name("wsock32");
+    result.ws2_32 = supports_name("ws2_32");
+    result.dplayx = supports_name("dplayx");
+
+    return result;
+  }
+
   bool can_support_zero_tier(const std::any& state)
   {
     auto& self = get(state);
@@ -1908,11 +2031,6 @@ namespace siege::views
 
     if (self.loaded_module)
     {
-      static std::vector<std::string> names{
-        "wsock32",
-        "sdl2_net",
-        "sdl_net",
-      };
 
       win32::file file(self.loaded_path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
 
@@ -1932,51 +2050,9 @@ namespace siege::views
       if (mapping && file_size)
       {
         auto view = mapping->MapViewOfFile(FILE_MAP_READ, clamped_file_size);
-        std::string_view data((char*)view.get(), clamped_file_size);
+        auto result = get_supported_networking_libraries(view);
 
-        for (auto& name : names)
-        {
-          if (data.find(name + ".DLL") != std::string_view::npos)
-          {
-            return true;
-          }
-
-          if (data.find(name + ".dll") != std::string_view::npos)
-          {
-            return true;
-          }
-
-          name[0] = (char)std::toupper(name[0]);
-          if (data.find(name + ".DLL") != std::string_view::npos)
-          {
-            return true;
-          }
-
-          if (data.find(name + ".dll") != std::string_view::npos)
-          {
-            return true;
-          }
-
-          if (data.find(siege::platform::to_upper(name) + ".dll") != std::string_view::npos)
-          {
-            return true;
-          }
-
-          if (data.find(siege::platform::to_upper(name) + ".DLL") != std::string_view::npos)
-          {
-            return true;
-          }
-
-          if (data.find(name) != std::string_view::npos)
-          {
-            return true;
-          }
-
-          if (data.find(siege::platform::to_upper(name)) != std::string_view::npos)
-          {
-            return true;
-          }
-        }
+        return result.wsock_32 && !result.ws2_32 && !result.dplayx;
       }
     }
 

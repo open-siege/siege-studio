@@ -1,6 +1,7 @@
 # Siege Studio + Siege Launcher 25.34 Development Release
 * When a game is running, keyboard and mouse events were disabled for Siege Studio/Launcher. Now, only keyboard events are disabled.
-* When using the Open menu command, exe files are set as the default file type.
+* When using the Open menu command, EXE files are set as the default file type.
+* EXE files won't open unless they have resource data or supported network libraries.
 
 # Siege Studio + Siege Launcher 25.32 Development Release
 * Fixed issue with Zero Tier Node ID not being generated for unsupported games if it wasn't generated before.
