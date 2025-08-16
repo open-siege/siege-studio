@@ -985,11 +985,11 @@ namespace siege::views
   bool is_exe_or_lib(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
-    thread_local std::string data(1024, '\0');
+    thread_local std::string data(128, '\0');
 
     stream.read(data.data(), data.size());
 
-    if (auto filename = siege::platform::get_stream_path(stream); data[0] == 'M' && data[1] == 'Z' && data.find("PE") != std::string::npos && filename)
+    if (auto filename = siege::platform::get_stream_path(stream); data[0] == 'M' && data[1] == 'Z' && filename)
     {
       auto module = ::LoadLibraryExW(filename->c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE);
 
