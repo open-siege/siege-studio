@@ -385,19 +385,24 @@ namespace siege::platform
       return std::nullopt;
     }
 
-    static std::list<game_extension_module> load_modules(std::filesystem::path search_path, std::move_only_function<bool(const game_extension_module&)> condition = nullptr)
+    static std::list<game_extension_module> load_modules(std::filesystem::path search_path, std::move_only_function<bool(const std::filesystem::path&)> sort_condition = nullptr, std::move_only_function<bool(const game_extension_module&)> condition = nullptr)
     {
       std::list<game_extension_module> loaded_modules;
 
-      std::set<std::filesystem::path> dll_paths;
+      std::vector<std::filesystem::path> dll_paths;
 
       for (auto const& dir_entry : std::filesystem::directory_iterator{ search_path })
       {
         if ((dir_entry.path().extension() == ".dll" || dir_entry.path().extension() == ".DLL")
             && dir_entry.path().stem().wstring().find(L"siege-extension") != std::wstring::npos)
         {
-          dll_paths.insert(dir_entry.path());
+          dll_paths.emplace_back(dir_entry.path());
         }
+      }
+
+      if (sort_condition)
+      {
+        std::stable_partition(dll_paths.begin(), dll_paths.end(), std::move(sort_condition));
       }
 
       std::for_each(dll_paths.begin(), dll_paths.end(), [&loaded_modules, condition = std::move(condition)](auto path) mutable {

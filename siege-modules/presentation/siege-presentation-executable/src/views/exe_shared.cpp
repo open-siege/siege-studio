@@ -11,6 +11,7 @@
 #include "exe_shared.hpp"
 
 using json = nlohmann::json;
+namespace fs = std::filesystem;
 
 namespace siege::views
 {
@@ -972,6 +973,11 @@ namespace siege::views
     bool wsock_32;
     bool ws2_32;
     bool dplayx;
+
+    operator bool()
+    {
+      return wsock_32 || ws2_32 || dplayx;
+    }
   };
 
   networking_support get_supported_networking_libraries(std::span<char> data);
@@ -1070,9 +1076,18 @@ namespace siege::views
     if (self.loaded_module)
     {
       std::filesystem::path app_path = std::filesystem::path(win32::module_ref::current_module().GetModuleFileName()).parent_path();
-      auto extensions = platform::game_extension_module::load_modules(app_path, [path](const auto& ext) {
-        return ext.executable_is_supported(*path) == true;
-      });
+
+      auto format_path = [path] {
+        auto result = siege::platform::to_lower(path->stem().wstring());
+
+        for (auto i = L'0'; i < L'9'; ++i)
+        {
+          result.erase(std::remove(result.begin(), result.end(), i), result.end());
+        }
+
+        return result;
+      };
+      auto extensions = platform::game_extension_module::load_modules(app_path, [name = format_path()](const auto& other) { return std::wstring_view(other.c_str()).contains(name); }, [path](const auto& ext) { return ext.executable_is_supported(*path) == true; });
 
       if (!extensions.empty())
       {
@@ -2029,33 +2044,73 @@ namespace siege::views
       return get_extension(state).caps->ip_connect_setting || get_extension(state).caps->dedicated_setting || get_extension(state).caps->listen_setting;
     }
 
-    if (self.loaded_module)
+    if (!self.loaded_module)
     {
-
-      win32::file file(self.loaded_path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
-
-      auto file_size = file.GetFileSizeEx();
-
-      constexpr static std::size_t max_file_size = 128 * 1024 * 1024;
-
-      std::size_t clamped_file_size = 0;
-
-      if (file_size)
-      {
-        clamped_file_size = std::clamp<std::size_t>((std::size_t)file_size->QuadPart, 0, max_file_size);
-      }
-
-      auto mapping = file.CreateFileMapping(std::nullopt, PAGE_READONLY, LARGE_INTEGER{ .QuadPart = clamped_file_size }, L"");
-
-      if (mapping && file_size)
-      {
-        auto view = mapping->MapViewOfFile(FILE_MAP_READ, clamped_file_size);
-        auto result = get_supported_networking_libraries(view);
-
-        return result.wsock_32 && !result.ws2_32 && !result.dplayx;
-      }
+      return false;
     }
 
+    win32::file file(self.loaded_path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
+
+    auto file_size = file.GetFileSizeEx();
+
+    if (!file_size)
+    {
+      return false;
+    }
+    constexpr static std::size_t max_file_size = 128 * 1024 * 1024;
+
+    std::size_t clamped_file_size = 0;
+
+    if (file_size)
+    {
+      clamped_file_size = std::clamp<std::size_t>((std::size_t)file_size->QuadPart, 0, max_file_size);
+    }
+
+    auto mapping = file.CreateFileMapping(std::nullopt, PAGE_READONLY, LARGE_INTEGER{ .QuadPart = clamped_file_size }, L"");
+
+    if (!mapping)
+    {
+      return false;
+    }
+
+    auto view = mapping->MapViewOfFile(FILE_MAP_READ, clamped_file_size);
+    std::span<char> view_data = view;
+    auto result = get_supported_networking_libraries(view_data);
+
+    if (result.wsock_32 && !result.ws2_32 && !result.dplayx)
+    {
+      return true;
+    }
+    else if (!result)
+    {
+      std::string_view view_data_str{ view_data };
+      
+      for (auto const& dir_entry : fs::directory_iterator{ self.loaded_path.parent_path() })
+      {
+        if (dir_entry.path().extension() == ".dll" || dir_entry.path().extension() == ".DLL")
+        {
+          auto dll_name = dir_entry.path().filename().string();
+
+          win32::file dll_file(dir_entry.path(), GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
+
+          auto dll_mapping = dll_file.CreateFileMapping(std::nullopt, PAGE_READONLY, LARGE_INTEGER{}, L"");
+
+          auto dll_view = dll_mapping->MapViewOfFile(FILE_MAP_READ, 0);
+
+          auto result = get_supported_networking_libraries(dll_view);
+
+          if (!result)
+          {
+            continue;
+          }
+
+          if (result.wsock_32 && !result.ws2_32 && !result.dplayx)
+          {
+            return true;
+          }
+        }
+      }
+    }
     return false;
   }
 
@@ -2173,8 +2228,6 @@ namespace siege::views
             return item.name != nullptr && std::wstring_view(item.name) == L"ZERO_TIER_NETWORK_ID" && item.value != nullptr && item.value[0] != '\0';
           }))
       {
-        namespace fs = std::filesystem;
-
         auto ext_path = fs::path(win32::module_ref::current_module().GetModuleFileName()).parent_path() / "runtime-extensions";
 
         fs::remove_all(ext_path, last_errorc);

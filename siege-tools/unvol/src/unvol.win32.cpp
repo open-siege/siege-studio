@@ -168,7 +168,7 @@ int start_ui_modal(command_line_args args, std::function<void(command_line_args)
 
       if (message == TDN_BUTTON_CLICKED && wparam == 30)
       {
-        ::ShellExecuteW(NULL, L"open", args.output_path->c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+        ::ShellExecuteW(NULL, L"explore", args.output_path->c_str(), nullptr, nullptr, SW_SHOWNORMAL);
         return S_OK;
       }
 
