@@ -5,7 +5,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 add_executable(json-to-dts src/convert_json.cpp)
 set_property(TARGET json-to-dts PROPERTY CXX_STANDARD 23)
-target_link_libraries(json-to-dts siege-content)
+target_link_libraries(json-to-dts siege-content-all)
 
 if(UNIX AND NOT APPLE)
     find_package(TBB REQUIRED)

@@ -18,11 +18,11 @@ The technology has since powered many indie games and morphed into various incar
 * Legions: Overdrive
 
 #### Common Engine File Formats
-* [DTS](/siege-modules/foundation/siege-content/src/dts/DTS.md)
+* [DTS](/siege-modules/content/siege-content-3space/src/dts/DTS.md)
 * [DSQ](DSQ.md)
 * JPG
 * PNG
-* [MIS](/siege-modules/foundation/siege-configuration/src/mis/MIS.md)
+* [MIS](/siege-modules/content/siege-content-3space/src/mis/MIS.md)
 * GUI
 * [CS](CS.md)
 * [DSO](DSO.md)

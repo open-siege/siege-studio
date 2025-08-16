@@ -7,10 +7,10 @@ list(REMOVE_ITEM LIB_SRC_FILES ${WIN32_SRC_FILES})
 
 if (WIN32)
     add_library(${PROJECT_NAME} SHARED ${LIB_SRC_FILES} ${WIN32_SRC_FILES} src/${PROJECT_NAME}.def)
-    target_link_libraries(${PROJECT_NAME} PRIVATE siege-win-desktop siege-content)
+    target_link_libraries(${PROJECT_NAME} PRIVATE siege-win-desktop siege-content-all)
 else()
     add_library(${PROJECT_NAME} SHARED ${LIB_SRC_FILES})
-    target_link_libraries(${PROJECT_NAME} PRIVATE siege-content)
+    target_link_libraries(${PROJECT_NAME} PRIVATE siege-content-all)
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23 POSITION_INDEPENDENT_CODE ON)

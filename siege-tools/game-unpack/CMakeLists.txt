@@ -11,7 +11,7 @@ else()
     add_executable(${PROJECT_NAME} src/game-unpack.cpp)
 endif()
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)
-target_link_libraries(${PROJECT_NAME} PRIVATE siege-resource)
+target_link_libraries(${PROJECT_NAME} PRIVATE siege-content-all)
 target_include_directories(${PROJECT_NAME} PRIVATE src)
 
 include(copy_deps.cmake)

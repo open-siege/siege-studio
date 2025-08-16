@@ -12,7 +12,7 @@ endif()
 
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)
-target_link_libraries(${PROJECT_NAME} PRIVATE siege-resource)
+target_link_libraries(${PROJECT_NAME} PRIVATE siege-content-all)
 
 if(UNIX AND NOT APPLE)
     find_package(TBB REQUIRED)
