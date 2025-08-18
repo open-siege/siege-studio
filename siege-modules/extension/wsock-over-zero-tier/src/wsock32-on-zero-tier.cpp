@@ -24,10 +24,23 @@
 
 namespace fs = std::filesystem;
 
-std::set<int>& get_zero_tier_handles()
+struct socket_handle_info
 {
-  static std::set<int> handles;
-  return handles;
+  std::set<int> created_handles;
+  std::set<int> accepted_handles;
+  std::set<int> non_blocking_handles;
+  std::atomic_bool select_called = false;
+
+  bool contains(int value) const
+  {
+    return created_handles.contains(value) || accepted_handles.contains(value);
+  }
+};
+
+socket_handle_info& get_zero_tier_handles()
+{
+  static socket_handle_info info{};
+  return info;
 }
 
 void load_system_wsock();
@@ -302,7 +315,7 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
       }
 
       get_log() << "Created zero tier socket successfully (" << socket << ")" << '\n';
-      get_zero_tier_handles().emplace(socket);
+      get_zero_tier_handles().accepted_handles.emplace(socket);
 
 
       int value = 65536;
@@ -404,7 +417,22 @@ int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* op
     }
 
     static auto* zt_setsockopt = (std::add_pointer_t<decltype(zts_bsd_setsockopt)>)::GetProcAddress(get_ztlib(), "zts_bsd_setsockopt");
-    auto zt_result = zt_setsockopt(to_zts(ws), level, optname, optval, optlen);
+    int zt_result;
+
+    if (optval && optlen == sizeof(DWORD) && (level == SOL_SOCKET || level == ZTS_SOL_SOCKET) && (optname == SO_RCVTIMEO || optname == SO_SNDTIMEO))
+    {
+      get_log() << "Converting timeout values to correct format\n";
+      DWORD milliseconds = 0;
+      std::memcpy(&milliseconds, optval, optlen);
+      zts_timeval timeout{
+        .tv_usec = (long)milliseconds * 1000
+      };
+      zt_result = zt_setsockopt(to_zts(ws), level, optname, &timeout, sizeof(timeout));
+    }
+    else
+    {
+      zt_result = zt_setsockopt(to_zts(ws), level, optname, optval, optlen);
+    }
 
     return zt_to_winsock_result(zt_result);
   }
@@ -494,6 +522,27 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
 
       static auto* zt_recvfrom = (std::add_pointer_t<decltype(zts_bsd_recvfrom)>)::GetProcAddress(get_ztlib(), "zts_bsd_recvfrom");
       static auto* zt_addr_get_str = (std::add_pointer_t<decltype(zts_addr_get_str)>)::GetProcAddress(get_ztlib(), "zts_addr_get_str");
+      static auto* zt_select = (std::add_pointer_t<decltype(zts_bsd_select)>)::GetProcAddress(get_ztlib(), "zts_bsd_select");
+
+      if (!get_zero_tier_handles().select_called && get_zero_tier_handles().non_blocking_handles.contains(to_zts(ws)))
+      {
+        get_log() << "Doing a fallback select" << std::endl;
+        zts_fd_set zt_read{};
+        ZTS_FD_ZERO(&zt_read);
+        ZTS_FD_SET(to_zts(ws), &zt_read);
+        zts_timeval timeval{};
+        auto count = zt_select(ZTS_FD_SETSIZE, &zt_read, nullptr, nullptr, &timeval);
+        if (count == 0)
+        {
+          wsock_WSASetLastError(WSAEWOULDBLOCK);
+          return SOCKET_ERROR;
+        }
+      }
+
+      std::shared_ptr<void> deferred = { nullptr,
+        [](...) {
+          get_zero_tier_handles().select_called = false;
+        } };
 
       zts_sockaddr* zt_from_final = nullptr;
       zts_socklen_t* zt_from_len_final = nullptr;
@@ -527,6 +576,9 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
       {
         get_fallback_broadcast_addresses().emplace(zt_addr.sin_addr.S_addr);
       }
+
+
+      get_log() << "zts_bsd_recvfrom successful\n";
 
       copy_address(zt_addr, from, fromLen);
 
@@ -646,6 +698,11 @@ int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
     static auto* zt_ioctl = (std::add_pointer_t<decltype(zts_bsd_ioctl)>)::GetProcAddress(get_ztlib(), "zts_bsd_ioctl");
 
     auto zt_result = zt_ioctl(to_zts(ws), cmd, argp);
+
+    if (zt_result == ZTS_ERR_OK && cmd == ZTS_FIONBIO)
+    {
+      get_zero_tier_handles().non_blocking_handles.emplace(to_zts(ws));
+    }
 
     return zt_to_winsock_result(zt_result);
   }
@@ -1013,6 +1070,7 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
         return zt_to_winsock_result(count);
       }
 
+      get_zero_tier_handles().select_called = true;
       return count;
     }
     return wsock_select(value, read, write, except, timeout);
