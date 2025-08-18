@@ -57,7 +57,7 @@ struct sendto_params
   constexpr static auto message_id = bind_params::message_id + 1;
 
   int buffer_length;
-  HGLOBAL buffer;
+  ATOM buffer;
   int flags;
   int to_address_size;
   sockaddr_storage to_address;
@@ -69,7 +69,7 @@ struct recvfrom_params
   constexpr static auto message_id = sendto_params::message_id + 1;
 
   int buffer_length;
-  HGLOBAL buffer;
+  ATOM buffer;
   int flags;
   int from_address_size;
   sockaddr_storage from_address;

@@ -2,6 +2,9 @@
 #include <siege/platform/win/basic_window.hpp>
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/module.hpp>
+#include <filesystem>
+#include <algorithm>
+#include <expected>
 
 namespace fs = std::filesystem;
 
@@ -55,44 +58,87 @@ decltype(::WSARecvFrom)* wsock_WSARecvFrom = nullptr;
 decltype(::WSAEventSelect)* wsock_WSAEventSelect = nullptr;
 decltype(::WSAEnumNetworkEvents)* wsock_WSAEnumNetworkEvents = nullptr;
 
-struct hglobal_unlocker
+std::expected<std::span<char>, LRESULT> get_value(HWND window, LPARAM lparam)
 {
-  HGLOBAL global;
+  static std::array<wchar_t, 256> temp{};
 
-  void operator()(void* value)
+  static std::set<std::wstring> keys;
+  static std::map<std::wstring_view, std::span<char>> already_mapped_data;
+  static std::shared_ptr<void> deferred_unmap = { nullptr, [](...) {
+                                                   for (auto& item : already_mapped_data)
+                                                   {
+                                                     ::UnmapViewOfFile(item.second.data());
+                                                   }
+                                                 } };
+
+  if (::GetAtomNameW((ATOM)lparam, temp.data(), (int)temp.size()) == 0)
   {
-    ::GlobalUnlock(global);
+    ::SetPropW(window, L"LastError", (HANDLE)WSA_INVALID_PARAMETER);
+    return std::unexpected(SOCKET_ERROR);
   }
-};
 
-template<typename TParam = void>
-std::unique_ptr<TParam, hglobal_unlocker> global_lock(HGLOBAL global_memory)
-{
-  auto* raw = ::GlobalLock(global_memory);
-  return std::unique_ptr<TParam, hglobal_unlocker>{ (TParam*)raw, hglobal_unlocker{ global_memory } };
+  std::wstring_view key = temp.data();
+
+  auto iter = already_mapped_data.find(key);
+
+  if (iter != already_mapped_data.end())
+  {
+    return iter->second;
+  }
+
+  HANDLE shared_memory = ::OpenFileMappingW(FILE_MAP_READ, FALSE, temp.data());
+
+  if (!shared_memory)
+  {
+    ::SetPropW(window, L"LastError", (HANDLE)WSA_INVALID_PARAMETER);
+    return std::unexpected(SOCKET_ERROR);
+  }
+
+  std::shared_ptr<void> deferred = { nullptr, [shared_memory](...) {
+                                      ::CloseHandle(shared_memory);
+                                    } };
+
+  auto data = ::MapViewOfFile(shared_memory, FILE_MAP_READ, 0, 0, 0);
+
+  if (!data)
+  {
+    ::SetPropW(window, L"LastError", (HANDLE)WSA_INVALID_PARAMETER);
+    return std::unexpected(SOCKET_ERROR);
+  }
+
+  MEMORY_BASIC_INFORMATION info{};
+  auto size = ::VirtualQuery(shared_memory, &info, sizeof(info));
+
+  if (size == 0)
+  {
+    ::SetPropW(window, L"LastError", (HANDLE)WSA_INVALID_PARAMETER);
+    ::UnmapViewOfFile(data);
+    return std::unexpected(SOCKET_ERROR);
+  }
+
+  auto new_key = keys.emplace(key);
+  auto new_data = already_mapped_data.emplace(new_key, std::span<char>((char*)data, size));
+
+  return new_data.first->second;
 }
 
 template<typename TParam>
-std::expected<std::unique_ptr<TParam, hglobal_unlocker>, LRESULT> get_value(HWND window, LPARAM lparam)
+std::expected<TParam*, LRESULT> get_value(HWND window, LPARAM lparam)
 {
-  HGLOBAL global_memory = (HGLOBAL)lparam;
-  auto size = ::GlobalSize(global_memory);
-
-  if (size < sizeof(TParam))
-  {
-    ::SetPropW(window, L"LastError", (HANDLE)WSA_INVALID_PARAMETER);
-    return std::unexpected(SOCKET_ERROR);
-  }
-
-  auto result = global_lock<TParam>(global_memory);
+  auto result = get_value(window, lparam);
 
   if (!result)
   {
+    return result;
+  }
+
+  if (result->size() < sizeof(TParam))
+  {
     ::SetPropW(window, L"LastError", (HANDLE)WSA_INVALID_PARAMETER);
     return std::unexpected(SOCKET_ERROR);
   }
 
-  return result;
+  return (TParam*)result->data();
 }
 
 struct wsock_window : win32::basic_window<wsock_window>
@@ -191,10 +237,16 @@ struct wsock_window : win32::basic_window<wsock_window>
 
       auto& params = *value.value();
 
-      auto data = global_lock<char>(params.buffer);
+      auto data = get_value(*this, params.buffer);
+
+      if (!data)
+      {
+        return data.error();
+      }
+
       sockaddr* address = params.to_address_size == 0 ? nullptr : (sockaddr*)&params.to_address;
 
-      auto result = wsock_sendto((SOCKET)wparam, data.get(), params.buffer_length, params.flags, address, params.to_address_size);
+      auto result = wsock_sendto((SOCKET)wparam, data->data(), params.buffer_length, params.flags, address, params.to_address_size);
       ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
       return result;
     }
@@ -210,11 +262,16 @@ struct wsock_window : win32::basic_window<wsock_window>
 
       auto& params = *value.value();
 
-      auto data = global_lock<char>(params.buffer);
+      auto data = get_value(*this, params.buffer);
+
+      if (!data)
+      {
+        return data.error();
+      }
       sockaddr* address = params.from_address_size == 0 ? nullptr : (sockaddr*)&params.from_address;
       int* address_size = params.from_address_size == 0 ? nullptr : &params.from_address_size;
 
-      auto result = wsock_recvfrom((SOCKET)wparam, data.get(), params.buffer_length, params.flags, address, address_size);
+      auto result = wsock_recvfrom((SOCKET)wparam, data->data(), params.buffer_length, params.flags, address, address_size);
 
       ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
       return result;

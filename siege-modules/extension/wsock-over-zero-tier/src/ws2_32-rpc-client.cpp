@@ -84,52 +84,72 @@ decltype(::WSARecvFrom)* wsock_WSARecvFrom = nullptr;
 decltype(::WSAEventSelect)* wsock_WSAEventSelect = nullptr;
 decltype(::WSAEnumNetworkEvents)* wsock_WSAEnumNetworkEvents = nullptr;
 
-std::shared_ptr<void> get_global_memory(std::size_t size)
+std::shared_ptr<std::pair<const ATOM, std::span<char>>> get_global_memory(std::size_t size, std::optional<ATOM> key = std::nullopt)
 {
-  static std::map<std::size_t, HGLOBAL> cache;
-  static std::map<std::size_t, HGLOBAL> used_globals;
+  static std::map<ATOM, std::span<char>> cache;
+  static std::map<ATOM, std::span<char>> used_globals;
   static std::shared_ptr<void> deferred = { nullptr, [](...) {
                                              for (auto& item : cache)
                                              {
-                                               ::GlobalFree(item.second);
+                                               ::GlobalDeleteAtom(item.first);
+                                               ::UnmapViewOfFile(item.second.data());
                                              }
                                              cache.clear();
 
                                              for (auto& item : used_globals)
                                              {
-                                               ::GlobalFree(item.second);
+                                               ::GlobalDeleteAtom(item.first);
+                                               ::UnmapViewOfFile(item.second.data());
                                              }
                                              used_globals.clear();
                                            } };
 
-  auto iter = cache.find(size);
+  auto iter = cache.end();
+
+  if (key) {
+    iter = cache.find(*key);
+  }
 
   if (iter == cache.end())
   {
     iter = std::find_if(cache.begin(), cache.end(), [&](auto& item) {
-      return item.first > size;
+      return item.second.size() > size;
     });
   }
 
   if (iter == cache.end())
   {
-    auto out_handle = ::GlobalAlloc(GMEM_MOVEABLE, size);
+    auto new_name = L"ws2_32_rpc_data" + std::to_wstring(cache.size() + used_globals.size());
+
+    auto out_handle = ::CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, size, new_name.c_str());
 
     if (!out_handle)
     {
       throw std::bad_alloc();
     }
-    iter = cache.emplace(size, out_handle).first;
+
+    std::shared_ptr<void> deferred = { nullptr, [out_handle](...) {
+                                        ::CloseHandle(out_handle);
+                                      } };
+
+    auto view = ::MapViewOfFile(out_handle, PAGE_READWRITE, 0, 0, 0);
+
+    if (!view)
+    {
+      throw std::bad_alloc();
+    }
+    MEMORY_BASIC_INFORMATION info{};
+    auto size = ::VirtualQuery(view, &info, sizeof(info));
+    auto atom = ::GlobalAddAtomW(new_name.c_str());
+    iter = cache.emplace(atom, std::span<char>((char*)view, size)).first;
   }
 
-  used_globals.emplace(*iter);
-  auto global = iter->second;
-  auto real_size = iter->first;
+  auto added = used_globals.emplace(*iter);
   cache.erase(iter);
 
-  return std::shared_ptr<void>(global, [real_size](void* global) {
+  return std::shared_ptr<std::pair<const ATOM, std::span<char>>>(&*added.first, [](void* global) {
     auto existing = std::find_if(used_globals.begin(), used_globals.end(), [&](auto& item) {
-      return item.second == global;
+      return item.second.data() == global;
     });
 
     if (existing != used_globals.end())
@@ -140,32 +160,16 @@ std::shared_ptr<void> get_global_memory(std::size_t size)
   });
 }
 
-struct hglobal_unlocker
-{
-  HGLOBAL global;
-
-  void operator()(void* value)
-  {
-    ::GlobalUnlock(global);
-  }
-};
-
-template<typename TParam = void>
-std::unique_ptr<TParam, hglobal_unlocker> global_lock(HGLOBAL global_memory)
-{
-  auto* raw = ::GlobalLock(global_memory);
-  return std::unique_ptr<TParam, hglobal_unlocker>{ (TParam*)raw, hglobal_unlocker{ global_memory } };
-}
-
 template<typename TParam, int MessageId>
 int send_message_to_server(SOCKET socket, std::function<TParam*(void*)> init, std::function<void(TParam*)> on_finish = nullptr)
 {
-  auto out_handle = get_global_memory(sizeof(TParam));
-  auto data = global_lock(out_handle.get());
-  auto* params = init(data.get());
-  data.reset();
+  auto data = get_global_memory(sizeof(TParam));
+  auto* params = init(data->second.data());
+  auto atom = data->first;
   DWORD_PTR return_value = 0;
-  auto result = ::SendMessageTimeoutW(server_info.server, MessageId, (WPARAM)socket, (LPARAM)out_handle.get(), SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &return_value);
+  auto result = ::SendMessageTimeoutW(server_info.server, MessageId, (WPARAM)socket, (LPARAM)data->first, SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &return_value);
+  data.reset();
+  
 
   if (!result)
   {
@@ -186,8 +190,8 @@ int send_message_to_server(SOCKET socket, std::function<TParam*(void*)> init, st
 
   if (on_finish)
   {
-    auto data = global_lock(out_handle.get());
-    params = (TParam*)data.get();
+    auto data = get_global_memory(sizeof(TParam), atom);
+    auto* params = (TParam*)data->second.data();
     on_finish(params);
   }
 
@@ -270,12 +274,11 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
   {
     socket_params params{ .address_family = af, .type = type, .protocol = protocol };
 
-    auto out_handle = get_global_memory(sizeof(params));
-    auto data = global_lock(out_handle.get());
-    std::memcpy(data.get(), &params, sizeof(params));
-    data.reset();
+    auto data = get_global_memory(sizeof(params));
+    std::memcpy(data->second.data(), &params, sizeof(params));
     DWORD_PTR new_socket = 0;
-    auto result = ::SendMessageTimeoutW(server_info.server, socket_params::message_id, 0, (LPARAM)out_handle.get(), SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &new_socket);
+    auto result = ::SendMessageTimeoutW(server_info.server, socket_params::message_id, 0, (LPARAM)data->first, SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &new_socket);
+    data.reset();
 
     if (!result)
     {
@@ -427,7 +430,9 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
       if (buf && len)
       {
         params->buffer_length = len;
-        params->buffer = get_global_memory(params->buffer_length).get();
+
+        auto temp = get_global_memory(params->buffer_length);
+        params->buffer = temp->first;
       }
 
       if (from && fromLen)
@@ -439,8 +444,8 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
       return params; }, [=](recvfrom_params* params) {
       if (buf && len)
       {
-        auto data = global_lock(params->buffer);
-        std::memcpy(buf, data.get(), params->buffer_length);
+        auto data = get_global_memory(params->buffer_length, params->buffer);
+        std::memcpy(buf, data->second.data(), params->buffer_length);
       }
 
       if (from && fromLen)
@@ -553,11 +558,11 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
       if (buf && len)
       {
         params->buffer_length = len;
-        params->buffer = get_global_memory(params->buffer_length).get();
 
-        auto data = global_lock(params->buffer);
+        auto temp = get_global_memory(params->buffer_length);
+        params->buffer = temp->first;
 
-        std::memcpy(data.get(), buf, len);
+        std::memcpy(temp->second.data(), buf, len);
       }
 
       if (to && tolen)
