@@ -163,7 +163,7 @@ namespace siege::views
 
         ::SetWindowTextW(launch_table_ip_address, text.data());
 
-        launch_table_edit_unbind = launch_table_ip_address.bind_en_kill_focus([this, info, &setting](auto, const auto&) {
+        launch_table_edit_unbind = launch_table_ip_address.bind_en_kill_focus([this, info, setting](auto, const auto&) {
           launch_table_ip_address.SetWindowStyle(launch_table_ip_address.GetWindowStyle() & ~WS_VISIBLE);
           ::GetWindowTextW(launch_table_ip_address, text.data(), (int)text.size());
           setting->get().update_value(text.data());
