@@ -315,7 +315,7 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
       }
 
       get_log() << "Created zero tier socket successfully (" << socket << ")" << '\n';
-      get_zero_tier_handles().accepted_handles.emplace(socket);
+      get_zero_tier_handles().created_handles.emplace(socket);
 
 
       int value = 65536;
@@ -724,9 +724,13 @@ int __stdcall siege_listen(SOCKET ws, int backlog)
       wsock_WSASetLastError(WSAENOTSOCK);
       return SOCKET_ERROR;
     }
-
+    
     static auto* zt_listen = (std::add_pointer_t<decltype(zts_bsd_listen)>)::GetProcAddress(get_ztlib(), "zts_bsd_listen");
 
+    if (backlog == SOMAXCONN)
+    {
+      backlog = ZTS_FD_SETSIZE;
+    }
     auto zt_result = zt_listen(to_zts(ws), backlog);
     return zt_to_winsock_result(zt_result);
   }
@@ -760,6 +764,7 @@ SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
       {
         copy_address(zt_addr, name, namelen);
 
+        get_zero_tier_handles().accepted_handles.emplace(zt_result);
         return from_zts(zt_result);
       }
 
@@ -767,6 +772,12 @@ SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
     }
 
     auto zt_result = zt_accept(to_zts(ws), nullptr, nullptr);
+
+    if (zt_result >= 0)
+    {
+      get_zero_tier_handles().accepted_handles.emplace(zt_result);
+      return from_zts(zt_result);
+    }
 
     return zt_to_winsock_result(zt_result);
   }
