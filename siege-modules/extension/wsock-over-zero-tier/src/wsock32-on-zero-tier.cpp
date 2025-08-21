@@ -523,26 +523,13 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
       static auto* zt_addr_get_str = (std::add_pointer_t<decltype(zts_addr_get_str)>)::GetProcAddress(get_ztlib(), "zts_addr_get_str");
       static auto* zt_select = (std::add_pointer_t<decltype(zts_bsd_select)>)::GetProcAddress(get_ztlib(), "zts_bsd_select");
 
-      zts_sockaddr* zt_from_final = nullptr;
-      zts_socklen_t* zt_from_len_final = nullptr;
-
       zts_sockaddr_in zt_addr{
         .sin_len = sizeof(zts_sockaddr_in)
       };
 
       zts_socklen_t zt_size = sizeof(zt_addr);
 
-      if (from)
-      {
-        zt_from_final = (zts_sockaddr*)&zt_addr;
-      }
-
-      if (fromLen)
-      {
-        zt_from_len_final = &zt_size;
-      }
-
-      auto zt_result = (int)zt_recvfrom(to_zts(ws), buf, len, to_zt_msg_flags(flags), zt_from_final, zt_from_len_final);
+      auto zt_result = (int)zt_recvfrom(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&zt_addr, &zt_size);
 
       if (zt_result == ZTS_ERR_SOCKET || zt_result == ZTS_ERR_SERVICE || zt_result == ZTS_ERR_ARG)
       {
@@ -551,7 +538,7 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
         return zt_to_winsock_result(zt_result);
       }
 
-      if (from && fromLen && zt_addr.sin_addr.S_addr)
+      if (zt_addr.sin_addr.S_addr)
       {
         get_fallback_broadcast_addresses().emplace(zt_addr.sin_addr.S_addr);
       }
@@ -703,7 +690,7 @@ int __stdcall siege_listen(SOCKET ws, int backlog)
       wsock_WSASetLastError(WSAENOTSOCK);
       return SOCKET_ERROR;
     }
-    
+
     static auto* zt_listen = (std::add_pointer_t<decltype(zts_bsd_listen)>)::GetProcAddress(get_ztlib(), "zts_bsd_listen");
 
     if (backlog == SOMAXCONN)
@@ -731,29 +718,21 @@ SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
     get_log() << "zts_bsd_accept\n";
     static auto* zt_accept = (std::add_pointer_t<decltype(zts_bsd_accept)>)::GetProcAddress(get_ztlib(), "zts_bsd_accept");
 
-    if (name && namelen)
-    {
-      zts_sockaddr_in zt_addr{};
+    zts_sockaddr_in zt_addr{};
 
-      zts_socklen_t zt_size = sizeof(zt_addr);
+    zts_socklen_t zt_size = sizeof(zt_addr);
 
-      auto zt_result = zt_accept(to_zts(ws), (zts_sockaddr*)&zt_addr, &zt_size);
-
-      if (zt_result >= 0)
-      {
-        copy_address(zt_addr, name, namelen);
-
-        get_zero_tier_handles().accepted_handles.emplace(zt_result);
-        return from_zts(zt_result);
-      }
-
-      return zt_to_winsock_result(zt_result);
-    }
-
-    auto zt_result = zt_accept(to_zts(ws), nullptr, nullptr);
+    auto zt_result = zt_accept(to_zts(ws), (zts_sockaddr*)&zt_addr, &zt_size);
 
     if (zt_result >= 0)
     {
+      copy_address(zt_addr, name, namelen);
+
+      if (zt_addr.sin_addr.S_addr)
+      {
+        get_fallback_broadcast_addresses().emplace(zt_addr.sin_addr.S_addr);
+      }
+
       get_zero_tier_handles().accepted_handles.emplace(zt_result);
       return from_zts(zt_result);
     }
@@ -892,11 +871,6 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
 
         if (address_and_size.first.sin_addr.S_addr == ZTS_IPADDR_BROADCAST || is_broadcast_address())
         {
-          int socket_type = 0;
-          zts_socklen_t size = sizeof(int);
-
-          zt_getsockopt(to_zts(ws), ZTS_SOL_SOCKET, ZTS_SO_TYPE, &socket_type, &size);
-
           get_log() << "Trying to broadcast\n";
 
           auto zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
