@@ -29,7 +29,6 @@ struct socket_handle_info
   std::set<int> created_handles;
   std::set<int> accepted_handles;
   std::set<int> non_blocking_handles;
-  std::atomic_bool select_called = false;
 
   bool contains(int value) const
   {
@@ -523,26 +522,6 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
       static auto* zt_recvfrom = (std::add_pointer_t<decltype(zts_bsd_recvfrom)>)::GetProcAddress(get_ztlib(), "zts_bsd_recvfrom");
       static auto* zt_addr_get_str = (std::add_pointer_t<decltype(zts_addr_get_str)>)::GetProcAddress(get_ztlib(), "zts_addr_get_str");
       static auto* zt_select = (std::add_pointer_t<decltype(zts_bsd_select)>)::GetProcAddress(get_ztlib(), "zts_bsd_select");
-
-      if (!get_zero_tier_handles().select_called && get_zero_tier_handles().non_blocking_handles.contains(to_zts(ws)))
-      {
-        get_log() << "Doing a fallback select" << std::endl;
-        zts_fd_set zt_read{};
-        ZTS_FD_ZERO(&zt_read);
-        ZTS_FD_SET(to_zts(ws), &zt_read);
-        zts_timeval timeval{};
-        auto count = zt_select(ZTS_FD_SETSIZE, &zt_read, nullptr, nullptr, &timeval);
-        if (count == 0)
-        {
-          wsock_WSASetLastError(WSAEWOULDBLOCK);
-          return SOCKET_ERROR;
-        }
-      }
-
-      std::shared_ptr<void> deferred = { nullptr,
-        [](...) {
-          get_zero_tier_handles().select_called = false;
-        } };
 
       zts_sockaddr* zt_from_final = nullptr;
       zts_socklen_t* zt_from_len_final = nullptr;
@@ -1080,8 +1059,6 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
       {
         return zt_to_winsock_result(count);
       }
-
-      get_zero_tier_handles().select_called = true;
       return count;
     }
     return wsock_select(value, read, write, except, timeout);
