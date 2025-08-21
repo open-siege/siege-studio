@@ -117,6 +117,7 @@ namespace siege::views
   auto copy_to_array = [](auto& raw_value, auto& array) {
     auto value = std::visit(convert_to_string, raw_value);
     auto max_size = value.size() > array.size() ? array.size() : value.size();
+    std::fill(array.begin(), array.end(), '\0');
     std::copy_n(value.data(), max_size, array.data());
   };
 
