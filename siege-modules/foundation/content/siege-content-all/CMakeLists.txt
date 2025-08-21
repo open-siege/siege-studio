@@ -13,7 +13,7 @@ file(GLOB TESTABLE_SRC_FILES src/*.cpp src/**/*.cpp)
 add_library(${PROJECT_NAME} STATIC ${LIB_SRC_FILES})
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(${PROJECT_NAME} siege-content-id-tech siege-content-3space siege-content-other siege-content-cyclone siege-content-colony-wars)
+target_link_libraries(${PROJECT_NAME} siege-content-id-tech siege-content-3space siege-content-mw2 siege-content-mw4 siege-content-sword siege-content-cyclone siege-content-colony-wars)
 
 install(DIRECTORY include
         DESTINATION .
