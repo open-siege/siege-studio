@@ -4,6 +4,7 @@
 * EXE files won't open unless they have resource data or supported network libraries.
 * For partially supported games, Zero Tier is enabled if usage of networking is also detected inside of exectable adjacent DLLs.
 * Opening a folder of an extracted file now works when using unvol, either standalone or in self-extraction mode.
+* Fixed issue with game controller configurations not loading correctly.
 
 # Siege Studio + Siege Launcher 25.32 Development Release
 * Fixed issue with Zero Tier Node ID not being generated for unsupported games if it wasn't generated before.

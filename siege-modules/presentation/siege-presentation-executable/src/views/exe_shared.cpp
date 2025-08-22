@@ -900,7 +900,7 @@ namespace siege::views
               if (*value && setting.enabled)
               {
                 auto flag_iter = std::find_if(self.final_args->flags.begin(), self.final_args->flags.end(), [&setting](auto& item) {
-                  return item == setting.setting_name;
+                  return item && item == setting.setting_name;
                 });
 
                 if (flag_iter != self.final_args->flags.end())

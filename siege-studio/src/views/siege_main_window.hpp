@@ -439,15 +439,7 @@ namespace siege::views
       win32::set_window_command_subclass(*this, id++, [this](auto, auto, auto) -> std::optional<LRESULT> {
         auto size = this->GetClientSize();
         auto pos = this->GetWindowRect();
-        theme_window = *win32::window_module_ref(win32::module_ref::current_application()).CreateWindowExW(CREATESTRUCTW{
-          .hwndParent = *this,
-          .cy = size->cy,
-          .cx = size->cx,
-          .y = pos->top,
-          .x = pos->left,
-          .style = (LONG)(WS_POPUPWINDOW | WS_CAPTION | WS_MINIMIZEBOX | WS_MAXIMIZEBOX),
-          .lpszName = L"Preferences",
-          .lpszClass = win32::type_name<preferences_view>().c_str() });
+        theme_window = *win32::window_module_ref(win32::module_ref::current_application()).CreateWindowExW(CREATESTRUCTW{ .hwndParent = *this, .cy = size->cy, .cx = size->cx, .y = pos->top, .x = pos->left, .style = (LONG)(WS_POPUPWINDOW | WS_CAPTION | WS_MINIMIZEBOX | WS_MAXIMIZEBOX), .lpszName = L"Preferences", .lpszClass = win32::type_name<preferences_view>().c_str() });
 
         auto ref = win32::window_ref(theme_window);
         win32::apply_window_theme(ref);
@@ -750,6 +742,17 @@ namespace siege::views
 
         SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&tab_rect));
 
+        std::shared_ptr<void> deferred{ nullptr, [old_path = fs::current_path()](...) {
+                                         fs::current_path(old_path);
+                                       } };
+
+        auto file_path = win32::get_path_from_handle((HANDLE)message.data_type);
+
+        if (file_path)
+        {
+          fs::current_path(get_working_directory_for_path(*file_path));
+        }
+        
         auto child = plugin->CreateWindowExW(::CREATESTRUCTW{
           .hwndParent = *this,
           .cy = tab_rect.bottom - tab_rect.top,
@@ -763,8 +766,6 @@ namespace siege::views
         auto ref = child->ref();
         win32::apply_window_theme(ref);
 
-        auto file_path = win32::get_path_from_handle((HANDLE)message.data_type);
-
         if (file_path && child->CopyData(*this, COPYDATASTRUCT{ .dwData = (ULONG_PTR)message.data_type, .cbData = DWORD(message.data.size()), .lpData = message.data.data() }))
         {
           auto index = tab_control.GetItemCount();
@@ -776,6 +777,8 @@ namespace siege::views
           tab_control.InsertItem(index, TCITEMW{ .mask = TCIF_TEXT | TCIF_PARAM, .pszText = filename.data(), .lParam = win32::lparam_t(child->get()) });
 
           SetWindowLongPtrW(*child, GWLP_ID, index + 1);
+
+          deferred.reset();
 
           tab_control_tcn_sel_changing(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGING });
 
@@ -1176,6 +1179,10 @@ namespace siege::views
 
         if (plugin != loaded_modules.end())
         {
+          std::shared_ptr<void> deferred{ nullptr, [old_path = fs::current_path()](...) {
+                                           fs::current_path(old_path);
+                                         } };
+
           auto class_name = plugin->get_window_class_for_stream(storage);
 
           if (::FindWindowExW(*this, nullptr, class_name.c_str(), file_path.c_str()) != nullptr)
@@ -1183,6 +1190,7 @@ namespace siege::views
             return false;
           }
 
+          fs::current_path(get_working_directory_for_path(file_path));
           auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
 
           SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&tab_rect));
@@ -1226,6 +1234,8 @@ namespace siege::views
             {
               on_size(*this->GetClientSize());
             }
+
+            deferred.reset();
 
             tab_control_tcn_sel_changing(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGING });
 
