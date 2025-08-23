@@ -386,12 +386,22 @@ namespace siege::views
               if (connect_setting != self.launch_settings.end())
               {
                 connect_setting->enabled = should_connect;
+
+                auto value = std::visit(convert_to_string, connect_setting->value);
+
+                if (should_connect && (value.empty() || value == L"0.0.0.0" || value == L"127.0.0.1"))
+                {
+                  connect_setting->value = self.registry_data.last_ip_address.data();
+                }
+
                 if (connect_setting->persist)
                 {
                   connect_setting->persist();
                 }
               }
             }
+
+            auto listen_and_connect_are_same = caps.listen_setting && caps.ip_connect_setting && std::wstring_view(caps.listen_setting) == caps.ip_connect_setting;
 
             if (self.listen_setting_type && caps.listen_setting)
             {
@@ -401,16 +411,28 @@ namespace siege::views
 
               bool enabled = value == pref_options[2];
 
-              if (listen_setting != self.launch_settings.end())
+              if (enabled)
               {
-                if (enabled)
+                if (listen_setting != self.launch_settings.end())
                 {
                   enable_setting(*listen_setting);
+                  listen_setting->enabled = enabled;
+                  if (listen_setting->persist)
+                  {
+                    listen_setting->persist();
+                  }
                 }
-                enabled ? enable_setting(*listen_setting) : disable_setting(*listen_setting);
-                if (listen_setting->persist)
+              }
+              else if (!listen_and_connect_are_same)
+              {
+                if (listen_setting != self.launch_settings.end())
                 {
-                  listen_setting->persist();
+                  disable_setting(*listen_setting);
+                  listen_setting->enabled = enabled;
+                  if (listen_setting->persist)
+                  {
+                    listen_setting->persist();
+                  }
                 }
               }
             }
@@ -548,6 +570,11 @@ namespace siege::views
                 });
               setting_iter != self.launch_settings.end())
             {
+              auto value = std::visit(convert_to_string, setting_iter->value);
+              if (value.empty() || value == L"0.0.0.0" || value == L"127.0.0.1")
+              {
+                return;
+              }
               copy_to_array(setting_iter->value, self.registry_data.last_ip_address);
             }
           } });
@@ -2085,7 +2112,7 @@ namespace siege::views
     else if (!result)
     {
       std::string_view view_data_str{ view_data };
-      
+
       for (auto const& dir_entry : fs::directory_iterator{ self.loaded_path.parent_path() })
       {
         if (dir_entry.path().extension() == ".dll" || dir_entry.path().extension() == ".DLL")

@@ -120,11 +120,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   bind_axis_to_send_input(*args, "+lookup", "+mlook");
   bind_axis_to_send_input(*args, "+lookdown", "+mlook");
 
-  auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
-
-  std::advance(iter, 1);
-  iter->name = L"exec";
-  iter->value = L"siege_studio_inputs.cfg";
+  insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
 
   auto free_iter = std::find_if(args->flags.begin(), args->flags.end(), [](auto& setting) { return setting == nullptr; });
   *free_iter = L"notwarezed";

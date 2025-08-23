@@ -731,6 +731,24 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
   return enable_controller;
 }
 
+void insert_string_setting_once(siege::platform::game_command_line_args& args, std::wstring_view name, std::wstring_view value)
+{
+    if (std::any_of(args.string_settings.begin(), args.string_settings.end(), [&](auto& item) {
+        return item.name && item.name == name && item.value && item.value == value;
+        }))
+    {
+      return;
+    }
+
+  auto iter = std::find_if(args.string_settings.begin(), args.string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
+
+  if (iter != args.string_settings.end())
+  {
+    iter->name = name.data();
+    iter->value = value.data();
+  }
+}
+
 void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std::string_view source, std::string_view target, std::optional<WORD> not_target_vkey)
 {
   for (auto& binding : args.action_bindings)
