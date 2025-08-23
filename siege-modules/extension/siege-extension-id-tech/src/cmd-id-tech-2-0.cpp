@@ -133,7 +133,7 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
   {
     if (!flag)
     {
-      break;
+      continue;
     }
 
     auto& back = string_args.emplace_back(flag);
