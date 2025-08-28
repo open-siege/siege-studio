@@ -17,6 +17,7 @@
 #endif
 #include <siege/platform/win/module.hpp>
 #include <siege/platform/win/process.hpp>
+#include <siege/platform/shared.hpp>
 
 namespace fs = std::filesystem;
 
@@ -32,9 +33,15 @@ std::string af_to_string(int af);
 static struct rpc_process_info : ::PROCESS_INFORMATION
 {
   HWND server = nullptr;
+
+  // This is fine if we only ever have wsock and ws2_32 from one process.
+  // But fails completely when we have more than two.
+  // TODO find a way to handle more than two clients.
+  bool owning = true;
 } server_info{};
 
 HMODULE wsock_module = nullptr;
+std::shared_ptr<void> cleanup = nullptr;
 decltype(::WSAStartup)* wsock_WSAStartup = nullptr;
 decltype(::WSACleanup)* wsock_WSACleanup = nullptr;
 decltype(::socket)* wsock_socket = nullptr;
@@ -88,6 +95,7 @@ std::shared_ptr<std::pair<const ATOM, std::span<char>>> get_global_memory(std::s
 {
   static std::map<ATOM, std::span<char>> cache;
   static std::map<ATOM, std::span<char>> used_globals;
+  static std::set<HANDLE> mapping_handles;
   static std::shared_ptr<void> deferred = { nullptr, [](...) {
                                              for (auto& item : cache)
                                              {
@@ -102,11 +110,17 @@ std::shared_ptr<std::pair<const ATOM, std::span<char>>> get_global_memory(std::s
                                                ::UnmapViewOfFile(item.second.data());
                                              }
                                              used_globals.clear();
+
+                                             for (auto handle : mapping_handles)
+                                             {
+                                               ::CloseHandle(handle);
+                                             }
                                            } };
 
   auto iter = cache.end();
 
-  if (key) {
+  if (key)
+  {
     iter = cache.find(*key);
   }
 
@@ -119,7 +133,15 @@ std::shared_ptr<std::pair<const ATOM, std::span<char>>> get_global_memory(std::s
 
   if (iter == cache.end())
   {
-    auto new_name = L"ws2_32_rpc_data" + std::to_wstring(cache.size() + used_globals.size());
+    static auto dll_stem = [] {
+      auto stem = fs::path(win32::module_ref::current_module().GetModuleFileName()).stem();
+      return siege::platform::to_lower(stem.wstring());
+    }();
+
+    // TODO once more than one client are supported,
+    // there will need to be better tracking of the 
+    // individual clients that are loaded per process.
+    auto new_name = dll_stem + L"_rpc_data" + std::to_wstring(cache.size() + used_globals.size());
 
     auto out_handle = ::CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, size, new_name.c_str());
 
@@ -128,28 +150,26 @@ std::shared_ptr<std::pair<const ATOM, std::span<char>>> get_global_memory(std::s
       throw std::bad_alloc();
     }
 
-    std::shared_ptr<void> deferred = { nullptr, [out_handle](...) {
-                                        ::CloseHandle(out_handle);
-                                      } };
-
-    auto view = ::MapViewOfFile(out_handle, PAGE_READWRITE, 0, 0, 0);
+    auto view = ::MapViewOfFile(out_handle, FILE_MAP_WRITE, 0, 0, 0);
 
     if (!view)
     {
+      ::CloseHandle(out_handle);
       throw std::bad_alloc();
     }
+    mapping_handles.emplace(out_handle);
     MEMORY_BASIC_INFORMATION info{};
-    auto size = ::VirtualQuery(view, &info, sizeof(info));
+    auto query_result = ::VirtualQuery(view, &info, sizeof(info));
     auto atom = ::GlobalAddAtomW(new_name.c_str());
-    iter = cache.emplace(atom, std::span<char>((char*)view, size)).first;
+    iter = cache.emplace(atom, std::span<char>((char*)view, info.RegionSize)).first;
   }
 
   auto added = used_globals.emplace(*iter);
   cache.erase(iter);
 
-  return std::shared_ptr<std::pair<const ATOM, std::span<char>>>(&*added.first, [](void* global) {
+  return std::shared_ptr<std::pair<const ATOM, std::span<char>>>(&*added.first, [](std::pair<const ATOM, std::span<char>>* global) {
     auto existing = std::find_if(used_globals.begin(), used_globals.end(), [&](auto& item) {
-      return item.second.data() == global;
+      return item.second.data() == global->second.data();
     });
 
     if (existing != used_globals.end())
@@ -169,7 +189,6 @@ int send_message_to_server(SOCKET socket, std::function<TParam*(void*)> init, st
   DWORD_PTR return_value = 0;
   auto result = ::SendMessageTimeoutW(server_info.server, MessageId, (WPARAM)socket, (LPARAM)data->first, SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &return_value);
   data.reset();
-  
 
   if (!result)
   {
@@ -187,6 +206,8 @@ int send_message_to_server(SOCKET socket, std::function<TParam*(void*)> init, st
     wsock_WSASetLastError(last_error);
     return SOCKET_ERROR;
   }
+
+  wsock_WSASetLastError(0);
 
   if (on_finish)
   {
@@ -216,36 +237,91 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
     // preallocate some memory
     try
     {
+      get_log() << "Preallocating shared memory\n";
       auto temp1 = get_global_memory(1024);
       auto temp2 = get_global_memory(1024);
     }
     catch (...)
     {
+      get_log() << "Could not preallocate memory\n";
       return WSASYSNOTREADY;
     }
 
+    HWND server_window = nullptr;
+
+    get_log() << "Finding existing server window\n";
+    for (auto i = 0; i < 3; ++i)
+    {
+      server_window = ::FindWindowExW(HWND_MESSAGE, nullptr, L"ws2_32-rpc-server", nullptr);
+      if (server_window)
+      {
+        server_info.owning = false;
+        server_info.server = server_window;
+        server_info.dwThreadId = ::GetWindowThreadProcessId(server_info.server, &server_info.dwProcessId);
+        return result;
+      }
+      ::Sleep(50);
+    }
+
+    get_log() << "No server found. Launching new server\n";
+
+    auto exe_path = fs::path(win32::module_ref::current_module().GetModuleFileName()).parent_path() / L"ws2_32-rpc-server.exe";
     auto process_info = win32::CreateProcessW({
-        .application_name = L"ws2_32-rpc-server.exe",
+      .application_name = exe_path.c_str(),
     });
 
     if (!process_info)
     {
-      return WSASYSNOTREADY;
-    }
-
-    auto server_window = ::FindWindowExW(HWND_MESSAGE, nullptr, L"ws2_32-rpc-server", nullptr);
-
-    if (!server_window)
-    {
-      ::PostThreadMessageW(process_info->dwThreadId, WM_QUIT, 0, 0);
-      ::WaitForSingleObject(process_info->hProcess, 1000);
-      ::CloseHandle(process_info->hProcess);
-      ::CloseHandle(process_info->hThread);
+      get_log() << "Could not launch server\n";
       return WSASYSNOTREADY;
     }
 
     std::memcpy(&server_info, &process_info, sizeof(process_info));
-    server_info.server = server_window;    
+
+    cleanup = std::shared_ptr<void>{ nullptr, [](...) {
+                                      ::PostThreadMessageW(server_info.dwThreadId, WM_QUIT, 0, 0);
+                                      ::WaitForSingleObject(server_info.hProcess, 1000);
+                                      ::CloseHandle(server_info.hProcess);
+                                      ::CloseHandle(server_info.hThread);
+                                    } };
+
+    for (auto i = 0; i < 3; ++i)
+    {
+      server_window = ::FindWindowExW(HWND_MESSAGE, nullptr, L"ws2_32-rpc-server", nullptr);
+      if (server_window)
+      {
+        break;
+      }
+      ::Sleep(50);
+    }
+
+
+    if (!server_window)
+    {
+      get_log() << "Could not find server window\n";
+      cleanup.reset();
+      return WSASYSNOTREADY;
+    }
+
+    bool is_init = false;
+    for (auto i = 0; i < 500; ++i)
+    {
+      is_init = ::GetPropW(server_window, L"IsOnline") == (HANDLE)1;
+
+      if (is_init)
+      {
+        break;
+      }
+      ::Sleep(100);
+    }
+
+    if (!is_init)
+    {
+      cleanup.reset();
+      return WSASYSNOTREADY;
+    }
+
+    server_info.server = server_window;
   }
 
   get_log().flush();
@@ -259,6 +335,11 @@ int __stdcall siege_WSACleanup()
 
   if (use_zero_tier())
   {
+    if (server_info.owning && server_info.server && cleanup)
+    {
+      cleanup.reset();
+    }
+
     return 0;
   }
 
@@ -282,12 +363,14 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
 
     if (!result)
     {
+      get_log() << "Did not receive a successful result\n";
       wsock_WSASetLastError(WSAESOCKTNOSUPPORT);
       return INVALID_SOCKET;
     }
 
     if ((SOCKET)new_socket == INVALID_SOCKET)
     {
+      get_log() << "Received invalid socket\n";
       int last_error = WSAESOCKTNOSUPPORT;
       if (auto server_last_error = (int)::GetPropW(server_info.server, L"LastError"); server_last_error)
       {
@@ -297,6 +380,8 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
       return INVALID_SOCKET;
     }
 
+    wsock_WSASetLastError(0);
+    get_log() << "Returning new socket " << (std::size_t)new_socket << '\n';
     return (SOCKET)new_socket;
   }
 
@@ -308,6 +393,7 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
 
 int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* optval, int optlen)
 {
+  get_log() << "siege_setsockopt " << '\n';
   if (use_zero_tier())
   {
     return send_message_to_server<sockopt_params, sockopt_params::set_message_id>(ws, [=](void* raw) {
@@ -329,6 +415,7 @@ int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* op
 
 int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, int* optlen)
 {
+  get_log() << "siege_getsockopt " << '\n';
   if (use_zero_tier())
   {
     return send_message_to_server<sockopt_params, sockopt_params::get_message_id>(ws, [=](void* raw) {
@@ -391,7 +478,7 @@ int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
 
   if (use_zero_tier())
   {
-    return send_message_to_server<ioctl_params, bind_params::message_id>(ws, [=](void* raw) {
+    return send_message_to_server<ioctl_params, ioctl_params::message_id>(ws, [=](void* raw) {
       auto* params = new (raw) ioctl_params{ .command = cmd };
 
       if (argp)
@@ -422,8 +509,11 @@ int __stdcall siege_recv(SOCKET ws, char* buf, int len, int flags)
 
 int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr* from, int* fromLen)
 {
+  get_log() << "siege_recvfrom" << '\n';
   if (use_zero_tier())
   {
+    // TODO the server is always non-blocking.
+    // However, if we want to have blocking sockets we should block on the client side.
     return send_message_to_server<recvfrom_params, recvfrom_params::message_id>(ws, [=](void* raw) {
       auto* params = new (raw) recvfrom_params{ .flags = flags };
 
@@ -461,7 +551,7 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
 
 int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
 {
-  get_log() << "siege_getsockname\n";
+  get_log() << "siege_getsockname" << '\n';
   if (use_zero_tier())
   {
     return send_message_to_server<sockname_params, sockname_params::sock_name_message_id>(ws, [=](void* raw) {
@@ -487,7 +577,7 @@ int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
 
 int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
 {
-  get_log() << "siege_getpeername\n";
+  get_log() << "siege_getpeername" << '\n';
   if (use_zero_tier())
   {
     return send_message_to_server<sockname_params, sockname_params::sock_name_message_id>(ws, [=](void* raw) {
@@ -550,6 +640,7 @@ int __stdcall siege_send(SOCKET ws, const char* buf, int len, int flags)
 
 int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen)
 {
+  get_log() << "siege_sendto" << '\n';
   if (use_zero_tier())
   {
     return send_message_to_server<sendto_params, sendto_params::message_id>(ws, [=](void* raw) {
@@ -641,6 +732,10 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
 {
   if (use_zero_tier())
   {
+    // TODO If the timeout is too long
+    // then the client will ignore the response from the server.
+    // It's better to update this to make the client do the waiting and 
+    // send small timeout increments to the server
     return send_message_to_server<select_params, select_params::message_id>(0, [=](void* raw) {
       select_params* params = new (raw) select_params{};
 
@@ -719,8 +814,8 @@ hostent* __stdcall siege_gethostbyname(const char* name)
 
   if (use_zero_tier())
   {
-    get_log() << "siege_WSAAsyncGetHostByName.\n";
-    ::MessageBoxW(nullptr, L"The game tried to use WSAAsyncGetHostByName, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
+    get_log() << "siege_gethostbyname.\n";
+    ::MessageBoxW(nullptr, L"The game tried to use siege_gethostbyname, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
     ::ExitProcess(-1);
   }
 
@@ -868,6 +963,7 @@ auto __stdcall siege_htonl(u_long value)
 
 auto __stdcall siege_htons(u_short value)
 {
+  get_log() << "siege_htons: " << value << '\n';
   load_system_wsock();
   return wsock_htons(value);
 }
@@ -884,7 +980,7 @@ auto __stdcall siege_ntohs(u_short value)
   return wsock_ntohs(value);
 }
 
-auto __stdcall siege_inet_addr(const char* addr)
+unsigned long __stdcall siege_inet_addr(const char* addr)
 {
   load_system_wsock();
   return wsock_inet_addr(addr);
@@ -991,8 +1087,8 @@ void load_system_wsock()
   wsock_htonl = (decltype(wsock_htonl))::GetProcAddress(wsock_module, "htonl");
   wsock_ntohl = (decltype(wsock_ntohl))::GetProcAddress(wsock_module, "ntohl");
   wsock_ntohs = (decltype(wsock_ntohs))::GetProcAddress(wsock_module, "ntohs");
-  wsock_inet_addr = (decltype(wsock_inet_addr))::GetProcAddress(wsock_module, "inet_addr");
   wsock_inet_ntoa = (decltype(wsock_inet_ntoa))::GetProcAddress(wsock_module, "inet_ntoa");
+  wsock_inet_addr = (decltype(wsock_inet_addr))::GetProcAddress(wsock_module, "inet_addr");
   wsock_recv = (decltype(wsock_recv))::GetProcAddress(wsock_module, "recv");
   wsock_recvfrom = (decltype(wsock_recvfrom))::GetProcAddress(wsock_module, "recvfrom");
   wsock_send = (decltype(wsock_send))::GetProcAddress(wsock_module, "send");
@@ -1039,7 +1135,7 @@ std::optional<in_addr> get_zero_tier_fallback_broadcast_ip_v4()
 
       get_log() << "Zero Tier fallback broadcast IP is " << network_ip << '\n';
       in_addr result{};
-      result.S_un.S_addr = wsock_inet_addr(network_ip.c_str());
+      result.S_un.S_addr = siege_inet_addr(network_ip.c_str());
       return result;
     }
 

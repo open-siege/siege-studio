@@ -1,9 +1,10 @@
 #include "ws2_32-rpc.hpp"
 #include <siege/platform/win/basic_window.hpp>
 #include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/module.hpp>
+#include <siege/platform/win/file.hpp>
 #include <filesystem>
 #include <algorithm>
+#include <optional>
 #include <expected>
 
 namespace fs = std::filesystem;
@@ -71,7 +72,8 @@ std::expected<std::span<char>, LRESULT> get_value(HWND window, LPARAM lparam)
                                                    }
                                                  } };
 
-  if (::GetAtomNameW((ATOM)lparam, temp.data(), (int)temp.size()) == 0)
+  std::fill(temp.begin(), temp.end(), '\0');
+  if (::GlobalGetAtomNameW((ATOM)lparam, temp.data(), (int)temp.size()) == 0)
   {
     ::SetPropW(window, L"LastError", (HANDLE)WSA_INVALID_PARAMETER);
     return std::unexpected(SOCKET_ERROR);
@@ -86,7 +88,7 @@ std::expected<std::span<char>, LRESULT> get_value(HWND window, LPARAM lparam)
     return iter->second;
   }
 
-  HANDLE shared_memory = ::OpenFileMappingW(FILE_MAP_READ, FALSE, temp.data());
+  HANDLE shared_memory = ::OpenFileMappingW(FILE_MAP_WRITE, FALSE, key.data());
 
   if (!shared_memory)
   {
@@ -98,7 +100,7 @@ std::expected<std::span<char>, LRESULT> get_value(HWND window, LPARAM lparam)
                                       ::CloseHandle(shared_memory);
                                     } };
 
-  auto data = ::MapViewOfFile(shared_memory, FILE_MAP_READ, 0, 0, 0);
+  auto data = ::MapViewOfFile(shared_memory, FILE_MAP_WRITE, 0, 0, 0);
 
   if (!data)
   {
@@ -107,9 +109,9 @@ std::expected<std::span<char>, LRESULT> get_value(HWND window, LPARAM lparam)
   }
 
   MEMORY_BASIC_INFORMATION info{};
-  auto size = ::VirtualQuery(shared_memory, &info, sizeof(info));
+  auto query_result = ::VirtualQuery(shared_memory, &info, sizeof(info));
 
-  if (size == 0)
+  if (query_result == 0)
   {
     ::SetPropW(window, L"LastError", (HANDLE)WSA_INVALID_PARAMETER);
     ::UnmapViewOfFile(data);
@@ -117,7 +119,7 @@ std::expected<std::span<char>, LRESULT> get_value(HWND window, LPARAM lparam)
   }
 
   auto new_key = keys.emplace(key);
-  auto new_data = already_mapped_data.emplace(new_key, std::span<char>((char*)data, size));
+  auto new_data = already_mapped_data.emplace(*new_key.first, std::span<char>((char*)data, info.RegionSize));
 
   return new_data.first->second;
 }
@@ -129,7 +131,8 @@ std::expected<TParam*, LRESULT> get_value(HWND window, LPARAM lparam)
 
   if (!result)
   {
-    return result;
+    ::SetPropW(window, L"LastError", (HANDLE)WSA_INVALID_PARAMETER);
+    return std::unexpected(SOCKET_ERROR);
   }
 
   if (result->size() < sizeof(TParam))
@@ -158,6 +161,15 @@ struct wsock_window : win32::basic_window<wsock_window>
 
       auto result = wsock_socket(params.address_family, params.type, params.protocol);
       ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+
+      // TODO the socket has to be created
+      // as non-blocking because it would otherwise make the message loop unresponsive.
+      // This is mostly fine for games as almost all of them using non-blocking IO anyway.
+      if (result != SOCKET_ERROR)
+      {
+        u_long value = 1;
+        wsock_ioctlsocket(result, FIONBIO, &value);
+      }
       return result;
     }
 
@@ -367,6 +379,8 @@ struct wsock_window : win32::basic_window<wsock_window>
 
     if (message == WM_DESTROY)
     {
+      ::RemovePropW(*this, L"LastError");
+      ::RemovePropW(*this, L"IsOnline");
       ::PostQuitMessage(0);
     }
 
@@ -405,7 +419,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 
   auto window = win32::CreateWindowExW(CREATESTRUCTW{
     .hwndParent = HWND_MESSAGE,
-    .lpszName = L"ws2_32_rpc_server",
+    .lpszName = L"Siege Network Helper",
     .lpszClass = MAKEINTATOM(atom),
   });
 
@@ -424,9 +438,11 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
     return -1;
   }
 
+  ::SetPropW(*window, L"IsOnline", (HANDLE)1);
+
   MSG msg;
 
-  while (BOOL status = ::GetMessageW(&msg, *window, 0, 0) != 0)
+  while (BOOL status = ::GetMessageW(&msg, nullptr, 0, 0) != 0)
   {
     if (status == -1)
     {
@@ -450,8 +466,22 @@ void load_local_wsock()
 
   auto module_path = win32::module_ref::current_module().GetModuleFileName();
 
+  std::vector<wchar_t> temp;
+  temp.resize(::GetEnvironmentVariableW(L"WSOCK_RPC_BACKEND", nullptr, 0));
+  ::GetEnvironmentVariableW(L"WSOCK_RPC_BACKEND", temp.data(), (DWORD)temp.size() + 1);
 
-  wsock_module = LoadLibraryExW(L"ws2_32-on-zero-tier.dll", nullptr, 0);
+  fs::path lib_path;
+
+  if (temp.empty())
+  {
+    lib_path = fs::path(module_path).parent_path() / L"ws2_32-on-zero-tier.dll";
+  }
+  else
+  {
+    lib_path = temp.data();
+  }
+
+  wsock_module = ::LoadLibraryExW(lib_path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
 
   if (!wsock_module)
   {

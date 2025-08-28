@@ -116,10 +116,13 @@ namespace win32
   {
     std::wstring class_name;
 
-    if (!params.lpszClass || params.lpszClass[0] == L'\0')
+    if constexpr (!std::is_same_v<TControl, window>)
     {
-      class_name = window_class_name<TControl>();
-      params.lpszClass = class_name.c_str();
+      if (!params.lpszClass || params.lpszClass[0] == L'\0')
+      {
+        class_name = window_class_name<TControl>();
+        params.lpszClass = class_name.c_str();
+      }
     }
 
     auto result = ::CreateWindowExW(

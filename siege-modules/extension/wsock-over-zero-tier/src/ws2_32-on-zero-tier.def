@@ -1,4 +1,5 @@
 EXPORTS
+	siege_accept @1
 	accept=siege_accept
 	siege_bind @2
 	bind=siege_bind
@@ -14,10 +15,11 @@ EXPORTS
 	htonl=siege_htonl
 	siege_htons @9
 	htons=siege_htons
-	siege_inet_addr @10
+	siege_inet_addr @11
 	inet_addr=siege_inet_addr
-	siege_inet_ntoa @11
+	siege_inet_ntoa @12
 	inet_ntoa=siege_inet_ntoa
+	siege_ioctlsocket @10
 	ioctlsocket=siege_ioctlsocket
 	siege_ntohl @14
 	ntohl=siege_ntohl
