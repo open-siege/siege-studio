@@ -378,10 +378,18 @@ discovery_info discover_installation_info(int major_version, int minor_version, 
 
   info.current_app_exe_path = fs::path(win32::module_ref::current_application().GetModuleFileName());
 
-#if _DEBUG
-  info.launch_exe_path = info.current_app_exe_path;
-  return info;
-#endif
+  static bool has_embedded_modules = [] {
+    std::vector<embedded_module> embedded_modules;
+    embedded_modules.reserve(128);
+    ::EnumResourceNamesW(win32::module_ref::current_application(), RT_RCDATA, enumerate_embedded_modules, (LONG_PTR)&embedded_modules);
+    return !embedded_modules.empty();
+  }();
+
+  if (!has_embedded_modules)
+  {
+    info.launch_exe_path = info.current_app_exe_path;
+    return info;
+  }
 
   win32::com::com_string known_folder;
   std::error_code last_error;

@@ -1,7 +1,10 @@
 #include <SDKDDKVer.h>
-#include <siege/platform/win/file.hpp>
-#include <siege/platform/win/threading.hpp>
+#include <siege/platform/win/shell.hpp>
+#include <siege/platform/win/window_impl.hpp>
+#include <siege/platform/shared.hpp>
 #include <siege/platform/win/window_module.hpp>
+#include <siege/platform/win/threading.hpp>
+#include <siege/platform/win/capabilities.hpp>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/http.hpp>
 #include <fstream>
@@ -159,7 +162,32 @@ __declspec(dllexport) void detect_update(std::uint32_t update_type)
 
 __declspec(dllexport) BOOL can_update()
 {
-  return TRUE;
+  win32::com::com_string known_folder;
+  std::error_code last_error;
+
+  if (auto hresult = ::SHGetKnownFolderPath(FOLDERID_UserProgramFiles, 0, nullptr, known_folder.put()); hresult == S_OK)
+  {
+    // TODO this should be centralised and possibly stored in an environment variable
+    auto root = fs::path(known_folder) / "The Siege Hub" / "Siege Studio";
+    auto channel_type = fs::path(SIEGE_CHANNEL_TYPE);
+    auto path_info = discover_installation_info(SIEGE_MAJOR_VERSION, SIEGE_MINOR_VERSION, channel_type.wstring());
+    
+
+    auto possible_path = path_info.matching_installed_exe_path
+                           .or_else([&]() { return path_info.latest_installed_exe_path; })
+                           .or_else([&]() { return path_info.extraction_target_path; })
+                           .or_else([&]() { return std::make_optional(fs::path(win32::module_ref::current_module().GetModuleFileName())); });
+
+    if (!(possible_path))
+    {
+      return FALSE;
+    }
+
+    auto temp = fs::relative(*possible_path, root, last_error);
+
+    return !temp.empty() && temp.native()[0] != L'.' ? TRUE : FALSE;
+  }
+  return FALSE;
 }
 
 __declspec(dllexport) BOOL has_update(std::uint32_t update_type)
