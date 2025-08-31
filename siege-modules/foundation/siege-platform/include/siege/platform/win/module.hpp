@@ -21,14 +21,14 @@ namespace win32
     using base::base;
 
     template<typename TPointer = void*>
-    auto GetProcAddress(WORD ordinal)
+    auto GetProcAddress(WORD ordinal) const
     {
       static_assert(std::is_pointer_v<TPointer>);
       return reinterpret_cast<TPointer>(::GetProcAddress(*this, MAKEINTRESOURCEA(ordinal)));
     }
 
     template<typename TPointer = void*>
-    auto GetProcAddress(std::string name)
+    auto GetProcAddress(std::string name) const
     {
       static_assert(std::is_pointer_v<TPointer>);
       return reinterpret_cast<TPointer>(::GetProcAddress(*this, name.c_str()));

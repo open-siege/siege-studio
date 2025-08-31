@@ -2362,7 +2362,7 @@ namespace siege::views
 
       auto* detour_ordinal = get_extension(state).GetProcAddress(1);
 
-      if (detour_ordinal)
+      if (detour_ordinal && !get_extension(state).is_named_export(detour_ordinal))
       {
         dll_paths.emplace_back(extension_path.c_str());
       }

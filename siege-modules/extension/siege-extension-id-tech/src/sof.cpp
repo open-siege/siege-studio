@@ -282,7 +282,6 @@ std::errc init_controller_inputs(controller_binding* binding)
 
   append_controller_defaults(game_actions, actions, *binding);
 
-
   return std::errc{};
 }
 

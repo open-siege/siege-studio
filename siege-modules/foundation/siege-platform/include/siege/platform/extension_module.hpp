@@ -196,6 +196,28 @@ namespace siege::platform
 
     const std::optional<game_command_line_caps> caps = std::nullopt;
 
+    inline bool is_named_export(void* export_ptr) const
+    {
+      if (!export_ptr)
+      {
+        return false;
+      }
+
+      return export_ptr == executable_is_supported_proc ||
+          export_ptr == get_function_name_ranges_proc ||
+          export_ptr == get_variable_name_ranges_proc ||
+          export_ptr == init_keyboard_inputs_proc ||
+          export_ptr == init_mouse_inputs_proc ||
+          export_ptr == get_predefined_string_command_line_settings_proc ||
+          export_ptr == get_predefined_int_command_line_settings_proc ||
+          export_ptr == init_controller_inputs_proc ||
+          export_ptr == GetProcAddress<game_command_line_caps*>("command_line_caps") ||
+          export_ptr == GetProcAddress<game_command_line_caps*>("controller_input_backends") ||
+          export_ptr == GetProcAddress<game_command_line_caps*>("apply_prelaunch_settings") ||
+          export_ptr == GetProcAddress<game_command_line_caps*>("game_actions") ||
+          export_ptr == GetProcAddress<game_command_line_caps*>("format_command_line");
+    }
+
     inline std::span<const wchar_t*> update_span(const char* key)
     {
       auto* storage = this->GetProcAddress<const wchar_t**>(key);
