@@ -3,11 +3,7 @@ project(siege-content-all)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-find_package(Catch2 REQUIRED)
-
-file(GLOB_RECURSE TEST_SRC_FILES src/*.test.cpp)
 file(GLOB LIB_SRC_FILES src/*.cpp src/**/*.cpp)
-list(REMOVE_ITEM LIB_SRC_FILES ${TEST_SRC_FILES})
 file(GLOB TESTABLE_SRC_FILES src/*.cpp src/**/*.cpp)
 
 add_library(${PROJECT_NAME} STATIC ${LIB_SRC_FILES})
