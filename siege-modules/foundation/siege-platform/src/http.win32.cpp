@@ -53,6 +53,16 @@ namespace siege::platform
 
     if (sent)
     {
+      DWORD content_length = 0;
+      DWORD buffer_size = sizeof(content_length);
+      DWORD header_index = 0;
+
+      if (::WinHttpQueryHeaders(request, WINHTTP_QUERY_CONTENT_LENGTH | WINHTTP_QUERY_FLAG_NUMBER, nullptr, &content_length, &buffer_size, &header_index) && 
+          callbacks.on_received_content_length)
+      {
+        callbacks.on_received_content_length(content_length);
+      }
+
       DWORD size;
       do {
 

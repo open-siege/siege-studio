@@ -581,7 +581,11 @@ namespace siege::views
                   win32::apply_window_theme(ref);
                   ::SendMessageW(dialog, TDM_SET_MARQUEE_PROGRESS_BAR, get_max_update_size((std::uint32_t)update_type) == 0 ? TRUE : FALSE, 0);
                   ::SendMessageW(dialog, TDM_SET_PROGRESS_BAR_MARQUEE, get_max_update_size((std::uint32_t)update_type) == 0 ? TRUE : FALSE, 0);
-                  ::SendMessageW(dialog, TDM_SET_PROGRESS_BAR_RANGE, 0, MAKELPARAM(0, 100));
+
+                  // TOOD this is very racy. If there is a delay in the HTTP code
+                  // then we'll get the current exe size instead of the download size.
+                  // Not yet a major issue but something to improve.
+                  ::SendMessageW(dialog, TDM_SET_PROGRESS_BAR_RANGE, 0, MAKELPARAM(0, get_max_update_size((std::uint32_t)update_type)));
                 }
 
                 if (msg == TDN_TIMER && (wParam > 600 && wParam <= 800))
@@ -593,13 +597,10 @@ namespace siege::views
 
                 if (msg == TDN_TIMER && get_max_update_size((std::uint32_t)update_type) > 0 && get_current_update_size)
                 {
-                  auto max = (float)get_max_update_size((std::uint32_t)update_type);
-                  auto curr = (float)get_current_update_size((std::uint32_t)update_type);
-                  auto result = (curr / max) * 100;
+                  auto curr = get_current_update_size((std::uint32_t)update_type);
+                  ::SendMessageW(dialog, TDM_SET_PROGRESS_BAR_POS, (WPARAM)curr, 0);
 
-                  ::SendMessageW(dialog, TDM_SET_PROGRESS_BAR_POS, (WPARAM)result, 0);
-
-                  if (result >= 100)
+                  if (curr >= get_max_update_size((std::uint32_t)update_type))
                   {
                     return S_OK;
                   }

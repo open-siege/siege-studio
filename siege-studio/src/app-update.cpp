@@ -125,12 +125,7 @@ __declspec(dllexport) void detect_update(std::uint32_t update_type)
 
     std::error_code last_error;
 
-    // TODO get the real size of the exe by doing a HEAD request
     info.max_size = fs::file_size(win32::module_ref::current_application().GetModuleFileName(), last_error);
-
-#if _DEBUG
-    info.max_size = info.max_size * 10;
-#endif
 
     std::ostringstream sstr;
     siege::platform::http_client_context context;
@@ -171,7 +166,7 @@ __declspec(dllexport) BOOL can_update()
     auto root = fs::path(known_folder) / "The Siege Hub" / "Siege Studio";
     auto channel_type = fs::path(SIEGE_CHANNEL_TYPE);
     auto path_info = discover_installation_info(SIEGE_MAJOR_VERSION, SIEGE_MINOR_VERSION, channel_type.wstring());
-    
+
 
     auto possible_path = path_info.matching_installed_exe_path
                            .or_else([&]() { return path_info.latest_installed_exe_path; })
@@ -256,8 +251,11 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
 
     siege::platform::http_client_context http_context;
     std::size_t transmitted = download_http_data(http_context, resolve_domain(), final_path.str(), downloaded_file, siege::platform::http_callbacks{ [&info](auto value) {
-      info.current_size = value;
-    } });
+                                                                                                                                                      info.max_size = value;
+                                                                                                                                                    },
+                                                                                                                      [&info](auto value) {
+                                                                                                                        info.current_size = value;
+                                                                                                                      } });
 
     info.current_size = transmitted;
     if (transmitted == 0)

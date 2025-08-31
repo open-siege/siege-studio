@@ -12,6 +12,7 @@ namespace siege::platform
 
   struct http_callbacks
   {
+    std::function<void(std::size_t)> on_received_content_length;
     std::function<void(std::size_t)> on_transmitted;
   };
 
