@@ -1,4 +1,4 @@
-#include "ws2_32-rpc.hpp"
+#include "wsock32-rpc.hpp"
 #include <WinSock2.h>
 #include <optional>
 #include <string>
@@ -252,7 +252,7 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
     get_log() << "Finding existing server window\n";
     for (auto i = 0; i < 3; ++i)
     {
-      server_window = ::FindWindowExW(HWND_MESSAGE, nullptr, L"ws2_32-rpc-server", nullptr);
+      server_window = ::FindWindowExW(HWND_MESSAGE, nullptr, L"wsock32-rpc-server", nullptr);
       if (server_window)
       {
         server_info.owning = false;
@@ -265,7 +265,7 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 
     get_log() << "No server found. Launching new server\n";
 
-    auto exe_path = fs::path(win32::module_ref::current_module().GetModuleFileName()).parent_path() / L"ws2_32-rpc-server.exe";
+    auto exe_path = fs::path(win32::module_ref::current_module().GetModuleFileName()).parent_path() / L"wsock32-rpc-server.exe";
     auto process_info = win32::CreateProcessW({
       .application_name = exe_path.c_str(),
     });
@@ -287,7 +287,7 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 
     for (auto i = 0; i < 3; ++i)
     {
-      server_window = ::FindWindowExW(HWND_MESSAGE, nullptr, L"ws2_32-rpc-server", nullptr);
+      server_window = ::FindWindowExW(HWND_MESSAGE, nullptr, L"wsock32-rpc-server", nullptr);
       if (server_window)
       {
         break;

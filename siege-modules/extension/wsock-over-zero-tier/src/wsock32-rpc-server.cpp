@@ -1,4 +1,4 @@
-#include "ws2_32-rpc.hpp"
+#include "wsock32-rpc.hpp"
 #include <siege/platform/win/basic_window.hpp>
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/file.hpp>
@@ -395,7 +395,7 @@ struct wsock_window : win32::basic_window<wsock_window>
       .lpfnWndProc = basic_window::window_proc,
       .cbWndExtra = sizeof(void*),
       .hInstance = module,
-      .lpszClassName = L"ws2_32-rpc-server",
+      .lpszClassName = L"wsock32-rpc-server",
 
     };
     return ::RegisterClassExW(&info);
