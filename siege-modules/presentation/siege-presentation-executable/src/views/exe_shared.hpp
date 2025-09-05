@@ -68,9 +68,8 @@ namespace siege::views
   };
 
   bool has_extension_module(const std::any& state);
-  bool can_support_zero_tier(const std::any& state);
-  bool has_zero_tier_extension(const std::any& state);
-
+  bool can_support_zero_tier(std::any& state);
+  
   siege::platform::game_extension_module& get_extension(std::any& state);
   const siege::platform::game_extension_module& get_extension(const std::any& state);
 

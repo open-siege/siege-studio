@@ -509,7 +509,6 @@ int __stdcall siege_recv(SOCKET ws, char* buf, int len, int flags)
 
 int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr* from, int* fromLen)
 {
-  get_log() << "siege_recvfrom" << '\n';
   if (use_zero_tier())
   {
     // TODO the server is always non-blocking.
@@ -640,7 +639,6 @@ int __stdcall siege_send(SOCKET ws, const char* buf, int len, int flags)
 
 int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen)
 {
-  get_log() << "siege_sendto" << '\n';
   if (use_zero_tier())
   {
     return send_message_to_server<sendto_params, sendto_params::message_id>(ws, [=](void* raw) {

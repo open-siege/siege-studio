@@ -211,9 +211,21 @@ namespace siege::views
     return std::visit(convert_to_string, value);
   }
 
+  struct networking_support
+  {
+    bool wsock_32;
+    bool ws2_32;
+    bool dplayx;
+
+    operator bool()
+    {
+      return wsock_32 || ws2_32 || dplayx;
+    }
+  };
+
   struct exe_state
   {
-    std::filesystem::path loaded_path;
+    fs::path loaded_path;
     win32::module loaded_module;
     std::optional<siege::platform::game_extension_module> matching_extension;
     registry_settings registry_data{};
@@ -223,6 +235,8 @@ namespace siege::views
     std::optional<extension_setting_type> listen_setting_type{};
 
     std::unique_ptr<siege::platform::game_command_line_args> final_args = std::make_unique<siege::platform::game_command_line_args>();
+
+    std::map<fs::path, networking_support> detected_networking_support;
   };
 
   exe_state& get(std::any& cache)
@@ -271,8 +285,9 @@ namespace siege::views
   bool has_extension_module(const std::any& state) { return get(state).matching_extension.has_value(); }
   siege::platform::game_extension_module& get_extension(std::any& state) { return *get(state).matching_extension; }
   const siege::platform::game_extension_module& get_extension(const std::any& state) { return *get(state).matching_extension; }
+  std::optional<fs::path> get_zero_tier_extension_folder_path(const std::any& state);
 
-  std::filesystem::path get_exe_path(const std::any& state) { return get(state).loaded_path; }
+  fs::path get_exe_path(const std::any& state) { return get(state).loaded_path; }
 
   const registry_settings& load_game_settings(std::any& state);
 
@@ -468,7 +483,7 @@ namespace siege::views
         .group_id = 2 });
     }
 
-    if (can_support_zero_tier(state) && has_zero_tier_extension(state))
+    if (can_support_zero_tier(state) && get_zero_tier_extension_folder_path(state))
     {
       self.launch_settings.emplace_back(game_setting{
         .setting_name = L"ZERO_TIER_ENABLED",
@@ -996,18 +1011,6 @@ namespace siege::views
     return std::nullopt;
   }
 
-  struct networking_support
-  {
-    bool wsock_32;
-    bool ws2_32;
-    bool dplayx;
-
-    operator bool()
-    {
-      return wsock_32 || ws2_32 || dplayx;
-    }
-  };
-
   networking_support get_supported_networking_libraries(std::span<char> data);
 
   bool is_exe_or_lib(std::istream& stream)
@@ -1074,9 +1077,7 @@ namespace siege::views
 
         auto view = mapping->MapViewOfFile(FILE_MAP_READ, LARGE_INTEGER{ .QuadPart = 1024 }, (std::size_t)size->QuadPart);
 
-        auto results = get_supported_networking_libraries(view);
-
-        return results.wsock_32 && !results.ws2_32 && !results.dplayx;
+        return (bool)get_supported_networking_libraries(view);
       }
 
 
@@ -1086,7 +1087,7 @@ namespace siege::views
     return false;
   }
 
-  std::size_t load_executable(std::any& state, std::istream& image_stream, std::optional<std::filesystem::path> path) noexcept
+  std::size_t load_executable(std::any& state, std::istream& image_stream, std::optional<fs::path> path) noexcept
   {
     auto& self = get(state);
     if (!path)
@@ -1103,7 +1104,7 @@ namespace siege::views
 
     if (self.loaded_module)
     {
-      std::filesystem::path app_path = std::filesystem::path(win32::module_ref::current_module().GetModuleFileName()).parent_path();
+      fs::path app_path = fs::path(win32::module_ref::current_module().GetModuleFileName()).parent_path();
 
       auto format_path = [path] {
         auto result = siege::platform::to_lower(path->stem().wstring());
@@ -1129,7 +1130,7 @@ namespace siege::views
     return 0;
   }
 
-  std::vector<std::string> get_strings(const std::filesystem::path& loaded_path, const win32::module& loaded_module)
+  std::vector<std::string> get_strings(const fs::path& loaded_path, const win32::module& loaded_module)
   {
     if (!loaded_module)
     {
@@ -1245,9 +1246,9 @@ namespace siege::views
     return results;
   }
 
-  std::map<std::filesystem::path, std::vector<std::string>>& get_string_cache()
+  std::map<fs::path, std::vector<std::string>>& get_string_cache()
   {
-    static std::map<std::filesystem::path, std::vector<std::string>> cache{};
+    static std::map<fs::path, std::vector<std::string>> cache{};
 
     return cache;
   }
@@ -1764,7 +1765,7 @@ namespace siege::views
     return std::nullopt;
   }
 
-  std::array<char, 384> generate_zero_tier_node_id(std::filesystem::path zt_path)
+  std::array<char, 384> generate_zero_tier_node_id(fs::path zt_path)
   {
     std::error_code last_errorc;
     if (std::filesystem::exists(zt_path, last_errorc) && std::filesystem::exists(zt_path, last_errorc))
@@ -1959,14 +1960,14 @@ namespace siege::views
     else if (has_extension_module(state))
     {
       std::string extension_path = get_extension(state).GetModuleFileName<char>();
-      auto zt_path = std::filesystem::path(extension_path).parent_path() / "zt-shared.dll";
+      auto zt_path = fs::path(extension_path).parent_path() / "zt-shared.dll";
       self.registry_data.last_zero_tier_node_id_and_private_key = generate_zero_tier_node_id(zt_path);
       ::SetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", self.registry_data.last_zero_tier_node_id_and_private_key.data());
     }
     else
     {
       std::string extension_path = win32::module_ref::current_module().GetModuleFileName<char>();
-      auto zt_path = std::filesystem::path(extension_path).parent_path() / "zt-shared.dll";
+      auto zt_path = fs::path(extension_path).parent_path() / "zt-shared.dll";
       self.registry_data.last_zero_tier_node_id_and_private_key = generate_zero_tier_node_id(zt_path);
       ::SetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", self.registry_data.last_zero_tier_node_id_and_private_key.data());
     }
@@ -2061,20 +2062,46 @@ namespace siege::views
     result.ws2_32 = supports_name("ws2_32");
     result.dplayx = supports_name("dplayx");
 
+    if (!result.dplayx)
+    {
+      static constexpr std::array<char, 16> dplay2_guid{ { 0xc0, 0xf7, 0x74, 0x2b, 0x54, 0x91, 0xcf, 0x11, 0xa9, 0xcd, 0x0, 0xaa, 0x0, 0x68, 0x86, 0xe3 } };
+      static constexpr std::array<char, 16> dplay2a_guid{ { 0x80, 0x05, 0x46, 0x9d, 0x22, 0xa8, 0xcf, 0x11, 0x96, 0xc, 0x0, 0x80, 0xc7, 0x53, 0x4e, 0x82 } };
+
+      static constexpr std::array<char, 16> dplay3_guid{ { 0x40, 0xfe, 0x3e, 0x13, 0xdc, 0x32, 0xd0, 0x11, 0x9c, 0xfb, 0x00, 0xa0, 0xc9, 0xa, 0x43, 0xcb } };
+      static constexpr std::array<char, 16> dplay3a_guid{ { 0x41, 0xfe, 0x3e, 0x13, 0xdc, 0x32, 0xd0, 0x11, 0x9c, 0xfb, 0x00, 0xa0, 0xc9, 0xa, 0x4c, 0xcb } };
+
+      static constexpr std::array<char, 16> dplay4_guid{ { 0x30, 0xc5, 0xb1, 0x0a, 0x45, 0x47, 0xd1, 0x11, 0xa7, 0xa1, 0x00, 0x00, 0xf8, 0x3, 0xab, 0xfc } };
+      static constexpr std::array<char, 16> dplay4a_guid{ { 0x31, 0xc5, 0xb1, 0x0a, 0x45, 0x47, 0xd1, 0x11, 0xa7, 0xa1, 0x00, 0x00, 0xf8, 0x3, 0xab, 0xfc } };
+      static constexpr std::array<char, 16> dplay_cls_guid{ { 0x20, 0x6d, 0xeb, 0xd1, 0x23, 0x89, 0xd0, 0x11, 0x9d, 0x97, 0x00, 0xa0, 0xc9, 0x0a, 0x43, 0xcb } };
+
+      auto keys = std::array<std::string_view, 6>{ {
+        std::string_view(dplay2_guid),
+        std::string_view(dplay2a_guid),
+        std::string_view(dplay3a_guid),
+        std::string_view(dplay4_guid),
+        std::string_view(dplay4a_guid),
+        std::string_view(dplay_cls_guid),
+      } };
+
+      std::string_view temp(data);
+      for (auto key : keys)
+      {
+        if (temp.contains(key))
+        {
+          result.dplayx = true;
+          break;
+        }
+      }
+    }
+
     return result;
   }
 
-  bool can_support_zero_tier(const std::any& state)
+  bool links_to_networking_libraries(exe_state& self)
   {
-    auto& self = get(state);
-    if (self.matching_extension)
+    if (!self.detected_networking_support.empty())
     {
-      return get_extension(state).caps->ip_connect_setting || get_extension(state).caps->dedicated_setting || get_extension(state).caps->listen_setting;
-    }
-
-    if (!self.loaded_module)
-    {
-      return false;
+      return true;
     }
 
     win32::file file(self.loaded_path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
@@ -2105,85 +2132,93 @@ namespace siege::views
     std::span<char> view_data = view;
     auto result = get_supported_networking_libraries(view_data);
 
-    if (result.wsock_32 && !result.ws2_32 && !result.dplayx)
+    if (result)
     {
-      return true;
+      self.detected_networking_support.emplace(self.loaded_path, result);
     }
-    else if (!result)
-    {
-      std::string_view view_data_str{ view_data };
 
-      for (auto const& dir_entry : fs::directory_iterator{ self.loaded_path.parent_path() })
+    std::string_view view_data_str{ view_data };
+
+    auto process_entry = [&self](auto& dir_entry) {
+      if (dir_entry.path().extension() == ".dll" || dir_entry.path().extension() == ".DLL")
       {
-        if (dir_entry.path().extension() == ".dll" || dir_entry.path().extension() == ".DLL")
+        auto dll_name = dir_entry.path().filename().string();
+
+        win32::file dll_file(dir_entry.path(), GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
+
+        auto dll_mapping = dll_file.CreateFileMapping(std::nullopt, PAGE_READONLY, LARGE_INTEGER{}, L"");
+
+        auto dll_view = dll_mapping->MapViewOfFile(FILE_MAP_READ, 0);
+
+        auto result = get_supported_networking_libraries(dll_view);
+
+        if (result)
         {
-          auto dll_name = dir_entry.path().filename().string();
+          self.detected_networking_support.emplace(dir_entry.path(), result);
+        }
+      }
+    };
 
-          win32::file dll_file(dir_entry.path(), GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
+    for (auto const& dir_entry : fs::directory_iterator{ self.loaded_path.parent_path() })
+    {
+      process_entry(dir_entry);
 
-          auto dll_mapping = dll_file.CreateFileMapping(std::nullopt, PAGE_READONLY, LARGE_INTEGER{}, L"");
-
-          auto dll_view = dll_mapping->MapViewOfFile(FILE_MAP_READ, 0);
-
-          auto result = get_supported_networking_libraries(dll_view);
-
-          if (!result)
-          {
-            continue;
-          }
-
-          if (result.wsock_32 && !result.ws2_32 && !result.dplayx)
-          {
-            return true;
-          }
+      if (dir_entry.is_directory())
+      {
+        for (auto const& sub_entry : fs::directory_iterator{ self.loaded_path.parent_path() })
+        {
+          process_entry(sub_entry);
         }
       }
     }
-    return false;
+
+    return !self.detected_networking_support.empty();
   }
 
-  bool has_zero_tier_extension(const std::any& state)
+  bool can_support_zero_tier(std::any& state)
   {
     auto& self = get(state);
     if (self.matching_extension)
     {
-      std::string extension_path = get_extension(state).GetModuleFileName<char>();
-      auto wsock_path = std::filesystem::path(extension_path).parent_path() / "wsock32-on-zero-tier.dll";
-      auto zt_path = std::filesystem::path(extension_path).parent_path() / "zt-shared.dll";
-      std::error_code last_errorc;
-      return std::filesystem::exists(wsock_path, last_errorc) && std::filesystem::exists(zt_path, last_errorc);
+      return get_extension(state).caps->ip_connect_setting || get_extension(state).caps->dedicated_setting || get_extension(state).caps->listen_setting;
     }
 
+    if (!self.loaded_module)
+    {
+      return false;
+    }
 
-    std::string extension_path = win32::module_ref::current_module().GetModuleFileName<char>();
-    auto wsock_path = std::filesystem::path(extension_path).parent_path() / "wsock32-on-zero-tier.dll";
-    auto zt_path = std::filesystem::path(extension_path).parent_path() / "zt-shared.dll";
-    std::error_code last_errorc;
-    return std::filesystem::exists(wsock_path, last_errorc) && std::filesystem::exists(zt_path, last_errorc);
+    return links_to_networking_libraries(self);
   }
 
-  std::optional<std::filesystem::path> get_zero_tier_extension_folder_path(const std::any& state)
+  std::optional<fs::path> get_zero_tier_extension_folder_path(const std::any& state)
   {
     auto& self = get(state);
+
+    std::vector<fs::path> paths_to_check;
+
     if (self.matching_extension)
     {
       std::string extension_path = get_extension(state).GetModuleFileName<char>();
-      auto wsock_path = std::filesystem::path(extension_path).parent_path() / "wsock32-on-zero-tier.dll";
-      auto zt_path = std::filesystem::path(extension_path).parent_path() / "zt-shared.dll";
+      paths_to_check.emplace_back(fs::path(extension_path).parent_path());
+    }
+
+    paths_to_check.emplace_back(fs::path(win32::module_ref::current_module().GetModuleFileName<char>()).parent_path());
+
+
+    for (auto& parent_path : paths_to_check)
+    {
+      auto wsock_path = parent_path / "wsock32-on-zero-tier.dll";
+      auto wsock_rpc_path = parent_path / "wsock32-rpc-client.dll";
+      auto ws2_rpc_path = parent_path / "ws2_32-rpc-client.dll";
+      auto wsock_rpc_server_path = parent_path / "wsock32-rpc-server.exe";
+      auto zt_path = parent_path / "zt-shared.dll";
       std::error_code last_errorc;
-      if (std::filesystem::exists(wsock_path, last_errorc) && std::filesystem::exists(zt_path, last_errorc))
+
+      if (fs::exists(wsock_path, last_errorc) && fs::exists(zt_path, last_errorc) && fs::exists(wsock_rpc_server_path, last_errorc) && fs::exists(wsock_rpc_path, last_errorc) && fs::exists(ws2_rpc_path, last_errorc))
       {
-        return std::filesystem::path(extension_path).parent_path();
+        return parent_path;
       }
-    }
-
-    std::string extension_path = win32::module_ref::current_module().GetModuleFileName<char>();
-    auto wsock_path = std::filesystem::path(extension_path).parent_path() / "wsock32-on-zero-tier.dll";
-    auto zt_path = std::filesystem::path(extension_path).parent_path() / "zt-shared.dll";
-    std::error_code last_errorc;
-    if (std::filesystem::exists(wsock_path, last_errorc) && std::filesystem::exists(zt_path, last_errorc))
-    {
-      return std::filesystem::path(extension_path).parent_path();
     }
 
     return std::nullopt;
@@ -2192,6 +2227,31 @@ namespace siege::views
   using apply_prelaunch_settings = HRESULT(const wchar_t* exe_path_str, const siege::platform::game_command_line_args*);
   using format_command_line = const wchar_t**(const siege::platform::game_command_line_args*, std::uint32_t* new_size);
   bool allow_input_filtering = false;// TODO There are still some issues with id Tech 3 games that should be fixed.
+
+
+  bool uses_wsock32(const exe_state& state)
+  {
+    for (auto& info : state.detected_networking_support)
+    {
+      if (info.second.wsock_32)
+      {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool uses_ws2_32(const exe_state& state)
+  {
+    for (auto& info : state.detected_networking_support)
+    {
+      if (info.second.ws2_32 || info.second.dplayx)
+      {
+        return true;
+      }
+    }
+    return false;
+  }
 
   HRESULT launch_game_with_extension(std::any& state, const siege::platform::game_command_line_args* game_args, PROCESS_INFORMATION* process_info) noexcept
   {
@@ -2211,6 +2271,9 @@ namespace siege::views
 
     store_registry_data(state);
 
+    std::vector<const char*> dll_paths;
+    std::set<std::string> string_cache;
+
     auto configure_environment = [&]() {
       auto get_env = [](auto key) {
         auto size = ::GetEnvironmentVariableW(key, nullptr, 0);
@@ -2228,7 +2291,7 @@ namespace siege::views
 
       std::wstring current_path = get_env(L"Path");
 
-      std::array<std::filesystem::path, 3> search_paths{ {
+      std::array<fs::path, 3> search_paths{ {
         get_env(L"SystemDrive") + L"//",
         get_env(L"ProgramFiles"),
         get_env(L"ProgramFiles(X86)"),
@@ -2252,7 +2315,9 @@ namespace siege::views
         return item.name != nullptr && std::wstring_view(item.name) == L"ZERO_TIER_ENABLED" && item.value != nullptr && item.value[0] == '1';
       };
 
-      if (has_zero_tier_extension(state) && std::any_of(game_args->environment_settings.begin(), game_args->environment_settings.end(), zt_is_enabled) && std::any_of(game_args->environment_settings.begin(), game_args->environment_settings.end(), [](auto& item) {
+      auto zt_ext_path = get_zero_tier_extension_folder_path(state);
+
+      if (zt_ext_path && std::any_of(game_args->environment_settings.begin(), game_args->environment_settings.end(), zt_is_enabled) && std::any_of(game_args->environment_settings.begin(), game_args->environment_settings.end(), [](auto& item) {
             return item.name != nullptr && std::wstring_view(item.name) == L"ZERO_TIER_NETWORK_ID" && item.value != nullptr && item.value[0] != '\0';
           }))
       {
@@ -2261,11 +2326,36 @@ namespace siege::views
         fs::remove_all(ext_path, last_errorc);
         fs::create_directories(ext_path, last_errorc);
 
-        auto wsock_path = *get_zero_tier_extension_folder_path(state) / "wsock32-on-zero-tier.dll";
-        auto zt_path = *get_zero_tier_extension_folder_path(state) / "zt-shared.dll";
-
-        fs::copy_file(wsock_path, ext_path / "wsock32.dll", fs::copy_options::overwrite_existing, last_errorc);
+        auto zt_path = *zt_ext_path / "zt-shared.dll";
         fs::copy_file(zt_path, ext_path / "zt-shared.dll", fs::copy_options::overwrite_existing, last_errorc);
+
+
+        if (links_to_networking_libraries(self) && uses_ws2_32(self))
+        {
+          auto ws2_path = *zt_ext_path / "ws2_32-rpc-client.dll";
+          fs::copy_file(ws2_path, ext_path / "ws2_32.dll", fs::copy_options::overwrite_existing, last_errorc);
+          dll_paths.emplace_back(string_cache.emplace((ext_path / "ws2_32.dll").string()).first->c_str());
+
+          if (uses_wsock32(self))
+          {
+            auto ws2_path = *zt_ext_path / "wsock32-rpc-client.dll";
+            fs::copy_file(ws2_path, ext_path / "wsock32.dll", fs::copy_options::overwrite_existing, last_errorc);
+            dll_paths.emplace_back(string_cache.emplace((ext_path / "wsock32.dll").string()).first->c_str());
+          }
+
+          auto wsock_rpc_server_path = *zt_ext_path / "wsock32-rpc-server.exe";
+          fs::copy_file(wsock_rpc_server_path, ext_path / "wsock32-rpc-server.exe", fs::copy_options::overwrite_existing, last_errorc);
+
+          auto wsock_path = *zt_ext_path / "ws2_32-on-zero-tier.dll";
+
+          fs::copy_file(wsock_path, ext_path / "ws2_32-on-zero-tier.dll", fs::copy_options::overwrite_existing, last_errorc);
+        }
+        else if (links_to_networking_libraries(self) && uses_wsock32(self))
+        {
+          auto wsock_path = *zt_ext_path / "wsock32-on-zero-tier.dll";
+
+          fs::copy_file(wsock_path, ext_path / "wsock32.dll", fs::copy_options::overwrite_existing, last_errorc);
+        }
 
         ::SetDllDirectoryW(ext_path.c_str());
 
@@ -2344,9 +2434,7 @@ namespace siege::views
 
       STARTUPINFOW startup_info{ .cb = sizeof(STARTUPINFOW) };
 
-      auto hook_path = (std::filesystem::path(extension_path).parent_path() / "siege-extension-input-filter-raw-input.dll").string();
-
-      std::vector<const char*> dll_paths;
+      auto hook_path = (fs::path(extension_path).parent_path() / "siege-extension-input-filter-raw-input.dll").string();
 
       if (allow_input_filtering)
       {
