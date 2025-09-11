@@ -444,6 +444,12 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 
   while (BOOL status = ::GetMessageW(&msg, nullptr, 0, 0) != 0)
   {
+    if (msg.message == WM_QUIT)
+    {
+      ::DestroyWindow(*window);
+      break;
+    }
+
     if (status == -1)
     {
       break;
@@ -454,6 +460,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
       ::DispatchMessageW(&msg);
     }
   }
+
+  wsock_WSACleanup();
   return (int)msg.wParam;
 }
 
