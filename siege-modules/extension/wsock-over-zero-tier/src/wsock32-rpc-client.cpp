@@ -45,6 +45,7 @@ std::shared_ptr<void> cleanup = nullptr;
 decltype(::WSAStartup)* wsock_WSAStartup = nullptr;
 decltype(::WSACleanup)* wsock_WSACleanup = nullptr;
 decltype(::socket)* wsock_socket = nullptr;
+decltype(::WSASocketW)* wsock_WSASocketW = nullptr;
 decltype(::setsockopt)* wsock_setsockopt = nullptr;
 decltype(::getsockopt)* wsock_getsockopt = nullptr;
 decltype(::getsockname)* wsock_getsockname = nullptr;
@@ -57,6 +58,7 @@ decltype(::recvfrom)* wsock_recvfrom = nullptr;
 decltype(::send)* wsock_send = nullptr;
 decltype(::sendto)* wsock_sendto = nullptr;
 decltype(::ioctlsocket)* wsock_ioctlsocket = nullptr;
+decltype(::WSAIoctl)* wsock_WSAIoctl = nullptr;
 decltype(::bind)* wsock_bind = nullptr;
 decltype(::connect)* wsock_connect = nullptr;
 decltype(::accept)* wsock_accept = nullptr;
@@ -139,7 +141,7 @@ std::shared_ptr<std::pair<const ATOM, std::span<char>>> get_global_memory(std::s
     }();
 
     // TODO once more than one client are supported,
-    // there will need to be better tracking of the 
+    // there will need to be better tracking of the
     // individual clients that are loaded per process.
     auto new_name = dll_stem + L"_rpc_data" + std::to_wstring(cache.size() + used_globals.size());
 
@@ -391,6 +393,18 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
   return result;
 }
 
+SOCKET __stdcall siege_WSASocketW(int af, int type, int protocol, LPWSAPROTOCOL_INFOW lpProtocolInfo, GROUP g, DWORD dwFlags)
+{
+  get_log() << "siege_WSASocketW " << '\n';
+  if (use_zero_tier())
+  {
+    ::MessageBoxW(nullptr, L"The game tried to use siege_WSASocketW, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
+    ::ExitProcess(-1);
+  }
+
+  return wsock_WSASocketW(af, type, protocol, lpProtocolInfo, g, dwFlags);
+}
+
 int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* optval, int optlen)
 {
   get_log() << "siege_setsockopt " << '\n';
@@ -498,11 +512,24 @@ int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
   return result;
 }
 
+int __stdcall siege_WSAIoctl(SOCKET s, DWORD controlCode, LPVOID inBuffer, DWORD inBufferCount, LPVOID outBuffer, DWORD outBufferCount, LPDWORD bytesReturned, LPWSAOVERLAPPED overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completionRoutine)
+{
+  if (use_zero_tier())
+  {
+    ::MessageBoxW(nullptr, L"The game tried to use siege_WSAIoctl, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
+    ::ExitProcess(-1);
+  }
+
+  return wsock_WSAIoctl(s, controlCode, inBuffer, inBufferCount, outBuffer, outBufferCount, bytesReturned, overlapped, completionRoutine);
+}
+
 
 int __stdcall siege_recv(SOCKET ws, char* buf, int len, int flags)
 {
   if (use_zero_tier())
   {
+    ::MessageBoxW(nullptr, L"The game tried to use siege_recv, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
+    ::ExitProcess(-1);
   }
   return wsock_recv(ws, buf, len, flags);
 }
@@ -732,7 +759,7 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
   {
     // TODO If the timeout is too long
     // then the client will ignore the response from the server.
-    // It's better to update this to make the client do the waiting and 
+    // It's better to update this to make the client do the waiting and
     // send small timeout increments to the server
     return send_message_to_server<select_params, select_params::message_id>(0, [=](void* raw) {
       select_params* params = new (raw) select_params{};
@@ -1074,6 +1101,7 @@ void load_system_wsock()
   wsock_WSAStartup = (decltype(wsock_WSAStartup))::GetProcAddress(wsock_module, "WSAStartup");
   wsock_WSACleanup = (decltype(wsock_WSACleanup))::GetProcAddress(wsock_module, "WSACleanup");
   wsock_socket = (decltype(wsock_socket))::GetProcAddress(wsock_module, "socket");
+  wsock_WSASocketW = (decltype(wsock_WSASocketW))::GetProcAddress(wsock_module, "WSASocketW");
   wsock_setsockopt = (decltype(wsock_setsockopt))::GetProcAddress(wsock_module, "setsockopt");
   wsock_getsockname = (decltype(wsock_getsockname))::GetProcAddress(wsock_module, "getsockname");
   wsock_getpeername = (decltype(wsock_getpeername))::GetProcAddress(wsock_module, "getpeername");
@@ -1092,6 +1120,7 @@ void load_system_wsock()
   wsock_send = (decltype(wsock_send))::GetProcAddress(wsock_module, "send");
   wsock_sendto = (decltype(wsock_sendto))::GetProcAddress(wsock_module, "sendto");
   wsock_ioctlsocket = (decltype(wsock_ioctlsocket))::GetProcAddress(wsock_module, "ioctlsocket");
+  wsock_WSAIoctl = (decltype(wsock_WSAIoctl))::GetProcAddress(wsock_module, "WSAIoctl");
   wsock_bind = (decltype(wsock_connect))::GetProcAddress(wsock_module, "bind");
   wsock_connect = (decltype(wsock_connect))::GetProcAddress(wsock_module, "connect");
   wsock_accept = (decltype(wsock_accept))::GetProcAddress(wsock_module, "accept");

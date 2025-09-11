@@ -124,6 +124,8 @@ decltype(::WSASend)* wsock_WSASend = nullptr;
 decltype(::WSARecvFrom)* wsock_WSARecvFrom = nullptr;
 decltype(::WSAEventSelect)* wsock_WSAEventSelect = nullptr;
 decltype(::WSAEnumNetworkEvents)* wsock_WSAEnumNetworkEvents = nullptr;
+decltype(::WSASocketW)* wsock_WSASocketW = nullptr;
+decltype(::WSAIoctl)* wsock_WSAIoctl = nullptr;
 #endif
 
 
@@ -333,6 +335,31 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
   get_log() << "Created winsock socket successfully (" << (int)result << ")" << '\n';
   return result;
 }
+
+#ifdef USE_WINSOCK2
+SOCKET __stdcall siege_WSASocketW(int af, int type, int protocol, LPWSAPROTOCOL_INFOW lpProtocolInfo, GROUP g, DWORD dwFlags)
+{
+  get_log() << "siege_WSASocketW " << '\n';
+  if (use_zero_tier())
+  {
+    ::MessageBoxW(nullptr, L"The game tried to use siege_WSASocketW, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
+    ::ExitProcess(-1);
+  }
+
+  return wsock_WSASocketW(af, type, protocol, lpProtocolInfo, g, dwFlags);
+}
+
+int __stdcall siege_WSAIoctl(SOCKET s, DWORD controlCode, LPVOID inBuffer, DWORD inBufferCount, LPVOID outBuffer, DWORD outBufferCount, LPDWORD bytesReturned, LPWSAOVERLAPPED overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completionRoutine)
+{
+  if (use_zero_tier())
+  {
+    ::MessageBoxW(nullptr, L"The game tried to use siege_WSAIoctl, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
+    ::ExitProcess(-1);
+  }
+
+  return wsock_WSAIoctl(s, controlCode, inBuffer, inBufferCount, outBuffer, outBufferCount, bytesReturned, overlapped, completionRoutine);
+}
+#endif
 
 int __stdcall siege_recv(SOCKET ws, char* buf, int len, int flags)
 {
@@ -1547,6 +1574,8 @@ void load_system_wsock()
   wsock_WSARecvFrom = (decltype(wsock_WSARecvFrom))::GetProcAddress(wsock_module, "WSARecvFrom");
   wsock_WSAEventSelect = (decltype(wsock_WSAEventSelect))::GetProcAddress(wsock_module, "WSAEventSelect");
   wsock_WSAEnumNetworkEvents = (decltype(wsock_WSAEnumNetworkEvents))::GetProcAddress(wsock_module, "WSAEnumNetworkEvents");
+  wsock_WSASocketW = (decltype(wsock_WSASocketW))::GetProcAddress(wsock_module, "WSASocketW");
+  wsock_WSAIoctl = (decltype(wsock_WSAIoctl))::GetProcAddress(wsock_module, "WSAIoctl");
 #endif
 }
 

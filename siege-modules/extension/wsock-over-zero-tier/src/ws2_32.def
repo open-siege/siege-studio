@@ -21,6 +21,7 @@ EXPORTS
 	inet_ntoa=siege_inet_ntoa
 	siege_ioctlsocket @10
 	ioctlsocket=siege_ioctlsocket
+	WSAIoctl=siege_WSAIoctl
 	siege_ntohl @14
 	ntohl=siege_ntohl
 	siege_ntohs @15
@@ -42,6 +43,7 @@ EXPORTS
 	shutdown=siege_shutdown
 	siege_socket @23
 	socket=siege_socket
+	WSASocketW=siege_WSASocketW
 	siege_gethostbyname @52
 	gethostbyname=siege_gethostbyname
 	siege_gethostname @57
