@@ -122,6 +122,7 @@ decltype(::WSAWaitForMultipleEvents)* wsock_WSAWaitForMultipleEvents = nullptr;
 decltype(::WSASendTo)* wsock_WSASendTo = nullptr;
 decltype(::WSASend)* wsock_WSASend = nullptr;
 decltype(::WSARecvFrom)* wsock_WSARecvFrom = nullptr;
+decltype(::WSARecv)* wsock_WSARecv = nullptr;
 decltype(::WSAEventSelect)* wsock_WSAEventSelect = nullptr;
 decltype(::WSAEnumNetworkEvents)* wsock_WSAEnumNetworkEvents = nullptr;
 decltype(::WSASocketW)* wsock_WSASocketW = nullptr;
@@ -358,6 +359,17 @@ int __stdcall siege_WSAIoctl(SOCKET s, DWORD controlCode, LPVOID inBuffer, DWORD
   }
 
   return wsock_WSAIoctl(s, controlCode, inBuffer, inBufferCount, outBuffer, outBufferCount, bytesReturned, overlapped, completionRoutine);
+}
+
+int __stdcall siege_WSARecv(SOCKET ws, LPWSABUF buffers, DWORD bufferCount, LPDWORD numberOfBytesRecvd, LPDWORD flags, LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completionRoutine)
+{
+  if (use_zero_tier())
+  {
+    ::MessageBoxW(nullptr, L"The game tried to use siege_WSARecv, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
+    ::ExitProcess(-1);
+  }
+
+  return wsock_WSARecv(ws, buffers, bufferCount, numberOfBytesRecvd, flags, lpOverlapped, completionRoutine);
 }
 #endif
 
@@ -1164,6 +1176,7 @@ hostent* __stdcall siege_gethostbyname(const char* name)
           auto ip_int = wsock_inet_addr(ipstr);
           std::memcpy(raw_ip.data(), &ip_int, raw_ip.size());
           host_cache[name].h_addr_list[0] = raw_ip.data();
+          host_cache[name].h_addr_list[1] = nullptr;
         }
         return &host_cache[name];
       }
@@ -1572,6 +1585,7 @@ void load_system_wsock()
   wsock_WSASendTo = (decltype(wsock_WSASendTo))::GetProcAddress(wsock_module, "WSASendTo");
   wsock_WSASend = (decltype(wsock_WSASend))::GetProcAddress(wsock_module, "WSASend");
   wsock_WSARecvFrom = (decltype(wsock_WSARecvFrom))::GetProcAddress(wsock_module, "WSARecvFrom");
+  wsock_WSARecv = (decltype(wsock_WSARecv))::GetProcAddress(wsock_module, "WSARecv");
   wsock_WSAEventSelect = (decltype(wsock_WSAEventSelect))::GetProcAddress(wsock_module, "WSAEventSelect");
   wsock_WSAEnumNetworkEvents = (decltype(wsock_WSAEnumNetworkEvents))::GetProcAddress(wsock_module, "WSAEnumNetworkEvents");
   wsock_WSASocketW = (decltype(wsock_WSASocketW))::GetProcAddress(wsock_module, "WSASocketW");

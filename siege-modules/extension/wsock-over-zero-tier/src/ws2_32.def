@@ -33,6 +33,7 @@ EXPORTS
 	listen=siege_listen
 	siege_select @18
 	select=siege_select
+	siege_send @19
 	send=siege_send
 	siege_sendto @20
 	sendto=siege_sendto
@@ -51,6 +52,7 @@ EXPORTS
 	siege_WSAGetLastError @111
 	WSAGetLastError=siege_WSAGetLastError
 	WSASetLastError=siege_WSASetLastError
+	siege_WSASetLastError @112
 	siege_WSAStartup @115
 	WSAStartup=siege_WSAStartup
 	siege_WSACleanup @116
@@ -74,3 +76,6 @@ EXPORTS
 	WSAEventSelect=siege_WSAEventSelect
 	WSAEnumNetworkEvents=siege_WSAEnumNetworkEvents
 	WSARecvFrom=siege_WSARecvFrom
+	siege_WSARecvFrom @93
+	WSARecv=siege_WSARecv
+	siege_WSARecv @91

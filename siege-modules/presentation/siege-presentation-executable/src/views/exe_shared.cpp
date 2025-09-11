@@ -2545,7 +2545,23 @@ namespace siege::views
 
       auto deferred = configure_environment();
 
-      if (::CreateProcessW(self.loaded_path.c_str(), args.data(), nullptr, nullptr, FALSE, DETACHED_PROCESS, nullptr, self.loaded_path.parent_path().c_str(), &startup_info, process_info))
+      if (dll_paths.empty() && ::CreateProcessW(self.loaded_path.c_str(), args.data(), nullptr, nullptr, FALSE, DETACHED_PROCESS, nullptr, self.loaded_path.parent_path().c_str(), &startup_info, process_info))
+      {
+        return S_OK;
+      }
+      else if (::DetourCreateProcessWithDllsW(self.loaded_path.c_str(),
+                 args.data(),
+                 nullptr,
+                 nullptr,
+                 FALSE,
+                 DETACHED_PROCESS,
+                 nullptr,
+                 self.loaded_path.parent_path().c_str(),
+                 &startup_info,
+                 process_info,
+                 dll_paths.size(),
+                 dll_paths.data(),
+                 nullptr))
       {
         return S_OK;
       }

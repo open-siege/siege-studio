@@ -89,6 +89,7 @@ decltype(::WSACloseEvent)* wsock_WSACloseEvent = nullptr;
 decltype(::WSAWaitForMultipleEvents)* wsock_WSAWaitForMultipleEvents = nullptr;
 decltype(::WSASendTo)* wsock_WSASendTo = nullptr;
 decltype(::WSASend)* wsock_WSASend = nullptr;
+decltype(::WSARecv)* wsock_WSARecv = nullptr;
 decltype(::WSARecvFrom)* wsock_WSARecvFrom = nullptr;
 decltype(::WSAEventSelect)* wsock_WSAEventSelect = nullptr;
 decltype(::WSAEnumNetworkEvents)* wsock_WSAEnumNetworkEvents = nullptr;
@@ -532,6 +533,17 @@ int __stdcall siege_recv(SOCKET ws, char* buf, int len, int flags)
     ::ExitProcess(-1);
   }
   return wsock_recv(ws, buf, len, flags);
+}
+
+int __stdcall siege_WSARecv(SOCKET ws, LPWSABUF buffers, DWORD bufferCount, LPDWORD numberOfBytesRecvd, LPDWORD flags, LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completionRoutine)
+{
+  if (use_zero_tier())
+  {
+    ::MessageBoxW(nullptr, L"The game tried to use siege_WSARecv, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
+    ::ExitProcess(-1);
+  }
+
+  return wsock_WSARecv(ws, buffers, bufferCount, numberOfBytesRecvd, flags, lpOverlapped, completionRoutine);
 }
 
 int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr* from, int* fromLen)
@@ -1145,6 +1157,7 @@ void load_system_wsock()
   wsock_WSAWaitForMultipleEvents = (decltype(wsock_WSAWaitForMultipleEvents))::GetProcAddress(wsock_module, "WSAWaitForMultipleEvents");
   wsock_WSASendTo = (decltype(wsock_WSASendTo))::GetProcAddress(wsock_module, "WSASendTo");
   wsock_WSASend = (decltype(wsock_WSASend))::GetProcAddress(wsock_module, "WSASend");
+  wsock_WSARecv = (decltype(wsock_WSARecv))::GetProcAddress(wsock_module, "WSARecv");
   wsock_WSARecvFrom = (decltype(wsock_WSARecvFrom))::GetProcAddress(wsock_module, "WSARecvFrom");
   wsock_WSAEventSelect = (decltype(wsock_WSAEventSelect))::GetProcAddress(wsock_module, "WSAEventSelect");
   wsock_WSAEnumNetworkEvents = (decltype(wsock_WSAEnumNetworkEvents))::GetProcAddress(wsock_module, "WSAEnumNetworkEvents");
