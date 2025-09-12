@@ -77,8 +77,6 @@ extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"ma
 extern auto autoexec_configuration_paths = std::array<const wchar_t*, 2>{ { L"main/autoexec.cfg" } };
 extern auto profile_configuration_paths = std::array<const wchar_t*, 3>{ { L"main/config.cfg" } };
 
-extern void(__cdecl* ConsoleEvalCdecl)(const char*);
-
 using namespace std::literals;
 
 constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x451894) },
@@ -91,15 +89,6 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 4> fu
   { "echo"sv, "print"sv } } };
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "in_mouse"sv, "in_joystick"sv } } };
-
-inline void set_gog_exports()
-{
-  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x41db30;
-}
-
-constexpr std::array<void (*)(), 1> export_functions = { {
-  set_gog_exports,
-} };
 
 std::errc get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {

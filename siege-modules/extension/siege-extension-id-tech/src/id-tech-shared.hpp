@@ -5,6 +5,7 @@
 #include <siege/configuration/id_tech.hpp>
 #include <siege/platform/extension_module.hpp>
 #include <filesystem>
+#include <optional>
 
 std::optional<siege::configuration::text_game_config> load_config_from_pak(std::filesystem::path real_file_path, std::wstring pak_path, std::wstring pak_folder_path);
 std::optional<siege::configuration::text_game_config> load_config_from_pk3(std::filesystem::path real_file_path, std::wstring pak_path, std::wstring pak_folder_path);
@@ -17,6 +18,7 @@ std::optional<std::pair<WORD, hardware_context>> key_to_vkey(std::string_view va
 std::optional<std::string> vkey_to_key(WORD vkey, hardware_context context);
 std::optional<std::string_view> hardware_index_to_button_name_id_tech_2_0(WORD index);
 std::optional<std::string_view> hardware_index_to_button_name_id_tech_3_0(WORD index);
+std::optional<std::string_view> hardware_index_to_button_name_id_tech_3_0_from_zero(WORD index);
 std::optional<std::string_view> dpad_name_id_tech_2_0(WORD index);
 std::optional<std::string_view> dpad_name_id_tech_3_0(WORD index);
 std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_3_0(WORD vkey, WORD index);
@@ -51,10 +53,23 @@ struct q3_mapping_context : mapping_context
   };
 };
 
+struct raven_mapping_context : mapping_context
+{
+  raven_mapping_context()
+  {
+    index_to_axis = hardware_index_to_joystick_axis_id_tech_3_0;
+    index_to_button = hardware_index_to_button_name_id_tech_3_0_from_zero;
+    dpad_name = dpad_name_id_tech_3_0;
+    axis_set_prefix = "bind";
+    supports_triggers_as_buttons = true;
+  };
+};
+
 
 bool save_bindings_to_config(siege::platform::game_command_line_args& args, siege::configuration::text_game_config& config, mapping_context context = {});
 void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std::string_view source, std::string_view target, std::optional<WORD> not_target_vkey = std::nullopt);
-void bind_controller_send_input_fallback(siege::platform::game_command_line_args& args, hardware_context expected_context, WORD expected_vkey, WORD not_target_vkey);
+void bind_controller_send_input_fallback(siege::platform::game_command_line_args& args, hardware_context expected_context, WORD expected_vkey, std::optional<WORD> not_target_vkey = std::nullopt);
+void bind_controller_send_input_fallback(siege::platform::game_command_line_args& args, hardware_context expected_context, WORD expected_vkey, std::string_view target_action, std::optional<WORD> not_target_vkey = std::nullopt);
 
 inline bool is_vkey_for_controller(WORD vkey)
 {

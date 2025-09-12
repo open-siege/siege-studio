@@ -28,7 +28,7 @@ using predefined_int = siege::platform::game_command_line_predefined_setting<int
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
 
 extern auto command_line_caps = game_command_line_caps{
-  .int_settings = {{ L"dedicated", L"r_customwidth", L"r_customheight", L"r_mode" }},
+  .int_settings = { { L"dedicated", L"r_customwidth", L"r_customheight", L"r_mode" } },
   .string_settings = { { L"name", L"connect", L"map" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
@@ -63,12 +63,9 @@ extern auto game_actions = std::array<game_action, 32>{ {
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 
-extern void(__cdecl* ConsoleEvalCdecl)(const char*) ;
-
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { 
-  { "exec"sv, std::size_t(0x4fb190) },
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x4fb190) },
   { "cmdlist"sv, std::size_t(0x4fb198) },
   { "cl_pitchspeed"sv, std::size_t(0x4f9498) } } } } };
 
@@ -118,7 +115,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
 
-  bool enable_controller = save_bindings_to_config(*args, config, q3_mapping_context{});
+  bool enable_controller = save_bindings_to_config(*args, config, raven_mapping_context{});
 
   if (enable_controller)
   {
@@ -128,17 +125,8 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
 
   config.save(custom_bindings);
 
-  auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
-
-  if (iter != args->string_settings.end())
-  {
-    iter->name = L"exec";
-    iter->value = L"siege_studio_inputs.cfg";
-  }
-
-  std::advance(iter, 1);
-  iter->name = L"console";
-  iter->value = L"1";
+  insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
+  insert_string_setting_once(*args, L"console", L"1");
 
   return std::errc{};
 }

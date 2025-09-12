@@ -190,6 +190,31 @@ std::optional<std::string_view> hardware_index_to_button_name_id_tech_3_0(WORD i
   return button_names[index];
 }
 
+std::optional<std::string_view> hardware_index_to_button_name_id_tech_3_0_from_zero(WORD index)
+{
+  constexpr static auto button_names = std::array<std::string_view, 15>{ { "JOY0",
+    "JOY1",
+    "JOY2",
+    "JOY3",
+    "JOY4",
+    "JOY5",
+    "JOY6",
+    "JOY7",
+    "JOY8",
+    "JOY9",
+    "JOY10",
+    "JOY11",
+    "JOY12",
+    "JOY13",
+    "JOY14" } };
+
+  if (index > button_names.size())
+  {
+    return std::nullopt;
+  }
+  return button_names[index];
+}
+
 std::optional<std::string_view> dpad_name_id_tech_2_0(WORD vkey)
 {
   switch (vkey)
@@ -807,7 +832,8 @@ void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std:
 void bind_controller_send_input_fallback(siege::platform::game_command_line_args& args,
   hardware_context expected_context,
   WORD expected_vkey,
-  WORD not_target_vkey)
+  std::string_view target_action,
+  std::optional<WORD> not_target_vkey)
 {
   auto right_stick_left = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [=](auto& binding) {
     return binding.context == expected_context && binding.vkey == expected_vkey;
@@ -817,13 +843,29 @@ void bind_controller_send_input_fallback(siege::platform::game_command_line_args
   if (right_stick_left != args.action_bindings.end())
   {
     auto fallback = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& binding) {
-      return (binding.context == hardware_context::global || binding.context == hardware_context::keyboard) && binding.vkey != not_target_vkey && binding.action_name == right_stick_left->action_name;
+      return (binding.context == hardware_context::global || 
+          binding.context == hardware_context::keyboard) && binding.vkey != not_target_vkey && std::string_view{ binding.action_name.data() } == target_action;
     });
 
     if (fallback != args.action_bindings.end())
     {
-      bind_axis_to_send_input(args, right_stick_left->action_name.data(), fallback->action_name.data(), not_target_vkey);
+      bind_axis_to_send_input(args, right_stick_left->action_name.data(), target_action, not_target_vkey);
     }
+  }
+}
+
+void bind_controller_send_input_fallback(siege::platform::game_command_line_args& args,
+  hardware_context expected_context,
+  WORD expected_vkey,
+  std::optional<WORD> not_target_vkey)
+{
+  auto right_stick_left = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [=](auto& binding) {
+    return binding.context == expected_context && binding.vkey == expected_vkey;
+  });
+
+  if (right_stick_left != args.action_bindings.end())
+  {
+    bind_controller_send_input_fallback(args, expected_context, expected_vkey, right_stick_left->action_name.data(), not_target_vkey);
   }
 }
 

@@ -68,8 +68,6 @@ extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"ma
 extern auto autoexec_configuration_paths = std::array<const wchar_t*, 4>{ { L"main/autoexec.cfg" } };
 extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{ { L"main/configs/*.cfg", L"main/configs/unnamedsoldier.cfg" } };
 
-extern void(__cdecl* ConsoleEvalCdecl)(const char*);
-
 using namespace std::literals;
 
 constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 1>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 1>{ {
@@ -88,22 +86,10 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> va
 
 constexpr static auto moh_aliases = std::array<std::array<std::string_view, 2>, 6>{ { { "swap-pistol", "vstr swap-pistol-start" },
   { "swap-pistol-start", "useweaponclass pistol;set swap-pistol vstr swap-pistol-stop" },
-  { "swap-pistol-stop", "-attacksecondary;uselast;set swap-pistol vstr swap-pistol-start" },
-  { "swap-grenade", "vstr swap-pistol-start" },
-  { "swap-grenade-start", "useweaponclass grenade;set swap-pistol vstr swap-grenade-stop" },
-  { "swap-grenade-stop", "-attacksecondary;uselast;set swap-pistol vstr swap-grenade-start" }
-
-} };
-
-
-inline void set_gog_exports()
-{
-  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x41db30;
-}
-
-constexpr std::array<void (*)(), 5> export_functions = { {
-  set_gog_exports,
-} };
+  { "swap-pistol-stop", "uselast;set swap-pistol vstr swap-pistol-start" },
+  { "swap-grenade", "vstr swap-grenade-start" },
+  { "swap-grenade-start", "useweaponclass grenade;set swap-grenade vstr swap-grenade-stop" },
+  { "swap-grenade-stop", "uselast;set swap-grenade vstr swap-grenade-start" } } };
 
 std::errc get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
@@ -152,18 +138,14 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
 
   bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, VK_LEFT);
   bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, VK_RIGHT);
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_LEFT_TRIGGER, "+left", VK_RIGHT);
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_TRIGGER, "+right", VK_LEFT);
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_LEFT_TRIGGER);
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_TRIGGER);
 
-  auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
-
-  if (iter != args->string_settings.end())
-  {
-    iter->name = L"exec";
-    iter->value = L"siege_studio_inputs.cfg";
-  }
-
-  std::advance(iter, 1);
-  iter->name = L"console";
-  iter->value = L"1";
+  insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
+  insert_string_setting_once(*args, L"console", L"1");
+  insert_string_setting_once(*args, L"cl_playintro", L"0");
 
   return std::errc{};
 }
@@ -182,7 +164,7 @@ std::errc init_mouse_inputs(mouse_binding* binding)
   }
 
   std::array<std::pair<WORD, std::string_view>, 2> actions{
-    { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+altattack"),
+    { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+attacksecondary"),
       std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use") }
   };
 
@@ -206,13 +188,17 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 5> actions{
+  std::array<std::pair<WORD, std::string_view>, 9> actions{
     {
       std::make_pair<WORD, std::string_view>('G', "vstr swap-grenade"),
       std::make_pair<WORD, std::string_view>('F', "vstr melee-attack"),
+      std::make_pair<WORD, std::string_view>('v', "+attackprimary"),
+      std::make_pair<WORD, std::string_view>('b', "+attacksecondary"),
       std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
+      std::make_pair<WORD, std::string_view>(VK_OEM_COMMA, "+left"),
+      std::make_pair<WORD, std::string_view>(VK_OEM_PERIOD, "+right"),
     }
   };
 
@@ -227,7 +213,7 @@ std::errc init_controller_inputs(controller_binding* binding)
   {
     return std::errc::bad_address;
   }
-  std::array<std::pair<WORD, std::string_view>, 23> actions{
+  std::array<std::pair<WORD, std::string_view>, 24> actions{
     {
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attackprimary"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "+attacksecondary"),
@@ -243,11 +229,12 @@ std::errc init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "vstr swap-pistol"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "inven"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "weapnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "invnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "toggleitem"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "weapondrop"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "holster"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "vstr swap-pistol"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "toggleitem"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "vstr swap-grenade"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_UP, "invnext"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "invprev"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "weapprev"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_RIGHT, "weapnext"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "+scores"),
