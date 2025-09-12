@@ -1,5 +1,0 @@
-EXPORTS
-	DetourFinishHelperProcess @1
-	executable_is_supported
-	command_line_caps DATA PRIVATE
-	format_command_line PRIVATE
