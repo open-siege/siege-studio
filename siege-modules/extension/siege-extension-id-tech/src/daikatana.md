@@ -1,4 +1,4 @@
-# Siege Extension for Sin
+# Siege Extension for Daikatana
 
 ## Features
 * Online multiplayer support through a WinSock wrapper over Zero Tier Sockets (wsock32-on-zero-tier).
