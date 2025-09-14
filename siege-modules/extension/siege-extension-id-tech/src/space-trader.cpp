@@ -12,7 +12,7 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-#include "GetGameFunctionNames.hpp"
+
 #include "id-tech-shared.hpp"
 
 
@@ -62,7 +62,8 @@ extern auto game_actions = std::array<game_action, 32>{ {
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x101ff54) },
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { 
+  { "exec"sv, std::size_t(0x101ff54) },
   { "cmdlist"sv, std::size_t(0x1022e94) },
   { "cl_pitchspeed"sv, std::size_t(0x1022738) } } } } };
 
@@ -75,12 +76,13 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 6> fu
   { "toggle"sv, "bind"sv },
 } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 5> variable_name_ranges{ {
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 6> variable_name_ranges{ {
   { "com_cmdline"sv, "use_steam"sv },
   { "usernameandpassword"sv, "http_bugproject"sv },
   { "r_bugreport"sv, "ui_username"sv },
   { "journal"sv, "journal"sv },
   { "s_volume"sv, "s_info"sv },
+  { "cl_spacetrader"sv, "cl_spacetrader"sv },
 } };
 
 std::errc get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
@@ -110,7 +112,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
     return std::errc::bad_address;
   }
 
-  std::ofstream custom_bindings("main/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
+  std::ofstream custom_bindings("st/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
 
@@ -151,7 +153,6 @@ std::errc init_mouse_inputs(mouse_binding* binding)
   };
 
   upsert_mouse_defaults(game_actions, actions, *binding);
-
 
   return std::errc{};
 }

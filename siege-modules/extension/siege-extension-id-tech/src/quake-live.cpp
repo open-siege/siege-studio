@@ -12,7 +12,7 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-#include "GetGameFunctionNames.hpp"
+
 #include "id-tech-shared.hpp"
 
 
@@ -60,18 +60,8 @@ extern auto game_actions = std::array<game_action, 32>{ {
 } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
-extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
-extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"baseq3/pak0.pak/default.cfg", L"baseq3/default.cfg" } };
-extern auto autoexec_configuration_paths = std::array<const wchar_t*, 4>{ { L"baseq3/autoexec.cfg", L"xatrix/autoexec.cfg", L"rogue/autoexec.cfg" } };
-extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{ { L"baseq3/config.cfg", L"xatrix/config.cfg", L"rogue/config.cfg" } };
 
 using namespace std::literals;
-
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
-  { "cmdlist"sv, std::size_t(0x45189c) },
-  { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } } };
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 0> function_name_ranges{};
 
@@ -104,7 +94,9 @@ std::errc executable_is_supported(const wchar_t* filename) noexcept
   auto exe_path = std::filesystem::path(filename);
   auto parent_path = exe_path.parent_path();
 
-  if (exe_path.stem() == "quakelive_steam" && exe_path.extension() == ".exe" && std::filesystem::is_directory(parent_path / "baseq3", last_error))
+  if (exe_path.stem().string().starts_with("quakelive") && 
+      exe_path.extension() == ".exe" && 
+      std::filesystem::is_directory(parent_path / "baseq3", last_error))
   {
     return std::errc{};
   }
@@ -143,17 +135,8 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   bind_axis_to_send_input(*args, "+lookup", "+mlook");
   bind_axis_to_send_input(*args, "+lookdown", "+mlook");
 
-  auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
-
-  if (iter != args->string_settings.end())
-  {
-    iter->name = L"exec";
-    iter->value = L"siege_studio_inputs.cfg";
-  }
-
-  std::advance(iter, 1);
-  iter->name = L"console";
-  iter->value = L"1";
+  insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
+  insert_string_setting_once(*args, L"console", L"1");
 
   return std::errc{};
 }

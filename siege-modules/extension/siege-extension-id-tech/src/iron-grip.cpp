@@ -12,7 +12,7 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-#include "GetGameFunctionNames.hpp"
+
 #include "id-tech-shared.hpp"
 
 
@@ -60,33 +60,12 @@ extern auto game_actions = std::array<game_action, 32>{ {
 } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
-extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
-extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"Main/pak0.pak/default.cfg", L"Main/default.cfg" } };
-extern auto autoexec_configuration_paths = std::array<const wchar_t*, 4>{ { L"Main/autoexec.cfg" } };
-extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{ { L"Main/config.cfg" } };
-
-static void(__cdecl* ConsoleEval)(const char*) = nullptr;
 
 using namespace std::literals;
-
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
-  { "cmdlist"sv, std::size_t(0x45189c) },
-  { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } } };
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 0> function_name_ranges{};
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 0> variable_name_ranges{};
-
-inline void set_gog_exports()
-{
-  ConsoleEval = (decltype(ConsoleEval))0x41db30;
-}
-
-constexpr std::array<void (*)(), 5> export_functions = { {
-  set_gog_exports,
-} };
 
 std::errc get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
@@ -100,7 +79,29 @@ std::errc get_variable_name_ranges(std::size_t length, std::array<const char*, 2
 
 std::errc executable_is_supported(const wchar_t* filename) noexcept
 {
-  return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
+  if (filename == nullptr)
+  {
+    return std::errc::bad_address;
+  }
+
+  std::error_code last_error;
+
+  if (!std::filesystem::exists(filename, last_error))
+  {
+    return std::errc::invalid_argument;
+  }
+
+  auto exe_path = std::filesystem::path(filename);
+  auto parent_path = exe_path.parent_path();
+
+  if (exe_path.stem().string().starts_with("igwarlord") && 
+      exe_path.extension() == ".exe" && 
+      std::filesystem::is_directory(parent_path / "base", last_error))
+  {
+    return std::errc{};
+  }
+
+  return std::errc::not_supported;
 }
 
 std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
@@ -115,7 +116,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
     return std::errc::bad_address;
   }
 
-  std::ofstream custom_bindings("baseq2/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
+  std::ofstream custom_bindings("base/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
 
@@ -160,7 +161,7 @@ std::errc init_mouse_inputs(mouse_binding* binding)
   {
     return std::errc::bad_address;
   }
-  auto config = load_config_from_pak(L"baseq2\\default.cfg", L"baseq2/pak0.pak", L"baseq2/pak0.pak");
+  auto config = load_config_from_pak(L"base\\default.cfg", L"base/resources.pk3", L"base/resources.pk3");
 
   if (config)
   {
@@ -172,8 +173,7 @@ std::errc init_mouse_inputs(mouse_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use") }
   };
 
-  append_mouse_defaults(game_actions, actions, *binding);
-
+  upsert_mouse_defaults(game_actions, actions, *binding);
 
   return std::errc{};
 }
@@ -185,7 +185,7 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     return std::errc::bad_address;
   }
 
-  auto config = load_config_from_pak(L"baseq2\\default.cfg", L"baseq2/pak0.pak", L"baseq2/pak0.pak");
+  auto config = load_config_from_pak(L"base\\default.cfg", L"base/resources.pk3", L"base/resources.pk3");
 
   if (config)
   {
@@ -201,7 +201,7 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     }
   };
 
-  append_keyboard_defaults(game_actions, actions, *binding);
+  upsert_keyboard_defaults(game_actions, actions, *binding);
 
   return std::errc{};
 }

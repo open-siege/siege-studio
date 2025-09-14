@@ -26,10 +26,15 @@ using game_action = siege::platform::game_action;
 using game_command_line_caps = siege::platform::game_command_line_caps;
 using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
+using key_type = siege::configuration::key_type;
 
 extern auto command_line_caps = game_command_line_caps{
-  .int_settings = { { L"r_customwidth", L"r_customheight", L"r_mode" } },
-  .string_settings = { { L"map" } }
+  .int_settings = { { L"dedicated", L"r_mode" } },
+  .string_settings = { { L"name", L"connect", L"map", L"r_glDriver" } },
+  .ip_connect_setting = L"connect",
+  .player_name_setting = L"name",
+  .listen_setting = L"connect",
+  .dedicated_setting = L"dedicated",
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
@@ -39,44 +44,60 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::analog, "+moveright", u"Strafe Right", u"Movement" },
   game_action{ game_action::analog, "+moveup", u"Jump", u"Movement" },
   game_action{ game_action::analog, "+movedown", u"Crouch", u"Movement" },
-  game_action{ game_action::digital, "+speed", u"Run", u"Movement" },
+  game_action{ game_action::digital, "+sprint", u"Spring", u"Movement" },
   game_action{ game_action::analog, "+left", u"Turn Left", u"Aiming" },
   game_action{ game_action::analog, "+right", u"Turn Right", u"Aiming" },
   game_action{ game_action::analog, "+lookup", u"Look Up", u"Aiming" },
   game_action{ game_action::analog, "+lookdown", u"Look Down", u"Aiming" },
   game_action{ game_action::digital, "+attack", u"Attack", u"Combat" },
-  game_action{ game_action::digital, "+altattack", u"Alt Attack", u"Combat" },
-  game_action{ game_action::digital, "weapon 1", u"Melee Attack", u"Combat" },
+  game_action{ game_action::digital, "weapalt", u"Alt Attack", u"Combat" },
+  game_action{ game_action::digital, "vstr melee-toggle", u"Toggle Melee", u"Combat" },
+  game_action{ game_action::digital, "vstr grenade-toggle", u"Toggle Grenade", u"Combat" },
+  game_action{ game_action::digital, "vstr pistol-toggle", u"Toggle Pistol", u"Combat" },
+  game_action{ game_action::digital, "+zoom", u"Binocular Zoom", u"Combat" },
+  game_action{ game_action::digital, "+dropweapon", u"Drop Weapon", u"Combat" },
+  game_action{ game_action::digital, "+reload", u"Drop Weapon", u"Combat" },
   game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
   game_action{ game_action::digital, "weaprev", u"Previous Weapon", u"Combat" },
-  game_action{ game_action::digital, "forcenext", u"Next Item", u"Combat" },
-  game_action{ game_action::digital, "+useforce", u"Use Item", u"Combat" },
-  game_action{ game_action::digital, "score", u"Score", u"Interface" },
-  game_action{ game_action::digital, "datapad", u"Objectives", u"Interface" },
+  game_action{ game_action::digital, "+scores", u"Score", u"Interface" },
+  game_action{ game_action::digital, "OpenLimboMenu", u"Limbo Menu", u"Interface" },
   game_action{ game_action::digital, "+klook", u"Keyboard Look", u"Misc" },
   game_action{ game_action::digital, "+mlook", u"Mouse Look", u"Misc" },
 } };
+
+constexpr static auto wolf_aliases = std::array<std::array<std::string_view, 3>, 9>{
+  { { "melee-toggle", "vstr melee-toggle-start" },
+    { "melee-toggle-start", "weaponbank 1;set melee-toggle vstr melee-toggle-stop;" },
+    { "melee-toggle-stop", "weaplastused;set melee-toggle vstr melee-toggle-start" },
+    { "grenade-toggle", "vstr grenade-toggle-start" },
+    { "grenade-toggle-start", "weaponbank 4;set grenade-toggle vstr grenade-toggle-stop" },
+    { "grenade-toggle-stop", "weaplastused;set grenade-toggle vstr grenade-toggle-start" },
+    { "pistol-toggle", "vstr pistol-toggle-start" },
+    { "pistol-toggle-start", "weaponbank 2;set pistol-toggle vstr pistol-toggle-stop" },
+    { "pistol-toggle-stop", "weaplastused;set pistol-toggle vstr pistol-toggle-start" } }
+};
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x4e9bf8) },
-  { "cmdlist"sv, std::size_t(0x4e9c00) },
-  { "cl_pitchspeed"sv, std::size_t(0x4e8aa4) } } } } };
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x55d2e0) },
+  { "cmdlist"sv, std::size_t(0x55d2d8) },
+  { "cl_pitchspeed"sv, std::size_t(0x55add4) } } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 5> function_name_ranges{ {
-  { "-mlook"sv, "+altattack"sv },
-  { "-force_grip"sv, "+force_lightning"sv },
-  { "-attack"sv, "centerview"sv },
-  { "ff_restart"sv, "endscreendissolve"sv },
-  { "datapad"sv, "configstrings"sv },
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 4> function_name_ranges{ {
+  { "+moveup"sv, "help"sv },
+  { "condump"sv, "clear"sv },
+  { "killserv"sv, "sectorlist"sv },
+  { "bind"sv, "bindlist"sv },
 } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> variable_name_ranges{ {
-  { "com_introPlayed"sv, "com_introPlayed"sv },
-  { "helpUsObi"sv, "helpUsObi"sv },
-  { "sp_leet"sv, "sp_language"sv },
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 5> variable_name_ranges{ {
+  { "com_buildScript"sv, "com_recommendedSet"sv },
+  { "dedicated"sv, "sv_running"sv },
+  { "com_showtrace"sv, "com_cameraMode"sv },
+  { "cg_wolfparticles"sv, "cl_doubletapdelay"sv },
+  { "cm_noAreas"sv, "cm_optimize"sv },
 } };
 
 std::errc get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
@@ -106,19 +127,26 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
     return std::errc::bad_address;
   }
 
-  std::ofstream custom_bindings("base/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
+  std::ofstream custom_bindings("etmain/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
 
-  bool enable_controller = save_bindings_to_config(*args, config, raven_mapping_context{});
+  for (auto& alias : wolf_aliases)
+  {
+    config.emplace(key_type({ "seta", alias[0] }), (alias[1]));
+  }
+
+  bool enable_controller = save_bindings_to_config(*args, config, q3_mapping_context{});
 
   if (enable_controller)
   {
     config.emplace(siege::configuration::key_type({ "seta", "in_joystick" }), siege::configuration::key_type("1"));
-    config.emplace(siege::configuration::key_type({ "seta", "joy_xbutton" }), siege::configuration::key_type("1"));
   }
 
   config.save(custom_bindings);
+
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, VK_LEFT);
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, VK_RIGHT);
 
   insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
   insert_string_setting_once(*args, L"console", L"1");
@@ -132,16 +160,15 @@ std::errc init_mouse_inputs(mouse_binding* binding)
   {
     return std::errc::bad_address;
   }
-  auto config = load_config_from_pk3(L"base\\default.cfg", L"base/assets0.pk3", L"base/assets0.pk3");
+  auto config = load_config_from_pak(L"etmain\\default.cfg", L"etmain/pak0.pk3", L"etmain/pak0.pk3");
 
   if (config)
   {
     load_mouse_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 2> actions{
-    { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+altattack"),
-      std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use") }
+  std::array<std::pair<WORD, std::string_view>, 1> actions{
+    { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "weapalt") }
   };
 
   upsert_mouse_defaults(game_actions, actions, *binding);
@@ -157,21 +184,20 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     return std::errc::bad_address;
   }
 
-  auto config = load_config_from_pk3(L"base\\default.cfg", L"base/assets0.pk3", L"base/assets0.pk3");
+  auto config = load_config_from_pak(L"etmain\\default.cfg", L"etmain/pak0.pk3", L"etmain/pak0.pk3");
 
   if (config)
   {
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 6> actions{
+  std::array<std::pair<WORD, std::string_view>, 5> actions{
     {
-      std::make_pair<WORD, std::string_view>('G', "+throw-grenade"),
+      std::make_pair<WORD, std::string_view>('g', "vstr grenade-toggle"),
+      std::make_pair<WORD, std::string_view>('f', "vstr melee-toggle"),
       std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
-      std::make_pair<WORD, std::string_view>(VK_LEFT, "+moveleft"),
-      std::make_pair<WORD, std::string_view>(VK_RIGHT, "+moveright"),
     }
   };
 
@@ -189,10 +215,10 @@ std::errc init_controller_inputs(controller_binding* binding)
   std::array<std::pair<WORD, std::string_view>, 23> actions{
     {
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attack"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "invuse"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "weapalt"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_A, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_B, "+movedown"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "+speed"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "+sprint"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_UP, "+forward"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, "+back"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, "+moveleft"),
@@ -201,16 +227,16 @@ std::errc init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, "+right"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "weapon 1"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "inven"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "weapnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "invnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "+throw-grenade"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "weapondrop"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "vstr melee-toggle"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "+reload"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "vstr pistol-toggle"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "+zoom"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "vstr grenade-toggle"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "+dropweapon"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "weapprev"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_RIGHT, "weapnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "score"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_MENU, "cmd help"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "+scores"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_MENU, "OpenLimboMenu"),
     }
   };
 
@@ -232,15 +258,14 @@ predefined_int*
 
   if (name_str == L"r_mode")
   {
-    static auto modes = std::array<predefined_int, 9>{
-      predefined_int{ .label = L"640x480", .value = 3 },
-      predefined_int{ .label = L"800x600", .value = 4 },
-      predefined_int{ .label = L"960x720", .value = 5 },
-      predefined_int{ .label = L"1024x768", .value = 5 },
-      predefined_int{ .label = L"1152x864", .value = 6 },
-      predefined_int{ .label = L"1280x1024", .value = 7 },
-      predefined_int{ .label = L"1600x1200", .value = 8 },
-      predefined_int{ .label = L"Custom", .value = -1 },
+    static auto modes = std::array<predefined_int, 8>{
+      predefined_int{ .label = L"640x480", .value = 1 },
+      predefined_int{ .label = L"800x600", .value = 1 },
+      predefined_int{ .label = L"960x720", .value = 1 },
+      predefined_int{ .label = L"1024x768", .value = 1 },
+      predefined_int{ .label = L"1152x864", .value = 1 },
+      predefined_int{ .label = L"1280x960", .value = 1 },
+      predefined_int{ .label = L"1600x1200", .value = 1 },
       predefined_int{},
     };
 
@@ -258,7 +283,7 @@ predefined_string*
 {
   if (name && std::wstring_view(name) == L"map")
   {
-    return get_predefined_id_tech_3_map_command_line_settings(L"base");
+    return get_predefined_id_tech_3_map_command_line_settings(L"Main");
   }
 
   return nullptr;

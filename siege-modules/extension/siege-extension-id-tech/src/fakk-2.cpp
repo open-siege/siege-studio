@@ -12,7 +12,7 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-#include "GetGameFunctionNames.hpp"
+
 #include "id-tech-shared.hpp"
 
 extern "C" {
@@ -64,14 +64,6 @@ extern auto game_actions = std::array<game_action, 32>{ {
 } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
-extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
-extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"main/pak0.pk3/default.cfg", L"main/default.cfg" } };
-extern auto autoexec_configuration_paths = std::array<const wchar_t*, 4>{ { L"main/autoexec.cfg" } };
-extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{ { L"main/configs/*.cfg", L"main/configs/unnamedsoldier.cfg" } };
-
-extern void(__cdecl* ConsoleEvalCdecl)(const char*);
 
 using namespace std::literals;
 

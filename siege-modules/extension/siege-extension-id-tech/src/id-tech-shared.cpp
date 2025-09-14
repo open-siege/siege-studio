@@ -14,7 +14,7 @@
 #include <siege/resource/zip_resource.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-#include "GetGameFunctionNames.hpp"
+
 #include "id-tech-shared.hpp"
 
 namespace fs = std::filesystem;

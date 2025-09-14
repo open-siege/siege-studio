@@ -12,7 +12,7 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-#include "GetGameFunctionNames.hpp"
+
 #include "id-tech-shared.hpp"
 
 
@@ -57,14 +57,6 @@ extern auto game_actions = std::array<game_action, 32>{ {
 } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
-extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
-extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"baseq2/pak0.pak/default.cfg", L"baseq2/default.cfg" } };
-extern auto autoexec_configuration_paths = std::array<const wchar_t*, 4>{ { L"baseq2/autoexec.cfg", L"xatrix/autoexec.cfg", L"rogue/autoexec.cfg" } };
-extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{ { L"baseq2/config.cfg", L"xatrix/config.cfg", L"rogue/config.cfg" } };
-
-static void(__cdecl* ConsoleEval)(const char*) = nullptr;
 
 using namespace std::literals;
 
@@ -86,17 +78,6 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> va
   { "cl_gameplayfix_nudgeoutofsolid_separation"sv, "cl_explosions_alpha_start"sv },
   { "cl_movement_stopspeed"sv, "cl_itembobspeed"sv },
   { "qw_svc_maxspeed"sv, "scr_printspeed"sv }
-} };
-
-inline void set_steam_exports()
-{
-    //console var = 140b5f898
-    //console eval = 0x1400a77c0
-  ConsoleEval = (decltype(ConsoleEval))0x41db30;
-}
-
-constexpr std::array<void (*)(), 5> export_functions = { {
-  set_steam_exports,
 } };
 
 std::errc get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept

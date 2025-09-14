@@ -12,7 +12,7 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-#include "GetGameFunctionNames.hpp"
+
 #include "id-tech-shared.hpp"
 
 
@@ -70,12 +70,6 @@ constexpr static auto kingpin_aliases = std::array<std::array<std::string_view, 
 
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"siege-extension-kingpin" } };
-extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
-extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"main/Pak0.pak/default.cfg", L"main/default.cfg" } };
-extern auto autoexec_configuration_paths = std::array<const wchar_t*, 2>{ { L"main/autoexec.cfg" } };
-extern auto profile_configuration_paths = std::array<const wchar_t*, 3>{ { L"main/config.cfg" } };
 
 using namespace std::literals;
 

@@ -12,7 +12,7 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-#include "GetGameFunctionNames.hpp"
+
 #include "id-tech-shared.hpp"
 
 
@@ -71,12 +71,6 @@ constexpr static auto quake3_aliases = std::array<std::array<std::string_view, 2
   { "melee-swap-stop", "weapprev; set melee-swap vstr melee-swap-start" } } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
-extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
-extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"baseq3/pak0.pak/default.cfg", L"baseq3/default.cfg" } };
-extern auto autoexec_configuration_paths = std::array<const wchar_t*, 4>{ { L"baseq3/autoexec.cfg", L"xatrix/autoexec.cfg", L"rogue/autoexec.cfg" } };
-extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{ { L"baseq3/config.cfg", L"xatrix/config.cfg", L"rogue/config.cfg" } };
 
 using namespace std::literals;
 

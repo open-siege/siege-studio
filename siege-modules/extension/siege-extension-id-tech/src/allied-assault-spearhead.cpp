@@ -12,7 +12,7 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-#include "GetGameFunctionNames.hpp"
+
 #include "id-tech-shared.hpp"
 
 
@@ -56,16 +56,12 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "toggleitem", u"Use Item", u"Combat" },
   game_action{ game_action::digital, "+scores", u"Score", u"Interface" },
   game_action{ game_action::digital, "togglemenu", u"Objectives", u"Interface" },
-  game_action{ game_action::digital, "klook", u"Keyboard Look", u"Misc" },
-  game_action{ game_action::digital, "mlook", u"Mouse Look", u"Misc" },
 } };
 
-constexpr static auto moh_aliases = std::array<std::array<std::string_view, 2>, 6>{ { { "swap-pistol", "vstr swap-pistol-start" },
-  { "swap-pistol-start", "useweaponclass pistol;set swap-pistol vstr swap-pistol-stop" },
-  { "swap-pistol-stop", "uselast;set swap-pistol vstr swap-pistol-start" },
-  { "swap-grenade", "vstr swap-grenade-start" },
-  { "swap-grenade-start", "useweaponclass grenade;set swap-grenade vstr swap-grenade-stop" },
-  { "swap-grenade-stop", "uselast;set swap-grenade vstr swap-grenade-start" } } };
+constexpr static auto moh_aliases = std::array<std::array<std::string_view, 2>, 4>{ { { "+melee-attack", "useweaponclass pistol;wait 50;+attacksecondary" },
+  { "-melee-attack", "-attacksecondary;wait;uselast;" },
+  { "+throw-grenade", "useweaponclass grenade;wait 50;+attackprimary;" },
+  { "-throw-grenade", "-attackprimary;wait;uselast;" } } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 using namespace std::literals;
@@ -117,7 +113,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
 
   for (auto& alias : moh_aliases)
   {
-    config.emplace(siege::configuration::key_type({ "seta", alias[0] }), siege::configuration::key_type(alias[1]));
+    config.emplace(siege::configuration::key_type({ "alias", alias[0] }), siege::configuration::key_type(alias[1]));
   }
 
   if (enable_controller)

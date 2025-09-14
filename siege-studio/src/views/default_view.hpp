@@ -143,8 +143,8 @@ namespace siege::views
     { L"MageSlayer"sv, L"vampire"sv, L"siege-extension-mageslayer", std::array<std::wstring_view, 8>{ { L".vpk"sv, L".cfg", L".wav" } } },
     { L"Quake"sv, L"id_tech-2.0"sv, L"siege-extension-quake", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
     { L"Hexen 2"sv, L"id_tech-2.0"sv, L"siege-extension-hexen-2", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
-    { L"Laser Arena"sv, L"id_tech-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
-    { L"CIA Operative: Solo Missions"sv, L"id_tech-2.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
+    { L"Laser Arena"sv, L"id_tech-2.0"sv, L"siege-extension-laser-arena", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
+    { L"CIA Operative: Solo Missions"sv, L"id_tech-2.0"sv, L"siege-extension-cia-operative", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
     { L"Quake 2"sv, L"id_tech-2.5"sv, L"siege-extension-quake-2", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
     { L"Heretic 2"sv, L"id_tech-2.5"sv, L"siege-extension-heretic-2", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
     { L"SiN"sv, L"id_tech-2.5"sv, L"siege-extension-sin", std::array<std::wstring_view, 8>{ { L".pak", L".cfg", L".wav" } } },
@@ -157,25 +157,25 @@ namespace siege::views
     { L"Star Trek: Voyager - Elite Force"sv, L"id_tech-3.0-raven"sv, L"siege-extension-elite-force-sp", std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Star Trek: Voyager - Elite Force - Holomatch"sv, L"id_tech-3.0-raven"sv, L"siege-extension-elite-force-mp", std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Star Trek: Elite Force 2"sv, L"id_tech-3.0-ritual"sv, L"siege-extension-elite-force-2", std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
-    { L"American McGee's Alice"sv, L"id_tech-3.0-ritual"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3", L".cfg", L".wav" } } },
+    { L"American McGee's Alice"sv, L"id_tech-3.0-ritual"sv, L"siege-extension-alice"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".cfg", L".wav" } } },
     { L"Return to Castle Wolfenstein"sv, L"id_tech-3.0-wolf"sv, L"siege-extension-return-to-castle-wolf-sp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Return to Castle Wolfenstein (Multiplayer)"sv, L"id_tech-3.0-wolf"sv, L"siege-extension-return-to-castle-wolf-mp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".cfg", L".wav" } } },
     { L"Medal of Honor: Allied Assault"sv, L"id_tech-3.0-ritual"sv, L"siege-extension-allied-assault"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Medal of Honor: Allied Assault - Spearhead"sv, L"id_tech-3.0-ritual"sv, L"siege-extension-allied-assault-spearhead"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Medal of Honor: Allied Assault - Breakthrough"sv, L"id_tech-3.0-ritual"sv, L"siege-extension-allied-assault-breakthrough"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
-    { L"Medal of Honor: Pacific Assault"sv, L"id_tech-3.0-ritual"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Medal of Honor: Pacific Assault"sv, L"id_tech-3.0-ritual"sv, L"siege-extension-pacific-assault"sv, std::array<std::wstring_view, 8>{ { L".jpg", L".cfg", L".wav" } } },
     { L"Star Wars Jedi Knight 2: Jedi Outcast"sv, L"id_tech-3.0-raven"sv, L"siege-extension-jedi-outcast-sp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Star Wars Jedi Knight 2: Jedi Outcast (Multiplayer)"sv, L"id_tech-3.0-raven"sv, L"siege-extension-jedi-outcast-mp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Star Wars Jedi Knight: Jedi Academy"sv, L"id_tech-3.0-raven"sv, L"siege-extension-jedi-academy-sp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Star Wars Jedi Knight: Jedi Academy (Multiplayer)"sv, L"id_tech-3.0-raven"sv, L"siege-extension-jedi-academy-mp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Soldier of Fortune 2: Double Helix"sv, L"id_tech-3.0-raven"sv, L"siege-extension-soldier-of-fortune-2-sp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".png", L".cfg", L".wav" } } },
     { L"Soldier of Fortune 2: Double Helix (Multiplayer)"sv, L"id_tech-3.0-raven"sv, L"siege-extension-soldier-of-fortune-2-mp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".png", L".cfg", L".wav" } } },
-    { L"Wolfenstein: Enemy Territory"sv, L"id_tech-3.0-wolf"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Wolfenstein: Enemy Territory"sv, L"id_tech-3.0-wolf"sv, L"siege-extension-wolf-et"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Call of Duty"sv, L"id_tech-3.0-wolf"sv, L"siege-extension-call-of-duty-sp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Call of Duty (Multiplayer)"sv, L"id_tech-3.0-wolf"sv, L"siege-extension-call-of-duty-mp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Call of Duty: United Offensive"sv, L"id_tech-3.0-wolf"sv, L"siege-extension-call-of-duty-uo-sp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Call of Duty: United Offensive (Multiplayer)"sv, L"id_tech-3.0-wolf"sv, L"siege-extension-call-of-duty-uo-mp"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
-    { L"Iron Grip: Warlord"sv, L"id_tech-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
+    { L"Iron Grip: Warlord"sv, L"id_tech-3.0"sv, L"siege-extension-iron-grip"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Dark Salvation"sv, L"id_tech-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Quake Live"sv, L"id_tech-3.0"sv, L"siege-extension-quake-live", std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
     { L"Space Trader: Merchant Marine"sv, L"id_tech-3.0"sv, L"siege-extension-space-trader"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
@@ -738,10 +738,9 @@ namespace siege::views
                 dir_entry != fs::recursive_directory_iterator();
                 ++dir_entry)
               {
-
                 process_path(*dir_entry);
 
-                if (dir_entry.depth() == 2)
+                if (dir_entry.depth() == 4)
                 {
                   dir_entry.disable_recursion_pending();
                 }

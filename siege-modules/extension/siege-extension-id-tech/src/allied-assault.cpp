@@ -12,7 +12,7 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-#include "GetGameFunctionNames.hpp"
+
 #include "id-tech-shared.hpp"
 
 
@@ -48,25 +48,17 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::analog, "+lookdown", u"Look Down", u"Aiming" },
   game_action{ game_action::digital, "+attackprimary", u"Attack", u"Combat" },
   game_action{ game_action::digital, "+attacksecondary", u"Alt Attack", u"Combat" },
-  game_action{ game_action::digital, "vstr swap-pistol", u"Swap to Pistol", u"Combat" },
-  game_action{ game_action::digital, "vstr swap-grenade", u"Swap to Grenade", u"Combat" },
+  game_action{ game_action::digital, "+melee-attack", u"Melee Attack", u"Combat" },
+  game_action{ game_action::digital, "+throw-grenade", u"Throw Grenade", u"Combat" },
   game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
   game_action{ game_action::digital, "weapprev", u"Previous Weapon", u"Combat" },
   game_action{ game_action::digital, "invnext", u"Next Item", u"Combat" },
   game_action{ game_action::digital, "toggleitem", u"Use Item", u"Combat" },
   game_action{ game_action::digital, "+scores", u"Score", u"Interface" },
   game_action{ game_action::digital, "togglemenu", u"Objectives", u"Interface" },
-  game_action{ game_action::digital, "klook", u"Keyboard Look", u"Misc" },
-  game_action{ game_action::digital, "mlook", u"Mouse Look", u"Misc" },
 } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
-extern auto keyboard_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto mouse_input_backends = std::array<const wchar_t*, 2>{ { L"user32" } };
-extern auto configuration_extensions = std::array<const wchar_t*, 2>{ { L".cfg" } };
-extern auto template_configuration_paths = std::array<const wchar_t*, 3>{ { L"main/pak0.pk3/default.cfg", L"main/default.cfg" } };
-extern auto autoexec_configuration_paths = std::array<const wchar_t*, 4>{ { L"main/autoexec.cfg" } };
-extern auto profile_configuration_paths = std::array<const wchar_t*, 4>{ { L"main/configs/*.cfg", L"main/configs/unnamedsoldier.cfg" } };
 
 using namespace std::literals;
 
@@ -84,12 +76,11 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 7> fu
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "in_mouse"sv, "in_midi"sv } } };
 
-constexpr static auto moh_aliases = std::array<std::array<std::string_view, 2>, 6>{ { { "swap-pistol", "vstr swap-pistol-start" },
-  { "swap-pistol-start", "useweaponclass pistol;set swap-pistol vstr swap-pistol-stop" },
-  { "swap-pistol-stop", "uselast;set swap-pistol vstr swap-pistol-start" },
-  { "swap-grenade", "vstr swap-grenade-start" },
-  { "swap-grenade-start", "useweaponclass grenade;set swap-grenade vstr swap-grenade-stop" },
-  { "swap-grenade-stop", "uselast;set swap-grenade vstr swap-grenade-start" } } };
+constexpr static auto moh_aliases = std::array<std::array<std::string_view, 2>, 4>{ { 
+  { "+melee-attack", "useweaponclass pistol;wait 50;+attacksecondary" },
+  { "-melee-attack", "-attacksecondary;wait;uselast;" },
+  { "+throw-grenade", "useweaponclass grenade;wait 50;+attackprimary;" },
+  { "-throw-grenade", "-attackprimary;wait;uselast;" } } };
 
 std::errc get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
@@ -124,7 +115,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
 
   for (auto& alias : moh_aliases)
   {
-    config.emplace(siege::configuration::key_type({ "seta", alias[0] }), siege::configuration::key_type(alias[1]));
+    config.emplace(siege::configuration::key_type({ "alias", alias[0] }), siege::configuration::key_type(alias[1]));
   }
 
   bool enable_controller = save_bindings_to_config(*args, config, q3_mapping_context{});
