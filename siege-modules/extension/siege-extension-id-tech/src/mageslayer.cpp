@@ -12,7 +12,6 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-
 #include "id-tech-shared.hpp"
 
 
@@ -22,29 +21,27 @@ using game_action = siege::platform::game_action;
 using game_command_line_caps = siege::platform::game_command_line_caps;
 
 extern auto game_actions = std::array<game_action, 32>{ {
-  game_action{ game_action::analog, "forward", u"Move Forward", u"Movement" },
-  game_action{ game_action::analog, "back", u"Move Backward", u"Movement" },
-  game_action{ game_action::analog, "moveleft", u"Strafe Left", u"Movement" },
-  game_action{ game_action::analog, "moveright", u"Strafe Right", u"Movement" },
-  game_action{ game_action::analog, "moveup", u"Jump", u"Movement" },
-  game_action{ game_action::analog, "movedown", u"Crouch", u"Movement" },
-  game_action{ game_action::digital, "speed", u"Run", u"Movement" },
-  game_action{ game_action::analog, "left", u"Turn Left", u"Aiming" },
-  game_action{ game_action::analog, "right", u"Turn Right", u"Aiming" },
-  game_action{ game_action::analog, "lookup", u"Look Up", u"Aiming" },
-  game_action{ game_action::analog, "lookdown", u"Look Down", u"Aiming" },
-  game_action{ game_action::digital, "attack", u"Attack", u"Combat" },
-  game_action{ game_action::digital, "altattack", u"Alt Attack", u"Combat" },
-  game_action{ game_action::digital, "melee-attack", u"Melee Attack", u"Combat" },
-  game_action{ game_action::digital, "use-plus-speciau", u"Special Action", u"Combat" },
-  game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
-  game_action{ game_action::digital, "weaprev", u"Previous Weapon", u"Combat" },
-  game_action{ game_action::digital, "itemnext", u"Next Item", u"Combat" },
-  game_action{ game_action::digital, "itemuse", u"Use Item", u"Combat" },
-  game_action{ game_action::digital, "score", u"Score", u"Interface" },
-  game_action{ game_action::digital, "menu-objectives", u"Objectives", u"Interface" },
-  game_action{ game_action::digital, "klook", u"Keyboard Look", u"Misc" },
-  game_action{ game_action::digital, "mlook", u"Mouse Look", u"Misc" },
+  game_action{ game_action::analog, "+forward", u"Move Forward", u"Movement" },
+  game_action{ game_action::analog, "+backward", u"Move Backward", u"Movement" },
+  game_action{ game_action::analog, "+strafeleft", u"Strafe Left", u"Movement" },
+  game_action{ game_action::analog, "+straferight", u"Strafe Right", u"Movement" },
+  game_action{ game_action::analog, "+jump", u"Jump", u"Movement" },
+  game_action{ game_action::analog, "+down", u"Crouch", u"Movement" },
+  game_action{ game_action::digital, "+speed", u"Run", u"Movement" },
+  game_action{ game_action::analog, "+turnleft", u"Turn Left", u"Aiming" },
+  game_action{ game_action::analog, "+turnright", u"Turn Right", u"Aiming" },
+  game_action{ game_action::analog, "+aimup", u"Aim Up", u"Aiming" },
+  game_action{ game_action::analog, "+aimdown", u"Aim Down", u"Aiming" },
+  game_action{ game_action::digital, "+attack", u"Attack", u"Combat" },
+  game_action{ game_action::digital, "+use", u"Use", u"Combat" },
+  game_action{ game_action::digital, "previtem", u"Previous Item", u"Combat" },
+  game_action{ game_action::digital, "nextitem", u"Next Item", u"Combat" },
+  game_action{ game_action::digital, "useitem", u"Use Item", u"Combat" },
+  game_action{ game_action::digital, "dropitem", u"Drop Item", u"Combat" },
+  game_action{ game_action::digital, "nextweapon", u"Next Weapon", u"Combat" },
+  game_action{ game_action::digital, "prevweapon", u"Previous Weapon", u"Combat" },
+  game_action{ game_action::digital, "dropweapon", u"Drop Weapon", u"Combat" },
+  game_action{ game_action::digital, "looktoggle", u"Look Toggle", u"Misc" },
 } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };

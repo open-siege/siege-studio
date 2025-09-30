@@ -12,7 +12,6 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-
 #include "id-tech-shared.hpp"
 
 
@@ -53,7 +52,6 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::analog, "+lookdown", u"Look Down", u"Aiming" },
   game_action{ game_action::digital, "+attack", u"Attack", u"Combat" },
   game_action{ game_action::digital, "+zoom", u"Zoom", u"Combat" },
-  game_action{ game_action::digital, "vstr melee-swap", u"Toggle Melee", u"Combat" },
   game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
   game_action{ game_action::digital, "weaprev", u"Previous Weapon", u"Combat" },
   game_action{ game_action::digital, "itemnext", u"Next Item", u"Combat" },
@@ -65,10 +63,6 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "+klook", u"Keyboard Look", u"Misc" },
   game_action{ game_action::digital, "+mlook", u"Mouse Look", u"Misc" },
 } };
-
-constexpr static auto quake3_aliases = std::array<std::array<std::string_view, 2>, 3>{ { { "melee-swap", "vstr melee-swap-start" },
-  { "melee-swap-start", "weapon 1; set melee-swap vstr melee-swap-stop" },
-  { "melee-swap-stop", "weapprev; set melee-swap vstr melee-swap-start" } } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 
@@ -126,11 +120,6 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   std::ofstream custom_bindings("baseq3/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
-
-  for (auto& alias : quake3_aliases)
-  {
-    config.emplace(siege::configuration::key_type({ "set", alias[0] }), siege::configuration::key_type(alias[1]));
-  }
 
   bool enable_controller = save_bindings_to_config(*args, config, q3_mapping_context{});
 
@@ -221,7 +210,7 @@ std::errc init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, "+right"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "vstr melee-swap"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "weaprev"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "weapnext"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "weapprev"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_RIGHT, "weapnext"),

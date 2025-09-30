@@ -309,8 +309,7 @@ std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_2_5(WORD
 
 std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_2_0(WORD vkey, WORD index)
 {
-  if (!(vkey == VK_GAMEPAD_LEFT_TRIGGER || vkey == VK_GAMEPAD_RIGHT_TRIGGER || 
-      (vkey >= VK_GAMEPAD_LEFT_THUMBSTICK_UP && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)))
+  if (!(vkey == VK_GAMEPAD_LEFT_TRIGGER || vkey == VK_GAMEPAD_RIGHT_TRIGGER || (vkey >= VK_GAMEPAD_LEFT_THUMBSTICK_UP && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)))
   {
     return std::nullopt;
   }
@@ -676,8 +675,7 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
         config.emplace(siege::configuration::key_type({ *setting }), siege::configuration::key_type(index));
       }
 
-      if ((binding.vkey == VK_GAMEPAD_LEFT_TRIGGER || binding.vkey == VK_GAMEPAD_RIGHT_TRIGGER) &&
-          binding.context == hardware_context::controller_xbox && !context.supports_triggers_as_buttons)
+      if ((binding.vkey == VK_GAMEPAD_LEFT_TRIGGER || binding.vkey == VK_GAMEPAD_RIGHT_TRIGGER) && binding.context == hardware_context::controller_xbox && !context.supports_triggers_as_buttons)
       {
         auto action_name = std::string_view(binding.action_name.data());
         auto mouse = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& existing) {
@@ -758,12 +756,12 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
 
 void insert_string_setting_once(siege::platform::game_command_line_args& args, std::wstring_view name, std::wstring_view value)
 {
-    if (std::any_of(args.string_settings.begin(), args.string_settings.end(), [&](auto& item) {
+  if (std::any_of(args.string_settings.begin(), args.string_settings.end(), [&](auto& item) {
         return item.name && item.name == name && item.value && item.value == value;
-        }))
-    {
-      return;
-    }
+      }))
+  {
+    return;
+  }
 
   auto iter = std::find_if(args.string_settings.begin(), args.string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
 
@@ -843,8 +841,7 @@ void bind_controller_send_input_fallback(siege::platform::game_command_line_args
   if (right_stick_left != args.action_bindings.end())
   {
     auto fallback = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& binding) {
-      return (binding.context == hardware_context::global || 
-          binding.context == hardware_context::keyboard) && binding.vkey != not_target_vkey && std::string_view{ binding.action_name.data() } == target_action;
+      return (binding.context == hardware_context::global || binding.context == hardware_context::keyboard) && binding.vkey != not_target_vkey && std::string_view{ binding.action_name.data() } == target_action;
     });
 
     if (fallback != args.action_bindings.end())
@@ -870,10 +867,6 @@ void bind_controller_send_input_fallback(siege::platform::game_command_line_args
 }
 
 extern "C" {
-extern void(__cdecl* ConsoleEvalCdecl)(const char*) = nullptr;
-extern void(__fastcall* ConsoleEvalFastcall)(const char*) = nullptr;
-extern void(__stdcall* ConsoleEvalStdcall)(const char*) = nullptr;
-
 std::errc apply_dpi_awareness(const wchar_t* exe_path_str)
 {
   if (exe_path_str == nullptr)
@@ -1169,296 +1162,5 @@ predefined_string*
   {
     return nullptr;
   }
-}
-
-LRESULT CALLBACK dispatch_input_to_game_console(int code, WPARAM wParam, LPARAM lParam, void (*process_movement_keydown)(MSG* message, void (*console_eval)(const char*)), void (*console_eval)(const char*));
-
-void process_quake_movement_keydown(MSG* message, void (*console_eval)(const char*));
-void process_quake_3_movement_keydown(MSG* message, void (*console_eval)(const char*));
-
-LRESULT CALLBACK dispatch_input_to_cdecl_quake_2_console(int code, WPARAM wParam, LPARAM lParam)
-{
-  if (ConsoleEvalCdecl)
-  {
-    return dispatch_input_to_game_console(code, wParam, lParam, process_quake_movement_keydown, ConsoleEvalCdecl);
-  }
-
-  return CallNextHookEx(nullptr, code, wParam, lParam);
-}
-
-void do_console_eval_cdecl_quake_1(const char* text)
-{
-  thread_local std::string temp;
-  temp.assign(text);
-  temp.append(1, '\n');
-  ConsoleEvalCdecl(temp.c_str());
-}
-
-LRESULT CALLBACK dispatch_input_to_cdecl_quake_1_console(int code, WPARAM wParam, LPARAM lParam)
-{
-  if (ConsoleEvalCdecl)
-  {
-    return dispatch_input_to_game_console(code, wParam, lParam, process_quake_movement_keydown, do_console_eval_cdecl_quake_1);
-  }
-
-  return CallNextHookEx(nullptr, code, wParam, lParam);
-}
-
-LRESULT CALLBACK dispatch_input_to_cdecl_quake_3_console(int code, WPARAM wParam, LPARAM lParam)
-{
-  if (ConsoleEvalCdecl)
-  {
-    return dispatch_input_to_game_console(code, wParam, lParam, process_quake_3_movement_keydown, do_console_eval_cdecl_quake_1);
-  }
-
-  return CallNextHookEx(nullptr, code, wParam, lParam);
-}
-
-void do_console_eval_stdcall_quake_3(const char* text)
-{
-  thread_local std::string temp;
-  temp.assign(text);
-  temp.append(1, '\n');
-  ConsoleEvalCdecl(temp.c_str());
-}
-
-LRESULT CALLBACK dispatch_input_to_stdcall_quake_3_console(int code, WPARAM wParam, LPARAM lParam)
-{
-  if (ConsoleEvalCdecl)
-  {
-    return dispatch_input_to_game_console(code, wParam, lParam, process_quake_3_movement_keydown, do_console_eval_stdcall_quake_3);
-  }
-
-  return CallNextHookEx(nullptr, code, wParam, lParam);
-}
-
-void do_console_eval_fastcall(const char* text)
-{
-  ConsoleEvalFastcall(text);
-}
-
-LRESULT CALLBACK dispatch_input_to_fastcall_quake_2_console(int code, WPARAM wParam, LPARAM lParam)
-{
-  if (ConsoleEvalFastcall)
-  {
-    return dispatch_input_to_game_console(code, wParam, lParam, process_quake_movement_keydown, do_console_eval_fastcall);
-  }
-
-  return CallNextHookEx(nullptr, code, wParam, lParam);
-}
-
-WORD get_extended_state(BYTE vkey)
-{
-  std::array<WORD, 256>* extended_states = nullptr;
-  auto window = ::GetFocus();
-  if (window && ::IsWindowUnicode(window))
-  {
-    extended_states = (std::array<WORD, 256>*)::GetPropW(window, L"ExtendedVkStates");
-  }
-  else if (window)
-  {
-    extended_states = (std::array<WORD, 256>*)::GetPropA(window, "ExtendedVkStates");
-  }
-
-  if (extended_states)
-  {
-    return (*extended_states)[vkey];
-  }
-
-  return 0;
-}
-
-void process_quake_3_movement_keydown(MSG* message, void (*console_eval)(const char*))
-{
-  constexpr static std::uint16_t uint_max = -1;
-  constexpr static std::uint16_t uint_half = uint_max / 2;
-  if (message->wParam == VK_GAMEPAD_LEFT_THUMBSTICK_LEFT)
-  {
-    auto state = get_extended_state(message->wParam);
-
-    std::stringstream command;
-    command << "cl_run " << (state > uint_half ? "1" : "0");
-    console_eval(command.str().c_str());
-    console_eval("+moveleft");
-  }
-  else if (message->wParam == VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT)
-  {
-    auto state = get_extended_state(message->wParam);
-    std::stringstream command;
-    command << "cl_run " << (state > uint_half ? "1" : "0");
-    console_eval(command.str().c_str());
-    console_eval("+moveright");
-  }
-  else if (message->wParam == VK_GAMEPAD_LEFT_THUMBSTICK_UP)
-  {
-    auto state = get_extended_state(message->wParam);
-    std::stringstream command;
-    command << "cl_run " << (state > uint_half ? "1" : "0");
-    console_eval(command.str().c_str());
-    console_eval("+forward");
-  }
-  else if (message->wParam == VK_GAMEPAD_LEFT_THUMBSTICK_DOWN)
-  {
-    auto state = get_extended_state(message->wParam);
-    std::stringstream command;
-    command << "cl_run " << (state > uint_half ? "1" : "0");
-    console_eval(command.str().c_str());
-    console_eval("+back");
-  }
-
-  if (message->wParam == VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)
-  {
-    auto state = ((float)get_extended_state(message->wParam) / (float)uint_max) * 100;
-    std::stringstream command;
-    command << "cl_yawspeed " << (int)state;
-    console_eval(command.str().c_str());
-    console_eval("+left");
-  }
-  else if (message->wParam == VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT)
-  {
-    auto state = ((float)get_extended_state(message->wParam) / (float)uint_max) * 100;
-    std::stringstream command;
-    command << "cl_yawspeed " << (int)state;
-    console_eval(command.str().c_str());
-    console_eval("+right");
-  }
-  else if (message->wParam == VK_GAMEPAD_RIGHT_THUMBSTICK_UP)
-  {
-    auto state = ((float)get_extended_state(message->wParam) / (float)uint_max) * 100;
-    std::stringstream command;
-    command << "cl_pitchspeed " << (int)state;
-    console_eval(command.str().c_str());
-    console_eval("+lookup");
-  }
-  else if (message->wParam == VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN)
-  {
-    auto state = ((float)get_extended_state(message->wParam) / (float)uint_max) * 100;
-    std::stringstream command;
-    command << "cl_pitchspeed " << (int)state;
-    console_eval(command.str().c_str());
-    console_eval("+lookdown");
-  }
-}
-
-void process_quake_movement_keydown(MSG* message, void (*console_eval)(const char*))
-{
-  constexpr static std::uint16_t uint_max = -1;
-  if (message->wParam == VK_GAMEPAD_LEFT_THUMBSTICK_LEFT)
-  {
-    auto state = ((float)get_extended_state(message->wParam) / (float)uint_max) * 160;
-
-    std::stringstream command;
-    command << "cl_sidespeed " << (int)state;
-    console_eval(command.str().c_str());
-    console_eval("+moveleft");
-  }
-  else if (message->wParam == VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT)
-  {
-    auto state = ((float)get_extended_state(message->wParam) / (float)uint_max) * 160;
-    std::stringstream command;
-    command << "cl_sidespeed " << (int)state;
-    console_eval(command.str().c_str());
-    console_eval("+moveright");
-  }
-  else if (message->wParam == VK_GAMEPAD_LEFT_THUMBSTICK_UP)
-  {
-    auto state = ((float)get_extended_state(message->wParam) / (float)uint_max) * 160;
-    std::stringstream command;
-    command << "cl_forwardspeed " << (int)state;
-    console_eval(command.str().c_str());
-    console_eval("+forward");
-  }
-  else if (message->wParam == VK_GAMEPAD_LEFT_THUMBSTICK_DOWN)
-  {
-    auto state = ((float)get_extended_state(message->wParam) / (float)uint_max) * 160;
-    std::stringstream command;
-    command << "cl_forwardspeed " << (int)state;
-    console_eval(command.str().c_str());
-    console_eval("+back");
-  }
-
-  if (message->wParam == VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)
-  {
-    auto state = ((float)get_extended_state(message->wParam) / (float)uint_max) * 100;
-    std::stringstream command;
-    command << "cl_yawspeed " << (int)state;
-    console_eval(command.str().c_str());
-    console_eval("+left");
-  }
-  else if (message->wParam == VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT)
-  {
-    auto state = ((float)get_extended_state(message->wParam) / (float)uint_max) * 100;
-    std::stringstream command;
-    command << "cl_yawspeed " << (int)state;
-    console_eval(command.str().c_str());
-    console_eval("+right");
-  }
-  else if (message->wParam == VK_GAMEPAD_RIGHT_THUMBSTICK_UP)
-  {
-    auto state = ((float)get_extended_state(message->wParam) / (float)uint_max) * 100;
-    std::stringstream command;
-    command << "cl_pitchspeed " << (int)state;
-    console_eval(command.str().c_str());
-    console_eval("+lookup");
-  }
-  else if (message->wParam == VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN)
-  {
-    auto state = ((float)get_extended_state(message->wParam) / (float)uint_max) * 100;
-    std::stringstream command;
-    command << "cl_pitchspeed " << (int)state;
-    console_eval(command.str().c_str());
-    console_eval("+lookdown");
-  }
-}
-
-LRESULT CALLBACK dispatch_input_to_game_console(int code, WPARAM wParam, LPARAM lParam, void (*process_movement_keydown)(MSG* message, void (*console_eval)(const char*)), void (*console_eval)(const char*))
-{
-  if (code == HC_ACTION && wParam == PM_REMOVE)
-  {
-    auto* message = (MSG*)lParam;
-
-    if (message->message == WM_KEYDOWN)
-    {
-      process_movement_keydown(message, console_eval);
-    }
-    else if (message->message == WM_KEYUP)
-    {
-      if (message->wParam == VK_GAMEPAD_LEFT_THUMBSTICK_LEFT)
-      {
-        console_eval("-moveleft");
-      }
-      else if (message->wParam == VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT)
-      {
-        console_eval("-moveright");
-      }
-      else if (message->wParam == VK_GAMEPAD_LEFT_THUMBSTICK_UP)
-      {
-        console_eval("-forward");
-      }
-      else if (message->wParam == VK_GAMEPAD_LEFT_THUMBSTICK_DOWN)
-      {
-        console_eval("-back");
-      }
-
-      if (message->wParam == VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)
-      {
-        console_eval("-left");
-      }
-      else if (message->wParam == VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT)
-      {
-        console_eval("-right");
-      }
-      else if (message->wParam == VK_GAMEPAD_RIGHT_THUMBSTICK_UP)
-      {
-        console_eval("-lookup");
-      }
-      else if (message->wParam == VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN)
-      {
-        console_eval("-lookdown");
-      }
-    }
-  }
-
-  return CallNextHookEx(nullptr, code, wParam, lParam);
 }
 }

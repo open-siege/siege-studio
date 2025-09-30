@@ -14,7 +14,6 @@
 #include <siege/extension/shared.hpp>
 #include "id-tech-shared.hpp"
 
-
 extern "C" {
 using hardware_context = siege::platform::hardware_context;
 using game_action = siege::platform::game_action;
@@ -55,7 +54,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "+zoom", u"Binocular Zoom", u"Combat" },
   game_action{ game_action::digital, "itemnext", u"Next Item", u"Combat" },
   game_action{ game_action::digital, "itemuse", u"Use Item", u"Combat" },
-  game_action{ game_action::digital, "score", u"Score", u"Interface" },
+  game_action{ game_action::digital, "+scores", u"Score", u"Interface" },
   game_action{ game_action::digital, "notebook", u"Objectives", u"Interface" },
   game_action{ game_action::digital, "+klook", u"Keyboard Look", u"Misc" },
   game_action{ game_action::digital, "+mlook", u"Mouse Look", u"Misc" },
@@ -188,22 +187,8 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, VK_LEFT);
   bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, VK_RIGHT);
 
-  auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
-
-  if (iter != args->string_settings.end())
-  {
-    iter->name = L"exec";
-    iter->value = L"siege_studio_inputs.cfg";
-  }
-
-  std::advance(iter, 1);
-  iter->name = L"console";
-  iter->value = L"1";
-
-  std::advance(iter, 1);
-  iter->name = L"map";
-  iter->value = L"trdm01a";
-
+  insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
+  insert_string_setting_once(*args, L"console", L"1");
 
   return std::errc{};
 }
@@ -272,6 +257,8 @@ std::errc init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "weapalt"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_A, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_B, "+movedown"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "+reload"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "vstr pistol-toggle"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "+speed"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_UP, "+forward"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, "+back"),
@@ -282,8 +269,6 @@ std::errc init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "+kick"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "+reload"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "vstr pistol-toggle"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "+zoom"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "vstr grenade-toggle"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "weapondrop"),

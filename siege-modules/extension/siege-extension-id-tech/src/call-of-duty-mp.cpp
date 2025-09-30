@@ -12,7 +12,6 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-
 #include "id-tech-shared.hpp"
 
 
@@ -127,17 +126,8 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
 
   config.save(custom_bindings);
 
-  auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
-
-  if (iter != args->string_settings.end())
-  {
-    iter->name = L"exec";
-    iter->value = L"siege_studio_inputs.cfg";
-  }
-
-  std::advance(iter, 1);
-  iter->name = L"console";
-  iter->value = L"1";
+  insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
+  insert_string_setting_once(*args, L"console", L"1");
 
   return std::errc{};
 }

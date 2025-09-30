@@ -8,6 +8,7 @@
 #include "exe_view.hpp"
 #include <detours.h>
 #include <imagehlp.h>
+#include <xinput.h>
 
 using game_command_line_caps = siege::platform::game_command_line_caps;
 
@@ -305,8 +306,35 @@ namespace siege::views
         UINT size = controllers.size();
         ::GetRawInputDeviceList(controllers.data(), &size, sizeof(RAWINPUTDEVICELIST));
 
+        // Raw input doesn't work properly under remote desktop :(
+        bool has_controllers = std::any_of(controllers.begin(), controllers.end(), [](auto& entry) {
+          return entry.dwType == RIM_TYPEHID;
+        });
 
-        for (auto i = 0; i < controller_table.GetItemCount(); ++i)
+        bool has_xinput_controllers = false;
+
+        if (!has_controllers)
+        {
+          auto version_and_name = win32::get_xinput_version();
+
+          if (version_and_name)
+          {
+            win32::module xinput_module;
+            xinput_module.reset(::LoadLibraryExW(version_and_name->second.data(), nullptr, ::IsWindowsVistaOrGreater() ? LOAD_LIBRARY_SEARCH_SYSTEM32 : 0));
+
+            std::add_pointer_t<decltype(::XInputGetState)> xinput_get_state = xinput_module.GetProcAddress<decltype(xinput_get_state)>("XInputGetState");
+            XINPUT_STATE temp{};
+            has_xinput_controllers = xinput_get_state(0, &temp) == S_OK;
+          }
+        }
+
+        auto binding_count = controller_table.GetItemCount();
+        if (!(has_controllers || has_xinput_controllers))
+        {
+          binding_count = 0;
+        }
+
+        for (auto i = 0; i < binding_count; ++i)
         {
           auto item = controller_table.GetItem(LVITEMW{
             .mask = LVIF_PARAM,
@@ -322,7 +350,13 @@ namespace siege::views
 
               auto& action = actions[action_index];
 
-              auto hardware_index = hardware_index_for_controller_vkey(std::span<RAWINPUTDEVICELIST>(controllers.data(), size), 0, virtual_key);
+
+              auto hardware_index = hardware_index_for_xbox_vkey(virtual_key);
+
+              if (has_controllers)
+              {
+                hardware_index = hardware_index_for_controller_vkey(std::span<RAWINPUTDEVICELIST>(controllers.data(), size), 0, virtual_key);
+              }
 
               auto key_name = string_for_vkey(virtual_key, hardware_index.first);
 

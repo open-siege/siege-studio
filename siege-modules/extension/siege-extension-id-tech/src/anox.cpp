@@ -63,8 +63,6 @@ extern auto game_actions = std::array<game_action, 32>{ {
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"siege-extension-anachronox" } };
 
-extern void(__cdecl* ConsoleEvalCdecl)(const char*);
-
 using namespace std::literals;
 
 constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{
@@ -77,15 +75,6 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> fu
   { "echo"sv, "echo"sv } } };
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "in_initmouse"sv, "in_joystick"sv } } };
-
-inline void set_gog_exports()
-{
-  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x4356da;
-}
-
-constexpr std::array<void (*)(), 1> export_functions = { {
-  set_gog_exports,
-} };
 
 std::errc get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
@@ -264,92 +253,5 @@ std::errc executable_is_supported(const wchar_t* filename) noexcept
   }
 
   return std::errc::not_supported;
-}
-
-BOOL WINAPI DllMain(
-  HINSTANCE hinstDLL,
-  DWORD fdwReason,
-  LPVOID lpvReserved) noexcept
-{
-  if constexpr (sizeof(void*) != sizeof(std::uint32_t))
-  {
-    return TRUE;
-  }
-
-  if (DetourIsHelperProcess())
-  {
-    return TRUE;
-  }
-
-  if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
-  {
-    auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
-
-    auto value = app_module.GetProcAddress<std::uint32_t*>("DisableSiegeExtensionModule");
-
-    if (value && *value == -1)
-    {
-      return TRUE;
-    }
-  }
-
-  if (fdwReason == DLL_PROCESS_ATTACH || fdwReason == DLL_PROCESS_DETACH)
-  {
-    thread_local HHOOK hook;
-
-    if (fdwReason == DLL_PROCESS_ATTACH)
-    {
-      int index = 0;
-      try
-      {
-        auto app_module = win32::module_ref(::GetModuleHandleW(nullptr));
-
-        bool module_is_valid = false;
-
-        for (const auto& item : verification_strings)
-        {
-          win32::module_ref temp((void*)item[0].second);
-
-          if (temp != app_module)
-          {
-            continue;
-          }
-
-          module_is_valid = std::all_of(item.begin(), item.end(), [](const auto& str) {
-            return std::memcmp(str.first.data(), (void*)str.second, str.first.size()) == 0;
-          });
-
-
-          if (module_is_valid)
-          {
-            export_functions[index]();
-
-            break;
-          }
-          index++;
-        }
-
-        if (!module_is_valid)
-        {
-          return FALSE;
-        }
-
-        DetourRestoreAfterWith();
-
-        auto self = win32::window_module_ref(hinstDLL);
-        hook = ::SetWindowsHookExW(WH_GETMESSAGE, dispatch_input_to_cdecl_quake_2_console, self, ::GetCurrentThreadId());
-      }
-      catch (...)
-      {
-        return FALSE;
-      }
-    }
-    else if (fdwReason == DLL_PROCESS_DETACH)
-    {
-      UnhookWindowsHookEx(hook);
-    }
-  }
-
-  return TRUE;
 }
 }

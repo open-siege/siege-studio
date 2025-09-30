@@ -12,9 +12,7 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-
 #include "id-tech-shared.hpp"
-
 
 extern "C" {
 using hardware_context = siege::platform::hardware_context;
@@ -218,6 +216,8 @@ std::errc init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "weapalt"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_A, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_B, "+movedown"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "+reload"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "vstr pistol-toggle"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "+sprint"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_UP, "+forward"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, "+back"),
@@ -228,8 +228,6 @@ std::errc init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "vstr melee-toggle"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "+reload"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "vstr pistol-toggle"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "+zoom"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "vstr grenade-toggle"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "+dropweapon"),

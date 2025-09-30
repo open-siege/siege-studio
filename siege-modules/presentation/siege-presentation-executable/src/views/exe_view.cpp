@@ -695,6 +695,52 @@ namespace siege::views
     return L"Keyboard";
   }
 
+  std::pair<siege::platform::hardware_context, std::uint16_t> hardware_index_for_xbox_vkey(SHORT vkey)
+  {
+    using namespace siege::platform;
+
+    switch (vkey)
+    {
+    case VK_GAMEPAD_A:
+      return std::make_pair(hardware_context::controller_xbox, 0);
+    case VK_GAMEPAD_B:
+      return std::make_pair(hardware_context::controller_xbox, 1);
+    case VK_GAMEPAD_X:
+      return std::make_pair(hardware_context::controller_xbox, 2);
+    case VK_GAMEPAD_Y:
+      return std::make_pair(hardware_context::controller_xbox, 3);
+    case VK_GAMEPAD_LEFT_SHOULDER:
+      return std::make_pair(hardware_context::controller_xbox, 4);
+    case VK_GAMEPAD_RIGHT_SHOULDER:
+      return std::make_pair(hardware_context::controller_xbox, 5);
+    case VK_GAMEPAD_VIEW:
+      return std::make_pair(hardware_context::controller_xbox, 6);
+    case VK_GAMEPAD_MENU:
+      return std::make_pair(hardware_context::controller_xbox, 7);
+    case VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON:
+      return std::make_pair(hardware_context::controller_xbox, 8);
+    case VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON:
+      return std::make_pair(hardware_context::controller_xbox, 9);
+    case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
+    case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT:
+      return std::make_pair(hardware_context::controller_xbox, 0);
+    case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
+    case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN:
+      return std::make_pair(hardware_context::controller_xbox, 1);
+    case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
+    case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT:
+      return std::make_pair(hardware_context::controller_xbox, 4);
+    case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
+    case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN:
+      return std::make_pair(hardware_context::controller_xbox, 3);
+    case VK_GAMEPAD_LEFT_TRIGGER:
+    case VK_GAMEPAD_RIGHT_TRIGGER:
+      return std::make_pair(hardware_context::controller_xbox, 2);
+    default:
+      return std::make_pair(hardware_context::controller_xbox, 0);
+    }
+  }
+
   std::pair<siege::platform::hardware_context, std::uint16_t> hardware_index_for_controller_vkey(std::span<RAWINPUTDEVICELIST> controllers, std::uint32_t index, SHORT vkey)
   {
     std::wstring device_name(2048, 0);
@@ -750,46 +796,7 @@ namespace siege::views
 
     if (found_controller && xinput_devices.size() > index)
     {
-      switch (vkey)
-      {
-      case VK_GAMEPAD_A:
-        return std::make_pair(hardware_context::controller_xbox, 0);
-      case VK_GAMEPAD_B:
-        return std::make_pair(hardware_context::controller_xbox, 1);
-      case VK_GAMEPAD_X:
-        return std::make_pair(hardware_context::controller_xbox, 2);
-      case VK_GAMEPAD_Y:
-        return std::make_pair(hardware_context::controller_xbox, 3);
-      case VK_GAMEPAD_LEFT_SHOULDER:
-        return std::make_pair(hardware_context::controller_xbox, 4);
-      case VK_GAMEPAD_RIGHT_SHOULDER:
-        return std::make_pair(hardware_context::controller_xbox, 5);
-      case VK_GAMEPAD_VIEW:
-        return std::make_pair(hardware_context::controller_xbox, 6);
-      case VK_GAMEPAD_MENU:
-        return std::make_pair(hardware_context::controller_xbox, 7);
-      case VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON:
-        return std::make_pair(hardware_context::controller_xbox, 8);
-      case VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON:
-        return std::make_pair(hardware_context::controller_xbox, 9);
-      case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
-      case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT:
-        return std::make_pair(hardware_context::controller_xbox, 0);
-      case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
-      case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN:
-        return std::make_pair(hardware_context::controller_xbox, 1);
-      case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
-      case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT:
-        return std::make_pair(hardware_context::controller_xbox, 4);
-      case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
-      case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN:
-        return std::make_pair(hardware_context::controller_xbox, 3);
-      case VK_GAMEPAD_LEFT_TRIGGER:
-      case VK_GAMEPAD_RIGHT_TRIGGER:
-        return std::make_pair(hardware_context::controller_xbox, 2);
-      default:
-        return std::make_pair(hardware_context::controller_xbox, 0);
-      }
+      return hardware_index_for_xbox_vkey(vkey);
     }
     else if (found_controller)
     {

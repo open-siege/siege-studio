@@ -12,7 +12,6 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-
 #include "id-tech-shared.hpp"
 
 
@@ -47,7 +46,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::analog, "+lookdown", u"Look Down", u"Aiming" },
   game_action{ game_action::digital, "+attack", u"Attack", u"Combat" },
   game_action{ game_action::digital, "+altattack", u"Alt Attack", u"Combat" },
-  game_action{ game_action::digital, "weapon 1", u"Melee Attack", u"Combat" },
+  game_action{ game_action::digital, "+use", u"Use", u"Combat" },
   game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
   game_action{ game_action::digital, "weaprev", u"Previous Weapon", u"Combat" },
   game_action{ game_action::digital, "+info", u"Score", u"Interface" },
@@ -58,12 +57,9 @@ extern auto game_actions = std::array<game_action, 32>{ {
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 
-extern void(__cdecl* ConsoleEvalCdecl)(const char*) ;
-
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { 
-  { "exec"sv, std::size_t(0x48b3b4) },
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x48b3b4) },
   { "cmdlist"sv, std::size_t(0x48b3bc) },
   { "cl_pitchspeed"sv, std::size_t(0x48a3f0) } } } } };
 
@@ -118,17 +114,11 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
 
   config.save(custom_bindings);
 
-  auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, VK_LEFT);
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, VK_RIGHT);
 
-  if (iter != args->string_settings.end())
-  {
-    iter->name = L"exec";
-    iter->value = L"siege_studio_inputs.cfg";
-  }
-
-  std::advance(iter, 1);
-  iter->name = L"console";
-  iter->value = L"1";
+  insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
+  insert_string_setting_once(*args, L"console", L"1");
 
   return std::errc{};
 }
@@ -148,7 +138,7 @@ std::errc init_mouse_inputs(mouse_binding* binding)
 
   std::array<std::pair<WORD, std::string_view>, 2> actions{
     { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+altattack"),
-      std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use") }
+      std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+zoom") }
   };
 
   upsert_mouse_defaults(game_actions, actions, *binding);
@@ -171,13 +161,15 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 5> actions{
+  std::array<std::pair<WORD, std::string_view>, 7> actions{
     {
       std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
       std::make_pair<WORD, std::string_view>(VK_LEFT, "+moveleft"),
       std::make_pair<WORD, std::string_view>(VK_RIGHT, "+moveright"),
+      std::make_pair<WORD, std::string_view>(VK_OEM_COMMA, "+left"),
+      std::make_pair<WORD, std::string_view>(VK_OEM_PERIOD, "+right"),
     }
   };
 
@@ -192,12 +184,14 @@ std::errc init_controller_inputs(controller_binding* binding)
   {
     return std::errc::bad_address;
   }
-  std::array<std::pair<WORD, std::string_view>, 23> actions{
+  std::array<std::pair<WORD, std::string_view>, 19> actions{
     {
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attack"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "+altattack"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_A, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_B, "+movedown"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "+use"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "weapnext"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "+speed"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_UP, "+forward"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, "+back"),
@@ -207,13 +201,7 @@ std::errc init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, "+right"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "weapon 1"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "+use"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "weapnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "invnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "+throw-grenade"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "weapondrop"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "weapprev"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "weaprev"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_RIGHT, "weapnext"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "+info"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_MENU, "ui_teamorders"),

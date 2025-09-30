@@ -12,9 +12,7 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-
 #include "id-tech-shared.hpp"
-
 
 extern "C" {
 using hardware_context = siege::platform::hardware_context;
@@ -94,9 +92,7 @@ std::errc executable_is_supported(const wchar_t* filename) noexcept
   auto exe_path = std::filesystem::path(filename);
   auto parent_path = exe_path.parent_path();
 
-  if (exe_path.stem().string().starts_with("igwarlord") && 
-      exe_path.extension() == ".exe" && 
-      std::filesystem::is_directory(parent_path / "base", last_error))
+  if (exe_path.stem().string().starts_with("igwarlord") && exe_path.extension() == ".exe" && std::filesystem::is_directory(parent_path / "base", last_error))
   {
     return std::errc{};
   }
@@ -135,22 +131,8 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   bind_axis_to_send_input(*args, "+lookup", "+mlook");
   bind_axis_to_send_input(*args, "+lookdown", "+mlook");
 
-  auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
-
-  if (iter != args->string_settings.end())
-  {
-    iter->name = L"exec";
-    iter->value = L"siege_studio_inputs.cfg";
-  }
-
-  std::advance(iter, 1);
-  iter->name = L"console";
-  iter->value = L"1";
-
-  std::advance(iter, 1);
-  iter->name = L"map";
-  iter->value = L"trdm01a";
-
+  insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
+  insert_string_setting_once(*args, L"console", L"1");
 
   return std::errc{};
 }

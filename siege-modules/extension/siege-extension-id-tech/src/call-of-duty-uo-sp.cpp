@@ -12,7 +12,6 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-
 #include "id-tech-shared.hpp"
 
 
@@ -92,12 +91,7 @@ std::errc executable_is_supported(const wchar_t* filename) noexcept
   auto exe_path = std::filesystem::path(filename);
   auto parent_path = exe_path.parent_path();
 
-  if (exe_path.stem() == "CoDUOSP" && 
-      exe_path.extension() == ".exe" &&
-      std::filesystem::exists(parent_path / "uo_gamex86.dll", last_error) &&
-      std::filesystem::exists(parent_path / "uo_cgamex86.dll", last_error) &&
-      std::filesystem::exists(parent_path / "uo_uix86.dll", last_error) &&
-      std::filesystem::is_directory(parent_path / "uo", last_error))
+  if (exe_path.stem() == "CoDUOSP" && exe_path.extension() == ".exe" && std::filesystem::exists(parent_path / "uo_gamex86.dll", last_error) && std::filesystem::exists(parent_path / "uo_cgamex86.dll", last_error) && std::filesystem::exists(parent_path / "uo_uix86.dll", last_error) && std::filesystem::is_directory(parent_path / "uo", last_error))
   {
     return std::errc{};
   }
@@ -130,17 +124,8 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
 
   config.save(custom_bindings);
 
-  auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
-
-  if (iter != args->string_settings.end())
-  {
-    iter->name = L"exec";
-    iter->value = L"siege_studio_inputs.cfg";
-  }
-
-  std::advance(iter, 1);
-  iter->name = L"console";
-  iter->value = L"1";
+  insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
+  insert_string_setting_once(*args, L"console", L"1");
 
   return std::errc{};
 }

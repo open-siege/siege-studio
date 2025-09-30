@@ -12,7 +12,6 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-
 #include "id-tech-shared.hpp"
 
 
@@ -48,15 +47,24 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::analog, "+right", u"Turn Right", u"Aiming" },
   game_action{ game_action::analog, "+lookup", u"Look Up", u"Aiming" },
   game_action{ game_action::analog, "+lookdown", u"Look Down", u"Aiming" },
-  game_action{ game_action::digital, "attack", u"Attack", u"Combat" },
-  game_action{ game_action::digital, "altattack", u"Alt Attack", u"Combat" },
-  game_action{ game_action::digital, "melee-attack", u"Melee Attack", u"Combat" },
+  game_action{ game_action::digital, "+attack", u"Attack", u"Combat" },
+  game_action{ game_action::digital, "+altattack", u"Alt Attack", u"Combat" },
   game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
-  game_action{ game_action::digital, "weaprev", u"Previous Weapon", u"Combat" },
-  game_action{ game_action::digital, "forcenext", u"Next Item", u"Combat" },
-  game_action{ game_action::digital, "+useforce", u"Use Item", u"Combat" },
+  game_action{ game_action::digital, "weapprev", u"Previous Weapon", u"Combat" },
+  game_action{ game_action::digital, "forcenext", u"Next Force Power", u"Combat" },
+  game_action{ game_action::digital, "forceprev", u"Previous Force Power", u"Combat" },
+  game_action{ game_action::digital, "+useforce", u"Use Force Power", u"Combat" },
+  game_action{ game_action::digital, "saberAttackCycle", u"Change Saber Stance", u"Combat" },
+  game_action{ game_action::digital, "use_seeker", u"Use Seeker", u"Combat" },
+  game_action{ game_action::digital, "use_field", u"Use Force Field", u"Combat" },
+  game_action{ game_action::digital, "use_bacta", u"Use Bacta", u"Combat" },
+  game_action{ game_action::digital, "use_sentry", u"Use Sentry Turret", u"Combat" },
+  game_action{ game_action::digital, "invnext", u"Next Inventory Item", u"Combat" },
+  game_action{ game_action::digital, "invprev", u"Previous Inventory Item", u"Combat" },
+  game_action{ game_action::digital, "+button2", u"Use Inventory Item", u"Combat" },
+  game_action{ game_action::digital, "force_speed", u"Force Speed", u"Combat" },
+  game_action{ game_action::digital, "cg_thirdperson !", u"Toggle Third Person", u"Combat" },
   game_action{ game_action::digital, "+scores", u"Score", u"Interface" },
-  game_action{ game_action::digital, "datapad", u"Objectives", u"Interface" },
   game_action{ game_action::digital, "+klook", u"Keyboard Look", u"Misc" },
   game_action{ game_action::digital, "+mlook", u"Mouse Look", u"Misc" },
 } };
@@ -125,6 +133,9 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
 
   config.save(custom_bindings);
 
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, VK_LEFT);
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, VK_RIGHT);
+
   insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
   insert_string_setting_once(*args, L"console", L"1");
 
@@ -169,14 +180,15 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 6> actions{
+  std::array<std::pair<WORD, std::string_view>, 8> actions{
     {
-      std::make_pair<WORD, std::string_view>('G', "+throw-grenade"),
       std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
       std::make_pair<WORD, std::string_view>(VK_LEFT, "+moveleft"),
       std::make_pair<WORD, std::string_view>(VK_RIGHT, "+moveright"),
+      std::make_pair<WORD, std::string_view>(VK_OEM_COMMA, "+left"),
+      std::make_pair<WORD, std::string_view>(VK_OEM_PERIOD, "+right"),
     }
   };
 
@@ -191,13 +203,15 @@ std::errc init_controller_inputs(controller_binding* binding)
   {
     return std::errc::bad_address;
   }
-  std::array<std::pair<WORD, std::string_view>, 23> actions{
+  std::array<std::pair<WORD, std::string_view>, 24> actions{
     {
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attack"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "invuse"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "+altattack"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_A, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_B, "+movedown"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "+speed"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "+button2"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "saberAttackCycle"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "force_speed"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_UP, "+forward"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, "+back"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, "+moveleft"),
@@ -206,16 +220,15 @@ std::errc init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, "+right"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "weapon 1"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "inven"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "weapnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "invnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "+throw-grenade"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "weapondrop"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "+useforce"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "forceprev"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "forcenext"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_UP, "invnext"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "invprev"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "weapprev"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_RIGHT, "weapnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "score"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_MENU, "cmd help"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "cg_thirdperson !"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_MENU, "+scores"),
     }
   };
 

@@ -12,9 +12,7 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-
 #include "id-tech-shared.hpp"
-
 
 extern "C" {
 using hardware_context = siege::platform::hardware_context;
