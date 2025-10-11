@@ -12,9 +12,7 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-
 #include "id-tech-shared.hpp"
-
 
 extern "C" {
 using hardware_context = siege::platform::hardware_context;
@@ -26,6 +24,7 @@ using game_action = siege::platform::game_action;
 using game_command_line_caps = siege::platform::game_command_line_caps;
 using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
+using key_type = siege::configuration::key_type;
 
 extern auto command_line_caps = game_command_line_caps{
   .int_settings = { { L"r_customwidth", L"r_customheight", L"r_mode" } },
@@ -58,10 +57,18 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "togglemenu", u"Objectives", u"Interface" },
 } };
 
-constexpr static auto moh_aliases = std::array<std::array<std::string_view, 2>, 4>{ { { "+melee-attack", "useweaponclass pistol;wait 50;+attacksecondary" },
-  { "-melee-attack", "-attacksecondary;wait;uselast;" },
-  { "+throw-grenade", "useweaponclass grenade;wait 50;+attackprimary;" },
-  { "-throw-grenade", "-attackprimary;wait;uselast;" } } };
+constexpr static auto moh_vstrs = std::array<std::array<std::string_view, 3>, 3>{
+  { { "pistol-toggle", "vstr pistol-toggle-start" },
+    { "pistol-toggle-start", "useweaponclass pistol;set pistol-toggle vstr pistol-toggle-stop" },
+    { "pistol-toggle-stop", "uselast;set pistol-toggle vstr pistol-toggle-start" } }
+};
+
+constexpr static auto moh_aliases = std::array<std::array<std::string_view, 2>, 4>{
+  { { "+melee-attack", "useweaponclass pistol;wait 50;+attacksecondary" },
+    { "-melee-attack", "-attacksecondary;wait;uselast;" },
+    { "+throw-grenade", "useweaponclass grenade;wait 50;+attackprimary;" },
+    { "-throw-grenade", "-attackprimary;wait;uselast;" } }
+};
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 using namespace std::literals;
@@ -111,9 +118,14 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
 
   bool enable_controller = save_bindings_to_config(*args, config, q3_mapping_context{});
 
+  for (auto& vstr : moh_vstrs)
+  {
+    config.emplace(key_type({ "seta", vstr[0] }), key_type(vstr[1]));
+  }
+
   for (auto& alias : moh_aliases)
   {
-    config.emplace(siege::configuration::key_type({ "alias", alias[0] }), siege::configuration::key_type(alias[1]));
+    config.emplace(key_type({ "alias", alias[0] }), key_type(alias[1]));
   }
 
   if (enable_controller)
@@ -204,6 +216,8 @@ std::errc init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "+attacksecondary"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_A, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_B, "+movedown"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "+use"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "vstr pistol-toggle"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "+speed"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_UP, "+forward"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, "+back"),
@@ -213,17 +227,15 @@ std::errc init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, "+right"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "vstr swap-pistol"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "holster"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "vstr swap-pistol"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "+melee-attack"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "toggleitem"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "vstr swap-grenade"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "+throw-grenade"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_UP, "invnext"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "invprev"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "weapprev"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_RIGHT, "weapnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "+scores"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_MENU, "togglemenu"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "holster"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_MENU, "+scores"),
     }
   };
 

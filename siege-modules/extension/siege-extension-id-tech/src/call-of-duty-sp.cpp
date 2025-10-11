@@ -38,15 +38,16 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::analog, "+moveright", u"Strafe Right", u"Movement" },
   game_action{ game_action::analog, "+moveup", u"Jump", u"Movement" },
   game_action{ game_action::analog, "+movedown", u"Crouch", u"Movement" },
-  game_action{ game_action::digital, "+speed", u"Run", u"Movement" },
+  game_action{ game_action::digital, "+speed", u"Aim Down Sights", u"Movement" },
   game_action{ game_action::analog, "+left", u"Turn Left", u"Aiming" },
   game_action{ game_action::analog, "+right", u"Turn Right", u"Aiming" },
   game_action{ game_action::analog, "+lookup", u"Look Up", u"Aiming" },
   game_action{ game_action::analog, "+lookdown", u"Look Down", u"Aiming" },
   game_action{ game_action::digital, "+attack", u"Attack", u"Combat" },
-  game_action{ game_action::digital, "+altattack", u"Alt Attack", u"Combat" },
+  game_action{ game_action::digital, "weapalt", u"Change Fire Mode", u"Combat" },
   game_action{ game_action::digital, "+melee", u"Melee Attack", u"Combat" },
   game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
+  game_action{ game_action::digital, "weaponslot grenade", u"Swap to Grenade`", u"Combat" },
   game_action{ game_action::digital, "weaprev", u"Previous Weapon", u"Combat" },
   game_action{ game_action::digital, "itemnext", u"Next Item", u"Combat" },
   game_action{ game_action::digital, "itemuse", u"Use Item", u"Combat" },
@@ -90,11 +91,7 @@ std::errc executable_is_supported(const wchar_t* filename) noexcept
   auto exe_path = std::filesystem::path(filename);
   auto parent_path = exe_path.parent_path();
 
-  if (exe_path.stem() == "CoDSP" && exe_path.extension() == ".exe" && 
-      std::filesystem::exists(parent_path / "gamex86.dll", last_error) && 
-      std::filesystem::exists(parent_path / "cgamex86.dll", last_error) && 
-      std::filesystem::exists(parent_path / "uix86.dll", last_error) && 
-      std::filesystem::is_directory(parent_path / "main", last_error))
+  if (exe_path.stem() == "CoDSP" && exe_path.extension() == ".exe" && std::filesystem::exists(parent_path / "gamex86.dll", last_error) && std::filesystem::exists(parent_path / "cgamex86.dll", last_error) && std::filesystem::exists(parent_path / "uix86.dll", last_error) && std::filesystem::is_directory(parent_path / "main", last_error))
   {
     return std::errc{};
   }
@@ -127,17 +124,11 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
 
   config.save(custom_bindings);
 
-  auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, VK_LEFT);
+  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, VK_RIGHT);
 
-  if (iter != args->string_settings.end())
-  {
-    iter->name = L"exec";
-    iter->value = L"siege_studio_inputs.cfg";
-  }
-
-  std::advance(iter, 1);
-  iter->name = L"console";
-  iter->value = L"1";
+  insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
+  insert_string_setting_once(*args, L"console", L"1");
 
   return std::errc{};
 }
@@ -156,9 +147,10 @@ std::errc init_mouse_inputs(mouse_binding* binding)
   }
 
   std::array<std::pair<WORD, std::string_view>, 2> actions{
-    { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+altattack"),
-      std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use") }
+    { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+speed"),
+      std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+activate") }
   };
+
 
   upsert_mouse_defaults(game_actions, actions, *binding);
 
@@ -180,9 +172,8 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 8> actions{
+  std::array<std::pair<WORD, std::string_view>, 9> actions{
     {
-      std::make_pair<WORD, std::string_view>('G', "+throw-grenade"),
       std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
@@ -190,6 +181,8 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_RIGHT, "+moveright"),
       std::make_pair<WORD, std::string_view>(VK_UP, "+forward"),
       std::make_pair<WORD, std::string_view>(VK_DOWN, "+back"),
+      std::make_pair<WORD, std::string_view>(VK_OEM_COMMA, "+left"),
+      std::make_pair<WORD, std::string_view>(VK_OEM_PERIOD, "+right"),
     }
   };
 
@@ -207,10 +200,12 @@ std::errc init_controller_inputs(controller_binding* binding)
   std::array<std::pair<WORD, std::string_view>, 23> actions{
     {
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attack"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "invuse"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "+speed"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_A, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_B, "+movedown"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "+speed"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "+activate"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "weapnext"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "weapalt"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_UP, "+forward"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, "+back"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, "+moveleft"),
@@ -220,10 +215,8 @@ std::errc init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "+melee"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "inven"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "weapnext"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "invnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "+throw-grenade"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "weaponslot grenade"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "weapondrop"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "weapprev"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_RIGHT, "weapnext"),

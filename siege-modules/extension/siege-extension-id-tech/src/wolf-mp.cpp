@@ -56,7 +56,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "+dropweapon", u"Drop Weapon", u"Combat" },
   game_action{ game_action::digital, "+reload", u"Drop Weapon", u"Combat" },
   game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
-  game_action{ game_action::digital, "weaprev", u"Previous Weapon", u"Combat" },
+  game_action{ game_action::digital, "weapprev", u"Previous Weapon", u"Combat" },
   game_action{ game_action::digital, "+scores", u"Score", u"Interface" },
   game_action{ game_action::digital, "OpenLimboMenu", u"Limbo Menu", u"Interface" },
   game_action{ game_action::digital, "+klook", u"Keyboard Look", u"Misc" },
@@ -195,13 +195,15 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 5> actions{
+  std::array<std::pair<WORD, std::string_view>, 7> actions{
     {
       std::make_pair<WORD, std::string_view>('g', "vstr grenade-toggle"),
       std::make_pair<WORD, std::string_view>('f', "vstr melee-toggle"),
       std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
+      std::make_pair<WORD, std::string_view>(VK_OEM_COMMA, "+left"),
+      std::make_pair<WORD, std::string_view>(VK_OEM_PERIOD, "+right"),
     }
   };
 
@@ -222,6 +224,8 @@ std::errc init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "weapalt"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_A, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_B, "+movedown"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "+reload"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "vstr pistol-toggle"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "+sprint"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_UP, "+forward"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, "+back"),
@@ -232,8 +236,6 @@ std::errc init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "vstr melee-toggle"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "+reload"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "vstr pistol-toggle"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "+zoom"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "vstr grenade-toggle"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "+dropweapon"),

@@ -848,6 +848,15 @@ void bind_controller_send_input_fallback(siege::platform::game_command_line_args
     {
       bind_axis_to_send_input(args, right_stick_left->action_name.data(), target_action, not_target_vkey);
     }
+
+    fallback = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& binding) {
+      return (binding.context == hardware_context::mouse) && binding.vkey != not_target_vkey && std::string_view{ binding.action_name.data() } == target_action;
+    });
+
+    if (fallback != args.action_bindings.end())
+    {
+      bind_axis_to_send_input(args, right_stick_left->action_name.data(), target_action, not_target_vkey);
+    }
   }
 }
 

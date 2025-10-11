@@ -125,6 +125,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
   insert_string_setting_once(*args, L"console", L"1");
   insert_string_setting_once(*args, L"cl_playintro", L"0");
+  insert_string_setting_once(*args, L"g_aimtoggle", L"0");
 
   return std::errc{};
 }
@@ -142,8 +143,9 @@ std::errc init_mouse_inputs(mouse_binding* binding)
     load_mouse_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 1> actions{
+  std::array<std::pair<WORD, std::string_view>, 2> actions{
     {
+      std::make_pair<WORD, std::string_view>(VK_LBUTTON, "+attackprimary"),
       std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+playeraim"),
     }
   };
@@ -168,21 +170,14 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  /*std::array<std::pair<WORD, std::string_view>, 9> actions{
+  std::array<std::pair<WORD, std::string_view>, 2> actions{
     {
-      std::make_pair<WORD, std::string_view>('G', "vstr swap-grenade"),
-      std::make_pair<WORD, std::string_view>('F', "vstr melee-attack"),
-      std::make_pair<WORD, std::string_view>('v', "+attackprimary"),
-      std::make_pair<WORD, std::string_view>('b', "+attacksecondary"),
-      std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
-      std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
-      std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
       std::make_pair<WORD, std::string_view>(VK_OEM_COMMA, "+left"),
       std::make_pair<WORD, std::string_view>(VK_OEM_PERIOD, "+right"),
     }
   };
 
-  upsert_keyboard_defaults(game_actions, actions, *binding);*/
+  upsert_keyboard_defaults(game_actions, actions, *binding);
 
   return std::errc{};
 }
@@ -212,7 +207,7 @@ std::errc init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "holster"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "weapnext"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "toggleitem"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "vstr swap-grenade"),
+      //std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "vstr swap-grenade"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_UP, "invnext"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "invprev"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "weapprev"),

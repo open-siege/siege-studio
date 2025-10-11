@@ -187,14 +187,15 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 6> actions{
+  std::array<std::pair<WORD, std::string_view>, 7> actions{
     {
-      std::make_pair<WORD, std::string_view>('G', "+throw-grenade"),
       std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
       std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
       std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
       std::make_pair<WORD, std::string_view>(VK_LEFT, "+moveleft"),
       std::make_pair<WORD, std::string_view>(VK_RIGHT, "+moveright"),
+      std::make_pair<WORD, std::string_view>(VK_OEM_COMMA, "+left"),
+      std::make_pair<WORD, std::string_view>(VK_OEM_PERIOD, "+right"),
     }
   };
 
