@@ -80,7 +80,7 @@ if (WIN32)
     add_library(siege-extension-call-of-duty-uo-mp SHARED src/call-of-duty-uo-mp.cpp src/id-tech-3.def)
     add_library(siege-extension-quake-3 SHARED src/quake-3.cpp src/id-tech-3.def)
     add_library(siege-extension-quake-live SHARED src/quake-live.cpp src/id-tech-3.def)
-    add_library(siege-extension-space-trader SHARED src/space-trader.cpp src/id-tech-3.def)
+    add_library(siege-extension-space-trader SHARED src/space-trader.cpp src/space-trader.def)
     add_library(siege-extension-iron-grip SHARED src/iron-grip.cpp src/id-tech-3.def)
     
     add_library(siege-extension-fakk-2 SHARED src/fakk-2.cpp src/fakk-2.def)

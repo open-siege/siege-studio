@@ -13,9 +13,7 @@
 #include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-
 #include "id-tech-shared.hpp"
-
 
 extern "C" {
 using hardware_context = siege::platform::hardware_context;
@@ -37,6 +35,8 @@ extern auto command_line_caps = game_command_line_caps{
   .player_name_setting = L"name",
 };
 
+// TODO when it comes to controller support
+// the game doesn't have it, so we will just do keyboard + mouse emulation
 extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::analog, "+forward", u"Move Forward", u"Movement" },
   game_action{ game_action::analog, "+back", u"Move Backward", u"Movement" },

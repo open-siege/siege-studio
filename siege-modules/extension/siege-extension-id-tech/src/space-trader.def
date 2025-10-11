@@ -1,0 +1,14 @@
+EXPORTS
+	DetourFinishHelperProcess @1
+	game_actions DATA PRIVATE
+	command_line_caps DATA PRIVATE
+	executable_is_supported
+	get_function_name_ranges PRIVATE
+	get_variable_name_ranges PRIVATE
+	get_predefined_string_command_line_settings PRIVATE
+	get_predefined_int_command_line_settings PRIVATE
+	format_command_line PRIVATE
+	init_keyboard_inputs PRIVATE
+	init_mouse_inputs PRIVATE
+	init_controller_inputs PRIVATE
+	apply_prelaunch_settings PRIVATE

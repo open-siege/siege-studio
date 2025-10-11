@@ -162,6 +162,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
     connect_iter->value = address_port.c_str();
   }
 
+  // TODO update to use new setting functions
   auto server_iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return 
       setting.name != nullptr && 
       setting.value != nullptr && 

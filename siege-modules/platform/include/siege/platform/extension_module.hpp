@@ -164,7 +164,7 @@ namespace siege::platform
 
     std::array<controller_to_send_input_mapping, 256> controller_to_send_input_mappings;
   };
-  // TODO replace HRESULT with std::errc for the cross-platform functions
+
   using executable_is_supported = std::errc(const siege::fs_char* filename) noexcept;
   using get_function_name_ranges = std::errc(std::size_t, std::array<const char*, 2>*, std::size_t*) noexcept;
   using get_variable_name_ranges = std::errc(std::size_t, std::array<const char*, 2>*, std::size_t*) noexcept;
