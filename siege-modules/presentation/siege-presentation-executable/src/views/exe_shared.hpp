@@ -14,6 +14,15 @@ namespace siege::views
 {
   constexpr auto zt_fallback_ip = L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4";
 
+  struct controller_info
+  {
+    siege::platform::hardware_context detected_context;
+    std::string_view backend;
+    std::uint16_t (*get_hardware_index)(SHORT vkey);
+  };
+
+  std::vector<controller_info> get_connected_controllers();
+
   struct menu_item : ::MENUITEMINFOW
   {
     menu_item() : ::MENUITEMINFOW()

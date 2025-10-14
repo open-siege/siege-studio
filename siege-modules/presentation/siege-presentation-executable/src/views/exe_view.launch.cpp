@@ -301,35 +301,14 @@ namespace siege::views
       }
       else
       {
-        std::array<RAWINPUTDEVICELIST, 64> controllers{};
-
-        UINT size = controllers.size();
-        ::GetRawInputDeviceList(controllers.data(), &size, sizeof(RAWINPUTDEVICELIST));
-
-        // Raw input doesn't work properly under remote desktop :(
-        bool has_controllers = std::any_of(controllers.begin(), controllers.end(), [](auto& entry) {
-          return entry.dwType == RIM_TYPEHID;
-        });
-
-        bool has_xinput_controllers = false;
-
-        if (!has_controllers)
-        {
-          auto version_and_name = win32::get_xinput_version();
-
-          if (version_and_name)
-          {
-            win32::module xinput_module;
-            xinput_module.reset(::LoadLibraryExW(version_and_name->second.data(), nullptr, ::IsWindowsVistaOrGreater() ? LOAD_LIBRARY_SEARCH_SYSTEM32 : 0));
-
-            std::add_pointer_t<decltype(::XInputGetState)> xinput_get_state = xinput_module.GetProcAddress<decltype(xinput_get_state)>("XInputGetState");
-            XINPUT_STATE temp{};
-            has_xinput_controllers = xinput_get_state(0, &temp) == S_OK;
-          }
-        }
-
+        // TODO the only reason for checking for connected controllers is to detect the hardware context.
+        // But rather than auto-detecting it here, we should auto-detect in the UI and then let the user decide.
+        // Either it's fine, and they do nothing, or they select the context they want.
+        // The other big issue is whether the game requires a preferred device to be selected.
+        // This also has to be addressed somehow.
+        auto contollers = get_connected_controllers();
         auto binding_count = controller_table.GetItemCount();
-        if (!(has_controllers || has_xinput_controllers))
+        if (contollers.empty())
         {
           binding_count = 0;
         }
@@ -350,20 +329,12 @@ namespace siege::views
 
               auto& action = actions[action_index];
 
-
-              auto hardware_index = hardware_index_for_xbox_vkey(virtual_key);
-
-              if (has_controllers)
-              {
-                hardware_index = hardware_index_for_controller_vkey(std::span<RAWINPUTDEVICELIST>(controllers.data(), size), 0, virtual_key);
-              }
-
-              auto key_name = string_for_vkey(virtual_key, hardware_index.first);
+              auto& controller = *contollers.begin();
 
               game_args.action_bindings[binding_index].vkey = virtual_key;
               game_args.action_bindings[binding_index].action_name = action.action_name;
-              game_args.action_bindings[binding_index].context = hardware_index.first;
-              game_args.action_bindings[binding_index++].hardware_index = hardware_index.second;
+              game_args.action_bindings[binding_index].context = controller.detected_context;
+              game_args.action_bindings[binding_index++].hardware_index = controller.get_hardware_index(virtual_key);
             }
             catch (...)
             {
