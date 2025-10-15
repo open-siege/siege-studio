@@ -5,6 +5,8 @@
 #include <siege/platform/win/capabilities.hpp>
 #include <hidusage.h>
 #include <xinput.h>
+#include "exe_shared.hpp"
+#include <joystickapi.h>
 
 namespace siege::views
 {
@@ -13,18 +15,16 @@ namespace siege::views
   std::uint16_t hardware_index_for_xbox_vkey(SHORT vkey);
   std::uint16_t hardware_index_for_ps3_vkey(SHORT vkey);
 
-  struct controller_info
-  {
-    hardware_context detected_context;
-    std::string_view backend;
-    std::uint16_t (*get_hardware_index)(SHORT vkey);
-  };
-
-
+  // Get the connected controllers with as much
+  // useful information as possible.
+  // The most important thing is that we figure out the hardware
+  // context to use as a default and then the preferred input device
+  // for games which make use of it.
   std::vector<controller_info> get_connected_controllers()
   {
     std::vector<controller_info> results;
 
+    // TODO make this dynamic
     std::array<RAWINPUTDEVICELIST, 64> controllers{};
 
     UINT size = controllers.size();
@@ -66,20 +66,52 @@ namespace siege::views
       {
         device_name.resize(real_size);
       }
-
+      // If we have IG_ then we are an xbox controller:
+      // see https://learn.microsoft.com/en-us/windows/win32/xinput/xinput-and-directinput
       if (device_name.rfind(L"IG_") != std::wstring_view::npos)
       {
-        results.emplace_back(hardware_context::controller_xbox, "user32", hardware_index_for_xbox_vkey);
+        results.emplace_back(hardware_context::controller_xbox, "user32", hardware_index_for_xbox_vkey, std::make_pair(info.hid.dwVendorId, info.hid.dwProductId));
       }
       else
       {
         // TODO more robust checking here
-        results.emplace_back(hardware_context::controller_playstation_3, "user32", hardware_index_for_ps3_vkey);
+        results.emplace_back(hardware_context::controller_playstation_3, "user32", hardware_index_for_ps3_vkey, std::make_pair(info.hid.dwVendorId, info.hid.dwProductId));
       }
 
       device_name.clear();
       device_name.resize(info_size);
     }
+
+    win32::module winmm_module;
+    winmm_module.reset(::LoadLibraryExW(L"winmm.dll", nullptr, ::IsWindowsVistaOrGreater() ? LOAD_LIBRARY_SEARCH_SYSTEM32 : 0));
+    auto* get_dev_caps = winmm_module.GetProcAddress<std::add_pointer_t<decltype(::joyGetDevCapsW)>>("joyGetDevCapsW");
+    auto* get_num_devs = winmm_module.GetProcAddress<std::add_pointer_t<decltype(::joyGetNumDevs)>>("joyGetNumDevs");
+
+    if (get_dev_caps && get_num_devs)
+    {
+      auto num_devs = get_num_devs();
+
+      ::JOYCAPSW caps{};
+      for (auto i = 0; i < num_devs; ++i)
+      {
+        auto state = get_dev_caps(i, &caps, sizeof(caps));
+        if (state == JOYERR_NOERROR)
+        {
+          auto iter = std::find_if(results.begin(), results.end(), [&](auto& item) {
+            return item.vendor_product_id.first == caps.wMid && item.vendor_product_id.second == caps.wPid;
+          });
+
+          if (iter != results.end())
+          {
+            iter->is_system_preferred = true;
+          }
+          break;
+        }
+      }
+    }
+
+    // TODO populate fallbacks with winmm first
+    // then use xinput to figure out the xbox context
 
     // When connecting through remote desktop, it is possible that no HID devices are reported by
     // Raw input, so we have to query through other APIs.
@@ -87,6 +119,8 @@ namespace siege::views
     {
       auto version_and_name = win32::get_xinput_version();
 
+      // TODO use the undocumented API to get the vendor + product ID to match
+      // the controller with existing devices if they are not already detected.
       if (version_and_name)
       {
         win32::module xinput_module;
@@ -104,6 +138,8 @@ namespace siege::views
         }
       }
     }
+
+    std::stable_partition(results.begin(), results.end(), [](const auto& item) { return item.is_system_preferred; });
 
     return results;
   }
@@ -195,6 +231,11 @@ namespace siege::views
     default:
       return 0;
     }
+  }
+
+  bool is_vkey_for_controller(WORD vkey)
+  {
+    return vkey >= VK_GAMEPAD_A && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT;
   }
 
 }// namespace siege::views

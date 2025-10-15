@@ -14,14 +14,46 @@ namespace siege::views
 {
   constexpr auto zt_fallback_ip = L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4";
 
+  // TODO games which use winmm (and possibly also dinput)
+  // rely on the first controller being used.
+  // This is governed by the primary controller setting in Windows.
+  // We should add which controller is considered to be the primary here.
+  // Then, if the user's preferred context is not the primary, we can warn them and
+  // ask if they want to change it via the system dialog
   struct controller_info
   {
     siege::platform::hardware_context detected_context;
     std::string_view backend;
     std::uint16_t (*get_hardware_index)(SHORT vkey);
+    std::pair<std::uint32_t, std::uint32_t> vendor_product_id;
+    bool is_system_preferred = false;
   };
 
   std::vector<controller_info> get_connected_controllers();
+
+  struct input_action_binding
+  {
+    std::uint16_t vkey;
+    // The context starts off vague and becomes more
+    // defined as more hardware information is detected.
+    // For controller input especially, we eventually
+    // care about the type of context to use for generating configurations.
+    // This is because older games rely on the hardware index 
+    // of buttons/axises but we care about the conceptual button/axies when binding
+    // (ie we want the A button to jump). 
+    // The reason why each input gets a context
+    // is because in more complex configurations,
+    // you may have two separate input devices to control a game (think of HOTAS configurations).
+    // But, most old games are programmed to only handle one input at a time.
+    // The logic to handle separate contextes doesn't strictly exist yet,
+    // but it would fall on the extension to do something reasonable 
+    // (ie configure a primary device as the joystick and then the secondary device to simulate keyboard/mouse inputs)
+    siege::platform::hardware_context context;
+    std::uint16_t action_index;
+  };
+
+  std::span<input_action_binding> get_action_bindings(std::any& state);
+  std::size_t add_action_binding(std::any& state, input_action_binding binding);
 
   struct menu_item : ::MENUITEMINFOW
   {
@@ -78,7 +110,7 @@ namespace siege::views
 
   bool has_extension_module(const std::any& state);
   bool can_support_zero_tier(std::any& state);
-  
+
   siege::platform::game_extension_module& get_extension(std::any& state);
   const siege::platform::game_extension_module& get_extension(const std::any& state);
 
@@ -106,6 +138,7 @@ namespace siege::views
   std::span<const siege::fs_string_view> get_library_formats() noexcept;
 
   std::span<game_setting> init_launch_settings(std::any& state);
+  bool is_vkey_for_controller(WORD vkey);
   std::optional<std::reference_wrapper<game_setting>> get_game_setting(std::any& state, std::size_t index);
 
   void set_ip_for_current_network(std::any& state, std::string ip_address);

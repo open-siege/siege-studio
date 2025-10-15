@@ -236,6 +236,11 @@ namespace siege::views
       std::size_t binding_index = 0;
       auto& game_args = get_final_args(state);
 
+      auto bound_actions = get_action_bindings(state);
+      auto controller_actions = std::vector(bound_actions.begin(), bound_actions.end());
+      controller_actions.erase(std::remove_if(controller_actions.begin(), controller_actions.end(), [](auto& item) {
+        return !is_vkey_for_controller(item.vkey);
+      }), controller_actions.end());
 
       if (!actions.empty())
       {
@@ -303,42 +308,22 @@ namespace siege::views
       {
         // TODO the only reason for checking for connected controllers is to detect the hardware context.
         // But rather than auto-detecting it here, we should auto-detect in the UI and then let the user decide.
-        // Either it's fine, and they do nothing, or they select the context they want.
+        // Either it's fine, and they do nothing extra, or they select the context they want.
         // The other big issue is whether the game requires a preferred device to be selected.
         // This also has to be addressed somehow.
-        auto contollers = get_connected_controllers();
-        auto binding_count = controller_table.GetItemCount();
-        if (contollers.empty())
-        {
-          binding_count = 0;
-        }
+        auto controllers = get_connected_controllers();
 
-        for (auto i = 0; i < binding_count; ++i)
+        if (!controllers.empty())
         {
-          auto item = controller_table.GetItem(LVITEMW{
-            .mask = LVIF_PARAM,
-            .iItem = i });
-
-          if (item && item->lParam)
+          for (auto& bound_action : controller_actions)
           {
-            try
-            {
-              auto virtual_key = bound_actions.at(item->lParam).vkey;
-              auto context = bound_actions[item->lParam].context;
-              auto action_index = bound_actions[item->lParam].action_index;
+            auto virtual_key = bound_action.vkey;
+            auto& controller = *controllers.begin();
 
-              auto& action = actions[action_index];
-
-              auto& controller = *contollers.begin();
-
-              game_args.action_bindings[binding_index].vkey = virtual_key;
-              game_args.action_bindings[binding_index].action_name = action.action_name;
-              game_args.action_bindings[binding_index].context = controller.detected_context;
-              game_args.action_bindings[binding_index++].hardware_index = controller.get_hardware_index(virtual_key);
-            }
-            catch (...)
-            {
-            }
+            game_args.action_bindings[binding_index].vkey = virtual_key;
+            game_args.action_bindings[binding_index].action_name = actions[bound_action.action_index].action_name;
+            game_args.action_bindings[binding_index].context = controller.detected_context;
+            game_args.action_bindings[binding_index++].hardware_index = controller.get_hardware_index(virtual_key);
           }
         }
       }

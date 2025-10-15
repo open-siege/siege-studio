@@ -38,15 +38,6 @@ namespace siege::views
     win32::ip_address_edit launch_table_ip_address;
     std::function<void()> launch_table_edit_unbind;
 
-    struct input_action_binding
-    {
-      std::uint16_t vkey;
-      siege::platform::hardware_context context;
-      std::uint16_t action_index;
-    };
-
-    std::vector<input_action_binding> bound_actions = { {} };
-
     struct controller_send_input_binding
     {
       std::uint16_t from_vkey;

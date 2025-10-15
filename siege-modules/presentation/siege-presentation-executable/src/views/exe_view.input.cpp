@@ -212,11 +212,8 @@ namespace siege::views
         win32::list_view_item up((wchar_t*)context.action.action_display_name.data(), images[context.vkey]);
         up.mask = up.mask | LVIF_GROUPID | LVIF_PARAM;
         up.iGroupId = ids_for_grouping[context.action.group_display_name.data()];
-        up.lParam = (LPARAM)bound_actions.size();
-        bound_actions.emplace_back(input_action_binding{
-          .vkey = context.vkey,
-          .context = context.context,
-          .action_index = context.action_index });
+        up.lParam = (LPARAM)add_action_binding(state, input_action_binding{ .vkey = context.vkey, .context = context.context, .action_index = context.action_index });
+
         set_tile_info(controller_table.InsertRow(up));
       }
     }
@@ -310,19 +307,13 @@ namespace siege::views
       }
     }
 
-    bound_actions.reserve(action_settings.size());
-
     for (auto& context : action_settings)
     {
       win32::list_view_item up((wchar_t*)context.action.action_display_name.data());
       up.mask = up.mask | LVIF_GROUPID | LVIF_PARAM;
       up.iGroupId = ids_for_grouping[context.action.group_display_name.data()];
       auto vkey = context.vkey;
-      up.lParam = (LPARAM)bound_actions.size();
-      bound_actions.emplace_back(input_action_binding{
-        .vkey = vkey,
-        .context = context.context,
-        .action_index = context.action_index });
+      up.lParam = (LPARAM)add_action_binding(state, input_action_binding{ .vkey = vkey, .context = context.context, .action_index = context.action_index });
       up.sub_items.emplace_back(string_for_vkey(vkey, context.context));
       keyboard_table.InsertRow(up);
     }
@@ -481,7 +472,7 @@ namespace siege::views
 
     if (item && item->lParam)
     {
-      auto& context = bound_actions[item->lParam];
+      auto& context = get_action_bindings(state)[item->lParam];
 
       context.vkey = LOWORD(result);
       context.context = static_cast<decltype(context.context)>(HIWORD(result));

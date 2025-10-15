@@ -29,6 +29,78 @@ namespace siege::views
     std::array<char, 384> last_zero_tier_node_id_and_private_key;
   };
 
+  struct networking_support
+  {
+    bool wsock_32;
+    bool ws2_32;
+    bool dplayx;
+
+    operator bool()
+    {
+      return wsock_32 || ws2_32 || dplayx;
+    }
+  };
+
+  struct exe_state
+  {
+    fs::path loaded_path;
+    win32::module loaded_module;
+    std::optional<siege::platform::game_extension_module> matching_extension;
+    registry_settings registry_data{};
+    std::vector<game_setting> launch_settings = {};
+
+    std::optional<extension_setting_type> dedicated_setting_type{};
+    std::optional<extension_setting_type> listen_setting_type{};
+
+    std::unique_ptr<siege::platform::game_command_line_args> final_args = std::make_unique<siege::platform::game_command_line_args>();
+
+    std::map<fs::path, networking_support> detected_networking_support;
+
+    std::vector<input_action_binding> bound_actions = { {} };
+  };
+
+  exe_state& get(std::any& cache)
+  {
+    if (cache.type() != typeid(std::shared_ptr<exe_state>))
+    {
+      auto temp = std::make_shared<exe_state>();
+      cache = temp;
+    }
+
+    return *std::any_cast<std::shared_ptr<exe_state>>(cache);
+  }
+
+  const exe_state& get(const std::any& cache)
+  {
+    return *std::any_cast<const std::shared_ptr<exe_state>>(cache);
+  }
+
+  void init_capacity(exe_state& self)
+  {
+    if (self.bound_actions.size() == 1 && self.bound_actions.capacity() == 1 && self.matching_extension)
+    {
+      self.bound_actions.reserve(self.matching_extension->game_actions.size());
+    }
+  }
+
+  std::span<input_action_binding> get_action_bindings(std::any& state)
+  {
+    auto& self = get(state);
+
+    init_capacity(self);
+
+    return self.bound_actions;
+  }
+
+  std::size_t add_action_binding(std::any& state, input_action_binding binding)
+  {
+    auto& self = get(state);
+    init_capacity(self);
+    auto new_index = self.bound_actions.size();
+    self.bound_actions.emplace_back(binding);
+    return new_index;
+  }
+
   constexpr static std::size_t char_size = sizeof(siege::fs_char);
 
   auto convert_to_string = [](auto& item) -> std::wstring {
@@ -209,50 +281,6 @@ namespace siege::views
     }
 
     return std::visit(convert_to_string, value);
-  }
-
-  struct networking_support
-  {
-    bool wsock_32;
-    bool ws2_32;
-    bool dplayx;
-
-    operator bool()
-    {
-      return wsock_32 || ws2_32 || dplayx;
-    }
-  };
-
-  struct exe_state
-  {
-    fs::path loaded_path;
-    win32::module loaded_module;
-    std::optional<siege::platform::game_extension_module> matching_extension;
-    registry_settings registry_data{};
-    std::vector<game_setting> launch_settings = {};
-
-    std::optional<extension_setting_type> dedicated_setting_type{};
-    std::optional<extension_setting_type> listen_setting_type{};
-
-    std::unique_ptr<siege::platform::game_command_line_args> final_args = std::make_unique<siege::platform::game_command_line_args>();
-
-    std::map<fs::path, networking_support> detected_networking_support;
-  };
-
-  exe_state& get(std::any& cache)
-  {
-    if (cache.type() != typeid(std::shared_ptr<exe_state>))
-    {
-      auto temp = std::make_shared<exe_state>();
-      cache = temp;
-    }
-
-    return *std::any_cast<std::shared_ptr<exe_state>>(cache);
-  }
-
-  const exe_state& get(const std::any& cache)
-  {
-    return *std::any_cast<const std::shared_ptr<exe_state>>(cache);
   }
 
   siege::platform::game_command_line_args& get_final_args(std::any& state)
