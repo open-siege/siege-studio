@@ -313,7 +313,7 @@ namespace siege::views
         // This also has to be addressed somehow.
         auto controllers = get_connected_controllers();
 
-        if (!controllers.empty())
+        if (!controllers.empty() && controllers.begin()->get_hardware_index != nullptr)
         {
           for (auto& bound_action : controller_actions)
           {
@@ -323,7 +323,10 @@ namespace siege::views
             game_args.action_bindings[binding_index].vkey = virtual_key;
             game_args.action_bindings[binding_index].action_name = actions[bound_action.action_index].action_name;
             game_args.action_bindings[binding_index].context = controller.detected_context;
-            game_args.action_bindings[binding_index++].hardware_index = controller.get_hardware_index(virtual_key);
+
+            // TODO how to describe games which prefer values instead of buttons.
+            // TODO get the game input backend and set the correct index
+            game_args.action_bindings[binding_index++].hardware_index = controller.get_hardware_index(virtual_key, controller_info::prefer_button, controller_info::prefer_winmm);
           }
         }
       }

@@ -8,7 +8,10 @@
 #include <variant>
 #include <any>
 #include <map>
+#include <span>
+#include <array>
 #include <siege/platform/extension_module.hpp>
+#include <xinput.h>
 
 namespace siege::views
 {
@@ -24,12 +27,38 @@ namespace siege::views
   {
     siege::platform::hardware_context detected_context;
     std::string_view backend;
-    std::uint16_t (*get_hardware_index)(SHORT vkey);
+    std::wstring_view device_path;
+    std::wstring_view device_name;
+    enum button_preference : bool
+    {
+        prefer_value,
+        prefer_button
+    };
+
+    enum index_preference : bool
+    {
+      prefer_hid,
+      prefer_winmm
+    };
+    std::uint16_t (*get_hardware_index)(SHORT vkey, button_preference, index_preference);
     std::pair<std::uint32_t, std::uint32_t> vendor_product_id;
     bool is_system_preferred = false;
   };
 
+  struct controller_state
+  {
+    controller_info info;
+    std::any caps;
+    XINPUT_STATE last_state;
+    std::array<std::pair<WORD, std::uint16_t>, 64> buffer;
+  };
+
+  std::span<std::pair<WORD, std::uint16_t>> get_changes(const XINPUT_STATE& a, const XINPUT_STATE& b, std::span<std::pair<WORD, std::uint16_t>> buffer);
   std::vector<controller_info> get_connected_controllers();
+  std::optional<controller_info> controller_info_for_raw_input_device_handle(HANDLE handle);
+  std::optional<controller_info> controller_info_for_raw_input_handle(HRAWINPUT handle);
+  controller_info detect_and_store_controller_context_from_hint(const controller_info& info, siege::platform::hardware_context hint);
+  XINPUT_STATE get_current_state_for_handle(controller_state& state, HRAWINPUT handle);
 
   struct input_action_binding
   {

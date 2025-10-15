@@ -1,4 +1,3 @@
-
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/theming.hpp>
@@ -9,16 +8,10 @@
 
 namespace siege::views
 {
-  void exe_view::populate_controller_table(std::span<siege::platform::game_action> actions, std::span<const wchar_t*> controller_input_backends)
-  {
-    auto set_tile_info = [this](auto index) {
-      UINT columns[2] = { 1, 2 };
-      int formats[2] = { LVCFMT_LEFT, LVCFMT_RIGHT };
-      LVTILEINFO item_info{ .cbSize = sizeof(LVTILEINFO), .iItem = (int)index, .cColumns = 2, .puColumns = columns, .piColFmt = formats };
 
-      ListView_SetTileInfo(controller_table, &item_info);
-    };
-    std::map<WORD, int> images = {
+  int get_image_index_for_button(WORD vkey)
+  {
+    const static std::map<WORD, int> images = {
       { VK_GAMEPAD_A, 0 },
       { VK_GAMEPAD_B, 1 },
       { VK_GAMEPAD_X, 2 },
@@ -45,6 +38,18 @@ namespace siege::views
       { VK_GAMEPAD_MENU, 20 },
     };
 
+    return images.at(vkey);
+  }
+
+  void exe_view::populate_controller_table(std::span<siege::platform::game_action> actions, std::span<const wchar_t*> controller_input_backends)
+  {
+    auto set_tile_info = [this](auto index) {
+      UINT columns[2] = { 1, 2 };
+      int formats[2] = { LVCFMT_LEFT, LVCFMT_RIGHT };
+      LVTILEINFO item_info{ .cbSize = sizeof(LVTILEINFO), .iItem = (int)index, .cColumns = 2, .puColumns = columns, .piColFmt = formats };
+
+      ListView_SetTileInfo(controller_table, &item_info);
+    };
 
     if (controller_input_backends.empty())
     {
@@ -137,7 +142,7 @@ namespace siege::views
 
       for (auto mapping : default_mappings)
       {
-        win32::list_view_item up(string_for_vkey(mapping.first, siege::platform::hardware_context::controller_xbox), images[mapping.first]);
+        win32::list_view_item up(string_for_vkey(mapping.first, siege::platform::hardware_context::controller_xbox), get_image_index_for_button(mapping.first));
         up.iGroupId = grouping[mapping.first];
 
         up.lParam = bound_inputs.size();
@@ -209,7 +214,7 @@ namespace siege::views
 
       for (auto& context : action_settings)
       {
-        win32::list_view_item up((wchar_t*)context.action.action_display_name.data(), images[context.vkey]);
+        win32::list_view_item up((wchar_t*)context.action.action_display_name.data(), get_image_index_for_button(context.vkey));
         up.mask = up.mask | LVIF_GROUPID | LVIF_PARAM;
         up.iGroupId = ids_for_grouping[context.action.group_display_name.data()];
         up.lParam = (LPARAM)add_action_binding(state, input_action_binding{ .vkey = context.vkey, .context = context.context, .action_index = context.action_index });
@@ -319,15 +324,284 @@ namespace siege::views
     }
   }
 
-  std::optional<LRESULT> exe_view::handle_keyboard_mouse_press(win32::window_ref dialog, INT message, WPARAM wparam, LPARAM lparam)
+  std::optional<LRESULT> handle_keyboard_mouse_press(win32::window_ref dialog, INT message, WPARAM wparam, LPARAM lparam);
+
+  void exe_view::keyboard_table_nm_click(win32::list_view sender, const NMITEMACTIVATE& message)
+  {
+    if (!has_extension_module(state))
+    {
+      return;
+    }
+
+    if (get_extension(state).game_actions.empty())
+    {
+      return;
+    }
+
+    auto result = win32::DialogBoxIndirectParamW(win32::module_ref::current_application(),
+      win32::default_dialog({ .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 200, .cy = 100 }),
+      ref(),
+      &handle_keyboard_mouse_press);
+
+    auto item = keyboard_table.GetItem(LVITEMW{
+      .mask = LVIF_PARAM,
+      .iItem = message.iItem });
+
+    if (!(item && item->lParam))
+    {
+      return;
+    }
+
+    auto& context = get_action_bindings(state)[item->lParam];
+
+    context.vkey = LOWORD(result);
+    context.context = static_cast<decltype(context.context)>(HIWORD(result));
+
+    auto temp = string_for_vkey(result, context.context);
+    ListView_SetItemText(keyboard_table, message.iItem, 1, temp.data());
+  }
+
+  void exe_view::controller_table_nm_click(win32::list_view sender, const NMITEMACTIVATE& message)
+  {
+    if (has_extension_module(state) && !get_extension(state).controller_input_backends.empty())
+    {
+      auto result = win32::DialogBoxIndirectParamW(win32::module_ref::current_application(),
+        win32::default_dialog({ .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU,
+          .cx = 200,
+          .cy = 100 }),
+        ref(),
+        [controllers = std::map<HANDLE, controller_state>{}](win32::window_ref dialog, INT message, WPARAM wparam, LPARAM lparam) mutable -> std::optional<LRESULT> {
+          switch (message)
+          {
+          case WM_INITDIALOG: {
+            ::SetWindowTextW(dialog, L"Press a button on your controller or joystick");
+
+            DWORD flags = RIDEV_INPUTSINK | RIDEV_DEVNOTIFY;
+            std::array<RAWINPUTDEVICE, 2> descriptors{ {
+              { .usUsagePage = HID_USAGE_PAGE_GENERIC,
+                .usUsage = HID_USAGE_GENERIC_GAMEPAD,
+                .dwFlags = flags,
+                .hwndTarget = dialog },
+              { .usUsagePage = HID_USAGE_PAGE_GENERIC,
+                .usUsage = HID_USAGE_GENERIC_JOYSTICK,
+                .dwFlags = flags,
+                .hwndTarget = dialog },
+            }
+
+            };
+
+            if (::RegisterRawInputDevices(descriptors.data(), descriptors.size(), sizeof(RAWINPUTDEVICE)) == FALSE)
+            {
+              assert(false);
+            }
+            return TRUE;
+          }
+          case WM_DESTROY: {
+
+            std::array<RAWINPUTDEVICE, 2> descriptors{ {
+
+              { .usUsagePage = HID_USAGE_PAGE_GENERIC,
+                .usUsage = HID_USAGE_GENERIC_GAMEPAD,
+                .dwFlags = RIDEV_REMOVE },
+              {
+                .usUsagePage = HID_USAGE_PAGE_GENERIC,
+                .usUsage = HID_USAGE_GENERIC_JOYSTICK,
+                .dwFlags = RIDEV_REMOVE,
+              } } };
+
+            if (::RegisterRawInputDevices(descriptors.data(), descriptors.size(), sizeof(RAWINPUTDEVICE)) == FALSE)
+            {
+              assert(false);
+            }
+            return 0;
+          }
+          case WM_INPUT_DEVICE_CHANGE: {
+            if (wparam == GIDC_ARRIVAL)
+            {
+              auto handle = (HANDLE)lparam;
+              auto info = controller_info_for_raw_input_device_handle(handle);
+
+              if (info)
+              {
+                controllers[handle] = controller_state{ *info };
+              }
+            }
+            else if (wparam == GIDC_REMOVAL)
+            {
+              controllers.erase((HANDLE)lparam);
+            }
+
+            return 0;
+          }
+          case WM_INPUT: {
+            if (::GetPropW(dialog, L"IsProcessing") == (HANDLE)1)
+            {
+              return 0;
+            }
+
+            RAWINPUTHEADER header{};
+
+            UINT size = sizeof(header);
+            if (::GetRawInputData((HRAWINPUT)lparam, RID_HEADER, &header, &size, sizeof(header)) == (UINT)-1)
+            {
+              return 0;
+            }
+
+            auto info = controllers.find(header.hDevice);
+
+            if (info == controllers.end())
+            {
+              return 0;
+            }
+
+            if (!info->second.info.get_hardware_index)
+            {
+              ::SetPropW(dialog, L"IsProcessing", (HANDLE)1);
+              using namespace siege::platform;
+              std::vector<TASKDIALOG_BUTTON> default_buttons = {
+                TASKDIALOG_BUTTON{ .nButtonID = (int)hardware_context::controller_playstation_4, .pszButtonText = L"Playstation" },
+                // TODO figure out how to process input from a switch controller
+                TASKDIALOG_BUTTON{ .nButtonID = (int)hardware_context::controller_nintendo, .pszButtonText = L"Switch Pro" },
+                TASKDIALOG_BUTTON{ .nButtonID = (int)hardware_context::joystick, .pszButtonText = L"Joystick" },
+                TASKDIALOG_BUTTON{ .nButtonID = (int)hardware_context::throttle, .pszButtonText = L"Throttle" },
+              };
+
+              auto result = win32::task_dialog_indirect(TASKDIALOGCONFIG{
+                                                          .cbSize = sizeof(TASKDIALOGCONFIG),
+                                                          .dwFlags = TDF_ALLOW_DIALOG_CANCELLATION | TDF_USE_COMMAND_LINKS,
+                                                          .dwCommonButtons = TDCBF_CLOSE_BUTTON,
+                                                          .pszWindowTitle = L"Select Controller Layout",
+                                                          .pszMainInstruction = L"An unknown controller was detected. Please specify the layout below: ",
+                                                          .cButtons = (UINT)default_buttons.size(),
+                                                          .pButtons = default_buttons.data(),
+                                                        },
+                [](auto window, auto message, auto wparam, auto lparam) -> HRESULT {
+                  if (message == TDN_BUTTON_CLICKED && (wparam >= (int)hardware_context::controller_playstation_4 && wparam <= (int)hardware_context::throttle))
+                  {
+                    return S_OK;
+                  }
+                  return S_FALSE;
+                });
+
+              if (result)
+              {
+                info->second.info = detect_and_store_controller_context_from_hint(info->second.info, (hardware_context)result->buttons[0]);
+                info->second.last_state = get_current_state_for_handle(info->second, (HRAWINPUT)lparam);
+              }
+
+              ::SetPropW(dialog, L"IsProcessing", (HANDLE)0);
+              ::OutputDebugStringW(L"Controller button reached");
+
+              ::EndDialog(dialog, 0);
+            }
+
+            auto new_state = get_current_state_for_handle(info->second, (HRAWINPUT)lparam);
+
+            if (info->second.last_state.dwPacketNumber != new_state.dwPacketNumber)
+            {
+              // TODO get updated value and return it here
+              auto changes = get_changes(info->second.last_state, new_state, info->second.buffer);
+
+              if (changes.empty())
+              {
+                return 0;
+              }
+
+              info->second.last_state = std::move(new_state);
+
+
+              // remove axes which have not moved enough
+              changes = std::span(changes.begin(), std::remove_if(changes.begin(), changes.end(), [](auto& item) {
+                return item.second < std::numeric_limits<std::uint16_t>::max() / 2;
+              }));
+
+              if (changes.empty())
+              {
+                return 0;
+              }
+
+              // get the highest values
+              std::sort(changes.begin(), changes.begin(), [](const auto& a, const auto& b) {
+                return a.second < b.second;
+              });
+
+              // but prefer buttons
+              std::stable_partition(changes.begin(), changes.begin(), [](auto& item) {
+                return item.first >= VK_GAMEPAD_A && item.first <= VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON && item.second != 0;
+              });
+
+              ::EndDialog(dialog, MAKELRESULT(changes.begin()->first, info->second.info.detected_context));
+            }
+
+            return 0;
+          }
+          default:
+            return std::nullopt;
+          }
+        });
+
+      auto item = controller_table.GetItem(LVITEMW{
+        .mask = LVIF_PARAM,
+        .iItem = message.iItem });
+
+      if (!(item && item->lParam))
+      {
+        return;
+      }
+
+
+      auto& context = get_action_bindings(state)[item->lParam];
+
+      context.vkey = LOWORD(result);
+      context.context = static_cast<decltype(context.context)>(HIWORD(result));
+
+      LVITEMW item_to_update{
+        .mask = LVIF_IMAGE,
+        .iItem = message.iItem,
+        .iImage = get_image_index_for_button(LOWORD(result))
+      };
+      ListView_SetItem(controller_table, &item_to_update);
+      return;
+    }
+
+    // TODO instead of using the UI as the source of truth
+    // we should put the data into shared state then update the UI
+    auto result = win32::DialogBoxIndirectParamW(win32::module_ref::current_application(),
+      win32::default_dialog({ .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 200, .cy = 100 }),
+      ref(),
+      &handle_keyboard_mouse_press);
+
+    auto item = controller_table.GetItem(LVITEMW{
+      .mask = LVIF_PARAM,
+      .iItem = message.iItem });
+
+    if (!(item && item->lParam))
+    {
+      return;
+    }
+
+    auto& binding = bound_inputs.at(item->lParam);
+
+    auto context = static_cast<siege::platform::hardware_context>(HIWORD(result));
+    auto vkey = LOWORD(result);
+    std::wstring temp = category_for_vkey(vkey, context);
+    ListView_SetItemText(controller_table, message.iItem, 1, temp.data());
+
+    temp = string_for_vkey(vkey, context);
+    ListView_SetItemText(controller_table, message.iItem, 2, temp.data());
+    binding.to_context = context;
+    binding.to_vkey = vkey;
+  }
+
+  std::optional<LRESULT> handle_keyboard_mouse_press(win32::window_ref dialog, INT message, WPARAM wparam, LPARAM lparam)
   {
     using namespace siege::platform;
     static std::wstring temp;
     switch (message)
     {
     case WM_INITDIALOG: {
-      SetWindowTextW(dialog, L"Press a keyboard or mouse button");
-      SetTimer(dialog, 1, USER_TIMER_MINIMUM, nullptr);
+      ::SetWindowTextW(dialog, L"Press a keyboard or mouse button");
+      ::SetTimer(dialog, 1, USER_TIMER_MINIMUM, nullptr);
       return FALSE;
     }
     case WM_TIMER: {
@@ -337,7 +611,7 @@ namespace siege::views
       {
         if (::GetKeyState(state) & 0x80)
         {
-          KillTimer(dialog, 1);
+          ::KillTimer(dialog, 1);
 
           if (state == VK_RETURN)
           {
@@ -347,11 +621,11 @@ namespace siege::views
             temp.resize(::GetKeyNameTextW(lparam, temp.data(), temp.size() + 1));
 
             context = temp == L"Numpad Enter" ? hardware_context::keypad : hardware_context::keyboard;
-            EndDialog(dialog, MAKELRESULT(state, context));
+            ::EndDialog(dialog, MAKELRESULT(state, context));
           }
           else
           {
-            EndDialog(dialog, MAKELRESULT(state, hardware_context::keyboard));
+            ::EndDialog(dialog, MAKELRESULT(state, hardware_context::keyboard));
           }
           break;
         }
@@ -449,69 +723,5 @@ namespace siege::views
     };
   }
 
-  void exe_view::keyboard_table_nm_click(win32::list_view sender, const NMITEMACTIVATE& message)
-  {
-    if (!has_extension_module(state))
-    {
-      return;
-    }
-
-    if (get_extension(state).game_actions.empty())
-    {
-      return;
-    }
-
-    auto result = win32::DialogBoxIndirectParamW(win32::module_ref::current_application(),
-      win32::default_dialog({ .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 200, .cy = 100 }),
-      ref(),
-      std::bind_front(&exe_view::handle_keyboard_mouse_press, this));
-
-    auto item = keyboard_table.GetItem(LVITEMW{
-      .mask = LVIF_PARAM,
-      .iItem = message.iItem });
-
-    if (item && item->lParam)
-    {
-      auto& context = get_action_bindings(state)[item->lParam];
-
-      context.vkey = LOWORD(result);
-      context.context = static_cast<decltype(context.context)>(HIWORD(result));
-
-      auto temp = string_for_vkey(result, context.context);
-      ListView_SetItemText(keyboard_table, message.iItem, 1, temp.data());
-    }
-  }
-
-  void exe_view::controller_table_nm_click(win32::list_view sender, const NMITEMACTIVATE& message)
-  {
-    if (has_extension_module(state) && !get_extension(state).controller_input_backends.empty())
-    {
-      return;
-    }
-
-    auto result = win32::DialogBoxIndirectParamW(win32::module_ref::current_application(),
-      win32::default_dialog({ .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 200, .cy = 100 }),
-      ref(),
-      std::bind_front(&exe_view::handle_keyboard_mouse_press, this));
-
-    auto item = controller_table.GetItem(LVITEMW{
-      .mask = LVIF_PARAM,
-      .iItem = message.iItem });
-
-    if (item && item->lParam)
-    {
-      auto& binding = bound_inputs.at(item->lParam);
-
-      auto context = static_cast<siege::platform::hardware_context>(HIWORD(result));
-      auto vkey = LOWORD(result);
-      std::wstring temp = category_for_vkey(vkey, context);
-      ListView_SetItemText(controller_table, message.iItem, 1, temp.data());
-
-      temp = string_for_vkey(vkey, context);
-      ListView_SetItemText(controller_table, message.iItem, 2, temp.data());
-      binding.to_context = context;
-      binding.to_vkey = vkey;
-    }
-  }
 
 }// namespace siege::views

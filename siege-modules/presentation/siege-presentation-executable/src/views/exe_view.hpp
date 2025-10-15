@@ -96,8 +96,6 @@ namespace siege::views
     std::optional<win32::lresult_t> wm_copy_data(win32::copy_data_message<char> message);
 
     void launch_table_nm_click(win32::list_view sender, const NMITEMACTIVATE& message);
-    std::optional<LRESULT> handle_keyboard_mouse_press(win32::window_ref dialog, INT message, WPARAM wparam, LPARAM lparam);
-
     void resource_table_nm_rclick(win32::list_view, const NMITEMACTIVATE& message);
     void resource_table_lvn_item_changed(win32::list_view, const NMLISTVIEW& message);
 

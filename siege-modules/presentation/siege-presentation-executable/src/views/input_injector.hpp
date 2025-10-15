@@ -13,9 +13,11 @@
 #include <xinput.h>
 #include <mmsystem.h>
 #include <siege/extension/input_filter.hpp>
+#include "exe_shared.hpp"
 
 namespace siege
 {
+  using controller_state = siege::views::controller_state;
 
   struct input_injector_args
   {
@@ -131,14 +133,8 @@ namespace siege
 
     std::set<HANDLE> registered_mice;
     std::set<HANDLE> registered_keyboards;
-    std::set<HANDLE> registered_controllers;
-    std::set<HANDLE> regular_controllers;
-    std::map<int, XINPUT_STATE> controller_state;
+    std::map<HANDLE, controller_state> registered_controllers;
     std::map<std::string_view, bool> action_states;
-
-    win32::module xinput_module;
-    std::add_pointer_t<decltype(::XInputGetState)> xinput_get_state = nullptr;
-    std::add_pointer_t<decltype(::XInputGetKeystroke)> xinput_get_key_stroke = nullptr;
 
     static LRESULT __stdcall sub_class_callback(
       HWND hwnd,
@@ -173,45 +169,32 @@ namespace siege
       simulated_inputs.reserve(64);
       siege::init_active_input_state();
 
-      auto version_and_name = win32::get_xinput_version();
-
-      if (version_and_name)
-      {
-        xinput_module.reset(::LoadLibraryExW(version_and_name->second.data(), nullptr, ::IsWindowsVistaOrGreater() ? LOAD_LIBRARY_SEARCH_SYSTEM32 : 0));
-        xinput_get_state = xinput_module.GetProcAddress<decltype(xinput_get_state)>("XInputGetState");
-        xinput_get_key_stroke = xinput_module.GetProcAddress<decltype(xinput_get_key_stroke)>("XInputGetKeystroke");
-      }
-
       win32::set_window_subclass(target_window, sub_class_callback, (UINT_PTR)this, (DWORD_PTR)this);
 
-      std::array<RAWINPUTDEVICE, 4> descriptors{};
-
-      auto flags = RIDEV_INPUTSINK | RIDEV_DEVNOTIFY;
-      descriptors[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
-      descriptors[0].usUsage = HID_USAGE_GENERIC_GAMEPAD;
-      descriptors[0].dwFlags = flags;
-      descriptors[0].hwndTarget = target_window;
-
-      descriptors[1].usUsagePage = HID_USAGE_PAGE_GENERIC;
-      descriptors[1].usUsage = HID_USAGE_GENERIC_JOYSTICK;
-      descriptors[1].dwFlags = flags;
-      descriptors[1].hwndTarget = target_window;
-
-      descriptors[2].usUsagePage = HID_USAGE_PAGE_GENERIC;
-      descriptors[2].usUsage = HID_USAGE_GENERIC_MOUSE;
-      descriptors[2].dwFlags = flags;
-      descriptors[2].hwndTarget = target_window;
-
-      descriptors[3].usUsagePage = HID_USAGE_PAGE_GENERIC;
-      descriptors[3].usUsage = HID_USAGE_GENERIC_KEYBOARD;
-      descriptors[3].dwFlags = flags | RIDEV_NOLEGACY;
-      descriptors[3].hwndTarget = target_window;
+      DWORD flags = RIDEV_INPUTSINK | RIDEV_DEVNOTIFY;
+      std::array<RAWINPUTDEVICE, 4> descriptors{ {
+        { .usUsagePage = HID_USAGE_PAGE_GENERIC,
+          .usUsage = HID_USAGE_GENERIC_GAMEPAD,
+          .dwFlags = flags,
+          .hwndTarget = target_window },
+        { .usUsagePage = HID_USAGE_PAGE_GENERIC,
+          .usUsage = HID_USAGE_GENERIC_JOYSTICK,
+          .dwFlags = flags,
+          .hwndTarget = target_window },
+        { .usUsagePage = HID_USAGE_PAGE_GENERIC,
+          .usUsage = HID_USAGE_GENERIC_MOUSE,
+          .dwFlags = flags,
+          .hwndTarget = target_window },
+        { .usUsagePage = HID_USAGE_PAGE_GENERIC,
+          .usUsage = HID_USAGE_GENERIC_KEYBOARD,
+          .dwFlags = flags | RIDEV_NOLEGACY,
+          .hwndTarget = target_window },
+      } };
 
       if (::RegisterRawInputDevices(descriptors.data(), descriptors.size(), sizeof(RAWINPUTDEVICE)) == FALSE)
       {
         auto error = GetLastError();
         DebugBreak();
-        // registration failed. Call GetLastError for the cause of the error.
       }
 
       try
@@ -238,24 +221,27 @@ namespace siege
     ~input_injector()
     {
       win32::remove_window_subclass(target_window, sub_class_callback, (UINT_PTR)this);
-      std::array<RAWINPUTDEVICE, 4> descriptors{};
 
-      auto flags = RIDEV_REMOVE;
-      descriptors[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
-      descriptors[0].usUsage = HID_USAGE_GENERIC_GAMEPAD;
-      descriptors[0].dwFlags = flags;
-
-      descriptors[1].usUsagePage = HID_USAGE_PAGE_GENERIC;
-      descriptors[1].usUsage = HID_USAGE_GENERIC_JOYSTICK;
-      descriptors[1].dwFlags = flags;
-
-      descriptors[2].usUsagePage = HID_USAGE_PAGE_GENERIC;
-      descriptors[2].usUsage = HID_USAGE_GENERIC_MOUSE;
-      descriptors[2].dwFlags = flags;
-
-      descriptors[3].usUsagePage = HID_USAGE_PAGE_GENERIC;
-      descriptors[3].usUsage = HID_USAGE_GENERIC_KEYBOARD;
-      descriptors[3].dwFlags = flags;
+      std::array<RAWINPUTDEVICE, 4> descriptors{ {
+        { .usUsagePage = HID_USAGE_PAGE_GENERIC,
+          .usUsage = HID_USAGE_GENERIC_GAMEPAD,
+          .dwFlags = RIDEV_REMOVE },
+        {
+          .usUsagePage = HID_USAGE_PAGE_GENERIC,
+          .usUsage = HID_USAGE_GENERIC_JOYSTICK,
+          .dwFlags = RIDEV_REMOVE,
+        },
+        {
+          .usUsagePage = HID_USAGE_PAGE_GENERIC,
+          .usUsage = HID_USAGE_GENERIC_MOUSE,
+          .dwFlags = RIDEV_REMOVE,
+        },
+        {
+          .usUsagePage = HID_USAGE_PAGE_GENERIC,
+          .usUsage = HID_USAGE_GENERIC_KEYBOARD,
+          .dwFlags = RIDEV_REMOVE,
+        },
+      } };
 
       if (::RegisterRawInputDevices(descriptors.data(), descriptors.size(), sizeof(RAWINPUTDEVICE)) == FALSE)
       {
@@ -294,43 +280,6 @@ namespace siege
       }
 
       return std::make_pair(x, y);
-    }
-
-    std::optional<WORD> map_virtual_key(WORD vkey)
-    {
-      switch (vkey)
-      {
-      case VK_PAD_A:
-        return VK_GAMEPAD_A;
-      case VK_PAD_B:
-        return VK_GAMEPAD_B;
-      case VK_PAD_X:
-        return VK_GAMEPAD_X;
-      case VK_PAD_Y:
-        return VK_GAMEPAD_Y;
-      case VK_PAD_LTRIGGER:
-        return VK_GAMEPAD_LEFT_TRIGGER;
-      case VK_PAD_RTRIGGER:
-        return VK_GAMEPAD_RIGHT_TRIGGER;
-      case VK_PAD_LTHUMB_UP:
-        return VK_GAMEPAD_LEFT_THUMBSTICK_UP;
-      case VK_PAD_LTHUMB_DOWN:
-        return VK_GAMEPAD_LEFT_THUMBSTICK_DOWN;
-      case VK_PAD_LTHUMB_LEFT:
-        return VK_GAMEPAD_LEFT_THUMBSTICK_LEFT;
-      case VK_PAD_LTHUMB_RIGHT:
-        return VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT;
-      case VK_PAD_RTHUMB_UP:
-        return VK_GAMEPAD_RIGHT_THUMBSTICK_UP;
-      case VK_PAD_RTHUMB_DOWN:
-        return VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN;
-      case VK_PAD_RTHUMB_LEFT:
-        return VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT;
-      case VK_PAD_RTHUMB_RIGHT:
-        return VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT;
-      default:
-        return std::nullopt;
-      }
     }
 
     LRESULT wm_input(win32::input_message message)
@@ -405,87 +354,33 @@ namespace siege
 
       simulated_inputs.clear();
 
-      if (regular_controllers.contains(header.hDevice))
-      {
-        auto item = registered_controllers.find(header.hDevice);
-        auto index = std::distance(item, registered_controllers.end()) - 1;
-        JOYINFOEX info{
-          .dwSize = sizeof(JOYINFOEX),
-          .dwFlags = JOY_RETURNALL
-        };
+      auto info = registered_controllers.find(header.hDevice);
 
-        if (joyGetPosEx(index, &info) == JOYERR_NOERROR)
-        {
-          auto& button_a = simulated_inputs.emplace_back();
-          button_a.type = INPUT_KEYBOARD;
-          button_a.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
-          button_a.ki.wScan = 0x0039;// space
-
-          if (info.dwButtons & JOY_BUTTON1)
-          {
-            button_a.ki.dwFlags = KEYEVENTF_SCANCODE;
-          }
-
-          auto& button_b = simulated_inputs.emplace_back();
-          button_b.type = INPUT_KEYBOARD;
-
-          button_b.ki.dwFlags = KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE;
-          button_b.ki.wScan = 0x001D;// left control
-
-          if (info.dwButtons & JOY_BUTTON2)
-          {
-            button_b.ki.dwFlags = KEYEVENTF_SCANCODE;
-          }
-        }
-
-        if (!simulated_inputs.empty())
-        {
-          ::SendInput(simulated_inputs.size(), simulated_inputs.data(), sizeof(INPUT));
-        }
-
-        return 0;
-      }
-
-      if (controller_state.empty() || !xinput_get_state)
+      if (info == registered_controllers.end())
       {
         return 0;
-      }
+      } 
 
       XINPUT_STATE temp{};
 
       auto& mappings = injector_args.args.controller_to_send_input_mappings;
 
-      for (auto& state : controller_state)
+      auto new_state = siege::views::get_current_state_for_handle(info->second, message.handle);
+      
+      if (new_state.dwPacketNumber == info->second.last_state.dwPacketNumber)
       {
-        auto result = xinput_get_state(state.first, &temp);
+        return 0;
+      }
 
-        if (result != S_OK || state.second.dwPacketNumber == temp.dwPacketNumber)
-        {
-          continue;
-        }
+      auto changes = siege::views::get_changes(info->second.last_state, new_state, std::span{ info->second.buffer });
 
-        auto [newLx, newLy] = calculate_deadzone(std::make_pair(temp.Gamepad.sThumbLX, temp.Gamepad.sThumbLY), XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
-        auto [oldLx, oldLy] = calculate_deadzone(std::make_pair(state.second.Gamepad.sThumbLX, state.second.Gamepad.sThumbLY), XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
-
-        auto find_mapping = [&](auto vkey) {
-          return std::find_if(mappings.begin(), mappings.end(), [&](auto& mapping) {
-            return mapping.from_vkey == vkey;
-          });
-        };
-        XINPUT_KEYSTROKE stroke{};
-
-        if (xinput_get_key_stroke(state.first, 0, &stroke) != ERROR_SUCCESS)
-        {
-          continue;
-        }
-
-        auto mapped_vkey = map_virtual_key(stroke.VirtualKey);
-
-        if (!mapped_vkey)
-        {
-          continue;
-        }
-
+      if (changes.size() == 0)
+      {
+        return 0;
+      }
+      
+      for (auto mapped_vkey : changes)
+      {
         for (auto& mapping : mappings)
         {
           if (!mapping.from_vkey || !mapping.to_vkey)
@@ -493,7 +388,7 @@ namespace siege
             break;
           }
 
-          if (mapping.from_vkey != mapped_vkey)
+          if (mapping.from_vkey != mapped_vkey.first)
           {
             continue;
           }
@@ -503,23 +398,24 @@ namespace siege
             continue;
           }
 
-          if (stroke.Flags & XINPUT_KEYSTROKE_KEYUP)
-          {
-            simulated_inputs.emplace_back(vk_to_input(mapping.to_vkey, mapping.to_context, *device_id, input_state::up));
-          }
-          else if (stroke.Flags & XINPUT_KEYSTROKE_KEYDOWN)
+          if (mapped_vkey.second > 0)
           {
             simulated_inputs.emplace_back(vk_to_input(mapping.to_vkey, mapping.to_context, *device_id, input_state::down));
           }
+          else
+          {
+            simulated_inputs.emplace_back(vk_to_input(mapping.to_vkey, mapping.to_context, *device_id, input_state::up));
+          }
         }
-
-        if (!simulated_inputs.empty())
-        {
-          assert(::SendInput(simulated_inputs.size(), simulated_inputs.data(), sizeof(INPUT)) == simulated_inputs.size());
-        }
-
-        state.second = temp;
       }
+      
+
+      if (!simulated_inputs.empty())
+      {
+        assert(::SendInput(simulated_inputs.size(), simulated_inputs.data(), sizeof(INPUT)) == simulated_inputs.size());
+      }
+
+      info->second.last_state = new_state;
 
       return 0;
     }
@@ -572,29 +468,11 @@ namespace siege
           }
         }
 
-        registered_controllers.insert(message.device_handle);
+        auto info = siege::views::controller_info_for_raw_input_device_handle(message.device_handle);
 
-        std::vector<wchar_t> device_buffer(255, '\0');
-        size = device_buffer.size();
-
-        if (::GetRawInputDeviceInfoW(message.device_handle, RIDI_DEVICENAME, device_buffer.data(), &size) > 0)
+        if (info)
         {
-          std::wstring_view device_path(device_buffer.data());
-
-          if (device_path.rfind(L"IG_") == std::wstring_view::npos)
-          {
-            regular_controllers.insert(message.device_handle);
-          }
-        }
-
-        XINPUT_STATE temp;
-
-        for (auto i = 0; i < XUSER_MAX_COUNT; ++i)
-        {
-          if (xinput_get_state && xinput_get_state(i, &temp) == S_OK)
-          {
-            controller_state.emplace(i, temp);
-          }
+          registered_controllers[message.device_handle] = controller_state{ *info };
         }
       }
       else if (message.code == GIDC_REMOVAL)
@@ -603,23 +481,6 @@ namespace siege
         registered_mice.erase(message.device_handle);
         registered_keyboards.erase(message.device_handle);
         registered_controllers.erase(message.device_handle);
-        registered_controllers.erase(message.device_handle);
-        regular_controllers.erase(message.device_handle);
-
-        std::set<int> controllers_to_remove;
-
-        for (auto& kv : controller_state)
-        {
-          if (xinput_get_state && xinput_get_state(kv.first, &kv.second) == ERROR_DEVICE_NOT_CONNECTED)
-          {
-            controllers_to_remove.insert(kv.first);
-          }
-        }
-
-        for (auto& key : controllers_to_remove)
-        {
-          controller_state.erase(key);
-        }
       }
       return 0;
     }
