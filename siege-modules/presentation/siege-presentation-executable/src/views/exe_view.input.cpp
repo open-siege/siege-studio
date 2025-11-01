@@ -12,30 +12,30 @@ namespace siege::views
   int get_image_index_for_button(WORD vkey)
   {
     const static std::map<WORD, int> images = {
-      { VK_GAMEPAD_A, 0 },
-      { VK_GAMEPAD_B, 1 },
-      { VK_GAMEPAD_X, 2 },
-      { VK_GAMEPAD_Y, 3 },
-      { VK_GAMEPAD_LEFT_SHOULDER, 4 },
-      { VK_GAMEPAD_RIGHT_SHOULDER, 5 },
-      { VK_GAMEPAD_LEFT_TRIGGER, 6 },
-      { VK_GAMEPAD_RIGHT_TRIGGER, 7 },
-      { VK_GAMEPAD_DPAD_UP, 9 },
-      { VK_GAMEPAD_DPAD_DOWN, 10 },
-      { VK_GAMEPAD_DPAD_LEFT, 11 },
-      { VK_GAMEPAD_DPAD_RIGHT, 12 },
-      { VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, 13 },
-      { VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, 14 },
-      { VK_GAMEPAD_LEFT_THUMBSTICK_UP, 15 },
-      { VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, 16 },
-      { VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, 17 },
-      { VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, 18 },
-      { VK_GAMEPAD_RIGHT_THUMBSTICK_UP, 15 },
-      { VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, 16 },
-      { VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, 17 },
-      { VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, 18 },
-      { VK_GAMEPAD_VIEW, 19 },
-      { VK_GAMEPAD_MENU, 20 },
+      { VK_GAMEPAD_A, 1 },
+      { VK_GAMEPAD_B, 2 },
+      { VK_GAMEPAD_X, 3 },
+      { VK_GAMEPAD_Y, 4 },
+      { VK_GAMEPAD_LEFT_SHOULDER, 5 },
+      { VK_GAMEPAD_RIGHT_SHOULDER, 6 },
+      { VK_GAMEPAD_LEFT_TRIGGER, 7 },
+      { VK_GAMEPAD_RIGHT_TRIGGER, 8 },
+      { VK_GAMEPAD_DPAD_UP, 10 },
+      { VK_GAMEPAD_DPAD_DOWN, 11 },
+      { VK_GAMEPAD_DPAD_LEFT, 12 },
+      { VK_GAMEPAD_DPAD_RIGHT, 13 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, 14 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, 15 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_UP, 16 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, 17 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, 18 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, 19 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_UP, 16 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, 17 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, 18 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, 19 },
+      { VK_GAMEPAD_VIEW, 20 },
+      { VK_GAMEPAD_MENU, 21 },
     };
 
     return images.at(vkey);
@@ -51,7 +51,7 @@ namespace siege::views
       ListView_SetTileInfo(controller_table, &item_info);
     };
 
-    if (controller_input_backends.empty())
+    if (actions.empty())
     {
       int id = 1;
       controller_table.InsertGroup(-1, LVGROUP{
@@ -166,11 +166,6 @@ namespace siege::views
 
       auto bindings = get_extension(state).init_controller_inputs();
 
-      if (!bindings)
-      {
-        return;
-      }
-
       int id = 1;
       for (auto& action : actions)
       {
@@ -196,25 +191,42 @@ namespace siege::views
       };
 
       std::vector<context> action_settings;
-      action_settings.reserve((*bindings)->inputs.size());
-
-      for (auto& binding : (*bindings)->inputs)
+      action_settings.reserve(actions.size());
+      
+      WORD action_index = 0;
+      for (auto& action : actions)
       {
-        if (binding.input_type == binding.unknown)
-        {
-          break;
-        }
-        auto action_iter = std::find_if(actions.begin(), actions.end(), [&](auto& action) { return action.action_name == binding.action_name; });
-
-        if (action_iter != actions.end())
-        {
-          action_settings.emplace_back(context{ binding.virtual_key, (siege::platform::hardware_context)binding.context, *action_iter, (WORD)(std::distance(actions.begin(), action_iter)) });
-        }
+        action_settings.emplace_back(context{.action = action, .action_index = action_index++ });
       }
 
+      if (bindings)
+      {
+        for (auto& binding : (*bindings)->inputs)
+        {
+          if (binding.input_type == binding.unknown)
+          {
+            break;
+          }
+          auto action_iter = std::find_if(action_settings.begin(), action_settings.end(), [&](auto& action) { return action.action.action_name == binding.action_name; });
+
+          if (action_iter != action_settings.end())
+          {
+            action_iter->vkey = binding.virtual_key;
+            action_iter->context = (siege::platform::hardware_context)binding.context;
+          }
+        }
+      }
+      
       for (auto& context : action_settings)
       {
-        win32::list_view_item up((wchar_t*)context.action.action_display_name.data(), get_image_index_for_button(context.vkey));
+        win32::list_view_item up((wchar_t*)context.action.action_display_name.data());
+
+        if (context.vkey)
+        {
+          up.iImage = get_image_index_for_button(context.vkey);
+          up.mask = up.mask | LVIF_IMAGE;
+        }
+
         up.mask = up.mask | LVIF_GROUPID | LVIF_PARAM;
         up.iGroupId = ids_for_grouping[context.action.group_display_name.data()];
         up.lParam = (LPARAM)add_action_binding(state, input_action_binding{ .vkey = context.vkey, .context = context.context, .action_index = context.action_index });

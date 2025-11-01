@@ -14,7 +14,6 @@
 #include <siege/extension/shared.hpp>
 #include "id-tech-shared.hpp"
 
-
 extern "C" {
 using hardware_context = siege::platform::hardware_context;
 using game_action = siege::platform::game_action;

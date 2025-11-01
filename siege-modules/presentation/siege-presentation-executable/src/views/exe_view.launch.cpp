@@ -240,7 +240,8 @@ namespace siege::views
       auto controller_actions = std::vector(bound_actions.begin(), bound_actions.end());
       controller_actions.erase(std::remove_if(controller_actions.begin(), controller_actions.end(), [](auto& item) {
         return !is_vkey_for_controller(item.vkey);
-      }), controller_actions.end());
+      }),
+        controller_actions.end());
 
       if (!actions.empty())
       {
@@ -280,7 +281,7 @@ namespace siege::views
       // to make Quake 3 based games work. The left analog stick is bound
       // to the same names as the arrow keys, so we want the controller settings to have higher priority.
       // Maybe this is not a bad idea in general, but it's better to have something more explicit for the user to control.
-      if (backends.empty())
+      if (actions.empty())
       {
         for (auto i = 0; i < controller_table.GetItemCount(); ++i)
         {
@@ -301,6 +302,35 @@ namespace siege::views
               iter->to_context = bound_inputs.at(item->lParam).to_context;
               iter->to_vkey = bound_inputs.at(item->lParam).to_vkey;
             }
+          }
+        }
+      }
+      else if (backends.empty())
+      {
+        for (auto& bound_action : controller_actions)
+        {
+          auto virtual_key = bound_action.vkey;
+          
+          auto action_iter = std::find_if(bound_actions.begin(), bound_actions.end(), [&](auto& other) {
+            return other.action_index == bound_action.action_index && 
+                (other.vkey != bound_action.vkey && other.context != bound_action.context);
+          });
+
+          if (action_iter == bound_actions.end())
+          {
+            continue;
+          }
+
+          auto iter = std::find_if(game_args.controller_to_send_input_mappings.begin(), game_args.controller_to_send_input_mappings.end(), [](auto& item) {
+            return item.from_vkey == 0;
+          });
+
+          if (iter != game_args.controller_to_send_input_mappings.end())
+          {
+            iter->from_context = bound_action.context;
+            iter->from_vkey = bound_action.vkey;
+            iter->to_context = action_iter->context;
+            iter->to_vkey = action_iter->vkey;
           }
         }
       }

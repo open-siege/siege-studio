@@ -83,8 +83,9 @@ namespace siege::platform
     enum
     {
       unknown,
-      digital,
-      analog
+      digital, //digital_only
+      analog, // analog_only
+      analog_or_digital
     } type;
     std::array<char, 32> action_name;
     std::array<char16_t, 64> action_display_name;

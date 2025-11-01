@@ -82,7 +82,8 @@ namespace win32
     shield = 0xEA18,
     check_mark = 0xe73e,
     button_menu = 0xede3,
-    button_view = 0xeeca
+    button_view = 0xeeca,
+    unknown = 0xE9CE
   };
 
   win32::image_list create_icon_list(std::span<segoe_fluent_icons> icons, SIZE icon_size, std::optional<::RGBQUAD> optional_color = std::nullopt);

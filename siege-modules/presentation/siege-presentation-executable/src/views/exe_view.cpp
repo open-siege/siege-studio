@@ -387,6 +387,7 @@ namespace siege::views
     exe_actions_icons = win32::create_icon_list(exe_icons, icon_size);
 
     std::array controller_icons{
+      win32::segoe_fluent_icons::unknown,
       win32::segoe_fluent_icons::button_a,
       win32::segoe_fluent_icons::button_b,
       win32::segoe_fluent_icons::button_x,
@@ -529,6 +530,10 @@ namespace siege::views
         if (extension.caps)
         {
           populate_launch_table();
+        }
+
+        if (!extension.game_actions.empty())
+        {
           populate_controller_table(extension.game_actions, extension.controller_input_backends);
           populate_keyboard_table(extension.game_actions, extension.controller_input_backends);
         }
