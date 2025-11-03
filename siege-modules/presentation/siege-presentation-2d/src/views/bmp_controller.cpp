@@ -1,7 +1,7 @@
 #include "bmp_controller.hpp"
 #include "pal_controller.hpp"
 #include <siege/content/bmp/bitmap.hpp>
-#include <siege/content/bmp/tim.hpp>
+#include <siege/content/tim.hpp>
 #include <siege/platform/image.hpp>
 #include <siege/platform/stream.hpp>
 #include <deque>

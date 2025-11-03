@@ -7,10 +7,10 @@ list(REMOVE_ITEM LIB_SRC_FILES ${WIN32_SRC_FILES})
 
 if (WIN32)
     add_library(${PROJECT_NAME} SHARED ${LIB_SRC_FILES} ${WIN32_SRC_FILES} src/${PROJECT_NAME}.def)
-    target_link_libraries(${PROJECT_NAME} PRIVATE siege-win-desktop siege-content-3space siege-content-mw2 opengl32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE siege-win-desktop siege-content-all siege-content-mw2 opengl32)
 else()
     add_library(${PROJECT_NAME} SHARED ${LIB_SRC_FILES})
-    target_link_libraries(${PROJECT_NAME} PRIVATE siege-content-3space)
+    target_link_libraries(${PROJECT_NAME} PRIVATE siege-content-all)
 endif()
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)

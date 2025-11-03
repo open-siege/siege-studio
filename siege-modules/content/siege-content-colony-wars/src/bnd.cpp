@@ -4,8 +4,8 @@
 #include <array>
 #include <any>
 #include <spanstream>
-#include <siege/content/dts/tmd.hpp>
-#include <siege/content/bmp/tim.hpp>
+#include <siege/content/tmd.hpp>
+#include <siege/content/tim.hpp>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>

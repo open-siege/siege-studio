@@ -1,9 +1,9 @@
 #include <any>
 #include <siege/content/dts/darkstar.hpp>
 #include <siege/content/dts/3space.hpp>
-#include <siege/content/dts/renderable_shape_factory.hpp>
-#include <siege/content/dts/null_renderable_shape.hpp>
-#include <siege/content/dts/wtb.hpp>
+#include <siege/content/renderable_shape_factory.hpp>
+#include <siege/content/null_renderable_shape.hpp>
+#include <siege/content/wtb.hpp>
 #include "dts_controller.hpp"
 
 namespace siege::content::tmd

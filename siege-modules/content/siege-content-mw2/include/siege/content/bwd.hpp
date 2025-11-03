@@ -3,7 +3,7 @@
 
 #include <array>
 #include <siege/platform/endian_arithmetic.hpp>
-#include <siege/content/dts/wtb.hpp>
+#include <siege/content/wtb.hpp>
 
 
 namespace siege::content::bwd

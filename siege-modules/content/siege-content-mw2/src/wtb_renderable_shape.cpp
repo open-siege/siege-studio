@@ -7,7 +7,7 @@
 #include <list>
 #include <glm/gtx/quaternion.hpp>
 
-#include "wtb_renderable_shape.hpp"
+#include <siege/content/wtb_renderable_shape.hpp>
 
 
 namespace siege::content::wtb

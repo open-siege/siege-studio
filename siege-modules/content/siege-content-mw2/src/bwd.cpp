@@ -11,7 +11,7 @@
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
-#include <siege/content/dts/bwd.hpp>
+#include <siege/content/bwd.hpp>
 
 namespace siege::content::bwd
 {

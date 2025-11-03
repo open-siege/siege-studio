@@ -4,7 +4,7 @@
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
-#include <siege/content/dts/wtb.hpp>
+#include <siege/content/wtb.hpp>
 
 namespace siege::content::wtb
 {

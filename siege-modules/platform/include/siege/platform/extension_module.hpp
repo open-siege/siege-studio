@@ -204,19 +204,7 @@ namespace siege::platform
         return false;
       }
 
-      return export_ptr == executable_is_supported_proc ||
-          export_ptr == get_function_name_ranges_proc ||
-          export_ptr == get_variable_name_ranges_proc ||
-          export_ptr == init_keyboard_inputs_proc ||
-          export_ptr == init_mouse_inputs_proc ||
-          export_ptr == get_predefined_string_command_line_settings_proc ||
-          export_ptr == get_predefined_int_command_line_settings_proc ||
-          export_ptr == init_controller_inputs_proc ||
-          export_ptr == GetProcAddress<game_command_line_caps*>("command_line_caps") ||
-          export_ptr == GetProcAddress<game_command_line_caps*>("controller_input_backends") ||
-          export_ptr == GetProcAddress<game_command_line_caps*>("apply_prelaunch_settings") ||
-          export_ptr == GetProcAddress<game_command_line_caps*>("game_actions") ||
-          export_ptr == GetProcAddress<game_command_line_caps*>("format_command_line");
+      return export_ptr == executable_is_supported_proc || export_ptr == get_function_name_ranges_proc || export_ptr == get_variable_name_ranges_proc || export_ptr == init_keyboard_inputs_proc || export_ptr == init_mouse_inputs_proc || export_ptr == get_predefined_string_command_line_settings_proc || export_ptr == get_predefined_int_command_line_settings_proc || export_ptr == init_controller_inputs_proc || export_ptr == GetProcAddress<game_command_line_caps*>("command_line_caps") || export_ptr == GetProcAddress<game_command_line_caps*>("controller_input_backends") || export_ptr == GetProcAddress<game_command_line_caps*>("apply_prelaunch_settings") || export_ptr == GetProcAddress<game_command_line_caps*>("game_actions") || export_ptr == GetProcAddress<game_command_line_caps*>("format_command_line");
     }
 
     inline std::span<const wchar_t*> update_span(const char* key)
@@ -338,9 +326,14 @@ namespace siege::platform
           {
             results.reserve(raw.size());
 
-            std::transform(raw.begin(), raw.end(), std::back_inserter(results), [](auto& item) {
-              return std::make_pair<std::string, std::string>(item[0], item[1]);
-            });
+            for (auto& item : raw)
+            {
+              if (!(item[0] || item[1]))
+              {
+                break;
+              }
+              results.emplace_back(std::make_pair<std::string, std::string>(item[0], item[1]));
+            }
           }
         }
       }

@@ -1,11 +1,10 @@
 #include <siege/content/dts/darkstar.hpp>
 #include <siege/content/dts/3space.hpp>
-#include <siege/content/dts/wtb.hpp>
-#include <siege/content/dts/bwd.hpp>
+#include <siege/content/bwd.hpp>
+#include <siege/content/wtb_renderable_shape.hpp>
 #include <siege/content/dts/dts_renderable_shape.hpp>
 #include <siege/content/dts/3space_renderable_shape.hpp>
-#include "wtb_renderable_shape.hpp"
-#include <siege/content/dts/null_renderable_shape.hpp>
+#include <siege/content/null_renderable_shape.hpp>
 
 namespace siege::content::dts
 {

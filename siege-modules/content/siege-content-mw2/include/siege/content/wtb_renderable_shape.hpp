@@ -11,8 +11,8 @@
 #include <variant>
 
 #include <siege/content/renderable_shape.hpp>
-#include <siege/content/dts/wtb.hpp>
-#include <siege/content/dts/bwd.hpp>
+#include <siege/content/wtb.hpp>
+#include <siege/content/bwd.hpp>
 
 namespace siege::content::wtb
 {
