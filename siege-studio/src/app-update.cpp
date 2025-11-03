@@ -1,6 +1,5 @@
 #include <SDKDDKVer.h>
 #include <siege/platform/win/shell.hpp>
-#include <siege/platform/win/window_impl.hpp>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/threading.hpp>

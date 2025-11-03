@@ -3,6 +3,9 @@
 
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/theming.hpp>
+#include <siege/platform/win/basic_window.hpp>
+#include <siege/platform/win/window_module.hpp>
+#include <siege/platform/presentation_module.hpp>
 #include <siege/platform/win/threading.hpp>
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/extension_module.hpp>
@@ -1089,22 +1092,6 @@ namespace siege::views
       return 0;
     }
 
-    inline static auto register_class(HINSTANCE module)
-    {
-      WNDCLASSEXW info{
-        .cbSize = sizeof(info),
-        .style = CS_HREDRAW | CS_VREDRAW,
-        .lpfnWndProc = basic_window::window_proc,
-        .cbWndExtra = sizeof(void*),
-        .hInstance = module,
-        .hIcon = (HICON)::LoadImageW(module, L"AppIcon", IMAGE_ICON, 0, 0, 0),
-        .hCursor = LoadCursorW(module, IDC_ARROW),
-        .hbrBackground = (HBRUSH)(COLOR_WINDOW + 1),
-        .lpszClassName = win32::type_name<siege::views::default_view>().c_str(),
-      };
-      return ::RegisterClassExW(&info);
-    }
-
     std::optional<LRESULT> window_proc(UINT message, WPARAM wparam, LPARAM lparam) override
     {
       static auto unpack_done_id = ::RegisterWindowMessageW(L"SIEGE_UNPACK_DONE");
@@ -1128,6 +1115,22 @@ namespace siege::views
       }
     }
   };
+
+  ATOM register_default_view(HINSTANCE module)
+  {
+    WNDCLASSEXW info{
+      .cbSize = sizeof(info),
+      .style = CS_HREDRAW | CS_VREDRAW,
+      .lpfnWndProc = win32::basic_window<default_view>::window_proc,
+      .cbWndExtra = sizeof(void*),
+      .hInstance = module,
+      .hIcon = (HICON)::LoadImageW(module, L"AppIcon", IMAGE_ICON, 0, 0, 0),
+      .hCursor = LoadCursorW(module, IDC_ARROW),
+      .hbrBackground = (HBRUSH)(COLOR_WINDOW + 1),
+      .lpszClassName = L"default_view",
+    };
+    return ::RegisterClassExW(&info);
+  }
 }// namespace siege::views
 
 #endif

@@ -15,7 +15,7 @@ namespace siege::views
   using namespace std::literals;
 
 
-  std::optional<win32::lresult_t> exe_view::wm_create()
+  win32::lresult_t exe_view::wm_create()
   {
     options = *win32::CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
       .hwndParent = *this,
@@ -159,7 +159,7 @@ namespace siege::views
     return 0;
   }
 
-  std::optional<win32::lresult_t> exe_view::wm_size(std::size_t type, SIZE client_size)
+  win32::lresult_t exe_view::wm_size(std::size_t type, SIZE client_size)
   {
     auto top_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy / 12 };
 
@@ -445,7 +445,7 @@ namespace siege::views
     }
   }
 
-  std::optional<win32::lresult_t> exe_view::wm_copy_data(win32::copy_data_message<char> message)
+  win32::lresult_t exe_view::wm_copy_data(win32::copy_data_message<char> message)
   {
     std::spanstream stream(message.data);
 
@@ -674,6 +674,23 @@ namespace siege::views
     return std::nullopt;
   }
 
+  std::optional<LRESULT> exe_view::window_proc(UINT message, WPARAM wparam, LPARAM lparam)
+  {
+    switch (message)
+    {
+    case WM_CREATE:
+      return wm_create();
+    case WM_SETTINGCHANGE:
+      return wm_setting_change(win32::setting_change_message(wparam, lparam));
+    case WM_SIZE:
+      return wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
+    case WM_COPYDATA:
+      return (LRESULT)wm_copy_data(win32::copy_data_message<char>(wparam, lparam));
+    default:
+      return std::nullopt;
+    }
+  }
+
   std::wstring category_for_vkey(SHORT vkey, siege::platform::hardware_context context)
   {
     using namespace siege::platform;
@@ -878,7 +895,15 @@ namespace siege::views
 
   ATOM register_exe_view(win32::window_module_ref module)
   {
-    return module.RegisterClassExW(win32::window_meta_class<exe_view>());
+    WNDCLASSEXW info{
+      .cbSize = sizeof(info),
+      .style = CS_HREDRAW | CS_VREDRAW,
+      .lpfnWndProc = win32::basic_window<exe_view>::window_proc,
+      .cbWndExtra = sizeof(void*),
+      .hInstance = module,
+      .lpszClassName = win32::type_name<exe_view>().c_str(),
+    };
+    return ::RegisterClassExW(&info);
   }
 
 }// namespace siege::views

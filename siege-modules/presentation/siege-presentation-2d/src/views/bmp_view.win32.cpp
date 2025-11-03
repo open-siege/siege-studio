@@ -2,6 +2,7 @@
 #define BITMAPWINDOW_HPP
 
 #include <siege/platform/win/common_controls.hpp>
+#include <siege/platform/win/basic_window.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/win/wic.hpp>
@@ -16,8 +17,8 @@
 #include <memory>
 #include <istream>
 #include <spanstream>
-#include "bmp_controller.hpp"
-#include "pal_controller.hpp"
+#include <future>
+#include "2d_shared.hpp"
 
 namespace siege::views
 {
@@ -25,9 +26,9 @@ namespace siege::views
 
   // TODO add a right click menu to open the palette in a new tab
   // TODO update icons of list view to be radio buttons instead of checkboxes
-  struct bmp_view : win32::window_ref
+  struct bmp_view : win32::basic_window<bmp_view>
   {
-    bmp_controller controller;
+    bmp_context state;
 
     win32::list_view palette_list;
     win32::tool_bar bitmap_actions;
@@ -58,7 +59,7 @@ namespace siege::views
     std::list<platform::storage_module> loaded_modules;
     std::future<void> pending_palette_load;
 
-//    win32::local_atom pbmp_id = win32::local_atom(L".pbm");
+    //    win32::local_atom pbmp_id = win32::local_atom(L".pbm");
     win32::local_atom bmp_id = win32::local_atom(L".bmp");
     win32::local_atom jpg_id = win32::local_atom(L".jpg");
     win32::local_atom png_id = win32::local_atom(L".png");
@@ -66,10 +67,10 @@ namespace siege::views
     win32::local_atom tiff_id = win32::local_atom(L".tif");
     win32::local_atom dds_id = win32::local_atom(L".dds");
 
-//    win32::local_atom single_pba_id = win32::local_atom(L"single.pba");
+    //    win32::local_atom single_pba_id = win32::local_atom(L"single.pba");
     win32::local_atom single_gif_id = win32::local_atom(L"single.gif");
     win32::local_atom single_tiff_id = win32::local_atom(L"single.tif");
-//    win32::local_atom multiple_pbmp_id = win32::local_atom(L"multiple.pbm");
+    //    win32::local_atom multiple_pbmp_id = win32::local_atom(L"multiple.pbm");
     win32::local_atom multiple_gif_id = win32::local_atom(L"multiple.pba");
     win32::local_atom multiple_tiff_id = win32::local_atom(L"multiple.tif");
     win32::local_atom multiple_jpg_id = win32::local_atom(L"multiple.jpg");
@@ -79,7 +80,7 @@ namespace siege::views
 
     std::map<ATOM, std::function<std::unique_ptr<bitmap_encoder>(std::filesystem::path)>> encoder_creators;
 
-    bmp_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
+    bmp_view(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params)
     {
       auto bmp_creator = [](auto path) {
         return std::unique_ptr<bitmap_encoder>(new bmp_bitmap_encoder(path));
@@ -197,7 +198,7 @@ namespace siege::views
       image_export_menu.AppendMenuW(MF_OWNERDRAW | MF_POPUP, (UINT_PTR)export_single_menu.get(), L"Export Current Frame");
       image_export_menu.AppendMenuW(MF_OWNERDRAW | MF_POPUP | MF_DISABLED, (UINT_PTR)export_multiple_menu.get(), L"Export All Frames");
 
-//      export_single_menu.AppendMenuW(MF_OWNERDRAW, pbmp_id, L"Export As Phoenix BMP/PBM");
+      //      export_single_menu.AppendMenuW(MF_OWNERDRAW, pbmp_id, L"Export As Phoenix BMP/PBM");
       export_single_menu.AppendMenuW(MF_OWNERDRAW, bmp_id, L"Export As Microsoft BMP");
       export_single_menu.AppendMenuW(MF_OWNERDRAW, png_id, L"Export As PNG");
       export_single_menu.AppendMenuW(MF_OWNERDRAW, jpg_id, L"Export As JPG");
@@ -205,10 +206,10 @@ namespace siege::views
       export_single_menu.AppendMenuW(MF_OWNERDRAW, tiff_id, L"Export As TIFF");
       export_single_menu.AppendMenuW(MF_OWNERDRAW, dds_id, L"Export As DDS");
 
-//      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, single_pba_id, L"Export As Single Phoenix BMP Array (PBA)");
+      //      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, single_pba_id, L"Export As Single Phoenix BMP Array (PBA)");
       export_multiple_menu.AppendMenuW(MF_OWNERDRAW, single_gif_id, L"Export As Single GIF");
       export_multiple_menu.AppendMenuW(MF_OWNERDRAW, single_tiff_id, L"Export As Single TIFF");
-//      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_pbmp_id, L"Export As Multiple Phoenix BMPs");
+      //      export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_pbmp_id, L"Export As Multiple Phoenix BMPs");
       export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_gif_id, L"Export As Multiple GIFs");
       export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_tiff_id, L"Export As Multiple TIFFs");
       export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_bmp_id, L"Export As Multiple Microsoft BMPs");
@@ -260,7 +261,7 @@ namespace siege::views
 
         if (selection)
         {
-          auto frame_count = controller.get_frame_count();
+          auto frame_count = get_frame_count(state);
           if (selection - 1 == frame_count)
           {
             if (animation_timer)
@@ -281,7 +282,7 @@ namespace siege::views
                 }
 
                 previous_viewport = WICRect{};
-                current_frame = &controller.get_frame(current_frame_index);
+                current_frame = &get_frame(state, current_frame_index);
                 resize_preview(true);
               });
             }
@@ -290,8 +291,8 @@ namespace siege::views
           {
             previous_viewport = WICRect{};
             current_frame_index = selection - 1;
-            auto frame_size = controller.get_size(current_frame_index);
-            current_frame = &controller.get_frame(current_frame_index);
+            auto frame_size = get_size(state, current_frame_index);
+            current_frame = &get_frame(state, current_frame_index);
             resize_preview(true);
           }
         }
@@ -340,10 +341,10 @@ namespace siege::views
                     std::ofstream stream(filename, std::ios::trunc);
                     auto encoder = creator->second(filename);
 
-                    for (auto i = 0u; i < controller.get_frame_count(); ++i)
+                    for (auto i = 0u; i < get_frame_count(state); ++i)
                     {
-                      auto frame_size = controller.get_size(i);
-                      auto ref = controller.get_frame(i);
+                      auto frame_size = get_size(state, i);
+                      auto ref = get_frame(state, i);
                       auto frame = encoder->create_new_frame();
                       frame.write_source(ref);
                       frame.commit();
@@ -356,7 +357,7 @@ namespace siege::views
                     filename = path->replace_extension(extension);
 
                     auto stem = filename.stem().wstring();
-                    for (auto i = 0u; i < controller.get_frame_count(); ++i)
+                    for (auto i = 0u; i < get_frame_count(state); ++i)
                     {
                       filename.replace_filename(stem + std::to_wstring(i + 1)).replace_extension(extension);
                       std::ofstream stream(filename, std::ios::trunc);
@@ -365,7 +366,7 @@ namespace siege::views
 
                       auto frame = encoder->create_new_frame();
 
-                      auto ref = controller.get_frame(i);
+                      auto ref = get_frame(state, i);
                       frame.write_source(ref);
                       frame.commit();
                       encoder->commit();
@@ -601,7 +602,7 @@ namespace siege::views
       {
         if (scale != 0 && current_frame)
         {
-          auto frame_size = controller.get_size(current_frame_index);
+          auto frame_size = get_size(state, current_frame_index);
 
           if (this->viewport.Width > frame_size.width)
           {
@@ -759,11 +760,11 @@ namespace siege::views
     {
       std::ispanstream stream(message.data);
 
-      if (bmp_controller::is_bmp(stream))
+      if (is_bmp(stream))
       {
         static std::unordered_map<std::filesystem::path, siege::platform::storage_module::context_ptr> loaded_contexts;
 
-        auto pending_load = controller.load_palettes_async(
+        auto pending_load = load_palettes_async(state, 
           std::nullopt, [&](auto path) {
           
           siege::platform::storage_info info{
@@ -798,7 +799,7 @@ namespace siege::views
 
           for (auto& file : files.value())
           {
-            auto is_pal = std::any_of(pal_controller::formats.begin(), pal_controller::formats.end(), [&](auto& ext) { return file.extension().c_str() == ext; });
+            auto is_pal = std::ranges::any_of(get_pal_formats(), [&](auto& ext) { return file.extension().c_str() == ext; });
 
             if (is_pal)
             {
@@ -832,7 +833,7 @@ namespace siege::views
             return std::vector<char>{};
           });
 
-        auto count = controller.load_bitmap(stream, pending_load);
+        auto count = load_bitmap(state, stream, pending_load);
 
         frame_selection_menu = win32::popup_menu();
 
@@ -846,7 +847,7 @@ namespace siege::views
           frame_sizes.reserve(count);
           for (auto i = 0u; i < count; ++i)
           {
-            frame_sizes.emplace_back(controller.get_size(i));
+            frame_sizes.emplace_back(get_size(state, i));
           }
 
           if (std::all_of(frame_sizes.begin(), frame_sizes.end(), [first = frame_sizes[0]](auto& size) {
@@ -867,8 +868,8 @@ namespace siege::views
         if (count > 0)
         {
           auto size = static_image.GetClientSize();
-          auto frame_size = controller.get_size(current_frame_index);
-          current_frame = &controller.get_frame(current_frame_index);
+          auto frame_size = get_size(state, current_frame_index);
+          current_frame = &get_frame(state, current_frame_index);
 
           if (!(current_frame->get_pixel_format() == pixel_format::indexed_1bpp || current_frame->get_pixel_format() == pixel_format::indexed_2bpp || current_frame->get_pixel_format() != pixel_format::indexed_4bpp || current_frame->get_pixel_format() != pixel_format::indexed_8bpp))
           {
@@ -888,7 +889,7 @@ namespace siege::views
           pending_palette_load = std::async(std::launch::async, [this, pending_load]() {
                 auto& palettes = pending_load.get();
                 loaded_contexts.clear();
-                auto selection = controller.get_selected_palette();
+                auto selection = get_selected_palette(state);
                 auto p = 1u;
                 std::vector<win32::list_view_group> groups;
 
@@ -909,7 +910,7 @@ namespace siege::views
                     child_item.lParam = (LPARAM)&child;
                     child_item.mask = LVIF_TEXT | LVIF_PARAM;
 
-                    if (selection.first->path == pal.path && selection.second == (c - 2))
+                    if (selection.first.path == pal.path && selection.second == (c - 2))
                     {
                       selected_index = index;
                     }
@@ -934,7 +935,47 @@ namespace siege::views
 
       return FALSE;
     }
+
+    std::optional<LRESULT> window_proc(UINT message, WPARAM wparam, LPARAM lparam) override
+    {
+      switch (message)
+      {
+      case WM_CREATE:
+        return wm_create();
+      case WM_SETTINGCHANGE:
+        return wm_setting_change(win32::setting_change_message(wparam, lparam));
+      case WM_SIZE:
+        return wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
+      case WM_COPYDATA:
+        return (LRESULT)wm_copy_data(win32::copy_data_message<char>(wparam, lparam));
+      case WM_MOUSEMOVE:
+        return (LRESULT)wm_mouse_move(wparam, MAKEPOINTS(lparam));
+      case WM_LBUTTONDOWN:
+        [[fallthrough]];
+      case WM_MBUTTONDOWN:
+        [[fallthrough]];
+      case WM_RBUTTONDOWN:
+        [[fallthrough]];
+      case WM_XBUTTONDOWN:
+        return (LRESULT)wm_mouse_button_down(wparam, MAKEPOINTS(lparam));
+      default:
+        return std::nullopt;
+      }
+    }
   };
+
+  ATOM register_bmp_view(win32::window_module_ref module)
+  {
+    WNDCLASSEXW info{
+      .cbSize = sizeof(info),
+      .style = CS_HREDRAW | CS_VREDRAW,
+      .lpfnWndProc = win32::basic_window<bmp_view>::window_proc,
+      .cbWndExtra = sizeof(void*),
+      .hInstance = module,
+      .lpszClassName = win32::type_name<bmp_view>().c_str(),
+    };
+    return ::RegisterClassExW(&info);
+  }
 }// namespace siege::views
 
 #endif

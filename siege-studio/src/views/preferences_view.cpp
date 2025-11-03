@@ -1,14 +1,14 @@
-#ifndef THEME_VIEW_HPP
-#define THEME_VIEW_HPP
-
+#include <siege/platform/win/window.hpp>
+#include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/theming.hpp>
+#include <siege/platform/win/basic_window.hpp>
 #include <set>
 #include <type_traits>
 
 namespace siege::views
 {
-  struct preferences_view final : win32::window_ref
+  struct preferences_view final : win32::basic_window<preferences_view>
   {
     win32::list_box options;
     std::function<void()> options_unbind;
@@ -62,7 +62,7 @@ namespace siege::views
     // allows theme settings to be saved
     // theme settings changed per control type
 
-    preferences_view(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self)
+    preferences_view(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params)
     {
     }
 
@@ -604,11 +604,33 @@ namespace siege::views
       return 0;
     }
 
-    std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
+    std::optional<LRESULT> window_proc(UINT message, WPARAM wparam, LPARAM lparam) override
     {
-      return std::nullopt;
+      switch (message)
+      {
+      case WM_CREATE:
+        return wm_create();
+      case WM_SIZE:
+        return wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
+      default:
+        return std::nullopt;
+      }
     }
   };
-}// namespace siege::views
 
-#endif
+  ATOM register_preferences_view(HINSTANCE module)
+  {
+    WNDCLASSEXW info{
+      .cbSize = sizeof(info),
+      .style = CS_HREDRAW | CS_VREDRAW,
+      .lpfnWndProc = win32::basic_window<preferences_view>::window_proc,
+      .cbWndExtra = sizeof(void*),
+      .hInstance = module,
+      .hIcon = (HICON)::LoadImageW(module, L"AppIcon", IMAGE_ICON, 0, 0, 0),
+      .hCursor = LoadCursorW(module, IDC_ARROW),
+      .hbrBackground = (HBRUSH)(COLOR_WINDOW + 1),
+      .lpszClassName = L"preferences_view",
+    };
+    return ::RegisterClassExW(&info);
+  }
+}// namespace siege::views

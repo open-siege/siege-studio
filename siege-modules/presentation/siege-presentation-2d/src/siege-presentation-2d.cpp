@@ -4,8 +4,7 @@
 #include <system_error>
 #include <siege/platform/stream.hpp>
 
-#include "views/bmp_controller.hpp"
-#include "views/pal_controller.hpp"
+#include "views/2d_shared.hpp"
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;
@@ -22,8 +21,8 @@ std::errc get_supported_extensions(std::size_t count, const siege::fs_char** str
     std::vector<siege::fs_string_view> extensions;
     extensions.reserve(32);
 
-    std::copy(bmp_controller::formats.begin(), bmp_controller::formats.end(), std::back_inserter(extensions));
-    std::copy(pal_controller::formats.begin(), pal_controller::formats.end(), std::back_inserter(extensions));
+    std::ranges::copy(get_bmp_formats(), std::back_inserter(extensions));
+    std::ranges::copy(get_pal_formats(), std::back_inserter(extensions));
 
     return extensions;
   }();
@@ -81,17 +80,19 @@ std::errc get_supported_extensions_for_category(const char16_t* category, std::s
 
   if (category_str == u"All Images")
   {
-    count = std::clamp<std::size_t>(count, 0u, bmp_controller::formats.size());
+    auto formats = get_bmp_formats();
+    count = std::clamp<std::size_t>(count, 0u, formats.size());
 
-    std::transform(bmp_controller::formats.begin(), bmp_controller::formats.begin() + count, strings, [](const auto value) {
+    std::transform(formats.begin(), formats.begin() + count, strings, [](const auto value) {
       return value.data();
     });
   }
   else if (category_str == u"All Palettes")
   {
-    count = std::clamp<std::size_t>(count, 0u, pal_controller::formats.size());
+    auto formats = get_pal_formats();
+    count = std::clamp<std::size_t>(count, 0u, formats.size());
 
-    std::transform(pal_controller::formats.begin(), pal_controller::formats.begin() + count, strings, [](const auto value) {
+    std::transform(formats.begin(), formats.begin() + count, strings, [](const auto value) {
       return value.data();
     });
   }
@@ -117,12 +118,12 @@ std::errc is_stream_supported(storage_info* data) noexcept
 
   auto stream = siege::platform::create_istream(*data);
 
-  if (pal_controller::is_pal(*stream))
+  if (is_pal(*stream))
   {
     return std::errc(0);
   }
 
-  if (bmp_controller::is_bmp(*stream))
+  if (is_bmp(*stream))
   {
     return std::errc(0);
   }

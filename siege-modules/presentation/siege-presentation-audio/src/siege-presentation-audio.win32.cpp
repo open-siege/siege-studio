@@ -1,14 +1,23 @@
-#include <siege/platform/win/window_impl.hpp>
+
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/hresult.hpp>
 #include <siege/platform/stream.hpp>
-#include "views/sfx_view.hpp"
+#include "views/sfx_shared.hpp"
 
 using namespace siege::views;
+
 using storage_info = siege::platform::storage_info;
+
+static ATOM sfx_view_atom;
+
+namespace siege::views
+{
+  ATOM register_sfx_view(win32::window_module_ref module);
+}
 
 extern "C" {
 extern const std::uint32_t default_file_icon = SIID_AUDIOFILES;
+
 
 HRESULT get_window_class_for_stream(storage_info* data, wchar_t** class_name) noexcept
 {
@@ -22,32 +31,38 @@ HRESULT get_window_class_for_stream(storage_info* data, wchar_t** class_name) no
     return E_INVALIDARG;
   }
 
-  static std::wstring empty;
-  *class_name = empty.data();
-
   auto stream = siege::platform::create_istream(*data);
 
-  try
-  {
-    static auto this_module = win32::window_module_ref::current_module();
+  static auto this_module = win32::window_module_ref::current_module();
 
-    if (sfx_controller::is_sfx(*stream))
-    {
-      static auto window_type_name = win32::type_name<sfx_view>();
-
-      if (this_module.GetClassInfoExW(window_type_name))
-      {
-        *class_name = window_type_name.data();
-        return S_OK;
-      }
-    }
-
-    return S_FALSE;
-  }
-  catch (...)
+  if (!is_sfx(*stream))
   {
     return S_FALSE;
   }
+
+  static std::wstring storage;
+
+  if (!storage.empty())
+  {
+    *class_name = storage.data();
+    return S_OK;
+  }
+
+  auto window = this_module.CreateWindowExW(CREATESTRUCTW{
+    .hwndParent = HWND_MESSAGE,
+    .lpszClass = MAKEINTATOM(sfx_view_atom) });
+
+  if (!window)
+  {
+    return S_FALSE;
+  }
+
+  storage.resize(255);
+  storage.resize(::GetClassNameW(*window, storage.data(), (int)storage.size()));
+  ::DestroyWindow(*window);
+  window->release();
+  *class_name = storage.data();
+  return S_OK;
 }
 
 BOOL WINAPI DllMain(
@@ -67,11 +82,11 @@ BOOL WINAPI DllMain(
 
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
-      this_module.RegisterClassExW(win32::window_meta_class<sfx_view>());
+      sfx_view_atom = register_sfx_view(win32::window_module_ref(hinstDLL));
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
-      this_module.UnregisterClassW<sfx_view>();
+      ::UnregisterClassW(MAKEINTATOM(sfx_view_atom), hinstDLL);
     }
   }
 

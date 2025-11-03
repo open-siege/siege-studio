@@ -9,6 +9,7 @@
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/dialog.hpp>
+#include <siege/platform/win/basic_window.hpp>
 #include <string>
 #include "input_injector.hpp"
 #include "exe_shared.hpp"
@@ -20,7 +21,7 @@ namespace siege::views
   std::wstring string_for_vkey(SHORT vkey, siege::platform::hardware_context context);
   std::wstring category_for_vkey(SHORT vkey, siege::platform::hardware_context context);
   
-  struct exe_view final : win32::window_ref
+  struct exe_view final : win32::basic_window<exe_view>
   {
     std::any state;
     std::optional<input_injector> injector;
@@ -78,13 +79,15 @@ namespace siege::views
       { L"#24"sv, L"Side-by-Side Assembly Manifest"sv },
     };
 
-    exe_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
+    exe_view(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params)
     {
     }
 
-    std::optional<win32::lresult_t> wm_create();
+    win32::lresult_t wm_create();
 
-    std::optional<win32::lresult_t> wm_size(std::size_t type, SIZE client_size);
+    win32::lresult_t wm_size(std::size_t type, SIZE client_size);
+
+    win32::lresult_t wm_copy_data(win32::copy_data_message<char> message);
 
     void recreate_image_lists(std::optional<SIZE> possible_size);
 
@@ -92,8 +95,6 @@ namespace siege::views
 
     void populate_controller_table(std::span<siege::platform::game_action> actions, std::span<const wchar_t*> controller_input_backends);
     void populate_keyboard_table(std::span<siege::platform::game_action> actions, std::span<const wchar_t*> controller_input_backends);
-
-    std::optional<win32::lresult_t> wm_copy_data(win32::copy_data_message<char> message);
 
     void launch_table_nm_click(win32::list_view sender, const NMITEMACTIVATE& message);
     void resource_table_nm_rclick(win32::list_view, const NMITEMACTIVATE& message);
@@ -105,6 +106,8 @@ namespace siege::views
     void extract_selected_files();
 
     BOOL exe_actions_nm_click(win32::tool_bar, const NMMOUSE& message);
+
+    std::optional<LRESULT> window_proc(UINT message, WPARAM wparam, LPARAM lparam) override;
 
     std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message);
   };

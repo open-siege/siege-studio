@@ -4,7 +4,7 @@
 #include <siege/content/renderable_shape_factory.hpp>
 #include <siege/content/null_renderable_shape.hpp>
 #include <siege/content/wtb.hpp>
-#include "dts_controller.hpp"
+#include "3d_shared.hpp"
 
 namespace siege::content::tmd
 {
@@ -38,7 +38,23 @@ namespace siege::content::bwd
 
 namespace siege::views
 {
-  bool dts_controller::is_shape(std::istream& stream)
+  struct shape_data
+  {
+    // to keep it copyable :(
+    std::shared_ptr<content::renderable_shape> shape;
+    std::vector<std::string> detail_levels;
+    std::vector<content::material> materials;
+    std::vector<std::size_t> selected_detail_levels;
+    std::vector<content::sequence_info> sequences;
+  };
+
+  std::span<const siege::fs_string_view> get_shape_formats() noexcept
+  {
+    constexpr static auto formats = std::array<siege::fs_string_view, 12>{ { FSL ".dts", FSL ".tmd", FSL ".bnd", FSL ".cwg", FSL ".trk", FSL ".bwd", FSL ".wtb", FSL ".erf", FSL ".mdl", FSL ".md2", FSL ".mdx", FSL ".dkm" } };
+    return formats;
+  }
+
+  bool is_shape(std::istream& stream) noexcept
   {
     return siege::content::dts::darkstar::is_darkstar_dts(stream)
            || siege::content::dts::three_space::v1::is_3space_dts(stream)
@@ -51,7 +67,7 @@ namespace siege::views
            || siege::content::wtb::is_wtb(stream);
   }
 
-  std::size_t dts_controller::load_shape(std::istream& stream)
+  std::size_t load_shape(shape_context& state, std::istream& stream)
   {
     if (siege::content::tmd::is_tmd(stream))
     {
@@ -96,19 +112,34 @@ namespace siege::views
 
     auto sequences = shape->get_sequences(selected_detail_levels);
 
-    shapes.push_back(shape_context{
+    std::vector<shape_data> shapes;
+    shapes.push_back(shape_data{
       .shape = std::move(shape),
       .detail_levels = detail_levels,
       .materials = std::move(materials),
       .selected_detail_levels = std::move(selected_detail_levels),
       .sequences = std::move(sequences) });
 
-    return shapes.size();
+    auto result = shapes.size();
+    state = std::move(shapes);
+
+    return result;
   }
 
-  std::vector<std::string> dts_controller::get_detail_levels_for_shape(std::size_t index) const
+  std::vector<shape_data>* self(shape_context& state)
   {
-    auto detail_levels = shapes.at(index).detail_levels;
+    return std::any_cast<std::vector<shape_data>>(&state);
+  }
+
+  const std::vector<shape_data>* self(const shape_context& state)
+  {
+    return std::any_cast<std::vector<shape_data>>(&state);
+  }
+
+  std::vector<std::string> get_detail_levels_for_shape(const shape_context& state, std::size_t index)
+  {
+    auto* shapes = self(state);
+    auto detail_levels = shapes->at(index).detail_levels;
 
     if (detail_levels.empty())
     {
@@ -118,14 +149,16 @@ namespace siege::views
     return detail_levels;
   }
 
-  std::vector<content::sequence_info> dts_controller::get_sequence_info_for_shape(std::size_t index) const
+  std::vector<content::sequence_info> get_sequence_info_for_shape(const shape_context& state, std::size_t index)
   {
-    return shapes.at(index).sequences;
+    auto* shapes = self(state);
+    return shapes->at(index).sequences;
   }
 
-  std::vector<std::int32_t> dts_controller::get_sequence_ids_for_shape(std::size_t index) const
+  std::vector<std::int32_t> get_sequence_ids_for_shape(const shape_context& state, std::size_t index)
   {
-    auto& shape = shapes.at(index);
+    auto* shapes = self(state);
+    auto& shape = shapes->at(index);
     std::vector<std::int32_t> results;
     results.reserve(shape.sequences.size());
 
@@ -136,21 +169,25 @@ namespace siege::views
     return results;
   }
 
-  std::vector<std::size_t> dts_controller::get_selected_detail_levels(std::size_t index) const
+  std::vector<std::size_t> get_selected_detail_levels(const shape_context& state, std::size_t index)
   {
-    return shapes.at(index).selected_detail_levels;
+    auto* shapes = self(state);
+    return shapes->at(index).selected_detail_levels;
   }
 
-  void dts_controller::set_selected_detail_levels(std::size_t index, std::span<std::size_t> span)
+  void set_selected_detail_levels(shape_context& state, std::size_t index, std::span<std::size_t> span)
   {
-    auto& shape = shapes.at(index);
+    auto* shapes = self(state);
+    auto& shape = shapes->at(index);
     shape.selected_detail_levels.resize(span.size());
     std::copy(span.begin(), span.end(), shape.selected_detail_levels.begin());
   }
 
-  bool dts_controller::is_sequence_enabled(std::size_t shape_index, std::int32_t index) const
+  bool is_sequence_enabled(const shape_context& state, std::size_t shape_index, std::int32_t index)
   {
-    auto& shape = shapes.at(shape_index);
+    auto* shapes = self(state);
+    
+    auto& shape = shapes->at(shape_index);
 
     for (auto& sequence : shape.sequences)
     {
@@ -162,9 +199,11 @@ namespace siege::views
     return false;
   }
 
-  void dts_controller::enable_sequence(std::size_t shape_index, std::int32_t index)
+  void enable_sequence(shape_context& state, std::size_t shape_index, std::int32_t index)
   {
-    auto& shape = shapes.at(shape_index);
+    auto* shapes = self(state);
+    
+    auto& shape = shapes->at(shape_index);
 
     for (auto& sequence : shape.sequences)
     {
@@ -177,9 +216,11 @@ namespace siege::views
     }
   }
 
-  void dts_controller::disable_sequence(std::size_t shape_index, std::int32_t index)
+  void disable_sequence(shape_context& state, std::size_t shape_index, std::int32_t index)
   {
-    auto& shape = shapes.at(shape_index);
+    auto* shapes = self(state);
+    
+    auto& shape = shapes->at(shape_index);
 
     for (auto& sequence : shape.sequences)
     {
@@ -196,9 +237,10 @@ namespace siege::views
     }
   }
 
-  void dts_controller::advance_sequence(std::size_t shape_index, std::int32_t index)
+  void advance_sequence(shape_context& state, std::size_t shape_index, std::int32_t index)
   {
-    auto& shape = shapes.at(shape_index);
+    auto* shapes = self(state);
+    auto& shape = shapes->at(shape_index);
 
     auto& sequence = shape.sequences.at(index);
 
@@ -212,9 +254,10 @@ namespace siege::views
     }
   }
 
-  void dts_controller::render_shape(std::size_t index, content::shape_renderer& renderer)
+  void render_shape(const shape_context& state, std::size_t index, content::shape_renderer& renderer)
   {
-    auto& context = shapes[index];
+    auto* shapes = self(state);
+    auto& context = shapes->operator[](index);
     context.shape->render_shape(renderer, context.selected_detail_levels, context.sequences);
   }
 }// namespace siege::views

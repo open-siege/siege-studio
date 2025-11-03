@@ -10,7 +10,6 @@
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/win/com.hpp>
 #include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/window_impl.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
 

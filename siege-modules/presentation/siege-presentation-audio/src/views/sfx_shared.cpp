@@ -1,27 +1,40 @@
 #include <siege/platform/wave.hpp>
-#include "sfx_controller.hpp"
+#include <siege/content/sfx/sound.hpp>
+#include "sfx_shared.hpp"
 
 namespace siege::views
 {
-  bool sfx_controller::is_sfx(std::istream& stream)
+  std::span<const siege::fs_string_view> get_sfx_formats() noexcept
+  {
+    constexpr static auto formats = std::array<siege::fs_string_view, 5>{ { FSL ".sfx", FSL ".wav", FSL ".mp3", FSL ".ogg", FSL ".wma" } };
+    return formats;
+  }
+
+  bool is_sfx(std::istream& stream) noexcept
   {
     return siege::platform::wave::is_wav(stream)
            || siege::content::sfx::is_flac(stream)
            || siege::content::sfx::is_ogg(stream);
   }
 
-  std::size_t sfx_controller::load_sound(std::istream& sound_stream) noexcept
+  content::sfx::platform_sound* self(std::any& state)
+  {
+    return std::any_cast<content::sfx::platform_sound>(&state);
+  }
+
+  std::size_t load_sound(std::any& state, std::istream& sound_stream) noexcept
   {
     using namespace siege::content;
 
     try
     {
-      original_sound.emplace(sound_stream);
+      state.emplace<content::sfx::platform_sound>(sound_stream);
     }
     catch (...)
     {
     }
 
+    auto* original_sound = self(state);
     if (original_sound)
     {
       return original_sound->track_count();
@@ -30,8 +43,9 @@ namespace siege::views
     return 1;
   }
 
-  std::optional<std::filesystem::path> sfx_controller::get_sound_path(std::size_t index)
+  std::optional<std::filesystem::path> get_sound_path(std::any& state, std::size_t index)
   {
+    auto* original_sound = self(state);
     if (original_sound)
     {
       auto data = original_sound->get_sound_data(index);
@@ -45,8 +59,9 @@ namespace siege::views
     return std::nullopt;
   }
 
-  std::optional<std::span<std::byte>> sfx_controller::get_sound_data(std::size_t index)
+  std::optional<std::span<std::byte>> get_sound_data(std::any& state, std::size_t index)
   {
+    auto* original_sound = self(state);
     if (original_sound)
     {
       auto data = original_sound->get_sound_data(index);

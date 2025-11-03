@@ -9,7 +9,6 @@
 #include <fstream>
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/window_impl.hpp>
 #include <siege/resource/pak_resource.hpp>
 #include <siege/resource/zip_resource.hpp>
 #include <detours.h>

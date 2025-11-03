@@ -172,7 +172,7 @@ namespace siege::views
 
   void set_ip_for_current_network(std::any& state, std::string ip_address);
 
-  bool is_exe_or_lib(std::istream& stream);
+  bool is_exe_or_lib(std::istream& stream) noexcept;
 
   HRESULT launch_game_with_extension(std::any& state, const siege::platform::game_command_line_args* game_args, PROCESS_INFORMATION* process_info) noexcept;
 }// namespace siege::views

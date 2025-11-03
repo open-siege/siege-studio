@@ -8,17 +8,18 @@
 #include <siege/platform/presentation_module.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/theming.hpp>
+#include <siege/platform/win/threading.hpp>
 #include <siege/platform/win/layout.hpp>
 #include <siege/platform/win/dialog.hpp>
 #include <siege/platform/win/basic_window.hpp>
-#include "views/preferences_view.hpp"
-#include "views/about_view.hpp"
-#include "views/default_view.hpp"
 #include <map>
+#include <filesystem>
 #include <spanstream>
 
 namespace siege::views
 {
+  void show_about_dialog(win32::window_ref parent);
+  namespace fs = std::filesystem;
   // TODO update tree view to support multiple levels of navigation
   // TODO add filename filter for directory listing
   // TODO add category and extension filter for directory listing
@@ -439,7 +440,7 @@ namespace siege::views
       win32::set_window_command_subclass(*this, id++, [this](auto, auto, auto) -> std::optional<LRESULT> {
         auto size = this->GetClientSize();
         auto pos = this->GetWindowRect();
-        theme_window = *win32::window_module_ref(win32::module_ref::current_application()).CreateWindowExW(CREATESTRUCTW{ .hwndParent = *this, .cy = size->cy, .cx = size->cx, .y = pos->top, .x = pos->left, .style = (LONG)(WS_POPUPWINDOW | WS_CAPTION | WS_MINIMIZEBOX | WS_MAXIMIZEBOX), .lpszName = L"Preferences", .lpszClass = win32::type_name<preferences_view>().c_str() });
+        theme_window = *win32::window_module_ref(win32::module_ref::current_application()).CreateWindowExW(CREATESTRUCTW{ .hwndParent = *this, .cy = size->cy, .cx = size->cx, .y = pos->top, .x = pos->left, .style = (LONG)(WS_POPUPWINDOW | WS_CAPTION | WS_MINIMIZEBOX | WS_MAXIMIZEBOX), .lpszName = L"Preferences", .lpszClass = L"preferences_view" });
 
         auto ref = win32::window_ref(theme_window);
         win32::apply_window_theme(ref);
@@ -449,9 +450,7 @@ namespace siege::views
 
       popup_menus[2].AppendMenuW(MF_OWNERDRAW, id, L"About");
       win32::set_window_command_subclass(*this, id++, [this](auto, auto, auto) -> std::optional<LRESULT> {
-        win32::DialogBoxIndirectParamW<about_view>(::GetModuleHandleW(nullptr),
-          win32::default_dialog{ { .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 350, .cy = 400 } },
-          ref());
+        show_about_dialog(ref());
         return std::nullopt;
       });
       auto can_update = win32::module_ref::current_application().GetProcAddress<BOOL (*)()>("can_update");
@@ -753,7 +752,7 @@ namespace siege::views
         {
           fs::current_path(get_working_directory_for_path(*file_path));
         }
-        
+
         auto child = plugin->CreateWindowExW(::CREATESTRUCTW{
           .hwndParent = *this,
           .cy = tab_rect.bottom - tab_rect.top,
@@ -1103,8 +1102,6 @@ namespace siege::views
 
     void AddDefaultTab()
     {
-      auto class_name = win32::type_name<default_view>();
-
       auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
 
       SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&tab_rect));
@@ -1116,7 +1113,7 @@ namespace siege::views
         .y = tab_rect.top,
         .x = tab_rect.left,
         .style = WS_CHILD | WS_CLIPCHILDREN,
-        .lpszClass = class_name.c_str(),
+        .lpszClass = L"default_view",
       });
       child->SetPropW(L"TabIndestructible", TRUE);
 
@@ -1386,22 +1383,6 @@ namespace siege::views
       return FALSE;
     }
 
-    inline static auto register_class(HINSTANCE module)
-    {
-      WNDCLASSEXW info{
-        .cbSize = sizeof(info),
-        .style = CS_HREDRAW | CS_VREDRAW,
-        .lpfnWndProc = basic_window::window_proc,
-        .cbWndExtra = sizeof(void*),
-        .hInstance = module,
-        .hIcon = (HICON)::LoadImageW(module, L"AppIcon", IMAGE_ICON, 0, 0, 0),
-        .hCursor = LoadCursorW(module, IDC_ARROW),
-        .hbrBackground = (HBRUSH)(COLOR_WINDOW + 1),
-        .lpszClassName = win32::type_name<siege::views::siege_main_window>().c_str(),
-      };
-      return ::RegisterClassExW(&info);
-    }
-
     std::optional<LRESULT> window_proc(UINT message, WPARAM wparam, LPARAM lparam) override
     {
       static auto unpack_done_id = ::RegisterWindowMessageW(L"SIEGE_UNPACK_DONE");
@@ -1439,6 +1420,22 @@ namespace siege::views
       }
     }
   };
+
+  ATOM register_main_window(HINSTANCE module)
+  {
+    WNDCLASSEXW info{
+      .cbSize = sizeof(info),
+      .style = CS_HREDRAW | CS_VREDRAW,
+      .lpfnWndProc = win32::basic_window<siege_main_window>::window_proc,
+      .cbWndExtra = sizeof(void*),
+      .hInstance = module,
+      .hIcon = (HICON)::LoadImageW(module, L"AppIcon", IMAGE_ICON, 0, 0, 0),
+      .hCursor = LoadCursorW(module, IDC_ARROW),
+      .hbrBackground = (HBRUSH)(COLOR_WINDOW + 1),
+      .lpszClassName = win32::type_name<siege::views::siege_main_window>().c_str(),
+    };
+    return ::RegisterClassExW(&info);
+  }
 }// namespace siege::views
 
 #endif

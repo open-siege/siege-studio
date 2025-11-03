@@ -1,7 +1,7 @@
 #ifndef PLATFORM_DIALOG_HPP
 #define PLATFORM_DIALOG_HPP
 #include <siege/platform/win/window.hpp>
-#include <siege/platform/win/window_impl.hpp>
+#include <siege/platform/win/basic_window.hpp>
 #include <functional>
 
 namespace win32
@@ -56,7 +56,7 @@ namespace win32
 
       if (instance)
       {
-        auto result = dispatch_message(instance, message, wparam, lparam);
+        auto result = static_cast<default_window*>(instance)->window_proc(message, wparam, lparam);
 
         if (message == WM_NCDESTROY)
         {

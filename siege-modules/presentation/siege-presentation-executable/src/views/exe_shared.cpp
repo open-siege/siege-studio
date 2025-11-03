@@ -1041,7 +1041,7 @@ namespace siege::views
 
   networking_support get_supported_networking_libraries(std::span<char> data);
 
-  bool is_exe_or_lib(std::istream& stream)
+  bool is_exe_or_lib(std::istream& stream) noexcept
   {
     platform::istream_pos_resetter resetter(stream);
     thread_local std::string data(128, '\0');

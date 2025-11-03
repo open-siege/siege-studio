@@ -3,7 +3,7 @@
 #include <memory>
 #include <system_error>
 #include <siege/platform/stream.hpp>
-#include "views/cfg_controller.hpp"
+#include "views/cfg_shared.hpp"
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;
@@ -17,9 +17,10 @@ std::errc get_supported_extensions(std::size_t count, const siege::fs_char** str
     return std::errc::invalid_argument;
   }
 
-  count = std::clamp<std::size_t>(count, 0u, cfg_controller::formats.size());
+  auto formats = get_cfg_formats();
+  count = std::clamp<std::size_t>(count, 0u, formats.size());
 
-  std::transform(cfg_controller::formats.begin(), cfg_controller::formats.begin() + count, strings, [](const auto value) {
+  std::transform(formats.begin(), formats.begin() + count, strings, [](const auto value) {
     return value.data();
   });
 
@@ -65,9 +66,10 @@ std::errc get_supported_extensions_for_category(const char16_t* category, std::s
 
   if (category_str == u"All Configurations")
   {
-    count = std::clamp<std::size_t>(count, 0u, cfg_controller::formats.size());
+    auto formats = get_cfg_formats();
+    count = std::clamp<std::size_t>(count, 0u, formats.size());
 
-    std::transform(cfg_controller::formats.begin(), cfg_controller::formats.begin() + count, strings, [](const auto value) {
+    std::transform(formats.begin(), formats.begin() + count, strings, [](const auto value) {
       return value.data();
     });
   }
@@ -93,7 +95,7 @@ std::errc is_stream_supported(storage_info* data) noexcept
 
   auto stream = siege::platform::create_istream(*data);
 
-  if (cfg_controller::is_cfg(*stream))
+  if (is_cfg(*stream))
   {
     return std::errc(0);
   }

@@ -1,17 +1,17 @@
-#ifndef DTS_VIEW_HPP
-#define DTS_VIEW_HPP
-
 #include <string_view>
 #include <istream>
 #include <spanstream>
+#include <siege/platform/stream.hpp>
+#include <siege/platform/win/basic_window.hpp>
+#include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/win/theming.hpp>
-#include "dts_controller.hpp"
 #include "gl_renderer.hpp"
 #include <siege/content/obj_renderer.hpp>
 #include <glm/ext/vector_float3.hpp>
+#include "3d_shared.hpp"
 
 namespace siege::views
 {
@@ -24,9 +24,9 @@ namespace siege::views
     }
   };
 
-  struct dts_view final : win32::window_ref
+  struct dts_view final : win32::basic_window<dts_view>
   {
-    dts_controller controller;
+    shape_context state;
 
     win32::static_control render_view;
     win32::list_box detail_level_list;
@@ -52,7 +52,7 @@ namespace siege::views
     glm::vec3 translation = { 0, 0, -20 };
     content::vector3f rotation = { 45, 90, -35 };
 
-    dts_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
+    dts_view(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params)
     {
     }
 
@@ -90,7 +90,7 @@ namespace siege::views
         widened.reserve(indexes.size());
         std::copy(indexes.begin(), indexes.end(), std::back_inserter(widened));
 
-        controller.set_selected_detail_levels(0, widened);
+        set_selected_detail_levels(state, 0, widened);
         ::InvalidateRect(render_view, nullptr, TRUE);
       });
 
@@ -213,7 +213,7 @@ namespace siege::views
     {
       std::spanstream stream(message.data);
 
-      if (controller.is_shape(stream))
+      if (is_shape(stream))
       {
         auto path = platform::get_stream_path(stream);
 
@@ -231,7 +231,7 @@ namespace siege::views
           filename = L"3d-model";
         }
 
-        auto shape_count = controller.load_shape(stream);
+        auto shape_count = load_shape(state, stream);
 
         if (shape_count > 0)
         {
@@ -239,7 +239,7 @@ namespace siege::views
 
           std::wstring temp;
 
-          auto detail_levels = controller.get_detail_levels_for_shape(0);
+          auto detail_levels = get_detail_levels_for_shape(state, 0);
 
           for (auto& detail_level : detail_levels)
           {
@@ -248,7 +248,7 @@ namespace siege::views
             detail_level_list.InsertString(-1, temp.c_str());
           }
 
-          auto sequences = controller.get_sequence_info_for_shape(0);
+          auto sequences = get_sequence_info_for_shape(state, 0);
 
           for (auto i = 0; i < GetMenuItemCount(sequence_menu); ++i)
           {
@@ -463,7 +463,7 @@ namespace siege::views
                 animation_timer();
               }
               animation_timer = win32::SetTimer(ref(), 100, [this, selection](auto, auto, auto, auto) {
-                controller.advance_sequence(0, selection);
+                advance_sequence(state, 0, selection);
                 ::InvalidateRect(render_view, nullptr, TRUE);
               });
             }
@@ -484,9 +484,9 @@ namespace siege::views
             }
             ::CheckMenuItem(sequence_menu, 0, is_animating ? MF_BYPOSITION | MF_CHECKED : MF_BYPOSITION | MF_UNCHECKED);
 
-            for (auto id : controller.get_sequence_ids_for_shape(0))
+            for (auto id : get_sequence_ids_for_shape(state, 0))
             {
-              if (is_animating && controller.is_sequence_enabled(0, id))
+              if (is_animating && is_sequence_enabled(state, 0, id))
               {
                 start_animation(id);
                 break;
@@ -501,14 +501,14 @@ namespace siege::views
             animation_timer = nullptr;
           }
 
-          if (controller.is_sequence_enabled(0, selection))
+          if (is_sequence_enabled(state, 0, selection))
           {
-            controller.disable_sequence(0, selection);
+            disable_sequence(state, 0, selection);
             ::CheckMenuItem(sequence_menu, selection, MF_BYCOMMAND | MF_UNCHECKED);
           }
           else
           {
-            controller.enable_sequence(0, selection);
+            enable_sequence(state, 0, selection);
 
             for (auto i = 1; i < GetMenuItemCount(sequence_menu); ++i)
             {
@@ -548,7 +548,7 @@ namespace siege::views
                 auto new_filename = std::filesystem::path(filename).replace_extension(".obj");
                 std::ofstream output(*path / new_filename, std::ios::binary | std::ios::trunc);
                 siege::content::obj_renderer renderer(output);
-                controller.render_shape(0, renderer);
+                render_shape(state, 0, renderer);
                 win32::launch_shell_process(*path);
               }
             }
@@ -583,13 +583,40 @@ namespace siege::views
         glRotatef(rotation.y, 0.f, 1.f, 0.f);
         glRotatef(rotation.z, 0.f, 0.f, 1.f);
 
-        controller.render_shape(0, *renderer);
+        render_shape(state, 0, *renderer);
         glFlush();
       }
 
       return TRUE;
     }
-  };
-}// namespace siege::views
 
-#endif
+    std::optional<LRESULT> window_proc(UINT message, WPARAM wparam, LPARAM lparam) override
+    {
+      switch (message)
+      {
+      case WM_CREATE:
+        return wm_create();
+      case WM_SIZE:
+        return (LRESULT)wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
+      case WM_COPYDATA:
+        return (LRESULT)wm_copy_data(win32::copy_data_message<char>(wparam, lparam));
+      default:
+        return std::nullopt;
+      }
+    }
+  };
+
+  ATOM register_dts_view(win32::window_module_ref module)
+  {
+    WNDCLASSEXW info{
+      .cbSize = sizeof(info),
+      .style = CS_HREDRAW | CS_VREDRAW,
+      .lpfnWndProc = win32::basic_window<dts_view>::window_proc,
+      .cbWndExtra = sizeof(void*),
+      .hInstance = module,
+      .lpszClassName = win32::type_name<dts_view>().c_str(),
+    };
+    return ::RegisterClassExW(&info);
+  }
+
+}// namespace siege::views

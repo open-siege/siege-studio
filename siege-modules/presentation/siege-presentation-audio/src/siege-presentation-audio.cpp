@@ -4,7 +4,7 @@
 #include <system_error>
 #include <algorithm>
 #include <siege/platform/stream.hpp>
-#include "views/sfx_controller.hpp"
+#include "views/sfx_shared.hpp"
 
 using namespace std::literals;
 using namespace siege::views;
@@ -23,9 +23,10 @@ extern "C" {
       return std::errc::invalid_argument;
     }
 
-    count = std::clamp<std::size_t>(count, 0u, sfx_controller::formats.size());
+    auto formats = get_sfx_formats();
+    count = std::clamp<std::size_t>(count, 0u, formats.size());
 
-    std::transform(sfx_controller::formats.begin(), sfx_controller::formats.begin() + count, strings, [](const auto value) {
+    std::transform(formats.begin(), formats.begin() + count, strings, [](const auto value) {
       return value.data();
     });
 
@@ -83,9 +84,10 @@ extern "C" {
 
     if (category == u"All Audio"sv)
     {
-      count = std::clamp<std::size_t>(count, 0u, sfx_controller::formats.size());
+      auto formats = get_sfx_formats();
+      count = std::clamp<std::size_t>(count, 0u, formats.size());
 
-      std::transform(sfx_controller::formats.begin(), sfx_controller::formats.begin() + count, strings, [](const auto value) {
+      std::transform(formats.begin(), formats.begin() + count, strings, [](const auto value) {
         return value.data();
       });
 
@@ -109,7 +111,7 @@ extern "C" {
 
     auto stream = siege::platform::create_istream(*data);
 
-    if (sfx_controller::is_sfx(*stream))
+    if (is_sfx(*stream))
     {
       return std::errc(0);
     }

@@ -1,20 +1,19 @@
-﻿#ifndef PAL_VIEW_HPP
-#define PAL_VIEW_HPP
-
-#include <string_view>
+﻿#include <string_view>
 #include <istream>
 #include <spanstream>
+#include <siege/platform/win/basic_window.hpp>
+#include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/theming.hpp>
-#include "sfx_controller.hpp"
+#include "sfx_shared.hpp"
 #include "media_module.hpp"
 
 namespace siege::views
 {
-  struct sfx_view final : win32::window_ref
+  struct sfx_view final : win32::basic_window<sfx_view>
   {
-    sfx_controller controller;
+    std::any state;
 
     win32::tool_bar player_buttons;
     win32::list_box selection;
@@ -22,7 +21,7 @@ namespace siege::views
     win32::image_list image_list;
     media_module media;
 
-    sfx_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self), media{}
+    sfx_view(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params), media{}
     {
     }
 
@@ -110,9 +109,9 @@ namespace siege::views
     {
       std::spanstream stream(message.data);
 
-      if (controller.is_sfx(stream))
+      if (is_sfx(stream))
       {
-        auto size = controller.load_sound(stream);
+        auto size = load_sound(state, stream);
 
         if (size > 0)
         {
@@ -224,14 +223,14 @@ namespace siege::views
           {
             loop = true;
           }
-          auto path = controller.get_sound_path(0);
+          auto path = get_sound_path(this->state, 0);
 
           if (path)
           {
             media.PlaySound(*path, true, loop);
           }
 
-          auto data = controller.get_sound_data(0);
+          auto data = get_sound_data(this->state, 0);
 
           if (data)
           {
@@ -256,7 +255,37 @@ namespace siege::views
       }
       return TRUE;
     }
+
+    std::optional<LRESULT> window_proc(UINT message, WPARAM wparam, LPARAM lparam) override
+    {
+      switch (message)
+      {
+      case WM_CREATE:
+        return wm_create();
+      case WM_SETTINGCHANGE:
+        return wm_setting_change(win32::setting_change_message(wparam, lparam));
+      case WM_SIZE:
+        return (LRESULT)wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
+      case WM_COPYDATA:
+        return (LRESULT)wm_copy_data(win32::copy_data_message<char>(wparam, lparam));
+      default:
+        return std::nullopt;
+      }
+    }
   };
+
+  ATOM register_sfx_view(win32::window_module_ref module)
+  {
+    WNDCLASSEXW info{
+      .cbSize = sizeof(info),
+      .style = CS_HREDRAW | CS_VREDRAW,
+      .lpfnWndProc = win32::basic_window<sfx_view>::window_proc,
+      .cbWndExtra = sizeof(void*),
+      .hInstance = module,
+      .lpszClassName = win32::type_name<sfx_view>().c_str(),
+    };
+    return ::RegisterClassExW(&info);
+  }
 }// namespace siege::views
 
 /* TODO reimplement old logic
@@ -284,5 +313,3 @@ namespace siege::views
     }
 
 */
-
-#endif

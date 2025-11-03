@@ -1,5 +1,3 @@
-#include "bmp_controller.hpp"
-#include "pal_controller.hpp"
 #include <siege/content/bmp/bitmap.hpp>
 #include <siege/content/tim.hpp>
 #include <siege/platform/image.hpp>
@@ -10,10 +8,61 @@
 #include <filesystem>
 #include <future>
 #include <execution>
+#include "2d_shared.hpp"
 
 namespace siege::views
 {
-  bool bmp_controller::is_bmp(std::istream& image_stream) noexcept
+  struct bitmap_data
+  {
+    std::optional<platform::bitmap::platform_image> original_image;
+    std::deque<palette_info> palettes;
+    std::deque<palette_info>::iterator selected_palette_file;
+    std::size_t selected_palette;
+  };
+
+  bitmap_data* get(bmp_context& state)
+  {
+    if (!state.has_value())
+    {
+      state.emplace<bitmap_data>();
+    }
+    return std::any_cast<bitmap_data>(&state);
+  }
+
+  const bitmap_data* get(const bmp_context& state)
+  {
+    return std::any_cast<bitmap_data>(&state);
+  }
+
+  std::span<const siege::fs_string_view> get_bmp_formats() noexcept
+  {
+    constexpr static auto formats = std::array<siege::fs_string_view, 22>{ { FSL ".jpg",
+      FSL ".jpeg",
+      FSL ".gif",
+      FSL ".png",
+      FSL ".tag",
+      FSL ".bmp",
+      FSL ".pbm",
+      FSL ".dds",
+      FSL ".ico",
+      FSL ".tif",
+      FSL ".tiff",
+      FSL ".dib",
+      FSL ".tim",
+      FSL ".pba",
+      FSL ".dmb",
+      FSL ".db0",
+      FSL ".db1",
+      FSL ".db2",
+      FSL ".hba",
+      FSL ".hb0",
+      FSL ".hb1",
+      FSL ".hb2" } };
+
+    return formats;
+  }
+
+  bool is_bmp(std::istream& image_stream) noexcept
   {
     auto path = siege::platform::get_stream_path(image_stream);
 
@@ -82,14 +131,12 @@ namespace siege::views
     return temp;
   }
 
-  std::shared_future<const std::deque<palette_info>&> bmp_controller::load_palettes_async(std::optional<std::filesystem::path> folder_hint,
-    std::move_only_function<get_embedded_pal_filenames> get_palettes,
-    std::move_only_function<resolve_embedded_pal> resolve_data)
+  std::shared_future<const std::deque<palette_info>&> load_palettes_async(bmp_context& state, std::optional<std::filesystem::path> folder_hint, std::move_only_function<get_embedded_pal_filenames> get_palettes, std::move_only_function<resolve_embedded_pal> resolve_data)
   {
     namespace fs = std::filesystem;
 
     return std::async(std::launch::async,
-      [this, get_palettes = std::move(get_palettes), resolve_data = std::move(resolve_data)]() mutable -> const std::deque<palette_info>& {
+      [self = get(state), get_palettes = std::move(get_palettes), resolve_data = std::move(resolve_data)]() mutable -> const std::deque<palette_info>& {
         std::deque<fs::path> pal_paths;
         std::deque<fs::path> embedded_pal_paths;
 
@@ -105,7 +152,7 @@ namespace siege::views
 
           if (!fs::is_directory(entry->path()))
           {
-            auto is_pal = std::any_of(pal_controller::formats.begin(), pal_controller::formats.end(), [&](auto& ext) { return entry->path().extension() == ext; });
+            auto is_pal = std::ranges::any_of(get_pal_formats(), [&](auto& ext) { return entry->path().extension() == ext; });
 
             if (is_pal)
             {
@@ -119,7 +166,7 @@ namespace siege::views
           }
         }
 
-        palettes.resize(pal_paths.size() + embedded_pal_paths.size());
+        self->palettes.resize(pal_paths.size() + embedded_pal_paths.size());
 
         auto load_palette = [&](std::filesystem::path&& path, std::istream& temp) -> palette_info {
           std::vector<content::pal::palette> results;
@@ -147,7 +194,7 @@ namespace siege::views
         auto task_a = std::async(std::launch::async, [&]() {
           std::transform(embedded_pal_paths.begin(),
             embedded_pal_paths.end(),
-            palettes.begin() + pal_paths.size(),
+            self->palettes.begin() + pal_paths.size(),
             [&resolve_data, &load_palette](auto& path) mutable {
               auto data = resolve_data(path);
               std::spanstream span_data(data);
@@ -155,7 +202,7 @@ namespace siege::views
             });
         });
 
-        std::transform(std::execution::par_unseq, pal_paths.begin(), pal_paths.end(), palettes.begin(), [&load_palette](auto& path) mutable {
+        std::transform(std::execution::par_unseq, pal_paths.begin(), pal_paths.end(), self->palettes.begin(), [&load_palette](auto& path) mutable {
           std::fstream file_data(path);
           return load_palette(std::move(path), file_data);
         });
@@ -163,23 +210,25 @@ namespace siege::views
 
         task_a.wait();
 
-        selected_palette_file = palettes.begin();
-        selected_palette = 0;
+        self->selected_palette_file = self->palettes.begin();
+        self->selected_palette = 0;
 
-        return palettes;
+        return self->palettes;
       })
       .share();
   }
 
-  std::size_t bmp_controller::load_bitmap(std::istream& image_stream, std::shared_future<const std::deque<palette_info>&> pending_load) noexcept
+  std::size_t load_bitmap(bmp_context& state, std::istream& image_stream, std::shared_future<const std::deque<palette_info>&> pending_load) noexcept
   {
     using namespace siege::content;
+
+    auto* self = get(state);
 
     try
     {
       if (platform::bitmap::is_microsoft_bmp(image_stream))
       {
-        original_image.emplace(platform::bitmap::get_bmp_data(image_stream));
+        self->original_image.emplace(platform::bitmap::get_bmp_data(image_stream));
       }
       else if (bmp::is_phoenix_bmp(image_stream))
       {
@@ -192,28 +241,28 @@ namespace siege::views
         dest.info.height = image.bmp_header.height;
 
         pending_load.wait();
-        if (!palettes.empty())
+        if (!self->palettes.empty())
         {
-          selected_palette = 0;
-          selected_palette_file = std::find_if(palettes.begin(), palettes.end(), [&](palette_info& group) {
+          self->selected_palette = 0;
+          self->selected_palette_file = std::find_if(self->palettes.begin(), self->palettes.end(), [&](palette_info& group) {
             return std::any_of(group.children.begin(), group.children.end(), [&](pal::palette& pal) {
               return pal.index == image.palette_index;
             });
           });
 
-          if (selected_palette_file != palettes.end())
+          if (self->selected_palette_file != self->palettes.end())
           {
-            auto expected_pal = std::find_if(selected_palette_file->children.begin(), selected_palette_file->children.end(), [&](pal::palette& pal) {
+            auto expected_pal = std::find_if(self->selected_palette_file->children.begin(), self->selected_palette_file->children.end(), [&](pal::palette& pal) {
               return pal.index == image.palette_index;
             });
 
-            selected_palette = std::distance(selected_palette_file->children.begin(), expected_pal);
+            self->selected_palette = std::distance(self->selected_palette_file->children.begin(), expected_pal);
             dest.colours = expected_pal->colours;
           }
           else
           {
-            selected_palette_file = palettes.begin();
-            dest.colours = palettes.begin()->children.begin()->colours;
+            self->selected_palette_file = self->palettes.begin();
+            dest.colours = self->palettes.begin()->children.begin()->colours;
           }
         }
         else
@@ -226,11 +275,11 @@ namespace siege::views
           return std::int32_t(value);
         });
 
-        original_image.emplace(std::move(dest));
+        self->original_image.emplace(std::move(dest));
       }
       else if (tim::is_tim(image_stream))
       {
-        original_image.emplace(tim::get_tim_data_as_bitmap(image_stream));
+        self->original_image.emplace(tim::get_tim_data_as_bitmap(image_stream));
       }
       else if (bmp::is_earthsiege_bmp(image_stream))
       {
@@ -257,12 +306,12 @@ namespace siege::views
         if (icon)
         {
           ::DestroyIcon((HICON)icon);
-          original_image.emplace(file);
+          self->original_image.emplace(file);
         }
         else
 #endif
         {
-          original_image.emplace(image_stream, true);
+          self->original_image.emplace(image_stream, true);
         }
       }
     }
@@ -270,9 +319,9 @@ namespace siege::views
     {
     }
 
-    if (original_image)
+    if (self->original_image)
     {
-      return original_image->frame_count();
+      return self->original_image->frame_count();
     }
 
     return 0;
@@ -280,13 +329,44 @@ namespace siege::views
 
   using size = siege::platform::bitmap::size;
 
-  size bmp_controller::get_size(std::size_t frame) const noexcept
+  size get_size(const bmp_context& state, std::size_t frame) noexcept
   {
-    if (original_image)
+    auto* self = get(state);
+    if (self && self->original_image)
     {
-      return original_image->get_size(frame);
+      return self->original_image->get_size(frame);
     }
 
     return {};
   }
+
+  std::size_t get_frame_count(const bmp_context& state) noexcept
+  {
+    auto* self = get(state);
+    if (self && self->original_image)
+    {
+      return self->original_image->frame_count();
+    }
+
+    return {};
+  }
+
+  std::pair<const palette_info&, std::size_t> get_selected_palette(const bmp_context& state)
+  {
+    auto* self = get(state);
+    if (!self)
+    {
+      throw std::runtime_error("Could not get state");
+    }
+
+    return std::make_pair(*self->selected_palette_file, self->selected_palette);
+  }
+
+#if WIN32
+  win32::wic::bitmap_source& get_frame(bmp_context& state, std::size_t frame)
+  {
+    auto* self = get(state);
+    return self->original_image->at(frame);
+  }
+#endif
 }// namespace siege::views

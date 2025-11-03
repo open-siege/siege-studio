@@ -1,11 +1,9 @@
 #ifndef VOL_SHARED_HPP
 #define VOL_SHARED_HPP
 
-
 #include <span>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/resource.hpp>
-
 
 namespace siege::views
 {

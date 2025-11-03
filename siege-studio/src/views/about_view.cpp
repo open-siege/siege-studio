@@ -2,6 +2,9 @@
 #define SIEGE_ABOUT_VIEW_HPP
 
 #include <utility>
+#include <siege/platform/win/window_module.hpp>
+#include <siege/platform/win/basic_window.hpp>
+#include <siege/platform/win/dialog.hpp>
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/wic.hpp>
@@ -39,7 +42,7 @@ std::optional<SIZE> get_module_version()
 
 namespace siege::views
 {
-  struct about_view final : win32::window_ref
+  struct about_view final : win32::basic_window<about_view>
   {
     win32::static_control heading;
     win32::static_control logo;
@@ -53,7 +56,7 @@ namespace siege::views
 
     // https://thesiegehub.itch.io/siege-studio
 
-    about_view(win32::hwnd_t self, const CREATESTRUCTW& params) : win32::window_ref(self)
+    about_view(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params)
     {
       logo_icon.reset((HICON)::LoadImageW(params.hInstance, L"AppIcon", IMAGE_ICON, 0, 0, 0));
       win32::apply_window_theme(*this);
@@ -204,7 +207,29 @@ namespace siege::views
       EndDialog(*this, 0);
       return 0;
     }
+
+    std::optional<LRESULT> window_proc(UINT message, WPARAM wparam, LPARAM lparam) override
+    {
+      switch (message)
+      {
+      case WM_CREATE:
+        return wm_create();
+      case WM_SIZE:
+        return wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
+      case WM_CLOSE:
+        return wm_close();
+      default:
+        return std::nullopt;
+      }
+    }
   };
+
+  void show_about_dialog(win32::window_ref parent)
+  {
+    win32::DialogBoxIndirectParamW<about_view>(::GetModuleHandleW(nullptr),
+      win32::default_dialog{ { .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 350, .cy = 400 } },
+      std::move(parent));
+  }
 }// namespace siege::views
 
 #endif

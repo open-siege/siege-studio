@@ -6,7 +6,7 @@
 #include <siege/platform/presentation_module.hpp>
 #include <siege/platform/resource.hpp>
 #include <siege/platform/shared.hpp>
-#include <siege/platform/win/window_impl.hpp>
+#include <siege/platform/win/basic_window.hpp>
 #include <spanstream>
 #include <map>
 #include <unordered_map>
@@ -24,7 +24,7 @@ namespace siege::views
     std::optional<fs::path> output_path,
     std::optional<std::vector<std::string>> post_extract_commands);
 
-  struct vol_view final : win32::window_ref
+  struct vol_view final : win32::basic_window<vol_view>
   {
     std::any shared_state;
 
@@ -57,7 +57,7 @@ namespace siege::views
 
     constexpr static std::u16string_view generic_category = u"All Generic Data Files";
 
-    vol_view(win32::hwnd_t self, const CREATESTRUCTW&) : win32::window_ref(self)
+    vol_view(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params)
     {
     }
 
@@ -896,10 +896,35 @@ namespace siege::views
         }
       }
     }
+
+    std::optional<LRESULT> window_proc(UINT message, WPARAM wparam, LPARAM lparam) override
+    {
+      switch (message)
+      {
+      case WM_CREATE:
+        return wm_create();
+      case WM_SETTINGCHANGE:
+        return wm_setting_change(win32::setting_change_message(wparam, lparam));
+      case WM_SIZE:
+        return (LRESULT)wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
+      case WM_COPYDATA:
+        return (LRESULT)wm_copy_data(win32::copy_data_message<char>(wparam, lparam));
+      default:
+        return std::nullopt;
+      }
+    }
   };
 
   ATOM register_vol_view(win32::window_module_ref module)
   {
-    return module.RegisterClassExW(win32::window_meta_class<vol_view>());
+    WNDCLASSEXW info{
+      .cbSize = sizeof(info),
+      .style = CS_HREDRAW | CS_VREDRAW,
+      .lpfnWndProc = win32::basic_window<vol_view>::window_proc,
+      .cbWndExtra = sizeof(void*),
+      .hInstance = module,
+      .lpszClassName = win32::type_name<vol_view>().c_str(),
+    };
+    return ::RegisterClassExW(&info);
   }
 }// namespace siege::views

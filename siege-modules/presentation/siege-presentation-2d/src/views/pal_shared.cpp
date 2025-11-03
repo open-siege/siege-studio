@@ -1,19 +1,22 @@
-#include "pal_controller.hpp"
+#include "2d_shared.hpp"
 #include <siege/content/bmp/bitmap.hpp>
 
 namespace siege::views
 {
-  bool pal_controller::is_pal(std::istream& image_stream)
+  bool is_pal(std::istream& image_stream) noexcept
   {
-    return siege::platform::palette::is_microsoft_pal(image_stream) ||
-           siege::content::pal::is_earthsiege_pal(image_stream) ||
-           siege::content::pal::is_old_pal(image_stream) ||
-           siege::content::pal::is_phoenix_pal(image_stream);
+    return siege::platform::palette::is_microsoft_pal(image_stream) || siege::content::pal::is_earthsiege_pal(image_stream) || siege::content::pal::is_old_pal(image_stream) || siege::content::pal::is_phoenix_pal(image_stream);
   }
 
-  std::size_t pal_controller::load_palettes(std::istream& image_stream)
+  std::span<const siege::fs_string_view> get_pal_formats() noexcept
   {
-    std::vector<std::vector<pal_controller::colour_entry>> all_rectangles;
+    constexpr static auto formats = std::array<siege::fs_string_view, 4>{ { FSL ".pal", FSL ".ipl", FSL ".ppl", FSL ".dpl" } };
+    return formats;
+  }
+
+  std::size_t load_palettes(pal_context& state, std::istream& image_stream)
+  {
+    std::vector<std::vector<colour_entry>> all_rectangles;
 
     auto generate_rectangles = [&](auto& colours) {
       auto& rectangles = all_rectangles.emplace_back();
@@ -31,16 +34,14 @@ namespace siege::views
       for (auto& colour : colours)
       {
         auto temp = std::to_string(index++);
-        rectangles.emplace_back(pal_controller::colour_entry {
-          .position = pal_controller::rect {
+        rectangles.emplace_back(colour_entry{
+          .position = rect{
             .x = x,
             .y = y,
             .width = size,
-            .height = size
-          },
+            .height = size },
           .colour = colour,
-          .name = name + std::u8string(temp.begin(), temp.end())
-        });
+          .name = name + std::u8string(temp.begin(), temp.end()) });
 
         y += size;
 
@@ -70,7 +71,6 @@ namespace siege::views
       {
         generate_rectangles(palette.colours);
       }
-
     }
     else if (siege::content::pal::is_phoenix_pal(image_stream))
     {
@@ -82,14 +82,21 @@ namespace siege::views
       }
     }
 
-    this->palettes = std::move(all_rectangles);
-    return this->palettes.size();
+    auto size = all_rectangles.size();
+    state = std::move(all_rectangles);
+    return size;
   }
 
-  const std::vector<pal_controller::colour_entry>& pal_controller::get_palette(std::size_t index) const
+  std::span<const colour_entry> get_palette(const pal_context& state, std::size_t index)
   {
-    return palettes[index];
+    auto* palettes = std::any_cast<std::vector<std::vector<colour_entry>>>(&state);
+    if (!palettes)
+    {
+      return {};
+    }
+
+    return palettes->operator[](index);
   }
 
-  
+
 }// namespace siege::views

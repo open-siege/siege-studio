@@ -1,4 +1,4 @@
-#include <siege/platform/win/window_impl.hpp>
+
 #include <siege/platform/win/hresult.hpp>
 #include <siege/platform/presentation_module.hpp>
 #include "views/vol_shared.hpp"
@@ -28,43 +28,39 @@ HRESULT get_window_class_for_stream(storage_info* data, wchar_t** class_name) no
     return E_INVALIDARG;
   }
 
-  static std::wstring storage;
-  *class_name = storage.data();
-
   auto stream = siege::platform::create_istream(*data);
 
-  try
-  {
-    static auto this_module = win32::window_module_ref::current_module();
+  static auto this_module = win32::window_module_ref::current_module();
 
-    if (siege::views::is_vol(*stream))
-    {
-      // TODO overhaul the presentation layer to use ATOMs for class names exclusively
-      if (storage.empty())
-      {
-        auto window = this_module.CreateWindowExW(CREATESTRUCTW{
-          .hwndParent = HWND_MESSAGE,
-          .lpszClass = MAKEINTATOM(vol_view_atom) });
-
-        if (window)
-        {
-          storage.resize(255);
-          storage.resize(::GetClassNameW(*window, storage.data(), (int)storage.size()));
-          ::DestroyWindow(*window);
-          window->release();
-        }
-      }
-
-      *class_name = storage.data();
-      return S_OK;
-    }
-
-    return S_FALSE;
-  }
-  catch (...)
+  if (!siege::views::is_vol(*stream))
   {
     return S_FALSE;
   }
+
+  static std::wstring storage;
+  
+  if (!storage.empty())
+  {
+    *class_name = storage.data();
+    return S_OK;
+  }
+
+  auto window = this_module.CreateWindowExW(CREATESTRUCTW{
+    .hwndParent = HWND_MESSAGE,
+    .lpszClass = MAKEINTATOM(vol_view_atom) });
+
+  if (!window)
+  {
+    return S_FALSE;
+  }
+
+  storage.resize(255);
+  storage.resize(::GetClassNameW(*window, storage.data(), (int)storage.size()));
+  ::DestroyWindow(*window);
+  window->release();
+
+  *class_name = storage.data();
+  return S_OK;
 }
 
 BOOL WINAPI DllMain(
