@@ -674,7 +674,6 @@ namespace siege::views
 
       if (b > 0)
       {
-        auto new_value = static_cast<std::uint16_t>(b);
         buffer[result++] = (std::make_pair(key_positive, static_cast<std::uint16_t>(b) * 2 + 1));
       }
       else

@@ -13,7 +13,6 @@ namespace siege::views
 {
   using namespace std::literals;
 
-
   win32::lresult_t exe_view::wm_create()
   {
     options = *win32::CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
