@@ -2,8 +2,6 @@
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/wic.hpp>
-#include <siege/platform/win/direct_2d.hpp>
-#include <siege/platform/win/animation.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/win/capabilities.hpp>
 #include <siege/platform/win/shell.hpp>

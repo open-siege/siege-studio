@@ -43,7 +43,11 @@ namespace win32
           .dwExStyle = (DWORD)::GetWindowLongPtr(self, GWL_EXSTYLE)
         };
         auto* window = new TWindow(self, params);
-        window->wm_create();
+        if (static_cast<default_window*>(instance)->window_proc(WM_CREATE, 0, (LPARAM)&params) == -1)
+        {
+          ::EndDialog(self, -1);
+          delete window;
+        }
 
         ::SetWindowLongPtrW(self, DWLP_USER, (LONG_PTR)window);
 

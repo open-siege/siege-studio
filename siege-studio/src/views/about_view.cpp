@@ -52,10 +52,6 @@ namespace siege::views
 
     win32::window text_stack;
 
-    // https://github.com/open-siege/siege-studio/
-
-    // https://thesiegehub.itch.io/siege-studio
-
     about_view(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params)
     {
       logo_icon.reset((HICON)::LoadImageW(params.hInstance, L"AppIcon", IMAGE_ICON, 0, 0, 0));
@@ -114,39 +110,6 @@ namespace siege::views
       else
       {
         win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = L"Windows Imaging Component not available" });
-      }
-
-      auto wam_version = win32::get_scenic_animation_version();
-
-      if (wam_version)
-      {
-        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"Windows Animation Manager version: " + std::to_wstring(wam_version->major) + L"." + std::to_wstring(wam_version->minor)).c_str() });
-      }
-      else
-      {
-        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = L"Windows Animation Manager not available" });
-      }
-
-      auto direct2d_version = win32::get_direct2d_version();
-
-      if (direct2d_version)
-      {
-        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"Direct2D version: " + std::to_wstring(direct2d_version->major) + L"." + std::to_wstring(direct2d_version->minor)).c_str() });
-      }
-      else
-      {
-        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = L"Direct2D not available" });
-      }
-
-      auto directwrite_version = win32::get_direct_write_version();
-
-      if (directwrite_version)
-      {
-        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = std::wstring(L"DirectWrite version: " + std::to_wstring(directwrite_version->major) + L"." + std::to_wstring(direct2d_version->minor)).c_str() });
-      }
-      else
-      {
-        win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = text_stack, .style = WS_CHILD | WS_VISIBLE, .lpszName = L"DirectWrite not available" });
       }
 
       return 0;
