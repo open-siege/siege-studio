@@ -192,8 +192,14 @@ namespace siege::views
     }
   }
 
+  
+  void show_connected_devices_dialog(win32::window_ref parent);
+
+
   BOOL exe_view::exe_actions_nm_click(win32::tool_bar, const NMMOUSE& message)
   {
+    // TODO add a button for this
+    //show_connected_devices_dialog(this->ref());
     ::SetFocus(this->exe_actions);
     if (message.dwItemSpec == add_to_firewall_selected_id)
     {
