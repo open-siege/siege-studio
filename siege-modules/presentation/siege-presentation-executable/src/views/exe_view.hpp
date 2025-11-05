@@ -11,7 +11,6 @@
 #include <siege/platform/win/dialog.hpp>
 #include <siege/platform/win/basic_window.hpp>
 #include <string>
-#include "input_injector.hpp"
 #include "exe_shared.hpp"
 
 namespace siege::views
@@ -24,7 +23,7 @@ namespace siege::views
   struct exe_view final : win32::basic_window<exe_view>
   {
     std::any state;
-    std::optional<input_injector> injector;
+    std::any injector;
     win32::list_box options;
     std::function<void()> options_unbind;
     win32::list_view resource_table;

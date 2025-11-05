@@ -3,7 +3,7 @@
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/dialog.hpp>
 #include <siege/extension/input_filter.hpp>
-#include "input_injector.hpp"
+#include <hidusage.h>
 #include "exe_view.hpp"
 
 namespace siege::views

@@ -4,11 +4,11 @@
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/dialog.hpp>
 #include <siege/extension/input_filter.hpp>
-#include "input_injector.hpp"
 #include "exe_view.hpp"
 #include <detours.h>
 #include <imagehlp.h>
 #include <xinput.h>
+#include "input_injector.hpp"
 
 using game_command_line_caps = siege::platform::game_command_line_caps;
 
@@ -310,10 +310,9 @@ namespace siege::views
         for (auto& bound_action : controller_actions)
         {
           auto virtual_key = bound_action.vkey;
-          
+
           auto action_iter = std::find_if(bound_actions.begin(), bound_actions.end(), [&](auto& other) {
-            return other.action_index == bound_action.action_index && 
-                (other.vkey != bound_action.vkey && other.context != bound_action.context);
+            return other.action_index == bound_action.action_index && (other.vkey != bound_action.vkey && other.context != bound_action.context);
           });
 
           if (action_iter == bound_actions.end())
@@ -345,6 +344,10 @@ namespace siege::views
 
         if (!controllers.empty() && controllers.begin()->get_hardware_index != nullptr)
         {
+          bool uses_winmm = std::count_if(backends.begin(), backends.end(), [](std::wstring_view value) {
+            return value == L"winmm";
+          });
+
           for (auto& bound_action : controller_actions)
           {
             auto virtual_key = bound_action.vkey;
@@ -355,8 +358,14 @@ namespace siege::views
             game_args.action_bindings[binding_index].context = controller.detected_context;
 
             // TODO how to describe games which prefer values instead of buttons.
-            // TODO get the game input backend and set the correct index
-            game_args.action_bindings[binding_index++].hardware_index = controller.get_hardware_index(virtual_key, controller_info::prefer_button, controller_info::prefer_winmm);
+            if (uses_winmm)
+            {
+              game_args.action_bindings[binding_index++].hardware_index = map_hid_to_winmm(controller.get_hardware_index(virtual_key, controller_info::prefer_button)).index;
+            }
+            else
+            {
+              game_args.action_bindings[binding_index++].hardware_index = controller.get_hardware_index(virtual_key, controller_info::prefer_button).index;
+            }
           }
         }
       }
@@ -382,7 +391,7 @@ namespace siege::views
         ::SetEnvironmentVariableW(L"ZERO_TIER_CURRENT_IP_GLOBAL_HANDLE", L"ZeroTierCurrentIpGlobalHandle");
       }
 
-      injector.emplace(*this, input_injector_args{ .args = game_args, .launch_game_with_extension = [this](const auto* args, auto* process_info) -> HRESULT { return launch_game_with_extension(state, args, process_info); }, .on_process_closed = [this, existing_state, global] mutable {
+      injector = bind_to_window(ref(), input_injector_args{ .args = game_args, .launch_game_with_extension = [this](const auto* args, auto* process_info) -> HRESULT { return launch_game_with_extension(state, args, process_info); }, .on_process_closed = [this, existing_state, global] mutable {
                                                     existing_state |= TBSTATE_ENABLED;
                                                     ::SendMessageW(exe_actions, TB_SETSTATE, launch_selected_id, MAKEWORD(existing_state, 0));
                                                     injector.reset();
@@ -415,7 +424,7 @@ namespace siege::views
                                                       ::SetEnvironmentVariableW(L"ZERO_TIER_CURRENT_IP_GLOBAL_HANDLE", nullptr);
                                                     } }
 
-                              });
+                                       });
 
 
       return TRUE;

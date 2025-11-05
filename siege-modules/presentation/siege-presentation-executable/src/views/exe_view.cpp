@@ -7,7 +7,6 @@
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/win/threading.hpp>
 #include <siege/extension/input_filter.hpp>
-#include "input_injector.hpp"
 #include "views/exe_view.hpp"
 
 namespace siege::views

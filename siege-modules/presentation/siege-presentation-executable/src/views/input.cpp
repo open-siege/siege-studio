@@ -5,17 +5,19 @@
 #include <siege/platform/win/capabilities.hpp>
 #include <hidusage.h>
 #include <xinput.h>
-#include "exe_shared.hpp"
 #include <joystickapi.h>
 #include <hidsdi.h>
+#include <joystickapi.h>
+#include "exe_shared.hpp"
+
 
 namespace siege::views
 {
   using namespace siege::platform;
 
-  std::uint16_t hardware_index_for_xbox_vkey(SHORT vkey, controller_info::button_preference, controller_info::index_preference);
-  std::uint16_t hardware_index_for_ps3_vkey(SHORT vkey, controller_info::button_preference, controller_info::index_preference);
-  std::uint16_t hardware_index_for_ps4_vkey(SHORT vkey, controller_info::button_preference, controller_info::index_preference);
+  hardware_index hardware_index_for_xbox_vkey(SHORT vkey, controller_info::button_preference);
+  hardware_index hardware_index_for_ps3_vkey(SHORT vkey, controller_info::button_preference);
+  hardware_index hardware_index_for_ps4_vkey(SHORT vkey, controller_info::button_preference);
   hardware_context string_to_context(std::wstring_view value);
   std::wstring_view context_to_string(hardware_context value);
 
@@ -376,18 +378,18 @@ namespace siege::views
               continue;
             }
 
-            if (state.info.get_hardware_index(button.first, controller_info::prefer_button, controller_info::prefer_hid) == usage)
+            if (state.info.get_hardware_index(button.first, controller_info::prefer_button).index == usage)
             {
               result.Gamepad.wButtons |= button.second;
               break;
             }
 
-            if (caps->has_triggers_as_buttons && state.info.get_hardware_index(VK_GAMEPAD_LEFT_TRIGGER, controller_info::prefer_button, controller_info::prefer_hid) == usage)
+            if (caps->has_triggers_as_buttons && state.info.get_hardware_index(VK_GAMEPAD_LEFT_TRIGGER, controller_info::prefer_button).index == usage)
             {
               result.Gamepad.bLeftTrigger = 255;
             }
 
-            if (caps->has_triggers_as_buttons && state.info.get_hardware_index(VK_GAMEPAD_RIGHT_TRIGGER, controller_info::prefer_button, controller_info::prefer_hid) == usage)
+            if (caps->has_triggers_as_buttons && state.info.get_hardware_index(VK_GAMEPAD_RIGHT_TRIGGER, controller_info::prefer_button).index == usage)
             {
               result.Gamepad.bRightTrigger = 255;
             }
@@ -438,33 +440,33 @@ namespace siege::views
         }
 
         auto index = value.Range.UsageMin - HID_USAGE_GENERIC_X;
-        if (state.info.get_hardware_index(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, controller_info::prefer_value, controller_info::prefer_hid) == index)
+        if (state.info.get_hardware_index(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, controller_info::prefer_value).index == index)
         {
           result.Gamepad.sThumbLX = to_s16(value.BitSize, usage);
         }
-        else if (state.info.get_hardware_index(VK_GAMEPAD_LEFT_THUMBSTICK_UP, controller_info::prefer_value, controller_info::prefer_hid) == index)
+        else if (state.info.get_hardware_index(VK_GAMEPAD_LEFT_THUMBSTICK_UP, controller_info::prefer_value).index == index)
         {
           result.Gamepad.sThumbLY = -to_s16(value.BitSize, usage);
         }
-        else if (state.info.get_hardware_index(VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, controller_info::prefer_value, controller_info::prefer_hid) == index)
+        else if (state.info.get_hardware_index(VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, controller_info::prefer_value).index == index)
         {
           result.Gamepad.sThumbRX = to_s16(value.BitSize, usage);
         }
-        else if (state.info.get_hardware_index(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, controller_info::prefer_value, controller_info::prefer_hid) == index)
+        else if (state.info.get_hardware_index(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, controller_info::prefer_value).index == index)
         {
           result.Gamepad.sThumbRY = -to_s16(value.BitSize, usage);
         }
-        else if (caps->trigger_value_count == 1 && state.info.get_hardware_index(VK_GAMEPAD_LEFT_TRIGGER, controller_info::prefer_value, controller_info::prefer_hid) == index)
+        else if (caps->trigger_value_count == 1 && state.info.get_hardware_index(VK_GAMEPAD_LEFT_TRIGGER, controller_info::prefer_value).index == index)
         {
           auto [left, right] = to_byte_pair(value.BitSize, usage);
           result.Gamepad.bLeftTrigger = left;
           result.Gamepad.bRightTrigger = right;
         }
-        else if (caps->trigger_value_count >= 2 && state.info.get_hardware_index(VK_GAMEPAD_LEFT_TRIGGER, controller_info::prefer_value, controller_info::prefer_hid) == index)
+        else if (caps->trigger_value_count >= 2 && state.info.get_hardware_index(VK_GAMEPAD_LEFT_TRIGGER, controller_info::prefer_value).index == index)
         {
           result.Gamepad.bLeftTrigger = to_byte(value.BitSize, usage);
         }
-        else if (caps->trigger_value_count >= 2 && state.info.get_hardware_index(VK_GAMEPAD_RIGHT_TRIGGER, controller_info::prefer_value, controller_info::prefer_hid) == index)
+        else if (caps->trigger_value_count >= 2 && state.info.get_hardware_index(VK_GAMEPAD_RIGHT_TRIGGER, controller_info::prefer_value).index == index)
         {
           result.Gamepad.bRightTrigger = to_byte(value.BitSize, usage);
         }
@@ -487,12 +489,10 @@ namespace siege::views
   std::optional<XINPUT_STATE> get_xinput_state(HANDLE file_handle)
   {
     std::array<BYTE, 3> request = { { 0x01, 0x01, 0x00 } };
-    
+
     std::array<BYTE, 29> response{};
     DWORD size;
-    if (!DeviceIoControl(file_handle, 0x8000e00c, 
-        request.data(), (DWORD)request.size(), 
-        response.data(), (DWORD)response.size(), &size, NULL) || size != response.size())
+    if (!DeviceIoControl(file_handle, 0x8000e00c, request.data(), (DWORD)request.size(), response.data(), (DWORD)response.size(), &size, NULL) || size != response.size())
     {
       return std::nullopt;
     }
@@ -755,159 +755,183 @@ namespace siege::views
   }
 
 
-  USAGE to_index(USAGE value)
+  constexpr USAGE to_index(USAGE value)
   {
     return value - HID_USAGE_GENERIC_X;
   }
 
-
-  std::uint16_t hardware_index_for_xbox_vkey(SHORT vkey, controller_info::button_preference, controller_info::index_preference prefer_winmm)
+  hardware_index hardware_index_for_xbox_vkey(SHORT vkey, controller_info::button_preference)
   {
     switch (vkey)
     {
     case VK_GAMEPAD_A:
-      return 0;
+      return { hardware_index::button, 0 };
     case VK_GAMEPAD_B:
-      return 1;
+      return { hardware_index::button, 1 };
     case VK_GAMEPAD_X:
-      return 2;
+      return { hardware_index::button, 2 };
     case VK_GAMEPAD_Y:
-      return 3;
+      return { hardware_index::button, 3 };
     case VK_GAMEPAD_LEFT_SHOULDER:
-      return 4;
+      return { hardware_index::button, 4 };
     case VK_GAMEPAD_RIGHT_SHOULDER:
-      return 5;
+      return { hardware_index::button, 5 };
     case VK_GAMEPAD_VIEW:
-      return 6;
+      return { hardware_index::button, 6 };
     case VK_GAMEPAD_MENU:
-      return 7;
+      return { hardware_index::button, 7 };
     case VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON:
-      return 8;
+      return { hardware_index::button, 8 };
     case VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON:
-      return 9;
+      return { hardware_index::button, 9 };
     case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
     case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT:
-      return to_index(HID_USAGE_GENERIC_X);
+      return { hardware_index::value, to_index(HID_USAGE_GENERIC_X) };
     case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
     case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN:
-      return to_index(HID_USAGE_GENERIC_Y);
+      return { hardware_index::value, to_index(HID_USAGE_GENERIC_Y) };
     case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
     case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT:
-      return prefer_winmm ? to_index(HID_USAGE_GENERIC_RY) : to_index(HID_USAGE_GENERIC_RX);
+      return { hardware_index::value, to_index(HID_USAGE_GENERIC_RX) };
     case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
     case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN:
-      return prefer_winmm ? to_index(HID_USAGE_GENERIC_RX) : to_index(HID_USAGE_GENERIC_RY);
+      return { hardware_index::value, to_index(HID_USAGE_GENERIC_RY) };
     case VK_GAMEPAD_LEFT_TRIGGER:
     case VK_GAMEPAD_RIGHT_TRIGGER:
-      return to_index(HID_USAGE_GENERIC_Z);
+      return { hardware_index::value, to_index(HID_USAGE_GENERIC_Z) };
     default:
-      return 0;
+      return {};
     }
   }
 
-  std::uint16_t hardware_index_for_ps3_vkey(SHORT vkey, controller_info::button_preference, controller_info::index_preference prefer_winmm)
+  hardware_index hardware_index_for_ps3_vkey(SHORT vkey, controller_info::button_preference)
   {
     switch (vkey)
     {
     case VK_GAMEPAD_X:// ps3/ps4 square
-      return 0;
+      return { hardware_index::button, 0 };
     case VK_GAMEPAD_A:// ps3/ps4 cross
-      return 1;
+      return { hardware_index::button, 1 };
     case VK_GAMEPAD_B:// ps3/ps4 circle
-      return 2;
+      return { hardware_index::button, 2 };
     case VK_GAMEPAD_Y:// ps3/ps4 triangle
-      return 3;
+      return { hardware_index::button, 3 };
     case VK_GAMEPAD_LEFT_SHOULDER:
-      return 4;
+      return { hardware_index::button, 4 };
     case VK_GAMEPAD_RIGHT_SHOULDER:
-      return 5;
+      return { hardware_index::button, 5 };
     case VK_GAMEPAD_LEFT_TRIGGER:
-      return 6;
+      return { hardware_index::button, 6 };
     case VK_GAMEPAD_RIGHT_TRIGGER:
-      return 7;
+      return { hardware_index::button, 7 };
     case VK_GAMEPAD_VIEW:
-      return 8;
+      return { hardware_index::button, 8 };
     case VK_GAMEPAD_MENU:
-      return 9;
+      return { hardware_index::button, 9 };
     case VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON:
-      return 10;
+      return { hardware_index::button, 10 };
     case VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON:
-      return 11;
+      return { hardware_index::button, 11 };
     case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
     case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT:
-      return to_index(HID_USAGE_GENERIC_X);
+      return { hardware_index::value, to_index(HID_USAGE_GENERIC_X) };
     case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
     case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN:
-      return to_index(HID_USAGE_GENERIC_Y);
+      return { hardware_index::value, to_index(HID_USAGE_GENERIC_Y) };
     case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
     case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT:
-      return to_index(HID_USAGE_GENERIC_Z);
+      return { hardware_index::value, to_index(HID_USAGE_GENERIC_Z) };
     case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
     case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN:
-      return prefer_winmm ? to_index(HID_USAGE_GENERIC_RX) : to_index(HID_USAGE_GENERIC_RZ);
+      return { hardware_index::value, to_index(HID_USAGE_GENERIC_RZ) };
     default:
-      return 0;
+      return {};
     }
   }
 
-  std::uint16_t hardware_index_for_ps4_vkey(SHORT vkey, controller_info::button_preference prefer_button, controller_info::index_preference prefer_winmm)
+  hardware_index hardware_index_for_ps4_vkey(SHORT vkey, controller_info::button_preference prefer_button)
   {
     switch (vkey)
     {
     case VK_GAMEPAD_X:// ps3/ps4 square
-      return 0;
+      return { hardware_index::button, 0 };
     case VK_GAMEPAD_A:// ps3/ps4 cross
-      return 1;
+      return { hardware_index::button, 1 };
     case VK_GAMEPAD_B:// ps3/ps4 circle
-      return 2;
+      return { hardware_index::button, 2 };
     case VK_GAMEPAD_Y:// ps3/ps4 triangle
-      return 3;
+      return { hardware_index::button, 3 };
     case VK_GAMEPAD_LEFT_SHOULDER:
-      return 4;
+      return { hardware_index::button, 4 };
     case VK_GAMEPAD_RIGHT_SHOULDER:
-      return 5;
+      return { hardware_index::button, 5 };
     case VK_GAMEPAD_VIEW:
-      return 8;
+      return { hardware_index::button, 8 };
     case VK_GAMEPAD_MENU:
-      return 9;
+      return { hardware_index::button, 9 };
     case VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON:
-      return 10;
+      return { hardware_index::button, 10 };
     case VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON:
-      return 11;
+      return { hardware_index::button, 11 };
     case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
     case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT:
-      return to_index(HID_USAGE_GENERIC_X);
+      return { hardware_index::value, to_index(HID_USAGE_GENERIC_X) };
     case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
     case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN:
-      return to_index(HID_USAGE_GENERIC_Y);
+      return { hardware_index::value, to_index(HID_USAGE_GENERIC_Y) };
     case VK_GAMEPAD_LEFT_TRIGGER: {
       if (prefer_button)
       {
-        return 6;
+        return { hardware_index::button, 6 };
       }
 
-      return prefer_winmm ? to_index(HID_USAGE_GENERIC_RY) : to_index(HID_USAGE_GENERIC_RX);
+      return { hardware_index::value, to_index(HID_USAGE_GENERIC_RX) };
     }
     case VK_GAMEPAD_RIGHT_TRIGGER: {
 
       if (prefer_button)
       {
-        return 7;
+        return { hardware_index::button, 7 };
       }
-      // TODO probably wrong
-      return prefer_winmm ? to_index(HID_USAGE_GENERIC_RZ) : to_index(HID_USAGE_GENERIC_RY);
+
+      return { hardware_index::value, to_index(HID_USAGE_GENERIC_RY) };
     }
     case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
     case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT:
-      return HID_USAGE_GENERIC_Z - HID_USAGE_GENERIC_X;
+      return { hardware_index::value, to_index(HID_USAGE_GENERIC_Z) };
     case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
     case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN:
-      return prefer_winmm ? to_index(HID_USAGE_GENERIC_RX) : to_index(HID_USAGE_GENERIC_RZ);
+      return { hardware_index::value, to_index(HID_USAGE_GENERIC_RZ) };
     default:
-      return 0;
+      return {};
     }
   }
 
+  winmm_hardware_index map_hid_to_winmm(hardware_index index)
+  {
+    winmm_hardware_index result{};
+    std::memcpy(&result, &index, sizeof(index));
+
+    if (result.type == hardware_index::value)
+    {
+      auto x_offset = offsetof(JOYINFOEX, dwXpos);
+      // derived from notes here: https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ee416627(v=vs.85)
+      // and here: https://learn.microsoft.com/en-us/previous-versions/dd757112(v=vs.85)
+      if (result.index == to_index(HID_USAGE_GENERIC_RZ))
+      {
+        result.index = offsetof(JOYINFOEX, dwRpos) - x_offset;
+      }
+      else if (result.index == to_index(HID_USAGE_GENERIC_RY))
+      {
+        result.index = offsetof(JOYINFOEX, dwUpos) - x_offset;
+      }
+      else if (result.index == to_index(HID_USAGE_GENERIC_RX))
+      {
+        result.index = offsetof(JOYINFOEX, dwVpos) - x_offset;
+      }
+    }
+    return result;
+  }
 
   SHORT to_s16(USHORT bit_size, ULONG usage)
   {

@@ -23,6 +23,21 @@ namespace siege::views
   // We should add which controller is considered to be the primary here.
   // Then, if the user's preferred context is not the primary, we can warn them and
   // ask if they want to change it via the system dialog
+  struct hardware_index
+  {
+    enum type : bool
+    {
+      button,
+      value
+    } type;
+
+    std::uint16_t index;
+  };
+
+  struct winmm_hardware_index : hardware_index
+  {
+  };
+  
   struct controller_info
   {
     siege::platform::hardware_context detected_context;
@@ -40,10 +55,12 @@ namespace siege::views
       prefer_hid,
       prefer_winmm
     };
-    std::uint16_t (*get_hardware_index)(SHORT vkey, button_preference, index_preference);
+    hardware_index (*get_hardware_index)(SHORT vkey, button_preference);
     std::pair<std::uint32_t, std::uint32_t> vendor_product_id;
     bool is_system_preferred = false;
   };
+
+  winmm_hardware_index map_hid_to_winmm(hardware_index);
 
   struct controller_state
   {
