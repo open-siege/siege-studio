@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <optional>
+#include <any>
 #include <variant>
 #include <unordered_map>
 #include "3d_structures.hpp"
@@ -80,6 +81,49 @@ namespace siege::content
         return to_string(val);
       }, data);
     }
+  };
+
+  
+  class renderable_shape_value
+  {
+  public:
+    template<typename TTest>
+    renderable_shape_value(TTest value) : raw(std::move(value))
+    {
+      get_base = [](std::any& raw) -> renderable_shape* {
+        return static_cast<renderable_shape*>(std::any_cast<TTest>(&raw));
+      };
+    }
+
+    inline auto get_sequences(const std::vector<std::size_t>& detail_level_indexes)
+    {
+      return get_base(raw)->get_sequences(detail_level_indexes);
+    }
+
+    inline auto get_detail_levels()
+    {
+      return get_base(raw)->get_detail_levels();
+    }
+
+    inline auto get_materials()
+    {
+      return get_base(raw)->get_materials();
+    }
+
+    
+    inline void render_shape(shape_renderer& renderer, const std::vector<std::size_t>& detail_level_indexes, const std::vector<sequence_info>& sequences) const
+    {
+      return get_base(const_cast<std::any&>(raw))->render_shape(renderer, detail_level_indexes, sequences);
+    }
+
+    operator renderable_shape&()
+    {
+      return *get_base(raw);
+    }
+
+  private:
+    std::any raw;
+    renderable_shape* (*get_base)(std::any& raw);
   };
 }
 

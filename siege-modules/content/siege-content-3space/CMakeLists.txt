@@ -6,26 +6,40 @@ find_package(glm REQUIRED)
 find_package(Catch2 REQUIRED)
 
 file(GLOB_RECURSE TEST_SRC_FILES src/*.test.cpp)
-file(GLOB_RECURSE WIN32_SRC_FILES src/*.win32.cpp)
-file(GLOB LIB_SRC_FILES src/*.cpp src/**/*.cpp)
 
-list(REMOVE_ITEM LIB_SRC_FILES ${TEST_SRC_FILES} ${WIN32_SRC_FILES})
+add_library(${PROJECT_NAME}-2d STATIC src/bmp/bitmap.cpp src/pal/palette.cpp src/fnt/font.cpp)
 
-add_library(${PROJECT_NAME} STATIC ${LIB_SRC_FILES})
+add_library(${PROJECT_NAME}-3d STATIC src/dts/dts_renderable_shape.cpp 
+                                      src/dts/3space.cpp 
+                                      src/dts/3space_renderable_shape.cpp 
+                                      src/dts/3space_v2.cpp src/dts/darkstar.cpp)
 
-if (WIN32)
-    target_sources(${PROJECT_NAME} PRIVATE ${WIN32_SRC_FILES})
-endif()
+target_link_libraries(${PROJECT_NAME}-3d PRIVATE ${PROJECT_NAME}-2d)
 
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23 POSITION_INDEPENDENT_CODE ON)
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(${PROJECT_NAME} siege-content-common)
+add_library(${PROJECT_NAME}-scripting STATIC src/mis/mission.cpp src/gui/interface.cpp)
+
+add_library(${PROJECT_NAME}-resource STATIC src/clm_resource.cpp 
+                                            src/darkstar_resource.cpp 
+                                            src/three_space_resource.cpp
+                                            src/trophy_bass_resource.cpp
+)
+
+target_link_libraries(${PROJECT_NAME}-resource PRIVATE ${PROJECT_NAME}-2d ${PROJECT_NAME}-3d ${PROJECT_NAME}-scripting)
+
+set(PROJECT_TARGETS ${PROJECT_NAME}-2d ${PROJECT_NAME}-3d ${PROJECT_NAME}-scripting ${PROJECT_NAME}-resource)
+
+foreach(TARGET IN ITEMS ${PROJECT_TARGETS})
+    set_target_properties(${TARGET} PROPERTIES CXX_STANDARD 23 POSITION_INDEPENDENT_CODE ON)
+    target_link_libraries(${TARGET} PUBLIC siege-content-common)
+    target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+endforeach()
+
 install(DIRECTORY include
         DESTINATION .
         COMPONENT devel
         FILES_MATCHING PATTERN "*.hpp")
 
-install(TARGETS ${PROJECT_NAME}
+install(TARGETS ${PROJECT_TARGETS}
         CONFIGURATIONS Debug Release
         RUNTIME DESTINATION lib)
 

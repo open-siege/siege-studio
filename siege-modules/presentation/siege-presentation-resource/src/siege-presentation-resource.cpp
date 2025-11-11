@@ -1,18 +1,23 @@
 
 #include <bit>
 #include <filesystem>
-#undef NDEBUG 
+#undef NDEBUG
 #include <cassert>
 #include <atomic>
 #include <unordered_set>
 #include <unordered_map>
 #include <system_error>
 #include <siege/platform/stream.hpp>
-#include <siege/resource/resource_maker.hpp>
 #include "views/vol_shared.hpp"
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;
+
+namespace siege::resource
+{
+  bool is_resource_readable(std::istream&);
+  siege::platform::resource_reader make_resource_reader(std::istream&);
+}// namespace siege::resource
 
 extern "C" {
 
@@ -110,7 +115,7 @@ std::errc is_stream_supported(storage_info* data) noexcept
     auto formats = get_volume_formats();
     auto extension = std::filesystem::path(data->info.path).extension().native();
     if (!std::any_of(formats.begin(), formats.end(), [&](const auto value) {
-        return value == extension;
+          return value == extension;
         }))
     {
       return std::errc::not_supported;
@@ -333,7 +338,7 @@ std::errc extract_file_contents(siege::platform::resource_reader_context* contex
   }
 
   auto& real_info = std::get<siege::platform::file_info>(*file_info);
-  
+
   if ((size == 0 || buffer == nullptr) && written)
   {
     *written = real_info.size;
@@ -362,5 +367,4 @@ std::errc destroy_reader_context(siege::platform::resource_reader_context* conte
 
   return std::errc::invalid_argument;
 }
-
 }

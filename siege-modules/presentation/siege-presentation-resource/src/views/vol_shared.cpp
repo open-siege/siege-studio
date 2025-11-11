@@ -1,4 +1,3 @@
-#include <siege/resource/resource_maker.hpp>
 #include <siege/platform/stream.hpp>
 #include <fstream>
 #include <spanstream>
@@ -16,6 +15,14 @@
 #if WIN32
 #include <siege/platform/win/file.hpp>
 #endif
+
+#include <siege/platform/resource.hpp>
+
+namespace siege::resource
+{
+  bool is_resource_readable(std::istream&);
+  siege::platform::resource_reader make_resource_reader(std::istream&);
+}// namespace siege::resource
 
 namespace siege::views
 {
@@ -88,7 +95,7 @@ namespace siege::views
     return *std::any_cast<std::shared_ptr<controller_state>>(self).get();
   }
 
-  // TODO this was meant to be cross platform code. 
+  // TODO this was meant to be cross platform code.
   // Oops. I'll have to move this to the win32 section later.
   std::pair<win32::file_view, std::size_t> get_raw_resource_data(std::any& self)
   {

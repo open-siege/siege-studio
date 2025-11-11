@@ -7,7 +7,13 @@
 #include <iostream>
 #include <span>
 #include <future>
-#include <siege/resource/resource_maker.hpp>
+#include <siege/platform/resource.hpp>
+
+namespace siege::resource
+{
+  bool is_resource_readable(std::istream&);
+  siege::platform::resource_reader make_resource_reader(std::istream&);
+}// namespace siege::resource
 
 namespace fs = std::filesystem;
 

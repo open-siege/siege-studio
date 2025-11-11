@@ -10,7 +10,6 @@ add_subdirectory(content/siege-content-sword)
 add_subdirectory(content/siege-content-mw2)
 add_subdirectory(content/siege-content-mw4)
 add_subdirectory(content/siege-content-3space)
-add_subdirectory(content/siege-content-all)
 
 add_subdirectory(presentation/siege-presentation-2d)
 add_subdirectory(presentation/siege-presentation-3d)

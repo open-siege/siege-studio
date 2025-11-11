@@ -1,9 +1,7 @@
 #include <any>
+#include <siege/content/dts/renderable_shapes.hpp>
+#include <siege/content/wtb_renderable_shape.hpp>
 #include <siege/content/dts/darkstar.hpp>
-#include <siege/content/dts/3space.hpp>
-#include <siege/content/renderable_shape_factory.hpp>
-#include <siege/content/null_renderable_shape.hpp>
-#include <siege/content/wtb.hpp>
 #include "3d_shared.hpp"
 
 namespace siege::content::tmd
@@ -30,18 +28,12 @@ namespace siege::content::mdl
   std::any load_mdx(std::istream& stream);
 }// namespace siege::content::mdl
 
-namespace siege::content::bwd
-{
-  bool is_bwd(std::istream& stream);
-  std::any load_bwd(std::istream& stream);
-}// namespace siege::content::bwd
-
 namespace siege::views
 {
+  std::optional<content::renderable_shape_value> make_shape(std::istream& shape_stream);
   struct shape_data
   {
-    // to keep it copyable :(
-    std::shared_ptr<content::renderable_shape> shape;
+    content::renderable_shape_value shape;
     std::vector<std::string> detail_levels;
     std::vector<content::material> materials;
     std::vector<std::size_t> selected_detail_levels;
@@ -94,9 +86,9 @@ namespace siege::views
       siege::content::mdl::load_mdx(stream);
     }
 
-    auto shape = content::dts::make_shape(stream);
+    auto shape = make_shape(stream);
 
-    if (dynamic_cast<content::dts::null_renderable_shape*>(shape.get()) != nullptr)
+    if (!shape)
     {
       return {};
     }
@@ -114,7 +106,7 @@ namespace siege::views
 
     std::vector<shape_data> shapes;
     shapes.push_back(shape_data{
-      .shape = std::move(shape),
+      .shape = std::move(*shape),
       .detail_levels = detail_levels,
       .materials = std::move(materials),
       .selected_detail_levels = std::move(selected_detail_levels),
@@ -186,7 +178,7 @@ namespace siege::views
   bool is_sequence_enabled(const shape_context& state, std::size_t shape_index, std::int32_t index)
   {
     auto* shapes = self(state);
-    
+
     auto& shape = shapes->at(shape_index);
 
     for (auto& sequence : shape.sequences)
@@ -202,7 +194,7 @@ namespace siege::views
   void enable_sequence(shape_context& state, std::size_t shape_index, std::int32_t index)
   {
     auto* shapes = self(state);
-    
+
     auto& shape = shapes->at(shape_index);
 
     for (auto& sequence : shape.sequences)
@@ -219,7 +211,7 @@ namespace siege::views
   void disable_sequence(shape_context& state, std::size_t shape_index, std::int32_t index)
   {
     auto* shapes = self(state);
-    
+
     auto& shape = shapes->at(shape_index);
 
     for (auto& sequence : shape.sequences)
@@ -258,6 +250,39 @@ namespace siege::views
   {
     auto* shapes = self(state);
     auto& context = shapes->operator[](index);
-    context.shape->render_shape(renderer, context.selected_detail_levels, context.sequences);
+    context.shape.render_shape(renderer, context.selected_detail_levels, context.sequences);
+  }
+
+  std::optional<content::renderable_shape_value> make_shape(std::istream& shape_stream)
+  {
+    using namespace siege::content;
+    if (dts::darkstar::is_darkstar_dts(shape_stream))
+    {
+      return std::make_optional(content::dts::darkstar::make_renderable_shape(dts::darkstar::read_shape(shape_stream, std::nullopt)));
+    }
+
+    if (dts::three_space::v1::is_3space_dts(shape_stream))
+    {
+      auto shapes = content::dts::three_space::v1::read_shapes(shape_stream);
+
+      if (shapes.empty())
+      {
+        return std::nullopt;
+      }
+
+      return std::make_optional(dts::three_space::make_renderable_shape(shapes.front()));
+    }
+
+    if (wtb::is_wtb(shape_stream))
+    {
+      return std::make_optional(wtb::make_renderable_shape(wtb::load_wtb(shape_stream)));
+    }
+
+    if (bwd::is_bwd(shape_stream))
+    {
+      return std::make_optional(wtb::make_renderable_shape(bwd::load_bwd(shape_stream)));
+    }
+
+    return std::nullopt;
   }
 }// namespace siege::views

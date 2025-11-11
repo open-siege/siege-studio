@@ -6,26 +6,28 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 find_package(Catch2 REQUIRED)
 
 file(GLOB_RECURSE TEST_SRC_FILES src/*.test.cpp)
-file(GLOB_RECURSE WIN32_SRC_FILES src/*.win32.cpp)
-file(GLOB LIB_SRC_FILES src/*.cpp src/**/*.cpp)
 
-list(REMOVE_ITEM LIB_SRC_FILES ${TEST_SRC_FILES} ${WIN32_SRC_FILES})
+add_library(${PROJECT_NAME}-2d STATIC src/m8.cpp)
+add_library(${PROJECT_NAME}-3d STATIC src/mdl.cpp)
+target_link_libraries(${PROJECT_NAME}-3d PRIVATE ${PROJECT_NAME}-2d)
+add_library(${PROJECT_NAME}-scripting STATIC src/id_tech_2)
+add_library(${PROJECT_NAME}-resource STATIC src/pak_resource.cpp src/wad_resource.cpp)
+target_link_libraries(${PROJECT_NAME}-resource PRIVATE ${PROJECT_NAME}-2d ${PROJECT_NAME}-3d ${PROJECT_NAME}-scripting)
 
-add_library(${PROJECT_NAME} STATIC ${LIB_SRC_FILES})
+set(PROJECT_TARGETS ${PROJECT_NAME}-2d ${PROJECT_NAME}-3d ${PROJECT_NAME}-scripting ${PROJECT_NAME}-resource)
 
-if (WIN32)
-    target_sources(${PROJECT_NAME} PRIVATE ${WIN32_SRC_FILES})
-endif()
+foreach(TARGET IN ITEMS ${PROJECT_TARGETS})
+    set_target_properties(${TARGET} PROPERTIES CXX_STANDARD 23 POSITION_INDEPENDENT_CODE ON)
+    target_link_libraries(${TARGET} PUBLIC siege-content-common)
+    target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+endforeach()
 
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23 POSITION_INDEPENDENT_CODE ON)
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(${PROJECT_NAME} siege-content-common)
 install(DIRECTORY include
         DESTINATION .
         COMPONENT devel
         FILES_MATCHING PATTERN "*.hpp")
 
-install(TARGETS ${PROJECT_NAME}
+install(TARGETS ${PROJECT_TARGETS}
         CONFIGURATIONS Debug Release
         RUNTIME DESTINATION lib)
 

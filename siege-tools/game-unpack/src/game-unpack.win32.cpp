@@ -6,8 +6,8 @@
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/threading.hpp>
-#include <siege/resource/resource_maker.hpp>
 #include <siege/platform/http.hpp>
+#include <siege/platform/resource.hpp>
 #include <span>
 #include <string_view>
 #include <array>
@@ -20,6 +20,12 @@
 #include <future>
 #include <filesystem>
 #include <ranges>
+
+namespace siege::resource
+{
+  bool is_resource_readable(std::istream&);
+  siege::platform::resource_reader make_resource_reader(std::istream&);
+}// namespace siege::resource
 
 #pragma comment(linker, \
   "\"/manifestdependency:type='win32' \

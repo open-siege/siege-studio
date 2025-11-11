@@ -6,8 +6,8 @@
 #include <functional>
 #include <list>
 #include <glm/gtx/quaternion.hpp>
-
-#include <siege/content/dts/dts_renderable_shape.hpp>
+#include <siege/content/renderable_shape.hpp>
+#include <siege/content/dts/darkstar_structures.hpp>
 
 template<class... Ts>
 struct overloaded : Ts...
@@ -127,295 +127,314 @@ namespace siege::content::dts::darkstar
       shape);
   }
 
-  std::vector<sequence_info> dts_renderable_shape::get_sequences(const std::vector<std::size_t>& detail_level_indexes) const
+  class dts_renderable_shape final : public renderable_shape
   {
-    std::vector<sequence_info> results;
-
-    if (shape.index() == std::variant_npos)
+  public:
+    dts_renderable_shape(shape_variant shape)
+      : shape(std::move(shape))
     {
+    }
+
+    std::vector<sequence_info> get_sequences(const std::vector<std::size_t>& detail_level_indexes) const override
+    {
+      std::vector<sequence_info> results;
+
+      if (shape.index() == std::variant_npos)
+      {
+        return results;
+      }
+
+      std::visit([&](auto& local_shape) {
+        if (local_shape.sequences.empty() || local_shape.sub_sequences.empty())
+        {
+          return;
+        }
+
+        std::vector<sequence_info> sequences;
+        results.reserve(local_shape.sequences.size());
+
+        for (auto i = 0; i < local_shape.sequences.size(); ++i)
+        {
+          auto& sequence = local_shape.sequences[i];
+          results.push_back({ i, local_shape.names[sequence.name_index].data(), i == 0, std::vector<sub_sequence_info>{} });
+        }
+
+        if (local_shape.details.empty())
+        {
+          return;
+        }
+
+        for (auto detail_level_index : detail_level_indexes)
+        {
+          auto instance = get_instance(shape, detail_level_index);
+
+          std::function<void(const std::int32_t&, const node_instance&)> populate_sequences = [&](const auto& node_index, const auto& node_instance) {
+            if (node_index == -1)
+            {
+              return;
+            }
+
+            const auto& node = local_shape.nodes[node_index];
+            std::string node_name = local_shape.names[node.name_index].data();
+
+            auto create_sub_info = [&](auto node_index, auto& sub_sequence) {
+              sub_sequence_info info;
+              info.node_index = node_index;
+              info.node_name = node_name;
+              info.first_key_frame_index = sub_sequence.first_key_frame_index;
+              info.num_key_frames = sub_sequence.num_key_frames;
+              info.enabled = sub_sequence.sequence_index == 0;
+
+              if (sub_sequence.num_key_frames > 0)
+              {
+                info.min_position = local_shape.keyframes[sub_sequence.first_key_frame_index].position;
+                info.max_position = local_shape.keyframes[sub_sequence.first_key_frame_index.value() + sub_sequence.num_key_frames - 1].position;
+              }
+              else
+              {
+                info.min_position = 0;
+                info.max_position = 0;
+              }
+
+              info.frame_index = 0;
+              info.position = info.min_position;
+
+              return info;
+            };
+
+            if (node.num_sub_sequences == 0)
+            {
+              for (auto& object : local_shape.objects)
+              {
+                if (object.node_index == node_index)
+                {
+                  for (auto i = object.first_sub_sequence_index; i < object.first_sub_sequence_index.value() + object.num_sub_sequences; ++i)
+                  {
+                    auto& sub_sequence = local_shape.sub_sequences[i];
+                    auto& sequence = results[sub_sequence.sequence_index];
+
+                    sequence.sub_sequences.emplace_back(create_sub_info(node_index, sub_sequence));
+                  }
+                  break;
+                }
+              }
+            }
+            else
+            {
+              for (auto i = node.first_sub_sequence_index; i < node.first_sub_sequence_index.value() + node.num_sub_sequences; ++i)
+              {
+                auto& sub_sequence = local_shape.sub_sequences[i];
+                auto& sequence = results[sub_sequence.sequence_index];
+
+                sequence.sub_sequences.emplace_back(create_sub_info(node_index, sub_sequence));
+              }
+            }
+
+            for (const auto& [child_node_index, child_node_instance] : node_instance.node_indexes)
+            {
+              populate_sequences(child_node_index, *child_node_instance);
+            }
+          };
+
+          populate_sequences(instance.root_node.first, *instance.root_node.second);
+        }
+      },
+        shape);
+
       return results;
     }
 
-    std::visit([&](auto& local_shape) {
-      if (local_shape.sequences.empty() || local_shape.sub_sequences.empty())
-      {
-        return;
-      }
 
-      std::vector<sequence_info> sequences;
-      results.reserve(local_shape.sequences.size());
+    std::vector<std::string> get_detail_levels() const override
+    {
+      return std::visit([](const auto& instance) {
+        std::vector<std::string> results;
+        results.reserve(instance.details.size());
 
-      for (auto i = 0; i < local_shape.sequences.size(); ++i)
-      {
-        auto& sequence = local_shape.sequences[i];
-        results.push_back({ i, local_shape.names[sequence.name_index].data(), i == 0, std::vector<sub_sequence_info>{} });
-      }
-
-      if (local_shape.details.empty())
-      {
-        return;
-      }
-
-      for (auto detail_level_index : detail_level_indexes)
-      {
-        auto instance = get_instance(shape, detail_level_index);
-
-        std::function<void(const std::int32_t&, const node_instance&)> populate_sequences = [&](const auto& node_index, const auto& node_instance) {
-          if (node_index == -1)
-          {
-            return;
-          }
-
-          const auto& node = local_shape.nodes[node_index];
-          std::string node_name = local_shape.names[node.name_index].data();
-
-          auto create_sub_info = [&](auto node_index, auto& sub_sequence) {
-            sub_sequence_info info;
-            info.node_index = node_index;
-            info.node_name = node_name;
-            info.first_key_frame_index = sub_sequence.first_key_frame_index;
-            info.num_key_frames = sub_sequence.num_key_frames;
-            info.enabled = sub_sequence.sequence_index == 0;
-
-            if (sub_sequence.num_key_frames > 0)
-            {
-              info.min_position = local_shape.keyframes[sub_sequence.first_key_frame_index].position;
-              info.max_position = local_shape.keyframes[sub_sequence.first_key_frame_index.value() + sub_sequence.num_key_frames - 1].position;
-            }
-            else
-            {
-              info.min_position = 0;
-              info.max_position = 0;
-            }
-
-            info.frame_index = 0;
-            info.position = info.min_position;
-
-            return info;
-          };
-
-          if (node.num_sub_sequences == 0)
-          {
-            for (auto& object : local_shape.objects)
-            {
-              if (object.node_index == node_index)
-              {
-                for (auto i = object.first_sub_sequence_index; i < object.first_sub_sequence_index.value() + object.num_sub_sequences; ++i)
-                {
-                  auto& sub_sequence = local_shape.sub_sequences[i];
-                  auto& sequence = results[sub_sequence.sequence_index];
-
-                  sequence.sub_sequences.emplace_back(create_sub_info(node_index, sub_sequence));
-                }
-                break;
-              }
-            }
-          }
-          else
-          {
-            for (auto i = node.first_sub_sequence_index; i < node.first_sub_sequence_index.value() + node.num_sub_sequences; ++i)
-            {
-              auto& sub_sequence = local_shape.sub_sequences[i];
-              auto& sequence = results[sub_sequence.sequence_index];
-
-              sequence.sub_sequences.emplace_back(create_sub_info(node_index, sub_sequence));
-            }
-          }
-
-          for (const auto& [child_node_index, child_node_instance] : node_instance.node_indexes)
-          {
-            populate_sequences(child_node_index, *child_node_instance);
-          }
-        };
-
-        populate_sequences(instance.root_node.first, *instance.root_node.second);
-      }
-    },
-      shape);
-
-    return results;
-  }
-
-  std::vector<std::string> dts_renderable_shape::get_detail_levels() const
-  {
-    return std::visit([](const auto& instance) {
-      std::vector<std::string> results;
-      results.reserve(instance.details.size());
-
-      for (const auto& detail : instance.details)
-      {
-        const auto root_note_index = detail.root_node_index;
-        const auto& node = instance.nodes[root_note_index];
-        results.emplace_back(instance.names[node.name_index].data());
-      }
-
-      return results;
-    },
-      shape);
-  }
-
-  std::vector<material> dts_renderable_shape::get_materials() const
-  {
-    return std::visit([](const auto& instance) {
-      return std::visit([](const auto& list) {
-        std::vector<material> results;
-        results.reserve(list.materials.size());
-
-        for (const auto& raw_material : list.materials)
+        for (const auto& detail : instance.details)
         {
-         auto& temp = results.emplace_back();
-         temp.filename = raw_material.file_name.data();
-
-         temp.metadata.emplace("flags", raw_material.flags.value());
-         temp.metadata.emplace("alpha", raw_material.alpha);
-         temp.metadata.emplace("index", raw_material.index.value());
-         temp.metadata.emplace("rgbData", raw_material.rgb_data);
-
-         using T = std::decay_t<decltype(raw_material)>;
-
-         if constexpr (std::is_same_v<T, material_list::v3::material>)
-         {
-           temp.metadata.emplace("type", raw_material.type.value());
-           temp.metadata.emplace("friction", raw_material.friction);
-           temp.metadata.emplace("elasticity", raw_material.elasticity);
-         }
-         if constexpr (std::is_same_v<T, material_list::v4::material>)
-         {
-           temp.metadata.emplace("type", raw_material.type.value());
-           temp.metadata.emplace("friction", raw_material.friction);
-           temp.metadata.emplace("elasticity", raw_material.elasticity);
-           temp.metadata.emplace("useDefaultProperties", raw_material.use_default_properties.value());
-         }
+          const auto root_note_index = detail.root_node_index;
+          const auto& node = instance.nodes[root_note_index];
+          results.emplace_back(instance.names[node.name_index].data());
         }
+
         return results;
       },
-        instance.material_list);
-      }, shape);
-  }
+        shape);
+    }
 
-  void dts_renderable_shape::render_shape(shape_renderer& renderer, const std::vector<std::size_t>& detail_level_indexes, const std::vector<sequence_info>& sequences) const
+    std::vector<material> get_materials() const
+    {
+      return std::visit([](const auto& instance) {
+        return std::visit([](const auto& list) {
+          std::vector<material> results;
+          results.reserve(list.materials.size());
+
+          for (const auto& raw_material : list.materials)
+          {
+            auto& temp = results.emplace_back();
+            temp.filename = raw_material.file_name.data();
+
+            temp.metadata.emplace("flags", raw_material.flags.value());
+            temp.metadata.emplace("alpha", raw_material.alpha);
+            temp.metadata.emplace("index", raw_material.index.value());
+            temp.metadata.emplace("rgbData", raw_material.rgb_data);
+
+            using T = std::decay_t<decltype(raw_material)>;
+
+            if constexpr (std::is_same_v<T, material_list::v3::material>)
+            {
+              temp.metadata.emplace("type", raw_material.type.value());
+              temp.metadata.emplace("friction", raw_material.friction);
+              temp.metadata.emplace("elasticity", raw_material.elasticity);
+            }
+            if constexpr (std::is_same_v<T, material_list::v4::material>)
+            {
+              temp.metadata.emplace("type", raw_material.type.value());
+              temp.metadata.emplace("friction", raw_material.friction);
+              temp.metadata.emplace("elasticity", raw_material.elasticity);
+              temp.metadata.emplace("useDefaultProperties", raw_material.use_default_properties.value());
+            }
+          }
+          return results;
+        },
+          instance.material_list);
+      },
+        shape);
+    }
+
+    void render_shape(shape_renderer& renderer, const std::vector<std::size_t>& detail_level_indexes, const std::vector<sequence_info>& sequences) const
+    {
+
+      std::visit([&](const auto& local_shape) {
+        if (local_shape.details.empty())
+        {
+          return;
+        }
+
+        for (auto detail_level_index : detail_level_indexes)
+        {
+          auto instance = get_instance(shape, detail_level_index);
+
+          std::function<void(const std::pair<std::int32_t, std::reference_wrapper<node_instance>>&, std::optional<glm::mat4>)> render_node =
+            [&](const auto& node_item, const auto parent_node_matrix) {
+              auto& [node_index, node_instance] = node_item;
+
+              const auto& node = local_shape.nodes[node_index];
+              const std::string_view node_name = local_shape.names[node.name_index].data();
+
+              glm::mat4 node_matrix;
+
+              auto transform_index = get_transform_index(shape, node_index, sequences);
+              const auto& [translation, rotation, scale] = get_translation(local_shape.transforms[transform_index]);
+
+              auto translation_matrix = glm::translate(glm::mat4(1.0f), glm::vec3(translation.x, translation.y, translation.z));
+              auto rotation_matrix = glm::transpose(glm::toMat4(glm::quat(rotation.w, rotation.x, rotation.y, rotation.z)));
+
+              auto scale_matrix = glm::scale(glm::mat4(1.0f), glm::vec3(scale.x, scale.y, scale.z));
+
+              if (parent_node_matrix.has_value())
+              {
+                node_matrix = parent_node_matrix.value() * (translation_matrix * rotation_matrix * scale_matrix);
+              }
+              else
+              {
+                node_matrix = translation_matrix * rotation_matrix * scale_matrix;
+              }
+
+              std::optional<std::string_view> parent_node_name;
+
+              if (node.parent_node_index != -1)
+              {
+                const auto& parent_node = local_shape.nodes[node.parent_node_index];
+                parent_node_name = local_shape.names[parent_node.name_index].data();
+              }
+
+              renderer.update_node(parent_node_name, node_name);
+
+              for (const std::int32_t object_index : node_instance.get().object_indexes)
+              {
+                const auto& object = local_shape.objects[object_index];
+                const std::string_view object_name = local_shape.names[object.name_index].data();
+
+                renderer.update_object(node_name, object_name);
+
+                std::visit([&](const auto& mesh) {
+                  vector3f mesh_scale;
+                  vector3f mesh_origin;
+
+                  if constexpr (std::remove_reference_t<decltype(mesh)>::version < 3)
+                  {
+                    mesh_scale = mesh.header.scale;
+                    mesh_origin = mesh.header.origin;
+                  }
+                  else if constexpr (std::remove_reference_t<decltype(mesh)>::version >= 3)
+                  {
+                    if (!mesh.frames.empty())
+                    {
+                      mesh_scale = mesh.frames[0].scale;
+                      mesh_origin = mesh.frames[0].origin;
+                    }
+                    else
+                    {
+                      mesh_scale = { 1, 1, 1 };
+                      mesh_origin = { 0, 0, 0 };
+                    }
+                  }
+                  for (const auto& face : mesh.faces)
+                  {
+                    renderer.new_face(3);
+                    std::array vertices{ std::cref(mesh.vertices[face.vi3]),
+                      std::cref(mesh.vertices[face.vi2]),
+                      std::cref(mesh.vertices[face.vi1]) };
+
+                    std::array texture_vertices{ std::cref(mesh.texture_vertices[face.ti3]),
+                      std::cref(mesh.texture_vertices[face.ti2]),
+                      std::cref(mesh.texture_vertices[face.ti1]) };
+
+                    for (const auto& raw_vertex : vertices)
+                    {
+                      auto vertex = glm::vec4(raw_vertex.get().x, raw_vertex.get().y, raw_vertex.get().z, 1.0f);
+
+                      auto translation_matrix = glm::translate(glm::mat4(1.0f), glm::vec3(mesh_origin.x, mesh_origin.y, mesh_origin.z));
+                      auto scale_matrix = glm::scale(glm::mat4(1.0f), glm::vec3(mesh_scale.x, mesh_scale.y, mesh_scale.z));
+
+                      vertex = translation_matrix * scale_matrix * vertex;
+
+                      vertex = node_matrix * vertex;
+
+                      renderer.emit_vertex(vector3f{ vertex.x, vertex.y, vertex.z });
+                    }
+
+                    for (const auto& raw_texture_vertex : texture_vertices)
+                    {
+                      renderer.emit_texture_vertex(raw_texture_vertex.get());
+                    }
+
+                    renderer.end_face();
+                  }
+                },
+                  local_shape.meshes[object.mesh_index]);
+              }
+
+              for (const auto& child_node_item : node_instance.get().node_indexes)
+              {
+                render_node(std::make_pair(child_node_item.first, std::ref(*child_node_item.second)), node_matrix);
+              }
+            };
+
+          render_node(std::make_pair(instance.root_node.first, std::ref(*instance.root_node.second)), std::nullopt);
+        }
+      },
+        shape);
+    }
+
+  private:
+    shape_variant shape;
+  };
+
+  renderable_shape_value make_renderable_shape(shape_variant data)
   {
-
-    std::visit([&](const auto& local_shape) {
-      if (local_shape.details.empty())
-      {
-        return;
-      }
-
-      for (auto detail_level_index : detail_level_indexes)
-      {
-        auto instance = get_instance(shape, detail_level_index);
-
-        std::function<void(const std::pair<std::int32_t, std::reference_wrapper<node_instance>>&, std::optional<glm::mat4>)> render_node =
-          [&](const auto& node_item, const auto parent_node_matrix) {
-            auto& [node_index, node_instance] = node_item;
-
-            const auto& node = local_shape.nodes[node_index];
-            const std::string_view node_name = local_shape.names[node.name_index].data();
-
-            glm::mat4 node_matrix;
-
-            auto transform_index = get_transform_index(shape, node_index, sequences);
-            const auto& [translation, rotation, scale] = get_translation(local_shape.transforms[transform_index]);
-
-            auto translation_matrix = glm::translate(glm::mat4(1.0f), glm::vec3(translation.x, translation.y, translation.z));
-            auto rotation_matrix = glm::transpose(glm::toMat4(glm::quat(rotation.w, rotation.x, rotation.y, rotation.z)));
-
-            auto scale_matrix = glm::scale(glm::mat4(1.0f), glm::vec3(scale.x, scale.y, scale.z));
-
-            if (parent_node_matrix.has_value())
-            {
-              node_matrix = parent_node_matrix.value() * (translation_matrix * rotation_matrix * scale_matrix);
-            }
-            else
-            {
-              node_matrix = translation_matrix * rotation_matrix * scale_matrix;
-            }
-
-            std::optional<std::string_view> parent_node_name;
-
-            if (node.parent_node_index != -1)
-            {
-              const auto& parent_node = local_shape.nodes[node.parent_node_index];
-              parent_node_name = local_shape.names[parent_node.name_index].data();
-            }
-
-            renderer.update_node(parent_node_name, node_name);
-
-            for (const std::int32_t object_index : node_instance.get().object_indexes)
-            {
-              const auto& object = local_shape.objects[object_index];
-              const std::string_view object_name = local_shape.names[object.name_index].data();
-
-              renderer.update_object(node_name, object_name);
-
-              std::visit([&](const auto& mesh) {
-                vector3f mesh_scale;
-                vector3f mesh_origin;
-
-                if constexpr (std::remove_reference_t<decltype(mesh)>::version < 3)
-                {
-                  mesh_scale = mesh.header.scale;
-                  mesh_origin = mesh.header.origin;
-                }
-                else if constexpr (std::remove_reference_t<decltype(mesh)>::version >= 3)
-                {
-                  if (!mesh.frames.empty())
-                  {
-                    mesh_scale = mesh.frames[0].scale;
-                    mesh_origin = mesh.frames[0].origin;
-                  }
-                  else
-                  {
-                    mesh_scale = { 1, 1, 1 };
-                    mesh_origin = { 0, 0, 0 };
-                  }
-                }
-                for (const auto& face : mesh.faces)
-                {
-                  renderer.new_face(3);
-                  std::array vertices{ std::cref(mesh.vertices[face.vi3]),
-                    std::cref(mesh.vertices[face.vi2]),
-                    std::cref(mesh.vertices[face.vi1]) };
-
-                  std::array texture_vertices{ std::cref(mesh.texture_vertices[face.ti3]),
-                    std::cref(mesh.texture_vertices[face.ti2]),
-                    std::cref(mesh.texture_vertices[face.ti1]) };
-
-                  for (const auto& raw_vertex : vertices)
-                  {
-                    auto vertex = glm::vec4(raw_vertex.get().x, raw_vertex.get().y, raw_vertex.get().z, 1.0f);
-
-                    auto translation_matrix = glm::translate(glm::mat4(1.0f), glm::vec3(mesh_origin.x, mesh_origin.y, mesh_origin.z));
-                    auto scale_matrix = glm::scale(glm::mat4(1.0f), glm::vec3(mesh_scale.x, mesh_scale.y, mesh_scale.z));
-
-                    vertex = translation_matrix * scale_matrix * vertex;
-
-                    vertex = node_matrix * vertex;
-
-                    renderer.emit_vertex(vector3f{ vertex.x, vertex.y, vertex.z });
-                  }
-
-                  for (const auto& raw_texture_vertex : texture_vertices)
-                  {
-                    renderer.emit_texture_vertex(raw_texture_vertex.get());
-                  }
-
-                  renderer.end_face();
-                }
-              },
-                local_shape.meshes[object.mesh_index]);
-            }
-
-            for (const auto& child_node_item : node_instance.get().node_indexes)
-            {
-              render_node(std::make_pair(child_node_item.first, std::ref(*child_node_item.second)), node_matrix);
-            }
-          };
-
-        render_node(std::make_pair(instance.root_node.first, std::ref(*instance.root_node.second)), std::nullopt);
-      }
-    },
-      shape);
+    return renderable_shape_value{ dts_renderable_shape{ std::move(data) } };
   }
 }// namespace siege::content::dts::darkstar
