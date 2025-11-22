@@ -102,6 +102,7 @@ namespace siege::views
       win32::apply_tab_control_theme();
       win32::apply_tool_bar_theme();
       win32::apply_tooltip_theme();
+      win32::apply_track_bar_theme();
     }
 
     void repopulate_tree_view(fs::path path)

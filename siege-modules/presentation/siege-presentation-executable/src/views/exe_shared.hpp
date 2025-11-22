@@ -76,7 +76,9 @@ namespace siege::views
   std::optional<controller_info> controller_info_for_raw_input_handle(HRAWINPUT handle);
   controller_info detect_and_store_controller_context_from_hint(const controller_info& info, siege::platform::hardware_context hint);
   XINPUT_STATE get_current_state_for_handle(controller_state& state, HRAWINPUT handle);
-
+  std::wstring string_for_vkey(SHORT vkey, siege::platform::hardware_context context);
+  std::wstring category_for_vkey(SHORT vkey, siege::platform::hardware_context context);
+  
   struct input_action_binding
   {
     std::uint16_t vkey;

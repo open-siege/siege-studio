@@ -481,9 +481,9 @@ namespace win32
       return Header_SetFilterChangeTimeout(*this, timeout);
     }
 
-    [[maybe_unused]] inline std::function<void()> bind_hdn_filter_btn_click(std::move_only_function<BOOL(win32::header, const NMHDFILTERBTNCLICK&)> callback)
+    [[maybe_unused]] inline std::function<void()> bind_hdn_filter_btn_click(std::move_only_function<bool(win32::header, const NMHDFILTERBTNCLICK&)> callback)
     {
-      return bind_notification<win32::header, NMHDFILTERBTNCLICK, BOOL>(HDN_FILTERBTNCLICK, std::move(callback));
+      return bind_notification<win32::header, NMHDFILTERBTNCLICK, bool>(HDN_FILTERBTNCLICK, std::move(callback));
     }
 
     [[maybe_unused]] inline std::function<void()> bind_hdn_filter_change(std::move_only_function<void(win32::header, const NMHEADERW&)> callback)
@@ -1135,9 +1135,9 @@ namespace win32
       return bind_notification<win32::tab_control, NMHDR>(NM_RDBLCLK, std::move(callback));
     }
 
-    [[maybe_unused]] inline std::function<void()> bind_tcn_sel_changing(std::move_only_function<BOOL(win32::tab_control, const NMHDR&)> callback)
+    [[maybe_unused]] inline std::function<void()> bind_tcn_sel_changing(std::move_only_function<bool(win32::tab_control, const NMHDR&)> callback)
     {
-      return bind_notification<win32::tab_control, NMHDR, BOOL>(TCN_SELCHANGING, std::move(callback));
+      return bind_notification<win32::tab_control, NMHDR, bool>(TCN_SELCHANGING, std::move(callback));
     }
 
     [[maybe_unused]] inline std::function<void()> bind_tcn_sel_change(std::move_only_function<void(win32::tab_control, const NMHDR&)> callback)
@@ -1338,24 +1338,24 @@ namespace win32
       return SendMessageW(*this, TB_PRESSBUTTON, id, MAKELPARAM(is_pressed ? TRUE : FALSE, 0));
     }
 
-    [[maybe_unused]] inline std::function<void()> bind_nm_click(std::move_only_function<BOOL(win32::tool_bar, const NMMOUSE&)> callback)
+    [[maybe_unused]] inline std::function<void()> bind_nm_click(std::move_only_function<bool(win32::tool_bar, const NMMOUSE&)> callback)
     {
-      return bind_notification<win32::tool_bar, NMMOUSE, BOOL>(NM_CLICK, std::move(callback));
+      return bind_notification<win32::tool_bar, NMMOUSE, bool>(NM_CLICK, std::move(callback));
     }
 
-    [[maybe_unused]] inline std::function<void()> bind_nm_rclick(std::move_only_function<BOOL(win32::tool_bar, const NMMOUSE&)> callback)
+    [[maybe_unused]] inline std::function<void()> bind_nm_rclick(std::move_only_function<bool(win32::tool_bar, const NMMOUSE&)> callback)
     {
-      return bind_notification<win32::tool_bar, NMMOUSE, BOOL>(NM_RCLICK, std::move(callback));
+      return bind_notification<win32::tool_bar, NMMOUSE, bool>(NM_RCLICK, std::move(callback));
     }
 
-    [[maybe_unused]] inline std::function<void()> bind_nm_dbl_click(std::move_only_function<BOOL(win32::tool_bar, const NMMOUSE&)> callback)
+    [[maybe_unused]] inline std::function<void()> bind_nm_dbl_click(std::move_only_function<bool(win32::tool_bar, const NMMOUSE&)> callback)
     {
-      return bind_notification<win32::tool_bar, NMMOUSE, BOOL>(NM_DBLCLK, std::move(callback));
+      return bind_notification<win32::tool_bar, NMMOUSE, bool>(NM_DBLCLK, std::move(callback));
     }
 
-    [[maybe_unused]] inline std::function<void()> bind_nm_dbl_rclick(std::move_only_function<BOOL(win32::tool_bar, const NMMOUSE&)> callback)
+    [[maybe_unused]] inline std::function<void()> bind_nm_dbl_rclick(std::move_only_function<bool(win32::tool_bar, const NMMOUSE&)> callback)
     {
-      return bind_notification<win32::tool_bar, NMMOUSE, BOOL>(NM_RDBLCLK, std::move(callback));
+      return bind_notification<win32::tool_bar, NMMOUSE, bool>(NM_RDBLCLK, std::move(callback));
     }
 
     [[maybe_unused]] inline std::function<void()> bind_tbn_dropdown(std::move_only_function<LRESULT(win32::tool_bar, const NMTOOLBARW&)> callback)
@@ -1567,24 +1567,24 @@ namespace win32
       }
     }
 
-    [[maybe_unused]] inline std::function<void()> bind_nm_click(std::move_only_function<BOOL(win32::tree_view, const NMHDR&)> callback)
+    [[maybe_unused]] inline std::function<void()> bind_nm_click(std::move_only_function<bool(win32::tree_view, const NMHDR&)> callback)
     {
-      return bind_notification<win32::tree_view, NMHDR, BOOL>(NM_CLICK, std::move(callback));
+      return bind_notification<win32::tree_view, NMHDR, bool>(NM_CLICK, std::move(callback));
     }
 
-    [[maybe_unused]] inline std::function<void()> bind_nm_dbl_click(std::move_only_function<BOOL(win32::tree_view, const NMHDR&)> callback)
+    [[maybe_unused]] inline std::function<void()> bind_nm_dbl_click(std::move_only_function<bool(win32::tree_view, const NMHDR&)> callback)
     {
-      return bind_notification<win32::tree_view, NMHDR, BOOL>(NM_DBLCLK, std::move(callback));
+      return bind_notification<win32::tree_view, NMHDR, bool>(NM_DBLCLK, std::move(callback));
     }
 
-    [[maybe_unused]] inline std::function<void()> bind_nm_dbl_rclick(std::move_only_function<BOOL(win32::tree_view, const NMHDR&)> callback)
+    [[maybe_unused]] inline std::function<void()> bind_nm_dbl_rclick(std::move_only_function<bool(win32::tree_view, const NMHDR&)> callback)
     {
-      return bind_notification<win32::tree_view, NMHDR, BOOL>(NM_RDBLCLK, std::move(callback));
+      return bind_notification<win32::tree_view, NMHDR, bool>(NM_RDBLCLK, std::move(callback));
     }
 
-    [[maybe_unused]] inline std::function<void()> bind_nm_rclick(std::move_only_function<BOOL(win32::tree_view, const NMHDR&)> callback)
+    [[maybe_unused]] inline std::function<void()> bind_nm_rclick(std::move_only_function<bool(win32::tree_view, const NMHDR&)> callback)
     {
-      return bind_notification<win32::tree_view, NMHDR, BOOL>(NM_RCLICK, std::move(callback));
+      return bind_notification<win32::tree_view, NMHDR, bool>(NM_RCLICK, std::move(callback));
     }
 
     [[maybe_unused]] inline std::function<void()> bind_tvn_sel_changed(std::move_only_function<void(win32::tree_view, const NMTREEVIEWW&)> callback)
@@ -1592,9 +1592,9 @@ namespace win32
       return bind_notification<win32::tree_view, NMTREEVIEWW>(TVN_SELCHANGED, std::move(callback));
     }
 
-    [[maybe_unused]] inline std::function<void()> bind_tvn_item_expanding(std::move_only_function<BOOL(win32::tree_view, const NMTREEVIEWW&)> callback)
+    [[maybe_unused]] inline std::function<void()> bind_tvn_item_expanding(std::move_only_function<bool(win32::tree_view, const NMTREEVIEWW&)> callback)
     {
-      return bind_notification<win32::tree_view, NMTREEVIEWW, BOOL>(TVN_ITEMEXPANDING, std::move(callback));
+      return bind_notification<win32::tree_view, NMTREEVIEWW, bool>(TVN_ITEMEXPANDING, std::move(callback));
     }
   };
 

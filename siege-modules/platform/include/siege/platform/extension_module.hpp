@@ -58,7 +58,10 @@ namespace siege::platform
     controller_playstation_4,
     controller_nintendo,
     joystick,
-    throttle
+    throttle,
+    steering_wheel,
+    pedal,
+    custom = 64
   };
   using controller_binding = input_binding<32, controller_context>;
 
@@ -75,7 +78,10 @@ namespace siege::platform
     controller_playstation_4,
     controller_nintendo,
     joystick,
-    throttle
+    throttle,
+    steering_wheel,
+    pedal,
+    custom = 64
   };
 
   struct game_action

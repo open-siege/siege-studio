@@ -322,6 +322,7 @@ namespace win32
   void apply_tab_control_theme(bool remove = false);
   void apply_header_theme(bool remove = false);
   void apply_tool_bar_theme(bool remove = false);
+  void apply_track_bar_theme(bool remove = false);
 }// namespace win32
 
 #endif

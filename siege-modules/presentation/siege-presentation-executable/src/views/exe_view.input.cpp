@@ -1,4 +1,5 @@
 #include <siege/platform/win/common_controls.hpp>
+#include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/dialog.hpp>
@@ -8,37 +9,342 @@
 
 namespace siege::views
 {
+  int get_image_index_for_button(WORD vkey);
+  std::optional<LRESULT> handle_keyboard_mouse_press(win32::window_ref dialog, INT message, WPARAM wparam, LPARAM lparam);
+  void show_connected_devices_dialog(win32::window_ref parent);
 
-  int get_image_index_for_button(WORD vkey)
+  decltype(exe_view::input) exe_view::create_input_controls()
   {
-    const static std::map<WORD, int> images = {
-      { VK_GAMEPAD_A, 1 },
-      { VK_GAMEPAD_B, 2 },
-      { VK_GAMEPAD_X, 3 },
-      { VK_GAMEPAD_Y, 4 },
-      { VK_GAMEPAD_LEFT_SHOULDER, 5 },
-      { VK_GAMEPAD_RIGHT_SHOULDER, 6 },
-      { VK_GAMEPAD_LEFT_TRIGGER, 7 },
-      { VK_GAMEPAD_RIGHT_TRIGGER, 8 },
-      { VK_GAMEPAD_DPAD_UP, 10 },
-      { VK_GAMEPAD_DPAD_DOWN, 11 },
-      { VK_GAMEPAD_DPAD_LEFT, 12 },
-      { VK_GAMEPAD_DPAD_RIGHT, 13 },
-      { VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, 14 },
-      { VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, 15 },
-      { VK_GAMEPAD_LEFT_THUMBSTICK_UP, 16 },
-      { VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, 17 },
-      { VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, 18 },
-      { VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, 19 },
-      { VK_GAMEPAD_RIGHT_THUMBSTICK_UP, 16 },
-      { VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, 17 },
-      { VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, 18 },
-      { VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, 19 },
-      { VK_GAMEPAD_VIEW, 20 },
-      { VK_GAMEPAD_MENU, 21 },
+    decltype(exe_view::input) input{};
+    input.keyboard_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = this->ref(), .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
+
+    input.keyboard_table.InsertColumn(-1, LVCOLUMNW{
+                                            .pszText = const_cast<wchar_t*>(L"Action"),
+                                          });
+
+    input.keyboard_table.InsertColumn(-1, LVCOLUMNW{
+                                            .pszText = const_cast<wchar_t*>(L"Key"),
+                                          });
+
+    input.keyboard_table.SetExtendedListViewStyle(0, LVS_EX_FULLROWSELECT);
+    input.keyboard_table.EnableGroupView(true);
+
+
+    input.controller_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this, .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
+    input.controller_table.InsertColumn(-1, LVCOLUMNW{
+                                              .pszText = const_cast<wchar_t*>(L""),
+                                            });
+
+    input.controller_table.InsertColumn(-1, LVCOLUMNW{
+                                              .fmt = LVCFMT_RIGHT,
+                                              .pszText = const_cast<wchar_t*>(L""),
+
+                                            });
+
+    input.controller_table.InsertColumn(-1, LVCOLUMNW{
+                                              .fmt = LVCFMT_RIGHT,
+                                              .pszText = const_cast<wchar_t*>(L""),
+                                            });
+
+    input.controller_table.EnableGroupView(true);
+
+    ListView_SetView(input.controller_table, LV_VIEW_TILE);
+
+    LVTILEVIEWINFO tileViewInfo{
+      .cbSize = sizeof(tileViewInfo),
+      .dwMask = LVTVIM_COLUMNS,
+      .dwFlags = LVTVIF_AUTOSIZE,
+      .cLines = 2
     };
 
-    return images.at(vkey);
+    ListView_SetTileViewInfo(input.controller_table, &tileViewInfo);
+
+    for (auto i = 0; i < input.controller_table.GetItemCount(); ++i)
+    {
+      UINT columns[2] = { 1, 2 };
+      int formats[2] = { LVCFMT_LEFT, LVCFMT_RIGHT };
+      LVTILEINFO item_info{ .cbSize = sizeof(LVTILEINFO), .iItem = (int)i, .cColumns = 2, .puColumns = columns, .piColFmt = formats };
+
+      ListView_SetTileInfo(input.controller_table, &item_info);
+    }
+
+
+    input.keyboard_table.bind_nm_click([this](win32::list_view keyboard_table, const NMITEMACTIVATE& message) {
+      if (!has_extension_module(state))
+      {
+        return;
+      }
+
+      if (get_extension(state).game_actions.empty())
+      {
+        return;
+      }
+
+      auto result = win32::DialogBoxIndirectParamW(win32::module_ref::current_application(),
+        win32::default_dialog({ .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 200, .cy = 100 }),
+        ref(),
+        &handle_keyboard_mouse_press);
+
+      auto item = keyboard_table.GetItem(LVITEMW{
+        .mask = LVIF_PARAM,
+        .iItem = message.iItem });
+
+      if (!(item && item->lParam))
+      {
+        return;
+      }
+
+      auto& context = get_action_bindings(state)[item->lParam];
+
+      context.vkey = LOWORD(result);
+      context.context = static_cast<decltype(context.context)>(HIWORD(result));
+
+      auto temp = string_for_vkey(result, context.context);
+      ListView_SetItemText(keyboard_table, message.iItem, 1, temp.data());
+    });
+
+    input.controller_table.bind_nm_click([this](win32::list_view controller_table, const NMITEMACTIVATE& message) {
+      if (has_extension_module(state) && !get_extension(state).controller_input_backends.empty())
+      {
+        auto result = win32::DialogBoxIndirectParamW(win32::module_ref::current_application(),
+          win32::default_dialog({ .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU,
+            .cx = 200,
+            .cy = 100 }),
+          ref(),
+          [controllers = std::map<HANDLE, controller_state>{}](win32::window_ref dialog, INT message, WPARAM wparam, LPARAM lparam) mutable -> std::optional<LRESULT> {
+            switch (message)
+            {
+            case WM_INITDIALOG: {
+              ::SetWindowTextW(dialog, L"Press a button on your controller or joystick");
+
+              DWORD flags = RIDEV_INPUTSINK | RIDEV_DEVNOTIFY;
+              std::array<RAWINPUTDEVICE, 2> descriptors{ {
+                { .usUsagePage = HID_USAGE_PAGE_GENERIC,
+                  .usUsage = HID_USAGE_GENERIC_GAMEPAD,
+                  .dwFlags = flags,
+                  .hwndTarget = dialog },
+                { .usUsagePage = HID_USAGE_PAGE_GENERIC,
+                  .usUsage = HID_USAGE_GENERIC_JOYSTICK,
+                  .dwFlags = flags,
+                  .hwndTarget = dialog },
+              }
+
+              };
+
+              if (::RegisterRawInputDevices(descriptors.data(), descriptors.size(), sizeof(RAWINPUTDEVICE)) == FALSE)
+              {
+                assert(false);
+              }
+              return TRUE;
+            }
+            case WM_DESTROY: {
+
+              std::array<RAWINPUTDEVICE, 2> descriptors{ {
+
+                { .usUsagePage = HID_USAGE_PAGE_GENERIC,
+                  .usUsage = HID_USAGE_GENERIC_GAMEPAD,
+                  .dwFlags = RIDEV_REMOVE },
+                {
+                  .usUsagePage = HID_USAGE_PAGE_GENERIC,
+                  .usUsage = HID_USAGE_GENERIC_JOYSTICK,
+                  .dwFlags = RIDEV_REMOVE,
+                } } };
+
+              if (::RegisterRawInputDevices(descriptors.data(), descriptors.size(), sizeof(RAWINPUTDEVICE)) == FALSE)
+              {
+                assert(false);
+              }
+              return 0;
+            }
+            case WM_INPUT_DEVICE_CHANGE: {
+              if (wparam == GIDC_ARRIVAL)
+              {
+                auto handle = (HANDLE)lparam;
+                auto info = controller_info_for_raw_input_device_handle(handle);
+
+                if (info)
+                {
+                  controllers[handle] = controller_state{ *info };
+                }
+              }
+              else if (wparam == GIDC_REMOVAL)
+              {
+                controllers.erase((HANDLE)lparam);
+              }
+
+              return 0;
+            }
+            case WM_INPUT: {
+              if (::GetPropW(dialog, L"IsProcessing") == (HANDLE)1)
+              {
+                return 0;
+              }
+
+              RAWINPUTHEADER header{};
+
+              UINT size = sizeof(header);
+              if (::GetRawInputData((HRAWINPUT)lparam, RID_HEADER, &header, &size, sizeof(header)) == (UINT)-1)
+              {
+                return 0;
+              }
+
+              auto info = controllers.find(header.hDevice);
+
+              if (info == controllers.end())
+              {
+                return 0;
+              }
+
+              if (!info->second.info.get_hardware_index)
+              {
+                ::SetPropW(dialog, L"IsProcessing", (HANDLE)1);
+                using namespace siege::platform;
+                std::vector<TASKDIALOG_BUTTON> default_buttons = {
+                  TASKDIALOG_BUTTON{ .nButtonID = (int)hardware_context::controller_playstation_4, .pszButtonText = L"Playstation" },
+                  // TODO figure out how to process input from a switch controller
+                  TASKDIALOG_BUTTON{ .nButtonID = (int)hardware_context::controller_nintendo, .pszButtonText = L"Switch Pro" },
+                  TASKDIALOG_BUTTON{ .nButtonID = (int)hardware_context::joystick, .pszButtonText = L"Joystick" },
+                  TASKDIALOG_BUTTON{ .nButtonID = (int)hardware_context::throttle, .pszButtonText = L"Throttle" },
+                };
+
+                auto result = win32::task_dialog_indirect(TASKDIALOGCONFIG{
+                                                            .cbSize = sizeof(TASKDIALOGCONFIG),
+                                                            .dwFlags = TDF_ALLOW_DIALOG_CANCELLATION | TDF_USE_COMMAND_LINKS,
+                                                            .dwCommonButtons = TDCBF_CLOSE_BUTTON,
+                                                            .pszWindowTitle = L"Select Controller Layout",
+                                                            .pszMainInstruction = L"An unknown controller was detected. Please specify the layout below: ",
+                                                            .cButtons = (UINT)default_buttons.size(),
+                                                            .pButtons = default_buttons.data(),
+                                                          },
+                  [](auto window, auto message, auto wparam, auto lparam) -> HRESULT {
+                    if (message == TDN_BUTTON_CLICKED && (wparam >= (int)hardware_context::controller_playstation_4 && wparam <= (int)hardware_context::throttle))
+                    {
+                      return S_OK;
+                    }
+                    return S_FALSE;
+                  });
+
+                if (result)
+                {
+                  info->second.info = detect_and_store_controller_context_from_hint(info->second.info, (hardware_context)result->buttons[0]);
+                  info->second.last_state = get_current_state_for_handle(info->second, (HRAWINPUT)lparam);
+                }
+
+                ::SetPropW(dialog, L"IsProcessing", (HANDLE)0);
+                ::OutputDebugStringW(L"Controller button reached");
+
+                ::EndDialog(dialog, 0);
+              }
+
+              auto new_state = get_current_state_for_handle(info->second, (HRAWINPUT)lparam);
+
+              if (info->second.last_state.dwPacketNumber != new_state.dwPacketNumber)
+              {
+                // TODO get updated value and return it here
+                auto changes = get_changes(info->second.last_state, new_state, info->second.buffer);
+
+                if (changes.empty())
+                {
+                  return 0;
+                }
+
+                info->second.last_state = std::move(new_state);
+
+
+                // remove axes which have not moved enough
+                changes = std::span(changes.begin(), std::remove_if(changes.begin(), changes.end(), [](auto& item) {
+                  return item.second < std::numeric_limits<std::uint16_t>::max() / 2;
+                }));
+
+                if (changes.empty())
+                {
+                  return 0;
+                }
+
+                // get the highest values
+                std::sort(changes.begin(), changes.begin(), [](const auto& a, const auto& b) {
+                  return a.second < b.second;
+                });
+
+                // but prefer buttons
+                std::stable_partition(changes.begin(), changes.begin(), [](auto& item) {
+                  return item.first >= VK_GAMEPAD_A && item.first <= VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON && item.second != 0;
+                });
+
+                ::EndDialog(dialog, MAKELRESULT(changes.begin()->first, info->second.info.detected_context));
+              }
+
+              return 0;
+            }
+            default:
+              return std::nullopt;
+            }
+          });
+
+        auto item = controller_table.GetItem(LVITEMW{
+          .mask = LVIF_PARAM,
+          .iItem = message.iItem });
+
+        if (!(item && item->lParam))
+        {
+          return;
+        }
+
+
+        auto& context = get_action_bindings(state)[item->lParam];
+
+        context.vkey = LOWORD(result);
+        context.context = static_cast<decltype(context.context)>(HIWORD(result));
+
+        LVITEMW item_to_update{
+          .mask = LVIF_IMAGE,
+          .iItem = message.iItem,
+          .iImage = get_image_index_for_button(LOWORD(result))
+        };
+        ListView_SetItem(controller_table, &item_to_update);
+        return;
+      }
+
+      // TODO instead of using the UI as the source of truth
+      // we should put the data into shared state then update the UI
+      auto result = win32::DialogBoxIndirectParamW(win32::module_ref::current_application(),
+        win32::default_dialog({ .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 200, .cy = 100 }),
+        ref(),
+        &handle_keyboard_mouse_press);
+
+      auto item = controller_table.GetItem(LVITEMW{
+        .mask = LVIF_PARAM,
+        .iItem = message.iItem });
+
+      if (!(item && item->lParam))
+      {
+        return;
+      }
+
+      auto& binding = this->input.bound_inputs.at(item->lParam);
+
+      auto context = static_cast<siege::platform::hardware_context>(HIWORD(result));
+      auto vkey = LOWORD(result);
+      std::wstring temp = category_for_vkey(vkey, context);
+      ListView_SetItemText(controller_table, message.iItem, 1, temp.data());
+
+      temp = string_for_vkey(vkey, context);
+      ListView_SetItemText(controller_table, message.iItem, 2, temp.data());
+      binding.to_context = context;
+      binding.to_vkey = vkey;
+    });
+
+
+    exe_actions.bind_nm_click([this](win32::tool_bar exe_actions, const NMMOUSE& message) {
+      if (message.dwItemSpec != this->input.controllers_selected_id)
+      {
+        return false;
+      }
+      show_connected_devices_dialog(this->ref());
+      return true;
+    });
+
+    return input;
   }
 
   void exe_view::populate_controller_table(std::span<siege::platform::game_action> actions, std::span<const wchar_t*> controller_input_backends)
@@ -48,45 +354,45 @@ namespace siege::views
       int formats[2] = { LVCFMT_LEFT, LVCFMT_RIGHT };
       LVTILEINFO item_info{ .cbSize = sizeof(LVTILEINFO), .iItem = (int)index, .cColumns = 2, .puColumns = columns, .piColFmt = formats };
 
-      ListView_SetTileInfo(controller_table, &item_info);
+      ListView_SetTileInfo(input.controller_table, &item_info);
     };
 
     if (actions.empty())
     {
       int id = 1;
-      controller_table.InsertGroup(-1, LVGROUP{
-                                         .pszHeader = const_cast<wchar_t*>(L"D-Pad"),
-                                         .iGroupId = id++,
-                                         .state = LVGS_COLLAPSIBLE,
-                                       });
-      controller_table.InsertGroup(-1, LVGROUP{
-                                         .pszHeader = const_cast<wchar_t*>(L"Face Buttons"),
-                                         .iGroupId = id++,
-                                         .state = LVGS_COLLAPSIBLE,
-                                       });
+      input.controller_table.InsertGroup(-1, LVGROUP{
+                                               .pszHeader = const_cast<wchar_t*>(L"D-Pad"),
+                                               .iGroupId = id++,
+                                               .state = LVGS_COLLAPSIBLE,
+                                             });
+      input.controller_table.InsertGroup(-1, LVGROUP{
+                                               .pszHeader = const_cast<wchar_t*>(L"Face Buttons"),
+                                               .iGroupId = id++,
+                                               .state = LVGS_COLLAPSIBLE,
+                                             });
 
-      controller_table.InsertGroup(-1, LVGROUP{
-                                         .pszHeader = const_cast<wchar_t*>(L"Bumpers and Triggers"),
-                                         .iGroupId = id++,
-                                         .state = LVGS_COLLAPSIBLE,
-                                       });
-      controller_table.InsertGroup(-1, LVGROUP{
-                                         .pszHeader = const_cast<wchar_t*>(L"Left Stick"),
-                                         .iGroupId = id++,
-                                         .state = LVGS_COLLAPSIBLE,
-                                       });
+      input.controller_table.InsertGroup(-1, LVGROUP{
+                                               .pszHeader = const_cast<wchar_t*>(L"Bumpers and Triggers"),
+                                               .iGroupId = id++,
+                                               .state = LVGS_COLLAPSIBLE,
+                                             });
+      input.controller_table.InsertGroup(-1, LVGROUP{
+                                               .pszHeader = const_cast<wchar_t*>(L"Left Stick"),
+                                               .iGroupId = id++,
+                                               .state = LVGS_COLLAPSIBLE,
+                                             });
 
-      controller_table.InsertGroup(-1, LVGROUP{
-                                         .pszHeader = const_cast<wchar_t*>(L"Right Stick"),
-                                         .iGroupId = id++,
-                                         .state = LVGS_COLLAPSIBLE,
-                                       });
+      input.controller_table.InsertGroup(-1, LVGROUP{
+                                               .pszHeader = const_cast<wchar_t*>(L"Right Stick"),
+                                               .iGroupId = id++,
+                                               .state = LVGS_COLLAPSIBLE,
+                                             });
 
-      controller_table.InsertGroup(-1, LVGROUP{
-                                         .pszHeader = const_cast<wchar_t*>(L"System Buttons"),
-                                         .iGroupId = id++,
-                                         .state = LVGS_COLLAPSIBLE,
-                                       });
+      input.controller_table.InsertGroup(-1, LVGROUP{
+                                               .pszHeader = const_cast<wchar_t*>(L"System Buttons"),
+                                               .iGroupId = id++,
+                                               .state = LVGS_COLLAPSIBLE,
+                                             });
 
 
       using namespace siege::platform;
@@ -145,18 +451,18 @@ namespace siege::views
         win32::list_view_item up(string_for_vkey(mapping.first, siege::platform::hardware_context::controller_xbox), get_image_index_for_button(mapping.first));
         up.iGroupId = grouping[mapping.first];
 
-        up.lParam = bound_inputs.size();
-        auto& input = bound_inputs.emplace_back();
+        up.lParam = input.bound_inputs.size();
+        auto& bound_input = input.bound_inputs.emplace_back();
 
-        input.from_vkey = mapping.first;
-        input.from_context = siege::platform::hardware_context::controller_xbox;
-        input.to_vkey = mapping.second.first;
-        input.to_context = mapping.second.second;
+        bound_input.from_vkey = mapping.first;
+        bound_input.from_context = siege::platform::hardware_context::controller_xbox;
+        bound_input.to_vkey = mapping.second.first;
+        bound_input.to_context = mapping.second.second;
         up.mask = up.mask | LVIF_GROUPID | LVIF_PARAM;
 
         up.sub_items.emplace_back(category_for_vkey(mapping.second.first, mapping.second.second));
         up.sub_items.emplace_back(string_for_vkey(mapping.second.first, mapping.second.second));
-        set_tile_info(controller_table.InsertRow(up));
+        set_tile_info(input.controller_table.InsertRow(up));
       }
     }
     else
@@ -174,11 +480,11 @@ namespace siege::views
         if (iter.second)
         {
           ids_for_grouping[action.group_display_name.data()] = id;
-          controller_table.InsertGroup(-1, LVGROUP{
-                                             .pszHeader = (wchar_t*)(action.group_display_name.data()),
-                                             .iGroupId = id++,
-                                             .state = LVGS_COLLAPSIBLE,
-                                           });
+          input.controller_table.InsertGroup(-1, LVGROUP{
+                                                   .pszHeader = (wchar_t*)(action.group_display_name.data()),
+                                                   .iGroupId = id++,
+                                                   .state = LVGS_COLLAPSIBLE,
+                                                 });
         }
       }
 
@@ -192,11 +498,11 @@ namespace siege::views
 
       std::vector<context> action_settings;
       action_settings.reserve(actions.size());
-      
+
       WORD action_index = 0;
       for (auto& action : actions)
       {
-        action_settings.emplace_back(context{.action = action, .action_index = action_index++ });
+        action_settings.emplace_back(context{ .action = action, .action_index = action_index++ });
       }
 
       if (bindings)
@@ -216,7 +522,7 @@ namespace siege::views
           }
         }
       }
-      
+
       for (auto& context : action_settings)
       {
         win32::list_view_item up((wchar_t*)context.action.action_display_name.data());
@@ -231,7 +537,7 @@ namespace siege::views
         up.iGroupId = ids_for_grouping[context.action.group_display_name.data()];
         up.lParam = (LPARAM)add_action_binding(state, input_action_binding{ .vkey = context.vkey, .context = context.context, .action_index = context.action_index });
 
-        set_tile_info(controller_table.InsertRow(up));
+        set_tile_info(input.controller_table.InsertRow(up));
       }
     }
   }
@@ -258,11 +564,11 @@ namespace siege::views
       if (iter.second)
       {
         ids_for_grouping[action.group_display_name.data()] = id;
-        keyboard_table.InsertGroup(-1, LVGROUP{
-                                         .pszHeader = (wchar_t*)(action.group_display_name.data()),
-                                         .iGroupId = id++,
-                                         .state = LVGS_COLLAPSIBLE,
-                                       });
+        input.keyboard_table.InsertGroup(-1, LVGROUP{
+                                               .pszHeader = (wchar_t*)(action.group_display_name.data()),
+                                               .iGroupId = id++,
+                                               .state = LVGS_COLLAPSIBLE,
+                                             });
       }
     }
 
@@ -332,277 +638,8 @@ namespace siege::views
       auto vkey = context.vkey;
       up.lParam = (LPARAM)add_action_binding(state, input_action_binding{ .vkey = vkey, .context = context.context, .action_index = context.action_index });
       up.sub_items.emplace_back(string_for_vkey(vkey, context.context));
-      keyboard_table.InsertRow(up);
+      input.keyboard_table.InsertRow(up);
     }
-  }
-
-  std::optional<LRESULT> handle_keyboard_mouse_press(win32::window_ref dialog, INT message, WPARAM wparam, LPARAM lparam);
-
-  void exe_view::keyboard_table_nm_click(win32::list_view sender, const NMITEMACTIVATE& message)
-  {
-    if (!has_extension_module(state))
-    {
-      return;
-    }
-
-    if (get_extension(state).game_actions.empty())
-    {
-      return;
-    }
-
-    auto result = win32::DialogBoxIndirectParamW(win32::module_ref::current_application(),
-      win32::default_dialog({ .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 200, .cy = 100 }),
-      ref(),
-      &handle_keyboard_mouse_press);
-
-    auto item = keyboard_table.GetItem(LVITEMW{
-      .mask = LVIF_PARAM,
-      .iItem = message.iItem });
-
-    if (!(item && item->lParam))
-    {
-      return;
-    }
-
-    auto& context = get_action_bindings(state)[item->lParam];
-
-    context.vkey = LOWORD(result);
-    context.context = static_cast<decltype(context.context)>(HIWORD(result));
-
-    auto temp = string_for_vkey(result, context.context);
-    ListView_SetItemText(keyboard_table, message.iItem, 1, temp.data());
-  }
-
-  void exe_view::controller_table_nm_click(win32::list_view sender, const NMITEMACTIVATE& message)
-  {
-    if (has_extension_module(state) && !get_extension(state).controller_input_backends.empty())
-    {
-      auto result = win32::DialogBoxIndirectParamW(win32::module_ref::current_application(),
-        win32::default_dialog({ .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU,
-          .cx = 200,
-          .cy = 100 }),
-        ref(),
-        [controllers = std::map<HANDLE, controller_state>{}](win32::window_ref dialog, INT message, WPARAM wparam, LPARAM lparam) mutable -> std::optional<LRESULT> {
-          switch (message)
-          {
-          case WM_INITDIALOG: {
-            ::SetWindowTextW(dialog, L"Press a button on your controller or joystick");
-
-            DWORD flags = RIDEV_INPUTSINK | RIDEV_DEVNOTIFY;
-            std::array<RAWINPUTDEVICE, 2> descriptors{ {
-              { .usUsagePage = HID_USAGE_PAGE_GENERIC,
-                .usUsage = HID_USAGE_GENERIC_GAMEPAD,
-                .dwFlags = flags,
-                .hwndTarget = dialog },
-              { .usUsagePage = HID_USAGE_PAGE_GENERIC,
-                .usUsage = HID_USAGE_GENERIC_JOYSTICK,
-                .dwFlags = flags,
-                .hwndTarget = dialog },
-            }
-
-            };
-
-            if (::RegisterRawInputDevices(descriptors.data(), descriptors.size(), sizeof(RAWINPUTDEVICE)) == FALSE)
-            {
-              assert(false);
-            }
-            return TRUE;
-          }
-          case WM_DESTROY: {
-
-            std::array<RAWINPUTDEVICE, 2> descriptors{ {
-
-              { .usUsagePage = HID_USAGE_PAGE_GENERIC,
-                .usUsage = HID_USAGE_GENERIC_GAMEPAD,
-                .dwFlags = RIDEV_REMOVE },
-              {
-                .usUsagePage = HID_USAGE_PAGE_GENERIC,
-                .usUsage = HID_USAGE_GENERIC_JOYSTICK,
-                .dwFlags = RIDEV_REMOVE,
-              } } };
-
-            if (::RegisterRawInputDevices(descriptors.data(), descriptors.size(), sizeof(RAWINPUTDEVICE)) == FALSE)
-            {
-              assert(false);
-            }
-            return 0;
-          }
-          case WM_INPUT_DEVICE_CHANGE: {
-            if (wparam == GIDC_ARRIVAL)
-            {
-              auto handle = (HANDLE)lparam;
-              auto info = controller_info_for_raw_input_device_handle(handle);
-
-              if (info)
-              {
-                controllers[handle] = controller_state{ *info };
-              }
-            }
-            else if (wparam == GIDC_REMOVAL)
-            {
-              controllers.erase((HANDLE)lparam);
-            }
-
-            return 0;
-          }
-          case WM_INPUT: {
-            if (::GetPropW(dialog, L"IsProcessing") == (HANDLE)1)
-            {
-              return 0;
-            }
-
-            RAWINPUTHEADER header{};
-
-            UINT size = sizeof(header);
-            if (::GetRawInputData((HRAWINPUT)lparam, RID_HEADER, &header, &size, sizeof(header)) == (UINT)-1)
-            {
-              return 0;
-            }
-
-            auto info = controllers.find(header.hDevice);
-
-            if (info == controllers.end())
-            {
-              return 0;
-            }
-
-            if (!info->second.info.get_hardware_index)
-            {
-              ::SetPropW(dialog, L"IsProcessing", (HANDLE)1);
-              using namespace siege::platform;
-              std::vector<TASKDIALOG_BUTTON> default_buttons = {
-                TASKDIALOG_BUTTON{ .nButtonID = (int)hardware_context::controller_playstation_4, .pszButtonText = L"Playstation" },
-                // TODO figure out how to process input from a switch controller
-                TASKDIALOG_BUTTON{ .nButtonID = (int)hardware_context::controller_nintendo, .pszButtonText = L"Switch Pro" },
-                TASKDIALOG_BUTTON{ .nButtonID = (int)hardware_context::joystick, .pszButtonText = L"Joystick" },
-                TASKDIALOG_BUTTON{ .nButtonID = (int)hardware_context::throttle, .pszButtonText = L"Throttle" },
-              };
-
-              auto result = win32::task_dialog_indirect(TASKDIALOGCONFIG{
-                                                          .cbSize = sizeof(TASKDIALOGCONFIG),
-                                                          .dwFlags = TDF_ALLOW_DIALOG_CANCELLATION | TDF_USE_COMMAND_LINKS,
-                                                          .dwCommonButtons = TDCBF_CLOSE_BUTTON,
-                                                          .pszWindowTitle = L"Select Controller Layout",
-                                                          .pszMainInstruction = L"An unknown controller was detected. Please specify the layout below: ",
-                                                          .cButtons = (UINT)default_buttons.size(),
-                                                          .pButtons = default_buttons.data(),
-                                                        },
-                [](auto window, auto message, auto wparam, auto lparam) -> HRESULT {
-                  if (message == TDN_BUTTON_CLICKED && (wparam >= (int)hardware_context::controller_playstation_4 && wparam <= (int)hardware_context::throttle))
-                  {
-                    return S_OK;
-                  }
-                  return S_FALSE;
-                });
-
-              if (result)
-              {
-                info->second.info = detect_and_store_controller_context_from_hint(info->second.info, (hardware_context)result->buttons[0]);
-                info->second.last_state = get_current_state_for_handle(info->second, (HRAWINPUT)lparam);
-              }
-
-              ::SetPropW(dialog, L"IsProcessing", (HANDLE)0);
-              ::OutputDebugStringW(L"Controller button reached");
-
-              ::EndDialog(dialog, 0);
-            }
-
-            auto new_state = get_current_state_for_handle(info->second, (HRAWINPUT)lparam);
-
-            if (info->second.last_state.dwPacketNumber != new_state.dwPacketNumber)
-            {
-              // TODO get updated value and return it here
-              auto changes = get_changes(info->second.last_state, new_state, info->second.buffer);
-
-              if (changes.empty())
-              {
-                return 0;
-              }
-
-              info->second.last_state = std::move(new_state);
-
-
-              // remove axes which have not moved enough
-              changes = std::span(changes.begin(), std::remove_if(changes.begin(), changes.end(), [](auto& item) {
-                return item.second < std::numeric_limits<std::uint16_t>::max() / 2;
-              }));
-
-              if (changes.empty())
-              {
-                return 0;
-              }
-
-              // get the highest values
-              std::sort(changes.begin(), changes.begin(), [](const auto& a, const auto& b) {
-                return a.second < b.second;
-              });
-
-              // but prefer buttons
-              std::stable_partition(changes.begin(), changes.begin(), [](auto& item) {
-                return item.first >= VK_GAMEPAD_A && item.first <= VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON && item.second != 0;
-              });
-
-              ::EndDialog(dialog, MAKELRESULT(changes.begin()->first, info->second.info.detected_context));
-            }
-
-            return 0;
-          }
-          default:
-            return std::nullopt;
-          }
-        });
-
-      auto item = controller_table.GetItem(LVITEMW{
-        .mask = LVIF_PARAM,
-        .iItem = message.iItem });
-
-      if (!(item && item->lParam))
-      {
-        return;
-      }
-
-
-      auto& context = get_action_bindings(state)[item->lParam];
-
-      context.vkey = LOWORD(result);
-      context.context = static_cast<decltype(context.context)>(HIWORD(result));
-
-      LVITEMW item_to_update{
-        .mask = LVIF_IMAGE,
-        .iItem = message.iItem,
-        .iImage = get_image_index_for_button(LOWORD(result))
-      };
-      ListView_SetItem(controller_table, &item_to_update);
-      return;
-    }
-
-    // TODO instead of using the UI as the source of truth
-    // we should put the data into shared state then update the UI
-    auto result = win32::DialogBoxIndirectParamW(win32::module_ref::current_application(),
-      win32::default_dialog({ .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 200, .cy = 100 }),
-      ref(),
-      &handle_keyboard_mouse_press);
-
-    auto item = controller_table.GetItem(LVITEMW{
-      .mask = LVIF_PARAM,
-      .iItem = message.iItem });
-
-    if (!(item && item->lParam))
-    {
-      return;
-    }
-
-    auto& binding = bound_inputs.at(item->lParam);
-
-    auto context = static_cast<siege::platform::hardware_context>(HIWORD(result));
-    auto vkey = LOWORD(result);
-    std::wstring temp = category_for_vkey(vkey, context);
-    ListView_SetItemText(controller_table, message.iItem, 1, temp.data());
-
-    temp = string_for_vkey(vkey, context);
-    ListView_SetItemText(controller_table, message.iItem, 2, temp.data());
-    binding.to_context = context;
-    binding.to_vkey = vkey;
   }
 
   std::optional<LRESULT> handle_keyboard_mouse_press(win32::window_ref dialog, INT message, WPARAM wparam, LPARAM lparam)
@@ -735,5 +772,35 @@ namespace siege::views
     };
   }
 
+  int get_image_index_for_button(WORD vkey)
+  {
+    const static std::map<WORD, int> images = {
+      { VK_GAMEPAD_A, 1 },
+      { VK_GAMEPAD_B, 2 },
+      { VK_GAMEPAD_X, 3 },
+      { VK_GAMEPAD_Y, 4 },
+      { VK_GAMEPAD_LEFT_SHOULDER, 5 },
+      { VK_GAMEPAD_RIGHT_SHOULDER, 6 },
+      { VK_GAMEPAD_LEFT_TRIGGER, 7 },
+      { VK_GAMEPAD_RIGHT_TRIGGER, 8 },
+      { VK_GAMEPAD_DPAD_UP, 10 },
+      { VK_GAMEPAD_DPAD_DOWN, 11 },
+      { VK_GAMEPAD_DPAD_LEFT, 12 },
+      { VK_GAMEPAD_DPAD_RIGHT, 13 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, 14 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, 15 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_UP, 16 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, 17 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, 18 },
+      { VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, 19 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_UP, 16 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, 17 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, 18 },
+      { VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, 19 },
+      { VK_GAMEPAD_VIEW, 20 },
+      { VK_GAMEPAD_MENU, 21 },
+    };
 
+    return images.at(vkey);
+  }
 }// namespace siege::views

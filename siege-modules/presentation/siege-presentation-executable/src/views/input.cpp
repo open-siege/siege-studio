@@ -1001,4 +1001,205 @@ namespace siege::views
     return storage;
   }
 
+  std::wstring category_for_vkey(SHORT vkey, siege::platform::hardware_context context)
+  {
+    using namespace siege::platform;
+    if (vkey >= VK_LBUTTON && vkey <= VK_XBUTTON2)
+    {
+      return L"Mouse";
+    }
+
+    if (context == hardware_context::mouse || context == hardware_context::mouse_wheel)
+    {
+      return L"Mouse";
+    }
+
+    if (vkey >= VK_GAMEPAD_A && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)
+    {
+      return L"Controller";
+    }
+
+    if (context == hardware_context::controller_xbox || context == hardware_context::joystick || context == hardware_context::throttle)
+    {
+      return L"Controller";
+    }
+
+    return L"Keyboard";
+  }
+
+  std::wstring string_for_vkey(SHORT vkey, siege::platform::hardware_context context)
+  {
+    constexpr static auto directions = std::array<std::wstring_view, 4>{
+      {
+        std::wstring_view(L"Left"),
+        std::wstring_view(L"Up"),
+        std::wstring_view(L"Right"),
+        std::wstring_view(L"Down"),
+      }
+    };
+
+    if (context == siege::platform::hardware_context::mouse)
+    {
+      if (vkey >= VK_LEFT && vkey <= VK_DOWN)
+      {
+        std::wstring result(L"Move ");
+        result.append(directions[vkey - VK_LEFT]);
+        return result;
+      }
+    }
+
+    if (context == siege::platform::hardware_context::mouse_wheel)
+    {
+      if (vkey >= VK_LEFT && vkey <= VK_DOWN)
+      {
+        std::wstring result(L"Scroll ");
+        result.append(directions[vkey - VK_LEFT]);
+        return result;
+      }
+    }
+
+    if (vkey >= VK_NUMPAD0 && vkey <= VK_NUMPAD9)
+    {
+      std::wstring result(L"Numpad ");
+      result.push_back(L'0' + vkey - VK_NUMPAD0);
+      return result;
+    }
+
+    if (vkey >= VK_F1 && vkey <= VK_F9)
+    {
+      std::wstring result(1, 'F');
+      result.push_back(L'1' + vkey - VK_F1);
+      return result;
+    }
+
+    if (vkey >= VK_F10 && vkey <= VK_F19)
+    {
+      std::wstring result(1, 'F');
+      result.push_back(L'1');
+      result.push_back(L'0' + vkey - VK_F10);
+      return result;
+    }
+
+    if (vkey >= VK_F20 && vkey <= VK_F24)
+    {
+      std::wstring result(1, 'F');
+      result.push_back(L'2');
+      result.push_back(L'0' + vkey - VK_F20);
+      return result;
+    }
+
+    switch (vkey)
+    {
+    case VK_LBUTTON:
+      return L"Left Button";
+    case VK_RBUTTON:
+      return L"Right Button";
+    case VK_MBUTTON:
+      return L"Middle Button";
+    case VK_XBUTTON1:
+      return L"Extra Button 1";
+    case VK_XBUTTON2:
+      return L"Extra Button 2";
+    case VK_TAB:
+      return L"Tab";
+    case VK_LCONTROL:
+      return L"Left Control";
+    case VK_RCONTROL:
+      return L"Right Control";
+    case VK_LMENU:
+      return L"Left Alt";
+    case VK_RMENU:
+      return L"Right Alt";
+    case VK_LSHIFT:
+      return L"Left Shift";
+    case VK_RSHIFT:
+      return L"Right Shift";
+    case VK_LWIN:
+      return L"Left Windows Key";
+    case VK_RWIN:
+      return L"Right Windows Key";
+    case VK_RETURN:
+      return L"Enter";
+    case VK_UP:
+      return L"Up Arrow";
+    case VK_DOWN:
+      return L"Down Arrow";
+    case VK_LEFT:
+      return L"Left Arrow";
+    case VK_RIGHT:
+      return L"Right Arrow";
+    case VK_SPACE:
+      return L"Spacebar";
+    case VK_SNAPSHOT:
+      return L"Print Screen";
+    case VK_CAPITAL:
+      return L"Caps Lock";
+    case VK_NUMLOCK:
+      return L"Num Lock";
+    case VK_SCROLL:
+      return L"Scroll Lock";
+    case VK_HOME:
+      return L"Home";
+    case VK_DELETE:
+      return L"Insert";
+    case VK_ESCAPE:
+      return L"Escape";
+    case VK_INSERT:
+      return L"Insert";
+    case VK_PRIOR:
+      return L"Page Down";
+    case VK_NEXT:
+      return L"Page Up";
+    case VK_PAUSE:
+      return L"Pause";
+    case VK_BACK:
+      return L"Backspace";
+    case VK_GAMEPAD_A:
+      return L"A Button";
+    case VK_GAMEPAD_B:
+      return L"B Button";
+    case VK_GAMEPAD_X:
+      return L"X Button";
+    case VK_GAMEPAD_Y:
+      return L"Y Button";
+    case VK_GAMEPAD_LEFT_SHOULDER:
+      return L"Left Bumper";
+    case VK_GAMEPAD_RIGHT_SHOULDER:
+      return L"Right Bumper";
+    case VK_GAMEPAD_LEFT_TRIGGER:
+      return L"Left Trigger";
+    case VK_GAMEPAD_RIGHT_TRIGGER:
+      return L"Right Trigger";
+    case VK_GAMEPAD_DPAD_UP:
+      return L"D-pad Up";
+    case VK_GAMEPAD_DPAD_DOWN:
+      return L"D-pad Down";
+    case VK_GAMEPAD_DPAD_LEFT:
+      return L"D-pad Left";
+    case VK_GAMEPAD_DPAD_RIGHT:
+      return L"D-pad Right";
+    case VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON:
+      return L"Left Stick Button";
+    case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
+      return L"Left Stick Up";
+    case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN:
+      return L"Left Stick Down";
+    case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
+      return L"Left Stick Left";
+    case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT:
+      return L"Left Stick Right";
+    case VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON:
+      return L"Right Stick Button";
+    case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
+      return L"Right Stick Up";
+    case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN:
+      return L"Right Stick Down";
+    case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
+      return L"Right Stick Left";
+    case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT:
+      return L"Right Stick Right";
+    default:
+      return std::wstring(1, ::MapVirtualKeyW(vkey, MAPVK_VK_TO_CHAR));
+    }
+  }
 }// namespace siege::views

@@ -11,6 +11,8 @@
 namespace siege::views
 {
   using controller_state = siege::views::controller_state;
+  using controller_context = siege::platform::controller_context;
+
 
   struct connected_devices_dialog : win32::basic_window<connected_devices_dialog>
   {
@@ -20,10 +22,23 @@ namespace siege::views
       controller_state state;
     };
 
+    struct controller_mapping
+    {
+      win32::wparam_t item;
+      bool visible = false;
+      hardware_index index;
+      WORD vkey;
+    };
+
     win32::list_view device_selection;
+    win32::tool_bar device_context;
+    win32::list_view custom_mapping;
     std::map<HANDLE, win32::wparam_t> registered_keyboards;
     std::map<HANDLE, win32::wparam_t> registered_mice;
     std::map<HANDLE, controller_item> registered_controllers;
+    std::vector<controller_mapping> mappings;
+    std::span<controller_mapping> button_mappings;
+    std::span<controller_mapping> axis_mappings;
 
     struct
     {
@@ -55,10 +70,79 @@ namespace siege::views
       win32::track_bar right_y_axis_up;
       win32::track_bar right_y_axis_down;
       win32::button right_stick_button;
+
+      std::array<win32::window_ref, 24> to_array()
+      {
+        return { { a_button.ref(),
+          b_button.ref(),
+          x_button.ref(),
+          y_button.ref(),
+          dpad_up_button.ref(),
+          dpad_down_button.ref(),
+          dpad_left_button.ref(),
+          dpad_right_button.ref(),
+          view_button.ref(),
+          menu_button.ref(),
+          left_bumper.ref(),
+          right_bumper.ref(),
+          left_trigger.ref(),
+          right_trigger.ref(),
+          left_y_axis_up.ref(),
+          left_y_axis_down.ref(),
+          left_x_axis_left.ref(),
+          left_x_axis_right.ref(),
+          left_stick_button.ref(),
+          right_y_axis_up.ref(),
+          right_y_axis_down.ref(),
+          right_x_axis_left.ref(),
+          right_x_axis_right.ref(),
+          right_stick_button.ref() } };
+      }
+
+      std::array<win32::window_ref, 10> track_bars()
+      {
+        return { { left_trigger.ref(),
+          right_trigger.ref(),
+          left_y_axis_up.ref(),
+          left_y_axis_down.ref(),
+          left_x_axis_left.ref(),
+          left_x_axis_right.ref(),
+          right_y_axis_up.ref(),
+          right_y_axis_down.ref(),
+          right_x_axis_left.ref(),
+          right_x_axis_right.ref() } };
+      }
+
+
+      void show_all()
+      {
+        for (auto& item : to_array())
+        {
+          item.SetWindowStyle(item.GetWindowStyle() | WS_VISIBLE);
+        }
+      }
+
+      void hide_all()
+      {
+        for (auto& item : to_array())
+        {
+          item.SetWindowStyle(item.GetWindowStyle() & ~WS_VISIBLE);
+        }
+      }
+
+      void set_size_for_all(SIZE size)
+      {
+        for (auto& item : to_array())
+        {
+          item.SetWindowPos(size);
+        }
+      }
+
     } controller_controls;
 
     connected_devices_dialog(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params)
     {
+      mappings.reserve(32);
     }
 
     LRESULT wm_create()
@@ -121,6 +205,101 @@ namespace siege::views
                                          .state = LVGS_COLLAPSIBLE,
                                        });
 
+
+      device_selection.bind_nm_click([&](auto, const NMITEMACTIVATE& event) {
+        auto item = std::find_if(registered_controllers.begin(), registered_controllers.end(), [&](auto& controller) {
+          return controller.second.item == (win32::wparam_t)event.iItem;
+        });
+
+        if (item == registered_controllers.end())
+        {
+          controller_controls.hide_all();
+          device_context.SetWindowStyle(device_context.GetWindowStyle() & ~WS_VISIBLE);
+          custom_mapping.SetWindowStyle(custom_mapping.GetWindowStyle() & ~WS_VISIBLE);
+          return;
+        }
+
+        controller_controls.show_all();
+        device_context.SetWindowStyle(device_context.GetWindowStyle() | WS_VISIBLE);
+        custom_mapping.SetWindowStyle(custom_mapping.GetWindowStyle() | WS_VISIBLE);
+
+        auto context = item->second.state.info.detected_context;
+        ::SendMessageW(device_context, TB_SETSTATE, (WPARAM)context, MAKELPARAM(TBSTATE_CHECKED, 0));
+        update_mappings_for_context(item->second.state.info);
+      });
+
+      device_context = *win32::CreateWindowExW<win32::tool_bar>(::CREATESTRUCTW{
+        .hwndParent = *this,
+        .style = WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
+
+      device_context.InsertButton(-1, {
+                                        .idCommand = (int)controller_context::controller_xbox,
+                                        .fsState = TBSTATE_ENABLED,
+                                        .fsStyle = BTNS_CHECKGROUP,
+                                        .iString = (INT_PTR)L"Xbox",
+                                      },
+        false);
+      device_context.InsertButton(-1, { .idCommand = (int)controller_context::controller_playstation_3, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Playstation 3" }, false);
+      device_context.InsertButton(-1, { .idCommand = (int)controller_context::controller_playstation_4, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Playstation 4" }, false);
+      device_context.InsertButton(-1, { .idCommand = (int)controller_context::joystick, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Joystick" }, false);
+      device_context.InsertButton(-1, { .idCommand = (int)controller_context::throttle, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Throttle" }, false);
+      device_context.InsertButton(-1, { .idCommand = (int)controller_context::steering_wheel, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Steering Wheel" }, false);
+      device_context.InsertButton(-1, { .idCommand = (int)controller_context::pedal, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Pedals" }, false);
+      device_context.InsertButton(-1, { .idCommand = (int)controller_context::custom, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Custom" }, false);
+
+      custom_mapping = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this,
+        .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
+
+      custom_mapping.InsertColumn(-1, LVCOLUMNW{
+                                        .pszText = const_cast<wchar_t*>(L"Input Name"),
+                                      });
+
+      custom_mapping.InsertColumn(-1, LVCOLUMNW{
+                                        .pszText = const_cast<wchar_t*>(L"Controller Mapping"),
+                                      });
+
+      custom_mapping.EnableGroupView(true);
+
+      custom_mapping.InsertGroup(-1, LVGROUP{
+                                       .pszHeader = const_cast<wchar_t*>(L"Hidden"),
+                                       .iGroupId = 3,
+                                       .state = LVGS_HIDDEN | LVGS_NOHEADER | LVGS_COLLAPSED,
+                                     });
+
+      custom_mapping.InsertGroup(-1, LVGROUP{
+                                       .pszHeader = const_cast<wchar_t*>(L"Buttons"),
+                                       .iGroupId = 1,
+                                       .state = LVGS_COLLAPSIBLE,
+                                     });
+
+      for (auto i = 1; i <= 32; ++i)
+      {
+        win32::list_view_item button_item(L"Button " + std::to_wstring(i));
+        button_item.sub_items.emplace_back(L"N/A");
+        button_item.iGroupId = 1;
+        button_item.mask = button_item.mask | LVIF_GROUPID;
+        auto index = custom_mapping.InsertRow(button_item);
+
+        mappings.emplace_back().item = index;
+      }
+      button_mappings = std::span<controller_mapping>(mappings.begin(), 32);
+
+      custom_mapping.InsertGroup(-1, LVGROUP{
+                                       .pszHeader = const_cast<wchar_t*>(L"Axes"),
+                                       .iGroupId = 2,
+                                       .state = LVGS_COLLAPSIBLE,
+                                     });
+
+      for (auto i = 1; i <= 16; ++i)
+      {
+        win32::list_view_item axis_item(L"Axis " + std::to_wstring(i));
+        axis_item.sub_items.emplace_back(L"N/A");
+        axis_item.iGroupId = 2;
+        axis_item.mask = axis_item.mask | LVIF_GROUPID;
+        auto index = custom_mapping.InsertRow(axis_item);
+        mappings.emplace_back().item = index;
+      }
+      axis_mappings = std::span<controller_mapping>(mappings.begin() + button_mappings.size(), 16);
 
       // TODO add an icon for each button
       // TODO have different labels for certain contexts
@@ -231,11 +410,6 @@ namespace siege::views
         .style = WS_CHILD | WS_DISABLED | BS_PUSHLIKE,
         .lpszName = L"RS" });
 
-      // TODO create list view here,
-      // at least 3 groups - keyboards, mice, controllers
-      // TODO create controller input table,
-      // TODO create controller settings section
-      // register for raw input here
       return 0;
     }
 
@@ -258,6 +432,12 @@ namespace siege::views
       } };
 
       ::RegisterRawInputDevices(descriptors.data(), descriptors.size(), sizeof(RAWINPUTDEVICE));
+      return 0;
+    }
+
+    LRESULT wm_close()
+    {
+      ::EndDialog(*this, 0);
       return 0;
     }
 
@@ -287,69 +467,31 @@ namespace siege::views
         device_selection.SetColumnWidth(i, column_width);
       }
 
-      // TODO reduce the duplication somehow
+      auto current_item = ListView_GetNextItem(device_selection, -1, LVNI_SELECTED);
+
       auto remaining = SIZE{ .cx = (client_size.cx - one_quarter.cx) / 4, .cy = client_size.cy };
       auto button_size = SIZE{ .cx = remaining.cx / 4, .cy = remaining.cx / 4 };
 
-      auto slider_x_size = button_size;
-      auto slider_y_size = button_size;
-
       auto starting = POINT{ .x = one_quarter.cx };
 
-      controller_controls.left_trigger.SetWindowStyle(controller_controls.left_trigger.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.left_trigger.SetWindowPos(button_size);
+      controller_controls.set_size_for_all(button_size);
       controller_controls.left_trigger.SetWindowPos(POINT{ .x = starting.x + button_size.cx });
-
-      controller_controls.right_trigger.SetWindowStyle(controller_controls.right_trigger.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.right_trigger.SetWindowPos(button_size);
       controller_controls.right_trigger.SetWindowPos(POINT{ .x = starting.x + button_size.cx * 13 });
-
-      controller_controls.left_bumper.SetWindowStyle(controller_controls.left_bumper.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.left_bumper.SetWindowPos(button_size);
       controller_controls.left_bumper.SetWindowPos(POINT{ .x = starting.x + button_size.cx, .y = button_size.cy });
-
-      controller_controls.view_button.SetWindowStyle(controller_controls.left_bumper.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.view_button.SetWindowPos(button_size);
       controller_controls.view_button.SetWindowPos(POINT{ .x = starting.x + button_size.cx * 5, .y = button_size.cy });
-
-      controller_controls.menu_button.SetWindowStyle(controller_controls.left_bumper.GetWindowStyle() | WS_VISIBLE);
       controller_controls.menu_button.SetWindowPos(button_size);
       controller_controls.menu_button.SetWindowPos(POINT{ .x = starting.x + button_size.cx * 9, .y = button_size.cy });
-
-      controller_controls.right_bumper.SetWindowStyle(controller_controls.right_bumper.GetWindowStyle() | WS_VISIBLE);
       controller_controls.right_bumper.SetWindowPos(button_size);
       controller_controls.right_bumper.SetWindowPos(POINT{ .x = starting.x + button_size.cx * 13, .y = button_size.cy });
 
       starting = POINT{ .x = one_quarter.cx, .y = button_size.cy * 3 };
 
-      controller_controls.dpad_up_button.SetWindowStyle(controller_controls.dpad_up_button.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.dpad_up_button.SetWindowPos(button_size);
       controller_controls.dpad_up_button.SetWindowPos(POINT{ .x = starting.x + button_size.cx, .y = starting.y });
-
-      controller_controls.dpad_left_button.SetWindowStyle(controller_controls.dpad_left_button.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.dpad_left_button.SetWindowPos(button_size);
       controller_controls.dpad_left_button.SetWindowPos(POINT{ .x = starting.x, .y = starting.y + button_size.cy });
-
-      controller_controls.dpad_down_button.SetWindowStyle(controller_controls.dpad_down_button.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.dpad_down_button.SetWindowPos(button_size);
       controller_controls.dpad_down_button.SetWindowPos(POINT{ .x = starting.x + button_size.cx, .y = starting.y + button_size.cy + button_size.cy });
-
-      controller_controls.dpad_right_button.SetWindowStyle(controller_controls.dpad_right_button.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.dpad_right_button.SetWindowPos(button_size);
       controller_controls.dpad_right_button.SetWindowPos(POINT{ .x = starting.x + button_size.cx + button_size.cx, .y = starting.y + button_size.cy });
 
       starting = POINT{ .x = starting.x + button_size.cx * 4, .y = starting.y };
-
-      controller_controls.left_x_axis_left.SetWindowStyle(controller_controls.left_x_axis_left.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.left_x_axis_right.SetWindowStyle(controller_controls.left_x_axis_right.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.left_y_axis_up.SetWindowStyle(controller_controls.left_y_axis_up.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.left_y_axis_down.SetWindowStyle(controller_controls.left_y_axis_down.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.left_stick_button.SetWindowStyle(controller_controls.left_stick_button.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.left_x_axis_left.SetWindowPos(slider_x_size);
-      controller_controls.left_x_axis_right.SetWindowPos(slider_x_size);
-      controller_controls.left_y_axis_up.SetWindowPos(slider_y_size);
-      controller_controls.left_y_axis_down.SetWindowPos(slider_y_size);
-      controller_controls.left_stick_button.SetWindowPos(button_size);
 
       controller_controls.left_y_axis_up.SetWindowPos(POINT{ .x = starting.x + button_size.cx, .y = starting.y });
       controller_controls.left_y_axis_down.SetWindowPos(POINT{ .x = starting.x + button_size.cx, .y = starting.y + button_size.cy + button_size.cy });
@@ -359,17 +501,6 @@ namespace siege::views
 
       starting = POINT{ .x = starting.x + button_size.cx * 4, .y = starting.y };
 
-      controller_controls.right_x_axis_left.SetWindowStyle(controller_controls.right_x_axis_left.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.right_x_axis_right.SetWindowStyle(controller_controls.right_x_axis_right.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.right_y_axis_up.SetWindowStyle(controller_controls.right_y_axis_up.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.right_y_axis_down.SetWindowStyle(controller_controls.right_y_axis_down.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.right_stick_button.SetWindowStyle(controller_controls.right_stick_button.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.right_x_axis_left.SetWindowPos(slider_x_size);
-      controller_controls.right_x_axis_right.SetWindowPos(slider_x_size);
-      controller_controls.right_y_axis_up.SetWindowPos(slider_y_size);
-      controller_controls.right_y_axis_down.SetWindowPos(slider_y_size);
-      controller_controls.right_stick_button.SetWindowPos(button_size);
-
       controller_controls.right_y_axis_up.SetWindowPos(POINT{ .x = starting.x + button_size.cx, .y = starting.y });
       controller_controls.right_y_axis_down.SetWindowPos(POINT{ .x = starting.x + button_size.cx, .y = starting.y + button_size.cy + button_size.cy });
       controller_controls.right_stick_button.SetWindowPos(POINT{ .x = starting.x + button_size.cx, .y = starting.y + button_size.cy });
@@ -378,21 +509,29 @@ namespace siege::views
 
       starting = POINT{ .x = starting.x + button_size.cx * 4, .y = starting.y };
 
-      controller_controls.x_button.SetWindowStyle(controller_controls.a_button.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.x_button.SetWindowPos(button_size);
       controller_controls.x_button.SetWindowPos(POINT{ .x = starting.x, .y = starting.y + button_size.cy });
-
-      controller_controls.y_button.SetWindowStyle(controller_controls.b_button.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.y_button.SetWindowPos(button_size);
       controller_controls.y_button.SetWindowPos(POINT{ .x = starting.x + button_size.cx, .y = starting.y });
-
-      controller_controls.a_button.SetWindowStyle(controller_controls.x_button.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.a_button.SetWindowPos(button_size);
       controller_controls.a_button.SetWindowPos(POINT{ .x = starting.x + button_size.cx, .y = starting.y + button_size.cy + button_size.cy });
-
-      controller_controls.b_button.SetWindowStyle(controller_controls.y_button.GetWindowStyle() | WS_VISIBLE);
-      controller_controls.b_button.SetWindowPos(button_size);
       controller_controls.b_button.SetWindowPos(POINT{ .x = starting.x + button_size.cx + button_size.cx, .y = starting.y + button_size.cy });
+
+      starting = POINT{ .x = one_quarter.cx, .y = starting.y + button_size.cy * 3 };
+
+      device_context.SetWindowPos(starting);
+
+      device_context.SetWindowPos(SIZE{ .cx = client_size.cx - one_quarter.cx, .cy = button_size.cy });
+
+      starting = POINT{ .x = one_quarter.cx, .y = starting.y + button_size.cy };
+      custom_mapping.SetWindowPos(starting);
+      custom_mapping.SetWindowPos(SIZE{ .cx = client_size.cx - one_quarter.cx, .cy = remaining.cy - starting.y });
+
+      auto mapping_count = custom_mapping.GetColumnCount();
+
+      auto mapping_width = (client_size.cx - one_quarter.cx) / mapping_count;
+
+      for (auto i = 0u; i < mapping_count; ++i)
+      {
+        custom_mapping.SetColumnWidth(i, mapping_width);
+      }
 
       return 0;
     }
@@ -449,10 +588,10 @@ namespace siege::views
       Button_SetState(controller_controls.left_stick_button, new_state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB ? TRUE : FALSE);
       Button_SetState(controller_controls.right_stick_button, new_state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB ? TRUE : FALSE);
 
+      ::SendMessageW(controller_controls.left_trigger, TBM_SETPOS, FALSE, new_state.Gamepad.bLeftTrigger);
       ::SendMessageW(controller_controls.left_trigger, TBM_SETSEL, TRUE, MAKELPARAM(0, new_state.Gamepad.bLeftTrigger));
-      ::SendMessageW(controller_controls.left_trigger, TBM_SETPOS, TRUE, new_state.Gamepad.bLeftTrigger);
+      ::SendMessageW(controller_controls.right_trigger, TBM_SETPOS, FALSE, new_state.Gamepad.bRightTrigger);
       ::SendMessageW(controller_controls.right_trigger, TBM_SETSEL, TRUE, MAKELPARAM(0, new_state.Gamepad.bRightTrigger));
-      ::SendMessageW(controller_controls.right_trigger, TBM_SETPOS, TRUE, new_state.Gamepad.bLeftTrigger);
 
       auto convert = [](SHORT value) -> SHORT {
         if (value >= 0)
@@ -464,56 +603,149 @@ namespace siege::views
 
       if (new_state.Gamepad.sThumbLX >= 0)
       {
+        ::SendMessageW(controller_controls.left_x_axis_right, TBM_SETPOS, FALSE, convert(new_state.Gamepad.sThumbLX));
         ::SendMessageW(controller_controls.left_x_axis_right, TBM_SETSEL, TRUE, MAKELPARAM(0, convert(new_state.Gamepad.sThumbLX)));
-        ::SendMessageW(controller_controls.left_x_axis_right, TBM_SETPOS, TRUE, convert(new_state.Gamepad.sThumbLX));
+        ::SendMessageW(controller_controls.left_x_axis_left, TBM_SETPOS, FALSE, 0);
         ::SendMessageW(controller_controls.left_x_axis_left, TBM_SETSEL, TRUE, MAKELPARAM(0, 0));
       }
       else
       {
+
+        ::SendMessageW(controller_controls.left_x_axis_right, TBM_SETPOS, FALSE, 0);
         ::SendMessageW(controller_controls.left_x_axis_right, TBM_SETSEL, TRUE, MAKELPARAM(0, 0));
+        ::SendMessageW(controller_controls.left_x_axis_left, TBM_SETPOS, FALSE, 32767 - convert(new_state.Gamepad.sThumbLX));
         ::SendMessageW(controller_controls.left_x_axis_left, TBM_SETSEL, TRUE, MAKELPARAM(32767 - convert(new_state.Gamepad.sThumbLX), 32767));
-        ::SendMessageW(controller_controls.left_x_axis_left, TBM_SETPOS, TRUE, 32767 - convert(new_state.Gamepad.sThumbLX));
       }
 
       if (new_state.Gamepad.sThumbLY >= 0)
       {
+        ::SendMessageW(controller_controls.left_y_axis_up, TBM_SETPOS, FALSE, 32767 - convert(new_state.Gamepad.sThumbLY));
         ::SendMessageW(controller_controls.left_y_axis_up, TBM_SETSEL, TRUE, MAKELPARAM(32767 - convert(new_state.Gamepad.sThumbLY), 32767));
+        ::SendMessageW(controller_controls.left_y_axis_down, TBM_SETPOS, FALSE, 0);
         ::SendMessageW(controller_controls.left_y_axis_down, TBM_SETSEL, TRUE, MAKELPARAM(0, 0));
       }
       else
       {
+        ::SendMessageW(controller_controls.left_y_axis_up, TBM_SETPOS, FALSE, 0);
         ::SendMessageW(controller_controls.left_y_axis_up, TBM_SETSEL, TRUE, MAKELPARAM(0, 0));
+        ::SendMessageW(controller_controls.left_y_axis_down, TBM_SETPOS, FALSE, convert(new_state.Gamepad.sThumbLY));
         ::SendMessageW(controller_controls.left_y_axis_down, TBM_SETSEL, TRUE, MAKELPARAM(0, convert(new_state.Gamepad.sThumbLY)));
       }
 
       if (new_state.Gamepad.sThumbRX >= 0)
       {
+        ::SendMessageW(controller_controls.right_x_axis_right, TBM_SETPOS, FALSE, convert(new_state.Gamepad.sThumbRX));
         ::SendMessageW(controller_controls.right_x_axis_right, TBM_SETSEL, TRUE, MAKELPARAM(0, convert(new_state.Gamepad.sThumbRX)));
-        ::SendMessageW(controller_controls.right_x_axis_right, TBM_SETPOS, TRUE, convert(new_state.Gamepad.sThumbRX));
+        ::SendMessageW(controller_controls.right_x_axis_left, TBM_SETPOS, FALSE, 0);
         ::SendMessageW(controller_controls.right_x_axis_left, TBM_SETSEL, TRUE, MAKELPARAM(0, 0));
       }
       else
       {
-        ::SendMessageW(controller_controls.right_x_axis_right, TBM_SETSEL, TRUE, MAKELPARAM(0, 0));
+        ::SendMessageW(controller_controls.right_x_axis_right, TBM_SETPOS, FALSE, MAKELPARAM(0, 0));
+        ::SendMessageW(controller_controls.right_x_axis_right, TBM_SETSEL, TRUE, 0);
+        ::SendMessageW(controller_controls.right_x_axis_left, TBM_SETPOS, FALSE, 32767 - convert(new_state.Gamepad.sThumbRX));
         ::SendMessageW(controller_controls.right_x_axis_left, TBM_SETSEL, TRUE, MAKELPARAM(32767 - convert(new_state.Gamepad.sThumbRX), 32767));
-        ::SendMessageW(controller_controls.right_x_axis_left, TBM_SETPOS, TRUE, 32767 - convert(new_state.Gamepad.sThumbRX));
       }
 
       if (new_state.Gamepad.sThumbRY >= 0)
       {
+        ::SendMessageW(controller_controls.right_y_axis_up, TBM_SETPOS, FALSE, 32767 - convert(new_state.Gamepad.sThumbRY));
         ::SendMessageW(controller_controls.right_y_axis_up, TBM_SETSEL, TRUE, MAKELPARAM(32767 - convert(new_state.Gamepad.sThumbRY), 32767));
+        ::SendMessageW(controller_controls.right_y_axis_down, TBM_SETPOS, FALSE, 0);
         ::SendMessageW(controller_controls.right_y_axis_down, TBM_SETSEL, TRUE, MAKELPARAM(0, 0));
       }
       else
       {
+        ::SendMessageW(controller_controls.right_y_axis_up, TBM_SETPOS, FALSE, 0);
         ::SendMessageW(controller_controls.right_y_axis_up, TBM_SETSEL, TRUE, MAKELPARAM(0, 0));
+
+        ::SendMessageW(controller_controls.right_y_axis_down, TBM_SETPOS, FALSE, convert(new_state.Gamepad.sThumbRY));
         ::SendMessageW(controller_controls.right_y_axis_down, TBM_SETSEL, TRUE, MAKELPARAM(0, convert(new_state.Gamepad.sThumbRY)));
       }
-
 
       return std::nullopt;
     }
 
+
+    win32::lresult_t nm_custom_draw(NMCUSTOMDRAW& info)
+    {
+      if (auto bars = controller_controls.track_bars(); info.dwDrawStage == CDDS_PREPAINT && std::any_of(bars.begin(), bars.end(), [&](auto& bar) {
+            return bar == info.hdr.hwndFrom;
+          }))
+      {
+        auto control = win32::window_ref(info.hdr.hwndFrom);
+
+        auto rect = control.GetClientRect();
+
+        if (!rect)
+        {
+          return CDRF_DODEFAULT;
+        }
+
+        auto stock_brush = GetStockBrush(DC_BRUSH);
+
+        ::SetDCBrushColor(info.hdc, RGB(0, 0, 0));
+        ::FillRect(info.hdc, &*rect, stock_brush);
+
+        auto style = control.GetWindowStyle();
+
+        if (style & TBS_VERT)
+        {
+          auto pos = ::SendMessageW(control, TBM_GETPOS, 0, 0);
+          auto max = ::SendMessageW(control, TBM_GETRANGEMAX, 0, 0);
+
+          auto max_height = rect->bottom - rect->top;
+
+          auto interval = (double)max_height / max;
+          auto actual_height = pos * interval;
+
+          if (style & TBS_REVERSED)
+          {
+            rect->top = (long)actual_height;
+            if (::SendMessageW(control, TBM_GETSELEND, 0, 0) == 0)
+            {
+              rect->bottom = 0;
+            }
+          }
+          else
+          {
+            rect->bottom = ((long)actual_height) - rect->top;
+          }
+
+          ::SetDCBrushColor(info.hdc, RGB(255, 0, 0));
+          ::FillRect(info.hdc, &*rect, stock_brush);
+        }
+        else
+        {
+          auto pos = ::SendMessageW(control, TBM_GETPOS, 0, 0);
+          auto max = ::SendMessageW(control, TBM_GETRANGEMAX, 0, 0);
+
+          auto max_width = rect->right - rect->left;
+
+          auto interval = (double)max_width / max;
+          auto actual_width = pos * interval;
+
+          if (style & TBS_REVERSED)
+          {
+            rect->left = (long)actual_width;
+            if (::SendMessageW(control, TBM_GETSELEND, 0, 0) == 0)
+            {
+              rect->right = 0;
+            }
+          }
+          else
+          {
+            rect->right = ((long)actual_width) - rect->left;
+          }
+          ::SetDCBrushColor(info.hdc, RGB(255, 0, 0));
+          ::FillRect(info.hdc, &*rect, stock_brush);
+        }
+
+        return CDRF_SKIPDEFAULT;
+      }
+
+      return CDRF_DODEFAULT;
+    }
 
     void add_device(HANDLE handle)
     {
@@ -610,6 +842,122 @@ namespace siege::views
       return std::nullopt;
     }
 
+    void update_mappings_for_context(controller_info& info)
+    {
+      for (auto& mapping : mappings)
+      {
+        mapping.visible = false;
+      }
+
+      for (auto button : {
+             VK_GAMEPAD_A,
+             VK_GAMEPAD_B,
+             VK_GAMEPAD_X,
+             VK_GAMEPAD_Y,
+             VK_GAMEPAD_LEFT_SHOULDER,
+             VK_GAMEPAD_RIGHT_SHOULDER,
+             VK_GAMEPAD_LEFT_TRIGGER,
+             VK_GAMEPAD_RIGHT_TRIGGER,
+             VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON,
+             VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON,
+             VK_GAMEPAD_VIEW,
+             VK_GAMEPAD_MENU,
+           })
+      {
+        auto index = info.get_hardware_index(button, controller_info::prefer_button);
+
+        if (index.type != hardware_index::button)
+        {
+          continue;
+        }
+        button_mappings[index.index].visible = true;
+        button_mappings[index.index].index = index;
+        button_mappings[index.index].vkey = button;
+      }
+
+      for (auto axis : {
+             VK_GAMEPAD_LEFT_THUMBSTICK_LEFT,
+             VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT,
+             VK_GAMEPAD_LEFT_THUMBSTICK_UP,
+             VK_GAMEPAD_LEFT_THUMBSTICK_DOWN,
+             VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT,
+             VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT,
+             VK_GAMEPAD_RIGHT_THUMBSTICK_UP,
+             VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN,
+             VK_GAMEPAD_LEFT_TRIGGER,
+             VK_GAMEPAD_RIGHT_TRIGGER,
+           })
+      {
+        auto index = info.get_hardware_index(axis, controller_info::prefer_value);
+
+        if (index.type != hardware_index::value)
+        {
+          continue;
+        }
+        axis_mappings[index.index].visible = true;
+        axis_mappings[index.index].index = index;
+        axis_mappings[index.index].vkey = axis;
+      }
+
+      std::wstring temp;
+
+      LVITEMW invisible_item{
+        .mask = LVIF_GROUPID,
+        .iGroupId = 3
+      };
+      LVITEMW button_item{
+        .mask = LVIF_GROUPID,
+        .iGroupId = 1
+      };
+
+      LVITEMW axis_item{
+        .mask = LVIF_GROUPID,
+        .iGroupId = 2
+      };
+
+      for (auto& mapping : button_mappings)
+      {
+        if (mapping.visible)
+        {
+          auto name = string_for_vkey(mapping.vkey, info.detected_context);
+          temp = L"Button " + std::to_wstring(mapping.index.index + 1);
+          ListView_SetItemText(custom_mapping, mapping.item, 0, temp.data());
+          ListView_SetItemText(custom_mapping, mapping.item, 1, name.data());
+          button_item.iItem = mapping.item;
+          ListView_SetItem(custom_mapping, &button_item);
+        }
+        else
+        {
+          temp = L"";
+          ListView_SetItemText(custom_mapping, mapping.item, 0, temp.data());
+          ListView_SetItemText(custom_mapping, mapping.item, 1, temp.data());
+          invisible_item.iItem = mapping.item;
+          ListView_SetItem(custom_mapping, &invisible_item);
+        }
+      }
+
+      for (auto& mapping : axis_mappings)
+      {
+        if (mapping.visible)
+        {
+          auto name = string_for_vkey(mapping.vkey, info.detected_context);
+          temp = L"Axis " + std::to_wstring(mapping.index.index + 1);
+          ListView_SetItemText(custom_mapping, mapping.item, 0, temp.data());
+          ListView_SetItemText(custom_mapping, mapping.item, 1, name.data());
+          button_item.iItem = mapping.item;
+          ListView_SetItem(custom_mapping, &axis_item);
+        }
+        else
+        {
+          temp = L"";
+          ListView_SetItemText(custom_mapping, mapping.item, 0, temp.data());
+          ListView_SetItemText(custom_mapping, mapping.item, 1, temp.data());
+          invisible_item.iItem = mapping.item;
+          ListView_SetItem(custom_mapping, &invisible_item);
+        }
+      }
+    }
+
     std::optional<LRESULT> window_proc(UINT message, WPARAM wparam, LPARAM lparam) override
     {
       switch (message)
@@ -623,6 +971,16 @@ namespace siege::views
       case WM_SIZE: {
         return wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
       }
+      case WM_NOTIFY: {
+        NMHDR* hdr = (NMHDR*)lparam;
+        if (hdr && hdr->code == NM_CUSTOMDRAW)
+        {
+          return nm_custom_draw(*(NMCUSTOMDRAW*)lparam);
+        }
+        return std::nullopt;
+      }
+      case WM_CLOSE:
+        return wm_close();
       case WM_INPUT: {
         return wm_input((HRAWINPUT)lparam);
       }
@@ -638,7 +996,7 @@ namespace siege::views
   void show_connected_devices_dialog(win32::window_ref parent)
   {
     win32::DialogBoxIndirectParamW<connected_devices_dialog>(::GetModuleHandleW(nullptr),
-      win32::default_dialog{ { .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU, .cx = 640, .cy = 480 } },
+      win32::default_dialog{ { .style = DS_CENTER | DS_MODALFRAME | WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_SYSMENU, .cx = 640, .cy = 480 } },
       std::move(parent));
   }
 }// namespace siege::views
