@@ -7,6 +7,7 @@
 #include <thread>
 #include <string_view>
 #include <fstream>
+#include <cassert>
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/win/window_module.hpp>
 #include <siege/resource/pak_resource.hpp>
@@ -450,7 +451,7 @@ void load_mouse_bindings(siege::configuration::text_game_config& config, siege::
     // TODO handle mouse wheel too
     std::memcpy(binding.inputs[index].action_name.data(), temp.data(), temp.size());
     binding.inputs[index].virtual_key = vkey->first;
-    binding.inputs[index].input_type = siege::platform::mouse_binding::action_binding::button;
+    binding.inputs[index].input_type = siege::platform::controller_input_type::button;
     binding.inputs[index].context = siege::platform::mouse_context::mouse;
     index++;
 
@@ -498,7 +499,7 @@ void load_keyboard_bindings(siege::configuration::text_game_config& config, sieg
 
     std::memcpy(binding.inputs[index].action_name.data(), temp.data(), temp.size());
     binding.inputs[index].virtual_key = vkey->first;
-    binding.inputs[index].input_type = siege::platform::keyboard_binding::action_binding::button;
+    binding.inputs[index].input_type = siege::platform::controller_input_type::button;
     binding.inputs[index].context = (siege::platform::keyboard_context)vkey->second;
 
     index++;
@@ -526,7 +527,7 @@ void upsert_mouse_defaults(const std::span<siege::platform::game_action> game_ac
     {
 
       std::memcpy(existing->action_name.data(), action->action_name.data(), action->action_name.size());
-      existing->input_type = siege::platform::mouse_binding::action_binding::button;
+      existing->input_type = siege::platform::controller_input_type::button;
       existing->virtual_key = action_str.first;
       continue;
     }
@@ -539,7 +540,7 @@ void upsert_mouse_defaults(const std::span<siege::platform::game_action> game_ac
     }
 
     std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
-    first_available->input_type = siege::platform::mouse_binding::action_binding::button;
+    first_available->input_type = siege::platform::controller_input_type::button;
     first_available->virtual_key = action_str.first;
     first_available->context = default_context;
   }
@@ -567,7 +568,7 @@ void upsert_keyboard_defaults(const std::span<siege::platform::game_action> game
     {
 
       std::memcpy(existing->action_name.data(), action->action_name.data(), action->action_name.size());
-      existing->input_type = siege::platform::keyboard_binding::action_binding::button;
+      existing->input_type = siege::platform::controller_input_type::button;
       existing->virtual_key = action_str.first;
       continue;
     }
@@ -581,7 +582,7 @@ void upsert_keyboard_defaults(const std::span<siege::platform::game_action> game
     }
 
     std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
-    first_available->input_type = siege::platform::keyboard_binding::action_binding::button;
+    first_available->input_type = siege::platform::controller_input_type::button;
     first_available->virtual_key = action_str.first;
     first_available->context = default_context;
   }
@@ -605,8 +606,26 @@ void append_controller_defaults(const std::span<siege::platform::game_action> ga
     }
     std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
 
-    first_available->input_type = action->type == action->analog ? siege::platform::controller_binding::action_binding::axis : siege::platform::controller_binding::action_binding::button;
+    first_available->input_type = action->type == action->analog ? siege::platform::controller_input_type::axis : siege::platform::controller_input_type::button;
     first_available->virtual_key = controller_default.first;
+  }
+}
+
+void unbind_joystick_for_quake_1_config(siege::configuration::text_game_config& config)
+{
+  using siege::configuration::key_type;
+  config.emplace(key_type({ "joyadvaxisx" }), key_type("0"));
+  config.emplace(key_type({ "joyadvaxisy" }), key_type("0"));
+  config.emplace(key_type({ "joyadvaxisz" }), key_type("0"));
+  config.emplace(key_type({ "joyadvaxisr" }), key_type("0"));
+  config.emplace(key_type({ "joyadvaxisu" }), key_type("0"));
+  config.emplace(key_type({ "joyadvaxisv" }), key_type("0"));
+
+  for (auto i = 0; i < 15; ++i)
+  {
+    auto index = hardware_index_to_button_name_id_tech_2_0(i);
+    assert(index.has_value());
+    config.emplace(key_type({ "unbind", *index }), key_type{});
   }
 }
 
@@ -672,32 +691,6 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
       else
       {
         config.emplace(siege::configuration::key_type({ *setting }), siege::configuration::key_type(index));
-      }
-
-      if ((binding.vkey == VK_GAMEPAD_LEFT_TRIGGER || binding.vkey == VK_GAMEPAD_RIGHT_TRIGGER) && binding.context == hardware_context::controller_xbox && !context.supports_triggers_as_buttons)
-      {
-        auto action_name = std::string_view(binding.action_name.data());
-        auto mouse = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& existing) {
-          return existing.action_name.data() == action_name && (existing.context == siege::platform::hardware_context::mouse);
-        });
-
-        if (mouse == args.action_bindings.end())
-        {
-          mouse = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& existing) {
-            return existing.action_name.data() == action_name && (existing.context == siege::platform::hardware_context::keyboard || existing.context == siege::platform::hardware_context::keypad || existing.context == siege::platform::hardware_context::global);
-          });
-        }
-
-        if (auto free_mapping = std::find_if(args.controller_to_send_input_mappings.begin(), args.controller_to_send_input_mappings.end(), [](auto& mapping) {
-              return mapping.from_vkey == 0;
-            });
-          free_mapping != args.controller_to_send_input_mappings.end() && mouse != args.action_bindings.end())
-        {
-          free_mapping->from_vkey = binding.vkey;
-          free_mapping->from_context = binding.context;
-          free_mapping->to_vkey = mouse->vkey;
-          free_mapping->to_context = mouse->context;
-        }
       }
     }
     else
@@ -875,6 +868,204 @@ void bind_controller_send_input_fallback(siege::platform::game_command_line_args
 }
 
 extern "C" {
+std::errc is_id_tech_3_input_mapping_valid(const siege::platform::hardware_context_caps* caps, const siege::platform::input_mapping_ex* mapping)
+{
+  using namespace siege::platform;
+  if (mapping == nullptr)
+  {
+    return std::errc::bad_address;
+  }
+
+  if (caps == nullptr)
+  {
+    return std::errc::bad_address;
+  }
+
+  if (mapping->mapping_size < sizeof(input_mapping_ex))
+  {
+    return std::errc::bad_message;
+  }
+
+  if (caps->caps_size < sizeof(hardware_context_caps))
+  {
+    return std::errc::bad_message;
+  }
+  if (caps->context == hardware_context::mouse)
+  {
+    if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index == 0
+        && (mapping->action_name == std::array<char, 32>{ "+left" } || mapping->action_name == std::array<char, 32>{ "+right" }))
+    {
+      return std::errc::not_supported;
+    }
+    if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index == 1
+        && (mapping->action_name == std::array<char, 32>{ "+lookup" } || mapping->action_name == std::array<char, 32>{ "+lookdown" }))
+    {
+      return std::errc::not_supported;
+    }
+    return std::errc{};
+  }
+
+  if (is_for_controller(caps->context))
+  {
+    if (caps->hardware_index != 0)
+    {
+      return std::errc::not_supported;
+    }
+
+    if (caps->axis_count >= 6)
+    {
+      if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index == 4
+          && (mapping->action_name == std::array<char, 32>{ "+left" } || mapping->action_name == std::array<char, 32>{ "+right" }))
+      {
+        return std::errc::not_supported;
+      }
+      if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index == 5
+          && (mapping->action_name == std::array<char, 32>{ "+lookup" } || mapping->action_name == std::array<char, 32>{ "+lookdown" }))
+      {
+        return std::errc::not_supported;
+      }
+    }
+    else if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index > 3)
+    {
+      return std::errc::not_supported;
+    }
+  }
+
+  return std::errc{};
+}
+
+std::errc is_id_tech_2_5_input_mapping_valid(const siege::platform::hardware_context_caps* caps, const siege::platform::input_mapping_ex* mapping)
+{
+  using namespace siege::platform;
+  if (mapping == nullptr)
+  {
+    return std::errc::bad_address;
+  }
+
+  if (caps == nullptr)
+  {
+    return std::errc::bad_address;
+  }
+
+  if (mapping->mapping_size < sizeof(input_mapping_ex))
+  {
+    return std::errc::bad_message;
+  }
+
+  if (caps->caps_size < sizeof(hardware_context_caps))
+  {
+    return std::errc::bad_message;
+  }
+
+  if (caps->context == hardware_context::mouse)
+  {
+    if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index == 0
+        && (mapping->action_name == std::array<char, 32>{ "+left" } || mapping->action_name == std::array<char, 32>{ "+right" }))
+    {
+      return std::errc::not_supported;
+    }
+    if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index == 1
+        && (mapping->action_name == std::array<char, 32>{ "+lookup" } || mapping->action_name == std::array<char, 32>{ "+lookdown" }))
+    {
+      return std::errc::not_supported;
+    }
+    return std::errc{};
+  }
+
+  if (is_for_controller(caps->context))
+  {
+    if (caps->hardware_index != 0)
+    {
+      return std::errc::not_supported;
+    }
+
+    constexpr static std::array<std::array<char, 32>, 10> axis_only{ {
+      "+forward",
+      "+back",
+      "+left",
+      "+right",
+      "+moveleft",
+      "+moveright",
+      "+lookup",
+      "+lookdown",
+      "+moveup",
+      "+movedown",
+    } };
+
+
+    if (!std::ranges::any_of(axis_only, [&](auto& item) { return item == mapping->action_name; }) && mapping->hardware_input_type == controller_input_type::axis)
+    {
+      return std::errc::not_supported;
+    }
+  }
+
+  return std::errc{};
+}
+
+
+std::errc is_id_tech_2_0_input_mapping_valid(const siege::platform::hardware_context_caps* caps, const siege::platform::input_mapping_ex* mapping)
+{
+  using namespace siege::platform;
+  if (mapping == nullptr)
+  {
+    return std::errc::bad_address;
+  }
+
+  if (caps == nullptr)
+  {
+    return std::errc::bad_address;
+  }
+
+  if (mapping->mapping_size < sizeof(input_mapping_ex))
+  {
+    return std::errc::bad_message;
+  }
+
+  if (mapping->context == hardware_context::mouse)
+  {
+    if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index == 0
+        && (mapping->action_name == std::array<char, 32>{ "+left" } || mapping->action_name == std::array<char, 32>{ "+right" }))
+    {
+      return std::errc::not_supported;
+    }
+    if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index == 1
+        && (mapping->action_name == std::array<char, 32>{ "+lookup" } || mapping->action_name == std::array<char, 32>{ "+lookdown" }))
+    {
+      return std::errc::not_supported;
+    }
+    return std::errc{};
+  }
+
+  if (is_for_controller(caps->context))
+  {
+    if (caps->hardware_index != 0)
+    {
+      return std::errc::not_supported;
+    }
+
+    constexpr static std::array<std::array<char, 32>, 10> axis_only{ {
+      "+forward",
+      "+back",
+      "+left",
+      "+right",
+      "+moveleft",
+      "+moveright",
+      "+lookup",
+      "+lookdown",
+      "+jump",
+      "+movedown",
+    } };
+
+    if (!std::ranges::any_of(axis_only, [&](auto& item) { return item == mapping->action_name; }) && mapping->hardware_input_type == siege::platform::controller_input_type::axis)
+    {
+      return std::errc::not_supported;
+    }
+  }
+
+  return std::errc{};
+}
+
+
 std::errc apply_dpi_awareness(const wchar_t* exe_path_str)
 {
   if (exe_path_str == nullptr)

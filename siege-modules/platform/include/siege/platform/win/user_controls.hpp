@@ -71,6 +71,14 @@ namespace win32
               {
                 context.callback(TControl(header->hwndFrom), *(TNotification*)lParam);
               }
+              else if constexpr (std::is_same_v<TReturn, bool>)
+              {
+                if (context.callback(TControl(header->hwndFrom), *(TNotification*)lParam))
+                {
+                  return TRUE;
+                }
+                return def_subclass_proc(hWnd, uMsg, wParam, lParam);
+              }
               else
               {
                 return context.callback(TControl(header->hwndFrom), *(TNotification*)lParam);

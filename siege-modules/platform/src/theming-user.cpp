@@ -554,6 +554,13 @@ namespace win32
 
           if (header->code == NM_CUSTOMDRAW && controls.contains(header->hwndFrom))
           {
+            auto result = def_subclass_proc(parent, message, wParam, lParam);
+
+            if (result != CDRF_DODEFAULT)
+            {
+              return result;
+            }
+
             auto& custom_draw = *(NMCUSTOMDRAW*)header;
             if (custom_draw.dwDrawStage == CDDS_PREPAINT)
             {

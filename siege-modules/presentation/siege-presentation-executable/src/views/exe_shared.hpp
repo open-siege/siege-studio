@@ -13,6 +13,10 @@
 #include <siege/platform/extension_module.hpp>
 #include <xinput.h>
 
+#define DIRECTINPUT_VERSION 0x800
+// Only needed for DIJOYSTATE
+#include <dinput.h>
+
 namespace siege::views
 {
   constexpr auto zt_fallback_ip = L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4";
@@ -25,19 +29,17 @@ namespace siege::views
   // ask if they want to change it via the system dialog
   struct hardware_index
   {
-    enum type : bool
-    {
-      button,
-      value
-    } type;
+    siege::platform::controller_input_type type;
 
     std::uint16_t index;
+
+    auto operator<=> (const hardware_index&) const = default;
   };
 
   struct winmm_hardware_index : hardware_index
   {
   };
-  
+
   struct controller_info
   {
     siege::platform::hardware_context detected_context;
@@ -46,8 +48,8 @@ namespace siege::views
     std::wstring_view device_name;
     enum button_preference : bool
     {
-        prefer_value,
-        prefer_button
+      prefer_axis,
+      prefer_button
     };
 
     enum index_preference : bool
@@ -55,12 +57,12 @@ namespace siege::views
       prefer_hid,
       prefer_winmm
     };
-    hardware_index (*get_hardware_index)(SHORT vkey, button_preference);
+    std::function<std::optional<hardware_index>(SHORT, button_preference)> get_hardware_index;
     std::pair<std::uint32_t, std::uint32_t> vendor_product_id;
     bool is_system_preferred = false;
   };
 
-  winmm_hardware_index map_hid_to_winmm(hardware_index);
+  winmm_hardware_index map_hid_to_winmm(hardware_index, const std::set<std::uint32_t>& axis_indexes);
 
   struct controller_state
   {
@@ -70,12 +72,29 @@ namespace siege::views
     std::array<std::pair<WORD, std::uint16_t>, 64> buffer;
   };
 
+  using input_type = decltype(siege::views::hardware_index::type);
+
   std::span<std::pair<WORD, std::uint16_t>> get_changes(const XINPUT_STATE& a, const XINPUT_STATE& b, std::span<std::pair<WORD, std::uint16_t>> buffer);
   std::vector<controller_info> get_connected_controllers();
   std::optional<controller_info> controller_info_for_raw_input_device_handle(HANDLE handle);
   std::optional<controller_info> controller_info_for_raw_input_handle(HRAWINPUT handle);
+
+  std::set<std::uint32_t> hardware_buttons(const controller_state&);
+  std::set<std::uint32_t> hardware_axes(const controller_state&);
+  std::uint32_t hardware_hat_count(const controller_state&);
+
+  std::set<std::uint32_t> mapped_buttons(const controller_info& info);
+  std::set<std::uint32_t> mapped_axes(const controller_info& info);
+  std::uint32_t mapped_hat_count(const controller_info&);
+
   controller_info detect_and_store_controller_context_from_hint(const controller_info& info, siege::platform::hardware_context hint);
+  controller_info store_controller_context(const controller_info& info, siege::platform::hardware_context context);
   XINPUT_STATE get_current_state_for_handle(controller_state& state, HRAWINPUT handle);
+  DIJOYSTATE get_raw_state_for_handle(controller_state& state, HRAWINPUT handle);
+
+  std::wstring label_for_vkey(SHORT vkey, siege::platform::hardware_context context);
+  std::wstring category_for_vkey(SHORT vkey, siege::platform::hardware_context context);
+  siege::platform::hardware_context string_to_context(std::wstring_view value);
 
   struct input_action_binding
   {
@@ -84,15 +103,15 @@ namespace siege::views
     // defined as more hardware information is detected.
     // For controller input especially, we eventually
     // care about the type of context to use for generating configurations.
-    // This is because older games rely on the hardware index 
+    // This is because older games rely on the hardware index
     // of buttons/axises but we care about the conceptual button/axies when binding
-    // (ie we want the A button to jump). 
+    // (ie we want the A button to jump).
     // The reason why each input gets a context
     // is because in more complex configurations,
     // you may have two separate input devices to control a game (think of HOTAS configurations).
     // But, most old games are programmed to only handle one input at a time.
     // The logic to handle separate contextes doesn't strictly exist yet,
-    // but it would fall on the extension to do something reasonable 
+    // but it would fall on the extension to do something reasonable
     // (ie configure a primary device as the joystick and then the secondary device to simulate keyboard/mouse inputs)
     siege::platform::hardware_context context;
     std::uint16_t action_index;
@@ -160,8 +179,6 @@ namespace siege::views
   siege::platform::game_extension_module& get_extension(std::any& state);
   const siege::platform::game_extension_module& get_extension(const std::any& state);
 
-  siege::platform::game_command_line_args& get_final_args(std::any& state);
-
   std::optional<std::wstring> get_extension_for_name(const std::any& state, std::wstring type, std::wstring name);
 
   std::vector<std::byte> get_resource_data(const std::any& state, std::wstring type, std::wstring name, bool raw = false);
@@ -190,8 +207,9 @@ namespace siege::views
   void set_ip_for_current_network(std::any& state, std::string ip_address);
 
   bool is_exe_or_lib(std::istream& stream) noexcept;
+  siege::platform::owning_packaged_args get_packaged_args(std::any& state);
 
-  HRESULT launch_game_with_extension(std::any& state, const siege::platform::game_command_line_args* game_args, PROCESS_INFORMATION* process_info) noexcept;
+  HRESULT launch_game_with_extension(std::any& state, siege::platform::packaged_args& game_args, PROCESS_INFORMATION* process_info) noexcept;
 }// namespace siege::views
 
 #endif// !EXE_SHARED_HPP

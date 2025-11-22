@@ -11,9 +11,7 @@
 #include <siege/platform/win/window_module.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-
 #include "id-tech-shared.hpp"
-
 
 extern "C" {
 using hardware_context = siege::platform::hardware_context;
@@ -59,7 +57,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "+mlook", u"Mouse Look", u"Misc" },
 } };
 
-constexpr static auto quake_aliases = std::array<std::array<std::string_view, 2>, 2>{ { 
+constexpr static auto quake_aliases = std::array<std::array<std::string_view, 2>, 2>{ {
   { "+melee-attack", "impulse 1; +attack" },
   { "-melee-attack", "impulse 12; -attack" },
 } };
@@ -138,6 +136,7 @@ std::errc executable_is_supported(const wchar_t* filename) noexcept
   }
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
+
 std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
 {
   if (auto result = apply_dpi_awareness(exe_path_str); result != std::errc{})
@@ -153,6 +152,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   std::ofstream custom_bindings("Id1/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
+  unbind_joystick_for_quake_1_config(config);
 
   for (auto& alias : quake_aliases)
   {
@@ -238,8 +238,7 @@ std::errc init_controller_inputs(controller_binding* binding)
     return std::errc::bad_address;
   }
   std::array<std::pair<WORD, std::string_view>, 18> actions{
-    {
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attack"),
+    { std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attack"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_A, "+jump"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_B, "+movedown"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "+speed"),
@@ -256,8 +255,7 @@ std::errc init_controller_inputs(controller_binding* binding)
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "invnext"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "impulse 12"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_RIGHT, "impulse 10"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "+showscores")
-    }
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "+showscores") }
   };
 
   append_controller_defaults(game_actions, actions, *binding);

@@ -12,3 +12,4 @@ EXPORTS
 	init_mouse_inputs PRIVATE
 	init_controller_inputs PRIVATE
 	apply_prelaunch_settings PRIVATE
+	is_input_mapping_valid=is_id_tech_3_input_mapping_valid PRIVATE

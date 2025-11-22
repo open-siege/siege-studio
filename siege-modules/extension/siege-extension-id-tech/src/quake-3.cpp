@@ -13,7 +13,6 @@
 #include <siege/extension/shared.hpp>
 #include "id-tech-shared.hpp"
 
-
 extern "C" {
 using hardware_context = siege::platform::hardware_context;
 using game_action = siege::platform::game_action;
@@ -33,7 +32,7 @@ extern auto command_line_caps = game_command_line_caps{
   // not actually the setting because the game starts a listen server by default
   // by this forces the UI to have the "listen" option.
   // TODO look into a better way of representing this
-  .listen_setting = L"net_noipx", 
+  .listen_setting = L"net_noipx",
   .dedicated_setting = L"dedicated",
 };
 

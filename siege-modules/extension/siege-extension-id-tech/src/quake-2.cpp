@@ -11,7 +11,6 @@
 #include <siege/platform/win/window_module.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-
 #include "id-tech-shared.hpp"
 
 extern "C" {
@@ -132,7 +131,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
     config.emplace(siege::configuration::key_type({ "set", "joy_advanced" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "set", "joy_sidesensitivity" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "set", "joy_pitchsensitivity" }), siege::configuration::key_type("1"));
-    
+
     config.emplace(siege::configuration::key_type({ "joy_advancedupdate" }), siege::configuration::key_type{});
   }
 

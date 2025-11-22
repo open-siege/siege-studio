@@ -649,6 +649,13 @@ namespace win32
       {
         if (message == WM_NOTIFY && ((NMHDR*)lParam)->code == NM_CUSTOMDRAW && controls.contains(((NMHDR*)lParam)->hwndFrom))
         {
+          auto result = def_subclass_proc(parent, message, wParam, lParam);
+
+          if (result != CDRF_DODEFAULT)
+          {
+            return result;
+          }
+
           auto& custom_draw = *(NMLVCUSTOMDRAW*)lParam;
 
           if (custom_draw.dwItemType == LVCDI_GROUP && custom_draw.nmcd.dwDrawStage == CDDS_PREPAINT)
@@ -1071,6 +1078,101 @@ namespace win32
     if (!superclass.dummy)
     {
       superclass.init(TOOLTIPS_CLASSW, (LONG_PTR)handlers::handle_control_message);
+    }
+
+    if (superclass.dummy && remove)
+    {
+      superclass.dispose(controls, (LONG_PTR)handlers::handle_control_message);
+    }
+  }
+
+  void apply_track_bar_theme(bool remove)
+  {
+    static superclass_handle superclass;
+    static std::unordered_set<HWND> controls;
+
+    struct handlers
+    {
+      static LRESULT __stdcall handle_control_message(HWND self, UINT message, WPARAM wParam, LPARAM lParam)
+      {
+        if (message == WM_NCCREATE)
+        {
+          CREATESTRUCTW* create_params = (CREATESTRUCTW*)lParam;
+
+          if (!create_params)
+          {
+            return FALSE;
+          }
+
+          if (!create_params->hwndParent || is_parent_from_system(create_params->hwndParent))
+          {
+            return superclass.control_proc(self, message, wParam, lParam);
+          }
+
+          auto root = ::GetAncestor(create_params->hwndParent, GA_ROOT);
+          auto parent = create_params->hwndParent;
+          DWORD_PTR existing_object{};
+
+          if (!get_window_subclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, &existing_object))
+          {
+            set_window_subclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, (DWORD_PTR)&controls);
+          }
+
+          if (!get_window_subclass(parent, handle_parent_message, 0, &existing_object))
+          {
+            set_window_subclass(parent, handle_parent_message, 0, 0);
+          }
+          controls.emplace(self);
+          return superclass.control_proc(self, message, wParam, lParam);
+        }
+
+        if (message == WM_CREATE && controls.contains(self))
+        {
+          // TODO implement proper theming
+          auto result = superclass.control_proc(self, message, wParam, lParam);
+          return result;
+        }
+
+        if (message == WM_SETTINGCHANGE && controls.contains(self))
+        {
+          // TODO implement proper theming
+        }
+
+        if (message == WM_NCDESTROY && controls.contains(self))
+        {
+          controls.erase(self);
+        }
+
+
+        return superclass.control_proc(self, message, wParam, lParam);
+      }
+
+      static LRESULT __stdcall handle_parent_message(HWND parent, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      {
+        if (message == WM_NOTIFY && ((NMHDR*)lParam)->code == NM_CUSTOMDRAW && controls.contains(((NMHDR*)lParam)->hwndFrom))
+        {
+          auto result = def_subclass_proc(parent, message, wParam, lParam);
+
+          if (result != CDRF_DODEFAULT)
+          {
+            return result;
+          }
+          // TODO actually theme a track bar
+          return CDRF_DODEFAULT;
+        }
+
+        if (message == WM_NCDESTROY)
+        {
+          remove_window_subclass(parent, handle_parent_message, 0);
+        }
+
+        return def_subclass_proc(parent, message, wParam, lParam);
+      }
+    };
+
+    if (!superclass.dummy)
+    {
+      superclass.init(TRACKBAR_CLASSW, (LONG_PTR)handlers::handle_control_message);
     }
 
     if (superclass.dummy && remove)

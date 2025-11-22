@@ -75,7 +75,8 @@ namespace siege::views
 
       try
       {
-        if (this->injector_args.launch_game_with_extension(&this->injector_args.args, &child_process) == S_OK && child_process.hProcess)
+        siege::platform::packaged_args final_args = this->injector_args.args;
+        if (this->injector_args.launch_game_with_extension(final_args, &child_process) == S_OK && child_process.hProcess)
         {
           auto& state = siege::get_active_input_state();
 
@@ -473,7 +474,7 @@ namespace siege::views
 
   std::any bind_to_window(win32::window_ref ref, input_injector_args args)
   {
-    return input_injector(std::move(ref), args);
+    return std::make_any<input_injector>(std::move(ref), std::move(args));
   }
 
-}// namespace siege
+}// namespace siege::views

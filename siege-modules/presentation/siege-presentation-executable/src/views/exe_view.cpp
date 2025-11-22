@@ -7,11 +7,17 @@
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/win/threading.hpp>
 #include <siege/extension/input_filter.hpp>
+#include <siege/extension/input_filter.hpp>
 #include "views/exe_view.hpp"
 
 namespace siege::views
 {
   using namespace std::literals;
+
+  constexpr static int add_to_firewall_selected_id = 12;
+  constexpr static int extract_selected_id = 13;
+
+  void extract_selected_files(std::any& state, exe_view::resource_controls& resource);
 
   win32::lresult_t exe_view::wm_create()
   {
@@ -19,10 +25,6 @@ namespace siege::views
       .hwndParent = *this,
       .style = WS_VISIBLE | WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS });
 
-    extract_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 1, L"Open in New Tab");
-    extract_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 2, L"Extract");
-
-    options_unbind = options.bind_lbn_sel_change(std::bind_front(&exe_view::options_lbn_sel_change, this));
     options.InsertString(-1, L"Resources");
     options.SetCurrentSelection(0);
 
@@ -31,122 +33,84 @@ namespace siege::views
       .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
 
     exe_actions.InsertButton(-1, { .iBitmap = 0, .idCommand = add_to_firewall_selected_id, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR)L"Add to Firewall" }, false);
-    exe_actions.InsertButton(-1, { .iBitmap = 1, .idCommand = launch_selected_id, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR)L"Launch" }, false);
+    exe_actions.InsertButton(-1, { .iBitmap = 0, .idCommand = input.controllers_selected_id, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR)L"Input Devices" }, false);
+    exe_actions.InsertButton(-1, { .iBitmap = 1, .idCommand = launch.launch_selected_id, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR)L"Launch" }, false);
     exe_actions.InsertButton(-1, { .iBitmap = 2, .idCommand = extract_selected_id, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" }, false);
     exe_actions.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
-    exe_actions.bind_nm_click(std::bind_front(&exe_view::exe_actions_nm_click, this));
+    exe_actions.bind_nm_click([this](win32::tool_bar exe_actions, const NMMOUSE& message) {
+      if (message.dwItemSpec != extract_selected_id)
+      {
+        return false;
+      }
 
-    resource_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this,
+      extract_selected_files(state, resource);
+      return true;
+    });
+
+
+    exe_actions.bind_nm_click([this](win32::tool_bar, const NMMOUSE& message) {
+      if (message.dwItemSpec != add_to_firewall_selected_id)
+      {
+        return false;
+      }
+
+      auto path = get_exe_path(state);
+
+      std::wstring args;
+      args.reserve(256);
+
+      args.append(L"advfirewall firewall add rule dir=out enable=yes name=");
+
+      args.append(1, L'\"');
+      args.append(path.parent_path().stem());
+      args.append(1, L'\"');
+      args.append(L" action=allow program=");
+
+      args.append(1, L'\"');
+      args.append(path);
+      args.append(1, L'\"');
+
+      ::ShellExecuteW(nullptr,
+        L"runas",
+        L"netsh.exe",
+        args.c_str(),
+        nullptr,// default dir
+        SW_SHOWNORMAL);
+
+      return true;
+    });
+
+    resource.extract_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 1, L"Open in New Tab");
+    resource.extract_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 2, L"Extract");
+
+
+    resource.resource_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this,
       .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
 
-    resource_table.InsertColumn(-1, LVCOLUMNW{
-                                      .pszText = const_cast<wchar_t*>(L"Name"),
-                                    });
+    resource.resource_table.InsertColumn(-1, LVCOLUMNW{
+                                               .pszText = const_cast<wchar_t*>(L"Name"),
+                                             });
 
-    resource_table.InsertColumn(-1, LVCOLUMNW{
-                                      .pszText = const_cast<wchar_t*>(L"Action"),
-                                    });
+    resource.resource_table.InsertColumn(-1, LVCOLUMNW{
+                                               .pszText = const_cast<wchar_t*>(L"Action"),
+                                             });
 
-    resource_table.EnableGroupView(true);
+    resource.resource_table.EnableGroupView(true);
 
-    resource_table.bind_nm_rclick(std::bind_front(&exe_view::resource_table_nm_rclick, this));
-    resource_table.bind_lvn_item_changed(std::bind_front(&exe_view::resource_table_lvn_item_changed, this));
-    resource_table.SetExtendedListViewStyle(LVS_EX_HEADERINALLVIEWS | LVS_EX_FULLROWSELECT, LVS_EX_HEADERINALLVIEWS | LVS_EX_FULLROWSELECT);
+    resource.resource_table.SetExtendedListViewStyle(LVS_EX_HEADERINALLVIEWS | LVS_EX_FULLROWSELECT, LVS_EX_HEADERINALLVIEWS | LVS_EX_FULLROWSELECT);
 
-    string_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this,
+    resource.string_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this,
       .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
-    string_table.InsertColumn(-1, LVCOLUMNW{
-                                    .pszText = const_cast<wchar_t*>(L"Text"),
-                                  });
+    resource.string_table.InsertColumn(-1, LVCOLUMNW{
+                                             .pszText = const_cast<wchar_t*>(L"Text"),
+                                           });
 
-    string_table.EnableGroupView(true);
+    resource.string_table.EnableGroupView(true);
 
-    launch_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this,
-      .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
+    launch = create_launch_controls();
+    input = create_input_controls();
 
-    launch_table.bind_nm_click(std::bind_front(&exe_view::launch_table_nm_click, this));
-    launch_table.InsertColumn(-1, LVCOLUMNW{
-                                    .pszText = const_cast<wchar_t*>(L"Name"),
-                                  });
-
-    launch_table.InsertColumn(-1, LVCOLUMNW{
-                                    .pszText = const_cast<wchar_t*>(L"Value"),
-                                  });
-
-    launch_table.EnableGroupView(true);
-
-    launch_table.InsertGroup(-1, LVGROUP{
-                                   .pszHeader = const_cast<wchar_t*>(L"Multiplayer Options"),
-                                   .iGroupId = 1,
-                                   .state = LVGS_COLLAPSIBLE,
-                                 });
-    launch_table.InsertGroup(-1, LVGROUP{
-                                   .pszHeader = const_cast<wchar_t*>(L"Other Options"),
-                                   .iGroupId = 2,
-                                   .state = LVGS_COLLAPSIBLE,
-                                 });
-
-    launch_table_edit = *win32::CreateWindowExW<win32::edit>({ .hwndParent = *this, .style = WS_CHILD });
-    launch_table_combo = *win32::CreateWindowExW<win32::combo_box_ex>({ .hwndParent = *this, .cy = 300, .cx = 300, .style = WS_CHILD | CBS_DROPDOWNLIST });
-
-    launch_table_ip_address = *win32::CreateWindowExW<win32::ip_address_edit>({ .hwndParent = *this, .cy = 100, .cx = 300, .style = WS_CHILD });
-
-    keyboard_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this, .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
-
-    keyboard_table.InsertColumn(-1, LVCOLUMNW{
-                                      .pszText = const_cast<wchar_t*>(L"Action"),
-                                    });
-
-    keyboard_table.InsertColumn(-1, LVCOLUMNW{
-                                      .pszText = const_cast<wchar_t*>(L"Key"),
-                                    });
-
-    keyboard_table.SetExtendedListViewStyle(0, LVS_EX_FULLROWSELECT);
-    keyboard_table.EnableGroupView(true);
-    keyboard_table.bind_nm_click(std::bind_front(&exe_view::keyboard_table_nm_click, this));
-
-
-    controller_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this, .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
-    controller_table.bind_nm_click(std::bind_front(&exe_view::controller_table_nm_click, this));
-
-    controller_table.InsertColumn(-1, LVCOLUMNW{
-                                        .pszText = const_cast<wchar_t*>(L""),
-                                      });
-
-    controller_table.InsertColumn(-1, LVCOLUMNW{
-                                        .fmt = LVCFMT_RIGHT,
-                                        .pszText = const_cast<wchar_t*>(L""),
-
-                                      });
-
-    controller_table.InsertColumn(-1, LVCOLUMNW{
-                                        .fmt = LVCFMT_RIGHT,
-                                        .pszText = const_cast<wchar_t*>(L""),
-                                      });
-
-    controller_table.EnableGroupView(true);
-
-    ListView_SetView(controller_table, LV_VIEW_TILE);
-
-    LVTILEVIEWINFO tileViewInfo{
-      .cbSize = sizeof(tileViewInfo),
-      .dwMask = LVTVIM_COLUMNS,
-      .dwFlags = LVTVIF_AUTOSIZE,
-      .cLines = 2
-    };
-
-    ListView_SetTileViewInfo(controller_table, &tileViewInfo);
-
-    for (auto i = 0; i < controller_table.GetItemCount(); ++i)
-    {
-      UINT columns[2] = { 1, 2 };
-      int formats[2] = { LVCFMT_LEFT, LVCFMT_RIGHT };
-      LVTILEINFO item_info{ .cbSize = sizeof(LVTILEINFO), .iItem = (int)i, .cColumns = 2, .puColumns = columns, .piColFmt = formats };
-
-      ListView_SetTileInfo(controller_table, &item_info);
-    }
-
-    auto header = launch_table.GetHeader();
+    auto header = launch.launch_table.GetHeader();
 
     auto style = header.GetWindowStyle();
 
@@ -154,6 +118,76 @@ namespace siege::views
 
     wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
+    resource.resource_table.bind_lvn_item_changed([this](win32::list_view, const NMLISTVIEW& message) {
+      if (!message.lParam)
+      {
+        return;
+      }
+
+      std::wstring temp(255, '\0');
+
+      temp.resize(::GetAtomNameW((ATOM)message.lParam, temp.data(), temp.size()));
+
+      if (temp.size() == 0)
+      {
+        return;
+      }
+
+      auto group_id = temp.substr(0, temp.find(':'));
+      auto item_id = temp.substr(temp.find(':') + 1);
+
+      if (message.uNewState & LVIS_SELECTED)
+      {
+        resource.selected_resource_items.emplace(std::make_pair(group_id, item_id));
+      }
+      else if (message.uOldState & LVIS_SELECTED)
+      {
+        resource.selected_resource_items.erase(std::make_pair(group_id, item_id));
+      }
+
+      TBBUTTONINFOW button_info{
+        .cbSize = sizeof(TBBUTTONINFOW),
+        .dwMask = TBIF_STATE,
+        .fsState = resource.selected_resource_items.empty() ? BYTE(0x00) : BYTE(TBSTATE_ENABLED),
+      };
+
+      ::SendMessageW(exe_actions, TB_SETBUTTONINFO, extract_selected_id, (LPARAM)&button_info);
+    });
+
+    resource.resource_table.bind_nm_rclick([this](win32::list_view resource_table, const NMITEMACTIVATE& message) {
+      auto point = message.ptAction;
+
+      if (!ClientToScreen(resource_table, &point))
+      {
+        return;
+      }
+
+      auto result = resource.extract_menu.TrackPopupMenuEx(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, point, ref());
+
+      if (result == 1)
+      {
+        auto root = this->GetAncestor(GA_ROOT);
+
+        if (root)
+        {
+          for (auto& item : resource.selected_resource_items)
+          {
+            auto extension = get_extension_for_name(state, item.first, item.second);
+
+            if (extension)
+            {
+              auto raw_data = get_resource_data(state, item.first, item.second);
+              auto filename = item.second + *extension;
+              root->CopyData(*this, COPYDATASTRUCT{ .dwData = ::AddAtomW(filename.data()), .cbData = DWORD(raw_data.size()), .lpData = raw_data.data() });
+            }
+          }
+        }
+      }
+      else if (result == 2)
+      {
+        extract_selected_files(state, resource);
+      }
+    });
     return 0;
   }
 
@@ -171,30 +205,30 @@ namespace siege::views
     exe_actions.SetWindowPos(top_size, SWP_DEFERERASE);
     exe_actions.SetButtonSize(SIZE{ .cx = top_size.cx / exe_actions.ButtonCount(), .cy = top_size.cy });
 
-    resource_table.SetWindowPos(three_quarters);
-    resource_table.SetWindowPos(POINT{ .y = top_size.cy });
+    resource.resource_table.SetWindowPos(three_quarters);
+    resource.resource_table.SetWindowPos(POINT{ .y = top_size.cy });
 
-    string_table.SetWindowPos(three_quarters);
-    string_table.SetWindowPos(POINT{ .y = top_size.cy });
+    resource.string_table.SetWindowPos(three_quarters);
+    resource.string_table.SetWindowPos(POINT{ .y = top_size.cy });
 
-    launch_table.SetWindowPos(three_quarters);
-    launch_table.SetWindowPos(POINT{ .y = top_size.cy });
+    launch.launch_table.SetWindowPos(three_quarters);
+    launch.launch_table.SetWindowPos(POINT{ .y = top_size.cy });
 
-    keyboard_table.SetWindowPos(three_quarters);
-    keyboard_table.SetWindowPos(POINT{ .y = top_size.cy });
+    input.keyboard_table.SetWindowPos(three_quarters);
+    input.keyboard_table.SetWindowPos(POINT{ .y = top_size.cy });
 
-    controller_table.SetWindowPos(three_quarters);
-    controller_table.SetWindowPos(POINT{ .y = top_size.cy });
-    controller_table.SetImageList(LVSIL_NORMAL, controller_table_icons);
+    input.controller_table.SetWindowPos(three_quarters);
+    input.controller_table.SetWindowPos(POINT{ .y = top_size.cy });
+    input.controller_table.SetImageList(LVSIL_NORMAL, input.controller_table_icons);
 
     options.SetWindowPos(one_quarter);
     options.SetWindowPos(POINT{ .x = three_quarters.cx, .y = top_size.cy });
 
-    std::array<std::reference_wrapper<win32::list_view>, 5> tables = { { std::ref(resource_table),
-      std::ref(string_table),
-      std::ref(keyboard_table),
-      std::ref(launch_table),
-      std::ref(controller_table) } };
+    std::array<std::reference_wrapper<win32::list_view>, 5> tables = { { std::ref(resource.resource_table),
+      std::ref(resource.string_table),
+      std::ref(input.keyboard_table),
+      std::ref(launch.launch_table),
+      std::ref(input.controller_table) } };
 
     for (auto& table : tables)
     {
@@ -245,9 +279,9 @@ namespace siege::views
     return std::nullopt;
   }
 
-  void exe_view::extract_selected_files()
+  void extract_selected_files(std::any& state, exe_view::resource_controls& resource)
   {
-    if (has_saved == false)
+    if (resource.has_saved == false)
     {
       return;
     }
@@ -259,12 +293,12 @@ namespace siege::views
       return;
     }
 
-    auto items = selected_resource_items;
+    auto items = resource.selected_resource_items;
 
-    win32::queue_user_work_item([path = std::move(path), this, items]() {
-      has_saved = false;
+    win32::queue_user_work_item([path = std::move(path), &state, &resource, items]() {
+      resource.has_saved = false;
 
-      std::for_each(items.begin(), items.end(), [this, path](auto& item) {
+      std::for_each(items.begin(), items.end(), [&state, path](auto& item) {
         auto extension = get_extension_for_name(state, item.first, item.second);
 
         if (extension)
@@ -279,77 +313,8 @@ namespace siege::views
       });
 
       win32::launch_shell_process(*path);
-      has_saved = true;
+      resource.has_saved = true;
     });
-  }
-
-  void exe_view::resource_table_lvn_item_changed(win32::list_view, const NMLISTVIEW& message)
-  {
-    std::wstring temp(255, '\0');
-
-    if (message.lParam)
-    {
-      temp.resize(::GetAtomNameW((ATOM)message.lParam, temp.data(), temp.size()));
-
-      if (temp.size() == 0)
-      {
-        return;
-      }
-
-      auto group_id = temp.substr(0, temp.find(':'));
-      auto item_id = temp.substr(temp.find(':') + 1);
-
-      if (message.uNewState & LVIS_SELECTED)
-      {
-        selected_resource_items.emplace(std::make_pair(group_id, item_id));
-      }
-      else if (message.uOldState & LVIS_SELECTED)
-      {
-        selected_resource_items.erase(std::make_pair(group_id, item_id));
-      }
-
-      TBBUTTONINFOW button_info{
-        .cbSize = sizeof(TBBUTTONINFOW),
-        .dwMask = TBIF_STATE,
-        .fsState = selected_resource_items.empty() ? BYTE(0x00) : BYTE(TBSTATE_ENABLED),
-      };
-
-      ::SendMessageW(exe_actions, TB_SETBUTTONINFO, extract_selected_id, (LPARAM)&button_info);
-    }
-  }
-
-  void exe_view::resource_table_nm_rclick(win32::list_view, const NMITEMACTIVATE& message)
-  {
-    auto point = message.ptAction;
-
-    if (ClientToScreen(resource_table, &point))
-    {
-      auto result = extract_menu.TrackPopupMenuEx(TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, point, ref());
-
-      if (result == 1)
-      {
-        auto root = this->GetAncestor(GA_ROOT);
-
-        if (root)
-        {
-          for (auto& item : selected_resource_items)
-          {
-            auto extension = get_extension_for_name(state, item.first, item.second);
-
-            if (extension)
-            {
-              auto raw_data = get_resource_data(state, item.first, item.second);
-              auto filename = item.second + *extension;
-              root->CopyData(*this, COPYDATASTRUCT{ .dwData = ::AddAtomW(filename.data()), .cbData = DWORD(raw_data.size()), .lpData = raw_data.data() });
-            }
-          }
-        }
-      }
-      else if (result == 2)
-      {
-        extract_selected_files();
-      }
-    }
   }
 
   void exe_view::recreate_image_lists(std::optional<SIZE> possible_size)
@@ -370,9 +335,9 @@ namespace siege::views
       exe_actions_icons.reset();
     }
 
-    if (controller_table_icons)
+    if (input.controller_table_icons)
     {
-      controller_table_icons.reset();
+      input.controller_table_icons.reset();
     }
 
 
@@ -408,39 +373,7 @@ namespace siege::views
       win32::segoe_fluent_icons::button_view,
       win32::segoe_fluent_icons::button_menu
     };
-    controller_table_icons = win32::create_icon_list(controller_icons, icon_size);
-  }
-
-  void exe_view::options_lbn_sel_change(win32::list_box, const NMHDR&)
-  {
-    auto selected = options.GetCurrentSelection();
-
-    std::array tables{ launch_table.ref(), keyboard_table.ref(), controller_table.ref(), string_table.ref(), resource_table.ref() };
-
-    for (auto i = 0; i < tables.size(); ++i)
-    {
-      ::ShowWindow(tables[i], i == selected ? SW_SHOW : SW_HIDE);
-    }
-
-    if (selected != 0)
-    {
-      ::ShowWindow(launch_table_edit, SW_HIDE);
-      ::ShowWindow(launch_table_combo, SW_HIDE);
-      ::ShowWindow(launch_table_ip_address, SW_HIDE);
-    }
-
-    if (selected != tables.size() - 1)
-    {
-      selected_resource_items.clear();
-
-      TBBUTTONINFOW button_info{
-        .cbSize = sizeof(TBBUTTONINFOW),
-        .dwMask = TBIF_STATE,
-        .fsState = 0,
-      };
-
-      ::SendMessageW(exe_actions, TB_SETBUTTONINFO, extract_selected_id, (LPARAM)&button_info);
-    }
+    input.controller_table_icons = win32::create_icon_list(controller_icons, icon_size);
   }
 
   win32::lresult_t exe_view::wm_copy_data(win32::copy_data_message<char> message)
@@ -455,9 +388,46 @@ namespace siege::views
       options.InsertString(1, L"Keyboard/Mouse Settings");
       options.InsertString(2, L"Controller");
       options.InsertString(3, L"Scripting");
+      options.SetCurrentSelection(0);
+      options.bind_lbn_sel_change([this](win32::list_box options, const NMHDR&) {
+        auto selected = options.GetCurrentSelection();
 
-      ::ShowWindow(launch_table, SW_SHOW);
-      ::ShowWindow(resource_table, SW_HIDE);
+        std::array tables{ launch.launch_table.ref(), input.keyboard_table.ref(), input.controller_table.ref(), resource.string_table.ref(), resource.resource_table.ref() };
+
+        for (auto i = 0; i < tables.size(); ++i)
+        {
+          ::ShowWindow(tables[i], i == selected ? SW_SHOW : SW_HIDE);
+        }
+      });
+      options.bind_lbn_sel_change([this](auto options, const auto&) {
+        auto selected = options.GetCurrentSelection();
+        if (selected != 0)
+        {
+          ::ShowWindow(launch.launch_table_edit, SW_HIDE);
+          ::ShowWindow(launch.launch_table_combo, SW_HIDE);
+          ::ShowWindow(launch.launch_table_ip_address, SW_HIDE);
+        }
+      });
+
+      options.bind_lbn_sel_change([this](auto options, const auto&) {
+        auto selected = options.GetCurrentSelection();
+
+        if (selected != 4)
+        {
+          resource.selected_resource_items.clear();
+
+          TBBUTTONINFOW button_info{
+            .cbSize = sizeof(TBBUTTONINFOW),
+            .dwMask = TBIF_STATE,
+            .fsState = 0,
+          };
+
+          ::SendMessageW(exe_actions, TB_SETBUTTONINFO, extract_selected_id, (LPARAM)&button_info);
+        }
+      });
+
+      ::ShowWindow(launch.launch_table, SW_SHOW);
+      ::ShowWindow(resource.resource_table, SW_HIDE);
 
       siege::init_active_input_state();
 
@@ -467,7 +437,8 @@ namespace siege::views
         .fsState = TBSTATE_ENABLED,
       };
 
-      ::SendMessageW(exe_actions, TB_SETBUTTONINFO, launch_selected_id, (LPARAM)&button_info);
+      ::SendMessageW(exe_actions, TB_SETBUTTONINFO, launch.launch_selected_id, (LPARAM)&button_info);
+      ::SendMessageW(exe_actions, TB_SETBUTTONINFO, input.controllers_selected_id, (LPARAM)&button_info);
       ::SendMessageW(exe_actions, TB_SETBUTTONINFO, add_to_firewall_selected_id, (LPARAM)&button_info);
     }
 
@@ -496,7 +467,7 @@ namespace siege::views
           column.lParam = (LPARAM)setting_index;
           column.iGroupId = setting.group_id;
 
-          setting.persist = [setting_index, launch_table = launch_table.get(), &setting, persist = std::move(setting.persist)]() {
+          setting.persist = [setting_index, launch_table = launch.launch_table.get(), &setting, persist = std::move(setting.persist)]() {
             if (persist)
             {
               persist();
@@ -517,7 +488,7 @@ namespace siege::views
             auto value = setting.get_computed_display_value();
             ListView_SetItemText(launch_table, item, 1, value.data());
           };
-          launch_table.InsertRow(std::move(column));
+          launch.launch_table.InsertRow(std::move(column));
         }
       };
 
@@ -610,9 +581,27 @@ namespace siege::views
           items.emplace_back(std::move(item));
         }
 
+        const static std::map<std::wstring_view, std::wstring_view> group_names = {
+          { L"#1"sv, L"Cursor"sv },
+          { L"#2"sv, L"Bitmap"sv },
+          { L"#3"sv, L"Icon"sv },
+          { L"#4"sv, L"Menu"sv },
+          { L"#5"sv, L"Dialog"sv },
+          { L"#6"sv, L"String Table"sv },
+          { L"#8"sv, L"Font"sv },
+          { L"#9"sv, L"Accelerator"sv },
+          { L"#10"sv, L"Raw Data"sv },
+          { L"#12"sv, L"Cursor Group"sv },
+          { L"#14"sv, L"Icon Group"sv },
+          { L"#16"sv, L"Version"sv },
+          { L"#22"sv, L"Animated Icon"sv },
+          { L"#23"sv, L"HTML"sv },
+          { L"#24"sv, L"Side-by-Side Assembly Manifest"sv },
+        };
+
         if (group_names.contains(value.first))
         {
-          auto& group = groups.emplace_back(std::wstring(group_names[value.first]), std::move(items));
+          auto& group = groups.emplace_back(std::wstring(group_names.at(value.first)), std::move(items));
           group.state = LVGS_COLLAPSIBLE;
         }
         else
@@ -622,7 +611,7 @@ namespace siege::views
         }
       }
 
-      resource_table.InsertGroups(groups);
+      resource.resource_table.InsertGroups(groups);
 
       groups.clear();
       groups.reserve(2);
@@ -651,7 +640,7 @@ namespace siege::views
       auto& group2 = groups.emplace_back(L"Script/Console Variables", std::move(items));
       group2.state = LVGS_COLLAPSIBLE;
 
-      string_table.InsertGroups(groups);
+      resource.string_table.InsertGroups(groups);
 
       return TRUE;
     }
@@ -686,208 +675,6 @@ namespace siege::views
       return (LRESULT)wm_copy_data(win32::copy_data_message<char>(wparam, lparam));
     default:
       return std::nullopt;
-    }
-  }
-
-  std::wstring category_for_vkey(SHORT vkey, siege::platform::hardware_context context)
-  {
-    using namespace siege::platform;
-    if (vkey >= VK_LBUTTON && vkey <= VK_XBUTTON2)
-    {
-      return L"Mouse";
-    }
-
-    if (context == hardware_context::mouse || context == hardware_context::mouse_wheel)
-    {
-      return L"Mouse";
-    }
-
-    if (vkey >= VK_GAMEPAD_A && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)
-    {
-      return L"Controller";
-    }
-
-    if (context == hardware_context::controller_xbox || context == hardware_context::joystick || context == hardware_context::throttle)
-    {
-      return L"Controller";
-    }
-
-    return L"Keyboard";
-  }
-
-  std::wstring string_for_vkey(SHORT vkey, siege::platform::hardware_context context)
-  {
-    constexpr static auto directions = std::array<std::wstring_view, 4>{
-      {
-        std::wstring_view(L"Left"),
-        std::wstring_view(L"Up"),
-        std::wstring_view(L"Right"),
-        std::wstring_view(L"Down"),
-      }
-    };
-
-    if (context == siege::platform::hardware_context::mouse)
-    {
-      if (vkey >= VK_LEFT && vkey <= VK_DOWN)
-      {
-        std::wstring result(L"Move ");
-        result.append(directions[vkey - VK_LEFT]);
-        return result;
-      }
-    }
-
-    if (context == siege::platform::hardware_context::mouse_wheel)
-    {
-      if (vkey >= VK_LEFT && vkey <= VK_DOWN)
-      {
-        std::wstring result(L"Scroll ");
-        result.append(directions[vkey - VK_LEFT]);
-        return result;
-      }
-    }
-
-    if (vkey >= VK_NUMPAD0 && vkey <= VK_NUMPAD9)
-    {
-      std::wstring result(L"Numpad ");
-      result.push_back(L'0' + vkey - VK_NUMPAD0);
-      return result;
-    }
-
-    if (vkey >= VK_F1 && vkey <= VK_F9)
-    {
-      std::wstring result(1, 'F');
-      result.push_back(L'1' + vkey - VK_F1);
-      return result;
-    }
-
-    if (vkey >= VK_F10 && vkey <= VK_F19)
-    {
-      std::wstring result(1, 'F');
-      result.push_back(L'1');
-      result.push_back(L'0' + vkey - VK_F10);
-      return result;
-    }
-
-    if (vkey >= VK_F20 && vkey <= VK_F24)
-    {
-      std::wstring result(1, 'F');
-      result.push_back(L'2');
-      result.push_back(L'0' + vkey - VK_F20);
-      return result;
-    }
-
-    switch (vkey)
-    {
-    case VK_LBUTTON:
-      return L"Left Button";
-    case VK_RBUTTON:
-      return L"Right Button";
-    case VK_MBUTTON:
-      return L"Middle Button";
-    case VK_XBUTTON1:
-      return L"Extra Button 1";
-    case VK_XBUTTON2:
-      return L"Extra Button 2";
-    case VK_TAB:
-      return L"Tab";
-    case VK_LCONTROL:
-      return L"Left Control";
-    case VK_RCONTROL:
-      return L"Right Control";
-    case VK_LMENU:
-      return L"Left Alt";
-    case VK_RMENU:
-      return L"Right Alt";
-    case VK_LSHIFT:
-      return L"Left Shift";
-    case VK_RSHIFT:
-      return L"Right Shift";
-    case VK_LWIN:
-      return L"Left Windows Key";
-    case VK_RWIN:
-      return L"Right Windows Key";
-    case VK_RETURN:
-      return L"Enter";
-    case VK_UP:
-      return L"Up Arrow";
-    case VK_DOWN:
-      return L"Down Arrow";
-    case VK_LEFT:
-      return L"Left Arrow";
-    case VK_RIGHT:
-      return L"Right Arrow";
-    case VK_SPACE:
-      return L"Spacebar";
-    case VK_SNAPSHOT:
-      return L"Print Screen";
-    case VK_CAPITAL:
-      return L"Caps Lock";
-    case VK_NUMLOCK:
-      return L"Num Lock";
-    case VK_SCROLL:
-      return L"Scroll Lock";
-    case VK_HOME:
-      return L"Home";
-    case VK_DELETE:
-      return L"Insert";
-    case VK_ESCAPE:
-      return L"Escape";
-    case VK_INSERT:
-      return L"Insert";
-    case VK_PRIOR:
-      return L"Page Down";
-    case VK_NEXT:
-      return L"Page Up";
-    case VK_PAUSE:
-      return L"Pause";
-    case VK_BACK:
-      return L"Backspace";
-    case VK_GAMEPAD_A:
-      return L"A Button";
-    case VK_GAMEPAD_B:
-      return L"B Button";
-    case VK_GAMEPAD_X:
-      return L"X Button";
-    case VK_GAMEPAD_Y:
-      return L"Y Button";
-    case VK_GAMEPAD_LEFT_SHOULDER:
-      return L"Left Bumper";
-    case VK_GAMEPAD_RIGHT_SHOULDER:
-      return L"Right Bumper";
-    case VK_GAMEPAD_LEFT_TRIGGER:
-      return L"Left Trigger";
-    case VK_GAMEPAD_RIGHT_TRIGGER:
-      return L"Right Trigger";
-    case VK_GAMEPAD_DPAD_UP:
-      return L"D-pad Up";
-    case VK_GAMEPAD_DPAD_DOWN:
-      return L"D-pad Down";
-    case VK_GAMEPAD_DPAD_LEFT:
-      return L"D-pad Left";
-    case VK_GAMEPAD_DPAD_RIGHT:
-      return L"D-pad Right";
-    case VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON:
-      return L"Left Stick Button";
-    case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
-      return L"Left Stick Up";
-    case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN:
-      return L"Left Stick Down";
-    case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
-      return L"Left Stick Left";
-    case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT:
-      return L"Left Stick Right";
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON:
-      return L"Right Stick Button";
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
-      return L"Right Stick Up";
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN:
-      return L"Right Stick Down";
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
-      return L"Right Stick Left";
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT:
-      return L"Right Stick Right";
-    default:
-      return std::wstring(1, ::MapVirtualKeyW(vkey, MAPVK_VK_TO_CHAR));
     }
   }
 

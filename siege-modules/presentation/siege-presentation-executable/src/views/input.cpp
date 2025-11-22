@@ -10,15 +10,18 @@
 #include <joystickapi.h>
 #include "exe_shared.hpp"
 
-
 namespace siege::views
 {
   using namespace siege::platform;
 
-  hardware_index hardware_index_for_xbox_vkey(SHORT vkey, controller_info::button_preference);
-  hardware_index hardware_index_for_ps3_vkey(SHORT vkey, controller_info::button_preference);
-  hardware_index hardware_index_for_ps4_vkey(SHORT vkey, controller_info::button_preference);
-  hardware_context string_to_context(std::wstring_view value);
+  std::optional<hardware_index> hardware_index_for_xbox_vkey(SHORT vkey, controller_info::button_preference);
+  std::optional<hardware_index> hardware_index_for_ps3_vkey(SHORT vkey, controller_info::button_preference);
+  std::optional<hardware_index> hardware_index_for_ps4_vkey(SHORT vkey, controller_info::button_preference);
+  std::optional<hardware_index> hardware_index_for_joystick_vkey(SHORT vkey, controller_info::button_preference);
+
+  std::function<std::optional<hardware_index>(SHORT, controller_info::button_preference)> hardware_index_from_cache(HKEY cache);
+  std::function<std::optional<hardware_index>(SHORT, controller_info::button_preference)> hardware_index_lookup_from_context(hardware_context context, HKEY cache);
+
   std::wstring_view context_to_string(hardware_context value);
 
   std::set<std::wstring>& strings();
@@ -214,23 +217,11 @@ namespace siege::views
           {
             buffer.resize(buffer.find(L'\0'));
           }
-          ::RegCloseKey(main_key);
-          ::RegCloseKey(user_key);
 
           result.detected_context = string_to_context(buffer);
-
-          if (result.detected_context == hardware_context::controller_xbox)
-          {
-            result.get_hardware_index = hardware_index_for_xbox_vkey;
-          }
-          else if (result.detected_context == hardware_context::controller_playstation_3)
-          {
-            result.get_hardware_index = hardware_index_for_ps3_vkey;
-          }
-          else if (result.detected_context == hardware_context::controller_playstation_4)
-          {
-            result.get_hardware_index = hardware_index_for_ps4_vkey;
-          }
+          result.get_hardware_index = hardware_index_lookup_from_context(result.detected_context, main_key);
+          ::RegCloseKey(main_key);
+          ::RegCloseKey(user_key);
         }
       }
 
@@ -287,11 +278,212 @@ namespace siege::views
     std::shared_ptr<void> file_handle;
   };
 
-  SHORT to_s16(USHORT, ULONG value_usages);
-  std::pair<BYTE, BYTE> to_byte_pair(USHORT, ULONG value_usages);
-  BYTE to_byte(USHORT caps, ULONG usage);
+  constexpr SHORT to_s16(USHORT, ULONG value_usages);
+  constexpr LONG to_s32(USHORT, ULONG value_usages);
+  constexpr std::pair<BYTE, BYTE> to_byte_pair(USHORT, ULONG value_usages);
+  constexpr BYTE to_byte(USHORT caps, ULONG usage);
 
   std::optional<XINPUT_STATE> get_xinput_state(HANDLE file_handle);
+
+  std::set<std::uint32_t> hardware_buttons(const controller_state& state)
+  {
+    if (!state.caps.has_value())
+    {
+      return {};
+    }
+
+    const hid_caps* caps = std::any_cast<hid_caps>(&state.caps);
+
+    std::set<std::uint32_t> results;
+    for (auto& button_cap : caps->button_caps)
+    {
+      results.emplace(button_cap.Range.UsageMin);
+    }
+
+    return results;
+  }
+
+  std::set<std::uint32_t> hardware_axes(const controller_state& state)
+  {
+    if (!state.caps.has_value())
+    {
+      return {};
+    }
+
+    const hid_caps* caps = std::any_cast<hid_caps>(&state.caps);
+    std::set<std::uint32_t> results;
+
+    for (auto& value_cap : caps->value_caps)
+    {
+      if (!(value_cap.Range.UsageMin >= HID_USAGE_GENERIC_X && value_cap.Range.UsageMin <= HID_USAGE_GENERIC_SLIDER))
+      {
+        continue;
+      }
+      results.emplace(value_cap.Range.UsageMin - HID_USAGE_GENERIC_X);
+    }
+
+    return results;
+  }
+
+  std::uint32_t hardware_hat_count(const controller_state& state)
+  {
+    if (!state.caps.has_value())
+    {
+      return 0;
+    }
+
+    const hid_caps* caps = std::any_cast<hid_caps>(&state.caps);
+
+    auto count = std::count_if(caps->value_caps.begin(), caps->value_caps.end(), [](auto& value_cap) {
+      return value_cap.Range.UsageMin == HID_USAGE_GENERIC_HATSWITCH;
+    });
+
+    return static_cast<std::uint32_t>(count);
+  }
+
+  DIJOYSTATE get_raw_state_for_handle(controller_state& state, HRAWINPUT handle)
+  {
+    DIJOYSTATE result{};
+    hid_caps* caps = std::any_cast<hid_caps>(&state.caps);
+
+    UINT buffer_size{};
+    ::GetRawInputData(handle, RID_INPUT, nullptr, &buffer_size, sizeof(RAWINPUTHEADER));
+
+    if (!buffer_size)
+    {
+      return result;
+    }
+
+    caps->buffer.resize(buffer_size);
+    caps->buffer.resize(::GetRawInputData(handle, RID_INPUT, caps->buffer.data(), &buffer_size, sizeof(RAWINPUTHEADER)));
+
+    if (caps->buffer.empty())
+    {
+      return result;
+    }
+
+    std::span<RAWINPUT> input_data((RAWINPUT*)caps->buffer.data(), caps->buffer.size() / sizeof(RAWINPUT));
+
+    for (auto& raw_input : input_data)
+    {
+      if (raw_input.header.dwType != RIM_TYPEHID)
+      {
+        continue;
+      }
+
+      ::GetRawInputDeviceInfoW(raw_input.header.hDevice, RIDI_PREPARSEDDATA, nullptr, &buffer_size);
+      caps->secondary.resize(buffer_size);
+      ::GetRawInputDeviceInfoW(raw_input.header.hDevice, RIDI_PREPARSEDDATA, caps->secondary.data(), &buffer_size);
+      PHIDP_PREPARSED_DATA preparsed = (PHIDP_PREPARSED_DATA)caps->secondary.data();
+
+      for (auto& [button, usages] : caps->button_usages)
+      {
+        if (button->UsagePage != HID_USAGE_PAGE_BUTTON)
+        {
+          continue;
+        }
+
+        auto count = (button->Range.UsageMax - button->Range.UsageMin + 1);
+        usages.resize(count);
+        ULONG size = usages.size();
+        auto status = ::HidP_GetUsages(HidP_Input, button->UsagePage, 0, usages.data(), &size, preparsed, (PCHAR)raw_input.data.hid.bRawData, raw_input.data.hid.dwSizeHid);
+        usages.resize(size);
+
+        if (status != HIDP_STATUS_SUCCESS)
+        {
+          continue;
+        }
+
+        for (auto i = 0; i < usages.size(); ++i)
+        {
+          auto usage = usages[i] - button->Range.UsageMin;
+          if (usage >= 32)
+          {
+            break;
+          }
+          result.rgbButtons[usage] = 255;
+        }
+      }
+
+      for (auto i = 0; i < caps->value_caps.size(); ++i)
+      {
+        auto& value = caps->value_caps[i];
+        auto& usage = caps->value_usages[i];
+        auto status = ::HidP_GetUsageValue(HidP_Input, value.UsagePage, 0, value.Range.UsageMin, &usage, preparsed, (PCHAR)raw_input.data.hid.bRawData, raw_input.data.hid.dwSizeHid);
+
+        if (status != HIDP_STATUS_SUCCESS)
+        {
+          continue;
+        }
+
+        if (value.Range.UsageMin == HID_USAGE_GENERIC_HATSWITCH && value.BitSize == 4)
+        {
+          if (usage == 0 && value.LogicalMin != 0)
+          {
+            continue;
+          }
+
+
+          usage = usage - value.LogicalMin;
+          // For indicators that have only five positions, the value for a controller is - 1, 0, 9,000, 18,000, or 27,000.
+          /*if (usage == 0 || usage == 1 || usage == 7)
+          {
+            result.Gamepad.wButtons |= XINPUT_GAMEPAD_DPAD_UP;
+          }
+
+          if (usage == 1 || usage == 2 || usage == 3)
+          {
+            result.Gamepad.wButtons |= XINPUT_GAMEPAD_DPAD_RIGHT;
+          }
+
+          if (usage == 3 || usage == 4 || usage == 5)
+          {
+            result.Gamepad.wButtons |= XINPUT_GAMEPAD_DPAD_DOWN;
+          }
+
+          if (usage == 5 || usage == 6 || usage == 7)
+          {
+            result.Gamepad.wButtons |= XINPUT_GAMEPAD_DPAD_LEFT;
+          }*/
+
+          continue;
+        }
+
+        switch (value.Range.UsageMin)
+        {
+        case HID_USAGE_GENERIC_X: {
+          result.lX = to_s32(value.BitSize, usage);
+          break;
+        }
+        case HID_USAGE_GENERIC_Y: {
+          result.lY = to_s32(value.BitSize, usage);
+          break;
+        }
+        case HID_USAGE_GENERIC_Z: {
+          result.lZ = to_s32(value.BitSize, usage);
+          break;
+        }
+        case HID_USAGE_GENERIC_RX: {
+          result.lRx = to_s32(value.BitSize, usage);
+          break;
+        }
+        case HID_USAGE_GENERIC_RY: {
+          result.lRy = to_s32(value.BitSize, usage);
+          break;
+        }
+        case HID_USAGE_GENERIC_RZ: {
+          result.lRz = to_s32(value.BitSize, usage);
+          break;
+        }
+        default:
+          break;
+        }
+      }
+    }
+
+    return result;
+  }
+
 
   XINPUT_STATE get_current_state_for_handle(controller_state& state, HRAWINPUT handle)
   {
@@ -378,18 +570,20 @@ namespace siege::views
               continue;
             }
 
-            if (state.info.get_hardware_index(button.first, controller_info::prefer_button).index == usage)
+            if (auto index = state.info.get_hardware_index(button.first, controller_info::prefer_button); index && index->index == usage)
             {
               result.Gamepad.wButtons |= button.second;
               break;
             }
 
-            if (caps->has_triggers_as_buttons && state.info.get_hardware_index(VK_GAMEPAD_LEFT_TRIGGER, controller_info::prefer_button).index == usage)
+            if (auto index = state.info.get_hardware_index(VK_GAMEPAD_LEFT_TRIGGER, controller_info::prefer_button);
+              caps->has_triggers_as_buttons && index && index->index == usage)
             {
               result.Gamepad.bLeftTrigger = 255;
             }
 
-            if (caps->has_triggers_as_buttons && state.info.get_hardware_index(VK_GAMEPAD_RIGHT_TRIGGER, controller_info::prefer_button).index == usage)
+            if (auto index = state.info.get_hardware_index(VK_GAMEPAD_RIGHT_TRIGGER, controller_info::prefer_button);
+              caps->has_triggers_as_buttons && index && index->index == usage)
             {
               result.Gamepad.bRightTrigger = 255;
             }
@@ -440,33 +634,36 @@ namespace siege::views
         }
 
         auto index = value.Range.UsageMin - HID_USAGE_GENERIC_X;
-        if (state.info.get_hardware_index(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, controller_info::prefer_value).index == index)
+
+
+        if (auto ll_index = state.info.get_hardware_index(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, controller_info::prefer_axis); ll_index && ll_index->index == index)
         {
           result.Gamepad.sThumbLX = to_s16(value.BitSize, usage);
         }
-        else if (state.info.get_hardware_index(VK_GAMEPAD_LEFT_THUMBSTICK_UP, controller_info::prefer_value).index == index)
+        else if (auto lu_index = state.info.get_hardware_index(VK_GAMEPAD_LEFT_THUMBSTICK_UP, controller_info::prefer_axis); lu_index && lu_index->index == index)
         {
           result.Gamepad.sThumbLY = -to_s16(value.BitSize, usage);
         }
-        else if (state.info.get_hardware_index(VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, controller_info::prefer_value).index == index)
+        else if (auto rl_index = state.info.get_hardware_index(VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, controller_info::prefer_axis); rl_index && rl_index->index == index)
         {
           result.Gamepad.sThumbRX = to_s16(value.BitSize, usage);
         }
-        else if (state.info.get_hardware_index(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, controller_info::prefer_value).index == index)
+        else if (auto ru_index = state.info.get_hardware_index(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, controller_info::prefer_axis); ru_index && ru_index->index == index)
         {
           result.Gamepad.sThumbRY = -to_s16(value.BitSize, usage);
         }
-        else if (caps->trigger_value_count == 1 && state.info.get_hardware_index(VK_GAMEPAD_LEFT_TRIGGER, controller_info::prefer_value).index == index)
+        else if (auto lt_index = state.info.get_hardware_index(VK_GAMEPAD_LEFT_TRIGGER, controller_info::prefer_axis); caps->trigger_value_count == 1 && lt_index && lt_index->index == index)
         {
           auto [left, right] = to_byte_pair(value.BitSize, usage);
           result.Gamepad.bLeftTrigger = left;
           result.Gamepad.bRightTrigger = right;
         }
-        else if (caps->trigger_value_count >= 2 && state.info.get_hardware_index(VK_GAMEPAD_LEFT_TRIGGER, controller_info::prefer_value).index == index)
+        else if (caps->trigger_value_count >= 2 && lt_index && lt_index->index == index)
         {
           result.Gamepad.bLeftTrigger = to_byte(value.BitSize, usage);
         }
-        else if (caps->trigger_value_count >= 2 && state.info.get_hardware_index(VK_GAMEPAD_RIGHT_TRIGGER, controller_info::prefer_value).index == index)
+        else if (auto rt_index = state.info.get_hardware_index(VK_GAMEPAD_RIGHT_TRIGGER, controller_info::prefer_axis);
+          caps->trigger_value_count >= 2 && rt_index && rt_index->index == index)
         {
           result.Gamepad.bRightTrigger = to_byte(value.BitSize, usage);
         }
@@ -605,6 +802,38 @@ namespace siege::views
     return (int)hint >= (int)hardware_context::global && (int)hint <= (int)hardware_context::mouse_wheel;
   }
 
+
+  controller_info store_controller_context(const controller_info& info, siege::platform::hardware_context context)
+  {
+    if (is_non_controller_context(context))
+    {
+      return info;
+    }
+
+    auto result = info;
+
+    result.detected_context = context;
+
+    std::wstring key = L"Software\\The Siege Hub\\Siege Studio\\ControllerCache";
+    HKEY user_key = nullptr;
+    HKEY main_key = nullptr;
+    auto access = KEY_QUERY_VALUE | KEY_READ | KEY_SET_VALUE;
+
+    key = key + L"\\" + std::to_wstring(result.vendor_product_id.first) + std::wstring(L"\\") + std::to_wstring(result.vendor_product_id.second);
+    if (::RegOpenCurrentUser(access, &user_key) == ERROR_SUCCESS && ::RegCreateKeyExW(user_key, key.c_str(), 0, nullptr, 0, access, nullptr, &main_key, nullptr) == ERROR_SUCCESS)
+    {
+      auto str = context_to_string(result.detected_context);
+      ::RegSetValueExW(main_key, L"ControllerContext", 0, REG_SZ, (BYTE*)str.data(), str.size() * sizeof(wchar_t));
+
+      result.get_hardware_index = hardware_index_lookup_from_context(result.detected_context, main_key);
+
+      ::RegCloseKey(main_key);
+      ::RegCloseKey(user_key);
+    }
+
+    return result;
+  }
+
   controller_info detect_and_store_controller_context_from_hint(const controller_info& info, hardware_context hint)
   {
     if (is_non_controller_context(hint))
@@ -622,31 +851,90 @@ namespace siege::views
       if (result.device_name.contains(L"4"))
       {
         result.detected_context = hardware_context::controller_playstation_4;
-        result.get_hardware_index = hardware_index_for_ps4_vkey;
       }
       else
       {
         result.detected_context = hardware_context::controller_playstation_3;
-        result.get_hardware_index = hardware_index_for_ps3_vkey;
       }
     }
 
-    std::wstring key = L"Software\\The Siege Hub\\Siege Studio\\ControllerCache";
-    HKEY user_key = nullptr;
-    HKEY main_key = nullptr;
-    auto access = KEY_QUERY_VALUE | KEY_READ | KEY_SET_VALUE;
+    return store_controller_context(result, hint);
+  }
 
-    key = key + L"\\" + std::to_wstring(result.vendor_product_id.first) + std::wstring(L"\\") + std::to_wstring(result.vendor_product_id.second);
-    if (::RegOpenCurrentUser(access, &user_key) == ERROR_SUCCESS && ::RegCreateKeyExW(user_key, key.c_str(), 0, nullptr, 0, access, nullptr, &main_key, nullptr) == ERROR_SUCCESS)
+  std::set<std::uint32_t> mapped_buttons(const controller_info& info)
+  {
+    if (!info.get_hardware_index)
     {
-      auto str = context_to_string(result.detected_context);
-      ::RegSetValueExW(main_key, L"ControllerContext", 0, REG_SZ, (BYTE*)str.data(), str.size() * sizeof(wchar_t));
+      return {};
+    }
+    std::set<std::uint32_t> indexes;
+    for (auto i = VK_GAMEPAD_A; i <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT; ++i)
+    {
+      auto value = info.get_hardware_index(i, controller_info::button_preference::prefer_button);
 
-      ::RegCloseKey(main_key);
-      ::RegCloseKey(user_key);
+      if (!value)
+      {
+        continue;
+      }
+      if (value->type != input_type::button)
+      {
+        continue;
+      }
+      indexes.emplace(value->index);
     }
 
-    return result;
+    return indexes;
+  }
+
+  std::set<std::uint32_t> mapped_axes(const controller_info& info)
+  {
+    if (!info.get_hardware_index)
+    {
+      return {};
+    }
+    std::set<std::uint32_t> indexes;
+    for (auto i = VK_GAMEPAD_A; i <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT; ++i)
+    {
+      auto value = info.get_hardware_index(i, controller_info::button_preference::prefer_button);
+
+      if (!value)
+      {
+        continue;
+      }
+      if (value->type != input_type::axis)
+      {
+        continue;
+      }
+      indexes.emplace(value->index);
+    }
+
+    return indexes;
+  }
+
+  std::uint32_t mapped_hat_count(const controller_info& info)
+  {
+    if (!info.get_hardware_index)
+    {
+      return 0;
+    }
+
+    std::set<siege::views::hardware_index> indexes;
+    for (auto i = VK_GAMEPAD_A; i <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT; ++i)
+    {
+      auto value = info.get_hardware_index(i, controller_info::button_preference::prefer_button);
+
+      if (!value)
+      {
+        continue;
+      }
+      if (value->type != input_type::hat)
+      {
+        continue;
+      }
+      indexes.emplace(*value);
+    }
+
+    return (std::uint32_t)indexes.size();
   }
 
   std::span<std::pair<WORD, std::uint16_t>> get_changes(const XINPUT_STATE& a, const XINPUT_STATE& b, std::span<std::pair<WORD, std::uint16_t>> buffer)
@@ -703,236 +991,98 @@ namespace siege::views
     return std::span(buffer.begin(), buffer.begin() + result);
   }
 
-  hardware_context string_to_context(std::wstring_view value)
-  {
-    if (value == L"xbox")
-    {
-      return hardware_context::controller_xbox;
-    }
-
-    if (value == L"playstation_3")
-    {
-      return hardware_context::controller_playstation_3;
-    }
-
-    if (value == L"playstation_4")
-    {
-      return hardware_context::controller_playstation_4;
-    }
-
-    if (value == L"pro_controller")
-    {
-      return hardware_context::controller_nintendo;
-    }
-
-    return hardware_context::global;
-  }
-
-  std::wstring_view context_to_string(hardware_context value)
-  {
-    if (value == hardware_context::controller_xbox)
-    {
-      return L"xbox";
-    }
-
-    if (value == hardware_context::controller_playstation_3)
-    {
-      return L"playstation_3";
-    }
-
-    if (value == hardware_context::controller_playstation_4)
-    {
-      return L"playstation_4";
-    }
-
-    if (value == hardware_context::controller_nintendo)
-    {
-      return L"pro_controller";
-    }
-
-    return L"global";
-  }
-
-
   constexpr USAGE to_index(USAGE value)
   {
     return value - HID_USAGE_GENERIC_X;
   }
 
-  hardware_index hardware_index_for_xbox_vkey(SHORT vkey, controller_info::button_preference)
-  {
-    switch (vkey)
-    {
-    case VK_GAMEPAD_A:
-      return { hardware_index::button, 0 };
-    case VK_GAMEPAD_B:
-      return { hardware_index::button, 1 };
-    case VK_GAMEPAD_X:
-      return { hardware_index::button, 2 };
-    case VK_GAMEPAD_Y:
-      return { hardware_index::button, 3 };
-    case VK_GAMEPAD_LEFT_SHOULDER:
-      return { hardware_index::button, 4 };
-    case VK_GAMEPAD_RIGHT_SHOULDER:
-      return { hardware_index::button, 5 };
-    case VK_GAMEPAD_VIEW:
-      return { hardware_index::button, 6 };
-    case VK_GAMEPAD_MENU:
-      return { hardware_index::button, 7 };
-    case VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON:
-      return { hardware_index::button, 8 };
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON:
-      return { hardware_index::button, 9 };
-    case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
-    case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT:
-      return { hardware_index::value, to_index(HID_USAGE_GENERIC_X) };
-    case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
-    case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN:
-      return { hardware_index::value, to_index(HID_USAGE_GENERIC_Y) };
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT:
-      return { hardware_index::value, to_index(HID_USAGE_GENERIC_RX) };
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN:
-      return { hardware_index::value, to_index(HID_USAGE_GENERIC_RY) };
-    case VK_GAMEPAD_LEFT_TRIGGER:
-    case VK_GAMEPAD_RIGHT_TRIGGER:
-      return { hardware_index::value, to_index(HID_USAGE_GENERIC_Z) };
-    default:
-      return {};
-    }
-  }
-
-  hardware_index hardware_index_for_ps3_vkey(SHORT vkey, controller_info::button_preference)
-  {
-    switch (vkey)
-    {
-    case VK_GAMEPAD_X:// ps3/ps4 square
-      return { hardware_index::button, 0 };
-    case VK_GAMEPAD_A:// ps3/ps4 cross
-      return { hardware_index::button, 1 };
-    case VK_GAMEPAD_B:// ps3/ps4 circle
-      return { hardware_index::button, 2 };
-    case VK_GAMEPAD_Y:// ps3/ps4 triangle
-      return { hardware_index::button, 3 };
-    case VK_GAMEPAD_LEFT_SHOULDER:
-      return { hardware_index::button, 4 };
-    case VK_GAMEPAD_RIGHT_SHOULDER:
-      return { hardware_index::button, 5 };
-    case VK_GAMEPAD_LEFT_TRIGGER:
-      return { hardware_index::button, 6 };
-    case VK_GAMEPAD_RIGHT_TRIGGER:
-      return { hardware_index::button, 7 };
-    case VK_GAMEPAD_VIEW:
-      return { hardware_index::button, 8 };
-    case VK_GAMEPAD_MENU:
-      return { hardware_index::button, 9 };
-    case VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON:
-      return { hardware_index::button, 10 };
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON:
-      return { hardware_index::button, 11 };
-    case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
-    case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT:
-      return { hardware_index::value, to_index(HID_USAGE_GENERIC_X) };
-    case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
-    case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN:
-      return { hardware_index::value, to_index(HID_USAGE_GENERIC_Y) };
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT:
-      return { hardware_index::value, to_index(HID_USAGE_GENERIC_Z) };
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN:
-      return { hardware_index::value, to_index(HID_USAGE_GENERIC_RZ) };
-    default:
-      return {};
-    }
-  }
-
-  hardware_index hardware_index_for_ps4_vkey(SHORT vkey, controller_info::button_preference prefer_button)
-  {
-    switch (vkey)
-    {
-    case VK_GAMEPAD_X:// ps3/ps4 square
-      return { hardware_index::button, 0 };
-    case VK_GAMEPAD_A:// ps3/ps4 cross
-      return { hardware_index::button, 1 };
-    case VK_GAMEPAD_B:// ps3/ps4 circle
-      return { hardware_index::button, 2 };
-    case VK_GAMEPAD_Y:// ps3/ps4 triangle
-      return { hardware_index::button, 3 };
-    case VK_GAMEPAD_LEFT_SHOULDER:
-      return { hardware_index::button, 4 };
-    case VK_GAMEPAD_RIGHT_SHOULDER:
-      return { hardware_index::button, 5 };
-    case VK_GAMEPAD_VIEW:
-      return { hardware_index::button, 8 };
-    case VK_GAMEPAD_MENU:
-      return { hardware_index::button, 9 };
-    case VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON:
-      return { hardware_index::button, 10 };
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON:
-      return { hardware_index::button, 11 };
-    case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
-    case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT:
-      return { hardware_index::value, to_index(HID_USAGE_GENERIC_X) };
-    case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
-    case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN:
-      return { hardware_index::value, to_index(HID_USAGE_GENERIC_Y) };
-    case VK_GAMEPAD_LEFT_TRIGGER: {
-      if (prefer_button)
-      {
-        return { hardware_index::button, 6 };
-      }
-
-      return { hardware_index::value, to_index(HID_USAGE_GENERIC_RX) };
-    }
-    case VK_GAMEPAD_RIGHT_TRIGGER: {
-
-      if (prefer_button)
-      {
-        return { hardware_index::button, 7 };
-      }
-
-      return { hardware_index::value, to_index(HID_USAGE_GENERIC_RY) };
-    }
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT:
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT:
-      return { hardware_index::value, to_index(HID_USAGE_GENERIC_Z) };
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_UP:
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN:
-      return { hardware_index::value, to_index(HID_USAGE_GENERIC_RZ) };
-    default:
-      return {};
-    }
-  }
-
-  winmm_hardware_index map_hid_to_winmm(hardware_index index)
+  winmm_hardware_index map_hid_to_winmm(hardware_index index, const std::set<std::uint32_t>& axis_indexes)
   {
     winmm_hardware_index result{};
-    std::memcpy(&result, &index, sizeof(index));
+    result.index = index.index;
+    result.type = index.type;
 
-    if (result.type == hardware_index::value)
+    if (result.type == input_type::axis)
     {
-      auto x_offset = offsetof(JOYINFOEX, dwXpos);
+      static_assert(sizeof(JOYINFOEX::dwXpos) == sizeof(JOYINFOEX::dwRpos));
+      static_assert(sizeof(JOYINFOEX::dwXpos) == sizeof(JOYINFOEX::dwRpos));
+      static_assert(sizeof(JOYINFOEX::dwXpos) == sizeof(JOYINFOEX::dwUpos));
+      static_assert(sizeof(JOYINFOEX::dwXpos) == sizeof(JOYINFOEX::dwVpos));
+      constexpr auto x_offset = offsetof(JOYINFOEX, dwXpos);
+      constexpr auto r_offset = offsetof(JOYINFOEX, dwRpos);
+      constexpr auto u_offset = offsetof(JOYINFOEX, dwUpos);
+      constexpr auto v_offset = offsetof(JOYINFOEX, dwVpos);
+
       // derived from notes here: https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ee416627(v=vs.85)
       // and here: https://learn.microsoft.com/en-us/previous-versions/dd757112(v=vs.85)
-      if (result.index == to_index(HID_USAGE_GENERIC_RZ))
+      const auto is_rotation = [](auto index) {
+        return index == to_index(HID_USAGE_GENERIC_RZ) || index == to_index(HID_USAGE_GENERIC_RY) || index == to_index(HID_USAGE_GENERIC_RX);
+      };
+
+      std::map<std::uint32_t, std::uint32_t> rotations;
+
+      std::uint32_t to_add = 0;
+      for (auto iter = axis_indexes.rbegin(); iter != axis_indexes.rend(); ++iter)
       {
-        result.index = offsetof(JOYINFOEX, dwRpos) - x_offset;
+        if (!is_rotation(*iter))
+        {
+          continue;
+        }
+
+        if (rotations.size() == 3)
+        {
+          continue;
+        }
+
+        auto r_index = (r_offset - x_offset) / sizeof(JOYINFOEX::dwXpos);
+
+        rotations.emplace(*iter, r_index + to_add);
+        ++to_add;
       }
-      else if (result.index == to_index(HID_USAGE_GENERIC_RY))
+
+      if (is_rotation(result.index))
       {
-        result.index = offsetof(JOYINFOEX, dwUpos) - x_offset;
-      }
-      else if (result.index == to_index(HID_USAGE_GENERIC_RX))
-      {
-        result.index = offsetof(JOYINFOEX, dwVpos) - x_offset;
+        if (rotations.size() == 1)
+        {
+          result.index = (r_offset - x_offset) / sizeof(JOYINFOEX::dwXpos);
+        }
+        else
+        {
+          auto iter = rotations.find(result.index);
+
+          if (iter != rotations.end())
+          {
+            result.index = iter->second;
+          }
+        }
       }
     }
     return result;
   }
 
-  SHORT to_s16(USHORT bit_size, ULONG usage)
+  constexpr LONG to_s32(USHORT bit_size, ULONG usage)
+  {
+    if (bit_size == 16)
+    {
+      std::int64_t scaled = (std::int64_t)usage * (65535LL + 2);
+
+      return (std::int32_t)(scaled + std::numeric_limits<std::int32_t>::min());
+    }
+
+    if (bit_size == 8)
+    {
+      return to_s32(16, usage * 257);
+    }
+
+    return 0;
+  }
+
+  static_assert(to_s32(16, 65535) == std::numeric_limits<std::int32_t>::max());
+  static_assert(to_s32(16, 0) == std::numeric_limits<std::int32_t>::min());
+  static_assert(to_s32(8, 255) == std::numeric_limits<std::int32_t>::max());
+  static_assert(to_s32(8, 0) == std::numeric_limits<std::int32_t>::min());
+
+  constexpr SHORT to_s16(USHORT bit_size, ULONG usage)
   {
     if (bit_size == 16)
     {
@@ -947,7 +1097,12 @@ namespace siege::views
     return 0;
   }
 
-  BYTE to_byte(USHORT bit_size, ULONG usage)
+  static_assert(to_s16(16, 65535) == std::numeric_limits<std::int16_t>::max());
+  static_assert(to_s16(16, 0) == std::numeric_limits<std::int16_t>::min());
+  static_assert(to_s16(8, 255) == std::numeric_limits<std::int16_t>::max());
+  static_assert(to_s16(8, 0) == std::numeric_limits<std::int16_t>::min());
+
+  constexpr BYTE to_byte(USHORT bit_size, ULONG usage)
   {
     if (bit_size == 16)
     {
@@ -968,7 +1123,12 @@ namespace siege::views
     return 0;
   }
 
-  std::pair<BYTE, BYTE> to_byte_pair(USHORT bit_size, ULONG usage)
+  static_assert(to_byte(16, 65535) == 255);
+  static_assert(to_byte(16, 0) == 0);
+  static_assert(to_byte(8, 255) == 255);
+  static_assert(to_byte(8, 0) == 0);
+
+  constexpr std::pair<BYTE, BYTE> to_byte_pair(USHORT bit_size, ULONG usage)
   {
     if (bit_size == 16)
     {
@@ -1001,4 +1161,255 @@ namespace siege::views
     return storage;
   }
 
+  std::wstring category_for_vkey(SHORT vkey, siege::platform::hardware_context context)
+  {
+    using namespace siege::platform;
+    if (vkey >= VK_LBUTTON && vkey <= VK_XBUTTON2)
+    {
+      return L"Mouse";
+    }
+
+    if (context == hardware_context::mouse || context == hardware_context::mouse_wheel)
+    {
+      return L"Mouse";
+    }
+
+    if (vkey >= VK_GAMEPAD_A && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)
+    {
+      return L"Controller";
+    }
+
+    if (context == hardware_context::controller_xbox || context == hardware_context::controller_playstation_3 || context == hardware_context::controller_playstation_4 || context == hardware_context::controller_nintendo || context == hardware_context::steering_wheel || context == hardware_context::pedal || context == hardware_context::joystick || context == hardware_context::throttle)
+    {
+      return L"Controller";
+    }
+
+    return L"Keyboard";
+  }
+
+  std::wstring label_for_vkey(SHORT vkey, siege::platform::controller_context context)
+  {
+    static std::map<std::wstring_view, SHORT> xbox_labels{
+      { L"A Button", VK_GAMEPAD_A },
+      { L"B Button", VK_GAMEPAD_B },
+      { L"X Button", VK_GAMEPAD_X },
+      { L"Y Button", VK_GAMEPAD_Y },
+      { L"Left Bumper", VK_GAMEPAD_LEFT_SHOULDER },
+      { L"Right Bumper", VK_GAMEPAD_RIGHT_SHOULDER },
+      { L"Left Trigger", VK_GAMEPAD_LEFT_TRIGGER },
+      { L"Right Trigger", VK_GAMEPAD_RIGHT_TRIGGER },
+      { L"D-pad Up", VK_GAMEPAD_DPAD_UP },
+      { L"D-pad Down", VK_GAMEPAD_DPAD_DOWN },
+      { L"D-pad Left", VK_GAMEPAD_DPAD_LEFT },
+      { L"D-pad Right", VK_GAMEPAD_DPAD_RIGHT },
+      { L"Left Stick Button", VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON },
+      { L"Left Stick Up", VK_GAMEPAD_LEFT_THUMBSTICK_UP },
+      { L"Left Stick Down", VK_GAMEPAD_LEFT_THUMBSTICK_DOWN },
+      { L"Left Stick Left", VK_GAMEPAD_LEFT_THUMBSTICK_LEFT },
+      { L"Left Stick Right", VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT },
+      { L"Right Stick Button", VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON },
+      { L"Right Stick Up", VK_GAMEPAD_RIGHT_THUMBSTICK_UP },
+      { L"Right Stick Down", VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN },
+      { L"Right Stick Left", VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT },
+      { L"Right Stick Right", VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT },
+      { L"View Button", VK_GAMEPAD_VIEW },
+      { L"Menu Button", VK_GAMEPAD_MENU },
+    };
+
+    static std::map<std::wstring_view, SHORT> playstation_labels{
+      { L"Cross Button", VK_GAMEPAD_A },
+      { L"Circle Button", VK_GAMEPAD_B },
+      { L"Square Button", VK_GAMEPAD_X },
+      { L"Triangle Button", VK_GAMEPAD_Y },
+      { L"L1", VK_GAMEPAD_LEFT_SHOULDER },
+      { L"R1", VK_GAMEPAD_RIGHT_SHOULDER },
+      { L"L2", VK_GAMEPAD_LEFT_TRIGGER },
+      { L"R2", VK_GAMEPAD_RIGHT_TRIGGER },
+      { L"L3", VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON },
+      { L"R3", VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON },
+      { L"Select Button", VK_GAMEPAD_VIEW },
+      { L"Start Button", VK_GAMEPAD_MENU },
+    };
+
+    if (context == controller_context::controller_playstation_3 || context == controller_context::controller_playstation_4)
+    {
+      auto label = std::find_if(playstation_labels.begin(), playstation_labels.end(), [vkey](auto& name) { return name.second == vkey; });
+
+      if (label != playstation_labels.end())
+      {
+        return std::wstring{ label->first };
+      }
+    }
+
+    auto label = std::find_if(xbox_labels.begin(), xbox_labels.end(), [vkey](auto& name) { return name.second == vkey; });
+
+    if (label == xbox_labels.end())
+    {
+      return L"";
+    }
+
+    return std::wstring{ label->first };
+  }
+
+  std::wstring label_for_vkey(SHORT vkey, siege::platform::hardware_context context)
+  {
+    constexpr static auto directions = std::array<std::wstring_view, 4>{
+      {
+        std::wstring_view(L"Left"),
+        std::wstring_view(L"Up"),
+        std::wstring_view(L"Right"),
+        std::wstring_view(L"Down"),
+      }
+    };
+
+    if (context == siege::platform::hardware_context::mouse)
+    {
+      if (vkey >= VK_LEFT && vkey <= VK_DOWN)
+      {
+        std::wstring result(L"Move ");
+        result.append(directions[vkey - VK_LEFT]);
+        return result;
+      }
+    }
+
+    if (context == siege::platform::hardware_context::mouse_wheel)
+    {
+      if (vkey >= VK_LEFT && vkey <= VK_DOWN)
+      {
+        std::wstring result(L"Scroll ");
+        result.append(directions[vkey - VK_LEFT]);
+        return result;
+      }
+    }
+
+    if (vkey >= VK_NUMPAD0 && vkey <= VK_NUMPAD9)
+    {
+      std::wstring result(L"Numpad ");
+      result.push_back(L'0' + vkey - VK_NUMPAD0);
+      return result;
+    }
+
+    if (vkey >= VK_F1 && vkey <= VK_F9)
+    {
+      std::wstring result(1, 'F');
+      result.push_back(L'1' + vkey - VK_F1);
+      return result;
+    }
+
+    if (vkey >= VK_F10 && vkey <= VK_F19)
+    {
+      std::wstring result(1, 'F');
+      result.push_back(L'1');
+      result.push_back(L'0' + vkey - VK_F10);
+      return result;
+    }
+
+    if (vkey >= VK_F20 && vkey <= VK_F24)
+    {
+      std::wstring result(1, 'F');
+      result.push_back(L'2');
+      result.push_back(L'0' + vkey - VK_F20);
+      return result;
+    }
+
+    if (vkey >= VK_GAMEPAD_A && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)
+    {
+      return label_for_vkey(vkey, (siege::platform::controller_context)context);
+    }
+
+    switch (vkey)
+    {
+    case VK_LBUTTON:
+      return L"Left Button";
+    case VK_RBUTTON:
+      return L"Right Button";
+    case VK_MBUTTON:
+      return L"Middle Button";
+    case VK_XBUTTON1:
+      return L"Extra Button 1";
+    case VK_XBUTTON2:
+      return L"Extra Button 2";
+    case VK_TAB:
+      return L"Tab";
+    case VK_LCONTROL:
+      return L"Left Control";
+    case VK_RCONTROL:
+      return L"Right Control";
+    case VK_LMENU:
+      return L"Left Alt";
+    case VK_RMENU:
+      return L"Right Alt";
+    case VK_LSHIFT:
+      return L"Left Shift";
+    case VK_RSHIFT:
+      return L"Right Shift";
+    case VK_LWIN:
+      return L"Left Windows Key";
+    case VK_RWIN:
+      return L"Right Windows Key";
+    case VK_RETURN:
+      return L"Enter";
+    case VK_UP:
+      return L"Up Arrow";
+    case VK_DOWN:
+      return L"Down Arrow";
+    case VK_LEFT:
+      return L"Left Arrow";
+    case VK_RIGHT:
+      return L"Right Arrow";
+    case VK_SPACE:
+      return L"Spacebar";
+    case VK_SNAPSHOT:
+      return L"Print Screen";
+    case VK_CAPITAL:
+      return L"Caps Lock";
+    case VK_NUMLOCK:
+      return L"Num Lock";
+    case VK_SCROLL:
+      return L"Scroll Lock";
+    case VK_HOME:
+      return L"Home";
+    case VK_DELETE:
+      return L"Insert";
+    case VK_ESCAPE:
+      return L"Escape";
+    case VK_INSERT:
+      return L"Insert";
+    case VK_PRIOR:
+      return L"Page Down";
+    case VK_NEXT:
+      return L"Page Up";
+    case VK_PAUSE:
+      return L"Pause";
+    case VK_BACK:
+      return L"Backspace";
+    default:
+      return std::wstring(1, ::MapVirtualKeyW(vkey, MAPVK_VK_TO_CHAR));
+    }
+  }
+  std::function<std::optional<hardware_index>(SHORT, controller_info::button_preference)> hardware_index_lookup_from_context(hardware_context context, HKEY cache)
+  {
+    if (context == hardware_context::controller_xbox)
+    {
+      return hardware_index_for_xbox_vkey;
+    }
+    else if (context == hardware_context::controller_playstation_3)
+    {
+      return hardware_index_for_ps3_vkey;
+    }
+    else if (context == hardware_context::controller_playstation_4)
+    {
+      return hardware_index_for_ps4_vkey;
+    }
+    else if (context == hardware_context::joystick)
+    {
+      return hardware_index_for_joystick_vkey;
+    }
+    else if (context == hardware_context::custom)
+    {
+      return hardware_index_from_cache(cache);
+    }
+
+    return nullptr;
+  }
 }// namespace siege::views

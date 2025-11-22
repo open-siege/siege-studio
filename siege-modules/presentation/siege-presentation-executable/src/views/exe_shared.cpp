@@ -12,6 +12,7 @@
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
+namespace stl = std::ranges;
 
 namespace siege::views
 {
@@ -52,11 +53,15 @@ namespace siege::views
     std::optional<extension_setting_type> dedicated_setting_type{};
     std::optional<extension_setting_type> listen_setting_type{};
 
-    std::unique_ptr<siege::platform::game_command_line_args> final_args = std::make_unique<siege::platform::game_command_line_args>();
-
     std::map<fs::path, networking_support> detected_networking_support;
 
     std::vector<input_action_binding> bound_actions = { {} };
+
+    std::vector<const siege::fs_char*> flags;
+    std::vector<siege::platform::game_command_line_args::int_setting> int_settings;
+    std::vector<siege::platform::game_command_line_args::float_setting> float_settings;
+    std::vector<siege::platform::game_command_line_args::string_setting> string_settings;
+    std::vector<siege::platform::game_command_line_args::string_setting> environment_settings;
   };
 
   exe_state& get(std::any& cache)
@@ -102,6 +107,35 @@ namespace siege::views
   }
 
   constexpr static std::size_t char_size = sizeof(siege::fs_char);
+
+  auto convert_to_bool = [](auto& item) -> bool {
+    if constexpr (std::is_same_v<std::decay_t<decltype(item)>, bool>)
+    {
+      return item;
+    }
+
+    if constexpr (std::is_same_v<std::decay_t<decltype(item)>, int>)
+    {
+      return item != 0;
+    }
+
+    if constexpr (std::is_same_v<std::decay_t<decltype(item)>, float>)
+    {
+      return item != NAN;
+    }
+
+    if constexpr (std::is_same_v<std::decay_t<decltype(item)>, std::wstring>)
+    {
+      if (item.empty())
+      {
+        return false;
+      }
+
+      return item == L"Yes" || item == L"1";
+    }
+
+    return false;
+  };
 
   auto convert_to_string = [](auto& item) -> std::wstring {
     if constexpr (std::is_same_v<std::decay_t<decltype(item)>, bool>)
@@ -281,13 +315,6 @@ namespace siege::views
     }
 
     return std::visit(convert_to_string, value);
-  }
-
-  siege::platform::game_command_line_args& get_final_args(std::any& state)
-  {
-    auto& self = get(state);
-
-    return *self.final_args;
   }
 
   std::span<const siege::fs_string_view> get_executable_formats() noexcept
@@ -543,7 +570,8 @@ namespace siege::views
               });
             setting_iter != self.launch_settings.end())
           {
-            self.registry_data.zero_tier_enabled = true;
+             
+            self.registry_data.zero_tier_enabled = std::visit(convert_to_bool, setting_iter->value);
           } } });
 
       auto network_id = std::wstring{ settings.last_zero_tier_network_id.data() };
@@ -843,27 +871,23 @@ namespace siege::views
           {
           case extension_setting_type::env_setting: {
 
-            auto env_iter = std::find_if(self.final_args->environment_settings.begin(), self.final_args->environment_settings.end(), [&setting](auto& item) {
+            auto env_iter = stl::find_if(self.environment_settings, [&setting](auto& item) {
               return item.name && item.name == setting.setting_name;
             });
 
-            if (env_iter == self.final_args->environment_settings.end())
-            {
-              env_iter = std::find_if(self.final_args->environment_settings.begin(), self.final_args->environment_settings.end(), [&setting](auto& item) {
-                return !item.name;
-              });
-            }
-
-            if (env_iter == self.final_args->environment_settings.end())
-            {
-              return;
-            }
-
             if (!setting.enabled)
             {
-              env_iter->name = nullptr;
-              env_iter->value = nullptr;
+              if (env_iter != self.environment_settings.end())
+              {
+                self.environment_settings.erase(env_iter);
+              }
               return;
+            }
+
+            if (env_iter == self.environment_settings.end())
+            {
+              self.environment_settings.emplace_back();
+              env_iter = std::prev(self.environment_settings.end());
             }
 
             env_iter->name = setting.setting_name.c_str();
@@ -872,27 +896,23 @@ namespace siege::views
             break;
           }
           case extension_setting_type::string_setting: {
-            auto str_iter = std::find_if(self.final_args->string_settings.begin(), self.final_args->string_settings.end(), [&setting](auto& item) {
+            auto str_iter = stl::find_if(self.string_settings, [&setting](auto& item) {
               return item.name && item.name == setting.setting_name;
             });
 
-            if (str_iter == self.final_args->string_settings.end())
-            {
-              str_iter = std::find_if(self.final_args->string_settings.begin(), self.final_args->string_settings.end(), [&setting](auto& item) {
-                return !item.name;
-              });
-            }
-
-            if (str_iter == self.final_args->string_settings.end())
-            {
-              return;
-            }
-
             if (!setting.enabled)
             {
-              str_iter->name = nullptr;
-              str_iter->value = nullptr;
+              if (str_iter != self.string_settings.end())
+              {
+                self.string_settings.erase(str_iter);
+              }
               return;
+            }
+
+            if (str_iter == self.string_settings.end())
+            {
+              self.string_settings.emplace_back();
+              str_iter = std::prev(self.string_settings.end());
             }
 
             str_iter->name = setting.setting_name.c_str();
@@ -904,28 +924,23 @@ namespace siege::views
           case extension_setting_type::int_setting: {
             if (auto* value = std::get_if<int>(&setting.value); value)
             {
-              auto int_iter = std::find_if(self.final_args->int_settings.begin(), self.final_args->int_settings.end(), [&setting](auto& item) {
+              auto int_iter = stl::find_if(self.int_settings, [&setting](auto& item) {
                 return item.name && item.name == setting.setting_name;
               });
 
-              if (int_iter == self.final_args->int_settings.end())
-              {
-                int_iter = std::find_if(self.final_args->int_settings.begin(), self.final_args->int_settings.end(), [&setting](auto& item) {
-                  return !item.name;
-                });
-              }
-
-              if (int_iter == self.final_args->int_settings.end())
-              {
-                return;
-              }
-
-
               if (!setting.enabled)
               {
-                int_iter->name = nullptr;
-                int_iter->value = 0;
+                if (int_iter != self.int_settings.end())
+                {
+                  self.int_settings.erase(int_iter);
+                }
                 return;
+              }
+
+              if (int_iter == self.int_settings.end())
+              {
+                self.int_settings.emplace_back();
+                int_iter = std::prev(self.int_settings.end());
               }
 
               int_iter->name = setting.setting_name.c_str();
@@ -936,27 +951,23 @@ namespace siege::views
           case extension_setting_type::float_setting: {
             if (auto* value = std::get_if<float>(&setting.value); value)
             {
-              auto float_iter = std::find_if(self.final_args->float_settings.begin(), self.final_args->float_settings.end(), [&setting](auto& item) {
+              auto float_iter = stl::find_if(self.float_settings, [&setting](auto& item) {
                 return item.name && item.name == setting.setting_name;
               });
 
-              if (float_iter == self.final_args->float_settings.end())
-              {
-                float_iter = std::find_if(self.final_args->float_settings.begin(), self.final_args->float_settings.end(), [&setting](auto& item) {
-                  return !item.name;
-                });
-              }
-
-              if (float_iter == self.final_args->float_settings.end())
-              {
-                return;
-              }
-
               if (!setting.enabled)
               {
-                float_iter->name = nullptr;
-                float_iter->value = NAN;
+                if (float_iter != self.float_settings.end())
+                {
+                  self.float_settings.erase(float_iter);
+                }
                 return;
+              }
+
+              if (float_iter == self.float_settings.end())
+              {
+                self.float_settings.emplace_back();
+                float_iter = std::prev(self.float_settings.end());
               }
 
               float_iter->name = setting.setting_name.c_str();
@@ -969,36 +980,27 @@ namespace siege::views
             {
               if (*value && setting.enabled)
               {
-                auto flag_iter = std::find_if(self.final_args->flags.begin(), self.final_args->flags.end(), [&setting](auto& item) {
+                auto flag_iter = stl::find_if(self.flags, [&setting](auto& item) {
                   return item && item == setting.setting_name;
                 });
 
-                if (flag_iter != self.final_args->flags.end())
+                if (flag_iter != self.flags.end())
                 {
                   return;
                 }
-
-                flag_iter = std::find_if(self.final_args->flags.begin(), self.final_args->flags.end(), [&setting](auto& item) {
-                  return !item;
-                });
-
-                if (flag_iter == self.final_args->flags.end())
-                {
-                  return;
-                }
-                *flag_iter = setting.setting_name.c_str();
+                self.flags.emplace_back(setting.setting_name.c_str());
               }
               else
               {
-                auto flag_iter = std::find_if(self.final_args->flags.begin(), self.final_args->flags.end(), [&setting](auto& item) {
+                auto flag_iter = stl::find_if(self.flags, [&setting](auto& item) {
                   return item && item == setting.setting_name;
                 });
 
-                if (flag_iter == self.final_args->flags.end())
+                if (flag_iter == self.flags.end())
                 {
                   return;
                 }
-                *flag_iter = nullptr;
+                self.flags.erase(flag_iter);
               }
             }
             break;
@@ -1026,6 +1028,27 @@ namespace siege::views
 
     return self.launch_settings;
   }
+
+  siege::platform::owning_packaged_args get_packaged_args(std::any& state)
+  {
+    auto& self = get(state);
+
+    siege::platform::owning_packaged_args result{
+      .flags = self.flags,
+      .int_settings = self.int_settings,
+      .float_settings = self.float_settings,
+      .string_settings = self.string_settings,
+      .environment_settings = self.environment_settings,
+    };
+    result.flags.resize(32);
+    result.int_settings.resize(32);
+    result.float_settings.resize(32);
+    result.string_settings.resize(32);
+    result.environment_settings.resize(32);
+
+    return result;
+  }
+
 
   std::optional<std::reference_wrapper<game_setting>> get_game_setting(std::any& state, std::size_t index)
   {
@@ -2251,9 +2274,6 @@ namespace siege::views
 
     return std::nullopt;
   }
-
-  using apply_prelaunch_settings = HRESULT(const wchar_t* exe_path_str, const siege::platform::game_command_line_args*);
-  using format_command_line = const wchar_t**(const siege::platform::game_command_line_args*, std::uint32_t* new_size);
   bool allow_input_filtering = false;// TODO There are still some issues with id Tech 3 games that should be fixed.
 
 
@@ -2281,16 +2301,127 @@ namespace siege::views
     return false;
   }
 
-  HRESULT launch_game_with_extension(std::any& state, const siege::platform::game_command_line_args* game_args, PROCESS_INFORMATION* process_info) noexcept
+  void copy_args(siege::platform::packaged_args& game_args, siege::platform::game_command_line_args& old_args)
+  {
+    auto copy = [](auto& a, auto& b, std::size_t size) {
+      static_assert(sizeof(a[0]) == sizeof(b[0]));
+      for (auto i = 0U; i < size; ++i)
+      {
+        std::memcpy(&b[i], &a[i], sizeof(a[0]));
+      }
+    };
+    copy(game_args.int_settings, old_args.int_settings, std::clamp<std::size_t>(game_args.int_settings.size(), 0, old_args.int_settings.size()));
+    copy(game_args.float_settings, old_args.float_settings, std::clamp<std::size_t>(game_args.float_settings.size(), 0, old_args.float_settings.size()));
+    copy(game_args.string_settings, old_args.string_settings, std::clamp<std::size_t>(game_args.string_settings.size(), 0, old_args.string_settings.size()));
+    copy(game_args.flags, old_args.flags, std::clamp<std::size_t>(game_args.flags.size(), 0, old_args.flags.size()));
+    copy(game_args.environment_settings, old_args.environment_settings, std::clamp<std::size_t>(game_args.environment_settings.size(), 0, old_args.environment_settings.size()));
+    copy(game_args.controller_to_send_input_mappings, old_args.controller_to_send_input_mappings, std::clamp<std::size_t>(game_args.controller_to_send_input_mappings.size(), 0, old_args.controller_to_send_input_mappings.size()));
+
+    std::size_t action_size = std::clamp<std::size_t>(game_args.action_bindings.size(), 0, old_args.action_bindings.size());
+    std::size_t old_index = 0;
+    std::size_t fallback_index = stl::count_if(game_args.controller_to_send_input_mappings, [](auto& item) { return item.from_vkey != 0; });
+
+    for (auto i = 0U; i < action_size; ++i)
+    {
+      auto& action = game_args.action_bindings[i];
+
+      auto is_dpad_vkey = [&] {
+        return action.vkey == VK_GAMEPAD_DPAD_UP || action.vkey == VK_GAMEPAD_DPAD_DOWN || action.vkey == VK_GAMEPAD_DPAD_LEFT || action.vkey == VK_GAMEPAD_DPAD_RIGHT;
+      };
+
+      auto is_unmappable_dpad = [&] {
+        if (!siege::platform::is_for_controller(action.context))
+        {
+          return false;
+        }
+
+        if (action.hardware_input_type == input_type::hat && action.hardware_index == 0 && !is_dpad_vkey())
+        {
+          return true;
+        }
+        else if (action.hardware_input_type != input_type::hat && is_dpad_vkey())
+        {
+          return true;
+        }
+        else if (action.hardware_input_type == input_type::hat && is_dpad_vkey() && action.hardware_index != 0)
+        {
+          return true;
+        }
+
+        return false;
+      };
+
+      if (is_unmappable_dpad())
+      {
+        if (fallback_index > old_args.controller_to_send_input_mappings.size())
+        {
+          continue;
+        }
+
+        auto& fallback = old_args.controller_to_send_input_mappings[fallback_index];
+        using siege::platform::hardware_context::mouse;
+        using siege::platform::hardware_context::mouse_wheel;
+        using siege::platform::hardware_context::keyboard;
+        using siege::platform::hardware_context::keyboard_shifted;
+        using siege::platform::hardware_context::keypad;
+
+        auto existing = stl::find_if(game_args.action_bindings, [&](auto& binding) {
+          return binding.action_name == action.action_name && (binding.context == mouse || binding.context == mouse_wheel);
+        });
+
+        if (existing == game_args.action_bindings.end())
+        {
+          existing = stl::find_if(game_args.action_bindings, [&](auto& binding) {
+            return binding.action_name == action.action_name && (binding.context == keyboard || binding.context == keyboard_shifted || binding.context == keypad);
+          });
+        }
+
+        if (existing == game_args.action_bindings.end())
+        {
+          continue;
+        }
+
+        fallback.from_context = action.context;
+        fallback.from_vkey = action.vkey;
+        fallback.to_vkey = existing->vkey;
+        fallback.to_context = existing->context;
+        fallback_index++;
+      }
+      else
+      {
+        auto& old_action = old_args.action_bindings[old_index];
+        old_action.vkey = action.vkey;
+        old_action.hardware_index = action.hardware_index;
+        old_action.context = action.context;
+        old_action.action_name = action.action_name;
+        old_index++;
+      }
+    }
+  }
+
+  void copy_args(siege::platform::game_command_line_args& old_args, siege::platform::packaged_args& game_args)
+  {
+    auto copy = [](auto& a, auto& b, std::size_t size) {
+      static_assert(sizeof(a[0]) == sizeof(b[0]));
+      for (auto i = 0U; i < size; ++i)
+      {
+        std::memcpy(&b[i], &a[i], sizeof(a[0]));
+      }
+    };
+
+    copy(old_args.int_settings, game_args.int_settings, std::clamp<std::size_t>(old_args.int_settings.size(), 0, game_args.int_settings.size()));
+    copy(old_args.float_settings, game_args.float_settings, std::clamp<std::size_t>(old_args.float_settings.size(), 0, game_args.float_settings.size()));
+    copy(old_args.string_settings, game_args.string_settings, std::clamp<std::size_t>(old_args.string_settings.size(), 0, game_args.string_settings.size()));
+    copy(old_args.flags, game_args.flags, std::clamp<std::size_t>(old_args.flags.size(), 0, game_args.flags.size()));
+    copy(old_args.environment_settings, game_args.environment_settings, std::clamp<std::size_t>(old_args.environment_settings.size(), 0, game_args.environment_settings.size()));
+    copy(old_args.controller_to_send_input_mappings, game_args.controller_to_send_input_mappings, std::clamp<std::size_t>(old_args.controller_to_send_input_mappings.size(), 0, game_args.controller_to_send_input_mappings.size()));
+  }
+
+  HRESULT launch_game_with_extension(std::any& state, siege::platform::packaged_args& game_args, PROCESS_INFORMATION* process_info) noexcept
   {
     auto& self = get(state);
 
     std::error_code last_errorc;
-
-    if (!game_args)
-    {
-      return E_POINTER;
-    }
 
     if (!process_info)
     {
@@ -2345,7 +2476,7 @@ namespace siege::views
 
       auto zt_ext_path = get_zero_tier_extension_folder_path(state);
 
-      if (zt_ext_path && std::any_of(game_args->environment_settings.begin(), game_args->environment_settings.end(), zt_is_enabled) && std::any_of(game_args->environment_settings.begin(), game_args->environment_settings.end(), [](auto& item) {
+      if (zt_ext_path && stl::any_of(game_args.environment_settings, zt_is_enabled) && stl::any_of(game_args.environment_settings, [](auto& item) {
             return item.name != nullptr && std::wstring_view(item.name) == L"ZERO_TIER_NETWORK_ID" && item.value != nullptr && item.value[0] != '\0';
           }))
       {
@@ -2393,11 +2524,11 @@ namespace siege::views
           {
             auto connect_str = std::wstring_view(caps->ip_connect_setting);
 
-            auto setting = std::find_if(game_args->string_settings.begin(), game_args->string_settings.end(), [&](auto& item) {
+            auto setting = stl::find_if(game_args.string_settings, [&](auto& item) {
               return item.name != nullptr && item.name == connect_str && item.value != nullptr && item.value[0] != '\0' && std::wstring_view(item.value) != L"0.0.0.0";
             });
 
-            if (setting != game_args->string_settings.end())
+            if (setting != game_args.string_settings.end())
             {
               ::SetEnvironmentVariableW(L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4", setting->value);
             }
@@ -2414,16 +2545,16 @@ namespace siege::views
       }
 
 
-      for (auto i = 0; i < game_args->environment_settings.size(); ++i)
+      for (auto i = 0; i < game_args.environment_settings.size(); ++i)
       {
-        if (!game_args->environment_settings[i].name)
+        if (!game_args.environment_settings[i].name)
         {
           break;
         }
-        ::SetEnvironmentVariableW(game_args->environment_settings[i].name, game_args->environment_settings[i].value);
+        ::SetEnvironmentVariableW(game_args.environment_settings[i].name, game_args.environment_settings[i].value);
       }
 
-      if (!std::any_of(game_args->environment_settings.begin(), game_args->environment_settings.end(), zt_is_enabled))
+      if (!stl::any_of(game_args.environment_settings, zt_is_enabled))
       {
         ::SetEnvironmentVariableW(L"ZERO_TIER_ENABLED", nullptr);
         ::SetEnvironmentVariableW(L"ZERO_TIER_NETWORK_ID", nullptr);
@@ -2437,27 +2568,62 @@ namespace siege::views
 
     if (has_extension_module(state))
     {
-      std::string extension_path = get_extension(state).GetModuleFileName<char>();
+      auto& extension = get_extension(state);
 
-      auto* apply_prelaunch_settings_func = get_extension(state).GetProcAddress<std::add_pointer_t<apply_prelaunch_settings>>("apply_prelaunch_settings");
+      std::string extension_path = extension.GetModuleFileName<char>();
 
-      if (apply_prelaunch_settings_func)
+      std::unique_ptr<siege::platform::game_command_line_args> legacy_args{};
+
+      if (extension.supports_apply_prelaunch_settings_ex() == false || extension.supports_format_command_line_ex() == false)
       {
-        if (apply_prelaunch_settings_func(self.loaded_path.c_str(), game_args) != S_OK)
+        legacy_args = std::make_unique<siege::platform::game_command_line_args>();
+        copy_args(game_args, *legacy_args);
+      }
+
+      auto create_args = [&] {
+        return siege::platform::game_command_line_args_ex{
+          .flags_size = game_args.flags.size(),
+          .flags = game_args.flags.data(),
+          .int_settings_size = game_args.int_settings.size(),
+          .int_settings = game_args.int_settings.data(),
+          .float_settings_size = game_args.float_settings.size(),
+          .float_settings = game_args.float_settings.data(),
+          .string_settings_size = game_args.string_settings.size(),
+          .string_settings = game_args.string_settings.data(),
+          .environment_settings_size = game_args.environment_settings.size(),
+          .environment_settings = game_args.environment_settings.data(),
+          .action_bindings_size = game_args.action_bindings.size(),
+          .action_bindings = (std::byte*)game_args.action_bindings.data(),
+          .controller_to_send_input_mappings_size = game_args.controller_to_send_input_mappings.size(),
+          .controller_to_send_input_mappings = game_args.controller_to_send_input_mappings.data()
+        };
+      };
+
+      if (extension.supports_apply_prelaunch_settings_ex() == true)
+      {
+        if (extension.apply_prelaunch_settings(self.loaded_path, create_args()) != std::errc{})
         {
           return E_ABORT;
         }
       }
-
-      auto* format_command_line_func = get_extension(state).GetProcAddress<std::add_pointer_t<format_command_line>>("format_command_line");
-
-      const wchar_t** argv = nullptr;
-      std::uint32_t argc = 0;
-
-
-      if (format_command_line_func)
+      if (extension.supports_apply_prelaunch_settings_ex() == false)
       {
-        argv = format_command_line_func(game_args, &argc);
+        if (extension.apply_prelaunch_settings(self.loaded_path, *legacy_args) != std::errc{})
+        {
+          return E_ABORT;
+        }
+        copy_args(*legacy_args, game_args);
+      }
+
+      std::span<const siege::fs_char*> argv{};
+
+      if (extension.supports_format_command_line_ex() == true)
+      {
+        argv = extension.format_command_line(create_args());
+      }
+      if (extension.supports_format_command_line_ex() == false)
+      {
+        argv = extension.format_command_line(*legacy_args);
       }
 
       STARTUPINFOW startup_info{ .cb = sizeof(STARTUPINFOW) };
@@ -2476,26 +2642,26 @@ namespace siege::views
         dll_paths.emplace_back(extension_path.c_str());
       }
 
-      auto* detour_ordinal = get_extension(state).GetProcAddress(1);
+      auto* detour_ordinal = extension.GetProcAddress(1);
 
-      if (detour_ordinal && !get_extension(state).is_named_export(detour_ordinal))
+      if (detour_ordinal && !extension.is_named_export(detour_ordinal))
       {
         dll_paths.emplace_back(extension_path.c_str());
       }
 
       std::wstring args;
-      args.reserve(argc + 3 * sizeof(std::wstring) + 3);
+      args.reserve(argv.size() + 3 * sizeof(std::wstring) + 3);
 
 
       auto exe_path = self.loaded_path;
 
-      if (auto& caps = get_extension(state).caps; game_args && caps && caps->preferred_exe_setting && caps->preferred_exe_setting[0] != '\0')
+      if (auto& caps = extension.caps; caps && caps->preferred_exe_setting && caps->preferred_exe_setting[0] != '\0')
       {
-        auto preferred_game_exe = std::find_if(game_args->string_settings.begin(), game_args->string_settings.end(), [=](auto& item) {
+        auto preferred_game_exe = stl::find_if(game_args.string_settings, [=](auto& item) {
           return item.name && item.value && item.value[0] != '\0' && item.name == std::wstring_view(caps->preferred_exe_setting);
         });
 
-        if (preferred_game_exe != game_args->string_settings.end())
+        if (preferred_game_exe != game_args.string_settings.end())
         {
           auto temp_path = exe_path;
           temp_path.replace_filename(preferred_game_exe->value);
@@ -2511,14 +2677,14 @@ namespace siege::views
       args.append(exe_path.wstring());
       args.append(1, L'"');
 
-      if (argv && argc > 0)
+      if (!argv.empty())
       {
         args.append(1, L' ');
-        for (auto i = 0u; i < argc; ++i)
+        for (auto i = 0u; i < argv.size(); ++i)
         {
           args.append(argv[i]);
 
-          if (i < (argc - 1))
+          if (i < (argv.size() - 1))
           {
             args.append(1, L' ');
           }
@@ -2562,11 +2728,11 @@ namespace siege::views
       args.append(self.loaded_path.wstring());
       args.append(1, L'"');
 
-      auto cmd_args = std::find_if(game_args->string_settings.begin(), game_args->string_settings.end(), [=](auto& item) {
+      auto cmd_args = stl::find_if(game_args.string_settings, [=](auto& item) {
         return item.name && item.value && item.value[0] != '\0' && item.name == std::wstring_view(L"CMD_ARGS");
       });
 
-      if (cmd_args != game_args->string_settings.end())
+      if (cmd_args != game_args.string_settings.end())
       {
         args.append(cmd_args->value);
       }
